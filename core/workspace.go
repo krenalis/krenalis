@@ -422,6 +422,17 @@ func (this *Workspace) Connections() []*Connection {
 	return infos
 }
 
+// ConsumeRateLimitCapacity consumes the specified number of units from the
+// workspace's request rate-limit capacity. units must be at least 1.
+//
+// ConsumeRateLimitCapacity returns errors.TooManyRequests when the requested
+// capacity is unavailable. It returns errors.Unavailable when a temporary
+// condition makes capacity availability impossible to determine.
+func (this *Workspace) ConsumeRateLimitCapacity(ctx context.Context, units int) error {
+	this.core.mustBeOpen()
+	return translateRateLimitError(this.workspace.ConsumeRateLimitCapacity(ctx, units))
+}
+
 // CreateConnection creates a new connection. authToken is an authorization
 // token returned by the AuthToken method and must be empty if the connector
 // does not support authorization.

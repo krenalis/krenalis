@@ -275,14 +275,19 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	// Read all organizations.
 	state.organizations = map[string]*Organization{}
 	err = tx.QueryScan(ctx, "SELECT id, name, enabled, members_limit, access_keys_limit, workspaces_limit,"+
-		" connectors_limit, connections_limit, pipelines_limit FROM organizations", func(rows *db.Rows) error {
+		" connectors_limit, connections_limit, pipelines_limit, organization_requests_rate_per_minute, organization_requests_max_capacity,"+
+		" workspace_requests_rate_per_minute, workspace_requests_max_capacity, workspace_events_rate_per_minute, workspace_events_max_capacity FROM organizations", func(rows *db.Rows) error {
 		for rows.Next() {
 			org := &Organization{mu: new(sync.Mutex)}
 			var limits OrganizationLimits
 			if err := rows.Scan(&org.ID, &org.Name, &org.Enabled, &limits.Members, &limits.AccessKeys,
-				&limits.Workspaces, &limits.Connectors, &limits.Connections, &limits.Pipelines); err != nil {
+				&limits.Workspaces, &limits.Connectors, &limits.Connections, &limits.Pipelines,
+				&limits.Rates.OrganizationSpecific.RatePerMinute, &limits.Rates.OrganizationSpecific.MaxCapacity,
+				&limits.Rates.WorkspaceSpecific.RatePerMinute, &limits.Rates.WorkspaceSpecific.MaxCapacity,
+				&limits.Rates.EventsSpecific.RatePerMinute, &limits.Rates.EventsSpecific.MaxCapacity); err != nil {
 				return fmt.Errorf("loading organization %s: %s", org.ID, err)
 			}
+			org.bucket = state.rateLimiter.NewBucket("organization", org.ID, requestLeaseSize, requestMaxUnits)
 			org.usage = newOrganizationUsage(limits)
 			org.workspaces = map[string]*Workspace{}
 			org.members = map[string]bool{}
@@ -350,6 +355,8 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 					&ws.pipelinesToPurge); err != nil {
 					return fmt.Errorf("loading workspace %s: %s", ws.ID, err)
 				}
+				ws.bucket = state.rateLimiter.NewBucket("workspace", ws.ID, requestLeaseSize, requestMaxUnits)
+				ws.eventBucket = state.rateLimiter.NewBucket("events", ws.ID, eventLeaseSize, eventMaxUnits)
 				ws.organization = state.organizations[organizationID]
 				if _, ok := state.warehousePlatforms[warehousePlatform]; !ok {
 					return fmt.Errorf("loading workspace %s: warehouse platform for %q is required but not registered. (Possibly forgotten import?)", ws.ID, warehousePlatform)

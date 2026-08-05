@@ -538,6 +538,7 @@ func (state *State) createOrganization(n notification) string {
 	}
 	org := &Organization{
 		mu:         &sync.Mutex{},
+		bucket:     state.rateLimiter.NewBucket("organization", e.ID, requestLeaseSize, requestMaxUnits),
 		workspaces: map[string]*Workspace{},
 		members:    map[string]bool{},
 		usage:      newOrganizationUsage(e.Limits),
@@ -681,6 +682,8 @@ func (state *State) createWorkspace(n notification) string {
 	organization := state.organizations[e.Organization]
 	ws := Workspace{
 		mu:                             &sync.Mutex{},
+		bucket:                         state.rateLimiter.NewBucket("workspace", e.ID, requestLeaseSize, requestMaxUnits),
+		eventBucket:                    state.rateLimiter.NewBucket("events", e.ID, eventLeaseSize, eventMaxUnits),
 		connections:                    map[string]*Connection{},
 		ID:                             e.ID,
 		organization:                   organization,

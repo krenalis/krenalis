@@ -766,6 +766,22 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	ws := connection.Workspace()
+	eventCount := dec.EventCount()
+	if err = ws.ConsumeEventRateLimitCapacity(r.Context(), eventCount); err != nil {
+		if errors.Is(err, state.ErrRateLimiterUnavailable) {
+			return errors.Unavailable("request cannot be processed at this time; try again later")
+		}
+		if err, ok := errors.AsType[state.CapacityExceededError](err); ok {
+			return errors.TooManyRequests(err.RetryAfter, "%s", err)
+		}
+		return err
+	}
+	consumedEventCount := 0
+	defer func() {
+		if unusedEventCount := eventCount - consumedEventCount; unusedEventCount > 0 {
+			_ = ws.RestoreEventRateLimitCapacity(unusedEventCount)
+		}
+	}()
 	connector := connection.Connector()
 	pipelines := connection.Pipelines()
 	observer, _ := c.observers.Load(ws.ID)
@@ -779,6 +795,11 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	var destinations []string
 
 	var observedEvents []events.Event
+	var pendingReceivePassed []string
+	var pendingConsentPassed []string
+	var pendingConsentFailed []string
+	var pendingFilterPassed []string
+	var pendingFilterFailed []string
 
 	// Decode the events.
 	for event, err := range dec.Events(connection.ID, connector.FallbackToRequestIP) {
@@ -787,6 +808,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			continue
 		}
+		consumedEventCount++
 
 		_, duplicated := c.duplicated.LoadOrStore(event["messageId"].(string), nil)
 		if duplicated {
@@ -805,17 +827,17 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			if !p.Enabled || p.Target != state.TargetEvent {
 				continue
 			}
-			c.metrics.ReceivePassed(p.ID, 1)
+			pendingReceivePassed = append(pendingReceivePassed, p.ID)
 			if !filters.Applies(p.Filter, event) {
-				c.metrics.FilterFailed(p.ID, 1)
+				pendingFilterFailed = append(pendingFilterFailed, p.ID)
 				continue
 			}
-			c.metrics.FilterPassed(p.ID, 1)
+			pendingFilterPassed = append(pendingFilterPassed, p.ID)
 			if !consents.Satisfies(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
-				c.metrics.ConsentFailed(p.ID, 1)
+				pendingConsentFailed = append(pendingConsentFailed, p.ID)
 				continue
 			}
-			c.metrics.ConsentPassed(p.ID, 1)
+			pendingConsentPassed = append(pendingConsentPassed, p.ID)
 			if _, ok := c.eventWriters.Load(ws.ID); ok {
 				topics = append(topics, "pipeline-"+p.ID)
 			}
@@ -826,17 +848,17 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 			if !p.Enabled || p.Target != state.TargetUser {
 				continue
 			}
-			c.metrics.ReceivePassed(p.ID, 1)
+			pendingReceivePassed = append(pendingReceivePassed, p.ID)
 			if !filters.Applies(p.Filter, event) {
-				c.metrics.FilterFailed(p.ID, 1)
+				pendingFilterFailed = append(pendingFilterFailed, p.ID)
 				continue
 			}
-			c.metrics.FilterPassed(p.ID, 1)
+			pendingFilterPassed = append(pendingFilterPassed, p.ID)
 			if !consents.Satisfies(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
-				c.metrics.ConsentFailed(p.ID, 1)
+				pendingConsentFailed = append(pendingConsentFailed, p.ID)
 				continue
 			}
-			c.metrics.ConsentPassed(p.ID, 1)
+			pendingConsentPassed = append(pendingConsentPassed, p.ID)
 			if _, ok := c.identityWriters.Load(p.ID); ok {
 				topics = append(topics, "pipeline-"+p.ID)
 			}
@@ -852,17 +874,17 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				if !p.Enabled || p.Target != state.TargetEvent {
 					continue
 				}
-				c.metrics.ReceivePassed(p.ID, 1)
+				pendingReceivePassed = append(pendingReceivePassed, p.ID)
 				if !filters.Applies(p.Filter, event) {
-					c.metrics.FilterFailed(p.ID, 1)
+					pendingFilterFailed = append(pendingFilterFailed, p.ID)
 					continue
 				}
-				c.metrics.FilterPassed(p.ID, 1)
+				pendingFilterPassed = append(pendingFilterPassed, p.ID)
 				if !consents.Satisfies(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
-					c.metrics.ConsentFailed(p.ID, 1)
+					pendingConsentFailed = append(pendingConsentFailed, p.ID)
 					continue
 				}
-				c.metrics.ConsentPassed(p.ID, 1)
+				pendingConsentPassed = append(pendingConsentPassed, p.ID)
 				destinations = append(destinations, p.ID)
 			}
 			if len(destinations) > 0 {
@@ -887,6 +909,21 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
+	for _, pipeline := range pendingReceivePassed {
+		c.metrics.ReceivePassed(pipeline, 1)
+	}
+	for _, pipeline := range pendingConsentPassed {
+		c.metrics.ConsentPassed(pipeline, 1)
+	}
+	for _, pipeline := range pendingConsentFailed {
+		c.metrics.ConsentFailed(pipeline, 1)
+	}
+	for _, pipeline := range pendingFilterPassed {
+		c.metrics.FilterPassed(pipeline, 1)
+	}
+	for _, pipeline := range pendingFilterFailed {
+		c.metrics.FilterFailed(pipeline, 1)
+	}
 	for _, event := range observedEvents {
 		observer.addEvent(event)
 	}

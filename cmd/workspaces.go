@@ -27,7 +27,7 @@ func (workspace workspace) AddConsentPurpose(w http.ResponseWriter, r *http.Requ
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func (workspace workspace) AlterProfileSchema(_ http.ResponseWriter, r *http.Req
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func (workspace workspace) AlterProfileSchema(_ http.ResponseWriter, r *http.Req
 // the redirection URI used to obtain that code, that can be used to add a new
 // connection to the workspace for the specified connector.
 func (workspace workspace) AuthToken(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func (workspace workspace) AuthToken(_ http.ResponseWriter, r *http.Request) (an
 
 // Connection returns a connection of the current workspace.
 func (workspace workspace) Connection(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (workspace workspace) Connection(_ http.ResponseWriter, r *http.Request) (a
 
 // Connections returns the connections of the current workspace.
 func (workspace workspace) Connections(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func (workspace workspace) Connections(_ http.ResponseWriter, r *http.Request) (
 
 // ConsentPurposes returns the consent purposes of the current workspace.
 func (workspace workspace) ConsentPurposes(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func (workspace workspace) CreateConnection(_ http.ResponseWriter, r *http.Reque
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +148,7 @@ func (workspace workspace) CreateEventListener(_ http.ResponseWriter, r *http.Re
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +179,7 @@ func (workspace workspace) CreateEventListener(_ http.ResponseWriter, r *http.Re
 
 // Delete deletes the current workspace with all its connections.
 func (workspace workspace) Delete(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +189,7 @@ func (workspace workspace) Delete(_ http.ResponseWriter, r *http.Request) (any, 
 
 // DeleteConsentPurpose deletes a consent purpose of the current workspace.
 func (workspace workspace) DeleteConsentPurpose(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +199,7 @@ func (workspace workspace) DeleteConsentPurpose(_ http.ResponseWriter, r *http.R
 
 // DeleteEventListener deletes an event listener of a workspace.
 func (workspace workspace) DeleteEventListener(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +210,7 @@ func (workspace workspace) DeleteEventListener(_ http.ResponseWriter, r *http.Re
 // Events returns the events.
 func (workspace workspace) Events(_ http.ResponseWriter, r *http.Request) (any, error) {
 
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -269,7 +269,7 @@ func (workspace workspace) Events(_ http.ResponseWriter, r *http.Request) (any, 
 // Identities returns the identities of a profile, and an estimate of their
 // total number without applying first and limit.
 func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -329,7 +329,7 @@ func (workspace workspace) IngestEvents(w http.ResponseWriter, r *http.Request) 
 // LatestIdentityResolution returns information about the latest Identity
 // Resolution of a workspace.
 func (workspace workspace) LatestIdentityResolution(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -346,7 +346,7 @@ func (workspace workspace) LatestIdentityResolution(_ http.ResponseWriter, r *ht
 // LatestAlterProfileSchema returns information about the latest altering of the
 // profile schema of a workspace.
 func (workspace workspace) LatestAlterProfileSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -369,7 +369,7 @@ func (workspace workspace) LatestAlterProfileSchema(_ http.ResponseWriter, r *ht
 // ListenedEvents returns the events listen to by a specified listener and the
 // number of omitted events.
 func (workspace workspace) ListenedEvents(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -390,7 +390,7 @@ func (workspace workspace) ListenedEvents(_ http.ResponseWriter, r *http.Request
 // IdentityResolutionSettings returns the identity resolution settings of the
 // workspace.
 func (workspace workspace) IdentityResolutionSettings(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -403,7 +403,7 @@ func (workspace workspace) IdentityResolutionSettings(_ http.ResponseWriter, r *
 
 // Pipeline returns a pipeline of a connection.
 func (workspace workspace) Pipeline(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -417,7 +417,7 @@ func (workspace workspace) Pipeline(_ http.ResponseWriter, r *http.Request) (any
 // PipelineErrors returns the pipeline errors of the workspace.
 func (workspace workspace) PipelineErrors(_ http.ResponseWriter, r *http.Request) (any, error) {
 
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -493,7 +493,7 @@ func (workspace workspace) PipelineErrors(_ http.ResponseWriter, r *http.Request
 
 // PipelineRun returns the run of a pipeline in the current workspace.
 func (workspace workspace) PipelineRun(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -506,7 +506,7 @@ func (workspace workspace) PipelineRun(_ http.ResponseWriter, r *http.Request) (
 
 // PipelineRuns returns the runs of the pipelines of the current workspace.
 func (workspace workspace) PipelineRuns(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -524,7 +524,7 @@ func (workspace workspace) PreviewAlterProfileSchema(_ http.ResponseWriter, r *h
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -549,7 +549,7 @@ func (workspace workspace) RepairWarehouse(_ http.ResponseWriter, r *http.Reques
 	if err := validateForbiddenBody(r); err != nil {
 		return nil, err
 	}
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -602,7 +602,7 @@ func (workspace workspace) StartIdentityResolution(_ http.ResponseWriter, r *htt
 	if err := validateForbiddenBody(r); err != nil {
 		return nil, err
 	}
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -615,7 +615,7 @@ func (workspace workspace) TestWarehouseUpdate(_ http.ResponseWriter, r *http.Re
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -636,7 +636,7 @@ func (workspace workspace) TestWarehouseUpdate(_ http.ResponseWriter, r *http.Re
 
 // Attributes returns the attributes of a profile, given its KPID.
 func (workspace workspace) Attributes(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -653,7 +653,7 @@ func (workspace workspace) Update(_ http.ResponseWriter, r *http.Request) (any, 
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -674,7 +674,7 @@ func (workspace workspace) UpdateConsentPurpose(w http.ResponseWriter, r *http.R
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -693,7 +693,7 @@ func (workspace workspace) UpdateIdentityResolutionSettings(_ http.ResponseWrite
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -714,7 +714,7 @@ func (workspace workspace) UpdateWarehouse(_ http.ResponseWriter, r *http.Reques
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -740,7 +740,7 @@ func (workspace workspace) UpdateWarehouseMode(_ http.ResponseWriter, r *http.Re
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -759,7 +759,7 @@ func (workspace workspace) UpdateWarehouseMode(_ http.ResponseWriter, r *http.Re
 // ProfileEvents returns the events of a profile.
 func (workspace workspace) ProfileEvents(_ http.ResponseWriter, r *http.Request) (any, error) {
 
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -807,7 +807,7 @@ func (workspace workspace) ProfileEvents(_ http.ResponseWriter, r *http.Request)
 
 // ProfileSchema returns the profile schema of a workspace.
 func (workspace workspace) ProfileSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -818,7 +818,7 @@ func (workspace workspace) ProfileSchema(_ http.ResponseWriter, r *http.Request)
 // estimate of their total number without applying first and limit.
 func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any, error) {
 
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -891,7 +891,7 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 // Warehouse returns the platform, settings and MCP settings of the data
 // warehouse for a workspace.
 func (workspace workspace) Warehouse(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := workspace.workspace(r)
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
@@ -904,16 +904,4 @@ func (workspace workspace) Warehouse(_ http.ResponseWriter, r *http.Request) (an
 		"settings":    settings,
 		"mcpSettings": mcpSettings,
 	}, nil
-}
-
-// workspace returns the current workspace.
-func (workspace workspace) workspace(r *http.Request) (*core.Workspace, error) {
-	_, ws, err := workspace.authenticateRequest(r)
-	if err != nil {
-		return nil, err
-	}
-	if ws == nil {
-		return nil, errMissingWorkspace
-	}
-	return ws, nil
 }
