@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/collector/sender"
-	"github.com/krenalis/krenalis/core/internal/metrics"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/streams"
 	"github.com/krenalis/krenalis/core/internal/transformers"
@@ -54,7 +53,8 @@ type destinationPipeline struct {
 
 // queuedEvent represents a queued event.
 type queuedEvent struct {
-	streamEvent streams.Event
+	attributes  map[string]any
+	ack         streams.Ack
 	senderEvent *sender.Event
 }
 
@@ -62,8 +62,14 @@ type queuedEvent struct {
 // transformed. Each destinationPipeline instance has its own
 // destinationPipelineQueue, even if the pipeline has no transformation.
 type destinationPipelineQueue struct {
-	metrics *metrics.Collector // metrics collector
-	sender  *sender.Sender     // sender associated with the connection
+	// metrics collector
+	metrics interface {
+		TransformationFailed(pipeline string, count int, message string)
+		TransformationPassed(pipeline string, count int)
+		OutputValidationFailed(pipeline string, count int, message string)
+		OutputValidationPassed(pipeline string, count int)
+	}
+	sender *sender.Sender // sender associated with the connection
 
 	mu     sync.Mutex
 	cond   *sync.Cond
@@ -94,47 +100,78 @@ func newDestinationPipeline(pipeline *state.Pipeline, schema types.Type, provide
 }
 
 // Close closes dp by discarding all queued events and canceling any in-progress
-// transformations, using the provided error as the cancellation cause.
-// It is called when the associated pipeline is disabled or deleted.
+// transformations, using the provided error as the cancellation cause. It is
+// idempotent and is called when the associated pipeline is disabled or deleted.
 func (dp *destinationPipeline) Close(cause error) {
 	dp.queue.mu.Lock()
-	dp.queue.close.closed = true
-	if len(dp.queue.events) > 0 {
-		dp.queue.metrics.TransformationFailed(dp.id, len(dp.queue.events), cause.Error())
-	}
-	clear(dp.queue.events)
-	dp.queue.resetTimerLocked()
-	dp.queue.cond.Broadcast()
-	dp.queue.close.cancel(cause)
-	dp.queue.mu.Unlock()
-}
-
-// QueueEvent queues an event for the pipeline.
-//
-// If the pipeline has a transformation, the event is transformed before being
-// queued.
-func (dp *destinationPipeline) QueueEvent(event streams.Event) {
-	se := dp.queue.sender.CreateEvent(dp.id, dp.eventType, dp.schema, event)
-	if dp.transformer == nil {
-		dp.queue.metrics.TransformationPassed(dp.id, 1)
-		dp.queue.metrics.OutputValidationPassed(dp.id, 1)
-		dp.queue.sender.SendEvent(se)
-		return
-	}
-	dp.queue.mu.Lock()
-	for !dp.queue.close.closed && len(dp.queue.events) >= maxQueuedEventSize {
-		dp.queue.cond.Wait()
-	}
 	if dp.queue.close.closed {
 		dp.queue.mu.Unlock()
 		return
 	}
-	dp.queue.events = append(dp.queue.events, queuedEvent{streamEvent: event, senderEvent: se})
-	n := len(dp.queue.events)
-	if n == 1 || n == minQueuedEventSize {
+	dp.queue.close.closed = true
+	// Detach the queued events while holding the lock. A concurrent QueueEvent
+	// either accepts its event before the pipeline is closed or observes the
+	// closed state.
+	events := dp.queue.events
+	dp.queue.events = nil
+	dp.queue.resetTimerLocked()
+	dp.queue.cond.Broadcast()
+	dp.queue.close.cancel(cause)
+	dp.queue.mu.Unlock()
+
+	if len(events) > 0 {
+		dp.queue.metrics.TransformationFailed(dp.id, len(events), cause.Error())
+		for _, event := range events {
+			dp.queue.discardEvent(event)
+		}
+	}
+}
+
+// QueueEvent submits an event and its corresponding acknowledgment to the
+// pipeline.
+//
+// If the pipeline has a transformation, the event is transformed before being
+// passed to the sender.
+func (dp *destinationPipeline) QueueEvent(attributes map[string]any, ack streams.Ack) {
+
+	dp.queue.mu.Lock()
+	if dp.queue.close.closed {
+		dp.queue.mu.Unlock()
+		ack.Acknowledge()
+		return
+	}
+
+	if dp.transformer == nil {
+		event := dp.queue.sender.CreateEvent(dp.id, dp.eventType, dp.schema, attributes, ack)
+		dp.queue.mu.Unlock()
+		dp.queue.metrics.TransformationPassed(dp.id, 1)
+		dp.queue.metrics.OutputValidationPassed(dp.id, 1)
+		dp.queue.sender.SendEvent(event)
+		return
+	}
+
+	for len(dp.queue.events) >= maxQueuedEventSize && !dp.queue.close.closed {
+		dp.queue.cond.Wait()
+	}
+	if dp.queue.close.closed {
+		dp.queue.mu.Unlock()
+		ack.Acknowledge()
+		return
+	}
+	event := dp.queue.sender.CreateEvent(dp.id, dp.eventType, dp.schema, attributes, ack)
+	dp.queue.events = append(dp.queue.events, queuedEvent{attributes: attributes, ack: ack, senderEvent: event})
+	if n := len(dp.queue.events); n == 1 || n == minQueuedEventSize {
 		dp.queue.resetTimerLocked()
 	}
 	dp.queue.mu.Unlock()
+
+}
+
+// discardEvent marks the event as discarded in the sender, allowing its
+// per-user sequence to advance, before acknowledging its pipeline branch.
+func (q *destinationPipelineQueue) discardEvent(event queuedEvent) {
+	q.sender.DiscardEvent(event.senderEvent)
+	event.ack.Acknowledge()
 }
 
 // resetTimerLocked schedules the timer so that the oldest queued event is
@@ -176,15 +213,14 @@ func (dp *destinationPipeline) transform() {
 	records := make([]transformers.Record, n)
 	for i := range n {
 		records[i].Purpose = transformers.Create
-		records[i].Attributes = events[i].streamEvent.Attributes
+		records[i].Attributes = events[i].attributes
 	}
 
 	// Transform the events.
 	err := dp.transformer.Transform(dp.queue.close.ctx, records)
 	if err != nil {
 		for i := range n {
-			dp.queue.sender.DiscardEvent(events[i].senderEvent)
-			events[i].streamEvent.Ack.Acknowledge()
+			dp.queue.discardEvent(events[i])
 		}
 		var msg string
 		if _, ok := err.(transformers.FunctionExecError); ok {
@@ -201,8 +237,7 @@ func (dp *destinationPipeline) transform() {
 
 	for i, record := range records {
 		if err := record.Err; err != nil {
-			dp.queue.sender.DiscardEvent(events[i].senderEvent)
-			events[i].streamEvent.Ack.Acknowledge()
+			dp.queue.discardEvent(events[i])
 			switch err.(type) {
 			case transformers.RecordTransformationError:
 				dp.queue.metrics.TransformationFailed(dp.id, 1, err.Error())

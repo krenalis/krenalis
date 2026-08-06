@@ -489,6 +489,7 @@ func (s *stream) Consume(topic string, size int) streams.Consumer {
 					FilterSubject: filterSubject,
 					AckPolicy:     jetstream.AckExplicitPolicy,
 					AckWait:       s.ackWait,
+					MaxDeliver:    -1,
 					MaxAckPending: -1,
 				})
 				if err != nil {
@@ -525,18 +526,19 @@ func (s *stream) Consume(topic string, size int) streams.Consumer {
 						err = fmt.Errorf("invalid event data: %s", err)
 						return
 					}
+					var destinations []string
 					if header := msg.Headers(); header != nil {
-						if destinations, ok := header["destinations"]; ok {
-							for _, d := range destinations {
-								if !isValidDestination(d) {
-									err = fmt.Errorf("invalid event destination: %q", d)
+						if ids, ok := header["destinations"]; ok {
+							for _, id := range ids {
+								if !isValidDestination(id) {
+									err = fmt.Errorf("invalid event destination: %q", id)
 									return
 								}
 							}
-							event.Destinations = destinations
+							destinations = ids
 						}
 					}
-					event.Ack = eventAck
+					event.Destinations = destinationsForMessage(eventAck, destinations)
 					select {
 					case consumer.events <- event:
 					case <-done:
@@ -692,7 +694,7 @@ func (m *ackManager) Remove(a *ack) {
 // Track starts tracking a message until it is acknowledged or tracking is
 // stopped.
 func (m *ackManager) Track(msg jetstream.Msg) *ack {
-	a := &ack{msg: msg, manager: m}
+	a := &ack{msg: msg, manager: m, remaining: 1}
 	m.mu.Lock()
 	m.pending[a] = struct{}{}
 	m.mu.Unlock()
@@ -752,22 +754,43 @@ func (m *ackManager) run(ctx context.Context, heartbeatInterval time.Duration) {
 	}
 }
 
-// ack tracks a NATS message until it is acknowledged or tracking is stopped.
+// ack coordinates the destination acknowledgments of a NATS message and tracks
+// it until every destination has completed or tracking is stopped.
 type ack struct {
-	mu      sync.Mutex // protects done and serializes InProgress with finish
-	done    bool       // whether tracking has finished; protected by mu
-	msg     jetstream.Msg
-	manager *ackManager
+	mu        sync.Mutex // protects done, remaining, and destinationAck.done
+	done      bool       // whether tracking has finished; protected by mu
+	msg       jetstream.Msg
+	manager   *ackManager
+	remaining int // number of destinations that have not acknowledged the message; protected by mu
 }
 
-// Acknowledge stops tracking the message and sends its acknowledgment to NATS.
-func (a *ack) Acknowledge() {
-	if !a.finish() {
+// destinationAck acknowledges one destination of a NATS message.
+type destinationAck struct {
+	parent *ack
+	done   bool // whether the destination has acknowledged the message; protected by parent.mu
+}
+
+// Acknowledge marks the destination as complete. The last destination stops
+// tracking the message and sends its acknowledgment to NATS.
+func (d *destinationAck) Acknowledge() {
+	a := d.parent
+	a.mu.Lock()
+	if d.done || a.done {
+		a.mu.Unlock()
 		return
 	}
+	d.done = true
+	a.remaining--
+	if a.remaining != 0 {
+		a.mu.Unlock()
+		return
+	}
+	a.done = true
+	a.mu.Unlock()
+
 	a.manager.Remove(a)
 	if err := a.msg.Ack(); err != nil {
-		slog.Warn(fmt.Sprintf("collector: cannot ack event: %s", err))
+		slog.Warn(fmt.Sprintf("nats: cannot ack event: %s", err))
 	}
 }
 
@@ -805,6 +828,26 @@ func (a *ack) finish() bool {
 	}
 	a.done = true
 	return true
+}
+
+// destinationsForMessage returns the destinations and their acknowledgments for
+// a NATS message. A message without explicit destinations has one destination
+// whose ID is empty.
+func destinationsForMessage(parent *ack, ids []string) []streams.Destination {
+	switch n := len(ids); n {
+	case 0:
+		return []streams.Destination{{Ack: &destinationAck{parent: parent}}}
+	default:
+		parent.mu.Lock()
+		parent.remaining = n
+		parent.mu.Unlock()
+		destinations := make([]streams.Destination, n)
+		for i := range destinations {
+			destinations[i].ID = ids[i]
+			destinations[i].Ack = &destinationAck{parent: parent}
+		}
+		return destinations
+	}
 }
 
 // isValidDestination reports whether s is a valid destination identifier.
