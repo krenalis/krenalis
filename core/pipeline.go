@@ -264,9 +264,11 @@ func (this *Pipeline) Delete(ctx context.Context) error {
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		// Mark the pipeline's function as discontinued.
 		now := time.Now().UTC()
-		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
-			"SELECT p.transformation_id, $1\n"+
+		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, organization, discontinued_at)\n"+
+			"SELECT p.transformation_id, w.organization, $1\n"+
 			"FROM pipelines AS p\n"+
+			"INNER JOIN connections AS c ON p.connection = c.id\n"+
+			"INNER JOIN workspaces AS w ON c.workspace = w.id\n"+
 			"WHERE p.transformation_id != '' AND p.id = $2\n"+
 			"ON CONFLICT (id) DO NOTHING", now, n.ID)
 		if err != nil {
@@ -824,7 +826,8 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 	// Format settings.
 	if format != nil && pipeline.FormatSettings != nil {
 		conf := &connections.ConnectorConfig{
-			Role: this.pipeline.Connection().Role,
+			Role:         this.pipeline.Connection().Role,
+			Organization: this.pipeline.Organization().ID,
 		}
 		n.FormatSettings, err = this.core.connections.UpdatedSettings(ctx, format, conf, pipeline.FormatSettings)
 		if err != nil {
@@ -841,15 +844,16 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 	// Transformation.
 	if fn := n.Transformation.Function; fn != nil {
 		current := this.pipeline.Transformation.Function
+		organization := this.pipeline.Organization().ID
 		if current == nil || fn.Language != current.Language {
 			name := transformationFunctionName(n.ID)
-			fn.ID, fn.Version, err = this.core.functionProvider.Create(ctx, name, fn.Language, fn.Source)
+			fn.ID, fn.Version, err = this.core.functionProvider.Create(ctx, organization, name, fn.Language, fn.Source)
 			if err != nil {
 				return err
 			}
 		} else if fn.Source != current.Source {
 			fn.ID = current.ID
-			fn.Version, err = this.core.functionProvider.Update(ctx, fn.ID, fn.Source)
+			fn.Version, err = this.core.functionProvider.Update(ctx, organization, fn.ID, fn.Source)
 			if err != nil {
 				return err
 			}
@@ -899,9 +903,11 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 		}
 		// Mark the pipeline’s function as discontinued if its identifier changes.
 		now := time.Now().UTC()
-		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
-			"SELECT p.transformation_id, $1\n"+
+		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, organization, discontinued_at)\n"+
+			"SELECT p.transformation_id, w.organization, $1\n"+
 			"FROM pipelines AS p\n"+
+			"INNER JOIN connections AS c ON p.connection = c.id\n"+
+			"INNER JOIN workspaces AS w ON c.workspace = w.id\n"+
 			"WHERE p.transformation_id != '' AND p.transformation_id != $2 AND p.id = $3\n"+
 			"ON CONFLICT (id) DO NOTHING", now, function.ID, n.ID)
 		if err != nil {

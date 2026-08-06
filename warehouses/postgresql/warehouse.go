@@ -55,6 +55,7 @@ type PostgreSQL struct {
 	mu       sync.Mutex // for the pool field
 	pool     *pgxpool.Pool
 	settings warehouses.SettingsLoader
+	dialWith warehouses.DialWith
 }
 
 type pgSettings struct {
@@ -309,6 +310,12 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 	return nil
 }
 
+// SetDialWith sets the function that wraps the dial function the warehouse
+// uses to establish its outbound network connections.
+func (warehouse *PostgreSQL) SetDialWith(dialWith warehouses.DialWith) {
+	warehouse.dialWith = dialWith
+}
+
 // Truncate truncates the specified table.
 func (warehouse *PostgreSQL) Truncate(ctx context.Context, table string) error {
 	pool, _, err := warehouse.connectionPool(ctx, false)
@@ -392,6 +399,9 @@ func (warehouse *PostgreSQL) connectionPool(ctx context.Context, returnSchema bo
 	config, err := pgxpool.ParseConfig(u.String())
 	if err != nil {
 		return nil, "", err
+	}
+	if warehouse.dialWith != nil {
+		config.ConnConfig.DialFunc = warehouse.dialWith(config.ConnConfig.DialFunc)
 	}
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {

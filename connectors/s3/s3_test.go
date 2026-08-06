@@ -14,9 +14,17 @@ import (
 	"github.com/krenalis/krenalis/tools/json"
 )
 
-// TestHTTPClient checks that the S3 HTTP client is reused.
+// TestHTTPClient checks that the S3 HTTP client is reused by the connector
+// instance that created it.
 func TestHTTPClient(t *testing.T) {
-	if httpClient() != httpClient() {
+	env := &connectors.FileStorageEnv{
+		DialWith: func(dial connectors.DialFunc) connectors.DialFunc { return dial },
+	}
+	s3, err := New(env)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s3.httpClient() != s3.httpClient() {
 		t.Fatal("expected the same HTTP client, got a different one")
 	}
 }

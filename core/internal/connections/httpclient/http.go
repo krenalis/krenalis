@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/dialer"
 	"github.com/krenalis/krenalis/core/internal/state"
 )
 
@@ -34,8 +35,18 @@ type HTTP struct {
 	// behavior may be unexpected or cause a panic.
 	state *state.State
 
-	transport http.RoundTripper
+	// transport is the base transport: the transport of each organization is a
+	// clone of it.
+	transport *http.Transport
 	trace     io.Writer
+
+	// organizations holds the transport of each organization the requests can be
+	// made on behalf of, by ID; it is nil when there is no state to follow the
+	// organizations with. The transport of an organization is created the first
+	// time it needs one, so it is nil until then, and it is discarded when the
+	// organization is deleted.
+	organizationsMu sync.Mutex                 // protects organizations
+	organizations   map[string]*http.Transport // by organization ID; protected by organizationsMu
 
 	// muxes maps each connector code to the corresponding ServeMux handling its rate limits.
 	mu    sync.Mutex                // protect muxes
@@ -48,13 +59,75 @@ type HTTP struct {
 // It is possible to provide a nil state; in that case the returned HTTP client
 // will be restricted and will not allow invocation of OAuth-related methods, as
 // their behavior may be unexpected or may cause a panic.
-func New(state *state.State, transport http.RoundTripper) *HTTP {
+func New(state *state.State, transport *http.Transport) *HTTP {
 	h := &HTTP{
 		state:     state,
 		transport: transport,
 	}
 	h.muxes = map[string]*http.ServeMux{}
+	if state != nil {
+		state.Freeze()
+		state.AddListener(h.onCreateOrganization)
+		state.AddListener(h.onDeleteOrganization)
+		h.organizations = map[string]*http.Transport{}
+		for _, org := range state.Organizations() {
+			h.organizations[org.ID] = nil
+		}
+		state.Unfreeze()
+	}
 	return h
+}
+
+// onCreateOrganization is called when an organization is created. Its transport
+// is not created until the organization needs one.
+func (h *HTTP) onCreateOrganization(n state.CreateOrganization) {
+	h.organizationsMu.Lock()
+	if _, ok := h.organizations[n.ID]; !ok {
+		// The transport will be instantiated only when actually needed.
+		h.organizations[n.ID] = nil
+	}
+	h.organizationsMu.Unlock()
+}
+
+// onDeleteOrganization is called when an organization is deleted. Its transport
+// is discarded, closing the connections it keeps idle, so that the transports do
+// not accumulate for the whole life of the process. The clients created before
+// the deletion keep the transport they were created with, and they can still
+// make requests with it.
+func (h *HTTP) onDeleteOrganization(n state.DeleteOrganization) {
+	h.organizationsMu.Lock()
+	transport := h.organizations[n.ID]
+	delete(h.organizations, n.ID)
+	h.organizationsMu.Unlock()
+	// The transport is nil when the organization does not exist, or when it has
+	// never needed one, and there is then nothing to discard. It has a connection
+	// pool of its own, so closing its idle connections does not affect the
+	// requests of the other organizations.
+	if transport != nil {
+		transport.CloseIdleConnections()
+	}
+}
+
+// transportFor returns the transport to make the requests attributed to the
+// given organization.
+// The base transport is returned, as it is, when organization is empty or does
+// not exist.
+func (h *HTTP) transportFor(organization string) http.RoundTripper {
+	if organization == "" {
+		return h.transport
+	}
+	h.organizationsMu.Lock()
+	defer h.organizationsMu.Unlock()
+	transport, ok := h.organizations[organization]
+	if !ok {
+		return h.transport
+	}
+	if transport == nil {
+		transport = h.transport.Clone()
+		transport.DialContext = dialer.DialWith(organization)(transport.DialContext)
+		h.organizations[organization] = transport
+	}
+	return transport
 }
 
 // ConnectionClient returns an HTTP client for the provided connection.
@@ -72,6 +145,7 @@ func (h *HTTP) ConnectionClient(connection *state.Connection) *Client {
 		http:       h,
 		connector:  connector.Code,
 		connection: connection.ID,
+		transport:  h.transportFor(connection.Organization().ID),
 	}
 	c.endpointGroups.mux = h.connectorMux(connector.Code, connector.EndpointGroups)
 	c.endpointGroups.byPattern = endpointGroupByPattern(connector.EndpointGroups)
@@ -86,7 +160,13 @@ func (h *HTTP) ConnectionClient(connection *state.Connection) *Client {
 // OAuth, clientSecret and accessToken must be left empty; in this case,
 // OAuth-related Client methods cannot be invoked, as their behavior may be
 // undefined or cause a panic.
-func (h *HTTP) ConnectorClient(connector *state.Connector, clientSecret, accessToken string) *Client {
+//
+// A connector, unlike a connection, does not belong to an organization, but the
+// requests it sends are made on behalf of one, like when it serves the UI of a
+// connection that is being created; organization is the ID of that organization.
+// It can be left empty, and then the client uses the transport that is not
+// associated with any organization, which is useful in test scenarios.
+func (h *HTTP) ConnectorClient(connector *state.Connector, organization, clientSecret, accessToken string) *Client {
 	if h.state == nil && (clientSecret != "" || accessToken != "") {
 		panic("when the HTTP state is nil, the clientSecret and accessToken cannot be provided")
 	}
@@ -95,6 +175,7 @@ func (h *HTTP) ConnectorClient(connector *state.Connector, clientSecret, accessT
 		connector:    connector.Code,
 		clientSecret: clientSecret,
 		accessToken:  accessToken,
+		transport:    h.transportFor(organization),
 	}
 	c.endpointGroups.mux = h.connectorMux(connector.Code, connector.EndpointGroups)
 	c.endpointGroups.byPattern = endpointGroupByPattern(connector.EndpointGroups)
@@ -103,9 +184,10 @@ func (h *HTTP) ConnectorClient(connector *state.Connector, clientSecret, accessT
 
 // GrantAuthorization grants an OAuth authorization code and returns the access
 // token, the refresh token and the expiration time. redirectionURI is the
-// redirection URI.
-func (h *HTTP) GrantAuthorization(ctx context.Context, connector *state.Connector, code, redirectionURI string) (string, string, time.Time, error) {
-	client := h.ConnectorClient(connector, "", "")
+// redirection URI, and organization is the ID of the organization on behalf
+// of which the authorization is granted.
+func (h *HTTP) GrantAuthorization(ctx context.Context, connector *state.Connector, organization, code, redirectionURI string) (string, string, time.Time, error) {
+	client := h.ConnectorClient(connector, organization, "", "")
 	return client.retrieveOAuthToken(ctx, connector.OAuth, code, redirectionURI, "")
 }
 
