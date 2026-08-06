@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
-	"github.com/krenalis/krenalis/core/internal/streams"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -101,13 +100,10 @@ func testSenderRandomScenario(t *testing.T, test senderRandomTest) senderRandomC
 		if !valid {
 			typ = "Invalid"
 		}
-		event := s.CreateEvent(testPipelineID, typ, types.Type{}, streams.Event{
-			Attributes: map[string]any{
-				"anonymousId": anonymousID,
-				"messageId":   messageID,
-			},
-			Ack: nopAck{},
-		})
+		event := s.CreateEvent(testPipelineID, typ, types.Type{}, map[string]any{
+			"anonymousId": anonymousID,
+			"messageId":   messageID,
+		}, nopAck{})
 		expectedEvents[messageID] = senderRandomExpectedEvent{
 			anonymousID: anonymousID,
 			valid:       valid,
