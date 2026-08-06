@@ -73,12 +73,12 @@ func New(st *state.State, metrics *metrics.Collector) (*Datastore, error) {
 // CanInitialize indicates whether the warehouse with the provided platform and
 // settings can be initialized.
 //
+// organization is the ID of the organization performing the operation.
+//
 // It returns a *warehouses.WarehouseSettingsError error if the settings are not
 // valid, a *warehouses.WarehouseNotInitializableError if the data warehouse is
 // not initializable, and *UnavailableError if an error occurred with the data
 // warehouse.
-//
-// organization is the ID of the organization performing the operation.
 func (ds *Datastore) CanInitialize(ctx context.Context, organization, platform string, settings json.Value) error {
 	ds.mustBeOpen()
 	dw := warehouses.Registered(platform).New(newSettingsLoader(settings))
