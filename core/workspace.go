@@ -724,6 +724,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 //
 // It returns an errors.UnprocessableError error with code:
 //
+//   - ConsentPurposeNotExist, if a required consent purpose does not exist.
 //   - TooManyListeners, if there are already too many listeners.
 func (this *Workspace) CreateEventListener(connection string, size int, filter *Filter, requiredConsents *RequiredConsents) (string, error) {
 	this.core.mustBeOpen()
@@ -767,15 +768,20 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 		}
 		rc = &state.RequiredConsents{
 			Operator: state.ConsentPurposesOperator(requiredConsents.Operator),
-			Purposes: slices.Clone(requiredConsents.Purposes),
+			Purposes: make([]*state.ConsentPurpose, len(requiredConsents.Purposes)),
 		}
-		for i, code := range rc.Purposes {
-			if err := validateConsentPurposeCode(code); err != nil {
-				return "", errors.BadRequest("%s", err)
+		for i, id := range requiredConsents.Purposes {
+			if !IsValidID(id) {
+				return "", errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
 			}
-			if slices.Contains(rc.Purposes[i+1:], code) {
-				return "", errors.BadRequest("required consent purpose %q is duplicated", code)
+			if slices.Contains(requiredConsents.Purposes[i+1:], id) {
+				return "", errors.BadRequest("required consent purpose %s is duplicated", id)
 			}
+			cp, ok := this.workspace.ConsentPurpose(id)
+			if !ok {
+				return "", errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", id)
+			}
+			rc.Purposes[i] = cp
 		}
 	}
 	observer, ok := this.core.collector.Observer(this.workspace.ID)

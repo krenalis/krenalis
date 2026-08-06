@@ -77,23 +77,6 @@
 	flex-shrink: 0;
 }
 
-.privacy__dialog-warning {
-	color: var(--sl-color-warning-700);
-	display: flex;
-	align-items: start;
-	gap: 7px;
-	margin-top: 3px;
-	font-size: 15px;
-}
-
-.privacy__dialog-warning sl-icon {
-	color: var(--sl-color-warning-700);
-	font-size: 14px;
-	position: relative;
-	top: 5px;
-	flex-shrink: 0;
-}
-
 .privacy__dialog-code {
 	margin-top: 15px;
 }

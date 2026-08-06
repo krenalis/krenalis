@@ -112,6 +112,7 @@ func New(db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datast
 	st.AddListener(c.onSetOrganizationStatus)
 	st.AddListener(c.onSetPipelineStatus)
 	st.AddListener(c.onUnlinkConnection)
+	st.AddListener(c.onUpdateConsentPurpose)
 	st.AddListener(c.onUpdatePipeline)
 	for _, org := range st.Organizations() {
 		if org.Enabled {
@@ -477,6 +478,23 @@ func (c *Collector) onUnlinkConnection(n state.UnlinkConnection) {
 	if len(connection.LinkedConnections) == 0 {
 		c.stopConnectionWorker(connection)
 	}
+}
+
+// onUpdateConsentPurpose is called when a consent purpose is updated.
+func (c *Collector) onUpdateConsentPurpose(n state.UpdateConsentPurpose) {
+	observer, ok := c.observers.Load(n.Workspace)
+	if !ok {
+		return
+	}
+	ws, ok := c.state.Workspace(n.Workspace)
+	if !ok {
+		return
+	}
+	cp, ok := ws.ConsentPurpose(n.ID)
+	if !ok {
+		return
+	}
+	observer.replaceConsentPurpose(cp)
 }
 
 // onUpdatePipeline is called when a pipeline is updated.

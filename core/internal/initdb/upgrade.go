@@ -27,10 +27,12 @@ const (
 
 const consentPurposesTable = `
 	CREATE TABLE IF NOT EXISTS consent_purposes (
+		id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
 		workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
 		code varchar(100) NOT NULL CHECK (code ~ '^[A-Za-z_][0-9A-Za-z_]{0,99}$'),
 		name varchar(100) NOT NULL,
-		PRIMARY KEY (workspace, code)
+		UNIQUE (workspace, code),
+		PRIMARY KEY (id)
 	)`
 
 const organizationConnectorReferencesView = `
@@ -260,7 +262,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'AddConsentPurpose'`,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'DeleteConsentPurpose'`,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateConsentPurpose'`,
-			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents varchar(100)[] NOT NULL DEFAULT '{}'`,
+			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents varchar(12)[] NOT NULL DEFAULT '{}'`,
 			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents_operator varchar(3) NOT NULL DEFAULT 'and' CHECK (required_consents_operator IN ('and', 'or'))`,
 			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS passed_6 integer NOT NULL DEFAULT 0`,
 			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS failed_6 integer NOT NULL DEFAULT 0`,

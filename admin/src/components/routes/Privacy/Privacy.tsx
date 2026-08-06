@@ -76,9 +76,7 @@ const Privacy = () => {
 		return result;
 	}, [connections]);
 
-	const purposeToDeletePipelines =
-		purposeToDelete == null ? [] : (pipelinesByPurpose.get(purposeToDelete.code) ?? []);
-	const purposeToEditPipelines = purposeToEdit == null ? [] : (pipelinesByPurpose.get(purposeToEdit.code) ?? []);
+	const purposeToDeletePipelines = purposeToDelete == null ? [] : (pipelinesByPurpose.get(purposeToDelete.id) ?? []);
 
 	useLayoutEffect(() => {
 		setTitle('Settings / Privacy');
@@ -118,7 +116,7 @@ const Privacy = () => {
 	const onConfirmDelete = async () => {
 		setIsDeleting(true);
 		try {
-			await api.workspaces.deleteConsentPurpose(purposeToDelete.code);
+			await api.workspaces.deleteConsentPurpose(purposeToDelete.id);
 		} catch (err) {
 			setIsDeleting(false);
 			if (err instanceof UnprocessableError && err.code === 'ConsentPurposeInUse') {
@@ -146,7 +144,7 @@ const Privacy = () => {
 			return [];
 		}
 		return purposes.map((p) => {
-			const pipelines = pipelinesByPurpose.get(p.code) ?? [];
+			const pipelines = pipelinesByPurpose.get(p.id) ?? [];
 			const codeCell = <span className='privacy__grid-code'>{p.code}</span>;
 			const pipelinesCell =
 				pipelines.length === 0 ? (
@@ -234,14 +232,12 @@ const Privacy = () => {
 				<PurposeDialog
 					isOpen={isCreating}
 					purposeToEdit={null}
-					pipelines={[]}
 					onClose={() => setIsCreating(false)}
 					onSaved={() => setIsLoading(true)}
 				/>
 				<PurposeDialog
 					isOpen={purposeToEdit != null}
 					purposeToEdit={purposeToEdit}
-					pipelines={purposeToEditPipelines}
 					onClose={() => setPurposeToEdit(null)}
 					onSaved={() => setIsLoading(true)}
 				/>
@@ -253,12 +249,11 @@ const Privacy = () => {
 interface PurposeDialogProps {
 	isOpen: boolean;
 	purposeToEdit: ConsentPurpose | null;
-	pipelines: PurposePipeline[];
 	onClose: () => void;
 	onSaved: () => void;
 }
 
-const PurposeDialog = ({ isOpen, purposeToEdit, pipelines, onClose, onSaved }: PurposeDialogProps) => {
+const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialogProps) => {
 	const [name, setName] = useState<string>('');
 	const [code, setCode] = useState<string>('');
 	const [nameError, setNameError] = useState<string>('');
@@ -307,7 +302,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, pipelines, onClose, onSaved }: P
 		setIsSaving(true);
 		try {
 			if (isEditing) {
-				await api.workspaces.updateConsentPurpose(purposeToEdit.code, code, name);
+				await api.workspaces.updateConsentPurpose(purposeToEdit.id, code, name);
 			} else {
 				await api.workspaces.addConsentPurpose(code, name);
 			}
@@ -364,12 +359,6 @@ const PurposeDialog = ({ isOpen, purposeToEdit, pipelines, onClose, onSaved }: P
 					<div className='privacy__dialog-error'>
 						<SlIcon slot='icon' name='exclamation-octagon' />
 						{codeError}
-					</div>
-				)}
-				{isEditing && code !== purposeToEdit.code && pipelines.length > 0 && (
-					<div className='privacy__dialog-warning'>
-						<SlIcon slot='icon' name='exclamation-triangle' />
-						{`This purpose is used by ${pipelines.length} ${pipelines.length === 1 ? 'pipeline' : 'pipelines'}. Changing its code may cause events to be filtered incorrectly.`}
 					</div>
 				)}
 				<SlButton loading={isSaving} className='privacy__dialog-save' variant='primary' onClick={onSave}>

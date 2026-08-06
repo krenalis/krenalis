@@ -193,7 +193,7 @@ func (workspace workspace) DeleteConsentPurpose(_ http.ResponseWriter, r *http.R
 	if err != nil {
 		return nil, err
 	}
-	err = ws.DeleteConsentPurpose(r.Context(), r.PathValue("code"))
+	err = ws.DeleteConsentPurpose(r.Context(), r.PathValue("id"))
 	return nil, err
 }
 
@@ -683,7 +683,7 @@ func (workspace workspace) UpdateConsentPurpose(w http.ResponseWriter, r *http.R
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.UpdateConsentPurpose(r.Context(), r.PathValue("code"), purpose)
+	err = ws.UpdateConsentPurpose(r.Context(), r.PathValue("id"), purpose)
 	return nil, err
 }
 

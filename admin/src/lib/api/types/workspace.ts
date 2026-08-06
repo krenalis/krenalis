@@ -40,6 +40,7 @@ interface LatestAlterProfileSchema {
 }
 
 interface ConsentPurpose {
+	id: string;
 	code: string;
 	name: string;
 }

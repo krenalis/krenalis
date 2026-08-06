@@ -1992,24 +1992,6 @@ inherit the disabled style */
 	font-weight: 500;
 }
 
-.pipeline__consents-undefined-option::part(label) {
-	color: var(--sl-color-neutral-500);
-	font-style: italic;
-}
-
-.pipeline__consents-warning {
-	display: flex;
-	align-items: center;
-	gap: 7px;
-	color: var(--sl-color-warning-700);
-	font-size: 15px;
-}
-
-.pipeline__consents-warning sl-icon {
-	color: var(--sl-color-warning-700);
-	font-size: 14px;
-}
-
 .pipeline__consents-logical-sentence {
 	display: flex;
 	flex-flow: row wrap;

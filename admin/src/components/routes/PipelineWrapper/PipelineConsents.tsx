@@ -7,13 +7,11 @@ import { ConsentPurposesOperator } from '../../../lib/api/types/pipeline';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 
 const PipelineConsents = forwardRef<any>((_, ref) => {
 	const { pipeline, setPipeline } = useContext(PipelineContext);
 
 	const [purposes, setPurposes] = useState<ConsentPurpose[]>([]);
-	const [arePurposesLoaded, setArePurposesLoaded] = useState(false);
 	const [isEnabled, setIsEnabled] = useState((pipeline.requiredConsents?.purposes.length ?? 0) > 0);
 
 	const { api, handleError } = useContext(AppContext);
@@ -27,23 +25,12 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 			try {
 				const res = await api.workspaces.consentPurposes();
 				setPurposes(res.purposes);
-				setArePurposesLoaded(true);
 			} catch (err) {
 				handleError(err);
 			}
 		};
 		fetchPurposes();
 	}, []);
-
-	const selectedCodes = pipeline.requiredConsents?.purposes ?? [];
-
-	// undefinedCodes are the required codes that are no longer the code of a
-	// purpose of the workspace, because the purpose has been deleted or its
-	// code has been changed. The pipeline does not process any event until they
-	// are removed, so they are listed as options to let the user remove them.
-	const undefinedCodes = arePurposesLoaded
-		? selectedCodes.filter((code) => !purposes.some((p) => p.code === code))
-		: [];
 
 	const setEnabled = (enabled: boolean) => {
 		const p = structuredClone(pipeline);
@@ -82,6 +69,8 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 		setPipeline(p);
 	};
 
+	const selectedPurposeIDs = pipeline.requiredConsents?.purposes ?? [];
+
 	return (
 		<Section
 			className='pipeline__consents'
@@ -119,29 +108,16 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 					multiple
 					clearable
 					placeholder={purposes.length === 0 ? 'No purposes defined yet' : 'Select the required purposes'}
-					value={selectedCodes}
+					value={selectedPurposeIDs}
 					onSlChange={onChangePurposes}
-					disabled={!isEnabled || (purposes.length === 0 && undefinedCodes.length === 0)}
+					disabled={!isEnabled || purposes.length === 0}
 				>
 					{purposes.map((p) => (
-						<SlOption key={p.code} value={p.code}>
+						<SlOption key={p.id} value={p.id}>
 							{p.name}
 						</SlOption>
 					))}
-					{undefinedCodes.map((code) => (
-						<SlOption key={code} value={code} className='pipeline__consents-undefined-option'>
-							{code}
-						</SlOption>
-					))}
 				</SlSelect>
-				{undefinedCodes.length > 0 && (
-					<div className='pipeline__consents-warning'>
-						<SlIcon slot='icon' name='exclamation-triangle' />
-						{undefinedCodes.length === 1
-							? `The "${undefinedCodes[0]}" purpose no longer exists. This pipeline does not process any event until you remove it or define the purpose again.`
-							: `The ${undefinedCodes.map((c) => `"${c}"`).join(', ')} purposes no longer exist. This pipeline does not process any event until you remove them or define the purposes again.`}
-					</div>
-				)}
 			</div>
 		</Section>
 	);
