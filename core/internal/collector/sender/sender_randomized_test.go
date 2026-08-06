@@ -100,7 +100,7 @@ func testSenderRandomScenario(t *testing.T, test senderRandomTest) senderRandomC
 		if !valid {
 			typ = "Invalid"
 		}
-		event := s.CreateEvent(testPipelineID, typ, types.Type{}, map[string]any{
+		event := s.CreateEvent(testPipelineID, typ, "events", types.Type{}, map[string]any{
 			"anonymousId": anonymousID,
 			"messageId":   messageID,
 		}, nopAck{})

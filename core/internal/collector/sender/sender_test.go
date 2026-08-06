@@ -135,7 +135,7 @@ func Test_Sender_Peek(t *testing.T) {
 				}
 
 				s := New(app, nil)
-				event := s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+				event := s.CreateEvent(testPipelineID, "Click", "events", types.Type{}, map[string]any{
 					"anonymousId": "user",
 					"messageId":   "msg-0",
 				}, nopAck{})
@@ -265,11 +265,11 @@ func Test_Sender_DiscardedOutOfOrderEvent(t *testing.T) {
 		}
 		s := New(app, nil)
 
-		event0 := s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+		event0 := s.CreateEvent(testPipelineID, "Click", "events", types.Type{}, map[string]any{
 			"anonymousId": "user",
 			"messageId":   "msg-0",
 		}, nopAck{})
-		event1 := s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+		event1 := s.CreateEvent(testPipelineID, "Click", "events", types.Type{}, map[string]any{
 			"anonymousId": "user",
 			"messageId":   "msg-1",
 		}, nopAck{})
@@ -283,6 +283,134 @@ func Test_Sender_DiscardedOutOfOrderEvent(t *testing.T) {
 			t.Fatalf("event was not consumed")
 		}
 
+	})
+}
+
+// Test_Sender_OrderingGroupPreservesOrder verifies that events for the same
+// user and ordering group are delivered in creation order even when associated
+// with different pipelines.
+func Test_Sender_OrderingGroupPreservesOrder(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		var delivered []string
+
+		app := newTestApplication()
+		app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
+			for event := range events.All() {
+				delivered = append(delivered, event.Received.MessageID())
+			}
+			return nil
+		}
+		s := New(app, nil)
+
+		newEvent := func(pipeline, messageID string) *Event {
+			return s.CreateEvent(pipeline, "Click", "contacts", types.Type{}, map[string]any{
+				"anonymousId": "user",
+				"messageId":   messageID,
+			}, nopAck{})
+		}
+		first := newEvent("pipeline-1", "msg-1")
+		second := newEvent("pipeline-2", "msg-2")
+
+		// Make the second event ready first. It must wait for the first event
+		// because both pipelines share the same ordering group.
+		s.SendEvent(second)
+		s.SendEvent(first)
+		time.Sleep(maxQueueDelay)
+		s.Close(t.Context())
+
+		expected := []string{"msg-1", "msg-2"}
+		if !slices.Equal(delivered, expected) {
+			t.Fatalf("expected delivered events %v, got %v", expected, delivered)
+		}
+	})
+}
+
+// Test_Sender_OrderingGroupsAreIndependent verifies that an event waiting for
+// an earlier event does not block the same user's events in another group.
+func Test_Sender_OrderingGroupsAreIndependent(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		var delivered []string
+
+		app := newTestApplication()
+		app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
+			for event := range events.All() {
+				delivered = append(delivered, event.Received.MessageID())
+			}
+			return nil
+		}
+		s := New(app, nil)
+
+		newEvent := func(group, messageID string) *Event {
+			return s.CreateEvent("pipeline-"+group, group, group, types.Type{}, map[string]any{
+				"anonymousId": "user",
+				"messageId":   messageID,
+			}, nopAck{})
+		}
+		contactsFirst := newEvent("contacts", "contacts-1")
+		contactsSecond := newEvent("contacts", "contacts-2")
+		ordersFirst := newEvent("orders", "orders-1")
+
+		// contacts-2 waits for contacts-1, while orders-1 remains available
+		// because it belongs to an independent ordering group.
+		s.SendEvent(contactsSecond)
+		s.SendEvent(ordersFirst)
+		time.Sleep(maxQueueDelay)
+		synctest.Wait()
+
+		expected := []string{"orders-1"}
+		if !slices.Equal(delivered, expected) {
+			t.Fatalf("expected delivered events %v while contacts are blocked, got %v", expected, delivered)
+		}
+
+		s.DiscardEvent(contactsFirst)
+		time.Sleep(maxQueueDelay)
+		s.Close(t.Context())
+
+		expected = []string{"orders-1", "contacts-2"}
+		if !slices.Equal(delivered, expected) {
+			t.Fatalf("expected delivered events %v after contacts are unblocked, got %v", expected, delivered)
+		}
+	})
+}
+
+// Test_Sender_SameUserIncludesOrderingGroups verifies that SameUser returns
+// events for one user even when they belong to different ordering groups.
+func Test_Sender_SameUserIncludesOrderingGroups(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		var batches [][]string
+
+		app := newTestApplication()
+		app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
+			var batch []string
+			for event := range events.SameUser() {
+				batch = append(batch, event.Received.MessageID())
+			}
+			batches = append(batches, batch)
+			return nil
+		}
+		s := New(app, nil)
+
+		newEvent := func(anonymousID, group, messageID string) *Event {
+			return s.CreateEvent("pipeline-"+group, group, group, types.Type{}, map[string]any{
+				"anonymousId": anonymousID,
+				"messageId":   messageID,
+			}, nopAck{})
+		}
+		s.SendEvent(newEvent("user-1", "contacts", "contacts-1"))
+		s.SendEvent(newEvent("user-2", "contacts", "other-user"))
+		s.SendEvent(newEvent("user-1", "orders", "orders-1"))
+
+		time.Sleep(maxQueueDelay)
+		synctest.Wait()
+		s.Close(t.Context())
+
+		if len(batches) == 0 {
+			t.Fatal("expected at least one delivered batch, got none")
+		}
+		expected := []string{"contacts-1", "orders-1"}
+		if !slices.Equal(batches[0], expected) {
+			t.Fatalf("expected first user batch %v, got %v", expected, batches[0])
+		}
 	})
 }
 
@@ -329,7 +457,7 @@ func Test_Sender_SameUserRebindPreservesOrder(t *testing.T) {
 		defer s.Close(t.Context())
 
 		newEvent := func(anonymousID, messageID string) *Event {
-			return s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+			return s.CreateEvent(testPipelineID, "Click", "events", types.Type{}, map[string]any{
 				"anonymousId": anonymousID,
 				"messageId":   messageID,
 			}, nopAck{})
@@ -368,8 +496,8 @@ func Test_Sender_SameUserRebindPreservesOrder(t *testing.T) {
 	})
 }
 
-// Test_Sender_SequenceOverflowRescale verifies that per-user ordering holds
-// across sequence overflow.
+// Test_Sender_SequenceOverflowRescale verifies that an ordering preserves
+// creation order across sequence overflow.
 func Test_Sender_SequenceOverflowRescale(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		var seen []string
@@ -383,20 +511,21 @@ func Test_Sender_SequenceOverflowRescale(t *testing.T) {
 		}
 		s := New(app, nil)
 
-		// Force the per-user sequence near overflow without creating a huge number
+		// Force the ordering sequence near overflow without creating a huge number
 		// of events, while still asserting only on externally visible ordering.
 		const userID = "user-overflow"
 		s.mu.Lock()
-		u := users.Get()
-		u.anonymousID = userID
-		u.queue.sequence.next = math.MaxInt - 1
-		u.queue.sequence.expected = math.MaxInt - 1
-		s.users[userID] = u
+		key := orderingKey{group: "events", anonymousID: userID}
+		o := orderingsPool.Get()
+		o.key = key
+		o.queue.sequence.next = math.MaxInt - 1
+		o.queue.sequence.expected = math.MaxInt - 1
+		s.orderings[key] = o
 		s.mu.Unlock()
 
 		makeEvent := func(messageID string) *Event {
 			t.Helper()
-			return s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+			return s.CreateEvent(testPipelineID, "Click", "events", types.Type{}, map[string]any{
 				"anonymousId": userID,
 				"messageId":   messageID,
 			}, nopAck{})
@@ -446,7 +575,7 @@ func Test_Sender_RetryAfterSendEventsErrorWithoutIteration(t *testing.T) {
 		}
 		s := New(app, nil)
 
-		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+		event := s.CreateEvent(testPipelineID, "Click", "events", types.Type{}, map[string]any{
 			"anonymousId": "user",
 			"messageId":   "msg-0",
 		}, nopAck{})
@@ -639,15 +768,15 @@ func Test_Sender_QueueEventUnblocksAfterDiscard(t *testing.T) {
 
 }
 
-// Test_Sender_UserRemoval verifies that users are removed after their last
-// event is discarded or sent.
-func Test_Sender_UserRemoval(t *testing.T) {
+// Test_Sender_OrderingRemoval verifies that orderings are removed after
+// their last event is discarded or sent.
+func Test_Sender_OrderingRemoval(t *testing.T) {
 	t.Run("DiscardBeforeEnqueue", func(t *testing.T) {
 		app := newTestApplication()
 		s := New(app, nil)
 		defer s.Close(t.Context())
 
-		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+		event := s.CreateEvent(testPipelineID, "Click", "events", types.Type{}, map[string]any{
 			"anonymousId": "user-1",
 			"messageId":   "msg-1",
 		}, nopAck{})
@@ -655,10 +784,50 @@ func Test_Sender_UserRemoval(t *testing.T) {
 		s.DiscardEvent(event)
 
 		s.mu.Lock()
-		_, ok := s.users["user-1"]
+		_, ok := s.orderings[orderingKey{group: "events", anonymousID: "user-1"}]
 		s.mu.Unlock()
 		if ok {
-			t.Fatal("expected user to be removed after discarding the only event before enqueue, got present")
+			t.Fatal("expected ordering to be removed after discarding the only event before enqueue, got present")
+		}
+	})
+
+	t.Run("SameUserDifferentGroups", func(t *testing.T) {
+		app := newTestApplication()
+		s := New(app, nil)
+		defer s.Close(t.Context())
+
+		newEvent := func(group, messageID string) *Event {
+			return s.CreateEvent(testPipelineID, "Click", group, types.Type{}, map[string]any{
+				"anonymousId": "user",
+				"messageId":   messageID,
+			}, nopAck{})
+		}
+		contacts := newEvent("contacts", "contacts-1")
+		orders := newEvent("orders", "orders-1")
+		contactsKey := orderingKey{group: "contacts", anonymousID: "user"}
+		ordersKey := orderingKey{group: "orders", anonymousID: "user"}
+
+		hasOrdering := func(key orderingKey) bool {
+			s.mu.Lock()
+			defer s.mu.Unlock()
+			_, ok := s.orderings[key]
+			return ok
+		}
+		if !hasOrdering(contactsKey) || !hasOrdering(ordersKey) {
+			t.Fatal("expected both orderings to be present after creating their events")
+		}
+
+		s.DiscardEvent(contacts)
+		if hasOrdering(contactsKey) {
+			t.Fatal("expected contacts ordering to be removed after discarding its only event")
+		}
+		if !hasOrdering(ordersKey) {
+			t.Fatal("expected orders ordering to remain until its event is processed")
+		}
+
+		s.DiscardEvent(orders)
+		if hasOrdering(ordersKey) {
+			t.Fatal("expected orders ordering to be removed after discarding its only event")
 		}
 	})
 
@@ -681,7 +850,7 @@ func Test_Sender_UserRemoval(t *testing.T) {
 		})
 		defer s.Close(t.Context())
 
-		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+		event := s.CreateEvent(testPipelineID, "Click", "events", types.Type{}, map[string]any{
 			"anonymousId": "user-2",
 			"messageId":   "msg-2",
 		}, nopAck{})
@@ -694,10 +863,10 @@ func Test_Sender_UserRemoval(t *testing.T) {
 		}
 
 		s.mu.Lock()
-		_, ok := s.users["user-2"]
+		_, ok := s.orderings[orderingKey{group: "events", anonymousID: "user-2"}]
 		s.mu.Unlock()
 		if ok {
-			t.Fatal("expected user to be removed after discarding during iteration, got present")
+			t.Fatal("expected ordering to be removed after discarding during iteration, got present")
 		}
 	})
 
@@ -716,7 +885,7 @@ func Test_Sender_UserRemoval(t *testing.T) {
 		})
 		defer s.Close(t.Context())
 
-		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+		event := s.CreateEvent(testPipelineID, "Click", "events", types.Type{}, map[string]any{
 			"anonymousId": "user-3",
 			"messageId":   "msg-3",
 		}, nopAck{})
@@ -729,17 +898,17 @@ func Test_Sender_UserRemoval(t *testing.T) {
 		}
 
 		s.mu.Lock()
-		_, ok := s.users["user-3"]
+		_, ok := s.orderings[orderingKey{group: "events", anonymousID: "user-3"}]
 		s.mu.Unlock()
 		if ok {
-			t.Fatal("expected user to be removed after sending the only event, got present")
+			t.Fatal("expected ordering to be removed after sending the only event, got present")
 		}
 	})
 }
 
 // createTestEvent creates a minimal event for tests.
 func createTestEvent(s *Sender, i int) *Event {
-	return s.CreateEvent(testPipelineID, "page", types.Type{}, map[string]any{
+	return s.CreateEvent(testPipelineID, "page", "events", types.Type{}, map[string]any{
 		"anonymousId": "user123",
 		"messageId":   fmt.Sprintf("msg-%d", i),
 	}, nopAck{})
