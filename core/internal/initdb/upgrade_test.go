@@ -6,66 +6,17 @@ package initdb
 
 import (
 	"testing"
-	"time"
 
 	"github.com/krenalis/krenalis/core/internal/db"
-	"github.com/krenalis/krenalis/test/testimages"
 	"github.com/krenalis/krenalis/tools/base58"
-
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // TestUpgrade verifies that database upgrades are applied and are idempotent.
 func TestUpgrade(t *testing.T) {
-	const (
-		databaseName = "krenalis"
-		user         = "krenalis"
-		password     = "krenalis"
-	)
-
 	ctx := t.Context()
-	container, err := postgres.Run(ctx,
-		testimages.PostgreSQL,
-		postgres.WithDatabase(databaseName),
-		postgres.WithUsername(user),
-		postgres.WithPassword(password),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(60*time.Second)),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		if err := testcontainers.TerminateContainer(container); err != nil {
-			t.Error(err)
-		}
-	})
-	host, err := container.Host(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	port, err := container.MappedPort(ctx, "5432/tcp")
-	if err != nil {
-		t.Fatal(err)
-	}
+	database := newTestDatabase(t)
 
-	database, err := db.Open(&db.Options{
-		Host:     host,
-		Port:     int(port.Num()),
-		Username: user,
-		Password: password,
-		Database: databaseName,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(database.Close)
-
-	_, err = database.Exec(ctx, `
+	_, err := database.Exec(ctx, `
 		CREATE TYPE notification_name AS ENUM ('EndPipelineRun');
 		CREATE TABLE metadata (
 			singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
@@ -182,9 +133,169 @@ func TestUpgrade(t *testing.T) {
 	assertPipelineMetricsSurvivePipelineDelete(t, database)
 	assertStateRequestSyncSchemaUpgraded(t, database)
 	assertDiscontinuedFunctionsUpgrade(t, database)
+	assertRateLimitLeaseFunction(t, database)
+	assertConsentStepColumns(t, database)
 
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatalf("expected second upgrade to succeed, got %s", err)
+	}
+}
+
+func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
+	t.Helper()
+	if _, err := database.Exec(t.Context(), `
+		SELECT granted_units
+		FROM acquire_rate_limit_leases($1::jsonb)`, `[
+			{"subject_kind":"organization","subject_id":"111111111111","requested_units":101}
+		]`); err == nil {
+		t.Fatal("lease request above 100 units succeeded")
+	}
+	if _, err := database.Exec(t.Context(), `
+		SELECT granted_units
+		FROM acquire_rate_limit_leases($1::jsonb)`, `[
+			{"subject_kind":"events","subject_id":"222222222222","requested_units":20001}
+		]`); err == nil {
+		t.Fatal("event lease request above 20,000 events succeeded")
+	}
+
+	_, err := database.Exec(t.Context(), `
+		UPDATE metadata
+		SET requests_rate_per_minute = 60,
+			requests_max_capacity = 100
+		WHERE singleton;
+		UPDATE organizations
+		SET organization_requests_rate_per_minute = 60,
+			organization_requests_max_capacity = 100,
+			workspace_requests_rate_per_minute = 60,
+			workspace_requests_max_capacity = 100,
+			workspace_events_rate_per_minute = 1000,
+			workspace_events_max_capacity = 20000
+		WHERE id = '111111111111'`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rows, err := database.Query(t.Context(), `
+		SELECT subject_kind, subject_id, granted_units, capacity_units,
+			available_units, rate_per_minute, refill_remainder
+		FROM acquire_rate_limit_leases($1::jsonb)`, `[
+			{"subject_kind":"platform","subject_id":"platform","requested_units":100},
+			{"subject_kind":"organization","subject_id":"111111111111","requested_units":100},
+			{"subject_kind":"workspace","subject_id":"222222222222","requested_units":100},
+			{"subject_kind":"events","subject_id":"222222222222","requested_units":20000}
+		]`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	grants := map[string]int{}
+	for rows.Next() {
+		var kind, id string
+		var granted, capacity, available, rate, remainder int
+		if err := rows.Scan(&kind, &id, &granted, &capacity, &available, &rate, &remainder); err != nil {
+			t.Fatal(err)
+		}
+		wantCapacity := 100
+		if kind == "events" {
+			wantCapacity = 20000
+		}
+		if capacity != wantCapacity {
+			t.Fatalf("expected capacity for %s %s %d, got %d", kind, id, wantCapacity, capacity)
+		}
+		if available != 0 || remainder != 0 {
+			t.Fatalf("expected exhausted bucket state for %s %s, got available=%d remainder=%d", kind, id, available, remainder)
+		}
+		wantRate := 60
+		if kind == "events" {
+			wantRate = 1000
+		}
+		if rate != wantRate {
+			t.Fatalf("expected rate for %s %s %d, got %d", kind, id, wantRate, rate)
+		}
+		grants[kind+":"+id] = granted
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if grants["platform:platform"] != 100 || grants["organization:111111111111"] != 100 ||
+		grants["workspace:222222222222"] != 100 || grants["events:222222222222"] != 20000 {
+		t.Fatalf("expected mixed batch grants for platform=100, organization=100, workspace=100, events=20,000, got %#v", grants)
+	}
+
+	// A second limiter process would execute the same database function. Its
+	// request cannot obtain the tokens already leased by the first process.
+	var granted int
+	err = database.QueryRow(t.Context(), `
+		SELECT granted_units
+		FROM acquire_rate_limit_leases($1::jsonb)`, `[
+			{"subject_kind":"organization","subject_id":"111111111111","requested_units":100}
+		]`).Scan(&granted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if granted != 0 {
+		t.Fatalf("expected second organization lease to grant 0 units, got %d", granted)
+	}
+
+	_, err = database.Exec(t.Context(), `
+		UPDATE rate_limit_buckets
+		SET available_units = 0,
+			last_refill_at = clock_timestamp() - INTERVAL '30 seconds',
+			refill_remainder = 0
+		WHERE subject_kind = 'organization'
+		  AND subject_id = '111111111111'`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = database.QueryRow(t.Context(), `
+		SELECT granted_units
+		FROM acquire_rate_limit_leases($1::jsonb)`, `[
+			{"subject_kind":"organization","subject_id":"111111111111","requested_units":30}
+		]`).Scan(&granted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if granted != 30 {
+		t.Fatalf("expected 30-second refill at 60 units per minute to grant 30 units, got %d", granted)
+	}
+
+	_, err = database.Exec(t.Context(), `
+		SELECT restore_rate_limit_capacity($1::jsonb)`, `[
+			{"subject_kind":"organization","subject_id":"111111111111","units":90},
+			{"subject_kind":"organization","subject_id":"222222222222","units":90}
+		]`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = database.Exec(t.Context(), `
+		SELECT restore_rate_limit_capacity($1::jsonb)`, `[
+			{"subject_kind":"organization","subject_id":"111111111111","units":20}
+		]`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = database.QueryRow(t.Context(), `
+		SELECT available_units
+		FROM rate_limit_buckets
+		WHERE subject_kind = 'organization'
+		  AND subject_id = '111111111111'`).Scan(&granted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if granted != 100 {
+		t.Fatalf("expected restored capacity to be capped at 100 units, got %d", granted)
+	}
+	var count int
+	err = database.QueryRow(t.Context(), `
+		SELECT COUNT(*)
+		FROM rate_limit_buckets
+		WHERE subject_kind = 'organization'
+		  AND subject_id = '222222222222'`).Scan(&count)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatalf("expected missing subject to remain absent, got %d rows", count)
 	}
 }
 
@@ -394,12 +505,14 @@ func assertPipelineMetricsUpgrade(t *testing.T, database *db.DB) {
 		"passed_3",
 		"passed_4",
 		"passed_5",
+		"passed_6",
 		"failed_0",
 		"failed_1",
 		"failed_2",
 		"failed_3",
 		"failed_4",
 		"failed_5",
+		"failed_6",
 	} {
 		expectedConstraints = append(expectedConstraints, "pipelines_metrics_"+column+"_not_null")
 	}
@@ -482,25 +595,39 @@ func assertOrganizationLimits(t *testing.T, database *db.DB) {
 	t.Helper()
 
 	var (
-		members     int
-		accessKeys  int
-		workspaces  int
-		connectors  int
-		connections int
-		pipelines   int
+		members                           int
+		accessKeys                        int
+		workspaces                        int
+		connectors                        int
+		connections                       int
+		pipelines                         int
+		organizationRequestsRatePerMinute int
+		organizationRequestsMaxCapacity   int
+		workspaceRequestsRatePerMinute    int
+		workspaceRequestsMaxCapacity      int
+		workspaceEventsRatePerMinute      int
+		workspaceEventsMaxCapacity        int
 	)
 	err := database.QueryRow(t.Context(), `
-		SELECT members_limit, access_keys_limit, workspaces_limit, connectors_limit, connections_limit, pipelines_limit
-		FROM organizations
-		WHERE id = '111111111111'`).Scan(&members, &accessKeys, &workspaces, &connectors, &connections, &pipelines)
+			SELECT members_limit, access_keys_limit, workspaces_limit, connectors_limit, connections_limit, pipelines_limit,
+				organization_requests_rate_per_minute, organization_requests_max_capacity,
+				workspace_requests_rate_per_minute, workspace_requests_max_capacity,
+				workspace_events_rate_per_minute, workspace_events_max_capacity
+			FROM organizations
+			WHERE id = '111111111111'`).Scan(&members, &accessKeys, &workspaces, &connectors, &connections, &pipelines,
+		&organizationRequestsRatePerMinute, &organizationRequestsMaxCapacity,
+		&workspaceRequestsRatePerMinute, &workspaceRequestsMaxCapacity, &workspaceEventsRatePerMinute, &workspaceEventsMaxCapacity)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if members != 10000 || accessKeys != 1000 || workspaces != 1000 || connectors != 1000 ||
-		connections != 10000 || pipelines != 10000 {
-		t.Fatalf("expected limits members=%d access_keys=%d workspaces=%d connectors=%d connections=%d pipelines=%d, got members=%d access_keys=%d workspaces=%d connectors=%d connections=%d pipelines=%d",
-			10000, 1000, 1000, 1000, 10000, 10000, members, accessKeys, workspaces, connectors, connections, pipelines)
+		connections != 10000 || pipelines != 10000 || organizationRequestsRatePerMinute != 1000 || organizationRequestsMaxCapacity != 1000 ||
+		workspaceRequestsRatePerMinute != 1000 || workspaceRequestsMaxCapacity != 1000 ||
+		workspaceEventsRatePerMinute != 1000 || workspaceEventsMaxCapacity != 20000 {
+		t.Fatalf("expected default organization limits, got members=%d access_keys=%d workspaces=%d connectors=%d connections=%d pipelines=%d organization_requests_rate_per_minute=%d organization_requests_max_capacity=%d workspace_requests_rate_per_minute=%d workspace_requests_max_capacity=%d workspace_events_rate_per_minute=%d workspace_events_max_capacity=%d",
+			members, accessKeys, workspaces, connectors, connections, pipelines, organizationRequestsRatePerMinute, organizationRequestsMaxCapacity,
+			workspaceRequestsRatePerMinute, workspaceRequestsMaxCapacity, workspaceEventsRatePerMinute, workspaceEventsMaxCapacity)
 	}
 }
 
@@ -516,22 +643,51 @@ func assertOrganizationLimitsHaveNoDefaults(t *testing.T, database *db.DB) {
 		"connectors_limit",
 		"connections_limit",
 		"pipelines_limit",
+		"organization_requests_rate_per_minute",
+		"organization_requests_max_capacity",
+		"workspace_requests_rate_per_minute",
+		"workspace_requests_max_capacity",
+		"workspace_events_rate_per_minute",
+		"workspace_events_max_capacity",
 	} {
-		hasDefault, err := database.QueryExists(t.Context(), `
-			SELECT FROM pg_attrdef d
-			JOIN pg_attribute a ON a.attrelid = d.adrelid AND a.attnum = d.adnum
-			JOIN pg_class c ON c.oid = d.adrelid
-			JOIN pg_namespace n ON n.oid = c.relnamespace
-			WHERE n.nspname = current_schema()
-				AND c.relname = 'organizations'
-				AND a.attname = $1`, column)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if hasDefault {
+		if hasDefault(t, database, "organizations", column) {
 			t.Fatalf("expected column organizations.%s to have no default, got a default", column)
 		}
 	}
+}
+
+// assertConsentStepColumns verifies that the consent step columns were added,
+// keeping their default on pipelines_runs and dropping it on
+// pipelines_metrics.
+func assertConsentStepColumns(t *testing.T, database *db.DB) {
+	t.Helper()
+
+	for _, column := range []string{"passed_6", "failed_6"} {
+		if !hasDefault(t, database, "pipelines_runs", column) {
+			t.Fatalf("expected column pipelines_runs.%s to have a default, got no default", column)
+		}
+		if hasDefault(t, database, "pipelines_metrics", column) {
+			t.Fatalf("expected column pipelines_metrics.%s to have no default, got a default", column)
+		}
+	}
+}
+
+// hasDefault reports whether table.column has a database default.
+func hasDefault(t *testing.T, database *db.DB, table, column string) bool {
+	t.Helper()
+
+	found, err := database.QueryExists(t.Context(), `
+		SELECT FROM pg_attrdef d
+		JOIN pg_attribute a ON a.attrelid = d.adrelid AND a.attnum = d.adnum
+		JOIN pg_class c ON c.oid = d.adrelid
+		JOIN pg_namespace n ON n.oid = c.relnamespace
+		WHERE n.nspname = current_schema()
+			AND c.relname = $1
+			AND a.attname = $2`, table, column)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return found
 }
 
 // assertIndexExists verifies that an index with name exists.

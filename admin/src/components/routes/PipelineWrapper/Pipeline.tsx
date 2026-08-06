@@ -5,6 +5,7 @@ import PipelineTransformation from './PipelineTransformation';
 import PipelineFile from './PipelineFile';
 import PipelineQuery from './PipelineQuery';
 import PipelineFilters from './PipelineFilters';
+import PipelineConsents from './PipelineConsents';
 import PipelineExportMode from './PipelineExportMode';
 import PipelineUpdateOnDuplicates from './PipelineUpdateOnDuplicates';
 import PipelineMatching from './PipelineMatching';
@@ -137,6 +138,7 @@ const Pipeline = ({ pipelineType: providedPipelineType, pipeline: providedPipeli
 				<PipelineHeader />
 				<div className='pipeline__body'>
 					{pipelineType!.fields.includes('Filter') && !isFileStorageImport && <PipelineFilters />}
+					{pipelineType!.fields.includes('Consents') && <PipelineConsents />}
 					{pipelineType!.fields.includes('Query') && <PipelineQuery />}
 					{pipelineType!.fields.includes('File') && <PipelineFile />}
 					{pipelineType!.fields.includes('TableName') && <PipelineTable />}

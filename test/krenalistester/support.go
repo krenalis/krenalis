@@ -107,6 +107,12 @@ func (k *Krenalis) CanGetOrganization(id string) error {
 	return k.TryCall("GET", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, nil)
 }
 
+// CanGetOrganizationWithoutRetry is like CanGetOrganization but returns a 429
+// response without retrying it.
+func (k *Krenalis) CanGetOrganizationWithoutRetry(id string) error {
+	return k.TryCallWithoutRetry("GET", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, nil)
+}
+
 // ConnectionIdentities returns the connection's identities in the given range,
 // together with their total count.
 func (k *Krenalis) ConnectionIdentities(conn string, first, limit int) ([]Identity, int) {
@@ -269,6 +275,20 @@ var DefaultOrganizationLimits = OrganizationLimits{
 	Connectors:  20,
 	Connections: 100,
 	Pipelines:   100,
+	Rates: RateLimits{
+		OrganizationSpecific: RateLimit{
+			RatePerMinute: 1000,
+			MaxCapacity:   1000,
+		},
+		WorkspaceSpecific: RateLimit{
+			RatePerMinute: 1000,
+			MaxCapacity:   1000,
+		},
+		EventsSpecific: RateLimit{
+			RatePerMinute: 1000,
+			MaxCapacity:   20_000,
+		},
+	},
 }
 
 // CreatePipeline creates a pipeline for the connection and target, returning
@@ -526,16 +546,24 @@ func (k *Krenalis) Organization(id string) Organization {
 
 // Organizations returns the organizations in the given range.
 func (k *Krenalis) Organizations(first, limit int) []Organization {
+	organizations, err := k.TryOrganizations(first, limit)
+	must(k.t, err)
+	return organizations
+}
+
+// TryOrganizations is like Organizations but returns an error instead of
+// failing the test.
+func (k *Krenalis) TryOrganizations(first, limit int) ([]Organization, error) {
 	var response struct {
 		Organizations []Organization `json:"organizations"`
 	}
 	path := fmt.Sprintf("/v1/organizations?first=%d&limit=%d", first, limit)
-	k.Call("GET", path, organizationsHeaders(), nil, &response)
-	return response.Organizations
+	err := k.TryCall("GET", path, organizationsHeaders(), nil, &response)
+	return response.Organizations, err
 }
 
-// organizationsHeaders returns the headers needed to call the organizations
-// API.
+// organizationsHeaders returns the headers needed to call the platform
+// management API.
 func organizationsHeaders() http.Header {
 	return http.Header{
 		"Krenalis-Workspace": nil, // so that Call does not add automatically the header.
@@ -688,8 +716,9 @@ func (k *Krenalis) SendEvent(writeKey string, message analytics.Message) {
 	client, err := analytics.NewWithConfig(
 		writeKey,
 		analytics.Config{
-			Endpoint: endpoint,
-			Callback: cb,
+			Endpoint:  endpoint,
+			BatchSize: 1,
+			Callback:  cb,
 		},
 	)
 	if err != nil {
@@ -699,13 +728,13 @@ func (k *Krenalis) SendEvent(writeKey string, message analytics.Message) {
 	if err != nil {
 		k.t.Fatalf("cannot enqueue event: %s", err)
 	}
-	err = client.Close()
+	err = <-cb.ch
 	if err != nil {
 		k.t.Fatalf("cannot send event: %s", err)
 	}
-	err = <-cb.ch
+	err = client.Close()
 	if err != nil {
-		k.t.Fatalf("cannot close client when sending events: %s", err)
+		k.t.Fatalf("cannot close client after sending event: %s", err)
 	}
 }
 
@@ -724,7 +753,7 @@ func (s sendEventCallback) Failure(msg analytics.Message, err error) {
 }
 
 // SetOrganizationStatus enables or disables an organization through the
-// organizations API.
+// platform management API.
 func (k *Krenalis) SetOrganizationStatus(id string, enabled bool) {
 	must(k.t, k.TrySetOrganizationStatus(id, enabled, organizationsHeaders()))
 }
@@ -957,7 +986,7 @@ func (k *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...string) {
 				if run.Error != "" {
 					k.t.Fatalf("error running pipeline %s for run %s: %s", run.Pipeline, run.ID, run.Error)
 				}
-				if !allowFailed && run.Failed != [6]int{} {
+				if !allowFailed && run.Failed != [7]int{} {
 					k.t.Fatalf("error running pipeline %s for run %s: %d failed", run.Pipeline, run.ID, run.Failed)
 				}
 				return
@@ -978,7 +1007,7 @@ func (k *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...string) {
 			if run.Error != "" {
 				k.t.Fatalf("error running pipeline %s for run %s: %s", run.Pipeline, run.ID, run.Error)
 			}
-			if !allowFailed && run.Failed != [6]int{} {
+			if !allowFailed && run.Failed != [7]int{} {
 				k.t.Fatalf("error running pipeline %s for run %s: %d failed", run.Pipeline, run.ID, run.Failed)
 			}
 		}

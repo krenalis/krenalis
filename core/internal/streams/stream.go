@@ -71,8 +71,11 @@ type BatchPublisher interface {
 	Done(ctx context.Context) error
 }
 
-// Ack acknowledges an event.
-type Ack func()
+// Ack acknowledges an event read from a stream.
+type Ack interface {
+	// Acknowledge acknowledges the event.
+	Acknowledge()
+}
 
 // Event represents an event read from the stream.
 type Event struct {

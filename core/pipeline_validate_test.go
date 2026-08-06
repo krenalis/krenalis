@@ -427,6 +427,54 @@ func Test_validatePipeline(t *testing.T) {
 			connectionConnectorType: state.SDK,
 		},
 		{
+			name: "GOOD: Source/SDK/Event - with required consents",
+			pipeline: PipelineToSet{
+				Name: "Import events into the data warehouse",
+				RequiredConsents: RequiredConsents{
+					Operator: PurposesAnd,
+					Purposes: []string{"marketing", "analytics"},
+				},
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.SDK,
+		},
+		{
+			name: "GOOD: Source/SDK/User - with required consents",
+			pipeline: PipelineToSet{
+				Name:     "Import users",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+				RequiredConsents: RequiredConsents{
+					Operator: PurposesAnd,
+					Purposes: []string{"marketing"},
+				},
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.SDK,
+		},
+		{
+			name: "GOOD: Source/Webhook/Event - with required consents",
+			pipeline: PipelineToSet{
+				Name: "Import events into the data warehouse",
+				RequiredConsents: RequiredConsents{
+					Operator: PurposesOr,
+					Purposes: []string{"marketing"},
+				},
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.Webhook,
+		},
+		{
 			name: "GOOD: Source/Webhook/User - with mapping",
 			pipeline: PipelineToSet{
 				Name:     "Import users",
@@ -596,6 +644,108 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "traits.email",
 					},
 				},
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+		},
+		{
+			name: "GOOD: Destination/Application/Event - with required consents",
+			pipeline: PipelineToSet{
+				Name:     "Dispatch events to application",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+				RequiredConsents: RequiredConsents{
+					Operator: PurposesAnd,
+					Purposes: []string{"marketing", "analytics"},
+				},
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+		},
+		{
+			name: "BAD: Destination/Application/Event - duplicated required consent purpose",
+			pipeline: PipelineToSet{
+				Name:     "Dispatch events to application",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+				RequiredConsents: RequiredConsents{Purposes: []string{"marketing", "marketing"}},
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+			err:                     `required consent purpose "marketing" is duplicated`,
+		},
+		{
+			name: "BAD: Source/Application/User - required consents are not allowed",
+			pipeline: PipelineToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.String()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				RequiredConsents: RequiredConsents{Purposes: []string{"marketing"}},
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.Application,
+			err:                     "required consents are not allowed",
+		},
+		{
+			name: "GOOD: Destination/Application/Event - missing required consents operator defaults to and",
+			pipeline: PipelineToSet{
+				Name:     "Dispatch events to application",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+				RequiredConsents: RequiredConsents{Purposes: []string{"marketing"}},
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+		},
+		{
+			name: "GOOD: Destination/Application/Event - required consents operator without required consent purposes",
+			pipeline: PipelineToSet{
+				Name:     "Dispatch events to application",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+				RequiredConsents: RequiredConsents{Operator: PurposesAnd},
 			},
 			target:                  state.TargetEvent,
 			connectionRole:          state.Destination,

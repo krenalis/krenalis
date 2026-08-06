@@ -106,7 +106,7 @@ func testSenderRandomScenario(t *testing.T, test senderRandomTest) senderRandomC
 				"anonymousId": anonymousID,
 				"messageId":   messageID,
 			},
-			Ack: nopAck,
+			Ack: nopAck{},
 		})
 		expectedEvents[messageID] = senderRandomExpectedEvent{
 			anonymousID: anonymousID,

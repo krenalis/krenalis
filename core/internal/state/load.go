@@ -275,14 +275,19 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	// Read all organizations.
 	state.organizations = map[string]*Organization{}
 	err = tx.QueryScan(ctx, "SELECT id, name, enabled, members_limit, access_keys_limit, workspaces_limit,"+
-		" connectors_limit, connections_limit, pipelines_limit FROM organizations", func(rows *db.Rows) error {
+		" connectors_limit, connections_limit, pipelines_limit, organization_requests_rate_per_minute, organization_requests_max_capacity,"+
+		" workspace_requests_rate_per_minute, workspace_requests_max_capacity, workspace_events_rate_per_minute, workspace_events_max_capacity FROM organizations", func(rows *db.Rows) error {
 		for rows.Next() {
 			org := &Organization{mu: new(sync.Mutex)}
 			var limits OrganizationLimits
 			if err := rows.Scan(&org.ID, &org.Name, &org.Enabled, &limits.Members, &limits.AccessKeys,
-				&limits.Workspaces, &limits.Connectors, &limits.Connections, &limits.Pipelines); err != nil {
+				&limits.Workspaces, &limits.Connectors, &limits.Connections, &limits.Pipelines,
+				&limits.Rates.OrganizationSpecific.RatePerMinute, &limits.Rates.OrganizationSpecific.MaxCapacity,
+				&limits.Rates.WorkspaceSpecific.RatePerMinute, &limits.Rates.WorkspaceSpecific.MaxCapacity,
+				&limits.Rates.EventsSpecific.RatePerMinute, &limits.Rates.EventsSpecific.MaxCapacity); err != nil {
 				return fmt.Errorf("loading organization %s: %s", org.ID, err)
 			}
+			org.bucket = state.rateLimiter.NewBucket("organization", org.ID, requestLeaseSize, requestMaxUnits)
 			org.usage = newOrganizationUsage(limits)
 			org.workspaces = map[string]*Workspace{}
 			org.members = map[string]bool{}
@@ -332,9 +337,10 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				var profileSchema []byte
 				var alterProfileSchemaSchema []byte
 				ws := &Workspace{
-					mu:          new(sync.Mutex),
-					connections: map[string]*Connection{},
-					accounts:    map[int]*Account{},
+					mu:              new(sync.Mutex),
+					connections:     map[string]*Connection{},
+					accounts:        map[int]*Account{},
+					consentPurposes: map[string]*ConsentPurpose{},
 				}
 				var settingsKey, mcpSettingsKey []byte
 				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehousePlatform,
@@ -349,6 +355,8 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 					&ws.pipelinesToPurge); err != nil {
 					return fmt.Errorf("loading workspace %s: %s", ws.ID, err)
 				}
+				ws.bucket = state.rateLimiter.NewBucket("workspace", ws.ID, requestLeaseSize, requestMaxUnits)
+				ws.eventBucket = state.rateLimiter.NewBucket("events", ws.ID, eventLeaseSize, eventMaxUnits)
 				ws.organization = state.organizations[organizationID]
 				if _, ok := state.warehousePlatforms[warehousePlatform]; !ok {
 					return fmt.Errorf("loading workspace %s: warehouse platform for %q is required but not registered. (Possibly forgotten import?)", ws.ID, warehousePlatform)
@@ -419,6 +427,23 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		})
 	if err != nil {
 		return fmt.Errorf("cannot load accounts: %s", err)
+	}
+
+	// Read all consent purposes.
+	err = tx.QueryScan(ctx, "SELECT workspace, code, name FROM consent_purposes",
+		func(rows *db.Rows) error {
+			for rows.Next() {
+				cp := ConsentPurpose{}
+				var workspaceID string
+				if err := rows.Scan(&workspaceID, &cp.Code, &cp.Name); err != nil {
+					return fmt.Errorf("loading consent purpose %s: %s", cp.Code, err)
+				}
+				state.workspaces[workspaceID].consentPurposes[cp.Code] = &cp
+			}
+			return nil
+		})
+	if err != nil {
+		return fmt.Errorf("cannot load consent purposes: %s", err)
 	}
 
 	// Read all connections.
@@ -504,12 +529,12 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 
 	// Read all pipelines.
 	err = tx.QueryScan(ctx, "SELECT id, connection, target, event_type, name, enabled, schedule_start,\n"+
-		"schedule_period, in_schema, out_schema, filter, transformation_mapping, transformation_id,\n"+
-		"transformation_version, transformation_language, transformation_source, transformation_preserve_json,\n"+
-		"transformation_in_paths, transformation_out_paths, query, format, path, sheet, compression::TEXT,\n"+
-		"order_by, format_settings, export_mode, matching_in, matching_out, update_on_duplicates, table_name,\n"+
-		"table_key, user_id_column, updated_at_column, updated_at_format, health, properties_to_unset\n"+
-		"FROM pipelines",
+		"schedule_period, in_schema, out_schema, filter, required_consents, required_consents_operator,\n"+
+		"transformation_mapping, transformation_id, transformation_version, transformation_language,\n"+
+		"transformation_source, transformation_preserve_json, transformation_in_paths, transformation_out_paths,\n"+
+		"query, format, path, sheet, compression::TEXT, order_by, format_settings, export_mode, matching_in,\n"+
+		"matching_out, update_on_duplicates, table_name, table_key, user_id_column, updated_at_column,\n"+
+		"updated_at_format, health, properties_to_unset FROM pipelines",
 		func(rows *db.Rows) error {
 			for rows.Next() {
 				var connectionID string
@@ -520,11 +545,11 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				pipeline := Pipeline{}
 				err := rows.Scan(&pipeline.ID, &connectionID, &pipeline.Target, &eventType, &pipeline.Name,
 					&pipeline.Enabled, &pipeline.ScheduleStart, &pipeline.SchedulePeriod, &rawInSchema, &rawOutSchema,
-					&filter, &mapping, &function.ID, &function.Version, &function.Language, &function.Source, &function.PreserveJSON,
-					&pipeline.Transformation.InPaths, &pipeline.Transformation.OutPaths, &pipeline.Query, &format,
-					&pipeline.Path, &pipeline.Sheet, &pipeline.Compression, &pipeline.OrderBy, &pipeline.FormatSettings, &pipeline.ExportMode,
-					&pipeline.Matching.In, &pipeline.Matching.Out, &pipeline.UpdateOnDuplicates, &pipeline.TableName,
-					&pipeline.TableKey, &pipeline.UserIDColumn, &pipeline.UpdatedAtColumn,
+					&filter, &pipeline.RequiredConsents.Purposes, &pipeline.RequiredConsents.Operator, &mapping, &function.ID,
+					&function.Version, &function.Language, &function.Source, &function.PreserveJSON, &pipeline.Transformation.InPaths,
+					&pipeline.Transformation.OutPaths, &pipeline.Query, &format, &pipeline.Path, &pipeline.Sheet, &pipeline.Compression,
+					&pipeline.OrderBy, &pipeline.FormatSettings, &pipeline.ExportMode, &pipeline.Matching.In, &pipeline.Matching.Out,
+					&pipeline.UpdateOnDuplicates, &pipeline.TableName, &pipeline.TableKey, &pipeline.UserIDColumn, &pipeline.UpdatedAtColumn,
 					&pipeline.UpdatedAtFormat, &pipeline.Health, &pipeline.propertiesToUnset)
 				if err != nil {
 					return fmt.Errorf("loading pipeline %s: %s", pipeline.ID, err)

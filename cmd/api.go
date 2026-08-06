@@ -102,7 +102,7 @@ func (api api) ChangeMemberPasswordByToken(_ http.ResponseWriter, r *http.Reques
 
 // Connector returns a connector.
 func (api api) Connector(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := api.authenticateRequest(r); err != nil {
+	if _, _, err := api.admitWorkspaceOptionalRequest(r, x1); err != nil {
 		return nil, err
 	}
 	return api.core.Connector(api.code(r))
@@ -110,7 +110,7 @@ func (api api) Connector(_ http.ResponseWriter, r *http.Request) (any, error) {
 
 // ConnectorDocumentation returns the documentation of a connector.
 func (api api) ConnectorDocumentation(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := api.authenticateRequest(r); err != nil {
+	if _, _, err := api.admitWorkspaceOptionalRequest(r, x1); err != nil {
 		return nil, err
 	}
 	return api.core.ConnectorDocumentation(api.code(r))
@@ -118,63 +118,59 @@ func (api api) ConnectorDocumentation(_ http.ResponseWriter, r *http.Request) (a
 
 // Connectors returns the connectors.
 func (api api) Connectors(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := api.authenticateRequest(r); err != nil {
+	if _, _, err := api.admitWorkspaceOptionalRequest(r, x1); err != nil {
 		return nil, err
 	}
 	return map[string]any{"connectors": api.core.Connectors()}, nil
 }
 
+// organizationLimits contains the limits used when creating or updating an
+// organization.
+type organizationLimits struct {
+	Members     *int `json:"members"`
+	AccessKeys  *int `json:"accessKeys"`
+	Workspaces  *int `json:"workspaces"`
+	Connectors  *int `json:"connectors"`
+	Connections *int `json:"connections"`
+	Pipelines   *int `json:"pipelines"`
+	Rates       *struct {
+		OrganizationSpecific *struct {
+			RatePerMinute *int `json:"ratePerMinute"`
+			MaxCapacity   *int `json:"maxCapacity"`
+		} `json:"organizationSpecific"`
+		WorkspaceSpecific *struct {
+			RatePerMinute *int `json:"ratePerMinute"`
+			MaxCapacity   *int `json:"maxCapacity"`
+		} `json:"workspaceSpecific"`
+		EventsSpecific *struct {
+			RatePerMinute *int `json:"ratePerMinute"`
+			MaxCapacity   *int `json:"maxCapacity"`
+		} `json:"eventsSpecific"`
+	} `json:"rates"`
+}
+
 // CreateOrganization creates a new organization.
 //
-// Authentication is performed using the organizations API key.
+// Authentication is performed using the platform management API key.
 func (api api) CreateOrganization(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := api.authenticateOrganizationsRequest(r); err != nil {
+	if err := api.admitPlatformRequest(r, x1); err != nil {
 		return nil, err
 	}
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
 	var body struct {
-		Name    string `json:"name"`
-		Enabled bool   `json:"enabled"`
-		Limits  struct {
-			Members     *int `json:"members"`
-			AccessKeys  *int `json:"accessKeys"`
-			Workspaces  *int `json:"workspaces"`
-			Connectors  *int `json:"connectors"`
-			Connections *int `json:"connections"`
-			Pipelines   *int `json:"pipelines"`
-		} `json:"limits"`
+		Name    string              `json:"name"`
+		Enabled bool                `json:"enabled"`
+		Limits  *organizationLimits `json:"limits"`
 	}
 	err := json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	if body.Limits.Members == nil {
-		return nil, errors.BadRequest("organization limit for members is required")
-	}
-	if body.Limits.AccessKeys == nil {
-		return nil, errors.BadRequest("organization limit for access keys is required")
-	}
-	if body.Limits.Workspaces == nil {
-		return nil, errors.BadRequest("organization limit for workspaces is required")
-	}
-	if body.Limits.Connectors == nil {
-		return nil, errors.BadRequest("organization limit for connectors is required")
-	}
-	if body.Limits.Connections == nil {
-		return nil, errors.BadRequest("organization limit for connections is required")
-	}
-	if body.Limits.Pipelines == nil {
-		return nil, errors.BadRequest("organization limit for pipelines is required")
-	}
-	limits := core.OrganizationLimits{
-		Members:     *body.Limits.Members,
-		AccessKeys:  *body.Limits.AccessKeys,
-		Workspaces:  *body.Limits.Workspaces,
-		Connectors:  *body.Limits.Connectors,
-		Connections: *body.Limits.Connections,
-		Pipelines:   *body.Limits.Pipelines,
+	limits, err := parseOrganizationLimits(body.Limits)
+	if err != nil {
+		return nil, err
 	}
 	id, err := api.core.CreateOrganization(r.Context(), body.Name, body.Enabled, limits)
 	if err != nil {
@@ -185,7 +181,7 @@ func (api api) CreateOrganization(_ http.ResponseWriter, r *http.Request) (any, 
 
 // EventSchema returns the event schema.
 func (api api) EventSchema(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := api.authenticateRequest(r); err != nil {
+	if _, _, err := api.admitWorkspaceOptionalRequest(r, x1); err != nil {
 		return nil, err
 	}
 	return core.EventSchema(), nil
@@ -284,9 +280,9 @@ func (api api) MemberInvitation(_ http.ResponseWriter, r *http.Request) (any, er
 
 // Organization returns the organization with the given identifier.
 //
-// Authentication is performed using the organizations API key.
+// Authentication is performed using the platform management API key.
 func (api api) Organization(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := api.authenticateOrganizationsRequest(r); err != nil {
+	if err := api.admitPlatformRequest(r, x1); err != nil {
 		return nil, err
 	}
 	return api.core.Organization(r.PathValue("id"))
@@ -294,9 +290,9 @@ func (api api) Organization(_ http.ResponseWriter, r *http.Request) (any, error)
 
 // Organizations returns the organizations.
 //
-// Authentication is performed using the organizations API key.
+// Authentication is performed using the platform management API key.
 func (api api) Organizations(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if err := api.authenticateOrganizationsRequest(r); err != nil {
+	if err := api.admitPlatformRequest(r, x1); err != nil {
 		return nil, err
 	}
 	q := r.URL.Query()
@@ -470,7 +466,7 @@ func (api api) TransformData(_ http.ResponseWriter, r *http.Request) (any, error
 
 // TransformationLanguages returns the supported transformation languages.
 func (api api) TransformationLanguages(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := api.authenticateRequest(r); err != nil {
+	if _, _, err := api.admitWorkspaceOptionalRequest(r, x1); err != nil {
 		return nil, err
 	}
 	languages := api.core.TransformationLanguages()
@@ -499,7 +495,7 @@ func (api api) ValidateExpression(_ http.ResponseWriter, r *http.Request) (any, 
 
 // WarehousePlatforms returns the supported data warehouse platforms.
 func (api api) WarehousePlatforms(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := api.authenticateRequest(r); err != nil {
+	if _, _, err := api.admitWorkspaceOptionalRequest(r, x1); err != nil {
 		return nil, err
 	}
 	return map[string]any{"platforms": api.core.WarehousePlatforms()}, nil
@@ -507,6 +503,83 @@ func (api api) WarehousePlatforms(_ http.ResponseWriter, r *http.Request) (any, 
 
 func (api api) code(r *http.Request) string {
 	return r.PathValue("code")
+}
+
+// parseOrganizationLimits parses the organization limits.
+func parseOrganizationLimits(limits *organizationLimits) (core.OrganizationLimits, error) {
+	if limits == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("organization limits are required")
+	}
+	if limits.Members == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("member limit is required")
+	}
+	if limits.AccessKeys == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("access key limit is required")
+	}
+	if limits.Workspaces == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("workspace limit is required")
+	}
+	if limits.Connectors == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("connector limit is required")
+	}
+	if limits.Connections == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("connection limit is required")
+	}
+	if limits.Pipelines == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("pipeline limit is required")
+	}
+	if limits.Rates == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("rate limit is required")
+	}
+	if limits.Rates.OrganizationSpecific == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("organization request limit is required")
+	}
+	if limits.Rates.OrganizationSpecific.RatePerMinute == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("organization request rate per minute limit is required")
+	}
+	if limits.Rates.OrganizationSpecific.MaxCapacity == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("organization request maximum capacity is required")
+	}
+	if limits.Rates.WorkspaceSpecific == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("workspace request limit is required")
+	}
+	if limits.Rates.WorkspaceSpecific.RatePerMinute == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("workspace request rate per minute limit is required")
+	}
+	if limits.Rates.WorkspaceSpecific.MaxCapacity == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("workspace request maximum capacity is required")
+	}
+	if limits.Rates.EventsSpecific == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("event limit is required")
+	}
+	if limits.Rates.EventsSpecific.RatePerMinute == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("event rate per minute limit is required")
+	}
+	if limits.Rates.EventsSpecific.MaxCapacity == nil {
+		return core.OrganizationLimits{}, errors.BadRequest("event maximum capacity is required")
+	}
+	return core.OrganizationLimits{
+		Members:     *limits.Members,
+		AccessKeys:  *limits.AccessKeys,
+		Workspaces:  *limits.Workspaces,
+		Connectors:  *limits.Connectors,
+		Connections: *limits.Connections,
+		Pipelines:   *limits.Pipelines,
+		Rates: core.RateLimits{
+			OrganizationSpecific: core.RateLimit{
+				RatePerMinute: *limits.Rates.OrganizationSpecific.RatePerMinute,
+				MaxCapacity:   *limits.Rates.OrganizationSpecific.MaxCapacity,
+			},
+			WorkspaceSpecific: core.RateLimit{
+				RatePerMinute: *limits.Rates.WorkspaceSpecific.RatePerMinute,
+				MaxCapacity:   *limits.Rates.WorkspaceSpecific.MaxCapacity,
+			},
+			EventsSpecific: core.RateLimit{
+				RatePerMinute: *limits.Rates.EventsSpecific.RatePerMinute,
+				MaxCapacity:   *limits.Rates.EventsSpecific.MaxCapacity,
+			},
+		},
+	}, nil
 }
 
 // splitQueryParameters expands comma-separated query parameter values.
