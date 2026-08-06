@@ -35,9 +35,9 @@ const traces = false  // set to true to trace execution flow
 
 var tracesMu sync.Mutex
 
-// postponeMarker is assigned to a user when an iterator postpones one of its
-// events. It prevents further events from that user being consumed by another
-// iterator until the postponed event is processed, preserving event order.
+// postponeMarker is assigned to an ordering when an iterator postpones
+// one of its events. It prevents further events with the same ordering key from
+// being consumed by another iterator until the postponed event is processed.
 var postponeMarker = new(iterator)
 
 type Application interface {
@@ -69,7 +69,7 @@ type Event struct {
 	connectors.Event             // original event.
 	createdAt        time.Time   // time at which the event was created.
 	pipeline         string      // pipeline ID.
-	user             *user       // user to whom the event belongs.
+	ordering         *ordering   // shared by events from the same user and ordering group.
 	sequence         int         // sequence number; access is synchronized via Sender.mu.
 	discarded        bool        // true if DiscardEvent was called for this event.
 	iterator         *iterator   // iterator that consumed the event; nil if it hasn't been consumed.
@@ -81,14 +81,14 @@ func (e *Event) CreatedAt() time.Time {
 }
 
 // Sender sends events, buffering them internally for batch delivery.
-// It ensures that events from the same user (i.e., with the same Anonymous ID)
-// are delivered to the application in the exact order they were received.
+//
+// It ensures that events with the same user and ordering group are sent in the
+// order established by calls to CreateEvent.
 //
 // To send an event, follow these steps:
-//  1. Call the CreateEvent method. The order in which this is called determines
-//     delivery order.
-//  2. (Optional) Transform the event and set the Event.Properties field.
-//  3. Call the SendEvent method.
+//  1. Call CreateEvent. The order of these calls determines the delivery order.
+//  2. Optionally transform the event and set Event.Properties.
+//  3. Call SendEvent.
 type Sender struct {
 	connector string // application connector.
 	metrics   *metrics.Collector
@@ -98,19 +98,19 @@ type Sender struct {
 		queueWait      *prometheus.HistogramBuf
 	}
 
-	mu                 sync.Mutex
-	waitTime           func(pattern string) (time.Duration, error)               // function that returns an estimate of how long to wait before calling sendEvents.
-	sendEvents         func(ctx context.Context, events connectors.Events) error // function that sends the events to the application.
-	queue              queue                                                     // events queue.
-	users              map[string]*user                                          // users by anonymous id; protected by mu.
-	releasableUsers    map[*user]struct{}                                        // users that have been iterated and are now ready to be released.
-	iterator           *iterator                                                 // current iterator; protected by mu.
-	available          int                                                       // number of available (non-read) records; protected by mu.
-	availableSince     time.Time                                                 // when available first became > 0.
-	schedule           *time.Timer                                               // timer to trigger an iterator every maxQueueDelay; protected by mu.
-	minBatchSize       int                                                       // minimum number of events in the queue required to trigger a new iteration.
-	rateLimiterPattern string                                                    // pattern of the rate limiter that defines how requests are throttled over time.
-	sent               func(messageID string, err error)                         // function called in tests when an event is sent or discarded.
+	mu                  sync.Mutex
+	waitTime            func(pattern string) (time.Duration, error)               // function that returns an estimate of how long to wait before calling sendEvents.
+	sendEvents          func(ctx context.Context, events connectors.Events) error // function that sends the events to the application.
+	queue               queue                                                     // events queue.
+	orderings           map[orderingKey]*ordering                                 // orderings indexed by orderingKey, one per user and ordering group; protected by mu.
+	releasableOrderings map[*ordering]struct{}                                    // orderings that have been iterated and are now ready to be released.
+	iterator            *iterator                                                 // current iterator; protected by mu.
+	available           int                                                       // number of available (non-read) records; protected by mu.
+	availableSince      time.Time                                                 // when available first became > 0.
+	schedule            *time.Timer                                               // timer to trigger an iterator every maxQueueDelay; protected by mu.
+	minBatchSize        int                                                       // minimum number of events in the queue required to trigger a new iteration.
+	rateLimiterPattern  string                                                    // pattern of the rate limiter that defines how requests are throttled over time.
+	sent                func(messageID string, err error)                         // function called in tests when an event is sent or discarded.
 
 	close struct {
 		closed bool                 // indicates whether the sender is closed; protected by mu.
@@ -168,14 +168,14 @@ func (q *queue) assertTotal(n int) {
 // metrics collector, or nil if no metrics are collected.
 func New(app Application, metrics *metrics.Collector) *Sender {
 	s := &Sender{
-		connector:       app.Connector(),
-		waitTime:        app.WaitTime,
-		sendEvents:      app.SendEvents,
-		metrics:         metrics,
-		users:           make(map[string]*user),
-		releasableUsers: make(map[*user]struct{}),
-		schedule:        newSchedule(),
-		minBatchSize:    min(10, MaxQueuedEvents),
+		connector:           app.Connector(),
+		waitTime:            app.WaitTime,
+		sendEvents:          app.SendEvents,
+		metrics:             metrics,
+		orderings:           make(map[orderingKey]*ordering),
+		releasableOrderings: make(map[*ordering]struct{}),
+		schedule:            newSchedule(),
+		minBatchSize:        min(10, MaxQueuedEvents),
 	}
 	s.queue.events = make([]*Event, 0, min(64, MaxQueuedEvents))
 	s.queue.cond.L = &s.mu
@@ -226,24 +226,25 @@ func (s *Sender) Close(ctx context.Context) {
 	return
 }
 
-// CreateEvent creates a new event using the given pipeline, type, schema,
-// attributes, and acknowledgment.
+// CreateEvent creates a new event using the given pipeline, type, ordering
+// group, schema, attributes, and acknowledgment.
 //
 // The caller must pass the returned event to SendEvent, optionally after
 // setting Properties, or to DiscardEvent if the event should not be sent.
-func (s *Sender) CreateEvent(pipeline, typ string, schema types.Type, attributes map[string]any, ack streams.Ack) *Event {
+func (s *Sender) CreateEvent(pipeline, typ, orderingGroup string, schema types.Type, attributes map[string]any, ack streams.Ack) *Event {
 	anonymousID, ok := attributes["anonymousId"].(string)
 	if !ok {
 		panic("CreateEvent called with an event missing anonymousId")
 	}
+	orderingKey := orderingKey{group: orderingGroup, anonymousID: anonymousID}
 	s.mu.Lock()
-	u, ok := s.users[anonymousID]
+	o, ok := s.orderings[orderingKey]
 	if !ok {
-		u = users.Get()
-		u.anonymousID = anonymousID
-		s.users[anonymousID] = u
+		o = orderingsPool.Get()
+		o.key = orderingKey
+		s.orderings[orderingKey] = o
 	}
-	sequence := u.queue.next()
+	sequence := o.queue.next()
 	s.mu.Unlock()
 	ev := &Event{
 		Event: connectors.Event{
@@ -256,7 +257,7 @@ func (s *Sender) CreateEvent(pipeline, typ string, schema types.Type, attributes
 		},
 		createdAt: time.Now().UTC(),
 		pipeline:  pipeline,
-		user:      u,
+		ordering:  o,
 		sequence:  sequence,
 		ack:       ack,
 	}
@@ -275,8 +276,8 @@ func (s *Sender) DiscardEvent(event *Event) {
 
 // SendEvent enqueues an event to be sent later, possibly in a batch.
 //
-// Events from the same user (i.e., with the same anonymousId) are sent in the
-// order they were created.
+// Events from the same user and ordering group are sent in the order they were
+// created.
 //
 // SendEvent must not be called if DiscardEvent or SendEvent have already been
 // called with the same event.
@@ -346,21 +347,21 @@ func (s *Sender) discard(err error) {
 	}
 	// Dequeue the event.
 	s.queue.dequeue(i)
-	// Update the user.
-	u := e.user
-	u.totals--
-	u.consumed--
-	if u.consumed == 0 {
-		u.iterator = nil
-		s.addAvailable(u.totals)
+	// Update the ordering.
+	o := e.ordering
+	o.total--
+	o.consumed--
+	if o.consumed == 0 {
+		o.iterator = nil
+		s.addAvailable(o.total)
 	}
-	if u.disposable() {
-		s.disposeUser(u)
+	if o.disposable() {
+		s.disposeOrdering(o)
 	}
 	// Update the iterator.
 	s.iterator.numConsumed--
 	if s.iterator.numConsumed == 0 {
-		s.iterator.sameUser.user = nil
+		s.iterator.sameUser.anonymousID = ""
 		s.iterator.index = i + 1
 	}
 	trace("Sender.discard: iterator %p; discard index %d, current %d; pipeline %s, message ID %q\n",
@@ -377,14 +378,16 @@ func (s *Sender) discard(err error) {
 	}
 }
 
-// disposeUser releases a user instance back to the pool and removes it from the
-// Sender. It must be called only after the user no longer owns any events.
-// Use u.disposable() to check whether it is safe to dispose the user.
+// disposeOrdering removes an ordering from s.orderings and returns it to the
+// pool.
 //
-// It must be called holding the s.mu mutex.
-func (s *Sender) disposeUser(u *user) {
-	delete(s.users, u.anonymousID)
-	users.Put(u)
+// The ordering must be disposable before this method is called. Use
+// o.disposable() to verify that it is safe to release.
+//
+// s.mu must be held when calling this method.
+func (s *Sender) disposeOrdering(o *ordering) {
+	delete(s.orderings, o.key)
+	orderingsPool.Put(o)
 }
 
 // iterated marks the iteration of the current iterator as completed, allowing
@@ -413,7 +416,7 @@ func (s *Sender) iterated() {
 		}
 	}
 	s.iterator = nil
-	s.releaseUsers()
+	s.releaseOrderings()
 	s.scheduleIteration()
 	s.mu.Unlock()
 }
@@ -440,7 +443,7 @@ LOOP:
 		var iter *iterator
 		var pattern string
 		if s.iterator == nil && s.available > 0 {
-			s.releaseUsers()
+			s.releaseOrderings()
 			iter = newIterator(s)
 			s.iterator = iter
 			pattern = s.rateLimiterPattern
@@ -489,12 +492,12 @@ func (s *Sender) postpone() {
 		i--
 	}
 	e.iterator = nil
-	e.user.iterator = postponeMarker
-	e.user.consumed--
+	e.ordering.iterator = postponeMarker
+	e.ordering.consumed--
 	s.iterator.numConsumed--
-	// Mark the user as releasable if no events were consumed during this iteration.
-	if e.user.consumed == 0 {
-		s.releasableUsers[e.user] = struct{}{}
+	// Mark the ordering as releasable if no events were consumed during this iteration.
+	if e.ordering.consumed == 0 {
+		s.releasableOrderings[e.ordering] = struct{}{}
 	}
 	trace("Sender.postpone: iterator %p; postpone index %d, current %d\n", s.iterator, i, s.iterator.index)
 	if asserts {
@@ -506,9 +509,9 @@ func (s *Sender) postpone() {
 // processEvent is invoked by Discard and SendEvent and represents the entry
 // point for processing an event previously created by CreateEvent.
 func (s *Sender) processEvent(event *Event) {
-	u := event.user
+	o := event.ordering
 	s.mu.Lock()
-	event.user.queue.enqueue(event, func(event *Event) bool {
+	event.ordering.queue.enqueue(event, func(event *Event) bool {
 		for s.queue.total >= MaxQueuedEvents {
 			if s.close.closed {
 				return false
@@ -519,8 +522,8 @@ func (s *Sender) processEvent(event *Event) {
 			return false
 		}
 		s.queue.enqueue(event)
-		u.totals++
-		if u.iterator == nil {
+		o.total++
+		if o.iterator == nil {
 			s.addAvailable(1)
 			if s.iterator == nil {
 				s.scheduleIteration()
@@ -528,8 +531,8 @@ func (s *Sender) processEvent(event *Event) {
 		}
 		return true
 	})
-	if u.disposable() {
-		s.disposeUser(u)
+	if o.disposable() {
+		s.disposeOrdering(o)
 	}
 	if asserts {
 		s._assertAvailable(s.available)
@@ -552,13 +555,13 @@ func (s *Sender) read(consume bool) (*Event, bool) {
 		if e.iterator != nil {
 			continue
 		}
-		if iter := e.user.iterator; iter != nil && iter != s.iterator {
+		if iter := e.ordering.iterator; iter != nil && iter != s.iterator {
 			continue
 		}
 		if same := s.iterator.sameUser; same.enabled {
-			if same.user == nil {
-				s.iterator.sameUser.user = e.user
-			} else if same.user != e.user {
+			if same.anonymousID == "" {
+				s.iterator.sameUser.anonymousID = e.ordering.key.anonymousID
+			} else if same.anonymousID != e.ordering.key.anonymousID {
 				continue
 			}
 		}
@@ -569,11 +572,11 @@ func (s *Sender) read(consume bool) (*Event, bool) {
 	if event != nil && consume {
 		event.iterator = s.iterator
 		s.iterator.index++
-		if event.user.consumed == 0 {
-			event.user.iterator = s.iterator
-			s.addAvailable(-event.user.totals)
+		if event.ordering.consumed == 0 {
+			event.ordering.iterator = s.iterator
+			s.addAvailable(-event.ordering.total)
 		}
-		event.user.consumed++
+		event.ordering.consumed++
 		s.iterator.numConsumed += 1
 		if asserts {
 			s._assertAvailable(s.available)
@@ -603,26 +606,26 @@ func (s *Sender) read(consume bool) (*Event, bool) {
 	return event, true
 }
 
-// releaseUsers releases the iterated users, making their events available
-// again. They cannot be released while an iteration is in progress.
+// releaseOrderings releases the iterated orderings, making their events
+// available again. They cannot be released while an iteration is in progress.
 //
 // It must be called holding the s.mu mutex.
-func (s *Sender) releaseUsers() {
+func (s *Sender) releaseOrderings() {
 	if s.iterator != nil {
-		panic("core/events/collector/sender: releaseUsers called while an iteration is still in progress")
+		panic("core/events/collector/sender: releaseOrderings called while an iteration is still in progress")
 	}
-	if len(s.releasableUsers) == 0 {
+	if len(s.releasableOrderings) == 0 {
 		return
 	}
-	for u := range s.releasableUsers {
-		u.iterator = nil
-		u.consumed = 0
-		s.addAvailable(u.totals)
-		if u.disposable() {
-			s.disposeUser(u)
+	for o := range s.releasableOrderings {
+		o.iterator = nil
+		o.consumed = 0
+		s.addAvailable(o.total)
+		if o.disposable() {
+			s.disposeOrdering(o)
 		}
 	}
-	clear(s.releasableUsers)
+	clear(s.releasableOrderings)
 }
 
 // scheduleIteration computes when to run the next send iteration based on
@@ -710,8 +713,8 @@ func (s *Sender) send(ctx context.Context, iter *iterator, rateLimiterPattern st
 			if s.queue.events[i] == nil || s.queue.events[i].iterator != iter {
 				continue
 			}
-			user := s.queue.events[i].user
-			s.releasableUsers[user] = struct{}{}
+			ordering := s.queue.events[i].ordering
+			s.releasableOrderings[ordering] = struct{}{}
 			err := errRequest
 			if errEvents != nil {
 				err = errEvents[index]
@@ -730,13 +733,13 @@ func (s *Sender) send(ctx context.Context, iter *iterator, rateLimiterPattern st
 			if s.sent != nil {
 				defer s.sent(s.queue.events[i].Received.MessageID(), err)
 			}
-			user.totals--
+			ordering.total--
 			acks = append(acks, s.queue.events[i].ack)
 			s.queue.dequeue(i)
 			index++
 		}
 		if s.iterator == nil {
-			s.releaseUsers()
+			s.releaseOrderings()
 			s.scheduleIteration()
 		}
 		if asserts {
@@ -785,9 +788,9 @@ func (s *Sender) setSentFunc(f func(messageID string, err error)) {
 // It must be called holding the s.mu mutex.
 func (s *Sender) _assertAvailable(n int) {
 	available := 0
-	for _, user := range s.users {
-		if user.iterator == nil {
-			available += user.totals
+	for _, ordering := range s.orderings {
+		if ordering.iterator == nil {
+			available += ordering.total
 		}
 	}
 	if n != available {
