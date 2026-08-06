@@ -554,7 +554,7 @@ func (s *stream) Consume(topic string, size int) streams.Consumer {
 
 // ack coordinates the destination acknowledgments of a NATS message.
 type ack struct {
-	mu        sync.Mutex // protects remaining and the done field of each destination acknowledgment.
+	mu        sync.Mutex // protects 'remaining' and every destinationAck.done field.
 	msg       jetstream.Msg
 	remaining int // number of destinations that have not acknowledged the message; protected by mu.
 }
