@@ -64,6 +64,7 @@ test(`Add "Import customers" pipeline on Dummy`, async ({ page }) => {
 		"name": "Import Dummy customers",
 		"enabled": true,
 		"filter": null,
+		"requiredConsents": null,
 		"inSchema": {
 			"kind": "object",
 			"properties": [
@@ -196,6 +197,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 				}
 			]
 		},
+		"requiredConsents": null,
 		"inSchema": {
 			"kind": "object",
 			"properties": [
@@ -332,6 +334,7 @@ test(`Add "Send Add to Cart" pipeline on Dummy`, async ({ page }) => {
 		"name": "Send Add to Cart",
 		"enabled": false,
 		"filter": null,
+		"requiredConsents": null,
 		"inSchema": null,
 		"outSchema": {
 			"kind": "object",
@@ -424,6 +427,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 		"name": "Import users",
 		"enabled": true,
 		"filter": null,
+		"requiredConsents": null,
 		"inSchema": {
 			"kind": "object",
 			"properties": [
@@ -590,6 +594,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 				}
 			]
 		},
+		"requiredConsents": null,
 		"inSchema": {
 			"kind": "object",
 			"properties": [
@@ -768,6 +773,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 			"name": "Import users",
 			"enabled": true,
 			"filter": null,
+			"requiredConsents": null,
 			"inSchema": {
 				"kind": "object",
 				"properties": [
@@ -945,6 +951,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 					}
 				]
 			},
+			"requiredConsents": null,
 			"inSchema": {
 				"kind": "object",
 				"properties": [
@@ -1260,6 +1267,7 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 				}
 			]
 		},
+		"requiredConsents": null,
 		"inSchema": null,
 		"outSchema": null,
 		"transformation": null
@@ -1327,6 +1335,7 @@ test(`Add "Import users" pipeline on JavaScript`, async ({ page }) => {
        			}
 			]
 		},
+		"requiredConsents": null,
 		"inSchema": null,
 		"outSchema": null,
 		"transformation": null

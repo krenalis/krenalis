@@ -98,7 +98,7 @@ type Config struct {
 	DB                            DBConfig
 	NATS                          NATSConfig
 	KMS                           string
-	OrganizationsAPIKey           string // can be empty (which means that organizations APIs cannot be used)
+	OrganizationsAPIKey           string // can be empty (which means that the platform management API cannot be used)
 	FunctionProvider              any    // must be a LambdaConfig or LocalConfig value
 	MaxMindDBPath                 string
 	MemberEmailFrom               string
@@ -298,7 +298,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}
 	defer func() {
 		if err != nil {
-			core.state.Close()
+			core.state.Close(ctx)
 		}
 	}()
 
@@ -589,7 +589,7 @@ func (core *Core) Close(ctx context.Context) {
 	core.collector.Close(ctx)
 	core.metrics.Close(context.Background())
 	core.datastore.Close()
-	core.state.Close()
+	core.state.Close(ctx)
 	// Unregister the database connection pool metrics.
 	core.dbPoolMetrics.Unregister()
 	// Close NATS connection.
@@ -732,6 +732,18 @@ func (core *Core) Connectors() []*Connector {
 	return connectors
 }
 
+// ConsumeRateLimitCapacity consumes the specified number of units from the
+// request rate-limit capacity for the platform management API. Units must be at
+// least 1.
+//
+// ConsumeRateLimitCapacity returns errors.TooManyRequests when the requested
+// capacity is unavailable. It returns errors.Unavailable when a temporary
+// condition makes capacity availability impossible to determine.
+func (core *Core) ConsumeRateLimitCapacity(ctx context.Context, units int) error {
+	core.mustBeOpen()
+	return translateRateLimitError(core.state.ConsumeRateLimitCapacity(ctx, units))
+}
+
 // CountOrganizations returns the total number of organizations.
 func (core *Core) CountOrganizations(ctx context.Context) int {
 	core.mustBeOpen()
@@ -756,23 +768,8 @@ func (core *Core) CreateOrganization(ctx context.Context, name string, enabled b
 	if err := util.ValidateStringField("name", name, 255); err != nil {
 		return "", errors.BadRequest("%s", err)
 	}
-	if limits.Members < 1 || limits.Members > MembersLimit {
-		return "", errors.BadRequest("members limit must be in range [1,%d]", MembersLimit)
-	}
-	if limits.AccessKeys < 0 || limits.AccessKeys > AccessKeysLimit {
-		return "", errors.BadRequest("access keys limit must be in range [0,%d]", AccessKeysLimit)
-	}
-	if limits.Workspaces < 0 || limits.Workspaces > WorkspacesLimit {
-		return "", errors.BadRequest("workspaces limit must be in range [0,%d]", WorkspacesLimit)
-	}
-	if limits.Connectors < 0 || limits.Connectors > ConnectorsLimit {
-		return "", errors.BadRequest("connectors limit must be in range [0,%d]", ConnectorsLimit)
-	}
-	if limits.Connections < 0 || limits.Connections > ConnectionsLimit {
-		return "", errors.BadRequest("connections limit must be in range [0,%d]", ConnectionsLimit)
-	}
-	if limits.Pipelines < 0 || limits.Pipelines > PipelinesLimit {
-		return "", errors.BadRequest("pipelines limit must be in range [0,%d]", PipelinesLimit)
+	if err := validateOrganizationLimits(&limits); err != nil {
+		return "", err
 	}
 	n := state.CreateOrganization{
 		Name:    name,
@@ -786,13 +783,21 @@ func (core *Core) CreateOrganization(ctx context.Context, name string, enabled b
 			Pipelines:   limits.Pipelines,
 		},
 	}
+	n.Limits.Rates.OrganizationSpecific = state.RateLimit(limits.Rates.OrganizationSpecific)
+	n.Limits.Rates.WorkspaceSpecific = state.RateLimit(limits.Rates.WorkspaceSpecific)
+	n.Limits.Rates.EventsSpecific = state.RateLimit(limits.Rates.EventsSpecific)
 	for {
 		n.ID = generateID(core.state.Organization)
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 			_, err := tx.Exec(ctx, "INSERT INTO organizations (id, name, enabled, members_limit, access_keys_limit,"+
-				" workspaces_limit, connectors_limit, connections_limit, pipelines_limit)"+
-				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", n.ID, n.Name, n.Enabled, n.Limits.Members,
-				n.Limits.AccessKeys, n.Limits.Workspaces, n.Limits.Connectors, n.Limits.Connections, n.Limits.Pipelines)
+				" workspaces_limit, connectors_limit, connections_limit, pipelines_limit,"+
+				" organization_requests_rate_per_minute, organization_requests_max_capacity, workspace_requests_rate_per_minute, workspace_requests_max_capacity,"+
+				" workspace_events_rate_per_minute, workspace_events_max_capacity)"+
+				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)", n.ID, n.Name, n.Enabled, n.Limits.Members,
+				n.Limits.AccessKeys, n.Limits.Workspaces, n.Limits.Connectors, n.Limits.Connections, n.Limits.Pipelines,
+				n.Limits.Rates.OrganizationSpecific.RatePerMinute, n.Limits.Rates.OrganizationSpecific.MaxCapacity,
+				n.Limits.Rates.WorkspaceSpecific.RatePerMinute, n.Limits.Rates.WorkspaceSpecific.MaxCapacity,
+				n.Limits.Rates.EventsSpecific.RatePerMinute, n.Limits.Rates.EventsSpecific.MaxCapacity)
 			if err != nil {
 				return nil, err
 			}
@@ -925,9 +930,20 @@ func (core *Core) Organization(id string) (*Organization, error) {
 		ID:           org.ID,
 		Name:         org.Name,
 		Enabled:      org.Enabled,
-		Limits:       OrganizationLimits(org.Limits()),
-		Counts:       OrganizationCounts(org.Counts()),
 	}
+	limits := org.Limits()
+	organization.Limits = OrganizationLimits{
+		Members:     limits.Members,
+		AccessKeys:  limits.AccessKeys,
+		Workspaces:  limits.Workspaces,
+		Connectors:  limits.Connectors,
+		Connections: limits.Connections,
+		Pipelines:   limits.Pipelines,
+	}
+	organization.Limits.Rates.OrganizationSpecific = RateLimit(limits.Rates.OrganizationSpecific)
+	organization.Limits.Rates.WorkspaceSpecific = RateLimit(limits.Rates.WorkspaceSpecific)
+	organization.Limits.Rates.EventsSpecific = RateLimit(limits.Rates.EventsSpecific)
+	organization.Counts = OrganizationCounts(org.Counts())
 	return &organization, nil
 }
 
@@ -970,9 +986,20 @@ func (core *Core) Organizations(order OrganizationSort, first, limit int) ([]*Or
 			ID:           organization.ID,
 			Name:         organization.Name,
 			Enabled:      organization.Enabled,
-			Limits:       OrganizationLimits(organization.Limits()),
-			Counts:       OrganizationCounts(organization.Counts()),
 		}
+		limits := organization.Limits()
+		orgs[i].Limits = OrganizationLimits{
+			Members:     limits.Members,
+			AccessKeys:  limits.AccessKeys,
+			Workspaces:  limits.Workspaces,
+			Connectors:  limits.Connectors,
+			Connections: limits.Connections,
+			Pipelines:   limits.Pipelines,
+		}
+		orgs[i].Limits.Rates.OrganizationSpecific = RateLimit(limits.Rates.OrganizationSpecific)
+		orgs[i].Limits.Rates.WorkspaceSpecific = RateLimit(limits.Rates.WorkspaceSpecific)
+		orgs[i].Limits.Rates.EventsSpecific = RateLimit(limits.Rates.EventsSpecific)
+		orgs[i].Counts = OrganizationCounts(organization.Counts())
 	}
 	return orgs, nil
 }
@@ -1329,18 +1356,18 @@ func (core *Core) endLiveRun(ctx context.Context, run *state.PipelineRun, reason
 			res, err := tx.Exec(ctx,
 				"WITH s AS (\n"+
 					"\tSELECT COALESCE(SUM(passed_0), 0) as passed_0, COALESCE(SUM(passed_1), 0) as passed_1, COALESCE(SUM(passed_2), 0) as passed_2,"+
-					" COALESCE(SUM(passed_3), 0) as passed_3, COALESCE(SUM(passed_4), 0) as passed_4, COALESCE(SUM(passed_5), 0) as passed_5,"+
+					" COALESCE(SUM(passed_3), 0) as passed_3, COALESCE(SUM(passed_4), 0) as passed_4, COALESCE(SUM(passed_5), 0) as passed_5, COALESCE(SUM(passed_6), 0) as passed_6,"+
 					" COALESCE(SUM(failed_0), 0) as failed_0, COALESCE(SUM(failed_1), 0) as failed_1, COALESCE(SUM(failed_2), 0) as failed_2,"+
-					" COALESCE(SUM(failed_3), 0) as failed_3, COALESCE(SUM(failed_4), 0) as failed_4, COALESCE(SUM(failed_5), 0) as failed_5\n"+
+					" COALESCE(SUM(failed_3), 0) as failed_3, COALESCE(SUM(failed_4), 0) as failed_4, COALESCE(SUM(failed_5), 0) as failed_5, COALESCE(SUM(failed_6), 0) as failed_6\n"+
 					" FROM pipelines_metrics\n"+
 					"\tWHERE pipeline = $2\n"+
 					")\n"+
 					"UPDATE pipelines_runs AS e\n"+
 					"SET function = '', end_time = $3,"+
 					" passed_0 = e.passed_0 + s.passed_0, passed_1 = e.passed_1 + s.passed_1, passed_2 = e.passed_2 + s.passed_2,"+
-					" passed_3 = e.passed_3 + s.passed_3, passed_4 = e.passed_4 + s.passed_4, passed_5 = e.passed_5 + s.passed_5,"+
+					" passed_3 = e.passed_3 + s.passed_3, passed_4 = e.passed_4 + s.passed_4, passed_5 = e.passed_5 + s.passed_5, passed_6 = e.passed_6 + s.passed_6,"+
 					" failed_0 = e.failed_0 + s.failed_0, failed_1 = e.failed_1 + s.failed_1, failed_2 = e.failed_2 + s.failed_2,"+
-					" failed_3 = e.failed_3 + s.failed_3, failed_4 = e.failed_4 + s.failed_4, failed_5 = e.failed_5 + s.failed_5,"+
+					" failed_3 = e.failed_3 + s.failed_3, failed_4 = e.failed_4 + s.failed_4, failed_5 = e.failed_5 + s.failed_5, failed_6 = e.failed_6 + s.failed_6,"+
 					" error = $4\n"+
 					"FROM s\n"+
 					"WHERE id = $1 AND pipeline = $2 AND end_time IS NULL", run.ID, pipeline, endTime, errorMessage)
@@ -1494,17 +1521,17 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 				"WITH s AS (\n"+
 					"	SELECT -COALESCE(SUM(passed_0), 0) as passed_0, -COALESCE(SUM(passed_1), 0) as passed_1,"+
 					" -COALESCE(SUM(passed_2), 0) as passed_2, -COALESCE(SUM(passed_3), 0) as passed_3,"+
-					" -COALESCE(SUM(passed_4), 0) as passed_4, -COALESCE(SUM(passed_5), 0) as passed_5,"+
+					" -COALESCE(SUM(passed_4), 0) as passed_4, -COALESCE(SUM(passed_5), 0) as passed_5, -COALESCE(SUM(passed_6), 0) as passed_6,"+
 					" -COALESCE(SUM(failed_0), 0) as failed_0, -COALESCE(SUM(failed_1), 0) as failed_1,"+
 					" -COALESCE(SUM(failed_2), 0) as failed_2, -COALESCE(SUM(failed_3), 0) as failed_3,"+
-					" -COALESCE(SUM(failed_4), 0) as failed_4, -COALESCE(SUM(failed_5), 0) as failed_5\n"+
+					" -COALESCE(SUM(failed_4), 0) as failed_4, -COALESCE(SUM(failed_5), 0) as failed_5, -COALESCE(SUM(failed_6), 0) as failed_6\n"+
 					"	FROM pipelines_metrics\n"+
 					"	WHERE pipeline = $2\n"+
 					")\n"+
 					"UPDATE pipelines_runs\n"+
 					"SET passed_0 = s.passed_0, passed_1 = s.passed_1, passed_2 = s.passed_2, passed_3 = s.passed_3,"+
-					" passed_4 = s.passed_4, passed_5 = s.passed_5, failed_0 = s.failed_0, failed_1 = s.failed_1,"+
-					" failed_2 = s.failed_2, failed_3 = s.failed_3, failed_4 = s.failed_4, failed_5 = s.failed_5\n"+
+					" passed_4 = s.passed_4, passed_5 = s.passed_5, passed_6 = s.passed_6, failed_0 = s.failed_0, failed_1 = s.failed_1,"+
+					" failed_2 = s.failed_2, failed_3 = s.failed_3, failed_4 = s.failed_4, failed_5 = s.failed_5, failed_6 = s.failed_6\n"+
 					"FROM s\n"+
 					"WHERE id = $1", run.ID, pipeline.ID)
 			if err != nil {
@@ -2141,6 +2168,59 @@ func stateToCoreTargets(targets state.ConnectorTargets) []Target {
 		ts = append(ts, TargetEvent)
 	}
 	return ts
+}
+
+const (
+	minRequestRatePerMinute = 60
+	maxRequestRatePerMinute = 20_000
+	minEventRatePerMinute   = 1_000
+	maxEventRatePerMinute   = 1_000_000
+
+	minRequestMaxCapacity = 1
+	maxRequestMaxCapacity = 10_000
+	minEventMaxCapacity   = 20_000
+	maxEventMaxCapacity   = 100_000
+)
+
+// validateOrganizationLimits validates the organization limits.
+func validateOrganizationLimits(limits *OrganizationLimits) error {
+	if limits.Members < 1 || limits.Members > MembersLimit {
+		return errors.BadRequest("members limit must be in range [1,%d]", MembersLimit)
+	}
+	if limits.AccessKeys < 0 || limits.AccessKeys > AccessKeysLimit {
+		return errors.BadRequest("access keys limit must be in range [0,%d]", AccessKeysLimit)
+	}
+	if limits.Workspaces < 0 || limits.Workspaces > WorkspacesLimit {
+		return errors.BadRequest("workspaces limit must be in range [0,%d]", WorkspacesLimit)
+	}
+	if limits.Connectors < 0 || limits.Connectors > ConnectorsLimit {
+		return errors.BadRequest("connectors limit must be in range [0,%d]", ConnectorsLimit)
+	}
+	if limits.Connections < 0 || limits.Connections > ConnectionsLimit {
+		return errors.BadRequest("connections limit must be in range [0,%d]", ConnectionsLimit)
+	}
+	if limits.Pipelines < 0 || limits.Pipelines > PipelinesLimit {
+		return errors.BadRequest("pipelines limit must be in range [0,%d]", PipelinesLimit)
+	}
+	if rate := limits.Rates.OrganizationSpecific.RatePerMinute; rate < minRequestRatePerMinute || rate > maxRequestRatePerMinute {
+		return errors.BadRequest("organization request rate per minute must be between %d and %d", minRequestRatePerMinute, maxRequestRatePerMinute)
+	}
+	if maxCapacity := limits.Rates.OrganizationSpecific.MaxCapacity; maxCapacity < minRequestMaxCapacity || maxCapacity > maxRequestMaxCapacity {
+		return errors.BadRequest("organization request maximum capacity must be between %d and %d", minRequestMaxCapacity, maxRequestMaxCapacity)
+	}
+	if rate := limits.Rates.WorkspaceSpecific.RatePerMinute; rate < minRequestRatePerMinute || rate > maxRequestRatePerMinute {
+		return errors.BadRequest("workspace request rate per minute must be between %d and %d", minRequestRatePerMinute, maxRequestRatePerMinute)
+	}
+	if maxCapacity := limits.Rates.WorkspaceSpecific.MaxCapacity; maxCapacity < minRequestMaxCapacity || maxCapacity > maxRequestMaxCapacity {
+		return errors.BadRequest("workspace request maximum capacity must be between %d and %d", minRequestMaxCapacity, maxRequestMaxCapacity)
+	}
+	if rate := limits.Rates.EventsSpecific.RatePerMinute; rate < minEventRatePerMinute || rate > maxEventRatePerMinute {
+		return errors.BadRequest("event rate per minute must be between %d and %d", minEventRatePerMinute, maxEventRatePerMinute)
+	}
+	if maxCapacity := limits.Rates.EventsSpecific.MaxCapacity; maxCapacity < minEventMaxCapacity || maxCapacity > maxEventMaxCapacity {
+		return errors.BadRequest("event maximum capacity must be between %d and %d", minEventMaxCapacity, maxEventMaxCapacity)
+	}
+	return nil
 }
 
 type OrganizationSort int

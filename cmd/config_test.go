@@ -300,7 +300,7 @@ func TestParseSettings(t *testing.T) {
 		}
 	})
 
-	t.Run("organizations API key setting", func(t *testing.T) {
+	t.Run("platform management API key setting", func(t *testing.T) {
 		validKey := "org_" + strings.Repeat("a", 43)
 
 		cases := []struct {

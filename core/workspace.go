@@ -39,7 +39,6 @@ const (
 // Workspace represents a workspace.
 type Workspace struct {
 	core                           *Core
-	organization                   *Organization
 	store                          *datastore.Store
 	workspace                      *state.Workspace
 	ID                             string            `json:"id"`
@@ -68,6 +67,7 @@ const (
 	ReceiveStep          = PipelineStep(metrics.ReceiveStep)
 	InputValidationStep  = PipelineStep(metrics.InputValidationStep)
 	FilterStep           = PipelineStep(metrics.FilterStep)
+	ConsentStep          = PipelineStep(metrics.ConsentStep)
 	TransformationStep   = PipelineStep(metrics.TransformationStep)
 	OutputValidationStep = PipelineStep(metrics.OutputValidationStep)
 	FinalizeStep         = PipelineStep(metrics.FinalizeStep)
@@ -81,6 +81,8 @@ func (step PipelineStep) String() string {
 		return "InputValidation"
 	case FilterStep:
 		return "Filter"
+	case ConsentStep:
+		return "Consent"
 	case TransformationStep:
 		return "Transformation"
 	case OutputValidationStep:
@@ -101,6 +103,8 @@ func ParsePipelineStep(step string) (PipelineStep, error) {
 		return InputValidationStep, nil
 	case "Filter":
 		return FilterStep, nil
+	case "Consent":
+		return ConsentStep, nil
 	case "Transformation":
 		return TransformationStep, nil
 	case "OutputValidation":
@@ -418,6 +422,17 @@ func (this *Workspace) Connections() []*Connection {
 	return infos
 }
 
+// ConsumeRateLimitCapacity consumes the specified number of units from the
+// workspace's request rate-limit capacity. units must be at least 1.
+//
+// ConsumeRateLimitCapacity returns errors.TooManyRequests when the requested
+// capacity is unavailable. It returns errors.Unavailable when a temporary
+// condition makes capacity availability impossible to determine.
+func (this *Workspace) ConsumeRateLimitCapacity(ctx context.Context, units int) error {
+	this.core.mustBeOpen()
+	return translateRateLimitError(this.workspace.ConsumeRateLimitCapacity(ctx, units))
+}
+
 // CreateConnection creates a new connection. authToken is an authorization
 // token returned by the AuthToken method and must be empty if the connector
 // does not support authorization.
@@ -713,9 +728,14 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 //
 // If filter is non-nil, only events that satisfy the filter will be observed.
 //
-// It returns an errors.UnprocessableError with code TooManyListeners, if there
-// are already too many listeners.
-func (this *Workspace) CreateEventListener(connection string, size int, filter *Filter) (string, error) {
+// If requiredConsents is non-nil, only events whose consents satisfy its
+// purposes, according to its operator, will be observed. Its purposes must be
+// at most MaxRequiredConsentPurposes and must not contain duplicates.
+//
+// It returns an errors.UnprocessableError error with code:
+//
+//   - TooManyListeners, if there are already too many listeners.
+func (this *Workspace) CreateEventListener(connection string, size int, filter *Filter, requiredConsents *RequiredConsents) (string, error) {
 	this.core.mustBeOpen()
 	if connection != "" && !IsValidID(connection) {
 		return "", errors.BadRequest("identifier %q is not a valid connection identifier", connection)
@@ -747,11 +767,32 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 		}
 		where = convertFilterToWhere(filter, schemas.Event)
 	}
+	var rc *state.RequiredConsents
+	if requiredConsents != nil {
+		if op := requiredConsents.Operator; op != PurposesAnd && op != PurposesOr {
+			return "", errors.BadRequest(`required consents operator %q is not valid. It must be "and" or "or"`, op)
+		}
+		if len(requiredConsents.Purposes) > MaxRequiredConsentPurposes {
+			return "", errors.BadRequest("required consent purposes must be at most %d", MaxRequiredConsentPurposes)
+		}
+		rc = &state.RequiredConsents{
+			Operator: state.ConsentPurposesOperator(requiredConsents.Operator),
+			Purposes: slices.Clone(requiredConsents.Purposes),
+		}
+		for i, code := range rc.Purposes {
+			if err := validateConsentPurposeCode(code); err != nil {
+				return "", errors.BadRequest("%s", err)
+			}
+			if slices.Contains(rc.Purposes[i+1:], code) {
+				return "", errors.BadRequest("required consent purpose %q is duplicated", code)
+			}
+		}
+	}
 	observer, ok := this.core.collector.Observer(this.workspace.ID)
 	if !ok {
 		return "", errors.New("observer either has not been created yet or has already been removed")
 	}
-	id, err := observer.CreateListener(connections, size, where)
+	id, err := observer.CreateListener(connections, size, where, rc)
 	if err != nil {
 		if err == collector.ErrTooManyListeners {
 			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", MaxEventListeners)
@@ -1046,15 +1087,15 @@ func (this *Workspace) PipelineRun(ctx context.Context, id string) (*PipelineRun
 	var run PipelineRun
 	err := this.core.db.QueryRow(ctx,
 		"SELECT r.id, r.pipeline, r.start_time, r.end_time, r.passed_0, r.passed_1, r.passed_2, r.passed_3,"+
-			" r.passed_4, r.passed_5, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4,"+
-			" r.failed_5, r.error\n"+
+			" r.passed_4, r.passed_5, r.passed_6, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4,"+
+			" r.failed_5, r.failed_6, r.error\n"+
 			"FROM pipelines_runs r\n"+
 			"INNER JOIN pipelines p ON p.id = r.pipeline\n"+
 			"INNER JOIN connections c ON c.id = p.connection\n"+
 			"WHERE c.workspace = $1 AND r.id = $2", this.workspace.ID, id).Scan(
 		&run.ID, &run.Pipeline, &run.StartTime, &run.EndTime, &run.Passed[0], &run.Passed[1], &run.Passed[2], &run.Passed[3],
-		&run.Passed[4], &run.Passed[5], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
-		&run.Failed[5], &run.Error)
+		&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
+		&run.Failed[5], &run.Failed[6], &run.Error)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.NotFound("pipeline run %s does not exist", id)
@@ -1062,8 +1103,8 @@ func (this *Workspace) PipelineRun(ctx context.Context, id string) (*PipelineRun
 		return nil, err
 	}
 	if run.EndTime == nil {
-		run.Passed = [6]int{}
-		run.Failed = [6]int{}
+		run.Passed = [7]int{}
+		run.Failed = [7]int{}
 	}
 	return &run, nil
 }
@@ -1076,7 +1117,7 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 	runs := []*PipelineRun{}
 	err := this.core.db.QueryScan(ctx,
 		"SELECT r.id, r.pipeline, r.start_time, r.end_time, r.passed_0, r.passed_1, r.passed_2, r.passed_3,"+
-			" r.passed_4, r.passed_5, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4, r.failed_5, r.error\n"+
+			" r.passed_4, r.passed_5, r.passed_6, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4, r.failed_5, r.failed_6, r.error\n"+
 			"FROM pipelines_runs r\n"+
 			"INNER JOIN pipelines p ON p.id = r.pipeline\n"+
 			"INNER JOIN connections c ON c.id = p.connection\n"+
@@ -1086,8 +1127,8 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 			for rows.Next() {
 				var run PipelineRun
 				if err = rows.Scan(&run.ID, &run.Pipeline, &run.StartTime, &run.EndTime, &run.Passed[0], &run.Passed[1], &run.Passed[2], &run.Passed[3],
-					&run.Passed[4], &run.Passed[5], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
-					&run.Failed[5], &run.Error); err != nil {
+					&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
+					&run.Failed[5], &run.Failed[6], &run.Error); err != nil {
 					return err
 				}
 				runs = append(runs, &run)
@@ -1100,8 +1141,8 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 
 	for _, run := range runs {
 		if run.EndTime == nil {
-			run.Passed = [6]int{}
-			run.Failed = [6]int{}
+			run.Passed = [7]int{}
+			run.Failed = [7]int{}
 		}
 	}
 

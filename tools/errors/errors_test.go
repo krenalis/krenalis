@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 // Test_BadRequestError ensures BadRequest returns an error wrapping the cause
@@ -18,7 +19,7 @@ func Test_BadRequestError(t *testing.T) {
 	cause := New("wrong")
 	err := BadRequest("bad: %w", cause)
 	if err.Error() != "bad: wrong" {
-		t.Fatalf("unexpected error string: %q", err.Error())
+		t.Fatalf("expected error string %q, got %q", "bad: wrong", err.Error())
 	}
 	if err.Unwrap() != cause {
 		t.Fatalf("expected unwrap %v, got %v", cause, err.Unwrap())
@@ -36,7 +37,7 @@ func Test_BadRequestError(t *testing.T) {
 func Test_ForbiddenError(t *testing.T) {
 	err := Forbidden("forbidden")
 	if err.Error() != "forbidden" {
-		t.Fatalf("unexpected error string: %q", err.Error())
+		t.Fatalf("expected error string %q, got %q", "forbidden", err.Error())
 	}
 	expected := "{\"error\":{\"code\":\"Forbidden\",\"message\":\"forbidden\"}}\n"
 	checkResponse(t, err, http.StatusForbidden, "Forbidden", expected)
@@ -46,7 +47,7 @@ func Test_ForbiddenError(t *testing.T) {
 func Test_NotFoundError(t *testing.T) {
 	err := NotFound("missing")
 	if err.Error() != "missing" {
-		t.Fatalf("unexpected error string: %q", err.Error())
+		t.Fatalf("expected error string %q, got %q", "missing", err.Error())
 	}
 	expected := "{\"error\":{\"code\":\"NotFound\",\"message\":\"missing\"}}\n"
 	checkResponse(t, err, http.StatusNotFound, "NotFound", expected)
@@ -97,11 +98,29 @@ func Test_StdWrappers(t *testing.T) {
 	}
 }
 
+// Test_TooManyRequestsError verifies TooManyRequests formatting and
+// serialization.
+func Test_TooManyRequestsError(t *testing.T) {
+	err := TooManyRequests(1500*time.Millisecond, "slow down")
+	if err.Error() != "slow down" {
+		t.Fatalf("expected error string %q, got %q", "slow down", err.Error())
+	}
+	expected := "{\"error\":{\"code\":\"TooManyRequests\",\"message\":\"slow down\"}}\n"
+	checkResponse(t, err, http.StatusTooManyRequests, "TooManyRequests", expected)
+	response := httptest.NewRecorder()
+	if writeErr := err.WriteTo(response); writeErr != nil {
+		t.Fatal(writeErr)
+	}
+	if got := response.Header().Get("Retry-After"); got != "2" {
+		t.Fatalf("expected Retry-After 2, got %q", got)
+	}
+}
+
 // Test_UnauthorizedError verifies Unauthorized formatting and serialization.
 func Test_UnauthorizedError(t *testing.T) {
 	err := Unauthorized("no auth")
 	if err.Error() != "no auth" {
-		t.Fatalf("unexpected error string: %q", err.Error())
+		t.Fatalf("expected error string %q, got %q", "no auth", err.Error())
 	}
 	expected := "{\"error\":{\"code\":\"Unauthorized\",\"message\":\"no auth\"}}\n"
 	checkResponse(t, err, http.StatusUnauthorized, "Unauthorized", expected)
@@ -112,7 +131,7 @@ func Test_UnavailableError(t *testing.T) {
 	cause := New("temp")
 	err := Unavailable("unavail: %w", cause)
 	if err.Error() != "unavail: temp" {
-		t.Fatalf("unexpected error string: %q", err.Error())
+		t.Fatalf("expected error string %q, got %q", "unavail: temp", err.Error())
 	}
 	if err.Unwrap() != cause {
 		t.Fatalf("expected unwrap %v, got %v", cause, err.Unwrap())
@@ -127,7 +146,7 @@ func Test_UnprocessableError(t *testing.T) {
 	cause := New("bad state")
 	err := Unprocessable("SomeCode", "cannot: %w", cause)
 	if err.Error() != "cannot: bad state" {
-		t.Fatalf("unexpected error string: %q", err.Error())
+		t.Fatalf("expected error string %q, got %q", "cannot: bad state", err.Error())
 	}
 	if err.Unwrap() != cause {
 		t.Fatalf("expected unwrap %v, got %v", cause, err.Unwrap())
@@ -136,6 +155,7 @@ func Test_UnprocessableError(t *testing.T) {
 	checkResponse(t, err, http.StatusUnprocessableEntity, "SomeCode", expected)
 }
 
+// checkResponse verifies an HTTP error response.
 func checkResponse(t *testing.T, err ResponseWriterTo, status int, code Code, body string) {
 	t.Helper()
 	rr := httptest.NewRecorder()

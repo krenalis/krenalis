@@ -19,6 +19,12 @@ import { PipelineError, PipelineErrorsResponse } from '../../../lib/api/types/re
 import { PipelineMetrics, PipelineTarget } from '../../../lib/api/types/pipeline';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import TransformedConnection from '../../../lib/core/connection';
+import {
+	hasFilterStep,
+	hasInputValidationStep,
+	hasRequiredConsents,
+	hasTransformations,
+} from '../../../lib/core/pipeline';
 import { Link } from '../../base/Link/Link';
 import considerAsUTC from '../../../utils/considerUTC';
 import { RelativeTime } from '../../base/RelativeTime/RelativeTime';
@@ -40,7 +46,14 @@ type FunnelData = FunnelPoint[];
 
 type metricsRange = 'last15Minutes' | 'last24Hours' | 'last7Days' | 'Custom';
 
-type StepIdentifier = 'RECEIVE' | 'INPUT_VALIDATION' | 'FILTER' | 'TRANSFORMATION' | 'OUTPUT_VALIDATION' | 'FINALIZE';
+type StepIdentifier =
+	| 'RECEIVE'
+	| 'INPUT_VALIDATION'
+	| 'FILTER'
+	| 'CONSENT'
+	| 'TRANSFORMATION'
+	| 'OUTPUT_VALIDATION'
+	| 'FINALIZE';
 
 const MINUTES_COUNT = 15;
 const HOURS_COUNT = 24;
@@ -58,10 +71,16 @@ const STEP_IDENTIFIERS: StepIdentifier[] = [
 	'RECEIVE',
 	'INPUT_VALIDATION',
 	'FILTER',
+	'CONSENT',
 	'TRANSFORMATION',
 	'OUTPUT_VALIDATION',
 	'FINALIZE',
 ];
+
+const STEP_COUNT = STEP_IDENTIFIERS.length;
+const FILTER_INDEX = STEP_IDENTIFIERS.indexOf('FILTER');
+const CONSENT_INDEX = STEP_IDENTIFIERS.indexOf('CONSENT');
+const FINALIZE_INDEX = STEP_IDENTIFIERS.indexOf('FINALIZE');
 
 const ConnectionMetrics = () => {
 	const { connection: c } = useContext(ConnectionContext);
@@ -123,13 +142,14 @@ const ConnectionMetrics = () => {
 		RECEIVE: receiveStepTerm,
 		INPUT_VALIDATION: 'Check user data',
 		FILTER: 'Apply filter',
+		CONSENT: 'Check consent',
 		TRANSFORMATION: 'Transform',
 		OUTPUT_VALIDATION: 'Validate',
 		FINALIZE: finalizeStepTerm,
 	};
 
 	const { userPipelineErrorRows, eventPipelineErrorRows } = useMemo(() => {
-		const stepTerms = Object.values(stepTermByIdentifier);
+		const stepTerms = STEP_IDENTIFIERS.map((identifier) => stepTermByIdentifier[identifier]);
 		return {
 			userPipelineErrorRows: computePipelineErrorRows(c, userPipelinesErrors, stepTerms),
 			eventPipelineErrorRows: computePipelineErrorRows(c, eventPipelinesErrors, stepTerms),
@@ -151,32 +171,21 @@ const ConnectionMetrics = () => {
 	}, [userPipelinesMetrics, eventPipelinesMetrics]);
 
 	const steps = useMemo(() => {
-		let steps: StepIdentifier[] = [...STEP_IDENTIFIERS];
-		switch (c.connector.type) {
-			case 'Application':
-				if (c.role == 'Destination') {
-					if (selectedTarget == 'Event') {
-						steps = steps.filter((v) => v !== 'INPUT_VALIDATION'); // No Input Validation.
-					}
-				}
-				break;
-			case 'Database':
-				steps = steps.filter((v) => v !== 'FILTER'); // No Filter.
-				break;
-			case 'FileStorage':
-				if (c.role == 'Destination') {
-					steps = ['RECEIVE', 'INPUT_VALIDATION', 'FINALIZE'];
-				}
-				break;
-			case 'SDK':
-			case 'Webhook':
-				if (selectedTarget == 'User') {
-					steps = steps.filter((v) => v !== 'INPUT_VALIDATION'); // No Input Validation.
-				} else {
-					steps = ['RECEIVE', 'FILTER', 'FINALIZE'];
-				}
-		}
-		return steps;
+		return STEP_IDENTIFIERS.filter((step) => {
+			switch (step) {
+				case 'INPUT_VALIDATION':
+					return hasInputValidationStep(c, selectedTarget);
+				case 'FILTER':
+					return hasFilterStep(c, selectedTarget);
+				case 'CONSENT':
+					return hasRequiredConsents(c, selectedTarget);
+				case 'TRANSFORMATION':
+				case 'OUTPUT_VALIDATION':
+					return hasTransformations(c, selectedTarget);
+				default:
+					return true;
+			}
+		});
 	}, [c, selectedTarget]);
 
 	useEffect(() => {
@@ -194,7 +203,9 @@ const ConnectionMetrics = () => {
 		}
 		const arrows: ReactNode[] = [];
 		for (let [i, s] of steps.entries()) {
-			const isFilterStep = s === 'FILTER';
+			// Filtered and consent-discarded events are dropped intentionally,
+			// so they are styled as discarded rather than failed.
+			const isDiscardedStep = s === 'FILTER' || s === 'CONSENT';
 
 			const identifierIndex = STEP_IDENTIFIERS.findIndex((identifier) => identifier === s);
 			const passedData = data[identifierIndex].passed;
@@ -230,7 +241,7 @@ const ConnectionMetrics = () => {
 					path='grid'
 					label={
 						<div
-							className={`connection-metrics__funnel-label connection-metrics__funnel-label--failed${isFilterStep ? ' connection-metrics__funnel-label--discarded' : ''}`}
+							className={`connection-metrics__funnel-label connection-metrics__funnel-label--failed${isDiscardedStep ? ' connection-metrics__funnel-label--discarded' : ''}`}
 						>
 							{formatNumber(failedData)}
 						</div>
@@ -257,7 +268,7 @@ const ConnectionMetrics = () => {
 		setTimeout(() => {
 			setFunnelArrows(arrows);
 		});
-	}, [isLoading, eventFunnelData, userFunnelData]);
+	}, [isLoading, steps, eventFunnelData, userFunnelData]);
 
 	useEffect(() => {
 		const stopLoading = () => {
@@ -670,8 +681,8 @@ const ConnectionMetrics = () => {
 								})}
 								<div className='connection-metrics__funnel-final' id={`funnel-circle-final`}>
 									{isUsersSelected
-										? formatNumber(userFunnelData[5].passed)
-										: formatNumber(eventFunnelData[5].passed)}
+										? formatNumber(userFunnelData[FINALIZE_INDEX].passed)
+										: formatNumber(eventFunnelData[FINALIZE_INDEX].passed)}
 								</div>
 							</div>
 							<div className='connection-metrics__funnel-failed'>
@@ -763,15 +774,17 @@ const computePipelineMetricsData = (pipelineMetrics: PipelineMetrics, range: met
 	let counter = timeUnits;
 	for (let timeUnit = 0; timeUnit < timeUnits; timeUnit++) {
 		let failedTotal = 0;
-		for (let i = 0; i < 6; i++) {
-			if (i === 2) {
-				// filtered must not be considered as failed.
+		for (let i = 0; i < STEP_COUNT; i++) {
+			if (i === FILTER_INDEX || i === CONSENT_INDEX) {
+				// filtered and consent-discarded events must not be considered
+				// as failed.
 				continue;
 			}
 			failedTotal += totals.failed[timeUnit]?.[i] ?? 0;
 		}
-		let filteredTotal = totals.failed[timeUnit]?.[2] ?? 0;
-		let passedTotal = totals.passed[timeUnit]?.[5] ?? 0;
+		let filteredTotal =
+			(totals.failed[timeUnit]?.[FILTER_INDEX] ?? 0) + (totals.failed[timeUnit]?.[CONSENT_INDEX] ?? 0);
+		let passedTotal = totals.passed[timeUnit]?.[FINALIZE_INDEX] ?? 0;
 		let total = failedTotal + filteredTotal + passedTotal;
 		const d = new Date(pipelineMetrics.end.getTime());
 		let time = '';
@@ -812,18 +825,11 @@ const computeMetricsTimeUnits = (pipelineMetrics: PipelineMetrics, range: metric
 
 const computeFunnelData = (pipelineMetrics: PipelineMetrics): FunnelData => {
 	if (pipelineMetrics == null) {
-		return [
-			{ passed: 0, failed: 0 },
-			{ passed: 0, failed: 0 },
-			{ passed: 0, failed: 0 },
-			{ passed: 0, failed: 0 },
-			{ passed: 0, failed: 0 },
-			{ passed: 0, failed: 0 },
-		];
+		return Array.from({ length: STEP_COUNT }, () => ({ passed: 0, failed: 0 }));
 	}
 	const totals = aggregatePipelineMetrics(pipelineMetrics);
 	const data = [];
-	for (let i = 0; i < 6; i++) {
+	for (let i = 0; i < STEP_COUNT; i++) {
 		let totalPassed = 0;
 		let totalFailed = 0;
 		for (const p of totals.passed) {
@@ -840,6 +846,8 @@ const computeFunnelData = (pipelineMetrics: PipelineMetrics): FunnelData => {
 	return data as FunnelData;
 };
 
+type StepCounts = PipelineMetrics['metrics'][number]['passed'][number];
+
 const aggregatePipelineMetrics = (
 	pipelineMetrics: PipelineMetrics,
 ): Pick<PipelineMetrics['metrics'][number], 'passed' | 'failed'> => {
@@ -847,11 +855,11 @@ const aggregatePipelineMetrics = (
 	if (first == null) {
 		return { passed: [], failed: [] };
 	}
-	const passed = first.passed.map(() => [0, 0, 0, 0, 0, 0] as [number, number, number, number, number, number]);
-	const failed = first.failed.map(() => [0, 0, 0, 0, 0, 0] as [number, number, number, number, number, number]);
+	const passed = first.passed.map<StepCounts>(() => [0, 0, 0, 0, 0, 0, 0]);
+	const failed = first.failed.map<StepCounts>(() => [0, 0, 0, 0, 0, 0, 0]);
 	for (const series of pipelineMetrics.metrics) {
 		for (let timeUnit = 0; timeUnit < series.passed.length; timeUnit++) {
-			for (let step = 0; step < 6; step++) {
+			for (let step = 0; step < STEP_COUNT; step++) {
 				passed[timeUnit][step] += series.passed[timeUnit][step];
 				failed[timeUnit][step] += series.failed[timeUnit][step];
 			}

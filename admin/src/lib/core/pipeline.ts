@@ -7,6 +7,7 @@ import {
 	ExpressionToBeExtracted,
 	Filter,
 	FilterCondition,
+	RequiredConsents,
 	FilterOperator,
 	Mapping,
 	Matching,
@@ -210,6 +211,7 @@ interface TransformedTransformation {
 
 type PipelineTypeField =
 	| 'Filter'
+	| 'Consents'
 	| 'Transformation'
 	| 'Matching'
 	| 'UpdateOnDuplicates'
@@ -252,6 +254,7 @@ interface TransformedPipeline {
 	inSchema: ObjectType | null;
 	outSchema: ObjectType | null;
 	filter: Filter | null;
+	requiredConsents: RequiredConsents | null;
 	transformation: TransformedTransformation | null;
 	query?: string | null;
 	path?: string | null;
@@ -629,6 +632,7 @@ const transformPipeline = (
 		inSchema: pipeline.inSchema,
 		outSchema: pipeline.outSchema,
 		filter: pipeline.filter,
+		requiredConsents: pipeline.requiredConsents,
 		transformation: {
 			mapping: pipelineMapping != null ? transformPipelineMapping(pipelineMapping, outputSchema) : null,
 			function: pipeline.transformation?.function,
@@ -976,6 +980,14 @@ const transformInPipelineToSet = async (
 		}
 	}
 
+	let requiredConsents: RequiredConsents = null;
+	if (pipeline.requiredConsents != null) {
+		const purposes = Array.from(new Set(pipeline.requiredConsents.purposes));
+		if (purposes.length > 0) {
+			requiredConsents = { operator: pipeline.requiredConsents.operator, purposes: purposes };
+		}
+	}
+
 	if (pipeline.query != null) {
 		query = pipeline.query.trim();
 	}
@@ -1091,6 +1103,7 @@ const transformInPipelineToSet = async (
 		name: pipeline.name,
 		enabled: pipeline.enabled,
 		filter: filter,
+		requiredConsents: requiredConsents,
 		inSchema: inSchema && inSchema.properties.length > 0 ? inSchema : null,
 		outSchema: outSchema && outSchema.properties.length > 0 ? outSchema : null,
 		transformation: mapping == null && func == null ? null : { mapping: mapping, function: func },
@@ -1150,6 +1163,7 @@ const computeDefaultPipeline = (
 			pipelineType.target == 'User' &&
 			(connection.isApplication || connection.isDatabase || connection.isFileStorage),
 		filter: null,
+		requiredConsents: null,
 		transformation: {
 			mapping: flattenSchema(outputSchema, true),
 			function: null,
@@ -1214,6 +1228,51 @@ const hasFilters = (connection: TransformedConnection, target: PipelineTarget) =
 	return !(connection.role === 'Source' && connection.connector.type === 'Database' && target === 'User');
 };
 
+const isEventDriven = (connection: TransformedConnection, target: PipelineTarget) => {
+	if (connection.role === 'Destination') {
+		// The events are dispatched to an application.
+		return connection.connector.type === 'Application' && target === 'Event';
+	}
+	// The events are imported into the warehouse, either as events or as user
+	// identities extracted from them.
+	return connection.isEventBased && (target === 'Event' || target === 'User');
+};
+
+// hasInputValidationStep reports whether the pipelines of a given connection,
+// and with the given target, validate the records they read.
+const hasInputValidationStep = (connection: TransformedConnection, target: PipelineTarget) => {
+	return !isEventDriven(connection, target);
+};
+
+// hasFilterStep reports whether the pipelines of a given connection, and with
+// the given target, count the records their filter discards. Exports and
+// database imports filter the records while reading them, so they have no step
+// to report.
+const hasFilterStep = (connection: TransformedConnection, target: PipelineTarget) => {
+	return (
+		isEventDriven(connection, target) || (connection.role === 'Source' && connection.connector.type !== 'Database')
+	);
+};
+
+const hasRequiredConsents = (connection: TransformedConnection, target: PipelineTarget) => {
+	// Required consents are allowed on any pipeline that handles events.
+	return isEventDriven(connection, target);
+};
+
+const hasTransformations = (connection: TransformedConnection, target: PipelineTarget) => {
+	const type = connection.connector.type;
+	if (type === 'Application' || type === 'Database') {
+		return true;
+	}
+	if (type === 'FileStorage') {
+		return connection.role === 'Source';
+	}
+	if (type === 'SDK' || type === 'Webhook') {
+		return connection.role === 'Source' && (target === 'User' || target === 'Group');
+	}
+	return false;
+};
+
 const computePipelineTypeFields = (connection: TransformedConnection, pipelineType: PipelineType) => {
 	const fields: PipelineTypeField[] = [];
 
@@ -1221,18 +1280,14 @@ const computePipelineTypeFields = (connection: TransformedConnection, pipelineTy
 		fields.push('Filter');
 	}
 
+	if (hasRequiredConsents(connection, pipelineType.target)) {
+		fields.push('Consents');
+	}
+
 	const type = connection.connector.type;
 
-	if (type === 'Application') {
+	if (hasTransformations(connection, pipelineType.target)) {
 		fields.push('Transformation');
-	} else if (type === 'Database') {
-		fields.push('Transformation');
-	} else if (type === 'FileStorage' && connection.role === 'Source') {
-		fields.push('Transformation');
-	} else if (type === 'SDK' || type == 'Webhook') {
-		if (connection.role === 'Source' && (pipelineType.target === 'User' || pipelineType.target === 'Group')) {
-			fields.push('Transformation');
-		}
 	}
 
 	if (
@@ -2051,6 +2106,10 @@ export {
 	isRecursiveType,
 	computeDefaultPipeline,
 	hasFilters,
+	hasInputValidationStep,
+	hasFilterStep,
+	hasRequiredConsents,
+	hasTransformations,
 	computePipelineTypeFields,
 	transformPipelineType,
 	transformPipeline,

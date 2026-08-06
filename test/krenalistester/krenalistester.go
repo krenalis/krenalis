@@ -570,7 +570,7 @@ func (k *Krenalis) createWorkspace(name string, profileSchema types.Type, uiPref
 		// Workspace creation is organization-scoped.
 		"Krenalis-Workspace": nil,
 	}
-	err := k.tryCall("POST", "/v1/workspaces", headers, req, &response)
+	err := k.tryCall("POST", "/v1/workspaces", headers, req, &response, true)
 	if err != nil {
 		return "", err
 	}
@@ -582,7 +582,7 @@ func (k *Krenalis) login() error {
 		"email":    "acme@krenalis.com",
 		"password": "krenalis-password",
 	}
-	return k.tryCall("POST", "/v1/members/login", nil, body, nil)
+	return k.tryCall("POST", "/v1/members/login", nil, body, nil, true)
 }
 
 // ExecQueryTestDatabase executes a query on the test database.

@@ -27,6 +27,8 @@ import { PipelineTarget } from '../../../lib/api/types/pipeline';
 import { IS_PASSWORDLESS_KEY, storageKeysToBeRemoved, WORKSPACE_ID_KEY } from '../../../constants/storage';
 
 const FILTER_STEP = 2;
+const CONSENT_STEP = 3;
+const FINALIZE_STEP = 6;
 
 const useApp = (
 	handleError: (err: Error | string) => void,
@@ -489,8 +491,10 @@ const useApp = (
 			return;
 		}
 
-		const passed = run.passed[5];
-		const failed = run.failed.filter((_, i) => i !== FILTER_STEP).reduce((sum, n) => sum + n, 0);
+		const passed = run.passed[FINALIZE_STEP];
+		const failed = run.failed
+			.filter((_, i) => i !== FILTER_STEP && i !== CONSENT_STEP)
+			.reduce((sum, n) => sum + n, 0);
 
 		const pipeline = connection.pipelines.find((p) => p.id === pipelineID);
 

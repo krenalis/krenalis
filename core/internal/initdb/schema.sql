@@ -14,6 +14,12 @@ CREATE TABLE organizations (
     connectors_limit integer NOT NULL CHECK (connectors_limit BETWEEN 0 AND 1000),
     connections_limit integer NOT NULL CHECK (connections_limit BETWEEN 0 AND 10000),
     pipelines_limit integer NOT NULL CHECK (pipelines_limit BETWEEN 0 AND 10000),
+    organization_requests_rate_per_minute integer NOT NULL CHECK (organization_requests_rate_per_minute BETWEEN 60 AND 20000),
+    organization_requests_max_capacity integer NOT NULL CHECK (organization_requests_max_capacity BETWEEN 1 AND 10000),
+    workspace_requests_rate_per_minute integer NOT NULL CHECK (workspace_requests_rate_per_minute BETWEEN 60 AND 20000),
+    workspace_requests_max_capacity integer NOT NULL CHECK (workspace_requests_max_capacity BETWEEN 1 AND 10000),
+    workspace_events_rate_per_minute integer NOT NULL CHECK (workspace_events_rate_per_minute BETWEEN 1000 AND 1000000),
+    workspace_events_max_capacity integer NOT NULL CHECK (workspace_events_max_capacity BETWEEN 20000 AND 100000),
     PRIMARY KEY (id)
 );
 
@@ -79,6 +85,53 @@ CREATE TABLE workspaces (
 
 CREATE INDEX workspaces_organization_idx ON workspaces (organization);
 
+CREATE TABLE rate_limit_buckets (
+    subject_kind varchar(12) NOT NULL CHECK (subject_kind IN ('platform', 'organization', 'workspace', 'events')),
+    subject_id varchar(12) NOT NULL CHECK (
+        (subject_kind = 'platform' AND subject_id = 'platform')
+        OR (subject_kind <> 'platform' AND subject_id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$')
+    ),
+    organization varchar(12) REFERENCES organizations ON DELETE CASCADE,
+    workspace varchar(12) REFERENCES workspaces ON DELETE CASCADE,
+    available_units integer NOT NULL,
+    capacity_units integer NOT NULL,
+    rate_per_minute integer NOT NULL,
+    last_refill_at timestamptz NOT NULL,
+    refill_remainder integer NOT NULL,
+    PRIMARY KEY (subject_kind, subject_id),
+    CHECK (available_units >= 0),
+    CHECK (
+        (subject_kind IN ('platform', 'organization', 'workspace') AND capacity_units BETWEEN 1 AND 10000)
+        OR (subject_kind = 'events' AND capacity_units BETWEEN 20000 AND 100000)
+    ),
+    CHECK (available_units <= capacity_units),
+    CHECK (
+        (subject_kind IN ('platform', 'organization', 'workspace') AND rate_per_minute BETWEEN 60 AND 20000)
+        OR (subject_kind = 'events' AND rate_per_minute BETWEEN 1000 AND 1000000)
+    ),
+    CHECK (refill_remainder >= 0 AND refill_remainder < 60000000),
+    CHECK (
+        (
+            subject_kind = 'platform'
+            AND subject_id = 'platform'
+            AND organization IS NULL
+            AND workspace IS NULL
+        )
+        OR
+        (
+            subject_kind = 'organization'
+            AND subject_id = organization
+            AND workspace IS NULL
+        )
+        OR
+        (
+            subject_kind IN ('workspace', 'events')
+            AND subject_id = workspace
+            AND organization IS NULL
+        )
+    )
+);
+
 CREATE TYPE access_key_type AS ENUM ('API', 'MCP');
 
 CREATE TABLE access_keys (
@@ -91,6 +144,13 @@ CREATE TABLE access_keys (
     hint varchar(13) NOT NULL,
     created_at timestamp(0) NOT NULL,
     PRIMARY KEY (id)
+);
+
+CREATE TABLE consent_purposes (
+    workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+    code varchar(100) NOT NULL CHECK (code ~ '^[A-Za-z_][0-9A-Za-z_]{0,99}$'),
+    name varchar(100) NOT NULL,
+    PRIMARY KEY (workspace, code)
 );
 
 CREATE TYPE role AS ENUM ('Source', 'Destination');
@@ -136,6 +196,8 @@ CREATE TABLE pipelines (
     in_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     out_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     filter jsonb,
+    required_consents varchar(100)[] NOT NULL DEFAULT '{}',
+    required_consents_operator varchar(3) NOT NULL DEFAULT 'and' CHECK (required_consents_operator IN ('and', 'or')),
     transformation_mapping jsonb,
     transformation_id varchar(200) NOT NULL DEFAULT '',
     transformation_version varchar(128) NOT NULL DEFAULT '',
@@ -209,12 +271,14 @@ CREATE TABLE pipelines_runs (
     passed_3 integer NOT NULL DEFAULT 0,
     passed_4 integer NOT NULL DEFAULT 0,
     passed_5 integer NOT NULL DEFAULT 0,
+    passed_6 integer NOT NULL DEFAULT 0,
     failed_0 integer NOT NULL DEFAULT 0,
     failed_1 integer NOT NULL DEFAULT 0,
     failed_2 integer NOT NULL DEFAULT 0,
     failed_3 integer NOT NULL DEFAULT 0,
     failed_4 integer NOT NULL DEFAULT 0,
     failed_5 integer NOT NULL DEFAULT 0,
+    failed_6 integer NOT NULL DEFAULT 0,
     error varchar NOT NULL DEFAULT '',
     PRIMARY KEY (id)
 );
@@ -252,12 +316,14 @@ CREATE TABLE pipelines_metrics (
     passed_3 integer NOT NULL,
     passed_4 integer NOT NULL,
     passed_5 integer NOT NULL,
+    passed_6 integer NOT NULL,
     failed_0 integer NOT NULL,
     failed_1 integer NOT NULL,
     failed_2 integer NOT NULL,
     failed_3 integer NOT NULL,
     failed_4 integer NOT NULL,
     failed_5 integer NOT NULL,
+    failed_6 integer NOT NULL,
     PRIMARY KEY (pipeline, timeslot)
 );
 
@@ -308,6 +374,7 @@ CREATE INDEX ON accounts (connector);
 
 CREATE TYPE notification_name AS ENUM (
     'AcceptInvitation',
+    'AddConsentPurpose',
     'AddMember',
     'CreateAccessKey',
     'CreateConnection',
@@ -317,6 +384,7 @@ CREATE TYPE notification_name AS ENUM (
     'CreateWorkspace',
     'DeleteAccessKey',
     'DeleteConnection',
+    'DeleteConsentPurpose',
     'DeleteEventWriteKey',
     'DeleteMember',
     'DeleteMembers',
@@ -342,6 +410,7 @@ CREATE TYPE notification_name AS ENUM (
     'StartIdentityResolution',
     'UnlinkConnection',
     'UpdateConnection',
+    'UpdateConsentPurpose',
     'UpdateIdentityPropertiesToUnset',
     'UpdateIdentityResolutionSettings',
     'UpdateOrganization',
@@ -365,7 +434,9 @@ CREATE TABLE metadata (
     kms_encrypted_http_secret_key bytea NOT NULL,
     kms_encrypted_oauth_key bytea NOT NULL,
     kms_encrypted_notification_key bytea NOT NULL,
-    kms_encrypted_api_key_pepper bytea NOT NULL
+    kms_encrypted_api_key_pepper bytea NOT NULL,
+    requests_rate_per_minute integer NOT NULL CHECK (requests_rate_per_minute BETWEEN 60 AND 20000),
+    requests_max_capacity integer NOT NULL CHECK (requests_max_capacity BETWEEN 1 AND 10000)
 );
 
 INSERT INTO metadata (
@@ -373,11 +444,15 @@ INSERT INTO metadata (
     kms_encrypted_http_secret_key,
     kms_encrypted_oauth_key,
     kms_encrypted_notification_key,
-    kms_encrypted_api_key_pepper
+    kms_encrypted_api_key_pepper,
+    requests_rate_per_minute,
+    requests_max_capacity
 ) VALUES (
     gen_random_uuid(),
     '\x'::bytea,
     '\x'::bytea,
     '\x'::bytea,
-    '\x'::bytea
+    '\x'::bytea,
+    100,
+    100
 );

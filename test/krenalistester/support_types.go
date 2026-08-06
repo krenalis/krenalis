@@ -80,8 +80,8 @@ type PipelineRun struct {
 	Pipeline  string     `json:"pipeline"`
 	StartTime time.Time  `json:"startTime"`
 	EndTime   *time.Time `json:"endTime"`
-	Passed    [6]int     `json:"passed"`
-	Failed    [6]int     `json:"failed"`
+	Passed    [7]int     `json:"passed"`
+	Failed    [7]int     `json:"failed"`
 	Error     string     `json:"error"`
 }
 
@@ -360,12 +360,27 @@ type OrganizationCounts struct {
 
 // OrganizationLimits stores the resource limits for an organization.
 type OrganizationLimits struct {
-	Members     int `json:"members"`
-	AccessKeys  int `json:"accessKeys"`
-	Workspaces  int `json:"workspaces"`
-	Connectors  int `json:"connectors"`
-	Connections int `json:"connections"`
-	Pipelines   int `json:"pipelines"`
+	Members     int        `json:"members"`
+	AccessKeys  int        `json:"accessKeys"`
+	Workspaces  int        `json:"workspaces"`
+	Connectors  int        `json:"connectors"`
+	Connections int        `json:"connections"`
+	Pipelines   int        `json:"pipelines"`
+	Rates       RateLimits `json:"rates"`
+}
+
+// RateLimits stores the request and event limits for each workspace, and
+// the request limits for organization-level operations.
+type RateLimits struct {
+	OrganizationSpecific RateLimit `json:"organizationSpecific"`
+	WorkspaceSpecific    RateLimit `json:"workspaceSpecific"`
+	EventsSpecific       RateLimit `json:"eventsSpecific"`
+}
+
+// RateLimit defines a sustained rate and a maximum capacity.
+type RateLimit struct {
+	RatePerMinute int `json:"ratePerMinute"`
+	MaxCapacity   int `json:"maxCapacity"`
 }
 
 // Organization represents an organization returned by the APIs.

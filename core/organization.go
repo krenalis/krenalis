@@ -78,12 +78,33 @@ type OrganizationCounts struct {
 
 // OrganizationLimits stores the resource limits for an organization.
 type OrganizationLimits struct {
-	Members     int `json:"members"`
-	AccessKeys  int `json:"accessKeys"`
-	Workspaces  int `json:"workspaces"`
-	Connectors  int `json:"connectors"`
-	Connections int `json:"connections"`
-	Pipelines   int `json:"pipelines"`
+	Members     int        `json:"members"`     // Maximum number of members.
+	AccessKeys  int        `json:"accessKeys"`  // Maximum number of access keys.
+	Workspaces  int        `json:"workspaces"`  // Maximum number of workspaces.
+	Connectors  int        `json:"connectors"`  // Maximum number of connectors.
+	Connections int        `json:"connections"` // Maximum number of connections.
+	Pipelines   int        `json:"pipelines"`   // Maximum number of pipelines.
+	Rates       RateLimits `json:"rates"`       // Request and event rate limits.
+}
+
+// RateLimits stores the request limits for organization-level operations and
+// the request and event limits for each workspace.
+type RateLimits struct {
+	OrganizationSpecific RateLimit `json:"organizationSpecific"` // Request limit for organization-level operations, independent of each workspace's request limit.
+	WorkspaceSpecific    RateLimit `json:"workspaceSpecific"`    // Request limit for each workspace.
+	EventsSpecific       RateLimit `json:"eventsSpecific"`       // Event ingestion limit for each workspace, measured in events.
+}
+
+// RateLimit defines the refill rate and maximum capacity of an authoritative
+// rate-limit bucket.
+type RateLimit struct {
+
+	// Sustained rate, in units per minute.
+	RatePerMinute int `json:"ratePerMinute"`
+
+	// MaxCapacity is the configured maximum capacity of the authoritative bucket.
+	// Process-local leasing can allow greater short-term traffic concentration.
+	MaxCapacity int `json:"maxCapacity"`
 }
 
 // Member represents a member of an organization.
@@ -369,6 +390,30 @@ func (this *Organization) CanMemberLogin(id string) (bool, error) {
 		return false, errors.NotFound("member %s does not exist", id)
 	}
 	return canLogin, nil
+}
+
+func translateRateLimitError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, state.ErrRateLimiterUnavailable) {
+		return errors.Unavailable("request cannot be processed at this time; try again later")
+	}
+	if err, ok := errors.AsType[state.CapacityExceededError](err); ok {
+		return errors.TooManyRequests(err.RetryAfter, "%s", err)
+	}
+	return err
+}
+
+// ConsumeRateLimitCapacity consumes the specified number of units from the
+// organization's request rate-limit capacity. units must be at least 1.
+//
+// ConsumeRateLimitCapacity returns errors.TooManyRequests when the requested
+// capacity is unavailable. It returns errors.Unavailable when a temporary
+// condition makes capacity availability impossible to determine.
+func (this *Organization) ConsumeRateLimitCapacity(ctx context.Context, units int) error {
+	this.core.mustBeOpen()
+	return translateRateLimitError(this.organization.ConsumeRateLimitCapacity(ctx, units))
 }
 
 // CreateAccessKey creates a new access key for the organization with the
@@ -840,8 +885,8 @@ type MetricSeries struct {
 	Workspace  string   `json:"workspace,omitzero"`
 	Connection string   `json:"connection,omitzero"`
 	Pipeline   string   `json:"pipeline,omitzero"`
-	Passed     [][6]int `json:"passed"`
-	Failed     [][6]int `json:"failed"`
+	Passed     [][7]int `json:"passed"`
+	Failed     [][7]int `json:"failed"`
 }
 
 // MetricSelection defines the selected pipeline metric series.
@@ -1137,12 +1182,14 @@ s AS (
 		COALESCE(SUM(m.passed_3), 0) AS passed_3,
 		COALESCE(SUM(m.passed_4), 0) AS passed_4,
 		COALESCE(SUM(m.passed_5), 0) AS passed_5,
+		COALESCE(SUM(m.passed_6), 0) AS passed_6,
 		COALESCE(SUM(m.failed_0), 0) AS failed_0,
 		COALESCE(SUM(m.failed_1), 0) AS failed_1,
 		COALESCE(SUM(m.failed_2), 0) AS failed_2,
 		COALESCE(SUM(m.failed_3), 0) AS failed_3,
 		COALESCE(SUM(m.failed_4), 0) AS failed_4,
-		COALESCE(SUM(m.failed_5), 0) AS failed_5
+		COALESCE(SUM(m.failed_5), 0) AS failed_5,
+		COALESCE(SUM(m.failed_6), 0) AS failed_6
 	FROM live_runs AS r
 	LEFT JOIN pipelines_metrics AS m ON m.pipeline = r.pipeline
 	GROUP BY r.id
@@ -1157,12 +1204,14 @@ ended_runs AS (
 		passed_3 = r.passed_3 + s.passed_3,
 		passed_4 = r.passed_4 + s.passed_4,
 		passed_5 = r.passed_5 + s.passed_5,
+		passed_6 = r.passed_6 + s.passed_6,
 		failed_0 = r.failed_0 + s.failed_0,
 		failed_1 = r.failed_1 + s.failed_1,
 		failed_2 = r.failed_2 + s.failed_2,
 		failed_3 = r.failed_3 + s.failed_3,
 		failed_4 = r.failed_4 + s.failed_4,
 		failed_5 = r.failed_5 + s.failed_5,
+		failed_6 = r.failed_6 + s.failed_6,
 		error = $3
 	FROM s
 	WHERE r.id = s.id AND r.end_time IS NULL
@@ -1290,23 +1339,8 @@ func (this *Organization) Update(ctx context.Context, name string, limits *Organ
 		return errors.BadRequest("%s", err)
 	}
 	if limits != nil {
-		if limits.Members < 1 || limits.Members > MembersLimit {
-			return errors.BadRequest("members limit must be in range [1,%d]", MembersLimit)
-		}
-		if limits.AccessKeys < 0 || limits.AccessKeys > AccessKeysLimit {
-			return errors.BadRequest("access keys limit must be in range [0,%d]", AccessKeysLimit)
-		}
-		if limits.Workspaces < 0 || limits.Workspaces > WorkspacesLimit {
-			return errors.BadRequest("workspaces limit must be in range [0,%d]", WorkspacesLimit)
-		}
-		if limits.Connectors < 0 || limits.Connectors > ConnectorsLimit {
-			return errors.BadRequest("connectors limit must be in range [0,%d]", ConnectorsLimit)
-		}
-		if limits.Connections < 0 || limits.Connections > ConnectionsLimit {
-			return errors.BadRequest("connections limit must be in range [0,%d]", ConnectionsLimit)
-		}
-		if limits.Pipelines < 0 || limits.Pipelines > PipelinesLimit {
-			return errors.BadRequest("pipelines limit must be in range [0,%d]", PipelinesLimit)
+		if err := validateOrganizationLimits(limits); err != nil {
+			return err
 		}
 	}
 	n := state.UpdateOrganization{
@@ -1322,6 +1356,9 @@ func (this *Organization) Update(ctx context.Context, name string, limits *Organ
 			Connections: limits.Connections,
 			Pipelines:   limits.Pipelines,
 		}
+		n.Limits.Rates.OrganizationSpecific = state.RateLimit(limits.Rates.OrganizationSpecific)
+		n.Limits.Rates.WorkspaceSpecific = state.RateLimit(limits.Rates.WorkspaceSpecific)
+		n.Limits.Rates.EventsSpecific = state.RateLimit(limits.Rates.EventsSpecific)
 	}
 	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var result *db.Result
@@ -1330,10 +1367,14 @@ func (this *Organization) Update(ctx context.Context, name string, limits *Organ
 			result, err = tx.Exec(ctx, "UPDATE organizations SET name = $1 WHERE id = $2", name, this.organization.ID)
 		} else {
 			result, err = tx.Exec(ctx, "UPDATE organizations"+
-				" SET name = $1, members_limit = $2, access_keys_limit = $3, workspaces_limit = $4,"+
-				" connectors_limit = $5, connections_limit = $6, pipelines_limit = $7 WHERE id = $8",
-				name, n.Limits.Members, n.Limits.AccessKeys, n.Limits.Workspaces, n.Limits.Connectors,
-				n.Limits.Connections, n.Limits.Pipelines, this.organization.ID)
+				" SET name = $1, members_limit = $2, access_keys_limit = $3, workspaces_limit = $4, connectors_limit = $5,"+
+				" connections_limit = $6, pipelines_limit = $7, organization_requests_rate_per_minute = $8, organization_requests_max_capacity = $9,"+
+				" workspace_requests_rate_per_minute = $10, workspace_requests_max_capacity = $11,"+
+				" workspace_events_rate_per_minute = $12, workspace_events_max_capacity = $13 WHERE id = $14",
+				name, n.Limits.Members, n.Limits.AccessKeys, n.Limits.Workspaces, n.Limits.Connectors, n.Limits.Connections,
+				n.Limits.Pipelines, n.Limits.Rates.OrganizationSpecific.RatePerMinute, n.Limits.Rates.OrganizationSpecific.MaxCapacity,
+				n.Limits.Rates.WorkspaceSpecific.RatePerMinute, n.Limits.Rates.WorkspaceSpecific.MaxCapacity,
+				n.Limits.Rates.EventsSpecific.RatePerMinute, n.Limits.Rates.EventsSpecific.MaxCapacity, this.organization.ID)
 		}
 		if err != nil {
 			return nil, err
@@ -1363,7 +1404,6 @@ func (this *Organization) Workspace(id string) (*Workspace, error) {
 	}
 	workspace := Workspace{
 		core:                           this.core,
-		organization:                   this,
 		store:                          store,
 		workspace:                      ws,
 		ID:                             ws.ID,
@@ -1390,7 +1430,6 @@ func (this *Organization) Workspaces() []*Workspace {
 		}
 		workspace := Workspace{
 			core:                           this.core,
-			organization:                   this,
 			store:                          store,
 			workspace:                      ws,
 			ID:                             ws.ID,
