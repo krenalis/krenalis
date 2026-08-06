@@ -38,13 +38,11 @@ func (err FunctionExecError) Error() string {
 //   - subsequently contain only [A-Za-z0-9_-]
 //   - terminate with ".js", for JavaScript functions, or with ".py" for Python
 //     functions
-//
-// The organization parameter of the Call, Create, Delete, and Update methods is
-// the ID of the organization the function belongs to.
 type FunctionProvider interface {
 
 	// Call calls the function with the given identifier and version for each record
 	// updating its Attributes field with the result of each invocation.
+	// organization is the ID of the organization the function belongs to.
 	//
 	// Before transformation, record attributes must conform to inSchema.
 	// After transformation, they should conform to outSchema, unless an error
@@ -63,9 +61,11 @@ type FunctionProvider interface {
 
 	// Create creates a new function with the given name, language, and source and
 	// returns its identifier and version.
+	// organization is the ID of the organization the function belongs to.
 	Create(ctx context.Context, organization, name string, language state.Language, source string) (string, string, error)
 
 	// Delete deletes the function with the given identifier.
+	// organization is the ID of the organization the function belongs to.
 	// If a function with the given identifier does not exist, it does nothing.
 	//
 	// A function outlives its organization, as it is deleted by the pipeline
@@ -79,6 +79,7 @@ type FunctionProvider interface {
 
 	// Update updates the source of the function with the given identifier and
 	// returns a new version, which has a length in the range [1, 128].
+	// organization is the ID of the organization the function belongs to.
 	// If the function does not exist, it returns the ErrFunctionNotExist error.
 	Update(ctx context.Context, organization, id, source string) (string, error)
 }
