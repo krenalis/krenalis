@@ -363,6 +363,7 @@ var parameters = map[string]string{
 	"/max-queued-events-per-destination":      "MAX_QUEUED_EVENTS_PER_DESTINATION",
 	"/maxmind-db-path":                        "MAXMIND_DB_PATH",
 	"/member-email-from":                      "MEMBER_EMAIL_FROM",
+	"/nats/ack-wait":                          "NATS_ACK_WAIT",
 	"/nats/compression":                       "NATS_COMPRESSION",
 	"/nats/nkey":                              "NATS_NKEY",
 	"/nats/password":                          "NATS_PASSWORD",
