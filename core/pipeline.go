@@ -911,7 +911,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 			if err != nil && err != sql.ErrNoRows {
 				return nil, err
 			}
-			if err == nil {
+			if missing != "" {
 				return nil, errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", missing)
 			}
 		}
