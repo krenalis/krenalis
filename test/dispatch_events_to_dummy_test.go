@@ -17,12 +17,14 @@ import (
 	"github.com/krenalis/analytics-go"
 )
 
+const (
+	pipelineProcessingSteps = 6
+	transformationStep      = 3
+	outputValidationStep    = 4
+)
+
 func TestDispatchEventsToDummy(t *testing.T) {
-	const (
-		ackWait              = time.Second
-		transformationStep   = 3
-		outputValidationStep = 4
-	)
+	const ackWait = time.Second
 	t.Setenv("KRENALIS_NATS_ACK_WAIT", ackWait.String())
 
 	// Create a test HTTP server that will receive request sent to it from
@@ -103,7 +105,7 @@ func TestDispatchEventsToDummy(t *testing.T) {
 
 // waitPipelinePassedMetrics waits until processing metrics for pipelineID are
 // visible and returns their totals across all minute buckets.
-func waitPipelinePassedMetrics(t *testing.T, k *krenalistester.Krenalis, pipelineID string) [6]int {
+func waitPipelinePassedMetrics(t *testing.T, k *krenalistester.Krenalis, pipelineID string) [pipelineProcessingSteps]int {
 	t.Helper()
 	poll := time.NewTicker(100 * time.Millisecond)
 	defer poll.Stop()
@@ -114,11 +116,11 @@ func waitPipelinePassedMetrics(t *testing.T, k *krenalistester.Krenalis, pipelin
 	for {
 		var response struct {
 			Metrics []struct {
-				Passed [][6]int `json:"passed"`
+				Passed [][pipelineProcessingSteps]int `json:"passed"`
 			} `json:"metrics"`
 		}
 		k.Call("GET", "/v1/pipelines/metrics/minutes/1?pipelines="+pipelineID, nil, nil, &response)
-		totals = [6]int{}
+		totals = [pipelineProcessingSteps]int{}
 		series = len(response.Metrics)
 		if series == 1 {
 			for _, bucket := range response.Metrics[0].Passed {
@@ -126,7 +128,7 @@ func waitPipelinePassedMetrics(t *testing.T, k *krenalistester.Krenalis, pipelin
 					totals[step] += count
 				}
 			}
-			if totals[3] > 0 && totals[4] > 0 {
+			if totals[transformationStep] > 0 && totals[outputValidationStep] > 0 {
 				return totals
 			}
 		}
