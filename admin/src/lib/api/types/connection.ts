@@ -12,6 +12,7 @@ interface EventType {
 	name: string;
 	description: string;
 	orderingGroup: string;
+	deliveryEndpoint: string;
 	defaultFilter: string;
 }
 
