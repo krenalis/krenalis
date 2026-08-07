@@ -47,6 +47,10 @@ type Consumer interface {
 	Events(ctx context.Context) (<-chan Event, error)
 
 	// Close closes the consumer and its events channel.
+	//
+	// When Close is called, no calls to other Consumer methods should be in
+	// progress, and no other methods should be called afterward. Close is
+	// idempotent; subsequent calls have no effect.
 	Close()
 }
 
