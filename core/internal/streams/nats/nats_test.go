@@ -5,6 +5,7 @@
 package nats
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"testing"
@@ -91,6 +92,26 @@ func TestAckManagerStopsWithoutAcknowledging(t *testing.T) {
 			t.Fatalf("expected no acknowledgment, got %d", got)
 		}
 	})
+}
+
+// TestAckManagerClearsSnapshotAfterCancellation verifies that a canceled
+// heartbeat pass does not retain references to pending acknowledgments.
+func TestAckManagerClearsSnapshotAfterCancellation(t *testing.T) {
+	manager := newAckManager(time.Hour)
+	defer manager.Close()
+	manager.Track(new(testJetStreamMsg))
+
+	// Populate the reusable snapshot buffer before canceling the next pass.
+	manager.inProgress(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	manager.inProgress(ctx)
+
+	for i, ack := range manager.pendingSnapshot {
+		if ack != nil {
+			t.Fatalf("expected acknowledgment %d to be cleared from the snapshot", i)
+		}
+	}
 }
 
 // TestAckStopPreventsDestinationAcknowledgment verifies that stopping the

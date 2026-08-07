@@ -714,6 +714,12 @@ func (m *ackManager) inProgress(ctx context.Context) {
 		pending = append(pending, ack)
 	}
 	m.mu.Unlock()
+	defer func() {
+		// Reuse the snapshot's backing array on the next call without retaining
+		// references to acknowledgments after this pass returns.
+		clear(pending)
+		m.pendingSnapshot = pending
+	}()
 
 	var lastErrMsg string
 
@@ -734,10 +740,6 @@ func (m *ackManager) inProgress(ctx context.Context) {
 			}
 		}
 	}
-
-	// Reuse the snapshot's backing array on the next call.
-	clear(pending)
-	m.pendingSnapshot = pending
 }
 
 // run sends acknowledgment heartbeats until the context is canceled.
