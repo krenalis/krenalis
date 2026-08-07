@@ -901,6 +901,20 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 				return nil, err
 			}
 		}
+		// Check that the required consent purposes exist.
+		if len(n.RequiredConsents.Purposes) > 0 {
+			var missing string
+			err := tx.QueryRow(ctx, "SELECT purpose\n"+
+				"FROM UNNEST($1::varchar[]) AS purpose\n"+
+				"WHERE NOT EXISTS (SELECT 1 FROM consent_purposes AS cp WHERE cp.id = purpose AND cp.workspace = $2)\n"+
+				"LIMIT 1", n.RequiredConsents.Purposes, c.Workspace().ID).Scan(&missing)
+			if err != nil && err != sql.ErrNoRows {
+				return nil, err
+			}
+			if err == nil {
+				return nil, errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", missing)
+			}
+		}
 		// Mark the pipeline’s function as discontinued if its identifier changes.
 		now := time.Now().UTC()
 		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
@@ -927,20 +941,6 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 				if _, ok := hasPath[path]; !ok && !slices.Contains(n.PropertiesToUnset, path) {
 					n.PropertiesToUnset = append(n.PropertiesToUnset, path)
 				}
-			}
-		}
-		// Check that the required consent purposes exist.
-		if len(n.RequiredConsents.Purposes) > 0 {
-			var missing string
-			err := tx.QueryRow(ctx, "SELECT purpose\n"+
-				"FROM UNNEST($1::varchar[]) AS purpose\n"+
-				"WHERE NOT EXISTS (SELECT FROM consent_purposes AS cp WHERE cp.id = purpose AND cp.workspace = $2)\n"+
-				"LIMIT 1", n.RequiredConsents.Purposes, c.Workspace().ID).Scan(&missing)
-			if err != nil && err != sql.ErrNoRows {
-				return nil, err
-			}
-			if err == nil {
-				return nil, errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", missing)
 			}
 		}
 		// Update the pipeline.
