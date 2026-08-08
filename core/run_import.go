@@ -112,24 +112,24 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 		if user.Err != nil {
 			_ = iw.Keep(ctx, user.ID)
 			if err, ok := user.Err.(connections.InputValidationError); ok {
-				this.core.metrics.ReceivePassed(pipeline.ID, 1)
-				this.core.metrics.InputValidationFailed(pipeline.ID, 1, err.Error())
+				this.core.metrics.Pipelines.ReceivePassed(pipeline.ID, 1)
+				this.core.metrics.Pipelines.InputValidationFailed(pipeline.ID, 1, err.Error())
 			} else {
-				this.core.metrics.ReceiveFailed(pipeline.ID, 1, user.Err.Error())
+				this.core.metrics.Pipelines.ReceiveFailed(pipeline.ID, 1, user.Err.Error())
 			}
 			goto Next
 		}
 
-		this.core.metrics.ReceivePassed(pipeline.ID, 1)
-		this.core.metrics.InputValidationPassed(pipeline.ID, 1)
+		this.core.metrics.Pipelines.ReceivePassed(pipeline.ID, 1)
+		this.core.metrics.Pipelines.InputValidationPassed(pipeline.ID, 1)
 
 		// In case the pipeline has a filter, check if it applies to the user.
 		if connector.Type != state.Database {
 			if !filters.Applies(pipeline.Filter, user.Attributes) {
-				this.core.metrics.FilterFailed(pipeline.ID, 1)
+				this.core.metrics.Pipelines.FilterFailed(pipeline.ID, 1)
 				goto Next
 			}
-			this.core.metrics.FilterPassed(pipeline.ID, 1)
+			this.core.metrics.Pipelines.FilterPassed(pipeline.ID, 1)
 		}
 
 		if user.UpdatedAt.After(cursor) {
@@ -162,17 +162,17 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 				if err := record.Err; err != nil {
 					switch err.(type) {
 					case transformers.RecordTransformationError:
-						this.core.metrics.TransformationFailed(pipeline.ID, 1, err.Error())
+						this.core.metrics.Pipelines.TransformationFailed(pipeline.ID, 1, err.Error())
 					case transformers.RecordValidationError:
-						this.core.metrics.TransformationPassed(pipeline.ID, 1)
-						this.core.metrics.OutputValidationFailed(pipeline.ID, 1, err.Error())
+						this.core.metrics.Pipelines.TransformationPassed(pipeline.ID, 1)
+						this.core.metrics.Pipelines.OutputValidationFailed(pipeline.ID, 1, err.Error())
 					}
 					_ = iw.Keep(ctx, user.ID)
 					continue
 				}
 				user.Attributes = record.Attributes
-				this.core.metrics.TransformationPassed(pipeline.ID, 1)
-				this.core.metrics.OutputValidationPassed(pipeline.ID, 1)
+				this.core.metrics.Pipelines.TransformationPassed(pipeline.ID, 1)
+				this.core.metrics.Pipelines.OutputValidationPassed(pipeline.ID, 1)
 				_ = iw.Write(ctx, datastore.Identity{
 					ID:         user.ID,
 					Attributes: user.Attributes,
@@ -212,7 +212,7 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 		if err != datastore.ErrPurgeSkipped {
 			return newPipelineError(metrics.FinalizeStep, err)
 		}
-		this.core.metrics.FinalizeFailed(pipeline.ID, 0, "unimported records not deleted because at least one with errors could not be identified")
+		this.core.metrics.Pipelines.FinalizeFailed(pipeline.ID, 0, "unimported records not deleted because at least one with errors could not be identified")
 	}
 
 	return nil

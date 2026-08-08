@@ -90,6 +90,8 @@ func TestPipelineMetricsHTTPContract(t *testing.T) {
 	})
 }
 
+// createPipelineMetricsFixture creates a source and pipeline, runs the pipeline,
+// and returns the source connection ID.
 func createPipelineMetricsFixture(t *testing.T, k *krenalistester.Krenalis) string {
 	t.Helper()
 	k.UpdateIdentityResolutionSettings(false, nil)
