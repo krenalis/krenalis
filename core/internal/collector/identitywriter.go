@@ -25,7 +25,7 @@ var maxQueuedEventIdentityTime = 200 * time.Millisecond
 type identityWriter struct {
 	pipeline    string // pipeline identifier
 	writer      *datastore.EventIdentityWriter
-	metrics     *metrics.Collector
+	metrics     *metrics.Pipelines
 	mu          sync.Mutex                // for transformer, identities, and timer
 	transformer *transformers.Transformer // protected by mu
 	events      []streams.Event           // protected by mu
@@ -35,7 +35,7 @@ type identityWriter struct {
 // newIdentityWriter returns a new identityWriter for the provided pipeline.
 //
 // It must be called on a frozen state.
-func newIdentityWriter(ds *datastore.Datastore, pipeline *state.Pipeline, provider transformers.FunctionProvider, metrics *metrics.Collector) *identityWriter {
+func newIdentityWriter(ds *datastore.Datastore, pipeline *state.Pipeline, provider transformers.FunctionProvider, metrics *metrics.Pipelines) *identityWriter {
 	iw := &identityWriter{
 		pipeline: pipeline.ID,
 		metrics:  metrics,
