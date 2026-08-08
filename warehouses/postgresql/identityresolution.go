@@ -152,7 +152,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 		mergeProfiles.WriteString(quoteIdent(c.Name))
 		mergeProfiles.WriteByte(',')
 	}
-	mergeProfiles.WriteString(`"_identities", "_kpid", "_updated_at"`)
+	mergeProfiles.WriteString(`"_identities", "_anonymous_count", "_recognized_count", "_kpid", "_updated_at"`)
 	mergeProfiles.WriteString(") SELECT\n")
 	for _, c := range profileColumns {
 		if c.Type.Kind() == types.ArrayKind {
@@ -177,6 +177,8 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 	}
 	// Write the "_identities" column.
 	mergeProfiles.WriteString(`ARRAY_AGG(DISTINCT "_pk"), `)
+	mergeProfiles.WriteString(`COUNT(DISTINCT ("_connection", "_identity_id")) FILTER (WHERE "_is_anonymous"), `)
+	mergeProfiles.WriteString(`COUNT(DISTINCT ("_connection", "_identity_id")) FILTER (WHERE NOT "_is_anonymous"), `)
 	// Write the "_kpid" column.
 	// If all KPIDs are the same - ignoring the NULL ones, which refer to new
 	// identities - then take the common value as the profile's KPID; otherwise,
