@@ -56,6 +56,11 @@ type identity struct {
 	attributes   map[string]any
 }
 
+type identityCounts struct {
+	anonymous  int
+	recognized int
+}
+
 const (
 	identityResolutionConnection1 = "6NpT4zB8QaR2"
 	identityResolutionConnection2 = "8QaT3mN7KxP5"
@@ -89,7 +94,14 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 		primarySources   map[string]string
 		identities       []identity
 		expectedProfiles []map[string]any
+		expectedCounts   []identityCounts
 	}{
+		{
+			name:           "No identities",
+			identifiers:    []string{},
+			identities:     []identity{},
+			expectedCounts: []identityCounts{},
+		},
 		{
 			name:        "One identity, no identifiers",
 			identifiers: []string{},
@@ -104,6 +116,24 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			expectedProfiles: []map[string]any{
 				{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 			},
+			expectedCounts: []identityCounts{{recognized: 1}},
+		},
+		{
+			name:        "One anonymous identity, no identifiers",
+			identifiers: []string{},
+			identities: []identity{
+				{
+					connection:  identityResolutionConnection1,
+					pipeline:    identityResolutionPipeline1,
+					isAnonymous: true,
+					id:          "anonymous-1",
+					attributes:  map[string]any{"email": nil, "first_name": nil, "last_name": nil, "notes": nil},
+				},
+			},
+			expectedProfiles: []map[string]any{
+				{"email": nil, "first_name": nil, "last_name": nil, "notes": nil},
+			},
+			expectedCounts: []identityCounts{{anonymous: 1}},
 		},
 		{
 			name:        "Two identities from the same connection (different ID), no identifiers",
@@ -147,6 +177,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			expectedProfiles: []map[string]any{
 				{"email": "c@d", "first_name": nil, "last_name": nil, "notes": nil},
 			},
+			expectedCounts: []identityCounts{{recognized: 1}},
 		},
 		{
 			name:        "Two identities from two different connections, no identifiers",
@@ -190,6 +221,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			expectedProfiles: []map[string]any{
 				{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 			},
+			expectedCounts: []identityCounts{{recognized: 2}},
 		},
 		{
 			name:        "Two identities from two different connections, matching for an identifier with second-level priority, previous identifiers are both nil",
@@ -276,6 +308,30 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			expectedProfiles: []map[string]any{
 				{"email": nil, "first_name": "Luke", "last_name": nil, "notes": nil},
 			},
+			expectedCounts: []identityCounts{{anonymous: 1}},
+		},
+		{
+			name:        "Anonymous and recognized identities with the same text are different identities",
+			identifiers: []string{"email"},
+			identities: []identity{
+				{
+					connection:  identityResolutionConnection1,
+					pipeline:    identityResolutionPipeline1,
+					isAnonymous: true,
+					id:          "same-id",
+					attributes:  map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
+				},
+				{
+					connection: identityResolutionConnection1,
+					pipeline:   identityResolutionPipeline2,
+					id:         "same-id",
+					attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
+				},
+			},
+			expectedProfiles: []map[string]any{
+				{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
+			},
+			expectedCounts: []identityCounts{{anonymous: 1, recognized: 1}},
 		},
 		{
 			name:        "Two identities not merged as one is anonymous and one is not",
@@ -575,6 +631,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			}
 
 			mergeColumns := identitiesMergeColumns(columnByName)
+			profilesVersion := 0
 
 			for _, test := range tests {
 				t.Run(test.name, func(t *testing.T) {
@@ -636,6 +693,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 							t.Fatal(err)
 						}
 					}
+					profilesVersion++
 
 					// Read the profiles from the warehouse and check that they match with
 					// the expected ones.
@@ -700,11 +758,63 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					if !reflect.DeepEqual(test.expectedProfiles, gotProfiles) {
 						t.Fatalf("\nexpected profiles:\n\t%v\ngot:\n\t%v", test.expectedProfiles, gotProfiles)
 					}
+
+					if test.expectedCounts != nil {
+						gotCounts := readIdentityCounts(t, ctx, dw, profilesVersion)
+						expectedCounts := slices.Clone(test.expectedCounts)
+						sortIdentityCounts(expectedCounts)
+						sortIdentityCounts(gotCounts)
+						if !slices.Equal(expectedCounts, gotCounts) {
+							t.Fatalf("expected identity counts %v, got %v", expectedCounts, gotCounts)
+						}
+					}
 				})
 			}
 		})
 	}
 
+}
+
+func readIdentityCounts(t *testing.T, ctx context.Context, dw warehouses.Warehouse, profilesVersion int) []identityCounts {
+	t.Helper()
+	countColumns := []warehouses.Column{
+		{Name: "_anonymous_count", Type: types.Int(32)},
+		{Name: "_recognized_count", Type: types.Int(32)},
+	}
+	r, _, err := dw.Query(ctx, warehouses.RowQuery{
+		Columns: countColumns,
+		Table:   fmt.Sprintf("krenalis_profiles_%d", profilesVersion),
+	}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var counts []identityCounts
+	row := make([]any, len(countColumns))
+	for r.Next() {
+		if err := r.Scan(row...); err != nil {
+			t.Fatal(err)
+		}
+		counts = append(counts, identityCounts{
+			anonymous:  row[0].(int),
+			recognized: row[1].(int),
+		})
+	}
+	if err := r.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return counts
+}
+
+func sortIdentityCounts(counts []identityCounts) {
+	slices.SortFunc(counts, func(a, b identityCounts) int {
+		if n := cmp.Compare(a.anonymous, b.anonymous); n != 0 {
+			return n
+		}
+		return cmp.Compare(a.recognized, b.recognized)
+	})
 }
 
 // identitiesMergeColumns returns the columns to be used during the identities

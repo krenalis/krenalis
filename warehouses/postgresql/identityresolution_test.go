@@ -46,6 +46,44 @@ func Test_finalizeIdentityResolutionPreservesPersistedSuccess(t *testing.T) {
 
 }
 
+// TestResolveIdentitiesAddsMissingIdentityCountColumns verifies that a new
+// profiles table includes identity count columns when copied from a previous
+// schema.
+func TestResolveIdentitiesAddsMissingIdentityCountColumns(t *testing.T) {
+
+	warehouse, pool := newTestPostgreSQLWarehouse(t)
+	profileColumns := []warehouses.Column{{Name: "email", Type: types.String(), Nullable: true}}
+	if err := warehouse.Initialize(t.Context(), profileColumns); err != nil {
+		t.Fatal(err)
+	}
+	for _, column := range []string{"_anonymous_count", "_recognized_count"} {
+		_, err := pool.Exec(t.Context(), `ALTER TABLE "krenalis_profiles_0" DROP COLUMN `+quoteIdent(column))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	const opID = "a44731d8-d89d-44b9-ac87-a8ce1a8770d7"
+	err := warehouse.ResolveIdentities(t.Context(), opID, profileColumns, profileColumns, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var countColumns int
+	err = pool.QueryRow(t.Context(), `SELECT COUNT(*)
+		FROM information_schema.columns
+		WHERE table_schema = current_schema()
+			AND table_name = 'krenalis_profiles_1'
+			AND column_name IN ('_anonymous_count', '_recognized_count')`).Scan(&countColumns)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if countColumns != 2 {
+		t.Fatalf("expected two identity count columns in the new profiles table, got %d", countColumns)
+	}
+
+}
+
 // TestResolveIdentitiesRemovesObsoleteProfileTables verifies that a successful
 // operation after a failure removes obsolete profile tables and retains only
 // the published table.

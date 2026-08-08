@@ -87,6 +87,13 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 		if err != nil {
 			return fmt.Errorf("cannot create profiles table (with name %s): %s", quoteIdent(newProfilesName), err)
 		}
+		// Add the identity count columns if they are not already present.
+		_, err = tx.Exec(ctx, `ALTER TABLE `+quoteIdent(newProfilesName)+
+			` ADD COLUMN IF NOT EXISTS "_anonymous_count" integer NOT NULL,`+
+			` ADD COLUMN IF NOT EXISTS "_recognized_count" integer NOT NULL`)
+		if err != nil {
+			return err
+		}
 		// Link the candidate version to this operation so it can be published on
 		// success or removed on failure.
 		_, err = tx.Exec(ctx, `INSERT INTO "krenalis_profile_schema_versions" ("version", "operation", "timestamp")`+
@@ -152,7 +159,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 		mergeProfiles.WriteString(quoteIdent(c.Name))
 		mergeProfiles.WriteByte(',')
 	}
-	mergeProfiles.WriteString(`"_identities", "_kpid", "_updated_at"`)
+	mergeProfiles.WriteString(`"_identities", "_anonymous_count", "_recognized_count", "_kpid", "_updated_at"`)
 	mergeProfiles.WriteString(") SELECT\n")
 	for _, c := range profileColumns {
 		if c.Type.Kind() == types.ArrayKind {
@@ -177,6 +184,8 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 	}
 	// Write the "_identities" column.
 	mergeProfiles.WriteString(`ARRAY_AGG(DISTINCT "_pk"), `)
+	mergeProfiles.WriteString(`COUNT(DISTINCT ("_connection", "_identity_id")) FILTER (WHERE "_is_anonymous"), `)
+	mergeProfiles.WriteString(`COUNT(DISTINCT ("_connection", "_identity_id")) FILTER (WHERE NOT "_is_anonymous"), `)
 	// Write the "_kpid" column.
 	// If all KPIDs are the same - ignoring the NULL ones, which refer to new
 	// identities - then take the common value as the profile's KPID; otherwise,

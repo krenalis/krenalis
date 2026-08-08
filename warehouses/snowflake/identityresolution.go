@@ -89,6 +89,12 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 		if err != nil {
 			return fmt.Errorf("cannot create profiles table (with name %s): %s", quoteIdent(newProfilesName), err)
 		}
+		// Add the identity count columns if they are not already present.
+		_, err = tx.ExecContext(ctx, `ALTER TABLE `+quoteIdent(newProfilesName)+` ADD COLUMN IF NOT EXISTS`+
+			` "_ANONYMOUS_COUNT" INTEGER NOT NULL, COLUMN IF NOT EXISTS "_RECOGNIZED_COUNT" INTEGER NOT NULL`)
+		if err != nil {
+			return snowflake(err)
+		}
 		// Link the candidate version to this operation so it can be published on
 		// success or removed on failure.
 		_, err = tx.ExecContext(ctx, `INSERT INTO "KRENALIS_PROFILE_SCHEMA_VERSIONS" ("VERSION", "OPERATION", "TIMESTAMP")`+
@@ -149,7 +155,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 		mergeProfiles.WriteString(quoteIdent(c.Name))
 		mergeProfiles.WriteByte(',')
 	}
-	mergeProfiles.WriteString(`"_IDENTITIES", "_KPID", "_UPDATED_AT"`)
+	mergeProfiles.WriteString(`"_IDENTITIES", "_ANONYMOUS_COUNT", "_RECOGNIZED_COUNT", "_KPID", "_UPDATED_AT"`)
 	mergeProfiles.WriteString(") SELECT\n")
 	for _, c := range profileColumns {
 		if c.Type.Kind() == types.ArrayKind {
@@ -182,6 +188,14 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	}
 	// Write the "_identities" column.
 	mergeProfiles.WriteString(`ARRAY_AGG(DISTINCT "_PK"), `)
+	mergeProfiles.WriteString(`COUNT(DISTINCT
+		CASE WHEN "_IS_ANONYMOUS" THEN "_CONNECTION" END,
+		CASE WHEN "_IS_ANONYMOUS" THEN "_IDENTITY_ID" END
+	), `)
+	mergeProfiles.WriteString(`COUNT(DISTINCT
+		CASE WHEN NOT "_IS_ANONYMOUS" THEN "_CONNECTION" END,
+		CASE WHEN NOT "_IS_ANONYMOUS" THEN "_IDENTITY_ID" END
+	), `)
 	// Write the "_KPID" column.
 	// If all KPIDs are the same - ignoring the NULL ones, which refer to new
 	// identities - then take the common value as the profile's KPID; otherwise,
@@ -313,29 +327,33 @@ func createPendingViewQuery(currentProfilesName, newProfilesName, opID string, p
 			AND "ERROR" = ''
 	)`)
 
-	var b strings.Builder
-	b.WriteString(`CREATE OR REPLACE VIEW "PROFILES" AS SELECT` + "\n")
+	var columns strings.Builder
 	metaProps := []string{"_KPID", "_UPDATED_AT"}
 	for i, property := range metaProps {
 		if i > 0 {
-			b.WriteString(",\n")
+			columns.WriteString(",\n")
 		}
-		b.WriteString("\t")
-		b.WriteString(quoteIdent(property))
+		columns.WriteString("\t")
+		columns.WriteString(quoteIdent(property))
 	}
 	for _, column := range profileColumns {
-		b.WriteString(",\n\t")
-		b.WriteString(quoteIdent(column.Name))
+		columns.WriteString(",\n\t")
+		columns.WriteString(quoteIdent(column.Name))
 	}
-	b.WriteString("\nFROM (\n\tSELECT * FROM ")
+
+	var b strings.Builder
+	b.WriteString(`CREATE OR REPLACE VIEW "PROFILES" AS SELECT` + "\n")
+	b.WriteString(columns.String())
+	b.WriteString("\nFROM ")
 	b.WriteString(quoteIdent(newProfilesName))
 	b.WriteString(" WHERE ")
 	b.WriteString(completed.String())
-	b.WriteString("\n\tUNION ALL\n\tSELECT * FROM ")
+	b.WriteString("\nUNION ALL\nSELECT\n")
+	b.WriteString(columns.String())
+	b.WriteString("\nFROM ")
 	b.WriteString(quoteIdent(currentProfilesName))
 	b.WriteString(" WHERE NOT ")
 	b.WriteString(completed.String())
-	b.WriteString("\n) AS \"PUBLISHED_PROFILES\"")
 
 	return b.String()
 }
