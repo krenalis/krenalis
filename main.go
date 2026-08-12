@@ -33,6 +33,7 @@ import (
 	"embed"
 
 	// Import connectors.
+	_ "github.com/krenalis/krenalis/connectors/activecampaign"
 	_ "github.com/krenalis/krenalis/connectors/brevo"
 	_ "github.com/krenalis/krenalis/connectors/clickhouse"
 	_ "github.com/krenalis/krenalis/connectors/csv"
