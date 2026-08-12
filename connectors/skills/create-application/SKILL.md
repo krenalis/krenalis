@@ -12,11 +12,11 @@ Implement only the provider capabilities requested by the task. Do not default t
 1. Inspect the task, the target package if it exists, and the current public API in `connectors/applications.go`, `connectors/connectors.go`, `connectors/ui.go`, and `connectors/registry.go`.
 2. Declare the capability matrix before choosing endpoints:
 
-   | Role | Target | Required implementation |
-   | --- | --- | --- |
-   | Source | User | `RecordFetcher` |
-   | Destination | User | `RecordUpserter` |
-   | Destination | Event | `EventSender` and a non-`None` `SendingMode` |
+   | Role        | Target | Required implementation                      |
+   |-------------|--------|----------------------------------------------|
+   | Source      | User   | `RecordFetcher`                              |
+   | Destination | User   | `RecordUpserter`                             |
+   | Destination | Event  | `EventSender` and a non-`None` `SendingMode` |
 
    Source applications currently support only `TargetUser`. `RecordUpserter` embeds `RecordFetcher`; a destination-user provider therefore needs usable schema, fetch, and upsert behavior. A destination may combine `TargetUser` and `TargetEvent` only when both are useful and supported.
 3. For a new provider or capability, follow [provider discovery](references/provider-discovery.md). If the request names only a provider, choose the smallest useful, well-supported capability set and state the assumption; do not manufacture parity with existing connectors.
@@ -36,16 +36,16 @@ Do not conceal a framework mismatch with dummy capabilities or misleading stubs.
 
 Always read [application specification and packaging](references/application-spec.md) and [testing](references/testing.md). Then load only the references needed for the selected capabilities:
 
-| Concern | Reference |
-| --- | --- |
-| Provider endpoints and feasibility | [Provider discovery](references/provider-discovery.md) |
-| API key, bearer, basic, or OAuth | [Authentication](references/auth.md) |
-| Connection configuration | [Settings UI](references/settings-ui.md) |
-| User and event value shapes | [Schemas and types](references/schemas-and-types.md) |
-| User import or upsert | [Users](references/users.md) |
-| Event destination | [Events](references/events.md) |
-| Multi-item consumption or request limits | [Iteration and batching](references/iteration-batching.md) |
-| Requests, endpoint groups, retries, and errors | [HTTP behavior](references/http.md) |
+| Concern                                        | Reference                                                  |
+|------------------------------------------------|------------------------------------------------------------|
+| Provider endpoints and feasibility             | [Provider discovery](references/provider-discovery.md)     |
+| API key, bearer, basic, or OAuth               | [Authentication](references/auth.md)                       |
+| Connection configuration                       | [Settings UI](references/settings-ui.md)                   |
+| User and event value shapes                    | [Schemas and types](references/schemas-and-types.md)       |
+| User import or upsert                          | [Users](references/users.md)                               |
+| Event destination                              | [Events](references/events.md)                             |
+| Multi-item consumption or request limits       | [Iteration and batching](references/iteration-batching.md) |
+| Requests, endpoint groups, retries, and errors | [HTTP behavior](references/http.md)                        |
 
 ## Implement in evidence-driven order
 
