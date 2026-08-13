@@ -534,7 +534,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		"transformation_source, transformation_preserve_json, transformation_in_paths, transformation_out_paths,\n"+
 		"query, format, path, sheet, compression::TEXT, order_by, format_settings, export_mode, matching_in,\n"+
 		"matching_out, update_on_duplicates, table_name, table_key, user_id_column, updated_at_column,\n"+
-		"updated_at_format, health, properties_to_unset FROM pipelines",
+		"updated_at_format, incremental, health, properties_to_unset FROM pipelines",
 		func(rows *db.Rows) error {
 			for rows.Next() {
 				var connectionID string
@@ -550,7 +550,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 					&pipeline.Transformation.OutPaths, &pipeline.Query, &format, &pipeline.Path, &pipeline.Sheet, &pipeline.Compression,
 					&pipeline.OrderBy, &pipeline.FormatSettings, &pipeline.ExportMode, &pipeline.Matching.In, &pipeline.Matching.Out,
 					&pipeline.UpdateOnDuplicates, &pipeline.TableName, &pipeline.TableKey, &pipeline.UserIDColumn, &pipeline.UpdatedAtColumn,
-					&pipeline.UpdatedAtFormat, &pipeline.Health, &pipeline.propertiesToUnset)
+					&pipeline.UpdatedAtFormat, &pipeline.Incremental, &pipeline.Health, &pipeline.propertiesToUnset)
 				if err != nil {
 					return fmt.Errorf("loading pipeline %s: %s", pipeline.ID, err)
 				}
