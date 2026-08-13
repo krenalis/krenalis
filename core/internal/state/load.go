@@ -72,13 +72,15 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 			if connector.Terms.UserID != "" {
 				c.Terms.UserID = connector.Terms.UserID
 			}
-			switch connector.AsDestination.SendingMode {
-			case connectors.Client:
-				c.SendingMode = new(Client)
-			case connectors.Server:
-				c.SendingMode = new(Server)
-			case connectors.ClientAndServer:
-				c.SendingMode = new(ClientAndServer)
+			if connector.AsDestination != nil {
+				switch connector.AsDestination.SendingMode {
+				case connectors.Client:
+					c.SendingMode = new(Client)
+				case connectors.Server:
+					c.SendingMode = new(Server)
+				case connectors.ClientAndServer:
+					c.SendingMode = new(ClientAndServer)
+				}
 			}
 			// c.WebhooksPer = WebhooksPer(connector.WebhooksPer) TODO(marco): implement webhooks
 			if connector.OAuth.AuthURL != "" {
