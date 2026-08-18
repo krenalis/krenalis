@@ -11,6 +11,7 @@ import (
 	"iter"
 	"math"
 	"slices"
+	"strings"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -121,8 +122,10 @@ func Test_Sender_Peek(t *testing.T) {
 					}
 					func() {
 						defer func() {
-							if recover() == nil {
-								t.Fatal("Peek after iteration: expected panic")
+							r := recover()
+							msg, ok := r.(string)
+							if !ok || !strings.Contains(msg, "Events.Peek outside of an iteration") {
+								t.Errorf("Peek after iteration: unexpected panic %v", r)
 							}
 						}()
 						events.Peek()
