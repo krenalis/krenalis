@@ -391,10 +391,11 @@ type Records interface {
 	// update one record at a time.
 	First() Record
 
-	// Peek retrieves the next record without advancing the iterator. It returns the
-	// record and true if a record is available, or false if there are no further
-	// records. Can only be called during an iteration with All or Same.
-	// The returned record must not be modified.
+	// Peek returns the next record without consuming it. It returns the record and
+	// true if one is available, or a zero Record and false otherwise. It may be
+	// called before All, Same, or First, or while an iterator returned by All or
+	// Same is yielding a record. It panics otherwise. The returned record must not
+	// be modified.
 	Peek() (Record, bool)
 
 	// Postpone postpones the current record in the iteration and marks it as
@@ -551,9 +552,11 @@ type Events interface {
 	// After First is called, no further method calls on Events are allowed.
 	First() *Event
 
-	// Peek retrieves the next event without advancing the iterator. It returns the
-	// event and true if an event is available, or false if there are no further
-	// events. The returned event must not be modified.
+	// Peek returns the next event without consuming it. It returns the event and
+	// true if one is available, or nil and false otherwise. It may be called before
+	// All, SameUser, or First, or while an iterator returned by All or SameUser is
+	// yielding an event. It panics otherwise. The returned event must not be
+	// modified.
 	Peek() (*Event, bool)
 
 	// Postpone postpones the current event in the iteration and marks it as unread.

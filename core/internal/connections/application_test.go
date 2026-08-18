@@ -5,14 +5,77 @@
 package connections
 
 import (
+	"context"
+	"io"
 	"iter"
 	"testing"
+	"time"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
+
+type recordFetcherFunc func(context.Context, connectors.Targets, time.Time, string, types.Type) ([]connectors.Record, string, error)
+
+func (recordFetcherFunc) RecordSchema(context.Context, connectors.Targets, connectors.Role) (types.Type, error) {
+	panic("unexpected call to RecordSchema")
+}
+
+func (f recordFetcherFunc) Records(ctx context.Context, target connectors.Targets, updatedAt time.Time, cursor string, schema types.Type) ([]connectors.Record, string, error) {
+	return f(ctx, target, updatedAt, cursor, schema)
+}
+
+// TestAppRecordsPreservesConnectorRecordError verifies that an application
+// record preserves the connector error and does not read its update time or
+// attributes when the record has an error.
+func TestAppRecordsPreservesConnectorRecordError(t *testing.T) {
+
+	recordErr := errors.New("record cannot be read")
+	schema := types.Object([]types.Property{
+		{Name: "email", Type: types.String()},
+	})
+	records := &appRecords{
+		schema:    schema,
+		appSchema: schema,
+		updatedAt: time.Date(2026, time.January, 2, 3, 4, 5, 0, time.UTC),
+		connector: "test",
+		inner: recordFetcherFunc(func(context.Context, connectors.Targets, time.Time, string, types.Type) ([]connectors.Record, string, error) {
+			return []connectors.Record{{
+				ID:  "user-1",
+				Err: recordErr,
+			}}, "", io.EOF
+		}),
+	}
+
+	var got []Record
+	for record := range records.All(t.Context()) {
+		got = append(got, record)
+	}
+	if err := records.Err(); err != nil {
+		t.Fatalf("expected no iterator error, got %s", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("expected one record, got %d", len(got))
+	}
+	record := got[0]
+	if record.ID != "user-1" {
+		t.Fatalf("expected record ID %q, got %q", "user-1", record.ID)
+	}
+	if !errors.Is(record.Err, recordErr) {
+		t.Fatalf("expected record error %q, got %v", recordErr, record.Err)
+	}
+	if !record.UpdatedAt.IsZero() {
+		t.Fatalf("expected zero update time, got %s", record.UpdatedAt)
+	}
+	if record.Attributes != nil {
+		t.Fatalf("expected nil attributes, got %#v", record.Attributes)
+	}
+	if !records.Last() {
+		t.Fatal("expected the errored record to be the last record")
+	}
+}
 
 func Test_sameValue(t *testing.T) {
 
