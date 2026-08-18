@@ -792,7 +792,7 @@ func (d *destinationAck) Acknowledge() {
 
 	a.manager.Remove(a)
 	if err := a.msg.Ack(); err != nil {
-		slog.Warn(fmt.Sprintf("nats: cannot ack event: %s", err))
+		slog.Warn("cannot ack NATS event", "error", err)
 	}
 }
 
