@@ -6,12 +6,13 @@ package connections
 
 import (
 	"context"
-	"errors"
 	"io"
+	"iter"
 	"testing"
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
@@ -118,6 +119,92 @@ func Test_sameValue(t *testing.T) {
 				t.Fatalf("expected %t, got %t", test.expected, got)
 			}
 		})
+	}
+
+}
+
+// Test_singleEventIterator_Peek verifies Peek's behavior before, during, and
+// after iterating over a single event.
+func Test_singleEventIterator_Peek(t *testing.T) {
+
+	tests := []struct {
+		name string
+		seq  func(*singleEventIterator) iter.Seq[*connectors.Event]
+	}{
+		{name: "All", seq: (*singleEventIterator).All},
+		{name: "SameUser", seq: (*singleEventIterator).SameUser},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			event := new(connectors.Event)
+			events := newSingleEventIterator(event, "test")
+
+			for range 2 {
+				got, ok := events.Peek()
+				if !ok || got != event {
+					t.Fatalf("Peek before iteration: expected event %p and true, got %p and %t", event, got, ok)
+				}
+			}
+
+			yielded := 0
+			for range test.seq(events) {
+				yielded++
+				if got, ok := events.Peek(); ok || got != nil {
+					t.Fatalf("Peek during iteration: expected nil and false, got %p and %t", got, ok)
+				}
+			}
+			if yielded != 1 {
+				t.Fatalf("expected one event, got %d", yielded)
+			}
+
+			defer func() {
+				if recover() == nil {
+					t.Fatal("Peek after iteration: expected panic")
+				}
+			}()
+			events.Peek()
+		})
+	}
+}
+
+// Test_singleEventIterator_UsageAfterIteration verifies that methods available
+// only during an active iteration panic after the iteration completes.
+func Test_singleEventIterator_UsageAfterIteration(t *testing.T) {
+
+	sequences := []struct {
+		name string
+		seq  func(*singleEventIterator) iter.Seq[*connectors.Event]
+	}{
+		{name: "All", seq: (*singleEventIterator).All},
+		{name: "SameUser", seq: (*singleEventIterator).SameUser},
+	}
+	methods := []struct {
+		name string
+		call func(*singleEventIterator)
+	}{
+		{name: "Discard", call: func(events *singleEventIterator) {
+			events.Discard(errors.New("event is invalid"))
+		}},
+		{name: "Postpone", call: func(events *singleEventIterator) {
+			events.Postpone()
+		}},
+	}
+
+	for _, sequence := range sequences {
+		for _, method := range methods {
+			t.Run(sequence.name+"/"+method.name, func(t *testing.T) {
+				events := newSingleEventIterator(&connectors.Event{}, "test")
+				for range sequence.seq(events) {
+				}
+				defer func() {
+					if recover() == nil {
+						t.Fatal(method.name + " after iteration: expected panic")
+					}
+				}()
+				method.call(events)
+			})
+		}
 	}
 
 }

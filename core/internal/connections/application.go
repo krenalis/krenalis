@@ -401,6 +401,7 @@ func (iter *singleEventIterator) All() iter.Seq[*connectors.Event] {
 	return func(yield func(event *connectors.Event) bool) {
 		iter.iterating = true
 		yield(iter.event)
+		iter.iterating = false
 	}
 }
 
@@ -466,6 +467,7 @@ func (iter *singleEventIterator) SameUser() iter.Seq[*connectors.Event] {
 	return func(yield func(event *connectors.Event) bool) {
 		iter.iterating = true
 		yield(iter.event)
+		iter.iterating = false
 	}
 }
 
