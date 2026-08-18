@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
@@ -102,4 +103,45 @@ func Test_singleEventIterator_Peek(t *testing.T) {
 			events.Peek()
 		})
 	}
+}
+
+// Test_singleEventIterator_UsageAfterIteration verifies that methods available
+// only during an active iteration panic after the iteration completes.
+func Test_singleEventIterator_UsageAfterIteration(t *testing.T) {
+
+	sequences := []struct {
+		name string
+		seq  func(*singleEventIterator) iter.Seq[*connectors.Event]
+	}{
+		{name: "All", seq: (*singleEventIterator).All},
+		{name: "SameUser", seq: (*singleEventIterator).SameUser},
+	}
+	methods := []struct {
+		name string
+		call func(*singleEventIterator)
+	}{
+		{name: "Discard", call: func(events *singleEventIterator) {
+			events.Discard(errors.New("event is invalid"))
+		}},
+		{name: "Postpone", call: func(events *singleEventIterator) {
+			events.Postpone()
+		}},
+	}
+
+	for _, sequence := range sequences {
+		for _, method := range methods {
+			t.Run(sequence.name+"/"+method.name, func(t *testing.T) {
+				events := newSingleEventIterator(&connectors.Event{}, "test")
+				for range sequence.seq(events) {
+				}
+				defer func() {
+					if recover() == nil {
+						t.Fatal(method.name + " after iteration: expected panic")
+					}
+				}()
+				method.call(events)
+			})
+		}
+	}
+
 }
