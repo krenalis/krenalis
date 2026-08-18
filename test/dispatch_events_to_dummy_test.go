@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	pipelineProcessingSteps = 6
-	transformationStep      = 3
-	outputValidationStep    = 4
+	pipelineProcessingSteps = 7
+	transformationStep      = 4
+	outputValidationStep    = 5
 )
 
 func TestDispatchEventsToDummy(t *testing.T) {
@@ -111,7 +111,7 @@ func waitPipelinePassedMetrics(t *testing.T, k *krenalistester.Krenalis, pipelin
 	defer poll.Stop()
 	timeout := time.NewTimer(5 * time.Second)
 	defer timeout.Stop()
-	var totals [6]int
+	var totals [pipelineProcessingSteps]int
 	var series int
 	for {
 		var response struct {
