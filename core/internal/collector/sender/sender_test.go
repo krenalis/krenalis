@@ -101,24 +101,24 @@ func Test_Sender_Peek(t *testing.T) {
 				app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
 					first, ok := events.Peek()
 					if !ok {
-						t.Fatal("Peek before iteration: expected an event")
+						t.Error("Peek before iteration: expected an event")
 					}
 					if got, ok := events.Peek(); !ok || got != first {
-						t.Fatalf("repeated Peek before iteration: expected event %p and true, got %p and %t", first, got, ok)
+						t.Errorf("repeated Peek before iteration: expected event %p and true, got %p and %t", first, got, ok)
 					}
 
 					yielded := 0
 					for event := range test.seq(events) {
 						yielded++
 						if event != first {
-							t.Fatalf("expected event %p, got %p", first, event)
+							t.Errorf("expected event %p, got %p", first, event)
 						}
 						if got, ok := events.Peek(); ok || got != nil {
-							t.Fatalf("Peek during iteration: expected nil and false, got %p and %t", got, ok)
+							t.Errorf("Peek during iteration: expected nil and false, got %p and %t", got, ok)
 						}
 					}
 					if yielded != 1 {
-						t.Fatalf("expected one event, got %d", yielded)
+						t.Errorf("expected one event, got %d", yielded)
 					}
 					func() {
 						defer func() {
