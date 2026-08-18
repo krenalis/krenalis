@@ -186,7 +186,7 @@ func (store *Store) DeleteDestinationProfiles(ctx context.Context, pipeline stri
 		return err
 	}
 	defer done()
-	where := warehouses.NewBaseExpr(
+	where := warehouses.NewConditionExpr(
 		warehouses.Column{Name: "_pipeline", Type: types.String()}, warehouses.OpIs, pipeline)
 	return store.warehouse().Delete(ctx, "krenalis_destination_profiles", where)
 }
@@ -446,7 +446,7 @@ func (store *Store) PurgePipelines(ctx context.Context, pipelines []string) erro
 	for i, pipeline := range pipelines {
 		values[i] = pipeline
 	}
-	where := warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.String()}, warehouses.OpIsOneOf, values...)
+	where := warehouses.NewConditionExpr(warehouses.Column{Name: "_pipeline", Type: types.String()}, warehouses.OpIsOneOf, values...)
 	err = store.warehouse().Delete(ctx, "krenalis_identities", where)
 	if err != nil {
 		return err

@@ -99,9 +99,9 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 		joins = []warehouses.Join{
 			{
 				Table: "krenalis_destination_profiles",
-				Condition: warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-					warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.String()}, warehouses.OpIs, matching.Pipeline),
-					warehouses.NewBaseExpr(inPropertyColumn, warehouses.OpIs, warehouses.Column{Name: "_out_matching_value", Type: types.String()}),
+				Condition: warehouses.NewLogicalExpr(warehouses.OpAnd, []warehouses.Expr{
+					warehouses.NewConditionExpr(warehouses.Column{Name: "_pipeline", Type: types.String()}, warehouses.OpIs, matching.Pipeline),
+					warehouses.NewConditionExpr(inPropertyColumn, warehouses.OpIs, warehouses.Column{Name: "_out_matching_value", Type: types.String()}),
 				}),
 			},
 		}
@@ -111,13 +111,13 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 			joins[0].Type = warehouses.InnerJoin
 		case state.CreateOnly:
 			// Include only users without a corresponding match.
-			where = andExpressions(where, warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.String()}, warehouses.OpIsNull))
+			where = andExpressions(where, warehouses.NewConditionExpr(warehouses.Column{Name: "_pipeline", Type: types.String()}, warehouses.OpIsNull))
 			fallthrough
 		case state.CreateOrUpdate:
 			// Perform a LEFT JOIN to also return users without a matching destination user.
 			joins[0].Type = warehouses.LeftJoin
 			// Include only users with a value for the input matching property.
-			where = andExpressions(where, warehouses.NewBaseExpr(inPropertyColumn, warehouses.OpIsNotNull))
+			where = andExpressions(where, warehouses.NewConditionExpr(inPropertyColumn, warehouses.OpIsNotNull))
 		}
 		// Sort the results by the input matching property, user ID, and external ID.
 		orderBy = []warehouses.Column{
@@ -157,17 +157,16 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 	return records, err
 }
 
-// andExpressions returns an expression resulting from the AND of expr with
-// base.
-func andExpressions(expr warehouses.Expr, base *warehouses.BaseExpr) warehouses.Expr {
+// andExpressions returns the logical AND of expr and condition.
+func andExpressions(expr warehouses.Expr, condition *warehouses.ConditionExpr) warehouses.Expr {
 	if expr == nil {
-		return base
+		return condition
 	}
-	if e, ok := expr.(*warehouses.MultiExpr); ok && e.Operator == warehouses.OpAnd {
-		e.Operands = append(e.Operands, base)
+	if e, ok := expr.(*warehouses.LogicalExpr); ok && e.Operator == warehouses.OpAnd {
+		e.Operands = append(e.Operands, condition)
 		return e
 	}
-	return warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{expr, base})
+	return warehouses.NewLogicalExpr(warehouses.OpAnd, []warehouses.Expr{expr, condition})
 }
 
 // Records represents records read from the data warehouse.

@@ -29,8 +29,8 @@ func TestConvertWhereSimple(t *testing.T) {
 	if err != nil {
 		t.Fatalf("convertWhere returned error: %v", err)
 	}
-	want := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-		warehouses.NewBaseExpr(column, warehouses.OpIs, 1),
+	want := warehouses.NewLogicalExpr(warehouses.OpAnd, []warehouses.Expr{
+		warehouses.NewConditionExpr(column, warehouses.OpIs, 1),
 	})
 	if !reflect.DeepEqual(want, got) {
 		t.Fatalf("expected %#v, got %#v", want, got)
@@ -56,9 +56,9 @@ func TestConvertWhereMultiple(t *testing.T) {
 	if err != nil {
 		t.Fatalf("convertWhere returned error: %v", err)
 	}
-	want := warehouses.NewMultiExpr(warehouses.OpOr, []warehouses.Expr{
-		warehouses.NewBaseExpr(colA, warehouses.OpIsGreaterThan, 5),
-		warehouses.NewBaseExpr(colBC, warehouses.OpIsLessThanOrEqualTo, 10),
+	want := warehouses.NewLogicalExpr(warehouses.OpOr, []warehouses.Expr{
+		warehouses.NewConditionExpr(colA, warehouses.OpIsGreaterThan, 5),
+		warehouses.NewConditionExpr(colBC, warehouses.OpIsLessThanOrEqualTo, 10),
 	})
 	if !reflect.DeepEqual(want, got) {
 		t.Fatalf("expected %#v, got %#v", want, got)
@@ -91,15 +91,15 @@ func TestConvertWhereExistsOperators(t *testing.T) {
 	if err != nil {
 		t.Fatalf("convertWhere returned error: %v", err)
 	}
-	want := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-		warehouses.NewBaseExpr(colA, warehouses.OpIsNotNull),
-		warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-			warehouses.NewBaseExpr(colBC, warehouses.OpIsNull),
-			warehouses.NewBaseExpr(colBD, warehouses.OpIsNull),
+	want := warehouses.NewLogicalExpr(warehouses.OpAnd, []warehouses.Expr{
+		warehouses.NewConditionExpr(colA, warehouses.OpIsNotNull),
+		warehouses.NewLogicalExpr(warehouses.OpAnd, []warehouses.Expr{
+			warehouses.NewConditionExpr(colBC, warehouses.OpIsNull),
+			warehouses.NewConditionExpr(colBD, warehouses.OpIsNull),
 		}),
-		warehouses.NewMultiExpr(warehouses.OpOr, []warehouses.Expr{
-			warehouses.NewBaseExpr(colEF, warehouses.OpIsNotNull),
-			warehouses.NewBaseExpr(colEG, warehouses.OpIsNotNull),
+		warehouses.NewLogicalExpr(warehouses.OpOr, []warehouses.Expr{
+			warehouses.NewConditionExpr(colEF, warehouses.OpIsNotNull),
+			warehouses.NewConditionExpr(colEG, warehouses.OpIsNotNull),
 		}),
 	})
 	if !reflect.DeepEqual(want, got) {

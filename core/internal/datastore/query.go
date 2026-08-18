@@ -53,25 +53,25 @@ type Query struct {
 // "exists" and "does not exist" operators are mapped to OpIsNotNull and
 // OpIsNull, respectively.
 func convertWhere(where *state.Where, columnFromProperty map[string]warehouses.Column) (warehouses.Expr, error) {
-	exp := warehouses.NewMultiExpr(warehouses.LogicalOperator(where.Logical), make([]warehouses.Expr, len(where.Conditions)))
+	exp := warehouses.NewLogicalExpr(warehouses.LogicalOperator(where.Logical), make([]warehouses.Expr, len(where.Conditions)))
 	for i, cond := range where.Conditions {
 		path := strings.Join(cond.Property, ".") // TODO(marco): How can I avoid this allocation?
 		if column, ok := columnFromProperty[path]; ok {
-			var op warehouses.Operator
+			var op warehouses.ConditionOperator
 			switch cond.Operator {
 			case state.OpExists:
 				op = warehouses.OpIsNotNull
 			case state.OpDoesNotExist:
 				op = warehouses.OpIsNull
 			default:
-				op = warehouses.Operator(cond.Operator)
+				op = warehouses.ConditionOperator(cond.Operator)
 			}
-			exp.Operands[i] = warehouses.NewBaseExpr(column, op, cond.Values...)
+			exp.Operands[i] = warehouses.NewConditionExpr(column, op, cond.Values...)
 			continue
 		}
 		// The property is an object; apply it to all sub-property columns.
 		var logical warehouses.LogicalOperator
-		var op warehouses.Operator
+		var op warehouses.ConditionOperator
 		switch cond.Operator {
 		case state.OpExists:
 			logical = warehouses.OpOr
@@ -85,16 +85,16 @@ func convertWhere(where *state.Where, columnFromProperty map[string]warehouses.C
 		var operands []warehouses.Expr
 		for name, column := range columnFromProperty {
 			if strings.HasPrefix(name, path) && name[len(path)] == '.' {
-				operands = append(operands, warehouses.NewBaseExpr(column, op))
+				operands = append(operands, warehouses.NewConditionExpr(column, op))
 			}
 		}
 		if operands == nil {
 			return nil, fmt.Errorf("property %q does not exist in where expression", path)
 		}
 		slices.SortFunc(operands, func(a, b warehouses.Expr) int {
-			return cmp.Compare(a.(*warehouses.BaseExpr).Column.Name, b.(*warehouses.BaseExpr).Column.Name)
+			return cmp.Compare(a.(*warehouses.ConditionExpr).Column.Name, b.(*warehouses.ConditionExpr).Column.Name)
 		})
-		exp.Operands[i] = warehouses.NewMultiExpr(logical, operands)
+		exp.Operands[i] = warehouses.NewLogicalExpr(logical, operands)
 	}
 	return exp, nil
 }
