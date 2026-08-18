@@ -231,12 +231,16 @@ func (r FailureReason) String() string {
 	panic(fmt.Errorf("unexpected FailureReason %d", r))
 }
 
+// MaxEventTypeIdentifierLen is the maximum length of event type and ordering
+// group identifiers.
+const MaxEventTypeIdentifierLen = 25
+
 // EventType represents a type of event that can be sent to an application.
 type EventType struct {
 	// ID is the identifier of the event type. It must be unique for every event
-	// type of the connection.
+	// type of the connection and follow the syntax of a property name.
 	//
-	// It cannot be longer than 100 runes.
+	// It cannot be longer than MaxEventTypeIdentifierLen characters.
 	ID string
 
 	// Name is the name of the event type to be displayed.
@@ -245,8 +249,24 @@ type EventType struct {
 	// Description is the description of the event type to be displayed.
 	Description string
 
+	// OrderingGroup defines the per-user delivery order shared by event types.
+	// Events whose types have the same ordering group are delivered in their
+	// original order for each user. If empty, ID is used. If set, it must follow
+	// the syntax of a property name and cannot be longer than
+	// MaxEventTypeIdentifierLen characters.
+	OrderingGroup string
+
 	// DefaultFilter is the default filter to use for pipelines.
 	DefaultFilter string
+}
+
+// OrderingGroup returns the effective ordering group of an event type. If no
+// group is set, it returns the event type ID.
+func OrderingGroup(eventType *EventType) string {
+	if eventType.OrderingGroup == "" {
+		return eventType.ID
+	}
+	return eventType.OrderingGroup
 }
 
 // RecordFetcher is implemented by application connectors that support fetching
@@ -430,7 +450,8 @@ type EventSender interface {
 	// ErrEventTypeNotExist error.
 	EventTypeSchema(ctx context.Context, eventType string) (types.Type, error)
 
-	// EventTypes returns the event types of the connector's instance.
+	// EventTypes returns the event types of the connector's instance. The caller
+	// must not modify the returned slice or event types.
 	EventTypes(ctx context.Context) ([]*EventType, error)
 
 	// PreviewSendEvents builds and returns the HTTP request that would be used
