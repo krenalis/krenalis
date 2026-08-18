@@ -6,6 +6,7 @@ package appwriter
 
 import (
 	"iter"
+	"strings"
 	"testing"
 
 	"github.com/krenalis/krenalis/connectors"
@@ -72,8 +73,10 @@ func Test_iterator_Peek(t *testing.T) {
 			}
 
 			defer func() {
-				if recover() == nil {
-					t.Fatal("Peek after iteration: expected panic")
+				r := recover()
+				msg, ok := r.(string)
+				if !ok || !strings.Contains(msg, "Records.Peek outside of an iteration") {
+					t.Errorf("Peek after iteration: unexpected panic %v", r)
 				}
 			}()
 			it.Peek()
@@ -94,8 +97,10 @@ func Test_iterator_PeekAfterFirst(t *testing.T) {
 	}
 
 	defer func() {
-		if recover() == nil {
-			t.Fatal("Peek after First: expected panic")
+		r := recover()
+		msg, ok := r.(string)
+		if !ok || !strings.Contains(msg, "Records.Peek outside of an iteration") {
+			t.Errorf("Peek after First: unexpected panic %v", r)
 		}
 	}()
 	it.Peek()
