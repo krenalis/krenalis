@@ -193,6 +193,9 @@ CREATE TABLE pipelines (
     ordering_group varchar(25) NOT NULL CONSTRAINT pipelines_ordering_group_check
         CHECK ((event_type = '' AND ordering_group = '') OR
             (event_type <> '' AND ordering_group ~ '^[A-Za-z_][A-Za-z0-9_]*$')),
+    delivery_endpoint varchar(25) NOT NULL CONSTRAINT pipelines_delivery_endpoint_check
+        CHECK (delivery_endpoint = '' OR
+            (event_type <> '' AND delivery_endpoint ~ '^[A-Za-z_][A-Za-z0-9_]*$')),
     name varchar(60) NOT NULL DEFAULT '',
     enabled boolean NOT NULL DEFAULT FALSE,
     schedule_start smallint NOT NULL DEFAULT 0 CHECK (schedule_start >= 0 AND schedule_start < 1440),

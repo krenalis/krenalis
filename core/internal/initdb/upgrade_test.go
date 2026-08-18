@@ -128,7 +128,7 @@ func TestUpgrade(t *testing.T) {
 	assertIndexExists(t, database, pipelinesMetricsTimeslotIndex)
 	assertOrganizationConnectorReferences(t, database)
 	assertNodeIDsUpgraded(t, database)
-	assertPipelineEventTypesUpgraded(t, database)
+	assertPipelineEventMetadataUpgraded(t, database)
 	assertPipelineMetricsUpgrade(t, database)
 	assertPipelineMetricsColumnOrder(t, database)
 	assertPipelineMetricsSurvivePipelineDelete(t, database)
@@ -299,12 +299,12 @@ func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
 	}
 }
 
-// assertPipelineEventTypesUpgraded verifies event type identifier limits and
-// persisted ordering groups.
-func assertPipelineEventTypesUpgraded(t *testing.T, database *db.DB) {
+// assertPipelineEventMetadataUpgraded verifies event type identifier limits
+// and persisted ordering and delivery metadata.
+func assertPipelineEventMetadataUpgraded(t *testing.T, database *db.DB) {
 	t.Helper()
 
-	for _, column := range []string{"event_type", "ordering_group"} {
+	for _, column := range []string{"event_type", "ordering_group", "delivery_endpoint"} {
 		var length int
 		err := database.QueryRow(t.Context(), `
 			SELECT character_maximum_length
@@ -320,31 +320,57 @@ func assertPipelineEventTypesUpgraded(t *testing.T, database *db.DB) {
 		}
 	}
 
-	var eventType, orderingGroup string
+	var eventType, orderingGroup, deliveryEndpoint string
 	err := database.QueryRow(t.Context(), `
-		SELECT event_type, ordering_group
+		SELECT event_type, ordering_group, delivery_endpoint
 		FROM pipelines
-		WHERE id = '777777777777'`).Scan(&eventType, &orderingGroup)
+		WHERE id = '777777777777'`).Scan(&eventType, &orderingGroup, &deliveryEndpoint)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if eventType != "send_event_with_no_schema" || orderingGroup != "events" {
 		t.Fatalf("expected event type %q and ordering group %q, got %q and %q", "send_event_with_no_schema", "events", eventType, orderingGroup)
 	}
+	if deliveryEndpoint != "" {
+		t.Fatalf("expected empty delivery endpoint, got %q", deliveryEndpoint)
+	}
 
 	err = database.QueryRow(t.Context(), `
-		SELECT event_type, ordering_group
+		SELECT event_type, ordering_group, delivery_endpoint
 		FROM pipelines
-		WHERE id = '444444444444'`).Scan(&eventType, &orderingGroup)
+		WHERE id = '444444444444'`).Scan(&eventType, &orderingGroup, &deliveryEndpoint)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if eventType != "" || orderingGroup != "" {
 		t.Fatalf("expected empty event type and ordering group, got %q and %q", eventType, orderingGroup)
 	}
+	if deliveryEndpoint != "" {
+		t.Fatalf("expected empty delivery endpoint, got %q", deliveryEndpoint)
+	}
 
 	assertConstraintExists(t, database, "pipelines", "pipelines_event_type_check")
 	assertConstraintExists(t, database, "pipelines", "pipelines_ordering_group_check")
+	assertConstraintExists(t, database, "pipelines", "pipelines_delivery_endpoint_check")
+
+	if _, err := database.Exec(t.Context(), `
+		UPDATE pipelines
+		SET delivery_endpoint = 'contacts'
+		WHERE id = '777777777777'`); err != nil {
+		t.Fatalf("expected explicit delivery endpoint to be accepted, got %v", err)
+	}
+	if _, err := database.Exec(t.Context(), `
+		UPDATE pipelines
+		SET delivery_endpoint = 'contact-events'
+		WHERE id = '777777777777'`); err == nil {
+		t.Fatal("expected invalid delivery endpoint to be rejected, got no error")
+	}
+	if _, err := database.Exec(t.Context(), `
+		UPDATE pipelines
+		SET delivery_endpoint = 'contacts'
+		WHERE id = '444444444444'`); err == nil {
+		t.Fatal("expected delivery endpoint on a non-event pipeline to be rejected, got no error")
+	}
 }
 
 func assertStateRequestSyncSchemaUpgraded(t *testing.T, database *db.DB) {
