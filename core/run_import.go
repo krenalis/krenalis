@@ -104,7 +104,7 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 	users := make([]connections.Record, 0, 100)
 	transformationRecords := make([]transformers.Record, 0, 100)
 
-	var cursor time.Time
+	cursor := run.Cursor
 
 	// Read the users.
 	for user := range records.All(ctx) {

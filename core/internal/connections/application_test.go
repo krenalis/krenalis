@@ -5,11 +5,77 @@
 package connections
 
 import (
+	"context"
+	"io"
+	"iter"
 	"testing"
+	"time"
 
+	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
+
+type recordFetcherFunc func(context.Context, connectors.Targets, time.Time, string, types.Type) ([]connectors.Record, string, error)
+
+func (recordFetcherFunc) RecordSchema(context.Context, connectors.Targets, connectors.Role) (types.Type, error) {
+	panic("unexpected call to RecordSchema")
+}
+
+func (f recordFetcherFunc) Records(ctx context.Context, target connectors.Targets, updatedAt time.Time, cursor string, schema types.Type) ([]connectors.Record, string, error) {
+	return f(ctx, target, updatedAt, cursor, schema)
+}
+
+// TestAppRecordsPreservesConnectorRecordError verifies that an application
+// record preserves the connector error and does not read its update time or
+// attributes when the record has an error.
+func TestAppRecordsPreservesConnectorRecordError(t *testing.T) {
+
+	recordErr := errors.New("record cannot be read")
+	schema := types.Object([]types.Property{
+		{Name: "email", Type: types.String()},
+	})
+	records := &appRecords{
+		schema:    schema,
+		appSchema: schema,
+		updatedAt: time.Date(2026, time.January, 2, 3, 4, 5, 0, time.UTC),
+		connector: "test",
+		inner: recordFetcherFunc(func(context.Context, connectors.Targets, time.Time, string, types.Type) ([]connectors.Record, string, error) {
+			return []connectors.Record{{
+				ID:  "user-1",
+				Err: recordErr,
+			}}, "", io.EOF
+		}),
+	}
+
+	var got []Record
+	for record := range records.All(t.Context()) {
+		got = append(got, record)
+	}
+	if err := records.Err(); err != nil {
+		t.Fatalf("expected no iterator error, got %s", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("expected one record, got %d", len(got))
+	}
+	record := got[0]
+	if record.ID != "user-1" {
+		t.Fatalf("expected record ID %q, got %q", "user-1", record.ID)
+	}
+	if !errors.Is(record.Err, recordErr) {
+		t.Fatalf("expected record error %q, got %v", recordErr, record.Err)
+	}
+	if !record.UpdatedAt.IsZero() {
+		t.Fatalf("expected zero update time, got %s", record.UpdatedAt)
+	}
+	if record.Attributes != nil {
+		t.Fatalf("expected nil attributes, got %#v", record.Attributes)
+	}
+	if !records.Last() {
+		t.Fatal("expected the errored record to be the last record")
+	}
+}
 
 func Test_sameValue(t *testing.T) {
 
@@ -53,6 +119,92 @@ func Test_sameValue(t *testing.T) {
 				t.Fatalf("expected %t, got %t", test.expected, got)
 			}
 		})
+	}
+
+}
+
+// Test_singleEventIterator_Peek verifies Peek's behavior before, during, and
+// after iterating over a single event.
+func Test_singleEventIterator_Peek(t *testing.T) {
+
+	tests := []struct {
+		name string
+		seq  func(*singleEventIterator) iter.Seq[*connectors.Event]
+	}{
+		{name: "All", seq: (*singleEventIterator).All},
+		{name: "SameUser", seq: (*singleEventIterator).SameUser},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			event := new(connectors.Event)
+			events := newSingleEventIterator(event, "test")
+
+			for range 2 {
+				got, ok := events.Peek()
+				if !ok || got != event {
+					t.Fatalf("Peek before iteration: expected event %p and true, got %p and %t", event, got, ok)
+				}
+			}
+
+			yielded := 0
+			for range test.seq(events) {
+				yielded++
+				if got, ok := events.Peek(); ok || got != nil {
+					t.Fatalf("Peek during iteration: expected nil and false, got %p and %t", got, ok)
+				}
+			}
+			if yielded != 1 {
+				t.Fatalf("expected one event, got %d", yielded)
+			}
+
+			defer func() {
+				if recover() == nil {
+					t.Fatal("Peek after iteration: expected panic")
+				}
+			}()
+			events.Peek()
+		})
+	}
+}
+
+// Test_singleEventIterator_UsageAfterIteration verifies that methods available
+// only during an active iteration panic after the iteration completes.
+func Test_singleEventIterator_UsageAfterIteration(t *testing.T) {
+
+	sequences := []struct {
+		name string
+		seq  func(*singleEventIterator) iter.Seq[*connectors.Event]
+	}{
+		{name: "All", seq: (*singleEventIterator).All},
+		{name: "SameUser", seq: (*singleEventIterator).SameUser},
+	}
+	methods := []struct {
+		name string
+		call func(*singleEventIterator)
+	}{
+		{name: "Discard", call: func(events *singleEventIterator) {
+			events.Discard(errors.New("event is invalid"))
+		}},
+		{name: "Postpone", call: func(events *singleEventIterator) {
+			events.Postpone()
+		}},
+	}
+
+	for _, sequence := range sequences {
+		for _, method := range methods {
+			t.Run(sequence.name+"/"+method.name, func(t *testing.T) {
+				events := newSingleEventIterator(&connectors.Event{}, "test")
+				for range sequence.seq(events) {
+				}
+				defer func() {
+					if recover() == nil {
+						t.Fatal(method.name + " after iteration: expected panic")
+					}
+				}()
+				method.call(events)
+			})
+		}
 	}
 
 }

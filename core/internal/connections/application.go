@@ -401,6 +401,7 @@ func (iter *singleEventIterator) All() iter.Seq[*connectors.Event] {
 	return func(yield func(event *connectors.Event) bool) {
 		iter.iterating = true
 		yield(iter.event)
+		iter.iterating = false
 	}
 }
 
@@ -466,6 +467,7 @@ func (iter *singleEventIterator) SameUser() iter.Seq[*connectors.Event] {
 	return func(yield func(event *connectors.Event) bool) {
 		iter.iterating = true
 		yield(iter.event)
+		iter.iterating = false
 	}
 }
 
@@ -606,18 +608,21 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 				processedIDs[user.ID] = struct{}{}
 
 				record := Record{
-					ID:        user.ID,
-					UpdatedAt: user.UpdatedAt.UTC().Truncate(time.Microsecond),
+					ID:  user.ID,
+					Err: user.Err,
 					// Associations:   user.Associations, TODO(marco): Implement groups
 				}
 
-				// Validate the update time.
-				if err = validateUpdatedAt(record.UpdatedAt); err != nil {
-					record.Err = errors.New("record's update time is before 1900 or in the future")
-				}
-				if !r.updatedAt.IsZero() && record.UpdatedAt.Before(r.updatedAt) {
-					r.err = fmt.Errorf("%s returned a record whose update time is earlier than the required minimum", r.connector)
-					return
+				if record.Err == nil {
+					record.UpdatedAt = user.UpdatedAt.UTC().Truncate(time.Microsecond)
+					// Validate the update time.
+					if err = validateUpdatedAt(record.UpdatedAt); err != nil {
+						record.Err = errors.New("record's update time is before 1900 or in the future")
+					}
+					if !r.updatedAt.IsZero() && record.UpdatedAt.Before(r.updatedAt) {
+						r.err = fmt.Errorf("%s returned a record whose update time is earlier than the required minimum", r.connector)
+						return
+					}
 				}
 
 				if record.Err == nil {
