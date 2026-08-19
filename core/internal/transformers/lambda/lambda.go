@@ -451,11 +451,10 @@ func (fn *function) lambdaClient(ctx context.Context) (*lambda.Client, error) {
 	return fn.client, nil
 }
 
+// countEgress makes the Lambda client count the bytes it sends and receives as
+// network usage of the organization.
 func countEgress(o *lambda.Options) {
-	client, ok := o.HTTPClient.(*awshttp.BuildableClient)
-	if !ok {
-		client = awshttp.NewBuildableClient()
-	}
+	client := o.HTTPClient.(*awshttp.BuildableClient)
 	o.HTTPClient = client.WithTransportOptions(func(t *http.Transport) {
 		t.DialContext = dialer.DialWithContext(t.DialContext)
 		// TODO(Gianluca): the organization is resolved when a connection is
