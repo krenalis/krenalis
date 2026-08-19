@@ -87,9 +87,7 @@ func EnableCounting(st *state.State) {
 // its counter, which stays at zero until the organization dials.
 func onCreateOrganization(n state.CreateOrganization) {
 	organizationsMu.Lock()
-	if _, ok := organizations[n.ID]; !ok {
-		organizations[n.ID] = egressBytes.Register(n.ID)
-	}
+	organizations[n.ID] = egressBytes.Register(n.ID)
 	organizationsMu.Unlock()
 }
 
@@ -98,18 +96,13 @@ func onCreateOrganization(n state.CreateOrganization) {
 //
 // The connections dialed by the organization before it was deleted may still be
 // written to, and so may the connections its dial functions establish later,
-// but the bytes they add to the counter they hold are no longer collected, and
-// the counter is freed together with the last of them.
+// but the bytes they add to the counter they hold are no longer collected.
 func onDeleteOrganization(n state.DeleteOrganization) {
 	organizationsMu.Lock()
 	c := organizations[n.ID]
 	delete(organizations, n.ID)
 	organizationsMu.Unlock()
-	// The counter is nil when the organization does not exist, and there is
-	// then nothing to unregister.
-	if c != nil {
-		c.Unregister()
-	}
+	c.Unregister()
 }
 
 // Dial returns the dial function to establish the connections made on behalf of
