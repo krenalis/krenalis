@@ -29,7 +29,9 @@ import (
 	"github.com/krenalis/krenalis/tools/prometheus"
 )
 
-// DialFunc is the type of the dial functions this package returns.
+// DialFunc is the type of the dial functions this package returns. It matches
+// the signature of [net.Dialer.DialContext] and of the DialContext field of
+// [net/http.Transport].
 type DialFunc = func(ctx context.Context, network, addr string) (net.Conn, error)
 
 // egressBytes is the Prometheus counter exposing the bytes written by each
