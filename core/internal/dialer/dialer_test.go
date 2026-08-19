@@ -112,12 +112,10 @@ func echoServer(t *testing.T) string {
 			if err != nil {
 				return
 			}
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				defer conn.Close()
 				_, _ = io.Copy(conn, conn)
-			}()
+			})
 		}
 	}()
 	t.Cleanup(func() {
