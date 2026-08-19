@@ -78,9 +78,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
@@ -239,14 +239,14 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
 						},
-						{
+						&FilterCondition{
 							Property: "id",
 							Operator: OpIsNot,
 							Values:   []string{"1234567890"},
@@ -411,9 +411,9 @@ func Test_validatePipeline(t *testing.T) {
 			name: "GOOD: Source/SDK/Event - with filters",
 			pipeline: PipelineToSet{
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "anonymousId",
 							Operator: OpIsNot,
 							Values:   []string{"abc"},
@@ -598,9 +598,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
@@ -928,9 +928,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{Property: "first_name", Operator: OpIs, Values: []string{"Bob"}},
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{Property: "first_name", Operator: OpIs, Values: []string{"Bob"}},
 					},
 				},
 				InSchema: types.Object([]types.Property{
@@ -2665,9 +2665,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "_id",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
@@ -2703,9 +2703,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "_id",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
@@ -3093,14 +3093,14 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
 						},
-						{
+						&FilterCondition{
 							Property: "id",
 							Operator: OpIsNot,
 							Values:   []string{"1234567890"},
@@ -3133,9 +3133,9 @@ func Test_validatePipeline(t *testing.T) {
 			name: "BAD: Source/SDK/Event - cannot provide input schema",
 			pipeline: PipelineToSet{
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "anonymousId",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
@@ -3273,9 +3273,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
@@ -3382,9 +3382,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},

@@ -392,17 +392,17 @@ func (k *Krenalis) CreateWorkspaceRestrictedAPIKey(name string) string {
 // DefaultFilterUserFromEvents is the filter that the admin adds by default to
 // the pipelines that import users from events.
 var DefaultFilterUserFromEvents = &Filter{
-	Logical: "or",
-	Conditions: []FilterCondition{
-		{
+	Operator: OpOr,
+	Rules: []FilterRule{
+		&FilterCondition{
 			Property: "type",
 			Operator: "is",
 			Values:   []string{"identify"},
 		},
-		{
+		&FilterCondition{
 			Property: "traits",
 			Operator: "is not empty",
-			Values:   nil,
+			Values:   []string{},
 		},
 	},
 }
@@ -633,9 +633,9 @@ func (k *Krenalis) ProfileEvents(kpid uuid.UUID, properties []string) []map[stri
 		"limit":      []string{"10"},
 	}
 	filter := Filter{
-		Logical: OpAnd,
-		Conditions: []FilterCondition{
-			{Property: "kpid",
+		Operator: OpAnd,
+		Rules: []FilterRule{
+			&FilterCondition{Property: "kpid",
 				Operator: OpIs,
 				Values:   []string{kpid.String()}},
 		},

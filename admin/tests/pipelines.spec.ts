@@ -177,8 +177,8 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 		"name": "Export customers",
 		"enabled": true,
 		"filter": {
-			"logical": "or",
-			"conditions": [
+			"operator": "or",
+			"rules": [
 				{
 					"property": "email",
 					"operator": "is one of",
@@ -574,8 +574,8 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 		"name": "Export users",
 		"enabled": true,
 		"filter": {
-			"logical": "or",
-			"conditions": [
+			"operator": "or",
+			"rules": [
 				{
 					"property": "email",
 					"operator": "is one of",
@@ -931,8 +931,8 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 			"name": "Export users",
 			"enabled": true,
 			"filter": {
-				"logical": "or",
-				"conditions": [
+				"operator": "or",
+				"rules": [
 					{
 						"property": "email",
 						"operator": "is one of",
@@ -1238,7 +1238,7 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 	await page.locator('.pipeline__filters-add-condition').click();
 	await page.locator('.pipeline__filters-add-condition').click();
 
-	let filters = page.locator('.pipeline__filters-filter');
+	const filters = page.locator('.pipeline__filters-filter');
 
 	await filters.nth(0).locator('.pipeline__filters-property sl-input').click();
 	await filters
@@ -1256,8 +1256,8 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 		"name": "Import events into warehouse",
 		"enabled": false,
 		"filter": {
-			"logical": "and",
-			"conditions": [
+			"operator": "and",
+			"rules": [
 				{
 					"property": "type",
 					"operator": "is",
@@ -1319,8 +1319,8 @@ test(`Add "Import users" pipeline on JavaScript`, async ({ page }) => {
 		"name": "Import users into warehouse",
 		"enabled": false,
 		"filter": {
-			"logical": "or",
-			"conditions": [
+			"operator": "or",
+			"rules": [
 				{
 					"property": "type",
 					"operator": "is",
@@ -1330,9 +1330,9 @@ test(`Add "Import users" pipeline on JavaScript`, async ({ page }) => {
 				},
 				{
 					"property": "traits",
-         			"operator": "is not empty",
-         			"values": null
-       			}
+					"operator": "is not empty",
+					"values": []
+				}
 			]
 		},
 		"requiredConsents": null,

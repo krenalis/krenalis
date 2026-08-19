@@ -324,6 +324,29 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateConsentPurpose'`,
 			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents varchar(100)[] NOT NULL DEFAULT '{}'`,
 			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents_operator varchar(3) NOT NULL DEFAULT 'and' CHECK (required_consents_operator IN ('and', 'or'))`,
+			`UPDATE pipelines
+				SET filter = jsonb_build_object(
+					'operator', filter->'logical',
+					'rules', (
+						SELECT COALESCE(
+							jsonb_agg(
+								CASE
+									WHEN rule->>'operator' = 'OpIsNotBetween' THEN
+										jsonb_set(rule, '{operator}', '"IsNotBetween"'::jsonb)
+									ELSE rule
+								END
+								ORDER BY position
+							),
+							'[]'::jsonb
+						)
+						FROM jsonb_array_elements(filter->'conditions') WITH ORDINALITY AS rules(rule, position)
+					)
+				)
+				WHERE filter IS NOT NULL
+					AND filter ? 'logical'
+					AND filter ? 'conditions'
+					AND NOT (filter ? 'operator')
+					AND NOT (filter ? 'rules')`,
 			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS passed_6 integer NOT NULL DEFAULT 0`,
 			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS failed_6 integer NOT NULL DEFAULT 0`,
 			`ALTER TABLE pipelines_metrics ALTER COLUMN passed_6 DROP DEFAULT`,

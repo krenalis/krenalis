@@ -53,6 +53,7 @@ func TestUpgrade(t *testing.T) {
 			id varchar(12) PRIMARY KEY,
 			connection varchar(12) NOT NULL REFERENCES connections (id),
 			target pipeline_target NOT NULL,
+			filter jsonb,
 			format varchar
 		);
 		CREATE TABLE pipelines_metrics (
@@ -86,7 +87,27 @@ func TestUpgrade(t *testing.T) {
 		INSERT INTO organizations (id, name, enabled) VALUES ('111111111111', 'ACME inc', true);
 		INSERT INTO workspaces (id, organization) VALUES ('222222222222', '111111111111');
 		INSERT INTO connections (id, workspace, connector, role) VALUES ('333333333333', '222222222222', 'dummy', 'Source');
-		INSERT INTO pipelines (id, connection, target, format) VALUES ('444444444444', '333333333333', 'User', 'csv');
+		INSERT INTO pipelines (id, connection, target, filter, format) VALUES
+			(
+				'444444444444',
+				'333333333333',
+				'User',
+				'{
+					"logical": "And",
+					"conditions": [
+						{"property": ["a"], "operator": "OpIsNotBetween", "values": [5, 10]},
+						{"property": ["b"], "operator": "IsNull"}
+					]
+				}',
+				'csv'
+			),
+			(
+				'666666666666',
+				'333333333333',
+				'User',
+				'{"operator":"Or","rules":[{"property":["b"],"operator":"IsNotBetween","values":[15,20]}]}',
+				NULL
+			);
 		INSERT INTO pipelines_metrics (
 			pipeline, timeslot,
 			passed_0, passed_1, passed_2, passed_3, passed_4, passed_5,
@@ -122,9 +143,9 @@ func TestUpgrade(t *testing.T) {
 	assertIndexExists(t, database, pipelinesMetricsTimeslotIndex)
 	assertOrganizationConnectorReferences(t, database)
 	assertNodeIDsUpgraded(t, database)
+	assertPipelineFiltersUpgraded(t, database)
 	assertPipelineMetricsUpgrade(t, database)
 	assertPipelineMetricsColumnOrder(t, database)
-	assertPipelineMetricsSurvivePipelineDelete(t, database)
 	assertStateRequestSyncSchemaUpgraded(t, database)
 	assertRateLimitLeaseFunction(t, database)
 	assertConsentStepColumns(t, database)
@@ -132,6 +153,8 @@ func TestUpgrade(t *testing.T) {
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatalf("expected second upgrade to succeed, got %s", err)
 	}
+	assertPipelineFiltersUpgraded(t, database)
+	assertPipelineMetricsSurvivePipelineDelete(t, database)
 }
 
 func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
@@ -370,6 +393,43 @@ func assertNodeIDsUpgraded(t *testing.T, database *db.DB) {
 	if leader != "" {
 		t.Fatalf("expected upgraded election leader to be empty, got %q", leader)
 	}
+}
+
+// assertPipelineFiltersUpgraded verifies that legacy pipeline filters are
+// converted without changing filters already in the current format.
+func assertPipelineFiltersUpgraded(t *testing.T, database *db.DB) {
+
+	t.Helper()
+
+	tests := []struct {
+		id     string
+		filter string
+	}{
+		{
+			id: "444444444444",
+			filter: `{"operator":"And","rules":[` +
+				`{"property":["a"],"operator":"IsNotBetween","values":[5,10]},` +
+				`{"property":["b"],"operator":"IsNull"}` +
+				`]}`,
+		},
+		{
+			id:     "666666666666",
+			filter: `{"operator":"Or","rules":[{"property":["b"],"operator":"IsNotBetween","values":[15,20]}]}`,
+		},
+	}
+	for _, test := range tests {
+		exists, err := database.QueryExists(t.Context(), `
+			SELECT FROM pipelines
+			WHERE id = $1
+				AND filter = $2::jsonb`, test.id, test.filter)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !exists {
+			t.Fatalf("expected pipeline %s to have filter %s", test.id, test.filter)
+		}
+	}
+
 }
 
 // assertPipelineMetricsUpgrade verifies that old pipeline metrics rows gain

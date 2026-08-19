@@ -1,4 +1,4 @@
-import { Filter, FilterCondition } from '../lib/api/types/pipeline';
+import { Filter, FilterCondition, FilterRule } from '../lib/api/types/pipeline';
 
 const MIN_INT = BigInt('-9223372036854775808');
 const MAX_INT = BigInt('9223372036854775807');
@@ -249,11 +249,8 @@ const parseText = (s: string): string => {
 };
 
 // serializeFilter returns a string representation of the given Filter object.
-// If formatted is true, each condition appears on its own line with indentation
-// based on the logical connector.
+// If formatted is true, each rule appears on its own indented line.
 const serializeFilter = (filter: Filter, formatted: boolean): string => {
-	const { logical, conditions } = filter;
-
 	// escapeString returns the input string escaped and wrapped in double quotes.
 	function escapeString(value: string): string {
 		return `"${value
@@ -265,8 +262,8 @@ const serializeFilter = (filter: Filter, formatted: boolean): string => {
 	}
 
 	// formatValues formats a list of values as a string.
-	function formatValues(values: string[] | null): string {
-		if (!values || values.length === 0) {
+	function formatValues(values: string[]): string {
+		if (values.length === 0) {
 			return '';
 		}
 
@@ -291,32 +288,33 @@ const serializeFilter = (filter: Filter, formatted: boolean): string => {
 	// formatCondition builds a single condition string.
 	function formatCondition(condition: FilterCondition): string {
 		const { property, operator, values } = condition;
-
-		if (!values) {
-			return `${property} ${operator}`;
-		}
-
-		return `${property} ${operator} ${formatValues(values)}`;
+		const formattedValues = formatValues(values);
+		return `${property} ${operator}${formattedValues === '' ? '' : ` ${formattedValues}`}`;
 	}
 
-	// Build the final string from all conditions.
-	const lines: string[] = [];
-
-	for (let i = 0; i < conditions.length; i++) {
-		const condStr = formatCondition(conditions[i]);
-
+	// formatRule formats a condition or nested group.
+	function formatRule(rule: FilterRule, depth: number): string {
+		if (!('rules' in rule)) {
+			return formatCondition(rule);
+		}
 		if (!formatted) {
-			lines.push(condStr);
-		} else {
-			if (i === 0) {
-				lines.push(condStr);
-			} else {
-				lines.push(`${logical} ${condStr}`); // prefix subsequent lines with the connector
-			}
+			return `(${formatGroup(rule, depth + 1)})`;
 		}
+		return `(\n${formatGroup(rule, depth + 1)}\n${'  '.repeat(depth)})`;
 	}
 
-	return formatted ? lines.join('\n') : lines.join(` ${logical} `);
+	// formatGroup formats all rules in a group.
+	function formatGroup(group: Filter, depth: number): string {
+		if (!formatted) {
+			return group.rules.map((rule) => formatRule(rule, depth)).join(` ${group.operator} `);
+		}
+		const indentation = '  '.repeat(depth);
+		return group.rules
+			.map((rule, index) => `${indentation}${index === 0 ? '' : `${group.operator} `}${formatRule(rule, depth)}`)
+			.join('\n');
+	}
+
+	return formatGroup(filter, 0);
 };
 
 export {

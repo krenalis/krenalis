@@ -27,9 +27,9 @@ func TestSourceAppUsersFiltering(t *testing.T) {
 		Name:    "Import users from Dummy",
 		Enabled: true,
 		Filter: &krenalistester.Filter{
-			Logical: krenalistester.OpAnd,
-			Conditions: []krenalistester.FilterCondition{
-				{
+			Operator: krenalistester.OpAnd,
+			Rules: []krenalistester.FilterRule{
+				&krenalistester.FilterCondition{
 					Property: "email",
 					Operator: krenalistester.OpIsNot,
 					Values:   []string{"kdericut4@example.com"},

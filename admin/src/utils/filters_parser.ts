@@ -1,7 +1,9 @@
 import { FILTER_OPERATORS } from '../lib/core/pipeline';
-import { FilterLogical, FilterOperator, Filter, FilterCondition } from '../lib/api/types/pipeline';
+import { FilterLogical, FilterOperator, Filter, FilterCondition, FilterRule } from '../lib/api/types/pipeline';
 
 const SORTED_OPERATORS = [...FILTER_OPERATORS].sort((a, b) => b.length - a.length);
+const MAX_FILTER_DEPTH = 4;
+const MAX_FILTER_RULE_COUNT = 100;
 
 const UNARY_OPERATORS: FilterOperator[] = [
 	'is',
@@ -213,66 +215,124 @@ function parseOperator(s: string, i: number): [FilterOperator, number] {
 	throw new Error('Unknown operator');
 }
 
-// parseFilter parses a user-readable filter expression into a Filter object.
-//
-// It supports property paths, string/number/boolean values, and a rich set of operators.
-// It returns a structured Filter with conditions and a logical connector (and/or).
-// Syntax errors are reported with informative messages.
-export function parseFilter(s: string): Filter {
-	let i = 0;
-	const conditions: FilterCondition[] = [];
-	let logical: FilterLogical | null = null;
-	let conditionCount = 0;
+// isFilterGroup reports whether rule is a filter group.
+const isFilterGroup = (rule: FilterRule): rule is Filter => 'rules' in rule;
 
-	while (i < s.length) {
-		i = skipSpaces(s, i);
+// isOperatorUnary reports whether operator accepts no values.
+const isOperatorUnary = (operator: FilterOperator): boolean =>
+	operator.endsWith('null') ||
+	operator.endsWith('empty') ||
+	operator.endsWith('exist') ||
+	operator === 'is true' ||
+	operator === 'is false';
+
+// parseLogical parses a logical operator at i.
+const parseLogical = (s: string, i: number): FilterLogical | null => {
+	for (const operator of ['and', 'or'] as FilterLogical[]) {
+		const end = i + operator.length;
+		if (s.slice(i, end) === operator && (end === s.length || isWhitespace(s[end]) || s[end] === '(')) {
+			return operator;
+		}
+	}
+
+	return null;
+};
+
+// parseFilter parses a user-readable filter expression into a Filter object.
+// Parentheses delimit nested groups with their own logical operator.
+export function parseFilter(s: string): Filter {
+	let ruleCount = 0;
+
+	const parseCondition = (start: number): [FilterCondition, number] => {
+		let i = start;
 		const [property, ni1] = parseProperty(s, i);
 		i = skipSpaces(s, ni1);
 		const [operator, ni2] = parseOperator(s, i);
 		i = skipSpaces(s, ni2);
 
-		let values: string[] | null = null;
-		if (
-			!operator.endsWith('null') &&
-			!operator.endsWith('empty') &&
-			!operator.endsWith('exist') &&
-			operator !== 'is true' &&
-			operator !== 'is false'
-		) {
+		let values: string[] = [];
+		if (!isOperatorUnary(operator)) {
 			const expectMultiple =
 				operator === 'is one of' ||
 				operator === 'is not one of' ||
 				operator === 'is between' ||
 				operator === 'is not between';
-			const [vals, ni3] = parseValues(s, i, expectMultiple);
-			values = vals;
+			const [parsedValues, ni3] = parseValues(s, i, expectMultiple);
+			values = parsedValues;
 			i = ni3;
 
-			const n = values.length;
-			if ((operator === 'is between' || operator === 'is not between') && n !== 2)
+			if ((operator === 'is between' || operator === 'is not between') && values.length !== 2) {
 				throw new Error(`Operator '${operator}' requires exactly 2 values`);
-			if ((operator === 'is one of' || operator === 'is not one of') && n < 1)
+			}
+			if ((operator === 'is one of' || operator === 'is not one of') && values.length < 1) {
 				throw new Error(`Operator '${operator}' requires at least 1 value`);
-			if (UNARY_OPERATORS.includes(operator) && n !== 1)
+			}
+			if (UNARY_OPERATORS.includes(operator) && values.length !== 1) {
 				throw new Error(`Operator '${operator}' requires exactly 1 value`);
+			}
 		}
 
-		conditions.push({ property, operator, values });
-		conditionCount++;
+		return [{ property, operator, values }, i];
+	};
 
-		i = skipSpaces(s, i);
-		if (i >= s.length) return { logical: logical || 'and', conditions };
+	const parseGroup = (start: number, depth: number, nested: boolean): [Filter, number] => {
+		if (depth > MAX_FILTER_DEPTH) {
+			throw new Error(`Filter exceeds maximum depth of ${MAX_FILTER_DEPTH}`);
+		}
 
-		const next = s.startsWith('and', i) ? 'and' : s.startsWith('or', i) ? 'or' : null;
-		if (!next) throw new Error("Expected logical connector 'and' or 'or'");
-		if (logical && logical !== next) throw new Error('Mixed logical connectors are not allowed');
-		logical = next as FilterLogical;
-		i += next.length;
+		let i = skipSpaces(s, start);
+		const rules: FilterRule[] = [];
+		let operator: FilterLogical | null = null;
+		for (;;) {
+			if (nested && s[i] === ')') {
+				if (rules.length === 0) throw new Error('Filter groups cannot be empty');
+				return [{ operator: operator || 'and', rules }, i + 1];
+			}
+			if (i >= s.length) {
+				if (nested) throw new Error('Unclosed filter group');
+				return [{ operator: operator || 'and', rules }, i];
+			}
 
-		i = skipSpaces(s, i);
-		if (i >= s.length) throw new Error('Trailing logical connector without following condition');
+			let rule: FilterRule;
+			if (s[i] === '(') {
+				[rule, i] = parseGroup(i + 1, depth + 1, true);
+			} else {
+				[rule, i] = parseCondition(i);
+			}
+			rules.push(rule);
+			ruleCount++;
+			if (ruleCount > MAX_FILTER_RULE_COUNT) {
+				throw new Error(`Filter exceeds maximum rule count of ${MAX_FILTER_RULE_COUNT}`);
+			}
+
+			i = skipSpaces(s, i);
+			if (nested && s[i] === ')') {
+				return [{ operator: operator || 'and', rules }, i + 1];
+			}
+			if (i >= s.length) {
+				if (nested) throw new Error('Unclosed filter group');
+				return [{ operator: operator || 'and', rules }, i];
+			}
+			if (s[i] === ')') throw new Error('Unexpected closing parenthesis');
+
+			const next = parseLogical(s, i);
+			if (next == null) throw new Error("Expected logical connector 'and' or 'or'");
+			if (operator != null && operator !== next) {
+				throw new Error('Mixed logical connectors require parentheses');
+			}
+			operator = next;
+			i = skipSpaces(s, i + next.length);
+			if (i >= s.length || (nested && s[i] === ')')) {
+				throw new Error('Trailing logical connector without following rule');
+			}
+		}
+	};
+
+	const [filter, end] = parseGroup(0, 1, false);
+	if (skipSpaces(s, end) !== s.length) throw new Error('Unexpected content after filter');
+	if (filter.rules.length === 1 && isFilterGroup(filter.rules[0])) {
+		return filter.rules[0];
 	}
 
-	if (conditionCount > 1 && !logical) throw new Error('Missing logical connector (and/or) between conditions');
-	return { logical: logical || 'and', conditions };
+	return filter;
 }
