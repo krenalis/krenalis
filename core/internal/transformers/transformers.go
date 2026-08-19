@@ -59,8 +59,8 @@ type Transformer struct {
 // functions and should be nil for mappings. layouts, if not nil, represents the
 // layouts used to format datetime, date, and time values as strings.
 //
-// It only accesses the Organization method and the ID, InSchema, OutSchema, and
-// Transformation fields of pipeline.
+// It only accesses the ID, InSchema, OutSchema, and Transformation fields of
+// pipeline and its Organization method.
 //
 // It returns a types.PathNotExistError error if a path in the mapping does not
 // exist in the source schema.
