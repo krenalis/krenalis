@@ -251,16 +251,12 @@ func dialWith(organization string, dial DialFunc) DialFunc {
 	if !countingEnabled {
 		return dial
 	}
-	// The counter of the organization is taken once, here, and not at every
-	// dial, so that establishing a connection does not have to look it up and
-	// take the lock.
 	organizationsMu.Lock()
 	c := organizations[organization]
 	organizationsMu.Unlock()
 	if c == nil {
-		// The organization does not exist, so there is nothing to count the
-		// bytes sent for and the connections are established as they would be
-		// without this package.
+		// The organization does not exist, so the egress traffic is not
+		// counted.
 		return dial
 	}
 	return func(ctx context.Context, network, addr string) (net.Conn, error) {
