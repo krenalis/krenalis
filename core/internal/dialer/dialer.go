@@ -49,15 +49,7 @@ var countingEnabled bool
 var (
 	organizationsMu sync.Mutex
 	// organizations holds the counter of the bytes sent by each existing
-	// organization, by ID. The counter is registered when the organization is
-	// created and it is unregistered when the organization is deleted, so that
-	// the counters do not accumulate for the whole life of the process.
-	//
-	// An organization that does not exist has no entry here, so looking it up
-	// yields a nil counter: dialing on its behalf is not an error, there is
-	// simply nothing to count the bytes it sends for. The dial functions look
-	// it up only when counting is enabled, so the organizations are known, see
-	// [EnableCounting].
+	// organization, by ID.
 	organizations = map[string]*prometheus.Counter{}
 )
 
@@ -86,8 +78,6 @@ func EnableCounting(st *state.State) {
 	for _, org := range st.Organizations() {
 		organizations[org.ID] = egressBytes.Register(org.ID)
 	}
-	// Counting is enabled only now that the organizations are known, so that
-	// the dial functions never look one up while they are being populated.
 	countingEnabled = true
 	organizationsMu.Unlock()
 	st.Unfreeze()
