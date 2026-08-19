@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/krenalis/krenalis/core/internal/state"
+	krprometheus "github.com/krenalis/krenalis/tools/prometheus"
 
 	"github.com/prometheus/client_golang/prometheus"
 	client "github.com/prometheus/client_model/go"
@@ -63,6 +64,21 @@ func collected(t *testing.T, organizationID string) (uint64, bool) {
 		}
 	}
 	return value, found
+}
+
+// counterValue returns the current value of c, collecting it directly instead
+// of through egressBytes. Unlike collected, it still works after c has been
+// unregistered and dropped from the counters egressBytes collects.
+func counterValue(t *testing.T, c *krprometheus.Counter) uint64 {
+	t.Helper()
+	ch := make(chan prometheus.Metric, 1)
+	c.Collect(ch)
+	close(ch)
+	m := &client.Metric{}
+	if err := (<-ch).Write(m); err != nil {
+		t.Fatalf("cannot read the counter: %s", err)
+	}
+	return uint64(m.GetCounter().GetValue())
 }
 
 // forget removes the organizations with the given IDs, and unregisters their
@@ -208,6 +224,15 @@ func TestPlainDial(t *testing.T) {
 	if !dialed {
 		t.Fatal("the connection has not been established by the given dial function")
 	}
+	if _, ok := conn.(*instrumentedConn); ok {
+		t.Fatal("the connection is instrumented, expecting a plain connection")
+	}
+}
+
+func TestPlainDialWithNilDialFunc(t *testing.T) {
+	// A nil dial function is replaced by a plain dialer, as in PlainDial.
+	addr := echoServer(t)
+	conn := write(t, PlainDialWith()(nil), addr, "hello")
 	if _, ok := conn.(*instrumentedConn); ok {
 		t.Fatal("the connection is instrumented, expecting a plain connection")
 	}
@@ -434,6 +459,10 @@ func TestDeletedOrganization(t *testing.T) {
 		t.Fatal("no counter is collected for the organization, expecting one")
 	}
 
+	organizationsMu.Lock()
+	c := organizations["org-deleted"]
+	organizationsMu.Unlock()
+
 	onDeleteOrganization(state.DeleteOrganization{ID: "org-deleted"})
 
 	// The organization is gone, and so is its counter.
@@ -449,19 +478,27 @@ func TestDeletedOrganization(t *testing.T) {
 
 	// A connection dialed before the deletion may still be written to. Its
 	// bytes are added to the counter it holds, which is no longer collected.
+	before := counterValue(t, c)
 	if _, err := conn.Write([]byte("world!")); err != nil {
 		t.Fatalf("cannot write to a connection of a deleted organization: %s", err)
 	}
 	if _, ok := collected(t, "org-deleted"); ok {
 		t.Fatal("a counter is collected again for the deleted organization")
 	}
+	if n := counterValue(t, c) - before; n != 6 {
+		t.Fatalf("the counter increased by %d bytes, expecting 6", n)
+	}
 
 	// A dial function created before the deletion still dials, and the bytes
 	// its connections send go to the counter it holds, which is no longer
 	// collected.
+	before = counterValue(t, c)
 	write(t, dial, addr, "hello")
 	if _, ok := collected(t, "org-deleted"); ok {
 		t.Fatal("a counter is collected again for the deleted organization")
+	}
+	if n := counterValue(t, c) - before; n != 5 {
+		t.Fatalf("the counter increased by %d bytes, expecting 5", n)
 	}
 }
 
