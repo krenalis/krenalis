@@ -24,8 +24,6 @@ const (
 )
 
 func TestDispatchEventsToDummy(t *testing.T) {
-	const ackWait = time.Second
-	t.Setenv("KRENALIS_NATS_ACK_WAIT", ackWait.String())
 
 	// Create a test HTTP server that will receive request sent to it from
 	// Dummy. The first received request is written on a channel.
@@ -47,6 +45,7 @@ func TestDispatchEventsToDummy(t *testing.T) {
 		t.Skip()
 	}
 	k := krenalistester.NewKrenalisInstance(t)
+	k.SetNATSAckWait("1s")
 	k.Start()
 	defer k.Stop()
 
@@ -119,7 +118,7 @@ func waitPipelinePassedMetrics(t *testing.T, k *krenalistester.Krenalis, pipelin
 				Passed [][pipelineProcessingSteps]int `json:"passed"`
 			} `json:"metrics"`
 		}
-		k.Call("GET", "/v1/pipelines/metrics/minutes/1?pipelines="+pipelineID, nil, nil, &response)
+		k.Call("GET", "/v1/pipelines/metrics/minutes/2?pipelines="+pipelineID, nil, nil, &response)
 		totals = [pipelineProcessingSteps]int{}
 		series = len(response.Metrics)
 		if series == 1 {
