@@ -635,23 +635,22 @@ type Expr interface {
 	expr()
 }
 
-// MultiExpr represents an SQL expression with a logical operator, which can be
-// both And or Or, and a list of SQL expressions on which the operator is
-// applied.
-type MultiExpr struct {
+// LogicalExpr combines SQL expressions using a logical operator.
+type LogicalExpr struct {
 	Operator LogicalOperator
 	Operands []Expr
 }
 
-func (*MultiExpr) expr() {}
-
-// NewMultiExpr returns a new MultiExpr expression with the given operator and
+// NewLogicalExpr returns a logical expression with the given operator and
 // operands.
-func NewMultiExpr(operator LogicalOperator, operands []Expr) *MultiExpr {
-	return &MultiExpr{Operator: operator, Operands: operands}
+func NewLogicalExpr(operator LogicalOperator, operands []Expr) *LogicalExpr {
+	return &LogicalExpr{Operator: operator, Operands: operands}
 }
 
-// LogicalOperator represents the logical operator of a MultiExpr.
+// expr marks LogicalExpr as an expression.
+func (*LogicalExpr) expr() {}
+
+// LogicalOperator identifies the logical operator used by a LogicalExpr.
 type LogicalOperator int
 
 const (
@@ -659,49 +658,48 @@ const (
 	OpOr
 )
 
-// BaseExpr represents an SQL expression that refers to a property, on which an
-// operator is applied, an eventually an operand, if the operator is binary.
-type BaseExpr struct {
+// ConditionExpr applies an operator to a column and zero or more values.
+type ConditionExpr struct {
 	Column   Column
-	Operator Operator
+	Operator ConditionOperator
 	Values   []any // may be nil for unary expressions.
 }
 
-func (*BaseExpr) expr() {}
-
-// NewBaseExpr returns a new BaseExpr expression that applies to the given
-// column with the given operator and values.
-// If the operator is unary, value should be nil.
-func NewBaseExpr(column Column, operator Operator, values ...any) *BaseExpr {
-	return &BaseExpr{Column: column, Operator: operator, Values: values}
+// NewConditionExpr returns a condition expression for the given column,
+// operator, and values. If the operator is unary, values should be empty.
+func NewConditionExpr(column Column, operator ConditionOperator, values ...any) *ConditionExpr {
+	return &ConditionExpr{Column: column, Operator: operator, Values: values}
 }
 
-// Operator presents a unary or binary operator of a BaseExpr.
-type Operator int
+// expr marks ConditionExpr as an expression.
+func (*ConditionExpr) expr() {}
+
+// ConditionOperator represents the operator used by a ConditionExpr.
+type ConditionOperator int
 
 const (
-	OpIs                     Operator = iota // is
-	OpIsNot                                  // is not
-	OpIsLessThan                             // is less than
-	OpIsLessThanOrEqualTo                    // is less than or equal to
-	OpIsGreaterThan                          // is greater than
-	OpIsGreaterThanOrEqualTo                 // is greater than or equal to
-	OpIsBetween                              // is between
-	OpIsNotBetween                           // is not between
-	OpContains                               // contains
-	OpDoesNotContain                         // does not contain
-	OpIsOneOf                                // is one of
-	OpIsNotOneOf                             // is not one of
-	OpStartsWith                             // starts with
-	OpEndsWith                               // ends with
-	OpIsBefore                               // is before
-	OpIsOnOrBefore                           // is on or before
-	OpIsAfter                                // is after
-	OpIsOnOrAfter                            // is on or after
-	OpIsTrue                                 // is true
-	OpIsFalse                                // is false
-	OpIsEmpty                                // is empty
-	OpIsNotEmpty                             // is not empty
-	OpIsNull                                 // is null
-	OpIsNotNull                              // is not null
+	OpIs                     ConditionOperator = iota // is
+	OpIsNot                                           // is not
+	OpIsLessThan                                      // is less than
+	OpIsLessThanOrEqualTo                             // is less than or equal to
+	OpIsGreaterThan                                   // is greater than
+	OpIsGreaterThanOrEqualTo                          // is greater than or equal to
+	OpIsBetween                                       // is between
+	OpIsNotBetween                                    // is not between
+	OpContains                                        // contains
+	OpDoesNotContain                                  // does not contain
+	OpIsOneOf                                         // is one of
+	OpIsNotOneOf                                      // is not one of
+	OpStartsWith                                      // starts with
+	OpEndsWith                                        // ends with
+	OpIsBefore                                        // is before
+	OpIsOnOrBefore                                    // is on or before
+	OpIsAfter                                         // is after
+	OpIsOnOrAfter                                     // is on or after
+	OpIsTrue                                          // is true
+	OpIsFalse                                         // is false
+	OpIsEmpty                                         // is empty
+	OpIsNotEmpty                                      // is not empty
+	OpIsNull                                          // is null
+	OpIsNotNull                                       // is not null
 )

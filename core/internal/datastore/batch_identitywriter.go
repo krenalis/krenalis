@@ -144,9 +144,9 @@ func (w *BatchIdentityWriter) Close(ctx context.Context) error {
 		if w.skipPurge {
 			return ErrPurgeSkipped
 		}
-		where := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-			warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.String()}, warehouses.OpIs, w.pipeline),
-			warehouses.NewBaseExpr(warehouses.Column{Name: "_run", Type: types.String()}, warehouses.OpIsNot, w.run),
+		where := warehouses.NewLogicalExpr(warehouses.OpAnd, []warehouses.Expr{
+			warehouses.NewConditionExpr(warehouses.Column{Name: "_pipeline", Type: types.String()}, warehouses.OpIs, w.pipeline),
+			warehouses.NewConditionExpr(warehouses.Column{Name: "_run", Type: types.String()}, warehouses.OpIsNot, w.run),
 		})
 		err = w.store.warehouse().Delete(ctx, "krenalis_identities", where)
 	}

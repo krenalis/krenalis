@@ -20,39 +20,39 @@ import (
 // representing a boolean expression.
 func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 
-	// Handle MultiExpr expression.
-	if multiExpr, ok := exp.(*warehouses.MultiExpr); ok {
+	// Handle logical expressions.
+	if logicalExpr, ok := exp.(*warehouses.LogicalExpr); ok {
 		var op string
-		switch multiExpr.Operator {
+		switch logicalExpr.Operator {
 		case warehouses.OpAnd:
 			op = " AND "
 		case warehouses.OpOr:
 			op = " OR "
 		default:
-			return fmt.Errorf("invalid operator %d", multiExpr.Operator)
+			return fmt.Errorf("invalid operator %d", logicalExpr.Operator)
 		}
-		for i, operand := range multiExpr.Operands {
+		for i, operand := range logicalExpr.Operands {
 			if i > 0 {
 				b.WriteString(op)
 			}
-			_, isMultiExpr := operand.(*warehouses.MultiExpr)
-			if isMultiExpr {
+			_, isLogicalExpr := operand.(*warehouses.LogicalExpr)
+			if isLogicalExpr {
 				b.WriteByte('(')
 			}
 			err := renderExpr(b, operand)
 			if err != nil {
 				return err
 			}
-			if isMultiExpr {
+			if isLogicalExpr {
 				b.WriteByte(')')
 			}
 		}
 		return nil
 	}
 
-	// Handle BaseExpr expressions.
-	baseExpr := exp.(*warehouses.BaseExpr)
-	c := baseExpr.Column
+	// Handle condition expressions.
+	conditionExpr := exp.(*warehouses.ConditionExpr)
+	c := conditionExpr.Column
 
 	// Validate the column name.
 	if !warehouses.IsValidIdentifier(c.Name) {
@@ -62,7 +62,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 	qname := quoteIdent(c.Name)
 
 	// Render the column identifier, the operator, and, if necessary, the values.
-	switch op := baseExpr.Operator; op {
+	switch op := conditionExpr.Operator; op {
 	case
 		warehouses.OpIs,
 		warehouses.OpIsNot,
@@ -91,7 +91,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		case warehouses.OpIsGreaterThanOrEqualTo, warehouses.OpIsOnOrAfter:
 			b.WriteString(" >= ")
 		}
-		serializeValue(b, baseExpr.Values[0], c.Type)
+		serializeValue(b, conditionExpr.Values[0], c.Type)
 
 	case warehouses.OpIsBetween, warehouses.OpIsNotBetween:
 		b.WriteString(qname)
@@ -99,9 +99,9 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 			b.WriteString(" NOT")
 		}
 		b.WriteString(" BETWEEN ")
-		serializeValue(b, baseExpr.Values[0], c.Type)
+		serializeValue(b, conditionExpr.Values[0], c.Type)
 		b.WriteString(" AND ")
-		serializeValue(b, baseExpr.Values[1], c.Type)
+		serializeValue(b, conditionExpr.Values[1], c.Type)
 
 	case warehouses.OpContains, warehouses.OpDoesNotContain:
 		if op == warehouses.OpDoesNotContain {
@@ -110,7 +110,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		b.WriteString("CONTAINS(")
 		b.WriteString(qname)
 		b.WriteString(", ")
-		serializeValue(b, baseExpr.Values[0], c.Type)
+		serializeValue(b, conditionExpr.Values[0], c.Type)
 		b.WriteString(")")
 
 	case warehouses.OpIsOneOf, warehouses.OpIsNotOneOf:
@@ -120,7 +120,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		} else {
 			b.WriteString(" NOT IN (")
 		}
-		for i, v := range baseExpr.Values {
+		for i, v := range conditionExpr.Values {
 			if i > 0 {
 				b.WriteByte(',')
 			}
@@ -136,7 +136,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		}
 		b.WriteString(qname)
 		b.WriteString(", ")
-		serializeValue(b, baseExpr.Values[0], c.Type)
+		serializeValue(b, conditionExpr.Values[0], c.Type)
 		b.WriteString(")")
 
 	case warehouses.OpIsTrue:

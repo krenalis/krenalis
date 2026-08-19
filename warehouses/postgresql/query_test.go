@@ -18,7 +18,7 @@ func Test_appendJoins(t *testing.T) {
 	join := warehouses.Join{
 		Type:  warehouses.InnerJoin,
 		Table: "t2",
-		Condition: warehouses.NewBaseExpr(
+		Condition: warehouses.NewConditionExpr(
 			warehouses.Column{Name: "id", Type: types.Int(32)},
 			warehouses.OpIs,
 			warehouses.Column{Name: "fk", Type: types.Int(32)},
@@ -36,7 +36,7 @@ func Test_appendJoins(t *testing.T) {
 	bad := warehouses.Join{
 		Type:      warehouses.InnerJoin,
 		Table:     "t3",
-		Condition: warehouses.NewBaseExpr(warehouses.Column{Name: "bad name", Type: types.Int(32)}, warehouses.OpIs, 1),
+		Condition: warehouses.NewConditionExpr(warehouses.Column{Name: "bad name", Type: types.Int(32)}, warehouses.OpIs, 1),
 	}
 	b.Reset()
 	if err := appendJoins(&b, []warehouses.Join{bad}); err == nil {
