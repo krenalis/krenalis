@@ -8,8 +8,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"iter"
 	"math"
 	"slices"
+	"strings"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -77,6 +79,77 @@ func Test_newStoppedTimer(t *testing.T) {
 	if tm.Stop() {
 		t.Fatal("Stop should return false on an already stopped timer")
 	}
+}
+
+// Test_Sender_Peek verifies Peek's behavior before, during, and after an event
+// iteration.
+func Test_Sender_Peek(t *testing.T) {
+
+	tests := []struct {
+		name string
+		seq  func(connectors.Events) iter.Seq[*connectors.Event]
+	}{
+		{name: "All", seq: connectors.Events.All},
+		{name: "SameUser", seq: connectors.Events.SameUser},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				var checked bool
+				app := newTestApplication()
+				app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
+					first, ok := events.Peek()
+					if !ok {
+						t.Error("Peek before iteration: expected an event")
+					}
+					if got, ok := events.Peek(); !ok || got != first {
+						t.Errorf("repeated Peek before iteration: expected event %p and true, got %p and %t", first, got, ok)
+					}
+
+					yielded := 0
+					for event := range test.seq(events) {
+						yielded++
+						if event != first {
+							t.Errorf("expected event %p, got %p", first, event)
+						}
+						if got, ok := events.Peek(); ok || got != nil {
+							t.Errorf("Peek during iteration: expected nil and false, got %p and %t", got, ok)
+						}
+					}
+					if yielded != 1 {
+						t.Errorf("expected one event, got %d", yielded)
+					}
+					func() {
+						defer func() {
+							r := recover()
+							msg, ok := r.(string)
+							if !ok || !strings.Contains(msg, "Events.Peek outside of an iteration") {
+								t.Errorf("Peek after iteration: unexpected panic %v", r)
+							}
+						}()
+						events.Peek()
+					}()
+					checked = true
+					return nil
+				}
+
+				s := New(app, nil)
+				event := s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+					"anonymousId": "user",
+					"messageId":   "msg-0",
+				}, nopAck{})
+				s.SendEvent(event)
+				time.Sleep(maxQueueDelay)
+				s.Close(t.Context())
+
+				if !checked {
+					t.Fatal("Peek after iteration was not checked")
+				}
+			})
+		})
+	}
+
 }
 
 func Test_iterator_invalidUsage(t *testing.T) {
