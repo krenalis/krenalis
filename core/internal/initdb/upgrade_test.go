@@ -107,6 +107,13 @@ func TestUpgrade(t *testing.T) {
 				'User',
 				'{"operator":"Or","rules":[{"property":["b"],"operator":"IsNotBetween","values":[15,20]}]}',
 				NULL
+			),
+			(
+				'777777777777',
+				'333333333333',
+				'User',
+				'{"operator":"And","rules":[{"rules":[{"property":["b"],"operator":"OpIsNotBetween","values":[25,30]},{"property":["literal"],"operator":"Contains","values":["OpIsNotBetween"]}],"operator":"Or"}]}',
+				NULL
 			);
 		INSERT INTO pipelines_metrics (
 			pipeline, timeslot,
@@ -395,8 +402,8 @@ func assertNodeIDsUpgraded(t *testing.T, database *db.DB) {
 	}
 }
 
-// assertPipelineFiltersUpgraded verifies that legacy pipeline filters are
-// converted without changing filters already in the current format.
+// assertPipelineFiltersUpgraded verifies that pipeline filters are converted
+// and legacy operator names are corrected.
 func assertPipelineFiltersUpgraded(t *testing.T, database *db.DB) {
 
 	t.Helper()
@@ -415,6 +422,10 @@ func assertPipelineFiltersUpgraded(t *testing.T, database *db.DB) {
 		{
 			id:     "666666666666",
 			filter: `{"operator":"Or","rules":[{"property":["b"],"operator":"IsNotBetween","values":[15,20]}]}`,
+		},
+		{
+			id:     "777777777777",
+			filter: `{"operator":"And","rules":[{"rules":[{"property":["b"],"operator":"IsNotBetween","values":[25,30]},{"property":["literal"],"operator":"Contains","values":["OpIsNotBetween"]}],"operator":"Or"}]}`,
 		},
 	}
 	for _, test := range tests {
