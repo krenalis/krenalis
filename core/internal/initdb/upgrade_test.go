@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/tools/base58"
 )
 
 // TestUpgrade verifies that database upgrades are applied and are idempotent.
@@ -82,6 +83,10 @@ func TestUpgrade(t *testing.T) {
 			leader uuid NOT NULL,
 			date timestamp NOT NULL
 		);
+		CREATE TABLE discontinued_functions (
+			id varchar(200) PRIMARY KEY,
+			discontinued_at timestamp(0) NOT NULL
+		);
 		CREATE INDEX pipelines_metrics_pipeline_idx ON pipelines_metrics (pipeline);
 		INSERT INTO organizations (id, name, enabled) VALUES ('111111111111', 'ACME inc', true);
 		INSERT INTO workspaces (id, organization) VALUES ('222222222222', '111111111111');
@@ -98,6 +103,7 @@ func TestUpgrade(t *testing.T) {
 		);
 		INSERT INTO pipelines_runs (id, pipeline, node) VALUES ('555555555555', '444444444444', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
 		INSERT INTO election (number, leader, date) VALUES (1, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', NOW());
+		INSERT INTO discontinued_functions (id, discontinued_at) VALUES ('arn:aws:lambda:eu-west-1:1:function:transform.js', NOW());
 		INSERT INTO metadata (installation_id, kms_encrypted_cookie_key, kms_encrypted_oauth_key, kms_encrypted_notification_key, kms_encrypted_api_key_pepper)
 			VALUES ('test-installation', '\x01'::bytea, '\x02'::bytea, '\x03'::bytea, '\x04'::bytea);
 		INSERT INTO notifications (id, name, payload) VALUES (1, 'EndPipelineRun', '{}'::jsonb)`)
@@ -126,6 +132,7 @@ func TestUpgrade(t *testing.T) {
 	assertPipelineMetricsColumnOrder(t, database)
 	assertPipelineMetricsSurvivePipelineDelete(t, database)
 	assertStateRequestSyncSchemaUpgraded(t, database)
+	assertDiscontinuedFunctionsUpgrade(t, database)
 	assertRateLimitLeaseFunction(t, database)
 	assertConsentStepColumns(t, database)
 
@@ -320,6 +327,73 @@ func assertStateRequestSyncSchemaUpgraded(t *testing.T, database *db.DB) {
 	}
 	if version != 1 {
 		t.Fatalf("expected notification version %d, got %d", 1, version)
+	}
+}
+
+// assertDiscontinuedFunctionsUpgrade verifies that discontinued functions gain
+// their organization column, which holds the unknown organization for the rows
+// already in the table and is not a foreign key, as a function outlives its
+// organization, and that the upgraded table keeps the canonical column order.
+func assertDiscontinuedFunctionsUpgrade(t *testing.T, database *db.DB) {
+	t.Helper()
+
+	var organizationPosition, discontinuedAtPosition int
+	err := database.QueryRow(t.Context(), `
+		SELECT
+			MAX(CASE WHEN attname = 'organization' THEN attnum END),
+			MAX(CASE WHEN attname = 'discontinued_at' THEN attnum END)
+		FROM pg_attribute
+		WHERE attrelid = 'discontinued_functions'::regclass
+			AND attname IN ('organization', 'discontinued_at')
+			AND NOT attisdropped`).Scan(&organizationPosition, &discontinuedAtPosition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if organizationPosition >= discontinuedAtPosition {
+		t.Fatalf("expected organization column before discontinued_at column, got organization=%d discontinued_at=%d", organizationPosition, discontinuedAtPosition)
+	}
+
+	var organization string
+	err = database.QueryRow(t.Context(), `
+		SELECT organization
+		FROM discontinued_functions
+		WHERE id = 'arn:aws:lambda:eu-west-1:1:function:transform.js'`).Scan(&organization)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if organization != unknownOrganization {
+		t.Fatalf("expected discontinued function organization %q, got %q", unknownOrganization, organization)
+	}
+	if base58.IsValid(unknownOrganization) {
+		t.Fatalf("the unknown organization %q is a valid identifier, expecting one that cannot collide with a real organization", unknownOrganization)
+	}
+
+	hasDefault, err := database.QueryExists(t.Context(), `
+		SELECT FROM pg_attrdef d
+		JOIN pg_attribute a ON a.attrelid = d.adrelid AND a.attnum = d.adnum
+		JOIN pg_class c ON c.oid = d.adrelid
+		JOIN pg_namespace n ON n.oid = c.relnamespace
+		WHERE n.nspname = current_schema()
+			AND c.relname = 'discontinued_functions'
+			AND a.attname = 'organization'`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasDefault {
+		t.Fatal("expected column discontinued_functions.organization to have no default, got a default")
+	}
+
+	hasOrganizationFK, err := database.QueryExists(t.Context(), `
+		SELECT FROM pg_constraint con
+		JOIN pg_attribute attr ON attr.attrelid = con.conrelid AND attr.attnum = ANY(con.conkey)
+		WHERE con.conrelid = 'discontinued_functions'::regclass
+			AND con.contype = 'f'
+			AND attr.attname = 'organization'`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasOrganizationFK {
+		t.Fatal("expected discontinued_functions.organization to have no foreign key, got one")
 	}
 }
 

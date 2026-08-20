@@ -47,15 +47,17 @@ func init() {
 	}, New)
 }
 
-// New returns a new Snowflake data warehouse instance.
-func New(settings warehouses.SettingsLoader) *Snowflake {
-	return &Snowflake{settings: settings}
+// New returns a new Snowflake data warehouse instance, whose network
+// connections are established dialing with dialWith, which must not be nil.
+func New(settings warehouses.SettingsLoader, dialWith warehouses.DialWith) *Snowflake {
+	return &Snowflake{settings: settings, dialWith: dialWith}
 }
 
 type Snowflake struct {
 	mu       sync.Mutex // for the db field
 	db       *sql.DB
 	settings warehouses.SettingsLoader
+	dialWith warehouses.DialWith
 }
 
 type sfSettings struct {
@@ -459,7 +461,7 @@ func (warehouse *Snowflake) openDB(ctx context.Context) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	db := sql.OpenDB(connector(&s))
+	db := sql.OpenDB(connector(&s, warehouse.dialWith))
 	warehouse.db = db
 	return db, nil
 }
@@ -535,8 +537,9 @@ func validateSettings(s *sfSettings) error {
 
 var falseStrPtr = new("false")
 
-// connector returns a driver.Connector from the settings.
-func connector(s *sfSettings) driver.Connector {
+// connector returns a driver.Connector from the settings, whose connections are
+// established dialing with dialWith.
+func connector(s *sfSettings, dialWith warehouses.DialWith) driver.Connector {
 	account := s.Account
 	if i := strings.IndexByte(account, '.'); i > 0 {
 		account = account[:i] + "-" + account[i+1:]
@@ -551,6 +554,7 @@ func connector(s *sfSettings) driver.Connector {
 		Params: map[string]*string{
 			"CLIENT_TELEMETRY_ENABLED": falseStrPtr,
 		},
+		WrapDialContext: dialWith,
 	}
 	if s.OIDCToken != "" {
 		cfg.Authenticator = gosnowflake.AuthTypeWorkloadIdentityFederation

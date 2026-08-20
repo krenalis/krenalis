@@ -11,10 +11,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/krenalis/krenalis/core/internal/dialer"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/transformers"
 	"github.com/krenalis/krenalis/core/internal/transformers/embed"
@@ -24,7 +26,7 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/aws/transport/http"
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
 	lambdatypes "github.com/aws/aws-sdk-go-v2/service/lambda/types"
@@ -58,6 +60,9 @@ func New(settings Settings) transformers.FunctionProvider {
 // Call calls the function with the given identifier and version for each record
 // updating its Attributes field with the result of each invocation.
 //
+// organization is the organization on whose behalf the transformation function
+// is called.
+//
 // Before transformation, record attributes must conform to inSchema.
 // After transformation, they should conform to outSchema, unless an error
 // occurs on the record.
@@ -67,7 +72,7 @@ func New(settings Settings) transformers.FunctionProvider {
 // error), it returns a FunctionExecError.
 // Even if the call succeeds, individual records may still encounter errors,
 // which are stored in the Err field of each record.
-func (fn *function) Call(ctx context.Context, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
+func (fn *function) Call(ctx context.Context, organization, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
 
 	arn, language, err := parseID(id)
 	if err != nil {
@@ -78,6 +83,7 @@ func (fn *function) Call(ctx context.Context, id, version string, inSchema, outS
 	if err != nil {
 		return err
 	}
+	ctx = dialer.WithOrganization(ctx, organization)
 
 	// Marshal the values.
 	payload := make([]byte, 0, 1024)
@@ -186,7 +192,10 @@ func (fn *function) Close(ctx context.Context) error {
 
 // Create creates a new function with the given name, language, and source and
 // returns its identifier and version.
-func (fn *function) Create(ctx context.Context, name string, language state.Language, source string) (string, string, error) {
+//
+// organization is the organization on behalf of which the transformation
+// function is created.
+func (fn *function) Create(ctx context.Context, organization, name string, language state.Language, source string) (string, string, error) {
 	if !transformers.ValidFunctionName(name) {
 		return "", "", errors.New("function name is not valid")
 	}
@@ -201,6 +210,7 @@ func (fn *function) Create(ctx context.Context, name string, language state.Lang
 	if err != nil {
 		return "", "", err
 	}
+	ctx = dialer.WithOrganization(ctx, organization)
 	var runtime string
 	var layers []string
 	switch language {
@@ -250,7 +260,10 @@ func (fn *function) Create(ctx context.Context, name string, language state.Lang
 
 // Delete deletes the function with the given identifier.
 // If a function with the given identifier does not exist, it does nothing.
-func (fn *function) Delete(ctx context.Context, id string) error {
+//
+// organization is the organization on behalf of which the transformation
+// function is deleted.
+func (fn *function) Delete(ctx context.Context, organization, id string) error {
 	arn, _, err := parseID(id)
 	if err != nil {
 		return err
@@ -259,6 +272,7 @@ func (fn *function) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
+	ctx = dialer.WithOrganization(ctx, organization)
 	_, err = client.DeleteFunction(ctx, &lambda.DeleteFunctionInput{
 		FunctionName: &arn,
 	})
@@ -283,7 +297,10 @@ func (fn *function) SupportLanguage(language state.Language) bool {
 // Update updates the source of the function with the given identifier and
 // returns a new version, which has a length in the range [1, 128].
 // If the function does not exist, it returns the ErrFunctionNotExist error.
-func (fn *function) Update(ctx context.Context, id, source string) (string, error) {
+//
+// organization is the organization on behalf of which the transformation
+// function is updated.
+func (fn *function) Update(ctx context.Context, organization, id, source string) (string, error) {
 	arn, language, err := parseID(id)
 	if err != nil {
 		return "", err
@@ -296,6 +313,7 @@ func (fn *function) Update(ctx context.Context, id, source string) (string, erro
 	if err != nil {
 		return "", err
 	}
+	ctx = dialer.WithOrganization(ctx, organization)
 	out, err := client.UpdateFunctionCode(ctx, &lambda.UpdateFunctionCodeInput{
 		FunctionName: &arn,
 		Publish:      true,
@@ -429,8 +447,24 @@ func (fn *function) lambdaClient(ctx context.Context) (*lambda.Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("transformers/lambda: cannot load AWS config: %s", err)
 	}
-	fn.client = lambda.NewFromConfig(cfg)
+	fn.client = lambda.NewFromConfig(cfg, withDialer)
 	return fn.client, nil
+}
+
+// withDialer makes the Lambda client establish its connections with the dial
+// function of the dialer package, as every outbound connection of Krenalis is
+// established.
+func withDialer(o *lambda.Options) {
+	client := o.HTTPClient.(*awshttp.BuildableClient)
+	o.HTTPClient = client.WithTransportOptions(func(t *http.Transport) {
+		t.DialContext = dialer.DialWithContext(t.DialContext)
+		// TODO(Gianluca): the organization is resolved when a connection is
+		// dialed, so a pooled connection would attribute the bytes of every
+		// request it later serves to the organization that dialed it.
+		// Keep-alives are disabled, so that each request is counted for its own
+		// organization.
+		t.DisableKeepAlives = true
+	})
 }
 
 // pythonEscaper is used by escapePythonSourceCode.
@@ -465,7 +499,7 @@ func escapeJavaScriptSourceCode(src string) string {
 // The boolean return value reports whether a status code exists.
 func httpStatusCode(err error) (int, bool) {
 	if err, ok := err.(*smithy.OperationError); ok {
-		if err, ok := err.Err.(*http.ResponseError); ok {
+		if err, ok := err.Err.(*awshttp.ResponseError); ok {
 			return err.Response.StatusCode, true
 		}
 	}

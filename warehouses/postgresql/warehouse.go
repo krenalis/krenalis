@@ -46,15 +46,17 @@ func init() {
 	}, New)
 }
 
-// New returns a new PostgreSQL data warehouse instance.
-func New(settings warehouses.SettingsLoader) *PostgreSQL {
-	return &PostgreSQL{settings: settings}
+// New returns a new PostgreSQL data warehouse instance, whose network
+// connections are established dialing with dialWith, which must not be nil.
+func New(settings warehouses.SettingsLoader, dialWith warehouses.DialWith) *PostgreSQL {
+	return &PostgreSQL{settings: settings, dialWith: dialWith}
 }
 
 type PostgreSQL struct {
 	mu       sync.Mutex // for the pool field
 	pool     *pgxpool.Pool
 	settings warehouses.SettingsLoader
+	dialWith warehouses.DialWith
 }
 
 type pgSettings struct {
@@ -393,6 +395,7 @@ func (warehouse *PostgreSQL) connectionPool(ctx context.Context, returnSchema bo
 	if err != nil {
 		return nil, "", err
 	}
+	config.ConnConfig.DialFunc = warehouse.dialWith(config.ConnConfig.DialFunc)
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, "", err

@@ -25,6 +25,14 @@ const (
 	pipelinesMetricsTimeslotIndex                                      = "pipelines_metrics_timeslot_idx"
 )
 
+// unknownOrganization is the organization given to the rows that predate a
+// column holding one, when it cannot be recovered.
+//
+// It cannot collide with a real organization: identifiers are twelve Base58
+// characters, and Base58 has no '0'. It resolves to no organization, so the
+// bytes sent on its behalf are attributed to nobody.
+const unknownOrganization = "000000000000"
+
 const consentPurposesTable = `
 	CREATE TABLE IF NOT EXISTS consent_purposes (
 		workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
@@ -315,6 +323,26 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsWorkspaceTimeslotIndex + ` ON pipelines_metrics (workspace, timeslot)`,
 			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsConnectionTimeslotIndex + ` ON pipelines_metrics (connection, timeslot)`,
 			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsTimeslotIndex + ` ON pipelines_metrics (timeslot)`,
+			`DO $$
+				BEGIN
+					IF NOT EXISTS (
+						SELECT FROM pg_attribute
+						WHERE attrelid = 'discontinued_functions'::regclass
+							AND attname = 'organization'
+							AND NOT attisdropped
+					) THEN
+						ALTER TABLE discontinued_functions
+							ADD COLUMN organization varchar(12) NOT NULL DEFAULT '` + unknownOrganization + `';
+						ALTER TABLE discontinued_functions ALTER COLUMN organization DROP DEFAULT;
+
+						ALTER TABLE discontinued_functions ADD COLUMN discontinued_at_reordered timestamp(0);
+						UPDATE discontinued_functions SET discontinued_at_reordered = discontinued_at;
+						ALTER TABLE discontinued_functions DROP COLUMN discontinued_at;
+						ALTER TABLE discontinued_functions
+							RENAME COLUMN discontinued_at_reordered TO discontinued_at;
+						ALTER TABLE discontinued_functions ALTER COLUMN discontinued_at SET NOT NULL;
+					END IF;
+				END $$`,
 			organizationConnectorReferencesView,
 			nodeIDUpgrade,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'InviteMember' AFTER 'EndPipelineRun'`,

@@ -48,6 +48,9 @@ func New(settings Settings) transformers.FunctionProvider {
 // Call calls the function with the given identifier and version for each record
 // updating its Attributes field with the result of each invocation.
 //
+// organization is the organization on whose behalf the transformation function
+// is called.
+//
 // Before transformation, record attributes must conform to inSchema.
 // After transformation, they should conform to outSchema, unless an error
 // occurs on the record.
@@ -57,7 +60,7 @@ func New(settings Settings) transformers.FunctionProvider {
 // error), it returns a FunctionExecError.
 // Even if the call succeeds, individual records may still encounter errors,
 // which are stored in the Err field of each record.
-func (fn *function) Call(ctx context.Context, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
+func (fn *function) Call(ctx context.Context, organization, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
 
 	name, language, err := parseID(id)
 	if err != nil {
@@ -157,7 +160,10 @@ func (fn *function) Close(ctx context.Context) error {
 
 // Create creates a new function with the given name, language, and source and
 // returns its identifier and version.
-func (fn *function) Create(ctx context.Context, name string, language state.Language, source string) (string, string, error) {
+//
+// organization is the organization on behalf of which the transformation
+// function is created.
+func (fn *function) Create(ctx context.Context, organization, name string, language state.Language, source string) (string, string, error) {
 	if !transformers.ValidFunctionName(name) {
 		return "", "", errors.New("function name is not valid")
 	}
@@ -324,7 +330,10 @@ if __name__ == "__main__":
 
 // Delete deletes the function with the given identifier.
 // If a function with the given identifier does not exist, it does nothing.
-func (fn *function) Delete(ctx context.Context, id string) error {
+//
+// organization is the organization on behalf of which the transformation
+// function is deleted.
+func (fn *function) Delete(ctx context.Context, organization, id string) error {
 	name, language, err := parseID(id)
 	if err != nil {
 		return err
@@ -382,7 +391,10 @@ func (fn *function) SupportLanguage(language state.Language) bool {
 // Update updates the source of the function with the given identifier and
 // returns a new version, which has a length in the range [1, 128].
 // If the function does not exist, it returns the ErrFunctionNotExist error.
-func (fn *function) Update(ctx context.Context, id, source string) (string, error) {
+//
+// organization is the organization on behalf of which the transformation
+// function is updated.
+func (fn *function) Update(ctx context.Context, organization, id, source string) (string, error) {
 	name, language, err := parseID(id)
 	if err != nil {
 		return "", err

@@ -174,7 +174,7 @@ func (rmq *RabbitMQ) connect(ctx context.Context, settings *innerSettings, deliv
 	config := amqp.Config{
 		Dial: func(network, address string) (net.Conn, error) {
 			d := net.Dialer{Timeout: defaultConnectionTimeout}
-			netConn, err = d.DialContext(ctx, network, address)
+			netConn, err = rmq.env.DialWith(d.DialContext)(ctx, network, address)
 			if err != nil {
 				return nil, err
 			}

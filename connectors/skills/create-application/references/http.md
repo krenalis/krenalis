@@ -8,7 +8,18 @@ All HTTP calls must go through:
 res, err := c.env.HTTPClient.Do(req)
 ```
 
-Do not use `http.DefaultClient` for connector calls.
+Do not use `http.DefaultClient` for connector calls, and do not build your own
+`http.Client`, `http.Transport`, `net.Dialer`, or any other custom dialing path.
+
+`env.HTTPClient` is not only a matter of rate limits and retries: its transport
+belongs to the organization on behalf of which the connector runs, and Krenalis
+counts the bytes it sends to attribute the network usage to that organization.
+Any request sent outside `env.HTTPClient` escapes that accounting, so its traffic
+is not attributed to anyone.
+
+Unlike database, file-storage, and message-broker connectors, an Application
+connector receives no `Dial` or `DialWith` function in its env: `env.HTTPClient`
+is its only outbound network path.
 
 Always close response bodies (`defer res.Body.Close()` or `_ = res.Body.Close()`), including on non-2xx responses, to avoid resource leaks.
 Do not manually drain response bodies.
