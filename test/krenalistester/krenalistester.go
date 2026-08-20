@@ -72,6 +72,7 @@ type Krenalis struct {
 
 	// Options.
 	fileSystemRoot        string
+	natsAckWait           string
 	populateProfileSchema bool
 }
 
@@ -88,8 +89,8 @@ func (k *Krenalis) Addr() string {
 // NewKrenalisInstance initializes a new instance of Krenalis for testing.
 //
 // After initializing an instance, its options can be set (via
-// [PopulateProfileSchema] and [SetFileSystemRoot]) and finally the instance can be
-// started with the [Start] method.
+// [PopulateProfileSchema], [SetFileSystemRoot], and [SetNATSAckWait]) and
+// finally the instance can be started with the [Start] method.
 func NewKrenalisInstance(t *testing.T) *Krenalis {
 
 	if !launchKrenalisExternally {
@@ -170,6 +171,11 @@ func (k *Krenalis) PopulateProfileSchema(populate bool) {
 // environment variable.
 func (k *Krenalis) SetFileSystemRoot(root string) {
 	k.fileSystemRoot = root
+}
+
+// SetNATSAckWait sets the NATS ack wait duration.
+func (k *Krenalis) SetNATSAckWait(duration string) {
+	k.natsAckWait = duration
 }
 
 // Start starts the Krenalis instance.
@@ -349,6 +355,7 @@ func (k *Krenalis) Start() {
 			"KRENALIS_DB_PASSWORD=" + testsSettings.Database.Password,
 			"KRENALIS_DB_DATABASE=" + testsSettings.Database.Database,
 			"KRENALIS_DB_SCHEMA=" + testsSettings.Database.Schema,
+			"KRENALIS_NATS_ACK_WAIT=" + k.natsAckWait,
 			"KRENALIS_TRANSFORMERS_PROVIDER=local",
 			"KRENALIS_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE=" + testsSettings.PythonExecutable,
 			"KRENALIS_TRANSFORMERS_LOCAL_FUNCTIONS_DIR=" + k.transformationsTempDir,
@@ -394,6 +401,12 @@ func (k *Krenalis) Start() {
 		setts.NATS.Servers = []string{fmt.Sprintf("nats://%s:%d", testsSettings.NATS.URL, testsSettings.NATS.Port)}
 		setts.NATS.User = testsSettings.NATS.User
 		setts.NATS.Password = testsSettings.NATS.Password
+		if k.natsAckWait != "" {
+			setts.NATS.AckWait, err = time.ParseDuration(k.natsAckWait)
+			if err != nil {
+				k.t.Fatal(err)
+			}
+		}
 		setts.Transformers.Local.PythonExecutable = testsSettings.PythonExecutable
 		setts.Transformers.Local.FunctionsDir = k.transformationsTempDir
 		setts.MaxQueuedEventsPerDestination = 50_000
