@@ -81,8 +81,7 @@ func New(st *state.State, metrics *metrics.Collector) (*Datastore, error) {
 // warehouse.
 func (ds *Datastore) CanInitialize(ctx context.Context, organization, platform string, settings json.Value) error {
 	ds.mustBeOpen()
-	dw := warehouses.Registered(platform).New(newSettingsLoader(settings))
-	dw.SetDialWith(dialer.DialWith(organization))
+	dw := warehouses.Registered(platform).New(newSettingsLoader(settings), dialer.DialWith(organization))
 	defer dw.Close()
 	err := dw.CanInitialize(ctx)
 	if err != nil {
@@ -99,8 +98,7 @@ func (ds *Datastore) CanInitialize(ctx context.Context, organization, platform s
 // organization is the ID of the organization performing the operation.
 func (ds *Datastore) CheckMCPSettings(ctx context.Context, organization, platform string, settings json.Value) error {
 	ds.mustBeOpen()
-	dw := warehouses.Registered(platform).New(newSettingsLoader(settings))
-	dw.SetDialWith(dialer.DialWith(organization))
+	dw := warehouses.Registered(platform).New(newSettingsLoader(settings), dialer.DialWith(organization))
 	defer dw.Close()
 	err := dw.CheckReadOnlyAccess(ctx)
 	if err != nil {
@@ -138,8 +136,7 @@ func (ds *Datastore) Close() {
 // *datastore.UnavailableError error if an error occurs with the data warehouse.
 func (ds *Datastore) Initialize(ctx context.Context, organization, platform string, settings json.Value, profileSchema types.Type) error {
 	ds.mustBeOpen()
-	dw := warehouses.Registered(platform).New(newSettingsLoader(settings))
-	dw.SetDialWith(dialer.DialWith(organization))
+	dw := warehouses.Registered(platform).New(newSettingsLoader(settings), dialer.DialWith(organization))
 	defer dw.Close()
 	profileColumns := util.PropertiesToColumns(profileSchema.Properties())
 	err := dw.Initialize(ctx, profileColumns)
@@ -171,8 +168,7 @@ func (ds *Datastore) ValidateWarehouseSettings(ctx context.Context, organization
 	if _, ok := ds.state.WarehousePlatform(platform); !ok {
 		return nil, ErrWarehousePlatformNotExist
 	}
-	dw := warehouses.Registered(platform).New(newSettingsLoader(settings))
-	dw.SetDialWith(dialer.DialWith(organization))
+	dw := warehouses.Registered(platform).New(newSettingsLoader(settings), dialer.DialWith(organization))
 	defer dw.Close()
 	s, err := dw.ValidateSettings(ctx)
 	if err != nil {
@@ -306,8 +302,7 @@ func (ds *Datastore) onUpdateWarehouse(n state.UpdateWarehouse) {
 	// Update the warehouse if the settings have changed.
 	prevWarehouse := store.warehouse()
 	ws, _ := ds.state.Workspace(n.Workspace)
-	nextWarehouse := warehouses.Registered(ws.Warehouse.Platform).New(newStateSettingsLoader(ws))
-	nextWarehouse.SetDialWith(dialer.DialWith(ws.Organization().ID))
+	nextWarehouse := warehouses.Registered(ws.Warehouse.Platform).New(newStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
 	if n.SettingsHaveChanged() {
 		store.wh.Store(nextWarehouse)
 		// Close the previous warehouse.

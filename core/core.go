@@ -384,8 +384,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	for _, ws := range core.state.Workspaces() {
 		var dw warehouses.Warehouse
 		if ws.HasWarehouseMCPSettings() {
-			dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
-			dw.SetDialWith(dialer.DialWith(ws.Organization().ID))
+			dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
 		}
 		core.mcp[ws.ID] = dw
 	}
@@ -1839,8 +1838,7 @@ func (core *Core) onCreateWorkspace(n state.CreateWorkspace) {
 	ws, _ := core.state.Workspace(n.ID)
 	var dw warehouses.Warehouse
 	if ws.HasWarehouseMCPSettings() {
-		dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
-		dw.SetDialWith(dialer.DialWith(ws.Organization().ID))
+		dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
 	}
 	core.mcpMu.Lock()
 	core.mcp[ws.ID] = dw
@@ -1934,8 +1932,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 	ws, _ := core.state.Workspace(n.Workspace)
 	if ws.HasWarehouseMCPSettings() {
 		// Open the new warehouse.
-		newWarehouse = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
-		newWarehouse.SetDialWith(dialer.DialWith(ws.Organization().ID))
+		newWarehouse = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
 	}
 	core.mcpMu.Lock()
 	oldWarehouse = core.mcp[n.Workspace]

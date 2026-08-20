@@ -47,9 +47,10 @@ func init() {
 	}, New)
 }
 
-// New returns a new Snowflake data warehouse instance.
-func New(settings warehouses.SettingsLoader) *Snowflake {
-	return &Snowflake{settings: settings}
+// New returns a new Snowflake data warehouse instance, whose network
+// connections are established dialing with dialWith, which must not be nil.
+func New(settings warehouses.SettingsLoader, dialWith warehouses.DialWith) *Snowflake {
+	return &Snowflake{settings: settings, dialWith: dialWith}
 }
 
 type Snowflake struct {
@@ -365,12 +366,6 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []wareh
 	}
 
 	return nil
-}
-
-// SetDialWith sets the function that wraps the dial function the warehouse
-// uses to establish its outbound network connections.
-func (warehouse *Snowflake) SetDialWith(dialWith warehouses.DialWith) {
-	warehouse.dialWith = dialWith
 }
 
 // Truncate truncates the specified table.

@@ -37,9 +37,19 @@ func (platform Platform) ReflectType() reflect.Type {
 	return platform.ct
 }
 
-// New returns a new data warehouse instance.
-func (platform Platform) New(settings SettingsLoader) Warehouse {
-	out := platform.newFunc.Call([]reflect.Value{reflect.ValueOf(settings)})
+// New returns a new data warehouse instance, whose network connections are
+// established dialing with dialWith. If dialWith is nil, the warehouse dials
+// with its own dialer.
+func (platform Platform) New(settings SettingsLoader, dialWith DialWith) Warehouse {
+	if dialWith == nil {
+		dialWith = func(dial DialFunc) DialFunc {
+			if dial != nil {
+				return dial
+			}
+			return new(net.Dialer).DialContext
+		}
+	}
+	out := platform.newFunc.Call([]reflect.Value{reflect.ValueOf(settings), reflect.ValueOf(dialWith)})
 	d, _ := reflect.TypeAssert[Warehouse](out[0])
 	return d
 }
@@ -60,7 +70,7 @@ type SettingsLoader interface {
 }
 
 // NewFunc represents functions that create new warehouse platform instance.
-type NewFunc[T Warehouse] func(SettingsLoader) T
+type NewFunc[T Warehouse] func(SettingsLoader, DialWith) T
 
 // AlterOperation represents an operation that alters the columns of the profile
 // tables.
@@ -304,19 +314,6 @@ type Warehouse interface {
 	// initialized, with the aim of correcting any extraordinary issues (such as
 	// accidental table deletions) in an attempt to make Krenalis functional again.
 	Repair(ctx context.Context, profileColumns []Column) error
-
-	// SetDialWith sets the function that wraps the dial function the warehouse uses
-	// to establish its outbound network connections.
-	//
-	// If it is called, the warehouse passes its own dialer to the given function
-	// and dials with the returned dial function, so that it keeps its own dial
-	// options, like its timeouts and its keep-alive. A warehouse with no dialer of
-	// its own passes a nil argument, and the returned dial function dials with a
-	// plain dialer. If it is not called, the warehouse dials with its own default
-	// dialer.
-	//
-	// It cannot be called after any other method of this interface.
-	SetDialWith(dialWith DialWith)
 
 	// Truncate truncates the specified table.
 	Truncate(ctx context.Context, table string) error
