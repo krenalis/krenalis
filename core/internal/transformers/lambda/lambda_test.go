@@ -120,7 +120,7 @@ func call(t *testing.T, fn transformers.FunctionProvider, organization string) {
 //
 // Being disabled, no organization has a counter to add bytes to, so the bytes
 // counted can only be zero: what this test really guards is that the client
-// dials on behalf of the organization, as TestCountEgress requires, because a
+// dials on behalf of the organization, as TestWithDialer requires, because a
 // dial whose context carries no organization fails. The counting itself is
 // tested in the dialer package.
 func TestCallWithCountingDisabled(t *testing.T) {
@@ -173,15 +173,11 @@ func TestCallUsesASingleClient(t *testing.T) {
 	}
 }
 
-// TestCountEgress tests that the client dials with the dialer of the
-// organization, so that the bytes it sends are counted, and that it keeps its
-// connections from being reused by another organization.
-//
-// The bytes are counted by the dialer package, which tests the counting itself:
-// what is tested here is that the client the calls are made with is wired to
-// it, because a client created without countEgress would send its bytes
-// uncounted, and silently so.
-func TestCountEgress(t *testing.T) {
+// TestWithDialer tests that the client establishes its connections with the
+// dial function of the dialer package, and that it keeps them from being reused
+// by another organization. A client created without withDialer would dial on
+// its own, and silently so.
+func TestWithDialer(t *testing.T) {
 
 	fn := newFunction(t, "http://127.0.0.1:1").(*function)
 	client, err := fn.lambdaClient(t.Context())

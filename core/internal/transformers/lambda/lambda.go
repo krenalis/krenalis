@@ -447,13 +447,14 @@ func (fn *function) lambdaClient(ctx context.Context) (*lambda.Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("transformers/lambda: cannot load AWS config: %s", err)
 	}
-	fn.client = lambda.NewFromConfig(cfg, countEgress)
+	fn.client = lambda.NewFromConfig(cfg, withDialer)
 	return fn.client, nil
 }
 
-// countEgress makes the Lambda client count the bytes it sends and receives as
-// network usage of the organization.
-func countEgress(o *lambda.Options) {
+// withDialer makes the Lambda client establish its connections with the dial
+// function of the dialer package, as every outbound connection of Krenalis is
+// established.
+func withDialer(o *lambda.Options) {
 	client := o.HTTPClient.(*awshttp.BuildableClient)
 	o.HTTPClient = client.WithTransportOptions(func(t *http.Transport) {
 		t.DialContext = dialer.DialWithContext(t.DialContext)
