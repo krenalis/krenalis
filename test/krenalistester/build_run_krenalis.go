@@ -44,6 +44,7 @@ func buildKrenalis(t *testing.T, repo, krenalisDir string) {
 
 	// Edit the go.mod so that our Snowflake fork is used.
 	// See https://github.com/krenalis/krenalis/issues/2368.
+	// Keep in sync with the version within "go.mod".
 	execCmd(t, tmpdir, "go", "mod", "edit", "-replace", "github.com/snowflakedb/gosnowflake/v2=github.com/krenalis/gosnowflake/v2@v2.1.0-patched")
 
 	// Copy the file with the connectors and warehouse imports, replacing the

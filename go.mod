@@ -5,6 +5,7 @@ module github.com/krenalis/krenalis
 go 1.26
 
 // Use our Snowflake driver fork. See https://github.com/krenalis/krenalis/issues/2368.
+// Keep in sync with the version within "test/krenalistester/build_run_krenalis.go".
 replace github.com/snowflakedb/gosnowflake/v2 => github.com/krenalis/gosnowflake/v2 v2.1.0-patched
 
 require (
