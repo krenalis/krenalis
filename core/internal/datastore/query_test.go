@@ -285,6 +285,38 @@ func TestConvertWhereRejectsInvalidOperators(t *testing.T) {
 	}
 }
 
+// TestConvertWhereRejectsMissingRules tests convertWhere with empty top-level
+// and nested groups.
+func TestConvertWhereRejectsMissingRules(t *testing.T) {
+	tests := []struct {
+		name  string
+		where *state.Where
+	}{
+		{
+			name:  "top-level group",
+			where: &state.Where{Operator: state.OpAnd},
+		},
+		{
+			name: "nested group",
+			where: &state.Where{
+				Operator: state.OpAnd,
+				Rules: []state.WhereRule{
+					&state.Where{Operator: state.OpOr},
+				},
+			},
+		},
+	}
+	expected := errors.New("where rules are missing")
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := convertWhere(test.where, nil)
+			if !reflect.DeepEqual(expected, err) {
+				t.Fatalf("expected error %q (type %T), got error %q (type %T)", expected, expected, err, err)
+			}
+		})
+	}
+}
+
 // TestConvertWhereRejectsUnsupportedObjectOperator tests convertWhere with an
 // operator that cannot be translated for an object property.
 func TestConvertWhereRejectsUnsupportedObjectOperator(t *testing.T) {

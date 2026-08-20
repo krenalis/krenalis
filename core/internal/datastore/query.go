@@ -63,9 +63,11 @@ func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Col
 	if where.Operator != state.OpAnd && where.Operator != state.OpOr {
 		return nil, fmt.Errorf("invalid logical operator %d in where expression", int(where.Operator))
 	}
+	if len(where.Rules) == 0 {
+		return nil, errors.New("where rules are missing")
+	}
 
-	// state.WhereLogical values match the corresponding
-	// warehouses.LogicalOperator values.
+	// state.WhereLogical values match the corresponding warehouses.LogicalOperator values.
 	expr := warehouses.NewMultiExpr(
 		warehouses.LogicalOperator(where.Operator),
 		make([]warehouses.Expr, len(where.Rules)),
@@ -89,7 +91,7 @@ func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Col
 			if rule == nil {
 				return nil, errors.New("where condition cannot be nil")
 			}
-			path := strings.Join(rule.Property, ".")
+			path := strings.Join(rule.Property, ".") // TODO(marco): How can I avoid this allocation?
 			if rule.Operator < state.OpIs || rule.Operator > state.OpDoesNotExist {
 				return nil, fmt.Errorf("invalid operator %d for property %q in where expression",
 					int(rule.Operator), path)
@@ -102,8 +104,6 @@ func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Col
 				case state.OpDoesNotExist:
 					op = warehouses.OpIsNull
 				default:
-					// state.WhereOperator values through state.OpIsNotNull match the
-					// corresponding warehouses.Operator values.
 					op = warehouses.Operator(rule.Operator)
 				}
 				expr.Operands[i] = warehouses.NewBaseExpr(column, op, rule.Values...)
