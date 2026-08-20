@@ -92,6 +92,7 @@ func (h *HTTP) onDeleteOrganization(n state.DeleteOrganization) {
 	transport := h.organizations[n.ID]
 	delete(h.organizations, n.ID)
 	h.organizationsMu.Unlock()
+	// The transport is nil when the organization has never made a request.
 	if transport != nil {
 		transport.CloseIdleConnections()
 	}
