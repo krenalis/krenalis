@@ -4,40 +4,79 @@ import { getFilterPropertyComboboxItems } from '../../helpers/getSchemaComboboxI
 import PipelineContext from '../../../context/PipelineContext';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlButtonGroup from '@shoelace-style/shoelace/dist/react/button-group/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { Combobox } from '../../base/Combobox/Combobox';
 import {
 	FILTER_OPERATORS,
+	MAX_FILTER_DEPTH,
+	MAX_FILTER_RULE_COUNT,
 	flattenSchema,
 	getCompatibleFilterOperators,
 	isBetweenOperator,
+	isFilterGroup,
 	isOneOfOperator,
 	isUnaryOperator,
 	splitPropertyAndPath,
 	TransformedPipeline,
 	TransformedProperty,
 } from '../../../lib/core/pipeline';
-import { FilterLogical, FilterOperator } from '../../../lib/api/types/pipeline';
-import { checkIfPropertyExists } from './Pipeline.helpers';
+import { Filter, FilterCondition, FilterLogical, FilterOperator } from '../../../lib/api/types/pipeline';
+import { checkIfPropertyExists, pipelineObjectLabels } from './Pipeline.helpers';
 import { StringType } from '../../../lib/api/types/types';
+
+// countFilterRules returns the number of groups and conditions below filter.
+const countFilterRules = (filter: Filter): number =>
+	filter.rules.reduce((count, rule) => count + 1 + (isFilterGroup(rule) ? countFilterRules(rule) : 0), 0);
+
+// filterGroupAt returns the group at path in filter.
+const filterGroupAt = (filter: Filter, path: number[]): Filter => {
+	let group = filter;
+	for (const index of path) {
+		const rule = group.rules[index];
+		if (!isFilterGroup(rule)) {
+			throw new Error('Filter path does not identify a group');
+		}
+		group = rule;
+	}
+	return group;
+};
+
+// filterConditionAt returns the condition at path in filter.
+const filterConditionAt = (filter: Filter, path: number[]): FilterCondition => {
+	const group = filterGroupAt(filter, path.slice(0, -1));
+	const rule = group.rules[path[path.length - 1]];
+	if (isFilterGroup(rule)) {
+		throw new Error('Filter path does not identify a condition');
+	}
+	return rule;
+};
+
+// newFilterCondition returns an empty condition for the visual editor.
+const newFilterCondition = (): FilterCondition => ({ property: '', operator: '', values: [''] });
+
+// pathID returns a stable identifier for a rule path.
+const pathID = (path: number[]): string => path.join('-');
 
 const PipelineFilters = forwardRef<any>((_, ref) => {
 	const { pipeline, setPipeline, pipelineType, connection, isTransformationDisabled, isImport } =
 		useContext(PipelineContext);
-	const targetTerm =
-		pipelineType.target === 'Event'
-			? 'events'
-			: connection.connector.terms.users?.trim()
-				? connection.connector.terms.users.toLowerCase()
-				: 'contacts';
+	const [filterSubject] = pipelineObjectLabels(connection, pipeline, 'plural');
+	const filterSubjectTerm = filterSubject.toLowerCase();
 	const actionVerb = isImport ? 'import' : pipelineType.target === 'Event' ? 'send' : 'export';
 
-	const flatInputSchema = useMemo(() => {
-		return flattenSchema(pipelineType.inputSchema);
-	}, [pipelineType.inputSchema]);
+	const flatInputSchema = useMemo(() => flattenSchema(pipelineType.inputSchema), [pipelineType.inputSchema]);
+
+	const isEventBasedUserImport = connection.isEventBased && connection.isSource && pipeline.target === 'User';
+	const isAppEventsExport = connection.isApplication && connection.isDestination && pipeline.target === 'Event';
+	const isEventImport = connection.isSource && pipeline.target === 'Event';
+	const propertiesToHide = isEventBasedUserImport || isAppEventsExport || isEventImport ? ['kpid'] : [];
+
+	const isFileStorageImport = connection.isFileStorage && connection.isSource;
+	const isDisabled = isFileStorageImport && isTransformationDisabled;
+	const filterRuleCount = pipeline.filter == null ? 0 : countFilterRules(pipeline.filter);
 
 	const findPropertyInSchema = (propertyName: string): TransformedProperty | undefined => {
 		if (propertyName == null || propertyName === '') {
@@ -50,519 +89,481 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		if (property == null || property.type !== 'string') {
 			return null;
 		}
-		const stringType = property.full.type as StringType;
-		return stringType.values ?? null;
+		return (property.full.type as StringType).values ?? null;
 	};
 
-	const onAddCondition = () => {
+	const onAddCondition = (groupPath: number[]) => {
 		const p = structuredClone(pipeline);
 		if (p.filter == null) {
-			p.filter = { logical: 'and', conditions: [] };
+			p.filter = { operator: 'and', rules: [] };
 		}
-		p.filter.conditions = [...p.filter.conditions, { property: '', operator: '', values: [''] }];
+		filterGroupAt(p.filter, groupPath).rules.push(newFilterCondition());
 		setPipeline(p);
 	};
 
-	const onRemoveCondition = (id: number) => {
+	const onAddGroup = (groupPath: number[]) => {
 		const p = structuredClone(pipeline);
-		p.filter!.conditions.splice(id, 1);
-		if (p.filter!.conditions.length === 0) {
-			p.filter = null;
-		}
+		const parent = filterGroupAt(p.filter!, groupPath);
+		parent.rules.push({
+			operator: parent.operator === 'and' ? 'or' : 'and',
+			rules: [newFilterCondition()],
+		});
 		setPipeline(p);
 	};
 
-	const onInputPropertyFragment = (name: string, value: string) => {
-		updatePropertyFragment(name, value);
-	};
-
-	const onSelectPropertyFragment = (name: string, value: string) => {
-		const updated = updatePropertyFragment(name, value);
-
-		const id = Number(name.split('-')[1]);
-		const hasPath = 'path' in updated.filter!.conditions[id];
-		const currentOperator = updated.filter!.conditions[id]['operator'];
-		const currentOperatorIndex = FILTER_OPERATORS.findIndex((op) => op === currentOperator);
-		const compatibleOperators = getCompatibleFilterOperators(
-			flatInputSchema[value],
-			hasPath,
-			connection.role,
-			pipeline.target,
-		);
-		const isCompatible = compatibleOperators.includes(currentOperatorIndex);
-		const isJson = flatInputSchema[value]?.type === 'json';
-
-		if (!isCompatible) {
-			// Select the first compatible operator.
-			const operator = FILTER_OPERATORS[compatibleOperators[0]];
-			changeOperator(id, operator, updated);
-			if (!isJson) {
-				setTimeout(() => {
-					const operatorSelect: any = document
-						.querySelector(`[data-id=property-${id}]`)
-						.closest('.pipeline__filters-condition')
-						.querySelector('.pipeline__filters-operator');
-					operatorSelect.show();
-				}, 10);
-			}
-		}
-
-		if (isJson) {
-			setTimeout(() => {
-				const pathInput: any = document
-					.querySelector(`[data-id=property-${id}]`)
-					.closest('.pipeline__filters-condition')
-					.querySelector('.pipeline__filters-path');
-				pathInput.select();
-			}, 10);
-		}
-	};
-
-	const updatePropertyFragment = (name: string, value: string): TransformedPipeline => {
+	const onRemoveRule = (path: number[]) => {
 		const p = structuredClone(pipeline);
-		const id = Number(name.split('-')[1]);
+		const filter = p.filter!;
+		const groupPath = path.slice(0, -1);
+		const group = filterGroupAt(filter, groupPath);
+		group.rules.splice(path[path.length - 1], 1);
 
-		const condition = p.filter!.conditions[id];
-
-		const previousPropertyName = condition['property'];
-		const previousProperty = findPropertyInSchema(previousPropertyName);
-		const previousPropertyValues = getPropertyValues(previousProperty);
-
-		const [_, path] = splitPropertyAndPath(previousPropertyName, flatInputSchema);
-		let newPropertyName = '';
-		let hasPath = path !== '';
-		if (hasPath && flatInputSchema[value]?.type === 'json') {
-			newPropertyName = `${value}.${path}`;
-		} else {
-			newPropertyName = value;
-		}
-
-		const compatibleOperators = getCompatibleFilterOperators(
-			flatInputSchema[newPropertyName],
-			hasPath,
-			connection.role,
-			pipeline.target,
-		);
-		const currentOperator = condition['operator'];
-		if (currentOperator != null && currentOperator !== '') {
-			const index = FILTER_OPERATORS.indexOf(currentOperator);
-			if (!compatibleOperators.includes(index)) {
-				// The current operator is not compatible with the new property.
-				// Reset the operator and the values.
-				condition['operator'] = '';
-				condition['values'] = [''];
-			}
-		}
-
-		condition['property'] = newPropertyName;
-		const newProperty = findPropertyInSchema(newPropertyName);
-		const newPropertyValues = getPropertyValues(newProperty);
-		const hasDifferentValues =
-			previousPropertyName !== newPropertyName && (previousPropertyValues != null || newPropertyValues != null);
-		if (hasDifferentValues) {
-			// Reset the old values, because the new property has a different
-			// set of enumerated values.
-			const op = condition.operator;
-			if (isBetweenOperator(op)) {
-				condition.values = ['', ''];
+		if (group.rules.length === 0) {
+			if (groupPath.length === 0) {
+				p.filter = null;
 			} else {
-				condition.values = [''];
+				group.rules.push(newFilterCondition());
 			}
 		}
+		setPipeline(p);
+	};
 
+	const onLogicalChange = (groupPath: number[], operator: FilterLogical) => {
+		const p = structuredClone(pipeline);
+		filterGroupAt(p.filter!, groupPath).operator = operator;
+		setPipeline(p);
+	};
+
+	const updateProperty = (path: number[], value: string): TransformedPipeline => {
+		const p = structuredClone(pipeline);
+		const condition = filterConditionAt(p.filter!, path);
+		const previousPropertyName = condition.property;
+		const previousPropertyValues = getPropertyValues(findPropertyInSchema(previousPropertyName));
+		const [, previousPath] = splitPropertyAndPath(previousPropertyName, flatInputSchema);
+		const newPropertyName =
+			previousPath !== '' && flatInputSchema[value]?.type === 'json' ? `${value}.${previousPath}` : value;
+		const newProperty = findPropertyInSchema(newPropertyName);
+		const [, newPath] = splitPropertyAndPath(newPropertyName, flatInputSchema);
+
+		const compatibleOperators = getCompatibleFilterOperators(
+			newProperty,
+			newPath !== '',
+			connection.role,
+			pipeline.target,
+		);
+		if (condition.operator !== '' && !compatibleOperators.includes(FILTER_OPERATORS.indexOf(condition.operator))) {
+			condition.operator = '';
+			condition.values = [''];
+		}
+
+		condition.property = newPropertyName;
+		const newPropertyValues = getPropertyValues(newProperty);
+		if (previousPropertyName !== newPropertyName && (previousPropertyValues != null || newPropertyValues != null)) {
+			condition.values = isBetweenOperator(condition.operator) ? ['', ''] : [''];
+		}
 		setPipeline(p);
 		return p;
 	};
 
-	const onInputPathFragment = (e) => {
-		const p = structuredClone(pipeline);
-		const id = Number(e.target.name.split('-')[1]);
-		const propertyName = p.filter!.conditions[id]['property'];
-		const [base, _] = splitPropertyAndPath(propertyName, flatInputSchema);
-		let newPropertyName = '';
-		const newPath = e.target.value;
-		if (newPath !== '') {
-			newPropertyName = `${base}.${newPath}`;
-		} else {
-			newPropertyName = base;
-		}
-		p.filter!.conditions[id]['property'] = newPropertyName;
-		setPipeline(p);
-	};
+	const onSelectProperty = (path: number[], value: string) => {
+		const p = updateProperty(path, value);
+		const condition = filterConditionAt(p.filter!, path);
+		const [, propertyPath] = splitPropertyAndPath(condition.property, flatInputSchema);
+		const compatibleOperators = getCompatibleFilterOperators(
+			flatInputSchema[value],
+			propertyPath !== '',
+			connection.role,
+			pipeline.target,
+		);
+		const currentOperatorIndex = FILTER_OPERATORS.findIndex((operator) => operator === condition.operator);
+		const isJSON = flatInputSchema[value]?.type === 'json';
 
-	const onChangeOperatorFragment = (e: any) => {
-		const id = Number(e.target.name.split('-')[1]);
-		const operator = FILTER_OPERATORS[e.target.value];
-		changeOperator(id, operator);
-	};
-
-	const onOperatorSelectClose = (e: any) => {
-		const operator = FILTER_OPERATORS[e.target.value];
-		if (!isUnaryOperator(operator)) {
-			// Focus the first value input.
-			setTimeout(() => {
-				const valueInput = e.target
-					.closest('.pipeline__filters-condition')
-					.querySelector('.pipeline__filters-value-input');
-				const isSelect = valueInput.tagName === 'SL-SELECT';
-				if (isSelect) {
-					valueInput.show();
-				} else {
-					valueInput.focus();
-				}
-			}, 50);
-		}
-	};
-
-	const changeOperator = (conditionID: number, operator: FilterOperator, updatedPipeline?: TransformedPipeline) => {
-		const id = conditionID;
-		let p: TransformedPipeline;
-		if (updatedPipeline != null) {
-			p = updatedPipeline;
-		} else {
-			p = structuredClone(pipeline);
-		}
-		p.filter!.conditions[id]['operator'] = operator;
-		if (isUnaryOperator(operator)) {
-			p.filter!.conditions[id]['values'] = null;
-		} else {
-			const isBetween = isBetweenOperator(operator);
-			const isOneOf = isOneOfOperator(operator);
-
-			let values: string[] | null;
-			if (isBetween) {
-				let v = ['', ''];
-				if (p.filter!.conditions[id]['values'] != null) {
-					v = p.filter!.conditions[id]['values'].slice(0, 2);
-					if (v.length === 1) {
-						v.push('');
-					}
-				}
-				values = v;
-			} else if (isOneOf) {
-				let v = p.filter!.conditions[id]['values'];
-				if (v == null) {
-					v = [''];
-				}
-				values = v;
-			} else {
-				let v = '';
-				if (p.filter!.conditions[id]['values'] != null) {
-					v = p.filter!.conditions[id]['values'][0];
-				}
-				values = [v];
+		if (!compatibleOperators.includes(currentOperatorIndex) && compatibleOperators.length > 0) {
+			changeOperator(path, FILTER_OPERATORS[compatibleOperators[0]], p);
+			if (!isJSON) {
+				setTimeout(() => {
+					const property: any = document.querySelector(`[data-id="property-${pathID(path)}"]`);
+					property
+						?.closest('.pipeline__filters-condition')
+						?.querySelector('.pipeline__filters-operator')
+						?.show();
+				}, 10);
 			}
+		}
 
-			p.filter!.conditions[id]['values'] = values;
+		if (isJSON) {
+			setTimeout(() => {
+				const property: any = document.querySelector(`[data-id="property-${pathID(path)}"]`);
+				property?.closest('.pipeline__filters-condition')?.querySelector('.pipeline__filters-path')?.select();
+			}, 10);
+		}
+	};
+
+	const onInputPath = (path: number[], value: string) => {
+		const p = structuredClone(pipeline);
+		const condition = filterConditionAt(p.filter!, path);
+		const [base] = splitPropertyAndPath(condition.property, flatInputSchema);
+		const compatibleOperators = getCompatibleFilterOperators(
+			flatInputSchema[base],
+			value !== '',
+			connection.role,
+			pipeline.target,
+		);
+		if (condition.operator !== '' && !compatibleOperators.includes(FILTER_OPERATORS.indexOf(condition.operator))) {
+			condition.operator = '';
+			condition.values = [''];
+		}
+		condition.property = value === '' ? base : `${base}.${value}`;
+		setPipeline(p);
+	};
+
+	const changeOperator = (path: number[], operator: FilterOperator, updatedPipeline?: TransformedPipeline) => {
+		const p = updatedPipeline ?? structuredClone(pipeline);
+		const condition = filterConditionAt(p.filter!, path);
+		condition.operator = operator;
+		if (isUnaryOperator(operator)) {
+			condition.values = [];
+		} else if (isBetweenOperator(operator)) {
+			condition.values = condition.values.slice(0, 2);
+			while (condition.values.length < 2) {
+				condition.values.push('');
+			}
+		} else if (isOneOfOperator(operator)) {
+			if (condition.values.length === 0) {
+				condition.values = [''];
+			}
+		} else {
+			condition.values = [condition.values[0] ?? ''];
 		}
 		setPipeline(p);
 	};
 
-	const onChangeValueFragment = (name: string, value: string) => {
-		const p = structuredClone(pipeline);
-		const split = name.split('-');
-		const id = Number(split[1]);
-		const position = Number(split[2]);
-		p.filter!.conditions[id]['values'][position] = value;
-		setPipeline(p);
-	};
-
-	const onLogicalClick = (logical: FilterLogical) => {
-		const p = structuredClone(pipeline);
-		p.filter!.logical = logical;
-		setPipeline(p);
-	};
-
-	const onAddValue = (index: number) => {
-		const p = structuredClone(pipeline);
-		const currentLength = p.filter!.conditions[index]['values'].length;
-		p.filter!.conditions[index]['values'] = [...p.filter!.conditions[index]['values'], ''];
-		setPipeline(p);
+	const onOperatorSelectClose = (event: any) => {
+		const operator = FILTER_OPERATORS[event.target.value];
+		if (operator == null || isUnaryOperator(operator)) {
+			return;
+		}
 		setTimeout(() => {
-			// focus the new input.
-			const valueInputs: any = document
-				.querySelector(`[data-id=property-${index}]`)
+			const valueInput = event.target
 				.closest('.pipeline__filters-condition')
-				.querySelectorAll('.pipeline__filters-value-input');
-			const newValueInput = valueInputs[currentLength];
-			const isSelect = newValueInput.tagName === 'SL-SELECT';
-			if (isSelect) {
-				newValueInput.show();
+				?.querySelector('.pipeline__filters-value-input');
+			if (valueInput == null) {
+				return;
+			}
+			if (valueInput.tagName === 'SL-SELECT') {
+				valueInput.show();
 			} else {
-				newValueInput.focus();
+				valueInput.focus();
 			}
 		}, 50);
 	};
 
-	const onRemoveValue = (conditionIndex: number, valueIndex: number) => {
+	const onChangeValue = (path: number[], position: number, value: string) => {
 		const p = structuredClone(pipeline);
-		const values = p.filter!.conditions[conditionIndex]['values'];
-		const filtered = [];
-		for (const [i, v] of values.entries()) {
-			if (i !== valueIndex) {
-				filtered.push(v);
-			}
-		}
-		p.filter!.conditions[conditionIndex]['values'] = filtered;
+		filterConditionAt(p.filter!, path).values[position] = value;
 		setPipeline(p);
 	};
 
-	const isFileStorageImport = connection.isFileStorage && connection.isSource;
+	const onAddValue = (path: number[]) => {
+		const p = structuredClone(pipeline);
+		const condition = filterConditionAt(p.filter!, path);
+		const position = condition.values.length;
+		condition.values.push('');
+		setPipeline(p);
+		setTimeout(() => {
+			const property: any = document.querySelector(`[data-id="property-${pathID(path)}"]`);
+			const inputs = property
+				?.closest('.pipeline__filters-condition')
+				?.querySelectorAll('.pipeline__filters-value-input');
+			const input = inputs?.[position];
+			if (input == null) {
+				return;
+			}
+			if (input.tagName === 'SL-SELECT') {
+				input.show();
+			} else {
+				input.focus();
+			}
+		}, 50);
+	};
 
-	// For file storage imports, the filter section is displayed
-	// together with the transformation section when the file's settings
-	// are confirmed. It must be disabled when the settings are changed
-	// and not yet re-confirmed.
-	const isDisabled = isFileStorageImport && isTransformationDisabled;
+	const onRemoveValue = (path: number[], position: number) => {
+		const p = structuredClone(pipeline);
+		const condition = filterConditionAt(p.filter!, path);
+		condition.values.splice(position, 1);
+		setPipeline(p);
+	};
 
-	const conditions: ReactNode[] = [];
-	if (pipeline.filter != null) {
-		for (const [i, condition] of pipeline.filter.conditions.entries()) {
-			const [base, path] = splitPropertyAndPath(condition.property, flatInputSchema);
+	const renderCondition = (condition: FilterCondition, path: number[]): ReactNode => {
+		const id = pathID(path);
+		const groupPath = path.slice(0, -1);
+		const isOnlyRuleInNestedGroup =
+			groupPath.length > 0 && filterGroupAt(pipeline.filter!, groupPath).rules.length === 1;
+		const isRemoveDisabled = isDisabled || isOnlyRuleInNestedGroup;
+		const [base, propertyPath] = splitPropertyAndPath(condition.property, flatInputSchema);
+		const property = flatInputSchema?.[base];
+		const isUnary = isUnaryOperator(condition.operator);
+		const isJSON = property?.type === 'json';
+		const isBetween = isBetweenOperator(condition.operator);
+		const isOneOf = isOneOfOperator(condition.operator);
+		const isInvalidProperty = property == null;
+		const propertyValues = getPropertyValues(property) ?? [];
 
-			let property = flatInputSchema?.[base];
-			const isUnary = isUnaryOperator(condition.operator);
-			const isJSON = property?.type === 'json';
-			const isBetween = isBetweenOperator(condition.operator);
-			const isOneOf = isOneOfOperator(condition.operator);
-			const isInvalidProperty = property == null;
-
-			let logicalElement: ReactNode;
-			let propertyInput: ReactNode;
-			let pathInput: ReactNode;
-			let operatorSelect: ReactNode;
-			let valueElements: ReactNode[] = [];
-
-			// Logical
-			if (i === 0) {
-				if (pipeline.filter.conditions.length > 1) {
-					// Add a placeholder to maintain alignment.
-					logicalElement = (
-						<div className='pipeline__filters-logical pipeline__filters-logical--placeholder'></div>
-					);
+		const propertyInput = (
+			<Combobox
+				onInput={(_, value) => updateProperty(path, value)}
+				onSelect={(_, value) => onSelectProperty(path, value)}
+				value={isJSON ? base : condition.property}
+				className='pipeline__filters-property'
+				size='small'
+				name={`property-${id}`}
+				items={getFilterPropertyComboboxItems(
+					pipelineType.inputSchema,
+					connection,
+					pipeline.target,
+					propertiesToHide,
+				)}
+				isExpression={false}
+				disabled={isDisabled}
+				placeholder='Property'
+				caret={true}
+				controlled={true}
+				autoResize={true}
+				error={
+					condition.property !== '' &&
+					checkIfPropertyExists(isJSON ? base : condition.property, flatInputSchema, propertiesToHide)
 				}
-			} else if (i === 1) {
-				logicalElement = (
-					<SlButtonGroup className='pipeline__filters-logical'>
-						<SlButton
-							size='small'
-							variant={pipeline.filter!.logical === 'and' ? 'primary' : 'default'}
-							onClick={() => onLogicalClick('and')}
-							disabled={isDisabled}
-						>
-							and
-						</SlButton>
-						<SlButton
-							size='small'
-							variant={pipeline.filter!.logical === 'or' ? 'primary' : 'default'}
-							onClick={() => onLogicalClick('or')}
-							disabled={isDisabled}
-						>
-							or
-						</SlButton>
-					</SlButtonGroup>
-				);
-			} else if (i > 1) {
-				logicalElement = (
-					<div className='pipeline__filters-logical pipeline__filters-logical--text'>
-						{pipeline.filter!.logical}
-					</div>
-				);
-			}
-
-			// Property
-			const isEventBasedUserImport = connection.isEventBased && connection.isSource && pipeline.target === 'User';
-			const isAppEventsExport =
-				connection.isApplication && connection.isDestination && pipeline.target === 'Event';
-			const isEventImport = connection.isSource && pipeline.target === 'Event';
-
-			let propertiesToHide = [];
-			if (isEventBasedUserImport || isAppEventsExport || isEventImport) {
-				propertiesToHide = ['kpid'];
-			}
-
-			propertyInput = (
-				<Combobox
-					onInput={onInputPropertyFragment}
-					onSelect={onSelectPropertyFragment}
-					value={isJSON ? base : condition.property}
-					className='pipeline__filters-property'
-					size='small'
-					name={`property-${i}`}
-					items={getFilterPropertyComboboxItems(
-						pipelineType.inputSchema,
-						connection,
-						pipeline.target,
-						propertiesToHide,
-					)}
-					isExpression={false}
-					disabled={isDisabled}
-					placeholder={'Property'}
-					caret={true}
-					controlled={true}
-					autoResize={true}
-					error={
-						condition.property !== '' &&
-						checkIfPropertyExists(isJSON ? base : condition.property, flatInputSchema, propertiesToHide)
-					}
-				/>
-			);
-
-			if (isJSON) {
-				pathInput = (
-					<SlInput
-						size='small'
-						className='pipeline__filters-path'
-						value={path}
-						onSlInput={onInputPathFragment}
-						name={`path-${i}`}
-						disabled={isDisabled}
-						placeholder='Path (optional)'
-					/>
-				);
-			}
-
-			// Operator
-			operatorSelect = (
-				<SlSelect
-					size='small'
-					name={`operator-${i}`}
-					className='pipeline__filters-operator'
-					value={String(FILTER_OPERATORS.findIndex((op) => op === condition.operator))}
-					onSlChange={onChangeOperatorFragment}
-					onSlHide={onOperatorSelectClose}
-					placeholder='Operator'
-					disabled={isInvalidProperty || isDisabled}
-				>
-					{property != null
-						? getCompatibleFilterOperators(property, path !== '', connection.role, pipeline.target).map(
-								(i) => (
-									<SlOption key={i} value={String(i)}>
-										{FILTER_OPERATORS[i]}
-									</SlOption>
-								),
-							)
-						: Object.keys(FILTER_OPERATORS).map((i) => (
-								<SlOption key={i} value={String(i)}>
-									{FILTER_OPERATORS[i]}
+			/>
+		);
+		const pathInput = isJSON ? (
+			<SlInput
+				size='small'
+				className='pipeline__filters-path'
+				value={propertyPath}
+				onSlInput={(event: any) => onInputPath(path, event.target.value)}
+				name={`path-${id}`}
+				disabled={isDisabled}
+				placeholder='Path (optional)'
+			/>
+		) : null;
+		const operatorSelect = (
+			<SlSelect
+				size='small'
+				name={`operator-${id}`}
+				className='pipeline__filters-operator'
+				value={String(FILTER_OPERATORS.findIndex((operator) => operator === condition.operator))}
+				onSlChange={(event: any) => changeOperator(path, FILTER_OPERATORS[event.target.value])}
+				onSlHide={onOperatorSelectClose}
+				placeholder='Operator'
+				disabled={isInvalidProperty || isDisabled}
+			>
+				{property != null
+					? getCompatibleFilterOperators(property, propertyPath !== '', connection.role, pipeline.target).map(
+							(index) => (
+								<SlOption key={index} value={String(index)}>
+									{FILTER_OPERATORS[index]}
 								</SlOption>
-							))}
-				</SlSelect>
+							),
+						)
+					: FILTER_OPERATORS.map((operator, index) => (
+							<SlOption key={operator} value={String(index)}>
+								{operator}
+							</SlOption>
+						))}
+			</SlSelect>
+		);
+
+		const valueElements: ReactNode[] = [];
+		if (!isUnary) {
+			valueElements.push(
+				<PipelineFilterValueControl
+					key={`value-${id}-0`}
+					name={`value-${id}-0`}
+					value={condition.values[0] ?? ''}
+					options={propertyValues}
+					disabled={isInvalidProperty || isDisabled}
+					onValueChange={(value) => onChangeValue(path, 0, value)}
+				/>,
 			);
-
-			// Values
-			if (!isUnary) {
-				const id = `value-${i}-0`;
-
-				let propertyValues = [];
-				if (!isInvalidProperty && property.type === 'string') {
-					const typ = property.full.type as StringType;
-					propertyValues = typ.values || [];
-				}
-
+			if (isBetween) {
 				valueElements.push(
+					<span className='pipeline__filters-value-and' key='and'>
+						and
+					</span>,
 					<PipelineFilterValueControl
-						key={id}
-						name={id}
-						value={condition.values != null ? condition.values[0] : ''}
+						key={`value-${id}-1`}
+						name={`value-${id}-1`}
+						value={condition.values[1] ?? ''}
 						options={propertyValues}
 						disabled={isInvalidProperty || isDisabled}
-						onValueChange={onChangeValueFragment}
+						onValueChange={(value) => onChangeValue(path, 1, value)}
 					/>,
 				);
-
-				if (isBetween) {
+			} else if (isOneOf) {
+				for (const [position, value] of condition.values.slice(1).entries()) {
+					const valuePosition = position + 1;
 					valueElements.push(
-						<span className='pipeline__filters-value-and' key='and'>
-							and
-						</span>,
-					);
-					const id = `value-${i}-1`;
-					valueElements.push(
-						<PipelineFilterValueControl
-							key={id}
-							name={id}
-							value={condition.values != null ? (condition.values[1] ? condition.values[1] : '') : ''}
-							options={propertyValues}
-							disabled={isInvalidProperty || isDisabled}
-							onValueChange={onChangeValueFragment}
-						/>,
-					);
-				} else if (isOneOf) {
-					const additionalValues = condition.values.slice(1);
-					let k = 1;
-					for (const value of additionalValues) {
-						const currentK = k;
-						const id = `value-${i}-${currentK}`;
-						const input = (
+						<div className='pipeline__filters-value' key={`value-${id}-${valuePosition}`}>
 							<PipelineFilterValueControl
-								key={id}
-								name={id}
+								name={`value-${id}-${valuePosition}`}
 								value={value}
 								options={propertyValues}
 								disabled={isInvalidProperty || isDisabled}
-								onValueChange={onChangeValueFragment}
+								onValueChange={(value) => onChangeValue(path, valuePosition, value)}
 								removable={true}
-								onRemove={() => onRemoveValue(i, currentK)}
+								onRemove={() => onRemoveValue(path, valuePosition)}
 							/>
-						);
-						valueElements.push(
-							<div className='pipeline__filters-value pipeline__filters-value--additional' key={id}>
-								{input}
-							</div>,
-						);
-						k++;
-					}
-					valueElements.push(
-						<SlButton
-							className='pipeline__filters-add-value'
-							key='add-button'
-							variant='default'
-							size='small'
-							disabled={isDisabled}
-							onClick={() => onAddValue(i)}
-						>
-							Add value
-						</SlButton>,
+						</div>,
 					);
 				}
-			}
-
-			let values: ReactNode;
-			if (isOneOf) {
-				values = <div className='pipeline__filters-is-one-of-values'>{valueElements}</div>;
-			} else {
-				values = valueElements;
-			}
-
-			conditions.push(
-				<div className='pipeline__filters-filter'>
-					{logicalElement}
-					<div
-						key={i}
-						className={`pipeline__filters-condition${isOneOf ? ' pipeline__filters-condition--is-one-of' : ''}`}
+				valueElements.push(
+					<SlButton
+						className='pipeline__filters-add-value'
+						key='add-button'
+						variant='default'
+						size='small'
+						disabled={isDisabled}
+						onClick={() => onAddValue(path)}
 					>
-						<div className='pipeline__filters-property-and-operator'>
-							{propertyInput}
-							{pathInput}
-							{operatorSelect}
-						</div>
-						{values}
-						<div className='pipeline__filters-remove-condition-wrapper'>
-							<SlButton
-								className='pipeline__filters-remove-condition'
-								size='small'
-								onClick={() => onRemoveCondition(i)}
-								disabled={isDisabled}
-							>
-								<SlIcon name='x-circle' slot='prefix' />
-							</SlButton>
-						</div>
-					</div>
-				</div>,
-			);
+						Add value
+					</SlButton>,
+				);
+			}
 		}
-	}
+
+		const removeButton = (
+			<SlButton
+				className='pipeline__filters-remove-condition pipeline__filters-remove-rule'
+				size='small'
+				variant='text'
+				onClick={() => onRemoveRule(path)}
+				disabled={isRemoveDisabled}
+			>
+				<SlIcon name='x-circle' aria-hidden='true' />
+				<span className='pipeline__filters-remove-rule-label'>Remove condition</span>
+			</SlButton>
+		);
+
+		return (
+			<div className='pipeline__filters-filter' key={id}>
+				<div
+					className={`pipeline__filters-condition${isOneOf ? ' pipeline__filters-condition--is-one-of' : ''}`}
+				>
+					<div className='pipeline__filters-property-and-operator'>
+						{propertyInput}
+						{pathInput}
+						{operatorSelect}
+					</div>
+					{isOneOf ? (
+						<div className='pipeline__filters-is-one-of-values'>{valueElements}</div>
+					) : (
+						valueElements
+					)}
+					<div className='pipeline__filters-remove-condition-wrapper'>
+						{isRemoveDisabled ? (
+							removeButton
+						) : (
+							<SlTooltip content='Remove condition' hoist={true}>
+								{removeButton}
+							</SlTooltip>
+						)}
+					</div>
+				</div>
+			</div>
+		);
+	};
+
+	const renderGroup = (group: Filter, groupPath: number[], depth: number): ReactNode => {
+		const isRoot = depth === 1;
+		const removeGroupTooltip = group.rules.some(isFilterGroup) ? 'Remove groups' : 'Remove group';
+
+		return (
+			<div
+				className={`pipeline__filters-group${isRoot ? ' pipeline__filters-group--root' : ''}`}
+				key={pathID(groupPath) || 'root'}
+			>
+				<div className='pipeline__filters-group-header'>
+					<span className='pipeline__filters-group-subject'>
+						{isRoot ? `${filterSubject} matching` : 'matching'}
+					</span>
+					<SlSelect
+						className='pipeline__filters-logical'
+						size='small'
+						value={group.operator}
+						onSlChange={(event: any) => onLogicalChange(groupPath, event.target.value as FilterLogical)}
+						disabled={isDisabled}
+						aria-label='Match rules'
+					>
+						<SlOption value='and'>all</SlOption>
+						<SlOption value='or'>any</SlOption>
+					</SlSelect>
+					<span>of the following:</span>
+					{!isRoot && (
+						<div className='pipeline__filters-remove-group-wrapper'>
+							<SlTooltip content={removeGroupTooltip} hoist={true}>
+								<SlButton
+									className='pipeline__filters-remove-group pipeline__filters-remove-rule'
+									size='small'
+									variant='text'
+									onClick={() => onRemoveRule(groupPath)}
+									disabled={isDisabled}
+								>
+									<SlIcon name='x-circle' aria-hidden='true' />
+									<span className='pipeline__filters-remove-rule-label'>Remove group</span>
+								</SlButton>
+							</SlTooltip>
+						</div>
+					)}
+				</div>
+				<div className='pipeline__filters-group-rules'>
+					{group.rules.map((rule, index) => {
+						const path = [...groupPath, index];
+						const isGroup = isFilterGroup(rule);
+
+						return (
+							<div
+								className={`pipeline__filters-rule${isGroup ? ' pipeline__filters-rule--group' : ''}`}
+								key={pathID(path)}
+							>
+								{index > 0 && (
+									<div className='pipeline__filters-connector' aria-hidden='true'>
+										{group.operator}
+									</div>
+								)}
+								<div className='pipeline__filters-rule-content'>
+									{isGroup ? renderGroup(rule, path, depth + 1) : renderCondition(rule, path)}
+								</div>
+							</div>
+						);
+					})}
+				</div>
+				<div className='pipeline__filters-group-actions'>
+					<SlButton
+						className='pipeline__filters-add-condition'
+						size='medium'
+						variant='text'
+						onClick={() => onAddCondition(groupPath)}
+						disabled={isDisabled || filterRuleCount >= MAX_FILTER_RULE_COUNT}
+					>
+						<SlIcon slot='prefix' name='plus-circle' />
+						Add a condition
+					</SlButton>
+					<SlButton
+						className='pipeline__filters-add-group'
+						size='medium'
+						variant='text'
+						onClick={() => onAddGroup(groupPath)}
+						disabled={
+							isDisabled || depth >= MAX_FILTER_DEPTH || filterRuleCount > MAX_FILTER_RULE_COUNT - 2
+						}
+					>
+						<SlIcon slot='prefix' name='plus-circle' />
+						Add a group
+					</SlButton>
+				</div>
+			</div>
+		);
+	};
 
 	return (
 		<Section
@@ -570,7 +571,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 			title='Filters'
 			description={
 				<>
-					<span>{`Choose which ${targetTerm} to ${actionVerb}. Leave empty to ${actionVerb} all ${targetTerm}.`}</span>
+					<span>{`Choose which ${filterSubjectTerm} to ${actionVerb}. Leave empty to ${actionVerb} all ${filterSubjectTerm}.`}</span>
 					<a href='https://www.krenalis.com/docs/ref/admin/filters' target='_blank' rel='noopener'>
 						Learn more about filters
 					</a>
@@ -580,17 +581,20 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 			ref={ref}
 			annotated={true}
 		>
-			{conditions}
-			<SlButton
-				className='pipeline__filters-add-condition'
-				size='medium'
-				variant='text'
-				onClick={onAddCondition}
-				disabled={isDisabled}
-			>
-				<SlIcon slot='prefix' name='plus-circle' />
-				Add {conditions.length > 0 ? 'new ' : ''}filter
-			</SlButton>
+			{pipeline.filter == null ? (
+				<SlButton
+					className='pipeline__filters-add-condition'
+					size='medium'
+					variant='text'
+					onClick={() => onAddCondition([])}
+					disabled={isDisabled || filterRuleCount >= MAX_FILTER_RULE_COUNT}
+				>
+					<SlIcon slot='prefix' name='plus-circle' />
+					Add filter
+				</SlButton>
+			) : (
+				renderGroup(pipeline.filter, [], 1)
+			)}
 		</Section>
 	);
 });
@@ -598,9 +602,9 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 interface PipelineFilterValueControlProps {
 	name: string;
 	value: string;
-	options: string[] | null;
+	options: string[];
 	disabled: boolean;
-	onValueChange: (name: string, value: string) => void;
+	onValueChange: (value: string) => void;
 	removable?: boolean;
 	onRemove?: () => void;
 }
@@ -615,20 +619,32 @@ const PipelineFilterValueControl = ({
 	onRemove,
 }: PipelineFilterValueControlProps) => {
 	const handleInput = (event: any) => {
-		onValueChange(name, event.target.value);
+		onValueChange(event.target.value);
 	};
 
 	const handleSelect = (event: any) => {
 		const target = event.target as any;
 		const v = event.detail?.value ?? target.value;
-		onValueChange(name, v);
+		onValueChange(v);
 	};
 
-	if (options != null && options.length > 0) {
+	const removeButton = removable ? (
+		<SlButton
+			slot='suffix'
+			variant='default'
+			size='small'
+			circle
+			className='pipeline__filters-value-remove'
+			onClick={onRemove}
+			disabled={disabled}
+		>
+			<SlIcon name='x' />
+		</SlButton>
+	) : null;
+
+	if (options.length > 0) {
 		return (
-			<div
-				className={`pipeline__filters-value-control${removable ? ' pipeline__filters-value-control--removable' : ''}`}
-			>
+			<div className={removable ? 'pipeline__filters-value-control--removable' : undefined}>
 				<SlSelect
 					size='small'
 					className='pipeline__filters-value-input'
@@ -642,19 +658,7 @@ const PipelineFilterValueControl = ({
 							{option === '' ? '\u00A0' : option}
 						</SlOption>
 					))}
-					{removable && (
-						<SlButton
-							slot='suffix'
-							variant='default'
-							size='small'
-							circle
-							className='pipeline__filters-value-remove'
-							onClick={onRemove}
-							disabled={disabled}
-						>
-							<SlIcon name='x' />
-						</SlButton>
-					)}
+					{removeButton}
 				</SlSelect>
 			</div>
 		);
@@ -669,19 +673,7 @@ const PipelineFilterValueControl = ({
 			name={name}
 			disabled={disabled}
 		>
-			{removable && (
-				<SlButton
-					variant='default'
-					size='small'
-					circle
-					className='pipeline__filters-value-remove'
-					onClick={onRemove}
-					slot='suffix'
-					disabled={disabled}
-				>
-					<SlIcon name='x' />
-				</SlButton>
-			)}
+			{removeButton}
 		</SlInput>
 	);
 };

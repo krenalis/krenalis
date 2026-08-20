@@ -7,6 +7,7 @@ import {
 	ExpressionToBeExtracted,
 	Filter,
 	FilterCondition,
+	FilterRule,
 	RequiredConsents,
 	FilterOperator,
 	Mapping,
@@ -75,6 +76,48 @@ const FILTER_OPERATORS: FilterOperator[] = [
 	'exists',
 	'does not exist',
 ];
+
+const MAX_FILTER_DEPTH = 4;
+const MAX_FILTER_RULE_COUNT = 100;
+
+// isFilterGroup reports whether rule is a filter group.
+const isFilterGroup = (rule: FilterRule): rule is Filter => 'rules' in rule;
+
+// getFilterConditions returns every condition in filter in traversal order.
+const getFilterConditions = (filter: Filter): FilterCondition[] => {
+	const conditions: FilterCondition[] = [];
+	for (const rule of filter.rules) {
+		if (isFilterGroup(rule)) {
+			conditions.push(...getFilterConditions(rule));
+		} else {
+			conditions.push(rule);
+		}
+	}
+	return conditions;
+};
+
+// mapFilterConditions applies transform to every condition in filter.
+const mapFilterConditions = (filter: Filter, transform: (condition: FilterCondition) => FilterCondition): Filter => ({
+	operator: filter.operator,
+	rules: filter.rules.map((rule) => (isFilterGroup(rule) ? mapFilterConditions(rule, transform) : transform(rule))),
+});
+
+// omitEmptyFilterRules removes draft conditions and groups that contain no
+// complete rules. It returns null when the root group becomes empty.
+const omitEmptyFilterRules = (filter: Filter): Filter | null => {
+	const rules: FilterRule[] = [];
+	for (const rule of filter.rules) {
+		if (isFilterGroup(rule)) {
+			const group = omitEmptyFilterRules(rule);
+			if (group != null) {
+				rules.push(group);
+			}
+		} else if (rule.property !== '') {
+			rules.push(rule);
+		}
+	}
+	return rules.length === 0 ? null : { operator: filter.operator, rules };
+};
 
 const UNARY_OPERATORS = new Set<FilterOperator>([
 	'is true',
@@ -601,22 +644,10 @@ const transformPipeline = (
 	}
 
 	if (pipeline.filter) {
-		const conditions: FilterCondition[] = [];
-		for (const condition of pipeline.filter.conditions) {
-			let cond = { ...condition };
-			let values: string[] | null = [];
-			if (condition.values == null) {
-				values = null;
-			} else {
-				for (const v of condition.values) {
-					const formatted = formatString(v);
-					values.push(formatted);
-				}
-			}
-			cond.values = values;
-			conditions.push(cond);
-		}
-		pipeline.filter.conditions = conditions;
+		pipeline.filter = mapFilterConditions(pipeline.filter, (condition) => ({
+			...condition,
+			values: condition.values.map((value) => formatString(value)),
+		}));
 	}
 
 	return {
@@ -945,38 +976,27 @@ const transformInPipelineToSet = async (
 			inSchema = { kind: 'object', properties: [] };
 		}
 
-		let f = { logical: pipeline.filter.logical, conditions: [] };
-
-		// Exclude conditions that have empty properties.
-		let conditions = pipeline.filter.conditions.filter((condition) => condition.property !== '');
-
 		const isEventImport = connection.isSource && pipelineType.target === 'Event';
 		const isEventBasedUserImport = connection.isEventBased && connection.isSource && pipelineType.target === 'User';
 		const isAppEventsExport =
 			connection.isApplication && connection.isDestination && pipelineType.target === 'Event';
-
-		for (const condition of conditions) {
-			const propertyName = condition.property;
-			const [base, path] = splitPropertyAndPath(propertyName, flattenedInputSchema);
-			const property = flattenedInputSchema[base];
-			let c: FilterCondition;
-			try {
-				c = validateAndNormalizeFilterCondition(
+		const draftFilter = omitEmptyFilterRules(pipeline.filter);
+		if (draftFilter != null) {
+			filter = mapFilterConditions(draftFilter, (condition) => {
+				const propertyName = condition.property;
+				const [base, path] = splitPropertyAndPath(propertyName, flattenedInputSchema);
+				const property = flattenedInputSchema[base];
+				const normalized = validateAndNormalizeFilterCondition(
 					condition,
 					property,
 					path,
 					propertyName,
 					isEventBasedUserImport || isAppEventsExport || isEventImport ? ['kpid'] : null,
 				);
-			} catch (err) {
-				throw err;
-			}
-			addPropertyToSchema(base, property.full, inSchema, flattenedInputSchema, property.indentation === 0);
-			f.conditions.push(c);
-		}
+				addPropertyToSchema(base, property.full, inSchema, flattenedInputSchema, property.indentation === 0);
 
-		if (f.conditions.length > 0) {
-			filter = f;
+				return normalized;
+			});
 		}
 	}
 
@@ -1177,10 +1197,10 @@ const computeDefaultPipeline = (
 			pipeline.filter = eventType.defaultFilter;
 		} else if ((connection.isSDK || connection.isWebhook) && pipelineType.target === 'User') {
 			pipeline.filter = {
-				logical: 'or',
-				conditions: [
+				operator: 'or',
+				rules: [
 					{ property: 'type', operator: 'is', values: ['identify'] },
-					{ property: 'traits', operator: 'is not empty', values: null },
+					{ property: 'traits', operator: 'is not empty', values: [] },
 				],
 			};
 		}
@@ -1968,8 +1988,8 @@ const validateAndNormalizeFilterCondition = (
 		}
 	}
 
-	let values: string[] | null = [];
-	if (isJsonOrText && condition.values != null) {
+	let values: string[] = [];
+	if (isJsonOrText) {
 		const stringType = property.type === 'string' ? (property.full.type as StringType) : null;
 		const propertyValues = stringType?.values ?? null;
 		const allowsEmptySelection = propertyValues != null && propertyValues.includes('');
@@ -2009,7 +2029,7 @@ const validateAndNormalizeFilterCondition = (
 	return c;
 };
 
-const validateFilterConditionValues = (type: Type, values: string[] | null, propertyName: string) => {
+const validateFilterConditionValues = (type: Type, values: string[], propertyName: string) => {
 	const throwIfInvalid = (isValid: boolean, typeKind: string, unsigned?: boolean) => {
 		if (!isValid) {
 			throw new Error(
@@ -2017,10 +2037,6 @@ const validateFilterConditionValues = (type: Type, values: string[] | null, prop
 			);
 		}
 	};
-
-	if (values == null) {
-		return;
-	}
 
 	for (const v of values) {
 		if (type.kind === 'int') {
@@ -2101,6 +2117,8 @@ const propertyTypesAreEqual = (aType: Type, bType: Type): boolean => {
 export {
 	SCHEDULE_PERIODS,
 	FILTER_OPERATORS,
+	MAX_FILTER_DEPTH,
+	MAX_FILTER_RULE_COUNT,
 	EXPORT_MODE_OPTIONS,
 	flattenSchema,
 	isRecursiveType,
@@ -2117,6 +2135,8 @@ export {
 	checkMapping,
 	checkFunctionPath,
 	getCompatibleFilterOperators,
+	getFilterConditions,
+	isFilterGroup,
 	isUnaryOperator,
 	isBetweenOperator,
 	isOneOfOperator,
@@ -2128,6 +2148,7 @@ export {
 	validateAndNormalizeFilterCondition,
 	validateMatching,
 	propertyTypesAreEqual,
+	omitEmptyFilterRules,
 };
 
 export type {
