@@ -151,8 +151,7 @@ func DialWith(organization string) func(dial DialFunc) DialFunc {
 // on behalf of an organization, as for a connector under test. The bytes such
 // connections send are counted for no one.
 func PlainDial() DialFunc {
-	var d net.Dialer
-	return d.DialContext
+	return plainDial
 }
 
 // PlainDialWith returns a function that returns the dial function it is given
@@ -165,7 +164,7 @@ func PlainDial() DialFunc {
 func PlainDialWith() func(dial DialFunc) DialFunc {
 	return func(dial DialFunc) DialFunc {
 		if dial == nil {
-			return PlainDial()
+			return plainDial
 		}
 		return dial
 	}
@@ -267,6 +266,9 @@ func dialWith(organization string, dial DialFunc) DialFunc {
 		return &instrumentedConn{Conn: conn, egress: c}, nil
 	}
 }
+
+// plainDial is the dial function of a plain net.Dialer.
+var plainDial DialFunc = new(net.Dialer).DialContext
 
 // instrumentedConn wraps a net.Conn, recording the bytes it writes into its
 // organization's egress counter.
