@@ -250,8 +250,6 @@ type innerSettings struct {
 
 // TODO(Gianluca): the change made to this connector should be revisited.
 
-const dialTimeout = 5 * time.Second
-
 // opts returns s as options to configure a client. The connections are
 // established using dial, in place of the client's default dialer.
 func opts(s *innerSettings, dial connectors.DialFunc) []kgo.Opt {
@@ -275,6 +273,8 @@ func opts(s *innerSettings, dial connectors.DialFunc) []kgo.Opt {
 	}
 	return opts
 }
+
+const dialTimeout = 5 * time.Second
 
 // dialTLS returns a dial function that establishes the connection with dial and
 // then negotiates TLS on it. TLS is negotiated on the connection returned by
