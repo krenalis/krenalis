@@ -396,6 +396,7 @@ func (k *Krenalis) Start() {
 		setts.NATS.Password = testsSettings.NATS.Password
 		setts.Transformers.Local.PythonExecutable = testsSettings.PythonExecutable
 		setts.Transformers.Local.FunctionsDir = k.transformationsTempDir
+		setts.MaxQueuedEventsPerDestination = 50_000
 		err := os.Setenv("KRENALIS_CONNECTOR_FILESYSTEM_ROOT", k.fileSystemRoot)
 		if err != nil {
 			k.t.Fatal(err)
