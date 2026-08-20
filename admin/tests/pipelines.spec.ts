@@ -1249,6 +1249,47 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 
 	await filters.nth(0).locator('.pipeline__filters-value-input sl-option[value="track"]').click(); // value select should open automatically after selecting the operator
 
+	const jsonCondition = filters.nth(1);
+	const jsonPropertyInput = jsonCondition.locator('.pipeline__filters-property sl-input');
+	await jsonPropertyInput.click();
+	await jsonCondition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^traits$/ }).click();
+	const jsonPathInput = jsonCondition.locator('.pipeline__filters-path >> input');
+	await jsonPathInput.fill('email');
+	const jsonOperatorSelect = jsonCondition.locator('.pipeline__filters-operator');
+	await expect(jsonOperatorSelect).toHaveJSProperty('value', '0');
+	const jsonValueInput = jsonCondition.locator('.pipeline__filters-value-input');
+	await jsonValueInput.locator('input').fill('a@example.com');
+
+	await jsonPropertyInput.click();
+	await jsonCondition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^properties$/ }).click();
+	await expect(jsonPropertyInput).toHaveJSProperty('value', 'properties');
+	await expect(jsonPathInput).toHaveValue('email');
+	await expect(jsonOperatorSelect).toHaveJSProperty('value', '0');
+	await expect(jsonValueInput).toHaveJSProperty('value', 'a@example.com');
+
+	await jsonPropertyInput.click();
+	await jsonCondition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^traits$/ }).click();
+
+	for (const operator of [
+		{ name: 'exists', index: 24 },
+		{ name: 'does not exist', index: 25 },
+	]) {
+		const condition = filters.nth(1);
+		await condition.locator('.pipeline__filters-property sl-input').click();
+		await condition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^traits$/ }).click();
+		const pathInput = condition.locator('.pipeline__filters-path >> input');
+		await pathInput.fill('email');
+		const operatorSelect = condition.locator('.pipeline__filters-operator');
+		const operatorOption = operatorSelect.locator(`sl-option[value="${operator.index}"]`);
+		await expect(operatorOption).toHaveText(operator.name);
+		await operatorSelect.click();
+		await operatorOption.click();
+		await expect(operatorSelect).toHaveJSProperty('value', String(operator.index));
+		await pathInput.fill('');
+		await expect(operatorSelect).toHaveJSProperty('value', '');
+		await condition.locator('.pipeline__filters-remove-condition').click();
+	}
+
 	const expectedBody = `
 	{
 		"target": "Event",

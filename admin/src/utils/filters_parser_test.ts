@@ -36,8 +36,8 @@ const tests = [
 		expectError: false,
 	},
 	{
-		name: 'Single quote string',
-		input: "props['key'] is 'value'",
+		name: 'Single-quoted value',
+		input: "props.key is 'value'",
 		expectError: false,
 	},
 
@@ -65,8 +65,8 @@ const tests = [
 		expectError: false,
 	},
 	{
-		name: 'AND with escaped keys and quoted values',
-		input: 'properties["client id"] is "abc" and metadata["referrer"] contains "google"',
+		name: 'AND with nested properties and quoted values',
+		input: 'properties.client_id is "abc" and metadata.referrer contains "google"',
 		expectError: false,
 	},
 	{
@@ -95,8 +95,18 @@ const tests = [
 		expectError: false,
 	},
 	{
+		name: 'Fully parenthesized filter at maximum depth',
+		input: '((((a is 1))))',
+		expectError: false,
+	},
+	{
 		name: 'Maximum rule count',
 		input: Array.from({ length: 100 }, (_, i) => `property${i} is ${i}`).join(' and '),
+		expectError: false,
+	},
+	{
+		name: 'Fully parenthesized filter at maximum rule count',
+		input: `(${Array.from({ length: 100 }, (_, i) => `property${i} is ${i}`).join(' and ')})`,
 		expectError: false,
 	},
 	{
@@ -104,10 +114,16 @@ const tests = [
 		input: 'comment contains "👍 café \u2764"',
 		expectError: false,
 	},
+	// ❌ Invalid: empty filters
 	{
-		name: 'Property key with escaped quotes',
-		input: 'metadata["key with \\"quotes\\""] contains "something"',
-		expectError: false,
+		name: 'Empty filter',
+		input: '',
+		expectError: true,
+	},
+	{
+		name: 'Whitespace-only filter',
+		input: ' \n\t',
+		expectError: true,
 	},
 
 	// ❌ Invalid: single value with parentheses
@@ -176,13 +192,33 @@ const tests = [
 		expectError: true,
 	},
 	{
+		name: 'Fully parenthesized filter exceeds maximum depth',
+		input: '(((((a is 1)))))',
+		expectError: true,
+	},
+	{
 		name: 'Filter exceeds maximum rule count',
 		input: Array.from({ length: 101 }, (_, i) => `property${i} is ${i}`).join(' and '),
 		expectError: true,
 	},
 	{
+		name: 'Fully parenthesized filter exceeds maximum rule count',
+		input: `(${Array.from({ length: 101 }, (_, i) => `property${i} is ${i}`).join(' and ')})`,
+		expectError: true,
+	},
+	{
 		name: 'Consecutive dots in property',
 		input: 'user..name is "Alice"',
+		expectError: true,
+	},
+	{
+		name: 'Bracket notation with single quotes',
+		input: "props['key'] is 'value'",
+		expectError: true,
+	},
+	{
+		name: 'Bracket notation with double quotes',
+		input: 'metadata["key"] contains "something"',
 		expectError: true,
 	},
 	{
@@ -231,11 +267,6 @@ const tests = [
 		expectError: true,
 	},
 	{
-		name: 'Brackets not closed in property key',
-		input: 'meta["client id" is "abc"',
-		expectError: true,
-	},
-	{
 		name: 'Empty parentheses in values',
 		input: 'type is one of ()',
 		expectError: true,
@@ -278,16 +309,46 @@ for (const test of tests) {
 	}
 }
 
-const nested = parseFilter('status is "active" and (country is "Italy" or country is "Spain")');
-for (const formatted of [false, true]) {
-	const serialized = serializeFilter(nested, formatted);
-	const parsed = parseFilter(serialized);
-	if (JSON.stringify(parsed) === JSON.stringify(nested)) {
-		console.log(`✅ [PASS] Nested filter ${formatted ? 'formatted' : 'compact'} round trip`);
-		passed++;
-	} else {
-		console.error(`❌ [FAIL] Nested filter round trip → ${serialized}`);
-		failed++;
+const roundTripExpressions = [
+	{
+		name: 'Nested filter',
+		expression: 'status is "active" and (country is "Italy" or country is "Spain")',
+	},
+	...['true', 'false'].map((value) => ({
+		name: `Filter with "${value}" as a string value`,
+		expression: `status is "${value}"`,
+	})),
+	...['0', '-1', '+.5', '1.', '1.23e+5', '0x10', 'Infinity', ' 1', '1 '].map((value) => ({
+		name: `Filter with ${JSON.stringify(value)} as a value`,
+		expression: `code is ${JSON.stringify(value)}`,
+	})),
+	{
+		name: 'Filter list containing numeric-looking string values',
+		expression: 'code is one of ("0x10", "Infinity", " 1", "1.23e+5")',
+	},
+	...['is one of', 'is not one of'].map((operator) => ({
+		name: `Filter using "${operator}" with one value`,
+		expression: `status ${operator} ("active")`,
+	})),
+	...['is true', 'is false', 'is empty', 'is not empty', 'is null', 'is not null', 'exists', 'does not exist'].map(
+		(operator) => ({
+			name: `Nested filter ending in a condition using "${operator}"`,
+			expression: `status is "active" and (property ${operator})`,
+		}),
+	),
+];
+for (const roundTrip of roundTripExpressions) {
+	const filter = parseFilter(roundTrip.expression);
+	for (const formatted of [false, true]) {
+		const serialized = serializeFilter(filter, formatted);
+		const parsed = parseFilter(serialized);
+		if (JSON.stringify(parsed) === JSON.stringify(filter)) {
+			console.log(`✅ [PASS] ${roundTrip.name} ${formatted ? 'formatted' : 'compact'} round trip`);
+			passed++;
+		} else {
+			console.error(`❌ [FAIL] ${roundTrip.name} round trip → ${serialized}`);
+			failed++;
+		}
 	}
 }
 

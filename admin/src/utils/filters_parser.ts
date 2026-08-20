@@ -1,9 +1,14 @@
-import { FILTER_OPERATORS } from '../lib/core/pipeline';
+import {
+	FILTER_OPERATORS,
+	MAX_FILTER_DEPTH,
+	MAX_FILTER_RULE_COUNT,
+	isFilterGroup,
+	isUnaryOperator,
+} from '../lib/core/pipeline';
 import { FilterLogical, FilterOperator, Filter, FilterCondition, FilterRule } from '../lib/api/types/pipeline';
+import { isFilterNumber, isValidPropertyPath } from './filters';
 
 const SORTED_OPERATORS = [...FILTER_OPERATORS].sort((a, b) => b.length - a.length);
-const MAX_FILTER_DEPTH = 4;
-const MAX_FILTER_RULE_COUNT = 100;
 
 const UNARY_OPERATORS: FilterOperator[] = [
 	'is',
@@ -48,8 +53,7 @@ function parseNumber(s: string, i: number): [string, number] {
 	const start = i;
 	while (i < s.length && /[0-9eE.+\-]/.test(s[i])) i++;
 	const str = s.slice(start, i);
-	const num = Number(str);
-	if (!isFinite(num)) throw new Error(`Invalid number: ${str}`);
+	if (!isFilterNumber(str)) throw new Error(`Invalid number: ${str}`);
 	return [str, i];
 }
 
@@ -157,46 +161,27 @@ function parseValues(s: string, i: number, expectMultiple: boolean): [string[], 
 	return [[val], ni];
 }
 
-// parseBracketString parses a map-style property access like ["key"].
-function parseBracketString(s: string, i: number): [string, number] {
-	if (s[i] !== '[') throw new Error('Expected "[" for map access');
-	i++;
-	const quote = s[i];
-	if (quote !== '"' && quote !== "'") throw new Error('Expected quoted string in map access');
-	const [str, end] = parseString(s, i);
-	if (s[end] !== ']') throw new Error('Expected closing bracket ] in map access');
-	return [`[${quote}${str}${quote}]`, end + 1];
-}
-
-// parseProperty parses a property path, including dot notation and brackets.
+// parseProperty parses a filter property path. Unlike transformation
+// expressions, filter property paths support only dot notation; bracket
+// notation for map and JSON keys is intentionally rejected.
 function parseProperty(s: string, i: number): [string, number] {
 	let prop = '';
-	let lastCharDot = false;
 	while (i < s.length) {
-		if (isPropStart(s[i])) {
+		if (isPropChar(s[i])) {
 			const begin = i;
 			while (i < s.length && isPropChar(s[i])) i++;
 			prop += s.slice(begin, i);
-			lastCharDot = false;
 			continue;
 		}
 		if (s[i] === '.') {
-			if (lastCharDot) throw new Error('Invalid property path: consecutive dots');
 			prop += '.';
 			i++;
-			lastCharDot = true;
-			continue;
-		}
-		if (s[i] === '[') {
-			const [bracketed, ni] = parseBracketString(s, i);
-			prop += bracketed;
-			i = ni;
-			lastCharDot = false;
 			continue;
 		}
 		break;
 	}
-	if (!prop || prop.endsWith('.')) throw new Error('Invalid property path');
+	if (!isValidPropertyPath(prop)) throw new Error('Invalid property path');
+	if (s[i] === '[') throw new Error('Bracket notation is not supported in filter property paths');
 	return [prop, i];
 }
 
@@ -208,23 +193,19 @@ function parseOperator(s: string, i: number): [FilterOperator, number] {
 		if (end > len) continue;
 		if (s.slice(i, i + op.length) !== op) continue;
 		const nextChar = s[end];
-		if (end === len || isWhitespace(nextChar) || nextChar === '(' || nextChar === '"' || nextChar === "'") {
+		if (
+			end === len ||
+			isWhitespace(nextChar) ||
+			nextChar === '(' ||
+			nextChar === ')' ||
+			nextChar === '"' ||
+			nextChar === "'"
+		) {
 			return [op as FilterOperator, end];
 		}
 	}
 	throw new Error('Unknown operator');
 }
-
-// isFilterGroup reports whether rule is a filter group.
-const isFilterGroup = (rule: FilterRule): rule is Filter => 'rules' in rule;
-
-// isOperatorUnary reports whether operator accepts no values.
-const isOperatorUnary = (operator: FilterOperator): boolean =>
-	operator.endsWith('null') ||
-	operator.endsWith('empty') ||
-	operator.endsWith('exist') ||
-	operator === 'is true' ||
-	operator === 'is false';
 
 // parseLogical parses a logical operator at i.
 const parseLogical = (s: string, i: number): FilterLogical | null => {
@@ -251,7 +232,7 @@ export function parseFilter(s: string): Filter {
 		i = skipSpaces(s, ni2);
 
 		let values: string[] = [];
-		if (!isOperatorUnary(operator)) {
+		if (!isUnaryOperator(operator)) {
 			const expectMultiple =
 				operator === 'is one of' ||
 				operator === 'is not one of' ||
@@ -276,7 +257,7 @@ export function parseFilter(s: string): Filter {
 	};
 
 	const parseGroup = (start: number, depth: number, nested: boolean): [Filter, number] => {
-		if (depth > MAX_FILTER_DEPTH) {
+		if (depth > MAX_FILTER_DEPTH + 1) {
 			throw new Error(`Filter exceeds maximum depth of ${MAX_FILTER_DEPTH}`);
 		}
 
@@ -290,6 +271,7 @@ export function parseFilter(s: string): Filter {
 			}
 			if (i >= s.length) {
 				if (nested) throw new Error('Unclosed filter group');
+				if (rules.length === 0) throw new Error('Filter groups cannot be empty');
 				return [{ operator: operator || 'and', rules }, i];
 			}
 
@@ -301,7 +283,7 @@ export function parseFilter(s: string): Filter {
 			}
 			rules.push(rule);
 			ruleCount++;
-			if (ruleCount > MAX_FILTER_RULE_COUNT) {
+			if (ruleCount > MAX_FILTER_RULE_COUNT + 1) {
 				throw new Error(`Filter exceeds maximum rule count of ${MAX_FILTER_RULE_COUNT}`);
 			}
 
@@ -330,9 +312,24 @@ export function parseFilter(s: string): Filter {
 
 	const [filter, end] = parseGroup(0, 1, false);
 	if (skipSpaces(s, end) !== s.length) throw new Error('Unexpected content after filter');
-	if (filter.rules.length === 1 && isFilterGroup(filter.rules[0])) {
-		return filter.rules[0];
-	}
+	const result = filter.rules.length === 1 && isFilterGroup(filter.rules[0]) ? filter.rules[0] : filter;
 
-	return filter;
+	let actualRuleCount = 0;
+	const validateGroupLimits = (group: Filter, depth: number) => {
+		if (depth > MAX_FILTER_DEPTH) {
+			throw new Error(`Filter exceeds maximum depth of ${MAX_FILTER_DEPTH}`);
+		}
+		for (const rule of group.rules) {
+			actualRuleCount++;
+			if (actualRuleCount > MAX_FILTER_RULE_COUNT) {
+				throw new Error(`Filter exceeds maximum rule count of ${MAX_FILTER_RULE_COUNT}`);
+			}
+			if (isFilterGroup(rule)) {
+				validateGroupLimits(rule, depth + 1);
+			}
+		}
+	};
+	validateGroupLimits(result, 1);
+
+	return result;
 }

@@ -77,6 +77,9 @@ const FILTER_OPERATORS: FilterOperator[] = [
 	'does not exist',
 ];
 
+const MAX_FILTER_DEPTH = 4;
+const MAX_FILTER_RULE_COUNT = 100;
+
 // isFilterGroup reports whether rule is a filter group.
 const isFilterGroup = (rule: FilterRule): rule is Filter => 'rules' in rule;
 
@@ -106,7 +109,9 @@ const omitEmptyFilterRules = (filter: Filter): Filter | null => {
 	for (const rule of filter.rules) {
 		if (isFilterGroup(rule)) {
 			const group = omitEmptyFilterRules(rule);
-			if (group != null) rules.push(group);
+			if (group != null) {
+				rules.push(group);
+			}
 		} else if (rule.property !== '') {
 			rules.push(rule);
 		}
@@ -2112,6 +2117,8 @@ const propertyTypesAreEqual = (aType: Type, bType: Type): boolean => {
 export {
 	SCHEDULE_PERIODS,
 	FILTER_OPERATORS,
+	MAX_FILTER_DEPTH,
+	MAX_FILTER_RULE_COUNT,
 	EXPORT_MODE_OPTIONS,
 	flattenSchema,
 	isRecursiveType,

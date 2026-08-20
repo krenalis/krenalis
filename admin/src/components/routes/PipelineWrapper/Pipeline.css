@@ -210,7 +210,6 @@
 .pipeline__filters-group {
 	--pipeline-filters-action-color: var(--sl-color-primary-600);
 	--pipeline-filters-connector-width: 54px;
-	--sl-input-font-family: var(--system-fonts);
 
 	border: 1px solid var(--sl-color-neutral-200);
 	border-radius: 6px;
@@ -310,6 +309,8 @@ sl-button.pipeline__filters-remove-rule[variant='text']::part(label) {
 }
 
 .pipeline__filters-logical {
+	--sl-input-font-family: var(--system-fonts);
+
 	width: 88px;
 }
 
@@ -417,6 +418,16 @@ sl-button.pipeline__filters-remove-rule[variant='text']::part(label) {
 
 .pipeline__filters-value-input {
 	width: 150px;
+}
+
+.pipeline__filters-operator,
+.pipeline__filters-path,
+.pipeline__filters-value-input {
+	--sl-input-font-family: var(--monospace-fonts);
+}
+
+.pipeline__filters-value-input sl-option::part(base) {
+	font-family: var(--monospace-fonts);
 }
 
 .pipeline__filters-operator sl-option::part(base),

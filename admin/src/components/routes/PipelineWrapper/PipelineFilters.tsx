@@ -11,6 +11,8 @@ import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { Combobox } from '../../base/Combobox/Combobox';
 import {
 	FILTER_OPERATORS,
+	MAX_FILTER_DEPTH,
+	MAX_FILTER_RULE_COUNT,
 	flattenSchema,
 	getCompatibleFilterOperators,
 	isBetweenOperator,
@@ -25,9 +27,6 @@ import { Filter, FilterCondition, FilterLogical, FilterOperator } from '../../..
 import { checkIfPropertyExists, pipelineObjectLabels } from './Pipeline.helpers';
 import { StringType } from '../../../lib/api/types/types';
 
-const MAX_FILTER_DEPTH = 4;
-const MAX_FILTER_RULE_COUNT = 100;
-
 // countFilterRules returns the number of groups and conditions below filter.
 const countFilterRules = (filter: Filter): number =>
 	filter.rules.reduce((count, rule) => count + 1 + (isFilterGroup(rule) ? countFilterRules(rule) : 0), 0);
@@ -37,7 +36,9 @@ const filterGroupAt = (filter: Filter, path: number[]): Filter => {
 	let group = filter;
 	for (const index of path) {
 		const rule = group.rules[index];
-		if (!isFilterGroup(rule)) throw new Error('Filter path does not identify a group');
+		if (!isFilterGroup(rule)) {
+			throw new Error('Filter path does not identify a group');
+		}
 		group = rule;
 	}
 	return group;
@@ -47,7 +48,9 @@ const filterGroupAt = (filter: Filter, path: number[]): Filter => {
 const filterConditionAt = (filter: Filter, path: number[]): FilterCondition => {
 	const group = filterGroupAt(filter, path.slice(0, -1));
 	const rule = group.rules[path[path.length - 1]];
-	if (isFilterGroup(rule)) throw new Error('Filter path does not identify a condition');
+	if (isFilterGroup(rule)) {
+		throw new Error('Filter path does not identify a condition');
+	}
 	return rule;
 };
 
@@ -76,67 +79,75 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 	const filterRuleCount = pipeline.filter == null ? 0 : countFilterRules(pipeline.filter);
 
 	const findPropertyInSchema = (propertyName: string): TransformedProperty | undefined => {
-		if (propertyName == null || propertyName === '') return undefined;
+		if (propertyName == null || propertyName === '') {
+			return undefined;
+		}
 		return flatInputSchema[propertyName] ?? flatInputSchema[splitPropertyAndPath(propertyName, flatInputSchema)[0]];
 	};
 
 	const getPropertyValues = (property: TransformedProperty | undefined): string[] | null => {
-		if (property == null || property.type !== 'string') return null;
+		if (property == null || property.type !== 'string') {
+			return null;
+		}
 		return (property.full.type as StringType).values ?? null;
 	};
 
 	const onAddCondition = (groupPath: number[]) => {
-		const updated = structuredClone(pipeline);
-		if (updated.filter == null) updated.filter = { operator: 'and', rules: [] };
-		filterGroupAt(updated.filter, groupPath).rules.push(newFilterCondition());
-		setPipeline(updated);
+		const p = structuredClone(pipeline);
+		if (p.filter == null) {
+			p.filter = { operator: 'and', rules: [] };
+		}
+		filterGroupAt(p.filter, groupPath).rules.push(newFilterCondition());
+		setPipeline(p);
 	};
 
 	const onAddGroup = (groupPath: number[]) => {
-		const updated = structuredClone(pipeline);
-		const parent = filterGroupAt(updated.filter!, groupPath);
+		const p = structuredClone(pipeline);
+		const parent = filterGroupAt(p.filter!, groupPath);
 		parent.rules.push({
 			operator: parent.operator === 'and' ? 'or' : 'and',
 			rules: [newFilterCondition()],
 		});
-		setPipeline(updated);
+		setPipeline(p);
 	};
 
 	const onRemoveRule = (path: number[]) => {
-		const updated = structuredClone(pipeline);
-		const filter = updated.filter!;
-		let groupPath = path.slice(0, -1);
-		filterGroupAt(filter, groupPath).rules.splice(path[path.length - 1], 1);
+		const p = structuredClone(pipeline);
+		const filter = p.filter!;
+		const groupPath = path.slice(0, -1);
+		const group = filterGroupAt(filter, groupPath);
+		group.rules.splice(path[path.length - 1], 1);
 
-		while (groupPath.length > 0) {
-			const group = filterGroupAt(filter, groupPath);
-			if (group.rules.length > 0) break;
-			const index = groupPath[groupPath.length - 1];
-			groupPath = groupPath.slice(0, -1);
-			filterGroupAt(filter, groupPath).rules.splice(index, 1);
+		if (group.rules.length === 0) {
+			if (groupPath.length === 0) {
+				p.filter = null;
+			} else {
+				group.rules.push(newFilterCondition());
+			}
 		}
-		if (filter.rules.length === 0) updated.filter = null;
-		setPipeline(updated);
+		setPipeline(p);
 	};
 
 	const onLogicalChange = (groupPath: number[], operator: FilterLogical) => {
-		const updated = structuredClone(pipeline);
-		filterGroupAt(updated.filter!, groupPath).operator = operator;
-		setPipeline(updated);
+		const p = structuredClone(pipeline);
+		filterGroupAt(p.filter!, groupPath).operator = operator;
+		setPipeline(p);
 	};
 
 	const updateProperty = (path: number[], value: string): TransformedPipeline => {
-		const updated = structuredClone(pipeline);
-		const condition = filterConditionAt(updated.filter!, path);
+		const p = structuredClone(pipeline);
+		const condition = filterConditionAt(p.filter!, path);
 		const previousPropertyName = condition.property;
 		const previousPropertyValues = getPropertyValues(findPropertyInSchema(previousPropertyName));
 		const [, previousPath] = splitPropertyAndPath(previousPropertyName, flatInputSchema);
-		const hasPath = previousPath !== '';
-		const newPropertyName = hasPath && flatInputSchema[value]?.type === 'json' ? `${value}.${previousPath}` : value;
+		const newPropertyName =
+			previousPath !== '' && flatInputSchema[value]?.type === 'json' ? `${value}.${previousPath}` : value;
+		const newProperty = findPropertyInSchema(newPropertyName);
+		const [, newPath] = splitPropertyAndPath(newPropertyName, flatInputSchema);
 
 		const compatibleOperators = getCompatibleFilterOperators(
-			flatInputSchema[newPropertyName],
-			hasPath,
+			newProperty,
+			newPath !== '',
 			connection.role,
 			pipeline.target,
 		);
@@ -146,17 +157,17 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		}
 
 		condition.property = newPropertyName;
-		const newPropertyValues = getPropertyValues(findPropertyInSchema(newPropertyName));
+		const newPropertyValues = getPropertyValues(newProperty);
 		if (previousPropertyName !== newPropertyName && (previousPropertyValues != null || newPropertyValues != null)) {
 			condition.values = isBetweenOperator(condition.operator) ? ['', ''] : [''];
 		}
-		setPipeline(updated);
-		return updated;
+		setPipeline(p);
+		return p;
 	};
 
 	const onSelectProperty = (path: number[], value: string) => {
-		const updated = updateProperty(path, value);
-		const condition = filterConditionAt(updated.filter!, path);
+		const p = updateProperty(path, value);
+		const condition = filterConditionAt(p.filter!, path);
 		const [, propertyPath] = splitPropertyAndPath(condition.property, flatInputSchema);
 		const compatibleOperators = getCompatibleFilterOperators(
 			flatInputSchema[value],
@@ -168,7 +179,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		const isJSON = flatInputSchema[value]?.type === 'json';
 
 		if (!compatibleOperators.includes(currentOperatorIndex) && compatibleOperators.length > 0) {
-			changeOperator(path, FILTER_OPERATORS[compatibleOperators[0]], updated);
+			changeOperator(path, FILTER_OPERATORS[compatibleOperators[0]], p);
 			if (!isJSON) {
 				setTimeout(() => {
 					const property: any = document.querySelector(`[data-id="property-${pathID(path)}"]`);
@@ -189,72 +200,98 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 	};
 
 	const onInputPath = (path: number[], value: string) => {
-		const updated = structuredClone(pipeline);
-		const condition = filterConditionAt(updated.filter!, path);
+		const p = structuredClone(pipeline);
+		const condition = filterConditionAt(p.filter!, path);
 		const [base] = splitPropertyAndPath(condition.property, flatInputSchema);
+		const compatibleOperators = getCompatibleFilterOperators(
+			flatInputSchema[base],
+			value !== '',
+			connection.role,
+			pipeline.target,
+		);
+		if (condition.operator !== '' && !compatibleOperators.includes(FILTER_OPERATORS.indexOf(condition.operator))) {
+			condition.operator = '';
+			condition.values = [''];
+		}
 		condition.property = value === '' ? base : `${base}.${value}`;
-		setPipeline(updated);
+		setPipeline(p);
 	};
 
-	const changeOperator = (path: number[], operator: FilterOperator, current?: TransformedPipeline) => {
-		const updated = current ?? structuredClone(pipeline);
-		const condition = filterConditionAt(updated.filter!, path);
+	const changeOperator = (path: number[], operator: FilterOperator, updatedPipeline?: TransformedPipeline) => {
+		const p = updatedPipeline ?? structuredClone(pipeline);
+		const condition = filterConditionAt(p.filter!, path);
 		condition.operator = operator;
 		if (isUnaryOperator(operator)) {
 			condition.values = [];
 		} else if (isBetweenOperator(operator)) {
 			condition.values = condition.values.slice(0, 2);
-			while (condition.values.length < 2) condition.values.push('');
+			while (condition.values.length < 2) {
+				condition.values.push('');
+			}
 		} else if (isOneOfOperator(operator)) {
-			if (condition.values.length === 0) condition.values = [''];
+			if (condition.values.length === 0) {
+				condition.values = [''];
+			}
 		} else {
 			condition.values = [condition.values[0] ?? ''];
 		}
-		setPipeline(updated);
+		setPipeline(p);
 	};
 
 	const onOperatorSelectClose = (event: any) => {
 		const operator = FILTER_OPERATORS[event.target.value];
-		if (operator == null || isUnaryOperator(operator)) return;
+		if (operator == null || isUnaryOperator(operator)) {
+			return;
+		}
 		setTimeout(() => {
 			const valueInput = event.target
 				.closest('.pipeline__filters-condition')
 				?.querySelector('.pipeline__filters-value-input');
-			if (valueInput == null) return;
-			if (valueInput.tagName === 'SL-SELECT') valueInput.show();
-			else valueInput.focus();
+			if (valueInput == null) {
+				return;
+			}
+			if (valueInput.tagName === 'SL-SELECT') {
+				valueInput.show();
+			} else {
+				valueInput.focus();
+			}
 		}, 50);
 	};
 
 	const onChangeValue = (path: number[], position: number, value: string) => {
-		const updated = structuredClone(pipeline);
-		filterConditionAt(updated.filter!, path).values[position] = value;
-		setPipeline(updated);
+		const p = structuredClone(pipeline);
+		filterConditionAt(p.filter!, path).values[position] = value;
+		setPipeline(p);
 	};
 
 	const onAddValue = (path: number[]) => {
-		const updated = structuredClone(pipeline);
-		const condition = filterConditionAt(updated.filter!, path);
+		const p = structuredClone(pipeline);
+		const condition = filterConditionAt(p.filter!, path);
 		const position = condition.values.length;
 		condition.values.push('');
-		setPipeline(updated);
+		setPipeline(p);
 		setTimeout(() => {
 			const property: any = document.querySelector(`[data-id="property-${pathID(path)}"]`);
 			const inputs = property
 				?.closest('.pipeline__filters-condition')
 				?.querySelectorAll('.pipeline__filters-value-input');
 			const input = inputs?.[position];
-			if (input == null) return;
-			if (input.tagName === 'SL-SELECT') input.show();
-			else input.focus();
+			if (input == null) {
+				return;
+			}
+			if (input.tagName === 'SL-SELECT') {
+				input.show();
+			} else {
+				input.focus();
+			}
 		}, 50);
 	};
 
 	const onRemoveValue = (path: number[], position: number) => {
-		const updated = structuredClone(pipeline);
-		const condition = filterConditionAt(updated.filter!, path);
+		const p = structuredClone(pipeline);
+		const condition = filterConditionAt(p.filter!, path);
 		condition.values.splice(position, 1);
-		setPipeline(updated);
+		setPipeline(p);
 	};
 
 	const renderCondition = (condition: FilterCondition, path: number[]): ReactNode => {

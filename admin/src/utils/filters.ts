@@ -7,6 +7,11 @@ const MAX_FLOAT32 = 3.4028234663852885981170418348451692544e38;
 const MIN_YEAR = 1;
 const MAX_YEAR = 9999;
 
+// isFilterNumber reports whether value uses the numeric syntax accepted by the
+// filter parser.
+const isFilterNumber = (value: string): boolean =>
+	/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value) && Number.isFinite(Number(value));
+
 // formatText formats a string value as a string.
 const formatString = (str: string): string => {
 	if (!/^[\s"']/.test(str) && !/[\s"']$/.test(str)) {
@@ -262,21 +267,26 @@ const serializeFilter = (filter: Filter, formatted: boolean): string => {
 	}
 
 	// formatValues formats a list of values as a string.
-	function formatValues(values: string[]): string {
+	function formatValues(values: string[], operator: FilterCondition['operator']): string {
 		if (values.length === 0) {
 			return '';
 		}
 
-		if (values.length === 1) {
+		const usesValueList =
+			operator === 'is one of' ||
+			operator === 'is not one of' ||
+			operator === 'is between' ||
+			operator === 'is not between';
+		if (values.length === 1 && !usesValueList) {
 			const v = values[0];
-			if (v === 'true' || v === 'false' || (v !== '' && !isNaN(Number(v)))) {
+			if ((operator !== 'is' && (v === 'true' || v === 'false')) || isFilterNumber(v)) {
 				return v;
 			}
 			return escapeString(v);
 		}
 
 		const formattedList = values.map((v) => {
-			if (v === 'true' || v === 'false' || (v !== '' && !isNaN(Number(v)))) {
+			if (v === 'true' || v === 'false' || isFilterNumber(v)) {
 				return v;
 			}
 			return escapeString(v);
@@ -288,7 +298,7 @@ const serializeFilter = (filter: Filter, formatted: boolean): string => {
 	// formatCondition builds a single condition string.
 	function formatCondition(condition: FilterCondition): string {
 		const { property, operator, values } = condition;
-		const formattedValues = formatValues(values);
+		const formattedValues = formatValues(values, operator);
 		return `${property} ${operator}${formattedValues === '' ? '' : ` ${formattedValues}`}`;
 	}
 
@@ -322,6 +332,7 @@ export {
 	isDate,
 	isDateTime,
 	isDecimal,
+	isFilterNumber,
 	isFloat,
 	isIP,
 	isInt,
