@@ -56,8 +56,11 @@ func TestChangeProfileSchema(t *testing.T) {
 
 	// Alter the profile schema.
 	queries := k.PreviewAlterProfileSchema(file.Schema, file.RePaths)
-	if len(queries) != 4 {
-		t.Fatalf("expected 4 queries, got %d", len(queries))
+	if queries == nil {
+		t.Fatal("expected an empty query list, got nil")
+	}
+	if len(queries) != 0 {
+		t.Fatalf("expected no queries, got %#v", queries)
 	}
 	k.AlterProfileSchemaAndWait(file.Schema, file.PrimarySources, file.RePaths)
 
@@ -67,6 +70,24 @@ func TestChangeProfileSchema(t *testing.T) {
 	}
 	if err := checkSchemaProperties(ws.ProfileSchema); err != nil {
 		t.Fatalf("invalid profile schema: %s", err)
+	}
+	if !slices.Equal(identifiers, ws.Identifiers) {
+		t.Fatalf("expected identifiers %v, got %v", identifiers, ws.Identifiers)
+	}
+
+	// Change only schema metadata.
+	descriptionProperties := file.Schema.Properties().Slice()
+	descriptionProperties[0].Description = "Updated description"
+	descriptionSchema := types.Object(descriptionProperties)
+	queries = k.PreviewAlterProfileSchema(descriptionSchema, nil)
+	if len(queries) != 0 {
+		t.Fatalf("expected no queries, got %#v", queries)
+	}
+	k.AlterProfileSchemaAndWait(descriptionSchema, file.PrimarySources, nil)
+
+	ws = k.Workspace()
+	if !types.Equal(descriptionSchema, ws.ProfileSchema) {
+		t.Fatal("expected the metadata-only schema change to be persisted")
 	}
 	if !slices.Equal(identifiers, ws.Identifiers) {
 		t.Fatalf("expected identifiers %v, got %v", identifiers, ws.Identifiers)
