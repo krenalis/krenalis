@@ -13,8 +13,10 @@ import (
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/datastore/diffschemas"
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 // AlterProfileSchema alters the profile schema and the primary sources of the
@@ -133,6 +135,9 @@ func (this *Workspace) PreviewAlterProfileSchema(ctx context.Context, schema typ
 	if err != nil {
 		return nil, errors.Unprocessable(InvalidAlterSchema, "cannot alter the schema as specified: %s", err)
 	}
+	if !profileSchemaChangeRequiresWarehouseDDL(this.workspace.ProfileSchema, schema, operations) {
+		return []string{}, nil
+	}
 	queries, err := this.store.PreviewAlterProfileSchema(ctx, schema, operations)
 	if err != nil {
 		if err, ok := err.(*datastore.UnavailableError); ok {
@@ -201,6 +206,27 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 		}
 	}
 	return nil
+}
+
+// profileSchemaChangeRequiresWarehouseDDL reports whether changing from
+// oldSchema to newSchema requires DDL on the data warehouse. operations must be
+// the result of comparing the two schemas with diffschemas.Diff.
+func profileSchemaChangeRequiresWarehouseDDL(oldSchema, newSchema types.Type, operations []warehouses.AlterOperation) bool {
+	if len(operations) > 0 {
+		return true
+	}
+	columns1 := util.PropertiesToColumns(oldSchema.Properties())
+	columns2 := util.PropertiesToColumns(newSchema.Properties())
+	if len(columns1) != len(columns2) {
+		return true
+	}
+	for i, c1 := range columns1 {
+		c2 := columns2[i]
+		if c1.Name != c2.Name || c1.Nullable != c2.Nullable || !types.Equal(c1.Type, c2.Type) {
+			return true
+		}
+	}
+	return false
 }
 
 // validatePrimarySources validates a primary source returning an error if it is
