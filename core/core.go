@@ -309,22 +309,22 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 		})
 	}
 
-	// Init the metrics.
-	core.metrics = metrics.New(db, core.state)
-	defer func() {
-		if err != nil {
-			core.metrics.Close(context.Background())
-		}
-	}()
-
 	// Init the datastore.
-	core.datastore, err = datastore.New(core.state, &core.metrics.Pipelines)
+	core.datastore, err = datastore.New(core.state)
 	if err != nil {
 		return nil, fmt.Errorf("core: cannot init the datastore: %s", err)
 	}
 	defer func() {
 		if err != nil {
 			core.datastore.Close()
+		}
+	}()
+
+	// Init the metrics.
+	core.metrics = metrics.New(db, core.state, core.datastore)
+	defer func() {
+		if err != nil {
+			core.metrics.Close(context.Background())
 		}
 	}()
 
@@ -1564,18 +1564,18 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 		connection := &Connection{core: core, store: store, connection: c}
 		p := &Pipeline{core: core, pipeline: pipeline, connection: connection}
 
-		var err error
+		var runErr error
 		if c.Role == state.Source {
-			err = p.importUsers(executionCtx)
+			runErr = p.importUsers(executionCtx)
 		} else {
-			err = p.exportProfiles(executionCtx)
+			runErr = p.exportProfiles(executionCtx)
 		}
 		if executionCtx.Err() != nil {
 			return
 		}
 
 		// End the run.
-		err = core.endLiveRun(core.close.ctx, run, err)
+		err := core.endLiveRun(core.close.ctx, run, runErr)
 		if err != nil {
 			// Context has been canceled.
 			return
@@ -1584,13 +1584,21 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 		// Stop pinging as it is no longer required.
 		stopPing()
 
+		// Refresh identity metrics after a successful import.
+		if c.Role == state.Source && runErr == nil {
+			err := core.metrics.Identities.Refresh(core.close.ctx, ws.ID)
+			if err != nil {
+				slog.Error("core: cannot refresh identity metrics at the end of import",
+					"workspace", ws.ID, "run", run.ID, "error", warehouses.NewOperationError(err))
+			}
+		}
+
 		// Start the Identity Resolution, if necessary.
 		if c.Role == state.Source && ws.ResolveIdentitiesOnBatchImport {
 			err := core.startIdentityResolution(core.close.ctx, ws.ID)
 			if err != nil {
-				if err2, ok := err.(*errors.UnprocessableError); ok && err2.Code == OperationAlreadyExecuting {
-					// Do nothing.
-				} else {
+				err2, ok := errors.AsType[*errors.UnprocessableError](err)
+				if !ok || err2.Code != OperationAlreadyExecuting {
 					slog.Error("core: cannot start Identity Resolution at the end of import", "pipeline", pipeline.ID, "run", run.ID, "error", err)
 				}
 			}

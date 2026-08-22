@@ -87,7 +87,7 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 	defer records.Close()
 
 	// Instantiate a batch identity writer.
-	iw, err := this.connection.store.NewBatchIdentityWriter(pipeline, purge)
+	iw, err := this.connection.store.NewBatchIdentityWriter(pipeline, purge, &this.core.metrics.Pipelines)
 	if err != nil {
 		if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
 			return newPipelineError(metrics.FinalizeStep, err)

@@ -13,7 +13,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/krenalis/krenalis/core/internal/metrics"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/json"
@@ -37,19 +36,17 @@ func (err ConnectionFailed) Error() string {
 }
 
 type Datastore struct {
-	state   *state.State
-	mu      sync.Mutex // for the store field
-	store   map[string]*Store
-	metrics *metrics.Pipelines
-	closed  atomic.Bool
+	state  *state.State
+	mu     sync.Mutex // for the store field
+	store  map[string]*Store
+	closed atomic.Bool
 }
 
 // New returns a *Datastore instance.
-func New(st *state.State, metrics *metrics.Pipelines) (*Datastore, error) {
+func New(st *state.State) (*Datastore, error) {
 	ds := &Datastore{
-		state:   st,
-		store:   map[string]*Store{},
-		metrics: metrics,
+		state: st,
+		store: map[string]*Store{},
 	}
 	st.Freeze()
 	ds.state.AddListener(ds.onCreatePipeline)
