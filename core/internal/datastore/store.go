@@ -95,6 +95,12 @@ type Store struct {
 	mc                   *modeCoordinator
 }
 
+// PipelineMetrics contains the pipeline metric operations used by datastore
+// writers.
+type PipelineMetrics interface {
+	FinalizePassed(pipeline string, count int)
+}
+
 // newStore returns a new Store for the workspace ws.
 // It must be called when the state is frozen.
 func newStore(ds *Datastore, ws *state.Workspace) *Store {
@@ -175,6 +181,32 @@ func (store *Store) AlterProfileSchema(ctx context.Context, opID string, schema 
 func (store *Store) ColumnTypeDescription(t types.Type) (string, error) {
 	store.mustBeOpen()
 	return store.warehouse().ColumnTypeDescription(t)
+}
+
+// CountIdentities returns counts of anonymous and recognized identities, and
+// identities without a profile, from the provided pipelines, grouped by
+// connection.
+//
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
+// returns an *UnavailableError error.
+func (store *Store) CountIdentities(ctx context.Context, pipelines []string) (*warehouses.IdentityCounts, error) {
+	store.mustBeOpen()
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
+	if err != nil {
+		return nil, err
+	}
+	defer done()
+	if len(pipelines) == 0 {
+		return &warehouses.IdentityCounts{
+			Anonymous:      map[string]int{},
+			Recognized:     map[string]int{},
+			WithoutProfile: map[string]int{},
+		}, nil
+	}
+	counts, err := store.warehouse().CountIdentities(ctx, pipelines)
+
+	return counts, unavailableError(err)
 }
 
 // CountProfiles returns the exact number of profiles in the workspace's data
@@ -349,9 +381,9 @@ func (store *Store) Mode() state.WarehouseMode {
 //
 // If the pipeline's output schema does not align with the profile schema, it
 // returns a *schemas.Error error.
-func (store *Store) NewBatchIdentityWriter(pipeline *state.Pipeline, purge bool) (*BatchIdentityWriter, error) {
+func (store *Store) NewBatchIdentityWriter(pipeline *state.Pipeline, purge bool, metrics PipelineMetrics) (*BatchIdentityWriter, error) {
 	store.mustBeOpen()
-	return newBatchIdentityWriter(store, pipeline, purge)
+	return newBatchIdentityWriter(store, pipeline, purge, metrics)
 }
 
 // NewEventIdentityWriter returns an identity writer for writing identities,
@@ -359,15 +391,15 @@ func (store *Store) NewBatchIdentityWriter(pipeline *state.Pipeline, purge bool)
 // identities from events.
 //
 // It must be called on a frozen state.
-func (store *Store) NewEventIdentityWriter(pipelineID string) *EventIdentityWriter {
+func (store *Store) NewEventIdentityWriter(pipelineID string, metrics PipelineMetrics) *EventIdentityWriter {
 	store.mustBeOpen()
-	return newEventIdentityWriter(store, pipelineID)
+	return newEventIdentityWriter(store, pipelineID, metrics)
 }
 
 // NewEventWriter returns a new writer to write events.
-func (store *Store) NewEventWriter() *EventWriter {
+func (store *Store) NewEventWriter(metrics PipelineMetrics) *EventWriter {
 	store.mustBeOpen()
-	return newEventWriter(store)
+	return newEventWriter(store, metrics)
 }
 
 // PreviewAlterProfileSchema provides a preview of an alter profile schema

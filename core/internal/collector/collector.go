@@ -268,7 +268,7 @@ func (c *Collector) addConnection(connection *state.Connection) {
 func (c *Collector) addWorkspace(id string) {
 	c.observers.Store(id, newObserver())
 	store, _ := c.datastore.Store(id)
-	c.eventWriters.Store(id, store.NewEventWriter())
+	c.eventWriters.Store(id, store.NewEventWriter(&c.metrics.Pipelines))
 }
 
 // connectionByKey returns the SDK or webhook connection for the key and true

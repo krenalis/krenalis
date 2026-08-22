@@ -10,7 +10,6 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	_ "embed"
-	"errors"
 	"fmt"
 	"io"
 	"regexp"
@@ -21,6 +20,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
@@ -200,6 +200,114 @@ func (warehouse *Snowflake) Count(ctx context.Context, table string) (int, error
 		return 0, snowflake(err)
 	}
 	return count, nil
+}
+
+// CountIdentities counts anonymous and recognized identities, including those
+// without a profile, from the provided pipelines, grouped by connection.
+func (warehouse *Snowflake) CountIdentities(ctx context.Context, pipelines []string) (*warehouses.IdentityCounts, error) {
+
+	const maxConnectionLength = 12
+	counts := &warehouses.IdentityCounts{
+		Anonymous:      make(map[string]int, len(pipelines)),
+		Recognized:     make(map[string]int, len(pipelines)),
+		WithoutProfile: make(map[string]int, len(pipelines)),
+	}
+	if len(pipelines) == 0 {
+		return counts, nil
+	}
+
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return nil, snowflake(err)
+	}
+
+	var query strings.Builder
+	query.WriteString(`
+WITH selected_identities AS (
+	SELECT
+		"_PIPELINE",
+		"_IS_ANONYMOUS",
+		"_IDENTITY_ID",
+		"_CONNECTION",
+		"_KPID",
+		MIN("_PIPELINE") OVER (PARTITION BY "_CONNECTION")
+			= MAX("_PIPELINE") OVER (PARTITION BY "_CONNECTION") AS single_pipeline
+	FROM "KRENALIS_IDENTITIES"
+	WHERE "_PIPELINE" IN (`)
+	args := make([]any, len(pipelines))
+	for i, pipeline := range pipelines {
+		if i > 0 {
+			query.WriteByte(',')
+		}
+		query.WriteByte('?')
+		args[i] = pipeline
+	}
+	query.WriteString(`)
+),
+product_identities AS (
+	SELECT
+		"_CONNECTION",
+		"_IS_ANONYMOUS",
+		"_IDENTITY_ID",
+		single_pipeline,
+		COUNT(*) AS row_count,
+		BOOLOR_AGG("_KPID" IS NOT NULL) AS assigned
+	FROM selected_identities
+	GROUP BY "_CONNECTION", "_IS_ANONYMOUS", "_IDENTITY_ID", single_pipeline
+)
+SELECT
+	LEFT("_CONNECTION", `)
+	query.WriteString(strconv.Itoa(maxConnectionLength + 1))
+	query.WriteString(`) AS "_CONNECTION",
+	SUM(CASE WHEN "_IS_ANONYMOUS"
+		THEN CASE WHEN single_pipeline THEN row_count ELSE 1 END
+		ELSE 0 END) AS anonymous_count,
+	SUM(CASE WHEN NOT "_IS_ANONYMOUS"
+		THEN CASE WHEN single_pipeline THEN row_count ELSE 1 END
+		ELSE 0 END) AS recognized_count,
+	COALESCE(COUNT_IF(NOT assigned), 0) AS without_profile_count
+FROM product_identities
+GROUP BY "_CONNECTION"
+LIMIT `)
+	query.WriteString(strconv.Itoa(len(pipelines) + 1))
+
+	rows, err := db.QueryContext(ctx, query.String(), args...)
+	if err != nil {
+		return nil, snowflake(err)
+	}
+	defer rows.Close()
+	rowCount := 0
+	for rows.Next() {
+		if rowCount == len(pipelines) {
+			return nil, errors.New("identity counts contain too many connections")
+		}
+		rowCount++
+		var connection string
+		var anonymous, recognized, withoutProfile int
+		if err := rows.Scan(&connection, &anonymous, &recognized, &withoutProfile); err != nil {
+			return nil, snowflake(err)
+		}
+		if len(connection) > maxConnectionLength {
+			return nil, errors.New("identity counts contain an oversized connection identifier")
+		}
+		if anonymous > 0 {
+			counts.Anonymous[connection] = anonymous
+		}
+		if recognized > 0 {
+			counts.Recognized[connection] = recognized
+		}
+		if withoutProfile > 0 {
+			counts.WithoutProfile[connection] = withoutProfile
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, snowflake(err)
+	}
+	if err := warehouses.ValidateIdentityCounts(counts); err != nil {
+		return nil, err
+	}
+
+	return counts, nil
 }
 
 // Delete deletes rows from the specified table that match the provided where
