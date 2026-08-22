@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useContext, useMemo, useRef, ReactNode } from 'react';
 import './ConnectionMetrics.css';
-import 'react-date-range/dist/styles.css';
-import 'react-date-range/dist/theme/default.css';
 import Grid from '../../base/Grid/Grid';
 import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
@@ -14,7 +12,6 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlButtonGroup from '@shoelace-style/shoelace/dist/react/button-group/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import { DateRange } from 'react-date-range';
 import { PipelineError, PipelineErrorsResponse } from '../../../lib/api/types/responses';
 import { PipelineMetrics, PipelineTarget } from '../../../lib/api/types/pipeline';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
@@ -29,6 +26,10 @@ import { Link } from '../../base/Link/Link';
 import considerAsUTC from '../../../utils/considerUTC';
 import { RelativeTime } from '../../base/RelativeTime/RelativeTime';
 import { formatNumber } from '../../../utils/formatNumber';
+import SegmentedDateRangeControl, {
+	SegmentedDateRangePreset,
+	SegmentedDateRangeSelection,
+} from '../../base/SegmentedDateRangeControl/SegmentedDateRangeControl';
 
 interface PipelineMetricsPoint {
 	time: string;
@@ -45,6 +46,7 @@ interface FunnelPoint {
 type FunnelData = FunnelPoint[];
 
 type metricsRange = 'last15Minutes' | 'last24Hours' | 'last7Days' | 'Custom';
+type metricsPreset = Exclude<metricsRange, 'Custom'>;
 
 type StepIdentifier =
 	| 'RECEIVE'
@@ -58,6 +60,12 @@ type StepIdentifier =
 const MINUTES_COUNT = 15;
 const HOURS_COUNT = 24;
 const DAYS_COUNT = 7;
+
+const METRICS_RANGE_PRESETS: SegmentedDateRangePreset<metricsPreset>[] = [
+	{ value: 'last15Minutes', label: 'Last 15 minutes' },
+	{ value: 'last24Hours', label: 'Last 24 hours' },
+	{ value: 'last7Days', label: 'Last 7 days' },
+];
 
 const ERRORS_COLUMNS: GridColumn[] = [
 	{ name: 'Pipeline' },
@@ -101,8 +109,7 @@ const ConnectionMetrics = () => {
 					: 'User',
 	);
 	const [selectedMetricsRange, setSelectedMetricsRange] = useState<metricsRange>('last15Minutes');
-	const [isCustomMetricsRangePickerOpen, setIsCustomMetricsRangePickerOpen] = useState<boolean>(false);
-	const [customMetricsRange, setCustomMetricsRange] = useState([
+	const [customMetricsRange, setCustomMetricsRange] = useState<SegmentedDateRangeSelection[]>([
 		{
 			startDate: new Date(),
 			endDate: new Date(),
@@ -417,22 +424,6 @@ const ConnectionMetrics = () => {
 		};
 	}, [c, selectedTarget, selectedMetricsRange, customMetricsRange, selectedPipeline]);
 
-	useEffect(() => {
-		const handleCustomRangePickerClick = (e) => {
-			const isInRangePicker = e.target.closest('.connection-metrics__tabs-date-range-picker') != null;
-			if (!isInRangePicker) {
-				const isInRangePickerSelector = e.target.closest('.connection-metrics__tabs-date-range') != null;
-				if (!isInRangePickerSelector) {
-					setIsCustomMetricsRangePickerOpen(false);
-				}
-			}
-		};
-		window.addEventListener('click', handleCustomRangePickerClick);
-		() => {
-			window.removeEventListener('click', handleCustomRangePickerClick);
-		};
-	}, []);
-
 	const onChangeSelectedTarget = (target: PipelineTarget) => {
 		const isAlreadySelected = selectedTarget === target;
 		if (isAlreadySelected) {
@@ -447,27 +438,15 @@ const ConnectionMetrics = () => {
 		setSelectedPipeline(toRestore);
 	};
 
-	const onSelectLast15Minutes = () => {
-		setSelectedMetricsRange('last15Minutes');
-	};
-
-	const onSelectLast24Hours = () => {
-		setSelectedMetricsRange('last24Hours');
-	};
-
-	const onSelectLast7Days = () => {
-		setSelectedMetricsRange('last7Days');
-	};
-
-	const onSelectCustom = () => {
-		setIsCustomMetricsRangePickerOpen(!isCustomMetricsRangePickerOpen);
-	};
-
-	const onChangeCustomMetricsRange = (selection) => {
+	const onChangeCustomMetricsRange = (selection: SegmentedDateRangeSelection[]) => {
 		// the dates must be considered UTC.
-		selection[0].startDate = considerAsUTC(selection[0].startDate);
-		selection[0].endDate = considerAsUTC(selection[0].endDate);
-		setCustomMetricsRange(selection);
+		setCustomMetricsRange(
+			selection.map((range) => ({
+				...range,
+				startDate: considerAsUTC(range.startDate),
+				endDate: considerAsUTC(range.endDate),
+			})),
+		);
 		setSelectedMetricsRange('Custom');
 	};
 
@@ -523,53 +502,14 @@ const ConnectionMetrics = () => {
 			{supportedTargets.current.length > 0 ? (
 				<>
 					<div className='connection-metrics__tabs'>
-						<SlButtonGroup>
-							<SlButton
-								variant={selectedMetricsRange === 'last15Minutes' ? 'primary' : 'default'}
-								onClick={onSelectLast15Minutes}
-								size='small'
-							>
-								Last 15 minutes
-							</SlButton>
-							<SlButton
-								variant={selectedMetricsRange === 'last24Hours' ? 'primary' : 'default'}
-								onClick={onSelectLast24Hours}
-								size='small'
-							>
-								Last 24 hours
-							</SlButton>
-							<SlButton
-								variant={selectedMetricsRange === 'last7Days' ? 'primary' : 'default'}
-								onClick={onSelectLast7Days}
-								size='small'
-							>
-								Last 7 days
-							</SlButton>
-							<div className='connection-metrics__tabs-date-range'>
-								<SlButton
-									variant={selectedMetricsRange === 'Custom' ? 'primary' : 'default'}
-									onClick={onSelectCustom}
-									size='small'
-								>
-									{selectedMetricsRange === 'Custom'
-										? `${customMetricsRange[0].startDate.toLocaleDateString()} - ${customMetricsRange[0].endDate.toLocaleDateString()}`
-										: 'Custom range'}
-								</SlButton>
-								<div
-									className={`connection-metrics__tabs-date-range-picker${isCustomMetricsRangePickerOpen ? ' connection-metrics__tabs-date-range-picker--open' : ''}`}
-								>
-									<DateRange
-										editableDateInputs={true}
-										onChange={(item) => onChangeCustomMetricsRange([item.selection])}
-										showSelectionPreview={true}
-										moveRangeOnFirstSelection={false}
-										months={2}
-										ranges={customMetricsRange}
-										direction='horizontal'
-									/>
-								</div>
-							</div>
-						</SlButtonGroup>
+						<SegmentedDateRangeControl<metricsPreset>
+							presets={METRICS_RANGE_PRESETS}
+							defaultPreset='last15Minutes'
+							value={selectedMetricsRange}
+							customRange={customMetricsRange}
+							onPresetChange={setSelectedMetricsRange}
+							onCustomRangeChange={onChangeCustomMetricsRange}
+						/>
 						<SlButtonGroup>
 							<SlButton
 								variant={isUsersSelected ? 'default' : 'primary'}
