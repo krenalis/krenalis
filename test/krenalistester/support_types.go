@@ -75,6 +75,14 @@ type DummySettings struct {
 	OperationDelay          string `json:"operationDelay,omitempty"`
 }
 
+type IdentityResolutionRun struct {
+	ID        string     `json:"id"`
+	Status    string     `json:"status"`
+	StartTime time.Time  `json:"startTime"`
+	EndTime   *time.Time `json:"endTime"`
+	Error     *string    `json:"error"`
+}
+
 type PipelineRun struct {
 	ID        string     `json:"id"`
 	Pipeline  string     `json:"pipeline"`

@@ -40,7 +40,10 @@ func TestUpgrade(t *testing.T) {
 		);
 		CREATE TABLE workspaces (
 			id varchar(12) PRIMARY KEY,
-			organization varchar(12) NOT NULL REFERENCES organizations (id)
+			organization varchar(12) NOT NULL REFERENCES organizations (id),
+			ir_id uuid,
+			ir_start_time timestamp(3),
+			ir_end_time timestamp(3)
 		);
 		CREATE TYPE role AS ENUM ('Source', 'Destination');
 		CREATE TYPE pipeline_target AS ENUM ('Event', 'User', 'Group');
@@ -86,6 +89,10 @@ func TestUpgrade(t *testing.T) {
 		CREATE INDEX pipelines_metrics_pipeline_idx ON pipelines_metrics (pipeline);
 		INSERT INTO organizations (id, name, enabled) VALUES ('111111111111', 'ACME inc', true);
 		INSERT INTO workspaces (id, organization) VALUES ('222222222222', '111111111111');
+		UPDATE workspaces
+		SET ir_id = 'aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb',
+			ir_start_time = '2026-08-10 01:30:00'
+		WHERE id = '222222222222';
 		INSERT INTO connections (id, workspace, connector, role) VALUES ('333333333333', '222222222222', 'dummy', 'Source');
 		INSERT INTO pipelines (id, connection, target, format) VALUES ('444444444444', '333333333333', 'User', 'csv');
 		INSERT INTO pipelines_metrics (
@@ -128,6 +135,8 @@ func TestUpgrade(t *testing.T) {
 	assertPipelineMetricsSurvivePipelineDelete(t, database)
 	assertUsageMetricsUpgrade(t, database)
 	assertIdentityMetricsUpgrade(t, database)
+	assertIdentityResolutionMetricsUpgrade(t, database)
+	assertIdentityResolutionRunsUpgrade(t, database)
 	assertStateRequestSyncSchemaUpgraded(t, database)
 	assertRateLimitLeaseFunction(t, database)
 	assertConsentStepColumns(t, database)
@@ -137,6 +146,8 @@ func TestUpgrade(t *testing.T) {
 	}
 	assertUsageMetricsUpgrade(t, database)
 	assertIdentityMetricsUpgrade(t, database)
+	assertIdentityResolutionMetricsUpgrade(t, database)
+	assertIdentityResolutionRunsUpgrade(t, database)
 }
 
 // assertIdentityMetricsUpgrade verifies that the upgrade creates the identity
@@ -166,6 +177,67 @@ func assertIdentityMetricsUpgrade(t *testing.T, database *db.DB) {
 	if count != 1 {
 		t.Fatalf("expected one initial zero identity observation, got %d", count)
 	}
+}
+
+// assertIdentityResolutionMetricsUpgrade verifies that the upgrade creates the
+// Identity Resolution metric table.
+func assertIdentityResolutionMetricsUpgrade(t *testing.T, database *db.DB) {
+
+	t.Helper()
+	if got := identityMetricPrimaryKey(t, database, "identity_resolution_metrics"); got != "workspace,day" {
+		t.Fatalf("expected identity_resolution_metrics primary key %q, got %q", "workspace,day", got)
+	}
+	assertConstraintExists(t, database, "identity_resolution_metrics",
+		"identity_resolution_metrics_workspace_fkey")
+
+	var count int
+	err := database.QueryRow(t.Context(), "SELECT COUNT(*) FROM identity_resolution_metrics").Scan(&count)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatalf("expected no initial Identity Resolution metrics, got %d", count)
+	}
+
+}
+
+// assertIdentityResolutionRunsUpgrade verifies that the upgrade creates the run
+// history and preserves an Identity Resolution that was already running.
+func assertIdentityResolutionRunsUpgrade(t *testing.T, database *db.DB) {
+
+	t.Helper()
+	assertConstraintExists(t, database, "identity_resolution_runs", "identity_resolution_runs_pkey")
+	assertConstraintExists(t, database, "identity_resolution_runs", "identity_resolution_runs_workspace_fkey")
+	assertIndexExists(t, database, "identity_resolution_runs_workspace_start_idx")
+
+	var workspace string
+	var startTime time.Time
+	var endTime *time.Time
+	var runError *string
+	err := database.QueryRow(t.Context(), `SELECT workspace, start_time, end_time, error
+		FROM identity_resolution_runs
+		WHERE id = 'aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb'`).Scan(
+		&workspace, &startTime, &endTime, &runError)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantStart := time.Date(2026, time.August, 10, 1, 30, 0, 0, time.UTC)
+	if workspace != "222222222222" || !startTime.Equal(wantStart) {
+		t.Fatalf("expected seeded run scope/time %q/%s, got %q/%s",
+			"222222222222", wantStart, workspace, startTime)
+	}
+	if endTime != nil || runError != nil {
+		t.Fatalf("expected seeded run to remain open, got end=%v error=%v", endTime, runError)
+	}
+
+	var count int
+	if err := database.QueryRow(t.Context(), "SELECT COUNT(*) FROM identity_resolution_runs").Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("expected one seeded Identity Resolution run, got %d", count)
+	}
+
 }
 
 // assertUsageMetricsUpgrade verifies the schema and defaults of the upgraded

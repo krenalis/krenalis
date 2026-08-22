@@ -1006,6 +1006,88 @@ func (this *Workspace) Identities(ctx context.Context, kpid string, first, limit
 	return identities, total, nil
 }
 
+// IdentityResolutionRunStatus is the derived lifecycle status of an Identity
+// Resolution run.
+type IdentityResolutionRunStatus string
+
+const (
+	IdentityResolutionRunRunning    IdentityResolutionRunStatus = "running"
+	IdentityResolutionRunSuccessful IdentityResolutionRunStatus = "successful"
+	IdentityResolutionRunFailed     IdentityResolutionRunStatus = "failed"
+)
+
+// IdentityResolutionRun describes one accepted Identity Resolution execution.
+type IdentityResolutionRun struct {
+	ID        string                      `json:"id"`
+	Status    IdentityResolutionRunStatus `json:"status"`
+	StartTime time.Time                   `json:"startTime"`
+	EndTime   *time.Time                  `json:"endTime"`
+	Error     *string                     `json:"error"`
+}
+
+// IdentityResolutionRuns returns Identity Resolution runs for the workspace,
+// newest first. Status is optional; when provided it must be running,
+// successful, or failed. first must be >= 0 and 0 < limit <= 1000.
+func (this *Workspace) IdentityResolutionRuns(ctx context.Context, first, limit int, status IdentityResolutionRunStatus) ([]IdentityResolutionRun, error) {
+
+	this.core.mustBeOpen()
+
+	// Validate pagination.
+	if first < 0 || first > maxInt32 {
+		return nil, errors.BadRequest("first %d is not valid", first)
+	}
+	if limit < 1 || limit > 1000 {
+		return nil, errors.BadRequest("limit %d is not valid", limit)
+	}
+
+	// Validate status and build its query predicate.
+	var predicate string
+	switch status {
+	case "":
+	case IdentityResolutionRunRunning:
+		predicate = " AND end_time IS NULL"
+	case IdentityResolutionRunSuccessful:
+		predicate = " AND end_time IS NOT NULL AND error IS NULL"
+	case IdentityResolutionRunFailed:
+		predicate = " AND end_time IS NOT NULL AND error IS NOT NULL"
+	default:
+		return nil, errors.BadRequest("status %q is not valid", status)
+	}
+
+	query := `SELECT id::text, start_time, end_time, error
+		FROM identity_resolution_runs
+		WHERE workspace = $1` + predicate + `
+		ORDER BY start_time DESC, id DESC
+		OFFSET $2 LIMIT $3`
+
+	runs := make([]IdentityResolutionRun, 0)
+	err := this.core.db.QueryScan(ctx, query, this.workspace.ID, first, limit, func(rows *db.Rows) error {
+		for rows.Next() {
+			var run IdentityResolutionRun
+			if err := rows.Scan(&run.ID, &run.StartTime, &run.EndTime, &run.Error); err != nil {
+				return err
+			}
+			switch {
+			case run.EndTime == nil && run.Error == nil:
+				run.Status = IdentityResolutionRunRunning
+			case run.EndTime != nil && run.Error == nil:
+				run.Status = IdentityResolutionRunSuccessful
+			case run.EndTime != nil && run.Error != nil:
+				run.Status = IdentityResolutionRunFailed
+			default:
+				return fmt.Errorf("unexpected status for identity resolution run %q", run.ID)
+			}
+			runs = append(runs, run)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return runs, nil
+}
+
 // LatestIdentityResolution return information about the latest identity
 // resolution.
 //
