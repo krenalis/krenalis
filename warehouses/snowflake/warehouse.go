@@ -478,6 +478,27 @@ func (warehouse *Snowflake) profilesVersion(ctx context.Context) (int, error) {
 	return v, nil
 }
 
+// publishedProfilesVersion returns the version of the currently published
+// profiles table.
+func (warehouse *Snowflake) publishedProfilesVersion(ctx context.Context) (int, error) {
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return 0, snowflake(err)
+	}
+	var version int
+	err = db.QueryRowContext(ctx, `SELECT COALESCE(MAX("V"."VERSION"), 0)
+		FROM "KRENALIS_PROFILE_SCHEMA_VERSIONS" "V"
+		JOIN "KRENALIS_SYSTEM_OPERATIONS" "O" ON "O"."ID" = "V"."OPERATION"
+		WHERE "O"."COMPLETED_AT" IS NOT NULL AND "O"."ERROR" = ''`).Scan(&version)
+	if err != nil {
+		return 0, snowflake(err)
+	}
+	if version < 0 {
+		return 0, fmt.Errorf("warehouse returned a negative published profile schema version")
+	}
+	return version, nil
+}
+
 // accountFormat is the format of the account identifier in the settings.
 var accountFormat = regexp.MustCompile(`^[a-zA-Z0-9]+[.-][a-zA-Z0-9]+$`)
 
