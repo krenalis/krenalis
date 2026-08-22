@@ -439,6 +439,27 @@ func (warehouse *PostgreSQL) profilesVersion(ctx context.Context) (int, error) {
 	return v, nil
 }
 
+// publishedProfilesVersion returns the version of the currently published
+// profiles table.
+func (warehouse *PostgreSQL) publishedProfilesVersion(ctx context.Context) (int, error) {
+	pool, _, err := warehouse.connectionPool(ctx, false)
+	if err != nil {
+		return 0, err
+	}
+	var version int
+	err = pool.QueryRow(ctx, `SELECT COALESCE(MAX("v"."version"), 0)
+		FROM "krenalis_profile_schema_versions" "v"
+		JOIN "krenalis_system_operations" "o" ON "o"."id" = "v"."operation"
+		WHERE "o"."completed_at" IS NOT NULL AND "o"."error" = ''`).Scan(&version)
+	if err != nil {
+		return 0, err
+	}
+	if version < 0 {
+		return 0, fmt.Errorf("warehouse returned a negative published profile schema version")
+	}
+	return version, nil
+}
+
 // validateSettings validates the settings.
 // It returns a *warehouses.SettingsError if the settings are not valid.
 func validateSettings(s *pgSettings) error {
