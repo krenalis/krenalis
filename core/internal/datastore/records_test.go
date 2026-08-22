@@ -83,6 +83,8 @@ func Test_Records(t *testing.T) {
 		Name: "krenalis_profiles_0",
 		Columns: []warehouses.Column{
 			{Name: "_kpid", Type: types.UUID()},
+			{Name: "_anonymous_count", Type: types.Int(32)},
+			{Name: "_recognized_count", Type: types.Int(32)},
 			{Name: "_updated_at", Type: types.DateTime()},
 			{Name: "id", Type: types.String()},
 			{Name: "other_id", Type: types.String()},
@@ -102,7 +104,7 @@ func Test_Records(t *testing.T) {
 		Keys: []string{"_pipeline", "_external_id"},
 	}
 
-	err = dw.Initialize(ctx, profilesTable.Columns[2:])
+	err = dw.Initialize(ctx, profilesTable.Columns[4:])
 	if err != nil {
 		t.Fatalf("cannot initialize the warehouse: %s", err)
 	}
@@ -110,13 +112,13 @@ func Test_Records(t *testing.T) {
 	now := time.Now().UTC()
 
 	initUsers := [][]any{
-		{"e5a5c059-bc78-4c9c-b4d1-e9fb187562b1", now, "1", "1", "Jake Thompson", 43},
-		{"943a0a39-fd0b-4f7b-a113-59046fb8a511", now, "2", "2", "Emily Davis", 58},
-		{"2a3654ca-a387-49c3-8eb8-8420ab8a7532", now, "3", "3", "Michael Carter", 31},
-		{"243abf79-cbc3-4c6e-8739-e1406f2f6b51", now, "2", "2", "Sophia Harris", 19},
-		{"445ab9fa-5689-4870-bc39-2d01c2a71b00", now, "6", "6", "Emily Johnson", 25},
-		{"ce8f366d-7144-4ec0-96e7-d0dc35597c02", now, "7", "7", "James Williams", 77},
-		{"a415976f-279e-4653-ab6a-64ea7f74e174", now, "7", "7", "Daniel Brown", 12},
+		{"e5a5c059-bc78-4c9c-b4d1-e9fb187562b1", 0, 1, now, "1", "1", "Jake Thompson", 43},
+		{"943a0a39-fd0b-4f7b-a113-59046fb8a511", 0, 1, now, "2", "2", "Emily Davis", 58},
+		{"2a3654ca-a387-49c3-8eb8-8420ab8a7532", 0, 1, now, "3", "3", "Michael Carter", 31},
+		{"243abf79-cbc3-4c6e-8739-e1406f2f6b51", 0, 1, now, "2", "2", "Sophia Harris", 19},
+		{"445ab9fa-5689-4870-bc39-2d01c2a71b00", 0, 1, now, "6", "6", "Emily Johnson", 25},
+		{"ce8f366d-7144-4ec0-96e7-d0dc35597c02", 0, 1, now, "7", "7", "James Williams", 77},
+		{"a415976f-279e-4653-ab6a-64ea7f74e174", 0, 1, now, "7", "7", "Daniel Brown", 12},
 	}
 	err = dw.Merge(ctx, profilesTable, initUsers, nil)
 	if err != nil {

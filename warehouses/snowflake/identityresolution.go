@@ -149,7 +149,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 		mergeProfiles.WriteString(quoteIdent(c.Name))
 		mergeProfiles.WriteByte(',')
 	}
-	mergeProfiles.WriteString(`"_IDENTITIES", "_KPID", "_UPDATED_AT"`)
+	mergeProfiles.WriteString(`"_IDENTITIES", "_ANONYMOUS_COUNT", "_RECOGNIZED_COUNT", "_KPID", "_UPDATED_AT"`)
 	mergeProfiles.WriteString(") SELECT\n")
 	for _, c := range profileColumns {
 		if c.Type.Kind() == types.ArrayKind {
@@ -182,6 +182,14 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	}
 	// Write the "_identities" column.
 	mergeProfiles.WriteString(`ARRAY_AGG(DISTINCT "_PK"), `)
+	mergeProfiles.WriteString(`COUNT(DISTINCT
+		CASE WHEN "_IS_ANONYMOUS" THEN "_CONNECTION" END,
+		CASE WHEN "_IS_ANONYMOUS" THEN "_IDENTITY_ID" END
+	), `)
+	mergeProfiles.WriteString(`COUNT(DISTINCT
+		CASE WHEN NOT "_IS_ANONYMOUS" THEN "_CONNECTION" END,
+		CASE WHEN NOT "_IS_ANONYMOUS" THEN "_IDENTITY_ID" END
+	), `)
 	// Write the "_KPID" column.
 	// If all KPIDs are the same - ignoring the NULL ones, which refer to new
 	// identities - then take the common value as the profile's KPID; otherwise,
