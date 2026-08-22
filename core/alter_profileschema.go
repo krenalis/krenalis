@@ -204,6 +204,28 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 				return fmt.Errorf("profile schema properties cannot have type %s(%s)", p.Type.Kind(), k)
 			}
 		}
+		if p.Semantic == nil {
+			continue
+		}
+
+		semanticType := p.Type
+		for semanticType.Kind() == types.ArrayKind || semanticType.Kind() == types.MapKind {
+			semanticType = semanticType.Elem()
+		}
+		switch p.Semantic.Kind() {
+		case types.DateTimeSemanticKind:
+			return errors.New("profile schema properties cannot have datetime semantic")
+		case types.MoneySemanticKind, types.PercentageSemanticKind, types.MeasurementSemanticKind:
+			if semanticType.Kind() != types.DecimalKind {
+				return fmt.Errorf(
+					"profile schema properties with %s semantic must have decimal values", p.Semantic.Kind(),
+				)
+			}
+		case types.DurationSemanticKind:
+			if semanticType.Kind() != types.IntKind || semanticType.BitSize() != 64 || semanticType.IsUnsigned() {
+				return errors.New("profile schema properties with duration semantic must have signed int(64) values")
+			}
+		}
 	}
 	return nil
 }

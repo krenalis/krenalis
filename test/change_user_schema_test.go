@@ -93,8 +93,63 @@ func TestChangeProfileSchema(t *testing.T) {
 		t.Fatalf("expected identifiers %v, got %v", identifiers, ws.Identifiers)
 	}
 
+	// Change only an array property semantic.
+	semanticProperties := descriptionSchema.Properties().Slice()
+	i := slices.IndexFunc(semanticProperties, func(property types.Property) bool {
+		return property.Name == "phone_numbers"
+	})
+	if i == -1 {
+		t.Fatal("phone_numbers property not found")
+	}
+	semanticProperties[i].Semantic = types.Phone()
+	semanticSchema := types.Object(semanticProperties)
+	queries = k.PreviewAlterProfileSchema(semanticSchema, nil)
+	if len(queries) != 0 {
+		t.Fatalf("expected no queries, got %#v", queries)
+	}
+	k.AlterProfileSchemaAndWait(semanticSchema, file.PrimarySources, nil)
+
+	ws = k.Workspace()
+	if !types.Equal(semanticSchema, ws.ProfileSchema) {
+		t.Fatal("expected the semantic-only schema change to be persisted")
+	}
+	if !slices.Equal(identifiers, ws.Identifiers) {
+		t.Fatalf("expected identifiers %v, got %v", identifiers, ws.Identifiers)
+	}
+
+	// Reject formatted datetime text in the profile schema.
+	invalidSemanticProperties := semanticSchema.Properties().Slice()
+	i = slices.IndexFunc(invalidSemanticProperties, func(property types.Property) bool {
+		return property.Name == "email"
+	})
+	if i == -1 {
+		t.Fatal("email property not found")
+	}
+	invalidSemanticProperties[i].Semantic = types.FormattedDateTime("2006-01-02 15:04:05")
+	invalidSemanticSchema := types.Object(invalidSemanticProperties)
+	_, err = k.TryPreviewAlterProfileSchema(invalidSemanticSchema, nil)
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	expectedSemanticPreviewErr := `PUT v1/profiles/schema/preview: unexpected status code 400: ` +
+		`{"error":{"code":"BadRequest","message":"profile schema properties cannot have datetime semantic"}} ` +
+		`[request has body: true, response body expected: true]`
+	if err.Error() != expectedSemanticPreviewErr {
+		t.Fatalf("expected error %q, got %q", expectedSemanticPreviewErr, err.Error())
+	}
+	err = k.TryAlterProfileSchema(invalidSemanticSchema, nil, nil)
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	expectedSemanticErr := `PUT v1/profiles/schema: unexpected status code 400: ` +
+		`{"error":{"code":"BadRequest","message":"profile schema properties cannot have datetime semantic"}} ` +
+		`[request has body: true, response body expected: false]`
+	if err.Error() != expectedSemanticErr {
+		t.Fatalf("expected error %q, got %q", expectedSemanticErr, err.Error())
+	}
+
 	// Add a single property.
-	schema := types.Object(append(file.Schema.Properties().Slice(), types.Property{
+	schema := types.Object(append(semanticSchema.Properties().Slice(), types.Property{
 		Name: "new_prop", Type: types.String(), ReadOptional: true,
 	}))
 	queries = k.PreviewAlterProfileSchema(schema, nil)
