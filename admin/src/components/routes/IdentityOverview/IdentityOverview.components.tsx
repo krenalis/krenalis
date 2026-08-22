@@ -9,31 +9,62 @@ import {
 	Legend,
 	Line,
 	LineChart,
+	Cell,
+	Pie,
+	PieChart,
 	ResponsiveContainer,
 	Tooltip,
 	XAxis,
 	YAxis,
 } from 'recharts';
+import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import type SlSelectElement from '@shoelace-style/shoelace/dist/components/select/select.component.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import Grid from '../../base/Grid/Grid';
+import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
+import { Link } from '../../base/Link/Link';
 import { formatNumber } from '../../../utils/formatNumber';
 import {
 	ConnectionBar,
 	DELETED_CONNECTION_SCOPE,
 	IdentityTrend,
+	ProfileCompositionBucket,
+	ResolutionEffectivenessPoint,
+	UnifiedProfileHistoryPoint,
+	buildProfileComposition,
+	buildTypeDistribution,
+	chartDomainTicks,
 	formatChartDate,
+	formatRatio,
+	formatResolutionUTCTimestamp,
+	formatRunDuration,
 	formatSharePercent,
+	identityLinkRateChartDomain,
+	ratioChartDomain,
 	sparklineDomain,
 } from './IdentityOverview.helpers';
+import { IdentityResolutionComposition } from '../../../lib/api/types/metrics';
+import { IdentityResolutionRun } from '../../../lib/api/types/workspace';
 
 const CHART_COLOR = '#6062d0';
 const CONNECTION_ANONYMOUS_COLOR = '#b9bae9';
+const IDENTITY_LINK_RATE_COLOR = '#0EA5E9';
+const IDENTITIES_PER_PROFILE_COLOR = '#0f7c82';
+const UNIFIED_PROFILES_RECOGNIZED_COLOR = '#f2822e';
+const UNIFIED_PROFILES_ANONYMOUS_COLOR = '#fce4d3';
+const TYPE_DISTRIBUTION_COLORS = {
+	recognized: '#5a5f6b',
+	anonymous: '#d9dde3',
+};
 const GRID_COLOR = '#e8e8ee';
 const TREND_CHART_ANIMATION_DURATION = 450;
+const OVERVIEW_DONUT_INNER_RADIUS = 48;
+const OVERVIEW_DONUT_OUTER_RADIUS = 68;
 const CONNECTION_AXIS_WIDTH = 180;
 const CONNECTION_AXIS_SHARE_OFFSET = 52;
 
@@ -87,6 +118,13 @@ const DashboardCard = ({ title, temporalLabel, info, headerAction, className, ch
 	</div>
 );
 
+const DonutCenter = ({ value, label }: { value: ReactNode; label: string }) => (
+	<div className='identity-overview__donut-center'>
+		<strong>{value}</strong>
+		<span>{label}</span>
+	</div>
+);
+
 interface ChartTooltipRow {
 	label: ReactNode;
 	value: ReactNode;
@@ -122,13 +160,24 @@ interface RechartsTooltipEntry {
 	payload?: unknown;
 }
 
-interface RecognizedAnonymousHistoryTooltipProps {
+interface TimeSeriesTooltipProps {
 	active?: boolean;
 	label?: unknown;
 	payload?: readonly RechartsTooltipEntry[];
+	formatValue: (value: number) => string;
 }
 
-const RecognizedAnonymousHistoryTooltip = ({ active, label, payload }: RecognizedAnonymousHistoryTooltipProps) => {
+const TimeSeriesTooltip = ({ active, label, payload, formatValue }: TimeSeriesTooltipProps) => (
+	<ChartTooltip
+		active={active}
+		title={label == null ? undefined : formatChartDate(String(label))}
+		rows={(payload ?? []).flatMap((entry) =>
+			entry.value == null ? [] : [{ label: String(entry.name ?? ''), value: formatValue(Number(entry.value)) }],
+		)}
+	/>
+);
+
+const RecognizedAnonymousHistoryTooltip = ({ active, label, payload }: Omit<TimeSeriesTooltipProps, 'formatValue'>) => {
 	const entries = (payload ?? []).flatMap((entry) =>
 		entry.value == null ? [] : [{ label: String(entry.name ?? ''), value: Number(entry.value) }],
 	);
@@ -142,6 +191,19 @@ const RecognizedAnonymousHistoryTooltip = ({ active, label, payload }: Recognize
 				label: entry.label,
 				value: `${formatNumber(entry.value)} (${formatSharePercent(entry.value, total, 2)})`,
 			}))}
+		/>
+	);
+};
+
+const DonutTooltip = ({ active, payload }: Omit<TimeSeriesTooltipProps, 'label' | 'formatValue'>) => {
+	const entry = payload?.[0];
+	const datum = entry?.payload as { label?: string } | undefined;
+	const label = datum?.label ?? (entry?.name == null ? undefined : String(entry.name));
+	return (
+		<ChartTooltip
+			active={active}
+			title={label}
+			rows={entry?.value == null ? [] : [{ label: 'Total', value: formatNumber(Number(entry.value)) }]}
 		/>
 	);
 };
@@ -447,6 +509,26 @@ const IdentitiesChart = ({
 	/>
 );
 
+interface ProfilesChartProps {
+	days: UnifiedProfileHistoryPoint[];
+	loading: boolean;
+	error?: string;
+}
+
+const ProfilesChart = ({ days, loading, error }: ProfilesChartProps) => (
+	<RecognizedAnonymousHistoryChart
+		title='Profiles over time (daily)'
+		info='Daily end-state recognized and anonymous unified profiles for the Trend range. Missing observations remain gaps.'
+		days={days}
+		recognizedColor={UNIFIED_PROFILES_RECOGNIZED_COLOR}
+		anonymousColor={UNIFIED_PROFILES_ANONYMOUS_COLOR}
+		loading={loading}
+		error={error}
+		errorTitle='Unified profile metrics could not be loaded'
+		emptyTitle='No unified profile data in this period'
+	/>
+);
+
 interface ConnectionsChartProps {
 	data: ConnectionBar[];
 	totalIdentities: number | null;
@@ -609,4 +691,502 @@ const ConnectionsChart = ({ data, totalIdentities, observedLabel, loading, error
 		)}
 	</DashboardCard>
 );
-export { ConnectionsChart, IdentitiesChart, KpiCard, SectionHeading, StateMessage };
+
+interface ResolutionEffectivenessChartProps {
+	data: ResolutionEffectivenessPoint[];
+	loading: boolean;
+	error?: string;
+}
+
+const ResolutionEffectivenessChart = ({ data, loading, error }: ResolutionEffectivenessChartProps) => {
+	const hasIdentityLinkRate = data.some((day) => day.linkedIdentitiesRatePercent != null);
+	const hasIdentitiesPerProfile = data.some((day) => day.identitiesPerProfile != null);
+	const hasData = hasIdentityLinkRate || hasIdentitiesPerProfile;
+	const identityLinkRateDomain = identityLinkRateChartDomain(data);
+	const ratioDomain = ratioChartDomain(data);
+	const identityLinkRateTicks = chartDomainTicks(identityLinkRateDomain);
+	const ratioTicks = chartDomainTicks(ratioDomain);
+
+	return (
+		<DashboardCard
+			title='Resolution effectiveness over time (daily)'
+			className='identity-overview__chart-card identity-overview__resolution-chart-card'
+		>
+			{loading ? (
+				<CardLoading chart />
+			) : error ? (
+				<StateMessage
+					variant='error'
+					title='Resolution metrics could not be loaded'
+					description={error}
+					compact
+				/>
+			) : !hasData ? (
+				<StateMessage
+					variant='empty'
+					title='No Identity Resolution data in this period'
+					description='Run Identity Resolution to populate the daily series.'
+					compact
+				/>
+			) : (
+				<div className='identity-overview__effectiveness-content'>
+					<div className='identity-overview__effectiveness-metric'>
+						<div className='identity-overview__effectiveness-metric-heading'>
+							<h4>Identities per profile</h4>
+							<InfoTooltip
+								content='Average number of identities per unified profile. Shows the daily as-of trend over the Trend range. Values change when a new successful Identity Resolution is completed.'
+								label='About identities per profile'
+							/>
+						</div>
+						{hasIdentitiesPerProfile ? (
+							<div className='identity-overview__effectiveness-chart'>
+								<ResponsiveContainer width='100%' height='100%'>
+									<LineChart
+										data={data}
+										margin={{ top: 10, right: 12, bottom: 10, left: 0 }}
+										syncId='identity-resolution-effectiveness'
+										syncMethod='value'
+									>
+										<CartesianGrid stroke={GRID_COLOR} vertical={false} />
+										<XAxis dataKey='day' hide />
+										<YAxis
+											domain={ratioDomain}
+											ticks={ratioTicks}
+											tickFormatter={(value) => formatRatio(Number(value))}
+											tickLine={false}
+											axisLine={{ stroke: GRID_COLOR }}
+											interval={0}
+											width={42}
+										/>
+										<Tooltip
+											content={({ active, label, payload }) => (
+												<TimeSeriesTooltip
+													active={active}
+													label={label}
+													payload={payload}
+													formatValue={formatRatio}
+												/>
+											)}
+										/>
+										<Line
+											type='stepAfter'
+											dataKey='identitiesPerProfile'
+											name='Identities per profile (ratio)'
+											stroke={IDENTITIES_PER_PROFILE_COLOR}
+											strokeWidth={2}
+											dot={false}
+											activeDot={{ r: 3 }}
+											connectNulls={false}
+											isAnimationActive
+											animationDuration={TREND_CHART_ANIMATION_DURATION}
+											animationEasing='ease-out'
+										/>
+									</LineChart>
+								</ResponsiveContainer>
+							</div>
+						) : (
+							<div className='identity-overview__effectiveness-empty'>No data available</div>
+						)}
+					</div>
+					<div className='identity-overview__effectiveness-metric'>
+						<div className='identity-overview__effectiveness-metric-heading'>
+							<h4>Identity link rate</h4>
+							<InfoTooltip
+								content='Share of identities that belong to a profile containing more than one identity. Shows the daily as-of trend over the Trend range. Values change when a new successful Identity Resolution is completed.'
+								label='About identity link rate'
+							/>
+						</div>
+						{hasIdentityLinkRate ? (
+							<div className='identity-overview__effectiveness-chart'>
+								<ResponsiveContainer width='100%' height='100%'>
+									<LineChart
+										data={data}
+										margin={{ top: 10, right: 12, bottom: 2, left: 0 }}
+										syncId='identity-resolution-effectiveness'
+										syncMethod='value'
+									>
+										<CartesianGrid stroke={GRID_COLOR} vertical={false} />
+										<XAxis
+											dataKey='day'
+											tickFormatter={formatChartDate}
+											minTickGap={28}
+											tickLine={false}
+											axisLine={{ stroke: GRID_COLOR }}
+										/>
+										<YAxis
+											domain={identityLinkRateDomain}
+											ticks={identityLinkRateTicks}
+											tickFormatter={(value) => `${Number(value).toFixed(1)}%`}
+											tickLine={false}
+											axisLine={{ stroke: GRID_COLOR }}
+											interval={0}
+											width={42}
+										/>
+										<Tooltip
+											content={({ active, label, payload }) => (
+												<TimeSeriesTooltip
+													active={active}
+													label={label}
+													payload={payload}
+													formatValue={(value) => `${value.toFixed(1)}%`}
+												/>
+											)}
+										/>
+										<Line
+											type='stepAfter'
+											dataKey='linkedIdentitiesRatePercent'
+											name='Identity link rate (%)'
+											stroke={IDENTITY_LINK_RATE_COLOR}
+											strokeWidth={2}
+											dot={false}
+											activeDot={{
+												r: 3,
+												fill: IDENTITY_LINK_RATE_COLOR,
+												stroke: IDENTITY_LINK_RATE_COLOR,
+											}}
+											connectNulls={false}
+											isAnimationActive
+											animationDuration={TREND_CHART_ANIMATION_DURATION}
+											animationEasing='ease-out'
+										/>
+									</LineChart>
+								</ResponsiveContainer>
+							</div>
+						) : (
+							<div className='identity-overview__effectiveness-empty'>No data available</div>
+						)}
+					</div>
+				</div>
+			)}
+		</DashboardCard>
+	);
+};
+
+const COMPOSITION_COLORS = ['#5557be', '#686ac7', '#7778cf', '#999ade', '#b9bae9', '#d9d9f2'];
+interface TypeDistributionSnapshot {
+	total: number;
+	recognized: number;
+	anonymous: number;
+	temporalLabel: string;
+}
+
+interface TypeDistributionBlockProps {
+	title: string;
+	snapshot?: TypeDistributionSnapshot;
+	loading: boolean;
+	error?: string;
+	recognizedColor?: string;
+	anonymousColor?: string;
+}
+
+const distributionPercentage = (value: number | null): string => (value == null ? '—' : `${value.toFixed(1)}%`);
+
+const TypeDistributionBlock = ({
+	title,
+	snapshot,
+	loading,
+	error,
+	recognizedColor = TYPE_DISTRIBUTION_COLORS.recognized,
+	anonymousColor = TYPE_DISTRIBUTION_COLORS.anonymous,
+}: TypeDistributionBlockProps) => {
+	const segments =
+		snapshot == null ? [] : buildTypeDistribution(snapshot.recognized, snapshot.anonymous, snapshot.total);
+	const total = snapshot?.total ?? 0;
+	const hasData = snapshot != null && total > 0 && error == null;
+	const colors = { recognized: recognizedColor, anonymous: anonymousColor };
+
+	return (
+		<div className='identity-overview__distribution-block'>
+			<div className='identity-overview__distribution-heading'>
+				<h4>{title}</h4>
+				{snapshot && <p>{snapshot.temporalLabel}</p>}
+			</div>
+			{loading ? (
+				<CardLoading chart />
+			) : !hasData ? (
+				<div className='identity-overview__distribution-empty' role='status'>
+					<SlIcon name='info-circle' />
+					<span>No data available</span>
+				</div>
+			) : (
+				<div className='identity-overview__distribution-body'>
+					<div
+						className='identity-overview__donut-ring identity-overview__distribution-ring'
+						aria-label={`${title} type distribution`}
+					>
+						<ResponsiveContainer width='100%' height='100%'>
+							<PieChart>
+								<Pie
+									data={segments}
+									dataKey='count'
+									nameKey='label'
+									innerRadius={OVERVIEW_DONUT_INNER_RADIUS}
+									outerRadius={OVERVIEW_DONUT_OUTER_RADIUS}
+									startAngle={90}
+									endAngle={-270}
+									stroke='none'
+									isAnimationActive={false}
+								>
+									{segments.map((segment) => (
+										<Cell key={segment.key} fill={colors[segment.key]} />
+									))}
+								</Pie>
+								<Tooltip
+									content={({ active, payload }) => (
+										<DonutTooltip active={active} payload={payload} />
+									)}
+								/>
+							</PieChart>
+						</ResponsiveContainer>
+						<DonutCenter value={formatNumber(total)} label='Total' />
+					</div>
+					<div className='identity-overview__distribution-legend'>
+						{segments.map((segment) => (
+							<div className='identity-overview__distribution-legend-item' key={segment.key}>
+								<i style={{ background: colors[segment.key] }} />
+								<div>
+									<span>{segment.label}</span>
+									<strong>{distributionPercentage(segment.percentage)}</strong>
+									<small>{formatNumber(segment.count)}</small>
+								</div>
+							</div>
+						))}
+					</div>
+				</div>
+			)}
+		</div>
+	);
+};
+
+interface TypeDistributionCardProps {
+	processed?: TypeDistributionSnapshot;
+	unified?: TypeDistributionSnapshot;
+	loading: boolean;
+	error?: string;
+}
+
+const TypeDistributionCard = ({ processed, unified, loading, error }: TypeDistributionCardProps) => (
+	<DashboardCard
+		title='Distribution per type'
+		info='Identities processed and unified profiles show the type distributions from the same latest successful Identity Resolution.'
+		className='identity-overview__distribution-card'
+	>
+		<div className='identity-overview__distribution-panel'>
+			<TypeDistributionBlock title='Identities processed' snapshot={processed} loading={loading} error={error} />
+			<div className='identity-overview__distribution-divider' aria-hidden='true'>
+				<span>↔</span>
+			</div>
+			<TypeDistributionBlock
+				title='Unified profiles'
+				snapshot={unified}
+				loading={loading}
+				error={error}
+				recognizedColor={UNIFIED_PROFILES_RECOGNIZED_COLOR}
+				anonymousColor={UNIFIED_PROFILES_ANONYMOUS_COLOR}
+			/>
+		</div>
+		<div className='identity-overview__distribution-footer'>
+			<span>
+				<SlIcon name='people' />
+				<strong>Recognized:</strong> has at least one recognized identity
+			</span>
+			<i aria-hidden='true' />
+			<span>
+				<SlIcon name='person' />
+				<strong>Anonymous:</strong> only anonymous identities
+			</span>
+		</div>
+	</DashboardCard>
+);
+
+interface ProfileCompositionProps {
+	profiles: number;
+	composition?: IdentityResolutionComposition;
+	loading: boolean;
+	error?: string;
+}
+
+const compositionPercentage = (bucket: ProfileCompositionBucket): string =>
+	bucket.percentage == null ? '—' : `${bucket.percentage.toFixed(1)}%`;
+
+const ProfileComposition = ({ profiles, composition, loading, error }: ProfileCompositionProps) => {
+	const buckets = composition == null ? [] : buildProfileComposition(composition, profiles);
+	const hasValues = buckets.some((bucket) => bucket.count > 0);
+	return (
+		<DashboardCard
+			title='Profiles by number of identities'
+			info='Profiles are grouped by the number of identities they contain. The chart shows the distribution from the latest successful Identity Resolution.'
+			className='identity-overview__composition-card'
+		>
+			{loading ? (
+				<CardLoading chart />
+			) : error ? (
+				<StateMessage variant='error' title='Composition could not be loaded' description={error} compact />
+			) : composition == null ? (
+				<StateMessage variant='unavailable' title='Profile composition is unavailable' compact />
+			) : (
+				<div className='identity-overview__composition-content'>
+					<div
+						className='identity-overview__donut-ring identity-overview__composition-ring'
+						aria-label='Profiles by number of identities'
+					>
+						{hasValues ? (
+							<ResponsiveContainer width='100%' height='100%'>
+								<PieChart>
+									<Pie
+										data={buckets}
+										dataKey='count'
+										nameKey='label'
+										innerRadius={OVERVIEW_DONUT_INNER_RADIUS}
+										outerRadius={OVERVIEW_DONUT_OUTER_RADIUS}
+										stroke='none'
+										isAnimationActive={false}
+									>
+										{buckets.map((bucket, index) => (
+											<Cell key={bucket.key} fill={COMPOSITION_COLORS[index]} />
+										))}
+									</Pie>
+									<Tooltip
+										content={({ active, payload }) => (
+											<DonutTooltip active={active} payload={payload} />
+										)}
+									/>
+								</PieChart>
+							</ResponsiveContainer>
+						) : (
+							<div className='identity-overview__composition-ring-placeholder' />
+						)}
+						<DonutCenter value={formatNumber(profiles)} label='Profiles' />
+					</div>
+					<div className='identity-overview__composition-legend'>
+						{buckets.map((bucket, index) => (
+							<div key={bucket.key}>
+								<i style={{ background: COMPOSITION_COLORS[index] }} />
+								<span>{bucket.label}</span>
+								<strong>{compositionPercentage(bucket)}</strong>
+							</div>
+						))}
+					</div>
+				</div>
+			)}
+		</DashboardCard>
+	);
+};
+
+const GoToRun = () => (
+	<Link path='profile-unification/profiles'>
+		<SlButton size='small' variant='default'>
+			Go to Run
+		</SlButton>
+	</Link>
+);
+
+const ResolutionPeriodEmptyState = () => (
+	<DashboardCard className='identity-overview__period-empty-card'>
+		<StateMessage
+			variant='empty'
+			title='No Identity Resolution completed in this period'
+			description='Run Identity Resolution to see results here.'
+			action={<GoToRun />}
+		/>
+	</DashboardCard>
+);
+
+const NoResolutionState = () => (
+	<DashboardCard className='identity-overview__no-resolution-card'>
+		<StateMessage
+			variant='empty'
+			title='No Identity Resolution completed in this period'
+			description='Run Identity Resolution to see results here.'
+			action={<GoToRun />}
+		/>
+	</DashboardCard>
+);
+
+const HISTORY_COLUMNS: GridColumn[] = [
+	{ name: 'Status' },
+	{ name: 'Started at' },
+	{ name: 'Completed at' },
+	{ name: 'Duration' },
+	{ name: 'Error' },
+];
+
+interface HistorySectionProps {
+	runs: IdentityResolutionRun[];
+	loading: boolean;
+	error?: string;
+}
+
+const historyStatusBadge = (status: IdentityResolutionRun['status']): ReactNode => {
+	const labels = { running: 'Running', successful: 'Successful', failed: 'Failed' } as const;
+	const variants = { running: 'primary', successful: 'success', failed: 'danger' } as const;
+	return (
+		<SlBadge className='identity-overview__history-status' variant={variants[status]} pill>
+			{labels[status]}
+		</SlBadge>
+	);
+};
+
+const historyRows = (runs: IdentityResolutionRun[]): GridRow[] =>
+	runs.map((run) => ({
+		key: run.id,
+		cells: [
+			historyStatusBadge(run.status),
+			formatResolutionUTCTimestamp(run.startTime),
+			run.endTime == null ? '—' : formatResolutionUTCTimestamp(run.endTime),
+			formatRunDuration(run.startTime, run.endTime),
+			run.error == null ? (
+				'—'
+			) : (
+				<span className='identity-overview__history-error' title={run.error}>
+					{run.error}
+				</span>
+			),
+		],
+	}));
+
+const HistorySection = ({ runs, loading, error }: HistorySectionProps) => (
+	<section className='identity-overview__section'>
+		<SectionHeading
+			title='Identity Resolution history'
+			info='Accepted Identity Resolution runs, including running, successful, and failed executions.'
+		/>
+		<DashboardCard className='identity-overview__history-card'>
+			{error == null ? (
+				<div className='identity-overview__history-grid'>
+					<Grid
+						columns={HISTORY_COLUMNS}
+						rows={historyRows(runs)}
+						gridColumnsWidths='minmax(120px, 0.7fr) minmax(210px, 1.2fr) minmax(210px, 1.2fr) minmax(110px, 0.6fr) minmax(260px, 1.8fr)'
+						isLoading={loading}
+						loadingText='Loading Identity Resolution history'
+						noRowsMessage='No Identity Resolution runs yet'
+					/>
+				</div>
+			) : (
+				<StateMessage
+					variant='error'
+					title='Identity Resolution run history could not be loaded'
+					description={error}
+				/>
+			)}
+		</DashboardCard>
+	</section>
+);
+
+export {
+	ConnectionsChart,
+	HistorySection,
+	IDENTITIES_PER_PROFILE_COLOR,
+	IdentitiesChart,
+	KpiCard,
+	NoResolutionState,
+	ProfileComposition,
+	ResolutionEffectivenessChart,
+	IDENTITY_LINK_RATE_COLOR,
+	ResolutionPeriodEmptyState,
+	SectionHeading,
+	StateMessage,
+	TypeDistributionCard,
+	ProfilesChart,
+};

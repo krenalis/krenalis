@@ -56,6 +56,8 @@ type identity struct {
 	attributes   map[string]any
 }
 
+// identityCounts contains the anonymous and recognized identity counts for a
+// materialized profile.
 type identityCounts struct {
 	anonymous  int
 	recognized int
@@ -685,12 +687,21 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					// Call ResolveIdentities several times, just to do a
-					// minimal idempotency test.
-					for range 5 {
-						err = dw.ResolveIdentities(ctx, opID.String(), identifiers, columns, test.primarySources)
+					// Call ResolveIdentities several times to verify that retries return the
+					// original counts.
+					var returnedCounts warehouses.IdentityResolutionCounts
+					for i := range 5 {
+						counts, err := dw.ResolveIdentities(ctx, opID.String(), identifiers, columns, test.primarySources)
 						if err != nil {
 							t.Fatal(err)
+						}
+						if counts == nil {
+							t.Fatal("expected ResolveIdentities to return non-nil counts, got nil")
+						}
+						if i == 0 {
+							returnedCounts = *counts
+						} else if *counts != returnedCounts {
+							t.Fatalf("expected ResolveIdentities retry counts %v, got %v", returnedCounts, counts)
 						}
 					}
 					profilesVersion++
@@ -759,8 +770,11 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 						t.Fatalf("\nexpected profiles:\n\t%v\ngot:\n\t%v", test.expectedProfiles, gotProfiles)
 					}
 
+					gotCounts := readIdentityCounts(t, dw, profilesVersion)
+					if wantCounts := aggregateIdentityResolutionCounts(t, gotCounts); returnedCounts != *wantCounts {
+						t.Fatalf("expected ResolveIdentities counts %v, got %v", wantCounts, returnedCounts)
+					}
 					if test.expectedCounts != nil {
-						gotCounts := readIdentityCounts(t, ctx, dw, profilesVersion)
 						expectedCounts := slices.Clone(test.expectedCounts)
 						sortIdentityCounts(expectedCounts)
 						sortIdentityCounts(gotCounts)
@@ -775,13 +789,50 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 
 }
 
-func readIdentityCounts(t *testing.T, ctx context.Context, dw warehouses.Warehouse, profilesVersion int) []identityCounts {
+// aggregateIdentityResolutionCounts derives Identity Resolution counts from
+// per-profile identity counts.
+func aggregateIdentityResolutionCounts(t *testing.T, profiles []identityCounts) *warehouses.IdentityResolutionCounts {
+	t.Helper()
+	var counts warehouses.IdentityResolutionCounts
+	for _, profile := range profiles {
+		identities := profile.anonymous + profile.recognized
+		if profile.anonymous < 0 || profile.recognized < 0 || identities == 0 {
+			t.Fatalf("invalid per-profile identity counts: %+v", profile)
+		}
+		if profile.recognized == 0 {
+			counts.Profiles.Anonymous++
+		} else {
+			counts.Profiles.Recognized++
+		}
+		counts.Identities.Anonymous += profile.anonymous
+		counts.Identities.Recognized += profile.recognized
+		switch {
+		case identities == 1:
+			counts.Composition.One++
+		case identities == 2:
+			counts.Composition.Two++
+		case identities == 3:
+			counts.Composition.Three++
+		case identities <= 10:
+			counts.Composition.FourToTen++
+		case identities <= 20:
+			counts.Composition.ElevenToTwenty++
+		default:
+			counts.Composition.MoreThanTwenty++
+		}
+	}
+	return &counts
+}
+
+// readIdentityCounts reads the anonymous and recognized identity counts from
+// one materialized profile-table version.
+func readIdentityCounts(t *testing.T, dw warehouses.Warehouse, profilesVersion int) []identityCounts {
 	t.Helper()
 	countColumns := []warehouses.Column{
 		{Name: "_anonymous_count", Type: types.Int(32)},
 		{Name: "_recognized_count", Type: types.Int(32)},
 	}
-	r, _, err := dw.Query(ctx, warehouses.RowQuery{
+	r, _, err := dw.Query(t.Context(), warehouses.RowQuery{
 		Columns: countColumns,
 		Table:   fmt.Sprintf("krenalis_profiles_%d", profilesVersion),
 	}, false)
@@ -808,6 +859,8 @@ func readIdentityCounts(t *testing.T, ctx context.Context, dw warehouses.Warehou
 	return counts
 }
 
+// sortIdentityCounts orders profile identity counts by anonymous count and then
+// by recognized count.
 func sortIdentityCounts(counts []identityCounts) {
 	slices.SortFunc(counts, func(a, b identityCounts) int {
 		if n := cmp.Compare(a.anonymous, b.anonymous); n != 0 {

@@ -85,6 +85,18 @@ CREATE TABLE workspaces (
 
 CREATE INDEX workspaces_organization_idx ON workspaces (organization);
 
+CREATE TABLE identity_resolution_runs (
+    id uuid NOT NULL,
+    workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+    start_time timestamp(3) NOT NULL,
+    end_time timestamp(3),
+    error varchar,
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX identity_resolution_runs_workspace_start_idx
+    ON identity_resolution_runs (workspace, start_time DESC, id DESC);
+
 CREATE TABLE rate_limit_buckets (
     subject_kind varchar(12) NOT NULL CHECK (subject_kind IN ('platform', 'organization', 'workspace', 'events')),
     subject_id varchar(12) NOT NULL CHECK (
@@ -327,6 +339,10 @@ CREATE TABLE pipelines_metrics (
     PRIMARY KEY (pipeline, timeslot)
 );
 
+CREATE INDEX pipelines_metrics_workspace_timeslot_idx ON pipelines_metrics (workspace, timeslot);
+CREATE INDEX pipelines_metrics_connection_timeslot_idx ON pipelines_metrics (connection, timeslot);
+CREATE INDEX pipelines_metrics_timeslot_idx ON pipelines_metrics (timeslot);
+
 CREATE TABLE usage_metrics (
     organization varchar(12) NOT NULL REFERENCES organizations ON DELETE CASCADE,
     workspace varchar(12) NOT NULL,
@@ -340,6 +356,23 @@ CREATE TABLE usage_metrics (
 
 CREATE INDEX usage_metrics_organization_day_idx
     ON usage_metrics (organization, day);
+
+CREATE TABLE identity_resolution_metrics (
+    workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+    day date NOT NULL,
+    observed_at time without time zone NOT NULL,
+    profiles_anonymous bigint NOT NULL,
+    profiles_recognized bigint NOT NULL,
+    identities_anonymous bigint NOT NULL,
+    identities_recognized bigint NOT NULL,
+    composition_one bigint NOT NULL,
+    composition_two bigint NOT NULL,
+    composition_three bigint NOT NULL,
+    composition_four_to_ten bigint NOT NULL,
+    composition_eleven_to_twenty bigint NOT NULL,
+    composition_more_than_twenty bigint NOT NULL,
+    PRIMARY KEY (workspace, day)
+);
 
 CREATE TABLE identity_metrics (
     workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
@@ -359,10 +392,6 @@ CREATE TABLE identity_connection_metrics (
     identities_without_profile bigint NOT NULL,
     PRIMARY KEY (connection, day)
 );
-
-CREATE INDEX pipelines_metrics_workspace_timeslot_idx ON pipelines_metrics (workspace, timeslot);
-CREATE INDEX pipelines_metrics_connection_timeslot_idx ON pipelines_metrics (connection, timeslot);
-CREATE INDEX pipelines_metrics_timeslot_idx ON pipelines_metrics (timeslot);
 
 CREATE TABLE discontinued_functions (
     id varchar(200) NOT NULL,

@@ -143,6 +143,31 @@ type IdentityCounts struct {
 	WithoutProfile map[string]int
 }
 
+// IdentityResolutionCounts contains profile and identity counts for a specific
+// Identity Resolution.
+type IdentityResolutionCounts struct {
+	Profiles    Counts                        `json:"profiles"`
+	Identities  Counts                        `json:"identities"`
+	Composition IdentityResolutionComposition `json:"composition"`
+}
+
+// IdentityResolutionComposition contains counts of profiles grouped by their
+// number of identities.
+type IdentityResolutionComposition struct {
+	One            int `json:"one"`
+	Two            int `json:"two"`
+	Three          int `json:"three"`
+	FourToTen      int `json:"fourToTen"`
+	ElevenToTwenty int `json:"elevenToTwenty"`
+	MoreThanTwenty int `json:"moreThanTwenty"`
+}
+
+// Counts contains anonymous and recognized counts.
+type Counts struct {
+	Anonymous  int `json:"anonymous"`
+	Recognized int `json:"recognized"`
+}
+
 // Warehouse is the interface implemented by warehouses.
 type Warehouse interface {
 
@@ -299,7 +324,7 @@ type Warehouse interface {
 	//
 	// This method, once called, can then return in four distinct cases:
 	//
-	// (1) the operation was successful and no error was returned;
+	// (1) the operation was successful and its counts were returned;
 	//
 	// (2) the context was canceled;
 	//
@@ -310,7 +335,7 @@ type Warehouse interface {
 	// (4) the operation ended with an unexpected and unknown error, and it is
 	// therefore up to the caller to try calling this method again by providing the
 	// same ID.
-	ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []Column, profilePrimarySources map[string]string) error
+	ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []Column, profilePrimarySources map[string]string) (*IdentityResolutionCounts, error)
 
 	// Repair repairs the database objects on the data warehouse needed by warehouses.
 	// It also takes care of correcting other inconsistent data (such as any tables
@@ -536,6 +561,89 @@ func ValidateIdentityCounts(counts *IdentityCounts) error {
 	}
 	if anonymousTotal > math.MaxInt-recognizedTotal {
 		return errors.New("warehouse returned an identity count total that is too large")
+	}
+
+	return nil
+}
+
+// ValidateIdentityResolutionCounts validates the internal consistency of
+// Identity Resolution counts returned by a warehouse.
+func ValidateIdentityResolutionCounts(counts *IdentityResolutionCounts) error {
+
+	// Validate top-level counts.
+	if counts == nil {
+		return errors.New("warehouse returned nil Identity Resolution counts")
+	}
+	if counts.Profiles.Anonymous < 0 || counts.Profiles.Recognized < 0 {
+		return fmt.Errorf("warehouse returned negative profile counts: %v", counts.Profiles)
+	}
+	if counts.Identities.Anonymous < 0 || counts.Identities.Recognized < 0 {
+		return fmt.Errorf("warehouse returned negative identity counts: %v", counts.Identities)
+	}
+	if counts.Profiles.Anonymous > math.MaxInt-counts.Profiles.Recognized {
+		return fmt.Errorf("warehouse returned a profile count total that is too large: %v", counts.Profiles)
+	}
+	if counts.Identities.Anonymous > math.MaxInt-counts.Identities.Recognized {
+		return fmt.Errorf("warehouse returned an identity count total that is too large: %v", counts.Identities)
+	}
+	profilesTotal := counts.Profiles.Anonymous + counts.Profiles.Recognized
+	identitiesTotal := counts.Identities.Anonymous + counts.Identities.Recognized
+	if profilesTotal > math.MaxInt32 {
+		return fmt.Errorf("warehouse returned a profile count total greater than %d", math.MaxInt32)
+	}
+
+	// Validate composition.
+	minimumIdentitiesPerProfile := [...]int{1, 2, 3, 4, 11, 21}
+	maximumIdentitiesPerProfile := [...]int{1, 2, 3, 10, 20}
+	composition := [...]int{
+		counts.Composition.One,
+		counts.Composition.Two,
+		counts.Composition.Three,
+		counts.Composition.FourToTen,
+		counts.Composition.ElevenToTwenty,
+		counts.Composition.MoreThanTwenty,
+	}
+	compositionTotal := 0
+	minimumIdentitiesTotal := 0
+	maximumIdentitiesTotal := 0
+	for index, count := range composition {
+		if count < 0 {
+			return fmt.Errorf("warehouse returned a negative composition count: %v", counts.Composition)
+		}
+		if count > math.MaxInt-compositionTotal {
+			return fmt.Errorf("warehouse returned a composition total that is too large: %v", counts.Composition)
+		}
+		compositionTotal += count
+		minimum := minimumIdentitiesPerProfile[index]
+		if count > (math.MaxInt-minimumIdentitiesTotal)/minimum {
+			return fmt.Errorf("warehouse returned a minimum identity total that is too large: %v", counts.Composition)
+		}
+		minimumIdentitiesTotal += count * minimum
+		if index < len(maximumIdentitiesPerProfile) {
+			maximum := maximumIdentitiesPerProfile[index]
+			if count > (math.MaxInt-maximumIdentitiesTotal)/maximum {
+				maximumIdentitiesTotal = math.MaxInt
+			} else {
+				maximumIdentitiesTotal += count * maximum
+			}
+		}
+	}
+
+	// Validate consistency between profile, identity, and composition totals.
+	if profilesTotal != compositionTotal {
+		return fmt.Errorf("warehouse returned profile counts inconsistent with composition: %v", counts)
+	}
+	if counts.Identities.Anonymous < counts.Profiles.Anonymous {
+		return fmt.Errorf("warehouse returned fewer anonymous identities than anonymous profiles: %v", counts)
+	}
+	if counts.Identities.Recognized < counts.Profiles.Recognized {
+		return fmt.Errorf("warehouse returned fewer recognized identities than recognized profiles: %v", counts)
+	}
+	if identitiesTotal < minimumIdentitiesTotal {
+		return fmt.Errorf("warehouse returned fewer identities than required by composition: %v", counts)
+	}
+	if counts.Composition.MoreThanTwenty == 0 && identitiesTotal > maximumIdentitiesTotal {
+		return fmt.Errorf("warehouse returned more identities than allowed by composition: %v", counts)
 	}
 
 	return nil

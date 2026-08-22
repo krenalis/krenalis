@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/tools/backoff"
+	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
@@ -25,36 +26,39 @@ import (
 var identityResolutionQueries string
 
 // ResolveIdentities resolves the identities.
-func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, primarySources map[string]string) (err error) {
+func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, primarySources map[string]string) (counts *warehouses.IdentityResolutionCounts, err error) {
 
 	db, err := warehouse.openDB(ctx)
 	if err != nil {
-		return snowflake(err)
+		return nil, snowflake(err)
 	}
 	status, err := warehouse.executeOperation(ctx, opID, identityResolution)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if status.alreadyCompleted {
 		if status.executionError != nil {
-			return status.executionError
+			return nil, status.executionError
 		}
-		return nil
+		if status.identityResolutionCounts == nil {
+			return nil, fmt.Errorf("identity resolution result is unavailable for operation %s", opID)
+		}
+		return status.identityResolutionCounts, nil
 	}
 
 	defer func() {
-		err = warehouse.finalizeIdentityResolution(ctx, db, opID, err)
+		counts, err = warehouse.finalizeIdentityResolution(ctx, db, opID, counts, err)
 	}()
 
 	// Determine the current version of the "krenalis_profiles" table and create
 	// a copy of it with the incremented version.
 	profilesVersion, err := warehouse.profilesVersion(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	publishedProfilesVersion, err := warehouse.publishedProfilesVersion(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	newProfilesVersion := profilesVersion + 1
 	newProfilesName := fmt.Sprintf("KRENALIS_PROFILES_%d", newProfilesVersion)
@@ -89,6 +93,12 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 		if err != nil {
 			return fmt.Errorf("cannot create profiles table (with name %s): %s", quoteIdent(newProfilesName), err)
 		}
+		// Add the identity metric columns if they are not already present.
+		_, err = tx.ExecContext(ctx, `ALTER TABLE `+quoteIdent(newProfilesName)+` ADD COLUMN IF NOT EXISTS`+
+			` "_ANONYMOUS_COUNT" INTEGER NOT NULL, "_RECOGNIZED_COUNT" INTEGER NOT NULL`)
+		if err != nil {
+			return snowflake(err)
+		}
 		// Link the candidate version to this operation so it can be published on
 		// success or removed on failure.
 		_, err = tx.ExecContext(ctx, `INSERT INTO "KRENALIS_PROFILE_SCHEMA_VERSIONS" ("VERSION", "OPERATION", "TIMESTAMP")`+
@@ -99,7 +109,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 		return nil
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Snowflake commits each DDL statement independently. Stage the view before
@@ -107,13 +117,13 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	// and no longer depends on a table left by a previous failed operation.
 	_, err = db.ExecContext(ctx, createPendingViewQuery(currentProfilesName, newProfilesName, opID, profileColumns))
 	if err != nil {
-		return snowflake(err)
+		return nil, snowflake(err)
 	}
 	if removePreviousProfilesTable {
 		// Drop the failed candidate table after preserving its schema changes.
 		_, err = db.ExecContext(ctx, `DROP TABLE IF EXISTS "KRENALIS_PROFILES_`+strconv.Itoa(profilesVersion)+`"`)
 		if err != nil {
-			return snowflake(err)
+			return nil, snowflake(err)
 		}
 	}
 
@@ -236,23 +246,65 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	ctxMulti := gosnowflake.WithMultiStatement(ctx, 5) // TODO(Gianluca): is there a better way?
 	_, err = db.ExecContext(ctxMulti, query)
 	if err != nil {
-		return snowflake(err)
+		return nil, snowflake(err)
 	}
 
 	// Call the 'RESOLVE_IDENTITIES' stored procedure (which is declared in the
 	// "identity_resolution.sql" file).
 	_, err = db.ExecContext(ctx, "CALL RESOLVE_IDENTITIES()")
 	if err != nil {
-		return snowflake(err)
+		return nil, snowflake(err)
+	}
+
+	// Count the profiles and identities produced by this Identity Resolution
+	// before publishing the new profiles table.
+	query = `SELECT
+		COALESCE(COUNT_IF("_RECOGNIZED_COUNT" = 0), 0),
+		COALESCE(COUNT_IF("_RECOGNIZED_COUNT" > 0), 0),
+		COALESCE(SUM("_ANONYMOUS_COUNT"), 0),
+		COALESCE(SUM("_RECOGNIZED_COUNT"), 0),
+		COALESCE(COUNT_IF("_ANONYMOUS_COUNT" + "_RECOGNIZED_COUNT" = 1), 0),
+		COALESCE(COUNT_IF("_ANONYMOUS_COUNT" + "_RECOGNIZED_COUNT" = 2), 0),
+		COALESCE(COUNT_IF("_ANONYMOUS_COUNT" + "_RECOGNIZED_COUNT" = 3), 0),
+		COALESCE(COUNT_IF("_ANONYMOUS_COUNT" + "_RECOGNIZED_COUNT" BETWEEN 4 AND 10), 0),
+		COALESCE(COUNT_IF("_ANONYMOUS_COUNT" + "_RECOGNIZED_COUNT" BETWEEN 11 AND 20), 0),
+		COALESCE(COUNT_IF("_ANONYMOUS_COUNT" + "_RECOGNIZED_COUNT" >= 21), 0)
+	FROM ` + quoteIdent(newProfilesName)
+	counts = &warehouses.IdentityResolutionCounts{}
+	err = db.QueryRowContext(ctx, query).Scan(
+		&counts.Profiles.Anonymous,
+		&counts.Profiles.Recognized,
+		&counts.Identities.Anonymous,
+		&counts.Identities.Recognized,
+		&counts.Composition.One,
+		&counts.Composition.Two,
+		&counts.Composition.Three,
+		&counts.Composition.FourToTen,
+		&counts.Composition.ElevenToTwenty,
+		&counts.Composition.MoreThanTwenty,
+	)
+	if err != nil {
+		return nil, snowflake(err)
+	}
+	if err := warehouses.ValidateIdentityResolutionCounts(counts); err != nil {
+		return nil, err
+	}
+
+	// Serialize the counts as the structured operation result.
+	result, err := json.Marshal(struct {
+		Counts *warehouses.IdentityResolutionCounts `json:"counts"`
+	}{Counts: counts})
+	if err != nil {
+		return nil, err
 	}
 
 	// Committing the successful operation switches the staged view to the new
 	// profiles without requiring another DDL statement.
 	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
-		return warehouse.setOperationAsCompleted(ctx, tx, opID, nil)
+		return warehouse.setOperationAsCompleted(ctx, tx, opID, result, nil)
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Replace the staged view with its final definition, then remove the old
@@ -261,50 +313,54 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	_, err2 := db.ExecContext(ctx, createViewQuery(newProfilesName, profileColumns, true))
 	if err2 != nil {
 		slog.Warn("cannot finalize identity resolution view", "err", warehouses.NewOperationError(snowflake(err2)))
-		return nil
+		return counts, nil
 	}
 	_, err2 = db.ExecContext(ctx, `DROP TABLE IF EXISTS `+quoteIdent(currentProfilesName))
 	if err2 != nil {
 		slog.Warn("cannot drop previous identity resolution table", "err", warehouses.NewOperationError(snowflake(err2)))
 	}
 
-	return nil
+	return counts, nil
 }
 
-// finalizeIdentityResolution returns nil on local success. On failure, it
-// attempts to mark the operation as failed and returns its persisted outcome.
-func (warehouse *Snowflake) finalizeIdentityResolution(ctx context.Context, conn connection, opID string, operationErr error) error {
+// finalizeIdentityResolution returns the local result on success. On failure,
+// it attempts to mark the operation as failed and returns its persisted result
+// or execution error.
+func (warehouse *Snowflake) finalizeIdentityResolution(ctx context.Context, conn connection, opID string, counts *warehouses.IdentityResolutionCounts, operationErr error) (*warehouses.IdentityResolutionCounts, error) {
 
 	if operationErr == nil {
-		return nil
+		return counts, nil
 	}
 	operationError := warehouses.NewOperationError(operationErr)
 
 	bo := backoff.New(200)
 	bo.SetCap(30 * time.Second)
 	for bo.Next(ctx) {
-		if err := warehouse.setOperationAsCompleted(ctx, conn, opID, operationError); err != nil {
+		if err := warehouse.setOperationAsCompleted(ctx, conn, opID, nil, operationError); err != nil {
 			slog.Error("cannot mark identity resolution operation as failed, retrying",
 				"err", warehouses.NewOperationError(err), "operationError", operationError)
 			continue
 		}
-		status, err := warehouse.readOperationStatus(ctx, conn, opID)
+		status, err := warehouse.readOperationStatus(ctx, conn, opID, identityResolution)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if status == nil {
-			return fmt.Errorf("identity resolution operation %s not found", opID)
+			return nil, fmt.Errorf("identity resolution operation %s not found", opID)
 		}
 		if !status.alreadyCompleted {
-			return fmt.Errorf("identity resolution operation %s is not completed", opID)
+			return nil, fmt.Errorf("identity resolution operation %s is not completed", opID)
 		}
 		if status.executionError != nil {
-			return status.executionError
+			return nil, status.executionError
 		}
-		return nil
+		if status.identityResolutionCounts == nil {
+			return nil, fmt.Errorf("identity resolution result is unavailable for operation %s", opID)
+		}
+		return status.identityResolutionCounts, nil
 	}
 
-	return ctx.Err()
+	return nil, ctx.Err()
 }
 
 // createPendingViewQuery returns a Snowflake view definition that exposes the
@@ -318,6 +374,7 @@ func createPendingViewQuery(currentProfilesName, newProfilesName, opID string, p
 	quoteString(&completed, opID)
 	completed.WriteString(`
 			AND "COMPLETED_AT" IS NOT NULL
+			AND "RESULT" IS NOT NULL
 			AND "ERROR" = ''
 	)`)
 

@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"math"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -207,27 +206,6 @@ func (store *Store) CountIdentities(ctx context.Context, pipelines []string) (*w
 	counts, err := store.warehouse().CountIdentities(ctx, pipelines)
 
 	return counts, unavailableError(err)
-}
-
-// CountProfiles returns the exact number of profiles in the workspace's data
-// warehouse. If the warehouse is in maintenance mode, it returns
-// ErrMaintenanceMode. Warehouse errors are returned as *UnavailableError.
-func (store *Store) CountProfiles(ctx context.Context) (int, error) {
-	store.mustBeOpen()
-	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
-	if err != nil {
-		return 0, err
-	}
-	defer done()
-	count, err := store.warehouse().Count(ctx, "profiles")
-	if err != nil {
-		return 0, unavailableError(err)
-	}
-	if count < 0 || count > math.MaxInt32 {
-		return 0, unavailableError(fmt.Errorf("warehouse returned profile count outside the supported range: %d", count))
-	}
-
-	return count, nil
 }
 
 // DeleteDestinationProfiles deletes the destination profiles of the provided
@@ -542,7 +520,8 @@ func (store *Store) Repair(ctx context.Context, userSchema types.Type) error {
 //
 // This method, once called, can then return in five distinct cases:
 //
-// (1) the operation was successful and no error was returned;
+// (1) the operation was successful, the resulting counts were returned, and no
+// error was returned;
 //
 // (2) the workspace no longer exists and [ErrWorkspaceNotExist] was returned;
 //
@@ -555,7 +534,7 @@ func (store *Store) Repair(ctx context.Context, userSchema types.Type) error {
 // (5) the operation ended with an unexpected and unknown error, and it is
 // therefore up to the caller to try calling this method again by providing the
 // same ID.
-func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
+func (store *Store) ResolveIdentities(ctx context.Context, opID string) (*warehouses.IdentityResolutionCounts, error) {
 	store.mustBeOpen()
 
 	// TODO(Gianluca): the context here is discarded, rather than passed to the
@@ -563,14 +542,14 @@ func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
 	// https://github.com/krenalis/krenalis/issues/1224.
 	_, done, err := store.mc.StartOperation(ctx, normalMode)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer done()
 
 	// Retrieve the workspace.
 	ws, ok := store.ds.state.Workspace(store.workspace)
 	if !ok {
-		return ErrWorkspaceNotExist
+		return nil, ErrWorkspaceNotExist
 	}
 
 	// Determine the identifiers columns.
@@ -579,7 +558,7 @@ func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
 	for i, ident := range ws.Identifiers {
 		identifier, err := properties.ByPath(ident)
 		if err != nil {
-			return errors.New("unexpected error: identifier does not exist in profile schema")
+			return nil, errors.New("unexpected error: identifier does not exist in profile schema")
 		}
 		identifiers[i] = warehouses.Column{
 			Name:     strings.ReplaceAll(ident, ".", "_"),
@@ -599,12 +578,7 @@ func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
 	}
 
 	// Resolve the identities.
-	err = store.warehouse().ResolveIdentities(ctx, opID, identifiers, profileColumns, primarySources)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return store.warehouse().ResolveIdentities(ctx, opID, identifiers, profileColumns, primarySources)
 }
 
 // TestWarehouseUpdate tests if it is possible to update the warehouse of the
