@@ -498,6 +498,19 @@ func (k *Krenalis) Identities(kpid uuid.UUID, first, limit int) ([]Identity, int
 	return response.Identities, response.Total
 }
 
+// IdentityResolutionRuns returns Identity Resolution run history.
+func (k *Krenalis) IdentityResolutionRuns(first, limit int, status string) []IdentityResolutionRun {
+	var response struct {
+		Runs []IdentityResolutionRun `json:"runs"`
+	}
+	path := fmt.Sprintf("/v1/identity-resolution/runs?first=%d&limit=%d", first, limit)
+	if status != "" {
+		path += "&status=" + url.QueryEscape(status)
+	}
+	k.Call("GET", path, nil, nil, &response)
+	return response.Runs
+}
+
 // JavaScriptSDKURL returns the JavaScript SDK URL from the public metadata.
 func (k *Krenalis) JavaScriptSDKURL() string {
 	var metadata map[string]any
@@ -693,7 +706,7 @@ func (k *Krenalis) TryRepairWarehouse() error {
 // RunIdentityResolutionAndWait runs the identity resolution and waits for it to
 // complete before returning.
 func (k *Krenalis) RunIdentityResolutionAndWait() {
-	ts := time.Now().UTC()
+	ts := time.Now().UTC().Truncate(time.Millisecond)
 	k.Call("POST", "/v1/identity-resolution/start", nil, nil, nil)
 	// Waits for the Identity Resolution that was started following the call to
 	// this method to finish.
