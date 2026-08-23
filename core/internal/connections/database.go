@@ -601,6 +601,7 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 				}
 				record.ID = ""
 				record.Attributes = nil
+				record.UpdatedAt = time.Time{}
 				record.Err = nil
 			}
 			if err := ctx.Err(); err != nil {
