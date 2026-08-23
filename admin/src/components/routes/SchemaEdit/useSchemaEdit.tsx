@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect, ReactNode, useRef, useContext } from 'react';
 import Type, { ObjectType, Role, TypeKind } from '../../../lib/api/types/types';
 import { SortableGridRow, GridColumn } from '../../base/Grid/Grid.types';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 import { EditableProperty, EditableSchema, transformSchema, normalizeSchema } from './SchemaEdit.helpers';
 import { PreviewAlterProfileSchemaResponse, RePaths } from '../../../lib/api/types/responses';
 import AppContext from '../../../context/AppContext';
@@ -18,8 +17,9 @@ import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Name' },
 	{ name: 'Type' },
+	{ name: 'Description' },
 	{ name: 'Primary source' },
-	{ name: '' }, // buttons
+	{ name: '' },
 ];
 
 interface PropertyToEdit {
@@ -46,12 +46,23 @@ interface PropertyToRemove {
 	type: TypeKind;
 }
 
+interface PropertyParent {
+	key: string;
+	label: string;
+	indentation: number;
+	root: string;
+}
+
+type PropertyChangeStatus = 'added' | 'modified';
+
 const useSchemaEdit = (
 	schema: ObjectType,
-	onAddClick: (parentKey: string, indentation: number, root: string) => void,
 	onEditClick: (propertyKey: string, property: EditableProperty) => void,
-	onRemoveClick: (propertyKey: string, propertyName: string, typeKind: TypeKind) => void,
 	onClose: () => void,
+	selectedPropertyKey?: string,
+	search?: string,
+	showOnlyChanged?: boolean,
+	initialPropertyKey?: string | null,
 ) => {
 	const [editableSchema, setEditableSchema] = useState<EditableSchema>();
 	const [queries, setQueries] = useState<string[]>();
@@ -65,13 +76,60 @@ const useSchemaEdit = (
 
 	const { setIsAltering } = useContext(SchemaContext);
 
-	const primarySources = useRef<PrimarySources>(workspaces.find((w) => w.id === selectedWorkspace).primarySources);
+	const primarySources = useRef<PrimarySources>(
+		structuredClone(workspaces.find((w) => w.id === selectedWorkspace).primarySources),
+	);
 	const rePaths = useRef<RePaths>({});
 	const deletedAppliedKeys = useRef<string[]>([]);
-
-	const rows = useMemo(() => {
-		return getRows(editableSchema, primarySources.current, connections, onAddClick, onEditClick, onRemoveClick);
+	const initialEditableSchema = useRef<EditableSchema>();
+	const initialPrimarySources = useRef<PrimarySources>();
+	const initialSchemaEditStateKey = useRef<string>();
+	const schemaEditStateKey = useMemo(() => {
+		if (editableSchema == null) {
+			return null;
+		}
+		try {
+			return buildSchemaEditStateKey(editableSchema, primarySources.current, rePaths.current);
+		} catch {
+			return null;
+		}
 	}, [editableSchema]);
+
+	const hasSchemaChanges =
+		initialSchemaEditStateKey.current != null && schemaEditStateKey !== initialSchemaEditStateKey.current;
+
+	const propertyStatuses = useMemo(() => {
+		return getPropertyChangeStatuses(
+			editableSchema,
+			initialEditableSchema.current,
+			primarySources.current,
+			initialPrimarySources.current,
+		);
+	}, [editableSchema]);
+	const { objectCount, propertyCount } = useMemo(() => {
+		let objectCount = 0;
+		const properties = Object.values(editableSchema || {});
+		for (const property of properties) {
+			if (property.type.kind === 'object') {
+				objectCount++;
+			}
+		}
+
+		return { objectCount, propertyCount: properties.length };
+	}, [editableSchema]);
+	const propertyParents = useMemo(() => getPropertyParents(editableSchema), [editableSchema]);
+	const rows = useMemo(() => {
+		return getRows(
+			editableSchema,
+			primarySources.current,
+			connections,
+			propertyStatuses,
+			selectedPropertyKey,
+			search,
+			showOnlyChanged,
+			onEditClick,
+		);
+	}, [editableSchema, onEditClick, propertyStatuses, search, selectedPropertyKey, showOnlyChanged]);
 
 	useEffect(() => {
 		if (schema == null) {
@@ -84,7 +142,16 @@ const useSchemaEdit = (
 				s.properties.push(p);
 			}
 		}
-		setEditableSchema(transformSchema(s));
+		rePaths.current = {};
+		deletedAppliedKeys.current = [];
+		const editable = transformSchema(s);
+		initialEditableSchema.current = structuredClone(editable);
+		initialPrimarySources.current = structuredClone(primarySources.current);
+		initialSchemaEditStateKey.current = buildSchemaEditStateKey(editable, primarySources.current, rePaths.current);
+		setEditableSchema(editable);
+		if (initialPropertyKey != null && editable[initialPropertyKey] != null) {
+			onEditClick(initialPropertyKey, editable[initialPropertyKey]);
+		}
 	}, [schema]);
 
 	const onAddProperty = (property: PropertyToEdit, primarySource: string | null) => {
@@ -390,12 +457,21 @@ const useSchemaEdit = (
 	const onCancelChanges = () => {
 		setQueries(null);
 	};
+	const changeCount = hasSchemaChanges
+		? Math.max(1, Object.keys(propertyStatuses).length + deletedAppliedKeys.current.length)
+		: 0;
 
 	return {
 		rows: rows,
 		columns: SCHEMA_COLUMNS,
+		changeCount,
+		objectCount,
+		propertyCount,
+		propertyParents,
+		propertyStatuses,
 		primarySources: primarySources.current,
 		queries,
+		hasSchemaChanges,
 		isQueriesLoading,
 		isConfirmChangesLoading,
 		onAddProperty,
@@ -409,17 +485,118 @@ const useSchemaEdit = (
 	};
 };
 
+const buildSchemaEditStateKey = (
+	editableSchema: EditableSchema,
+	primarySources: PrimarySources,
+	rePaths: RePaths,
+): string => {
+	const schema = normalizeSchema(structuredClone(editableSchema));
+	const sortedPrimarySources = Object.entries(primarySources).sort(([a], [b]) => a.localeCompare(b));
+	const sortedRePaths = Object.entries(rePaths).sort(([a], [b]) => a.localeCompare(b));
+	return JSON.stringify({ schema, primarySources: sortedPrimarySources, rePaths: sortedRePaths });
+};
+
+const getPropertyChangeStatuses = (
+	schema: EditableSchema,
+	initialSchema: EditableSchema,
+	primarySources: PrimarySources,
+	initialPrimarySources: PrimarySources,
+): Record<string, PropertyChangeStatus> => {
+	const statuses: Record<string, PropertyChangeStatus> = {};
+	if (schema == null || initialSchema == null || initialPrimarySources == null) {
+		return statuses;
+	}
+	for (const [key, property] of Object.entries(schema)) {
+		const initialProperty = initialSchema[key];
+		if (initialProperty == null) {
+			statuses[key] = 'added';
+			continue;
+		}
+		if (
+			JSON.stringify(property) !== JSON.stringify(initialProperty) ||
+			primarySources[key] !== initialPrimarySources[key]
+		) {
+			statuses[key] = 'modified';
+		}
+	}
+	return statuses;
+};
+
+const getPropertyParents = (schema: EditableSchema): PropertyParent[] => {
+	const parents: PropertyParent[] = [{ key: '', label: 'Profile schema / root', indentation: 0, root: '' }];
+	if (schema == null) {
+		return parents;
+	}
+	for (const [key, property] of Object.entries(schema)) {
+		if (property.type.kind !== 'object') {
+			continue;
+		}
+		const path = key
+			.split('.')
+			.map((_, index, fragments) => schema[fragments.slice(0, index + 1).join('.')]?.name)
+			.filter((fragment) => fragment != null)
+			.join(' / ');
+		parents.push({
+			key,
+			label: `Profile schema / ${path}`,
+			indentation: property.indentation + 1,
+			root: property.root,
+		});
+	}
+	return parents;
+};
+
+const getVisiblePropertyKeys = (
+	schema: EditableSchema,
+	statuses: Record<string, PropertyChangeStatus>,
+	search: string | undefined,
+	showOnlyChanged: boolean | undefined,
+): Set<string> => {
+	const visibleKeys = new Set<string>();
+	if (schema == null) {
+		return visibleKeys;
+	}
+	const term = search?.trim().toLocaleLowerCase() || '';
+	for (const [key, property] of Object.entries(schema)) {
+		const matchesSearch =
+			term === '' ||
+			`${property.name} ${property.description || ''} ${toKrenalisStringType(property.type)}`
+				.toLocaleLowerCase()
+				.includes(term);
+		const matchesStatus = !showOnlyChanged || statuses[key] != null;
+		if (!matchesSearch || !matchesStatus) {
+			continue;
+		}
+		visibleKeys.add(key);
+		const fragments = key.split('.');
+		for (let index = 1; index < fragments.length; index++) {
+			visibleKeys.add(fragments.slice(0, index).join('.'));
+		}
+		if (term !== '' && property.type.kind === 'object') {
+			for (const candidateKey of Object.keys(schema)) {
+				if (candidateKey.startsWith(`${key}.`)) {
+					visibleKeys.add(candidateKey);
+				}
+			}
+		}
+	}
+	return visibleKeys;
+};
 const getRows = (
 	schema: EditableSchema,
 	primarySources: PrimarySources,
 	connections: TransformedConnection[],
-	onAddClick: (parentKey: string, indentation: number, root: string) => void,
+	propertyStatuses: Record<string, PropertyChangeStatus>,
+	selectedPropertyKey: string | undefined,
+	search: string | undefined,
+	showOnlyChanged: boolean | undefined,
 	onEditClick: (propertyKey: string, property: EditableProperty) => void,
-	onRemoveClick: (propertyKey: string, propertyName: string, typeKind: TypeKind) => void,
 ): SortableGridRow[] => {
 	const mappedRows = {};
+	const visibleKeys = getVisiblePropertyKeys(schema, propertyStatuses, search, showOnlyChanged);
+	const isFiltered = (search?.trim() || '') !== '' || showOnlyChanged === true;
 	for (const propertyKey in schema) {
-		if (!schema.hasOwnProperty(propertyKey)) {
+		if (!schema.hasOwnProperty(propertyKey) || !visibleKeys.has(propertyKey)) {
 			continue;
 		}
 		let primarySourceConnection: TransformedConnection | null = null;
@@ -427,6 +604,7 @@ const getRows = (
 			primarySourceConnection = connections.find((c) => c.id === primarySources[propertyKey]);
 		}
 		const property = schema[propertyKey];
+		const expanded = isFiltered || selectedPropertyKey?.startsWith(`${propertyKey}.`);
 		const isSubProperty = property.indentation > 0;
 		if (isSubProperty) {
 			let fragments = propertyKey.split('.');
@@ -444,9 +622,11 @@ const getRows = (
 					propertyKey,
 					property,
 					primarySourceConnection,
-					onAddClick,
+					propertyStatuses[propertyKey],
+					selectedPropertyKey === propertyKey,
+					expanded,
+					isFiltered,
 					onEditClick,
-					onRemoveClick,
 				);
 				m[propertyKey] = subMap;
 			} else {
@@ -454,9 +634,11 @@ const getRows = (
 					propertyKey,
 					property,
 					primarySourceConnection,
-					null,
+					propertyStatuses[propertyKey],
+					selectedPropertyKey === propertyKey,
+					expanded,
+					isFiltered,
 					onEditClick,
-					onRemoveClick,
 				);
 			}
 		} else {
@@ -466,9 +648,11 @@ const getRows = (
 					propertyKey,
 					property,
 					primarySourceConnection,
-					onAddClick,
+					propertyStatuses[propertyKey],
+					selectedPropertyKey === propertyKey,
+					expanded,
+					isFiltered,
 					onEditClick,
-					onRemoveClick,
 				);
 				mappedRows[propertyKey] = subMap;
 			} else {
@@ -476,9 +660,11 @@ const getRows = (
 					propertyKey,
 					property,
 					primarySourceConnection,
-					null,
+					propertyStatuses[propertyKey],
+					selectedPropertyKey === propertyKey,
+					expanded,
+					isFiltered,
 					onEditClick,
-					onRemoveClick,
 				);
 			}
 		}
@@ -491,49 +677,21 @@ const buildRow = (
 	propertyKey: string,
 	property: EditableProperty,
 	primarySourceConnection: TransformedConnection,
-	onAddClick: (parentKey: string, indentation: number, root: string) => void,
+	status: PropertyChangeStatus | undefined,
+	selected: boolean,
+	expanded: boolean,
+	isFiltered: boolean,
 	onEditClick: (propertyKey: string, property: EditableProperty) => void,
-	onRemoveClick: (propertyKey: string, propertyName: string, typeKind: TypeKind) => void,
 ): SortableGridRow => {
-	const buttons = (
-		<div className='schema-edit__property-buttons'>
-			<SlButton
-				className='schema-edit__property-buttons-edit'
-				size='small'
-				onClick={() => onEditClick(propertyKey, property)}
-			>
-				Edit
-			</SlButton>
-			<SlButton
-				size='small'
-				className='schema-edit__property-buttons-remove'
-				variant='danger'
-				outline={true}
-				onClick={() => onRemoveClick(propertyKey, property.name, property.type.kind)}
-			>
-				Remove
-			</SlButton>
+	const actions = (
+		<div className='schema-edit__property-actions'>
+			{status === 'added' && <SlBadge variant='success'>Added</SlBadge>}
+			{status === 'modified' && <SlBadge variant='warning'>Modified</SlBadge>}
 		</div>
 	);
-	let typeCell: ReactNode;
-	if (property.type.kind === 'object') {
-		typeCell = (
-			<div className='schema-edit__editable-object-cell'>
-				{property.type.kind}
-				<SlButton
-					size='small'
-					variant='primary'
-					onClick={() => onAddClick(propertyKey, property.indentation + 1, property.name)}
-					outline={true}
-				>
-					<SlIcon name='plus-circle' slot='suffix' />
-					Add property
-				</SlButton>
-			</div>
-		);
-	} else {
-		typeCell = toKrenalisStringType(property.type);
-	}
+	const typeCell: ReactNode = (
+		<span className='schema-edit__property-technical-type'>{toKrenalisStringType(property.type)}</span>
+	);
 	let primarySourceCell: ReactNode;
 	if (property.type.kind !== 'object' && property.type.kind !== 'array') {
 		if (primarySourceConnection) {
@@ -544,13 +702,22 @@ const buildRow = (
 				</div>
 			);
 		} else {
-			primarySourceCell = 'None';
+			primarySourceCell = <span className='schema-edit__empty-cell'>—</span>;
 		}
 	}
 	return {
-		cells: [property.name, typeCell, primarySourceCell, buttons],
-		dragKey: propertyKey,
+		cells: [
+			property.name,
+			typeCell,
+			property.description || <span className='schema-edit__empty-cell'>—</span>,
+			primarySourceCell,
+			actions,
+		],
+		dragKey: isFiltered ? '' : propertyKey,
+		expanded,
 		id: propertyKey,
+		onClick: () => onEditClick(propertyKey, property),
+		selected,
 	};
 };
 
@@ -588,4 +755,4 @@ const validateEditableSchema = (editableSchema: EditableSchema) => {
 	}
 };
 
-export { useSchemaEdit, PropertyToEdit, PropertyToRemove };
+export { useSchemaEdit, PropertyChangeStatus, PropertyParent, PropertyToEdit, PropertyToRemove };

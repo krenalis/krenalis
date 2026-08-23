@@ -16,6 +16,7 @@ interface StandardGridRow {
 	onClick?: () => void;
 	animation?: string;
 	selected?: boolean;
+	expanded?: boolean;
 }
 
 interface SortableGridRow extends StandardGridRow {
@@ -30,9 +31,23 @@ interface GridCell {
 	alignment?: string;
 }
 
+interface GridNestedRowsIndentation {
+	base: number;
+	step: number;
+}
+
 interface SortableRowComponent {
 	id: string;
 	row: ReactNode;
 }
 
-export type { GridColumn, GridRow, GridCell, StandardGridRow, NestedGridRows, SortableGridRow, SortableRowComponent };
+export type {
+	GridColumn,
+	GridRow,
+	GridCell,
+	GridNestedRowsIndentation,
+	StandardGridRow,
+	NestedGridRows,
+	SortableGridRow,
+	SortableRowComponent,
+};

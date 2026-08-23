@@ -1,7 +1,7 @@
-import React, { useState, ReactNode, Fragment } from 'react';
+import React, { useEffect, useState, ReactNode, Fragment } from 'react';
 import './GridNestedRows.css';
 import GridRow from '../GridRow/GridRow';
-import { NestedGridRows, GridColumn, SortableGridRow } from '../Grid.types';
+import { NestedGridRows, GridColumn, GridNestedRowsIndentation, SortableGridRow } from '../Grid.types';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import {
 	DndContext,
@@ -24,6 +24,7 @@ interface GridNestedRowsProps {
 	nesting: number;
 	onSortRow?: (overRowID: string, movedRowID: string) => void;
 	isSortable?: boolean;
+	indentation?: GridNestedRowsIndentation;
 	reloadColumnsWidths: () => void;
 }
 
@@ -34,10 +35,11 @@ const GridNestedRows = ({
 	nesting,
 	onSortRow,
 	isSortable,
+	indentation,
 	reloadColumnsWidths,
 }: GridNestedRowsProps) => {
 	const [activeRow, setActiveRow] = useState(null);
-	const [isExpanded, setIsExpanded] = useState(false);
+	const [isExpanded, setIsExpanded] = useState(!Array.isArray(rows[0]) && rows[0].expanded === true);
 	const sensors = useSensors(
 		useSensor(PointerSensor),
 		useSensor(KeyboardSensor, {
@@ -58,10 +60,20 @@ const GridNestedRows = ({
 		setActiveRow(active.id);
 	};
 
-	const onExpand = () => {
+	const onExpand = (event: React.MouseEvent, onSelect?: () => void) => {
 		setIsExpanded(!isExpanded);
 		reloadColumnsWidths();
+		// Expand and collapse all use programmatic clicks and must not change the selected row.
+		if (event.isTrusted) {
+			onSelect?.();
+		}
 	};
+
+	useEffect(() => {
+		if (!Array.isArray(rows[0]) && rows[0].expanded === true) {
+			setIsExpanded(true);
+		}
+	}, [rows]);
 
 	let parentComponent: ReactNode = null;
 	let childrenComponents: any[] = [];
@@ -77,6 +89,7 @@ const GridNestedRows = ({
 					nesting={nesting + 1}
 					onSortRow={onSortRow}
 					isSortable={isSortable}
+					indentation={indentation}
 					reloadColumnsWidths={reloadColumnsWidths}
 				/>
 			);
@@ -94,7 +107,11 @@ const GridNestedRows = ({
 			if (i === 0) {
 				parentComponent = (
 					<Fragment key={i}>
-						<SlIcon className='grid__row-expand' name='caret-right-fill' onClick={onExpand}></SlIcon>
+						<SlIcon
+							className='grid__row-expand'
+							name='caret-right-fill'
+							onClick={(event) => onExpand(event, r.onClick)}
+						></SlIcon>
 						<GridRow row={r} columns={columns} className='grid__row grid__row--parent' />
 					</Fragment>
 				);
@@ -115,8 +132,10 @@ const GridNestedRows = ({
 		}
 	}
 
-	const parentIndentation = 50 + 30 * (nesting - 1) + 'px'; // takes the indentation of the previous level.
-	const childrenIndentation = 50 + 30 * nesting + 'px'; // takes the incremented indentation.
+	const baseIndentation = indentation?.base ?? 50;
+	const indentationStep = indentation?.step ?? 30;
+	const parentIndentation = baseIndentation + indentationStep * (nesting - 1) + 'px';
+	const childrenIndentation = baseIndentation + indentationStep * nesting + 'px';
 	return (
 		<div
 			className={`${className}${isExpanded ? ' grid__nested-rows--expanded' : ''}`}

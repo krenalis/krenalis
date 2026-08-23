@@ -1,7 +1,13 @@
 import React, { ReactNode, forwardRef, useMemo, useRef, useEffect, useImperativeHandle } from 'react';
 import './Grid.css';
 import GridHeaderRow from './GridHeaderRow/GridHeaderRow';
-import { GridRow as GridRowType, GridColumn, NestedGridRows, StandardGridRow } from './Grid.types';
+import {
+	GridRow as GridRowType,
+	GridColumn,
+	GridNestedRowsIndentation,
+	NestedGridRows,
+	StandardGridRow,
+} from './Grid.types';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { useGrid } from './useGrid';
@@ -23,6 +29,7 @@ interface GridProps {
 	// viewport (for instance, because it was inside a tab panel group).
 	isShown?: boolean;
 	loadingText?: string;
+	nestedRowsIndentation?: GridNestedRowsIndentation;
 }
 
 interface gridMethods {
@@ -45,6 +52,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 			className,
 			isShown,
 			loadingText,
+			nestedRowsIndentation,
 		}: GridProps,
 		ref,
 	) => {
@@ -103,6 +111,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 							columns={columns}
 							className={`grid__nested-rows ${className}`}
 							nesting={1}
+							indentation={nestedRowsIndentation}
 							reloadColumnsWidths={reloadColumnsWidths}
 						/>,
 					);
@@ -119,7 +128,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 				);
 			}
 			return rowComponents;
-		}, [rows]);
+		}, [rows, nestedRowsIndentation]);
 
 		let widths = columnsWidths;
 		if (gridColumnsWidths != null) {
