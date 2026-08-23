@@ -106,6 +106,49 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 
 	cursor := run.Cursor
 
+	// processBatch transforms and queues identities, then persists the cursor reached by the batch.
+	processBatch := func(batch []connections.Record) error {
+
+		// Transform the users.
+		transformationRecords = transformationRecords[:len(batch)]
+		for i, user := range batch {
+			transformationRecords[i] = transformers.Record{Attributes: user.Attributes}
+		}
+		err := transformer.Transform(ctx, transformationRecords)
+		if err != nil {
+			if _, ok := err.(transformers.FunctionExecError); ok {
+				err = newPipelineError(metrics.TransformationStep, err)
+			}
+			return err
+		}
+
+		// Set the identities into the data warehouse.
+		for i, record := range transformationRecords {
+			user := batch[i]
+			if err := record.Err; err != nil {
+				switch err.(type) {
+				case transformers.RecordTransformationError:
+					this.core.metrics.TransformationFailed(pipeline.ID, 1, err.Error())
+				case transformers.RecordValidationError:
+					this.core.metrics.TransformationPassed(pipeline.ID, 1)
+					this.core.metrics.OutputValidationFailed(pipeline.ID, 1, err.Error())
+				}
+				_ = iw.Keep(ctx, user.ID)
+				continue
+			}
+			user.Attributes = record.Attributes
+			this.core.metrics.TransformationPassed(pipeline.ID, 1)
+			this.core.metrics.OutputValidationPassed(pipeline.ID, 1)
+			_ = iw.Write(ctx, datastore.Identity{
+				ID:         user.ID,
+				Attributes: user.Attributes,
+				UpdatedAt:  user.UpdatedAt,
+			})
+		}
+
+		return this.setRunCursor(ctx, cursor)
+	}
+
 	// Read the users.
 	for user := range records.All(ctx) {
 
@@ -117,7 +160,7 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 			} else {
 				this.core.metrics.ReceiveFailed(pipeline.ID, 1, user.Err.Error())
 			}
-			goto Next
+			continue
 		}
 
 		this.core.metrics.ReceivePassed(pipeline.ID, 1)
@@ -127,7 +170,7 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 		if connector.Type != state.Database {
 			if !filters.Applies(pipeline.Filter, user.Attributes) {
 				this.core.metrics.FilterFailed(pipeline.ID, 1)
-				goto Next
+				continue
 			}
 			this.core.metrics.FilterPassed(pipeline.ID, 1)
 		}
@@ -138,57 +181,12 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 
 		users = append(users, user)
 
-	Next:
-
-		// Does a batch processing of users.
-		if len(users) == 100 || records.Last() {
-
-			// Transform the users.
-			transformationRecords = transformationRecords[0:len(users)]
-			for i, user := range users {
-				transformationRecords[i].Attributes = user.Attributes
-			}
-			err := transformer.Transform(ctx, transformationRecords)
-			if err != nil {
-				if _, ok := err.(transformers.FunctionExecError); ok {
-					err = newPipelineError(metrics.TransformationStep, err)
-				}
+		if len(users) == 100 {
+			if err := processBatch(users); err != nil {
 				return err
 			}
-
-			// Set the identities into the data warehouse.
-			for i, record := range transformationRecords {
-				user := users[i]
-				if err := record.Err; err != nil {
-					switch err.(type) {
-					case transformers.RecordTransformationError:
-						this.core.metrics.TransformationFailed(pipeline.ID, 1, err.Error())
-					case transformers.RecordValidationError:
-						this.core.metrics.TransformationPassed(pipeline.ID, 1)
-						this.core.metrics.OutputValidationFailed(pipeline.ID, 1, err.Error())
-					}
-					_ = iw.Keep(ctx, user.ID)
-					continue
-				}
-				user.Attributes = record.Attributes
-				this.core.metrics.TransformationPassed(pipeline.ID, 1)
-				this.core.metrics.OutputValidationPassed(pipeline.ID, 1)
-				_ = iw.Write(ctx, datastore.Identity{
-					ID:         user.ID,
-					Attributes: user.Attributes,
-					UpdatedAt:  user.UpdatedAt,
-				})
-			}
-
-			// Set the cursor.
-			err = this.setRunCursor(ctx, cursor)
-			if err != nil {
-				return err
-			}
-
 			clear(users)
 			users = users[0:0]
-
 		}
 
 	}
@@ -201,6 +199,11 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 			err = fmt.Errorf("file does not contain any sheet named %q", pipeline.Sheet)
 		}
 		return newPipelineError(metrics.ReceiveStep, err)
+	}
+	if len(users) > 0 {
+		if err := processBatch(users); err != nil {
+			return err
+		}
 	}
 
 	// TODO(Gianluca): calling Close may return error in case the warehouse mode
