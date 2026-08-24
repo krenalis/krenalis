@@ -1,5 +1,5 @@
 import React, { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import './IdentityOverview.css';
+import './IdentityDashboard.css';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
@@ -20,8 +20,8 @@ import {
 	DisplayDateRange,
 	DELETED_CONNECTION_LABEL,
 	DELETED_CONNECTION_SCOPE,
-	IDENTITY_OVERVIEW_DEFAULT_DATE_PRESET,
-	IdentityOverviewDatePreset,
+	IDENTITY_DASHBOARD_DEFAULT_DATE_PRESET,
+	IdentityDashboardDatePreset,
 	aggregateConnections,
 	buildDeletedConnectionMetric,
 	buildIdentityChangeSinceResolutionPoints,
@@ -56,7 +56,7 @@ import {
 	instantToDateKey,
 	pickerDateToDateKey,
 	todayUTCDateKey,
-} from './IdentityOverview.helpers';
+} from './IdentityDashboard.helpers';
 import {
 	ConnectionsChart,
 	HistorySection,
@@ -72,11 +72,11 @@ import {
 	SectionHeading,
 	StateMessage,
 	TypeDistributionCard,
-} from './IdentityOverview.components';
+} from './IdentityDashboard.components';
 
 const initialDisplayRange = (): DisplayDateRange => {
 	const end = todayUTCDateKey();
-	return displayRangeForPreset(IDENTITY_OVERVIEW_DEFAULT_DATE_PRESET, end);
+	return displayRangeForPreset(IDENTITY_DASHBOARD_DEFAULT_DATE_PRESET, end);
 };
 
 const initialCustomRange = (): SegmentedDateRangeSelection[] => {
@@ -90,7 +90,7 @@ const initialCustomRange = (): SegmentedDateRangeSelection[] => {
 	];
 };
 
-const DATE_RANGE_PRESETS: SegmentedDateRangePreset<IdentityOverviewDatePreset>[] = [
+const DATE_RANGE_PRESETS: SegmentedDateRangePreset<IdentityDashboardDatePreset>[] = [
 	{ value: 'last7Days', label: 'Last 7 days' },
 	{ value: 'last30Days', label: 'Last 30 days' },
 	{ value: 'last90Days', label: 'Last 90 days' },
@@ -105,14 +105,14 @@ interface LoadMetricsOptions {
 	preserveData?: boolean;
 }
 
-const IdentityOverview = () => {
+const IdentityDashboard = () => {
 	const { api, connections, selectedWorkspace, setTitle } = useContext(AppContext);
 	const [displayRange, setDisplayRange] = useState<DisplayDateRange>(initialDisplayRange);
 	const [loadedIdentityDisplayRange, setLoadedIdentityDisplayRange] = useState<DisplayDateRange>(initialDisplayRange);
 	const [loadedResolutionDisplayRange, setLoadedResolutionDisplayRange] =
 		useState<DisplayDateRange>(initialDisplayRange);
-	const [selectedDateRange, setSelectedDateRange] = useState<IdentityOverviewDatePreset | 'Custom'>(
-		IDENTITY_OVERVIEW_DEFAULT_DATE_PRESET,
+	const [selectedDateRange, setSelectedDateRange] = useState<IdentityDashboardDatePreset | 'Custom'>(
+		IDENTITY_DASHBOARD_DEFAULT_DATE_PRESET,
 	);
 	const [customDateRange, setCustomDateRange] = useState<SegmentedDateRangeSelection[]>(initialCustomRange);
 	const [latestIdentityMetric, setLatestIdentityMetric] = useState<IdentityMetric>();
@@ -154,7 +154,7 @@ const IdentityOverview = () => {
 	const previousSourceConnectionCatalogKey = useRef(sourceConnectionCatalogKey);
 
 	useLayoutEffect(() => {
-		setTitle('Profile Unification / Overview');
+		setTitle('Profile Unification / Dashboard');
 	}, [setTitle]);
 
 	useLayoutEffect(() => {
@@ -521,7 +521,7 @@ const IdentityOverview = () => {
 					temporalLabel: resolutionDistributionTemporalLabel,
 				};
 
-	const onPresetChange = (preset: IdentityOverviewDatePreset) => {
+	const onPresetChange = (preset: IdentityDashboardDatePreset) => {
 		const end =
 			latestIdentityMetric == null ? todayUTCDateKey() : instantToDateKey(latestIdentityMetric.observedAt);
 		setSelectedDateRange(preset);
@@ -574,13 +574,13 @@ const IdentityOverview = () => {
 	};
 
 	return (
-		<main className='identity-overview'>
-			<div className='identity-overview__page-header'>
+		<main className='identity-dashboard'>
+			<div className='identity-dashboard__page-header'>
 				<div>
-					<h1>Profile unification overview</h1>
-					<p>Understand your current identity state and the effectiveness of Identity Resolution.</p>
+					<h1>Identity dashboard</h1>
+					<p>Understand the effectiveness of your identity resolution and your current identity state.</p>
 				</div>
-				<div className='identity-overview__page-actions'>
+				<div className='identity-dashboard__page-actions'>
 					<SlButton
 						className='segmented-date-range-button'
 						variant='default'
@@ -592,10 +592,10 @@ const IdentityOverview = () => {
 						<SlIcon slot='prefix' name='arrow-clockwise' />
 						Refresh
 					</SlButton>
-					<SegmentedDateRangeControl<IdentityOverviewDatePreset>
+					<SegmentedDateRangeControl<IdentityDashboardDatePreset>
 						accessibleLabel='Trend range'
 						presets={DATE_RANGE_PRESETS}
-						defaultPreset={IDENTITY_OVERVIEW_DEFAULT_DATE_PRESET}
+						defaultPreset={IDENTITY_DASHBOARD_DEFAULT_DATE_PRESET}
 						value={selectedDateRange}
 						customRange={customDateRange}
 						onPresetChange={onPresetChange}
@@ -605,27 +605,27 @@ const IdentityOverview = () => {
 				</div>
 			</div>
 
-			<section className='identity-overview__section'>
+			<section className='identity-dashboard__section'>
 				{resolutionError && (
 					<StateMessage
 						variant='error'
-						title='Identity Resolution metrics are unavailable'
+						title='Identity resolution metrics are unavailable'
 						description={resolutionError}
 						compact
 					/>
 				)}
 				{showResolutionStructure && (
-					<div className='identity-overview__kpi-grid identity-overview__resolution-kpi-grid'>
+					<div className='identity-dashboard__kpi-grid identity-dashboard__resolution-kpi-grid'>
 						<KpiCard
 							title='Last successful identity resolution'
-							info='The latest successful Identity Resolution result, independent of the Trend range.'
+							info='The latest successful identity resolution result, independent of the Trend range.'
 							value={latestResolutionUTCTimestamp == null ? '—' : latestResolutionUTCTimestamp}
 							secondary={
 								latestResolution == null ? (
 									'—'
 								) : (
 									<SlTooltip placement='top' hoist>
-										<div slot='content' className='identity-overview__local-time-tooltip'>
+										<div slot='content' className='identity-dashboard__local-time-tooltip'>
 											<strong>Your local time</strong>
 											<span>
 												{formatResolutionLocalTimeZoneDetails(
@@ -634,7 +634,7 @@ const IdentityOverview = () => {
 												)}
 											</span>
 										</div>
-										<span className='identity-overview__local-time-trigger' tabIndex={0}>
+										<span className='identity-dashboard__local-time-trigger' tabIndex={0}>
 											{formatResolutionLocalTimestamp(
 												latestResolution.observedAt,
 												browserTimeZone,
@@ -655,7 +655,7 @@ const IdentityOverview = () => {
 						<KpiCard
 							title='Identities per profile'
 							titleAccentColor={IDENTITIES_PER_PROFILE_COLOR}
-							info='Average number of identities per unified profile. Value from the latest successful Identity Resolution.'
+							info='Average number of identities per unified profile. Value from the latest successful identity resolution.'
 							value={formatNullableRatio(latestResolution?.identitiesPerProfile ?? null)}
 							comparison={identitiesPerProfileComparison}
 							loading={isResolutionLoading}
@@ -663,14 +663,14 @@ const IdentityOverview = () => {
 						<KpiCard
 							title='Identity link rate'
 							titleAccentColor={IDENTITY_LINK_RATE_COLOR}
-							info='Share of identities that belong to a profile containing more than one identity. Value from the latest successful Identity Resolution.'
+							info='Share of identities that belong to a profile containing more than one identity. Value from the latest successful identity resolution.'
 							value={latestResolution == null ? '—' : formatRate(latestResolution.linkedIdentitiesRate)}
 							comparison={identityLinkRateComparison}
 							loading={isResolutionLoading}
 						/>
 					</div>
 				)}
-				<div className='identity-overview__resolution-layout'>
+				<div className='identity-dashboard__resolution-layout'>
 					<TypeDistributionCard
 						processed={processedTypeDistribution}
 						unified={unifiedTypeDistribution}
@@ -706,7 +706,7 @@ const IdentityOverview = () => {
 				</div>
 			</section>
 
-			<section className='identity-overview__section identity-overview__section--current-state'>
+			<section className='identity-dashboard__section identity-dashboard__section--current-state'>
 				<SectionHeading
 					title='Current identity state'
 					secondary={observedLabel == null ? undefined : <>(as of {observedLabel})</>}
@@ -720,7 +720,7 @@ const IdentityOverview = () => {
 						compact
 					/>
 				)}
-				<div className='identity-overview__kpi-grid'>
+				<div className='identity-dashboard__kpi-grid'>
 					<KpiCard
 						title='Total identities'
 						value={latestIdentityMetric == null ? '—' : formatNumber(latestIdentityMetric.total)}
@@ -730,14 +730,14 @@ const IdentityOverview = () => {
 					/>
 					<KpiCard
 						title='Since last resolution'
-						info='Net change in current identities since the latest successful Identity Resolution.'
+						info='Net change in current identities since the latest successful identity resolution.'
 						value={
 							identitiesChangeSinceResolution == null ? (
 								'—'
 							) : (
 								<>
 									{formatSignedIntegerDelta(identitiesChangeSinceResolution)}{' '}
-									<span className='identity-overview__kpi-value-unit'>identities</span>
+									<span className='identity-dashboard__kpi-value-unit'>identities</span>
 								</>
 							)
 						}
@@ -774,7 +774,7 @@ const IdentityOverview = () => {
 						loading={isIdentityLoading}
 					/>
 				</div>
-				<div className='identity-overview__current-charts'>
+				<div className='identity-dashboard__current-charts'>
 					<IdentitiesChart
 						days={identityChartDays}
 						loading={identityChartLoading}
@@ -798,4 +798,4 @@ const IdentityOverview = () => {
 	);
 };
 
-export default IdentityOverview;
+export default IdentityDashboard;

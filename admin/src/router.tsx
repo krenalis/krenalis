@@ -39,7 +39,7 @@ import { WorkspacesWrapper } from './components/routes/WorkspacesWrapper/Workspa
 import { AccessKeys } from './components/routes/AccessKeys/AccessKeys';
 import { ResetPassword } from './components/routes/ResetPassword/ResetPassword';
 import { ResetPasswordToken } from './components/routes/ResetPasswordToken/ResetPasswordToken';
-import IdentityOverview from './components/routes/IdentityOverview/IdentityOverview';
+import IdentityDashboard from './components/routes/IdentityDashboard/IdentityDashboard';
 
 const router = createBrowserRouter([
 	{
@@ -121,8 +121,8 @@ const router = createBrowserRouter([
 						element: <ProfileUnification />,
 						children: [
 							{
-								path: 'overview',
-								element: <IdentityOverview />,
+								path: 'dashboard',
+								element: <IdentityDashboard />,
 							},
 							{
 								path: 'profiles',

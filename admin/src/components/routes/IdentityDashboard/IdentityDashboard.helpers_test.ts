@@ -1,10 +1,10 @@
 /**
- * Focused tests for Identity Overview metric semantics.
+ * Focused tests for Identity Dashboard metric semantics.
  *
  * Run from admin/ with:
- *   ./node_modules/.bin/esbuild src/components/routes/IdentityOverview/IdentityOverview.helpers_test.ts \
- *     --bundle --platform=node --format=cjs --outfile=/tmp/identity-overview-helpers-test.cjs
- *   node /tmp/identity-overview-helpers-test.cjs
+ *   ./node_modules/.bin/esbuild src/components/routes/IdentityDashboard/IdentityDashboard.helpers_test.ts \
+ *     --bundle --platform=node --format=cjs --outfile=/tmp/identity-dashboard-helpers-test.cjs
+ *   node /tmp/identity-dashboard-helpers-test.cjs
  */
 import {
 	IdentityMetric,
@@ -13,7 +13,7 @@ import {
 	IdentityResolutionMetricDay,
 } from '../../../lib/api/types/metrics';
 import {
-	IDENTITY_OVERVIEW_DEFAULT_DATE_PRESET,
+	IDENTITY_DASHBOARD_DEFAULT_DATE_PRESET,
 	addUTCDays,
 	aggregateConnections,
 	buildDeletedConnectionMetric,
@@ -55,7 +55,7 @@ import {
 	ratioChartDomain,
 	sparklineDomain,
 	sliceDays,
-} from './IdentityOverview.helpers';
+} from './IdentityDashboard.helpers';
 
 const equal = (actual: unknown, expected: unknown, message: string) => {
 	if (JSON.stringify(actual) !== JSON.stringify(expected)) {
@@ -100,7 +100,7 @@ const tests: { name: string; run: () => void }[] = [
 	{
 		name: 'date presets produce inclusive 7, 30, and 90 day display ranges',
 		run: () => {
-			equal(IDENTITY_OVERVIEW_DEFAULT_DATE_PRESET, 'last30Days', 'default preset');
+			equal(IDENTITY_DASHBOARD_DEFAULT_DATE_PRESET, 'last30Days', 'default preset');
 			equal(
 				displayRangeForPreset('last7Days', '2026-08-10'),
 				{ start: '2026-08-04', end: '2026-08-10' },
@@ -916,5 +916,5 @@ for (const test of tests) {
 if (failures > 0) {
 	process.exitCode = 1;
 } else {
-	console.log(`\n${tests.length} Identity Overview helper tests passed.`);
+	console.log(`\n${tests.length} Identity Dashboard helper tests passed.`);
 }

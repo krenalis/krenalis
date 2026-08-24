@@ -119,7 +119,7 @@ const IdentityResolutionSettings = () => {
 		setIsLoadingWorkspaces(true);
 		setTimeout(() => {
 			setIsSaving(false);
-			showStatus({ variant: 'success', icon: icons.OK, text: 'Identity Resolution settings saved successfully' });
+			showStatus({ variant: 'success', icon: icons.OK, text: 'Identity resolution settings saved successfully' });
 		}, 500);
 	};
 

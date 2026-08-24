@@ -15,7 +15,7 @@ interface DisplayDateRange {
 	end: string;
 }
 
-interface IdentityOverviewTemporalSemantics {
+interface IdentityDashboardTemporalSemantics {
 	latestIdentityDay: string | null;
 	showLatestResolutionComparison: boolean;
 }
@@ -37,9 +37,9 @@ interface IdentityResolutionMetricChartDay {
 	linkedIdentitiesRate: number | null;
 }
 
-type IdentityOverviewDatePreset = 'last7Days' | 'last30Days' | 'last90Days';
+type IdentityDashboardDatePreset = 'last7Days' | 'last30Days' | 'last90Days';
 
-const IDENTITY_OVERVIEW_DEFAULT_DATE_PRESET: IdentityOverviewDatePreset = 'last30Days';
+const IDENTITY_DASHBOARD_DEFAULT_DATE_PRESET: IdentityDashboardDatePreset = 'last30Days';
 
 interface TrendPoint {
 	day: string;
@@ -139,7 +139,7 @@ const addUTCDays = (dateKey: string, days: number): string => {
 	return date.toISOString().slice(0, 10);
 };
 
-const displayRangeForPreset = (preset: IdentityOverviewDatePreset, end: string): DisplayDateRange => {
+const displayRangeForPreset = (preset: IdentityDashboardDatePreset, end: string): DisplayDateRange => {
 	const days = preset === 'last7Days' ? 7 : preset === 'last30Days' ? 30 : 90;
 	return { start: addUTCDays(end, -(days - 1)), end };
 };
@@ -162,7 +162,7 @@ const buildTemporalSemantics = (
 	displayRange: DisplayDateRange,
 	identityObservedAt?: string,
 	resolutionObservedAt?: string,
-): IdentityOverviewTemporalSemantics => {
+): IdentityDashboardTemporalSemantics => {
 	const latestIdentityDay = identityObservedAt == null ? null : instantToDateKey(identityObservedAt);
 	const latestAvailableDay =
 		latestIdentityDay ?? (resolutionObservedAt == null ? null : instantToDateKey(resolutionObservedAt));
@@ -727,7 +727,7 @@ const formatRatioDelta = (value: number | null): string => {
 export {
 	DELETED_CONNECTION_LABEL,
 	DELETED_CONNECTION_SCOPE,
-	IDENTITY_OVERVIEW_DEFAULT_DATE_PRESET,
+	IDENTITY_DASHBOARD_DEFAULT_DATE_PRESET,
 	addUTCDays,
 	aggregateConnections,
 	buildDeletedConnectionMetric,
@@ -779,7 +779,7 @@ export {
 export type {
 	ConnectionBar,
 	DisplayDateRange,
-	IdentityOverviewDatePreset,
+	IdentityDashboardDatePreset,
 	IdentityTrend,
 	ProfileCompositionBucket,
 	ResolutionEffectivenessPoint,

@@ -47,7 +47,7 @@ import {
 	identityLinkRateChartDomain,
 	ratioChartDomain,
 	sparklineDomain,
-} from './IdentityOverview.helpers';
+} from './IdentityDashboard.helpers';
 import { IdentityResolutionComposition } from '../../../lib/api/types/metrics';
 import { IdentityResolutionRun } from '../../../lib/api/types/workspace';
 
@@ -63,8 +63,8 @@ const TYPE_DISTRIBUTION_COLORS = {
 };
 const GRID_COLOR = '#e8e8ee';
 const TREND_CHART_ANIMATION_DURATION = 450;
-const OVERVIEW_DONUT_INNER_RADIUS = 48;
-const OVERVIEW_DONUT_OUTER_RADIUS = 68;
+const DASHBOARD_DONUT_INNER_RADIUS = 48;
+const DASHBOARD_DONUT_OUTER_RADIUS = 68;
 const CONNECTION_AXIS_WIDTH = 180;
 const CONNECTION_AXIS_SHARE_OFFSET = 52;
 
@@ -75,7 +75,7 @@ interface InfoTooltipProps {
 
 const InfoTooltip = ({ content, label }: InfoTooltipProps) => (
 	<SlTooltip content={content} placement='top' hoist>
-		<button className='identity-overview__info' type='button' aria-label={label}>
+		<button className='identity-dashboard__info' type='button' aria-label={label}>
 			<SlIcon name='info-circle' />
 		</button>
 	</SlTooltip>
@@ -88,7 +88,7 @@ interface SectionHeadingProps {
 }
 
 const SectionHeading = ({ title, secondary, info }: SectionHeadingProps) => (
-	<div className='identity-overview__section-heading'>
+	<div className='identity-dashboard__section-heading'>
 		<h2>{title}</h2>
 		{secondary && <span>{secondary}</span>}
 		<InfoTooltip content={info} label={`About ${title}`} />
@@ -105,13 +105,13 @@ interface DashboardCardProps {
 }
 
 const DashboardCard = ({ title, temporalLabel, info, headerAction, className, children }: DashboardCardProps) => (
-	<div className={`identity-overview__card${className ? ` ${className}` : ''}`}>
+	<div className={`identity-dashboard__card${className ? ` ${className}` : ''}`}>
 		{title && (
-			<div className='identity-overview__card-heading'>
+			<div className='identity-dashboard__card-heading'>
 				<h3>{title}</h3>
 				{temporalLabel && <span>{temporalLabel}</span>}
 				{info && <InfoTooltip content={info} label={`About ${title}`} />}
-				{headerAction && <div className='identity-overview__card-heading-action'>{headerAction}</div>}
+				{headerAction && <div className='identity-dashboard__card-heading-action'>{headerAction}</div>}
 			</div>
 		)}
 		{children}
@@ -119,7 +119,7 @@ const DashboardCard = ({ title, temporalLabel, info, headerAction, className, ch
 );
 
 const DonutCenter = ({ value, label }: { value: ReactNode; label: string }) => (
-	<div className='identity-overview__donut-center'>
+	<div className='identity-dashboard__donut-center'>
 		<strong>{value}</strong>
 		<span>{label}</span>
 	</div>
@@ -140,7 +140,7 @@ const ChartTooltip = ({ active, title, rows }: ChartTooltipProps) => {
 	if (!active || rows.length === 0) return null;
 
 	return (
-		<div className='identity-overview__chart-tooltip' role='tooltip'>
+		<div className='identity-dashboard__chart-tooltip' role='tooltip'>
 			{title != null && <strong>{title}</strong>}
 			<dl>
 				{rows.map((row, index) => (
@@ -218,13 +218,13 @@ interface StateMessageProps {
 
 const StateMessage = ({ variant, title, description, action, compact }: StateMessageProps) => (
 	<div
-		className={`identity-overview__state identity-overview__state--${variant}${compact ? ' identity-overview__state--compact' : ''}`}
+		className={`identity-dashboard__state identity-dashboard__state--${variant}${compact ? ' identity-dashboard__state--compact' : ''}`}
 		role={variant === 'error' ? 'alert' : 'status'}
 	>
 		<SlIcon name={variant === 'error' ? 'exclamation-triangle' : 'info-circle'} />
 		<div>
-			<div className='identity-overview__state-title'>{title}</div>
-			{description && <div className='identity-overview__state-description'>{description}</div>}
+			<div className='identity-dashboard__state-title'>{title}</div>
+			{description && <div className='identity-dashboard__state-description'>{description}</div>}
 			{action}
 		</div>
 	</div>
@@ -232,15 +232,15 @@ const StateMessage = ({ variant, title, description, action, compact }: StateMes
 
 const CardLoading = ({ chart = false }: { chart?: boolean }) => (
 	<div
-		className={`identity-overview__loading${chart ? ' identity-overview__loading--chart' : ''}`}
+		className={`identity-dashboard__loading${chart ? ' identity-dashboard__loading--chart' : ''}`}
 		aria-label='Loading'
 	>
 		{chart ? (
 			<SlSpinner style={{ fontSize: '2rem', '--track-width': '4px' } as React.CSSProperties} />
 		) : (
 			<>
-				<div className='identity-overview__skeleton identity-overview__skeleton--value' />
-				<div className='identity-overview__skeleton identity-overview__skeleton--label' />
+				<div className='identity-dashboard__skeleton identity-dashboard__skeleton--value' />
+				<div className='identity-dashboard__skeleton identity-dashboard__skeleton--label' />
 			</>
 		)}
 	</div>
@@ -272,12 +272,12 @@ const KpiCard = ({
 	info,
 	comparison,
 }: KpiCardProps) => (
-	<DashboardCard className={`identity-overview__kpi${subtleBackground ? ' identity-overview__kpi--subtle' : ''}`}>
-		<div className='identity-overview__kpi-title'>
-			<span className='identity-overview__kpi-title-label'>
+	<DashboardCard className={`identity-dashboard__kpi${subtleBackground ? ' identity-dashboard__kpi--subtle' : ''}`}>
+		<div className='identity-dashboard__kpi-title'>
+			<span className='identity-dashboard__kpi-title-label'>
 				{titleAccentColor && (
 					<span
-						className='identity-overview__kpi-title-accent'
+						className='identity-dashboard__kpi-title-accent'
 						style={{ backgroundColor: titleAccentColor }}
 						aria-hidden='true'
 					/>
@@ -290,12 +290,12 @@ const KpiCard = ({
 			<CardLoading />
 		) : (
 			<>
-				<div className='identity-overview__kpi-body'>
-					<div className='identity-overview__kpi-value'>{value}</div>
-					{secondary != null && <div className='identity-overview__kpi-secondary'>{secondary}</div>}
+				<div className='identity-dashboard__kpi-body'>
+					<div className='identity-dashboard__kpi-value'>{value}</div>
+					{secondary != null && <div className='identity-dashboard__kpi-secondary'>{secondary}</div>}
 					{comparison && (
-						<div className='identity-overview__kpi-comparison'>
-							<span className='identity-overview__kpi-comparison-delta'>{comparison.delta}</span>
+						<div className='identity-dashboard__kpi-comparison'>
+							<span className='identity-dashboard__kpi-comparison-delta'>{comparison.delta}</span>
 							<span>from {comparison.referenceDate}</span>
 						</div>
 					)}
@@ -309,7 +309,7 @@ const KpiCard = ({
 const TrendSparkline = ({ points }: { points: IdentityTrend['points'] }) => {
 	const domain = sparklineDomain(points);
 	return (
-		<div className='identity-overview__sparkline' aria-hidden='true'>
+		<div className='identity-dashboard__sparkline' aria-hidden='true'>
 			<ResponsiveContainer width='100%' height='100%'>
 				<LineChart data={points}>
 					<XAxis dataKey='day' hide />
@@ -346,7 +346,7 @@ interface RecognizedAnonymousLegendProps {
 }
 
 const RecognizedAnonymousLegend = ({ recognizedColor, anonymousColor }: RecognizedAnonymousLegendProps) => (
-	<ul className='identity-overview__connection-legend' aria-label='Identity types'>
+	<ul className='identity-dashboard__connection-legend' aria-label='Identity types'>
 		<li>
 			<span style={{ background: recognizedColor }} />
 			Recognized
@@ -383,7 +383,7 @@ const RecognizedAnonymousHistoryChart = ({
 	errorTitle,
 	emptyTitle,
 }: RecognizedAnonymousHistoryChartProps) => (
-	<DashboardCard title={title} info={info} headerAction={headerAction} className='identity-overview__chart-card'>
+	<DashboardCard title={title} info={info} headerAction={headerAction} className='identity-dashboard__chart-card'>
 		{loading ? (
 			<CardLoading chart />
 		) : error ? (
@@ -396,7 +396,7 @@ const RecognizedAnonymousHistoryChart = ({
 				compact
 			/>
 		) : (
-			<div className='identity-overview__chart'>
+			<div className='identity-dashboard__chart'>
 				<ResponsiveContainer width='100%' height='100%'>
 					<AreaChart data={days} margin={{ top: 8, right: 18, bottom: 2, left: 4 }}>
 						<CartesianGrid stroke={GRID_COLOR} vertical={false} />
@@ -474,27 +474,27 @@ const IdentitiesChart = ({
 		info='Daily end-state recognized and anonymous identities for the Trend range. Missing observations remain gaps.'
 		headerAction={
 			<SlSelect
-				className='identity-overview__connection-select'
+				className='identity-dashboard__connection-select'
 				size='small'
 				value={selectedConnection}
 				hoist
 				aria-label='Connection'
 				onSlChange={(event) => onConnectionChange(String((event.currentTarget as SlSelectElement).value))}
 			>
-				<SlOption className='identity-overview__connection-option' value=''>
+				<SlOption className='identity-dashboard__connection-option' value=''>
 					All connections
 				</SlOption>
 				{connectionOptions.map((connection) => (
 					<SlOption
-						className={`identity-overview__connection-option${
+						className={`identity-dashboard__connection-option${
 							connection.id === DELETED_CONNECTION_SCOPE
-								? ' identity-overview__connection-option--deleted'
+								? ' identity-dashboard__connection-option--deleted'
 								: ''
 						}`}
 						key={connection.id}
 						value={connection.id}
 					>
-						<span className='identity-overview__connection-option-name'>{connection.name}</span>
+						<span className='identity-dashboard__connection-option-name'>{connection.name}</span>
 					</SlOption>
 				))}
 			</SlSelect>
@@ -579,9 +579,9 @@ const ConnectionAxisTick = ({ x = 0, y = 0, index = 0, data, totalIdentities }: 
 	return (
 		<g transform={`translate(0 ${y})`}>
 			<text
-				className={`identity-overview__connection-axis-name${
+				className={`identity-dashboard__connection-axis-name${
 					connection.connection === DELETED_CONNECTION_SCOPE
-						? ' identity-overview__connection-axis-name--deleted'
+						? ' identity-dashboard__connection-axis-name--deleted'
 						: ''
 				}`}
 				x={x - CONNECTION_AXIS_SHARE_OFFSET}
@@ -592,9 +592,9 @@ const ConnectionAxisTick = ({ x = 0, y = 0, index = 0, data, totalIdentities }: 
 				{connection.name}
 			</text>
 			<text
-				className={`identity-overview__connection-axis-share${
+				className={`identity-dashboard__connection-axis-share${
 					connection.connection === DELETED_CONNECTION_SCOPE
-						? ' identity-overview__connection-axis-share--deleted'
+						? ' identity-dashboard__connection-axis-share--deleted'
 						: ''
 				}`}
 				x={x - CONNECTION_AXIS_SHARE_OFFSET / 2}
@@ -613,7 +613,7 @@ const ConnectionsChart = ({ data, totalIdentities, observedLabel, loading, error
 		title='Identities by connection'
 		temporalLabel={observedLabel == null ? undefined : `(as of ${observedLabel})`}
 		info='Latest identity state grouped by live source connection, with deleted connections shown as an aggregate. Identities without a profile are a subset of the anonymous and recognized counts.'
-		className='identity-overview__chart-card'
+		className='identity-dashboard__chart-card'
 	>
 		{loading ? (
 			<CardLoading chart />
@@ -628,7 +628,7 @@ const ConnectionsChart = ({ data, totalIdentities, observedLabel, loading, error
 			/>
 		) : (
 			<div
-				className='identity-overview__chart identity-overview__connections-chart'
+				className='identity-dashboard__chart identity-dashboard__connections-chart'
 				style={{ height: 258 + (data.length > 1 ? data.length * 2 + 2 : 0) }}
 			>
 				<ResponsiveContainer width='100%' height='100%'>
@@ -710,7 +710,7 @@ const ResolutionEffectivenessChart = ({ data, loading, error }: ResolutionEffect
 	return (
 		<DashboardCard
 			title='Resolution effectiveness over time (daily)'
-			className='identity-overview__chart-card identity-overview__resolution-chart-card'
+			className='identity-dashboard__chart-card identity-dashboard__resolution-chart-card'
 		>
 			{loading ? (
 				<CardLoading chart />
@@ -724,22 +724,22 @@ const ResolutionEffectivenessChart = ({ data, loading, error }: ResolutionEffect
 			) : !hasData ? (
 				<StateMessage
 					variant='empty'
-					title='No Identity Resolution data in this period'
-					description='Run Identity Resolution to populate the daily series.'
+					title='No identity resolution data in this period'
+					description='Run identity resolution to populate the daily series.'
 					compact
 				/>
 			) : (
-				<div className='identity-overview__effectiveness-content'>
-					<div className='identity-overview__effectiveness-metric'>
-						<div className='identity-overview__effectiveness-metric-heading'>
+				<div className='identity-dashboard__effectiveness-content'>
+					<div className='identity-dashboard__effectiveness-metric'>
+						<div className='identity-dashboard__effectiveness-metric-heading'>
 							<h4>Identities per profile</h4>
 							<InfoTooltip
-								content='Average number of identities per unified profile. Shows the daily as-of trend over the Trend range. Values change when a new successful Identity Resolution is completed.'
+								content='Average number of identities per unified profile. Shows the daily as-of trend over the Trend range. Values change when a new successful identity resolution is completed.'
 								label='About identities per profile'
 							/>
 						</div>
 						{hasIdentitiesPerProfile ? (
-							<div className='identity-overview__effectiveness-chart'>
+							<div className='identity-dashboard__effectiveness-chart'>
 								<ResponsiveContainer width='100%' height='100%'>
 									<LineChart
 										data={data}
@@ -785,19 +785,19 @@ const ResolutionEffectivenessChart = ({ data, loading, error }: ResolutionEffect
 								</ResponsiveContainer>
 							</div>
 						) : (
-							<div className='identity-overview__effectiveness-empty'>No data available</div>
+							<div className='identity-dashboard__effectiveness-empty'>No data available</div>
 						)}
 					</div>
-					<div className='identity-overview__effectiveness-metric'>
-						<div className='identity-overview__effectiveness-metric-heading'>
+					<div className='identity-dashboard__effectiveness-metric'>
+						<div className='identity-dashboard__effectiveness-metric-heading'>
 							<h4>Identity link rate</h4>
 							<InfoTooltip
-								content='Share of identities that belong to a profile containing more than one identity. Shows the daily as-of trend over the Trend range. Values change when a new successful Identity Resolution is completed.'
+								content='Share of identities that belong to a profile containing more than one identity. Shows the daily as-of trend over the Trend range. Values change when a new successful identity resolution is completed.'
 								label='About identity link rate'
 							/>
 						</div>
 						{hasIdentityLinkRate ? (
-							<div className='identity-overview__effectiveness-chart'>
+							<div className='identity-dashboard__effectiveness-chart'>
 								<ResponsiveContainer width='100%' height='100%'>
 									<LineChart
 										data={data}
@@ -853,7 +853,7 @@ const ResolutionEffectivenessChart = ({ data, loading, error }: ResolutionEffect
 								</ResponsiveContainer>
 							</div>
 						) : (
-							<div className='identity-overview__effectiveness-empty'>No data available</div>
+							<div className='identity-dashboard__effectiveness-empty'>No data available</div>
 						)}
 					</div>
 				</div>
@@ -896,22 +896,22 @@ const TypeDistributionBlock = ({
 	const colors = { recognized: recognizedColor, anonymous: anonymousColor };
 
 	return (
-		<div className='identity-overview__distribution-block'>
-			<div className='identity-overview__distribution-heading'>
+		<div className='identity-dashboard__distribution-block'>
+			<div className='identity-dashboard__distribution-heading'>
 				<h4>{title}</h4>
 				{snapshot && <p>{snapshot.temporalLabel}</p>}
 			</div>
 			{loading ? (
 				<CardLoading chart />
 			) : !hasData ? (
-				<div className='identity-overview__distribution-empty' role='status'>
+				<div className='identity-dashboard__distribution-empty' role='status'>
 					<SlIcon name='info-circle' />
 					<span>No data available</span>
 				</div>
 			) : (
-				<div className='identity-overview__distribution-body'>
+				<div className='identity-dashboard__distribution-body'>
 					<div
-						className='identity-overview__donut-ring identity-overview__distribution-ring'
+						className='identity-dashboard__donut-ring identity-dashboard__distribution-ring'
 						aria-label={`${title} type distribution`}
 					>
 						<ResponsiveContainer width='100%' height='100%'>
@@ -920,8 +920,8 @@ const TypeDistributionBlock = ({
 									data={segments}
 									dataKey='count'
 									nameKey='label'
-									innerRadius={OVERVIEW_DONUT_INNER_RADIUS}
-									outerRadius={OVERVIEW_DONUT_OUTER_RADIUS}
+									innerRadius={DASHBOARD_DONUT_INNER_RADIUS}
+									outerRadius={DASHBOARD_DONUT_OUTER_RADIUS}
 									startAngle={90}
 									endAngle={-270}
 									stroke='none'
@@ -940,9 +940,9 @@ const TypeDistributionBlock = ({
 						</ResponsiveContainer>
 						<DonutCenter value={formatNumber(total)} label='Total' />
 					</div>
-					<div className='identity-overview__distribution-legend'>
+					<div className='identity-dashboard__distribution-legend'>
 						{segments.map((segment) => (
-							<div className='identity-overview__distribution-legend-item' key={segment.key}>
+							<div className='identity-dashboard__distribution-legend-item' key={segment.key}>
 								<i style={{ background: colors[segment.key] }} />
 								<div>
 									<span>{segment.label}</span>
@@ -968,12 +968,12 @@ interface TypeDistributionCardProps {
 const TypeDistributionCard = ({ processed, unified, loading, error }: TypeDistributionCardProps) => (
 	<DashboardCard
 		title='Distribution per type'
-		info='Identities processed and unified profiles show the type distributions from the same latest successful Identity Resolution.'
-		className='identity-overview__distribution-card'
+		info='Identities processed and unified profiles show the type distributions from the same latest successful identity resolution.'
+		className='identity-dashboard__distribution-card'
 	>
-		<div className='identity-overview__distribution-panel'>
+		<div className='identity-dashboard__distribution-panel'>
 			<TypeDistributionBlock title='Identities processed' snapshot={processed} loading={loading} error={error} />
-			<div className='identity-overview__distribution-divider' aria-hidden='true'>
+			<div className='identity-dashboard__distribution-divider' aria-hidden='true'>
 				<span>↔</span>
 			</div>
 			<TypeDistributionBlock
@@ -985,7 +985,7 @@ const TypeDistributionCard = ({ processed, unified, loading, error }: TypeDistri
 				anonymousColor={UNIFIED_PROFILES_ANONYMOUS_COLOR}
 			/>
 		</div>
-		<div className='identity-overview__distribution-footer'>
+		<div className='identity-dashboard__distribution-footer'>
 			<span>
 				<SlIcon name='people' />
 				<strong>Recognized:</strong> has at least one recognized identity
@@ -1015,8 +1015,8 @@ const ProfileComposition = ({ profiles, composition, loading, error }: ProfileCo
 	return (
 		<DashboardCard
 			title='Profiles by number of identities'
-			info='Profiles are grouped by the number of identities they contain. The chart shows the distribution from the latest successful Identity Resolution.'
-			className='identity-overview__composition-card'
+			info='Profiles are grouped by the number of identities they contain. The chart shows the distribution from the latest successful identity resolution.'
+			className='identity-dashboard__composition-card'
 		>
 			{loading ? (
 				<CardLoading chart />
@@ -1025,9 +1025,9 @@ const ProfileComposition = ({ profiles, composition, loading, error }: ProfileCo
 			) : composition == null ? (
 				<StateMessage variant='unavailable' title='Profile composition is unavailable' compact />
 			) : (
-				<div className='identity-overview__composition-content'>
+				<div className='identity-dashboard__composition-content'>
 					<div
-						className='identity-overview__donut-ring identity-overview__composition-ring'
+						className='identity-dashboard__donut-ring identity-dashboard__composition-ring'
 						aria-label='Profiles by number of identities'
 					>
 						{hasValues ? (
@@ -1037,8 +1037,8 @@ const ProfileComposition = ({ profiles, composition, loading, error }: ProfileCo
 										data={buckets}
 										dataKey='count'
 										nameKey='label'
-										innerRadius={OVERVIEW_DONUT_INNER_RADIUS}
-										outerRadius={OVERVIEW_DONUT_OUTER_RADIUS}
+										innerRadius={DASHBOARD_DONUT_INNER_RADIUS}
+										outerRadius={DASHBOARD_DONUT_OUTER_RADIUS}
 										stroke='none'
 										isAnimationActive={false}
 									>
@@ -1054,11 +1054,11 @@ const ProfileComposition = ({ profiles, composition, loading, error }: ProfileCo
 								</PieChart>
 							</ResponsiveContainer>
 						) : (
-							<div className='identity-overview__composition-ring-placeholder' />
+							<div className='identity-dashboard__composition-ring-placeholder' />
 						)}
 						<DonutCenter value={formatNumber(profiles)} label='Profiles' />
 					</div>
-					<div className='identity-overview__composition-legend'>
+					<div className='identity-dashboard__composition-legend'>
 						{buckets.map((bucket, index) => (
 							<div key={bucket.key}>
 								<i style={{ background: COMPOSITION_COLORS[index] }} />
@@ -1082,22 +1082,22 @@ const GoToRun = () => (
 );
 
 const ResolutionPeriodEmptyState = () => (
-	<DashboardCard className='identity-overview__period-empty-card'>
+	<DashboardCard className='identity-dashboard__period-empty-card'>
 		<StateMessage
 			variant='empty'
-			title='No Identity Resolution completed in this period'
-			description='Run Identity Resolution to see results here.'
+			title='No identity resolution completed in this period'
+			description='Run identity resolution to see results here.'
 			action={<GoToRun />}
 		/>
 	</DashboardCard>
 );
 
 const NoResolutionState = () => (
-	<DashboardCard className='identity-overview__no-resolution-card'>
+	<DashboardCard className='identity-dashboard__no-resolution-card'>
 		<StateMessage
 			variant='empty'
-			title='No Identity Resolution completed in this period'
-			description='Run Identity Resolution to see results here.'
+			title='No identity resolution completed in this period'
+			description='Run identity resolution to see results here.'
 			action={<GoToRun />}
 		/>
 	</DashboardCard>
@@ -1121,7 +1121,7 @@ const historyStatusBadge = (status: IdentityResolutionRun['status']): ReactNode 
 	const labels = { running: 'Running', successful: 'Successful', failed: 'Failed' } as const;
 	const variants = { running: 'primary', successful: 'success', failed: 'danger' } as const;
 	return (
-		<SlBadge className='identity-overview__history-status' variant={variants[status]} pill>
+		<SlBadge className='identity-dashboard__history-status' variant={variants[status]} pill>
 			{labels[status]}
 		</SlBadge>
 	);
@@ -1138,7 +1138,7 @@ const historyRows = (runs: IdentityResolutionRun[]): GridRow[] =>
 			run.error == null ? (
 				'—'
 			) : (
-				<span className='identity-overview__history-error' title={run.error}>
+				<span className='identity-dashboard__history-error' title={run.error}>
 					{run.error}
 				</span>
 			),
@@ -1146,27 +1146,27 @@ const historyRows = (runs: IdentityResolutionRun[]): GridRow[] =>
 	}));
 
 const HistorySection = ({ runs, loading, error }: HistorySectionProps) => (
-	<section className='identity-overview__section'>
+	<section className='identity-dashboard__section'>
 		<SectionHeading
-			title='Identity Resolution history'
-			info='Accepted Identity Resolution runs, including running, successful, and failed executions.'
+			title='Identity resolution history'
+			info='Accepted identity resolution runs, including running, successful, and failed executions.'
 		/>
-		<DashboardCard className='identity-overview__history-card'>
+		<DashboardCard className='identity-dashboard__history-card'>
 			{error == null ? (
-				<div className='identity-overview__history-grid'>
+				<div className='identity-dashboard__history-grid'>
 					<Grid
 						columns={HISTORY_COLUMNS}
 						rows={historyRows(runs)}
 						gridColumnsWidths='minmax(120px, 0.7fr) minmax(210px, 1.2fr) minmax(210px, 1.2fr) minmax(110px, 0.6fr) minmax(260px, 1.8fr)'
 						isLoading={loading}
-						loadingText='Loading Identity Resolution history'
-						noRowsMessage='No Identity Resolution runs yet'
+						loadingText='Loading identity resolution history'
+						noRowsMessage='No identity resolution runs yet'
 					/>
 				</div>
 			) : (
 				<StateMessage
 					variant='error'
-					title='Identity Resolution run history could not be loaded'
+					title='Identity resolution run history could not be loaded'
 					description={error}
 				/>
 			)}
