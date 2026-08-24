@@ -162,8 +162,7 @@ func (warehouse *PostgreSQL) readOperationStatus(ctx context.Context, conn conne
 // opError is the error returned by the operation; nil indicates that it
 // completed successfully. If the operation has already been set as completed,
 // this method does nothing.
-func (warehouse *PostgreSQL) setOperationAsCompleted(
-	ctx context.Context, conn connection, opID string, result json.Value, opError *warehouses.OperationError) error {
+func (warehouse *PostgreSQL) setOperationAsCompleted(ctx context.Context, conn connection, opID string, result json.Value, opError *warehouses.OperationError) error {
 
 	var opErrorStr string
 	if opError != nil {

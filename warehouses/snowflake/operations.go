@@ -161,8 +161,7 @@ func (warehouse *Snowflake) readOperationStatus(ctx context.Context, conn connec
 // opError is the error returned by the operation; nil indicates that it
 // completed successfully. If the operation has already been set as completed,
 // this method does nothing.
-func (warehouse *Snowflake) setOperationAsCompleted(
-	ctx context.Context, conn connection, opID string, result json.Value, opError *warehouses.OperationError) error {
+func (warehouse *Snowflake) setOperationAsCompleted(ctx context.Context, conn connection, opID string, result json.Value, opError *warehouses.OperationError) error {
 
 	var opErrorStr string
 	if opError != nil {
