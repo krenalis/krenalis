@@ -1616,7 +1616,6 @@ func (core *Core) executeAlterProfileSchema(workspace, opID string, schema types
 	}
 	var alterSchemaErr *warehouses.OperationError
 	if profileSchemaChangeRequiresWarehouseDDL(ws.ProfileSchema, schema, operations) {
-
 		// Keep calling 'AlterProfileSchema' until it (1) returns successfully,
 		// (2) returns with a *warehouses.OperationError, or (3) the context is
 		// canceled.
@@ -1643,7 +1642,6 @@ func (core *Core) executeAlterProfileSchema(workspace, opID string, schema types
 			// In case of unknown error, try again.
 			slog.Error("alter schema on warehouse returned an unknown error; retrying", "retry_after", bo.WaitTime(), "error", err)
 		}
-
 	}
 	nEnd := state.EndAlterProfileSchema{
 		Workspace: workspace,
