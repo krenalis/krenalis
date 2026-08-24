@@ -7,6 +7,7 @@ package core
 import (
 	"testing"
 
+	"github.com/krenalis/krenalis/core/internal/datastore/diffschemas"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -154,6 +155,107 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 				t.Fatalf("expected error %q, got %q", test.err, gotErrStr)
 			}
 		})
+	}
+
+}
+
+// Test_profileSchemaChangeRequiresWarehouseDDL tests which profile schema
+// changes require DDL on the data warehouse.
+func Test_profileSchemaChangeRequiresWarehouseDDL(t *testing.T) {
+
+	property := func(name string) types.Property {
+		return types.Property{Name: name, Type: types.String(), ReadOptional: true}
+	}
+
+	tests := []struct {
+		name      string
+		oldSchema types.Type
+		newSchema types.Type
+		rePaths   map[string]any
+		expected  bool
+	}{
+		{
+			name:      "Identical schemas",
+			oldSchema: types.Object([]types.Property{property("a"), property("b")}),
+			newSchema: types.Object([]types.Property{property("a"), property("b")}),
+		},
+		{
+			name: "Description changed",
+			oldSchema: types.Object([]types.Property{
+				property("a"),
+			}),
+			newSchema: types.Object([]types.Property{
+				{Name: "a", Type: types.String(), ReadOptional: true, Description: "New description"},
+			}),
+		},
+		{
+			name:      "Property added",
+			oldSchema: types.Object([]types.Property{property("a")}),
+			newSchema: types.Object([]types.Property{property("a"), property("b")}),
+			expected:  true,
+		},
+		{
+			name:      "Property removed",
+			oldSchema: types.Object([]types.Property{property("a"), property("b")}),
+			newSchema: types.Object([]types.Property{property("a")}),
+			expected:  true,
+		},
+		{
+			name:      "Property renamed",
+			oldSchema: types.Object([]types.Property{property("a")}),
+			newSchema: types.Object([]types.Property{property("b")}),
+			rePaths:   map[string]any{"b": "a"},
+			expected:  true,
+		},
+		{
+			name:      "Top-level properties reordered",
+			oldSchema: types.Object([]types.Property{property("a"), property("b")}),
+			newSchema: types.Object([]types.Property{property("b"), property("a")}),
+			expected:  true,
+		},
+		{
+			name: "Nested properties reordered",
+			oldSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{property("a"), property("b")}), ReadOptional: true},
+			}),
+			newSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{property("b"), property("a")}), ReadOptional: true},
+			}),
+			expected: true,
+		},
+		{
+			name:      "Explicit property recreation",
+			oldSchema: types.Object([]types.Property{property("a")}),
+			newSchema: types.Object([]types.Property{property("a")}),
+			rePaths:   map[string]any{"a": nil},
+			expected:  true,
+		},
+	}
+
+	for _, test := range tests {
+
+		t.Run(test.name, func(t *testing.T) {
+
+			// Keep the fixtures within the profile schema domain. Invalid
+			// properties, including nullable ones, belong to validation tests.
+			if err := checkAllowedPropertyProfileSchema(test.oldSchema); err != nil {
+				t.Fatalf("old schema contains a property not allowed in a profile schema: %s", err)
+			}
+			if err := checkAllowedPropertyProfileSchema(test.newSchema); err != nil {
+				t.Fatalf("new schema contains a property not allowed in a profile schema: %s", err)
+			}
+
+			operations, err := diffschemas.Diff(test.oldSchema, test.newSchema, test.rePaths, "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			actual := profileSchemaChangeRequiresWarehouseDDL(test.oldSchema, test.newSchema, operations)
+			if actual != test.expected {
+				t.Fatalf("expected %t, got %t", test.expected, actual)
+			}
+
+		})
+
 	}
 
 }
