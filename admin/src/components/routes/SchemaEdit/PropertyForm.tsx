@@ -21,7 +21,7 @@ import Type, {
 import TransformedConnection from '../../../lib/core/connection';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
-import { PropertyParent, PropertyToEdit } from './useSchemaEdit';
+import { PropertyFieldChanges, PropertyParent, PropertyToEdit } from './useSchemaEdit';
 import {
 	getPropertyValueType,
 	PropertyTypeSelector,
@@ -35,6 +35,7 @@ const MAX_DECIMAL_PRECISION: number = 76;
 const MAX_DECIMAL_SCALE: number = 37;
 
 interface PropertyFormProps {
+	fieldChanges?: PropertyFieldChanges;
 	formID: string;
 	propertyToEdit: PropertyToEdit;
 	primarySources: Record<string, string>;
@@ -46,6 +47,7 @@ interface PropertyFormProps {
 }
 
 const PropertyForm = ({
+	fieldChanges,
 	formID,
 	propertyToEdit,
 	primarySources,
@@ -323,7 +325,6 @@ const PropertyForm = ({
 					ref={nameInputRef}
 					value={property.name}
 					autocomplete='off'
-					label='Name'
 					name='name'
 					placeholder='first_name'
 					readonly={!isNameEditable}
@@ -332,6 +333,9 @@ const PropertyForm = ({
 					onSlInput={onInputName}
 					onKeyDown={onKeyDownName}
 				>
+					<PropertyFormLabel slot='label' modified={fieldChanges?.name}>
+						Name
+					</PropertyFormLabel>
 					{isEditing && !isNameEditable && (
 						<SlButton
 							className='property-form__change-name'
@@ -348,7 +352,9 @@ const PropertyForm = ({
 				{nameError !== '' && <PropertyFormError name='name'>{nameError}</PropertyFormError>}
 			</div>
 			<div className='property-form__control'>
-				<div className='property-form__label'>Type</div>
+				<div className='property-form__label'>
+					<PropertyFormLabel modified={fieldChanges?.type}>Type</PropertyFormLabel>
+				</div>
 				<PropertyTypeSelector
 					ref={typeSelectorRef}
 					type={property.type}
@@ -462,25 +468,31 @@ const PropertyForm = ({
 				placeholder='Describe what this property represents…'
 				onSlInput={onInputDescription}
 			>
-				<span slot='label'>
+				<PropertyFormLabel slot='label' modified={fieldChanges?.description}>
 					Description <span className='property-form__optional-label'>(optional)</span>
-				</span>
+				</PropertyFormLabel>
 			</SlTextarea>
 			{property.type?.kind !== 'object' && property.type?.kind !== 'array' && (
 				<div className='property-form__control'>
 					{sourceConnections.length === 0 ? (
 						<>
-							<div className='property-form__label'>Primary source</div>
+							<div className='property-form__label'>
+								<PropertyFormLabel modified={fieldChanges?.primarySource}>
+									Primary source
+								</PropertyFormLabel>
+							</div>
 							<div className='property-form__empty-value'>No source connections are available.</div>
 						</>
 					) : (
 						<SlSelect
 							className='property-dialog__primary-source'
 							value={primarySource == null ? 'none' : primarySource}
-							label='Primary source'
 							name='primary-source'
 							onSlChange={onChangePrimarySource}
 						>
+							<PropertyFormLabel slot='label' modified={fieldChanges?.primarySource}>
+								Primary source
+							</PropertyFormLabel>
 							<div slot='prefix'>
 								{selectedConnection != null && (
 									<LittleLogo
@@ -506,6 +518,23 @@ const PropertyForm = ({
 				</div>
 			)}
 		</form>
+	);
+};
+
+const PropertyFormLabel = ({
+	children,
+	modified,
+	slot,
+}: {
+	children: React.ReactNode;
+	modified?: boolean;
+	slot?: string;
+}) => {
+	return (
+		<span className='property-form__label-content' slot={slot}>
+			{children}
+			{modified && <span className='property-form__modified-dot' role='img' aria-label='Modified' />}
+		</span>
 	);
 };
 

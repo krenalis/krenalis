@@ -35,6 +35,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 	const [propertyToRemove, setPropertyToRemove] = useState<PropertyToRemove | null>(null);
 	const [animatePropertyActions, setAnimatePropertyActions] = useState(false);
 	const [isCancelEditPending, setIsCancelEditPending] = useState(false);
+	const [isDiscardingAndLeaving, setIsDiscardingAndLeaving] = useState(false);
 	const [propertyDraftDirty, setPropertyDraftDirty] = useState(false);
 	const [isSearchOpen, setIsSearchOpen] = useState(false);
 	const [search, setSearch] = useState('');
@@ -81,6 +82,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		objectCount,
 		propertyCount,
 		propertyParents,
+		selectedPropertyFieldChanges,
 		propertyStatuses,
 		primarySources,
 		queries,
@@ -223,23 +225,32 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 
 	const onDiscardChangesAndLeave = () => {
 		setAnimatePropertyActions(false);
+		setIsDiscardingAndLeaving(true);
 		setIsCancelEditPending(false);
 		setPropertyToEdit(null);
 		setPropertyDraftDirty(false);
 		skipNavigationBlockRef.current = true;
-		if (navigationBlocker.state === 'blocked') {
-			navigationBlocker.proceed();
-			return;
-		}
-		closeFullscreen();
 	};
 
 	const onKeepEditing = () => {
+		setIsDiscardingAndLeaving(false);
 		setIsCancelEditPending(false);
 		skipNavigationBlockRef.current = false;
 		if (navigationBlocker.state === 'blocked') {
 			navigationBlocker.reset();
 		}
+	};
+
+	const onDiscardDialogAfterHide = () => {
+		if (!isDiscardingAndLeaving) {
+			onKeepEditing();
+			return;
+		}
+		if (navigationBlocker.state === 'blocked') {
+			navigationBlocker.proceed();
+			return;
+		}
+		closeFullscreen();
 	};
 
 	const onReviewChangesClick = () => {
@@ -416,6 +427,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 				<PropertyPanel
 					animateActions={animatePropertyActions}
 					dirty={propertyDraftDirty}
+					fieldChanges={selectedPropertyFieldChanges}
 					property={propertyToEdit}
 					parents={propertyParents}
 					primarySources={primarySources}
@@ -496,8 +508,8 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 			</AlertDialog>
 			<AlertDialog
 				variant='warning'
-				isOpen={isCancelEditPending || navigationBlocker.state === 'blocked'}
-				onClose={onKeepEditing}
+				isOpen={!isDiscardingAndLeaving && (isCancelEditPending || navigationBlocker.state === 'blocked')}
+				onClose={onDiscardDialogAfterHide}
 				title='Discard unsaved changes?'
 				actions={
 					<>

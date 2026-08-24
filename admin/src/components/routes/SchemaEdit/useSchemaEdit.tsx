@@ -9,6 +9,7 @@ import {
 	normalizeSchema,
 	transformSchema,
 } from './SchemaEdit.helpers';
+import { usePropertyReordering } from './usePropertyReordering';
 import { PreviewAlterProfileSchemaResponse, RePaths } from '../../../lib/api/types/responses';
 import AppContext from '../../../context/AppContext';
 import { isMetaProperty } from '../../../lib/core/schema';
@@ -61,9 +62,28 @@ interface SelectPropertyOptions {
 	animateActionsIfBlocked?: boolean;
 }
 
+interface PropertyFieldChanges {
+	name: boolean;
+	type: boolean;
+	description: boolean;
+	primarySource: boolean;
+}
+
 type SelectProperty = (propertyKey: string, property: EditableProperty, options?: SelectPropertyOptions) => void;
 
-type PropertyChangeStatus = 'added' | 'modified';
+type PropertyChangeStatus = 'added' | 'modified' | 'reordered';
+
+const propertyStatusLabels: Record<PropertyChangeStatus, string> = {
+	added: 'Added',
+	modified: 'Modified',
+	reordered: 'Reordered',
+};
+
+const PropertyStatusBadge = ({ status }: { status: PropertyChangeStatus }) => (
+	<SlBadge className={`schema-edit__property-status schema-edit__property-status--${status}`} pill variant='neutral'>
+		{propertyStatusLabels[status]}
+	</SlBadge>
+);
 
 const useSchemaEdit = (
 	schema: ObjectType,
@@ -94,6 +114,11 @@ const useSchemaEdit = (
 	const initialEditableSchema = useRef<EditableSchema>();
 	const initialPrimarySources = useRef<PrimarySources>();
 	const initialSchemaEditStateKey = useRef<string>();
+	const { onSortRow, reorderedPropertyKeys, resetMoveHistory } = usePropertyReordering({
+		editableSchema,
+		initialEditableSchema: initialEditableSchema.current,
+		setEditableSchema,
+	});
 	const schemaEditStateKey = useMemo(() => {
 		if (editableSchema == null) {
 			return null;
@@ -114,8 +139,25 @@ const useSchemaEdit = (
 			initialEditableSchema.current,
 			primarySources.current,
 			initialPrimarySources.current,
+			reorderedPropertyKeys,
 		);
-	}, [editableSchema]);
+	}, [editableSchema, reorderedPropertyKeys]);
+	const selectedPropertyFieldChanges = useMemo(() => {
+		if (selectedPropertyKey == null) {
+			return undefined;
+		}
+		const property = editableSchema?.[selectedPropertyKey];
+		const initialProperty = initialEditableSchema.current?.[selectedPropertyKey];
+		if (property == null || initialProperty == null) {
+			return undefined;
+		}
+		return getPropertyFieldChanges(
+			property,
+			initialProperty,
+			primarySources.current[selectedPropertyKey],
+			initialPrimarySources.current?.[selectedPropertyKey],
+		);
+	}, [editableSchema, selectedPropertyKey]);
 	const { objectCount, propertyCount } = useMemo(() => {
 		let objectCount = 0;
 		const properties = Object.values(editableSchema || {});
@@ -154,6 +196,7 @@ const useSchemaEdit = (
 		}
 		rePaths.current = {};
 		deletedAppliedKeys.current = [];
+		resetMoveHistory();
 		const editable = transformSchema(s);
 		initialEditableSchema.current = structuredClone(editable);
 		initialPrimarySources.current = structuredClone(primarySources.current);
@@ -166,7 +209,7 @@ const useSchemaEdit = (
 		if (propertyKey != null) {
 			onSelectProperty(propertyKey, editable[propertyKey]);
 		}
-	}, [schema]);
+	}, [resetMoveHistory, schema]);
 
 	const onAddProperty = (property: PropertyToEdit, primarySource: string | null) => {
 		if (isMetaProperty(property.name)) {
@@ -387,26 +430,6 @@ const useSchemaEdit = (
 		return nextProperty;
 	};
 
-	const onSortRow = (overRowID: string, movedRowID: string) => {
-		const s = { ...editableSchema };
-		const keys = Object.keys(s);
-		const overPropertyIndex = keys.findIndex((k) => k === overRowID);
-		const movedPropertyIndex = keys.findIndex((k) => k === movedRowID);
-		const isAfter = overPropertyIndex > movedPropertyIndex;
-		const keysToMove = keys.filter((k) => k === movedRowID || k.startsWith(`${movedRowID}.`));
-		const sk = keys.filter((k) => !keysToMove.includes(k));
-		let insertIndex = sk.findIndex((k) => k === overRowID);
-		if (isAfter) {
-			insertIndex++;
-		}
-		sk.splice(insertIndex, 0, ...keysToMove);
-		const newSchema: EditableSchema = {};
-		for (let key of sk) {
-			newSchema[key] = s[key];
-		}
-		setEditableSchema(newSchema);
-	};
-
 	const onApplyChanges = async () => {
 		setIsQueriesLoading(true);
 		try {
@@ -485,6 +508,7 @@ const useSchemaEdit = (
 		objectCount,
 		propertyCount,
 		propertyParents,
+		selectedPropertyFieldChanges,
 		propertyStatuses,
 		primarySources: primarySources.current,
 		queries,
@@ -518,6 +542,7 @@ const getPropertyChangeStatuses = (
 	initialSchema: EditableSchema,
 	primarySources: PrimarySources,
 	initialPrimarySources: PrimarySources,
+	reorderedPropertyKeys: ReadonlySet<string>,
 ): Record<string, PropertyChangeStatus> => {
 	const statuses: Record<string, PropertyChangeStatus> = {};
 	if (schema == null || initialSchema == null || initialPrimarySources == null) {
@@ -525,18 +550,38 @@ const getPropertyChangeStatuses = (
 	}
 	for (const [key, property] of Object.entries(schema)) {
 		const initialProperty = initialSchema[key];
-		if (initialProperty == null) {
+		if (initialProperty == null || property.isEditable === true) {
 			statuses[key] = 'added';
 			continue;
 		}
-		if (
-			JSON.stringify(property) !== JSON.stringify(initialProperty) ||
-			primarySources[key] !== initialPrimarySources[key]
-		) {
+		const fieldChanges = getPropertyFieldChanges(
+			property,
+			initialProperty,
+			primarySources[key],
+			initialPrimarySources[key],
+		);
+		const hasPropertyChanges = Object.values(fieldChanges).some((changed) => changed);
+		if (hasPropertyChanges) {
 			statuses[key] = 'modified';
+		} else if (reorderedPropertyKeys.has(key)) {
+			statuses[key] = 'reordered';
 		}
 	}
 	return statuses;
+};
+
+const getPropertyFieldChanges = (
+	property: EditableProperty,
+	initialProperty: EditableProperty,
+	primarySource: string | null | undefined,
+	initialPrimarySource: string | null | undefined,
+): PropertyFieldChanges => {
+	return {
+		name: property.name !== initialProperty.name,
+		type: JSON.stringify(property.type) !== JSON.stringify(initialProperty.type),
+		description: (property.description || '') !== (initialProperty.description || ''),
+		primarySource: primarySource !== initialPrimarySource,
+	};
 };
 
 const getPropertySelectionAfterRemoval = (schema: EditableSchema, propertyKey: string): PropertyToEdit | null => {
@@ -739,10 +784,7 @@ const buildRow = (
 	onSelectProperty: SelectProperty,
 ): SortableGridRow => {
 	const actions = (
-		<div className='schema-edit__property-actions'>
-			{status === 'added' && <SlBadge variant='success'>Added</SlBadge>}
-			{status === 'modified' && <SlBadge variant='warning'>Modified</SlBadge>}
-		</div>
+		<div className='schema-edit__property-actions'>{status != null && <PropertyStatusBadge status={status} />}</div>
 	);
 	const typeCell: ReactNode = (
 		<span className='schema-edit__property-technical-type'>{toKrenalisStringType(property.type)}</span>
@@ -803,12 +845,21 @@ const validateEditableSchema = (editableSchema: EditableSchema) => {
 		const typ = p.type;
 		if (typ.kind === 'object') {
 			// Check that it has at least one sub-property.
-			const subProperties = keys.filter((k) => k.startsWith(key) && k !== key);
-			if (subProperties.length === 0) {
-				throw new Error(`object property "${p.name}" must have at least one sub property`);
+			const hasSubProperties = keys.some((candidate) => candidate.startsWith(`${key}.`));
+			if (!hasSubProperties) {
+				throw new Error(`Object property "${p.name}" must contain at least one property`);
 			}
 		}
 	}
 };
 
-export { useSchemaEdit, PropertyChangeStatus, PropertyParent, PropertyToEdit, PropertyToRemove, SelectPropertyOptions };
+export {
+	useSchemaEdit,
+	PropertyStatusBadge,
+	PropertyChangeStatus,
+	PropertyFieldChanges,
+	PropertyParent,
+	PropertyToEdit,
+	PropertyToRemove,
+	SelectPropertyOptions,
+};

@@ -9,10 +9,19 @@ const selectPropertyType = async (page, option: string) => {
 	await expect(panel.locator('.property-type-selector__structure-option-label')).toHaveText([
 		'one value',
 		'array',
+		'object',
 		'map',
 	]);
 	await panel.locator('.property-type-selector__structure-trigger').click();
 	await panel.locator('.property-type-selector__trigger').click();
+	await expect(panel.locator('.property-type-selector__group-label')).toHaveText([
+		'Basic values',
+		'Date and time',
+		'Specialized values',
+	]);
+	await expect(
+		panel.locator('.property-type-selector__group').nth(2).locator('.property-type-selector__option-label'),
+	).toHaveText(['uuid', 'json', 'ip']);
 	await expect(panel.locator('[data-type-option="datetime"] .property-type-selector__option-label')).toHaveText(
 		'datetime',
 	);
@@ -120,6 +129,8 @@ test(`Navigate profile schema properties when focus is outside an arrow-key cont
 	);
 
 	const description = page.locator('.property-panel sl-textarea >> textarea[name="description"]');
+	const modifiedDots = page.locator('.property-panel .property-form__modified-dot');
+	const initialDescription = await description.inputValue();
 	await description.focus();
 	await page.keyboard.press('ArrowDown');
 	await expect(page.locator(`.schema-edit .grid__row[data-id="${readOnlyRowIDs[2]}"]`)).toHaveClass(
@@ -135,6 +146,32 @@ test(`Navigate profile schema properties when focus is outside an arrow-key cont
 			return rowIDs.indexOf(readOnlyRowIDs[2]);
 		})
 		.toBe(rowIDsBeforeMove.indexOf(readOnlyRowIDs[2]) + 1);
+	const movedRow = page.locator(`.schema-edit .grid__row[data-id="${readOnlyRowIDs[2]}"]`);
+	await expect(movedRow.locator('.schema-edit__property-actions')).toHaveText('Reordered');
+	await expect(modifiedDots).toHaveCount(0);
+	await expect(page.locator('.schema-edit__change-count')).toContainText('1 pending change');
+
+	await description.fill(`${initialDescription} updated`);
+	await page.locator('.property-dialog__save').click();
+	await expect(movedRow.locator('.schema-edit__property-actions')).toHaveText('Modified');
+	await expect(page.locator('.property-panel sl-textarea .property-form__modified-dot')).toBeVisible();
+	await expect(modifiedDots).toHaveCount(1);
+
+	await description.fill(initialDescription);
+	await page.locator('.property-dialog__save').click();
+	await expect(movedRow.locator('.schema-edit__property-actions')).toHaveText('Reordered');
+	await expect(modifiedDots).toHaveCount(0);
+
+	await cancelButton.focus();
+	await page.keyboard.press('Shift+ArrowUp');
+	await expect
+		.poll(async () => {
+			const rowIDs = await editRows.evaluateAll((rows) => rows.map((row: HTMLElement) => row.dataset.id));
+			return rowIDs.indexOf(readOnlyRowIDs[2]);
+		})
+		.toBe(rowIDsBeforeMove.indexOf(readOnlyRowIDs[2]));
+	await expect(movedRow.locator('.schema-edit__property-actions')).toBeEmpty();
+	await expect(page.locator('.schema-edit__change-count')).toContainText('No pending changes');
 });
 
 test(`Warn before leaving pending profile schema changes`, async ({ page }) => {
@@ -157,6 +194,27 @@ test(`Warn before leaving pending profile schema changes`, async ({ page }) => {
 	await expect(dialog).toBeVisible();
 	await dialog.getByText('Discard and leave', { exact: true }).click();
 	await expect(page.locator('.schema-grid')).toBeVisible();
+});
+
+test(`Restore pointer interaction after discarding schema changes with Cancel`, async ({ page }) => {
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+
+	const cancelButton = page.locator('.schema-edit__header-cancel-button');
+	await cancelButton.focus();
+	await page.keyboard.press('Shift+ArrowDown');
+	await expect(page.locator('.schema-edit__change-count')).toContainText('1 pending change');
+
+	await cancelButton.click();
+	const dialog = page.locator('.alert-dialog', { hasText: 'Discard unsaved changes?' });
+	await expect(dialog).toBeVisible();
+	await dialog.getByText('Discard and leave', { exact: true }).click();
+	await expect(page.locator('.schema-grid')).toBeVisible();
+
+	const row = page.locator('.schema-grid .grid__row--clickable:visible').nth(1);
+	await row.click();
+	await expect(row).toHaveClass(/grid__row--selected/);
+	await expect(page.locator('.property-details-panel')).toBeVisible();
 });
 
 test(`Discard unsaved property changes when selecting another property`, async ({ page }) => {
@@ -500,7 +558,11 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
 	}, 'test_obj');
 
-	await selectPropertyType(page, 'object');
+	const propertyPanel = page.locator('.property-panel');
+	await propertyPanel.locator('.property-type-selector__structure-trigger').click();
+	await propertyPanel.locator('.property-type-selector__structure-option[value="object"]').click();
+	await expect(propertyPanel.locator('.property-type-selector__structure-trigger')).toContainText('object');
+	await expect(propertyPanel.locator('.property-type-selector__dropdown')).toHaveCount(0);
 
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
 
@@ -510,6 +572,8 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 	const objectRow = page.locator('.grid__row[data-id="test_obj"]');
 	await expect(objectRow).toBeVisible();
 	await page.click('.schema-edit__add-property');
+	await expect(propertyPanel.locator('.property-type-selector__structure-trigger')).toContainText('one value');
+	await expect(propertyPanel.locator('.property-type-selector__dropdown')).toHaveCount(1);
 	await page.locator('.property-panel .property-form__parent').evaluate((select: any) => {
 		select.value = 'test_obj';
 		select.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
@@ -561,6 +625,98 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 			hasText: 'test_sub_prop_1',
 		}),
 	).toBeAttached();
+});
+
+test(`Reject a new object property without sub-properties`, async ({ page }) => {
+	let previewRequests = 0;
+	await page.route('**/v1/profiles/schema/preview', async (route) => {
+		previewRequests++;
+		await route.abort();
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await page.click('.schema-edit__add-property');
+
+	const propertyPanel = page.locator('.property-panel');
+	await propertyPanel.locator('.property-dialog__name-input').evaluate((input: any) => {
+		input.value = 'empty_object';
+		input.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+	});
+	await propertyPanel.locator('.property-type-selector__structure-trigger').click();
+	await propertyPanel.locator('.property-type-selector__structure-option[value="object"]').click();
+	await propertyPanel.locator('.property-dialog__save').click();
+	await expect(page.locator('.schema-edit .grid__row[data-id="empty_object"]')).toBeVisible();
+
+	await page.locator('.schema-edit__header-apply-button').click();
+	await expect(page.locator('.toast')).toContainText(
+		'Object property "empty_object" must contain at least one property',
+	);
+	expect(previewRequests).toBe(0);
+});
+
+test(`Reject an existing object property after removing all its sub-properties`, async ({ page }) => {
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		schema.properties.push(
+			{
+				name: 'object_to_empty',
+				prefilled: '',
+				role: 'Both',
+				type: {
+					kind: 'object',
+					properties: [
+						{
+							name: 'child',
+							prefilled: '',
+							role: 'Both',
+							type: { kind: 'string' },
+							createRequired: false,
+							updateRequired: false,
+							readOptional: true,
+							nullable: false,
+							description: '',
+						},
+					],
+				},
+				createRequired: false,
+				updateRequired: false,
+				readOptional: true,
+				nullable: false,
+				description: '',
+			},
+			{
+				name: 'object_to_empty_sibling',
+				prefilled: '',
+				role: 'Both',
+				type: { kind: 'string' },
+				createRequired: false,
+				updateRequired: false,
+				readOptional: true,
+				nullable: false,
+				description: '',
+			},
+		);
+		await route.fulfill({ response, json: schema });
+	});
+	let previewRequests = 0;
+	await page.route('**/v1/profiles/schema/preview', async (route) => {
+		previewRequests++;
+		await route.abort();
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await page.click('.schema-edit__expand-all-button');
+	await removeProperty(page, 'object_to_empty.child');
+	await expect(page.locator('.schema-edit .grid__row[data-id="object_to_empty.child"]')).toHaveCount(0);
+
+	await page.locator('.schema-edit__header-apply-button').click();
+	await expect(page.locator('.toast')).toContainText(
+		'Object property "object_to_empty" must contain at least one property',
+	);
+	expect(previewRequests).toBe(0);
 });
 
 test(`Remove schema properties`, async ({ page }) => {

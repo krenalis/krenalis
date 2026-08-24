@@ -1,17 +1,23 @@
 import React from 'react';
 import SlAnimation from '@shoelace-style/shoelace/dist/react/animation/index.js';
-import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { PrimarySources } from '../../../lib/api/types/workspace';
 import { PropertyPanelLayout } from '../Schema/PropertyPanelLayout';
 import { PropertyForm } from './PropertyForm';
-import { PropertyChangeStatus, PropertyParent, PropertyToEdit } from './useSchemaEdit';
+import {
+	PropertyChangeStatus,
+	PropertyFieldChanges,
+	PropertyParent,
+	PropertyStatusBadge,
+	PropertyToEdit,
+} from './useSchemaEdit';
 
 interface PropertyPanelProps {
 	animateActions: boolean;
 	dirty: boolean;
+	fieldChanges?: PropertyFieldChanges;
 	property: PropertyToEdit | null;
 	parents: PropertyParent[];
 	primarySources: PrimarySources;
@@ -26,6 +32,7 @@ interface PropertyPanelProps {
 const PropertyPanel = ({
 	animateActions,
 	dirty,
+	fieldChanges,
 	property,
 	parents,
 	primarySources,
@@ -102,6 +109,8 @@ const PropertyPanel = ({
 					titleAdornment={status != null && <PropertyStatusBadge status={status} />}
 				>
 					<PropertyForm
+						key={property.key ?? '__new__'}
+						fieldChanges={fieldChanges}
 						formID={formID}
 						propertyToEdit={property}
 						primarySources={primarySources}
@@ -115,13 +124,6 @@ const PropertyPanel = ({
 			)}
 		</>
 	);
-};
-
-const PropertyStatusBadge = ({ status }: { status: PropertyChangeStatus }) => {
-	if (status === 'added') {
-		return <SlBadge variant='success'>Added</SlBadge>;
-	}
-	return <SlBadge variant='warning'>Modified</SlBadge>;
 };
 
 export { PropertyPanel };

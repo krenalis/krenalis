@@ -31,6 +31,22 @@
 	padding: 0 0 5px 1px;
 }
 
+.property-form__label-content {
+	align-items: center;
+	display: inline-flex;
+}
+
+.property-form__modified-dot {
+	background-color: var(--sl-color-warning-600);
+	border: 2px solid var(--bg-primary);
+	border-radius: 50%;
+	flex: 0 0 auto;
+	height: 8px;
+	margin-inline-start: 2px;
+	transform: translateY(-2px);
+	width: 8px;
+}
+
 .property-form__optional-label {
 	color: var(--sl-color-neutral-400);
 }
@@ -80,6 +96,8 @@
 }
 
 .property-form__integer-sign {
+	--integer-sign-text-tint: #174ea6;
+
 	align-self: end;
 }
 
@@ -113,22 +131,22 @@
 
 .property-form__integer-sign sl-radio-button[checked]::part(button) {
 	background-color: #e8f0fe !important;
-	color: var(--sl-color-neutral-900) !important;
+	color: color-mix(in srgb, var(--sl-color-neutral-900) 88%, var(--integer-sign-text-tint)) !important;
 }
 
 .property-form__integer-sign sl-radio-button[checked]:hover::part(button) {
 	background-color: #dbe8fd !important;
-	color: var(--sl-color-neutral-900) !important;
+	color: color-mix(in srgb, var(--sl-color-neutral-900) 88%, var(--integer-sign-text-tint)) !important;
 }
 
 .property-form__integer-sign sl-radio-button:not([checked])::part(button) {
 	background-color: transparent !important;
-	color: var(--sl-color-neutral-600) !important;
+	color: color-mix(in srgb, var(--sl-color-neutral-600) 88%, var(--integer-sign-text-tint)) !important;
 }
 
 .property-form__integer-sign sl-radio-button:not([checked]):hover::part(button) {
 	background-color: #f5f9ff !important;
-	color: var(--sl-color-neutral-800) !important;
+	color: color-mix(in srgb, var(--sl-color-neutral-800) 88%, var(--integer-sign-text-tint)) !important;
 }
 
 .property-dialog__bitsize::part(form-control-label),

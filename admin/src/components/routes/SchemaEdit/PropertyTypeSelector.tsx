@@ -10,7 +10,7 @@ import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import Type, { TypeKind } from '../../../lib/api/types/types';
 import { TypeIcon } from '../../base/TypeIcon/TypeIcon';
 
-type PropertyStructure = 'one' | 'array' | 'map';
+type PropertyStructure = 'one' | 'array' | 'object' | 'map';
 
 interface PropertyStructureOption {
 	id: PropertyStructure;
@@ -22,7 +22,7 @@ interface PropertyStructureOption {
 
 interface PropertyTypeOption {
 	id: TypeKind;
-	group: 'Basic values' | 'Date and time' | 'Identifiers and network' | 'Structured values';
+	group: 'Basic values' | 'Date and time' | 'Specialized values';
 	label: string;
 	description: string;
 	kind: TypeKind;
@@ -56,6 +56,13 @@ const PROPERTY_STRUCTURE_OPTIONS: PropertyStructureOption[] = [
 		icon: 'list-ul',
 	},
 	{
+		id: 'object',
+		label: 'object',
+		triggerLabel: 'object',
+		description: 'The property contains nested properties',
+		icon: 'braces',
+	},
+	{
 		id: 'map',
 		label: 'map',
 		triggerLabel: 'map of',
@@ -77,7 +84,7 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 		id: 'int',
 		group: 'Basic values',
 		label: 'int',
-		description: 'Whole numeric value',
+		description: 'Number without decimal places',
 		kind: 'int',
 		create: () => ({ kind: 'int', bitSize: 32, unsigned: false }),
 	},
@@ -139,35 +146,27 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 	},
 	{
 		id: 'uuid',
-		group: 'Identifiers and network',
+		group: 'Specialized values',
 		label: 'uuid',
 		description: 'Universally unique identifier',
 		kind: 'uuid',
 		create: () => ({ kind: 'uuid' }),
 	},
 	{
-		id: 'ip',
-		group: 'Identifiers and network',
-		label: 'ip',
-		description: 'IPv4 or IPv6 network address',
-		kind: 'ip',
-		create: () => ({ kind: 'ip' }),
-	},
-	{
 		id: 'json',
-		group: 'Structured values',
+		group: 'Specialized values',
 		label: 'json',
 		description: 'Structured data stored as JSON',
 		kind: 'json',
 		create: () => ({ kind: 'json' }),
 	},
 	{
-		id: 'object',
-		group: 'Structured values',
-		label: 'object',
-		description: 'Value with nested properties',
-		kind: 'object',
-		create: () => ({ kind: 'object', properties: [] }),
+		id: 'ip',
+		group: 'Specialized values',
+		label: 'ip',
+		description: 'IPv4 or IPv6 network address',
+		kind: 'ip',
+		create: () => ({ kind: 'ip' }),
 	},
 ];
 
@@ -197,18 +196,16 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 		const selectedOption = getPropertyTypeOption(type);
 		const selectedStructureOption =
 			PROPERTY_STRUCTURE_OPTIONS.find((option) => option.id === structure) || PROPERTY_STRUCTURE_OPTIONS[0];
+		const showValueTypeSelector = structure !== 'object';
 		const options = useMemo(() => {
 			const term = search.trim().toLocaleLowerCase();
 			return PROPERTY_TYPE_OPTIONS.filter((option) => {
-				if (structure !== 'one' && option.kind === 'object') {
-					return false;
-				}
 				if (!canEditType && !isOptionCompatibleWithType(option, valueType)) {
 					return false;
 				}
 				return term === '' || `${option.label} ${option.description}`.toLocaleLowerCase().includes(term);
 			});
-		}, [canEditType, search, structure, valueType]);
+		}, [canEditType, search, valueType]);
 
 		useEffect(() => {
 			if (type != null) {
@@ -220,14 +217,18 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 			if (!canEditType) {
 				return;
 			}
-			openTypeAfterStructureSelectionRef.current = true;
 			const newStructure = event.detail.item.value as PropertyStructure;
+			openTypeAfterStructureSelectionRef.current = newStructure !== 'object';
 			if (newStructure === structure) {
 				return;
 			}
 			setStructure(newStructure);
+			if (newStructure === 'object') {
+				onChange({ kind: 'object', properties: [] });
+				return;
+			}
 			const newValueType = getPropertyValueType(type);
-			if (newValueType == null || (newStructure !== 'one' && newValueType.kind === 'object')) {
+			if (newValueType == null || newValueType.kind === 'object') {
 				onChange(null);
 				return;
 			}
@@ -268,7 +269,7 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 					<div
 						className={`property-type-selector__controls${
 							canEditType ? '' : ' property-type-selector__controls--read-only'
-						}`}
+						}${showValueTypeSelector ? '' : ' property-type-selector__controls--structure-only'}`}
 						onPointerDown={(event) => {
 							if (!canEditType) {
 								event.preventDefault();
@@ -319,76 +320,80 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 								))}
 							</SlMenu>
 						</SlDropdown>
-						<SlDropdown
-							className='property-type-selector__dropdown'
-							ref={dropdownRef}
-							hoist={true}
-							placement='bottom-end'
-							distance={6}
-							disabled={!canEditType}
-							onSlAfterHide={() => setSearch('')}
-						>
-							<SlButton
-								className='property-type-selector__trigger'
-								slot='trigger'
-								caret={canEditType}
-								aria-disabled={!canEditType || undefined}
-								aria-label={selectedOption != null ? `Type: ${selectedOption.label}` : 'Select type'}
+						{showValueTypeSelector && (
+							<SlDropdown
+								className='property-type-selector__dropdown'
+								ref={dropdownRef}
+								hoist={true}
+								placement='bottom-end'
+								distance={6}
+								disabled={!canEditType}
+								onSlAfterHide={() => setSearch('')}
 							>
-								{selectedOption != null && (
-									<PropertyTypeOptionIcon option={selectedOption} slot='prefix' />
-								)}
-								{selectedOption != null ? (
-									selectedOption.label
-								) : (
-									<span className='property-type-selector__placeholder'>Select type</span>
-								)}
-							</SlButton>
-							<div className='property-type-selector__browser'>
-								<SlInput
-									className='property-type-selector__search'
-									placeholder='Search types...'
-									value={search}
-									onSlInput={(event: any) => setSearch(event.target.value)}
+								<SlButton
+									className='property-type-selector__trigger'
+									slot='trigger'
+									caret={canEditType}
+									aria-disabled={!canEditType || undefined}
+									aria-label={
+										selectedOption != null ? `Type: ${selectedOption.label}` : 'Select type'
+									}
 								>
-									<SlIcon slot='prefix' name='search' />
-								</SlInput>
-								<div className='property-type-selector__options'>
-									{Object.entries(groupedOptions).map(([group, groupOptions]) => (
-										<div className='property-type-selector__group' key={group}>
-											<div className='property-type-selector__group-label'>{group}</div>
-											{groupOptions.map((option) => (
-												<button
-													className={`property-type-selector__option${
-														selectedOption?.id === option.id
-															? ' property-type-selector__option--selected'
-															: ''
-													}`}
-													key={option.id}
-													type='button'
-													data-type-option={option.id}
-													onClick={() => onSelectOption(option)}
-												>
-													<PropertyTypeOptionIcon option={option} />
-													<span className='property-type-selector__option-content'>
-														<span className='property-type-selector__option-label'>
-															{option.label}
-														</span>
-														<span className='property-type-selector__option-description'>
-															{option.description}
-														</span>
-													</span>
-													{selectedOption?.id === option.id && <SlIcon name='check-lg' />}
-												</button>
-											))}
-										</div>
-									))}
-									{options.length === 0 && (
-										<div className='property-type-selector__no-options'>No matching types</div>
+									{selectedOption != null && (
+										<PropertyTypeOptionIcon option={selectedOption} slot='prefix' />
 									)}
+									{selectedOption != null ? (
+										selectedOption.label
+									) : (
+										<span className='property-type-selector__placeholder'>Select type</span>
+									)}
+								</SlButton>
+								<div className='property-type-selector__browser'>
+									<SlInput
+										className='property-type-selector__search'
+										placeholder='Search types...'
+										value={search}
+										onSlInput={(event: any) => setSearch(event.target.value)}
+									>
+										<SlIcon slot='prefix' name='search' />
+									</SlInput>
+									<div className='property-type-selector__options'>
+										{Object.entries(groupedOptions).map(([group, groupOptions]) => (
+											<div className='property-type-selector__group' key={group}>
+												<div className='property-type-selector__group-label'>{group}</div>
+												{groupOptions.map((option) => (
+													<button
+														className={`property-type-selector__option${
+															selectedOption?.id === option.id
+																? ' property-type-selector__option--selected'
+																: ''
+														}`}
+														key={option.id}
+														type='button'
+														data-type-option={option.id}
+														onClick={() => onSelectOption(option)}
+													>
+														<PropertyTypeOptionIcon option={option} />
+														<span className='property-type-selector__option-content'>
+															<span className='property-type-selector__option-label'>
+																{option.label}
+															</span>
+															<span className='property-type-selector__option-description'>
+																{option.description}
+															</span>
+														</span>
+														{selectedOption?.id === option.id && <SlIcon name='check-lg' />}
+													</button>
+												))}
+											</div>
+										))}
+										{options.length === 0 && (
+											<div className='property-type-selector__no-options'>No matching types</div>
+										)}
+									</div>
 								</div>
-							</div>
-						</SlDropdown>
+							</SlDropdown>
+						)}
 					</div>
 				</SlTooltip>
 			</div>
@@ -413,6 +418,9 @@ const getPropertyStructure = (type: Type | null): PropertyStructure => {
 	}
 	if (type?.kind === 'map') {
 		return 'map';
+	}
+	if (type?.kind === 'object') {
+		return 'object';
 	}
 	return 'one';
 };

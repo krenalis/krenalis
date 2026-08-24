@@ -394,8 +394,24 @@
 	width: 100%;
 }
 
-.schema-edit__property-actions sl-badge::part(base) {
+.schema-edit__property-status::part(base) {
+	border: 0;
 	font-size: 11px;
+}
+
+.schema-edit__property-status--added::part(base) {
+	background-color: var(--sl-color-sky-100);
+	color: var(--sl-color-sky-800);
+}
+
+.schema-edit__property-status--modified::part(base) {
+	background-color: var(--sl-color-warning-100);
+	color: var(--sl-color-warning-800);
+}
+
+.schema-edit__property-status--reordered::part(base) {
+	background-color: var(--sl-color-primary-100);
+	color: var(--sl-color-primary-800);
 }
 
 .schema-edit__primary-source {
