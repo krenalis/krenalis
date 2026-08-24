@@ -146,6 +146,9 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 			})
 		}
 
+		// The cursor may move past records that failed input validation or transformation.
+		// Incremental imports do not move the cursor back to retry failed records.
+		// Processing them again requires a non-incremental import.
 		return this.setRunCursor(ctx, cursor)
 	}
 
