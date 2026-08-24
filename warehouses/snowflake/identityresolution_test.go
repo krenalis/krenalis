@@ -65,7 +65,7 @@ func Test_finalizeIdentityResolutionPreservesPersistedSuccess(t *testing.T) {
 	const opID = "a44731d8-d89d-44b9-ac87-a8ce1a8770d0"
 	_, err = db.ExecContext(t.Context(), `INSERT INTO "KRENALIS_SYSTEM_OPERATIONS"
 		("ID", "OPERATION_TYPE", "COMPLETED_AT", "RESULT")
-		VALUES (?, ?, ?, PARSE_JSON(?))`, opID, identityResolution, time.Now().UTC(), string(persistedResult))
+		SELECT ?, ?, ?, PARSE_JSON(?)`, opID, identityResolution, time.Now().UTC(), string(persistedResult))
 	if err != nil {
 		t.Fatal(err)
 	}
