@@ -1,10 +1,16 @@
 .grid {
+	--grid-selected-row-background: #f5f5fb;
+
 	display: grid;
 	background-color: var(--bg-primary);
 	border-radius: var(--radius);
 	border: 1px solid var(--sl-color-neutral-200);
 	overflow: auto;
 	position: relative;
+}
+
+.grid[tabindex='0']:focus-visible {
+	outline: none;
 }
 
 .grid::-webkit-scrollbar {
@@ -63,7 +69,7 @@ sl-popup::part(arrow) {
 }
 
 .grid__row--selected .grid__cell {
-	background-color: var(--sl-color-primary-50) !important;
+	background-color: var(--grid-selected-row-background) !important;
 }
 
 .grid__cell-content-object {

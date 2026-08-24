@@ -1,16 +1,18 @@
-import React, { ReactNode, useMemo, useRef, useState, useImperativeHandle, forwardRef, useEffect } from 'react';
+import React, { ReactNode, useMemo, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import './Grid.css';
 import GridHeaderRow from './GridHeaderRow/GridHeaderRow';
 import {
 	GridColumn,
 	GridNestedRowsIndentation,
 	NestedGridRows,
+	SortableGridRef,
 	StandardGridRow,
 	SortableGridRow,
 	SortableRowComponent,
 } from './Grid.types';
 import { useGrid } from './useGrid';
 import { getChildIndexClassname } from './Grid.helpers';
+import { focusGridForKeyboardNavigation, navigateGrid, navigateGridWithKeyboard } from './GridKeyboardNavigation';
 import GridNestedRows from './GridNestedRows/GridNestedRows';
 import GridRow from './GridRow/GridRow';
 import {
@@ -31,28 +33,13 @@ interface SortableGridProps {
 	columns: GridColumn[];
 	rows: SortableGridRow[];
 	onSortRow: (overRowID: string, movedRowID: string) => void;
-	showColumnBorder?: boolean;
-	showRowBorder?: boolean;
 	gridColumnsWidths?: string;
-	isLoading?: boolean;
-	noRowsMessage?: string;
 	nestedRowsIndentation?: GridNestedRowsIndentation;
-
-	// used to recompute the table if at first rendering it wasn't in the
-	// viewport (for instance, because it was inside a tab panel group).
-	isShown?: boolean;
+	keyboardNavigation?: boolean;
 }
-
-interface SortableGridMethods {
-	collapse: () => void;
-	expand: () => void;
-	expandRow: (id: string) => void;
-}
-
-type SortableGridRef = SortableGridMethods & any;
 
 const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(
-	({ columns, rows, onSortRow, gridColumnsWidths, nestedRowsIndentation }, ref) => {
+	({ columns, rows, onSortRow, gridColumnsWidths, nestedRowsIndentation, keyboardNavigation }, ref) => {
 		const [activeRow, setActiveRow] = useState(null);
 		const sensors = useSensors(
 			useSensor(PointerSensor),
@@ -101,12 +88,14 @@ const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(
 						expandIcon.click();
 					}
 				},
+				focus: () => {
+					gridRef.current?.focus({ preventScroll: true });
+				},
+				navigate: (key: string, shiftKey = false) => {
+					return gridRef.current == null ? false : navigateGrid(gridRef.current, key, shiftKey, onSortRow);
+				},
 			};
-		}, []);
-
-		useEffect(() => {
-			ref = gridRef.current;
-		}, []);
+		}, [onSortRow]);
 
 		const { rowComponents, sortableRowComponents } = useMemo(() => {
 			const rowComponents = [] as ReactNode[];
@@ -182,6 +171,9 @@ const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(
 				ref={gridRef}
 				className={`grid grid--sortable${widths == null ? ' grid--hide-content' : ''}`}
 				style={{ '--grid-columns': widths } as React.CSSProperties}
+				tabIndex={keyboardNavigation ? 0 : undefined}
+				onClick={keyboardNavigation ? focusGridForKeyboardNavigation : undefined}
+				onKeyDown={keyboardNavigation ? (event) => navigateGridWithKeyboard(event, onSortRow) : undefined}
 			>
 				<GridHeaderRow columns={columns} />
 				{rowComponents}
@@ -213,4 +205,3 @@ const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(
 );
 
 export default SortableGrid;
-export { SortableGridRef };

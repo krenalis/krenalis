@@ -31,6 +31,10 @@
 	padding: 0 0 5px 1px;
 }
 
+.property-form__optional-label {
+	color: var(--sl-color-neutral-400);
+}
+
 .property-form__help {
 	color: var(--text-light);
 	font-size: 12px;
@@ -65,8 +69,8 @@
 .property-form__constraints {
 	display: grid;
 	gap: 12px;
-	grid-template-columns: minmax(120px, 160px) minmax(180px, 1fr);
-	margin: -5px 0 20px;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	margin: 10px 0 20px;
 	padding-left: 1px;
 }
 
@@ -75,12 +79,86 @@
 	padding-bottom: 8px;
 }
 
-.property-form__constraints--decimal {
-	grid-template-columns: repeat(2, minmax(100px, 160px));
+.property-form__integer-sign {
+	align-self: end;
 }
 
+.property-form__integer-sign::part(button-group),
+.property-form__integer-sign::part(form-control-input) {
+	width: 100%;
+}
+
+.property-form__integer-sign::part(button-group__base) {
+	background-color: var(--sl-color-neutral-0);
+	border: 1px solid #aecbfa;
+	border-radius: var(--sl-input-border-radius-small);
+	box-sizing: border-box;
+	width: 100%;
+}
+
+.property-form__integer-sign sl-radio-button {
+	flex: 1;
+	margin-inline-start: 0 !important;
+}
+
+.property-form__integer-sign sl-radio-button::part(button) {
+	border: 0 !important;
+	min-height: calc(var(--sl-input-height-small) - 2px) !important;
+	width: 100%;
+}
+
+.property-form__integer-sign sl-radio-button + sl-radio-button::part(button) {
+	border-inline-start: 1px solid #aecbfa !important;
+}
+
+.property-form__integer-sign sl-radio-button[checked]::part(button) {
+	background-color: #e8f0fe !important;
+	color: var(--sl-color-neutral-900) !important;
+}
+
+.property-form__integer-sign sl-radio-button[checked]:hover::part(button) {
+	background-color: #dbe8fd !important;
+	color: var(--sl-color-neutral-900) !important;
+}
+
+.property-form__integer-sign sl-radio-button:not([checked])::part(button) {
+	background-color: transparent !important;
+	color: var(--sl-color-neutral-600) !important;
+}
+
+.property-form__integer-sign sl-radio-button:not([checked]):hover::part(button) {
+	background-color: #f5f9ff !important;
+	color: var(--sl-color-neutral-800) !important;
+}
+
+.property-dialog__bitsize::part(form-control-label),
+.property-form__integer-sign::part(form-control-label) {
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
+	height: 1px;
+	overflow: hidden;
+	position: absolute;
+	white-space: nowrap;
+	width: 1px;
+}
+
+.property-form__constraints--decimal,
+.property-form__constraints--integer,
 .property-form__constraints--length {
-	grid-template-columns: minmax(160px, 1fr) 100px;
+	margin: 4px 12px 28px;
+	padding-left: 0;
+}
+
+.property-form__constraints--decimal {
+	margin-top: -10px;
+}
+
+.property-form__decimal-description {
+	color: var(--text-light);
+	font-size: 12px;
+	grid-column: 1 / -1;
+	margin-top: -4px;
+	text-align: center;
 }
 
 .property-dialog__primary-source .little-logo svg,
@@ -119,9 +197,7 @@
 }
 
 @media (max-width: 700px) {
-	.property-form__constraints,
-	.property-form__constraints--decimal,
-	.property-form__constraints--length {
+	.property-form__constraints {
 		grid-template-columns: 1fr;
 	}
 }

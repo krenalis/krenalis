@@ -1,5 +1,6 @@
-import React, { useContext, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import './SchemaEdit.css';
+import { useBeforeUnload, useBlocker } from 'react-router-dom';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
@@ -11,13 +12,15 @@ import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import SortableGrid from '../../base/Grid/SortableGrid';
+import { GridKeyboardHints } from '../../base/Grid/GridKeyboardHints';
+import { useDocumentGridKeyboardNavigation } from '../../base/Grid/useDocumentGridKeyboardNavigation';
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
 import { FullscreenContext } from '../../../context/FullscreenContext';
 import { SchemaContext } from '../../../context/SchemaContext';
 import { TypeKind } from '../../../lib/api/types/types';
-import { EditableProperty, newPropertyToEdit } from './SchemaEdit.helpers';
+import { EditableProperty, getParentPropertyKey, newPropertyToEdit } from './SchemaEdit.helpers';
 import { PropertyPanel } from './PropertyPanel';
-import { PropertyToEdit, PropertyToRemove, useSchemaEdit } from './useSchemaEdit';
+import { PropertyToEdit, PropertyToRemove, SelectPropertyOptions, useSchemaEdit } from './useSchemaEdit';
 
 const schemaEditGridColumns =
 	'minmax(160px, 0.65fr) minmax(210px, 0.85fr) minmax(240px, 1.5fr) minmax(160px, 0.65fr) 90px';
@@ -30,37 +33,40 @@ interface SchemaEditProps {
 const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 	const [propertyToEdit, setPropertyToEdit] = useState<PropertyToEdit | null>(null);
 	const [propertyToRemove, setPropertyToRemove] = useState<PropertyToRemove | null>(null);
-	const [pendingPropertyToEdit, setPendingPropertyToEdit] = useState<PropertyToEdit | null>(null);
+	const [animatePropertyActions, setAnimatePropertyActions] = useState(false);
+	const [isCancelEditPending, setIsCancelEditPending] = useState(false);
 	const [propertyDraftDirty, setPropertyDraftDirty] = useState(false);
 	const [isSearchOpen, setIsSearchOpen] = useState(false);
 	const [search, setSearch] = useState('');
 	const [showOnlyChanged, setShowOnlyChanged] = useState(false);
+	const selectedPropertyBeforeAddRef = useRef<PropertyToEdit | null>(null);
+	const skipNavigationBlockRef = useRef(false);
 	const searchRef = useRef<any>();
 
 	const { schema } = useContext(SchemaContext);
 	const { closeFullscreen } = useContext(FullscreenContext);
-
-	const onAddClick = (parentKey: string, indentation: number, root: string) => {
-		if (propertyToEdit != null && propertyToEdit.key == null) {
-			return;
-		}
-		const property = newPropertyToEdit(parentKey, indentation, root);
-		if (propertyDraftDirty) {
-			setPendingPropertyToEdit(property);
-			return;
-		}
-		setPropertyToEdit(property);
+	const hasUnsavedPropertyChanges = propertyToEdit != null && propertyDraftDirty;
+	const resetPropertyDraft = (property: PropertyToEdit | null) => {
+		setPropertyToEdit(property == null ? null : structuredClone(property));
+	};
+	const closeAfterApplyingChanges = () => {
+		skipNavigationBlockRef.current = true;
+		closeFullscreen();
 	};
 
-	const onEditClick = (propertyKey: string, property: EditableProperty) => {
+	const onSelectProperty = (propertyKey: string, property: EditableProperty, options: SelectPropertyOptions = {}) => {
 		if (propertyToEdit?.key === propertyKey) {
 			return;
 		}
-		const nextProperty = { key: propertyKey, ...property };
-		if (propertyDraftDirty) {
-			setPendingPropertyToEdit(nextProperty);
+		if (hasUnsavedPropertyChanges) {
+			if (options.animateActionsIfBlocked !== false) {
+				setAnimatePropertyActions(true);
+			}
 			return;
 		}
+		const nextProperty = { key: propertyKey, ...property };
+		selectedPropertyBeforeAddRef.current = null;
+		setAnimatePropertyActions(false);
 		setPropertyToEdit(nextProperty);
 	};
 
@@ -91,40 +97,112 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		sortableGridRef,
 	} = useSchemaEdit(
 		schema,
-		onEditClick,
-		closeFullscreen,
+		onSelectProperty,
+		closeAfterApplyingChanges,
 		propertyToEdit?.key,
 		search,
 		showOnlyChanged,
 		initialPropertyKey,
 	);
-	const isAddingProperty = propertyToEdit != null && propertyToEdit.key == null;
+	const hasPendingChanges = hasUnsavedPropertyChanges || hasSchemaChanges;
+	const shouldBlockNavigation = useCallback(
+		() => hasPendingChanges && !skipNavigationBlockRef.current,
+		[hasPendingChanges],
+	);
+	const navigationBlocker = useBlocker(shouldBlockNavigation);
+	const isGridKeyboardNavigationEnabled = propertyCount > 0;
+	let discardChangesDescription = 'The pending schema changes will be discarded.';
+	if (hasUnsavedPropertyChanges) {
+		if (hasSchemaChanges) {
+			discardChangesDescription =
+				'The unsaved property changes and all pending schema changes will be discarded.';
+		} else if (propertyToEdit?.key == null) {
+			discardChangesDescription = 'The new property will be discarded.';
+		} else {
+			discardChangesDescription = `The unsaved changes to “${propertyToEdit.name}” will be discarded.`;
+		}
+	}
+
+	useBeforeUnload(
+		useCallback(
+			(event) => {
+				if (hasPendingChanges) {
+					event.preventDefault();
+					event.returnValue = '';
+				}
+			},
+			[hasPendingChanges],
+		),
+	);
+
+	useDocumentGridKeyboardNavigation(sortableGridRef, isGridKeyboardNavigationEnabled);
+
+	useEffect(() => {
+		if (!isGridKeyboardNavigationEnabled) {
+			return;
+		}
+		const animationFrame = requestAnimationFrame(() => sortableGridRef.current?.focus());
+		return () => cancelAnimationFrame(animationFrame);
+	}, [isGridKeyboardNavigationEnabled, propertyCount, sortableGridRef]);
+
+	const onAddClick = () => {
+		if (hasUnsavedPropertyChanges) {
+			setAnimatePropertyActions(true);
+			return;
+		}
+
+		const contextualProperty = propertyToEdit?.key == null ? selectedPropertyBeforeAddRef.current : propertyToEdit;
+		if (propertyToEdit?.key != null) {
+			selectedPropertyBeforeAddRef.current = structuredClone(propertyToEdit);
+		}
+		let parent = propertyParents[0];
+		if (contextualProperty?.key != null) {
+			const parentKey =
+				contextualProperty.type?.kind === 'object'
+					? contextualProperty.key
+					: getParentPropertyKey(contextualProperty.key);
+			parent = propertyParents.find((candidate) => candidate.key === parentKey) || parent;
+		}
+
+		const property = newPropertyToEdit(parent.key, parent.indentation, parent.root);
+		setAnimatePropertyActions(false);
+		setPropertyToEdit(property);
+	};
 
 	const onSaveProperty = (property: PropertyToEdit, primarySource: string | null) => {
+		setAnimatePropertyActions(false);
 		if (property.key == null) {
-			onAddProperty(property, primarySource);
-			setPropertyToEdit(null);
+			const addedProperty = onAddProperty(property, primarySource);
+			selectedPropertyBeforeAddRef.current = null;
+			setPropertyToEdit(addedProperty);
 			setPropertyDraftDirty(false);
 			return;
 		}
 		onEditProperty(property, primarySource);
-		setPropertyToEdit(structuredClone(property));
+		resetPropertyDraft(property);
 		setPropertyDraftDirty(false);
+	};
+
+	const onCancelProperty = () => {
+		setAnimatePropertyActions(false);
+		setPropertyDraftDirty(false);
+		if (propertyToEdit?.key == null) {
+			const previousProperty = selectedPropertyBeforeAddRef.current;
+			selectedPropertyBeforeAddRef.current = null;
+			resetPropertyDraft(previousProperty);
+			return;
+		}
+		resetPropertyDraft(propertyToEdit);
 	};
 
 	const onConfirmRemove = () => {
-		onRemoveProperty(propertyToRemove.key);
+		const nextProperty = onRemoveProperty(propertyToRemove.key);
 		if (propertyToEdit?.key === propertyToRemove.key) {
-			setPropertyToEdit(null);
+			selectedPropertyBeforeAddRef.current = null;
+			setPropertyToEdit(nextProperty);
 			setPropertyDraftDirty(false);
 		}
 		setPropertyToRemove(null);
-	};
-
-	const onDiscardPropertyDraft = () => {
-		setPropertyToEdit(pendingPropertyToEdit);
-		setPendingPropertyToEdit(null);
-		setPropertyDraftDirty(false);
 	};
 
 	const onExpandClick = () => {
@@ -136,7 +214,43 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 	};
 
 	const onCancelEdit = () => {
+		if (hasPendingChanges) {
+			setIsCancelEditPending(true);
+			return;
+		}
 		closeFullscreen();
+	};
+
+	const onDiscardChangesAndLeave = () => {
+		setAnimatePropertyActions(false);
+		setIsCancelEditPending(false);
+		setPropertyToEdit(null);
+		setPropertyDraftDirty(false);
+		skipNavigationBlockRef.current = true;
+		if (navigationBlocker.state === 'blocked') {
+			navigationBlocker.proceed();
+			return;
+		}
+		closeFullscreen();
+	};
+
+	const onKeepEditing = () => {
+		setIsCancelEditPending(false);
+		skipNavigationBlockRef.current = false;
+		if (navigationBlocker.state === 'blocked') {
+			navigationBlocker.reset();
+		}
+	};
+
+	const onReviewChangesClick = () => {
+		if (hasUnsavedPropertyChanges) {
+			setAnimatePropertyActions(true);
+			return;
+		}
+		if (propertyToEdit?.key == null) {
+			onCancelProperty();
+		}
+		onApplyChanges();
 	};
 
 	const onSearchBlur = (event: any) => {
@@ -164,8 +278,8 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 					<SlButton
 						className='schema-edit__header-apply-button'
 						variant='primary'
-						onClick={onApplyChanges}
-						disabled={!hasSchemaChanges || propertyDraftDirty || isAddingProperty}
+						onClick={onReviewChangesClick}
+						disabled={!hasSchemaChanges && !hasUnsavedPropertyChanges}
 					>
 						Review and apply changes...
 					</SlButton>
@@ -191,11 +305,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 								: `${changeCount} pending ${changeCount === 1 ? 'change' : 'changes'}`}
 						</div>
 					</div>
-					<SlButton
-						variant='text'
-						className='schema-edit__add-property'
-						onClick={() => onAddClick('', 0, '')}
-					>
+					<SlButton variant='text' className='schema-edit__add-property' onClick={onAddClick}>
 						<SlIcon name='plus-lg' slot='prefix' />
 						Add a new property
 					</SlButton>
@@ -295,22 +405,23 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 					<SortableGrid
 						rows={rows}
 						columns={columns}
+						keyboardNavigation
 						gridColumnsWidths={schemaEditGridColumns}
 						nestedRowsIndentation={schemaEditNestedRowsIndentation}
 						onSortRow={onSortRow}
 						ref={sortableGridRef}
 					/>
+					{propertyCount > 0 && <GridKeyboardHints canReorder />}
 				</div>
 				<PropertyPanel
+					animateActions={animatePropertyActions}
 					dirty={propertyDraftDirty}
 					property={propertyToEdit}
 					parents={propertyParents}
 					primarySources={primarySources}
 					status={propertyStatuses[propertyToEdit?.key]}
-					onClose={() => {
-						setPropertyToEdit(null);
-						setPropertyDraftDirty(false);
-					}}
+					onClose={onCancelProperty}
+					onActionsAnimationFinish={() => setAnimatePropertyActions(false)}
 					onDirtyChange={setPropertyDraftDirty}
 					onRemove={(property) => onRemoveClick(property.key, property.name, property.type.kind)}
 					onSave={onSaveProperty}
@@ -385,23 +496,19 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 			</AlertDialog>
 			<AlertDialog
 				variant='warning'
-				isOpen={pendingPropertyToEdit != null}
-				onClose={() => setPendingPropertyToEdit(null)}
+				isOpen={isCancelEditPending || navigationBlocker.state === 'blocked'}
+				onClose={onKeepEditing}
 				title='Discard unsaved changes?'
 				actions={
 					<>
-						<SlButton onClick={() => setPendingPropertyToEdit(null)}>Keep editing</SlButton>
-						<SlButton variant='primary' onClick={onDiscardPropertyDraft}>
-							Discard changes
+						<SlButton onClick={onKeepEditing}>Keep editing</SlButton>
+						<SlButton variant='primary' onClick={onDiscardChangesAndLeave}>
+							Discard and leave
 						</SlButton>
 					</>
 				}
 			>
-				<p>
-					{propertyToEdit?.key == null
-						? 'The new property has unsaved changes. They will be lost.'
-						: `The unsaved changes to “${propertyToEdit?.name}” will be lost.`}
-				</p>
+				<p>{discardChangesDescription}</p>
 			</AlertDialog>
 		</div>
 	);

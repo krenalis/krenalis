@@ -1,15 +1,24 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import './PropertyTypeSelector.css';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
+import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
+import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
+import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import Type, { TypeKind } from '../../../lib/api/types/types';
 import { TypeIcon } from '../../base/TypeIcon/TypeIcon';
 
 type PropertyStructure = 'one' | 'array' | 'map';
+
+interface PropertyStructureOption {
+	id: PropertyStructure;
+	label: string;
+	triggerLabel: string;
+	description: string;
+	icon: string;
+}
 
 interface PropertyTypeOption {
 	id: TypeKind;
@@ -27,11 +36,39 @@ interface PropertyTypeSelectorProps {
 	onChange: (type: Type | null) => void;
 }
 
+interface PropertyTypeSelectorRef {
+	openStructureMenu: () => void;
+}
+
+const PROPERTY_STRUCTURE_OPTIONS: PropertyStructureOption[] = [
+	{
+		id: 'one',
+		label: 'one value',
+		triggerLabel: 'one value',
+		description: 'The property contains a single value',
+		icon: '1-circle',
+	},
+	{
+		id: 'array',
+		label: 'array',
+		triggerLabel: 'array of',
+		description: 'The property contains an ordered collection of values',
+		icon: 'list-ul',
+	},
+	{
+		id: 'map',
+		label: 'map',
+		triggerLabel: 'map of',
+		description: 'The property contains key-value pairs with string keys',
+		icon: 'braces-asterisk',
+	},
+];
+
 const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 	{
 		id: 'string',
 		group: 'Basic values',
-		label: 'Text',
+		label: 'string',
 		description: 'Text without a specific meaning',
 		kind: 'string',
 		create: () => ({ kind: 'string' }),
@@ -39,7 +76,7 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 	{
 		id: 'int',
 		group: 'Basic values',
-		label: 'Integer',
+		label: 'int',
 		description: 'Whole numeric value',
 		kind: 'int',
 		create: () => ({ kind: 'int', bitSize: 32, unsigned: false }),
@@ -47,7 +84,7 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 	{
 		id: 'decimal',
 		group: 'Basic values',
-		label: 'Decimal number',
+		label: 'decimal',
 		description: 'Fixed-point numeric value',
 		kind: 'decimal',
 		create: () => ({ kind: 'decimal', precision: 10, scale: 0 }),
@@ -55,7 +92,7 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 	{
 		id: 'float',
 		group: 'Basic values',
-		label: 'Floating-point number',
+		label: 'float',
 		description: 'Floating-point numeric value',
 		kind: 'float',
 		create: () => ({ kind: 'float', bitSize: 64, real: false }),
@@ -63,15 +100,15 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 	{
 		id: 'boolean',
 		group: 'Basic values',
-		label: 'True or false',
-		description: 'Boolean value',
+		label: 'boolean',
+		description: 'True or false value',
 		kind: 'boolean',
 		create: () => ({ kind: 'boolean' }),
 	},
 	{
 		id: 'datetime',
 		group: 'Date and time',
-		label: 'Date and time',
+		label: 'datetime',
 		description: 'Native date-time value',
 		kind: 'datetime',
 		create: () => ({ kind: 'datetime' }),
@@ -79,7 +116,7 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 	{
 		id: 'date',
 		group: 'Date and time',
-		label: 'Date',
+		label: 'date',
 		description: 'Date without a time',
 		kind: 'date',
 		create: () => ({ kind: 'date' }),
@@ -87,7 +124,7 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 	{
 		id: 'time',
 		group: 'Date and time',
-		label: 'Time',
+		label: 'time',
 		description: 'Time without a date',
 		kind: 'time',
 		create: () => ({ kind: 'time' }),
@@ -95,7 +132,7 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 	{
 		id: 'year',
 		group: 'Date and time',
-		label: 'Year',
+		label: 'year',
 		description: 'Year value',
 		kind: 'year',
 		create: () => ({ kind: 'year' }),
@@ -103,7 +140,7 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 	{
 		id: 'uuid',
 		group: 'Identifiers and network',
-		label: 'UUID',
+		label: 'uuid',
 		description: 'Universally unique identifier',
 		kind: 'uuid',
 		create: () => ({ kind: 'uuid' }),
@@ -111,7 +148,7 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 	{
 		id: 'ip',
 		group: 'Identifiers and network',
-		label: 'IP address',
+		label: 'ip',
 		description: 'IPv4 or IPv6 network address',
 		kind: 'ip',
 		create: () => ({ kind: 'ip' }),
@@ -119,7 +156,7 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 	{
 		id: 'json',
 		group: 'Structured values',
-		label: 'JSON value',
+		label: 'json',
 		description: 'Structured data stored as JSON',
 		kind: 'json',
 		create: () => ({ kind: 'json' }),
@@ -127,158 +164,244 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 	{
 		id: 'object',
 		group: 'Structured values',
-		label: 'Object',
+		label: 'object',
 		description: 'Value with nested properties',
 		kind: 'object',
 		create: () => ({ kind: 'object', properties: [] }),
 	},
 ];
 
-const PropertyTypeSelector = ({ type, canEditType, onChange }: PropertyTypeSelectorProps) => {
-	const [search, setSearch] = useState('');
-	const [structure, setStructure] = useState<PropertyStructure>(() => getPropertyStructure(type));
-	const dropdownRef = useRef<any>();
+const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSelectorProps>(
+	({ type, canEditType, onChange }, ref) => {
+		const [search, setSearch] = useState('');
+		const [structure, setStructure] = useState<PropertyStructure>(() => getPropertyStructure(type));
+		const structureDropdownRef = useRef<any>();
+		const dropdownRef = useRef<any>();
+		const openTypeAfterStructureSelectionRef = useRef(false);
 
-	const valueType = getPropertyValueType(type);
-	const selectedOption = getPropertyTypeOption(type);
-	const options = useMemo(() => {
-		const term = search.trim().toLocaleLowerCase();
-		return PROPERTY_TYPE_OPTIONS.filter((option) => {
-			if (structure !== 'one' && option.kind === 'object') {
-				return false;
+		useImperativeHandle(
+			ref,
+			() => ({
+				openStructureMenu: () => {
+					if (!canEditType) {
+						return;
+					}
+					structureDropdownRef.current?.focusOnTrigger();
+					void structureDropdownRef.current?.show();
+				},
+			}),
+			[canEditType],
+		);
+
+		const valueType = getPropertyValueType(type);
+		const selectedOption = getPropertyTypeOption(type);
+		const selectedStructureOption =
+			PROPERTY_STRUCTURE_OPTIONS.find((option) => option.id === structure) || PROPERTY_STRUCTURE_OPTIONS[0];
+		const options = useMemo(() => {
+			const term = search.trim().toLocaleLowerCase();
+			return PROPERTY_TYPE_OPTIONS.filter((option) => {
+				if (structure !== 'one' && option.kind === 'object') {
+					return false;
+				}
+				if (!canEditType && !isOptionCompatibleWithType(option, valueType)) {
+					return false;
+				}
+				return term === '' || `${option.label} ${option.description}`.toLocaleLowerCase().includes(term);
+			});
+		}, [canEditType, search, structure, valueType]);
+
+		useEffect(() => {
+			if (type != null) {
+				setStructure(getPropertyStructure(type));
 			}
-			if (!canEditType && !isOptionCompatibleWithType(option, valueType)) {
-				return false;
+		}, [type]);
+
+		const onSelectStructure = (event) => {
+			if (!canEditType) {
+				return;
 			}
-			return term === '' || `${option.label} ${option.description}`.toLocaleLowerCase().includes(term);
-		});
-	}, [canEditType, search, structure, valueType]);
+			openTypeAfterStructureSelectionRef.current = true;
+			const newStructure = event.detail.item.value as PropertyStructure;
+			if (newStructure === structure) {
+				return;
+			}
+			setStructure(newStructure);
+			const newValueType = getPropertyValueType(type);
+			if (newValueType == null || (newStructure !== 'one' && newValueType.kind === 'object')) {
+				onChange(null);
+				return;
+			}
+			onChange(wrapPropertyValueType(newValueType, newStructure));
+		};
 
-	useEffect(() => {
-		if (type != null) {
-			setStructure(getPropertyStructure(type));
-		}
-	}, [type]);
+		const onStructureMenuAfterHide = () => {
+			if (!openTypeAfterStructureSelectionRef.current) {
+				return;
+			}
+			openTypeAfterStructureSelectionRef.current = false;
+			dropdownRef.current?.focusOnTrigger();
+			void dropdownRef.current?.show();
+		};
 
-	const onChangeStructure = (event) => {
-		const newStructure = event.target.value as PropertyStructure;
-		setStructure(newStructure);
-		const newValueType = getPropertyValueType(type);
-		if (newValueType == null || (newStructure !== 'one' && newValueType.kind === 'object')) {
-			onChange(null);
-			return;
-		}
-		onChange(wrapPropertyValueType(newValueType, newStructure));
-	};
+		const onSelectOption = (option: PropertyTypeOption) => {
+			const newType = canEditType ? wrapPropertyValueType(option.create(), structure) : type;
+			onChange(newType);
+			dropdownRef.current?.hide();
+		};
 
-	const onSelectOption = (option: PropertyTypeOption) => {
-		const newType = canEditType ? wrapPropertyValueType(option.create(), structure) : type;
-		onChange(newType);
-		dropdownRef.current?.hide();
-	};
+		const groupedOptions = options.reduce<Record<string, PropertyTypeOption[]>>((groups, option) => {
+			if (groups[option.group] == null) {
+				groups[option.group] = [];
+			}
+			groups[option.group].push(option);
+			return groups;
+		}, {});
 
-	const groupedOptions = options.reduce<Record<string, PropertyTypeOption[]>>((groups, option) => {
-		if (groups[option.group] == null) {
-			groups[option.group] = [];
-		}
-		groups[option.group].push(option);
-		return groups;
-	}, {});
-
-	return (
-		<div className='property-type-selector'>
-			<div className='property-type-selector__controls'>
-				<SlSelect
-					className='property-type-selector__structure'
-					label='Structure'
-					value={structure}
-					onSlChange={onChangeStructure}
-					disabled={!canEditType}
+		return (
+			<div className='property-type-selector'>
+				<SlTooltip
+					className='schema-edit__toolbar-tooltip'
+					content='The type of an existing property cannot be changed.'
+					disabled={canEditType}
+					hoist
 				>
-					<SlOption value='one'>One value</SlOption>
-					<SlOption value='array'>Array</SlOption>
-					<SlOption value='map'>Map</SlOption>
-				</SlSelect>
-				<SlDropdown
-					className='property-type-selector__dropdown'
-					ref={dropdownRef}
-					hoist={true}
-					placement='bottom-end'
-					distance={6}
-					onSlAfterHide={() => setSearch('')}
-				>
-					<SlButton className='property-type-selector__trigger' slot='trigger' caret={true}>
-						<span className='property-type-selector__trigger-content'>
-							{selectedOption != null ? (
-								<>
-									<PropertyTypeOptionIcon option={selectedOption} />
-									{selectedOption.label}
-								</>
-							) : (
-								<span className='property-type-selector__placeholder'>Select type</span>
-							)}
-						</span>
-					</SlButton>
-					<div className='property-type-selector__browser'>
-						<SlInput
-							className='property-type-selector__search'
-							placeholder='Search types...'
-							value={search}
-							onSlInput={(event: any) => setSearch(event.target.value)}
+					<div
+						className={`property-type-selector__controls${
+							canEditType ? '' : ' property-type-selector__controls--read-only'
+						}`}
+						onPointerDown={(event) => {
+							if (!canEditType) {
+								event.preventDefault();
+							}
+						}}
+					>
+						<SlDropdown
+							className='property-type-selector__structure-dropdown'
+							ref={structureDropdownRef}
+							hoist={true}
+							placement='bottom-start'
+							distance={6}
+							disabled={!canEditType}
+							onSlAfterHide={onStructureMenuAfterHide}
 						>
-							<SlIcon slot='prefix' name='search' />
-						</SlInput>
-						<div className='property-type-selector__options'>
-							{Object.entries(groupedOptions).map(([group, groupOptions]) => (
-								<div className='property-type-selector__group' key={group}>
-									<div className='property-type-selector__group-label'>{group}</div>
-									{groupOptions.map((option) => (
-										<button
-											className={`property-type-selector__option${
-												selectedOption?.id === option.id
-													? ' property-type-selector__option--selected'
-													: ''
-											}`}
-											key={option.id}
-											type='button'
-											data-type-option={option.id}
-											onClick={() => onSelectOption(option)}
-										>
-											<PropertyTypeOptionIcon option={option} />
-											<span className='property-type-selector__option-content'>
-												<span className='property-type-selector__option-label'>
-													{option.label}
-												</span>
-												<span className='property-type-selector__option-description'>
-													{option.description}
-												</span>
+							<SlButton
+								className='property-type-selector__structure-trigger'
+								slot='trigger'
+								caret={canEditType}
+								aria-disabled={!canEditType || undefined}
+								aria-label={`Structure: ${selectedStructureOption.label}`}
+							>
+								<SlIcon slot='prefix' name={selectedStructureOption.icon} />
+								{selectedStructureOption.triggerLabel}
+							</SlButton>
+							<SlMenu className='property-type-selector__structure-menu' onSlSelect={onSelectStructure}>
+								{PROPERTY_STRUCTURE_OPTIONS.map((option) => (
+									<SlMenuItem
+										className={`property-type-selector__structure-option${
+											structure === option.id
+												? ' property-type-selector__structure-option--selected'
+												: ''
+										}`}
+										key={option.id}
+										value={option.id}
+									>
+										<SlIcon slot='prefix' name={option.icon} />
+										<span className='property-type-selector__structure-option-content'>
+											<span className='property-type-selector__structure-option-label'>
+												{option.label}
 											</span>
-											{selectedOption?.id === option.id && <SlIcon name='check-lg' />}
-										</button>
+											<span className='property-type-selector__structure-option-description'>
+												{option.description}
+											</span>
+										</span>
+										{structure === option.id && <SlIcon slot='suffix' name='check-lg' />}
+									</SlMenuItem>
+								))}
+							</SlMenu>
+						</SlDropdown>
+						<SlDropdown
+							className='property-type-selector__dropdown'
+							ref={dropdownRef}
+							hoist={true}
+							placement='bottom-end'
+							distance={6}
+							disabled={!canEditType}
+							onSlAfterHide={() => setSearch('')}
+						>
+							<SlButton
+								className='property-type-selector__trigger'
+								slot='trigger'
+								caret={canEditType}
+								aria-disabled={!canEditType || undefined}
+								aria-label={selectedOption != null ? `Type: ${selectedOption.label}` : 'Select type'}
+							>
+								{selectedOption != null && (
+									<PropertyTypeOptionIcon option={selectedOption} slot='prefix' />
+								)}
+								{selectedOption != null ? (
+									selectedOption.label
+								) : (
+									<span className='property-type-selector__placeholder'>Select type</span>
+								)}
+							</SlButton>
+							<div className='property-type-selector__browser'>
+								<SlInput
+									className='property-type-selector__search'
+									placeholder='Search types...'
+									value={search}
+									onSlInput={(event: any) => setSearch(event.target.value)}
+								>
+									<SlIcon slot='prefix' name='search' />
+								</SlInput>
+								<div className='property-type-selector__options'>
+									{Object.entries(groupedOptions).map(([group, groupOptions]) => (
+										<div className='property-type-selector__group' key={group}>
+											<div className='property-type-selector__group-label'>{group}</div>
+											{groupOptions.map((option) => (
+												<button
+													className={`property-type-selector__option${
+														selectedOption?.id === option.id
+															? ' property-type-selector__option--selected'
+															: ''
+													}`}
+													key={option.id}
+													type='button'
+													data-type-option={option.id}
+													onClick={() => onSelectOption(option)}
+												>
+													<PropertyTypeOptionIcon option={option} />
+													<span className='property-type-selector__option-content'>
+														<span className='property-type-selector__option-label'>
+															{option.label}
+														</span>
+														<span className='property-type-selector__option-description'>
+															{option.description}
+														</span>
+													</span>
+													{selectedOption?.id === option.id && <SlIcon name='check-lg' />}
+												</button>
+											))}
+										</div>
 									))}
+									{options.length === 0 && (
+										<div className='property-type-selector__no-options'>No matching types</div>
+									)}
 								</div>
-							))}
-							{options.length === 0 && (
-								<div className='property-type-selector__no-options'>No matching types</div>
-							)}
-						</div>
+							</div>
+						</SlDropdown>
 					</div>
-				</SlDropdown>
+				</SlTooltip>
 			</div>
-			<div className='property-type-selector__help'>
-				Structure defines whether the property stores one value, an array of values, or a map of values. Type
-				describes the stored value.
-			</div>
-		</div>
-	);
-};
+		);
+	},
+);
 
-const PropertyTypeOptionIcon = ({ option }: { option: PropertyTypeOption }) => {
+const PropertyTypeOptionIcon = ({ option, slot }: { option: PropertyTypeOption; slot?: string }) => {
 	if (option.icon != null) {
-		return <SlIcon className='property-type-selector__option-icon' name={option.icon} />;
+		return <SlIcon className='property-type-selector__option-icon' name={option.icon} slot={slot} />;
 	}
 	return (
-		<span className='property-type-selector__option-icon'>
+		<span className='property-type-selector__option-icon' slot={slot}>
 			<TypeIcon kind={option.kind} />
 		</span>
 	);
@@ -292,11 +415,6 @@ const getPropertyStructure = (type: Type | null): PropertyStructure => {
 		return 'map';
 	}
 	return 'one';
-};
-
-const getPropertyTypeLabel = (type: Type | null): string => {
-	const option = getPropertyTypeOption(type);
-	return option?.label || 'Select type';
 };
 
 const getPropertyTypeOption = (type: Type | null): PropertyTypeOption | undefined => {
@@ -338,10 +456,5 @@ const wrapPropertyValueType = (type: Type, structure: PropertyStructure): Type =
 	return type;
 };
 
-export {
-	PropertyTypeSelector,
-	getPropertyStructure,
-	getPropertyTypeLabel,
-	getPropertyValueType,
-	replacePropertyValueType,
-};
+export { PropertyTypeSelector, getPropertyValueType, replacePropertyValueType };
+export type { PropertyTypeSelectorRef };

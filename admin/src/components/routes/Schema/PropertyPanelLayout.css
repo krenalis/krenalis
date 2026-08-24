@@ -48,7 +48,6 @@
 .property-panel__header {
 	align-items: center;
 	background-color: var(--bg-primary);
-	border-bottom: 1px solid var(--border-primary);
 	display: flex;
 	flex: none;
 	justify-content: space-between;

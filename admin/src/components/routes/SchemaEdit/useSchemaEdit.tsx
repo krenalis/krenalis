@@ -1,11 +1,16 @@
 import React, { useState, useMemo, useEffect, ReactNode, useRef, useContext } from 'react';
 import Type, { ObjectType, Role, TypeKind } from '../../../lib/api/types/types';
-import { SortableGridRow, GridColumn } from '../../base/Grid/Grid.types';
+import { SortableGridRef, SortableGridRow, GridColumn } from '../../base/Grid/Grid.types';
 import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
-import { EditableProperty, EditableSchema, transformSchema, normalizeSchema } from './SchemaEdit.helpers';
+import {
+	EditableProperty,
+	EditableSchema,
+	getParentPropertyKey,
+	normalizeSchema,
+	transformSchema,
+} from './SchemaEdit.helpers';
 import { PreviewAlterProfileSchemaResponse, RePaths } from '../../../lib/api/types/responses';
 import AppContext from '../../../context/AppContext';
-import { SortableGridRef } from '../../base/Grid/SortableGrid';
 import { isMetaProperty } from '../../../lib/core/schema';
 import TransformedConnection from '../../../lib/core/connection';
 import { PrimarySources } from '../../../lib/api/types/workspace';
@@ -28,7 +33,6 @@ interface PropertyToEdit {
 	indentation?: number;
 	root?: string;
 	name?: string;
-	label?: string;
 	prefilled?: string;
 	role?: Role;
 	type?: Type | null;
@@ -53,11 +57,17 @@ interface PropertyParent {
 	root: string;
 }
 
+interface SelectPropertyOptions {
+	animateActionsIfBlocked?: boolean;
+}
+
+type SelectProperty = (propertyKey: string, property: EditableProperty, options?: SelectPropertyOptions) => void;
+
 type PropertyChangeStatus = 'added' | 'modified';
 
 const useSchemaEdit = (
 	schema: ObjectType,
-	onEditClick: (propertyKey: string, property: EditableProperty) => void,
+	onSelectProperty: SelectProperty,
 	onClose: () => void,
 	selectedPropertyKey?: string,
 	search?: string,
@@ -69,7 +79,7 @@ const useSchemaEdit = (
 	const [isQueriesLoading, setIsQueriesLoading] = useState<boolean>(false);
 	const [isConfirmChangesLoading, setIsConfirmChangesLoading] = useState<boolean>(false);
 
-	const sortableGridRef = useRef<SortableGridRef>();
+	const sortableGridRef = useRef<SortableGridRef>(null);
 
 	const { api, handleError, workspaces, selectedWorkspace, connections, setIsLoadingWorkspaces } =
 		useContext(AppContext);
@@ -127,9 +137,9 @@ const useSchemaEdit = (
 			selectedPropertyKey,
 			search,
 			showOnlyChanged,
-			onEditClick,
+			onSelectProperty,
 		);
-	}, [editableSchema, onEditClick, propertyStatuses, search, selectedPropertyKey, showOnlyChanged]);
+	}, [editableSchema, onSelectProperty, propertyStatuses, search, selectedPropertyKey, showOnlyChanged]);
 
 	useEffect(() => {
 		if (schema == null) {
@@ -149,8 +159,12 @@ const useSchemaEdit = (
 		initialPrimarySources.current = structuredClone(primarySources.current);
 		initialSchemaEditStateKey.current = buildSchemaEditStateKey(editable, primarySources.current, rePaths.current);
 		setEditableSchema(editable);
-		if (initialPropertyKey != null && editable[initialPropertyKey] != null) {
-			onEditClick(initialPropertyKey, editable[initialPropertyKey]);
+		const propertyKey =
+			initialPropertyKey != null && editable[initialPropertyKey] != null
+				? initialPropertyKey
+				: Object.keys(editable)[0];
+		if (propertyKey != null) {
+			onSelectProperty(propertyKey, editable[propertyKey]);
 		}
 	}, [schema]);
 
@@ -234,6 +248,7 @@ const useSchemaEdit = (
 				}
 			}, 100);
 		}
+		return { key: k, ...s[k] };
 	};
 
 	const onEditProperty = (property: PropertyToEdit, primarySource: string | null) => {
@@ -337,6 +352,7 @@ const useSchemaEdit = (
 
 	const onRemoveProperty = (propertyKey: string) => {
 		const schema = { ...editableSchema };
+		const nextProperty = getPropertySelectionAfterRemoval(schema, propertyKey);
 		if (schema[propertyKey].type.kind === 'object') {
 			for (const key of Object.keys(schema)) {
 				const isNested = key.startsWith(`${propertyKey}.`);
@@ -368,6 +384,7 @@ const useSchemaEdit = (
 		}
 		delete schema[propertyKey];
 		setEditableSchema(schema);
+		return nextProperty;
 	};
 
 	const onSortRow = (overRowID: string, movedRowID: string) => {
@@ -522,11 +539,33 @@ const getPropertyChangeStatuses = (
 	return statuses;
 };
 
+const getPropertySelectionAfterRemoval = (schema: EditableSchema, propertyKey: string): PropertyToEdit | null => {
+	const keys = Object.keys(schema);
+	const propertyIndex = keys.indexOf(propertyKey);
+	const isRemovedProperty = (key: string) => key === propertyKey || key.startsWith(`${propertyKey}.`);
+	let nextPropertyKey = keys.slice(propertyIndex + 1).find((key) => !isRemovedProperty(key));
+	if (nextPropertyKey == null) {
+		nextPropertyKey = keys
+			.slice(0, propertyIndex)
+			.reverse()
+			.find((key) => !isRemovedProperty(key));
+	}
+	return nextPropertyKey == null ? null : { key: nextPropertyKey, ...schema[nextPropertyKey] };
+};
+
 const getPropertyParents = (schema: EditableSchema): PropertyParent[] => {
-	const parents: PropertyParent[] = [{ key: '', label: 'Profile schema / root', indentation: 0, root: '' }];
+	const parents: PropertyParent[] = [
+		{
+			key: '',
+			label: 'Profile (top level)',
+			indentation: 0,
+			root: '',
+		},
+	];
 	if (schema == null) {
 		return parents;
 	}
+	const parentsByParentKey = new Map<string, PropertyParent[]>();
 	for (const [key, property] of Object.entries(schema)) {
 		if (property.type.kind !== 'object') {
 			continue;
@@ -535,13 +574,29 @@ const getPropertyParents = (schema: EditableSchema): PropertyParent[] => {
 			.split('.')
 			.map((_, index, fragments) => schema[fragments.slice(0, index + 1).join('.')]?.name)
 			.filter((fragment) => fragment != null)
-			.join(' / ');
-		parents.push({
+			.join(' › ');
+		const parentKey = getParentPropertyKey(key);
+		const siblings = parentsByParentKey.get(parentKey) || [];
+		siblings.push({
 			key,
-			label: `Profile schema / ${path}`,
+			label: path,
 			indentation: property.indentation + 1,
 			root: property.root,
 		});
+		parentsByParentKey.set(parentKey, siblings);
+	}
+	const topLevelParents = parentsByParentKey.get('') || [];
+	const pending = [...topLevelParents].reverse();
+	while (pending.length > 0) {
+		const parent = pending.pop();
+		if (parent == null) {
+			continue;
+		}
+		parents.push(parent);
+		const children = parentsByParentKey.get(parent.key) || [];
+		for (let index = children.length - 1; index >= 0; index--) {
+			pending.push(children[index]);
+		}
 	}
 	return parents;
 };
@@ -590,7 +645,7 @@ const getRows = (
 	selectedPropertyKey: string | undefined,
 	search: string | undefined,
 	showOnlyChanged: boolean | undefined,
-	onEditClick: (propertyKey: string, property: EditableProperty) => void,
+	onSelectProperty: SelectProperty,
 ): SortableGridRow[] => {
 	const mappedRows = {};
 	const visibleKeys = getVisiblePropertyKeys(schema, propertyStatuses, search, showOnlyChanged);
@@ -626,7 +681,7 @@ const getRows = (
 					selectedPropertyKey === propertyKey,
 					expanded,
 					isFiltered,
-					onEditClick,
+					onSelectProperty,
 				);
 				m[propertyKey] = subMap;
 			} else {
@@ -638,7 +693,7 @@ const getRows = (
 					selectedPropertyKey === propertyKey,
 					expanded,
 					isFiltered,
-					onEditClick,
+					onSelectProperty,
 				);
 			}
 		} else {
@@ -652,7 +707,7 @@ const getRows = (
 					selectedPropertyKey === propertyKey,
 					expanded,
 					isFiltered,
-					onEditClick,
+					onSelectProperty,
 				);
 				mappedRows[propertyKey] = subMap;
 			} else {
@@ -664,7 +719,7 @@ const getRows = (
 					selectedPropertyKey === propertyKey,
 					expanded,
 					isFiltered,
-					onEditClick,
+					onSelectProperty,
 				);
 			}
 		}
@@ -681,7 +736,7 @@ const buildRow = (
 	selected: boolean,
 	expanded: boolean,
 	isFiltered: boolean,
-	onEditClick: (propertyKey: string, property: EditableProperty) => void,
+	onSelectProperty: SelectProperty,
 ): SortableGridRow => {
 	const actions = (
 		<div className='schema-edit__property-actions'>
@@ -716,7 +771,8 @@ const buildRow = (
 		dragKey: isFiltered ? '' : propertyKey,
 		expanded,
 		id: propertyKey,
-		onClick: () => onEditClick(propertyKey, property),
+		onClick: () => onSelectProperty(propertyKey, property),
+		onToggleExpansion: () => onSelectProperty(propertyKey, property, { animateActionsIfBlocked: false }),
 		selected,
 	};
 };
@@ -755,4 +811,4 @@ const validateEditableSchema = (editableSchema: EditableSchema) => {
 	}
 };
 
-export { useSchemaEdit, PropertyChangeStatus, PropertyParent, PropertyToEdit, PropertyToRemove };
+export { useSchemaEdit, PropertyChangeStatus, PropertyParent, PropertyToEdit, PropertyToRemove, SelectPropertyOptions };

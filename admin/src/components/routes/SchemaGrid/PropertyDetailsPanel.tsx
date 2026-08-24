@@ -5,7 +5,6 @@ import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { Property } from '../../../lib/api/types/types';
 import TransformedConnection from '../../../lib/core/connection';
 import { PropertyPanelLayout } from '../Schema/PropertyPanelLayout';
-import { getPropertyStructure, getPropertyTypeLabel } from '../SchemaEdit/PropertyTypeSelector';
 
 interface PropertyDetailsPanelProps {
 	onClose: () => void;
@@ -20,41 +19,29 @@ interface PropertyDetailProps {
 }
 
 const PropertyDetailsPanel = ({ onClose, primarySource, property }: PropertyDetailsPanelProps) => {
-	const type = getPropertyTypeLabel(property.type);
-	const structure = getPropertyStructure(property.type);
-	const showPrimarySource = property.type.kind !== 'object' && property.type.kind !== 'array';
-
 	return (
 		<PropertyPanelLayout className='property-details-panel' closeLabel='Close property details' onClose={onClose}>
 			<div className='property-details-panel__details'>
 				<div className='property-details-panel__section'>
 					<PropertyDetail label='Name'>{property.name}</PropertyDetail>
-					<PropertyDetail label='Type'>{type}</PropertyDetail>
-					<PropertyDetail label='Storage' className='property-details-panel__technical-type'>
+					<PropertyDetail label='Type' className='property-details-panel__technical-type'>
 						{toKrenalisStringType(property.type)}
 					</PropertyDetail>
-					{structure !== 'one' && (
-						<PropertyDetail label='Structure'>{structure === 'array' ? 'Array' : 'Map'}</PropertyDetail>
-					)}
 				</div>
 				<div className='property-details-panel__section property-details-panel__section--metadata'>
 					<PropertyDetail label='Description' className='property-details-panel__description'>
-						{property.description || (
-							<span className='property-details-panel__empty-value'>No description</span>
+						{property.description || <span className='property-details-panel__empty-value'>—</span>}
+					</PropertyDetail>
+					<PropertyDetail label='Primary source'>
+						{primarySource == null ? (
+							<span className='property-details-panel__empty-value'>—</span>
+						) : (
+							<span className='property-details-panel__primary-source'>
+								<LittleLogo code={primarySource.connector.code} path={CONNECTORS_ASSETS_PATH} />
+								{primarySource.name}
+							</span>
 						)}
 					</PropertyDetail>
-					{showPrimarySource && (
-						<PropertyDetail label='Primary source'>
-							{primarySource == null ? (
-								<span className='property-details-panel__empty-value'>No primary source</span>
-							) : (
-								<span className='property-details-panel__primary-source'>
-									<LittleLogo code={primarySource.connector.code} path={CONNECTORS_ASSETS_PATH} />
-									{primarySource.name}
-								</span>
-							)}
-						</PropertyDetail>
-					)}
 				</div>
 			</div>
 		</PropertyPanelLayout>

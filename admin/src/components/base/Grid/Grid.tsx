@@ -1,10 +1,11 @@
-import React, { ReactNode, forwardRef, useMemo, useRef, useEffect, useImperativeHandle } from 'react';
+import React, { ReactNode, forwardRef, useMemo, useRef, useImperativeHandle } from 'react';
 import './Grid.css';
 import GridHeaderRow from './GridHeaderRow/GridHeaderRow';
 import {
 	GridRow as GridRowType,
 	GridColumn,
 	GridNestedRowsIndentation,
+	GridRef,
 	NestedGridRows,
 	StandardGridRow,
 } from './Grid.types';
@@ -12,6 +13,7 @@ import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { useGrid } from './useGrid';
 import { getChildIndexClassname } from './Grid.helpers';
+import { focusGridForKeyboardNavigation, navigateGrid, navigateGridWithKeyboard } from './GridKeyboardNavigation';
 import GridNestedRows from './GridNestedRows/GridNestedRows';
 import GridRow from './GridRow/GridRow';
 
@@ -30,14 +32,8 @@ interface GridProps {
 	isShown?: boolean;
 	loadingText?: string;
 	nestedRowsIndentation?: GridNestedRowsIndentation;
+	keyboardNavigation?: boolean;
 }
-
-interface gridMethods {
-	expand: () => void;
-	collapse: () => void;
-}
-
-type GridRef = gridMethods & any;
 
 const Grid = forwardRef<GridRef, GridProps>(
 	(
@@ -53,6 +49,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 			isShown,
 			loadingText,
 			nestedRowsIndentation,
+			keyboardNavigation,
 		}: GridProps,
 		ref,
 	) => {
@@ -69,6 +66,12 @@ const Grid = forwardRef<GridRef, GridProps>(
 
 		useImperativeHandle(ref, () => {
 			return {
+				focus: () => {
+					gridRef.current?.focus({ preventScroll: true });
+				},
+				navigate: (key: string, shiftKey = false) => {
+					return gridRef.current == null ? false : navigateGrid(gridRef.current, key, shiftKey);
+				},
 				expand: () => {
 					const nestedRows = gridRef.current.querySelectorAll('.grid__nested-rows');
 					for (const r of nestedRows) {
@@ -92,10 +95,6 @@ const Grid = forwardRef<GridRef, GridProps>(
 					reloadColumnsWidths();
 				},
 			};
-		}, []);
-
-		useEffect(() => {
-			ref = gridRef.current;
 		}, []);
 
 		const rowComponents = useMemo(() => {
@@ -140,6 +139,9 @@ const Grid = forwardRef<GridRef, GridProps>(
 				ref={gridRef}
 				className={`grid${className ? ' ' + className : ''}${showColumnBorder ? ' grid--show-column-border' : ''}${showRowBorder ? ' grid--show-row-border' : ''}${widths == null ? ' grid--hide-content' : ''}`}
 				style={{ '--grid-columns': widths } as React.CSSProperties}
+				tabIndex={keyboardNavigation ? 0 : undefined}
+				onClick={keyboardNavigation ? focusGridForKeyboardNavigation : undefined}
+				onKeyDown={keyboardNavigation ? navigateGridWithKeyboard : undefined}
 			>
 				{isLoading ? (
 					<div className='grid__loading'>

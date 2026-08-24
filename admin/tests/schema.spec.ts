@@ -4,7 +4,18 @@ import { ObjectType } from '../src/lib/api/types/types';
 
 const selectPropertyType = async (page, option: string) => {
 	const panel = page.locator('.property-panel');
+	await expect(panel.locator('.property-type-selector__structure-trigger')).toContainText('one value');
+	await panel.locator('.property-type-selector__structure-trigger').click();
+	await expect(panel.locator('.property-type-selector__structure-option-label')).toHaveText([
+		'one value',
+		'array',
+		'map',
+	]);
+	await panel.locator('.property-type-selector__structure-trigger').click();
 	await panel.locator('.property-type-selector__trigger').click();
+	await expect(panel.locator('[data-type-option="datetime"] .property-type-selector__option-label')).toHaveText(
+		'datetime',
+	);
 	await panel.locator(`[data-type-option="${option}"]`).click();
 };
 
@@ -67,6 +78,85 @@ test(`Search profile schema properties by technical type`, async ({ page }) => {
 	await expect(page.locator('.schema-edit__filter-dot')).toHaveClass(/schema-edit__filter-dot--active/);
 	await expect(page.locator('.schema-edit .grid__row')).toHaveCount(0);
 	await showChanged.click();
+});
+
+test(`Navigate profile schema properties when focus is outside an arrow-key control`, async ({ page }) => {
+	await page.goto(`${adminURL}/profile-unification/schema`);
+
+	const readOnlyRows = page.locator('.schema-grid .grid__row--clickable:visible');
+	const readOnlyRowIDs = await readOnlyRows.evaluateAll((rows) => rows.map((row: HTMLElement) => row.dataset.id));
+	expect(readOnlyRowIDs.length).toBeGreaterThan(3);
+
+	const editSchemaButton = page.locator('.schema-grid__alter-button');
+	await editSchemaButton.focus();
+	await page.keyboard.press('ArrowDown');
+	await expect(readOnlyRows.nth(0)).toHaveClass(/grid__row--selected/);
+	await expect(page.locator('.schema-grid .grid')).toBeFocused();
+	expect(await page.locator('.schema-grid .grid').evaluate((grid) => getComputedStyle(grid).outlineStyle)).toBe(
+		'none',
+	);
+	await editSchemaButton.focus();
+	await page.keyboard.press('ArrowDown');
+	await expect(readOnlyRows.nth(1)).toHaveClass(/grid__row--selected/);
+
+	await page.locator('.schema-grid__search-button').click();
+	const searchInput = page.locator('.schema-grid__search >> input');
+	await expect(searchInput).toBeFocused();
+	await page.keyboard.press('ArrowDown');
+	await expect(readOnlyRows.nth(1)).toHaveClass(/grid__row--selected/);
+	await searchInput.blur();
+
+	await editSchemaButton.click();
+	const editRows = page.locator('.schema-edit .grid__row--clickable:visible');
+	await expect(page.locator(`.schema-edit .grid__row[data-id="${readOnlyRowIDs[1]}"]`)).toHaveClass(
+		/grid__row--selected/,
+	);
+
+	const cancelButton = page.locator('.schema-edit__header-cancel-button');
+	await cancelButton.focus();
+	await page.keyboard.press('ArrowDown');
+	await expect(page.locator(`.schema-edit .grid__row[data-id="${readOnlyRowIDs[2]}"]`)).toHaveClass(
+		/grid__row--selected/,
+	);
+
+	const description = page.locator('.property-panel sl-textarea >> textarea[name="description"]');
+	await description.focus();
+	await page.keyboard.press('ArrowDown');
+	await expect(page.locator(`.schema-edit .grid__row[data-id="${readOnlyRowIDs[2]}"]`)).toHaveClass(
+		/grid__row--selected/,
+	);
+
+	const rowIDsBeforeMove = await editRows.evaluateAll((rows) => rows.map((row: HTMLElement) => row.dataset.id));
+	await cancelButton.focus();
+	await page.keyboard.press('Shift+ArrowDown');
+	await expect
+		.poll(async () => {
+			const rowIDs = await editRows.evaluateAll((rows) => rows.map((row: HTMLElement) => row.dataset.id));
+			return rowIDs.indexOf(readOnlyRowIDs[2]);
+		})
+		.toBe(rowIDsBeforeMove.indexOf(readOnlyRowIDs[2]) + 1);
+});
+
+test(`Warn before leaving pending profile schema changes`, async ({ page }) => {
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+
+	const cancelButton = page.locator('.schema-edit__header-cancel-button');
+	await cancelButton.focus();
+	await page.keyboard.press('Shift+ArrowDown');
+	await expect(page.locator('.schema-edit__change-count')).toContainText('1 pending change');
+
+	await page.evaluate(() => window.history.back());
+	const dialog = page.locator('.alert-dialog', { hasText: 'Discard unsaved changes?' });
+	await expect(dialog).toBeVisible();
+	await expect(dialog).toContainText('The pending schema changes will be discarded.');
+	await dialog.getByText('Keep editing', { exact: true }).click();
+	await expect(page.locator('.schema-edit')).toBeVisible();
+
+	await page.evaluate(() => window.history.back());
+	await expect(dialog).toBeVisible();
+	await dialog.getByText('Discard and leave', { exact: true }).click();
+	await expect(page.locator('.schema-grid')).toBeVisible();
 });
 
 test(`Discard unsaved property changes when selecting another property`, async ({ page }) => {
@@ -132,11 +222,25 @@ test(`View property details and keep the selection when editing`, async ({ page 
 	await openProperty(page, 'email');
 	let panel = page.locator('.property-details-panel');
 	await expect(panel.locator('.property-panel__title')).toHaveText('Property');
-	await expect(
-		panel.locator('.property-details-panel__detail').first().locator('.property-details-panel__value'),
-	).toHaveText('email');
-	await expect(panel).toContainText('string, max 300 chars');
-	await expect(page.locator('.grid__row[data-id="email"]')).toHaveClass(/grid__row--selected/);
+	const emailRow = page.locator('.grid__row[data-id="email"]');
+	await expect(panel.locator('.property-details-panel__label')).toHaveText([
+		'Name',
+		'Type',
+		'Description',
+		'Primary source',
+	]);
+	await expect(panel.locator('.property-details-panel__value')).toHaveText(
+		await emailRow.locator('.grid__cell-content').allInnerTexts(),
+	);
+	const gridTypeFont = await emailRow
+		.locator('.schema-grid__technical-type')
+		.evaluate((type) => getComputedStyle(type).fontFamily);
+	expect(
+		await panel
+			.locator('.property-details-panel__technical-type')
+			.evaluate((type) => getComputedStyle(type).fontFamily),
+	).toBe(gridTypeFont);
+	await expect(emailRow).toHaveClass(/grid__row--selected/);
 	await panel.getByLabel('Close property details').click();
 	await expect(panel).toHaveCount(0);
 
@@ -171,7 +275,6 @@ test(`View property details and keep the selection when editing`, async ({ page 
 	await expect(
 		panel.locator('.property-details-panel__detail').first().locator('.property-details-panel__value'),
 	).toHaveText('country');
-	await expect(panel).toContainText('Text');
 	await expect(panel).toContainText('string, max 2 chars');
 	const countryRow = page.locator('.schema-grid .grid__row[data-id="address.country"]');
 	await page.locator('.schema-grid__page-header h1').hover();
@@ -222,7 +325,11 @@ test(`Add schema property`, async ({ page }) => {
 		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
 	}, 'foo');
 
-	await selectPropertyType(page, 'string');
+	await page.keyboard.press('Tab');
+	await expect(panel.locator('.property-type-selector__structure-dropdown')).toHaveJSProperty('open', true);
+	await panel.locator('.property-type-selector__structure-option[value="one"]').click();
+	await expect(panel.locator('.property-type-selector__dropdown')).toHaveJSProperty('open', true);
+	await panel.locator('[data-type-option="string"]').click();
 
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
 
@@ -252,6 +359,8 @@ test(`Edit schema property`, async ({ page }) => {
 	await page.click('.schema-grid__alter-button');
 
 	await openProperty(page, 'foo');
+	await expect(page.locator('.property-type-selector__structure-trigger')).toHaveJSProperty('caret', false);
+	await expect(page.locator('.property-type-selector__trigger')).toHaveJSProperty('caret', false);
 	const changeNameButton = page.locator('.property-panel .property-form__change-name');
 	const nameInput = page.locator('.property-panel .property-dialog__name-input');
 	await expect(nameInput).toHaveAttribute('readonly', '');

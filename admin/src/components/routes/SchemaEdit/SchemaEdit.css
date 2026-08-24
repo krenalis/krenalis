@@ -116,6 +116,10 @@
 	max-height: none;
 }
 
+.schema-edit__workspace > .property-panel .property-panel__header {
+	min-height: 54px;
+}
+
 .schema-edit__toolbar {
 	align-items: center;
 	display: flex;
@@ -229,8 +233,7 @@
 .schema-edit__toolbar-tooltip::part(base__arrow) {
 	background-color: var(--bg-primary);
 	border: 1px solid var(--sl-color-neutral-300);
-	border-bottom: 0;
-	border-right: 0;
+	box-sizing: border-box;
 }
 
 .schema-edit__filter-dot {
@@ -283,7 +286,7 @@
 	border: 0;
 	border-radius: 0;
 	box-shadow: none;
-	max-height: calc(100vh - 280px);
+	max-height: calc(100vh - 318px);
 }
 
 .schema-edit__schema-panel > .grid .grid__header-row {
@@ -347,35 +350,36 @@
 	padding-left: 34px;
 }
 
-.schema-edit__schema-panel .grid--sortable .grid__sortable-rows .grid__row,
-.schema-edit__schema-panel .grid--sortable .grid__sortable-rows .grid__row .grid__cell {
+.schema-edit .schema-edit__schema-panel .grid.grid--sortable .grid__sortable-rows .grid__row,
+.schema-edit .schema-edit__schema-panel .grid.grid--sortable .grid__sortable-rows .grid__row .grid__cell {
 	background-color: var(--bg-primary) !important;
 	font-weight: 400 !important;
 }
 
-.schema-edit__schema-panel .grid--sortable .grid__sortable-rows .grid__row--clickable:hover,
-.schema-edit__schema-panel .grid--sortable .grid__sortable-rows .grid__row--clickable:hover .grid__cell {
+.schema-edit .schema-edit__schema-panel .grid.grid--sortable .grid__sortable-rows .grid__row--clickable:hover,
+.schema-edit
+	.schema-edit__schema-panel
+	.grid.grid--sortable
+	.grid__sortable-rows
+	.grid__row--clickable:hover
+	.grid__cell {
 	background-color: var(--sl-color-neutral-50) !important;
 }
 
-.schema-edit__schema-panel .grid--sortable .grid__sortable-rows .grid__row--selected,
-.schema-edit__schema-panel .grid--sortable .grid__sortable-rows .grid__row--selected > .grid__cell,
-.schema-edit__schema-panel .grid--sortable .grid__sortable-rows .grid__row--selected:hover,
-.schema-edit__schema-panel .grid--sortable .grid__sortable-rows .grid__row--selected:hover > .grid__cell {
-	background-color: var(--sl-color-primary-50) !important;
-}
-
-.schema-edit__property-type {
-	line-height: 1.35;
+.schema-edit .schema-edit__schema-panel .grid.grid--sortable .grid__sortable-rows .grid__row--selected,
+.schema-edit .schema-edit__schema-panel .grid.grid--sortable .grid__sortable-rows .grid__row--selected > .grid__cell,
+.schema-edit .schema-edit__schema-panel .grid.grid--sortable .grid__sortable-rows .grid__row--selected:hover,
+.schema-edit
+	.schema-edit__schema-panel
+	.grid.grid--sortable
+	.grid__sortable-rows
+	.grid__row--selected:hover
+	> .grid__cell {
+	background-color: var(--grid-selected-row-background) !important;
 }
 
 .schema-edit__property-technical-type {
 	font-family: var(--monospace-fonts);
-}
-
-.schema-edit__property-storage-type {
-	color: var(--text-light);
-	font-size: 11px;
 }
 
 .schema-edit__empty-cell {
@@ -499,7 +503,6 @@
 	text-align: center;
 }
 
-.schema-edit__queries-description,
 .schema-edit__no-query {
 	color: var(--text-light);
 	font-size: 14px;
@@ -513,10 +516,6 @@
 	max-height: min(520px, calc(100vh - 300px));
 	overflow: auto;
 	padding: 15px;
-}
-
-.schema-edit__copy-queries {
-	margin-top: 8px;
 }
 
 .schema-edit__queries-buttons {

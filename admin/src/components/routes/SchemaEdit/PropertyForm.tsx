@@ -5,6 +5,8 @@ import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import SlRadioButton from '@shoelace-style/shoelace/dist/react/radio-button/index.js';
+import SlRadioGroup from '@shoelace-style/shoelace/dist/react/radio-group/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlTextarea from '@shoelace-style/shoelace/dist/react/textarea/index.js';
 import AppContext from '../../../context/AppContext';
@@ -20,7 +22,12 @@ import TransformedConnection from '../../../lib/core/connection';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { PropertyParent, PropertyToEdit } from './useSchemaEdit';
-import { getPropertyValueType, PropertyTypeSelector, replacePropertyValueType } from './PropertyTypeSelector';
+import {
+	getPropertyValueType,
+	PropertyTypeSelector,
+	type PropertyTypeSelectorRef,
+	replacePropertyValueType,
+} from './PropertyTypeSelector';
 
 const INT_BITSIZES: string[] = ['8', '16', '24', '32', '64'];
 const FLOAT_BITSIZES: string[] = ['32', '64'];
@@ -55,6 +62,7 @@ const PropertyForm = ({
 	const [typeError, setTypeError] = useState('');
 	const initialState = useRef('');
 	const nameInputRef = useRef<any>();
+	const typeSelectorRef = useRef<PropertyTypeSelectorRef>();
 
 	const { connections } = useContext(AppContext);
 	const isEditing = propertyToEdit.key != null;
@@ -171,6 +179,21 @@ const PropertyForm = ({
 		});
 	};
 
+	const onKeyDownName = (event: React.KeyboardEvent<any>) => {
+		if (
+			isEditing ||
+			event.currentTarget.value === '' ||
+			event.key !== 'Tab' ||
+			event.shiftKey ||
+			event.altKey ||
+			event.ctrlKey ||
+			event.metaKey
+		) {
+			return;
+		}
+		requestAnimationFrame(() => typeSelectorRef.current?.openStructureMenu());
+	};
+
 	const onChangeParent = (event) => {
 		const parentKey = event.target.value === '__root__' ? '' : event.target.value;
 		const parent = parents.find((candidate) => candidate.key === parentKey);
@@ -217,41 +240,32 @@ const PropertyForm = ({
 		});
 	};
 
-	const onUnsignedChange = () => {
+	const onUnsignedChange = (event) => {
+		const unsigned = event.currentTarget.value === 'unsigned';
 		updateValueType((type: IntType) => {
-			type.unsigned = !type.unsigned;
-		});
-	};
-
-	const onToggleMaxBytes = () => {
-		updateValueType((type: StringType) => {
-			if (type.maxBytes == null) {
-				type.maxBytes = 255;
-			} else {
-				delete type.maxBytes;
-			}
-		});
-	};
-
-	const onToggleMaxLength = () => {
-		updateValueType((type: StringType) => {
-			if (type.maxLength == null) {
-				type.maxLength = 255;
-			} else {
-				delete type.maxLength;
-			}
+			type.unsigned = unsigned;
 		});
 	};
 
 	const onInputMaxBytes = (event) => {
+		const value = event.currentTarget.value;
 		updateValueType((type: StringType) => {
-			type.maxBytes = Number(event.target.value);
+			if (value === '') {
+				delete type.maxBytes;
+			} else {
+				type.maxBytes = Number(value);
+			}
 		});
 	};
 
 	const onInputMaxLength = (event) => {
+		const value = event.currentTarget.value;
 		updateValueType((type: StringType) => {
-			type.maxLength = Number(event.target.value);
+			if (value === '') {
+				delete type.maxLength;
+			} else {
+				type.maxLength = Number(value);
+			}
 		});
 	};
 
@@ -289,27 +303,20 @@ const PropertyForm = ({
 	};
 
 	const valueType = getPropertyValueType(property.type);
+	let decimalDescription: string | null = null;
+	if (
+		valueType?.kind === 'decimal' &&
+		Number.isInteger(valueType.precision) &&
+		Number.isInteger(valueType.scale) &&
+		checkDecimalType(valueType) == null
+	) {
+		const integerDigits = valueType.precision - valueType.scale;
+		decimalDescription = `Up to ${integerDigits} ${integerDigits === 1 ? 'digit' : 'digits'} before and ${valueType.scale} after the decimal point.`;
+	}
 	const selectedConnection = sourceConnections.find((connection) => connection.id === primarySource);
 
 	return (
 		<form className='property-form' id={formID} onSubmit={onSubmit}>
-			{showParent && parents != null && (
-				<div className='property-form__control'>
-					<SlSelect
-						className='property-form__parent'
-						label='Parent'
-						value={property.parentKey || '__root__'}
-						onSlChange={onChangeParent}
-					>
-						{parents.map((parent) => (
-							<SlOption key={parent.key || '__root__'} value={parent.key || '__root__'}>
-								{parent.label}
-							</SlOption>
-						))}
-					</SlSelect>
-					<div className='property-form__help'>The object where this property will be created.</div>
-				</div>
-			)}
 			<div className='property-form__control property-dialog__control--name'>
 				<SlInput
 					className='property-dialog__name-input'
@@ -323,6 +330,7 @@ const PropertyForm = ({
 					onSlBlur={onBlurName}
 					onSlFocus={onFocusName}
 					onSlInput={onInputName}
+					onKeyDown={onKeyDownName}
 				>
 					{isEditing && !isNameEditable && (
 						<SlButton
@@ -341,54 +349,65 @@ const PropertyForm = ({
 			</div>
 			<div className='property-form__control'>
 				<div className='property-form__label'>Type</div>
-				<PropertyTypeSelector type={property.type} canEditType={canEditType} onChange={onChangeType} />
+				<PropertyTypeSelector
+					ref={typeSelectorRef}
+					type={property.type}
+					canEditType={canEditType}
+					onChange={onChangeType}
+				/>
 				{typeError !== '' && <PropertyFormError name='type'>{typeError}</PropertyFormError>}
 			</div>
 			{valueType?.kind === 'string' && canEditType && (
 				<div className='property-form__constraints property-form__constraints--length'>
-					<SlCheckbox checked={valueType.maxBytes != null} onSlChange={onToggleMaxBytes} size='small'>
-						Maximum bytes
-					</SlCheckbox>
 					<SlInput
-						value={valueType.maxBytes == null ? '' : String(valueType.maxBytes)}
-						type='number'
-						onSlInput={onInputMaxBytes}
-						disabled={valueType.maxBytes == null}
-						noSpinButtons
-					/>
-					<SlCheckbox checked={valueType.maxLength != null} onSlChange={onToggleMaxLength} size='small'>
-						Maximum characters
-					</SlCheckbox>
-					<SlInput
+						label='Max characters'
+						size='small'
 						value={valueType.maxLength == null ? '' : String(valueType.maxLength)}
 						type='number'
 						onSlInput={onInputMaxLength}
-						disabled={valueType.maxLength == null}
-						noSpinButtons
+					/>
+					<SlInput
+						label='Max bytes'
+						size='small'
+						value={valueType.maxBytes == null ? '' : String(valueType.maxBytes)}
+						type='number'
+						onSlInput={onInputMaxBytes}
 					/>
 				</div>
 			)}
 			{(valueType?.kind === 'int' || valueType?.kind === 'float') && canEditType && (
-				<div className='property-form__constraints'>
+				<div
+					className={`property-form__constraints${
+						valueType.kind === 'int' ? ' property-form__constraints--integer' : ''
+					}`}
+				>
 					<SlSelect
 						className='property-dialog__bitsize'
-						label='Bit size'
+						label={valueType.kind === 'int' ? 'Integer size' : 'Bit size'}
+						size='small'
 						value={String(valueType.bitSize)}
 						onSlChange={onChangeBitSize}
 					>
 						{(valueType.kind === 'int' ? INT_BITSIZES : FLOAT_BITSIZES).map((bitSize) => (
 							<SlOption key={bitSize} value={bitSize}>
-								{bitSize}
+								{bitSize}-bit
 							</SlOption>
 						))}
 					</SlSelect>
 					{valueType.kind === 'int' ? (
-						<SlCheckbox size='small' checked={valueType.unsigned} onSlChange={onUnsignedChange}>
-							Unsigned
-						</SlCheckbox>
+						<SlRadioGroup
+							className='property-form__integer-sign'
+							label='Sign'
+							size='small'
+							value={valueType.unsigned ? 'unsigned' : 'signed'}
+							onSlChange={onUnsignedChange}
+						>
+							<SlRadioButton value='signed'>Signed</SlRadioButton>
+							<SlRadioButton value='unsigned'>Unsigned</SlRadioButton>
+						</SlRadioGroup>
 					) : (
 						<SlCheckbox size='small' checked={!valueType.real} onSlChange={onRealChange}>
-							Allow infinite and NaN values
+							Allow Infinity and NaN
 						</SlCheckbox>
 					)}
 				</div>
@@ -398,33 +417,55 @@ const PropertyForm = ({
 					<SlInput
 						className='property-dialog__precision'
 						label='Precision'
+						size='small'
 						value={String(valueType.precision)}
 						type='number'
 						max={MAX_DECIMAL_PRECISION}
 						maxlength={2}
 						onSlInput={onInputPrecision}
-						noSpinButtons
 					/>
 					<SlInput
 						className='property-dialog__scale'
 						label='Scale'
+						size='small'
 						value={String(valueType.scale)}
 						type='number'
 						max={MAX_DECIMAL_SCALE}
 						maxlength={2}
 						onSlInput={onInputScale}
-						noSpinButtons
 					/>
+					{decimalDescription != null && (
+						<div className='property-form__decimal-description'>{decimalDescription}</div>
+					)}
+				</div>
+			)}
+			{showParent && parents != null && (
+				<div className='property-form__control'>
+					<SlSelect
+						className='property-form__parent'
+						label='Add to'
+						value={property.parentKey || '__root__'}
+						onSlChange={onChangeParent}
+					>
+						{parents.map((parent) => (
+							<SlOption key={parent.key || '__root__'} value={parent.key || '__root__'}>
+								{parent.label}
+							</SlOption>
+						))}
+					</SlSelect>
 				</div>
 			)}
 			<SlTextarea
 				className='property-form__control'
 				value={property.description || ''}
-				label='Description (optional)'
 				name='description'
-				placeholder='Describe what this property represents...'
+				placeholder='Describe what this property represents…'
 				onSlInput={onInputDescription}
-			/>
+			>
+				<span slot='label'>
+					Description <span className='property-form__optional-label'>(optional)</span>
+				</span>
+			</SlTextarea>
 			{property.type?.kind !== 'object' && property.type?.kind !== 'array' && (
 				<div className='property-form__control'>
 					{sourceConnections.length === 0 ? (

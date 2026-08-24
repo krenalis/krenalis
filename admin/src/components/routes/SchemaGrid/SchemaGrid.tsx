@@ -6,10 +6,13 @@ import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { Outlet, useLocation } from 'react-router-dom';
 import Grid from '../../base/Grid/Grid';
+import { GridRef } from '../../base/Grid/Grid.types';
 import AppContext from '../../../context/AppContext';
 import { SchemaContext } from '../../../context/SchemaContext';
 import { PropertyDetailsPanel } from './PropertyDetailsPanel';
 import { useSchemaGrid } from './useSchemaGrid';
+import { GridKeyboardHints } from '../../base/Grid/GridKeyboardHints';
+import { useDocumentGridKeyboardNavigation } from '../../base/Grid/useDocumentGridKeyboardNavigation';
 
 const schemaGridColumns = 'minmax(170px, 0.65fr) minmax(220px, 0.85fr) minmax(300px, 1.75fr) minmax(160px, 0.55fr)';
 const schemaGridNestedRowsIndentation = { base: 34, step: 20 };
@@ -24,7 +27,7 @@ const SchemaGrid = () => {
 	const [selectedPropertyPath, setSelectedPropertyPath] = useState<string | null>(null);
 	const { redirect } = useContext(AppContext);
 	const { schema, isLoadingSchema, latestAlterError, isAltering } = useContext(SchemaContext);
-	const gridRef = useRef<any>();
+	const gridRef = useRef<GridRef>(null);
 	const searchRef = useRef<any>();
 	const location = useLocation();
 	const isEditing = location.pathname.endsWith('/schema/edit');
@@ -40,6 +43,9 @@ const SchemaGrid = () => {
 	const [lastSelectedProperty, setLastSelectedProperty] = useState(selectedProperty);
 	const isDetailsPanelOpen = selectedProperty != null && !isEditing;
 	const detailsPanelProperty = isEditing ? null : selectedProperty || lastSelectedProperty;
+	const isGridKeyboardNavigationEnabled = !isEditing && !isLoadingSchema && !isAltering && propertyCount > 0;
+
+	useDocumentGridKeyboardNavigation(gridRef, isGridKeyboardNavigationEnabled);
 
 	useEffect(() => {
 		if (!isLoadingSchema && selectedPropertyPath != null && selectedProperty == null) {
@@ -52,6 +58,14 @@ const SchemaGrid = () => {
 			setLastSelectedProperty(selectedProperty);
 		}
 	}, [selectedProperty]);
+
+	useEffect(() => {
+		if (!isGridKeyboardNavigationEnabled) {
+			return;
+		}
+		const animationFrame = requestAnimationFrame(() => gridRef.current?.focus());
+		return () => cancelAnimationFrame(animationFrame);
+	}, [isGridKeyboardNavigationEnabled, propertyCount]);
 
 	const onEditClick = () => {
 		redirect('profile-unification/schema/edit');
@@ -175,12 +189,14 @@ const SchemaGrid = () => {
 						ref={gridRef}
 						columns={columns}
 						rows={rows}
+						keyboardNavigation
 						gridColumnsWidths={schemaGridColumns}
 						nestedRowsIndentation={schemaGridNestedRowsIndentation}
 						isLoading={isLoadingSchema || isAltering}
 						loadingText={isAltering ? 'Schema is being altered' : 'Loading schema'}
 						noRowsMessage={search === '' ? undefined : 'No properties match your search'}
 					/>
+					{propertyCount > 0 && <GridKeyboardHints />}
 				</div>
 				{detailsPanelProperty != null && (
 					<div className='schema-grid__details-panel' onTransitionEnd={onDetailsPanelTransitionEnd}>

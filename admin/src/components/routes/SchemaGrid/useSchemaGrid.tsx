@@ -7,7 +7,6 @@ import { PrimarySources } from '../../../lib/api/types/workspace';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { toKrenalisStringType } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
-import { getPropertyTypeLabel } from '../SchemaEdit/PropertyTypeSelector';
 
 const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Property' },
@@ -80,7 +79,7 @@ const getRows = (
 		const matches =
 			includeAll ||
 			search === '' ||
-			`${property.name} ${property.description || ''} ${getPropertyTypeLabel(property.type)} ${toKrenalisStringType(property.type)}`
+			`${property.name} ${property.description || ''} ${toKrenalisStringType(property.type)}`
 				.toLocaleLowerCase()
 				.includes(search);
 		let nestedRows: GridRow[] = [];
@@ -128,7 +127,7 @@ const buildRow = (
 	const typeCell: ReactNode = (
 		<span className='schema-grid__technical-type'>{toKrenalisStringType(property.type)}</span>
 	);
-	let primarySourceCell: ReactNode;
+	let primarySourceCell: ReactNode = <span className='schema-grid__empty-cell'>—</span>;
 	if (property.type.kind !== 'object' && property.type.kind !== 'array') {
 		if (primarySource != null) {
 			primarySourceCell = (
@@ -137,8 +136,6 @@ const buildRow = (
 					{primarySource.name}
 				</div>
 			);
-		} else {
-			primarySourceCell = <span className='schema-grid__empty-cell'>—</span>;
 		}
 	}
 	return {

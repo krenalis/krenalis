@@ -60,7 +60,7 @@ const GridNestedRows = ({
 		setActiveRow(active.id);
 	};
 
-	const onExpand = (event: React.MouseEvent, onSelect?: () => void) => {
+	const onToggleExpansion = (event: React.MouseEvent, onSelect?: () => void) => {
 		setIsExpanded(!isExpanded);
 		reloadColumnsWidths();
 		// Expand and collapse all use programmatic clicks and must not change the selected row.
@@ -110,7 +110,7 @@ const GridNestedRows = ({
 						<SlIcon
 							className='grid__row-expand'
 							name='caret-right-fill'
-							onClick={(event) => onExpand(event, r.onClick)}
+							onClick={(event) => onToggleExpansion(event, r.onToggleExpansion ?? r.onClick)}
 						></SlIcon>
 						<GridRow row={r} columns={columns} className='grid__row grid__row--parent' />
 					</Fragment>

@@ -134,4 +134,9 @@ const newPropertyToEdit = (parentKey: string, indentation: number, root: string)
 	};
 };
 
-export { transformSchema, normalizeSchema, EditableSchema, EditableProperty, newPropertyToEdit };
+const getParentPropertyKey = (propertyKey: string): string => {
+	const separatorIndex = propertyKey.lastIndexOf('.');
+	return separatorIndex === -1 ? '' : propertyKey.slice(0, separatorIndex);
+};
+
+export { transformSchema, normalizeSchema, EditableSchema, EditableProperty, getParentPropertyKey, newPropertyToEdit };
