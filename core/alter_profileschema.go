@@ -222,7 +222,7 @@ func profileSchemaChangeRequiresWarehouseDDL(oldSchema, newSchema types.Type, op
 	}
 	for i, c1 := range columns1 {
 		c2 := columns2[i]
-		if c1.Name != c2.Name || c1.Nullable != c2.Nullable || !types.Equal(c1.Type, c2.Type) {
+		if c1.Name != c2.Name || !types.Equal(c1.Type, c2.Type) {
 			return true
 		}
 	}

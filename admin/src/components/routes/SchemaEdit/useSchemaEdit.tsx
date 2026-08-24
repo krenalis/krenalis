@@ -373,10 +373,7 @@ const useSchemaEdit = (
 		// Applied property types are read-only, so these fields are enough to
 		// identify edits that cannot change the warehouse schema.
 		const warehouseSchemaUnchanged =
-			!current.isEditable &&
-			property.name === current.name &&
-			property.type === current.type &&
-			property.nullable === current.nullable;
+			!current.isEditable && property.name === current.name && property.type === current.type;
 		if (warehouseSchemaUnchanged && currentSchemaPreview != null) {
 			const request = buildSchemaPreviewRequest(s, rePaths.current);
 			setSchemaPreview({ key: request.key, queries: currentSchemaPreview.queries });
