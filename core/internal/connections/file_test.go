@@ -5,12 +5,14 @@
 package connections
 
 import (
-	"errors"
 	"io"
 	"strings"
 	"testing"
 	"testing/synctest"
 	"time"
+
+	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // TestMaterializeReadSeeker verifies that a streaming reader is materialized as
@@ -125,6 +127,42 @@ func TestMaterializeReadSeekerReusesReadSeekAt(t *testing.T) {
 	}
 	if !originalReader.closed {
 		t.Fatal("expected returned closer to close reused reader")
+	}
+
+}
+
+// TestRecordWriterYieldsRecordAtLimit verifies that the record at the configured
+// limit is yielded before reading stops.
+func TestRecordWriterYieldsRecordAtLimit(t *testing.T) {
+
+	rw := newRecordWriter("test", nil, time.Time{}, nil, time.Time{}, 2)
+	var got []Record
+	rw.yield = func(record Record) bool {
+		got = append(got, record)
+		return true
+	}
+	err := rw.Columns([]types.Property{{Name: "email", Type: types.String()}})
+	if err != nil {
+		t.Fatalf("expected Columns to succeed, got %s", err)
+	}
+	err = rw.Record(map[string]any{"email": "first@example.com"})
+	if err != nil {
+		t.Fatalf("expected the first record to succeed, got %s", err)
+	}
+	err = rw.Record(map[string]any{"email": "second@example.com"})
+	if err != nil {
+		if !errors.Is(err, errRecordStop) {
+			t.Fatalf("expected the second record to stop reading, got %v", err)
+		}
+	}
+	if err == nil {
+		t.Fatal("expected the second record to stop reading")
+	}
+	if len(got) != 2 {
+		t.Fatalf("expected two yielded records, got %d", len(got))
+	}
+	if got[1].Attributes["email"] != "second@example.com" {
+		t.Fatalf("expected the record at the limit to be yielded, got %#v", got[1])
 	}
 
 }
