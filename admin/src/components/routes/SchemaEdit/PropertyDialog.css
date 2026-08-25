@@ -41,14 +41,13 @@
 }
 
 .property-form__modified-dot {
-	background-color: var(--sl-color-warning-600);
-	border: 2px solid var(--bg-primary);
+	background-color: var(--sl-color-primary-600);
 	border-radius: 50%;
 	flex: 0 0 auto;
-	height: 8px;
-	margin-inline-start: 2px;
-	transform: translateY(-2px);
-	width: 8px;
+	height: 6px;
+	margin-inline-start: 6px;
+	transform: translateY(-3px);
+	width: 6px;
 }
 
 .property-form__optional-label {

@@ -17,20 +17,15 @@ type SchemaPropertyGridClassNamePrefix = (typeof schemaPropertyGridClassNamePref
 
 interface SchemaPropertyGridSummaryProps {
 	children?: ReactNode;
-	objectCount: number;
 	propertyCount: number;
 	view: SchemaPropertyGridView;
 }
 
-const SchemaPropertyGridSummary = ({ children, objectCount, propertyCount, view }: SchemaPropertyGridSummaryProps) => (
+const SchemaPropertyGridSummary = ({ children, propertyCount, view }: SchemaPropertyGridSummaryProps) => (
 	<div className={`${schemaPropertyGridClassNamePrefixes[view]}__summary`}>
 		<span>
 			<SlIcon name='table' />
 			{propertyCount} {propertyCount === 1 ? 'property' : 'properties'}
-		</span>
-		<span>
-			<SlIcon name='box' />
-			{objectCount} {objectCount === 1 ? 'object' : 'objects'}
 		</span>
 		{children}
 	</div>

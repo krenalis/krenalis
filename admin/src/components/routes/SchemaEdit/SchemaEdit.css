@@ -32,8 +32,8 @@
 .schema-edit__change-count > span {
 	background-color: var(--sl-color-primary-600);
 	border-radius: 50%;
-	height: 9px;
-	width: 9px;
+	height: 8px;
+	width: 8px;
 }
 
 .schema-edit__change-count--empty > span {
@@ -245,28 +245,15 @@
 }
 
 .schema-edit__property-status::part(base) {
+	background-color: var(--sl-color-primary-100);
 	border: 0;
+	color: var(--sl-color-primary-800);
 	font-size: 11px;
 }
 
 .property-panel__title-row > .schema-edit__property-status {
 	position: relative;
 	top: 1px;
-}
-
-.schema-edit__property-status--added::part(base) {
-	background-color: var(--sl-color-sky-100);
-	color: var(--sl-color-sky-800);
-}
-
-.schema-edit__property-status--modified::part(base) {
-	background-color: var(--sl-color-warning-100);
-	color: var(--sl-color-warning-800);
-}
-
-.schema-edit__property-status--reordered::part(base) {
-	background-color: var(--sl-color-primary-100);
-	color: var(--sl-color-primary-800);
 }
 
 .schema-edit .grid__nested-rows .grid__row-expand {

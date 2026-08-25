@@ -80,7 +80,7 @@ const propertyStatusLabels: Record<PropertyChangeStatus, string> = {
 };
 
 const PropertyStatusBadge = ({ status }: { status: PropertyChangeStatus }) => (
-	<SlBadge className={`schema-edit__property-status schema-edit__property-status--${status}`} pill variant='neutral'>
+	<SlBadge className='schema-edit__property-status' pill variant='neutral'>
 		{propertyStatusLabels[status]}
 	</SlBadge>
 );
@@ -160,16 +160,13 @@ const useSchemaEdit = (
 			initialPrimarySources.current?.[selectedPropertyKey],
 		);
 	}, [editableSchema, selectedPropertyKey]);
-	const { objectCount, propertyCount } = useMemo(() => {
-		let objectCount = 0;
+	const { hasObjects, propertyCount } = useMemo(() => {
 		const properties = Object.values(editableSchema || {});
-		for (const property of properties) {
-			if (property.type.kind === 'object') {
-				objectCount++;
-			}
-		}
 
-		return { objectCount, propertyCount: properties.length };
+		return {
+			hasObjects: properties.some((property) => property.type.kind === 'object'),
+			propertyCount: properties.length,
+		};
 	}, [editableSchema]);
 	const propertyParents = useMemo(() => getPropertyParents(editableSchema), [editableSchema]);
 	const isFiltered = (search?.trim() || '') !== '' || showOnlyChanged === true;
@@ -559,7 +556,7 @@ const useSchemaEdit = (
 		isFiltered,
 		isSchemaReady: editableSchema != null,
 		isSelectedPropertyVisible,
-		objectCount,
+		hasObjects,
 		propertyCount,
 		visiblePropertyCount: visiblePropertyKeys.size,
 		propertyParents,
