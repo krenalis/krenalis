@@ -1622,33 +1622,34 @@ func (core *Core) executeAlterProfileSchema(workspace, opID string, schema types
 	if !ok {
 		return
 	}
-	// Keep calling 'AlterProfileSchema' until it (1) returns successfully, (2)
-	// returns with a *warehouses.OperationError, or (3) the context is
-	// canceled.
 	var alterSchemaErr *warehouses.OperationError
-	bo := backoff.New(200)
-	bo.SetCap(5 * time.Minute)
-	for bo.Next(ctx) {
-		err := store.AlterProfileSchema(ctx, opID, schema, operations)
-		// In case of success, go on and send an EndAlterProfileSchema
-		// notification.
-		if err == nil {
-			break
+	if profileSchemaChangeRequiresWarehouseDDL(ws.ProfileSchema, schema, operations) {
+		// Keep calling 'AlterProfileSchema' until it (1) returns successfully,
+		// (2) returns with a *warehouses.OperationError, or (3) the context is
+		// canceled.
+		bo := backoff.New(200)
+		bo.SetCap(5 * time.Minute)
+		for bo.Next(ctx) {
+			err := store.AlterProfileSchema(ctx, opID, schema, operations)
+			// In case of success, go on and send an EndAlterProfileSchema
+			// notification.
+			if err == nil {
+				break
+			}
+			// If the context has expired, just return.
+			if ctx.Err() != nil {
+				return
+			}
+			// In case of OperationError log it, then go on and send an
+			// EndAlterProfileSchema notification.
+			if err2, ok := err.(*warehouses.OperationError); ok {
+				slog.Error("alter schema ended with an error", "error", err2)
+				alterSchemaErr = err2
+				break
+			}
+			// In case of unknown error, try again.
+			slog.Error("alter schema on warehouse returned an unknown error; retrying", "retry_after", bo.WaitTime(), "error", err)
 		}
-		// If the context has expired, just return.
-		if ctx.Err() != nil {
-			return
-		}
-		// In case of OperationError log it, then go on and send an
-		// EndAlterProfileSchema notification.
-		if err2, ok := err.(*warehouses.OperationError); ok {
-			slog.Error("alter schema ended with an error", "error", err2)
-			alterSchemaErr = err2
-			break
-		}
-		// In case of unknown error, try again.
-		slog.Error("alter schema on warehouse returned an unknown error; retrying", "retry_after", bo.WaitTime(), "error", err)
-
 	}
 	nEnd := state.EndAlterProfileSchema{
 		Workspace: workspace,
