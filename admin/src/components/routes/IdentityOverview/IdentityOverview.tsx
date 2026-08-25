@@ -603,7 +603,7 @@ const IdentityOverview = () => {
 						size='small'
 						onClick={refreshDashboard}
 						loading={isRefreshing}
-						disabled={isRefreshing || isIdentityLoading || isResolutionLoading}
+						disabled={isRefreshing || isIdentityLoading || isResolutionLoading || isResolutionRunsLoading}
 					>
 						<SlIcon slot='prefix' name='arrow-clockwise' />
 						Refresh
