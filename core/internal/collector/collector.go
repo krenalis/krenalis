@@ -482,19 +482,25 @@ func (c *Collector) onUnlinkConnection(n state.UnlinkConnection) {
 
 // onUpdateConsentPurpose is called when a consent purpose is updated.
 func (c *Collector) onUpdateConsentPurpose(n state.UpdateConsentPurpose) {
-	observer, ok := c.observers.Load(n.Workspace)
-	if !ok {
-		return
-	}
 	ws, ok := c.state.Workspace(n.Workspace)
 	if !ok {
 		return
 	}
-	cp, ok := ws.ConsentPurpose(n.ID)
-	if !ok {
-		return
+	if observer, ok := c.observers.Load(n.Workspace); ok {
+		if cp, ok := ws.ConsentPurpose(n.ID); ok {
+			observer.replaceConsentPurpose(cp)
+		}
 	}
-	observer.replaceConsentPurpose(cp)
+	// The state has already replaced the purpose in the pipelines that require
+	// it, so the identity writers only need to read their required consents
+	// again.
+	for _, connection := range ws.Connections() {
+		for _, p := range connection.Pipelines() {
+			if w, ok := c.identityWriters.Load(p.ID); ok {
+				w.(*identityWriter).SetRequiredConsents(p.RequiredConsents)
+			}
+		}
+	}
 }
 
 // onUpdatePipeline is called when a pipeline is updated.
@@ -504,13 +510,15 @@ func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
 		return
 	}
 	if p.Enabled {
-		// The transformation might have changed.
+		// The transformation and the required consents might have changed.
 		if w, ok := c.identityWriters.Load(p.ID); ok {
+			iw := w.(*identityWriter)
 			var transformer *transformers.Transformer
 			if p.Transformation.Mapping != nil || p.Transformation.Function != nil {
 				transformer, _ = transformers.New(p, c.functionProvider, nil)
 			}
-			w.(*identityWriter).SetTransformer(transformer)
+			iw.SetTransformer(transformer)
+			iw.SetRequiredConsents(p.RequiredConsents)
 		}
 	}
 	connection := p.Connection()
@@ -829,11 +837,11 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				continue
 			}
 			c.metrics.FilterPassed(p.ID, 1)
-			if !consents.Satisfies(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
-				c.metrics.ConsentFailed(p.ID, 1)
+			if !consents.SatisfiesEvent(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
+				c.metrics.EventConsentFailed(p.ID, 1)
 				continue
 			}
-			c.metrics.ConsentPassed(p.ID, 1)
+			c.metrics.EventConsentPassed(p.ID, 1)
 			if _, ok := c.eventWriters.Load(ws.ID); ok {
 				topics = append(topics, "pipeline-"+p.ID)
 			}
@@ -850,11 +858,6 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				continue
 			}
 			c.metrics.FilterPassed(p.ID, 1)
-			if !consents.Satisfies(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
-				c.metrics.ConsentFailed(p.ID, 1)
-				continue
-			}
-			c.metrics.ConsentPassed(p.ID, 1)
 			if _, ok := c.identityWriters.Load(p.ID); ok {
 				topics = append(topics, "pipeline-"+p.ID)
 			}
@@ -876,11 +879,11 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 					continue
 				}
 				c.metrics.FilterPassed(p.ID, 1)
-				if !consents.Satisfies(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
-					c.metrics.ConsentFailed(p.ID, 1)
+				if !consents.SatisfiesEvent(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
+					c.metrics.EventConsentFailed(p.ID, 1)
 					continue
 				}
-				c.metrics.ConsentPassed(p.ID, 1)
+				c.metrics.EventConsentPassed(p.ID, 1)
 				destinations = append(destinations, p.ID)
 			}
 			if len(destinations) > 0 {

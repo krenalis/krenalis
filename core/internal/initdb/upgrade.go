@@ -270,6 +270,12 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TABLE pipelines_metrics ALTER COLUMN failed_6 DROP DEFAULT`,
 			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS passed_6 integer NOT NULL DEFAULT 0`,
 			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS failed_6 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS passed_7 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS failed_7 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_metrics ALTER COLUMN passed_7 DROP DEFAULT`,
+			`ALTER TABLE pipelines_metrics ALTER COLUMN failed_7 DROP DEFAULT`,
+			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS passed_7 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS failed_7 integer NOT NULL DEFAULT 0`,
 		}
 		for _, query := range queries {
 			if _, err := tx.Exec(ctx, query); err != nil {

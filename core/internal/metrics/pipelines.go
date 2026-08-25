@@ -171,8 +171,8 @@ func (c *Collector) queryMetrics(ctx context.Context, start, end time.Time, reso
 	case selection.Pipelines != nil:
 		query.WriteString("pipeline, ")
 	}
-	query.WriteString("timeslot/$1 AS slot, SUM(passed_0), SUM(passed_1), SUM(passed_2), SUM(passed_3), SUM(passed_4), SUM(passed_5), SUM(passed_6)," +
-		" SUM(failed_0), SUM(failed_1), SUM(failed_2), SUM(failed_3), SUM(failed_4), SUM(failed_5), SUM(failed_6)\n" +
+	query.WriteString("timeslot/$1 AS slot, SUM(passed_0), SUM(passed_1), SUM(passed_2), SUM(passed_3), SUM(passed_4), SUM(passed_5), SUM(passed_6), SUM(passed_7)," +
+		" SUM(failed_0), SUM(failed_1), SUM(failed_2), SUM(failed_3), SUM(failed_4), SUM(failed_5), SUM(failed_6), SUM(failed_7)\n" +
 		"FROM pipelines_metrics\nWHERE timeslot BETWEEN $2 AND $3")
 	switch {
 	case selection.Workspaces != nil:
@@ -227,8 +227,8 @@ func (c *Collector) queryMetrics(ctx context.Context, start, end time.Time, reso
 		var id string
 		var passed, failed [numSteps]int
 		err = rows.Scan(&id, &slot,
-			&passed[0], &passed[1], &passed[2], &passed[3], &passed[4], &passed[5], &passed[6],
-			&failed[0], &failed[1], &failed[2], &failed[3], &failed[4], &failed[5], &failed[6])
+			&passed[0], &passed[1], &passed[2], &passed[3], &passed[4], &passed[5], &passed[6], &passed[7],
+			&failed[0], &failed[1], &failed[2], &failed[3], &failed[4], &failed[5], &failed[6], &failed[7])
 		if err != nil {
 			return Metrics{}, err
 		}

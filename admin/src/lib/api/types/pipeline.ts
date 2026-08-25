@@ -8,9 +8,10 @@ type PipelineStep =
 	| 'Receive'
 	| 'InputValidation'
 	| 'Filter'
-	| 'Consent'
+	| 'EventConsent'
 	| 'Transformation'
 	| 'OutputValidation'
+	| 'ProfileConsent'
 	| 'Finalize';
 
 type SchedulePeriod = 'Off' | '5m' | '15m' | '30m' | '1h' | '2h' | '3h' | '6h' | '8h' | '12h' | '24h';

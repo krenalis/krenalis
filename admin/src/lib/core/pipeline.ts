@@ -1259,6 +1259,19 @@ const hasRequiredConsents = (connection: TransformedConnection, target: Pipeline
 	return isEventDriven(connection, target);
 };
 
+// hasEventConsentStep reports whether the pipelines of a given connection, and
+// with the given target, count the events their required consents discard.
+const hasEventConsentStep = (connection: TransformedConnection, target: PipelineTarget) => {
+	return isEventDriven(connection, target) && target === 'Event';
+};
+
+// hasProfileConsentStep reports whether the pipelines of a given connection,
+// and with the given target, count the profiles their required consents
+// discard.
+const hasProfileConsentStep = (connection: TransformedConnection, target: PipelineTarget) => {
+	return isEventDriven(connection, target) && target === 'User';
+};
+
 const hasTransformations = (connection: TransformedConnection, target: PipelineTarget) => {
 	const type = connection.connector.type;
 	if (type === 'Application' || type === 'Database') {
@@ -2108,7 +2121,8 @@ export {
 	hasFilters,
 	hasInputValidationStep,
 	hasFilterStep,
-	hasRequiredConsents,
+	hasEventConsentStep,
+	hasProfileConsentStep,
 	hasTransformations,
 	computePipelineTypeFields,
 	transformPipelineType,

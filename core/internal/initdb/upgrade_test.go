@@ -452,13 +452,13 @@ func assertOrganizationLimitsHaveNoDefaults(t *testing.T, database *db.DB) {
 	}
 }
 
-// assertConsentStepColumns verifies that the consent step columns were added,
-// keeping their default on pipelines_runs and dropping it on
-// pipelines_metrics.
+// assertConsentStepColumns verifies that the step columns added by the consent
+// management upgrades were added, keeping their default on pipelines_runs and
+// dropping it on pipelines_metrics.
 func assertConsentStepColumns(t *testing.T, database *db.DB) {
 	t.Helper()
 
-	for _, column := range []string{"passed_6", "failed_6"} {
+	for _, column := range []string{"passed_6", "failed_6", "passed_7", "failed_7"} {
 		if !hasDefault(t, database, "pipelines_runs", column) {
 			t.Fatalf("expected column pipelines_runs.%s to have a default, got no default", column)
 		}

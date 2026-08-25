@@ -10,178 +10,261 @@ import (
 	"github.com/krenalis/krenalis/core/internal/state"
 )
 
+var givenConsentsCases = []struct {
+	name     string
+	required []string
+	matchAll bool
+	given    map[string]any
+	want     bool
+}{
+	{
+		name:     "no required codes",
+		required: nil,
+		matchAll: true,
+		given:    map[string]any{},
+		want:     true,
+	},
+	{
+		name:     "AND: all required codes are true",
+		required: []string{"marketing", "analytics"},
+		matchAll: true,
+		given: map[string]any{
+			"marketing": true,
+			"analytics": true,
+			"other":     false,
+		},
+		want: true,
+	},
+	{
+		name:     "AND: one required code is false",
+		required: []string{"marketing", "analytics"},
+		matchAll: true,
+		given: map[string]any{
+			"marketing": true,
+			"analytics": false,
+		},
+		want: false,
+	},
+	{
+		name:     "AND: one required code is missing",
+		required: []string{"marketing", "analytics"},
+		matchAll: true,
+		given: map[string]any{
+			"marketing": true,
+		},
+		want: false,
+	},
+	{
+		name:     "AND: required code is not a bool",
+		required: []string{"marketing"},
+		matchAll: true,
+		given: map[string]any{
+			"marketing": "true",
+		},
+		want: false,
+	},
+	{
+		name:     "AND: no consent is given",
+		required: []string{"marketing"},
+		matchAll: true,
+		given:    map[string]any{},
+		want:     false,
+	},
+	{
+		name:     "OR: all required codes are true",
+		required: []string{"marketing", "analytics"},
+		matchAll: false,
+		given: map[string]any{
+			"marketing": true,
+			"analytics": true,
+		},
+		want: true,
+	},
+	{
+		name:     "OR: one required code is true",
+		required: []string{"marketing", "analytics"},
+		matchAll: false,
+		given: map[string]any{
+			"marketing": false,
+			"analytics": true,
+		},
+		want: true,
+	},
+	{
+		name:     "OR: one required code is missing and the other is true",
+		required: []string{"marketing", "analytics"},
+		matchAll: false,
+		given: map[string]any{
+			"analytics": true,
+		},
+		want: true,
+	},
+	{
+		name:     "OR: every required code is missing",
+		required: []string{"marketing", "analytics"},
+		matchAll: false,
+		given: map[string]any{
+			"other": true,
+		},
+		want: false,
+	},
+	{
+		name:     "OR: no required code is true",
+		required: []string{"marketing", "analytics"},
+		matchAll: false,
+		given: map[string]any{
+			"marketing": false,
+			"analytics": false,
+		},
+		want: false,
+	},
+	{
+		name:     "OR: no consent is given",
+		required: []string{"marketing"},
+		matchAll: false,
+		given:    map[string]any{},
+		want:     false,
+	},
+}
+
 func TestSatisfies(t *testing.T) {
-	cases := []struct {
-		name       string
-		required   []string
-		matchAll   bool
-		attributes map[string]any
-		want       bool
-	}{
-		{
-			name:       "no required codes",
-			required:   nil,
-			matchAll:   true,
-			attributes: map[string]any{},
-			want:       true,
-		},
-		{
-			name:     "AND: all required codes are true",
-			required: []string{"marketing", "analytics"},
-			matchAll: true,
-			attributes: map[string]any{
-				"context": map[string]any{
-					"consents": map[string]any{
-						"marketing": true,
-						"analytics": true,
-						"other":     false,
-					},
-				},
-			},
-			want: true,
-		},
-		{
-			name:     "AND: one required code is false",
-			required: []string{"marketing", "analytics"},
-			matchAll: true,
-			attributes: map[string]any{
-				"context": map[string]any{
-					"consents": map[string]any{
-						"marketing": true,
-						"analytics": false,
-					},
-				},
-			},
-			want: false,
-		},
-		{
-			name:     "AND: one required code is missing",
-			required: []string{"marketing", "analytics"},
-			matchAll: true,
-			attributes: map[string]any{
-				"context": map[string]any{
-					"consents": map[string]any{
-						"marketing": true,
-					},
-				},
-			},
-			want: false,
-		},
-		{
-			name:     "AND: required code is not a bool",
-			required: []string{"marketing"},
-			matchAll: true,
-			attributes: map[string]any{
-				"context": map[string]any{
-					"consents": map[string]any{
-						"marketing": "true",
-					},
-				},
-			},
-			want: false,
-		},
-		{
-			name:       "AND: missing context",
-			required:   []string{"marketing"},
-			matchAll:   true,
-			attributes: map[string]any{},
-			want:       false,
-		},
-		{
-			name:     "AND: missing consent",
-			required: []string{"marketing"},
-			matchAll: true,
-			attributes: map[string]any{
-				"context": map[string]any{},
-			},
-			want: false,
-		},
-		{
-			name:     "OR: all required codes are true",
-			required: []string{"marketing", "analytics"},
-			matchAll: false,
-			attributes: map[string]any{
-				"context": map[string]any{
-					"consents": map[string]any{
-						"marketing": true,
-						"analytics": true,
-					},
-				},
-			},
-			want: true,
-		},
-		{
-			name:     "OR: one required code is true",
-			required: []string{"marketing", "analytics"},
-			matchAll: false,
-			attributes: map[string]any{
-				"context": map[string]any{
-					"consents": map[string]any{
-						"marketing": false,
-						"analytics": true,
-					},
-				},
-			},
-			want: true,
-		},
-		{
-			name:     "OR: one required code is missing and the other is true",
-			required: []string{"marketing", "analytics"},
-			matchAll: false,
-			attributes: map[string]any{
-				"context": map[string]any{
-					"consents": map[string]any{
-						"analytics": true,
-					},
-				},
-			},
-			want: true,
-		},
-		{
-			name:     "OR: every required code is missing",
-			required: []string{"marketing", "analytics"},
-			matchAll: false,
-			attributes: map[string]any{
-				"context": map[string]any{
-					"consents": map[string]any{
-						"other": true,
-					},
-				},
-			},
-			want: false,
-		},
-		{
-			name:     "OR: no required code is true",
-			required: []string{"marketing", "analytics"},
-			matchAll: false,
-			attributes: map[string]any{
-				"context": map[string]any{
-					"consents": map[string]any{
-						"marketing": false,
-						"analytics": false,
-					},
-				},
-			},
-			want: false,
-		},
-		{
-			name:       "OR: missing context",
-			required:   []string{"marketing"},
-			matchAll:   false,
-			attributes: map[string]any{},
-			want:       false,
-		},
-	}
-	for _, c := range cases {
+	for _, c := range givenConsentsCases {
 		t.Run(c.name, func(t *testing.T) {
-			purposes := make([]*state.ConsentPurpose, len(c.required))
-			for i, code := range c.required {
-				purposes[i] = &state.ConsentPurpose{ID: code, Code: code, Name: code}
-			}
-			got := Satisfies(purposes, c.matchAll, c.attributes)
+			got := Satisfies(requiredPurposes(c.required), c.matchAll, c.given)
 			if got != c.want {
 				t.Fatalf("got %v, want %v", got, c.want)
 			}
 		})
 	}
+}
+
+func TestSatisfiesEvent(t *testing.T) {
+	for _, c := range givenConsentsCases {
+		t.Run(c.name, func(t *testing.T) {
+			event := map[string]any{
+				"context": map[string]any{
+					"consents": c.given,
+				},
+			}
+			got := SatisfiesEvent(requiredPurposes(c.required), c.matchAll, event)
+			if got != c.want {
+				t.Fatalf("got %v, want %v", got, c.want)
+			}
+		})
+	}
+
+	cases := []struct {
+		name     string
+		required []string
+		matchAll bool
+		event    map[string]any
+		want     bool
+	}{
+		{
+			name:     "AND: missing context",
+			required: []string{"marketing"},
+			matchAll: true,
+			event:    map[string]any{},
+			want:     false,
+		},
+		{
+			name:     "AND: missing consents",
+			required: []string{"marketing"},
+			matchAll: true,
+			event: map[string]any{
+				"context": map[string]any{},
+			},
+			want: false,
+		},
+		{
+			name:     "OR: missing context",
+			required: []string{"marketing"},
+			matchAll: false,
+			event:    map[string]any{},
+			want:     false,
+		},
+		{
+			name:     "no required codes and missing context",
+			required: nil,
+			matchAll: true,
+			event:    map[string]any{},
+			want:     true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := SatisfiesEvent(requiredPurposes(c.required), c.matchAll, c.event)
+			if got != c.want {
+				t.Fatalf("got %v, want %v", got, c.want)
+			}
+		})
+	}
+}
+
+func TestSatisfiesProfile(t *testing.T) {
+	for _, c := range givenConsentsCases {
+		t.Run(c.name, func(t *testing.T) {
+			profile := map[string]any{"consents": c.given}
+			got := SatisfiesProfile(requiredPurposes(c.required), c.matchAll, profile)
+			if got != c.want {
+				t.Fatalf("got %v, want %v", got, c.want)
+			}
+		})
+	}
+
+	cases := []struct {
+		name     string
+		required []string
+		matchAll bool
+		profile  map[string]any
+		want     bool
+	}{
+		{
+			name:     "AND: missing consents",
+			required: []string{"marketing"},
+			matchAll: true,
+			profile:  map[string]any{},
+			want:     false,
+		},
+		{
+			name:     "AND: consents is not an object",
+			required: []string{"marketing"},
+			matchAll: true,
+			profile: map[string]any{
+				"consents": true,
+			},
+			want: false,
+		},
+		{
+			name:     "OR: missing consents",
+			required: []string{"marketing"},
+			matchAll: false,
+			profile:  map[string]any{},
+			want:     false,
+		},
+		{
+			name:     "no required codes and missing consents",
+			required: nil,
+			matchAll: true,
+			profile:  map[string]any{},
+			want:     true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := SatisfiesProfile(requiredPurposes(c.required), c.matchAll, c.profile)
+			if got != c.want {
+				t.Fatalf("got %v, want %v", got, c.want)
+			}
+		})
+	}
+}
+
+// requiredPurposes returns the consent purposes with the given codes.
+func requiredPurposes(codes []string) []*state.ConsentPurpose {
+	purposes := make([]*state.ConsentPurpose, len(codes))
+	for i, code := range codes {
+		purposes[i] = &state.ConsentPurpose{ID: code, Code: code, Name: code}
+	}
+	return purposes
 }
