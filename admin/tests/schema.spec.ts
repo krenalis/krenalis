@@ -32,6 +32,12 @@ const selectPropertyType = async (page, option: string) => {
 	await panel.locator(`[data-type-option="${option}"]`).click();
 };
 
+const editSchema = async (page) => {
+	const button = page.locator('.schema-grid__alter-button');
+	await expect(button).not.toHaveAttribute('disabled');
+	await button.click();
+};
+
 const openProperty = async (page, property: string) => {
 	const isEditing = new URL(page.url()).pathname.endsWith('/schema/edit');
 	const schema = page.locator(isEditing ? '.schema-edit' : '.schema-grid');
@@ -64,6 +70,47 @@ test.afterEach(async ({ page }) => {
 	await logout(page);
 });
 
+test(`Disable profile schema editing until the schema has loaded`, async ({ page }) => {
+	let schemaRequestCount = 0;
+	let releaseSchemaReload = () => {};
+	const schemaReloadGate = new Promise<void>((resolve) => {
+		releaseSchemaReload = resolve;
+	});
+	let schemaReloadStarted = () => {};
+	const schemaReloadPromise = new Promise<void>((resolve) => {
+		schemaReloadStarted = resolve;
+	});
+	await page.route('**/v1/profiles/schema', async (route) => {
+		if (route.request().method() === 'GET' && schemaRequestCount++ > 0) {
+			schemaReloadStarted();
+			await schemaReloadGate;
+		}
+		await route.continue();
+	});
+	let latestAlterRequestCount = 0;
+	await page.route('**/v1/profiles/schema/latest-alter', async (route) => {
+		latestAlterRequestCount++;
+		await route.fulfill({
+			json: {
+				startTime: '2026-08-25T00:00:00Z',
+				endTime: latestAlterRequestCount === 1 ? null : '2026-08-25T00:00:01Z',
+				error: null,
+			},
+		});
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	const editSchemaButton = page.locator('.schema-grid__alter-button');
+	try {
+		await schemaReloadPromise;
+		await expect(editSchemaButton).toHaveJSProperty('loading', false);
+		await expect(editSchemaButton).toHaveAttribute('disabled');
+	} finally {
+		releaseSchemaReload();
+	}
+	await expect(editSchemaButton).not.toHaveAttribute('disabled', { timeout: 10000 });
+});
+
 // Search profile schema properties by the technical type shown in the list.
 test(`Search profile schema properties by technical type`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -84,7 +131,7 @@ test(`Search profile schema properties by technical type`, async ({ page }) => {
 	await expect(searchInput).toHaveCount(0);
 	await expect(searchButton).toBeVisible();
 
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	const editSearchButton = page.locator('.schema-edit__search-button');
 	await editSearchButton.click();
 	const editSearchInput = page.locator('.schema-edit__search >> input');
@@ -125,7 +172,7 @@ test(`Keep keyboard hints fixed and show disabled reorder handles while filterin
 	await page.goto(`${adminURL}/profile-unification/schema`);
 
 	await expect.poll(() => getKeyboardHintsBottomGap(page.locator('.schema-grid__layout'))).toBeLessThan(1);
-	await page.locator('.schema-grid__alter-button').click();
+	await editSchema(page);
 	await page.locator('.schema-edit__search-button').click();
 	const searchInput = page.locator('.schema-edit__search >> input');
 	await searchInput.fill('string');
@@ -223,7 +270,7 @@ test(`Keep profile schema search selection and expansion consistent`, async ({ p
 	await expect(readOnlyNestedRow).toBeHidden();
 	await expect(page.locator('.schema-grid .grid__row--selected')).toHaveCount(0);
 	await searchInput.blur();
-	await page.locator('.schema-grid__alter-button').click();
+	await editSchema(page);
 
 	await page.locator('.schema-edit__search-button').click();
 	const editSearchInput = page.locator('.schema-edit__search >> input');
@@ -387,7 +434,7 @@ test(`Keep an object expanded when reordering it`, async ({ page }) => {
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 
 	const objectRow = page.locator('.schema-edit .grid__row[data-id="expanded_object"]');
 	const objectGroup = objectRow.locator('xpath=..');
@@ -401,7 +448,7 @@ test(`Keep an object expanded when reordering it`, async ({ page }) => {
 
 test(`Warn before leaving pending profile schema changes`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 
 	const cancelButton = page.locator('.schema-edit__header-cancel-button');
 	await cancelButton.focus();
@@ -424,7 +471,7 @@ test(`Warn before leaving pending profile schema changes`, async ({ page }) => {
 
 test(`Restore pointer interaction after discarding schema changes with Cancel`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 
 	const cancelButton = page.locator('.schema-edit__header-cancel-button');
 	await cancelButton.focus();
@@ -445,7 +492,7 @@ test(`Restore pointer interaction after discarding schema changes with Cancel`, 
 
 test(`Keep an unsaved property selected when selecting another property`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	const applyButton = page.locator('.schema-edit__header-apply-button');
 
 	await openProperty(page, 'email');
@@ -491,7 +538,7 @@ test(`Keep contextual and form actions in their expected tab order`, async ({ pa
 		await route.fulfill({ response, json: body });
 	});
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await openProperty(page, 'email');
 
 	const propertyPanel = page.locator('.property-panel');
@@ -517,7 +564,7 @@ test(`Keep contextual and form actions in their expected tab order`, async ({ pa
 
 test(`Keep an unsaved property visible while filtering`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await openProperty(page, 'email');
 
 	const propertyPanel = page.locator('.property-panel');
@@ -645,7 +692,7 @@ test(`View property details and keep the selection when editing`, async ({ page 
 			}),
 	).toBe(countryBackground);
 
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await expect(page.locator('.property-details-panel')).toHaveCount(0);
 	await expect(page.locator('.property-panel .property-panel__title')).toHaveText('Property');
 	await expect(page.locator('.property-panel .property-dialog__name-input')).toHaveJSProperty('value', 'country');
@@ -691,7 +738,7 @@ test(`Keep object types unchanged after canceling the schema review`, async ({ p
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await expandAllObjects(page);
 	await openProperty(page, 'review_object.child');
 
@@ -720,7 +767,7 @@ test(`Keep the schema review closed when its preview finishes`, async ({ page })
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await openProperty(page, 'email');
 
 	const propertyPanel = page.locator('.property-panel');
@@ -764,7 +811,7 @@ test(`Keep the schema review open while applying changes`, async ({ page }) => {
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await openProperty(page, 'email');
 
 	const propertyPanel = page.locator('.property-panel');
@@ -810,7 +857,7 @@ test(`Preserve create-required on top-level properties in the schema preview`, a
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await openProperty(page, 'create_required_property');
 
 	const propertyPanel = page.locator('.property-panel');
@@ -831,7 +878,7 @@ test(`Preserve create-required on top-level properties in the schema preview`, a
 test(`Add schema property`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
 
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await page.click('.schema-edit__add-property');
 
 	const panel = page.locator('.property-panel');
@@ -921,7 +968,7 @@ test(`Clear the primary source when changing a new property to an array`, async 
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await page.click('.schema-edit__add-property');
 
 	const propertyPanel = page.locator('.property-panel');
@@ -994,7 +1041,7 @@ test(`Only offer user-capable source connections as primary sources`, async ({ p
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await page.click('.schema-edit__add-property');
 
 	const propertyPanel = page.locator('.property-panel');
@@ -1008,7 +1055,7 @@ test(`Only offer user-capable source connections as primary sources`, async ({ p
 
 test(`Validate string length constraints before adding a property`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await page.click('.schema-edit__add-property');
 
 	const propertyPanel = page.locator('.property-panel');
@@ -1042,7 +1089,7 @@ test(`Validate string length constraints before adding a property`, async ({ pag
 test(`Edit schema property`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
 
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 
 	await openProperty(page, 'foo');
 	await expect(page.locator('.property-type-selector__structure-trigger')).toHaveJSProperty('caret', false);
@@ -1131,7 +1178,7 @@ test(`Restore the original property name without leaving pending changes`, async
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await openProperty(page, 'original_property_name');
 	const firstVisiblePropertyKey = await page
 		.locator('.schema-edit .grid__row--clickable:visible')
@@ -1189,7 +1236,7 @@ test(`Remove a renamed property without sending its stale RePath`, async ({ page
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await openProperty(page, 'property_to_rename_and_remove');
 
 	const propertyPanel = page.locator('.property-panel');
@@ -1226,7 +1273,7 @@ test(`Remove a replacement property without sending its stale RePath`, async ({ 
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await removeProperty(page, 'property_to_replace_and_remove');
 
 	await page.click('.schema-edit__add-property');
@@ -1263,7 +1310,7 @@ test(`Do not show modified field indicators on a replacement property`, async ({
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await removeProperty(page, 'property_to_replace');
 
 	await page.click('.schema-edit__add-property');
@@ -1309,7 +1356,7 @@ test(`Rename an existing property to a deleted property's name`, async ({ page }
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await removeProperty(page, 'deleted_property_name');
 	await openProperty(page, 'property_to_rename');
 
@@ -1329,7 +1376,7 @@ test(`Rename an existing property to a deleted property's name`, async ({ page }
 test(`Check that RePaths are sent correctly`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
 
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 
 	await openProperty(page, 'bar');
 	await page.locator('.property-panel .property-form__change-name').click();
@@ -1413,7 +1460,7 @@ test(`Reuse a property name more than once before applying schema changes`, asyn
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 
 	const renameProperty = async (key: string, name: string) => {
 		await openProperty(page, key);
@@ -1459,7 +1506,7 @@ test(`Remove a replacement property's RePath when renaming it`, async ({ page })
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 
 	const propertyPanel = page.locator('.property-panel');
 	await openProperty(page, 'replacement_name');
@@ -1522,7 +1569,7 @@ test(`Allow matching property names under different object parents`, async ({ pa
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await page.click('.schema-edit__expand-all-button');
 
 	await page.click('.schema-edit__add-property');
@@ -1574,7 +1621,7 @@ test(`Support hasOwnProperty as a profile schema property name`, async ({ page }
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await expect(page.locator('.schema-edit .grid__row[data-id="hasOwnProperty"]')).toBeVisible();
 
 	await openProperty(page, 'property_container');
@@ -1608,7 +1655,7 @@ test(`Ignore inherited primary sources for prototype property names`, async ({ p
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await openProperty(page, 'toString');
 
 	const propertyPanel = page.locator('.property-panel');
@@ -1625,7 +1672,7 @@ test(`Ignore inherited primary sources for prototype property names`, async ({ p
 test(`Add schema object property with sub-property`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
 
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await page.click('.schema-edit__add-property');
 
 	await page.locator('.property-panel .property-dialog__name-input').evaluate((el: any, value) => {
@@ -1708,7 +1755,7 @@ test(`Remove nested properties when changing a new object to another type`, asyn
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await page.click('.schema-edit__add-property');
 
 	const propertyPanel = page.locator('.property-panel');
@@ -1783,7 +1830,7 @@ test(`Reject descendant changes while renaming an object property`, async ({ pag
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await openProperty(page, 'object_to_rename');
 
 	const propertyPanel = page.locator('.property-panel');
@@ -1811,7 +1858,7 @@ test(`Reject a new object property without sub-properties`, async ({ page }) => 
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await page.click('.schema-edit__add-property');
 
 	const propertyPanel = page.locator('.property-panel');
@@ -1883,7 +1930,7 @@ test(`Reject an existing object property after removing all its sub-properties`,
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await page.click('.schema-edit__expand-all-button');
 	await removeProperty(page, 'object_to_empty.child');
 	await expect(page.locator('.schema-edit .grid__row[data-id="object_to_empty.child"]')).toHaveCount(0);
@@ -1940,7 +1987,7 @@ test(`Count an object removal once after changing its children`, async ({ page }
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await page.click('.schema-edit__expand-all-button');
 	await removeProperty(page, 'object_with_replaced_child.child');
 
@@ -1964,7 +2011,7 @@ test(`Count an object removal once after changing its children`, async ({ page }
 
 test(`Clear the property selection after deleting a filtered property`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 
 	await page.locator('.schema-edit__search-button').click();
 	const searchInput = page.locator('.schema-edit__search >> input');
@@ -1979,7 +2026,7 @@ test(`Clear the property selection after deleting a filtered property`, async ({
 test(`Remove schema properties`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
 
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 
 	await removeProperty(page, 'foo');
 	await removeProperty(page, 'bar');
@@ -2017,7 +2064,7 @@ test(`Remove schema properties`, async ({ page }) => {
 test(`Check that the property name is correctly validated`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
 
-	await page.click('.schema-grid__alter-button');
+	await editSchema(page);
 	await page.click('.schema-edit__add-property');
 
 	let error = page.locator('.property-dialog__control--name .property-dialog__control-error');

@@ -113,8 +113,8 @@ const SchemaGrid = () => {
 				<SlButton
 					className='schema-grid__alter-button'
 					variant='primary'
-					onClick={isAltering ? null : onEditClick}
-					disabled={isAltering}
+					onClick={gridInteractionsDisabled ? null : onEditClick}
+					disabled={gridInteractionsDisabled}
 					loading={isAltering}
 				>
 					Edit schema
