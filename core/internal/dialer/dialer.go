@@ -110,7 +110,7 @@ func onDeleteOrganization(n state.DeleteOrganization) {
 // instead to keep the dial options of an already configured dialer.
 //
 // Use [PlainDial] when there is no organization to dial on behalf of (for
-// example in certain tests scenarios).
+// example in certain test scenarios).
 //
 // The connections it establishes count the bytes they send, see
 // [EnableCounting]. It returns a plain, unwrapped dialer, counting nothing,
@@ -127,8 +127,8 @@ func Dial(organization string) DialFunc {
 // keep-alive. If the wrapped dial function is nil, a plain net.Dialer is used,
 // as in [Dial].
 //
-// Use [PlainDial] when there is no organization to dial on behalf of (for
-// example in certain tests scenarios).
+// Use [PlainDialWith] when there is no organization to dial on behalf of (for
+// example in certain test scenarios).
 //
 // As in [Dial], the connections count the bytes they send, see
 // [EnableCounting], and the dial function is returned unwrapped while counting
