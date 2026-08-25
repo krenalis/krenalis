@@ -123,12 +123,19 @@ const DashboardCard = ({ title, temporalLabel, info, headerAction, className, ch
 	);
 };
 
-const DonutCenter = ({ value, label }: { value: ReactNode; label: string }) => (
-	<div className='identity-dashboard__donut-center'>
-		<strong>{value}</strong>
-		<span>{label}</span>
-	</div>
-);
+interface DonutCenterProps {
+	value: ReactNode;
+	label: string;
+}
+
+const DonutCenter = ({ value, label }: DonutCenterProps) => {
+	return (
+		<div className='identity-dashboard__donut-center'>
+			<strong>{value}</strong>
+			<span>{label}</span>
+		</div>
+	);
+};
 
 interface ChartTooltipRow {
 	label: ReactNode;
@@ -172,17 +179,27 @@ interface TimeSeriesTooltipProps {
 	formatValue: (value: number) => string;
 }
 
-const TimeSeriesTooltip = ({ active, label, payload, formatValue }: TimeSeriesTooltipProps) => (
-	<ChartTooltip
-		active={active}
-		title={label == null ? undefined : formatChartDate(String(label))}
-		rows={(payload ?? []).flatMap((entry) =>
-			entry.value == null ? [] : [{ label: String(entry.name ?? ''), value: formatValue(Number(entry.value)) }],
-		)}
-	/>
-);
+const TimeSeriesTooltip = ({ active, label, payload, formatValue }: TimeSeriesTooltipProps) => {
+	return (
+		<ChartTooltip
+			active={active}
+			title={label == null ? undefined : formatChartDate(String(label))}
+			rows={(payload ?? []).flatMap((entry) =>
+				entry.value == null
+					? []
+					: [{ label: String(entry.name ?? ''), value: formatValue(Number(entry.value)) }],
+			)}
+		/>
+	);
+};
 
-const RecognizedAnonymousHistoryTooltip = ({ active, label, payload }: Omit<TimeSeriesTooltipProps, 'formatValue'>) => {
+interface RecognizedAnonymousHistoryTooltipProps {
+	active?: boolean;
+	label?: unknown;
+	payload?: readonly RechartsTooltipEntry[];
+}
+
+const RecognizedAnonymousHistoryTooltip = ({ active, label, payload }: RecognizedAnonymousHistoryTooltipProps) => {
 	const entries = (payload ?? []).flatMap((entry) =>
 		entry.value == null ? [] : [{ label: String(entry.name ?? ''), value: Number(entry.value) }],
 	);
@@ -200,7 +217,12 @@ const RecognizedAnonymousHistoryTooltip = ({ active, label, payload }: Omit<Time
 	);
 };
 
-const DonutTooltip = ({ active, payload }: Omit<TimeSeriesTooltipProps, 'label' | 'formatValue'>) => {
+interface DonutTooltipProps {
+	active?: boolean;
+	payload?: readonly RechartsTooltipEntry[];
+}
+
+const DonutTooltip = ({ active, payload }: DonutTooltipProps) => {
 	const entry = payload?.[0];
 	const datum = entry?.payload as { label?: string } | undefined;
 	const label = datum?.label ?? (entry?.name == null ? undefined : String(entry.name));
@@ -550,19 +572,21 @@ interface ProfilesChartProps {
 	error?: string;
 }
 
-const ProfilesChart = ({ days, loading, error }: ProfilesChartProps) => (
-	<RecognizedAnonymousHistoryChart
-		title='Profiles over time (daily)'
-		info='Daily end-of-day counts of recognized and anonymous unified profiles over the selected date range. Values carry forward until the next successful identity resolution run; days before the first available data point are shown as gaps.'
-		days={days}
-		recognizedColor={UNIFIED_PROFILES_RECOGNIZED_COLOR}
-		anonymousColor={UNIFIED_PROFILES_ANONYMOUS_COLOR}
-		loading={loading}
-		error={error}
-		errorTitle='Unified profile metrics could not be loaded'
-		emptyTitle='No unified profile data in this period'
-	/>
-);
+const ProfilesChart = ({ days, loading, error }: ProfilesChartProps) => {
+	return (
+		<RecognizedAnonymousHistoryChart
+			title='Profiles over time (daily)'
+			info='Daily end-of-day counts of recognized and anonymous unified profiles over the selected date range. Values carry forward until the next successful identity resolution run; days before the first available data point are shown as gaps.'
+			days={days}
+			recognizedColor={UNIFIED_PROFILES_RECOGNIZED_COLOR}
+			anonymousColor={UNIFIED_PROFILES_ANONYMOUS_COLOR}
+			loading={loading}
+			error={error}
+			errorTitle='Unified profile metrics could not be loaded'
+			emptyTitle='No unified profile data in this period'
+		/>
+	);
+};
 
 interface ConnectionsChartProps {
 	data: ConnectionBar[];
@@ -752,20 +776,20 @@ const ResolutionEffectivenessChart = ({ data, loading, error }: ResolutionEffect
 			className='identity-dashboard__chart-card identity-dashboard__resolution-chart-card'
 		>
 			{loading ? (
-				<CardLoading chart />
+				<CardLoading chart={true} />
 			) : error ? (
 				<StateMessage
 					variant='error'
 					title='Resolution metrics could not be loaded'
 					description={error}
-					compact
+					compact={true}
 				/>
 			) : !hasData ? (
 				<StateMessage
 					variant='empty'
 					title='No identity resolution data in this period'
 					description='Run identity resolution to populate the daily series.'
-					compact
+					compact={true}
 				/>
 			) : (
 				<div className='identity-dashboard__effectiveness-content'>
@@ -787,7 +811,7 @@ const ResolutionEffectivenessChart = ({ data, loading, error }: ResolutionEffect
 										syncMethod='value'
 									>
 										<CartesianGrid stroke={GRID_COLOR} vertical={false} />
-										<XAxis dataKey='day' hide />
+										<XAxis dataKey='day' hide={true} />
 										<YAxis
 											domain={ratioDomain}
 											ticks={ratioTicks}
@@ -816,7 +840,7 @@ const ResolutionEffectivenessChart = ({ data, loading, error }: ResolutionEffect
 											dot={false}
 											activeDot={{ r: 3 }}
 											connectNulls={false}
-											isAnimationActive
+											isAnimationActive={true}
 											animationDuration={TREND_CHART_ANIMATION_DURATION}
 											animationEasing='ease-out'
 										/>
@@ -884,7 +908,7 @@ const ResolutionEffectivenessChart = ({ data, loading, error }: ResolutionEffect
 												stroke: IDENTITY_LINK_RATE_COLOR,
 											}}
 											connectNulls={false}
-											isAnimationActive
+											isAnimationActive={true}
 											animationDuration={TREND_CHART_ANIMATION_DURATION}
 											animationEasing='ease-out'
 										/>
@@ -939,7 +963,7 @@ const TypeDistributionBlock = ({
 				{snapshot && <p>{snapshot.temporalLabel}</p>}
 			</div>
 			{loading ? (
-				<CardLoading chart />
+				<CardLoading chart={true} />
 			) : !hasData ? (
 				<div className='identity-dashboard__distribution-empty' role='status'>
 					<SlIcon name='info-circle' />
@@ -999,39 +1023,46 @@ interface TypeDistributionCardProps {
 	error?: string;
 }
 
-const TypeDistributionCard = ({ processed, unified, loading, error }: TypeDistributionCardProps) => (
-	<DashboardCard
-		title='Distribution per type'
-		info='Both charts show the recognized vs. anonymous distribution from the latest successful identity resolution run.'
-		className='identity-dashboard__distribution-card'
-	>
-		<div className='identity-dashboard__distribution-panel'>
-			<TypeDistributionBlock title='Identities processed' snapshot={processed} loading={loading} error={error} />
-			<div className='identity-dashboard__distribution-divider' aria-hidden='true'>
-				<span>↔</span>
+const TypeDistributionCard = ({ processed, unified, loading, error }: TypeDistributionCardProps) => {
+	return (
+		<DashboardCard
+			title='Distribution per type'
+			info='Both charts show the recognized vs. anonymous distribution from the latest successful identity resolution run.'
+			className='identity-dashboard__distribution-card'
+		>
+			<div className='identity-dashboard__distribution-panel'>
+				<TypeDistributionBlock
+					title='Identities processed'
+					snapshot={processed}
+					loading={loading}
+					error={error}
+				/>
+				<div className='identity-dashboard__distribution-divider' aria-hidden='true'>
+					<span>↔</span>
+				</div>
+				<TypeDistributionBlock
+					title='Unified profiles'
+					snapshot={unified}
+					loading={loading}
+					error={error}
+					recognizedColor={UNIFIED_PROFILES_RECOGNIZED_COLOR}
+					anonymousColor={UNIFIED_PROFILES_ANONYMOUS_COLOR}
+				/>
 			</div>
-			<TypeDistributionBlock
-				title='Unified profiles'
-				snapshot={unified}
-				loading={loading}
-				error={error}
-				recognizedColor={UNIFIED_PROFILES_RECOGNIZED_COLOR}
-				anonymousColor={UNIFIED_PROFILES_ANONYMOUS_COLOR}
-			/>
-		</div>
-		<div className='identity-dashboard__distribution-footer'>
-			<span>
-				<SlIcon name='people' />
-				<strong>Recognized:</strong> has at least one recognized identity
-			</span>
-			<i aria-hidden='true' />
-			<span>
-				<SlIcon name='person' />
-				<strong>Anonymous:</strong> only anonymous identities
-			</span>
-		</div>
-	</DashboardCard>
-);
+			<div className='identity-dashboard__distribution-footer'>
+				<span>
+					<SlIcon name='people' />
+					<strong>Recognized:</strong> has at least one recognized identity
+				</span>
+				<i aria-hidden='true' />
+				<span>
+					<SlIcon name='person' />
+					<strong>Anonymous:</strong> only anonymous identities
+				</span>
+			</div>
+		</DashboardCard>
+	);
+};
 
 interface ProfileCompositionProps {
 	profiles: number;
@@ -1050,11 +1081,16 @@ const ProfileComposition = ({ profiles, composition, loading, error }: ProfileCo
 			className='identity-dashboard__composition-card'
 		>
 			{loading ? (
-				<CardLoading chart />
+				<CardLoading chart={true} />
 			) : error ? (
-				<StateMessage variant='error' title='Composition could not be loaded' description={error} compact />
+				<StateMessage
+					variant='error'
+					title='Composition could not be loaded'
+					description={error}
+					compact={true}
+				/>
 			) : composition == null ? (
-				<StateMessage variant='unavailable' title='Profile composition is unavailable' compact />
+				<StateMessage variant='unavailable' title='Profile composition is unavailable' compact={true} />
 			) : (
 				<div className='identity-dashboard__composition-content'>
 					<div className='identity-dashboard__donut-ring' aria-label='Profiles by number of identities'>
@@ -1101,35 +1137,41 @@ const ProfileComposition = ({ profiles, composition, loading, error }: ProfileCo
 	);
 };
 
-const GoToRun = () => (
-	<Link path='profile-unification/profiles'>
-		<SlButton size='small' variant='default'>
-			Go to Run
-		</SlButton>
-	</Link>
-);
+const GoToRun = () => {
+	return (
+		<Link path='profile-unification/profiles'>
+			<SlButton size='small' variant='default'>
+				Go to Run
+			</SlButton>
+		</Link>
+	);
+};
 
-const ResolutionPeriodEmptyState = () => (
-	<DashboardCard className='identity-dashboard__period-empty-card'>
-		<StateMessage
-			variant='empty'
-			title='No identity resolution completed in this period'
-			description='Run identity resolution to see results here.'
-			action={<GoToRun />}
-		/>
-	</DashboardCard>
-);
+const ResolutionPeriodEmptyState = () => {
+	return (
+		<DashboardCard className='identity-dashboard__period-empty-card'>
+			<StateMessage
+				variant='empty'
+				title='No identity resolution completed in this period'
+				description='Run identity resolution to see results here.'
+				action={<GoToRun />}
+			/>
+		</DashboardCard>
+	);
+};
 
-const NoResolutionState = () => (
-	<DashboardCard className='identity-dashboard__no-resolution-card'>
-		<StateMessage
-			variant='empty'
-			title='No identity resolution completed in this period'
-			description='Run identity resolution to see results here.'
-			action={<GoToRun />}
-		/>
-	</DashboardCard>
-);
+const NoResolutionState = () => {
+	return (
+		<DashboardCard className='identity-dashboard__no-resolution-card'>
+			<StateMessage
+				variant='empty'
+				title='No identity resolution completed in this period'
+				description='Run identity resolution to see results here.'
+				action={<GoToRun />}
+			/>
+		</DashboardCard>
+	);
+};
 
 const HISTORY_COLUMNS: GridColumn[] = [
 	{ name: 'Status' },
@@ -1178,34 +1220,36 @@ const historyRows = (runs: IdentityResolutionRun[]): GridRow[] =>
 		],
 	}));
 
-const HistorySection = ({ runs, loading, error }: HistorySectionProps) => (
-	<section className='identity-dashboard__section'>
-		<SectionHeading
-			title='Identity resolution history'
-			info='Identity resolution runs, including those in progress, successful, and failed.'
-		/>
-		<DashboardCard className='identity-dashboard__history-card'>
-			{error == null ? (
-				<div className='identity-dashboard__history-grid'>
-					<Grid
-						columns={HISTORY_COLUMNS}
-						rows={historyRows(runs)}
-						gridColumnsWidths='minmax(120px, 0.7fr) minmax(210px, 1.2fr) minmax(210px, 1.2fr) minmax(110px, 0.6fr) minmax(260px, 1.8fr)'
-						isLoading={loading}
-						loadingText='Loading identity resolution history'
-						noRowsMessage='No identity resolution runs yet'
+const HistorySection = ({ runs, loading, error }: HistorySectionProps) => {
+	return (
+		<section className='identity-dashboard__section'>
+			<SectionHeading
+				title='Identity resolution history'
+				info='Identity resolution runs, including those in progress, successful, and failed.'
+			/>
+			<DashboardCard className='identity-dashboard__history-card'>
+				{error == null ? (
+					<div className='identity-dashboard__history-grid'>
+						<Grid
+							columns={HISTORY_COLUMNS}
+							rows={historyRows(runs)}
+							gridColumnsWidths='minmax(120px, 0.7fr) minmax(210px, 1.2fr) minmax(210px, 1.2fr) minmax(110px, 0.6fr) minmax(260px, 1.8fr)'
+							isLoading={loading}
+							loadingText='Loading identity resolution history'
+							noRowsMessage='No identity resolution runs yet'
+						/>
+					</div>
+				) : (
+					<StateMessage
+						variant='error'
+						title='Identity resolution run history could not be loaded'
+						description={error}
 					/>
-				</div>
-			) : (
-				<StateMessage
-					variant='error'
-					title='Identity resolution run history could not be loaded'
-					description={error}
-				/>
-			)}
-		</DashboardCard>
-	</section>
-);
+				)}
+			</DashboardCard>
+		</section>
+	);
+};
 
 export {
 	ConnectionsChart,
