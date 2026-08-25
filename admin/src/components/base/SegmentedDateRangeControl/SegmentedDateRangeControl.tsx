@@ -25,6 +25,7 @@ interface SegmentedDateRangeControlProps<T extends string> {
 	onPresetChange: (preset: T) => void;
 	onCustomRangeChange: (range: SegmentedDateRangeSelection[]) => void;
 	pickerAlignment?: 'start' | 'end';
+	disabled?: boolean;
 }
 
 const formatCustomRange = (range: SegmentedDateRangeSelection[]): string => {
@@ -41,6 +42,7 @@ const SegmentedDateRangeControl = <T extends string>({
 	onPresetChange,
 	onCustomRangeChange,
 	pickerAlignment = 'start',
+	disabled = false,
 }: SegmentedDateRangeControlProps<T>) => {
 	const root = useRef<HTMLDivElement>(null);
 	const [isPickerOpen, setIsPickerOpen] = useState<boolean>(false);
@@ -54,6 +56,10 @@ const SegmentedDateRangeControl = <T extends string>({
 		window.addEventListener('click', closeOnOutsideClick);
 		return () => window.removeEventListener('click', closeOnOutsideClick);
 	}, []);
+
+	useEffect(() => {
+		if (disabled) setIsPickerOpen(false);
+	}, [disabled]);
 
 	const selectPreset = (preset: T) => {
 		setIsPickerOpen(false);
@@ -69,6 +75,7 @@ const SegmentedDateRangeControl = <T extends string>({
 						variant={value === preset.value ? 'primary' : 'default'}
 						onClick={() => selectPreset(preset.value)}
 						size='small'
+						disabled={disabled}
 					>
 						{preset.label}
 					</SlButton>
@@ -78,6 +85,7 @@ const SegmentedDateRangeControl = <T extends string>({
 						variant={value === 'Custom' ? 'primary' : 'default'}
 						onClick={() => setIsPickerOpen((open) => !open)}
 						size='small'
+						disabled={disabled}
 					>
 						{value === 'Custom' ? formatCustomRange(customRange) : 'Custom range'}
 					</SlButton>

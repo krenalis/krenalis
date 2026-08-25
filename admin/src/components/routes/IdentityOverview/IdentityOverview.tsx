@@ -339,6 +339,7 @@ const IdentityOverview = () => {
 						onPresetChange={onPresetChange}
 						onCustomRangeChange={onCustomRangeChange}
 						pickerAlignment='end'
+						disabled={isRefreshing}
 					/>
 				</div>
 			</div>
