@@ -23,9 +23,8 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-// testDialWith is the connectors.DialWith used by database connector tests.
-// It dials with a plain net.Dialer, so tests establish real connections
-// instead of relying on the connector's own default dialer.
+// testDialWith is the connectors.DialWith given to the connector by the tests.
+// It returns dial, or a plain net.Dialer dial function if dial is nil.
 func testDialWith(dial connectors.DialFunc) connectors.DialFunc {
 	if dial != nil {
 		return dial
