@@ -42,8 +42,8 @@ type HTTP struct {
 
 	organizationsMu sync.Mutex // protects organizations
 	// organizations holds the transport for each organization; it is nil when
-	// there is no state to follow the organizations with.
-	// Protected by organizationsMu.
+	// there is no state to follow the organizations with; protected by
+	// organizationsMu.
 	organizations map[string]*http.Transport
 
 	// muxes maps each connector code to the corresponding ServeMux handling its rate limits.
@@ -51,12 +51,16 @@ type HTTP struct {
 	muxes map[string]*http.ServeMux // nil if state is nil; protected by mu
 }
 
-// New returns an HTTP instance given the state and the transport to use for
-// HTTP connections.
+// New returns an HTTP instance given the state and the base transport to use
+// for HTTP connections. The requests made on behalf of an organization are sent
+// with a clone of the base transport, dedicated to that organization and
+// created when it first needs one; the returned instance listens on the state
+// to track the organizations that exist.
 //
 // It is possible to provide a nil state; in that case the returned HTTP client
 // will be restricted and will not allow invocation of OAuth-related methods, as
-// their behavior may be unexpected or may cause a panic.
+// their behavior may be unexpected or may cause a panic; the organizations are
+// not followed either, so every request is made with the base transport.
 func New(state *state.State, transport *http.Transport) *HTTP {
 	h := &HTTP{
 		state:     state,
