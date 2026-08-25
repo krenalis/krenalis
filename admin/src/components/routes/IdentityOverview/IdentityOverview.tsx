@@ -81,19 +81,19 @@ const IdentityOverview = () => {
 	const [customDateRange, setCustomDateRange] = useState<SegmentedDateRangeSelection[]>(initialCustomRange);
 	const [latestMetric, setLatestMetric] = useState<IdentityMetric>();
 	const [metricDays, setMetricDays] = useState<IdentityMetricDay[]>();
-	const [selectedConnection, setSelectedConnection] = useState('');
+	const [selectedConnection, setSelectedConnection] = useState<string>('');
 	const [connectionMetricDays, setConnectionMetricDays] = useState<IdentityMetricDay[]>();
 	const [loadedConnectionRange, setLoadedConnectionRange] = useState<DisplayDateRange>(initialDisplayRange);
 	const [connectionError, setConnectionError] = useState<string>();
-	const [isConnectionLoading, setIsConnectionLoading] = useState(false);
+	const [isConnectionLoading, setIsConnectionLoading] = useState<boolean>(false);
 	const [error, setError] = useState<string>();
-	const [isLoading, setIsLoading] = useState(true);
-	const [isRefreshing, setIsRefreshing] = useState(false);
-	const requestVersion = useRef(0);
-	const connectionRequestVersion = useRef(0);
+	const [isLoading, setIsLoading] = useState<boolean>(true);
+	const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+	const requestVersion = useRef<number>(0);
+	const connectionRequestVersion = useRef<number>(0);
 	const latestMetricRef = useRef<IdentityMetric>();
-	const selectedConnectionRef = useRef('');
-	const previousWorkspace = useRef(selectedWorkspace);
+	const selectedConnectionRef = useRef<string>('');
+	const previousWorkspace = useRef<string>(selectedWorkspace);
 	const sourceConnectionCatalogKey = useMemo(
 		() =>
 			connections
@@ -103,7 +103,7 @@ const IdentityOverview = () => {
 				.join(','),
 		[connections],
 	);
-	const previousSourceConnectionCatalogKey = useRef(sourceConnectionCatalogKey);
+	const previousSourceConnectionCatalogKey = useRef<string>(sourceConnectionCatalogKey);
 
 	useLayoutEffect(() => {
 		setTitle('Profile Unification / Overview');
@@ -199,7 +199,7 @@ const IdentityOverview = () => {
 			setConnectionError(undefined);
 			setIsConnectionLoading(false);
 		}
-		void loadMetrics();
+		loadMetrics();
 	}, [loadMetrics, selectedWorkspace, sourceConnectionCatalogKey]);
 
 	useEffect(() => {
@@ -286,7 +286,7 @@ const IdentityOverview = () => {
 			setIsConnectionLoading(true);
 			return;
 		}
-		void loadConnectionMetrics(latest, connection, displayRange);
+		loadConnectionMetrics(latest, connection, displayRange);
 	};
 
 	const refreshDashboard = async () => {
@@ -356,7 +356,7 @@ const IdentityOverview = () => {
 						variant='error'
 						title='Current identity state is unavailable'
 						description={error}
-						compact
+						compact={true}
 					/>
 				)}
 				<div className='identity-overview__kpi-grid'>
@@ -364,7 +364,7 @@ const IdentityOverview = () => {
 						title='Total identities'
 						value={latestMetric == null ? '—' : formatNumber(latestMetric.total)}
 						secondary={observedLabel == null ? undefined : <>As of {observedLabel}</>}
-						subtleBackground
+						subtleBackground={true}
 						loading={isLoading}
 					/>
 					<KpiCard

@@ -1,4 +1,5 @@
 import { IdentityConnectionMetric, IdentityMetric, IdentityMetricDay } from '../../../lib/api/types/metrics';
+import { ConnectionRole } from '../../../lib/api/types/connection';
 
 const DELETED_CONNECTION_SCOPE = 'deleted';
 const DELETED_CONNECTION_LABEL = 'Removed connections';
@@ -44,7 +45,7 @@ interface ConnectionBar {
 interface IdentityConnectionCatalogEntry {
 	id: string;
 	name: string;
-	role: 'Source' | 'Destination';
+	role: ConnectionRole;
 }
 
 interface IdentityConnectionOption {
