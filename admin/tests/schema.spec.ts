@@ -2041,7 +2041,7 @@ test(`Remove schema properties`, async ({ page }) => {
 		page.locator('.grid__row > .grid__cell:first-child > .grid__cell-content', { hasText: /^foo$/ }),
 	).not.toBeAttached();
 	await expect(
-		page.locator('.grid__row > .grid__cell:first-child > .grid__cell-content', { hasText: /^foo$/ }),
+		page.locator('.grid__row > .grid__cell:first-child > .grid__cell-content', { hasText: /^bar$/ }),
 	).not.toBeAttached();
 	await expect(
 		page.locator('.grid__row > .grid__cell:first-child > .grid__cell-content', { hasText: /^test_obj$/ }),
@@ -2054,7 +2054,7 @@ test(`Remove schema properties`, async ({ page }) => {
 		page.locator('.grid__row > .grid__cell:first-child > .grid__cell-content', { hasText: /^foo$/ }),
 	).not.toBeAttached();
 	await expect(
-		page.locator('.grid__row > .grid__cell:first-child > .grid__cell-content', { hasText: /^foo$/ }),
+		page.locator('.grid__row > .grid__cell:first-child > .grid__cell-content', { hasText: /^bar$/ }),
 	).not.toBeAttached();
 	await expect(
 		page.locator('.grid__row > .grid__cell:first-child > .grid__cell-content', { hasText: /^test_obj$/ }),
