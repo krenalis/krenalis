@@ -79,6 +79,7 @@ const IdentityOverview = () => {
 		IDENTITY_OVERVIEW_DEFAULT_DATE_PRESET,
 	);
 	const [customDateRange, setCustomDateRange] = useState<SegmentedDateRangeSelection[]>(initialCustomRange);
+	const [today, setToday] = useState<string>(todayUTCDateKey);
 	const [latestMetric, setLatestMetric] = useState<IdentityMetric>();
 	const [metricDays, setMetricDays] = useState<IdentityMetricDay[]>();
 	const [selectedConnection, setSelectedConnection] = useState<string>('');
@@ -108,6 +109,18 @@ const IdentityOverview = () => {
 	useLayoutEffect(() => {
 		setTitle('Profile Unification / Overview');
 	}, [setTitle]);
+
+	useEffect(() => {
+		let timeout: number;
+		const updateToday = () => {
+			const now = new Date();
+			setToday(todayUTCDateKey(now));
+			const nextUTCDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
+			timeout = window.setTimeout(updateToday, nextUTCDay - now.getTime() + 1);
+		};
+		updateToday();
+		return () => window.clearTimeout(timeout);
+	}, []);
 
 	const fetchMetricDays = useCallback(
 		async (latest: IdentityMetric, requestedRange: DisplayDateRange, connection?: string) => {
@@ -338,6 +351,7 @@ const IdentityOverview = () => {
 						customRange={customDateRange}
 						onPresetChange={onPresetChange}
 						onCustomRangeChange={onCustomRangeChange}
+						maxDate={dateKeyToPickerDate(today)}
 						pickerAlignment='end'
 						disabled={isRefreshing}
 					/>
