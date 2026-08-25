@@ -1322,6 +1322,12 @@ const FullscreenTransformation = ({
 	}, [pipeline.filter]);
 
 	const normalizedConsents = useMemo(() => {
+		// Pipelines that import users from events check the required consents on
+		// the profile they produce, and not on the event they receive, so their
+		// samples must not be filtered by the consents.
+		if (isEventBasedUserImport) {
+			return null;
+		}
 		// Discard the required consents (and their operator) when no purpose
 		// has been selected.
 		let consents: RequiredConsents | null = null;
@@ -1329,7 +1335,7 @@ const FullscreenTransformation = ({
 			consents = pipeline.requiredConsents;
 		}
 		return consents;
-	}, [pipeline.requiredConsents]);
+	}, [isEventBasedUserImport, pipeline.requiredConsents]);
 
 	const { startListening, stopListening } = useEventListener(
 		(newly: EventListenerEvent[]) => {
