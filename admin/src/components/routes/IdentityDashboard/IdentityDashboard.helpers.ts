@@ -6,6 +6,7 @@ import {
 	IdentityResolutionMetric,
 	IdentityResolutionMetricDay,
 } from '../../../lib/api/types/metrics';
+import { ConnectionRole } from '../../../lib/api/types/connection';
 
 const DELETED_CONNECTION_SCOPE = 'deleted';
 const DELETED_CONNECTION_LABEL = 'Removed connections';
@@ -66,7 +67,7 @@ interface ConnectionBar {
 interface IdentityConnectionCatalogEntry {
 	id: string;
 	name: string;
-	role: 'Source' | 'Destination';
+	role: ConnectionRole;
 }
 
 interface IdentityConnectionOption {
@@ -122,9 +123,9 @@ const dateKeyToPickerDate = (dateKey: string): Date => {
 };
 
 const pickerDateToDateKey = (date: Date): string => {
-	return [date.getFullYear(), date.getMonth() + 1, date.getDate()]
-		.map((part, index) => (index === 0 ? String(part) : String(part).padStart(2, '0')))
-		.join('-');
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	return `${date.getFullYear()}-${month}-${day}`;
 };
 
 const instantToDateKey = (instant: string): string => {
@@ -381,26 +382,22 @@ const buildIdentityConnectionOptions = (
 	connections: readonly IdentityConnectionCatalogEntry[],
 	metrics: readonly IdentityConnectionMetric[] | undefined,
 ): IdentityConnectionOption[] => {
-	const totals = new Map<string, number>();
-	for (const metric of metrics ?? []) {
-		totals.set(
-			metric.connection,
-			(totals.get(metric.connection) ?? 0) + Number(metric.anonymous) + Number(metric.recognized),
-		);
-	}
 	const options = new Map<string, string>();
 	for (const connection of connections) {
 		if (connection.role === 'Source') {
 			options.set(connection.id, connection.name || connection.id);
 		}
 	}
+	let deletedTotal = 0;
 	for (const metric of metrics ?? []) {
-		if (metric.connection === DELETED_CONNECTION_SCOPE) continue;
+		if (metric.connection === DELETED_CONNECTION_SCOPE) {
+			deletedTotal += Number(metric.anonymous) + Number(metric.recognized);
+			continue;
+		}
 		if (!options.has(metric.connection)) {
 			options.set(metric.connection, metric.connection);
 		}
 	}
-	const deletedTotal = totals.get(DELETED_CONNECTION_SCOPE) ?? 0;
 	if (deletedTotal > 0) {
 		options.set(DELETED_CONNECTION_SCOPE, DELETED_CONNECTION_LABEL);
 	}

@@ -133,15 +133,15 @@ const IdentityDashboard = () => {
 	const [isResolutionLoading, setIsResolutionLoading] = useState<boolean>(true);
 	const [isResolutionRunsLoading, setIsResolutionRunsLoading] = useState<boolean>(true);
 	const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-	const requestVersion = useRef(0);
-	const connectionRequestVersion = useRef(0);
-	const runsRequestVersion = useRef(0);
+	const requestVersion = useRef<number>(0);
+	const connectionRequestVersion = useRef<number>(0);
+	const runsRequestVersion = useRef<number>(0);
 	// Keep range changes anchored to one latest snapshot until the next refresh.
 	const latestIdentityMetricRef = useRef<IdentityMetric>();
 	const latestResolutionMetricRef = useRef<IdentityResolutionMetric | null>();
-	const selectedIdentityConnectionRef = useRef('');
-	const previousWorkspace = useRef(selectedWorkspace);
-	const previousConnectionWorkspace = useRef(selectedWorkspace);
+	const selectedIdentityConnectionRef = useRef<string>('');
+	const previousWorkspace = useRef<string>(selectedWorkspace);
+	const previousConnectionWorkspace = useRef<string>(selectedWorkspace);
 	const sourceConnectionCatalogKey = useMemo(
 		() =>
 			connections
@@ -151,7 +151,7 @@ const IdentityDashboard = () => {
 				.join(','),
 		[connections],
 	);
-	const previousSourceConnectionCatalogKey = useRef(sourceConnectionCatalogKey);
+	const previousSourceConnectionCatalogKey = useRef<string>(sourceConnectionCatalogKey);
 
 	useLayoutEffect(() => {
 		setTitle('Profile Unification / Dashboard');
@@ -362,17 +362,14 @@ const IdentityDashboard = () => {
 		() => buildIdentityMetricChartDays(connectionIdentityMetricDays ?? [], loadedConnectionDisplayRange),
 		[connectionIdentityMetricDays, loadedConnectionDisplayRange],
 	);
-	const identityChartDays =
-		selectedIdentityConnection === ''
-			? identityDays
-			: connectionIdentityMetricDays == null
-				? identityDays
-				: selectedConnectionIdentityDays;
-	const identityChartLoading =
-		selectedIdentityConnection === ''
-			? isIdentityLoading
-			: isConnectionIdentityLoading && connectionIdentityMetricDays == null && identityMetricDays == null;
-	const identityChartError = selectedIdentityConnection === '' ? identityError : connectionIdentityError;
+	const showAllIdentityConnections = selectedIdentityConnection === '';
+	const selectedIdentityChartDays =
+		connectionIdentityMetricDays == null ? identityDays : selectedConnectionIdentityDays;
+	const identityChartDays = showAllIdentityConnections ? identityDays : selectedIdentityChartDays;
+	const identityChartLoading = showAllIdentityConnections
+		? isIdentityLoading
+		: isConnectionIdentityLoading && connectionIdentityMetricDays == null && identityMetricDays == null;
+	const identityChartError = showAllIdentityConnections ? identityError : connectionIdentityError;
 	const temporalSemantics = useMemo(
 		() =>
 			buildTemporalSemantics(
@@ -395,15 +392,13 @@ const IdentityDashboard = () => {
 		() => buildDeletedConnectionMetric(latestIdentityMetric ?? null),
 		[latestIdentityMetric],
 	);
-	const hasDeletedConnectionMetrics =
-		deletedConnectionMetric != null && deletedConnectionMetric.anonymous + deletedConnectionMetric.recognized > 0;
-	const latestConnectionMetrics = useMemo(
-		() => [
-			...(latestIdentityMetric?.connections ?? []),
-			...(hasDeletedConnectionMetrics ? [deletedConnectionMetric] : []),
-		],
-		[deletedConnectionMetric, hasDeletedConnectionMetrics, latestIdentityMetric],
-	);
+	const latestConnectionMetrics = useMemo(() => {
+		const metrics = [...(latestIdentityMetric?.connections ?? [])];
+		if (deletedConnectionMetric == null) return metrics;
+		const deletedTotal = deletedConnectionMetric.anonymous + deletedConnectionMetric.recognized;
+		if (deletedTotal > 0) metrics.push(deletedConnectionMetric);
+		return metrics;
+	}, [deletedConnectionMetric, latestIdentityMetric]);
 	const connectionBars = useMemo(
 		() => aggregateConnections(latestConnectionMetrics, connectionNames),
 		[latestConnectionMetrics, connectionNames],
@@ -544,7 +539,7 @@ const IdentityDashboard = () => {
 			setIsConnectionIdentityLoading(true);
 			return;
 		}
-		void loadConnectionIdentityMetrics(latest, connection, displayRange);
+		loadConnectionIdentityMetrics(latest, connection, displayRange);
 	};
 
 	const refreshDashboard = async () => {
@@ -610,7 +605,7 @@ const IdentityDashboard = () => {
 						variant='error'
 						title='Identity resolution metrics are unavailable'
 						description={resolutionError}
-						compact
+						compact={true}
 					/>
 				)}
 				{showResolutionStructure && (
@@ -623,7 +618,7 @@ const IdentityDashboard = () => {
 								latestResolution == null ? (
 									'—'
 								) : (
-									<SlTooltip className='identity-dashboard__tooltip' placement='top' hoist>
+									<SlTooltip className='identity-dashboard__tooltip' placement='top' hoist={true}>
 										<div slot='content' className='identity-dashboard__local-time-tooltip'>
 											<strong>Your local time</strong>
 											<span>
@@ -642,7 +637,7 @@ const IdentityDashboard = () => {
 									</SlTooltip>
 								)
 							}
-							subtleBackground
+							subtleBackground={true}
 							loading={isResolutionLoading}
 						/>
 						<KpiCard
@@ -716,7 +711,7 @@ const IdentityDashboard = () => {
 						variant='error'
 						title='Current identity state is unavailable'
 						description={identityError}
-						compact
+						compact={true}
 					/>
 				)}
 				<div className='identity-dashboard__kpi-grid'>
@@ -724,7 +719,7 @@ const IdentityDashboard = () => {
 						title='Total identities'
 						value={latestIdentityMetric == null ? '—' : formatNumber(latestIdentityMetric.total)}
 						secondary={observedLabel == null ? undefined : <>As of {observedLabel}</>}
-						subtleBackground
+						subtleBackground={true}
 						loading={isIdentityLoading}
 					/>
 					<KpiCard
