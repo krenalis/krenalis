@@ -493,14 +493,13 @@ interface ConnectionAxisTickProps {
 const ConnectionAxisTick = ({ x = 0, y = 0, index = 0, data, totalIdentities }: ConnectionAxisTickProps) => {
 	const connection = data[index];
 	if (connection == null) return <g />;
+	const isDeleted = connection.connection === DELETED_CONNECTION_SCOPE;
 
 	return (
 		<g transform={`translate(0 ${y})`}>
 			<text
 				className={`identity-overview__connection-axis-name${
-					connection.connection === DELETED_CONNECTION_SCOPE
-						? ' identity-overview__connection-axis-name--deleted'
-						: ''
+					isDeleted ? ' identity-overview__connection-axis-name--deleted' : ''
 				}`}
 				x={x - CONNECTION_AXIS_SHARE_OFFSET}
 				y={0}
@@ -511,9 +510,7 @@ const ConnectionAxisTick = ({ x = 0, y = 0, index = 0, data, totalIdentities }: 
 			</text>
 			<text
 				className={`identity-overview__connection-axis-share${
-					connection.connection === DELETED_CONNECTION_SCOPE
-						? ' identity-overview__connection-axis-share--deleted'
-						: ''
+					isDeleted ? ' identity-overview__connection-axis-share--deleted' : ''
 				}`}
 				x={x - CONNECTION_AXIS_SHARE_OFFSET / 2}
 				y={0}

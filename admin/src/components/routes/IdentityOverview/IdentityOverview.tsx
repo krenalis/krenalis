@@ -219,13 +219,13 @@ const IdentityOverview = () => {
 		() => buildIdentityMetricChartDays(connectionMetricDays ?? [], loadedConnectionRange),
 		[connectionMetricDays, loadedConnectionRange],
 	);
-	const chartDays =
-		selectedConnection === '' ? identityChartDays : connectionMetricDays == null ? [] : selectedConnectionDays;
-	const chartLoading =
-		selectedConnection === ''
-			? isLoading
-			: isConnectionLoading && connectionMetricDays == null && metricDays == null;
-	const chartError = selectedConnection === '' ? error : connectionError;
+	const showAllConnections = selectedConnection === '';
+	const connectionChartDays = connectionMetricDays == null ? [] : selectedConnectionDays;
+	const chartDays = showAllConnections ? identityChartDays : connectionChartDays;
+	const chartLoading = showAllConnections
+		? isLoading
+		: isConnectionLoading && connectionMetricDays == null && metricDays == null;
+	const chartError = showAllConnections ? error : connectionError;
 	const latestDay = latestMetric == null ? loadedDisplayRange.end : instantToDateKey(latestMetric.observedAt);
 	const sevenDayTrend = useMemo(
 		() => calculateIdentityTrend(metricDays ?? [], latestDay, 7),
@@ -236,19 +236,16 @@ const IdentityOverview = () => {
 		[latestDay, metricDays],
 	);
 	const deletedConnectionMetric = useMemo(() => buildDeletedConnectionMetric(latestMetric ?? null), [latestMetric]);
-	const hasDeletedConnectionMetrics =
-		deletedConnectionMetric != null &&
-		deletedConnectionMetric.anonymous +
+	const latestConnectionMetrics = useMemo(() => {
+		const metrics = [...(latestMetric?.connections ?? [])];
+		if (deletedConnectionMetric == null) return metrics;
+		const deletedTotal =
+			deletedConnectionMetric.anonymous +
 			deletedConnectionMetric.recognized +
-			deletedConnectionMetric.withoutProfile >
-			0;
-	const latestConnectionMetrics = useMemo(
-		() => [
-			...(latestMetric?.connections ?? []),
-			...(hasDeletedConnectionMetrics && deletedConnectionMetric != null ? [deletedConnectionMetric] : []),
-		],
-		[deletedConnectionMetric, hasDeletedConnectionMetrics, latestMetric],
-	);
+			deletedConnectionMetric.withoutProfile;
+		if (deletedTotal > 0) metrics.push(deletedConnectionMetric);
+		return metrics;
+	}, [deletedConnectionMetric, latestMetric]);
 	const connectionNames = useMemo(
 		() =>
 			new Map([
