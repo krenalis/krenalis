@@ -339,7 +339,6 @@ const IdentityOverview = () => {
 					<SegmentedDateRangeControl<IdentityOverviewDatePreset>
 						accessibleLabel='Trend range'
 						presets={DATE_RANGE_PRESETS}
-						defaultPreset={IDENTITY_OVERVIEW_DEFAULT_DATE_PRESET}
 						value={selectedDateRange}
 						customRange={customDateRange}
 						onPresetChange={onPresetChange}

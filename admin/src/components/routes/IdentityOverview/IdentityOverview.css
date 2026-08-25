@@ -310,23 +310,9 @@
 	margin-bottom: var(--identity-overview-card-padding-block);
 }
 
-.identity-overview__chart .recharts-wrapper text,
-.identity-overview__sparkline .recharts-wrapper text {
+.identity-overview__chart .recharts-wrapper text {
 	font-size: 11px;
 	fill: var(--sl-color-neutral-600);
-}
-
-.identity-overview__chart .recharts-legend-item-text {
-	font-size: 12px;
-	color: var(--sl-color-neutral-700) !important;
-}
-
-.identity-overview__chart .recharts-default-legend {
-	padding-top: 3px !important;
-}
-
-.identity-overview__chart .recharts-tooltip-wrapper {
-	font-size: 12px;
 }
 
 .identity-overview__chart-tooltip {

@@ -156,7 +156,7 @@ interface StateMessageProps {
 
 const StateMessage = ({ variant, title, description, action, compact }: StateMessageProps) => (
 	<div
-		className={`identity-overview__state identity-overview__state--${variant}${compact ? ' identity-overview__state--compact' : ''}`}
+		className={`identity-overview__state${variant === 'error' ? ' identity-overview__state--error' : ''}${compact ? ' identity-overview__state--compact' : ''}`}
 		role={variant === 'error' ? 'alert' : 'status'}
 	>
 		<SlIcon name={variant === 'error' ? 'exclamation-triangle' : 'info-circle'} />
@@ -228,12 +228,12 @@ const KpiCard = ({
 			<CardLoading />
 		) : (
 			<>
-				<div className='identity-overview__kpi-body'>
+				<div>
 					<div className='identity-overview__kpi-value'>{value}</div>
 					{secondary != null && <div className='identity-overview__kpi-secondary'>{secondary}</div>}
 					{comparison && (
 						<div className='identity-overview__kpi-comparison'>
-							<span className='identity-overview__kpi-comparison-delta'>{comparison.delta}</span>
+							<span>{comparison.delta}</span>
 							<span>from {comparison.referenceDate}</span>
 						</div>
 					)}

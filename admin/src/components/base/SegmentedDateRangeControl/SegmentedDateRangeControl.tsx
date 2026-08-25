@@ -20,8 +20,7 @@ interface SegmentedDateRangeSelection {
 interface SegmentedDateRangeControlProps<T extends string> {
 	accessibleLabel?: string;
 	presets: readonly SegmentedDateRangePreset<T>[];
-	defaultPreset: T;
-	value?: T | 'Custom';
+	value: T | 'Custom';
 	customRange: SegmentedDateRangeSelection[];
 	onPresetChange: (preset: T) => void;
 	onCustomRangeChange: (range: SegmentedDateRangeSelection[]) => void;
@@ -37,7 +36,6 @@ const formatCustomRange = (range: SegmentedDateRangeSelection[]): string => {
 const SegmentedDateRangeControl = <T extends string>({
 	accessibleLabel,
 	presets,
-	defaultPreset,
 	value,
 	customRange,
 	onPresetChange,
@@ -45,9 +43,7 @@ const SegmentedDateRangeControl = <T extends string>({
 	pickerAlignment = 'start',
 }: SegmentedDateRangeControlProps<T>) => {
 	const root = useRef<HTMLDivElement>(null);
-	const [internalValue, setInternalValue] = useState<T | 'Custom'>(defaultPreset);
 	const [isPickerOpen, setIsPickerOpen] = useState<boolean>(false);
-	const selectedValue = value ?? internalValue;
 
 	useEffect(() => {
 		const closeOnOutsideClick = (event: MouseEvent) => {
@@ -60,14 +56,8 @@ const SegmentedDateRangeControl = <T extends string>({
 	}, []);
 
 	const selectPreset = (preset: T) => {
-		setInternalValue(preset);
 		setIsPickerOpen(false);
 		onPresetChange(preset);
-	};
-
-	const changeCustomRange = (selection: SegmentedDateRangeSelection[]) => {
-		setInternalValue('Custom');
-		onCustomRangeChange(selection);
 	};
 
 	return (
@@ -76,7 +66,7 @@ const SegmentedDateRangeControl = <T extends string>({
 				{presets.map((preset) => (
 					<SlButton
 						key={preset.value}
-						variant={selectedValue === preset.value ? 'primary' : 'default'}
+						variant={value === preset.value ? 'primary' : 'default'}
 						onClick={() => selectPreset(preset.value)}
 						size='small'
 					>
@@ -85,18 +75,18 @@ const SegmentedDateRangeControl = <T extends string>({
 				))}
 				<div className='segmented-date-range-control__custom'>
 					<SlButton
-						variant={selectedValue === 'Custom' ? 'primary' : 'default'}
+						variant={value === 'Custom' ? 'primary' : 'default'}
 						onClick={() => setIsPickerOpen((open) => !open)}
 						size='small'
 					>
-						{selectedValue === 'Custom' ? formatCustomRange(customRange) : 'Custom range'}
+						{value === 'Custom' ? formatCustomRange(customRange) : 'Custom range'}
 					</SlButton>
 					<div
 						className={`segmented-date-range-control__picker segmented-date-range-control__picker--${pickerAlignment}${isPickerOpen ? ' segmented-date-range-control__picker--open' : ''}`}
 					>
 						<DateRange
 							editableDateInputs={true}
-							onChange={(item) => changeCustomRange([item.selection as SegmentedDateRangeSelection])}
+							onChange={(item) => onCustomRangeChange([item.selection as SegmentedDateRangeSelection])}
 							showSelectionPreview={true}
 							moveRangeOnFirstSelection={false}
 							months={2}
