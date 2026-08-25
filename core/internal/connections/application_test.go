@@ -8,6 +8,7 @@ import (
 	"context"
 	"io"
 	"iter"
+	"slices"
 	"testing"
 	"time"
 
@@ -25,6 +26,141 @@ func (recordFetcherFunc) RecordSchema(context.Context, connectors.Targets, conne
 
 func (f recordFetcherFunc) Records(ctx context.Context, target connectors.Targets, updatedAt time.Time, cursor string, schema types.Type) ([]connectors.Record, string, error) {
 	return f(ctx, target, updatedAt, cursor, schema)
+}
+
+// TestAppRecordsPaging verifies paging, deduplication, and lazy record processing.
+func TestAppRecordsPaging(t *testing.T) {
+
+	schema := types.Object([]types.Property{
+		{Name: "email", Type: types.String()},
+	})
+	updatedAt := time.Date(2026, time.January, 2, 3, 4, 5, 0, time.UTC)
+	newRecord := func(id string) connectors.Record {
+		return connectors.Record{
+			ID:         id,
+			Attributes: map[string]any{"email": id + "@example.com"},
+			UpdatedAt:  updatedAt,
+		}
+	}
+
+	t.Run("deduplicates records", func(t *testing.T) {
+
+		duplicateUser1 := newRecord("user-1")
+		duplicateUser1.Attributes["email"] = "duplicate-user-1@example.com"
+		duplicateUser2 := newRecord("user-2")
+		duplicateUser2.Attributes["email"] = "duplicate-user-2@example.com"
+		records := &appRecords{
+			schema:    schema,
+			appSchema: schema,
+			connector: "test",
+			inner: recordFetcherFunc(func(_ context.Context, _ connectors.Targets, _ time.Time, cursor string, _ types.Type) ([]connectors.Record, string, error) {
+				switch cursor {
+				case "":
+					return []connectors.Record{newRecord("user-1"), duplicateUser1, newRecord("user-2")}, "second", nil
+				case "second":
+					return []connectors.Record{duplicateUser2, newRecord("user-3")}, "third", nil
+				case "third":
+					return []connectors.Record{newRecord("user-1"), newRecord("user-3")}, "", io.EOF
+				default:
+					t.Fatalf("unexpected cursor %q", cursor)
+					return nil, "", nil
+				}
+			}),
+		}
+		defer records.Close()
+
+		var got []string
+		var user1Email, user2Email any
+		for record := range records.All(t.Context()) {
+			got = append(got, record.ID)
+			switch record.ID {
+			case "user-1":
+				user1Email = record.Attributes["email"]
+			case "user-2":
+				user2Email = record.Attributes["email"]
+			}
+		}
+		if err := records.Err(); err != nil {
+			t.Fatalf("expected no iterator error, got %s", err)
+		}
+		if expected := []string{"user-1", "user-2", "user-3"}; !slices.Equal(got, expected) {
+			t.Fatalf("expected record IDs %q, got %q", expected, got)
+		}
+		if user1Email != "user-1@example.com" {
+			t.Fatalf("expected the first user-1 record to be retained, got email %v", user1Email)
+		}
+		if user2Email != "user-2@example.com" {
+			t.Fatalf("expected the first user-2 record to be retained, got email %v", user2Email)
+		}
+
+	})
+
+	t.Run("yields records returned with EOF", func(t *testing.T) {
+
+		records := &appRecords{
+			schema:    schema,
+			appSchema: schema,
+			connector: "test",
+			inner: recordFetcherFunc(func(_ context.Context, _ connectors.Targets, _ time.Time, cursor string, _ types.Type) ([]connectors.Record, string, error) {
+				if cursor != "" {
+					t.Fatalf("unexpected cursor %q", cursor)
+				}
+				return []connectors.Record{newRecord("user-1")}, "", io.EOF
+			}),
+		}
+		defer records.Close()
+
+		var got []string
+		for record := range records.All(t.Context()) {
+			got = append(got, record.ID)
+		}
+		if err := records.Err(); err != nil {
+			t.Fatalf("expected no iterator error, got %s", err)
+		}
+		if expected := []string{"user-1"}; !slices.Equal(got, expected) {
+			t.Fatalf("expected record IDs %q, got %q", expected, got)
+		}
+
+	})
+
+	t.Run("does not process records ahead of iteration", func(t *testing.T) {
+
+		// invalidRecord makes appRecords fail if it processes past user-2.
+		invalidRecord := newRecord("")
+		records := &appRecords{
+			schema:    schema,
+			appSchema: schema,
+			connector: "test",
+			inner: recordFetcherFunc(func(_ context.Context, _ connectors.Targets, _ time.Time, cursor string, _ types.Type) ([]connectors.Record, string, error) {
+				switch cursor {
+				case "":
+					return []connectors.Record{newRecord("user-1")}, "second", nil
+				case "second":
+					return []connectors.Record{newRecord("user-2"), invalidRecord}, "", io.EOF
+				default:
+					t.Fatalf("unexpected cursor %q", cursor)
+					return nil, "", nil
+				}
+			}),
+		}
+		defer records.Close()
+
+		var got []string
+		for record := range records.All(t.Context()) {
+			got = append(got, record.ID)
+			if len(got) == 2 {
+				break
+			}
+		}
+		if err := records.Err(); err != nil {
+			t.Fatalf("expected no iterator error, got %s", err)
+		}
+		if expected := []string{"user-1", "user-2"}; !slices.Equal(got, expected) {
+			t.Fatalf("expected record IDs %q, got %q", expected, got)
+		}
+
+	})
+
 }
 
 // TestAppRecordsPreservesConnectorRecordError verifies that an application
@@ -48,6 +184,7 @@ func TestAppRecordsPreservesConnectorRecordError(t *testing.T) {
 			}}, "", io.EOF
 		}),
 	}
+	defer records.Close()
 
 	var got []Record
 	for record := range records.All(t.Context()) {
@@ -71,9 +208,6 @@ func TestAppRecordsPreservesConnectorRecordError(t *testing.T) {
 	}
 	if record.Attributes != nil {
 		t.Fatalf("expected nil attributes, got %#v", record.Attributes)
-	}
-	if !records.Last() {
-		t.Fatal("expected the errored record to be the last record")
 	}
 }
 

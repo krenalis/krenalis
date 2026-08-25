@@ -93,10 +93,6 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 	droppedNames := difference(oldNames, newNames)
 	keptNames := intersection(oldNames, newNames)
 
-	// Keep track of property renaming, it will be useful later to determine
-	// whether the ordering has changed or not.
-	newNameOf := map[string]string{}
-
 	// Iterate over AddedNames.
 	for _, addedName := range addedNames {
 
@@ -115,7 +111,6 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			oldName := propPathToName(oldPath)
 			oldProp, _ := oldProperties.ByName(oldName)
 			newProp, _ := newProperties.ByName(addedName)
-			newNameOf[oldName] = addedName
 			if newProp.Type.Kind() == types.ObjectKind {
 				if !types.Equal(oldProp.Type, newProp.Type) {
 					return nil, fmt.Errorf("it is not possible to rename an object property (%q, renamed to %q) and simultaneously make changes to its descendant properties", appendPath(path, oldName), appendPath(path, addedName))
@@ -286,7 +281,6 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			if !types.Equal(oldProp.Type, newProp.Type) {
 				return nil, fmt.Errorf("error on property %q: type changes are not supported", appendPath(path, oldProp.Name))
 			}
-			newNameOf[propPathToName(oldPath)] = keptName
 			if newProp.Type.Kind() == types.ObjectKind {
 				for _, c := range util.PropertiesToColumns(newProp.Type.Properties()) {
 					operations = append(operations, warehouses.AlterOperation{

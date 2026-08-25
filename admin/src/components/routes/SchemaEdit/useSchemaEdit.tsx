@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, ReactNode, useRef, useContext } from 'react';
+import React, { useState, useMemo, useEffect, ReactNode, useRef, useContext, useCallback } from 'react';
 import Type, { ObjectType, Role, TypeKind } from '../../../lib/api/types/types';
 import { SortableGridRef, SortableGridRow, GridColumn } from '../../base/Grid/Grid.types';
 import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
@@ -85,6 +85,17 @@ const PropertyStatusBadge = ({ status }: { status: PropertyChangeStatus }) => (
 	</SlBadge>
 );
 
+interface SchemaPreviewRequest {
+	key: string;
+	schema: ObjectType;
+	rePaths: RePaths;
+}
+
+interface SchemaPreview {
+	key: string;
+	queries: string[];
+}
+
 const useSchemaEdit = (
 	schema: ObjectType,
 	onSelectProperty: SelectProperty,
@@ -97,6 +108,8 @@ const useSchemaEdit = (
 ) => {
 	const [editableSchema, setEditableSchema] = useState<EditableSchema>();
 	const [queries, setQueries] = useState<string[]>();
+	const [schemaPreview, setSchemaPreview] = useState<SchemaPreview>();
+	const [isSchemaPreviewLoading, setIsSchemaPreviewLoading] = useState<boolean>(false);
 	const [isQueriesLoading, setIsQueriesLoading] = useState<boolean>(false);
 	const [isConfirmChangesLoading, setIsConfirmChangesLoading] = useState<boolean>(false);
 	const previewRequestSequence = useRef(0);
@@ -121,6 +134,41 @@ const useSchemaEdit = (
 		initialEditableSchema: initialEditableSchema.current,
 		setEditableSchema,
 	});
+	const schemaPreviewInFlight = useRef<{
+		key: string;
+		promise: Promise<PreviewAlterProfileSchemaResponse>;
+	}>();
+
+	const requestSchemaPreview = useCallback(
+		(request: SchemaPreviewRequest): Promise<PreviewAlterProfileSchemaResponse> => {
+			if (schemaPreviewInFlight.current?.key === request.key) {
+				return schemaPreviewInFlight.current.promise;
+			}
+			const promise = api.workspaces.previewAlterProfileSchema(request.schema, request.rePaths);
+			schemaPreviewInFlight.current = { key: request.key, promise };
+			const clearRequest = () => {
+				if (schemaPreviewInFlight.current?.promise === promise) {
+					schemaPreviewInFlight.current = undefined;
+				}
+			};
+			void promise.then(clearRequest, clearRequest);
+			return promise;
+		},
+		[api],
+	);
+
+	const schemaPreviewRequest = useMemo(() => {
+		if (editableSchema == null) {
+			return null;
+		}
+		try {
+			return buildSchemaPreviewRequest(editableSchema, initialEditableSchema.current, rePaths.current);
+		} catch {
+			return null;
+		}
+	}, [editableSchema]);
+
+	const currentSchemaPreview = schemaPreview?.key === schemaPreviewRequest?.key ? schemaPreview : undefined;
 	const schemaEditStateKey = useMemo(() => {
 		if (editableSchema == null) {
 			return null;
@@ -134,6 +182,7 @@ const useSchemaEdit = (
 
 	const hasSchemaChanges =
 		initialSchemaEditStateKey.current != null && schemaEditStateKey !== initialSchemaEditStateKey.current;
+	const warehouseDDLRequired = currentSchemaPreview != null && currentSchemaPreview.queries.length > 0;
 
 	const propertyStatuses = useMemo(() => {
 		return getPropertyChangeStatuses(
@@ -220,9 +269,12 @@ const useSchemaEdit = (
 		deletedAppliedKeys.current = [];
 		resetMoveHistory();
 		const editable = transformSchema(s);
+		const request = buildSchemaPreviewRequest(editable, editable, rePaths.current);
 		initialEditableSchema.current = structuredClone(editable);
 		initialPrimarySources.current = copyPrimarySources(primarySources.current);
 		initialSchemaEditStateKey.current = buildSchemaEditStateKey(editable, primarySources.current, rePaths.current);
+		setIsSchemaPreviewLoading(false);
+		setSchemaPreview({ key: request.key, queries: [] });
 		setEditableSchema(editable);
 		const propertyKey =
 			initialPropertyKey != null && editable[initialPropertyKey] != null
@@ -232,6 +284,41 @@ const useSchemaEdit = (
 			onSelectProperty(propertyKey, editable[propertyKey]);
 		}
 	}, [resetMoveHistory, schema]);
+
+	useEffect(() => {
+		if (!hasSchemaChanges) {
+			setIsSchemaPreviewLoading(false);
+			if (schemaPreviewRequest != null && schemaPreview?.key !== schemaPreviewRequest.key) {
+				setSchemaPreview({ key: schemaPreviewRequest.key, queries: [] });
+			}
+			return;
+		}
+		const shouldRequestPreview = schemaPreviewRequest != null && schemaPreview?.key !== schemaPreviewRequest.key;
+		setIsSchemaPreviewLoading(shouldRequestPreview);
+		if (!shouldRequestPreview) {
+			return;
+		}
+		let active = true;
+		const timeout = window.setTimeout(async () => {
+			try {
+				const res = await requestSchemaPreview(schemaPreviewRequest);
+				if (active) {
+					setSchemaPreview({ key: schemaPreviewRequest.key, queries: res.queries });
+					setIsSchemaPreviewLoading(false);
+				}
+			} catch {
+				// Automatic previews are best-effort. Errors are reported if
+				// the user explicitly tries to apply the changes.
+				if (active) {
+					setIsSchemaPreviewLoading(false);
+				}
+			}
+		}, 300);
+		return () => {
+			active = false;
+			window.clearTimeout(timeout);
+		};
+	}, [hasSchemaChanges, requestSchemaPreview, schemaPreview, schemaPreviewRequest]);
 
 	const onAddProperty = (property: PropertyToEdit, primarySource: string | null) => {
 		if (isMetaProperty(property.name)) {
@@ -414,6 +501,16 @@ const useSchemaEdit = (
 				delete primarySources.current[descendantKey];
 			}
 		}
+		// Applied property types are read-only, so these fields are enough to
+		// identify edits that cannot change the warehouse schema.
+		const warehouseSchemaUnchanged =
+			!current.isEditable &&
+			property.name === current.name &&
+			JSON.stringify(property.type) === JSON.stringify(current.type);
+		if (warehouseSchemaUnchanged && currentSchemaPreview != null) {
+			const request = buildSchemaPreviewRequest(s, initialEditableSchema.current, rePaths.current);
+			setSchemaPreview({ key: request.key, queries: currentSchemaPreview.queries });
+		}
 		setEditableSchema(s);
 	};
 
@@ -467,18 +564,21 @@ const useSchemaEdit = (
 
 	const onApplyChanges = async () => {
 		const requestSequence = ++previewRequestSequence.current;
-		setIsQueriesLoading(true);
+		let request: SchemaPreviewRequest;
 		try {
-			validateEditableSchema(editableSchema, initialEditableSchema.current, rePaths.current);
+			request = buildSchemaPreviewRequest(editableSchema, initialEditableSchema.current, rePaths.current);
 		} catch (err) {
 			handleError(err);
-			setIsQueriesLoading(false);
 			return;
 		}
-		const s = normalizeSchema(structuredClone(editableSchema));
+		if (schemaPreview?.key === request.key) {
+			setQueries(schemaPreview.queries);
+			return;
+		}
+		setIsQueriesLoading(true);
 		let res: PreviewAlterProfileSchemaResponse;
 		try {
-			res = await api.workspaces.previewAlterProfileSchema(s, rePaths.current);
+			res = await requestSchemaPreview(request);
 		} catch (err) {
 			if (requestSequence !== previewRequestSequence.current) {
 				return;
@@ -497,6 +597,7 @@ const useSchemaEdit = (
 			if (requestSequence !== previewRequestSequence.current) {
 				return;
 			}
+			setSchemaPreview({ key: request.key, queries: res.queries });
 			setQueries(res.queries);
 			setIsQueriesLoading(false);
 		}, 300);
@@ -565,8 +666,10 @@ const useSchemaEdit = (
 		primarySources: primarySources.current,
 		queries,
 		hasSchemaChanges,
+		isSchemaPreviewLoading,
 		isQueriesLoading,
 		isConfirmChangesLoading,
+		warehouseDDLRequired,
 		onAddProperty,
 		onEditProperty,
 		onRemoveProperty,
@@ -583,7 +686,7 @@ const buildSchemaEditStateKey = (
 	primarySources: PrimarySources,
 	rePaths: RePaths,
 ): string => {
-	const schema = normalizeSchema(structuredClone(editableSchema));
+	const schema = normalizeSchema(editableSchema);
 	const sortedPrimarySources = Object.entries(primarySources).sort(([a], [b]) => a.localeCompare(b));
 	const sortedRePaths = Object.entries(rePaths).sort(([a], [b]) => a.localeCompare(b));
 	return JSON.stringify({ schema, primarySources: sortedPrimarySources, rePaths: sortedRePaths });
@@ -748,6 +851,22 @@ const getVisiblePropertyKeys = (
 	}
 	return visibleKeys;
 };
+
+const buildSchemaPreviewRequest = (
+	editableSchema: EditableSchema,
+	initialEditableSchema: EditableSchema | undefined,
+	rePaths: RePaths,
+): SchemaPreviewRequest => {
+	validateEditableSchema(editableSchema, initialEditableSchema, rePaths);
+	const schema = normalizeSchema(editableSchema);
+	const currentRePaths = { ...rePaths };
+	return {
+		key: JSON.stringify({ schema, rePaths: currentRePaths }),
+		schema,
+		rePaths: currentRePaths,
+	};
+};
+
 const getRows = (
 	schema: EditableSchema,
 	primarySources: PrimarySources,

@@ -757,32 +757,42 @@ test(`Keep object types unchanged after canceling the schema review`, async ({ p
 });
 
 test(`Keep the schema review closed when its preview finishes`, async ({ page }) => {
+	let previewRequestCount = 0;
 	let finishPreview = () => {};
 	const previewResponse = new Promise<void>((resolve) => {
 		finishPreview = resolve;
 	});
 	await page.route('**/v1/profiles/schema/preview', async (route) => {
+		previewRequestCount++;
+		if (previewRequestCount === 1) {
+			await route.fulfill({ status: 500, contentType: 'application/json', body: '{}' });
+			return;
+		}
 		await previewResponse;
 		await route.fulfill({ json: { queries: ['SELECT 1'] } });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
 	await editSchema(page);
-	await openProperty(page, 'email');
-
+	await page.click('.schema-edit__add-property');
 	const propertyPanel = page.locator('.property-panel');
-	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Updated description');
+	await propertyPanel.locator('.property-dialog__name-input input').fill('property_with_delayed_preview');
+	await selectPropertyType(page, 'string');
+	const failedPreviewResponse = page.waitForResponse(
+		(response) => response.url().endsWith('/profiles/schema/preview') && response.status() === 500,
+	);
 	await propertyPanel.locator('.property-dialog__save').click();
-	await page.locator('.schema-edit__header-apply-button').click();
+	await failedPreviewResponse;
 
 	const reviewDialog = page.locator('.schema-edit__queries');
+	const previewResponsePromise = page.waitForResponse(
+		(response) => response.url().endsWith('/profiles/schema/preview') && response.status() === 200,
+	);
+	await page.locator('.schema-edit__header-apply-button').click();
 	await expect(reviewDialog).toHaveJSProperty('open', true);
 	await page.keyboard.press('Escape');
 	await expect(reviewDialog).toHaveJSProperty('open', false);
 
-	const previewResponsePromise = page.waitForResponse((response) =>
-		response.url().endsWith('/profiles/schema/preview'),
-	);
 	finishPreview();
 	await previewResponsePromise;
 	await page.waitForTimeout(400);
@@ -858,16 +868,14 @@ test(`Preserve create-required on top-level properties in the schema preview`, a
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
 	await editSchema(page);
-	await openProperty(page, 'create_required_property');
-
+	await page.click('.schema-edit__add-property');
 	const propertyPanel = page.locator('.property-panel');
-	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Updated description');
-	await propertyPanel.locator('.property-dialog__save').click();
-
+	await propertyPanel.locator('.property-dialog__name-input input').fill('preview_trigger');
+	await selectPropertyType(page, 'string');
 	const previewRequestPromise = page.waitForRequest(
 		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
 	);
-	await page.locator('.schema-edit__header-apply-button').click();
+	await propertyPanel.locator('.property-dialog__save').click();
 	const previewRequest = await previewRequestPromise;
 	const previewSchema = previewRequest.postDataJSON().schema as ObjectType;
 	const property = previewSchema.properties.find((candidate) => candidate.name === 'create_required_property');
@@ -875,10 +883,118 @@ test(`Preserve create-required on top-level properties in the schema preview`, a
 	expect(property).not.toHaveProperty('createRequire');
 });
 
+test(`Preview schema metadata changes`, async ({ page }) => {
+	await page.goto(`${adminURL}/profile-unification/schema`);
+
+	await editSchema(page);
+	const applyButton = page.locator('.schema-edit__header-apply-button');
+	await expect(applyButton).toHaveText('Apply changes');
+	await expect(applyButton).toHaveAttribute('disabled');
+	let previewRequests = 0;
+	page.on('request', (request) => {
+		if (request.url().includes('/profiles/schema/preview') && request.method() === 'PUT') {
+			previewRequests++;
+		}
+	});
+	// Record every label so the test also detects changes that are too brief for
+	// a final-state assertion.
+	await applyButton.evaluate((button: any) => {
+		button.observedLabels = [button.textContent.trim()];
+		button.labelObserver = new MutationObserver(() => {
+			button.observedLabels.push(button.textContent.trim());
+		});
+		button.labelObserver.observe(button, { childList: true, subtree: true, characterData: true });
+	});
+
+	await openProperty(page, 'email');
+	const propertyPanel = page.locator('.property-panel');
+	const description = propertyPanel.locator('sl-textarea textarea[name="description"]');
+	const originalDescription = await description.inputValue();
+	await description.fill('Updated description');
+
+	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
+
+	await propertyPanel.locator('.property-dialog__save').click();
+	await expect(applyButton).toHaveText('Apply changes');
+	await expect(applyButton).not.toHaveAttribute('disabled');
+	await page.waitForTimeout(1000);
+	expect(previewRequests).toBe(0);
+	const observedLabels = await applyButton.evaluate((button: any) => {
+		button.labelObserver.disconnect();
+		return button.observedLabels;
+	});
+	expect(observedLabels).not.toContain('Review and apply changes...');
+
+	await applyButton.click();
+	const dialog = page.locator('.schema-edit__queries');
+	await expect(dialog).toHaveAttribute('label', 'Apply schema changes?');
+	await expect(dialog.locator('.schema-edit__no-query')).toHaveText(
+		'These changes affect only the schema definition. The data warehouse will not be modified.',
+	);
+	await expect(dialog.locator('.schema-edit__apply-alter-button')).toHaveAttribute('variant', 'primary');
+	await dialog.locator('.schema-edit__queries-buttons sl-button').first().click();
+
+	await openProperty(page, 'email');
+	await description.fill(originalDescription);
+	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
+	await propertyPanel.locator('.property-dialog__save').click();
+	await expect(applyButton).toHaveText('Apply changes');
+	await expect(applyButton).toHaveAttribute('disabled');
+	await page.waitForTimeout(1000);
+	expect(previewRequests).toBe(0);
+
+	// Cache a preview for a change that requires warehouse DDL.
+	await page.click('.schema-edit__add-property');
+	await page.locator('.property-dialog__name-input').evaluate((el: any, value) => {
+		el.value = value;
+		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+	}, 'temporary_preview_property');
+	await selectPropertyType(page, 'string');
+	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
+	await Promise.all([
+		page.waitForResponse(
+			(response) => response.url().includes('/profiles/schema/preview') && response.request().method() === 'PUT',
+		),
+		propertyPanel.locator('.property-dialog__save').click(),
+	]);
+	await expect(applyButton).toHaveText('Review and apply changes...');
+
+	// Add a metadata change before removing the temporary property.
+	await openProperty(page, 'email');
+	await description.fill('Updated description');
+	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
+	await propertyPanel.locator('.property-dialog__save').click();
+	await expect(applyButton).toHaveText('Review and apply changes...');
+
+	// A failed preview must not leave the warehouse status of an earlier
+	// version of the schema on the apply button.
+	await page.route(
+		'**/profiles/schema/preview',
+		async (route) => {
+			await route.fulfill({ status: 500, contentType: 'application/json', body: '{}' });
+		},
+		{ times: 1 },
+	);
+	const failedPreviewResponse = page.waitForResponse(
+		(response) =>
+			response.url().includes('/profiles/schema/preview') &&
+			response.request().method() === 'PUT' &&
+			response.status() === 500,
+	);
+	await removeProperty(page, 'temporary_preview_property');
+	await failedPreviewResponse;
+	await expect(applyButton).not.toHaveAttribute('loading');
+	await expect(applyButton).toHaveText('Apply changes');
+	await expect(applyButton).not.toHaveAttribute('disabled');
+});
+
 test(`Add schema property`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
 
 	await editSchema(page);
+	const applyButton = page.locator('.schema-edit__header-apply-button');
+	await expect(applyButton).toHaveText('Apply changes');
+	await expect(applyButton).toHaveAttribute('disabled');
 	await page.click('.schema-edit__add-property');
 
 	const panel = page.locator('.property-panel');
@@ -915,10 +1031,20 @@ test(`Add schema property`, async ({ page }) => {
 
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
 
+	const previewResponse = page.waitForResponse(
+		(response) => response.url().includes('/profiles/schema/preview') && response.request().method() === 'PUT',
+	);
 	await panel.locator('.property-dialog__save').click();
+	await expect(applyButton).toHaveAttribute('loading');
+	await expect(applyButton).toHaveAttribute('disabled');
+	await previewResponse;
 	await logValidationErrors(page, ['.property-dialog__control-error']);
+	await expect(applyButton).toHaveText('Review and apply changes...');
+	await expect(applyButton).not.toHaveAttribute('disabled');
 
-	await page.click('.schema-edit__header-apply-button');
+	await applyButton.click();
+	await expect(page.locator('.schema-edit__queries')).toHaveAttribute('label', 'Review changes');
+	await expect(page.locator('.schema-edit__apply-alter-button')).toHaveAttribute('variant', 'danger');
 	await page.click('.schema-edit__apply-alter-button');
 
 	await expect(page.locator('.schema-grid')).toBeAttached();
@@ -989,12 +1115,19 @@ test(`Clear the primary source when changing a new property to an array`, async 
 	await expect(primarySource).toHaveCount(0);
 	await expect(propertyPanel.locator('.property-type-selector__trigger')).toBeFocused();
 	await expect(propertyPanel.locator('.property-type-selector__dropdown')).toHaveJSProperty('open', false);
+	const previewResponsePromise = page.waitForResponse(
+		(response) => response.url().endsWith('/profiles/schema/preview') && response.request().method() === 'PUT',
+	);
 	await propertyPanel.locator('.property-dialog__save').click();
+	await previewResponsePromise;
 
 	const alterRequestPromise = page.waitForRequest(
 		(request) => request.url().endsWith('/profiles/schema') && request.method() === 'PUT',
 	);
-	await page.locator('.schema-edit__header-apply-button').click();
+	const applyButton = page.locator('.schema-edit__header-apply-button');
+	await expect(applyButton).not.toHaveAttribute('disabled');
+	await applyButton.click();
+	await expect(page.locator('.schema-edit__queries')).toBeVisible();
 	await page.locator('.schema-edit__apply-alter-button').click();
 	const alterRequest = await alterRequestPromise;
 	expect(alterRequest.postDataJSON().primarySources).not.toHaveProperty('array_without_primary_source');
@@ -1136,6 +1269,7 @@ test(`Edit schema property`, async ({ page }) => {
 	await page.click('.property-dialog__save');
 	await logValidationErrors(page, ['.property-dialog__control-error']);
 
+	await expect(page.locator('.schema-edit__header-apply-button')).toHaveText('Review and apply changes...');
 	await page.click('.schema-edit__header-apply-button');
 	await page.click('.schema-edit__apply-alter-button');
 
@@ -1242,20 +1376,35 @@ test(`Remove a renamed property without sending its stale RePath`, async ({ page
 	const propertyPanel = page.locator('.property-panel');
 	await propertyPanel.locator('.property-form__change-name').click();
 	await propertyPanel.locator('.property-dialog__name-input input').fill('temporary_property_name');
+	const renamedPropertyPreviewPromise = page.waitForResponse((response) => {
+		if (!response.url().endsWith('/profiles/schema/preview') || response.request().method() !== 'PUT') {
+			return false;
+		}
+		const previewSchema = response.request().postDataJSON().schema as ObjectType;
+		return previewSchema.properties.some((property) => property.name === 'temporary_property_name');
+	});
 	await propertyPanel.locator('.property-dialog__save').click();
+	await renamedPropertyPreviewPromise;
+
+	const previewRequestPromise = page.waitForRequest((request) => {
+		if (!request.url().endsWith('/profiles/schema/preview') || request.method() !== 'PUT') {
+			return false;
+		}
+		const previewSchema = request.postDataJSON().schema as ObjectType;
+		return !previewSchema.properties.some((property) => property.name === 'temporary_property_name');
+	});
 	await propertyPanel.locator('.property-panel__remove').click();
 	await page.click('.schema-edit__confirm-remove-property');
-
-	const previewRequestPromise = page.waitForRequest(
-		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
-	);
-	await page.click('.schema-edit__header-apply-button');
 	const previewRequest = await previewRequestPromise;
 	expect(previewRequest.postDataJSON().rePaths).toEqual({});
 });
 
 test(`Remove a replacement property without sending its stale RePath`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
+		if (route.request().method() === 'PUT') {
+			await route.fulfill({ json: {} });
+			return;
+		}
 		const response = await route.fetch();
 		const schema = (await response.json()) as ObjectType;
 		schema.properties.push({
@@ -1274,21 +1423,30 @@ test(`Remove a replacement property without sending its stale RePath`, async ({ 
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
 	await editSchema(page);
+	const initialRemovalPreviewPromise = page.waitForResponse(
+		(response) => response.url().endsWith('/profiles/schema/preview') && response.request().method() === 'PUT',
+	);
 	await removeProperty(page, 'property_to_replace_and_remove');
+	await initialRemovalPreviewPromise;
 
 	await page.click('.schema-edit__add-property');
 	const propertyPanel = page.locator('.property-panel');
 	await propertyPanel.locator('.property-dialog__name-input input').fill('property_to_replace_and_remove');
 	await selectPropertyType(page, 'string');
 	await propertyPanel.locator('.property-dialog__save').click();
+
 	await removeProperty(page, 'property_to_replace_and_remove');
 
-	const previewRequestPromise = page.waitForRequest(
-		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
+	const applyButton = page.locator('.schema-edit__header-apply-button');
+	await expect(applyButton).not.toHaveAttribute('disabled');
+	await applyButton.click();
+	await expect(page.locator('.schema-edit__queries')).toBeVisible();
+	const alterRequestPromise = page.waitForRequest(
+		(request) => request.url().endsWith('/profiles/schema') && request.method() === 'PUT',
 	);
-	await page.click('.schema-edit__header-apply-button');
-	const previewRequest = await previewRequestPromise;
-	expect(previewRequest.postDataJSON().rePaths).toEqual({});
+	await page.locator('.schema-edit__apply-alter-button').click();
+	const alterRequest = await alterRequestPromise;
+	expect(alterRequest.postDataJSON().rePaths).toEqual({});
 });
 
 test(`Do not show modified field indicators on a replacement property`, async ({ page }) => {
@@ -1416,6 +1574,7 @@ test(`Check that RePaths are sent correctly`, async ({ page }) => {
 		}
 	});
 
+	await expect(page.locator('.schema-edit__header-apply-button')).toHaveText('Review and apply changes...');
 	await page.click('.schema-edit__header-apply-button');
 	await page.click('.schema-edit__apply-alter-button');
 
@@ -1629,10 +1788,16 @@ test(`Support hasOwnProperty as a profile schema property name`, async ({ page }
 	const propertyPanel = page.locator('.property-panel');
 	await propertyPanel.locator('.property-dialog__name-input input').fill('hasOwnProperty');
 	await selectPropertyType(page, 'string');
+	const previewResponsePromise = page.waitForResponse(
+		(response) => response.url().endsWith('/profiles/schema/preview') && response.request().method() === 'PUT',
+	);
 	await propertyPanel.locator('.property-dialog__save').click();
+	await previewResponsePromise;
 	await expect(page.locator('.schema-edit .grid__row[data-id="property_container.hasOwnProperty"]')).toBeVisible();
 
-	await page.locator('.schema-edit__header-apply-button').click();
+	const applyButton = page.locator('.schema-edit__header-apply-button');
+	await expect(applyButton).not.toHaveAttribute('disabled');
+	await applyButton.click();
 	await expect(page.locator('.schema-edit__queries')).toBeVisible();
 });
 
@@ -1713,6 +1878,7 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 	await page.click('.property-panel .property-dialog__save');
 	await logValidationErrors(page, ['.property-dialog__control-error']);
 
+	await expect(page.locator('.schema-edit__header-apply-button')).toHaveText('Review and apply changes...');
 	await page.click('.schema-edit__header-apply-button');
 
 	await page.click('.schema-edit__apply-alter-button');
@@ -1767,7 +1933,11 @@ test(`Remove nested properties when changing a new object to another type`, asyn
 	await page.click('.schema-edit__add-property');
 	await propertyPanel.locator('.property-dialog__name-input input').fill('nested_property');
 	await selectPropertyType(page, 'string');
+	const nestedPropertyPreviewPromise = page.waitForResponse(
+		(response) => response.url().endsWith('/profiles/schema/preview') && response.request().method() === 'PUT',
+	);
 	await propertyPanel.locator('.property-dialog__save').click();
+	await nestedPropertyPreviewPromise;
 	await expect(page.locator('.schema-edit .grid__row[data-id="new_object.nested_property"]')).toBeVisible();
 
 	await openProperty(page, 'new_object');
@@ -1777,17 +1947,18 @@ test(`Remove nested properties when changing a new object to another type`, asyn
 	await expect(propertyPanel.locator('.property-type-selector__dropdown')).toHaveJSProperty('open', false);
 	await propertyPanel.locator('.property-type-selector__trigger').click();
 	await propertyPanel.locator('[data-type-option="string"]').click();
-	await propertyPanel.locator('.property-dialog__save').click();
-	await expect(page.locator('.schema-edit .grid__row[data-id="new_object.nested_property"]')).toHaveCount(0);
-
 	const previewRequestPromise = page.waitForRequest(
 		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
 	);
-	await page.locator('.schema-edit__header-apply-button').click();
+	await propertyPanel.locator('.property-dialog__save').click();
 	const previewRequest = await previewRequestPromise;
+	await expect(page.locator('.schema-edit .grid__row[data-id="new_object.nested_property"]')).toHaveCount(0);
 	const previewSchema = previewRequest.postDataJSON().schema as ObjectType;
 	const property = previewSchema.properties.find((candidate) => candidate.name === 'new_object');
 	expect(property?.type).toEqual({ kind: 'string' });
+	const applyButton = page.locator('.schema-edit__header-apply-button');
+	await expect(applyButton).not.toHaveAttribute('disabled');
+	await applyButton.click();
 	await expect(page.locator('.schema-edit__queries')).toBeVisible();
 });
 
@@ -2032,6 +2203,7 @@ test(`Remove schema properties`, async ({ page }) => {
 	await removeProperty(page, 'bar');
 	await removeProperty(page, 'test_obj');
 
+	await expect(page.locator('.schema-edit__header-apply-button')).toHaveText('Review and apply changes...');
 	await page.click('.schema-edit__header-apply-button');
 	await page.click('.schema-edit__apply-alter-button');
 

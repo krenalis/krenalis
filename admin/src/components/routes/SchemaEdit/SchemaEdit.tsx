@@ -98,8 +98,10 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		primarySources,
 		queries,
 		hasSchemaChanges,
+		isSchemaPreviewLoading,
 		isQueriesLoading,
 		isConfirmChangesLoading,
+		warehouseDDLRequired,
 		onAddProperty,
 		onEditProperty,
 		onRemoveProperty,
@@ -161,6 +163,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 			discardChangesDescription = `The unsaved changes to “${propertyToEdit.name}” will be discarded.`;
 		}
 	}
+	const hasNoWarehouseQueries = queries?.length === 0;
 
 	useBeforeUnload(
 		useCallback(
@@ -326,9 +329,10 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 						className='schema-edit__header-apply-button'
 						variant='primary'
 						onClick={onReviewChangesClick}
-						disabled={!hasSchemaChanges && !hasUnsavedPropertyChanges}
+						disabled={(!hasSchemaChanges && !hasUnsavedPropertyChanges) || isSchemaPreviewLoading}
+						loading={hasSchemaChanges && isSchemaPreviewLoading}
 					>
-						Review and apply changes...
+						{hasSchemaChanges && warehouseDDLRequired ? 'Review and apply changes...' : 'Apply changes'}
 					</SlButton>
 				</div>
 			</div>
@@ -430,7 +434,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 			</div>
 			<SlDialog
 				open={isQueriesLoading || queries != null}
-				label='Review changes'
+				label={hasNoWarehouseQueries ? 'Apply schema changes?' : 'Review changes'}
 				onSlRequestClose={onReviewDialogRequestClose}
 				onSlAfterHide={onCancelChanges}
 				className={`schema-edit__queries${isQueriesLoading ? ' schema-edit__queries--loading' : ''}`}
@@ -453,7 +457,10 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 									<SyntaxHighlight language='sql'>{queries.join('\n\n')}</SyntaxHighlight>
 								</div>
 							) : (
-								<div className='schema-edit__no-query'>No query for this operation</div>
+								<div className='schema-edit__no-query'>
+									These changes affect only the schema definition. The data warehouse will not be
+									modified.
+								</div>
 							)}
 							<div className='schema-edit__queries-buttons' slot='footer'>
 								<SlButton size='small' onClick={onCancelChanges} disabled={isConfirmChangesLoading}>
@@ -462,11 +469,11 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 								<SlButton
 									className='schema-edit__apply-alter-button'
 									size='small'
-									variant='danger'
+									variant={hasNoWarehouseQueries ? 'primary' : 'danger'}
 									onClick={onConfirmChanges}
 									loading={isConfirmChangesLoading}
 								>
-									Apply alter schema
+									Apply changes
 								</SlButton>
 							</div>
 						</>
