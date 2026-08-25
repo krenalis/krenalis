@@ -74,7 +74,7 @@ interface InfoTooltipProps {
 }
 
 const InfoTooltip = ({ content, label }: InfoTooltipProps) => (
-	<SlTooltip content={content} placement='top' hoist>
+	<SlTooltip className='identity-dashboard__tooltip' content={content} placement='top' hoist>
 		<button className='identity-dashboard__info' type='button' aria-label={label}>
 			<SlIcon name='info-circle' />
 		</button>

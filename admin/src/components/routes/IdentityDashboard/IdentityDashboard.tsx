@@ -624,7 +624,7 @@ const IdentityDashboard = () => {
 								latestResolution == null ? (
 									'—'
 								) : (
-									<SlTooltip placement='top' hoist>
+									<SlTooltip className='identity-dashboard__tooltip' placement='top' hoist>
 										<div slot='content' className='identity-dashboard__local-time-tooltip'>
 											<strong>Your local time</strong>
 											<span>

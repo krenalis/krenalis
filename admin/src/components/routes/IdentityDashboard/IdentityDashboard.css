@@ -98,6 +98,23 @@
 	box-shadow: 0 0 0 2px var(--sl-color-primary-200);
 }
 
+.identity-dashboard__tooltip::part(body) {
+	background-color: var(--bg-primary);
+	border: 1px solid var(--sl-color-neutral-300);
+	color: var(--text-primary);
+	padding: calc(var(--sl-spacing-2x-small) + 2px) calc(var(--sl-spacing-x-small) + 4px);
+}
+
+.identity-dashboard__tooltip::part(base__popup) {
+	box-shadow: var(--sl-shadow-medium);
+}
+
+.identity-dashboard__tooltip::part(base__arrow) {
+	background-color: var(--bg-primary);
+	border: 1px solid var(--sl-color-neutral-300);
+	box-sizing: border-box;
+}
+
 .identity-dashboard__card {
 	background: var(--bg-primary);
 	border: 1px solid var(--sl-color-neutral-200);
