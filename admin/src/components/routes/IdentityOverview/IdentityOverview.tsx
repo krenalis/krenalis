@@ -1,5 +1,5 @@
 import React, { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import './IdentityDashboard.css';
+import './IdentityOverview.css';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
@@ -56,7 +56,7 @@ import {
 	instantToDateKey,
 	pickerDateToDateKey,
 	todayUTCDateKey,
-} from './IdentityDashboard.helpers';
+} from './IdentityOverview.helpers';
 import {
 	ConnectionsChart,
 	HistorySection,
@@ -72,7 +72,7 @@ import {
 	SectionHeading,
 	StateMessage,
 	TypeDistributionCard,
-} from './IdentityDashboard.components';
+} from './IdentityOverview.components';
 
 const initialDisplayRange = (): DisplayDateRange => {
 	const end = todayUTCDateKey();
@@ -105,7 +105,7 @@ interface LoadMetricsOptions {
 	preserveData?: boolean;
 }
 
-const IdentityDashboard = () => {
+const IdentityOverview = () => {
 	const { api, connections, selectedWorkspace, setTitle } = useContext(AppContext);
 	const [displayRange, setDisplayRange] = useState<DisplayDateRange>(initialDisplayRange);
 	const [loadedIdentityDisplayRange, setLoadedIdentityDisplayRange] = useState<DisplayDateRange>(initialDisplayRange);
@@ -154,7 +154,7 @@ const IdentityDashboard = () => {
 	const previousSourceConnectionCatalogKey = useRef<string>(sourceConnectionCatalogKey);
 
 	useLayoutEffect(() => {
-		setTitle('Profile Unification / Dashboard');
+		setTitle('Profile Unification / Overview');
 	}, [setTitle]);
 
 	useLayoutEffect(() => {
@@ -792,4 +792,4 @@ const IdentityDashboard = () => {
 	);
 };
 
-export default IdentityDashboard;
+export default IdentityOverview;

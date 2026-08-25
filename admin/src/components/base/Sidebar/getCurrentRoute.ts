@@ -58,8 +58,8 @@ const getCurrentRoute = (location: Location, connections: TransformedConnection[
 		const i = fragments.findIndex((s) => s === 'profile-unification');
 		if (i !== -1 && fragments.length - 1 > i) {
 			const resource = fragments[i + 1];
-			if (resource === 'dashboard') {
-				currentRoute = 'profile-unification/dashboard';
+			if (resource === 'overview') {
+				currentRoute = 'profile-unification/overview';
 			} else if (resource === 'profiles') {
 				currentRoute = 'profile-unification/profiles';
 			} else if (resource === 'schema') {

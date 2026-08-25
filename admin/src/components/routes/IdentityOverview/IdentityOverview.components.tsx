@@ -46,7 +46,7 @@ import {
 	identityLinkRateChartDomain,
 	ratioChartDomain,
 	sparklineDomain,
-} from './IdentityDashboard.helpers';
+} from './IdentityOverview.helpers';
 import { IdentityResolutionComposition } from '../../../lib/api/types/metrics';
 import { IdentityResolutionRun } from '../../../lib/api/types/workspace';
 
