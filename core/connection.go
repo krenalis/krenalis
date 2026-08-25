@@ -1535,6 +1535,8 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			},
 		}
 
+		organization := this.connection.Organization().ID
+
 		// provider is a temporary function provider.
 		var provider transformers.FunctionProvider
 
@@ -1582,14 +1584,13 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			// the same).
 			pipeline.Transformation.InPaths = pipeline.InSchema.Properties().SortedNames()
 			pipeline.Transformation.OutPaths = pipeline.OutSchema.Properties().SortedNames()
-			organization := this.connection.Organization().ID
 			provider = newTempTransformerProvider(organization, name, pipeline.Transformation.Function.Language, pipeline.Transformation.Function.Source, this.core.functionProvider)
 		default:
 			return nil, errors.BadRequest("transformation mapping or function is required")
 		}
 
 		// Transform the attributes.
-		transformer, err := transformers.New(pipeline, provider, nil)
+		transformer, err := transformers.New(organization, pipeline, provider, nil)
 		if err != nil {
 			return nil, err
 		}

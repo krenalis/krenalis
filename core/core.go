@@ -1200,7 +1200,7 @@ func (core *Core) TransformData(ctx context.Context, organization string, data [
 	}
 
 	// Transform the attributes.
-	transformer, err := transformers.New(pipeline, provider, nil)
+	transformer, err := transformers.New(organization, pipeline, provider, nil)
 	if err != nil {
 		return nil, err
 	}

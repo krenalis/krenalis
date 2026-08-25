@@ -55,16 +55,18 @@ type Transformer struct {
 }
 
 // New returns a new transformer that transforms values for the provided
-// pipeline. provider is the transformer provider used for transformation
-// functions and should be nil for mappings. layouts, if not nil, represents the
-// layouts used to format datetime, date, and time values as strings.
+// pipeline. organization is the ID of the organization on whose behalf the
+// transformation function is called and must not be empty. provider is the
+// transformer provider used for transformation functions and should be nil for
+// mappings. layouts, if not nil, represents the layouts used to format
+// datetime, date, and time values as strings.
 //
 // It only accesses the ID, InSchema, OutSchema, and Transformation fields of
-// pipeline and its Organization method.
+// pipeline.
 //
 // It returns a types.PathNotExistError error if a path in the mapping does not
 // exist in the source schema.
-func New(pipeline *state.Pipeline, provider FunctionProvider, layouts *state.TimeLayouts) (*Transformer, error) {
+func New(organization string, pipeline *state.Pipeline, provider FunctionProvider, layouts *state.TimeLayouts) (*Transformer, error) {
 
 	if m := pipeline.Transformation.Mapping; m != nil {
 		inPlace := pipeline.Target != state.TargetEvent
@@ -87,7 +89,7 @@ func New(pipeline *state.Pipeline, provider FunctionProvider, layouts *state.Tim
 
 	if f := pipeline.Transformation.Function; f != nil {
 		t := Transformer{
-			organization: pipeline.Organization().ID,
+			organization: organization,
 			pipeline:     pipeline.ID,
 			provider:     provider,
 			outSchema:    schemaSubset(pipeline.OutSchema, pipeline.Transformation.OutPaths),
