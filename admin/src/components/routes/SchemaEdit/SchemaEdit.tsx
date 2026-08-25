@@ -39,8 +39,11 @@ const SchemaEdit = () => {
 		columns,
 		primarySources,
 		queries,
+		hasSchemaChanges,
+		isSchemaPreviewLoading,
 		isQueriesLoading,
 		isConfirmChangesLoading,
+		warehouseDDLRequired,
 		onAddProperty,
 		onEditProperty,
 		onRemoveProperty,
@@ -50,6 +53,7 @@ const SchemaEdit = () => {
 		onCancelChanges,
 		sortableGridRef,
 	} = useSchemaEdit(schema, onAddClick, onEditClick, onRemoveClick, closeFullscreen);
+	const hasNoWarehouseQueries = queries?.length === 0;
 
 	const onCancelRemove = () => {
 		setPropertyToRemove(null);
@@ -67,8 +71,14 @@ const SchemaEdit = () => {
 					<SlButton className='schema-edit__header-cancel-button' onClick={onCancelEdit}>
 						Cancel
 					</SlButton>
-					<SlButton className='schema-edit__header-apply-button' variant='primary' onClick={onApplyChanges}>
-						Review and apply changes...
+					<SlButton
+						className='schema-edit__header-apply-button'
+						variant='primary'
+						onClick={onApplyChanges}
+						disabled={!hasSchemaChanges || isSchemaPreviewLoading}
+						loading={hasSchemaChanges && isSchemaPreviewLoading}
+					>
+						{hasSchemaChanges && warehouseDDLRequired ? 'Review and apply changes...' : 'Apply changes'}
 					</SlButton>
 				</div>
 			</div>
@@ -93,7 +103,7 @@ const SchemaEdit = () => {
 			/>
 			<SlDialog
 				open={isQueriesLoading || queries != null}
-				label='Review changes'
+				label={hasNoWarehouseQueries ? 'Apply schema changes?' : 'Review changes'}
 				onSlAfterHide={onCancelChanges}
 				className={`schema-edit__queries ${isQueriesLoading ? ' schema-edit__queries--loading' : ''}`}
 			>
@@ -115,7 +125,10 @@ const SchemaEdit = () => {
 									<SyntaxHighlight language='sql'>{queries.join('\n\n')}</SyntaxHighlight>
 								</div>
 							) : (
-								<div className='schema-edit__no-query'>No query for this operation</div>
+								<div className='schema-edit__no-query'>
+									These changes affect only the schema definition. The data warehouse will not be
+									modified.
+								</div>
 							)}
 							<div className='schema-edit__queries-buttons' slot='footer'>
 								<SlButton size='small' onClick={onCancelChanges}>
@@ -124,11 +137,11 @@ const SchemaEdit = () => {
 								<SlButton
 									className='schema-edit__apply-alter-button'
 									size='small'
-									variant='danger'
+									variant={hasNoWarehouseQueries ? 'primary' : 'danger'}
 									onClick={onConfirmChanges}
 									loading={isConfirmChangesLoading}
 								>
-									Apply alter schema
+									Apply changes
 								</SlButton>
 							</div>
 						</>

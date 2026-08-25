@@ -112,6 +112,19 @@ func generateAssets(ctx context.Context, repo string) error {
 	return nil
 }
 
+// environWithoutKrenalisVars returns the environment of the current process
+// without the variables that configure Krenalis.
+func environWithoutKrenalisVars() []string {
+	var env []string
+	for _, v := range os.Environ() {
+		if key, _, ok := strings.Cut(v, "="); ok && strings.HasPrefix(key, "KRENALIS_") {
+			continue
+		}
+		env = append(env, v)
+	}
+	return env
+}
+
 func launchKrenalis(ctx context.Context, env []string) error {
 	repo, err := filepath.Abs("../")
 	if err != nil {

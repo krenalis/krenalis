@@ -481,10 +481,11 @@ type fileRecords struct {
 	closed bool
 }
 
+// All returns an iterator over the file records.
 func (r *fileRecords) All(ctx context.Context) iter.Seq[Record] {
 	return func(yield func(Record) bool) {
 		if r.closed {
-			r.err = errors.New("connectors: For called on a closed Records")
+			r.err = errors.New("connectors: All called on a closed Records")
 			return
 		}
 		defer func() {
@@ -493,9 +494,8 @@ func (r *fileRecords) All(ctx context.Context) iter.Seq[Record] {
 				r.err = ErrNoColumnsFound
 			}
 		}()
-		r.rw.setYieldFunc(yield)
+		r.rw.yield = yield
 		err := readFromFileConnector(ctx, r.inner, &r.rc, r.sheet, r.rw)
-		r.rw.close()
 		if err != nil && err != errRecordStop {
 			r.err = connectorError(err)
 		}
@@ -516,10 +516,6 @@ func (r *fileRecords) Close() error {
 
 func (r *fileRecords) Err() error {
 	return r.err
-}
-
-func (r *fileRecords) Last() bool {
-	return r.rw.last()
 }
 
 // funcReadCloser wraps an io.Reader and implements io.ReadCloser. It calls a
@@ -631,8 +627,8 @@ func (closedReadCloser) Close() error {
 }
 
 var (
-	// errRecordStop is returned by recordWriter methods when the maximum row
-	// limit has been reached, signaling the need to stop writing rows.
+	// errRecordStop is returned by recordWriter methods when the consumer stops
+	// iterating or the configured row limit is reached.
 	errRecordStop = errors.New("stop record")
 
 	// errReadStopped is returned to a file connector when it calls w.Write and the
@@ -686,29 +682,6 @@ func (rr *recordReader) Record(ctx context.Context) (map[string]any, error) {
 	}
 }
 
-// newRecordWriter returns a new record writer implementing the RecordWriter
-// interface. It calls the yield function, which must be set by calling the
-// setYieldFunc method, for each record written, up to a maximum of limit
-// records.
-//
-// storageUpdatedAt is the update time provided by the storage connector, used
-// when the file columns do not specify an update time property.
-//
-// The close method should be called when there are no more records to write.
-func newRecordWriter(format string, pipeline *state.Pipeline, storageUpdatedAt time.Time, layout *state.TimeLayouts, startTime time.Time, limit int) *recordWriter {
-	rw := recordWriter{
-		format:            format,
-		pipeline:          pipeline,
-		storageUpdatedAt:  storageUpdatedAt,
-		timeLayouts:       layout,
-		startTime:         startTime,
-		limit:             limit,
-		userIDColumnIndex: -1,
-		updatedAtIndex:    -1,
-	}
-	return &rw
-}
-
 // recordWriter implements the connector.RecordWriter interface.
 type recordWriter struct {
 	format                 string
@@ -722,9 +695,26 @@ type recordWriter struct {
 	numPropertiesPerRecord int
 	properties             []types.Property // properties of the pipeline's schema, or the file's columns if a pipeline has not been provided
 	issues                 []string
-	record                 Record
 	yield                  func(Record) bool
-	isLast                 bool
+}
+
+// newRecordWriter returns a new record writer. Its yield function must be set
+// before writing records.
+//
+// storageUpdatedAt is the update time reported by the storage connector. It is
+// used when a record does not provide an updated-at value.
+func newRecordWriter(format string, pipeline *state.Pipeline, storageUpdatedAt time.Time, layout *state.TimeLayouts, startTime time.Time, limit int) *recordWriter {
+	rw := recordWriter{
+		format:            format,
+		pipeline:          pipeline,
+		storageUpdatedAt:  storageUpdatedAt,
+		timeLayouts:       layout,
+		startTime:         startTime,
+		limit:             limit,
+		userIDColumnIndex: -1,
+		updatedAtIndex:    -1,
+	}
+	return &rw
 }
 
 // Columns sets the columns of the records as properties.
@@ -805,13 +795,7 @@ func (rw *recordWriter) Record(record map[string]any) error {
 			}
 		}
 	}
-	// Call the yield function passing the previous record.
-	if rw.record.Attributes != nil || rw.record.Err != nil {
-		if !rw.yield(rw.record) {
-			return errRecordStop
-		}
-	}
-	rw.record = Record{
+	result := Record{
 		Attributes: make(map[string]any, rw.numPropertiesPerRecord),
 		UpdatedAt:  updatedAt,
 		Err:        err,
@@ -819,13 +803,13 @@ func (rw *recordWriter) Record(record map[string]any) error {
 	// Get the user ID column.
 	if i := rw.userIDColumnIndex; i >= 0 {
 		p := rw.properties[i]
-		rw.record.ID, err = parseUserIDColumn(p.Name, p.Type, record[p.Name], rw.timeLayouts)
+		result.ID, err = parseUserIDColumn(p.Name, p.Type, record[p.Name], rw.timeLayouts)
 		if err != nil {
-			rw.record.Err = err
+			result.Err = err
 		}
 	}
 	// Get the attributes.
-	if rw.record.Err == nil {
+	if result.Err == nil {
 		for _, p := range rw.properties {
 			if p.Name == "" {
 				continue
@@ -833,24 +817,20 @@ func (rw *recordWriter) Record(record map[string]any) error {
 			v, ok := record[p.Name]
 			if !ok {
 				if !p.ReadOptional {
-					rw.record.Err = inputValidationErrorf(p.Name, "does not have a value, but the property is not optional for reading")
+					result.Err = inputValidationErrorf(p.Name, "does not have a value, but the property is not optional for reading")
 					break
 				}
 				continue
 			}
 			v, err = normalize(p.Name, p.Type, v, p.Nullable, rw.timeLayouts)
 			if err != nil {
-				rw.record.Err = err
+				result.Err = err
 				break
 			}
-			rw.record.Attributes[p.Name] = v
+			result.Attributes[p.Name] = v
 		}
 	}
-	rw.limit--
-	if rw.limit == 0 {
-		return errRecordStop
-	}
-	return nil
+	return rw.yieldRecord(result)
 }
 
 // RecordSlice writes a record.
@@ -879,13 +859,7 @@ func (rw *recordWriter) RecordSlice(record []any) error {
 			}
 		}
 	}
-	// Call the yield function passing the previous record.
-	if rw.record.Attributes != nil || rw.record.Err != nil {
-		if !rw.yield(rw.record) {
-			return errRecordStop
-		}
-	}
-	rw.record = Record{
+	result := Record{
 		Attributes: make(map[string]any, rw.numPropertiesPerRecord),
 		UpdatedAt:  updatedAt,
 		Err:        err,
@@ -893,30 +867,26 @@ func (rw *recordWriter) RecordSlice(record []any) error {
 	// Get the user ID column.
 	if i := rw.userIDColumnIndex; i >= 0 {
 		p := rw.properties[i]
-		rw.record.ID, err = parseUserIDColumn(p.Name, p.Type, record[i], rw.timeLayouts)
+		result.ID, err = parseUserIDColumn(p.Name, p.Type, record[i], rw.timeLayouts)
 		if err != nil {
-			rw.record.Err = err
+			result.Err = err
 		}
 	}
 	// Get the attributes.
-	if rw.record.Err == nil {
+	if result.Err == nil {
 		for i, p := range rw.properties {
 			if p.Name == "" {
 				continue
 			}
 			v, err := normalize(p.Name, p.Type, record[i], p.Nullable, rw.timeLayouts)
 			if err != nil {
-				rw.record.Err = err
+				result.Err = err
 				break
 			}
-			rw.record.Attributes[p.Name] = v
+			result.Attributes[p.Name] = v
 		}
 	}
-	rw.limit--
-	if rw.limit == 0 {
-		return errRecordStop
-	}
-	return nil
+	return rw.yieldRecord(result)
 }
 
 // RecordStrings writes a record represented as a slice of strings. The slice
@@ -954,13 +924,7 @@ func (rw *recordWriter) RecordStrings(record []string) error {
 			}
 		}
 	}
-	// Call the yield function passing the previous record.
-	if rw.record.Attributes != nil || rw.record.Err != nil {
-		if !rw.yield(rw.record) {
-			return errRecordStop
-		}
-	}
-	rw.record = Record{
+	result := Record{
 		Attributes: make(map[string]any, rw.numPropertiesPerRecord),
 		UpdatedAt:  updatedAt,
 		Err:        err,
@@ -968,57 +932,38 @@ func (rw *recordWriter) RecordStrings(record []string) error {
 	// Get the user ID column.
 	if i := rw.userIDColumnIndex; i >= 0 {
 		p := rw.properties[i]
-		rw.record.ID, err = parseUserIDColumn(p.Name, p.Type, record[i], rw.timeLayouts)
+		result.ID, err = parseUserIDColumn(p.Name, p.Type, record[i], rw.timeLayouts)
 		if err != nil {
-			rw.record.Err = err
+			result.Err = err
 		}
 	}
 	// Get the attributes.
-	if rw.record.Err == nil {
+	if result.Err == nil {
 		for i, p := range rw.properties {
 			if p.Name == "" {
 				continue
 			}
 			v, err := normalize(p.Name, p.Type, record[i], p.Nullable, rw.timeLayouts)
 			if err != nil {
-				rw.record.Err = err
+				result.Err = err
 				break
 			}
-			rw.record.Attributes[p.Name] = v
+			result.Attributes[p.Name] = v
 		}
 	}
+	return rw.yieldRecord(result)
+}
+
+// yieldRecord calls the yield function with record and applies the record limit.
+func (rw *recordWriter) yieldRecord(record Record) error {
 	rw.limit--
+	if !rw.yield(record) {
+		return errRecordStop
+	}
 	if rw.limit == 0 {
 		return errRecordStop
 	}
 	return nil
-}
-
-// close closes the record writer. It should be called when there are no more
-// records to write. If there is a last record, it calls the yield function with
-// that record. After close is called, no other methods of the record writer
-// should be called except for the 'last' method.
-func (rw *recordWriter) close() {
-	if rw.record.Attributes == nil && rw.record.Err == nil {
-		return
-	}
-	rw.isLast = true
-	rw.yield(rw.record)
-	rw.record.Attributes = nil
-	rw.record.Err = nil
-}
-
-// last reports whether the record passed to the yield function is the last
-// record. It should be only called in the yield function.
-func (rw *recordWriter) last() bool {
-	return rw.isLast
-}
-
-// setYieldFunc sets the yield function that will be called for each written
-// record. setYieldFunc must be set before calling the Record, RecordSlice, and
-// RecordStrings methods.
-func (rw *recordWriter) setYieldFunc(yield func(Record) bool) {
-	rw.yield = yield
 }
 
 // storageWriteCloser wraps an io.Writer and implements io.WriteCloser. It calls a

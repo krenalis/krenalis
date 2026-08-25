@@ -543,19 +543,20 @@ type appRecords struct {
 	updatedAt   time.Time
 	connector   string
 	inner       any
-	last        bool
 	err         error
 	closed      bool
 }
 
+// All returns an iterator over the application records.
 func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 
 	return func(yield func(Record) bool) {
 
 		if r.closed {
-			r.err = errors.New("connectors: For called on a closed Records")
+			r.err = errors.New("connectors: All called on a closed Records")
 			return
 		}
+		defer r.Close()
 
 		var cursor string
 
@@ -586,9 +587,6 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 				}
 				return
 			}
-
-			// previous is the previous read record.
-			var previous Record
 
 			for _, user := range users {
 
@@ -651,20 +649,10 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 					}
 				}
 
-				if previous.ID != "" {
-					if !yield(previous) {
-						return
-					}
-				}
-				previous = record
-
-			}
-
-			if previous.ID != "" {
-				r.last = true
-				if !yield(previous) {
+				if !yield(record) {
 					return
 				}
+
 			}
 
 			if eof {
@@ -684,10 +672,6 @@ func (r *appRecords) Close() error {
 
 func (r *appRecords) Err() error {
 	return r.err
-}
-
-func (r *appRecords) Last() bool {
-	return r.last
 }
 
 type schema struct {

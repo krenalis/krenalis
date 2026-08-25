@@ -81,25 +81,21 @@ func (err *UnavailableError) Error() string {
 // the placeholder is allowed.
 type PlaceholderReplacer func(name string) (string, bool)
 
-// Records is the iterator interface used to iterate over the records read from
-// apps, databases, and files.
+// Records is an interface for iterating over records read from apps, databases,
+// and files.
 type Records interface {
 
-	// All returns an iterator to iterate over the records. After All completes, it
-	// is also necessary to check the result of Err for any potential errors.
+	// All returns a sequence of records. When the sequence is iterated, Close is
+	// called automatically when iteration finishes or is stopped early. Err must
+	// be checked afterward.
 	All(ctx context.Context) iter.Seq[Record]
 
-	// Close closes the iterator. It is automatically called by the For method
-	// before returning. Close is idempotent and does not impact the result of Err.
+	// Close releases resources associated with Records and is idempotent. Callers
+	// must call Close if iteration is never started.
 	Close() error
 
-	// Err returns any error encountered during iteration, excluding errors returned
-	// by the yield function, which may have occurred after an explicit or implicit
-	// Close.
+	// Err returns any error encountered during iteration or cleanup.
 	Err() error
-
-	// Last reports whether the last record has been read.
-	Last() bool
 }
 
 type EventType = connectors.EventType

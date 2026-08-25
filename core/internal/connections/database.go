@@ -548,7 +548,6 @@ type databaseRecords struct {
 	columns     []connectors.Column
 	pipeline    *state.Pipeline
 	timeLayouts *state.TimeLayouts
-	last        bool
 	err         error
 	closed      bool
 }
@@ -564,6 +563,7 @@ func newDatabaseRecords(rows connectors.Rows, columns []connectors.Column, pipel
 	return &records
 }
 
+// All returns an iterator over the database records.
 func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 	return func(yield func(Record) bool) {
 		if r.closed {
@@ -595,7 +595,8 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 			}
 			n++
 		}
-		// Read the rows.
+		// Delay yielding each record until the next iteration so every row-processing
+		// error path can use continue Rows without duplicating the yield logic.
 		var record Record
 	Rows:
 		for r.rows.Next() {
@@ -605,6 +606,7 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 				}
 				record.ID = ""
 				record.Attributes = nil
+				record.UpdatedAt = time.Time{}
 				record.Err = nil
 			}
 			if err := ctx.Err(); err != nil {
@@ -668,7 +670,6 @@ func (r *databaseRecords) All(ctx context.Context) iter.Seq[Record] {
 			}
 		}
 		if record.Attributes != nil || record.Err != nil {
-			r.last = true
 			if !yield(record) {
 				return
 			}
@@ -693,10 +694,6 @@ func (r *databaseRecords) Close() error {
 
 func (r *databaseRecords) Err() error {
 	return r.err
-}
-
-func (r *databaseRecords) Last() bool {
-	return r.last
 }
 
 // queryScanValue implements the sql.Scanner interface to read the database

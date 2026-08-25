@@ -275,9 +275,7 @@ func (this *Connection) ApplicationUsers(ctx context.Context, schema types.Type,
 			return nil, "", errors.Unavailable("%s has returned an invalid user; %s", this.application().Connector(), user.Err)
 		}
 		users = append(users, user.Attributes)
-		if records.Last() {
-			last = user
-		}
+		last = user
 		if len(users) == 100 {
 			break
 		}
