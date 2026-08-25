@@ -53,58 +53,6 @@ var (
 	organizations = map[string]*prometheus.Counter{}
 )
 
-// EnableCounting makes the connections dialed on behalf of an organization
-// count the bytes they send, exposing them as the
-// krenalis_organization_network_egress_bytes_total Prometheus counter, labeled
-// by organization. Only the bytes sent are counted, the bytes received are not.
-//
-// st is the Krenalis state that this package listens on to track changes to
-// organizations.
-//
-// Counting is disabled by default, and it is left disabled by not calling this
-// function at all: the other functions of this package can still be called,
-// they just return plain, unwrapped dialers.
-//
-// If this function is called, it must be called before any other function in
-// the package.
-func EnableCounting(st *state.State) {
-	if countingEnabled {
-		panic("dialer: EnableCounting called more than once")
-	}
-	st.Freeze()
-	st.AddListener(onCreateOrganization)
-	st.AddListener(onDeleteOrganization)
-	organizationsMu.Lock()
-	for _, org := range st.Organizations() {
-		organizations[org.ID] = egressBytes.Register(org.ID)
-	}
-	countingEnabled = true
-	organizationsMu.Unlock()
-	st.Unfreeze()
-}
-
-// onCreateOrganization is called when an organization is created, registering
-// its counter, which stays at zero until the organization dials.
-func onCreateOrganization(n state.CreateOrganization) {
-	organizationsMu.Lock()
-	organizations[n.ID] = egressBytes.Register(n.ID)
-	organizationsMu.Unlock()
-}
-
-// onDeleteOrganization is called when an organization is deleted. Its counter is
-// unregistered, so that it is no longer collected and it is freed.
-//
-// The connections dialed by the organization before it was deleted may still be
-// written to, and so may the connections its dial functions establish later,
-// but the bytes they add to the counter they hold are no longer collected.
-func onDeleteOrganization(n state.DeleteOrganization) {
-	organizationsMu.Lock()
-	c := organizations[n.ID]
-	delete(organizations, n.ID)
-	organizationsMu.Unlock()
-	c.Unregister()
-}
-
 // Dial returns the dial function to establish the connections made on behalf of
 // the given organization, dialing with a plain net.Dialer. Use [DialWith]
 // instead to keep the dial options of an already configured dialer.
@@ -143,48 +91,6 @@ func DialWith(organization string) func(dial DialFunc) DialFunc {
 	return func(dial DialFunc) DialFunc {
 		return dialWith(organization, dial)
 	}
-}
-
-// PlainDial returns a plain net.Dialer dial function.
-//
-// Use it, in place of [Dial], when the connections it establishes are not made
-// on behalf of an organization, as for a connector under test. The bytes such
-// connections send are counted for no one.
-func PlainDial() DialFunc {
-	return plainDial
-}
-
-// PlainDialWith returns a function that returns the dial function it is given
-// unwrapped, so that it establishes the connections with its own dial options.
-// If the given dial function is nil, a plain net.Dialer is returned, as in
-// [PlainDial].
-//
-// Use it, in place of [DialWith], when the connections are not established on
-// behalf of an organization, as for [PlainDial].
-func PlainDialWith() func(dial DialFunc) DialFunc {
-	return func(dial DialFunc) DialFunc {
-		if dial == nil {
-			return plainDial
-		}
-		return dial
-	}
-}
-
-// organizationKey is the key of the organization a dial is made on behalf of.
-// Its value is a string, the ID of the organization.
-type organizationKey struct{}
-
-// WithOrganization returns a copy of ctx carrying the ID of the organization
-// the connections dialed with it are established on behalf of.
-//
-// Use it, together with [DialWithContext], when a client is shared by every
-// organization and the organization is only known when the client is used, so
-// that the dial function does not have to be fixed when the client is created.
-func WithOrganization(ctx context.Context, organization string) context.Context {
-	if organization == "" {
-		panic("dialer: empty organization ID")
-	}
-	return context.WithValue(ctx, organizationKey{}, organization)
 }
 
 // DialWithContext wraps the dial function of a client shared by every
@@ -229,6 +135,74 @@ func DialWithContext(dial DialFunc) DialFunc {
 	}
 }
 
+// EnableCounting makes the connections dialed on behalf of an organization
+// count the bytes they send, exposing them as the
+// krenalis_organization_network_egress_bytes_total Prometheus counter, labeled
+// by organization. Only the bytes sent are counted, the bytes received are not.
+//
+// st is the Krenalis state that this package listens on to track changes to
+// organizations.
+//
+// Counting is disabled by default, and it is left disabled by not calling this
+// function at all: the other functions of this package can still be called,
+// they just return plain, unwrapped dialers.
+//
+// If this function is called, it must be called before any other function in
+// the package.
+func EnableCounting(st *state.State) {
+	if countingEnabled {
+		panic("dialer: EnableCounting called more than once")
+	}
+	st.Freeze()
+	st.AddListener(onCreateOrganization)
+	st.AddListener(onDeleteOrganization)
+	organizationsMu.Lock()
+	for _, org := range st.Organizations() {
+		organizations[org.ID] = egressBytes.Register(org.ID)
+	}
+	countingEnabled = true
+	organizationsMu.Unlock()
+	st.Unfreeze()
+}
+
+// PlainDial returns a plain net.Dialer dial function.
+//
+// Use it, in place of [Dial], when the connections it establishes are not made
+// on behalf of an organization, as for a connector under test. The bytes such
+// connections send are counted for no one.
+func PlainDial() DialFunc {
+	return plainDial
+}
+
+// PlainDialWith returns a function that returns the dial function it is given
+// unwrapped, so that it establishes the connections with its own dial options.
+// If the given dial function is nil, a plain net.Dialer is returned, as in
+// [PlainDial].
+//
+// Use it, in place of [DialWith], when the connections are not established on
+// behalf of an organization, as for [PlainDial].
+func PlainDialWith() func(dial DialFunc) DialFunc {
+	return func(dial DialFunc) DialFunc {
+		if dial == nil {
+			return plainDial
+		}
+		return dial
+	}
+}
+
+// WithOrganization returns a copy of ctx carrying the ID of the organization
+// the connections dialed with it are established on behalf of.
+//
+// Use it, together with [DialWithContext], when a client is shared by every
+// organization and the organization is only known when the client is used, so
+// that the dial function does not have to be fixed when the client is created.
+func WithOrganization(ctx context.Context, organization string) context.Context {
+	if organization == "" {
+		panic("dialer: empty organization ID")
+	}
+	return context.WithValue(ctx, organizationKey{}, organization)
+}
+
 // dialWith returns a dial function that establishes the connections made on
 // behalf of the given organization using dial. If dial is nil, a plain
 // net.Dialer is used.
@@ -267,9 +241,6 @@ func dialWith(organization string, dial DialFunc) DialFunc {
 	}
 }
 
-// plainDial is the dial function of a plain net.Dialer.
-var plainDial DialFunc = new(net.Dialer).DialContext
-
 // instrumentedConn wraps a net.Conn, recording the bytes it writes into its
 // organization's egress counter.
 type instrumentedConn struct {
@@ -284,3 +255,32 @@ func (c *instrumentedConn) Write(b []byte) (int, error) {
 	}
 	return n, err
 }
+
+// onCreateOrganization is called when an organization is created, registering
+// its counter, which stays at zero until the organization dials.
+func onCreateOrganization(n state.CreateOrganization) {
+	organizationsMu.Lock()
+	organizations[n.ID] = egressBytes.Register(n.ID)
+	organizationsMu.Unlock()
+}
+
+// onDeleteOrganization is called when an organization is deleted. Its counter is
+// unregistered, so that it is no longer collected and it is freed.
+//
+// The connections dialed by the organization before it was deleted may still be
+// written to, and so may the connections its dial functions establish later,
+// but the bytes they add to the counter they hold are no longer collected.
+func onDeleteOrganization(n state.DeleteOrganization) {
+	organizationsMu.Lock()
+	c := organizations[n.ID]
+	delete(organizations, n.ID)
+	organizationsMu.Unlock()
+	c.Unregister()
+}
+
+// organizationKey is the key of the organization a dial is made on behalf of.
+// Its value is a string, the ID of the organization.
+type organizationKey struct{}
+
+// plainDial is the dial function of a plain net.Dialer.
+var plainDial DialFunc = new(net.Dialer).DialContext
