@@ -384,7 +384,7 @@ const IdentityOverview = () => {
 	const identityChartDays = showAllIdentityConnections ? identityDays : selectedIdentityChartDays;
 	const identityChartLoading = showAllIdentityConnections
 		? isIdentityLoading
-		: isConnectionIdentityLoading && connectionIdentityMetricDays == null;
+		: (isIdentityLoading || isRefreshing || isConnectionIdentityLoading) && connectionIdentityMetricDays == null;
 	const identityChartError = showAllIdentityConnections ? identityError : connectionIdentityError;
 	const temporalSemantics = useMemo(
 		() =>
@@ -552,7 +552,7 @@ const IdentityOverview = () => {
 
 		const latest = latestIdentityMetricRef.current;
 		if (latest == null) {
-			setIsConnectionIdentityLoading(true);
+			setIsConnectionIdentityLoading(false);
 			return;
 		}
 		loadConnectionIdentityMetrics(latest, connection, displayRange);
@@ -603,7 +603,13 @@ const IdentityOverview = () => {
 						size='small'
 						onClick={refreshDashboard}
 						loading={isRefreshing}
-						disabled={isRefreshing || isIdentityLoading || isResolutionLoading || isResolutionRunsLoading}
+						disabled={
+							isRefreshing ||
+							isIdentityLoading ||
+							isConnectionIdentityLoading ||
+							isResolutionLoading ||
+							isResolutionRunsLoading
+						}
 					>
 						<SlIcon slot='prefix' name='arrow-clockwise' />
 						Refresh
