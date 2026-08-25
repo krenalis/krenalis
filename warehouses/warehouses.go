@@ -54,6 +54,12 @@ func (platform Platform) New(settings SettingsLoader, dialWith DialWith) Warehou
 	return d
 }
 
+type SettingsLoader interface {
+
+	// Load decrypts settings and stores the result in the value pointed to by dst.
+	Load(ctx context.Context, dst any) error
+}
+
 type (
 	// A DialFunc establishes an outbound network connection to the given address.
 	DialFunc = func(ctx context.Context, network, address string) (net.Conn, error)
@@ -62,12 +68,6 @@ type (
 	// function to be used in its place.
 	DialWith = func(dial DialFunc) DialFunc
 )
-
-type SettingsLoader interface {
-
-	// Load decrypts settings and stores the result in the value pointed to by dst.
-	Load(ctx context.Context, dst any) error
-}
 
 // NewFunc represents functions that create new warehouse platform instance.
 type NewFunc[T Warehouse] func(SettingsLoader, DialWith) T
