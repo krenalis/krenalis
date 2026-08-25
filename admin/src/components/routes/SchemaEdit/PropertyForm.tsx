@@ -9,6 +9,7 @@ import SlRadioButton from '@shoelace-style/shoelace/dist/react/radio-button/inde
 import SlRadioGroup from '@shoelace-style/shoelace/dist/react/radio-group/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlTextarea from '@shoelace-style/shoelace/dist/react/textarea/index.js';
+import type SlTextareaElement from '@shoelace-style/shoelace/dist/components/textarea/textarea.component.js';
 import AppContext from '../../../context/AppContext';
 import Type, {
 	DecimalType,
@@ -33,6 +34,17 @@ const INT_BITSIZES: string[] = ['8', '16', '24', '32', '64'];
 const FLOAT_BITSIZES: string[] = ['32', '64'];
 const MAX_DECIMAL_PRECISION: number = 76;
 const MAX_DECIMAL_SCALE: number = 37;
+const MAX_STRING_LENGTH: number = 4294967295;
+
+const disableShoelaceTextareaHeightReset = (textarea: SlTextareaElement | null) => {
+	if (textarea == null) {
+		return;
+	}
+	// Shoelace 2.20 resets the inline height whenever its ResizeObserver runs,
+	// which prevents the browser's vertical resize handle from working.
+	// See https://github.com/shoelace-style/shoelace/pull/2465.
+	Reflect.set(textarea, 'setTextareaHeight', () => undefined);
+};
 
 interface PropertyFormProps {
 	fieldChanges?: PropertyFieldChanges;
@@ -73,7 +85,7 @@ const PropertyForm = ({
 	const sourceConnections = useMemo(() => {
 		const sources: TransformedConnection[] = [];
 		for (const connection of connections) {
-			if (connection.role === 'Source') {
+			if (connection.role === 'Source' && connection.connector.asSource?.targets.includes('User')) {
 				sources.push(connection);
 			}
 		}
@@ -193,7 +205,20 @@ const PropertyForm = ({
 		) {
 			return;
 		}
-		requestAnimationFrame(() => typeSelectorRef.current?.openStructureMenu());
+		requestAnimationFrame(() => typeSelectorRef.current?.focusStructureTrigger());
+	};
+
+	const onKeyDownPrimarySource = (event: React.KeyboardEvent<HTMLDivElement>) => {
+		if (event.key !== 'Tab' || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) {
+			return;
+		}
+		const panel = event.currentTarget.closest('.property-panel') as HTMLElement | null;
+		const cancelButton = panel?.querySelector('.property-panel__cancel') as HTMLElement | null;
+		if (cancelButton == null) {
+			return;
+		}
+		event.preventDefault();
+		cancelButton.focus();
 	};
 
 	const onChangeParent = (event) => {
@@ -213,6 +238,9 @@ const PropertyForm = ({
 		updateProperty((nextProperty) => {
 			nextProperty.type = type;
 		});
+		if (type?.kind === 'object' || type?.kind === 'array') {
+			setPrimarySource(null);
+		}
 		setTypeError('');
 	};
 
@@ -258,6 +286,7 @@ const PropertyForm = ({
 				type.maxBytes = Number(value);
 			}
 		});
+		setTypeError('');
 	};
 
 	const onInputMaxLength = (event) => {
@@ -269,6 +298,7 @@ const PropertyForm = ({
 				type.maxLength = Number(value);
 			}
 		});
+		setTypeError('');
 	};
 
 	const onInputDescription = (event) => {
@@ -370,6 +400,9 @@ const PropertyForm = ({
 						size='small'
 						value={valueType.maxLength == null ? '' : String(valueType.maxLength)}
 						type='number'
+						min={1}
+						max={MAX_STRING_LENGTH}
+						step={1}
 						onSlInput={onInputMaxLength}
 					/>
 					<SlInput
@@ -377,6 +410,9 @@ const PropertyForm = ({
 						size='small'
 						value={valueType.maxBytes == null ? '' : String(valueType.maxBytes)}
 						type='number'
+						min={1}
+						max={MAX_STRING_LENGTH}
+						step={1}
 						onSlInput={onInputMaxBytes}
 					/>
 				</div>
@@ -462,7 +498,8 @@ const PropertyForm = ({
 				</div>
 			)}
 			<SlTextarea
-				className='property-form__control'
+				className='property-form__control property-form__description'
+				ref={disableShoelaceTextareaHeightReset}
 				value={property.description || ''}
 				name='description'
 				placeholder='Describe what this property represents…'
@@ -473,7 +510,7 @@ const PropertyForm = ({
 				</PropertyFormLabel>
 			</SlTextarea>
 			{property.type?.kind !== 'object' && property.type?.kind !== 'array' && (
-				<div className='property-form__control'>
+				<div className='property-form__control' onKeyDownCapture={onKeyDownPrimarySource}>
 					{sourceConnections.length === 0 ? (
 						<>
 							<div className='property-form__label'>
@@ -556,6 +593,20 @@ const validatePropertyType = (property: PropertyToEdit): string => {
 		return 'Type cannot be empty';
 	}
 	const type = getPropertyValueType(property.type);
+	if (type.kind === 'string') {
+		if (
+			type.maxLength != null &&
+			(!Number.isInteger(type.maxLength) || type.maxLength < 1 || type.maxLength > MAX_STRING_LENGTH)
+		) {
+			return `Max characters must be an integer in range [1, ${MAX_STRING_LENGTH}]`;
+		}
+		if (
+			type.maxBytes != null &&
+			(!Number.isInteger(type.maxBytes) || type.maxBytes < 1 || type.maxBytes > MAX_STRING_LENGTH)
+		) {
+			return `Max bytes must be an integer in range [1, ${MAX_STRING_LENGTH}]`;
+		}
+	}
 	if (type.kind === 'decimal') {
 		const error = checkDecimalType(type);
 		if (error != null) {
@@ -583,6 +634,9 @@ const validatePropertyName = (name: string) => {
 	}
 	if (/\s/.test(name)) {
 		throw new Error('Name cannot contain spaces');
+	}
+	if (name.startsWith('_')) {
+		throw new Error('Profile schema property names cannot start with an underscore');
 	}
 	if (/^[0-9]/.test(name)) {
 		throw new Error('Name cannot start with a number');

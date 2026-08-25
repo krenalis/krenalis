@@ -113,12 +113,32 @@
 		base
 	) {
 	background-color: var(--sl-color-neutral-50);
-	color: var(--text-primary);
+	color: var(--text-primary) !important;
 }
 
 .property-type-selector__structure-option--selected::part(base) {
 	background-color: #f5f5fb;
-	color: var(--text-primary);
+	color: var(--text-primary) !important;
+}
+
+.property-type-selector__structure-option:focus-visible .property-type-selector__structure-option-content,
+.property-type-selector__structure-option:focus-visible .property-type-selector__structure-option-content *,
+.property-type-selector__structure-option:focus-visible > [slot='prefix'],
+.property-type-selector__option:focus-visible .property-type-selector__option-content,
+.property-type-selector__option:focus-visible .property-type-selector__option-content *,
+.property-type-selector__option:focus-visible .property-type-selector__option-icon,
+.property-type-selector__option:focus-visible .property-type-selector__option-icon * {
+	color: var(--text-primary) !important;
+}
+
+.property-type-selector__structure-option:focus-visible .property-type-selector__structure-option-description,
+.property-type-selector__option:focus-visible .property-type-selector__option-description {
+	color: var(--text-light) !important;
+}
+
+.property-type-selector__structure-option:focus-visible > [slot='suffix'],
+.property-type-selector__option:focus-visible > [slot='suffix'] {
+	color: var(--sl-color-primary-600) !important;
 }
 
 .property-type-selector__structure-option-content {
@@ -135,7 +155,6 @@
 .property-type-selector__structure-option-description {
 	color: var(--text-light);
 	font-size: 12px;
-	min-height: 2.7em;
 }
 
 .property-type-selector__structure-option > [slot='suffix'] {
@@ -143,7 +162,8 @@
 }
 
 .property-type-selector__placeholder {
-	color: var(--sl-color-neutral-400);
+	color: var(--sl-input-placeholder-color);
+	font-weight: var(--sl-font-weight-normal);
 }
 
 .property-type-selector__browser {
@@ -151,10 +171,8 @@
 	border: solid var(--sl-panel-border-width) var(--sl-panel-border-color);
 	border-radius: var(--sl-border-radius-medium);
 	box-sizing: border-box;
-	display: flex;
-	flex-direction: column;
 	max-height: min(400px, var(--auto-size-available-height));
-	overflow: hidden;
+	overflow-y: auto;
 	padding: var(--sl-spacing-x-small) 0;
 	width: min(calc(100cqi - 20px), calc(100vw - 40px));
 }
@@ -165,46 +183,48 @@
 	margin-bottom: 8px;
 }
 
-.property-type-selector__options {
-	min-height: 0;
-	overflow-y: auto;
-}
-
-.property-type-selector__group {
-	padding: 6px 0;
-}
-
-.property-type-selector__group + .property-type-selector__group {
-	border-top: 1px solid var(--border-primary);
-}
-
 .property-type-selector__group-label {
 	color: var(--text-light);
 	font-size: 12px;
 	font-weight: 600;
-	padding: 2px 8px 4px;
+	padding: 8px 8px 4px;
 }
 
-.property-type-selector__option {
-	background-color: transparent;
-	border: 0;
+.property-type-selector__group-label--separated {
+	border-top: 1px solid var(--border-primary);
+	margin-top: 6px;
+}
+
+.property-type-selector__option::part(base) {
+	align-items: center;
 	border-radius: var(--radius);
 	color: var(--text-primary);
-	cursor: pointer;
-	display: grid;
-	grid-template-columns: 22px minmax(0, 1fr) 18px;
-	gap: 10px;
 	padding: 6px 8px;
-	text-align: left;
-	width: 100%;
 }
 
-.property-type-selector__option:not(.property-type-selector__option--selected):hover {
+.property-type-selector__option::part(checked-icon),
+.property-type-selector__option::part(submenu-icon) {
+	display: none;
+}
+
+.property-type-selector__option::part(label) {
+	overflow: visible;
+	white-space: normal;
+}
+
+.property-type-selector__option:not(.property-type-selector__option--selected):hover::part(base),
+.property-type-selector__option:not(.property-type-selector__option--selected):focus-visible::part(base) {
 	background-color: var(--sl-color-neutral-50);
+	color: var(--text-primary) !important;
 }
 
-.property-type-selector__option--selected {
+.property-type-selector__option--selected::part(base) {
 	background-color: #f5f5fb;
+	color: var(--text-primary) !important;
+}
+
+.property-type-selector__option:last-of-type {
+	margin-bottom: 6px;
 }
 
 .property-type-selector__option-icon {
@@ -233,8 +253,7 @@
 	font-size: 12px;
 }
 
-.property-type-selector__option > sl-icon:last-child {
-	align-self: center;
+.property-type-selector__option > [slot='suffix'] {
 	color: var(--sl-color-primary-600);
 }
 

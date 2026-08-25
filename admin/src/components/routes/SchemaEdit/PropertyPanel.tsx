@@ -93,18 +93,11 @@ const PropertyPanel = ({
 	return (
 		<>
 			{property == null ? (
-				<aside className='property-panel property-panel--empty'>
-					<div className='property-panel__empty'>
-						<SlIcon name='cursor' />
-						<div className='property-panel__empty-title'>Select a property</div>
-						<div className='property-panel__empty-description'>
-							Choose a property from the schema to view or edit its configuration.
-						</div>
-					</div>
-				</aside>
+				<aside className='property-panel property-panel--empty' />
 			) : (
 				<PropertyPanelLayout
 					actions={actions}
+					actionsAfterContent={showActions}
 					title={isNew ? 'New property' : 'Property'}
 					titleAdornment={status != null && <PropertyStatusBadge status={status} />}
 				>

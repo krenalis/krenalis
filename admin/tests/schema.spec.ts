@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { login, logout, adminURL, logValidationErrors } from './utils';
-import { ObjectType } from '../src/lib/api/types/types';
+import { ObjectType, Property } from '../src/lib/api/types/types';
 
 const selectPropertyType = async (page, option: string) => {
 	const panel = page.locator('.property-panel');
@@ -20,7 +20,11 @@ const selectPropertyType = async (page, option: string) => {
 		'Specialized values',
 	]);
 	await expect(
-		panel.locator('.property-type-selector__group').nth(2).locator('.property-type-selector__option-label'),
+		panel.locator(
+			'[data-type-option="uuid"] .property-type-selector__option-label, ' +
+				'[data-type-option="json"] .property-type-selector__option-label, ' +
+				'[data-type-option="ip"] .property-type-selector__option-label',
+		),
 	).toHaveText(['uuid', 'json', 'ip']);
 	await expect(panel.locator('[data-type-option="datetime"] .property-type-selector__option-label')).toHaveText(
 		'datetime',
@@ -35,13 +39,21 @@ const openProperty = async (page, property: string) => {
 };
 
 const expandAllObjects = async (page) => {
-	await page.click('.schema-grid__expand-all-button');
+	const isEditing = new URL(page.url()).pathname.endsWith('/schema/edit');
+	await page.click(isEditing ? '.schema-edit__expand-all-button' : '.schema-grid__expand-all-button');
 };
 
 const removeProperty = async (page, property: string) => {
 	await openProperty(page, property);
 	await page.locator('.property-panel__remove').click();
 	await page.click('.schema-edit__confirm-remove-property');
+};
+
+const getKeyboardHintsBottomGap = async (container) => {
+	return container.evaluate((element) => {
+		const hints = element.querySelector('.grid-keyboard-hints');
+		return Math.abs(element.getBoundingClientRect().bottom - hints.getBoundingClientRect().bottom);
+	});
 };
 
 test.beforeEach(async ({ page }) => {
@@ -63,9 +75,12 @@ test(`Search profile schema properties by technical type`, async ({ page }) => {
 	await expect(searchInput).toBeFocused();
 	await searchInput.fill('string');
 	await expect(page.locator('.grid__row[data-id="email"]')).toBeVisible();
-	await expect(page.locator('.grid__row[data-id="birth_date"]')).toHaveCount(0);
-	await searchInput.fill('');
-	await searchInput.blur();
+	await expect(page.locator('.grid__row[data-id="favorite_movie.length"]')).toHaveCount(0);
+	await page.locator('.schema-grid__search [part="clear-button"]').click();
+	await expect(searchInput).toHaveValue('');
+	await expect(page.locator('.grid__row[data-id="favorite_movie.length"]')).toHaveCount(1);
+	await expect(searchInput).toBeFocused();
+	await page.locator('.schema-grid__expand-all-button').click();
 	await expect(searchInput).toHaveCount(0);
 	await expect(searchButton).toBeVisible();
 
@@ -76,25 +91,176 @@ test(`Search profile schema properties by technical type`, async ({ page }) => {
 	await expect(editSearchInput).toBeFocused();
 	await editSearchInput.fill('string');
 	await expect(page.locator('.schema-edit .grid__row[data-id="email"]')).toBeVisible();
-	await expect(page.locator('.schema-edit .grid__row[data-id="birth_date"]')).toHaveCount(0);
-	await editSearchInput.fill('');
-	await editSearchInput.blur();
+	await expect(page.locator('.schema-edit .grid__row[data-id="favorite_movie.length"]')).toHaveCount(0);
+	await expect(editSearchInput).toBeFocused();
+	await page.locator('.schema-edit__search [part="clear-button"]').click();
+	await expect(editSearchInput).toHaveValue('');
+	await expect(page.locator('.schema-edit .grid__row[data-id="favorite_movie.length"]')).toHaveCount(1);
+	await expect(editSearchInput).toBeFocused();
+	await page.locator('.schema-edit__expand-all-button').click();
 	await expect(editSearchInput).toHaveCount(0);
+	await openProperty(page, 'email');
+	const firstVisiblePropertyKey = await page
+		.locator('.schema-edit .grid__row--clickable:visible')
+		.first()
+		.getAttribute('data-id');
+	expect(firstVisiblePropertyKey).not.toBeNull();
 
 	await page.locator('.schema-edit__filter-button').click();
 	const showChanged = page.locator('.schema-edit__show-changed');
 	await showChanged.click();
 	await expect(page.locator('.schema-edit__filter-dot')).toHaveClass(/schema-edit__filter-dot--active/);
 	await expect(page.locator('.schema-edit .grid__row')).toHaveCount(0);
+	await expect(page.locator('.property-panel--empty')).toBeEmpty();
+	await expect(page.getByText('Reorder', { exact: true }).locator('..')).toHaveAttribute('aria-disabled', 'true');
 	await showChanged.click();
+	await expect(page.getByText('Reorder', { exact: true }).locator('..')).not.toHaveAttribute('aria-disabled', 'true');
+	await expect(page.locator(`.schema-edit .grid__row[data-id="${firstVisiblePropertyKey}"]`)).toHaveClass(
+		/grid__row--selected/,
+	);
+	await expect(page.locator('.property-panel--empty')).toHaveCount(0);
+});
+
+test(`Keep keyboard hints fixed and show disabled reorder handles while filtering`, async ({ page }) => {
+	await page.goto(`${adminURL}/profile-unification/schema`);
+
+	await expect.poll(() => getKeyboardHintsBottomGap(page.locator('.schema-grid__layout'))).toBeLessThan(1);
+	await page.locator('.schema-grid__alter-button').click();
+	await page.locator('.schema-edit__search-button').click();
+	const searchInput = page.locator('.schema-edit__search >> input');
+	await searchInput.fill('string');
+
+	const row = page.locator('.schema-edit .grid__row[data-id="email"]');
+	await row.click();
+	const handle = row.locator('xpath=..').locator('.draggable-wrapper__handle');
+	await expect(handle).toBeVisible();
+	await expect(handle).toBeDisabled();
+	await expect.poll(() => getKeyboardHintsBottomGap(page.locator('.schema-edit__layout'))).toBeLessThan(1);
+	await expect
+		.poll(() =>
+			row.evaluate((element) => {
+				const cell = element.querySelector('.grid__cell');
+				return getComputedStyle(element).backgroundColor === getComputedStyle(cell).backgroundColor;
+			}),
+		)
+		.toBe(true);
+
+	const visibleRows = page.locator('.schema-edit .grid__row--clickable:visible');
+	const rowIDs = await visibleRows.evaluateAll((elements) =>
+		elements.map((element: HTMLElement) => element.dataset.id),
+	);
+	await page.locator('.schema-edit .grid').focus();
+	await page.keyboard.press('Shift+ArrowDown');
+	await expect
+		.poll(() => visibleRows.evaluateAll((elements) => elements.map((element: HTMLElement) => element.dataset.id)))
+		.toEqual(rowIDs);
+
+	await searchInput.fill('');
+	await expect(handle).toBeEnabled();
+});
+
+test(`Keep profile schema search selection and expansion consistent`, async ({ page }) => {
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		schema.properties.push({
+			name: 'search_object',
+			prefilled: '',
+			role: 'Both',
+			type: {
+				kind: 'object',
+				properties: [
+					{
+						name: 'nested_match',
+						prefilled: '',
+						role: 'Both',
+						type: { kind: 'string' },
+						createRequired: false,
+						updateRequired: false,
+						readOptional: true,
+						nullable: false,
+						description: '',
+					},
+				],
+			},
+			createRequired: false,
+			updateRequired: false,
+			readOptional: true,
+			nullable: false,
+			description: '',
+		});
+		await route.fulfill({ response, json: schema });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await openProperty(page, 'email');
+	await page.locator('.schema-grid__search-button').click();
+	const searchInput = page.locator('.schema-grid__search >> input');
+	await searchInput.fill('dummy_id');
+	await expect(page.locator('.schema-grid .grid__row[data-id="dummy_id"]')).toHaveClass(/grid__row--selected/);
+	await expect(
+		page.locator('.property-details-panel__detail').first().locator('.property-details-panel__value'),
+	).toHaveText('dummy_id');
+
+	await searchInput.fill('no_matching_property');
+	await expect(page.locator('.schema-grid .grid__row--selected')).toHaveCount(0);
+	await expect(page.locator('.schema-grid__workspace')).not.toHaveClass(/schema-grid__workspace--with-panel/);
+	const readOnlyHints = page.locator('.schema-grid .grid-keyboard-hints__hint');
+	await expect(readOnlyHints.nth(0)).toHaveAttribute('aria-disabled', 'true');
+	await expect(readOnlyHints.nth(1)).toHaveAttribute('aria-disabled', 'true');
+	await expect(page.locator('.schema-grid__expand-all-button')).toHaveAttribute('disabled');
+	await expect(page.locator('.schema-grid__collapse-all-button')).toHaveAttribute('disabled');
+
+	await searchInput.fill('nested_match');
+	const readOnlyNestedRow = page.locator('.schema-grid .grid__row[data-id="search_object.nested_match"]');
+	await expect(readOnlyNestedRow).toBeVisible();
+	await expect(readOnlyNestedRow.locator('xpath=..')).toHaveClass(/grid__nested-rows--expanded/);
+	await expect(readOnlyHints.nth(0)).not.toHaveAttribute('aria-disabled', 'true');
+	await expect(readOnlyHints.nth(1)).toHaveAttribute('aria-disabled', 'true');
+	await expect(page.locator('.schema-grid .grid__row--selected')).toHaveCount(0);
+
+	await searchInput.fill('');
+	await expect(readOnlyNestedRow).toBeHidden();
+	await expect(page.locator('.schema-grid .grid__row--selected')).toHaveCount(0);
+	await searchInput.blur();
+	await page.locator('.schema-grid__alter-button').click();
+
+	await page.locator('.schema-edit__search-button').click();
+	const editSearchInput = page.locator('.schema-edit__search >> input');
+	await editSearchInput.fill('nested_match');
+	const editNestedRow = page.locator('.schema-edit .grid__row[data-id="search_object.nested_match"]');
+	await expect(editNestedRow).toBeVisible();
+	await expect(
+		editNestedRow.locator(
+			'xpath=ancestor::div[contains(concat(" ", normalize-space(@class), " "), " grid__nested-rows ")][1]',
+		),
+	).toHaveClass(/grid__nested-rows--expanded/);
+	await expect(page.locator('.schema-edit__expand-all-button')).toHaveAttribute('disabled');
+	await expect(page.locator('.schema-edit__collapse-all-button')).toHaveAttribute('disabled');
+	const editHints = page.locator('.schema-edit .grid-keyboard-hints__hint');
+	await expect(editHints.nth(0)).not.toHaveAttribute('aria-disabled', 'true');
+	await expect(editHints.nth(1)).toHaveAttribute('aria-disabled', 'true');
+	await expect(editHints.nth(2)).toHaveAttribute('aria-disabled', 'true');
+
+	await editSearchInput.fill('no_matching_property');
+	await expect(page.locator('.property-panel--empty')).toBeEmpty();
+	await expect(editHints.nth(0)).toHaveAttribute('aria-disabled', 'true');
+	await expect(editHints.nth(1)).toHaveAttribute('aria-disabled', 'true');
+	await expect(editHints.nth(2)).toHaveAttribute('aria-disabled', 'true');
+	await expect(editSearchInput).toBeFocused();
+
+	await editSearchInput.fill('nested_match');
+	await expect(editNestedRow).toBeVisible();
+	await editSearchInput.fill('');
+	await expect(editNestedRow).toBeHidden();
 });
 
 test(`Navigate profile schema properties when focus is outside an arrow-key control`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
 
 	const readOnlyRows = page.locator('.schema-grid .grid__row--clickable:visible');
+	await expect.poll(() => readOnlyRows.count()).toBeGreaterThan(3);
 	const readOnlyRowIDs = await readOnlyRows.evaluateAll((rows) => rows.map((row: HTMLElement) => row.dataset.id));
-	expect(readOnlyRowIDs.length).toBeGreaterThan(3);
 
 	const editSchemaButton = page.locator('.schema-grid__alter-button');
 	await editSchemaButton.focus();
@@ -122,7 +288,7 @@ test(`Navigate profile schema properties when focus is outside an arrow-key cont
 	);
 
 	const cancelButton = page.locator('.schema-edit__header-cancel-button');
-	await cancelButton.focus();
+	await cancelButton.locator('button').focus();
 	await page.keyboard.press('ArrowDown');
 	await expect(page.locator(`.schema-edit .grid__row[data-id="${readOnlyRowIDs[2]}"]`)).toHaveClass(
 		/grid__row--selected/,
@@ -138,7 +304,7 @@ test(`Navigate profile schema properties when focus is outside an arrow-key cont
 	);
 
 	const rowIDsBeforeMove = await editRows.evaluateAll((rows) => rows.map((row: HTMLElement) => row.dataset.id));
-	await cancelButton.focus();
+	await cancelButton.locator('button').focus();
 	await page.keyboard.press('Shift+ArrowDown');
 	await expect
 		.poll(async () => {
@@ -162,7 +328,7 @@ test(`Navigate profile schema properties when focus is outside an arrow-key cont
 	await expect(movedRow.locator('.schema-edit__property-actions')).toHaveText('Reordered');
 	await expect(modifiedDots).toHaveCount(0);
 
-	await cancelButton.focus();
+	await cancelButton.locator('button').focus();
 	await page.keyboard.press('Shift+ArrowUp');
 	await expect
 		.poll(async () => {
@@ -172,6 +338,65 @@ test(`Navigate profile schema properties when focus is outside an arrow-key cont
 		.toBe(rowIDsBeforeMove.indexOf(readOnlyRowIDs[2]));
 	await expect(movedRow.locator('.schema-edit__property-actions')).toBeEmpty();
 	await expect(page.locator('.schema-edit__change-count')).toContainText('No pending changes');
+});
+
+test(`Keep an object expanded when reordering it`, async ({ page }) => {
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		schema.properties.push(
+			{
+				name: 'expanded_object',
+				prefilled: '',
+				role: 'Both',
+				type: {
+					kind: 'object',
+					properties: [
+						{
+							name: 'child',
+							prefilled: '',
+							role: 'Both',
+							type: { kind: 'string' },
+							createRequired: false,
+							updateRequired: false,
+							readOptional: true,
+							nullable: false,
+							description: '',
+						},
+					],
+				},
+				createRequired: false,
+				updateRequired: false,
+				readOptional: true,
+				nullable: false,
+				description: '',
+			},
+			{
+				name: 'following_property',
+				prefilled: '',
+				role: 'Both',
+				type: { kind: 'string' },
+				createRequired: false,
+				updateRequired: false,
+				readOptional: true,
+				nullable: false,
+				description: '',
+			},
+		);
+		await route.fulfill({ response, json: schema });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+
+	const objectRow = page.locator('.schema-edit .grid__row[data-id="expanded_object"]');
+	const objectGroup = objectRow.locator('xpath=..');
+	await objectRow.locator('xpath=preceding-sibling::*[contains(@class, "grid__row-expand")]').click();
+	await expect(objectGroup).toHaveClass(/grid__nested-rows--expanded/);
+
+	await page.keyboard.press('Shift+ArrowDown');
+	await expect(objectGroup).toHaveClass(/grid__nested-rows--expanded/);
+	await expect(page.locator('.schema-edit .grid__row[data-id="expanded_object.child"]')).toBeVisible();
 });
 
 test(`Warn before leaving pending profile schema changes`, async ({ page }) => {
@@ -189,6 +414,7 @@ test(`Warn before leaving pending profile schema changes`, async ({ page }) => {
 	await expect(dialog).toContainText('The pending schema changes will be discarded.');
 	await dialog.getByText('Keep editing', { exact: true }).click();
 	await expect(page.locator('.schema-edit')).toBeVisible();
+	await expect(dialog).not.toBeVisible();
 
 	await page.evaluate(() => window.history.back());
 	await expect(dialog).toBeVisible();
@@ -217,7 +443,7 @@ test(`Restore pointer interaction after discarding schema changes with Cancel`, 
 	await expect(page.locator('.property-details-panel')).toBeVisible();
 });
 
-test(`Discard unsaved property changes when selecting another property`, async ({ page }) => {
+test(`Keep an unsaved property selected when selecting another property`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
 	await page.click('.schema-grid__alter-button');
 	const applyButton = page.locator('.schema-edit__header-apply-button');
@@ -235,12 +461,77 @@ test(`Discard unsaved property changes when selecting another property`, async (
 	await expect(propertyPanel.locator('.property-panel__remove')).toHaveCount(0);
 	await page.waitForTimeout(100);
 	await openProperty(page, 'phone_numbers');
-
-	const dialog = page.locator('.alert-dialog', { hasText: 'Discard unsaved changes?' });
-	await expect(dialog).toBeVisible();
-	await dialog.getByText('Discard changes', { exact: true }).click();
-	await expect(page.locator('.schema-edit .grid__row[data-id="phone_numbers"]')).toHaveClass(/grid__row--selected/);
+	await expect(page.locator('.schema-edit .grid__row[data-id="email"]')).toHaveClass(/grid__row--selected/);
+	await expect(page.locator('.schema-edit .grid__row[data-id="phone_numbers"]')).not.toHaveClass(
+		/grid__row--selected/,
+	);
+	await expect(propertyPanel.locator('sl-animation')).toHaveJSProperty('play', true);
+	await propertyPanel.locator('.property-panel__cancel').click();
 	await expect(applyButton).toHaveAttribute('disabled');
+});
+
+test(`Keep contextual and form actions in their expected tab order`, async ({ page }) => {
+	await page.route('**/v1/connections', async (route) => {
+		const response = await route.fetch();
+		const body = await response.json();
+		body.connections.push({
+			id: '9zQ4Tn7B3mS6',
+			name: 'Schema test source',
+			connector: 'dummy',
+			connectorType: 'SDK',
+			role: 'Source',
+			storage: '',
+			compression: '',
+			strategy: null,
+			sendingMode: null,
+			hasSettings: false,
+			health: 'Healthy',
+			linkedConnections: null,
+		});
+		await route.fulfill({ response, json: body });
+	});
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await openProperty(page, 'email');
+
+	const propertyPanel = page.locator('.property-panel');
+	const primarySource = propertyPanel.locator('.property-dialog__primary-source');
+	const primarySourceInput = primarySource.locator('[part="display-input"]');
+	const removeButton = propertyPanel.locator('.property-panel__remove');
+	await primarySourceInput.focus();
+	await expect(primarySourceInput).toBeFocused();
+	await page.keyboard.press('Tab');
+	await expect(primarySourceInput).not.toBeFocused();
+	await expect(removeButton).not.toBeFocused();
+
+	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Unsaved description');
+	await expect(propertyPanel.locator('.property-panel__cancel')).toBeVisible();
+	await primarySourceInput.focus();
+	await expect(primarySourceInput).toBeFocused();
+	await page.keyboard.press('Tab');
+	await expect(propertyPanel.locator('.property-panel__cancel')).toBeFocused();
+	await page.keyboard.press('Tab');
+	await expect(propertyPanel.locator('.property-dialog__save')).toBeFocused();
+	await propertyPanel.locator('.property-panel__cancel').click();
+});
+
+test(`Keep an unsaved property visible while filtering`, async ({ page }) => {
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await openProperty(page, 'email');
+
+	const propertyPanel = page.locator('.property-panel');
+	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Unsaved description');
+	await page.locator('.schema-edit__search-button').click();
+	await page.locator('.schema-edit__search >> input').fill('dummy_id');
+
+	await expect(page.locator('.schema-edit .grid__row[data-id="email"]')).toHaveClass(/grid__row--selected/);
+	await expect(page.locator('.schema-edit .grid__row[data-id="dummy_id"]')).toBeVisible();
+	await expect(page.getByText('Reorder', { exact: true }).locator('..')).toHaveAttribute('aria-disabled', 'true');
+
+	await propertyPanel.locator('.property-panel__cancel').click();
+	await expect(page.locator('.schema-edit .grid__row[data-id="email"]')).toHaveCount(0);
+	await expect(page.locator('.schema-edit .grid__row[data-id="dummy_id"]')).toHaveClass(/grid__row--selected/);
 });
 
 test(`View property details and keep the selection when editing`, async ({ page }) => {
@@ -363,6 +654,180 @@ test(`View property details and keep the selection when editing`, async ({ page 
 	await expect(selectedRow).toHaveClass(/grid__row--selected/);
 });
 
+test(`Keep object types unchanged after canceling the schema review`, async ({ page }) => {
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		schema.properties.push({
+			name: 'review_object',
+			prefilled: '',
+			role: 'Both',
+			type: {
+				kind: 'object',
+				properties: [
+					{
+						name: 'child',
+						prefilled: '',
+						role: 'Both',
+						type: { kind: 'string' },
+						createRequired: false,
+						updateRequired: false,
+						readOptional: true,
+						nullable: false,
+						description: '',
+					},
+				],
+			},
+			createRequired: false,
+			updateRequired: false,
+			readOptional: true,
+			nullable: false,
+			description: '',
+		});
+		await route.fulfill({ response, json: schema });
+	});
+	await page.route('**/v1/profiles/schema/preview', async (route) => {
+		await route.fulfill({ json: { queries: [] } });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await expandAllObjects(page);
+	await openProperty(page, 'review_object.child');
+
+	const propertyPanel = page.locator('.property-panel');
+	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Updated child');
+	await propertyPanel.locator('.property-dialog__save').click();
+	await page.locator('.schema-edit__header-apply-button').click();
+
+	const reviewDialog = page.locator('.schema-edit__queries');
+	await expect(reviewDialog).toBeVisible();
+	await reviewDialog.getByText('Cancel', { exact: true }).click();
+	await expect(reviewDialog).not.toBeVisible();
+
+	await openProperty(page, 'review_object');
+	await expect(propertyPanel.locator('.property-form__modified-dot')).toHaveCount(0);
+});
+
+test(`Keep the schema review closed when its preview finishes`, async ({ page }) => {
+	let finishPreview = () => {};
+	const previewResponse = new Promise<void>((resolve) => {
+		finishPreview = resolve;
+	});
+	await page.route('**/v1/profiles/schema/preview', async (route) => {
+		await previewResponse;
+		await route.fulfill({ json: { queries: ['SELECT 1'] } });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await openProperty(page, 'email');
+
+	const propertyPanel = page.locator('.property-panel');
+	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Updated description');
+	await propertyPanel.locator('.property-dialog__save').click();
+	await page.locator('.schema-edit__header-apply-button').click();
+
+	const reviewDialog = page.locator('.schema-edit__queries');
+	await expect(reviewDialog).toHaveJSProperty('open', true);
+	await page.keyboard.press('Escape');
+	await expect(reviewDialog).toHaveJSProperty('open', false);
+
+	const previewResponsePromise = page.waitForResponse((response) =>
+		response.url().endsWith('/profiles/schema/preview'),
+	);
+	finishPreview();
+	await previewResponsePromise;
+	await page.waitForTimeout(400);
+	await expect(reviewDialog).toHaveJSProperty('open', false);
+
+	await page.locator('.schema-edit__header-cancel-button').click();
+	await page.locator('.alert-dialog', { hasText: 'Discard unsaved changes?' }).getByText('Discard and leave').click();
+	await expect(page.locator('.schema-edit')).toHaveCount(0);
+});
+
+test(`Keep the schema review open while applying changes`, async ({ page }) => {
+	let finishAlter = () => {};
+	const alterResponse = new Promise<void>((resolve) => {
+		finishAlter = resolve;
+	});
+	await page.route('**/v1/profiles/schema/preview', async (route) => {
+		await route.fulfill({ json: { queries: [] } });
+	});
+	await page.route('**/v1/profiles/schema', async (route) => {
+		if (route.request().method() !== 'PUT') {
+			await route.continue();
+			return;
+		}
+		await alterResponse;
+		await route.fulfill({ json: {} });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await openProperty(page, 'email');
+
+	const propertyPanel = page.locator('.property-panel');
+	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Updated description');
+	await propertyPanel.locator('.property-dialog__save').click();
+	await page.locator('.schema-edit__header-apply-button').click();
+
+	const reviewDialog = page.locator('.schema-edit__queries');
+	await expect(reviewDialog).toBeVisible();
+	const alterRequestPromise = page.waitForRequest(
+		(request) => request.url().endsWith('/profiles/schema') && request.method() === 'PUT',
+	);
+	await page.locator('.schema-edit__apply-alter-button').click();
+	await alterRequestPromise;
+
+	await expect(reviewDialog.getByText('Cancel', { exact: true })).toHaveAttribute('disabled');
+	await page.keyboard.press('Escape');
+	await expect(reviewDialog).toHaveJSProperty('open', true);
+
+	finishAlter();
+	await expect(page.locator('.schema-edit')).toHaveCount(0);
+});
+
+test(`Preserve create-required on top-level properties in the schema preview`, async ({ page }) => {
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		schema.properties.push({
+			name: 'create_required_property',
+			prefilled: '',
+			role: 'Both',
+			type: { kind: 'string' },
+			createRequired: true,
+			updateRequired: false,
+			readOptional: true,
+			nullable: false,
+			description: '',
+		});
+		await route.fulfill({ response, json: schema });
+	});
+	await page.route('**/v1/profiles/schema/preview', async (route) => {
+		await route.fulfill({ json: { queries: [] } });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await openProperty(page, 'create_required_property');
+
+	const propertyPanel = page.locator('.property-panel');
+	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Updated description');
+	await propertyPanel.locator('.property-dialog__save').click();
+
+	const previewRequestPromise = page.waitForRequest(
+		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
+	);
+	await page.locator('.schema-edit__header-apply-button').click();
+	const previewRequest = await previewRequestPromise;
+	const previewSchema = previewRequest.postDataJSON().schema as ObjectType;
+	const property = previewSchema.properties.find((candidate) => candidate.name === 'create_required_property');
+	expect(property).toHaveProperty('createRequired', true);
+	expect(property).not.toHaveProperty('createRequire');
+});
+
 test(`Add schema property`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
 
@@ -384,10 +849,22 @@ test(`Add schema property`, async ({ page }) => {
 	}, 'foo');
 
 	await page.keyboard.press('Tab');
+	await expect(panel.locator('.property-type-selector__structure-trigger')).toBeFocused();
+	await expect(panel.locator('.property-type-selector__structure-dropdown')).toHaveJSProperty('open', false);
+	await page.keyboard.press('ArrowDown');
 	await expect(panel.locator('.property-type-selector__structure-dropdown')).toHaveJSProperty('open', true);
-	await panel.locator('.property-type-selector__structure-option[value="one"]').click();
+	await expect(panel.locator('[data-structure-option="one"]')).toBeFocused();
+	await page.keyboard.press('Enter');
+	await expect(panel.locator('.property-type-selector__trigger')).toBeFocused();
+	await expect(panel.locator('.property-type-selector__dropdown')).toHaveJSProperty('open', false);
+	await page.keyboard.press('ArrowDown');
 	await expect(panel.locator('.property-type-selector__dropdown')).toHaveJSProperty('open', true);
-	await panel.locator('[data-type-option="string"]').click();
+	await expect(panel.locator('[data-type-option="string"]')).toBeFocused();
+	await page.keyboard.press('ArrowDown');
+	await expect(panel.locator('[data-type-option="int"]')).toBeFocused();
+	await page.keyboard.press('ArrowUp');
+	await expect(panel.locator('[data-type-option="string"]')).toBeFocused();
+	await page.keyboard.press('Enter');
 
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
 
@@ -409,6 +886,157 @@ test(`Add schema property`, async ({ page }) => {
 	cell = page.locator('.grid__row > .grid__cell:first-child > .grid__cell-content', { hasText: /^foo$/ });
 	await expect(cell).toBeAttached();
 	await expect(cell.locator('xpath=../following-sibling::*[1]')).toContainText('string');
+});
+
+test(`Clear the primary source when changing a new property to an array`, async ({ page }) => {
+	const sourceID = '9zQ4Tn7B3mS6';
+	await page.route('**/v1/connections', async (route) => {
+		const response = await route.fetch();
+		const body = await response.json();
+		body.connections.push({
+			id: sourceID,
+			name: 'Schema test source',
+			connector: 'dummy',
+			connectorType: 'SDK',
+			role: 'Source',
+			storage: '',
+			compression: '',
+			strategy: null,
+			sendingMode: null,
+			hasSettings: false,
+			health: 'Healthy',
+			linkedConnections: null,
+		});
+		await route.fulfill({ response, json: body });
+	});
+	await page.route('**/v1/profiles/schema/preview', async (route) => {
+		await route.fulfill({ json: { queries: [] } });
+	});
+	await page.route('**/v1/profiles/schema', async (route) => {
+		if (route.request().method() === 'PUT') {
+			await route.fulfill({ json: {} });
+			return;
+		}
+		await route.continue();
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await page.click('.schema-edit__add-property');
+
+	const propertyPanel = page.locator('.property-panel');
+	await propertyPanel.locator('.property-dialog__name-input input').fill('array_without_primary_source');
+	await selectPropertyType(page, 'string');
+	const primarySource = propertyPanel.locator('.property-dialog__primary-source');
+	await primarySource.click();
+	await primarySource.locator(`sl-option[value="${sourceID}"]`).click();
+	await expect(primarySource).toHaveJSProperty('open', false);
+	await primarySource.focus();
+	await page.keyboard.press('Tab');
+	await expect(propertyPanel.locator('.property-panel__cancel')).toBeFocused();
+	await page.keyboard.press('Tab');
+	await expect(propertyPanel.locator('.property-dialog__save')).toBeFocused();
+
+	await propertyPanel.locator('.property-type-selector__structure-trigger').click();
+	await propertyPanel.locator('[data-structure-option="array"]').click();
+	await expect(primarySource).toHaveCount(0);
+	await expect(propertyPanel.locator('.property-type-selector__trigger')).toBeFocused();
+	await expect(propertyPanel.locator('.property-type-selector__dropdown')).toHaveJSProperty('open', false);
+	await propertyPanel.locator('.property-dialog__save').click();
+
+	const alterRequestPromise = page.waitForRequest(
+		(request) => request.url().endsWith('/profiles/schema') && request.method() === 'PUT',
+	);
+	await page.locator('.schema-edit__header-apply-button').click();
+	await page.locator('.schema-edit__apply-alter-button').click();
+	const alterRequest = await alterRequestPromise;
+	expect(alterRequest.postDataJSON().primarySources).not.toHaveProperty('array_without_primary_source');
+	await expect(page.locator('.schema-edit')).toHaveCount(0);
+});
+
+test(`Only offer user-capable source connections as primary sources`, async ({ page }) => {
+	const eventSourceID = '7B3mN9qK2xA';
+	const userSourceID = '9zQ4Tn7B3mS6';
+	await page.route('**/v1/connections', async (route) => {
+		const response = await route.fetch();
+		const body = await response.json();
+		body.connections.push(
+			{
+				id: eventSourceID,
+				name: 'Event-only source',
+				connector: 'kafka',
+				connectorType: 'MessageBroker',
+				role: 'Source',
+				storage: '',
+				compression: '',
+				strategy: null,
+				sendingMode: null,
+				hasSettings: true,
+				health: 'Healthy',
+				linkedConnections: null,
+			},
+			{
+				id: userSourceID,
+				name: 'User-capable source',
+				connector: 'dummy',
+				connectorType: 'SDK',
+				role: 'Source',
+				storage: '',
+				compression: '',
+				strategy: null,
+				sendingMode: null,
+				hasSettings: false,
+				health: 'Healthy',
+				linkedConnections: null,
+			},
+		);
+		await route.fulfill({ response, json: body });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await page.click('.schema-edit__add-property');
+
+	const propertyPanel = page.locator('.property-panel');
+	await propertyPanel.locator('.property-dialog__name-input input').fill('property_with_primary_source');
+	await selectPropertyType(page, 'string');
+	const primarySource = propertyPanel.locator('.property-dialog__primary-source');
+	await primarySource.click();
+	await expect(primarySource.locator(`sl-option[value="${userSourceID}"]`)).toHaveCount(1);
+	await expect(primarySource.locator(`sl-option[value="${eventSourceID}"]`)).toHaveCount(0);
+});
+
+test(`Validate string length constraints before adding a property`, async ({ page }) => {
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await page.click('.schema-edit__add-property');
+
+	const propertyPanel = page.locator('.property-panel');
+	await propertyPanel.locator('.property-dialog__name-input input').fill('string_with_length_constraints');
+	await selectPropertyType(page, 'string');
+
+	const lengthConstraints = propertyPanel.locator('.property-form__constraints--length sl-input');
+	const maxCharacters = lengthConstraints.nth(0).locator('input');
+	const maxBytes = lengthConstraints.nth(1).locator('input');
+	const addedProperty = page.locator('.schema-edit .grid__row[data-id="string_with_length_constraints"]');
+
+	await maxCharacters.fill('0');
+	await propertyPanel.locator('.property-dialog__save').click();
+	await expect(addedProperty).toHaveCount(0);
+
+	await maxCharacters.fill('1');
+	await maxBytes.fill('1.5');
+	await propertyPanel.locator('.property-dialog__save').click();
+	await expect(addedProperty).toHaveCount(0);
+
+	await maxBytes.fill('4294967296');
+	await propertyPanel.locator('.property-dialog__save').click();
+	await expect(addedProperty).toHaveCount(0);
+
+	await maxCharacters.fill('');
+	await maxBytes.fill('');
+	await propertyPanel.locator('.property-dialog__save').click();
+	await expect(addedProperty).toBeVisible();
 });
 
 test(`Edit schema property`, async ({ page }) => {
@@ -445,6 +1073,11 @@ test(`Edit schema property`, async ({ page }) => {
 	await expect(nameInput).toHaveAttribute('readonly', '');
 	await expect(changeNameButton).toBeVisible();
 	await changeNameButton.click();
+	await nativeNameInput.fill('_foo');
+	await expect(page.locator('.property-dialog__control--name .property-dialog__control-error')).toContainText(
+		'Profile schema property names cannot start with an underscore',
+	);
+	await expect(page.locator('.property-dialog__save')).toHaveAttribute('disabled');
 
 	await nameInput.evaluate((el: any, value) => {
 		el.value = value;
@@ -477,6 +1110,220 @@ test(`Edit schema property`, async ({ page }) => {
 	barCell = page.locator('.grid__row > .grid__cell:first-child > .grid__cell-content', { hasText: /^bar$/ });
 	await expect(fooCell).not.toBeAttached();
 	await expect(barCell).toBeAttached();
+});
+
+test(`Restore the original property name without leaving pending changes`, async ({ page }) => {
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		schema.properties.push({
+			name: 'original_property_name',
+			prefilled: '',
+			role: 'Both',
+			type: { kind: 'string' },
+			createRequired: false,
+			updateRequired: false,
+			readOptional: true,
+			nullable: false,
+			description: '',
+		});
+		await route.fulfill({ response, json: schema });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await openProperty(page, 'original_property_name');
+	const firstVisiblePropertyKey = await page
+		.locator('.schema-edit .grid__row--clickable:visible')
+		.first()
+		.getAttribute('data-id');
+	expect(firstVisiblePropertyKey).not.toBeNull();
+
+	const propertyPanel = page.locator('.property-panel');
+	const nameInput = propertyPanel.locator('.property-dialog__name-input input');
+	const changeNameButton = propertyPanel.locator('.property-form__change-name');
+
+	await changeNameButton.click();
+	await nameInput.fill('temporary_property_name');
+	await propertyPanel.locator('.property-dialog__save').click();
+	await expect(page.locator('.schema-edit__change-count')).toContainText('1 pending change');
+	await page.locator('.schema-edit__filter-button').click();
+	const showChanged = page.locator('.schema-edit__show-changed');
+	await showChanged.click();
+	await page.locator('.schema-edit__filter-button').click();
+	await expect(page.locator('.schema-edit .grid__row[data-id="original_property_name"]')).toHaveClass(
+		/grid__row--selected/,
+	);
+
+	await changeNameButton.click();
+	await nameInput.fill('original_property_name');
+	await propertyPanel.locator('.property-dialog__save').click();
+	await expect(page.locator('.schema-edit__change-count')).toContainText('No pending changes');
+	await expect(page.locator('.schema-edit__header-apply-button')).toHaveAttribute('disabled');
+	await expect(page.locator('.schema-edit .grid__row')).toHaveCount(0);
+	await expect(page.locator('.property-panel--empty')).toBeEmpty();
+
+	await page.locator('.schema-edit__filter-button').click();
+	await showChanged.click();
+	await expect(page.locator(`.schema-edit .grid__row[data-id="${firstVisiblePropertyKey}"]`)).toHaveClass(
+		/grid__row--selected/,
+	);
+});
+
+test(`Remove a renamed property without sending its stale RePath`, async ({ page }) => {
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		schema.properties.push({
+			name: 'property_to_rename_and_remove',
+			prefilled: '',
+			role: 'Both',
+			type: { kind: 'string' },
+			createRequired: false,
+			updateRequired: false,
+			readOptional: true,
+			nullable: false,
+			description: '',
+		});
+		await route.fulfill({ response, json: schema });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await openProperty(page, 'property_to_rename_and_remove');
+
+	const propertyPanel = page.locator('.property-panel');
+	await propertyPanel.locator('.property-form__change-name').click();
+	await propertyPanel.locator('.property-dialog__name-input input').fill('temporary_property_name');
+	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__remove').click();
+	await page.click('.schema-edit__confirm-remove-property');
+
+	const previewRequestPromise = page.waitForRequest(
+		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
+	);
+	await page.click('.schema-edit__header-apply-button');
+	const previewRequest = await previewRequestPromise;
+	expect(previewRequest.postDataJSON().rePaths).toEqual({});
+});
+
+test(`Remove a replacement property without sending its stale RePath`, async ({ page }) => {
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		schema.properties.push({
+			name: 'property_to_replace_and_remove',
+			prefilled: '',
+			role: 'Both',
+			type: { kind: 'string' },
+			createRequired: false,
+			updateRequired: false,
+			readOptional: true,
+			nullable: false,
+			description: '',
+		});
+		await route.fulfill({ response, json: schema });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await removeProperty(page, 'property_to_replace_and_remove');
+
+	await page.click('.schema-edit__add-property');
+	const propertyPanel = page.locator('.property-panel');
+	await propertyPanel.locator('.property-dialog__name-input input').fill('property_to_replace_and_remove');
+	await selectPropertyType(page, 'string');
+	await propertyPanel.locator('.property-dialog__save').click();
+	await removeProperty(page, 'property_to_replace_and_remove');
+
+	const previewRequestPromise = page.waitForRequest(
+		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
+	);
+	await page.click('.schema-edit__header-apply-button');
+	const previewRequest = await previewRequestPromise;
+	expect(previewRequest.postDataJSON().rePaths).toEqual({});
+});
+
+test(`Do not show modified field indicators on a replacement property`, async ({ page }) => {
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		schema.properties.push({
+			name: 'property_to_replace',
+			prefilled: '',
+			role: 'Both',
+			type: { kind: 'string' },
+			createRequired: false,
+			updateRequired: false,
+			readOptional: true,
+			nullable: false,
+			description: 'Original description',
+		});
+		await route.fulfill({ response, json: schema });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await removeProperty(page, 'property_to_replace');
+
+	await page.click('.schema-edit__add-property');
+	const propertyPanel = page.locator('.property-panel');
+	await propertyPanel.locator('.property-dialog__name-input input').fill('property_to_replace');
+	await selectPropertyType(page, 'boolean');
+	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Replacement description');
+	await propertyPanel.locator('.property-dialog__save').click();
+
+	await expect(propertyPanel.locator('.schema-edit__property-status')).toHaveText('Added');
+	await expect(propertyPanel.locator('.property-form__modified-dot')).toHaveCount(0);
+});
+
+test(`Rename an existing property to a deleted property's name`, async ({ page }) => {
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		schema.properties.push(
+			{
+				name: 'property_to_rename',
+				prefilled: '',
+				role: 'Both',
+				type: { kind: 'string' },
+				createRequired: false,
+				updateRequired: false,
+				readOptional: true,
+				nullable: false,
+				description: '',
+			},
+			{
+				name: 'deleted_property_name',
+				prefilled: '',
+				role: 'Both',
+				type: { kind: 'string' },
+				createRequired: false,
+				updateRequired: false,
+				readOptional: true,
+				nullable: false,
+				description: '',
+			},
+		);
+		await route.fulfill({ response, json: schema });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await removeProperty(page, 'deleted_property_name');
+	await openProperty(page, 'property_to_rename');
+
+	const propertyPanel = page.locator('.property-panel');
+	await propertyPanel.locator('.property-form__change-name').click();
+	await propertyPanel.locator('.property-dialog__name-input input').fill('deleted_property_name');
+	await propertyPanel.locator('.property-dialog__save').click();
+
+	const previewRequestPromise = page.waitForRequest(
+		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
+	);
+	await page.click('.schema-edit__header-apply-button');
+	const previewRequest = await previewRequestPromise;
+	expect(previewRequest.postDataJSON().rePaths).toEqual({ deleted_property_name: 'property_to_rename' });
 });
 
 test(`Check that RePaths are sent correctly`, async ({ page }) => {
@@ -547,6 +1394,234 @@ test(`Check that RePaths are sent correctly`, async ({ page }) => {
 	await expect(barCell).toBeAttached();
 });
 
+test(`Reuse a property name more than once before applying schema changes`, async ({ page }) => {
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		schema.properties.push({
+			name: 'reused_property_name',
+			prefilled: '',
+			role: 'Both',
+			type: { kind: 'string' },
+			createRequired: false,
+			updateRequired: false,
+			readOptional: true,
+			nullable: false,
+			description: '',
+		});
+		await route.fulfill({ response, json: schema });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+
+	const renameProperty = async (key: string, name: string) => {
+		await openProperty(page, key);
+		const propertyPanel = page.locator('.property-panel');
+		await propertyPanel.locator('.property-form__change-name').click();
+		await propertyPanel.locator('.property-dialog__name-input input').fill(name);
+		await propertyPanel.locator('.property-dialog__save').click();
+	};
+	const addStringProperty = async () => {
+		await page.click('.schema-edit__add-property');
+		const propertyPanel = page.locator('.property-panel');
+		await propertyPanel.locator('.property-dialog__name-input input').fill('reused_property_name');
+		await selectPropertyType(page, 'string');
+		await propertyPanel.locator('.property-dialog__save').click();
+	};
+
+	await renameProperty('reused_property_name', 'first_renamed_property');
+	await addStringProperty();
+	await renameProperty('reused_property_name-2', 'second_renamed_property');
+	await addStringProperty();
+
+	const thirdProperty = page.locator('.schema-edit .grid__row[data-id="reused_property_name-3"]');
+	await expect(thirdProperty).toBeVisible();
+	await expect(thirdProperty.locator('.grid__cell').first()).toContainText('reused_property_name');
+});
+
+test(`Remove a replacement property's RePath when renaming it`, async ({ page }) => {
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		schema.properties.push({
+			name: 'replacement_name',
+			prefilled: '',
+			role: 'Both',
+			type: { kind: 'string' },
+			createRequired: false,
+			updateRequired: false,
+			readOptional: true,
+			nullable: false,
+			description: '',
+		});
+		await route.fulfill({ response, json: schema });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+
+	const propertyPanel = page.locator('.property-panel');
+	await openProperty(page, 'replacement_name');
+	await propertyPanel.locator('.property-form__change-name').click();
+	await propertyPanel.locator('.property-dialog__name-input input').fill('renamed_original');
+	await propertyPanel.locator('.property-dialog__save').click();
+
+	await page.click('.schema-edit__add-property');
+	await propertyPanel.locator('.property-dialog__name-input input').fill('replacement_name');
+	await selectPropertyType(page, 'string');
+	await propertyPanel.locator('.property-dialog__save').click();
+
+	await openProperty(page, 'replacement_name-2');
+	await propertyPanel.locator('.property-form__change-name').click();
+	await propertyPanel.locator('.property-dialog__name-input input').fill('renamed_replacement');
+	await propertyPanel.locator('.property-dialog__save').click();
+
+	const previewRequestPromise = page.waitForRequest(
+		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
+	);
+	await page.click('.schema-edit__header-apply-button');
+	const previewRequest = await previewRequestPromise;
+	expect(previewRequest.postDataJSON().rePaths).toEqual({ renamed_original: 'replacement_name' });
+});
+
+test(`Allow matching property names under different object parents`, async ({ page }) => {
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		const createProperty = (name: string, type: Property['type']): Property => ({
+			name,
+			prefilled: '',
+			role: 'Both',
+			type,
+			createRequired: false,
+			updateRequired: false,
+			readOptional: true,
+			nullable: false,
+			description: '',
+		});
+		schema.properties.push(
+			createProperty('duplicate_scope', {
+				kind: 'object',
+				properties: [
+					createProperty('billing', {
+						kind: 'object',
+						properties: [
+							createProperty('matching_add_name', { kind: 'string' }),
+							createProperty('matching_rename_name', { kind: 'string' }),
+						],
+					}),
+					createProperty('shipping', {
+						kind: 'object',
+						properties: [createProperty('shipping_child', { kind: 'string' })],
+					}),
+				],
+			}),
+		);
+		await route.fulfill({ response, json: schema });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await page.click('.schema-edit__expand-all-button');
+
+	await page.click('.schema-edit__add-property');
+	const propertyPanel = page.locator('.property-panel');
+	await propertyPanel.locator('.property-form__parent').evaluate((select: any) => {
+		select.value = 'duplicate_scope.shipping';
+		select.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
+	});
+	await propertyPanel.locator('.property-dialog__name-input input').fill('matching_add_name');
+	await selectPropertyType(page, 'string');
+	await propertyPanel.locator('.property-dialog__save').click();
+	await expect(page.locator('.grid__row[data-id="duplicate_scope.shipping.matching_add_name"]')).toBeVisible();
+
+	await openProperty(page, 'duplicate_scope.shipping.shipping_child');
+	await propertyPanel.locator('.property-form__change-name').click();
+	await propertyPanel.locator('.property-dialog__name-input input').fill('matching_rename_name');
+	await propertyPanel.locator('.property-dialog__save').click();
+	await expect(
+		page.locator('.schema-edit .grid__row[data-id="duplicate_scope.shipping.shipping_child"]'),
+	).toContainText('matching_rename_name');
+});
+
+test(`Support hasOwnProperty as a profile schema property name`, async ({ page }) => {
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		const createProperty = (name: string, type: Property['type']): Property => ({
+			name,
+			prefilled: '',
+			role: 'Both',
+			type,
+			createRequired: false,
+			updateRequired: false,
+			readOptional: true,
+			nullable: false,
+			description: '',
+		});
+		schema.properties.push(
+			createProperty('hasOwnProperty', { kind: 'string' }),
+			createProperty('property_container', {
+				kind: 'object',
+				properties: [createProperty('existing_child', { kind: 'string' })],
+			}),
+		);
+		await route.fulfill({ response, json: schema });
+	});
+	await page.route('**/v1/profiles/schema/preview', async (route) => {
+		await route.fulfill({ json: { queries: [] } });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await expect(page.locator('.schema-edit .grid__row[data-id="hasOwnProperty"]')).toBeVisible();
+
+	await openProperty(page, 'property_container');
+	await page.click('.schema-edit__add-property');
+	const propertyPanel = page.locator('.property-panel');
+	await propertyPanel.locator('.property-dialog__name-input input').fill('hasOwnProperty');
+	await selectPropertyType(page, 'string');
+	await propertyPanel.locator('.property-dialog__save').click();
+	await expect(page.locator('.schema-edit .grid__row[data-id="property_container.hasOwnProperty"]')).toBeVisible();
+
+	await page.locator('.schema-edit__header-apply-button').click();
+	await expect(page.locator('.schema-edit__queries')).toBeVisible();
+});
+
+test(`Ignore inherited primary sources for prototype property names`, async ({ page }) => {
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		schema.properties.push({
+			name: 'toString',
+			prefilled: '',
+			role: 'Both',
+			type: { kind: 'string' },
+			createRequired: false,
+			updateRequired: false,
+			readOptional: true,
+			nullable: false,
+			description: '',
+		});
+		await route.fulfill({ response, json: schema });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await openProperty(page, 'toString');
+
+	const propertyPanel = page.locator('.property-panel');
+	const description = propertyPanel.locator('sl-textarea textarea[name="description"]');
+	await description.fill('Updated description');
+	await propertyPanel.locator('.property-dialog__save').click();
+	await expect(page.locator('.schema-edit__change-count')).toContainText('1 pending change');
+
+	await description.fill('');
+	await propertyPanel.locator('.property-dialog__save').click();
+	await expect(page.locator('.schema-edit__change-count')).toContainText('No pending changes');
+});
+
 test(`Add schema object property with sub-property`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
 
@@ -560,7 +1635,7 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 
 	const propertyPanel = page.locator('.property-panel');
 	await propertyPanel.locator('.property-type-selector__structure-trigger').click();
-	await propertyPanel.locator('.property-type-selector__structure-option[value="object"]').click();
+	await propertyPanel.locator('[data-structure-option="object"]').click();
 	await expect(propertyPanel.locator('.property-type-selector__structure-trigger')).toContainText('object');
 	await expect(propertyPanel.locator('.property-type-selector__dropdown')).toHaveCount(0);
 
@@ -627,6 +1702,107 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 	).toBeAttached();
 });
 
+test(`Remove nested properties when changing a new object to another type`, async ({ page }) => {
+	await page.route('**/v1/profiles/schema/preview', async (route) => {
+		await route.fulfill({ json: { queries: [] } });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await page.click('.schema-edit__add-property');
+
+	const propertyPanel = page.locator('.property-panel');
+	await propertyPanel.locator('.property-dialog__name-input input').fill('new_object');
+	await propertyPanel.locator('.property-type-selector__structure-trigger').click();
+	await propertyPanel.locator('[data-structure-option="object"]').click();
+	await propertyPanel.locator('.property-dialog__save').click();
+
+	await page.click('.schema-edit__add-property');
+	await propertyPanel.locator('.property-dialog__name-input input').fill('nested_property');
+	await selectPropertyType(page, 'string');
+	await propertyPanel.locator('.property-dialog__save').click();
+	await expect(page.locator('.schema-edit .grid__row[data-id="new_object.nested_property"]')).toBeVisible();
+
+	await openProperty(page, 'new_object');
+	await propertyPanel.locator('.property-type-selector__structure-trigger').click();
+	await propertyPanel.locator('[data-structure-option="one"]').click();
+	await expect(propertyPanel.locator('.property-type-selector__trigger')).toBeFocused();
+	await expect(propertyPanel.locator('.property-type-selector__dropdown')).toHaveJSProperty('open', false);
+	await propertyPanel.locator('.property-type-selector__trigger').click();
+	await propertyPanel.locator('[data-type-option="string"]').click();
+	await propertyPanel.locator('.property-dialog__save').click();
+	await expect(page.locator('.schema-edit .grid__row[data-id="new_object.nested_property"]')).toHaveCount(0);
+
+	const previewRequestPromise = page.waitForRequest(
+		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
+	);
+	await page.locator('.schema-edit__header-apply-button').click();
+	const previewRequest = await previewRequestPromise;
+	const previewSchema = previewRequest.postDataJSON().schema as ObjectType;
+	const property = previewSchema.properties.find((candidate) => candidate.name === 'new_object');
+	expect(property?.type).toEqual({ kind: 'string' });
+	await expect(page.locator('.schema-edit__queries')).toBeVisible();
+});
+
+test(`Reject descendant changes while renaming an object property`, async ({ page }) => {
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		schema.properties.push({
+			name: 'object_to_rename',
+			prefilled: '',
+			role: 'Both',
+			type: {
+				kind: 'object',
+				properties: [
+					{
+						name: 'child',
+						prefilled: '',
+						role: 'Both',
+						type: { kind: 'string' },
+						createRequired: false,
+						updateRequired: false,
+						readOptional: true,
+						nullable: false,
+						description: '',
+					},
+				],
+			},
+			createRequired: false,
+			updateRequired: false,
+			readOptional: true,
+			nullable: false,
+			description: '',
+		});
+		await route.fulfill({ response, json: schema });
+	});
+	let previewRequests = 0;
+	await page.route('**/v1/profiles/schema/preview', async (route) => {
+		previewRequests++;
+		await route.abort();
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await openProperty(page, 'object_to_rename');
+
+	const propertyPanel = page.locator('.property-panel');
+	await propertyPanel.locator('.property-form__change-name').click();
+	await propertyPanel.locator('.property-dialog__name-input input').fill('renamed_object');
+	await propertyPanel.locator('.property-dialog__save').click();
+
+	await expandAllObjects(page);
+	await openProperty(page, 'object_to_rename.child');
+	await propertyPanel.locator('textarea[name="description"]').fill('Changed description');
+	await propertyPanel.locator('.property-dialog__save').click();
+	await page.locator('.schema-edit__header-apply-button').click();
+
+	await expect(page.locator('.toast')).toContainText(
+		'Object property "object_to_rename" cannot be renamed while its nested properties are being changed',
+	);
+	expect(previewRequests).toBe(0);
+});
+
 test(`Reject a new object property without sub-properties`, async ({ page }) => {
 	let previewRequests = 0;
 	await page.route('**/v1/profiles/schema/preview', async (route) => {
@@ -644,7 +1820,7 @@ test(`Reject a new object property without sub-properties`, async ({ page }) => 
 		input.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
 	});
 	await propertyPanel.locator('.property-type-selector__structure-trigger').click();
-	await propertyPanel.locator('.property-type-selector__structure-option[value="object"]').click();
+	await propertyPanel.locator('[data-structure-option="object"]').click();
 	await propertyPanel.locator('.property-dialog__save').click();
 	await expect(page.locator('.schema-edit .grid__row[data-id="empty_object"]')).toBeVisible();
 
@@ -717,6 +1893,87 @@ test(`Reject an existing object property after removing all its sub-properties`,
 		'Object property "object_to_empty" must contain at least one property',
 	);
 	expect(previewRequests).toBe(0);
+});
+
+test(`Count an object removal once after changing its children`, async ({ page }) => {
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		schema.properties.push({
+			name: 'object_with_replaced_child',
+			prefilled: '',
+			role: 'Both',
+			type: {
+				kind: 'object',
+				properties: [
+					{
+						name: 'child',
+						prefilled: '',
+						role: 'Both',
+						type: { kind: 'string' },
+						createRequired: false,
+						updateRequired: false,
+						readOptional: true,
+						nullable: false,
+						description: '',
+					},
+					{
+						name: 'removed_child',
+						prefilled: '',
+						role: 'Both',
+						type: { kind: 'string' },
+						createRequired: false,
+						updateRequired: false,
+						readOptional: true,
+						nullable: false,
+						description: '',
+					},
+				],
+			},
+			createRequired: false,
+			updateRequired: false,
+			readOptional: true,
+			nullable: false,
+			description: '',
+		});
+		await route.fulfill({ response, json: schema });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+	await page.click('.schema-edit__expand-all-button');
+	await removeProperty(page, 'object_with_replaced_child.child');
+
+	await page.click('.schema-edit__add-property');
+	const propertyPanel = page.locator('.property-panel');
+	await propertyPanel.locator('.property-dialog__name-input input').fill('child');
+	await selectPropertyType(page, 'string');
+	await propertyPanel.locator('.property-dialog__save').click();
+
+	await removeProperty(page, 'object_with_replaced_child.removed_child');
+	await removeProperty(page, 'object_with_replaced_child');
+	await expect(page.locator('.schema-edit__change-count')).toContainText('1 pending change');
+
+	const previewRequestPromise = page.waitForRequest(
+		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
+	);
+	await page.click('.schema-edit__header-apply-button');
+	const previewRequest = await previewRequestPromise;
+	expect(previewRequest.postDataJSON().rePaths).toEqual({});
+});
+
+test(`Clear the property selection after deleting a filtered property`, async ({ page }) => {
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await page.click('.schema-grid__alter-button');
+
+	await page.locator('.schema-edit__search-button').click();
+	const searchInput = page.locator('.schema-edit__search >> input');
+	await searchInput.fill('foo string');
+	await removeProperty(page, 'foo');
+
+	await expect(page.locator('.property-panel--empty')).toBeVisible();
+	await expect(page.locator('.schema-edit .grid__row--selected')).toHaveCount(0);
+	await expect(searchInput).toHaveValue('foo string');
 });
 
 test(`Remove schema properties`, async ({ page }) => {

@@ -61,7 +61,7 @@ const transformSchema = (schema: ObjectType): EditableSchema | null => {
 const normalizeSchema = (schema: EditableSchema): ObjectType => {
 	const normalized: ObjectType = { kind: 'object', properties: [] };
 	for (const k in schema) {
-		if (!schema.hasOwnProperty(k)) {
+		if (!Object.prototype.hasOwnProperty.call(schema, k)) {
 			continue;
 		}
 		const property = schema[k];
@@ -83,7 +83,7 @@ const normalizeSchema = (schema: EditableSchema): ObjectType => {
 			if (!property.isEditable) {
 				p.prefilled = property.prefilled;
 				p.role = property.role;
-				p.createRequire = property.createRequired;
+				p.createRequired = property.createRequired;
 				p.updateRequired = property.updateRequired;
 			}
 			normalized.properties.push(p);

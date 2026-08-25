@@ -18,6 +18,7 @@ interface StandardGridRow {
 	animation?: string;
 	selected?: boolean;
 	expanded?: boolean;
+	forceExpanded?: boolean; // expands without changing the row's stored expansion state
 }
 
 interface SortableGridRow extends StandardGridRow {

@@ -271,6 +271,14 @@ sl-popup::part(arrow) {
 	transform: translateY(-50%);
 }
 
+.grid--sortable .draggable-wrapper__handle:disabled {
+	cursor: default;
+}
+
+.grid--sortable .draggable-wrapper__handle:disabled sl-icon {
+	color: var(--sl-color-neutral-300);
+}
+
 .grid--sortable .overlay-row {
 	cursor: grabbing;
 	display: flex;

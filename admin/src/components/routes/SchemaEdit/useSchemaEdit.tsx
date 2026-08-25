@@ -92,12 +92,14 @@ const useSchemaEdit = (
 	selectedPropertyKey?: string,
 	search?: string,
 	showOnlyChanged?: boolean,
+	keepSelectedPropertyVisible?: boolean,
 	initialPropertyKey?: string | null,
 ) => {
 	const [editableSchema, setEditableSchema] = useState<EditableSchema>();
 	const [queries, setQueries] = useState<string[]>();
 	const [isQueriesLoading, setIsQueriesLoading] = useState<boolean>(false);
 	const [isConfirmChangesLoading, setIsConfirmChangesLoading] = useState<boolean>(false);
+	const previewRequestSequence = useRef(0);
 
 	const sortableGridRef = useRef<SortableGridRef>(null);
 
@@ -107,7 +109,7 @@ const useSchemaEdit = (
 	const { setIsAltering } = useContext(SchemaContext);
 
 	const primarySources = useRef<PrimarySources>(
-		structuredClone(workspaces.find((w) => w.id === selectedWorkspace).primarySources),
+		copyPrimarySources(workspaces.find((w) => w.id === selectedWorkspace).primarySources),
 	);
 	const rePaths = useRef<RePaths>({});
 	const deletedAppliedKeys = useRef<string[]>([]);
@@ -148,7 +150,7 @@ const useSchemaEdit = (
 		}
 		const property = editableSchema?.[selectedPropertyKey];
 		const initialProperty = initialEditableSchema.current?.[selectedPropertyKey];
-		if (property == null || initialProperty == null) {
+		if (property == null || initialProperty == null || property.isEditable === true) {
 			return undefined;
 		}
 		return getPropertyFieldChanges(
@@ -170,6 +172,21 @@ const useSchemaEdit = (
 		return { objectCount, propertyCount: properties.length };
 	}, [editableSchema]);
 	const propertyParents = useMemo(() => getPropertyParents(editableSchema), [editableSchema]);
+	const isFiltered = (search?.trim() || '') !== '' || showOnlyChanged === true;
+	const visiblePropertyKeys = useMemo(() => {
+		return getVisiblePropertyKeys(
+			editableSchema,
+			propertyStatuses,
+			search,
+			showOnlyChanged,
+			keepSelectedPropertyVisible ? selectedPropertyKey : undefined,
+		);
+	}, [editableSchema, keepSelectedPropertyVisible, propertyStatuses, search, selectedPropertyKey, showOnlyChanged]);
+	const firstVisibleProperty = useMemo(() => {
+		const key = Object.keys(editableSchema || {}).find((propertyKey) => visiblePropertyKeys.has(propertyKey));
+		return key == null || editableSchema == null ? null : { key, ...editableSchema[key] };
+	}, [editableSchema, visiblePropertyKeys]);
+	const isSelectedPropertyVisible = selectedPropertyKey != null && visiblePropertyKeys.has(selectedPropertyKey);
 	const rows = useMemo(() => {
 		return getRows(
 			editableSchema,
@@ -177,14 +194,22 @@ const useSchemaEdit = (
 			connections,
 			propertyStatuses,
 			selectedPropertyKey,
-			search,
-			showOnlyChanged,
+			visiblePropertyKeys,
+			isFiltered,
 			onSelectProperty,
 		);
-	}, [editableSchema, onSelectProperty, propertyStatuses, search, selectedPropertyKey, showOnlyChanged]);
+	}, [
+		connections,
+		editableSchema,
+		isFiltered,
+		onSelectProperty,
+		propertyStatuses,
+		selectedPropertyKey,
+		visiblePropertyKeys,
+	]);
 
 	useEffect(() => {
-		if (schema == null) {
+		if (schema == null || initialEditableSchema.current != null) {
 			return;
 		}
 		// Remove meta properties from the schema.
@@ -199,7 +224,7 @@ const useSchemaEdit = (
 		resetMoveHistory();
 		const editable = transformSchema(s);
 		initialEditableSchema.current = structuredClone(editable);
-		initialPrimarySources.current = structuredClone(primarySources.current);
+		initialPrimarySources.current = copyPrimarySources(primarySources.current);
 		initialSchemaEditStateKey.current = buildSchemaEditStateKey(editable, primarySources.current, rePaths.current);
 		setEditableSchema(editable);
 		const propertyKey =
@@ -223,20 +248,12 @@ const useSchemaEdit = (
 
 		// Check if a property with the same name already exists.
 		for (let k in editableSchema) {
-			if (!editableSchema.hasOwnProperty(k)) {
+			if (!Object.prototype.hasOwnProperty.call(editableSchema, k)) {
 				continue;
 			}
 			let p = editableSchema[k];
-			if (p.name === property.name) {
-				if (p.indentation === property.indentation) {
-					if (p.indentation > 0) {
-						if (p.root === property.root) {
-							throw new Error(`Property "${property.name}" already exists`);
-						}
-					} else {
-						throw new Error(`Property "${property.name}" already exists`);
-					}
-				}
+			if (p.name === property.name && getParentPropertyKey(k) === property.parentKey) {
+				throw new Error(`Property "${property.name}" already exists`);
 			}
 		}
 
@@ -262,6 +279,7 @@ const useSchemaEdit = (
 		let counter = 2;
 		while (s[k] != null) {
 			k = `${key}-${counter}`;
+			counter++;
 		}
 
 		// Update the primary sources.
@@ -302,28 +320,21 @@ const useSchemaEdit = (
 		// Check if the property has been renamed.
 		if (property.name !== current.name) {
 			// Check if a property with the same name already exists.
+			const parentKey = getParentPropertyKey(key);
 			for (let k in s) {
-				if (!s.hasOwnProperty(k)) {
+				if (!Object.prototype.hasOwnProperty.call(s, k)) {
 					continue;
 				}
 				let p = s[k];
-				if (p.name === property.name) {
-					if (p.indentation === property.indentation) {
-						if (p.indentation > 0) {
-							if (p.root === property.root) {
-								throw new Error(`Property "${property.name}" already exists`);
-							}
-						} else {
-							throw new Error(`Property "${property.name}" already exists`);
-						}
-					}
+				if (p.name === property.name && getParentPropertyKey(k) === parentKey) {
+					throw new Error(`Property "${property.name}" already exists`);
 				}
 			}
 
 			// Update the 'root' field of the children properties.
 			if (property.type.kind === 'object') {
 				for (let k in s) {
-					if (!s.hasOwnProperty(k)) {
+					if (!Object.prototype.hasOwnProperty.call(s, k)) {
 						continue;
 					}
 					let p = { ...s[k] };
@@ -342,12 +353,19 @@ const useSchemaEdit = (
 					delete rePaths.current[k];
 				}
 			}
-			if (key in rePaths.current && rePaths.current[key] == null) {
+			const currentPath = key
+				.split('.')
+				.map((_, index, fragments) => s[fragments.slice(0, index + 1).join('.')].name)
+				.join('.');
+			if (
+				Object.prototype.hasOwnProperty.call(rePaths.current, currentPath) &&
+				rePaths.current[currentPath] == null
+			) {
 				// If the property was created with a name identical to
 				// that of another previously deleted or renamed
 				// property, since we are now renaming it, delete the
 				// corresponding “null” repath.
-				delete rePaths.current[key];
+				delete rePaths.current[currentPath];
 			}
 
 			let newKey = property.name;
@@ -356,10 +374,10 @@ const useSchemaEdit = (
 			}
 
 			if (deletedAppliedKeys.current.includes(newKey)) {
-				// If the property now renamed takes the name of a
-				// previously deleted property, add the “null” repath.
-				rePaths.current[newKey] = null;
-			} else if (!current.isEditable) {
+				// A new property replaces the deleted property, while an
+				// existing property takes its name through a rename.
+				rePaths.current[newKey] = current.isEditable ? null : key;
+			} else if (!current.isEditable && newKey !== key) {
 				// If the property was already applied to the schema,
 				// add the repath.
 				rePaths.current[newKey] = key;
@@ -390,22 +408,42 @@ const useSchemaEdit = (
 			isEditable: current.isEditable ? current.isEditable : false,
 		};
 		s[key] = editedProperty;
+		if (current.type.kind === 'object' && property.type.kind !== 'object') {
+			for (const descendantKey of Object.keys(s)) {
+				if (!descendantKey.startsWith(`${key}.`)) {
+					continue;
+				}
+				delete s[descendantKey];
+				delete primarySources.current[descendantKey];
+			}
+		}
 		setEditableSchema(s);
 	};
 
 	const onRemoveProperty = (propertyKey: string) => {
 		const schema = { ...editableSchema };
-		const nextProperty = getPropertySelectionAfterRemoval(schema, propertyKey);
+		const isFiltered = (search?.trim() || '') !== '' || showOnlyChanged === true;
+		const nextProperty = isFiltered ? null : getPropertySelectionAfterRemoval(schema, propertyKey);
+		const propertyPath = propertyKey
+			.split('.')
+			.map((_, index, fragments) => schema[fragments.slice(0, index + 1).join('.')].name)
+			.join('.');
+		delete rePaths.current[propertyPath];
+		for (const key in rePaths.current) {
+			if (rePaths.current[key] === propertyKey) {
+				delete rePaths.current[key];
+			}
+		}
 		if (schema[propertyKey].type.kind === 'object') {
+			deletedAppliedKeys.current = deletedAppliedKeys.current.filter(
+				(deletedKey) => !deletedKey.startsWith(`${propertyKey}.`),
+			);
 			for (const key of Object.keys(schema)) {
 				const isNested = key.startsWith(`${propertyKey}.`);
 				if (isNested) {
 					delete schema[key];
-					// Check if nested property is in the deleted keys.
-					if (deletedAppliedKeys.current.includes(key)) {
-						delete deletedAppliedKeys.current[key];
-					}
 					// Check if nested property is in the RePaths.
+					delete rePaths.current[key];
 					for (const k in rePaths.current) {
 						if (rePaths.current[k] === key) {
 							delete rePaths.current[k];
@@ -431,20 +469,27 @@ const useSchemaEdit = (
 	};
 
 	const onApplyChanges = async () => {
+		const requestSequence = ++previewRequestSequence.current;
 		setIsQueriesLoading(true);
 		try {
-			validateEditableSchema(editableSchema);
+			validateEditableSchema(editableSchema, initialEditableSchema.current, rePaths.current);
 		} catch (err) {
 			handleError(err);
 			setIsQueriesLoading(false);
 			return;
 		}
-		const s = normalizeSchema(editableSchema);
+		const s = normalizeSchema(structuredClone(editableSchema));
 		let res: PreviewAlterProfileSchemaResponse;
 		try {
 			res = await api.workspaces.previewAlterProfileSchema(s, rePaths.current);
 		} catch (err) {
+			if (requestSequence !== previewRequestSequence.current) {
+				return;
+			}
 			setTimeout(() => {
+				if (requestSequence !== previewRequestSequence.current) {
+					return;
+				}
 				setQueries(null);
 				setIsQueriesLoading(false);
 				handleError(err);
@@ -452,6 +497,9 @@ const useSchemaEdit = (
 			return;
 		}
 		setTimeout(() => {
+			if (requestSequence !== previewRequestSequence.current) {
+				return;
+			}
 			setQueries(res.queries);
 			setIsQueriesLoading(false);
 		}, 300);
@@ -474,7 +522,7 @@ const useSchemaEdit = (
 			sources[path] = primarySources.current[k];
 		}
 		setIsConfirmChangesLoading(true);
-		const s = normalizeSchema(editableSchema);
+		const s = normalizeSchema(structuredClone(editableSchema));
 		try {
 			await api.workspaces.alterProfileSchema(s, sources, rePaths.current);
 		} catch (err) {
@@ -495,7 +543,9 @@ const useSchemaEdit = (
 	};
 
 	const onCancelChanges = () => {
+		previewRequestSequence.current++;
 		setQueries(null);
+		setIsQueriesLoading(false);
 	};
 	const changeCount = hasSchemaChanges
 		? Math.max(1, Object.keys(propertyStatuses).length + deletedAppliedKeys.current.length)
@@ -505,8 +555,13 @@ const useSchemaEdit = (
 		rows: rows,
 		columns: SCHEMA_COLUMNS,
 		changeCount,
+		firstVisibleProperty,
+		isFiltered,
+		isSchemaReady: editableSchema != null,
+		isSelectedPropertyVisible,
 		objectCount,
 		propertyCount,
+		visiblePropertyCount: visiblePropertyKeys.size,
 		propertyParents,
 		selectedPropertyFieldChanges,
 		propertyStatuses,
@@ -535,6 +590,10 @@ const buildSchemaEditStateKey = (
 	const sortedPrimarySources = Object.entries(primarySources).sort(([a], [b]) => a.localeCompare(b));
 	const sortedRePaths = Object.entries(rePaths).sort(([a], [b]) => a.localeCompare(b));
 	return JSON.stringify({ schema, primarySources: sortedPrimarySources, rePaths: sortedRePaths });
+};
+
+const copyPrimarySources = (primarySources: PrimarySources): PrimarySources => {
+	return Object.assign(Object.create(null), primarySources);
 };
 
 const getPropertyChangeStatuses = (
@@ -651,6 +710,7 @@ const getVisiblePropertyKeys = (
 	statuses: Record<string, PropertyChangeStatus>,
 	search: string | undefined,
 	showOnlyChanged: boolean | undefined,
+	alwaysVisiblePropertyKey?: string,
 ): Set<string> => {
 	const visibleKeys = new Set<string>();
 	if (schema == null) {
@@ -660,7 +720,9 @@ const getVisiblePropertyKeys = (
 	for (const [key, property] of Object.entries(schema)) {
 		const matchesSearch =
 			term === '' ||
-			`${property.name} ${property.description || ''} ${toKrenalisStringType(property.type)}`
+			[property.name, property.description, toKrenalisStringType(property.type)]
+				.filter(Boolean)
+				.join(' ')
 				.toLocaleLowerCase()
 				.includes(term);
 		const matchesStatus = !showOnlyChanged || statuses[key] != null;
@@ -680,6 +742,13 @@ const getVisiblePropertyKeys = (
 			}
 		}
 	}
+	if (alwaysVisiblePropertyKey != null && schema[alwaysVisiblePropertyKey] != null) {
+		visibleKeys.add(alwaysVisiblePropertyKey);
+		const fragments = alwaysVisiblePropertyKey.split('.');
+		for (let index = 1; index < fragments.length; index++) {
+			visibleKeys.add(fragments.slice(0, index).join('.'));
+		}
+	}
 	return visibleKeys;
 };
 const getRows = (
@@ -688,15 +757,13 @@ const getRows = (
 	connections: TransformedConnection[],
 	propertyStatuses: Record<string, PropertyChangeStatus>,
 	selectedPropertyKey: string | undefined,
-	search: string | undefined,
-	showOnlyChanged: boolean | undefined,
+	visiblePropertyKeys: ReadonlySet<string>,
+	isFiltered: boolean,
 	onSelectProperty: SelectProperty,
 ): SortableGridRow[] => {
 	const mappedRows = {};
-	const visibleKeys = getVisiblePropertyKeys(schema, propertyStatuses, search, showOnlyChanged);
-	const isFiltered = (search?.trim() || '') !== '' || showOnlyChanged === true;
 	for (const propertyKey in schema) {
-		if (!schema.hasOwnProperty(propertyKey) || !visibleKeys.has(propertyKey)) {
+		if (!Object.prototype.hasOwnProperty.call(schema, propertyKey) || !visiblePropertyKeys.has(propertyKey)) {
 			continue;
 		}
 		let primarySourceConnection: TransformedConnection | null = null;
@@ -704,7 +771,7 @@ const getRows = (
 			primarySourceConnection = connections.find((c) => c.id === primarySources[propertyKey]);
 		}
 		const property = schema[propertyKey];
-		const expanded = isFiltered || selectedPropertyKey?.startsWith(`${propertyKey}.`);
+		const expanded = selectedPropertyKey?.startsWith(`${propertyKey}.`);
 		const isSubProperty = property.indentation > 0;
 		if (isSubProperty) {
 			let fragments = propertyKey.split('.');
@@ -810,8 +877,9 @@ const buildRow = (
 			primarySourceCell,
 			actions,
 		],
-		dragKey: isFiltered ? '' : propertyKey,
+		dragKey: propertyKey,
 		expanded,
+		forceExpanded: isFiltered,
 		id: propertyKey,
 		onClick: () => onSelectProperty(propertyKey, property),
 		onToggleExpansion: () => onSelectProperty(propertyKey, property, { animateActionsIfBlocked: false }),
@@ -822,7 +890,7 @@ const buildRow = (
 const convertToRows = (mappedRows: object): SortableGridRow[] => {
 	const rows: SortableGridRow[] = [];
 	for (const key in mappedRows) {
-		if (!mappedRows.hasOwnProperty(key)) {
+		if (!Object.prototype.hasOwnProperty.call(mappedRows, key)) {
 			continue;
 		}
 		const isObjectRow = mappedRows[key].cells == null;
@@ -835,10 +903,14 @@ const convertToRows = (mappedRows: object): SortableGridRow[] => {
 	return rows;
 };
 
-const validateEditableSchema = (editableSchema: EditableSchema) => {
+const validateEditableSchema = (
+	editableSchema: EditableSchema,
+	initialEditableSchema: EditableSchema | undefined,
+	rePaths: RePaths,
+) => {
 	const keys = Object.keys(editableSchema);
 	for (const key of keys) {
-		if (!editableSchema.hasOwnProperty(key)) {
+		if (!Object.prototype.hasOwnProperty.call(editableSchema, key)) {
 			continue;
 		}
 		const p = editableSchema[key];
@@ -851,6 +923,46 @@ const validateEditableSchema = (editableSchema: EditableSchema) => {
 			}
 		}
 	}
+	if (initialEditableSchema == null) {
+		return;
+	}
+	const initialSchema = normalizeSchema(structuredClone(initialEditableSchema));
+	const currentSchema = normalizeSchema(structuredClone(editableSchema));
+	for (const oldPath of Object.values(rePaths)) {
+		if (oldPath == null) {
+			continue;
+		}
+		const initialType = getTypeByPath(initialSchema, oldPath);
+		if (initialType?.kind !== 'object') {
+			continue;
+		}
+		const currentPath = oldPath
+			.split('.')
+			.map((_, index, fragments) => editableSchema[fragments.slice(0, index + 1).join('.')]?.name)
+			.filter((fragment) => fragment != null)
+			.join('.');
+		const currentType = getTypeByPath(currentSchema, currentPath);
+		if (currentType?.kind === 'object' && JSON.stringify(currentType) !== JSON.stringify(initialType)) {
+			throw new Error(
+				`Object property "${oldPath}" cannot be renamed while its nested properties are being changed`,
+			);
+		}
+	}
+};
+
+const getTypeByPath = (schema: ObjectType, path: string): Type | null => {
+	let type: Type = schema;
+	for (const fragment of path.split('.')) {
+		if (type.kind !== 'object') {
+			return null;
+		}
+		const property = type.properties?.find((candidate) => candidate.name === fragment);
+		if (property == null) {
+			return null;
+		}
+		type = property.type;
+	}
+	return type;
 };
 
 export {

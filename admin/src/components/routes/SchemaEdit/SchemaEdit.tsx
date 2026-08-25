@@ -1,11 +1,11 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import '../Schema/SchemaPropertyGrid.css';
 import './SchemaEdit.css';
 import { useBeforeUnload, useBlocker } from 'react-router-dom';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
@@ -21,10 +21,14 @@ import { TypeKind } from '../../../lib/api/types/types';
 import { EditableProperty, getParentPropertyKey, newPropertyToEdit } from './SchemaEdit.helpers';
 import { PropertyPanel } from './PropertyPanel';
 import { PropertyToEdit, PropertyToRemove, SelectPropertyOptions, useSchemaEdit } from './useSchemaEdit';
+import {
+	SchemaPropertyGridSummary,
+	SchemaPropertyGridToolbar,
+	schemaPropertyGridNestedRowsIndentation,
+} from '../Schema/SchemaPropertyGrid';
 
 const schemaEditGridColumns =
 	'minmax(160px, 0.65fr) minmax(210px, 0.85fr) minmax(240px, 1.5fr) minmax(160px, 0.65fr) 90px';
-const schemaEditNestedRowsIndentation = { base: 34, step: 20 };
 
 interface SchemaEditProps {
 	initialPropertyKey?: string | null;
@@ -37,12 +41,11 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 	const [isCancelEditPending, setIsCancelEditPending] = useState(false);
 	const [isDiscardingAndLeaving, setIsDiscardingAndLeaving] = useState(false);
 	const [propertyDraftDirty, setPropertyDraftDirty] = useState(false);
-	const [isSearchOpen, setIsSearchOpen] = useState(false);
 	const [search, setSearch] = useState('');
 	const [showOnlyChanged, setShowOnlyChanged] = useState(false);
 	const selectedPropertyBeforeAddRef = useRef<PropertyToEdit | null>(null);
+	const discardAndLeaveRef = useRef(false);
 	const skipNavigationBlockRef = useRef(false);
-	const searchRef = useRef<any>();
 
 	const { schema } = useContext(SchemaContext);
 	const { closeFullscreen } = useContext(FullscreenContext);
@@ -55,21 +58,24 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		closeFullscreen();
 	};
 
-	const onSelectProperty = (propertyKey: string, property: EditableProperty, options: SelectPropertyOptions = {}) => {
-		if (propertyToEdit?.key === propertyKey) {
-			return;
-		}
-		if (hasUnsavedPropertyChanges) {
-			if (options.animateActionsIfBlocked !== false) {
-				setAnimatePropertyActions(true);
+	const onSelectProperty = useCallback(
+		(propertyKey: string, property: EditableProperty, options: SelectPropertyOptions = {}) => {
+			if (propertyToEdit?.key === propertyKey) {
+				return;
 			}
-			return;
-		}
-		const nextProperty = { key: propertyKey, ...property };
-		selectedPropertyBeforeAddRef.current = null;
-		setAnimatePropertyActions(false);
-		setPropertyToEdit(nextProperty);
-	};
+			if (hasUnsavedPropertyChanges) {
+				if (options.animateActionsIfBlocked !== false) {
+					setAnimatePropertyActions(true);
+				}
+				return;
+			}
+			const nextProperty = { key: propertyKey, ...property };
+			selectedPropertyBeforeAddRef.current = null;
+			setAnimatePropertyActions(false);
+			setPropertyToEdit(nextProperty);
+		},
+		[hasUnsavedPropertyChanges, propertyToEdit?.key],
+	);
 
 	const onRemoveClick = (propertyKey: string, propertyName: string, typeKind: TypeKind) => {
 		setPropertyToRemove({ key: propertyKey, name: propertyName, type: typeKind });
@@ -79,8 +85,13 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		rows,
 		columns,
 		changeCount,
+		firstVisibleProperty,
+		isFiltered,
+		isSchemaReady,
+		isSelectedPropertyVisible,
 		objectCount,
 		propertyCount,
+		visiblePropertyCount,
 		propertyParents,
 		selectedPropertyFieldChanges,
 		propertyStatuses,
@@ -104,15 +115,41 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		propertyToEdit?.key,
 		search,
 		showOnlyChanged,
+		hasUnsavedPropertyChanges,
 		initialPropertyKey,
 	);
+	useEffect(() => {
+		if (
+			!isSchemaReady ||
+			(propertyToEdit != null && propertyToEdit.key == null) ||
+			hasUnsavedPropertyChanges ||
+			isSelectedPropertyVisible
+		) {
+			return;
+		}
+		if (firstVisibleProperty != null) {
+			onSelectProperty(firstVisibleProperty.key, firstVisibleProperty, { animateActionsIfBlocked: false });
+			return;
+		}
+		selectedPropertyBeforeAddRef.current = null;
+		setPropertyToEdit(null);
+	}, [
+		firstVisibleProperty,
+		hasUnsavedPropertyChanges,
+		isSchemaReady,
+		isSelectedPropertyVisible,
+		onSelectProperty,
+		propertyToEdit,
+	]);
+	const propertyInPanel = propertyToEdit?.key == null || isSelectedPropertyVisible ? propertyToEdit : null;
 	const hasPendingChanges = hasUnsavedPropertyChanges || hasSchemaChanges;
 	const shouldBlockNavigation = useCallback(
 		() => hasPendingChanges && !skipNavigationBlockRef.current,
 		[hasPendingChanges],
 	);
 	const navigationBlocker = useBlocker(shouldBlockNavigation);
-	const isGridKeyboardNavigationEnabled = propertyCount > 0;
+	const isGridKeyboardNavigationEnabled = visiblePropertyCount > 0;
+	const expansionDisabled = isFiltered || objectCount === 0;
 	let discardChangesDescription = 'The pending schema changes will be discarded.';
 	if (hasUnsavedPropertyChanges) {
 		if (hasSchemaChanges) {
@@ -224,6 +261,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 	};
 
 	const onDiscardChangesAndLeave = () => {
+		discardAndLeaveRef.current = true;
 		setAnimatePropertyActions(false);
 		setIsDiscardingAndLeaving(true);
 		setIsCancelEditPending(false);
@@ -233,6 +271,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 	};
 
 	const onKeepEditing = () => {
+		discardAndLeaveRef.current = false;
 		setIsDiscardingAndLeaving(false);
 		setIsCancelEditPending(false);
 		skipNavigationBlockRef.current = false;
@@ -242,10 +281,10 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 	};
 
 	const onDiscardDialogAfterHide = () => {
-		if (!isDiscardingAndLeaving) {
-			onKeepEditing();
+		if (!discardAndLeaveRef.current) {
 			return;
 		}
+		discardAndLeaveRef.current = false;
 		if (navigationBlocker.state === 'blocked') {
 			navigationBlocker.proceed();
 			return;
@@ -264,15 +303,12 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		onApplyChanges();
 	};
 
-	const onSearchBlur = (event: any) => {
-		if (event.target.value === '') {
-			setIsSearchOpen(false);
+	const onReviewDialogRequestClose = (event: Event) => {
+		if (isConfirmChangesLoading) {
+			event.preventDefault();
+			return;
 		}
-	};
-
-	const onSearchClick = () => {
-		setIsSearchOpen(true);
-		requestAnimationFrame(() => searchRef.current?.focus());
+		onCancelChanges();
 	};
 
 	return (
@@ -298,15 +334,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 			</div>
 			<div className='schema-edit__overview'>
 				<div className='schema-edit__overview-main'>
-					<div className='schema-edit__summary'>
-						<span>
-							<SlIcon name='table' />
-							{propertyCount} {propertyCount === 1 ? 'property' : 'properties'}
-						</span>
-						<span>
-							<SlIcon name='box' />
-							{objectCount} {objectCount === 1 ? 'object' : 'objects'}
-						</span>
+					<SchemaPropertyGridSummary view='edit' objectCount={objectCount} propertyCount={propertyCount}>
 						<div
 							className={`schema-edit__change-count${changeCount === 0 ? ' schema-edit__change-count--empty' : ''}`}
 						>
@@ -315,71 +343,24 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 								? 'No pending changes'
 								: `${changeCount} pending ${changeCount === 1 ? 'change' : 'changes'}`}
 						</div>
-					</div>
+					</SchemaPropertyGridSummary>
 					<SlButton variant='text' className='schema-edit__add-property' onClick={onAddClick}>
 						<SlIcon name='plus-lg' slot='prefix' />
 						Add a new property
 					</SlButton>
 				</div>
 			</div>
-			<div className='schema-edit__workspace'>
-				<div className='schema-edit__schema-panel'>
-					<div className='schema-edit__toolbar'>
-						<div className='schema-edit__expansion-buttons'>
-							<SlTooltip className='schema-edit__toolbar-tooltip' content='Expand all properties' hoist>
-								<SlButton
-									className='schema-edit__expand-all-button schema-edit__expansion-button schema-edit__toolbar-icon-button'
-									size='small'
-									aria-label='Expand all properties'
-									onClick={onExpandClick}
-								>
-									<SlIcon name='chevron-expand' />
-								</SlButton>
-							</SlTooltip>
-							<SlTooltip className='schema-edit__toolbar-tooltip' content='Collapse all properties' hoist>
-								<SlButton
-									className='schema-edit__collapse-all-button schema-edit__expansion-button schema-edit__toolbar-icon-button'
-									size='small'
-									aria-label='Collapse all properties'
-									onClick={onCollapseClick}
-								>
-									<SlIcon name='chevron-contract' />
-								</SlButton>
-							</SlTooltip>
-						</div>
-						<div className='schema-edit__toolbar-controls'>
-							<div
-								className={`schema-edit__search-control${isSearchOpen ? ' schema-edit__search-control--open' : ''}`}
-							>
-								{isSearchOpen ? (
-									<SlInput
-										ref={searchRef}
-										className='schema-edit__search'
-										size='small'
-										placeholder='Search a property...'
-										value={search}
-										onSlBlur={onSearchBlur}
-										onSlInput={(event: any) => setSearch(event.target.value)}
-									>
-										<SlIcon name='search' slot='prefix' />
-									</SlInput>
-								) : (
-									<SlTooltip
-										className='schema-edit__toolbar-tooltip'
-										content='Search properties'
-										hoist
-									>
-										<SlButton
-											className='schema-edit__search-button schema-edit__toolbar-icon-button'
-											size='small'
-											aria-label='Search properties'
-											onClick={onSearchClick}
-										>
-											<SlIcon name='search' />
-										</SlButton>
-									</SlTooltip>
-								)}
-							</div>
+			<div className='grid-keyboard-hints-layout schema-edit__layout'>
+				<div className='schema-edit__workspace'>
+					<div className='schema-edit__schema-panel grid-keyboard-hints-layout__grid'>
+						<SchemaPropertyGridToolbar
+							view='edit'
+							expansionDisabled={expansionDisabled}
+							onCollapse={onCollapseClick}
+							onExpand={onExpandClick}
+							onSearchChange={setSearch}
+							search={search}
+						>
 							<SlTooltip className='schema-edit__toolbar-tooltip' content='Filter properties' hoist>
 								<SlDropdown
 									className='schema-edit__filter'
@@ -411,37 +392,46 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 									</SlMenu>
 								</SlDropdown>
 							</SlTooltip>
-						</div>
+						</SchemaPropertyGridToolbar>
+						<SortableGrid
+							rows={rows}
+							columns={columns}
+							keyboardNavigation={isGridKeyboardNavigationEnabled}
+							gridColumnsWidths={schemaEditGridColumns}
+							nestedRowsIndentation={schemaPropertyGridNestedRowsIndentation}
+							onSortRow={onSortRow}
+							reorderDisabled={isFiltered}
+							ref={sortableGridRef}
+						/>
 					</div>
-					<SortableGrid
-						rows={rows}
-						columns={columns}
-						keyboardNavigation
-						gridColumnsWidths={schemaEditGridColumns}
-						nestedRowsIndentation={schemaEditNestedRowsIndentation}
-						onSortRow={onSortRow}
-						ref={sortableGridRef}
+					<PropertyPanel
+						animateActions={animatePropertyActions}
+						dirty={propertyDraftDirty}
+						fieldChanges={propertyInPanel == null ? undefined : selectedPropertyFieldChanges}
+						property={propertyInPanel}
+						parents={propertyParents}
+						primarySources={primarySources}
+						status={propertyStatuses[propertyInPanel?.key]}
+						onClose={onCancelProperty}
+						onActionsAnimationFinish={() => setAnimatePropertyActions(false)}
+						onDirtyChange={setPropertyDraftDirty}
+						onRemove={(property) => onRemoveClick(property.key, property.name, property.type.kind)}
+						onSave={onSaveProperty}
 					/>
-					{propertyCount > 0 && <GridKeyboardHints canReorder />}
 				</div>
-				<PropertyPanel
-					animateActions={animatePropertyActions}
-					dirty={propertyDraftDirty}
-					fieldChanges={selectedPropertyFieldChanges}
-					property={propertyToEdit}
-					parents={propertyParents}
-					primarySources={primarySources}
-					status={propertyStatuses[propertyToEdit?.key]}
-					onClose={onCancelProperty}
-					onActionsAnimationFinish={() => setAnimatePropertyActions(false)}
-					onDirtyChange={setPropertyDraftDirty}
-					onRemove={(property) => onRemoveClick(property.key, property.name, property.type.kind)}
-					onSave={onSaveProperty}
-				/>
+				{propertyCount > 0 && (
+					<GridKeyboardHints
+						canReorder
+						disabled={visiblePropertyCount === 0}
+						expansionDisabled={expansionDisabled}
+						reorderDisabled={isFiltered}
+					/>
+				)}
 			</div>
 			<SlDialog
 				open={isQueriesLoading || queries != null}
 				label='Review changes'
+				onSlRequestClose={onReviewDialogRequestClose}
 				onSlAfterHide={onCancelChanges}
 				className={`schema-edit__queries${isQueriesLoading ? ' schema-edit__queries--loading' : ''}`}
 			>
@@ -466,7 +456,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 								<div className='schema-edit__no-query'>No query for this operation</div>
 							)}
 							<div className='schema-edit__queries-buttons' slot='footer'>
-								<SlButton size='small' onClick={onCancelChanges}>
+								<SlButton size='small' onClick={onCancelChanges} disabled={isConfirmChangesLoading}>
 									Cancel
 								</SlButton>
 								<SlButton
@@ -510,6 +500,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 				variant='warning'
 				isOpen={!isDiscardingAndLeaving && (isCancelEditPending || navigationBlocker.state === 'blocked')}
 				onClose={onDiscardDialogAfterHide}
+				onRequestClose={onKeepEditing}
 				title='Discard unsaved changes?'
 				actions={
 					<>

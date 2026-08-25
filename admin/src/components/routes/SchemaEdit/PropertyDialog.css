@@ -2,6 +2,10 @@
 	margin-bottom: 20px;
 }
 
+.property-form__description::part(textarea) {
+	min-height: calc(4 * 1.4em + 1em);
+}
+
 .property-form__change-name {
 	--sl-input-height-small: 20px;
 
@@ -49,6 +53,7 @@
 
 .property-form__optional-label {
 	color: var(--sl-color-neutral-400);
+	margin-inline-start: 4px;
 }
 
 .property-form__help {

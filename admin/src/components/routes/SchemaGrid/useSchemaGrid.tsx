@@ -38,6 +38,8 @@ const useSchemaGrid = (
 			onSelectProperty,
 		);
 	}, [connections, isLoading, onSelectProperty, schema, search, selectedPropertyPath, workspace]);
+	const visiblePropertyPaths = useMemo(() => getVisiblePropertyPaths(rows), [rows]);
+	const firstVisiblePropertyPath = visiblePropertyPaths.values().next().value ?? null;
 	const { objectCount, propertyCount } = useMemo(() => countProperties(schema), [schema]);
 	const selectedProperty = useMemo(() => {
 		if (schema == null || selectedPropertyPath == null) {
@@ -56,10 +58,13 @@ const useSchemaGrid = (
 
 	return {
 		columns: SCHEMA_COLUMNS,
+		firstVisiblePropertyPath,
+		isSelectedPropertyVisible: selectedPropertyPath != null && visiblePropertyPaths.has(selectedPropertyPath),
 		objectCount,
 		propertyCount,
 		rows,
 		selectedProperty,
+		visiblePropertyCount: visiblePropertyPaths.size,
 	};
 };
 
@@ -79,7 +84,9 @@ const getRows = (
 		const matches =
 			includeAll ||
 			search === '' ||
-			`${property.name} ${property.description || ''} ${toKrenalisStringType(property.type)}`
+			[property.name, property.description, toKrenalisStringType(property.type)]
+				.filter(Boolean)
+				.join(' ')
 				.toLocaleLowerCase()
 				.includes(search);
 		let nestedRows: GridRow[] = [];
@@ -121,7 +128,7 @@ const buildRow = (
 	property: Property,
 	primarySource: TransformedConnection | null,
 	selected: boolean,
-	expanded: boolean,
+	forceExpanded: boolean,
 	onSelectProperty: (path: string) => void,
 ): StandardGridRow => {
 	const typeCell: ReactNode = (
@@ -145,11 +152,27 @@ const buildRow = (
 			property.description || <span className='schema-grid__empty-cell'>—</span>,
 			primarySourceCell,
 		],
-		expanded,
+		forceExpanded,
 		id: path,
 		onClick: () => onSelectProperty(path),
 		selected,
 	};
+};
+
+const getVisiblePropertyPaths = (rows: GridRow[]): Set<string> => {
+	const paths = new Set<string>();
+	for (const row of rows) {
+		if (Array.isArray(row)) {
+			for (const path of getVisiblePropertyPaths(row)) {
+				paths.add(path);
+			}
+			continue;
+		}
+		if (row.id != null) {
+			paths.add(row.id);
+		}
+	}
+	return paths;
 };
 
 const countProperties = (schema: ObjectType): { objectCount: number; propertyCount: number } => {

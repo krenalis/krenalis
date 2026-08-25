@@ -37,7 +37,7 @@ interface PropertyTypeSelectorProps {
 }
 
 interface PropertyTypeSelectorRef {
-	openStructureMenu: () => void;
+	focusStructureTrigger: () => void;
 }
 
 const PROPERTY_STRUCTURE_OPTIONS: PropertyStructureOption[] = [
@@ -45,28 +45,28 @@ const PROPERTY_STRUCTURE_OPTIONS: PropertyStructureOption[] = [
 		id: 'one',
 		label: 'one value',
 		triggerLabel: 'one value',
-		description: 'The property contains a single value',
+		description: 'Exactly one value',
 		icon: '1-circle',
 	},
 	{
 		id: 'array',
 		label: 'array',
 		triggerLabel: 'array of',
-		description: 'The property contains an ordered collection of values',
+		description: 'Ordered collection of values',
 		icon: 'list-ul',
 	},
 	{
 		id: 'object',
 		label: 'object',
 		triggerLabel: 'object',
-		description: 'The property contains nested properties',
+		description: 'Related properties, each with its own type',
 		icon: 'braces',
 	},
 	{
 		id: 'map',
 		label: 'map',
 		triggerLabel: 'map of',
-		description: 'The property contains key-value pairs with string keys',
+		description: 'Collection of values stored under text keys',
 		icon: 'braces-asterisk',
 	},
 ];
@@ -176,17 +176,16 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 		const [structure, setStructure] = useState<PropertyStructure>(() => getPropertyStructure(type));
 		const structureDropdownRef = useRef<any>();
 		const dropdownRef = useRef<any>();
-		const openTypeAfterStructureSelectionRef = useRef(false);
+		const focusTypeAfterStructureSelectionRef = useRef(false);
 
 		useImperativeHandle(
 			ref,
 			() => ({
-				openStructureMenu: () => {
+				focusStructureTrigger: () => {
 					if (!canEditType) {
 						return;
 					}
 					structureDropdownRef.current?.focusOnTrigger();
-					void structureDropdownRef.current?.show();
 				},
 			}),
 			[canEditType],
@@ -218,7 +217,7 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 				return;
 			}
 			const newStructure = event.detail.item.value as PropertyStructure;
-			openTypeAfterStructureSelectionRef.current = newStructure !== 'object';
+			focusTypeAfterStructureSelectionRef.current = newStructure !== 'object';
 			if (newStructure === structure) {
 				return;
 			}
@@ -236,18 +235,20 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 		};
 
 		const onStructureMenuAfterHide = () => {
-			if (!openTypeAfterStructureSelectionRef.current) {
+			if (!focusTypeAfterStructureSelectionRef.current) {
 				return;
 			}
-			openTypeAfterStructureSelectionRef.current = false;
+			focusTypeAfterStructureSelectionRef.current = false;
 			dropdownRef.current?.focusOnTrigger();
-			void dropdownRef.current?.show();
 		};
 
-		const onSelectOption = (option: PropertyTypeOption) => {
+		const onSelectOption = (event) => {
+			const option = options.find((candidate) => candidate.id === event.detail.item.value);
+			if (option == null) {
+				return;
+			}
 			const newType = canEditType ? wrapPropertyValueType(option.create(), structure) : type;
 			onChange(newType);
-			dropdownRef.current?.hide();
 		};
 
 		const groupedOptions = options.reduce<Record<string, PropertyTypeOption[]>>((groups, option) => {
@@ -304,6 +305,7 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 												: ''
 										}`}
 										key={option.id}
+										data-structure-option={option.id}
 										value={option.id}
 									>
 										<SlIcon slot='prefix' name={option.icon} />
@@ -348,7 +350,7 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 										<span className='property-type-selector__placeholder'>Select type</span>
 									)}
 								</SlButton>
-								<div className='property-type-selector__browser'>
+								<SlMenu className='property-type-selector__browser' onSlSelect={onSelectOption}>
 									<SlInput
 										className='property-type-selector__search'
 										placeholder='Search types...'
@@ -357,41 +359,48 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 									>
 										<SlIcon slot='prefix' name='search' />
 									</SlInput>
-									<div className='property-type-selector__options'>
-										{Object.entries(groupedOptions).map(([group, groupOptions]) => (
-											<div className='property-type-selector__group' key={group}>
-												<div className='property-type-selector__group-label'>{group}</div>
-												{groupOptions.map((option) => (
-													<button
-														className={`property-type-selector__option${
-															selectedOption?.id === option.id
-																? ' property-type-selector__option--selected'
-																: ''
-														}`}
-														key={option.id}
-														type='button'
-														data-type-option={option.id}
-														onClick={() => onSelectOption(option)}
-													>
-														<PropertyTypeOptionIcon option={option} />
-														<span className='property-type-selector__option-content'>
-															<span className='property-type-selector__option-label'>
-																{option.label}
-															</span>
-															<span className='property-type-selector__option-description'>
-																{option.description}
-															</span>
-														</span>
-														{selectedOption?.id === option.id && <SlIcon name='check-lg' />}
-													</button>
-												))}
+									{Object.entries(groupedOptions).map(([group, groupOptions], groupIndex) => (
+										<React.Fragment key={group}>
+											<div
+												className={`property-type-selector__group-label${
+													groupIndex === 0
+														? ''
+														: ' property-type-selector__group-label--separated'
+												}`}
+											>
+												{group}
 											</div>
-										))}
-										{options.length === 0 && (
-											<div className='property-type-selector__no-options'>No matching types</div>
-										)}
-									</div>
-								</div>
+											{groupOptions.map((option) => (
+												<SlMenuItem
+													className={`property-type-selector__option${
+														selectedOption?.id === option.id
+															? ' property-type-selector__option--selected'
+															: ''
+													}`}
+													key={option.id}
+													data-type-option={option.id}
+													value={option.id}
+												>
+													<PropertyTypeOptionIcon option={option} slot='prefix' />
+													<span className='property-type-selector__option-content'>
+														<span className='property-type-selector__option-label'>
+															{option.label}
+														</span>
+														<span className='property-type-selector__option-description'>
+															{option.description}
+														</span>
+													</span>
+													{selectedOption?.id === option.id && (
+														<SlIcon slot='suffix' name='check-lg' />
+													)}
+												</SlMenuItem>
+											))}
+										</React.Fragment>
+									))}
+									{options.length === 0 && (
+										<div className='property-type-selector__no-options'>No matching types</div>
+									)}
+								</SlMenu>
 							</SlDropdown>
 						)}
 					</div>
@@ -464,5 +473,4 @@ const wrapPropertyValueType = (type: Type, structure: PropertyStructure): Type =
 	return type;
 };
 
-export { PropertyTypeSelector, getPropertyValueType, replacePropertyValueType };
-export type { PropertyTypeSelectorRef };
+export { getPropertyValueType, PropertyTypeSelector, type PropertyTypeSelectorRef, replacePropertyValueType };

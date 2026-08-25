@@ -103,9 +103,10 @@ const Grid = forwardRef<GridRef, GridProps>(
 				const className = getChildIndexClassname(i, rows.length);
 				if (Array.isArray(row)) {
 					const r = row as NestedGridRows;
+					const parentRow = r[0] as StandardGridRow;
 					rowComponents.push(
 						<GridNestedRows
-							key={i}
+							key={parentRow.id ?? i}
 							rows={r}
 							columns={columns}
 							className={`grid__nested-rows ${className}`}

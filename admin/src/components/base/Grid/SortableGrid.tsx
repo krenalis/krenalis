@@ -36,10 +36,14 @@ interface SortableGridProps {
 	gridColumnsWidths?: string;
 	nestedRowsIndentation?: GridNestedRowsIndentation;
 	keyboardNavigation?: boolean;
+	reorderDisabled?: boolean;
 }
 
 const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(
-	({ columns, rows, onSortRow, gridColumnsWidths, nestedRowsIndentation, keyboardNavigation }, ref) => {
+	(
+		{ columns, rows, onSortRow, gridColumnsWidths, nestedRowsIndentation, keyboardNavigation, reorderDisabled },
+		ref,
+	) => {
 		const [activeRow, setActiveRow] = useState(null);
 		const sensors = useSensors(
 			useSensor(PointerSensor),
@@ -92,10 +96,12 @@ const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(
 					gridRef.current?.focus({ preventScroll: true });
 				},
 				navigate: (key: string, shiftKey = false) => {
-					return gridRef.current == null ? false : navigateGrid(gridRef.current, key, shiftKey, onSortRow);
+					return gridRef.current == null
+						? false
+						: navigateGrid(gridRef.current, key, shiftKey, reorderDisabled ? undefined : onSortRow);
 				},
 			};
-		}, [onSortRow]);
+		}, [onSortRow, reorderDisabled]);
 
 		const { rowComponents, sortableRowComponents } = useMemo(() => {
 			const rowComponents = [] as ReactNode[];
@@ -103,23 +109,26 @@ const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(
 			for (const [i, row] of rows.entries()) {
 				const className = getChildIndexClassname(i, rows.length);
 				if (Array.isArray(row)) {
-					const isSortable = row[0].dragKey != null && row[0].dragKey !== '';
+					const nestedRows = row as NestedGridRows;
+					const parentRow = nestedRows[0] as SortableGridRow;
+					const isSortable = parentRow.dragKey != null && parentRow.dragKey !== '';
 					const component = (
 						<GridNestedRows
-							key={i}
-							rows={row as NestedGridRows}
+							key={parentRow.id ?? i}
+							rows={nestedRows}
 							columns={columns}
 							className={`grid__nested-rows ${className}`}
 							nesting={1}
 							onSortRow={onSortRow}
 							isSortable={isSortable}
+							reorderDisabled={reorderDisabled}
 							indentation={nestedRowsIndentation}
 							reloadColumnsWidths={reloadColumnsWidths}
 						/>
 					);
 					if (isSortable) {
 						sortableRowComponents.push({
-							id: row[0].dragKey,
+							id: parentRow.dragKey,
 							row: component,
 						});
 					} else {
@@ -146,11 +155,11 @@ const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(
 				}
 			}
 			return { rowComponents, sortableRowComponents };
-		}, [rows, nestedRowsIndentation]);
+		}, [rows, nestedRowsIndentation, reorderDisabled]);
 
 		function onDragEnd(e) {
 			const { over, active } = e;
-			if (over.id !== active.id) {
+			if (over != null && over.id !== active.id) {
 				onSortRow(over.id, active.id);
 			}
 			setActiveRow(null);
@@ -173,7 +182,11 @@ const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(
 				style={{ '--grid-columns': widths } as React.CSSProperties}
 				tabIndex={keyboardNavigation ? 0 : undefined}
 				onClick={keyboardNavigation ? focusGridForKeyboardNavigation : undefined}
-				onKeyDown={keyboardNavigation ? (event) => navigateGridWithKeyboard(event, onSortRow) : undefined}
+				onKeyDown={
+					keyboardNavigation
+						? (event) => navigateGridWithKeyboard(event, reorderDisabled ? undefined : onSortRow)
+						: undefined
+				}
 			>
 				<GridHeaderRow columns={columns} />
 				{rowComponents}
@@ -187,7 +200,7 @@ const SortableGrid = forwardRef<SortableGridRef, SortableGridProps>(
 					>
 						<SortableContext items={sortableRowComponents} strategy={verticalListSortingStrategy}>
 							{sortableRowComponents.map(({ id, row }) => (
-								<DraggableWrapper key={id} id={id}>
+								<DraggableWrapper key={id} id={id} disabled={reorderDisabled}>
 									{row}
 								</DraggableWrapper>
 							))}

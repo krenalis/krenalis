@@ -24,6 +24,7 @@ interface GridNestedRowsProps {
 	nesting: number;
 	onSortRow?: (overRowID: string, movedRowID: string) => void;
 	isSortable?: boolean;
+	reorderDisabled?: boolean;
 	indentation?: GridNestedRowsIndentation;
 	reloadColumnsWidths: () => void;
 }
@@ -35,11 +36,14 @@ const GridNestedRows = ({
 	nesting,
 	onSortRow,
 	isSortable,
+	reorderDisabled,
 	indentation,
 	reloadColumnsWidths,
 }: GridNestedRowsProps) => {
+	const rootRow = Array.isArray(rows[0]) ? null : rows[0];
 	const [activeRow, setActiveRow] = useState(null);
-	const [isExpanded, setIsExpanded] = useState(!Array.isArray(rows[0]) && rows[0].expanded === true);
+	const [isExpanded, setIsExpanded] = useState(rootRow?.expanded === true);
+	const forceExpanded = rootRow?.forceExpanded === true;
 	const sensors = useSensors(
 		useSensor(PointerSensor),
 		useSensor(KeyboardSensor, {
@@ -49,7 +53,7 @@ const GridNestedRows = ({
 
 	const onDragEnd = (e) => {
 		const { over, active } = e;
-		if (over.id !== active.id) {
+		if (over != null && over.id !== active.id) {
 			onSortRow(over.id, active.id);
 		}
 		setActiveRow(null);
@@ -61,8 +65,10 @@ const GridNestedRows = ({
 	};
 
 	const onToggleExpansion = (event: React.MouseEvent, onSelect?: () => void) => {
-		setIsExpanded(!isExpanded);
-		reloadColumnsWidths();
+		if (!forceExpanded) {
+			setIsExpanded(!isExpanded);
+			reloadColumnsWidths();
+		}
 		// Expand and collapse all use programmatic clicks and must not change the selected row.
 		if (event.isTrusted) {
 			onSelect?.();
@@ -70,33 +76,34 @@ const GridNestedRows = ({
 	};
 
 	useEffect(() => {
-		if (!Array.isArray(rows[0]) && rows[0].expanded === true) {
+		if (rootRow?.expanded === true) {
 			setIsExpanded(true);
 		}
-	}, [rows]);
+	}, [rootRow?.expanded]);
 
 	let parentComponent: ReactNode = null;
 	let childrenComponents: any[] = [];
 	for (const [i, row] of rows.entries()) {
 		if (Array.isArray(row)) {
-			const r = row as NestedGridRows;
+			const nestedRows = row as NestedGridRows;
+			const parentRow = nestedRows[0] as SortableGridRow;
 			const component = (
 				<GridNestedRows
-					key={i}
-					rows={r}
+					key={parentRow.id ?? i}
+					rows={nestedRows}
 					columns={columns}
 					className='grid__nested-rows grid__nested-rows--children'
 					nesting={nesting + 1}
 					onSortRow={onSortRow}
 					isSortable={isSortable}
+					reorderDisabled={reorderDisabled}
 					indentation={indentation}
 					reloadColumnsWidths={reloadColumnsWidths}
 				/>
 			);
 			if (isSortable) {
-				const r = row as SortableGridRow[];
 				childrenComponents.push({
-					id: r[0].dragKey,
+					id: parentRow.dragKey,
 					row: component,
 				});
 			} else {
@@ -138,7 +145,7 @@ const GridNestedRows = ({
 	const childrenIndentation = baseIndentation + indentationStep * nesting + 'px';
 	return (
 		<div
-			className={`${className}${isExpanded ? ' grid__nested-rows--expanded' : ''}`}
+			className={`${className}${forceExpanded || isExpanded ? ' grid__nested-rows--expanded' : ''}`}
 			style={
 				{
 					'--parent-indentation': parentIndentation,
@@ -157,7 +164,7 @@ const GridNestedRows = ({
 				>
 					<SortableContext items={childrenComponents} strategy={verticalListSortingStrategy}>
 						{childrenComponents.map(({ id, row }) => (
-							<DraggableWrapper key={id} id={id}>
+							<DraggableWrapper key={id} id={id} disabled={reorderDisabled}>
 								{row}
 							</DraggableWrapper>
 						))}
