@@ -235,7 +235,9 @@ const IdentityOverview = () => {
 	const showAllConnections = selectedConnection === '';
 	const connectionChartDays = connectionMetricDays == null ? [] : selectedConnectionDays;
 	const chartDays = showAllConnections ? identityChartDays : connectionChartDays;
-	const chartLoading = showAllConnections ? isLoading : isConnectionLoading && connectionMetricDays == null;
+	const chartLoading = showAllConnections
+		? isLoading
+		: (isLoading || isRefreshing || isConnectionLoading) && connectionMetricDays == null;
 	const chartError = showAllConnections ? error : connectionError;
 	const latestDay = latestMetric == null ? loadedDisplayRange.end : instantToDateKey(latestMetric.observedAt);
 	const sevenDayTrend = useMemo(
@@ -294,7 +296,7 @@ const IdentityOverview = () => {
 		}
 		const latest = latestMetricRef.current;
 		if (latest == null) {
-			setIsConnectionLoading(true);
+			setIsConnectionLoading(false);
 			return;
 		}
 		loadConnectionMetrics(latest, connection, displayRange);
@@ -339,7 +341,7 @@ const IdentityOverview = () => {
 						size='small'
 						onClick={refreshDashboard}
 						loading={isRefreshing}
-						disabled={isRefreshing || isLoading}
+						disabled={isRefreshing || isLoading || isConnectionLoading}
 					>
 						<SlIcon slot='prefix' name='arrow-clockwise' />
 						Refresh
