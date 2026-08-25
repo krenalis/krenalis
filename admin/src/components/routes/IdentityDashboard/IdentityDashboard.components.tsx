@@ -33,7 +33,6 @@ import {
 	ConnectionBar,
 	DELETED_CONNECTION_SCOPE,
 	IdentityTrend,
-	ProfileCompositionBucket,
 	ResolutionEffectivenessPoint,
 	UnifiedProfileHistoryPoint,
 	buildProfileComposition,
@@ -357,6 +356,8 @@ const compactNumber = (value: number): string =>
 	new Intl.NumberFormat('en-US', { notation: 'compact', compactDisplay: 'short', maximumFractionDigits: 1 }).format(
 		value,
 	);
+
+const formatPercentage = (value: number | null): string => (value == null ? '—' : `${value.toFixed(1)}%`);
 
 interface RecognizedAnonymousHistoryPoint {
 	day: string;
@@ -854,7 +855,7 @@ const ResolutionEffectivenessChart = ({ data, loading, error }: ResolutionEffect
 										<YAxis
 											domain={identityLinkRateDomain}
 											ticks={identityLinkRateTicks}
-											tickFormatter={(value) => `${Number(value).toFixed(1)}%`}
+											tickFormatter={(value) => formatPercentage(Number(value))}
 											tickLine={false}
 											axisLine={{ stroke: GRID_COLOR }}
 											interval={0}
@@ -866,7 +867,7 @@ const ResolutionEffectivenessChart = ({ data, loading, error }: ResolutionEffect
 													active={active}
 													label={label}
 													payload={payload}
-													formatValue={(value) => `${value.toFixed(1)}%`}
+													formatValue={formatPercentage}
 												/>
 											)}
 										/>
@@ -916,8 +917,6 @@ interface TypeDistributionBlockProps {
 	recognizedColor?: string;
 	anonymousColor?: string;
 }
-
-const distributionPercentage = (value: number | null): string => (value == null ? '—' : `${value.toFixed(1)}%`);
 
 const TypeDistributionBlock = ({
 	title,
@@ -981,7 +980,7 @@ const TypeDistributionBlock = ({
 								<i style={{ background: colors[segment.key] }} />
 								<div>
 									<span>{segment.label}</span>
-									<strong>{distributionPercentage(segment.percentage)}</strong>
+									<strong>{formatPercentage(segment.percentage)}</strong>
 									<small>{formatNumber(segment.count)}</small>
 								</div>
 							</div>
@@ -1041,9 +1040,6 @@ interface ProfileCompositionProps {
 	error?: string;
 }
 
-const compositionPercentage = (bucket: ProfileCompositionBucket): string =>
-	bucket.percentage == null ? '—' : `${bucket.percentage.toFixed(1)}%`;
-
 const ProfileComposition = ({ profiles, composition, loading, error }: ProfileCompositionProps) => {
 	const buckets = composition == null ? [] : buildProfileComposition(composition, profiles);
 	const hasValues = buckets.some((bucket) => bucket.count > 0);
@@ -1095,7 +1091,7 @@ const ProfileComposition = ({ profiles, composition, loading, error }: ProfileCo
 							<div key={bucket.key}>
 								<i style={{ background: COMPOSITION_COLORS[index] }} />
 								<span>{bucket.label}</span>
-								<strong>{compositionPercentage(bucket)}</strong>
+								<strong>{formatPercentage(bucket.percentage)}</strong>
 							</div>
 						))}
 					</div>
@@ -1143,6 +1139,12 @@ const HISTORY_COLUMNS: GridColumn[] = [
 	{ name: 'Error' },
 ];
 
+const HISTORY_STATUSES = {
+	running: { label: 'Running', variant: 'primary' },
+	successful: { label: 'Successful', variant: 'success' },
+	failed: { label: 'Failed', variant: 'danger' },
+} as const;
+
 interface HistorySectionProps {
 	runs: IdentityResolutionRun[];
 	loading: boolean;
@@ -1150,11 +1152,10 @@ interface HistorySectionProps {
 }
 
 const historyStatusBadge = (status: IdentityResolutionRun['status']): ReactNode => {
-	const labels = { running: 'Running', successful: 'Successful', failed: 'Failed' } as const;
-	const variants = { running: 'primary', successful: 'success', failed: 'danger' } as const;
+	const { label, variant } = HISTORY_STATUSES[status];
 	return (
-		<SlBadge className='identity-dashboard__history-status' variant={variants[status]} pill>
-			{labels[status]}
+		<SlBadge className='identity-dashboard__history-status' variant={variant} pill>
+			{label}
 		</SlBadge>
 	);
 };

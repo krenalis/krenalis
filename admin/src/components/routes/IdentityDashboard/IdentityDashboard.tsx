@@ -334,7 +334,7 @@ const IdentityDashboard = () => {
 	}, [loadMetrics, selectedWorkspace, sourceConnectionCatalogKey]);
 
 	useEffect(() => {
-		loadResolutionRuns(false);
+		loadResolutionRuns();
 	}, [loadResolutionRuns, selectedWorkspace]);
 
 	useEffect(() => {

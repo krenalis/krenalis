@@ -957,13 +957,6 @@
 		padding-inline: 20px;
 	}
 
-	.identity-dashboard__resolution-layout
-		> .identity-dashboard__distribution-card
-		.identity-dashboard__distribution-body {
-		grid-template-columns: 162px minmax(140px, 1fr);
-		gap: 24px;
-	}
-
 	.identity-dashboard__kpi-grid {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}

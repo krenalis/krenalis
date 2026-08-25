@@ -581,7 +581,7 @@ const buildTypeDistribution = (
 };
 
 const hasResolutionDataInRange = (days: IdentityResolutionMetricDay[], range: DisplayDateRange): boolean =>
-	sliceDays(days, range).length !== 0;
+	days.some((day) => day.day >= range.start && day.day <= range.end);
 
 const formatDate = (dateKey: string, includeYear = true): string => {
 	return new Intl.DateTimeFormat('en-US', {
@@ -778,7 +778,6 @@ export type {
 	DisplayDateRange,
 	IdentityDashboardDatePreset,
 	IdentityTrend,
-	ProfileCompositionBucket,
 	ResolutionEffectivenessPoint,
 	UnifiedProfileHistoryPoint,
 };
