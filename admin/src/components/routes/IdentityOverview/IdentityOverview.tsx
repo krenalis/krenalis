@@ -222,9 +222,7 @@ const IdentityOverview = () => {
 	const showAllConnections = selectedConnection === '';
 	const connectionChartDays = connectionMetricDays == null ? [] : selectedConnectionDays;
 	const chartDays = showAllConnections ? identityChartDays : connectionChartDays;
-	const chartLoading = showAllConnections
-		? isLoading
-		: isConnectionLoading && connectionMetricDays == null && metricDays == null;
+	const chartLoading = showAllConnections ? isLoading : isConnectionLoading && connectionMetricDays == null;
 	const chartError = showAllConnections ? error : connectionError;
 	const latestDay = latestMetric == null ? loadedDisplayRange.end : instantToDateKey(latestMetric.observedAt);
 	const sevenDayTrend = useMemo(
@@ -276,8 +274,8 @@ const IdentityOverview = () => {
 		selectedConnectionRef.current = connection;
 		setSelectedConnection(connection);
 		setConnectionError(undefined);
+		setConnectionMetricDays(undefined);
 		if (connection === '') {
-			setConnectionMetricDays(undefined);
 			setIsConnectionLoading(false);
 			return;
 		}
