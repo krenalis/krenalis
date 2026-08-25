@@ -218,7 +218,7 @@ interface StateMessageProps {
 
 const StateMessage = ({ variant, title, description, action, compact }: StateMessageProps) => (
 	<div
-		className={`identity-dashboard__state identity-dashboard__state--${variant}${compact ? ' identity-dashboard__state--compact' : ''}`}
+		className={`identity-dashboard__state${variant === 'error' ? ' identity-dashboard__state--error' : ''}${compact ? ' identity-dashboard__state--compact' : ''}`}
 		role={variant === 'error' ? 'alert' : 'status'}
 	>
 		<SlIcon name={variant === 'error' ? 'exclamation-triangle' : 'info-circle'} />
@@ -290,12 +290,12 @@ const KpiCard = ({
 			<CardLoading />
 		) : (
 			<>
-				<div className='identity-dashboard__kpi-body'>
+				<div>
 					<div className='identity-dashboard__kpi-value'>{value}</div>
 					{secondary != null && <div className='identity-dashboard__kpi-secondary'>{secondary}</div>}
 					{comparison && (
 						<div className='identity-dashboard__kpi-comparison'>
-							<span className='identity-dashboard__kpi-comparison-delta'>{comparison.delta}</span>
+							<span>{comparison.delta}</span>
 							<span>from {comparison.referenceDate}</span>
 						</div>
 					)}
@@ -910,10 +910,7 @@ const TypeDistributionBlock = ({
 				</div>
 			) : (
 				<div className='identity-dashboard__distribution-body'>
-					<div
-						className='identity-dashboard__donut-ring identity-dashboard__distribution-ring'
-						aria-label={`${title} type distribution`}
-					>
+					<div className='identity-dashboard__donut-ring' aria-label={`${title} type distribution`}>
 						<ResponsiveContainer width='100%' height='100%'>
 							<PieChart>
 								<Pie
@@ -1026,10 +1023,7 @@ const ProfileComposition = ({ profiles, composition, loading, error }: ProfileCo
 				<StateMessage variant='unavailable' title='Profile composition is unavailable' compact />
 			) : (
 				<div className='identity-dashboard__composition-content'>
-					<div
-						className='identity-dashboard__donut-ring identity-dashboard__composition-ring'
-						aria-label='Profiles by number of identities'
-					>
+					<div className='identity-dashboard__donut-ring' aria-label='Profiles by number of identities'>
 						{hasValues ? (
 							<ResponsiveContainer width='100%' height='100%'>
 								<PieChart>

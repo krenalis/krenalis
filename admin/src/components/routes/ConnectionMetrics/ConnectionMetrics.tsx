@@ -504,7 +504,6 @@ const ConnectionMetrics = () => {
 					<div className='connection-metrics__tabs'>
 						<SegmentedDateRangeControl<metricsPreset>
 							presets={METRICS_RANGE_PRESETS}
-							defaultPreset='last15Minutes'
 							value={selectedMetricsRange}
 							customRange={customMetricsRange}
 							onPresetChange={setSelectedMetricsRange}

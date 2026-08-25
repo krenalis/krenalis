@@ -328,23 +328,9 @@
 	margin-bottom: var(--identity-dashboard-card-padding-block);
 }
 
-.identity-dashboard__chart .recharts-wrapper text,
-.identity-dashboard__sparkline .recharts-wrapper text {
+.identity-dashboard__chart .recharts-wrapper text {
 	font-size: 11px;
 	fill: var(--sl-color-neutral-600);
-}
-
-.identity-dashboard__chart .recharts-legend-item-text {
-	font-size: 12px;
-	color: var(--sl-color-neutral-700) !important;
-}
-
-.identity-dashboard__chart .recharts-default-legend {
-	padding-top: 3px !important;
-}
-
-.identity-dashboard__chart .recharts-tooltip-wrapper {
-	font-size: 12px;
 }
 
 .identity-dashboard__chart-tooltip {
@@ -422,10 +408,6 @@
 .identity-dashboard__connections-chart text.identity-dashboard__connection-axis-name--deleted,
 .identity-dashboard__connections-chart text.identity-dashboard__connection-axis-share--deleted {
 	fill: var(--identity-dashboard-removed-connection-color);
-}
-
-.identity-dashboard__distribution-card {
-	margin-top: 12px;
 }
 
 .identity-dashboard__distribution-panel,
@@ -644,10 +626,6 @@
 	margin-top: 12px;
 }
 
-.identity-dashboard__resolution-layout > .identity-dashboard__distribution-card {
-	margin-top: 0;
-}
-
 .identity-dashboard__resolution-layout
 	> .identity-dashboard__distribution-card
 	.identity-dashboard__distribution-block {
@@ -666,9 +644,7 @@
 	min-height: 370px;
 }
 
-.identity-dashboard__composition-card,
-.identity-dashboard__period-empty-card,
-.identity-dashboard__resolution-chart-card {
+.identity-dashboard__composition-card {
 	min-height: 306px;
 }
 
@@ -726,10 +702,6 @@
 .identity-dashboard__effectiveness-chart .recharts-wrapper text {
 	font-size: 10px;
 	fill: var(--sl-color-neutral-600);
-}
-
-.identity-dashboard__effectiveness-chart .recharts-tooltip-wrapper {
-	font-size: 11px;
 }
 
 .identity-dashboard__effectiveness-empty {
@@ -839,10 +811,6 @@
 .identity-dashboard__period-empty-card .identity-dashboard__state,
 .identity-dashboard__no-resolution-card .identity-dashboard__state {
 	min-height: 304px;
-}
-
-.identity-dashboard__no-resolution-card {
-	min-height: 306px;
 }
 
 .identity-dashboard__history-card {

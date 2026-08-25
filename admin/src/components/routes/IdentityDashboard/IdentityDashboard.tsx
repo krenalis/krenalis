@@ -595,7 +595,6 @@ const IdentityDashboard = () => {
 					<SegmentedDateRangeControl<IdentityDashboardDatePreset>
 						accessibleLabel='Trend range'
 						presets={DATE_RANGE_PRESETS}
-						defaultPreset={IDENTITY_DASHBOARD_DEFAULT_DATE_PRESET}
 						value={selectedDateRange}
 						customRange={customDateRange}
 						onPresetChange={onPresetChange}
@@ -615,7 +614,7 @@ const IdentityDashboard = () => {
 					/>
 				)}
 				{showResolutionStructure && (
-					<div className='identity-dashboard__kpi-grid identity-dashboard__resolution-kpi-grid'>
+					<div className='identity-dashboard__kpi-grid'>
 						<KpiCard
 							title='Last successful identity resolution'
 							info='The most recent successful identity resolution run, regardless of the selected date range.'
