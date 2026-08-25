@@ -471,7 +471,7 @@ const IdentitiesChart = ({
 }: IdentitiesChartProps) => (
 	<RecognizedAnonymousHistoryChart
 		title='Identities over time (daily)'
-		info='Daily end-state recognized and anonymous identities for the Trend range. Missing observations remain gaps.'
+		info='Counts of recognized and anonymous identities at the end of each UTC day over the selected date range. Days with no data are shown as gaps.'
 		headerAction={
 			<SlSelect
 				className='identity-dashboard__connection-select'
@@ -518,7 +518,7 @@ interface ProfilesChartProps {
 const ProfilesChart = ({ days, loading, error }: ProfilesChartProps) => (
 	<RecognizedAnonymousHistoryChart
 		title='Profiles over time (daily)'
-		info='Daily end-state recognized and anonymous unified profiles for the Trend range. Missing observations remain gaps.'
+		info='Daily end-of-day counts of recognized and anonymous unified profiles over the selected date range. Values carry forward until the next successful identity resolution run; days before the first available data point are shown as gaps.'
 		days={days}
 		recognizedColor={UNIFIED_PROFILES_RECOGNIZED_COLOR}
 		anonymousColor={UNIFIED_PROFILES_ANONYMOUS_COLOR}
@@ -612,7 +612,7 @@ const ConnectionsChart = ({ data, totalIdentities, observedLabel, loading, error
 	<DashboardCard
 		title='Identities by connection'
 		temporalLabel={observedLabel == null ? undefined : `(as of ${observedLabel})`}
-		info='Latest identity state grouped by live source connection, with deleted connections shown as an aggregate. Identities without a profile are a subset of the anonymous and recognized counts.'
+		info='Latest identity state grouped by active source connection. Identities from deleted connections are grouped under Other. Identities without a profile are included in the appropriate recognized or anonymous count.'
 		className='identity-dashboard__chart-card'
 	>
 		{loading ? (
@@ -734,7 +734,7 @@ const ResolutionEffectivenessChart = ({ data, loading, error }: ResolutionEffect
 						<div className='identity-dashboard__effectiveness-metric-heading'>
 							<h4>Identities per profile</h4>
 							<InfoTooltip
-								content='Average number of identities per unified profile. Shows the daily as-of trend over the Trend range. Values change when a new successful identity resolution is completed.'
+								content='Average number of identities per unified profile over the selected date range. Each day shows the value as of the latest successful identity resolution run.'
 								label='About identities per profile'
 							/>
 						</div>
@@ -792,7 +792,7 @@ const ResolutionEffectivenessChart = ({ data, loading, error }: ResolutionEffect
 						<div className='identity-dashboard__effectiveness-metric-heading'>
 							<h4>Identity link rate</h4>
 							<InfoTooltip
-								content='Share of identities that belong to a profile containing more than one identity. Shows the daily as-of trend over the Trend range. Values change when a new successful identity resolution is completed.'
+								content='Share of identities that are part of a unified profile with multiple identities over the selected date range. Each day shows the value as of the latest successful identity resolution run.'
 								label='About identity link rate'
 							/>
 						</div>
@@ -968,7 +968,7 @@ interface TypeDistributionCardProps {
 const TypeDistributionCard = ({ processed, unified, loading, error }: TypeDistributionCardProps) => (
 	<DashboardCard
 		title='Distribution per type'
-		info='Identities processed and unified profiles show the type distributions from the same latest successful identity resolution.'
+		info='Both charts show the recognized vs. anonymous distribution from the latest successful identity resolution run.'
 		className='identity-dashboard__distribution-card'
 	>
 		<div className='identity-dashboard__distribution-panel'>
@@ -1015,7 +1015,7 @@ const ProfileComposition = ({ profiles, composition, loading, error }: ProfileCo
 	return (
 		<DashboardCard
 			title='Profiles by number of identities'
-			info='Profiles are grouped by the number of identities they contain. The chart shows the distribution from the latest successful identity resolution.'
+			info='Shows how unified profiles are distributed by the number of identities they contain, based on the latest successful identity resolution run.'
 			className='identity-dashboard__composition-card'
 		>
 			{loading ? (
@@ -1149,7 +1149,7 @@ const HistorySection = ({ runs, loading, error }: HistorySectionProps) => (
 	<section className='identity-dashboard__section'>
 		<SectionHeading
 			title='Identity resolution history'
-			info='Accepted identity resolution runs, including running, successful, and failed executions.'
+			info='Identity resolution runs, including those in progress, successful, and failed.'
 		/>
 		<DashboardCard className='identity-dashboard__history-card'>
 			{error == null ? (

@@ -618,7 +618,7 @@ const IdentityDashboard = () => {
 					<div className='identity-dashboard__kpi-grid identity-dashboard__resolution-kpi-grid'>
 						<KpiCard
 							title='Last successful identity resolution'
-							info='The latest successful identity resolution result, independent of the Trend range.'
+							info='The most recent successful identity resolution run, regardless of the selected date range.'
 							value={latestResolutionUTCTimestamp == null ? '—' : latestResolutionUTCTimestamp}
 							secondary={
 								latestResolution == null ? (
@@ -655,7 +655,7 @@ const IdentityDashboard = () => {
 						<KpiCard
 							title='Identities per profile'
 							titleAccentColor={IDENTITIES_PER_PROFILE_COLOR}
-							info='Average number of identities per unified profile. Value from the latest successful identity resolution.'
+							info='Average number of identities linked to each unified profile, based on the latest successful identity resolution run.'
 							value={formatNullableRatio(latestResolution?.identitiesPerProfile ?? null)}
 							comparison={identitiesPerProfileComparison}
 							loading={isResolutionLoading}
@@ -663,7 +663,7 @@ const IdentityDashboard = () => {
 						<KpiCard
 							title='Identity link rate'
 							titleAccentColor={IDENTITY_LINK_RATE_COLOR}
-							info='Share of identities that belong to a profile containing more than one identity. Value from the latest successful identity resolution.'
+							info='Share of identities that are part of a unified profile with multiple identities, based on the latest successful identity resolution run.'
 							value={latestResolution == null ? '—' : formatRate(latestResolution.linkedIdentitiesRate)}
 							comparison={identityLinkRateComparison}
 							loading={isResolutionLoading}
@@ -710,7 +710,7 @@ const IdentityDashboard = () => {
 				<SectionHeading
 					title='Current identity state'
 					secondary={observedLabel == null ? undefined : <>(as of {observedLabel})</>}
-					info='The latest observed workspace identity state, not a sum of daily values.'
+					info='The latest available identity state for your workspace. Values are point-in-time, not cumulative.'
 				/>
 				{identityError && (
 					<StateMessage
@@ -730,7 +730,7 @@ const IdentityDashboard = () => {
 					/>
 					<KpiCard
 						title='Since last resolution'
-						info='Net change in current identities since the latest successful identity resolution.'
+						info='Net change in the total number of identities since the latest successful identity resolution run.'
 						value={
 							identitiesChangeSinceResolution == null ? (
 								'—'
@@ -751,7 +751,7 @@ const IdentityDashboard = () => {
 					/>
 					<KpiCard
 						title='Over the last 7 days'
-						info='Compares the latest identity state with the identity state as of exactly seven days earlier.'
+						info='Percentage change in the total number of identities compared with exactly seven days earlier.'
 						value={formatTrendPercent(sevenDayTrend.changePercent)}
 						secondary={
 							sevenDayTrend.changePercent == null
@@ -763,7 +763,7 @@ const IdentityDashboard = () => {
 					/>
 					<KpiCard
 						title='Over the last 30 days'
-						info='Compares the latest identity state with the identity state as of exactly 30 days earlier.'
+						info='Percentage change in the total number of identities compared with exactly 30 days earlier.'
 						value={formatTrendPercent(thirtyDayTrend.changePercent)}
 						secondary={
 							thirtyDayTrend.changePercent == null
