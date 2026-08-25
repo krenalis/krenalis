@@ -102,6 +102,7 @@ const getErrorMessage = (error: unknown): string => {
 };
 
 interface LoadMetricsOptions {
+	loadIdentity?: boolean;
 	preserveData?: boolean;
 }
 
@@ -241,16 +242,18 @@ const IdentityOverview = () => {
 	);
 
 	const loadMetrics = useCallback(
-		async ({ preserveData = false }: LoadMetricsOptions = {}) => {
+		async ({ loadIdentity = true, preserveData = false }: LoadMetricsOptions = {}) => {
 			const version = ++requestVersion.current;
 			const requestedRange = displayRange;
-			setIdentityError(undefined);
+			if (loadIdentity) setIdentityError(undefined);
 			setResolutionError(undefined);
 			if (!preserveData) {
-				setIsIdentityLoading(true);
+				if (loadIdentity) {
+					setIsIdentityLoading(true);
+					setLatestIdentityMetric(undefined);
+					setIdentityMetricDays(undefined);
+				}
 				setIsResolutionLoading(true);
-				setLatestIdentityMetric(undefined);
-				setIdentityMetricDays(undefined);
 				setLatestResolutionMetric(undefined);
 				setResolutionMetricDays(undefined);
 			}
@@ -310,7 +313,7 @@ const IdentityOverview = () => {
 				}
 			};
 
-			await Promise.all([loadIdentityMetrics(), loadResolutionMetrics()]);
+			await Promise.all([loadIdentity ? loadIdentityMetrics() : Promise.resolve(), loadResolutionMetrics()]);
 		},
 		[api, displayRange, fetchIdentityMetricDays, fetchResolutionMetricDays, loadConnectionIdentityMetrics],
 	);
@@ -559,12 +562,17 @@ const IdentityOverview = () => {
 		setIsRefreshing(true);
 		setIdentityError(undefined);
 		try {
-			await api.workspaces.refreshIdentityMetrics();
-			latestIdentityMetricRef.current = undefined;
+			let loadIdentity = true;
+			try {
+				await api.workspaces.refreshIdentityMetrics();
+				latestIdentityMetricRef.current = undefined;
+			} catch (err) {
+				loadIdentity = false;
+				setIdentityError(getErrorMessage(err));
+			}
+
 			latestResolutionMetricRef.current = undefined;
-			await Promise.all([loadMetrics({ preserveData: true }), loadResolutionRuns(true)]);
-		} catch (err) {
-			setIdentityError(getErrorMessage(err));
+			await Promise.all([loadMetrics({ loadIdentity, preserveData: true }), loadResolutionRuns(true)]);
 		} finally {
 			setIsRefreshing(false);
 		}
