@@ -115,6 +115,7 @@ const IdentityOverview = () => {
 		IDENTITY_DASHBOARD_DEFAULT_DATE_PRESET,
 	);
 	const [customDateRange, setCustomDateRange] = useState<SegmentedDateRangeSelection[]>(initialCustomRange);
+	const [today, setToday] = useState<string>(todayUTCDateKey);
 	const [latestIdentityMetric, setLatestIdentityMetric] = useState<IdentityMetric>();
 	const [identityMetricDays, setIdentityMetricDays] = useState<IdentityMetricDay[]>();
 	const [selectedIdentityConnection, setSelectedIdentityConnection] = useState<string>('');
@@ -156,6 +157,18 @@ const IdentityOverview = () => {
 	useLayoutEffect(() => {
 		setTitle('Profile Unification / Overview');
 	}, [setTitle]);
+
+	useEffect(() => {
+		let timeout: number;
+		const updateToday = () => {
+			const now = new Date();
+			setToday(todayUTCDateKey(now));
+			const nextUTCDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
+			timeout = window.setTimeout(updateToday, nextUTCDay - now.getTime() + 1);
+		};
+		updateToday();
+		return () => window.clearTimeout(timeout);
+	}, []);
 
 	useLayoutEffect(() => {
 		if (previousConnectionWorkspace.current === selectedWorkspace) return;
@@ -368,7 +381,7 @@ const IdentityOverview = () => {
 	const identityChartDays = showAllIdentityConnections ? identityDays : selectedIdentityChartDays;
 	const identityChartLoading = showAllIdentityConnections
 		? isIdentityLoading
-		: isConnectionIdentityLoading && connectionIdentityMetricDays == null && identityMetricDays == null;
+		: isConnectionIdentityLoading && connectionIdentityMetricDays == null;
 	const identityChartError = showAllIdentityConnections ? identityError : connectionIdentityError;
 	const temporalSemantics = useMemo(
 		() =>
@@ -528,8 +541,8 @@ const IdentityOverview = () => {
 		selectedIdentityConnectionRef.current = connection;
 		setSelectedIdentityConnection(connection);
 		setConnectionIdentityError(undefined);
+		setConnectionIdentityMetricDays(undefined);
 		if (connection === '') {
-			setConnectionIdentityMetricDays(undefined);
 			setIsConnectionIdentityLoading(false);
 			return;
 		}
@@ -594,7 +607,9 @@ const IdentityOverview = () => {
 						customRange={customDateRange}
 						onPresetChange={onPresetChange}
 						onCustomRangeChange={onCustomRangeChange}
+						maxDate={dateKeyToPickerDate(today)}
 						pickerAlignment='end'
+						disabled={isRefreshing}
 					/>
 				</div>
 			</div>
