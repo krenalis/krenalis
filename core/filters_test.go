@@ -10,6 +10,7 @@ import (
 	"math"
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -28,12 +29,13 @@ func Test_Filter_JSON(t *testing.T) {
 	data := []byte(`{"operator":"and","rules":[` +
 		`{"property":"a","operator":"is","values":["5"]},` +
 		`{"operator":"or","rules":[` +
-		`{"property":"b","operator":"is null","values":[]},` +
+		`{"property":"b","operator":"is null"},` +
 		`{"property":"c","operator":"is one of","values":["x","y"]}` +
 		`]}` +
 		`]}`)
 	var filter Filter
-	if err := json.Unmarshal(data, &filter); err != nil {
+	err := json.Unmarshal(data, &filter)
+	if err != nil {
 		t.Fatalf("unexpected error %q", err)
 	}
 	expected := Filter{
@@ -43,7 +45,7 @@ func Test_Filter_JSON(t *testing.T) {
 			&Filter{
 				Operator: OpOr,
 				Rules: []FilterRule{
-					&FilterCondition{Property: "b", Operator: OpIsNull, Values: []string{}},
+					&FilterCondition{Property: "b", Operator: OpIsNull},
 					&FilterCondition{Property: "c", Operator: OpIsOneOf, Values: []string{"x", "y"}},
 				},
 			},
@@ -60,19 +62,212 @@ func Test_Filter_JSON(t *testing.T) {
 		t.Fatalf("expected %s, got %s", data, got)
 	}
 
-	var encoded bytes.Buffer
-	err = json.Encode(&encoded, &Filter{
-		Operator: OpAnd,
+}
+
+// Test_Filter_MarshalJSONDoesNotValidateSemantics verifies that JSON encoding
+// does not reject filters solely because they are semantically invalid.
+func Test_Filter_MarshalJSONDoesNotValidateSemantics(t *testing.T) {
+
+	filter := Filter{
+		Operator: "invalid",
 		Rules: []FilterRule{
-			&FilterCondition{Property: "a", Operator: OpIsNull},
+			&Filter{Operator: "invalid"},
+			&FilterCondition{Operator: "invalid", Values: []string{}},
 		},
-	})
-	if err != nil {
-		t.Fatalf("unexpected error %q", err)
 	}
-	const unary = `{"operator":"and","rules":[{"property":"a","operator":"is null","values":[]}]}`
-	if encoded.String() != unary {
-		t.Fatalf("expected %s, got %s", unary, encoded.String())
+	got, err := json.Marshal(filter)
+	if err != nil {
+		t.Fatalf("unexpected marshal error %q", err)
+	}
+	expected := `{"operator":"invalid","rules":[{"operator":"invalid","rules":[]},` +
+		`{"property":"","operator":"invalid","values":[]}]}`
+	if string(got) != expected {
+		t.Fatalf("expected %s, got %s", expected, got)
+	}
+
+}
+
+// Test_Filter_MarshalJSONRejectsInvalidStrings verifies that JSON encoding
+// returns an error for invalid UTF-8 in filter strings.
+func Test_Filter_MarshalJSONRejectsInvalidStrings(t *testing.T) {
+
+	invalid := string([]byte{0xff})
+	tests := []struct {
+		name   string
+		filter Filter
+	}{
+		{
+			name:   "logical operator",
+			filter: Filter{Operator: FilterLogical(invalid)},
+		},
+		{
+			name: "property",
+			filter: Filter{Rules: []FilterRule{
+				&FilterCondition{Property: invalid},
+			}},
+		},
+		{
+			name: "condition operator",
+			filter: Filter{Rules: []FilterRule{
+				&FilterCondition{Operator: FilterOperator(invalid)},
+			}},
+		},
+		{
+			name: "condition value",
+			filter: Filter{Rules: []FilterRule{
+				&FilterCondition{Values: []string{invalid}},
+			}},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := json.Marshal(&test.filter)
+			if err != nil {
+				return
+			}
+			t.Fatal("expected error, got no error")
+		})
+	}
+
+}
+
+// Test_Filter_MarshalJSONRejectsNilReceivers verifies that MarshalJSON returns
+// an error when called directly on a nil receiver.
+func Test_Filter_MarshalJSONRejectsNilReceivers(t *testing.T) {
+
+	var filter *Filter
+	_, err := filter.MarshalJSON()
+	if err != nil {
+		if err.Error() != "filter cannot be nil" {
+			t.Fatalf("expected filter error %q, got %q", "filter cannot be nil", err)
+		}
+	}
+	if err == nil {
+		t.Fatal("expected filter error, got no error")
+	}
+
+	var condition *FilterCondition
+	_, err = condition.MarshalJSON()
+	if err != nil {
+		if err.Error() != "filter condition cannot be nil" {
+			t.Fatalf("expected condition error %q, got %q", "filter condition cannot be nil", err)
+		}
+	}
+	if err == nil {
+		t.Fatal("expected condition error, got no error")
+	}
+
+}
+
+// Test_Filter_MarshalJSONRejectsNilRules verifies that JSON encoding returns
+// an error for nil rules.
+func Test_Filter_MarshalJSONRejectsNilRules(t *testing.T) {
+
+	tests := []struct {
+		name     string
+		rule     FilterRule
+		expected string
+	}{
+		{"interface", nil, "filter rule cannot be nil"},
+		{"group", (*Filter)(nil), "filter group cannot be nil"},
+		{"condition", (*FilterCondition)(nil), "filter condition cannot be nil"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			filter := Filter{Operator: OpAnd, Rules: []FilterRule{test.rule}}
+			_, err := json.Marshal(&filter)
+			if err != nil {
+				if !strings.Contains(err.Error(), test.expected) {
+					t.Fatalf("expected error %q, got %q", test.expected, err)
+				}
+				return
+			}
+			t.Fatal("expected error, got no error")
+		})
+	}
+
+}
+
+// Test_Filter_MarshalJSONValues verifies the JSON representation of nil,
+// empty, and non-empty condition values.
+func Test_Filter_MarshalJSONValues(t *testing.T) {
+
+	tests := []struct {
+		name      string
+		condition *FilterCondition
+		expected  string
+	}{
+		{
+			name:      "nil",
+			condition: &FilterCondition{Property: "a", Operator: OpIsNull},
+			expected:  `{"property":"a","operator":"is null"}`,
+		},
+		{
+			name:      "empty",
+			condition: &FilterCondition{Property: "a", Operator: OpIsNull, Values: []string{}},
+			expected:  `{"property":"a","operator":"is null","values":[]}`,
+		},
+		{
+			name:      "non-empty",
+			condition: &FilterCondition{Property: "a", Operator: OpIs, Values: []string{"5"}},
+			expected:  `{"property":"a","operator":"is","values":["5"]}`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := json.Marshal(test.condition)
+			if err != nil {
+				t.Fatalf("unexpected condition marshal error %q", err)
+			}
+			if string(got) != test.expected {
+				t.Fatalf("expected %s, got %s", test.expected, got)
+			}
+
+			filter := &Filter{Operator: OpAnd, Rules: []FilterRule{test.condition}}
+			got, err = json.Marshal(filter)
+			if err != nil {
+				t.Fatalf("unexpected filter marshal error %q", err)
+			}
+			expectedFilter := `{"operator":"and","rules":[` + test.expected + `]}`
+			if string(got) != expectedFilter {
+				t.Fatalf("expected %s, got %s", expectedFilter, got)
+			}
+
+			var encoded bytes.Buffer
+			err = json.Encode(&encoded, filter)
+			if err != nil {
+				t.Fatalf("unexpected encode error %q", err)
+			}
+			if encoded.String() != expectedFilter {
+				t.Fatalf("expected %s, got %s", expectedFilter, encoded.String())
+			}
+		})
+	}
+
+}
+
+// Test_Filter_UnmarshalJSONDoesNotValidateSemantics verifies that JSON
+// decoding does not reject filters solely because they are semantically
+// invalid.
+func Test_Filter_UnmarshalJSONDoesNotValidateSemantics(t *testing.T) {
+
+	data := []byte(`{"operator":"invalid","rules":[` +
+		`{"operator":"invalid","rules":[]},` +
+		`{"property":"","operator":"invalid","values":[]}]}`)
+	var filter Filter
+	err := json.Unmarshal(data, &filter)
+	if err != nil {
+		t.Fatalf("unexpected unmarshal error %q", err)
+	}
+	expected := Filter{
+		Operator: "invalid",
+		Rules: []FilterRule{
+			&Filter{Operator: "invalid", Rules: []FilterRule{}},
+			&FilterCondition{Operator: "invalid", Values: []string{}},
+		},
+	}
+	if diff := cmp.Diff(&expected, &filter); diff != "" {
+		t.Fatalf("unexpected filter (-want +got):\n%s", diff)
 	}
 
 }
@@ -82,25 +277,62 @@ func Test_Filter_JSON(t *testing.T) {
 func Test_Filter_UnmarshalJSONRejectsInvalidStructure(t *testing.T) {
 
 	tests := []string{
+		`null`,
 		`[]`,
+		`{"operator":"and"}`,
+		`{"rules":[]}`,
+		`{"operator":1,"rules":[]}`,
+		`{"operator":"and","operator":"or","rules":[]}`,
+		`{"operator":"and","rules":[],"rules":[]}`,
 		`{"operator":"and","rules":"invalid"}`,
+		`{"operator":"and","rules":null}`,
+		`{"operator":"and","rules":[],"values":[]}`,
 		`{"operator":"and","rules":[true]}`,
 		`{"operator":"and","rules":[{"rules":[]}]}`,
 		`{"operator":"and","rules":[{"operator":"or","rules":[],"property":"a"}]}`,
 		`{"operator":"and","rules":[{}]}`,
-		`{"operator":"and","rules":[{"property":"a","operator":"is"}]}`,
-		`{"operator":"and","rules":[{"property":"a","operator":"is","values":null}]}`,
+		`{"operator":"and","rules":[{"property":"a","values":[]}]}`,
+		`{"operator":"and","rules":[{"property":1,"operator":"is"}]}`,
+		`{"operator":"and","rules":[{"property":"a","operator":1}]}`,
+		`{"operator":"and","rules":[{"property":"a","operator":"is","values":true}]}`,
+		`{"operator":"and","rules":[{"property":"a","operator":"is","values":[1]}]}`,
+		`{"operator":"and","rules":[{"property":"a","operator":"is","values":[],"values":[]}]}`,
 		`{"operator":"and","rules":[{"property":"a","operator":"is","values":["1"],"extra":true}]}`,
 		`{"operator":"and","rules":[],"logical":"and"}`,
 	}
 	for _, data := range tests {
 		t.Run(data, func(t *testing.T) {
 			var filter Filter
-			if err := json.Unmarshal([]byte(data), &filter); err == nil {
+			err := json.Unmarshal([]byte(data), &filter)
+			if err == nil {
 				t.Fatal("expected error, got no error")
 			}
 		})
 	}
+}
+
+// Test_Filter_UnmarshalJSONRejectsRootConditions verifies that decoding a
+// condition as a Filter reports that the top-level value must be a group.
+func Test_Filter_UnmarshalJSONRejectsRootConditions(t *testing.T) {
+
+	tests := []string{
+		`{"property":"a","operator":"is","values":["1"]}`,
+		`{"values":true,"property":"a","operator":"is"}`,
+	}
+	for _, data := range tests {
+		t.Run(data, func(t *testing.T) {
+			var filter Filter
+			err := json.Unmarshal([]byte(data), &filter)
+			if err != nil {
+				if !strings.Contains(err.Error(), "filter must be a group") {
+					t.Fatalf("expected group error, got %q", err)
+				}
+				return
+			}
+			t.Fatal("expected error, got no error")
+		})
+	}
+
 }
 
 // Test_Filter_UnmarshalJSONLimits verifies filter complexity limits while
@@ -121,6 +353,12 @@ func Test_Filter_UnmarshalJSONLimits(t *testing.T) {
 		}
 		return &Filter{Operator: OpAnd, Rules: rules}
 	}
+	filterWithNestedRuleCount := func(ruleCount int) *Filter {
+		nestedRuleCount := ruleCount / 2
+		filter := filterWithRuleCount(ruleCount - nestedRuleCount - 1)
+		filter.Rules = append(filter.Rules, filterWithRuleCount(nestedRuleCount))
+		return filter
+	}
 
 	tests := []struct {
 		name     string
@@ -131,6 +369,8 @@ func Test_Filter_UnmarshalJSONLimits(t *testing.T) {
 		{"excessive depth", filterWithDepth(maxFilterDepth + 1), fmt.Errorf("filter exceeds maximum depth of %d", maxFilterDepth)},
 		{"maximum rule count", filterWithRuleCount(maxFilterRuleCount), nil},
 		{"excessive rule count", filterWithRuleCount(maxFilterRuleCount + 1), fmt.Errorf("filter exceeds maximum rule count of %d", maxFilterRuleCount)},
+		{"maximum nested rule count", filterWithNestedRuleCount(maxFilterRuleCount), nil},
+		{"excessive nested rule count", filterWithNestedRuleCount(maxFilterRuleCount + 1), fmt.Errorf("filter exceeds maximum rule count of %d", maxFilterRuleCount)},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -145,6 +385,81 @@ func Test_Filter_UnmarshalJSONLimits(t *testing.T) {
 			}
 			if !reflect.DeepEqual(test.expected, err) {
 				t.Fatalf("expected error %q (type %T), got error %q (type %T)", test.expected, test.expected, err, err)
+			}
+		})
+	}
+
+}
+
+// Test_Filter_UnmarshalJSONValues verifies that absent and null condition
+// values decode as nil while an empty array remains non-nil.
+func Test_Filter_UnmarshalJSONValues(t *testing.T) {
+
+	tests := []struct {
+		name     string
+		data     string
+		expected []string
+	}{
+		{
+			name: "absent",
+			data: `{"operator":"and","rules":[` +
+				`{"property":"a","operator":"is null"}]}`,
+		},
+		{
+			name: "null",
+			data: `{"operator":"and","rules":[` +
+				`{"property":"a","operator":"is null","values":null}]}`,
+		},
+		{
+			name: "absent with valued operator",
+			data: `{"operator":"and","rules":[` +
+				`{"property":"a","operator":"is"}]}`,
+		},
+		{
+			name: "null with valued operator",
+			data: `{"operator":"and","rules":[` +
+				`{"property":"a","operator":"is","values":null}]}`,
+		},
+		{
+			name: "empty",
+			data: `{"operator":"and","rules":[` +
+				`{"property":"a","operator":"is null","values":[]}]}`,
+			expected: []string{},
+		},
+		{
+			name: "non-empty",
+			data: `{"operator":"and","rules":[` +
+				`{"property":"a","operator":"is","values":["5"]}]}`,
+			expected: []string{"5"},
+		},
+		{
+			name: "null element",
+			data: `{"operator":"and","rules":[` +
+				`{"property":"a","operator":"is","values":[null]}]}`,
+			expected: []string{""},
+		},
+		{
+			name:     "members in a different order",
+			data:     `{"rules":[{"values":["5"],"operator":"is","property":"a"}],"operator":"and"}`,
+			expected: []string{"5"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var filter Filter
+			err := json.Unmarshal([]byte(test.data), &filter)
+			if err != nil {
+				t.Fatalf("unexpected unmarshal error %q", err)
+			}
+			if len(filter.Rules) != 1 {
+				t.Fatalf("expected one rule, got %d", len(filter.Rules))
+			}
+			condition, ok := filter.Rules[0].(*FilterCondition)
+			if !ok {
+				t.Fatalf("expected a filter condition, got %T", filter.Rules[0])
+			}
+			if diff := cmp.Diff(test.expected, condition.Values); diff != "" {
+				t.Fatalf("unexpected values (-want +got):\n%s", diff)
 			}
 		})
 	}
@@ -912,6 +1227,26 @@ func Test_validateFilter(t *testing.T) {
 				},
 			},
 			err: errors.New(`operator "boo" is not valid`),
+		},
+		{
+			name: "no values with unary operator",
+			filter: Filter{
+				Operator: OpOr,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "b", Operator: OpIsNull},
+				},
+			},
+			expected: []string{"b"},
+		},
+		{
+			name: "empty values with unary operator",
+			filter: Filter{
+				Operator: OpOr,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "b", Operator: OpIsNull, Values: []string{}},
+				},
+			},
+			err: errors.New(`values cannot be used with the operator "is null"`),
 		},
 		{
 			name: "value with unary operator",

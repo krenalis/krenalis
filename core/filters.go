@@ -5,6 +5,7 @@
 package core
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"net/netip"
@@ -43,18 +44,27 @@ type FilterRule interface {
 	filterRule()
 }
 
+// MarshalJSON returns the JSON representation of filter.
+func (filter *Filter) MarshalJSON() ([]byte, error) {
+	if filter == nil {
+		return nil, errors.New("filter cannot be nil")
+	}
+	var b json.Buffer
+	err := marshalFilterJSON(&b, filter)
+	if err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
+}
+
 // UnmarshalJSON sets filter to the filter group represented by data.
 func (filter *Filter) UnmarshalJSON(data []byte) error {
-	var value json.Value
-	if err := json.Unmarshal(data, &value); err != nil {
-		return err
-	}
-	ruleCount := 0
-	group, err := unmarshalFilterGroup(value, 1, &ruleCount)
+	dec := json.NewDecoder(bytes.NewBuffer(data))
+	group, _, err := unmarshalFilterRule(dec, 1, expectFilterGroup)
 	if err != nil {
 		return err
 	}
-	*filter = *group
+	*filter = *(group.(*Filter))
 	return nil
 }
 
@@ -99,16 +109,20 @@ type FilterCondition struct {
 	// Values.
 	// If the property has a string type with allowed values, each value must be one of the allowed values.
 	// In all other cases, each value must be at most 60 runes and must not contain the NUL byte.
-	Values []string `json:"values"`
+	Values []string `json:"values,omitzero"`
 }
 
 // MarshalJSON returns the JSON representation of condition.
-func (condition FilterCondition) MarshalJSON() ([]byte, error) {
-	if condition.Values == nil {
-		condition.Values = []string{}
+func (condition *FilterCondition) MarshalJSON() ([]byte, error) {
+	if condition == nil {
+		return nil, errors.New("filter condition cannot be nil")
 	}
-	type plainFilterCondition FilterCondition
-	return json.Marshal(plainFilterCondition(condition))
+	var b json.Buffer
+	err := marshalFilterConditionJSON(&b, condition)
+	if err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
 }
 
 // filterRule marks FilterCondition as a filter rule.
@@ -392,6 +406,75 @@ func isFloatingPoint(s string) bool {
 	return i == len(s)
 }
 
+// marshalFilterConditionJSON appends the JSON representation of condition to
+// b.
+func marshalFilterConditionJSON(b *json.Buffer, condition *FilterCondition) error {
+	b.WriteString(`{"property":`)
+	err := b.Encode(condition.Property)
+	if err != nil {
+		return err
+	}
+	b.WriteString(`,"operator":`)
+	err = b.Encode(condition.Operator)
+	if err != nil {
+		return err
+	}
+	if condition.Values != nil {
+		b.WriteString(`,"values":[`)
+		for i, value := range condition.Values {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			err = b.Encode(value)
+			if err != nil {
+				return err
+			}
+		}
+		b.WriteByte(']')
+	}
+	b.WriteByte('}')
+	return nil
+}
+
+// marshalFilterJSON appends the JSON representation of filter to b.
+func marshalFilterJSON(b *json.Buffer, filter *Filter) error {
+	b.WriteString(`{"operator":`)
+	err := b.Encode(filter.Operator)
+	if err != nil {
+		return err
+	}
+	b.WriteString(`,"rules":[`)
+	for i, rule := range filter.Rules {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		switch rule := rule.(type) {
+		case *Filter:
+			if rule == nil {
+				return errors.New("filter group cannot be nil")
+			}
+			err = marshalFilterJSON(b, rule)
+			if err != nil {
+				return err
+			}
+		case *FilterCondition:
+			if rule == nil {
+				return errors.New("filter condition cannot be nil")
+			}
+			err = marshalFilterConditionJSON(b, rule)
+			if err != nil {
+				return err
+			}
+		case nil:
+			return errors.New("filter rule cannot be nil")
+		default:
+			return fmt.Errorf("unsupported filter rule type %T", rule)
+		}
+	}
+	b.WriteString(`]}`)
+	return nil
+}
+
 // parseInt parses an int(64) from s and returns the int(64) value and true.
 // If s is not a valid int(64), it returns 0 and false.
 func parseInt(s string) (int, bool) {
@@ -491,75 +574,141 @@ func resolveFilterProperty(properties types.Properties, path string) (types.Prop
 	return p, path, nil
 }
 
-// unmarshalFilterGroup unmarshals a filter group and returns it.
-func unmarshalFilterGroup(value json.Value, depth int, ruleCount *int) (*Filter, error) {
+// Filter rule decoding modes.
+const (
+	expectAnyFilterRule = false
+	expectFilterGroup   = true
+)
 
-	if depth > maxFilterDepth {
-		return nil, fmt.Errorf("filter exceeds maximum depth of %d", maxFilterDepth)
+// unmarshalFilterRule unmarshals a filter rule and returns it and its number of
+// descendant rules. If expectGroup is true, it accepts only a filter group.
+func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup bool) (FilterRule, int, error) {
+
+	tok, err := dec.ReadToken()
+	if err != nil {
+		return nil, 0, err
 	}
-	if !value.IsObject() {
-		return nil, errors.New("filter group must be an object")
-	}
-	if err := validateFilterJSONProperties(value, "operator", "rules"); err != nil {
-		return nil, err
-	}
-	operatorValue, hasOperator := value.Get([]string{"operator"})
-	rulesValue, hasRules := value.Get([]string{"rules"})
-	if !hasOperator || !hasRules {
-		return nil, errors.New("filter group must contain operator and rules")
-	}
-	if !rulesValue.IsArray() {
-		return nil, errors.New("filter rules must be an array")
+	if tok.Kind() != json.Object {
+		return nil, 0, errors.New("filter rule must be an object")
 	}
 
-	var operator FilterLogical
-	if err := operatorValue.Unmarshal(&operator); err != nil {
-		return nil, err
-	}
-	rules := make([]FilterRule, 0, rulesValue.NumElement())
+	var operator string
+	var property string
+	var rules []FilterRule
+	var values []string
+	var descendantRuleCount int
+	var hasOperator, hasProperty, hasRules, hasValues bool
 
-	for _, rawRule := range rulesValue.Elements() {
-		(*ruleCount)++
-		if *ruleCount > maxFilterRuleCount {
-			return nil, fmt.Errorf("filter exceeds maximum rule count of %d", maxFilterRuleCount)
+	for dec.PeekKind() != '}' {
+		tok, err = dec.ReadToken()
+		if err != nil {
+			return nil, 0, err
 		}
-		if !rawRule.IsObject() {
-			return nil, errors.New("filter rule must be an object")
-		}
-		_, isGroup := rawRule.Get([]string{"rules"})
-		_, isCondition := rawRule.Get([]string{"property"})
-		switch {
-		case isGroup && isCondition:
-			return nil, errors.New(`filter rule cannot contain both "rules" and "property"`)
-		case isGroup:
-			group, err := unmarshalFilterGroup(rawRule, depth+1, ruleCount)
-			if err != nil {
-				return nil, err
+		name := tok.String()
+		switch name {
+		case "operator":
+			if hasOperator {
+				return nil, 0, fmt.Errorf("duplicate filter property %q", name)
 			}
-			rules = append(rules, group)
-		case isCondition:
-			if err := validateFilterJSONProperties(rawRule, "property", "operator", "values"); err != nil {
-				return nil, err
+			hasOperator = true
+			err = dec.Decode(&operator)
+		case "property":
+			if hasProperty {
+				return nil, 0, fmt.Errorf("duplicate filter property %q", name)
 			}
-			_, hasConditionOperator := rawRule.Get([]string{"operator"})
-			values, hasValues := rawRule.Get([]string{"values"})
-			if !hasConditionOperator || !hasValues {
-				return nil, errors.New("filter condition must contain property, operator, and values")
+			hasProperty = true
+			if expectGroup {
+				err = dec.SkipValue()
+			} else {
+				err = dec.Decode(&property)
 			}
-			if !values.IsArray() {
-				return nil, errors.New("filter condition values must be an array")
+		case "rules":
+			if hasRules {
+				return nil, 0, fmt.Errorf("duplicate filter property %q", name)
 			}
-			var condition FilterCondition
-			if err := rawRule.Unmarshal(&condition); err != nil {
-				return nil, err
+			if depth > maxFilterDepth {
+				return nil, 0, fmt.Errorf("filter exceeds maximum depth of %d", maxFilterDepth)
 			}
-			rules = append(rules, &condition)
+			hasRules = true
+			rules, descendantRuleCount, err = unmarshalFilterRules(dec, depth)
+		case "values":
+			if hasValues {
+				return nil, 0, fmt.Errorf("duplicate filter property %q", name)
+			}
+			hasValues = true
+			if expectGroup {
+				err = dec.SkipValue()
+			} else {
+				err = dec.Decode(&values)
+			}
 		default:
-			return nil, errors.New(`filter rule must contain either "rules" or "property"`)
+			return nil, 0, fmt.Errorf("unknown filter property %q", name)
+		}
+		if err != nil {
+			return nil, 0, err
 		}
 	}
 
-	return &Filter{Operator: operator, Rules: rules}, nil
+	_ = dec.SkipToken() // skip '}'
+
+	if hasRules && hasProperty {
+		return nil, 0, errors.New(`filter rule cannot contain both "rules" and "property"`)
+	}
+	if hasRules {
+		if hasValues {
+			return nil, 0, errors.New(`unknown filter property "values"`)
+		}
+		if !hasOperator {
+			return nil, 0, errors.New("filter group must contain operator and rules")
+		}
+		return &Filter{Operator: FilterLogical(operator), Rules: rules}, descendantRuleCount, nil
+	}
+	if expectGroup {
+		if hasProperty || hasValues {
+			return nil, 0, errors.New("filter must be a group")
+		}
+		return nil, 0, errors.New("filter group must contain operator and rules")
+	}
+	if hasProperty {
+		if !hasOperator {
+			return nil, 0, errors.New("filter condition must contain property and operator")
+		}
+		return &FilterCondition{Property: property, Operator: FilterOperator(operator), Values: values}, 0, nil
+	}
+
+	return nil, 0, errors.New(`filter rule must contain either "rules" or "property"`)
+}
+
+// unmarshalFilterRules unmarshals the rules of a filter group and returns them
+// and their total rule count.
+func unmarshalFilterRules(dec *json.Decoder, depth int) ([]FilterRule, int, error) {
+
+	tok, err := dec.ReadToken()
+	if err != nil {
+		return nil, 0, err
+	}
+	if tok.Kind() != json.Array {
+		return nil, 0, errors.New("filter rules must be an array")
+	}
+
+	rules := []FilterRule{}
+	ruleCount := 0
+	for dec.PeekKind() != ']' {
+		rule, descendantRuleCount, err := unmarshalFilterRule(dec, depth+1, expectAnyFilterRule)
+		if err != nil {
+			return nil, 0, err
+		}
+		ruleCount += descendantRuleCount + 1
+		if ruleCount > maxFilterRuleCount {
+			return nil, 0, fmt.Errorf("filter exceeds maximum rule count of %d", maxFilterRuleCount)
+		}
+		rules = append(rules, rule)
+	}
+
+	// Consume ']'.
+	_ = dec.SkipToken()
+
+	return rules, ruleCount, nil
 }
 
 // validateFilter checks the validity of a filter and returns the referenced
@@ -735,7 +884,7 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 	// Validate the values.
 	switch op {
 	case OpIsTrue, OpIsFalse, OpIsEmpty, OpIsNotEmpty, OpIsNull, OpIsNotNull, OpExists, OpDoesNotExist:
-		if len(cond.Values) != 0 {
+		if cond.Values != nil {
 			return nil, fmt.Errorf("values cannot be used with the operator %q", op)
 		}
 	default:
@@ -751,7 +900,7 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 			return nil, fmt.Errorf("at least one value must be used with the operator %q", op)
 		}
 	}
-	if len(cond.Values) == 0 {
+	if cond.Values == nil {
 		return []string{path}, nil
 	}
 	// Handle string properties with allowed values separately.
@@ -862,16 +1011,5 @@ func validateFilterGroup(filter *Filter, validation *filterValidation, depth int
 		}
 	}
 
-	return nil
-}
-
-// validateFilterJSONProperties checks that value contains only the provided
-// properties.
-func validateFilterJSONProperties(value json.Value, properties ...string) error {
-	for property := range value.Properties() {
-		if !slices.Contains(properties, property) {
-			return fmt.Errorf("unknown filter property %q", property)
-		}
-	}
 	return nil
 }

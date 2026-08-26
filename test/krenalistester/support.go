@@ -402,7 +402,6 @@ var DefaultFilterUserFromEvents = &Filter{
 		&FilterCondition{
 			Property: "traits",
 			Operator: "is not empty",
-			Values:   []string{},
 		},
 	},
 }

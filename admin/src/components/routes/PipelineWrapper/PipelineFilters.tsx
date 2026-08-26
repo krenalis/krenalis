@@ -54,6 +54,10 @@ const filterConditionAt = (filter: Filter, path: number[]): FilterCondition => {
 	return rule;
 };
 
+// filterConditionValues returns the values of condition, initializing them
+// when they are absent from the API representation.
+const filterConditionValues = (condition: FilterCondition): string[] => (condition.values ??= []);
+
 // newFilterCondition returns an empty condition for the visual editor.
 const newFilterCondition = (): FilterCondition => ({ property: '', operator: '', values: [''] });
 
@@ -220,20 +224,21 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 	const changeOperator = (path: number[], operator: FilterOperator, updatedPipeline?: TransformedPipeline) => {
 		const p = updatedPipeline ?? structuredClone(pipeline);
 		const condition = filterConditionAt(p.filter!, path);
+		const values = filterConditionValues(condition);
 		condition.operator = operator;
 		if (isUnaryOperator(operator)) {
 			condition.values = [];
 		} else if (isBetweenOperator(operator)) {
-			condition.values = condition.values.slice(0, 2);
+			condition.values = values.slice(0, 2);
 			while (condition.values.length < 2) {
 				condition.values.push('');
 			}
 		} else if (isOneOfOperator(operator)) {
-			if (condition.values.length === 0) {
+			if (values.length === 0) {
 				condition.values = [''];
 			}
 		} else {
-			condition.values = [condition.values[0] ?? ''];
+			condition.values = [values[0] ?? ''];
 		}
 		setPipeline(p);
 	};
@@ -260,15 +265,16 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 
 	const onChangeValue = (path: number[], position: number, value: string) => {
 		const p = structuredClone(pipeline);
-		filterConditionAt(p.filter!, path).values[position] = value;
+		filterConditionValues(filterConditionAt(p.filter!, path))[position] = value;
 		setPipeline(p);
 	};
 
 	const onAddValue = (path: number[]) => {
 		const p = structuredClone(pipeline);
 		const condition = filterConditionAt(p.filter!, path);
-		const position = condition.values.length;
-		condition.values.push('');
+		const values = filterConditionValues(condition);
+		const position = values.length;
+		values.push('');
 		setPipeline(p);
 		setTimeout(() => {
 			const property: any = document.querySelector(`[data-id="property-${pathID(path)}"]`);
@@ -290,7 +296,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 	const onRemoveValue = (path: number[], position: number) => {
 		const p = structuredClone(pipeline);
 		const condition = filterConditionAt(p.filter!, path);
-		condition.values.splice(position, 1);
+		filterConditionValues(condition).splice(position, 1);
 		setPipeline(p);
 	};
 
@@ -308,6 +314,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		const isOneOf = isOneOfOperator(condition.operator);
 		const isInvalidProperty = property == null;
 		const propertyValues = getPropertyValues(property) ?? [];
+		const values = condition.values ?? [];
 
 		const propertyInput = (
 			<Combobox
@@ -379,7 +386,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 				<PipelineFilterValueControl
 					key={`value-${id}-0`}
 					name={`value-${id}-0`}
-					value={condition.values[0] ?? ''}
+					value={values[0] ?? ''}
 					options={propertyValues}
 					disabled={isInvalidProperty || isDisabled}
 					onValueChange={(value) => onChangeValue(path, 0, value)}
@@ -393,14 +400,14 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 					<PipelineFilterValueControl
 						key={`value-${id}-1`}
 						name={`value-${id}-1`}
-						value={condition.values[1] ?? ''}
+						value={values[1] ?? ''}
 						options={propertyValues}
 						disabled={isInvalidProperty || isDisabled}
 						onValueChange={(value) => onChangeValue(path, 1, value)}
 					/>,
 				);
 			} else if (isOneOf) {
-				for (const [position, value] of condition.values.slice(1).entries()) {
+				for (const [position, value] of values.slice(1).entries()) {
 					const valuePosition = position + 1;
 					valueElements.push(
 						<div className='pipeline__filters-value' key={`value-${id}-${valuePosition}`}>

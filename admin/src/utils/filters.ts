@@ -298,7 +298,7 @@ const serializeFilter = (filter: Filter, formatted: boolean): string => {
 	// formatCondition builds a single condition string.
 	function formatCondition(condition: FilterCondition): string {
 		const { property, operator, values } = condition;
-		const formattedValues = formatValues(values, operator);
+		const formattedValues = formatValues(values ?? [], operator);
 		return `${property} ${operator}${formattedValues === '' ? '' : ` ${formattedValues}`}`;
 	}
 

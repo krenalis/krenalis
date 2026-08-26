@@ -9,8 +9,24 @@ import (
 	"testing"
 )
 
+// TestDefaultFilterUserFromEventsJSON verifies the JSON representation of the
+// default filter for pipelines that import users from events.
+func TestDefaultFilterUserFromEventsJSON(t *testing.T) {
+
+	got, err := json.Marshal(DefaultFilterUserFromEvents)
+	if err != nil {
+		t.Fatalf("cannot marshal filter: %v", err)
+	}
+	expected := `{"operator":"or","rules":[{"property":"type","operator":"is","values":["identify"]},` +
+		`{"property":"traits","operator":"is not empty","values":null}]}`
+	if string(got) != expected {
+		t.Fatalf("expected %s, got %s", expected, got)
+	}
+
+}
+
 // TestFilterJSON verifies the recursive filter JSON representation, including
-// encoding a nil FilterCondition.Values slice as an empty array.
+// encoding a nil FilterCondition.Values slice as null.
 func TestFilterJSON(t *testing.T) {
 
 	filter := Filter{
@@ -31,7 +47,7 @@ func TestFilterJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot marshal filter: %v", err)
 	}
-	expected := `{"operator":"and","rules":[{"property":"x","operator":"exists","values":[]},` +
+	expected := `{"operator":"and","rules":[{"property":"x","operator":"exists","values":null},` +
 		`{"operator":"or","rules":[{"property":"y","operator":"is","values":["a"]},` +
 		`{"property":"z","operator":"is","values":["b"]}]}]}`
 	if string(got) != expected {

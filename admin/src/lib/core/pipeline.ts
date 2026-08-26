@@ -646,7 +646,7 @@ const transformPipeline = (
 	if (pipeline.filter) {
 		pipeline.filter = mapFilterConditions(pipeline.filter, (condition) => ({
 			...condition,
-			values: condition.values.map((value) => formatString(value)),
+			values: (condition.values ?? []).map((value) => formatString(value)),
 		}));
 	}
 
@@ -1200,7 +1200,7 @@ const computeDefaultPipeline = (
 				operator: 'or',
 				rules: [
 					{ property: 'type', operator: 'is', values: ['identify'] },
-					{ property: 'traits', operator: 'is not empty', values: [] },
+					{ property: 'traits', operator: 'is not empty' },
 				],
 			};
 		}
@@ -1988,13 +1988,14 @@ const validateAndNormalizeFilterCondition = (
 		}
 	}
 
+	const conditionValues = condition.values ?? [];
 	let values: string[] = [];
 	if (isJsonOrText) {
 		const stringType = property.type === 'string' ? (property.full.type as StringType) : null;
 		const propertyValues = stringType?.values ?? null;
 		const allowsEmptySelection = propertyValues != null && propertyValues.includes('');
 
-		for (const [i, v] of condition.values.entries()) {
+		for (const [i, v] of conditionValues.entries()) {
 			const isFirstValueEmpty = i === 0 && v === '';
 			const isSecondBetweenEmpty = i === 1 && v === '' && isBetweenOperator(condition.operator);
 			if ((isFirstValueEmpty || isSecondBetweenEmpty) && !allowsEmptySelection) {
@@ -2016,16 +2017,19 @@ const validateAndNormalizeFilterCondition = (
 			values.push(parsed);
 		}
 	} else {
-		values = condition.values;
+		values = conditionValues;
 	}
 
 	try {
-		validateFilterConditionValues(property.full.type, condition.values, propertyName);
+		validateFilterConditionValues(property.full.type, conditionValues, propertyName);
 	} catch (err) {
 		throw err;
 	}
 
-	const c: FilterCondition = { property: condition.property, operator: condition.operator, values: values };
+	const c: FilterCondition = { property: condition.property, operator: condition.operator };
+	if (!isUnaryOperator(condition.operator)) {
+		c.values = values;
+	}
 	return c;
 };
 

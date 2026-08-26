@@ -124,17 +124,6 @@ type FilterCondition struct {
 	Values   []string       `json:"values"`
 }
 
-// MarshalJSON returns the JSON representation of condition.
-func (condition FilterCondition) MarshalJSON() ([]byte, error) {
-
-	if condition.Values == nil {
-		condition.Values = []string{}
-	}
-	type plainFilterCondition FilterCondition
-
-	return json.Marshal(plainFilterCondition(condition))
-}
-
 // filterRule marks FilterCondition as a filter rule.
 func (*FilterCondition) filterRule() {}
 

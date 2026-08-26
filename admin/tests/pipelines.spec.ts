@@ -1371,8 +1371,7 @@ test(`Add "Import users" pipeline on JavaScript`, async ({ page }) => {
 				},
 				{
 					"property": "traits",
-					"operator": "is not empty",
-					"values": []
+					"operator": "is not empty"
 				}
 			]
 		},

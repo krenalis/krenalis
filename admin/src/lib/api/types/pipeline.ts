@@ -84,7 +84,7 @@ type FilterOperator =
 interface FilterCondition {
 	property: string;
 	operator: FilterOperator | '';
-	values: string[];
+	values?: string[];
 }
 
 type FilterRule = FilterCondition | Filter;
