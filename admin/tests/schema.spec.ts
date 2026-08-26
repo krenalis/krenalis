@@ -206,6 +206,130 @@ test(`Keep keyboard hints fixed and show disabled reorder handles while filterin
 	await expect(handle).toBeEnabled();
 });
 
+test(`Expand nested object properties while viewing and editing`, async ({ page }) => {
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		const property = schema.properties[0];
+		schema.properties.push({ ...property, name: 'reference_property', type: { kind: 'string' } });
+		schema.properties.push({
+			...property,
+			name: 'nested_object',
+			type: {
+				kind: 'object',
+				properties: [
+					{ ...property, name: 'outer_leaf', type: { kind: 'string' } },
+					{
+						...property,
+						name: 'inner_object',
+						type: {
+							kind: 'object',
+							properties: [{ ...property, name: 'leaf', type: { kind: 'string' } }],
+						},
+					},
+				],
+			},
+		});
+		await route.fulfill({ response, json: schema });
+	});
+
+	const getExpandControl = (row) => row.locator('xpath=..').locator(':scope > .grid__row-expand');
+	const expectExpandControlToPointDown = async (expand) => {
+		await expect
+			.poll(() =>
+				expand.evaluate((element) => {
+					const svg = element.shadowRoot?.querySelector('svg');
+					if (svg == null) {
+						return null;
+					}
+					const transform = new DOMMatrixReadOnly(getComputedStyle(svg).transform);
+					return [transform.a, transform.b, transform.c, transform.d].map(Math.round).join(',');
+				}),
+			)
+			.toBe('0,1,-1,0');
+	};
+	const expectExpandControlAfterHandle = async (row) => {
+		const nestedRows = row.locator('xpath=..');
+		const expand = getExpandControl(row);
+		const handle = nestedRows.locator('xpath=..').locator(':scope > .draggable-wrapper__handle');
+		await expect(expand).toBeVisible();
+		await expect
+			.poll(async () => {
+				const [expandBox, handleBox] = await Promise.all([expand.boundingBox(), handle.boundingBox()]);
+				if (expandBox == null || handleBox == null) {
+					return null;
+				}
+				return Math.round(expandBox.x - handleBox.x - handleBox.width);
+			})
+			.toBe(2);
+		return expand;
+	};
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	const readOnlyOuterRow = page.locator('.schema-grid .grid__row[data-id="nested_object"]');
+	const readOnlyOuterExpand = getExpandControl(readOnlyOuterRow);
+	await expect(readOnlyOuterExpand).toBeVisible();
+	await readOnlyOuterExpand.click({ timeout: 5000 });
+	await expectExpandControlToPointDown(readOnlyOuterExpand);
+	const readOnlyInnerRow = page.locator('.schema-grid .grid__row[data-id="nested_object.inner_object"]');
+	const readOnlyInnerExpand = getExpandControl(readOnlyInnerRow);
+	await expect(readOnlyInnerExpand).toBeVisible();
+	await expect
+		.poll(() =>
+			readOnlyInnerRow.evaluate((element) =>
+				element.parentElement == null ? null : getComputedStyle(element.parentElement).borderBottomWidth,
+			),
+		)
+		.toBe('0px');
+	await readOnlyInnerExpand.click({ timeout: 5000 });
+	await expectExpandControlToPointDown(readOnlyInnerExpand);
+	await expect(page.locator('.schema-grid .grid__row[data-id="nested_object.inner_object.leaf"]')).toBeVisible();
+
+	await page.reload();
+	await editSchema(page);
+
+	const referenceName = page.locator(
+		'.schema-edit .grid__row[data-id="reference_property"] .grid__cell.grid-el--first .grid__cell-content',
+	);
+	const outerRow = page.locator('.schema-edit .grid__row[data-id="nested_object"]');
+	const outerExpand = await expectExpandControlAfterHandle(outerRow);
+	const outerName = outerRow.locator('.grid__cell.grid-el--first .grid__cell-content');
+	await expect
+		.poll(async () => {
+			const [referenceBox, outerBox] = await Promise.all([referenceName.boundingBox(), outerName.boundingBox()]);
+			return referenceBox == null || outerBox == null ? null : Math.round(outerBox.x - referenceBox.x);
+		})
+		.toBe(0);
+	await outerExpand.click({ timeout: 5000 });
+	await expectExpandControlToPointDown(outerExpand);
+	const innerRow = page.locator('.schema-edit .grid__row[data-id="nested_object.inner_object"]');
+	const outerLeaf = page.locator('.schema-edit .grid__row[data-id="nested_object.outer_leaf"]');
+	await expect(innerRow).toBeVisible();
+	await expect
+		.poll(() => innerRow.evaluate((element) => getComputedStyle(element, '::before').display))
+		.not.toBe('none');
+	const innerName = innerRow.locator('.grid__cell.grid-el--first .grid__cell-content');
+	const outerLeafName = outerLeaf.locator('.grid__cell.grid-el--first .grid__cell-content');
+	await expect
+		.poll(async () => {
+			const [innerBox, outerLeafBox] = await Promise.all([innerName.boundingBox(), outerLeafName.boundingBox()]);
+			return innerBox == null || outerLeafBox == null ? null : Math.round(innerBox.x - outerLeafBox.x);
+		})
+		.toBe(0);
+	const innerExpand = await expectExpandControlAfterHandle(innerRow);
+	await expect
+		.poll(async () => {
+			const [outerBox, innerBox] = await Promise.all([outerExpand.boundingBox(), innerExpand.boundingBox()]);
+			return outerBox == null || innerBox == null
+				? null
+				: Math.round(innerBox.x + innerBox.width / 2 - outerBox.x - outerBox.width / 2);
+		})
+		.toBe(0);
+	await innerExpand.click({ timeout: 5000 });
+	await expectExpandControlToPointDown(innerExpand);
+	await expect(page.locator('.schema-edit .grid__row[data-id="nested_object.inner_object.leaf"]')).toBeVisible();
+});
+
 test(`Keep profile schema search selection and expansion consistent`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();

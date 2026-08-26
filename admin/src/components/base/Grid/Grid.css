@@ -222,29 +222,6 @@ sl-popup::part(arrow) {
 	left: calc(var(--children-indentation) + 30px);
 }
 
-.grid--sortable .grid__sortable-rows .grid__row,
-.grid--sortable .grid__sortable-rows .grid__row .grid__cell {
-	background-color: var(--sl-color-primary-50);
-	font-weight: 500;
-}
-
-.grid--sortable .grid__sortable-rows .grid__nested-rows .grid__row--children,
-.grid--sortable .grid__sortable-rows .grid__nested-rows .grid__row--children .grid__cell,
-.grid--sortable .grid__sortable-rows .grid__nested-rows .grid__nested-rows .grid__row--parent,
-.grid--sortable .grid__sortable-rows .grid__nested-rows .grid__nested-rows .grid__row--parent .grid__cell {
-	background-color: var(--sl-color-primary-100) !important;
-	font-weight: 500 !important;
-}
-
-.grid--sortable .grid__sortable-rows .grid__nested-rows--expanded > .grid__row--parent,
-.grid--sortable .grid__sortable-rows .grid__nested-rows > .grid__row--children:last-child,
-.grid--sortable .grid__sortable-rows .grid__nested-rows > .grid__nested-rows--children:last-child,
-.grid--sortable .grid__sortable-rows .grid__nested-rows > .draggable-wrapper > .grid__row--children:last-child,
-.grid--sortable .grid__sortable-rows .grid__nested-rows > .draggable-wrapper > .grid__nested-rows--children:last-child {
-	border-top: 0 !important;
-	border-bottom: 0 !important;
-}
-
 .grid--sortable .draggable-wrapper {
 	position: relative;
 }

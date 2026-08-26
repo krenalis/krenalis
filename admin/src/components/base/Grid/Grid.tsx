@@ -7,6 +7,8 @@ import {
 	GridNestedRowsIndentation,
 	GridRef,
 	NestedGridRows,
+	SortableGridRow,
+	SortableRowComponent,
 	StandardGridRow,
 } from './Grid.types';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
@@ -16,6 +18,12 @@ import { getChildIndexClassname } from './Grid.helpers';
 import { focusGridForKeyboardNavigation, navigateGrid, navigateGridWithKeyboard } from './GridKeyboardNavigation';
 import GridNestedRows from './GridNestedRows/GridNestedRows';
 import GridRow from './GridRow/GridRow';
+import { SortableRows } from './SortableRows';
+
+interface GridReordering {
+	disabled?: boolean;
+	onSortRow: (overRowID: string, movedRowID: string) => void;
+}
 
 interface GridProps {
 	columns: GridColumn[];
@@ -33,6 +41,7 @@ interface GridProps {
 	loadingText?: string;
 	nestedRowsIndentation?: GridNestedRowsIndentation;
 	keyboardNavigation?: boolean;
+	reordering?: GridReordering;
 }
 
 const Grid = forwardRef<GridRef, GridProps>(
@@ -50,10 +59,13 @@ const Grid = forwardRef<GridRef, GridProps>(
 			loadingText,
 			nestedRowsIndentation,
 			keyboardNavigation,
+			reordering,
 		}: GridProps,
 		ref,
 	) => {
 		const gridRef = useRef<any>();
+		const onSortRow = reordering?.onSortRow;
+		const reorderDisabled = reordering?.disabled;
 
 		const { columnsWidths, reloadColumnsWidths } = useGrid(
 			gridRef,
@@ -66,11 +78,16 @@ const Grid = forwardRef<GridRef, GridProps>(
 
 		useImperativeHandle(ref, () => {
 			return {
-				focus: () => {
-					gridRef.current?.focus({ preventScroll: true });
-				},
-				navigate: (key: string, shiftKey = false) => {
-					return gridRef.current == null ? false : navigateGrid(gridRef.current, key, shiftKey);
+				collapse: () => {
+					const nestedRows = gridRef.current.querySelectorAll('.grid__nested-rows');
+					for (const r of nestedRows) {
+						const isExpanded = r.classList.contains('grid__nested-rows--expanded');
+						if (isExpanded) {
+							const expandIcon = r.querySelector('.grid__row-expand');
+							expandIcon.click();
+						}
+					}
+					reloadColumnsWidths();
 				},
 				expand: () => {
 					const nestedRows = gridRef.current.querySelectorAll('.grid__nested-rows');
@@ -83,52 +100,83 @@ const Grid = forwardRef<GridRef, GridProps>(
 					}
 					reloadColumnsWidths();
 				},
-				collapse: () => {
-					const nestedRows = gridRef.current.querySelectorAll('.grid__nested-rows');
-					for (const r of nestedRows) {
-						const isExpanded = r.classList.contains('grid__nested-rows--expanded');
-						if (isExpanded) {
-							const expandIcon = r.querySelector('.grid__row-expand');
-							expandIcon.click();
-						}
+				expandRow: (id: string) => {
+					const row = gridRef.current.querySelector(`[data-id="${id}"]`);
+					const parent = row.closest('.grid__nested-rows');
+					if (parent == null) {
+						return;
 					}
-					reloadColumnsWidths();
+					const isExpanded = parent.classList.contains('grid__nested-rows--expanded');
+					if (!isExpanded) {
+						const expandIcon = parent.querySelector('.grid__row-expand');
+						expandIcon.click();
+					}
+				},
+				focus: () => {
+					gridRef.current?.focus({ preventScroll: true });
+				},
+				navigate: (key: string, shiftKey = false) => {
+					return gridRef.current == null
+						? false
+						: navigateGrid(gridRef.current, key, shiftKey, reorderDisabled ? undefined : onSortRow);
 				},
 			};
-		}, []);
+		}, [onSortRow, reorderDisabled]);
 
-		const rowComponents = useMemo(() => {
+		const { rowComponents, sortableRowComponents } = useMemo(() => {
 			const rowComponents = [] as ReactNode[];
+			const sortableRowComponents = [] as SortableRowComponent[];
 			for (const [i, row] of rows.entries()) {
 				const className = getChildIndexClassname(i, rows.length);
 				if (Array.isArray(row)) {
 					const r = row as NestedGridRows;
-					const parentRow = r[0] as StandardGridRow;
-					rowComponents.push(
+					const parentRow = r[0] as SortableGridRow;
+					const isSortable = onSortRow != null && parentRow.dragKey != null && parentRow.dragKey !== '';
+					const component = (
 						<GridNestedRows
 							key={parentRow.id ?? i}
 							rows={r}
 							columns={columns}
 							className={`grid__nested-rows ${className}`}
 							nesting={1}
+							onSortRow={onSortRow}
+							isSortable={isSortable}
+							reorderDisabled={reorderDisabled}
 							indentation={nestedRowsIndentation}
 							reloadColumnsWidths={reloadColumnsWidths}
-						/>,
+						/>
 					);
+					if (isSortable) {
+						sortableRowComponents.push({
+							id: parentRow.dragKey,
+							row: component,
+						});
+					} else {
+						rowComponents.push(component);
+					}
 					continue;
 				}
-				const r = row as StandardGridRow;
-				rowComponents.push(
+				const component = (
 					<GridRow
 						key={i}
-						row={r}
+						row={row as StandardGridRow}
 						columns={columns}
 						className={`grid__row${className ? ' ' + className : ''}`}
-					/>,
+					/>
 				);
+				const sortableRow = row as SortableGridRow;
+				const isSortable = onSortRow != null && sortableRow.dragKey != null && sortableRow.dragKey !== '';
+				if (isSortable) {
+					sortableRowComponents.push({
+						id: sortableRow.dragKey,
+						row: component,
+					});
+				} else {
+					rowComponents.push(component);
+				}
 			}
-			return rowComponents;
-		}, [rows, nestedRowsIndentation]);
+			return { rowComponents, sortableRowComponents };
+		}, [rows, nestedRowsIndentation, onSortRow, reorderDisabled]);
 
 		let widths = columnsWidths;
 		if (gridColumnsWidths != null) {
@@ -138,11 +186,15 @@ const Grid = forwardRef<GridRef, GridProps>(
 		return (
 			<div
 				ref={gridRef}
-				className={`grid${className ? ' ' + className : ''}${showColumnBorder ? ' grid--show-column-border' : ''}${showRowBorder ? ' grid--show-row-border' : ''}${widths == null ? ' grid--hide-content' : ''}`}
+				className={`grid${onSortRow == null ? '' : ' grid--sortable'}${className ? ' ' + className : ''}${showColumnBorder ? ' grid--show-column-border' : ''}${showRowBorder ? ' grid--show-row-border' : ''}${widths == null ? ' grid--hide-content' : ''}`}
 				style={{ '--grid-columns': widths } as React.CSSProperties}
 				tabIndex={keyboardNavigation ? 0 : undefined}
 				onClick={keyboardNavigation ? focusGridForKeyboardNavigation : undefined}
-				onKeyDown={keyboardNavigation ? navigateGridWithKeyboard : undefined}
+				onKeyDown={
+					keyboardNavigation
+						? (event) => navigateGridWithKeyboard(event, reorderDisabled ? undefined : onSortRow)
+						: undefined
+				}
 			>
 				{isLoading ? (
 					<div className='grid__loading'>
@@ -159,7 +211,18 @@ const Grid = forwardRef<GridRef, GridProps>(
 				) : (
 					<>
 						<GridHeaderRow columns={columns} />
-						{rowComponents.length > 0 ? (
+						{onSortRow != null ? (
+							<>
+								{rowComponents}
+								<SortableRows
+									className='grid__sortable-rows'
+									disabled={reorderDisabled}
+									onSortRow={onSortRow}
+								>
+									{sortableRowComponents}
+								</SortableRows>
+							</>
+						) : rowComponents.length > 0 ? (
 							rowComponents
 						) : noRowsMessage ? (
 							<div className='grid__no-rows'>

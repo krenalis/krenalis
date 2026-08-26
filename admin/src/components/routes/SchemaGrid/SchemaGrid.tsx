@@ -59,7 +59,11 @@ const SchemaGrid = () => {
 		if (!isGridKeyboardNavigationEnabled) {
 			return;
 		}
-		const animationFrame = requestAnimationFrame(() => gridRef.current?.focus());
+		const animationFrame = requestAnimationFrame(() => {
+			if (document.activeElement == null || document.activeElement === document.body) {
+				gridRef.current?.focus();
+			}
+		});
 		return () => cancelAnimationFrame(animationFrame);
 	}, [isGridKeyboardNavigationEnabled, propertyCount]);
 

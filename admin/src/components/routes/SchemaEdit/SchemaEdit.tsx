@@ -11,7 +11,7 @@ import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
-import SortableGrid from '../../base/Grid/SortableGrid';
+import Grid from '../../base/Grid/Grid';
 import { GridKeyboardHints } from '../../base/Grid/GridKeyboardHints';
 import { useDocumentGridKeyboardNavigation } from '../../base/Grid/useDocumentGridKeyboardNavigation';
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
@@ -107,7 +107,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		onApplyChanges,
 		onConfirmChanges,
 		onCancelChanges,
-		sortableGridRef,
+		gridRef,
 	} = useSchemaEdit(
 		schema,
 		onSelectProperty,
@@ -175,15 +175,15 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		),
 	);
 
-	useDocumentGridKeyboardNavigation(sortableGridRef, isGridKeyboardNavigationEnabled);
+	useDocumentGridKeyboardNavigation(gridRef, isGridKeyboardNavigationEnabled);
 
 	useEffect(() => {
 		if (!isGridKeyboardNavigationEnabled) {
 			return;
 		}
-		const animationFrame = requestAnimationFrame(() => sortableGridRef.current?.focus());
+		const animationFrame = requestAnimationFrame(() => gridRef.current?.focus());
 		return () => cancelAnimationFrame(animationFrame);
-	}, [isGridKeyboardNavigationEnabled, propertyCount, sortableGridRef]);
+	}, [gridRef, isGridKeyboardNavigationEnabled, propertyCount]);
 
 	const onAddClick = () => {
 		if (hasUnsavedPropertyChanges) {
@@ -246,11 +246,11 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 	};
 
 	const onExpandClick = () => {
-		sortableGridRef.current?.expand();
+		gridRef.current?.expand();
 	};
 
 	const onCollapseClick = () => {
-		sortableGridRef.current?.collapse();
+		gridRef.current?.collapse();
 	};
 
 	const onCancelEdit = () => {
@@ -394,15 +394,14 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 								</SlDropdown>
 							</SlTooltip>
 						</SchemaPropertyGridToolbar>
-						<SortableGrid
+						<Grid
 							rows={rows}
 							columns={columns}
 							keyboardNavigation={isGridKeyboardNavigationEnabled}
 							gridColumnsWidths={schemaEditGridColumns}
 							nestedRowsIndentation={schemaPropertyGridNestedRowsIndentation}
-							onSortRow={onSortRow}
-							reorderDisabled={isFiltered}
-							ref={sortableGridRef}
+							reordering={{ disabled: isFiltered, onSortRow }}
+							ref={gridRef}
 						/>
 					</div>
 					<PropertyPanel

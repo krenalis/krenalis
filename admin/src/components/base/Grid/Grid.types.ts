@@ -41,12 +41,9 @@ interface GridNestedRowsIndentation {
 interface GridRef {
 	collapse: () => void;
 	expand: () => void;
+	expandRow: (id: string) => void;
 	focus: () => void;
 	navigate: (key: string, shiftKey?: boolean) => boolean;
-}
-
-interface SortableGridRef extends GridRef {
-	expandRow: (id: string) => void;
 }
 
 interface SortableRowComponent {
@@ -62,7 +59,6 @@ export type {
 	GridRef,
 	StandardGridRow,
 	NestedGridRows,
-	SortableGridRef,
 	SortableGridRow,
 	SortableRowComponent,
 };

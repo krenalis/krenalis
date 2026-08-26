@@ -55,6 +55,8 @@
 
 .schema-grid__card,
 .schema-edit__schema-panel {
+	--grid-row-separator-color: #f2f2f2;
+
 	background-color: var(--bg-primary);
 	min-width: 0;
 	overflow: hidden;
@@ -195,6 +197,44 @@
 	border-radius: 0;
 }
 
+:is(.schema-grid__card, .schema-edit__schema-panel) > .grid .grid__row {
+	border-bottom: 1px solid var(--grid-row-separator-color);
+	border-top: 0;
+}
+
+:is(.schema-grid__card, .schema-edit__schema-panel) .grid__nested-rows > .grid__nested-rows--children:last-child,
+:is(.schema-grid__card, .schema-edit__schema-panel)
+	.grid__nested-rows
+	> .draggable-wrapper
+	> .grid__nested-rows--children:last-child {
+	border-bottom: 0 !important;
+}
+
+:is(.schema-grid__card, .schema-edit__schema-panel) .grid__nested-rows .grid__row--children,
+:is(.schema-grid__card, .schema-edit__schema-panel) .grid__nested-rows .grid__row--children .grid__cell,
+:is(.schema-grid__card, .schema-edit__schema-panel) .grid__nested-rows .grid__nested-rows .grid__row,
+:is(.schema-grid__card, .schema-edit__schema-panel) .grid__nested-rows .grid__nested-rows .grid__row .grid__cell {
+	background-color: var(--bg-primary) !important;
+}
+
+:is(.schema-grid__card, .schema-edit__schema-panel) .grid__row--clickable:not(.grid__row--selected):hover,
+:is(.schema-grid__card, .schema-edit__schema-panel) .grid__row--clickable:not(.grid__row--selected):hover .grid__cell {
+	background-color: var(--sl-color-neutral-50) !important;
+}
+
+:is(.schema-grid__card, .schema-edit__schema-panel) .grid__row--selected,
+:is(.schema-grid__card, .schema-edit__schema-panel) .grid__row--selected .grid__cell,
+:is(.schema-grid__card, .schema-edit__schema-panel) .grid__nested-rows .grid__row--selected,
+:is(.schema-grid__card, .schema-edit__schema-panel) .grid__nested-rows .grid__row--selected .grid__cell,
+:is(.schema-grid__card, .schema-edit__schema-panel) .grid__nested-rows .grid__nested-rows .grid__row--selected,
+:is(.schema-grid__card, .schema-edit__schema-panel)
+	.grid__nested-rows
+	.grid__nested-rows
+	.grid__row--selected
+	.grid__cell {
+	background-color: var(--grid-selected-row-background) !important;
+}
+
 .schema-grid__card .grid__cell,
 .schema-edit__schema-panel .grid__cell {
 	font-size: 13px;
@@ -246,6 +286,7 @@
 	transform: translateY(-50%);
 	transition: background-color 0.2s;
 	width: 24px;
+	z-index: 1;
 }
 
 .schema-grid .grid__nested-rows .grid__row-expand:hover,

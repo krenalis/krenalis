@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, ReactNode, useRef, useContext, useCallback } from 'react';
 import Type, { ObjectType, Role, TypeKind } from '../../../lib/api/types/types';
-import { SortableGridRef, SortableGridRow, GridColumn } from '../../base/Grid/Grid.types';
+import { GridRef, SortableGridRow, GridColumn } from '../../base/Grid/Grid.types';
 import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 import {
 	EditableProperty,
@@ -107,7 +107,7 @@ const useSchemaEdit = (
 	const [isConfirmChangesLoading, setIsConfirmChangesLoading] = useState<boolean>(false);
 	const previewRequestSequence = useRef(0);
 
-	const sortableGridRef = useRef<SortableGridRef>(null);
+	const gridRef = useRef<GridRef>(null);
 
 	const { api, handleError, workspaces, selectedWorkspace, connections, setIsLoadingWorkspaces } =
 		useContext(AppContext);
@@ -330,8 +330,8 @@ const useSchemaEdit = (
 		setEditableSchema(s);
 		if (property.indentation > 0) {
 			setTimeout(() => {
-				if (sortableGridRef.current != null) {
-					sortableGridRef.current.expandRow(property.parentKey);
+				if (gridRef.current != null) {
+					gridRef.current.expandRow(property.parentKey);
 				}
 			}, 100);
 		}
@@ -602,7 +602,7 @@ const useSchemaEdit = (
 		onApplyChanges,
 		onConfirmChanges,
 		onCancelChanges,
-		sortableGridRef,
+		gridRef,
 	};
 };
 

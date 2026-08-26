@@ -97,17 +97,6 @@
 	padding-top: 9px;
 }
 
-.schema-grid__card > .grid > .grid__row,
-.schema-grid__card .grid__nested-rows .grid__row {
-	border-bottom: 1px solid var(--grid-row-separator-color);
-	border-top: 0;
-}
-
-.schema-grid__card .grid__row--clickable:not(.grid__row--selected):hover,
-.schema-grid__card .grid__row--clickable:not(.grid__row--selected):hover .grid__cell {
-	background-color: var(--sl-color-neutral-50);
-}
-
 .schema-grid__card > .grid > .grid__header-row > .grid__header-cell.grid-el--first .grid__cell-content,
 .schema-grid__card > .grid > .grid__row > .grid__cell.grid-el--first .grid__cell-content {
 	padding-left: 34px;
@@ -178,25 +167,6 @@
 
 .schema-grid .grid__nested-rows--children > .grid__row--parent::before {
 	left: var(--parent-indentation);
-}
-
-.schema-grid .grid__nested-rows .grid__row--children,
-.schema-grid .grid__nested-rows .grid__row--children .grid__cell,
-.schema-grid .grid__nested-rows .grid__nested-rows .grid__row,
-.schema-grid .grid__nested-rows .grid__nested-rows .grid__row .grid__cell {
-	background-color: var(--bg-primary) !important;
-}
-
-.schema-grid .grid__nested-rows .grid__row--clickable:not(.grid__row--selected):hover,
-.schema-grid .grid__nested-rows .grid__row--clickable:not(.grid__row--selected):hover .grid__cell {
-	background-color: var(--sl-color-neutral-50) !important;
-}
-
-.schema-grid__card .grid__row--selected,
-.schema-grid__card .grid__row--selected .grid__cell,
-.schema-grid .grid__nested-rows .grid__row--selected,
-.schema-grid .grid__nested-rows .grid__row--selected .grid__cell {
-	background-color: var(--grid-selected-row-background) !important;
 }
 
 @media (max-width: 1200px) {

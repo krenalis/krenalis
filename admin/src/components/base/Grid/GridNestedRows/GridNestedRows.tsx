@@ -3,19 +3,7 @@ import './GridNestedRows.css';
 import GridRow from '../GridRow/GridRow';
 import { NestedGridRows, GridColumn, GridNestedRowsIndentation, SortableGridRow } from '../Grid.types';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import {
-	DndContext,
-	closestCenter,
-	KeyboardSensor,
-	PointerSensor,
-	useSensor,
-	useSensors,
-	DragOverlay,
-} from '@dnd-kit/core';
-import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
-import { DraggableWrapper } from '../DraggableWrapper/DraggableWrapper';
-import { OverlayRow } from '../../OverlayRow/OverlayRow';
+import { SortableRows } from '../SortableRows';
 
 interface GridNestedRowsProps {
 	rows: NestedGridRows;
@@ -41,28 +29,8 @@ const GridNestedRows = ({
 	reloadColumnsWidths,
 }: GridNestedRowsProps) => {
 	const rootRow = Array.isArray(rows[0]) ? null : rows[0];
-	const [activeRow, setActiveRow] = useState(null);
 	const [isExpanded, setIsExpanded] = useState(rootRow?.expanded === true);
 	const forceExpanded = rootRow?.forceExpanded === true;
-	const sensors = useSensors(
-		useSensor(PointerSensor),
-		useSensor(KeyboardSensor, {
-			coordinateGetter: sortableKeyboardCoordinates,
-		}),
-	);
-
-	const onDragEnd = (e) => {
-		const { over, active } = e;
-		if (over != null && over.id !== active.id) {
-			onSortRow(over.id, active.id);
-		}
-		setActiveRow(null);
-	};
-
-	const onDragStart = (e) => {
-		const { active } = e;
-		setActiveRow(active.id);
-	};
 
 	const onToggleExpansion = (event: React.MouseEvent, onSelect?: () => void) => {
 		if (!forceExpanded) {
@@ -155,26 +123,9 @@ const GridNestedRows = ({
 		>
 			{parentComponent}
 			{isSortable ? (
-				<DndContext
-					sensors={sensors}
-					collisionDetection={closestCenter}
-					modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-					onDragStart={onDragStart}
-					onDragEnd={onDragEnd}
-				>
-					<SortableContext items={childrenComponents} strategy={verticalListSortingStrategy}>
-						{childrenComponents.map(({ id, row }) => (
-							<DraggableWrapper key={id} id={id} disabled={reorderDisabled}>
-								{row}
-							</DraggableWrapper>
-						))}
-					</SortableContext>
-					<DragOverlay>
-						{activeRow ? (
-							<OverlayRow>{childrenComponents.find((c) => c.id === activeRow).row}</OverlayRow>
-						) : null}
-					</DragOverlay>
-				</DndContext>
+				<SortableRows disabled={reorderDisabled} onSortRow={onSortRow}>
+					{childrenComponents}
+				</SortableRows>
 			) : (
 				childrenComponents
 			)}

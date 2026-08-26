@@ -167,10 +167,6 @@
 	color: var(--text-primary);
 }
 
-.schema-edit__schema-panel > .grid > .grid__sortable-rows {
-	border-bottom: 1px solid var(--grid-row-separator-color);
-}
-
 .schema-edit__schema-panel > .grid .grid__header-row,
 .schema-edit__schema-panel > .grid .grid__row {
 	padding-left: 15px;
@@ -185,14 +181,15 @@
 .schema-edit__schema-panel .grid__nested-rows .draggable-wrapper__handle {
 	height: 36px;
 	justify-content: center;
-	left: 2px;
+	left: 0;
 	padding: 0;
 	top: 1px;
 	transform: none;
+	width: 20px;
 }
 
 .schema-edit__schema-panel .draggable-wrapper__handle sl-icon {
-	left: 50%;
+	left: 15px;
 	transform: translate(-50%, -50%);
 }
 
@@ -205,35 +202,7 @@
 	> .grid__row
 	> .grid__cell.grid-el--first
 	.grid__cell-content {
-	padding-left: 34px;
-}
-
-.schema-edit .schema-edit__schema-panel .grid.grid--sortable .grid__sortable-rows .grid__row,
-.schema-edit .schema-edit__schema-panel .grid.grid--sortable .grid__sortable-rows .grid__row .grid__cell {
-	background-color: var(--bg-primary) !important;
-	font-weight: 400 !important;
-}
-
-.schema-edit .schema-edit__schema-panel .grid.grid--sortable .grid__sortable-rows .grid__row--clickable:hover,
-.schema-edit
-	.schema-edit__schema-panel
-	.grid.grid--sortable
-	.grid__sortable-rows
-	.grid__row--clickable:hover
-	.grid__cell {
-	background-color: var(--sl-color-neutral-50) !important;
-}
-
-.schema-edit .schema-edit__schema-panel .grid.grid--sortable .grid__sortable-rows .grid__row--selected,
-.schema-edit .schema-edit__schema-panel .grid.grid--sortable .grid__sortable-rows .grid__row--selected > .grid__cell,
-.schema-edit .schema-edit__schema-panel .grid.grid--sortable .grid__sortable-rows .grid__row--selected:hover,
-.schema-edit
-	.schema-edit__schema-panel
-	.grid.grid--sortable
-	.grid__sortable-rows
-	.grid__row--selected:hover
-	> .grid__cell {
-	background-color: var(--grid-selected-row-background) !important;
+	padding-left: 36px;
 }
 
 .schema-edit__property-actions {
@@ -257,11 +226,16 @@
 }
 
 .schema-edit .grid__nested-rows .grid__row-expand {
-	left: 25px;
+	left: 22px;
+	transform: translateY(-50%);
 }
 
 .schema-edit .grid__nested-rows .grid__row--parent .grid__cell.grid-el--first .grid__cell-content {
-	padding-left: calc(var(--parent-indentation) + 5px);
+	padding-left: calc(var(--parent-indentation) + 2px);
+}
+
+.schema-edit .grid__nested-rows--children > .grid__row--parent > .grid__cell.grid-el--first .grid__cell-content {
+	padding-left: var(--parent-indentation);
 }
 
 .schema-edit .grid__nested-rows .grid__row--children::before,
