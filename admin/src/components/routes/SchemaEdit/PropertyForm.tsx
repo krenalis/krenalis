@@ -9,6 +9,7 @@ import SlRadioButton from '@shoelace-style/shoelace/dist/react/radio-button/inde
 import SlRadioGroup from '@shoelace-style/shoelace/dist/react/radio-group/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlTextarea from '@shoelace-style/shoelace/dist/react/textarea/index.js';
+import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import type SlTextareaElement from '@shoelace-style/shoelace/dist/components/textarea/textarea.component.js';
 import AppContext from '../../../context/AppContext';
 import Type, {
@@ -35,6 +36,10 @@ const FLOAT_BITSIZES: string[] = ['32', '64'];
 const MAX_DECIMAL_PRECISION: number = 76;
 const MAX_DECIMAL_SCALE: number = 37;
 const MAX_STRING_LENGTH: number = 4294967295;
+const PRIMARY_SOURCE_TOOLTIP = {
+	content: 'The selected source has the highest precedence when populating this property.',
+	label: 'About primary source',
+};
 
 const disableShoelaceTextareaHeightReset = (textarea: SlTextareaElement | null) => {
 	if (textarea == null) {
@@ -514,7 +519,10 @@ const PropertyForm = ({
 					{sourceConnections.length === 0 ? (
 						<>
 							<div className='property-form__label'>
-								<PropertyFormLabel modified={fieldChanges?.primarySource}>
+								<PropertyFormLabel
+									modified={fieldChanges?.primarySource}
+									tooltip={PRIMARY_SOURCE_TOOLTIP}
+								>
 									Primary source
 								</PropertyFormLabel>
 							</div>
@@ -527,7 +535,11 @@ const PropertyForm = ({
 							name='primary-source'
 							onSlChange={onChangePrimarySource}
 						>
-							<PropertyFormLabel slot='label' modified={fieldChanges?.primarySource}>
+							<PropertyFormLabel
+								slot='label'
+								modified={fieldChanges?.primarySource}
+								tooltip={PRIMARY_SOURCE_TOOLTIP}
+							>
 								Primary source
 							</PropertyFormLabel>
 							<div slot='prefix'>
@@ -549,9 +561,6 @@ const PropertyForm = ({
 							))}
 						</SlSelect>
 					)}
-					<div className='property-form__help'>
-						The selected source has the highest precedence when populating this property.
-					</div>
 				</div>
 			)}
 		</form>
@@ -562,14 +571,26 @@ const PropertyFormLabel = ({
 	children,
 	modified,
 	slot,
+	tooltip,
 }: {
 	children: React.ReactNode;
 	modified?: boolean;
 	slot?: string;
+	tooltip?: {
+		content: string;
+		label: string;
+	};
 }) => {
 	return (
 		<span className='property-form__label-content' slot={slot}>
 			{children}
+			{tooltip != null && (
+				<SlTooltip className='property-form__tooltip' content={tooltip.content} placement='top' hoist={true}>
+					<button className='property-form__info' type='button' aria-label={tooltip.label}>
+						<SlIcon name='info-circle' />
+					</button>
+				</SlTooltip>
+			)}
 			{modified && <span className='property-form__modified-dot' role='img' aria-label='Modified' />}
 		</span>
 	);
