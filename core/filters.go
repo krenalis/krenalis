@@ -726,7 +726,7 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 
 // validateFilterCondition checks the validity of a filter condition and
 // returns its property path.
-func validateFilterCondition(cond *FilterCondition, validation *filterValidation) ([]string, error) {
+func validateFilterCondition(cond *FilterCondition, validation *filterValidation) (string, error) {
 
 	// disallowJSON indicates whether JSON properties are disallowed.
 	disallowJSON := validation.role == state.Destination && validation.target == state.TargetUser
@@ -736,19 +736,19 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 	disallowEmptyOnObject := validation.role == state.Destination && validation.target == state.TargetUser || validation.target == state.TargetEvent
 
 	if !types.IsValidPropertyPath(cond.Property) {
-		return nil, errors.New("property path is not valid")
+		return "", errors.New("property path is not valid")
 	}
 
 	p, path, err := resolveFilterProperty(validation.properties, cond.Property)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	op := cond.Operator
 	kind := p.Type.Kind()
 
 	if disallowJSON && kind == types.JSONKind {
-		return nil, fmt.Errorf("property %q has type json, which is not supported in data warehouse exports", path)
+		return "", fmt.Errorf("property %q has type json, which is not supported in data warehouse exports", path)
 	}
 
 	// Validate the operator for the property kind.
@@ -790,32 +790,32 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 	case OpIs, OpIsNot:
 		switch kind {
 		case types.BooleanKind, types.ArrayKind, types.ObjectKind, types.MapKind:
-			return nil, fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
+			return "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 		}
 	case OpIsBetween, OpIsNotBetween:
 		switch kind {
 		case types.StringKind:
 			if p.Type.Values() != nil {
-				return nil, fmt.Errorf("operator %q cannot be used with string type that has values", op)
+				return "", fmt.Errorf("operator %q cannot be used with string type that has values", op)
 			}
 		case types.BooleanKind, types.UUIDKind, types.IPKind, types.ArrayKind, types.ObjectKind, types.MapKind:
-			return nil, fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
+			return "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 		}
 	case OpIsOneOf, OpIsNotOneOf:
 		switch kind {
 		case types.BooleanKind, types.UUIDKind, types.IPKind, types.ArrayKind, types.ObjectKind, types.MapKind:
-			return nil, fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
+			return "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 		}
 	case OpIsLessThan, OpIsLessThanOrEqualTo, OpIsGreaterThan, OpIsGreaterThanOrEqualTo:
 		switch kind {
 		case types.StringKind:
 			if p.Type.Values() != nil {
-				return nil, fmt.Errorf("operator %q cannot be used with string type that has values", op)
+				return "", fmt.Errorf("operator %q cannot be used with string type that has values", op)
 			}
 		case types.IntKind, types.FloatKind, types.DecimalKind:
 		case types.JSONKind:
 		default:
-			return nil, fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
+			return "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 		}
 	case OpContains, OpDoesNotContain:
 		switch kind {
@@ -823,20 +823,20 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 		case types.ArrayKind:
 			switch k := p.Type.Elem().Kind(); k {
 			case types.BooleanKind, types.ArrayKind, types.ObjectKind, types.MapKind:
-				return nil, fmt.Errorf("operator %q cannot be used with array(%s) properties", op, k)
+				return "", fmt.Errorf("operator %q cannot be used with array(%s) properties", op, k)
 			}
 		default:
-			return nil, fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
+			return "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 		}
 	case OpStartsWith, OpEndsWith:
 		switch kind {
 		case types.StringKind:
 			if p.Type.Values() != nil {
-				return nil, fmt.Errorf("operator %q cannot be used with string type that has values", op)
+				return "", fmt.Errorf("operator %q cannot be used with string type that has values", op)
 			}
 		case types.JSONKind:
 		default:
-			return nil, fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
+			return "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 		}
 	case OpIsBefore, OpIsAfter, OpIsOnOrBefore, OpIsOnOrAfter:
 		switch kind {
@@ -844,74 +844,74 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 		case types.YearKind:
 		case types.JSONKind:
 		default:
-			return nil, fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
+			return "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 		}
 	case OpIsTrue, OpIsFalse:
 		if kind != types.BooleanKind && kind != types.JSONKind {
-			return nil, fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
+			return "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 		}
 	case OpIsEmpty, OpIsNotEmpty:
 		switch kind {
 		case types.StringKind:
 			if values := p.Type.Values(); len(values) > 0 {
 				if !slices.Contains(values, "") {
-					return nil, fmt.Errorf("operator %q cannot be used on string properties that exclude the empty string from allowed values", op)
+					return "", fmt.Errorf("operator %q cannot be used on string properties that exclude the empty string from allowed values", op)
 				}
 			}
 		case types.JSONKind, types.ArrayKind, types.MapKind:
 		case types.ObjectKind:
 			if disallowEmptyOnObject {
 				if validation.target == state.TargetEvent {
-					return nil, fmt.Errorf("operator %q cannot be used on object properties for pipelines on events", op)
+					return "", fmt.Errorf("operator %q cannot be used on object properties for pipelines on events", op)
 				}
-				return nil, fmt.Errorf("operator %q cannot be used on object properties for destination pipelines on users", op)
+				return "", fmt.Errorf("operator %q cannot be used on object properties for destination pipelines on users", op)
 			}
 		default:
-			return nil, fmt.Errorf("operator %q can only be used with json, string, object, array, and map properties", op)
+			return "", fmt.Errorf("operator %q can only be used with json, string, object, array, and map properties", op)
 		}
 	case OpIsNull, OpIsNotNull:
 		if !p.Nullable && kind != types.JSONKind {
-			return nil, fmt.Errorf("operator %q can only be used with nullable or json properties", op)
+			return "", fmt.Errorf("operator %q can only be used with nullable or json properties", op)
 		}
 	case OpExists, OpDoesNotExist:
 		if !p.ReadOptional && path == cond.Property {
-			return nil, fmt.Errorf("operator %q can only be used with read-optional properties or with json properties that include a JSON path", op)
+			return "", fmt.Errorf("operator %q can only be used with read-optional properties or with json properties that include a JSON path", op)
 		}
 	default:
-		return nil, fmt.Errorf("operator %q is not valid", op)
+		return "", fmt.Errorf("operator %q is not valid", op)
 	}
 
 	// Validate the values.
 	switch op {
 	case OpIsTrue, OpIsFalse, OpIsEmpty, OpIsNotEmpty, OpIsNull, OpIsNotNull, OpExists, OpDoesNotExist:
 		if cond.Values != nil {
-			return nil, fmt.Errorf("values cannot be used with the operator %q", op)
+			return "", fmt.Errorf("values cannot be used with the operator %q", op)
 		}
 	default:
 		if len(cond.Values) != 1 {
-			return nil, fmt.Errorf("only one value can be used with the operator %q", op)
+			return "", fmt.Errorf("only one value can be used with the operator %q", op)
 		}
 	case OpIsBetween, OpIsNotBetween:
 		if len(cond.Values) != 2 {
-			return nil, fmt.Errorf("two values must be used with the operator %q", op)
+			return "", fmt.Errorf("two values must be used with the operator %q", op)
 		}
 	case OpIsOneOf, OpIsNotOneOf:
 		if len(cond.Values) == 0 {
-			return nil, fmt.Errorf("at least one value must be used with the operator %q", op)
+			return "", fmt.Errorf("at least one value must be used with the operator %q", op)
 		}
 	}
 	if cond.Values == nil {
-		return []string{path}, nil
+		return path, nil
 	}
 	// Handle string properties with allowed values separately.
 	if kind == types.StringKind {
 		if values := p.Type.Values(); values != nil {
 			for _, value := range cond.Values {
 				if !slices.Contains(values, value) {
-					return nil, fmt.Errorf("value of the %q property is not among the allowed values", cond.Property)
+					return "", fmt.Errorf("value of the %q property is not among the allowed values", cond.Property)
 				}
 			}
-			return []string{path}, nil
+			return path, nil
 		}
 	}
 	t := p.Type
@@ -921,7 +921,7 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 	k := t.Kind()
 	for _, value := range cond.Values {
 		if err := util.ValidateStringField("condition value", value, 60); err != nil {
-			return nil, err
+			return "", err
 		}
 		var valid bool
 		switch k {
@@ -957,14 +957,14 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 			_, err := netip.ParseAddr(value)
 			valid = err == nil
 		default:
-			return nil, fmt.Errorf("unexpected type for property %q", cond.Property)
+			return "", fmt.Errorf("unexpected type for property %q", cond.Property)
 		}
 		if !valid {
-			return nil, fmt.Errorf("value of the %q property is not a valid %s", cond.Property, k)
+			return "", fmt.Errorf("value of the %q property is not a valid %s", cond.Property, k)
 		}
 	}
 
-	return []string{path}, nil
+	return path, nil
 }
 
 // validateFilterGroup checks the validity of a filter group and its rules.
@@ -997,14 +997,12 @@ func validateFilterGroup(filter *Filter, validation *filterValidation, depth int
 			if rule == nil {
 				return errors.New("filter condition cannot be nil")
 			}
-			paths, err := validateFilterCondition(rule, validation)
+			path, err := validateFilterCondition(rule, validation)
 			if err != nil {
 				return err
 			}
-			for _, path := range paths {
-				if i, ok := slices.BinarySearch(validation.paths, path); !ok {
-					validation.paths = slices.Insert(validation.paths, i, path)
-				}
+			if i, ok := slices.BinarySearch(validation.paths, path); !ok {
+				validation.paths = slices.Insert(validation.paths, i, path)
 			}
 		default:
 			return errors.New("unsupported filter rule")
