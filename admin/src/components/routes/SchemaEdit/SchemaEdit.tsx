@@ -98,10 +98,8 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		primarySources,
 		queries,
 		hasSchemaChanges,
-		isSchemaPreviewLoading,
 		isQueriesLoading,
 		isConfirmChangesLoading,
-		warehouseDDLRequired,
 		onAddProperty,
 		onEditProperty,
 		onRemoveProperty,
@@ -329,10 +327,9 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 						className='schema-edit__header-apply-button'
 						variant='primary'
 						onClick={onReviewChangesClick}
-						disabled={(!hasSchemaChanges && !hasUnsavedPropertyChanges) || isSchemaPreviewLoading}
-						loading={hasSchemaChanges && isSchemaPreviewLoading}
+						disabled={!hasSchemaChanges && !hasUnsavedPropertyChanges}
 					>
-						{hasSchemaChanges && warehouseDDLRequired ? 'Review and apply changes...' : 'Apply changes'}
+						Apply changes
 					</SlButton>
 				</div>
 			</div>
