@@ -86,10 +86,10 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		columns,
 		changeCount,
 		firstVisibleProperty,
-		hasObjects,
 		isFiltered,
 		isSchemaReady,
 		isSelectedPropertyVisible,
+		objectCount,
 		propertyCount,
 		visiblePropertyCount,
 		propertyParents,
@@ -149,7 +149,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 	);
 	const navigationBlocker = useBlocker(shouldBlockNavigation);
 	const isGridKeyboardNavigationEnabled = visiblePropertyCount > 0;
-	const expansionDisabled = isFiltered || !hasObjects;
+	const expansionDisabled = isFiltered || objectCount === 0;
 	let discardChangesDescription = 'The pending schema changes will be discarded.';
 	if (hasUnsavedPropertyChanges) {
 		if (hasSchemaChanges) {
@@ -335,7 +335,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 			</div>
 			<div className='schema-edit__overview'>
 				<div className='schema-edit__overview-main'>
-					<SchemaPropertyGridSummary view='edit' propertyCount={propertyCount}>
+					<SchemaPropertyGridSummary view='edit' objectCount={objectCount} propertyCount={propertyCount}>
 						<div
 							className={`schema-edit__change-count${changeCount === 0 ? ' schema-edit__change-count--empty' : ''}`}
 						>

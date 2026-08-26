@@ -189,11 +189,12 @@ const useSchemaEdit = (
 			initialPrimarySources.current?.[selectedPropertyKey],
 		);
 	}, [editableSchema, selectedPropertyKey]);
-	const { hasObjects, propertyCount } = useMemo(() => {
+	const { objectCount, propertyCount } = useMemo(() => {
 		const properties = Object.values(editableSchema || {});
+		const objectCount = properties.filter((property) => property.type.kind === 'object').length;
 
 		return {
-			hasObjects: properties.some((property) => property.type.kind === 'object'),
+			objectCount,
 			propertyCount: properties.length,
 		};
 	}, [editableSchema]);
@@ -584,7 +585,7 @@ const useSchemaEdit = (
 		isFiltered,
 		isSchemaReady: editableSchema != null,
 		isSelectedPropertyVisible,
-		hasObjects,
+		objectCount,
 		propertyCount,
 		visiblePropertyCount: visiblePropertyKeys.size,
 		propertyParents,

@@ -38,8 +38,8 @@ const SchemaGrid = () => {
 	const {
 		columns,
 		firstVisiblePropertyPath,
-		hasObjects,
 		isSelectedPropertyVisible,
+		objectCount,
 		propertyCount,
 		rows,
 		selectedProperty,
@@ -51,7 +51,7 @@ const SchemaGrid = () => {
 	const detailsPanelProperty = isEditing ? null : visibleSelectedProperty || lastSelectedProperty;
 	const gridInteractionsDisabled = isLoadingSchema || isAltering;
 	const isGridKeyboardNavigationEnabled = !isEditing && !gridInteractionsDisabled && visiblePropertyCount > 0;
-	const expansionDisabled = gridInteractionsDisabled || isSearchActive || !hasObjects;
+	const expansionDisabled = gridInteractionsDisabled || isSearchActive || objectCount === 0;
 
 	useDocumentGridKeyboardNavigation(gridRef, isGridKeyboardNavigationEnabled);
 
@@ -112,7 +112,11 @@ const SchemaGrid = () => {
 					<div className='schema-grid__page-description'>
 						Explore the canonical profile schema used for identity resolution and unification.
 					</div>
-					<SchemaPropertyGridSummary view='readOnly' propertyCount={propertyCount} />
+					<SchemaPropertyGridSummary
+						view='readOnly'
+						objectCount={objectCount}
+						propertyCount={propertyCount}
+					/>
 				</div>
 				<SlButton
 					className='schema-grid__alter-button'

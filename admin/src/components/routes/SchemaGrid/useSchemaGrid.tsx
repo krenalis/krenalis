@@ -40,7 +40,7 @@ const useSchemaGrid = (
 	}, [connections, isLoading, onSelectProperty, schema, search, selectedPropertyPath, workspace]);
 	const visiblePropertyPaths = useMemo(() => getVisiblePropertyPaths(rows), [rows]);
 	const firstVisiblePropertyPath = visiblePropertyPaths.values().next().value ?? null;
-	const { hasObjects, propertyCount } = useMemo(() => countProperties(schema), [schema]);
+	const { objectCount, propertyCount } = useMemo(() => countProperties(schema), [schema]);
 	const selectedProperty = useMemo(() => {
 		if (schema == null || selectedPropertyPath == null) {
 			return null;
@@ -60,7 +60,7 @@ const useSchemaGrid = (
 		columns: SCHEMA_COLUMNS,
 		firstVisiblePropertyPath,
 		isSelectedPropertyVisible: selectedPropertyPath != null && visiblePropertyPaths.has(selectedPropertyPath),
-		hasObjects,
+		objectCount,
 		propertyCount,
 		rows,
 		selectedProperty,
@@ -175,18 +175,19 @@ const getVisiblePropertyPaths = (rows: GridRow[]): Set<string> => {
 	return paths;
 };
 
-const countProperties = (schema: ObjectType): { hasObjects: boolean; propertyCount: number } => {
-	let hasObjects = false;
+const countProperties = (schema: ObjectType): { objectCount: number; propertyCount: number } => {
+	let objectCount = 0;
 	let propertyCount = 0;
 	for (const property of schema?.properties || []) {
 		propertyCount++;
 		if (property.type.kind === 'object') {
-			hasObjects = true;
+			objectCount++;
 			const nestedCounts = countProperties(property.type);
+			objectCount += nestedCounts.objectCount;
 			propertyCount += nestedCounts.propertyCount;
 		}
 	}
-	return { hasObjects, propertyCount };
+	return { objectCount, propertyCount };
 };
 
 const getPrimarySource = (
