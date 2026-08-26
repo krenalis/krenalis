@@ -85,7 +85,8 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 	var workOS *workos.WorkOS
 	if config.WorkOS.ClientID != "" {
 		workOS = workos.New(core, config.WorkOS.ClientID, config.WorkOS.APIKey,
-			config.WorkOS.WebhookSecret, config.WorkOS.ActionsSecret, config.WorkOS.DevMode)
+			config.WorkOS.WebhookSecret, config.WorkOS.ActionsSecret, config.WorkOS.DevMode,
+			config.WorkOS.SelfServiceOnboarding)
 	}
 
 	sentryErrorTunnel := newSentryErrorTunnel()
@@ -163,6 +164,14 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 		case r.URL.Path == "/admin" || strings.HasPrefix(r.URL.Path, "/admin/"):
 			admin.ServeHTTP(w, r)
 			return
+		case r.URL.Path == "/onboarding":
+			if workOS != nil && workOS.SelfServiceOnboarding() {
+				err := serveOnboardingHTMLPage(w)
+				if err != nil {
+					slog.Error("failed to serve the onboarding HTML page", "error", err)
+				}
+				return
+			}
 		case strings.HasPrefix(r.URL.Path, "/workos/"):
 			if workOS != nil {
 				r.URL.Path = strings.TrimPrefix(r.URL.Path, "/workos")
@@ -339,6 +348,19 @@ func verifyCertificate(cert tls.Certificate, dnsName string, roots *x509.CertPoo
 		}
 	}
 
+	return nil
+}
+
+// serveOnboardingHTMLPage returns the self-service onboarding HTML page.
+func serveOnboardingHTMLPage(w http.ResponseWriter) error {
+	w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet, notranslate, noimageindex")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fi, err := static.Open("static/onboarding.html")
+	if err != nil {
+		return errors.New("embedded file 'static/onboarding.html' not found in executable")
+	}
+	_, _ = io.Copy(w, fi)
+	_ = fi.Close()
 	return nil
 }
 

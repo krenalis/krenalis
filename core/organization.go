@@ -1635,6 +1635,12 @@ func sendMail(mail *emailToSend, config *SMTPConfig) error {
 	return err
 }
 
+// ValidateEmail validates an email address and returns an error if it is not
+// valid.
+func ValidateEmail(email string) error {
+	return validateMemberEmail(email)
+}
+
 // validateMemberEmail validates a member's email and returns an error if it is
 // not valid.
 func validateMemberEmail(email string) error {

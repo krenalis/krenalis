@@ -278,6 +278,37 @@ func (api api) MemberInvitation(_ http.ResponseWriter, r *http.Request) (any, er
 	return map[string]any{"email": email, "organization": organization.Name}, nil
 }
 
+// Onboard creates an organization and invites its admin by email. It is served
+// only when the self-service onboarding is enabled.
+//
+// Authentication is not required to call Onboard.
+func (api api) Onboard(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if api.workOS == nil || !api.workOS.SelfServiceOnboarding() {
+		return nil, errors.NotFound("the self-service onboarding is not enabled")
+	}
+	if err := validateRequiredBody(r, false); err != nil {
+		return nil, err
+	}
+	var body struct {
+		OrganizationName string `json:"organizationName"`
+		AdminEmail       string `json:"adminEmail"`
+		Website          string `json:"website"` // honeypot, must be empty.
+	}
+	err := json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	// Requests that fill in the honeypot come from a bot: report a success
+	// without creating anything, so that the bot has nothing to learn.
+	if body.Website != "" {
+		return nil, nil
+	}
+	if err := api.core.ConsumeRateLimitCapacity(r.Context(), x1); err != nil {
+		return nil, err
+	}
+	return nil, api.workOS.Onboard(r.Context(), body.OrganizationName, body.AdminEmail)
+}
+
 // Organization returns the organization with the given identifier.
 //
 // Authentication is performed using the platform management API key.

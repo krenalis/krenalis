@@ -5,6 +5,7 @@
 package workos
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"net/http"
@@ -19,6 +20,59 @@ import (
 
 // maxPayloadSize is the maximum size in bytes for a webhook or action payload.
 const maxPayloadSize = 64 * 1024
+
+// onboardingLimits are the resource limits granted to an organization created
+// through the self-service onboarding.
+var onboardingLimits = core.OrganizationLimits{
+	Members:     core.MembersLimit,
+	AccessKeys:  core.AccessKeysLimit,
+	Workspaces:  core.WorkspacesLimit,
+	Connectors:  core.ConnectorsLimit,
+	Connections: core.ConnectionsLimit,
+	Pipelines:   core.PipelinesLimit,
+	Rates: core.RateLimits{
+		OrganizationSpecific: core.RateLimit{RatePerMinute: 6_000, MaxCapacity: 1_000},
+		WorkspaceSpecific:    core.RateLimit{RatePerMinute: 6_000, MaxCapacity: 1_000},
+		EventsSpecific:       core.RateLimit{RatePerMinute: 60_000, MaxCapacity: 100_000},
+	},
+}
+
+// Onboard creates an enabled organization in Krenalis, creates the WorkOS
+// organization linked to it, and sends a WorkOS invitation email that invites
+// adminEmail as an admin of the organization. If a step after the Krenalis
+// organization has been created fails, that organization is deleted again.
+//
+// It returns an errors.UnprocessableError with code core.InvalidEmail if
+// adminEmail is not a valid email address.
+func (wo *WorkOS) Onboard(ctx context.Context, organizationName, adminEmail string) error {
+
+	organizationName = strings.TrimSpace(norm.NFC.String(organizationName))
+	adminEmail = strings.TrimSpace(norm.NFC.String(adminEmail))
+
+	if err := core.ValidateEmail(adminEmail); err != nil {
+		return errors.Unprocessable(core.InvalidEmail, "admin email is not a valid email address")
+	}
+
+	// CreateOrganization validates the organization name.
+	id, err := wo.core.CreateOrganization(ctx, organizationName, true, onboardingLimits)
+	if err != nil {
+		return err
+	}
+
+	workosOrganizationID, err := wo.createOrganization(ctx, organizationName, id)
+	if err != nil {
+		wo.deleteOnboardedOrganization(ctx, id)
+		return err
+	}
+
+	err = wo.sendInvitation(ctx, adminEmail, workosOrganizationID)
+	if err != nil {
+		wo.deleteOnboardedOrganization(ctx, id)
+		return err
+	}
+
+	return nil
+}
 
 // ServeHTTP serves action and webhook requests.
 func (wo *WorkOS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -90,6 +144,19 @@ func (wo *WorkOS) ServeLogin(r *http.Request) (string, string, error) {
 	}
 
 	return org.ID, member, nil
+}
+
+// deleteOnboardedOrganization deletes the organization created by Onboard,
+// after a later onboarding step failed. It logs a deletion failure instead of
+// reporting it, because the caller reports the error that caused the deletion.
+func (wo *WorkOS) deleteOnboardedOrganization(ctx context.Context, id string) {
+	org, err := wo.core.Organization(id)
+	if err == nil {
+		err = org.Delete(ctx)
+	}
+	if err != nil {
+		slog.Error("failed to delete the organization of a failed onboarding", "organization", id, "error", err)
+	}
 }
 
 // serveAction handles the user registration action. It verifies the request

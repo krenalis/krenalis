@@ -52,14 +52,15 @@ var (
 )
 
 type WorkOS struct {
-	core          *core.Core
-	clientID      string
-	apiKey        string
-	webhookSecret string
-	actionsSecret string
-	devMode       bool
-	keyStore      keyStore
-	transport     http.RoundTripper
+	core                  *core.Core
+	clientID              string
+	apiKey                string
+	webhookSecret         string
+	actionsSecret         string
+	devMode               bool
+	selfServiceOnboarding bool
+	keyStore              keyStore
+	transport             http.RoundTripper
 }
 
 // AuthenticatedUser holds the authenticated user information returned by WorkOS
@@ -137,16 +138,17 @@ type jwks struct {
 	} `json:"keys"`
 }
 
-func New(core *core.Core, clientID, apiKey, webhookSecret, actionsSecret string, devMode bool) *WorkOS {
+func New(core *core.Core, clientID, apiKey, webhookSecret, actionsSecret string, devMode, selfServiceOnboarding bool) *WorkOS {
 	return &WorkOS{
-		core:          core,
-		clientID:      clientID,
-		apiKey:        apiKey,
-		webhookSecret: webhookSecret,
-		actionsSecret: actionsSecret,
-		devMode:       devMode,
-		keyStore:      keyStore{byID: make(map[string]*publicKey)},
-		transport:     &http.Transport{Proxy: nil},
+		core:                  core,
+		clientID:              clientID,
+		apiKey:                apiKey,
+		webhookSecret:         webhookSecret,
+		actionsSecret:         actionsSecret,
+		devMode:               devMode,
+		selfServiceOnboarding: selfServiceOnboarding,
+		keyStore:              keyStore{byID: make(map[string]*publicKey)},
+		transport:             &http.Transport{Proxy: nil},
 	}
 }
 
@@ -158,6 +160,11 @@ func (wo *WorkOS) ClientID() string {
 // DevMode reports whether WorkOS dev mode is enabled.
 func (wo *WorkOS) DevMode() bool {
 	return wo.devMode
+}
+
+// SelfServiceOnboarding reports whether the self-service onboarding is enabled.
+func (wo *WorkOS) SelfServiceOnboarding() bool {
+	return wo.selfServiceOnboarding
 }
 
 // publicKey returns the RSA public key for the given token, using the in-memory
@@ -303,6 +310,39 @@ func (wo *WorkOS) authenticate(ctx context.Context, token string) (*Authenticate
 	}
 
 	return user, nil
+}
+
+// createOrganization creates a WorkOS organization with the given name, linked
+// to the Krenalis organization with the given external ID, and returns the ID
+// of the created WorkOS organization.
+func (wo *WorkOS) createOrganization(ctx context.Context, name, externalID string) (string, error) {
+	var res struct {
+		ID string `json:"id"`
+	}
+	body := map[string]string{"name": name, "external_id": externalID}
+	err := wo.call(ctx, http.MethodPost, "/organizations", http.StatusCreated, body, &res)
+	if err != nil {
+		return "", fmt.Errorf("failed to create the WorkOS organization: %s", err)
+	}
+	if res.ID == "" {
+		return "", errors.New("WorkOS returned an empty organization ID")
+	}
+	return res.ID, nil
+}
+
+// sendInvitation sends a WorkOS invitation email that invites the given email
+// address as an admin of the WorkOS organization with the given ID.
+func (wo *WorkOS) sendInvitation(ctx context.Context, email, organizationID string) error {
+	body := map[string]string{
+		"email":           email,
+		"organization_id": organizationID,
+		"role_slug":       "admin",
+	}
+	err := wo.call(ctx, http.MethodPost, "/user_management/invitations", http.StatusCreated, body, nil)
+	if err != nil {
+		return fmt.Errorf("failed to send the WorkOS invitation: %s", err)
+	}
+	return nil
 }
 
 // organizationExternalID fetches and returns the external ID of the WorkOS

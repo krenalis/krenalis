@@ -1818,6 +1818,65 @@ func TestParseSettings(t *testing.T) {
 		}
 	})
 
+	// setWorkOSBaseline sets the WorkOS settings that must all be set for the
+	// WorkOS settings to be read.
+	setWorkOSBaseline := func(t *testing.T) {
+		t.Helper()
+		setBaseline(t)
+		t.Setenv("KRENALIS_WORKOS_CLIENT_ID", "client_123")
+		t.Setenv("KRENALIS_WORKOS_API_KEY", "sk_123")
+		t.Setenv("KRENALIS_WORKOS_WEBHOOK_SECRET", "whsec_123")
+		t.Setenv("KRENALIS_WORKOS_ACTIONS_SECRET", "asec_123")
+	}
+
+	t.Run("self-service onboarding defaults to disabled", func(t *testing.T) {
+		setWorkOSBaseline(t)
+		config, err := loadConfigFn()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if config.WorkOS.SelfServiceOnboarding {
+			t.Fatal("expected the self-service onboarding to be disabled by default")
+		}
+	})
+
+	t.Run("self-service onboarding enabled", func(t *testing.T) {
+		setWorkOSBaseline(t)
+		t.Setenv("KRENALIS_WORKOS_SELF_SERVICE_ONBOARDING", "true")
+		config, err := loadConfigFn()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if !config.WorkOS.SelfServiceOnboarding {
+			t.Fatal("expected the self-service onboarding to be enabled")
+		}
+	})
+
+	t.Run("self-service onboarding must be a boolean", func(t *testing.T) {
+		setWorkOSBaseline(t)
+		t.Setenv("KRENALIS_WORKOS_SELF_SERVICE_ONBOARDING", "yes")
+		_, err := loadConfigFn()
+		if err == nil {
+			t.Fatal("expected an error for a non-boolean value, got nil")
+		}
+		want := `KRENALIS_WORKOS_SELF_SERVICE_ONBOARDING must be a boolean: value "yes" is not a valid boolean value (expected true, false or empty string)`
+		if err.Error() != want {
+			t.Fatalf("expected %q, got %q", want, err)
+		}
+	})
+
+	t.Run("self-service onboarding ignored without WorkOS", func(t *testing.T) {
+		setBaseline(t)
+		t.Setenv("KRENALIS_WORKOS_SELF_SERVICE_ONBOARDING", "true")
+		config, err := loadConfigFn()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if config.WorkOS.SelfServiceOnboarding {
+			t.Fatal("expected the self-service onboarding to be disabled when WorkOS is not configured")
+		}
+	})
+
 }
 
 // TestParseEnvURLSuccess verifies valid inputs and normalization behaviors.
