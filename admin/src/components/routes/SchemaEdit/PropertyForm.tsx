@@ -380,7 +380,7 @@ const PropertyForm = ({
 							onPointerDown={(event) => event.preventDefault()}
 							onClick={onChangeName}
 						>
-							change
+							Change
 						</SlButton>
 					)}
 				</SlInput>
