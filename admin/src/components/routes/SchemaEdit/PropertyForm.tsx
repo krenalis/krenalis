@@ -449,8 +449,8 @@ const PropertyForm = ({
 							value={valueType.unsigned ? 'unsigned' : 'signed'}
 							onSlChange={onUnsignedChange}
 						>
-							<SlRadioButton value='signed'>Signed</SlRadioButton>
-							<SlRadioButton value='unsigned'>Unsigned</SlRadioButton>
+							<SlRadioButton value='signed'>signed</SlRadioButton>
+							<SlRadioButton value='unsigned'>unsigned</SlRadioButton>
 						</SlRadioGroup>
 					) : (
 						<SlCheckbox size='small' checked={!valueType.real} onSlChange={onRealChange}>
