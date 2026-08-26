@@ -1829,51 +1829,51 @@ func TestParseSettings(t *testing.T) {
 		t.Setenv("KRENALIS_WORKOS_ACTIONS_SECRET", "asec_123")
 	}
 
-	t.Run("self-service onboarding defaults to disabled", func(t *testing.T) {
+	t.Run("onboarding defaults to disabled", func(t *testing.T) {
 		setWorkOSBaseline(t)
 		config, err := loadConfigFn()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
-		if config.WorkOS.SelfServiceOnboarding {
-			t.Fatal("expected the self-service onboarding to be disabled by default")
+		if config.WorkOS.OnboardingEnabled {
+			t.Fatal("expected onboarding to be disabled by default")
 		}
 	})
 
-	t.Run("self-service onboarding enabled", func(t *testing.T) {
+	t.Run("onboarding enabled", func(t *testing.T) {
 		setWorkOSBaseline(t)
-		t.Setenv("KRENALIS_WORKOS_SELF_SERVICE_ONBOARDING", "true")
+		t.Setenv("KRENALIS_WORKOS_ONBOARDING_ENABLED", "true")
 		config, err := loadConfigFn()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
-		if !config.WorkOS.SelfServiceOnboarding {
-			t.Fatal("expected the self-service onboarding to be enabled")
+		if !config.WorkOS.OnboardingEnabled {
+			t.Fatal("expected onboarding to be enabled")
 		}
 	})
 
-	t.Run("self-service onboarding must be a boolean", func(t *testing.T) {
+	t.Run("onboarding must be a boolean", func(t *testing.T) {
 		setWorkOSBaseline(t)
-		t.Setenv("KRENALIS_WORKOS_SELF_SERVICE_ONBOARDING", "yes")
+		t.Setenv("KRENALIS_WORKOS_ONBOARDING_ENABLED", "yes")
 		_, err := loadConfigFn()
 		if err == nil {
 			t.Fatal("expected an error for a non-boolean value, got nil")
 		}
-		want := `KRENALIS_WORKOS_SELF_SERVICE_ONBOARDING must be a boolean: value "yes" is not a valid boolean value (expected true, false or empty string)`
+		want := `KRENALIS_WORKOS_ONBOARDING_ENABLED must be a boolean: value "yes" is not a valid boolean value (expected true, false or empty string)`
 		if err.Error() != want {
 			t.Fatalf("expected %q, got %q", want, err)
 		}
 	})
 
-	t.Run("self-service onboarding ignored without WorkOS", func(t *testing.T) {
+	t.Run("onboarding ignored without WorkOS", func(t *testing.T) {
 		setBaseline(t)
-		t.Setenv("KRENALIS_WORKOS_SELF_SERVICE_ONBOARDING", "true")
+		t.Setenv("KRENALIS_WORKOS_ONBOARDING_ENABLED", "true")
 		config, err := loadConfigFn()
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
-		if config.WorkOS.SelfServiceOnboarding {
-			t.Fatal("expected the self-service onboarding to be disabled when WorkOS is not configured")
+		if config.WorkOS.OnboardingEnabled {
+			t.Fatal("expected onboarding to be disabled when WorkOS is not configured")
 		}
 	})
 

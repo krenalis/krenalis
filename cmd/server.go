@@ -86,7 +86,7 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 	if config.WorkOS.ClientID != "" {
 		workOS = workos.New(core, config.WorkOS.ClientID, config.WorkOS.APIKey,
 			config.WorkOS.WebhookSecret, config.WorkOS.ActionsSecret, config.WorkOS.DevMode,
-			config.WorkOS.SelfServiceOnboarding)
+			config.WorkOS.OnboardingEnabled)
 	}
 
 	sentryErrorTunnel := newSentryErrorTunnel()
@@ -165,7 +165,7 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 			admin.ServeHTTP(w, r)
 			return
 		case r.URL.Path == "/onboarding":
-			if workOS != nil && workOS.SelfServiceOnboarding() {
+			if workOS != nil && workOS.OnboardingEnabled() {
 				err := serveOnboardingHTMLPage(w)
 				if err != nil {
 					slog.Error("failed to serve the onboarding HTML page", "error", err)
@@ -351,7 +351,7 @@ func verifyCertificate(cert tls.Certificate, dnsName string, roots *x509.CertPoo
 	return nil
 }
 
-// serveOnboardingHTMLPage returns the self-service onboarding HTML page.
+// serveOnboardingHTMLPage returns the onboarding HTML page.
 func serveOnboardingHTMLPage(w http.ResponseWriter) error {
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet, notranslate, noimageindex")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

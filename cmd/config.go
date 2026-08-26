@@ -71,12 +71,12 @@ type Config struct {
 	OAuthCredentials              map[string]*core.OAuthCredentials // always empty (no connector currently uses OAuth).
 	MaxQueuedEventsPerDestination int
 	WorkOS                        struct {
-		ClientID              string
-		APIKey                string
-		WebhookSecret         string
-		ActionsSecret         string
-		DevMode               bool
-		SelfServiceOnboarding bool
+		ClientID          string
+		APIKey            string
+		WebhookSecret     string
+		ActionsSecret     string
+		DevMode           bool
+		OnboardingEnabled bool
 	}
 }
 
@@ -595,9 +595,9 @@ func loadConfig(ctx context.Context, source string) (*Config, error) {
 			return nil, fmt.Errorf("KRENALIS_WORKOS_DEV_MODE must be a boolean: %s", err)
 		}
 
-		settings.WorkOS.SelfServiceOnboarding, err = boolEnvVar(conf.Get("KRENALIS_WORKOS_SELF_SERVICE_ONBOARDING"), false)
+		settings.WorkOS.OnboardingEnabled, err = boolEnvVar(conf.Get("KRENALIS_WORKOS_ONBOARDING_ENABLED"), false)
 		if err != nil {
-			return nil, fmt.Errorf("KRENALIS_WORKOS_SELF_SERVICE_ONBOARDING must be a boolean: %s", err)
+			return nil, fmt.Errorf("KRENALIS_WORKOS_ONBOARDING_ENABLED must be a boolean: %s", err)
 		}
 	}
 

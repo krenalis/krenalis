@@ -22,7 +22,7 @@ import (
 const maxPayloadSize = 64 * 1024
 
 // onboardingLimits are the resource limits granted to an organization created
-// through the self-service onboarding.
+// through onboarding.
 var onboardingLimits = core.OrganizationLimits{
 	Members:     core.MembersLimit,
 	AccessKeys:  core.AccessKeysLimit,
