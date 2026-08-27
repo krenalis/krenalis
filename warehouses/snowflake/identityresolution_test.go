@@ -69,6 +69,155 @@ func Test_finalizeIdentityResolutionPreservesPersistedSuccess(t *testing.T) {
 
 }
 
+// TestAlterProfileSchemaUsesPublishedProfilesAfterIdentityResolutionFailure
+// verifies that after a failed Identity Resolution, altering the profile schema
+// keeps the last published profiles visible and updates the published profiles
+// table.
+func TestAlterProfileSchemaUsesPublishedProfilesAfterIdentityResolutionFailure(t *testing.T) {
+
+	warehouse, db := newTestSnowflakeWarehouse(t)
+	profileColumns := []warehouses.Column{{Name: "email", Type: types.String(), Nullable: true}}
+	identifiers := profileColumns
+	err := warehouse.Initialize(t.Context(), profileColumns)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = db.ExecContext(t.Context(), `INSERT INTO "KRENALIS_PROFILES_0"
+		("_KPID", "_IDENTITIES", "_UPDATED_AT", "EMAIL") SELECT ?, ARRAY_CONSTRUCT(1), ?, ?`,
+		"a44731d8-d89d-44b9-ac87-a8ce1a8770d7", time.Now().UTC(), "person@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	badProfileColumns := append([]warehouses.Column{}, profileColumns...)
+	badProfileColumns = append(badProfileColumns, warehouses.Column{
+		Name:     "column_not_in_profiles_table",
+		Type:     types.String(),
+		Nullable: true,
+	})
+	const failedOpID = "a44731d8-d89d-44b9-ac87-a8ce1a8770d8"
+	err = warehouse.ResolveIdentities(t.Context(), failedOpID, identifiers, badProfileColumns, nil)
+	if err != nil {
+		_, ok := errors.AsType[*warehouses.OperationError](err)
+		if !ok {
+			t.Fatalf("expected failed operation to return *warehouses.OperationError, got %T: %v", err, err)
+		}
+	}
+	if err == nil {
+		t.Fatal("expected Identity Resolution to fail")
+	}
+
+	var email string
+	err = db.QueryRowContext(t.Context(), `SELECT "EMAIL" FROM "PROFILES" WHERE "_KPID" = ?`,
+		"a44731d8-d89d-44b9-ac87-a8ce1a8770d7").Scan(&email)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if email != "person@example.com" {
+		t.Errorf("expected the published profile to remain visible after failed Identity Resolution, got email %q", email)
+	}
+
+	var failedProfilesTableExists bool
+	err = db.QueryRowContext(t.Context(), `SELECT COUNT(*) > 0
+		FROM INFORMATION_SCHEMA.TABLES
+		WHERE TABLE_SCHEMA = CURRENT_SCHEMA()
+			AND TABLE_NAME = 'KRENALIS_PROFILES_1'`).Scan(&failedProfilesTableExists)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !failedProfilesTableExists {
+		t.Fatal("expected the failed profiles table to exist")
+	}
+
+	newProfileColumns := append([]warehouses.Column{}, profileColumns...)
+	newProfileColumns = append(newProfileColumns, warehouses.Column{Name: "phone", Type: types.String(), Nullable: true})
+	alterOperations := []warehouses.AlterOperation{{
+		Operation: warehouses.OperationAddColumn,
+		Column:    "phone",
+		Type:      types.String(),
+	}}
+	preview, err := warehouse.PreviewAlterProfileSchema(t.Context(), newProfileColumns, alterOperations)
+	if err != nil {
+		t.Fatal(err)
+	}
+	previewSQL := strings.Join(preview, "\n")
+	if !strings.Contains(previewSQL, `ALTER TABLE "KRENALIS_PROFILES_0"`) {
+		t.Errorf("expected preview to alter the published profiles table, got:\n%s", previewSQL)
+	}
+	if strings.Contains(previewSQL, `ALTER TABLE "KRENALIS_PROFILES_1"`) {
+		t.Errorf("expected preview not to alter the failed profiles table, got:\n%s", previewSQL)
+	}
+
+	const alterOpID = "a44731d8-d89d-44b9-ac87-a8ce1a8770d9"
+	err = warehouse.AlterProfileSchema(t.Context(), alterOpID, newProfileColumns, alterOperations)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.QueryRowContext(t.Context(), `SELECT "EMAIL" FROM "PROFILES" WHERE "_KPID" = ?`,
+		"a44731d8-d89d-44b9-ac87-a8ce1a8770d7").Scan(&email)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if email != "person@example.com" {
+		t.Errorf("expected the published profile to remain visible, got email %q", email)
+	}
+
+	var columnExists bool
+	err = db.QueryRowContext(t.Context(), `SELECT COUNT(*) > 0
+		FROM INFORMATION_SCHEMA.COLUMNS
+		WHERE TABLE_SCHEMA = CURRENT_SCHEMA()
+			AND TABLE_NAME = 'KRENALIS_PROFILES_0'
+			AND COLUMN_NAME = 'PHONE'`).Scan(&columnExists)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !columnExists {
+		t.Error("expected the published profiles table to contain the new column")
+	}
+	err = db.QueryRowContext(t.Context(), `SELECT COUNT(*) > 0
+		FROM INFORMATION_SCHEMA.TABLES
+		WHERE TABLE_SCHEMA = CURRENT_SCHEMA()
+			AND TABLE_NAME = 'KRENALIS_PROFILES_1'`).Scan(&failedProfilesTableExists)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !failedProfilesTableExists {
+		t.Fatal("expected the failed profiles table to remain after schema alteration")
+	}
+	err = db.QueryRowContext(t.Context(), `SELECT COUNT(*) > 0
+		FROM INFORMATION_SCHEMA.COLUMNS
+		WHERE TABLE_SCHEMA = CURRENT_SCHEMA()
+			AND TABLE_NAME = 'KRENALIS_PROFILES_1'
+			AND COLUMN_NAME = 'PHONE'`).Scan(&columnExists)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if columnExists {
+		t.Error("expected the failed profiles table not to contain the new column")
+	}
+
+	const successfulOpID = "a44731d8-d89d-44b9-ac87-a8ce1a8770da"
+	err = warehouse.ResolveIdentities(t.Context(), successfulOpID, identifiers, newProfileColumns, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.QueryRowContext(t.Context(), `SELECT COUNT(*) > 0
+		FROM INFORMATION_SCHEMA.COLUMNS
+		WHERE TABLE_SCHEMA = CURRENT_SCHEMA()
+			AND TABLE_NAME = 'KRENALIS_PROFILES_2'
+			AND COLUMN_NAME = 'PHONE'`).Scan(&columnExists)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !columnExists {
+		t.Error("expected the next profiles table to copy the published schema")
+	}
+
+}
+
 // TestResolveIdentitiesPreservesProfilesViewAfterPendingFailure verifies that
 // replacing a failed pending operation does not leave the profiles view
 // referencing a removed table when the replacement also fails.

@@ -80,8 +80,8 @@ func (warehouse *PostgreSQL) CheckReadOnlyAccess(ctx context.Context) error {
 	// the 'has_table_privilege' function).
 	const disallowedPrivileges = `INSERT,UPDATE,DELETE,TRUNCATE`
 
-	// Retrieve the profiles table version.
-	profileSchemaVersion, err := warehouse.profilesVersion(ctx)
+	// Retrieve the greatest recorded profiles table version.
+	profileSchemaVersion, err := warehouse.maxProfilesVersion(ctx)
 	if err != nil {
 		return err
 	}
@@ -425,8 +425,9 @@ func (warehouse *PostgreSQL) execTransaction(ctx context.Context, f func(pgx.Tx)
 	return nil
 }
 
-// profilesVersion returns the version of the "krenalis_profiles" table.
-func (warehouse *PostgreSQL) profilesVersion(ctx context.Context) (int, error) {
+// maxProfilesVersion returns the greatest recorded version of the
+// "krenalis_profiles" table.
+func (warehouse *PostgreSQL) maxProfilesVersion(ctx context.Context) (int, error) {
 	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return 0, err

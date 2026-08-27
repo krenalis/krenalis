@@ -78,8 +78,8 @@ func (warehouse *Snowflake) CheckReadOnlyAccess(ctx context.Context) error {
 		return snowflake(err)
 	}
 
-	// Retrieve the profiles table version.
-	profileSchemaVersion, err := warehouse.profilesVersion(ctx)
+	// Retrieve the greatest recorded profiles table version.
+	profileSchemaVersion, err := warehouse.maxProfilesVersion(ctx)
 	if err != nil {
 		return err
 	}
@@ -464,8 +464,9 @@ func (warehouse *Snowflake) openDB(ctx context.Context) (*sql.DB, error) {
 	return db, nil
 }
 
-// profilesVersion returns the version of the "KRENALIS_PROFILES" table.
-func (warehouse *Snowflake) profilesVersion(ctx context.Context) (int, error) {
+// maxProfilesVersion returns the greatest recorded version of the
+// "KRENALIS_PROFILES" table.
+func (warehouse *Snowflake) maxProfilesVersion(ctx context.Context) (int, error) {
 	db, err := warehouse.openDB(ctx)
 	if err != nil {
 		return 0, snowflake(err)

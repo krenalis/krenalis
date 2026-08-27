@@ -46,9 +46,9 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 		err = warehouse.finalizeIdentityResolution(ctx, db, opID, err)
 	}()
 
-	// Determine the current version of the "krenalis_profiles" table and create
-	// a copy of it with the incremented version.
-	profilesVersion, err := warehouse.profilesVersion(ctx)
+	// Determine the greatest recorded version of the "KRENALIS_PROFILES" table
+	// and allocate the next version.
+	maxProfilesVersion, err := warehouse.maxProfilesVersion(ctx)
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	if err != nil {
 		return err
 	}
-	newProfilesVersion := profilesVersion + 1
+	newProfilesVersion := maxProfilesVersion + 1
 	newProfilesName := fmt.Sprintf("KRENALIS_PROFILES_%d", newProfilesVersion)
 	currentProfilesName := fmt.Sprintf("KRENALIS_PROFILES_%d", publishedProfilesVersion)
 
@@ -64,7 +64,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	// Resolution results.
 	removePreviousProfilesTable := false
 	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
-		if profilesVersion != publishedProfilesVersion {
+		if maxProfilesVersion != publishedProfilesVersion {
 			// The latest unpublished profiles version may belong to an operation
 			// that is still running. Replace it only if that operation failed.
 			err = tx.QueryRowContext(ctx, `SELECT EXISTS (
@@ -74,18 +74,19 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 				WHERE "V"."VERSION" = ?
 					AND "O"."COMPLETED_AT" IS NOT NULL
 					AND "O"."ERROR" <> ''
-			)`, profilesVersion).Scan(&removePreviousProfilesTable)
+			)`, maxProfilesVersion).Scan(&removePreviousProfilesTable)
 			if err != nil {
 				return snowflake(err)
 			}
 			if !removePreviousProfilesTable {
 				return fmt.Errorf(
-					"profiles version %d is unpublished but does not belong to a failed operation", profilesVersion)
+					"profiles version %d is unpublished but does not belong to a failed operation", maxProfilesVersion)
 			}
 		}
-		// Create the candidate table by copying the schema from the current profiles table.
+		// Create the candidate table by copying the schema from the published profiles table.
 		_, err = tx.ExecContext(ctx,
-			fmt.Sprintf(`CREATE TABLE %s LIKE "KRENALIS_PROFILES_%d"`, quoteIdent(newProfilesName), profilesVersion))
+			fmt.Sprintf(`CREATE TABLE %s LIKE "KRENALIS_PROFILES_%d"`,
+				quoteIdent(newProfilesName), publishedProfilesVersion))
 		if err != nil {
 			return fmt.Errorf("cannot create profiles table (with name %s): %s", quoteIdent(newProfilesName), err)
 		}
@@ -110,8 +111,8 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 		return snowflake(err)
 	}
 	if removePreviousProfilesTable {
-		// Drop the failed candidate table after preserving its schema changes.
-		_, err = db.ExecContext(ctx, `DROP TABLE IF EXISTS "KRENALIS_PROFILES_`+strconv.Itoa(profilesVersion)+`"`)
+		// Drop the failed candidate table.
+		_, err = db.ExecContext(ctx, `DROP TABLE IF EXISTS "KRENALIS_PROFILES_`+strconv.Itoa(maxProfilesVersion)+`"`)
 		if err != nil {
 			return snowflake(err)
 		}
