@@ -569,6 +569,10 @@ func (c *consumer) processMessage(ctx context.Context, msg jetstream.Msg, eventA
 // bounding the number of messages waiting to be processed for each shard.
 const maxMessagesPerFetch = jetstream.DefaultMaxMessages
 
+// minFetchBatchSize prevents slow message processing from reducing fetches to
+// individual messages.
+const minFetchBatchSize = maxMessagesPerFetch / 2
+
 // fetchedMsg represents a message fetched from a stream for one shard.
 type fetchedMsg struct {
 	msg jetstream.Msg
@@ -595,7 +599,7 @@ func (sc *shardConsumer) Messages(ctx context.Context) iter.Seq[fetchedMsg] {
 
 		fetchCtx, cancel := context.WithCancel(ctx)
 		pending := make(chan fetchedMsg, maxMessagesPerFetch)
-		// spaceAvailable wakes the fetch loop when processing frees a full queue.
+		// spaceAvailable wakes the fetch loop as processing frees pending slots.
 		spaceAvailable := make(chan struct{}, 1)
 		go sc.fetch(fetchCtx, pending, spaceAvailable)
 		defer func() {
@@ -648,9 +652,9 @@ func (sc *shardConsumer) fetch(ctx context.Context, pending chan<- fetchedMsg, s
 		}
 
 		for ctx.Err() == nil {
-			// Do not fetch until every returned message is guaranteed to fit in
-			// pending without waiting for the preceding message to be processed.
-			for len(pending) == cap(pending) {
+			// Wait for enough room to keep fetches batched. The resulting batch size
+			// also guarantees that every returned message fits in pending.
+			for cap(pending)-len(pending) < minFetchBatchSize {
 				select {
 				case <-spaceAvailable:
 				case <-ctx.Done():
