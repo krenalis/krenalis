@@ -849,8 +849,9 @@ test(`View property details and keep the selection when editing`, async ({ page 
 	).toBe(countryBackground);
 
 	await editSchema(page);
-	await expect(page.locator('.property-details-panel')).toHaveCount(0);
-	await expect(page.locator('.property-panel .property-panel__title')).toHaveText('Property');
+	await expect(page.locator('.schema-grid__workspace')).toHaveClass(/schema-grid__workspace--with-panel/);
+	await expect(panel).toHaveCount(1);
+	await expect(page.locator('.schema-edit .property-panel .property-panel__title')).toHaveText('Property');
 	await expect(page.locator('.property-panel .property-dialog__name-input')).toHaveJSProperty('value', 'country');
 	const selectedRow = page.locator('.schema-edit .grid__row[data-id="address.country"]');
 	await expect(selectedRow).toBeVisible();
@@ -884,7 +885,7 @@ test(`Show identifier order and renumber identifiers after removing a property`,
 		.locator('.property-details-panel__value');
 	await expect(identifierDetail).toHaveText('Identifier #1');
 	await expect(identifierDetail.locator('.schema-property-grid__identifier')).toHaveText('#1');
-	await openProperty(page, 'birth_date');
+	await openProperty(page, 'phone_numbers');
 	await expect(
 		page.locator('.property-details-panel__label').filter({ hasText: 'Identity resolution' }),
 	).toHaveCount(0);
@@ -897,7 +898,7 @@ test(`Show identifier order and renumber identifiers after removing a property`,
 	await expect(
 		page.locator('.property-form__read-only-value .schema-property-grid__identifier'),
 	).toHaveText('#1');
-	await openProperty(page, 'birth_date');
+	await openProperty(page, 'phone_numbers');
 	await expect(page.locator('.property-form__label').filter({ hasText: 'Identity resolution' })).toHaveCount(0);
 
 	await removeProperty(page, 'email');
