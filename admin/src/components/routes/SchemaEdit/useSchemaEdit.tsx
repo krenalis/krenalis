@@ -59,6 +59,7 @@ interface PropertyParent {
 	label: string;
 	indentation: number;
 	root: string;
+	propertyNames: string[];
 }
 
 interface SelectPropertyOptions {
@@ -295,7 +296,8 @@ const useSchemaEdit = (
 			}
 			let p = editableSchema[k];
 			if (p.name === property.name && getParentPropertyKey(k) === property.parentKey) {
-				throw new Error(`Property "${property.name}" already exists`);
+				const parentLabel = propertyParents.find((parent) => parent.key === property.parentKey)?.label;
+				throw new Error(`A property named “${property.name}” already exists in ${parentLabel}.`);
 			}
 		}
 
@@ -380,7 +382,8 @@ const useSchemaEdit = (
 				}
 				let p = s[k];
 				if (p.name === property.name && getParentPropertyKey(k) === parentKey) {
-					throw new Error(`Property "${property.name}" already exists`);
+					const parentLabel = propertyParents.find((parent) => parent.key === parentKey)?.label;
+					throw new Error(`A property named “${property.name}” already exists in ${parentLabel}.`);
 				}
 			}
 
@@ -711,12 +714,20 @@ const getPropertySelectionAfterRemoval = (schema: EditableSchema, propertyKey: s
 };
 
 const getPropertyParents = (schema: EditableSchema): PropertyParent[] => {
+	const propertyNamesByParentKey = new Map<string, string[]>();
+	for (const [key, property] of Object.entries(schema || {})) {
+		const parentKey = getParentPropertyKey(key);
+		const propertyNames = propertyNamesByParentKey.get(parentKey) || [];
+		propertyNames.push(property.name);
+		propertyNamesByParentKey.set(parentKey, propertyNames);
+	}
 	const parents: PropertyParent[] = [
 		{
 			key: '',
 			label: 'Profile (top level)',
 			indentation: 0,
 			root: '',
+			propertyNames: propertyNamesByParentKey.get('') || [],
 		},
 	];
 	if (schema == null) {
@@ -739,6 +750,7 @@ const getPropertyParents = (schema: EditableSchema): PropertyParent[] => {
 			label: path,
 			indentation: property.indentation + 1,
 			root: property.root,
+			propertyNames: propertyNamesByParentKey.get(key) || [],
 		});
 		parentsByParentKey.set(parentKey, siblings);
 	}

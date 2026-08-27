@@ -28,6 +28,7 @@ import {
 	SchemaPropertyIdentifierValue,
 	SchemaPropertyInfoTooltip,
 } from '../Schema/SchemaPropertyGrid';
+import { getParentPropertyKey } from './SchemaEdit.helpers';
 import { PropertyFieldChanges, PropertyParent, PropertyToEdit } from './useSchemaEdit';
 import {
 	getPropertyValueType,
@@ -93,6 +94,7 @@ const PropertyForm = ({
 	const { connections } = useContext(AppContext);
 	const isEditing = propertyToEdit.key != null;
 	const canEditType = !isEditing || propertyToEdit.isEditable === true;
+	const parentKey = property.key == null ? property.parentKey || '' : getParentPropertyKey(property.key);
 	const showIdentityResolution =
 		isEditing && propertyToEdit.isEditable !== true && isSuitableAsIdentifier(propertyToEdit.type);
 
@@ -196,12 +198,7 @@ const PropertyForm = ({
 
 	const onInputName = (event) => {
 		const name = event.target.value;
-		try {
-			validatePropertyName(name);
-			setNameError('');
-		} catch (err) {
-			setNameError(err.message);
-		}
+		setNameError(getPropertyNameError(name, parentKey, isEditing ? propertyToEdit.name : undefined, parents));
 		updateProperty((nextProperty) => {
 			nextProperty.name = name;
 		});
@@ -240,6 +237,11 @@ const PropertyForm = ({
 		const parent = parents.find((candidate) => candidate.key === parentKey);
 		if (parent == null) {
 			return;
+		}
+		if (property.name !== '') {
+			setNameError(
+				getPropertyNameError(property.name, parent.key, isEditing ? propertyToEdit.name : undefined, parents),
+			);
 		}
 		updateProperty((nextProperty) => {
 			nextProperty.parentKey = parent.key;
@@ -327,10 +329,14 @@ const PropertyForm = ({
 
 	const onSubmit = (event: React.FormEvent) => {
 		event.preventDefault();
-		try {
-			validatePropertyName(property.name);
-		} catch (err) {
-			setNameError(err.message);
+		const propertyNameError = getPropertyNameError(
+			property.name,
+			parentKey,
+			isEditing ? propertyToEdit.name : undefined,
+			parents,
+		);
+		if (propertyNameError !== '') {
+			setNameError(propertyNameError);
 			return;
 		}
 		const error = validatePropertyType(property);
@@ -683,6 +689,27 @@ const validatePropertyName = (name: string) => {
 	if (!/^.[A-Za-z0-9_]*$/.test(name)) {
 		throw new Error('Name must contain only ASCII alphabet characters, digits and underscores');
 	}
+};
+
+const getPropertyNameError = (
+	name: string,
+	parentKey: string,
+	originalName: string | undefined,
+	parents: PropertyParent[] | undefined,
+): string => {
+	try {
+		validatePropertyName(name);
+	} catch (err) {
+		return err.message;
+	}
+	if (name === originalName) {
+		return '';
+	}
+	const parent = parents?.find((candidate) => candidate.key === parentKey);
+	if (parent == null || !parent.propertyNames.includes(name)) {
+		return '';
+	}
+	return `A property named “${name}” already exists in ${parent.label}.`;
 };
 
 export { PropertyForm };

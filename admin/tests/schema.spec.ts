@@ -1908,10 +1908,20 @@ test(`Allow matching property names under different object parents`, async ({ pa
 	await page.click('.schema-edit__add-property');
 	const propertyPanel = page.locator('.property-panel');
 	await propertyPanel.locator('.property-form__parent').evaluate((select: any) => {
-		select.value = 'duplicate_scope.shipping';
+		select.value = 'duplicate_scope.billing';
 		select.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
 	});
 	await propertyPanel.locator('.property-form__name-input input').fill('matching_add_name');
+	const nameError = propertyPanel.locator('.property-form__control--name .property-form__control-error');
+	await expect(nameError).toHaveText(
+		'A property named “matching_add_name” already exists in duplicate_scope › billing.',
+	);
+	await expect(propertyPanel.locator('.property-panel__save')).toHaveAttribute('disabled');
+	await propertyPanel.locator('.property-form__parent').evaluate((select: any) => {
+		select.value = 'duplicate_scope.shipping';
+		select.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
+	});
+	await expect(nameError).not.toBeAttached();
 	await selectPropertyType(page, 'string');
 	await propertyPanel.locator('.property-panel__save').click();
 	await expect(page.locator('.grid__row[data-id="duplicate_scope.shipping.matching_add_name"]')).toBeVisible();
@@ -2446,5 +2456,10 @@ test(`Check that the property name is correctly validated`, async ({ page }) => 
 	await page.locator('sl-input >> input[name="name"]').fill('foo$bar');
 	await expect(error).toBeAttached();
 	await expect(error).toContainText('Name must contain only ASCII alphabet characters, digits and underscores');
+	await expect(saveButton).toHaveAttribute('disabled');
+
+	// Name must be unique within the selected parent.
+	await page.locator('sl-input >> input[name="name"]').fill('email');
+	await expect(error).toContainText('A property named “email” already exists in Profile (top level).');
 	await expect(saveButton).toHaveAttribute('disabled');
 });

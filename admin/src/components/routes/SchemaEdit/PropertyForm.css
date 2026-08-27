@@ -202,7 +202,7 @@
 }
 
 .property-form__control-error {
-	align-items: center;
+	align-items: flex-start;
 	color: var(--sl-color-danger-600);
 	display: flex;
 	font-size: 12px;
@@ -213,6 +213,7 @@
 
 .property-form__control-error sl-icon {
 	color: var(--sl-color-danger-600);
+	margin-top: 2px;
 }
 
 @media (max-width: 700px) {
