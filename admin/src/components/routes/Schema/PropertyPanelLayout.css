@@ -60,7 +60,7 @@
 	padding: 20px;
 }
 
-@media (max-width: 950px) {
+@media (max-width: 1000px) {
 	.property-panel {
 		max-height: none;
 		position: static;

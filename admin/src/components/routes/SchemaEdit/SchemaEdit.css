@@ -317,7 +317,15 @@
 	}
 }
 
-@media (max-width: 950px) {
+@media (max-width: 1000px) {
+	.schema-edit__overview {
+		grid-template-columns: 1fr;
+	}
+
+	.schema-edit__overview-main {
+		padding-right: 0;
+	}
+
 	.schema-edit__layout {
 		--grid-keyboard-hints-side-width: 0px;
 	}

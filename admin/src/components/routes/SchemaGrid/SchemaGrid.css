@@ -175,7 +175,7 @@
 	}
 }
 
-@media (max-width: 950px) {
+@media (max-width: 1000px) {
 	.schema-grid__layout--with-panel {
 		--grid-keyboard-hints-side-width: 0px;
 	}

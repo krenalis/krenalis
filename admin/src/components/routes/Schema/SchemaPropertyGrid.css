@@ -330,7 +330,7 @@
 	width: 12px;
 }
 
-@media (max-width: 950px) {
+@media (max-width: 1000px) {
 	.schema-grid__details-panel > .property-panel,
 	.schema-edit__workspace > .property-panel {
 		border-left: 0;
