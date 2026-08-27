@@ -423,15 +423,15 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 
 	// Read all consent purposes.
-	err = tx.QueryScan(ctx, "SELECT workspace, id, code, name FROM consent_purposes",
+	err = tx.QueryScan(ctx, "SELECT workspace, id, code, name, event_path, profile_path FROM consent_purposes",
 		func(rows *db.Rows) error {
 			for rows.Next() {
 				cp := ConsentPurpose{}
 				var workspaceID string
-				if err := rows.Scan(&workspaceID, &cp.ID, &cp.Code, &cp.Name); err != nil {
+				if err := rows.Scan(&workspaceID, &cp.ID, &cp.Code, &cp.Name, &cp.EventPath, &cp.ProfilePath); err != nil {
 					return fmt.Errorf("loading consent purpose %s: %s", cp.ID, err)
 				}
-				state.workspaces[workspaceID].consentPurposes[cp.ID] = &cp
+				state.workspaces[workspaceID].consentPurposes[cp.ID] = NewConsentPurpose(cp)
 			}
 			return nil
 		})

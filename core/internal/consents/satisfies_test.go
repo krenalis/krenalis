@@ -127,17 +127,6 @@ var givenConsentsCases = []struct {
 	},
 }
 
-func TestSatisfies(t *testing.T) {
-	for _, c := range givenConsentsCases {
-		t.Run(c.name, func(t *testing.T) {
-			got := Satisfies(requiredPurposes(c.required), c.matchAll, c.given)
-			if got != c.want {
-				t.Fatalf("got %v, want %v", got, c.want)
-			}
-		})
-	}
-}
-
 func TestSatisfiesEvent(t *testing.T) {
 	for _, c := range givenConsentsCases {
 		t.Run(c.name, func(t *testing.T) {
@@ -260,11 +249,131 @@ func TestSatisfiesProfile(t *testing.T) {
 	}
 }
 
-// requiredPurposes returns the consent purposes with the given codes.
+func TestSatisfiesWithConfiguredPaths(t *testing.T) {
+	cases := []struct {
+		name       string
+		purposes   []*state.ConsentPurpose
+		matchAll   bool
+		attributes map[string]any
+		event      bool
+		want       bool
+	}{
+		{
+			name:     "event path out of the context",
+			purposes: []*state.ConsentPurpose{purposeWithPaths("marketing", "consents.marketing", "")},
+			matchAll: true,
+			attributes: map[string]any{
+				"consents": map[string]any{"marketing": true},
+			},
+			event: true,
+			want:  true,
+		},
+		{
+			name:     "event path at the root of the event",
+			purposes: []*state.ConsentPurpose{purposeWithPaths("marketing", "marketingConsent", "")},
+			matchAll: true,
+			attributes: map[string]any{
+				"marketingConsent": true,
+			},
+			event: true,
+			want:  true,
+		},
+		{
+			name:     "the event path takes precedence over the code",
+			purposes: []*state.ConsentPurpose{purposeWithPaths("marketing", "marketingConsent", "")},
+			matchAll: true,
+			attributes: map[string]any{
+				"context":          map[string]any{"consents": map[string]any{"marketing": true}},
+				"marketingConsent": false,
+			},
+			event: true,
+			want:  false,
+		},
+		{
+			name:     "nested profile path",
+			purposes: []*state.ConsentPurpose{purposeWithPaths("marketing", "", "privacy.marketing")},
+			matchAll: true,
+			attributes: map[string]any{
+				"privacy": map[string]any{"marketing": true},
+			},
+			want: true,
+		},
+		{
+			name:     "the profile path holds a value that is not a bool",
+			purposes: []*state.ConsentPurpose{purposeWithPaths("marketing", "", "privacy.marketing")},
+			matchAll: true,
+			attributes: map[string]any{
+				"privacy": map[string]any{"marketing": "true"},
+			},
+			want: false,
+		},
+		{
+			name:       "the profile path does not exist",
+			purposes:   []*state.ConsentPurpose{purposeWithPaths("marketing", "", "privacy.marketing")},
+			matchAll:   true,
+			attributes: map[string]any{},
+			want:       false,
+		},
+		{
+			name: "AND: every purpose is read from its own profile path",
+			purposes: []*state.ConsentPurpose{
+				purposeWithPaths("marketing", "", "privacy.marketing"),
+				purposeWithPaths("analytics", "", "analyticsConsent"),
+			},
+			matchAll: true,
+			attributes: map[string]any{
+				"privacy":          map[string]any{"marketing": true},
+				"analyticsConsent": true,
+			},
+			want: true,
+		},
+		{
+			name: "OR: only the purpose read from the nested profile path is granted",
+			purposes: []*state.ConsentPurpose{
+				purposeWithPaths("marketing", "", "privacy.marketing"),
+				purposeWithPaths("analytics", "", "analyticsConsent"),
+			},
+			matchAll: false,
+			attributes: map[string]any{
+				"privacy":          map[string]any{"marketing": true},
+				"analyticsConsent": false,
+			},
+			want: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var got bool
+			if c.event {
+				got = SatisfiesEvent(c.purposes, c.matchAll, c.attributes)
+			} else {
+				got = SatisfiesProfile(c.purposes, c.matchAll, c.attributes)
+			}
+			if got != c.want {
+				t.Fatalf("got %v, want %v", got, c.want)
+			}
+		})
+	}
+}
+
+// requiredPurposes returns the consent purposes with the given codes, each one
+// with the default property paths.
 func requiredPurposes(codes []string) []*state.ConsentPurpose {
 	purposes := make([]*state.ConsentPurpose, len(codes))
 	for i, code := range codes {
-		purposes[i] = &state.ConsentPurpose{ID: code, Code: code, Name: code}
+		purposes[i] = purposeWithPaths(code, "", "")
 	}
 	return purposes
+}
+
+// purposeWithPaths returns the consent purpose with the given code, event path
+// and profile path.
+func purposeWithPaths(code, eventPath, profilePath string) *state.ConsentPurpose {
+	return state.NewConsentPurpose(state.ConsentPurpose{
+		ID:          code,
+		Code:        code,
+		Name:        code,
+		EventPath:   eventPath,
+		ProfilePath: profilePath,
+	})
 }

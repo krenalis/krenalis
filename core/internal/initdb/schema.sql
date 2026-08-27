@@ -98,6 +98,8 @@ CREATE TABLE consent_purposes (
     workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
     code varchar(100) NOT NULL CHECK (code ~ '^[A-Za-z_][0-9A-Za-z_]{0,99}$'),
     name varchar(100) NOT NULL,
+    event_path varchar(1024) NOT NULL DEFAULT '',
+    profile_path varchar(1024) NOT NULL DEFAULT '',
     UNIQUE (workspace, code),
     PRIMARY KEY (id)
 );

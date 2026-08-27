@@ -214,13 +214,15 @@ func (workspace *Workspace) replaceAccount(id int, f func(*Account)) *Account {
 }
 
 // replaceConsentPurpose calls the function f passing a copy of the consent
-// purpose with identifier id. After f is returned, it replaces the consent
-// purpose with its copy in the workspace and returns the latter.
+// purpose with identifier id. After f is returned, it resolves the paths of the
+// properties of the copy, replaces the consent purpose with the copy in the
+// workspace and returns the latter.
 func (workspace *Workspace) replaceConsentPurpose(id string, f func(*ConsentPurpose)) *ConsentPurpose {
 	cp := workspace.consentPurposes[id]
 	cc := new(ConsentPurpose)
 	*cc = *cp
 	f(cc)
+	cc.resolvePropertyPaths()
 	workspace.mu.Lock()
 	workspace.consentPurposes[id] = cc
 	workspace.mu.Unlock()
@@ -360,10 +362,12 @@ func (state *State) acceptInvitation(n notification) string {
 
 // AddConsentPurpose is the event sent when a new consent purpose is added.
 type AddConsentPurpose struct {
-	Workspace string
-	ID        string
-	Code      string
-	Name      string
+	Workspace   string
+	ID          string
+	Code        string
+	Name        string
+	EventPath   string
+	ProfilePath string
 }
 
 // addConsentPurpose adds a new consent purpose.
@@ -373,11 +377,13 @@ func (state *State) addConsentPurpose(n notification) string {
 		return ""
 	}
 	ws := state.workspaces[e.Workspace]
-	cp := &ConsentPurpose{
-		ID:   e.ID,
-		Code: e.Code,
-		Name: e.Name,
-	}
+	cp := NewConsentPurpose(ConsentPurpose{
+		ID:          e.ID,
+		Code:        e.Code,
+		Name:        e.Name,
+		EventPath:   e.EventPath,
+		ProfilePath: e.ProfilePath,
+	})
 	ws.mu.Lock()
 	ws.consentPurposes[cp.ID] = cp
 	ws.mu.Unlock()
@@ -1643,10 +1649,12 @@ func (state *State) updateConnection(n notification) string {
 
 // UpdateConsentPurpose is the event sent when a consent purpose is updated.
 type UpdateConsentPurpose struct {
-	Workspace string
-	ID        string
-	Code      string
-	Name      string
+	Workspace   string
+	ID          string
+	Code        string
+	Name        string
+	EventPath   string
+	ProfilePath string
 }
 
 // updateConsentPurpose updates a consent purpose.
@@ -1660,6 +1668,8 @@ func (state *State) updateConsentPurpose(n notification) string {
 	cp := ws.replaceConsentPurpose(e.ID, func(cp *ConsentPurpose) {
 		cp.Code = e.Code
 		cp.Name = e.Name
+		cp.EventPath = e.EventPath
+		cp.ProfilePath = e.ProfilePath
 	})
 	// Replace the consent purpose in the pipelines that require it.
 	for _, c := range ws.connections {

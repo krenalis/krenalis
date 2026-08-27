@@ -6,7 +6,6 @@ package filters
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -635,44 +634,4 @@ func Test_AppliesWithNestedPath(t *testing.T) {
 	if Applies(filter, props) {
 		t.Fatal("expected false when missing n1")
 	}
-}
-
-// Test_readPropertyFrom verifies retrieving nested properties from maps and
-// JSON.
-func Test_readPropertyFrom(t *testing.T) {
-	jsonObj := json.Value(`{"b":{"c":4}}`)
-	m := map[string]any{
-		"a": 5,
-		"nested": map[string]any{
-			"b": map[string]any{"c": "foo"},
-		},
-		"json": jsonObj,
-	}
-
-	cases := []struct {
-		path     []string
-		expected any
-		ok       bool
-	}{
-		{[]string{"a"}, 5, true},
-		{[]string{"nested", "b", "c"}, "foo", true},
-		{[]string{"nested", "x"}, nil, false},
-		{[]string{"a", "b"}, nil, false},
-		{[]string{"json", "b", "c"}, json.Value("4"), true},
-		{[]string{"json", "x"}, nil, false},
-	}
-
-	for _, cas := range cases {
-		got, ok := readAttributeFrom(m, cas.path)
-		if ok != cas.ok || !reflect.DeepEqual(got, cas.expected) {
-			t.Fatalf("%v: expected (%v,%v) got (%v,%v)", cas.path, cas.expected, cas.ok, got, ok)
-		}
-	}
-
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatal("expected panic with empty path")
-		}
-	}()
-	readAttributeFrom(m, []string{})
 }

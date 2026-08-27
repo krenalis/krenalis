@@ -17,8 +17,9 @@ import (
 )
 
 const (
-	MaxRequiredConsentPurposes = 100 // maximum allowed number of required consent purposes.
-	maxConsentPurposeCodeLen   = 100 // maximum length of a consent purpose code.
+	MaxRequiredConsentPurposes = 100  // maximum allowed number of required consent purposes.
+	maxConsentPurposeCodeLen   = 100  // maximum length of a consent purpose code.
+	maxConsentPurposePathLen   = 1024 // maximum length of a consent purpose property path.
 )
 
 // ConsentPurpose represents a purpose.
@@ -26,33 +27,43 @@ type ConsentPurpose struct {
 	ID   string `json:"id"`
 	Code string `json:"code"`
 	Name string `json:"name"`
+	// EventPath and ProfilePath are the paths of the properties that hold the
+	// consent given for the purpose, in an event and in a profile respectively.
+	EventPath   string `json:"eventPath"`
+	ProfilePath string `json:"profilePath"`
 }
 
-// AddConsentPurpose adds a consent purpose with the given code and name.
-//
-// code must be a valid consent purpose code and name must be between 1 and 100
-// runes long.
+// ConsentPurposeToSet contains the values of a consent purpose to add or to
+// update.
+type ConsentPurposeToSet struct {
+	Code        string `json:"code"`
+	Name        string `json:"name"`
+	EventPath   string `json:"eventPath"`
+	ProfilePath string `json:"profilePath"`
+}
+
+// AddConsentPurpose adds a consent purpose with the values of purpose.
 //
 // It returns an errors.UnprocessableError error with code
 // ConsentPurposeCodeExists if a consent purpose with the same code already
 // exists in the workspace.
-func (this *Workspace) AddConsentPurpose(ctx context.Context, code, name string) error {
+func (this *Workspace) AddConsentPurpose(ctx context.Context, purpose ConsentPurposeToSet) error {
 	this.core.mustBeOpen()
-	if err := validateConsentPurposeCode(code); err != nil {
-		return errors.BadRequest("%s", err)
-	}
-	if err := util.ValidateStringField("name", name, 100); err != nil {
-		return errors.BadRequest("%s", err)
+	if err := validateConsentPurposeToSet(purpose); err != nil {
+		return err
 	}
 	n := state.AddConsentPurpose{
-		Workspace: this.workspace.ID,
-		Code:      code,
-		Name:      name,
+		Workspace:   this.workspace.ID,
+		Code:        purpose.Code,
+		Name:        purpose.Name,
+		EventPath:   purpose.EventPath,
+		ProfilePath: purpose.ProfilePath,
 	}
 	n.ID = generateID(this.workspace.ConsentPurpose)
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		_, err := tx.Exec(ctx, "INSERT INTO consent_purposes (workspace, id, code, name) VALUES ($1, $2, $3, $4)",
-			n.Workspace, n.ID, n.Code, n.Name)
+		_, err := tx.Exec(ctx, "INSERT INTO consent_purposes (workspace, id, code, name, event_path, profile_path)"+
+			" VALUES ($1, $2, $3, $4, $5, $6)",
+			n.Workspace, n.ID, n.Code, n.Name, n.EventPath, n.ProfilePath)
 		if err != nil {
 			return nil, err
 		}
@@ -74,7 +85,13 @@ func (this *Workspace) ConsentPurposes() []*ConsentPurpose {
 	consentPurposes := this.workspace.ConsentPurposes()
 	purposes := make([]*ConsentPurpose, len(consentPurposes))
 	for i, cp := range consentPurposes {
-		purposes[i] = &ConsentPurpose{ID: cp.ID, Code: cp.Code, Name: cp.Name}
+		purposes[i] = &ConsentPurpose{
+			ID:          cp.ID,
+			Code:        cp.Code,
+			Name:        cp.Name,
+			EventPath:   cp.EventPath,
+			ProfilePath: cp.ProfilePath,
+		}
 	}
 	sort.Slice(purposes, func(i, j int) bool {
 		a, b := purposes[i], purposes[j]
@@ -125,7 +142,7 @@ func (this *Workspace) DeleteConsentPurpose(ctx context.Context, id string) erro
 }
 
 // UpdateConsentPurpose updates the consent purpose with the given id, setting
-// its code and name to those of purpose.
+// its code, name and paths to those of purpose.
 //
 // It returns an errors.NotFoundError error if the consent purpose does not
 // exist.
@@ -133,33 +150,34 @@ func (this *Workspace) DeleteConsentPurpose(ctx context.Context, id string) erro
 // It returns an errors.UnprocessableError error with code
 // ConsentPurposeCodeExists if another consent purpose with the new code already
 // exists in the workspace.
-func (this *Workspace) UpdateConsentPurpose(ctx context.Context, id string, purpose ConsentPurpose) error {
+func (this *Workspace) UpdateConsentPurpose(ctx context.Context, id string, purpose ConsentPurposeToSet) error {
 	this.core.mustBeOpen()
 	if !IsValidID(id) {
 		return errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
 	}
-	if err := validateConsentPurposeCode(purpose.Code); err != nil {
-		return errors.BadRequest("%s", err)
-	}
-	if err := util.ValidateStringField("name", purpose.Name, 100); err != nil {
-		return errors.BadRequest("%s", err)
+	if err := validateConsentPurposeToSet(purpose); err != nil {
+		return err
 	}
 	current, ok := this.workspace.ConsentPurpose(id)
 	if !ok {
 		return errors.NotFound("consent purpose %s does not exist", id)
 	}
-	if purpose.Code == current.Code && purpose.Name == current.Name {
+	if purpose.Code == current.Code && purpose.Name == current.Name &&
+		purpose.EventPath == current.EventPath && purpose.ProfilePath == current.ProfilePath {
 		return nil
 	}
 	n := state.UpdateConsentPurpose{
-		Workspace: this.workspace.ID,
-		ID:        id,
-		Code:      purpose.Code,
-		Name:      purpose.Name,
+		Workspace:   this.workspace.ID,
+		ID:          id,
+		Code:        purpose.Code,
+		Name:        purpose.Name,
+		EventPath:   purpose.EventPath,
+		ProfilePath: purpose.ProfilePath,
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		result, err := tx.Exec(ctx, "UPDATE consent_purposes SET code = $1, name = $2 WHERE workspace = $3 AND id = $4",
-			n.Code, n.Name, n.Workspace, n.ID)
+		result, err := tx.Exec(ctx, "UPDATE consent_purposes SET code = $1, name = $2, event_path = $3,"+
+			" profile_path = $4 WHERE workspace = $5 AND id = $6",
+			n.Code, n.Name, n.EventPath, n.ProfilePath, n.Workspace, n.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -194,6 +212,44 @@ func knownConsentPurposeIDs(ws *state.Workspace) map[string]bool {
 		ids[cp.ID] = true
 	}
 	return ids
+}
+
+// validateConsentPurposeToSet validates the code, the name and the paths of the
+// given consent purpose. It returns an errors.BadRequestError error if one of
+// them is not valid.
+func validateConsentPurposeToSet(purpose ConsentPurposeToSet) error {
+	if err := validateConsentPurposeCode(purpose.Code); err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	if err := util.ValidateStringField("name", purpose.Name, 100); err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	if err := validateConsentPurposePath("eventPath", purpose.EventPath); err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	if err := validateConsentPurposePath("profilePath", purpose.ProfilePath); err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	return nil
+}
+
+// validateConsentPurposePath validates the consent purpose property path with
+// the given field name. An empty path is valid and means that the default path
+// is used.
+func validateConsentPurposePath(field, path string) error {
+	if path == "" {
+		return nil
+	}
+	if len(path) > maxConsentPurposePathLen {
+		return fmt.Errorf("%s %q is not a valid property path. Property paths must be at most %d characters long",
+			field, util.Abbreviate(path, 50), maxConsentPurposePathLen)
+	}
+	if !types.IsValidPropertyPath(path) {
+		return fmt.Errorf("%s %q is not a valid property path. Property paths must be property names separated by a"+
+			" dot, each starting with a letter or underscore [A-Za-z_] and subsequently containing only letters,"+
+			" numbers, or underscores [A-Za-z0-9_]", field, util.Abbreviate(path, 50))
+	}
+	return nil
 }
 
 // validateConsentPurposeCode validates the given consent purpose code.

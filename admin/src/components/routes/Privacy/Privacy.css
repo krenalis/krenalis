@@ -81,6 +81,11 @@
 	margin-top: 15px;
 }
 
+.privacy__dialog-event-path,
+.privacy__dialog-profile-path {
+	margin-top: 15px;
+}
+
 .privacy__dialog-save {
 	margin-top: 30px;
 	display: block;

@@ -13,6 +13,7 @@ import (
 	"maps"
 	"slices"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -1247,6 +1248,54 @@ type ConsentPurpose struct {
 	ID   string
 	Code string
 	Name string
+	// EventPath and ProfilePath are the configured paths of the properties that
+	// hold the consent given for the purpose, in an event and in a profile
+	// respectively. They are empty when they are not configured.
+	EventPath   string
+	ProfilePath string
+	// eventPropertyPath and profilePropertyPath are the paths actually read,
+	// resolved by resolvePropertyPaths: they are always set, and default to the
+	// code of the purpose when the configured path is empty.
+	eventPropertyPath   []string
+	profilePropertyPath []string
+}
+
+// NewConsentPurpose returns a new consent purpose with the paths of its
+// properties resolved.
+func NewConsentPurpose(purpose ConsentPurpose) *ConsentPurpose {
+	cp := new(ConsentPurpose)
+	*cp = purpose
+	cp.resolvePropertyPaths()
+	return cp
+}
+
+// EventPropertyPath returns the path of the property of an event that holds the
+// consent given for the purpose.
+func (purpose *ConsentPurpose) EventPropertyPath() []string {
+	return purpose.eventPropertyPath
+}
+
+// ProfilePropertyPath returns the path of the property of a profile that
+// holds the consent given for the purpose.
+func (purpose *ConsentPurpose) ProfilePropertyPath() []string {
+	return purpose.profilePropertyPath
+}
+
+// resolvePropertyPaths resolves the paths of the properties that hold the
+// consent given for the purpose. Paths that are not configured default to the
+// code of the purpose, in the consents of the context for an event and in the
+// "consents" field of the profile for a profile.
+func (purpose *ConsentPurpose) resolvePropertyPaths() {
+	if purpose.EventPath == "" {
+		purpose.eventPropertyPath = []string{"context", "consents", purpose.Code}
+	} else {
+		purpose.eventPropertyPath = strings.Split(purpose.EventPath, ".")
+	}
+	if purpose.ProfilePath == "" {
+		purpose.profilePropertyPath = []string{"consents", purpose.Code}
+	} else {
+		purpose.profilePropertyPath = strings.Split(purpose.ProfilePath, ".")
+	}
 }
 
 // Strategy represents a strategy.

@@ -176,6 +176,7 @@ func TestUpgrade(t *testing.T) {
 	assertPipelineMetricsSurvivePipelineDelete(t, database)
 	assertStateRequestSyncSchemaUpgraded(t, database)
 	assertConsentStepColumns(t, database)
+	assertConsentPurposePathColumns(t, database)
 
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatalf("expected second upgrade to succeed, got %s", err)
@@ -464,6 +465,20 @@ func assertConsentStepColumns(t *testing.T, database *db.DB) {
 		}
 		if hasDefault(t, database, "pipelines_metrics", column) {
 			t.Fatalf("expected column pipelines_metrics.%s to have no default, got a default", column)
+		}
+	}
+}
+
+// assertConsentPurposePathColumns verifies that the property path columns added
+// by the consent management upgrades were added to the consent purposes,
+// keeping their default.
+func assertConsentPurposePathColumns(t *testing.T, database *db.DB) {
+	t.Helper()
+
+	for _, column := range []string{"event_path", "profile_path"} {
+		assertColumnExists(t, database, "consent_purposes", column)
+		if !hasDefault(t, database, "consent_purposes", column) {
+			t.Fatalf("expected column consent_purposes.%s to have a default, got no default", column)
 		}
 	}
 }

@@ -14,6 +14,7 @@ import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
+import { isValidPropertyPath } from '../../../utils/filters';
 
 const GRID_COLUMNS: GridColumn[] = [{ name: 'Name' }, { name: 'Code' }, { name: 'Pipelines' }, { name: '' }];
 
@@ -40,6 +41,20 @@ const validatePurposeCode = (value: string) => {
 	if (!CODE_FORMAT.test(value)) {
 		throw new Error(
 			'Code must start with a letter or an underscore and can only contain letters, digits and underscores',
+		);
+	}
+};
+
+const validatePurposePath = (name: string, value: string) => {
+	if (value === '') {
+		return;
+	}
+	if (Array.from(value).length > 1024) {
+		throw new Error(`${name} must be no longer than 1024 characters`);
+	}
+	if (!isValidPropertyPath(value)) {
+		throw new Error(
+			`${name} must be property names separated by a dot, each starting with a letter or an underscore and containing only letters, digits and underscores`,
 		);
 	}
 };
@@ -256,8 +271,12 @@ interface PurposeDialogProps {
 const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialogProps) => {
 	const [name, setName] = useState<string>('');
 	const [code, setCode] = useState<string>('');
+	const [eventPath, setEventPath] = useState<string>('');
+	const [profilePath, setProfilePath] = useState<string>('');
 	const [nameError, setNameError] = useState<string>('');
 	const [codeError, setCodeError] = useState<string>('');
+	const [eventPathError, setEventPathError] = useState<string>('');
+	const [profilePathError, setProfilePathError] = useState<string>('');
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 
 	const { api, handleError } = useContext(AppContext);
@@ -272,8 +291,12 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 		}
 		setName(isEditing ? purposeToEdit.name : '');
 		setCode(isEditing ? purposeToEdit.code : '');
+		setEventPath(isEditing ? purposeToEdit.eventPath : '');
+		setProfilePath(isEditing ? purposeToEdit.profilePath : '');
 		setNameError('');
 		setCodeError('');
+		setEventPathError('');
+		setProfilePathError('');
 		setTimeout(() => {
 			inputRef.current?.focus();
 		}, 100);
@@ -281,10 +304,18 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 
 	const onInputName = (e) => setName(e.target.value);
 	const onInputCode = (e) => setCode(e.target.value);
+	const onInputEventPath = (e) => setEventPath(e.target.value);
+	const onInputProfilePath = (e) => setProfilePath(e.target.value);
+
+	// A path left empty defaults to the consents of the context of an event and
+	// to the consents of a profile, both named after the code of the purpose.
+	const codeOrPlaceholder = code === '' ? '<code>' : code;
 
 	const onSave = async () => {
 		setNameError('');
 		setCodeError('');
+		setEventPathError('');
+		setProfilePathError('');
 
 		try {
 			validatePurposeField('Name', name);
@@ -298,13 +329,25 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 			setCodeError(err.message);
 			return;
 		}
+		try {
+			validatePurposePath('Event path', eventPath);
+		} catch (err) {
+			setEventPathError(err.message);
+			return;
+		}
+		try {
+			validatePurposePath('Profile path', profilePath);
+		} catch (err) {
+			setProfilePathError(err.message);
+			return;
+		}
 
 		setIsSaving(true);
 		try {
 			if (isEditing) {
-				await api.workspaces.updateConsentPurpose(purposeToEdit.id, code, name);
+				await api.workspaces.updateConsentPurpose(purposeToEdit.id, code, name, eventPath, profilePath);
 			} else {
-				await api.workspaces.addConsentPurpose(code, name);
+				await api.workspaces.addConsentPurpose(code, name, eventPath, profilePath);
 			}
 		} catch (err) {
 			setIsSaving(false);
@@ -359,6 +402,34 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 					<div className='privacy__dialog-error'>
 						<SlIcon slot='icon' name='exclamation-octagon' />
 						{codeError}
+					</div>
+				)}
+				<SlInput
+					className='privacy__dialog-event-path'
+					label='Event path'
+					value={eventPath}
+					onSlInput={onInputEventPath}
+					placeholder={`context.consents.${codeOrPlaceholder}`}
+					helpText='The path of the event property that holds the consent given for this purpose. Leave it empty to use the default path'
+				/>
+				{eventPathError && (
+					<div className='privacy__dialog-error'>
+						<SlIcon slot='icon' name='exclamation-octagon' />
+						{eventPathError}
+					</div>
+				)}
+				<SlInput
+					className='privacy__dialog-profile-path'
+					label='Profile path'
+					value={profilePath}
+					onSlInput={onInputProfilePath}
+					placeholder={`consents.${codeOrPlaceholder}`}
+					helpText='The path of the profile property that holds the consent given for this purpose. Leave it empty to use the default path'
+				/>
+				{profilePathError && (
+					<div className='privacy__dialog-error'>
+						<SlIcon slot='icon' name='exclamation-octagon' />
+						{profilePathError}
 					</div>
 				)}
 				<SlButton loading={isSaving} className='privacy__dialog-save' variant='primary' onClick={onSave}>

@@ -43,6 +43,8 @@ interface ConsentPurpose {
 	id: string;
 	code: string;
 	name: string;
+	eventPath: string;
+	profilePath: string;
 }
 
 export default Workspace;
