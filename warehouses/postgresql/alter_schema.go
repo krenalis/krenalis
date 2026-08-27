@@ -21,24 +21,36 @@ import (
 
 // AlterProfileSchema alters the profile schema.
 func (warehouse *PostgreSQL) AlterProfileSchema(ctx context.Context, opID string, columns []warehouses.Column, operations []warehouses.AlterOperation) error {
+	pool, _, err := warehouse.connectionPool(ctx, false)
+	if err != nil {
+		return err
+	}
 	status, err := warehouse.executeOperation(ctx, opID, alterProfileSchema)
 	if err != nil {
 		return err
 	}
 	if status.alreadyCompleted {
-		return status.executionError
+		if status.executionError != nil {
+			return status.executionError
+		}
+		return nil
 	}
+	var operationErr *warehouses.OperationError
 	err = warehouse.alterProfileSchema(ctx, columns, operations)
+	if err != nil {
+		operationErr = warehouses.NewOperationError(err)
+	}
 	bo := backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
-		err2 := warehouse.setOperationAsCompleted(ctx, opID, err)
+		err2 := warehouse.setOperationAsCompleted(ctx, pool, opID, operationErr)
 		if err2 != nil {
-			slog.Error("cannot set alter profile columns operation as completed, retrying", "err", err2, "operationError", err)
+			slog.Error("cannot set alter profile columns operation as completed, retrying",
+				"err", warehouses.NewOperationError(err2), "operationError", operationErr)
 			continue
 		}
-		if err != nil {
-			return warehouses.NewOperationError(err)
+		if operationErr != nil {
+			return operationErr
 		}
 		return nil
 	}

@@ -6,12 +6,13 @@ package postgresql
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/krenalis/krenalis/tools/backoff"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/warehouses"
 )
 
@@ -25,91 +26,98 @@ const (
 type opStatus struct {
 	canBeStarted     bool
 	alreadyCompleted bool
-	// executionError is significant only if 'alreadyCompleted' is true.
-	// If executionError is not nil, it has type warehouses.OperationError.
-	executionError error
+	executionError   *warehouses.OperationError
+}
+
+// connection is implemented by PostgreSQL pools and transactions.
+type connection interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+	QueryRow(context.Context, string, ...any) pgx.Row
 }
 
 // executeOperation starts an operation, identified by an ID.
 //
-// The returned status indicates whether the operation can be started, or
-// returns the status of a current executing or previous execution.
+// The returned status indicates whether the operation can be started or
+// describes an operation that has already completed.
 func (warehouse *PostgreSQL) executeOperation(ctx context.Context, opID string, opType warehouseOp) (status *opStatus, err error) {
-	var completedAt *time.Time
-	var opError string
+
 	bo := backoff.New(200)
 	bo.SetCap(500 * time.Millisecond)
 	for bo.Next(ctx) {
-		err := warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
+		err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
 			_, err = tx.Exec(ctx, `LOCK "krenalis_system_operations"`)
 			if err != nil {
 				return err
 			}
-			var readID *string
-			rows, err := tx.Query(ctx, `SELECT "id", "completed_at", "error" FROM "krenalis_system_operations" WHERE "id" = $1`, opID)
+			status, err = warehouse.readOperationStatus(ctx, tx, opID)
 			if err != nil {
 				return err
 			}
-			defer rows.Close()
-			for rows.Next() {
-				err := rows.Scan(&readID, &completedAt, &opError)
-				if err != nil {
-					return err
-				}
-			}
-			if err := rows.Err(); err != nil {
-				return err
-			}
-			if readID == nil {
-				// No rows in DB, so the operation can be started.
-				_, err = tx.Exec(ctx, `INSERT INTO "krenalis_system_operations" ("id", "operation_type") VALUES ($1, $2)`, opID, opType)
-				if err != nil {
-					return err
-				}
-				status = &opStatus{canBeStarted: true}
+			if status != nil {
 				return nil
 			}
+			// No existing operation was found, so this one can be started.
+			_, err = tx.Exec(ctx,
+				`INSERT INTO "krenalis_system_operations" ("id", "operation_type") VALUES ($1, $2)`,
+				opID, opType)
+			if err != nil {
+				return err
+			}
+			status = &opStatus{canBeStarted: true}
 			return nil
 		})
 		if err != nil {
 			return nil, err
 		}
-		if status != nil {
+		if status.canBeStarted || status.alreadyCompleted {
 			return status, nil
 		}
-		// Operation is still running, so wait 500ms then try again to check if
-		// it has completed.
-		if completedAt == nil {
-			continue
-		}
-		// Operation is completed with an error.
-		if opError != "" {
-			return &opStatus{alreadyCompleted: true, executionError: warehouses.NewOperationError(errors.New(opError))}, nil
-		}
-		// Operations is completed without errors.
-		return &opStatus{alreadyCompleted: true}, nil
+		// The operation is still running, so wait before checking again.
 	}
+
 	return nil, ctx.Err()
 }
 
-// setOperationAsCompleted sets the given operation as completed. opError is the
-// possible error in the execution of the operation, which will be stored in the
-// database; nil means operation ended successfully.
-// If an operation has already been set as completed, this method does
-// nothing.
-func (warehouse *PostgreSQL) setOperationAsCompleted(ctx context.Context, opID string, opError error) error {
-	pool, _, err := warehouse.connectionPool(ctx, false)
+// readOperationStatus reads the persisted status of an operation. It returns
+// nil when the operation does not exist.
+func (warehouse *PostgreSQL) readOperationStatus(ctx context.Context, conn connection, opID string) (*opStatus, error) {
+
+	var completedAt *time.Time
+	var opError string
+	err := conn.QueryRow(ctx, `SELECT "completed_at", LEFT("error", $2)`+
+		` FROM "krenalis_system_operations" WHERE "id" = $1 LIMIT 1`,
+		opID, warehouses.MaxOperationErrorBytes+1).
+		Scan(&completedAt, &opError)
 	if err != nil {
-		return err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
 	}
+	status := &opStatus{}
+	if completedAt == nil {
+		return status, nil
+	}
+	status.alreadyCompleted = true
+	if opError != "" {
+		status.executionError = warehouses.NewPersistedOperationError(opError)
+	}
+
+	return status, nil
+}
+
+// setOperationAsCompleted sets the given operation as completed. opError is the
+// error returned by the operation; nil indicates that it completed
+// successfully. If the operation has already been set as completed, this
+// method does nothing.
+func (warehouse *PostgreSQL) setOperationAsCompleted(ctx context.Context, conn connection, opID string, opError *warehouses.OperationError) error {
+
 	var opErrorStr string
 	if opError != nil {
 		opErrorStr = opError.Error()
 	}
-	_, err = pool.Exec(ctx, `UPDATE "krenalis_system_operations" SET "completed_at" = $1, "error" = $2`+
+	_, err := conn.Exec(ctx, `UPDATE "krenalis_system_operations" SET "completed_at" = $1, "error" = $2`+
 		` WHERE "id" = $3 AND "completed_at" IS NULL`, time.Now().UTC(), opErrorStr, opID)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return err
 }

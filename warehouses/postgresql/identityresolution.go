@@ -24,37 +24,27 @@ import (
 var identityResolutionQueries string
 
 // ResolveIdentities resolves the identities.
-func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, profilePrimarySources map[string]string) error {
-	status, err := warehouse.executeOperation(ctx, opID, identityResolution)
-	if err != nil {
-		return err
-	}
-	if status.alreadyCompleted {
-		return status.executionError
-	}
-	err = warehouse.resolveIdentities(ctx, opID, identifiers, profileColumns, profilePrimarySources)
-	bo := backoff.New(200)
-	bo.SetCap(time.Second)
-	for bo.Next(ctx) {
-		err2 := warehouse.setOperationAsCompleted(ctx, opID, err)
-		if err2 != nil {
-			slog.Error("cannot set identity resolution operation as completed, retrying", "err", err2, "operationError", err)
-			continue
-		}
-		if err != nil {
-			return warehouses.NewOperationError(err)
-		}
-		return nil
-	}
-	return ctx.Err()
-}
-
-func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, primarySources map[string]string) error {
+func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, primarySources map[string]string) (err error) {
 
 	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return err
 	}
+
+	status, err := warehouse.executeOperation(ctx, opID, identityResolution)
+	if err != nil {
+		return err
+	}
+	if status.alreadyCompleted {
+		if status.executionError != nil {
+			return status.executionError
+		}
+		return nil
+	}
+
+	defer func() {
+		err = warehouse.finalizeIdentityResolution(ctx, pool, opID, err)
+	}()
 
 	// Determine the current version of the "krenalis_profiles" table and create a copy
 	// of it with the incremented version.
@@ -62,20 +52,54 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 	if err != nil {
 		return err
 	}
+	publishedProfilesVersion, err := warehouse.publishedProfilesVersion(ctx)
+	if err != nil {
+		return err
+	}
 	newProfilesVersion := profilesVersion + 1
 	newProfilesName := fmt.Sprintf("krenalis_profiles_%d", newProfilesVersion)
 
-	// Create a copy of the current profiles table and set its new version in
-	// 'krenalis_profile_schema_versions'.
+	// Prepare a candidate profiles version without exposing partial Identity
+	// Resolution results.
 	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
+		removePreviousProfilesTable := false
+		if profilesVersion != publishedProfilesVersion {
+			// The latest unpublished profiles version may belong to an operation
+			// that is still running. Replace it only if that operation failed.
+			err = tx.QueryRow(ctx, `SELECT EXISTS (
+				SELECT 1
+				FROM "krenalis_profile_schema_versions" "v"
+				JOIN "krenalis_system_operations" "o" ON "o"."id" = "v"."operation"
+				WHERE "v"."version" = $1
+					AND "o"."completed_at" IS NOT NULL
+					AND "o"."error" <> ''
+			)`, profilesVersion).Scan(&removePreviousProfilesTable)
+			if err != nil {
+				return err
+			}
+			if !removePreviousProfilesTable {
+				return fmt.Errorf(
+					"profiles version %d is unpublished but does not belong to a failed operation", profilesVersion)
+			}
+		}
+		// Create the candidate table by copying the schema from the current profiles table.
 		_, err := tx.Exec(ctx, fmt.Sprintf(`CREATE TABLE %s (LIKE "krenalis_profiles_%d")`, quoteIdent(newProfilesName), profilesVersion))
 		if err != nil {
 			return fmt.Errorf("cannot create profiles table (with name %s): %s", quoteIdent(newProfilesName), err)
 		}
+		// Link the candidate version to this operation so it can be published on
+		// success or removed on failure.
 		_, err = tx.Exec(ctx, `INSERT INTO "krenalis_profile_schema_versions" ("version", "operation", "timestamp")`+
 			` VALUES ($1, $2, $3)`, newProfilesVersion, opID, time.Now().UTC())
 		if err != nil {
 			return err
+		}
+		if removePreviousProfilesTable {
+			// Drop the failed candidate table after preserving its schema changes.
+			_, err = tx.Exec(ctx, `DROP TABLE IF EXISTS "krenalis_profiles_`+strconv.Itoa(profilesVersion)+`"`)
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	})
@@ -208,20 +232,62 @@ func (warehouse *PostgreSQL) resolveIdentities(ctx context.Context, opID string,
 		return err
 	}
 
-	// Replace the current "profiles" view with a new one using the "CREATE OR
-	// REPLACE VIEW" statement since the table "_profiles" that the view refers
-	// to has changed its name.
-	_, err = pool.Exec(ctx, createViewQuery(newProfilesName, profileColumns, true))
-	if err != nil {
-		return err
-	}
+	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
 
-	// Drop the 'profiles' table that existed before executing this Identity
-	// Resolution.
-	_, err = pool.Exec(ctx, `DROP TABLE IF EXISTS "krenalis_profiles_`+strconv.Itoa(profilesVersion)+`"`)
+		// Replace the current "profiles" view with a new one using the "CREATE OR REPLACE VIEW"
+		// statement since the table "_profiles" that the view refers to has changed its name.
+		_, err = tx.Exec(ctx, createViewQuery(newProfilesName, profileColumns, true))
+		if err != nil {
+			return err
+		}
+
+		// Drop the "profiles" table that existed before executing this Identity Resolution.
+		_, err = tx.Exec(ctx, `DROP TABLE IF EXISTS "krenalis_profiles_`+strconv.Itoa(publishedProfilesVersion)+`"`)
+		if err != nil {
+			return err
+		}
+
+		return warehouse.setOperationAsCompleted(ctx, tx, opID, nil)
+	})
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// finalizeIdentityResolution returns nil on local success. On failure, it
+// attempts to mark the operation as failed and returns its persisted outcome.
+func (warehouse *PostgreSQL) finalizeIdentityResolution(ctx context.Context, conn connection, opID string, operationErr error) error {
+
+	if operationErr == nil {
+		return nil
+	}
+	operationError := warehouses.NewOperationError(operationErr)
+
+	bo := backoff.New(200)
+	bo.SetCap(30 * time.Second)
+	for bo.Next(ctx) {
+		if err := warehouse.setOperationAsCompleted(ctx, conn, opID, operationError); err != nil {
+			slog.Error("cannot mark identity resolution operation as failed, retrying",
+				"err", warehouses.NewOperationError(err), "operationError", operationError)
+			continue
+		}
+		status, err := warehouse.readOperationStatus(ctx, conn, opID)
+		if err != nil {
+			return err
+		}
+		if status == nil {
+			return fmt.Errorf("identity resolution operation %s not found", opID)
+		}
+		if !status.alreadyCompleted {
+			return fmt.Errorf("identity resolution operation %s is not completed", opID)
+		}
+		if status.executionError != nil {
+			return status.executionError
+		}
+		return nil
+	}
+
+	return ctx.Err()
 }
