@@ -6,6 +6,7 @@ import {
 	EditableProperty,
 	EditableSchema,
 	getParentPropertyKey,
+	getPropertyInsertionAnchor,
 	normalizeSchema,
 	transformSchema,
 } from './SchemaEdit.helpers';
@@ -277,7 +278,7 @@ const useSchemaEdit = (
 		}
 	}, [resetMoveHistory, schema]);
 
-	const onAddProperty = (property: PropertyToEdit, primarySource: string | null) => {
+	const onAddProperty = (property: PropertyToEdit, primarySource: string | null, selectedPropertyKey?: string) => {
 		if (isMetaProperty(property.name)) {
 			throw new Error(`Profile schema property names cannot start with an underscore`);
 		}
@@ -328,7 +329,7 @@ const useSchemaEdit = (
 			primarySources.current[k] = primarySource;
 		}
 
-		s[k] = {
+		const addedProperty: EditableProperty = {
 			indentation: property.indentation,
 			root: property.root === '' ? property.name : property.root,
 			name: property.name,
@@ -342,7 +343,18 @@ const useSchemaEdit = (
 			description: property.description,
 			isEditable: true,
 		};
-		setEditableSchema(s);
+		const insertionAnchorKey = getPropertyInsertionAnchor(s, property.parentKey, selectedPropertyKey);
+		const updatedSchema: EditableSchema = {};
+		for (const [propertyKey, currentProperty] of Object.entries(s)) {
+			updatedSchema[propertyKey] = currentProperty;
+			if (propertyKey === insertionAnchorKey) {
+				updatedSchema[k] = addedProperty;
+			}
+		}
+		if (insertionAnchorKey == null) {
+			updatedSchema[k] = addedProperty;
+		}
+		setEditableSchema(updatedSchema);
 		if (property.indentation > 0) {
 			setTimeout(() => {
 				if (gridRef.current != null) {
@@ -350,7 +362,7 @@ const useSchemaEdit = (
 				}
 			}, 100);
 		}
-		return { key: k, ...s[k] };
+		return { key: k, ...addedProperty };
 	};
 
 	const onEditProperty = (property: PropertyToEdit, primarySource: string | null) => {

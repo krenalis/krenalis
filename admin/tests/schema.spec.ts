@@ -1601,6 +1601,10 @@ test(`Remove a replacement property without sending its stale RePath`, async ({ 
 
 	await page.click('.schema-edit__add-property');
 	const propertyPanel = page.locator('.property-panel');
+	await propertyPanel.locator('.property-form__parent').evaluate((select: any) => {
+		select.value = '__root__';
+		select.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
+	});
 	await propertyPanel.locator('.property-form__name-input input').fill('property_to_replace_and_remove');
 	await selectPropertyType(page, 'string');
 	await propertyPanel.locator('.property-panel__save').click();

@@ -211,7 +211,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 	const onSaveProperty = (property: PropertyToEdit, primarySource: string | null) => {
 		setAnimatePropertyActions(false);
 		if (property.key == null) {
-			const addedProperty = onAddProperty(property, primarySource);
+			const addedProperty = onAddProperty(property, primarySource, selectedPropertyBeforeAddRef.current?.key);
 			selectedPropertyBeforeAddRef.current = null;
 			setPropertyToEdit(addedProperty);
 			setPropertyDraftDirty(false);

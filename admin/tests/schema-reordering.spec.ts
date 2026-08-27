@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { EditableSchema } from '../src/components/routes/SchemaEdit/SchemaEdit.helpers';
+import { EditableSchema, getPropertyInsertionAnchor } from '../src/components/routes/SchemaEdit/SchemaEdit.helpers';
 import { getReorderedPropertyKeys } from '../src/components/routes/SchemaEdit/usePropertyReordering';
 
 const createMoveHistory = (...keys: string[]): ReadonlyMap<string, number> => {
@@ -39,6 +39,26 @@ const getReorderedKeys = (initial: string[], current: string[], movedKeys: strin
 		),
 	).sort();
 };
+
+test(`Finds an insertion anchor within the selected branch`, () => {
+	const schema = createSchema([
+		'first_name',
+		'address',
+		'address.street',
+		'address.billing',
+		'address.billing.city',
+		'address.country',
+		'preferences',
+		'preferences.language',
+	]);
+
+	expect(getPropertyInsertionAnchor(schema, '', 'first_name')).toBe('first_name');
+	expect(getPropertyInsertionAnchor(schema, '', 'address')).toBe('address.country');
+	expect(getPropertyInsertionAnchor(schema, '', 'address.billing.city')).toBe('address.country');
+	expect(getPropertyInsertionAnchor(schema, 'address', 'address.billing.city')).toBe('address.billing.city');
+	expect(getPropertyInsertionAnchor(schema, 'address', 'address')).toBeNull();
+	expect(getPropertyInsertionAnchor(schema, 'address', 'preferences.language')).toBeNull();
+});
 
 test(`Attributes a move to the row that was moved instead of the rows it crossed`, () => {
 	expect(getReorderedKeys(['A', 'B', 'C', 'D'], ['B', 'C', 'D', 'A'], ['A'])).toEqual(['A']);

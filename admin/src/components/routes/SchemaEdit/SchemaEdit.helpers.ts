@@ -133,4 +133,38 @@ const getParentPropertyKey = (propertyKey: string): string => {
 	return separatorIndex === -1 ? '' : propertyKey.slice(0, separatorIndex);
 };
 
-export { transformSchema, normalizeSchema, EditableSchema, EditableProperty, getParentPropertyKey, newPropertyToEdit };
+const getPropertyInsertionAnchor = (
+	schema: EditableSchema,
+	parentKey: string,
+	selectedPropertyKey?: string,
+): string | null => {
+	if (selectedPropertyKey == null || selectedPropertyKey === parentKey) {
+		return null;
+	}
+	const parentPrefix = parentKey === '' ? '' : `${parentKey}.`;
+	if (!selectedPropertyKey.startsWith(parentPrefix)) {
+		return null;
+	}
+	const directChildFragment = selectedPropertyKey.slice(parentPrefix.length).split('.')[0];
+	const directChildKey = `${parentPrefix}${directChildFragment}`;
+	if (schema[directChildKey] == null) {
+		return null;
+	}
+	let anchorKey = directChildKey;
+	for (const propertyKey of Object.keys(schema)) {
+		if (propertyKey.startsWith(`${directChildKey}.`)) {
+			anchorKey = propertyKey;
+		}
+	}
+	return anchorKey;
+};
+
+export {
+	transformSchema,
+	normalizeSchema,
+	EditableSchema,
+	EditableProperty,
+	getParentPropertyKey,
+	getPropertyInsertionAnchor,
+	newPropertyToEdit,
+};
