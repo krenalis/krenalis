@@ -306,7 +306,8 @@ func (api api) Onboard(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if err := api.core.ConsumeRateLimitCapacity(r.Context(), x1); err != nil {
 		return nil, err
 	}
-	return nil, api.workOS.Onboard(r.Context(), body.OrganizationName, body.AdminEmail)
+	err = api.workOS.Onboard(r.Context(), body.OrganizationName, body.AdminEmail)
+	return nil, err
 }
 
 // Organization returns the organization with the given identifier.

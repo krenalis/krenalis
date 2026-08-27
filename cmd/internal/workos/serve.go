@@ -159,7 +159,8 @@ func (wo *WorkOS) deleteOnboardedOrganization(ctx context.Context, id string) er
 	if err != nil {
 		return err
 	}
-	return org.Delete(ctx)
+	err = org.Delete(ctx)
+	return err
 }
 
 // serveAction handles the user registration action. It verifies the request
