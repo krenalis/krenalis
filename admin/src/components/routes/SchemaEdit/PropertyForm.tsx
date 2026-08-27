@@ -417,6 +417,12 @@ const PropertyForm = ({
 		});
 	};
 
+	const onInputDisplayName = (event) => {
+		updateProperty((nextProperty) => {
+			nextProperty.displayName = event.target.value;
+		});
+	};
+
 	const onChangePrimarySource = (event) => {
 		setPrimarySource(event.target.value === 'none' ? null : event.target.value);
 	};
@@ -683,6 +689,17 @@ const PropertyForm = ({
 					</SlSelect>
 				</div>
 			)}
+			<SlInput
+				className='property-form__control property-form__display-name'
+				value={property.displayName || ''}
+				name='displayName'
+				placeholder='First name'
+				onSlInput={onInputDisplayName}
+			>
+				<PropertyFormLabel slot='label' modified={fieldChanges?.displayName}>
+					Display name <span className='property-form__optional-label'>(optional)</span>
+				</PropertyFormLabel>
+			</SlInput>
 			<SlTextarea
 				className='property-form__control property-form__description'
 				ref={disableShoelaceTextareaHeightReset}
