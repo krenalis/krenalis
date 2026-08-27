@@ -40,12 +40,12 @@ type Datastore struct {
 	state   *state.State
 	mu      sync.Mutex // for the store field
 	store   map[string]*Store
-	metrics *metrics.Collector
+	metrics *metrics.Pipelines
 	closed  atomic.Bool
 }
 
 // New returns a *Datastore instance.
-func New(st *state.State, metrics *metrics.Collector) (*Datastore, error) {
+func New(st *state.State, metrics *metrics.Pipelines) (*Datastore, error) {
 	ds := &Datastore{
 		state:   st,
 		store:   map[string]*Store{},

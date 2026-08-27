@@ -63,7 +63,7 @@ type Collector struct {
 	stream           streams.Stream
 	state            *state.State
 	datastore        *datastore.Datastore
-	metrics          *metrics.Collector
+	metrics          *metrics.Metrics
 	observers        Observers
 	duplicated       sync.Map
 	functionProvider transformers.FunctionProvider
@@ -86,7 +86,7 @@ type Collector struct {
 // not opened and the geolocation information are not automatically added by
 // Krenalis.
 func New(db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datastore, connections *connections.Connections,
-	provider transformers.FunctionProvider, metrics *metrics.Collector, maxMindDBPath string) (*Collector, error) {
+	provider transformers.FunctionProvider, metrics *metrics.Metrics, maxMindDBPath string) (*Collector, error) {
 
 	var c = &Collector{
 		db:               db,
@@ -95,7 +95,7 @@ func New(db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datast
 		datastore:        ds,
 		metrics:          metrics,
 		functionProvider: provider,
-		destinations:     newDestinations(st, connections, provider, metrics),
+		destinations:     newDestinations(st, connections, provider, &metrics.Pipelines),
 	}
 	c.workers.cancelPipeline = map[string]context.CancelFunc{}
 	c.workers.cancelConnection = map[string]context.CancelFunc{}
@@ -801,6 +801,12 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	var pendingFilterPassed []string
 	var pendingFilterFailed []string
 
+	var ingestedEvents int
+	receivedAt := dec.receivedAt
+	defer func() {
+		c.metrics.Usage.IngestedEvents(ws.Organization().ID, ws.ID, receivedAt, ingestedEvents)
+	}()
+
 	// Decode the events.
 	for event, err := range dec.Events(connection.ID, connector.FallbackToRequestIP) {
 
@@ -814,6 +820,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		if duplicated {
 			continue
 		}
+		ingestedEvents++
 
 		if observer != nil {
 			observedEvents = append(observedEvents, event)
@@ -910,19 +917,19 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	for _, pipeline := range pendingReceivePassed {
-		c.metrics.ReceivePassed(pipeline, 1)
+		c.metrics.Pipelines.ReceivePassed(pipeline, 1)
 	}
 	for _, pipeline := range pendingConsentPassed {
-		c.metrics.ConsentPassed(pipeline, 1)
+		c.metrics.Pipelines.ConsentPassed(pipeline, 1)
 	}
 	for _, pipeline := range pendingConsentFailed {
-		c.metrics.ConsentFailed(pipeline, 1)
+		c.metrics.Pipelines.ConsentFailed(pipeline, 1)
 	}
 	for _, pipeline := range pendingFilterPassed {
-		c.metrics.FilterPassed(pipeline, 1)
+		c.metrics.Pipelines.FilterPassed(pipeline, 1)
 	}
 	for _, pipeline := range pendingFilterFailed {
-		c.metrics.FilterFailed(pipeline, 1)
+		c.metrics.Pipelines.FilterFailed(pipeline, 1)
 	}
 	for _, event := range observedEvents {
 		observer.addEvent(event)
@@ -999,7 +1006,7 @@ func (c *Collector) startPipelineWorker(pipeline *state.Pipeline) {
 	switch pipeline.Target {
 	case state.TargetUser:
 		// Import the identity into the data warehouse.
-		iw := newIdentityWriter(c.datastore, pipeline, c.functionProvider, c.metrics)
+		iw := newIdentityWriter(c.datastore, pipeline, c.functionProvider, &c.metrics.Pipelines)
 		c.identityWriters.Store(pipeline.ID, iw)
 		consumer := c.stream.Consume("pipeline-"+pipeline.ID, 1000)
 		c.workers.Go(func() {

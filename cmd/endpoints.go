@@ -66,8 +66,9 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /members/current":                             api.Member,                           /* Admin console only */
 		"GET    /members/invitations/{token}":                 api.MemberInvitation,                 /* Admin console only */
 		"GET    /members/reset-password/{token}":              api.ValidateMemberPasswordResetToken, /* Admin console only */
-		"GET    /organizations/{id}":                          api.Organization,                     /* Needs platform management API key */
-		"GET    /organizations":                               api.Organizations,                    /* Needs platform management API key */
+		"GET    /metrics/usage/dates/{start}/{end}":           organization.UsageMetricsPerDate,
+		"GET    /organizations/{id}":                          api.Organization,  /* Needs platform management API key */
+		"GET    /organizations":                               api.Organizations, /* Needs platform management API key */
 		"GET    /pipelines/errors/{start}/{end}":              workspace.PipelineErrors,
 		"GET    /pipelines/metrics/dates/{start}/{end}":       organization.PipelineMetricsPerDate,
 		"GET    /pipelines/metrics/days/{days}":               organization.PipelineMetricsPerDay,
