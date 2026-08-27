@@ -158,6 +158,7 @@ const SchemaGrid = () => {
 							nestedRowsIndentation={schemaPropertyGridNestedRowsIndentation}
 							isLoading={isLoadingSchema || isAltering}
 							loadingText={isAltering ? 'Schema is being altered' : 'Loading schema'}
+							noRowsIcon='search'
 							noRowsMessage={isSearchActive ? 'No properties match your search' : undefined}
 						/>
 					</div>

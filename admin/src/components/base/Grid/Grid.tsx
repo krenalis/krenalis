@@ -32,6 +32,7 @@ interface GridProps {
 	showRowBorder?: boolean;
 	gridColumnsWidths?: string; // the widths of the columns in the 'grid-template-columns' CSS rule format.
 	isLoading?: boolean;
+	noRowsIcon?: string;
 	noRowsMessage?: string;
 	className?: string;
 
@@ -53,6 +54,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 			showRowBorder,
 			gridColumnsWidths,
 			isLoading,
+			noRowsIcon,
 			noRowsMessage,
 			className,
 			isShown,
@@ -211,7 +213,14 @@ const Grid = forwardRef<GridRef, GridProps>(
 				) : (
 					<>
 						<GridHeaderRow columns={columns} />
-						{onSortRow != null ? (
+						{rows.length === 0 && noRowsMessage ? (
+							<div className='grid__no-rows'>
+								<div className='grid__no-rows-text'>
+									<SlIcon name={noRowsIcon ?? 'exclamation-circle'}></SlIcon>
+									{noRowsMessage}
+								</div>
+							</div>
+						) : onSortRow != null ? (
 							<>
 								{rowComponents}
 								<SortableRows
@@ -224,13 +233,6 @@ const Grid = forwardRef<GridRef, GridProps>(
 							</>
 						) : rowComponents.length > 0 ? (
 							rowComponents
-						) : noRowsMessage ? (
-							<div className='grid__no-rows'>
-								<div className='grid__no-rows-text'>
-									<SlIcon name='exclamation-circle'></SlIcon>
-									{noRowsMessage}
-								</div>
-							</div>
 						) : (
 							<div className='grid__no-rows'>
 								<div className='grid__no-rows-text'>

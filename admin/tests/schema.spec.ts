@@ -123,6 +123,10 @@ test(`Search profile schema properties by technical type`, async ({ page }) => {
 	await searchInput.fill('string');
 	await expect(page.locator('.grid__row[data-id="email"]')).toBeVisible();
 	await expect(page.locator('.grid__row[data-id="favorite_movie.length"]')).toHaveCount(0);
+	await searchInput.fill('no_matching_property');
+	await expect(
+		page.locator('.schema-grid').getByText('No properties match your search', { exact: true }),
+	).toBeVisible();
 	await page.locator('.schema-grid__search [part="clear-button"]').click();
 	await expect(searchInput).toHaveValue('');
 	await expect(page.locator('.grid__row[data-id="favorite_movie.length"]')).toHaveCount(1);
@@ -139,6 +143,10 @@ test(`Search profile schema properties by technical type`, async ({ page }) => {
 	await editSearchInput.fill('string');
 	await expect(page.locator('.schema-edit .grid__row[data-id="email"]')).toBeVisible();
 	await expect(page.locator('.schema-edit .grid__row[data-id="favorite_movie.length"]')).toHaveCount(0);
+	await editSearchInput.fill('no_matching_property');
+	await expect(
+		page.locator('.schema-edit').getByText('No properties match your search', { exact: true }),
+	).toBeVisible();
 	await expect(editSearchInput).toBeFocused();
 	await page.locator('.schema-edit__search [part="clear-button"]').click();
 	await expect(editSearchInput).toHaveValue('');

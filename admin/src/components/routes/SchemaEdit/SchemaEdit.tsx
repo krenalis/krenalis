@@ -400,6 +400,8 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 							keyboardNavigation={isGridKeyboardNavigationEnabled}
 							gridColumnsWidths={schemaEditGridColumns}
 							nestedRowsIndentation={schemaPropertyGridNestedRowsIndentation}
+							noRowsIcon='search'
+							noRowsMessage={search.trim() !== '' ? 'No properties match your search' : undefined}
 							reordering={{ disabled: isFiltered, onSortRow }}
 							ref={gridRef}
 						/>
