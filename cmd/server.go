@@ -350,19 +350,6 @@ func verifyCertificate(cert tls.Certificate, dnsName string, roots *x509.CertPoo
 	return nil
 }
 
-// serveOnboardingHTMLPage returns the onboarding HTML page.
-func serveOnboardingHTMLPage(w http.ResponseWriter) error {
-	w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet, notranslate, noimageindex")
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fi, err := static.Open("static/onboarding.html")
-	if err != nil {
-		return errors.New("embedded file 'static/onboarding.html' not found in executable")
-	}
-	_, _ = io.Copy(w, fi)
-	_ = fi.Close()
-	return nil
-}
-
 // serveMCPServerHTMLIndex returns the MCP server HTML index page.
 func serveMCPServerHTMLIndex(w http.ResponseWriter) error {
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet, notranslate, noimageindex")
@@ -370,6 +357,19 @@ func serveMCPServerHTMLIndex(w http.ResponseWriter) error {
 	fi, err := static.Open("static/mcp_index.html")
 	if err != nil {
 		return errors.New("embedded file 'static/mcp_index.html' not found in executable")
+	}
+	_, _ = io.Copy(w, fi)
+	_ = fi.Close()
+	return nil
+}
+
+// serveOnboardingHTMLPage returns the onboarding HTML page.
+func serveOnboardingHTMLPage(w http.ResponseWriter) error {
+	w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet, notranslate, noimageindex")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fi, err := static.Open("static/onboarding.html")
+	if err != nil {
+		return errors.New("embedded file 'static/onboarding.html' not found in executable")
 	}
 	_, _ = io.Copy(w, fi)
 	_ = fi.Close()
