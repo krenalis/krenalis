@@ -21,7 +21,6 @@ import { useDocumentGridKeyboardNavigation } from '../../base/Grid/useDocumentGr
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
 import { FullscreenContext } from '../../../context/FullscreenContext';
 import { SchemaContext } from '../../../context/SchemaContext';
-import { TypeKind } from '../../../lib/api/types/types';
 import { EditableProperty, getParentPropertyKey, newPropertyToEdit } from './SchemaEdit.helpers';
 import { PropertyPanel } from './PropertyPanel';
 import { PropertyToEdit, PropertyToRemove, SelectPropertyOptions, useSchemaEdit } from './useSchemaEdit';
@@ -76,8 +75,8 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		[hasUnsavedPropertyChanges, propertyToEdit?.key],
 	);
 
-	const onRemoveClick = (propertyKey: string, propertyName: string, typeKind: TypeKind) => {
-		setPropertyToRemove({ key: propertyKey, name: propertyName, type: typeKind });
+	const onRemoveClick = (propertyKey: string, propertyName: string, isNew: boolean) => {
+		setPropertyToRemove({ key: propertyKey, name: propertyName, isNew });
 	};
 
 	const {
@@ -311,6 +310,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		}
 		onCancelChanges();
 	};
+	const isDiscardingNewProperty = propertyToRemove?.isNew === true;
 
 	return (
 		<div className='schema-edit'>
@@ -420,7 +420,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 						onClose={onCancelProperty}
 						onActionsAnimationFinish={() => setAnimatePropertyActions(false)}
 						onDirtyChange={setPropertyDraftDirty}
-						onRemove={(property) => onRemoveClick(property.key, property.name, property.type.kind)}
+						onRemove={(property) => onRemoveClick(property.key, property.name, property.isEditable === true)}
 						onSave={onSaveProperty}
 					/>
 				</div>
@@ -485,7 +485,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 				variant='danger'
 				isOpen={propertyToRemove != null}
 				onClose={() => setPropertyToRemove(null)}
-				title='Delete property?'
+				title={isDiscardingNewProperty ? 'Discard property?' : 'Delete property?'}
 				actions={
 					<>
 						<SlButton onClick={() => setPropertyToRemove(null)}>Cancel</SlButton>
@@ -494,14 +494,16 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 							className='schema-edit__confirm-remove-property'
 							onClick={onConfirmRemove}
 						>
-							Delete property
+							{isDiscardingNewProperty ? 'Discard property' : 'Delete property'}
 						</SlButton>
 					</>
 				}
 			>
 				<p>
-					The property <b>“{propertyToRemove?.name}”</b> will be deleted when you apply the schema changes.
-					{propertyToRemove?.type === 'object' ? ' Its nested properties will also be deleted.' : ''}
+					<b>“{propertyToRemove?.name}”</b>
+					{isDiscardingNewProperty
+						? " hasn't been added to the schema yet. Discarding it will remove it from your pending changes."
+						: ' will be deleted when you apply your schema changes.'}
 				</p>
 			</AlertDialog>
 			<AlertDialog

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, ReactNode, useRef, useContext, useCallback } from 'react';
-import Type, { ObjectType, Role, TypeKind } from '../../../lib/api/types/types';
+import Type, { ObjectType, Role } from '../../../lib/api/types/types';
 import { GridRef, SortableGridRow, GridColumn } from '../../base/Grid/Grid.types';
 import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 import {
@@ -50,7 +50,7 @@ interface PropertyToEdit {
 interface PropertyToRemove {
 	key: string;
 	name: string;
-	type: TypeKind;
+	isNew: boolean;
 }
 
 interface PropertyParent {
