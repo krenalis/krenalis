@@ -245,11 +245,19 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 				// New properties with the same name as a deleted property. They
 				// appear in "rePaths" (the key is the name of the created
 				// property, the value is nil).
-				operations = append(operations,
-					warehouses.AlterOperation{
+				if oldProp.Type.Kind() == types.ObjectKind {
+					for _, p := range propertyPaths(oldProp.Type) {
+						operations = append(operations, warehouses.AlterOperation{
+							Operation: warehouses.OperationDropColumn,
+							Column:    pathToColumn(appendPath(path, appendPath(keptName, p))),
+						})
+					}
+				} else {
+					operations = append(operations, warehouses.AlterOperation{
 						Operation: warehouses.OperationDropColumn,
 						Column:    pathToColumn(keptPath),
 					})
+				}
 			}
 			if newProp.Type.Kind() == types.ObjectKind {
 				for _, c := range util.PropertiesToColumns(newProp.Type.Properties()) {
