@@ -16,7 +16,7 @@
 	--sl-input-height-small: 20px;
 
 	margin-right: 5px;
-	transform: translate(3px, -2px);
+	transform: translate(3px, -1px);
 }
 
 .property-form__change-name::part(base) {
