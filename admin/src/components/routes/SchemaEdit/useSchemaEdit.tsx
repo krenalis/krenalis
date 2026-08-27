@@ -19,10 +19,12 @@ import { SchemaContext } from '../../../context/SchemaContext';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { toKrenalisStringType } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
+import { SchemaPropertyIdentifierBadge } from '../Schema/SchemaPropertyGrid';
 
 const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Name' },
 	{ name: 'Type' },
+	{ name: 'Identifier', alignment: 'center' },
 	{ name: 'Description' },
 	{ name: 'Primary source' },
 	{ name: '' },
@@ -111,12 +113,11 @@ const useSchemaEdit = (
 
 	const { api, handleError, workspaces, selectedWorkspace, connections, setIsLoadingWorkspaces } =
 		useContext(AppContext);
+	const workspace = workspaces.find((candidate) => candidate.id === selectedWorkspace);
 
 	const { setIsAltering } = useContext(SchemaContext);
 
-	const primarySources = useRef<PrimarySources>(
-		copyPrimarySources(workspaces.find((w) => w.id === selectedWorkspace).primarySources),
-	);
+	const primarySources = useRef<PrimarySources>(copyPrimarySources(workspace.primarySources));
 	const rePaths = useRef<RePaths>({});
 	const deletedAppliedKeys = useRef<string[]>([]);
 	const initialEditableSchema = useRef<EditableSchema>();
@@ -199,6 +200,17 @@ const useSchemaEdit = (
 		};
 	}, [editableSchema]);
 	const propertyParents = useMemo(() => getPropertyParents(editableSchema), [editableSchema]);
+	const identifierPositions = useMemo(() => {
+		const positions = new Map<string, number>();
+		for (const identifier of workspace.identifiers) {
+			const property = editableSchema?.[identifier];
+			if (property == null || property.isEditable === true) {
+				continue;
+			}
+			positions.set(identifier, positions.size + 1);
+		}
+		return positions;
+	}, [editableSchema, workspace]);
 	const isFiltered = (search?.trim() || '') !== '' || showOnlyChanged === true;
 	const visiblePropertyKeys = useMemo(() => {
 		return getVisiblePropertyKeys(
@@ -219,6 +231,7 @@ const useSchemaEdit = (
 			editableSchema,
 			primarySources.current,
 			connections,
+			identifierPositions,
 			propertyStatuses,
 			selectedPropertyKey,
 			visiblePropertyKeys,
@@ -228,6 +241,7 @@ const useSchemaEdit = (
 	}, [
 		connections,
 		editableSchema,
+		identifierPositions,
 		isFiltered,
 		onSelectProperty,
 		propertyStatuses,
@@ -585,6 +599,7 @@ const useSchemaEdit = (
 		isFiltered,
 		isSchemaReady: editableSchema != null,
 		isSelectedPropertyVisible,
+		identifierPositions,
 		objectCount,
 		propertyCount,
 		visiblePropertyCount: visiblePropertyKeys.size,
@@ -797,6 +812,7 @@ const getRows = (
 	schema: EditableSchema,
 	primarySources: PrimarySources,
 	connections: TransformedConnection[],
+	identifierPositions: ReadonlyMap<string, number>,
 	propertyStatuses: Record<string, PropertyChangeStatus>,
 	selectedPropertyKey: string | undefined,
 	visiblePropertyKeys: ReadonlySet<string>,
@@ -831,6 +847,7 @@ const getRows = (
 					propertyKey,
 					property,
 					primarySourceConnection,
+					identifierPositions.get(propertyKey),
 					propertyStatuses[propertyKey],
 					selectedPropertyKey === propertyKey,
 					expanded,
@@ -843,6 +860,7 @@ const getRows = (
 					propertyKey,
 					property,
 					primarySourceConnection,
+					identifierPositions.get(propertyKey),
 					propertyStatuses[propertyKey],
 					selectedPropertyKey === propertyKey,
 					expanded,
@@ -857,6 +875,7 @@ const getRows = (
 					propertyKey,
 					property,
 					primarySourceConnection,
+					identifierPositions.get(propertyKey),
 					propertyStatuses[propertyKey],
 					selectedPropertyKey === propertyKey,
 					expanded,
@@ -869,6 +888,7 @@ const getRows = (
 					propertyKey,
 					property,
 					primarySourceConnection,
+					identifierPositions.get(propertyKey),
 					propertyStatuses[propertyKey],
 					selectedPropertyKey === propertyKey,
 					expanded,
@@ -886,6 +906,7 @@ const buildRow = (
 	propertyKey: string,
 	property: EditableProperty,
 	primarySourceConnection: TransformedConnection,
+	identifierPosition: number | undefined,
 	status: PropertyChangeStatus | undefined,
 	selected: boolean,
 	expanded: boolean,
@@ -915,6 +936,7 @@ const buildRow = (
 		cells: [
 			property.name,
 			typeCell,
+			identifierPosition == null ? null : <SchemaPropertyIdentifierBadge position={identifierPosition} />,
 			property.description || <span className='schema-edit__empty-cell'>—</span>,
 			primarySourceCell,
 			actions,

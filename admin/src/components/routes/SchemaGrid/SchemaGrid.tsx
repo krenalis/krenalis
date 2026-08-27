@@ -18,7 +18,8 @@ import {
 	schemaPropertyGridNestedRowsIndentation,
 } from '../Schema/SchemaPropertyGrid';
 
-const schemaGridColumns = 'minmax(170px, 0.65fr) minmax(220px, 0.85fr) minmax(300px, 1.75fr) minmax(160px, 0.55fr)';
+const schemaGridColumns =
+	'minmax(160px, 0.65fr) minmax(200px, 0.85fr) 86px minmax(250px, 1.75fr) minmax(150px, 0.55fr)';
 
 interface SchemaGridOutletContext {
 	selectedPropertyPath: string | null;
@@ -165,6 +166,7 @@ const SchemaGrid = () => {
 					{detailsPanelProperty != null && (
 						<div className='schema-grid__details-panel' onTransitionEnd={onDetailsPanelTransitionEnd}>
 							<PropertyDetailsPanel
+								identifierPosition={detailsPanelProperty.identifierPosition}
 								property={detailsPanelProperty.property}
 								primarySource={detailsPanelProperty.primarySource}
 								onClose={() => setSelectedPropertyPath(null)}

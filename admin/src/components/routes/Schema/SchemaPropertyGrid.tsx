@@ -1,4 +1,5 @@
 import React, { ReactNode, useEffect, useRef, useState } from 'react';
+import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
@@ -14,6 +15,42 @@ const schemaPropertyGridClassNamePrefixes = {
 
 type SchemaPropertyGridView = keyof typeof schemaPropertyGridClassNamePrefixes;
 type SchemaPropertyGridClassNamePrefix = (typeof schemaPropertyGridClassNamePrefixes)[SchemaPropertyGridView];
+
+const SchemaPropertyIdentifierBadge = ({ position }: { position: number }) => (
+	<SlBadge className='schema-property-grid__identifier' pill variant='neutral'>
+		#{position}
+	</SlBadge>
+);
+
+const SchemaPropertyIdentifierValue = ({ position }: { position?: number }) =>
+	position == null ? (
+		<>Not an identifier</>
+	) : (
+		<span className='schema-property-grid__identifier-value'>
+			Identifier <SchemaPropertyIdentifierBadge position={position} />
+		</span>
+	);
+
+const SchemaPropertyInfoTooltip = ({ content, label }: { content: string; label: string }) => (
+	<SlTooltip className='schema-property-grid__tooltip' content={content} placement='top' hoist={true}>
+		<button className='schema-property-grid__info' type='button' aria-label={label}>
+			<SlIcon name='info-circle' />
+		</button>
+	</SlTooltip>
+);
+
+const SchemaPropertyIdentifierLabel = () => (
+	<span className='schema-property-grid__label-content'>
+		Identity resolution
+		<SchemaPropertyInfoTooltip
+			content={
+				'During identity resolution, identifiers are properties used to match identities across different connections. The number shows their matching priority, with #1 being the highest.\n\n' +
+				'To change identifiers or their priority, go to Profile Unification → Rules.'
+			}
+			label='About identifiers'
+		/>
+	</span>
+);
 
 interface SchemaPropertyGridSummaryProps {
 	children?: ReactNode;
@@ -236,4 +273,12 @@ const SchemaPropertyGridToolbar = ({
 	);
 };
 
-export { SchemaPropertyGridSummary, SchemaPropertyGridToolbar, schemaPropertyGridNestedRowsIndentation };
+export {
+	SchemaPropertyGridSummary,
+	SchemaPropertyGridToolbar,
+	SchemaPropertyIdentifierBadge,
+	SchemaPropertyIdentifierLabel,
+	SchemaPropertyIdentifierValue,
+	SchemaPropertyInfoTooltip,
+	schemaPropertyGridNestedRowsIndentation,
+};

@@ -1,12 +1,14 @@
 import React, { ReactNode } from 'react';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
-import { toKrenalisStringType } from '../../helpers/types';
+import { isSuitableAsIdentifier, toKrenalisStringType } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { Property } from '../../../lib/api/types/types';
 import TransformedConnection from '../../../lib/core/connection';
 import { PropertyPanelLayout } from '../Schema/PropertyPanelLayout';
+import { SchemaPropertyIdentifierLabel, SchemaPropertyIdentifierValue } from '../Schema/SchemaPropertyGrid';
 
 interface PropertyDetailsPanelProps {
+	identifierPosition?: number;
 	onClose: () => void;
 	primarySource: TransformedConnection | null;
 	property: Property;
@@ -15,10 +17,10 @@ interface PropertyDetailsPanelProps {
 interface PropertyDetailProps {
 	children: ReactNode;
 	className?: string;
-	label: string;
+	label: ReactNode;
 }
 
-const PropertyDetailsPanel = ({ onClose, primarySource, property }: PropertyDetailsPanelProps) => {
+const PropertyDetailsPanel = ({ identifierPosition, onClose, primarySource, property }: PropertyDetailsPanelProps) => {
 	return (
 		<PropertyPanelLayout className='property-details-panel' closeLabel='Close property details' onClose={onClose}>
 			<div className='property-details-panel__details'>
@@ -27,6 +29,11 @@ const PropertyDetailsPanel = ({ onClose, primarySource, property }: PropertyDeta
 					<PropertyDetail label='Type' className='property-details-panel__technical-type'>
 						{toKrenalisStringType(property.type)}
 					</PropertyDetail>
+					{isSuitableAsIdentifier(property.type) && (
+						<PropertyDetail label={<SchemaPropertyIdentifierLabel />}>
+							<SchemaPropertyIdentifierValue position={identifierPosition} />
+						</PropertyDetail>
+					)}
 				</div>
 				<div className='property-details-panel__section property-details-panel__section--metadata'>
 					<PropertyDetail label='Description' className='property-details-panel__description'>

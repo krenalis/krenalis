@@ -769,15 +769,21 @@ test(`View property details and keep the selection when editing`, async ({ page 
 	let panel = page.locator('.property-details-panel');
 	await expect(panel.locator('.property-panel__title')).toHaveText('Property');
 	const emailRow = page.locator('.grid__row[data-id="email"]');
-	await expect(panel.locator('.property-details-panel__label')).toHaveText([
+	await expect(panel.locator('.property-details-panel__label')).toContainText([
 		'Name',
 		'Type',
+		'Identity resolution',
 		'Description',
 		'Primary source',
 	]);
-	await expect(panel.locator('.property-details-panel__value')).toHaveText(
-		await emailRow.locator('.grid__cell-content').allInnerTexts(),
-	);
+	const emailCells = await emailRow.locator('.grid__cell-content').allInnerTexts();
+	await expect(panel.locator('.property-details-panel__value')).toHaveText([
+		emailCells[0],
+		emailCells[1],
+		'Not an identifier',
+		emailCells[3],
+		emailCells[4],
+	]);
 	const gridTypeFont = await emailRow
 		.locator('.schema-grid__technical-type')
 		.evaluate((type) => getComputedStyle(type).fontFamily);
@@ -849,6 +855,63 @@ test(`View property details and keep the selection when editing`, async ({ page 
 	const selectedRow = page.locator('.schema-edit .grid__row[data-id="address.country"]');
 	await expect(selectedRow).toBeVisible();
 	await expect(selectedRow).toHaveClass(/grid__row--selected/);
+});
+
+test(`Show identifier order and renumber identifiers after removing a property`, async ({ page }) => {
+	await page.route('**/v1/workspaces', async (route) => {
+		const response = await route.fetch();
+		const body = await response.json();
+		for (const workspace of body.workspaces) {
+			workspace.identifiers = ['email', 'first_name', 'last_name'];
+		}
+		await route.fulfill({ response, json: body });
+	});
+
+	const identifierCell = (container, property: string) =>
+		container.locator(`.grid__row[data-id="${property}"] .grid__cell-content`).nth(2);
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	const readOnlyGrid = page.locator('.schema-grid');
+	await expect(identifierCell(readOnlyGrid, 'email')).toHaveText('#1');
+	await expect(identifierCell(readOnlyGrid, 'first_name')).toHaveText('#2');
+	await expect(identifierCell(readOnlyGrid, 'last_name')).toHaveText('#3');
+	await expect(identifierCell(readOnlyGrid, 'phone_numbers')).toBeEmpty();
+
+	await openProperty(page, 'email');
+	const identifierDetail = page
+		.locator('.property-details-panel__detail')
+		.filter({ hasText: 'Identity resolution' })
+		.locator('.property-details-panel__value');
+	await expect(identifierDetail).toHaveText('Identifier #1');
+	await expect(identifierDetail.locator('.schema-property-grid__identifier')).toHaveText('#1');
+	await openProperty(page, 'birth_date');
+	await expect(
+		page.locator('.property-details-panel__label').filter({ hasText: 'Identity resolution' }),
+	).toHaveCount(0);
+	await openProperty(page, 'email');
+
+	await editSchema(page);
+	const editGrid = page.locator('.schema-edit');
+	await expect(identifierCell(editGrid, 'email')).toHaveText('#1');
+	await expect(identifierCell(editGrid, 'phone_numbers')).toBeEmpty();
+	await expect(
+		page.locator('.property-form__read-only-value .schema-property-grid__identifier'),
+	).toHaveText('#1');
+	await openProperty(page, 'birth_date');
+	await expect(page.locator('.property-form__label').filter({ hasText: 'Identity resolution' })).toHaveCount(0);
+
+	await removeProperty(page, 'email');
+	await expect(identifierCell(editGrid, 'first_name')).toHaveText('#1');
+	await expect(identifierCell(editGrid, 'last_name')).toHaveText('#2');
+
+	await page.locator('.schema-edit__add-property').click();
+	const propertyPanel = page.locator('.property-panel');
+	await expect(propertyPanel.locator('.property-form__label').filter({ hasText: 'Identity resolution' })).toHaveCount(0);
+	await propertyPanel.locator('.property-dialog__name-input input').fill('email');
+	await selectPropertyType(page, 'string');
+	await propertyPanel.locator('.property-dialog__save').click();
+	await expect(identifierCell(editGrid, 'email')).toBeEmpty();
+	await expect(propertyPanel.locator('.property-form__label').filter({ hasText: 'Identity resolution' })).toHaveCount(0);
 });
 
 test(`Keep object types unchanged after canceling the schema review`, async ({ page }) => {

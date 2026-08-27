@@ -18,6 +18,7 @@ interface PropertyPanelProps {
 	animateActions: boolean;
 	dirty: boolean;
 	fieldChanges?: PropertyFieldChanges;
+	identifierPosition?: number;
 	property: PropertyToEdit | null;
 	parents: PropertyParent[];
 	primarySources: PrimarySources;
@@ -33,6 +34,7 @@ const PropertyPanel = ({
 	animateActions,
 	dirty,
 	fieldChanges,
+	identifierPosition,
 	property,
 	parents,
 	primarySources,
@@ -105,6 +107,7 @@ const PropertyPanel = ({
 						key={property.key ?? '__new__'}
 						fieldChanges={fieldChanges}
 						formID={formID}
+						identifierPosition={identifierPosition}
 						propertyToEdit={property}
 						primarySources={primarySources}
 						parents={parents}

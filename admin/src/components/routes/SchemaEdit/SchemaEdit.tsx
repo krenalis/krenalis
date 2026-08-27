@@ -28,7 +28,7 @@ import {
 } from '../Schema/SchemaPropertyGrid';
 
 const schemaEditGridColumns =
-	'minmax(160px, 0.65fr) minmax(210px, 0.85fr) minmax(240px, 1.5fr) minmax(160px, 0.65fr) 90px';
+	'minmax(160px, 0.65fr) minmax(210px, 0.85fr) 86px minmax(240px, 1.5fr) minmax(160px, 0.65fr) 90px';
 
 interface SchemaEditProps {
 	initialPropertyKey?: string | null;
@@ -89,6 +89,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		isFiltered,
 		isSchemaReady,
 		isSelectedPropertyVisible,
+		identifierPositions,
 		objectCount,
 		propertyCount,
 		visiblePropertyCount,
@@ -410,6 +411,9 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 						animateActions={animatePropertyActions}
 						dirty={propertyDraftDirty}
 						fieldChanges={propertyInPanel == null ? undefined : selectedPropertyFieldChanges}
+						identifierPosition={
+							propertyInPanel?.key == null ? undefined : identifierPositions.get(propertyInPanel.key)
+						}
 						property={propertyInPanel}
 						parents={propertyParents}
 						primarySources={primarySources}

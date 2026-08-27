@@ -9,7 +9,6 @@ import SlRadioButton from '@shoelace-style/shoelace/dist/react/radio-button/inde
 import SlRadioGroup from '@shoelace-style/shoelace/dist/react/radio-group/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlTextarea from '@shoelace-style/shoelace/dist/react/textarea/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import type SlTextareaElement from '@shoelace-style/shoelace/dist/components/textarea/textarea.component.js';
 import AppContext from '../../../context/AppContext';
 import Type, {
@@ -23,6 +22,12 @@ import Type, {
 import TransformedConnection from '../../../lib/core/connection';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
+import { isSuitableAsIdentifier } from '../../helpers/types';
+import {
+	SchemaPropertyIdentifierLabel,
+	SchemaPropertyIdentifierValue,
+	SchemaPropertyInfoTooltip,
+} from '../Schema/SchemaPropertyGrid';
 import { PropertyFieldChanges, PropertyParent, PropertyToEdit } from './useSchemaEdit';
 import {
 	getPropertyValueType,
@@ -54,6 +59,7 @@ const disableShoelaceTextareaHeightReset = (textarea: SlTextareaElement | null) 
 interface PropertyFormProps {
 	fieldChanges?: PropertyFieldChanges;
 	formID: string;
+	identifierPosition?: number;
 	propertyToEdit: PropertyToEdit;
 	primarySources: Record<string, string>;
 	parents?: PropertyParent[];
@@ -66,6 +72,7 @@ interface PropertyFormProps {
 const PropertyForm = ({
 	fieldChanges,
 	formID,
+	identifierPosition,
 	propertyToEdit,
 	primarySources,
 	parents,
@@ -86,6 +93,8 @@ const PropertyForm = ({
 	const { connections } = useContext(AppContext);
 	const isEditing = propertyToEdit.key != null;
 	const canEditType = !isEditing || propertyToEdit.isEditable === true;
+	const showIdentityResolution =
+		isEditing && propertyToEdit.isEditable !== true && isSuitableAsIdentifier(propertyToEdit.type);
 
 	const sourceConnections = useMemo(() => {
 		const sources: TransformedConnection[] = [];
@@ -486,6 +495,16 @@ const PropertyForm = ({
 					)}
 				</div>
 			)}
+			{showIdentityResolution && (
+				<div className='property-form__control'>
+					<div className='property-form__label'>
+						<SchemaPropertyIdentifierLabel />
+					</div>
+					<div className='property-form__read-only-value'>
+						<SchemaPropertyIdentifierValue position={identifierPosition} />
+					</div>
+				</div>
+			)}
 			{showParent && parents != null && (
 				<div className='property-form__control'>
 					<SlSelect
@@ -585,11 +604,7 @@ const PropertyFormLabel = ({
 		<span className='property-form__label-content' slot={slot}>
 			{children}
 			{tooltip != null && (
-				<SlTooltip className='property-form__tooltip' content={tooltip.content} placement='top' hoist={true}>
-					<button className='property-form__info' type='button' aria-label={tooltip.label}>
-						<SlIcon name='info-circle' />
-					</button>
-				</SlTooltip>
+				<SchemaPropertyInfoTooltip content={tooltip.content} label={tooltip.label} />
 			)}
 			{modified && <span className='property-form__modified-dot' role='img' aria-label='Modified' />}
 		</span>

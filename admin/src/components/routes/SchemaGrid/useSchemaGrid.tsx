@@ -7,10 +7,12 @@ import { PrimarySources } from '../../../lib/api/types/workspace';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { toKrenalisStringType } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
+import { SchemaPropertyIdentifierBadge } from '../Schema/SchemaPropertyGrid';
 
 const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Property' },
 	{ name: 'Type' },
+	{ name: 'Identifier', alignment: 'center' },
 	{ name: 'Description' },
 	{ name: 'Primary source' },
 ];
@@ -24,6 +26,10 @@ const useSchemaGrid = (
 ) => {
 	const { workspaces, selectedWorkspace, connections } = useContext(AppContext);
 	const workspace = workspaces.find((candidate) => candidate.id === selectedWorkspace);
+	const identifierPositions = useMemo(
+		() => new Map(workspace.identifiers.map((identifier, index) => [identifier, index + 1])),
+		[workspace],
+	);
 
 	const rows = useMemo(() => {
 		if (isLoading || schema == null) {
@@ -33,11 +39,12 @@ const useSchemaGrid = (
 			schema,
 			workspace.primarySources,
 			connections,
+			identifierPositions,
 			search.trim().toLocaleLowerCase(),
 			selectedPropertyPath,
 			onSelectProperty,
 		);
-	}, [connections, isLoading, onSelectProperty, schema, search, selectedPropertyPath, workspace]);
+	}, [connections, identifierPositions, isLoading, onSelectProperty, schema, search, selectedPropertyPath, workspace]);
 	const visiblePropertyPaths = useMemo(() => getVisiblePropertyPaths(rows), [rows]);
 	const firstVisiblePropertyPath = visiblePropertyPaths.values().next().value ?? null;
 	const { objectCount, propertyCount } = useMemo(() => countProperties(schema), [schema]);
@@ -50,11 +57,12 @@ const useSchemaGrid = (
 			return null;
 		}
 		return {
+			identifierPosition: identifierPositions.get(selectedPropertyPath),
 			path: selectedPropertyPath,
 			primarySource: getPrimarySource(selectedPropertyPath, workspace.primarySources, connections),
 			property,
 		};
-	}, [connections, schema, selectedPropertyPath, workspace]);
+	}, [connections, identifierPositions, schema, selectedPropertyPath, workspace]);
 
 	return {
 		columns: SCHEMA_COLUMNS,
@@ -72,6 +80,7 @@ const getRows = (
 	schema: ObjectType,
 	primarySources: PrimarySources,
 	connections: TransformedConnection[],
+	identifierPositions: ReadonlyMap<string, number>,
 	search: string,
 	selectedPropertyPath: string | null,
 	onSelectProperty: (path: string) => void,
@@ -95,6 +104,7 @@ const getRows = (
 				property.type,
 				primarySources,
 				connections,
+				identifierPositions,
 				search,
 				selectedPropertyPath,
 				onSelectProperty,
@@ -110,6 +120,7 @@ const getRows = (
 			path,
 			property,
 			primarySource,
+			identifierPositions.get(path),
 			selectedPropertyPath === path,
 			search !== '',
 			onSelectProperty,
@@ -127,6 +138,7 @@ const buildRow = (
 	path: string,
 	property: Property,
 	primarySource: TransformedConnection | null,
+	identifierPosition: number | undefined,
 	selected: boolean,
 	forceExpanded: boolean,
 	onSelectProperty: (path: string) => void,
@@ -149,6 +161,7 @@ const buildRow = (
 		cells: [
 			property.name,
 			typeCell,
+			identifierPosition == null ? null : <SchemaPropertyIdentifierBadge position={identifierPosition} />,
 			property.description || <span className='schema-grid__empty-cell'>—</span>,
 			primarySourceCell,
 		],
