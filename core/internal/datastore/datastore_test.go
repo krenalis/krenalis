@@ -7,8 +7,30 @@ package datastore
 import (
 	"testing"
 
+	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/types"
 )
+
+// TestCountIdentitiesEmptyPipelines verifies that an empty pipeline list
+// returns initialized empty maps without accessing the warehouse.
+func TestCountIdentitiesEmptyPipelines(t *testing.T) {
+
+	store := &Store{mc: newModeCoordinator(state.Normal)}
+	counts, err := store.CountIdentities(t.Context(), []string{})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if counts == nil {
+		t.Fatal("expected non-nil identity counts, got nil")
+	}
+	if counts.Anonymous == nil || counts.Recognized == nil || counts.WithoutProfile == nil {
+		t.Fatalf("expected initialized identity count maps, got %#v", counts)
+	}
+	if len(counts.Anonymous) != 0 || len(counts.Recognized) != 0 || len(counts.WithoutProfile) != 0 {
+		t.Fatalf("expected three empty identity count maps, got %#v", counts)
+	}
+
+}
 
 func Test_CheckConflictingProperties(t *testing.T) {
 	tests := []struct {

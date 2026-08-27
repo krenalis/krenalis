@@ -45,6 +45,12 @@ const sidebarItems: sidebarItem[] = [
 		icon: 'people',
 		subItems: [
 			{
+				name: 'profile-unification/overview',
+				label: 'Overview',
+				link: 'profile-unification/overview',
+				icon: 'activity',
+			},
+			{
 				name: 'profile-unification/profiles',
 				label: 'Profiles',
 				link: 'profile-unification/profiles',

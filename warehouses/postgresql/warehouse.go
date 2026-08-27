@@ -7,7 +7,6 @@ package postgresql
 import (
 	"context"
 	_ "embed"
-	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -18,6 +17,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/types"
@@ -157,6 +157,101 @@ func (warehouse *PostgreSQL) Count(ctx context.Context, table string) (int, erro
 	var count int
 	err = pool.QueryRow(ctx, `SELECT COUNT(*) FROM `+quoteIdent(table)).Scan(&count)
 	return count, err
+}
+
+// CountIdentities counts anonymous and recognized identities, including those
+// without a profile, from the provided pipelines, grouped by connection.
+func (warehouse *PostgreSQL) CountIdentities(ctx context.Context, pipelines []string) (*warehouses.IdentityCounts, error) {
+
+	const maxConnectionLength = 12
+	counts := &warehouses.IdentityCounts{
+		Anonymous:      make(map[string]int, len(pipelines)),
+		Recognized:     make(map[string]int, len(pipelines)),
+		WithoutProfile: make(map[string]int, len(pipelines)),
+	}
+	if len(pipelines) == 0 {
+		return counts, nil
+	}
+
+	pool, _, err := warehouse.connectionPool(ctx, false)
+	if err != nil {
+		return nil, err
+	}
+
+	const query = `
+WITH selected_identities AS (
+	SELECT
+		"_pipeline",
+		"_is_anonymous",
+		"_identity_id",
+		"_connection",
+		"_kpid",
+		MIN("_pipeline") OVER (PARTITION BY "_connection")
+			= MAX("_pipeline") OVER (PARTITION BY "_connection") AS single_pipeline
+	FROM "krenalis_identities"
+	WHERE "_pipeline" = ANY($1::text[])
+),
+product_identities AS (
+	SELECT
+		"_connection",
+		"_is_anonymous",
+		"_identity_id",
+		single_pipeline,
+		COUNT(*) AS row_count,
+		BOOL_OR("_kpid" IS NOT NULL) AS assigned
+	FROM selected_identities
+	GROUP BY "_connection", "_is_anonymous", "_identity_id", single_pipeline
+)
+SELECT
+	LEFT("_connection", $2) AS "_connection",
+	SUM(CASE WHEN "_is_anonymous"
+		THEN CASE WHEN single_pipeline THEN row_count ELSE 1 END
+		ELSE 0 END)::bigint AS anonymous_count,
+	SUM(CASE WHEN NOT "_is_anonymous"
+		THEN CASE WHEN single_pipeline THEN row_count ELSE 1 END
+		ELSE 0 END)::bigint AS recognized_count,
+	COUNT(*) FILTER (WHERE NOT assigned) AS without_profile_count
+FROM product_identities
+GROUP BY "_connection"
+LIMIT $3`
+
+	rows, err := pool.Query(ctx, query, pipelines, maxConnectionLength+1, len(pipelines)+1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	rowCount := 0
+	for rows.Next() {
+		if rowCount == len(pipelines) {
+			return nil, errors.New("identity counts contain too many connections")
+		}
+		rowCount++
+		var connection string
+		var anonymous, recognized, withoutProfile int
+		if err := rows.Scan(&connection, &anonymous, &recognized, &withoutProfile); err != nil {
+			return nil, err
+		}
+		if len(connection) > maxConnectionLength {
+			return nil, errors.New("identity counts contain an oversized connection identifier")
+		}
+		if anonymous > 0 {
+			counts.Anonymous[connection] = anonymous
+		}
+		if recognized > 0 {
+			counts.Recognized[connection] = recognized
+		}
+		if withoutProfile > 0 {
+			counts.WithoutProfile[connection] = withoutProfile
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if err := warehouses.ValidateIdentityCounts(counts); err != nil {
+		return nil, err
+	}
+
+	return counts, nil
 }
 
 // Delete deletes rows from the specified table that match the provided where

@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 
@@ -130,6 +131,18 @@ func (e *RejectedReadOnlyQueryError) Error() string {
 	return e.Msg
 }
 
+// IdentityCounts contains counts of anonymous and recognized identities,
+// including those without a profile, grouped by connection.
+// A missing connection is equivalent to zero.
+type IdentityCounts struct {
+	Anonymous  map[string]int
+	Recognized map[string]int
+
+	// WithoutProfile counts anonymous and recognized identities that have not
+	// been assigned to a profile.
+	WithoutProfile map[string]int
+}
+
 // Warehouse is the interface implemented by warehouses.
 type Warehouse interface {
 
@@ -183,6 +196,17 @@ type Warehouse interface {
 
 	// Count returns the number of rows in table.
 	Count(ctx context.Context, table string) (int, error)
+
+	// CountIdentities counts anonymous and recognized identities, including those
+	// without a profile, from the provided pipelines, grouped by connection.
+	// For anonymous and recognized identities, it counts physical rows when all
+	// rows belonging to the provided pipelines for a connection come from one
+	// pipeline. When they span multiple pipelines, it counts each identity ID once
+	// within every category in which it occurs. Identities without a profile are
+	// always counted once per identity ID within each category.
+	//
+	// The returned maps are sparse; a missing connection is equivalent to zero.
+	CountIdentities(ctx context.Context, pipelines []string) (*IdentityCounts, error)
 
 	// Delete deletes rows from the specified table that match the provided where
 	// expression. Returns an error if the expression is nil.
@@ -461,6 +485,60 @@ func NewPersistedOperationError(message string) *OperationError {
 // Error returns the operation error message.
 func (err OperationError) Error() string {
 	return err.message
+}
+
+// ValidateIdentityCounts validates the internal consistency of identity counts
+// returned by a warehouse.
+func ValidateIdentityCounts(counts *IdentityCounts) error {
+
+	if counts == nil {
+		return errors.New("warehouse returned nil identity counts")
+	}
+
+	var anonymousTotal, recognizedTotal, withoutProfileTotal int
+	for _, count := range counts.Anonymous {
+		if count < 0 {
+			return errors.New("warehouse returned a negative anonymous identity count")
+		}
+		if count > math.MaxInt-anonymousTotal {
+			return errors.New("warehouse returned an anonymous identity count total that is too large")
+		}
+		anonymousTotal += count
+	}
+	for _, count := range counts.Recognized {
+		if count < 0 {
+			return errors.New("warehouse returned a negative recognized identity count")
+		}
+		if count > math.MaxInt-recognizedTotal {
+			return errors.New("warehouse returned a recognized identity count total that is too large")
+		}
+		recognizedTotal += count
+	}
+	for _, count := range counts.WithoutProfile {
+		if count < 0 {
+			return errors.New("warehouse returned a negative identity count without a profile")
+		}
+		if count > math.MaxInt-withoutProfileTotal {
+			return errors.New("warehouse returned an identity count total without a profile that is too large")
+		}
+		withoutProfileTotal += count
+	}
+
+	for connection, anonymous := range counts.Anonymous {
+		if anonymous > math.MaxInt-counts.Recognized[connection] {
+			return errors.New("warehouse returned a connection identity count total that is too large")
+		}
+	}
+	for connection, withoutProfile := range counts.WithoutProfile {
+		if withoutProfile > counts.Anonymous[connection]+counts.Recognized[connection] {
+			return errors.New("warehouse returned an identity count without a profile greater than its connection total")
+		}
+	}
+	if anonymousTotal > math.MaxInt-recognizedTotal {
+		return errors.New("warehouse returned an identity count total that is too large")
+	}
+
+	return nil
 }
 
 // ValidateInt validates an int value.
