@@ -59,6 +59,11 @@ func TestPropertySerialization(t *testing.T) {
 			Expected: `{"name":"a","type":{"kind":"string"},"description":"some description"}`,
 		},
 		{
+			Property: Property{Name: "first_name", Type: String(), DisplayName: "First name", Description: "some description"},
+			Expected: `{"name":"first_name","type":{"kind":"string"},` +
+				`"displayName":"First name","description":"some description"}`,
+		},
+		{
 			Property: Property{Name: "a", Prefilled: "<prefilled>", Type: String(), Description: "some description"},
 			Expected: `{"name":"a","prefilled":"<prefilled>",` +
 				`"type":{"kind":"string"},"description":"some description"}`,
@@ -146,6 +151,18 @@ func TestPropertyDeserialization(t *testing.T) {
 			Property: Property{Name: "a", Type: Int(32)},
 		},
 		{
+			JSON:     `{"name":"first_name","displayName":"First name","description":"","type":{"kind":"string"}}`,
+			Property: Property{Name: "first_name", Type: String(), DisplayName: "First name"},
+		},
+		{
+			JSON: `{"name":"a","displayName":false,"type":{"kind":"string"}}`,
+			Err:  "unexpected value for property display name",
+		},
+		{
+			JSON: `{"name":"a","displayName":"A","displayName":"B","type":{"kind":"string"}}`,
+			Err:  "repeated 'displayName' key",
+		},
+		{
 			JSON: `{{`,
 			Err:  "invalid character '{' looking for beginning of object key string",
 		},
@@ -187,6 +204,11 @@ func TestPropertySerializationDeserialization(t *testing.T) {
 			`{"name":"Apple","type":{"kind":"string","values":["g","c"]},"description":"Some description..."}`,
 			Property{Name: "Apple", Type: String().WithValues("g", "c"), Description: "Some description..."},
 			`{"name":"Apple","type":{"kind":"string","values":["g","c"]},"description":"Some description..."}`,
+		},
+		{
+			`{"name":"first_name","type":{"kind":"string"},"displayName":"First name","description":"Given name"}`,
+			Property{Name: "first_name", Type: String(), DisplayName: "First name", Description: "Given name"},
+			`{"name":"first_name","type":{"kind":"string"},"displayName":"First name","description":"Given name"}`,
 		},
 	}
 	for _, test := range tests {
@@ -291,6 +313,9 @@ func TestTypeSerialization(t *testing.T) {
 		}, {
 			Data: `{"kind":"object","properties":[{"name":"email","type":{"kind":"string"},"nullable":true,"description":""}]}`,
 			Type: Object([]Property{{Name: "email", Type: String(), Nullable: true}}),
+		}, {
+			Data: `{"kind":"object","properties":[{"name":"first_name","type":{"kind":"string"},"displayName":"First name","description":""}]}`,
+			Type: Object([]Property{{Name: "first_name", Type: String(), DisplayName: "First name"}}),
 		}, {
 			Data: `{"kind":"object","properties":[{"name":"birthday","type":{"kind":"date"},"description":""}]}`,
 			Type: Object([]Property{{Name: "birthday", Type: Date()}}),

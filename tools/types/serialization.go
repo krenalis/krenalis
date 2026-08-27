@@ -274,6 +274,10 @@ func marshalProperty(b *bytes.Buffer, p Property) error {
 	if p.Nullable {
 		b.WriteString(`,"nullable":true`)
 	}
+	if p.DisplayName != "" {
+		b.WriteString(`,"displayName":`)
+		_ = marshalString(b, p.DisplayName)
+	}
 	b.WriteString(`,"description":`)
 	_ = marshalString(b, p.Description)
 	b.WriteByte('}')
@@ -941,7 +945,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 func unmarshalProperty(dec *json.Decoder) (Property, error) {
 
 	var p Property
-	var hasPrefilled, hasCreateRequired, hasUpdateRequired, hasReadOptional, hasNullable, hasDescription bool
+	var hasPrefilled, hasCreateRequired, hasUpdateRequired, hasReadOptional, hasNullable, hasDisplayName, hasDescription bool
 
 	// Read property keys and values.
 	for {
@@ -1035,6 +1039,15 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 				return Property{}, errors.New("unexpected value for 'nullable' key of property")
 			}
 			hasNullable = true
+		case "displayName":
+			if hasDisplayName {
+				return Property{}, errors.New("repeated 'displayName' key")
+			}
+			p.DisplayName, ok = tok.(string)
+			if !ok {
+				return Property{}, errors.New("unexpected value for property display name")
+			}
+			hasDisplayName = true
 		case "description":
 			if hasDescription {
 				return Property{}, errors.New("repeated 'description' key")
