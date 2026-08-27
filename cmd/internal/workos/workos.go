@@ -52,15 +52,14 @@ var (
 )
 
 type WorkOS struct {
-	core              *core.Core
-	clientID          string
-	apiKey            string
-	webhookSecret     string
-	actionsSecret     string
-	devMode           bool
-	onboardingEnabled bool
-	keyStore          keyStore
-	transport         http.RoundTripper
+	core          *core.Core
+	clientID      string
+	apiKey        string
+	webhookSecret string
+	actionsSecret string
+	devMode       bool
+	keyStore      keyStore
+	transport     http.RoundTripper
 }
 
 // AuthenticatedUser holds the authenticated user information returned by WorkOS
@@ -138,17 +137,16 @@ type jwks struct {
 	} `json:"keys"`
 }
 
-func New(core *core.Core, clientID, apiKey, webhookSecret, actionsSecret string, devMode, onboardingEnabled bool) *WorkOS {
+func New(core *core.Core, clientID, apiKey, webhookSecret, actionsSecret string, devMode bool) *WorkOS {
 	return &WorkOS{
-		core:              core,
-		clientID:          clientID,
-		apiKey:            apiKey,
-		webhookSecret:     webhookSecret,
-		actionsSecret:     actionsSecret,
-		devMode:           devMode,
-		onboardingEnabled: onboardingEnabled,
-		keyStore:          keyStore{byID: make(map[string]*publicKey)},
-		transport:         &http.Transport{Proxy: nil},
+		core:          core,
+		clientID:      clientID,
+		apiKey:        apiKey,
+		webhookSecret: webhookSecret,
+		actionsSecret: actionsSecret,
+		devMode:       devMode,
+		keyStore:      keyStore{byID: make(map[string]*publicKey)},
+		transport:     &http.Transport{Proxy: nil},
 	}
 }
 
@@ -160,11 +158,6 @@ func (wo *WorkOS) ClientID() string {
 // DevMode reports whether WorkOS dev mode is enabled.
 func (wo *WorkOS) DevMode() bool {
 	return wo.devMode
-}
-
-// OnboardingEnabled reports whether onboarding is enabled.
-func (wo *WorkOS) OnboardingEnabled() bool {
-	return wo.onboardingEnabled
 }
 
 // publicKey returns the RSA public key for the given token, using the in-memory

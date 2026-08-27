@@ -279,11 +279,11 @@ func (api api) MemberInvitation(_ http.ResponseWriter, r *http.Request) (any, er
 }
 
 // Onboard creates an organization and invites its admin by email. It is served
-// only when onboarding is enabled.
+// only when WorkOS is enabled.
 //
 // Authentication is not required to call Onboard.
 func (api api) Onboard(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if api.workOS == nil || !api.workOS.OnboardingEnabled() {
+	if api.workOS == nil {
 		return nil, errors.NotFound("onboarding is not enabled")
 	}
 	if err := validateRequiredBody(r, false); err != nil {

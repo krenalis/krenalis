@@ -85,8 +85,7 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 	var workOS *workos.WorkOS
 	if config.WorkOS.ClientID != "" {
 		workOS = workos.New(core, config.WorkOS.ClientID, config.WorkOS.APIKey,
-			config.WorkOS.WebhookSecret, config.WorkOS.ActionsSecret, config.WorkOS.DevMode,
-			config.WorkOS.OnboardingEnabled)
+			config.WorkOS.WebhookSecret, config.WorkOS.ActionsSecret, config.WorkOS.DevMode)
 	}
 
 	sentryErrorTunnel := newSentryErrorTunnel()
@@ -165,7 +164,7 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 			admin.ServeHTTP(w, r)
 			return
 		case r.URL.Path == "/onboarding":
-			if workOS != nil && workOS.OnboardingEnabled() {
+			if workOS != nil {
 				err := serveOnboardingHTMLPage(w)
 				if err != nil {
 					slog.Error("failed to serve the onboarding HTML page", "error", err)
