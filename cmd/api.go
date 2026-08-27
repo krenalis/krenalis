@@ -303,9 +303,6 @@ func (api api) Onboard(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if body.Website != "" {
 		return nil, nil
 	}
-	if err := api.core.ConsumeRateLimitCapacity(r.Context(), x1); err != nil {
-		return nil, err
-	}
 	err = api.workOS.Onboard(r.Context(), body.OrganizationName, body.AdminEmail)
 	return nil, err
 }
