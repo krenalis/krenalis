@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
-import './PropertyDialog.css';
+import './PropertyForm.css';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
@@ -363,9 +363,9 @@ const PropertyForm = ({
 
 	return (
 		<form className='property-form' id={formID} onSubmit={onSubmit}>
-			<div className='property-form__control property-dialog__control--name'>
+			<div className='property-form__control property-form__control--name'>
 				<SlInput
-					className='property-dialog__name-input'
+					className='property-form__name-input'
 					ref={nameInputRef}
 					value={property.name}
 					autocomplete='off'
@@ -438,7 +438,7 @@ const PropertyForm = ({
 					}`}
 				>
 					<SlSelect
-						className='property-dialog__bitsize'
+						className='property-form__bit-size'
 						label={valueType.kind === 'int' ? 'Integer size' : 'Bit size'}
 						size='small'
 						value={String(valueType.bitSize)}
@@ -471,7 +471,7 @@ const PropertyForm = ({
 			{valueType?.kind === 'decimal' && canEditType && (
 				<div className='property-form__constraints property-form__constraints--decimal'>
 					<SlInput
-						className='property-dialog__precision'
+						className='property-form__precision'
 						label='Precision'
 						size='small'
 						value={String(valueType.precision)}
@@ -481,7 +481,7 @@ const PropertyForm = ({
 						onSlInput={onInputPrecision}
 					/>
 					<SlInput
-						className='property-dialog__scale'
+						className='property-form__scale'
 						label='Scale'
 						size='small'
 						value={String(valueType.scale)}
@@ -549,7 +549,7 @@ const PropertyForm = ({
 						</>
 					) : (
 						<SlSelect
-							className='property-dialog__primary-source'
+							className='property-form__primary-source'
 							value={primarySource == null ? 'none' : primarySource}
 							name='primary-source'
 							onSlChange={onChangePrimarySource}
@@ -613,7 +613,7 @@ const PropertyFormLabel = ({
 
 const PropertyFormError = ({ name, children }: { name: string; children: React.ReactNode }) => {
 	return (
-		<div className='property-dialog__control-error' data-error-on={name}>
+		<div className='property-form__control-error' data-error-on={name}>
 			<SlIcon name='exclamation-circle' />
 			{children}
 		</div>

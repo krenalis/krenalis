@@ -497,13 +497,13 @@ test(`Navigate profile schema properties when focus is outside an arrow-key cont
 	await expect(page.locator('.schema-edit__change-count')).toContainText('1 pending change');
 
 	await description.fill(`${initialDescription} updated`);
-	await page.locator('.property-dialog__save').click();
+	await page.locator('.property-panel__save').click();
 	await expect(movedRow.locator('.schema-edit__property-actions')).toHaveText('Modified');
 	await expect(page.locator('.property-panel sl-textarea .property-form__modified-dot')).toBeVisible();
 	await expect(modifiedDots).toHaveCount(1);
 
 	await description.fill(initialDescription);
-	await page.locator('.property-dialog__save').click();
+	await page.locator('.property-panel__save').click();
 	await expect(movedRow.locator('.schema-edit__property-actions')).toHaveText('Reordered');
 	await expect(modifiedDots).toHaveCount(0);
 
@@ -649,12 +649,12 @@ test(`Keep an unsaved property selected when selecting another property`, async 
 	const propertyPanel = page.locator('.property-panel');
 	await expect(propertyPanel.locator('.property-panel__header sl-icon-button')).toHaveCount(0);
 	await expect(propertyPanel.locator('.property-panel__cancel')).toHaveCount(0);
-	await expect(propertyPanel.locator('.property-dialog__save')).toHaveCount(0);
+	await expect(propertyPanel.locator('.property-panel__save')).toHaveCount(0);
 	await expect(propertyPanel.locator('.property-panel__remove')).toBeVisible();
 	const description = page.locator('.property-panel sl-textarea >> textarea[name="description"]');
 	await description.fill('Unsaved description');
 	await expect(propertyPanel.locator('.property-panel__cancel')).toHaveText('Cancel');
-	await expect(propertyPanel.locator('.property-dialog__save')).toHaveText('Confirm');
+	await expect(propertyPanel.locator('.property-panel__save')).toHaveText('Confirm');
 	await expect(propertyPanel.locator('.property-panel__remove')).toHaveCount(0);
 	await page.waitForTimeout(100);
 	await openProperty(page, 'phone_numbers');
@@ -692,7 +692,7 @@ test(`Keep contextual and form actions in their expected tab order`, async ({ pa
 	await openProperty(page, 'email');
 
 	const propertyPanel = page.locator('.property-panel');
-	const primarySource = propertyPanel.locator('.property-dialog__primary-source');
+	const primarySource = propertyPanel.locator('.property-form__primary-source');
 	const primarySourceInput = primarySource.locator('[part="display-input"]');
 	const removeButton = propertyPanel.locator('.property-panel__remove');
 	await primarySourceInput.focus();
@@ -708,7 +708,7 @@ test(`Keep contextual and form actions in their expected tab order`, async ({ pa
 	await page.keyboard.press('Tab');
 	await expect(propertyPanel.locator('.property-panel__cancel')).toBeFocused();
 	await page.keyboard.press('Tab');
-	await expect(propertyPanel.locator('.property-dialog__save')).toBeFocused();
+	await expect(propertyPanel.locator('.property-panel__save')).toBeFocused();
 	await propertyPanel.locator('.property-panel__cancel').click();
 });
 
@@ -852,7 +852,7 @@ test(`View property details and keep the selection when editing`, async ({ page 
 	await expect(page.locator('.schema-grid__workspace')).toHaveClass(/schema-grid__workspace--with-panel/);
 	await expect(panel).toHaveCount(1);
 	await expect(page.locator('.schema-edit .property-panel .property-panel__title')).toHaveText('Property');
-	await expect(page.locator('.property-panel .property-dialog__name-input')).toHaveJSProperty('value', 'country');
+	await expect(page.locator('.property-panel .property-form__name-input')).toHaveJSProperty('value', 'country');
 	const selectedRow = page.locator('.schema-edit .grid__row[data-id="address.country"]');
 	await expect(selectedRow).toBeVisible();
 	await expect(selectedRow).toHaveClass(/grid__row--selected/);
@@ -908,9 +908,9 @@ test(`Show identifier order and renumber identifiers after removing a property`,
 	await page.locator('.schema-edit__add-property').click();
 	const propertyPanel = page.locator('.property-panel');
 	await expect(propertyPanel.locator('.property-form__label').filter({ hasText: 'Identity resolution' })).toHaveCount(0);
-	await propertyPanel.locator('.property-dialog__name-input input').fill('email');
+	await propertyPanel.locator('.property-form__name-input input').fill('email');
 	await selectPropertyType(page, 'string');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 	await expect(identifierCell(editGrid, 'email')).toBeEmpty();
 	await expect(propertyPanel.locator('.property-form__label').filter({ hasText: 'Identity resolution' })).toHaveCount(0);
 });
@@ -958,7 +958,7 @@ test(`Keep object types unchanged after canceling the schema review`, async ({ p
 
 	const propertyPanel = page.locator('.property-panel');
 	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Updated child');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 	await page.locator('.schema-edit__header-apply-button').click();
 
 	const reviewDialog = page.locator('.schema-edit__queries');
@@ -990,9 +990,9 @@ test(`Keep the schema review closed when its preview finishes`, async ({ page })
 	await editSchema(page);
 	await page.click('.schema-edit__add-property');
 	const propertyPanel = page.locator('.property-panel');
-	await propertyPanel.locator('.property-dialog__name-input input').fill('property_with_delayed_preview');
+	await propertyPanel.locator('.property-form__name-input input').fill('property_with_delayed_preview');
 	await selectPropertyType(page, 'string');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 
 	const reviewDialog = page.locator('.schema-edit__queries');
 	const failedPreviewResponse = page.waitForResponse(
@@ -1043,7 +1043,7 @@ test(`Keep the schema review open while applying changes`, async ({ page }) => {
 
 	const propertyPanel = page.locator('.property-panel');
 	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Updated description');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 	await page.locator('.schema-edit__header-apply-button').click();
 
 	const reviewDialog = page.locator('.schema-edit__queries');
@@ -1087,9 +1087,9 @@ test(`Preserve create-required on top-level properties in the schema preview`, a
 	await editSchema(page);
 	await page.click('.schema-edit__add-property');
 	const propertyPanel = page.locator('.property-panel');
-	await propertyPanel.locator('.property-dialog__name-input input').fill('preview_trigger');
+	await propertyPanel.locator('.property-form__name-input input').fill('preview_trigger');
 	await selectPropertyType(page, 'string');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 	const previewRequestPromise = page.waitForRequest(
 		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
 	);
@@ -1122,7 +1122,7 @@ test(`Preview schema changes only when applying them`, async ({ page }) => {
 
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
 
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 	await expect(applyButton).toHaveText('Apply changes');
 	await expect(applyButton).not.toHaveAttribute('disabled');
 	await expect(applyButton).not.toHaveAttribute('loading');
@@ -1145,7 +1145,7 @@ test(`Preview schema changes only when applying them`, async ({ page }) => {
 	await openProperty(page, 'email');
 	await description.fill(originalDescription);
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 	await expect(applyButton).toHaveText('Apply changes');
 	await expect(applyButton).toHaveAttribute('disabled');
 	await page.waitForTimeout(1000);
@@ -1153,13 +1153,13 @@ test(`Preview schema changes only when applying them`, async ({ page }) => {
 
 	// Structural changes are also previewed only when the user applies them.
 	await page.click('.schema-edit__add-property');
-	await page.locator('.property-dialog__name-input').evaluate((el: any, value) => {
+	await page.locator('.property-form__name-input').evaluate((el: any, value) => {
 		el.value = value;
 		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
 	}, 'temporary_preview_property');
 	await selectPropertyType(page, 'string');
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 	await expect(applyButton).toHaveText('Apply changes');
 	await expect(applyButton).not.toHaveAttribute('loading');
 	await page.waitForTimeout(1000);
@@ -1185,12 +1185,12 @@ test(`Add schema property`, async ({ page }) => {
 
 	const panel = page.locator('.property-panel');
 	await expect(panel.locator('.property-panel__title')).toHaveText('New property');
-	const nameInput = panel.locator('.property-dialog__name-input');
+	const nameInput = panel.locator('.property-form__name-input');
 	await expect(nameInput).toBeFocused();
 	await expect(panel.locator('.property-form__change-name')).toHaveCount(0);
 	await expect(panel.locator('.property-panel__remove')).toHaveCount(0);
 	await expect(panel.locator('.property-panel__cancel')).toHaveText('Cancel');
-	await expect(panel.locator('.property-dialog__save')).toHaveText('Confirm');
+	await expect(panel.locator('.property-panel__save')).toHaveText('Confirm');
 
 	await nameInput.evaluate((el: any, value) => {
 		el.value = value;
@@ -1217,8 +1217,8 @@ test(`Add schema property`, async ({ page }) => {
 
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
 
-	await panel.locator('.property-dialog__save').click();
-	await logValidationErrors(page, ['.property-dialog__control-error']);
+	await panel.locator('.property-panel__save').click();
+	await logValidationErrors(page, ['.property-form__control-error']);
 	await expect(applyButton).toHaveText('Apply changes');
 	await expect(applyButton).not.toHaveAttribute('loading');
 	await expect(applyButton).not.toHaveAttribute('disabled');
@@ -1283,9 +1283,9 @@ test(`Clear the primary source when changing a new property to an array`, async 
 	await page.click('.schema-edit__add-property');
 
 	const propertyPanel = page.locator('.property-panel');
-	await propertyPanel.locator('.property-dialog__name-input input').fill('array_without_primary_source');
+	await propertyPanel.locator('.property-form__name-input input').fill('array_without_primary_source');
 	await selectPropertyType(page, 'string');
-	const primarySource = propertyPanel.locator('.property-dialog__primary-source');
+	const primarySource = propertyPanel.locator('.property-form__primary-source');
 	await primarySource.click();
 	await primarySource.locator(`sl-option[value="${sourceID}"]`).click();
 	await expect(primarySource).toHaveJSProperty('open', false);
@@ -1293,14 +1293,14 @@ test(`Clear the primary source when changing a new property to an array`, async 
 	await page.keyboard.press('Tab');
 	await expect(propertyPanel.locator('.property-panel__cancel')).toBeFocused();
 	await page.keyboard.press('Tab');
-	await expect(propertyPanel.locator('.property-dialog__save')).toBeFocused();
+	await expect(propertyPanel.locator('.property-panel__save')).toBeFocused();
 
 	await propertyPanel.locator('.property-type-selector__structure-trigger').click();
 	await propertyPanel.locator('[data-structure-option="array"]').click();
 	await expect(primarySource).toHaveCount(0);
 	await expect(propertyPanel.locator('.property-type-selector__trigger')).toBeFocused();
 	await expect(propertyPanel.locator('.property-type-selector__dropdown')).toHaveJSProperty('open', false);
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 
 	const alterRequestPromise = page.waitForRequest(
 		(request) => request.url().endsWith('/profiles/schema') && request.method() === 'PUT',
@@ -1363,9 +1363,9 @@ test(`Only offer user-capable source connections as primary sources`, async ({ p
 	await page.click('.schema-edit__add-property');
 
 	const propertyPanel = page.locator('.property-panel');
-	await propertyPanel.locator('.property-dialog__name-input input').fill('property_with_primary_source');
+	await propertyPanel.locator('.property-form__name-input input').fill('property_with_primary_source');
 	await selectPropertyType(page, 'string');
-	const primarySource = propertyPanel.locator('.property-dialog__primary-source');
+	const primarySource = propertyPanel.locator('.property-form__primary-source');
 	await primarySource.click();
 	await expect(primarySource.locator(`sl-option[value="${userSourceID}"]`)).toHaveCount(1);
 	await expect(primarySource.locator(`sl-option[value="${eventSourceID}"]`)).toHaveCount(0);
@@ -1377,7 +1377,7 @@ test(`Validate string length constraints before adding a property`, async ({ pag
 	await page.click('.schema-edit__add-property');
 
 	const propertyPanel = page.locator('.property-panel');
-	await propertyPanel.locator('.property-dialog__name-input input').fill('string_with_length_constraints');
+	await propertyPanel.locator('.property-form__name-input input').fill('string_with_length_constraints');
 	await selectPropertyType(page, 'string');
 
 	const lengthConstraints = propertyPanel.locator('.property-form__constraints--length sl-input');
@@ -1386,21 +1386,21 @@ test(`Validate string length constraints before adding a property`, async ({ pag
 	const addedProperty = page.locator('.schema-edit .grid__row[data-id="string_with_length_constraints"]');
 
 	await maxCharacters.fill('0');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 	await expect(addedProperty).toHaveCount(0);
 
 	await maxCharacters.fill('1');
 	await maxBytes.fill('1.5');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 	await expect(addedProperty).toHaveCount(0);
 
 	await maxBytes.fill('4294967296');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 	await expect(addedProperty).toHaveCount(0);
 
 	await maxCharacters.fill('');
 	await maxBytes.fill('');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 	await expect(addedProperty).toBeVisible();
 });
 
@@ -1413,7 +1413,7 @@ test(`Edit schema property`, async ({ page }) => {
 	await expect(page.locator('.property-type-selector__structure-trigger')).toHaveJSProperty('caret', false);
 	await expect(page.locator('.property-type-selector__trigger')).toHaveJSProperty('caret', false);
 	const changeNameButton = page.locator('.property-panel .property-form__change-name');
-	const nameInput = page.locator('.property-panel .property-dialog__name-input');
+	const nameInput = page.locator('.property-panel .property-form__name-input');
 	await expect(nameInput).toHaveAttribute('readonly', '');
 	await nameInput.evaluate((element: any) => {
 		const input = element.shadowRoot.querySelector('input');
@@ -1439,10 +1439,10 @@ test(`Edit schema property`, async ({ page }) => {
 	await expect(changeNameButton).toBeVisible();
 	await changeNameButton.click();
 	await nativeNameInput.fill('_foo');
-	await expect(page.locator('.property-dialog__control--name .property-dialog__control-error')).toContainText(
+	await expect(page.locator('.property-form__control--name .property-form__control-error')).toContainText(
 		'Profile schema property names cannot start with an underscore',
 	);
-	await expect(page.locator('.property-dialog__save')).toHaveAttribute('disabled');
+	await expect(page.locator('.property-panel__save')).toHaveAttribute('disabled');
 
 	await nameInput.evaluate((el: any, value) => {
 		el.value = value;
@@ -1451,8 +1451,8 @@ test(`Edit schema property`, async ({ page }) => {
 
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
 
-	await page.click('.property-dialog__save');
-	await logValidationErrors(page, ['.property-dialog__control-error']);
+	await page.click('.property-panel__save');
+	await logValidationErrors(page, ['.property-form__control-error']);
 
 	await expect(page.locator('.schema-edit__header-apply-button')).toHaveText('Apply changes');
 	await page.click('.schema-edit__header-apply-button');
@@ -1506,12 +1506,12 @@ test(`Restore the original property name without leaving pending changes`, async
 	expect(firstVisiblePropertyKey).not.toBeNull();
 
 	const propertyPanel = page.locator('.property-panel');
-	const nameInput = propertyPanel.locator('.property-dialog__name-input input');
+	const nameInput = propertyPanel.locator('.property-form__name-input input');
 	const changeNameButton = propertyPanel.locator('.property-form__change-name');
 
 	await changeNameButton.click();
 	await nameInput.fill('temporary_property_name');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 	await expect(page.locator('.schema-edit__change-count')).toContainText('1 pending change');
 	await page.locator('.schema-edit__filter-button').click();
 	const showChanged = page.locator('.schema-edit__show-changed');
@@ -1523,7 +1523,7 @@ test(`Restore the original property name without leaving pending changes`, async
 
 	await changeNameButton.click();
 	await nameInput.fill('original_property_name');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 	await expect(page.locator('.schema-edit__change-count')).toContainText('No pending changes');
 	await expect(page.locator('.schema-edit__header-apply-button')).toHaveAttribute('disabled');
 	await expect(page.locator('.schema-edit .grid__row')).toHaveCount(0);
@@ -1560,8 +1560,8 @@ test(`Remove a renamed property without sending its stale RePath`, async ({ page
 
 	const propertyPanel = page.locator('.property-panel');
 	await propertyPanel.locator('.property-form__change-name').click();
-	await propertyPanel.locator('.property-dialog__name-input input').fill('temporary_property_name');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-form__name-input input').fill('temporary_property_name');
+	await propertyPanel.locator('.property-panel__save').click();
 	await propertyPanel.locator('.property-panel__remove').click();
 	await page.click('.schema-edit__confirm-remove-property');
 
@@ -1601,9 +1601,9 @@ test(`Remove a replacement property without sending its stale RePath`, async ({ 
 
 	await page.click('.schema-edit__add-property');
 	const propertyPanel = page.locator('.property-panel');
-	await propertyPanel.locator('.property-dialog__name-input input').fill('property_to_replace_and_remove');
+	await propertyPanel.locator('.property-form__name-input input').fill('property_to_replace_and_remove');
 	await selectPropertyType(page, 'string');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 
 	await removeProperty(page, 'property_to_replace_and_remove');
 
@@ -1643,10 +1643,10 @@ test(`Do not show modified field indicators on a replacement property`, async ({
 
 	await page.click('.schema-edit__add-property');
 	const propertyPanel = page.locator('.property-panel');
-	await propertyPanel.locator('.property-dialog__name-input input').fill('property_to_replace');
+	await propertyPanel.locator('.property-form__name-input input').fill('property_to_replace');
 	await selectPropertyType(page, 'boolean');
 	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Replacement description');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 
 	await expect(propertyPanel.locator('.schema-edit__property-status')).toHaveText('Added');
 	await expect(propertyPanel.locator('.property-form__modified-dot')).toHaveCount(0);
@@ -1690,8 +1690,8 @@ test(`Rename an existing property to a deleted property's name`, async ({ page }
 
 	const propertyPanel = page.locator('.property-panel');
 	await propertyPanel.locator('.property-form__change-name').click();
-	await propertyPanel.locator('.property-dialog__name-input input').fill('deleted_property_name');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-form__name-input input').fill('deleted_property_name');
+	await propertyPanel.locator('.property-panel__save').click();
 
 	const previewRequestPromise = page.waitForRequest(
 		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
@@ -1709,19 +1709,19 @@ test(`Check that RePaths are sent correctly`, async ({ page }) => {
 	await openProperty(page, 'bar');
 	await page.locator('.property-panel .property-form__change-name').click();
 
-	await page.locator('.property-panel .property-dialog__name-input').evaluate((el: any, value) => {
+	await page.locator('.property-panel .property-form__name-input').evaluate((el: any, value) => {
 		el.value = value;
 		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
 	}, 'foo');
 
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
 
-	await page.click('.property-dialog__save');
-	await logValidationErrors(page, ['.property-dialog__control-error']);
+	await page.click('.property-panel__save');
+	await logValidationErrors(page, ['.property-form__control-error']);
 
 	await page.click('.schema-edit__add-property');
 
-	await page.locator('.property-panel .property-dialog__name-input').evaluate((el: any, value) => {
+	await page.locator('.property-panel .property-form__name-input').evaluate((el: any, value) => {
 		el.value = value;
 		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
 	}, 'bar');
@@ -1730,8 +1730,8 @@ test(`Check that RePaths are sent correctly`, async ({ page }) => {
 
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
 
-	await page.click('.property-panel .property-dialog__save');
-	await logValidationErrors(page, ['.property-dialog__control-error']);
+	await page.click('.property-panel .property-panel__save');
+	await logValidationErrors(page, ['.property-form__control-error']);
 
 	await page.waitForTimeout(2000); // Add a timeout to ensure that editable schema in the React state is synced with the newly added property.
 
@@ -1795,15 +1795,15 @@ test(`Reuse a property name more than once before applying schema changes`, asyn
 		await openProperty(page, key);
 		const propertyPanel = page.locator('.property-panel');
 		await propertyPanel.locator('.property-form__change-name').click();
-		await propertyPanel.locator('.property-dialog__name-input input').fill(name);
-		await propertyPanel.locator('.property-dialog__save').click();
+		await propertyPanel.locator('.property-form__name-input input').fill(name);
+		await propertyPanel.locator('.property-panel__save').click();
 	};
 	const addStringProperty = async () => {
 		await page.click('.schema-edit__add-property');
 		const propertyPanel = page.locator('.property-panel');
-		await propertyPanel.locator('.property-dialog__name-input input').fill('reused_property_name');
+		await propertyPanel.locator('.property-form__name-input input').fill('reused_property_name');
 		await selectPropertyType(page, 'string');
-		await propertyPanel.locator('.property-dialog__save').click();
+		await propertyPanel.locator('.property-panel__save').click();
 	};
 
 	await renameProperty('reused_property_name', 'first_renamed_property');
@@ -1840,18 +1840,18 @@ test(`Remove a replacement property's RePath when renaming it`, async ({ page })
 	const propertyPanel = page.locator('.property-panel');
 	await openProperty(page, 'replacement_name');
 	await propertyPanel.locator('.property-form__change-name').click();
-	await propertyPanel.locator('.property-dialog__name-input input').fill('renamed_original');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-form__name-input input').fill('renamed_original');
+	await propertyPanel.locator('.property-panel__save').click();
 
 	await page.click('.schema-edit__add-property');
-	await propertyPanel.locator('.property-dialog__name-input input').fill('replacement_name');
+	await propertyPanel.locator('.property-form__name-input input').fill('replacement_name');
 	await selectPropertyType(page, 'string');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 
 	await openProperty(page, 'replacement_name-2');
 	await propertyPanel.locator('.property-form__change-name').click();
-	await propertyPanel.locator('.property-dialog__name-input input').fill('renamed_replacement');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-form__name-input input').fill('renamed_replacement');
+	await propertyPanel.locator('.property-panel__save').click();
 
 	const previewRequestPromise = page.waitForRequest(
 		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
@@ -1907,15 +1907,15 @@ test(`Allow matching property names under different object parents`, async ({ pa
 		select.value = 'duplicate_scope.shipping';
 		select.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
 	});
-	await propertyPanel.locator('.property-dialog__name-input input').fill('matching_add_name');
+	await propertyPanel.locator('.property-form__name-input input').fill('matching_add_name');
 	await selectPropertyType(page, 'string');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 	await expect(page.locator('.grid__row[data-id="duplicate_scope.shipping.matching_add_name"]')).toBeVisible();
 
 	await openProperty(page, 'duplicate_scope.shipping.shipping_child');
 	await propertyPanel.locator('.property-form__change-name').click();
-	await propertyPanel.locator('.property-dialog__name-input input').fill('matching_rename_name');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-form__name-input input').fill('matching_rename_name');
+	await propertyPanel.locator('.property-panel__save').click();
 	await expect(
 		page.locator('.schema-edit .grid__row[data-id="duplicate_scope.shipping.shipping_child"]'),
 	).toContainText('matching_rename_name');
@@ -1956,9 +1956,9 @@ test(`Support hasOwnProperty as a profile schema property name`, async ({ page }
 	await openProperty(page, 'property_container');
 	await page.click('.schema-edit__add-property');
 	const propertyPanel = page.locator('.property-panel');
-	await propertyPanel.locator('.property-dialog__name-input input').fill('hasOwnProperty');
+	await propertyPanel.locator('.property-form__name-input input').fill('hasOwnProperty');
 	await selectPropertyType(page, 'string');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 	await expect(page.locator('.schema-edit .grid__row[data-id="property_container.hasOwnProperty"]')).toBeVisible();
 
 	const applyButton = page.locator('.schema-edit__header-apply-button');
@@ -1996,11 +1996,11 @@ test(`Ignore inherited primary sources for prototype property names`, async ({ p
 	const propertyPanel = page.locator('.property-panel');
 	const description = propertyPanel.locator('sl-textarea textarea[name="description"]');
 	await description.fill('Updated description');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 	await expect(page.locator('.schema-edit__change-count')).toContainText('1 pending change');
 
 	await description.fill('');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 	await expect(page.locator('.schema-edit__change-count')).toContainText('No pending changes');
 });
 
@@ -2010,7 +2010,7 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 	await editSchema(page);
 	await page.click('.schema-edit__add-property');
 
-	await page.locator('.property-panel .property-dialog__name-input').evaluate((el: any, value) => {
+	await page.locator('.property-panel .property-form__name-input').evaluate((el: any, value) => {
 		el.value = value;
 		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
 	}, 'test_obj');
@@ -2023,8 +2023,8 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
 
-	await page.click('.property-panel .property-dialog__save');
-	await logValidationErrors(page, ['.property-dialog__control-error']);
+	await page.click('.property-panel .property-panel__save');
+	await logValidationErrors(page, ['.property-form__control-error']);
 
 	const objectRow = page.locator('.grid__row[data-id="test_obj"]');
 	await expect(objectRow).toBeVisible();
@@ -2036,7 +2036,7 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 		select.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
 	});
 
-	await page.locator('.property-panel .property-dialog__name-input').evaluate((el: any, value) => {
+	await page.locator('.property-panel .property-form__name-input').evaluate((el: any, value) => {
 		el.value = value;
 		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
 	}, 'test_sub_prop_1');
@@ -2045,8 +2045,8 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
 
-	await page.click('.property-panel .property-dialog__save');
-	await logValidationErrors(page, ['.property-dialog__control-error']);
+	await page.click('.property-panel .property-panel__save');
+	await logValidationErrors(page, ['.property-form__control-error']);
 
 	await expect(page.locator('.schema-edit__header-apply-button')).toHaveText('Apply changes');
 	await page.click('.schema-edit__header-apply-button');
@@ -2095,15 +2095,15 @@ test(`Remove nested properties when changing a new object to another type`, asyn
 	await page.click('.schema-edit__add-property');
 
 	const propertyPanel = page.locator('.property-panel');
-	await propertyPanel.locator('.property-dialog__name-input input').fill('new_object');
+	await propertyPanel.locator('.property-form__name-input input').fill('new_object');
 	await propertyPanel.locator('.property-type-selector__structure-trigger').click();
 	await propertyPanel.locator('[data-structure-option="object"]').click();
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 
 	await page.click('.schema-edit__add-property');
-	await propertyPanel.locator('.property-dialog__name-input input').fill('nested_property');
+	await propertyPanel.locator('.property-form__name-input input').fill('nested_property');
 	await selectPropertyType(page, 'string');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 	await expect(page.locator('.schema-edit .grid__row[data-id="new_object.nested_property"]')).toBeVisible();
 
 	await openProperty(page, 'new_object');
@@ -2113,7 +2113,7 @@ test(`Remove nested properties when changing a new object to another type`, asyn
 	await expect(propertyPanel.locator('.property-type-selector__dropdown')).toHaveJSProperty('open', false);
 	await propertyPanel.locator('.property-type-selector__trigger').click();
 	await propertyPanel.locator('[data-type-option="string"]').click();
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 	await expect(page.locator('.schema-edit .grid__row[data-id="new_object.nested_property"]')).toHaveCount(0);
 	const applyButton = page.locator('.schema-edit__header-apply-button');
 	await expect(applyButton).not.toHaveAttribute('disabled');
@@ -2172,13 +2172,13 @@ test(`Reject descendant changes while renaming an object property`, async ({ pag
 
 	const propertyPanel = page.locator('.property-panel');
 	await propertyPanel.locator('.property-form__change-name').click();
-	await propertyPanel.locator('.property-dialog__name-input input').fill('renamed_object');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-form__name-input input').fill('renamed_object');
+	await propertyPanel.locator('.property-panel__save').click();
 
 	await expandAllObjects(page);
 	await openProperty(page, 'object_to_rename.child');
 	await propertyPanel.locator('textarea[name="description"]').fill('Changed description');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 	await page.locator('.schema-edit__header-apply-button').click();
 
 	await expect(page.locator('.toast')).toContainText(
@@ -2199,13 +2199,13 @@ test(`Reject a new object property without sub-properties`, async ({ page }) => 
 	await page.click('.schema-edit__add-property');
 
 	const propertyPanel = page.locator('.property-panel');
-	await propertyPanel.locator('.property-dialog__name-input').evaluate((input: any) => {
+	await propertyPanel.locator('.property-form__name-input').evaluate((input: any) => {
 		input.value = 'empty_object';
 		input.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
 	});
 	await propertyPanel.locator('.property-type-selector__structure-trigger').click();
 	await propertyPanel.locator('[data-structure-option="object"]').click();
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 	await expect(page.locator('.schema-edit .grid__row[data-id="empty_object"]')).toBeVisible();
 
 	await page.locator('.schema-edit__header-apply-button').click();
@@ -2330,9 +2330,9 @@ test(`Count an object removal once after changing its children`, async ({ page }
 
 	await page.click('.schema-edit__add-property');
 	const propertyPanel = page.locator('.property-panel');
-	await propertyPanel.locator('.property-dialog__name-input input').fill('child');
+	await propertyPanel.locator('.property-form__name-input input').fill('child');
 	await selectPropertyType(page, 'string');
-	await propertyPanel.locator('.property-dialog__save').click();
+	await propertyPanel.locator('.property-panel__save').click();
 
 	await removeProperty(page, 'object_with_replaced_child.removed_child');
 	await removeProperty(page, 'object_with_replaced_child');
@@ -2405,8 +2405,8 @@ test(`Check that the property name is correctly validated`, async ({ page }) => 
 	await editSchema(page);
 	await page.click('.schema-edit__add-property');
 
-	let error = page.locator('.property-dialog__control--name .property-dialog__control-error');
-	let saveButton = page.locator('.property-dialog__save');
+	let error = page.locator('.property-form__control--name .property-form__control-error');
+	let saveButton = page.locator('.property-panel__save');
 
 	// Name cannot be empty.
 	await page.locator('sl-input >> input[name="name"]').fill('test');

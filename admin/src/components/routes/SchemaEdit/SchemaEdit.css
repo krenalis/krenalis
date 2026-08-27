@@ -220,11 +220,6 @@
 	font-size: 11px;
 }
 
-.property-panel__title-row > .schema-edit__property-status {
-	position: relative;
-	top: 1px;
-}
-
 .schema-edit .grid__nested-rows .grid__row-expand {
 	left: 22px;
 	transform: translateY(-50%);
@@ -249,28 +244,6 @@
 
 .schema-edit .grid__nested-rows--children > .grid__row--parent::before {
 	left: calc(var(--parent-indentation) + 15px);
-}
-
-.property-panel__delete-button::part(base) {
-	color: var(--sl-color-danger-600);
-}
-
-.property-panel__delete-button::part(base):hover {
-	background-color: var(--sl-color-danger-50);
-	color: var(--sl-color-danger-600);
-}
-
-.property-panel__delete-button::part(base):active {
-	background-color: var(--sl-color-danger-100);
-	color: var(--sl-color-danger-600);
-}
-
-.property-panel__delete-button sl-icon {
-	font-size: 18px;
-}
-
-.property-panel__remove {
-	width: 100%;
 }
 
 .schema-edit sl-dialog::part(base) {

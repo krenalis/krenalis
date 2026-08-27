@@ -1,4 +1,5 @@
 import React from 'react';
+import './PropertyPanel.css';
 import SlAnimation from '@shoelace-style/shoelace/dist/react/animation/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
@@ -65,7 +66,7 @@ const PropertyPanel = ({
 						Cancel
 					</SlButton>
 					<SlButton
-						className='property-dialog__save'
+						className='property-panel__save'
 						disabled={!valid}
 						form={formID}
 						size='small'

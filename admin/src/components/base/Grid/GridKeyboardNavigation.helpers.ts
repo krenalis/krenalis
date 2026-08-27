@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 
 const gridNavigationKeys = ['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp'] as const;
 const gridKeyboardControlSelector = [

@@ -1,5 +1,9 @@
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
-import '../Schema/SchemaPropertyGrid.css';
+import {
+	SchemaPropertyGridSummary,
+	SchemaPropertyGridToolbar,
+	schemaPropertyGridNestedRowsIndentation,
+} from '../Schema/SchemaPropertyGrid';
 import './SchemaEdit.css';
 import { useBeforeUnload, useBlocker } from 'react-router-dom';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
@@ -21,11 +25,6 @@ import { TypeKind } from '../../../lib/api/types/types';
 import { EditableProperty, getParentPropertyKey, newPropertyToEdit } from './SchemaEdit.helpers';
 import { PropertyPanel } from './PropertyPanel';
 import { PropertyToEdit, PropertyToRemove, SelectPropertyOptions, useSchemaEdit } from './useSchemaEdit';
-import {
-	SchemaPropertyGridSummary,
-	SchemaPropertyGridToolbar,
-	schemaPropertyGridNestedRowsIndentation,
-} from '../Schema/SchemaPropertyGrid';
 
 const schemaEditGridColumns =
 	'minmax(160px, 0.65fr) minmax(210px, 0.85fr) 86px minmax(240px, 1.5fr) minmax(160px, 0.65fr) 90px';

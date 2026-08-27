@@ -15,7 +15,11 @@ import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { useGrid } from './useGrid';
 import { getChildIndexClassname } from './Grid.helpers';
-import { focusGridForKeyboardNavigation, navigateGrid, navigateGridWithKeyboard } from './GridKeyboardNavigation';
+import {
+	focusGridForKeyboardNavigation,
+	navigateGrid,
+	navigateGridWithKeyboard,
+} from './GridKeyboardNavigation.helpers';
 import GridNestedRows from './GridNestedRows/GridNestedRows';
 import GridRow from './GridRow/GridRow';
 import { SortableRows } from './SortableRows';

@@ -1,5 +1,5 @@
 import { RefObject, useEffect } from 'react';
-import { shouldNavigateGridFromDocument } from './GridKeyboardNavigation';
+import { shouldNavigateGridFromDocument } from './GridKeyboardNavigation.helpers';
 import { GridRef } from './Grid.types';
 
 const useDocumentGridKeyboardNavigation = (gridRef: RefObject<GridRef>, enabled: boolean) => {

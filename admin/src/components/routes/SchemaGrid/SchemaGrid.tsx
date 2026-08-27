@@ -1,5 +1,9 @@
 import React, { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import '../Schema/SchemaPropertyGrid.css';
+import {
+	SchemaPropertyGridSummary,
+	SchemaPropertyGridToolbar,
+	schemaPropertyGridNestedRowsIndentation,
+} from '../Schema/SchemaPropertyGrid';
 import './SchemaGrid.css';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
@@ -12,11 +16,6 @@ import { PropertyDetailsPanel } from './PropertyDetailsPanel';
 import { useSchemaGrid } from './useSchemaGrid';
 import { GridKeyboardHints } from '../../base/Grid/GridKeyboardHints';
 import { useDocumentGridKeyboardNavigation } from '../../base/Grid/useDocumentGridKeyboardNavigation';
-import {
-	SchemaPropertyGridSummary,
-	SchemaPropertyGridToolbar,
-	schemaPropertyGridNestedRowsIndentation,
-} from '../Schema/SchemaPropertyGrid';
 
 const schemaGridColumns =
 	'minmax(160px, 0.65fr) minmax(200px, 0.85fr) 86px minmax(250px, 1.75fr) minmax(150px, 0.55fr)';
