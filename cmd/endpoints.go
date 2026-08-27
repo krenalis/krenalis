@@ -23,123 +23,126 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 	connection := connection{s}
 	pipeline := pipeline{s}
 	return map[string]endpointHandler{
-		"DELETE /connections/{id}":                            connection.Delete,
-		"DELETE /connections/{id}/event-write-keys/{key}":     connection.DeleteEventWriteKey,
-		"DELETE /connections/{src}/links/{dst}":               connection.UnlinkConnection,
-		"DELETE /consent-purposes/{code}":                     workspace.DeleteConsentPurpose,
-		"DELETE /events/listeners/{id}":                       workspace.DeleteEventListener,
-		"DELETE /keys/{key}":                                  organization.DeleteAccessKey, /* Admin console only */
-		"DELETE /members/{id}":                                organization.DeleteMember,    /* Admin console only */
-		"DELETE /organizations/{id}":                          organization.Delete,          /* Needs platform management API key */
-		"DELETE /pipelines/{id}":                              pipeline.Delete,
-		"DELETE /workspaces/current":                          workspace.Delete,
-		"GET    /{$}":                                         api.Index,
-		"GET    /connections":                                 workspace.Connections,
-		"GET    /connections/auth-token":                      workspace.AuthToken,
-		"GET    /connections/auth-url":                        connector.AuthURL,
-		"GET    /connections/{id}":                            workspace.Connection,
-		"GET    /connections/{id}/event-write-keys":           connection.EventWriteKeys,
-		"GET    /connections/{id}/files":                      connection.File,
-		"GET    /connections/{id}/files/absolute":             connection.AbsolutePath,
-		"GET    /connections/{id}/files/sheets":               connection.Sheets,
-		"GET    /connections/{id}/identities":                 connection.Identities,
-		"GET    /connections/{id}/pipeline-types":             connection.PipelineTypes,   /* Admin console only */
-		"GET    /connections/{id}/pipelines/schemas/Events":   connection.PipelineSchemas, /* Admin console only */
-		"GET    /connections/{id}/pipelines/schemas/{target}": connection.PipelineSchemas, /* Admin console only */
-		"GET    /connections/{id}/schemas/event":              connection.AppEventSchema,
-		"GET    /connections/{id}/schemas/user":               connection.ApplicationUserSchemas,
-		"GET    /connections/{id}/tables":                     connection.TableSchema,
-		"GET    /connections/{id}/ui":                         connection.ServeUI, /* Admin console only */
-		"GET    /connections/{id}/users":                      connection.ApplicationUsers,
-		"GET    /connectors":                                  api.Connectors,
-		"GET    /connectors/{code}":                           api.Connector,
-		"GET    /connectors/{code}/documentation":             api.ConnectorDocumentation,
-		"GET    /consent-purposes":                            workspace.ConsentPurposes,
-		"GET    /events":                                      workspace.Events,
-		"GET    /events/listeners/{id}":                       workspace.ListenedEvents,
-		"GET    /events/schema":                               api.EventSchema,
-		"GET    /events/settings/{write_key}":                 api.EventsSettings,
-		"GET    /identity-resolution/latest":                  workspace.LatestIdentityResolution,
-		"GET    /identity-resolution/settings":                workspace.IdentityResolutionSettings,
-		"GET    /keys":                                        organization.AccessKeys,              /* Admin console only */
-		"GET    /members":                                     organization.Members,                 /* Admin console only */
-		"GET    /members/current":                             api.Member,                           /* Admin console only */
-		"GET    /members/invitations/{token}":                 api.MemberInvitation,                 /* Admin console only */
-		"GET    /members/reset-password/{token}":              api.ValidateMemberPasswordResetToken, /* Admin console only */
-		"GET    /metrics/identities/dates/{start}/{end}":      workspace.IdentityMetricsPerDate,
-		"GET    /metrics/identities/latest":                   workspace.LatestIdentityMetric,
-		"GET    /metrics/usage/dates/{start}/{end}":           organization.UsageMetricsPerDate,
-		"GET    /organizations/{id}":                          api.Organization,  /* Needs platform management API key */
-		"GET    /organizations":                               api.Organizations, /* Needs platform management API key */
-		"GET    /pipelines/errors/{start}/{end}":              workspace.PipelineErrors,
-		"GET    /pipelines/metrics/dates/{start}/{end}":       organization.PipelineMetricsPerDate,
-		"GET    /pipelines/metrics/days/{days}":               organization.PipelineMetricsPerDay,
-		"GET    /pipelines/metrics/hours/{hours}":             organization.PipelineMetricsPerHour,
-		"GET    /pipelines/metrics/minutes/{minutes}":         organization.PipelineMetricsPerMinute,
-		"GET    /pipelines/runs":                              workspace.PipelineRuns,
-		"GET    /pipelines/runs/{id}":                         workspace.PipelineRun,
-		"GET    /pipelines/{id}":                              workspace.Pipeline,
-		"GET    /profiles":                                    workspace.Profiles,
-		"GET    /profiles/schema":                             workspace.ProfileSchema,
-		"GET    /profiles/schema/latest-alter":                workspace.LatestAlterProfileSchema,
-		"GET    /profiles/schema/suitable-as-identifiers":     workspace.ProfilePropertiesSuitableAsIdentifiers, /* Admin console only */
-		"GET    /profiles/{kpid}/attributes":                  workspace.Attributes,
-		"GET    /profiles/{kpid}/events":                      workspace.ProfileEvents,
-		"GET    /profiles/{kpid}/identities":                  workspace.Identities,
-		"GET    /public/metadata":                             api.PublicMetadata,
-		"GET    /system/transformations/languages":            api.TransformationLanguages,
-		"GET    /warehouse":                                   workspace.Warehouse,
-		"GET    /warehouse/platforms":                         api.WarehousePlatforms,
-		"GET    /workspaces":                                  organization.Workspaces,
-		"GET    /workspaces/current":                          organization.Workspace,
-		"POST   /connections":                                 workspace.CreateConnection,
-		"POST   /connections/{id}/event-write-keys":           connection.CreateEventWriteKey,
-		"POST   /connections/{id}/preview-send-event":         connection.PreviewSendEvent,
-		"POST   /connections/{id}/query":                      connection.ExecQuery,
-		"POST   /connections/{id}/ui-event":                   connection.ServeUI, /* Admin console only */
-		"POST   /connections/{src}/links/{dst}":               connection.LinkConnection,
-		"POST   /consent-purposes":                            workspace.AddConsentPurpose,
-		"POST   /events":                                      workspace.IngestEvents,
-		"POST   /events/listeners":                            workspace.CreateEventListener,
-		"POST   /events/{type}":                               workspace.IngestEvents,
-		"POST   /expressions-properties":                      api.ExpressionsProperties, /* Admin console only */
-		"POST   /identity-resolution/start":                   workspace.StartIdentityResolution,
-		"POST   /keys":                                        organization.CreateAccessKey, /* Admin console only */
-		"POST   /members":                                     organization.AddMember,       /* Admin console only */
-		"POST   /members/invitations":                         organization.InviteMember,    /* Admin console only */
-		"POST   /members/login":                               s.login,                      /* Admin console only */
-		"POST   /members/logout":                              s.logout,                     /* Admin console only */
-		"POST   /metrics/identities/refresh":                  workspace.RefreshIdentityMetrics,
-		"POST   /organizations":                               api.CreateOrganization, /* Needs platform management API key */
-		"POST   /pipelines":                                   connection.CreatePipeline,
-		"POST   /pipelines/{id}/runs":                         pipeline.Run,
-		"POST   /pipelines/{id}/ui-event":                     pipeline.ServeUI,       /* Admin console only */
-		"POST   /sentry/errors":                               s.forwardSentryError,   /* Admin console only */
-		"POST   /transformations":                             api.TransformData,      /* Admin console only */
-		"POST   /ui":                                          workspace.ServeUI,      /* Admin console only */
-		"POST   /ui-event":                                    workspace.ServeUI,      /* Admin console only */
-		"POST   /validate-expression":                         api.ValidateExpression, /* Admin console only */
-		"POST   /warehouse/repair":                            workspace.RepairWarehouse,
-		"POST   /workspaces":                                  organization.CreateWorkspace,
-		"POST   /workspaces/test":                             organization.TestWorkspaceCreation,
-		"PUT    /connections/{id}":                            connection.Update,
-		"PUT    /consent-purposes/{code}":                     workspace.UpdateConsentPurpose,
-		"PUT    /identity-resolution/settings":                workspace.UpdateIdentityResolutionSettings,
-		"PUT    /keys/{key}":                                  organization.UpdateAccessKey,    /* Admin console only */
-		"PUT    /members/current":                             organization.UpdateMember,       /* Admin console only */
-		"PUT    /members/invitations/{token}":                 api.AcceptInvitation,            /* Admin console only */
-		"PUT    /members/reset-password":                      api.SendMemberPasswordReset,     /* Admin console only */
-		"PUT    /members/reset-password/{token}":              api.ChangeMemberPasswordByToken, /* Admin console only */
-		"PUT    /organizations/{id}":                          organization.Update,             /* Needs platform management API key */
-		"PUT    /organizations/{id}/status":                   organization.SetStatus,          /* Needs platform management API key */
-		"PUT    /pipelines/{id}":                              pipeline.Update,
-		"PUT    /pipelines/{id}/schedule":                     pipeline.SetSchedulePeriod,
-		"PUT    /pipelines/{id}/status":                       pipeline.SetStatus,
-		"PUT    /profiles/schema":                             workspace.AlterProfileSchema,
-		"PUT    /profiles/schema/preview":                     workspace.PreviewAlterProfileSchema,
-		"PUT    /warehouse":                                   workspace.UpdateWarehouse,
-		"PUT    /warehouse/mode":                              workspace.UpdateWarehouseMode,
-		"PUT    /warehouse/test":                              workspace.TestWarehouseUpdate,
-		"PUT    /workspaces/current":                          workspace.Update,
+		"DELETE /connections/{id}":                                connection.Delete,
+		"DELETE /connections/{id}/event-write-keys/{key}":         connection.DeleteEventWriteKey,
+		"DELETE /connections/{src}/links/{dst}":                   connection.UnlinkConnection,
+		"DELETE /consent-purposes/{code}":                         workspace.DeleteConsentPurpose,
+		"DELETE /events/listeners/{id}":                           workspace.DeleteEventListener,
+		"DELETE /keys/{key}":                                      organization.DeleteAccessKey, /* Admin console only */
+		"DELETE /members/{id}":                                    organization.DeleteMember,    /* Admin console only */
+		"DELETE /organizations/{id}":                              organization.Delete,          /* Needs platform management API key */
+		"DELETE /pipelines/{id}":                                  pipeline.Delete,
+		"DELETE /workspaces/current":                              workspace.Delete,
+		"GET    /{$}":                                             api.Index,
+		"GET    /connections":                                     workspace.Connections,
+		"GET    /connections/auth-token":                          workspace.AuthToken,
+		"GET    /connections/auth-url":                            connector.AuthURL,
+		"GET    /connections/{id}":                                workspace.Connection,
+		"GET    /connections/{id}/event-write-keys":               connection.EventWriteKeys,
+		"GET    /connections/{id}/files":                          connection.File,
+		"GET    /connections/{id}/files/absolute":                 connection.AbsolutePath,
+		"GET    /connections/{id}/files/sheets":                   connection.Sheets,
+		"GET    /connections/{id}/identities":                     connection.Identities,
+		"GET    /connections/{id}/pipeline-types":                 connection.PipelineTypes,   /* Admin console only */
+		"GET    /connections/{id}/pipelines/schemas/Events":       connection.PipelineSchemas, /* Admin console only */
+		"GET    /connections/{id}/pipelines/schemas/{target}":     connection.PipelineSchemas, /* Admin console only */
+		"GET    /connections/{id}/schemas/event":                  connection.AppEventSchema,
+		"GET    /connections/{id}/schemas/user":                   connection.ApplicationUserSchemas,
+		"GET    /connections/{id}/tables":                         connection.TableSchema,
+		"GET    /connections/{id}/ui":                             connection.ServeUI, /* Admin console only */
+		"GET    /connections/{id}/users":                          connection.ApplicationUsers,
+		"GET    /connectors":                                      api.Connectors,
+		"GET    /connectors/{code}":                               api.Connector,
+		"GET    /connectors/{code}/documentation":                 api.ConnectorDocumentation,
+		"GET    /consent-purposes":                                workspace.ConsentPurposes,
+		"GET    /events":                                          workspace.Events,
+		"GET    /events/listeners/{id}":                           workspace.ListenedEvents,
+		"GET    /events/schema":                                   api.EventSchema,
+		"GET    /events/settings/{write_key}":                     api.EventsSettings,
+		"GET    /identity-resolution/latest":                      workspace.LatestIdentityResolution,
+		"GET    /identity-resolution/runs":                        workspace.IdentityResolutionRuns,
+		"GET    /identity-resolution/settings":                    workspace.IdentityResolutionSettings,
+		"GET    /keys":                                            organization.AccessKeys,              /* Admin console only */
+		"GET    /members":                                         organization.Members,                 /* Admin console only */
+		"GET    /members/current":                                 api.Member,                           /* Admin console only */
+		"GET    /members/invitations/{token}":                     api.MemberInvitation,                 /* Admin console only */
+		"GET    /members/reset-password/{token}":                  api.ValidateMemberPasswordResetToken, /* Admin console only */
+		"GET    /metrics/identity-resolution/dates/{start}/{end}": workspace.IdentityResolutionMetricsPerDate,
+		"GET    /metrics/identity-resolution/latest":              workspace.LatestIdentityResolutionMetric,
+		"GET    /metrics/identities/dates/{start}/{end}":          workspace.IdentityMetricsPerDate,
+		"GET    /metrics/identities/latest":                       workspace.LatestIdentityMetric,
+		"GET    /metrics/usage/dates/{start}/{end}":               organization.UsageMetricsPerDate,
+		"GET    /organizations/{id}":                              api.Organization,  /* Needs platform management API key */
+		"GET    /organizations":                                   api.Organizations, /* Needs platform management API key */
+		"GET    /pipelines/errors/{start}/{end}":                  workspace.PipelineErrors,
+		"GET    /pipelines/metrics/dates/{start}/{end}":           organization.PipelineMetricsPerDate,
+		"GET    /pipelines/metrics/days/{days}":                   organization.PipelineMetricsPerDay,
+		"GET    /pipelines/metrics/hours/{hours}":                 organization.PipelineMetricsPerHour,
+		"GET    /pipelines/metrics/minutes/{minutes}":             organization.PipelineMetricsPerMinute,
+		"GET    /pipelines/runs":                                  workspace.PipelineRuns,
+		"GET    /pipelines/runs/{id}":                             workspace.PipelineRun,
+		"GET    /pipelines/{id}":                                  workspace.Pipeline,
+		"GET    /profiles":                                        workspace.Profiles,
+		"GET    /profiles/schema":                                 workspace.ProfileSchema,
+		"GET    /profiles/schema/latest-alter":                    workspace.LatestAlterProfileSchema,
+		"GET    /profiles/schema/suitable-as-identifiers":         workspace.ProfilePropertiesSuitableAsIdentifiers, /* Admin console only */
+		"GET    /profiles/{kpid}/attributes":                      workspace.Attributes,
+		"GET    /profiles/{kpid}/events":                          workspace.ProfileEvents,
+		"GET    /profiles/{kpid}/identities":                      workspace.Identities,
+		"GET    /public/metadata":                                 api.PublicMetadata,
+		"GET    /system/transformations/languages":                api.TransformationLanguages,
+		"GET    /warehouse":                                       workspace.Warehouse,
+		"GET    /warehouse/platforms":                             api.WarehousePlatforms,
+		"GET    /workspaces":                                      organization.Workspaces,
+		"GET    /workspaces/current":                              organization.Workspace,
+		"POST   /connections":                                     workspace.CreateConnection,
+		"POST   /connections/{id}/event-write-keys":               connection.CreateEventWriteKey,
+		"POST   /connections/{id}/preview-send-event":             connection.PreviewSendEvent,
+		"POST   /connections/{id}/query":                          connection.ExecQuery,
+		"POST   /connections/{id}/ui-event":                       connection.ServeUI, /* Admin console only */
+		"POST   /connections/{src}/links/{dst}":                   connection.LinkConnection,
+		"POST   /consent-purposes":                                workspace.AddConsentPurpose,
+		"POST   /events":                                          workspace.IngestEvents,
+		"POST   /events/listeners":                                workspace.CreateEventListener,
+		"POST   /events/{type}":                                   workspace.IngestEvents,
+		"POST   /expressions-properties":                          api.ExpressionsProperties, /* Admin console only */
+		"POST   /identity-resolution/start":                       workspace.StartIdentityResolution,
+		"POST   /keys":                                            organization.CreateAccessKey, /* Admin console only */
+		"POST   /members":                                         organization.AddMember,       /* Admin console only */
+		"POST   /members/invitations":                             organization.InviteMember,    /* Admin console only */
+		"POST   /members/login":                                   s.login,                      /* Admin console only */
+		"POST   /members/logout":                                  s.logout,                     /* Admin console only */
+		"POST   /metrics/identities/refresh":                      workspace.RefreshIdentityMetrics,
+		"POST   /organizations":                                   api.CreateOrganization, /* Needs platform management API key */
+		"POST   /pipelines":                                       connection.CreatePipeline,
+		"POST   /pipelines/{id}/runs":                             pipeline.Run,
+		"POST   /pipelines/{id}/ui-event":                         pipeline.ServeUI,       /* Admin console only */
+		"POST   /sentry/errors":                                   s.forwardSentryError,   /* Admin console only */
+		"POST   /transformations":                                 api.TransformData,      /* Admin console only */
+		"POST   /ui":                                              workspace.ServeUI,      /* Admin console only */
+		"POST   /ui-event":                                        workspace.ServeUI,      /* Admin console only */
+		"POST   /validate-expression":                             api.ValidateExpression, /* Admin console only */
+		"POST   /warehouse/repair":                                workspace.RepairWarehouse,
+		"POST   /workspaces":                                      organization.CreateWorkspace,
+		"POST   /workspaces/test":                                 organization.TestWorkspaceCreation,
+		"PUT    /connections/{id}":                                connection.Update,
+		"PUT    /consent-purposes/{code}":                         workspace.UpdateConsentPurpose,
+		"PUT    /identity-resolution/settings":                    workspace.UpdateIdentityResolutionSettings,
+		"PUT    /keys/{key}":                                      organization.UpdateAccessKey,    /* Admin console only */
+		"PUT    /members/current":                                 organization.UpdateMember,       /* Admin console only */
+		"PUT    /members/invitations/{token}":                     api.AcceptInvitation,            /* Admin console only */
+		"PUT    /members/reset-password":                          api.SendMemberPasswordReset,     /* Admin console only */
+		"PUT    /members/reset-password/{token}":                  api.ChangeMemberPasswordByToken, /* Admin console only */
+		"PUT    /organizations/{id}":                              organization.Update,             /* Needs platform management API key */
+		"PUT    /organizations/{id}/status":                       organization.SetStatus,          /* Needs platform management API key */
+		"PUT    /pipelines/{id}":                                  pipeline.Update,
+		"PUT    /pipelines/{id}/schedule":                         pipeline.SetSchedulePeriod,
+		"PUT    /pipelines/{id}/status":                           pipeline.SetStatus,
+		"PUT    /profiles/schema":                                 workspace.AlterProfileSchema,
+		"PUT    /profiles/schema/preview":                         workspace.PreviewAlterProfileSchema,
+		"PUT    /warehouse":                                       workspace.UpdateWarehouse,
+		"PUT    /warehouse/mode":                                  workspace.UpdateWarehouseMode,
+		"PUT    /warehouse/test":                                  workspace.TestWarehouseUpdate,
+		"PUT    /workspaces/current":                              workspace.Update,
 	}
 }

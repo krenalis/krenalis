@@ -86,6 +86,43 @@ const identityMetricsUpgrade = `
 	)
 	ON CONFLICT (workspace, day) DO NOTHING`
 
+const identityResolutionMetricsUpgrade = `
+	CREATE TABLE IF NOT EXISTS identity_resolution_metrics (
+		workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+		day date NOT NULL,
+		observed_at time without time zone NOT NULL,
+		profiles_anonymous bigint NOT NULL,
+		profiles_recognized bigint NOT NULL,
+		identities_anonymous bigint NOT NULL,
+		identities_recognized bigint NOT NULL,
+		composition_one bigint NOT NULL,
+		composition_two bigint NOT NULL,
+		composition_three bigint NOT NULL,
+		composition_four_to_ten bigint NOT NULL,
+		composition_eleven_to_twenty bigint NOT NULL,
+		composition_more_than_twenty bigint NOT NULL,
+		PRIMARY KEY (workspace, day)
+	)`
+
+const identityResolutionRunsUpgrade = `
+	CREATE TABLE IF NOT EXISTS identity_resolution_runs (
+		id uuid NOT NULL,
+		workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+		start_time timestamp(3) NOT NULL,
+		end_time timestamp(3),
+		error varchar,
+		PRIMARY KEY (id)
+	);
+
+	CREATE INDEX IF NOT EXISTS identity_resolution_runs_workspace_start_idx
+		ON identity_resolution_runs (workspace, start_time DESC, id DESC);
+
+	INSERT INTO identity_resolution_runs (id, workspace, start_time)
+	SELECT ir_id, id, ir_start_time
+	FROM workspaces
+	WHERE ir_id IS NOT NULL
+	ON CONFLICT (id) DO NOTHING`
+
 const nodeIDUpgrade = `
 	DO $$
 	BEGIN
@@ -170,6 +207,8 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TABLE metadata ADD COLUMN IF NOT EXISTS requests_rate_per_minute integer NOT NULL DEFAULT 100 CHECK (requests_rate_per_minute BETWEEN 60 AND 20000)`,
 			`ALTER TABLE metadata ADD COLUMN IF NOT EXISTS requests_max_capacity integer NOT NULL DEFAULT 100 CHECK (requests_max_capacity BETWEEN 1 AND 10000)`,
 			identityMetricsUpgrade,
+			identityResolutionMetricsUpgrade,
+			identityResolutionRunsUpgrade,
 			`CREATE TABLE IF NOT EXISTS usage_metrics (
 				organization varchar(12) NOT NULL REFERENCES organizations ON DELETE CASCADE,
 				workspace varchar(12) NOT NULL,
