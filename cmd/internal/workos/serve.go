@@ -31,9 +31,9 @@ var onboardingLimits = core.OrganizationLimits{
 	Connections: core.ConnectionsLimit,
 	Pipelines:   core.PipelinesLimit,
 	Rates: core.RateLimits{
-		OrganizationSpecific: core.RateLimit{RatePerMinute: 6_000, MaxCapacity: 1_000},
-		WorkspaceSpecific:    core.RateLimit{RatePerMinute: 6_000, MaxCapacity: 1_000},
-		EventsSpecific:       core.RateLimit{RatePerMinute: 60_000, MaxCapacity: 100_000},
+		OrganizationSpecific: core.RateLimit{RatePerMinute: 1_000, MaxCapacity: 1_000},
+		WorkspaceSpecific:    core.RateLimit{RatePerMinute: 1_000, MaxCapacity: 1_000},
+		EventsSpecific:       core.RateLimit{RatePerMinute: 1_000, MaxCapacity: 20_000},
 	},
 }
 
