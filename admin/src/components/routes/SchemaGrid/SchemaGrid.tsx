@@ -48,8 +48,10 @@ const SchemaGrid = () => {
 	} = useSchemaGrid(schema, isLoadingSchema, search, selectedPropertyPath, onSelectProperty);
 	const visibleSelectedProperty = isSelectedPropertyVisible ? selectedProperty : null;
 	const [lastSelectedProperty, setLastSelectedProperty] = useState(visibleSelectedProperty);
-	const isDetailsPanelOpen = visibleSelectedProperty != null && !isEditing;
-	const detailsPanelProperty = isEditing ? null : visibleSelectedProperty || lastSelectedProperty;
+	const keepDetailsPanelOpenDuringReload =
+		isLoadingSchema && selectedPropertyPath != null && lastSelectedProperty != null;
+	const isDetailsPanelOpen = visibleSelectedProperty != null || keepDetailsPanelOpenDuringReload;
+	const detailsPanelProperty = visibleSelectedProperty || lastSelectedProperty;
 	const gridInteractionsDisabled = isLoadingSchema || isAltering;
 	const isGridKeyboardNavigationEnabled = !isEditing && !gridInteractionsDisabled && visiblePropertyCount > 0;
 	const expansionDisabled = gridInteractionsDisabled || isSearchActive || objectCount === 0;
