@@ -48,9 +48,9 @@ type Consumer interface {
 
 	// Close closes the consumer and its events channel.
 	//
-	// When Close is called, no calls to other Consumer methods should be in
-	// progress, and no other methods should be called afterward. Close is
-	// idempotent; subsequent calls have no effect.
+	// No call to Events may be in progress when Close is called, and Events must not
+	// be called afterward. Close may be called more than once, but calls must not
+	// overlap. Calls made after the first one has completed have no effect.
 	Close()
 }
 

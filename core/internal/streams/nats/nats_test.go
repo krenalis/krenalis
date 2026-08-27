@@ -15,7 +15,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/streams"
 	"github.com/krenalis/krenalis/core/natsopts"
 
-	gonats "github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 )
 
@@ -330,10 +330,7 @@ func TestShardConsumerNacksBufferedMessagesWhenIterationStops(t *testing.T) {
 
 	sc := newShardConsumer(c, 0)
 	for message := range sc.Messages(context.Background()) {
-		message.ack.Stop()
-		if err := message.msg.Nak(); err != nil {
-			t.Fatalf("expected no error, got %v", err)
-		}
+		message.nack()
 		// The test pull consumer cannot inspect FetchContext, so release any
 		// pending fetch before stopping iteration.
 		pullConsumer.Close()
@@ -379,10 +376,7 @@ func TestShardConsumerRecreatesConsumerAfterFetchErrors(t *testing.T) {
 
 				sc := newShardConsumer(c, 0)
 				for fetched := range sc.Messages(context.Background()) {
-					fetched.ack.Stop()
-					if err := fetched.msg.Nak(); err != nil {
-						t.Fatalf("expected no error, got %v", err)
-					}
+					fetched.nack()
 					pullConsumer.Close()
 					break
 				}
@@ -542,7 +536,7 @@ func (m *testJetStreamMsg) Data() []byte {
 }
 
 // Headers returns no headers for the test message.
-func (m *testJetStreamMsg) Headers() gonats.Header {
+func (m *testJetStreamMsg) Headers() nats.Header {
 	return nil
 }
 

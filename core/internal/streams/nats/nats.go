@@ -478,18 +478,18 @@ func newConsumer(s *stream, topic string, size int) *consumer {
 		c.close.Go(func() {
 			sc := newShardConsumer(c, shard)
 			for message := range sc.Messages(ctx) {
-				c.processMessage(ctx, message.msg, message.ack)
+				c.processMessage(ctx, message)
 			}
 		})
 	}
 	return c
 }
 
-// Close closes the consumer and its events channel. When Close is called, no
-// calls to other consumer methods should be in progress, and no other methods
-// should be called afterward.
+// Close closes the consumer and its events channel.
 //
-// Close is idempotent; subsequent calls have no effect.
+// No call to Events may be in progress when Close is called, and Events must not
+// be called afterward. Close may be called more than once, but calls must not
+// overlap. Calls made after the first one has completed have no effect.
 func (c *consumer) Close() {
 	if c.close.closed.Swap(true) {
 		return
@@ -515,13 +515,12 @@ func (c *consumer) Events(ctx context.Context) (<-chan streams.Event, error) {
 // processMessage decodes and validates a NATS message, then delivers the
 // resulting event to the consumer. If ctx is canceled, it stops acknowledgment
 // tracking and negatively acknowledges the message.
-func (c *consumer) processMessage(ctx context.Context, msg jetstream.Msg, eventAck *ack) {
+func (c *consumer) processMessage(ctx context.Context, message fetchedMsg) {
+	msg := message.msg
+	eventAck := message.ack
 	select {
 	case <-ctx.Done():
-		eventAck.Stop()
-		if err := msg.Nak(); err != nil {
-			slog.Warn("cannot send nack for a NATS message", "error", err)
-		}
+		message.nack()
 		return
 	default:
 	}
@@ -558,10 +557,7 @@ func (c *consumer) processMessage(ctx context.Context, msg jetstream.Msg, eventA
 	select {
 	case c.events <- event:
 	case <-ctx.Done():
-		eventAck.Stop()
-		if err := msg.Nak(); err != nil {
-			slog.Warn("cannot send nack for a NATS message", "error", err)
-		}
+		message.nack()
 	}
 }
 
@@ -577,6 +573,15 @@ const minFetchBatchSize = maxMessagesPerFetch / 2
 type fetchedMsg struct {
 	msg jetstream.Msg
 	ack *ack
+}
+
+// nack stops acknowledgment tracking and negatively acknowledges the message.
+func (message fetchedMsg) nack() {
+	message.ack.Stop()
+	err := message.msg.Nak()
+	if err != nil {
+		slog.Warn("cannot send nack for a NATS message", "error", err)
+	}
 }
 
 // shardConsumer fetches and buffers messages for one shard.
@@ -605,10 +610,7 @@ func (sc *shardConsumer) Messages(ctx context.Context) iter.Seq[fetchedMsg] {
 		defer func() {
 			cancel()
 			for message := range pending {
-				message.ack.Stop()
-				if err := message.msg.Nak(); err != nil {
-					slog.Warn("cannot send nack for a NATS message", "error", err)
-				}
+				message.nack()
 			}
 		}()
 
@@ -669,7 +671,7 @@ func (sc *shardConsumer) fetch(ctx context.Context, pending chan<- fetchedMsg, s
 					return
 				}
 				if !errors.Is(err, jetstream.ErrConsumerDoesNotExist) {
-					slog.Warn("failed to fetch messages from NATS consumer", "consumer", consumerName, "error", err)
+					slog.Warn("cannot fetch messages from a NATS consumer", "consumer", consumerName, "error", err)
 				}
 				break
 			}
@@ -683,7 +685,7 @@ func (sc *shardConsumer) fetch(ctx context.Context, pending chan<- fetchedMsg, s
 			}
 			if err := batch.Error(); err != nil {
 				if !errors.Is(err, jetstream.ErrConsumerDoesNotExist) {
-					slog.Warn("failed to fetch messages from NATS consumer", "consumer", consumerName, "error", err)
+					slog.Warn("cannot fetch messages from a NATS consumer", "consumer", consumerName, "error", err)
 				}
 				break
 			}
