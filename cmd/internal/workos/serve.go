@@ -61,13 +61,19 @@ func (wo *WorkOS) Onboard(ctx context.Context, organizationName, adminEmail stri
 
 	workosOrganizationID, err := wo.createOrganization(ctx, organizationName, id)
 	if err != nil {
-		wo.deleteOnboardedOrganization(ctx, id)
+		delErr := wo.deleteOnboardedOrganization(ctx, id)
+		if delErr != nil {
+			slog.Error("failed to delete the organization of a failed onboarding", "organization", id, "error", delErr)
+		}
 		return err
 	}
 
 	err = wo.sendInvitation(ctx, adminEmail, workosOrganizationID)
 	if err != nil {
-		wo.deleteOnboardedOrganization(ctx, id)
+		delErr := wo.deleteOnboardedOrganization(ctx, id)
+		if delErr != nil {
+			slog.Error("failed to delete the organization of a failed onboarding", "organization", id, "error", delErr)
+		}
 		return err
 	}
 
@@ -147,16 +153,13 @@ func (wo *WorkOS) ServeLogin(r *http.Request) (string, string, error) {
 }
 
 // deleteOnboardedOrganization deletes the organization created by Onboard,
-// after a later onboarding step failed. It logs a deletion failure instead of
-// reporting it, because the caller reports the error that caused the deletion.
-func (wo *WorkOS) deleteOnboardedOrganization(ctx context.Context, id string) {
+// after a later onboarding step failed.
+func (wo *WorkOS) deleteOnboardedOrganization(ctx context.Context, id string) error {
 	org, err := wo.core.Organization(id)
-	if err == nil {
-		err = org.Delete(ctx)
-	}
 	if err != nil {
-		slog.Error("failed to delete the organization of a failed onboarding", "organization", id, "error", err)
+		return err
 	}
+	return org.Delete(ctx)
 }
 
 // serveAction handles the user registration action. It verifies the request
