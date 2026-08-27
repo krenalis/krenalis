@@ -224,6 +224,11 @@ func TestConsumerTracksFetchedMessagesWhileDecodingIsBlocked(t *testing.T) {
 		if got := pullConsumer.fetchCount(); got < 2 {
 			t.Fatalf("expected at least 2 fetches, got %d", got)
 		}
+		for i, batchSize := range pullConsumer.fetchBatchSizes() {
+			if batchSize < minFetchBatchSize {
+				t.Fatalf("fetch %d: expected a batch of at least %d messages, got %d", i, minFetchBatchSize, batchSize)
+			}
+		}
 	})
 }
 
@@ -345,36 +350,49 @@ func TestShardConsumerNacksBufferedMessagesWhenIterationStops(t *testing.T) {
 	}
 }
 
-// TestShardConsumerRecreatesConsumerAfterFetchError verifies that a transient
-// fetch error causes the NATS consumer to be recreated before fetching resumes.
-func TestShardConsumerRecreatesConsumerAfterFetchError(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-		message := new(testJetStreamMsg)
-		pullConsumer := newTestPullConsumer([]*testJetStreamMsg{message})
-		pullConsumer.fetchError = jetstream.ErrConsumerDoesNotExist
-		wait := make(chan struct{})
-		close(wait)
-		js := &testJetStream{consumer: pullConsumer}
-		s := &stream{ackWait: 3 * time.Second}
-		s.js.jetStream = js
-		s.js.wait = wait
-		c := &consumer{stream: s, topic: "test", acks: newAckManager(s.ackWait)}
-		defer c.acks.Close()
-
-		sc := newShardConsumer(c, 0)
-		for fetched := range sc.Messages(context.Background()) {
-			fetched.ack.Stop()
-			if err := fetched.msg.Nak(); err != nil {
-				t.Fatalf("expected no error, got %v", err)
-			}
-			pullConsumer.Close()
-			break
+// TestShardConsumerRecreatesConsumerAfterFetchErrors verifies that the NATS
+// consumer is recreated and fetching resumes when Fetch or MessageBatch reports
+// that the consumer no longer exists.
+func TestShardConsumerRecreatesConsumerAfterFetchErrors(t *testing.T) {
+	for _, fromBatch := range []bool{false, true} {
+		name := "Fetch"
+		if fromBatch {
+			name = "MessageBatch"
 		}
+		t.Run(name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				message := new(testJetStreamMsg)
+				pullConsumer := newTestPullConsumer([]*testJetStreamMsg{message})
+				if fromBatch {
+					pullConsumer.batchError = jetstream.ErrConsumerDoesNotExist
+				} else {
+					pullConsumer.fetchError = jetstream.ErrConsumerDoesNotExist
+				}
+				wait := make(chan struct{})
+				close(wait)
+				js := &testJetStream{consumer: pullConsumer}
+				s := &stream{ackWait: 3 * time.Second}
+				s.js.jetStream = js
+				s.js.wait = wait
+				c := &consumer{stream: s, topic: "test", acks: newAckManager(s.ackWait)}
+				defer c.acks.Close()
 
-		if got := js.createCount(); got != 2 {
-			t.Fatalf("expected 2 consumer creations, got %d", got)
-		}
-	})
+				sc := newShardConsumer(c, 0)
+				for fetched := range sc.Messages(context.Background()) {
+					fetched.ack.Stop()
+					if err := fetched.msg.Nak(); err != nil {
+						t.Fatalf("expected no error, got %v", err)
+					}
+					pullConsumer.Close()
+					break
+				}
+
+				if got := js.createCount(); got != 2 {
+					t.Fatalf("expected 2 consumer creations, got %d", got)
+				}
+			})
+		})
+	}
 }
 
 // testJetStream provides the pull consumer used by consumer tests.
@@ -403,9 +421,11 @@ func (js *testJetStream) createCount() int {
 // testPullConsumer returns messages in explicitly sized fetch batches.
 type testPullConsumer struct {
 	jetstream.Consumer
-	mu         sync.Mutex // protects next, fetches, and fetchError
+	mu         sync.Mutex // protects the fields below
 	messages   []*testJetStreamMsg
 	next       int
+	batchSizes []int
+	batchError error
 	fetches    int
 	fetchError error
 	stop       chan struct{}
@@ -422,11 +442,20 @@ func newTestPullConsumer(messages []*testJetStreamMsg) *testPullConsumer {
 func (c *testPullConsumer) Fetch(batch int, _ ...jetstream.FetchOpt) (jetstream.MessageBatch, error) {
 	c.mu.Lock()
 	c.fetches++
+	c.batchSizes = append(c.batchSizes, batch)
 	if c.fetchError != nil {
 		err := c.fetchError
 		c.fetchError = nil
 		c.mu.Unlock()
 		return nil, err
+	}
+	if c.batchError != nil {
+		err := c.batchError
+		c.batchError = nil
+		c.mu.Unlock()
+		messages := make(chan jetstream.Msg)
+		close(messages)
+		return &testMessageBatch{messages: messages, err: err}, nil
 	}
 	start := c.next
 	end := min(start+batch, len(c.messages))
@@ -469,9 +498,17 @@ func (c *testPullConsumer) fetchCount() int {
 	return c.fetches
 }
 
+// fetchBatchSizes returns the message limit requested by each call to Fetch.
+func (c *testPullConsumer) fetchBatchSizes() []int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return append([]int(nil), c.batchSizes...)
+}
+
 // testMessageBatch contains the messages returned by a test fetch operation.
 type testMessageBatch struct {
 	messages <-chan jetstream.Msg
+	err      error
 }
 
 // Messages returns the messages in the test batch.
@@ -479,9 +516,9 @@ func (b *testMessageBatch) Messages() <-chan jetstream.Msg {
 	return b.messages
 }
 
-// Error reports that the test batch completed successfully.
+// Error returns the error reported after consuming the test batch.
 func (b *testMessageBatch) Error() error {
-	return nil
+	return b.err
 }
 
 // testJetStreamMsg embeds jetstream.Msg so tests only need to implement the
