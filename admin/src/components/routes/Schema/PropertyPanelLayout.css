@@ -1,4 +1,8 @@
 .property-panel {
+	--property-panel-label-color: var(--text-light);
+	--property-panel-label-font-size: 14px;
+	--property-panel-label-font-weight: 400;
+
 	align-self: start;
 	background-color: var(--bg-primary);
 	border: 1px solid var(--border-primary);

@@ -1,7 +1,6 @@
 .property-form {
 	--sl-font-size-medium: var(--sl-font-size-small);
 	--sl-input-font-size-medium: var(--sl-font-size-small);
-	--sl-input-label-font-size-medium: var(--sl-font-size-small);
 }
 
 .property-form__control {
@@ -35,10 +34,12 @@
 	mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent);
 }
 
-.property-form__label {
-	color: var(--text-light);
-	font-size: 14px;
-	font-weight: 500;
+.property-form__label,
+.property-form ::part(form-control-label) {
+	color: var(--property-panel-label-color);
+	font-size: var(--property-panel-label-font-size);
+	font-weight: var(--property-panel-label-font-weight);
+	margin: 0;
 	padding: 0 0 5px 1px;
 }
 
