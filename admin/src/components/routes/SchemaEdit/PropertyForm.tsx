@@ -47,6 +47,18 @@ const PRIMARY_SOURCE_TOOLTIP = {
 	label: 'About primary source',
 };
 
+interface DecimalTypeInputs {
+	precision: string;
+	precisionBadInput: boolean;
+	scale: string;
+	scaleBadInput: boolean;
+}
+
+interface PropertyTypeError {
+	location: 'type' | 'string-constraints' | 'decimal-constraints';
+	message: string;
+}
+
 const disableShoelaceTextareaHeightReset = (textarea: SlTextareaElement | null) => {
 	if (textarea == null) {
 		return;
@@ -84,9 +96,12 @@ const PropertyForm = ({
 }: PropertyFormProps) => {
 	const [property, setProperty] = useState<PropertyToEdit>(() => structuredClone(propertyToEdit));
 	const [primarySource, setPrimarySource] = useState<string | null>(primarySources[propertyToEdit.key] || null);
+	const [decimalTypeInputs, setDecimalTypeInputs] = useState<DecimalTypeInputs>(() =>
+		getDecimalTypeInputs(propertyToEdit.type),
+	);
 	const [isNameEditable, setIsNameEditable] = useState(propertyToEdit.key == null);
 	const [nameError, setNameError] = useState('');
-	const [typeError, setTypeError] = useState('');
+	const [typeError, setTypeError] = useState<PropertyTypeError | null>(null);
 	const initialState = useRef('');
 	const nameInputRef = useRef<any>();
 	const typeSelectorRef = useRef<PropertyTypeSelectorRef>();
@@ -111,12 +126,14 @@ const PropertyForm = ({
 	useEffect(() => {
 		const nextProperty = structuredClone(propertyToEdit);
 		const nextPrimarySource = primarySources[propertyToEdit.key] || null;
+		const nextDecimalTypeInputs = getDecimalTypeInputs(propertyToEdit.type);
 		setProperty(nextProperty);
 		setPrimarySource(nextPrimarySource);
+		setDecimalTypeInputs(nextDecimalTypeInputs);
 		setIsNameEditable(propertyToEdit.key == null);
 		setNameError('');
-		setTypeError('');
-		initialState.current = propertyFormStateKey(nextProperty, nextPrimarySource);
+		setTypeError(null);
+		initialState.current = propertyFormStateKey(nextProperty, nextPrimarySource, nextDecimalTypeInputs);
 		onDirtyChange?.(false);
 		setTimeout(() => {
 			const input = nameInputRef.current?.shadowRoot?.querySelector('input');
@@ -141,11 +158,18 @@ const PropertyForm = ({
 		if (initialState.current === '') {
 			return;
 		}
-		onDirtyChange?.(propertyFormStateKey(property, primarySource) !== initialState.current);
-	}, [property, primarySource]);
+		onDirtyChange?.(propertyFormStateKey(property, primarySource, decimalTypeInputs) !== initialState.current);
+	}, [property, primarySource, decimalTypeInputs]);
 
 	useEffect(() => {
-		onValidityChange?.(nameError === '' && typeError === '');
+		const type = getPropertyValueType(property.type);
+		if (type?.kind === 'decimal') {
+			setTypeError(getDecimalTypeError(type, decimalTypeInputs));
+		}
+	}, [property.type, decimalTypeInputs]);
+
+	useEffect(() => {
+		onValidityChange?.(nameError === '' && typeError == null);
 	}, [nameError, typeError]);
 
 	const updateProperty = (update: (property: PropertyToEdit) => void) => {
@@ -254,10 +278,11 @@ const PropertyForm = ({
 		updateProperty((nextProperty) => {
 			nextProperty.type = type;
 		});
+		setDecimalTypeInputs(getDecimalTypeInputs(type));
 		if (type?.kind === 'object' || type?.kind === 'array') {
 			setPrimarySource(null);
 		}
-		setTypeError('');
+		setTypeError(null);
 	};
 
 	const onChangeBitSize = (event) => {
@@ -267,17 +292,35 @@ const PropertyForm = ({
 	};
 
 	const onInputPrecision = (event) => {
+		const value = event.currentTarget.value;
+		const badInput = event.currentTarget.validity.badInput;
+		setDecimalTypeInputs((current) => ({
+			...current,
+			precision: value,
+			precisionBadInput: badInput,
+		}));
+		if (value === '') {
+			return;
+		}
 		updateValueType((type: DecimalType) => {
-			type.precision = Number(event.target.value);
+			type.precision = Number(value);
 		});
-		setTypeError('');
 	};
 
 	const onInputScale = (event) => {
+		const value = event.currentTarget.value;
+		const badInput = event.currentTarget.validity.badInput;
+		setDecimalTypeInputs((current) => ({
+			...current,
+			scale: value,
+			scaleBadInput: badInput,
+		}));
+		if (value === '') {
+			return;
+		}
 		updateValueType((type: DecimalType) => {
-			type.scale = Number(event.target.value);
+			type.scale = Number(value);
 		});
-		setTypeError('');
 	};
 
 	const onRealChange = () => {
@@ -302,7 +345,7 @@ const PropertyForm = ({
 				type.maxBytes = Number(value);
 			}
 		});
-		setTypeError('');
+		setTypeError(null);
 	};
 
 	const onInputMaxLength = (event) => {
@@ -314,7 +357,7 @@ const PropertyForm = ({
 				type.maxLength = Number(value);
 			}
 		});
-		setTypeError('');
+		setTypeError(null);
 	};
 
 	const onInputDescription = (event) => {
@@ -339,8 +382,8 @@ const PropertyForm = ({
 			setNameError(propertyNameError);
 			return;
 		}
-		const error = validatePropertyType(property);
-		if (error !== '') {
+		const error = validatePropertyType(property, decimalTypeInputs);
+		if (error != null) {
 			setTypeError(error);
 			return;
 		}
@@ -350,20 +393,19 @@ const PropertyForm = ({
 			setNameError(err.message);
 			return;
 		}
-		initialState.current = propertyFormStateKey(property, primarySource);
+		initialState.current = propertyFormStateKey(property, primarySource, decimalTypeInputs);
 		onDirtyChange?.(false);
 	};
 
 	const valueType = getPropertyValueType(property.type);
 	let decimalDescription: string | null = null;
-	if (
-		valueType?.kind === 'decimal' &&
-		Number.isInteger(valueType.precision) &&
-		Number.isInteger(valueType.scale) &&
-		checkDecimalType(valueType) == null
-	) {
-		const integerDigits = valueType.precision - valueType.scale;
-		decimalDescription = `Up to ${integerDigits} ${integerDigits === 1 ? 'digit' : 'digits'} before and ${valueType.scale} after the decimal point.`;
+	if (valueType?.kind === 'decimal' && checkDecimalType(valueType) == null) {
+		const scale = valueType.scale ?? 0;
+		const precisionDescription = `${valueType.precision} ${valueType.precision === 1 ? 'digit' : 'digits'} total`;
+		decimalDescription =
+			scale === 0
+				? `${precisionDescription}, with no decimal places.`
+				: `${precisionDescription}, with ${scale} after the decimal point.`;
 	}
 	const selectedConnection = sourceConnections.find((connection) => connection.id === primarySource);
 
@@ -411,7 +453,9 @@ const PropertyForm = ({
 					canEditType={canEditType}
 					onChange={onChangeType}
 				/>
-				{typeError !== '' && <PropertyFormError name='type'>{typeError}</PropertyFormError>}
+				{typeError?.location === 'type' && (
+					<PropertyFormError name='type'>{typeError.message}</PropertyFormError>
+				)}
 			</div>
 			{valueType?.kind === 'string' && canEditType && (
 				<div className='property-form__constraints property-form__constraints--length'>
@@ -435,6 +479,9 @@ const PropertyForm = ({
 						step={1}
 						onSlInput={onInputMaxBytes}
 					/>
+					{typeError?.location === 'string-constraints' && (
+						<PropertyFormError name='string-constraints'>{typeError.message}</PropertyFormError>
+					)}
 				</div>
 			)}
 			{(valueType?.kind === 'int' || valueType?.kind === 'float') && canEditType && (
@@ -480,7 +527,7 @@ const PropertyForm = ({
 						className='property-form__precision'
 						label='Precision'
 						size='small'
-						value={String(valueType.precision)}
+						value={decimalTypeInputs.precision}
 						type='number'
 						max={MAX_DECIMAL_PRECISION}
 						maxlength={2}
@@ -490,15 +537,17 @@ const PropertyForm = ({
 						className='property-form__scale'
 						label='Scale'
 						size='small'
-						value={String(valueType.scale)}
+						value={decimalTypeInputs.scale}
 						type='number'
 						max={MAX_DECIMAL_SCALE}
 						maxlength={2}
 						onSlInput={onInputScale}
 					/>
-					{decimalDescription != null && (
+					{typeError?.location === 'decimal-constraints' ? (
+						<PropertyFormError name='decimal-constraints'>{typeError.message}</PropertyFormError>
+					) : decimalDescription != null ? (
 						<div className='property-form__decimal-description'>{decimalDescription}</div>
-					)}
+					) : null}
 				</div>
 			)}
 			{showIdentityResolution && (
@@ -626,13 +675,20 @@ const PropertyFormError = ({ name, children }: { name: string; children: React.R
 	);
 };
 
-const propertyFormStateKey = (property: PropertyToEdit, primarySource: string | null): string => {
-	return JSON.stringify({ property, primarySource });
+const propertyFormStateKey = (
+	property: PropertyToEdit,
+	primarySource: string | null,
+	decimalTypeInputs: DecimalTypeInputs,
+): string => {
+	return JSON.stringify({ property, primarySource, decimalTypeInputs });
 };
 
-const validatePropertyType = (property: PropertyToEdit): string => {
+const validatePropertyType = (
+	property: PropertyToEdit,
+	decimalTypeInputs: DecimalTypeInputs,
+): PropertyTypeError | null => {
 	if (property.type == null) {
-		return 'Type cannot be empty';
+		return { location: 'type', message: 'Type cannot be empty' };
 	}
 	const type = getPropertyValueType(property.type);
 	if (type.kind === 'string') {
@@ -640,34 +696,81 @@ const validatePropertyType = (property: PropertyToEdit): string => {
 			type.maxLength != null &&
 			(!Number.isInteger(type.maxLength) || type.maxLength < 1 || type.maxLength > MAX_STRING_LENGTH)
 		) {
-			return `Max characters must be an integer in range [1, ${MAX_STRING_LENGTH}]`;
+			return {
+				location: 'string-constraints',
+				message: `Max characters must be an integer in range [1, ${MAX_STRING_LENGTH}]`,
+			};
 		}
 		if (
 			type.maxBytes != null &&
 			(!Number.isInteger(type.maxBytes) || type.maxBytes < 1 || type.maxBytes > MAX_STRING_LENGTH)
 		) {
-			return `Max bytes must be an integer in range [1, ${MAX_STRING_LENGTH}]`;
+			return {
+				location: 'string-constraints',
+				message: `Max bytes must be an integer in range [1, ${MAX_STRING_LENGTH}]`,
+			};
 		}
 	}
 	if (type.kind === 'decimal') {
-		const error = checkDecimalType(type);
-		if (error != null) {
-			return error;
-		}
+		return getDecimalTypeError(type, decimalTypeInputs);
 	}
-	return '';
+	return null;
 };
 
 const checkDecimalType = (type: DecimalType): string | undefined => {
-	if (type.precision < 1 || type.precision > MAX_DECIMAL_PRECISION) {
+	if (!Number.isInteger(type.precision) || type.precision < 1 || type.precision > MAX_DECIMAL_PRECISION) {
 		return `Precision must be in range [1, ${MAX_DECIMAL_PRECISION}]`;
 	}
-	if (type.scale < 0 || type.scale > MAX_DECIMAL_SCALE) {
+	const scale = type.scale ?? 0;
+	if (!Number.isInteger(scale) || scale < 0 || scale > MAX_DECIMAL_SCALE) {
 		return `Scale must be in range [0, ${MAX_DECIMAL_SCALE}]`;
 	}
-	if (type.scale > type.precision) {
+	if (scale > type.precision) {
 		return 'Scale cannot be greater than precision';
 	}
+};
+
+const checkDecimalTypeInputs = (inputs: DecimalTypeInputs): string | undefined => {
+	if (inputs.precisionBadInput) {
+		return 'Precision must be a number';
+	}
+	if (inputs.scaleBadInput) {
+		return 'Scale must be a number';
+	}
+	if (inputs.precision === '' && inputs.scale === '') {
+		return 'Precision and scale cannot be empty';
+	}
+	if (inputs.precision === '') {
+		return 'Precision cannot be empty';
+	}
+	if (inputs.scale === '') {
+		return 'Scale cannot be empty';
+	}
+};
+
+const getDecimalTypeError = (type: DecimalType, inputs: DecimalTypeInputs): PropertyTypeError | null => {
+	const inputError = checkDecimalTypeInputs(inputs);
+	if (inputError != null) {
+		return { location: 'decimal-constraints', message: inputError };
+	}
+	const error = checkDecimalType(type);
+	if (error != null) {
+		return { location: 'decimal-constraints', message: error };
+	}
+	return null;
+};
+
+const getDecimalTypeInputs = (type: Type | null | undefined): DecimalTypeInputs => {
+	const valueType = getPropertyValueType(type);
+	if (valueType?.kind !== 'decimal') {
+		return { precision: '', precisionBadInput: false, scale: '', scaleBadInput: false };
+	}
+	return {
+		precision: valueType.precision == null ? '' : String(valueType.precision),
+		precisionBadInput: false,
+		scale: String(valueType.scale ?? 0),
+		scaleBadInput: false,
+	};
 };
 
 const validatePropertyName = (name: string) => {

@@ -1404,6 +1404,45 @@ test(`Validate string length constraints before adding a property`, async ({ pag
 	await expect(addedProperty).toBeVisible();
 });
 
+test(`Validate decimal constraints as they are edited`, async ({ page }) => {
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await editSchema(page);
+	await page.click('.schema-edit__add-property');
+
+	const propertyPanel = page.locator('.property-panel');
+	const saveButton = propertyPanel.locator('.property-panel__save');
+	const decimalError = propertyPanel.locator(
+		'.property-form__constraints--decimal > [data-error-on="decimal-constraints"]',
+	);
+	const decimalDescription = propertyPanel.locator('.property-form__decimal-description');
+	await propertyPanel.locator('.property-form__name-input input').fill('decimal_constraints');
+	await selectPropertyType(page, 'decimal');
+
+	const precision = propertyPanel.locator('.property-form__precision input');
+	const scale = propertyPanel.locator('.property-form__scale input');
+
+	await precision.fill('');
+	await expect(precision).toHaveValue('');
+	await expect(decimalError).toContainText('Precision cannot be empty');
+	await expect(decimalDescription).toHaveCount(0);
+	await expect(saveButton).toHaveAttribute('disabled');
+
+	await precision.fill('10');
+	await scale.fill('');
+	await expect(scale).toHaveValue('');
+	await expect(decimalError).toContainText('Scale cannot be empty');
+	await expect(decimalDescription).toHaveCount(0);
+	await expect(saveButton).toHaveAttribute('disabled');
+
+	await scale.fill('4');
+	await expect(decimalError).toHaveCount(0);
+	await expect(decimalDescription).toHaveText('10 digits total, with 4 after the decimal point.');
+	await expect(saveButton).not.toHaveAttribute('disabled');
+	await saveButton.click();
+	const addedProperty = page.locator('.schema-edit .grid__row[data-id="decimal_constraints"]');
+	await expect(addedProperty.locator('.schema-edit__property-technical-type')).toHaveText('decimal(10,4)');
+});
+
 test(`Edit schema property`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
 

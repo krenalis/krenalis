@@ -97,6 +97,10 @@
 	padding-bottom: 8px;
 }
 
+.property-form__constraints > .property-form__control-error {
+	grid-column: 1 / -1;
+}
+
 .property-form__integer-sign {
 	--integer-sign-text-tint: #174ea6;
 
@@ -128,6 +132,7 @@
 }
 
 .property-form__integer-sign sl-radio-button::part(label) {
+	font-weight: 400;
 	transform: translateY(-1px);
 }
 
@@ -181,8 +186,14 @@
 	color: var(--text-light);
 	font-size: 12px;
 	grid-column: 1 / -1;
+	line-height: 1.2;
+	margin-left: 14px;
 	margin-top: -4px;
-	text-align: center;
+}
+
+.property-form__constraints--decimal > .property-form__control-error {
+	margin-top: -4px;
+	padding-top: 0;
 }
 
 .property-form__primary-source .little-logo svg,
