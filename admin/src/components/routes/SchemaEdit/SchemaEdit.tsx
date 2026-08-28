@@ -75,10 +75,6 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		[hasUnsavedPropertyChanges, propertyToEdit?.key],
 	);
 
-	const onRemoveClick = (propertyKey: string, propertyName: string, isNew: boolean) => {
-		setPropertyToRemove({ key: propertyKey, name: propertyName, isNew });
-	};
-
 	const {
 		rows,
 		columns,
@@ -117,6 +113,11 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		hasUnsavedPropertyChanges,
 		initialPropertyKey,
 	);
+	const onRemoveClick = (propertyKey: string, propertyName: string, isNew: boolean) => {
+		// Shoelace restores focus to the element that was active when the dialog opened.
+		gridRef.current?.focus();
+		setPropertyToRemove({ key: propertyKey, name: propertyName, isNew });
+	};
 	useEffect(() => {
 		if (
 			!isSchemaReady ||

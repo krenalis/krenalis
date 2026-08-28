@@ -2374,6 +2374,72 @@ test(`Clear the property selection after deleting a filtered property`, async ({
 	await expect(searchInput).toHaveValue('foo string');
 });
 
+test(`Do not restore focus to the delete action after closing its dialog`, async ({ page }) => {
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await editSchema(page);
+	await openProperty(page, 'foo');
+
+	const propertyPanel = page.locator('.property-panel');
+	const removeButton = propertyPanel.locator('.property-panel__remove');
+	const deleteTooltip = propertyPanel
+		.locator('.schema-edit__toolbar-tooltip')
+		.filter({ has: page.locator('.property-panel__remove') });
+	const grid = page.locator('.schema-edit .grid');
+	const removeDialog = page
+		.locator('.alert-dialog')
+		.filter({ has: page.locator('.schema-edit__confirm-remove-property') });
+	await expect(deleteTooltip).toHaveCount(1);
+	await removeButton.click();
+	await expect(removeDialog).toBeVisible();
+	await deleteTooltip.evaluate((tooltip) => {
+		tooltip.dataset.focusReturnCount = '0';
+		tooltip.addEventListener('focusin', () => {
+			tooltip.dataset.focusReturnCount = String(Number(tooltip.dataset.focusReturnCount) + 1);
+		});
+	});
+	await removeDialog.evaluate((dialog) => {
+		dialog.dataset.afterHideSettled = 'false';
+		dialog.addEventListener(
+			'sl-after-hide',
+			() => {
+				// Shoelace queues focus restoration immediately before emitting sl-after-hide.
+				setTimeout(() => {
+					dialog.dataset.afterHideSettled = 'true';
+				});
+			},
+			{ once: true },
+		);
+	});
+	await removeDialog.locator('sl-button').filter({ hasText: 'Cancel' }).click();
+	await expect(removeDialog).toHaveAttribute('data-after-hide-settled', 'true');
+	await expect(grid).toBeFocused();
+	await expect(deleteTooltip).toHaveAttribute('data-focus-return-count', '0');
+	await expect(deleteTooltip).not.toHaveAttribute('open');
+
+	await removeButton.click();
+	await expect(removeDialog).toBeVisible();
+	await deleteTooltip.evaluate((tooltip) => {
+		tooltip.dataset.focusReturnCount = '0';
+	});
+	await removeDialog.evaluate((dialog) => {
+		dialog.dataset.afterHideSettled = 'false';
+		dialog.addEventListener(
+			'sl-after-hide',
+			() => {
+				setTimeout(() => {
+					dialog.dataset.afterHideSettled = 'true';
+				});
+			},
+			{ once: true },
+		);
+	});
+	await removeDialog.locator('.schema-edit__confirm-remove-property').click();
+	await expect(removeDialog).toHaveAttribute('data-after-hide-settled', 'true');
+	await expect(grid).toBeFocused();
+	await expect(deleteTooltip).toHaveAttribute('data-focus-return-count', '0');
+	await expect(deleteTooltip).not.toHaveAttribute('open');
+});
+
 test(`Remove schema properties`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
 
