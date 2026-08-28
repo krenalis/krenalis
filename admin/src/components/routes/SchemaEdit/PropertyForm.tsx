@@ -490,6 +490,18 @@ const PropertyForm = ({
 						valueType.kind === 'int' ? ' property-form__constraints--integer' : ''
 					}`}
 				>
+					{valueType.kind === 'int' && (
+						<SlRadioGroup
+							className='property-form__integer-sign'
+							label='Sign'
+							size='small'
+							value={valueType.unsigned ? 'unsigned' : 'signed'}
+							onSlChange={onUnsignedChange}
+						>
+							<SlRadioButton value='signed'>signed</SlRadioButton>
+							<SlRadioButton value='unsigned'>unsigned</SlRadioButton>
+						</SlRadioGroup>
+					)}
 					<SlSelect
 						className='property-form__bit-size'
 						label={valueType.kind === 'int' ? 'Integer size' : 'Bit size'}
@@ -503,18 +515,7 @@ const PropertyForm = ({
 							</SlOption>
 						))}
 					</SlSelect>
-					{valueType.kind === 'int' ? (
-						<SlRadioGroup
-							className='property-form__integer-sign'
-							label='Sign'
-							size='small'
-							value={valueType.unsigned ? 'unsigned' : 'signed'}
-							onSlChange={onUnsignedChange}
-						>
-							<SlRadioButton value='signed'>signed</SlRadioButton>
-							<SlRadioButton value='unsigned'>unsigned</SlRadioButton>
-						</SlRadioGroup>
-					) : (
+					{valueType.kind === 'float' && (
 						<SlCheckbox size='small' checked={!valueType.real} onSlChange={onRealChange}>
 							Allow Infinity and NaN
 						</SlCheckbox>
