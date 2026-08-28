@@ -54,8 +54,20 @@ interface DecimalTypeInputs {
 	scaleBadInput: boolean;
 }
 
+interface NumericRangeInput {
+	value: string;
+	badInput: boolean;
+}
+
+interface NumericRangeInputs {
+	minimum: NumericRangeInput;
+	maximum: NumericRangeInput;
+}
+
+type NumericType = IntType | FloatType | DecimalType;
+
 interface PropertyTypeError {
-	location: 'type' | 'string-constraints' | 'decimal-constraints';
+	location: 'type' | 'string-constraints' | 'decimal-constraints' | 'numeric-range';
 	message: string;
 }
 
@@ -99,6 +111,9 @@ const PropertyForm = ({
 	const [decimalTypeInputs, setDecimalTypeInputs] = useState<DecimalTypeInputs>(() =>
 		getDecimalTypeInputs(propertyToEdit.type),
 	);
+	const [numericRangeInputs, setNumericRangeInputs] = useState<NumericRangeInputs>(() =>
+		getNumericRangeInputs(propertyToEdit.type),
+	);
 	const [isNameEditable, setIsNameEditable] = useState(propertyToEdit.key == null);
 	const [nameError, setNameError] = useState('');
 	const [typeError, setTypeError] = useState<PropertyTypeError | null>(null);
@@ -127,13 +142,20 @@ const PropertyForm = ({
 		const nextProperty = structuredClone(propertyToEdit);
 		const nextPrimarySource = primarySources[propertyToEdit.key] || null;
 		const nextDecimalTypeInputs = getDecimalTypeInputs(propertyToEdit.type);
+		const nextNumericRangeInputs = getNumericRangeInputs(propertyToEdit.type);
 		setProperty(nextProperty);
 		setPrimarySource(nextPrimarySource);
 		setDecimalTypeInputs(nextDecimalTypeInputs);
+		setNumericRangeInputs(nextNumericRangeInputs);
 		setIsNameEditable(propertyToEdit.key == null);
 		setNameError('');
 		setTypeError(null);
-		initialState.current = propertyFormStateKey(nextProperty, nextPrimarySource, nextDecimalTypeInputs);
+		initialState.current = propertyFormStateKey(
+			nextProperty,
+			nextPrimarySource,
+			nextDecimalTypeInputs,
+			nextNumericRangeInputs,
+		);
 		onDirtyChange?.(false);
 		setTimeout(() => {
 			const input = nameInputRef.current?.shadowRoot?.querySelector('input');
@@ -158,15 +180,18 @@ const PropertyForm = ({
 		if (initialState.current === '') {
 			return;
 		}
-		onDirtyChange?.(propertyFormStateKey(property, primarySource, decimalTypeInputs) !== initialState.current);
-	}, [property, primarySource, decimalTypeInputs]);
+		onDirtyChange?.(
+			propertyFormStateKey(property, primarySource, decimalTypeInputs, numericRangeInputs) !==
+				initialState.current,
+		);
+	}, [property, primarySource, decimalTypeInputs, numericRangeInputs]);
 
 	useEffect(() => {
 		const type = getPropertyValueType(property.type);
-		if (type?.kind === 'decimal') {
-			setTypeError(getDecimalTypeError(type, decimalTypeInputs));
+		if (isNumericType(type)) {
+			setTypeError(getNumericTypeError(type, decimalTypeInputs, numericRangeInputs));
 		}
-	}, [property.type, decimalTypeInputs]);
+	}, [property.type, decimalTypeInputs, numericRangeInputs]);
 
 	useEffect(() => {
 		onValidityChange?.(nameError === '' && typeError == null);
@@ -279,6 +304,7 @@ const PropertyForm = ({
 			nextProperty.type = type;
 		});
 		setDecimalTypeInputs(getDecimalTypeInputs(type));
+		setNumericRangeInputs(getNumericRangeInputs(type));
 		if (type?.kind === 'object' || type?.kind === 'array') {
 			setPrimarySource(null);
 		}
@@ -323,6 +349,24 @@ const PropertyForm = ({
 		});
 	};
 
+	const onInputNumericRange = (name: keyof NumericRangeInputs, event) => {
+		const input = {
+			value: event.currentTarget.value,
+			badInput: event.currentTarget.validity.badInput,
+		};
+		setNumericRangeInputs((current) => ({ ...current, [name]: input }));
+		if (input.badInput) {
+			return;
+		}
+		updateValueType((type: NumericType) => {
+			if (input.value === '') {
+				delete type[name];
+			} else {
+				type[name] = Number(input.value);
+			}
+		});
+	};
+
 	const onRealChange = () => {
 		updateValueType((type: FloatType) => {
 			type.real = !type.real;
@@ -331,8 +375,19 @@ const PropertyForm = ({
 
 	const onUnsignedChange = (event) => {
 		const unsigned = event.currentTarget.value === 'unsigned';
+		const minimum = numericRangeInputs.minimum;
+		const clearMinimum = unsigned && !minimum.badInput && minimum.value.startsWith('-');
+		if (clearMinimum) {
+			setNumericRangeInputs((current) => ({
+				...current,
+				minimum: { value: '', badInput: false },
+			}));
+		}
 		updateValueType((type: IntType) => {
 			type.unsigned = unsigned;
+			if (clearMinimum) {
+				delete type.minimum;
+			}
 		});
 	};
 
@@ -382,7 +437,7 @@ const PropertyForm = ({
 			setNameError(propertyNameError);
 			return;
 		}
-		const error = validatePropertyType(property, decimalTypeInputs);
+		const error = validatePropertyType(property, decimalTypeInputs, numericRangeInputs);
 		if (error != null) {
 			setTypeError(error);
 			return;
@@ -393,7 +448,7 @@ const PropertyForm = ({
 			setNameError(err.message);
 			return;
 		}
-		initialState.current = propertyFormStateKey(property, primarySource, decimalTypeInputs);
+		initialState.current = propertyFormStateKey(property, primarySource, decimalTypeInputs, numericRangeInputs);
 		onDirtyChange?.(false);
 	};
 
@@ -408,6 +463,69 @@ const PropertyForm = ({
 				: `${precisionDescription}, with ${scale} after the decimal point.`;
 	}
 	const selectedConnection = sourceConnections.find((connection) => connection.id === primarySource);
+	let minimumPlaceholder = '';
+	let maximumPlaceholder = '';
+	let minimumTooltip: { content: string; label: string } | undefined;
+	let maximumTooltip: { content: string; label: string } | undefined;
+	if (valueType?.kind === 'int') {
+		const [minimum, maximum] = getIntegerTypeRange(valueType);
+		if (valueType.unsigned || valueType.bitSize === 8 || valueType.bitSize === 16) {
+			minimumPlaceholder = minimum.toString();
+		}
+		if (valueType.bitSize === 8 || valueType.bitSize === 16) {
+			maximumPlaceholder = maximum.toString();
+		}
+		minimumTooltip = {
+			content: `Minimum allowed: ${formatIntegerLimit(minimum)}. Leave blank to use this minimum value.`,
+			label: 'About the minimum value',
+		};
+		maximumTooltip = {
+			content: `Maximum allowed: ${formatIntegerLimit(maximum)}. Leave blank to use this maximum value.`,
+			label: 'About the maximum value',
+		};
+	}
+	let numericRangeStep: number | 'any' = 1;
+	if (valueType?.kind === 'float') {
+		numericRangeStep = 'any';
+	} else if (valueType?.kind === 'decimal') {
+		numericRangeStep = 10 ** -(valueType.scale ?? 0);
+	}
+	const numericRangeControls = isNumericType(valueType) ? (
+		<div className='property-form__numeric-range'>
+			<SlInput
+				className='property-form__minimum'
+				size='small'
+				value={numericRangeInputs.minimum.value}
+				type='number'
+				step={numericRangeStep}
+				placeholder={minimumPlaceholder}
+				onSlInput={(event) => onInputNumericRange('minimum', event)}
+			>
+				<PropertyFormLabel slot='label' tooltip={minimumTooltip}>
+					Min
+				</PropertyFormLabel>
+			</SlInput>
+			<span className='property-form__numeric-range-separator' aria-hidden='true'>
+				–
+			</span>
+			<SlInput
+				className='property-form__maximum'
+				size='small'
+				value={numericRangeInputs.maximum.value}
+				type='number'
+				step={numericRangeStep}
+				placeholder={maximumPlaceholder}
+				onSlInput={(event) => onInputNumericRange('maximum', event)}
+			>
+				<PropertyFormLabel slot='label' tooltip={maximumTooltip}>
+					Max
+				</PropertyFormLabel>
+			</SlInput>
+			{typeError?.location === 'numeric-range' && (
+				<PropertyFormError name='numeric-range'>{typeError.message}</PropertyFormError>
+			)}
+		</div>
+	) : null;
 
 	return (
 		<form className='property-form' id={formID} onSubmit={onSubmit}>
@@ -520,6 +638,7 @@ const PropertyForm = ({
 							Allow Infinity and NaN
 						</SlCheckbox>
 					)}
+					{numericRangeControls}
 				</div>
 			)}
 			{valueType?.kind === 'decimal' && canEditType && (
@@ -549,6 +668,7 @@ const PropertyForm = ({
 					) : decimalDescription != null ? (
 						<div className='property-form__decimal-description'>{decimalDescription}</div>
 					) : null}
+					{numericRangeControls}
 				</div>
 			)}
 			{showIdentityResolution && (
@@ -680,13 +800,15 @@ const propertyFormStateKey = (
 	property: PropertyToEdit,
 	primarySource: string | null,
 	decimalTypeInputs: DecimalTypeInputs,
+	numericRangeInputs: NumericRangeInputs,
 ): string => {
-	return JSON.stringify({ property, primarySource, decimalTypeInputs });
+	return JSON.stringify({ property, primarySource, decimalTypeInputs, numericRangeInputs });
 };
 
 const validatePropertyType = (
 	property: PropertyToEdit,
 	decimalTypeInputs: DecimalTypeInputs,
+	numericRangeInputs: NumericRangeInputs,
 ): PropertyTypeError | null => {
 	if (property.type == null) {
 		return { location: 'type', message: 'Type cannot be empty' };
@@ -712,8 +834,8 @@ const validatePropertyType = (
 			};
 		}
 	}
-	if (type.kind === 'decimal') {
-		return getDecimalTypeError(type, decimalTypeInputs);
+	if (isNumericType(type)) {
+		return getNumericTypeError(type, decimalTypeInputs, numericRangeInputs);
 	}
 	return null;
 };
@@ -749,18 +871,6 @@ const checkDecimalTypeInputs = (inputs: DecimalTypeInputs): string | undefined =
 	}
 };
 
-const getDecimalTypeError = (type: DecimalType, inputs: DecimalTypeInputs): PropertyTypeError | null => {
-	const inputError = checkDecimalTypeInputs(inputs);
-	if (inputError != null) {
-		return { location: 'decimal-constraints', message: inputError };
-	}
-	const error = checkDecimalType(type);
-	if (error != null) {
-		return { location: 'decimal-constraints', message: error };
-	}
-	return null;
-};
-
 const getDecimalTypeInputs = (type: Type | null | undefined): DecimalTypeInputs => {
 	const valueType = getPropertyValueType(type);
 	if (valueType?.kind !== 'decimal') {
@@ -772,6 +882,130 @@ const getDecimalTypeInputs = (type: Type | null | undefined): DecimalTypeInputs 
 		scale: String(valueType.scale ?? 0),
 		scaleBadInput: false,
 	};
+};
+
+const checkNumericRange = (type: NumericType, inputs: NumericRangeInputs): string | undefined => {
+	const values: { input: string; label: string; number: number }[] = [];
+	const inputEntries: [keyof NumericRangeInputs, NumericRangeInput][] = [
+		['minimum', inputs.minimum],
+		['maximum', inputs.maximum],
+	];
+	for (const [name, input] of inputEntries) {
+		const label = name === 'minimum' ? 'Minimum' : 'Maximum';
+		if (input.badInput) {
+			return `${label} must be a number`;
+		}
+		if (input.value === '') {
+			continue;
+		}
+		const number = Number(input.value);
+		if (!Number.isFinite(number)) {
+			return `${label} must be a finite number`;
+		}
+		values.push({ input: input.value, label, number });
+	}
+
+	if (type.kind === 'int') {
+		const [minimum, maximum] = getIntegerTypeRange(type);
+		for (const value of values) {
+			if (
+				getDecimalPlaces(value.input) !== 0 ||
+				value.number < Number(minimum) ||
+				value.number > Number(maximum)
+			) {
+				return `${value.label} must be an integer in range [${minimum}, ${maximum}]`;
+			}
+		}
+	} else if (type.kind === 'float') {
+		for (const value of values) {
+			const represented = type.bitSize === 32 ? Math.fround(value.number) : value.number;
+			// Inspect the coefficient because Number may have underflowed a nonzero input to zero.
+			const inputIsZero = !/[1-9]/.test(value.input.split(/[eE]/)[0]);
+			if (!Number.isFinite(represented) || (!inputIsZero && represented === 0)) {
+				return `${value.label} must fit a ${type.bitSize}-bit float`;
+			}
+		}
+	} else {
+		const scale = type.scale ?? 0;
+		const maximum = 10 ** (type.precision - scale) - 10 ** -scale;
+		for (const value of values) {
+			if (Math.abs(value.number) > maximum || getDecimalPlaces(value.input) > scale) {
+				return `${value.label} does not fit decimal(${type.precision},${scale})`;
+			}
+		}
+	}
+
+	if (
+		inputs.minimum.value !== '' &&
+		inputs.maximum.value !== '' &&
+		Number(inputs.maximum.value) < Number(inputs.minimum.value)
+	) {
+		return 'Maximum cannot be less than minimum';
+	}
+};
+
+const formatIntegerLimit = (limit: bigint): string => {
+	const negative = limit < BigInt(0);
+	const digits = (negative ? -limit : limit).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+	return (negative ? '−' : '') + digits;
+};
+
+const getDecimalPlaces = (value: string): number => {
+	const [coefficient, exponentText] = value.toLowerCase().split('e');
+	const digits = coefficient.replace(/^[+-]/, '').replace('.', '');
+	if (!/[1-9]/.test(digits)) {
+		return 0;
+	}
+	const fractionalDigits = coefficient.split('.')[1]?.length ?? 0;
+	const decimalPlaces = Math.max(0, fractionalDigits - Number(exponentText || 0));
+	const trailingZeros = digits.match(/0+$/)?.[0].length ?? 0;
+	return Math.max(0, decimalPlaces - trailingZeros);
+};
+
+const getIntegerTypeRange = (type: IntType): [bigint, bigint] => {
+	const one = BigInt(1);
+	const magnitude = one << BigInt(type.bitSize - (type.unsigned ? 0 : 1));
+	return type.unsigned ? [BigInt(0), magnitude - one] : [-magnitude, magnitude - one];
+};
+
+const getNumericRangeInputs = (type: Type | null | undefined): NumericRangeInputs => {
+	const valueType = getPropertyValueType(type);
+	if (!isNumericType(valueType)) {
+		return {
+			minimum: { value: '', badInput: false },
+			maximum: { value: '', badInput: false },
+		};
+	}
+	return {
+		minimum: { value: valueType.minimum == null ? '' : String(valueType.minimum), badInput: false },
+		maximum: { value: valueType.maximum == null ? '' : String(valueType.maximum), badInput: false },
+	};
+};
+
+const getNumericTypeError = (
+	type: NumericType,
+	decimalTypeInputs: DecimalTypeInputs,
+	numericRangeInputs: NumericRangeInputs,
+): PropertyTypeError | null => {
+	if (type.kind === 'decimal') {
+		const inputError = checkDecimalTypeInputs(decimalTypeInputs);
+		if (inputError != null) {
+			return { location: 'decimal-constraints', message: inputError };
+		}
+		const error = checkDecimalType(type);
+		if (error != null) {
+			return { location: 'decimal-constraints', message: error };
+		}
+	}
+	const error = checkNumericRange(type, numericRangeInputs);
+	if (error != null) {
+		return { location: 'numeric-range', message: error };
+	}
+	return null;
+};
+
+const isNumericType = (type: Type | null | undefined): type is NumericType => {
+	return type?.kind === 'int' || type?.kind === 'float' || type?.kind === 'decimal';
 };
 
 const validatePropertyName = (name: string) => {

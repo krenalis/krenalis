@@ -1443,6 +1443,64 @@ test(`Validate decimal constraints as they are edited`, async ({ page }) => {
 	await expect(addedProperty.locator('.schema-edit__property-technical-type')).toHaveText('decimal(10,4)');
 });
 
+test(`Validate numeric range constraints as they are edited`, async ({ page }) => {
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await editSchema(page);
+	await page.click('.schema-edit__add-property');
+
+	const propertyPanel = page.locator('.property-panel');
+	const saveButton = propertyPanel.locator('.property-panel__save');
+	const rangeError = propertyPanel.locator('.property-form__numeric-range > [data-error-on="numeric-range"]');
+	const minimum = propertyPanel.locator('.property-form__minimum input');
+	const maximum = propertyPanel.locator('.property-form__maximum input');
+	const signed = propertyPanel
+		.locator('.property-form__integer-sign')
+		.getByRole('radio', { name: 'signed', exact: true });
+	const unsigned = propertyPanel
+		.locator('.property-form__integer-sign')
+		.getByRole('radio', { name: 'unsigned', exact: true });
+	await propertyPanel.locator('.property-form__name-input input').fill('numeric_range');
+	await selectPropertyType(page, 'int');
+
+	await minimum.fill('-2147483649');
+	await expect(rangeError).toContainText('Minimum must be an integer in range [-2147483648, 2147483647]');
+	await expect(saveButton).toHaveAttribute('disabled');
+	await minimum.fill('-10');
+	await maximum.fill('-11');
+	await expect(rangeError).toContainText('Maximum cannot be less than minimum');
+	await maximum.fill('10');
+	await minimum.fill('');
+	await unsigned.click();
+	await expect(minimum).toHaveValue('');
+	await expect(rangeError).toHaveCount(0);
+	await signed.click();
+	await expect(minimum).toHaveValue('');
+	await minimum.fill('-10');
+	await unsigned.click();
+	await expect(minimum).toHaveValue('');
+
+	await selectPropertyType(page, 'float');
+	await minimum.fill('1e-500');
+	await expect(rangeError).toContainText('Minimum must fit a 64-bit float');
+	await minimum.fill('-1.5');
+	await maximum.fill('2.5');
+	await expect(rangeError).toHaveCount(0);
+
+	await selectPropertyType(page, 'decimal');
+	await propertyPanel.locator('.property-form__scale input').fill('4');
+	await minimum.fill('-1.23456');
+	await expect(rangeError).toContainText('Minimum does not fit decimal(10,4)');
+	await minimum.fill('-1.2345');
+	await maximum.fill('1.2345');
+	await expect(rangeError).toHaveCount(0);
+	await saveButton.click();
+
+	const addedProperty = page.locator('.schema-edit .grid__row[data-id="numeric_range"]');
+	await expect(addedProperty.locator('.schema-edit__property-technical-type')).toHaveText(
+		'decimal(10,4), min -1.2345, max 1.2345',
+	);
+});
+
 test(`Edit schema property`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
 

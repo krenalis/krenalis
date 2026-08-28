@@ -196,6 +196,31 @@
 	padding-top: 0;
 }
 
+.property-form__numeric-range {
+	align-items: end;
+	display: grid;
+	gap: 8px;
+	grid-column: 1 / -1;
+	grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+
+.property-form__numeric-range-separator {
+	align-items: center;
+	color: var(--sl-color-neutral-400);
+	display: flex;
+	font-size: 12px;
+	height: var(--sl-input-height-small);
+	user-select: none;
+}
+
+.property-form__numeric-range > .property-form__control-error {
+	grid-column: 1 / -1;
+}
+
+.property-form__numeric-range .schema-property-grid__tooltip::part(body) {
+	white-space: normal;
+}
+
 .property-form__primary-source .little-logo svg,
 .property-form__primary-source sl-option .little-logo svg {
 	height: 17px;
