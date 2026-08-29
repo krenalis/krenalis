@@ -312,6 +312,12 @@ func Test_SemanticEquality(t *testing.T) {
 
 			t1 := Object([]Property{{Name: "value", Type: test.type_, Semantic: test.semantic}})
 			t2 := Object([]Property{{Name: "value", Type: test.type_, Semantic: test.other}})
+			if got := EqualSemantics(test.semantic, test.other); got != test.equal {
+				t.Fatalf("expected semantic equality %t, got %t", test.equal, got)
+			}
+			if got := EqualSemantics(test.other, test.semantic); got != test.equal {
+				t.Fatalf("expected reverse semantic equality %t, got %t", test.equal, got)
+			}
 			if got := Equal(t1, t2); got != test.equal {
 				t.Fatalf("expected equality %t, got %t", test.equal, got)
 			}
@@ -798,22 +804,22 @@ func Test_SchemaTransformationsPreserveSemantics(t *testing.T) {
 	})
 
 	filtered := Filter(schema, func(p Property) bool { return p.Name == "country" })
-	if p, ok := filtered.Properties().ByName("country"); !ok || !equalSemantics(p.Semantic, country) {
+	if p, ok := filtered.Properties().ByName("country"); !ok || !EqualSemantics(p.Semantic, country) {
 		t.Fatal("Filter did not preserve the semantic")
 	}
 	pruned := Prune(schema, func(path string) bool { return path == "profile.email" })
-	if p, err := pruned.Properties().ByPath("profile.email"); err != nil || !equalSemantics(p.Semantic, email) {
+	if p, err := pruned.Properties().ByPath("profile.email"); err != nil || !EqualSemantics(p.Semantic, email) {
 		t.Fatal("Prune did not preserve the semantic")
 	}
 	prunedAtPath, err := PruneAtPath(schema, "profile.weight")
 	if err != nil {
 		t.Fatalf("PruneAtPath returned an error: %v", err)
 	}
-	if p, err := prunedAtPath.Properties().ByPath("profile.weight"); err != nil || !equalSemantics(p.Semantic, weight) {
+	if p, err := prunedAtPath.Properties().ByPath("profile.weight"); err != nil || !EqualSemantics(p.Semantic, weight) {
 		t.Fatal("PruneAtPath did not preserve the semantic")
 	}
 	asDestination := AsRole(schema, Destination)
-	if p, err := asDestination.Properties().ByPath("profile.email"); err != nil || !equalSemantics(p.Semantic, email) {
+	if p, err := asDestination.Properties().ByPath("profile.email"); err != nil || !EqualSemantics(p.Semantic, email) {
 		t.Fatal("AsRole did not preserve the semantic")
 	}
 

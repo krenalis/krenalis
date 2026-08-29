@@ -34,6 +34,9 @@ import (
 // whose representations as columns in the data warehouse would have the same
 // column name.
 //
+// The semantic of a materialized property can be preserved or removed. It
+// cannot be added, replaced or changed, including its options.
+//
 // rePaths is a mapping containing the renamed property paths, where the key is
 // the new property path and its value is the old property path. In case of new
 // properties created with the same name of already existent properties, the
@@ -76,6 +79,9 @@ func (this *Workspace) AlterProfileSchema(ctx context.Context, schema types.Type
 	}
 	operations, err := diffschemas.Diff(this.workspace.ProfileSchema, schema, rePaths, "")
 	if err != nil {
+		return errors.Unprocessable(InvalidAlterSchema, "cannot alter the schema as specified: %s", err)
+	}
+	if err := checkAllowedSemanticChangesProfileSchema(this.workspace.ProfileSchema, schema, rePaths); err != nil {
 		return errors.Unprocessable(InvalidAlterSchema, "cannot alter the schema as specified: %s", err)
 	}
 	for _, s := range primarySources {
@@ -133,6 +139,9 @@ func (this *Workspace) PreviewAlterProfileSchema(ctx context.Context, schema typ
 	}
 	operations, err := diffschemas.Diff(this.workspace.ProfileSchema, schema, rePaths, "")
 	if err != nil {
+		return nil, errors.Unprocessable(InvalidAlterSchema, "cannot alter the schema as specified: %s", err)
+	}
+	if err := checkAllowedSemanticChangesProfileSchema(this.workspace.ProfileSchema, schema, rePaths); err != nil {
 		return nil, errors.Unprocessable(InvalidAlterSchema, "cannot alter the schema as specified: %s", err)
 	}
 	if !profileSchemaChangeRequiresWarehouseDDL(this.workspace.ProfileSchema, schema, operations) {
@@ -227,6 +236,62 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 			}
 		}
 	}
+	return nil
+}
+
+// checkAllowedSemanticChangesProfileSchema checks that materialized property
+// semantics are either preserved exactly or removed.
+func checkAllowedSemanticChangesProfileSchema(oldSchema, newSchema types.Type, rePaths map[string]any) error {
+	err := checkAllowedSemanticChangesProfileSchemaProperties(oldSchema.Properties(), newSchema.Properties(), rePaths, "")
+	return err
+}
+
+// checkAllowedSemanticChangesProfileSchemaProperties checks semantic changes
+// recursively for corresponding properties in oldProperties and newProperties.
+func checkAllowedSemanticChangesProfileSchemaProperties(
+	oldProperties, newProperties types.Properties, rePaths map[string]any, path string,
+) error {
+
+	for _, newProperty := range newProperties.All() {
+		newPath := newProperty.Name
+		if path != "" {
+			newPath = path + "." + newPath
+		}
+		oldName := newProperty.Name
+		if oldPath, ok := rePaths[newPath]; ok && oldPath == nil {
+			continue
+		}
+		if oldPath, ok := rePaths[newPath].(string); ok {
+			oldName = oldPath
+			if i := strings.LastIndexByte(oldName, '.'); i >= 0 {
+				oldName = oldName[i+1:]
+			}
+		}
+
+		oldProperty, ok := oldProperties.ByName(oldName)
+		if !ok {
+			continue
+		}
+		if oldProperty.Semantic == nil && newProperty.Semantic != nil {
+			return fmt.Errorf("semantic cannot be added to materialized profile schema property %q", newPath)
+		}
+		if oldProperty.Semantic != nil && newProperty.Semantic != nil &&
+			!types.EqualSemantics(oldProperty.Semantic, newProperty.Semantic) {
+			return fmt.Errorf(
+				"semantic of materialized profile schema property %q cannot be changed; it can only be removed", newPath,
+			)
+		}
+
+		if newProperty.Type.Kind() == types.ObjectKind {
+			err := checkAllowedSemanticChangesProfileSchemaProperties(
+				oldProperty.Type.Properties(), newProperty.Type.Properties(), rePaths, newPath,
+			)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 

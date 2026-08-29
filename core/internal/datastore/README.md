@@ -59,6 +59,8 @@ This table is based on the following principles:
 
 A property semantic is metadata and does not affect its data warehouse column type. The column type is determined only by the property's `Type` using the mappings in the table above.
 
+Once a property is materialized, its semantic can be preserved exactly or removed. It cannot be added, replaced or changed, including its options. Removing a semantic preserves the property's complete `Type` and does not require data warehouse DDL.
+
 Properties without a semantic may use any type allowed by the table above. Properties with a semantic must use the following types:
 
 | Semantic                              | Required type    | Configuration                         |

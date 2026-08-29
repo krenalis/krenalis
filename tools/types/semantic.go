@@ -657,8 +657,8 @@ func (*durationSemantic) duration() {}
 // semantic implements Semantic.
 func (*durationSemantic) semantic() {}
 
-// equalSemantics reports whether s1 and s2 have the same kind and options.
-func equalSemantics(s1, s2 Semantic) bool {
+// EqualSemantics reports whether s1 and s2 have the same kind and options.
+func EqualSemantics(s1, s2 Semantic) bool {
 
 	if s1 == nil || s2 == nil {
 		return s1 == nil && s2 == nil

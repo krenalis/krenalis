@@ -12,6 +12,110 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
+// Test_checkAllowedSemanticChangesProfileSchema tests the semantic changes
+// allowed for materialized profile schema properties.
+func Test_checkAllowedSemanticChangesProfileSchema(t *testing.T) {
+
+	schema := func(properties ...types.Property) types.Type {
+		return types.Object(properties)
+	}
+	stringProperty := func(name string, semantic types.Semantic) types.Property {
+		return types.Property{Name: name, Type: types.String().WithMaxLength(1), ReadOptional: true, Semantic: semantic}
+	}
+	objectProperty := func(name string, properties ...types.Property) types.Property {
+		return types.Property{Name: name, Type: types.Object(properties), ReadOptional: true}
+	}
+	moneyProperty := func(currency string) types.Property {
+
+		semantic := types.Money()
+		if currency != "" {
+			semantic = semantic.WithCurrency(currency)
+		}
+		return types.Property{
+			Name: "amount", Type: types.Decimal(18, 4), ReadOptional: true, Semantic: semantic,
+		}
+	}
+
+	tests := []struct {
+		name      string
+		oldSchema types.Type
+		newSchema types.Type
+		rePaths   map[string]any
+		err       string
+	}{
+		{
+			name:      "New property with semantic",
+			oldSchema: schema(stringProperty("existing", nil)),
+			newSchema: schema(
+				stringProperty("existing", nil),
+				stringProperty("value", types.Email()),
+			),
+		},
+		{
+			name:      "Unchanged semantic and options",
+			oldSchema: schema(moneyProperty("USD")),
+			newSchema: schema(moneyProperty("USD")),
+		},
+		{
+			name:      "Semantic removed",
+			oldSchema: schema(stringProperty("value", types.Email())),
+			newSchema: schema(stringProperty("value", nil)),
+		},
+		{
+			name:      "Semantic removed from renamed property",
+			oldSchema: schema(stringProperty("old", types.Email())),
+			newSchema: schema(stringProperty("new", nil)),
+			rePaths:   map[string]any{"new": "old"},
+		},
+		{
+			name:      "Recreated property with semantic",
+			oldSchema: schema(stringProperty("value", nil)),
+			newSchema: schema(stringProperty("value", types.Email())),
+			rePaths:   map[string]any{"value": nil},
+		},
+		{
+			name:      "Semantic added",
+			oldSchema: schema(stringProperty("value", nil)),
+			newSchema: schema(stringProperty("value", types.Email())),
+			err:       `semantic cannot be added to materialized profile schema property "value"`,
+		},
+		{
+			name:      "Semantic replaced",
+			oldSchema: schema(stringProperty("value", types.Email())),
+			newSchema: schema(stringProperty("value", types.URL())),
+			err:       `semantic of materialized profile schema property "value" cannot be changed; it can only be removed`,
+		},
+		{
+			name:      "Semantic option changed",
+			oldSchema: schema(moneyProperty("USD")),
+			newSchema: schema(moneyProperty("EUR")),
+			err:       `semantic of materialized profile schema property "amount" cannot be changed; it can only be removed`,
+		},
+		{
+			name:      "Nested semantic added",
+			oldSchema: schema(objectProperty("profile", stringProperty("value", nil))),
+			newSchema: schema(objectProperty("profile", stringProperty("value", types.Email()))),
+			err:       `semantic cannot be added to materialized profile schema property "profile.value"`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+
+			err := checkAllowedSemanticChangesProfileSchema(test.oldSchema, test.newSchema, test.rePaths)
+			var got string
+			if err != nil {
+				got = err.Error()
+			}
+			if got != test.err {
+				t.Fatalf("expected error %q, got %q", test.err, got)
+			}
+
+		})
+	}
+
+}
+
 func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 
 	tests := []struct {
@@ -306,18 +410,18 @@ func Test_profileSchemaChangeRequiresWarehouseDDL(t *testing.T) {
 			}),
 		},
 		{
-			name: "Nested map semantic changed",
+			name: "Nested map semantic removed",
 			oldSchema: types.Object([]types.Property{
-				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Map(types.Decimal(18, 4)), ReadOptional: true},
-				}), ReadOptional: true},
-			}),
-			newSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
 					{
 						Name: "a", Type: types.Map(types.Decimal(18, 4)), ReadOptional: true,
 						Semantic: types.Measurement(types.Kilogram),
 					},
+				}), ReadOptional: true},
+			}),
+			newSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Map(types.Decimal(18, 4)), ReadOptional: true},
 				}), ReadOptional: true},
 			}),
 		},
