@@ -4,11 +4,9 @@
 
 package validation
 
-import (
-	"strings"
-)
-
 // IsValidCurrencyCode returns true when code is a valid ISO 4217 currency identifier.
+// Keep the accepted codes synchronized with CURRENCY_OPTIONS in
+// admin/src/components/helpers/currencies.ts.
 func IsValidCurrencyCode(code string) bool {
 	// Fast path.
 	switch code {
@@ -19,8 +17,12 @@ func IsValidCurrencyCode(code string) bool {
 	if len(code) != 3 {
 		return false
 	}
-	idx := strings.Index(currencyCodes, code)
-	return idx >= 0 && idx%3 == 0
+	for offset := 0; offset < len(currencyCodes); offset += 3 {
+		if currencyCodes[offset:offset+3] == code {
+			return true
+		}
+	}
+	return false
 }
 
 // All ISO 4217 currency codes except those handled in the fast path.
