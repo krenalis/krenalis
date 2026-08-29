@@ -309,13 +309,13 @@ func Test_profileSchemaChangeRequiresWarehouseDDL(t *testing.T) {
 			name: "Nested map semantic changed",
 			oldSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
-					{Name: "a", Type: types.Map(types.Decimal(10, 2)), ReadOptional: true},
+					{Name: "a", Type: types.Map(types.Decimal(18, 4)), ReadOptional: true},
 				}), ReadOptional: true},
 			}),
 			newSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
 					{
-						Name: "a", Type: types.Map(types.Decimal(10, 2)), ReadOptional: true,
+						Name: "a", Type: types.Map(types.Decimal(18, 4)), ReadOptional: true,
 						Semantic: types.Measurement().WithUnitOfMeasure(types.Kilogram),
 					},
 				}), ReadOptional: true},
