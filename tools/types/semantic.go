@@ -4,7 +4,10 @@
 
 package types
 
-import "github.com/krenalis/krenalis/tools/errors"
+import (
+	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/validation"
+)
 
 // SemanticKind identifies the meaning associated with a property value.
 type SemanticKind int8
@@ -314,8 +317,8 @@ type MoneySemantic interface {
 	// Currency returns the currency code and whether one is set.
 	Currency() (string, bool)
 
-	// WithCurrency returns a copy of the semantic with the specified currency
-	// code. It panics unless currency consists of three uppercase ASCII letters.
+	// WithCurrency returns a copy of the semantic with the specified ISO 4217
+	// currency code. It panics unless currency is valid.
 	WithCurrency(currency string) MoneySemantic
 
 	// money distinguishes money semantics from other semantics.
@@ -345,11 +348,11 @@ func (*moneySemantic) Kind() SemanticKind {
 	return MoneySemanticKind
 }
 
-// WithCurrency returns a copy of s with the specified currency code.
-// It panics unless currency consists of three uppercase ASCII letters.
+// WithCurrency returns a copy of s with the specified ISO 4217 currency code.
+// It panics unless currency is valid.
 func (s *moneySemantic) WithCurrency(currency string) MoneySemantic {
 
-	if !validCurrencyCode(currency) {
+	if !validation.IsValidCurrencyCode(currency) {
 		panic("invalid currency code")
 	}
 	if s.currency == currency {
@@ -367,19 +370,6 @@ func (*moneySemantic) money() {}
 
 // semantic implements Semantic.
 func (*moneySemantic) semantic() {}
-
-// validCurrencyCode reports whether currency consists of three uppercase ASCII letters.
-func validCurrencyCode(currency string) bool {
-	if len(currency) != 3 {
-		return false
-	}
-	for i := range currency {
-		if currency[i] < 'A' || currency[i] > 'Z' {
-			return false
-		}
-	}
-	return true
-}
 
 // PercentageSemantic describes a percentage stored as its value divided by
 // 100, so 0.9 represents 90%.

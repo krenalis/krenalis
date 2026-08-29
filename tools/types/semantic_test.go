@@ -180,6 +180,7 @@ func Test_SemanticConstructorPanics(t *testing.T) {
 		{"long currency", func() { Money().WithCurrency("USDD") }},
 		{"lowercase currency", func() { Money().WithCurrency("usd") }},
 		{"non-letter currency", func() { Money().WithCurrency("U1D") }},
+		{"unknown currency", func() { Money().WithCurrency("ZZZ") }},
 		{"invalid unit of measure", func() { Measurement().WithUnitOfMeasure(InvalidUnitOfMeasure) }},
 		{"negative unit of measure", func() { Measurement().WithUnitOfMeasure(UnitOfMeasure(-1)) }},
 	}
@@ -438,6 +439,7 @@ func Test_SemanticJSONErrors(t *testing.T) {
 			"contains NUL byte",
 		},
 		{"invalid currency", intSemantic + `{"kind":"money","currency":"usd"}}`, `invalid currency code "usd"`},
+		{"unknown currency", intSemantic + `{"kind":"money","currency":"ZZZ"}}`, `invalid currency code "ZZZ"`},
 		{"empty currency", intSemantic + `{"kind":"money","currency":""}}`, `invalid currency code ""`},
 		{
 			"unexpected percentage option",

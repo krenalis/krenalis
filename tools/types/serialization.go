@@ -17,6 +17,7 @@ import (
 
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/validation"
 
 	"golang.org/x/text/unicode/norm"
 )
@@ -506,7 +507,7 @@ func unmarshalSemantic(dec *json.Decoder) (Semantic, error) {
 
 		s := Money()
 		if hasCurrency {
-			if !validCurrencyCode(currency) {
+			if !validation.IsValidCurrencyCode(currency) {
 				return nil, fmt.Errorf("invalid currency code %q", currency)
 			}
 			s = s.WithCurrency(currency)
