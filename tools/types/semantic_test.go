@@ -96,9 +96,9 @@ func Test_SemanticCompatibility(t *testing.T) {
 		{"money decimal", Decimal(10, 2), Money()},
 		{"money real float", Float(64).Real(), Money()},
 		{"percentage decimal", Decimal(10, 2), Percentage()},
-		{"measurement int", Int(64), Measurement()},
-		{"measurement decimal", Decimal(10, 2), Measurement().WithUnitOfMeasure(Kilogram)},
-		{"measurement real float", Float(64).Real(), Measurement()},
+		{"measurement int", Int(64), Measurement(Kilogram)},
+		{"measurement decimal", Decimal(10, 2), Measurement(Kilogram)},
+		{"measurement real float", Float(64).Real(), Measurement(Kilogram)},
 		{"duration int", Int(32), Duration(Second)},
 		{"duration decimal", Decimal(10, 3), Duration(Millisecond)},
 		{"duration real float", Float(32).Real(), Duration(Hour)},
@@ -106,7 +106,7 @@ func Test_SemanticCompatibility(t *testing.T) {
 		{"map country", Map(String()), Country(ISO3166Alpha3)},
 		{"array money", Array(Int(32)), Money()},
 		{"map percentage", Map(Decimal(18, 4)), Percentage()},
-		{"nested array and map measurement", Array(Map(Decimal(10, 2))), Measurement().WithUnitOfMeasure(Kilogram)},
+		{"nested array and map measurement", Array(Map(Decimal(10, 2))), Measurement(Kilogram)},
 		{"nested map and array duration", Map(Array(Float(32).Real())), Duration(Second)},
 	}
 	for _, test := range valid {
@@ -127,17 +127,17 @@ func Test_SemanticCompatibility(t *testing.T) {
 	}{
 		{"boolean country", Boolean(), Country(ISO3166Alpha2)},
 		{"object email", Object([]Property{{Name: "value", Type: String()}}), Email()},
-		{"JSON measurement", JSON(), Measurement()},
+		{"JSON measurement", JSON(), Measurement(Kilogram)},
 		{"generic country", Parameter("T"), Country(ISO3166Alpha2)},
 		{"array boolean country", Array(Boolean()), Country(ISO3166Alpha2)},
 		{"map object email", Map(Object([]Property{{Name: "value", Type: String()}})), Email()},
-		{"array JSON measurement", Array(JSON()), Measurement()},
+		{"array JSON measurement", Array(JSON()), Measurement(Kilogram)},
 		{"map generic country", Map(Parameter("T")), Country(ISO3166Alpha2)},
 		{"nested array and map ordinary float money", Array(Map(Float(32))), Money()},
 		{"ordinary float money", Float(32), Money()},
 		{"int percentage", Int(32), Percentage()},
 		{"real float percentage", Float(64).Real(), Percentage()},
-		{"ordinary float measurement", Float(32), Measurement()},
+		{"ordinary float measurement", Float(32), Measurement(Kilogram)},
 		{"ordinary float duration", Float(64), Duration(Second)},
 		{"datetime type and formatted datetime", DateTime(), FormattedDateTime("2006-01-02")},
 		{"string money", String(), Money()},
@@ -181,8 +181,8 @@ func Test_SemanticConstructorPanics(t *testing.T) {
 		{"lowercase currency", func() { Money().WithCurrency("usd") }},
 		{"non-letter currency", func() { Money().WithCurrency("U1D") }},
 		{"unknown currency", func() { Money().WithCurrency("ZZZ") }},
-		{"invalid unit of measure", func() { Measurement().WithUnitOfMeasure(InvalidUnitOfMeasure) }},
-		{"negative unit of measure", func() { Measurement().WithUnitOfMeasure(UnitOfMeasure(-1)) }},
+		{"invalid unit of measure", func() { Measurement(InvalidUnitOfMeasure) }},
+		{"negative unit of measure", func() { Measurement(UnitOfMeasure(-1)) }},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -213,7 +213,7 @@ func Test_SemanticConstructors(t *testing.T) {
 		{FormattedDateTime("dd/MM/yyyy"), DateTimeSemanticKind},
 		{Money(), MoneySemanticKind},
 		{Percentage(), PercentageSemanticKind},
-		{Measurement(), MeasurementSemanticKind},
+		{Measurement(Kilogram), MeasurementSemanticKind},
 		{Duration(Second), DurationSemanticKind},
 	}
 	for _, test := range tests {
@@ -234,8 +234,8 @@ func Test_SemanticConstructors(t *testing.T) {
 	if currency, ok := Money().Currency(); ok || currency != "" {
 		t.Errorf("expected no currency, got %q and %t", currency, ok)
 	}
-	if unit, ok := Measurement().UnitOfMeasure(); ok || unit != InvalidUnitOfMeasure {
-		t.Errorf("expected no unit, got %v and %t", unit, ok)
+	if got := Measurement(Kilogram).UnitOfMeasure(); got != Kilogram {
+		t.Errorf("expected unit %v, got %v", Kilogram, got)
 	}
 
 }
@@ -293,23 +293,15 @@ func Test_SemanticEquality(t *testing.T) {
 		{
 			"equal unit of measure",
 			Decimal(10, 2),
-			Measurement().WithUnitOfMeasure(Kilogram),
-			Measurement().WithUnitOfMeasure(Kilogram),
+			Measurement(Kilogram),
+			Measurement(Kilogram),
 			true,
 		},
 		{
 			"different unit of measure",
 			Decimal(10, 2),
-			Measurement().WithUnitOfMeasure(Kilogram),
-			Measurement().WithUnitOfMeasure(Meter),
-			false,
-		},
-		{"equal measurement without unit", Decimal(10, 2), Measurement(), Measurement(), true},
-		{
-			"missing and present unit of measure",
-			Decimal(10, 2),
-			Measurement(),
-			Measurement().WithUnitOfMeasure(Kilogram),
+			Measurement(Kilogram),
+			Measurement(Meter),
 			false,
 		},
 		{"equal duration unit", Decimal(10, 2), Duration(Second), Duration(Second), true},
@@ -351,19 +343,12 @@ func Test_SemanticCopyOnWrite(t *testing.T) {
 	if currency, _ := eur.Currency(); currency != "EUR" {
 		t.Fatalf("expected EUR, got %q", currency)
 	}
-	measurement := Measurement()
-	weight := measurement.WithUnitOfMeasure(Kilogram)
-	if unit, ok := measurement.UnitOfMeasure(); ok || unit != InvalidUnitOfMeasure {
-		t.Fatalf("Measurement was mutated: got %v and %t", unit, ok)
-	}
-	if unit, ok := weight.UnitOfMeasure(); !ok || unit != Kilogram {
-		t.Fatalf("expected kilogram, got %v and %t", unit, ok)
-	}
+	weight := Measurement(Kilogram)
 	length := weight.WithUnitOfMeasure(Meter)
-	if unit, _ := weight.UnitOfMeasure(); unit != Kilogram {
+	if unit := weight.UnitOfMeasure(); unit != Kilogram {
 		t.Fatalf("WithUnitOfMeasure mutated its receiver: got %v", unit)
 	}
-	if unit, _ := length.UnitOfMeasure(); unit != Meter {
+	if unit := length.UnitOfMeasure(); unit != Meter {
 		t.Fatalf("expected meter, got %v", unit)
 	}
 
@@ -451,6 +436,7 @@ func Test_SemanticJSONErrors(t *testing.T) {
 			intSemantic + `{"kind":"measurement","unit":"stone"}}`,
 			`invalid unit of measure "stone"`,
 		},
+		{"missing measurement unit", intSemantic + `{"kind":"measurement"}}`, "missing measurement unit"},
 		{
 			"empty measurement unit",
 			intSemantic + `{"kind":"measurement","unit":""}}`,
@@ -588,15 +574,9 @@ func Test_SemanticJSONRoundTrip(t *testing.T) {
 				`"semantic":{"kind":"percentage"},"description":""}`,
 		},
 		{
-			"measurement without unit",
-			Property{Name: "weight", Type: Decimal(10, 2), Semantic: Measurement()},
-			`{"name":"weight","type":{"kind":"decimal","precision":10,"scale":2},` +
-				`"semantic":{"kind":"measurement"},"description":""}`,
-		},
-		{
 			"measurement kilogram",
 			Property{
-				Name: "weight", Type: Decimal(10, 2), Semantic: Measurement().WithUnitOfMeasure(Kilogram),
+				Name: "weight", Type: Decimal(10, 2), Semantic: Measurement(Kilogram),
 			},
 			`{"name":"weight","type":{"kind":"decimal","precision":10,"scale":2},` +
 				`"semantic":{"kind":"measurement","unit":"kg"},"description":""}`,
@@ -713,7 +693,7 @@ func Test_PropertyReadsShareSemanticInstances(t *testing.T) {
 
 	country := Country(ISO3166Alpha2)
 	email := Email()
-	weight := Measurement().WithUnitOfMeasure(Kilogram)
+	weight := Measurement(Kilogram)
 	eventTime := FormattedDateTime("yyyy-MM-dd HH:mm:ss")
 	balance := Money().WithCurrency("EUR")
 	schema := Object([]Property{
@@ -808,7 +788,7 @@ func Test_SchemaTransformationsPreserveSemantics(t *testing.T) {
 
 	country := Country(ISO3166Alpha2)
 	email := Email()
-	weight := Measurement().WithUnitOfMeasure(Kilogram)
+	weight := Measurement(Kilogram)
 	schema := Object([]Property{
 		{Name: "country", Type: String(), Semantic: country},
 		{Name: "profile", Type: Object([]Property{
@@ -899,6 +879,12 @@ func Test_UnitOfMeasure(t *testing.T) {
 		{Gigabyte, "GB"},
 		{Celsius, "°C"},
 		{Fahrenheit, "°F"},
+		{Ounce, "oz"},
+		{Pound, "lb"},
+		{Inch, "in"},
+		{Foot, "ft"},
+		{Yard, "yd"},
+		{Mile, "mi"},
 	}
 	for _, test := range tests {
 		if !test.unit.Valid() {

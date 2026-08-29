@@ -45,7 +45,7 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 						decimal.MustParse("-50.5"), decimal.MustParse("50.5"),
 					)),
 					ReadOptional: true,
-					Semantic:     types.Measurement().WithUnitOfMeasure(types.Kilogram),
+					Semantic:     types.Measurement(types.Kilogram),
 				},
 				{Name: "duration", Type: types.Int(64), ReadOptional: true, Semantic: types.Duration(types.Second)},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
@@ -217,7 +217,7 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 			schema: types.Object([]types.Property{
 				{
 					Name: "measurements", Type: types.Map(types.Int(64)), ReadOptional: true,
-					Semantic: types.Measurement(),
+					Semantic: types.Measurement(types.Kilogram),
 				},
 			}),
 			err: "profile schema properties with measurement semantic must have decimal(18,4) values",
@@ -227,7 +227,7 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 			schema: types.Object([]types.Property{
 				{
 					Name: "measurement", Type: types.Decimal(18, 3), ReadOptional: true,
-					Semantic: types.Measurement(),
+					Semantic: types.Measurement(types.Kilogram),
 				},
 			}),
 			err: "profile schema properties with measurement semantic must have decimal(18,4) values",
@@ -316,7 +316,7 @@ func Test_profileSchemaChangeRequiresWarehouseDDL(t *testing.T) {
 				{Name: "x", Type: types.Object([]types.Property{
 					{
 						Name: "a", Type: types.Map(types.Decimal(18, 4)), ReadOptional: true,
-						Semantic: types.Measurement().WithUnitOfMeasure(types.Kilogram),
+						Semantic: types.Measurement(types.Kilogram),
 					},
 				}), ReadOptional: true},
 			}),

@@ -103,11 +103,9 @@ func marshalSemantic(b *bytes.Buffer, semantic Semantic) error {
 		}
 
 	case *measurementSemantic:
-		if s.unit.Valid() {
-			b.WriteString(`,"unit":`)
-			if err := marshalString(b, s.unit.String()); err != nil {
-				return err
-			}
+		b.WriteString(`,"unit":`)
+		if err := marshalString(b, s.unit.String()); err != nil {
+			return err
 		}
 
 	case *durationSemantic:
@@ -522,18 +520,18 @@ func unmarshalSemantic(dec *json.Decoder) (Semantic, error) {
 		return s, nil
 
 	case MeasurementSemanticKind:
+		if !hasUnit {
+			return nil, errors.New("missing measurement unit")
+		}
 		if hasFormat || hasCurrency {
 			return nil, errors.New("unexpected option for measurement semantic")
 		}
 
-		s := Measurement()
-		if hasUnit {
-			u, ok := UnitOfMeasureByName(unit)
-			if !ok {
-				return nil, fmt.Errorf("invalid unit of measure %q", unit)
-			}
-			s = s.WithUnitOfMeasure(u)
+		u, ok := UnitOfMeasureByName(unit)
+		if !ok {
+			return nil, fmt.Errorf("invalid unit of measure %q", unit)
 		}
+		s := Measurement(u)
 		return s, nil
 
 	case DurationSemanticKind:

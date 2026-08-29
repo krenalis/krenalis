@@ -422,6 +422,12 @@ const (
 	Gigabyte                                  // gigabyte
 	Celsius                                   // degree Celsius
 	Fahrenheit                                // degree Fahrenheit
+	Ounce                                     // ounce
+	Pound                                     // pound
+	Inch                                      // inch
+	Foot                                      // foot
+	Yard                                      // yard
+	Mile                                      // mile
 )
 
 // unitOfMeasureName contains the JSON name of each valid unit of measure.
@@ -440,6 +446,12 @@ var unitOfMeasureName = []string{
 	"GB",
 	"°C",
 	"°F",
+	"oz",
+	"lb",
+	"in",
+	"ft",
+	"yd",
+	"mi",
 }
 
 // UnitOfMeasureByName returns a unit of measure by its name. The second return
@@ -466,12 +478,12 @@ func (u UnitOfMeasure) Valid() bool {
 	return 1 <= u && int(u) <= len(unitOfMeasureName)
 }
 
-// MeasurementSemantic describes a numeric value that may have a unit of measure.
+// MeasurementSemantic describes a numeric value with a unit of measure.
 type MeasurementSemantic interface {
 	Semantic
 
-	// UnitOfMeasure returns the unit of measure and whether one is set.
-	UnitOfMeasure() (UnitOfMeasure, bool)
+	// UnitOfMeasure returns the unit of measure.
+	UnitOfMeasure() UnitOfMeasure
 
 	// WithUnitOfMeasure returns a copy of the semantic with the specified unit
 	// of measure. It panics if unit is invalid.
@@ -486,12 +498,38 @@ type measurementSemantic struct {
 	unit UnitOfMeasure
 }
 
-// measurementSemanticInstance is the shared measurement semantic without a unit.
-var measurementSemanticInstance = &measurementSemantic{}
+// measurementSemantics contains the shared measurement semantics indexed by unit.
+var measurementSemantics = [...]measurementSemantic{
+	{},
+	{unit: Gram},
+	{unit: Kilogram},
+	{unit: Millimeter},
+	{unit: Centimeter},
+	{unit: Meter},
+	{unit: Kilometer},
+	{unit: Milliliter},
+	{unit: Liter},
+	{unit: Byte},
+	{unit: Kilobyte},
+	{unit: Megabyte},
+	{unit: Gigabyte},
+	{unit: Celsius},
+	{unit: Fahrenheit},
+	{unit: Ounce},
+	{unit: Pound},
+	{unit: Inch},
+	{unit: Foot},
+	{unit: Yard},
+	{unit: Mile},
+}
 
-// Measurement returns the semantic for a numeric value without a unit of measure.
-func Measurement() MeasurementSemantic {
-	return measurementSemanticInstance
+// Measurement returns the semantic for a numeric value expressed in unit.
+// It panics if unit is invalid.
+func Measurement(unit UnitOfMeasure) MeasurementSemantic {
+	if !unit.Valid() {
+		panic("invalid unit of measure")
+	}
+	return &measurementSemantics[unit]
 }
 
 // Kind returns the measurement semantic kind.
@@ -499,26 +537,19 @@ func (*measurementSemantic) Kind() SemanticKind {
 	return MeasurementSemanticKind
 }
 
-// UnitOfMeasure returns the unit of measure and whether one is set.
-func (s *measurementSemantic) UnitOfMeasure() (UnitOfMeasure, bool) {
-	return s.unit, s.unit != InvalidUnitOfMeasure
+// UnitOfMeasure returns the unit of measure.
+func (s *measurementSemantic) UnitOfMeasure() UnitOfMeasure {
+	return s.unit
 }
 
 // WithUnitOfMeasure returns a copy of s with the specified unit of measure.
 // It panics if unit is invalid.
 func (s *measurementSemantic) WithUnitOfMeasure(unit UnitOfMeasure) MeasurementSemantic {
-
-	if !unit.Valid() {
-		panic("invalid unit of measure")
-	}
 	if s.unit == unit {
 		return s
 	}
-
-	c := *s
-	c.unit = unit
-
-	return &c
+	semantic := Measurement(unit)
+	return semantic
 }
 
 // measurement implements MeasurementSemantic.
