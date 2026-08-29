@@ -23,8 +23,6 @@ type FloatBitSize = 32 | 64;
 
 type CountryFormat = 'iso_3166_1_alpha_2' | 'iso_3166_1_alpha_3';
 
-type PercentageFormat = 'fraction' | 'whole';
-
 type UnitOfMeasure = 'g' | 'kg' | 'mm' | 'cm' | 'm' | 'km' | 'mL' | 'L' | 'B' | 'kB' | 'MB' | 'GB' | '°C' | '°F';
 
 type DurationUnit = 'millisecond' | 'second' | 'minute' | 'hour' | 'day' | 'week';
@@ -36,7 +34,7 @@ type Semantic =
 	| { kind: 'country'; format: CountryFormat }
 	| { kind: 'datetime'; format: string }
 	| { kind: 'money'; currency?: string }
-	| { kind: 'percentage'; format: PercentageFormat }
+	| { kind: 'percentage' }
 	| { kind: 'measurement'; unit?: UnitOfMeasure }
 	| { kind: 'duration'; unit: DurationUnit };
 

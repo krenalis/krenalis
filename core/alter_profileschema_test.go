@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/krenalis/krenalis/core/internal/datastore/diffschemas"
+	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -24,8 +25,12 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 				{Name: "first_name", Type: types.String(), ReadOptional: true},
 				{Name: "amount", Type: types.Decimal(10, 2), ReadOptional: true, Semantic: types.Money()},
 				{
-					Name: "percentages", Type: types.Array(types.Decimal(5, 4)), ReadOptional: true,
-					Semantic: types.Percentage(types.FractionPercentage),
+					Name: "percentages",
+					Type: types.Array(types.Decimal(18, 4).WithDecimalRange(
+						decimal.MustParse("-1"), decimal.MustParse("2.5"),
+					)),
+					ReadOptional: true,
+					Semantic:     types.Percentage(),
 				},
 				{
 					Name: "measurements", Type: types.Map(types.Decimal(10, 2)), ReadOptional: true,
@@ -170,14 +175,24 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 			err: "profile schema properties with money semantic must have decimal values",
 		},
 		{
-			name: "Percentage semantic on real float",
+			name: "Percentage semantic with wrong decimal precision",
 			schema: types.Object([]types.Property{
 				{
-					Name: "percentage", Type: types.Float(64).Real(), ReadOptional: true,
-					Semantic: types.Percentage(types.WholePercentage),
+					Name: "percentage", Type: types.Decimal(17, 4), ReadOptional: true,
+					Semantic: types.Percentage(),
 				},
 			}),
-			err: "profile schema properties with percentage semantic must have decimal values",
+			err: "profile schema properties with percentage semantic must have decimal(18,4) values",
+		},
+		{
+			name: "Percentage semantic with wrong decimal scale",
+			schema: types.Object([]types.Property{
+				{
+					Name: "percentage", Type: types.Decimal(18, 3), ReadOptional: true,
+					Semantic: types.Percentage(),
+				},
+			}),
+			err: "profile schema properties with percentage semantic must have decimal(18,4) values",
 		},
 		{
 			name: "Measurement semantic on map of int",

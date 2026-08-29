@@ -381,85 +381,25 @@ func validCurrencyCode(currency string) bool {
 	return true
 }
 
-// PercentageFormat identifies how a percentage is represented numerically.
-type PercentageFormat int8
-
-const (
-	InvalidPercentageFormat PercentageFormat = iota // does not identify a percentage format
-
-	// FractionPercentage means that 0.15 represents 15%.
-	FractionPercentage
-
-	// WholePercentage means that 15 represents 15%.
-	WholePercentage
-)
-
-// percentageFormatName contains the JSON name of each valid percentage format.
-var percentageFormatName = []string{
-	"fraction",
-	"whole",
-}
-
-// PercentageFormatByName returns a percentage format by its name. The second
-// return parameter reports whether a percentage format with the given name
-// exists.
-func PercentageFormatByName(name string) (PercentageFormat, bool) {
-	for i, n := range percentageFormatName {
-		if n == name {
-			return PercentageFormat(i + 1), true
-		}
-	}
-	return InvalidPercentageFormat, false
-}
-
-// String returns the name of f.
-func (f PercentageFormat) String() string {
-	if !f.Valid() {
-		return "Invalid"
-	}
-	return percentageFormatName[f-1]
-}
-
-// Valid reports whether f is a valid percentage format.
-func (f PercentageFormat) Valid() bool {
-	return 1 <= f && int(f) <= len(percentageFormatName)
-}
-
-// PercentageSemantic describes a percentage and its numeric representation.
+// PercentageSemantic describes a percentage stored as its value divided by
+// 100, so 0.9 represents 90%.
 type PercentageSemantic interface {
 	Semantic
-
-	// Format returns the percentage format.
-	Format() PercentageFormat
 
 	// percentage distinguishes percentage semantics from other semantics.
 	percentage()
 }
 
 // percentageSemantic implements PercentageSemantic.
-type percentageSemantic struct {
-	format PercentageFormat
-}
+type percentageSemantic struct{}
 
-// percentageSemantics contains the shared percentage semantics indexed by format.
-var percentageSemantics = [...]percentageSemantic{
-	{},
-	{format: FractionPercentage},
-	{format: WholePercentage},
-}
+// percentageSemanticInstance is the shared percentage semantic.
+var percentageSemanticInstance = &percentageSemantic{}
 
-// Percentage returns the semantic for a percentage represented using format.
-// It panics if format is invalid.
-func Percentage(format PercentageFormat) PercentageSemantic {
-	if !format.Valid() {
-		panic("invalid percentage format")
-	}
-	return &percentageSemantics[format]
-}
-
-// Format returns the percentage format.
-func (s *percentageSemantic) Format() PercentageFormat {
-	return s.format
+// Percentage returns the semantic for a percentage stored as its value divided
+// by 100, so 0.9 represents 90%.
+func Percentage() PercentageSemantic {
+	return percentageSemanticInstance
 }
 
 // Kind returns the percentage semantic kind.
@@ -719,8 +659,8 @@ func equalSemantics(s1, s2 Semantic) bool {
 		s2, ok := s2.(*moneySemantic)
 		return ok && s1.currency == s2.currency
 	case *percentageSemantic:
-		s2, ok := s2.(*percentageSemantic)
-		return ok && s1.format == s2.format
+		_, ok := s2.(*percentageSemantic)
+		return ok
 	case *measurementSemantic:
 		s2, ok := s2.(*measurementSemantic)
 		return ok && s1.unit == s2.unit
@@ -784,8 +724,8 @@ func validateSemanticCompatibility(s Semantic, t Type) error {
 			return errors.New("money semantic requires an int, decimal, or real float type")
 		}
 	case PercentageSemanticKind:
-		if !semanticNumericType(t) {
-			return errors.New("percentage semantic requires an int, decimal, or real float type")
+		if t.kind != DecimalKind {
+			return errors.New("percentage semantic requires decimal type")
 		}
 	case MeasurementSemanticKind:
 		if !semanticNumericType(t) {

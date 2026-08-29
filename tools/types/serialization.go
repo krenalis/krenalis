@@ -79,7 +79,7 @@ func marshalSemantic(b *bytes.Buffer, semantic Semantic) error {
 	b.WriteByte('"')
 
 	switch s := semantic.(type) {
-	case *emailSemantic, *phoneSemantic, *urlSemantic:
+	case *emailSemantic, *phoneSemantic, *urlSemantic, *percentageSemantic:
 
 	case *countrySemantic:
 		b.WriteString(`,"format":`)
@@ -99,12 +99,6 @@ func marshalSemantic(b *bytes.Buffer, semantic Semantic) error {
 			if err := marshalString(b, s.currency); err != nil {
 				return err
 			}
-		}
-
-	case *percentageSemantic:
-		b.WriteString(`,"format":`)
-		if err := marshalString(b, s.format.String()); err != nil {
-			return err
 		}
 
 	case *measurementSemantic:
@@ -520,18 +514,10 @@ func unmarshalSemantic(dec *json.Decoder) (Semantic, error) {
 		return s, nil
 
 	case PercentageSemanticKind:
-		if !hasFormat {
-			return nil, errors.New("missing percentage format")
-		}
-		if hasCurrency || hasUnit {
+		if hasFormat || hasCurrency || hasUnit {
 			return nil, errors.New("unexpected option for percentage semantic")
 		}
-
-		f, ok := PercentageFormatByName(format)
-		if !ok {
-			return nil, fmt.Errorf("invalid percentage format %q", format)
-		}
-		s := Percentage(f)
+		s := Percentage()
 		return s, nil
 
 	case MeasurementSemanticKind:

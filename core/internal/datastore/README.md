@@ -69,7 +69,7 @@ Properties without a semantic may use any type allowed by the table above. Prope
 | `Country(format)`                     | `string`         | `format` is required                  |
 | `FormattedDateTime(format)`           | *Not allowed*    | Use the native `datetime` type        |
 | `Money()`                             | `decimal(p,s)`   | Currency is optional                  |
-| `Percentage(format)`                  | `decimal(p,s)`   | `format` is required                  |
+| `Percentage()`                        | `decimal(18,4)`  | Minimum and maximum are optional      |
 | `Measurement()`                       | `decimal(p,s)`   | Unit of measure is optional           |
 | `Duration(unit)`                      | signed `int(64)` | `unit` is required                    |
 

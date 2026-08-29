@@ -77,38 +77,6 @@ func Test_DurationUnit(t *testing.T) {
 
 }
 
-// Test_PercentageFormat tests percentage format names, lookup, and validation.
-func Test_PercentageFormat(t *testing.T) {
-
-	tests := []struct {
-		format PercentageFormat
-		name   string
-	}{
-		{FractionPercentage, "fraction"},
-		{WholePercentage, "whole"},
-	}
-	for _, test := range tests {
-		if !test.format.Valid() {
-			t.Errorf("%d is not valid", test.format)
-		}
-		if got := test.format.String(); got != test.name {
-			t.Errorf("expected name %q, got %q", test.name, got)
-		}
-		got, ok := PercentageFormatByName(test.name)
-		if !ok || got != test.format {
-			t.Errorf("expected format %d and true, got %d and %t", test.format, got, ok)
-		}
-	}
-	if InvalidPercentageFormat.Valid() || PercentageFormat(-1).Valid() || PercentageFormat(127).Valid() ||
-		InvalidPercentageFormat.String() != "Invalid" {
-		t.Fatal("invalid percentage format is valid or has an unexpected name")
-	}
-	if got, ok := PercentageFormatByName("percent"); ok || got != InvalidPercentageFormat {
-		t.Fatalf("expected invalid format and false, got %d and %t", got, ok)
-	}
-
-}
-
 // Test_SemanticCompatibility tests semantic compatibility with property types.
 func Test_SemanticCompatibility(t *testing.T) {
 
@@ -127,9 +95,7 @@ func Test_SemanticCompatibility(t *testing.T) {
 		{"money unsigned int", Int(32).Unsigned(), Money()},
 		{"money decimal", Decimal(10, 2), Money()},
 		{"money real float", Float(64).Real(), Money()},
-		{"percentage int", Int(32), Percentage(WholePercentage)},
-		{"percentage decimal", Decimal(10, 2), Percentage(FractionPercentage)},
-		{"percentage real float", Float(32).Real(), Percentage(FractionPercentage)},
+		{"percentage decimal", Decimal(10, 2), Percentage()},
 		{"measurement int", Int(64), Measurement()},
 		{"measurement decimal", Decimal(10, 2), Measurement().WithUnitOfMeasure(Kilogram)},
 		{"measurement real float", Float(64).Real(), Measurement()},
@@ -139,7 +105,7 @@ func Test_SemanticCompatibility(t *testing.T) {
 		{"array email", Array(String()), Email()},
 		{"map country", Map(String()), Country(ISO3166Alpha3)},
 		{"array money", Array(Int(32)), Money()},
-		{"map percentage", Map(Int(32)), Percentage(WholePercentage)},
+		{"map percentage", Map(Decimal(18, 4)), Percentage()},
 		{"nested array and map measurement", Array(Map(Decimal(10, 2))), Measurement().WithUnitOfMeasure(Kilogram)},
 		{"nested map and array duration", Map(Array(Float(32).Real())), Duration(Second)},
 	}
@@ -169,7 +135,8 @@ func Test_SemanticCompatibility(t *testing.T) {
 		{"map generic country", Map(Parameter("T")), Country(ISO3166Alpha2)},
 		{"nested array and map ordinary float money", Array(Map(Float(32))), Money()},
 		{"ordinary float money", Float(32), Money()},
-		{"ordinary float percentage", Float(64), Percentage(FractionPercentage)},
+		{"int percentage", Int(32), Percentage()},
+		{"real float percentage", Float(64).Real(), Percentage()},
 		{"ordinary float measurement", Float(32), Measurement()},
 		{"ordinary float duration", Float(64), Duration(Second)},
 		{"datetime type and formatted datetime", DateTime(), FormattedDateTime("2006-01-02")},
@@ -203,8 +170,6 @@ func Test_SemanticConstructorPanics(t *testing.T) {
 	}{
 		{"invalid country format", func() { Country(InvalidCountryFormat) }},
 		{"negative country format", func() { Country(CountryFormat(-1)) }},
-		{"invalid percentage format", func() { Percentage(InvalidPercentageFormat) }},
-		{"negative percentage format", func() { Percentage(PercentageFormat(-1)) }},
 		{"invalid duration unit", func() { Duration(InvalidDurationUnit) }},
 		{"negative duration unit", func() { Duration(DurationUnit(-1)) }},
 		{"empty datetime format", func() { FormattedDateTime("") }},
@@ -246,7 +211,7 @@ func Test_SemanticConstructors(t *testing.T) {
 		{Country(ISO3166Alpha2), CountrySemanticKind},
 		{FormattedDateTime("dd/MM/yyyy"), DateTimeSemanticKind},
 		{Money(), MoneySemanticKind},
-		{Percentage(FractionPercentage), PercentageSemanticKind},
+		{Percentage(), PercentageSemanticKind},
 		{Measurement(), MeasurementSemanticKind},
 		{Duration(Second), DurationSemanticKind},
 	}
@@ -261,9 +226,6 @@ func Test_SemanticConstructors(t *testing.T) {
 	}
 	if got := FormattedDateTime("Cafe\u0301").Format(); got != "Caf\u00e9" {
 		t.Errorf("expected normalized datetime format %q, got %q", "Caf\u00e9", got)
-	}
-	if got := Percentage(WholePercentage).Format(); got != WholePercentage {
-		t.Errorf("expected percentage format %v, got %v", WholePercentage, got)
 	}
 	if got := Duration(Week).Unit(); got != Week {
 		t.Errorf("expected duration unit %v, got %v", Week, got)
@@ -326,20 +288,7 @@ func Test_SemanticEquality(t *testing.T) {
 		},
 		{"equal money without currency", Decimal(10, 2), Money(), Money(), true},
 		{"missing and present currency", Decimal(10, 2), Money(), Money().WithCurrency("USD"), false},
-		{
-			"equal percentage format",
-			Decimal(10, 2),
-			Percentage(FractionPercentage),
-			Percentage(FractionPercentage),
-			true,
-		},
-		{
-			"different percentage format",
-			Decimal(10, 2),
-			Percentage(FractionPercentage),
-			Percentage(WholePercentage),
-			false,
-		},
+		{"equal percentage", Decimal(10, 2), Percentage(), Percentage(), true},
 		{
 			"equal unit of measure",
 			Decimal(10, 2),
@@ -467,7 +416,6 @@ func Test_SemanticJSONErrors(t *testing.T) {
 		},
 		{"missing country format", stringSemantic + `{"kind":"country"}}`, "missing country format"},
 		{"missing datetime format", stringSemantic + `{"kind":"datetime"}}`, "missing datetime format"},
-		{"missing percentage format", intSemantic + `{"kind":"percentage"}}`, "missing percentage format"},
 		{"missing duration unit", intSemantic + `{"kind":"duration"}}`, "missing duration unit"},
 		{
 			"invalid country format",
@@ -492,9 +440,9 @@ func Test_SemanticJSONErrors(t *testing.T) {
 		{"invalid currency", intSemantic + `{"kind":"money","currency":"usd"}}`, `invalid currency code "usd"`},
 		{"empty currency", intSemantic + `{"kind":"money","currency":""}}`, `invalid currency code ""`},
 		{
-			"invalid percentage format",
-			intSemantic + `{"kind":"percentage","format":"percent"}}`,
-			`invalid percentage format "percent"`,
+			"unexpected percentage option",
+			intSemantic + `{"kind":"percentage","format":"fraction"}}`,
+			"unexpected option for percentage semantic",
 		},
 		{
 			"invalid measurement unit",
@@ -632,10 +580,10 @@ func Test_SemanticJSONRoundTrip(t *testing.T) {
 				`"semantic":{"kind":"money","currency":"EUR"},"description":""}`,
 		},
 		{
-			"percentage fraction",
-			Property{Name: "ratio", Type: Float(64).Real(), Semantic: Percentage(FractionPercentage)},
-			`{"name":"ratio","type":{"kind":"float","bitSize":64,"real":true},` +
-				`"semantic":{"kind":"percentage","format":"fraction"},"description":""}`,
+			"percentage",
+			Property{Name: "ratio", Type: Decimal(18, 4), Semantic: Percentage()},
+			`{"name":"ratio","type":{"kind":"decimal","precision":18,"scale":4},` +
+				`"semantic":{"kind":"percentage"},"description":""}`,
 		},
 		{
 			"measurement without unit",
