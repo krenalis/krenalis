@@ -1,4 +1,4 @@
-import React, { ReactNode, forwardRef, useMemo, useRef, useImperativeHandle } from 'react';
+import React, { ReactNode, forwardRef, useMemo, useRef, useImperativeHandle, useState } from 'react';
 import './Grid.css';
 import GridHeaderRow from './GridHeaderRow/GridHeaderRow';
 import {
@@ -70,6 +70,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 		ref,
 	) => {
 		const gridRef = useRef<any>();
+		const [isScrolledVertically, setIsScrolledVertically] = useState(false);
 		const onSortRow = reordering?.onSortRow;
 		const reorderDisabled = reordering?.disabled;
 
@@ -192,10 +193,11 @@ const Grid = forwardRef<GridRef, GridProps>(
 		return (
 			<div
 				ref={gridRef}
-				className={`grid${onSortRow == null ? '' : ' grid--sortable'}${className ? ' ' + className : ''}${showColumnBorder ? ' grid--show-column-border' : ''}${showRowBorder ? ' grid--show-row-border' : ''}${widths == null ? ' grid--hide-content' : ''}`}
+				className={`grid${onSortRow == null ? '' : ' grid--sortable'}${isScrolledVertically ? ' grid--scrolled-vertically' : ''}${className ? ' ' + className : ''}${showColumnBorder ? ' grid--show-column-border' : ''}${showRowBorder ? ' grid--show-row-border' : ''}${widths == null ? ' grid--hide-content' : ''}`}
 				style={{ '--grid-columns': widths } as React.CSSProperties}
 				tabIndex={keyboardNavigation ? 0 : undefined}
 				onClick={keyboardNavigation ? focusGridForKeyboardNavigation : undefined}
+				onScroll={(event) => setIsScrolledVertically(event.currentTarget.scrollTop > 0)}
 				onKeyDown={
 					keyboardNavigation
 						? (event) => navigateGridWithKeyboard(event, reorderDisabled ? undefined : onSortRow)

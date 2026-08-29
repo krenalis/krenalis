@@ -44,6 +44,8 @@
 
 .schema-grid__workspace,
 .schema-edit__workspace {
+	--schema-sticky-header-shadow: 0 4px 6px -5px rgb(0 0 0 / 22%);
+
 	background-color: var(--bg-primary);
 	border: 1px solid var(--border-primary);
 	border-radius: var(--radius);
@@ -184,10 +186,15 @@
 
 .schema-grid__card > .grid .grid__header-row,
 .schema-edit__schema-panel > .grid .grid__header-row {
+	border-bottom: 1px solid var(--border-primary);
 	border-radius: 0;
 	position: sticky;
 	top: 0;
-	z-index: 5;
+	z-index: 11;
+}
+
+:is(.schema-grid__card, .schema-edit__schema-panel) > .grid.grid--scrolled-vertically .grid__header-row {
+	box-shadow: var(--schema-sticky-header-shadow);
 }
 
 .schema-grid__card > .grid .grid__header-cell.grid-el--first,

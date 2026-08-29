@@ -56,6 +56,17 @@
 	padding: 10px 12px 10px 8px;
 }
 
+.property-panel__header-shadow {
+	grid-column: 1 / -1;
+	grid-row: 1;
+	pointer-events: none;
+	z-index: 1;
+}
+
+.property-panel--body-scrolled .property-panel__header-shadow {
+	box-shadow: var(--schema-sticky-header-shadow);
+}
+
 .property-panel__body {
 	background-color: var(--bg-gray);
 	grid-area: body;

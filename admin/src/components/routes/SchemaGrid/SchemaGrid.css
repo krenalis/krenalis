@@ -88,10 +88,6 @@
 	border-right: 0;
 }
 
-.schema-grid__card > .grid .grid__header-row {
-	border-bottom: 1px solid var(--border-primary);
-}
-
 .schema-grid__card .grid__cell {
 	padding-bottom: 9px;
 	padding-top: 9px;
