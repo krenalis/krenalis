@@ -23,7 +23,14 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 			name: "No errors",
 			schema: types.Object([]types.Property{
 				{Name: "first_name", Type: types.String(), ReadOptional: true},
-				{Name: "amount", Type: types.Decimal(10, 2), ReadOptional: true, Semantic: types.Money()},
+				{
+					Name: "amount",
+					Type: types.Decimal(18, 4).WithDecimalRange(
+						decimal.MustParse("-100"), decimal.MustParse("100"),
+					),
+					ReadOptional: true,
+					Semantic:     types.Money(),
+				},
 				{
 					Name: "percentages",
 					Type: types.Array(types.Decimal(18, 4).WithDecimalRange(
@@ -33,8 +40,12 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 					Semantic:     types.Percentage(),
 				},
 				{
-					Name: "measurements", Type: types.Map(types.Decimal(10, 2)), ReadOptional: true,
-					Semantic: types.Measurement().WithUnitOfMeasure(types.Kilogram),
+					Name: "measurements",
+					Type: types.Map(types.Decimal(18, 4).WithDecimalRange(
+						decimal.MustParse("-50.5"), decimal.MustParse("50.5"),
+					)),
+					ReadOptional: true,
+					Semantic:     types.Measurement().WithUnitOfMeasure(types.Kilogram),
 				},
 				{Name: "duration", Type: types.Int(64), ReadOptional: true, Semantic: types.Duration(types.Second)},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
@@ -172,7 +183,14 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 			schema: types.Object([]types.Property{
 				{Name: "amount", Type: types.Int(64), ReadOptional: true, Semantic: types.Money()},
 			}),
-			err: "profile schema properties with money semantic must have decimal values",
+			err: "profile schema properties with money semantic must have decimal(18,4) values",
+		},
+		{
+			name: "Money semantic with wrong decimal precision",
+			schema: types.Object([]types.Property{
+				{Name: "amount", Type: types.Decimal(17, 4), ReadOptional: true, Semantic: types.Money()},
+			}),
+			err: "profile schema properties with money semantic must have decimal(18,4) values",
 		},
 		{
 			name: "Percentage semantic with wrong decimal precision",
@@ -202,7 +220,17 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 					Semantic: types.Measurement(),
 				},
 			}),
-			err: "profile schema properties with measurement semantic must have decimal values",
+			err: "profile schema properties with measurement semantic must have decimal(18,4) values",
+		},
+		{
+			name: "Measurement semantic with wrong decimal scale",
+			schema: types.Object([]types.Property{
+				{
+					Name: "measurement", Type: types.Decimal(18, 3), ReadOptional: true,
+					Semantic: types.Measurement(),
+				},
+			}),
+			err: "profile schema properties with measurement semantic must have decimal(18,4) values",
 		},
 		{
 			name: "Duration semantic on decimal",
