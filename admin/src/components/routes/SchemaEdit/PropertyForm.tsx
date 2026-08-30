@@ -1,7 +1,9 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import './PropertyForm.css';
+import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
+import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
@@ -12,17 +14,26 @@ import SlTextarea from '@shoelace-style/shoelace/dist/react/textarea/index.js';
 import type SlTextareaElement from '@shoelace-style/shoelace/dist/components/textarea/textarea.component.js';
 import AppContext from '../../../context/AppContext';
 import Type, {
+	CountryFormat,
 	DecimalType,
 	FloatBitSize,
 	FloatType,
 	IntBitSize,
 	IntType,
+	Semantic,
 	StringType,
 } from '../../../lib/api/types/types';
 import TransformedConnection from '../../../lib/core/connection';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
-import { isSuitableAsIdentifier } from '../../helpers/types';
+import { COMMON_CURRENCY_OPTION_COUNT, CURRENCY_OPTIONS } from '../../helpers/currencies';
+import {
+	DURATION_UNIT_OPTIONS,
+	getPropertyValueType,
+	isSuitableAsIdentifier,
+	replacePropertyValueType,
+	UNIT_OF_MEASURE_OPTIONS,
+} from '../../helpers/types';
 import {
 	SchemaPropertyIdentifierLabel,
 	SchemaPropertyIdentifierValue,
@@ -31,12 +42,7 @@ import {
 } from '../Schema/SchemaPropertyGrid';
 import { getParentPropertyKey } from './SchemaEdit.helpers';
 import { PropertyFieldChanges, PropertyParent, PropertyToEdit } from './useSchemaEdit';
-import {
-	getPropertyValueType,
-	PropertyTypeSelector,
-	type PropertyTypeSelectorRef,
-	replacePropertyValueType,
-} from './PropertyTypeSelector';
+import { PropertyTypeSelector, type PropertyTypeSelectorRef } from './PropertyTypeSelector';
 
 const INT_BITSIZES: string[] = ['8', '16', '24', '32', '64'];
 const FLOAT_BITSIZES: string[] = ['32', '64'];
@@ -63,7 +69,13 @@ interface NumericRangeInputs {
 type NumericType = IntType | FloatType | DecimalType;
 
 interface PropertyTypeError {
-	location: 'type' | 'string-constraints' | 'decimal-constraints' | 'numeric-range';
+	location:
+		| 'type'
+		| 'string-constraints'
+		| 'decimal-constraints'
+		| 'numeric-range'
+		| 'measurement-unit'
+		| 'duration-unit';
 	message: string;
 }
 
@@ -81,6 +93,7 @@ interface PropertyFormProps {
 	fieldChanges?: PropertyFieldChanges;
 	formID: string;
 	identifierPosition?: number;
+	materializedSemantic?: Semantic;
 	propertyToEdit: PropertyToEdit;
 	primarySources: Record<string, string>;
 	parents?: PropertyParent[];
@@ -94,6 +107,7 @@ const PropertyForm = ({
 	fieldChanges,
 	formID,
 	identifierPosition,
+	materializedSemantic,
 	propertyToEdit,
 	primarySources,
 	parents,
@@ -184,10 +198,16 @@ const PropertyForm = ({
 
 	useEffect(() => {
 		const type = getPropertyValueType(property.type);
-		if (isNumericType(type)) {
-			setTypeError(getNumericTypeError(type, decimalTypeInputs, numericRangeInputs));
-		}
-	}, [property.type, decimalTypeInputs, numericRangeInputs]);
+		setTypeError((current) => {
+			if (current != null && current.location !== 'decimal-constraints' && current.location !== 'numeric-range') {
+				return current;
+			}
+			if ((property.semantic == null || hasSemanticDecimalRange(property.semantic)) && isNumericType(type)) {
+				return getNumericTypeError(type, decimalTypeInputs, numericRangeInputs);
+			}
+			return null;
+		});
+	}, [property.type, property.semantic, decimalTypeInputs, numericRangeInputs]);
 
 	useEffect(() => {
 		onValidityChange?.(nameError === '' && typeError == null);
@@ -295,9 +315,14 @@ const PropertyForm = ({
 		});
 	};
 
-	const onChangeType = (type: Type | null) => {
+	const onChangeType = (type: Type | null, semantic?: Semantic) => {
 		updateProperty((nextProperty) => {
 			nextProperty.type = type;
+			if (semantic == null) {
+				delete nextProperty.semantic;
+			} else {
+				nextProperty.semantic = semantic;
+			}
 		});
 		setDecimalTypeInputs(getDecimalTypeInputs(type));
 		setNumericRangeInputs(getNumericRangeInputs(type));
@@ -423,6 +448,55 @@ const PropertyForm = ({
 		});
 	};
 
+	const onChangeCurrency = (event) => {
+		const currency = event.target.value;
+		updateProperty((nextProperty) => {
+			if (nextProperty.semantic?.kind !== 'money') {
+				return;
+			}
+			if (currency === 'none') {
+				delete nextProperty.semantic.currency;
+			} else {
+				nextProperty.semantic.currency = currency;
+			}
+		});
+	};
+
+	const onChangeCountryFormat = (event) => {
+		const format = event.target.value as CountryFormat;
+		updateProperty((nextProperty) => {
+			if (nextProperty.semantic?.kind !== 'country' || nextProperty.type == null) {
+				return;
+			}
+			const valueType = structuredClone(getPropertyValueType(nextProperty.type));
+			if (valueType?.kind !== 'string') {
+				return;
+			}
+			nextProperty.semantic.format = format;
+			valueType.maxLength = format === 'iso_3166_1_alpha_2' ? 2 : 3;
+			delete valueType.maxBytes;
+			nextProperty.type = replacePropertyValueType(nextProperty.type, valueType);
+		});
+	};
+
+	const onChangeMeasurementUnit = (event) => {
+		updateProperty((nextProperty) => {
+			if (nextProperty.semantic?.kind === 'measurement') {
+				nextProperty.semantic.unit = event.target.value;
+			}
+		});
+		setTypeError((current) => (current?.location === 'measurement-unit' ? null : current));
+	};
+
+	const onChangeDurationUnit = (event) => {
+		updateProperty((nextProperty) => {
+			if (nextProperty.semantic?.kind === 'duration') {
+				nextProperty.semantic.unit = event.target.value;
+			}
+		});
+		setTypeError((current) => (current?.location === 'duration-unit' ? null : current));
+	};
+
 	const onChangePrimarySource = (event) => {
 		setPrimarySource(event.target.value === 'none' ? null : event.target.value);
 	};
@@ -455,6 +529,7 @@ const PropertyForm = ({
 	};
 
 	const valueType = getPropertyValueType(property.type);
+	const showPercentageControls = valueType?.kind === 'decimal' && property.semantic?.kind === 'percentage';
 	let decimalDescription: string | null = null;
 	if (valueType?.kind === 'decimal' && checkDecimalType(valueType) == null) {
 		const scale = valueType.scale ?? 0;
@@ -499,6 +574,7 @@ const PropertyForm = ({
 				size='small'
 				value={numericRangeInputs.minimum.value}
 				type='number'
+				disabled={!canEditType}
 				step={numericRangeStep}
 				placeholder={minimumPlaceholder}
 				onSlInput={(event) => onInputNumericRange('minimum', event)}
@@ -515,6 +591,7 @@ const PropertyForm = ({
 				size='small'
 				value={numericRangeInputs.maximum.value}
 				type='number'
+				disabled={!canEditType}
 				step={numericRangeStep}
 				placeholder={maximumPlaceholder}
 				onSlInput={(event) => onInputNumericRange('maximum', event)}
@@ -563,27 +640,56 @@ const PropertyForm = ({
 				</SlInput>
 				{nameError !== '' && <PropertyFormError name='name'>{nameError}</PropertyFormError>}
 			</div>
-			<div className='property-form__control'>
+			<div
+				className={`property-form__control${
+					showPercentageControls ? ' property-form__control--percentage-type' : ''
+				}`}
+			>
 				<div className='property-form__label'>
 					<PropertyFormLabel modified={fieldChanges?.type}>Type</PropertyFormLabel>
 				</div>
 				<PropertyTypeSelector
 					ref={typeSelectorRef}
 					type={property.type}
+					semantic={property.semantic}
 					canEditType={canEditType}
+					materializedSemantic={materializedSemantic}
 					onChange={onChangeType}
 				/>
+				{showPercentageControls && (
+					<div className='property-form__percentage-description'>
+						<SlBadge className='property-form__percentage-badge' pill variant='neutral'>
+							<span className='property-form__percentage-badge-text'>0.9 represents 90%</span>
+						</SlBadge>
+					</div>
+				)}
 				{typeError?.location === 'type' && (
 					<PropertyFormError name='type'>{typeError.message}</PropertyFormError>
 				)}
 			</div>
-			{valueType?.kind === 'string' && canEditType && (
+			{property.semantic?.kind === 'country' && (
+				<div className='property-form__constraints property-form__constraints--country'>
+					<SlSelect
+						className='property-form__country-format'
+						size='small'
+						value={property.semantic.format}
+						disabled={!canEditType}
+						onSlChange={onChangeCountryFormat}
+					>
+						<PropertyFormLabel slot='label'>Format</PropertyFormLabel>
+						<SlOption value='iso_3166_1_alpha_2'>2-letter ISO code</SlOption>
+						<SlOption value='iso_3166_1_alpha_3'>3-letter ISO code</SlOption>
+					</SlSelect>
+				</div>
+			)}
+			{valueType?.kind === 'string' && property.semantic == null && (
 				<div className='property-form__constraints property-form__constraints--length'>
 					<SlInput
 						label='Max characters'
 						size='small'
 						value={valueType.maxLength == null ? '' : String(valueType.maxLength)}
 						type='number'
+						disabled={!canEditType}
 						min={1}
 						max={MAX_STRING_LENGTH}
 						step={1}
@@ -594,6 +700,7 @@ const PropertyForm = ({
 						size='small'
 						value={valueType.maxBytes == null ? '' : String(valueType.maxBytes)}
 						type='number'
+						disabled={!canEditType}
 						min={1}
 						max={MAX_STRING_LENGTH}
 						step={1}
@@ -604,7 +711,7 @@ const PropertyForm = ({
 					)}
 				</div>
 			)}
-			{(valueType?.kind === 'int' || valueType?.kind === 'float') && canEditType && (
+			{(valueType?.kind === 'int' || valueType?.kind === 'float') && property.semantic == null && (
 				<div
 					className={`property-form__constraints property-form__constraints--${
 						valueType.kind === 'int' ? 'integer' : 'float'
@@ -618,8 +725,12 @@ const PropertyForm = ({
 							value={valueType.unsigned ? 'unsigned' : 'signed'}
 							onSlChange={onUnsignedChange}
 						>
-							<SlRadioButton value='signed'>signed</SlRadioButton>
-							<SlRadioButton value='unsigned'>unsigned</SlRadioButton>
+							<SlRadioButton value='signed' disabled={!canEditType}>
+								signed
+							</SlRadioButton>
+							<SlRadioButton value='unsigned' disabled={!canEditType}>
+								unsigned
+							</SlRadioButton>
 						</SlRadioGroup>
 					)}
 					<SlSelect
@@ -627,6 +738,7 @@ const PropertyForm = ({
 						label={valueType.kind === 'int' ? 'Integer size' : 'Bit size'}
 						size='small'
 						value={String(valueType.bitSize)}
+						disabled={!canEditType}
 						onSlChange={onChangeBitSize}
 					>
 						{(valueType.kind === 'int' ? INT_BITSIZES : FLOAT_BITSIZES).map((bitSize) => (
@@ -636,14 +748,19 @@ const PropertyForm = ({
 						))}
 					</SlSelect>
 					{valueType.kind === 'float' && (
-						<SlCheckbox size='small' checked={!valueType.real} onSlChange={onRealChange}>
+						<SlCheckbox
+							size='small'
+							checked={!valueType.real}
+							disabled={!canEditType}
+							onSlChange={onRealChange}
+						>
 							<span className='property-form__float-special-values-label'>Allow ±Inf and NaN</span>
 						</SlCheckbox>
 					)}
 					{numericRangeControls}
 				</div>
 			)}
-			{valueType?.kind === 'decimal' && canEditType && (
+			{valueType?.kind === 'decimal' && property.semantic == null && (
 				<div className='property-form__constraints property-form__constraints--decimal'>
 					<SlInput
 						className='property-form__precision'
@@ -651,6 +768,7 @@ const PropertyForm = ({
 						size='small'
 						value={decimalTypeInputs.precision}
 						type='number'
+						disabled={!canEditType}
 						max={MAX_DECIMAL_PRECISION}
 						maxlength={2}
 						onSlInput={onInputPrecision}
@@ -661,6 +779,7 @@ const PropertyForm = ({
 						size='small'
 						value={decimalTypeInputs.scale}
 						type='number'
+						disabled={!canEditType}
 						max={MAX_DECIMAL_SCALE}
 						maxlength={2}
 						onSlInput={onInputScale}
@@ -671,6 +790,105 @@ const PropertyForm = ({
 						<div className='property-form__decimal-description'>{decimalDescription}</div>
 					) : null}
 					{numericRangeControls}
+				</div>
+			)}
+			{property.semantic?.kind === 'money' && (
+				<div className='property-form__constraints property-form__constraints--money'>
+					<SlSelect
+						className='property-form__currency'
+						size='small'
+						value={property.semantic.currency || 'none'}
+						disabled={!canEditType}
+						onSlChange={onChangeCurrency}
+					>
+						<PropertyFormLabel slot='label'>Currency</PropertyFormLabel>
+						<SlOption value='none'>No currency specified</SlOption>
+						<SlDivider />
+						{CURRENCY_OPTIONS.map((option, index) => (
+							<React.Fragment key={option.code}>
+								{index === COMMON_CURRENCY_OPTION_COUNT && <SlDivider />}
+								<SlOption value={option.code}>
+									<span className='property-form__currency-option-code'>{option.code}</span>
+									<span className='property-form__currency-option-separator'> · </span>
+									<span>{option.name}</span>
+									{option.symbol != null && (
+										<span className='property-form__currency-option-symbol' slot='suffix'>
+											{option.symbol}
+										</span>
+									)}
+								</SlOption>
+							</React.Fragment>
+						))}
+					</SlSelect>
+					{numericRangeControls}
+				</div>
+			)}
+			{showPercentageControls && (
+				<div className='property-form__constraints property-form__constraints--percentage'>
+					{numericRangeControls}
+				</div>
+			)}
+			{property.semantic?.kind === 'measurement' && (
+				<div className='property-form__constraints property-form__constraints--measurement'>
+					<SlSelect
+						className='property-form__measurement-unit'
+						size='small'
+						value={property.semantic.unit}
+						placeholder='Select a unit...'
+						disabled={!canEditType}
+						onSlChange={onChangeMeasurementUnit}
+					>
+						<PropertyFormLabel slot='label'>Unit</PropertyFormLabel>
+						{!property.semantic.unit && (
+							<SlOption className='property-form__unit-placeholder' value='' disabled />
+						)}
+						{UNIT_OF_MEASURE_OPTIONS.map((option, index) => (
+							<React.Fragment key={option.value}>
+								{option.groupLabel != null && index > 0 && <SlDivider />}
+								{option.groupLabel != null && (
+									<div className='property-form__unit-option-group' role='presentation'>
+										{option.groupLabel}
+									</div>
+								)}
+								<SlOption value={option.value}>
+									<span>{option.label}</span>
+									<span className='property-form__unit-option-separator'> · </span>
+									<span className='property-form__unit-option-symbol'>{option.value}</span>
+								</SlOption>
+							</React.Fragment>
+						))}
+					</SlSelect>
+					{typeError?.location === 'measurement-unit' && (
+						<PropertyFormError name='measurement-unit'>{typeError.message}</PropertyFormError>
+					)}
+					{numericRangeControls}
+				</div>
+			)}
+			{property.semantic?.kind === 'duration' && (
+				<div className='property-form__constraints property-form__constraints--duration'>
+					<SlSelect
+						className='property-form__duration-unit'
+						size='small'
+						value={property.semantic.unit}
+						placeholder='Select a unit...'
+						disabled={!canEditType}
+						onSlChange={onChangeDurationUnit}
+					>
+						<PropertyFormLabel slot='label'>Unit</PropertyFormLabel>
+						{!property.semantic.unit && (
+							<SlOption className='property-form__unit-placeholder' value='' disabled />
+						)}
+						{DURATION_UNIT_OPTIONS.map((option) => (
+							<SlOption key={option.value} value={option.value}>
+								<span>{option.label}</span>
+								<span className='property-form__unit-option-separator'> · </span>
+								<span className='property-form__unit-option-symbol'>{option.symbol}</span>
+							</SlOption>
+						))}
+					</SlSelect>
+					{typeError?.location === 'duration-unit' && (
+						<PropertyFormError name='duration-unit'>{typeError.message}</PropertyFormError>
+					)}
 				</div>
 			)}
 			{showParent && parents != null && (
@@ -817,6 +1035,9 @@ const validatePropertyType = (
 	if (property.type == null) {
 		return { location: 'type', message: 'Type cannot be empty' };
 	}
+	if (property.semantic?.kind === 'measurement' && !property.semantic.unit) {
+		return { location: 'measurement-unit', message: 'Unit is required' };
+	}
 	const type = getPropertyValueType(property.type);
 	if (type.kind === 'string') {
 		if (
@@ -839,7 +1060,13 @@ const validatePropertyType = (
 		}
 	}
 	if (isNumericType(type)) {
-		return getNumericTypeError(type, decimalTypeInputs, numericRangeInputs);
+		const error = getNumericTypeError(type, decimalTypeInputs, numericRangeInputs);
+		if (error != null) {
+			return error;
+		}
+	}
+	if (property.semantic?.kind === 'duration' && !property.semantic.unit) {
+		return { location: 'duration-unit', message: 'Unit is required' };
 	}
 	return null;
 };
@@ -1012,6 +1239,10 @@ const getNumericTypeError = (
 
 const isNumericType = (type: Type | null | undefined): type is NumericType => {
 	return type?.kind === 'int' || type?.kind === 'float' || type?.kind === 'decimal';
+};
+
+const hasSemanticDecimalRange = (semantic?: Semantic): boolean => {
+	return semantic?.kind === 'money' || semantic?.kind === 'percentage' || semantic?.kind === 'measurement';
 };
 
 const validatePropertyName = (name: string) => {

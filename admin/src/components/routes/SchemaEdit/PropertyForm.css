@@ -1,10 +1,28 @@
 .property-form {
+	--property-form-option-hover-background-color: #f5f5fb;
+	--property-form-option-selected-background-color: #e4e4f2;
 	--sl-font-size-medium: var(--sl-font-size-small);
 	--sl-input-font-size-medium: var(--sl-font-size-small);
 }
 
+.property-form sl-option {
+	--sl-color-neutral-0: var(--text-primary);
+	--sl-color-neutral-100: var(--property-form-option-hover-background-color);
+	--sl-color-neutral-1000: var(--text-primary);
+	--sl-color-primary-600: var(--property-form-option-selected-background-color);
+}
+
+.property-form sl-option[aria-selected='true']::part(base) {
+	background-color: var(--property-form-option-selected-background-color);
+	color: var(--text-primary);
+}
+
 .property-form__control {
 	margin-bottom: 20px;
+}
+
+.property-form__control--percentage-type {
+	margin-bottom: 0;
 }
 
 .property-form__description::part(textarea) {
@@ -61,6 +79,20 @@
 .property-form__optional-label {
 	color: var(--sl-color-neutral-400);
 	margin-inline-start: 4px;
+}
+
+.property-form__currency-option-code {
+	font-family: var(--monospace-fonts);
+}
+
+.property-form__currency-option-separator,
+.property-form__currency-option-symbol {
+	color: var(--text-light);
+}
+
+.property-form__currency-option-symbol {
+	min-width: 16px;
+	text-align: center;
 }
 
 .property-form__empty-value {
@@ -124,6 +156,10 @@
 	width: 100%;
 }
 
+.property-form__float-special-values-label {
+	font-weight: var(--sl-font-weight-light);
+}
+
 .property-form__integer-sign sl-radio-button {
 	flex: 1;
 	margin-inline-start: 0 !important;
@@ -175,16 +211,62 @@
 	width: 1px;
 }
 
+.property-form__constraints--country,
 .property-form__constraints--decimal,
+.property-form__constraints--duration,
 .property-form__constraints--float,
 .property-form__constraints--integer,
-.property-form__constraints--length {
+.property-form__constraints--length,
+.property-form__constraints--measurement,
+.property-form__constraints--money,
+.property-form__constraints--percentage {
 	margin: 4px 12px 28px;
 	padding-left: 0;
 }
 
-.property-form__constraints--decimal {
+.property-form__constraints--country,
+.property-form__constraints--decimal,
+.property-form__constraints--duration,
+.property-form__constraints--measurement,
+.property-form__constraints--money {
 	margin-top: -10px;
+}
+
+.property-form__country-format,
+.property-form__currency,
+.property-form__duration-unit,
+.property-form__measurement-unit {
+	grid-column: 1 / -1;
+}
+
+.property-form__country-format sl-option::part(base),
+.property-form__currency sl-option::part(base),
+.property-form__duration-unit sl-option::part(base),
+.property-form__measurement-unit sl-option::part(base) {
+	height: 32px;
+	padding-block: 0;
+}
+
+/* Prevent Shoelace from highlighting the first real option while the select is empty. */
+.property-form__unit-placeholder {
+	display: none;
+}
+
+.property-form__unit-option-group {
+	color: var(--text-light);
+	font-size: 11px;
+	font-weight: var(--sl-font-weight-bold);
+	line-height: 1;
+	padding: 10px 12px 7px calc(var(--sl-spacing-x-small) + var(--sl-font-size-small) + var(--sl-spacing-2x-small));
+}
+
+.property-form__unit-option-separator {
+	color: var(--sl-color-neutral-500);
+}
+
+.property-form__unit-option-symbol {
+	color: var(--text-light);
+	font-family: var(--monospace-fonts);
 }
 
 .property-form__decimal-description {
@@ -196,11 +278,39 @@
 	margin-top: -4px;
 }
 
-.property-form__float-special-values-label {
-	font-weight: var(--sl-font-weight-light);
+.property-form__percentage-description {
+	display: grid;
+	grid-template-columns: minmax(120px, 0.8fr) minmax(0, 1.2fr);
+	margin-top: 8px;
 }
 
-.property-form__constraints--decimal > .property-form__control-error {
+.property-form__percentage-badge {
+	font-size: 11px;
+	grid-column: 2;
+	justify-self: stretch;
+	margin-inline: var(--sl-spacing-medium);
+}
+
+.property-form__percentage-badge::part(base) {
+	background-color: #ededf7;
+	border: 0;
+	box-sizing: border-box;
+	color: color-mix(in srgb, var(--sl-color-neutral-700) 88%, #6062d0);
+	font-size: 11px;
+	font-weight: var(--sl-font-weight-normal);
+	height: 19px;
+	padding-block: 4px;
+	width: 100%;
+}
+
+.property-form__percentage-badge-text {
+	display: inline-block;
+	transform: translateY(-1px);
+}
+
+.property-form__constraints--decimal > .property-form__control-error,
+.property-form__constraints--duration > .property-form__control-error,
+.property-form__constraints--measurement > .property-form__control-error {
 	margin-top: -4px;
 	padding-top: 0;
 }
