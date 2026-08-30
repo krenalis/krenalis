@@ -470,7 +470,7 @@ func Test_SemanticJSONErrors(t *testing.T) {
 		},
 		{
 			"unexpected measurement option",
-			intSemantic + `{"kind":"measurement","currency":"USD"}}`,
+			intSemantic + `{"kind":"measurement","unit":"kg","currency":"USD"}}`,
 			"unexpected option for measurement semantic",
 		},
 		{
