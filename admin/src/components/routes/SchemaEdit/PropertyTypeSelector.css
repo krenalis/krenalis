@@ -36,6 +36,10 @@
 	width: 100%;
 }
 
+.property-type-selector__structure-dropdown[disabled] .property-type-selector__structure-trigger::part(base) {
+	cursor: default;
+}
+
 .property-type-selector__structure-trigger > [slot='prefix'],
 .property-type-selector__trigger > [slot='prefix'] {
 	transform: translateY(1px);
@@ -94,7 +98,8 @@
 	padding: 9px 12px;
 }
 
-.property-type-selector__structure-option::part(checked-icon) {
+.property-type-selector__structure-option::part(checked-icon),
+.property-type-selector__structure-option::part(submenu-icon) {
 	display: none;
 }
 

@@ -1423,20 +1423,20 @@ test(`Validate decimal constraints as they are edited`, async ({ page }) => {
 
 	await precision.fill('');
 	await expect(precision).toHaveValue('');
-	await expect(decimalError).toContainText('Precision cannot be empty');
+	await expect(decimalError).toContainText('Precision is required');
 	await expect(decimalDescription).toHaveCount(0);
 	await expect(saveButton).toHaveAttribute('disabled');
 
 	await precision.fill('10');
 	await scale.fill('');
 	await expect(scale).toHaveValue('');
-	await expect(decimalError).toContainText('Scale cannot be empty');
+	await expect(decimalError).toContainText('Scale is required');
 	await expect(decimalDescription).toHaveCount(0);
 	await expect(saveButton).toHaveAttribute('disabled');
 
 	await scale.fill('4');
 	await expect(decimalError).toHaveCount(0);
-	await expect(decimalDescription).toHaveText('10 digits total, with 4 after the decimal point.');
+	await expect(decimalDescription).toHaveText('10 digits total, with 4 digits after the decimal point');
 	await expect(saveButton).not.toHaveAttribute('disabled');
 	await saveButton.click();
 	const addedProperty = page.locator('.schema-edit .grid__row[data-id="decimal_constraints"]');
@@ -1463,11 +1463,11 @@ test(`Validate numeric range constraints as they are edited`, async ({ page }) =
 	await selectPropertyType(page, 'int');
 
 	await minimum.fill('-2147483649');
-	await expect(rangeError).toContainText('Minimum must be an integer in range [-2147483648, 2147483647]');
+	await expect(rangeError).toContainText('Min must be an integer between -2147483648 and 2147483647');
 	await expect(saveButton).toHaveAttribute('disabled');
 	await minimum.fill('-10');
 	await maximum.fill('-11');
-	await expect(rangeError).toContainText('Maximum cannot be less than minimum');
+	await expect(rangeError).toContainText('Max must be greater than or equal to Min');
 	await maximum.fill('10');
 	await minimum.fill('');
 	await unsigned.click();

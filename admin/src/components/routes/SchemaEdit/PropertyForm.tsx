@@ -459,8 +459,8 @@ const PropertyForm = ({
 		const precisionDescription = `${valueType.precision} ${valueType.precision === 1 ? 'digit' : 'digits'} total`;
 		decimalDescription =
 			scale === 0
-				? `${precisionDescription}, with no decimal places.`
-				: `${precisionDescription}, with ${scale} after the decimal point.`;
+				? `${precisionDescription}, with no decimal places`
+				: `${precisionDescription}, with ${scale} ${scale === 1 ? 'digit' : 'digits'} after the decimal point`;
 	}
 	const selectedConnection = sourceConnections.find((connection) => connection.id === primarySource);
 	let minimumPlaceholder = '';
@@ -604,8 +604,8 @@ const PropertyForm = ({
 			)}
 			{(valueType?.kind === 'int' || valueType?.kind === 'float') && canEditType && (
 				<div
-					className={`property-form__constraints${
-						valueType.kind === 'int' ? ' property-form__constraints--integer' : ''
+					className={`property-form__constraints property-form__constraints--${
+						valueType.kind === 'int' ? 'integer' : 'float'
 					}`}
 				>
 					{valueType.kind === 'int' && (
@@ -635,7 +635,7 @@ const PropertyForm = ({
 					</SlSelect>
 					{valueType.kind === 'float' && (
 						<SlCheckbox size='small' checked={!valueType.real} onSlChange={onRealChange}>
-							Allow Infinity and NaN
+							<span className='property-form__float-special-values-label'>Allow ±Inf and NaN</span>
 						</SlCheckbox>
 					)}
 					{numericRangeControls}
@@ -864,10 +864,10 @@ const checkDecimalTypeInputs = (inputs: DecimalTypeInputs): string | undefined =
 		return 'Precision and scale cannot be empty';
 	}
 	if (inputs.precision === '') {
-		return 'Precision cannot be empty';
+		return 'Precision is required';
 	}
 	if (inputs.scale === '') {
-		return 'Scale cannot be empty';
+		return 'Scale is required';
 	}
 };
 
@@ -893,7 +893,8 @@ const checkNumericRange = (type: NumericType, inputs: NumericRangeInputs): strin
 	for (const [name, input] of inputEntries) {
 		const label = name === 'minimum' ? 'Minimum' : 'Maximum';
 		if (input.badInput) {
-			return `${label} must be a number`;
+			const shortLabel = name === 'minimum' ? 'Min' : 'Max';
+			return `${shortLabel} must be ${type.kind === 'int' ? 'an integer' : 'a number'}`;
 		}
 		if (input.value === '') {
 			continue;
@@ -913,7 +914,8 @@ const checkNumericRange = (type: NumericType, inputs: NumericRangeInputs): strin
 				value.number < Number(minimum) ||
 				value.number > Number(maximum)
 			) {
-				return `${value.label} must be an integer in range [${minimum}, ${maximum}]`;
+				const label = value.label === 'Minimum' ? 'Min' : 'Max';
+				return `${label} must be an integer between ${minimum} and ${maximum}`;
 			}
 		}
 	} else if (type.kind === 'float') {
@@ -940,7 +942,7 @@ const checkNumericRange = (type: NumericType, inputs: NumericRangeInputs): strin
 		inputs.maximum.value !== '' &&
 		Number(inputs.maximum.value) < Number(inputs.minimum.value)
 	) {
-		return 'Maximum cannot be less than minimum';
+		return 'Max must be greater than or equal to Min';
 	}
 };
 
