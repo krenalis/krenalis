@@ -770,7 +770,7 @@ test(`Keep an unsaved property visible while filtering`, async ({ page }) => {
 	await expect(page.locator('.schema-edit .grid__row[data-id="dummy_id"]')).toHaveClass(/grid__row--selected/);
 });
 
-test(`View property details and keep the selection when editing`, async ({ page }) => {
+test(`Keep property details aligned and selected while viewing and editing`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
 		const schema = (await response.json()) as ObjectType;
@@ -832,6 +832,12 @@ test(`View property details and keep the selection when editing`, async ({ page 
 	).toBeVisible();
 	const emailCells = await emailRow.locator('.grid__cell-content').allInnerTexts();
 	await expect(emailRow.locator('.schema-property-grid__property-display-name')).toHaveText('Email address');
+	const emailRowBottom = await emailRow.evaluate((row) => row.getBoundingClientRect().bottom);
+	const emailPropertyCellBottom = await emailRow
+		.locator('.grid__cell')
+		.first()
+		.evaluate((cell) => cell.getBoundingClientRect().bottom);
+	expect(emailPropertyCellBottom).toBeLessThanOrEqual(emailRowBottom);
 	await expect(panel.locator('.property-details-panel__value')).toHaveText([
 		'email',
 		emailCells[1],

@@ -273,6 +273,10 @@
 	min-width: 0;
 }
 
+.schema-property-grid__property-name > div {
+	line-height: inherit;
+}
+
 .schema-property-grid__property-display-name {
 	color: var(--text-light);
 	font-size: 12px;
