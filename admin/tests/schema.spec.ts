@@ -4,8 +4,14 @@ import { ObjectType, Property, Semantic } from '../src/lib/api/types/types';
 
 const selectPropertyType = async (page, option: string) => {
 	const panel = page.locator('.property-panel');
+	const dropdown = panel.locator('.property-type-selector__dropdown');
+	const typeOption = panel.locator(`[data-type-option="${option}"]`);
+	await expect(dropdown).toHaveJSProperty('open', false);
+	await typeOption.waitFor({ state: 'hidden' });
 	await panel.locator('.property-type-selector__trigger').click();
-	await panel.locator(`[data-type-option="${option}"]`).click();
+	await expect(dropdown).toHaveJSProperty('open', true);
+	await typeOption.waitFor({ state: 'visible' });
+	await typeOption.click();
 };
 
 const editSchema = async (page) => {
@@ -1468,39 +1474,64 @@ test(`Restrict materialized type changes and preserve physical configuration`, a
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
 	await editSchema(page);
-	await openProperty(page, 'email');
 	const propertyPanel = page.locator('.property-panel');
 	const typeDropdown = propertyPanel.locator('.property-type-selector__dropdown');
 	const typeTrigger = propertyPanel.locator('.property-type-selector__trigger');
-	await expect(propertyPanel.locator('.property-type-selector__structure-dropdown')).toHaveAttribute('disabled');
-	await expect(typeDropdown).not.toHaveAttribute('disabled');
+	const typeOptions = propertyPanel.locator('.property-type-selector__option');
+	const appliedTypeNote = propertyPanel.locator('.property-type-selector__applied-note');
+
+	await page.locator('.schema-edit__add-property').click();
+	await expect(appliedTypeNote).toHaveCount(0);
+	await selectPropertyType(page, 'string');
+	await expect(appliedTypeNote).toHaveText("Type can't be changed once the property has been applied.");
+	await selectPropertyType(page, 'email');
+	await expect(appliedTypeNote).toHaveText(
+		'This type can only be changed back to string once the property has been applied.',
+	);
+	await selectPropertyType(page, 'money');
+	await expect(appliedTypeNote).toHaveText(
+		'This type can only be changed back to decimal once the property has been applied.',
+	);
+	await selectPropertyType(page, 'duration');
+	await expect(appliedTypeNote).toHaveText(
+		'This type can only be changed back to int once the property has been applied.',
+	);
+	await propertyPanel.locator('.property-panel__cancel').click();
+
+	await openProperty(page, 'email');
+	await expect(propertyPanel.locator('.property-type-selector__structure-dropdown')).toHaveCount(0);
+	await expect(propertyPanel.locator('.property-type-selector__structure-value')).toHaveText('one value');
+	await expect(typeDropdown).toHaveCount(0);
+	await expect(typeTrigger).toHaveCount(0);
+	await expect(propertyPanel.locator('.property-type-selector__type-value .schema-property-type')).toHaveText(
+		'string · max 100 chars',
+	);
+	await expect(appliedTypeNote).toHaveText("Type can't be changed once the property has been applied.");
+	await expect(propertyPanel.locator('.property-type-selector__browser')).toHaveCount(0);
+	await expect(typeOptions).toHaveCount(0);
 	await expect(propertyPanel.locator('.property-form__constraints--length sl-input')).toHaveCount(2);
 	await expect(propertyPanel.locator('.property-form__constraints--length sl-input').first()).toHaveAttribute(
 		'disabled',
 	);
 
-	await typeTrigger.click();
-	await expect(propertyPanel.locator('.property-type-selector__fixed-type-note')).toBeVisible();
-	await expect(propertyPanel.locator('[data-type-option="string"]')).not.toHaveAttribute('disabled');
-	await expect(propertyPanel.locator('[data-type-option="email"]')).toHaveAttribute('disabled');
-	await expect(propertyPanel.locator('[data-type-option="boolean"]')).toHaveAttribute('disabled');
-	await expect(
-		propertyPanel.locator('[data-type-option="string"] .schema-property-type__primary--technical'),
-	).toHaveText('string · max 100 chars');
-	await typeTrigger.click();
-	await propertyPanel.locator('[data-type-option="string"]').waitFor({ state: 'hidden' });
-
 	await openProperty(page, 'materialized_email');
-	await typeTrigger.click();
-	await expect(propertyPanel.locator('.property-type-selector__fixed-type-note')).toBeVisible();
-	await expect(propertyPanel.locator('[data-type-option="string"]')).not.toHaveAttribute('disabled');
-	await expect(propertyPanel.locator('[data-type-option="email"]')).not.toHaveAttribute('disabled');
-	await expect(propertyPanel.locator('[data-type-option="phone"]')).toHaveAttribute('disabled');
-	await expect(propertyPanel.locator('[data-type-option="email"] .schema-property-type')).toHaveText(
-		'email · string · max 100 chars',
+	await expect(typeDropdown).toHaveCount(1);
+	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('email · string · max 100 chars');
+	await expect(appliedTypeNote).toHaveText(
+		'This type can only be changed back to string once the property has been applied.',
 	);
+	await typeTrigger.click();
+	expect(
+		await typeOptions.evaluateAll((options) => options.map((option) => option.getAttribute('data-type-option'))),
+	).toEqual(['email', 'string']);
+	await expect(propertyPanel.locator('.property-type-selector__option[disabled]')).toHaveCount(0);
+	await expect(typeDropdown.locator('.property-type-selector__applied-note')).toHaveCount(0);
+	await expect(typeOptions.locator('.schema-property-type')).toHaveText([
+		'email · string · max 100 chars',
+		'string · max 100 chars · Text value, such as a name or code',
+	]);
 	await propertyPanel.locator('[data-type-option="string"]').click();
-	await expect(propertyPanel.locator('.property-type-selector__trigger .schema-property-type')).toHaveText('string');
+	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('string · max 100 chars');
 	const lengthConstraints = propertyPanel.locator('.property-form__constraints--length sl-input');
 	await expect(lengthConstraints).toHaveCount(2);
 	await expect(lengthConstraints.first().locator('input')).toHaveValue('100');
@@ -1510,9 +1541,12 @@ test(`Restrict materialized type changes and preserve physical configuration`, a
 	const emailOption = propertyPanel.locator('[data-type-option="email"]');
 	await emailOption.waitFor({ state: 'hidden' });
 	await typeTrigger.click();
+	expect(
+		await typeOptions.evaluateAll((options) => options.map((option) => option.getAttribute('data-type-option'))),
+	).toEqual(['string', 'email']);
 	await emailOption.waitFor({ state: 'visible' });
 	await emailOption.click();
-	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('email · string');
+	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('email · string · max 100 chars');
 	const stringOption = propertyPanel.locator('[data-type-option="string"]');
 	await stringOption.waitFor({ state: 'hidden' });
 	await typeTrigger.click();
@@ -1528,18 +1562,21 @@ test(`Restrict materialized type changes and preserve physical configuration`, a
 	const currency = propertyPanel.locator('.property-form__currency');
 	await expect(currency).toHaveJSProperty('value', 'EUR');
 	await expect(currency).toHaveAttribute('disabled');
+	await expect(appliedTypeNote).toHaveText(
+		'This type can only be changed back to decimal once the property has been applied.',
+	);
 	await typeTrigger.click();
-	await expect(propertyPanel.locator('[data-type-option="decimal"]')).not.toHaveAttribute('disabled');
-	await expect(propertyPanel.locator('[data-type-option="money"]')).not.toHaveAttribute('disabled');
-	await expect(propertyPanel.locator('[data-type-option="percentage"]')).toHaveAttribute('disabled');
+	expect(
+		await typeOptions.evaluateAll((options) => options.map((option) => option.getAttribute('data-type-option'))),
+	).toEqual(['money', 'decimal']);
+	await expect(propertyPanel.locator('.property-type-selector__option[disabled]')).toHaveCount(0);
+	await expect(typeOptions.locator('.schema-property-type')).toHaveText([
+		'money · decimal(18,4) · min -0.5, max 1.25',
+		'decimal(18,4) · min -0.5, max 1.25 · Decimal number with fixed precision',
+	]);
 	await propertyPanel.locator('[data-type-option="decimal"]').click();
-	const moneyOption = propertyPanel.locator('[data-type-option="money"]');
-	await moneyOption.waitFor({ state: 'hidden' });
-	await typeTrigger.click();
-	await moneyOption.waitFor({ state: 'visible' });
-	await moneyOption.click();
-	await propertyPanel.locator('[data-type-option="decimal"]').waitFor({ state: 'hidden' });
-	await expect(currency).toHaveJSProperty('value', 'EUR');
+	await expect(currency).toHaveCount(0);
+	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('decimal(18,4) · min -0.5, max 1.25');
 	await propertyPanel.locator('.property-panel__save').click();
 
 	const previewRequestPromise = page.waitForRequest(
@@ -1561,7 +1598,7 @@ test(`Restrict materialized type changes and preserve physical configuration`, a
 		minimum: -0.5,
 		maximum: 1.25,
 	});
-	expect(materializedMoney?.semantic).toEqual({ kind: 'money', currency: 'EUR' });
+	expect(materializedMoney?.semantic).toBeUndefined();
 });
 
 test(`Preserve array property semantics`, async ({ page }) => {
@@ -1593,9 +1630,13 @@ test(`Preserve array property semantics`, async ({ page }) => {
 	await editSchema(page);
 	await openProperty(page, 'phone_numbers');
 	const propertyPanel = page.locator('.property-panel');
-	await expect(propertyPanel.locator('.property-type-selector__structure-trigger')).toContainText('array of');
+	await expect(propertyPanel.locator('.property-type-selector__structure-dropdown')).toHaveCount(0);
+	await expect(propertyPanel.locator('.property-type-selector__structure-value')).toHaveText('array of');
 	await expect(propertyPanel.locator('.property-type-selector__trigger .schema-property-type')).toHaveText(
-		'phone number · string',
+		'phone number · string · max 300 chars',
+	);
+	await expect(propertyPanel.locator('.property-type-selector__applied-note')).toHaveText(
+		'This type can only be changed back to string once the property has been applied.',
 	);
 	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Updated description');
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
