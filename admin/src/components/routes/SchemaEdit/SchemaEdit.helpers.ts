@@ -60,6 +60,9 @@ const normalizeSchema = (schema: EditableSchema): ObjectType => {
 		delete p.indentation;
 		delete p.root;
 		delete p.isEditable;
+		if (p.displayName === '') {
+			delete p.displayName;
+		}
 
 		if (property.type.kind === 'object') {
 			// Empty the properties; they will be populated with the edited

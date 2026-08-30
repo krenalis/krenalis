@@ -125,11 +125,6 @@
 	line-height: 1.45;
 }
 
-.property-details-panel__technical-type {
-	font-family: var(--monospace-fonts);
-	word-break: break-word;
-}
-
 .property-details-panel__description {
 	white-space: pre-wrap;
 }

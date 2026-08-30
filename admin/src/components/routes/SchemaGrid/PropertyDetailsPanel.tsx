@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
-import { isSuitableAsIdentifier, toKrenalisStringType } from '../../helpers/types';
+import { DURATION_UNIT_OPTIONS, isSuitableAsIdentifier, UNIT_OF_MEASURE_OPTIONS } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { Property } from '../../../lib/api/types/types';
 import TransformedConnection from '../../../lib/core/connection';
@@ -10,6 +10,7 @@ import {
 	SchemaPropertyIdentifierValue,
 	SchemaPropertyPrimarySourceLabel,
 } from '../Schema/SchemaPropertyGrid';
+import { SchemaPropertyType } from '../Schema/SchemaPropertyType';
 
 interface PropertyDetailsPanelProps {
 	identifierPosition?: number;
@@ -25,14 +26,21 @@ interface PropertyDetailProps {
 }
 
 const PropertyDetailsPanel = ({ identifierPosition, onClose, primarySource, property }: PropertyDetailsPanelProps) => {
+	const semanticDetail = getSemanticDetail(property);
+
 	return (
 		<PropertyPanelLayout className='property-details-panel' closeLabel='Close property details' onClose={onClose}>
 			<div className='property-details-panel__details'>
 				<div className='property-details-panel__section'>
 					<PropertyDetail label='Name'>{property.name}</PropertyDetail>
-					<PropertyDetail label='Type' className='property-details-panel__technical-type'>
-						{toKrenalisStringType(property.type)}
+					<PropertyDetail label='Type'>
+						<SchemaPropertyType context='details' type={property.type} semantic={property.semantic} />
 					</PropertyDetail>
+					{semanticDetail != null && (
+						<PropertyDetail label={semanticDetail.label}>
+							{semanticDetail.value || <span className='property-details-panel__empty-value'>—</span>}
+						</PropertyDetail>
+					)}
 				</div>
 				<div className='property-details-panel__section property-details-panel__section--metadata'>
 					<PropertyDetail label='Display name'>
@@ -62,6 +70,22 @@ const PropertyDetailsPanel = ({ identifierPosition, onClose, primarySource, prop
 			</div>
 		</PropertyPanelLayout>
 	);
+};
+
+const getSemanticDetail = (property: Property): { label: string; value?: string } | null => {
+	const semantic = property.semantic;
+	if (semantic?.kind === 'money') {
+		return { label: 'Currency', value: semantic.currency };
+	}
+	if (semantic?.kind === 'measurement') {
+		const option = UNIT_OF_MEASURE_OPTIONS.find((candidate) => candidate.value === semantic.unit);
+		return { label: 'Unit', value: option == null ? undefined : `${option.label} · ${option.value}` };
+	}
+	if (semantic?.kind === 'duration') {
+		const option = DURATION_UNIT_OPTIONS.find((candidate) => candidate.value === semantic.unit);
+		return { label: 'Unit', value: option == null ? undefined : `${option.label} · ${option.symbol}` };
+	}
+	return null;
 };
 
 const PropertyDetail = ({ children, className, label }: PropertyDetailProps) => {

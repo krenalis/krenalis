@@ -18,15 +18,14 @@ import TransformedConnection from '../../../lib/core/connection';
 import { PrimarySources } from '../../../lib/api/types/workspace';
 import { SchemaContext } from '../../../context/SchemaContext';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
-import { toKrenalisStringType } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { SchemaPropertyIdentifierBadge, SchemaPropertyName } from '../Schema/SchemaPropertyGrid';
+import { getSchemaPropertyTypePresentation, SchemaPropertyType } from '../Schema/SchemaPropertyType';
 
 const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Name' },
 	{ name: 'Type' },
 	{ name: 'Identifier', alignment: 'center' },
-	{ name: 'Description' },
 	{ name: 'Primary source' },
 	{ name: '' },
 ];
@@ -195,6 +194,8 @@ const useSchemaEdit = (
 			initialPrimarySources.current?.[selectedPropertyKey],
 		);
 	}, [editableSchema, selectedPropertyKey]);
+	const selectedPropertyMaterializedSemantic =
+		selectedPropertyKey == null ? undefined : initialEditableSchema.current?.[selectedPropertyKey]?.semantic;
 	const { objectCount, propertyCount } = useMemo(() => {
 		const properties = Object.values(editableSchema || {});
 		const objectCount = properties.filter((property) => property.type.kind === 'object').length;
@@ -629,6 +630,7 @@ const useSchemaEdit = (
 		visiblePropertyCount: visiblePropertyKeys.size,
 		propertyParents,
 		selectedPropertyFieldChanges,
+		selectedPropertyMaterializedSemantic,
 		propertyStatuses,
 		primarySources: primarySources.current,
 		queries,
@@ -702,7 +704,9 @@ const getPropertyFieldChanges = (
 ): PropertyFieldChanges => {
 	return {
 		name: property.name !== initialProperty.name,
-		type: JSON.stringify(property.type) !== JSON.stringify(initialProperty.type),
+		type:
+			JSON.stringify(property.type) !== JSON.stringify(initialProperty.type) ||
+			JSON.stringify(property.semantic) !== JSON.stringify(initialProperty.semantic),
 		displayName: (property.displayName || '') !== (initialProperty.displayName || ''),
 		description: (property.description || '') !== (initialProperty.description || ''),
 		primarySource: primarySource !== initialPrimarySource,
@@ -793,9 +797,16 @@ const getVisiblePropertyKeys = (
 	}
 	const term = search?.trim().toLocaleLowerCase() || '';
 	for (const [key, property] of Object.entries(schema)) {
+		const typePresentation = getSchemaPropertyTypePresentation(property.type, property.semantic, 'grid');
 		const matchesSearch =
 			term === '' ||
-			[property.name, property.displayName, property.description, toKrenalisStringType(property.type)]
+			[
+				property.name,
+				property.displayName,
+				property.description,
+				typePresentation.primary,
+				typePresentation.metadata,
+			]
 				.filter(Boolean)
 				.join(' ')
 				.toLocaleLowerCase()
@@ -950,9 +961,7 @@ const buildRow = (
 	const actions = (
 		<div className='schema-edit__property-actions'>{status != null && <PropertyStatusBadge status={status} />}</div>
 	);
-	const typeCell: ReactNode = (
-		<span className='schema-edit__property-technical-type'>{toKrenalisStringType(property.type)}</span>
-	);
+	const typeCell: ReactNode = <SchemaPropertyType context='grid' type={property.type} semantic={property.semantic} />;
 	let primarySourceCell: ReactNode;
 	if (property.type.kind !== 'object' && property.type.kind !== 'array') {
 		if (primarySourceConnection) {
@@ -971,7 +980,6 @@ const buildRow = (
 			<SchemaPropertyName property={property} />,
 			typeCell,
 			identifierPosition == null ? null : <SchemaPropertyIdentifierBadge position={identifierPosition} />,
-			property.description || <span className='schema-edit__empty-cell'>—</span>,
 			primarySourceCell,
 			actions,
 		],

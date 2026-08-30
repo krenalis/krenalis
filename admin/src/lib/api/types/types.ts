@@ -23,7 +23,27 @@ type FloatBitSize = 32 | 64;
 
 type CountryFormat = 'iso_3166_1_alpha_2' | 'iso_3166_1_alpha_3';
 
-type UnitOfMeasure = 'g' | 'kg' | 'mm' | 'cm' | 'm' | 'km' | 'mL' | 'L' | 'B' | 'kB' | 'MB' | 'GB' | '°C' | '°F';
+type UnitOfMeasure =
+	| 'g'
+	| 'kg'
+	| 'oz'
+	| 'lb'
+	| 'mm'
+	| 'cm'
+	| 'm'
+	| 'km'
+	| 'in'
+	| 'ft'
+	| 'yd'
+	| 'mi'
+	| 'mL'
+	| 'L'
+	| 'B'
+	| 'kB'
+	| 'MB'
+	| 'GB'
+	| '°C'
+	| '°F';
 
 type DurationUnit = 'millisecond' | 'second' | 'minute' | 'hour' | 'day' | 'week';
 
@@ -34,7 +54,7 @@ type Semantic =
 	| { kind: 'country'; format: CountryFormat }
 	| { kind: 'money'; currency?: string }
 	| { kind: 'percentage' }
-	| { kind: 'measurement'; unit?: UnitOfMeasure }
+	| { kind: 'measurement'; unit: UnitOfMeasure }
 	| { kind: 'duration'; unit: DurationUnit };
 
 interface Property {
@@ -163,6 +183,9 @@ export type {
 	TypeKind,
 	IntBitSize,
 	FloatBitSize,
+	CountryFormat,
+	UnitOfMeasure,
+	DurationUnit,
 	MapType,
 	Semantic,
 };

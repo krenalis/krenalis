@@ -5,15 +5,14 @@ import AppContext from '../../../context/AppContext';
 import TransformedConnection from '../../../lib/core/connection';
 import { PrimarySources } from '../../../lib/api/types/workspace';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
-import { toKrenalisStringType } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { SchemaPropertyIdentifierBadge, SchemaPropertyName } from '../Schema/SchemaPropertyGrid';
+import { getSchemaPropertyTypePresentation, SchemaPropertyType } from '../Schema/SchemaPropertyType';
 
 const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Property' },
 	{ name: 'Type' },
 	{ name: 'Identifier', alignment: 'center' },
-	{ name: 'Description' },
 	{ name: 'Primary source' },
 ];
 
@@ -99,10 +98,17 @@ const getRows = (
 	const rows: GridRow[] = [];
 	for (const property of schema.properties || []) {
 		const path = parent == null ? property.name : `${parent}.${property.name}`;
+		const typePresentation = getSchemaPropertyTypePresentation(property.type, property.semantic, 'grid');
 		const matches =
 			includeAll ||
 			search === '' ||
-			[property.name, property.displayName, property.description, toKrenalisStringType(property.type)]
+			[
+				property.name,
+				property.displayName,
+				property.description,
+				typePresentation.primary,
+				typePresentation.metadata,
+			]
 				.filter(Boolean)
 				.join(' ')
 				.toLocaleLowerCase()
@@ -152,9 +158,7 @@ const buildRow = (
 	forceExpanded: boolean,
 	onSelectProperty: (path: string) => void,
 ): StandardGridRow => {
-	const typeCell: ReactNode = (
-		<span className='schema-grid__technical-type'>{toKrenalisStringType(property.type)}</span>
-	);
+	const typeCell: ReactNode = <SchemaPropertyType context='grid' type={property.type} semantic={property.semantic} />;
 	let primarySourceCell: ReactNode = <span className='schema-grid__empty-cell'>—</span>;
 	if (property.type.kind !== 'object' && property.type.kind !== 'array') {
 		if (primarySource != null) {
@@ -171,7 +175,6 @@ const buildRow = (
 			<SchemaPropertyName property={property} />,
 			typeCell,
 			identifierPosition == null ? null : <SchemaPropertyIdentifierBadge position={identifierPosition} />,
-			property.description || <span className='schema-grid__empty-cell'>—</span>,
 			primarySourceCell,
 		],
 		forceExpanded,
