@@ -161,6 +161,7 @@ func (this *Workspace) PreviewAlterProfileSchema(ctx context.Context, schema typ
 // error in case it contains properties which are not allowed in data warehouse
 // profile schemas.
 func checkAllowedPropertyProfileSchema(schema types.Type) error {
+
 	for _, p := range schema.Properties().All() {
 		if datastore.IsMetaProperty(p.Name) {
 			return errors.New("profile schema cannot have meta properties")
@@ -236,6 +237,7 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 			}
 		}
 	}
+
 	return nil
 }
 
