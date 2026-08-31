@@ -124,6 +124,7 @@ func (bo *Backoff) Next(ctx context.Context) bool {
 		bo.waitTime = 0
 		select {
 		case <-ctx.Done():
+			bo.timer.Stop()
 			return false
 		case <-bo.timer.C:
 		}
