@@ -59,6 +59,14 @@ const validatePurposePath = (name: string, value: string) => {
 	}
 };
 
+const pathToSave = (isCustom: boolean, value: string, defaultValue: string) => {
+	if (!isCustom || value === defaultValue) {
+		// Leave the path empty when the default is used.
+		return '';
+	}
+	return value;
+};
+
 const Privacy = () => {
 	const [purposes, setPurposes] = useState<ConsentPurpose[]>();
 	const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -261,6 +269,28 @@ const Privacy = () => {
 	);
 };
 
+interface PathActionProps {
+	isCustom: boolean;
+	onCustomize: () => void;
+	onReset: () => void;
+}
+
+// PathAction is the button shown within a path input. It unlocks the path for
+// editing or reset it to the default if it already edited.
+const PathAction = ({ isCustom, onCustomize, onReset }: PathActionProps) => (
+	<SlTooltip slot='suffix' content={isCustom ? 'Reset to the default path' : 'Edit the path'} hoist>
+		<SlButton
+			className='privacy__dialog-path-action'
+			variant='text'
+			size='small'
+			circle
+			onClick={isCustom ? onReset : onCustomize}
+		>
+			<SlIcon name={isCustom ? 'arrow-counterclockwise' : 'pencil'} />
+		</SlButton>
+	</SlTooltip>
+);
+
 interface PurposeDialogProps {
 	isOpen: boolean;
 	purposeToEdit: ConsentPurpose | null;
@@ -273,6 +303,9 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 	const [code, setCode] = useState<string>('');
 	const [eventPath, setEventPath] = useState<string>('');
 	const [profilePath, setProfilePath] = useState<string>('');
+	const [isEventPathCustom, setIsEventPathCustom] = useState<boolean>(false);
+	const [isProfilePathCustom, setIsProfilePathCustom] = useState<boolean>(false);
+	const [isWarningOpen, setIsWarningOpen] = useState<boolean>(false);
 	const [nameError, setNameError] = useState<string>('');
 	const [codeError, setCodeError] = useState<string>('');
 	const [eventPathError, setEventPathError] = useState<string>('');
@@ -282,6 +315,9 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 	const { api, handleError } = useContext(AppContext);
 
 	const inputRef = useRef<any>();
+	const eventPathInputRef = useRef<any>();
+	const profilePathInputRef = useRef<any>();
+	const selectEventPathAfterWarning = useRef<boolean>(false);
 
 	const isEditing = purposeToEdit != null;
 
@@ -293,6 +329,10 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 		setCode(isEditing ? purposeToEdit.code : '');
 		setEventPath(isEditing ? purposeToEdit.eventPath : '');
 		setProfilePath(isEditing ? purposeToEdit.profilePath : '');
+		setIsEventPathCustom(isEditing && purposeToEdit.eventPath !== '');
+		setIsProfilePathCustom(isEditing && purposeToEdit.profilePath !== '');
+		setIsWarningOpen(false);
+		selectEventPathAfterWarning.current = false;
 		setNameError('');
 		setCodeError('');
 		setEventPathError('');
@@ -302,20 +342,78 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 		}, 100);
 	}, [isOpen]);
 
+	// The tooltips of the path actions bubble their own sl-after-hide up to the
+	// dialog, which would close it. Only the event of the dialog itself closes it.
+	const onSlAfterHide = (e) => {
+		if (e.target !== e.currentTarget) {
+			e.stopPropagation();
+			return;
+		}
+		onClose();
+	};
+
 	const onInputName = (e) => setName(e.target.value);
 	const onInputCode = (e) => setCode(e.target.value);
 	const onInputEventPath = (e) => setEventPath(e.target.value);
 	const onInputProfilePath = (e) => setProfilePath(e.target.value);
 
-	// A path left empty defaults to the consents of the context of an event and
-	// to the consents of a profile, both named after the code of the purpose.
+	// The paths default to the consents of the context of an event and to the
+	// consents of a profile, both keyed after the code of the purpose. Until
+	// the code is written they are shown as a placeholder, since the path they
+	// lead to is not decided yet.
 	const codeOrPlaceholder = code === '' ? '<code>' : code;
+	const defaultEventPath = code === '' ? '' : `context.consents.${code}`;
+	const defaultProfilePath = code === '' ? '' : `consents.${code}`;
+	const shownEventPath = isEventPathCustom ? eventPath : defaultEventPath;
+	const shownProfilePath = isProfilePathCustom ? profilePath : defaultProfilePath;
+	const eventPathPlaceholder = isEventPathCustom ? '' : `context.consents.${codeOrPlaceholder}`;
+	const profilePathPlaceholder = isProfilePathCustom ? '' : `consents.${codeOrPlaceholder}`;
+
+	const onCustomizeEventPath = () => {
+		setEventPath(defaultEventPath);
+		setIsEventPathCustom(true);
+		selectEventPathAfterWarning.current = true;
+		setIsWarningOpen(false);
+	};
+
+	const onWarningClosed = () => {
+		setIsWarningOpen(false);
+		if (selectEventPathAfterWarning.current) {
+			selectEventPathAfterWarning.current = false;
+			setTimeout(() => {
+				eventPathInputRef.current?.select();
+			}, 0);
+		}
+	};
+
+	const onResetEventPath = () => {
+		setEventPath('');
+		setEventPathError('');
+		setIsEventPathCustom(false);
+	};
+
+	const onCustomizeProfilePath = () => {
+		setProfilePath(defaultProfilePath);
+		setIsProfilePathCustom(true);
+		setTimeout(() => {
+			profilePathInputRef.current?.select();
+		}, 0);
+	};
+
+	const onResetProfilePath = () => {
+		setProfilePath('');
+		setProfilePathError('');
+		setIsProfilePathCustom(false);
+	};
 
 	const onSave = async () => {
 		setNameError('');
 		setCodeError('');
 		setEventPathError('');
 		setProfilePathError('');
+
+		const eventPathToSave = pathToSave(isEventPathCustom, eventPath, defaultEventPath);
+		const profilePathToSave = pathToSave(isProfilePathCustom, profilePath, defaultProfilePath);
 
 		try {
 			validatePurposeField('Name', name);
@@ -330,13 +428,13 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 			return;
 		}
 		try {
-			validatePurposePath('Event path', eventPath);
+			validatePurposePath('Event path', eventPathToSave);
 		} catch (err) {
 			setEventPathError(err.message);
 			return;
 		}
 		try {
-			validatePurposePath('Profile path', profilePath);
+			validatePurposePath('Profile path', profilePathToSave);
 		} catch (err) {
 			setProfilePathError(err.message);
 			return;
@@ -345,9 +443,15 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 		setIsSaving(true);
 		try {
 			if (isEditing) {
-				await api.workspaces.updateConsentPurpose(purposeToEdit.id, code, name, eventPath, profilePath);
+				await api.workspaces.updateConsentPurpose(
+					purposeToEdit.id,
+					code,
+					name,
+					eventPathToSave,
+					profilePathToSave,
+				);
 			} else {
-				await api.workspaces.addConsentPurpose(code, name, eventPath, profilePath);
+				await api.workspaces.addConsentPurpose(code, name, eventPathToSave, profilePathToSave);
 			}
 		} catch (err) {
 			setIsSaving(false);
@@ -370,73 +474,115 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 	};
 
 	return (
-		<SlDialog
-			className='privacy__dialog'
-			label={isEditing ? 'Edit the purpose' : 'Add a new purpose'}
-			open={isOpen}
-			onSlAfterHide={onClose}
-		>
-			<div className='privacy__dialog-form'>
-				<SlInput
-					className='privacy__dialog-name'
-					ref={inputRef}
-					label='Name'
-					value={name}
-					onSlInput={onInputName}
-					helpText='A recognizable name for this purpose'
-				/>
-				{nameError && (
-					<div className='privacy__dialog-error'>
-						<SlIcon slot='icon' name='exclamation-octagon' />
-						{nameError}
-					</div>
-				)}
-				<SlInput
-					className='privacy__dialog-code'
-					label='Code'
-					value={code}
-					onSlInput={onInputCode}
-					helpText='The code of the purpose. It must match the code you use to track consents within your CMP'
-				/>
-				{codeError && (
-					<div className='privacy__dialog-error'>
-						<SlIcon slot='icon' name='exclamation-octagon' />
-						{codeError}
-					</div>
-				)}
-				<SlInput
-					className='privacy__dialog-event-path'
-					label='Event path'
-					value={eventPath}
-					onSlInput={onInputEventPath}
-					placeholder={`context.consents.${codeOrPlaceholder}`}
-					helpText='The path of the event property that holds the consent given for this purpose. Leave it empty to use the default path'
-				/>
-				{eventPathError && (
-					<div className='privacy__dialog-error'>
-						<SlIcon slot='icon' name='exclamation-octagon' />
-						{eventPathError}
-					</div>
-				)}
-				<SlInput
-					className='privacy__dialog-profile-path'
-					label='Profile path'
-					value={profilePath}
-					onSlInput={onInputProfilePath}
-					placeholder={`consents.${codeOrPlaceholder}`}
-					helpText='The path of the profile property that holds the consent given for this purpose. Leave it empty to use the default path'
-				/>
-				{profilePathError && (
-					<div className='privacy__dialog-error'>
-						<SlIcon slot='icon' name='exclamation-octagon' />
-						{profilePathError}
-					</div>
-				)}
-				<SlButton loading={isSaving} className='privacy__dialog-save' variant='primary' onClick={onSave}>
-					{isEditing ? 'Save' : 'Add'}
-				</SlButton>
-			</div>
-		</SlDialog>
+		<>
+			<SlDialog
+				className='privacy__dialog'
+				label={isEditing ? 'Edit the purpose' : 'Add a new purpose'}
+				open={isOpen}
+				onSlAfterHide={onSlAfterHide}
+			>
+				<div className='privacy__dialog-form'>
+					<SlInput
+						className='privacy__dialog-name'
+						ref={inputRef}
+						label='Name'
+						value={name}
+						onSlInput={onInputName}
+						helpText='A recognizable name for this purpose'
+					/>
+					{nameError && (
+						<div className='privacy__dialog-error'>
+							<SlIcon slot='icon' name='exclamation-octagon' />
+							{nameError}
+						</div>
+					)}
+					<SlInput
+						className='privacy__dialog-code'
+						label='Code'
+						value={code}
+						onSlInput={onInputCode}
+						helpText='The code of the purpose. It must match the code you use to track consents within your CMP'
+					/>
+					{codeError && (
+						<div className='privacy__dialog-error'>
+							<SlIcon slot='icon' name='exclamation-octagon' />
+							{codeError}
+						</div>
+					)}
+
+					<SlInput
+						className='privacy__dialog-event-path'
+						ref={eventPathInputRef}
+						label='Event path'
+						value={shownEventPath}
+						onSlInput={onInputEventPath}
+						placeholder={eventPathPlaceholder}
+						readonly={!isEventPathCustom}
+						helpText='The event property that holds the consent given for this purpose'
+					>
+						<PathAction
+							isCustom={isEventPathCustom}
+							onCustomize={() => setIsWarningOpen(true)}
+							onReset={onResetEventPath}
+						/>
+					</SlInput>
+					{eventPathError && (
+						<div className='privacy__dialog-error'>
+							<SlIcon slot='icon' name='exclamation-octagon' />
+							{eventPathError}
+						</div>
+					)}
+
+					<SlInput
+						className='privacy__dialog-profile-path'
+						ref={profilePathInputRef}
+						label='Profile path'
+						value={shownProfilePath}
+						onSlInput={onInputProfilePath}
+						placeholder={profilePathPlaceholder}
+						readonly={!isProfilePathCustom}
+						helpText='The profile property that holds the consent given for this purpose'
+					>
+						<PathAction
+							isCustom={isProfilePathCustom}
+							onCustomize={onCustomizeProfilePath}
+							onReset={onResetProfilePath}
+						/>
+					</SlInput>
+					{profilePathError && (
+						<div className='privacy__dialog-error'>
+							<SlIcon slot='icon' name='exclamation-octagon' />
+							{profilePathError}
+						</div>
+					)}
+
+					<SlButton loading={isSaving} className='privacy__dialog-save' variant='primary' onClick={onSave}>
+						{isEditing ? 'Save' : 'Add'}
+					</SlButton>
+				</div>
+			</SlDialog>
+			<AlertDialog
+				variant='danger'
+				isOpen={isWarningOpen}
+				onClose={onWarningClosed}
+				title='Are you sure?'
+				actions={
+					<>
+						<SlButton onClick={() => setIsWarningOpen(false)}>Cancel</SlButton>
+						<SlButton
+							variant='danger'
+							className='privacy__dialog-customize-event-path'
+							onClick={onCustomizeEventPath}
+						>
+							Edit
+						</SlButton>
+					</>
+				}
+			>
+				Krenalis SDKs integrate with CMPs to send the consents automatically in the context of the event. Change
+				this path only if you manually deliver them somewhere else.
+			</AlertDialog>
+		</>
 	);
 };
 
