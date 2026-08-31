@@ -134,10 +134,10 @@
 
 .privacy__dialog-title {
     position: absolute;
-    top: -13px;
-    background-color: white;
-    padding: 0 15px;
-    left: 5px;
+    top: -14px;
+    background-color: #fff;
+    padding: 0 10px;
+    left: 10px;
     color: var(--sl-color-neutral-800);
 }
 
