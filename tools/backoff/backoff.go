@@ -142,8 +142,8 @@ func (bo *Backoff) Reset() {
 	bo.waitTime = 0
 }
 
-// SetAttempts sets the attempts. Use backoff.NoLimit for unlimited attempts.
-// It panics if attempts is zero or negative.
+// SetAttempts limits the backoff to attempts total attempts. A Backoff returned
+// by New has no attempt limit. It panics if attempts is zero or negative.
 func (bo *Backoff) SetAttempts(attempts int) {
 	if attempts <= 0 {
 		panic("backoff: attempts is zero or negative")

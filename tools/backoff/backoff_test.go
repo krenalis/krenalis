@@ -19,7 +19,7 @@ func Test_AfterFunc(t *testing.T) {
 	c := make(chan struct{})
 	f := func(_ context.Context) { c <- struct{}{} }
 
-	// Test NoLimit attempts.
+	// Test unlimited attempts.
 	cap := 10 * time.Millisecond
 	bo := New(1)
 	bo.SetCap(cap)
@@ -172,7 +172,7 @@ func Test_InvalidInputPanics(t *testing.T) {
 // limit when set.
 func Test_Next(t *testing.T) {
 
-	// Test NoLimit attempts.
+	// Test unlimited attempts.
 	bo := New(1)
 	bo.SetCap(10 * time.Millisecond)
 	i := 0
