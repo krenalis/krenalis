@@ -53,7 +53,6 @@ func (wo *WorkOS) Onboard(ctx context.Context, organizationName, adminEmail stri
 		return errors.Unprocessable(core.InvalidEmail, "admin email is not a valid email address")
 	}
 
-	// CreateOrganization validates the organization name.
 	id, err := wo.core.CreateOrganization(ctx, organizationName, true, onboardingLimits)
 	if err != nil {
 		return err
@@ -152,8 +151,7 @@ func (wo *WorkOS) ServeLogin(r *http.Request) (string, string, error) {
 	return org.ID, member, nil
 }
 
-// deleteOnboardedOrganization deletes the organization created by Onboard,
-// after a later onboarding step failed.
+// deleteOnboardedOrganization deletes the organization created by Onboard.
 func (wo *WorkOS) deleteOnboardedOrganization(ctx context.Context, id string) error {
 	org, err := wo.core.Organization(id)
 	if err != nil {
