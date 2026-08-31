@@ -1511,7 +1511,7 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 		defer stopPing()
 
 		// Prepare the run metrics.
-		bo = backoff.New(200)
+		bo.Reset()
 		for bo.Next(executionCtx) {
 			res, err := core.db.Exec(executionCtx,
 				// If statistics from previous runs of the same pipeline are available,
@@ -1794,7 +1794,7 @@ func (core *Core) executeIdentityResolution(workspace, opID string) {
 		ID:        opID,
 		EndTime:   time.Now().UTC(),
 	}
-	bo = backoff.New(200)
+	bo.Reset()
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
