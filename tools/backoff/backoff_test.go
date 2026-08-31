@@ -8,6 +8,7 @@ import (
 	"context"
 	"math"
 	"testing"
+	"testing/synctest"
 	"time"
 )
 
@@ -234,6 +235,59 @@ func Test_Next_Cap(t *testing.T) {
 			}
 		}
 	}
+}
+
+// Test_Reset verifies that Reset restores the initial retry state while
+// preserving configuration.
+func Test_Reset(t *testing.T) {
+
+	synctest.Test(t, func(t *testing.T) {
+
+		const (
+			attempts    = 2
+			base        = 7
+			capDuration = 5 * time.Millisecond
+		)
+		bo := New(base)
+		bo.SetAttempts(attempts)
+		bo.SetCap(capDuration)
+		if !bo.Next(t.Context()) {
+			t.Fatal("Next returned false on first call")
+		}
+		if !bo.Next(t.Context()) {
+			t.Fatal("Next returned false on second call")
+		}
+		bo.SetNextWaitTime(time.Hour)
+
+		bo.Reset()
+
+		if got := bo.Attempt(); got != 0 {
+			t.Fatalf("expected attempt 0 after reset, got %d", got)
+		}
+		if got := bo.WaitTime(); got != 0 {
+			t.Fatalf("expected waiting time 0 after reset, got %s", got)
+		}
+		if got := bo.attempts; got != attempts {
+			t.Fatalf("expected %d configured attempts after reset, got %d", attempts, got)
+		}
+		if got := bo.base; got != base {
+			t.Fatalf("expected configured base %d after reset, got %v", base, got)
+		}
+		if got := bo.cap; got != capDuration {
+			t.Fatalf("expected configured cap %s after reset, got %s", capDuration, got)
+		}
+		if !bo.Next(t.Context()) {
+			t.Fatal("Next returned false on first call after reset")
+		}
+		if !bo.Next(t.Context()) {
+			t.Fatal("Next returned false on second call after reset")
+		}
+		if bo.Next(t.Context()) {
+			t.Fatal("Next returned true after the configured attempts")
+		}
+
+	})
+
 }
 
 // Test_SetNextWaitTime validates that SetNextWaitTime overrides the next
