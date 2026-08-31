@@ -49,8 +49,8 @@ func (wo *WorkOS) Onboard(ctx context.Context, organizationName, adminEmail stri
 	organizationName = strings.TrimSpace(norm.NFC.String(organizationName))
 	adminEmail = strings.TrimSpace(norm.NFC.String(adminEmail))
 
-	if err := core.ValidateEmail(adminEmail); err != nil {
-		return errors.Unprocessable(core.InvalidEmail, "admin email is not a valid email address")
+	if err := core.ValidateMemberEmail(adminEmail); err != nil {
+		return err
 	}
 
 	id, err := wo.core.CreateOrganization(ctx, organizationName, true, onboardingLimits)
