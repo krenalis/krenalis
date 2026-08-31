@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/tools/errors"
@@ -20,6 +21,10 @@ import (
 
 // maxPayloadSize is the maximum size in bytes for a webhook or action payload.
 const maxPayloadSize = 64 * 1024
+
+// onboardingRollbackTimeout bounds the deletion of the organization of a failed
+// onboarding, which runs on a context detached from the request.
+const onboardingRollbackTimeout = 30 * time.Second
 
 // onboardingLimits are the resource limits granted to an organization created
 // through onboarding.
@@ -58,24 +63,32 @@ func (wo *WorkOS) Onboard(ctx context.Context, organizationName, adminEmail stri
 		return err
 	}
 
+	var onboarded bool
+	defer func() {
+		if onboarded {
+			return
+		}
+		// Detach the deletion from ctx, which is canceled when the client
+		// disconnects, so that it is attempted even then.
+		deleteCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), onboardingRollbackTimeout)
+		defer cancel()
+		err := wo.deleteOnboardedOrganization(deleteCtx, id)
+		if err != nil {
+			slog.Error("failed to delete the organization of a failed onboarding", "organization", id, "error", err)
+		}
+	}()
+
 	workosOrganizationID, err := wo.createOrganization(ctx, organizationName, id)
 	if err != nil {
-		delErr := wo.deleteOnboardedOrganization(ctx, id)
-		if delErr != nil {
-			slog.Error("failed to delete the organization of a failed onboarding", "organization", id, "error", delErr)
-		}
 		return err
 	}
 
 	err = wo.sendInvitation(ctx, adminEmail, workosOrganizationID)
 	if err != nil {
-		delErr := wo.deleteOnboardedOrganization(ctx, id)
-		if delErr != nil {
-			slog.Error("failed to delete the organization of a failed onboarding", "organization", id, "error", delErr)
-		}
 		return err
 	}
 
+	onboarded = true
 	return nil
 }
 
