@@ -732,7 +732,7 @@ func Test_validatePipeline(t *testing.T) {
 			err:                     `required consent purpose 111111111111 is duplicated`,
 		},
 		{
-			name: "BAD: Source/Application/User - required consents are not allowed",
+			name: "GOOD: Source/Application/User - with required consents",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -750,6 +750,35 @@ func Test_validatePipeline(t *testing.T) {
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
+			connectionConnectorType: state.Application,
+			knownConsentPurposeIDs:  map[string]bool{"111111111111": true},
+		},
+		{
+			name: "BAD: Destination/Application/User - required consents are not allowed",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+					{Name: "first_name", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"first_name": "first_name",
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "email_out",
+				},
+				RequiredConsents: RequiredConsents{Purposes: []string{"111111111111"}},
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
 			connectionConnectorType: state.Application,
 			knownConsentPurposeIDs:  map[string]bool{"111111111111": true},
 			err:                     "required consents are not allowed",

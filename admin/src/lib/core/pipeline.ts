@@ -1254,9 +1254,17 @@ const hasFilterStep = (connection: TransformedConnection, target: PipelineTarget
 	);
 };
 
+// isBatchProfileImport reports whether the pipelines of a given connection, and
+// with the given target, import profiles into the warehouse reading them in
+// batch from the source.
+const isBatchProfileImport = (connection: TransformedConnection, target: PipelineTarget) => {
+	return connection.role === 'Source' && !connection.isEventBased && target === 'User';
+};
+
 const hasRequiredConsents = (connection: TransformedConnection, target: PipelineTarget) => {
-	// Required consents are allowed on any pipeline that handles events.
-	return isEventDriven(connection, target);
+	// Required consents are allowed on any pipeline that handles events, and on
+	// the pipelines that import profiles into the warehouse in batch.
+	return isEventDriven(connection, target) || isBatchProfileImport(connection, target);
 };
 
 // hasEventConsentStep reports whether the pipelines of a given connection, and
@@ -1269,7 +1277,7 @@ const hasEventConsentStep = (connection: TransformedConnection, target: Pipeline
 // and with the given target, count the profiles their required consents
 // discard.
 const hasProfileConsentStep = (connection: TransformedConnection, target: PipelineTarget) => {
-	return isEventDriven(connection, target) && target === 'User';
+	return (isEventDriven(connection, target) && target === 'User') || isBatchProfileImport(connection, target);
 };
 
 const hasTransformations = (connection: TransformedConnection, target: PipelineTarget) => {

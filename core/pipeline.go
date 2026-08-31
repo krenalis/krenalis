@@ -322,18 +322,20 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 			case Application:
 				serialized = struct {
 					serializedPipeline
-					Filter         *Filter         `json:"filter"`
-					Incremental    bool            `json:"incremental"`
-					Transformation Transformation  `json:"transformation"`
-					InSchema       types.Type      `json:"inSchema"`
-					OutSchema      types.Type      `json:"outSchema"`
-					Running        bool            `json:"running"`
-					ScheduleStart  *int            `json:"scheduleStart"`
-					SchedulePeriod *SchedulePeriod `json:"schedulePeriod"`
+					Filter           *Filter          `json:"filter"`
+					Incremental      bool             `json:"incremental"`
+					RequiredConsents RequiredConsents `json:"requiredConsents"`
+					Transformation   Transformation   `json:"transformation"`
+					InSchema         types.Type       `json:"inSchema"`
+					OutSchema        types.Type       `json:"outSchema"`
+					Running          bool             `json:"running"`
+					ScheduleStart    *int             `json:"scheduleStart"`
+					SchedulePeriod   *SchedulePeriod  `json:"schedulePeriod"`
 				}{
 					serializedPipeline: p,
 					Filter:             this.Filter,
 					Incremental:        this.Incremental,
+					RequiredConsents:   this.RequiredConsents,
 					Transformation:     *this.Transformation,
 					InSchema:           this.InSchema,
 					OutSchema:          this.OutSchema,
@@ -344,17 +346,18 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 			case Database:
 				serialized = struct {
 					serializedPipeline
-					Query           string          `json:"query"`
-					UserIDColumn    string          `json:"userIDColumn"`
-					UpdatedAtColumn *string         `json:"updatedAtColumn"`
-					UpdatedAtFormat *string         `json:"updatedAtFormat"`
-					Incremental     bool            `json:"incremental"`
-					Transformation  Transformation  `json:"transformation"`
-					InSchema        types.Type      `json:"inSchema"`
-					OutSchema       types.Type      `json:"outSchema"`
-					Running         bool            `json:"running"`
-					ScheduleStart   *int            `json:"scheduleStart"`
-					SchedulePeriod  *SchedulePeriod `json:"schedulePeriod"`
+					Query            string           `json:"query"`
+					UserIDColumn     string           `json:"userIDColumn"`
+					UpdatedAtColumn  *string          `json:"updatedAtColumn"`
+					UpdatedAtFormat  *string          `json:"updatedAtFormat"`
+					Incremental      bool             `json:"incremental"`
+					RequiredConsents RequiredConsents `json:"requiredConsents"`
+					Transformation   Transformation   `json:"transformation"`
+					InSchema         types.Type       `json:"inSchema"`
+					OutSchema        types.Type       `json:"outSchema"`
+					Running          bool             `json:"running"`
+					ScheduleStart    *int             `json:"scheduleStart"`
+					SchedulePeriod   *SchedulePeriod  `json:"schedulePeriod"`
 				}{
 					serializedPipeline: p,
 					Query:              *this.Query,
@@ -362,6 +365,7 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 					UpdatedAtColumn:    this.UpdatedAtColumn,
 					UpdatedAtFormat:    this.UpdatedAtFormat,
 					Incremental:        this.Incremental,
+					RequiredConsents:   this.RequiredConsents,
 					Transformation:     *this.Transformation,
 					InSchema:           this.InSchema,
 					OutSchema:          this.OutSchema,
@@ -372,21 +376,22 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 			case FileStorage:
 				serialized = struct {
 					serializedPipeline
-					Format          string          `json:"format"`
-					Path            string          `json:"path"`
-					Sheet           *string         `json:"sheet"`
-					Compression     Compression     `json:"compression"`
-					Filter          *Filter         `json:"filter"`
-					UserIDColumn    string          `json:"userIDColumn"`
-					UpdatedAtColumn *string         `json:"updatedAtColumn"`
-					UpdatedAtFormat *string         `json:"updatedAtFormat"`
-					Incremental     bool            `json:"incremental"`
-					Transformation  Transformation  `json:"transformation"`
-					InSchema        types.Type      `json:"inSchema"`
-					OutSchema       types.Type      `json:"outSchema"`
-					Running         bool            `json:"running"`
-					ScheduleStart   *int            `json:"scheduleStart"`
-					SchedulePeriod  *SchedulePeriod `json:"schedulePeriod"`
+					Format           string           `json:"format"`
+					Path             string           `json:"path"`
+					Sheet            *string          `json:"sheet"`
+					Compression      Compression      `json:"compression"`
+					Filter           *Filter          `json:"filter"`
+					UserIDColumn     string           `json:"userIDColumn"`
+					UpdatedAtColumn  *string          `json:"updatedAtColumn"`
+					UpdatedAtFormat  *string          `json:"updatedAtFormat"`
+					Incremental      bool             `json:"incremental"`
+					RequiredConsents RequiredConsents `json:"requiredConsents"`
+					Transformation   Transformation   `json:"transformation"`
+					InSchema         types.Type       `json:"inSchema"`
+					OutSchema        types.Type       `json:"outSchema"`
+					Running          bool             `json:"running"`
+					ScheduleStart    *int             `json:"scheduleStart"`
+					SchedulePeriod   *SchedulePeriod  `json:"schedulePeriod"`
 				}{
 					serializedPipeline: p,
 					Format:             this.Format,
@@ -398,6 +403,7 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 					UpdatedAtColumn:    this.UpdatedAtColumn,
 					UpdatedAtFormat:    this.UpdatedAtFormat,
 					Incremental:        this.Incremental,
+					RequiredConsents:   this.RequiredConsents,
 					Transformation:     *this.Transformation,
 					InSchema:           this.InSchema,
 					OutSchema:          this.OutSchema,
@@ -1447,6 +1453,14 @@ func isImportingEventsIntoWarehouse(connectorType state.ConnectorType, role stat
 // given target, is importing identities from events.
 func isImportingUserIdentitiesFromEvents(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
 	return role == state.Source && target == state.TargetUser && (connectorType == state.SDK || connectorType == state.Webhook)
+}
+
+// isImportingUsersIntoWarehouse reports whether a connector of the given type,
+// on a connection with the given role, and a pipeline with the given target, is
+// importing users into the warehouse, reading them in batch from the source.
+func isImportingUsersIntoWarehouse(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
+	return role == state.Source && target == state.TargetUser && (connectorType == state.Application ||
+		connectorType == state.Database || connectorType == state.FileStorage)
 }
 
 // onlyForMatching returns a schema which contains only the properties of schema

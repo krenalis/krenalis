@@ -19,7 +19,7 @@ import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { FeedbackButtonRef } from '../../base/FeedbackButton/FeedbackButton';
 import { sleep } from '../../../utils/sleep';
 import { Link } from '../../base/Link/Link';
-import { hasFilters } from '../../../lib/core/pipeline';
+import { hasFilters, hasProfileConsentStep } from '../../../lib/core/pipeline';
 import { formatNumber } from '../../../utils/formatNumber';
 import * as Sentry from '@sentry/react';
 import { scrubURL } from '../../../lib/telemetry/scrubURL';
@@ -27,8 +27,8 @@ import { PipelineTarget } from '../../../lib/api/types/pipeline';
 import { IS_PASSWORDLESS_KEY, storageKeysToBeRemoved, WORKSPACE_ID_KEY } from '../../../constants/storage';
 
 const FILTER_STEP = 2;
-const CONSENT_STEP = 3;
-const FINALIZE_STEP = 6;
+const PROFILE_CONSENT_STEP = 6;
+const FINALIZE_STEP = 7;
 
 const useApp = (
 	handleError: (err: Error | string) => void,
@@ -493,7 +493,7 @@ const useApp = (
 
 		const passed = run.passed[FINALIZE_STEP];
 		const failed = run.failed
-			.filter((_, i) => i !== FILTER_STEP && i !== CONSENT_STEP)
+			.filter((_, i) => i !== FILTER_STEP && i !== PROFILE_CONSENT_STEP)
 			.reduce((sum, n) => sum + n, 0);
 
 		const pipeline = connection.pipelines.find((p) => p.id === pipelineID);
@@ -502,6 +502,12 @@ const useApp = (
 		if (hasFilters(connection, pipeline.target)) {
 			const filtered = run.failed[FILTER_STEP];
 			filteredItem = <li>{formatNumber(filtered)} filtered out</li>;
+		}
+
+		let missingConsentItem: ReactNode;
+		if (hasProfileConsentStep(connection, pipeline.target)) {
+			const discarded = run.failed[PROFILE_CONSENT_STEP];
+			missingConsentItem = <li>{formatNumber(discarded)} discarded for missing consent</li>;
 		}
 
 		const user = connection.isSource ? 'identity' : 'profile';
@@ -518,6 +524,7 @@ const useApp = (
 						{formatNumber(passed)} {passed === 1 ? user : users} {completed}
 					</li>
 					{filteredItem}
+					{missingConsentItem}
 					<li>
 						{failed === 0 ? 'No errors occurred' : `${formatNumber(failed)} not ${completed} due to errors`}
 					</li>

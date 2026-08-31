@@ -9,7 +9,7 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 
 const PipelineConsents = forwardRef<any>((_, ref) => {
-	const { pipeline, setPipeline } = useContext(PipelineContext);
+	const { pipeline, pipelineType, setPipeline } = useContext(PipelineContext);
 
 	const [purposes, setPurposes] = useState<ConsentPurpose[]>([]);
 	const [isEnabled, setIsEnabled] = useState((pipeline.requiredConsents?.purposes.length ?? 0) > 0);
@@ -71,11 +71,15 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 
 	const selectedPurposeIDs = pipeline.requiredConsents?.purposes ?? [];
 
+	const isEventTarget = pipelineType.target === 'Event';
+	const subject = isEventTarget ? 'An event' : 'A profile';
+	const subjects = isEventTarget ? 'events' : 'profiles';
+
 	return (
 		<Section
 			className='pipeline__consents'
 			title='Privacy'
-			description='Choose whether this pipeline should require consent for specific purposes before processing events.'
+			description={`Choose whether this pipeline should require consent for specific purposes before processing ${subjects}.`}
 			padded={true}
 			ref={ref}
 			annotated={true}
@@ -88,7 +92,7 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 					}`}
 					onClick={onSentenceClick}
 				>
-					An event must have consent for
+					{`${subject} must have consent for`}
 					<SlSelect
 						className='pipeline__consents-logical-select'
 						size='small'

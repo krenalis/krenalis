@@ -170,8 +170,8 @@ interface PipelineMetricsSeries {
 	workspace?: string;
 	connection?: string;
 	pipeline?: string;
-	passed: [number, number, number, number, number, number, number][];
-	failed: [number, number, number, number, number, number, number][];
+	passed: [number, number, number, number, number, number, number, number][];
+	failed: [number, number, number, number, number, number, number, number][];
 }
 
 interface PipelineMetrics {

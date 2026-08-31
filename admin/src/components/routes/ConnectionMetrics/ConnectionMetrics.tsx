@@ -864,8 +864,8 @@ const aggregatePipelineMetrics = (
 	if (first == null) {
 		return { passed: [], failed: [] };
 	}
-	const passed = first.passed.map<StepCounts>(() => [0, 0, 0, 0, 0, 0, 0]);
-	const failed = first.failed.map<StepCounts>(() => [0, 0, 0, 0, 0, 0, 0]);
+	const passed = first.passed.map<StepCounts>(() => [0, 0, 0, 0, 0, 0, 0, 0]);
+	const failed = first.failed.map<StepCounts>(() => [0, 0, 0, 0, 0, 0, 0, 0]);
 	for (const series of pipelineMetrics.metrics) {
 		for (let timeUnit = 0; timeUnit < series.passed.length; timeUnit++) {
 			for (let step = 0; step < STEP_COUNT; step++) {
