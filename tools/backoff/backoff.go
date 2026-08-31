@@ -134,6 +134,14 @@ func (bo *Backoff) Next(ctx context.Context) bool {
 	return true
 }
 
+// Reset clears the attempt counter and next wait time while preserving the
+// configured attempts, base, and cap. It must not be called while an AfterFunc
+// callback is pending.
+func (bo *Backoff) Reset() {
+	bo.attempt = 0
+	bo.waitTime = 0
+}
+
 // SetAttempts sets the attempts. Use backoff.NoLimit for unlimited attempts.
 // It panics if attempts is zero or negative.
 func (bo *Backoff) SetAttempts(attempts int) {
