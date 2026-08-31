@@ -1248,15 +1248,18 @@ type ConsentPurpose struct {
 	ID   string
 	Code string
 	Name string
+	// Aliases are the additional codes with which the consent for the purpose
+	// can be given in an event.
+	Aliases []string
 	// EventPath and ProfilePath are the configured paths of the properties that
 	// hold the consent given for the purpose, in an event and in a profile
 	// respectively. They are empty when they are not configured.
 	EventPath   string
 	ProfilePath string
-	// eventPropertyPath and profilePropertyPath are the paths actually read,
+	// eventPropertyPaths and profilePropertyPath are the paths actually read,
 	// resolved by resolvePropertyPaths: they are always set, and default to the
 	// code of the purpose when the configured path is empty.
-	eventPropertyPath   []string
+	eventPropertyPaths  [][]string
 	profilePropertyPath []string
 }
 
@@ -1269,10 +1272,11 @@ func NewConsentPurpose(purpose ConsentPurpose) *ConsentPurpose {
 	return cp
 }
 
-// EventPropertyPath returns the path of the property of an event that holds the
-// consent given for the purpose.
-func (purpose *ConsentPurpose) EventPropertyPath() []string {
-	return purpose.eventPropertyPath
+// EventPropertyPaths returns the paths of the properties of an event that hold
+// the consent given for the purpose. The consent is given when any of them
+// holds it.
+func (purpose *ConsentPurpose) EventPropertyPaths() [][]string {
+	return purpose.eventPropertyPaths
 }
 
 // ProfilePropertyPath returns the path of the property of a profile that
@@ -1284,12 +1288,19 @@ func (purpose *ConsentPurpose) ProfilePropertyPath() []string {
 // resolvePropertyPaths resolves the paths of the properties that hold the
 // consent given for the purpose. Paths that are not configured default to the
 // code of the purpose, in the consents of the context for an event and in the
-// "consents" field of the profile for a profile.
+// "consents" field of the profile for a profile. In an event the consent can
+// also be given with any of the aliases of the purpose, so a path is resolved
+// for each of them too. The aliases are not resolved when the event path is
+// customized, because that path alone holds the consent.
 func (purpose *ConsentPurpose) resolvePropertyPaths() {
 	if purpose.EventPath == "" {
-		purpose.eventPropertyPath = []string{"context", "consents", purpose.Code}
+		purpose.eventPropertyPaths = make([][]string, 0, 1+len(purpose.Aliases))
+		purpose.eventPropertyPaths = append(purpose.eventPropertyPaths, []string{"context", "consents", purpose.Code})
+		for _, alias := range purpose.Aliases {
+			purpose.eventPropertyPaths = append(purpose.eventPropertyPaths, []string{"context", "consents", alias})
+		}
 	} else {
-		purpose.eventPropertyPath = strings.Split(purpose.EventPath, ".")
+		purpose.eventPropertyPaths = [][]string{strings.Split(purpose.EventPath, ".")}
 	}
 	if purpose.ProfilePath == "" {
 		purpose.profilePropertyPath = []string{"consents", purpose.Code}

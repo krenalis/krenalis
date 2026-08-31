@@ -276,6 +276,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TABLE pipelines_metrics ALTER COLUMN failed_7 DROP DEFAULT`,
 			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS passed_7 integer NOT NULL DEFAULT 0`,
 			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS failed_7 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE consent_purposes ADD COLUMN IF NOT EXISTS aliases varchar(100)[] NOT NULL DEFAULT '{}'`,
 			`ALTER TABLE consent_purposes ADD COLUMN IF NOT EXISTS event_path varchar(1024) NOT NULL DEFAULT ''`,
 			`ALTER TABLE consent_purposes ADD COLUMN IF NOT EXISTS profile_path varchar(1024) NOT NULL DEFAULT ''`,
 		}

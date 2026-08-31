@@ -12,33 +12,37 @@ import (
 // SatisfiesEvent reports whether the consents carried by the given event
 // satisfy the required consent purposes.
 func SatisfiesEvent(purposes []*state.ConsentPurpose, matchAll bool, event map[string]any) bool {
-	return satisfies(purposes, matchAll, event, func(purpose *state.ConsentPurpose) []string {
-		return purpose.EventPropertyPath()
+	return satisfies(purposes, matchAll, func(purpose *state.ConsentPurpose) bool {
+		// The consent can be given with the code of the purpose or with any of
+		// its aliases, so every property path resolved for the purpose is read
+		// until one of them grants the consent.
+		for _, path := range purpose.EventPropertyPaths() {
+			if granted(event, path) {
+				return true
+			}
+		}
+		return false
 	})
 }
 
 // SatisfiesProfile reports whether the consents carried by the given profile
 // satisfy the required consent purposes.
 func SatisfiesProfile(purposes []*state.ConsentPurpose, matchAll bool, profile map[string]any) bool {
-	return satisfies(purposes, matchAll, profile, func(purpose *state.ConsentPurpose) []string {
-		return purpose.ProfilePropertyPath()
+	return satisfies(purposes, matchAll, func(purpose *state.ConsentPurpose) bool {
+		return granted(profile, purpose.ProfilePropertyPath())
 	})
 }
 
-// satisfies reports whether the consents carried by the given attributes
-// satisfy the required consent purposes. The consent given for a purpose is
-// read from the property of the attributes whose path is returned by property.
-// If matchAll is true, the given consents must satisfy every required purpose;
-// otherwise, satisfying at least one is enough.
-func satisfies(purposes []*state.ConsentPurpose, matchAll bool, attributes map[string]any,
-	property func(*state.ConsentPurpose) []string) bool {
+// satisfies reports whether the required consent purposes are satisfied, given
+// that grants reports whether the consent for a purpose is given. If matchAll
+// is true, the consent must be given for every required purpose; otherwise,
+// one purpose is enough.
+func satisfies(purposes []*state.ConsentPurpose, matchAll bool, grants func(*state.ConsentPurpose) bool) bool {
 	if len(purposes) == 0 {
 		return true
 	}
 	for _, purpose := range purposes {
-		v, _ := properties.Read(attributes, property(purpose))
-		granted, _ := v.(bool)
-		if granted {
+		if grants(purpose) {
 			if !matchAll {
 				return true
 			}
@@ -47,4 +51,12 @@ func satisfies(purposes []*state.ConsentPurpose, matchAll bool, attributes map[s
 		}
 	}
 	return matchAll
+}
+
+// granted reports whether the property of the given attributes with the given
+// path holds a granted consent.
+func granted(attributes map[string]any, path []string) bool {
+	v, _ := properties.Read(attributes, path)
+	b, _ := v.(bool)
+	return b
 }

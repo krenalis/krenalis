@@ -3,7 +3,7 @@
 }
 
 .privacy {
-	max-width: 900px;
+	max-width: 1200px;
 	margin: auto;
 	padding: 30px;
 }
@@ -41,6 +41,22 @@
 	border-radius: 5px;
 }
 
+.privacy__grid-aliases {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+}
+
+.privacy__grid-aliases-empty {
+	color: var(--sl-color-neutral-500);
+}
+
+.privacy__grid-aliases-more {
+	color: var(--sl-color-neutral-500);
+	font-size: 13px;
+}
+
 .privacy__grid-pipelines {
 	display: flex;
 	flex-wrap: wrap;
@@ -62,32 +78,80 @@
 	border-radius: var(--sl-border-radius-medium);
 }
 
+.privacy__dialog::part(panel) {
+	max-height: calc(100% - var(--sl-spacing-2x-large) - (var(--header-height) + 50px));
+}
+
 .privacy__dialog-error {
 	color: var(--sl-color-danger-600);
 	display: flex;
 	align-items: center;
 	gap: 7px;
 	margin-top: 3px;
-	font-size: 15px;
+	font-size: 13px;
 }
 
 .privacy__dialog-error sl-icon {
 	color: var(--sl-color-danger-600);
-	font-size: 14px;
+	font-size: 13px;
 	flex-shrink: 0;
 }
 
 .privacy__dialog-code,
+.privacy__dialog-alias,
 .privacy__dialog-event-path,
 .privacy__dialog-profile-path {
 	margin-top: 15px;
 }
 
+.privacy__dialog-alias + .privacy__dialog-alias {
+	margin-top: 8px;
+}
+
+.privacy__dialog-warning {
+	color: var(--sl-color-warning-600);
+	display: flex;
+	align-items: start;
+	gap: 7px;
+	margin-top: 8px;
+	font-size: 13px;
+}
+
+.privacy__dialog-warning sl-icon {
+    font-size: 13px;
+    flex-shrink: 0;
+    position: relative;
+    top: 5px;
+}
+
+.privacy__dialog-paths {
+    border: 1px solid var(--border-primary);
+    padding: 20px 20px;
+    margin-top: 30px;
+    border-radius: 5px;
+    position: relative;
+}
+
+.privacy__dialog-title {
+    position: absolute;
+    top: -13px;
+    background-color: white;
+    padding: 0 15px;
+    left: 5px;
+    color: var(--sl-color-neutral-800);
+}
+
+.privacy__dialog-event-path {
+	margin-top: 0;
+}
+
+.privacy__dialog-alias-action::part(base),
 .privacy__dialog-path-action::part(base) {
 	color: var(--sl-color-neutral-500);
 	font-size: 15px;
 }
 
+.privacy__dialog-alias-action::part(base):hover,
 .privacy__dialog-path-action::part(base):hover {
 	color: var(--sl-color-primary-600);
 }

@@ -933,10 +933,17 @@ class Workspaces {
 		return await call(`${this.apiURL}/consent-purposes`, http.GET, this.workspaceID);
 	};
 
-	addConsentPurpose = async (code: string, name: string, eventPath: string, profilePath: string): Promise<void> => {
+	addConsentPurpose = async (
+		code: string,
+		name: string,
+		aliases: string[],
+		eventPath: string,
+		profilePath: string,
+	): Promise<void> => {
 		return await call(`${this.apiURL}/consent-purposes`, http.POST, this.workspaceID, {
 			code,
 			name,
+			aliases,
 			eventPath,
 			profilePath,
 		});
@@ -946,12 +953,14 @@ class Workspaces {
 		id: string,
 		code: string,
 		name: string,
+		aliases: string[],
 		eventPath: string,
 		profilePath: string,
 	): Promise<void> => {
 		return await call(`${this.apiURL}/consent-purposes/${id}`, http.PUT, this.workspaceID, {
 			code,
 			name,
+			aliases,
 			eventPath,
 			profilePath,
 		});

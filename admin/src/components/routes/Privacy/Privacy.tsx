@@ -16,7 +16,20 @@ import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { isValidPropertyPath } from '../../../utils/filters';
 
-const GRID_COLUMNS: GridColumn[] = [{ name: 'Name' }, { name: 'Code' }, { name: 'Pipelines' }, { name: '' }];
+const GRID_COLUMNS: GridColumn[] = [
+	{ name: 'Name' },
+	{ name: 'Code' },
+	{ name: 'Aliases' },
+	{ name: 'Pipelines' },
+	{ name: '' },
+];
+
+// MAX_ALIASES is the maximum number of aliases a purpose can have.
+const MAX_ALIASES = 20;
+
+// SHOWN_ALIASES is the number of aliases shown in the grid before the remaining
+// ones are counted.
+const SHOWN_ALIASES = 2;
 
 interface PurposePipeline {
 	id: string;
@@ -56,6 +69,21 @@ const validatePurposePath = (name: string, value: string) => {
 		throw new Error(
 			`${name} must be property names separated by a dot, each starting with a letter or an underscore and containing only letters, digits and underscores`,
 		);
+	}
+};
+
+const validatePurposeAlias = (value: string) => {
+	if (Array.from(value).length > 100) {
+		throw new Error(`Alias "${value}" must be no longer than 100 characters`);
+	}
+	if (value !== value.trim()) {
+		throw new Error(`Alias "${value}" must not start or end with a space`);
+	}
+	for (const character of value) {
+		const codePoint = character.codePointAt(0);
+		if (codePoint < 0x20 || codePoint === 0x7f) {
+			throw new Error('An alias must not contain control characters');
+		}
 	}
 };
 
@@ -169,6 +197,23 @@ const Privacy = () => {
 		return purposes.map((p) => {
 			const pipelines = pipelinesByPurpose.get(p.id) ?? [];
 			const codeCell = <span className='privacy__grid-code'>{p.code}</span>;
+			const aliasesCell =
+				p.aliases.length === 0 ? (
+					<span className='privacy__grid-aliases-empty'>-</span>
+				) : (
+					<div className='privacy__grid-aliases'>
+						{p.aliases.slice(0, SHOWN_ALIASES).map((alias) => (
+							<span key={alias} className='privacy__grid-code'>
+								{alias}
+							</span>
+						))}
+						{p.aliases.length > SHOWN_ALIASES && (
+							<SlTooltip content={p.aliases.slice(SHOWN_ALIASES).join(', ')}>
+								<span className='privacy__grid-aliases-more'>{`+${p.aliases.length - SHOWN_ALIASES}`}</span>
+							</SlTooltip>
+						)}
+					</div>
+				);
 			const pipelinesCell =
 				pipelines.length === 0 ? (
 					<span className='privacy__grid-pipelines-empty'>-</span>
@@ -198,7 +243,7 @@ const Privacy = () => {
 				</div>
 			);
 			return {
-				cells: [p.name, codeCell, pipelinesCell, actionsCell],
+				cells: [p.name, codeCell, aliasesCell, pipelinesCell, actionsCell],
 				key: p.code,
 			};
 		});
@@ -269,28 +314,6 @@ const Privacy = () => {
 	);
 };
 
-interface PathActionProps {
-	isCustom: boolean;
-	onCustomize: () => void;
-	onReset: () => void;
-}
-
-// PathAction is the button shown within a path input. It unlocks the path for
-// editing or reset it to the default if it already edited.
-const PathAction = ({ isCustom, onCustomize, onReset }: PathActionProps) => (
-	<SlTooltip slot='suffix' content={isCustom ? 'Reset to the default path' : 'Edit the path'} hoist>
-		<SlButton
-			className='privacy__dialog-path-action'
-			variant='text'
-			size='small'
-			circle
-			onClick={isCustom ? onReset : onCustomize}
-		>
-			<SlIcon name={isCustom ? 'arrow-counterclockwise' : 'pencil'} />
-		</SlButton>
-	</SlTooltip>
-);
-
 interface PurposeDialogProps {
 	isOpen: boolean;
 	purposeToEdit: ConsentPurpose | null;
@@ -301,6 +324,7 @@ interface PurposeDialogProps {
 const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialogProps) => {
 	const [name, setName] = useState<string>('');
 	const [code, setCode] = useState<string>('');
+	const [aliases, setAliases] = useState<string[]>(['']);
 	const [eventPath, setEventPath] = useState<string>('');
 	const [profilePath, setProfilePath] = useState<string>('');
 	const [isEventPathCustom, setIsEventPathCustom] = useState<boolean>(false);
@@ -308,6 +332,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 	const [isWarningOpen, setIsWarningOpen] = useState<boolean>(false);
 	const [nameError, setNameError] = useState<string>('');
 	const [codeError, setCodeError] = useState<string>('');
+	const [aliasesError, setAliasesError] = useState<string>('');
 	const [eventPathError, setEventPathError] = useState<string>('');
 	const [profilePathError, setProfilePathError] = useState<string>('');
 	const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -327,6 +352,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 		}
 		setName(isEditing ? purposeToEdit.name : '');
 		setCode(isEditing ? purposeToEdit.code : '');
+		setAliases(isEditing && purposeToEdit.aliases.length > 0 ? [...purposeToEdit.aliases] : ['']);
 		setEventPath(isEditing ? purposeToEdit.eventPath : '');
 		setProfilePath(isEditing ? purposeToEdit.profilePath : '');
 		setIsEventPathCustom(isEditing && purposeToEdit.eventPath !== '');
@@ -335,6 +361,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 		selectEventPathAfterWarning.current = false;
 		setNameError('');
 		setCodeError('');
+		setAliasesError('');
 		setEventPathError('');
 		setProfilePathError('');
 		setTimeout(() => {
@@ -352,8 +379,21 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 		onClose();
 	};
 
-	const onInputName = (e) => setName(e.target.value);
-	const onInputCode = (e) => setCode(e.target.value);
+	const onInputName = (e: any) => setName(e.target.value);
+	const onInputCode = (e: any) => setCode(e.target.value);
+	const onInputAlias = (e: any, index: number) => {
+		const value = e.target.value;
+		setAliases((aliases) => aliases.map((alias, i) => (i === index ? value : alias)));
+	};
+
+	const onAddAlias = () => setAliases((aliases) => [...aliases, '']);
+
+	const onRemoveAlias = (index: number) =>
+		setAliases((aliases) => {
+			const remaining = aliases.filter((_, i) => i !== index);
+			return remaining.length === 0 ? [''] : remaining;
+		});
+
 	const onInputEventPath = (e) => setEventPath(e.target.value);
 	const onInputProfilePath = (e) => setProfilePath(e.target.value);
 
@@ -409,9 +449,11 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 	const onSave = async () => {
 		setNameError('');
 		setCodeError('');
+		setAliasesError('');
 		setEventPathError('');
 		setProfilePathError('');
 
+		const aliasesToSave = aliases.filter((alias) => alias !== '');
 		const eventPathToSave = pathToSave(isEventPathCustom, eventPath, defaultEventPath);
 		const profilePathToSave = pathToSave(isProfilePathCustom, profilePath, defaultProfilePath);
 
@@ -425,6 +467,22 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 			validatePurposeCode(code);
 		} catch (err) {
 			setCodeError(err.message);
+			return;
+		}
+		try {
+			const s = new Set<string>();
+			for (const alias of aliasesToSave) {
+				validatePurposeAlias(alias);
+				if (alias === code) {
+					throw new Error(`Alias "${alias}" is the code of this purpose`);
+				}
+				if (s.has(alias)) {
+					throw new Error(`Alias "${alias}" is written more than once`);
+				}
+				s.add(alias);
+			}
+		} catch (err) {
+			setAliasesError(err.message);
 			return;
 		}
 		try {
@@ -447,16 +505,21 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 					purposeToEdit.id,
 					code,
 					name,
+					aliasesToSave,
 					eventPathToSave,
 					profilePathToSave,
 				);
 			} else {
-				await api.workspaces.addConsentPurpose(code, name, eventPathToSave, profilePathToSave);
+				await api.workspaces.addConsentPurpose(code, name, aliasesToSave, eventPathToSave, profilePathToSave);
 			}
 		} catch (err) {
 			setIsSaving(false);
 			if (err instanceof UnprocessableError && err.code === 'ConsentPurposeCodeExists') {
 				setCodeError('A purpose with this code already exists');
+				return;
+			}
+			if (err instanceof UnprocessableError && err.code === 'ConsentPurposeAliasExists') {
+				setAliasesError('One of these aliases is already the code or an alias of another purpose');
 				return;
 			}
 			onClose();
@@ -483,12 +546,12 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 			>
 				<div className='privacy__dialog-form'>
 					<SlInput
+						size='small'
 						className='privacy__dialog-name'
 						ref={inputRef}
 						label='Name'
 						value={name}
 						onSlInput={onInputName}
-						helpText='A recognizable name for this purpose'
 					/>
 					{nameError && (
 						<div className='privacy__dialog-error'>
@@ -497,11 +560,12 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 						</div>
 					)}
 					<SlInput
+						size='small'
 						className='privacy__dialog-code'
 						label='Code'
 						value={code}
 						onSlInput={onInputCode}
-						helpText='The code of the purpose. It must match the code you use to track consents within your CMP'
+						helpText='The code you want to use to identify the purpose'
 					/>
 					{codeError && (
 						<div className='privacy__dialog-error'>
@@ -510,51 +574,104 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 						</div>
 					)}
 
-					<SlInput
-						className='privacy__dialog-event-path'
-						ref={eventPathInputRef}
-						label='Event path'
-						value={shownEventPath}
-						onSlInput={onInputEventPath}
-						placeholder={eventPathPlaceholder}
-						readonly={!isEventPathCustom}
-						helpText='The event property that holds the consent given for this purpose'
-					>
-						<PathAction
-							isCustom={isEventPathCustom}
-							onCustomize={() => setIsWarningOpen(true)}
-							onReset={onResetEventPath}
-						/>
-					</SlInput>
-					{eventPathError && (
+					{aliases.map((alias, i) => (
+						<SlInput
+							size='small'
+							key={i}
+							className='privacy__dialog-alias'
+							label={i === 0 ? 'Aliases' : undefined}
+							value={alias}
+							onSlInput={(e) => onInputAlias(e, i)}
+							disabled={isEventPathCustom}
+							helpText={
+								i === aliases.length - 1
+									? 'The other codes with which the consent for this purpose can be given in an event'
+									: undefined
+							}
+						>
+							{(aliases.length > 1 || alias !== '') && (
+								<AliasAction
+									icon='x-lg'
+									label='Remove this alias'
+									isDisabled={isEventPathCustom}
+									onClick={() => onRemoveAlias(i)}
+								/>
+							)}
+							{i === aliases.length - 1 && aliases.length < MAX_ALIASES && (
+								<AliasAction
+									icon='plus-lg'
+									label='Add another alias'
+									isDisabled={isEventPathCustom || alias === ''}
+									onClick={onAddAlias}
+								/>
+							)}
+						</SlInput>
+					))}
+					{aliasesError && (
 						<div className='privacy__dialog-error'>
 							<SlIcon slot='icon' name='exclamation-octagon' />
-							{eventPathError}
+							{aliasesError}
+						</div>
+					)}
+					{isEventPathCustom && (
+						<div className='privacy__dialog-warning'>
+							<SlIcon slot='icon' name='info-circle' />
+							The aliases are not used while the event path is customized, because the consent is read
+							only from that path.
 						</div>
 					)}
 
-					<SlInput
-						className='privacy__dialog-profile-path'
-						ref={profilePathInputRef}
-						label='Profile path'
-						value={shownProfilePath}
-						onSlInput={onInputProfilePath}
-						placeholder={profilePathPlaceholder}
-						readonly={!isProfilePathCustom}
-						helpText='The profile property that holds the consent given for this purpose'
-					>
-						<PathAction
-							isCustom={isProfilePathCustom}
-							onCustomize={onCustomizeProfilePath}
-							onReset={onResetProfilePath}
-						/>
-					</SlInput>
-					{profilePathError && (
-						<div className='privacy__dialog-error'>
-							<SlIcon slot='icon' name='exclamation-octagon' />
-							{profilePathError}
-						</div>
-					)}
+					<div className='privacy__dialog-paths'>
+						<div className='privacy__dialog-title'>Paths</div>
+
+						<SlInput
+							size='small'
+							className='privacy__dialog-event-path'
+							ref={eventPathInputRef}
+							label='Event path'
+							value={shownEventPath}
+							onSlInput={onInputEventPath}
+							placeholder={eventPathPlaceholder}
+							readonly={!isEventPathCustom}
+							helpText='The event property that holds the consent for this purpose'
+						>
+							<PathAction
+								isCustom={isEventPathCustom}
+								onCustomize={() => setIsWarningOpen(true)}
+								onReset={onResetEventPath}
+							/>
+						</SlInput>
+						{eventPathError && (
+							<div className='privacy__dialog-error'>
+								<SlIcon slot='icon' name='exclamation-octagon' />
+								{eventPathError}
+							</div>
+						)}
+
+						<SlInput
+							size='small'
+							className='privacy__dialog-profile-path'
+							ref={profilePathInputRef}
+							label='Profile path'
+							value={shownProfilePath}
+							onSlInput={onInputProfilePath}
+							placeholder={profilePathPlaceholder}
+							readonly={!isProfilePathCustom}
+							helpText='The profile property that holds the consent for this purpose'
+						>
+							<PathAction
+								isCustom={isProfilePathCustom}
+								onCustomize={onCustomizeProfilePath}
+								onReset={onResetProfilePath}
+							/>
+						</SlInput>
+						{profilePathError && (
+							<div className='privacy__dialog-error'>
+								<SlIcon slot='icon' name='exclamation-octagon' />
+								{profilePathError}
+							</div>
+						)}
+					</div>
 
 					<SlButton loading={isSaving} className='privacy__dialog-save' variant='primary' onClick={onSave}>
 						{isEditing ? 'Save' : 'Add'}
@@ -585,5 +702,51 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 		</>
 	);
 };
+
+interface PathActionProps {
+	isCustom: boolean;
+	onCustomize: () => void;
+	onReset: () => void;
+}
+
+// PathAction is the button shown within a path input. It unlocks the path for
+// editing or reset it to the default if it already edited.
+const PathAction = ({ isCustom, onCustomize, onReset }: PathActionProps) => (
+	<SlTooltip slot='suffix' content={isCustom ? 'Reset to the default path' : 'Edit the path'} hoist>
+		<SlButton
+			className='privacy__dialog-path-action'
+			variant='text'
+			size='small'
+			circle
+			onClick={isCustom ? onReset : onCustomize}
+		>
+			<SlIcon name={isCustom ? 'arrow-counterclockwise' : 'pencil'} />
+		</SlButton>
+	</SlTooltip>
+);
+
+interface AliasActionProps {
+	icon: string;
+	label: string;
+	isDisabled: boolean;
+	onClick: () => void;
+}
+
+// AliasAction is a button shown within an alias input, to remove that alias or
+// to add another one.
+const AliasAction = ({ icon, label, isDisabled, onClick }: AliasActionProps) => (
+	<SlTooltip slot='suffix' content={label} hoist>
+		<SlButton
+			className='privacy__dialog-alias-action'
+			variant='text'
+			size='small'
+			circle
+			disabled={isDisabled}
+			onClick={onClick}
+		>
+			<SlIcon name={icon} />
+		</SlButton>
+	</SlTooltip>
+);
 
 export default Privacy;

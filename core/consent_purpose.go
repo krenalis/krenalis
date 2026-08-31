@@ -6,8 +6,12 @@ package core
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
+	"slices"
 	"sort"
+	"strings"
+	"unicode"
 
 	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/core/internal/state"
@@ -19,6 +23,8 @@ import (
 const (
 	MaxRequiredConsentPurposes = 100  // maximum allowed number of required consent purposes.
 	maxConsentPurposeCodeLen   = 100  // maximum length of a consent purpose code.
+	maxConsentPurposeAliases   = 20   // maximum allowed number of aliases of a consent purpose.
+	maxConsentPurposeAliasLen  = 100  // maximum length of a consent purpose alias.
 	maxConsentPurposePathLen   = 1024 // maximum length of a consent purpose property path.
 )
 
@@ -27,6 +33,9 @@ type ConsentPurpose struct {
 	ID   string `json:"id"`
 	Code string `json:"code"`
 	Name string `json:"name"`
+	// Aliases are the additional codes with which the consent for the purpose
+	// can be given in an event.
+	Aliases []string `json:"aliases"`
 	// EventPath and ProfilePath are the paths of the properties that hold the
 	// consent given for the purpose, in an event and in a profile respectively.
 	EventPath   string `json:"eventPath"`
@@ -36,34 +45,44 @@ type ConsentPurpose struct {
 // ConsentPurposeToSet contains the values of a consent purpose to add or to
 // update.
 type ConsentPurposeToSet struct {
-	Code        string `json:"code"`
-	Name        string `json:"name"`
-	EventPath   string `json:"eventPath"`
-	ProfilePath string `json:"profilePath"`
+	Code        string   `json:"code"`
+	Name        string   `json:"name"`
+	Aliases     []string `json:"aliases"`
+	EventPath   string   `json:"eventPath"`
+	ProfilePath string   `json:"profilePath"`
 }
 
 // AddConsentPurpose adds a consent purpose with the values of purpose.
 //
 // It returns an errors.UnprocessableError error with code
 // ConsentPurposeCodeExists if a consent purpose with the same code already
-// exists in the workspace.
+// exists in the workspace, or with code ConsentPurposeAliasExists if one of its
+// aliases is already the code or an alias of another consent purpose of the
+// workspace.
 func (this *Workspace) AddConsentPurpose(ctx context.Context, purpose ConsentPurposeToSet) error {
 	this.core.mustBeOpen()
 	if err := validateConsentPurposeToSet(purpose); err != nil {
 		return err
 	}
+	if purpose.Aliases == nil {
+		purpose.Aliases = []string{}
+	}
 	n := state.AddConsentPurpose{
 		Workspace:   this.workspace.ID,
 		Code:        purpose.Code,
 		Name:        purpose.Name,
+		Aliases:     purpose.Aliases,
 		EventPath:   purpose.EventPath,
 		ProfilePath: purpose.ProfilePath,
 	}
 	n.ID = generateID(this.workspace.ConsentPurpose)
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		_, err := tx.Exec(ctx, "INSERT INTO consent_purposes (workspace, id, code, name, event_path, profile_path)"+
-			" VALUES ($1, $2, $3, $4, $5, $6)",
-			n.Workspace, n.ID, n.Code, n.Name, n.EventPath, n.ProfilePath)
+		if err := checkConsentPurposeCodes(ctx, tx, n.Workspace, n.ID, n.Code, n.Aliases); err != nil {
+			return nil, err
+		}
+		_, err := tx.Exec(ctx, "INSERT INTO consent_purposes (workspace, id, code, name, aliases, event_path,"+
+			" profile_path) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+			n.Workspace, n.ID, n.Code, n.Name, n.Aliases, n.EventPath, n.ProfilePath)
 		if err != nil {
 			return nil, err
 		}
@@ -89,6 +108,7 @@ func (this *Workspace) ConsentPurposes() []*ConsentPurpose {
 			ID:          cp.ID,
 			Code:        cp.Code,
 			Name:        cp.Name,
+			Aliases:     cp.Aliases,
 			EventPath:   cp.EventPath,
 			ProfilePath: cp.ProfilePath,
 		}
@@ -142,14 +162,16 @@ func (this *Workspace) DeleteConsentPurpose(ctx context.Context, id string) erro
 }
 
 // UpdateConsentPurpose updates the consent purpose with the given id, setting
-// its code, name and paths to those of purpose.
+// its code, name, aliases and paths to those of purpose.
 //
 // It returns an errors.NotFoundError error if the consent purpose does not
 // exist.
 //
 // It returns an errors.UnprocessableError error with code
 // ConsentPurposeCodeExists if another consent purpose with the new code already
-// exists in the workspace.
+// exists in the workspace, or with code ConsentPurposeAliasExists if one of the
+// new aliases is already the code or an alias of another consent purpose of the
+// workspace.
 func (this *Workspace) UpdateConsentPurpose(ctx context.Context, id string, purpose ConsentPurposeToSet) error {
 	this.core.mustBeOpen()
 	if !IsValidID(id) {
@@ -158,11 +180,15 @@ func (this *Workspace) UpdateConsentPurpose(ctx context.Context, id string, purp
 	if err := validateConsentPurposeToSet(purpose); err != nil {
 		return err
 	}
+	if purpose.Aliases == nil {
+		purpose.Aliases = []string{}
+	}
 	current, ok := this.workspace.ConsentPurpose(id)
 	if !ok {
 		return errors.NotFound("consent purpose %s does not exist", id)
 	}
 	if purpose.Code == current.Code && purpose.Name == current.Name &&
+		slices.Equal(purpose.Aliases, current.Aliases) &&
 		purpose.EventPath == current.EventPath && purpose.ProfilePath == current.ProfilePath {
 		return nil
 	}
@@ -171,13 +197,17 @@ func (this *Workspace) UpdateConsentPurpose(ctx context.Context, id string, purp
 		ID:          id,
 		Code:        purpose.Code,
 		Name:        purpose.Name,
+		Aliases:     purpose.Aliases,
 		EventPath:   purpose.EventPath,
 		ProfilePath: purpose.ProfilePath,
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		result, err := tx.Exec(ctx, "UPDATE consent_purposes SET code = $1, name = $2, event_path = $3,"+
-			" profile_path = $4 WHERE workspace = $5 AND id = $6",
-			n.Code, n.Name, n.EventPath, n.ProfilePath, n.Workspace, n.ID)
+		if err := checkConsentPurposeCodes(ctx, tx, n.Workspace, n.ID, n.Code, n.Aliases); err != nil {
+			return nil, err
+		}
+		result, err := tx.Exec(ctx, "UPDATE consent_purposes SET code = $1, name = $2, aliases = $3,"+
+			" event_path = $4, profile_path = $5 WHERE workspace = $6 AND id = $7",
+			n.Code, n.Name, n.Aliases, n.EventPath, n.ProfilePath, n.Workspace, n.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -214,14 +244,40 @@ func knownConsentPurposeIDs(ws *state.Workspace) map[string]bool {
 	return ids
 }
 
-// validateConsentPurposeToSet validates the code, the name and the paths of the
-// given consent purpose. It returns an errors.BadRequestError error if one of
-// them is not valid.
+// checkConsentPurposeCodes returns an errors.UnprocessableError error if the
+// given code or one of the given aliases is already the code or an alias of
+// another consent purpose of the workspace.
+func checkConsentPurposeCodes(ctx context.Context, tx *db.Tx, workspace, id, code string, aliases []string) error {
+	keys := append([]string{code}, aliases...)
+	var conflicting string
+	err := tx.QueryRow(ctx, "SELECT k\n"+
+		"FROM consent_purposes AS cp, UNNEST(ARRAY[cp.code] || cp.aliases) AS k\n"+
+		"WHERE cp.workspace = $1 AND cp.id <> $2 AND k = ANY($3)\n"+
+		"LIMIT 1", workspace, id, keys).Scan(&conflicting)
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
+	if conflicting == "" {
+		return nil
+	}
+	if conflicting == code {
+		return errors.Unprocessable(ConsentPurposeCodeExists, "a consent purpose with code %q already exists", code)
+	}
+	return errors.Unprocessable(ConsentPurposeAliasExists, "a consent purpose with alias %q already exists",
+		util.Abbreviate(conflicting, 50))
+}
+
+// validateConsentPurposeToSet validates the code, the name, the aliases and the
+// paths of the given consent purpose. It returns an errors.BadRequestError
+// error if one of them is not valid.
 func validateConsentPurposeToSet(purpose ConsentPurposeToSet) error {
 	if err := validateConsentPurposeCode(purpose.Code); err != nil {
 		return errors.BadRequest("%s", err)
 	}
 	if err := util.ValidateStringField("name", purpose.Name, 100); err != nil {
+		return errors.BadRequest("%s", err)
+	}
+	if err := validateConsentPurposeAliases(purpose.Code, purpose.Aliases); err != nil {
 		return errors.BadRequest("%s", err)
 	}
 	if err := validateConsentPurposePath("eventPath", purpose.EventPath); err != nil {
@@ -248,6 +304,32 @@ func validateConsentPurposePath(field, path string) error {
 		return fmt.Errorf("%s %q is not a valid property path. Property paths must be property names separated by a"+
 			" dot, each starting with a letter or underscore [A-Za-z_] and subsequently containing only letters,"+
 			" numbers, or underscores [A-Za-z0-9_]", field, util.Abbreviate(path, 50))
+	}
+	return nil
+}
+
+// validateConsentPurposeAliases validates the given aliases of a consent
+// purpose with the given code.
+func validateConsentPurposeAliases(code string, aliases []string) error {
+	if len(aliases) > maxConsentPurposeAliases {
+		return fmt.Errorf("a consent purpose can have at most %d aliases", maxConsentPurposeAliases)
+	}
+	for i, alias := range aliases {
+		if err := util.ValidateStringField("alias", alias, maxConsentPurposeAliasLen); err != nil {
+			return err
+		}
+		if strings.TrimSpace(alias) != alias {
+			return fmt.Errorf("alias %q must not start or end with a space", util.Abbreviate(alias, 50))
+		}
+		if strings.ContainsFunc(alias, unicode.IsControl) {
+			return fmt.Errorf("alias %q must not contain control characters", util.Abbreviate(alias, 50))
+		}
+		if alias == code {
+			return fmt.Errorf("alias %q is equal to the code of the consent purpose", util.Abbreviate(alias, 50))
+		}
+		if slices.Contains(aliases[i+1:], alias) {
+			return fmt.Errorf("alias %q is duplicated", util.Abbreviate(alias, 50))
+		}
 	}
 	return nil
 }

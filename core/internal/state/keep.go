@@ -366,6 +366,7 @@ type AddConsentPurpose struct {
 	ID          string
 	Code        string
 	Name        string
+	Aliases     []string
 	EventPath   string
 	ProfilePath string
 }
@@ -381,6 +382,7 @@ func (state *State) addConsentPurpose(n notification) string {
 		ID:          e.ID,
 		Code:        e.Code,
 		Name:        e.Name,
+		Aliases:     e.Aliases,
 		EventPath:   e.EventPath,
 		ProfilePath: e.ProfilePath,
 	})
@@ -1653,6 +1655,7 @@ type UpdateConsentPurpose struct {
 	ID          string
 	Code        string
 	Name        string
+	Aliases     []string
 	EventPath   string
 	ProfilePath string
 }
@@ -1668,6 +1671,7 @@ func (state *State) updateConsentPurpose(n notification) string {
 	cp := ws.replaceConsentPurpose(e.ID, func(cp *ConsentPurpose) {
 		cp.Code = e.Code
 		cp.Name = e.Name
+		cp.Aliases = e.Aliases
 		cp.EventPath = e.EventPath
 		cp.ProfilePath = e.ProfilePath
 	})

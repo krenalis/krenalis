@@ -18,6 +18,7 @@ const (
 	ConnectionsLimitReached       errors.Code = "ConnectionsLimitReached"
 	ConnectorNotExist             errors.Code = "ConnectorNotExist"
 	ConnectorsLimitReached        errors.Code = "ConnectorsLimitReached"
+	ConsentPurposeAliasExists     errors.Code = "ConsentPurposeAliasExists"
 	ConsentPurposeCodeExists      errors.Code = "ConsentPurposeCodeExists"
 	ConsentPurposeInUse           errors.Code = "ConsentPurposeInUse"
 	ConsentPurposeNotExist        errors.Code = "ConsentPurposeNotExist"

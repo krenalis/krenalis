@@ -356,6 +356,137 @@ func TestSatisfiesWithConfiguredPaths(t *testing.T) {
 	}
 }
 
+func TestSatisfiesWithAliases(t *testing.T) {
+	cases := []struct {
+		name     string
+		purposes []*state.ConsentPurpose
+		matchAll bool
+		given    map[string]any
+		profile  bool
+		want     bool
+	}{
+		{
+			name:     "the consent is given with the code",
+			purposes: []*state.ConsentPurpose{purposeWithAliases("marketing", "mkt", "#CFK567")},
+			matchAll: true,
+			given:    map[string]any{"marketing": true},
+			want:     true,
+		},
+		{
+			name:     "the consent is given with an alias",
+			purposes: []*state.ConsentPurpose{purposeWithAliases("marketing", "mkt", "#CFK567")},
+			matchAll: true,
+			given:    map[string]any{"mkt": true},
+			want:     true,
+		},
+		{
+			name:     "the consent is given with an alias that is not a property name",
+			purposes: []*state.ConsentPurpose{purposeWithAliases("marketing", "mkt", "#CFK567")},
+			matchAll: true,
+			given:    map[string]any{"#CFK567": true},
+			want:     true,
+		},
+		{
+			name:     "the code denies the consent and an alias grants it",
+			purposes: []*state.ConsentPurpose{purposeWithAliases("marketing", "mkt")},
+			matchAll: true,
+			given:    map[string]any{"marketing": false, "mkt": true},
+			want:     true,
+		},
+		{
+			name:     "an alias denies the consent and the code grants it",
+			purposes: []*state.ConsentPurpose{purposeWithAliases("marketing", "mkt")},
+			matchAll: true,
+			given:    map[string]any{"marketing": true, "mkt": false},
+			want:     true,
+		},
+		{
+			name:     "neither the code nor the aliases grant the consent",
+			purposes: []*state.ConsentPurpose{purposeWithAliases("marketing", "mkt", "#CFK567")},
+			matchAll: true,
+			given:    map[string]any{"mkt": false, "other": true},
+			want:     false,
+		},
+		{
+			name: "AND: each purpose is granted with one of its aliases",
+			purposes: []*state.ConsentPurpose{
+				purposeWithAliases("marketing", "mkt"),
+				purposeWithAliases("analytics", "#CFK567"),
+			},
+			matchAll: true,
+			given:    map[string]any{"mkt": true, "#CFK567": true},
+			want:     true,
+		},
+		{
+			name: "OR: only the purpose granted with an alias satisfies the consents",
+			purposes: []*state.ConsentPurpose{
+				purposeWithAliases("marketing", "mkt"),
+				purposeWithAliases("analytics", "#CFK567"),
+			},
+			matchAll: false,
+			given:    map[string]any{"mkt": true},
+			want:     true,
+		},
+		{
+			name:     "the aliases are ignored on a profile",
+			purposes: []*state.ConsentPurpose{purposeWithAliases("marketing", "mkt")},
+			matchAll: true,
+			given:    map[string]any{"mkt": true},
+			profile:  true,
+			want:     false,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var got bool
+			if c.profile {
+				got = SatisfiesProfile(c.purposes, c.matchAll, map[string]any{"consents": c.given})
+			} else {
+				event := map[string]any{"context": map[string]any{"consents": c.given}}
+				got = SatisfiesEvent(c.purposes, c.matchAll, event)
+			}
+			if got != c.want {
+				t.Fatalf("got %v, want %v", got, c.want)
+			}
+		})
+	}
+}
+
+func TestSatisfiesWithAliasesAndConfiguredEventPath(t *testing.T) {
+	// The aliases are not read when the event path is configured, because that
+	// path alone holds the consent.
+	purpose := state.NewConsentPurpose(state.ConsentPurpose{
+		ID:        "marketing",
+		Code:      "marketing",
+		Name:      "marketing",
+		Aliases:   []string{"mkt"},
+		EventPath: "properties.marketingConsent",
+	})
+	purposes := []*state.ConsentPurpose{purpose}
+	event := map[string]any{
+		"context":    map[string]any{"consents": map[string]any{"marketing": true, "mkt": true}},
+		"properties": map[string]any{"marketingConsent": false},
+	}
+	if SatisfiesEvent(purposes, true, event) {
+		t.Fatal("got true, want false")
+	}
+	event["properties"] = map[string]any{"marketingConsent": true}
+	if !SatisfiesEvent(purposes, true, event) {
+		t.Fatal("got false, want true")
+	}
+}
+
+// purposeWithAliases returns the consent purpose with the given code and
+// aliases, with the default property paths.
+func purposeWithAliases(code string, aliases ...string) *state.ConsentPurpose {
+	return state.NewConsentPurpose(state.ConsentPurpose{
+		ID:      code,
+		Code:    code,
+		Name:    code,
+		Aliases: aliases,
+	})
+}
+
 // requiredPurposes returns the consent purposes with the given codes, each one
 // with the default property paths.
 func requiredPurposes(codes []string) []*state.ConsentPurpose {
