@@ -165,6 +165,11 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 			return
 		case r.URL.Path == "/onboarding":
 			if workOS != nil {
+				if r.Method != "GET" && r.Method != "HEAD" {
+					w.Header().Set("Allow", "GET, HEAD")
+					http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+					return
+				}
 				err := serveOnboardingHTMLPage(w)
 				if err != nil {
 					slog.Error("failed to serve the onboarding HTML page", "error", err)
