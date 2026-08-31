@@ -290,6 +290,39 @@ func Test_Reset(t *testing.T) {
 
 }
 
+// Test_SetAttempts verifies that lowering the attempt limit below the current
+// attempt count prevents further attempts.
+func Test_SetAttempts(t *testing.T) {
+
+	synctest.Test(t, func(t *testing.T) {
+
+		bo := New(0)
+		if !bo.Next(t.Context()) {
+			t.Fatal("Next returned false on first call")
+		}
+		if !bo.Next(t.Context()) {
+			t.Fatal("Next returned false on second call")
+		}
+		if got := bo.Attempt(); got != 2 {
+			t.Fatalf("expected attempt 2, got %d", got)
+		}
+
+		bo.SetAttempts(1)
+
+		if got := bo.WaitTime(); got != 0 {
+			t.Errorf("expected WaitTime 0 after lowering attempt limit, got %s", got)
+		}
+		if bo.Next(t.Context()) {
+			t.Error("Next returned true after lowering attempt limit")
+		}
+		if bo.AfterFunc(t.Context(), func(context.Context) {}) {
+			t.Error("AfterFunc returned true after lowering attempt limit")
+		}
+
+	})
+
+}
+
 // Test_SetNextWaitTime validates that SetNextWaitTime overrides the next
 // calculated wait time.
 func Test_SetNextWaitTime(t *testing.T) {

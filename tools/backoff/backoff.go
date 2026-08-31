@@ -67,7 +67,7 @@ func New(base int) *Backoff {
 // so as soon as possible after cancellation.
 func (bo *Backoff) AfterFunc(ctx context.Context, f func(ctx context.Context)) bool {
 	if bo.attempt > 0 {
-		if bo.attempt == bo.attempts {
+		if bo.attempts != 0 && bo.attempt >= bo.attempts {
 			return false
 		}
 		if bo.waitTime == 0 {
@@ -108,7 +108,7 @@ func (bo *Backoff) Attempt() int {
 // made, otherwise, it returns false.
 func (bo *Backoff) Next(ctx context.Context) bool {
 	if bo.attempt > 0 {
-		if bo.attempt == bo.attempts {
+		if bo.attempts != 0 && bo.attempt >= bo.attempts {
 			return false
 		}
 		if bo.waitTime == 0 {
@@ -197,7 +197,7 @@ func (bo *Backoff) Stop() bool {
 // already been called or if there are no other retry attempts.
 func (bo *Backoff) WaitTime() time.Duration {
 	if bo.attempt > 0 {
-		if bo.attempt == bo.attempts {
+		if bo.attempts != 0 && bo.attempt >= bo.attempts {
 			return 0
 		}
 		if bo.waitTime == 0 {
