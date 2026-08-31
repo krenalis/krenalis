@@ -278,8 +278,13 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 				Operation: warehouses.OperationDropColumn,
 				Column:    pathToColumn(keptPath),
 			})
-			if !types.Equal(oldProp.Type, newProp.Type) {
-				return nil, fmt.Errorf("error on property %q: type changes are not supported", appendPath(path, oldProp.Name))
+			// The type to compare with the new one is that of the renamed
+			// property, at oldPath, and not that of the deleted property, whose
+			// name is the one that has been reused.
+			oldName := propPathToName(oldPath)
+			renamedProp, _ := oldProperties.ByName(oldName)
+			if !types.Equal(renamedProp.Type, newProp.Type) {
+				return nil, fmt.Errorf("error on property %q (renamed to %q): type changes are not supported", appendPath(path, oldName), keptPath)
 			}
 			if newProp.Type.Kind() == types.ObjectKind {
 				for _, c := range util.PropertiesToColumns(newProp.Type.Properties()) {

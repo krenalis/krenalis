@@ -75,7 +75,7 @@ func TestDiff(t *testing.T) {
 			rePaths: map[string]any{
 				"lastName": "firstName",
 			},
-			expectedErr: `error on property "lastName": type changes are not supported`,
+			expectedErr: `error on property "firstName" (renamed to "lastName"): type changes are not supported`,
 		},
 		{
 			name: "No changes",
@@ -705,6 +705,49 @@ func TestDiff(t *testing.T) {
 			expectedOps: []warehouses.AlterOperation{
 				{Operation: warehouses.OperationRenameColumn, Column: "x_a", NewColumn: "x_a2"},
 				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.String()},
+			},
+		},
+		{
+			name: "Property deleted and its name reused by a renamed property whose type has changed",
+			fromSchema: types.Object([]types.Property{
+				{Name: "foo", Type: types.String(), Nullable: true},
+				{Name: "bar", Type: types.Int(32), Nullable: true},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "foo", Type: types.String(), Nullable: true},
+			}),
+			rePaths:     map[string]any{"foo": "bar"},
+			expectedErr: `error on property "bar" (renamed to "foo"): type changes are not supported`,
+		},
+		{
+			name: "Property deleted and its name reused by a renamed property whose type has changed. Within an object property",
+			fromSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "foo", Type: types.String(), Nullable: true},
+					{Name: "bar", Type: types.Int(32), Nullable: true},
+				})},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "foo", Type: types.String(), Nullable: true},
+				})},
+			}),
+			rePaths:     map[string]any{"x.foo": "x.bar"},
+			expectedErr: `error on property "x.bar" (renamed to "x.foo"): type changes are not supported`,
+		},
+		{
+			name: "Property deleted and its name reused by a renamed property of the same type, but with a different type than the deleted one",
+			fromSchema: types.Object([]types.Property{
+				{Name: "foo", Type: types.Int(32), Nullable: true},
+				{Name: "bar", Type: types.String(), Nullable: true},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "foo", Type: types.String(), Nullable: true},
+			}),
+			rePaths: map[string]any{"foo": "bar"},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "foo"},
+				{Operation: warehouses.OperationRenameColumn, Column: "bar", NewColumn: "foo"},
 			},
 		},
 		{
