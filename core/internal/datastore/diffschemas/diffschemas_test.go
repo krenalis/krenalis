@@ -378,6 +378,30 @@ func TestDiff(t *testing.T) {
 			},
 		},
 		{
+			name: "One nested object property removed and then an object property added with the same name",
+			fromSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Object([]types.Property{
+						{Name: "b", Type: types.String(), Nullable: true},
+						{Name: "c", Type: types.Int(32), Nullable: true},
+					})},
+				})},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Object([]types.Property{
+						{Name: "d", Type: types.String(), Nullable: true},
+					})},
+				})},
+			}),
+			rePaths: map[string]any{"x.a": nil},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "x_a_b"},
+				{Operation: warehouses.OperationDropColumn, Column: "x_a_c"},
+				{Operation: warehouses.OperationAddColumn, Column: "x_a_d", Type: types.String()},
+			},
+		},
+		{
 			name: "One property removed and then added again (with another type) at second level",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
