@@ -230,6 +230,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		}
 
 		if v, ok := rePaths[keptPath]; ok && v == nil {
+			columnBase := pathToColumn(keptPath)
 			if renamed {
 				// New properties with the same name of a renamed property. They
 				// appear in "rePaths" (the key is the name of the created
@@ -249,13 +250,13 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 					for _, p := range propertyPaths(oldProp.Type) {
 						operations = append(operations, warehouses.AlterOperation{
 							Operation: warehouses.OperationDropColumn,
-							Column:    pathToColumn(appendPath(path, appendPath(keptName, p))),
+							Column:    columnBase + "_" + pathToColumn(p),
 						})
 					}
 				} else {
 					operations = append(operations, warehouses.AlterOperation{
 						Operation: warehouses.OperationDropColumn,
-						Column:    pathToColumn(keptPath),
+						Column:    columnBase,
 					})
 				}
 			}
@@ -263,7 +264,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 				for _, c := range util.PropertiesToColumns(newProp.Type.Properties()) {
 					operations = append(operations, warehouses.AlterOperation{
 						Operation: warehouses.OperationAddColumn,
-						Column:    pathToColumn(keptPath) + "_" + c.Name,
+						Column:    columnBase + "_" + c.Name,
 						Type:      c.Type,
 					})
 				}
@@ -271,7 +272,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 				operations = append(operations,
 					warehouses.AlterOperation{
 						Operation: warehouses.OperationAddColumn,
-						Column:    pathToColumn(keptPath),
+						Column:    columnBase,
 						Type:      newProp.Type,
 					})
 			}
