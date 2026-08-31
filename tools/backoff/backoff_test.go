@@ -19,7 +19,7 @@ func Test_AfterFunc(t *testing.T) {
 	c := make(chan struct{})
 	f := func(_ context.Context) { c <- struct{}{} }
 
-	// Test NoLimit attempts.
+	// Test unlimited attempts.
 	cap := 10 * time.Millisecond
 	bo := New(1)
 	bo.SetCap(cap)
@@ -172,7 +172,7 @@ func Test_InvalidInputPanics(t *testing.T) {
 // limit when set.
 func Test_Next(t *testing.T) {
 
-	// Test NoLimit attempts.
+	// Test unlimited attempts.
 	bo := New(1)
 	bo.SetCap(10 * time.Millisecond)
 	i := 0
@@ -284,6 +284,39 @@ func Test_Reset(t *testing.T) {
 		}
 		if bo.Next(t.Context()) {
 			t.Fatal("Next returned true after the configured attempts")
+		}
+
+	})
+
+}
+
+// Test_SetAttempts verifies that lowering the attempt limit below the current
+// attempt count prevents further attempts.
+func Test_SetAttempts(t *testing.T) {
+
+	synctest.Test(t, func(t *testing.T) {
+
+		bo := New(0)
+		if !bo.Next(t.Context()) {
+			t.Fatal("Next returned false on first call")
+		}
+		if !bo.Next(t.Context()) {
+			t.Fatal("Next returned false on second call")
+		}
+		if got := bo.Attempt(); got != 2 {
+			t.Fatalf("expected attempt 2, got %d", got)
+		}
+
+		bo.SetAttempts(1)
+
+		if got := bo.WaitTime(); got != 0 {
+			t.Errorf("expected WaitTime 0 after lowering attempt limit, got %s", got)
+		}
+		if bo.Next(t.Context()) {
+			t.Error("Next returned true after lowering attempt limit")
+		}
+		if bo.AfterFunc(t.Context(), func(context.Context) {}) {
+			t.Error("AfterFunc returned true after lowering attempt limit")
 		}
 
 	})
