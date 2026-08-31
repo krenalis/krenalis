@@ -1698,6 +1698,11 @@ Identifiers:
 				//
 				// Update the profile schema.
 				query := "UPDATE workspaces SET profile_schema = alter_profile_schema_schema," +
+					" profile_role_first_name = alter_profile_schema_role_first_name," +
+					" profile_role_last_name = alter_profile_schema_role_last_name," +
+					" profile_role_email = alter_profile_schema_role_email," +
+					" profile_role_country = alter_profile_schema_role_country," +
+					" profile_role_photo = alter_profile_schema_role_photo," +
 					" identifiers = $1 WHERE id = $2"
 				_, err := tx.Exec(ctx, query, nEnd.Identifiers, nEnd.Workspace)
 				if err != nil {
@@ -1719,7 +1724,10 @@ Identifiers:
 			// Set the alter schema update as completed.
 			query := "UPDATE workspaces SET alter_profile_schema_id = NULL," +
 				" alter_profile_schema_schema = 'null', alter_profile_schema_primary_sources = 'null'," +
-				" alter_profile_schema_operations = 'null', alter_profile_schema_end_time = $1," +
+				" alter_profile_schema_operations = 'null', alter_profile_schema_role_first_name = ''," +
+				" alter_profile_schema_role_last_name = '', alter_profile_schema_role_email = ''," +
+				" alter_profile_schema_role_country = '', alter_profile_schema_role_photo = ''," +
+				" alter_profile_schema_end_time = $1," +
 				" alter_profile_schema_error = $2 WHERE id = $3 AND alter_profile_schema_id = $4"
 			res, err := tx.Exec(ctx, query, nEnd.EndTime, nEnd.Err, nEnd.Workspace, nEnd.ID)
 			if err != nil {
@@ -1970,7 +1978,9 @@ func (core *Core) removeMCPWarehouse(ws string) {
 //     profile schema update) is already running.
 //   - ConnectionNotExist, if a connection referred in the primary sources does
 //     not exist.
-func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema types.Type, primarySources map[string]string, operations []warehouses.AlterOperation) error {
+func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema types.Type,
+	assignedRoles ProfileRoleAssignments, primarySources map[string]string,
+	operations []warehouses.AlterOperation) error {
 	core.mustBeOpen()
 	opID, err := uuid.NewUUID()
 	if err != nil {
@@ -1981,6 +1991,7 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema
 		ID:             opID.String(),
 		StartTime:      time.Now().UTC(),
 		Schema:         schema,
+		AssignedRoles:  state.ProfileRoleAssignments(assignedRoles),
 		PrimarySources: primarySources,
 		Operations:     operations,
 	}
@@ -2033,10 +2044,14 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema
 		// Sets the alter profile schema operation to running.
 		query = "UPDATE workspaces SET alter_profile_schema_id = $1," +
 			" alter_profile_schema_schema = $2, alter_profile_schema_primary_sources = $3," +
-			" alter_profile_schema_operations = $4, alter_profile_schema_start_time = $5," +
-			" alter_profile_schema_end_time = NULL, alter_profile_schema_error = NULL WHERE id = $6"
+			" alter_profile_schema_operations = $4, alter_profile_schema_role_first_name = $5," +
+			" alter_profile_schema_role_last_name = $6, alter_profile_schema_role_email = $7," +
+			" alter_profile_schema_role_country = $8, alter_profile_schema_role_photo = $9," +
+			" alter_profile_schema_start_time = $10, alter_profile_schema_end_time = NULL," +
+			" alter_profile_schema_error = NULL WHERE id = $11"
 		_, err = tx.Exec(ctx, query, n.ID, n.Schema, n.PrimarySources, n.Operations,
-			n.StartTime, n.Workspace)
+			n.AssignedRoles.FirstName, n.AssignedRoles.LastName, n.AssignedRoles.Email, n.AssignedRoles.Country,
+			n.AssignedRoles.Photo, n.StartTime, n.Workspace)
 		if err != nil {
 			return nil, err
 		}

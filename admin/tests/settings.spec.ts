@@ -24,35 +24,6 @@ test(`Change the workspace name`, async ({ page }) => {
 	await expect(page.locator('.workspace-selector__value')).toContainText('Workspace');
 });
 
-test(`Change the UI user profile properties`, async ({ page }) => {
-	await page.goto(`${adminURL}/settings/general`);
-
-	const userProfileFirstName = page.locator('.general-settings__user-profile-first-name sl-input >> input');
-	const userProfileLastName = page.locator('.general-settings__user-profile-last-name sl-input >> input');
-	const userProfileAdditionalLine = page.locator('.general-settings__user-profile-extra sl-input >> input');
-	const userProfileImage = page.locator('.general-settings__profile-image sl-input >> input');
-
-	await userProfileFirstName.fill('first_name');
-	await userProfileLastName.fill('last_name');
-	await userProfileAdditionalLine.fill('email');
-	await userProfileImage.fill('dummy_id'); // Currently in the default schema we don't have any property for the image.
-
-	await page.click('.general-settings__save-workspace-button');
-
-	await expect(userProfileFirstName).toHaveValue('first_name');
-	await expect(userProfileLastName).toHaveValue('last_name');
-	await expect(userProfileAdditionalLine).toHaveValue('email');
-	await expect(userProfileImage).toHaveValue('dummy_id');
-
-	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
-	await page.reload();
-
-	await expect(userProfileFirstName).toHaveValue('first_name');
-	await expect(userProfileLastName).toHaveValue('last_name');
-	await expect(userProfileAdditionalLine).toHaveValue('email');
-	await expect(userProfileImage).toHaveValue('dummy_id');
-});
-
 test(`Change the automatic execution of the identity resolution`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/rules`);
 

@@ -41,23 +41,24 @@ type Workspace struct {
 	core                           *Core
 	store                          *datastore.Store
 	workspace                      *state.Workspace
-	ID                             string            `json:"id"`
-	Name                           string            `json:"name"`
-	ProfileSchema                  types.Type        `json:"profileSchema"`
-	PrimarySources                 map[string]string `json:"primarySources,format:emitnull"`
-	ResolveIdentitiesOnBatchImport bool              `json:"resolveIdentitiesOnBatchImport"`
-	Identifiers                    []string          `json:"identifiers,format:emitnull"`
-	WarehouseMode                  WarehouseMode     `json:"warehouseMode"`
-	UIPreferences                  UIPreferences     `json:"uiPreferences"`
+	ID                             string                 `json:"id"`
+	Name                           string                 `json:"name"`
+	ProfileSchema                  types.Type             `json:"profileSchema"`
+	AssignedRoles                  ProfileRoleAssignments `json:"assignedRoles"`
+	PrimarySources                 map[string]string      `json:"primarySources,format:emitnull"`
+	ResolveIdentitiesOnBatchImport bool                   `json:"resolveIdentitiesOnBatchImport"`
+	Identifiers                    []string               `json:"identifiers,format:emitnull"`
+	WarehouseMode                  WarehouseMode          `json:"warehouseMode"`
 }
 
-type UIPreferences struct {
-	Profile struct {
-		Image     string `json:"image"`     // property path.
-		FirstName string `json:"firstName"` // property path.
-		LastName  string `json:"lastName"`  // property path.
-		Extra     string `json:"extra"`     // property path.
-	} `json:"profile"`
+// ProfileRoleAssignments maps each Profile role to the path of the property
+// assigned to it. An empty path means no property is assigned to that role.
+type ProfileRoleAssignments struct {
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+	Email     string `json:"email"`
+	Country   string `json:"country"`
+	Photo     string `json:"photo"`
 }
 
 // PipelineStep represents a step of a pipeline.
@@ -1587,33 +1588,23 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 	return nil
 }
 
-// Update updates the name and the displayed properties of the workspace. name
-// must be between 1 and 100 runes long. displayedProperties must contain valid
-// displayed property names. A valid displayed property name is an empty string,
-// or alternatively a valid property name between 1 and 100 runes long.
+// Update updates the name of the workspace. name must be between 1 and 100
+// runes long.
 //
 // It returns an errors.NotFoundError error if the workspace does not exist
 // anymore.
-func (this *Workspace) Update(ctx context.Context, name string, uiPreferences UIPreferences) error {
+func (this *Workspace) Update(ctx context.Context, name string) error {
 	this.core.mustBeOpen()
 	if err := util.ValidateStringField("name", name, 100); err != nil {
 		return errors.BadRequest("%s", err)
 	}
-	if err := validateUIPreferences(uiPreferences); err != nil {
-		return errors.BadRequest("%s", err)
-	}
 	ws := this.workspace
 	n := state.UpdateWorkspace{
-		Workspace:     ws.ID,
-		Name:          name,
-		UIPreferences: state.UIPreferences(uiPreferences),
+		Workspace: ws.ID,
+		Name:      name,
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		result, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1, ui_profile_image = $2, "+
-			"ui_profile_first_name = $3, ui_profile_last_name = $4, "+
-			"ui_profile_extra = $5 WHERE id = $6",
-			n.Name, n.UIPreferences.Profile.Image, n.UIPreferences.Profile.FirstName,
-			n.UIPreferences.Profile.LastName, n.UIPreferences.Profile.Extra, n.Workspace)
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET name = $1 WHERE id = $2", n.Name, n.Workspace)
 		if err != nil {
 			return nil, err
 		}
@@ -2189,22 +2180,4 @@ func filterWorkspacePipelines(ws *state.Workspace, pipelines []string) []string 
 		return ok
 	})
 	return pipelines
-}
-
-// validateUIPreferences validates whether the given UI preferences are valid or
-// not, returning an error if they are not.
-func validateUIPreferences(preferences UIPreferences) error {
-	if n := preferences.Profile.Image; n != "" && (len(n) > 1024 || !types.IsValidPropertyPath(n)) {
-		return fmt.Errorf("invalid profile 'image' %q", n)
-	}
-	if n := preferences.Profile.FirstName; n != "" && (len(n) > 1024 || !types.IsValidPropertyPath(n)) {
-		return fmt.Errorf("invalid profile 'firstName' %q", n)
-	}
-	if n := preferences.Profile.LastName; n != "" && (len(n) > 1024 || !types.IsValidPropertyPath(n)) {
-		return fmt.Errorf("invalid profile 'lastName' %q", n)
-	}
-	if n := preferences.Profile.Extra; n != "" && (len(n) > 1024 || !types.IsValidPropertyPath(n)) {
-		return fmt.Errorf("invalid profile 'extra' %q", n)
-	}
-	return nil
 }

@@ -365,6 +365,20 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TABLE pipelines_metrics ALTER COLUMN failed_6 DROP DEFAULT`,
 			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS passed_6 integer NOT NULL DEFAULT 0`,
 			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS failed_6 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS alter_profile_schema_role_first_name varchar NOT NULL DEFAULT ''`,
+			`ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS alter_profile_schema_role_last_name varchar NOT NULL DEFAULT ''`,
+			`ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS alter_profile_schema_role_email varchar NOT NULL DEFAULT ''`,
+			`ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS alter_profile_schema_role_country varchar NOT NULL DEFAULT ''`,
+			`ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS alter_profile_schema_role_photo varchar NOT NULL DEFAULT ''`,
+			`ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS profile_role_first_name varchar NOT NULL DEFAULT ''`,
+			`ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS profile_role_last_name varchar NOT NULL DEFAULT ''`,
+			`ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS profile_role_email varchar NOT NULL DEFAULT ''`,
+			`ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS profile_role_country varchar NOT NULL DEFAULT ''`,
+			`ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS profile_role_photo varchar NOT NULL DEFAULT ''`,
+			`ALTER TABLE workspaces DROP COLUMN IF EXISTS ui_profile_image`,
+			`ALTER TABLE workspaces DROP COLUMN IF EXISTS ui_profile_first_name`,
+			`ALTER TABLE workspaces DROP COLUMN IF EXISTS ui_profile_last_name`,
+			`ALTER TABLE workspaces DROP COLUMN IF EXISTS ui_profile_extra`,
 		}
 		for _, query := range queries {
 			if _, err := tx.Exec(ctx, query); err != nil {

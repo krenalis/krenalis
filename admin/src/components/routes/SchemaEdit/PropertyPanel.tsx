@@ -4,7 +4,7 @@ import SlAnimation from '@shoelace-style/shoelace/dist/react/animation/index.js'
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
-import { PrimarySources } from '../../../lib/api/types/workspace';
+import { PrimarySources, ProfileRoleAssignments, ProfileRoleID } from '../../../lib/api/types/workspace';
 import { PropertyPanelLayout } from '../Schema/PropertyPanelLayout';
 import { PropertyForm } from './PropertyForm';
 import {
@@ -16,6 +16,8 @@ import {
 } from './useSchemaEdit';
 
 interface PropertyPanelProps {
+	assignedRole: ProfileRoleID | null;
+	assignedRoles: ProfileRoleAssignments;
 	animateActions: boolean;
 	dirty: boolean;
 	fieldChanges?: PropertyFieldChanges;
@@ -24,15 +26,23 @@ interface PropertyPanelProps {
 	property: PropertyToEdit | null;
 	parents: PropertyParent[];
 	primarySources: PrimarySources;
+	propertyPaths: Readonly<Record<string, string>>;
 	status?: PropertyChangeStatus;
 	onClose: () => void;
 	onActionsAnimationFinish: () => void;
 	onDirtyChange: (dirty: boolean) => void;
 	onRemove: (property: PropertyToEdit) => void;
-	onSave: (property: PropertyToEdit, primarySource: string | null) => void;
+	onSave: (
+		property: PropertyToEdit,
+		primarySource: string | null,
+		assignedRole: ProfileRoleID | null,
+		rolesToUnassign: readonly ProfileRoleID[],
+	) => void;
 }
 
 const PropertyPanel = ({
+	assignedRole,
+	assignedRoles,
 	animateActions,
 	dirty,
 	fieldChanges,
@@ -41,6 +51,7 @@ const PropertyPanel = ({
 	property,
 	parents,
 	primarySources,
+	propertyPaths,
 	status,
 	onClose,
 	onActionsAnimationFinish,
@@ -107,6 +118,8 @@ const PropertyPanel = ({
 					titleAdornment={status != null && <PropertyStatusBadge status={status} />}
 				>
 					<PropertyForm
+						assignedRole={assignedRole}
+						assignedRoles={assignedRoles}
 						key={property.key ?? '__new__'}
 						fieldChanges={fieldChanges}
 						formID={formID}
@@ -114,6 +127,7 @@ const PropertyPanel = ({
 						materializedSemantic={materializedSemantic}
 						propertyToEdit={property}
 						primarySources={primarySources}
+						propertyPaths={propertyPaths}
 						parents={parents}
 						showParent={isNew}
 						onDirtyChange={onDirtyChange}

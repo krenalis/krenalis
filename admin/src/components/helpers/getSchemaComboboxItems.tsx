@@ -38,21 +38,6 @@ const getMatchingComboboxItems = (schema: FlatSchema): ComboboxItem[] => {
 	return computeItems(filteredSchema);
 };
 
-const getUIPreferencesComboboxItems = (schema: ObjectType): ComboboxItem[] => {
-	if (schema == null) {
-		return [];
-	}
-	const flatSchema = flattenSchema(schema);
-	const filteredSchema: FlatSchema = {};
-	for (const [k, v] of Object.entries(flatSchema)) {
-		const typ = flatSchema[k].type;
-		if (typ === 'int' || typ === 'uuid' || typ === 'decimal' || typ === 'string') {
-			filteredSchema[k] = v;
-		}
-	}
-	return computeItems(filteredSchema);
-};
-
 const getFilterPropertyComboboxItems = (
 	schema: ObjectType,
 	connection: TransformedConnection,
@@ -185,7 +170,6 @@ const computeItems = (schema: FlatSchema) => {
 export {
 	getSchemaComboboxItems,
 	getMatchingComboboxItems,
-	getUIPreferencesComboboxItems,
 	getUserIDColumnComboboxItems,
 	getUpdatedAtComboboxItems,
 	filterOrderingPropertySchema,
