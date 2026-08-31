@@ -274,10 +274,19 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		// They appear in "rePaths" (the key is the name of the property that
 		// "occupied the name", the value is the name of the deleted property).
 		if oldPath, ok := rePaths[keptPath].(string); ok {
-			operations = append(operations, warehouses.AlterOperation{
-				Operation: warehouses.OperationDropColumn,
-				Column:    pathToColumn(keptPath),
-			})
+			if oldProp.Type.Kind() == types.ObjectKind {
+				for _, p := range propertyPaths(oldProp.Type) {
+					operations = append(operations, warehouses.AlterOperation{
+						Operation: warehouses.OperationDropColumn,
+						Column:    pathToColumn(appendPath(keptPath, p)),
+					})
+				}
+			} else {
+				operations = append(operations, warehouses.AlterOperation{
+					Operation: warehouses.OperationDropColumn,
+					Column:    pathToColumn(keptPath),
+				})
+			}
 			if !types.Equal(oldProp.Type, newProp.Type) {
 				return nil, fmt.Errorf("error on property %q: type changes are not supported", appendPath(path, oldProp.Name))
 			}

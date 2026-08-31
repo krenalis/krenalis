@@ -708,6 +708,68 @@ func TestDiff(t *testing.T) {
 			},
 		},
 		{
+			name: "Object property deleted and its name reused by a renamed object property",
+			fromSchema: types.Object([]types.Property{
+				{Name: "foo", Type: types.Object([]types.Property{
+					{Name: "b", Type: types.String(), Nullable: true},
+					{Name: "c", Type: types.String(), Nullable: true},
+				})},
+				{Name: "bar", Type: types.Object([]types.Property{
+					{Name: "b", Type: types.String(), Nullable: true},
+					{Name: "c", Type: types.String(), Nullable: true},
+				})},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "foo", Type: types.Object([]types.Property{
+					{Name: "b", Type: types.String(), Nullable: true},
+					{Name: "c", Type: types.String(), Nullable: true},
+				})},
+			}),
+			rePaths: map[string]any{"foo": "bar"},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "foo_b"},
+				{Operation: warehouses.OperationDropColumn, Column: "foo_c"},
+				{Operation: warehouses.OperationRenameColumn, Column: "bar_b", NewColumn: "foo_b"},
+				{Operation: warehouses.OperationRenameColumn, Column: "bar_c", NewColumn: "foo_c"},
+			},
+		},
+		{
+			name: "Object property deleted and its name reused by a renamed object property. Within an object property",
+			fromSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "foo", Type: types.Object([]types.Property{
+						{Name: "b", Type: types.String(), Nullable: true},
+						{Name: "d", Type: types.Object([]types.Property{
+							{Name: "e", Type: types.String(), Nullable: true},
+						})},
+					})},
+					{Name: "bar", Type: types.Object([]types.Property{
+						{Name: "b", Type: types.String(), Nullable: true},
+						{Name: "d", Type: types.Object([]types.Property{
+							{Name: "e", Type: types.String(), Nullable: true},
+						})},
+					})},
+				})},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "foo", Type: types.Object([]types.Property{
+						{Name: "b", Type: types.String(), Nullable: true},
+						{Name: "d", Type: types.Object([]types.Property{
+							{Name: "e", Type: types.String(), Nullable: true},
+						})},
+					})},
+				})},
+			}),
+			rePaths: map[string]any{"x.foo": "x.bar"},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "x_foo_b"},
+				{Operation: warehouses.OperationDropColumn, Column: "x_foo_d_e"},
+				{Operation: warehouses.OperationRenameColumn, Column: "x_bar_b", NewColumn: "x_foo_b"},
+				{Operation: warehouses.OperationRenameColumn, Column: "x_bar_d_e", NewColumn: "x_foo_d_e"},
+			},
+		},
+		{
 			name: "Rename an object property and create a new property with the same name (but different type)",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
