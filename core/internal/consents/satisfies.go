@@ -56,14 +56,19 @@ func satisfies(purposes []*state.ConsentPurpose, matchAll bool, grants func(*sta
 
 // granted reports whether the property of the given attributes with the given
 // path holds a granted consent. The consent can be held by a boolean property
-// or by a boolean value inside a JSON property.
+// or by a boolean value inside a JSON property. The path of a consent purpose
+// is guaranteed to point to a boolean property or to a key of a JSON property,
+// so no other kind of value can hold a consent.
 func granted(attributes map[string]any, path []string) bool {
-	v, _ := properties.Read(attributes, path)
+	v, ok := properties.Read(attributes, path)
+	if !ok {
+		return false
+	}
 	switch v := v.(type) {
 	case bool:
 		return v
 	case json.Value:
 		return v.Bool()
 	}
-	return false
+	panic("unreachable code")
 }

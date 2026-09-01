@@ -56,11 +56,11 @@ var givenConsentsCases = []struct {
 		want: false,
 	},
 	{
-		name:     "AND: required code is not a bool",
+		name:     "AND: required code is not a bool inside a JSON property",
 		required: []string{"marketing"},
 		matchAll: true,
 		given: map[string]any{
-			"marketing": "true",
+			"marketing": json.Value(`"true"`),
 		},
 		want: false,
 	},
@@ -298,15 +298,6 @@ func TestSatisfiesWithConfiguredPaths(t *testing.T) {
 				"privacy": map[string]any{"marketing": true},
 			},
 			want: true,
-		},
-		{
-			name:     "the profile path holds a value that is not a bool",
-			purposes: []*state.ConsentPurpose{purposeWithPaths("marketing", "", "privacy.marketing")},
-			matchAll: true,
-			attributes: map[string]any{
-				"privacy": map[string]any{"marketing": "true"},
-			},
-			want: false,
 		},
 		{
 			name:     "profile path inside a JSON property",
