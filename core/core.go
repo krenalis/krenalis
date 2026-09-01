@@ -1119,6 +1119,12 @@ func (core *Core) TransformData(ctx context.Context, organization string, data [
 	core.mustBeOpen()
 
 	// Validate the parameters.
+	if !IsValidID(organization) {
+		return nil, errors.BadRequest("identifier %q is not a valid organization identifier", organization)
+	}
+	if _, ok := core.state.Organization(organization); !ok {
+		return nil, errors.NotFound("organization %s does not exist", organization)
+	}
 	if !inSchema.Valid() {
 		return nil, errors.BadRequest("input schema is not valid")
 	}
