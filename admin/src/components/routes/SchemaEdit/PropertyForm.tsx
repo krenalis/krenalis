@@ -1036,7 +1036,8 @@ const getPropertyNameError = (
 	if (parent == null || !parent.propertyNames.includes(name)) {
 		return '';
 	}
-	return `A property named “${name}” already exists in ${parent.label}.`;
+	const parentLabel = parent.key === '' ? parent.label : `“${parent.label}”`;
+	return `A property named “${name}” already exists in ${parentLabel}.`;
 };
 
 export { PropertyForm };

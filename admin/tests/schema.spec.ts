@@ -2017,7 +2017,7 @@ test(`Allow matching property names under different object parents`, async ({ pa
 	await propertyPanel.locator('.property-form__name-input input').fill('matching_add_name');
 	const nameError = propertyPanel.locator('.property-form__control--name .property-form__control-error');
 	await expect(nameError).toHaveText(
-		'A property named “matching_add_name” already exists in duplicate_scope › billing.',
+		'A property named “matching_add_name” already exists in “duplicate_scope › billing”.',
 	);
 	await expect(propertyPanel.locator('.property-panel__save')).toHaveAttribute('disabled');
 	await propertyPanel.locator('.property-form__parent').evaluate((select: any) => {

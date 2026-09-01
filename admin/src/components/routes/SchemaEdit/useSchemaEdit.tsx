@@ -297,7 +297,8 @@ const useSchemaEdit = (
 			let p = editableSchema[k];
 			if (p.name === property.name && getParentPropertyKey(k) === property.parentKey) {
 				const parentLabel = propertyParents.find((parent) => parent.key === property.parentKey)?.label;
-				throw new Error(`A property named “${property.name}” already exists in ${parentLabel}.`);
+				const referencedParent = property.parentKey === '' ? parentLabel : `“${parentLabel}”`;
+				throw new Error(`A property named “${property.name}” already exists in ${referencedParent}.`);
 			}
 		}
 
@@ -383,7 +384,8 @@ const useSchemaEdit = (
 				let p = s[k];
 				if (p.name === property.name && getParentPropertyKey(k) === parentKey) {
 					const parentLabel = propertyParents.find((parent) => parent.key === parentKey)?.label;
-					throw new Error(`A property named “${property.name}” already exists in ${parentLabel}.`);
+					const referencedParent = parentKey === '' ? parentLabel : `“${parentLabel}”`;
+					throw new Error(`A property named “${property.name}” already exists in ${referencedParent}.`);
 				}
 			}
 
