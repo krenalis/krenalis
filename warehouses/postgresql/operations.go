@@ -82,11 +82,16 @@ func (warehouse *PostgreSQL) executeOperation(ctx context.Context, opID string, 
 // nil when the operation does not exist.
 func (warehouse *PostgreSQL) readOperationStatus(ctx context.Context, conn connection, opID string) (*opStatus, error) {
 
+	// LEFT counts characters, not bytes. It bounds the error returned by the query
+	// before the driver receives it; NewPersistedOperationError enforces the exact
+	// byte limit.
+	const operationErrorReadLimitCharacters = warehouses.MaxOperationErrorBytes + 1
+
 	var completedAt *time.Time
 	var opError string
 	err := conn.QueryRow(ctx, `SELECT "completed_at", LEFT("error", $2)`+
 		` FROM "krenalis_system_operations" WHERE "id" = $1 LIMIT 1`,
-		opID, warehouses.MaxOperationErrorBytes+1).
+		opID, operationErrorReadLimitCharacters).
 		Scan(&completedAt, &opError)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

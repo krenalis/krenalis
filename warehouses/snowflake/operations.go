@@ -76,11 +76,16 @@ func (warehouse *Snowflake) executeOperation(ctx context.Context, opID string, o
 // nil when the operation does not exist.
 func (warehouse *Snowflake) readOperationStatus(ctx context.Context, conn connection, opID string) (*opStatus, error) {
 
+	// LEFT counts characters, not bytes. It bounds the error returned by the query
+	// before the driver receives it; NewPersistedOperationError enforces the exact
+	// byte limit.
+	const operationErrorReadLimitCharacters = warehouses.MaxOperationErrorBytes + 1
+
 	var completedAt *time.Time
 	var opError string
 	err := conn.QueryRowContext(ctx, `SELECT "COMPLETED_AT", LEFT("ERROR", ?)`+
 		` FROM "KRENALIS_SYSTEM_OPERATIONS" WHERE "ID" = ? LIMIT 1`,
-		warehouses.MaxOperationErrorBytes+1, opID).
+		operationErrorReadLimitCharacters, opID).
 		Scan(&completedAt, &opError)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
