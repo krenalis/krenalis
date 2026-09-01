@@ -25,6 +25,7 @@ import (
 	"errors"
 	"net"
 	"sync"
+	"syscall"
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/prometheus"
@@ -133,7 +134,7 @@ func DialWithContext(dial DialFunc) DialFunc {
 		if err != nil {
 			return nil, err
 		}
-		return &instrumentedConn{Conn: conn, egress: c}, nil
+		return newInstrumentedConn(conn, c), nil
 	}
 }
 
@@ -249,12 +250,13 @@ func dialWith(organization string, dial DialFunc) DialFunc {
 		if err != nil {
 			return nil, err
 		}
-		return &instrumentedConn{Conn: conn, egress: c}, nil
+		return newInstrumentedConn(conn, c), nil
 	}
 }
 
 // instrumentedConn wraps a net.Conn, recording the bytes it writes into its
-// organization's egress counter.
+// organization's egress counter. It does not expose io.ReaderFrom or
+// io.WriterTo, or io.Copy to the connection would bypass Write and the count.
 type instrumentedConn struct {
 	net.Conn
 	egress *prometheus.Counter
@@ -266,6 +268,29 @@ func (c *instrumentedConn) Write(b []byte) (int, error) {
 		c.egress.Add(n)
 	}
 	return n, err
+}
+
+// instrumentedSyscallConn is an instrumentedConn that also exposes the
+// syscall.Conn of the connection it wraps.
+type instrumentedSyscallConn struct {
+	instrumentedConn
+	syscallConn syscall.Conn
+}
+
+// SyscallConn returns the raw network connection of the wrapped connection.
+func (c *instrumentedSyscallConn) SyscallConn() (syscall.RawConn, error) {
+	return c.syscallConn.SyscallConn()
+}
+
+// newInstrumentedConn wraps conn so that the bytes it writes are counted into
+// egress, preserving the syscall.Conn of conn when it has one so that the
+// wrapper can stand in for conn wherever that is used.
+func newInstrumentedConn(conn net.Conn, egress *prometheus.Counter) net.Conn {
+	c := instrumentedConn{Conn: conn, egress: egress}
+	if sc, ok := conn.(syscall.Conn); ok {
+		return &instrumentedSyscallConn{instrumentedConn: c, syscallConn: sc}
+	}
+	return &c
 }
 
 // onCreateOrganization is called when an organization is created, registering

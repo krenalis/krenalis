@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"syscall"
 	"testing"
 
 	"github.com/krenalis/krenalis/core/internal/state"
@@ -164,13 +165,24 @@ func write(t *testing.T, dial DialFunc, addr, s string) net.Conn {
 	return conn
 }
 
+// instrumented reports whether conn is one of the wrappers this package uses to
+// count the bytes written to a connection.
+func instrumented(conn net.Conn) bool {
+	switch conn.(type) {
+	case *instrumentedConn, *instrumentedSyscallConn:
+		return true
+	default:
+		return false
+	}
+}
+
 func TestDialDisabled(t *testing.T) {
 	// The metrics are disabled, so the dialer is transparent and the bytes are
 	// not counted.
 	addr := echoServer(t)
 	egress := egress(t, "org-disabled")
 	conn := write(t, Dial("org-disabled"), addr, "hello")
-	if _, ok := conn.(*instrumentedConn); ok {
+	if instrumented(conn) {
 		t.Fatal("the connection is instrumented, expecting a plain connection")
 	}
 	if n := egress(); n != 0 {
@@ -209,7 +221,7 @@ func TestPlainDial(t *testing.T) {
 	enable(t)
 	addr := echoServer(t)
 	conn := write(t, PlainDial(), addr, "hello")
-	if _, ok := conn.(*instrumentedConn); ok {
+	if instrumented(conn) {
 		t.Fatal("the connection is instrumented, expecting a plain connection")
 	}
 	var dialed bool
@@ -222,7 +234,7 @@ func TestPlainDial(t *testing.T) {
 	if !dialed {
 		t.Fatal("the connection has not been established by the given dial function")
 	}
-	if _, ok := conn.(*instrumentedConn); ok {
+	if instrumented(conn) {
 		t.Fatal("the connection is instrumented, expecting a plain connection")
 	}
 }
@@ -231,7 +243,7 @@ func TestPlainDialWithNilDialFunc(t *testing.T) {
 	// A nil dial function is replaced by a plain dialer, as in PlainDial.
 	addr := echoServer(t)
 	conn := write(t, PlainDialWith()(nil), addr, "hello")
-	if _, ok := conn.(*instrumentedConn); ok {
+	if instrumented(conn) {
 		t.Fatal("the connection is instrumented, expecting a plain connection")
 	}
 }
@@ -244,7 +256,7 @@ func TestDial(t *testing.T) {
 	egressA := egress(t, "org-a")
 	egressB := egress(t, "org-b")
 	conn := write(t, Dial("org-a"), addr, "hello")
-	if _, ok := conn.(*instrumentedConn); !ok {
+	if !instrumented(conn) {
 		t.Fatalf("the connection is a %T, expecting an instrumented connection", conn)
 	}
 	if n := egressA(); n != 5 {
@@ -263,6 +275,35 @@ func TestDial(t *testing.T) {
 	}
 	if n := egressB(); n != 2 {
 		t.Fatalf("counted %d bytes for org-b, expecting 2", n)
+	}
+}
+
+func TestInstrumentedConnSyscallConn(t *testing.T) {
+	// The wrapper preserves the syscall.Conn of the connection it wraps, when
+	// there is one, and does not claim one when the wrapped connection has none.
+	enable(t, "org-syscall")
+	addr := echoServer(t)
+
+	// A dialed TCP connection is a syscall.Conn, and so is its wrapper, whose
+	// SyscallConn delegates to it.
+	conn := write(t, Dial("org-syscall"), addr, "hello")
+	sc, ok := conn.(syscall.Conn)
+	if !ok {
+		t.Fatalf("the connection is a %T, which is not a syscall.Conn", conn)
+	}
+	if _, err := sc.SyscallConn(); err != nil {
+		t.Fatalf("SyscallConn returned an error: %s", err)
+	}
+
+	// A connection that is not a syscall.Conn, like one end of a net.Pipe, is
+	// wrapped without gaining one.
+	pipe, _ := net.Pipe()
+	defer pipe.Close()
+	organizationsMu.Lock()
+	c := organizations["org-syscall"]
+	organizationsMu.Unlock()
+	if _, ok := newInstrumentedConn(pipe, c).(syscall.Conn); ok {
+		t.Fatalf("the wrapper of a %T is a syscall.Conn, expecting none", pipe)
 	}
 }
 
@@ -318,7 +359,7 @@ func TestDialWithContext(t *testing.T) {
 	if !dialed {
 		t.Fatal("the connection has not been established by the given dial function")
 	}
-	if _, ok := conn.(*instrumentedConn); !ok {
+	if !instrumented(conn) {
 		t.Fatalf("the connection is a %T, expecting an instrumented connection", conn)
 	}
 	if _, err = conn.Write([]byte("hello")); err != nil {
@@ -375,7 +416,7 @@ func TestDialWithContextWithoutOrganization(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer conn.Close()
-	if _, ok := conn.(*instrumentedConn); ok {
+	if instrumented(conn) {
 		t.Fatal("the connection is instrumented, expecting a plain connection")
 	}
 	if _, err = conn.Write([]byte("hello")); err != nil {
@@ -397,7 +438,7 @@ func TestDialWithContextDisabled(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer conn.Close()
-	if _, ok := conn.(*instrumentedConn); ok {
+	if instrumented(conn) {
 		t.Fatal("the connection is instrumented, expecting a plain connection")
 	}
 	if _, err = conn.Write([]byte("hello")); err != nil {
@@ -416,7 +457,7 @@ func TestDialUnknownOrganization(t *testing.T) {
 	addr := echoServer(t)
 	dial := Dial("org-unknown")
 	conn := write(t, dial, addr, "hello")
-	if _, ok := conn.(*instrumentedConn); ok {
+	if instrumented(conn) {
 		t.Fatal("the connection is instrumented, expecting a plain connection")
 	}
 	// No counter is registered for an organization that does not exist.
@@ -534,7 +575,7 @@ func TestDialWithContextUnknownOrganization(t *testing.T) {
 	conn := write(t, func(ctx context.Context, network, address string) (net.Conn, error) {
 		return dial(WithOrganization(ctx, "org-ctx-unknown"), network, address)
 	}, addr, "hello")
-	if _, ok := conn.(*instrumentedConn); ok {
+	if instrumented(conn) {
 		t.Fatal("the connection is instrumented, expecting a plain connection")
 	}
 
