@@ -93,12 +93,6 @@ const PROPERTY_STRUCTURE_OPTIONS: PropertyStructureOption[] = [
 
 const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 	{
-		id: 'string',
-		kind: 'string',
-		description: 'Text value, such as a name or code',
-		create: () => ({ type: { kind: 'string' } }),
-	},
-	{
 		id: 'email',
 		kind: 'string',
 		create: () => ({ type: { kind: 'string' }, semantic: { kind: 'email' } }),
@@ -109,17 +103,23 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 		create: () => ({ type: { kind: 'string' }, semantic: { kind: 'phone' } }),
 	},
 	{
-		id: 'url',
-		kind: 'string',
-		create: () => ({ type: { kind: 'string' }, semantic: { kind: 'url' } }),
-	},
-	{
 		id: 'country',
 		kind: 'string',
 		create: () => ({
 			type: { kind: 'string', maxLength: 2 },
 			semantic: { kind: 'country', format: 'iso_3166_1_alpha_2' },
 		}),
+	},
+	{
+		id: 'url',
+		kind: 'string',
+		create: () => ({ type: { kind: 'string' }, semantic: { kind: 'url' } }),
+	},
+	{
+		id: 'string',
+		kind: 'string',
+		description: 'Text value, such as a name or code',
+		create: () => ({ type: { kind: 'string' } }),
 	},
 	{
 		id: 'boolean',
@@ -129,19 +129,19 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 		create: () => ({ type: { kind: 'boolean' } }),
 	},
 	{
-		id: 'int',
-		kind: 'int',
-		description: 'Number with no decimal places',
-		separated: true,
-		create: () => ({ type: { kind: 'int', bitSize: 32, unsigned: false } }),
-	},
-	{
 		id: 'duration',
 		kind: 'int',
+		separated: true,
 		create: () => ({
 			type: { kind: 'int', bitSize: 64, unsigned: false },
 			semantic: { kind: 'duration', unit: EMPTY_DURATION_UNIT },
 		}),
+	},
+	{
+		id: 'int',
+		kind: 'int',
+		description: 'Number with no decimal places',
+		create: () => ({ type: { kind: 'int', bitSize: 32, unsigned: false } }),
 	},
 	{
 		id: 'float',
@@ -151,15 +151,9 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 		create: () => ({ type: { kind: 'float', bitSize: 64, real: false } }),
 	},
 	{
-		id: 'decimal',
-		kind: 'decimal',
-		description: 'Decimal number with fixed precision',
-		separated: true,
-		create: () => ({ type: { kind: 'decimal', precision: 10, scale: 0 } }),
-	},
-	{
 		id: 'money',
 		kind: 'decimal',
+		separated: true,
 		create: () => ({ type: { ...PROFILE_SEMANTIC_DECIMAL_TYPE }, semantic: { kind: 'money' } }),
 	},
 	{
@@ -177,6 +171,12 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 			type: { ...PROFILE_SEMANTIC_DECIMAL_TYPE },
 			semantic: { kind: 'measurement', unit: EMPTY_UNIT_OF_MEASURE },
 		}),
+	},
+	{
+		id: 'decimal',
+		kind: 'decimal',
+		description: 'Decimal number with fixed precision',
+		create: () => ({ type: { kind: 'decimal', precision: 10, scale: 0 } }),
 	},
 	{
 		id: 'datetime',
@@ -229,44 +229,43 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 		const [structure, setStructure] = useState<PropertyStructure>(() => getPropertyStructure(type));
 		const structureDropdownRef = useRef<any>();
 		const dropdownRef = useRef<any>();
-		const typeMenuRef = useRef<any>();
 		const focusTypeAfterStructureSelectionRef = useRef(false);
 
 		useImperativeHandle(
 			ref,
 			() => ({
-				focusStructureTrigger: () => {
-					if (canEditType) {
-						structureDropdownRef.current?.focusOnTrigger();
-					}
-				},
+				focusStructureTrigger: () => structureDropdownRef.current?.focusOnTrigger(),
 			}),
-			[canEditType],
+			[],
 		);
 
 		const valueType = getPropertyValueType(type);
 		const selectedOption = getPropertyTypeOption(type, semantic);
 		const materializedOption = getPropertyTypeOption(type, materializedSemantic);
-		const baseOption = valueType == null ? undefined : getPropertyTypeOption(valueType);
 		const selectedStructureOption =
 			PROPERTY_STRUCTURE_OPTIONS.find((option) => option.id === structure) || PROPERTY_STRUCTURE_OPTIONS[0];
 		const showValueTypeSelector = structure !== 'object';
-		let typeOptions = PROPERTY_TYPE_OPTIONS;
-		if (!canEditType) {
-			typeOptions = [];
-			if (materializedSemantic != null && materializedOption != null && baseOption != null) {
-				typeOptions = semantic == null ? [baseOption, materializedOption] : [materializedOption, baseOption];
-			}
-		}
-		const hasMaterializedSemanticTransition = !canEditType && typeOptions.length === 2;
-		const canOnlyChangeBackToBaseType = canEditType ? semantic != null : hasMaterializedSemanticTransition;
-		const showTypeDropdown = canEditType || hasMaterializedSemanticTransition;
-		let appliedTypeNote: string | null = null;
+		const hasMaterializedSemanticTransition =
+			!canEditType && materializedOption != null && materializedSemantic != null;
+		const canChangeToBaseType = canEditType ? semantic != null : hasMaterializedSemanticTransition;
+		const isTypeOptionSelectable = (option: PropertyTypeOption) =>
+			canEditType || option.id === valueType?.kind || option.id === materializedOption?.id;
+		let typeChangeNote: React.ReactNode = null;
 		if (type != null) {
-			appliedTypeNote =
-				canOnlyChangeBackToBaseType && valueType != null
-					? `This type can only be changed back to ${valueType.kind} once the property has been applied.`
-					: "Type can't be changed once the property has been applied.";
+			if (canChangeToBaseType && valueType != null) {
+				typeChangeNote = (
+					<>
+						{canEditType
+							? 'Once applied, this type can only be changed to '
+							: 'This type can only be changed to '}
+						<span className='property-type-selector__type-change-note-base-type'>{valueType.kind}</span>.
+					</>
+				);
+			} else {
+				typeChangeNote = canEditType
+					? "Can't be changed once the property has been applied."
+					: "This type can't be changed.";
+			}
 		}
 
 		useEffect(() => {
@@ -304,25 +303,9 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 			dropdownRef.current?.focusOnTrigger();
 		};
 
-		const onTypeMenuAfterShow = () => {
-			if (valueType != null) {
-				return;
-			}
-			const firstOption = typeMenuRef.current?.getAllItems()[0];
-			if (firstOption == null) {
-				return;
-			}
-			typeMenuRef.current.setCurrentItem(firstOption);
-			firstOption.focus();
-		};
-
 		const onSelectOption = (event) => {
 			const option = PROPERTY_TYPE_OPTIONS.find((candidate) => candidate.id === event.detail.item.value);
-			if (
-				option == null ||
-				option.id === selectedOption?.id ||
-				!typeOptions.some((candidate) => candidate.id === option.id)
-			) {
+			if (option == null || option.id === selectedOption?.id || !isTypeOptionSelectable(option)) {
 				return;
 			}
 			const selection = option.create();
@@ -342,31 +325,35 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 
 		return (
 			<div className='property-type-selector'>
+				{typeChangeNote != null && (
+					<div className='property-type-selector__type-change-note'>{typeChangeNote}</div>
+				)}
 				<div
 					className={`property-type-selector__controls${
 						showValueTypeSelector ? '' : ' property-type-selector__controls--structure-only'
-					}${showTypeDropdown ? '' : ' property-type-selector__controls--read-only'}`}
+					}`}
 				>
-					{canEditType ? (
-						<SlDropdown
-							className='property-type-selector__structure-dropdown'
-							ref={structureDropdownRef}
-							hoist
-							placement='bottom-start'
-							distance={6}
-							onSlAfterHide={onStructureMenuAfterHide}
+					<SlDropdown
+						className='property-type-selector__structure-dropdown'
+						ref={structureDropdownRef}
+						hoist
+						placement='bottom-start'
+						distance={6}
+						onSlAfterHide={onStructureMenuAfterHide}
+					>
+						<SlButton
+							className='property-type-selector__structure-trigger'
+							slot='trigger'
+							caret
+							aria-label={`Structure: ${selectedStructureOption.label}`}
 						>
-							<SlButton
-								className='property-type-selector__structure-trigger'
-								slot='trigger'
-								caret
-								aria-label={`Structure: ${selectedStructureOption.label}`}
-							>
-								<SlIcon slot='prefix' name={selectedStructureOption.icon} />
-								{selectedStructureOption.triggerLabel}
-							</SlButton>
-							<SlMenu className='property-type-selector__structure-menu' onSlSelect={onSelectStructure}>
-								{PROPERTY_STRUCTURE_OPTIONS.map((option) => (
+							<SlIcon slot='prefix' name={selectedStructureOption.icon} />
+							{selectedStructureOption.triggerLabel}
+						</SlButton>
+						<SlMenu className='property-type-selector__structure-menu' onSlSelect={onSelectStructure}>
+							{PROPERTY_STRUCTURE_OPTIONS.map((option) => {
+								const selectable = canEditType || structure === option.id;
+								return (
 									<SlMenuItem
 										className={`property-type-selector__structure-option${
 											structure === option.id
@@ -375,6 +362,7 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 										}`}
 										key={option.id}
 										data-structure-option={option.id}
+										disabled={!selectable}
 										value={option.id}
 									>
 										<SlIcon slot='prefix' name={option.icon} />
@@ -388,98 +376,72 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 										</span>
 										{structure === option.id && <SlIcon slot='suffix' name='check-lg' />}
 									</SlMenuItem>
-								))}
-							</SlMenu>
-						</SlDropdown>
-					) : (
-						<div
-							className='property-type-selector__structure-value'
-							aria-label={`Structure: ${selectedStructureOption.label}`}
+								);
+							})}
+						</SlMenu>
+					</SlDropdown>
+					{showValueTypeSelector && (
+						<SlDropdown
+							className='property-type-selector__dropdown'
+							ref={dropdownRef}
+							hoist
+							placement='bottom-end'
+							distance={6}
 						>
-							<SlIcon name={selectedStructureOption.icon} />
-							<span>{selectedStructureOption.triggerLabel}</span>
-						</div>
-					)}
-					{showValueTypeSelector &&
-						(showTypeDropdown ? (
-							<SlDropdown
-								className='property-type-selector__dropdown'
-								ref={dropdownRef}
-								hoist
-								placement='bottom-end'
-								distance={6}
-								onSlAfterShow={onTypeMenuAfterShow}
+							<SlButton
+								className='property-type-selector__trigger'
+								slot='trigger'
+								caret
+								aria-label={valueType == null ? 'Select type' : undefined}
 							>
-								<SlButton
-									className='property-type-selector__trigger'
-									slot='trigger'
-									caret
-									aria-label={valueType == null ? 'Select type' : undefined}
-								>
-									{valueType == null ? (
-										<span className='property-type-selector__placeholder'>Select type...</span>
-									) : (
-										<SchemaPropertyType
-											context={canEditType ? 'trigger' : 'menu'}
-											type={valueType}
-											semantic={semantic}
-										/>
-									)}
-								</SlButton>
-								<SlMenu
-									className='property-type-selector__browser'
-									ref={typeMenuRef}
-									onSlSelect={onSelectOption}
-								>
-									{typeOptions.map((option) => {
-										const selection = option.create();
-										const optionType =
-											!canEditType && valueType != null ? valueType : selection.type;
-										const optionSemantic =
-											!canEditType && option.id === materializedOption?.id
-												? materializedSemantic
-												: selection.semantic;
-										return (
-											<SlMenuItem
-												className={`property-type-selector__option${
-													canEditType && option.separated
-														? ' property-type-selector__option--separated'
-														: ''
-												}${
-													selectedOption?.id === option.id
-														? ' property-type-selector__option--selected'
-														: ''
-												}`}
-												key={option.id}
-												data-type-option={option.id}
-												value={option.id}
-											>
-												<SchemaPropertyType
-													context='menu'
-													type={optionType}
-													semantic={optionSemantic}
-													description={option.description}
-													catalogOption={canEditType}
-												/>
-												{selectedOption?.id === option.id && (
-													<SlIcon slot='suffix' name='check-lg' />
-												)}
-											</SlMenuItem>
-										);
-									})}
-								</SlMenu>
-							</SlDropdown>
-						) : (
-							<div className='property-type-selector__type-value'>
-								{valueType != null && (
-									<SchemaPropertyType context='menu' type={valueType} semantic={semantic} />
+								{valueType == null ? (
+									<span className='property-type-selector__placeholder'>Select type...</span>
+								) : (
+									<SchemaPropertyType context='trigger' type={valueType} semantic={semantic} />
 								)}
-							</div>
-						))}
+							</SlButton>
+							<SlMenu className='property-type-selector__browser' onSlSelect={onSelectOption}>
+								{PROPERTY_TYPE_OPTIONS.map((option) => {
+									const selectable = isTypeOptionSelectable(option);
+									const selection = option.create();
+									const optionType =
+										!canEditType && selectable && valueType != null ? valueType : selection.type;
+									const optionSemantic =
+										!canEditType && option.id === materializedOption?.id
+											? materializedSemantic
+											: selection.semantic;
+									return (
+										<SlMenuItem
+											className={`property-type-selector__option${
+												option.separated ? ' property-type-selector__option--separated' : ''
+											}${
+												selectedOption?.id === option.id
+													? ' property-type-selector__option--selected'
+													: ''
+											}`}
+											key={option.id}
+											data-type-option={option.id}
+											disabled={!selectable}
+											value={option.id}
+										>
+											<SchemaPropertyType
+												context='menu'
+												type={optionType}
+												semantic={optionSemantic}
+												description={option.description}
+												catalogOption={canEditType || !selectable}
+											/>
+											{selectedOption?.id === option.id && (
+												<SlIcon slot='suffix' name='check-lg' />
+											)}
+										</SlMenuItem>
+									);
+								})}
+							</SlMenu>
+							<div className='property-type-selector__browser-fade' aria-hidden='true' />
+						</SlDropdown>
+					)}
 				</div>
-				{appliedTypeNote != null && (
-					<div className='property-type-selector__applied-note'>{appliedTypeNote}</div>
-				)}
 			</div>
 		);
 	},

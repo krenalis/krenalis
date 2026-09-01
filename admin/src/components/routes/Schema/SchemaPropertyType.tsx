@@ -51,13 +51,7 @@ const SchemaPropertyType = ({ catalogOption, context, description, semantic, typ
 			className={`schema-property-type schema-property-type--${context}`}
 			title={context === 'menu' ? undefined : title}
 		>
-			<span
-				className={`schema-property-type__primary${
-					semantic == null ? ' schema-property-type__primary--technical' : ''
-				}`}
-			>
-				{presentation.primary}
-			</span>
+			<span className='schema-property-type__primary'>{presentation.primary}</span>
 			{presentation.metadata != null && (
 				<span
 					className={`schema-property-type__metadata${
@@ -96,13 +90,21 @@ const getSchemaPropertyTypePresentation = (
 		};
 	}
 
+	const semanticLabel = toSemanticLabel(semantic, context);
+	if (context === 'grid') {
+		return {
+			metadata: toProfileSchemaSemanticPhysicalType(type),
+			primary: withPropertyStructure(type, semanticLabel),
+		};
+	}
+
 	const usePhysicalTypeFamily =
 		context === 'trigger' ||
 		(context === 'menu' && options.catalogOption && (semantic.kind === 'country' || semantic.kind === 'duration'));
 
 	return {
 		metadata: usePhysicalTypeFamily ? toPhysicalTypeFamily(type) : toProfileSchemaPhysicalType(type),
-		primary: toSemanticLabel(semantic, context),
+		primary: semanticLabel,
 	};
 };
 
@@ -126,12 +128,26 @@ const toPhysicalTypeFamily = (type: Type): string => {
 
 const toProfileSchemaPhysicalType = (type: Type): string => {
 	if (type.kind === 'array' || type.kind === 'map') {
-		return `${type.kind}(${toProfileSchemaPhysicalType(type.elementType)})`;
+		return `${type.kind} of ${toProfileSchemaPhysicalType(type.elementType)}`;
 	}
 
 	const normalizedType =
 		type.kind === 'int' && type.unsigned && type.minimum == null ? { ...type, minimum: 0 } : type;
 	return toKrenalisStringType(normalizedType, undefined, ' · ');
+};
+
+const toProfileSchemaSemanticPhysicalType = (type: Type): string => {
+	if (type.kind === 'array' || type.kind === 'map') {
+		return toProfileSchemaSemanticPhysicalType(type.elementType);
+	}
+	return toProfileSchemaPhysicalType(type);
+};
+
+const withPropertyStructure = (type: Type, label: string): string => {
+	if (type.kind === 'array' || type.kind === 'map') {
+		return `${type.kind} of ${withPropertyStructure(type.elementType, label)}`;
+	}
+	return label;
 };
 
 const toSemanticLabel = (semantic: Semantic, context: SchemaPropertyTypeContext): string => {

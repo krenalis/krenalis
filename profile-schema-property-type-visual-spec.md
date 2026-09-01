@@ -19,7 +19,7 @@ Il secondo selettore determina una combinazione predefinita di physical type, se
 
 Il menu presenta sempre il catalogo completo. Per una property materializzata, sono selezionabili soltanto il physical
 type puro corrente e, se presente nello schema applicato, il semantic originale. Le altre voci restano visibili ma
-disabilitate.
+non selezionabili, con un'attenuazione lieve e senza hover.
 
 `Array` e `Map` applicano il formato rispettivamente all'elemento e al valore. `Object` non ha un semantic diretto e non mostra il secondo selettore.
 
@@ -37,10 +37,10 @@ La quantità di dettaglio cambia intenzionalmente tra i tre contesti:
 - il controllo chiuso aiuta a riconoscere la selezione e usa label compatte;
 - la grid permette di ispezionare la configurazione effettiva completa.
 
-Quando esiste un semantic, questo è sempre la primary label in font di sistema e il physical type è sempre metadata
-tecnico in monospace. Senza semantic, viene mostrato il physical type. Solo il menu aperto aggiunge una descrizione
-ai type puri. Currency, unità di measurement e unità di duration vengono aggiunte alla primary label soltanto nella
-grid, dove servono a ispezionare lo schema effettivo.
+Quando esiste un semantic, questo è sempre la primary label e il physical type è sempre metadata tecnico. Primary
+label e metadata tecnico usano il monospace. Senza semantic, viene mostrato il physical type, sempre in monospace.
+Solo il menu aperto aggiunge una descrizione in font di sistema ai type puri. Currency, unità di measurement e unità
+di duration vengono aggiunte alla primary label soltanto nella grid, dove servono a ispezionare lo schema effettivo.
 
 Nelle label compatte, una Semantic Option viene omessa soltanto quando può essere dedotta senza ambiguità dal physical
 type e dalle constraint mostrate. Se due varianti dello stesso semantic produrrebbero la stessa label, il qualificatore
@@ -95,7 +95,8 @@ Regole visuali:
 - se il contenuto è troncato, hover e focus mostrano il valore completo in un tooltip;
 - il secondo segmento continua ad aprire il menu per una property materializzata, per mostrare il catalogo e consentire
   la sola eventuale rimozione del semantic;
-- il primo segmento è disabilitato e senza caret quando la struttura è immutabile.
+- anche il primo segmento continua ad aprire il proprio menu quando la struttura è immutabile; soltanto la struttura
+  corrente è selezionabile, mentre le altre voci sono leggermente attenuate e non ricevono hover.
 
 Il controllo chiuso non documenta la configurazione completa. Mostra il nome del type puro senza descrizione:
 
@@ -119,6 +120,7 @@ Per i semantic semplici mostra soltanto la famiglia fisica:
 ```text
 email · string
 phone number · string
+country · string
 URL · string
 duration · int
 money · decimal
@@ -128,10 +130,6 @@ measurement · decimal
 
 `country` mantiene la stessa label compatta per entrambi i formati, perché la variante viene scelta nel sotto-menu
 `Format`:
-
-```text
-country · string
-```
 
 La riduzione è intenzionale: la voce di catalogo è visibile nel menu aperto e la configurazione completa è visibile
 nella grid. Per `Array` e `Map`
@@ -156,7 +154,9 @@ il wrapper è già espresso dal primo segmento, quindi il secondo mostra soltant
 Il menu:
 
 - ha una larghezza pari al `120%` dell'intero controllo `Type`, nei limiti dello spazio disponibile;
-- ha altezza massima `400px` e scroll verticale interno;
+- mostra dieci voci complete e metà della successiva per rendere evidente lo scroll verticale; riduce la propria altezza
+  quando lo spazio disponibile è inferiore e usa una leggerissima ombra interna sul bordo inferiore per suggerire la
+  continuazione;
 - non mostra un campo di ricerca;
 - non usa intestazioni come `Common`, `Basic values`, `Text`, `Numbers`, `Semantic types` o `Physical types`;
 - usa divider leggeri tra gruppi visivi, senza label;
@@ -190,7 +190,7 @@ Regole:
 - il contenuto è centrato verticalmente;
 - primary label, separatore `·` e metadata sono elementi distinti; il separatore usa un colore intermedio tra i due
   testi e ha spazio aggiuntivo su entrambi i lati;
-- il semantic è in font di sistema, `14px`, peso normale e colore primario;
+- il semantic usa il monospace, `14px`, peso normale e colore primario;
 - quando la primary label è un physical type puro, usa il monospace, `14px` e il colore primario;
 - il physical type usato come metadata è in monospace, `12px` e usa `var(--text-light)`;
 - la descrizione usata come metadata è in font di sistema, `13px`, peso normale e usa `var(--text-light)`;
@@ -201,8 +201,6 @@ Regole:
 - il divider è `1px`, usa il colore dei bordi esistenti e separa i gruppi visivi senza creare una card per ciascuna
   voce;
 - divider e spaziatura tra gruppi restano esterni all'area cliccabile di `32px`.
-- quando il menu viene aperto senza che sia ancora selezionato un type, `string` riceve il focus e lo stesso trattamento
-  visivo dell'hover, ma non viene selezionato;
 
 ### Catalogo completo per una property nuova o modificabile
 
@@ -210,26 +208,23 @@ Questo è l'ordine completo. Le righe separate da uno spazio appartengono allo s
 un divider. I gruppi aiutano a scorrere il catalogo e non rappresentano necessariamente una singola famiglia fisica.
 
 ```text
-string · Text value, such as a name or code
-
 email · string
 phone number · string
-URL · string
 country · string
+URL · string
+string · Text value, such as a name or code
 ─────────────────────────────────────────────────────────
 boolean · True or false
 ─────────────────────────────────────────────────────────
-int · Number with no decimal places
-
 duration · int
+int · Number with no decimal places
 ─────────────────────────────────────────────────────────
 float · Number with approximate precision
 ─────────────────────────────────────────────────────────
-decimal · Decimal number with fixed precision
-
 money · decimal(18,4)
 percentage · decimal(18,4)
 measurement · decimal(18,4)
+decimal · Decimal number with fixed precision
 ─────────────────────────────────────────────────────────
 datetime · Date and time
 date · Date without a time
@@ -284,16 +279,29 @@ per tutti e tre i semantic.
 
 Il menu conserva il catalogo completo. Cambia soltanto la disponibilità delle voci.
 
-In cima al menu, prima del catalogo, viene mostrata una nota compatta. Per una property senza semantic:
+La helper tra la label e il controllo è mostrata non appena una property ha un Type selezionato. Il nome del base type
+è monospace. Prima della materializzazione, per una property senza semantic:
 
 ```text
-The type can't be changed after the property is applied.
+Can't be changed once the property has been applied.
 ```
 
-Per una property con semantic:
+Prima della materializzazione, per una property con semantic:
 
 ```text
-After the property is applied, this type can only be changed back to its base type.
+Once applied, this type can only be changed to <base type>.
+```
+
+Dopo la materializzazione, per una property senza semantic:
+
+```text
+This type can't be changed.
+```
+
+Dopo la materializzazione, per una property con semantic:
+
+```text
+This type can only be changed to <base type>.
 ```
 
 Regole:
@@ -305,14 +313,15 @@ Regole:
   di `Apply changes`; riselezionarla ripristina anche le options originali;
 - una property materializzata senza semantic non può acquisirne uno;
 - non è possibile sostituire un semantic con un altro;
-- gli altri physical type e formati restano visibili ma sono disabilitati;
-- una voce disabilitata resta leggibile, non riceve hover selezionabile e non mostra il check;
+- gli altri physical type e formati restano visibili ma non sono selezionabili;
+- una voce non selezionabile è soltanto leggermente attenuata, non riceve hover e non mostra il check; conserva il
+  focus da tastiera previsto dal pattern ARIA del menu, che la annuncia come non disponibile senza renderla attivabile;
 - tutte le voci mantengono l'ordine canonico del catalogo;
 - ciascun formato appare una sola volta;
 - per una voce semantic abilitata, il metadata mostra il physical type effettivo della property con le sue constraint,
   non la configurazione usata per creare una property nuova;
 - per la voce del type puro abilitata, la primary label mostra il physical type effettivo con le sue constraint;
-- le voci disabilitate mantengono le label canoniche del catalogo;
+- le voci non selezionabili mantengono le label canoniche del catalogo;
 - la ripetizione del physical type effettivo nelle voci abilitate è intenzionale: rende esplicito che rimuovere semantic
   non modifica la configurazione materializzata.
 
@@ -343,26 +352,25 @@ duration — s · int(64)
 Esempio per una property esistente `string, max 100 chars`:
 
 ```text
-The type can't be changed after the property is applied.
+This type can't be changed.
 
+email · string                                             not selectable
+phone number · string                                      not selectable
+country · string                                           not selectable
+URL · string                                               not selectable
 string · max 100 chars · Text value, such as a name or code
-
-email · string                                             disabled
-phone number · string                                      disabled
-URL · string                                               disabled
-country · string                                           disabled
 ─────────────────────────────────────────────────────────
-boolean · True or false                                    disabled
+boolean · True or false                                    not selectable
 ─────────────────────────────────────────────────────────
-int · Number with no decimal places                       disabled
-
-duration · int                                             disabled
+duration · int                                             not selectable
+int · Number with no decimal places                        not selectable
 ─────────────────────────────────────────────────────────
-float · Number with approximate precision                 disabled
+float · Number with approximate precision                 not selectable
 ─────────────────────────────────────────────────────────
-decimal · Decimal number with fixed precision              disabled
-
-money · decimal(18,4)                                     disabled
+money · decimal(18,4)                                     not selectable
+percentage · decimal(18,4)                                not selectable
+measurement · decimal(18,4)                               not selectable
+decimal · Decimal number with fixed precision             not selectable
 
 ...
 ```
@@ -370,44 +378,39 @@ money · decimal(18,4)                                     disabled
 Se la stessa property avesse il semantic `email`, soltanto `string` ed `email` sarebbero abilitate:
 
 ```text
-After the property is applied, this type can only be changed back to its base type.
-
-string · max 100 chars · Text value, such as a name or code
+This type can only be changed to string.
 
 email · string · max 100 chars
-phone number · string                                      disabled
-URL · string                                               disabled
-country · string                                           disabled
+phone number · string                                      not selectable
+country · string                                           not selectable
+URL · string                                               not selectable
+string · max 100 chars · Text value, such as a name or code
 ...
 ```
 
 Esempio per una property esistente `int(64)`:
 
 ```text
-The type can't be changed after the property is applied.
+This type can't be changed.
 
-string · Text value, such as a name or code               disabled
-
-email · string                                             disabled
-
+email · string                                             not selectable
+phone number · string                                      not selectable
+country · string                                           not selectable
+URL · string                                               not selectable
+string · Text value, such as a name or code                not selectable
 ...
 ─────────────────────────────────────────────────────────
-boolean · True or false                                    disabled
+boolean · True or false                                    not selectable
 ─────────────────────────────────────────────────────────
+duration · int                                             not selectable
 int(64) · Number with no decimal places
-
-duration · int                                             disabled
 ─────────────────────────────────────────────────────────
-float · Number with approximate precision                disabled
-──────────────────────────────────────────────────────────
-decimal · Decimal number with fixed precision              disabled
-
-money · decimal(18,4)                                    disabled
-
-...
-
-percentage · decimal(18,4)                                disabled
-
+float · Number with approximate precision                 not selectable
+─────────────────────────────────────────────────────────
+money · decimal(18,4)                                     not selectable
+percentage · decimal(18,4)                                not selectable
+measurement · decimal(18,4)                               not selectable
+decimal · Decimal number with fixed precision             not selectable
 ...
 ```
 
@@ -431,9 +434,11 @@ fisica prevista dal formato e nasconde i controlli che potrebbero modificarla. R
 controlli specifici del semantic elencati nella sezione seguente e, per `money`, `percentage` e `measurement`, Min e
 Max opzionali.
 
-Per una property materializzata, il semantic può soltanto essere mantenuto o rimosso. La nota nel menu comunica che la
-configurazione fisica è fissa; gli eventuali controlli del physical type sono mostrati soltanto quando è selezionato il
-type puro e restano disabilitati.
+Per una property materializzata, il semantic può soltanto essere mantenuto o rimosso. La helper tra la label e il controllo
+comunica che la configurazione fisica è fissa; gli eventuali controlli del physical type sono mostrati soltanto quando
+è selezionato il type puro e sono read-only. Conservano il normale contrasto perché i valori descrivono la
+configurazione materializzata, non entrano nel tab order e usano il cursore `not-allowed` per comunicare che non
+possono essere modificati.
 
 ### Opzioni dei semantic
 
@@ -441,8 +446,8 @@ type puro e restano disabilitati.
 | ------------------------------------------ | --------------------------------------------------------------------------- |
 | `email · string`                           | nessuno                                                                     |
 | `phone number · string`                    | nessuno                                                                     |
-| `URL · string`                             | nessuno                                                                     |
 | `country · string`                         | select `Format`: `2-letter ISO code` per default oppure `3-letter ISO code` |
+| `URL · string`                             | nessuno                                                                     |
 | `money · decimal(18,4)`                    | select `Currency`, poi input opzionali `Min` e `Max`                        |
 | `percentage · decimal(18,4)`               | badge con testo `0.9 represents 90%` e input opzionali `Min` e `Max`        |
 | `measurement · decimal(18,4)`              | select obbligatorio `Unit`, poi input opzionali `Min` e `Max`               |
@@ -451,9 +456,9 @@ type puro e restano disabilitati.
 Per `money`, `percentage` e `measurement`, Precision e Scale non sono modificabili e non vengono mostrate. Min e Max
 non hanno valori predefiniti e possono essere lasciati vuoti; devono soltanto rispettare i limiti propri di
 `decimal(18,4)`. Per una property materializzata vengono mostrati soltanto quando è selezionato uno dei tre semantic e
-restano disabilitati.
-Per una property materializzata restano disabilitati anche `Format`, `Currency` e `Unit`: le Semantic Options
-applicate non possono essere riconfigurate.
+sono read-only.
+Per una property materializzata sono read-only anche `Format`, `Currency` e `Unit`: le Semantic Options applicate non
+possono essere riconfigurate, ma i rispettivi valori rimangono visibili con il normale contrasto.
 Per `percentage`, il testo `0.9 represents 90%` compare in un badge neutro con pill shape, coerente con gli altri badge
 del profile schema editor, immediatamente sotto il secondo segmento del controllo `Type` e separato dal menu di `8px`.
 Il badge usa lo sfondo `#ededf7`, occupa la larghezza del secondo segmento lasciando lo stesso margine a sinistra e a
@@ -571,7 +576,7 @@ Regole visuali:
 
 - altezza di ogni riga della grid fissa a `54px`;
 - il contenuto della cella `Type` è centrato verticalmente;
-- il semantic usa il font di sistema e il colore primario;
+- il semantic usa il monospace e il colore primario;
 - il physical type dopo il separatore `·` usa il monospace e un colore secondario;
 - un type puro usa il monospace e il colore primario;
 - semantic, separatore e physical type sono span distinti;
@@ -602,16 +607,16 @@ La currency di `money`, quando presente, compare nella primary label della grid 
 measurement e duration compaiono entrambe con il simbolo canonico.
 
 Nel secondo picker il type mostrato è sempre quello dell'elemento di un array o del valore di una map, perché la
-struttura è già esplicitata dal primo controllo. Nella grid viene invece mostrato il physical type completo:
+struttura è già esplicitata dal primo controllo. Nella grid la struttura precede invece il formato completo:
 
 ```text
-email · array(string)
+array of email · string
 ```
 
 Per `Map` viene usata la forma analoga:
 
 ```text
-money · map(decimal(18,4))
+map of money · decimal(18,4)
 ```
 
 I due contesti descrivono livelli diversi della struttura, quindi questa differenza non è un'incoerenza.
@@ -657,20 +662,20 @@ La UI deve essere verificata almeno nei seguenti stati, prima di considerare def
    il select `Currency` prima del range e i controlli specifici delle unità;
 5. property nuova con `duration`, verificando `int(64)`, il placeholder obbligatorio di `Unit` e l'assenza dei
    controlli del physical type gestiti dal prodotto;
-6. property esistente `string, max 100 chars` senza semantic, con nota sullo storage type, ordine canonico del catalogo,
-   soltanto `string` abilitato e tutti i semantic disabilitati;
+6. property esistente `string, max 100 chars` senza semantic, con helper sul Type, ordine canonico del catalogo,
+   soltanto `string` selezionabile e tutti i semantic non selezionabili ma solo leggermente attenuati;
 7. property esistente `email · string, max 100 chars`, con soltanto `string` ed `email` abilitati; dopo aver rimosso il
-   semantic, verificare i controlli della stringa disabilitati, le constraint di lunghezza invariate e la possibilità
+   semantic, verificare i controlli della stringa read-only, le constraint di lunghezza invariate e la possibilità
    di ripristinare `email` fino a `Apply changes`;
 8. property esistente `decimal(12,4)`, con `money`, `percentage` e `measurement` visibili nelle rispettive posizioni
-   canoniche ma disabilitati;
+   canoniche ma non selezionabili;
 9. property esistente `money · EUR · decimal(18,4), min -0.5, max 1.5`, con soltanto `decimal` e `money` abilitati,
-   Currency, Min e Max disabilitati e ripristino della currency originale quando si annulla la rimozione del semantic;
+   Currency, Min e Max read-only e ripristino della currency originale quando si annulla la rimozione del semantic;
 10. property esistente `float`, con il solo physical type puro abilitato e nessun formato semantic disponibile;
-11. `array of string` con `email`, verificando `email · string` nel controllo chiuso e `email · array(string)` nella
+11. `array of string` con `email`, verificando `email · string` nel controllo chiuso e `array of email · string` nella
     grid;
 12. `map of decimal(18,4)` con `money`, verificando `money · decimal` nel controllo chiuso e
-    `money · map(decimal(18,4))` nella grid;
+    `map of money · decimal(18,4)` nella grid;
 13. `object`, senza secondo selettore;
 14. pannello di modifica stretto da `340px`, verificando caret, ellissi e tooltip;
 15. grid con righe miste con e senza semantic, verificando il layout inline, la configurazione fisica completa,

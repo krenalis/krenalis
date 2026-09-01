@@ -6,7 +6,7 @@
 	white-space: nowrap;
 }
 
-.schema-property-type__primary--technical,
+.schema-property-type__primary,
 .schema-property-type__metadata-physical,
 .schema-property-type__details-physical {
 	font-family: var(--monospace-fonts);
@@ -27,7 +27,8 @@
 }
 
 .schema-property-type--menu .schema-property-type__separator,
-.schema-property-type--trigger .schema-property-type__separator {
+.schema-property-type--trigger .schema-property-type__separator,
+.schema-property-type--grid .schema-property-type__separator {
 	margin-inline: 0.25em;
 }
 
