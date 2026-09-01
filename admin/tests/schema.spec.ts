@@ -830,7 +830,7 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 		emailCells[3],
 	]);
 	const gridTypeFont = await emailRow
-		.locator('.schema-property-type__primary--technical')
+		.locator('.schema-property-type__primary')
 		.evaluate((type) => getComputedStyle(type).fontFamily);
 	expect(
 		await panel
@@ -886,6 +886,11 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 	await expect(countryRow.locator('.schema-property-type')).toHaveText(
 		'country — 2-letter ISO code · string · max 2 chars',
 	);
+	expect(
+		await countryRow
+			.locator('.schema-property-type__primary')
+			.evaluate((type) => getComputedStyle(type).fontFamily),
+	).toBe(gridTypeFont);
 	const countryTypeDetail = panel
 		.locator('.property-details-panel__detail')
 		.filter({ hasText: 'Type' })
@@ -1256,26 +1261,25 @@ test(`Create profile schema properties with semantic defaults and options`, asyn
 	await propertyPanel.locator('.property-form__name-input input').fill('semantic_country');
 	await propertyPanel.locator('.property-type-selector__trigger').click();
 	const stringOption = propertyPanel.locator('[data-type-option="string"]');
-	await expect(stringOption).toBeFocused();
 	await expect(stringOption).not.toHaveClass(/property-type-selector__option--selected/);
 	expect(
 		await propertyPanel
 			.locator('.property-type-selector__option')
 			.evaluateAll((options) => options.map((option) => option.getAttribute('data-type-option'))),
 	).toEqual([
-		'string',
 		'email',
 		'phone',
-		'url',
 		'country',
+		'url',
+		'string',
 		'boolean',
-		'int',
 		'duration',
+		'int',
 		'float',
-		'decimal',
 		'money',
 		'percentage',
 		'measurement',
+		'decimal',
 		'datetime',
 		'date',
 		'time',
@@ -1299,6 +1303,19 @@ test(`Create profile schema properties with semantic defaults and options`, asyn
 		'percentage · decimal(18,4)',
 		'measurement · decimal(18,4)',
 	]);
+	const physicalTypeFont = await propertyPanel
+		.locator('[data-type-option="country"] .schema-property-type__metadata-physical')
+		.evaluate((type) => getComputedStyle(type).fontFamily);
+	expect(
+		await propertyPanel
+			.locator('[data-type-option="country"] .schema-property-type__primary')
+			.evaluate((type) => getComputedStyle(type).fontFamily),
+	).toBe(physicalTypeFont);
+	expect(
+		await stringOption
+			.locator('.schema-property-type__primary')
+			.evaluate((type) => getComputedStyle(type).fontFamily),
+	).toBe(physicalTypeFont);
 	await propertyPanel.locator('[data-type-option="country"]').click();
 	await expect(propertyPanel.locator('.property-type-selector__trigger .schema-property-type')).toHaveText(
 		'country · string',
@@ -1445,7 +1462,7 @@ test(`Create profile schema properties with semantic defaults and options`, asyn
 	expect(duration?.semantic).toEqual({ kind: 'duration', unit: 'second' });
 });
 
-test(`Restrict materialized type changes and preserve physical configuration`, async ({ page }) => {
+test(`Show materialized type catalogs, restrict transitions, and preserve physical configuration`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
 		const schema = (await response.json()) as ObjectType;
@@ -1475,78 +1492,133 @@ test(`Restrict materialized type changes and preserve physical configuration`, a
 	await page.goto(`${adminURL}/profile-unification/schema`);
 	await editSchema(page);
 	const propertyPanel = page.locator('.property-panel');
+	const structureDropdown = propertyPanel.locator('.property-type-selector__structure-dropdown');
+	const structureTrigger = propertyPanel.locator('.property-type-selector__structure-trigger');
+	const structureOptions = propertyPanel.locator('.property-type-selector__structure-option');
 	const typeDropdown = propertyPanel.locator('.property-type-selector__dropdown');
 	const typeTrigger = propertyPanel.locator('.property-type-selector__trigger');
 	const typeOptions = propertyPanel.locator('.property-type-selector__option');
-	const appliedTypeNote = propertyPanel.locator('.property-type-selector__applied-note');
+	const typeChangeNote = propertyPanel.locator('.property-type-selector__type-change-note');
+	const getOptionVisualStyle = (option: Locator) =>
+		option.locator('[part="base"]').evaluate((base) => {
+			const style = getComputedStyle(base);
+			return {
+				backgroundColor: style.backgroundColor,
+				boxShadow: style.boxShadow,
+				color: style.color,
+				cursor: style.cursor,
+				opacity: style.opacity,
+			};
+		});
 
 	await page.locator('.schema-edit__add-property').click();
-	await expect(appliedTypeNote).toHaveCount(0);
+	await expect(typeChangeNote).toHaveCount(0);
 	await selectPropertyType(page, 'string');
-	await expect(appliedTypeNote).toHaveText("Type can't be changed once the property has been applied.");
+	await expect(typeChangeNote).toHaveText("Can't be changed once the property has been applied.");
 	await selectPropertyType(page, 'email');
-	await expect(appliedTypeNote).toHaveText(
-		'This type can only be changed back to string once the property has been applied.',
-	);
+	await expect(typeChangeNote).toHaveText('Once applied, this type can only be changed to string.');
 	await selectPropertyType(page, 'money');
-	await expect(appliedTypeNote).toHaveText(
-		'This type can only be changed back to decimal once the property has been applied.',
-	);
+	await expect(typeChangeNote).toHaveText('Once applied, this type can only be changed to decimal.');
 	await selectPropertyType(page, 'duration');
-	await expect(appliedTypeNote).toHaveText(
-		'This type can only be changed back to int once the property has been applied.',
-	);
+	await expect(typeChangeNote).toHaveText('Once applied, this type can only be changed to int.');
 	await propertyPanel.locator('.property-panel__cancel').click();
 
 	await openProperty(page, 'email');
-	await expect(propertyPanel.locator('.property-type-selector__structure-dropdown')).toHaveCount(0);
-	await expect(propertyPanel.locator('.property-type-selector__structure-value')).toHaveText('one value');
-	await expect(typeDropdown).toHaveCount(0);
-	await expect(typeTrigger).toHaveCount(0);
-	await expect(propertyPanel.locator('.property-type-selector__type-value .schema-property-type')).toHaveText(
-		'string · max 100 chars',
-	);
-	await expect(appliedTypeNote).toHaveText("Type can't be changed once the property has been applied.");
-	await expect(propertyPanel.locator('.property-type-selector__browser')).toHaveCount(0);
-	await expect(typeOptions).toHaveCount(0);
-	await expect(propertyPanel.locator('.property-form__constraints--length sl-input')).toHaveCount(2);
-	await expect(propertyPanel.locator('.property-form__constraints--length sl-input').first()).toHaveAttribute(
-		'disabled',
-	);
+	await expect(structureDropdown).toHaveCount(1);
+	await expect(structureTrigger).toContainText('one value');
+	await structureTrigger.click();
+	await expect(structureOptions).toHaveCount(4);
+	await expect(propertyPanel.locator('[data-structure-option="one"]')).not.toHaveAttribute('disabled');
+	await expect(propertyPanel.locator('[data-structure-option="array"]')).toHaveAttribute('disabled');
+	await expect(propertyPanel.locator('[data-structure-option="object"]')).toHaveAttribute('disabled');
+	await expect(propertyPanel.locator('[data-structure-option="map"]')).toHaveAttribute('disabled');
+	const unavailableStructureOption = propertyPanel.locator('[data-structure-option="array"]');
+	const unavailableStructureStyle = await getOptionVisualStyle(unavailableStructureOption);
+	expect(unavailableStructureStyle.cursor).toBe('default');
+	expect(unavailableStructureStyle.opacity).toBe('0.75');
+	await unavailableStructureOption.hover();
+	expect(await getOptionVisualStyle(unavailableStructureOption)).toEqual(unavailableStructureStyle);
+	await unavailableStructureOption.dispatchEvent('click');
+	await expect(structureDropdown).toHaveJSProperty('open', true);
+	await expect(structureTrigger).toContainText('one value');
+	await structureTrigger.click();
+
+	await expect(typeDropdown).toHaveCount(1);
+	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('string');
+	await expect(typeChangeNote).toHaveText("This type can't be changed.");
+	await typeTrigger.click();
+	await expect(typeOptions).toHaveCount(20);
+	await expect(propertyPanel.locator('[data-type-option="string"]')).not.toHaveAttribute('disabled');
+	await expect(propertyPanel.locator('.property-type-selector__option[disabled]')).toHaveCount(19);
+	const unavailableTypeOption = propertyPanel.locator('[data-type-option="email"]');
+	const unavailableTypeStyle = await getOptionVisualStyle(unavailableTypeOption);
+	expect(unavailableTypeStyle.cursor).toBe('default');
+	expect(unavailableTypeStyle.opacity).toBe('0.75');
+	await unavailableTypeOption.hover();
+	expect(await getOptionVisualStyle(unavailableTypeOption)).toEqual(unavailableTypeStyle);
+	await unavailableTypeOption.dispatchEvent('click');
+	await expect(typeDropdown).toHaveJSProperty('open', true);
+	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('string');
+	await typeTrigger.click();
+	const readOnlyLengthConstraints = propertyPanel.locator('.property-form__constraints--length sl-input');
+	await expect(readOnlyLengthConstraints).toHaveCount(2);
+	await expect(readOnlyLengthConstraints.first()).toHaveAttribute('readonly');
+	await expect(readOnlyLengthConstraints.first()).toHaveAttribute('tabindex', '-1');
+	await expect(readOnlyLengthConstraints.first()).not.toHaveAttribute('disabled');
+	const readOnlyLengthInputs = readOnlyLengthConstraints.locator('input');
+	await expect(readOnlyLengthInputs.first()).toHaveAttribute('tabindex', '-1');
+	await expect(readOnlyLengthInputs.last()).toHaveAttribute('tabindex', '-1');
+	expect(
+		await readOnlyLengthConstraints
+			.first()
+			.locator('[part="base"]')
+			.evaluate((control) => getComputedStyle(control).cursor),
+	).toBe('not-allowed');
+	await readOnlyLengthConstraints.first().click();
+	await expect(readOnlyLengthInputs.first()).not.toBeFocused();
+	await readOnlyLengthInputs.first().focus();
+	await page.keyboard.press('Tab');
+	await expect(propertyPanel.locator('.property-form__constraints--length input:focus')).toHaveCount(0);
 
 	await openProperty(page, 'materialized_email');
 	await expect(typeDropdown).toHaveCount(1);
-	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('email · string · max 100 chars');
-	await expect(appliedTypeNote).toHaveText(
-		'This type can only be changed back to string once the property has been applied.',
-	);
+	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('email · string');
+	await expect(typeChangeNote).toHaveText('This type can only be changed to string.');
 	await typeTrigger.click();
+	await expect(typeOptions).toHaveCount(20);
 	expect(
-		await typeOptions.evaluateAll((options) => options.map((option) => option.getAttribute('data-type-option'))),
+		await propertyPanel
+			.locator('.property-type-selector__option:not([disabled])')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('data-type-option'))),
 	).toEqual(['email', 'string']);
-	await expect(propertyPanel.locator('.property-type-selector__option[disabled]')).toHaveCount(0);
-	await expect(typeDropdown.locator('.property-type-selector__applied-note')).toHaveCount(0);
-	await expect(typeOptions.locator('.schema-property-type')).toHaveText([
+	await expect(propertyPanel.locator('.property-type-selector__option[disabled]')).toHaveCount(18);
+	await expect(typeDropdown.locator('.property-type-selector__type-change-note')).toHaveCount(0);
+	await expect(propertyPanel.locator('[data-type-option="email"] .schema-property-type')).toHaveText(
 		'email · string · max 100 chars',
+	);
+	await expect(propertyPanel.locator('[data-type-option="string"] .schema-property-type')).toHaveText(
 		'string · max 100 chars · Text value, such as a name or code',
-	]);
+	);
+	await expect(propertyPanel.locator('[data-type-option="phone"] .schema-property-type')).toHaveText(
+		'phone number · string',
+	);
 	await propertyPanel.locator('[data-type-option="string"]').click();
-	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('string · max 100 chars');
+	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('string');
 	const lengthConstraints = propertyPanel.locator('.property-form__constraints--length sl-input');
 	await expect(lengthConstraints).toHaveCount(2);
 	await expect(lengthConstraints.first().locator('input')).toHaveValue('100');
-	await expect(lengthConstraints.first()).toHaveAttribute('disabled');
+	await expect(lengthConstraints.first()).toHaveAttribute('readonly');
+	await expect(lengthConstraints.first()).not.toHaveAttribute('disabled');
 
 	// The original semantic can be restored until the draft is applied.
 	const emailOption = propertyPanel.locator('[data-type-option="email"]');
 	await emailOption.waitFor({ state: 'hidden' });
 	await typeTrigger.click();
-	expect(
-		await typeOptions.evaluateAll((options) => options.map((option) => option.getAttribute('data-type-option'))),
-	).toEqual(['string', 'email']);
+	await expect(typeOptions).toHaveCount(20);
 	await emailOption.waitFor({ state: 'visible' });
+	await expect(emailOption).not.toHaveAttribute('disabled');
 	await emailOption.click();
-	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('email · string · max 100 chars');
+	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('email · string');
 	const stringOption = propertyPanel.locator('[data-type-option="string"]');
 	await stringOption.waitFor({ state: 'hidden' });
 	await typeTrigger.click();
@@ -1560,23 +1632,29 @@ test(`Restrict materialized type changes and preserve physical configuration`, a
 
 	await openProperty(page, 'materialized_money');
 	const currency = propertyPanel.locator('.property-form__currency');
-	await expect(currency).toHaveJSProperty('value', 'EUR');
-	await expect(currency).toHaveAttribute('disabled');
-	await expect(appliedTypeNote).toHaveText(
-		'This type can only be changed back to decimal once the property has been applied.',
-	);
+	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('money · decimal');
+	await expect(currency.locator('input')).toHaveValue('EUR · Euro');
+	await expect(currency).toHaveAttribute('readonly');
+	await expect(currency).toHaveAttribute('tabindex', '-1');
+	await expect(currency).not.toHaveAttribute('disabled');
+	await expect(typeChangeNote).toHaveText('This type can only be changed to decimal.');
 	await typeTrigger.click();
+	await expect(typeOptions).toHaveCount(20);
 	expect(
-		await typeOptions.evaluateAll((options) => options.map((option) => option.getAttribute('data-type-option'))),
+		await propertyPanel
+			.locator('.property-type-selector__option:not([disabled])')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('data-type-option'))),
 	).toEqual(['money', 'decimal']);
-	await expect(propertyPanel.locator('.property-type-selector__option[disabled]')).toHaveCount(0);
-	await expect(typeOptions.locator('.schema-property-type')).toHaveText([
+	await expect(propertyPanel.locator('.property-type-selector__option[disabled]')).toHaveCount(18);
+	await expect(propertyPanel.locator('[data-type-option="money"] .schema-property-type')).toHaveText(
 		'money · decimal(18,4) · min -0.5, max 1.25',
+	);
+	await expect(propertyPanel.locator('[data-type-option="decimal"] .schema-property-type')).toHaveText(
 		'decimal(18,4) · min -0.5, max 1.25 · Decimal number with fixed precision',
-	]);
+	);
 	await propertyPanel.locator('[data-type-option="decimal"]').click();
 	await expect(currency).toHaveCount(0);
-	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('decimal(18,4) · min -0.5, max 1.25');
+	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('decimal');
 	await propertyPanel.locator('.property-panel__save').click();
 
 	const previewRequestPromise = page.waitForRequest(
@@ -1601,7 +1679,7 @@ test(`Restrict materialized type changes and preserve physical configuration`, a
 	expect(materializedMoney?.semantic).toBeUndefined();
 });
 
-test(`Preserve array property semantics`, async ({ page }) => {
+test(`Render array and map property types and preserve their semantics`, async ({ page }) => {
 	const semantic: Semantic = { kind: 'phone' };
 	await page.route('**/v1/profiles/schema/preview', async (route) => {
 		await route.fulfill({ json: { queries: [] } });
@@ -1611,8 +1689,17 @@ test(`Preserve array property semantics`, async ({ page }) => {
 		if (request.method() === 'GET') {
 			const response = await route.fetch();
 			const schema = (await response.json()) as ObjectType;
-			const property = schema.properties.find((property) => property.name === 'phone_numbers');
-			property.semantic = semantic;
+			const arrayProperty = schema.properties.find((property) => property.name === 'phone_numbers');
+			const plainArrayProperty = structuredClone(arrayProperty);
+			plainArrayProperty.name = 'plain_phone_numbers';
+			const plainMapProperty = structuredClone(arrayProperty);
+			plainMapProperty.name = 'plain_phone_numbers_by_kind';
+			plainMapProperty.type = { kind: 'map', elementType: { kind: 'string', maxLength: 300 } };
+			arrayProperty.semantic = semantic;
+			const semanticMapProperty = structuredClone(plainMapProperty);
+			semanticMapProperty.name = 'phone_numbers_by_kind';
+			semanticMapProperty.semantic = semantic;
+			schema.properties.push(plainArrayProperty, plainMapProperty, semanticMapProperty);
 			await route.fulfill({ response, json: schema });
 			return;
 		}
@@ -1624,19 +1711,39 @@ test(`Preserve array property semantics`, async ({ page }) => {
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
-	await expect(page.locator('.schema-grid .grid__row[data-id="phone_numbers"] .schema-property-type')).toHaveText(
-		'phone number · array(string · max 300 chars)',
-	);
+	const expectedTypes = {
+		phone_numbers: 'array of phone number · string · max 300 chars',
+		phone_numbers_by_kind: 'map of phone number · string · max 300 chars',
+		plain_phone_numbers: 'array of string · max 300 chars',
+		plain_phone_numbers_by_kind: 'map of string · max 300 chars',
+	};
+	for (const [property, type] of Object.entries(expectedTypes)) {
+		await expect(page.locator(`.schema-grid .grid__row[data-id="${property}"] .schema-property-type`)).toHaveText(
+			type,
+		);
+	}
 	await editSchema(page);
+	for (const [property, type] of Object.entries(expectedTypes)) {
+		await expect(page.locator(`.schema-edit .grid__row[data-id="${property}"] .schema-property-type`)).toHaveText(
+			type,
+		);
+	}
 	await openProperty(page, 'phone_numbers');
 	const propertyPanel = page.locator('.property-panel');
-	await expect(propertyPanel.locator('.property-type-selector__structure-dropdown')).toHaveCount(0);
-	await expect(propertyPanel.locator('.property-type-selector__structure-value')).toHaveText('array of');
+	const structureDropdown = propertyPanel.locator('.property-type-selector__structure-dropdown');
+	const structureTrigger = propertyPanel.locator('.property-type-selector__structure-trigger');
+	await expect(structureDropdown).toHaveCount(1);
+	await expect(structureTrigger).toContainText('array of');
+	await structureTrigger.click();
+	await expect(propertyPanel.locator('.property-type-selector__structure-option')).toHaveCount(4);
+	await expect(propertyPanel.locator('[data-structure-option="array"]')).not.toHaveAttribute('disabled');
+	await expect(propertyPanel.locator('.property-type-selector__structure-option[disabled]')).toHaveCount(3);
+	await structureTrigger.click();
 	await expect(propertyPanel.locator('.property-type-selector__trigger .schema-property-type')).toHaveText(
-		'phone number · string · max 300 chars',
+		'phone number · string',
 	);
-	await expect(propertyPanel.locator('.property-type-selector__applied-note')).toHaveText(
-		'This type can only be changed back to string once the property has been applied.',
+	await expect(propertyPanel.locator('.property-type-selector__type-change-note')).toHaveText(
+		'This type can only be changed to string.',
 	);
 	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Updated description');
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
@@ -1652,6 +1759,8 @@ test(`Preserve array property semantics`, async ({ page }) => {
 	const body = JSON.parse(response.request().postData());
 	const property = body.schema.properties.find((property) => property.name === 'phone_numbers');
 	expect(property.semantic).toEqual(semantic);
+	const mapProperty = body.schema.properties.find((property) => property.name === 'phone_numbers_by_kind');
+	expect(mapProperty.semantic).toEqual(semantic);
 });
 
 test(`Add schema property`, async ({ page }) => {
@@ -1678,6 +1787,8 @@ test(`Add schema property`, async ({ page }) => {
 	}, 'foo');
 
 	await page.keyboard.press('Tab');
+	await expect(panel.locator('.property-form__parent [part="display-input"]')).toBeFocused();
+	await page.keyboard.press('Tab');
 	await expect(panel.locator('.property-type-selector__structure-trigger')).toBeFocused();
 	await expect(panel.locator('.property-type-selector__structure-dropdown')).toHaveJSProperty('open', false);
 	await page.keyboard.press('ArrowDown');
@@ -1688,10 +1799,15 @@ test(`Add schema property`, async ({ page }) => {
 	await expect(panel.locator('.property-type-selector__dropdown')).toHaveJSProperty('open', false);
 	await page.keyboard.press('ArrowDown');
 	await expect(panel.locator('.property-type-selector__dropdown')).toHaveJSProperty('open', true);
-	await expect(panel.locator('[data-type-option="string"]')).toBeFocused();
-	await page.keyboard.press('ArrowDown');
 	await expect(panel.locator('[data-type-option="email"]')).toBeFocused();
+	await page.keyboard.press('ArrowDown');
+	await expect(panel.locator('[data-type-option="phone"]')).toBeFocused();
 	await page.keyboard.press('ArrowUp');
+	await expect(panel.locator('[data-type-option="email"]')).toBeFocused();
+	await page.keyboard.press('ArrowDown');
+	await page.keyboard.press('ArrowDown');
+	await page.keyboard.press('ArrowDown');
+	await page.keyboard.press('ArrowDown');
 	await expect(panel.locator('[data-type-option="string"]')).toBeFocused();
 	await page.keyboard.press('Enter');
 

@@ -124,13 +124,23 @@
 	padding-left: 1px;
 }
 
-.property-form__constraints--float sl-checkbox {
+.property-form__float-special-values {
 	align-self: center;
 	transform: translateY(-1px);
 }
 
-.property-form__constraints--float sl-checkbox::part(control) {
+.property-form__float-special-values sl-checkbox::part(control) {
 	transform: translateY(4px);
+}
+
+.property-form__float-special-values--read-only sl-checkbox::part(base) {
+	cursor: not-allowed;
+}
+
+.property-form__constraints sl-input[readonly]::part(base),
+.property-form__constraints sl-input[readonly]::part(input),
+.property-form__constraints sl-input[readonly]::part(suffix) {
+	cursor: not-allowed;
 }
 
 .property-form__constraints > .property-form__control-error {
