@@ -327,7 +327,11 @@ func newInstrumentedConn(conn net.Conn, egress *prometheus.Counter) net.Conn {
 // its counter, which stays at zero until the organization dials.
 func onCreateOrganization(n state.CreateOrganization) {
 	organizationsMu.Lock()
-	organizations[n.ID] = egressBytes.Register(n.ID)
+	// The counter is not registered when the notification is dispatched after a
+	// call to DisableCounting dropped every counter.
+	if countingEnabled.Load() {
+		organizations[n.ID] = egressBytes.Register(n.ID)
+	}
 	organizationsMu.Unlock()
 }
 
