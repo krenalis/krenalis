@@ -134,7 +134,7 @@
     },
     {
       "datasource": "${datasource}",
-      "description": "Total bytes sent per organization over the selected time range.",
+      "description": "Total bytes sent by the connections established on behalf of each organization, over the selected time range. Inbound traffic is not counted.",
       "fieldConfig": {
         "defaults": {
           "color": {

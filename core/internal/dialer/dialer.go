@@ -42,7 +42,7 @@ type DialFunc = func(ctx context.Context, network, addr string) (net.Conn, error
 // counted.
 var egressBytes = prometheus.RegisterCounterVec(
 	"krenalis_organization_network_egress_bytes_total",
-	"Total bytes sent per organization",
+	"Total bytes sent by the connections established on behalf of each organization",
 	[]string{"organization"},
 )
 
