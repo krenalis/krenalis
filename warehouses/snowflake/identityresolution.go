@@ -42,8 +42,11 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 		return nil
 	}
 
+	deferFinalization := true
 	defer func() {
-		err = warehouse.finalizeIdentityResolution(ctx, db, opID, err)
+		if deferFinalization {
+			err = warehouse.finalizeIdentityResolution(ctx, db, opID, err)
+		}
 	}()
 
 	// Determine the greatest recorded version of the "KRENALIS_PROFILES" table
@@ -244,6 +247,12 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
 		return warehouse.setOperationAsCompleted(ctx, tx, opID, nil)
 	})
+
+	// Reconcile an ambiguous commit result with the persisted operation state.
+	// If the operation was successfully committed, continue with the best-effort
+	// cleanups below.
+	deferFinalization = false
+	err = warehouse.finalizeIdentityResolution(ctx, db, opID, err)
 	if err != nil {
 		return err
 	}

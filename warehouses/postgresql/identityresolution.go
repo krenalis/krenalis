@@ -42,8 +42,11 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 		return nil
 	}
 
+	deferFinalization := true
 	defer func() {
-		err = warehouse.finalizeIdentityResolution(ctx, pool, opID, err)
+		if deferFinalization {
+			err = warehouse.finalizeIdentityResolution(ctx, pool, opID, err)
+		}
 	}()
 
 	// Determine the greatest recorded version of the "krenalis_profiles" table
@@ -250,6 +253,10 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 
 		return warehouse.setOperationAsCompleted(ctx, tx, opID, nil)
 	})
+
+	// Reconcile an ambiguous commit result with the persisted operation state.
+	deferFinalization = false
+	err = warehouse.finalizeIdentityResolution(ctx, pool, opID, err)
 	if err != nil {
 		return err
 	}
