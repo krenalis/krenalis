@@ -72,13 +72,15 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 			if connector.Terms.UserID != "" {
 				c.Terms.UserID = connector.Terms.UserID
 			}
-			switch connector.AsDestination.SendingMode {
-			case connectors.Client:
-				c.SendingMode = new(Client)
-			case connectors.Server:
-				c.SendingMode = new(Server)
-			case connectors.ClientAndServer:
-				c.SendingMode = new(ClientAndServer)
+			if connector.AsDestination != nil {
+				switch connector.AsDestination.SendingMode {
+				case connectors.Client:
+					c.SendingMode = new(Client)
+				case connectors.Server:
+					c.SendingMode = new(Server)
+				case connectors.ClientAndServer:
+					c.SendingMode = new(ClientAndServer)
+				}
 			}
 			// c.WebhooksPer = WebhooksPer(connector.WebhooksPer) TODO(marco): implement webhooks
 			if connector.OAuth.AuthURL != "" {
@@ -275,14 +277,19 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	// Read all organizations.
 	state.organizations = map[string]*Organization{}
 	err = tx.QueryScan(ctx, "SELECT id, name, enabled, members_limit, access_keys_limit, workspaces_limit,"+
-		" connectors_limit, connections_limit, pipelines_limit FROM organizations", func(rows *db.Rows) error {
+		" connectors_limit, connections_limit, pipelines_limit, organization_requests_rate_per_minute, organization_requests_max_capacity,"+
+		" workspace_requests_rate_per_minute, workspace_requests_max_capacity, workspace_events_rate_per_minute, workspace_events_max_capacity FROM organizations", func(rows *db.Rows) error {
 		for rows.Next() {
 			org := &Organization{mu: new(sync.Mutex)}
 			var limits OrganizationLimits
 			if err := rows.Scan(&org.ID, &org.Name, &org.Enabled, &limits.Members, &limits.AccessKeys,
-				&limits.Workspaces, &limits.Connectors, &limits.Connections, &limits.Pipelines); err != nil {
+				&limits.Workspaces, &limits.Connectors, &limits.Connections, &limits.Pipelines,
+				&limits.Rates.OrganizationSpecific.RatePerMinute, &limits.Rates.OrganizationSpecific.MaxCapacity,
+				&limits.Rates.WorkspaceSpecific.RatePerMinute, &limits.Rates.WorkspaceSpecific.MaxCapacity,
+				&limits.Rates.EventsSpecific.RatePerMinute, &limits.Rates.EventsSpecific.MaxCapacity); err != nil {
 				return fmt.Errorf("loading organization %s: %s", org.ID, err)
 			}
+			org.bucket = state.rateLimiter.NewBucket("organization", org.ID, requestLeaseSize, requestMaxUnits)
 			org.usage = newOrganizationUsage(limits)
 			org.workspaces = map[string]*Workspace{}
 			org.members = map[string]bool{}
@@ -350,6 +357,8 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 					&ws.pipelinesToPurge); err != nil {
 					return fmt.Errorf("loading workspace %s: %s", ws.ID, err)
 				}
+				ws.bucket = state.rateLimiter.NewBucket("workspace", ws.ID, requestLeaseSize, requestMaxUnits)
+				ws.eventBucket = state.rateLimiter.NewBucket("events", ws.ID, eventLeaseSize, eventMaxUnits)
 				ws.organization = state.organizations[organizationID]
 				if _, ok := state.warehousePlatforms[warehousePlatform]; !ok {
 					return fmt.Errorf("loading workspace %s: warehouse platform for %q is required but not registered. (Possibly forgotten import?)", ws.ID, warehousePlatform)
@@ -529,7 +538,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		"transformation_source, transformation_preserve_json, transformation_in_paths, transformation_out_paths,\n"+
 		"query, format, path, sheet, compression::TEXT, order_by, format_settings, export_mode, matching_in,\n"+
 		"matching_out, update_on_duplicates, table_name, table_key, user_id_column, updated_at_column,\n"+
-		"updated_at_format, health, properties_to_unset FROM pipelines",
+		"updated_at_format, incremental, health, properties_to_unset FROM pipelines",
 		func(rows *db.Rows) error {
 			for rows.Next() {
 				var connectionID string
@@ -546,7 +555,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 					&pipeline.Transformation.OutPaths, &pipeline.Query, &format, &pipeline.Path, &pipeline.Sheet, &pipeline.Compression,
 					&pipeline.OrderBy, &pipeline.FormatSettings, &pipeline.ExportMode, &pipeline.Matching.In, &pipeline.Matching.Out,
 					&pipeline.UpdateOnDuplicates, &pipeline.TableName, &pipeline.TableKey, &pipeline.UserIDColumn, &pipeline.UpdatedAtColumn,
-					&pipeline.UpdatedAtFormat, &pipeline.Health, &pipeline.propertiesToUnset)
+					&pipeline.UpdatedAtFormat, &pipeline.Incremental, &pipeline.Health, &pipeline.propertiesToUnset)
 				if err != nil {
 					return fmt.Errorf("loading pipeline %s: %s", pipeline.ID, err)
 				}

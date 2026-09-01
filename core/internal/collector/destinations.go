@@ -84,9 +84,12 @@ func (d *destinations) QueueEvent(connection string, event streams.Event) {
 	d.mu.Lock()
 	pipelines := d.pipelines[connection]
 	d.mu.Unlock()
-	for _, id := range event.Destinations {
-		if p, _ := pipelines.find(id); p != nil {
-			p.QueueEvent(event)
+	for _, destination := range event.Destinations {
+		pipeline, _ := pipelines.find(destination.ID)
+		if pipeline == nil {
+			destination.Ack.Acknowledge()
+		} else {
+			pipeline.QueueEvent(event.Attributes, destination.Ack)
 		}
 	}
 }

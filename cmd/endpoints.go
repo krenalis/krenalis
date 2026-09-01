@@ -30,7 +30,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"DELETE /events/listeners/{id}":                       workspace.DeleteEventListener,
 		"DELETE /keys/{key}":                                  organization.DeleteAccessKey, /* Admin console only */
 		"DELETE /members/{id}":                                organization.DeleteMember,    /* Admin console only */
-		"DELETE /organizations/{id}":                          organization.Delete,          /* Needs organizations API key */
+		"DELETE /organizations/{id}":                          organization.Delete,          /* Needs platform management API key */
 		"DELETE /pipelines/{id}":                              pipeline.Delete,
 		"DELETE /workspaces/current":                          workspace.Delete,
 		"GET    /{$}":                                         api.Index,
@@ -66,8 +66,8 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /members/current":                             api.Member,                           /* Admin console only */
 		"GET    /members/invitations/{token}":                 api.MemberInvitation,                 /* Admin console only */
 		"GET    /members/reset-password/{token}":              api.ValidateMemberPasswordResetToken, /* Admin console only */
-		"GET    /organizations/{id}":                          api.Organization,                     /* Needs organizations API key */
-		"GET    /organizations":                               api.Organizations,                    /* Needs organizations API key */
+		"GET    /organizations/{id}":                          api.Organization,                     /* Needs platform management API key */
+		"GET    /organizations":                               api.Organizations,                    /* Needs platform management API key */
 		"GET    /pipelines/errors/{start}/{end}":              workspace.PipelineErrors,
 		"GET    /pipelines/metrics/dates/{start}/{end}":       organization.PipelineMetricsPerDate,
 		"GET    /pipelines/metrics/days/{days}":               organization.PipelineMetricsPerDay,
@@ -106,7 +106,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"POST   /members/invitations":                         organization.InviteMember,    /* Admin console only */
 		"POST   /members/login":                               s.login,                      /* Admin console only */
 		"POST   /members/logout":                              s.logout,                     /* Admin console only */
-		"POST   /organizations":                               api.CreateOrganization,       /* Needs organizations API key */
+		"POST   /organizations":                               api.CreateOrganization,       /* Needs platform management API key */
 		"POST   /pipelines":                                   connection.CreatePipeline,
 		"POST   /pipelines/{id}/runs":                         pipeline.Run,
 		"POST   /pipelines/{id}/ui-event":                     pipeline.ServeUI,       /* Admin console only */
@@ -126,8 +126,8 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"PUT    /members/invitations/{token}":                 api.AcceptInvitation,            /* Admin console only */
 		"PUT    /members/reset-password":                      api.SendMemberPasswordReset,     /* Admin console only */
 		"PUT    /members/reset-password/{token}":              api.ChangeMemberPasswordByToken, /* Admin console only */
-		"PUT    /organizations/{id}":                          organization.Update,             /* Needs organizations API key */
-		"PUT    /organizations/{id}/status":                   organization.SetStatus,          /* Needs organizations API key */
+		"PUT    /organizations/{id}":                          organization.Update,             /* Needs platform management API key */
+		"PUT    /organizations/{id}/status":                   organization.SetStatus,          /* Needs platform management API key */
 		"PUT    /pipelines/{id}":                              pipeline.Update,
 		"PUT    /pipelines/{id}/schedule":                     pipeline.SetSchedulePeriod,
 		"PUT    /pipelines/{id}/status":                       pipeline.SetStatus,

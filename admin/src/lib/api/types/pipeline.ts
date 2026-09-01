@@ -86,12 +86,14 @@ type FilterOperator =
 interface FilterCondition {
 	property: string;
 	operator: FilterOperator | '';
-	values: string[] | null;
+	values?: string[];
 }
 
+type FilterRule = FilterCondition | Filter;
+
 interface Filter {
-	logical: FilterLogical;
-	conditions: FilterCondition[];
+	operator: FilterLogical;
+	rules: FilterRule[];
 }
 
 interface Pipeline {
@@ -191,6 +193,7 @@ export type {
 	Filter,
 	FilterOperator,
 	FilterLogical,
+	FilterRule,
 	ConsentPurposesOperator,
 	RequiredConsents,
 	FilterCondition,

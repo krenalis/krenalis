@@ -96,7 +96,7 @@ func (iw *identityWriter) Write(event streams.Event) error {
 		// the event itself, so the consents are read from it.
 		if !consents.SatisfiesEvent(requiredConsents.Purposes, requiredConsents.Operator != state.PurposesOr, event.Attributes) {
 			iw.metrics.ImportProfileConsentFailed(iw.pipeline, 1)
-			event.Ack.Acknowledge()
+			event.Destinations[0].Ack.Acknowledge()
 			return nil
 		}
 		iw.metrics.ImportProfileConsentPassed(iw.pipeline, 1)
@@ -153,7 +153,7 @@ func (iw *identityWriter) transformAndWrite(events []streams.Event) {
 	err := transformer.Transform(ctx, records)
 	if err != nil {
 		for _, event := range events {
-			event.Ack.Acknowledge()
+			event.Destinations[0].Ack.Acknowledge()
 		}
 		if err2, ok := err.(transformers.FunctionExecError); ok {
 			iw.metrics.TransformationFailed(iw.pipeline, len(records), err2.Error())
@@ -172,14 +172,14 @@ func (iw *identityWriter) transformAndWrite(events []streams.Event) {
 				iw.metrics.TransformationPassed(iw.pipeline, 1)
 				iw.metrics.OutputValidationFailed(iw.pipeline, 1, err.Error())
 			}
-			events[i].Ack.Acknowledge()
+			events[i].Destinations[0].Ack.Acknowledge()
 			continue
 		}
 		iw.metrics.TransformationPassed(iw.pipeline, 1)
 		iw.metrics.OutputValidationPassed(iw.pipeline, 1)
 		if !consents.SatisfiesProfile(requiredConsents.Purposes, requiredConsents.Operator != state.PurposesOr, record.Attributes) {
 			iw.metrics.ImportProfileConsentFailed(iw.pipeline, 1)
-			events[i].Ack.Acknowledge()
+			events[i].Destinations[0].Ack.Acknowledge()
 			continue
 		}
 		iw.metrics.ImportProfileConsentPassed(iw.pipeline, 1)
@@ -191,7 +191,7 @@ func (iw *identityWriter) transformAndWrite(events []streams.Event) {
 			AnonymousID: event.Attributes["anonymousId"].(string),
 			Attributes:  record.Attributes,
 			UpdatedAt:   event.Attributes["timestamp"].(time.Time),
-		}, event.Ack)
+		}, event.Destinations[0].Ack)
 		_ = err // TODO(marco): handle the error
 	}
 
@@ -205,5 +205,5 @@ func (iw *identityWriter) writeDirect(event streams.Event) error {
 		AnonymousID: event.Attributes["anonymousId"].(string),
 		Attributes:  map[string]any{},
 		UpdatedAt:   event.Attributes["timestamp"].(time.Time),
-	}, event.Ack)
+	}, event.Destinations[0].Ack)
 }

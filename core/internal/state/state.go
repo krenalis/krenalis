@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"runtime"
 	"slices"
 	"sort"
 	"strings"
@@ -20,16 +21,38 @@ import (
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/cipher"
 	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/core/internal/state/ratelimiter"
 	"github.com/krenalis/krenalis/tools/base58"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/kms"
+	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
 
 var (
-	ErrInvalidAccessKeyFormat = errors.New("invalid access key format")
 	ErrAccessKeyNotFound      = errors.New("access key not found")
+	ErrInvalidAccessKeyFormat = errors.New("invalid access key format")
+	ErrRateLimiterUnavailable = ratelimiter.ErrLimiterUnavailable
+
+	rateLimiterAcquisitionErrors = prometheus.RegisterCounter(
+		"krenalis_rate_limit_refill_errors_total",
+		"Total number of rate-limit lease refill errors",
+	)
+	rateLimiterQueueFull = prometheus.RegisterCounter(
+		"krenalis_rate_limit_refill_queue_full_total",
+		"Total number of rate-limit refill attempts rejected because the queue was full",
+	)
+)
+
+// CapacityExceededError is returned when the requested capacity is unavailable.
+type CapacityExceededError = ratelimiter.CapacityExceededError
+
+const (
+	requestLeaseSize = 100
+	requestMaxUnits  = requestLeaseSize
+	eventLeaseSize   = 20_000
+	eventMaxUnits    = eventLeaseSize
 )
 
 // election represents a leader election.
@@ -52,8 +75,10 @@ type metadata struct {
 
 // State represents the application state.
 type State struct {
-	id string
-	db *db.DB
+	id             string
+	db             *db.DB
+	rateLimiter    *ratelimiter.Limiter
+	platformBucket *ratelimiter.Bucket
 
 	changing           *sync.RWMutex
 	cipher             *cipher.Cipher
@@ -121,17 +146,25 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 		sendStats:        sendStats,
 	}
 	state.version.next = sync.Cond{L: &state.version.RWMutex}
+	state.close.ctx, state.close.cancel = context.WithCancel(context.Background())
+
+	// Init the rate limiter.
+	state.rateLimiter = ratelimiter.New(db, ratelimiter.Metrics{
+		AcquisitionErrors: rateLimiterAcquisitionErrors,
+		QueueFull:         rateLimiterQueueFull,
+	})
+	state.platformBucket = state.rateLimiter.NewBucket("platform", "platform", requestLeaseSize, requestMaxUnits)
 
 	// Init the notifier.
 	ch := make(chan notification, 10)
 	state.notifications.notifier = newNotifier(db, ch)
 	state.notifications.ch = ch
 
-	state.close.ctx, state.close.cancel = context.WithCancel(context.Background())
-
 	// Load the state.
 	err := state.load(ctx, credentials)
 	if err != nil {
+		state.close.cancel()
+		state.rateLimiter.Close(ctx)
 		state.notifications.Close()
 		return nil, fmt.Errorf("cannot load Krenalis state: %w", err)
 	}
@@ -182,9 +215,13 @@ func (state *State) Account(id int) (*Account, bool) {
 
 // Close closes the state. When it is called, no calls to the State methods
 // should be in progress, and no further calls should be made.
-func (state *State) Close() {
+func (state *State) Close(ctx context.Context) {
 	state.close.cancel()
 	state.close.Wait()
+	state.rateLimiter.Close(ctx)
+	// Keep state-owned buckets reachable until Limiter.Close returns so their
+	// unused capacity can be restored.
+	runtime.KeepAlive(state)
 	state.notifications.Close()
 }
 
@@ -242,6 +279,17 @@ func (state *State) Connectors() []*Connector {
 		return connectors[i].Code < connectors[j].Code
 	})
 	return connectors
+}
+
+// ConsumeRateLimitCapacity consumes the specified number of units from the
+// request rate-limit capacity for the platform management API. Units must be at
+// least 1.
+//
+// ConsumeRateLimitCapacity returns a CapacityExceededError when the requested
+// capacity is unavailable. It returns ErrLimiterUnavailable when a temporary
+// condition makes capacity availability impossible to determine.
+func (state *State) ConsumeRateLimitCapacity(ctx context.Context, units int) error {
+	return state.platformBucket.Consume(ctx, units)
 }
 
 // EncryptSettings encrypts the provided settings.
@@ -567,6 +615,7 @@ type AccessKey struct {
 // Organization represents an organization.
 type Organization struct {
 	mu         *sync.Mutex
+	bucket     *ratelimiter.Bucket
 	workspaces map[string]*Workspace
 	members    map[string]bool // true when the member can log in.
 	usage      organizationUsage
@@ -593,6 +642,21 @@ type OrganizationLimits struct {
 	Connectors  int
 	Connections int
 	Pipelines   int
+	Rates       RateLimits
+}
+
+// RateLimits stores the request limit for organization-level operations,
+// together with the request and event limits for each workspace.
+type RateLimits struct {
+	OrganizationSpecific RateLimit
+	WorkspaceSpecific    RateLimit
+	EventsSpecific       RateLimit
+}
+
+// RateLimit defines a sustained rate and a maximum capacity.
+type RateLimit struct {
+	RatePerMinute int
+	MaxCapacity   int
 }
 
 // CanMemberLogin reports whether the member with the given ID can log in and
@@ -602,6 +666,16 @@ func (organization *Organization) CanMemberLogin(id string) (bool, bool) {
 	canLogin, ok := organization.members[id]
 	organization.mu.Unlock()
 	return canLogin, ok
+}
+
+// ConsumeRateLimitCapacity consumes the specified number of units from the
+// organization's request rate-limit capacity. units must be at least 1.
+//
+// ConsumeRateLimitCapacity returns a CapacityExceededError when the requested
+// capacity is unavailable. It returns ErrLimiterUnavailable when a temporary
+// condition makes capacity availability impossible to determine.
+func (organization *Organization) ConsumeRateLimitCapacity(ctx context.Context, units int) error {
+	return organization.bucket.Consume(ctx, units)
 }
 
 // Counts returns the organization's counts.
@@ -766,8 +840,10 @@ func (mode WarehouseMode) Value() (driver.Value, error) {
 
 // Workspace represents a workspace.
 type Workspace struct {
-	mu        *sync.Mutex
-	Warehouse struct {
+	mu          *sync.Mutex
+	bucket      *ratelimiter.Bucket
+	eventBucket *ratelimiter.Bucket
+	Warehouse   struct {
 		Platform       string
 		Mode           WarehouseMode
 		settings       []byte
@@ -874,6 +950,27 @@ func (workspace *Workspace) ConsentPurposes() []*ConsentPurpose {
 	return purposes
 }
 
+// ConsumeEventRateLimitCapacity consumes event rate-limit capacity for the
+// specified number of events. eventCount must be at least 1.
+//
+// ConsumeEventRateLimitCapacity returns a CapacityExceededError when capacity
+// for the requested number of events is unavailable. It returns
+// ErrLimiterUnavailable when a temporary condition makes capacity availability
+// impossible to determine.
+func (workspace *Workspace) ConsumeEventRateLimitCapacity(ctx context.Context, eventCount int) error {
+	return workspace.eventBucket.Consume(ctx, eventCount)
+}
+
+// ConsumeRateLimitCapacity consumes the specified number of units from the
+// workspace's request rate-limit capacity. units must be at least 1.
+//
+// ConsumeRateLimitCapacity returns a CapacityExceededError when the requested
+// capacity is unavailable. It returns ErrLimiterUnavailable when a temporary
+// condition makes capacity availability impossible to determine.
+func (workspace *Workspace) ConsumeRateLimitCapacity(ctx context.Context, units int) error {
+	return workspace.bucket.Consume(ctx, units)
+}
+
 // resolveRequiredConsents returns the required consents of a pipeline of the
 // workspace, given the required consent purposes referred to by identifier.
 //
@@ -964,6 +1061,16 @@ func (workspace *Workspace) PipelinesToPurge() []string {
 	pipelines := workspace.pipelinesToPurge
 	workspace.mu.Unlock()
 	return slices.Clone(pipelines)
+}
+
+// RestoreEventRateLimitCapacity restores capacity previously consumed for
+// events. Restoring capacity never increases the workspace's node-local event
+// capacity above its current limit.
+//
+// eventCount must be at least 1. The caller must ensure that it does not exceed
+// the number of events in the corresponding successful consumption.
+func (workspace *Workspace) RestoreEventRateLimitCapacity(eventCount int) error {
+	return workspace.eventBucket.Restore(eventCount)
 }
 
 // WarehouseSettings returns the warehouse settings.

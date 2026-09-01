@@ -39,7 +39,6 @@ const (
 // Workspace represents a workspace.
 type Workspace struct {
 	core                           *Core
-	organization                   *Organization
 	store                          *datastore.Store
 	workspace                      *state.Workspace
 	ID                             string            `json:"id"`
@@ -242,11 +241,16 @@ func (this *Workspace) Attributes(ctx context.Context, kpid string) (json.Value,
 	}
 
 	properties := this.workspace.ProfileSchema.Properties().Names()
-	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"_kpid"},
-		Operator: state.OpIs,
-		Values:   []any{kpid},
-	}}}
+	where := &state.Where{
+		Operator: state.OpAnd,
+		Rules: []state.WhereRule{
+			&state.WhereCondition{
+				Property: []string{"_kpid"},
+				Operator: state.OpIs,
+				Values:   []any{kpid},
+			},
+		},
+	}
 
 	// Retrieve the profile attributes.
 	profiles, _, err := this.store.Profiles(ctx, datastore.Query{
@@ -431,6 +435,17 @@ func (this *Workspace) Connections() []*Connection {
 		return a.Name < b.Name || a.Name == b.Name && a.ID == b.ID
 	})
 	return infos
+}
+
+// ConsumeRateLimitCapacity consumes the specified number of units from the
+// workspace's request rate-limit capacity. units must be at least 1.
+//
+// ConsumeRateLimitCapacity returns errors.TooManyRequests when the requested
+// capacity is unavailable. It returns errors.Unavailable when a temporary
+// condition makes capacity availability impossible to determine.
+func (this *Workspace) ConsumeRateLimitCapacity(ctx context.Context, units int) error {
+	this.core.mustBeOpen()
+	return translateRateLimitError(this.workspace.ConsumeRateLimitCapacity(ctx, units))
 }
 
 // CreateConnection creates a new connection. authToken is an authorization
@@ -974,11 +989,16 @@ func (this *Workspace) Identities(ctx context.Context, kpid string, first, limit
 	if limit < 1 || limit > 1000 {
 		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
 	}
-	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"_kpid"},
-		Operator: state.OpIs,
-		Values:   []any{kpid},
-	}}}
+	where := &state.Where{
+		Operator: state.OpAnd,
+		Rules: []state.WhereRule{
+			&state.WhereCondition{
+				Property: []string{"_kpid"},
+				Operator: state.OpIs,
+				Values:   []any{kpid},
+			},
+		},
+	}
 	ws := &Workspace{
 		core:      this.core,
 		store:     this.store,

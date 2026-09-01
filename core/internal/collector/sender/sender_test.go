@@ -8,14 +8,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"iter"
 	"math"
 	"slices"
+	"strings"
 	"testing"
 	"testing/synctest"
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
-	"github.com/krenalis/krenalis/core/internal/streams"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -78,6 +79,77 @@ func Test_newStoppedTimer(t *testing.T) {
 	if tm.Stop() {
 		t.Fatal("Stop should return false on an already stopped timer")
 	}
+}
+
+// Test_Sender_Peek verifies Peek's behavior before, during, and after an event
+// iteration.
+func Test_Sender_Peek(t *testing.T) {
+
+	tests := []struct {
+		name string
+		seq  func(connectors.Events) iter.Seq[*connectors.Event]
+	}{
+		{name: "All", seq: connectors.Events.All},
+		{name: "SameUser", seq: connectors.Events.SameUser},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				var checked bool
+				app := newTestApplication()
+				app.SendEventsFunc = func(_ context.Context, events connectors.Events) error {
+					first, ok := events.Peek()
+					if !ok {
+						t.Error("Peek before iteration: expected an event")
+					}
+					if got, ok := events.Peek(); !ok || got != first {
+						t.Errorf("repeated Peek before iteration: expected event %p and true, got %p and %t", first, got, ok)
+					}
+
+					yielded := 0
+					for event := range test.seq(events) {
+						yielded++
+						if event != first {
+							t.Errorf("expected event %p, got %p", first, event)
+						}
+						if got, ok := events.Peek(); ok || got != nil {
+							t.Errorf("Peek during iteration: expected nil and false, got %p and %t", got, ok)
+						}
+					}
+					if yielded != 1 {
+						t.Errorf("expected one event, got %d", yielded)
+					}
+					func() {
+						defer func() {
+							r := recover()
+							msg, ok := r.(string)
+							if !ok || !strings.Contains(msg, "Events.Peek outside of an iteration") {
+								t.Errorf("Peek after iteration: unexpected panic %v", r)
+							}
+						}()
+						events.Peek()
+					}()
+					checked = true
+					return nil
+				}
+
+				s := New(app, nil)
+				event := s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+					"anonymousId": "user",
+					"messageId":   "msg-0",
+				}, nopAck{})
+				s.SendEvent(event)
+				time.Sleep(maxQueueDelay)
+				s.Close(t.Context())
+
+				if !checked {
+					t.Fatal("Peek after iteration was not checked")
+				}
+			})
+		})
+	}
+
 }
 
 func Test_iterator_invalidUsage(t *testing.T) {
@@ -193,20 +265,14 @@ func Test_Sender_DiscardedOutOfOrderEvent(t *testing.T) {
 		}
 		s := New(app, nil)
 
-		event0 := s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
-			Attributes: map[string]any{
-				"anonymousId": "user",
-				"messageId":   "msg-0",
-			},
-			Ack: nopAck{},
-		})
-		event1 := s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
-			Attributes: map[string]any{
-				"anonymousId": "user",
-				"messageId":   "msg-1",
-			},
-			Ack: nopAck{},
-		})
+		event0 := s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+			"anonymousId": "user",
+			"messageId":   "msg-0",
+		}, nopAck{})
+		event1 := s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+			"anonymousId": "user",
+			"messageId":   "msg-1",
+		}, nopAck{})
 
 		s.DiscardEvent(event1)
 		s.SendEvent(event0)
@@ -263,13 +329,10 @@ func Test_Sender_SameUserRebindPreservesOrder(t *testing.T) {
 		defer s.Close(t.Context())
 
 		newEvent := func(anonymousID, messageID string) *Event {
-			return s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
-				Attributes: map[string]any{
-					"anonymousId": anonymousID,
-					"messageId":   messageID,
-				},
-				Ack: nopAck{},
-			})
+			return s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+				"anonymousId": anonymousID,
+				"messageId":   messageID,
+			}, nopAck{})
 		}
 
 		// Discarding w-0 releases user-w, so the iteration binds to user-u
@@ -333,13 +396,10 @@ func Test_Sender_SequenceOverflowRescale(t *testing.T) {
 
 		makeEvent := func(messageID string) *Event {
 			t.Helper()
-			return s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
-				Attributes: map[string]any{
-					"anonymousId": userID,
-					"messageId":   messageID,
-				},
-				Ack: nopAck{},
-			})
+			return s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+				"anonymousId": userID,
+				"messageId":   messageID,
+			}, nopAck{})
 		}
 
 		e0 := makeEvent("msg-0")
@@ -386,13 +446,10 @@ func Test_Sender_RetryAfterSendEventsErrorWithoutIteration(t *testing.T) {
 		}
 		s := New(app, nil)
 
-		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
-			Attributes: map[string]any{
-				"anonymousId": "user",
-				"messageId":   "msg-0",
-			},
-			Ack: nopAck{},
-		})
+		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+			"anonymousId": "user",
+			"messageId":   "msg-0",
+		}, nopAck{})
 		s.SendEvent(event)
 
 		time.Sleep(maxQueueDelay)
@@ -590,13 +647,10 @@ func Test_Sender_UserRemoval(t *testing.T) {
 		s := New(app, nil)
 		defer s.Close(t.Context())
 
-		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
-			Attributes: map[string]any{
-				"anonymousId": "user-1",
-				"messageId":   "msg-1",
-			},
-			Ack: nopAck{},
-		})
+		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+			"anonymousId": "user-1",
+			"messageId":   "msg-1",
+		}, nopAck{})
 
 		s.DiscardEvent(event)
 
@@ -627,13 +681,10 @@ func Test_Sender_UserRemoval(t *testing.T) {
 		})
 		defer s.Close(t.Context())
 
-		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
-			Attributes: map[string]any{
-				"anonymousId": "user-2",
-				"messageId":   "msg-2",
-			},
-			Ack: nopAck{},
-		})
+		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+			"anonymousId": "user-2",
+			"messageId":   "msg-2",
+		}, nopAck{})
 		s.SendEvent(event)
 
 		select {
@@ -665,13 +716,10 @@ func Test_Sender_UserRemoval(t *testing.T) {
 		})
 		defer s.Close(t.Context())
 
-		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, streams.Event{
-			Attributes: map[string]any{
-				"anonymousId": "user-3",
-				"messageId":   "msg-3",
-			},
-			Ack: nopAck{},
-		})
+		event := s.CreateEvent(testPipelineID, "Click", types.Type{}, map[string]any{
+			"anonymousId": "user-3",
+			"messageId":   "msg-3",
+		}, nopAck{})
 		s.SendEvent(event)
 
 		select {
@@ -691,11 +739,8 @@ func Test_Sender_UserRemoval(t *testing.T) {
 
 // createTestEvent creates a minimal event for tests.
 func createTestEvent(s *Sender, i int) *Event {
-	return s.CreateEvent(testPipelineID, "page", types.Type{}, streams.Event{
-		Attributes: map[string]any{
-			"anonymousId": "user123",
-			"messageId":   fmt.Sprintf("msg-%d", i),
-		},
-		Ack: nopAck{},
-	})
+	return s.CreateEvent(testPipelineID, "page", types.Type{}, map[string]any{
+		"anonymousId": "user123",
+		"messageId":   fmt.Sprintf("msg-%d", i),
+	}, nopAck{})
 }

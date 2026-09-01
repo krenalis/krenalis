@@ -300,7 +300,7 @@ func TestParseSettings(t *testing.T) {
 		}
 	})
 
-	t.Run("organizations API key setting", func(t *testing.T) {
+	t.Run("platform management API key setting", func(t *testing.T) {
 		validKey := "org_" + strings.Repeat("a", 43)
 
 		cases := []struct {
@@ -1406,6 +1406,75 @@ func TestParseSettings(t *testing.T) {
 				}
 				if s.NATS.Storage != tc.want {
 					t.Fatalf("expected %v, got %v", tc.want, s.NATS.Storage)
+				}
+			})
+		}
+	})
+
+	t.Run("NATS ack wait parsing", func(t *testing.T) {
+		cases := []struct {
+			name    string
+			env     string
+			want    time.Duration
+			wantErr string
+		}{
+			{
+				name: "default when unset",
+				want: natsopts.DefaultAckWait,
+			},
+			{
+				name: "minimum duration",
+				env:  "1s",
+				want: natsopts.MinAckWait,
+			},
+			{
+				name: "custom duration",
+				env:  "2m30s",
+				want: 2*time.Minute + 30*time.Second,
+			},
+			{
+				name:    "invalid duration rejected",
+				env:     "soon",
+				wantErr: "invalid duration value specified for KRENALIS_NATS_ACK_WAIT: time: invalid duration \"soon\"",
+			},
+			{
+				name:    "duration below minimum rejected",
+				env:     "999ms",
+				wantErr: "KRENALIS_NATS_ACK_WAIT must be at least 1s",
+			},
+			{
+				name:    "zero duration rejected",
+				env:     "0s",
+				wantErr: "KRENALIS_NATS_ACK_WAIT must be at least 1s",
+			},
+			{
+				name:    "negative duration rejected",
+				env:     "-1s",
+				wantErr: "KRENALIS_NATS_ACK_WAIT must be at least 1s",
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				setBaseline(t)
+				if tc.env != "" {
+					t.Setenv("KRENALIS_NATS_ACK_WAIT", tc.env)
+				}
+				s, err := loadConfigFn()
+				if tc.wantErr != "" {
+					if err == nil {
+						t.Fatalf("expected error, got nil")
+					}
+					if err.Error() != tc.wantErr {
+						t.Fatalf("expected %q, got %q", tc.wantErr, err.Error())
+					}
+					return
+				}
+				if err != nil {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				if s.NATS.AckWait != tc.want {
+					t.Fatalf("expected %s, got %s", tc.want, s.NATS.AckWait)
 				}
 			})
 		}

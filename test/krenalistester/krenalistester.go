@@ -72,6 +72,7 @@ type Krenalis struct {
 
 	// Options.
 	fileSystemRoot        string
+	natsAckWait           string
 	populateProfileSchema bool
 }
 
@@ -88,8 +89,8 @@ func (k *Krenalis) Addr() string {
 // NewKrenalisInstance initializes a new instance of Krenalis for testing.
 //
 // After initializing an instance, its options can be set (via
-// [PopulateProfileSchema] and [SetFileSystemRoot]) and finally the instance can be
-// started with the [Start] method.
+// [PopulateProfileSchema], [SetFileSystemRoot], and [SetNATSAckWait]) and
+// finally the instance can be started with the [Start] method.
 func NewKrenalisInstance(t *testing.T) *Krenalis {
 
 	if !launchKrenalisExternally {
@@ -170,6 +171,11 @@ func (k *Krenalis) PopulateProfileSchema(populate bool) {
 // environment variable.
 func (k *Krenalis) SetFileSystemRoot(root string) {
 	k.fileSystemRoot = root
+}
+
+// SetNATSAckWait sets the NATS ack wait duration.
+func (k *Krenalis) SetNATSAckWait(duration string) {
+	k.natsAckWait = duration
 }
 
 // Start starts the Krenalis instance.
@@ -323,18 +329,19 @@ func (k *Krenalis) Start() {
 			k.t.Fatal(err)
 		}
 		// Build the environment for the Krenalis process by starting from the
-		// current process's environment (os.Environ()) and adding the
-		// Krenalis-specific variables.
+		// current process's environment, without the Krenalis variables, and
+		// adding the Krenalis-specific variables needed by the tests.
 		//
-		// We must preserve the existing environment variables because:
+		// The Krenalis variables already present in the environment are
+		// removed to keep behavior consistent with the "embedded" test mode,
+		// where Krenalis is configured programmatically and does not read the
+		// environment.
 		//
-		// (1) it keeps behavior consistent with the "embedded" test mode,
-		//     which also inherits the full environment, and
+		// The other environment variables must be preserved because Krenalis
+		// may fail if certain system environment variables are missing (e.g.,
+		// this causes errors on Windows).
 		//
-		// (2) Krenalis may fail if certain system environment variables are
-		//     missing (e.g., this causes errors on Windows).
-		//
-		env := append(os.Environ(), []string{
+		env := append(environWithoutKrenalisVars(), []string{
 			"KRENALIS_EXTERNAL_ASSETS_URLS=https://assets.krenalis.com/",
 			"KRENALIS_POTENTIAL_CONNECTORS_URL=https://assets.krenalis.com/admin/connectors/potentials.json",
 			"KRENALIS_TELEMETRY_LEVEL=none",
@@ -349,6 +356,7 @@ func (k *Krenalis) Start() {
 			"KRENALIS_DB_PASSWORD=" + testsSettings.Database.Password,
 			"KRENALIS_DB_DATABASE=" + testsSettings.Database.Database,
 			"KRENALIS_DB_SCHEMA=" + testsSettings.Database.Schema,
+			"KRENALIS_NATS_ACK_WAIT=" + k.natsAckWait,
 			"KRENALIS_TRANSFORMERS_PROVIDER=local",
 			"KRENALIS_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE=" + testsSettings.PythonExecutable,
 			"KRENALIS_TRANSFORMERS_LOCAL_FUNCTIONS_DIR=" + k.transformationsTempDir,
@@ -394,8 +402,15 @@ func (k *Krenalis) Start() {
 		setts.NATS.Servers = []string{fmt.Sprintf("nats://%s:%d", testsSettings.NATS.URL, testsSettings.NATS.Port)}
 		setts.NATS.User = testsSettings.NATS.User
 		setts.NATS.Password = testsSettings.NATS.Password
+		if k.natsAckWait != "" {
+			setts.NATS.AckWait, err = time.ParseDuration(k.natsAckWait)
+			if err != nil {
+				k.t.Fatal(err)
+			}
+		}
 		setts.Transformers.Local.PythonExecutable = testsSettings.PythonExecutable
 		setts.Transformers.Local.FunctionsDir = k.transformationsTempDir
+		setts.MaxQueuedEventsPerDestination = 50_000
 		err := os.Setenv("KRENALIS_CONNECTOR_FILESYSTEM_ROOT", k.fileSystemRoot)
 		if err != nil {
 			k.t.Fatal(err)
@@ -570,7 +585,7 @@ func (k *Krenalis) createWorkspace(name string, profileSchema types.Type, uiPref
 		// Workspace creation is organization-scoped.
 		"Krenalis-Workspace": nil,
 	}
-	err := k.tryCall("POST", "/v1/workspaces", headers, req, &response)
+	err := k.tryCall("POST", "/v1/workspaces", headers, req, &response, true)
 	if err != nil {
 		return "", err
 	}
@@ -582,7 +597,7 @@ func (k *Krenalis) login() error {
 		"email":    "acme@krenalis.com",
 		"password": "krenalis-password",
 	}
-	return k.tryCall("POST", "/v1/members/login", nil, body, nil)
+	return k.tryCall("POST", "/v1/members/login", nil, body, nil, true)
 }
 
 // ExecQueryTestDatabase executes a query on the test database.

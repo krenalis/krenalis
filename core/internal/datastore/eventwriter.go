@@ -208,8 +208,10 @@ func (w *EventWriter) Write(ctx context.Context, event streams.Event, pipeline s
 	// userId
 	row[66] = event.Attributes["userId"]
 
+	ack := event.Destinations[0].Ack
+
 	select {
-	case w.events <- flusherRow[[]any]{pipeline: pipeline, row: row, ack: event.Ack}:
+	case w.events <- flusherRow[[]any]{pipeline: pipeline, row: row, ack: ack}:
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()

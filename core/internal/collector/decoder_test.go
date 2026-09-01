@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/netip"
 	"net/url"
 	"reflect"
@@ -25,6 +26,85 @@ import (
 )
 
 const decoderTestConnectionID = "7B3mN9qK2xA4"
+
+// TestDecoderEventCount verifies that counting a request does not consume its
+// event decoder.
+func TestDecoderEventCount(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		body        string
+		count       int
+		validEvents bool
+		err         error
+	}{
+		{name: "single", body: `{"type":"page","userId":"x"}`, count: 1, validEvents: true},
+		{name: "batch", body: `[{"type":"page","userId":"x"},{"type":"page","userId":"y"}]`, count: 2, validEvents: true},
+		{name: "batch with whitespace", body: " \n [{\"type\":\"page\",\"userId\":\"x\"}]", count: 1, validEvents: true},
+		{name: "batch envelope", body: `{"batch":[{"type":"page","userId":"x"},{"type":"page","userId":"y"}]}`, count: 2, validEvents: true},
+		{name: "batch envelope with whitespace", body: "{\"batch\" : \n [{\"type\":\"page\",\"userId\":\"x\"}]}", count: 1, validEvents: true},
+		{name: "empty root batch", body: `[]`, err: errors.BadRequest("batch must contain at least one event")},
+		{name: "empty batch envelope", body: `{"batch":[]}`, err: errors.BadRequest("batch must contain at least one event")},
+		{name: "malformed batch", body: `[{"type":"page"}`, err: errors.BadRequest("error parsing the request body as JSON: unexpected EOF")},
+		{name: "malformed batch envelope", body: `{"batch":`, err: errors.BadRequest("error parsing the request body as JSON: unexpected EOF")},
+		{name: "maximum batch", body: "[" + strings.Repeat("0,", maxBatchEventCount-1) + "0]", count: maxBatchEventCount},
+		{name: "excessive batch", body: "[" + strings.Repeat("0,", maxBatchEventCount) + "0]", err: errors.BadRequest("batch contains too many events")},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodPost, "/events", strings.NewReader(test.body))
+			r.Header.Set("Content-Type", "application/json")
+			dec, err := newDecoder(r)
+			if !reflect.DeepEqual(test.err, err) {
+				t.Fatalf("expected error %#v, got error %#v", test.err, err)
+			}
+			if err != nil {
+				return
+			}
+			count := dec.EventCount()
+			if count != test.count {
+				t.Fatalf("expected event count %d, got %d", test.count, count)
+			}
+			decoded := 0
+			for event, err := range dec.Events(decoderTestConnectionID, false) {
+				if test.validEvents {
+					if err != nil {
+						t.Fatalf("expected no event error, got %v", err)
+					}
+					if event == nil {
+						t.Fatal("decoded event is nil")
+					}
+				}
+				decoded++
+			}
+			if decoded != test.count {
+				t.Fatalf("expected decoded events %d, got %d", test.count, decoded)
+			}
+		})
+	}
+}
+
+// TestDecoderResetResetsEventCount verifies that Reset updates the event count
+// for each request form.
+func TestDecoderResetResetsEventCount(t *testing.T) {
+	dec := &decoder{}
+	for _, test := range []struct {
+		path  string
+		body  string
+		count int
+	}{
+		{path: "/events", body: `[{"type":"page","userId":"x"},{"type":"page","userId":"y"}]`, count: 2},
+		{path: "/events", body: `{"batch":[{"type":"page","userId":"x"}]}`, count: 1},
+		{path: "/events/track", body: `{"userId":"x","event":"click"}`, count: 1},
+	} {
+		r := httptest.NewRequest(http.MethodPost, test.path, strings.NewReader(test.body))
+		r.Header.Set("Content-Type", "application/json")
+		if err := dec.Reset(r); err != nil {
+			t.Fatal(err)
+		}
+		if count := dec.EventCount(); count != test.count {
+			t.Fatalf("expected event count %d, got %d", test.count, count)
+		}
+	}
+}
 
 func Test_Decoder(t *testing.T) {
 
@@ -49,6 +129,7 @@ func Test_Decoder(t *testing.T) {
 		err error
 	}
 
+	batchEventMissingType := []expectedEvent{{err: errors.BadRequest("property 'type' is required for a batch request")}}
 	tests := []struct {
 		typ            string
 		body           string
@@ -66,21 +147,21 @@ func Test_Decoder(t *testing.T) {
 		{body: `{"batch":[]"}`, err: errors.BadRequest("error parsing the request body as JSON: invalid character '\"' after object value (expecting ',' or '}')")},
 		{body: `{"batch":[],"writeKey":true}`, err: errors.BadRequest("property 'writeKey' is not a valid string")},
 		{body: `{"batch":[],"writeKey":""}`, err: errors.BadRequest("property 'writeKey' cannot be empty")},
-		{body: `{"batch":[],"writeKey":"vjJCb9lilU1GABTrSQ5qOkY7ddTW1uBQ"}`, writeKey: writeKey},
-		{body: `{"batch":[]}`},
-		{body: `{"b\u0061tch":[]}`},
+		{body: `{"batch":[{}],"writeKey":"vjJCb9lilU1GABTrSQ5qOkY7ddTW1uBQ"}`, writeKey: writeKey, expected: batchEventMissingType},
+		{body: `{"batch":[]}`, err: errors.BadRequest("batch must contain at least one event")},
+		{body: `{"b\u0061tch":[]}`, err: errors.BadRequest("batch must contain at least one event")},
 		{body: `{"batch":[],"sentAt":""}`, err: errors.BadRequest("property 'sentAt' is not a valid ISO 8601 timestamp")},
 		{body: `{"batch":[],"sentAt":"0000-01-01T12:56:23"}`, err: errors.BadRequest("property 'sentAt' has an invalid year value")},
 		{body: `{"batch":[],"sentAt":"10000-01-01T12:56:23"}`, err: errors.BadRequest("property 'sentAt' has an invalid year value")},
-		{body: `{"batch":[],"sentAt":"2024-10-23T14:08:07.288305712"}`},
-		{body: `{"batch":[],"sentAt":"2024-10-23T14:08:07.288305712"}`},
-		{body: `{"batch":[],"foo":"boo"}`},
+		{body: `{"batch":[{}],"sentAt":"2024-10-23T14:08:07.288305712"}`, expected: batchEventMissingType},
+		{body: `{"batch":[{}],"sentAt":"2024-10-23T14:08:07.288305712"}`, expected: batchEventMissingType},
+		{body: `{"batch":[{}],"foo":"boo"}`, expected: batchEventMissingType},
 		{body: `{"batch":[],"context":null}`, err: errors.BadRequest("property 'context' is not a valid object")},
-		{body: `{"batch":[],"context":{}}`},
-		{body: `{"batch":[],"context":{"foo":"boo"}}`},
+		{body: `{"batch":[{}],"context":{}}`, expected: batchEventMissingType},
+		{body: `{"batch":[{}],"context":{"foo":"boo"}}`, expected: batchEventMissingType},
 		{body: `{"batch":[],"connectionId":56}`, err: errors.BadRequest("property 'connectionId' is not a string")},
 		{body: `{"batch":[],"connectionId":"a05!"}`, err: errors.BadRequest("property 'connectionId' is not a valid connection identifier")},
-		{body: `{"batch":[],"connectionId":"9zQ4Tn7B3mS6"}`},
+		{body: `{"batch":[{}],"connectionId":"9zQ4Tn7B3mS6"}`, expected: batchEventMissingType},
 
 		{typ: "track", body: ``, err: errors.BadRequest("request's body is empty")},
 		{typ: "track", body: `{`, expected: []expectedEvent{{err: errors.BadRequest("unexpected invalid token while decoding an event")}}},
