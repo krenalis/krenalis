@@ -55,7 +55,7 @@ const PropertyDetailsPanel = ({ identifierPosition, onClose, primarySource, prop
 						</PropertyDetail>
 					)}
 					<PropertyDetail
-						label={<SchemaPropertyPrimarySourceLabel hasPrimarySource={primarySource != null} />}
+						label={<SchemaPropertyPrimarySourceLabel primarySourceName={primarySource?.name ?? null} />}
 					>
 						{primarySource == null ? (
 							<span className='property-details-panel__empty-value'>—</span>

@@ -83,19 +83,22 @@ const SchemaPropertyIdentifierLabel = () => (
 	</span>
 );
 
-const SchemaPropertyPrimarySourceLabel = ({ hasPrimarySource = true }: { hasPrimarySource?: boolean }) => (
-	<span className='schema-property-grid__label-content'>
-		Primary source
-		<SchemaPropertyInfoTooltip
-			content={
-				hasPrimarySource
-					? 'If this source has a value for this property, its most recent value is used. Otherwise, the most recent value from any other source is used.'
-					: 'This property has no primary source, so the most recent value from any source is used.'
-			}
-			label='About primary source'
-		/>
-	</span>
-);
+const SchemaPropertyPrimarySourceLabel = ({ primarySourceName }: { primarySourceName?: string | null }) => {
+	let content =
+		'If this source has a value for this property, its most recent value is used. Otherwise, the most recent value from any other source is used.';
+	if (primarySourceName === null) {
+		content = 'This property has no primary source, so the most recent value from any source is used.';
+	} else if (primarySourceName !== undefined) {
+		content = `The ${primarySourceName} connection is the primary source for this property, so its most recent value is used when available. Otherwise, the most recent value from any other source is used.`;
+	}
+
+	return (
+		<span className='schema-property-grid__label-content'>
+			Primary source
+			<SchemaPropertyInfoTooltip content={content} label='About primary source' />
+		</span>
+	);
+};
 
 interface SchemaPropertyGridSummaryProps {
 	children?: ReactNode;
