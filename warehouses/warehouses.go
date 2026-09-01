@@ -37,9 +37,9 @@ func (platform Platform) ReflectType() reflect.Type {
 	return platform.ct
 }
 
-// New returns a new data warehouse instance, whose network connections are
-// established dialing with dialWith. If dialWith is nil, the warehouse dials
-// with its own dialer.
+// New returns a new data warehouse instance. If dialWith is provided, it is
+// used to establish network connections; otherwise, the warehouse uses its own
+// dialer.
 func (platform Platform) New(settings SettingsLoader, dialWith DialWith) Warehouse {
 	if dialWith == nil {
 		dialWith = func(dial DialFunc) DialFunc {
