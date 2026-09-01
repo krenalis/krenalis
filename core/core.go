@@ -1116,6 +1116,8 @@ const (
 // must be non-nil. purpose indicates the intent of the transformation and can
 // be "Import", "Create", or "Update".
 //
+// It returns an errors.NotFound error if the organization does not exist.
+//
 // It returns an errors.UnprocessableError error with code:
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
