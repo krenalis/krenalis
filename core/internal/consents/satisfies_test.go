@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/json"
 )
 
 var givenConsentsCases = []struct {
@@ -306,6 +307,34 @@ func TestSatisfiesWithConfiguredPaths(t *testing.T) {
 				"privacy": map[string]any{"marketing": "true"},
 			},
 			want: false,
+		},
+		{
+			name:     "profile path inside a JSON property",
+			purposes: []*state.ConsentPurpose{purposeWithPaths("marketing", "", "privacy.marketing")},
+			matchAll: true,
+			attributes: map[string]any{
+				"privacy": json.Value(`{"marketing":true}`),
+			},
+			want: true,
+		},
+		{
+			name:     "the profile path inside a JSON property holds a value that is not a bool",
+			purposes: []*state.ConsentPurpose{purposeWithPaths("marketing", "", "privacy.marketing")},
+			matchAll: true,
+			attributes: map[string]any{
+				"privacy": json.Value(`{"marketing":"true"}`),
+			},
+			want: false,
+		},
+		{
+			name:     "event path inside a JSON property",
+			purposes: []*state.ConsentPurpose{purposeWithPaths("marketing", "traits.marketing", "")},
+			matchAll: true,
+			attributes: map[string]any{
+				"traits": json.Value(`{"marketing":true}`),
+			},
+			event: true,
+			want:  true,
 		},
 		{
 			name:       "the profile path does not exist",

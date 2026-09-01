@@ -9,6 +9,124 @@ import (
 	"testing"
 )
 
+func Test_AddPropertyAtPath(t *testing.T) {
+
+	testObject := Object([]Property{
+		{Name: "email", Type: String(), ReadOptional: true},
+		{Name: "consents", ReadOptional: true, Type: Object([]Property{
+			{Name: "marketing", Type: Boolean(), ReadOptional: true},
+		})},
+	})
+
+	added := Property{Name: "ignored", Type: Boolean(), ReadOptional: true, Description: "profiling"}
+
+	t.Run("top level property", func(t *testing.T) {
+		got, ok, err := AddPropertyAtPath(testObject, "age", Property{Type: Int(32), ReadOptional: true})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !ok {
+			t.Fatal("expected the property to be added")
+		}
+		expected := Object([]Property{
+			{Name: "email", Type: String(), ReadOptional: true},
+			{Name: "consents", ReadOptional: true, Type: Object([]Property{
+				{Name: "marketing", Type: Boolean(), ReadOptional: true},
+			})},
+			{Name: "age", Type: Int(32), ReadOptional: true},
+		})
+		if !Equal(got, expected) {
+			t.Fatalf("unexpected type: %v", got)
+		}
+	})
+
+	t.Run("property added to an existing object", func(t *testing.T) {
+		got, ok, err := AddPropertyAtPath(testObject, "consents.profiling", added)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !ok {
+			t.Fatal("expected the property to be added")
+		}
+		expected := Object([]Property{
+			{Name: "email", Type: String(), ReadOptional: true},
+			{Name: "consents", ReadOptional: true, Type: Object([]Property{
+				{Name: "marketing", Type: Boolean(), ReadOptional: true},
+				{Name: "profiling", Type: Boolean(), ReadOptional: true, Description: "profiling"},
+			})},
+		})
+		if !Equal(got, expected) {
+			t.Fatalf("unexpected type: %v", got)
+		}
+	})
+
+	t.Run("missing intermediate levels are created", func(t *testing.T) {
+		got, ok, err := AddPropertyAtPath(testObject, "traits.privacy.profiling", added)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if !ok {
+			t.Fatal("expected the property to be added")
+		}
+		expected := Object([]Property{
+			{Name: "email", Type: String(), ReadOptional: true},
+			{Name: "consents", ReadOptional: true, Type: Object([]Property{
+				{Name: "marketing", Type: Boolean(), ReadOptional: true},
+			})},
+			{Name: "traits", ReadOptional: true, Type: Object([]Property{
+				{Name: "privacy", ReadOptional: true, Type: Object([]Property{
+					{Name: "profiling", Type: Boolean(), ReadOptional: true, Description: "profiling"},
+				})},
+			})},
+		})
+		if !Equal(got, expected) {
+			t.Fatalf("unexpected type: %v", got)
+		}
+	})
+
+	t.Run("existing path is left unchanged", func(t *testing.T) {
+		for _, path := range []string{"email", "consents", "consents.marketing"} {
+			got, ok, err := AddPropertyAtPath(testObject, path, added)
+			if err != nil {
+				t.Fatalf("%s: unexpected error: %v", path, err)
+			}
+			if ok {
+				t.Fatalf("%s: expected the property not to be added", path)
+			}
+			if !Equal(got, testObject) {
+				t.Fatalf("%s: unexpected type: %v", path, got)
+			}
+		}
+	})
+
+	t.Run("path through a non object property", func(t *testing.T) {
+		got, ok, err := AddPropertyAtPath(testObject, "email.marketing", added)
+		if err == nil {
+			t.Fatal("expected an error")
+		}
+		if err.Error() != `property "email" is not an object` {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if ok {
+			t.Fatal("expected the property not to be added")
+		}
+		if !Equal(got, testObject) {
+			t.Fatalf("unexpected type: %v", got)
+		}
+	})
+
+	t.Run("the source type is not modified", func(t *testing.T) {
+		if !Equal(testObject, Object([]Property{
+			{Name: "email", Type: String(), ReadOptional: true},
+			{Name: "consents", ReadOptional: true, Type: Object([]Property{
+				{Name: "marketing", Type: Boolean(), ReadOptional: true},
+			})},
+		})) {
+			t.Fatalf("the type has been modified: %v", testObject)
+		}
+	})
+}
+
 func Test_AsRole(t *testing.T) {
 	cases := []struct {
 		object   Type

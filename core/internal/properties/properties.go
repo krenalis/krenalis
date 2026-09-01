@@ -8,6 +8,32 @@ import (
 	"github.com/krenalis/krenalis/tools/json"
 )
 
+// Delete deletes the property with the given path from m, together with the
+// objects that its deletion leaves empty. It does nothing if the path does not
+// correspond to a value in m.
+//
+// Unlike Read, it does not traverse JSON values, because a property cannot be
+// deleted from them.
+func Delete(m map[string]any, path []string) {
+	last := len(path) - 1
+	if last == 0 {
+		delete(m, path[0])
+		return
+	}
+	v, ok := m[path[0]]
+	if !ok {
+		return
+	}
+	sub, ok := v.(map[string]any)
+	if !ok {
+		return
+	}
+	Delete(sub, path[1:])
+	if len(sub) == 0 {
+		delete(m, path[0])
+	}
+}
+
 // Read reads the property with the given path from m, returning its value (if
 // found, otherwise nil) and a boolean indicating if the property path
 // corresponds to a value in m or not.

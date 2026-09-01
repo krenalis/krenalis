@@ -65,14 +65,15 @@ type UIPreferences struct {
 type PipelineStep int
 
 const (
-	ReceiveStep          = PipelineStep(metrics.ReceiveStep)
-	InputValidationStep  = PipelineStep(metrics.InputValidationStep)
-	FilterStep           = PipelineStep(metrics.FilterStep)
-	EventConsentStep     = PipelineStep(metrics.EventConsentStep)
-	TransformationStep   = PipelineStep(metrics.TransformationStep)
-	OutputValidationStep = PipelineStep(metrics.OutputValidationStep)
-	ProfileConsentStep   = PipelineStep(metrics.ProfileConsentStep)
-	FinalizeStep         = PipelineStep(metrics.FinalizeStep)
+	ReceiveStep              = PipelineStep(metrics.ReceiveStep)
+	InputValidationStep      = PipelineStep(metrics.InputValidationStep)
+	FilterStep               = PipelineStep(metrics.FilterStep)
+	EventConsentStep         = PipelineStep(metrics.EventConsentStep)
+	ExportProfileConsentStep = PipelineStep(metrics.ExportProfileConsentStep)
+	TransformationStep       = PipelineStep(metrics.TransformationStep)
+	OutputValidationStep     = PipelineStep(metrics.OutputValidationStep)
+	ImportProfileConsentStep = PipelineStep(metrics.ImportProfileConsentStep)
+	FinalizeStep             = PipelineStep(metrics.FinalizeStep)
 )
 
 func (step PipelineStep) String() string {
@@ -85,12 +86,14 @@ func (step PipelineStep) String() string {
 		return "Filter"
 	case EventConsentStep:
 		return "EventConsent"
+	case ExportProfileConsentStep:
+		return "ExportProfileConsent"
 	case TransformationStep:
 		return "Transformation"
 	case OutputValidationStep:
 		return "OutputValidation"
-	case ProfileConsentStep:
-		return "ProfileConsent"
+	case ImportProfileConsentStep:
+		return "ImportProfileConsent"
 	case FinalizeStep:
 		return "Finalize"
 	}
@@ -109,12 +112,14 @@ func ParsePipelineStep(step string) (PipelineStep, error) {
 		return FilterStep, nil
 	case "EventConsent":
 		return EventConsentStep, nil
+	case "ExportProfileConsent":
+		return ExportProfileConsentStep, nil
 	case "Transformation":
 		return TransformationStep, nil
 	case "OutputValidation":
 		return OutputValidationStep, nil
-	case "ProfileConsent":
-		return ProfileConsentStep, nil
+	case "ImportProfileConsent":
+		return ImportProfileConsentStep, nil
 	case "Finalize":
 		return FinalizeStep, nil
 	}
@@ -1088,15 +1093,15 @@ func (this *Workspace) PipelineRun(ctx context.Context, id string) (*PipelineRun
 	var run PipelineRun
 	err := this.core.db.QueryRow(ctx,
 		"SELECT r.id, r.pipeline, r.start_time, r.end_time, r.passed_0, r.passed_1, r.passed_2, r.passed_3,"+
-			" r.passed_4, r.passed_5, r.passed_6, r.passed_7, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4,"+
-			" r.failed_5, r.failed_6, r.failed_7, r.error\n"+
+			" r.passed_4, r.passed_5, r.passed_6, r.passed_7, r.passed_8, r.failed_0, r.failed_1, r.failed_2, r.failed_3,"+
+			" r.failed_4, r.failed_5, r.failed_6, r.failed_7, r.failed_8, r.error\n"+
 			"FROM pipelines_runs r\n"+
 			"INNER JOIN pipelines p ON p.id = r.pipeline\n"+
 			"INNER JOIN connections c ON c.id = p.connection\n"+
 			"WHERE c.workspace = $1 AND r.id = $2", this.workspace.ID, id).Scan(
 		&run.ID, &run.Pipeline, &run.StartTime, &run.EndTime, &run.Passed[0], &run.Passed[1], &run.Passed[2], &run.Passed[3],
-		&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Passed[7], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3],
-		&run.Failed[4], &run.Failed[5], &run.Failed[6], &run.Failed[7], &run.Error)
+		&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Passed[7], &run.Passed[8], &run.Failed[0], &run.Failed[1], &run.Failed[2],
+		&run.Failed[3], &run.Failed[4], &run.Failed[5], &run.Failed[6], &run.Failed[7], &run.Failed[8], &run.Error)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.NotFound("pipeline run %s does not exist", id)
@@ -1104,8 +1109,8 @@ func (this *Workspace) PipelineRun(ctx context.Context, id string) (*PipelineRun
 		return nil, err
 	}
 	if run.EndTime == nil {
-		run.Passed = [8]int{}
-		run.Failed = [8]int{}
+		run.Passed = [9]int{}
+		run.Failed = [9]int{}
 	}
 	return &run, nil
 }
@@ -1118,7 +1123,7 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 	runs := []*PipelineRun{}
 	err := this.core.db.QueryScan(ctx,
 		"SELECT r.id, r.pipeline, r.start_time, r.end_time, r.passed_0, r.passed_1, r.passed_2, r.passed_3,"+
-			" r.passed_4, r.passed_5, r.passed_6, r.passed_7, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4, r.failed_5, r.failed_6, r.failed_7, r.error\n"+
+			" r.passed_4, r.passed_5, r.passed_6, r.passed_7, r.passed_8, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4, r.failed_5, r.failed_6, r.failed_7, r.failed_8, r.error\n"+
 			"FROM pipelines_runs r\n"+
 			"INNER JOIN pipelines p ON p.id = r.pipeline\n"+
 			"INNER JOIN connections c ON c.id = p.connection\n"+
@@ -1128,8 +1133,8 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 			for rows.Next() {
 				var run PipelineRun
 				if err = rows.Scan(&run.ID, &run.Pipeline, &run.StartTime, &run.EndTime, &run.Passed[0], &run.Passed[1], &run.Passed[2], &run.Passed[3],
-					&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Passed[7], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3],
-					&run.Failed[4], &run.Failed[5], &run.Failed[6], &run.Failed[7], &run.Error); err != nil {
+					&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Passed[7], &run.Passed[8], &run.Failed[0], &run.Failed[1], &run.Failed[2],
+					&run.Failed[3], &run.Failed[4], &run.Failed[5], &run.Failed[6], &run.Failed[7], &run.Failed[8], &run.Error); err != nil {
 					return err
 				}
 				runs = append(runs, &run)
@@ -1142,8 +1147,8 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 
 	for _, run := range runs {
 		if run.EndTime == nil {
-			run.Passed = [8]int{}
-			run.Failed = [8]int{}
+			run.Passed = [9]int{}
+			run.Failed = [9]int{}
 		}
 	}
 

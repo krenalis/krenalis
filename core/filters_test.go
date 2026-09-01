@@ -510,7 +510,7 @@ func Test_parseUUID(t *testing.T) {
 	}
 }
 
-func Test_resolveFilterProperty(t *testing.T) {
+func Test_retrieveProperty(t *testing.T) {
 
 	schema := types.Object([]types.Property{
 		{Name: "a", Type: types.Boolean()},
@@ -541,7 +541,7 @@ func Test_resolveFilterProperty(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			gotProperty, gotPath, err := retrieveFilterProperty(properties, test.path)
+			gotProperty, gotPath, err := retrieveProperty(properties, test.path)
 			if err != nil {
 				if test.err == nil {
 					t.Fatalf("expected no error, got error %q  (type %T)", err, err)

@@ -244,6 +244,52 @@ func knownConsentPurposeIDs(ws *state.Workspace) map[string]bool {
 	return ids
 }
 
+// addRequiredConsentProperties adds to the given schema, when they are not
+// already in it, the properties that hold the consents given for the purposes
+// required by a pipeline, so that they are read together with the properties
+// the pipeline declares. The properties are taken as they are from the given
+// profile schema, so that the schema stays aligned with it.
+//
+// It returns the resulting schema and the set of the paths of the properties
+// that have been added, which the caller must remove from what it reads before
+// processing it, given that the pipeline does not declare them.
+//
+// A path that leads inside a JSON property adds that JSON property.
+//
+// It returns an error if the property that holds the consent for a purpose does
+// not exist in the profile schema, or if the schema has a non-object property
+// along the path of that property.
+func addRequiredConsentProperties(schema, profileSchema types.Type, purposes []*state.ConsentPurpose) (types.Type, map[string]bool, error) {
+	if schema.Kind() != types.ObjectKind || profileSchema.Kind() != types.ObjectKind {
+		return schema, nil, nil
+	}
+	var added map[string]bool
+	for _, purpose := range purposes {
+		if purpose == nil {
+			continue
+		}
+		path := strings.Join(purpose.ProfilePropertyPath(), ".")
+		property, propertyPath, err := retrieveProperty(profileSchema.Properties(), path)
+		if err != nil {
+			return schema, nil, fmt.Errorf("property %q, that holds the consent for the consent purpose with code %q,"+
+				" does not exist in the profile schema", path, purpose.Code)
+		}
+		s, isAdded, err := types.AddPropertyAtPath(schema, propertyPath, property)
+		if err != nil {
+			return schema, nil, fmt.Errorf("cannot read the consent for the consent purpose with code %q: %s",
+				purpose.Code, err)
+		}
+		if isAdded {
+			if added == nil {
+				added = map[string]bool{}
+			}
+			added[propertyPath] = true
+			schema = s
+		}
+	}
+	return schema, added, nil
+}
+
 // checkConsentPurposeCodes returns an errors.UnprocessableError error if the
 // given code or one of the given aliases is already the code or an alias of
 // another consent purpose of the workspace.

@@ -19,7 +19,7 @@ import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { FeedbackButtonRef } from '../../base/FeedbackButton/FeedbackButton';
 import { sleep } from '../../../utils/sleep';
 import { Link } from '../../base/Link/Link';
-import { hasFilters, hasProfileConsentStep } from '../../../lib/core/pipeline';
+import { hasExportProfileConsentStep, hasFilters, hasImportProfileConsentStep } from '../../../lib/core/pipeline';
 import { formatNumber } from '../../../utils/formatNumber';
 import * as Sentry from '@sentry/react';
 import { scrubURL } from '../../../lib/telemetry/scrubURL';
@@ -27,8 +27,9 @@ import { PipelineTarget } from '../../../lib/api/types/pipeline';
 import { IS_PASSWORDLESS_KEY, storageKeysToBeRemoved, WORKSPACE_ID_KEY } from '../../../constants/storage';
 
 const FILTER_STEP = 2;
-const PROFILE_CONSENT_STEP = 6;
-const FINALIZE_STEP = 7;
+const EXPORT_PROFILE_CONSENT_STEP = 4;
+const IMPORT_PROFILE_CONSENT_STEP = 7;
+const FINALIZE_STEP = 8;
 
 const useApp = (
 	handleError: (err: Error | string) => void,
@@ -493,7 +494,9 @@ const useApp = (
 
 		const passed = run.passed[FINALIZE_STEP];
 		const failed = run.failed
-			.filter((_, i) => i !== FILTER_STEP && i !== PROFILE_CONSENT_STEP)
+			.filter(
+				(_, i) => i !== FILTER_STEP && i !== EXPORT_PROFILE_CONSENT_STEP && i !== IMPORT_PROFILE_CONSENT_STEP,
+			)
 			.reduce((sum, n) => sum + n, 0);
 
 		const pipeline = connection.pipelines.find((p) => p.id === pipelineID);
@@ -504,9 +507,18 @@ const useApp = (
 			filteredItem = <li>{formatNumber(filtered)} filtered out</li>;
 		}
 
+		// The profiles are discarded for missing consent before the
+		// transformation when they are exported, and after it when they are
+		// imported.
 		let missingConsentItem: ReactNode;
-		if (hasProfileConsentStep(connection, pipeline.target)) {
-			const discarded = run.failed[PROFILE_CONSENT_STEP];
+		let consentStep: number;
+		if (hasExportProfileConsentStep(connection, pipeline.target)) {
+			consentStep = EXPORT_PROFILE_CONSENT_STEP;
+		} else if (hasImportProfileConsentStep(connection, pipeline.target)) {
+			consentStep = IMPORT_PROFILE_CONSENT_STEP;
+		}
+		if (consentStep != null) {
+			const discarded = run.failed[consentStep];
 			missingConsentItem = <li>{formatNumber(discarded)} discarded for missing consent</li>;
 		}
 

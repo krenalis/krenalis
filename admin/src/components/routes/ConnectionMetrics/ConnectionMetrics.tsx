@@ -21,9 +21,10 @@ import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import TransformedConnection from '../../../lib/core/connection';
 import {
 	hasEventConsentStep,
+	hasExportProfileConsentStep,
 	hasFilterStep,
+	hasImportProfileConsentStep,
 	hasInputValidationStep,
-	hasProfileConsentStep,
 	hasTransformations,
 } from '../../../lib/core/pipeline';
 import { Link } from '../../base/Link/Link';
@@ -52,9 +53,10 @@ type StepIdentifier =
 	| 'INPUT_VALIDATION'
 	| 'FILTER'
 	| 'EVENT_CONSENT'
+	| 'EXPORT_PROFILE_CONSENT'
 	| 'TRANSFORMATION'
 	| 'OUTPUT_VALIDATION'
-	| 'PROFILE_CONSENT'
+	| 'IMPORT_PROFILE_CONSENT'
 	| 'FINALIZE';
 
 const MINUTES_COUNT = 15;
@@ -74,16 +76,18 @@ const STEP_IDENTIFIERS: StepIdentifier[] = [
 	'INPUT_VALIDATION',
 	'FILTER',
 	'EVENT_CONSENT',
+	'EXPORT_PROFILE_CONSENT',
 	'TRANSFORMATION',
 	'OUTPUT_VALIDATION',
-	'PROFILE_CONSENT',
+	'IMPORT_PROFILE_CONSENT',
 	'FINALIZE',
 ];
 
 const STEP_COUNT = STEP_IDENTIFIERS.length;
 const FILTER_INDEX = STEP_IDENTIFIERS.indexOf('FILTER');
 const EVENT_CONSENT_INDEX = STEP_IDENTIFIERS.indexOf('EVENT_CONSENT');
-const PROFILE_CONSENT_INDEX = STEP_IDENTIFIERS.indexOf('PROFILE_CONSENT');
+const EXPORT_PROFILE_CONSENT_INDEX = STEP_IDENTIFIERS.indexOf('EXPORT_PROFILE_CONSENT');
+const IMPORT_PROFILE_CONSENT_INDEX = STEP_IDENTIFIERS.indexOf('IMPORT_PROFILE_CONSENT');
 const FINALIZE_INDEX = STEP_IDENTIFIERS.indexOf('FINALIZE');
 
 const ConnectionMetrics = () => {
@@ -147,9 +151,10 @@ const ConnectionMetrics = () => {
 		INPUT_VALIDATION: 'Check user data',
 		FILTER: 'Apply filter',
 		EVENT_CONSENT: 'Check consent',
+		EXPORT_PROFILE_CONSENT: 'Check consent',
 		TRANSFORMATION: 'Transform',
 		OUTPUT_VALIDATION: 'Validate',
-		PROFILE_CONSENT: 'Check consent',
+		IMPORT_PROFILE_CONSENT: 'Check consent',
 		FINALIZE: finalizeStepTerm,
 	};
 
@@ -184,11 +189,13 @@ const ConnectionMetrics = () => {
 					return hasFilterStep(c, selectedTarget);
 				case 'EVENT_CONSENT':
 					return hasEventConsentStep(c, selectedTarget);
+				case 'EXPORT_PROFILE_CONSENT':
+					return hasExportProfileConsentStep(c, selectedTarget);
 				case 'TRANSFORMATION':
 				case 'OUTPUT_VALIDATION':
 					return hasTransformations(c, selectedTarget);
-				case 'PROFILE_CONSENT':
-					return hasProfileConsentStep(c, selectedTarget);
+				case 'IMPORT_PROFILE_CONSENT':
+					return hasImportProfileConsentStep(c, selectedTarget);
 				default:
 					return true;
 			}
@@ -212,7 +219,11 @@ const ConnectionMetrics = () => {
 		for (let [i, s] of steps.entries()) {
 			// Filtered and consent-discarded events are dropped intentionally,
 			// so they are styled as discarded rather than failed.
-			const isDiscardedStep = s === 'FILTER' || s === 'EVENT_CONSENT' || s === 'PROFILE_CONSENT';
+			const isDiscardedStep =
+				s === 'FILTER' ||
+				s === 'EVENT_CONSENT' ||
+				s === 'EXPORT_PROFILE_CONSENT' ||
+				s === 'IMPORT_PROFILE_CONSENT';
 
 			const identifierIndex = STEP_IDENTIFIERS.findIndex((identifier) => identifier === s);
 			const passedData = data[identifierIndex].passed;
@@ -782,7 +793,12 @@ const computePipelineMetricsData = (pipelineMetrics: PipelineMetrics, range: met
 	for (let timeUnit = 0; timeUnit < timeUnits; timeUnit++) {
 		let failedTotal = 0;
 		for (let i = 0; i < STEP_COUNT; i++) {
-			if (i === FILTER_INDEX || i === EVENT_CONSENT_INDEX || i === PROFILE_CONSENT_INDEX) {
+			if (
+				i === FILTER_INDEX ||
+				i === EVENT_CONSENT_INDEX ||
+				i === EXPORT_PROFILE_CONSENT_INDEX ||
+				i === IMPORT_PROFILE_CONSENT_INDEX
+			) {
 				// filtered and consent-discarded events must not be considered
 				// as failed.
 				continue;
@@ -792,7 +808,8 @@ const computePipelineMetricsData = (pipelineMetrics: PipelineMetrics, range: met
 		let filteredTotal =
 			(totals.failed[timeUnit]?.[FILTER_INDEX] ?? 0) +
 			(totals.failed[timeUnit]?.[EVENT_CONSENT_INDEX] ?? 0) +
-			(totals.failed[timeUnit]?.[PROFILE_CONSENT_INDEX] ?? 0);
+			(totals.failed[timeUnit]?.[EXPORT_PROFILE_CONSENT_INDEX] ?? 0) +
+			(totals.failed[timeUnit]?.[IMPORT_PROFILE_CONSENT_INDEX] ?? 0);
 		let passedTotal = totals.passed[timeUnit]?.[FINALIZE_INDEX] ?? 0;
 		let total = failedTotal + filteredTotal + passedTotal;
 		const d = new Date(pipelineMetrics.end.getTime());
@@ -864,8 +881,8 @@ const aggregatePipelineMetrics = (
 	if (first == null) {
 		return { passed: [], failed: [] };
 	}
-	const passed = first.passed.map<StepCounts>(() => [0, 0, 0, 0, 0, 0, 0, 0]);
-	const failed = first.failed.map<StepCounts>(() => [0, 0, 0, 0, 0, 0, 0, 0]);
+	const passed = first.passed.map<StepCounts>(() => [0, 0, 0, 0, 0, 0, 0, 0, 0]);
+	const failed = first.failed.map<StepCounts>(() => [0, 0, 0, 0, 0, 0, 0, 0, 0]);
 	for (const series of pipelineMetrics.metrics) {
 		for (let timeUnit = 0; timeUnit < series.passed.length; timeUnit++) {
 			for (let step = 0; step < STEP_COUNT; step++) {

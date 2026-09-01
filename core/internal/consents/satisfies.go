@@ -7,6 +7,7 @@ package consents
 import (
 	"github.com/krenalis/krenalis/core/internal/properties"
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/json"
 )
 
 // SatisfiesEvent reports whether the consents carried by the given event
@@ -54,9 +55,15 @@ func satisfies(purposes []*state.ConsentPurpose, matchAll bool, grants func(*sta
 }
 
 // granted reports whether the property of the given attributes with the given
-// path holds a granted consent.
+// path holds a granted consent. The consent can be held by a boolean property
+// or by a boolean value inside a JSON property.
 func granted(attributes map[string]any, path []string) bool {
 	v, _ := properties.Read(attributes, path)
-	b, _ := v.(bool)
-	return b
+	switch v := v.(type) {
+	case bool:
+		return v
+	case json.Value:
+		return v.Bool()
+	}
+	return false
 }

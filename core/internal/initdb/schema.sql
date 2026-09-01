@@ -225,6 +225,7 @@ CREATE TABLE pipelines_runs (
     passed_5 integer NOT NULL DEFAULT 0,
     passed_6 integer NOT NULL DEFAULT 0,
     passed_7 integer NOT NULL DEFAULT 0,
+    passed_8 integer NOT NULL DEFAULT 0,
     failed_0 integer NOT NULL DEFAULT 0,
     failed_1 integer NOT NULL DEFAULT 0,
     failed_2 integer NOT NULL DEFAULT 0,
@@ -233,6 +234,7 @@ CREATE TABLE pipelines_runs (
     failed_5 integer NOT NULL DEFAULT 0,
     failed_6 integer NOT NULL DEFAULT 0,
     failed_7 integer NOT NULL DEFAULT 0,
+    failed_8 integer NOT NULL DEFAULT 0,
     error varchar NOT NULL DEFAULT '',
     PRIMARY KEY (id)
 );
@@ -272,6 +274,7 @@ CREATE TABLE pipelines_metrics (
     passed_5 integer NOT NULL,
     passed_6 integer NOT NULL,
     passed_7 integer NOT NULL,
+    passed_8 integer NOT NULL,
     failed_0 integer NOT NULL,
     failed_1 integer NOT NULL,
     failed_2 integer NOT NULL,
@@ -280,6 +283,7 @@ CREATE TABLE pipelines_metrics (
     failed_5 integer NOT NULL,
     failed_6 integer NOT NULL,
     failed_7 integer NOT NULL,
+    failed_8 integer NOT NULL,
     PRIMARY KEY (pipeline, timeslot)
 );
 

@@ -95,11 +95,11 @@ func (iw *identityWriter) Write(event streams.Event) error {
 		// no profile to read the consents from. The output of the pipeline is
 		// the event itself, so the consents are read from it.
 		if !consents.SatisfiesEvent(requiredConsents.Purposes, requiredConsents.Operator != state.PurposesOr, event.Attributes) {
-			iw.metrics.ProfileConsentFailed(iw.pipeline, 1)
+			iw.metrics.ImportProfileConsentFailed(iw.pipeline, 1)
 			event.Ack.Acknowledge()
 			return nil
 		}
-		iw.metrics.ProfileConsentPassed(iw.pipeline, 1)
+		iw.metrics.ImportProfileConsentPassed(iw.pipeline, 1)
 		return iw.writeDirect(event)
 	}
 
@@ -178,11 +178,11 @@ func (iw *identityWriter) transformAndWrite(events []streams.Event) {
 		iw.metrics.TransformationPassed(iw.pipeline, 1)
 		iw.metrics.OutputValidationPassed(iw.pipeline, 1)
 		if !consents.SatisfiesProfile(requiredConsents.Purposes, requiredConsents.Operator != state.PurposesOr, record.Attributes) {
-			iw.metrics.ProfileConsentFailed(iw.pipeline, 1)
+			iw.metrics.ImportProfileConsentFailed(iw.pipeline, 1)
 			events[i].Ack.Acknowledge()
 			continue
 		}
-		iw.metrics.ProfileConsentPassed(iw.pipeline, 1)
+		iw.metrics.ImportProfileConsentPassed(iw.pipeline, 1)
 		event := events[i]
 		id, _ := event.Attributes["userId"].(string)
 		// Write the identity on the data warehouse.

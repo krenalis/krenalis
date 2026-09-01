@@ -449,22 +449,24 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 			case Application:
 				serialized = struct {
 					serializedPipeline
-					Filter             *Filter         `json:"filter"`
-					Matching           Matching        `json:"matching"`
-					ExportMode         ExportMode      `json:"exportMode"`
-					UpdateOnDuplicates bool            `json:"updateOnDuplicates"`
-					Transformation     Transformation  `json:"transformation"`
-					InSchema           types.Type      `json:"inSchema"`
-					OutSchema          types.Type      `json:"outSchema"`
-					Running            bool            `json:"running"`
-					ScheduleStart      *int            `json:"scheduleStart"`
-					SchedulePeriod     *SchedulePeriod `json:"schedulePeriod"`
+					Filter             *Filter          `json:"filter"`
+					Matching           Matching         `json:"matching"`
+					ExportMode         ExportMode       `json:"exportMode"`
+					UpdateOnDuplicates bool             `json:"updateOnDuplicates"`
+					RequiredConsents   RequiredConsents `json:"requiredConsents"`
+					Transformation     Transformation   `json:"transformation"`
+					InSchema           types.Type       `json:"inSchema"`
+					OutSchema          types.Type       `json:"outSchema"`
+					Running            bool             `json:"running"`
+					ScheduleStart      *int             `json:"scheduleStart"`
+					SchedulePeriod     *SchedulePeriod  `json:"schedulePeriod"`
 				}{
 					serializedPipeline: p,
 					Filter:             this.Filter,
 					Matching:           *this.Matching,
 					ExportMode:         *this.ExportMode,
 					UpdateOnDuplicates: *this.UpdateOnDuplicates,
+					RequiredConsents:   this.RequiredConsents,
 					Transformation:     *this.Transformation,
 					InSchema:           this.InSchema,
 					OutSchema:          this.OutSchema,
@@ -475,20 +477,22 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 			case Database:
 				serialized = struct {
 					serializedPipeline
-					Filter         *Filter         `json:"filter"`
-					TableName      string          `json:"tableName"`
-					TableKey       string          `json:"tableKey"`
-					Transformation Transformation  `json:"transformation"`
-					InSchema       types.Type      `json:"inSchema"`
-					OutSchema      types.Type      `json:"outSchema"`
-					Running        bool            `json:"running"`
-					ScheduleStart  *int            `json:"scheduleStart"`
-					SchedulePeriod *SchedulePeriod `json:"schedulePeriod"`
+					Filter           *Filter          `json:"filter"`
+					TableName        string           `json:"tableName"`
+					TableKey         string           `json:"tableKey"`
+					RequiredConsents RequiredConsents `json:"requiredConsents"`
+					Transformation   Transformation   `json:"transformation"`
+					InSchema         types.Type       `json:"inSchema"`
+					OutSchema        types.Type       `json:"outSchema"`
+					Running          bool             `json:"running"`
+					ScheduleStart    *int             `json:"scheduleStart"`
+					SchedulePeriod   *SchedulePeriod  `json:"schedulePeriod"`
 				}{
 					serializedPipeline: p,
 					Filter:             this.Filter,
 					TableName:          *this.TableName,
 					TableKey:           *this.TableKey,
+					RequiredConsents:   this.RequiredConsents,
 					Transformation:     *this.Transformation,
 					InSchema:           this.InSchema,
 					OutSchema:          this.OutSchema,
@@ -499,16 +503,17 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 			case FileStorage:
 				serialized = struct {
 					serializedPipeline
-					Format         string          `json:"format"`
-					Path           string          `json:"path"`
-					Sheet          *string         `json:"sheet"`
-					Compression    Compression     `json:"compression"`
-					OrderBy        string          `json:"orderBy"`
-					Filter         *Filter         `json:"filter"`
-					InSchema       types.Type      `json:"inSchema"`
-					Running        bool            `json:"running"`
-					ScheduleStart  *int            `json:"scheduleStart"`
-					SchedulePeriod *SchedulePeriod `json:"schedulePeriod"`
+					Format           string           `json:"format"`
+					Path             string           `json:"path"`
+					Sheet            *string          `json:"sheet"`
+					Compression      Compression      `json:"compression"`
+					OrderBy          string           `json:"orderBy"`
+					Filter           *Filter          `json:"filter"`
+					RequiredConsents RequiredConsents `json:"requiredConsents"`
+					InSchema         types.Type       `json:"inSchema"`
+					Running          bool             `json:"running"`
+					ScheduleStart    *int             `json:"scheduleStart"`
+					SchedulePeriod   *SchedulePeriod  `json:"schedulePeriod"`
 				}{
 					serializedPipeline: p,
 					Format:             this.Format,
@@ -517,6 +522,7 @@ func (this *Pipeline) MarshalJSON() ([]byte, error) {
 					Compression:        this.Compression,
 					OrderBy:            *this.OrderBy,
 					Filter:             this.Filter,
+					RequiredConsents:   this.RequiredConsents,
 					InSchema:           this.InSchema,
 					Running:            this.Running,
 					ScheduleStart:      this.ScheduleStart,
@@ -1433,6 +1439,14 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 // target, is dispatching events to applications.
 func isDispatchingEventsToApplications(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
 	return role == state.Destination && target == state.TargetEvent && connectorType == state.Application
+}
+
+// isExportingProfiles reports whether a connector of the given type, on a
+// connection with the given role, and a pipeline with the given target, is
+// exporting profiles from the warehouse.
+func isExportingProfiles(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
+	return role == state.Destination && target == state.TargetUser && (connectorType == state.Application ||
+		connectorType == state.Database || connectorType == state.FileStorage)
 }
 
 // isExportUsersToFile reports whether a connector of the given type, on a

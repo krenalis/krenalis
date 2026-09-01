@@ -754,7 +754,7 @@ func Test_validatePipeline(t *testing.T) {
 			knownConsentPurposeIDs:  map[string]bool{"111111111111": true},
 		},
 		{
-			name: "BAD: Destination/Application/User - required consents are not allowed",
+			name: "GOOD: Destination/Application/User - with required consents",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -781,7 +781,6 @@ func Test_validatePipeline(t *testing.T) {
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Application,
 			knownConsentPurposeIDs:  map[string]bool{"111111111111": true},
-			err:                     "required consents are not allowed",
 		},
 		{
 			name: "GOOD: Destination/Application/Event - missing required consents operator defaults to and",

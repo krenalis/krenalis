@@ -179,10 +179,10 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 					pipeline.RequiredConsents.Operator != state.PurposesOr,
 					user.Attributes,
 				) {
-					this.core.metrics.ProfileConsentFailed(pipeline.ID, 1)
+					this.core.metrics.ImportProfileConsentFailed(pipeline.ID, 1)
 					continue
 				}
-				this.core.metrics.ProfileConsentPassed(pipeline.ID, 1)
+				this.core.metrics.ImportProfileConsentPassed(pipeline.ID, 1)
 				_ = iw.Write(ctx, datastore.Identity{
 					ID:         user.ID,
 					Attributes: user.Attributes,

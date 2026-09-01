@@ -58,14 +58,15 @@ func Test_CollectorPassedFailed(t *testing.T) {
 // Step.
 func Test_StepString(t *testing.T) {
 	tests := map[Step]string{
-		ReceiveStep:          "Receive",
-		InputValidationStep:  "InputValidation",
-		FilterStep:           "Filter",
-		EventConsentStep:     "EventConsent",
-		TransformationStep:   "Transformation",
-		ProfileConsentStep:   "ProfileConsent",
-		OutputValidationStep: "OutputValidation",
-		FinalizeStep:         "Finalize",
+		ReceiveStep:              "Receive",
+		InputValidationStep:      "InputValidation",
+		FilterStep:               "Filter",
+		EventConsentStep:         "EventConsent",
+		ExportProfileConsentStep: "ExportProfileConsent",
+		TransformationStep:       "Transformation",
+		ImportProfileConsentStep: "ImportProfileConsent",
+		OutputValidationStep:     "OutputValidation",
+		FinalizeStep:             "Finalize",
 	}
 	for s, want := range tests {
 		if got := s.String(); got != want {

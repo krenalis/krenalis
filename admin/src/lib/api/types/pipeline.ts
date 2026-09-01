@@ -9,9 +9,10 @@ type PipelineStep =
 	| 'InputValidation'
 	| 'Filter'
 	| 'EventConsent'
+	| 'ExportProfileConsent'
 	| 'Transformation'
 	| 'OutputValidation'
-	| 'ProfileConsent'
+	| 'ImportProfileConsent'
 	| 'Finalize';
 
 type SchedulePeriod = 'Off' | '5m' | '15m' | '30m' | '1h' | '2h' | '3h' | '6h' | '8h' | '12h' | '24h';
@@ -170,8 +171,8 @@ interface PipelineMetricsSeries {
 	workspace?: string;
 	connection?: string;
 	pipeline?: string;
-	passed: [number, number, number, number, number, number, number, number][];
-	failed: [number, number, number, number, number, number, number, number][];
+	passed: [number, number, number, number, number, number, number, number, number][];
+	failed: [number, number, number, number, number, number, number, number, number][];
 }
 
 interface PipelineMetrics {

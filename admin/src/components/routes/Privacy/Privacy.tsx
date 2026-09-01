@@ -519,7 +519,11 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 				return;
 			}
 			if (err instanceof UnprocessableError && err.code === 'ConsentPurposeAliasExists') {
-				setAliasesError('One of these aliases is already the code or an alias of another purpose');
+				setAliasesError(
+					aliasesToSave.length === 1
+						? 'This alias is already the code or an alias of another purpose'
+						: 'One of these aliases is already the code or an alias of another purpose',
+				);
 				return;
 			}
 			onClose();
@@ -637,6 +641,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 						>
 							<PathAction
 								isCustom={isEventPathCustom}
+								isDefaultValue={eventPath === defaultEventPath}
 								onCustomize={() => setIsWarningOpen(true)}
 								onReset={onResetEventPath}
 							/>
@@ -661,6 +666,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 						>
 							<PathAction
 								isCustom={isProfilePathCustom}
+								isDefaultValue={profilePath === defaultProfilePath}
 								onCustomize={onCustomizeProfilePath}
 								onReset={onResetProfilePath}
 							/>
@@ -705,19 +711,23 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 
 interface PathActionProps {
 	isCustom: boolean;
+	isDefaultValue: boolean;
 	onCustomize: () => void;
 	onReset: () => void;
 }
 
 // PathAction is the button shown within a path input. It unlocks the path for
-// editing or reset it to the default if it already edited.
-const PathAction = ({ isCustom, onCustomize, onReset }: PathActionProps) => (
+// editing or reset it to the default if it already edited. While the path is
+// edited but it still holds the default value there is nothing to reset, so
+// the button is disabled.
+const PathAction = ({ isCustom, isDefaultValue, onCustomize, onReset }: PathActionProps) => (
 	<SlTooltip slot='suffix' content={isCustom ? 'Reset to the default path' : 'Edit the path'} hoist>
 		<SlButton
 			className='privacy__dialog-path-action'
 			variant='text'
 			size='small'
 			circle
+			disabled={isCustom && isDefaultValue}
 			onClick={isCustom ? onReset : onCustomize}
 		>
 			<SlIcon name={isCustom ? 'arrow-counterclockwise' : 'pencil'} />
