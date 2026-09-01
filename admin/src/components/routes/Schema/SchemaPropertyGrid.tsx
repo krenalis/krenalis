@@ -33,7 +33,10 @@ const SchemaPropertyIdentifierValue = ({ position }: { position?: number }) =>
 	);
 
 const SchemaPropertyInfoTooltip = ({ content, label }: { content: string; label: string }) => (
-	<SlTooltip className='schema-property-grid__tooltip' content={content} placement='top' hoist={true}>
+	<SlTooltip className='schema-property-grid__tooltip' placement='top' hoist={true}>
+		<span className='schema-property-grid__tooltip-content' slot='content'>
+			{content}
+		</span>
 		<button className='schema-property-grid__info' type='button' aria-label={label}>
 			<SlIcon name='info-circle' />
 		</button>
@@ -42,13 +45,27 @@ const SchemaPropertyInfoTooltip = ({ content, label }: { content: string; label:
 
 const SchemaPropertyIdentifierLabel = () => (
 	<span className='schema-property-grid__label-content'>
-		Identity resolution
+		Identifier
 		<SchemaPropertyInfoTooltip
 			content={
-				'During identity resolution, identifiers are properties used to match identities across different connections. The number shows their matching priority, with #1 being the highest.\n\n' +
-				'To change identifiers or their priority, go to Profile Unification → Rules.'
+				'Krenalis checks identifiers in order, starting with #1, to determine whether identities belong to the same profile.\n\n' +
+				"To change which properties are identifiers or the order in which they're checked, go to Profile Unification → Rules."
 			}
 			label='About identifiers'
+		/>
+	</span>
+);
+
+const SchemaPropertyPrimarySourceLabel = ({ hasPrimarySource = true }: { hasPrimarySource?: boolean }) => (
+	<span className='schema-property-grid__label-content'>
+		Primary source
+		<SchemaPropertyInfoTooltip
+			content={
+				hasPrimarySource
+					? 'If this source has a value for this property, its most recent value is used. Otherwise, the most recent value from any source is used.'
+					: 'This property has no primary source, so the most recent value from any source is used.'
+			}
+			label='About primary source'
 		/>
 	</span>
 );
@@ -281,5 +298,6 @@ export {
 	SchemaPropertyIdentifierLabel,
 	SchemaPropertyIdentifierValue,
 	SchemaPropertyInfoTooltip,
+	SchemaPropertyPrimarySourceLabel,
 	schemaPropertyGridNestedRowsIndentation,
 };

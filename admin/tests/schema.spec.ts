@@ -772,16 +772,22 @@ test(`View property details and keep the selection when editing`, async ({ page 
 	await expect(panel.locator('.property-details-panel__label')).toContainText([
 		'Name',
 		'Type',
-		'Identity resolution',
 		'Description',
+		'Identifier',
 		'Primary source',
 	]);
+	const primarySourceInfo = panel.getByLabel('About primary source');
+	await expect(primarySourceInfo).toBeVisible();
+	await primarySourceInfo.hover();
+	await expect(
+		page.getByText('This property has no primary source, so the most recent value from any source is used.'),
+	).toBeVisible();
 	const emailCells = await emailRow.locator('.grid__cell-content').allInnerTexts();
 	await expect(panel.locator('.property-details-panel__value')).toHaveText([
 		emailCells[0],
 		emailCells[1],
-		'Not an identifier',
 		emailCells[3],
+		'Not an identifier',
 		emailCells[4],
 	]);
 	const gridTypeFont = await emailRow
@@ -881,13 +887,13 @@ test(`Show identifier order and renumber identifiers after removing a property`,
 	await openProperty(page, 'email');
 	const identifierDetail = page
 		.locator('.property-details-panel__detail')
-		.filter({ hasText: 'Identity resolution' })
+		.filter({ hasText: 'Identifier' })
 		.locator('.property-details-panel__value');
 	await expect(identifierDetail).toHaveText('Identifier #1');
 	await expect(identifierDetail.locator('.schema-property-grid__identifier')).toHaveText('#1');
 	await openProperty(page, 'phone_numbers');
 	await expect(
-		page.locator('.property-details-panel__label').filter({ hasText: 'Identity resolution' }),
+		page.locator('.property-details-panel__label').filter({ hasText: 'Identifier' }),
 	).toHaveCount(0);
 	await openProperty(page, 'email');
 
@@ -899,7 +905,7 @@ test(`Show identifier order and renumber identifiers after removing a property`,
 		page.locator('.property-form__read-only-value .schema-property-grid__identifier'),
 	).toHaveText('#1');
 	await openProperty(page, 'phone_numbers');
-	await expect(page.locator('.property-form__label').filter({ hasText: 'Identity resolution' })).toHaveCount(0);
+	await expect(page.locator('.property-form__label').filter({ hasText: 'Identifier' })).toHaveCount(0);
 
 	await removeProperty(page, 'email');
 	await expect(identifierCell(editGrid, 'first_name')).toHaveText('#1');
@@ -907,12 +913,12 @@ test(`Show identifier order and renumber identifiers after removing a property`,
 
 	await page.locator('.schema-edit__add-property').click();
 	const propertyPanel = page.locator('.property-panel');
-	await expect(propertyPanel.locator('.property-form__label').filter({ hasText: 'Identity resolution' })).toHaveCount(0);
+	await expect(propertyPanel.locator('.property-form__label').filter({ hasText: 'Identifier' })).toHaveCount(0);
 	await propertyPanel.locator('.property-form__name-input input').fill('email');
 	await selectPropertyType(page, 'string');
 	await propertyPanel.locator('.property-panel__save').click();
 	await expect(identifierCell(editGrid, 'email')).toBeEmpty();
-	await expect(propertyPanel.locator('.property-form__label').filter({ hasText: 'Identity resolution' })).toHaveCount(0);
+	await expect(propertyPanel.locator('.property-form__label').filter({ hasText: 'Identifier' })).toHaveCount(0);
 });
 
 test(`Keep object types unchanged after canceling the schema review`, async ({ page }) => {

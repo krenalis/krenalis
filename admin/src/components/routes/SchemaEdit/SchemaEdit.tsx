@@ -421,7 +421,9 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 						onClose={onCancelProperty}
 						onActionsAnimationFinish={() => setAnimatePropertyActions(false)}
 						onDirtyChange={setPropertyDraftDirty}
-						onRemove={(property) => onRemoveClick(property.key, property.name, property.isEditable === true)}
+						onRemove={(property) =>
+							onRemoveClick(property.key, property.name, property.isEditable === true)
+						}
 						onSave={onSaveProperty}
 					/>
 				</div>

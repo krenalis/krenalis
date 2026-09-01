@@ -311,6 +311,9 @@
 	border: 1px solid var(--sl-color-neutral-300);
 	color: var(--text-primary);
 	padding: calc(var(--sl-spacing-2x-small) + 2px) calc(var(--sl-spacing-x-small) + 4px);
+}
+
+.schema-property-grid__tooltip-content {
 	white-space: pre-line;
 }
 

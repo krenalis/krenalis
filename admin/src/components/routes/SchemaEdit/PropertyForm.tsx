@@ -27,6 +27,7 @@ import {
 	SchemaPropertyIdentifierLabel,
 	SchemaPropertyIdentifierValue,
 	SchemaPropertyInfoTooltip,
+	SchemaPropertyPrimarySourceLabel,
 } from '../Schema/SchemaPropertyGrid';
 import { getParentPropertyKey } from './SchemaEdit.helpers';
 import { PropertyFieldChanges, PropertyParent, PropertyToEdit } from './useSchemaEdit';
@@ -42,11 +43,6 @@ const FLOAT_BITSIZES: string[] = ['32', '64'];
 const MAX_DECIMAL_PRECISION: number = 76;
 const MAX_DECIMAL_SCALE: number = 37;
 const MAX_STRING_LENGTH: number = 4294967295;
-const PRIMARY_SOURCE_TOOLTIP = {
-	content: 'The selected source has the highest precedence when populating this property.',
-	label: 'About primary source',
-};
-
 interface DecimalTypeInputs {
 	precision: string;
 	precisionBadInput: boolean;
@@ -671,16 +667,6 @@ const PropertyForm = ({
 					{numericRangeControls}
 				</div>
 			)}
-			{showIdentityResolution && (
-				<div className='property-form__control'>
-					<div className='property-form__label'>
-						<SchemaPropertyIdentifierLabel />
-					</div>
-					<div className='property-form__read-only-value'>
-						<SchemaPropertyIdentifierValue position={identifierPosition} />
-					</div>
-				</div>
-			)}
 			{showParent && parents != null && (
 				<div className='property-form__control'>
 					<SlSelect
@@ -709,16 +695,23 @@ const PropertyForm = ({
 					Description <span className='property-form__optional-label'>(optional)</span>
 				</PropertyFormLabel>
 			</SlTextarea>
+			{showIdentityResolution && (
+				<div className='property-form__control'>
+					<div className='property-form__label'>
+						<SchemaPropertyIdentifierLabel />
+					</div>
+					<div className='property-form__read-only-value'>
+						<SchemaPropertyIdentifierValue position={identifierPosition} />
+					</div>
+				</div>
+			)}
 			{property.type?.kind !== 'object' && property.type?.kind !== 'array' && (
 				<div className='property-form__control' onKeyDownCapture={onKeyDownPrimarySource}>
 					{sourceConnections.length === 0 ? (
 						<>
 							<div className='property-form__label'>
-								<PropertyFormLabel
-									modified={fieldChanges?.primarySource}
-									tooltip={PRIMARY_SOURCE_TOOLTIP}
-								>
-									Primary source
+								<PropertyFormLabel modified={fieldChanges?.primarySource}>
+									<SchemaPropertyPrimarySourceLabel />
 								</PropertyFormLabel>
 							</div>
 							<div className='property-form__empty-value'>No source connections are available.</div>
@@ -730,12 +723,8 @@ const PropertyForm = ({
 							name='primary-source'
 							onSlChange={onChangePrimarySource}
 						>
-							<PropertyFormLabel
-								slot='label'
-								modified={fieldChanges?.primarySource}
-								tooltip={PRIMARY_SOURCE_TOOLTIP}
-							>
-								Primary source
+							<PropertyFormLabel slot='label' modified={fieldChanges?.primarySource}>
+								<SchemaPropertyPrimarySourceLabel />
 							</PropertyFormLabel>
 							<div slot='prefix'>
 								{selectedConnection != null && (
@@ -779,9 +768,7 @@ const PropertyFormLabel = ({
 	return (
 		<span className='property-form__label-content' slot={slot}>
 			{children}
-			{tooltip != null && (
-				<SchemaPropertyInfoTooltip content={tooltip.content} label={tooltip.label} />
-			)}
+			{tooltip != null && <SchemaPropertyInfoTooltip content={tooltip.content} label={tooltip.label} />}
 			{modified && <span className='property-form__modified-dot' role='img' aria-label='Modified' />}
 		</span>
 	);

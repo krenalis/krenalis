@@ -44,7 +44,16 @@ const useSchemaGrid = (
 			selectedPropertyPath,
 			onSelectProperty,
 		);
-	}, [connections, identifierPositions, isLoading, onSelectProperty, schema, search, selectedPropertyPath, workspace]);
+	}, [
+		connections,
+		identifierPositions,
+		isLoading,
+		onSelectProperty,
+		schema,
+		search,
+		selectedPropertyPath,
+		workspace,
+	]);
 	const visiblePropertyPaths = useMemo(() => getVisiblePropertyPaths(rows), [rows]);
 	const firstVisiblePropertyPath = visiblePropertyPaths.values().next().value ?? null;
 	const { objectCount, propertyCount } = useMemo(() => countProperties(schema), [schema]);

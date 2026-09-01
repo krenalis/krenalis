@@ -5,7 +5,11 @@ import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { Property } from '../../../lib/api/types/types';
 import TransformedConnection from '../../../lib/core/connection';
 import { PropertyPanelLayout } from '../Schema/PropertyPanelLayout';
-import { SchemaPropertyIdentifierLabel, SchemaPropertyIdentifierValue } from '../Schema/SchemaPropertyGrid';
+import {
+	SchemaPropertyIdentifierLabel,
+	SchemaPropertyIdentifierValue,
+	SchemaPropertyPrimarySourceLabel,
+} from '../Schema/SchemaPropertyGrid';
 
 interface PropertyDetailsPanelProps {
 	identifierPosition?: number;
@@ -29,17 +33,19 @@ const PropertyDetailsPanel = ({ identifierPosition, onClose, primarySource, prop
 					<PropertyDetail label='Type' className='property-details-panel__technical-type'>
 						{toKrenalisStringType(property.type)}
 					</PropertyDetail>
-					{isSuitableAsIdentifier(property.type) && (
-						<PropertyDetail label={<SchemaPropertyIdentifierLabel />}>
-							<SchemaPropertyIdentifierValue position={identifierPosition} />
-						</PropertyDetail>
-					)}
 				</div>
 				<div className='property-details-panel__section property-details-panel__section--metadata'>
 					<PropertyDetail label='Description' className='property-details-panel__description'>
 						{property.description || <span className='property-details-panel__empty-value'>—</span>}
 					</PropertyDetail>
-					<PropertyDetail label='Primary source'>
+					{isSuitableAsIdentifier(property.type) && (
+						<PropertyDetail label={<SchemaPropertyIdentifierLabel />}>
+							<SchemaPropertyIdentifierValue position={identifierPosition} />
+						</PropertyDetail>
+					)}
+					<PropertyDetail
+						label={<SchemaPropertyPrimarySourceLabel hasPrimarySource={primarySource != null} />}
+					>
 						{primarySource == null ? (
 							<span className='property-details-panel__empty-value'>—</span>
 						) : (
