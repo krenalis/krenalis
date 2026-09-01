@@ -464,8 +464,8 @@ func (warehouse *Snowflake) openDB(ctx context.Context) (*sql.DB, error) {
 	return db, nil
 }
 
-// maxProfilesVersion returns the greatest recorded version of the
-// "KRENALIS_PROFILES" table.
+// maxProfilesVersion returns the greatest recorded profile schema version.
+// The returned version is always non-negative.
 func (warehouse *Snowflake) maxProfilesVersion(ctx context.Context) (int, error) {
 	db, err := warehouse.openDB(ctx)
 	if err != nil {
@@ -476,11 +476,14 @@ func (warehouse *Snowflake) maxProfilesVersion(ctx context.Context) (int, error)
 	if err != nil {
 		return 0, snowflake(err)
 	}
+	if v < 0 {
+		return 0, fmt.Errorf("warehouse returned a negative profile schema version")
+	}
 	return v, nil
 }
 
-// publishedProfilesVersion returns the version of the currently published
-// profiles table.
+// publishedProfilesVersion returns the greatest successfully published profile
+// schema version. The returned version is always non-negative.
 func (warehouse *Snowflake) publishedProfilesVersion(ctx context.Context) (int, error) {
 	db, err := warehouse.openDB(ctx)
 	if err != nil {

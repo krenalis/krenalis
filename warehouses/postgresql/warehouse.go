@@ -425,8 +425,8 @@ func (warehouse *PostgreSQL) execTransaction(ctx context.Context, f func(pgx.Tx)
 	return nil
 }
 
-// maxProfilesVersion returns the greatest recorded version of the
-// "krenalis_profiles" table.
+// maxProfilesVersion returns the greatest recorded profile schema version.
+// The returned version is always non-negative.
 func (warehouse *PostgreSQL) maxProfilesVersion(ctx context.Context) (int, error) {
 	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
@@ -437,11 +437,14 @@ func (warehouse *PostgreSQL) maxProfilesVersion(ctx context.Context) (int, error
 	if err != nil {
 		return 0, err
 	}
+	if v < 0 {
+		return 0, fmt.Errorf("warehouse returned a negative profile schema version")
+	}
 	return v, nil
 }
 
-// publishedProfilesVersion returns the version of the currently published
-// profiles table.
+// publishedProfilesVersion returns the greatest successfully published profile
+// schema version. The returned version is always non-negative.
 func (warehouse *PostgreSQL) publishedProfilesVersion(ctx context.Context) (int, error) {
 	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
