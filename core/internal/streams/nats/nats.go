@@ -566,8 +566,9 @@ func (c *consumer) processMessage(ctx context.Context, message fetchedMsg) {
 const maxMessagesPerFetch = jetstream.DefaultMaxMessages
 
 // minFetchBatchSize prevents slow message processing from reducing fetches to
-// individual messages.
-const minFetchBatchSize = maxMessagesPerFetch / 2
+// individual messages. Adding one before the division rounds the result up,
+// ensuring the threshold remains positive when maxMessagesPerFetch is one.
+const minFetchBatchSize = (maxMessagesPerFetch + 1) / 2
 
 // fetchedMsg represents a message fetched from a stream for one shard.
 type fetchedMsg struct {
@@ -691,9 +692,7 @@ func (sc *shardConsumer) fetch(ctx context.Context, pending chan<- fetchedMsg, s
 			}
 
 			// A completed fetch marks the end of a sequence of transient errors.
-			// TODO(marco): add a Reset method to backoff.Backoff and replace the
-			// following assignment with bo.Reset().
-			bo = backoff.New(10)
+			bo.Reset()
 		}
 	}
 }
