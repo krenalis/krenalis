@@ -136,9 +136,9 @@ func enable(t *testing.T, organizationIDs ...string) {
 	for _, id := range organizationIDs {
 		organizations[id] = egressBytes.Register(id)
 	}
-	countingEnabled = true
+	countingEnabled.Store(true)
 	organizationsMu.Unlock()
-	t.Cleanup(func() { countingEnabled = false })
+	t.Cleanup(func() { countingEnabled.Store(false) })
 }
 
 // write writes b to the connection established by dial to addr, reads the echo
@@ -560,6 +560,49 @@ func TestDeletedOrganization(t *testing.T) {
 	}
 	if n := counterValue(t, c) - before; n != 5 {
 		t.Fatalf("the counter increased by %d bytes, expecting 5", n)
+	}
+}
+
+func TestDisableCounting(t *testing.T) {
+	// DisableCounting is a no-op when counting is not enabled.
+	DisableCounting()
+	if countingEnabled.Load() {
+		t.Fatal("counting is enabled after DisableCounting was called on a disabled dialer")
+	}
+
+	addr := echoServer(t)
+
+	// It disables counting and drops every counter, so that counting can be
+	// enabled again from scratch, as a new Core would in the same process.
+	enable(t, "org-off")
+	write(t, Dial("org-off"), addr, "hello")
+	if _, ok := collected(t, "org-off"); !ok {
+		t.Fatal("no counter is collected for the organization while counting is enabled")
+	}
+
+	DisableCounting()
+	if countingEnabled.Load() {
+		t.Fatal("counting is still enabled after DisableCounting")
+	}
+	organizationsMu.Lock()
+	n := len(organizations)
+	organizationsMu.Unlock()
+	if n != 0 {
+		t.Fatalf("%d organizations are still registered after DisableCounting", n)
+	}
+	if _, ok := collected(t, "org-off"); ok {
+		t.Fatal("a counter is still collected for the organization after DisableCounting")
+	}
+	if conn := write(t, Dial("org-off"), addr, "hello"); instrumented(conn) {
+		t.Fatal("a connection dialed after DisableCounting is instrumented")
+	}
+
+	// Counting can be enabled again, and it starts from a clean state.
+	enable(t, "org-off")
+	egress := egress(t, "org-off")
+	write(t, Dial("org-off"), addr, "hello")
+	if n := egress(); n != 5 {
+		t.Fatalf("counted %d bytes after counting was enabled again, expecting 5", n)
 	}
 }
 

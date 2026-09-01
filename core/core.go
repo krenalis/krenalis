@@ -301,6 +301,10 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	defer func() {
 		if err != nil {
 			core.state.Close(ctx)
+			// Disable the per-organization egress counting, if it has been
+			// enabled below, once the state has stopped dispatching
+			// notifications.
+			dialer.DisableCounting()
 		}
 	}()
 
@@ -599,6 +603,9 @@ func (core *Core) Close(ctx context.Context) {
 	core.state.Close(ctx)
 	// Unregister the database connection pool metrics.
 	core.dbPoolMetrics.Unregister()
+	// Disable the per-organization egress counting, so that a new Core can
+	// enable it again in the same process.
+	dialer.DisableCounting()
 	// Close NATS connection.
 	_ = core.stream.Close()
 	// Close PostgreSQL connections.

@@ -25,6 +25,7 @@ import (
 	"errors"
 	"net"
 	"sync"
+	"sync/atomic"
 	"syscall"
 
 	"github.com/krenalis/krenalis/core/internal/state"
@@ -45,8 +46,9 @@ var egressBytes = prometheus.RegisterCounterVec(
 	[]string{"organization"},
 )
 
-// countingEnabled reports whether the bytes sent must be counted.
-var countingEnabled bool
+// countingEnabled reports whether the bytes sent must be counted. It is written
+// by [EnableCounting] and [DisableCounting] and read at every dial.
+var countingEnabled atomic.Bool
 
 var (
 	organizationsMu sync.Mutex
@@ -116,7 +118,7 @@ func DialWithContext(dial DialFunc) DialFunc {
 		if v == nil {
 			return nil, errors.New("dialer: no organization in the context of the dial")
 		}
-		if !countingEnabled {
+		if !countingEnabled.Load() {
 			return dial(ctx, network, addr)
 		}
 		organization := v.(string)
@@ -138,6 +140,29 @@ func DialWithContext(dial DialFunc) DialFunc {
 	}
 }
 
+// DisableCounting disables counting and unregisters the counter of every
+// organization, so that [EnableCounting] can enable it again in the same
+// process. It does nothing if counting is not enabled.
+//
+// It must be called when no other function of the package is being called.
+// Because the listeners [EnableCounting] adds to the state cannot be removed,
+// it must also be called only once that state has stopped dispatching
+// notifications. The connections dialed while counting was enabled may still be
+// written to, but the bytes they add to the counter they hold are no longer
+// collected.
+func DisableCounting() {
+	organizationsMu.Lock()
+	defer organizationsMu.Unlock()
+	if !countingEnabled.Load() {
+		return
+	}
+	countingEnabled.Store(false)
+	for _, c := range organizations {
+		c.Unregister()
+	}
+	clear(organizations)
+}
+
 // EnableCounting makes the connections dialed on behalf of an organization
 // count the bytes they send, exposing them as the
 // krenalis_organization_network_egress_bytes_total Prometheus counter, labeled
@@ -151,10 +176,13 @@ func DialWithContext(dial DialFunc) DialFunc {
 // they just return plain, unwrapped dialers.
 //
 // If this function is called, it must be called before any other function in
-// the package.
+// the package, and so must every later call following a [DisableCounting]: the
+// dial functions returned before it count nothing. Call [DisableCounting] to
+// reverse it, for example before a new Core enables counting again in the same
+// process.
 func EnableCounting(st *state.State) {
-	if countingEnabled {
-		panic("dialer: EnableCounting called more than once")
+	if countingEnabled.Load() {
+		panic("dialer: counting is already enabled")
 	}
 	st.Freeze()
 	st.AddListener(onCreateOrganization)
@@ -163,7 +191,7 @@ func EnableCounting(st *state.State) {
 	for _, org := range st.Organizations() {
 		organizations[org.ID] = egressBytes.Register(org.ID)
 	}
-	countingEnabled = true
+	countingEnabled.Store(true)
 	organizationsMu.Unlock()
 	st.Unfreeze()
 }
@@ -234,7 +262,7 @@ func dialWith(organization string, dial DialFunc) DialFunc {
 		var d net.Dialer
 		dial = d.DialContext
 	}
-	if !countingEnabled {
+	if !countingEnabled.Load() {
 		return dial
 	}
 	organizationsMu.Lock()
@@ -312,7 +340,11 @@ func onDeleteOrganization(n state.DeleteOrganization) {
 	c := organizations[n.ID]
 	delete(organizations, n.ID)
 	organizationsMu.Unlock()
-	c.Unregister()
+	// The organization has no counter when the notification is dispatched after
+	// a call to DisableCounting dropped it.
+	if c != nil {
+		c.Unregister()
+	}
 }
 
 // organizationKey is the key of the organization a dial is made on behalf of.
