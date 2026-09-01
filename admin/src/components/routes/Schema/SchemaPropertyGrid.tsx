@@ -82,8 +82,8 @@ const SchemaPropertyGridSummary = ({ children, objectCount, propertyCount, view 
 		<span>
 			<SlIcon name='table' />
 			<span>
-				{propertyCount} {propertyCount === 1 ? 'property' : 'properties'} · {objectCount}{' '}
-				{objectCount === 1 ? 'object' : 'objects'}
+				{propertyCount} {propertyCount === 1 ? 'property' : 'properties'} ({objectCount}{' '}
+				{objectCount === 1 ? 'object' : 'objects'})
 			</span>
 		</span>
 		{children}
