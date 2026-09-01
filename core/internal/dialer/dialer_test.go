@@ -107,7 +107,7 @@ func echoServer(t *testing.T) string {
 		t.Fatal(err)
 	}
 	var wg sync.WaitGroup
-	go func() {
+	wg.Go(func() {
 		for {
 			conn, err := l.Accept()
 			if err != nil {
@@ -118,7 +118,7 @@ func echoServer(t *testing.T) string {
 				_, _ = io.Copy(conn, conn)
 			})
 		}
-	}()
+	})
 	t.Cleanup(func() {
 		_ = l.Close()
 		wg.Wait()
