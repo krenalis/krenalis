@@ -299,7 +299,9 @@ func (c *instrumentedConn) Write(b []byte) (int, error) {
 }
 
 // instrumentedSyscallConn is an instrumentedConn that also exposes the
-// syscall.Conn of the connection it wraps.
+// syscall.Conn of the connection it wraps. Writing to the raw connection it
+// gives access to bypasses Write, and so the count; the drivers only read from
+// it, to check whether a pooled connection is still alive.
 type instrumentedSyscallConn struct {
 	instrumentedConn
 	syscallConn syscall.Conn
