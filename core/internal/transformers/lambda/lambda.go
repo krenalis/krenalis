@@ -262,7 +262,7 @@ func (fn *function) Create(ctx context.Context, organization, name string, langu
 // If a function with the given identifier does not exist, it does nothing.
 //
 // organization is the organization on behalf of which the transformation
-// function is deleted.
+// function is deleted. It is empty when the organization has been deleted.
 func (fn *function) Delete(ctx context.Context, organization, id string) error {
 	arn, _, err := parseID(id)
 	if err != nil {
@@ -272,7 +272,11 @@ func (fn *function) Delete(ctx context.Context, organization, id string) error {
 	if err != nil {
 		return err
 	}
-	ctx = dialer.WithOrganization(ctx, organization)
+	if organization == "" {
+		ctx = dialer.WithoutOrganization(ctx)
+	} else {
+		ctx = dialer.WithOrganization(ctx, organization)
+	}
 	_, err = client.DeleteFunction(ctx, &lambda.DeleteFunctionInput{
 		FunctionName: &arn,
 	})

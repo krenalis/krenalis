@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/krenalis/krenalis/core/internal/db"
-	"github.com/krenalis/krenalis/tools/base58"
 )
 
 // TestUpgrade verifies that database upgrades are applied and are idempotent.
@@ -331,9 +330,9 @@ func assertStateRequestSyncSchemaUpgraded(t *testing.T, database *db.DB) {
 }
 
 // assertDiscontinuedFunctionsUpgrade verifies that discontinued functions gain
-// their organization column, which holds the unknown organization for the rows
-// already in the table and is not a foreign key, as a function outlives its
-// organization, and that the upgraded table keeps the canonical column order.
+// their organization column, which references the organizations table and is
+// left NULL for the rows already in the table, whose organization cannot be
+// recovered, and that the upgraded table keeps the canonical column order.
 func assertDiscontinuedFunctionsUpgrade(t *testing.T, database *db.DB) {
 	t.Helper()
 
@@ -353,7 +352,7 @@ func assertDiscontinuedFunctionsUpgrade(t *testing.T, database *db.DB) {
 		t.Fatalf("expected organization column before discontinued_at column, got organization=%d discontinued_at=%d", organizationPosition, discontinuedAtPosition)
 	}
 
-	var organization string
+	var organization *string
 	err = database.QueryRow(t.Context(), `
 		SELECT organization
 		FROM discontinued_functions
@@ -361,26 +360,8 @@ func assertDiscontinuedFunctionsUpgrade(t *testing.T, database *db.DB) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if organization != unknownOrganization {
-		t.Fatalf("expected discontinued function organization %q, got %q", unknownOrganization, organization)
-	}
-	if base58.IsValid(unknownOrganization) {
-		t.Fatalf("the unknown organization %q is a valid identifier, expecting one that cannot collide with a real organization", unknownOrganization)
-	}
-
-	hasDefault, err := database.QueryExists(t.Context(), `
-		SELECT FROM pg_attrdef d
-		JOIN pg_attribute a ON a.attrelid = d.adrelid AND a.attnum = d.adnum
-		JOIN pg_class c ON c.oid = d.adrelid
-		JOIN pg_namespace n ON n.oid = c.relnamespace
-		WHERE n.nspname = current_schema()
-			AND c.relname = 'discontinued_functions'
-			AND a.attname = 'organization'`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if hasDefault {
-		t.Fatal("expected column discontinued_functions.organization to have no default, got a default")
+	if organization != nil {
+		t.Fatalf("expected discontinued function organization NULL, got %q", *organization)
 	}
 
 	hasOrganizationFK, err := database.QueryExists(t.Context(), `
@@ -388,12 +369,27 @@ func assertDiscontinuedFunctionsUpgrade(t *testing.T, database *db.DB) {
 		JOIN pg_attribute attr ON attr.attrelid = con.conrelid AND attr.attnum = ANY(con.conkey)
 		WHERE con.conrelid = 'discontinued_functions'::regclass
 			AND con.contype = 'f'
+			AND con.confrelid = 'organizations'::regclass
+			AND con.confdeltype = 'n'
 			AND attr.attname = 'organization'`)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if hasOrganizationFK {
-		t.Fatal("expected discontinued_functions.organization to have no foreign key, got one")
+	if !hasOrganizationFK {
+		t.Fatal("expected discontinued_functions.organization to reference organizations on delete set null, got no such foreign key")
+	}
+
+	isNotNull, err := database.QueryExists(t.Context(), `
+		SELECT FROM pg_attribute
+		WHERE attrelid = 'discontinued_functions'::regclass
+			AND attname = 'organization'
+			AND NOT attisdropped
+			AND attnotnull`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isNotNull {
+		t.Fatal("expected column discontinued_functions.organization to be nullable, got a not-null column")
 	}
 }
 

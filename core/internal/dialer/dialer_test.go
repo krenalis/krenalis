@@ -178,7 +178,7 @@ func TestDialDisabled(t *testing.T) {
 	}
 }
 
-func TestDialWithoutOrganization(t *testing.T) {
+func TestDialEmptyOrganization(t *testing.T) {
 	// The organization is mandatory: an empty one is a broken call site, and it
 	// panics instead of silently counting nothing. It panics even when counting
 	// is disabled, so that it is caught regardless of the metrics.
@@ -346,7 +346,7 @@ func TestDialWithContext(t *testing.T) {
 	}
 }
 
-func TestDialWithContextWithoutOrganization(t *testing.T) {
+func TestDialWithContextMissingOrganization(t *testing.T) {
 	// Every dial made with DialWithContext is made on behalf of an
 	// organization, so a context carrying none is a caller that has forgotten
 	// to set it, and the dial fails instead of silently counting nothing. It
@@ -361,6 +361,28 @@ func TestDialWithContextWithoutOrganization(t *testing.T) {
 			conn.Close()
 			t.Fatalf("dialing with no organization in the context succeeded, expecting it to fail (counting enabled: %t)", enabled)
 		}
+	}
+}
+
+func TestDialWithContextWithoutOrganization(t *testing.T) {
+	// The context is marked as carrying no organization, so, unlike one that
+	// carries none at all, the dial does not fail and the connection simply
+	// counts nothing.
+	enable(t)
+	addr := echoServer(t)
+	conn, err := DialWithContext(nil)(WithoutOrganization(t.Context()), "tcp", addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	if _, ok := conn.(*instrumentedConn); ok {
+		t.Fatal("the connection is instrumented, expecting a plain connection")
+	}
+	if _, err = conn.Write([]byte("hello")); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := collected(t, ""); ok {
+		t.Fatal("a counter is collected for the empty organization, expecting none")
 	}
 }
 

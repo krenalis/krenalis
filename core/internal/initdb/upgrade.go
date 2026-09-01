@@ -25,14 +25,6 @@ const (
 	pipelinesMetricsTimeslotIndex                                      = "pipelines_metrics_timeslot_idx"
 )
 
-// unknownOrganization is the organization given to the rows that predate a
-// column holding one, when it cannot be recovered.
-//
-// It cannot collide with a real organization: identifiers are twelve Base58
-// characters, and Base58 has no '0'. It resolves to no organization, so the
-// bytes sent on its behalf are attributed to nobody.
-const unknownOrganization = "000000000000"
-
 const consentPurposesTable = `
 	CREATE TABLE IF NOT EXISTS consent_purposes (
 		workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
@@ -332,8 +324,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 							AND NOT attisdropped
 					) THEN
 						ALTER TABLE discontinued_functions
-							ADD COLUMN organization varchar(12) NOT NULL DEFAULT '` + unknownOrganization + `';
-						ALTER TABLE discontinued_functions ALTER COLUMN organization DROP DEFAULT;
+							ADD COLUMN organization varchar(12) REFERENCES organizations ON DELETE SET NULL;
 
 						ALTER TABLE discontinued_functions ADD COLUMN discontinued_at_reordered timestamp(0);
 						UPDATE discontinued_functions SET discontinued_at_reordered = discontinued_at;

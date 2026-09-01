@@ -69,8 +69,8 @@ type FunctionProvider interface {
 	// If a function with the given identifier does not exist, it does nothing.
 	//
 	// A function outlives its organization, as it is deleted by the pipeline
-	// cleaner after the pipelines using it have been deleted, so organization
-	// may name one that has already been deleted.
+	// cleaner after the pipelines using it have been deleted, so organization is
+	// empty when the organization has been deleted in the meantime.
 	Delete(ctx context.Context, organization, id string) error
 
 	// SupportLanguage reports whether language is supported as a language.

@@ -11,7 +11,8 @@
 // shared by every organization, taking it from the context of each dial.
 //
 // In cases where there is no organization to dial on behalf of, as for a
-// connector under test, use [PlainDial] and [PlainDialWith].
+// connector under test, use [PlainDial] and [PlainDialWith], or
+// [WithoutOrganization] with [DialWithContext].
 //
 // The connections dialed on behalf of an organization count the bytes they
 // send, exposing them as a Prometheus counter, see [EnableCounting]. If an
@@ -100,9 +101,10 @@ func DialWith(organization string) func(dial DialFunc) DialFunc {
 // so a single client can serve more organizations. If the dial function is nil,
 // a plain net.Dialer is used, as in [Dial].
 //
-// A dial whose context carries no organization at all fails returning an error;
-// a context carrying an organization that does not exist, instead, is
-// legitimate, and the dial is done without counting.
+// A dial whose context carries no organization at all fails returning an error,
+// unless the context is marked with [WithoutOrganization]; a context carrying an
+// organization that does not exist, instead, is legitimate, and the dial is done
+// without counting.
 func DialWithContext(dial DialFunc) DialFunc {
 	if dial == nil {
 		var d net.Dialer
@@ -203,6 +205,16 @@ func WithOrganization(ctx context.Context, organization string) context.Context 
 	return context.WithValue(ctx, organizationKey{}, organization)
 }
 
+// WithoutOrganization returns a copy of ctx marking the connections dialed with
+// it as established on behalf of no organization, so that the bytes they send
+// are counted for nobody.
+//
+// Use it, in place of [WithOrganization], when there is no organization to dial
+// on behalf of, so that the dial is not taken for one that forgot to set it.
+func WithoutOrganization(ctx context.Context) context.Context {
+	return context.WithValue(ctx, organizationKey{}, "")
+}
+
 // dialWith returns a dial function that establishes the connections made on
 // behalf of the given organization using dial. If dial is nil, a plain
 // net.Dialer is used.
@@ -279,7 +291,8 @@ func onDeleteOrganization(n state.DeleteOrganization) {
 }
 
 // organizationKey is the key of the organization a dial is made on behalf of.
-// Its value is a string, the ID of the organization.
+// Its value is a string, the ID of the organization, empty when the dial is
+// made on behalf of no organization.
 type organizationKey struct{}
 
 // plainDial is the dial function of a plain net.Dialer.

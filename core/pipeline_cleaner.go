@@ -155,8 +155,9 @@ func (c *pipelineCleaner) deleteDiscontinuedFunctions() {
 		d = functionDeletionInterval
 		err := c.complete(func() error {
 			// Read the functions. These are the discontinued ones from over ten
-			// minutes ago, with no pipelines still using them.
-			rows, err := c.core.db.Query(c.close.ctx, "SELECT f.id, f.organization\n"+
+			// minutes ago, with no pipelines still using them. The organization
+			// is read as empty when it has been deleted in the meantime.
+			rows, err := c.core.db.Query(c.close.ctx, "SELECT f.id, COALESCE(f.organization, '')\n"+
 				"FROM discontinued_functions AS f\n"+
 				"LEFT JOIN pipelines_runs AS e ON f.id = e.function AND e.end_time IS NULL\n"+
 				"WHERE f.discontinued_at < $1 AND e.id IS NULL",
