@@ -157,16 +157,15 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 	rw := newRecordWriter(file.Code, nil, storageTimestamp, &file.TimeLayouts, time.Time{}, limit)
 	var records []map[string]any
 	var recordErr error
-	rw.setYieldFunc(func(record Record) bool {
+	rw.yield = func(record Record) bool {
 		if record.Err != nil {
 			recordErr = record.Err
 			return false
 		}
 		records = append(records, record.Attributes)
 		return true
-	})
+	}
 	err = readFromFileConnector(ctx, _file, &r, sheet, rw)
-	rw.close()
 	if err != nil && err != errRecordStop {
 		return nil, nil, nil, connectorError(err)
 	}

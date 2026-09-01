@@ -349,10 +349,9 @@ func (this *Pipeline) syncDestinationProfiles(ctx context.Context) error {
 			})
 		}
 
-		if len(profiles) > 0 && (len(profiles) == 10000 || records.Last()) {
+		if len(profiles) == 10000 {
 			// Merge destination profiles.
-			err = this.connection.store.MergeDestinationUsers(ctx, this.pipeline.ID, profiles, nil)
-			if err != nil {
+			if err := store.MergeDestinationUsers(ctx, this.pipeline.ID, profiles, nil); err != nil {
 				return err
 			}
 			profiles = profiles[0:0]
@@ -361,6 +360,11 @@ func (this *Pipeline) syncDestinationProfiles(ctx context.Context) error {
 	}
 	if err = records.Err(); err != nil {
 		return err
+	}
+	if len(profiles) > 0 {
+		if err := store.MergeDestinationUsers(ctx, this.pipeline.ID, profiles, nil); err != nil {
+			return err
+		}
 	}
 
 	return nil

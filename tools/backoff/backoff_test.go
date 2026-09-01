@@ -8,6 +8,7 @@ import (
 	"context"
 	"math"
 	"testing"
+	"testing/synctest"
 	"time"
 )
 
@@ -18,7 +19,7 @@ func Test_AfterFunc(t *testing.T) {
 	c := make(chan struct{})
 	f := func(_ context.Context) { c <- struct{}{} }
 
-	// Test NoLimit attempts.
+	// Test unlimited attempts.
 	cap := 10 * time.Millisecond
 	bo := New(1)
 	bo.SetCap(cap)
@@ -171,7 +172,7 @@ func Test_InvalidInputPanics(t *testing.T) {
 // limit when set.
 func Test_Next(t *testing.T) {
 
-	// Test NoLimit attempts.
+	// Test unlimited attempts.
 	bo := New(1)
 	bo.SetCap(10 * time.Millisecond)
 	i := 0
@@ -221,6 +222,23 @@ func Test_Next_Context(t *testing.T) {
 
 }
 
+// Test_Next_ContextCancellationStopsTimer verifies that Next stops the active
+// backoff timer when the provided context is canceled.
+func Test_Next_ContextCancellationStopsTimer(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		bo := New(1)
+		bo.SetNextWaitTime(time.Hour)
+		ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+		defer cancel()
+		if bo.Next(ctx) {
+			t.Fatal("Next returned true after its context timed out")
+		}
+		if bo.Stop() {
+			t.Fatal("Stop returned true after Next stopped its timer")
+		}
+	})
+}
+
 // Test_Next_Cap asserts WaitTime never exceeds the configured cap.
 func Test_Next_Cap(t *testing.T) {
 	for i := 1; i < 10; i++ {
@@ -234,6 +252,92 @@ func Test_Next_Cap(t *testing.T) {
 			}
 		}
 	}
+}
+
+// Test_Reset verifies that Reset restores the initial retry state while
+// preserving configuration.
+func Test_Reset(t *testing.T) {
+
+	synctest.Test(t, func(t *testing.T) {
+
+		const (
+			attempts    = 2
+			base        = 7
+			capDuration = 5 * time.Millisecond
+		)
+		bo := New(base)
+		bo.SetAttempts(attempts)
+		bo.SetCap(capDuration)
+		if !bo.Next(t.Context()) {
+			t.Fatal("Next returned false on first call")
+		}
+		if !bo.Next(t.Context()) {
+			t.Fatal("Next returned false on second call")
+		}
+		bo.SetNextWaitTime(time.Hour)
+
+		bo.Reset()
+
+		if got := bo.Attempt(); got != 0 {
+			t.Fatalf("expected attempt 0 after reset, got %d", got)
+		}
+		if got := bo.WaitTime(); got != 0 {
+			t.Fatalf("expected waiting time 0 after reset, got %s", got)
+		}
+		if got := bo.attempts; got != attempts {
+			t.Fatalf("expected %d configured attempts after reset, got %d", attempts, got)
+		}
+		if got := bo.base; got != base {
+			t.Fatalf("expected configured base %d after reset, got %v", base, got)
+		}
+		if got := bo.cap; got != capDuration {
+			t.Fatalf("expected configured cap %s after reset, got %s", capDuration, got)
+		}
+		if !bo.Next(t.Context()) {
+			t.Fatal("Next returned false on first call after reset")
+		}
+		if !bo.Next(t.Context()) {
+			t.Fatal("Next returned false on second call after reset")
+		}
+		if bo.Next(t.Context()) {
+			t.Fatal("Next returned true after the configured attempts")
+		}
+
+	})
+
+}
+
+// Test_SetAttempts verifies that lowering the attempt limit below the current
+// attempt count prevents further attempts.
+func Test_SetAttempts(t *testing.T) {
+
+	synctest.Test(t, func(t *testing.T) {
+
+		bo := New(0)
+		if !bo.Next(t.Context()) {
+			t.Fatal("Next returned false on first call")
+		}
+		if !bo.Next(t.Context()) {
+			t.Fatal("Next returned false on second call")
+		}
+		if got := bo.Attempt(); got != 2 {
+			t.Fatalf("expected attempt 2, got %d", got)
+		}
+
+		bo.SetAttempts(1)
+
+		if got := bo.WaitTime(); got != 0 {
+			t.Errorf("expected WaitTime 0 after lowering attempt limit, got %s", got)
+		}
+		if bo.Next(t.Context()) {
+			t.Error("Next returned true after lowering attempt limit")
+		}
+		if bo.AfterFunc(t.Context(), func(context.Context) {}) {
+			t.Error("AfterFunc returned true after lowering attempt limit")
+		}
+
+	})
+
 }
 
 // Test_SetNextWaitTime validates that SetNextWaitTime overrides the next

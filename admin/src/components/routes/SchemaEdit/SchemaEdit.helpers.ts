@@ -67,12 +67,9 @@ const normalizeSchema = (schema: EditableSchema): ObjectType => {
 		const property = schema[k];
 		const isFirstLevelProperty = property.indentation === 0;
 		if (isFirstLevelProperty) {
-			const typ = property.type;
-			if (typ.kind === 'object') {
-				// empty the properties, they will be populated with the
-				// edited subproperties.
-				typ.properties = [];
-			}
+			// Copy the type and empty its properties; they will be populated
+			// with the edited subproperties.
+			const typ = property.type.kind === 'object' ? { ...property.type, properties: [] } : property.type;
 			const p: any = {
 				name: property.name,
 				type: typ,
@@ -96,12 +93,9 @@ const normalizeSchema = (schema: EditableSchema): ObjectType => {
 				const typ = subProperties.find((p) => p.name === name).type as ObjectType;
 				subProperties = typ.properties;
 			}
-			const typ = property.type;
-			if (typ.kind === 'object') {
-				// empty the properties, they will be populated with the
-				// edited subproperties.
-				typ.properties = [];
-			}
+			// Copy the type and empty its properties; they will be populated
+			// with the edited subproperties.
+			const typ = property.type.kind === 'object' ? { ...property.type, properties: [] } : property.type;
 			const subP: any = {
 				name: property.name,
 				type: typ,

@@ -15,9 +15,10 @@ import (
 func newPeekTestIterator() *iterator {
 	w := &Writer{
 		connector: "test",
-		available: 2,
+		available: 3,
 		records: []record{
 			{id: "first", attributes: map[string]any{"name": "First"}},
+			{attributes: map[string]any{"name": "Creation"}},
 			{id: "second", attributes: map[string]any{"name": "Second"}},
 		},
 	}
@@ -34,9 +35,10 @@ func Test_iterator_Peek(t *testing.T) {
 	tests := []struct {
 		name string
 		seq  func(*iterator) iter.Seq[connectors.Record]
+		want []string
 	}{
-		{name: "All", seq: (*iterator).All},
-		{name: "Same", seq: (*iterator).Same},
+		{name: "All", seq: (*iterator).All, want: []string{"first", "", "second"}},
+		{name: "Same", seq: (*iterator).Same, want: []string{"first", "second"}},
 	}
 
 	for _, test := range tests {
@@ -50,26 +52,26 @@ func Test_iterator_Peek(t *testing.T) {
 				t.Fatalf("repeated Peek before iteration: expected record ID %q and true, got %q and %t", first.ID, got.ID, ok)
 			}
 
-			want := []string{"first", "second"}
 			yielded := 0
 			for record := range test.seq(it) {
-				if yielded >= len(want) {
-					t.Fatalf("expected %d records, got more", len(want))
+				if yielded >= len(test.want) {
+					t.Fatalf("expected %d records, got more", len(test.want))
 				}
-				if record.ID != want[yielded] {
-					t.Fatalf("record %d: expected ID %q, got %q", yielded, want[yielded], record.ID)
+				if record.ID != test.want[yielded] {
+					t.Fatalf("record %d: expected ID %q, got %q", yielded, test.want[yielded], record.ID)
 				}
-				if yielded+1 < len(want) {
-					if got, ok := it.Peek(); !ok || got.ID != want[yielded+1] {
-						t.Fatalf("Peek during iteration: expected record ID %q and true, got %q and %t", want[yielded+1], got.ID, ok)
+				if yielded+1 < len(test.want) {
+					if got, ok := it.Peek(); !ok || got.ID != test.want[yielded+1] {
+						t.Fatalf("Peek during iteration: expected record ID %q and true, got %q and %t", test.want[yielded+1],
+							got.ID, ok)
 					}
 				} else if got, ok := it.Peek(); ok || got.ID != "" || got.Attributes != nil || !got.UpdatedAt.IsZero() || got.Err != nil {
 					t.Fatalf("Peek at the end of the iteration: expected a zero record and false, got %#v and %t", got, ok)
 				}
 				yielded++
 			}
-			if yielded != len(want) {
-				t.Fatalf("expected %d records, got %d", len(want), yielded)
+			if yielded != len(test.want) {
+				t.Fatalf("expected %d records, got %d", len(test.want), yielded)
 			}
 
 			defer func() {
