@@ -1,5 +1,19 @@
 import Type from '../../lib/api/types/types';
 
+function isSuitableAsIdentifier(type: Type): boolean {
+	switch (type.kind) {
+		case 'string':
+		case 'int':
+		case 'uuid':
+		case 'ip':
+			return true;
+		case 'decimal':
+			return (type.scale ?? 0) === 0;
+		default:
+			return false;
+	}
+}
+
 function toKrenalisStringType(type: Type, nullable?: boolean) {
 	let t: string;
 
@@ -203,4 +217,4 @@ function toPythonType(type: Type, preserveJSON: boolean, nullable?: boolean) {
 	return t;
 }
 
-export { toKrenalisStringType, toJavascriptType, toPythonType };
+export { isSuitableAsIdentifier, toKrenalisStringType, toJavascriptType, toPythonType };
