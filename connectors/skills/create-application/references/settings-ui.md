@@ -1,130 +1,33 @@
-# Settings + UI (ServeUI)
+# Settings UI
 
-Settings are persisted by Krenalis and exposed to connectors through
-`env.Settings`, a `connectors.SettingsStore`:
-
-```go
-type SettingsStore interface {
-    Load(ctx context.Context, dst any) error
-    Store(ctx context.Context, src any) error
-}
-```
-
-`Load` reads current persisted settings into a Go value. `Store` persists a
-validated Go value. In normal connector code, pass the settings struct directly
-to `Store` (do not marshal it to JSON first).
-
-If the connector needs user configuration in the Admin console, implement:
+Implement the following method if and only if at least one declared role has `HasSettings` set. Set the flag only on roles that expose configuration UI:
 
 ```go
-ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error)
+ServeUI(context.Context, string, json.Value, connectors.Role) (*connectors.UI, error)
 ```
 
-Where `json.Value` is `github.com/krenalis/krenalis/tools/json.Value` (not the standard library `encoding/json` package).
+Registry validation rejects both a missing method for a true flag and a method when neither role enables settings.
 
-Important distinction:
+## Persist settings through the store
 
-- `env.Settings` is the persisted settings store for the connector.
-- The `settings json.Value` parameter passed to `ServeUI` is the Admin UI payload for the current event.
-- On `"load"`, read persisted settings with `env.Settings.Load(ctx, &s)` and return them in `UI.Settings`.
-- On `"save"`, validate the `settings` payload, then persist with `env.Settings.Store(ctx, s)`.
+Use `ApplicationEnv.Settings.Load` and `Store`. The current environment does not expose settings as a raw JSON field and has no `SetSettings` method.
 
-## Canonical pattern
+Define an internal settings struct with stable JSON names. A conventional flow is:
 
-Constructor:
+- `load`: load persisted settings, marshal them for `UI.Settings`, and return the form;
+- `save`: decode the supplied `json.Value`, validate it, optionally perform a bounded provider check, store it, and return;
+- custom event: handle it explicitly or return `connectors.ErrUIEventNotExist`.
 
-```go
-func New(env *connectors.ApplicationEnv) (*Example, error) {
-    return &Example{env: env}, nil
-}
+Return `connectors.NewInvalidSettingsError` or `connectors.NewInvalidSettingsErrorf` for correctable user input. Return operational errors normally. Do not persist partially validated settings.
 
-type Example struct {
-    env *connectors.ApplicationEnv
-}
-```
+## Build the form
 
-`ServeUI` + save:
+Use concrete components from `connectors/ui.go`, such as `Input`, `Select`, `Checkbox`, `Radios`, `Switch`, `KeyValue`, or `AlternativeFieldSets`. Use `connectors.SaveButton` for persistence. Set component `Role` when a shared UI contains role-specific fields.
 
-```go
-func (c *Example) ServeUI(ctx context.Context, event string, settings json.Value, role connectors.Role) (*connectors.UI, error) {
-    switch event {
-    case "load":
-        var s innerSettings
-        if err := c.env.Settings.Load(ctx, &s); err != nil {
-            return nil, err
-        }
-        settings, _ = json.Marshal(s)
-    case "save":
-        return nil, c.saveSettings(ctx, settings)
-    default:
-        return nil, connectors.ErrUIEventNotExist
-    }
+Keep UI settings and the persisted struct round-trippable. Preserve unknown or secret values only when the product workflow requires it and tests demonstrate the behavior. Do not assume that an empty submitted secret means “keep the old value” unless the current UI lifecycle supports that distinction and the connector tests creation, replacement, deliberate clearing, and role changes. Never echo a credential into alerts or validation messages.
 
-    return &connectors.UI{
-        Fields:   fields,
-        Settings: settings,
-        Buttons:  []connectors.Button{connectors.SaveButton},
-    }, nil
-}
-func (c *Example) saveSettings(ctx context.Context, settings json.Value) error {
-    var s innerSettings
-    if err := settings.Unmarshal(&s); err != nil {
-        return err
-    }
+Settings and UI complexity are capability-specific. Do not add settings merely because nearby connectors have them, and do not make a remote validation request a universal save requirement.
 
-    // Validate s completely before storing it.
+## Test the lifecycle
 
-    return c.env.Settings.Store(ctx, s)
-}
-```
-
-Operational methods:
-
-```go
-var s innerSettings
-if err := c.env.Settings.Load(ctx, &s); err != nil {
-    return err
-}
-```
-
-Use this pattern in methods such as `RecordSchema`, `Records`, `Upsert`,
-`EventTypes`, `SendEvents`, `PreviewSendEvents`, and helper methods that build
-authenticated API requests.
-
-## Rules
-
-- Must handle `"load"`:
-  - the `settings` parameter is normally nil on first load and is not the persisted state
-  - read persisted settings through `env.Settings.Load(ctx, &s)`
-  - apply any local defaults after `Load` if zero values need UI defaults
-  - return a non-nil UI with fields, initial settings JSON, **and at least one button**
-  - use `Buttons: []connectors.Button{connectors.SaveButton}` in the normal case
-- Must handle `"save"`:
-  - unmarshal and validate the `settings` payload received by `ServeUI`
-  - persist via `env.Settings.Store(ctx, s)` after validation succeeds
-  - always return a nil `*UI` on `"save"`, regardless of outcome: `(nil, nil)` on success and `(nil, err)` on validation/persistence failure
-- Unknown events: return `connectors.ErrUIEventNotExist`
-- For invalid settings: return `connectors.NewInvalidSettingsError(...)` (or `...Errorf`)
-- Do not add redundant UTF-8 checks for string settings (Krenalis already guarantees UTF-8 strings).
-- For security-sensitive settings (API keys/tokens/secrets/base URLs), make validation complete:
-  - enforce both min and max length for secrets/tokens (no "min only" checks)
-  - validate provider-required format/prefix/allowed charset when documented
-  - enforce strict URL validation for base URLs
-  - reject oversized values explicitly
-
-## Do not
-
-- Do not read `env.Settings` as `json.Value` (`env.Settings.Unmarshal`, `len(env.Settings)`, etc.).
-- Do not use `env.SetSettings`; it is the old API.
-- Do not marshal the settings struct before the normal `env.Settings.Store(ctx, s)` call.
-- Do not keep settings in connector instance fields (for example `c.settings`).
-- Do not load persisted settings in `New`.
-
-Use available UI components in `connectors/ui.go`:
-
-- `Input`, `Select`, `Checkbox`, `Radios`, `Switch`, `Range`, `KeyValue`, `FieldSet`, `AlternativeFieldSets`, `Text`, etc.
-
-Important:
-
-- If you set `HasSettings: true` in spec, you must implement `ServeUI`.
-- Avoid leaking secrets in UI. Validate and store them, but never echo them in a preview request.
+Cover load with empty and existing data, successful save, invalid JSON/type/length values, role-specific controls, custom events, store failures, and provider-check failures when present. Assert that failed validation does not store data and that secret values do not appear in returned errors or UI alerts.

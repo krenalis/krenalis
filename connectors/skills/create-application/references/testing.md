@@ -1,108 +1,49 @@
-# Testing expectations (Application connectors)
+# Testing and validation
 
-Use this file as the single operational checklist for connector tests.
+Make ordinary tests deterministic, credential-free, and network-free. Test the selected capability deeply instead of requiring a fixed source/users/events test triad.
 
-## Baseline policy
+## Build focused unit tests
 
-For every connector, unit tests are required.
+Use standard Go tests, `httptest`, or a controlled transport. `core/testconnector` currently provides useful public helpers:
 
-Focus first on:
+- `NewApplication` for constructing a registered application with settings;
+- `CaptureRequestContextKey` for capturing a request;
+- `DecodeNDJSON` for NDJSON bodies;
+- `ReceivedEvent` and `TransformEvent` for event fixtures;
+- `NewEventsIterator` for simple event iteration.
 
-- settings validation (`ServeUI("save", ...)`)
-- request building (preview) including redaction behavior
-- per-item error mapping (`RecordsError` / `EventsError`)
-- batching behavior with Postpone/Discard
+There is no `connectors/internal/livetest` package and no `livetest.*` API. Do not reference or recreate that nonexistent harness.
 
-For connectors implementing users (`Records` + `Upsert`) and events (`SendEvents`), testing must combine:
+Use helpers only for behavior they model faithfully. In particular, the current `testconnector.NewEventsIterator` seeds `SameUser` from `UserID` but compares subsequent events by `AnonymousID`, unlike production grouping. Do not use it alone to prove `SameUser` behavior when those identifiers differ; supplement it with a focused local fake or the production iterator tests in `core/internal/collector/sender`.
 
-- request-level unit tests for deterministic payload/headers behavior
-- one hybrid live test to validate integration behavior against the real API
+Include tests relevant to the capability:
 
-## Prefer core/testconnector helpers
+- registration and declared-interface alignment;
+- settings load/save/validation and secret handling;
+- source/destination schemas and dynamic-field edge cases;
+- pagination, cursor, `updatedAt`, IDs, timestamps, and final `io.EOF`;
+- create/update consumption, batching, postpone/discard, and `RecordsError` indices;
+- event type schemas, mappings, preview redaction, batching, and `EventsError` indices;
+- endpoint matching, retries, idempotency, status mapping, response closure, and cancellation;
+- concurrency or `go test -race` when the implementation has shared mutable state.
 
-For connector tests, prefer `github.com/krenalis/krenalis/core/testconnector` instead of ad-hoc test scaffolding.
+Assert request method, URL, headers, body, ordering, and error privacy. Exercise boundary values, not only a happy-path fixture.
 
-Use these helpers as defaults:
+## Keep live tests opt-in
 
-- `testconnector.NewApplication(code, settings)` to create a connector instance with JSON settings.
-- `testconnector.NewEventsIterator(events)` to build a `connectors.Events` sequence for `SendEvents` / `PreviewSendEvents`.
-- `testconnector.ReceivedEvent(map[string]any)` to build `connectors.ReceivedEvent` test inputs.
-- `testconnector.TransformEvent(schema, event, mapping)` to produce schema-aligned event values for tests.
-- `testconnector.CaptureRequestContextKey` to capture the built HTTP request from context in send/preview tests.
-- `testconnector.DecodeNDJSON(body, encoding)` when asserting NDJSON payloads (including gzip).
+Add a live test only when it validates a provider behavior that deterministic tests cannot establish and its operational risk is acceptable. Name it clearly, read credentials from explicit environment variables, and call `t.Skip` when any prerequisite is absent. Use a unique run marker, the smallest safe dataset, and cleanup when the API permits it.
 
-Only avoid these helpers when a test requires behavior they do not cover.
+Do not assume existing connector packages are safe precedents: some ordinary tests currently fail when credentials are missing, while newer live tests skip correctly. Never make a normal `go test` depend on real credentials, account state, quota, or internet access.
 
-## Minimum test checklist (required)
+## Validate proportionally
 
-- registration compiles and does not panic (spec matches implemented interfaces; EndpointGroups are valid)
-- settings UI:
-  - `ServeUI("load", ...)` returns UI + settings
-  - `ServeUI("save", ...)` validates and persists (including invalid settings cases)
-  - for security-sensitive settings, include boundary tests for both min and max length (for example API keys/tokens)
-- request building:
-  - at least one test that asserts the built HTTP request path/method/headers
-  - preview redacts secrets (`[REDACTED]`) and replaces pipeline IDs with `[PIPELINE]` when applicable
-- endpoint groups:
-  - if multiple endpoint groups are configured, add assertions that representative requests match the intended group patterns (so endpoint families are not accidentally merged)
-- batching/iteration:
-  - at least one test around `Postpone`/`Discard` behavior for body-size or max-items limits
-- error mapping:
-  - at least one test that returns `RecordsError` or `EventsError` and asserts index mapping stability
+At minimum:
 
-If the application supports event batch ingestion, add event-specific tests:
+1. run `gofmt` on changed Go files;
+2. run `go test ./connectors/<code>`;
+3. run focused runtime tests for any iterator, HTTP, schema, or registry contract relied upon;
+4. compile the built-in entry point after adding its blank import when registration/packaging changed;
+5. re-read changed files and verify every referenced symbol, path, embed, and command;
+6. inspect `git diff --check`, `git status --short`, and the final diff scope.
 
-- one `SendEvents` test proving multiple events are sent in a single HTTP request
-- one limit test proving overflow events are postponed (`events.Postpone()`) when max-events/body-size would be exceeded
-- one test for per-event error mapping from API responses when partial success is supported (for example index-based errors)
-
-Use patterns already present in connector tests, and consider injecting `context` keys if needed for deterministic behaviors (some existing connectors do this for tests).
-
-## Hybrid live tests (required for full application connectors)
-
-When the connector supports `Records`, `Upsert`, and `SendEvents`, add one live test that validates the complete flow against the vendor API.
-
-Prefer using shared helpers under `connectors/internal/livetest`:
-
-- `livetest.Run(t, adapter, cfg)` for the orchestration
-- `livetest.DefaultCaseConfig()` for sane defaults
-- `livetest.NewRunID(...)` and adapter-level run markers to isolate data
-
-Adapter responsibilities (implement all):
-
-- create a configured connector (`NewConnector`)
-- provide user schema (`UserSchema`)
-- build create records and update records (`BuildCreateRecords`, `BuildUpdateRecords`)
-- find and cleanup users created by the current run only (`FindUsersByRunID`, `CleanupUsersByRunID`)
-- build sendable events and expected verification facts (`BuildEvents`)
-- optionally verify events from vendor-side read endpoints (`SupportsEventVerification`, `VerifyEvents`)
-
-Minimum live assertions:
-
-- `Upsert` create path creates all expected users
-- `Upsert` update path updates at least one previously created user
-- `Records` pagination reads at least the configured minimum pages
-- `SendEvents` sends all requested events
-
-Live test safety rules:
-
-- gate live tests with explicit env vars and `t.Skip` when not configured
-- never target broad destructive cleanup; delete only run-scoped data
-- handle eventual consistency with polling (both for read-after-write and event visibility)
-- keep API key/token permissions documented in the connector README/test comments
-
-Execution integration:
-
-- place live tests in the connector package (`connectors/<code>`) so they are part of normal `go test` discovery
-- ensure they are skip-safe when env vars are missing, so `go run test/commit/commit.go` can run without forcing all credentials
-- they are skipped together with other connector tests when `-no-connector-tests` is used
-
-## Explicit exceptions
-
-You may skip the hybrid live test only when at least one of these is true:
-
-- the connector does not implement the full triad (`Records` + `Upsert` + `SendEvents`)
-- the user explicitly requests to skip live tests
-- vendor/API constraints make a safe live test impossible (for example no isolatable test data and no scoped cleanup path)
-
-If skipped, state the reason explicitly in the implementation summary.
+Do not run a broad mutating commit helper merely to claim validation. Report exact commands, results, skipped live coverage, and any test that could not run.

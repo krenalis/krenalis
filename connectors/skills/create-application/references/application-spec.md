@@ -1,196 +1,52 @@
-# ApplicationSpec: what to fill, and how
+# Application specification and packaging
 
-Krenalis validates `connectors.ApplicationSpec` vs implementation at registration time and can panic when they do not match. Treat spec fields as a contract.
+Treat `connectors.ApplicationSpec` and `connectors.RegisterApplication` as the registration contract. Confirm every field and interface against `connectors/applications.go` and `connectors/registry.go`; do not infer fields from another connector type.
 
-## Literal style: omit zero values
+## Declare only implemented capabilities
 
-When writing `connectors.ApplicationSpec` (and nested structs like `OAuth`, `EndpointGroup`, `RateLimit`, `RetryPolicy`, etc.), omit fields that would be set to their Go zero value.
+Set:
 
-- Do not write explicit zero-value assignments such as:
-  - `Patterns: nil`
-  - `RetryPolicy: connectors.RetryPolicy{}`
-  - `TimeLayouts: connectors.TimeLayouts{}`
-  - empty strings, `false`, `0`, empty/nil slices or maps
-- Include a field only when you are setting a meaningful non-zero value.
+- `Code`, `Label`, and `Categories`;
+- `AsSource` only for implemented source-user behavior;
+- `AsDestination` only for implemented user and/or event behavior;
+- `Terms` only when the connector exposes users and provider-specific terminology improves the UI;
+- `OAuth`, `EndpointGroups`, and `TimeLayouts` only when supported by evidence.
 
-## Capability contract (spec vs interfaces)
+For each non-nil role, set a non-zero supported `Targets` bitmask and follow the capability matrix established by the main workflow. Do not declare a role merely to make an interface shape look convenient.
 
-- `Code` must be non-empty and contain only characters in `[a-z0-9-]`.
-- If you declare `AsSource.Targets` includes `TargetUser`, your connector type must implement `connectors.RecordFetcher` (`RecordSchema` + `Records`).
-- If you declare `AsDestination.Targets` includes `TargetUser`, your connector type must implement `connectors.RecordUpserter` (`RecordSchema` + `Records` + `Upsert`).
-- If you declare `AsDestination.Targets` includes `TargetEvent`, your connector type must implement `connectors.EventSender` and you must set `SendingMode != None`.
-- If `HasSettings` is true in `AsSource` or `AsDestination`, your type must implement `ServeUI`.
-- If you implement `ServeUI` but `HasSettings` is false for both roles, registration panics.
+Registration validation panics on capability/interface mismatches. Add a compile-time assertion for each substantial interface when it makes the implementation easier to audit, but rely on a registration test as well.
 
-OAuth consistency rules (note: OAuth is experimental — see `references/auth.md`):
+## Register and construct
 
-- If you set `ApplicationSpec.OAuth.AuthURL != ""`, your type must implement `OAuthAccount(ctx) (string, error)`.
-- If OAuth is supported, at least one `EndpointGroup` must have `RequireOAuth: true` (otherwise registration panics).
-- You cannot set `RequireOAuth: true` in any endpoint group if OAuth is not supported.
-
-## Minimal Registration skeleton
+Register once from `init`:
 
 ```go
 func init() {
-    connectors.RegisterApplication(connectors.ApplicationSpec{
-        Code:       "<code>", // non-empty; only [a-z0-9-]
-        Label:      "<Human Name>",
-        Categories: connectors.CategorySaaS,
-
-        // Include only the roles/targets your connector actually implements.
-        //
-        // AsSource: &connectors.AsApplicationSource{
-        //     Targets:     connectors.TargetUser,
-        //     HasSettings: true,
-        //     Documentation: connectors.RoleDocumentation{
-        //         Summary:  "Import <X> as users from <App>",
-        //         Overview: "<longer markdown-like description>",
-        //     },
-        // },
-        //
-        // AsDestination: &connectors.AsApplicationDestination{
-        //     Targets:     connectors.TargetUser | connectors.TargetEvent,
-        //     HasSettings: true,
-        //     SendingMode: connectors.Server, // Client / Server / ClientAndServer; must not be None if TargetEvent is set
-        //     Documentation: connectors.RoleDocumentation{
-        //         Summary:  "Export profiles to <App> and/or send events",
-        //         Overview: "<longer description>",
-        //     },
-        // },
-
-        // Optional: override user terms, only if you support TargetUser.
-        // UserID should refer to the application's User ID (i.e. what you put in Record.ID).
-        // Terms: connectors.ApplicationTerms{
-        //     User:   "User",   // or "Contact", "Profile", ...
-        //     Users:  "Users",
-        //     UserID: "User ID",
-        // },
-
-        // Optional: OAuth + endpoint groups (rate limiting, retry, and whether OAuth is required for those calls).
-        // OAuth: connectors.OAuth{ ... },
-        // EndpointGroups: []connectors.EndpointGroup{ ... },
-
-        // Optional: custom time parsing formats for datetime/date/time values returned as strings/bytes
-        // inside Record.Attributes / EventType.Values.
-        //
-        // Prefer setting TimeLayouts over writing per-field parsing code in the connector when the API
-        // returns non-ISO date/time strings.
-        //
-        // If left empty, Krenalis parses time strings as ISO 8601.
-        //
-        // Note: this does not apply to Record.UpdatedAt (which is already a time.Time).
-        // Omit TimeLayouts entirely when defaults are fine.
-        // TimeLayouts: connectors.TimeLayouts{
-        //     DateTime: "2006-01-02 15:04:05",
-        // },
-    }, New)
+	connectors.RegisterApplication(connectors.ApplicationSpec{
+		Code:       "provider-code",
+		Label:      "Provider",
+		Categories: connectors.CategorySaaS,
+		// Add only evidenced role, auth, endpoint, and documentation fields.
+	}, New)
 }
 ```
 
-## EndpointGroups (rate limit + retry)
+Follow the built-in convention `func New(*connectors.ApplicationEnv) (*Connector, error)` unless the implementation has a concrete reason to use another type accepted by `RegisterApplication`. Retain the environment when later methods need it; do not create a separate `http.Client`, rate limiter, or retry loop. Avoid network calls in `New` unless construction cannot be correct without them.
 
-Endpoint groups let Krenalis enforce client-side rate limits and apply retry strategies per API endpoint group.
+## Package the connector
 
-Key points:
+Use `connectors/<code>` for a built-in connector. Follow nearby packages for copyright header, package documentation, trademark disclaimer, and file organization, but split files only when complexity warrants it.
 
-- Patterns are `net/http` ServeMux-style and may include method and host prefixes.
-  - Examples:
-    - `"/api/profiles/"` (path prefix)
-    - `"GET /3.0/lists/"` (method + path)
-    - `"GET login.example.com/oauth2/metadata"` (method + host + path)
-- If `EndpointGroups` is nil, Krenalis defaults to a single `"/"` group (matches all requests) with a conservative rate limit (1 rps, burst 1).
-- Never set `EndpointGroups` to an empty slice (`[]connectors.EndpointGroup{}`): it registers no patterns and requests fail at runtime.
-- `Patterns` must be either nil or contain at least one pattern (an explicit empty slice panics at registration time).
-  - To match all, omit the `Patterns` field (equivalent to nil). Do not write `Patterns: nil`.
-- If you have multiple endpoint groups:
-  - ensure patterns cover **all hosts** your connector calls (API host, OAuth host, validation host, upload host, etc.), otherwise requests fail at runtime with "no endpoint group matches this request".
-  - do not register the same pattern twice across groups (ServeMux handler registration may panic).
-- Every endpoint group must set a valid `RateLimit`:
-  - `RequestsPerSecond > 0`
-  - `Burst > 0`
-  - `MaxConcurrentRequests >= 0` (0 means unlimited)
-- Retry only applies to idempotent requests with retriable bodies (see `references/retries-errors.md`).
-- If you enable OAuth, at least one endpoint group must set `RequireOAuth: true`.
+Embed concise role documentation through `connectors.RoleDocumentation`. Event-only connectors commonly share `documentation/overview.md`; connectors with distinct source and destination behavior commonly use role subdirectories. The layout is a repository convention, not a framework requirement.
 
-### Deriving endpoint groups from vendor rate limits
+Add a built-in production package to the blank imports in `main.go`. Registration happens only when the package is imported. `test/krenalistester/test_imports.go` contains the additional packages needed by its test executable, not a catalogue of every connector; change it only when that executable needs the new package.
 
-Create endpoint groups that mirror the vendor's distinct rate-limit buckets.
+## Check runtime compatibility
 
-- If the vendor specifies different limits per endpoint family, create multiple groups.
-- If the vendor specifies one global limit, one group is fine (but cite the source showing it is truly global).
-- If rate limits are not documented, use a conservative default (e.g. `1 rps`, `burst 1`) and rely on 429 handling, but call it out as an assumption.
-- Merge groups when their effective configuration is identical (`RequireOAuth`, `RateLimit`, and `RetryPolicy` are all the same): use one group with combined `Patterns`.
-- Identical `RateLimit` alone does not imply merge if `RequireOAuth` or `RetryPolicy` differ.
-- If docs are ambiguous about bucket sharing, fail closed: keep groups separate and use conservative limits.
+Before finishing, compare the spec with its runtime consumers. Known current mismatches must be surfaced rather than worked around:
 
-### Rate-limit proof table (required when limits are documented)
+- `connectors.RegisterApplication` accepts source-only applications, but `core/internal/state/load.go` currently dereferences `AsDestination` while loading connector state.
+- Public comments around `Records.Peek` and the first-record `Records.Postpone` restriction do not fully match the tested `core/internal/connections/appwriter` iterator. Follow the tested runtime behavior for implementation, and report the documentation mismatch when it affects the design.
+- Public `connectors.Record.Err` is intended to report a provider item failure, but the current application-record runtime does not copy a connector-provided `Record.Err`. Do not rely on it for observable source item errors until that mismatch is resolved.
 
-Before coding, build a short table in your design summary with one row per endpoint family/group:
-
-- group/pattern
-- vendor bucket scope (global vs specific endpoint family)
-- raw documented limits + window
-- converted Krenalis values (`RequestsPerSecond`, `Burst`, `MaxConcurrentRequests`)
-- `RequireOAuth` and a short `RetryPolicy` summary (so merge/split decisions are explicit)
-- source links
-
-This table is mandatory whenever you define non-default rate limits.
-
-### Converting per-hour/per-minute limits to Krenalis RateLimit
-
-Krenalis models rate limits as a token bucket with:
-
-- `RequestsPerSecond` (float64): average rate
-- `Burst` (int): maximum accumulated tokens (short burst capacity)
-
-Rules:
-
-- Convert all limits to per-second averages:
-  - `X per hour` -> `X / 3600` rps
-  - `X per minute` -> `X / 60` rps
-- If the vendor provides multiple limits for the same bucket (e.g. per-second AND per-hour), set `RequestsPerSecond` to the minimum.
-- Choose `Burst` conservatively:
-  - strict low average limits (e.g. 100/hour): keep `Burst` small (often 1)
-  - explicit per-second limits (e.g. 10/sec): set `Burst` around that limit
-
-Always include the derived values and original limits in your "Connector Design" summary.
-
-### Traceability in code comments (recommended)
-
-For each non-default endpoint group, add a short comment near `EndpointGroups` showing:
-
-- the vendor limit you mapped (for example `120 req/min`)
-- the converted Krenalis values
-- a doc link
-
-This keeps future rewrites from silently changing the mapping logic.
-
-### Recommended endpoint group structure for OAuth connectors
-
-> **Reminder:** OAuth is experimental in Krenalis. See `references/auth.md` for details.
-
-If you enable `ApplicationSpec.OAuth`, it is often useful to separate endpoint groups by whether requests should carry OAuth access tokens:
-
-- OAuth token/metadata endpoints: typically `RequireOAuth: false` (calls happen before you have an access token)
-- Application API endpoints: typically `RequireOAuth: true`
-
-Keep patterns specific by host/path so both groups can coexist without duplicating `"/"`:
-
-- `POST login.example.com/oauth/token`
-- `GET login.example.com/oauth/metadata`
-- `GET api.example.com/v1/`
-- `POST api.example.com/v1/`
-
-When the application's host varies by region/tenant (e.g. `api.eu.example.com` vs `api.us.example.com`), prefer method + path patterns without a host to keep matching stable:
-
-- `POST /oauth/token`
-- `GET /v1/`
-- `POST /v1/`
-
-Note: host-less patterns apply to **all** hosts. Use them only if the same rate limits, retry policy, and OAuth requirements apply across the involved hosts.
-
-### Retry policy guidance
-
-- If the vendor docs specify retry behavior (status codes, headers, backoff), encode it in `RetryPolicy`.
-- If the vendor docs do **not** specify how to retry, prefer omitting `RetryPolicy` and rely on Krenalis's default behavior for idempotent requests.
-- If the vendor uses a documented non-standard header for 429 resets (or similar), it is reasonable to add a small targeted policy for that status code (e.g. header-based strategy), and still omit other codes unless justified.
+Do not add an invented destination, misleading stub behavior, or a silent panic merely to pass registry validation.
