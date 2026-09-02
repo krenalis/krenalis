@@ -2,7 +2,7 @@ module github.com/krenalis/krenalis
 
 // Keep in sync with the version within ".github/workflows/*.yml".
 // Keep in sync with the version within "Dockerfile".
-go 1.26
+go 1.27
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.47.0
