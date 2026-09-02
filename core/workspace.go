@@ -44,9 +44,9 @@ type Workspace struct {
 	ID                             string            `json:"id"`
 	Name                           string            `json:"name"`
 	ProfileSchema                  types.Type        `json:"profileSchema"`
-	PrimarySources                 map[string]string `json:"primarySources,format:emitnull"`
+	PrimarySources                 map[string]string `json:"primarySources"`
 	ResolveIdentitiesOnBatchImport bool              `json:"resolveIdentitiesOnBatchImport"`
-	Identifiers                    []string          `json:"identifiers,format:emitnull"`
+	Identifiers                    []string          `json:"identifiers"`
 	WarehouseMode                  WarehouseMode     `json:"warehouseMode"`
 	UIPreferences                  UIPreferences     `json:"uiPreferences"`
 }

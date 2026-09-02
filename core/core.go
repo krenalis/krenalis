@@ -1073,7 +1073,7 @@ func (core *Core) WaitStateVersion(ctx context.Context, version int) error {
 // DataTransformation represents transformation passed to (*Core).TransformData
 // and (*Connection).PreviewSendEvent methods.
 type DataTransformation struct {
-	Mapping  map[string]string           `json:"mapping,format:emitnull"`
+	Mapping  map[string]string           `json:"mapping"`
 	Function *DataTransformationFunction `json:"function"`
 }
 

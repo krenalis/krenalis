@@ -128,8 +128,24 @@ type TransformationFunction struct {
 
 // Transformation represents a transformation.
 type Transformation struct {
-	Mapping  map[string]string       `json:"mapping,format:emitnull"`
+	Mapping  map[string]string       `json:"mapping"`
 	Function *TransformationFunction `json:"function"`
+}
+
+// MarshalJSON returns the JSON encoding of transformation, encoding Mapping as
+// null when it is nil.
+func (transformation Transformation) MarshalJSON() ([]byte, error) {
+	var mapping any
+	if transformation.Mapping != nil {
+		mapping = transformation.Mapping
+	}
+	return json.Marshal(struct {
+		Mapping  any                     `json:"mapping"`
+		Function *TransformationFunction `json:"function"`
+	}{
+		Mapping:  mapping,
+		Function: transformation.Function,
+	})
 }
 
 // ExportMode represents one of the three export modes.
