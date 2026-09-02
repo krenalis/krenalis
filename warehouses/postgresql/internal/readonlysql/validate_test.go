@@ -504,8 +504,7 @@ func assertFunctionNotAllowedError(t *testing.T, err error, wantName string) {
 
 func assertRejectedError(t *testing.T, err error) {
 	t.Helper()
-	var target *warehouses.RejectedReadOnlyQueryError
-	if !errors.As(err, &target) {
+	if _, ok := errors.AsType[*warehouses.RejectedReadOnlyQueryError](err); !ok {
 		t.Fatalf("expected warehouses.RejectedReadOnlyQueryError, got %T (%v)", err, err)
 	}
 }
