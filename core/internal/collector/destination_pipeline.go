@@ -39,6 +39,7 @@ const maxQueuedEventTime = 200 * time.Millisecond
 type destinationPipeline struct {
 	id             string                    // ID of the pipeline
 	eventType      string                    // type of event the pipeline handles
+	orderingGroup  string                    // per-user ordering group of the pipeline
 	filter         *state.Where              // filter applied to incoming events
 	schema         types.Type                // schema of the event type.
 	transformation state.Transformation      // transformation applied to events
@@ -88,6 +89,7 @@ func newDestinationPipeline(pipeline *state.Pipeline, schema types.Type, provide
 	dp := &destinationPipeline{
 		id:             pipeline.ID,
 		eventType:      pipeline.EventType,
+		orderingGroup:  pipeline.OrderingGroup,
 		filter:         pipeline.Filter,
 		schema:         schema,
 		transformation: pipeline.Transformation,
@@ -142,7 +144,7 @@ func (dp *destinationPipeline) QueueEvent(attributes map[string]any, ack streams
 	}
 
 	if dp.transformer == nil {
-		event := dp.queue.sender.CreateEvent(dp.id, dp.eventType, dp.schema, attributes, ack)
+		event := dp.queue.sender.CreateEvent(dp.id, dp.eventType, dp.orderingGroup, dp.schema, attributes, ack)
 		dp.queue.mu.Unlock()
 		dp.queue.metrics.TransformationPassed(dp.id, 1)
 		dp.queue.metrics.OutputValidationPassed(dp.id, 1)
@@ -158,7 +160,7 @@ func (dp *destinationPipeline) QueueEvent(attributes map[string]any, ack streams
 		ack.Acknowledge()
 		return
 	}
-	event := dp.queue.sender.CreateEvent(dp.id, dp.eventType, dp.schema, attributes, ack)
+	event := dp.queue.sender.CreateEvent(dp.id, dp.eventType, dp.orderingGroup, dp.schema, attributes, ack)
 	dp.queue.events = append(dp.queue.events, queuedEvent{attributes: attributes, ack: ack, senderEvent: event})
 	if n := len(dp.queue.events); n == 1 || n == minQueuedEventSize {
 		dp.queue.resetTimerLocked()

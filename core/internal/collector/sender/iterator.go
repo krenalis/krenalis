@@ -17,9 +17,14 @@ type iterator struct {
 	sender *Sender
 	index  int // read index in sender.events, set by the sender
 
+	// sameUser tracks the user selected by Events.SameUser. It identifies the
+	// user by anonymous ID rather than by a specific ordering because the same
+	// user can have one ordering per ordering group. This allows a single
+	// Events.SameUser iteration to include events from all of the user's ordering
+	// groups.
 	sameUser struct {
-		enabled bool  // true if events must belong to the same user
-		user    *user // user to match; set by the sender when enabled
+		enabled     bool   // whether the iterator is restricted to events from the same user.
+		anonymousID string // anonymous ID to match; empty when no user is selected.
 	}
 
 	numConsumed int // number of consumed events
