@@ -23,6 +23,11 @@ func TestParseErrors(t *testing.T) {
 		{"{\"bitSize\":8}", "missing 'kind' key"},
 		{"{\"kind\":\"int\",\"bitSize\":8,\"bitSize\":16}", "repeated 'bitSize' key"},
 		{"{\"kind\":\"string\",\"pattern\":\"a\",\"values\":[\"b\"]}", "values cannot be provided if pattern is provided"},
+		{
+			`{"kind":"object","properties":[{"name":"country","type":{"kind":"boolean"},` +
+				`"semantic":{"kind":"country","format":"iso_3166_1_alpha_2"}}]}`,
+			"country semantic requires string type",
+		},
 	}
 	for _, tc := range tests {
 		_, err := Parse(tc.data)
@@ -49,6 +54,15 @@ func TestPropertySerialization(t *testing.T) {
 		{
 			Property: Property{Name: "a", Type: String()},
 			Expected: `{"name":"a","type":{"kind":"string"},"description":""}`,
+		},
+		{
+			Property: Property{Name: "country", Type: String(), Semantic: Country(ISO3166Alpha2)},
+			Expected: `{"name":"country","type":{"kind":"string"},` +
+				`"semantic":{"kind":"country","format":"iso_3166_1_alpha_2"},"description":""}`,
+		},
+		{
+			Property: Property{Name: "country", Type: Boolean(), Semantic: Country(ISO3166Alpha2)},
+			Err:      "country semantic requires string type",
 		},
 		{
 			Property: Property{Name: "a", Type: String()},
@@ -163,6 +177,16 @@ func TestPropertyDeserialization(t *testing.T) {
 			Err:  "repeated 'displayName' key",
 		},
 		{
+			JSON: `{"name":"country","type":{"kind":"string"},` +
+				`"semantic":{"kind":"country","format":"iso_3166_1_alpha_2"},"description":""}`,
+			Property: Property{Name: "country", Type: String(), Semantic: Country(ISO3166Alpha2)},
+		},
+		{
+			JSON: `{"name":"country","type":{"kind":"boolean"},` +
+				`"semantic":{"kind":"country","format":"iso_3166_1_alpha_2"}}`,
+			Err: "country semantic requires string type",
+		},
+		{
 			JSON: `{{`,
 			Err:  "invalid character '{' looking for beginning of object key string",
 		},
@@ -209,6 +233,15 @@ func TestPropertySerializationDeserialization(t *testing.T) {
 			`{"name":"first_name","type":{"kind":"string"},"displayName":"First name","description":"Given name"}`,
 			Property{Name: "first_name", Type: String(), DisplayName: "First name", Description: "Given name"},
 			`{"name":"first_name","type":{"kind":"string"},"displayName":"First name","description":"Given name"}`,
+		},
+		{
+			`{"name":"amount","type":{"kind":"decimal","precision":10,"scale":2},` +
+				`"semantic":{"currency":"EUR","kind":"money"},"description":"Amount"}`,
+			Property{
+				Name: "amount", Type: Decimal(10, 2), Semantic: Money().WithCurrency("EUR"), Description: "Amount",
+			},
+			`{"name":"amount","type":{"kind":"decimal","precision":10,"scale":2},` +
+				`"semantic":{"kind":"money","currency":"EUR"},"description":"Amount"}`,
 		},
 	}
 	for _, test := range tests {
@@ -311,6 +344,10 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"kind":"object","properties":[{"name":"email","type":{"kind":"string"},"description":""},{"name":"size","type":{"kind":"decimal","precision":1},"description":""}]}`,
 			Type: Object([]Property{{Name: "email", Type: String()}, {Name: "size", Type: Decimal(1, 0)}}),
 		}, {
+			Data: `{"kind":"object","properties":[{"name":"email","type":{"kind":"string"},` +
+				`"semantic":{"kind":"email"},"description":""}]}`,
+			Type: Object([]Property{{Name: "email", Type: String(), Semantic: Email()}}),
+		}, {
 			Data: `{"kind":"object","properties":[{"name":"email","type":{"kind":"string"},"nullable":true,"description":""}]}`,
 			Type: Object([]Property{{Name: "email", Type: String(), Nullable: true}}),
 		}, {
@@ -331,6 +368,15 @@ func TestTypeSerialization(t *testing.T) {
 			continue
 		}
 		if err = sameType(test.Type, got); err != nil {
+			t.Errorf("%s: %s", test.Data, err)
+			continue
+		}
+		var decoded Type
+		if err = json.Unmarshal([]byte(test.Data), &decoded); err != nil {
+			t.Errorf("cannot unmarshal type %q: %s", test.Data, err)
+			continue
+		}
+		if err = sameType(test.Type, decoded); err != nil {
 			t.Errorf("%s: %s", test.Data, err)
 			continue
 		}

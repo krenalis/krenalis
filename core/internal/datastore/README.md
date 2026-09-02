@@ -54,3 +54,25 @@ This table is based on the following principles:
 [^arraymapcomposite]: Supporting `array(T)` or `map(T)`, where `T` is of type `array`, `object` or `map`, would open up major implementation issues, especially in the Admin console, which would need to expose a way to handle the creation and mapping to these types. However, it should be noted that it is not yet clear whether such types could actually be supported and used in data warehouses, and so it might not be worth the effort anyway.
 
 [^issue-956]: Currently, the minimum and maximum value for numeric types is allowed for profile schema properties but cannot be specified when declaring types using the Admin console. See the issue [#956](https://github.com/krenalis/krenalis/issues/956) for more details.
+
+### Semantic support in profile schemas
+
+A property semantic is metadata and does not affect its data warehouse column type. The column type is determined only by the property's `Type` using the mappings in the table above.
+
+Once a property is materialized, its semantic can be preserved exactly or removed. It cannot be added, replaced or changed, including its options. Removing a semantic preserves the property's complete `Type` and does not require data warehouse DDL.
+
+Properties without a semantic may use any type allowed by the table above. Properties with a semantic must use the following types:
+
+| Semantic                              | Required type    | Configuration                         |
+|---------------------------------------|------------------|---------------------------------------|
+| `Email()`                             | `string`         | -                                     |
+| `Phone()`                             | `string`         | -                                     |
+| `URL()`                               | `string`         | -                                     |
+| `Country(format)`                     | `string`         | `format` is required                  |
+| `FormattedDateTime(format)`           | *Not allowed*    | Use the native `datetime` type        |
+| `Money()`                             | `decimal(p,s)`   | Currency is optional                  |
+| `Percentage()`                        | `decimal(18,4)`  | Minimum and maximum are optional      |
+| `Measurement()`                       | `decimal(p,s)`   | Unit of measure is optional           |
+| `Duration(unit)`                      | signed `int(64)` | `unit` is required                    |
+
+For an `array(T)` property, these restrictions apply to `T`. For a `map(T)` property, they apply to the map values of type `T`.
