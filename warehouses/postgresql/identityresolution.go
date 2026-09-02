@@ -236,6 +236,8 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 		return err
 	}
 
+	// Publish the new profiles version, remove the previous profiles table, and
+	// mark the operation as completed atomically.
 	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
 
 		// Replace the current "profiles" view with a new one using the "CREATE OR REPLACE VIEW"
@@ -255,6 +257,8 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 	})
 
 	// Reconcile an ambiguous commit result with the persisted operation state.
+	// Publication and cleanup were part of the same transaction, so no further
+	// finalization is needed after a persisted success.
 	deferFinalization = false
 	err = warehouse.finalizeIdentityResolution(ctx, pool, opID, err)
 	if err != nil {

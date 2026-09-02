@@ -39,7 +39,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 		if status.executionError != nil {
 			return status.executionError
 		}
-		return nil
+		return warehouse.finalizePublishedProfiles(ctx, db, opID, profileColumns)
 	}
 
 	deferFinalization := true
@@ -249,28 +249,104 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	})
 
 	// Reconcile an ambiguous commit result with the persisted operation state.
-	// If the operation was successfully committed, continue with the best-effort
-	// cleanups below.
+	// If the operation was persisted as successful, finalize the published
+	// profiles below.
 	deferFinalization = false
 	err = warehouse.finalizeIdentityResolution(ctx, db, opID, err)
 	if err != nil {
 		return err
 	}
 
-	// Replace the staged view with its final definition, then remove the old
-	// profiles table. These are best-effort cleanups: the operation is already
-	// successful and the staged view already exposes the new profiles.
-	_, err2 := db.ExecContext(ctx, createViewQuery(newProfilesName, profileColumns, true))
-	if err2 != nil {
-		slog.Warn("cannot finalize identity resolution view", "err", warehouses.NewOperationError(snowflake(err2)))
+	return warehouse.finalizePublishedProfiles(ctx, db, opID, profileColumns)
+}
+
+// finalizePublishedProfiles replaces the staged profiles view with its final
+// definition and removes obsolete profile tables, but only for the operation
+// that published the latest recorded profiles version.
+func (warehouse *Snowflake) finalizePublishedProfiles(ctx context.Context, db *sql.DB, opID string, profileColumns []warehouses.Column) error {
+	maxProfilesVersion, err := warehouse.maxProfilesVersion(ctx)
+	if err != nil {
+		return err
+	}
+	publishedProfilesVersion, err := warehouse.publishedProfilesVersion(ctx)
+	if err != nil {
+		return err
+	}
+	if maxProfilesVersion != publishedProfilesVersion {
 		return nil
 	}
-	_, err2 = db.ExecContext(ctx, `DROP TABLE IF EXISTS `+quoteIdent(currentProfilesName))
-	if err2 != nil {
-		slog.Warn("cannot drop previous identity resolution table", "err", warehouses.NewOperationError(snowflake(err2)))
+
+	var publishedByOperation bool
+	err = db.QueryRowContext(ctx, `SELECT EXISTS (
+		SELECT 1 FROM "KRENALIS_PROFILE_SCHEMA_VERSIONS"
+		WHERE "VERSION" = ? AND "OPERATION" = ?
+	)`, publishedProfilesVersion, opID).Scan(&publishedByOperation)
+	if err != nil {
+		return snowflake(err)
+	}
+	if !publishedByOperation {
+		return nil
+	}
+
+	publishedProfilesName := fmt.Sprintf("KRENALIS_PROFILES_%d", publishedProfilesVersion)
+	_, err = db.ExecContext(ctx, createViewQuery(publishedProfilesName, profileColumns, true))
+	if err != nil {
+		return snowflake(err)
+	}
+
+	obsoleteProfilesVersions, err := obsoleteProfilesTableVersions(ctx, db, publishedProfilesVersion)
+	if err != nil {
+		return err
+	}
+	for _, version := range obsoleteProfilesVersions {
+		name := fmt.Sprintf("KRENALIS_PROFILES_%d", version)
+		_, err := db.ExecContext(ctx, `DROP TABLE IF EXISTS `+quoteIdent(name))
+		if err != nil {
+			return snowflake(err)
+		}
 	}
 
 	return nil
+}
+
+// obsoleteProfilesTableVersions returns existing profiles table versions older
+// than publishedProfilesVersion whose operations have completed.
+func obsoleteProfilesTableVersions(ctx context.Context, db *sql.DB, publishedProfilesVersion int) ([]int, error) {
+	rows, err := db.QueryContext(ctx, `SELECT "V"."VERSION"
+		FROM "KRENALIS_PROFILE_SCHEMA_VERSIONS" "V"
+		JOIN "KRENALIS_SYSTEM_OPERATIONS" "O" ON "O"."ID" = "V"."OPERATION"
+		JOIN INFORMATION_SCHEMA.TABLES "T"
+			ON "T"."TABLE_SCHEMA" = CURRENT_SCHEMA()
+			AND "T"."TABLE_NAME" = CONCAT('KRENALIS_PROFILES_', TO_VARCHAR("V"."VERSION"))
+		WHERE "V"."VERSION" < ?
+			AND "O"."COMPLETED_AT" IS NOT NULL
+		UNION
+		SELECT 0
+		FROM INFORMATION_SCHEMA.TABLES "T"
+		WHERE "T"."TABLE_SCHEMA" = CURRENT_SCHEMA()
+			AND "T"."TABLE_NAME" = 'KRENALIS_PROFILES_0'
+			AND ? > 0`, publishedProfilesVersion, publishedProfilesVersion)
+	if err != nil {
+		return nil, snowflake(err)
+	}
+	defer rows.Close()
+
+	var versions []int
+	for rows.Next() {
+		var version int
+		if err := rows.Scan(&version); err != nil {
+			return nil, snowflake(err)
+		}
+		if version < 0 || version >= publishedProfilesVersion {
+			return nil, fmt.Errorf("warehouse returned an invalid obsolete profile schema version %d", version)
+		}
+		versions = append(versions, version)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, snowflake(err)
+	}
+
+	return versions, nil
 }
 
 // finalizeIdentityResolution returns nil on local success. On failure, it

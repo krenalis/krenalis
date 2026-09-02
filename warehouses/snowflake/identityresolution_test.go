@@ -69,6 +69,119 @@ func Test_finalizeIdentityResolutionPreservesPersistedSuccess(t *testing.T) {
 
 }
 
+// TestResolveIdentitiesFinalizesCurrentProfilesVersionOnRetry verifies that
+// retrying the operation that published the current profiles version finalizes
+// the staged view and removes obsolete profile tables, while retrying an older
+// completed operation leaves the current view unchanged.
+func TestResolveIdentitiesFinalizesCurrentProfilesVersionOnRetry(t *testing.T) {
+
+	warehouse, db := newTestSnowflakeWarehouse(t)
+	olderProfileColumns := []warehouses.Column{{Name: "email", Type: types.String(), Nullable: true}}
+	err := warehouse.Initialize(t.Context(), olderProfileColumns)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const olderOpID = "a44731d8-d89d-44b9-ac87-a8ce1a8770db"
+	_, err = db.ExecContext(t.Context(), `INSERT INTO "KRENALIS_SYSTEM_OPERATIONS"
+		("ID", "OPERATION_TYPE", "COMPLETED_AT") VALUES (?, ?, ?)`, olderOpID, identityResolution, time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.ExecContext(t.Context(), `CREATE TABLE "KRENALIS_PROFILES_1" LIKE "KRENALIS_PROFILES_0"`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.ExecContext(t.Context(), `INSERT INTO "KRENALIS_PROFILE_SCHEMA_VERSIONS"
+		("VERSION", "OPERATION", "TIMESTAMP") VALUES (?, ?, ?)`, 1, olderOpID, time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.ExecContext(t.Context(), `ALTER TABLE "KRENALIS_PROFILES_1" ADD COLUMN "PHONE" VARCHAR`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	currentProfileColumns := []warehouses.Column{
+		{Name: "email", Type: types.String(), Nullable: true},
+		{Name: "phone", Type: types.String(), Nullable: true},
+	}
+	const currentOpID = "a44731d8-d89d-44b9-ac87-a8ce1a8770dc"
+	_, err = db.ExecContext(t.Context(), `INSERT INTO "KRENALIS_SYSTEM_OPERATIONS"
+		("ID", "OPERATION_TYPE", "COMPLETED_AT") VALUES (?, ?, ?)`, currentOpID, identityResolution, time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.ExecContext(t.Context(), `CREATE TABLE "KRENALIS_PROFILES_2" LIKE "KRENALIS_PROFILES_1"`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.ExecContext(t.Context(), `INSERT INTO "KRENALIS_PROFILES_2"
+		("_KPID", "_IDENTITIES", "_UPDATED_AT", "EMAIL", "PHONE")
+		SELECT ?, ARRAY_CONSTRUCT(1), ?, ?, ?`,
+		"a44731d8-d89d-44b9-ac87-a8ce1a8770dd", time.Now().UTC(), "person@example.com", "+390000000000")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.ExecContext(t.Context(), `INSERT INTO "KRENALIS_PROFILE_SCHEMA_VERSIONS"
+		("VERSION", "OPERATION", "TIMESTAMP") VALUES (?, ?, ?)`, 2, currentOpID, time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.ExecContext(t.Context(), createPendingViewQuery("KRENALIS_PROFILES_1", "KRENALIS_PROFILES_2",
+		currentOpID, currentProfileColumns))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = warehouse.ResolveIdentities(t.Context(), currentOpID, nil, currentProfileColumns, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, name := range []string{"KRENALIS_PROFILES_0", "KRENALIS_PROFILES_1"} {
+		var exists bool
+		err = db.QueryRowContext(t.Context(), `SELECT COUNT(*) > 0
+			FROM INFORMATION_SCHEMA.TABLES
+			WHERE TABLE_SCHEMA = CURRENT_SCHEMA() AND TABLE_NAME = ?`, name).Scan(&exists)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if exists {
+			t.Errorf("expected obsolete profiles table %q to be removed", name)
+		}
+	}
+
+	err = warehouse.ResolveIdentities(t.Context(), olderOpID, nil, olderProfileColumns, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var phone string
+	err = db.QueryRowContext(t.Context(), `SELECT "PHONE" FROM "PROFILES"`).Scan(&phone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if phone != "+390000000000" {
+		t.Fatalf("older operation changed the published profiles view, got phone %q", phone)
+	}
+
+	// A staged view still depends on the operation row to select the new table.
+	// After finalization, removing that row must not affect the published view.
+	_, err = db.ExecContext(t.Context(), `DELETE FROM "KRENALIS_SYSTEM_OPERATIONS" WHERE "ID" = ?`, currentOpID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var profileCount int
+	err = db.QueryRowContext(t.Context(), `SELECT COUNT(*) FROM "PROFILES"`).Scan(&profileCount)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if profileCount != 1 {
+		t.Fatalf("expected the finalized view to expose one profile, got %d", profileCount)
+	}
+
+}
+
 // TestAlterProfileSchemaUsesPublishedProfilesAfterIdentityResolutionFailure
 // verifies that after a failed Identity Resolution, altering the profile schema
 // keeps the last published profiles visible and updates the published profiles
