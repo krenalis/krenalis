@@ -62,6 +62,18 @@ const getKeyboardHintsBottomGap = async (container) => {
 	});
 };
 
+const expectPassiveInformationTooltip = async (info) => {
+	const tooltip = info.locator('xpath=..');
+	const descriptionID = await info.getAttribute('aria-describedby');
+
+	expect(descriptionID).not.toBeNull();
+	await expect(info).toHaveAttribute('role', 'img');
+	expect(await info.evaluate((element) => getComputedStyle(element).cursor)).not.toBe('help');
+	expect(await info.evaluate((element: HTMLElement) => element.tabIndex)).toBe(-1);
+	await expect(tooltip).toHaveJSProperty('trigger', 'hover');
+	await expect(tooltip.locator(`[id="${descriptionID}"]`)).toHaveCount(1);
+};
+
 test.beforeEach(async ({ page }) => {
 	await login(page);
 });
@@ -695,13 +707,33 @@ test(`Keep contextual and form actions in their expected tab order`, async ({ pa
 	const primarySource = propertyPanel.locator('.property-form__primary-source');
 	const primarySourceInput = primarySource.locator('[part="display-input"]');
 	const removeButton = propertyPanel.locator('.property-panel__remove');
+	const identifierInfo = propertyPanel.getByLabel('About identifiers');
+	const primarySourceInfo = propertyPanel.getByLabel('About primary source');
+	await expect(propertyPanel.locator('.schema-property-grid__info')).toHaveCount(2);
+	await expectPassiveInformationTooltip(identifierInfo);
+	await expectPassiveInformationTooltip(primarySourceInfo);
+
+	const description = propertyPanel.locator('sl-textarea textarea[name="description"]');
+	await description.focus();
+	await primarySourceInfo.hover();
+	const primarySourceTooltip = primarySourceInfo.locator('xpath=..');
+	await expect(primarySourceTooltip).toHaveAttribute('open');
+	await expect(primarySourceTooltip.locator('.schema-property-grid__tooltip-content')).toHaveText(
+		'If this source has a value for this property, its most recent value is used. Otherwise, the most recent value from any other source is used.',
+	);
+	await primarySourceInfo.click();
+	await expect(primarySourceTooltip).toHaveAttribute('open');
+	await expect(description).toBeFocused();
+
 	await primarySourceInput.focus();
 	await expect(primarySourceInput).toBeFocused();
 	await page.keyboard.press('Tab');
 	await expect(primarySourceInput).not.toBeFocused();
+	await expect(identifierInfo).not.toBeFocused();
+	await expect(primarySourceInfo).not.toBeFocused();
 	await expect(removeButton).not.toBeFocused();
 
-	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Unsaved description');
+	await description.fill('Unsaved description');
 	await expect(propertyPanel.locator('.property-panel__cancel')).toBeVisible();
 	await primarySourceInput.focus();
 	await expect(primarySourceInput).toBeFocused();
@@ -778,6 +810,9 @@ test(`View property details and keep the selection when editing`, async ({ page 
 	]);
 	const primarySourceInfo = panel.getByLabel('About primary source');
 	await expect(primarySourceInfo).toBeVisible();
+	await expect(panel.locator('.schema-property-grid__info')).toHaveCount(2);
+	await expectPassiveInformationTooltip(panel.getByLabel('About identifiers'));
+	await expectPassiveInformationTooltip(primarySourceInfo);
 	await primarySourceInfo.hover();
 	await expect(
 		page.getByText('This property has no primary source, so the most recent value from any source is used.'),
@@ -1467,6 +1502,10 @@ test(`Validate numeric range constraints as they are edited`, async ({ page }) =
 		.getByRole('radio', { name: 'unsigned', exact: true });
 	await propertyPanel.locator('.property-form__name-input input').fill('numeric_range');
 	await selectPropertyType(page, 'int');
+	const rangeInformation = propertyPanel.locator('.property-form__numeric-range .schema-property-grid__info');
+	await expect(rangeInformation).toHaveCount(2);
+	await expectPassiveInformationTooltip(rangeInformation.nth(0));
+	await expectPassiveInformationTooltip(rangeInformation.nth(1));
 
 	await minimum.fill('-2147483649');
 	await expect(rangeError).toContainText('Min must be an integer between -2147483648 and 2147483647');

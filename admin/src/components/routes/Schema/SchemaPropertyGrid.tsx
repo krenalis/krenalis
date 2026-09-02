@@ -1,4 +1,4 @@
-import React, { ReactNode, useEffect, useRef, useState } from 'react';
+import React, { ReactNode, useEffect, useId, useRef, useState } from 'react';
 import './SchemaPropertyGrid.css';
 import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
@@ -32,16 +32,33 @@ const SchemaPropertyIdentifierValue = ({ position }: { position?: number }) =>
 		</span>
 	);
 
-const SchemaPropertyInfoTooltip = ({ content, label }: { content: string; label: string }) => (
-	<SlTooltip className='schema-property-grid__tooltip' placement='top' hoist={true}>
-		<span className='schema-property-grid__tooltip-content' slot='content'>
-			{content}
-		</span>
-		<button className='schema-property-grid__info' type='button' aria-label={label}>
-			<SlIcon name='info-circle' />
-		</button>
-	</SlTooltip>
-);
+// Prevent a surrounding Shoelace label from focusing its associated control.
+const preventInfoInteraction = (event: React.SyntheticEvent) => {
+	event.preventDefault();
+	event.stopPropagation();
+};
+
+const SchemaPropertyInfoTooltip = ({ content, label }: { content: string; label: string }) => {
+	const descriptionID = useId();
+
+	return (
+		<SlTooltip className='schema-property-grid__tooltip' placement='top' trigger='hover' hoist={true}>
+			<span id={descriptionID} className='schema-property-grid__tooltip-content' slot='content'>
+				{content}
+			</span>
+			<span
+				className='schema-property-grid__info'
+				role='img'
+				aria-label={label}
+				aria-describedby={descriptionID}
+				onPointerDownCapture={preventInfoInteraction}
+				onClickCapture={preventInfoInteraction}
+			>
+				<SlIcon name='info-circle' aria-hidden='true' />
+			</span>
+		</SlTooltip>
+	);
+};
 
 const SchemaPropertyIdentifierLabel = () => (
 	<span className='schema-property-grid__label-content'>
@@ -62,7 +79,7 @@ const SchemaPropertyPrimarySourceLabel = ({ hasPrimarySource = true }: { hasPrim
 		<SchemaPropertyInfoTooltip
 			content={
 				hasPrimarySource
-					? 'If this source has a value for this property, its most recent value is used. Otherwise, the most recent value from any source is used.'
+					? 'If this source has a value for this property, its most recent value is used. Otherwise, the most recent value from any other source is used.'
 					: 'This property has no primary source, so the most recent value from any source is used.'
 			}
 			label='About primary source'
