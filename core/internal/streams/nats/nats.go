@@ -764,6 +764,12 @@ type ackManager struct {
 	mu              sync.Mutex
 	pending         map[*ack]struct{} // message acknowledgments being tracked; protected by mu
 	pendingSnapshot []*ack
+	ackErrors       struct {
+		sync.Mutex   // protects message, occurrences, and lastLoggedAt
+		message      string
+		occurrences  int
+		lastLoggedAt time.Time
+	}
 }
 
 // newAckManager returns an acknowledgment manager that sends heartbeats at
@@ -847,6 +853,50 @@ func (m *ackManager) inProgress(ctx context.Context) {
 	}
 }
 
+// ackErrorLogInterval is the minimum interval between logs for repeated final
+// acknowledgment errors.
+const ackErrorLogInterval = 5 * time.Second
+
+// ackErrorRecoveryThreshold is the number of repeated equal errors after which
+// a subsequent successful acknowledgment is logged as a recovery.
+const ackErrorRecoveryThreshold = 3
+
+// logAckResult rate-limits repeated equal final acknowledgment errors and logs
+// when a later acknowledgment succeeds after repeated failures.
+func (m *ackManager) logAckResult(err error) {
+
+	s := &m.ackErrors
+	s.Lock()
+	defer s.Unlock()
+
+	if err == nil {
+		if s.occurrences >= ackErrorRecoveryThreshold {
+			slog.Info("NATS message acknowledgment delivery recovered", "previous_error", s.message, "occurrences", s.occurrences)
+		}
+		s.message = ""
+		s.occurrences = 0
+		s.lastLoggedAt = time.Time{}
+		return
+	}
+
+	now := time.Now()
+	message := err.Error()
+	if s.occurrences == 0 || message != s.message {
+		s.message = message
+		s.occurrences = 1
+		s.lastLoggedAt = now
+		slog.Warn("failed to acknowledge NATS message", "error", err, "occurrences", 1)
+		return
+	}
+
+	s.occurrences++
+	if now.Sub(s.lastLoggedAt) >= ackErrorLogInterval {
+		s.lastLoggedAt = now
+		slog.Warn("failed to acknowledge NATS message", "error", err, "occurrences", s.occurrences)
+	}
+
+}
+
 // run sends acknowledgment heartbeats until the context is canceled.
 func (m *ackManager) run(ctx context.Context, heartbeatInterval time.Duration) {
 	ticker := time.NewTicker(heartbeatInterval)
@@ -896,9 +946,7 @@ func (d *destinationAck) Acknowledge() {
 	a.mu.Unlock()
 
 	a.manager.Remove(a)
-	if err := a.msg.Ack(); err != nil {
-		slog.Warn("cannot ack NATS event", "error", err)
-	}
+	a.manager.logAckResult(a.msg.Ack())
 }
 
 // InProgress tells NATS that the message is still being processed.
