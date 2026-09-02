@@ -452,6 +452,7 @@ func init() {
 			ID:            def.ID,
 			Name:          def.Name,
 			Description:   fmt.Sprintf("Send '%s' events to Google Analytics", def.Name),
+			OrderingGroup: "events",
 			DefaultFilter: def.DefaultFilter,
 		})
 	}
