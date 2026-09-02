@@ -479,16 +479,12 @@ func (k *Krenalis) Start() {
 
 	// Create the workspace and connect the warehouse.
 	var profileSchema types.Type
-	var uiPreferences UIPreferences
 	if k.populateProfileSchema {
 		profileSchema = testsProfileSchema
-		uiPreferences.Profile.FirstName = "first_name"
-		uiPreferences.Profile.LastName = "last_name"
-		uiPreferences.Profile.Extra = "email"
 	} else {
 		profileSchema = minimalProfileSchema
 	}
-	id, err := k.createWorkspace("Test workspace", profileSchema, uiPreferences)
+	id, err := k.createWorkspace("Test workspace", profileSchema)
 	if err != nil {
 		k.t.Fatalf("cannot create workspace: %s", err)
 	}
@@ -568,7 +564,7 @@ func init() {
 	}
 }
 
-func (k *Krenalis) createWorkspace(name string, profileSchema types.Type, uiPreferences UIPreferences) (string, error) {
+func (k *Krenalis) createWorkspace(name string, profileSchema types.Type) (string, error) {
 	req := map[string]any{
 		"name":          name,
 		"profileSchema": profileSchema,
@@ -576,7 +572,6 @@ func (k *Krenalis) createWorkspace(name string, profileSchema types.Type, uiPref
 			"platform": testsSettings.WarehousePlatform,
 			"settings": testsSettings.Warehouse,
 		},
-		"uiPreferences": uiPreferences,
 	}
 	var response struct {
 		ID string `json:"id"`

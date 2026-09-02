@@ -39,7 +39,11 @@ func TestUpgrade(t *testing.T) {
 		);
 		CREATE TABLE workspaces (
 			id varchar(12) PRIMARY KEY,
-			organization varchar(12) NOT NULL REFERENCES organizations (id)
+			organization varchar(12) NOT NULL REFERENCES organizations (id),
+			ui_profile_image varchar(100) NOT NULL DEFAULT '',
+			ui_profile_first_name varchar(100) NOT NULL DEFAULT '',
+			ui_profile_last_name varchar(100) NOT NULL DEFAULT '',
+			ui_profile_extra varchar(100) NOT NULL DEFAULT ''
 		);
 		CREATE TYPE role AS ENUM ('Source', 'Destination');
 		CREATE TYPE pipeline_target AS ENUM ('Event', 'User', 'Group');
@@ -153,6 +157,8 @@ func TestUpgrade(t *testing.T) {
 	assertPipelineFiltersUpgraded(t, database)
 	assertPipelineMetricsUpgrade(t, database)
 	assertPipelineMetricsColumnOrder(t, database)
+	assertProfileRoleColumns(t, database)
+	assertDisplayedProfilePropertyColumnsRemoved(t, database)
 	assertStateRequestSyncSchemaUpgraded(t, database)
 	assertRateLimitLeaseFunction(t, database)
 	assertConsentStepColumns(t, database)
@@ -162,6 +168,65 @@ func TestUpgrade(t *testing.T) {
 	}
 	assertPipelineFiltersUpgraded(t, database)
 	assertPipelineMetricsSurvivePipelineDelete(t, database)
+}
+
+// assertDisplayedProfilePropertyColumnsRemoved verifies that obsolete UI
+// preference columns are removed.
+func assertDisplayedProfilePropertyColumnsRemoved(t *testing.T, database *db.DB) {
+
+	t.Helper()
+	for _, column := range [...]string{
+		"ui_profile_image",
+		"ui_profile_first_name",
+		"ui_profile_last_name",
+		"ui_profile_extra",
+	} {
+		assertColumnDoesNotExist(t, database, "workspaces", column)
+	}
+
+}
+
+// assertProfileRoleColumns verifies that Profile role assignment columns are
+// added with empty defaults.
+func assertProfileRoleColumns(t *testing.T, database *db.DB) {
+
+	t.Helper()
+	columns := []string{
+		"profile_role_first_name",
+		"profile_role_last_name",
+		"profile_role_email",
+		"profile_role_country",
+		"profile_role_photo",
+		"alter_profile_schema_role_first_name",
+		"alter_profile_schema_role_last_name",
+		"alter_profile_schema_role_email",
+		"alter_profile_schema_role_country",
+		"alter_profile_schema_role_photo",
+	}
+	for _, column := range columns {
+		assertColumnExists(t, database, "workspaces", column)
+	}
+
+	var firstName, lastName, email, country, photo string
+	var pendingFirstName, pendingLastName, pendingEmail, pendingCountry, pendingPhoto string
+	err := database.QueryRow(t.Context(), `
+		SELECT profile_role_first_name, profile_role_last_name, profile_role_email, profile_role_country,
+			profile_role_photo, alter_profile_schema_role_first_name, alter_profile_schema_role_last_name,
+			alter_profile_schema_role_email, alter_profile_schema_role_country, alter_profile_schema_role_photo
+		FROM workspaces
+		WHERE id = '222222222222'`).Scan(
+		&firstName, &lastName, &email, &country, &photo,
+		&pendingFirstName, &pendingLastName, &pendingEmail, &pendingCountry, &pendingPhoto,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if firstName != "" || lastName != "" || email != "" || country != "" || photo != "" ||
+		pendingFirstName != "" || pendingLastName != "" || pendingEmail != "" || pendingCountry != "" ||
+		pendingPhoto != "" {
+		t.Fatal("expected Profile role assignment columns to have empty defaults")
+	}
+
 }
 
 func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {

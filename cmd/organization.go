@@ -143,16 +143,15 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 		return nil, err
 	}
 	var body struct {
-		Name          string             `json:"name"`
-		ProfileSchema types.Type         `json:"profileSchema"`
-		Warehouse     core.Warehouse     `json:"warehouse"`
-		UIPreferences core.UIPreferences `json:"uiPreferences"`
+		Name          string         `json:"name"`
+		ProfileSchema types.Type     `json:"profileSchema"`
+		Warehouse     core.Warehouse `json:"warehouse"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	id, err := org.CreateWorkspace(r.Context(), body.Name, body.ProfileSchema, body.Warehouse, body.UIPreferences)
+	id, err := org.CreateWorkspace(r.Context(), body.Name, body.ProfileSchema, body.Warehouse)
 	if err != nil {
 		if err2, ok := err.(*errors.UnprocessableError); ok && err2.Code == core.OrganizationNotExist {
 			return nil, errors.Unauthorized("API key in the Authorization header of the request does not exist")
@@ -419,16 +418,15 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 		return nil, err
 	}
 	var body struct {
-		Name          string             `json:"name"`
-		ProfileSchema types.Type         `json:"profileSchema"`
-		Warehouse     core.Warehouse     `json:"warehouse"`
-		UIPreferences core.UIPreferences `json:"uiPreferences"`
+		Name          string         `json:"name"`
+		ProfileSchema types.Type     `json:"profileSchema"`
+		Warehouse     core.Warehouse `json:"warehouse"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = org.TestWorkspaceCreation(r.Context(), body.Name, body.ProfileSchema, body.Warehouse, body.UIPreferences)
+	err = org.TestWorkspaceCreation(r.Context(), body.Name, body.ProfileSchema, body.Warehouse)
 	return nil, err
 }
 

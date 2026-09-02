@@ -5,7 +5,6 @@
 package core
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/krenalis/krenalis/tools/types"
@@ -46,87 +45,5 @@ func Test_suitableAsIdentifier(t *testing.T) {
 		if got != test.expected {
 			t.Errorf("type %v: expected %t, got %t", test.t, test.expected, got)
 		}
-	}
-}
-
-func Test_validateUIPreferences(t *testing.T) {
-	tests := []struct {
-		name  string
-		prefs UIPreferences
-		err   string
-	}{
-		{
-			name: "Nothing is set",
-			prefs: UIPreferences{
-				Profile: struct {
-					Image     string "json:\"image\""
-					FirstName string "json:\"firstName\""
-					LastName  string "json:\"lastName\""
-					Extra     string "json:\"extra\""
-				}{},
-			},
-		},
-		{
-			name: "Valid property paths",
-			prefs: UIPreferences{
-				Profile: struct {
-					Image     string "json:\"image\""
-					FirstName string "json:\"firstName\""
-					LastName  string "json:\"lastName\""
-					Extra     string "json:\"extra\""
-				}{
-					Image:     "additional_data.image",
-					FirstName: "first_name",
-					LastName:  "last_name",
-					Extra:     "email",
-				},
-			},
-		},
-		{
-			name: "Last name has an invalid property path",
-			prefs: UIPreferences{
-				Profile: struct {
-					Image     string "json:\"image\""
-					FirstName string "json:\"firstName\""
-					LastName  string "json:\"lastName\""
-					Extra     string "json:\"extra\""
-				}{
-					Image:     "additional_data.image",
-					FirstName: "first_name",
-					LastName:  "last name", // space instead of _
-					Extra:     "email",
-				},
-			},
-			err: "invalid profile 'lastName' \"last name\"",
-		},
-		{
-			name: "Extra is too long",
-			prefs: UIPreferences{
-				Profile: struct {
-					Image     string "json:\"image\""
-					FirstName string "json:\"firstName\""
-					LastName  string "json:\"lastName\""
-					Extra     string "json:\"extra\""
-				}{
-					Image:     "additional_data.image",
-					FirstName: "first_name",
-					LastName:  "last_name",
-					Extra:     strings.Repeat("x", 1025),
-				},
-			},
-			err: "invalid profile 'extra' \"" + strings.Repeat("x", 1025) + "\"",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := validateUIPreferences(test.prefs)
-			var gotStr string
-			if got != nil {
-				gotStr = got.Error()
-			}
-			if gotStr != test.err {
-				t.Fatalf("expected error %q, got %q", test.err, gotStr)
-			}
-		})
 	}
 }

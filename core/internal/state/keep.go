@@ -670,7 +670,6 @@ type CreateWorkspace struct {
 		SettingsKey    []byte
 		MCPSettingsKey []byte
 	}
-	UIPreferences UIPreferences
 }
 
 // createWorkspace creates a workspace.
@@ -694,7 +693,6 @@ func (state *State) createWorkspace(n notification) string {
 		consentPurposes:                map[string]*ConsentPurpose{},
 		ResolveIdentitiesOnBatchImport: e.ResolveIdentitiesOnBatchImport,
 		Identifiers:                    []string{},
-		UIPreferences:                  e.UIPreferences,
 		pipelinesToPurge:               []string{},
 	}
 	ws.Warehouse.Platform = e.Warehouse.Platform
@@ -1162,6 +1160,7 @@ func (state *State) endAlterProfileSchema(n notification) string {
 			// These fields should be updated only in case of success,
 			// otherwise, in case of error, the current ones should be left.
 			w.ProfileSchema = w.AlterProfileSchema.Schema
+			w.AssignedRoles = w.AlterProfileSchema.AssignedRoles
 			w.PrimarySources = w.AlterProfileSchema.PrimarySources
 			w.Identifiers = e.Identifiers
 		}
@@ -1169,6 +1168,7 @@ func (state *State) endAlterProfileSchema(n notification) string {
 		w.AlterProfileSchema.EndTime = &e.EndTime
 		w.AlterProfileSchema.Err = &e.Err
 		w.AlterProfileSchema.Schema = types.Type{}
+		w.AlterProfileSchema.AssignedRoles = ProfileRoleAssignments{}
 		w.AlterProfileSchema.PrimarySources = nil
 		w.AlterProfileSchema.Operations = nil
 	})
@@ -1536,6 +1536,7 @@ type StartAlterProfileSchema struct {
 	Workspace      string
 	ID             string
 	Schema         types.Type
+	AssignedRoles  ProfileRoleAssignments
 	PrimarySources map[string]string // always != nil.
 	Operations     []warehouses.AlterOperation
 	StartTime      time.Time
@@ -1550,6 +1551,7 @@ func (state *State) startAlterProfileSchema(n notification) string {
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.AlterProfileSchema.ID = &e.ID
 		w.AlterProfileSchema.Schema = e.Schema
+		w.AlterProfileSchema.AssignedRoles = e.AssignedRoles
 		w.AlterProfileSchema.PrimarySources = e.PrimarySources
 		w.AlterProfileSchema.Operations = e.Operations
 		w.AlterProfileSchema.StartTime = &e.StartTime
@@ -1867,15 +1869,13 @@ func (state *State) updateWarehouseMode(n notification) string {
 	return ws.organization.ID
 }
 
-// UpdateWorkspace is the event sent when the name and the displayed properties
-// of a workspace are updated.
+// UpdateWorkspace is the event sent when the name of a workspace is updated.
 type UpdateWorkspace struct {
-	Workspace     string
-	Name          string
-	UIPreferences UIPreferences
+	Workspace string
+	Name      string
 }
 
-// updateWorkspace updates the name and the displayed properties of a workspace.
+// updateWorkspace updates the name of a workspace.
 func (state *State) updateWorkspace(n notification) string {
 	e := UpdateWorkspace{}
 	if !decodeNotification(n, &e) {
@@ -1883,7 +1883,6 @@ func (state *State) updateWorkspace(n notification) string {
 	}
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Name = e.Name
-		w.UIPreferences = e.UIPreferences
 	})
 	dispatchNotification(state, e)
 	return ws.organization.ID
