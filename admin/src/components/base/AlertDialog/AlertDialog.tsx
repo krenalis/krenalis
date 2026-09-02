@@ -7,6 +7,7 @@ import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 interface AlertDialogProps {
 	isOpen: boolean;
 	onClose: () => void;
+	onRequestClose?: (event: Event) => void;
 	title: ReactNode;
 	actions?: ReactNode;
 	children?: ReactNode;
@@ -14,7 +15,16 @@ interface AlertDialogProps {
 	variant?: string;
 }
 
-const AlertDialog = ({ isOpen, onClose, title, actions, children, className, variant }: AlertDialogProps) => {
+const AlertDialog = ({
+	isOpen,
+	onClose,
+	onRequestClose,
+	title,
+	actions,
+	children,
+	className,
+	variant,
+}: AlertDialogProps) => {
 	const { isFullscreen } = useContext(AppContext);
 
 	let icon: ReactNode, color: string;
@@ -32,6 +42,7 @@ const AlertDialog = ({ isOpen, onClose, title, actions, children, className, var
 		<SlDialog
 			className={`alert-dialog${className ? ' ' + className : ''}${isFullscreen ? ' alert-dialog--fullscreen' : ''}`}
 			open={isOpen}
+			onSlRequestClose={onRequestClose}
 			onSlAfterHide={onClose}
 			style={{ '--alert-color': color, '--width': '600px' } as React.CSSProperties}
 		>

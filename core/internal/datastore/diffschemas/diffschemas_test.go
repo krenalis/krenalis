@@ -338,6 +338,70 @@ func TestDiff(t *testing.T) {
 			},
 		},
 		{
+			name: "One object property removed and then a scalar property added with the same name",
+			fromSchema: types.Object([]types.Property{
+				{Name: "a", Type: types.Object([]types.Property{
+					{Name: "b", Type: types.String(), Nullable: true},
+					{Name: "c", Type: types.Int(32), Nullable: true},
+				})},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "a", Type: types.String(), Nullable: true},
+			}),
+			rePaths: map[string]any{"a": nil},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "a_b"},
+				{Operation: warehouses.OperationDropColumn, Column: "a_c"},
+				{Operation: warehouses.OperationAddColumn, Column: "a", Type: types.String()},
+			},
+		},
+		{
+			name: "One nested object property removed and then a scalar property added with the same name",
+			fromSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Object([]types.Property{
+						{Name: "b", Type: types.String(), Nullable: true},
+						{Name: "c", Type: types.Int(32), Nullable: true},
+					})},
+				})},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.String(), Nullable: true},
+				})},
+			}),
+			rePaths: map[string]any{"x.a": nil},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "x_a_b"},
+				{Operation: warehouses.OperationDropColumn, Column: "x_a_c"},
+				{Operation: warehouses.OperationAddColumn, Column: "x_a", Type: types.String()},
+			},
+		},
+		{
+			name: "One nested object property removed and then an object property added with the same name",
+			fromSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Object([]types.Property{
+						{Name: "b", Type: types.String(), Nullable: true},
+						{Name: "c", Type: types.Int(32), Nullable: true},
+					})},
+				})},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Object([]types.Property{
+						{Name: "d", Type: types.String(), Nullable: true},
+					})},
+				})},
+			}),
+			rePaths: map[string]any{"x.a": nil},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "x_a_b"},
+				{Operation: warehouses.OperationDropColumn, Column: "x_a_c"},
+				{Operation: warehouses.OperationAddColumn, Column: "x_a_d", Type: types.String()},
+			},
+		},
+		{
 			name: "One property removed and then added again (with another type) at second level",
 			fromSchema: types.Object([]types.Property{
 				{Name: "x", Type: types.Object([]types.Property{
@@ -748,6 +812,68 @@ func TestDiff(t *testing.T) {
 			expectedOps: []warehouses.AlterOperation{
 				{Operation: warehouses.OperationDropColumn, Column: "foo"},
 				{Operation: warehouses.OperationRenameColumn, Column: "bar", NewColumn: "foo"},
+			},
+		},
+		{
+			name: "Object property deleted and its name reused by a renamed object property",
+			fromSchema: types.Object([]types.Property{
+				{Name: "foo", Type: types.Object([]types.Property{
+					{Name: "b", Type: types.String(), Nullable: true},
+					{Name: "c", Type: types.String(), Nullable: true},
+				})},
+				{Name: "bar", Type: types.Object([]types.Property{
+					{Name: "b", Type: types.String(), Nullable: true},
+					{Name: "c", Type: types.String(), Nullable: true},
+				})},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "foo", Type: types.Object([]types.Property{
+					{Name: "b", Type: types.String(), Nullable: true},
+					{Name: "c", Type: types.String(), Nullable: true},
+				})},
+			}),
+			rePaths: map[string]any{"foo": "bar"},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "foo_b"},
+				{Operation: warehouses.OperationDropColumn, Column: "foo_c"},
+				{Operation: warehouses.OperationRenameColumn, Column: "bar_b", NewColumn: "foo_b"},
+				{Operation: warehouses.OperationRenameColumn, Column: "bar_c", NewColumn: "foo_c"},
+			},
+		},
+		{
+			name: "Object property deleted and its name reused by a renamed object property. Within an object property",
+			fromSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "foo", Type: types.Object([]types.Property{
+						{Name: "b", Type: types.String(), Nullable: true},
+						{Name: "d", Type: types.Object([]types.Property{
+							{Name: "e", Type: types.String(), Nullable: true},
+						})},
+					})},
+					{Name: "bar", Type: types.Object([]types.Property{
+						{Name: "b", Type: types.String(), Nullable: true},
+						{Name: "d", Type: types.Object([]types.Property{
+							{Name: "e", Type: types.String(), Nullable: true},
+						})},
+					})},
+				})},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "foo", Type: types.Object([]types.Property{
+						{Name: "b", Type: types.String(), Nullable: true},
+						{Name: "d", Type: types.Object([]types.Property{
+							{Name: "e", Type: types.String(), Nullable: true},
+						})},
+					})},
+				})},
+			}),
+			rePaths: map[string]any{"x.foo": "x.bar"},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "x_foo_b"},
+				{Operation: warehouses.OperationDropColumn, Column: "x_foo_d_e"},
+				{Operation: warehouses.OperationRenameColumn, Column: "x_bar_b", NewColumn: "x_foo_b"},
+				{Operation: warehouses.OperationRenameColumn, Column: "x_bar_d_e", NewColumn: "x_foo_d_e"},
 			},
 		},
 		{
