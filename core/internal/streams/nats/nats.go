@@ -459,7 +459,7 @@ type consumer struct {
 	acks   *ackManager
 	close  struct {
 		cancel context.CancelFunc // stops shard consumption
-		closed atomic.Bool        // indicates whether Close has been called
+		closed bool               // indicates whether Close has been called
 		sync.WaitGroup
 	}
 }
@@ -491,9 +491,10 @@ func newConsumer(s *stream, topic string, size int) *consumer {
 // be called afterward. Close may be called more than once, but calls must not
 // overlap. Calls made after the first one has completed have no effect.
 func (c *consumer) Close() {
-	if c.close.closed.Swap(true) {
+	if c.close.closed {
 		return
 	}
+	c.close.closed = true
 	c.close.cancel()
 	c.close.Wait()
 	c.acks.Close()
