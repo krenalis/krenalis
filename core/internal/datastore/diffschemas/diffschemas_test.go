@@ -815,6 +815,36 @@ func TestDiff(t *testing.T) {
 			},
 		},
 		{
+			name: "Object property deleted and its name reused by a differently shaped renamed object property",
+			fromSchema: types.Object([]types.Property{
+				{Name: "foo", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.String(), Nullable: true},
+					{Name: "b", Type: types.String(), Nullable: true},
+				})},
+				{Name: "bar", Type: types.Object([]types.Property{
+					{Name: "c", Type: types.String(), Nullable: true},
+					{Name: "d", Type: types.Object([]types.Property{
+						{Name: "e", Type: types.String(), Nullable: true},
+					})},
+				})},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "foo", Type: types.Object([]types.Property{
+					{Name: "c", Type: types.String(), Nullable: true},
+					{Name: "d", Type: types.Object([]types.Property{
+						{Name: "e", Type: types.String(), Nullable: true},
+					})},
+				})},
+			}),
+			rePaths: map[string]any{"foo": "bar"},
+			expectedOps: []warehouses.AlterOperation{
+				{Operation: warehouses.OperationDropColumn, Column: "foo_a"},
+				{Operation: warehouses.OperationDropColumn, Column: "foo_b"},
+				{Operation: warehouses.OperationRenameColumn, Column: "bar_c", NewColumn: "foo_c"},
+				{Operation: warehouses.OperationRenameColumn, Column: "bar_d_e", NewColumn: "foo_d_e"},
+			},
+		},
+		{
 			name: "Object property deleted and its name reused by a renamed object property",
 			fromSchema: types.Object([]types.Property{
 				{Name: "foo", Type: types.Object([]types.Property{
