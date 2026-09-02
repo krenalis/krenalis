@@ -233,6 +233,12 @@ func Test_ObjectOf_Errors(t *testing.T) {
 		t.Errorf("expected RepeatedPropertyNameError error, got a %T error", err)
 	}
 
+	// Test invalid display name encoding.
+	_, err = ObjectOf([]Property{{Name: "firstName", Type: String(), DisplayName: string([]byte{0xff})}})
+	if err == nil || err.Error() != "invalid UTF-8 encoding" {
+		t.Errorf("expected invalid UTF-8 encoding error, got %v", err)
+	}
+
 }
 
 func Test_Unique(t *testing.T) {
@@ -529,6 +535,9 @@ func sameProperty(p1, p2 Property) error {
 	}
 	if p1.Nullable != p2.Nullable {
 		return fmt.Errorf("expected property key 'nullable' with value %t, got %t", p1.Nullable, p2.Nullable)
+	}
+	if p1.DisplayName != p2.DisplayName {
+		return fmt.Errorf("expected property display name %q, got %q", p1.DisplayName, p2.DisplayName)
 	}
 	if p1.Description != p2.Description {
 		return fmt.Errorf("expected property description %q, got %q", p1.Description, p2.Description)

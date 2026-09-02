@@ -146,6 +146,7 @@ type Property struct {
 	UpdateRequired bool
 	ReadOptional   bool
 	Nullable       bool
+	DisplayName    string
 	Description    string
 }
 
@@ -367,6 +368,10 @@ func ObjectOf(properties []Property) (Type, error) {
 		} else if !property.Type.Valid() {
 			return Type{}, errors.New("invalid property type")
 		}
+		displayName, err := normalizedUTF8(property.DisplayName)
+		if err != nil {
+			return Type{}, err
+		}
 		description, err := normalizedUTF8(property.Description)
 		if err != nil {
 			return Type{}, err
@@ -379,6 +384,7 @@ func ObjectOf(properties []Property) (Type, error) {
 			UpdateRequired: property.UpdateRequired,
 			ReadOptional:   property.ReadOptional,
 			Nullable:       property.Nullable,
+			DisplayName:    displayName,
 			Description:    description,
 		}
 	}
