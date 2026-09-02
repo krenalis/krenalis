@@ -10,8 +10,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
-
-	"github.com/google/uuid"
+	"uuid"
 )
 
 // Categories represents connector categories.
@@ -149,7 +148,7 @@ func (role Role) String() string {
 // UUID returns a random version 4 UUID. For example, it can be used as an
 // idempotency key.
 func UUID() string {
-	return uuid.NewString()
+	return uuid.NewV4().String()
 }
 
 var errorQuoteReplacer = strings.NewReplacer("»", "≫")

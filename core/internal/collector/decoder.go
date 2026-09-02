@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+	"uuid"
 
 	"github.com/krenalis/krenalis/core/internal/events"
 	"github.com/krenalis/krenalis/tools/base58"
@@ -28,7 +29,6 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/LumenResearch/uasurfer"
-	"github.com/google/uuid"
 	"github.com/oschwald/maxminddb-golang/v2"
 	"github.com/relvacode/iso8601"
 	"golang.org/x/text/unicode/norm"
@@ -559,7 +559,7 @@ func (d *decoder) decodeEvent(connectionId string, fallbackToRequestIP bool) (ev
 			}
 			return nil, errors.BadRequest("either 'anonymousId' or 'userId' properties are required for a %s event", typ)
 		}
-		event["anonymousId"] = uuid.NewString()
+		event["anonymousId"] = uuid.NewV4().String()
 	}
 
 	// Category.
@@ -700,7 +700,7 @@ func (d *decoder) decodeEvent(connectionId string, fallbackToRequestIP bool) (ev
 
 	// Message ID.
 	if _, ok := event["messageId"]; !ok {
-		event["messageId"] = "krenalis-" + uuid.NewString()
+		event["messageId"] = "krenalis-" + uuid.NewV4().String()
 	}
 
 	// Name.

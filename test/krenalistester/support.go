@@ -13,13 +13,13 @@ import (
 	"slices"
 	"strconv"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/tools/backoff"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 
-	"github.com/google/uuid"
 	"github.com/krenalis/analytics-go"
 )
 
