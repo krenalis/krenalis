@@ -815,7 +815,7 @@ func TestDiff(t *testing.T) {
 			},
 		},
 		{
-			name: "Object property deleted and its name reused by a differently shaped renamed object property",
+			name: "Deleted object property name reused by a renamed object property whose shape differs from the deleted one",
 			fromSchema: types.Object([]types.Property{
 				{Name: "foo", Type: types.Object([]types.Property{
 					{Name: "a", Type: types.String(), Nullable: true},
