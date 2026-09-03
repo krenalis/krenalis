@@ -68,7 +68,7 @@ type Core struct {
 	state             *state.State
 	datastore         *datastore.Datastore
 	connections       *connections.Connections
-	metrics           *metrics.Collector
+	metrics           *metrics.Metrics
 	collector         *collector.Collector
 	functionProvider  transformers.FunctionProvider
 	pipelineCleaner   *pipelineCleaner
@@ -329,7 +329,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}()
 
 	// Init the datastore.
-	core.datastore, err = datastore.New(core.state, core.metrics)
+	core.datastore, err = datastore.New(core.state, &core.metrics.Pipelines)
 	if err != nil {
 		return nil, fmt.Errorf("core: cannot init the datastore: %s", err)
 	}
@@ -1366,7 +1366,7 @@ func (core *Core) endLiveRun(ctx context.Context, run *state.PipelineRun, reason
 	}
 
 	// Waits for the metrics to be saved.
-	core.metrics.WaitStore()
+	core.metrics.Pipelines.WaitStore()
 
 	n := state.EndPipelineRun{
 		ID:       run.ID,
@@ -1463,11 +1463,11 @@ func (core *Core) onRunPipeline(n state.RunPipeline) {
 
 // pipelineError represents a pipeline error.
 type pipelineError struct {
-	step metrics.Step
+	step metrics.PipelineStep
 	err  error
 }
 
-func newPipelineError(step metrics.Step, err error) *pipelineError {
+func newPipelineError(step metrics.PipelineStep, err error) *pipelineError {
 	return &pipelineError{step, err}
 }
 
@@ -1773,12 +1773,17 @@ Identifiers:
 
 // executeIdentityResolution executes the Identity Resolution, not returning
 // until it has completed (with success or with an operation error).
-func (core *Core) executeIdentityResolution(workspace, opID string) {
+func (core *Core) executeIdentityResolution(workspaceID, opID string) {
 	ctx := core.close.ctx
-	store, ok := core.datastore.Store(workspace)
+	store, ok := core.datastore.Store(workspaceID)
 	if !ok {
 		return
 	}
+	workspace, ok := core.state.Workspace(workspaceID)
+	if !ok {
+		return
+	}
+	organizationID := workspace.Organization().ID
 	// Keep calling 'ResolveIdentities' until it (1) returns successfully,
 	// (2) returns with a *warehouses.OperationError, or (3) the context is
 	// canceled.
@@ -1814,32 +1819,73 @@ func (core *Core) executeIdentityResolution(workspace, opID string) {
 		}
 		break
 	}
+	if ctx.Err() != nil {
+		return
+	}
 	if unknownErrorMsg != "" {
 		slog.Info("Identity resolution status checked successfully")
 		unknownErrorMsg = ""
 	}
-	nEnd := state.EndIdentityResolution{
-		Workspace: workspace,
+	// Count the currently visible profiles even if the Identity Resolution ended
+	// with an OperationError, because the profiles view may already have been
+	// replaced.
+	var profileCount int
+	bo = backoff.New(200)
+	bo.SetCap(5 * time.Minute)
+	for bo.Next(ctx) {
+		var err error
+		profileCount, err = store.CountProfiles(ctx)
+		if err == nil {
+			break
+		}
+		if msg := err.Error(); unknownErrorMsg != msg {
+			slog.Warn("failed to count profiles after Identity Resolution; retrying", "error", err)
+			unknownErrorMsg = msg
+		}
+	}
+	if ctx.Err() != nil {
+		return
+	}
+	if unknownErrorMsg != "" {
+		slog.Info("Profiles counted successfully after Identity Resolution")
+	}
+	n := state.EndIdentityResolution{
+		Workspace: workspaceID,
 		ID:        opID,
-		EndTime:   time.Now().UTC(),
 	}
 	bo.Reset()
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
-			query := "UPDATE workspaces SET ir_id = NULL, ir_end_time = $1 WHERE id = $2 AND ir_id = $3"
-			res, err := tx.Exec(ctx, query, nEnd.EndTime, nEnd.Workspace, nEnd.ID)
+			// Lock the workspace to serialize completion with every other operation.
+			var pending bool
+			query := `SELECT COALESCE(ir_id = $1, false)
+				FROM workspaces
+				WHERE id = $2 AND organization = $3
+				FOR UPDATE`
+			err := tx.QueryRow(ctx, query, n.ID, n.Workspace, organizationID).Scan(&pending)
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					return nil, nil
+				}
+				return nil, err
+			}
+			if !pending {
+				return nil, nil
+			}
+			n.EndTime = time.Now().UTC()
+			// Record the resulting profile count in the same transaction that completes
+			// the Identity Resolution.
+			err = core.metrics.Usage.RecordProfileObservation(ctx, tx, organizationID, n.Workspace, profileCount, n.EndTime)
 			if err != nil {
 				return nil, err
 			}
-			if res.RowsAffected() == 0 {
-				// This happens in cases where the query has been executed
-				// more than once (because an error occurred), but in fact
-				// the database has already been modified, so we don't want
-				// to send the notification more than once.
-				return nil, nil
+			query = "UPDATE workspaces SET ir_id = NULL, ir_end_time = $1 WHERE id = $2 AND organization = $3 AND ir_id = $4"
+			_, err = tx.Exec(ctx, query, n.EndTime, n.Workspace, organizationID, n.ID)
+			if err != nil {
+				return nil, err
 			}
-			return nEnd, nil
+			return n, nil
 		})
 		if err != nil {
 			if ctx.Err() != nil {
@@ -2042,10 +2088,9 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema
 				return nil, errors.Unprocessable(ConnectionNotExist, "a primary source does not exist")
 			}
 		}
-		// Check that there are no other operations in progress on the
-		// warehouse.
+		// Lock the workspace and check that no other warehouse operation is in progress.
 		var ongoingOp bool
-		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
+		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1 FOR UPDATE`
 		err := tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -2089,7 +2134,7 @@ func (core *Core) startIdentityResolution(ctx context.Context, ws string) error 
 	}
 	err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		var ongoingOp bool
-		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
+		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1 FOR UPDATE`
 		err := tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
 		if err != nil {
 			return nil, err

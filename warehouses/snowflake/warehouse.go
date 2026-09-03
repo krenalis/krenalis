@@ -190,6 +190,20 @@ func (warehouse *Snowflake) ColumnTypeDescription(t types.Type) (string, error) 
 	return typeToSnowflakeType(t), nil
 }
 
+// Count returns the number of rows in table.
+func (warehouse *Snowflake) Count(ctx context.Context, table string) (int, error) {
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return 0, snowflake(err)
+	}
+	var count int
+	err = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM `+quoteIdent(table)).Scan(&count)
+	if err != nil {
+		return 0, snowflake(err)
+	}
+	return count, nil
+}
+
 // Delete deletes rows from the specified table that match the provided where
 // expression.
 func (warehouse *Snowflake) Delete(ctx context.Context, table string, where warehouses.Expr) error {

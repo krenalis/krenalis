@@ -327,6 +327,20 @@ CREATE TABLE pipelines_metrics (
     PRIMARY KEY (pipeline, timeslot)
 );
 
+CREATE TABLE usage_metrics (
+    organization varchar(12) NOT NULL REFERENCES organizations ON DELETE CASCADE,
+    workspace varchar(12) NOT NULL,
+    day date NOT NULL,
+    profiles bigint NOT NULL DEFAULT 0,
+    profile_seconds bigint NOT NULL DEFAULT 0,
+    observed_at time without time zone,
+    events bigint NOT NULL DEFAULT 0,
+    PRIMARY KEY (organization, workspace, day)
+);
+
+CREATE INDEX usage_metrics_organization_day_idx
+    ON usage_metrics (organization, day);
+
 CREATE INDEX pipelines_metrics_workspace_timeslot_idx ON pipelines_metrics (workspace, timeslot);
 CREATE INDEX pipelines_metrics_connection_timeslot_idx ON pipelines_metrics (connection, timeslot);
 CREATE INDEX pipelines_metrics_timeslot_idx ON pipelines_metrics (timeslot);

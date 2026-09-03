@@ -150,6 +150,17 @@ func (warehouse *PostgreSQL) ColumnTypeDescription(t types.Type) (string, error)
 	return typeToPostgresType(t), nil
 }
 
+// Count returns the number of rows in table.
+func (warehouse *PostgreSQL) Count(ctx context.Context, table string) (int, error) {
+	pool, _, err := warehouse.connectionPool(ctx, false)
+	if err != nil {
+		return 0, err
+	}
+	var count int
+	err = pool.QueryRow(ctx, `SELECT COUNT(*) FROM `+quoteIdent(table)).Scan(&count)
+	return count, err
+}
+
 // Delete deletes rows from the specified table that match the provided where
 // expression.
 func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where warehouses.Expr) error {

@@ -200,6 +200,9 @@ type Warehouse interface {
 	// information, maximum character count, enum values, etc...).
 	ColumnTypeDescription(t types.Type) (string, error)
 
+	// Count returns the number of rows in table.
+	Count(ctx context.Context, table string) (int, error)
+
 	// Delete deletes rows from the specified table that match the provided where
 	// expression. Returns an error if the expression is nil.
 	Delete(ctx context.Context, table string, where Expr) error

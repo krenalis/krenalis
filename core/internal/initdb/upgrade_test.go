@@ -6,6 +6,7 @@ package initdb
 
 import (
 	"testing"
+	"time"
 
 	"github.com/krenalis/krenalis/core/internal/db"
 )
@@ -158,6 +159,7 @@ func TestUpgrade(t *testing.T) {
 	assertPipelineFiltersUpgraded(t, database)
 	assertPipelineMetricsUpgrade(t, database)
 	assertPipelineMetricsColumnOrder(t, database)
+	assertUsageMetricsUpgrade(t, database)
 	assertStateRequestSyncSchemaUpgraded(t, database)
 	assertDiscontinuedFunctionsUpgrade(t, database)
 	assertRateLimitLeaseFunction(t, database)
@@ -168,6 +170,82 @@ func TestUpgrade(t *testing.T) {
 	}
 	assertPipelineFiltersUpgraded(t, database)
 	assertPipelineMetricsSurvivePipelineDelete(t, database)
+	assertUsageMetricsUpgrade(t, database)
+}
+
+// assertUsageMetricsUpgrade verifies the schema and defaults of the upgraded
+// usage metrics table.
+func assertUsageMetricsUpgrade(t *testing.T, database *db.DB) {
+	t.Helper()
+	assertConstraintExists(t, database, "usage_metrics", "usage_metrics_pkey")
+	for _, constraint := range []string{
+		"usage_metrics_profile_values",
+		"usage_metrics_events",
+	} {
+		assertConstraintDoesNotExist(t, database, "usage_metrics", constraint)
+	}
+	assertIndexExists(t, database, "usage_metrics_organization_day_idx")
+
+	hasWorkspaceFK, err := database.QueryExists(t.Context(), `
+		SELECT FROM pg_constraint AS con
+		JOIN pg_attribute AS attr
+			ON attr.attrelid = con.conrelid AND attr.attnum = ANY(con.conkey)
+		WHERE con.conrelid = 'usage_metrics'::regclass
+			AND con.contype = 'f'
+			AND attr.attname = 'workspace'`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasWorkspaceFK {
+		t.Fatal("expected usage_metrics.workspace to have no foreign key")
+	}
+
+	const count = 3_000_000_000
+	_, err = database.Exec(t.Context(), `
+		INSERT INTO usage_metrics
+			(organization, workspace, day, profiles,
+			 profile_seconds, observed_at, events)
+		VALUES ('111111111111', '222222222222', '2026-08-01', $1, $1, '12:00:00', $1)
+		ON CONFLICT (organization, workspace, day) DO NOTHING`, count)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var profileCount, profileSeconds, ingestedEvents int
+	err = database.QueryRow(t.Context(), `
+		SELECT profiles, profile_seconds, events
+		FROM usage_metrics
+		WHERE organization = '111111111111'
+			AND workspace = '222222222222'
+			AND day = '2026-08-01'`).Scan(&profileCount, &profileSeconds, &ingestedEvents)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if profileCount != count || profileSeconds != count || ingestedEvents != count {
+		t.Fatalf("expected 64-bit usage counts %d, got profiles=%d profile-seconds=%d events=%d",
+			count, profileCount, profileSeconds, ingestedEvents)
+	}
+
+	_, err = database.Exec(t.Context(), `
+		INSERT INTO usage_metrics (organization, workspace, day, events)
+		VALUES ('111111111111', '333333333333', '2026-08-01', 1)
+		ON CONFLICT (organization, workspace, day) DO NOTHING`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var observedAt *time.Time
+	err = database.QueryRow(t.Context(), `
+		SELECT profiles, profile_seconds, observed_at
+		FROM usage_metrics
+		WHERE organization = '111111111111'
+			AND workspace = '333333333333'
+			AND day = '2026-08-01'`).Scan(&profileCount, &profileSeconds, &observedAt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if profileCount != 0 || profileSeconds != 0 || observedAt != nil {
+		t.Fatalf("expected event-only usage defaults, got profiles=%d profile-seconds=%d observed-at=%v",
+			profileCount, profileSeconds, observedAt)
+	}
 }
 
 func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
