@@ -230,6 +230,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		}
 
 		if v, ok := rePaths[keptPath]; ok && v == nil {
+			columnBase := pathToColumn(keptPath)
 			if renamed {
 				// New properties with the same name of a renamed property. They
 				// appear in "rePaths" (the key is the name of the created
@@ -245,17 +246,25 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 				// New properties with the same name as a deleted property. They
 				// appear in "rePaths" (the key is the name of the created
 				// property, the value is nil).
-				operations = append(operations,
-					warehouses.AlterOperation{
+				if oldProp.Type.Kind() == types.ObjectKind {
+					for _, p := range propertyPaths(oldProp.Type) {
+						operations = append(operations, warehouses.AlterOperation{
+							Operation: warehouses.OperationDropColumn,
+							Column:    columnBase + "_" + pathToColumn(p),
+						})
+					}
+				} else {
+					operations = append(operations, warehouses.AlterOperation{
 						Operation: warehouses.OperationDropColumn,
-						Column:    pathToColumn(keptPath),
+						Column:    columnBase,
 					})
+				}
 			}
 			if newProp.Type.Kind() == types.ObjectKind {
 				for _, c := range util.PropertiesToColumns(newProp.Type.Properties()) {
 					operations = append(operations, warehouses.AlterOperation{
 						Operation: warehouses.OperationAddColumn,
-						Column:    pathToColumn(appendPath(path, keptPath)) + "_" + c.Name,
+						Column:    columnBase + "_" + c.Name,
 						Type:      c.Type,
 					})
 				}
@@ -263,7 +272,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 				operations = append(operations,
 					warehouses.AlterOperation{
 						Operation: warehouses.OperationAddColumn,
-						Column:    pathToColumn(keptPath),
+						Column:    columnBase,
 						Type:      newProp.Type,
 					})
 			}
@@ -274,12 +283,26 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		// They appear in "rePaths" (the key is the name of the property that
 		// "occupied the name", the value is the name of the deleted property).
 		if oldPath, ok := rePaths[keptPath].(string); ok {
-			operations = append(operations, warehouses.AlterOperation{
-				Operation: warehouses.OperationDropColumn,
-				Column:    pathToColumn(keptPath),
-			})
-			if !types.Equal(oldProp.Type, newProp.Type) {
-				return nil, fmt.Errorf("error on property %q: type changes are not supported", appendPath(path, oldProp.Name))
+			if oldProp.Type.Kind() == types.ObjectKind {
+				for _, p := range propertyPaths(oldProp.Type) {
+					operations = append(operations, warehouses.AlterOperation{
+						Operation: warehouses.OperationDropColumn,
+						Column:    pathToColumn(appendPath(keptPath, p)),
+					})
+				}
+			} else {
+				operations = append(operations, warehouses.AlterOperation{
+					Operation: warehouses.OperationDropColumn,
+					Column:    pathToColumn(keptPath),
+				})
+			}
+			// Compare the new type with the type of the property renamed from
+			// oldPath, rather than with the deleted property whose name was
+			// reused.
+			oldName := propPathToName(oldPath)
+			renamedProp, _ := oldProperties.ByName(oldName)
+			if !types.Equal(renamedProp.Type, newProp.Type) {
+				return nil, fmt.Errorf("error on property %q (renamed to %q): type changes are not supported", appendPath(path, oldName), keptPath)
 			}
 			if newProp.Type.Kind() == types.ObjectKind {
 				for _, c := range util.PropertiesToColumns(newProp.Type.Properties()) {

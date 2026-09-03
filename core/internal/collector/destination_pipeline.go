@@ -94,7 +94,7 @@ func newDestinationPipeline(pipeline *state.Pipeline, schema types.Type, provide
 		queue:          queue,
 	}
 	if t := dp.transformation; t.Mapping != nil || t.Function != nil {
-		dp.transformer, _ = transformers.New(pipeline, provider, nil)
+		dp.transformer, _ = transformers.New(pipeline.Organization().ID, pipeline, provider, nil)
 	}
 	return dp
 }

@@ -10,8 +10,8 @@ import (
 	"slices"
 	"strings"
 	"unicode"
+	"uuid"
 
-	"github.com/google/uuid"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -61,10 +61,10 @@ func AsRole(t Type, role Role) Type {
 // canonical string form without uppercase letters. The boolean return value
 // reports whether s represent a UUID or not.
 func DecodeUUID(s []byte) (string, bool) {
-	id, err := uuid.FromBytes(s)
-	if err != nil {
+	if len(s) != len(uuid.UUID{}) {
 		return "", false
 	}
+	id := uuid.UUID(s)
 	return id.String(), true
 }
 

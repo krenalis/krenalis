@@ -1,5 +1,72 @@
 import { getHierarchicalPaths, TransformedPipeline, FlatSchema } from '../../../lib/core/pipeline';
+import TransformedConnection from '../../../lib/core/connection';
 import { SampleIdentifiers } from './Pipeline.types';
+
+type PipelineObjectLabelMode = 'compact' | 'full' | 'plural';
+
+const PIPELINE_OBJECT_LABELS: Record<PipelineObjectLabelMode, Record<string, [string, string]>> = {
+	compact: {
+		'source:sdk': ['Event schema', 'Profile schema'],
+		'source:webhook': ['Event schema', 'Profile schema'],
+		'source:database': ['Database user schema', 'Profile schema'],
+		'source:file': ['File user schema', 'Profile schema'],
+		'source:application': ['Application user schema', 'Profile schema'],
+		'destination:event': ['Event schema', 'Sending event parameters'],
+		'destination:database': ['Profile schema', 'Database table schema'],
+		'destination:application': ['Profile schema', 'Application user schema'],
+	},
+	full: {
+		'source:sdk': ['Event', 'Profile'],
+		'source:webhook': ['Event', 'Profile'],
+		'source:database': ['Database user', 'Profile'],
+		'source:file': ['File user', 'Profile'],
+		'source:application': ['Application user', 'Profile'],
+		'destination:event': ['Event', 'Sending event'],
+		'destination:database': ['Profile', 'Database table'],
+		'destination:application': ['Profile', 'Application user'],
+	},
+	plural: {
+		'source:sdk': ['Events', 'Profiles'],
+		'source:webhook': ['Events', 'Profiles'],
+		'source:database': ['Database users', 'Profiles'],
+		'source:file': ['File users', 'Profiles'],
+		'source:application': ['Application users', 'Profiles'],
+		'destination:event': ['Events', 'Sending events'],
+		'destination:database': ['Profiles', 'Database tables'],
+		'destination:application': ['Profiles', 'Application users'],
+	},
+};
+
+// pipelineObjectLabels reports the input and output labels for a pipeline.
+const pipelineObjectLabels = (
+	connection: TransformedConnection,
+	pipeline: TransformedPipeline,
+	mode: PipelineObjectLabelMode = 'compact',
+): [string, string] => {
+	let scenario: string;
+
+	if (connection.isSource) {
+		if (connection.isSDK) {
+			scenario = 'source:sdk';
+		} else if (connection.isWebhook) {
+			scenario = 'source:webhook';
+		} else if (connection.isDatabase) {
+			scenario = 'source:database';
+		} else if (connection.isFileStorage || connection.isFile) {
+			scenario = 'source:file';
+		} else {
+			scenario = 'source:application';
+		}
+	} else if (pipeline.target === 'Event') {
+		scenario = 'destination:event';
+	} else if (connection.isDatabase) {
+		scenario = 'destination:database';
+	} else {
+		scenario = 'destination:application';
+	}
+
+	return PIPELINE_OBJECT_LABELS[mode][scenario];
+};
 
 const updateMappingProperty = (
 	pipeline: TransformedPipeline,
@@ -137,4 +204,10 @@ const getSampleIdentifiers = (sample: Record<string, any>): SampleIdentifiers | 
 	};
 };
 
-export { updateMappingProperty, updateMappingPropertyError, checkIfPropertyExists, getSampleIdentifiers };
+export {
+	updateMappingProperty,
+	updateMappingPropertyError,
+	checkIfPropertyExists,
+	getSampleIdentifiers,
+	pipelineObjectLabels,
+};

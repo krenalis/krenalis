@@ -14,6 +14,7 @@ import (
 	"slices"
 	"testing"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/test/snowflaketester"
 	"github.com/krenalis/krenalis/test/testimages"
@@ -25,7 +26,6 @@ import (
 	_ "github.com/krenalis/krenalis/warehouses/postgresql"
 	_ "github.com/krenalis/krenalis/warehouses/snowflake"
 
-	"github.com/google/uuid"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -559,7 +559,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			}
 
 			// Open the warehouse.
-			dw := platform.New(newTestSettingsLoader(settings))
+			dw := platform.New(newTestSettingsLoader(settings), nil)
 
 			ctx := context.Background()
 
@@ -624,10 +624,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					for _, id := range test.identifiers {
 						identifiers = append(identifiers, columnByName[id])
 					}
-					opID, err := uuid.NewUUID()
-					if err != nil {
-						t.Fatal(err)
-					}
+					opID := uuid.New()
 					// Call ResolveIdentities several times, just to do a
 					// minimal idempotency test.
 					for range 5 {

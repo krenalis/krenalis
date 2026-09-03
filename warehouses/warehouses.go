@@ -8,18 +8,18 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net"
 	"net/netip"
 	"reflect"
 	"slices"
 	"strconv"
 	"time"
 	"unicode/utf8"
+	"uuid"
 
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
-
-	"github.com/google/uuid"
 )
 
 // Platform represents a warehouse platform.
@@ -36,9 +36,19 @@ func (platform Platform) ReflectType() reflect.Type {
 	return platform.ct
 }
 
-// New returns a new data warehouse instance.
-func (platform Platform) New(settings SettingsLoader) Warehouse {
-	out := platform.newFunc.Call([]reflect.Value{reflect.ValueOf(settings)})
+// New returns a new data warehouse instance. If dialWith is provided, it is
+// used to establish network connections; otherwise, the warehouse uses its own
+// dialer.
+func (platform Platform) New(settings SettingsLoader, dialWith DialWith) Warehouse {
+	if dialWith == nil {
+		dialWith = func(dial DialFunc) DialFunc {
+			if dial != nil {
+				return dial
+			}
+			return new(net.Dialer).DialContext
+		}
+	}
+	out := platform.newFunc.Call([]reflect.Value{reflect.ValueOf(settings), reflect.ValueOf(dialWith)})
 	d, _ := reflect.TypeAssert[Warehouse](out[0])
 	return d
 }
@@ -49,8 +59,17 @@ type SettingsLoader interface {
 	Load(ctx context.Context, dst any) error
 }
 
+type (
+	// A DialFunc establishes an outbound network connection to the given address.
+	DialFunc = func(ctx context.Context, network, address string) (net.Conn, error)
+
+	// A DialWith wraps the dial function of a warehouse, returning the dial
+	// function to be used in its place.
+	DialWith = func(dial DialFunc) DialFunc
+)
+
 // NewFunc represents functions that create new warehouse platform instance.
-type NewFunc[T Warehouse] func(SettingsLoader) T
+type NewFunc[T Warehouse] func(SettingsLoader, DialWith) T
 
 // AlterOperation represents an operation that alters the columns of the profile
 // tables.

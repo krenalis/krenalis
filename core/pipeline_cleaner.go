@@ -138,7 +138,12 @@ func (c *pipelineCleaner) complete(f func() error) error {
 //   - The transformation type has changed from function-based to mapping-based.
 //   - The function has switched between JavaScript and Python.
 func (c *pipelineCleaner) deleteDiscontinuedFunctions() {
-	var ids, deleted []string
+	type function struct {
+		id           string
+		organization string
+	}
+	var functions []function
+	var deleted []string
 	var d = 2 * time.Second // initial waiting time.
 	timer := time.NewTimer(d)
 	for {
@@ -150,8 +155,9 @@ func (c *pipelineCleaner) deleteDiscontinuedFunctions() {
 		d = functionDeletionInterval
 		err := c.complete(func() error {
 			// Read the functions. These are the discontinued ones from over ten
-			// minutes ago, with no pipelines still using them.
-			rows, err := c.core.db.Query(c.close.ctx, "SELECT f.id\n"+
+			// minutes ago, with no pipelines still using them. The organization
+			// is read as empty when it has been deleted in the meantime.
+			rows, err := c.core.db.Query(c.close.ctx, "SELECT f.id, COALESCE(f.organization, '')\n"+
 				"FROM discontinued_functions AS f\n"+
 				"LEFT JOIN pipelines_runs AS e ON f.id = e.function AND e.end_time IS NULL\n"+
 				"WHERE f.discontinued_at < $1 AND e.id IS NULL",
@@ -159,28 +165,28 @@ func (c *pipelineCleaner) deleteDiscontinuedFunctions() {
 			if err != nil {
 				return err
 			}
-			ids = ids[:0]
+			functions = functions[:0]
 			for rows.Next() {
-				var id string
-				if err := rows.Scan(&id); err != nil {
+				var fn function
+				if err := rows.Scan(&fn.id, &fn.organization); err != nil {
 					break
 				}
-				ids = append(ids, id)
+				functions = append(functions, fn)
 			}
 			if err = rows.Err(); err != nil {
 				return err
 			}
-			if len(ids) == 0 {
+			if len(functions) == 0 {
 				return nil
 			}
 			// Delete the functions.
 			deleted = deleted[:0]
-			for _, id := range ids {
-				err = c.functionProvider.Delete(c.close.ctx, id)
+			for _, fn := range functions {
+				err = c.functionProvider.Delete(c.close.ctx, fn.organization, fn.id)
 				if err != nil {
-					return fmt.Errorf("deleting function %q: %s", id, err)
+					return fmt.Errorf("deleting function %q: %s", fn.id, err)
 				}
-				deleted = append(deleted, id)
+				deleted = append(deleted, fn.id)
 			}
 			if len(deleted) == 0 {
 				return nil

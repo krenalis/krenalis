@@ -326,6 +326,25 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsWorkspaceTimeslotIndex + ` ON pipelines_metrics (workspace, timeslot)`,
 			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsConnectionTimeslotIndex + ` ON pipelines_metrics (connection, timeslot)`,
 			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsTimeslotIndex + ` ON pipelines_metrics (timeslot)`,
+			`DO $$
+				BEGIN
+					IF NOT EXISTS (
+						SELECT FROM pg_attribute
+						WHERE attrelid = 'discontinued_functions'::regclass
+							AND attname = 'organization'
+							AND NOT attisdropped
+					) THEN
+						ALTER TABLE discontinued_functions
+							ADD COLUMN organization varchar(12) REFERENCES organizations ON DELETE SET NULL;
+
+						ALTER TABLE discontinued_functions ADD COLUMN discontinued_at_reordered timestamp(0);
+						UPDATE discontinued_functions SET discontinued_at_reordered = discontinued_at;
+						ALTER TABLE discontinued_functions DROP COLUMN discontinued_at;
+						ALTER TABLE discontinued_functions
+							RENAME COLUMN discontinued_at_reordered TO discontinued_at;
+						ALTER TABLE discontinued_functions ALTER COLUMN discontinued_at SET NOT NULL;
+					END IF;
+				END $$`,
 			organizationConnectorReferencesView,
 			nodeIDUpgrade,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'InviteMember' AFTER 'EndPipelineRun'`,
@@ -335,6 +354,41 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateConsentPurpose'`,
 			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents varchar(100)[] NOT NULL DEFAULT '{}'`,
 			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents_operator varchar(3) NOT NULL DEFAULT 'and' CHECK (required_consents_operator IN ('and', 'or'))`,
+			`UPDATE pipelines
+				SET filter = regexp_replace(
+					(
+						CASE
+							WHEN filter ? 'logical'
+								AND filter ? 'conditions'
+								AND NOT (filter ? 'operator')
+								AND NOT (filter ? 'rules')
+							THEN jsonb_build_object(
+								'operator', filter->'logical',
+								'rules', (
+									SELECT COALESCE(
+										jsonb_agg(rule ORDER BY position),
+										'[]'::jsonb
+									)
+									FROM jsonb_array_elements(filter->'conditions') WITH ORDINALITY AS rules(rule, position)
+								)
+							)
+							ELSE filter
+						END
+					)::text,
+					'"operator"[[:space:]]*:[[:space:]]*"OpIsNotBetween"',
+					'"operator":"IsNotBetween"',
+					'g'
+				)::jsonb
+				WHERE filter IS NOT NULL
+					AND (
+						(
+							filter ? 'logical'
+							AND filter ? 'conditions'
+							AND NOT (filter ? 'operator')
+							AND NOT (filter ? 'rules')
+						)
+						OR filter::text ~ '"operator"[[:space:]]*:[[:space:]]*"OpIsNotBetween"'
+					)`,
 			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS passed_6 integer NOT NULL DEFAULT 0`,
 			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS failed_6 integer NOT NULL DEFAULT 0`,
 			`ALTER TABLE pipelines_metrics ALTER COLUMN passed_6 DROP DEFAULT`,

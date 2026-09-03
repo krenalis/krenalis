@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/warehouses"
 )
 
@@ -50,51 +51,103 @@ type Query struct {
 }
 
 // convertWhere converts a state.Where expression into a warehouses.Expr.
-// "exists" and "does not exist" operators are mapped to OpIsNotNull and
-// OpIsNull, respectively.
-func convertWhere(where *state.Where, columnFromProperty map[string]warehouses.Column) (warehouses.Expr, error) {
-	exp := warehouses.NewMultiExpr(warehouses.LogicalOperator(where.Logical), make([]warehouses.Expr, len(where.Conditions)))
-	for i, cond := range where.Conditions {
-		path := strings.Join(cond.Property, ".") // TODO(marco): How can I avoid this allocation?
-		if column, ok := columnFromProperty[path]; ok {
+// "exists" and "does not exist" operators are mapped to warehouses.OpIsNotNull
+// and warehouses.OpIsNull, respectively. For object properties, "exists"
+// matches if any descendant column is non-null, while "does not exist" matches
+// if all descendant columns are null.
+func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Column) (warehouses.Expr, error) {
+
+	if where == nil {
+		return nil, errors.New("where expression cannot be nil")
+	}
+	if where.Operator != state.OpAnd && where.Operator != state.OpOr {
+		return nil, fmt.Errorf("invalid logical operator %d in where expression", int(where.Operator))
+	}
+	if len(where.Rules) == 0 {
+		return nil, errors.New("where rules are missing")
+	}
+
+	// state.WhereLogical values match the corresponding warehouses.LogicalOperator values.
+	expr := warehouses.NewMultiExpr(
+		warehouses.LogicalOperator(where.Operator),
+		make([]warehouses.Expr, len(where.Rules)),
+	)
+
+	for i, rule := range where.Rules {
+
+		switch rule := rule.(type) {
+
+		case *state.Where:
+			if rule == nil {
+				return nil, errors.New("where group cannot be nil")
+			}
+			operand, err := convertWhere(rule, columnByProperty)
+			if err != nil {
+				return nil, err
+			}
+			expr.Operands[i] = operand
+
+		case *state.WhereCondition:
+			if rule == nil {
+				return nil, errors.New("where condition cannot be nil")
+			}
+			path := strings.Join(rule.Property, ".") // TODO(marco): How can I avoid this allocation?
+			if rule.Operator < state.OpIs || rule.Operator > state.OpDoesNotExist {
+				return nil, fmt.Errorf("invalid operator %d for property %q in where expression",
+					int(rule.Operator), path)
+			}
+			if column, ok := columnByProperty[path]; ok {
+				var op warehouses.Operator
+				switch rule.Operator {
+				case state.OpExists:
+					op = warehouses.OpIsNotNull
+				case state.OpDoesNotExist:
+					op = warehouses.OpIsNull
+				default:
+					op = warehouses.Operator(rule.Operator)
+				}
+				expr.Operands[i] = warehouses.NewBaseExpr(column, op, rule.Values...)
+				continue
+			}
+			var descendantColumns []warehouses.Column
+			n := len(path)
+			for name, column := range columnByProperty {
+				if len(name) > n && name[n] == '.' && name[:n] == path {
+					descendantColumns = append(descendantColumns, column)
+				}
+			}
+			if len(descendantColumns) == 0 {
+				return nil, fmt.Errorf("property %q does not map to any warehouse columns", path)
+			}
+			// The property is an object; apply the condition to all descendant columns.
+			var logicalOp warehouses.LogicalOperator
 			var op warehouses.Operator
-			switch cond.Operator {
+			switch rule.Operator {
 			case state.OpExists:
+				logicalOp = warehouses.OpOr
 				op = warehouses.OpIsNotNull
 			case state.OpDoesNotExist:
+				logicalOp = warehouses.OpAnd
 				op = warehouses.OpIsNull
 			default:
-				op = warehouses.Operator(cond.Operator)
+				return nil, fmt.Errorf("operator %q cannot be used with object property %q in where expression",
+					rule.Operator, path)
 			}
-			exp.Operands[i] = warehouses.NewBaseExpr(column, op, cond.Values...)
-			continue
-		}
-		// The property is an object; apply it to all sub-property columns.
-		var logical warehouses.LogicalOperator
-		var op warehouses.Operator
-		switch cond.Operator {
-		case state.OpExists:
-			logical = warehouses.OpOr
-			op = warehouses.OpIsNotNull
-		case state.OpDoesNotExist:
-			logical = warehouses.OpAnd
-			op = warehouses.OpIsNull
+			slices.SortFunc(descendantColumns, func(a, b warehouses.Column) int {
+				return cmp.Compare(a.Name, b.Name)
+			})
+			operands := make([]warehouses.Expr, len(descendantColumns))
+			for j, column := range descendantColumns {
+				operands[j] = warehouses.NewBaseExpr(column, op)
+			}
+			expr.Operands[i] = warehouses.NewMultiExpr(logicalOp, operands)
+
 		default:
-			return nil, fmt.Errorf("invalid operator %q for property %q in where expression", cond.Operator, path)
+			return nil, errors.New("unsupported where rule")
+
 		}
-		var operands []warehouses.Expr
-		for name, column := range columnFromProperty {
-			if strings.HasPrefix(name, path) && name[len(path)] == '.' {
-				operands = append(operands, warehouses.NewBaseExpr(column, op))
-			}
-		}
-		if operands == nil {
-			return nil, fmt.Errorf("property %q does not exist in where expression", path)
-		}
-		slices.SortFunc(operands, func(a, b warehouses.Expr) int {
-			return cmp.Compare(a.(*warehouses.BaseExpr).Column.Name, b.(*warehouses.BaseExpr).Column.Name)
-		})
-		exp.Operands[i] = warehouses.NewMultiExpr(logical, operands)
+
 	}
-	return exp, nil
+
+	return expr, nil
 }

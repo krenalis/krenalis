@@ -2,7 +2,7 @@
 
 # Keep in sync with the version within ".github/workflows/*.yml".
 # Keep in sync with the version within "go.mod".
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine3.24 AS build
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine3.24 AS build
 
 ARG TARGETOS
 ARG TARGETARCH

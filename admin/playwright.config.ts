@@ -39,7 +39,7 @@ export default defineConfig({
 		{
 			name: 'schema.spec.ts',
 			use: { ...devices['Desktop Chrome'] },
-			testMatch: ['tests/schema.spec.ts'],
+			testMatch: ['tests/schema.spec.ts', 'tests/schema-reordering.spec.ts'],
 		},
 		{
 			name: 'connections.spec.ts',
