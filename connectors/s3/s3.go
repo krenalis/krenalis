@@ -17,7 +17,6 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
@@ -67,11 +66,12 @@ func init() {
 
 // New returns a new connector instance for S3.
 func New(env *connectors.FileStorageEnv) (*S3, error) {
-	return &S3{env: env}, nil
+	return &S3{env: env, httpClient: newHTTPClient(env)}, nil
 }
 
 type S3 struct {
-	env *connectors.FileStorageEnv
+	env        *connectors.FileStorageEnv
+	httpClient aws.HTTPClient
 }
 
 type innerSettings struct {
@@ -218,7 +218,12 @@ func (s3 *S3) Write(ctx context.Context, p io.Reader, name, contentType string) 
 	return err
 }
 
-var httpClient = sync.OnceValue(func() aws.HTTPClient {
+// newHTTPClient returns the HTTP client the connector sends its requests with.
+//
+// TODO(Gianluca): with the new implementation (which requires a specific dialer
+// for each organization), it's no longer possible to maintain a single client.
+// Is this a problem? Are there any solutions?
+func newHTTPClient(env *connectors.FileStorageEnv) aws.HTTPClient {
 	return awsHTTP.NewBuildableClient().
 		WithTransportOptions(func(transport *http.Transport) {
 			transport.Proxy = nil
@@ -227,8 +232,9 @@ var httpClient = sync.OnceValue(func() aws.HTTPClient {
 			transport.MaxIdleConnsPerHost = maxIdleConnsPerHost
 			transport.IdleConnTimeout = idleConnTimeout
 			transport.ResponseHeaderTimeout = responseHeaderTimeout
+			transport.DialContext = env.DialWith(transport.DialContext)
 		})
-})
+}
 
 // client returns a S3 client.
 func (s3 *S3) client(s *innerSettings) *awsS3.Client {
@@ -241,7 +247,7 @@ func (s3 *S3) client(s *innerSettings) *awsS3.Client {
 				"",
 			),
 		),
-		HTTPClient: httpClient(),
+		HTTPClient: s3.httpClient,
 	}
 	return awsS3.NewFromConfig(cfg)
 }

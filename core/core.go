@@ -28,6 +28,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/db"
 	dbpkg "github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/core/internal/dialer"
 	"github.com/krenalis/krenalis/core/internal/initdb"
 	"github.com/krenalis/krenalis/core/internal/metrics"
 	"github.com/krenalis/krenalis/core/internal/requestid"
@@ -106,6 +107,7 @@ type Config struct {
 	OAuthCredentials              map[string]*OAuthCredentials
 	SentryTelemetryLevel          TelemetryLevel
 	MaxQueuedEventsPerDestination int
+	PrometheusMetricsEnabled      bool
 	DatabaseInitialization        struct {
 		// InitIfEmpty controls whether the PostgreSQL database should be
 		// initialized in case it is empty.
@@ -299,8 +301,17 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	defer func() {
 		if err != nil {
 			core.state.Close(ctx)
+			// Disable the per-organization egress counting, if it has been
+			// enabled below, once the state has stopped dispatching
+			// notifications.
+			dialer.DisableCounting()
 		}
 	}()
+
+	// Make the dialer package count the network usage of organizations.
+	if conf.PrometheusMetricsEnabled {
+		dialer.EnableCounting(core.state)
+	}
 
 	// Add the Krenalis installation ID tag to Sentry.
 	if conf.SentryTelemetryLevel != TelemetryLevelNone {
@@ -377,7 +388,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	for _, ws := range core.state.Workspaces() {
 		var dw warehouses.Warehouse
 		if ws.HasWarehouseMCPSettings() {
-			dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
+			dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
 		}
 		core.mcp[ws.ID] = dw
 	}
@@ -592,6 +603,9 @@ func (core *Core) Close(ctx context.Context) {
 	core.state.Close(ctx)
 	// Unregister the database connection pool metrics.
 	core.dbPoolMetrics.Unregister()
+	// Disable the per-organization egress counting, so that a new Core can
+	// enable it again in the same process.
+	dialer.DisableCounting()
 	// Close NATS connection.
 	_ = core.stream.Close()
 	// Close PostgreSQL connections.
@@ -1096,20 +1110,30 @@ const (
 )
 
 // TransformData transforms data using a mapping or a function transformation
-// and returns the transformed data. inSchema is the schema of data, and
-// outSchema is the schema of the transformed data. Only one of mapping and
-// transformation must be non-nil. purpose indicates the intent of the
-// transformation and can be "Import", "Create", or "Update".
+// and returns the transformed data. organization is the ID of the organization
+// performing the transformation. inSchema is the schema of data, and outSchema
+// is the schema of the transformed data. Only one of mapping and transformation
+// must be non-nil. purpose indicates the intent of the transformation and can
+// be "Import", "Create", or "Update".
+//
+// It returns an errors.NotFound error if the organization does not exist.
 //
 // It returns an errors.UnprocessableError error with code:
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
 //   - UnsupportedLanguage, if the transformation language is not supported.
-func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outSchema types.Type, transformation DataTransformation, purpose Purpose) (json.Value, error) {
+func (core *Core) TransformData(ctx context.Context, organization string, data []byte,
+	inSchema, outSchema types.Type, transformation DataTransformation, purpose Purpose) (json.Value, error) {
 
 	core.mustBeOpen()
 
 	// Validate the parameters.
+	if !IsValidID(organization) {
+		return nil, errors.BadRequest("identifier %q is not a valid organization identifier", organization)
+	}
+	if _, ok := core.state.Organization(organization); !ok {
+		return nil, errors.NotFound("organization %s does not exist", organization)
+	}
 	if !inSchema.Valid() {
 		return nil, errors.BadRequest("input schema is not valid")
 	}
@@ -1179,7 +1203,8 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 		// no need to list sub-property paths (as the behavior is the same).
 		pipeline.Transformation.InPaths = pipeline.InSchema.Properties().SortedNames()
 		pipeline.Transformation.OutPaths = pipeline.OutSchema.Properties().SortedNames()
-		provider = newTempTransformerProvider(name, pipeline.Transformation.Function.Language, pipeline.Transformation.Function.Source, core.functionProvider)
+		provider = newTempTransformerProvider(organization, name, pipeline.Transformation.Function.Language,
+			pipeline.Transformation.Function.Source, core.functionProvider)
 	default:
 		return nil, errors.BadRequest("mapping (or function) is required")
 	}
@@ -1190,7 +1215,7 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 	}
 
 	// Transform the attributes.
-	transformer, err := transformers.New(pipeline, provider, nil)
+	transformer, err := transformers.New(organization, pipeline, provider, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1833,7 +1858,7 @@ func (core *Core) onCreateWorkspace(n state.CreateWorkspace) {
 	ws, _ := core.state.Workspace(n.ID)
 	var dw warehouses.Warehouse
 	if ws.HasWarehouseMCPSettings() {
-		dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
+		dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
 	}
 	core.mcpMu.Lock()
 	core.mcp[ws.ID] = dw
@@ -1927,7 +1952,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 	ws, _ := core.state.Workspace(n.Workspace)
 	if ws.HasWarehouseMCPSettings() {
 		// Open the new warehouse.
-		newWarehouse = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
+		newWarehouse = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
 	}
 	core.mcpMu.Lock()
 	oldWarehouse = core.mcp[n.Workspace]
