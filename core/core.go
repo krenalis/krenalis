@@ -19,6 +19,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/collector"
@@ -49,7 +50,6 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/getsentry/sentry-go"
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -1976,10 +1976,7 @@ func (core *Core) removeMCPWarehouse(ws string) {
 //     not exist.
 func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema types.Type, primarySources map[string]string, operations []warehouses.AlterOperation) error {
 	core.mustBeOpen()
-	opID, err := uuid.NewUUID()
-	if err != nil {
-		return err
-	}
+	opID := uuid.New()
 	n := state.StartAlterProfileSchema{
 		Workspace:      ws,
 		ID:             opID.String(),
@@ -2008,7 +2005,7 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema
 		}
 		connQuery.WriteByte(')')
 	}
-	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+	err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		// Check if primary sources connections exist.
 		if len(primarySources) > 0 {
 			var count int
@@ -2024,7 +2021,7 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema
 		// warehouse.
 		var ongoingOp bool
 		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
-		err = tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
+		err := tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return nil, errors.NotFound("workspace %s does not exist", n.Workspace)
@@ -2059,16 +2056,13 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema
 // code OperationAlreadyExecuting.
 func (core *Core) startIdentityResolution(ctx context.Context, ws string) error {
 	core.mustBeOpen()
-	opID, err := uuid.NewUUID()
-	if err != nil {
-		return err
-	}
+	opID := uuid.New()
 	n := state.StartIdentityResolution{
 		Workspace: ws,
 		ID:        opID.String(),
 		StartTime: time.Now().UTC(),
 	}
-	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+	err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		var ongoingOp bool
 		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
 		err := tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)

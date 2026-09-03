@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/connections"
@@ -24,8 +25,6 @@ import (
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
-
-	"github.com/google/uuid"
 )
 
 // eventPipelineSchema defines the event schema for pipelines.
@@ -1583,7 +1582,7 @@ func toStateTransformation(transformation *Transformation, inSchema, outSchema t
 // transformation function.
 func transformationFunctionName(pipeline string) string {
 	if pipeline == "" {
-		return fmt.Sprintf("krenalis_preview_%s", uuid.NewString())
+		return fmt.Sprintf("krenalis_preview_%s", uuid.New())
 	}
 	now := time.Now().UTC()
 	return fmt.Sprintf("krenalis_pipeline_%s_%s-%09d", pipeline, now.Format("2006-01-02T15-04-05"), now.Nanosecond())

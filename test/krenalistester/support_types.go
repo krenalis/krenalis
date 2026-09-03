@@ -8,11 +8,10 @@ import (
 	"bytes"
 	"fmt"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
-
-	"github.com/google/uuid"
 )
 
 // These data types are copy-paste of the types defined within the APIs.
