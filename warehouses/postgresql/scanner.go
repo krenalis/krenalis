@@ -14,11 +14,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -379,7 +379,7 @@ func (s *scanner) scanArray(src any) ([]any, error) {
 		}
 		for i := range values {
 			p += 4 // skip length
-			values[i] = uuid.Must(uuid.FromBytes(data[p : p+16])).String()
+			values[i] = uuid.UUID(data[p : p+16]).String()
 			p += 16
 		}
 	case 114: // json

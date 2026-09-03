@@ -61,7 +61,7 @@ const transformSchema = (schema: ObjectType): EditableSchema | null => {
 const normalizeSchema = (schema: EditableSchema): ObjectType => {
 	const normalized: ObjectType = { kind: 'object', properties: [] };
 	for (const k in schema) {
-		if (!schema.hasOwnProperty(k)) {
+		if (!Object.prototype.hasOwnProperty.call(schema, k)) {
 			continue;
 		}
 		const property = schema[k];
@@ -80,7 +80,7 @@ const normalizeSchema = (schema: EditableSchema): ObjectType => {
 			if (!property.isEditable) {
 				p.prefilled = property.prefilled;
 				p.role = property.role;
-				p.createRequire = property.createRequired;
+				p.createRequired = property.createRequired;
 				p.updateRequired = property.updateRequired;
 			}
 			normalized.properties.push(p);
@@ -128,4 +128,43 @@ const newPropertyToEdit = (parentKey: string, indentation: number, root: string)
 	};
 };
 
-export { transformSchema, normalizeSchema, EditableSchema, EditableProperty, newPropertyToEdit };
+const getParentPropertyKey = (propertyKey: string): string => {
+	const separatorIndex = propertyKey.lastIndexOf('.');
+	return separatorIndex === -1 ? '' : propertyKey.slice(0, separatorIndex);
+};
+
+const getPropertyInsertionAnchor = (
+	schema: EditableSchema,
+	parentKey: string,
+	selectedPropertyKey?: string,
+): string | null => {
+	if (selectedPropertyKey == null || selectedPropertyKey === parentKey) {
+		return null;
+	}
+	const parentPrefix = parentKey === '' ? '' : `${parentKey}.`;
+	if (!selectedPropertyKey.startsWith(parentPrefix)) {
+		return null;
+	}
+	const directChildFragment = selectedPropertyKey.slice(parentPrefix.length).split('.')[0];
+	const directChildKey = `${parentPrefix}${directChildFragment}`;
+	if (schema[directChildKey] == null) {
+		return null;
+	}
+	let anchorKey = directChildKey;
+	for (const propertyKey of Object.keys(schema)) {
+		if (propertyKey.startsWith(`${directChildKey}.`)) {
+			anchorKey = propertyKey;
+		}
+	}
+	return anchorKey;
+};
+
+export {
+	transformSchema,
+	normalizeSchema,
+	EditableSchema,
+	EditableProperty,
+	getParentPropertyKey,
+	getPropertyInsertionAnchor,
+	newPropertyToEdit,
+};

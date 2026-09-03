@@ -56,6 +56,7 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 		OAuthCredentials:              maps.Clone(config.OAuthCredentials),
 		SentryTelemetryLevel:          config.SentryTelemetryLevel,
 		MaxQueuedEventsPerDestination: config.MaxQueuedEventsPerDestination,
+		PrometheusMetricsEnabled:      config.PrometheusMetricsEnabled,
 	}
 	conf.DatabaseInitialization.InitIfEmpty = initDBIfEmpty
 	conf.DatabaseInitialization.InitDockerMember = initDockerMember
