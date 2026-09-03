@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/connections"
@@ -24,8 +25,6 @@ import (
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
-
-	"github.com/google/uuid"
 )
 
 // eventPipelineSchema defines the event schema for pipelines.
@@ -128,8 +127,24 @@ type TransformationFunction struct {
 
 // Transformation represents a transformation.
 type Transformation struct {
-	Mapping  map[string]string       `json:"mapping,format:emitnull"`
+	Mapping  map[string]string       `json:"mapping"`
 	Function *TransformationFunction `json:"function"`
+}
+
+// MarshalJSON returns the JSON encoding of transformation, encoding Mapping as
+// null when it is nil.
+func (transformation Transformation) MarshalJSON() ([]byte, error) {
+	var mapping any
+	if transformation.Mapping != nil {
+		mapping = transformation.Mapping
+	}
+	return json.Marshal(struct {
+		Mapping  any                     `json:"mapping"`
+		Function *TransformationFunction `json:"function"`
+	}{
+		Mapping:  mapping,
+		Function: transformation.Function,
+	})
 }
 
 // ExportMode represents one of the three export modes.
@@ -264,9 +279,11 @@ func (this *Pipeline) Delete(ctx context.Context) error {
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		// Mark the pipeline's function as discontinued.
 		now := time.Now().UTC()
-		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
-			"SELECT p.transformation_id, $1\n"+
+		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, organization, discontinued_at)\n"+
+			"SELECT p.transformation_id, w.organization, $1\n"+
 			"FROM pipelines AS p\n"+
+			"INNER JOIN connections AS c ON p.connection = c.id\n"+
+			"INNER JOIN workspaces AS w ON c.workspace = w.id\n"+
 			"WHERE p.transformation_id != '' AND p.id = $2\n"+
 			"ON CONFLICT (id) DO NOTHING", now, n.ID)
 		if err != nil {
@@ -840,7 +857,8 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 	// Format settings.
 	if format != nil && pipeline.FormatSettings != nil {
 		conf := &connections.ConnectorConfig{
-			Role: this.pipeline.Connection().Role,
+			Role:         this.pipeline.Connection().Role,
+			Organization: this.pipeline.Organization().ID,
 		}
 		n.FormatSettings, err = this.core.connections.UpdatedSettings(ctx, format, conf, pipeline.FormatSettings)
 		if err != nil {
@@ -857,15 +875,16 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 	// Transformation.
 	if fn := n.Transformation.Function; fn != nil {
 		current := this.pipeline.Transformation.Function
+		organization := this.pipeline.Organization().ID
 		if current == nil || fn.Language != current.Language {
 			name := transformationFunctionName(n.ID)
-			fn.ID, fn.Version, err = this.core.functionProvider.Create(ctx, name, fn.Language, fn.Source)
+			fn.ID, fn.Version, err = this.core.functionProvider.Create(ctx, organization, name, fn.Language, fn.Source)
 			if err != nil {
 				return err
 			}
 		} else if fn.Source != current.Source {
 			fn.ID = current.ID
-			fn.Version, err = this.core.functionProvider.Update(ctx, fn.ID, fn.Source)
+			fn.Version, err = this.core.functionProvider.Update(ctx, organization, fn.ID, fn.Source)
 			if err != nil {
 				return err
 			}
@@ -929,9 +948,11 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 		}
 		// Mark the pipeline’s function as discontinued if its identifier changes.
 		now := time.Now().UTC()
-		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
-			"SELECT p.transformation_id, $1\n"+
+		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, organization, discontinued_at)\n"+
+			"SELECT p.transformation_id, w.organization, $1\n"+
 			"FROM pipelines AS p\n"+
+			"INNER JOIN connections AS c ON p.connection = c.id\n"+
+			"INNER JOIN workspaces AS w ON c.workspace = w.id\n"+
 			"WHERE p.transformation_id != '' AND p.transformation_id != $2 AND p.id = $3\n"+
 			"ON CONFLICT (id) DO NOTHING", now, function.ID, n.ID)
 		if err != nil {
@@ -1616,7 +1637,7 @@ func toStateTransformation(transformation *Transformation, inSchema, outSchema t
 // transformation function.
 func transformationFunctionName(pipeline string) string {
 	if pipeline == "" {
-		return fmt.Sprintf("krenalis_preview_%s", uuid.NewString())
+		return fmt.Sprintf("krenalis_preview_%s", uuid.New())
 	}
 	now := time.Now().UTC()
 	return fmt.Sprintf("krenalis_pipeline_%s_%s-%09d", pipeline, now.Format("2006-01-02T15-04-05"), now.Nanosecond())

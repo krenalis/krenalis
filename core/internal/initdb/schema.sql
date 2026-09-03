@@ -346,6 +346,7 @@ CREATE INDEX pipelines_metrics_timeslot_idx ON pipelines_metrics (timeslot);
 
 CREATE TABLE discontinued_functions (
     id varchar(200) NOT NULL,
+    organization varchar(12) REFERENCES organizations ON DELETE SET NULL,
     discontinued_at timestamp(0) NOT NULL,
     PRIMARY KEY (id)
 );

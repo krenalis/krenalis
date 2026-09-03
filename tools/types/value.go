@@ -17,11 +17,11 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+	"uuid"
 
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 
-	"github.com/google/uuid"
 	"github.com/relvacode/iso8601"
 )
 
@@ -442,7 +442,7 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 		}
 	case UUIDKind:
 		if v.Kind() == '"' {
-			if u, err := uuid.ParseBytes(v.AppendUnquote(nil)); err == nil {
+			if u, err := uuid.Parse(string(v.AppendUnquote(nil))); err == nil {
 				return u.String(), nil
 			}
 		}

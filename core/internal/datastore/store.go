@@ -6,16 +6,17 @@ package datastore
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
 	"sync/atomic"
 
+	"github.com/krenalis/krenalis/core/internal/dialer"
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/util"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
@@ -37,6 +38,10 @@ var ErrInspectionMode = errors.New("the data warehouse is in inspection mode")
 // ErrMaintenanceMode is returned by Store methods when they cannot execute due
 // to the data warehouse being in maintenance mode.
 var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
+
+// ErrWorkspaceNotExist is returned by Store methods when the workspace no
+// longer exists.
+var ErrWorkspaceNotExist = errors.New("workspace does not exist anymore")
 
 // UnavailableError represents an error with the data warehouse.
 type UnavailableError struct {
@@ -99,7 +104,7 @@ func newStore(ds *Datastore, ws *state.Workspace) *Store {
 		eventIdentityWriters: map[string]*EventIdentityWriter{},
 	}
 	store.mc = newModeCoordinator(ws.Warehouse.Mode)
-	dw := warehouses.Registered(ws.Warehouse.Platform).New(newStateSettingsLoader(ws))
+	dw := warehouses.Registered(ws.Warehouse.Platform).New(newStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
 	store.wh.Store(dw)
 	store.columnByProperty.user = profileColumnByProperty(ws.ProfileSchema)
 	store.columnByProperty.user["_kpid"] = warehouses.Column{Name: "_kpid", Type: types.UUID()}
@@ -379,8 +384,9 @@ func (store *Store) PreviewAlterProfileSchema(ctx context.Context, schema types.
 //
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If the schema, which must be valid, does not align
-// with the profile schema, it returns a *schemas.Error error. If an error
-// occurs with the data warehouse, it returns an *UnavailableError error.
+// with the profile schema, it returns a *schemas.Error error. If the workspace
+// no longer exists, it returns [ErrWorkspaceNotExist]. If an error occurs with
+// the data warehouse, it returns an *UnavailableError error.
 func (store *Store) ProfileRecords(ctx context.Context, query Query, schema types.Type, matching *Matching) (*Records, error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
@@ -396,7 +402,7 @@ func (store *Store) ProfileRecords(ctx context.Context, query Query, schema type
 	}
 	workspace, ok := store.ds.state.Workspace(store.workspace)
 	if !ok {
-		return nil, fmt.Errorf("workspace does not exist anymore")
+		return nil, ErrWorkspaceNotExist
 	}
 	// Check that schema is aligned with the profile schema.
 	err = schemas.CheckAlignment(schema, workspace.ProfileSchema, nil)
@@ -481,17 +487,19 @@ func (store *Store) Repair(ctx context.Context, userSchema types.Type) error {
 // the operation ended successfully or with a *warehouses.OperationError error,
 // that result is returned again.
 //
-// This method, once called, can then return in four distinct cases:
+// This method, once called, can then return in five distinct cases:
 //
 // (1) the operation was successful and no error was returned;
 //
-// (2) the context was canceled;
+// (2) the workspace no longer exists and [ErrWorkspaceNotExist] was returned;
 //
-// (3) the operation ended with an error of type *warehouses.OperationError, and
+// (3) the context was canceled;
+//
+// (4) the operation ended with an error of type *warehouses.OperationError, and
 // this means that even if the method is called again with the same ID, this
 // error is still returned;
 //
-// (4) the operation ended with an unexpected and unknown error, and it is
+// (5) the operation ended with an unexpected and unknown error, and it is
 // therefore up to the caller to try calling this method again by providing the
 // same ID.
 func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
@@ -509,7 +517,7 @@ func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
 	// Retrieve the workspace.
 	ws, ok := store.ds.state.Workspace(store.workspace)
 	if !ok {
-		return nil
+		return ErrWorkspaceNotExist
 	}
 
 	// Determine the identifiers columns.
@@ -579,7 +587,7 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings json.Val
 	}
 
 	// Count the users on the warehouse that will be connected.
-	dw := warehouses.Registered(ws.Warehouse.Platform).New(newStateSettingsLoader(ws))
+	dw := warehouses.Registered(ws.Warehouse.Platform).New(newStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
 	defer func() {
 		err := dw.Close()
 		if err != nil {

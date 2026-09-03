@@ -3435,7 +3435,9 @@ const TransformationProperty = ({
 										</span>
 									</span>
 									<span className='fullscreen-transformation__property-type'>
-										<span>{krenalisTypeName}</span>
+										<span className='fullscreen-transformation__property-storage-type'>
+											{krenalisTypeName}
+										</span>
 										{side === 'input' && property.readOptional && <span>- optional</span>}
 										{isRequired && (
 											<span

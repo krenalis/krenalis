@@ -515,7 +515,7 @@ func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
 			iw := w.(*identityWriter)
 			var transformer *transformers.Transformer
 			if p.Transformation.Mapping != nil || p.Transformation.Function != nil {
-				transformer, _ = transformers.New(p, c.functionProvider, nil)
+				transformer, _ = transformers.New(p.Organization().ID, p, c.functionProvider, nil)
 			}
 			iw.SetTransformer(transformer)
 			iw.SetRequiredConsents(p.RequiredConsents)
