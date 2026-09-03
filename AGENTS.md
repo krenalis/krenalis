@@ -201,8 +201,6 @@ Never begin an error message with the article `the`.
 
 ## Correctness
 
-`len(s)` on a string counts bytes, not runes. Use `utf8.RuneCountInString` when the limit is expressed in characters, and make the error message say which of the two it is.
-
 Anything arriving from outside — request bodies, settings, API values, connector responses — is validated and bounded before use, unless there is a stated reason not to.
 
 # Reuse
