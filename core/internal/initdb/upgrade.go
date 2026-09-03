@@ -144,6 +144,34 @@ const pipelineEventTypeUpgrade = `
 		END IF;
 	END $$`
 
+// pipelineDeliveryEndpointUpgrade adds persisted delivery endpoints and their
+// identifier constraint.
+const pipelineDeliveryEndpointUpgrade = `
+	ALTER TABLE pipelines
+		ADD COLUMN IF NOT EXISTS delivery_endpoint varchar(25);
+
+	UPDATE pipelines
+	SET delivery_endpoint = ''
+	WHERE delivery_endpoint IS NULL;
+
+	ALTER TABLE pipelines
+		ALTER COLUMN delivery_endpoint TYPE varchar(25),
+		ALTER COLUMN delivery_endpoint SET NOT NULL;
+
+	DO $$
+	BEGIN
+		IF NOT EXISTS (
+			SELECT FROM pg_constraint
+			WHERE conrelid = 'pipelines'::regclass
+				AND conname = 'pipelines_delivery_endpoint_check'
+		) THEN
+			ALTER TABLE pipelines
+				ADD CONSTRAINT pipelines_delivery_endpoint_check
+				CHECK (delivery_endpoint = '' OR
+					(event_type <> '' AND delivery_endpoint ~ '^[A-Za-z_][A-Za-z0-9_]*$'));
+		END IF;
+	END $$`
+
 // Upgrade applies idempotent updates to an existing Krenalis PostgreSQL
 // database.
 func Upgrade(ctx context.Context, database *db.DB) error {
@@ -382,6 +410,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			organizationConnectorReferencesView,
 			nodeIDUpgrade,
 			pipelineEventTypeUpgrade,
+			pipelineDeliveryEndpointUpgrade,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'InviteMember' AFTER 'EndPipelineRun'`,
 			consentPurposesTable,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'AddConsentPurpose'`,

@@ -212,18 +212,22 @@ func TestAppRecordsPreservesConnectorRecordError(t *testing.T) {
 	}
 }
 
-// TestValidateEventType verifies event type ID and ordering group validation.
+// TestValidateEventType verifies validation of event type IDs, ordering groups,
+// and delivery endpoints.
 func TestValidateEventType(t *testing.T) {
 	tests := []struct {
 		name      string
 		eventType *EventType
 		err       string
 	}{
-		{name: "valid", eventType: &EventType{ID: "createContact", OrderingGroup: "contacts"}},
+		{name: "default delivery endpoint", eventType: &EventType{ID: "createContact", OrderingGroup: "contacts"}},
+		{name: "explicit delivery endpoint", eventType: &EventType{ID: "createContact", OrderingGroup: "contacts", DeliveryEndpoint: "contacts"}},
 		{name: "invalid ID", eventType: &EventType{ID: "create-contact"}, err: `connector test returned an invalid event type ID ("create-contact")`},
 		{name: "long ID", eventType: &EventType{ID: strings.Repeat("a", 26)}, err: `connector test returned an invalid event type ID ("aaaaaaaaaaaaaaaaaaaaaaaaaa")`},
 		{name: "invalid ordering group", eventType: &EventType{ID: "contact", OrderingGroup: "contact-events"}, err: `connector test returned an invalid ordering group ("contact-events")`},
 		{name: "long ordering group", eventType: &EventType{ID: "contact", OrderingGroup: strings.Repeat("a", 26)}, err: `connector test returned an invalid ordering group ("aaaaaaaaaaaaaaaaaaaaaaaaaa")`},
+		{name: "invalid delivery endpoint", eventType: &EventType{ID: "contact", DeliveryEndpoint: "contact-events"}, err: `connector test returned an invalid delivery endpoint ("contact-events")`},
+		{name: "long delivery endpoint", eventType: &EventType{ID: "contact", DeliveryEndpoint: strings.Repeat("a", 26)}, err: `connector test returned an invalid delivery endpoint ("aaaaaaaaaaaaaaaaaaaaaaaaaa")`},
 	}
 
 	for _, test := range tests {
@@ -245,15 +249,14 @@ func TestValidateEventType(t *testing.T) {
 	}
 }
 
-// TestApplicationEventType verifies that EventType validates only matching
-// event types while detecting missing and repeated IDs.
+// TestApplicationEventType verifies that EventType validates event types before
+// returning the one with the requested ID.
 func TestApplicationEventType(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		expected := &EventType{ID: "createContact", OrderingGroup: "contacts"}
 		app := &Application{inner: &testEventSender{eventTypes: []*EventType{
-			nil,
-			{ID: "invalid-id"},
 			expected,
+			{ID: "updateContact", OrderingGroup: "contacts"},
 		}}}
 
 		got, err := app.EventType(context.Background(), expected.ID)
@@ -265,12 +268,13 @@ func TestApplicationEventType(t *testing.T) {
 		}
 	})
 
-	t.Run("invalid", func(t *testing.T) {
+	t.Run("invalid event type", func(t *testing.T) {
 		app := &Application{connector: "test", inner: &testEventSender{eventTypes: []*EventType{
+			{ID: "createContact"},
 			{ID: "invalid-id"},
 		}}}
 
-		_, err := app.EventType(context.Background(), "invalid-id")
+		_, err := app.EventType(context.Background(), "createContact")
 		expected := `connector test returned an invalid event type ID ("invalid-id")`
 		if err == nil {
 			t.Fatalf("expected %q, got nil", expected)
@@ -290,13 +294,13 @@ func TestApplicationEventType(t *testing.T) {
 	})
 
 	t.Run("repeated", func(t *testing.T) {
-		app := &Application{inner: &testEventSender{eventTypes: []*EventType{
+		app := &Application{connector: "test", inner: &testEventSender{eventTypes: []*EventType{
 			{ID: "createContact"},
 			{ID: "createContact"},
 		}}}
 
 		_, err := app.EventType(context.Background(), "createContact")
-		expected := `event type ID "createContact" is repeated`
+		expected := "connector test returned multiple event types with the same ID (createContact)"
 		if err == nil {
 			t.Fatalf("expected %q, got nil", expected)
 		}
@@ -304,6 +308,41 @@ func TestApplicationEventType(t *testing.T) {
 			t.Fatalf("expected %q, got %q", expected, err.Error())
 		}
 	})
+
+	t.Run("different delivery endpoints", func(t *testing.T) {
+		app := &Application{connector: "test", inner: &testEventSender{eventTypes: []*EventType{
+			{ID: "createContact", OrderingGroup: "contacts"},
+			{ID: "updateContact", OrderingGroup: "contacts", DeliveryEndpoint: "contacts"},
+		}}}
+
+		_, err := app.EventType(context.Background(), "createContact")
+		expected := `connector test returned different delivery endpoints for ordering group "contacts"`
+		if err == nil {
+			t.Fatalf("expected %q, got nil", expected)
+		}
+		if err.Error() != expected {
+			t.Fatalf("expected %q, got %q", expected, err.Error())
+		}
+	})
+}
+
+// TestApplicationEventTypesRejectsDifferentDeliveryEndpoints verifies that
+// event types in the same ordering group must resolve to the same delivery
+// endpoint.
+func TestApplicationEventTypesRejectsDifferentDeliveryEndpoints(t *testing.T) {
+	app := &Application{connector: "test", inner: &testEventSender{eventTypes: []*EventType{
+		{ID: "createContact", OrderingGroup: "contacts"},
+		{ID: "updateContact", OrderingGroup: "contacts", DeliveryEndpoint: "contacts"},
+	}}}
+
+	_, err := app.EventTypes(context.Background())
+	expected := `connector test returned different delivery endpoints for ordering group "contacts"`
+	if err == nil {
+		t.Fatalf("expected %q, got nil", expected)
+	}
+	if err.Error() != expected {
+		t.Fatalf("expected %q, got %q", expected, err.Error())
+	}
 }
 
 // testEventSender provides event types to Application tests.

@@ -231,8 +231,8 @@ func (r FailureReason) String() string {
 	panic(fmt.Errorf("unexpected FailureReason %d", r))
 }
 
-// MaxEventTypeIdentifierLen is the maximum length of event type and ordering
-// group identifiers.
+// MaxEventTypeIdentifierLen is the maximum length of event type, ordering
+// group, and delivery endpoint identifiers.
 const MaxEventTypeIdentifierLen = 25
 
 // EventType represents a type of event that can be sent to an application.
@@ -255,6 +255,13 @@ type EventType struct {
 	// the syntax of a property name and cannot be longer than
 	// MaxEventTypeIdentifierLen characters.
 	OrderingGroup string
+
+	// DeliveryEndpoint identifies the destination endpoint used for events of
+	// this type. Event types in the same ordering group must use the same endpoint.
+	// An empty value selects the connector's default endpoint. If set, the value
+	// must follow the syntax of a property name and be no longer than
+	// MaxEventTypeIdentifierLen characters.
+	DeliveryEndpoint string
 
 	// DefaultFilter is the default filter to use for pipelines.
 	DefaultFilter string
