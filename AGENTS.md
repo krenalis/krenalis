@@ -1,3 +1,11 @@
+# Krenalis
+
+Go monorepo. Dependencies are vendored in `vendor/`. This file holds the conventions that every change must follow.
+
+# Changes
+
+Keep the diff as small as the change allows. Touch only the lines the change needs: no drive-by reformatting, renaming, reordering, or rewrapping of a comment you happened to read. When the same fix can be written in two ways, pick the one that leaves more of the surrounding lines untouched. Reread your own diff before reporting it: every hunk should be one you can justify.
+
 # Review process
 
 When assessing a change against existing practices, use the code as it existed before the changes under review as the source of precedent. Do not treat code introduced or altered by the current change as evidence of an established convention.
@@ -22,6 +30,16 @@ Keep declarations in a predictable order. Place exported type groups before unex
 After the type groups, place package-level functions in alphabetical order.
 
 Place package-level constants and variables at the beginning of the file when they have broad relevance. When one is specific to a single function or method, or is otherwise of secondary importance, declare it immediately before the function or method that uses it.
+
+## Layout and naming
+
+An exported function or method never calls another exported function or method of the same package. Extract a shared unexported one and call that from both.
+
+Declare a variable as close as possible to where it is used, as long as the code stays readable.
+
+A field guarded by a mutex carries a `// protected by mu` comment, so the guard shows up in the editor when reading the field's documentation.
+
+Keep the receiver name the type already uses. The facade types in `core/` (`Connection`, `Connector`, `Organization`, `Pipeline`, `Workspace`) use `this`; leave it as it is.
 
 ## Imports
 
@@ -165,7 +183,9 @@ var x int
 
 ## Declaration comments
 
-Every package-level type, function, variable, and constant, as well as every method, must have a declaration comment written in the style of the Go standard library, except for the grouped declarations and self-explanatory test fixture constants described below.
+Every exported package-level type, function, variable, and constant, as well as every exported method, must have a declaration comment written in the style of the Go standard library, except for the grouped declarations and self-explanatory test fixture constants described below. An unexported declaration does not need one, but add it when the declaration is long, takes or returns several values, or its behavior is not obvious from the code.
+
+Keep comments compact: one precise sentence beats three loose ones, and do not restate what the code already says.
 
 When a variable or constant belongs to a parenthesized `var` or `const` declaration whose other members do not have individual declaration comments, do not add an individual comment only to that member. Preserve the established comment style consistently throughout the group.
 
@@ -178,6 +198,22 @@ A short comment for a package-level variable or constant may appear on the same 
 ## Error messages
 
 Never begin an error message with the article `the`.
+
+## Correctness
+
+Anything arriving from outside — request bodies, settings, API values, connector responses — is validated and bounded before use, unless there is a stated reason not to.
+
+# Reuse
+
+Before writing something new, look for the same thing already done elsewhere in the repo, and reuse it or follow it.
+
+Prefer the standard library, or an existing helper under `tools/`, over a hand-rolled version.
+
+When deleting something, look for what it leaves behind: callers, columns, fixtures, documentation, constants that are now dead.
+
+# Dependencies
+
+Do not state what a vendored library does from its API surface or from memory. Read it in `vendor/` and follow the call chain up to the caller that matters: an option that looks dropped along one path often arrives by another. Cite file and line when reporting such behavior.
 
 # Database constraints
 
@@ -256,6 +292,12 @@ API endpoint handlers in `cmd` parse values from paths, query strings, and reque
 
 Methods in `core` that serve an endpoint must select their error according to where that endpoint receives each argument, even though this couples them to the endpoint shape. Return the final API-ready error from `core` so that `cmd` can propagate it without translation.
 
+A method of `core` that can return an `errors.UnprocessableError` documents it and lists the codes. Handlers in `cmd/api.go` never document unprocessable errors.
+
 ## Core entry guards
 
 Every exported method in `core` that is called by `cmd` must execute `<receiver>.core.mustBeOpen()` as its first statement. If the method body contains any blank line, leave a blank line immediately after the opening brace and another immediately after the guard statement.
+
+# Before finishing
+
+Run `go build ./...`, `go vet ./...`, and `gofmt -l` over what you touched. Add tests where the package already has them. Report plainly what passed, what failed, and what you did not run.
