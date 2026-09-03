@@ -4,32 +4,14 @@ import { ObjectType, Property, Semantic } from '../src/lib/api/types/types';
 
 const selectPropertyType = async (page, option: string) => {
 	const panel = page.locator('.property-panel');
-	await expect(panel.locator('.property-type-selector__structure-trigger')).toContainText('one value');
-	await panel.locator('.property-type-selector__structure-trigger').click();
-	await expect(panel.locator('.property-type-selector__structure-option-label')).toHaveText([
-		'one value',
-		'array',
-		'object',
-		'map',
-	]);
-	await panel.locator('.property-type-selector__structure-trigger').click();
+	const dropdown = panel.locator('.property-type-selector__dropdown');
+	const typeOption = panel.locator(`[data-type-option="${option}"]`);
+	await expect(dropdown).toHaveJSProperty('open', false);
+	await typeOption.waitFor({ state: 'hidden' });
 	await panel.locator('.property-type-selector__trigger').click();
-	await expect(panel.locator('.property-type-selector__group-label')).toHaveText([
-		'Basic values',
-		'Date and time',
-		'Specialized values',
-	]);
-	await expect(
-		panel.locator(
-			'[data-type-option="uuid"] .property-type-selector__option-label, ' +
-				'[data-type-option="json"] .property-type-selector__option-label, ' +
-				'[data-type-option="ip"] .property-type-selector__option-label',
-		),
-	).toHaveText(['uuid', 'json', 'ip']);
-	await expect(panel.locator('[data-type-option="datetime"] .property-type-selector__option-label')).toHaveText(
-		'datetime',
-	);
-	await panel.locator(`[data-type-option="${option}"]`).click();
+	await expect(dropdown).toHaveJSProperty('open', true);
+	await typeOption.waitFor({ state: 'visible' });
+	await typeOption.click();
 };
 
 const editSchema = async (page) => {
@@ -791,6 +773,7 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 						prefilled: '',
 						role: 'Both',
 						type: { kind: 'string', maxLength: 2 },
+						semantic: { kind: 'country', format: 'iso_3166_1_alpha_2' },
 						createRequired: false,
 						updateRequired: false,
 						readOptional: true,
@@ -840,18 +823,18 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 	expect(emailPropertyCellBottom).toBeLessThanOrEqual(emailRowBottom);
 	await expect(panel.locator('.property-details-panel__value')).toHaveText([
 		'email',
-		emailCells[1],
+		'string',
 		'Email address',
-		emailCells[3],
+		'—',
 		'Not an identifier',
-		emailCells[4],
+		emailCells[3],
 	]);
 	const gridTypeFont = await emailRow
-		.locator('.schema-grid__technical-type')
+		.locator('.schema-property-type__primary')
 		.evaluate((type) => getComputedStyle(type).fontFamily);
 	expect(
 		await panel
-			.locator('.property-details-panel__technical-type')
+			.locator('.schema-property-type__details-physical')
 			.evaluate((type) => getComputedStyle(type).fontFamily),
 	).toBe(gridTypeFont);
 	await expect(emailRow).toHaveClass(/grid__row--selected/);
@@ -899,8 +882,21 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 	await expect(
 		panel.locator('.property-details-panel__detail').first().locator('.property-details-panel__value'),
 	).toHaveText('country');
-	await expect(panel).toContainText('string, max 2 chars');
 	const countryRow = page.locator('.schema-grid .grid__row[data-id="address.country"]');
+	await expect(countryRow.locator('.schema-property-type')).toHaveText(
+		'country — 2-letter ISO code · string · max 2 chars',
+	);
+	expect(
+		await countryRow
+			.locator('.schema-property-type__primary')
+			.evaluate((type) => getComputedStyle(type).fontFamily),
+	).toBe(gridTypeFont);
+	const countryTypeDetail = panel
+		.locator('.property-details-panel__detail')
+		.filter({ hasText: 'Type' })
+		.locator('.property-details-panel__value');
+	await expect(countryTypeDetail.locator('.schema-property-type__details-physical')).toHaveText('string');
+	await expect(countryTypeDetail.locator('.schema-property-type__details-semantic')).toHaveText('country (2-letter)');
 	await page.locator('.schema-grid__page-header h1').hover();
 	const countryBackground = await countryRow
 		.locator('.grid__cell')
@@ -1252,15 +1248,458 @@ test(`Preview schema changes only when applying them`, async ({ page }) => {
 	await expect(dialog.locator('.schema-edit__apply-alter-button')).toHaveAttribute('variant', 'danger');
 });
 
-test(`Preserve array property semantics`, async ({ page }) => {
+test(`Create profile schema properties with semantic defaults and options`, async ({ page }) => {
+	await page.route('**/v1/profiles/schema/preview', async (route) => {
+		await route.fulfill({ json: { queries: [] } });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await editSchema(page);
+	const propertyPanel = page.locator('.property-panel');
+
+	await page.locator('.schema-edit__add-property').click();
+	await propertyPanel.locator('.property-form__name-input input').fill('semantic_country');
+	await propertyPanel.locator('.property-type-selector__trigger').click();
+	const stringOption = propertyPanel.locator('[data-type-option="string"]');
+	await expect(stringOption).not.toHaveClass(/property-type-selector__option--selected/);
+	expect(
+		await propertyPanel
+			.locator('.property-type-selector__option')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('data-type-option'))),
+	).toEqual([
+		'email',
+		'phone',
+		'country',
+		'url',
+		'string',
+		'boolean',
+		'duration',
+		'int',
+		'float',
+		'money',
+		'percentage',
+		'measurement',
+		'decimal',
+		'datetime',
+		'date',
+		'time',
+		'year',
+		'uuid',
+		'json',
+		'ip',
+	]);
+	await expect(
+		propertyPanel.locator(
+			'[data-type-option="country"] .schema-property-type, ' +
+				'[data-type-option="duration"] .schema-property-type, ' +
+				'[data-type-option="money"] .schema-property-type, ' +
+				'[data-type-option="percentage"] .schema-property-type, ' +
+				'[data-type-option="measurement"] .schema-property-type',
+		),
+	).toHaveText([
+		'country · string',
+		'duration · int',
+		'money · decimal(18,4)',
+		'percentage · decimal(18,4)',
+		'measurement · decimal(18,4)',
+	]);
+	const physicalTypeFont = await propertyPanel
+		.locator('[data-type-option="country"] .schema-property-type__metadata-physical')
+		.evaluate((type) => getComputedStyle(type).fontFamily);
+	expect(
+		await propertyPanel
+			.locator('[data-type-option="country"] .schema-property-type__primary')
+			.evaluate((type) => getComputedStyle(type).fontFamily),
+	).toBe(physicalTypeFont);
+	expect(
+		await stringOption
+			.locator('.schema-property-type__primary')
+			.evaluate((type) => getComputedStyle(type).fontFamily),
+	).toBe(physicalTypeFont);
+	await propertyPanel.locator('[data-type-option="country"]').click();
+	await expect(propertyPanel.locator('.property-type-selector__trigger .schema-property-type')).toHaveText(
+		'country · string',
+	);
+	await expect(propertyPanel.locator('.property-form__constraints--length')).toHaveCount(0);
+	const countryFormat = propertyPanel.locator('.property-form__country-format');
+	await expect(countryFormat).toHaveJSProperty('value', 'iso_3166_1_alpha_2');
+	expect(
+		await countryFormat
+			.locator('sl-option')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('value'))),
+	).toEqual(['iso_3166_1_alpha_2', 'iso_3166_1_alpha_3']);
+	await countryFormat.click();
+	await countryFormat.locator('sl-option[value="iso_3166_1_alpha_3"]').click();
+	await expect(countryFormat).toHaveJSProperty('value', 'iso_3166_1_alpha_3');
+	await expect(propertyPanel.locator('.property-type-selector__trigger .schema-property-type')).toHaveText(
+		'country · string',
+	);
+	await propertyPanel.locator('.property-panel__save').click();
+	await expect(page.locator('.schema-edit .grid__row[data-id="semantic_country"] .schema-property-type')).toHaveText(
+		'country — 3-letter ISO code · string · max 3 chars',
+	);
+
+	await page.locator('.schema-edit__add-property').click();
+	await propertyPanel.locator('.property-form__name-input input').fill('semantic_percentage');
+	await selectPropertyType(page, 'percentage');
+	await expect(propertyPanel.locator('.property-type-selector__trigger .schema-property-type')).toHaveText(
+		'percentage · decimal',
+	);
+	await expect(propertyPanel.locator('.property-form__precision')).toHaveCount(0);
+	await expect(propertyPanel.locator('.property-form__scale')).toHaveCount(0);
+	await propertyPanel.locator('.property-form__minimum input').fill('-0.25');
+	await propertyPanel.locator('.property-form__maximum input').fill('1.5');
+	await propertyPanel.locator('.property-panel__save').click();
+	await expect(
+		page.locator('.schema-edit .grid__row[data-id="semantic_percentage"] .schema-property-type'),
+	).toHaveText('percentage · decimal(18,4) · min -0.25, max 1.5');
+
+	await page.locator('.schema-edit__add-property').click();
+	await propertyPanel.locator('.property-form__name-input input').fill('semantic_money');
+	await selectPropertyType(page, 'money');
+	const currency = propertyPanel.locator('.property-form__currency');
+	await expect(currency).toHaveJSProperty('value', 'none');
+	await expect(propertyPanel.locator('.property-panel__save')).not.toHaveAttribute('disabled');
+	await currency.click();
+	await currency.locator('sl-option[value="EUR"]').click();
+	await expect(currency).toHaveJSProperty('value', 'EUR');
+	await propertyPanel.locator('.property-form__minimum input').fill('-100.25');
+	await propertyPanel.locator('.property-form__maximum input').fill('999.9999');
+	await propertyPanel.locator('.property-panel__save').click();
+	await expect(page.locator('.schema-edit .grid__row[data-id="semantic_money"] .schema-property-type')).toHaveText(
+		'money — EUR · decimal(18,4) · min -100.25, max 999.9999',
+	);
+
+	await page.locator('.schema-edit__add-property').click();
+	await propertyPanel.locator('.property-form__name-input input').fill('semantic_measurement');
+	await selectPropertyType(page, 'measurement');
+	const measurementUnit = propertyPanel.locator('.property-form__measurement-unit');
+	await expect(measurementUnit).toHaveJSProperty('value', '');
+	await expect(propertyPanel.locator('[data-error-on="measurement-unit"]')).toHaveCount(0);
+	await expect(propertyPanel.locator('.property-panel__save')).not.toHaveAttribute('disabled');
+	await propertyPanel.locator('.property-panel__save').click();
+	await expect(propertyPanel.locator('[data-error-on="measurement-unit"]')).toBeVisible();
+	await expect(propertyPanel.locator('.property-panel__save')).toHaveAttribute('disabled');
+	await propertyPanel.locator('.property-form__minimum input').fill('-10.5');
+	await expect(propertyPanel.locator('[data-error-on="measurement-unit"]')).toBeVisible();
+	await expect(propertyPanel.locator('.property-panel__save')).toHaveAttribute('disabled');
+	await measurementUnit.click();
+	const emptyMeasurementUnit = measurementUnit.locator('sl-option[value=""]');
+	await expect(emptyMeasurementUnit).toBeHidden();
+	await expect(measurementUnit.locator('sl-option[value="g"]')).toHaveJSProperty('current', false);
+	await measurementUnit.locator('sl-option[value="kg"]').click();
+	await expect(measurementUnit).toHaveJSProperty('value', 'kg');
+	await expect(measurementUnit.locator('[part="display-input"]')).toHaveValue('Kilogram · kg');
+	await expect(emptyMeasurementUnit).toHaveCount(0);
+	await expect(propertyPanel.locator('[data-error-on="measurement-unit"]')).toHaveCount(0);
+	await expect(propertyPanel.locator('.property-panel__save')).not.toHaveAttribute('disabled');
+	await propertyPanel.locator('.property-form__maximum input').fill('10.5');
+	await propertyPanel.locator('.property-panel__save').click();
+	await expect(
+		page.locator('.schema-edit .grid__row[data-id="semantic_measurement"] .schema-property-type'),
+	).toHaveText('measurement — kg · decimal(18,4) · min -10.5, max 10.5');
+
+	await page.locator('.schema-edit__add-property').click();
+	await propertyPanel.locator('.property-form__name-input input').fill('semantic_duration');
+	await selectPropertyType(page, 'duration');
+	await expect(propertyPanel.locator('[data-error-on="duration-unit"]')).toHaveCount(0);
+	await expect(propertyPanel.locator('.property-panel__save')).not.toHaveAttribute('disabled');
+	await propertyPanel.locator('.property-panel__save').click();
+	await expect(propertyPanel.locator('[data-error-on="duration-unit"]')).toBeVisible();
+	await expect(propertyPanel.locator('.property-panel__save')).toHaveAttribute('disabled');
+	const durationUnit = propertyPanel.locator('.property-form__duration-unit');
+	await durationUnit.click();
+	const emptyDurationUnit = durationUnit.locator('sl-option[value=""]');
+	await expect(emptyDurationUnit).toBeHidden();
+	await expect(durationUnit.locator('sl-option[value="millisecond"]')).toHaveJSProperty('current', false);
+	await durationUnit.locator('sl-option[value="second"]').click();
+	await expect(durationUnit.locator('[part="display-input"]')).toHaveValue('Seconds · s');
+	await expect(emptyDurationUnit).toHaveCount(0);
+	await expect(propertyPanel.locator('[data-error-on="duration-unit"]')).toHaveCount(0);
+	await expect(propertyPanel.locator('.property-panel__save')).not.toHaveAttribute('disabled');
+	await propertyPanel.locator('.property-panel__save').click();
+	await expect(page.locator('.schema-edit .grid__row[data-id="semantic_duration"] .schema-property-type')).toHaveText(
+		'duration — s · int(64)',
+	);
+
+	const previewRequestPromise = page.waitForRequest(
+		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
+	);
+	await page.locator('.schema-edit__header-apply-button').click();
+	const schema = (await previewRequestPromise).postDataJSON().schema as ObjectType;
+	const country = schema.properties.find((property) => property.name === 'semantic_country');
+	expect(country?.type).toEqual({ kind: 'string', maxLength: 3 });
+	expect(country?.semantic).toEqual({ kind: 'country', format: 'iso_3166_1_alpha_3' });
+	const percentage = schema.properties.find((property) => property.name === 'semantic_percentage');
+	expect(percentage?.type).toEqual({
+		kind: 'decimal',
+		precision: 18,
+		scale: 4,
+		minimum: -0.25,
+		maximum: 1.5,
+	});
+	expect(percentage?.semantic).toEqual({ kind: 'percentage' });
+	const money = schema.properties.find((property) => property.name === 'semantic_money');
+	expect(money?.type).toEqual({
+		kind: 'decimal',
+		precision: 18,
+		scale: 4,
+		minimum: -100.25,
+		maximum: 999.9999,
+	});
+	expect(money?.semantic).toEqual({ kind: 'money', currency: 'EUR' });
+	const measurement = schema.properties.find((property) => property.name === 'semantic_measurement');
+	expect(measurement?.type).toEqual({
+		kind: 'decimal',
+		precision: 18,
+		scale: 4,
+		minimum: -10.5,
+		maximum: 10.5,
+	});
+	expect(measurement?.semantic).toEqual({ kind: 'measurement', unit: 'kg' });
+	const duration = schema.properties.find((property) => property.name === 'semantic_duration');
+	expect(duration?.type).toEqual({ kind: 'int', bitSize: 64, unsigned: false });
+	expect(duration?.semantic).toEqual({ kind: 'duration', unit: 'second' });
+});
+
+test(`Show materialized type catalogs, restrict transitions, and preserve physical configuration`, async ({ page }) => {
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		const email = schema.properties.find((property) => property.name === 'email');
+		email.type = { kind: 'string', maxLength: 100 };
+		delete email.semantic;
+		const materializedEmail = structuredClone(email);
+		materializedEmail.name = 'materialized_email';
+		materializedEmail.semantic = { kind: 'email' };
+		const materializedMoney = structuredClone(email);
+		materializedMoney.name = 'materialized_money';
+		materializedMoney.type = {
+			kind: 'decimal',
+			precision: 18,
+			scale: 4,
+			minimum: -0.5,
+			maximum: 1.25,
+		};
+		materializedMoney.semantic = { kind: 'money', currency: 'EUR' };
+		schema.properties.push(materializedEmail, materializedMoney);
+		await route.fulfill({ response, json: schema });
+	});
+	await page.route('**/v1/profiles/schema/preview', async (route) => {
+		await route.fulfill({ json: { queries: [] } });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await editSchema(page);
+	const propertyPanel = page.locator('.property-panel');
+	const structureDropdown = propertyPanel.locator('.property-type-selector__structure-dropdown');
+	const structureTrigger = propertyPanel.locator('.property-type-selector__structure-trigger');
+	const structureOptions = propertyPanel.locator('.property-type-selector__structure-option');
+	const typeDropdown = propertyPanel.locator('.property-type-selector__dropdown');
+	const typeTrigger = propertyPanel.locator('.property-type-selector__trigger');
+	const typeOptions = propertyPanel.locator('.property-type-selector__option');
+	const typeChangeNote = propertyPanel.locator('.property-type-selector__type-change-note');
+	const getOptionVisualStyle = (option: Locator) =>
+		option.locator('[part="base"]').evaluate((base) => {
+			const style = getComputedStyle(base);
+			return {
+				backgroundColor: style.backgroundColor,
+				boxShadow: style.boxShadow,
+				color: style.color,
+				cursor: style.cursor,
+				opacity: style.opacity,
+			};
+		});
+
+	await page.locator('.schema-edit__add-property').click();
+	await expect(typeChangeNote).toHaveCount(0);
+	await selectPropertyType(page, 'string');
+	await expect(typeChangeNote).toHaveText("Can't be changed once the property has been applied.");
+	await selectPropertyType(page, 'email');
+	await expect(typeChangeNote).toHaveText('Once applied, this type can only be changed to string.');
+	await selectPropertyType(page, 'money');
+	await expect(typeChangeNote).toHaveText('Once applied, this type can only be changed to decimal.');
+	await selectPropertyType(page, 'duration');
+	await expect(typeChangeNote).toHaveText('Once applied, this type can only be changed to int.');
+	await propertyPanel.locator('.property-panel__cancel').click();
+
+	await openProperty(page, 'email');
+	await expect(structureDropdown).toHaveCount(1);
+	await expect(structureTrigger).toContainText('one value');
+	await structureTrigger.click();
+	await expect(structureOptions).toHaveCount(4);
+	await expect(propertyPanel.locator('[data-structure-option="one"]')).not.toHaveAttribute('disabled');
+	await expect(propertyPanel.locator('[data-structure-option="array"]')).toHaveAttribute('disabled');
+	await expect(propertyPanel.locator('[data-structure-option="object"]')).toHaveAttribute('disabled');
+	await expect(propertyPanel.locator('[data-structure-option="map"]')).toHaveAttribute('disabled');
+	const unavailableStructureOption = propertyPanel.locator('[data-structure-option="array"]');
+	const unavailableStructureStyle = await getOptionVisualStyle(unavailableStructureOption);
+	expect(unavailableStructureStyle.cursor).toBe('default');
+	expect(unavailableStructureStyle.opacity).toBe('0.75');
+	await unavailableStructureOption.hover();
+	expect(await getOptionVisualStyle(unavailableStructureOption)).toEqual(unavailableStructureStyle);
+	await unavailableStructureOption.dispatchEvent('click');
+	await expect(structureDropdown).toHaveJSProperty('open', true);
+	await expect(structureTrigger).toContainText('one value');
+	await structureTrigger.click();
+
+	await expect(typeDropdown).toHaveCount(1);
+	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('string');
+	await expect(typeChangeNote).toHaveText("This type can't be changed.");
+	await typeTrigger.click();
+	await expect(typeOptions).toHaveCount(20);
+	await expect(propertyPanel.locator('[data-type-option="string"]')).not.toHaveAttribute('disabled');
+	await expect(propertyPanel.locator('.property-type-selector__option[disabled]')).toHaveCount(19);
+	const unavailableTypeOption = propertyPanel.locator('[data-type-option="email"]');
+	const unavailableTypeStyle = await getOptionVisualStyle(unavailableTypeOption);
+	expect(unavailableTypeStyle.cursor).toBe('default');
+	expect(unavailableTypeStyle.opacity).toBe('0.75');
+	await unavailableTypeOption.hover();
+	expect(await getOptionVisualStyle(unavailableTypeOption)).toEqual(unavailableTypeStyle);
+	await unavailableTypeOption.dispatchEvent('click');
+	await expect(typeDropdown).toHaveJSProperty('open', true);
+	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('string');
+	await typeTrigger.click();
+	const readOnlyLengthConstraints = propertyPanel.locator('.property-form__constraints--length sl-input');
+	await expect(readOnlyLengthConstraints).toHaveCount(2);
+	await expect(readOnlyLengthConstraints.first()).toHaveAttribute('readonly');
+	await expect(readOnlyLengthConstraints.first()).toHaveAttribute('tabindex', '-1');
+	await expect(readOnlyLengthConstraints.first()).not.toHaveAttribute('disabled');
+	const readOnlyLengthInputs = readOnlyLengthConstraints.locator('input');
+	await expect(readOnlyLengthInputs.first()).toHaveAttribute('tabindex', '-1');
+	await expect(readOnlyLengthInputs.last()).toHaveAttribute('tabindex', '-1');
+	expect(
+		await readOnlyLengthConstraints
+			.first()
+			.locator('[part="base"]')
+			.evaluate((control) => getComputedStyle(control).cursor),
+	).toBe('not-allowed');
+	await readOnlyLengthConstraints.first().click();
+	await expect(readOnlyLengthInputs.first()).not.toBeFocused();
+	await readOnlyLengthInputs.first().focus();
+	await page.keyboard.press('Tab');
+	await expect(propertyPanel.locator('.property-form__constraints--length input:focus')).toHaveCount(0);
+
+	await openProperty(page, 'materialized_email');
+	await expect(typeDropdown).toHaveCount(1);
+	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('email · string');
+	await expect(typeChangeNote).toHaveText('This type can only be changed to string.');
+	await typeTrigger.click();
+	await expect(typeOptions).toHaveCount(20);
+	expect(
+		await propertyPanel
+			.locator('.property-type-selector__option:not([disabled])')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('data-type-option'))),
+	).toEqual(['email', 'string']);
+	await expect(propertyPanel.locator('.property-type-selector__option[disabled]')).toHaveCount(18);
+	await expect(typeDropdown.locator('.property-type-selector__type-change-note')).toHaveCount(0);
+	await expect(propertyPanel.locator('[data-type-option="email"] .schema-property-type')).toHaveText(
+		'email · string · max 100 chars',
+	);
+	await expect(propertyPanel.locator('[data-type-option="string"] .schema-property-type')).toHaveText(
+		'string · max 100 chars · Text value, such as a name or code',
+	);
+	await expect(propertyPanel.locator('[data-type-option="phone"] .schema-property-type')).toHaveText(
+		'phone number · string',
+	);
+	await propertyPanel.locator('[data-type-option="string"]').click();
+	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('string');
+	const lengthConstraints = propertyPanel.locator('.property-form__constraints--length sl-input');
+	await expect(lengthConstraints).toHaveCount(2);
+	await expect(lengthConstraints.first().locator('input')).toHaveValue('100');
+	await expect(lengthConstraints.first()).toHaveAttribute('readonly');
+	await expect(lengthConstraints.first()).not.toHaveAttribute('disabled');
+
+	// The original semantic can be restored until the draft is applied.
+	const emailOption = propertyPanel.locator('[data-type-option="email"]');
+	await emailOption.waitFor({ state: 'hidden' });
+	await typeTrigger.click();
+	await expect(typeOptions).toHaveCount(20);
+	await emailOption.waitFor({ state: 'visible' });
+	await expect(emailOption).not.toHaveAttribute('disabled');
+	await emailOption.click();
+	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('email · string');
+	const stringOption = propertyPanel.locator('[data-type-option="string"]');
+	await stringOption.waitFor({ state: 'hidden' });
+	await typeTrigger.click();
+	await stringOption.waitFor({ state: 'visible' });
+	await stringOption.click();
+	await emailOption.waitFor({ state: 'hidden' });
+	await propertyPanel.locator('.property-panel__save').click();
+	await expect(
+		page.locator('.schema-edit .grid__row[data-id="materialized_email"] .schema-property-type'),
+	).toHaveText('string · max 100 chars');
+
+	await openProperty(page, 'materialized_money');
+	const currency = propertyPanel.locator('.property-form__currency');
+	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('money · decimal');
+	await expect(currency.locator('input')).toHaveValue('EUR · Euro');
+	await expect(currency).toHaveAttribute('readonly');
+	await expect(currency).toHaveAttribute('tabindex', '-1');
+	await expect(currency).not.toHaveAttribute('disabled');
+	await expect(typeChangeNote).toHaveText('This type can only be changed to decimal.');
+	await typeTrigger.click();
+	await expect(typeOptions).toHaveCount(20);
+	expect(
+		await propertyPanel
+			.locator('.property-type-selector__option:not([disabled])')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('data-type-option'))),
+	).toEqual(['money', 'decimal']);
+	await expect(propertyPanel.locator('.property-type-selector__option[disabled]')).toHaveCount(18);
+	await expect(propertyPanel.locator('[data-type-option="money"] .schema-property-type')).toHaveText(
+		'money · decimal(18,4) · min -0.5, max 1.25',
+	);
+	await expect(propertyPanel.locator('[data-type-option="decimal"] .schema-property-type')).toHaveText(
+		'decimal(18,4) · min -0.5, max 1.25 · Decimal number with fixed precision',
+	);
+	await propertyPanel.locator('[data-type-option="decimal"]').click();
+	await expect(currency).toHaveCount(0);
+	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('decimal');
+	await propertyPanel.locator('.property-panel__save').click();
+
+	const previewRequestPromise = page.waitForRequest(
+		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
+	);
+	await page.locator('.schema-edit__header-apply-button').click();
+	const schema = (await previewRequestPromise).postDataJSON().schema as ObjectType;
+	const email = schema.properties.find((property) => property.name === 'email');
+	expect(email?.type).toEqual({ kind: 'string', maxLength: 100 });
+	expect(email?.semantic).toBeUndefined();
+	const materializedEmail = schema.properties.find((property) => property.name === 'materialized_email');
+	expect(materializedEmail?.type).toEqual({ kind: 'string', maxLength: 100 });
+	expect(materializedEmail?.semantic).toBeUndefined();
+	const materializedMoney = schema.properties.find((property) => property.name === 'materialized_money');
+	expect(materializedMoney?.type).toEqual({
+		kind: 'decimal',
+		precision: 18,
+		scale: 4,
+		minimum: -0.5,
+		maximum: 1.25,
+	});
+	expect(materializedMoney?.semantic).toBeUndefined();
+});
+
+test(`Render array and map property types and preserve their semantics`, async ({ page }) => {
 	const semantic: Semantic = { kind: 'phone' };
+	await page.route('**/v1/profiles/schema/preview', async (route) => {
+		await route.fulfill({ json: { queries: [] } });
+	});
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const request = route.request();
 		if (request.method() === 'GET') {
 			const response = await route.fetch();
 			const schema = (await response.json()) as ObjectType;
-			const property = schema.properties.find((property) => property.name === 'phone_numbers');
-			property.semantic = semantic;
+			const arrayProperty = schema.properties.find((property) => property.name === 'phone_numbers');
+			const plainArrayProperty = structuredClone(arrayProperty);
+			plainArrayProperty.name = 'plain_phone_numbers';
+			const plainMapProperty = structuredClone(arrayProperty);
+			plainMapProperty.name = 'plain_phone_numbers_by_kind';
+			plainMapProperty.type = { kind: 'map', elementType: { kind: 'string', maxLength: 300 } };
+			arrayProperty.semantic = semantic;
+			const semanticMapProperty = structuredClone(plainMapProperty);
+			semanticMapProperty.name = 'phone_numbers_by_kind';
+			semanticMapProperty.semantic = semantic;
+			schema.properties.push(plainArrayProperty, plainMapProperty, semanticMapProperty);
 			await route.fulfill({ response, json: schema });
 			return;
 		}
@@ -1272,9 +1711,40 @@ test(`Preserve array property semantics`, async ({ page }) => {
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
+	const expectedTypes = {
+		phone_numbers: 'array of phone number · string · max 300 chars',
+		phone_numbers_by_kind: 'map of phone number · string · max 300 chars',
+		plain_phone_numbers: 'array of string · max 300 chars',
+		plain_phone_numbers_by_kind: 'map of string · max 300 chars',
+	};
+	for (const [property, type] of Object.entries(expectedTypes)) {
+		await expect(page.locator(`.schema-grid .grid__row[data-id="${property}"] .schema-property-type`)).toHaveText(
+			type,
+		);
+	}
 	await editSchema(page);
+	for (const [property, type] of Object.entries(expectedTypes)) {
+		await expect(page.locator(`.schema-edit .grid__row[data-id="${property}"] .schema-property-type`)).toHaveText(
+			type,
+		);
+	}
 	await openProperty(page, 'phone_numbers');
 	const propertyPanel = page.locator('.property-panel');
+	const structureDropdown = propertyPanel.locator('.property-type-selector__structure-dropdown');
+	const structureTrigger = propertyPanel.locator('.property-type-selector__structure-trigger');
+	await expect(structureDropdown).toHaveCount(1);
+	await expect(structureTrigger).toContainText('array of');
+	await structureTrigger.click();
+	await expect(propertyPanel.locator('.property-type-selector__structure-option')).toHaveCount(4);
+	await expect(propertyPanel.locator('[data-structure-option="array"]')).not.toHaveAttribute('disabled');
+	await expect(propertyPanel.locator('.property-type-selector__structure-option[disabled]')).toHaveCount(3);
+	await structureTrigger.click();
+	await expect(propertyPanel.locator('.property-type-selector__trigger .schema-property-type')).toHaveText(
+		'phone number · string',
+	);
+	await expect(propertyPanel.locator('.property-type-selector__type-change-note')).toHaveText(
+		'This type can only be changed to string.',
+	);
 	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Updated description');
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
 	await propertyPanel.locator('.property-panel__save').click();
@@ -1289,6 +1759,8 @@ test(`Preserve array property semantics`, async ({ page }) => {
 	const body = JSON.parse(response.request().postData());
 	const property = body.schema.properties.find((property) => property.name === 'phone_numbers');
 	expect(property.semantic).toEqual(semantic);
+	const mapProperty = body.schema.properties.find((property) => property.name === 'phone_numbers_by_kind');
+	expect(mapProperty.semantic).toEqual(semantic);
 });
 
 test(`Add schema property`, async ({ page }) => {
@@ -1315,6 +1787,8 @@ test(`Add schema property`, async ({ page }) => {
 	}, 'foo');
 
 	await page.keyboard.press('Tab');
+	await expect(panel.locator('.property-form__parent [part="display-input"]')).toBeFocused();
+	await page.keyboard.press('Tab');
 	await expect(panel.locator('.property-type-selector__structure-trigger')).toBeFocused();
 	await expect(panel.locator('.property-type-selector__structure-dropdown')).toHaveJSProperty('open', false);
 	await page.keyboard.press('ArrowDown');
@@ -1325,10 +1799,15 @@ test(`Add schema property`, async ({ page }) => {
 	await expect(panel.locator('.property-type-selector__dropdown')).toHaveJSProperty('open', false);
 	await page.keyboard.press('ArrowDown');
 	await expect(panel.locator('.property-type-selector__dropdown')).toHaveJSProperty('open', true);
-	await expect(panel.locator('[data-type-option="string"]')).toBeFocused();
+	await expect(panel.locator('[data-type-option="email"]')).toBeFocused();
 	await page.keyboard.press('ArrowDown');
-	await expect(panel.locator('[data-type-option="int"]')).toBeFocused();
+	await expect(panel.locator('[data-type-option="phone"]')).toBeFocused();
 	await page.keyboard.press('ArrowUp');
+	await expect(panel.locator('[data-type-option="email"]')).toBeFocused();
+	await page.keyboard.press('ArrowDown');
+	await page.keyboard.press('ArrowDown');
+	await page.keyboard.press('ArrowDown');
+	await page.keyboard.press('ArrowDown');
 	await expect(panel.locator('[data-type-option="string"]')).toBeFocused();
 	await page.keyboard.press('Enter');
 
@@ -1557,7 +2036,7 @@ test(`Validate decimal constraints as they are edited`, async ({ page }) => {
 	await expect(saveButton).not.toHaveAttribute('disabled');
 	await saveButton.click();
 	const addedProperty = page.locator('.schema-edit .grid__row[data-id="decimal_constraints"]');
-	await expect(addedProperty.locator('.schema-edit__property-technical-type')).toHaveText('decimal(10,4)');
+	await expect(addedProperty.locator('.schema-property-type')).toHaveText('decimal(10,4)');
 });
 
 test(`Validate numeric range constraints as they are edited`, async ({ page }) => {
@@ -1617,9 +2096,7 @@ test(`Validate numeric range constraints as they are edited`, async ({ page }) =
 	await saveButton.click();
 
 	const addedProperty = page.locator('.schema-edit .grid__row[data-id="numeric_range"]');
-	await expect(addedProperty.locator('.schema-edit__property-technical-type')).toHaveText(
-		'decimal(10,4), min -1.2345, max 1.2345',
-	);
+	await expect(addedProperty.locator('.schema-property-type')).toHaveText('decimal(10,4) · min -1.2345, max 1.2345');
 });
 
 test(`Edit schema property`, async ({ page }) => {
@@ -1628,8 +2105,6 @@ test(`Edit schema property`, async ({ page }) => {
 	await editSchema(page);
 
 	await openProperty(page, 'foo');
-	await expect(page.locator('.property-type-selector__structure-trigger')).toHaveJSProperty('caret', false);
-	await expect(page.locator('.property-type-selector__trigger')).toHaveJSProperty('caret', false);
 	const changeNameButton = page.locator('.property-panel .property-form__change-name');
 	const nameInput = page.locator('.property-panel .property-form__name-input');
 	await expect(nameInput).toHaveAttribute('readonly', '');
