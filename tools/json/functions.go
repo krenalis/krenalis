@@ -7,14 +7,13 @@ package json
 import (
 	"bytes"
 	jsonv1 "encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
 	"slices"
 	"unicode/utf8"
-
-	"github.com/krenalis/krenalis/tools/json/internal/json"
-	"github.com/krenalis/krenalis/tools/json/internal/json/jsontext"
 )
 
 // ErrInvalidJSON is returned when an argument is not valid JSON, or is not
