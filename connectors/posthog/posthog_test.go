@@ -78,7 +78,7 @@ func TestSendEvents(t *testing.T) {
 
 		anonymousID := "anon-identify-01"
 		userID := "user_891273"
-		messageID := uuid.NewV4().String()
+		messageID := uuid.New().String()
 		sessionUUID, err := makeSessionUUIDv7(anonymousID, sessionID)
 		if err != nil {
 			t.Fatalf("expected session UUID generation to succeed, got %v", err)
@@ -159,7 +159,7 @@ func TestSendEvents(t *testing.T) {
 		anonymousID := "anon-group-01"
 		userID := "user_73155"
 		groupID := "company-413"
-		messageID := uuid.NewV4().String()
+		messageID := uuid.New().String()
 		sessionUUID, err := makeSessionUUIDv7(anonymousID, sessionID)
 		if err != nil {
 			t.Fatalf("expected session UUID generation to succeed, got %v", err)
@@ -233,9 +233,9 @@ func TestSendEvents(t *testing.T) {
 
 	t.Run("track", func(t *testing.T) {
 
-		anonymousID := uuid.NewV4().String()
+		anonymousID := uuid.New().String()
 		userID := "user_4891"
-		messageID := uuid.NewV4().String()
+		messageID := uuid.New().String()
 		const explicitSessionID = "01946b9f-859b-7cce-ab5c-f9e68680be6e"
 
 		received := map[string]any{
@@ -307,8 +307,8 @@ func TestSendEvents(t *testing.T) {
 
 	t.Run("page", func(t *testing.T) {
 
-		anonymousID := uuid.NewV4().String()
-		messageID := uuid.NewV4().String()
+		anonymousID := uuid.New().String()
+		messageID := uuid.New().String()
 		sessionUUID, err := makeSessionUUIDv7(anonymousID, sessionID)
 		if err != nil {
 			t.Fatalf("expected session UUID generation to succeed, got %v", err)
@@ -382,9 +382,9 @@ func TestSendEvents(t *testing.T) {
 
 	t.Run("screen", func(t *testing.T) {
 
-		anonymousID := uuid.NewV4().String()
+		anonymousID := uuid.New().String()
 		userID := "user_70351"
-		messageID := uuid.NewV4().String()
+		messageID := uuid.New().String()
 		sessionUUID, err := makeSessionUUIDv7(anonymousID, sessionID)
 		if err != nil {
 			t.Fatalf("expected session UUID generation to succeed, got %v", err)
@@ -458,7 +458,7 @@ func TestSendEvents(t *testing.T) {
 
 		anonymousID := "anon_492"
 		userID := "user_982"
-		messageID := uuid.NewV4().String()
+		messageID := uuid.New().String()
 		sessionUUID, err := makeSessionUUIDv7(anonymousID, sessionID)
 		if err != nil {
 			t.Fatalf("expected session UUID generation to succeed, got %v", err)

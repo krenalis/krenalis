@@ -1972,7 +1972,7 @@ func (core *Core) removeMCPWarehouse(ws string) {
 //     not exist.
 func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema types.Type, primarySources map[string]string, operations []warehouses.AlterOperation) error {
 	core.mustBeOpen()
-	opID := uuid.NewV7()
+	opID := uuid.New()
 	n := state.StartAlterProfileSchema{
 		Workspace:      ws,
 		ID:             opID.String(),
@@ -2052,7 +2052,7 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema
 // code OperationAlreadyExecuting.
 func (core *Core) startIdentityResolution(ctx context.Context, ws string) error {
 	core.mustBeOpen()
-	opID := uuid.NewV7()
+	opID := uuid.New()
 	n := state.StartIdentityResolution{
 		Workspace: ws,
 		ID:        opID.String(),

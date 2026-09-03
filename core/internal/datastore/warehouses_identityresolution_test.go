@@ -624,7 +624,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					for _, id := range test.identifiers {
 						identifiers = append(identifiers, columnByName[id])
 					}
-					opID := uuid.NewV7()
+					opID := uuid.New()
 					// Call ResolveIdentities several times, just to do a
 					// minimal idempotency test.
 					for range 5 {

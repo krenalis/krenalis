@@ -61,7 +61,7 @@ func TestSendEvents(t *testing.T) {
 
 		received := map[string]any{
 			"connectionId": testConnectionID,
-			"anonymousId":  uuid.NewV4().String(),
+			"anonymousId":  uuid.New().String(),
 			"context": map[string]any{
 				"browser": map[string]any{
 					"name":    "Safari",
@@ -81,7 +81,7 @@ func TestSendEvents(t *testing.T) {
 				},
 			},
 			"event":     "Order Completed",
-			"messageId": uuid.NewV4().String(),
+			"messageId": uuid.New().String(),
 			"properties": marshalJSON(map[string]any{
 				"order_id":    "703924",
 				"affiliation": "AP3383",
@@ -161,7 +161,7 @@ func TestSendEvents(t *testing.T) {
 
 		received := map[string]any{
 			"connectionId": testConnectionID,
-			"anonymousId":  uuid.NewV4().String(),
+			"anonymousId":  uuid.New().String(),
 			"context": map[string]any{
 				"browser": map[string]any{
 					"name":    "Safari",
@@ -181,7 +181,7 @@ func TestSendEvents(t *testing.T) {
 				},
 			},
 			"event":     "Order Completed",
-			"messageId": uuid.NewV4().String(),
+			"messageId": uuid.New().String(),
 			"properties": marshalJSON(map[string]any{
 				"order_id":    "703924",
 				"affiliation": "AP3383",
@@ -270,7 +270,7 @@ func TestSendEvents(t *testing.T) {
 
 		received := map[string]any{
 			"connectionId": testConnectionID,
-			"anonymousId":  uuid.NewV4().String(),
+			"anonymousId":  uuid.New().String(),
 			"context": map[string]any{
 				"browser": map[string]any{
 					"name":    "Safari",
@@ -290,7 +290,7 @@ func TestSendEvents(t *testing.T) {
 				},
 			},
 			"event":     "Product Viewed",
-			"messageId": uuid.NewV4().String(),
+			"messageId": uuid.New().String(),
 			"properties": marshalJSON(map[string]any{
 				"product_id": 803916,
 			}),
@@ -354,7 +354,7 @@ func TestSendEvents(t *testing.T) {
 
 		received := map[string]any{
 			"connectionId": testConnectionID,
-			"anonymousId":  uuid.NewV4().String(),
+			"anonymousId":  uuid.New().String(),
 			"context": map[string]any{
 				"browser": map[string]any{
 					"name":    "Safari",
@@ -374,7 +374,7 @@ func TestSendEvents(t *testing.T) {
 				},
 			},
 			"name":      "Wireless Headphones",
-			"messageId": uuid.NewV4().String(),
+			"messageId": uuid.New().String(),
 			"properties": marshalJSON(map[string]any{
 				"productId": "WH-001",
 				"name":      "Wireless Headphones",
@@ -451,7 +451,7 @@ func TestSendEvents(t *testing.T) {
 
 		received := map[string]any{
 			"connectionId": testConnectionID,
-			"anonymousId":  uuid.NewV4().String(),
+			"anonymousId":  uuid.New().String(),
 			"context": map[string]any{
 				"app": map[string]any{
 					"name":      "MyFinance",
@@ -478,7 +478,7 @@ func TestSendEvents(t *testing.T) {
 				},
 			},
 			"name":      "Transaction History",
-			"messageId": uuid.NewV4().String(),
+			"messageId": uuid.New().String(),
 			"properties": marshalJSON(map[string]any{
 				"filter":            "Last 30 days",
 				"totalTransactions": 42,

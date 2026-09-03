@@ -559,7 +559,7 @@ func (d *decoder) decodeEvent(connectionId string, fallbackToRequestIP bool) (ev
 			}
 			return nil, errors.BadRequest("either 'anonymousId' or 'userId' properties are required for a %s event", typ)
 		}
-		event["anonymousId"] = uuid.NewV4().String()
+		event["anonymousId"] = uuid.New().String()
 	}
 
 	// Category.
@@ -700,7 +700,7 @@ func (d *decoder) decodeEvent(connectionId string, fallbackToRequestIP bool) (ev
 
 	// Message ID.
 	if _, ok := event["messageId"]; !ok {
-		event["messageId"] = "krenalis-" + uuid.NewV4().String()
+		event["messageId"] = "krenalis-" + uuid.New().String()
 	}
 
 	// Name.

@@ -148,7 +148,7 @@ func (role Role) String() string {
 // UUID returns a random version 4 UUID. For example, it can be used as an
 // idempotency key.
 func UUID() string {
-	return uuid.NewV4().String()
+	return uuid.New().String()
 }
 
 var errorQuoteReplacer = strings.NewReplacer("»", "≫")
