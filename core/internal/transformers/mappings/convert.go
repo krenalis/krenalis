@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"time"
 	"unicode/utf8"
+	"uuid"
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/util"
@@ -20,7 +21,6 @@ import (
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 
-	"github.com/google/uuid"
 	"github.com/relvacode/iso8601"
 )
 
@@ -601,7 +601,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			if !v.IsString() {
 				return v, errInvalidConversion
 			}
-			u, err := uuid.ParseBytes(v.Bytes())
+			u, err := uuid.Parse(string(v.Bytes()))
 			if err != nil {
 				return v, errParseConversion
 			}

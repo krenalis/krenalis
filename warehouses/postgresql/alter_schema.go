@@ -21,24 +21,36 @@ import (
 
 // AlterProfileSchema alters the profile schema.
 func (warehouse *PostgreSQL) AlterProfileSchema(ctx context.Context, opID string, columns []warehouses.Column, operations []warehouses.AlterOperation) error {
+	pool, _, err := warehouse.connectionPool(ctx, false)
+	if err != nil {
+		return err
+	}
 	status, err := warehouse.executeOperation(ctx, opID, alterProfileSchema)
 	if err != nil {
 		return err
 	}
 	if status.alreadyCompleted {
-		return status.executionError
+		if status.executionError != nil {
+			return status.executionError
+		}
+		return nil
 	}
+	var operationErr *warehouses.OperationError
 	err = warehouse.alterProfileSchema(ctx, columns, operations)
+	if err != nil {
+		operationErr = warehouses.NewOperationError(err)
+	}
 	bo := backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
-		err2 := warehouse.setOperationAsCompleted(ctx, opID, err)
+		err2 := warehouse.setOperationAsCompleted(ctx, pool, opID, operationErr)
 		if err2 != nil {
-			slog.Error("cannot set alter profile columns operation as completed, retrying", "err", err2, "operationError", err)
+			slog.Error("cannot set alter profile columns operation as completed, retrying",
+				"err", warehouses.NewOperationError(err2), "operationError", operationErr)
 			continue
 		}
-		if err != nil {
-			return warehouses.NewOperationError(err)
+		if operationErr != nil {
+			return operationErr
 		}
 		return nil
 	}
@@ -47,14 +59,14 @@ func (warehouse *PostgreSQL) AlterProfileSchema(ctx context.Context, opID string
 
 func (warehouse *PostgreSQL) alterProfileSchema(ctx context.Context, columns []warehouses.Column, operations []warehouses.AlterOperation) error {
 
-	// Retrieve the current version of the "krenalis_profiles" table.
-	profilesVersion, err := warehouse.profilesVersion(ctx)
+	// Retrieve the published version of the "krenalis_profiles" table.
+	publishedProfilesVersion, err := warehouse.publishedProfilesVersion(ctx)
 	if err != nil {
 		return err
 	}
 
 	// Determine the alter schema queries.
-	queries := alterProfileSchemaQueries("krenalis_profiles_"+strconv.Itoa(profilesVersion), columns, operations)
+	queries := alterProfileSchemaQueries("krenalis_profiles_"+strconv.Itoa(publishedProfilesVersion), columns, operations)
 
 	// Execute the alter schema queries within a transaction.
 	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
@@ -74,11 +86,11 @@ func (warehouse *PostgreSQL) alterProfileSchema(ctx context.Context, columns []w
 // operation by returning the queries that would be executed on the warehouse to
 // perform a given alter schema.
 func (warehouse *PostgreSQL) PreviewAlterProfileSchema(ctx context.Context, columns []warehouses.Column, operations []warehouses.AlterOperation) ([]string, error) {
-	profilesVersion, err := warehouse.profilesVersion(ctx)
+	publishedProfilesVersion, err := warehouse.publishedProfilesVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
-	queries := alterProfileSchemaQueries("krenalis_profiles_"+strconv.Itoa(profilesVersion), columns, operations)
+	queries := alterProfileSchemaQueries("krenalis_profiles_"+strconv.Itoa(publishedProfilesVersion), columns, operations)
 	queries = append([]string{"BEGIN"}, queries...)
 	queries = append(queries, "COMMIT")
 	for i, q := range queries {
