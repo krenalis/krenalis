@@ -213,10 +213,6 @@ Prefer the standard library, or an existing helper under `tools/`, over a hand-r
 
 When deleting something, look for what it leaves behind: callers, columns, fixtures, documentation, constants that are now dead.
 
-# New files
-
-Copy the copyright header from a sibling file in the same package: `core/`, `cmd/`, `admin/` and `test/` are under the Elastic License 2.0, `connectors/` and `warehouses/` under the MIT license, and `tools/` is mixed.
-
 # Dependencies
 
 Do not state what a vendored library does from its API surface or from memory. Read it in `vendor/` and follow the call chain up to the caller that matters: an option that looks dropped along one path often arrives by another. Cite file and line when reporting such behavior.
