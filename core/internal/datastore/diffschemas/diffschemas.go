@@ -296,9 +296,9 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 					Column:    pathToColumn(keptPath),
 				})
 			}
-			// The type to compare with the new one is that of the renamed
-			// property, at oldPath, and not that of the deleted property, whose
-			// name is the one that has been reused.
+			// Compare the new type with the type of the property renamed from
+			// oldPath, rather than with the deleted property whose name was
+			// reused.
 			oldName := propPathToName(oldPath)
 			renamedProp, _ := oldProperties.ByName(oldName)
 			if !types.Equal(renamedProp.Type, newProp.Type) {
