@@ -296,8 +296,13 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 					Column:    pathToColumn(keptPath),
 				})
 			}
-			if !types.Equal(oldProp.Type, newProp.Type) {
-				return nil, fmt.Errorf("error on property %q: type changes are not supported", appendPath(path, oldProp.Name))
+			// Compare the new type with the type of the property renamed from
+			// oldPath, rather than with the deleted property whose name was
+			// reused.
+			oldName := propPathToName(oldPath)
+			renamedProp, _ := oldProperties.ByName(oldName)
+			if !types.Equal(renamedProp.Type, newProp.Type) {
+				return nil, fmt.Errorf("error on property %q (renamed to %q): type changes are not supported", appendPath(path, oldName), keptPath)
 			}
 			if newProp.Type.Kind() == types.ObjectKind {
 				for _, c := range util.PropertiesToColumns(newProp.Type.Properties()) {
