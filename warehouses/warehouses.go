@@ -15,12 +15,11 @@ import (
 	"strconv"
 	"time"
 	"unicode/utf8"
+	"uuid"
 
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
-
-	"github.com/google/uuid"
 )
 
 // Platform represents a warehouse platform.
@@ -429,17 +428,55 @@ func IsValidSchemaName(name string) bool {
 	return IsValidIdentifier(name)
 }
 
-// OperationError represents an error that occurred in the data warehouse during
-// an Identity Resolution or profile schema update operation.
-type OperationError struct{ err error }
+// MaxOperationErrorBytes is the maximum supported size of an operation error
+// message.
+const MaxOperationErrorBytes = 4 << 10 // 4 KiB
 
-// NewOperationError returns a new *OperationError.
+// OperationError represents an error that occurred in the data warehouse during
+// an Identity Resolution or profile schema update operation. Its message is
+// valid UTF-8 and at most MaxOperationErrorBytes bytes long.
+type OperationError struct{ message string }
+
+// NewOperationError returns a new *OperationError. Messages longer than
+// MaxOperationErrorBytes are abbreviated at a Unicode character boundary with
+// a trailing "[...]". If the resulting message is not valid UTF-8, it is
+// replaced with a fixed message. NewOperationError panics if err is nil.
 func NewOperationError(err error) *OperationError {
-	return &OperationError{err: err}
+	if err == nil {
+		panic("warehouses.NewOperationError: nil error")
+	}
+	const invalidMessage = "warehouse operation failed with an invalid error message"
+	message := err.Error()
+	if len(message) > MaxOperationErrorBytes {
+		const suffix = "[...]"
+		end := MaxOperationErrorBytes - len(suffix)
+		for i := 0; i < utf8.UTFMax-1 && !utf8.RuneStart(message[end]); i++ {
+			end--
+		}
+		if !utf8.RuneStart(message[end]) {
+			return &OperationError{message: invalidMessage}
+		}
+		message = message[:end] + suffix
+	}
+	if !utf8.ValidString(message) {
+		message = invalidMessage
+	}
+	return &OperationError{message: message}
 }
 
+// NewPersistedOperationError returns an *OperationError for a message read from
+// a warehouse. Messages that are not valid UTF-8 or exceed
+// MaxOperationErrorBytes are replaced with a fixed message.
+func NewPersistedOperationError(message string) *OperationError {
+	if len(message) > MaxOperationErrorBytes || !utf8.ValidString(message) {
+		message = "warehouse operation failed with an invalid or oversized error message"
+	}
+	return &OperationError{message: message}
+}
+
+// Error returns the operation error message.
 func (err OperationError) Error() string {
-	return err.err.Error()
+	return err.message
 }
 
 // ValidateInt validates an int value.

@@ -19,6 +19,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/collector"
@@ -50,7 +51,6 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/getsentry/sentry-go"
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -1087,7 +1087,7 @@ func (core *Core) WaitStateVersion(ctx context.Context, version int) error {
 // DataTransformation represents transformation passed to (*Core).TransformData
 // and (*Connection).PreviewSendEvent methods.
 type DataTransformation struct {
-	Mapping  map[string]string           `json:"mapping,format:emitnull"`
+	Mapping  map[string]string           `json:"mapping"`
 	Function *DataTransformationFunction `json:"function"`
 }
 
@@ -1536,7 +1536,7 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 		defer stopPing()
 
 		// Prepare the run metrics.
-		bo = backoff.New(200)
+		bo.Reset()
 		for bo.Next(executionCtx) {
 			res, err := core.db.Exec(executionCtx,
 				// If statistics from previous runs of the same pipeline are available,
@@ -1787,28 +1787,32 @@ func (core *Core) executeIdentityResolution(workspace, opID string) {
 	var unknownErrorMsg string
 	for bo.Next(ctx) {
 		err := store.ResolveIdentities(ctx, opID)
-		// In case of success, go on and send an EndIdentityResolution
-		// notification.
-		if err == nil {
-			break
+		if err != nil {
+			// If the context has expired, just return.
+			if ctx.Err() != nil {
+				unknownErrorMsg = ""
+				return
+			}
+			// If the workspace no longer exists, stop the operation.
+			if errors.Is(err, datastore.ErrWorkspaceNotExist) {
+				return
+			}
+			// In case of OperationError log it, then go on and send an
+			// EndIdentityResolution notification.
+			if operationError, ok := errors.AsType[*warehouses.OperationError](err); ok {
+				slog.Error("identity resolution ended with an error", "error", operationError)
+				unknownErrorMsg = ""
+				break
+			}
+			// In case of unknown error, try again.
+			loggedError := warehouses.NewOperationError(err)
+			if msg := loggedError.Error(); unknownErrorMsg != msg {
+				slog.Warn("failed to check the identity resolution status; retrying", "error", loggedError)
+				unknownErrorMsg = msg
+			}
+			continue
 		}
-		// If the context has expired, just return.
-		if ctx.Err() != nil {
-			unknownErrorMsg = ""
-			return
-		}
-		// In case of OperationError log it, then go on and send an
-		// EndIdentityResolution notification.
-		if err2, ok := err.(*warehouses.OperationError); ok {
-			slog.Error("identity resolution ended with an error", "error", err2)
-			unknownErrorMsg = ""
-			break
-		}
-		// In case of unknown error, try again.
-		if msg := err.Error(); unknownErrorMsg != msg {
-			slog.Warn("failed to check the identity resolution status; retrying", "error", err)
-			unknownErrorMsg = msg
-		}
+		break
 	}
 	if unknownErrorMsg != "" {
 		slog.Info("Identity resolution status checked successfully")
@@ -1819,7 +1823,7 @@ func (core *Core) executeIdentityResolution(workspace, opID string) {
 		ID:        opID,
 		EndTime:   time.Now().UTC(),
 	}
-	bo = backoff.New(200)
+	bo.Reset()
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
@@ -1997,10 +2001,7 @@ func (core *Core) removeMCPWarehouse(ws string) {
 //     not exist.
 func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema types.Type, primarySources map[string]string, operations []warehouses.AlterOperation) error {
 	core.mustBeOpen()
-	opID, err := uuid.NewUUID()
-	if err != nil {
-		return err
-	}
+	opID := uuid.New()
 	n := state.StartAlterProfileSchema{
 		Workspace:      ws,
 		ID:             opID.String(),
@@ -2029,7 +2030,7 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema
 		}
 		connQuery.WriteByte(')')
 	}
-	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+	err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		// Check if primary sources connections exist.
 		if len(primarySources) > 0 {
 			var count int
@@ -2045,7 +2046,7 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema
 		// warehouse.
 		var ongoingOp bool
 		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
-		err = tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
+		err := tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return nil, errors.NotFound("workspace %s does not exist", n.Workspace)
@@ -2080,16 +2081,13 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema
 // code OperationAlreadyExecuting.
 func (core *Core) startIdentityResolution(ctx context.Context, ws string) error {
 	core.mustBeOpen()
-	opID, err := uuid.NewUUID()
-	if err != nil {
-		return err
-	}
+	opID := uuid.New()
 	n := state.StartIdentityResolution{
 		Workspace: ws,
 		ID:        opID.String(),
 		StartTime: time.Now().UTC(),
 	}
-	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+	err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		var ongoingOp bool
 		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
 		err := tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)

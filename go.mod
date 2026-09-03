@@ -2,7 +2,7 @@ module github.com/krenalis/krenalis
 
 // Keep in sync with the version within ".github/workflows/*.yml".
 // Keep in sync with the version within "Dockerfile".
-go 1.26
+go 1.27
 
 // Use our Snowflake driver fork. See https://github.com/krenalis/krenalis/issues/2368.
 // Keep in sync with the version within "test/krenalistester/build_run_krenalis.go".
@@ -28,14 +28,13 @@ require (
 	github.com/go-sql-driver/mysql v1.10.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/go-cmp v0.7.0
-	github.com/google/uuid v1.6.0
 	github.com/gorilla/securecookie v1.1.2
 	github.com/itchyny/timefmt-go v0.1.8
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/klauspost/compress v1.19.1
 	github.com/krenalis/analytics-go v0.0.8
-	github.com/mark3labs/mcp-go v0.52.0
+	github.com/mark3labs/mcp-go v0.58.0
 	github.com/nats-io/nats.go v1.52.0
 	github.com/nats-io/nkeys v0.4.15
 	github.com/oschwald/maxminddb-golang/v2 v2.4.1
@@ -111,6 +110,7 @@ require (
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/flatbuffers v25.12.19+incompatible // indirect
 	github.com/google/jsonschema-go v0.4.2 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect

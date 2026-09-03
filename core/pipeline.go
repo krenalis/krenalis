@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/connections"
@@ -24,8 +25,6 @@ import (
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
-
-	"github.com/google/uuid"
 )
 
 // eventPipelineSchema defines the event schema for pipelines.
@@ -128,8 +127,24 @@ type TransformationFunction struct {
 
 // Transformation represents a transformation.
 type Transformation struct {
-	Mapping  map[string]string       `json:"mapping,format:emitnull"`
+	Mapping  map[string]string       `json:"mapping"`
 	Function *TransformationFunction `json:"function"`
+}
+
+// MarshalJSON returns the JSON encoding of transformation, encoding Mapping as
+// null when it is nil.
+func (transformation Transformation) MarshalJSON() ([]byte, error) {
+	var mapping any
+	if transformation.Mapping != nil {
+		mapping = transformation.Mapping
+	}
+	return json.Marshal(struct {
+		Mapping  any                     `json:"mapping"`
+		Function *TransformationFunction `json:"function"`
+	}{
+		Mapping:  mapping,
+		Function: transformation.Function,
+	})
 }
 
 // ExportMode represents one of the three export modes.
@@ -1573,7 +1588,7 @@ func toStateTransformation(transformation *Transformation, inSchema, outSchema t
 // transformation function.
 func transformationFunctionName(pipeline string) string {
 	if pipeline == "" {
-		return fmt.Sprintf("krenalis_preview_%s", uuid.NewString())
+		return fmt.Sprintf("krenalis_preview_%s", uuid.New())
 	}
 	now := time.Now().UTC()
 	return fmt.Sprintf("krenalis_pipeline_%s_%s-%09d", pipeline, now.Format("2006-01-02T15-04-05"), now.Nanosecond())

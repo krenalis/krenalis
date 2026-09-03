@@ -80,8 +80,8 @@ func (warehouse *Snowflake) CheckReadOnlyAccess(ctx context.Context) error {
 		return snowflake(err)
 	}
 
-	// Retrieve the profiles table version.
-	profileSchemaVersion, err := warehouse.profilesVersion(ctx)
+	// Retrieve the greatest recorded profiles table version.
+	profileSchemaVersion, err := warehouse.maxProfilesVersion(ctx)
 	if err != nil {
 		return err
 	}
@@ -466,8 +466,9 @@ func (warehouse *Snowflake) openDB(ctx context.Context) (*sql.DB, error) {
 	return db, nil
 }
 
-// profilesVersion returns the version of the "KRENALIS_PROFILES" table.
-func (warehouse *Snowflake) profilesVersion(ctx context.Context) (int, error) {
+// maxProfilesVersion returns the greatest recorded profile schema version.
+// The returned version is always non-negative.
+func (warehouse *Snowflake) maxProfilesVersion(ctx context.Context) (int, error) {
 	db, err := warehouse.openDB(ctx)
 	if err != nil {
 		return 0, snowflake(err)
@@ -477,7 +478,31 @@ func (warehouse *Snowflake) profilesVersion(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, snowflake(err)
 	}
+	if v < 0 {
+		return 0, fmt.Errorf("warehouse returned a negative profile schema version")
+	}
 	return v, nil
+}
+
+// publishedProfilesVersion returns the greatest successfully published profile
+// schema version. The returned version is always non-negative.
+func (warehouse *Snowflake) publishedProfilesVersion(ctx context.Context) (int, error) {
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return 0, snowflake(err)
+	}
+	var version int
+	err = db.QueryRowContext(ctx, `SELECT COALESCE(MAX("V"."VERSION"), 0)
+		FROM "KRENALIS_PROFILE_SCHEMA_VERSIONS" "V"
+		JOIN "KRENALIS_SYSTEM_OPERATIONS" "O" ON "O"."ID" = "V"."OPERATION"
+		WHERE "O"."COMPLETED_AT" IS NOT NULL AND "O"."ERROR" = ''`).Scan(&version)
+	if err != nil {
+		return 0, snowflake(err)
+	}
+	if version < 0 {
+		return 0, fmt.Errorf("warehouse returned a negative published profile schema version")
+	}
+	return version, nil
 }
 
 // accountFormat is the format of the account identifier in the settings.

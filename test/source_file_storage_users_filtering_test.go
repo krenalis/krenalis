@@ -36,12 +36,27 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 		Enabled: true,
 		Path:    "users.csv",
 		Filter: &krenalistester.Filter{
-			Logical: krenalistester.OpAnd,
-			Conditions: []krenalistester.FilterCondition{
-				{
+			Operator: krenalistester.OpAnd,
+			Rules: []krenalistester.FilterRule{
+				&krenalistester.FilterCondition{
 					Property: "email",
 					Operator: krenalistester.OpIsNot,
-					Values:   []string{"et@example.com"},
+					Values:   []string{"ap@example.com"},
+				},
+				&krenalistester.Filter{
+					Operator: krenalistester.OpOr,
+					Rules: []krenalistester.FilterRule{
+						&krenalistester.FilterCondition{
+							Property: "email",
+							Operator: krenalistester.OpIs,
+							Values:   []string{"ap@example.com"},
+						},
+						&krenalistester.FilterCondition{
+							Property: "email",
+							Operator: krenalistester.OpIs,
+							Values:   []string{"cp@example.com"},
+						},
+					},
 				},
 			},
 		},
@@ -71,9 +86,9 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 
 	_, _, total := k.Profiles([]string{"email"}, "", false, 0, 100)
 
-	// The CSV file contains 10 profiles, but one of them was filtered out, so
-	// there must be 9.
-	const expectedTotal = 9
+	// Only cp@example.com satisfies "email is not ap@example.com" AND
+	// ("email is ap@example.com" OR "email is cp@example.com").
+	const expectedTotal = 1
 	if expectedTotal != total {
 		t.Fatalf("expected %d profiles, got %d", expectedTotal, total)
 	}

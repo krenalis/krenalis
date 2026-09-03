@@ -519,11 +519,11 @@ github.com/lufia/plan9stats
 # github.com/magiconair/properties v1.8.10
 ## explicit; go 1.19
 github.com/magiconair/properties
-# github.com/mark3labs/mcp-go v0.52.0
+# github.com/mark3labs/mcp-go v0.58.0
 ## explicit; go 1.25.5
 github.com/mark3labs/mcp-go/mcp
 github.com/mark3labs/mcp-go/server
-github.com/mark3labs/mcp-go/util
+github.com/mark3labs/mcp-go/tracing
 # github.com/moby/docker-image-spec v1.3.1
 ## explicit; go 1.18
 github.com/moby/docker-image-spec/specs-go/v1

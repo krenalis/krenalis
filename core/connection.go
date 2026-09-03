@@ -1045,11 +1045,16 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]Ide
 		store:     this.store,
 		workspace: this.connection.Workspace(),
 	}
-	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"_connection"},
-		Operator: state.OpIs,
-		Values:   []any{this.connection.ID},
-	}}}
+	where := &state.Where{
+		Operator: state.OpAnd,
+		Rules: []state.WhereRule{
+			&state.WhereCondition{
+				Property: []string{"_connection"},
+				Operator: state.OpIs,
+				Values:   []any{this.connection.ID},
+			},
+		},
+	}
 	identities, total, err := ws.identities(ctx, where, first, limit)
 	if err != nil {
 		return nil, 0, err

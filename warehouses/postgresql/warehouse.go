@@ -82,8 +82,8 @@ func (warehouse *PostgreSQL) CheckReadOnlyAccess(ctx context.Context) error {
 	// the 'has_table_privilege' function).
 	const disallowedPrivileges = `INSERT,UPDATE,DELETE,TRUNCATE`
 
-	// Retrieve the profiles table version.
-	profileSchemaVersion, err := warehouse.profilesVersion(ctx)
+	// Retrieve the greatest recorded profiles table version.
+	profileSchemaVersion, err := warehouse.maxProfilesVersion(ctx)
 	if err != nil {
 		return err
 	}
@@ -428,8 +428,9 @@ func (warehouse *PostgreSQL) execTransaction(ctx context.Context, f func(pgx.Tx)
 	return nil
 }
 
-// profilesVersion returns the version of the "krenalis_profiles" table.
-func (warehouse *PostgreSQL) profilesVersion(ctx context.Context) (int, error) {
+// maxProfilesVersion returns the greatest recorded profile schema version.
+// The returned version is always non-negative.
+func (warehouse *PostgreSQL) maxProfilesVersion(ctx context.Context) (int, error) {
 	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return 0, err
@@ -439,7 +440,31 @@ func (warehouse *PostgreSQL) profilesVersion(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	if v < 0 {
+		return 0, fmt.Errorf("warehouse returned a negative profile schema version")
+	}
 	return v, nil
+}
+
+// publishedProfilesVersion returns the greatest successfully published profile
+// schema version. The returned version is always non-negative.
+func (warehouse *PostgreSQL) publishedProfilesVersion(ctx context.Context) (int, error) {
+	pool, _, err := warehouse.connectionPool(ctx, false)
+	if err != nil {
+		return 0, err
+	}
+	var version int
+	err = pool.QueryRow(ctx, `SELECT COALESCE(MAX("v"."version"), 0)
+		FROM "krenalis_profile_schema_versions" "v"
+		JOIN "krenalis_system_operations" "o" ON "o"."id" = "v"."operation"
+		WHERE "o"."completed_at" IS NOT NULL AND "o"."error" = ''`).Scan(&version)
+	if err != nil {
+		return 0, err
+	}
+	if version < 0 {
+		return 0, fmt.Errorf("warehouse returned a negative published profile schema version")
+	}
+	return version, nil
 }
 
 // validateSettings validates the settings.

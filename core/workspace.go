@@ -44,9 +44,9 @@ type Workspace struct {
 	ID                             string            `json:"id"`
 	Name                           string            `json:"name"`
 	ProfileSchema                  types.Type        `json:"profileSchema"`
-	PrimarySources                 map[string]string `json:"primarySources,format:emitnull"`
+	PrimarySources                 map[string]string `json:"primarySources"`
 	ResolveIdentitiesOnBatchImport bool              `json:"resolveIdentitiesOnBatchImport"`
-	Identifiers                    []string          `json:"identifiers,format:emitnull"`
+	Identifiers                    []string          `json:"identifiers"`
 	WarehouseMode                  WarehouseMode     `json:"warehouseMode"`
 	UIPreferences                  UIPreferences     `json:"uiPreferences"`
 }
@@ -231,11 +231,16 @@ func (this *Workspace) Attributes(ctx context.Context, kpid string) (json.Value,
 	}
 
 	properties := this.workspace.ProfileSchema.Properties().Names()
-	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"_kpid"},
-		Operator: state.OpIs,
-		Values:   []any{kpid},
-	}}}
+	where := &state.Where{
+		Operator: state.OpAnd,
+		Rules: []state.WhereRule{
+			&state.WhereCondition{
+				Property: []string{"_kpid"},
+				Operator: state.OpIs,
+				Values:   []any{kpid},
+			},
+		},
+	}
 
 	// Retrieve the profile attributes.
 	profiles, _, err := this.store.Profiles(ctx, datastore.Query{
@@ -970,11 +975,16 @@ func (this *Workspace) Identities(ctx context.Context, kpid string, first, limit
 	if limit < 1 || limit > 1000 {
 		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
 	}
-	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"_kpid"},
-		Operator: state.OpIs,
-		Values:   []any{kpid},
-	}}}
+	where := &state.Where{
+		Operator: state.OpAnd,
+		Rules: []state.WhereRule{
+			&state.WhereCondition{
+				Property: []string{"_kpid"},
+				Operator: state.OpIs,
+				Values:   []any{kpid},
+			},
+		},
+	}
 	ws := &Workspace{
 		core:      this.core,
 		store:     this.store,
