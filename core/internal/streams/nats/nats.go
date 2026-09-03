@@ -764,6 +764,12 @@ type ackManager struct {
 	mu              sync.Mutex
 	pending         map[*ack]struct{} // message acknowledgments being tracked; protected by mu
 	pendingSnapshot []*ack
+	ackErrors       struct {
+		sync.Mutex   // protects message, occurrences, and lastLoggedAt
+		message      string
+		occurrences  int
+		lastLoggedAt time.Time
+	}
 }
 
 // newAckManager returns an acknowledgment manager that sends heartbeats at
@@ -847,6 +853,52 @@ func (m *ackManager) inProgress(ctx context.Context) {
 	}
 }
 
+// ackErrorLogInterval is the minimum interval between logs for repeated final
+// acknowledgment errors.
+const ackErrorLogInterval = 5 * time.Second
+
+// ackErrorRecoveryThreshold is the number of consecutive occurrences of the
+// same error required before a subsequent successful acknowledgment is logged
+// as a recovery. This avoids logging recoveries for short failure sequences.
+const ackErrorRecoveryThreshold = 3
+
+// logAckResult rate-limits repeated equal final acknowledgment errors and logs
+// when a later acknowledgment succeeds after repeated failures.
+func (m *ackManager) logAckResult(err error) {
+
+	s := &m.ackErrors
+	s.Lock()
+	defer s.Unlock()
+
+	if err == nil {
+		if s.occurrences >= ackErrorRecoveryThreshold {
+			slog.Info(
+				"NATS message acknowledgment delivery recovered",
+				"previous_error", s.message,
+				"occurrences", s.occurrences,
+			)
+		}
+		s.occurrences = 0
+		return
+	}
+
+	now := time.Now()
+	message := err.Error()
+	if message != s.message {
+		s.message = message
+		s.occurrences = 1
+	} else {
+		s.occurrences++
+		if !s.lastLoggedAt.IsZero() && now.Sub(s.lastLoggedAt) < ackErrorLogInterval {
+			return
+		}
+	}
+
+	s.lastLoggedAt = now
+	slog.Warn("cannot ack NATS event", "error", err, "occurrences", s.occurrences)
+
+}
+
 // run sends acknowledgment heartbeats until the context is canceled.
 func (m *ackManager) run(ctx context.Context, heartbeatInterval time.Duration) {
 	ticker := time.NewTicker(heartbeatInterval)
@@ -880,6 +932,7 @@ type destinationAck struct {
 // Acknowledge marks the destination as complete. The last destination stops
 // tracking the message and sends its acknowledgment to NATS.
 func (d *destinationAck) Acknowledge() {
+
 	a := d.parent
 	a.mu.Lock()
 	if d.done || a.done {
@@ -896,9 +949,9 @@ func (d *destinationAck) Acknowledge() {
 	a.mu.Unlock()
 
 	a.manager.Remove(a)
-	if err := a.msg.Ack(); err != nil {
-		slog.Warn("cannot ack NATS event", "error", err)
-	}
+	err := a.msg.Ack()
+	a.manager.logAckResult(err)
+
 }
 
 // InProgress tells NATS that the message is still being processed.
