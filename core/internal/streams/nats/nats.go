@@ -857,8 +857,9 @@ func (m *ackManager) inProgress(ctx context.Context) {
 // acknowledgment errors.
 const ackErrorLogInterval = 5 * time.Second
 
-// ackErrorRecoveryThreshold is the number of repeated equal errors after which
-// a subsequent successful acknowledgment is logged as a recovery.
+// ackErrorRecoveryThreshold is the number of consecutive occurrences of the
+// same error required before a subsequent successful acknowledgment is logged
+// as a recovery. This avoids logging recoveries for short failure sequences.
 const ackErrorRecoveryThreshold = 3
 
 // logAckResult rate-limits repeated equal final acknowledgment errors and logs
@@ -871,29 +872,30 @@ func (m *ackManager) logAckResult(err error) {
 
 	if err == nil {
 		if s.occurrences >= ackErrorRecoveryThreshold {
-			slog.Info("NATS message acknowledgment delivery recovered", "previous_error", s.message, "occurrences", s.occurrences)
+			slog.Info(
+				"NATS message acknowledgment delivery recovered",
+				"previous_error", s.message,
+				"occurrences", s.occurrences,
+			)
 		}
-		s.message = ""
 		s.occurrences = 0
-		s.lastLoggedAt = time.Time{}
 		return
 	}
 
 	now := time.Now()
 	message := err.Error()
-	if s.occurrences == 0 || message != s.message {
+	if message != s.message {
 		s.message = message
 		s.occurrences = 1
-		s.lastLoggedAt = now
-		slog.Warn("failed to acknowledge NATS message", "error", err, "occurrences", 1)
-		return
+	} else {
+		s.occurrences++
+		if !s.lastLoggedAt.IsZero() && now.Sub(s.lastLoggedAt) < ackErrorLogInterval {
+			return
+		}
 	}
 
-	s.occurrences++
-	if now.Sub(s.lastLoggedAt) >= ackErrorLogInterval {
-		s.lastLoggedAt = now
-		slog.Warn("failed to acknowledge NATS message", "error", err, "occurrences", s.occurrences)
-	}
+	s.lastLoggedAt = now
+	slog.Warn("cannot ack NATS event", "error", err, "occurrences", s.occurrences)
 
 }
 
@@ -930,6 +932,7 @@ type destinationAck struct {
 // Acknowledge marks the destination as complete. The last destination stops
 // tracking the message and sends its acknowledgment to NATS.
 func (d *destinationAck) Acknowledge() {
+
 	a := d.parent
 	a.mu.Lock()
 	if d.done || a.done {
@@ -946,7 +949,9 @@ func (d *destinationAck) Acknowledge() {
 	a.mu.Unlock()
 
 	a.manager.Remove(a)
-	a.manager.logAckResult(a.msg.Ack())
+	err := a.msg.Ack()
+	a.manager.logAckResult(err)
+
 }
 
 // InProgress tells NATS that the message is still being processed.

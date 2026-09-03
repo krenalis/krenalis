@@ -7,7 +7,6 @@ package nats
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -18,6 +17,7 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/streams"
 	"github.com/krenalis/krenalis/core/natsopts"
+	"github.com/krenalis/krenalis/tools/errors"
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -147,10 +147,12 @@ func TestAckStopPreventsDestinationAcknowledgment(t *testing.T) {
 }
 
 // TestAckManagerRateLimitsFinalAcknowledgmentErrors verifies that repeated
-// equal final acknowledgment errors are logged at a limited rate and that a
-// later successful acknowledgment logs recovery.
+// occurrences of the same final acknowledgment error are rate-limited and
+// that a later successful acknowledgment logs a recovery.
 func TestAckManagerRateLimitsFinalAcknowledgmentErrors(t *testing.T) {
+
 	synctest.Test(t, func(t *testing.T) {
+
 		var output bytes.Buffer
 		previousLogger := slog.Default()
 		slog.SetDefault(slog.New(slog.NewTextHandler(&output, nil)))
@@ -171,43 +173,54 @@ func TestAckManagerRateLimitsFinalAcknowledgmentErrors(t *testing.T) {
 			t.Fatalf("expected no log before an acknowledgment error, got %d bytes", got)
 		}
 
+		// Log the first error immediately and suppress repeated occurrences.
 		err := errors.New("request timed out")
 		acknowledge(err)
 		acknowledge(err)
 		acknowledge(err)
-		if got := countLogs("failed to acknowledge NATS message"); got != 1 {
+		if got := countLogs("cannot ack NATS event"); got != 1 {
 			t.Fatalf("expected 1 error log, got %d: %s", got, output.String())
 		}
 
+		// Keep suppressing the same error until the logging interval elapses.
 		time.Sleep(ackErrorLogInterval - time.Nanosecond)
 		acknowledge(err)
-		if got := countLogs("failed to acknowledge NATS message"); got != 1 {
+		if got := countLogs("cannot ack NATS event"); got != 1 {
 			t.Fatalf("expected 1 error log before the interval elapsed, got %d: %s", got, output.String())
 		}
 
 		time.Sleep(time.Nanosecond)
 		acknowledge(err)
-		if got := countLogs("failed to acknowledge NATS message"); got != 2 {
+		if got := countLogs("cannot ack NATS event"); got != 2 {
 			t.Fatalf("expected 2 error logs after the interval elapsed, got %d: %s", got, output.String())
 		}
 
+		// Log recovery after repeated failures.
 		acknowledge(nil)
 		if got := countLogs("NATS message acknowledgment delivery recovered"); got != 1 {
 			t.Fatalf("expected 1 recovery log, got %d: %s", got, output.String())
 		}
 
+		// A success does not reset the interval, and an isolated failure does
+		// not produce a recovery log.
 		acknowledge(err)
 		acknowledge(nil)
+		acknowledge(err)
+		if got := countLogs("cannot ack NATS event"); got != 2 {
+			t.Fatalf("expected success not to reset the error logging interval, got %d error logs: %s", got, output.String())
+		}
 		if got := countLogs("NATS message acknowledgment delivery recovered"); got != 1 {
 			t.Fatalf("expected no recovery log after a single failure, got %d: %s", got, output.String())
 		}
 
-		acknowledge(err)
+		// Log a different error immediately.
 		acknowledge(errors.New("connection closed"))
-		if got := countLogs("failed to acknowledge NATS message"); got != 5 {
+		if got := countLogs("cannot ack NATS event"); got != 3 {
 			t.Fatalf("expected a different error to be logged immediately, got %d error logs: %s", got, output.String())
 		}
+
 	})
+
 }
 
 // TestConsumerTracksFetchedMessagesWhileDecodingIsBlocked verifies that
