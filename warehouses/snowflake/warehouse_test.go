@@ -280,7 +280,7 @@ func newTestSnowflakeWarehouse(t *testing.T) (*Snowflake, *sql.DB) {
 		}
 	})
 
-	warehouse := warehouses.Registered("Snowflake").New(newTestSettingsLoader(testEnv.Settings().JSON())).(*Snowflake)
+	warehouse := warehouses.Registered("Snowflake").New(newTestSettingsLoader(testEnv.Settings().JSON()), nil).(*Snowflake)
 	t.Cleanup(func() {
 		if err := warehouse.Close(); err != nil {
 			t.Error(err)
