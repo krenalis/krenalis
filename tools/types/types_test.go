@@ -536,6 +536,9 @@ func sameProperty(p1, p2 Property) error {
 	if p1.Nullable != p2.Nullable {
 		return fmt.Errorf("expected property key 'nullable' with value %t, got %t", p1.Nullable, p2.Nullable)
 	}
+	if !EqualSemantics(p1.Semantic, p2.Semantic) {
+		return fmt.Errorf("expected property semantic %#v, got %#v", p1.Semantic, p2.Semantic)
+	}
 	if p1.DisplayName != p2.DisplayName {
 		return fmt.Errorf("expected property display name %q, got %q", p1.DisplayName, p2.DisplayName)
 	}

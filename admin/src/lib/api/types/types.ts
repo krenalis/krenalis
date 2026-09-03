@@ -21,6 +21,23 @@ type IntBitSize = 8 | 16 | 24 | 32 | 64;
 
 type FloatBitSize = 32 | 64;
 
+type CountryFormat = 'iso_3166_1_alpha_2' | 'iso_3166_1_alpha_3';
+
+type UnitOfMeasure = 'g' | 'kg' | 'mm' | 'cm' | 'm' | 'km' | 'mL' | 'L' | 'B' | 'kB' | 'MB' | 'GB' | '°C' | '°F';
+
+type DurationUnit = 'millisecond' | 'second' | 'minute' | 'hour' | 'day' | 'week';
+
+type Semantic =
+	| { kind: 'email' }
+	| { kind: 'phone' }
+	| { kind: 'url' }
+	| { kind: 'country'; format: CountryFormat }
+	| { kind: 'datetime'; format: string }
+	| { kind: 'money'; currency?: string }
+	| { kind: 'percentage' }
+	| { kind: 'measurement'; unit?: UnitOfMeasure }
+	| { kind: 'duration'; unit: DurationUnit };
+
 interface Property {
 	name: string;
 	prefilled: string;
@@ -30,6 +47,7 @@ interface Property {
 	updateRequired: boolean;
 	readOptional: boolean;
 	nullable: boolean;
+	semantic?: Semantic;
 	displayName?: string;
 	description: string;
 }
@@ -147,4 +165,5 @@ export type {
 	IntBitSize,
 	FloatBitSize,
 	MapType,
+	Semantic,
 };

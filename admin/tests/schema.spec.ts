@@ -1,6 +1,6 @@
 import { test, expect, type Locator } from '@playwright/test';
 import { login, logout, adminURL, logValidationErrors } from './utils';
-import { ObjectType, Property } from '../src/lib/api/types/types';
+import { ObjectType, Property, Semantic } from '../src/lib/api/types/types';
 
 const selectPropertyType = async (page, option: string) => {
 	const panel = page.locator('.property-panel');
@@ -969,9 +969,7 @@ test(`Show identifier order and renumber identifiers after removing a property`,
 	const editGrid = page.locator('.schema-edit');
 	await expect(identifierCell(editGrid, 'email')).toHaveText('#1');
 	await expect(identifierCell(editGrid, 'phone_numbers')).toBeEmpty();
-	await expect(
-		page.locator('.property-form__read-only-value .schema-property-grid__identifier'),
-	).toHaveText('#1');
+	await expect(page.locator('.property-form__read-only-value .schema-property-grid__identifier')).toHaveText('#1');
 	await openProperty(page, 'phone_numbers');
 	await expect(page.locator('.property-form__label').filter({ hasText: 'Identifier' })).toHaveCount(0);
 
@@ -1252,6 +1250,45 @@ test(`Preview schema changes only when applying them`, async ({ page }) => {
 	await structuralPreviewResponse;
 	await expect(dialog).toHaveAttribute('label', 'Review changes');
 	await expect(dialog.locator('.schema-edit__apply-alter-button')).toHaveAttribute('variant', 'danger');
+});
+
+test(`Preserve array property semantics`, async ({ page }) => {
+	const semantic: Semantic = { kind: 'phone' };
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const request = route.request();
+		if (request.method() === 'GET') {
+			const response = await route.fetch();
+			const schema = (await response.json()) as ObjectType;
+			const property = schema.properties.find((property) => property.name === 'phone_numbers');
+			property.semantic = semantic;
+			await route.fulfill({ response, json: schema });
+			return;
+		}
+		if (request.method() === 'PUT') {
+			await route.fulfill({ status: 200 });
+			return;
+		}
+		await route.continue();
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await editSchema(page);
+	await openProperty(page, 'phone_numbers');
+	const propertyPanel = page.locator('.property-panel');
+	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Updated description');
+	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
+	await propertyPanel.locator('.property-panel__save').click();
+
+	await page.click('.schema-edit__header-apply-button');
+	const [response] = await Promise.all([
+		page.waitForResponse((response) => {
+			return response.url().includes('/profiles/schema') && response.request().method() === 'PUT';
+		}),
+		page.click('.schema-edit__apply-alter-button'),
+	]);
+	const body = JSON.parse(response.request().postData());
+	const property = body.schema.properties.find((property) => property.name === 'phone_numbers');
+	expect(property.semantic).toEqual(semantic);
 });
 
 test(`Add schema property`, async ({ page }) => {

@@ -1,19 +1,9 @@
-import Type, { ObjectType, Property, Role } from '../../../lib/api/types/types';
+import { ObjectType, Property } from '../../../lib/api/types/types';
 import { PropertyToEdit } from './useSchemaEdit';
 
-interface EditableProperty {
+interface EditableProperty extends Property {
 	indentation: number;
 	root: string;
-	name: string;
-	prefilled: string;
-	role: Role;
-	type: Type;
-	readOptional: boolean;
-	createRequired: boolean;
-	updateRequired: boolean;
-	nullable: boolean;
-	displayName?: string;
-	description: string;
 	isEditable?: boolean;
 }
 
@@ -66,58 +56,38 @@ const normalizeSchema = (schema: EditableSchema): ObjectType => {
 			continue;
 		}
 		const property = schema[k];
+		const p = { ...property };
+		delete p.indentation;
+		delete p.root;
+		delete p.isEditable;
+
+		if (property.type.kind === 'object') {
+			// Empty the properties; they will be populated with the edited
+			// subproperties.
+			p.type = { ...property.type, properties: [] };
+		}
+		if (property.isEditable) {
+			delete p.prefilled;
+			delete p.role;
+			delete p.createRequired;
+			delete p.updateRequired;
+		}
+
 		const isFirstLevelProperty = property.indentation === 0;
 		if (isFirstLevelProperty) {
-			// Copy the type and empty its properties; they will be populated
-			// with the edited subproperties.
-			const typ = property.type.kind === 'object' ? { ...property.type, properties: [] } : property.type;
-			const p: any = {
-				name: property.name,
-				type: typ,
-				nullable: property.nullable,
-				description: property.description,
-				readOptional: property.readOptional,
-			};
-			if (property.displayName) {
-				p.displayName = property.displayName;
-			}
-			if (!property.isEditable) {
-				p.prefilled = property.prefilled;
-				p.role = property.role;
-				p.createRequired = property.createRequired;
-				p.updateRequired = property.updateRequired;
-			}
 			normalized.properties.push(p);
-		} else {
-			const parents = k.split('.').slice(0, -1);
-			let subProperties = normalized.properties;
-			for (let i = 0; i < parents.length; i++) {
-				const key = parents.slice(0, i + 1).join('.');
-				const name = schema[key].name;
-				const typ = subProperties.find((p) => p.name === name).type as ObjectType;
-				subProperties = typ.properties;
-			}
-			// Copy the type and empty its properties; they will be populated
-			// with the edited subproperties.
-			const typ = property.type.kind === 'object' ? { ...property.type, properties: [] } : property.type;
-			const subP: any = {
-				name: property.name,
-				type: typ,
-				nullable: property.nullable,
-				description: property.description,
-				readOptional: property.readOptional,
-			};
-			if (property.displayName) {
-				subP.displayName = property.displayName;
-			}
-			if (!property.isEditable) {
-				subP.prefilled = property.prefilled;
-				subP.role = property.role;
-				subP.createRequired = property.createRequired;
-				subP.updateRequired = property.updateRequired;
-			}
-			subProperties.push(subP);
+			continue;
 		}
+
+		const parents = k.split('.').slice(0, -1);
+		let subProperties = normalized.properties;
+		for (let i = 0; i < parents.length; i++) {
+			const key = parents.slice(0, i + 1).join('.');
+			const name = schema[key].name;
+			const typ = subProperties.find((subProperty) => subProperty.name === name).type as ObjectType;
+			subProperties = typ.properties;
+		}
+		subProperties.push(p);
 	}
 	return normalized;
 };

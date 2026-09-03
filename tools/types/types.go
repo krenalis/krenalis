@@ -146,6 +146,7 @@ type Property struct {
 	UpdateRequired bool
 	ReadOptional   bool
 	Nullable       bool
+	Semantic       Semantic // nil means no semantic information
 	DisplayName    string
 	Description    string
 }
@@ -320,9 +321,9 @@ func Array(t Type) Type {
 }
 
 // Object returns an object type with the given properties.
-// Panics if properties is empty, or if a property name is empty or repeated,
-// or if a property string field is not UTF-8 encoded or if a property type is
-// not valid.
+// Panics if properties is empty, if a property name is empty or repeated, if a
+// property string field is not UTF-8 encoded, if a property type is not valid,
+// or if a property semantic is not compatible with its type.
 func Object(properties []Property) Type {
 	t, err := ObjectOf(properties)
 	if err != nil {
@@ -368,6 +369,9 @@ func ObjectOf(properties []Property) (Type, error) {
 		} else if !property.Type.Valid() {
 			return Type{}, errors.New("invalid property type")
 		}
+		if err := validateSemanticCompatibility(property.Semantic, property.Type); err != nil {
+			return Type{}, err
+		}
 		displayName, err := normalizedUTF8(property.DisplayName)
 		if err != nil {
 			return Type{}, err
@@ -384,6 +388,7 @@ func ObjectOf(properties []Property) (Type, error) {
 			UpdateRequired: property.UpdateRequired,
 			ReadOptional:   property.ReadOptional,
 			Nullable:       property.Nullable,
+			Semantic:       property.Semantic,
 			DisplayName:    displayName,
 			Description:    description,
 		}

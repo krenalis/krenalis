@@ -8,8 +8,113 @@ import (
 	"testing"
 
 	"github.com/krenalis/krenalis/core/internal/datastore/diffschemas"
+	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/types"
 )
+
+// Test_checkAllowedSemanticChangesProfileSchema tests the semantic changes
+// allowed for materialized profile schema properties.
+func Test_checkAllowedSemanticChangesProfileSchema(t *testing.T) {
+
+	schema := func(properties ...types.Property) types.Type {
+		return types.Object(properties)
+	}
+	stringProperty := func(name string, semantic types.Semantic) types.Property {
+		return types.Property{Name: name, Type: types.String().WithMaxLength(1), ReadOptional: true, Semantic: semantic}
+	}
+	objectProperty := func(name string, properties ...types.Property) types.Property {
+		return types.Property{Name: name, Type: types.Object(properties), ReadOptional: true}
+	}
+	moneyProperty := func(currency string) types.Property {
+
+		semantic := types.Money()
+		if currency != "" {
+			semantic = semantic.WithCurrency(currency)
+		}
+		return types.Property{
+			Name: "amount", Type: types.Decimal(18, 4), ReadOptional: true, Semantic: semantic,
+		}
+	}
+
+	tests := []struct {
+		name      string
+		oldSchema types.Type
+		newSchema types.Type
+		rePaths   map[string]any
+		err       string
+	}{
+		{
+			name:      "New property with semantic",
+			oldSchema: schema(stringProperty("existing", nil)),
+			newSchema: schema(
+				stringProperty("existing", nil),
+				stringProperty("value", types.Email()),
+			),
+		},
+		{
+			name:      "Unchanged semantic and options",
+			oldSchema: schema(moneyProperty("USD")),
+			newSchema: schema(moneyProperty("USD")),
+		},
+		{
+			name:      "Semantic removed",
+			oldSchema: schema(stringProperty("value", types.Email())),
+			newSchema: schema(stringProperty("value", nil)),
+		},
+		{
+			name:      "Semantic removed from renamed property",
+			oldSchema: schema(stringProperty("old", types.Email())),
+			newSchema: schema(stringProperty("new", nil)),
+			rePaths:   map[string]any{"new": "old"},
+		},
+		{
+			name:      "Recreated property with semantic",
+			oldSchema: schema(stringProperty("value", nil)),
+			newSchema: schema(stringProperty("value", types.Email())),
+			rePaths:   map[string]any{"value": nil},
+		},
+		{
+			name:      "Semantic added",
+			oldSchema: schema(stringProperty("value", nil)),
+			newSchema: schema(stringProperty("value", types.Email())),
+			err:       `semantic cannot be added to materialized profile schema property "value"`,
+		},
+		{
+			name:      "Semantic replaced",
+			oldSchema: schema(stringProperty("value", types.Email())),
+			newSchema: schema(stringProperty("value", types.URL())),
+			err:       `semantic of materialized profile schema property "value" cannot be changed; it can only be removed`,
+		},
+		{
+			name:      "Semantic option changed",
+			oldSchema: schema(moneyProperty("USD")),
+			newSchema: schema(moneyProperty("EUR")),
+			err:       `semantic of materialized profile schema property "amount" cannot be changed; it can only be removed`,
+		},
+		{
+			name:      "Nested semantic added",
+			oldSchema: schema(objectProperty("profile", stringProperty("value", nil))),
+			newSchema: schema(objectProperty("profile", stringProperty("value", types.Email()))),
+			err:       `semantic cannot be added to materialized profile schema property "profile.value"`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+
+			err := checkAllowedSemanticChangesProfileSchema(test.oldSchema, test.newSchema, test.rePaths)
+			var got string
+			if err != nil {
+				got = err.Error()
+			}
+			if got != test.err {
+				t.Fatalf("expected error %q, got %q", test.err, got)
+			}
+
+		})
+	}
+
+}
 
 func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 
@@ -22,6 +127,31 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 			name: "No errors",
 			schema: types.Object([]types.Property{
 				{Name: "first_name", Type: types.String(), ReadOptional: true},
+				{
+					Name: "amount",
+					Type: types.Decimal(18, 4).WithDecimalRange(
+						decimal.MustParse("-100"), decimal.MustParse("100"),
+					),
+					ReadOptional: true,
+					Semantic:     types.Money(),
+				},
+				{
+					Name: "percentages",
+					Type: types.Array(types.Decimal(18, 4).WithDecimalRange(
+						decimal.MustParse("-1"), decimal.MustParse("2.5"),
+					)),
+					ReadOptional: true,
+					Semantic:     types.Percentage(),
+				},
+				{
+					Name: "measurements",
+					Type: types.Map(types.Decimal(18, 4).WithDecimalRange(
+						decimal.MustParse("-50.5"), decimal.MustParse("50.5"),
+					)),
+					ReadOptional: true,
+					Semantic:     types.Measurement(types.Kilogram),
+				},
+				{Name: "duration", Type: types.Int(64), ReadOptional: true, Semantic: types.Duration(types.Second)},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
 					{Name: "street1", Type: types.String(), ReadOptional: true},
 					{Name: "street2", Type: types.String(), ReadOptional: true},
@@ -142,6 +272,97 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 			}),
 			err: "profile schema properties with type string cannot specify values",
 		},
+		{
+			name: "Formatted datetime semantic",
+			schema: types.Object([]types.Property{
+				{
+					Name: "updated_at", Type: types.String(), ReadOptional: true,
+					Semantic: types.FormattedDateTime("2006-01-02 15:04:05"),
+				},
+			}),
+			err: "profile schema properties cannot have datetime semantic",
+		},
+		{
+			name: "Money semantic on int",
+			schema: types.Object([]types.Property{
+				{Name: "amount", Type: types.Int(64), ReadOptional: true, Semantic: types.Money()},
+			}),
+			err: "profile schema properties with money semantic must have decimal(18,4) values",
+		},
+		{
+			name: "Money semantic with wrong decimal precision",
+			schema: types.Object([]types.Property{
+				{Name: "amount", Type: types.Decimal(17, 4), ReadOptional: true, Semantic: types.Money()},
+			}),
+			err: "profile schema properties with money semantic must have decimal(18,4) values",
+		},
+		{
+			name: "Percentage semantic with wrong decimal precision",
+			schema: types.Object([]types.Property{
+				{
+					Name: "percentage", Type: types.Decimal(17, 4), ReadOptional: true,
+					Semantic: types.Percentage(),
+				},
+			}),
+			err: "profile schema properties with percentage semantic must have decimal(18,4) values",
+		},
+		{
+			name: "Percentage semantic with wrong decimal scale",
+			schema: types.Object([]types.Property{
+				{
+					Name: "percentage", Type: types.Decimal(18, 3), ReadOptional: true,
+					Semantic: types.Percentage(),
+				},
+			}),
+			err: "profile schema properties with percentage semantic must have decimal(18,4) values",
+		},
+		{
+			name: "Measurement semantic on map of int",
+			schema: types.Object([]types.Property{
+				{
+					Name: "measurements", Type: types.Map(types.Int(64)), ReadOptional: true,
+					Semantic: types.Measurement(types.Kilogram),
+				},
+			}),
+			err: "profile schema properties with measurement semantic must have decimal(18,4) values",
+		},
+		{
+			name: "Measurement semantic with wrong decimal scale",
+			schema: types.Object([]types.Property{
+				{
+					Name: "measurement", Type: types.Decimal(18, 3), ReadOptional: true,
+					Semantic: types.Measurement(types.Kilogram),
+				},
+			}),
+			err: "profile schema properties with measurement semantic must have decimal(18,4) values",
+		},
+		{
+			name: "Duration semantic on decimal",
+			schema: types.Object([]types.Property{
+				{
+					Name: "duration", Type: types.Decimal(10, 2), ReadOptional: true,
+					Semantic: types.Duration(types.Second),
+				},
+			}),
+			err: "profile schema properties with duration semantic must have signed int(64) values",
+		},
+		{
+			name: "Duration semantic on int(32)",
+			schema: types.Object([]types.Property{
+				{Name: "duration", Type: types.Int(32), ReadOptional: true, Semantic: types.Duration(types.Second)},
+			}),
+			err: "profile schema properties with duration semantic must have signed int(64) values",
+		},
+		{
+			name: "Duration semantic on unsigned int(64)",
+			schema: types.Object([]types.Property{
+				{
+					Name: "duration", Type: types.Int(64).Unsigned(), ReadOptional: true,
+					Semantic: types.Duration(types.Second),
+				},
+			}),
+			err: "profile schema properties with duration semantic must have signed int(64) values",
+		},
 	}
 
 	for _, test := range tests {
@@ -186,6 +407,22 @@ func Test_profileSchemaChangeRequiresWarehouseDDL(t *testing.T) {
 			}),
 			newSchema: types.Object([]types.Property{
 				{Name: "a", Type: types.String(), ReadOptional: true, Description: "New description"},
+			}),
+		},
+		{
+			name: "Nested map semantic removed",
+			oldSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{
+						Name: "a", Type: types.Map(types.Decimal(18, 4)), ReadOptional: true,
+						Semantic: types.Measurement(types.Kilogram),
+					},
+				}), ReadOptional: true},
+			}),
+			newSchema: types.Object([]types.Property{
+				{Name: "x", Type: types.Object([]types.Property{
+					{Name: "a", Type: types.Map(types.Decimal(18, 4)), ReadOptional: true},
+				}), ReadOptional: true},
 			}),
 		},
 		{

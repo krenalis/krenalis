@@ -93,9 +93,73 @@ func TestChangeProfileSchema(t *testing.T) {
 		t.Fatalf("expected identifiers %v, got %v", identifiers, ws.Identifiers)
 	}
 
+	// Reject adding a semantic to a materialized property.
+	semanticProperties := descriptionSchema.Properties().Slice()
+	i := slices.IndexFunc(semanticProperties, func(property types.Property) bool {
+		return property.Name == "phone_numbers"
+	})
+	if i == -1 {
+		t.Fatal("phone_numbers property not found")
+	}
+	semanticProperties[i].Semantic = types.Phone()
+	semanticSchema := types.Object(semanticProperties)
+	_, err = k.TryPreviewAlterProfileSchema(semanticSchema, nil)
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	expectedSemanticPreviewErr := `PUT v1/profiles/schema/preview: unexpected status code 422: ` +
+		`{"error":{"code":"InvalidAlterSchema","message":"cannot alter the schema as specified: ` +
+		`semantic cannot be added to materialized profile schema property \"phone_numbers\""}} ` +
+		`[request has body: true, response body expected: true]`
+	if err.Error() != expectedSemanticPreviewErr {
+		t.Fatalf("expected error %q, got %q", expectedSemanticPreviewErr, err.Error())
+	}
+	err = k.TryAlterProfileSchema(semanticSchema, nil, nil)
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	expectedSemanticErr := `PUT v1/profiles/schema: unexpected status code 422: ` +
+		`{"error":{"code":"InvalidAlterSchema","message":"cannot alter the schema as specified: ` +
+		`semantic cannot be added to materialized profile schema property \"phone_numbers\""}} ` +
+		`[request has body: true, response body expected: false]`
+	if err.Error() != expectedSemanticErr {
+		t.Fatalf("expected error %q, got %q", expectedSemanticErr, err.Error())
+	}
+
+	// Reject formatted datetime text in the profile schema.
+	invalidSemanticProperties := semanticSchema.Properties().Slice()
+	i = slices.IndexFunc(invalidSemanticProperties, func(property types.Property) bool {
+		return property.Name == "email"
+	})
+	if i == -1 {
+		t.Fatal("email property not found")
+	}
+	invalidSemanticProperties[i].Semantic = types.FormattedDateTime("2006-01-02 15:04:05")
+	invalidSemanticSchema := types.Object(invalidSemanticProperties)
+	_, err = k.TryPreviewAlterProfileSchema(invalidSemanticSchema, nil)
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	expectedSemanticPreviewErr = `PUT v1/profiles/schema/preview: unexpected status code 400: ` +
+		`{"error":{"code":"BadRequest","message":"profile schema properties cannot have datetime semantic"}} ` +
+		`[request has body: true, response body expected: true]`
+	if err.Error() != expectedSemanticPreviewErr {
+		t.Fatalf("expected error %q, got %q", expectedSemanticPreviewErr, err.Error())
+	}
+	err = k.TryAlterProfileSchema(invalidSemanticSchema, nil, nil)
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	expectedSemanticErr = `PUT v1/profiles/schema: unexpected status code 400: ` +
+		`{"error":{"code":"BadRequest","message":"profile schema properties cannot have datetime semantic"}} ` +
+		`[request has body: true, response body expected: false]`
+	if err.Error() != expectedSemanticErr {
+		t.Fatalf("expected error %q, got %q", expectedSemanticErr, err.Error())
+	}
+
 	// Add a single property.
-	schema := types.Object(append(file.Schema.Properties().Slice(), types.Property{
-		Name: "new_prop", Type: types.String(), ReadOptional: true,
+	schema := types.Object(append(descriptionSchema.Properties().Slice(), types.Property{
+		Name: "new_prop", Type: types.String(), ReadOptional: true, Semantic: types.Email(),
 	}))
 	queries = k.PreviewAlterProfileSchema(schema, nil)
 	expectedQueries := []string{"BEGIN;",
@@ -119,6 +183,27 @@ func TestChangeProfileSchema(t *testing.T) {
 	}
 	if !slices.Equal(identifiers, ws.Identifiers) {
 		t.Fatalf("expected identifiers %v, got %v", identifiers, ws.Identifiers)
+	}
+
+	// Remove a semantic without changing its materialized type.
+	semanticProperties = schema.Properties().Slice()
+	i = slices.IndexFunc(semanticProperties, func(property types.Property) bool {
+		return property.Name == "new_prop"
+	})
+	if i == -1 {
+		t.Fatal("new_prop property not found")
+	}
+	semanticProperties[i].Semantic = nil
+	schema = types.Object(semanticProperties)
+	queries = k.PreviewAlterProfileSchema(schema, nil)
+	if len(queries) != 0 {
+		t.Fatalf("expected no queries, got %#v", queries)
+	}
+	k.AlterProfileSchemaAndWait(schema, nil, nil)
+
+	ws = k.Workspace()
+	if !types.Equal(schema, ws.ProfileSchema) {
+		t.Fatal("expected the semantic removal to be persisted")
 	}
 
 	// Rename the property "android.id" to "android.identifier" and drop "email".
