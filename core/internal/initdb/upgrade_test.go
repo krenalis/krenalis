@@ -162,6 +162,7 @@ func TestUpgrade(t *testing.T) {
 	assertDiscontinuedFunctionsUpgrade(t, database)
 	assertRateLimitLeaseFunction(t, database)
 	assertConsentStepColumns(t, database)
+	assertConsentPurposePathColumns(t, database)
 
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatalf("expected second upgrade to succeed, got %s", err)
@@ -723,18 +724,32 @@ func assertOrganizationLimitsHaveNoDefaults(t *testing.T, database *db.DB) {
 	}
 }
 
-// assertConsentStepColumns verifies that the consent step columns were added,
-// keeping their default on pipelines_runs and dropping it on
-// pipelines_metrics.
+// assertConsentStepColumns verifies that the step columns added by the consent
+// management upgrades were added, keeping their default on pipelines_runs and
+// dropping it on pipelines_metrics.
 func assertConsentStepColumns(t *testing.T, database *db.DB) {
 	t.Helper()
 
-	for _, column := range []string{"passed_6", "failed_6"} {
+	for _, column := range []string{"passed_6", "failed_6", "passed_7", "failed_7", "passed_8", "failed_8"} {
 		if !hasDefault(t, database, "pipelines_runs", column) {
 			t.Fatalf("expected column pipelines_runs.%s to have a default, got no default", column)
 		}
 		if hasDefault(t, database, "pipelines_metrics", column) {
 			t.Fatalf("expected column pipelines_metrics.%s to have no default, got a default", column)
+		}
+	}
+}
+
+// assertConsentPurposePathColumns verifies that the property path columns added
+// by the consent management upgrades were added to the consent purposes,
+// keeping their default.
+func assertConsentPurposePathColumns(t *testing.T, database *db.DB) {
+	t.Helper()
+
+	for _, column := range []string{"event_path", "profile_path"} {
+		assertColumnExists(t, database, "consent_purposes", column)
+		if !hasDefault(t, database, "consent_purposes", column) {
+			t.Fatalf("expected column consent_purposes.%s to have a default, got no default", column)
 		}
 	}
 }

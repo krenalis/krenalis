@@ -313,6 +313,7 @@ func (this *Connection) ApplicationUsers(ctx context.Context, schema types.Type,
 //
 //   - ConnectionNotExist, if the connection does not exist.
 //   - ConnectorsLimitReached, if the organization cannot have more connectors.
+//   - ConsentPurposeNotExist, if a required consent purpose does not exist.
 //   - EventTypeNotExist, if the event type does not exist for the connection.
 //   - FormatNotExist, if the format of the pipeline does not exist.
 //   - InvalidSettings, if the settings are not valid.
@@ -388,6 +389,9 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		v.format.hasSettings = c.Role == state.Source && format.HasSourceSettings || c.Role == state.Destination && format.HasDestinationSettings
 	}
 	v.provider = this.core.functionProvider
+	if len(pipeline.RequiredConsents.Purposes) > 0 {
+		v.knownConsentPurposeIDs = knownConsentPurposeIDs(c.Workspace())
+	}
 	err := validatePipelineToSet(pipeline, v)
 	if err != nil {
 		return "", err
@@ -523,6 +527,20 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	for {
 		n.ID = generateID(this.connection.Pipeline)
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			// Check that the required consent purposes exist.
+			if len(n.RequiredConsents.Purposes) > 0 {
+				var missing string
+				err := tx.QueryRow(ctx, "SELECT purpose\n"+
+					"FROM UNNEST($1::varchar[]) AS purpose\n"+
+					"WHERE NOT EXISTS (SELECT 1 FROM consent_purposes AS cp WHERE cp.id = purpose AND cp.workspace = $2)\n"+
+					"LIMIT 1", n.RequiredConsents.Purposes, c.Workspace().ID).Scan(&missing)
+				if err != nil && err != sql.ErrNoRows {
+					return nil, err
+				}
+				if missing != "" {
+					return nil, errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", missing)
+				}
+			}
 			// Check the connector and pipeline limits.
 			if err := checkCreatePipelineLimits(ctx, tx, org.ID, n.Format); err != nil {
 				return nil, err
@@ -893,8 +911,8 @@ type PipelineRun struct {
 	Pipeline  string     `json:"pipeline"`
 	StartTime time.Time  `json:"startTime"`
 	EndTime   *time.Time `json:"endTime"`
-	Passed    [7]int     `json:"passed"`
-	Failed    [7]int     `json:"failed"`
+	Passed    [9]int     `json:"passed"`
+	Failed    [9]int     `json:"failed"`
 	Error     string     `json:"error"`
 }
 

@@ -204,7 +204,7 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 			continue
 		}
 		cond := rule.(*FilterCondition)
-		p, _, _ := resolveFilterProperty(properties, cond.Property)
+		p, _, _ := retrieveProperty(properties, cond.Property)
 		var values []any
 		if len(cond.Values) > 0 {
 			values = make([]any, len(cond.Values))
@@ -553,12 +553,12 @@ func parseYear(s string) (int, bool) {
 	return year, true
 }
 
-// resolveFilterProperty resolves path against properties.
+// retrieveProperty resolves path against properties.
 //
 // It returns the property at path and its schema path or, if path extends into
 // a JSON property, that JSON property and its schema path. path must be a valid
 // property path.
-func resolveFilterProperty(properties types.Properties, path string) (types.Property, string, error) {
+func retrieveProperty(properties types.Properties, path string) (types.Property, string, error) {
 	p, err := properties.ByPath(path)
 	if err != nil {
 		if p.Type.Kind() != types.JSONKind {
@@ -739,7 +739,7 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 		return "", errors.New("property path is not valid")
 	}
 
-	p, path, err := resolveFilterProperty(validation.properties, cond.Property)
+	p, path, err := retrieveProperty(validation.properties, cond.Property)
 	if err != nil {
 		return "", err
 	}

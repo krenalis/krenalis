@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/krenalis/krenalis/core/internal/consents"
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/metrics"
 	"github.com/krenalis/krenalis/core/internal/state"
@@ -23,13 +24,14 @@ var maxQueuedEventIdentityTime = 200 * time.Millisecond
 
 // identityWriter represents an identity writer for a pipeline.
 type identityWriter struct {
-	pipeline    string // pipeline identifier
-	writer      *datastore.EventIdentityWriter
-	metrics     *metrics.Collector
-	mu          sync.Mutex                // for transformer, identities, and timer
-	transformer *transformers.Transformer // protected by mu
-	events      []streams.Event           // protected by mu
-	timer       *time.Timer               // protected by mu
+	pipeline         string // pipeline identifier
+	writer           *datastore.EventIdentityWriter
+	metrics          *metrics.Collector
+	mu               sync.Mutex                // for transformer, requiredConsents, identities, and timer
+	transformer      *transformers.Transformer // protected by mu
+	requiredConsents state.RequiredConsents    // protected by mu
+	events           []streams.Event           // protected by mu
+	timer            *time.Timer               // protected by mu
 }
 
 // newIdentityWriter returns a new identityWriter for the provided pipeline.
@@ -37,8 +39,9 @@ type identityWriter struct {
 // It must be called on a frozen state.
 func newIdentityWriter(ds *datastore.Datastore, pipeline *state.Pipeline, provider transformers.FunctionProvider, metrics *metrics.Collector) *identityWriter {
 	iw := &identityWriter{
-		pipeline: pipeline.ID,
-		metrics:  metrics,
+		pipeline:         pipeline.ID,
+		metrics:          metrics,
+		requiredConsents: pipeline.RequiredConsents,
 	}
 	ws := pipeline.Connection().Workspace()
 	store, _ := ds.Store(ws.ID)
@@ -70,6 +73,13 @@ func (iw *identityWriter) SetTransformer(transformer *transformers.Transformer) 
 	iw.mu.Unlock()
 }
 
+// SetRequiredConsents sets the required consent purposes.
+func (iw *identityWriter) SetRequiredConsents(requiredConsents state.RequiredConsents) {
+	iw.mu.Lock()
+	iw.requiredConsents = requiredConsents
+	iw.mu.Unlock()
+}
+
 // Write writes the identity of the provided event into the data warehouse.
 func (iw *identityWriter) Write(event streams.Event) error {
 
@@ -79,7 +89,17 @@ func (iw *identityWriter) Write(event streams.Event) error {
 
 	// If the pipeline lacks a transformation, write the identity directly to the store.
 	if iw.transformer == nil {
+		requiredConsents := iw.requiredConsents
 		iw.mu.Unlock()
+		// Without a transformation the identity has no attributes, so there is
+		// no profile to read the consents from. The output of the pipeline is
+		// the event itself, so the consents are read from it.
+		if !consents.SatisfiesEvent(requiredConsents.Purposes, requiredConsents.Operator != state.PurposesOr, event.Attributes) {
+			iw.metrics.ImportProfileConsentFailed(iw.pipeline, 1)
+			event.Destinations[0].Ack.Acknowledge()
+			return nil
+		}
+		iw.metrics.ImportProfileConsentPassed(iw.pipeline, 1)
 		return iw.writeDirect(event)
 	}
 
@@ -126,6 +146,7 @@ func (iw *identityWriter) transformAndWrite(events []streams.Event) {
 
 	iw.mu.Lock()
 	transformer := iw.transformer
+	requiredConsents := iw.requiredConsents
 	iw.mu.Unlock()
 
 	ctx := context.Background()
@@ -156,6 +177,12 @@ func (iw *identityWriter) transformAndWrite(events []streams.Event) {
 		}
 		iw.metrics.TransformationPassed(iw.pipeline, 1)
 		iw.metrics.OutputValidationPassed(iw.pipeline, 1)
+		if !consents.SatisfiesProfile(requiredConsents.Purposes, requiredConsents.Operator != state.PurposesOr, record.Attributes) {
+			iw.metrics.ImportProfileConsentFailed(iw.pipeline, 1)
+			events[i].Destinations[0].Ack.Acknowledge()
+			continue
+		}
+		iw.metrics.ImportProfileConsentPassed(iw.pipeline, 1)
 		event := events[i]
 		id, _ := event.Attributes["userId"].(string)
 		// Write the identity on the data warehouse.

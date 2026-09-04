@@ -974,8 +974,8 @@ func Test_parseUnsigned(t *testing.T) {
 	}
 }
 
-// Test_resolveFilterProperty verifies resolution of filter property paths.
-func Test_resolveFilterProperty(t *testing.T) {
+// Test_retrieveProperty verifies resolution of filter property paths.
+func Test_retrieveProperty(t *testing.T) {
 
 	schema := types.Object([]types.Property{
 		{Name: "a", Type: types.Boolean()},
@@ -1005,8 +1005,8 @@ func Test_resolveFilterProperty(t *testing.T) {
 	properties := schema.Properties()
 
 	for _, test := range tests {
-		t.Run(test.path, func(t *testing.T) {
-			gotProperty, gotPath, err := resolveFilterProperty(properties, test.path)
+		t.Run("", func(t *testing.T) {
+			gotProperty, gotPath, err := retrieveProperty(properties, test.path)
 			if err != nil {
 				if test.err == nil {
 					t.Fatalf("expected no error, got error %q (type %T)", err, err)

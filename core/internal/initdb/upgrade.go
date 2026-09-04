@@ -27,10 +27,12 @@ const (
 
 const consentPurposesTable = `
 	CREATE TABLE IF NOT EXISTS consent_purposes (
+		id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
 		workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
 		code varchar(100) NOT NULL CHECK (code ~ '^[A-Za-z_][0-9A-Za-z_]{0,99}$'),
 		name varchar(100) NOT NULL,
-		PRIMARY KEY (workspace, code)
+		UNIQUE (workspace, code),
+		PRIMARY KEY (id)
 	)`
 
 const organizationConnectorReferencesView = `
@@ -341,7 +343,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'AddConsentPurpose'`,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'DeleteConsentPurpose'`,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateConsentPurpose'`,
-			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents varchar(100)[] NOT NULL DEFAULT '{}'`,
+			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents varchar(12)[] NOT NULL DEFAULT '{}'`,
 			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents_operator varchar(3) NOT NULL DEFAULT 'and' CHECK (required_consents_operator IN ('and', 'or'))`,
 			`UPDATE pipelines
 				SET filter = regexp_replace(
@@ -384,6 +386,21 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TABLE pipelines_metrics ALTER COLUMN failed_6 DROP DEFAULT`,
 			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS passed_6 integer NOT NULL DEFAULT 0`,
 			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS failed_6 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS passed_7 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS failed_7 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_metrics ALTER COLUMN passed_7 DROP DEFAULT`,
+			`ALTER TABLE pipelines_metrics ALTER COLUMN failed_7 DROP DEFAULT`,
+			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS passed_7 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS failed_7 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS passed_8 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS failed_8 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_metrics ALTER COLUMN passed_8 DROP DEFAULT`,
+			`ALTER TABLE pipelines_metrics ALTER COLUMN failed_8 DROP DEFAULT`,
+			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS passed_8 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS failed_8 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE consent_purposes ADD COLUMN IF NOT EXISTS aliases varchar(100)[] NOT NULL DEFAULT '{}'`,
+			`ALTER TABLE consent_purposes ADD COLUMN IF NOT EXISTS event_path varchar(1024) NOT NULL DEFAULT ''`,
+			`ALTER TABLE consent_purposes ADD COLUMN IF NOT EXISTS profile_path varchar(1024) NOT NULL DEFAULT ''`,
 		}
 		for _, query := range queries {
 			if _, err := tx.Exec(ctx, query); err != nil {

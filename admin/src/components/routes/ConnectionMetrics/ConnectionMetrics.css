@@ -169,7 +169,7 @@
 .connection-metrics__funnel-passed,
 .connection-metrics__funnel-failed {
 	display: grid;
-	grid-template-columns: repeat(9, 100px);
+	grid-template-columns: repeat(10, 100px);
 	column-gap: 50px;
 }
 
@@ -177,7 +177,7 @@
 	.connection-metrics__funnel-passed,
 	.connection-metrics__funnel-failed {
 		display: grid;
-		grid-template-columns: repeat(9, 70px);
+		grid-template-columns: repeat(10, 70px);
 	}
 
 	.connection-metrics__tabs-date-range-picker {
@@ -190,7 +190,7 @@
 	.connection-metrics__funnel-passed,
 	.connection-metrics__funnel-failed {
 		display: grid;
-		grid-template-columns: repeat(9, 50px);
+		grid-template-columns: repeat(10, 50px);
 	}
 
 	.connection-metrics__funnel-title {

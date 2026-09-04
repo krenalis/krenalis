@@ -32,6 +32,34 @@ func (err PathNotExistError) Error() string {
 	return fmt.Sprintf("property path %q does not exist", err.Path)
 }
 
+// AddPropertyAtPath returns a copy of t with the property p added at the given
+// path, creating the object properties of the intermediate levels of the path
+// that do not exist yet. The name of p is ignored, the last element of path is
+// used instead. The boolean return value reports whether the property has been
+// added, which is false when the path already exists in t, in which case t is
+// returned unchanged.
+//
+// The object properties created for the intermediate levels inherit the
+// ReadOptional field from p, and have every other field set to its zero value.
+// Hence, when t must stay aligned with another schema, the caller must ensure
+// that the intermediate levels of that schema have the same ReadOptional value
+// as p, or add the property at the path of the deepest level that is missing,
+// passing the whole subtree as p.
+//
+// It does not traverse through arrays and maps. If path is "x.y" and the type
+// of "x" is not an object, it returns an error.
+//
+// It panics if t is not an object or if path is not a valid property path.
+func AddPropertyAtPath(t Type, path string, p Property) (Type, bool, error) {
+	if t.kind != ObjectKind {
+		panic("cannot add a property to a non-object type")
+	}
+	if !IsValidPropertyPath(path) {
+		panic(invalidPathMsg)
+	}
+	return addPropertyAtPath(t, path, "", p)
+}
+
 // AsRole returns a copy of t with the ReadOptional, CreateRequired, and
 // UpdateRequired fields of each property adjusted to ensure compatibility with
 // the specified role:
@@ -261,6 +289,45 @@ func PruneAtPath(t Type, path string) (Type, error) {
 	return pruneAtPath(t, path), nil
 }
 
+// addPropertyAtPath is a recursive function called by the AddPropertyAtPath
+// function. t must be an object type and path must be a valid property path,
+// relative to t. prefix is the path of t in the type AddPropertyAtPath has been
+// called on, and is used to report the errors.
+func addPropertyAtPath(t Type, path, prefix string, p Property) (Type, bool, error) {
+	properties := t.vl.(Properties)
+	name, rest, nested := strings.Cut(path, ".")
+	i, exists := properties.names[name]
+	if !nested {
+		if exists {
+			return t, false, nil
+		}
+		p.Name = name
+		return Object(append(slices.Clone(properties.properties), p)), true, nil
+	}
+	var property Property
+	if exists {
+		property = properties.properties[i]
+		if property.Type.kind != ObjectKind {
+			return t, false, fmt.Errorf("property %q is not an object", prefix+name)
+		}
+		subtype, added, err := addPropertyAtPath(property.Type, rest, prefix+name+".", p)
+		if !added || err != nil {
+			return t, false, err
+		}
+		property.Type = subtype
+	} else {
+		property = propertyBranch(rest, p)
+		property = Property{Name: name, ReadOptional: p.ReadOptional, Type: Object([]Property{property})}
+	}
+	pp := slices.Clone(properties.properties)
+	if exists {
+		pp[i] = property
+	} else {
+		pp = append(pp, property)
+	}
+	return Object(pp), true, nil
+}
+
 // asRole is a recursive function called by the AsRole method. t must be an
 // object type, and role must be either Source or Destination. It returns the
 // resulting type and a boolean indicating whether the returned type is
@@ -314,6 +381,19 @@ func baseChar(r rune) rune {
 		}
 	}
 	return r
+}
+
+// propertyBranch returns the property at the first level of path, having as
+// type the hierarchy of objects that leads to p, which is the property at its
+// last level. The properties of the intermediate levels inherit the
+// ReadOptional field from p. path must be a valid property path.
+func propertyBranch(path string, p Property) Property {
+	name, rest, nested := strings.Cut(path, ".")
+	if !nested {
+		p.Name = name
+		return p
+	}
+	return Property{Name: name, ReadOptional: p.ReadOptional, Type: Object([]Property{propertyBranch(rest, p)})}
 }
 
 // prune is a recursive helper called by Prune. It returns the pruned
