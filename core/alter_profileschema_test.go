@@ -273,16 +273,6 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 			err: "profile schema properties with type string cannot specify values",
 		},
 		{
-			name: "Formatted datetime semantic",
-			schema: types.Object([]types.Property{
-				{
-					Name: "updated_at", Type: types.String(), ReadOptional: true,
-					Semantic: types.FormattedDateTime("2006-01-02 15:04:05"),
-				},
-			}),
-			err: "profile schema properties cannot have datetime semantic",
-		},
-		{
 			name: "Money semantic on int",
 			schema: types.Object([]types.Property{
 				{Name: "amount", Type: types.Int(64), ReadOptional: true, Semantic: types.Money()},

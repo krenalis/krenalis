@@ -88,12 +88,6 @@ func marshalSemantic(b *bytes.Buffer, semantic Semantic) error {
 			return err
 		}
 
-	case *dateTimeSemantic:
-		b.WriteString(`,"format":`)
-		if err := marshalString(b, s.format); err != nil {
-			return err
-		}
-
 	case *moneySemantic:
 		if s.currency != "" {
 			b.WriteString(`,"currency":`)
@@ -487,16 +481,6 @@ func unmarshalSemantic(dec *json.Decoder) (Semantic, error) {
 		}
 		s := Country(f)
 		return s, nil
-
-	case DateTimeSemanticKind:
-		if !hasFormat {
-			return nil, errors.New("missing datetime format")
-		}
-		if hasCurrency || hasUnit {
-			return nil, errors.New("unexpected option for datetime semantic")
-		}
-		s, err := newFormattedDateTime(format)
-		return s, err
 
 	case MoneySemanticKind:
 		if hasFormat || hasUnit {

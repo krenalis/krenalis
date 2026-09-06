@@ -32,7 +32,6 @@ type Semantic =
 	| { kind: 'phone' }
 	| { kind: 'url' }
 	| { kind: 'country'; format: CountryFormat }
-	| { kind: 'datetime'; format: string }
 	| { kind: 'money'; currency?: string }
 	| { kind: 'percentage' }
 	| { kind: 'measurement'; unit?: UnitOfMeasure }

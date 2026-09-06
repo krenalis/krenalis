@@ -90,7 +90,6 @@ func Test_SemanticCompatibility(t *testing.T) {
 		{"phone", String(), Phone()},
 		{"URL", String(), URL()},
 		{"country", String(), Country(ISO3166Alpha2)},
-		{"formatted datetime", String(), FormattedDateTime("dd/MM/yyyy HH:mm:ss")},
 		{"money int", Int(32), Money()},
 		{"money unsigned int", Int(32).Unsigned(), Money()},
 		{"money decimal", Decimal(10, 2), Money()},
@@ -139,7 +138,6 @@ func Test_SemanticCompatibility(t *testing.T) {
 		{"real float percentage", Float(64).Real(), Percentage()},
 		{"ordinary float measurement", Float(32), Measurement(Kilogram)},
 		{"ordinary float duration", Float(64), Duration(Second)},
-		{"datetime type and formatted datetime", DateTime(), FormattedDateTime("2006-01-02")},
 		{"string money", String(), Money()},
 	}
 	for _, test := range invalid {
@@ -172,9 +170,6 @@ func Test_SemanticConstructorPanics(t *testing.T) {
 		{"negative country format", func() { Country(CountryFormat(-1)) }},
 		{"invalid duration unit", func() { Duration(InvalidDurationUnit) }},
 		{"negative duration unit", func() { Duration(DurationUnit(-1)) }},
-		{"empty datetime format", func() { FormattedDateTime("") }},
-		{"invalid UTF-8 datetime format", func() { FormattedDateTime(string([]byte{0xff})) }},
-		{"NUL in datetime format", func() { FormattedDateTime("yyyy\x00MM") }},
 		{"empty currency", func() { Money().WithCurrency("") }},
 		{"short currency", func() { Money().WithCurrency("US") }},
 		{"long currency", func() { Money().WithCurrency("USDD") }},
@@ -210,7 +205,6 @@ func Test_SemanticConstructors(t *testing.T) {
 		{Phone(), PhoneSemanticKind},
 		{URL(), URLSemanticKind},
 		{Country(ISO3166Alpha2), CountrySemanticKind},
-		{FormattedDateTime("dd/MM/yyyy"), DateTimeSemanticKind},
 		{Money(), MoneySemanticKind},
 		{Percentage(), PercentageSemanticKind},
 		{Measurement(Kilogram), MeasurementSemanticKind},
@@ -224,9 +218,6 @@ func Test_SemanticConstructors(t *testing.T) {
 
 	if got := Country(ISO3166Alpha3).Format(); got != ISO3166Alpha3 {
 		t.Errorf("expected country format %v, got %v", ISO3166Alpha3, got)
-	}
-	if got := FormattedDateTime("Cafe\u0301").Format(); got != "Caf\u00e9" {
-		t.Errorf("expected normalized datetime format %q, got %q", "Caf\u00e9", got)
 	}
 	if got := Duration(Week).Unit(); got != Week {
 		t.Errorf("expected duration unit %v, got %v", Week, got)
@@ -259,20 +250,6 @@ func Test_SemanticEquality(t *testing.T) {
 		{"different kinds", String(), Email(), Phone(), false},
 		{"equal country format", String(), Country(ISO3166Alpha2), Country(ISO3166Alpha2), true},
 		{"different country format", String(), Country(ISO3166Alpha2), Country(ISO3166Alpha3), false},
-		{
-			"equal datetime format",
-			String(),
-			FormattedDateTime("yyyy-MM-dd"),
-			FormattedDateTime("yyyy-MM-dd"),
-			true,
-		},
-		{
-			"different datetime format",
-			String(),
-			FormattedDateTime("yyyy-MM-dd"),
-			FormattedDateTime("dd/MM/yyyy"),
-			false,
-		},
 		{
 			"equal currency",
 			Decimal(10, 2),
@@ -407,7 +384,6 @@ func Test_SemanticJSONErrors(t *testing.T) {
 			"repeated 'unit' key",
 		},
 		{"missing country format", stringSemantic + `{"kind":"country"}}`, "missing country format"},
-		{"missing datetime format", stringSemantic + `{"kind":"datetime"}}`, "missing datetime format"},
 		{"missing duration unit", intSemantic + `{"kind":"duration"}}`, "missing duration unit"},
 		{
 			"invalid country format",
@@ -418,16 +394,6 @@ func Test_SemanticJSONErrors(t *testing.T) {
 			"empty country format",
 			stringSemantic + `{"kind":"country","format":""}}`,
 			`invalid country format ""`,
-		},
-		{
-			"empty datetime format",
-			stringSemantic + `{"kind":"datetime","format":""}}`,
-			"datetime format is empty",
-		},
-		{
-			"NUL in datetime format",
-			stringSemantic + `{"kind":"datetime","format":"yyyy\u0000MM"}}`,
-			"contains NUL byte",
 		},
 		{"invalid currency", intSemantic + `{"kind":"money","currency":"usd"}}`, `invalid currency code "usd"`},
 		{"unknown currency", intSemantic + `{"kind":"money","currency":"ZZZ"}}`, `invalid currency code "ZZZ"`},
@@ -554,12 +520,6 @@ func Test_SemanticJSONRoundTrip(t *testing.T) {
 			Property{Name: "country", Type: String(), Semantic: Country(ISO3166Alpha2)},
 			`{"name":"country","type":{"kind":"string"},` +
 				`"semantic":{"kind":"country","format":"iso_3166_1_alpha_2"},"description":""}`,
-		},
-		{
-			"formatted datetime",
-			Property{Name: "updated_at", Type: String(), Semantic: FormattedDateTime("dd/MM/yyyy HH:mm:ss")},
-			`{"name":"updated_at","type":{"kind":"string"},` +
-				`"semantic":{"kind":"datetime","format":"dd/MM/yyyy HH:mm:ss"},"description":""}`,
 		},
 		{
 			"money without currency",
@@ -699,8 +659,8 @@ func Test_PropertyReadsShareSemanticInstances(t *testing.T) {
 
 	country := Country(ISO3166Alpha2)
 	email := Email()
+	phone := Phone()
 	weight := Measurement(Kilogram)
-	eventTime := FormattedDateTime("yyyy-MM-dd HH:mm:ss")
 	balance := Money().WithCurrency("EUR")
 	schema := Object([]Property{
 		{Name: "country", Type: String(), Semantic: country},
@@ -708,8 +668,8 @@ func Test_PropertyReadsShareSemanticInstances(t *testing.T) {
 			{Name: "email", Type: String(), Semantic: email, ReadOptional: true},
 			{Name: "weight", Type: Decimal(10, 2), Semantic: weight},
 		})},
-		{Name: "events", Type: Array(Object([]Property{
-			{Name: "created_at", Type: String(), Semantic: eventTime},
+		{Name: "contacts", Type: Array(Object([]Property{
+			{Name: "phone", Type: String(), Semantic: phone},
 		}))},
 		{Name: "balances", Type: Map(Object([]Property{
 			{Name: "amount", Type: Decimal(10, 2), Semantic: balance},
@@ -747,7 +707,7 @@ func Test_PropertyReadsShareSemanticInstances(t *testing.T) {
 	if !foundCountry {
 		t.Fatal("All did not return country")
 	}
-	foundEmail, foundEventTime, foundBalance := false, false, false
+	foundEmail, foundPhone, foundBalance := false, false, false
 	for path, p := range properties.WalkAll() {
 		switch path {
 		case "profile.email":
@@ -755,9 +715,9 @@ func Test_PropertyReadsShareSemanticInstances(t *testing.T) {
 			if p.Semantic != email {
 				t.Fatal("WalkAll did not preserve the semantic instance in an object")
 			}
-		case "events.created_at":
-			foundEventTime = true
-			if p.Semantic != eventTime {
+		case "contacts.phone":
+			foundPhone = true
+			if p.Semantic != phone {
 				t.Fatal("WalkAll did not preserve the semantic instance in an array element")
 			}
 		case "balances.amount":
@@ -767,10 +727,10 @@ func Test_PropertyReadsShareSemanticInstances(t *testing.T) {
 			}
 		}
 	}
-	if !foundEmail || !foundEventTime || !foundBalance {
+	if !foundEmail || !foundPhone || !foundBalance {
 		t.Fatalf(
 			"WalkAll did not return all nested semantic properties: %t, %t, %t",
-			foundEmail, foundEventTime, foundBalance,
+			foundEmail, foundPhone, foundBalance,
 		)
 	}
 	foundWeight := false
@@ -836,7 +796,6 @@ func Test_SemanticKind(t *testing.T) {
 		{PhoneSemanticKind, "phone"},
 		{URLSemanticKind, "url"},
 		{CountrySemanticKind, "country"},
-		{DateTimeSemanticKind, "datetime"},
 		{MoneySemanticKind, "money"},
 		{PercentageSemanticKind, "percentage"},
 		{MeasurementSemanticKind, "measurement"},

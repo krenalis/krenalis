@@ -18,7 +18,6 @@ const (
 	PhoneSemanticKind                           // phone number
 	URLSemanticKind                             // web URL
 	CountrySemanticKind                         // country
-	DateTimeSemanticKind                        // date and time represented as formatted text
 	MoneySemanticKind                           // monetary amount
 	PercentageSemanticKind                      // percentage
 	MeasurementSemanticKind                     // numeric measurement
@@ -31,7 +30,6 @@ var semanticKindName = []string{
 	"phone",
 	"url",
 	"country",
-	"datetime",
 	"money",
 	"percentage",
 	"measurement",
@@ -254,61 +252,6 @@ func (*countrySemantic) country() {}
 
 // semantic implements Semantic.
 func (*countrySemantic) semantic() {}
-
-// DateTimeSemantic describes a date and time represented as formatted text.
-type DateTimeSemantic interface {
-	Semantic
-
-	// Format returns the format used to represent the date and time.
-	Format() string
-
-	// dateTime distinguishes formatted date and time semantics from other semantics.
-	dateTime()
-}
-
-// dateTimeSemantic implements DateTimeSemantic.
-type dateTimeSemantic struct {
-	format string
-}
-
-// FormattedDateTime returns the semantic for a date and time represented using
-// format. It panics if format is empty, is not valid UTF-8, or contains a NUL
-// byte.
-func FormattedDateTime(format string) DateTimeSemantic {
-	s, err := newFormattedDateTime(format)
-	if err != nil {
-		panic(err)
-	}
-	return s
-}
-
-// newFormattedDateTime returns a validated formatted date and time semantic.
-func newFormattedDateTime(format string) (*dateTimeSemantic, error) {
-	format, err := normalizedUTF8(format)
-	if err != nil {
-		return nil, err
-	}
-	if format == "" {
-		return nil, errors.New("datetime format is empty")
-	}
-	return &dateTimeSemantic{format: format}, nil
-}
-
-// Format returns the format used to represent the date and time.
-func (s *dateTimeSemantic) Format() string {
-	return s.format
-}
-
-// Kind returns the formatted date and time semantic kind.
-func (*dateTimeSemantic) Kind() SemanticKind {
-	return DateTimeSemanticKind
-}
-
-// dateTime implements DateTimeSemantic.
-func (*dateTimeSemantic) dateTime() {}
-
-// semantic implements Semantic.
-func (*dateTimeSemantic) semantic() {}
 
 // MoneySemantic describes a monetary amount.
 type MoneySemantic interface {
@@ -673,9 +616,6 @@ func EqualSemantics(s1, s2 Semantic) bool {
 	case *countrySemantic:
 		s2, ok := s2.(*countrySemantic)
 		return ok && s1.format == s2.format
-	case *dateTimeSemantic:
-		s2, ok := s2.(*dateTimeSemantic)
-		return ok && s1.format == s2.format
 	case *moneySemantic:
 		s2, ok := s2.(*moneySemantic)
 		return ok && s1.currency == s2.currency
@@ -735,10 +675,6 @@ func validateSemanticCompatibility(s Semantic, t Type) error {
 	case CountrySemanticKind:
 		if t.kind != StringKind {
 			return errors.New("country semantic requires string type")
-		}
-	case DateTimeSemanticKind:
-		if t.kind != StringKind {
-			return errors.New("datetime semantic requires string type")
 		}
 	case MoneySemanticKind:
 		if !semanticNumericType(t) {

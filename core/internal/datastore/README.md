@@ -69,7 +69,6 @@ Properties without a semantic may use any type allowed by the table above. Prope
 | `Phone()`                             | `string`         | -                                     |
 | `URL()`                               | `string`         | -                                     |
 | `Country(format)`                     | `string`         | `format` is required                  |
-| `FormattedDateTime(format)`           | *Not allowed*    | Use the native `datetime` type        |
 | `Money()`                             | `decimal(p,s)`   | Currency is optional                  |
 | `Percentage()`                        | `decimal(18,4)`  | Minimum and maximum are optional      |
 | `Measurement()`                       | `decimal(p,s)`   | Unit of measure is optional           |

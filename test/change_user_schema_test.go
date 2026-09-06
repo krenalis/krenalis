@@ -126,37 +126,6 @@ func TestChangeProfileSchema(t *testing.T) {
 		t.Fatalf("expected error %q, got %q", expectedSemanticErr, err.Error())
 	}
 
-	// Reject formatted datetime text in the profile schema.
-	invalidSemanticProperties := semanticSchema.Properties().Slice()
-	i = slices.IndexFunc(invalidSemanticProperties, func(property types.Property) bool {
-		return property.Name == "email"
-	})
-	if i == -1 {
-		t.Fatal("email property not found")
-	}
-	invalidSemanticProperties[i].Semantic = types.FormattedDateTime("2006-01-02 15:04:05")
-	invalidSemanticSchema := types.Object(invalidSemanticProperties)
-	_, err = k.TryPreviewAlterProfileSchema(invalidSemanticSchema, nil)
-	if err == nil {
-		t.Fatal("expected an error")
-	}
-	expectedSemanticPreviewErr = `PUT v1/profiles/schema/preview: unexpected status code 400: ` +
-		`{"error":{"code":"BadRequest","message":"profile schema properties cannot have datetime semantic"}} ` +
-		`[request has body: true, response body expected: true]`
-	if err.Error() != expectedSemanticPreviewErr {
-		t.Fatalf("expected error %q, got %q", expectedSemanticPreviewErr, err.Error())
-	}
-	err = k.TryAlterProfileSchema(invalidSemanticSchema, nil, nil)
-	if err == nil {
-		t.Fatal("expected an error")
-	}
-	expectedSemanticErr = `PUT v1/profiles/schema: unexpected status code 400: ` +
-		`{"error":{"code":"BadRequest","message":"profile schema properties cannot have datetime semantic"}} ` +
-		`[request has body: true, response body expected: false]`
-	if err.Error() != expectedSemanticErr {
-		t.Fatalf("expected error %q, got %q", expectedSemanticErr, err.Error())
-	}
-
 	// Add a single property.
 	schema := types.Object(append(descriptionSchema.Properties().Slice(), types.Property{
 		Name: "new_prop", Type: types.String(), ReadOptional: true, Semantic: types.Email(),
