@@ -225,8 +225,6 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 			semanticType = semanticType.Elem()
 		}
 		switch p.Semantic.Kind() {
-		case types.DateTimeSemanticKind:
-			return errors.New("profile schema properties cannot have datetime semantic")
 		case types.MoneySemanticKind, types.PercentageSemanticKind, types.MeasurementSemanticKind:
 			if semanticType.Kind() != types.DecimalKind || semanticType.Precision() != 18 || semanticType.Scale() != 4 {
 				return fmt.Errorf(

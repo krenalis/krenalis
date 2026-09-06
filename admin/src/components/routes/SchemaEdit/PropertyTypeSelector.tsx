@@ -461,9 +461,6 @@ const getPropertyStructure = (type: Type | null): PropertyStructure => {
 };
 
 const getPropertyTypeOption = (type: Type | null, semantic?: Semantic): PropertyTypeOption | undefined => {
-	if (semantic?.kind === 'datetime') {
-		return undefined;
-	}
 	const id: PropertyTypeOptionID | undefined = semantic == null ? getPropertyValueType(type)?.kind : semantic.kind;
 	return PROPERTY_TYPE_OPTIONS.find((option) => option.id === id);
 };
