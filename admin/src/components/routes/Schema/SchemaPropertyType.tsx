@@ -168,8 +168,6 @@ const toSemanticLabel = (semantic: Semantic, context: SchemaPropertyTypeContext)
 			}
 			return 'country';
 		}
-		case 'datetime':
-			return 'formatted date and time';
 		case 'money':
 			return context === 'grid' && semantic.currency != null ? `money — ${semantic.currency}` : 'money';
 		case 'percentage':
