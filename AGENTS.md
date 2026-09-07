@@ -167,18 +167,20 @@ Exported methods in `core/internal/metrics` are an exception: they must assume t
 
 ## Block spacing
 
-Choose internal spacing for readability first: use blank lines when they help distinguish logical groups of statements. Keep short, cohesive blocks compact when no such separation is useful. This applies to function and method bodies too; neither a guard nor a `return` requires a blank line on its own.
+Apply the following procedure to every brace-delimited block, be it a function or method body or a block nested inside one. Decide each block on its own, from the inside out.
 
-When reviewing existing code within the scope of a change, make this decision independently of blank lines used only to satisfy the boundary rule below, including padding before a final `return`. Remove that padding if no useful internal separation remains.
+1. Choose the internal spacing. Looking only at the statements of the block, and ignoring any blank line adjacent to its braces, insert a blank line wherever it genuinely helps readability, typically by separating logically distinct groups of statements. A single-statement block never needs one, and neither does a short cohesive block; a guard or a `return` does not earn a blank line on its own.
+2. Pad the boundaries. If step 1 left at least one internal blank line, leave a blank line immediately after the opening brace and another immediately before the closing brace. If it left none, the block contains no blank line at all: never pad an otherwise compact block.
+3. Place the closing pad before a final `return`. When a padded block ends with a `return`, its trailing blank line goes immediately before that `return`, with no blank line between the `return` and the closing brace. A `return` inside a nested block is not the enclosing block's final statement.
 
-Once the internal spacing has been chosen, make the boundaries of every brace-delimited code block containing a blank line visible:
+Only two shapes are therefore valid:
 
-- Leave a blank line immediately after the opening brace.
-- If a function or method body ends with a top-level `return`, leave a blank line immediately before that statement and none between it and the closing brace.
-- In every other case, including a function or method body without a final `return`, leave a blank line immediately before the closing brace.
-- Separate the complete construct that owns the block from surrounding code with blank lines. Keep declaration comments attached to their declarations.
+- A compact block, with no blank line anywhere inside it.
+- A separated block, whose internal blank lines are matched by a blank line after the opening brace and one before the closing brace, the latter moved above a final `return`.
 
-A `return` inside a nested block does not count as the body's final `return`. These boundary requirements are conditional on internal blank lines; do not add blank lines solely to pad an otherwise compact block.
+Separate the complete construct that owns the block from surrounding code with blank lines. Keep declaration comments attached to their declarations.
+
+When reviewing existing code within the scope of a change, run step 1 independently of blank lines that are only boundary padding, including padding before a final `return`. Remove that padding if no useful internal separation remains.
 
 Short, cohesive bodies stay compact, with or without a final `return`:
 
