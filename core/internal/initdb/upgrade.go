@@ -99,6 +99,51 @@ const nodeIDUpgrade = `
 		END IF;
 	END $$`
 
+// pipelineEventTypeUpgrade adds persisted ordering groups and event type
+// identifier constraints.
+const pipelineEventTypeUpgrade = `
+	ALTER TABLE pipelines
+		ADD COLUMN IF NOT EXISTS ordering_group varchar(25);
+
+	UPDATE pipelines p
+	SET ordering_group = CASE
+		WHEN p.event_type = '' THEN ''
+		WHEN c.connector IN ('dummy', 'google-analytics', 'mixpanel', 'posthog') THEN 'events'
+		ELSE p.event_type
+	END
+	FROM connections c
+	WHERE c.id = p.connection
+		AND p.ordering_group IS NULL;
+
+	ALTER TABLE pipelines
+		ALTER COLUMN event_type TYPE varchar(25),
+		ALTER COLUMN ordering_group TYPE varchar(25),
+		ALTER COLUMN ordering_group SET NOT NULL;
+
+	DO $$
+	BEGIN
+		IF NOT EXISTS (
+			SELECT FROM pg_constraint
+			WHERE conrelid = 'pipelines'::regclass
+				AND conname = 'pipelines_event_type_check'
+		) THEN
+			ALTER TABLE pipelines
+				ADD CONSTRAINT pipelines_event_type_check
+				CHECK (event_type = '' OR event_type ~ '^[A-Za-z_][A-Za-z0-9_]*$');
+		END IF;
+
+		IF NOT EXISTS (
+			SELECT FROM pg_constraint
+			WHERE conrelid = 'pipelines'::regclass
+				AND conname = 'pipelines_ordering_group_check'
+		) THEN
+			ALTER TABLE pipelines
+				ADD CONSTRAINT pipelines_ordering_group_check
+				CHECK ((event_type = '' AND ordering_group = '') OR
+					(event_type <> '' AND ordering_group ~ '^[A-Za-z_][A-Za-z0-9_]*$'));
+		END IF;
+	END $$`
+
 // Upgrade applies idempotent updates to an existing Krenalis PostgreSQL
 // database.
 func Upgrade(ctx context.Context, database *db.DB) error {
@@ -336,6 +381,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 				END $$`,
 			organizationConnectorReferencesView,
 			nodeIDUpgrade,
+			pipelineEventTypeUpgrade,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'InviteMember' AFTER 'EndPipelineRun'`,
 			consentPurposesTable,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'AddConsentPurpose'`,
