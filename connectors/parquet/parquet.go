@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"strings"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/tools/decimal"
@@ -29,7 +30,6 @@ import (
 	goparquet "github.com/fraugster/parquet-go"
 	"github.com/fraugster/parquet-go/parquet"
 	"github.com/fraugster/parquet-go/parquetschema"
-	"github.com/google/uuid"
 )
 
 //go:embed documentation/source/overview.md

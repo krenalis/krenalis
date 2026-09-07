@@ -21,21 +21,15 @@ type IntBitSize = 8 | 16 | 24 | 32 | 64;
 
 type FloatBitSize = 32 | 64;
 
-type CountryFormat = 'iso_3166_1_alpha_2' | 'iso_3166_1_alpha_3';
+type CountryFormat = 'alpha-2' | 'alpha-3';
 
 type UnitOfMeasure =
 	| 'g'
 	| 'kg'
-	| 'oz'
-	| 'lb'
 	| 'mm'
 	| 'cm'
 	| 'm'
 	| 'km'
-	| 'in'
-	| 'ft'
-	| 'yd'
-	| 'mi'
 	| 'mL'
 	| 'L'
 	| 'B'
@@ -43,19 +37,17 @@ type UnitOfMeasure =
 	| 'MB'
 	| 'GB'
 	| '°C'
-	| '°F';
+	| '°F'
+	| 'oz'
+	| 'lb'
+	| 'in'
+	| 'ft'
+	| 'yd'
+	| 'mi';
 
 type DurationUnit = 'millisecond' | 'second' | 'minute' | 'hour' | 'day' | 'week';
 
-type Semantic =
-	| { kind: 'email' }
-	| { kind: 'phone' }
-	| { kind: 'url' }
-	| { kind: 'country'; format: CountryFormat }
-	| { kind: 'money'; currency?: string }
-	| { kind: 'percentage' }
-	| { kind: 'measurement'; unit: UnitOfMeasure }
-	| { kind: 'duration'; unit: DurationUnit };
+type Semantic = 'email' | 'phone' | 'url' | 'country' | 'money' | 'percentage' | 'measurement' | 'duration';
 
 interface Property {
 	name: string;
@@ -66,7 +58,6 @@ interface Property {
 	updateRequired: boolean;
 	readOptional: boolean;
 	nullable: boolean;
-	semantic?: Semantic;
 	displayName?: string;
 	description: string;
 }
@@ -90,6 +81,8 @@ type Type =
 
 interface StringType {
 	kind: 'string';
+	semantic?: 'email' | 'phone' | 'url' | 'country';
+	format?: CountryFormat;
 	maxBytes?: number;
 	maxLength?: number;
 	pattern?: string;
@@ -102,6 +95,8 @@ interface BooleanType {
 
 interface IntType {
 	kind: 'int';
+	semantic?: 'measurement' | 'duration';
+	unit?: UnitOfMeasure | DurationUnit;
 	bitSize: IntBitSize;
 	unsigned: boolean;
 	minimum?: number;
@@ -110,6 +105,8 @@ interface IntType {
 
 interface FloatType {
 	kind: 'float';
+	semantic?: 'measurement' | 'duration';
+	unit?: UnitOfMeasure | DurationUnit;
 	bitSize: FloatBitSize;
 	real?: boolean;
 	minimum?: number;
@@ -118,6 +115,9 @@ interface FloatType {
 
 interface DecimalType {
 	kind: 'decimal';
+	semantic?: 'money' | 'percentage' | 'measurement' | 'duration';
+	currency?: string;
+	unit?: UnitOfMeasure | DurationUnit;
 	minimum?: number;
 	maximum?: number;
 	precision?: number;

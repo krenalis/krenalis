@@ -91,7 +91,6 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		visiblePropertyCount,
 		propertyParents,
 		selectedPropertyFieldChanges,
-		selectedPropertyMaterializedSemantic,
 		propertyStatuses,
 		assignedRoles,
 		propertyPaths,
@@ -441,7 +440,6 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 						identifierPosition={
 							propertyInPanel?.key == null ? undefined : identifierPositions.get(propertyInPanel.key)
 						}
-						materializedSemantic={selectedPropertyMaterializedSemantic}
 						property={propertyInPanel}
 						parents={propertyParents}
 						primarySources={primarySources}

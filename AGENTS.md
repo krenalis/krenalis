@@ -149,11 +149,62 @@ Exported methods in `core/internal/metrics` are an exception: they must assume t
 
 ## Block spacing
 
-If a brace-delimited code block contains any blank line, make all of its boundaries visible: leave the first line after the opening brace and the last line before the closing brace blank, and separate the complete construct that owns the block from the surrounding code with blank lines. Apply this rule to function and method bodies as well.
+Choose internal spacing for readability first: use blank lines when they help distinguish logical groups of statements. Keep short, cohesive blocks compact when no such separation is useful. This applies to function and method bodies too; neither a guard nor a `return` requires a blank line on its own.
 
-When a function or method body ends with a `return`, place the final separating blank line immediately before the `return` instead of between the `return` and the closing brace.
+When reviewing existing code within the scope of a change, make this decision independently of blank lines used only to satisfy the boundary rule below, including padding before a final `return`. Remove that padding if no useful internal separation remains.
 
-When appropriate, code that initializes a variable may be confined to its own block. Declare the variable that receives the result outside the block and place the block immediately after that declaration, without an intervening blank line:
+Once the internal spacing has been chosen, make the boundaries of every brace-delimited code block containing a blank line visible:
+
+- Leave a blank line immediately after the opening brace.
+- If a function or method body ends with a top-level `return`, leave a blank line immediately before that statement and none between it and the closing brace.
+- In every other case, including a function or method body without a final `return`, leave a blank line immediately before the closing brace.
+- Separate the complete construct that owns the block from surrounding code with blank lines. Keep declaration comments attached to their declarations.
+
+A `return` inside a nested block does not count as the body's final `return`. These boundary requirements are conditional on internal blank lines; do not add blank lines solely to pad an otherwise compact block.
+
+Short, cohesive bodies stay compact, with or without a final `return`:
+
+```go
+func nonNegative(n int) int {
+    if n < 0 {
+        return 0
+    }
+    return n
+}
+
+func (c *cache) resetStats() {
+    c.hits = 0
+    c.misses = 0
+}
+```
+
+The following examples illustrate boundary placement once internal blank lines have been chosen to separate logical steps. They do not prescribe where to separate statements in other functions or methods:
+
+```go
+func sortedKeys(entries map[string]int) []string {
+
+    keys := make([]string, 0, len(entries))
+    for key := range entries {
+        keys = append(keys, key)
+    }
+
+    slices.Sort(keys)
+
+    return keys
+}
+
+func (c *cache) reset() {
+
+    clear(c.entries)
+    clear(c.pending)
+
+    c.hits = 0
+    c.misses = 0
+
+}
+```
+
+When appropriate, code that initializes a variable may be confined to its own block. As an exception to separating a block from surrounding code, keep the result variable's declaration immediately before its initialization block, without an intervening blank line:
 
 ```go
 var x int

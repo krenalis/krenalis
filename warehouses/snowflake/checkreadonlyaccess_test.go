@@ -90,8 +90,7 @@ func Test_CheckReadOnlyAccess_acceptsExpectedReadOnlySurface(t *testing.T) {
 // warehouses.SettingsNotReadOnly value.
 func assertSettingsNotReadOnly(t *testing.T, err error) {
 	t.Helper()
-	var target *warehouses.SettingsNotReadOnly
-	if !errors.As(err, &target) {
+	if _, ok := errors.AsType[*warehouses.SettingsNotReadOnly](err); !ok {
 		t.Fatalf("expected warehouses.SettingsNotReadOnly, got %T (%v)", err, err)
 	}
 }

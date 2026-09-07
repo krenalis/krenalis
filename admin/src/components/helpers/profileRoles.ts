@@ -1,5 +1,5 @@
 import { ProfileRoleAssignments, ProfileRoleID } from '../../lib/api/types/workspace';
-import Type, { Semantic } from '../../lib/api/types/types';
+import Type from '../../lib/api/types/types';
 
 interface ProfileRoleDefinition {
 	description: string;
@@ -8,7 +8,6 @@ interface ProfileRoleDefinition {
 }
 
 interface ProfileRoleProperty {
-	semantic?: Semantic;
 	type?: Type | null;
 }
 
@@ -68,7 +67,7 @@ const getProfileRole = (id: ProfileRoleID): ProfileRoleDefinition => {
 
 const isProfileRoleCompatible = (role: ProfileRoleID, property: ProfileRoleProperty): boolean => {
 	if (role === 'firstName' || role === 'lastName') {
-		return property.type?.kind === 'string' && property.semantic == null;
+		return property.type?.kind === 'string' && property.type.semantic == null;
 	}
 	const singleValue = property.type != null && property.type.kind !== 'array' && property.type.kind !== 'map';
 	if (!singleValue) {
@@ -76,11 +75,11 @@ const isProfileRoleCompatible = (role: ProfileRoleID, property: ProfileRolePrope
 	}
 	switch (role) {
 		case 'email':
-			return property.semantic?.kind === 'email';
+			return property.type?.kind === 'string' && property.type.semantic === 'email';
 		case 'country':
-			return property.semantic?.kind === 'country';
+			return property.type?.kind === 'string' && property.type.semantic === 'country';
 		case 'photo':
-			return property.semantic?.kind === 'url';
+			return property.type?.kind === 'string' && property.type.semantic === 'url';
 	}
 };
 

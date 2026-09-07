@@ -1,4 +1,4 @@
-import Type, { DurationUnit, UnitOfMeasure } from '../../lib/api/types/types';
+import Type, { DurationUnit, Semantic, UnitOfMeasure } from '../../lib/api/types/types';
 
 interface UnitOfMeasureOption {
 	groupLabel?: string;
@@ -49,6 +49,10 @@ function getPropertyValueType(type: Type | null): Type | null {
 		return type.elementType;
 	}
 	return type;
+}
+
+function getTypeSemantic(type: Type | null): Semantic | undefined {
+	return type != null && 'semantic' in type ? type.semantic : undefined;
 }
 
 function isSuitableAsIdentifier(type: Type): boolean {
@@ -284,6 +288,7 @@ export {
 	DURATION_UNIT_OPTIONS,
 	UNIT_OF_MEASURE_OPTIONS,
 	getPropertyValueType,
+	getTypeSemantic,
 	isSuitableAsIdentifier,
 	replacePropertyValueType,
 	toKrenalisStringType,

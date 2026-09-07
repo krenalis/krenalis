@@ -28,23 +28,20 @@ func TestProfileRoleAssignments(t *testing.T) {
 	properties := workspace.ProfileSchema.Properties().Slice()
 	properties = append(properties, types.Property{
 		Name:         "photo_url",
-		Type:         types.String(),
+		Type:         types.String().AsURL(),
 		ReadOptional: true,
-		Semantic:     types.URL(),
 	}, types.Property{
 		Name:         "not_photo",
 		Type:         types.Boolean(),
 		ReadOptional: true,
 	}, types.Property{
 		Name:         "email_address",
-		Type:         types.String(),
+		Type:         types.String().AsEmail(),
 		ReadOptional: true,
-		Semantic:     types.Email(),
 	}, types.Property{
 		Name:         "country",
-		Type:         types.String(),
+		Type:         types.String().AsCountry(types.ISO3166Alpha2),
 		ReadOptional: true,
-		Semantic:     types.Country(types.ISO3166Alpha2),
 	})
 	schema := types.Object(properties)
 	assignedRoles := krenalistester.ProfileRoleAssignments{

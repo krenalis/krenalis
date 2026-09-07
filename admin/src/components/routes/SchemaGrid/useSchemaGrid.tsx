@@ -102,7 +102,7 @@ const getRows = (
 	const rows: GridRow[] = [];
 	for (const property of schema.properties || []) {
 		const path = parent == null ? property.name : `${parent}.${property.name}`;
-		const typePresentation = getSchemaPropertyTypePresentation(property.type, property.semantic, 'grid');
+		const typePresentation = getSchemaPropertyTypePresentation(property.type, 'grid');
 		const assignedRole = getAssignedProfileRole(assignedRoles, path);
 		const matches =
 			includeAll ||
@@ -167,7 +167,7 @@ const buildRow = (
 	forceExpanded: boolean,
 	onSelectProperty: (path: string) => void,
 ): StandardGridRow => {
-	const typeCell: ReactNode = <SchemaPropertyType context='grid' type={property.type} semantic={property.semantic} />;
+	const typeCell: ReactNode = <SchemaPropertyType context='grid' type={property.type} />;
 	let primarySourceCell: ReactNode = <span className='schema-grid__empty-cell'>—</span>;
 	if (property.type.kind !== 'object' && property.type.kind !== 'array') {
 		if (primarySource != null) {

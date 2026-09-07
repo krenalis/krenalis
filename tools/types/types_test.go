@@ -324,6 +324,8 @@ func sameType(t1, t2 Type) error {
 		t1.unsigned == t2.unsigned &&
 		t1.unique == t2.unique &&
 		t1.real == t2.real &&
+		t1.semantic == t2.semantic &&
+		t1.semanticOption == t2.semanticOption &&
 		t1.p == t2.p &&
 		t1.s == t2.s &&
 		t1.vl == nil && t2.vl == nil {
@@ -373,6 +375,14 @@ func sameType(t1, t2 Type) error {
 	// Real.
 	if t1.real != t2.real {
 		return fmt.Errorf("expected real %t, got %t", t1.real, t2.real)
+	}
+	// Semantic.
+	if t1.semantic != t2.semantic {
+		return fmt.Errorf("expected type semantic %s, got %s", t1.semantic, t2.semantic)
+	}
+	// Semantic option.
+	if t1.semanticOption != t2.semanticOption {
+		return fmt.Errorf("expected semantic option %v, got %v", t1.semanticOption, t2.semanticOption)
 	}
 	// Precision, byte length or elements minimum length.
 	if t1.p != t2.p {
@@ -535,9 +545,6 @@ func sameProperty(p1, p2 Property) error {
 	}
 	if p1.Nullable != p2.Nullable {
 		return fmt.Errorf("expected property key 'nullable' with value %t, got %t", p1.Nullable, p2.Nullable)
-	}
-	if !EqualSemantics(p1.Semantic, p2.Semantic) {
-		return fmt.Errorf("expected property semantic %#v, got %#v", p1.Semantic, p2.Semantic)
 	}
 	if p1.DisplayName != p2.DisplayName {
 		return fmt.Errorf("expected property display name %q, got %q", p1.DisplayName, p2.DisplayName)

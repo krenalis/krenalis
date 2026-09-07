@@ -55,23 +55,27 @@ This table is based on the following principles:
 
 [^issue-956]: Currently, the minimum and maximum value for numeric types is allowed for profile schema properties but cannot be specified when declaring types using the Admin console. See the issue [#956](https://github.com/krenalis/krenalis/issues/956) for more details.
 
-### Semantic support in profile schemas
+### Semantic types
 
-A property semantic is metadata and does not affect its data warehouse column type. The column type is determined only by the property's `Type` using the mappings in the table above.
+A semantic is part of a type but does not affect its data warehouse representation.
 
-Once a property is materialized, its semantic can be preserved exactly or removed. It cannot be added, replaced or changed, including its options. Removing a semantic preserves the property's complete `Type` and does not require data warehouse DDL.
+| Semantic                | Type restrictions                                                                    |
+|-------------------------|--------------------------------------------------------------------------------------|
+| `AsEmail()`             | String                                                                               |
+| `AsPhone()`             | String without `maxBytes`, `maxLength`, `pattern` or `values`                        |
+| `AsURL()`               | String                                                                               |
+| `AsCountry(format)`     | String without `maxBytes`, `maxLength`, `pattern` or `values`; `format` is required  |
+| `AsMoney()`             | Decimal; currency is optional                                                        |
+| `AsPercentage()`        | Decimal                                                                              |
+| `AsMeasurement(unit)`   | Integer, decimal or real float; `unit` is required                                   |
+| `AsDuration(unit)`      | Integer, decimal or real float; `unit` is required                                   |
 
-Properties without a semantic may use any type allowed by the table above. Properties with a semantic must use the following types:
+For arrays and maps, the semantic belongs to the element or value type, for example `Array(String().AsPhone())`.
 
-| Semantic                              | Required type    | Configuration                         |
-|---------------------------------------|------------------|---------------------------------------|
-| `Email()`                             | `string`         | -                                     |
-| `Phone()`                             | `string`         | -                                     |
-| `URL()`                               | `string`         | -                                     |
-| `Country(format)`                     | `string`         | `format` is required                  |
-| `Money()`                             | `decimal(p,s)`   | Currency is optional                  |
-| `Percentage()`                        | `decimal(18,4)`  | Minimum and maximum are optional      |
-| `Measurement()`                       | `decimal(p,s)`   | Unit of measure is optional           |
-| `Duration(unit)`                      | signed `int(64)` | `unit` is required                    |
+### Semantic restrictions in profile schemas
 
-For an `array(T)` property, these restrictions apply to `T`. For a `map(T)` property, they apply to the map values of type `T`.
+Once a property is materialized, its type, including its semantic and semantic options, cannot be changed. Profile schemas also require:
+
+* `AsCountry(format)` to use `ISO3166Alpha2`;
+* `AsMoney()`, `AsPercentage()` and `AsMeasurement(unit)` to use a decimal with precision 18 and scale 4;
+* `AsDuration(unit)` to use a signed 64-bit integer.

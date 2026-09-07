@@ -5,346 +5,134 @@
 package types
 
 import (
+	"fmt"
+
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/validation"
 )
 
-// SemanticKind identifies the meaning associated with a property value.
-type SemanticKind int8
+// Semantic identifies what a type's values represent.
+type Semantic int8
 
 const (
-	InvalidSemanticKind     SemanticKind = iota // does not identify a semantic
-	EmailSemanticKind                           // email address
-	PhoneSemanticKind                           // phone number
-	URLSemanticKind                             // web URL
-	CountrySemanticKind                         // country
-	MoneySemanticKind                           // monetary amount
-	PercentageSemanticKind                      // percentage
-	MeasurementSemanticKind                     // numeric measurement
-	DurationSemanticKind                        // duration
+	NoSemantic          Semantic = iota // no semantic
+	CountrySemantic                     // country
+	DurationSemantic                    // duration
+	EmailSemantic                       // email address
+	MeasurementSemantic                 // numeric measurement
+	MoneySemantic                       // monetary amount
+	PercentageSemantic                  // percentage
+	PhoneSemantic                       // phone number
+	URLSemantic                         // web URL
 )
 
-// semanticKindName contains the JSON name of each valid semantic kind.
-var semanticKindName = []string{
-	"email",
-	"phone",
-	"url",
+// semanticName contains the JSON names of all semantics except NoSemantic.
+var semanticName = []string{
 	"country",
+	"duration",
+	"email",
+	"measurement",
 	"money",
 	"percentage",
-	"measurement",
-	"duration",
+	"phone",
+	"url",
 }
 
-// SemanticKindByName returns a semantic kind by its name. The second return
-// parameter reports whether a semantic kind with the given name exists.
-func SemanticKindByName(name string) (SemanticKind, bool) {
-	for i, n := range semanticKindName {
+// SemanticByName returns the semantic identified by name. It returns
+// NoSemantic, false if name does not identify a semantic. NoSemantic represents
+// the absence of a semantic and cannot be looked up by name.
+func SemanticByName(name string) (Semantic, bool) {
+	for i, n := range semanticName {
 		if n == name {
-			return SemanticKind(i + 1), true
+			return Semantic(i + 1), true
 		}
 	}
-	return InvalidSemanticKind, false
+	return NoSemantic, false
 }
 
-// String returns the name of k.
-func (k SemanticKind) String() string {
-	if !k.Valid() {
-		return "Invalid"
+// String returns the name of s.
+func (s Semantic) String() string {
+	if s == NoSemantic {
+		return "none"
 	}
-	return semanticKindName[k-1]
+	return semanticName[s-1]
 }
-
-// Valid reports whether k is a valid semantic kind.
-func (k SemanticKind) Valid() bool {
-	return 1 <= k && int(k) <= len(semanticKindName)
-}
-
-// Semantic describes what a property value represents and, when necessary,
-// how its representation is interpreted. For an array property, it describes
-// each element; for a map property, it describes each value, not its keys.
-// For nested arrays and maps, this applies recursively until a type that is
-// neither an array nor a map is reached.
-//
-// Semantic values are immutable.
-type Semantic interface {
-
-	// Kind returns the semantic kind.
-	Kind() SemanticKind
-
-	// semantic prevents implementations outside this package.
-	semantic()
-}
-
-// EmailSemantic describes an email address.
-type EmailSemantic interface {
-	Semantic
-
-	// email distinguishes email semantics from other stateless semantics.
-	email()
-}
-
-// emailSemantic implements EmailSemantic.
-type emailSemantic struct{}
-
-// emailSemanticInstance is the shared email semantic.
-var emailSemanticInstance = &emailSemantic{}
-
-// Email returns the semantic for an email address.
-func Email() EmailSemantic {
-	return emailSemanticInstance
-}
-
-// Kind returns the email semantic kind.
-func (*emailSemantic) Kind() SemanticKind {
-	return EmailSemanticKind
-}
-
-// email implements EmailSemantic.
-func (*emailSemantic) email() {}
-
-// semantic implements Semantic.
-func (*emailSemantic) semantic() {}
-
-// PhoneSemantic describes a phone number.
-type PhoneSemantic interface {
-	Semantic
-
-	// phone distinguishes phone semantics from other stateless semantics.
-	phone()
-}
-
-// phoneSemantic implements PhoneSemantic.
-type phoneSemantic struct{}
-
-// phoneSemanticInstance is the shared phone semantic.
-var phoneSemanticInstance = &phoneSemantic{}
-
-// Phone returns the semantic for a phone number.
-func Phone() PhoneSemantic {
-	return phoneSemanticInstance
-}
-
-// Kind returns the phone semantic kind.
-func (*phoneSemantic) Kind() SemanticKind {
-	return PhoneSemanticKind
-}
-
-// phone implements PhoneSemantic.
-func (*phoneSemantic) phone() {}
-
-// semantic implements Semantic.
-func (*phoneSemantic) semantic() {}
-
-// URLSemantic describes a URL.
-type URLSemantic interface {
-	Semantic
-
-	// url distinguishes URL semantics from other stateless semantics.
-	url()
-}
-
-// urlSemantic implements URLSemantic.
-type urlSemantic struct{}
-
-// urlSemanticInstance is the shared URL semantic.
-var urlSemanticInstance = &urlSemantic{}
-
-// URL returns the semantic for a URL.
-func URL() URLSemantic {
-	return urlSemanticInstance
-}
-
-// Kind returns the URL semantic kind.
-func (*urlSemantic) Kind() SemanticKind {
-	return URLSemanticKind
-}
-
-// semantic implements Semantic.
-func (*urlSemantic) semantic() {}
-
-// url implements URLSemantic.
-func (*urlSemantic) url() {}
 
 // CountryFormat identifies how a country value is represented.
 type CountryFormat int8
 
 const (
-	InvalidCountryFormat CountryFormat = iota // does not identify a country format
-	ISO3166Alpha2                             // two-letter ISO 3166-1 alpha-2 code
-	ISO3166Alpha3                             // three-letter ISO 3166-1 alpha-3 code
+	ISO3166Alpha2 CountryFormat = iota + 2 // two-letter ISO 3166-1 alpha-2 code
+	ISO3166Alpha3                          // three-letter ISO 3166-1 alpha-3 code
 )
 
-// countryFormatName contains the JSON name of each valid country format.
-var countryFormatName = []string{
-	"iso_3166_1_alpha_2",
-	"iso_3166_1_alpha_3",
+// countryFormatName contains the JSON names of all valid country formats.
+var countryFormatName = [...]string{
+	"alpha-2",
+	"alpha-3",
 }
 
-// CountryFormatByName returns a country format by its name. The second return
-// parameter reports whether a country format with the given name exists.
+// CountryFormatByName returns the country format with the given name.
+// The second return parameter reports whether a country format with the given
+// name exists.
 func CountryFormatByName(name string) (CountryFormat, bool) {
 	for i, n := range countryFormatName {
 		if n == name {
-			return CountryFormat(i + 1), true
+			return CountryFormat(i + 2), true
 		}
 	}
-	return InvalidCountryFormat, false
+	return CountryFormat(0), false
 }
 
 // String returns the name of f.
 func (f CountryFormat) String() string {
-	if !f.Valid() {
+	if f != ISO3166Alpha2 && f != ISO3166Alpha3 {
 		return "Invalid"
 	}
-	return countryFormatName[f-1]
+	return countryFormatName[f-2]
 }
 
-// Valid reports whether f is a valid country format.
-func (f CountryFormat) Valid() bool {
-	return 1 <= f && int(f) <= len(countryFormatName)
+// DurationUnit identifies the unit used to represent a duration.
+type DurationUnit int8
+
+const (
+	InvalidDurationUnit DurationUnit = iota // does not identify a duration unit
+	Millisecond                             // millisecond
+	Second                                  // second
+	Minute                                  // minute
+	Hour                                    // hour
+	Day                                     // day
+	Week                                    // week
+)
+
+// durationUnitName contains the JSON names of all valid duration units.
+var durationUnitName = [...]string{
+	"millisecond",
+	"second",
+	"minute",
+	"hour",
+	"day",
+	"week",
 }
 
-// CountrySemantic describes a country value and its representation.
-type CountrySemantic interface {
-	Semantic
-
-	// Format returns the format used to represent the country.
-	Format() CountryFormat
-
-	// country distinguishes country semantics from other semantics.
-	country()
-}
-
-// countrySemantic implements CountrySemantic.
-type countrySemantic struct {
-	format CountryFormat
-}
-
-// countrySemantics contains the shared country semantics indexed by format.
-var countrySemantics = [...]countrySemantic{
-	{},
-	{format: ISO3166Alpha2},
-	{format: ISO3166Alpha3},
-}
-
-// Country returns the semantic for a country represented using format.
-// It panics if format is invalid.
-func Country(format CountryFormat) CountrySemantic {
-	if !format.Valid() {
-		panic("invalid country format")
+// DurationUnitByName returns the duration unit with the given name. The second
+// return parameter reports whether a duration unit with the given name exists.
+func DurationUnitByName(name string) (DurationUnit, bool) {
+	for i, n := range durationUnitName {
+		if n == name {
+			return DurationUnit(i + 1), true
+		}
 	}
-	return &countrySemantics[format]
+	return InvalidDurationUnit, false
 }
 
-// Format returns the format used to represent the country.
-func (s *countrySemantic) Format() CountryFormat {
-	return s.format
-}
-
-// Kind returns the country semantic kind.
-func (*countrySemantic) Kind() SemanticKind {
-	return CountrySemanticKind
-}
-
-// country implements CountrySemantic.
-func (*countrySemantic) country() {}
-
-// semantic implements Semantic.
-func (*countrySemantic) semantic() {}
-
-// MoneySemantic describes a monetary amount.
-type MoneySemantic interface {
-	Semantic
-
-	// Currency returns the currency code and whether one is set.
-	Currency() (string, bool)
-
-	// WithCurrency returns a copy of the semantic with the specified ISO 4217
-	// currency code. It panics unless currency is valid.
-	WithCurrency(currency string) MoneySemantic
-
-	// money distinguishes money semantics from other semantics.
-	money()
-}
-
-// moneySemantic implements MoneySemantic.
-type moneySemantic struct {
-	currency string
-}
-
-// moneySemanticInstance is the shared money semantic without a currency.
-var moneySemanticInstance = &moneySemantic{}
-
-// Money returns the semantic for a monetary amount without a fixed currency.
-func Money() MoneySemantic {
-	return moneySemanticInstance
-}
-
-// Currency returns the currency code and whether one is set.
-func (s *moneySemantic) Currency() (string, bool) {
-	return s.currency, s.currency != ""
-}
-
-// Kind returns the money semantic kind.
-func (*moneySemantic) Kind() SemanticKind {
-	return MoneySemanticKind
-}
-
-// WithCurrency returns a copy of s with the specified ISO 4217 currency code.
-// It panics unless currency is valid.
-func (s *moneySemantic) WithCurrency(currency string) MoneySemantic {
-
-	if !validation.IsValidCurrencyCode(currency) {
-		panic("invalid currency code")
+// String returns the name of u.
+func (u DurationUnit) String() string {
+	if u < 1 || int(u) > len(durationUnitName) {
+		return "Invalid"
 	}
-	if s.currency == currency {
-		return s
-	}
-
-	c := *s
-	c.currency = currency
-
-	return &c
+	return durationUnitName[u-1]
 }
-
-// money implements MoneySemantic.
-func (*moneySemantic) money() {}
-
-// semantic implements Semantic.
-func (*moneySemantic) semantic() {}
-
-// PercentageSemantic describes a percentage stored as its value divided by
-// 100, so 0.9 represents 90%.
-type PercentageSemantic interface {
-	Semantic
-
-	// percentage distinguishes percentage semantics from other semantics.
-	percentage()
-}
-
-// percentageSemantic implements PercentageSemantic.
-type percentageSemantic struct{}
-
-// percentageSemanticInstance is the shared percentage semantic.
-var percentageSemanticInstance = &percentageSemantic{}
-
-// Percentage returns the semantic for a percentage stored as its value divided
-// by 100, so 0.9 represents 90%.
-func Percentage() PercentageSemantic {
-	return percentageSemanticInstance
-}
-
-// Kind returns the percentage semantic kind.
-func (*percentageSemantic) Kind() SemanticKind {
-	return PercentageSemanticKind
-}
-
-// percentage implements PercentageSemantic.
-func (*percentageSemantic) percentage() {}
-
-// semantic implements Semantic.
-func (*percentageSemantic) semantic() {}
 
 // UnitOfMeasure identifies a unit of measure.
 type UnitOfMeasure int8
@@ -373,7 +161,7 @@ const (
 	Mile                                      // mile
 )
 
-// unitOfMeasureName contains the JSON name of each valid unit of measure.
+// unitOfMeasureName contains the JSON names of all valid units of measure.
 var unitOfMeasureName = []string{
 	"g",
 	"kg",
@@ -397,8 +185,8 @@ var unitOfMeasureName = []string{
 	"mi",
 }
 
-// UnitOfMeasureByName returns a unit of measure by its name. The second return
-// parameter reports whether a unit with the given name exists.
+// UnitOfMeasureByName returns the unit of measure with the given name. The
+// second return parameter reports whether a unit with the given name exists.
 func UnitOfMeasureByName(name string) (UnitOfMeasure, bool) {
 	for i, n := range unitOfMeasureName {
 		if n == name {
@@ -410,231 +198,233 @@ func UnitOfMeasureByName(name string) (UnitOfMeasure, bool) {
 
 // String returns the name of u.
 func (u UnitOfMeasure) String() string {
-	if !u.Valid() {
+	if u < 1 || int(u) > len(unitOfMeasureName) {
 		return "Invalid"
 	}
 	return unitOfMeasureName[u-1]
 }
 
-// Valid reports whether u is a valid unit of measure.
-func (u UnitOfMeasure) Valid() bool {
-	return 1 <= u && int(u) <= len(unitOfMeasureName)
-}
-
-// MeasurementSemantic describes a numeric value with a unit of measure.
-type MeasurementSemantic interface {
-	Semantic
-
-	// UnitOfMeasure returns the unit of measure.
-	UnitOfMeasure() UnitOfMeasure
-
-	// WithUnitOfMeasure returns a copy of the semantic with the specified unit
-	// of measure. It panics if unit is invalid.
-	WithUnitOfMeasure(unit UnitOfMeasure) MeasurementSemantic
-
-	// measurement distinguishes measurement semantics from other semantics.
-	measurement()
-}
-
-// measurementSemantic implements MeasurementSemantic.
-type measurementSemantic struct {
-	unit UnitOfMeasure
-}
-
-// measurementSemantics contains the shared measurement semantics indexed by unit.
-var measurementSemantics = [...]measurementSemantic{
-	{},
-	{unit: Gram},
-	{unit: Kilogram},
-	{unit: Millimeter},
-	{unit: Centimeter},
-	{unit: Meter},
-	{unit: Kilometer},
-	{unit: Milliliter},
-	{unit: Liter},
-	{unit: Byte},
-	{unit: Kilobyte},
-	{unit: Megabyte},
-	{unit: Gigabyte},
-	{unit: Celsius},
-	{unit: Fahrenheit},
-	{unit: Ounce},
-	{unit: Pound},
-	{unit: Inch},
-	{unit: Foot},
-	{unit: Yard},
-	{unit: Mile},
-}
-
-// Measurement returns the semantic for a numeric value expressed in unit.
-// It panics if unit is invalid.
-func Measurement(unit UnitOfMeasure) MeasurementSemantic {
-	if !unit.Valid() {
-		panic("invalid unit of measure")
+// AsCountry returns t with the country semantic using format. It panics if t is
+// not a string type, if t already has a semantic or other string constraints,
+// or if format is invalid.
+func (t Type) AsCountry(format CountryFormat) Type {
+	t, err := t.withSemantic(CountrySemantic, format)
+	if err != nil {
+		panic(err.Error())
 	}
-	return &measurementSemantics[unit]
+	return t
 }
 
-// Kind returns the measurement semantic kind.
-func (*measurementSemantic) Kind() SemanticKind {
-	return MeasurementSemanticKind
-}
-
-// UnitOfMeasure returns the unit of measure.
-func (s *measurementSemantic) UnitOfMeasure() UnitOfMeasure {
-	return s.unit
-}
-
-// WithUnitOfMeasure returns a copy of s with the specified unit of measure.
-// It panics if unit is invalid.
-func (s *measurementSemantic) WithUnitOfMeasure(unit UnitOfMeasure) MeasurementSemantic {
-	if s.unit == unit {
-		return s
+// AsDuration returns t with the duration semantic using unit. It panics unless
+// t is an int, decimal, or real float type without a semantic and unit is
+// valid.
+func (t Type) AsDuration(unit DurationUnit) Type {
+	t, err := t.withSemantic(DurationSemantic, unit)
+	if err != nil {
+		panic(err.Error())
 	}
-	semantic := Measurement(unit)
-	return semantic
+	return t
 }
 
-// measurement implements MeasurementSemantic.
-func (*measurementSemantic) measurement() {}
-
-// semantic implements Semantic.
-func (*measurementSemantic) semantic() {}
-
-// DurationUnit identifies the unit used to represent a duration.
-type DurationUnit int8
-
-const (
-	InvalidDurationUnit DurationUnit = iota // does not identify a duration unit
-	Millisecond                             // millisecond
-	Second                                  // second
-	Minute                                  // minute
-	Hour                                    // hour
-	Day                                     // day
-	Week                                    // week
-)
-
-// durationUnitName contains the JSON name of each valid duration unit.
-var durationUnitName = []string{
-	"millisecond",
-	"second",
-	"minute",
-	"hour",
-	"day",
-	"week",
+// AsEmail returns t with the email semantic. It panics unless t is a string
+// type without a semantic.
+func (t Type) AsEmail() Type {
+	t, err := t.withSemantic(EmailSemantic, nil)
+	if err != nil {
+		panic(err.Error())
+	}
+	return t
 }
 
-// DurationUnitByName returns a duration unit by its name. The second return
-// parameter reports whether a duration unit with the given name exists.
-func DurationUnitByName(name string) (DurationUnit, bool) {
-	for i, n := range durationUnitName {
-		if n == name {
-			return DurationUnit(i + 1), true
+// AsMeasurement returns t with the measurement semantic using unit. It panics
+// unless t is an int, decimal, or real float type without a semantic and unit
+// is valid.
+func (t Type) AsMeasurement(unit UnitOfMeasure) Type {
+	t, err := t.withSemantic(MeasurementSemantic, unit)
+	if err != nil {
+		panic(err.Error())
+	}
+	return t
+}
+
+// AsMoney returns t with the money semantic. It panics unless t is a decimal
+// type without a semantic.
+func (t Type) AsMoney() Type {
+	t, err := t.withSemantic(MoneySemantic, nil)
+	if err != nil {
+		panic(err.Error())
+	}
+	return t
+}
+
+// AsPercentage returns t with the percentage semantic. It panics unless t is a
+// decimal type without a semantic.
+func (t Type) AsPercentage() Type {
+	t, err := t.withSemantic(PercentageSemantic, nil)
+	if err != nil {
+		panic(err.Error())
+	}
+	return t
+}
+
+// AsPhone returns t with the phone semantic. It panics if t is not a string
+// type or if t already has a semantic or other string constraints.
+func (t Type) AsPhone() Type {
+	t, err := t.withSemantic(PhoneSemantic, nil)
+	if err != nil {
+		panic(err.Error())
+	}
+	return t
+}
+
+// AsURL returns t with the URL semantic. It panics unless t is a string type
+// without a semantic.
+func (t Type) AsURL() Type {
+	t, err := t.withSemantic(URLSemantic, nil)
+	if err != nil {
+		panic(err.Error())
+	}
+	return t
+}
+
+// CountryFormat returns the country format of t. It panics unless t has the
+// country semantic.
+func (t Type) CountryFormat() CountryFormat {
+	if t.semantic != CountrySemantic {
+		panic("type does not have country semantic")
+	}
+	return t.semanticOption.(CountryFormat)
+}
+
+// Currency returns the currency code of t and whether one is set. It panics
+// unless t has the money semantic.
+func (t Type) Currency() (string, bool) {
+	if t.semantic != MoneySemantic {
+		panic("type does not have money semantic")
+	}
+	currency, _ := t.semanticOption.(string)
+	return currency, currency != ""
+}
+
+// DurationUnit returns the duration unit of t. It panics unless t has the
+// duration semantic.
+func (t Type) DurationUnit() DurationUnit {
+	if t.semantic != DurationSemantic {
+		panic("type does not have duration semantic")
+	}
+	return t.semanticOption.(DurationUnit)
+}
+
+// Semantic returns the semantic of t, or NoSemantic if t has no semantic.
+func (t Type) Semantic() Semantic {
+	return t.semantic
+}
+
+// UnitOfMeasure returns the unit of measure of t. It panics unless t has the
+// measurement semantic.
+func (t Type) UnitOfMeasure() UnitOfMeasure {
+	if t.semantic != MeasurementSemantic {
+		panic("type does not have measurement semantic")
+	}
+	return t.semanticOption.(UnitOfMeasure)
+}
+
+// WithCurrency returns t with the given ISO 4217 currency code. It panics
+// unless t has the money semantic and currency is valid.
+func (t Type) WithCurrency(currency string) Type {
+	if t.semantic != MoneySemantic {
+		panic("type does not have money semantic")
+	}
+	if !validation.IsValidCurrencyCode(currency) {
+		panic("invalid currency code")
+	}
+	t.semanticOption = currency
+	return t
+}
+
+// withSemantic returns t with the given semantic and option, or an error if
+// they are invalid or incompatible with t.
+func (t Type) withSemantic(semantic Semantic, option any) (Type, error) {
+
+	if semantic == NoSemantic {
+		return Type{}, errors.New("semantic does not specialize type")
+	}
+	if t.semantic != NoSemantic {
+		return Type{}, errors.New("type already has a semantic")
+	}
+
+	switch semantic {
+	case EmailSemantic:
+		if t.kind != StringKind {
+			return Type{}, errors.New("email semantic requires string type")
+		}
+		if option != nil {
+			return Type{}, errors.New("email semantic does not accept an option")
+		}
+	case PhoneSemantic:
+		if t.kind != StringKind {
+			return Type{}, errors.New("phone semantic requires string type")
+		}
+		if option != nil {
+			return Type{}, errors.New("phone semantic does not accept an option")
+		}
+	case URLSemantic:
+		if t.kind != StringKind {
+			return Type{}, errors.New("URL semantic requires string type")
+		}
+		if option != nil {
+			return Type{}, errors.New("URL semantic does not accept an option")
+		}
+	case CountrySemantic:
+		if t.kind != StringKind {
+			return Type{}, errors.New("country semantic requires string type")
+		}
+		format, ok := option.(CountryFormat)
+		if !ok || format != ISO3166Alpha2 && format != ISO3166Alpha3 {
+			return Type{}, errors.New("invalid country format")
+		}
+	case MoneySemantic:
+		if t.kind != DecimalKind {
+			return Type{}, errors.New("money semantic requires decimal type")
+		}
+		if option != nil {
+			return Type{}, errors.New("money semantic does not accept an option")
+		}
+	case PercentageSemantic:
+		if t.kind != DecimalKind {
+			return Type{}, errors.New("percentage semantic requires decimal type")
+		}
+		if option != nil {
+			return Type{}, errors.New("percentage semantic does not accept an option")
+		}
+	case MeasurementSemantic:
+		if !semanticNumericType(t) {
+			return Type{}, errors.New("measurement semantic requires an int, decimal, or real float type")
+		}
+		unit, ok := option.(UnitOfMeasure)
+		if !ok || unit < 1 || int(unit) > len(unitOfMeasureName) {
+			return Type{}, errors.New("invalid unit of measure")
+		}
+	case DurationSemantic:
+		if !semanticNumericType(t) {
+			return Type{}, errors.New("duration semantic requires an int, decimal, or real float type")
+		}
+		unit, ok := option.(DurationUnit)
+		if !ok || unit < 1 || int(unit) > len(durationUnitName) {
+			return Type{}, errors.New("invalid duration unit")
 		}
 	}
-	return InvalidDurationUnit, false
-}
-
-// String returns the name of u.
-func (u DurationUnit) String() string {
-	if !u.Valid() {
-		return "Invalid"
-	}
-	return durationUnitName[u-1]
-}
-
-// Valid reports whether u is a valid duration unit.
-func (u DurationUnit) Valid() bool {
-	return 1 <= u && int(u) <= len(durationUnitName)
-}
-
-// DurationSemantic describes a duration.
-type DurationSemantic interface {
-	Semantic
-
-	// Unit returns the unit used to represent the duration.
-	Unit() DurationUnit
-
-	// duration distinguishes duration semantics from other semantics.
-	duration()
-}
-
-// durationSemantic implements DurationSemantic.
-type durationSemantic struct {
-	unit DurationUnit
-}
-
-// durationSemantics contains the shared duration semantics indexed by unit.
-var durationSemantics = [...]durationSemantic{
-	{},
-	{unit: Millisecond},
-	{unit: Second},
-	{unit: Minute},
-	{unit: Hour},
-	{unit: Day},
-	{unit: Week},
-}
-
-// Duration returns the semantic for a duration expressed in unit.
-// It panics if unit is invalid.
-func Duration(unit DurationUnit) DurationSemantic {
-	if !unit.Valid() {
-		panic("invalid duration unit")
-	}
-	return &durationSemantics[unit]
-}
-
-// Kind returns the duration semantic kind.
-func (*durationSemantic) Kind() SemanticKind {
-	return DurationSemanticKind
-}
-
-// Unit returns the unit used to represent the duration.
-func (s *durationSemantic) Unit() DurationUnit {
-	return s.unit
-}
-
-// duration implements DurationSemantic.
-func (*durationSemantic) duration() {}
-
-// semantic implements Semantic.
-func (*durationSemantic) semantic() {}
-
-// EqualSemantics reports whether s1 and s2 have the same kind and options.
-func EqualSemantics(s1, s2 Semantic) bool {
-
-	if s1 == nil || s2 == nil {
-		return s1 == nil && s2 == nil
-	}
-	if s1.Kind() != s2.Kind() {
-		return false
+	if (semantic == CountrySemantic || semantic == PhoneSemantic) && (t.p != 0 || t.s != 0 || t.vl != nil) {
+		return Type{}, fmt.Errorf("%s semantic cannot be combined with other string constraints", semantic)
 	}
 
-	switch s1 := s1.(type) {
-	case *emailSemantic, *phoneSemantic, *urlSemantic:
-		return true
-	case *countrySemantic:
-		s2, ok := s2.(*countrySemantic)
-		return ok && s1.format == s2.format
-	case *moneySemantic:
-		s2, ok := s2.(*moneySemantic)
-		return ok && s1.currency == s2.currency
-	case *percentageSemantic:
-		_, ok := s2.(*percentageSemantic)
-		return ok
-	case *measurementSemantic:
-		s2, ok := s2.(*measurementSemantic)
-		return ok && s1.unit == s2.unit
-	case *durationSemantic:
-		s2, ok := s2.(*durationSemantic)
-		return ok && s1.unit == s2.unit
-	default:
-		panic("invalid semantic")
-	}
+	t.semantic = semantic
+	t.semanticOption = option
 
+	return t, nil
 }
 
-// semanticNumericType reports whether t has a numeric domain that excludes non-real values.
+// semanticNumericType reports whether t is an int, decimal, or real float type.
 func semanticNumericType(t Type) bool {
 	switch t.kind {
 	case IntKind, DecimalKind:
@@ -644,57 +434,4 @@ func semanticNumericType(t Type) bool {
 	default:
 		return false
 	}
-}
-
-// validateSemanticCompatibility verifies that s can be used with t.
-func validateSemanticCompatibility(s Semantic, t Type) error {
-
-	if s == nil {
-		return nil
-	}
-	for t.kind == ArrayKind || t.kind == MapKind {
-		t = t.Elem()
-	}
-	if t.Generic() {
-		return errors.New("semantic cannot be used with a generic type")
-	}
-
-	switch s.Kind() {
-	case EmailSemanticKind:
-		if t.kind != StringKind {
-			return errors.New("email semantic requires string type")
-		}
-	case PhoneSemanticKind:
-		if t.kind != StringKind {
-			return errors.New("phone semantic requires string type")
-		}
-	case URLSemanticKind:
-		if t.kind != StringKind {
-			return errors.New("URL semantic requires string type")
-		}
-	case CountrySemanticKind:
-		if t.kind != StringKind {
-			return errors.New("country semantic requires string type")
-		}
-	case MoneySemanticKind:
-		if !semanticNumericType(t) {
-			return errors.New("money semantic requires an int, decimal, or real float type")
-		}
-	case PercentageSemanticKind:
-		if t.kind != DecimalKind {
-			return errors.New("percentage semantic requires decimal type")
-		}
-	case MeasurementSemanticKind:
-		if !semanticNumericType(t) {
-			return errors.New("measurement semantic requires an int, decimal, or real float type")
-		}
-	case DurationSemanticKind:
-		if !semanticNumericType(t) {
-			return errors.New("duration semantic requires an int, decimal, or real float type")
-		}
-	default:
-		return errors.New("invalid semantic")
-	}
-
-	return nil
 }
