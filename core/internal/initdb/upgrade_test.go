@@ -340,9 +340,11 @@ func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
 // assertPipelineEventTypesUpgraded verifies event type identifier limits and
 // persisted ordering groups.
 func assertPipelineEventTypesUpgraded(t *testing.T, database *db.DB) {
+
 	t.Helper()
 
 	for _, column := range []string{"event_type", "ordering_group"} {
+
 		var length int
 		err := database.QueryRow(t.Context(), `
 			SELECT character_maximum_length
@@ -356,6 +358,7 @@ func assertPipelineEventTypesUpgraded(t *testing.T, database *db.DB) {
 		if length != 25 {
 			t.Fatalf("expected pipelines.%s to have length 25, got %d", column, length)
 		}
+
 	}
 
 	var eventType, orderingGroup string
@@ -367,7 +370,9 @@ func assertPipelineEventTypesUpgraded(t *testing.T, database *db.DB) {
 		t.Fatal(err)
 	}
 	if eventType != "send_event_with_no_schema" || orderingGroup != "events" {
-		t.Fatalf("expected event type %q and ordering group %q, got %q and %q", "send_event_with_no_schema", "events", eventType, orderingGroup)
+		t.Fatalf(
+			"expected event type %q and ordering group %q, got %q and %q",
+			"send_event_with_no_schema", "events", eventType, orderingGroup)
 	}
 
 	err = database.QueryRow(t.Context(), `
@@ -383,6 +388,7 @@ func assertPipelineEventTypesUpgraded(t *testing.T, database *db.DB) {
 
 	assertConstraintExists(t, database, "pipelines", "pipelines_event_type_check")
 	assertConstraintExists(t, database, "pipelines", "pipelines_ordering_group_check")
+
 }
 
 func assertStateRequestSyncSchemaUpgraded(t *testing.T, database *db.DB) {

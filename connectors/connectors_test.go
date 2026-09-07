@@ -9,6 +9,7 @@ import "testing"
 // TestOrderingGroup verifies that OrderingGroup returns the explicit group, or
 // the event type ID when no group is set.
 func TestOrderingGroup(t *testing.T) {
+
 	tests := []struct {
 		eventType *EventType
 		want      string
@@ -22,6 +23,7 @@ func TestOrderingGroup(t *testing.T) {
 			t.Fatalf("expected ordering group %q, got %q", test.want, got)
 		}
 	}
+
 }
 
 func TestQuoteErrorTerm(t *testing.T) {

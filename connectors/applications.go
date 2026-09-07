@@ -260,15 +260,6 @@ type EventType struct {
 	DefaultFilter string
 }
 
-// OrderingGroup returns the effective ordering group of an event type. If no
-// group is set, it returns the event type ID.
-func OrderingGroup(eventType *EventType) string {
-	if eventType.OrderingGroup == "" {
-		return eventType.ID
-	}
-	return eventType.OrderingGroup
-}
-
 // RecordFetcher is implemented by application connectors that support fetching
 // records.
 type RecordFetcher interface {
@@ -709,4 +700,13 @@ type ReceivedEventContextScreen interface {
 type ReceivedEventContextSession interface {
 	ID() (int, bool)
 	Start() (bool, bool)
+}
+
+// OrderingGroup returns the effective ordering group of an event type. If no
+// group is set, it returns the event type ID.
+func OrderingGroup(eventType *EventType) string {
+	if eventType.OrderingGroup == "" {
+		return eventType.ID
+	}
+	return eventType.OrderingGroup
 }
