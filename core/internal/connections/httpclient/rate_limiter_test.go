@@ -211,7 +211,7 @@ func TestRateLimiter_ErrorRateScaling(t *testing.T) {
 func TestRateLimiter_MaxConcurrency(t *testing.T) {
 	l := newRateLimiter(100, 100, 3) // maximum 3 concurrent
 	start := make(chan struct{})
-	var running int32
+	var running atomic.Int32
 	var maxRunning int32
 	var wg sync.WaitGroup
 
@@ -222,7 +222,7 @@ func TestRateLimiter_MaxConcurrency(t *testing.T) {
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
-			n := atomic.AddInt32(&running, 1)
+			n := running.Add(1)
 			// Atomically update the maximum ever seen.
 			for {
 				old := atomic.LoadInt32(&maxRunning)
@@ -234,7 +234,7 @@ func TestRateLimiter_MaxConcurrency(t *testing.T) {
 				}
 			}
 			time.Sleep(10 * time.Millisecond)
-			atomic.AddInt32(&running, -1)
+			running.Add(-1)
 			l.OnSuccess(0)
 		})
 	}
