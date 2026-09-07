@@ -68,6 +68,42 @@ func Test_Delete(t *testing.T) {
 	}
 }
 
+// Test_InJSON verifies recognizing the properties that are held inside a JSON
+// property.
+func Test_InJSON(t *testing.T) {
+	m := map[string]any{
+		"a": 5,
+		"nested": map[string]any{
+			"b":    map[string]any{"c": "foo"},
+			"json": json.Value(`{"c":true}`),
+		},
+		"json": json.Value(`{"b":{"c":4}}`),
+	}
+
+	cases := []struct {
+		path     []string
+		expected bool
+	}{
+		{[]string{}, false},
+		{[]string{"a"}, false},
+		{[]string{"nested", "b", "c"}, false},
+		{[]string{"json"}, false},
+		{[]string{"json", "b"}, true},
+		{[]string{"json", "b", "c"}, true},
+		{[]string{"nested", "json"}, false},
+		{[]string{"nested", "json", "c"}, true},
+		{[]string{"missing", "b"}, false},
+		{[]string{"a", "b"}, false},
+	}
+
+	for _, cas := range cases {
+		got := InJSON(m, cas.path)
+		if got != cas.expected {
+			t.Fatalf("%v: expected %v, got %v", cas.path, cas.expected, got)
+		}
+	}
+}
+
 // Test_Read verifies retrieving nested properties from maps and JSON.
 func Test_Read(t *testing.T) {
 	jsonObj := json.Value(`{"b":{"c":4}}`)

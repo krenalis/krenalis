@@ -108,7 +108,10 @@ const checkProfilePath = (path: string, schema: FlatSchema): string => {
 		return '';
 	}
 	const kind = schema[property].type;
-	if (kind !== 'boolean' && kind !== 'json') {
+	if (kind === 'json') {
+		return `Profile path "${path}" is a JSON property, which holds a consent only in a value inside it`;
+	}
+	if (kind !== 'boolean') {
 		return `Profile path "${path}" is a ${kind} property, which cannot hold a consent`;
 	}
 	return '';

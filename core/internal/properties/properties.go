@@ -34,6 +34,28 @@ func Delete(m map[string]any, path []string) {
 	}
 }
 
+// InJSON reports whether the property with the given path in m is held inside a
+// JSON property, that is, whether a JSON property precedes the last name of the
+// path. It reports false when the path leads to a property of m, and when it
+// leads nowhere.
+func InJSON(m map[string]any, path []string) bool {
+	for i := range len(path) - 1 {
+		v, ok := m[path[i]]
+		if !ok {
+			return false
+		}
+		switch v := v.(type) {
+		case map[string]any:
+			m = v
+		case json.Value:
+			return true
+		default:
+			return false
+		}
+	}
+	return false
+}
+
 // Read reads the property with the given path from m, returning its value (if
 // found, otherwise nil) and a boolean indicating if the property path
 // corresponds to a value in m or not.

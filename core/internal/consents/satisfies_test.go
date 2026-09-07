@@ -337,6 +337,34 @@ func TestSatisfiesWithConfiguredPaths(t *testing.T) {
 			want: true,
 		},
 		{
+			name:     "the profile path holds a JSON property that is a bool",
+			purposes: []*state.ConsentPurpose{purposeWithPaths("marketing", "", "privacy")},
+			matchAll: true,
+			attributes: map[string]any{
+				"privacy": json.Value("true"),
+			},
+			want: false,
+		},
+		{
+			name:     "the profile path holds a JSON property nested in an object that is a bool",
+			purposes: []*state.ConsentPurpose{purposeWithPaths("marketing", "", "privacy.marketing")},
+			matchAll: true,
+			attributes: map[string]any{
+				"privacy": map[string]any{"marketing": json.Value("true")},
+			},
+			want: false,
+		},
+		{
+			name:     "the event path holds a JSON property that is a bool",
+			purposes: []*state.ConsentPurpose{purposeWithPaths("marketing", "traits", "")},
+			matchAll: true,
+			attributes: map[string]any{
+				"traits": json.Value("true"),
+			},
+			event: true,
+			want:  false,
+		},
+		{
 			name:     "the profile path inside a JSON property holds a value that is not a bool",
 			purposes: []*state.ConsentPurpose{purposeWithPaths("marketing", "", "privacy.marketing")},
 			matchAll: true,
