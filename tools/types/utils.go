@@ -76,7 +76,8 @@ func Equal(t1, t2 Type) bool {
 		t1.unsigned == t2.unsigned &&
 		t1.unique == t2.unique &&
 		t1.real == t2.real &&
-		t1.p == t2.p && t1.s == t2.s
+		t1.p == t2.p && t1.s == t2.s &&
+		t1.semantic == t2.semantic && t1.semanticOption == t2.semanticOption
 	if !almostEqual {
 		return false
 	}
@@ -108,7 +109,6 @@ func Equal(t1, t2 Type) bool {
 				p1.UpdateRequired != p2.UpdateRequired ||
 				p1.ReadOptional != p2.ReadOptional ||
 				p1.Nullable != p2.Nullable ||
-				!EqualSemantics(p1.Semantic, p2.Semantic) ||
 				p1.DisplayName != p2.DisplayName ||
 				p1.Description != p2.Description ||
 				!Equal(p1.Type, p2.Type) {

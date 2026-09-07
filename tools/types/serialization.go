@@ -68,60 +68,32 @@ func (t *Type) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// marshalSemantic marshals semantic as JSON and writes it to b.
-func marshalSemantic(b *bytes.Buffer, semantic Semantic) error {
-
-	if semantic == nil {
-		return errors.New("missing semantic")
-	}
-
-	b.WriteString(`{"kind":"`)
-	b.WriteString(semantic.Kind().String())
-	b.WriteByte('"')
-
-	switch s := semantic.(type) {
-	case *emailSemantic, *phoneSemantic, *urlSemantic, *percentageSemantic:
-
-	case *countrySemantic:
-		b.WriteString(`,"format":`)
-		if err := marshalString(b, s.format.String()); err != nil {
-			return err
-		}
-
-	case *moneySemantic:
-		if s.currency != "" {
-			b.WriteString(`,"currency":`)
-			if err := marshalString(b, s.currency); err != nil {
-				return err
-			}
-		}
-
-	case *measurementSemantic:
-		b.WriteString(`,"unit":`)
-		if err := marshalString(b, s.unit.String()); err != nil {
-			return err
-		}
-
-	case *durationSemantic:
-		b.WriteString(`,"unit":`)
-		if err := marshalString(b, s.unit.String()); err != nil {
-			return err
-		}
-
-	default:
-		return errors.New("invalid semantic")
-	}
-
-	b.WriteByte('}')
-
-	return nil
-}
-
 // marshalType marshals t as JSON and writes it to b.
 func marshalType(b *bytes.Buffer, t Type) {
 	b.WriteString(`{"kind":"`)
 	b.WriteString(t.KindName())
 	b.WriteString(`"`)
+	if t.semantic != NoSemantic {
+		b.WriteString(`,"semantic":"`)
+		b.WriteString(t.semantic.String())
+		b.WriteByte('"')
+		switch t.semantic {
+		case CountrySemantic:
+			b.WriteString(`,"format":`)
+			_ = marshalString(b, t.CountryFormat().String())
+		case MoneySemantic:
+			if currency, ok := t.Currency(); ok {
+				b.WriteString(`,"currency":`)
+				_ = marshalString(b, currency)
+			}
+		case MeasurementSemantic:
+			b.WriteString(`,"unit":`)
+			_ = marshalString(b, t.UnitOfMeasure().String())
+		case DurationSemantic:
+			b.WriteString(`,"unit":`)
+			_ = marshalString(b, t.DurationUnit().String())
+		}
+	}
 	switch t.kind {
 	case StringKind:
 		if t.p > 0 {
@@ -296,37 +268,22 @@ func (p *Property) UnmarshalJSON(data []byte) error {
 
 // marshalProperty marshals p as JSON and writes it to b.
 func marshalProperty(b *bytes.Buffer, p Property) error {
-
 	if p.Name == "" {
 		return errors.New("missing property name")
 	}
 	if !p.Type.Valid() && !p.Type.Generic() {
 		return errors.New("missing property type")
 	}
-	if err := validateSemanticCompatibility(p.Semantic, p.Type); err != nil {
-		return err
-	}
-
 	b.WriteString(`{"name":`)
 	b.WriteByte('"')
 	b.WriteString(p.Name)
 	b.WriteByte('"')
-
 	if p.Prefilled != "" {
 		b.WriteString(`,"prefilled":`)
 		_ = marshalString(b, p.Prefilled)
 	}
-
 	b.WriteString(`,"type":`)
 	marshalType(b, p.Type)
-
-	if p.Semantic != nil {
-		b.WriteString(`,"semantic":`)
-		if err := marshalSemantic(b, p.Semantic); err != nil {
-			return err
-		}
-	}
-
 	if p.CreateRequired {
 		b.WriteString(`,"createRequired":true`)
 	}
@@ -345,197 +302,8 @@ func marshalProperty(b *bytes.Buffer, p Property) error {
 	}
 	b.WriteString(`,"description":`)
 	_ = marshalString(b, p.Description)
-
 	b.WriteByte('}')
-
 	return nil
-}
-
-// unmarshalSemantic reads the JSON tokens from dec and returns the decoded
-// semantic.
-func unmarshalSemantic(dec *json.Decoder) (Semantic, error) {
-
-	tok, err := dec.Token()
-	if err != nil {
-		return nil, err
-	}
-
-	if tok == nil {
-		return nil, errors.New("invalid semantic syntax")
-	}
-	if tok != json.Delim('{') {
-		return nil, errors.New("invalid semantic syntax")
-	}
-
-	var kind, format, currency, unit string
-	var hasKind, hasFormat, hasCurrency, hasUnit bool
-
-	for {
-		tok, err = dec.Token()
-		if err != nil {
-			return nil, err
-		}
-
-		if _, ok := tok.(json.Delim); ok {
-			break
-		}
-
-		key, ok := tok.(string)
-		if !ok {
-			return nil, errors.New("invalid semantic syntax")
-		}
-
-		tok, err = dec.Token()
-		if err != nil {
-			return nil, err
-		}
-
-		switch key {
-		case "kind":
-			if hasKind {
-				return nil, errors.New("repeated 'kind' key")
-			}
-			kind, ok = tok.(string)
-			if !ok {
-				return nil, errors.New("invalid semantic kind")
-			}
-			hasKind = true
-
-		case "format":
-			if hasFormat {
-				return nil, errors.New("repeated 'format' key")
-			}
-			format, ok = tok.(string)
-			if !ok {
-				return nil, errors.New("invalid semantic format")
-			}
-			hasFormat = true
-
-		case "currency":
-			if hasCurrency {
-				return nil, errors.New("repeated 'currency' key")
-			}
-			currency, ok = tok.(string)
-			if !ok {
-				return nil, errors.New("invalid semantic currency")
-			}
-			hasCurrency = true
-
-		case "unit":
-			if hasUnit {
-				return nil, errors.New("repeated 'unit' key")
-			}
-			unit, ok = tok.(string)
-			if !ok {
-				return nil, errors.New("invalid semantic unit")
-			}
-			hasUnit = true
-
-		default:
-			return nil, fmt.Errorf("unknown semantic key %q", key)
-		}
-	}
-
-	if !hasKind {
-		return nil, errors.New("missing 'kind' key")
-	}
-
-	k, ok := SemanticKindByName(kind)
-	if !ok {
-		return nil, fmt.Errorf("invalid semantic kind %q", kind)
-	}
-
-	switch k {
-	case EmailSemanticKind:
-		if hasFormat || hasCurrency || hasUnit {
-			return nil, errors.New("unexpected option for email semantic")
-		}
-		s := Email()
-		return s, nil
-
-	case PhoneSemanticKind:
-		if hasFormat || hasCurrency || hasUnit {
-			return nil, errors.New("unexpected option for phone semantic")
-		}
-		s := Phone()
-		return s, nil
-
-	case URLSemanticKind:
-		if hasFormat || hasCurrency || hasUnit {
-			return nil, errors.New("unexpected option for URL semantic")
-		}
-		s := URL()
-		return s, nil
-
-	case CountrySemanticKind:
-		if !hasFormat {
-			return nil, errors.New("missing country format")
-		}
-		if hasCurrency || hasUnit {
-			return nil, errors.New("unexpected option for country semantic")
-		}
-
-		f, ok := CountryFormatByName(format)
-		if !ok {
-			return nil, fmt.Errorf("invalid country format %q", format)
-		}
-		s := Country(f)
-		return s, nil
-
-	case MoneySemanticKind:
-		if hasFormat || hasUnit {
-			return nil, errors.New("unexpected option for money semantic")
-		}
-
-		s := Money()
-		if hasCurrency {
-			if !validation.IsValidCurrencyCode(currency) {
-				return nil, fmt.Errorf("invalid currency code %q", currency)
-			}
-			s = s.WithCurrency(currency)
-		}
-		return s, nil
-
-	case PercentageSemanticKind:
-		if hasFormat || hasCurrency || hasUnit {
-			return nil, errors.New("unexpected option for percentage semantic")
-		}
-		s := Percentage()
-		return s, nil
-
-	case MeasurementSemanticKind:
-		if !hasUnit {
-			return nil, errors.New("missing measurement unit")
-		}
-		if hasFormat || hasCurrency {
-			return nil, errors.New("unexpected option for measurement semantic")
-		}
-
-		u, ok := UnitOfMeasureByName(unit)
-		if !ok {
-			return nil, fmt.Errorf("invalid unit of measure %q", unit)
-		}
-		s := Measurement(u)
-		return s, nil
-
-	case DurationSemanticKind:
-		if !hasUnit {
-			return nil, errors.New("missing duration unit")
-		}
-		if hasFormat || hasCurrency {
-			return nil, errors.New("unexpected option for duration semantic")
-		}
-
-		u, ok := DurationUnitByName(unit)
-		if !ok {
-			return nil, fmt.Errorf("invalid duration unit %q", unit)
-		}
-		s := Duration(u)
-		return s, nil
-	}
-
-	panic("unreachable")
-
 }
 
 // unmarshalType reads the JSON tokens from dec and returns the decoded type.
@@ -555,8 +323,10 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	}
 
 	var hasUnsigned, hasReal, hasScale, hasMinElements, hasMaxElements, hasUniqueElements bool
+	var hasSemantic, hasFormat, hasCurrency, hasUnit bool
 
-	var kind string
+	var kind, format, currency, unit string
+	var semantic Semantic
 	var bitSize int
 	var unsigned bool
 	var minimum, maximum json.Number
@@ -607,6 +377,46 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			if !IsValidPropertyName(kind) {
 				return Type{}, errors.New("invalid type kind")
 			}
+		case "semantic":
+			if hasSemantic {
+				return Type{}, errors.New("repeated 'semantic' key")
+			}
+			name, ok := tok.(string)
+			if !ok {
+				return Type{}, errors.New("invalid semantic")
+			}
+			semantic, ok = SemanticByName(name)
+			if !ok {
+				return Type{}, fmt.Errorf("invalid semantic %q", name)
+			}
+			hasSemantic = true
+		case "format":
+			if hasFormat {
+				return Type{}, errors.New("repeated 'format' key")
+			}
+			format, ok = tok.(string)
+			if !ok {
+				return Type{}, errors.New("invalid semantic format")
+			}
+			hasFormat = true
+		case "currency":
+			if hasCurrency {
+				return Type{}, errors.New("repeated 'currency' key")
+			}
+			currency, ok = tok.(string)
+			if !ok {
+				return Type{}, errors.New("invalid semantic currency")
+			}
+			hasCurrency = true
+		case "unit":
+			if hasUnit {
+				return Type{}, errors.New("repeated 'unit' key")
+			}
+			unit, ok = tok.(string)
+			if !ok {
+				return Type{}, errors.New("invalid semantic unit")
+			}
+			hasUnit = true
 		case "bitSize":
 			if bitSize != 0 {
 				return Type{}, errors.New("repeated 'bitSize' key")
@@ -1190,6 +1000,105 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 		t.vl = Properties{properties: properties, names: names}
 	}
+	if !hasSemantic {
+		if hasFormat {
+			return Type{}, errors.New("unexpected 'format' key without semantic")
+		}
+		if hasCurrency {
+			return Type{}, errors.New("unexpected 'currency' key without semantic")
+		}
+		if hasUnit {
+			return Type{}, errors.New("unexpected 'unit' key without semantic")
+		}
+		return t, nil
+	}
+
+	var semanticOption any
+	switch semantic {
+	case EmailSemantic, PhoneSemantic, PercentageSemantic:
+		if hasFormat {
+			return Type{}, fmt.Errorf("unexpected 'format' key for %s semantic", semantic)
+		}
+		if hasCurrency {
+			return Type{}, fmt.Errorf("unexpected 'currency' key for %s semantic", semantic)
+		}
+		if hasUnit {
+			return Type{}, fmt.Errorf("unexpected 'unit' key for %s semantic", semantic)
+		}
+	case URLSemantic:
+		if hasFormat {
+			return Type{}, errors.New("unexpected 'format' key for URL semantic")
+		}
+		if hasCurrency {
+			return Type{}, errors.New("unexpected 'currency' key for URL semantic")
+		}
+		if hasUnit {
+			return Type{}, errors.New("unexpected 'unit' key for URL semantic")
+		}
+	case CountrySemantic:
+		if hasCurrency {
+			return Type{}, errors.New("unexpected 'currency' key for country semantic")
+		}
+		if hasUnit {
+			return Type{}, errors.New("unexpected 'unit' key for country semantic")
+		}
+		if !hasFormat {
+			return Type{}, errors.New("missing country format")
+		}
+		countryFormat, ok := CountryFormatByName(format)
+		if !ok {
+			return Type{}, fmt.Errorf("invalid country format %q", format)
+		}
+		semanticOption = countryFormat
+	case MoneySemantic:
+		if hasFormat {
+			return Type{}, errors.New("unexpected 'format' key for money semantic")
+		}
+		if hasUnit {
+			return Type{}, errors.New("unexpected 'unit' key for money semantic")
+		}
+	case MeasurementSemantic:
+		if hasFormat {
+			return Type{}, errors.New("unexpected 'format' key for measurement semantic")
+		}
+		if hasCurrency {
+			return Type{}, errors.New("unexpected 'currency' key for measurement semantic")
+		}
+		if !hasUnit {
+			return Type{}, errors.New("missing measurement unit")
+		}
+		measurementUnit, ok := UnitOfMeasureByName(unit)
+		if !ok {
+			return Type{}, fmt.Errorf("invalid unit of measure %q", unit)
+		}
+		semanticOption = measurementUnit
+	case DurationSemantic:
+		if hasFormat {
+			return Type{}, errors.New("unexpected 'format' key for duration semantic")
+		}
+		if hasCurrency {
+			return Type{}, errors.New("unexpected 'currency' key for duration semantic")
+		}
+		if !hasUnit {
+			return Type{}, errors.New("missing duration unit")
+		}
+		durationUnit, ok := DurationUnitByName(unit)
+		if !ok {
+			return Type{}, fmt.Errorf("invalid duration unit %q", unit)
+		}
+		semanticOption = durationUnit
+	}
+
+	t, err = t.withSemantic(semantic, semanticOption)
+	if err != nil {
+		return Type{}, err
+	}
+	if hasCurrency {
+		if !validation.IsValidCurrencyCode(currency) {
+			return Type{}, fmt.Errorf("invalid currency code %q", currency)
+		}
+		t = t.WithCurrency(currency)
+	}
 
 	return t, nil
 }
@@ -1199,8 +1108,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 func unmarshalProperty(dec *json.Decoder) (Property, error) {
 
 	var p Property
-	var hasPrefilled, hasCreateRequired, hasUpdateRequired, hasReadOptional, hasNullable, hasSemantic,
-		hasDisplayName, hasDescription bool
+	var hasPrefilled, hasCreateRequired, hasUpdateRequired, hasReadOptional, hasNullable, hasDisplayName, hasDescription bool
 
 	// Read property keys and values.
 	for {
@@ -1223,17 +1131,6 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 			if err != nil {
 				return Property{}, err
 			}
-			continue
-		}
-		if key == "semantic" {
-			if hasSemantic {
-				return Property{}, errors.New("repeated 'semantic' key")
-			}
-			p.Semantic, err = unmarshalSemantic(dec)
-			if err != nil {
-				return Property{}, err
-			}
-			hasSemantic = true
 			continue
 		}
 
@@ -1334,10 +1231,6 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 	}
 	if !p.Type.Valid() && !p.Type.Generic() {
 		return Property{}, errors.New("missing property type")
-	}
-	err := validateSemanticCompatibility(p.Semantic, p.Type)
-	if err != nil {
-		return Property{}, err
 	}
 
 	return p, nil

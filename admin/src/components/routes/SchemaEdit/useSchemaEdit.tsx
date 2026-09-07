@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, ReactNode, useRef, useContext, useCallback } from 'react';
-import Type, { ObjectType, Role, Semantic } from '../../../lib/api/types/types';
+import Type, { ObjectType, Role } from '../../../lib/api/types/types';
 import { GridRef, SortableGridRow, GridColumn } from '../../base/Grid/Grid.types';
 import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 import {
@@ -44,7 +44,6 @@ interface PropertyToEdit {
 	createRequired?: boolean;
 	updateRequired?: boolean;
 	nullable?: boolean;
-	semantic?: Semantic;
 	displayName?: string;
 	description?: string;
 	isEditable?: boolean;
@@ -346,7 +345,6 @@ const useSchemaEdit = (
 			readOptional: true,
 			createRequired: false,
 			updateRequired: false,
-			semantic: property.semantic,
 			displayName: property.displayName,
 			description: property.description,
 			isEditable: true,
@@ -457,7 +455,7 @@ const useSchemaEdit = (
 		}
 
 		const editedProperty = {
-			...current,
+			indentation: current.indentation,
 			root: property.name,
 			name: property.name,
 			type: property.type,
@@ -467,7 +465,6 @@ const useSchemaEdit = (
 			readOptional: current.readOptional,
 			createRequired: current.createRequired,
 			updateRequired: current.updateRequired,
-			semantic: property.semantic,
 			displayName: property.displayName,
 			description: property.description,
 			isEditable: current.isEditable ? current.isEditable : false,
