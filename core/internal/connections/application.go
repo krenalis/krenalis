@@ -21,7 +21,6 @@ import (
 	"github.com/krenalis/krenalis/core/internal/filters"
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
-	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -110,7 +109,40 @@ func (app *Application) Connector() string {
 	return app.connector
 }
 
-// EventTypes returns the application's event types.
+// EventType returns the application's event type with the specified ID. The
+// returned event type is owned by the connector and must not be modified.
+// If the event type does not exist, it returns connectors.ErrEventTypeNotExist.
+// If the connector returns an error, it returns an *UnavailableError error.
+// It panics if the application does not support the event target.
+func (app *Application) EventType(ctx context.Context, id string) (*EventType, error) {
+	if app.err != nil {
+		return nil, app.err
+	}
+	eventTypes, err := app.inner.(connectors.EventSender).EventTypes(ctx)
+	if err != nil {
+		return nil, connectorError(err)
+	}
+	var et *EventType
+	for _, candidate := range eventTypes {
+		if candidate == nil || candidate.ID != id {
+			continue
+		}
+		if et != nil {
+			return nil, fmt.Errorf("event type ID %q is repeated", id)
+		}
+		et = candidate
+	}
+	if et == nil {
+		return nil, connectors.ErrEventTypeNotExist
+	}
+	if err := validateEventType(app.connector, et); err != nil {
+		return nil, err
+	}
+	return et, nil
+}
+
+// EventTypes returns the application's event types. The returned slice and
+// event types are owned by the connector and must not be modified.
 // If the connector returns an error, it returns an *UnavailableError error.
 // It panics if the application does not support the event target.
 func (app *Application) EventTypes(ctx context.Context) ([]*EventType, error) {
@@ -121,9 +153,18 @@ func (app *Application) EventTypes(ctx context.Context) ([]*EventType, error) {
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	for _, typ := range eventTypes {
-		if err := util.ValidateStringField("event type", typ.ID, 100); err != nil {
+	for i, eventType := range eventTypes {
+		if eventType == nil {
+			return nil, fmt.Errorf("connector %s returned a nil event type", app.connector)
+		}
+		if err := validateEventType(app.connector, eventType); err != nil {
 			return nil, err
+		}
+		for _, next := range eventTypes[i+1:] {
+			if next != nil && next.ID == eventType.ID {
+				return nil, fmt.Errorf(
+					"connector %s returned multiple event types with the same ID (%s)", app.connector, eventType.ID)
+			}
 		}
 	}
 	return eventTypes, nil
@@ -677,4 +718,18 @@ func (r *appRecords) Err() error {
 type schema struct {
 	lock    chan struct{}
 	schemas [2]types.Type
+}
+
+// validateEventType validates an event type provided by a connector.
+func validateEventType(connector string, eventType *EventType) error {
+	if !types.IsValidPropertyName(eventType.ID) || len(eventType.ID) > connectors.MaxEventTypeIdentifierLen {
+		return fmt.Errorf("connector %s returned an invalid event type ID (%q)", connector, eventType.ID)
+	}
+	if eventType.OrderingGroup != "" {
+		if !types.IsValidPropertyName(eventType.OrderingGroup) ||
+			len(eventType.OrderingGroup) > connectors.MaxEventTypeIdentifierLen {
+			return fmt.Errorf("connector %s returned an invalid ordering group (%q)", connector, eventType.OrderingGroup)
+		}
+	}
+	return nil
 }
