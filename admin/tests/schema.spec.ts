@@ -2199,7 +2199,7 @@ test(`Ignore inherited primary sources for prototype property names`, async ({ p
 	await expect(page.locator('.schema-edit__change-count')).toContainText('No pending changes');
 });
 
-test(`Add schema object property with sub-property`, async ({ page }) => {
+test(`Persist and clear display names on an object and its sub-property`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
 
 	await editSchema(page);
@@ -2211,6 +2211,8 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 	}, 'test_obj');
 
 	const propertyPanel = page.locator('.property-panel');
+	const displayNameInput = propertyPanel.locator('sl-input input[name="displayName"]');
+	await displayNameInput.fill('Test object');
 	await propertyPanel.locator('.property-type-selector__structure-trigger').click();
 	await propertyPanel.locator('[data-structure-option="object"]').click();
 	await expect(propertyPanel.locator('.property-type-selector__structure-trigger')).toContainText('object');
@@ -2235,6 +2237,7 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 		el.value = value;
 		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
 	}, 'test_sub_prop_1');
+	await displayNameInput.fill('Test sub-property');
 
 	await selectPropertyType(page, 'string');
 
@@ -2278,6 +2281,41 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 			hasText: 'test_sub_prop_1',
 		}),
 	).toBeAttached();
+	await expect(objectRow.locator('.schema-property-grid__property-display-name')).toHaveText('Test object');
+	const subPropertyRow = page.locator('.grid__row[data-id="test_obj.test_sub_prop_1"]');
+	await expect(subPropertyRow.locator('.schema-property-grid__property-display-name')).toHaveText(
+		'Test sub-property',
+	);
+
+	await editSchema(page);
+	await openProperty(page, 'test_obj');
+	await displayNameInput.fill('');
+	await propertyPanel.locator('.property-panel__save').click();
+	await expandAllObjects(page);
+	await openProperty(page, 'test_obj.test_sub_prop_1');
+	await displayNameInput.fill('');
+	await propertyPanel.locator('.property-panel__save').click();
+	await page.locator('.schema-edit__header-apply-button').click();
+	const alterRequestPromise = page.waitForRequest(
+		(request) => request.url().endsWith('/profiles/schema') && request.method() === 'PUT',
+	);
+	await page.locator('.schema-edit__apply-alter-button').click();
+	const alterRequest = await alterRequestPromise;
+	const clearedSchema = alterRequest.postDataJSON().schema as ObjectType;
+	const clearedObject = clearedSchema.properties.find((property) => property.name === 'test_obj');
+	expect(clearedObject).not.toHaveProperty('displayName');
+	const clearedSubProperty = (clearedObject?.type as ObjectType).properties.find(
+		(property) => property.name === 'test_sub_prop_1',
+	);
+	expect(clearedSubProperty).not.toHaveProperty('displayName');
+
+	await expect(page.locator('.schema-grid')).toBeAttached();
+	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
+	await page.reload();
+
+	await expect(objectRow.locator('.schema-property-grid__property-display-name')).toHaveCount(0);
+	await expandAllObjects(page);
+	await expect(subPropertyRow.locator('.schema-property-grid__property-display-name')).toHaveCount(0);
 });
 
 test(`Remove nested properties when changing a new object to another type`, async ({ page }) => {

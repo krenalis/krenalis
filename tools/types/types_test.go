@@ -235,8 +235,12 @@ func Test_ObjectOf_Errors(t *testing.T) {
 
 	// Test invalid display name encoding.
 	_, err = ObjectOf([]Property{{Name: "firstName", Type: String(), DisplayName: string([]byte{0xff})}})
-	if err == nil || err.Error() != "invalid UTF-8 encoding" {
-		t.Errorf("expected invalid UTF-8 encoding error, got %v", err)
+	if err != nil {
+		if err.Error() != "invalid UTF-8 encoding" {
+			t.Errorf("expected invalid UTF-8 encoding error, got %v", err)
+		}
+	} else {
+		t.Error("expected invalid UTF-8 encoding error, got nil")
 	}
 
 }
