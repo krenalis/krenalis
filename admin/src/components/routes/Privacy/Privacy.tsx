@@ -15,6 +15,8 @@ import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { isValidPropertyPath } from '../../../utils/filters';
+import { ObjectType } from '../../../lib/api/types/types';
+import { FlatSchema, flattenSchema, splitPropertyAndPath } from '../../../lib/core/pipeline';
 
 const GRID_COLUMNS: GridColumn[] = [
 	{ name: 'Name' },
@@ -87,6 +89,31 @@ const validatePurposeAlias = (value: string) => {
 	}
 };
 
+// checkProfilePath returns the message to show when the property that holds the
+// consent given for a purpose does not exist in the profile schema or has a
+// type that cannot hold a consent, and an empty message otherwise. The API does
+// not check the profile path against the profile schema, so a purpose written
+// outside the Admin can be read from a property that no profile has.
+const checkProfilePath = (path: string, schema: FlatSchema): string => {
+	if (schema == null || path === '') {
+		return '';
+	}
+	const [property, insidePath] = splitPropertyAndPath(path, schema);
+	if (property === '') {
+		return `Profile path "${path}" does not exist in the profile schema`;
+	}
+	if (insidePath !== '') {
+		// The path continues inside a JSON property, which can hold a consent
+		// under any of its keys.
+		return '';
+	}
+	const kind = schema[property].type;
+	if (kind !== 'boolean' && kind !== 'json') {
+		return `Profile path "${path}" is a ${kind} property, which cannot hold a consent`;
+	}
+	return '';
+};
+
 const pathToSave = (isCustom: boolean, value: string, defaultValue: string) => {
 	if (!isCustom || value === defaultValue) {
 		// Leave the path empty when the default is used.
@@ -97,6 +124,7 @@ const pathToSave = (isCustom: boolean, value: string, defaultValue: string) => {
 
 const Privacy = () => {
 	const [purposes, setPurposes] = useState<ConsentPurpose[]>();
+	const [profileSchema, setProfileSchema] = useState<ObjectType>();
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [isCreating, setIsCreating] = useState<boolean>(false);
 	const [purposeToEdit, setPurposeToEdit] = useState<ConsentPurpose | null>();
@@ -155,6 +183,24 @@ const Privacy = () => {
 		};
 		fetchData();
 	}, [isLoading]);
+
+	// The profile schema is read to check that the profile path of a purpose
+	// leads to a property that can hold the consent given for it.
+	useEffect(() => {
+		const fetchProfileSchema = async () => {
+			let schema: ObjectType;
+			try {
+				schema = await api.workspaces.profileSchema();
+			} catch (err) {
+				handleError(err);
+				return;
+			}
+			setProfileSchema(schema);
+		};
+		fetchProfileSchema();
+	}, []);
+
+	const flatProfileSchema = useMemo(() => flattenSchema(profileSchema), [profileSchema]);
 
 	const onDeletePurpose = (purpose: ConsentPurpose) => {
 		setPurposeToDelete(purpose);
@@ -300,12 +346,14 @@ const Privacy = () => {
 				<PurposeDialog
 					isOpen={isCreating}
 					purposeToEdit={null}
+					profileSchema={flatProfileSchema}
 					onClose={() => setIsCreating(false)}
 					onSaved={() => setIsLoading(true)}
 				/>
 				<PurposeDialog
 					isOpen={purposeToEdit != null}
 					purposeToEdit={purposeToEdit}
+					profileSchema={flatProfileSchema}
 					onClose={() => setPurposeToEdit(null)}
 					onSaved={() => setIsLoading(true)}
 				/>
@@ -317,11 +365,12 @@ const Privacy = () => {
 interface PurposeDialogProps {
 	isOpen: boolean;
 	purposeToEdit: ConsentPurpose | null;
+	profileSchema: FlatSchema;
 	onClose: () => void;
 	onSaved: () => void;
 }
 
-const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialogProps) => {
+const PurposeDialog = ({ isOpen, purposeToEdit, profileSchema, onClose, onSaved }: PurposeDialogProps) => {
 	const [name, setName] = useState<string>('');
 	const [code, setCode] = useState<string>('');
 	const [aliases, setAliases] = useState<string[]>(['']);
@@ -495,6 +544,11 @@ const PurposeDialog = ({ isOpen, purposeToEdit, onClose, onSaved }: PurposeDialo
 			validatePurposePath('Profile path', profilePathToSave);
 		} catch (err) {
 			setProfilePathError(err.message);
+			return;
+		}
+		const profilePathMessage = checkProfilePath(shownProfilePath, profileSchema);
+		if (profilePathMessage !== '') {
+			setProfilePathError(profilePathMessage);
 			return;
 		}
 

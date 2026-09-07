@@ -254,11 +254,13 @@ func knownConsentPurposeIDs(ws *state.Workspace) map[string]bool {
 // that have been added, which the caller must remove from what it reads before
 // processing it, given that the pipeline does not declare them.
 //
-// A path that leads inside a JSON property adds that JSON property.
+// A path that leads inside a JSON property adds that JSON property. A purpose
+// whose property does not exist in the profile schema is skipped, because the
+// path of a purpose is not checked against the schema: the consent it requires
+// is then never given.
 //
-// It returns an error if the property that holds the consent for a purpose does
-// not exist in the profile schema, or if the schema has a non-object property
-// along the path of that property.
+// It returns an error if the schema has a non-object property along the path of
+// the property that holds a consent.
 func addRequiredConsentProperties(schema, profileSchema types.Type, purposes []*state.ConsentPurpose) (types.Type, map[string]bool, error) {
 	if schema.Kind() != types.ObjectKind || profileSchema.Kind() != types.ObjectKind {
 		return schema, nil, nil
@@ -271,8 +273,9 @@ func addRequiredConsentProperties(schema, profileSchema types.Type, purposes []*
 		path := strings.Join(purpose.ProfilePropertyPath(), ".")
 		property, propertyPath, err := retrieveProperty(profileSchema.Properties(), path)
 		if err != nil {
-			return schema, nil, fmt.Errorf("property %q, that holds the consent for the consent purpose with code %q,"+
-				" does not exist in the profile schema", path, purpose.Code)
+			// The property does not exist, so there is nothing to read and the
+			// consent for the purpose is not given.
+			continue
 		}
 		s, isAdded, err := types.AddPropertyAtPath(schema, propertyPath, property)
 		if err != nil {
