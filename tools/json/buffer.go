@@ -6,10 +6,9 @@ package json
 
 import (
 	"bytes"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"slices"
-
-	"github.com/krenalis/krenalis/tools/json/internal/json"
-	"github.com/krenalis/krenalis/tools/json/internal/json/jsontext"
 )
 
 // Buffer embeds a bytes.Buffer, providing all its methods along with

@@ -44,9 +44,9 @@ type Workspace struct {
 	ID                             string            `json:"id"`
 	Name                           string            `json:"name"`
 	ProfileSchema                  types.Type        `json:"profileSchema"`
-	PrimarySources                 map[string]string `json:"primarySources,format:emitnull"`
+	PrimarySources                 map[string]string `json:"primarySources"`
 	ResolveIdentitiesOnBatchImport bool              `json:"resolveIdentitiesOnBatchImport"`
-	Identifiers                    []string          `json:"identifiers,format:emitnull"`
+	Identifiers                    []string          `json:"identifiers"`
 	WarehouseMode                  WarehouseMode     `json:"warehouseMode"`
 	UIPreferences                  UIPreferences     `json:"uiPreferences"`
 }
@@ -311,7 +311,7 @@ func (this *Workspace) AuthToken(ctx context.Context, connector, redirectionURI,
 		return "", errors.BadRequest("connector %s does not support authorization", connector)
 	}
 
-	auth, err := this.core.connections.GrantAuthorization(ctx, c, code, redirectionURI)
+	auth, err := this.core.connections.GrantAuthorization(ctx, c, this.workspace.Organization().ID, code, redirectionURI)
 	if err != nil {
 		if err, ok := err.(*connections.UnavailableError); ok {
 			return "", errors.Unavailable("%w", err)
@@ -593,7 +593,8 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 			clientSecret = c.OAuth.ClientSecret
 		}
 		conf := &connections.ConnectorConfig{
-			Role: n.Role,
+			Role:         n.Role,
+			Organization: this.workspace.Organization().ID,
 		}
 		conf.OAuth.Account = n.Account.Code
 		conf.OAuth.ClientSecret = clientSecret
@@ -818,10 +819,11 @@ func (this *Workspace) Delete(ctx context.Context) error {
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		// Mark the pipeline functions as discontinued.
 		now := time.Now().UTC()
-		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
-			"SELECT p.transformation_id, $1\n"+
+		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, organization, discontinued_at)\n"+
+			"SELECT p.transformation_id, w.organization, $1\n"+
 			"FROM pipelines AS p\n"+
 			"INNER JOIN connections AS c ON p.connection = c.id\n"+
+			"INNER JOIN workspaces AS w ON c.workspace = w.id\n"+
 			"WHERE p.transformation_id != '' AND c.workspace = $2\n"+
 			"ON CONFLICT (id) DO NOTHING", now, n.ID)
 		if err != nil {
@@ -1488,7 +1490,8 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 		clientSecret = c.OAuth.ClientSecret
 	}
 	conf := &connections.ConnectorConfig{
-		Role: state.Role(role),
+		Role:         state.Role(role),
+		Organization: this.workspace.Organization().ID,
 	}
 	conf.OAuth.Account = account.Code
 	conf.OAuth.ClientSecret = clientSecret
@@ -1545,7 +1548,7 @@ func (this *Workspace) StartIdentityResolution(ctx context.Context) error {
 func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSettings json.Value) error {
 	this.core.mustBeOpen()
 	ws := this.workspace
-	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, ws.Warehouse.Platform, settings)
+	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, settings)
 	if err != nil {
 		if err, ok := err.(*warehouses.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
@@ -1553,7 +1556,7 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 		return err
 	}
 	if mcpSettings != nil {
-		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Warehouse.Platform, mcpSettings)
+		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsError); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
@@ -1563,7 +1566,7 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 		if bytes.Equal(settings, mcpSettings) {
 			return errors.Unprocessable(InvalidWarehouseSettings, "the MCP settings must be different from the data warehouse settings")
 		}
-		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Platform, mcpSettings)
+		err = this.core.datastore.CheckMCPSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
 				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
@@ -1743,7 +1746,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 
 	ws := this.workspace
 
-	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, ws.Warehouse.Platform, settings)
+	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, settings)
 	if err != nil {
 		if err, ok := err.(*warehouses.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
@@ -1752,7 +1755,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 	}
 
 	if mcpSettings != nil {
-		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Warehouse.Platform, mcpSettings)
+		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsError); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
@@ -1762,7 +1765,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 		if bytes.Equal(settings, mcpSettings) {
 			return errors.Unprocessable(InvalidWarehouseSettings, "the MCP settings must be different from the data warehouse settings")
 		}
-		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Platform, mcpSettings)
+		err = this.core.datastore.CheckMCPSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
 				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)

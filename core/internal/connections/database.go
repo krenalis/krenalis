@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/dialer"
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/types"
@@ -84,8 +85,11 @@ func (c *Connections) Database(connection *state.Connection) *Database {
 		connector:   connector.Code,
 		timeLayouts: &connector.TimeLayouts,
 	}
+	organization := connection.Organization()
 	inner, err := connectors.RegisteredDatabase(connector.Code).New(&connectors.DatabaseEnv{
 		Settings: newConnectionSettingStore(c.state, connection),
+		Dial:     dialer.Dial(organization.ID),
+		DialWith: dialer.DialWith(organization.ID),
 	})
 	database.inner = inner.(databaseConnection)
 	database.err = connectorError(err)

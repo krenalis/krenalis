@@ -30,7 +30,7 @@ jobs:
           # Keep in sync with the version within ".github/workflows/*.yml".
           # Keep in sync with the version within "Dockerfile".
           # Keep in sync with the version within "go.mod".
-          go-version: "1.26"
+          go-version: "1.27"
 
       - uses: actions/setup-node@v6
         with:

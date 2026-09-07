@@ -7,6 +7,7 @@ package snowflake
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"testing"
@@ -104,7 +105,7 @@ func Test_Merge(t *testing.T) {
 		}
 	}()
 
-	dw := warehouses.Registered("Snowflake").New(newTestSettingsLoader(testEnv.Settings().JSON()))
+	dw := warehouses.Registered("Snowflake").New(newTestSettingsLoader(testEnv.Settings().JSON()), nil)
 	defer dw.Close()
 
 	db, err := dw.(*Snowflake).openDB(t.Context())
@@ -258,4 +259,37 @@ func newTestSettingsLoader(settings json.Value) *testSettingsLoader {
 
 func (loader *testSettingsLoader) Load(ctx context.Context, dst any) error {
 	return json.Unmarshal(loader.settings, dst)
+}
+
+// newTestSnowflakeWarehouse creates a Snowflake test environment and opens a
+// warehouse connection to it.
+func newTestSnowflakeWarehouse(t *testing.T) (*Snowflake, *sql.DB) {
+
+	t.Helper()
+	if os.Getenv("KRENALIS_SKIP_SNOWFLAKE_TESTS") == "true" {
+		t.Skip()
+	}
+
+	testEnv, err := snowflaketester.CreateTestEnvironment()
+	if err != nil {
+		t.Fatalf("cannot create Snowflake test environment: %s", err)
+	}
+	t.Cleanup(func() {
+		if err := testEnv.Teardown(); err != nil {
+			t.Logf("cannot teardown Snowflake environment: %s", err)
+		}
+	})
+
+	warehouse := warehouses.Registered("Snowflake").New(newTestSettingsLoader(testEnv.Settings().JSON()), nil).(*Snowflake)
+	t.Cleanup(func() {
+		if err := warehouse.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	db, err := warehouse.openDB(t.Context())
+	if err != nil {
+		t.Fatalf("cannot open Snowflake warehouse: %s", err)
+	}
+
+	return warehouse, db
 }
