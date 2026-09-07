@@ -43,3 +43,27 @@ func Test_appendJoins(t *testing.T) {
 		t.Fatal("expected error for bad join condition")
 	}
 }
+
+// Test_renderCountQuery verifies that count queries keep joins and filters but
+// omit row projection, ordering, and pagination.
+func Test_renderCountQuery(t *testing.T) {
+	query := warehouses.RowQuery{
+		Columns: []warehouses.Column{{Name: "name", Type: types.String()}},
+		Table:   "profiles",
+		Where: warehouses.NewBaseExpr(
+			warehouses.Column{Name: "id", Type: types.Int(32)}, warehouses.OpIs, 1,
+		),
+		OrderBy: []warehouses.RowOrder{{Column: warehouses.Column{Name: "name", Type: types.String()}}},
+		First:   10,
+		Limit:   20,
+	}
+
+	statement, err := renderCountQuery(query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if statement != `SELECT COUNT(*) FROM "profiles" WHERE "id" = 1` {
+		t.Fatalf("unexpected count query %q", statement)
+	}
+
+}

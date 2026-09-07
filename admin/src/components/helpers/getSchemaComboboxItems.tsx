@@ -1,10 +1,9 @@
 import React from 'react';
 import { FlatSchema, flattenSchema, getCompatibleFilterOperators } from '../../lib/core/pipeline';
-import { DecimalType, ObjectType } from '../../lib/api/types/types';
+import { DecimalType, ObjectType, Role } from '../../lib/api/types/types';
 import { ComboboxItem } from '../base/Combobox/Combobox.types';
 import { TypeIcon } from '../base/TypeIcon/TypeIcon';
 import { PipelineTarget } from '../../lib/api/types/pipeline';
-import TransformedConnection from '../../lib/core/connection';
 
 const getSchemaComboboxItems = (schema: ObjectType | FlatSchema, toHide?: string[]): ComboboxItem[] => {
 	if (schema == null) {
@@ -40,7 +39,7 @@ const getMatchingComboboxItems = (schema: FlatSchema): ComboboxItem[] => {
 
 const getFilterPropertyComboboxItems = (
 	schema: ObjectType,
-	connection: TransformedConnection,
+	role: Role,
 	target: PipelineTarget,
 	toHide?: string[],
 ): ComboboxItem[] => {
@@ -50,22 +49,21 @@ const getFilterPropertyComboboxItems = (
 	const flatSchema = flattenSchema(schema);
 	const filteredSchema: FlatSchema = {};
 
-	for (const [k, v] of Object.entries(flatSchema)) {
-		if (toHide?.includes(k)) {
+	for (const [name, property] of Object.entries(flatSchema)) {
+		if (toHide?.includes(name)) {
 			continue;
 		}
-		const property = flatSchema[k];
 		if (property.type === 'object' || property.type === 'array') {
-			const compatibleOperators = getCompatibleFilterOperators(property, false, connection.role, target);
+			const compatibleOperators = getCompatibleFilterOperators(property, false, role, target);
 			if (compatibleOperators.length === 0) {
 				continue;
 			}
-		} else if (property.type === 'json' && connection.isDestination && target === 'User') {
+		} else if (property.type === 'json' && role === 'Destination' && target === 'User') {
 			continue;
 		}
-		filteredSchema[k] = v;
+		filteredSchema[name] = property;
 	}
-	return computeItems(filteredSchema);
+	return computeItems(filteredSchema, (name) => getPropertyPathDisplayValue(name, flatSchema));
 };
 
 const getUserIDColumnComboboxItems = (schema: ObjectType): ComboboxItem[] => {
@@ -146,10 +144,24 @@ const getTableKeyComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	return computeItems(filteredSchema);
 };
 
-const computeItems = (schema: FlatSchema) => {
+const getPropertyPathDisplayValue = (name: string, schema: FlatSchema): string => {
+	let path = '';
+	const labels: string[] = [];
+	for (const fragment of name.split('.')) {
+		path = path === '' ? fragment : `${path}.${fragment}`;
+		const property = schema[path]?.full;
+		const displayName = property?.displayName?.trim();
+		labels.push(displayName || property?.name || fragment);
+	}
+	return labels.join(' › ');
+};
+
+const computeItems = (schema: FlatSchema, getDisplayValue?: (name: string) => string) => {
 	const items: ComboboxItem[] = [];
 	for (const name in schema) {
 		let typ = schema[name].type;
+		const label = getDisplayValue?.(name) ?? name;
+		const displayValue = label === name ? undefined : label;
 		items.push({
 			content: (
 				<div className='schema-combobox-item' key={name}>
@@ -157,10 +169,11 @@ const computeItems = (schema: FlatSchema) => {
 						<TypeIcon kind={typ} />
 					</div>
 					<div className='schema-combobox-item__text'>
-						<div className='schema-combobox-item__name'>{name}</div>
+						<div className='schema-combobox-item__name'>{label}</div>
 					</div>
 				</div>
 			),
+			displayValue,
 			term: name,
 		});
 	}

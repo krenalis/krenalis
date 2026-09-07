@@ -13,6 +13,26 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
+// Count returns the number of rows matched by query.
+func (warehouse *Snowflake) Count(ctx context.Context, query warehouses.RowQuery) (int, error) {
+
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return 0, snowflake(err)
+	}
+	statement, err := renderCountQuery(query)
+	if err != nil {
+		return 0, err
+	}
+	var total int
+	err = db.QueryRowContext(ctx, statement).Scan(&total)
+	if err != nil {
+		return 0, snowflake(err)
+	}
+
+	return total, nil
+}
+
 // Query executes a query and returns the results as Rows.
 func (warehouse *Snowflake) Query(ctx context.Context, query warehouses.RowQuery, withTotal bool) (warehouses.Rows, int, error) {
 
@@ -34,24 +54,16 @@ func (warehouse *Snowflake) Query(ctx context.Context, query warehouses.RowQuery
 
 	var b strings.Builder
 
-	// Count the total number of records.
 	var total int
 	if withTotal {
-		b.WriteString(`SELECT COUNT(*) FROM `)
-		b.WriteString(quoteIdent(query.Table))
-		err := appendJoins(&b, query.Joins)
-		if err != nil {
-			return nil, 0, err
+		statement, countErr := renderCountQuery(query)
+		if countErr != nil {
+			return nil, 0, countErr
 		}
-		if query.Where != nil {
-			b.WriteString(` WHERE `)
-			b.WriteString(whereExpr)
-		}
-		err = db.QueryRowContext(ctx, b.String()).Scan(&total)
+		err = db.QueryRowContext(ctx, statement).Scan(&total)
 		if err != nil {
 			return nil, 0, snowflake(err)
 		}
-		b.Reset()
 	}
 
 	// Build the query.
@@ -75,16 +87,16 @@ func (warehouse *Snowflake) Query(ctx context.Context, query warehouses.RowQuery
 		b.WriteString(whereExpr)
 	}
 
-	if query.OrderBy != nil {
+	if len(query.OrderBy) > 0 {
 		b.WriteString(" ORDER BY ")
-		for i, column := range query.OrderBy {
+		for i, order := range query.OrderBy {
 			if i > 0 {
 				b.WriteString(", ")
 			}
-			b.WriteString(quoteIdent(column.Name))
-		}
-		if query.OrderDesc {
-			b.WriteString(" DESC")
+			b.WriteString(quoteIdent(order.Column.Name))
+			if order.Desc {
+				b.WriteString(" DESC")
+			}
 		}
 	}
 
@@ -127,4 +139,25 @@ func appendJoins(b *strings.Builder, joins []warehouses.Join) error {
 		}
 	}
 	return nil
+}
+
+// renderCountQuery renders a query that counts all rows matched by query.
+func renderCountQuery(query warehouses.RowQuery) (string, error) {
+
+	var b strings.Builder
+	b.WriteString(`SELECT COUNT(*) FROM `)
+	b.WriteString(quoteIdent(query.Table))
+	err := appendJoins(&b, query.Joins)
+	if err != nil {
+		return "", err
+	}
+	if query.Where != nil {
+		b.WriteString(` WHERE `)
+		err = renderExpr(&b, query.Where)
+		if err != nil {
+			return "", fmt.Errorf("cannot build WHERE expression: %s", err)
+		}
+	}
+
+	return b.String(), nil
 }

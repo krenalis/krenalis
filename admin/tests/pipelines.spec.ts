@@ -24,6 +24,39 @@ test.afterEach(async ({ page }) => {
 	await logout(page);
 });
 
+test(`Remove the only Pipeline condition without an Admin error and restore focus`, async ({ page }) => {
+	const pageErrors: Error[] = [];
+	page.on('pageerror', (error) => pageErrors.push(error));
+	const id = await addDummyDestination(page);
+	await page.goto(`${adminURL}/connections/${id}/pipelines`);
+	const name = page.locator('.connection-pipelines__no-pipeline-pipeline-types .list-tile__name', {
+		hasText: 'Export customers',
+	});
+	await expect(name).toBeAttached();
+	await name.locator('..').locator('..').locator('sl-button').click();
+	await expect(page.locator('.pipeline__header')).toBeAttached();
+
+	const filters = page.locator('.pipeline__filters');
+	const addFilter = filters.getByRole('button', { name: 'Add filter', exact: true });
+	await addFilter.click();
+
+	const removeCondition = filters.getByRole('button', { name: 'Remove condition 1', exact: true });
+	const tooltip = filters.locator('.pipeline__filters-remove-condition-wrapper sl-tooltip');
+	await expect(removeCondition).toHaveJSProperty('tagName', 'BUTTON');
+	await expect(removeCondition).toBeEnabled();
+	await removeCondition.focus();
+	await expect(tooltip).toHaveJSProperty('open', true);
+	await page.keyboard.press('Escape');
+	await expect(tooltip).toHaveJSProperty('open', false);
+	await removeCondition.hover();
+	await expect(tooltip).toHaveJSProperty('open', true);
+	await removeCondition.click();
+
+	await expect(addFilter).toBeFocused();
+	await expect(filters.locator('.filter-editor__announcement')).toHaveText('Condition removed');
+	expect(pageErrors).toEqual([]);
+});
+
 test(`Add "Import customers" pipeline on Dummy`, async ({ page }) => {
 	const id = await addDummySource(page);
 	await page.goto(`${adminURL}/connections/${id}/pipelines`);

@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"net/url"
 	"slices"
@@ -311,6 +312,12 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 	return nil
 }
 
+// ProfileDatasetVersion returns the version of the currently published
+// profiles dataset.
+func (warehouse *PostgreSQL) ProfileDatasetVersion(ctx context.Context) (int, error) {
+	return warehouse.publishedProfilesVersion(ctx)
+}
+
 // Truncate truncates the specified table.
 func (warehouse *PostgreSQL) Truncate(ctx context.Context, table string) error {
 	pool, _, err := warehouse.connectionPool(ctx, false)
@@ -461,8 +468,8 @@ func (warehouse *PostgreSQL) publishedProfilesVersion(ctx context.Context) (int,
 	if err != nil {
 		return 0, err
 	}
-	if version < 0 {
-		return 0, fmt.Errorf("warehouse returned a negative published profile schema version")
+	if version < 0 || version > math.MaxInt32 {
+		return 0, fmt.Errorf("warehouse returned an invalid published profile schema version")
 	}
 	return version, nil
 }

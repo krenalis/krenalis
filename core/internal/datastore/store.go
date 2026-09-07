@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -42,6 +43,10 @@ var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
 // ErrWorkspaceNotExist is returned by Store methods when the workspace no
 // longer exists.
 var ErrWorkspaceNotExist = errors.New("workspace does not exist anymore")
+
+// ErrProfileDatasetVersionMismatch indicates that the requested published
+// profiles dataset is no longer current.
+var ErrProfileDatasetVersionMismatch = errors.New("profile dataset version mismatch")
 
 // UnavailableError represents an error with the data warehouse.
 type UnavailableError struct {
@@ -417,21 +422,128 @@ func (store *Store) ProfileRecords(ctx context.Context, query Query, schema type
 	return records(ctx, store.warehouse(), query, "_kpid", store.profileColumnByProperty(), true, matching)
 }
 
-// Profiles returns the profiles according to the provided query.
+// ProfileCount returns the number of profiles matched by where and the
+// published dataset version used for the count. expectedVersion may be empty;
+// otherwise, it must equal the current published dataset version.
+//
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If expectedVersion is no longer current, it
+// returns ErrProfileDatasetVersionMismatch. If an error occurs with the data
+// warehouse, it returns an *UnavailableError error.
+func (store *Store) ProfileCount(ctx context.Context, where *state.Where, expectedVersion string) (int, string, error) {
+
+	store.mustBeOpen()
+
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
+	if err != nil {
+		return 0, "", err
+	}
+	defer done()
+	version, err := store.warehouse().ProfileDatasetVersion(ctx)
+	if err != nil {
+		return 0, "", unavailableError(err)
+	}
+	datasetVersion := strconv.Itoa(version)
+	if expectedVersion != "" && expectedVersion != datasetVersion {
+		return 0, datasetVersion, ErrProfileDatasetVersionMismatch
+	}
+
+	var expression warehouses.Expr
+	if where != nil {
+		expression, err = convertWhere(where, store.profileColumnByProperty())
+		if err != nil {
+			return 0, "", unavailableError(err)
+		}
+	}
+	total, err := store.warehouse().Count(ctx, warehouses.RowQuery{
+		Columns: []warehouses.Column{{Name: "_kpid", Type: types.UUID()}},
+		Table:   "krenalis_profiles_" + datasetVersion,
+		Where:   expression,
+	})
+	if err != nil {
+		if expectedVersion != "" {
+			currentVersion, versionErr := store.warehouse().ProfileDatasetVersion(ctx)
+			if versionErr == nil && strconv.Itoa(currentVersion) != expectedVersion {
+				return 0, strconv.Itoa(currentVersion), ErrProfileDatasetVersionMismatch
+			}
+		}
+		return 0, "", unavailableError(err)
+	}
+	if total < 0 {
+		return 0, "", unavailableError(errors.New("profile count is negative"))
+	}
+
+	return total, datasetVersion, nil
+}
+
+// ProfileDatasetVersion returns the version of the currently published
+// profiles dataset.
 //
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If an error occurs with the data warehouse, it
 // returns an *UnavailableError error.
-func (store *Store) Profiles(ctx context.Context, query Query) ([]map[string]any, int, error) {
+func (store *Store) ProfileDatasetVersion(ctx context.Context) (string, error) {
+
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
 	if err != nil {
-		return nil, 0, err
+		return "", err
 	}
 	defer done()
-	query.table = "profiles"
+	version, err := store.warehouse().ProfileDatasetVersion(ctx)
+	if err != nil {
+		return "", unavailableError(err)
+	}
+
+	return strconv.Itoa(version), nil
+}
+
+// Profiles returns the profiles according to the provided query, together
+// with their published dataset version and whether a subsequent row exists.
+// expectedVersion may be empty; otherwise, it must equal the current published
+// dataset version.
+//
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If expectedVersion is no longer current, it
+// returns ErrProfileDatasetVersionMismatch. If an error occurs with the data
+// warehouse, it returns an *UnavailableError error.
+func (store *Store) Profiles(ctx context.Context, query Query, expectedVersion string) ([]map[string]any, int, string, bool, error) {
+
+	store.mustBeOpen()
+
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
+	if err != nil {
+		return nil, 0, "", false, err
+	}
+	defer done()
+	version, err := store.warehouse().ProfileDatasetVersion(ctx)
+	if err != nil {
+		return nil, 0, "", false, unavailableError(err)
+	}
+	datasetVersion := strconv.Itoa(version)
+	if expectedVersion != "" && expectedVersion != datasetVersion {
+		return nil, 0, datasetVersion, false, ErrProfileDatasetVersionMismatch
+	}
+	query.table = "krenalis_profiles_" + datasetVersion
 	query.total = true
-	return store.query(ctx, query, store.profileColumnByProperty(), true)
+	requestedLimit := query.Limit
+	query.Limit = requestedLimit + 1
+	profiles, total, err := store.query(ctx, query, store.profileColumnByProperty(), true)
+	if err != nil {
+		if expectedVersion != "" {
+			currentVersion, versionErr := store.warehouse().ProfileDatasetVersion(ctx)
+			if versionErr == nil && strconv.Itoa(currentVersion) != expectedVersion {
+				return nil, 0, strconv.Itoa(currentVersion), false, ErrProfileDatasetVersionMismatch
+			}
+		}
+		return nil, 0, "", false, unavailableError(err)
+	}
+	hasNext := len(profiles) > requestedLimit
+	if hasNext {
+		profiles = profiles[:requestedLimit]
+	}
+
+	return profiles, total, datasetVersion, hasNext, nil
 }
 
 // PurgePipelines purges the provided pipelines from the data warehouse,
@@ -773,25 +885,25 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 		}
 	}
 
-	var orderBy []warehouses.Column
-	var orderDesc bool
-	if query.OrderBy != "" {
-		c, ok := columnByProperty[query.OrderBy]
-		if !ok {
-			return nil, 0, fmt.Errorf("property path %s does not exist", query.OrderBy)
+	var orderBy []warehouses.RowOrder
+	if len(query.OrderBy) > 0 {
+		orderBy = make([]warehouses.RowOrder, len(query.OrderBy))
+		for i, order := range query.OrderBy {
+			c, ok := columnByProperty[order.Property]
+			if !ok {
+				return nil, 0, fmt.Errorf("property path %s does not exist", order.Property)
+			}
+			orderBy[i] = warehouses.RowOrder{Column: c, Desc: order.Desc}
 		}
-		orderBy = []warehouses.Column{c}
-		orderDesc = query.OrderDesc
 	}
 
 	rows, total, err := store.warehouse().Query(ctx, warehouses.RowQuery{
-		Columns:   columns,
-		Table:     query.table,
-		Where:     where,
-		OrderBy:   orderBy,
-		OrderDesc: orderDesc,
-		First:     query.First,
-		Limit:     query.Limit,
+		Columns: columns,
+		Table:   query.table,
+		Where:   where,
+		OrderBy: orderBy,
+		First:   query.First,
+		Limit:   query.Limit,
 	}, true)
 	if err != nil {
 		return nil, 0, err

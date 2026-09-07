@@ -290,7 +290,7 @@ func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (a
 			return nil, errors.BadRequest("limit is not valid")
 		}
 	}
-	identities, total, err := ws.Identities(r.Context(), kpid, first, limit)
+	identities, total, err := ws.Identities(r.Context(), kpid, query.Get("expectedDatasetVersion"), first, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -642,11 +642,14 @@ func (workspace workspace) Attributes(_ http.ResponseWriter, r *http.Request) (a
 		return nil, err
 	}
 	kpid := r.PathValue("kpid")
-	attributes, err := ws.Attributes(r.Context(), kpid)
+	attributes, datasetVersion, err := ws.Attributes(r.Context(), kpid, r.URL.Query().Get("expectedDatasetVersion"))
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"attributes": attributes}, nil
+	return map[string]any{
+		"attributes":     attributes,
+		"datasetVersion": datasetVersion,
+	}, nil
 }
 
 // Update updates the name of a workspace.
@@ -783,6 +786,10 @@ func (workspace workspace) ProfileEvents(_ http.ResponseWriter, r *http.Request)
 
 	// Parse the properties.
 	properties := splitQueryParameters(q["properties"])
+	err = ws.CheckProfileDatasetVersion(r.Context(), q.Get("expectedDatasetVersion"))
+	if err != nil {
+		return nil, err
+	}
 
 	filter := &core.Filter{
 		Operator: core.OpAnd,
@@ -796,6 +803,10 @@ func (workspace workspace) ProfileEvents(_ http.ResponseWriter, r *http.Request)
 	}
 
 	evts, err := ws.Events(r.Context(), properties, filter, "timestamp", true, 0, limit)
+	if err != nil {
+		return nil, err
+	}
+	err = ws.CheckProfileDatasetVersion(r.Context(), q.Get("expectedDatasetVersion"))
 	if err != nil {
 		return nil, err
 	}
@@ -814,8 +825,37 @@ func (workspace workspace) ProfileSchema(_ http.ResponseWriter, r *http.Request)
 	return ws.ProfileSchema, nil
 }
 
-// Profiles returns the profiles, the profile schema of a workspace, and an
-// estimate of their total number without applying first and limit.
+// ProfileCount returns the number of profiles matched by the optional filter
+// and the published dataset version used for the count.
+func (workspace workspace) ProfileCount(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
+	if err != nil {
+		return nil, err
+	}
+
+	q := r.URL.Query()
+	var filter *core.Filter
+	if f := q.Get("filter"); f != "" {
+		err = json.Unmarshal([]byte(f), &filter)
+		if err != nil {
+			return nil, errors.BadRequest("invalid filter")
+		}
+		if filter == nil {
+			return nil, errors.BadRequest("filter cannot be null")
+		}
+	}
+	total, datasetVersion, err := ws.ProfileCount(r.Context(), filter, q.Get("expectedDatasetVersion"))
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]any{"total": total, "datasetVersion": datasetVersion}, nil
+}
+
+// Profiles returns the profiles, the optionally requested profile schema, an
+// estimate of their total number without applying first and limit, the
+// published dataset version, and the continuation state.
 func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any, error) {
 
 	ws, err := workspace.admitWorkspaceRequest(r, x1)
@@ -855,7 +895,10 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 		limit = 100
 	}
 
-	profiles, schema, total, err := ws.Profiles(r.Context(), properties, filter, order, orderDesc, first, limit)
+	expectedDatasetVersion := q.Get("expectedDatasetVersion")
+	includeSchema := q.Get("includeSchema") != "false"
+	profiles, schema, total, datasetVersion, hasNext, err := ws.Profiles(
+		r.Context(), properties, filter, order, orderDesc, first, limit, expectedDatasetVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -876,12 +919,21 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 		b.write(s)
 		b.writeByte('}')
 	}
-	b.writeString(`],"schema":`)
-	buf, _ := schema.MarshalJSON()
-	b.write(buf)
+	b.writeString(`]`)
+	if includeSchema {
+		b.writeString(`,"schema":`)
+		buf, _ := schema.MarshalJSON()
+		b.write(buf)
+	}
 	b.writeString(`,"total":`)
-	buf = b.availableBuffer()
+	buf := b.availableBuffer()
 	b.write(strconv.AppendInt(buf, int64(total), 10))
+	b.writeString(`,"datasetVersion":`)
+	buf = b.availableBuffer()
+	b.write(strconv.AppendQuote(buf, datasetVersion))
+	b.writeString(`,"hasNext":`)
+	buf = b.availableBuffer()
+	b.write(strconv.AppendBool(buf, hasNext))
 	b.writeByte('}')
 	b.flush()
 

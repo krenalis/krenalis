@@ -1,4 +1,5 @@
 import type React from 'react';
+import { GridKeyboardNavigationMode } from './Grid.types';
 
 const gridNavigationKeys = ['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp'] as const;
 const gridKeyboardControlSelector = [
@@ -62,9 +63,10 @@ const navigateGrid = (
 	grid: HTMLElement,
 	key: string,
 	shiftKey: boolean,
+	mode: GridKeyboardNavigationMode,
 	onMoveRow?: (overRowID: string, movedRowID: string) => void,
 ): boolean => {
-	if (!isGridNavigationKey(key)) {
+	if (!isGridNavigationKey(key) || (mode === 'rows' && (key === 'ArrowLeft' || key === 'ArrowRight'))) {
 		return false;
 	}
 	const isMove = shiftKey && onMoveRow != null && (key === 'ArrowDown' || key === 'ArrowUp');
@@ -137,12 +139,13 @@ const navigateGrid = (
 
 const navigateGridWithKeyboard = (
 	event: React.KeyboardEvent<HTMLDivElement>,
+	mode: GridKeyboardNavigationMode,
 	onMoveRow?: (overRowID: string, movedRowID: string) => void,
 ) => {
 	if (event.target !== event.currentTarget || event.altKey || event.ctrlKey || event.metaKey) {
 		return;
 	}
-	if (navigateGrid(event.currentTarget, event.key, event.shiftKey, onMoveRow)) {
+	if (navigateGrid(event.currentTarget, event.key, event.shiftKey, mode, onMoveRow)) {
 		event.preventDefault();
 	}
 };
@@ -231,8 +234,24 @@ const moveGridRow = (
 };
 
 const selectGridRow = (row: HTMLElement) => {
-	row.scrollIntoView({ block: 'nearest' });
+	scrollGridRowIntoView(row);
 	row.click();
 };
 
-export { focusGridForKeyboardNavigation, navigateGrid, navigateGridWithKeyboard, shouldNavigateGridFromDocument };
+const scrollGridRowIntoView = (row: HTMLElement) => {
+	row.scrollIntoView({ block: 'nearest' });
+	const grid = row.closest<HTMLElement>('.grid');
+	const header = grid?.querySelector<HTMLElement>(':scope > .grid__header-row');
+	if (grid != null && header != null && getComputedStyle(header).position === 'sticky') {
+		const overlap = Math.ceil(header.getBoundingClientRect().bottom - row.getBoundingClientRect().top);
+		grid.scrollTop -= Math.max(0, overlap);
+	}
+};
+
+export {
+	focusGridForKeyboardNavigation,
+	navigateGrid,
+	navigateGridWithKeyboard,
+	scrollGridRowIntoView,
+	shouldNavigateGridFromDocument,
+};

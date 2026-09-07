@@ -215,6 +215,7 @@ func (dummy *Dummy) RecordSchema(ctx context.Context, target connectors.Targets,
 			{Name: "street", Type: types.String(), Nullable: true, Description: "Street"},
 			{Name: "postal_code", Type: types.String(), Nullable: true, Description: "Postal code"},
 			{Name: "city", Type: types.String(), Nullable: true, Description: "City"},
+			{Name: "country", Type: types.String().AsCountry(types.ISO3166Alpha2), Nullable: true, Description: "Country"},
 		}), Nullable: true, Description: "Address"},
 	}...)
 	return types.Object(properties), nil
@@ -264,11 +265,6 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-
-	// Only the first 10 customers are taken. The others, with the current
-	// implementation of Dummy, remain defined in the JSON file but are not
-	// used.
-	rawCustomers = rawCustomers[:10]
 
 	now := time.Now().UTC()
 

@@ -52,7 +52,7 @@ const SchemaPropertyInfoTooltip = ({ content, label }: { content: string; label:
 	const descriptionID = useId();
 
 	return (
-		<SlTooltip className='schema-property-grid__tooltip' placement='top' trigger='hover' hoist={true}>
+		<SlTooltip className='app-tooltip schema-property-grid__tooltip' placement='top' trigger='hover' hoist={true}>
 			<span id={descriptionID} className='schema-property-grid__tooltip-content' slot='content'>
 				{content}
 			</span>
@@ -138,7 +138,11 @@ const SchemaPropertyGridExpansionButtons = ({
 
 	return (
 		<div className={`${classNamePrefix}__expansion-buttons`}>
-			<SlTooltip className={`${classNamePrefix}__toolbar-tooltip`} content='Expand all properties' hoist>
+			<SlTooltip
+				className={`app-tooltip ${classNamePrefix}__toolbar-tooltip`}
+				content='Expand all properties'
+				hoist
+			>
 				<SlButton
 					className={`${classNamePrefix}__expand-all-button ${buttonClassName}`}
 					size='small'
@@ -149,7 +153,11 @@ const SchemaPropertyGridExpansionButtons = ({
 					<SlIcon name='chevron-expand' />
 				</SlButton>
 			</SlTooltip>
-			<SlTooltip className={`${classNamePrefix}__toolbar-tooltip`} content='Collapse all properties' hoist>
+			<SlTooltip
+				className={`app-tooltip ${classNamePrefix}__toolbar-tooltip`}
+				content='Collapse all properties'
+				hoist
+			>
 				<SlButton
 					className={`${classNamePrefix}__collapse-all-button ${buttonClassName}`}
 					size='small'
@@ -223,7 +231,11 @@ const SchemaPropertySearch = ({
 					<SlIcon name='backspace' slot='clear-icon' />
 				</SlInput>
 			) : (
-				<SlTooltip className={`${classNamePrefix}__toolbar-tooltip`} content='Search properties' hoist>
+				<SlTooltip
+					className={`app-tooltip ${classNamePrefix}__toolbar-tooltip`}
+					content='Search properties'
+					hoist
+				>
 					<SlButton
 						className={`${classNamePrefix}__search-button ${classNamePrefix}__toolbar-icon-button`}
 						size='small'

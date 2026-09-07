@@ -3,112 +3,179 @@ import AppContext from '../../../context/AppContext';
 import { ProfileEventsResponse, IdentitiesResponse, profileAttributesResponse } from '../../../lib/api/types/responses';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { ProfileTab } from './Profiles.types';
-import { ProfileEvent, Identity } from '../../../lib/api/types/profile';
+import { ProfileEvent, Identity, ProfileAttributes } from '../../../lib/api/types/profile';
 
-const useProfileDrawer = (kpid: string, selectedTab: ProfileTab) => {
-	const [attributes, setAttributes] = useState<Record<string, any>>();
-	const [events, setEvents] = useState<ProfileEvent[]>();
-	const [identities, setIdentities] = useState<Identity[]>();
-	const [isLoading, setIsLoading] = useState<boolean>(false);
+const profileAttributesCache = new Map<string, ProfileAttributes>();
+const profileAttributesCacheLimit = 200;
 
-	const { api, handleError, redirect } = useContext(AppContext);
+interface ProfileResource<T> {
+	key: string;
+	value: T;
+}
+
+const useProfileDrawer = (
+	kpid: string,
+	selectedTab: ProfileTab,
+	datasetVersion: string | undefined,
+	profilesQueryKey: string,
+	onDatasetStale: () => void,
+) => {
+	const [attributesResource, setAttributesResource] = useState<ProfileResource<ProfileAttributes>>();
+	const [eventsResource, setEventsResource] = useState<ProfileResource<ProfileEvent[]>>();
+	const [identitiesResource, setIdentitiesResource] = useState<ProfileResource<Identity[]>>();
+	const [attributesLoadingKey, setAttributesLoadingKey] = useState('');
+	const [eventsLoadingKey, setEventsLoadingKey] = useState('');
+	const [identitiesLoadingKey, setIdentitiesLoadingKey] = useState('');
+
+	const { api, handleError, selectedWorkspace } = useContext(AppContext);
+	const attributesKey =
+		kpid === '' || datasetVersion == null
+			? ''
+			: `${selectedWorkspace}:${datasetVersion}:${profilesQueryKey}:${kpid}`;
+	const auxiliaryKey = kpid === '' || datasetVersion == null ? '' : `${selectedWorkspace}:${datasetVersion}:${kpid}`;
+	const attributes =
+		attributesResource?.key === attributesKey
+			? attributesResource.value
+			: attributesKey === ''
+				? undefined
+				: profileAttributesCache.get(attributesKey);
+	const events = selectedTab === 'events' && eventsResource?.key === auxiliaryKey ? eventsResource.value : undefined;
+	const identities =
+		selectedTab === 'identities' && identitiesResource?.key === auxiliaryKey ? identitiesResource.value : undefined;
+	const isAttributesLoading = attributesKey !== '' && attributesLoadingKey === attributesKey;
+	const isEventsLoading = selectedTab === 'events' && eventsLoadingKey === auxiliaryKey;
+	const isIdentitiesLoading = selectedTab === 'identities' && identitiesLoadingKey === auxiliaryKey;
 
 	useEffect(() => {
-		const fetchProfileAttributes = async () => {
-			setIsLoading(true);
-			// Fetch the profile's attributes.
-			let attributesResponse: profileAttributesResponse;
-			try {
-				attributesResponse = await api.workspaces.profiles.attributes(kpid);
-			} catch (err) {
-				setTimeout(() => setIsLoading(false), 200);
-				if (err instanceof NotFoundError) {
+		if (attributesKey === '' || datasetVersion == null) {
+			return;
+		}
+
+		const cached = profileAttributesCache.get(attributesKey);
+		if (cached != null) {
+			setAttributesLoadingKey('');
+			return;
+		}
+
+		const controller = new AbortController();
+		setAttributesLoadingKey(attributesKey);
+		void api.workspaces.profiles
+			.attributes(kpid, datasetVersion, controller.signal)
+			.then((response: profileAttributesResponse) => {
+				if (controller.signal.aborted) {
+					return;
+				}
+				if (response.datasetVersion !== datasetVersion) {
+					onDatasetStale();
+					return;
+				}
+				if (
+					!profileAttributesCache.has(attributesKey) &&
+					profileAttributesCache.size >= profileAttributesCacheLimit
+				) {
+					const oldestCacheKey = profileAttributesCache.keys().next().value;
+					if (oldestCacheKey != null) {
+						profileAttributesCache.delete(oldestCacheKey);
+					}
+				}
+				profileAttributesCache.set(attributesKey, response.attributes);
+				setAttributesResource({ key: attributesKey, value: response.attributes });
+			})
+			.catch((error) => {
+				if (error?.name === 'AbortError') {
+					return;
+				}
+				if (error instanceof UnprocessableError && error.code === 'ProfileDatasetVersionMismatch') {
+					onDatasetStale();
+					return;
+				}
+				if (error instanceof NotFoundError) {
 					handleError('This profile does not exist');
-					redirect('profile-unification/profiles');
 					return;
 				}
-				if (err instanceof UnprocessableError) {
-					if (err.code === 'WarehouseError') {
-						handleError('An error occurred with the data warehouse');
-						return;
-					}
+				handleError(error);
+			})
+			.finally(() => {
+				if (!controller.signal.aborted) {
+					setAttributesLoadingKey((key) => (key === attributesKey ? '' : key));
 				}
-				handleError(err);
-				return;
-			}
-			setAttributes(attributesResponse.attributes);
-			setTimeout(() => setIsLoading(false), 200);
-			return;
-		};
-		if (kpid === '') {
-			return;
-		}
-		fetchProfileAttributes();
-	}, [kpid]);
+			});
+
+		return () => controller.abort();
+	}, [api, attributesKey, datasetVersion, handleError, kpid, onDatasetStale]);
 
 	useEffect(() => {
-		const fetchProfileTab = async () => {
-			if (selectedTab === 'events') {
-				setIsLoading(true);
-				// Fetch the profile's events.
-				let eventsResponse: ProfileEventsResponse;
-				try {
-					eventsResponse = await api.workspaces.profiles.events(kpid);
-				} catch (err) {
-					setTimeout(() => setIsLoading(false), 200);
-					if (err instanceof NotFoundError) {
-						handleError('This profile does not exist');
-						redirect('profile-unification/profiles');
-						return;
-					}
-					if (err instanceof UnprocessableError) {
-						if (err.code === 'WarehouseError') {
-							handleError('An error occurred with the data warehouse');
-							return;
-						}
-					}
-					handleError(err);
-					return;
-				}
-				setEvents(eventsResponse.events);
-				setTimeout(() => setIsLoading(false), 200);
-				return;
-			}
-
-			if (selectedTab === 'identities') {
-				setIsLoading(true);
-				// Fetch the profile's identities.
-				let identitiesResponse: IdentitiesResponse;
-				try {
-					identitiesResponse = await api.workspaces.profiles.identities(kpid, 0, 1000);
-				} catch (err) {
-					setTimeout(() => setIsLoading(false), 200);
-					if (err instanceof NotFoundError) {
-						handleError('This profile does not exist');
-						redirect('profile-unification/profiles');
-						return;
-					}
-					if (err instanceof UnprocessableError) {
-						if (err.code === 'WarehouseError') {
-							handleError('An error occurred with the data warehouse');
-							return;
-						}
-					}
-					handleError(err);
-					return;
-				}
-				setIdentities(identitiesResponse.identities);
-				setTimeout(() => setIsLoading(false), 200);
-				return;
-			}
-		};
-		if (kpid === '') {
+		if (kpid === '' || datasetVersion == null || (selectedTab !== 'events' && selectedTab !== 'identities')) {
 			return;
 		}
-		fetchProfileTab();
-	}, [kpid, selectedTab]);
 
-	return { isLoading, attributes, events, identities };
+		// Events and identities are live auxiliary data in V1. Passing the
+		// expected dataset version verifies that the profile generation remains
+		// current while they are read; it does not make them snapshots.
+		const controller = new AbortController();
+		if (selectedTab === 'events') {
+			setEventsLoadingKey(auxiliaryKey);
+			void api.workspaces.profiles
+				.events(kpid, datasetVersion, controller.signal)
+				.then((response: ProfileEventsResponse) => {
+					if (!controller.signal.aborted) {
+						setEventsResource({ key: auxiliaryKey, value: response.events });
+					}
+				})
+				.catch((error) => handleAuxiliaryError(error, controller.signal, handleError, onDatasetStale))
+				.finally(() => {
+					if (!controller.signal.aborted) {
+						setEventsLoadingKey((key) => (key === auxiliaryKey ? '' : key));
+					}
+				});
+		} else {
+			setIdentitiesLoadingKey(auxiliaryKey);
+			void api.workspaces.profiles
+				.identities(kpid, 0, 1000, datasetVersion, controller.signal)
+				.then((response: IdentitiesResponse) => {
+					if (!controller.signal.aborted) {
+						setIdentitiesResource({ key: auxiliaryKey, value: response.identities });
+					}
+				})
+				.catch((error) => handleAuxiliaryError(error, controller.signal, handleError, onDatasetStale))
+				.finally(() => {
+					if (!controller.signal.aborted) {
+						setIdentitiesLoadingKey((key) => (key === auxiliaryKey ? '' : key));
+					}
+				});
+		}
+
+		return () => controller.abort();
+	}, [api, auxiliaryKey, datasetVersion, handleError, kpid, onDatasetStale, selectedTab]);
+
+	return {
+		attributes,
+		events,
+		identities,
+		isAttributesLoading,
+		isEventsLoading,
+		isIdentitiesLoading,
+	};
+};
+
+const handleAuxiliaryError = (
+	error: any,
+	signal: AbortSignal,
+	handleError: (error: Error | string) => void,
+	onDatasetStale: () => void,
+) => {
+	if (signal.aborted || error?.name === 'AbortError') {
+		return;
+	}
+	if (error instanceof UnprocessableError && error.code === 'ProfileDatasetVersionMismatch') {
+		onDatasetStale();
+		return;
+	}
+	if (error instanceof NotFoundError) {
+		handleError('This profile does not exist');
+		return;
+	}
+	handleError(error);
 };
 
 export { useProfileDrawer };

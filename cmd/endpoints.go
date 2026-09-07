@@ -77,6 +77,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /pipelines/runs/{id}":                         workspace.PipelineRun,
 		"GET    /pipelines/{id}":                              workspace.Pipeline,
 		"GET    /profiles":                                    workspace.Profiles,
+		"GET    /profiles/count":                              workspace.ProfileCount,
 		"GET    /profiles/schema":                             workspace.ProfileSchema,
 		"GET    /profiles/schema/latest-alter":                workspace.LatestAlterProfileSchema,
 		"GET    /profiles/schema/suitable-as-identifiers":     workspace.ProfilePropertiesSuitableAsIdentifiers, /* Admin console only */

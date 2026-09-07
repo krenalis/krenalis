@@ -8,24 +8,14 @@ import { useProfiles } from './useProfiles';
 
 const Profiles = () => {
 	const { setTitle } = useContext(AppContext);
-
-	const { profiles, profilesTotal, profilesProperties, isLoading, profileIDList, fetchProfiles } = useProfiles();
+	const profilesContext = useProfiles();
 
 	useLayoutEffect(() => {
 		setTitle('Profile Unification / Profiles');
 	}, []);
 
 	return (
-		<ProfilesContext.Provider
-			value={{
-				profiles,
-				profilesTotal,
-				profilesProperties,
-				isLoading,
-				profileIDList,
-				fetchProfiles,
-			}}
-		>
+		<ProfilesContext.Provider value={profilesContext}>
 			<ProfilesList />
 		</ProfilesContext.Provider>
 	);

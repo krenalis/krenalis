@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"regexp"
 	"slices"
 	"strconv"
@@ -368,6 +369,12 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []wareh
 	return nil
 }
 
+// ProfileDatasetVersion returns the version of the currently published
+// profiles dataset.
+func (warehouse *Snowflake) ProfileDatasetVersion(ctx context.Context) (int, error) {
+	return warehouse.publishedProfilesVersion(ctx)
+}
+
 // Truncate truncates the specified table.
 func (warehouse *Snowflake) Truncate(ctx context.Context, table string) error {
 	db, err := warehouse.openDB(ctx)
@@ -499,8 +506,8 @@ func (warehouse *Snowflake) publishedProfilesVersion(ctx context.Context) (int, 
 	if err != nil {
 		return 0, snowflake(err)
 	}
-	if version < 0 {
-		return 0, fmt.Errorf("warehouse returned a negative published profile schema version")
+	if version < 0 || version > math.MaxInt32 {
+		return 0, fmt.Errorf("warehouse returned an invalid published profile schema version")
 	}
 	return version, nil
 }

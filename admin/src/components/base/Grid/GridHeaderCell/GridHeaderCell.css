@@ -1,2 +1,82 @@
 .grid__header-cell {
 }
+
+.grid__header-cell--reorderable {
+	position: relative;
+}
+
+.grid__header-cell.grid__header-cell--reorderable .grid__cell-content {
+	padding-right: 34px;
+}
+
+.grid__header-cell--reorderable:hover {
+	background-color: color-mix(in srgb, var(--sl-color-primary-50) 75%, var(--bg-primary));
+}
+
+.grid__column-reorder-handle {
+	align-items: center;
+	background-color: transparent;
+	border: 0;
+	border-radius: var(--sl-border-radius-small);
+	color: var(--sl-color-primary-600);
+	cursor: grab;
+	display: flex;
+	font-size: 16px;
+	height: 26px;
+	justify-content: center;
+	opacity: 0;
+	padding: 0;
+	position: absolute;
+	right: 4px;
+	top: 50%;
+	touch-action: none;
+	transform: translateY(-50%);
+	transition:
+		background-color var(--sl-transition-fast),
+		opacity var(--sl-transition-fast);
+	width: 26px;
+}
+
+.grid__header-cell--reorderable:hover .grid__column-reorder-handle,
+.grid__column-reorder-handle:focus-visible,
+.grid__header-cell--dragging .grid__column-reorder-handle {
+	opacity: 1;
+}
+
+.grid__column-reorder-handle:hover {
+	background-color: var(--sl-color-primary-50);
+}
+
+.grid__column-reorder-handle:focus-visible {
+	outline: var(--sl-focus-ring);
+	outline-offset: var(--sl-focus-ring-offset);
+}
+
+.grid__header-cell--dragging {
+	opacity: 0;
+}
+
+.grid__column-reorder-overlay,
+.grid__column-reorder-overlay .grid__header-cell {
+	box-sizing: border-box;
+	height: 100%;
+	width: 100%;
+}
+
+.grid__header-cell--reorder-overlay {
+	background-color: var(--sl-color-primary-50);
+	box-shadow: var(--sl-shadow-medium);
+	cursor: grabbing;
+	z-index: 1;
+}
+
+.grid__header-cell--reorder-overlay .grid__column-reorder-handle {
+	cursor: grabbing;
+	opacity: 1;
+}
+
+@media (hover: none), (pointer: coarse) {
+	.grid__column-reorder-handle {
+		opacity: 1;
+	}
+}
