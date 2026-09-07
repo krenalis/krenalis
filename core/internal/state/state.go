@@ -1689,6 +1689,7 @@ type Pipeline struct {
 	Enabled            bool
 	EventType          string
 	OrderingGroup      string
+	DeliveryEndpoint   string
 	ScheduleStart      int16
 	SchedulePeriod     int16
 	InSchema           types.Type

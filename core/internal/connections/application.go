@@ -121,16 +121,22 @@ func (app *Application) EventTypes(ctx context.Context) ([]*EventType, error) {
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	for i, eventType := range eventTypes {
+	for _, eventType := range eventTypes {
 		if eventType == nil {
 			return nil, fmt.Errorf("connector %s returned a nil event type", app.connector)
 		}
 		if err := validateEventType(app.connector, eventType); err != nil {
 			return nil, err
 		}
+	}
+	for i, et := range eventTypes {
+		orderingGroup := connectors.OrderingGroup(et)
 		for _, next := range eventTypes[i+1:] {
-			if next != nil && next.ID == eventType.ID {
-				return nil, fmt.Errorf("connector %s returned multiple event types with the same ID (%s)", app.connector, eventType.ID)
+			if next.ID == et.ID {
+				return nil, fmt.Errorf("connector %s returned multiple event types with the same ID (%s)", app.connector, et.ID)
+			}
+			if connectors.OrderingGroup(next) == orderingGroup && next.DeliveryEndpoint != et.DeliveryEndpoint {
+				return nil, fmt.Errorf("connector %s returned different delivery endpoints for ordering group %q", app.connector, orderingGroup)
 			}
 		}
 	}
@@ -146,25 +152,19 @@ func (app *Application) EventType(ctx context.Context, id string) (*EventType, e
 	if app.err != nil {
 		return nil, app.err
 	}
-	eventTypes, err := app.inner.(connectors.EventSender).EventTypes(ctx)
+	eventTypes, err := app.EventTypes(ctx)
 	if err != nil {
-		return nil, connectorError(err)
+		return nil, err
 	}
 	var et *EventType
 	for _, candidate := range eventTypes {
-		if candidate == nil || candidate.ID != id {
-			continue
+		if candidate.ID == id {
+			et = candidate
+			break
 		}
-		if et != nil {
-			return nil, fmt.Errorf("event type ID %q is repeated", id)
-		}
-		et = candidate
 	}
 	if et == nil {
 		return nil, connectors.ErrEventTypeNotExist
-	}
-	if err := validateEventType(app.connector, et); err != nil {
-		return nil, err
 	}
 	return et, nil
 }
@@ -423,6 +423,11 @@ func validateEventType(connector string, eventType *EventType) error {
 	if eventType.OrderingGroup != "" {
 		if !types.IsValidPropertyName(eventType.OrderingGroup) || len(eventType.OrderingGroup) > connectors.MaxEventTypeIdentifierLen {
 			return fmt.Errorf("connector %s returned an invalid ordering group (%q)", connector, eventType.OrderingGroup)
+		}
+	}
+	if eventType.DeliveryEndpoint != "" {
+		if !types.IsValidPropertyName(eventType.DeliveryEndpoint) || len(eventType.DeliveryEndpoint) > connectors.MaxEventTypeIdentifierLen {
+			return fmt.Errorf("connector %s returned an invalid delivery endpoint (%q)", connector, eventType.DeliveryEndpoint)
 		}
 	}
 	return nil
