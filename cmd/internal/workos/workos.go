@@ -305,6 +305,39 @@ func (wo *WorkOS) authenticate(ctx context.Context, token string) (*Authenticate
 	return user, nil
 }
 
+// createOrganization creates a WorkOS organization with the given name, linked
+// to the Krenalis organization with the given external ID, and returns the ID
+// of the created WorkOS organization.
+func (wo *WorkOS) createOrganization(ctx context.Context, name, externalID string) (string, error) {
+	var res struct {
+		ID string `json:"id"`
+	}
+	body := map[string]string{"name": name, "external_id": externalID}
+	err := wo.call(ctx, http.MethodPost, "/organizations", http.StatusCreated, body, &res)
+	if err != nil {
+		return "", fmt.Errorf("failed to create the WorkOS organization: %s", err)
+	}
+	if res.ID == "" {
+		return "", errors.New("WorkOS returned an empty organization ID")
+	}
+	return res.ID, nil
+}
+
+// sendInvitation sends a WorkOS invitation email that invites the given email
+// address as an admin of the WorkOS organization with the given ID.
+func (wo *WorkOS) sendInvitation(ctx context.Context, email, organizationID string) error {
+	body := map[string]string{
+		"email":           email,
+		"organization_id": organizationID,
+		"role_slug":       "admin",
+	}
+	err := wo.call(ctx, http.MethodPost, "/user_management/invitations", http.StatusCreated, body, nil)
+	if err != nil {
+		return fmt.Errorf("failed to send the WorkOS invitation: %s", err)
+	}
+	return nil
+}
+
 // organizationExternalID fetches and returns the external ID of the WorkOS
 // organization with the given ID. The external ID of a WorkOS organization is
 // the identifier of its linked organization in Krenalis.
