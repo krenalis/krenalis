@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/dialer"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -61,8 +62,11 @@ func (c *Connections) FileStorage(storage *state.Connection) *FileStorage {
 		state:     c.state,
 		storage:   storage,
 	}
+	organization := storage.Organization()
 	s.inner, s.err = connectors.RegisteredFileStorage(storage.Connector().Code).New(&connectors.FileStorageEnv{
 		Settings: newConnectionSettingStore(c.state, storage),
+		Dial:     dialer.Dial(organization.ID),
+		DialWith: dialer.DialWith(organization.ID),
 	})
 	s.err = connectorError(s.err)
 	return s

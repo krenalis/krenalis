@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, ReactNode, useRef, useContext, useCallback } from 'react';
-import Type, { ObjectType, Role, Semantic } from '../../../lib/api/types/types';
+import Type, { ObjectType, Role } from '../../../lib/api/types/types';
 import { GridRef, SortableGridRow, GridColumn } from '../../base/Grid/Grid.types';
 import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 import {
@@ -43,7 +43,6 @@ interface PropertyToEdit {
 	createRequired?: boolean;
 	updateRequired?: boolean;
 	nullable?: boolean;
-	semantic?: Semantic;
 	displayName?: string;
 	description?: string;
 	isEditable?: boolean;
@@ -194,8 +193,6 @@ const useSchemaEdit = (
 			initialPrimarySources.current?.[selectedPropertyKey],
 		);
 	}, [editableSchema, selectedPropertyKey]);
-	const selectedPropertyMaterializedSemantic =
-		selectedPropertyKey == null ? undefined : initialEditableSchema.current?.[selectedPropertyKey]?.semantic;
 	const { objectCount, propertyCount } = useMemo(() => {
 		const properties = Object.values(editableSchema || {});
 		const objectCount = properties.filter((property) => property.type.kind === 'object').length;
@@ -347,7 +344,6 @@ const useSchemaEdit = (
 			readOptional: true,
 			createRequired: false,
 			updateRequired: false,
-			semantic: property.semantic,
 			displayName: property.displayName,
 			description: property.description,
 			isEditable: true,
@@ -458,7 +454,7 @@ const useSchemaEdit = (
 		}
 
 		const editedProperty = {
-			...current,
+			indentation: current.indentation,
 			root: property.name,
 			name: property.name,
 			type: property.type,
@@ -468,7 +464,6 @@ const useSchemaEdit = (
 			readOptional: current.readOptional,
 			createRequired: current.createRequired,
 			updateRequired: current.updateRequired,
-			semantic: property.semantic,
 			displayName: property.displayName,
 			description: property.description,
 			isEditable: current.isEditable ? current.isEditable : false,
@@ -630,7 +625,6 @@ const useSchemaEdit = (
 		visiblePropertyCount: visiblePropertyKeys.size,
 		propertyParents,
 		selectedPropertyFieldChanges,
-		selectedPropertyMaterializedSemantic,
 		propertyStatuses,
 		primarySources: primarySources.current,
 		queries,
@@ -704,9 +698,7 @@ const getPropertyFieldChanges = (
 ): PropertyFieldChanges => {
 	return {
 		name: property.name !== initialProperty.name,
-		type:
-			JSON.stringify(property.type) !== JSON.stringify(initialProperty.type) ||
-			JSON.stringify(property.semantic) !== JSON.stringify(initialProperty.semantic),
+		type: JSON.stringify(property.type) !== JSON.stringify(initialProperty.type),
 		displayName: (property.displayName || '') !== (initialProperty.displayName || ''),
 		description: (property.description || '') !== (initialProperty.description || ''),
 		primarySource: primarySource !== initialPrimarySource,
@@ -797,7 +789,7 @@ const getVisiblePropertyKeys = (
 	}
 	const term = search?.trim().toLocaleLowerCase() || '';
 	for (const [key, property] of Object.entries(schema)) {
-		const typePresentation = getSchemaPropertyTypePresentation(property.type, property.semantic, 'grid');
+		const typePresentation = getSchemaPropertyTypePresentation(property.type, 'grid');
 		const matchesSearch =
 			term === '' ||
 			[
@@ -961,7 +953,7 @@ const buildRow = (
 	const actions = (
 		<div className='schema-edit__property-actions'>{status != null && <PropertyStatusBadge status={status} />}</div>
 	);
-	const typeCell: ReactNode = <SchemaPropertyType context='grid' type={property.type} semantic={property.semantic} />;
+	const typeCell: ReactNode = <SchemaPropertyType context='grid' type={property.type} />;
 	let primarySourceCell: ReactNode;
 	if (property.type.kind !== 'object' && property.type.kind !== 'array') {
 		if (primarySourceConnection) {

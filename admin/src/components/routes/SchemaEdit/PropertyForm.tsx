@@ -109,7 +109,6 @@ interface PropertyFormProps {
 	fieldChanges?: PropertyFieldChanges;
 	formID: string;
 	identifierPosition?: number;
-	materializedSemantic?: Semantic;
 	propertyToEdit: PropertyToEdit;
 	primarySources: Record<string, string>;
 	parents?: PropertyParent[];
@@ -123,7 +122,6 @@ const PropertyForm = ({
 	fieldChanges,
 	formID,
 	identifierPosition,
-	materializedSemantic,
 	propertyToEdit,
 	primarySources,
 	parents,
@@ -218,12 +216,12 @@ const PropertyForm = ({
 			if (current != null && current.location !== 'decimal-constraints' && current.location !== 'numeric-range') {
 				return current;
 			}
-			if ((property.semantic == null || hasSemanticDecimalRange(property.semantic)) && isNumericType(type)) {
+			if (isNumericType(type) && (type.semantic == null || hasSemanticDecimalRange(type.semantic))) {
 				return getNumericTypeError(type, decimalTypeInputs, numericRangeInputs);
 			}
 			return null;
 		});
-	}, [property.type, property.semantic, decimalTypeInputs, numericRangeInputs]);
+	}, [property.type, decimalTypeInputs, numericRangeInputs]);
 
 	useEffect(() => {
 		onValidityChange?.(nameError === '' && typeError == null);
@@ -332,14 +330,9 @@ const PropertyForm = ({
 		});
 	};
 
-	const onChangeType = (type: Type | null, semantic?: Semantic) => {
+	const onChangeType = (type: Type | null) => {
 		updateProperty((nextProperty) => {
 			nextProperty.type = type;
-			if (semantic == null) {
-				delete nextProperty.semantic;
-			} else {
-				nextProperty.semantic = semantic;
-			}
 		});
 		setDecimalTypeInputs(getDecimalTypeInputs(type));
 		setNumericRangeInputs(getNumericRangeInputs(type));
@@ -467,48 +460,41 @@ const PropertyForm = ({
 
 	const onChangeCurrency = (event) => {
 		const currency = event.target.value;
-		updateProperty((nextProperty) => {
-			if (nextProperty.semantic?.kind !== 'money') {
+		updateValueType((type: DecimalType) => {
+			if (type.semantic !== 'money') {
 				return;
 			}
 			if (currency === 'none') {
-				delete nextProperty.semantic.currency;
+				delete type.currency;
 			} else {
-				nextProperty.semantic.currency = currency;
+				type.currency = currency;
 			}
 		});
 	};
 
 	const onChangeCountryFormat = (event) => {
 		const format = event.target.value as CountryFormat;
-		updateProperty((nextProperty) => {
-			if (nextProperty.semantic?.kind !== 'country' || nextProperty.type == null) {
+		updateValueType((type: StringType) => {
+			if (type.semantic !== 'country') {
 				return;
 			}
-			const valueType = structuredClone(getPropertyValueType(nextProperty.type));
-			if (valueType?.kind !== 'string') {
-				return;
-			}
-			nextProperty.semantic.format = format;
-			valueType.maxLength = format === 'iso_3166_1_alpha_2' ? 2 : 3;
-			delete valueType.maxBytes;
-			nextProperty.type = replacePropertyValueType(nextProperty.type, valueType);
+			type.format = format;
 		});
 	};
 
 	const onChangeMeasurementUnit = (event) => {
-		updateProperty((nextProperty) => {
-			if (nextProperty.semantic?.kind === 'measurement') {
-				nextProperty.semantic.unit = event.target.value;
+		updateValueType((type: DecimalType) => {
+			if (type.semantic === 'measurement') {
+				type.unit = event.target.value;
 			}
 		});
 		setTypeError((current) => (current?.location === 'measurement-unit' ? null : current));
 	};
 
 	const onChangeDurationUnit = (event) => {
-		updateProperty((nextProperty) => {
-			if (nextProperty.semantic?.kind === 'duration') {
-				nextProperty.semantic.unit = event.target.value;
+		updateValueType((type: IntType) => {
+			if (type.semantic === 'duration') {
+				type.unit = event.target.value;
 			}
 		});
 		setTypeError((current) => (current?.location === 'duration-unit' ? null : current));
@@ -546,7 +532,9 @@ const PropertyForm = ({
 	};
 
 	const valueType = getPropertyValueType(property.type);
-	const showPercentageControls = valueType?.kind === 'decimal' && property.semantic?.kind === 'percentage';
+	const showPercentageControls = valueType?.kind === 'decimal' && valueType.semantic === 'percentage';
+	const showStringConstraints =
+		valueType?.kind === 'string' && valueType.semantic !== 'country' && valueType.semantic !== 'phone';
 	let decimalDescription: string | null = null;
 	if (valueType?.kind === 'decimal' && checkDecimalType(valueType) == null) {
 		const scale = valueType.scale ?? 0;
@@ -557,16 +545,17 @@ const PropertyForm = ({
 				: `${precisionDescription}, with ${scale} ${scale === 1 ? 'digit' : 'digits'} after the decimal point`;
 	}
 	const selectedConnection = sourceConnections.find((connection) => connection.id === primarySource);
-	const semantic = property.semantic;
 	const selectedCurrencyOption =
-		semantic?.kind === 'money' ? CURRENCY_OPTIONS.find((option) => option.code === semantic.currency) : undefined;
+		valueType?.kind === 'decimal' && valueType.semantic === 'money'
+			? CURRENCY_OPTIONS.find((option) => option.code === valueType.currency)
+			: undefined;
 	const selectedMeasurementUnitOption =
-		semantic?.kind === 'measurement'
-			? UNIT_OF_MEASURE_OPTIONS.find((option) => option.value === semantic.unit)
+		valueType?.kind === 'decimal' && valueType.semantic === 'measurement'
+			? UNIT_OF_MEASURE_OPTIONS.find((option) => option.value === valueType.unit)
 			: undefined;
 	const selectedDurationUnitOption =
-		semantic?.kind === 'duration'
-			? DURATION_UNIT_OPTIONS.find((option) => option.value === semantic.unit)
+		valueType?.kind === 'int' && valueType.semantic === 'duration'
+			? DURATION_UNIT_OPTIONS.find((option) => option.value === valueType.unit)
 			: undefined;
 	let minimumPlaceholder = '';
 	let maximumPlaceholder = '';
@@ -703,9 +692,7 @@ const PropertyForm = ({
 				<PropertyTypeSelector
 					ref={typeSelectorRef}
 					type={property.type}
-					semantic={property.semantic}
 					canEditType={canEditType}
-					materializedSemantic={materializedSemantic}
 					onChange={onChangeType}
 				/>
 				{showPercentageControls && (
@@ -719,29 +706,25 @@ const PropertyForm = ({
 					<PropertyFormError name='type'>{typeError.message}</PropertyFormError>
 				)}
 			</div>
-			{property.semantic?.kind === 'country' && (
+			{valueType?.kind === 'string' && valueType.semantic === 'country' && (
 				<div className='property-form__constraints property-form__constraints--country'>
 					{canEditType ? (
 						<SlSelect
 							className='property-form__country-format'
 							size='small'
-							value={property.semantic.format}
+							value={valueType.format}
 							onSlChange={onChangeCountryFormat}
 						>
 							<PropertyFormLabel slot='label'>Format</PropertyFormLabel>
-							<SlOption value='iso_3166_1_alpha_2'>2-letter ISO code</SlOption>
-							<SlOption value='iso_3166_1_alpha_3'>3-letter ISO code</SlOption>
+							<SlOption value='alpha-2'>2-letter ISO code</SlOption>
+							<SlOption value='alpha-3'>3-letter ISO code</SlOption>
 						</SlSelect>
 					) : (
 						<SlInput
 							className='property-form__country-format'
 							ref={removeReadOnlyTypeControlFromTabOrder}
 							size='small'
-							value={
-								property.semantic.format === 'iso_3166_1_alpha_2'
-									? '2-letter ISO code'
-									: '3-letter ISO code'
-							}
+							value={valueType.format === 'alpha-2' ? '2-letter ISO code' : '3-letter ISO code'}
 							readonly
 							tabIndex={-1}
 							onPointerDown={preventReadOnlyTypeControlFocus}
@@ -751,7 +734,7 @@ const PropertyForm = ({
 					)}
 				</div>
 			)}
-			{valueType?.kind === 'string' && property.semantic == null && (
+			{showStringConstraints && (
 				<div className='property-form__constraints property-form__constraints--length'>
 					<SlInput
 						ref={canEditType ? undefined : removeReadOnlyTypeControlFromTabOrder}
@@ -788,7 +771,7 @@ const PropertyForm = ({
 					)}
 				</div>
 			)}
-			{(valueType?.kind === 'int' || valueType?.kind === 'float') && property.semantic == null && (
+			{(valueType?.kind === 'int' || valueType?.kind === 'float') && valueType.semantic == null && (
 				<div
 					className={`property-form__constraints property-form__constraints--${
 						valueType.kind === 'int' ? 'integer' : 'float'
@@ -874,7 +857,7 @@ const PropertyForm = ({
 					{numericRangeControls}
 				</div>
 			)}
-			{valueType?.kind === 'decimal' && property.semantic == null && (
+			{valueType?.kind === 'decimal' && valueType.semantic == null && (
 				<div className='property-form__constraints property-form__constraints--decimal'>
 					<SlInput
 						className='property-form__precision'
@@ -914,13 +897,13 @@ const PropertyForm = ({
 					{numericRangeControls}
 				</div>
 			)}
-			{property.semantic?.kind === 'money' && (
+			{valueType?.kind === 'decimal' && valueType.semantic === 'money' && (
 				<div className='property-form__constraints property-form__constraints--money'>
 					{canEditType ? (
 						<SlSelect
 							className='property-form__currency'
 							size='small'
-							value={property.semantic.currency || 'none'}
+							value={valueType.currency || 'none'}
 							onSlChange={onChangeCurrency}
 						>
 							<PropertyFormLabel slot='label'>Currency</PropertyFormLabel>
@@ -972,18 +955,18 @@ const PropertyForm = ({
 					{numericRangeControls}
 				</div>
 			)}
-			{property.semantic?.kind === 'measurement' && (
+			{valueType?.kind === 'decimal' && valueType.semantic === 'measurement' && (
 				<div className='property-form__constraints property-form__constraints--measurement'>
 					{canEditType ? (
 						<SlSelect
 							className='property-form__measurement-unit'
 							size='small'
-							value={property.semantic.unit}
+							value={valueType.unit}
 							placeholder='Select a unit...'
 							onSlChange={onChangeMeasurementUnit}
 						>
 							<PropertyFormLabel slot='label'>Unit</PropertyFormLabel>
-							{!property.semantic.unit && (
+							{!valueType.unit && (
 								<SlOption className='property-form__unit-placeholder' value='' disabled />
 							)}
 							{UNIT_OF_MEASURE_OPTIONS.map((option, index) => (
@@ -1025,18 +1008,18 @@ const PropertyForm = ({
 					{numericRangeControls}
 				</div>
 			)}
-			{property.semantic?.kind === 'duration' && (
+			{valueType?.kind === 'int' && valueType.semantic === 'duration' && (
 				<div className='property-form__constraints property-form__constraints--duration'>
 					{canEditType ? (
 						<SlSelect
 							className='property-form__duration-unit'
 							size='small'
-							value={property.semantic.unit}
+							value={valueType.unit}
 							placeholder='Select a unit...'
 							onSlChange={onChangeDurationUnit}
 						>
 							<PropertyFormLabel slot='label'>Unit</PropertyFormLabel>
-							{!property.semantic.unit && (
+							{!valueType.unit && (
 								<SlOption className='property-form__unit-placeholder' value='' disabled />
 							)}
 							{DURATION_UNIT_OPTIONS.map((option) => (
@@ -1197,10 +1180,10 @@ const validatePropertyType = (
 	if (property.type == null) {
 		return { location: 'type', message: 'Type cannot be empty' };
 	}
-	if (property.semantic?.kind === 'measurement' && !property.semantic.unit) {
+	const type = getPropertyValueType(property.type);
+	if (type.kind === 'decimal' && type.semantic === 'measurement' && !type.unit) {
 		return { location: 'measurement-unit', message: 'Unit is required' };
 	}
-	const type = getPropertyValueType(property.type);
 	if (type.kind === 'string') {
 		if (
 			type.maxLength != null &&
@@ -1227,7 +1210,7 @@ const validatePropertyType = (
 			return error;
 		}
 	}
-	if (property.semantic?.kind === 'duration' && !property.semantic.unit) {
+	if (type.kind === 'int' && type.semantic === 'duration' && !type.unit) {
 		return { location: 'duration-unit', message: 'Unit is required' };
 	}
 	return null;
@@ -1404,7 +1387,7 @@ const isNumericType = (type: Type | null | undefined): type is NumericType => {
 };
 
 const hasSemanticDecimalRange = (semantic?: Semantic): boolean => {
-	return semantic?.kind === 'money' || semantic?.kind === 'percentage' || semantic?.kind === 'measurement';
+	return semantic === 'money' || semantic === 'percentage' || semantic === 'measurement';
 };
 
 const validatePropertyName = (name: string) => {

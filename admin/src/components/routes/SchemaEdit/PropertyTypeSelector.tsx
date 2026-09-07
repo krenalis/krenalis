@@ -5,8 +5,8 @@ import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
-import Type, { DurationUnit, Semantic, TypeKind, UnitOfMeasure } from '../../../lib/api/types/types';
-import { getPropertyValueType } from '../../helpers/types';
+import Type, { DurationUnit, TypeKind, UnitOfMeasure } from '../../../lib/api/types/types';
+import { getPropertyValueType, getTypeSemantic } from '../../helpers/types';
 import { SchemaPropertyType } from '../Schema/SchemaPropertyType';
 
 type PropertyStructure = 'one' | 'array' | 'object' | 'map';
@@ -30,13 +30,8 @@ interface PropertyStructureOption {
 	triggerLabel: string;
 }
 
-interface PropertyTypeSelection {
-	semantic?: Semantic;
-	type: Type;
-}
-
 interface PropertyTypeOption {
-	create: () => PropertyTypeSelection;
+	create: () => Type;
 	description?: string;
 	id: PropertyTypeOptionID;
 	kind: TypeKind;
@@ -45,9 +40,7 @@ interface PropertyTypeOption {
 
 interface PropertyTypeSelectorProps {
 	canEditType: boolean;
-	materializedSemantic?: Semantic;
-	onChange: (type: Type | null, semantic?: Semantic) => void;
-	semantic?: Semantic;
+	onChange: (type: Type | null) => void;
 	type: Type | null;
 }
 
@@ -95,137 +88,129 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 	{
 		id: 'email',
 		kind: 'string',
-		create: () => ({ type: { kind: 'string' }, semantic: { kind: 'email' } }),
+		create: () => ({ kind: 'string', semantic: 'email' }),
 	},
 	{
 		id: 'phone',
 		kind: 'string',
-		create: () => ({ type: { kind: 'string' }, semantic: { kind: 'phone' } }),
+		create: () => ({ kind: 'string', semantic: 'phone' }),
 	},
 	{
 		id: 'country',
 		kind: 'string',
-		create: () => ({
-			type: { kind: 'string', maxLength: 2 },
-			semantic: { kind: 'country', format: 'iso_3166_1_alpha_2' },
-		}),
+		create: () => ({ kind: 'string', semantic: 'country', format: 'alpha-2' }),
 	},
 	{
 		id: 'url',
 		kind: 'string',
-		create: () => ({ type: { kind: 'string' }, semantic: { kind: 'url' } }),
+		create: () => ({ kind: 'string', semantic: 'url' }),
 	},
 	{
 		id: 'string',
 		kind: 'string',
 		description: 'Text value, such as a name or code',
-		create: () => ({ type: { kind: 'string' } }),
+		create: () => ({ kind: 'string' }),
 	},
 	{
 		id: 'boolean',
 		kind: 'boolean',
 		description: 'True or false',
 		separated: true,
-		create: () => ({ type: { kind: 'boolean' } }),
+		create: () => ({ kind: 'boolean' }),
 	},
 	{
 		id: 'duration',
 		kind: 'int',
 		separated: true,
-		create: () => ({
-			type: { kind: 'int', bitSize: 64, unsigned: false },
-			semantic: { kind: 'duration', unit: EMPTY_DURATION_UNIT },
-		}),
+		create: () => ({ kind: 'int', bitSize: 64, unsigned: false, semantic: 'duration', unit: EMPTY_DURATION_UNIT }),
 	},
 	{
 		id: 'int',
 		kind: 'int',
 		description: 'Number with no decimal places',
-		create: () => ({ type: { kind: 'int', bitSize: 32, unsigned: false } }),
+		create: () => ({ kind: 'int', bitSize: 32, unsigned: false }),
 	},
 	{
 		id: 'float',
 		kind: 'float',
 		description: 'Number with approximate precision',
 		separated: true,
-		create: () => ({ type: { kind: 'float', bitSize: 64, real: false } }),
+		create: () => ({ kind: 'float', bitSize: 64, real: false }),
 	},
 	{
 		id: 'money',
 		kind: 'decimal',
 		separated: true,
-		create: () => ({ type: { ...PROFILE_SEMANTIC_DECIMAL_TYPE }, semantic: { kind: 'money' } }),
+		create: () => ({ ...PROFILE_SEMANTIC_DECIMAL_TYPE, semantic: 'money' }),
 	},
 	{
 		id: 'percentage',
 		kind: 'decimal',
-		create: () => ({
-			type: { ...PROFILE_SEMANTIC_DECIMAL_TYPE },
-			semantic: { kind: 'percentage' },
-		}),
+		create: () => ({ ...PROFILE_SEMANTIC_DECIMAL_TYPE, semantic: 'percentage' }),
 	},
 	{
 		id: 'measurement',
 		kind: 'decimal',
 		create: () => ({
-			type: { ...PROFILE_SEMANTIC_DECIMAL_TYPE },
-			semantic: { kind: 'measurement', unit: EMPTY_UNIT_OF_MEASURE },
+			...PROFILE_SEMANTIC_DECIMAL_TYPE,
+			semantic: 'measurement',
+			unit: EMPTY_UNIT_OF_MEASURE,
 		}),
 	},
 	{
 		id: 'decimal',
 		kind: 'decimal',
 		description: 'Decimal number with fixed precision',
-		create: () => ({ type: { kind: 'decimal', precision: 10, scale: 0 } }),
+		create: () => ({ kind: 'decimal', precision: 10, scale: 0 }),
 	},
 	{
 		id: 'datetime',
 		kind: 'datetime',
 		description: 'Date and time',
 		separated: true,
-		create: () => ({ type: { kind: 'datetime' } }),
+		create: () => ({ kind: 'datetime' }),
 	},
 	{
 		id: 'date',
 		kind: 'date',
 		description: 'Date without a time',
-		create: () => ({ type: { kind: 'date' } }),
+		create: () => ({ kind: 'date' }),
 	},
 	{
 		id: 'time',
 		kind: 'time',
 		description: 'Time without a date',
-		create: () => ({ type: { kind: 'time' } }),
+		create: () => ({ kind: 'time' }),
 	},
 	{
 		id: 'year',
 		kind: 'year',
 		description: 'Year',
-		create: () => ({ type: { kind: 'year' } }),
+		create: () => ({ kind: 'year' }),
 	},
 	{
 		id: 'uuid',
 		kind: 'uuid',
 		description: 'UUID',
 		separated: true,
-		create: () => ({ type: { kind: 'uuid' } }),
+		create: () => ({ kind: 'uuid' }),
 	},
 	{
 		id: 'json',
 		kind: 'json',
 		description: 'JSON value',
-		create: () => ({ type: { kind: 'json' } }),
+		create: () => ({ kind: 'json' }),
 	},
 	{
 		id: 'ip',
 		kind: 'ip',
 		description: 'IPv4 or IPv6 address',
-		create: () => ({ type: { kind: 'ip' } }),
+		create: () => ({ kind: 'ip' }),
 	},
 ];
 
 const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSelectorProps>(
-	({ type, semantic, canEditType, materializedSemantic, onChange }, ref) => {
+	({ type, canEditType, onChange }, ref) => {
 		const [structure, setStructure] = useState<PropertyStructure>(() => getPropertyStructure(type));
 		const structureDropdownRef = useRef<any>();
 		const dropdownRef = useRef<any>();
@@ -240,32 +225,16 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 		);
 
 		const valueType = getPropertyValueType(type);
-		const selectedOption = getPropertyTypeOption(type, semantic);
-		const materializedOption = getPropertyTypeOption(type, materializedSemantic);
+		const selectedOption = getPropertyTypeOption(type);
 		const selectedStructureOption =
 			PROPERTY_STRUCTURE_OPTIONS.find((option) => option.id === structure) || PROPERTY_STRUCTURE_OPTIONS[0];
 		const showValueTypeSelector = structure !== 'object';
-		const hasMaterializedSemanticTransition =
-			!canEditType && materializedOption != null && materializedSemantic != null;
-		const canChangeToBaseType = canEditType ? semantic != null : hasMaterializedSemanticTransition;
-		const isTypeOptionSelectable = (option: PropertyTypeOption) =>
-			canEditType || option.id === valueType?.kind || option.id === materializedOption?.id;
+		const isTypeOptionSelectable = (option: PropertyTypeOption) => canEditType || option.id === selectedOption?.id;
 		let typeChangeNote: React.ReactNode = null;
 		if (type != null) {
-			if (canChangeToBaseType && valueType != null) {
-				typeChangeNote = (
-					<>
-						{canEditType
-							? 'Once applied, this type can only be changed to '
-							: 'This type can only be changed to '}
-						<span className='property-type-selector__type-change-note-base-type'>{valueType.kind}</span>.
-					</>
-				);
-			} else {
-				typeChangeNote = canEditType
-					? "Can't be changed once the property has been applied."
-					: "This type can't be changed.";
-			}
+			typeChangeNote = canEditType
+				? "Can't be changed once the property has been applied."
+				: "This type can't be changed.";
 		}
 
 		useEffect(() => {
@@ -292,7 +261,7 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 				onChange(null);
 				return;
 			}
-			onChange(wrapPropertyValueType(valueType, nextStructure), semantic);
+			onChange(wrapPropertyValueType(valueType, nextStructure));
 		};
 
 		const onStructureMenuAfterHide = () => {
@@ -309,18 +278,14 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 				return;
 			}
 			const selection = option.create();
-			const nextSemantic =
-				!canEditType && option.id === materializedOption?.id
-					? structuredClone(materializedSemantic)
-					: selection.semantic;
 			let nextValueType = valueType;
-			if (canEditType && (selection.semantic != null || valueType?.kind !== option.kind)) {
-				nextValueType = selection.type;
+			if (canEditType && (getTypeSemantic(selection) != null || valueType?.kind !== option.kind)) {
+				nextValueType = selection;
 			}
 			if (nextValueType == null) {
 				return;
 			}
-			onChange(wrapPropertyValueType(nextValueType, structure), nextSemantic);
+			onChange(wrapPropertyValueType(nextValueType, structure));
 		};
 
 		return (
@@ -397,7 +362,7 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 								{valueType == null ? (
 									<span className='property-type-selector__placeholder'>Select type...</span>
 								) : (
-									<SchemaPropertyType context='trigger' type={valueType} semantic={semantic} />
+									<SchemaPropertyType context='trigger' type={valueType} />
 								)}
 							</SlButton>
 							<SlMenu className='property-type-selector__browser' onSlSelect={onSelectOption}>
@@ -405,11 +370,7 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 									const selectable = isTypeOptionSelectable(option);
 									const selection = option.create();
 									const optionType =
-										!canEditType && selectable && valueType != null ? valueType : selection.type;
-									const optionSemantic =
-										!canEditType && option.id === materializedOption?.id
-											? materializedSemantic
-											: selection.semantic;
+										!canEditType && selectable && valueType != null ? valueType : selection;
 									return (
 										<SlMenuItem
 											className={`property-type-selector__option${
@@ -427,7 +388,6 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 											<SchemaPropertyType
 												context='menu'
 												type={optionType}
-												semantic={optionSemantic}
 												description={option.description}
 												catalogOption={canEditType || !selectable}
 											/>
@@ -460,8 +420,9 @@ const getPropertyStructure = (type: Type | null): PropertyStructure => {
 	return 'one';
 };
 
-const getPropertyTypeOption = (type: Type | null, semantic?: Semantic): PropertyTypeOption | undefined => {
-	const id: PropertyTypeOptionID | undefined = semantic == null ? getPropertyValueType(type)?.kind : semantic.kind;
+const getPropertyTypeOption = (type: Type | null): PropertyTypeOption | undefined => {
+	const valueType = getPropertyValueType(type);
+	const id: PropertyTypeOptionID | undefined = getTypeSemantic(valueType) ?? valueType?.kind;
 	return PROPERTY_TYPE_OPTIONS.find((option) => option.id === id);
 };
 

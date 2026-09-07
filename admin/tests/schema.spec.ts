@@ -1,6 +1,6 @@
 import { test, expect, type Locator } from '@playwright/test';
 import { login, logout, adminURL, logValidationErrors } from './utils';
-import { ObjectType, Property, Semantic } from '../src/lib/api/types/types';
+import { ObjectType, Property } from '../src/lib/api/types/types';
 
 const selectPropertyType = async (page, option: string) => {
 	const panel = page.locator('.property-panel');
@@ -772,8 +772,7 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 						displayName: 'Country',
 						prefilled: '',
 						role: 'Both',
-						type: { kind: 'string', maxLength: 2 },
-						semantic: { kind: 'country', format: 'iso_3166_1_alpha_2' },
+						type: { kind: 'string', semantic: 'country', format: 'alpha-2' },
 						createRequired: false,
 						updateRequired: false,
 						readOptional: true,
@@ -883,9 +882,7 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 		panel.locator('.property-details-panel__detail').first().locator('.property-details-panel__value'),
 	).toHaveText('country');
 	const countryRow = page.locator('.schema-grid .grid__row[data-id="address.country"]');
-	await expect(countryRow.locator('.schema-property-type')).toHaveText(
-		'country — 2-letter ISO code · string · max 2 chars',
-	);
+	await expect(countryRow.locator('.schema-property-type')).toHaveText('country — 2-letter ISO code · string');
 	expect(
 		await countryRow
 			.locator('.schema-property-type__primary')
@@ -956,9 +953,7 @@ test(`Show identifier order and renumber identifiers after removing a property`,
 	await expect(identifierDetail).toHaveText('Identifier #1');
 	await expect(identifierDetail.locator('.schema-property-grid__identifier')).toHaveText('#1');
 	await openProperty(page, 'phone_numbers');
-	await expect(
-		page.locator('.property-details-panel__label').filter({ hasText: 'Identifier' }),
-	).toHaveCount(0);
+	await expect(page.locator('.property-details-panel__label').filter({ hasText: 'Identifier' })).toHaveCount(0);
 	await openProperty(page, 'email');
 
 	await editSchema(page);
@@ -1322,21 +1317,21 @@ test(`Create profile schema properties with semantic defaults and options`, asyn
 	);
 	await expect(propertyPanel.locator('.property-form__constraints--length')).toHaveCount(0);
 	const countryFormat = propertyPanel.locator('.property-form__country-format');
-	await expect(countryFormat).toHaveJSProperty('value', 'iso_3166_1_alpha_2');
+	await expect(countryFormat).toHaveJSProperty('value', 'alpha-2');
 	expect(
 		await countryFormat
 			.locator('sl-option')
 			.evaluateAll((options) => options.map((option) => option.getAttribute('value'))),
-	).toEqual(['iso_3166_1_alpha_2', 'iso_3166_1_alpha_3']);
+	).toEqual(['alpha-2', 'alpha-3']);
 	await countryFormat.click();
-	await countryFormat.locator('sl-option[value="iso_3166_1_alpha_3"]').click();
-	await expect(countryFormat).toHaveJSProperty('value', 'iso_3166_1_alpha_3');
+	await countryFormat.locator('sl-option[value="alpha-3"]').click();
+	await expect(countryFormat).toHaveJSProperty('value', 'alpha-3');
 	await expect(propertyPanel.locator('.property-type-selector__trigger .schema-property-type')).toHaveText(
 		'country · string',
 	);
 	await propertyPanel.locator('.property-panel__save').click();
 	await expect(page.locator('.schema-edit .grid__row[data-id="semantic_country"] .schema-property-type')).toHaveText(
-		'country — 3-letter ISO code · string · max 3 chars',
+		'country — 3-letter ISO code · string',
 	);
 
 	await page.locator('.schema-edit__add-property').click();
@@ -1428,38 +1423,44 @@ test(`Create profile schema properties with semantic defaults and options`, asyn
 	await page.locator('.schema-edit__header-apply-button').click();
 	const schema = (await previewRequestPromise).postDataJSON().schema as ObjectType;
 	const country = schema.properties.find((property) => property.name === 'semantic_country');
-	expect(country?.type).toEqual({ kind: 'string', maxLength: 3 });
-	expect(country?.semantic).toEqual({ kind: 'country', format: 'iso_3166_1_alpha_3' });
+	expect(country?.type).toEqual({ kind: 'string', semantic: 'country', format: 'alpha-3' });
 	const percentage = schema.properties.find((property) => property.name === 'semantic_percentage');
 	expect(percentage?.type).toEqual({
 		kind: 'decimal',
+		semantic: 'percentage',
 		precision: 18,
 		scale: 4,
 		minimum: -0.25,
 		maximum: 1.5,
 	});
-	expect(percentage?.semantic).toEqual({ kind: 'percentage' });
 	const money = schema.properties.find((property) => property.name === 'semantic_money');
 	expect(money?.type).toEqual({
 		kind: 'decimal',
+		semantic: 'money',
+		currency: 'EUR',
 		precision: 18,
 		scale: 4,
 		minimum: -100.25,
 		maximum: 999.9999,
 	});
-	expect(money?.semantic).toEqual({ kind: 'money', currency: 'EUR' });
 	const measurement = schema.properties.find((property) => property.name === 'semantic_measurement');
 	expect(measurement?.type).toEqual({
 		kind: 'decimal',
+		semantic: 'measurement',
+		unit: 'kg',
 		precision: 18,
 		scale: 4,
 		minimum: -10.5,
 		maximum: 10.5,
 	});
-	expect(measurement?.semantic).toEqual({ kind: 'measurement', unit: 'kg' });
 	const duration = schema.properties.find((property) => property.name === 'semantic_duration');
-	expect(duration?.type).toEqual({ kind: 'int', bitSize: 64, unsigned: false });
-	expect(duration?.semantic).toEqual({ kind: 'duration', unit: 'second' });
+	expect(duration?.type).toEqual({
+		kind: 'int',
+		semantic: 'duration',
+		unit: 'second',
+		bitSize: 64,
+		unsigned: false,
+	});
 });
 
 test(`Show materialized type catalogs, restrict transitions, and preserve physical configuration`, async ({ page }) => {
@@ -1468,20 +1469,20 @@ test(`Show materialized type catalogs, restrict transitions, and preserve physic
 		const schema = (await response.json()) as ObjectType;
 		const email = schema.properties.find((property) => property.name === 'email');
 		email.type = { kind: 'string', maxLength: 100 };
-		delete email.semantic;
 		const materializedEmail = structuredClone(email);
 		materializedEmail.name = 'materialized_email';
-		materializedEmail.semantic = { kind: 'email' };
+		materializedEmail.type = { kind: 'string', semantic: 'email', maxLength: 100 };
 		const materializedMoney = structuredClone(email);
 		materializedMoney.name = 'materialized_money';
 		materializedMoney.type = {
 			kind: 'decimal',
+			semantic: 'money',
+			currency: 'EUR',
 			precision: 18,
 			scale: 4,
 			minimum: -0.5,
 			maximum: 1.25,
 		};
-		materializedMoney.semantic = { kind: 'money', currency: 'EUR' };
 		schema.properties.push(materializedEmail, materializedMoney);
 		await route.fulfill({ response, json: schema });
 	});
@@ -1516,11 +1517,11 @@ test(`Show materialized type catalogs, restrict transitions, and preserve physic
 	await selectPropertyType(page, 'string');
 	await expect(typeChangeNote).toHaveText("Can't be changed once the property has been applied.");
 	await selectPropertyType(page, 'email');
-	await expect(typeChangeNote).toHaveText('Once applied, this type can only be changed to string.');
+	await expect(typeChangeNote).toHaveText("Can't be changed once the property has been applied.");
 	await selectPropertyType(page, 'money');
-	await expect(typeChangeNote).toHaveText('Once applied, this type can only be changed to decimal.');
+	await expect(typeChangeNote).toHaveText("Can't be changed once the property has been applied.");
 	await selectPropertyType(page, 'duration');
-	await expect(typeChangeNote).toHaveText('Once applied, this type can only be changed to int.');
+	await expect(typeChangeNote).toHaveText("Can't be changed once the property has been applied.");
 	await propertyPanel.locator('.property-panel__cancel').click();
 
 	await openProperty(page, 'email');
@@ -1583,52 +1584,26 @@ test(`Show materialized type catalogs, restrict transitions, and preserve physic
 	await openProperty(page, 'materialized_email');
 	await expect(typeDropdown).toHaveCount(1);
 	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('email · string');
-	await expect(typeChangeNote).toHaveText('This type can only be changed to string.');
+	await expect(typeChangeNote).toHaveText("This type can't be changed.");
 	await typeTrigger.click();
 	await expect(typeOptions).toHaveCount(20);
 	expect(
 		await propertyPanel
 			.locator('.property-type-selector__option:not([disabled])')
 			.evaluateAll((options) => options.map((option) => option.getAttribute('data-type-option'))),
-	).toEqual(['email', 'string']);
-	await expect(propertyPanel.locator('.property-type-selector__option[disabled]')).toHaveCount(18);
+	).toEqual(['email']);
+	await expect(propertyPanel.locator('.property-type-selector__option[disabled]')).toHaveCount(19);
 	await expect(typeDropdown.locator('.property-type-selector__type-change-note')).toHaveCount(0);
 	await expect(propertyPanel.locator('[data-type-option="email"] .schema-property-type')).toHaveText(
 		'email · string · max 100 chars',
 	);
 	await expect(propertyPanel.locator('[data-type-option="string"] .schema-property-type')).toHaveText(
-		'string · max 100 chars · Text value, such as a name or code',
+		'string · Text value, such as a name or code',
 	);
 	await expect(propertyPanel.locator('[data-type-option="phone"] .schema-property-type')).toHaveText(
 		'phone number · string',
 	);
-	await propertyPanel.locator('[data-type-option="string"]').click();
-	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('string');
-	const lengthConstraints = propertyPanel.locator('.property-form__constraints--length sl-input');
-	await expect(lengthConstraints).toHaveCount(2);
-	await expect(lengthConstraints.first().locator('input')).toHaveValue('100');
-	await expect(lengthConstraints.first()).toHaveAttribute('readonly');
-	await expect(lengthConstraints.first()).not.toHaveAttribute('disabled');
-
-	// The original semantic can be restored until the draft is applied.
-	const emailOption = propertyPanel.locator('[data-type-option="email"]');
-	await emailOption.waitFor({ state: 'hidden' });
 	await typeTrigger.click();
-	await expect(typeOptions).toHaveCount(20);
-	await emailOption.waitFor({ state: 'visible' });
-	await expect(emailOption).not.toHaveAttribute('disabled');
-	await emailOption.click();
-	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('email · string');
-	const stringOption = propertyPanel.locator('[data-type-option="string"]');
-	await stringOption.waitFor({ state: 'hidden' });
-	await typeTrigger.click();
-	await stringOption.waitFor({ state: 'visible' });
-	await stringOption.click();
-	await emailOption.waitFor({ state: 'hidden' });
-	await propertyPanel.locator('.property-panel__save').click();
-	await expect(
-		page.locator('.schema-edit .grid__row[data-id="materialized_email"] .schema-property-type'),
-	).toHaveText('string · max 100 chars');
 
 	await openProperty(page, 'materialized_money');
 	const currency = propertyPanel.locator('.property-form__currency');
@@ -1637,24 +1612,23 @@ test(`Show materialized type catalogs, restrict transitions, and preserve physic
 	await expect(currency).toHaveAttribute('readonly');
 	await expect(currency).toHaveAttribute('tabindex', '-1');
 	await expect(currency).not.toHaveAttribute('disabled');
-	await expect(typeChangeNote).toHaveText('This type can only be changed to decimal.');
+	await expect(typeChangeNote).toHaveText("This type can't be changed.");
 	await typeTrigger.click();
 	await expect(typeOptions).toHaveCount(20);
 	expect(
 		await propertyPanel
 			.locator('.property-type-selector__option:not([disabled])')
 			.evaluateAll((options) => options.map((option) => option.getAttribute('data-type-option'))),
-	).toEqual(['money', 'decimal']);
-	await expect(propertyPanel.locator('.property-type-selector__option[disabled]')).toHaveCount(18);
+	).toEqual(['money']);
+	await expect(propertyPanel.locator('.property-type-selector__option[disabled]')).toHaveCount(19);
 	await expect(propertyPanel.locator('[data-type-option="money"] .schema-property-type')).toHaveText(
 		'money · decimal(18,4) · min -0.5, max 1.25',
 	);
 	await expect(propertyPanel.locator('[data-type-option="decimal"] .schema-property-type')).toHaveText(
-		'decimal(18,4) · min -0.5, max 1.25 · Decimal number with fixed precision',
+		'decimal(10,0) · Decimal number with fixed precision',
 	);
-	await propertyPanel.locator('[data-type-option="decimal"]').click();
-	await expect(currency).toHaveCount(0);
-	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('decimal');
+	await typeTrigger.click();
+	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Materialized money');
 	await propertyPanel.locator('.property-panel__save').click();
 
 	const previewRequestPromise = page.waitForRequest(
@@ -1664,23 +1638,21 @@ test(`Show materialized type catalogs, restrict transitions, and preserve physic
 	const schema = (await previewRequestPromise).postDataJSON().schema as ObjectType;
 	const email = schema.properties.find((property) => property.name === 'email');
 	expect(email?.type).toEqual({ kind: 'string', maxLength: 100 });
-	expect(email?.semantic).toBeUndefined();
 	const materializedEmail = schema.properties.find((property) => property.name === 'materialized_email');
-	expect(materializedEmail?.type).toEqual({ kind: 'string', maxLength: 100 });
-	expect(materializedEmail?.semantic).toBeUndefined();
+	expect(materializedEmail?.type).toEqual({ kind: 'string', semantic: 'email', maxLength: 100 });
 	const materializedMoney = schema.properties.find((property) => property.name === 'materialized_money');
 	expect(materializedMoney?.type).toEqual({
 		kind: 'decimal',
+		semantic: 'money',
+		currency: 'EUR',
 		precision: 18,
 		scale: 4,
 		minimum: -0.5,
 		maximum: 1.25,
 	});
-	expect(materializedMoney?.semantic).toBeUndefined();
 });
 
 test(`Render array and map property types and preserve their semantics`, async ({ page }) => {
-	const semantic: Semantic = { kind: 'phone' };
 	await page.route('**/v1/profiles/schema/preview', async (route) => {
 		await route.fulfill({ json: { queries: [] } });
 	});
@@ -1695,10 +1667,10 @@ test(`Render array and map property types and preserve their semantics`, async (
 			const plainMapProperty = structuredClone(arrayProperty);
 			plainMapProperty.name = 'plain_phone_numbers_by_kind';
 			plainMapProperty.type = { kind: 'map', elementType: { kind: 'string', maxLength: 300 } };
-			arrayProperty.semantic = semantic;
+			arrayProperty.type = { kind: 'array', elementType: { kind: 'string', semantic: 'phone' } };
 			const semanticMapProperty = structuredClone(plainMapProperty);
 			semanticMapProperty.name = 'phone_numbers_by_kind';
-			semanticMapProperty.semantic = semantic;
+			semanticMapProperty.type = { kind: 'map', elementType: { kind: 'string', semantic: 'phone' } };
 			schema.properties.push(plainArrayProperty, plainMapProperty, semanticMapProperty);
 			await route.fulfill({ response, json: schema });
 			return;
@@ -1712,8 +1684,8 @@ test(`Render array and map property types and preserve their semantics`, async (
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
 	const expectedTypes = {
-		phone_numbers: 'array of phone number · string · max 300 chars',
-		phone_numbers_by_kind: 'map of phone number · string · max 300 chars',
+		phone_numbers: 'array of phone number · string',
+		phone_numbers_by_kind: 'map of phone number · string',
 		plain_phone_numbers: 'array of string · max 300 chars',
 		plain_phone_numbers_by_kind: 'map of string · max 300 chars',
 	};
@@ -1743,7 +1715,7 @@ test(`Render array and map property types and preserve their semantics`, async (
 		'phone number · string',
 	);
 	await expect(propertyPanel.locator('.property-type-selector__type-change-note')).toHaveText(
-		'This type can only be changed to string.',
+		"This type can't be changed.",
 	);
 	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Updated description');
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
@@ -1758,9 +1730,9 @@ test(`Render array and map property types and preserve their semantics`, async (
 	]);
 	const body = JSON.parse(response.request().postData());
 	const property = body.schema.properties.find((property) => property.name === 'phone_numbers');
-	expect(property.semantic).toEqual(semantic);
+	expect(property.type).toEqual({ kind: 'array', elementType: { kind: 'string', semantic: 'phone' } });
 	const mapProperty = body.schema.properties.find((property) => property.name === 'phone_numbers_by_kind');
-	expect(mapProperty.semantic).toEqual(semantic);
+	expect(mapProperty.type).toEqual({ kind: 'map', elementType: { kind: 'string', semantic: 'phone' } });
 });
 
 test(`Add schema property`, async ({ page }) => {

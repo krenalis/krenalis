@@ -1,7 +1,12 @@
 import React from 'react';
 import './SchemaPropertyType.css';
-import Type, { Semantic } from '../../../lib/api/types/types';
-import { DURATION_UNIT_OPTIONS, getPropertyValueType, toKrenalisStringType } from '../../helpers/types';
+import Type from '../../../lib/api/types/types';
+import {
+	DURATION_UNIT_OPTIONS,
+	getPropertyValueType,
+	getTypeSemantic,
+	toKrenalisStringType,
+} from '../../helpers/types';
 
 type SchemaPropertyTypeContext = 'menu' | 'trigger' | 'grid' | 'details';
 
@@ -14,7 +19,6 @@ interface SchemaPropertyTypeProps {
 	catalogOption?: boolean;
 	context: SchemaPropertyTypeContext;
 	description?: string;
-	semantic?: Semantic;
 	type: Type;
 }
 
@@ -23,10 +27,11 @@ interface PresentationOptions {
 	description?: string;
 }
 
-const SchemaPropertyType = ({ catalogOption, context, description, semantic, type }: SchemaPropertyTypeProps) => {
+const SchemaPropertyType = ({ catalogOption, context, description, type }: SchemaPropertyTypeProps) => {
+	const semantic = getTypeSemantic(getPropertyValueType(type));
 	if (context === 'details') {
 		const physicalType = toCompactPhysicalType(type);
-		const semanticLabel = semantic == null ? null : toSemanticLabel(semantic, context);
+		const semanticLabel = semantic == null ? null : toSemanticLabel(type, context);
 		const title = semanticLabel == null ? physicalType : `${physicalType}\n${semanticLabel}`;
 
 		return (
@@ -39,7 +44,7 @@ const SchemaPropertyType = ({ catalogOption, context, description, semantic, typ
 		);
 	}
 
-	const presentation = getSchemaPropertyTypePresentation(type, semantic, context, {
+	const presentation = getSchemaPropertyTypePresentation(type, context, {
 		catalogOption,
 		description,
 	});
@@ -72,10 +77,10 @@ const SchemaPropertyType = ({ catalogOption, context, description, semantic, typ
 
 const getSchemaPropertyTypePresentation = (
 	type: Type,
-	semantic: Semantic | undefined,
 	context: Exclude<SchemaPropertyTypeContext, 'details'>,
 	options: PresentationOptions = {},
 ): SchemaPropertyTypePresentation => {
+	const semantic = getTypeSemantic(getPropertyValueType(type));
 	if (semantic == null) {
 		let primary: string;
 		if (context === 'trigger' || options.catalogOption) {
@@ -90,7 +95,7 @@ const getSchemaPropertyTypePresentation = (
 		};
 	}
 
-	const semanticLabel = toSemanticLabel(semantic, context);
+	const semanticLabel = toSemanticLabel(type, context);
 	if (context === 'grid') {
 		return {
 			metadata: toProfileSchemaSemanticPhysicalType(type),
@@ -100,7 +105,7 @@ const getSchemaPropertyTypePresentation = (
 
 	const usePhysicalTypeFamily =
 		context === 'trigger' ||
-		(context === 'menu' && options.catalogOption && (semantic.kind === 'country' || semantic.kind === 'duration'));
+		(context === 'menu' && options.catalogOption && (semantic === 'country' || semantic === 'duration'));
 
 	return {
 		metadata: usePhysicalTypeFamily ? toPhysicalTypeFamily(type) : toProfileSchemaPhysicalType(type),
@@ -150,8 +155,10 @@ const withPropertyStructure = (type: Type, label: string): string => {
 	return label;
 };
 
-const toSemanticLabel = (semantic: Semantic, context: SchemaPropertyTypeContext): string => {
-	switch (semantic.kind) {
+const toSemanticLabel = (type: Type, context: SchemaPropertyTypeContext): string => {
+	const valueType = getPropertyValueType(type);
+	const semantic = getTypeSemantic(valueType);
+	switch (semantic) {
 		case 'email':
 			return 'email';
 		case 'phone':
@@ -159,7 +166,7 @@ const toSemanticLabel = (semantic: Semantic, context: SchemaPropertyTypeContext)
 		case 'url':
 			return 'URL';
 		case 'country': {
-			const letters = semantic.format === 'iso_3166_1_alpha_2' ? 2 : 3;
+			const letters = valueType?.kind === 'string' && valueType.format === 'alpha-2' ? 2 : 3;
 			if (context === 'details') {
 				return `country (${letters}-letter)`;
 			}
@@ -169,14 +176,20 @@ const toSemanticLabel = (semantic: Semantic, context: SchemaPropertyTypeContext)
 			return 'country';
 		}
 		case 'money':
-			return context === 'grid' && semantic.currency != null ? `money — ${semantic.currency}` : 'money';
+			return context === 'grid' && valueType?.kind === 'decimal' && valueType.currency != null
+				? `money — ${valueType.currency}`
+				: 'money';
 		case 'percentage':
 			return 'percentage';
 		case 'measurement':
-			return context === 'grid' ? `measurement — ${semantic.unit}` : 'measurement';
+			return context === 'grid' && valueType != null && 'unit' in valueType
+				? `measurement — ${valueType.unit}`
+				: 'measurement';
 		case 'duration': {
 			if (context === 'grid') {
-				const unit = DURATION_UNIT_OPTIONS.find((option) => option.value === semantic.unit);
+				const unit = DURATION_UNIT_OPTIONS.find(
+					(option) => valueType != null && 'unit' in valueType && option.value === valueType.unit,
+				);
 				if (unit != null) {
 					return `duration — ${unit.symbol}`;
 				}
@@ -184,7 +197,7 @@ const toSemanticLabel = (semantic: Semantic, context: SchemaPropertyTypeContext)
 			return 'duration';
 		}
 		default:
-			throw new Error(`unknown semantic kind ${semantic satisfies never}`);
+			throw new Error(`unknown semantic ${semantic satisfies never}`);
 	}
 };
 

@@ -1,6 +1,11 @@
 import React, { ReactNode } from 'react';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
-import { DURATION_UNIT_OPTIONS, isSuitableAsIdentifier, UNIT_OF_MEASURE_OPTIONS } from '../../helpers/types';
+import {
+	DURATION_UNIT_OPTIONS,
+	getPropertyValueType,
+	isSuitableAsIdentifier,
+	UNIT_OF_MEASURE_OPTIONS,
+} from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { Property } from '../../../lib/api/types/types';
 import TransformedConnection from '../../../lib/core/connection';
@@ -34,7 +39,7 @@ const PropertyDetailsPanel = ({ identifierPosition, onClose, primarySource, prop
 				<div className='property-details-panel__section'>
 					<PropertyDetail label='Name'>{property.name}</PropertyDetail>
 					<PropertyDetail label='Type'>
-						<SchemaPropertyType context='details' type={property.type} semantic={property.semantic} />
+						<SchemaPropertyType context='details' type={property.type} />
 					</PropertyDetail>
 					{semanticDetail != null && (
 						<PropertyDetail label={semanticDetail.label}>
@@ -73,16 +78,16 @@ const PropertyDetailsPanel = ({ identifierPosition, onClose, primarySource, prop
 };
 
 const getSemanticDetail = (property: Property): { label: string; value?: string } | null => {
-	const semantic = property.semantic;
-	if (semantic?.kind === 'money') {
-		return { label: 'Currency', value: semantic.currency };
+	const type = getPropertyValueType(property.type);
+	if (type?.kind === 'decimal' && type.semantic === 'money') {
+		return { label: 'Currency', value: type.currency };
 	}
-	if (semantic?.kind === 'measurement') {
-		const option = UNIT_OF_MEASURE_OPTIONS.find((candidate) => candidate.value === semantic.unit);
+	if (type != null && 'semantic' in type && type.semantic === 'measurement') {
+		const option = UNIT_OF_MEASURE_OPTIONS.find((candidate) => candidate.value === type.unit);
 		return { label: 'Unit', value: option == null ? undefined : `${option.label} · ${option.value}` };
 	}
-	if (semantic?.kind === 'duration') {
-		const option = DURATION_UNIT_OPTIONS.find((candidate) => candidate.value === semantic.unit);
+	if (type != null && 'semantic' in type && type.semantic === 'duration') {
+		const option = DURATION_UNIT_OPTIONS.find((candidate) => candidate.value === type.unit);
 		return { label: 'Unit', value: option == null ? undefined : `${option.label} · ${option.symbol}` };
 	}
 	return null;

@@ -20,7 +20,6 @@ interface PropertyPanelProps {
 	dirty: boolean;
 	fieldChanges?: PropertyFieldChanges;
 	identifierPosition?: number;
-	materializedSemantic?: PropertyToEdit['semantic'];
 	property: PropertyToEdit | null;
 	parents: PropertyParent[];
 	primarySources: PrimarySources;
@@ -37,7 +36,6 @@ const PropertyPanel = ({
 	dirty,
 	fieldChanges,
 	identifierPosition,
-	materializedSemantic,
 	property,
 	parents,
 	primarySources,
@@ -111,7 +109,6 @@ const PropertyPanel = ({
 						fieldChanges={fieldChanges}
 						formID={formID}
 						identifierPosition={identifierPosition}
-						materializedSemantic={materializedSemantic}
 						propertyToEdit={property}
 						primarySources={primarySources}
 						parents={parents}
