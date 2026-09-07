@@ -405,6 +405,9 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 			if err == connectors.ErrEventTypeNotExist {
 				return "", errors.Unprocessable(EventTypeNotExist, "connection %s does not have event type %q", c.ID, eventType)
 			}
+			if _, ok := err.(*connections.UnavailableError); ok {
+				err = errors.Unavailable("%s", err)
+			}
 			return "", err
 		}
 		orderingGroup = connectors.OrderingGroup(et)
