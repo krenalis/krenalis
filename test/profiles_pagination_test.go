@@ -6,12 +6,12 @@ package test
 
 import (
 	"bytes"
+	"errors"
 	"net/http"
 	"net/url"
 	"testing"
 
 	"github.com/krenalis/krenalis/test/krenalistester"
-	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )

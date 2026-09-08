@@ -7,6 +7,7 @@ package postgresql
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -18,7 +19,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/types"
