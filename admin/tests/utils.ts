@@ -350,7 +350,8 @@ const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 	await expect(filters.nth(1).getByRole('button', { name: 'Remove condition 2', exact: true })).toBeFocused();
 
 	await filters.nth(2).locator('.pipeline__filters-remove-condition').click(); // remove the last filter.
-	await expect(filters.nth(2).locator('.pipeline__filters-property sl-input')).toBeFocused();
+	await expect(filters).toHaveCount(2);
+	await expect(filters.nth(1).locator('.pipeline__filters-property sl-input')).toBeFocused();
 	await expect(page.locator('.filter-editor__announcement')).toHaveText('Condition removed');
 
 	await expect(rootActions.locator('.pipeline__filters-add-condition')).toContainText('Add a condition');

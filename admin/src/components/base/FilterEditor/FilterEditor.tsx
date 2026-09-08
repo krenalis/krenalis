@@ -4,7 +4,9 @@ import { getFilterPropertyComboboxItems } from '../../helpers/getSchemaComboboxI
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import type SlButtonElement from '@shoelace-style/shoelace/dist/components/button/button.component.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import type SlInputElement from '@shoelace-style/shoelace/dist/components/input/input.component.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { Combobox } from '../Combobox/Combobox';
@@ -148,14 +150,24 @@ const FilterEditor = ({
 		}
 		pendingConditionFocusRef.current = undefined;
 
-		const propertyInputs = rootRef.current?.querySelectorAll<HTMLElement>('.pipeline__filters-property sl-input');
+		const propertyInputs = rootRef.current?.querySelectorAll<SlInputElement>(
+			'.pipeline__filters-property sl-input',
+		);
 		const target =
 			typeof pendingFocus === 'number'
 				? propertyInputs?.[pendingFocus]
-				: rootRef.current?.querySelector<HTMLElement>('.pipeline__filters-add-condition');
+				: rootRef.current?.querySelector<SlButtonElement>('.pipeline__filters-add-condition');
 		if (target != null) {
-			target.focus({ preventScroll: true });
-			return;
+			// Removing a rule can remount the next input before its internal control is ready.
+			let canceled = false;
+			void target.updateComplete.then(() => {
+				if (!canceled && target.isConnected) {
+					target.focus({ preventScroll: true });
+				}
+			});
+			return () => {
+				canceled = true;
+			};
 		}
 
 		// The fallback may be a newly mounted web component whose internal control is not ready yet.
@@ -356,23 +368,26 @@ const FilterEditor = ({
 	};
 
 	const onOperatorSelectClose = (event: any) => {
-		const operator = FILTER_OPERATORS[event.target.value];
+		const select = event.target;
+		// Hand off focus only after closing, without stealing it from a reopened menu or another control.
+		if (select.open || document.activeElement !== select) {
+			return;
+		}
+		const operator = FILTER_OPERATORS[select.value];
 		if (operator == null || isUnaryOperator(operator)) {
 			return;
 		}
-		setTimeout(() => {
-			const valueInput = event.target
-				.closest('.pipeline__filters-condition')
-				?.querySelector('.pipeline__filters-value-input');
-			if (valueInput == null) {
-				return;
-			}
-			if (valueInput.tagName === 'SL-SELECT') {
-				valueInput.show();
-			} else {
-				valueInput.focus();
-			}
-		}, 50);
+		const valueInput = select
+			.closest('.pipeline__filters-condition')
+			?.querySelector('.pipeline__filters-value-input');
+		if (valueInput == null) {
+			return;
+		}
+		if (valueInput.tagName === 'SL-SELECT' && !valueInput.open) {
+			valueInput.show();
+		} else {
+			valueInput.focus();
+		}
 	};
 
 	const updateValue = (path: number[], position: number, value: string): Filter => {
@@ -479,7 +494,7 @@ const FilterEditor = ({
 				className='pipeline__filters-operator'
 				value={String(FILTER_OPERATORS.findIndex((operator) => operator === condition.operator))}
 				onSlChange={(event: any) => changeOperator(path, FILTER_OPERATORS[event.target.value])}
-				onSlHide={onOperatorSelectClose}
+				onSlAfterHide={onOperatorSelectClose}
 				placeholder='Operator'
 				disabled={isInvalidProperty || disabled}
 				hoist={hoistMenus}

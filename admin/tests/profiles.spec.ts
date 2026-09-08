@@ -205,7 +205,9 @@ const fillStringFilterCondition = async (condition: Locator, propertyName: RegEx
 	const property = condition.locator('.pipeline__filters-property');
 	await property.locator('sl-input').click();
 	await property.locator('sl-menu-item .schema-combobox-item__name', { hasText: propertyName }).click();
-	await condition.locator('.pipeline__filters-operator sl-option[value="0"]').click();
+	const operator = condition.locator('.pipeline__filters-operator').getByRole('combobox');
+	await operator.press('Home');
+	await operator.press('Enter');
 	const valueInput = condition.locator('.pipeline__filters-value-input input');
 	await valueInput.fill(value);
 	await valueInput.press('Enter');
@@ -482,6 +484,11 @@ test(`Reorder profile columns without reloading their data and preserve the orde
 	const lastNameHandle = page.getByRole('button', { name: 'Move Last name column' });
 	await lastNameHandle.focus();
 	await page.keyboard.press('Space');
+	await expect(page.locator('[role="status"][aria-live="assertive"]')).toContainText(
+		'Draggable item last_name was moved over droppable area last_name.',
+	);
+	// The keyboard sensor attaches its listener in a deferred task after activation.
+	await page.evaluate(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
 	await page.keyboard.press('ArrowLeft');
 	await expect(page.locator('[role="status"][aria-live="assertive"]')).toContainText(
 		'Draggable item last_name was moved over droppable area email.',
@@ -496,6 +503,32 @@ test(`Reorder profile columns without reloading their data and preserve the orde
 	await expect(firstRowCells.nth(4)).toHaveText('one@example.com');
 	await expect(lastNameHandle).toBeFocused();
 	expect(gridRequests).toBe(requestsBeforeKeyboardReorder);
+});
+
+test(`Keep a reopened operator menu open and respect focus moved to another control`, async ({ page }) => {
+	await page.emulateMedia({ reducedMotion: 'reduce' });
+	await mockProfiles(page);
+	await page.goto(`${adminURL}/profile-unification/profiles`);
+	const { condition, property, valueInput } = await openFirstNameFilter(page);
+	const operatorSelect = condition.locator('.pipeline__filters-operator');
+	await expect(operatorSelect.locator('sl-option[value="0"]')).toBeVisible();
+	await page.clock.install();
+	await operatorSelect.evaluate(async (select: any) => {
+		await select.hide();
+		await select.show();
+	});
+	// Exercise the delayed focus handoff that used to close a newly reopened menu.
+	await page.clock.runFor(100);
+	await expect(operatorSelect).toHaveJSProperty('open', true);
+	await operatorSelect.locator('sl-option[value="0"]').click();
+	await expect(valueInput).toBeFocused();
+
+	await operatorSelect.getByRole('combobox').click();
+	await expect(operatorSelect).toHaveJSProperty('open', true);
+	await property.locator('input').click();
+	await expect(operatorSelect).toHaveJSProperty('open', false);
+	await page.clock.runFor(100);
+	await expect(property.locator('input')).toBeFocused();
 });
 
 test(`Preview a completed filter and show its profiles explicitly`, async ({ page }) => {
