@@ -50,7 +50,6 @@ const (
 	PipelineAlreadyRunning        errors.Code = "PipelineAlreadyRunning"
 	PipelineDisabled              errors.Code = "PipelineDisabled"
 	PipelinesLimitReached         errors.Code = "PipelinesLimitReached"
-	ProfileDatasetVersionMismatch errors.Code = "ProfileDatasetVersionMismatch"
 	PropertyNotExist              errors.Code = "PropertyNotExist"
 	SchemaNotAligned              errors.Code = "SchemaNotAligned"
 	SheetNotExist                 errors.Code = "SheetNotExist"

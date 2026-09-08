@@ -20,7 +20,6 @@ interface ProfilesSequenceState {
 	queryKey: string;
 	executionID: number;
 	projection: string[];
-	datasetVersion?: string;
 	pages: Record<number, ProfilesPage>;
 	visibleFirst: number;
 	pageSize: number;
@@ -28,7 +27,7 @@ interface ProfilesSequenceState {
 	activeProfileID: string;
 	isInitialLoading: boolean;
 	pendingFirst?: number;
-	stale: boolean;
+	schemaNotAligned: boolean;
 }
 
 type ProfilesSequenceAction =
@@ -38,7 +37,6 @@ type ProfilesSequenceAction =
 			first: number;
 			profiles: ResponseProfile[];
 			total: number;
-			datasetVersion: string;
 			hasNext: boolean;
 	  }
 	| {
@@ -51,12 +49,11 @@ type ProfilesSequenceAction =
 			activeProfileID: string;
 			profiles: ResponseProfile[];
 			total: number;
-			datasetVersion: string;
 			hasNext: boolean;
 	  }
 	| { type: 'commitPage'; first: number; activeProfileID: string }
 	| { type: 'initialFailed'; executionID: number }
-	| { type: 'markStale'; executionID?: number }
+	| { type: 'markSchemaNotAligned'; executionID?: number }
 	| { type: 'reset'; queryKey: string; executionID: number; pageSize: number; projection: string[] }
 	| { type: 'setActiveProfile'; profileID: string }
 	| { type: 'startBoundary'; first: number }
@@ -77,7 +74,7 @@ const createProfilesSequenceState = (
 	total: 0,
 	activeProfileID: '',
 	isInitialLoading: true,
-	stale: false,
+	schemaNotAligned: false,
 });
 
 const profilesSequenceReducer = (
@@ -89,15 +86,11 @@ const profilesSequenceReducer = (
 			if (action.executionID !== state.executionID) {
 				return state;
 			}
-			if (state.datasetVersion != null && state.datasetVersion !== action.datasetVersion) {
-				return { ...state, isInitialLoading: false, stale: true };
-			}
 
 			const pages = addProfilesRange(state.pages, state.pageSize, action.first, action.profiles, action.hasNext);
 
 			return {
 				...state,
-				datasetVersion: action.datasetVersion,
 				pages: evictProfilesPages(pages, state.visibleFirst, state.pageSize),
 				total: action.total,
 				isInitialLoading: false,
@@ -114,7 +107,6 @@ const profilesSequenceReducer = (
 				...replacement,
 				visibleFirst: action.first,
 				activeProfileID: action.activeProfileID,
-				datasetVersion: action.datasetVersion,
 				pages: addProfilesRange({}, action.pageSize, action.first, action.profiles, action.hasNext),
 				total: action.total,
 				isInitialLoading: false,
@@ -130,9 +122,9 @@ const profilesSequenceReducer = (
 			};
 		case 'initialFailed':
 			return action.executionID === state.executionID ? { ...state, isInitialLoading: false } : state;
-		case 'markStale':
+		case 'markSchemaNotAligned':
 			return action.executionID == null || action.executionID === state.executionID
-				? { ...state, stale: true }
+				? { ...state, schemaNotAligned: true, isInitialLoading: false }
 				: state;
 		case 'reset':
 			return createProfilesSequenceState(action.queryKey, action.executionID, action.pageSize, action.projection);

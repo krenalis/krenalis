@@ -14,7 +14,6 @@ import {
 	commitProfilesFilterPreview,
 	createProfilesFilterSession,
 	currentProfilesFilterHistoryEntry,
-	hasReusableProfilesFilterPreview,
 	profileFilterFingerprint,
 	profileFilterResultsFingerprint,
 } from '../src/components/routes/Profiles/profilesFilterSession';
@@ -54,7 +53,6 @@ test(`Split an initial look-ahead response into visible and adjacent windows`, (
 		first: 0,
 		profiles: [profile(1), profile(2), profile(3), profile(4)],
 		total: 5,
-		datasetVersion: 'v1',
 		hasNext: true,
 	});
 
@@ -64,7 +62,7 @@ test(`Split an initial look-ahead response into visible and adjacent windows`, (
 	expect(getProfilesPage(state, 2)?.hasNext).toBe(true);
 });
 
-test(`Ignore obsolete executions and reject a mismatching dataset version`, () => {
+test(`Ignore obsolete executions and accept changing data in the current execution`, () => {
 	let state = createProfilesSequenceState('query', 2, 2);
 	state = profilesSequenceReducer(state, {
 		type: 'acceptRange',
@@ -72,7 +70,6 @@ test(`Ignore obsolete executions and reject a mismatching dataset version`, () =
 		first: 0,
 		profiles: [profile(1)],
 		total: 1,
-		datasetVersion: 'old',
 		hasNext: false,
 	});
 	expect(getVisibleProfiles(state)).toEqual([]);
@@ -83,7 +80,6 @@ test(`Ignore obsolete executions and reject a mismatching dataset version`, () =
 		first: 0,
 		profiles: [profile(1), profile(2)],
 		total: 3,
-		datasetVersion: 'v1',
 		hasNext: true,
 	});
 	state = profilesSequenceReducer(state, {
@@ -92,13 +88,11 @@ test(`Ignore obsolete executions and reject a mismatching dataset version`, () =
 		first: 2,
 		profiles: [profile(3)],
 		total: 3,
-		datasetVersion: 'v2',
 		hasNext: false,
 	});
 
-	expect(state.stale).toBe(true);
-	expect(state.datasetVersion).toBe('v1');
-	expect(getProfilesPage(state, 2)).toBeUndefined();
+	expect(state.schemaNotAligned).toBe(false);
+	expect(getProfilesPage(state, 2)?.profiles).toEqual([profile(3)]);
 });
 
 test(`Do not let an obsolete mismatch mark the current execution stale`, () => {
@@ -109,13 +103,11 @@ test(`Do not let an obsolete mismatch mark the current execution stale`, () => {
 		first: 0,
 		profiles: [profile(1)],
 		total: 1,
-		datasetVersion: 'v2',
 		hasNext: false,
 	});
-	state = profilesSequenceReducer(state, { type: 'markStale', executionID: 1 });
+	state = profilesSequenceReducer(state, { type: 'markSchemaNotAligned', executionID: 1 });
 
-	expect(state.stale).toBe(false);
-	expect(state.datasetVersion).toBe('v2');
+	expect(state.schemaNotAligned).toBe(false);
 });
 
 test(`Retain useful adjacent pages and evict distant profile windows`, () => {
@@ -127,7 +119,6 @@ test(`Retain useful adjacent pages and evict distant profile windows`, () => {
 			first,
 			profiles: [profile(first + 1), profile(first + 2)],
 			total: 10,
-			datasetVersion: 'v1',
 			hasNext: first < 8,
 		});
 		state = profilesSequenceReducer(state, { type: 'commitPage', first, activeProfileID: '' });
@@ -139,7 +130,7 @@ test(`Retain useful adjacent pages and evict distant profile windows`, () => {
 	expect(getProfilesPage(state, 8)).toBeDefined();
 });
 
-test(`Associate an empty result with an unambiguous dataset version`, () => {
+test(`Accept an empty page without requiring a data version`, () => {
 	let state = createProfilesSequenceState('query', 1, 50);
 	state = profilesSequenceReducer(state, {
 		type: 'acceptRange',
@@ -147,11 +138,8 @@ test(`Associate an empty result with an unambiguous dataset version`, () => {
 		first: 0,
 		profiles: [],
 		total: 0,
-		datasetVersion: 'v1',
 		hasNext: false,
 	});
-
-	expect(state.datasetVersion).toBe('v1');
 	expect(getVisibleProfiles(state)).toEqual([]);
 	expect(getProfilesPage(state)?.hasNext).toBe(false);
 });
@@ -164,7 +152,6 @@ test(`Replace a sequence atomically after a candidate query succeeds`, () => {
 		first: 0,
 		profiles: [profile(1), profile(2)],
 		total: 4,
-		datasetVersion: 'v1',
 		hasNext: true,
 	});
 	state = profilesSequenceReducer(state, { type: 'setActiveProfile', profileID: 'profile-2' });
@@ -179,14 +166,12 @@ test(`Replace a sequence atomically after a candidate query succeeds`, () => {
 		activeProfileID: 'profile-4',
 		profiles: [profile(3), profile(4), profile(5)],
 		total: 3,
-		datasetVersion: 'v2',
 		hasNext: false,
 	});
 
 	expect(state.queryKey).toBe('filtered-query');
 	expect(state.executionID).toBe(2);
 	expect(state.projection).toEqual(['email']);
-	expect(state.datasetVersion).toBe('v2');
 	expect(state.visibleFirst).toBe(2);
 	expect(state.activeProfileID).toBe('profile-4');
 	expect(state.total).toBe(3);
@@ -203,7 +188,6 @@ test(`Reset the query execution and preserve page state across a failed transiti
 		first: 0,
 		profiles: [profile(1), profile(2)],
 		total: 4,
-		datasetVersion: 'v1',
 		hasNext: true,
 	});
 	state = profilesSequenceReducer(state, { type: 'setActiveProfile', profileID: 'profile-2' });
@@ -280,19 +264,18 @@ test(`Normalize filter drafts without silently accepting partial conditions`, ()
 	).toEqual({ operator: 'and', rules: [{ property: 'email', operator: 'does not exist' }] });
 });
 
-test(`Initialize filter history from the displayed filter and its versioned total`, () => {
+test(`Initialize filter history from the displayed filter and last observed total`, () => {
 	const filter: Filter = {
 		operator: 'and',
 		rules: [{ property: 'email', operator: 'contains', values: ['example.com'] }],
 	};
-	const session = createProfilesFilterSession(filter, 12, 'v1');
+	const session = createProfilesFilterSession(filter, 12);
 
 	expect(session.history).toHaveLength(1);
 	expect(currentProfilesFilterHistoryEntry(session)).toEqual({
 		filter,
 		fingerprint: profileFilterFingerprint(filter),
 		total: 12,
-		datasetVersion: 'v1',
 	});
 	expect(session.draft).not.toBe(filter);
 });
@@ -324,23 +307,23 @@ test(`Add only successful previews to filter history and truncate a redo branch`
 		operator: 'and',
 		rules: [{ property: 'email', operator: 'contains', values: ['example.net'] }],
 	};
-	let session = createProfilesFilterSession(null, 20, 'v1');
+	let session = createProfilesFilterSession(null, 20);
 	session = commitProfilesFilterPreview(
 		session,
 		{ filter: filterB, fingerprint: profileFilterFingerprint(filterB) },
-		{ total: 10, datasetVersion: 'v1' },
+		{ total: 10 },
 	);
 	session = commitProfilesFilterPreview(
 		session,
 		{ filter: filterC, fingerprint: profileFilterFingerprint(filterC) },
-		{ total: 5, datasetVersion: 'v1' },
+		{ total: 5 },
 	);
 
 	session = { ...session, draft: filterB, historyIndex: 1 };
 	session = commitProfilesFilterPreview(
 		session,
 		{ filter: filterD, fingerprint: profileFilterFingerprint(filterD) },
-		{ total: 0, datasetVersion: 'v1' },
+		{ total: 0 },
 	);
 
 	expect(session.history.map(({ filter }) => filter)).toEqual([null, filterB, filterD]);
@@ -348,32 +331,18 @@ test(`Add only successful previews to filter history and truncate a redo branch`
 	expect(currentProfilesFilterHistoryEntry(session).total).toBe(0);
 });
 
-test(`Refresh history metadata when a preview moves to another dataset version`, () => {
+test(`Refresh history counts when data changes`, () => {
 	const filter: Filter = {
 		operator: 'and',
 		rules: [{ property: 'email', operator: 'contains', values: ['example.com'] }],
 	};
-	let session = createProfilesFilterSession(filter, 12, 'v1');
+	let session = createProfilesFilterSession(filter, 12);
 	session = commitProfilesFilterPreview(
 		session,
 		{ filter, fingerprint: profileFilterFingerprint(filter), historyIndex: 0 },
-		{ total: 14, datasetVersion: 'v2' },
+		{ total: 14 },
 	);
-
-	expect(session.datasetVersion).toBe('v2');
 	expect(currentProfilesFilterHistoryEntry(session).total).toBe(14);
-	expect(currentProfilesFilterHistoryEntry(session).datasetVersion).toBe('v2');
-});
-
-test(`Reuse a preview count only for the same dataset version`, () => {
-	const filter: Filter = {
-		operator: 'and',
-		rules: [{ property: 'email', operator: 'contains', values: ['example.com'] }],
-	};
-	const entry = currentProfilesFilterHistoryEntry(createProfilesFilterSession(filter, 12, 'v1'));
-
-	expect(hasReusableProfilesFilterPreview(entry, profileFilterFingerprint(filter), 'v1')).toBe(true);
-	expect(hasReusableProfilesFilterPreview(entry, profileFilterFingerprint(filter), 'v2')).toBe(false);
 });
 
 test(`Adapt the text preview delay only after enough stable latency measurements`, () => {
@@ -419,4 +388,20 @@ test(`Suspend and conservatively restore automatic text previews`, () => {
 	timing = recordProfilesPreviewLatency(timing, 3000);
 	expect(timing.suspended).toBe(false);
 	expect(timing.delayMs).toBe(2500);
+});
+
+test('A successful preview preserves placeholders in the editable draft', () => {
+	const filter: Filter = {
+		operator: 'and',
+		rules: [{ property: 'email', operator: 'contains', values: ['example'] }],
+	};
+	const draft: Filter = { ...filter, rules: [...filter.rules, { property: '', operator: 'is', values: [] }] };
+	const session = { ...createProfilesFilterSession(null, 10), draft };
+	const next = commitProfilesFilterPreview(
+		session,
+		{ filter, fingerprint: profileFilterFingerprint(filter) },
+		{ total: 3 },
+	);
+	expect(next.draft).toEqual(draft);
+	expect(currentProfilesFilterHistoryEntry(next).filter).toEqual(filter);
 });

@@ -89,12 +89,12 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 
 	if len(query.OrderBy) > 0 {
 		b.WriteString(" ORDER BY ")
-		for i, order := range query.OrderBy {
+		for i, column := range query.OrderBy {
 			if i > 0 {
 				b.WriteString(", ")
 			}
-			b.WriteString(quoteIdent(order.Column.Name))
-			if order.Desc {
+			b.WriteString(quoteIdent(column.Name))
+			if query.OrderDesc {
 				b.WriteString(" DESC")
 			}
 		}

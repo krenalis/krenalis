@@ -6,12 +6,12 @@ package datastore
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"iter"
 	"slices"
 
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
@@ -64,19 +64,20 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 	}
 
 	var joins []warehouses.Join
-	var orderBy []warehouses.RowOrder
+	var orderBy []warehouses.Column
+	orderDesc := query.OrderDesc
 	var matchingIndex int // index of matching column in columns slice; 0 if matching is nil
 
 	if matching == nil {
 
 		if len(query.OrderBy) > 0 {
-			orderBy = make([]warehouses.RowOrder, len(query.OrderBy))
-			for i, order := range query.OrderBy {
-				c, ok := columnByProperty[order.Property]
+			orderBy = make([]warehouses.Column, len(query.OrderBy))
+			for i, property := range query.OrderBy {
+				c, ok := columnByProperty[property]
 				if !ok {
-					return nil, fmt.Errorf("property path %s does not exist", order.Property)
+					return nil, fmt.Errorf("property path %s does not exist", property)
 				}
-				orderBy[i] = warehouses.RowOrder{Column: c, Desc: order.Desc}
+				orderBy[i] = c
 			}
 		}
 
@@ -121,11 +122,12 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 			where = andExpressions(where, warehouses.NewBaseExpr(inPropertyColumn, warehouses.OpIsNotNull))
 		}
 		// Sort the results by the input matching property, user ID, and external ID.
-		orderBy = []warehouses.RowOrder{
-			{Column: inPropertyColumn},
-			{Column: columnByProperty[idProperty]},
-			{Column: externalIDColumn},
+		orderBy = []warehouses.Column{
+			inPropertyColumn,
+			columnByProperty[idProperty],
+			externalIDColumn,
 		}
+		orderDesc = false
 
 	}
 
@@ -133,13 +135,14 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 	columns = append(columns, columnByProperty[idProperty])
 
 	rows, _, err := warehouse.Query(ctx, warehouses.RowQuery{
-		Columns: columns,
-		Table:   query.table,
-		Joins:   joins,
-		Where:   where,
-		OrderBy: orderBy,
-		First:   query.First,
-		Limit:   query.Limit,
+		Columns:   columns,
+		Table:     query.table,
+		Joins:     joins,
+		Where:     where,
+		OrderBy:   orderBy,
+		OrderDesc: orderDesc,
+		First:     query.First,
+		Limit:     query.Limit,
 	}, false)
 	if err != nil {
 		return nil, err

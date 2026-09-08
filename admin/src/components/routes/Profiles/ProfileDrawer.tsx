@@ -28,16 +28,30 @@ const ProfileDrawer = () => {
 		activeProfileID,
 		canNavigateNextProfile,
 		canNavigatePreviousProfile,
-		datasetVersion,
+		profileSchema,
+		profilesExecutionID,
 		profilesQueryKey,
-		markProfilesStale,
+		markProfileSchemaNotAligned,
 		navigateProfile,
 		profileSchemaProperties,
 		profiles,
 		setActiveProfileID,
 	} = useContext(ProfilesContext);
-	const { attributes, events, identities, isAttributesLoading, isEventsLoading, isIdentitiesLoading } =
-		useProfileDrawer(activeProfileID, selectedTab, datasetVersion, profilesQueryKey, markProfilesStale);
+	const {
+		attributes,
+		events,
+		identities,
+		isAttributesLoading,
+		isEventsLoading,
+		isIdentitiesLoading,
+		isProfileMissing,
+	} = useProfileDrawer(
+		activeProfileID,
+		selectedTab,
+		profileSchema,
+		`${profilesExecutionID}:${profilesQueryKey}`,
+		markProfileSchemaNotAligned,
+	);
 
 	const workspace = useMemo(
 		() => workspaces.find((w) => w.id === selectedWorkspace),
@@ -73,7 +87,7 @@ const ProfileDrawer = () => {
 	};
 
 	const summary = profiles.find((profile) => profile.kpid === activeProfileID);
-	const displayedAttributes = attributes ?? summary?.attributes;
+	const displayedAttributes = isProfileMissing ? undefined : (attributes ?? summary?.attributes);
 	const profilePhoto = getProfileAttributeString(displayedAttributes, workspace?.assignedRoles.photo ?? '');
 	const profileFirstName = getProfileAttributeString(displayedAttributes, workspace?.assignedRoles.firstName ?? '');
 	const profileLastName = getProfileAttributeString(displayedAttributes, workspace?.assignedRoles.lastName ?? '');
@@ -143,6 +157,9 @@ const ProfileDrawer = () => {
 					</span>
 				</div>
 			</div>
+			{isProfileMissing && (
+				<p role='status'>This profile no longer exists. You can continue browsing or refresh the list.</p>
+			)}
 			<SlTabGroup onSlTabShow={onSelectTab}>
 				<SlTab slot='nav' panel='attributes' active={selectedTab === 'attributes'}>
 					Attributes

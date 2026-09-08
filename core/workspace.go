@@ -215,97 +215,59 @@ func (this *Workspace) PipelineErrors(ctx context.Context, start, end time.Time,
 	return errs, nil
 }
 
-// Attributes returns the attributes of a profile, given its KPID, and the
-// published profile dataset version from which they were read.
-// expectedDatasetVersion may be empty; otherwise, it must identify the current
-// published profiles dataset.
-//
-// It returns an errors.NotFoundError error, if the profile does not exist.
-// It returns an errors.UnprocessableError error with code:
-//
-//   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - ProfileDatasetVersionMismatch, if expectedDatasetVersion is no longer current.
-func (this *Workspace) Attributes(ctx context.Context, kpid, expectedDatasetVersion string) (json.Value, string, error) {
+// Attributes returns the attributes described by schema for the profile kpid.
+// It returns errors.BadRequestError for invalid arguments, errors.NotFoundError
+// if the profile or workspace does not exist, errors.UnprocessableError with
+// code MaintenanceMode or SchemaNotAligned, or errors.UnavailableError for a
+// warehouse failure.
+func (this *Workspace) Attributes(ctx context.Context, kpid string, schema types.Type) (json.Value, error) {
 
 	this.core.mustBeOpen()
 
-	ws := this.workspace
-
-	// Validate the KPID.
 	if _, ok := types.ParseUUID(kpid); !ok {
-		return nil, "", errors.BadRequest("profile %q is not a valid profile identifier", kpid)
+		return nil, errors.BadRequest("profile %q is not a valid profile identifier", kpid)
+	}
+	if schema.Kind() != types.ObjectKind || schema.Generic() {
+		return nil, errors.BadRequest("schema is not a concrete object type")
 	}
 
-	properties := this.workspace.ProfileSchema.Properties().Names()
 	where := &state.Where{
 		Operator: state.OpAnd,
-		Rules: []state.WhereRule{
-			&state.WhereCondition{
-				Property: []string{"_kpid"},
-				Operator: state.OpIs,
-				Values:   []any{kpid},
-			},
-		},
+		Rules: []state.WhereRule{&state.WhereCondition{
+			Property: []string{"_kpid"},
+			Operator: state.OpIs,
+			Values:   []any{kpid},
+		}},
 	}
-
-	// Retrieve the profile attributes.
-	profiles, _, datasetVersion, _, err := this.store.Profiles(ctx, datastore.Query{
-		Properties: properties,
+	profiles, _, _, err := this.store.Profiles(ctx, datastore.Query{
+		Properties: schema.Properties().Names(),
 		Where:      where,
 		Limit:      1,
-	}, expectedDatasetVersion)
+	}, schema)
 	if err != nil {
-		if err == datastore.ErrMaintenanceMode {
-			return nil, "", errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		if errors.Is(err, datastore.ErrMaintenanceMode) {
+			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
-		if err == datastore.ErrProfileDatasetVersionMismatch {
-			return nil, "", errors.Unprocessable(
-				ProfileDatasetVersionMismatch, "the profile dataset version is no longer current")
+		if errors.Is(err, datastore.ErrWorkspaceNotExist) {
+			return nil, errors.NotFound("workspace does not exist")
 		}
-		if err, ok := err.(*datastore.UnavailableError); ok {
-			return nil, "", errors.Unavailable("%s", err)
+		if schemaErr, ok := errors.AsType[*schemas.Error](err); ok {
+			return nil, errors.Unprocessable(SchemaNotAligned, "%s", schemaErr)
 		}
-		return nil, "", err
+		if warehouseErr, ok := errors.AsType[*datastore.UnavailableError](err); ok {
+			return nil, errors.Unavailable("%s", warehouseErr)
+		}
+		return nil, errors.New(err.Error())
 	}
 	if len(profiles) == 0 {
-		return nil, "", errors.NotFound("profile %q does not exist", kpid)
+		return nil, errors.NotFound("profile %q does not exist", kpid)
 	}
-
-	attributes, _ := types.Marshal(profiles[0], ws.ProfileSchema)
-
-	return attributes, datasetVersion, nil
-}
-
-// CheckProfileDatasetVersion verifies that expectedDatasetVersion identifies
-// the currently published profiles dataset.
-//
-// It returns an errors.UnprocessableError error with code:
-//
-//   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - ProfileDatasetVersionMismatch, if expectedDatasetVersion is no longer current.
-func (this *Workspace) CheckProfileDatasetVersion(ctx context.Context, expectedDatasetVersion string) error {
-
-	this.core.mustBeOpen()
-
-	if expectedDatasetVersion == "" {
-		return nil
-	}
-	datasetVersion, err := this.store.ProfileDatasetVersion(ctx)
+	attributes, err := types.Marshal(profiles[0], schema)
 	if err != nil {
-		if err == datastore.ErrMaintenanceMode {
-			return errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
-		}
-		if err, ok := err.(*datastore.UnavailableError); ok {
-			return errors.Unavailable("%s", err)
-		}
-
-		return err
-	}
-	if datasetVersion != expectedDatasetVersion {
-		return errors.Unprocessable(ProfileDatasetVersionMismatch, "the profile dataset version is no longer current")
+		return nil, errors.New(err.Error())
 	}
 
-	return nil
+	return attributes, nil
 }
 
 // ColumnTypeDescription returns a description for the warehouse column type
@@ -977,7 +939,8 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 	evts, err := this.store.Events(ctx, datastore.Query{
 		Properties: properties,
 		Where:      where,
-		OrderBy:    []datastore.QueryOrder{{Property: order, Desc: orderDesc}},
+		OrderBy:    []string{order},
+		OrderDesc:  orderDesc,
 		First:      first,
 		Limit:      limit,
 	})
@@ -1008,8 +971,7 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 // It returns an errors.UnprocessableError error with code:
 //
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - ProfileDatasetVersionMismatch, if expectedDatasetVersion is no longer current.
-func (this *Workspace) Identities(ctx context.Context, kpid, expectedDatasetVersion string, first, limit int) ([]Identity, int, error) {
+func (this *Workspace) Identities(ctx context.Context, kpid string, first, limit int) ([]Identity, int, error) {
 
 	this.core.mustBeOpen()
 
@@ -1021,10 +983,6 @@ func (this *Workspace) Identities(ctx context.Context, kpid, expectedDatasetVers
 	}
 	if limit < 1 || limit > 1000 {
 		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
-	}
-	err := this.CheckProfileDatasetVersion(ctx, expectedDatasetVersion)
-	if err != nil {
-		return nil, 0, err
 	}
 	where := &state.Where{
 		Operator: state.OpAnd,
@@ -1042,10 +1000,6 @@ func (this *Workspace) Identities(ctx context.Context, kpid, expectedDatasetVers
 		workspace: this.workspace,
 	}
 	identities, total, err := ws.identities(ctx, where, first, limit)
-	if err != nil {
-		return nil, 0, err
-	}
-	err = this.CheckProfileDatasetVersion(ctx, expectedDatasetVersion)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -1217,38 +1171,60 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 	return runs, nil
 }
 
-// ProfileCount returns the number of profiles that satisfy filter and the
-// published dataset version used for the count. expectedDatasetVersion may be
-// empty; otherwise, it must identify the current published profiles dataset.
-//
-// It returns an errors.UnprocessableError error with code MaintenanceMode if
-// the data warehouse is in maintenance mode, ProfileDatasetVersionMismatch if
-// expectedDatasetVersion is no longer current, or PropertyNotExist if a filter
-// property does not exist.
-func (this *Workspace) ProfileCount(ctx context.Context, filter *Filter, expectedDatasetVersion string) (int, string, error) {
+// ProfileCount returns the number of profiles matching filter.
+// schema is required when filter is present. Only filter dependencies must
+// align with the current profile schema.
+// It returns errors.UnprocessableError with code MaintenanceMode,
+// PropertyNotExist, or SchemaNotAligned, and errors.NotFoundError if the
+// workspace no longer exists. Invalid arguments return errors.BadRequestError;
+// warehouse failures return errors.UnavailableError.
+func (this *Workspace) ProfileCount(ctx context.Context, filter *Filter, schema types.Type) (int, error) {
 
 	this.core.mustBeOpen()
 
-	where, err := profileFilterWhere(filter, this.workspace.ProfileSchema)
-	if err != nil {
-		return 0, "", err
+	if (schema.Valid() || filter != nil) && (schema.Kind() != types.ObjectKind || schema.Generic()) {
+		return 0, errors.BadRequest("schema is not a concrete object type")
 	}
-	total, datasetVersion, err := this.store.ProfileCount(ctx, where, expectedDatasetVersion)
+	var where *state.Where
+	var dependencies types.Type
+	if filter != nil {
+
+		paths, err := validateFilter(filter, schema, state.Destination, state.TargetUser)
+		if err != nil {
+			if pathErr, ok := errors.AsType[types.PathNotExistError](err); ok {
+				return 0, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", pathErr.Path)
+			}
+			return 0, errors.BadRequest("filter is not valid: %s", err)
+		}
+		where = convertFilterToWhere(filter, schema)
+		dependencies = types.Prune(schema, func(path string) bool {
+			for _, dependency := range paths {
+				if path == dependency || strings.HasPrefix(path, dependency+".") {
+					return true
+				}
+			}
+			return false
+		})
+
+	}
+	total, err := this.store.ProfileCount(ctx, where, dependencies)
 	if err != nil {
-		if err == datastore.ErrMaintenanceMode {
-			return 0, "", errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		if errors.Is(err, datastore.ErrMaintenanceMode) {
+			return 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
-		if err == datastore.ErrProfileDatasetVersionMismatch {
-			return 0, "", errors.Unprocessable(
-				ProfileDatasetVersionMismatch, "profile dataset version is no longer current")
+		if errors.Is(err, datastore.ErrWorkspaceNotExist) {
+			return 0, errors.NotFound("workspace does not exist")
 		}
-		if err, ok := errors.AsType[*datastore.UnavailableError](err); ok {
-			return 0, "", errors.Unavailable("%s", err)
+		if schemaErr, ok := errors.AsType[*schemas.Error](err); ok {
+			return 0, errors.Unprocessable(SchemaNotAligned, "%s", schemaErr)
 		}
-		return 0, "", err
+		if warehouseErr, ok := errors.AsType[*datastore.UnavailableError](err); ok {
+			return 0, errors.Unavailable("%s", warehouseErr)
+		}
+		return 0, errors.New(err.Error())
 	}
 
-	return total, datasetVersion, nil
+	return total, nil
 }
 
 // ProfilePropertiesSuitableAsIdentifiers returns the properties of the profile
@@ -1269,80 +1245,85 @@ type Profile struct {
 	Attributes map[string]any `json:"attributes"`
 }
 
-// Profiles returns the profiles, the profile schema, an estimate of their
-// total number without applying first and limit, the published dataset version,
-// and whether a subsequent profile exists. It returns the profiles that
-// satisfies the filter, if not nil, and in range [first,first+limit] with
-// first >= 0 and 0 < limit <= 1000 and only the given properties.
-//
-// If properties is nil, all properties are returned; otherwise, properties
-// must contain at least one element.
-//
-// order is the name of the property by which to sort the returned profiles and
-// cannot have type json, array, object, or map; when not provided, the profiles
-// are ordered by their update time. Profiles with the same order value are
-// ordered by KPID.
-//
-// orderDesc controls whether the returned profiles should be ordered in
-// descending order instead of ascending, which is the default.
-// expectedDatasetVersion may be empty; otherwise, it must identify the current
-// published profiles dataset.
-//
-// It returns an errors.NotFoundError error, if the workspace does not exist
-// anymore. It returns an errors.UnprocessableError error with code
-//
-//   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - OrderNotExist, if order does not exist in schema.
-//   - OrderTypeNotSortable, if the type of the order property is not sortable.
-//   - ProfileDatasetVersionMismatch, if expectedDatasetVersion is no longer current.
-//   - PropertyNotExist, if a property does not exist.
-func (this *Workspace) Profiles(ctx context.Context, properties []string, filter *Filter, order string, orderDesc bool, first, limit int, expectedDatasetVersion string) ([]Profile, types.Type, int, string, bool, error) {
+// Profiles returns profiles matching filter, their projected schema, total
+// count, and whether another row follows the requested range.
+// schema describes the request's properties, filter, and ordering; only
+// dependencies used by the request must align with the current schema.
+// If properties is nil, all properties in schema are returned. Otherwise,
+// properties must contain at least one top-level property name.
+// first must be in [0, 2147483647] and limit in [1, 1000].
+// order defaults to update time; KPID breaks ties in the same direction.
+// It returns errors.NotFoundError if the workspace no longer exists, or
+// errors.UnprocessableError with code MaintenanceMode, PropertyNotExist,
+// OrderNotExist, OrderTypeNotSortable, or SchemaNotAligned. Invalid arguments
+// return errors.BadRequestError; warehouse failures return errors.UnavailableError.
+func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properties []string, filter *Filter, order string, orderDesc bool, first, limit int) ([]Profile, types.Type, int, bool, error) {
 
 	this.core.mustBeOpen()
 
-	ws := this.workspace
-
-	profileProperties := ws.ProfileSchema.Properties()
+	if schema.Kind() != types.ObjectKind || schema.Generic() {
+		return nil, types.Type{}, 0, false, errors.BadRequest("schema is not a concrete object type")
+	}
+	profileProperties := schema.Properties()
 
 	// Validate the properties.
 	if properties == nil {
 		properties = profileProperties.Names()
 	} else {
 		if len(properties) == 0 {
-			return nil, types.Type{}, 0, "", false, errors.BadRequest("properties is empty")
+			return nil, types.Type{}, 0, false, errors.BadRequest("properties is empty")
 		}
+		seen := map[string]bool{}
 		for _, name := range properties {
+			if seen[name] {
+				return nil, types.Type{}, 0, false, errors.BadRequest("property %q is repeated", name)
+			}
+			seen[name] = true
 			if _, ok := profileProperties.ByName(name); !ok {
 				if name == "" {
-					return nil, types.Type{}, 0, "", false, errors.BadRequest("a property name is empty")
+					return nil, types.Type{}, 0, false, errors.BadRequest("a property name is empty")
 				}
 				if !types.IsValidPropertyName(name) {
-					return nil, types.Type{}, 0, "", false, errors.BadRequest("property name %q is not valid", name)
+					return nil, types.Type{}, 0, false, errors.BadRequest("property name %q is not valid", name)
 				}
-				return nil, types.Type{}, 0, "", false, errors.Unprocessable(
+				return nil, types.Type{}, 0, false, errors.Unprocessable(
 					PropertyNotExist, "property name %s does not exist", name)
 			}
 		}
 	}
 
-	where, err := profileFilterWhere(filter, ws.ProfileSchema)
-	if err != nil {
-		return nil, types.Type{}, 0, "", false, err
+	// Validate the filter.
+	var where *state.Where
+	paths := slices.Clone(properties)
+	if filter != nil {
+
+		filterPaths, err := validateFilter(filter, schema, state.Destination, state.TargetUser)
+		if err != nil {
+			if pathErr, ok := errors.AsType[types.PathNotExistError](err); ok {
+				return nil, types.Type{}, 0, false, errors.Unprocessable(
+					PropertyNotExist, "filter's property %s does not exist", pathErr.Path)
+			}
+			return nil, types.Type{}, 0, false, errors.BadRequest("filter is not valid: %s", err)
+		}
+		where = convertFilterToWhere(filter, schema)
+		paths = append(paths, filterPaths...)
+
 	}
 
 	// Validate the order.
 	if order != "" {
+		paths = append(paths, order)
 		orderProperty, ok := profileProperties.ByName(order)
 		if !ok {
 			if !types.IsValidPropertyName(order) {
-				return nil, types.Type{}, 0, "", false, errors.BadRequest("order %q is not a valid property name", order)
+				return nil, types.Type{}, 0, false, errors.BadRequest("order %q is not a valid property name", order)
 			}
-			return nil, types.Type{}, 0, "", false, errors.Unprocessable(
+			return nil, types.Type{}, 0, false, errors.Unprocessable(
 				OrderNotExist, "order %s does not exist in schema", order)
 		}
 		switch orderProperty.Type.Kind() {
 		case types.JSONKind, types.ArrayKind, types.ObjectKind, types.MapKind:
-			return nil, types.Type{}, 0, "", false, errors.Unprocessable(OrderTypeNotSortable,
+			return nil, types.Type{}, 0, false, errors.Unprocessable(OrderTypeNotSortable,
 				"cannot sort by %s: property has type %s", order, orderProperty.Type)
 		}
 	} else {
@@ -1351,36 +1332,46 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 
 	// Validate first and limit.
 	if first < 0 || first > maxInt32 {
-		return nil, types.Type{}, 0, "", false, errors.BadRequest("first %d in not valid", first)
+		return nil, types.Type{}, 0, false, errors.BadRequest("first %d in not valid", first)
 	}
 	if limit < 1 || limit > 1000 {
-		return nil, types.Type{}, 0, "", false, errors.BadRequest("limit %d is not valid", limit)
+		return nil, types.Type{}, 0, false, errors.BadRequest("limit %d is not valid", limit)
 	}
 
+	// Restrict the schema to the request's dependencies.
+	dependencies := types.Prune(schema, func(path string) bool {
+		for _, dependency := range paths {
+			if path == dependency || strings.HasPrefix(path, dependency+".") {
+				return true
+			}
+		}
+		return false
+	})
+
 	// Read the profiles.
-	rows, total, datasetVersion, hasNext, err := this.store.Profiles(ctx, datastore.Query{
+	rows, total, hasNext, err := this.store.Profiles(ctx, datastore.Query{
 		Properties: append([]string{"_kpid", "_updated_at"}, properties...),
 		Where:      where,
-		OrderBy: []datastore.QueryOrder{
-			{Property: order, Desc: orderDesc},
-			{Property: "_kpid", Desc: orderDesc},
-		},
-		First: first,
-		Limit: limit,
-	}, expectedDatasetVersion)
+		OrderBy:    []string{order, "_kpid"},
+		OrderDesc:  orderDesc,
+		First:      first,
+		Limit:      limit,
+	}, dependencies)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
-			return nil, types.Type{}, 0, "", false, errors.Unprocessable(
+			return nil, types.Type{}, 0, false, errors.Unprocessable(
 				MaintenanceMode, "data warehouse is in maintenance mode")
 		}
-		if err == datastore.ErrProfileDatasetVersionMismatch {
-			return nil, types.Type{}, 0, "", false, errors.Unprocessable(
-				ProfileDatasetVersionMismatch, "the profile dataset version is no longer current")
+		if errors.Is(err, datastore.ErrWorkspaceNotExist) {
+			return nil, types.Type{}, 0, false, errors.NotFound("workspace does not exist")
 		}
-		if err, ok := err.(*datastore.UnavailableError); ok {
-			return nil, types.Type{}, 0, "", false, errors.Unavailable("%s", err)
+		if schemaErr, ok := errors.AsType[*schemas.Error](err); ok {
+			return nil, types.Type{}, 0, false, errors.Unprocessable(SchemaNotAligned, "%s", schemaErr)
 		}
-		return nil, types.Type{}, 0, "", false, err
+		if err, ok := errors.AsType[*datastore.UnavailableError](err); ok {
+			return nil, types.Type{}, 0, false, errors.Unavailable("%s", err)
+		}
+		return nil, types.Type{}, 0, false, errors.New(err.Error())
 	}
 
 	// Create the schema to return, with only the requested properties.
@@ -1388,7 +1379,7 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 	for i, name := range properties {
 		props[i], _ = profileProperties.ByName(name)
 	}
-	schema := types.Object(props)
+	schema = types.Object(props)
 
 	profiles := make([]Profile, len(rows))
 	for i, row := range rows {
@@ -1399,7 +1390,7 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 		delete(row, "_updated_at")
 	}
 
-	return profiles, schema, total, datasetVersion, hasNext, nil
+	return profiles, schema, total, hasNext, nil
 }
 
 const maxReadOnlyResponseSize = 10 * 1024 * 1024 // 10 MiB.
@@ -2000,10 +1991,11 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 			"_anonymous_ids",
 			"_updated_at",
 		},
-		Where:   where,
-		OrderBy: []datastore.QueryOrder{{Property: "_updated_at", Desc: true}},
-		First:   first,
-		Limit:   limit,
+		Where:     where,
+		OrderBy:   []string{"_updated_at"},
+		OrderDesc: true,
+		First:     first,
+		Limit:     limit,
 	})
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
@@ -2230,25 +2222,6 @@ func (mode *WarehouseMode) UnmarshalJSON(data []byte) error {
 	}
 	*mode = mo
 	return nil
-}
-
-// profileFilterWhere validates a profile filter and returns its warehouse
-// representation.
-func profileFilterWhere(filter *Filter, schema types.Type) (*state.Where, error) {
-
-	if filter == nil {
-		return nil, nil
-	}
-	_, err := validateFilter(filter, schema, state.Destination, state.TargetUser)
-	if err != nil {
-		if pathErr, ok := errors.AsType[types.PathNotExistError](err); ok {
-			return nil, errors.Unprocessable(
-				PropertyNotExist, "filter's property %s does not exist", pathErr.Path)
-		}
-		return nil, errors.BadRequest("filter is not valid: %w", err)
-	}
-
-	return convertFilterToWhere(filter, schema), nil
 }
 
 // suitableAsIdentifier reports whether a property with type t can be used as

@@ -312,12 +312,6 @@ func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []ware
 	return nil
 }
 
-// ProfileDatasetVersion returns the version of the currently published
-// profiles dataset.
-func (warehouse *PostgreSQL) ProfileDatasetVersion(ctx context.Context) (int, error) {
-	return warehouse.publishedProfilesVersion(ctx)
-}
-
 // Truncate truncates the specified table.
 func (warehouse *PostgreSQL) Truncate(ctx context.Context, table string) error {
 	pool, _, err := warehouse.connectionPool(ctx, false)

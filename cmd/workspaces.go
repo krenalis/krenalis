@@ -290,7 +290,7 @@ func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (a
 			return nil, errors.BadRequest("limit is not valid")
 		}
 	}
-	identities, total, err := ws.Identities(r.Context(), kpid, query.Get("expectedDatasetVersion"), first, limit)
+	identities, total, err := ws.Identities(r.Context(), kpid, first, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -642,13 +642,17 @@ func (workspace workspace) Attributes(_ http.ResponseWriter, r *http.Request) (a
 		return nil, err
 	}
 	kpid := r.PathValue("kpid")
-	attributes, datasetVersion, err := ws.Attributes(r.Context(), kpid, r.URL.Query().Get("expectedDatasetVersion"))
+	var schema types.Type
+	err = json.Unmarshal([]byte(r.URL.Query().Get("schema")), &schema)
+	if err != nil {
+		return nil, errors.BadRequest("invalid schema")
+	}
+	attributes, err := ws.Attributes(r.Context(), kpid, schema)
 	if err != nil {
 		return nil, err
 	}
 	return map[string]any{
-		"attributes":     attributes,
-		"datasetVersion": datasetVersion,
+		"attributes": attributes,
 	}, nil
 }
 
@@ -786,10 +790,6 @@ func (workspace workspace) ProfileEvents(_ http.ResponseWriter, r *http.Request)
 
 	// Parse the properties.
 	properties := splitQueryParameters(q["properties"])
-	err = ws.CheckProfileDatasetVersion(r.Context(), q.Get("expectedDatasetVersion"))
-	if err != nil {
-		return nil, err
-	}
 
 	filter := &core.Filter{
 		Operator: core.OpAnd,
@@ -803,10 +803,6 @@ func (workspace workspace) ProfileEvents(_ http.ResponseWriter, r *http.Request)
 	}
 
 	evts, err := ws.Events(r.Context(), properties, filter, "timestamp", true, 0, limit)
-	if err != nil {
-		return nil, err
-	}
-	err = ws.CheckProfileDatasetVersion(r.Context(), q.Get("expectedDatasetVersion"))
 	if err != nil {
 		return nil, err
 	}
@@ -825,8 +821,7 @@ func (workspace workspace) ProfileSchema(_ http.ResponseWriter, r *http.Request)
 	return ws.ProfileSchema, nil
 }
 
-// ProfileCount returns the number of profiles matched by the optional filter
-// and the published dataset version used for the count.
+// ProfileCount returns the number of profiles matched by the optional filter.
 func (workspace workspace) ProfileCount(_ http.ResponseWriter, r *http.Request) (any, error) {
 
 	ws, err := workspace.admitWorkspaceRequest(r, x1)
@@ -845,17 +840,23 @@ func (workspace workspace) ProfileCount(_ http.ResponseWriter, r *http.Request) 
 			return nil, errors.BadRequest("filter cannot be null")
 		}
 	}
-	total, datasetVersion, err := ws.ProfileCount(r.Context(), filter, q.Get("expectedDatasetVersion"))
+	var schema types.Type
+	if value, ok := q["schema"]; ok {
+		err = json.Unmarshal([]byte(value[0]), &schema)
+		if err != nil {
+			return nil, errors.BadRequest("invalid schema")
+		}
+	}
+	total, err := ws.ProfileCount(r.Context(), filter, schema)
 	if err != nil {
 		return nil, err
 	}
 
-	return map[string]any{"total": total, "datasetVersion": datasetVersion}, nil
+	return map[string]any{"total": total}, nil
 }
 
-// Profiles returns the profiles, the optionally requested profile schema, an
-// estimate of their total number without applying first and limit, the
-// published dataset version, and the continuation state.
+// Profiles returns profiles, their projected schema, an estimate of their total
+// number without applying first and limit, and the continuation state.
 func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any, error) {
 
 	ws, err := workspace.admitWorkspaceRequest(r, x1)
@@ -866,6 +867,9 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 	// Read and parse the parameters from the query string.
 	q := r.URL.Query()
 	properties := splitQueryParameters(q["properties"])
+	if _, present := q["properties"]; present && properties == nil {
+		properties = []string{}
+	}
 	var filter *core.Filter
 	if f := q.Get("filter"); f != "" {
 		err := json.Unmarshal([]byte(f), &filter)
@@ -895,10 +899,13 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 		limit = 100
 	}
 
-	expectedDatasetVersion := q.Get("expectedDatasetVersion")
-	includeSchema := q.Get("includeSchema") != "false"
-	profiles, schema, total, datasetVersion, hasNext, err := ws.Profiles(
-		r.Context(), properties, filter, order, orderDesc, first, limit, expectedDatasetVersion)
+	var schema types.Type
+	err = json.Unmarshal([]byte(q.Get("schema")), &schema)
+	if err != nil {
+		return nil, errors.BadRequest("invalid schema")
+	}
+	profiles, schema, total, hasNext, err := ws.Profiles(
+		r.Context(), schema, properties, filter, order, orderDesc, first, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -920,17 +927,12 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 		b.writeByte('}')
 	}
 	b.writeString(`]`)
-	if includeSchema {
-		b.writeString(`,"schema":`)
-		buf, _ := schema.MarshalJSON()
-		b.write(buf)
-	}
+	b.writeString(`,"schema":`)
+	schemaJSON, _ := schema.MarshalJSON()
+	b.write(schemaJSON)
 	b.writeString(`,"total":`)
 	buf := b.availableBuffer()
 	b.write(strconv.AppendInt(buf, int64(total), 10))
-	b.writeString(`,"datasetVersion":`)
-	buf = b.availableBuffer()
-	b.write(strconv.AppendQuote(buf, datasetVersion))
 	b.writeString(`,"hasNext":`)
 	buf = b.availableBuffer()
 	b.write(strconv.AppendBool(buf, hasNext))

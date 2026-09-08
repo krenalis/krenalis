@@ -86,9 +86,9 @@ func Test_CheckReadOnlyAccess_acceptsExpectedReadOnlySurface(t *testing.T) {
 	}
 }
 
-// Test_ProfileDatasetVersion validates versions returned by the published
-// operation metadata before using them as profile dataset versions.
-func Test_ProfileDatasetVersion(t *testing.T) {
+// TestPublishedProfilesVersion validates versions returned by the published
+// operation metadata before using them to identify a published profile table.
+func TestPublishedProfilesVersion(t *testing.T) {
 
 	tests := []struct {
 		name      string
@@ -113,16 +113,15 @@ func Test_ProfileDatasetVersion(t *testing.T) {
 			})
 			defer db.Close()
 
-			version, err := (&Snowflake{db: db}).ProfileDatasetVersion(t.Context())
-			if test.expectErr {
-				if err == nil {
-					t.Fatalf("expected an error, got version %d", version)
+			version, err := (&Snowflake{db: db}).publishedProfilesVersion(t.Context())
+			if err != nil {
+				if !test.expectErr {
+					t.Fatal(err)
 				}
-
 				return
 			}
-			if err != nil {
-				t.Fatal(err)
+			if test.expectErr {
+				t.Fatalf("expected an error, got version %d", version)
 			}
 			if version != test.expected {
 				t.Fatalf("expected version %d, got %d", test.expected, version)

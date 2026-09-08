@@ -6,16 +6,17 @@ package test
 
 import (
 	"bytes"
+	"net/http"
 	"net/url"
-	"strings"
 	"testing"
 
 	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-// TestProfilesPagination verifies that profile pages form a stable, complete sequence.
+// TestProfilesPagination verifies deterministic pagination and schema-aware live reads.
 func TestProfilesPagination(t *testing.T) {
 
 	if testing.Short() {
@@ -44,42 +45,41 @@ func TestProfilesPagination(t *testing.T) {
 	k.WaitForRunsCompletion(run)
 	k.RunIdentityResolutionAndWait()
 
+	var requestSchema types.Type
+	k.Call("GET", "/v1/profiles/schema", nil, nil, &requestSchema)
+	schemaJSON, err := requestSchema.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	const pageSize = 200
-	firstPage, _, expectedTotal, datasetVersion, hasNext := k.ProfilesVersioned(
-		[]string{"email"}, "", true, 0, pageSize, "")
+	firstPage, _, expectedTotal, hasNext := k.ProfilesWithSchema(
+		requestSchema, []string{"email"}, "", true, 0, pageSize)
 	if expectedTotal <= pageSize {
 		t.Fatalf("expected more than %d profiles, got %d", pageSize, expectedTotal)
 	}
 	if len(firstPage) != pageSize {
 		t.Fatalf("expected %d profiles in the first page, got %d", pageSize, len(firstPage))
 	}
-	if datasetVersion == "" {
-		t.Fatal("expected a published profile dataset version")
-	}
 	if !hasNext {
 		t.Fatal("expected the first profile page to have a continuation")
 	}
 	var summaryResponse map[string]any
 	k.Call("GET", "/v1/profiles?"+url.Values{
-		"properties":             []string{"email"},
-		"first":                  []string{"0"},
-		"limit":                  []string{"1"},
-		"includeSchema":          []string{"false"},
-		"expectedDatasetVersion": []string{datasetVersion},
+		"properties": []string{"email"},
+		"first":      []string{"0"},
+		"limit":      []string{"1"},
+		"schema":     []string{string(schemaJSON)},
 	}.Encode(), nil, nil, &summaryResponse)
-	if _, ok := summaryResponse["schema"]; ok {
-		t.Fatal("expected the profile summary response to omit schema metadata")
-	}
-	if summaryResponse["datasetVersion"] != datasetVersion {
-		t.Fatalf("expected summary dataset version %q, got %v", datasetVersion, summaryResponse["datasetVersion"])
+	if _, ok := summaryResponse["schema"]; !ok {
+		t.Fatal("expected the projected schema in the response")
 	}
 	var countResponse struct {
-		Total          int    `json:"total"`
-		DatasetVersion string `json:"datasetVersion"`
+		Total int `json:"total"`
 	}
 	k.Call("GET", "/v1/profiles/count", nil, nil, &countResponse)
-	if countResponse.Total != expectedTotal || countResponse.DatasetVersion != datasetVersion {
-		t.Fatalf("unexpected count response: total=%d version=%q", countResponse.Total, countResponse.DatasetVersion)
+	if countResponse.Total != expectedTotal {
+		t.Fatalf("unexpected count response: total=%d", countResponse.Total)
 	}
 	email, ok := firstPage[0].Attributes["email"].(string)
 	if !ok {
@@ -97,25 +97,22 @@ func TestProfilesPagination(t *testing.T) {
 		t.Fatal(err)
 	}
 	k.Call("GET", "/v1/profiles/count?"+url.Values{
-		"filter":                 []string{string(filter)},
-		"expectedDatasetVersion": []string{datasetVersion},
+		"filter": []string{string(filter)},
+		"schema": []string{string(schemaJSON)},
 	}.Encode(), nil, nil, &countResponse)
-	if countResponse.Total != 1 || countResponse.DatasetVersion != datasetVersion {
-		t.Fatalf("unexpected filtered count response: total=%d version=%q", countResponse.Total, countResponse.DatasetVersion)
+	if countResponse.Total != 1 {
+		t.Fatalf("unexpected filtered count response: total=%d", countResponse.Total)
 	}
 	profiles := firstPage
 	for first := pageSize; first < expectedTotal; first += pageSize {
-		page, _, total, version, pageHasNext := k.ProfilesVersioned(
-			[]string{"email"}, "", true, first, pageSize, datasetVersion)
+		page, _, total, pageHasNext := k.ProfilesWithSchema(
+			requestSchema, []string{"email"}, "", true, first, pageSize)
 		if total != expectedTotal {
 			t.Fatalf("expected a total of %d profiles, got %d", expectedTotal, total)
 		}
 		expectedPageSize := min(pageSize, expectedTotal-first)
 		if len(page) != expectedPageSize {
 			t.Fatalf("expected %d profiles at offset %d, got %d", expectedPageSize, first, len(page))
-		}
-		if version != datasetVersion {
-			t.Fatalf("expected dataset version %q, got %q", datasetVersion, version)
 		}
 		if pageHasNext != (first+len(page) < expectedTotal) {
 			t.Fatalf("unexpected hasNext value %t at offset %d", pageHasNext, first)
@@ -154,67 +151,250 @@ func TestProfilesPagination(t *testing.T) {
 	}
 
 	attributesPath := "/v1/profiles/" + firstPage[0].KPID.String() + "/attributes?" + url.Values{
-		"expectedDatasetVersion": []string{datasetVersion},
+		"schema": []string{string(schemaJSON)},
 	}.Encode()
 	var attributesResponse struct {
-		DatasetVersion string `json:"datasetVersion"`
+		Attributes map[string]any `json:"attributes"`
 	}
 	k.Call("GET", attributesPath, nil, nil, &attributesResponse)
-	if attributesResponse.DatasetVersion != datasetVersion {
-		t.Fatalf("expected attributes dataset version %q, got %q", datasetVersion, attributesResponse.DatasetVersion)
+	if attributesResponse.Attributes["email"] != email {
+		t.Fatal("attributes do not match the requested profile")
 	}
 
-	// Empty ranges still identify the published dataset unambiguously.
-	empty, _, _, emptyVersion, emptyHasNext := k.ProfilesVersioned(
-		[]string{"email"}, "", true, expectedTotal, pageSize, datasetVersion)
-	if len(empty) != 0 || emptyVersion != datasetVersion || emptyHasNext {
-		t.Fatalf("unexpected empty range: profiles=%d version=%q hasNext=%t", len(empty), emptyVersion, emptyHasNext)
+	empty, _, _, emptyHasNext := k.ProfilesWithSchema(
+		requestSchema, []string{"email"}, "", true, expectedTotal, pageSize)
+	if len(empty) != 0 || emptyHasNext {
+		t.Fatalf("unexpected empty range: profiles=%d hasNext=%t", len(empty), emptyHasNext)
 	}
 
-	// Publishing another Identity Resolution makes the former version
-	// distinguishable from a genuine profile-not-found result.
-	k.RunIdentityResolutionAndWait()
+	// An unrelated schema difference is irrelevant to a request's dependencies.
+	emailProperty, _ := requestSchema.Properties().ByName("email")
+	partialSchema := types.Object([]types.Property{emailProperty})
+	unrelatedSchema := types.Object([]types.Property{
+		emailProperty,
+		{Name: "no_longer_present", Type: types.String()},
+	})
+	unrelatedJSON, err := unrelatedSchema.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
 	query := url.Values{
-		"properties":             []string{"email"},
-		"first":                  []string{"0"},
-		"limit":                  []string{"1"},
-		"expectedDatasetVersion": []string{datasetVersion},
+		"schema": []string{string(unrelatedJSON)}, "properties": []string{"email"}, "limit": []string{"1"},
 	}
-	err = k.TryCall("GET", "/v1/profiles?"+query.Encode(), nil, nil, nil)
-	if err == nil || !strings.Contains(err.Error(), `"code":"ProfileDatasetVersionMismatch"`) {
-		t.Fatalf("expected a profile dataset version mismatch, got %v", err)
+	k.Call("GET", "/v1/profiles?"+query.Encode(), nil, nil, &summaryResponse)
+	k.Call("GET", "/v1/profiles/count?"+url.Values{
+		"schema": []string{string(unrelatedJSON)}, "filter": []string{string(filter)},
+	}.Encode(), nil, nil, &countResponse)
+	if countResponse.Total != 1 {
+		t.Fatalf("unexpected filtered count %d", countResponse.Total)
 	}
-	err = k.TryCall("GET", "/v1/profiles/count?"+url.Values{
-		"expectedDatasetVersion": []string{datasetVersion},
-	}.Encode(), nil, nil, nil)
-	if err == nil || !strings.Contains(err.Error(), `"code":"ProfileDatasetVersionMismatch"`) {
-		t.Fatalf("expected a profile count dataset version mismatch, got %v", err)
+
+	// Referenced properties must align, even when they occur only in a filter
+	// or order. Invalid arguments must be rejected before querying.
+	for _, tc := range []struct {
+		name   string
+		path   string
+		query  url.Values
+		status int
+		code   string
+	}{
+		{name: "missing schema", path: "/v1/profiles", status: http.StatusBadRequest},
+		{
+			name:   "malformed schema",
+			path:   "/v1/profiles",
+			query:  url.Values{"schema": []string{"{"}},
+			status: http.StatusBadRequest,
+		},
+		{
+			name: "empty properties",
+			path: "/v1/profiles",
+			query: url.Values{"schema": []string{string(schemaJSON)},
+				"properties": []string{""}},
+			status: http.StatusBadRequest,
+		},
+		{
+			name: "duplicate properties",
+			path: "/v1/profiles",
+			query: url.Values{"schema": []string{string(schemaJSON)},
+				"properties": []string{"email,email"}},
+			status: http.StatusBadRequest,
+		},
+		{
+			name: "unknown requested property",
+			path: "/v1/profiles",
+			query: url.Values{"schema": []string{string(schemaJSON)},
+				"properties": []string{"missing"}},
+			status: http.StatusUnprocessableEntity,
+			code:   "PropertyNotExist",
+		},
+		{
+			name:   "omitted properties uses supplied schema",
+			path:   "/v1/profiles",
+			query:  url.Values{"schema": []string{string(unrelatedJSON)}},
+			status: http.StatusUnprocessableEntity,
+			code:   "SchemaNotAligned",
+		},
+		{
+			name: "order dependency",
+			path: "/v1/profiles",
+			query: url.Values{"schema": []string{string(unrelatedJSON)},
+				"properties": []string{"email"},
+				"order":      []string{"no_longer_present"}},
+			status: http.StatusUnprocessableEntity,
+			code:   "SchemaNotAligned",
+		},
+		{
+			name:   "count needs filter schema",
+			path:   "/v1/profiles/count",
+			query:  url.Values{"filter": []string{string(filter)}},
+			status: http.StatusBadRequest,
+		},
+		{
+			name:   "attributes need schema",
+			path:   "/v1/profiles/" + firstPage[0].KPID.String() + "/attributes",
+			status: http.StatusBadRequest,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := k.TryCall("GET", tc.path+"?"+tc.query.Encode(), nil, nil, nil)
+			if err != nil {
+				statusErr, ok := errors.AsType[*krenalistester.StatusCodeError](err)
+				if !ok || statusErr.Response.Code != tc.status {
+					t.Fatalf("expected HTTP %d, got %v", tc.status, err)
+				}
+				if tc.code != "" {
+					var response struct {
+						Error struct {
+							Code string `json:"code"`
+						} `json:"error"`
+					}
+					err = json.Unmarshal([]byte(statusErr.Response.Text), &response)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if response.Error.Code != tc.code {
+						t.Fatalf("expected code %s, got %s", tc.code, response.Error.Code)
+					}
+				}
+				return
+			}
+			t.Fatal("expected an error")
+		})
+	}
+
+	// Reusing a name with a different type must not reinterpret the arguments.
+	changedEmail := emailProperty
+	changedEmail.Type = types.Int(64)
+	changedSchema := types.Object([]types.Property{changedEmail})
+	changedJSON, err := changedSchema.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	numericFilter := `{"operator":"and","rules":[{"property":"email","operator":"is","values":["1"]}]}`
+	for _, path := range []string{
+		"/v1/profiles?",
+		"/v1/profiles/count?filter=" + url.QueryEscape(numericFilter) + "&",
+		"/v1/profiles/" + firstPage[0].KPID.String() + "/attributes?",
+	} {
+		err = k.TryCall("GET", path+url.Values{"schema": []string{string(changedJSON)}}.Encode(), nil, nil, nil)
+		if err != nil {
+			statusErr, ok := errors.AsType[*krenalistester.StatusCodeError](err)
+			if !ok || statusErr.Response.Code != http.StatusUnprocessableEntity {
+				t.Fatalf("expected incompatible schema error, got %v", err)
+			}
+			continue
+		}
+		t.Fatal("expected incompatible schema error")
+	}
+
+	// Compatible alterations and subsequent IR publications keep old arguments usable.
+	newProperties := requestSchema.Properties().Slice()
+	newProperties = append(newProperties, types.Property{
+		Name: "new_property", Type: types.String(), ReadOptional: true,
+	})
+	k.AlterProfileSchemaAndWait(types.Object(newProperties), nil, nil)
+	page, projectedSchema, _, _ := k.ProfilesWithSchema(partialSchema, nil, "", true, 0, 1)
+	if len(page) != 1 || !types.Equal(projectedSchema, partialSchema) {
+		t.Fatal("omitting properties must return only the supplied schema")
+	}
+	k.RunIdentityResolutionAndWait()
+	k.ProfilesWithSchema(partialSchema, nil, "", true, 0, 1)
+
+	// Update and remove profiles without running Identity Resolution.
+	var settings krenalistester.DBSettings
+	err = json.Unmarshal(krenalistester.PostgresWarehouseSettings(), &settings)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pool, err := krenalistester.ConnectionPool(t.Context(), &settings)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	_, err = pool.Exec(t.Context(), "UPDATE profiles SET email = $1 WHERE _kpid = $2",
+		"changed@example.com", firstPage[0].KPID.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	k.Call("GET", attributesPath, nil, nil, &attributesResponse)
+	if attributesResponse.Attributes["email"] != "changed@example.com" {
+		t.Fatal("attributes did not reflect a live update")
+	}
+	// A partial nested object describes both the selected columns and serialization.
+	android, _ := requestSchema.Properties().ByName("android")
+	androidID, _ := android.Type.Properties().ByName("id")
+	android.Type = types.Object([]types.Property{androidID})
+	nestedSchema := types.Object([]types.Property{emailProperty, android})
+	nestedJSON, err := nestedSchema.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = pool.Exec(t.Context(),
+		"UPDATE profiles SET android_id = 'nested-id', android_idfa = 'unrequested' WHERE _kpid = $1",
+		firstPage[0].KPID.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	nestedFilter := `{"operator":"and","rules":[{"property":"android.id","operator":"is","values":["nested-id"]}]}`
+	var nestedResponse struct {
+		Profiles []struct {
+			Attributes map[string]any `json:"attributes"`
+		} `json:"profiles"`
+	}
+	k.Call("GET", "/v1/profiles?"+url.Values{
+		"schema": []string{string(nestedJSON)}, "properties": []string{"android"}, "filter": []string{nestedFilter},
+	}.Encode(), nil, nil, &nestedResponse)
+	if len(nestedResponse.Profiles) != 1 {
+		t.Fatalf("expected one nested match, got %d", len(nestedResponse.Profiles))
+	}
+	nested, ok := nestedResponse.Profiles[0].Attributes["android"].(map[string]any)
+	if !ok || len(nested) != 1 || nested["id"] != "nested-id" {
+		t.Fatalf("unexpected nested attributes: %v", nested)
+	}
+	k.Call("GET", "/v1/profiles/count?"+url.Values{
+		"schema": []string{string(nestedJSON)}, "filter": []string{nestedFilter},
+	}.Encode(), nil, nil, &countResponse)
+	if countResponse.Total != 1 {
+		t.Fatalf("expected one nested count match, got %d", countResponse.Total)
+	}
+
+	_, err = pool.Exec(t.Context(), "DELETE FROM profiles WHERE _kpid = $1", firstPage[0].KPID.String())
+	if err != nil {
+		t.Fatal(err)
 	}
 	err = k.TryCall("GET", attributesPath, nil, nil, nil)
-	if err == nil || !strings.Contains(err.Error(), `"code":"ProfileDatasetVersionMismatch"`) {
-		t.Fatalf("expected an attributes dataset version mismatch, got %v", err)
-	}
-	for _, path := range []string{
-		"/v1/profiles/" + firstPage[0].KPID.String() + "/events?limit=1&",
-		"/v1/profiles/" + firstPage[0].KPID.String() + "/identities?first=0&limit=1&",
-	} {
-
-		err = k.TryCall("GET", path+url.Values{
-			"expectedDatasetVersion": []string{datasetVersion},
-		}.Encode(), nil, nil, nil)
-		if err == nil || !strings.Contains(err.Error(), `"code":"ProfileDatasetVersionMismatch"`) {
-			t.Fatalf("expected a profile dataset version mismatch from %s, got %v", path, err)
+	if err != nil {
+		statusErr, ok := errors.AsType[*krenalistester.StatusCodeError](err)
+		if !ok || statusErr.Response.Code != http.StatusNotFound {
+			t.Fatalf("expected a local not-found error, got %v", err)
 		}
-
 	}
-
-	_, _, _, currentDatasetVersion, _ := k.ProfilesVersioned([]string{"email"}, "", true, 0, 1, "")
-	missingProfilePath := "/v1/profiles/00000000-0000-0000-0000-000000000000/attributes?" + url.Values{
-		"expectedDatasetVersion": []string{currentDatasetVersion},
-	}.Encode()
-	err = k.TryCall("GET", missingProfilePath, nil, nil, nil)
-	if err == nil || strings.Contains(err.Error(), `"code":"ProfileDatasetVersionMismatch"`) {
-		t.Fatalf("expected a genuine missing profile error, got %v", err)
+	if err == nil {
+		t.Fatal("expected a missing profile error")
+	}
+	k.Call("GET", "/v1/profiles/count", nil, nil, &countResponse)
+	if countResponse.Total != expectedTotal-1 {
+		t.Fatalf("expected the live count %d, got %d", expectedTotal-1, countResponse.Total)
 	}
 
 }

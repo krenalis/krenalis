@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -43,10 +42,6 @@ var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
 // ErrWorkspaceNotExist is returned by Store methods when the workspace no
 // longer exists.
 var ErrWorkspaceNotExist = errors.New("workspace does not exist anymore")
-
-// ErrProfileDatasetVersionMismatch indicates that the requested published
-// profiles dataset is no longer current.
-var ErrProfileDatasetVersionMismatch = errors.New("profile dataset version mismatch")
 
 // UnavailableError represents an error with the data warehouse.
 type UnavailableError struct {
@@ -422,128 +417,109 @@ func (store *Store) ProfileRecords(ctx context.Context, query Query, schema type
 	return records(ctx, store.warehouse(), query, "_kpid", store.profileColumnByProperty(), true, matching)
 }
 
-// ProfileCount returns the number of profiles matched by where and the
-// published dataset version used for the count. expectedVersion may be empty;
-// otherwise, it must equal the current published dataset version.
-//
-// If the data warehouse is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If expectedVersion is no longer current, it
-// returns ErrProfileDatasetVersionMismatch. If an error occurs with the data
-// warehouse, it returns an *UnavailableError error.
-func (store *Store) ProfileCount(ctx context.Context, where *state.Where, expectedVersion string) (int, string, error) {
+// ProfileCount returns the number of profiles matched by where.
+// schema describes the properties used by where and may be invalid only when
+// where is nil. It returns *schemas.Error if schema is not aligned,
+// ErrWorkspaceNotExist if the workspace no longer exists, ErrMaintenanceMode
+// in maintenance mode, or *UnavailableError for a warehouse failure.
+func (store *Store) ProfileCount(ctx context.Context, where *state.Where, schema types.Type) (int, error) {
 
 	store.mustBeOpen()
 
+	if (where != nil || schema.Valid()) && (schema.Kind() != types.ObjectKind || schema.Generic()) {
+		return 0, errors.New("schema is not a concrete object type")
+	}
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
 	if err != nil {
-		return 0, "", err
+		return 0, err
 	}
 	defer done()
-	version, err := store.warehouse().ProfileDatasetVersion(ctx)
-	if err != nil {
-		return 0, "", unavailableError(err)
-	}
-	datasetVersion := strconv.Itoa(version)
-	if expectedVersion != "" && expectedVersion != datasetVersion {
-		return 0, datasetVersion, ErrProfileDatasetVersionMismatch
+
+	if schema.Valid() {
+
+		workspace, ok := store.ds.state.Workspace(store.workspace)
+		if !ok {
+			return 0, ErrWorkspaceNotExist
+		}
+		err = schemas.CheckAlignment(schema, workspace.ProfileSchema, nil)
+		if err != nil {
+			return 0, err
+		}
+
 	}
 
 	var expression warehouses.Expr
 	if where != nil {
-		expression, err = convertWhere(where, store.profileColumnByProperty())
+		expression, err = convertWhere(where, profileColumnByProperty(schema))
 		if err != nil {
-			return 0, "", unavailableError(err)
+			return 0, unavailableError(err)
 		}
 	}
 	total, err := store.warehouse().Count(ctx, warehouses.RowQuery{
-		Columns: []warehouses.Column{{Name: "_kpid", Type: types.UUID()}},
-		Table:   "krenalis_profiles_" + datasetVersion,
-		Where:   expression,
+		Table: "profiles",
+		Where: expression,
 	})
 	if err != nil {
-		if expectedVersion != "" {
-			currentVersion, versionErr := store.warehouse().ProfileDatasetVersion(ctx)
-			if versionErr == nil && strconv.Itoa(currentVersion) != expectedVersion {
-				return 0, strconv.Itoa(currentVersion), ErrProfileDatasetVersionMismatch
-			}
-		}
-		return 0, "", unavailableError(err)
+		return 0, unavailableError(err)
 	}
 	if total < 0 {
-		return 0, "", unavailableError(errors.New("profile count is negative"))
+		return 0, unavailableError(errors.New("profile count is negative"))
 	}
 
-	return total, datasetVersion, nil
+	return total, nil
 }
 
-// ProfileDatasetVersion returns the version of the currently published
-// profiles dataset.
-//
-// If the data warehouse is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns an *UnavailableError error.
-func (store *Store) ProfileDatasetVersion(ctx context.Context) (string, error) {
-
-	store.mustBeOpen()
-	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
-	if err != nil {
-		return "", err
-	}
-	defer done()
-	version, err := store.warehouse().ProfileDatasetVersion(ctx)
-	if err != nil {
-		return "", unavailableError(err)
-	}
-
-	return strconv.Itoa(version), nil
-}
-
-// Profiles returns the profiles according to the provided query, together
-// with their published dataset version and whether a subsequent row exists.
-// expectedVersion may be empty; otherwise, it must equal the current published
-// dataset version.
-//
-// If the data warehouse is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If expectedVersion is no longer current, it
-// returns ErrProfileDatasetVersionMismatch. If an error occurs with the data
-// warehouse, it returns an *UnavailableError error.
-func (store *Store) Profiles(ctx context.Context, query Query, expectedVersion string) ([]map[string]any, int, string, bool, error) {
+// Profiles returns profiles matching query, their total count, and whether
+// another row follows the requested range. schema describes all properties
+// used by query, excluding the built-in KPID and update time.
+// It returns *schemas.Error if schema is not aligned, ErrWorkspaceNotExist
+// if the workspace no longer exists, ErrMaintenanceMode in maintenance mode,
+// or *UnavailableError for a warehouse failure.
+func (store *Store) Profiles(ctx context.Context, query Query, schema types.Type) ([]map[string]any, int, bool, error) {
 
 	store.mustBeOpen()
 
+	if schema.Kind() != types.ObjectKind || schema.Generic() {
+		return nil, 0, false, errors.New("schema is not a concrete object type")
+	}
+	if query.First < 0 || query.First > 2147483647 {
+		return nil, 0, false, errors.New("profile offset is out of range")
+	}
+	if query.Limit < 1 || query.Limit > 1000 {
+		return nil, 0, false, errors.New("profile limit is out of range")
+	}
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
 	if err != nil {
-		return nil, 0, "", false, err
+		return nil, 0, false, err
 	}
 	defer done()
-	version, err := store.warehouse().ProfileDatasetVersion(ctx)
+
+	workspace, ok := store.ds.state.Workspace(store.workspace)
+	if !ok {
+		return nil, 0, false, ErrWorkspaceNotExist
+	}
+	err = schemas.CheckAlignment(schema, workspace.ProfileSchema, nil)
 	if err != nil {
-		return nil, 0, "", false, unavailableError(err)
+		return nil, 0, false, err
 	}
-	datasetVersion := strconv.Itoa(version)
-	if expectedVersion != "" && expectedVersion != datasetVersion {
-		return nil, 0, datasetVersion, false, ErrProfileDatasetVersionMismatch
-	}
-	query.table = "krenalis_profiles_" + datasetVersion
+
+	columns := profileColumnByProperty(schema)
+	columns["_kpid"] = warehouses.Column{Name: "_kpid", Type: types.UUID()}
+	columns["_updated_at"] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
+	query.table = "profiles"
 	query.total = true
 	requestedLimit := query.Limit
-	query.Limit = requestedLimit + 1
-	profiles, total, err := store.query(ctx, query, store.profileColumnByProperty(), true)
+	query.Limit++
+	profiles, total, err := store.query(ctx, query, columns, true)
 	if err != nil {
-		if expectedVersion != "" {
-			currentVersion, versionErr := store.warehouse().ProfileDatasetVersion(ctx)
-			if versionErr == nil && strconv.Itoa(currentVersion) != expectedVersion {
-				return nil, 0, strconv.Itoa(currentVersion), false, ErrProfileDatasetVersionMismatch
-			}
-		}
-		return nil, 0, "", false, unavailableError(err)
+		return nil, 0, false, unavailableError(err)
 	}
 	hasNext := len(profiles) > requestedLimit
 	if hasNext {
 		profiles = profiles[:requestedLimit]
 	}
 
-	return profiles, total, datasetVersion, hasNext, nil
+	return profiles, total, hasNext, nil
 }
 
 // PurgePipelines purges the provided pipelines from the data warehouse,
@@ -885,48 +861,59 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 		}
 	}
 
-	var orderBy []warehouses.RowOrder
+	var orderBy []warehouses.Column
+	orderDesc := query.OrderDesc
 	if len(query.OrderBy) > 0 {
-		orderBy = make([]warehouses.RowOrder, len(query.OrderBy))
-		for i, order := range query.OrderBy {
-			c, ok := columnByProperty[order.Property]
+		orderBy = make([]warehouses.Column, len(query.OrderBy))
+		for i, property := range query.OrderBy {
+			c, ok := columnByProperty[property]
 			if !ok {
-				return nil, 0, fmt.Errorf("property path %s does not exist", order.Property)
+				return nil, 0, fmt.Errorf("property path %s does not exist", property)
 			}
-			orderBy[i] = warehouses.RowOrder{Column: c, Desc: order.Desc}
+			orderBy[i] = c
 		}
 	}
 
 	rows, total, err := store.warehouse().Query(ctx, warehouses.RowQuery{
-		Columns: columns,
-		Table:   query.table,
-		Where:   where,
-		OrderBy: orderBy,
-		First:   query.First,
-		Limit:   query.Limit,
+		Columns:   columns,
+		Table:     query.table,
+		Where:     where,
+		OrderBy:   orderBy,
+		OrderDesc: orderDesc,
+		First:     query.First,
+		Limit:     query.Limit,
 	}, true)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	records := make([]map[string]any, 0)
-
 	defer rows.Close()
+	if query.table == "profiles" && total < 0 {
+		return nil, 0, errors.New("profile count is negative")
+	}
+
+	records := []map[string]any{}
 	row := make([]any, len(columns))
 	for rows.Next() {
-		if err := rows.Scan(row...); err != nil {
+		if query.table == "profiles" && len(records) >= query.Limit {
+			return nil, 0, errors.New("profile row count exceeds requested limit")
+		}
+		err = rows.Scan(row...)
+		if err != nil {
 			return nil, 0, err
 		}
 		records = append(records, unflat(row))
 	}
-	if err = rows.Err(); err != nil {
+	err = rows.Err()
+	if err != nil {
 		return nil, 0, err
 	}
 
-	// Since total is an estimate, being counted separately from the actual
-	// total number of record returned, ensure to not return a value lower than
-	// the actually returned number of users.
-	total = max(len(records), total)
+	// Profile counts and rows are independent observations. Preserve the
+	// existing estimate adjustment for other queries.
+	if query.table != "profiles" {
+		total = max(len(records), total)
+	}
 
 	return records, total, nil
 }

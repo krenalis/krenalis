@@ -27,6 +27,7 @@ const COLUMN_VISIBILITY_TRANSITION_CLASS = 'profiles-columns-transition';
 let activeColumnVisibilityTransition: ViewTransition | undefined;
 
 interface ProfilesRangeRequest {
+	schema: ObjectType;
 	filter: Filter | null;
 	projection: string[];
 }
@@ -39,7 +40,6 @@ interface InFlightProfilesRequest {
 interface ProfilesReplacement {
 	activeProfileID: string;
 	animateColumnVisibility?: boolean;
-	expectedDatasetVersion: string;
 	filter: Filter | null;
 	first: number;
 	profileProperties: ProfileProperty[];
@@ -83,6 +83,7 @@ const useProfiles = () => {
 	const [profilesProperties, setProfilesPropertiesState] = useState<ProfileProperty[]>([]);
 	const [profileSchemaProperties, setProfileSchemaProperties] = useState<ProfileSchemaProperties>({});
 	const [profileSchema, setProfileSchema] = useState<ObjectType>();
+	const [profileSchemaSessionID, setProfileSchemaSessionID] = useState(0);
 	const [appliedFilter, setAppliedFilter] = useState<Filter | null>(null);
 
 	const { api, handleError, redirect, selectedWorkspace, warehouse, workspaces } = useContext(AppContext);
@@ -91,7 +92,6 @@ const useProfiles = () => {
 	const appliedFilterRef = useRef<Filter | null>(null);
 	const requestRef = useRef<ProfilesRangeRequest>();
 	const inFlightRef = useRef<Map<string, InFlightProfilesRequest>>(new Map());
-	const failedPrefetchRangesRef = useRef<Set<string>>(new Set());
 	const abortControllersRef = useRef<Set<AbortController>>(new Set());
 	const pendingNavigationRef = useRef(false);
 	const gridReplacementGenerationRef = useRef(0);
@@ -108,7 +108,6 @@ const useProfiles = () => {
 		}
 		abortControllersRef.current.clear();
 		inFlightRef.current.clear();
-		failedPrefetchRangesRef.current.clear();
 		pendingNavigationRef.current = false;
 	}, []);
 
@@ -124,47 +123,24 @@ const useProfiles = () => {
 			request: ProfilesRangeRequest,
 			first: number,
 			limit: number,
-			expectedDatasetVersion: string | undefined,
 			background: boolean,
 		): Promise<boolean> => {
 			const key = `${executionID}:${first}:${limit}`;
 			const inFlight = inFlightRef.current.get(key);
 			if (inFlight != null) {
 				if (!background && inFlight.background) {
-					return inFlight.promise.catch(() =>
-						loadProfilesRange(executionID, request, first, limit, expectedDatasetVersion, false),
-					);
+					return inFlight.promise.catch(() => loadProfilesRange(executionID, request, first, limit, false));
 				}
 				return inFlight.promise;
 			}
 
 			const controller = new AbortController();
-			if (!background) {
-				failedPrefetchRangesRef.current.delete(key);
-			}
 			abortControllersRef.current.add(controller);
 			let promise: Promise<boolean>;
 			promise = api.workspaces.profiles
-				.find(
-					request.projection,
-					request.filter,
-					'',
-					true,
-					first,
-					limit,
-					expectedDatasetVersion,
-					controller.signal,
-				)
+				.find(request.projection, request.filter, '', true, first, limit, request.schema, controller.signal)
 				.then((response: FindProfilesResponse) => {
-					if (executionRef.current !== executionID) {
-						return false;
-					}
-					const currentVersion = sequenceRef.current.datasetVersion;
-					if (
-						(expectedDatasetVersion != null && response.datasetVersion !== expectedDatasetVersion) ||
-						(currentVersion != null && response.datasetVersion !== currentVersion)
-					) {
-						applySequenceAction({ type: 'markStale', executionID });
+					if (controller.signal.aborted || executionRef.current !== executionID) {
 						return false;
 					}
 					applySequenceAction({
@@ -173,22 +149,17 @@ const useProfiles = () => {
 						first,
 						profiles: response.profiles,
 						total: response.total,
-						datasetVersion: response.datasetVersion,
 						hasNext: response.hasNext,
 					});
-					failedPrefetchRangesRef.current.delete(key);
 					return true;
 				})
 				.catch((error) => {
 					if (executionRef.current !== executionID || error?.name === 'AbortError') {
 						return false;
 					}
-					if (error instanceof UnprocessableError && error.code === 'ProfileDatasetVersionMismatch') {
-						applySequenceAction({ type: 'markStale', executionID });
+					if (error instanceof UnprocessableError && error.code === 'SchemaNotAligned') {
+						applySequenceAction({ type: 'markSchemaNotAligned', executionID });
 						return false;
-					}
-					if (background) {
-						failedPrefetchRangesRef.current.add(key);
 					}
 					throw error;
 				})
@@ -242,7 +213,7 @@ const useProfiles = () => {
 			setAppliedFilter(filter);
 			requestRef.current = request;
 			applySequenceAction({ type: 'reset', queryKey, executionID, pageSize, projection: request.projection });
-			void loadProfilesRange(executionID, request, 0, pageSize * 2, undefined, false).catch((error) => {
+			void loadProfilesRange(executionID, request, 0, pageSize * 2, false).catch((error) => {
 				if (executionRef.current !== executionID) {
 					return;
 				}
@@ -289,6 +260,7 @@ const useProfiles = () => {
 
 		const { properties, schemaProperties } = profileMetadata(schema);
 		setProfileSchema(schema);
+		setProfileSchemaSessionID((sessionID) => sessionID + 1);
 		setProfileSchemaProperties(schemaProperties);
 		setProfilesPropertiesState(properties);
 		localStorage.setItem(PROFILES_PROPERTIES_KEY, JSON.stringify(properties));
@@ -313,6 +285,7 @@ const useProfiles = () => {
 		setAppliedFilter(null);
 		void loadSchemaAndStartExecution();
 		return () => {
+			executionRef.current++;
 			cancelGridReplacement();
 			abortCurrentExecution();
 		};
@@ -327,14 +300,7 @@ const useProfiles = () => {
 			if (page == null || !page.hasNext || getProfilesPage(current, nextFirst) != null || request == null) {
 				return;
 			}
-			void loadProfilesRange(
-				current.executionID,
-				request,
-				nextFirst,
-				current.pageSize,
-				current.datasetVersion,
-				true,
-			).catch(() => {
+			void loadProfilesRange(current.executionID, request, nextFirst, current.pageSize, true).catch(() => {
 				// Speculative failures are retried as foreground requests if the
 				// user subsequently requests this boundary.
 			});
@@ -349,7 +315,7 @@ const useProfiles = () => {
 				return false;
 			}
 			const request = requestRef.current;
-			if (request == null || current.datasetVersion == null) {
+			if (request == null || current.isInitialLoading) {
 				return false;
 			}
 
@@ -362,7 +328,6 @@ const useProfiles = () => {
 						request,
 						first,
 						current.pageSize,
-						current.datasetVersion,
 						false,
 					);
 					if (!accepted) {
@@ -373,14 +338,14 @@ const useProfiles = () => {
 					return false;
 				}
 				const page = getProfilesPage(sequenceRef.current, first);
-				if (page == null || page.profiles.length === 0) {
+				if (page == null) {
 					return false;
 				}
 				let activeProfileID = '';
 				if (destinationActiveProfile === 'first') {
-					activeProfileID = page.profiles[0].kpid;
+					activeProfileID = page.profiles[0]?.kpid ?? '';
 				} else if (destinationActiveProfile === 'last') {
-					activeProfileID = page.profiles[page.profiles.length - 1].kpid;
+					activeProfileID = page.profiles[page.profiles.length - 1]?.kpid ?? '';
 				}
 				applySequenceAction({ type: 'commitPage', first, activeProfileID });
 				prefetchAfterPage(first);
@@ -444,6 +409,14 @@ const useProfiles = () => {
 	);
 
 	const refreshProfiles = useCallback(() => {
+		if (profileSchema != null) {
+			startExecution(profilesProperties, profileSchema, sequenceRef.current.pageSize);
+		}
+	}, [profileSchema, profilesProperties, startExecution]);
+
+	const resetProfilesSchema = useCallback(() => {
+		appliedFilterRef.current = null;
+		setAppliedFilter(null);
 		void loadSchemaAndStartExecution();
 	}, [loadSchemaAndStartExecution]);
 
@@ -454,23 +427,27 @@ const useProfiles = () => {
 
 	const previewProfilesFilter = useCallback(
 		async (filter: Filter | null, signal?: AbortSignal): Promise<CountProfilesResponse> => {
+			const executionID = executionRef.current;
 			try {
-				return await api.workspaces.profiles.count(filter, undefined, signal);
+				return await api.workspaces.profiles.count(filter, profileSchema, signal);
 			} catch (error) {
-				if (error instanceof NotFoundError) {
-					reportProfilesError(error);
+				if (!signal?.aborted && executionRef.current === executionID) {
+					if (error instanceof UnprocessableError && error.code === 'SchemaNotAligned') {
+						applySequenceAction({ type: 'markSchemaNotAligned', executionID });
+					} else if (error instanceof NotFoundError) {
+						reportProfilesError(error);
+					}
 				}
 				throw error;
 			}
 		},
-		[api, reportProfilesError],
+		[api, applySequenceAction, profileSchema, reportProfilesError],
 	);
 
 	const replaceProfilesExecution = useCallback(
 		async ({
 			activeProfileID,
 			animateColumnVisibility,
-			expectedDatasetVersion,
 			filter: requestedFilter,
 			first,
 			profileProperties,
@@ -503,7 +480,7 @@ const useProfiles = () => {
 					true,
 					first,
 					pageSize * 2,
-					expectedDatasetVersion,
+					request.schema,
 					controller.signal,
 				);
 				if (gridReplacementGenerationRef.current !== generation) {
@@ -511,11 +488,14 @@ const useProfiles = () => {
 				}
 
 				const commitReplacement = () => {
+					if (gridReplacementGenerationRef.current !== generation) {
+						return;
+					}
 					abortCurrentExecution();
 					const executionID = ++executionRef.current;
-					const retainedActiveProfileID = response.profiles.some(
-						(profile) => profile.kpid === activeProfileID,
-					)
+					const retainedActiveProfileID = response.profiles
+						.slice(0, pageSize)
+						.some((profile) => profile.kpid === activeProfileID)
 						? activeProfileID
 						: '';
 					appliedFilterRef.current = filter;
@@ -531,7 +511,6 @@ const useProfiles = () => {
 						activeProfileID: retainedActiveProfileID,
 						profiles: response.profiles,
 						total: response.total,
-						datasetVersion: response.datasetVersion,
 						hasNext: response.hasNext,
 					});
 				};
@@ -546,8 +525,8 @@ const useProfiles = () => {
 				if (gridReplacementGenerationRef.current !== generation || error?.name === 'AbortError') {
 					return false;
 				}
-				if (error instanceof UnprocessableError && error.code === 'ProfileDatasetVersionMismatch') {
-					applySequenceAction({ type: 'markStale', executionID: sequenceRef.current.executionID });
+				if (error instanceof UnprocessableError && error.code === 'SchemaNotAligned') {
+					applySequenceAction({ type: 'markSchemaNotAligned', executionID: sequenceRef.current.executionID });
 				}
 				throw error;
 			} finally {
@@ -568,11 +547,10 @@ const useProfiles = () => {
 	);
 
 	const showProfilesFilter = useCallback(
-		async (filter: Filter | null, expectedDatasetVersion: string): Promise<boolean> => {
+		async (filter: Filter | null): Promise<boolean> => {
 			try {
 				return await replaceProfilesExecution({
 					activeProfileID: '',
-					expectedDatasetVersion,
 					filter,
 					first: 0,
 					profileProperties: profilesProperties,
@@ -609,7 +587,7 @@ const useProfiles = () => {
 			}
 
 			const current = sequenceRef.current;
-			if (current.datasetVersion == null || requestRef.current == null) {
+			if (current.isInitialLoading || requestRef.current == null) {
 				setProfilesPropertiesState(properties);
 				localStorage.setItem(PROFILES_PROPERTIES_KEY, JSON.stringify(properties));
 				startExecution(properties, profileSchema, current.pageSize);
@@ -644,7 +622,6 @@ const useProfiles = () => {
 			void replaceProfilesExecution({
 				activeProfileID: current.activeProfileID,
 				animateColumnVisibility: true,
-				expectedDatasetVersion: current.datasetVersion,
 				filter: appliedFilterRef.current,
 				first: current.visibleFirst,
 				profileProperties: properties,
@@ -680,8 +657,8 @@ const useProfiles = () => {
 		],
 	);
 
-	const markProfilesStale = useCallback(
-		() => applySequenceAction({ type: 'markStale', executionID: sequenceRef.current.executionID }),
+	const markProfileSchemaNotAligned = useCallback(
+		() => applySequenceAction({ type: 'markSchemaNotAligned', executionID: sequenceRef.current.executionID }),
 		[applySequenceAction],
 	);
 
@@ -706,15 +683,17 @@ const useProfiles = () => {
 		profilesFirst: sequence.visibleFirst,
 		profilesLimit: sequence.pageSize,
 		profilesProjection: sequence.projection,
-		datasetVersion: sequence.datasetVersion,
 		profilesQueryKey: sequence.queryKey,
+		profilesExecutionID: sequence.executionID,
+		profileSchemaSessionID,
+		resetProfilesSchema,
 		hasNextPage: visiblePage?.hasNext ?? false,
 		activeProfileID: sequence.activeProfileID,
 		canNavigateNextProfile,
 		canNavigatePreviousProfile,
-		isProfilesStale: sequence.stale,
+		isProfileSchemaNotAligned: sequence.schemaNotAligned,
 		goToProfilesPage,
-		markProfilesStale,
+		markProfileSchemaNotAligned,
 		navigateProfile,
 		refreshProfiles,
 		reorderProfilesProperties,
@@ -813,7 +792,7 @@ const createProfilesExecution = (
 	return {
 		filter,
 		queryKey: createProfilesQueryKey(identity),
-		request: { filter, projection },
+		request: { filter, projection, schema },
 	};
 };
 

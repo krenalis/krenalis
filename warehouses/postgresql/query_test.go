@@ -53,7 +53,7 @@ func Test_renderCountQuery(t *testing.T) {
 		Where: warehouses.NewBaseExpr(
 			warehouses.Column{Name: "id", Type: types.Int(32)}, warehouses.OpIs, 1,
 		),
-		OrderBy: []warehouses.RowOrder{{Column: warehouses.Column{Name: "name", Type: types.String()}}},
+		OrderBy: []warehouses.Column{{Name: "name", Type: types.String()}},
 		First:   10,
 		Limit:   20,
 	}

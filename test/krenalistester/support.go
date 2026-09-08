@@ -692,35 +692,32 @@ func (k *Krenalis) ProfilePropertiesSuitableAsIdentifiers() types.Type {
 // Profiles returns the profiles in the given range, together with their schema
 // and total count.
 func (k *Krenalis) Profiles(properties []string, order string, orderDesc bool, first, limit int) (users []Profile, schema types.Type, total int) {
-	users, schema, total, _, _ = k.ProfilesVersioned(properties, order, orderDesc, first, limit, "")
-
+	k.Call("GET", "/v1/profiles/schema", nil, nil, &schema)
+	users, schema, total, _ = k.ProfilesWithSchema(schema, properties, order, orderDesc, first, limit)
 	return users, schema, total
 }
 
-// ProfilesVersioned returns the profiles in the given range, together with
-// their schema, total count, published dataset version, and continuation state.
-// expectedDatasetVersion may be empty.
-func (k *Krenalis) ProfilesVersioned(properties []string, order string, orderDesc bool, first, limit int, expectedDatasetVersion string) (users []Profile, schema types.Type, total int, datasetVersion string, hasNext bool) {
+// ProfilesWithSchema returns profiles interpreted using schema, their projected
+// schema, total count, and continuation state.
+func (k *Krenalis) ProfilesWithSchema(schema types.Type, properties []string, order string, orderDesc bool, first, limit int) ([]Profile, types.Type, int, bool) {
+	schemaJSON, err := schema.MarshalJSON()
+	must(k.t, err)
 	queryString := url.Values{
+		"schema":     []string{string(schemaJSON)},
 		"properties": properties,
 		"order":      []string{order},
 		"orderDesc":  []string{fmt.Sprintf("%t", orderDesc)},
 		"first":      []string{strconv.Itoa(first)},
 		"limit":      []string{strconv.Itoa(limit)},
 	}
-	if expectedDatasetVersion != "" {
-		queryString.Set("expectedDatasetVersion", expectedDatasetVersion)
-	}
 	var response struct {
-		Profiles       []Profile  `json:"profiles"`
-		Schema         types.Type `json:"schema"`
-		Total          int        `json:"total"`
-		DatasetVersion string     `json:"datasetVersion"`
-		HasNext        bool       `json:"hasNext"`
+		Profiles []Profile  `json:"profiles"`
+		Schema   types.Type `json:"schema"`
+		Total    int        `json:"total"`
+		HasNext  bool       `json:"hasNext"`
 	}
 	k.Call("GET", "/v1/profiles?"+queryString.Encode(), nil, nil, &response)
-
-	return response.Profiles, response.Schema, response.Total, response.DatasetVersion, response.HasNext
+	return response.Profiles, response.Schema, response.Total, response.HasNext
 }
 
 // RepairWarehouse repairs the warehouse.

@@ -1449,3 +1449,15 @@ sl-button.profiles-list__filter-update-results::part(label) {
 	border-radius: 5px;
 	padding: 0 3px;
 }
+
+.profiles-list__pagination-action-label {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+}

@@ -252,10 +252,6 @@ type Warehouse interface {
 	// current columns to the given columns.
 	PreviewAlterProfileSchema(ctx context.Context, columns []Column, operations []AlterOperation) ([]string, error)
 
-	// ProfileDatasetVersion returns the version of the currently published
-	// profiles dataset.
-	ProfileDatasetVersion(ctx context.Context) (int, error)
-
 	// Query executes a query and returns the results as Rows. If withTotal is true,
 	// it also returns an estimated total number of the records that would be
 	// returned if the query did not include First and Limit clauses.
@@ -377,8 +373,11 @@ type RowQuery struct {
 	// Where, when not nil, filters the records to return.
 	Where Expr
 
-	// OrderBy contains the criteria by which the returned rows are ordered.
-	OrderBy []RowOrder
+	// OrderBy specifies the columns by which the returned rows are ordered.
+	OrderBy []Column
+
+	// OrderDesc applies descending order to every OrderBy column.
+	OrderDesc bool
 
 	// First is the index of the first returned row and must be >= 0.
 	First int
@@ -386,17 +385,6 @@ type RowQuery struct {
 	// Limit controls how many rows should be returned and must be >= 0. If
 	// 0, it means that there is no limit.
 	Limit int
-}
-
-// RowOrder represents an ordering criterion for a row query.
-type RowOrder struct {
-
-	// Column is the column by which to order the rows.
-	Column Column
-
-	// Desc, when true, orders the rows in descending order instead of ascending
-	// order.
-	Desc bool
 }
 
 // JoinType represents a type of JOIN statement.

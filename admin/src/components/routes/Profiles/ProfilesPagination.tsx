@@ -32,7 +32,7 @@ const ProfilesPagination = ({
 	total,
 }: ProfilesPaginationProps) => {
 	const firstProfile = first + 1;
-	const lastProfile = Math.min(first + profileCount, total);
+	const lastProfile = first + profileCount;
 	const hasPreviousPage = first > 0;
 	const previousPageDisabled = isLoading || !hasPreviousPage;
 	const nextPageDisabled = isLoading || !hasNext;
@@ -41,7 +41,9 @@ const ProfilesPagination = ({
 		<nav className='profiles-list__pagination' aria-label='Profiles pagination'>
 			<div className='profiles-list__pagination-results'>
 				<span className='profiles-list__pagination-range'>
-					{formatNumber(firstProfile)}–{formatNumber(lastProfile)} of {formatNumber(total)}
+					{profileCount === 0
+						? 'No profiles on this page'
+						: `${formatNumber(firstProfile)}–${formatNumber(lastProfile)} of ${formatNumber(total)}`}
 				</span>
 				{children}
 			</div>
@@ -65,7 +67,7 @@ const ProfilesPagination = ({
 						className='profiles-list__pagination-previous'
 						size='small'
 						aria-label='Previous page'
-						aria-disabled={previousPageDisabled ? 'true' : 'false'}
+						disabled={previousPageDisabled}
 						onClick={() => {
 							if (!previousPageDisabled) {
 								onFirstChange(Math.max(0, first - limit));
@@ -73,12 +75,13 @@ const ProfilesPagination = ({
 						}}
 					>
 						<SlIcon name='chevron-left' aria-hidden='true' />
+						<span className='profiles-list__pagination-action-label'>Previous page</span>
 					</SlButton>
 					<SlButton
 						className='profiles-list__pagination-next'
 						size='small'
 						aria-label='Next page'
-						aria-disabled={nextPageDisabled ? 'true' : 'false'}
+						disabled={nextPageDisabled}
 						onClick={() => {
 							if (!nextPageDisabled) {
 								onFirstChange(first + limit);
@@ -86,6 +89,7 @@ const ProfilesPagination = ({
 						}}
 					>
 						<SlIcon name='chevron-right' aria-hidden='true' />
+						<span className='profiles-list__pagination-action-label'>Next page</span>
 					</SlButton>
 				</SlButtonGroup>
 			</div>

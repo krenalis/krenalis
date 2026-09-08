@@ -34,8 +34,11 @@ type Query struct {
 	// must satisfy.
 	Where *state.Where
 
-	// OrderBy contains the criteria by which the returned rows are ordered.
-	OrderBy []QueryOrder
+	// OrderBy contains the property paths by which the returned rows are ordered.
+	OrderBy []string
+
+	// OrderDesc applies descending order to every OrderBy property.
+	OrderDesc bool
 
 	// First is the index of the first returned record and must be >= 0.
 	First int
@@ -43,17 +46,6 @@ type Query struct {
 	// Limit controls how many rows should be returned and must be >= 0. If 0,
 	// it means that there is no limit.
 	Limit int
-}
-
-// QueryOrder represents an ordering criterion for a query.
-type QueryOrder struct {
-
-	// Property is the path of the property by which to order the rows.
-	Property string
-
-	// Desc, when true, orders the rows in descending order instead of ascending
-	// order.
-	Desc bool
 }
 
 // convertWhere converts a state.Where expression into a warehouses.Expr.

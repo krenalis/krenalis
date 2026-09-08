@@ -26,6 +26,7 @@ const ProfilesList = () => {
 	const [secondsSinceIRStart, setSecondsSinceIRStart] = useState<number>();
 	const [latestIRExecutionEnd, setLastIRExecutionEnd] = useState<string>();
 	const [columnSearch, setColumnSearch] = useState('');
+	const [askSchemaResetConfirmation, setAskSchemaResetConfirmation] = useState(false);
 
 	const { api, handleError, workspaces, selectedWorkspace } = useContext(AppContext);
 	const {
@@ -42,12 +43,12 @@ const ProfilesList = () => {
 		profilesFirst,
 		profilesLimit,
 		profilesProjection,
-		datasetVersion,
+		profileSchemaSessionID,
+		resetProfilesSchema,
 		hasNextPage,
 		activeProfileID,
-		isProfilesStale,
+		isProfileSchemaNotAligned,
 		goToProfilesPage,
-		markProfilesStale,
 		navigateProfile,
 		refreshProfiles,
 		reorderProfilesProperties,
@@ -64,7 +65,6 @@ const ProfilesList = () => {
 		countryType?.kind === 'string' && countryType.semantic === 'country' ? countryType.format : undefined;
 	const gridRef = useRef<GridRef>(null);
 	const [filterGridActionContainer, setFilterGridActionContainer] = useState<HTMLDivElement | null>(null);
-	const latestObservedIRExecution = useRef<{ workspace: string; end: string }>();
 	const { profilesRows, profileColumns } = useProfilesGrid(
 		profiles,
 		profilesProperties,
@@ -76,22 +76,11 @@ const ProfilesList = () => {
 	);
 	const isGridKeyboardNavigationEnabled = !isLoading && profilesRows.length > 0;
 	const isIdentityResolutionRunning = secondsSinceIRStart != null;
-	const [unfilteredProfilesTotal, setUnfilteredProfilesTotal] = useState(profilesTotal);
-	const totalProfiles = appliedFilter == null ? profilesTotal : unfilteredProfilesTotal;
-	const gridResultsLabel =
-		profilesTotal === totalProfiles
-			? `${formatNumber(totalProfiles)} ${totalProfiles === 1 ? 'profile' : 'profiles'}`
-			: `${formatNumber(profilesTotal)} of ${formatNumber(totalProfiles)} ${totalProfiles === 1 ? 'profile' : 'profiles'}`;
+	const gridResultsLabel = `${formatNumber(profilesTotal)} ${profilesTotal === 1 ? 'profile' : 'profiles'}`;
 
 	const inspectProfiles = useCallback(() => {
 		requestAnimationFrame(() => gridRef.current?.focus());
 	}, []);
-
-	useEffect(() => {
-		if (appliedFilter == null) {
-			setUnfilteredProfilesTotal(profilesTotal);
-		}
-	}, [appliedFilter, profilesTotal]);
 
 	useEffect(() => {
 		if (!isGridKeyboardNavigationEnabled) {
@@ -123,7 +112,7 @@ const ProfilesList = () => {
 		return () => {
 			clearInterval(intervalID);
 		};
-	}, [api, handleError, markProfilesStale]);
+	}, [api, handleError]);
 
 	const usedProperties = useMemo(
 		() => profilesProperties.filter((property) => property.isUsed),
@@ -159,16 +148,6 @@ const ProfilesList = () => {
 			sinceStart = Math.ceil((now.getTime() - st.getTime()) / 1000);
 		} else if (startTime != null && endTime !== null) {
 			end = endTime;
-		}
-
-		if (end != null) {
-			if (
-				latestObservedIRExecution.current?.workspace === selectedWorkspace &&
-				latestObservedIRExecution.current.end !== end
-			) {
-				markProfilesStale();
-			}
-			latestObservedIRExecution.current = { workspace: selectedWorkspace, end };
 		}
 
 		setSecondsSinceIRStart(sinceStart);
@@ -219,11 +198,11 @@ const ProfilesList = () => {
 
 	return (
 		<div className='profiles-list'>
-			{isProfilesStale && (
+			{isProfileSchemaNotAligned && (
 				<div className='profiles-list__stale-notice' role='status'>
-					<span>New profile data is available. Refresh to update this view.</span>
-					<SlButton size='small' onClick={refreshProfiles}>
-						Refresh
+					<span>The profile schema is no longer compatible with this view.</span>
+					<SlButton size='small' onClick={() => setAskSchemaResetConfirmation(true)}>
+						Reset view
 					</SlButton>
 				</div>
 			)}
@@ -260,16 +239,15 @@ const ProfilesList = () => {
 				</div>
 			</div>
 			<div className='profiles-list__content'>
-				{profileSchema != null && datasetVersion != null && (
+				{profileSchema != null && (
 					<ProfilesFilters
-						key={selectedWorkspace}
+						key={`${selectedWorkspace}:${profileSchemaSessionID}`}
 						appliedFilter={appliedFilter}
-						datasetVersion={datasetVersion}
 						gridActionContainer={filterGridActionContainer}
 						onInspectProfiles={inspectProfiles}
 						onPreview={previewProfilesFilter}
 						onShow={showProfilesFilter}
-						profilesTotal={profilesTotal}
+						profilesTotal={isLoading ? undefined : profilesTotal}
 						schema={profileSchema}
 						schemaProperties={profileSchemaProperties}
 					/>
@@ -291,6 +269,10 @@ const ProfilesList = () => {
 								<div ref={setFilterGridActionContainer} className='profiles-list__filter-grid-action' />
 							</div>
 							<div className='profiles-list__toolbar-actions'>
+								<SlButton size='small' onClick={refreshProfiles} disabled={isLoading}>
+									<SlIcon slot='prefix' name='arrow-clockwise' />
+									Refresh
+								</SlButton>
 								<SlDropdown
 									stayOpenOnSelect={true}
 									className='profiles-list__toggle-columns'
@@ -364,7 +346,7 @@ const ProfilesList = () => {
 						/>
 						<ProfileDrawer />
 					</div>
-					{profilesRows.length > 0 && (
+					{(profilesRows.length > 0 || profilesFirst > 0) && (
 						<footer className='profiles-list__footer'>
 							<ProfilesPagination
 								first={profilesFirst}
@@ -387,6 +369,32 @@ const ProfilesList = () => {
 					)}
 				</div>
 			</div>
+			{askSchemaResetConfirmation && (
+				<AlertDialog
+					isOpen={askSchemaResetConfirmation}
+					onClose={() => setAskSchemaResetConfirmation(false)}
+					title='Reset profile view?'
+					actions={
+						<>
+							<SlButton onClick={() => setAskSchemaResetConfirmation(false)}>Cancel</SlButton>
+							<SlButton
+								variant='primary'
+								onClick={() => {
+									setAskSchemaResetConfirmation(false);
+									resetProfilesSchema();
+								}}
+							>
+								Reset view
+							</SlButton>
+						</>
+					}
+				>
+					<p>
+						This reloads the profile schema and clears the applied filter, draft, filter history, and
+						selection.
+					</p>
+				</AlertDialog>
+			)}
 			<AlertDialog
 				isOpen={askRunIRConfirmation}
 				onClose={() => setAskResolveIdentitiesConfirmation(false)}

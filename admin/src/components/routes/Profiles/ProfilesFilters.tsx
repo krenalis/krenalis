@@ -22,7 +22,6 @@ import {
 	currentProfilesFilterHistoryEntry,
 	FilterHistoryEntry,
 	FilterSession,
-	hasReusableProfilesFilterPreview,
 	PreviewCandidate,
 	profileFilterFingerprint,
 	profileFilterResultsFingerprint,
@@ -31,12 +30,11 @@ import { createProfilesPreviewTiming, recordProfilesPreviewLatency } from './pro
 
 interface ProfilesFiltersProps {
 	appliedFilter: Filter | null;
-	datasetVersion: string;
 	gridActionContainer: HTMLDivElement | null;
 	onInspectProfiles: () => void;
 	onPreview: (filter: Filter | null, signal?: AbortSignal) => Promise<CountProfilesResponse>;
-	onShow: (filter: Filter | null, expectedDatasetVersion: string) => Promise<boolean>;
-	profilesTotal: number;
+	onShow: (filter: Filter | null) => Promise<boolean>;
+	profilesTotal?: number;
 	schema: ObjectType;
 	schemaProperties: ProfileSchemaProperties;
 }
@@ -310,7 +308,6 @@ const CollapsedFilterChips = ({ disabled, filter, onRemove, propertyLabel, summa
 
 const ProfilesFilters = ({
 	appliedFilter,
-	datasetVersion,
 	gridActionContainer,
 	onInspectProfiles,
 	onPreview,
@@ -320,7 +317,7 @@ const ProfilesFilters = ({
 	schemaProperties,
 }: ProfilesFiltersProps) => {
 	const [session, setSession] = useState<FilterSession>(() =>
-		createProfilesFilterSession(appliedFilter, profilesTotal, datasetVersion),
+		createProfilesFilterSession(appliedFilter, profilesTotal),
 	);
 	const [isOpen, setIsOpen] = useState(false);
 	const [pendingGridContext, setPendingGridContext] = useState<string>();
@@ -411,42 +408,6 @@ const ProfilesFilters = ({
 		async (candidate: PreviewCandidate) => {
 			const current = sessionRef.current;
 			if (current.pending?.fingerprint === candidate.fingerprint) {
-				return;
-			}
-
-			const currentEntry = currentProfilesFilterHistoryEntry(current);
-			const cachedEntry = candidate.historyIndex == null ? currentEntry : current.history[candidate.historyIndex];
-			if (hasReusableProfilesFilterPreview(cachedEntry, candidate.fingerprint, current.datasetVersion)) {
-				const update = (state: FilterSession): FilterSession => ({
-					...state,
-					draft: cloneProfileFilter(candidate.filter),
-					historyIndex: candidate.historyIndex ?? state.historyIndex,
-					pending: undefined,
-					failure: undefined,
-				});
-				if (candidate.historyIndex == null) {
-					updateSession(update);
-				} else {
-					updateSessionWithHistoryTransition(update);
-				}
-				return;
-			}
-
-			if (
-				cachedEntry.total != null &&
-				cachedEntry.datasetVersion != null &&
-				cachedEntry.datasetVersion === current.datasetVersion &&
-				profileFilterResultsFingerprint(cachedEntry.filter) ===
-					profileFilterResultsFingerprint(candidate.filter)
-			) {
-				const response = { total: cachedEntry.total, datasetVersion: cachedEntry.datasetVersion };
-				const update = (state: FilterSession): FilterSession =>
-					commitProfilesFilterPreview(state, candidate, response);
-				if (candidate.historyIndex == null) {
-					updateSession(update);
-				} else {
-					updateSessionWithHistoryTransition(update);
-				}
 				return;
 			}
 
@@ -591,11 +552,8 @@ const ProfilesFilters = ({
 
 	const materializeProfiles = useCallback(
 		async (entry: FilterHistoryEntry, intent: GridMaterializationIntent) => {
-			if (entry.datasetVersion == null) {
-				return;
-			}
-			const snapshot = createProfileFilterHistoryEntry(entry.filter, entry.total, entry.datasetVersion);
-			const snapshotContext = `${snapshot.fingerprint}:${snapshot.datasetVersion}`;
+			const snapshot = createProfileFilterHistoryEntry(entry.filter, entry.total);
+			const snapshotContext = snapshot.fingerprint;
 			const generation = ++gridRequestGenerationRef.current;
 			const draftRevision = draftRevisionRef.current;
 			expectedDisplayedContextRef.current = { context: snapshotContext, intent, session: sessionRef.current };
@@ -603,7 +561,7 @@ const ProfilesFilters = ({
 			setGridFailure(undefined);
 			setResultsUpdatedContext(undefined);
 			try {
-				const shown = await onShow(snapshot.filter, snapshot.datasetVersion);
+				const shown = await onShow(snapshot.filter);
 				if (gridRequestGenerationRef.current !== generation) {
 					return;
 				}
@@ -651,15 +609,15 @@ const ProfilesFilters = ({
 			}
 			nextFilter.rules.splice(ruleIndex, 1);
 			const filter = nextFilter.rules.length === 0 ? null : nextFilter;
-			const entry = createProfileFilterHistoryEntry(filter, undefined, datasetVersion);
+			const entry = createProfileFilterHistoryEntry(filter, undefined);
 			void materializeProfiles(entry, 'remove');
 		},
-		[appliedFilter, datasetVersion, materializeProfiles, pendingGridContext],
+		[appliedFilter, materializeProfiles, pendingGridContext],
 	);
 
 	const collapseFilters = useCallback(() => {
 		const currentEntry = currentProfilesFilterHistoryEntry(sessionRef.current);
-		if (pendingGridContext === `${currentEntry.fingerprint}:${currentEntry.datasetVersion}`) {
+		if (pendingGridContext === currentEntry.fingerprint) {
 			return;
 		}
 		draftRevisionRef.current++;
@@ -672,15 +630,13 @@ const ProfilesFilters = ({
 		}));
 		setGridFailure(undefined);
 
-		const requiresGridMaterialization =
-			previewFilterDiffersFromGrid || currentEntry.datasetVersion !== datasetVersion;
+		const requiresGridMaterialization = previewFilterDiffersFromGrid;
 		if (!requiresGridMaterialization) {
 			setEditorOpen(false);
 			return;
 		}
 		void materializeProfiles(currentEntry, 'collapse');
 	}, [
-		datasetVersion,
 		invalidatePreview,
 		materializeProfiles,
 		pendingGridContext,
@@ -689,9 +645,20 @@ const ProfilesFilters = ({
 		updateSession,
 	]);
 
-	const displayedContext = `${appliedFilterFingerprint}:${datasetVersion ?? ''}`;
+	const displayedContext = appliedFilterFingerprint;
 	useEffect(() => {
 		if (displayedContextRef.current === displayedContext) {
+			if (
+				profilesTotal != null &&
+				sessionRef.current.history.length === 1 &&
+				currentProfilesFilterHistoryEntry(sessionRef.current).total == null &&
+				sessionRef.current.pending == null
+			) {
+				updateSession((state) => ({
+					...state,
+					history: [createProfileFilterHistoryEntry(appliedFilter, profilesTotal)],
+				}));
+			}
 			return;
 		}
 		displayedContextRef.current = displayedContext;
@@ -704,9 +671,9 @@ const ProfilesFilters = ({
 			) {
 				updateSession((state) =>
 					commitProfilesFilterPreview(
-						state,
+						{ ...state, draft: cloneProfileFilter(appliedFilter) },
 						{ filter: appliedFilter, fingerprint: appliedFilterFingerprint },
-						{ total: profilesTotal, datasetVersion },
+						{ total: profilesTotal },
 					),
 				);
 			}
@@ -715,16 +682,8 @@ const ProfilesFilters = ({
 		invalidatePreview();
 		draftRevisionRef.current++;
 		setPreviewTiming(createProfilesPreviewTiming());
-		updateSession(() => createProfilesFilterSession(appliedFilter, profilesTotal, datasetVersion));
-	}, [
-		appliedFilter,
-		appliedFilterFingerprint,
-		datasetVersion,
-		displayedContext,
-		invalidatePreview,
-		profilesTotal,
-		updateSession,
-	]);
+		updateSession(() => createProfilesFilterSession(appliedFilter, profilesTotal));
+	}, [appliedFilter, appliedFilterFingerprint, displayedContext, invalidatePreview, profilesTotal, updateSession]);
 
 	useEffect(
 		() => () => {
@@ -773,7 +732,7 @@ const ProfilesFilters = ({
 		return () => document.removeEventListener('keydown', onKeyDown, true);
 	}, [collapseFilters, isOpen]);
 
-	const currentPreviewContext = `${historyEntry.fingerprint}:${historyEntry.datasetVersion}`;
+	const currentPreviewContext = historyEntry.fingerprint;
 	const isShowingCurrentPreview = pendingGridContext === currentPreviewContext;
 	const canShowCurrentPreview = draftMatchesCurrentPreview && previewFilterDiffersFromGrid;
 	const isCurrentResultsUpdateConfirmed =

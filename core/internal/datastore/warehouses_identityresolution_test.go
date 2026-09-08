@@ -573,22 +573,11 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			initialDatasetVersion, err := dw.ProfileDatasetVersion(ctx)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if initialDatasetVersion != 0 {
-				t.Fatalf("expected initial published profile dataset version 0, got %d", initialDatasetVersion)
-			}
 
 			mergeColumns := identitiesMergeColumns(columnByName)
 
 			for _, test := range tests {
 				t.Run(test.name, func(t *testing.T) {
-					previousDatasetVersion, err := dw.ProfileDatasetVersion(ctx)
-					if err != nil {
-						t.Fatal(err)
-					}
 
 					// Truncate the existing identities.
 					//
@@ -644,28 +633,6 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 							t.Fatal(err)
 						}
 					}
-					publishedDatasetVersion, err := dw.ProfileDatasetVersion(ctx)
-					if err != nil {
-						t.Fatal(err)
-					}
-					if publishedDatasetVersion != previousDatasetVersion+1 {
-						t.Fatalf("expected published profile dataset version %d, got %d",
-							previousDatasetVersion+1, publishedDatasetVersion)
-					}
-					if publishedDatasetVersion > 0 {
-						previousTable := fmt.Sprintf("krenalis_profiles_%d", publishedDatasetVersion-1)
-						rows, _, err := dw.Query(ctx, warehouses.RowQuery{
-							Columns: columns[:1],
-							Table:   previousTable,
-							Limit:   1,
-						}, false)
-						if err != nil {
-							t.Fatalf("previously published profiles table %q is not readable: %s", previousTable, err)
-						}
-						if err = rows.Close(); err != nil {
-							t.Fatal(err)
-						}
-					}
 
 					// Read the profiles from the warehouse and check that they match with
 					// the expected ones.
@@ -674,7 +641,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 						query := warehouses.RowQuery{
 							Columns: columns,
 							Table:   "profiles",
-							OrderBy: []warehouses.RowOrder{{Column: columnByName["email"]}},
+							OrderBy: []warehouses.Column{columnByName["email"]},
 						}
 						r, _, err := dw.Query(ctx, query, true)
 						if err != nil {
@@ -701,38 +668,6 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 							t.Fatal(err)
 						}
 					}
-					var physicalProfiles []map[string]any
-					{
-						query := warehouses.RowQuery{
-							Columns: columns,
-							Table:   fmt.Sprintf("krenalis_profiles_%d", publishedDatasetVersion),
-							OrderBy: []warehouses.RowOrder{{Column: columnByName["email"]}},
-						}
-						r, _, err := dw.Query(ctx, query, true)
-						if err != nil {
-							t.Fatal(err)
-						}
-						defer r.Close()
-						row := make([]any, len(columns))
-						for r.Next() {
-							err := r.Scan(row...)
-							if err != nil {
-								t.Fatal(err)
-							}
-							profile := make(map[string]any, len(columns))
-							for i, c := range columns {
-								profile[c.Name] = row[i]
-							}
-							physicalProfiles = append(physicalProfiles, profile)
-						}
-						if err := r.Err(); err != nil {
-							t.Fatal(err)
-						}
-						err = r.Close()
-						if err != nil {
-							t.Fatal(err)
-						}
-					}
 					// The returned profiles are sorted solely by email, as it is
 					// only possible to sort profiles by one property. Therefore,
 					// in the case of profiles with the same email but with
@@ -740,7 +675,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					// randomly fail based on how Krenalis returned them. For this
 					// reason, here the profiles are sorted based on all their string
 					// properties, in ascending order.
-					compareProfiles := func(u1, u2 map[string]any) int {
+					slices.SortFunc(gotProfiles, func(u1, u2 map[string]any) int {
 						for _, c := range columns {
 							if c.Type.Kind() == types.StringKind {
 								v1, _ := u1[c.Name].(string)
@@ -751,13 +686,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 							}
 						}
 						return 0
-					}
-					slices.SortFunc(gotProfiles, compareProfiles)
-					slices.SortFunc(physicalProfiles, compareProfiles)
-					if !reflect.DeepEqual(gotProfiles, physicalProfiles) {
-						t.Fatalf("published physical table differs from the profiles view:\nview: %v\nphysical: %v",
-							gotProfiles, physicalProfiles)
-					}
+					})
 					if !reflect.DeepEqual(test.expectedProfiles, gotProfiles) {
 						t.Fatalf("\nexpected profiles:\n\t%v\ngot:\n\t%v", test.expectedProfiles, gotProfiles)
 					}

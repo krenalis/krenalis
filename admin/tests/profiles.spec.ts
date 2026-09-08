@@ -152,7 +152,7 @@ const mockProfiles = async (
 		const url = new URL(route.request().url());
 		const matchingProfiles = profilesForRequest?.(url) ?? responseProfiles;
 		await route.fulfill({
-			json: { total: matchingProfiles.length, datasetVersion: 'profiles-v1' },
+			json: { total: matchingProfiles.length },
 		});
 	});
 	await page.route('**/v1/profiles?*', async (route) => {
@@ -166,7 +166,6 @@ const mockProfiles = async (
 				profiles: resultProfiles,
 				schema,
 				total: matchingProfiles.length,
-				datasetVersion: 'profiles-v1',
 				hasNext: first + resultProfiles.length < matchingProfiles.length,
 			},
 		});
@@ -175,7 +174,7 @@ const mockProfiles = async (
 		const fragments = new URL(route.request().url()).pathname.split('/');
 		const kpid = decodeURIComponent(fragments[fragments.length - 2]);
 		const profile = responseProfiles.find((candidate) => candidate.kpid === kpid);
-		await route.fulfill({ json: { attributes: profile?.attributes ?? {}, datasetVersion: 'profiles-v1' } });
+		await route.fulfill({ json: { attributes: profile?.attributes ?? {} } });
 	});
 	await page.route('**/v1/identity-resolution/latest', async (route) => {
 		await route.fulfill({ json: { startTime: null, endTime: '2026-08-03T12:00:00Z' } });
@@ -409,7 +408,7 @@ test(`Keep the profile grid stable while loading a newly selected property`, asy
 	await expect(grid.locator('.grid__row--clickable').first()).toContainText('Rome');
 	expect(projectionRequest?.searchParams.get('first')).toBe('0');
 	expect(projectionRequest?.searchParams.get('limit')).toBe('100');
-	expect(projectionRequest?.searchParams.get('expectedDatasetVersion')).toBe('profiles-v1');
+	expect(JSON.parse(projectionRequest!.searchParams.get('schema')!)).toEqual(profileSchema);
 });
 
 test(`Reorder profile columns without reloading their data and preserve the order`, async ({ page }) => {
@@ -753,7 +752,7 @@ test(`Preview a completed filter and show its profiles explicitly`, async ({ pag
 	);
 	await expect(filters).not.toHaveClass(/profiles-list__filters--results-updated/);
 	await expect(page.locator('.profiles-list__filter-preview-count')).toHaveCount(0);
-	await expect(page.locator('.profiles-list__grid-summary')).toContainText('1 of 4 profiles');
+	await expect(page.locator('.profiles-list__grid-summary')).toContainText('1 profile');
 	await expect(rows).toHaveCount(1);
 	await expect(rows.first()).toContainText('Grace Hopper');
 	await expect(rows.first()).not.toHaveClass(/grid__row--active/);
@@ -778,7 +777,7 @@ test(`Preview a completed filter and show its profiles explicitly`, async ({ pag
 	await expect(filters.locator('.filter-editor__announcement')).toHaveText('Condition removed');
 	await expect(editor.getByRole('button', { name: 'Add a condition', exact: true })).toBeFocused();
 	await expect(removeCondition).toHaveCount(0);
-	await expect(page.locator('.profiles-list__grid-summary')).toContainText('1 of 4 profiles');
+	await expect(page.locator('.profiles-list__grid-summary')).toContainText('1 profile');
 	await expect(rows).toHaveCount(1);
 	await page.getByRole('button', { name: 'Show 4 matches', exact: true }).click();
 	await expect(rows).toHaveCount(4);
@@ -823,7 +822,7 @@ test(`Offer Show matches only for a complete preview that differs from the grid`
 	expect(countRequests).toHaveLength(requestsBeforeUndo);
 });
 
-test(`Reuse previews when changing logical operators in groups with one rule`, async ({ page }) => {
+test(`Recalculate previews when changing logical operators even in single-rule groups`, async ({ page }) => {
 	const countRequests: URL[] = [];
 	page.on('request', (request) => {
 		const url = new URL(request.url());
@@ -847,7 +846,7 @@ test(`Reuse previews when changing logical operators in groups with one rule`, a
 	await rootLogical.locator('sl-option[value="or"]').click();
 	await expect(rootLogical).toHaveJSProperty('value', 'or');
 	await expect(showMatches).toBeVisible();
-	expect(countRequests).toHaveLength(1);
+	expect(countRequests).toHaveLength(2);
 
 	await rootGroup.locator(':scope > .pipeline__filters-group-actions > .pipeline__filters-add-group').click();
 	const nestedGroup = editor.locator('.pipeline__filters-group').nth(1);
@@ -859,7 +858,7 @@ test(`Reuse previews when changing logical operators in groups with one rule`, a
 	const nestedValue = nestedCondition.locator('.pipeline__filters-value-input input');
 	await nestedValue.fill('Ada');
 	await nestedValue.press('Enter');
-	await expect.poll(() => countRequests.length).toBe(2);
+	await expect.poll(() => countRequests.length).toBe(3);
 	await expect(showMatches).toBeVisible();
 
 	const nestedLogical = nestedGroup.locator(':scope > .pipeline__filters-group-header > .pipeline__filters-logical');
@@ -868,7 +867,7 @@ test(`Reuse previews when changing logical operators in groups with one rule`, a
 	await nestedLogical.locator('sl-option[value="or"]').click();
 	await expect(nestedLogical).toHaveJSProperty('value', 'or');
 	await expect(showMatches).toBeVisible();
-	expect(countRequests).toHaveLength(2);
+	expect(countRequests).toHaveLength(4);
 });
 
 test(`Summarize collapsed filters within their available width`, async ({ page }) => {
@@ -1024,7 +1023,7 @@ test(`Treat zero matches as a preview that can be shown`, async ({ page }) => {
 	await expect(updateResults).toContainText('Show 0 matches');
 	await updateResults.click();
 
-	await expect(page.locator('.profiles-list__grid-summary')).toContainText('0 of 4 profiles');
+	await expect(page.locator('.profiles-list__grid-summary')).toContainText('0 profiles');
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(0);
 	await expect(page.locator('.profiles-list .grid__no-rows')).toContainText('No profiles to show');
 });
@@ -1105,7 +1104,7 @@ test(`Materialize the current Undo entry on Done and preserve its history`, asyn
 	await expect(filters.locator('.profiles-list__filter-title')).toHaveText('Filters');
 	await expect(filters.locator('sl-button.profiles-list__filter-toggle')).toHaveText('Edit');
 	await expect(
-		filters.locator('.profiles-list__filter-summary-visible-chips .profiles-list__filter-summary-chip'),
+		filters.locator('.profiles-list__filter-summary-visible-chips .profiles-list__filter-summary-chip-label'),
 	).toHaveText('First name is "Grace"');
 	const visibleChipLabel = filters.locator(
 		'.profiles-list__filter-summary-visible-chips .profiles-list__filter-summary-chip-label',
@@ -1113,7 +1112,7 @@ test(`Materialize the current Undo entry on Done and preserve its history`, asyn
 	await expect(visibleChipLabel).toHaveCSS('user-select', 'none');
 	await expect(visibleChipLabel).toHaveCSS('cursor', 'default');
 	await expect(filters.locator('.profiles-list__filter-summary-chip-remove')).toHaveCSS('cursor', 'pointer');
-	await expect(page.locator('.profiles-list__grid-summary')).toContainText('1 of 4 profiles');
+	await expect(page.locator('.profiles-list__grid-summary')).toContainText('1 profile');
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toContainText(['Grace Hopper']);
 	await expect(filters.getByRole('button', { name: 'Edit', exact: true })).toBeFocused();
 	const materializedFilter = JSON.parse(gridRequests.at(-1)?.searchParams.get('filter') ?? 'null');
@@ -1173,9 +1172,9 @@ test(`Remove an applied filter from its collapsed chip, update the grid, and pre
 	await valueInput.press('Enter');
 	await filters.getByRole('button', { name: 'Done', exact: true }).click();
 	await expect(
-		filters.locator('.profiles-list__filter-summary-visible-chips .profiles-list__filter-summary-chip'),
+		filters.locator('.profiles-list__filter-summary-visible-chips .profiles-list__filter-summary-chip-label'),
 	).toHaveText('First name is "Grace"');
-	await expect(page.locator('.profiles-list__grid-summary')).toContainText('1 of 4 profiles');
+	await expect(page.locator('.profiles-list__grid-summary')).toContainText('1 profile');
 
 	const countRequestsBeforeRemoval = countRequests.length;
 	const gridRequestsBeforeRemoval = gridRequests.length;
@@ -1207,7 +1206,7 @@ test(`Remove an applied filter from its collapsed chip, update the grid, and pre
 	await expect(editor.locator('.pipeline__filters-property input')).toHaveValue('');
 	await expect(page.getByRole('button', { name: 'Show 1 match', exact: true })).toHaveCount(0);
 	await expect(undo).toBeEnabled();
-	expect(countRequests).toHaveLength(countRequestsBeforeRemoval);
+	expect(countRequests).toHaveLength(countRequestsBeforeRemoval + 2);
 });
 
 test(`Keep filters expanded when Done cannot update the grid and discard the error after Undo`, async ({ page }) => {
@@ -1503,7 +1502,7 @@ test(`Undo and redo successful filter previews without changing the grid`, async
 	await filters.getByRole('button', { name: 'Redo', exact: true }).click();
 	await expect(page.getByRole('button', { name: 'Show 1 match', exact: true })).toBeVisible();
 	await expect(condition.locator('.pipeline__filters-value-input input')).toHaveValue('Grace');
-	expect(countRequests).toHaveLength(requestCountBeforeDraftUndo);
+	expect(countRequests).toHaveLength(requestCountBeforeDraftUndo + 2);
 });
 
 test(`Keep an explicit grid request independent from a newer filter preview`, async ({ page }) => {
@@ -1552,7 +1551,7 @@ test(`Keep an explicit grid request independent from a newer filter preview`, as
 	await expect(valueInput).toBeFocused();
 	releaseGraceGrid();
 
-	await expect(page.locator('.profiles-list__grid-summary')).toContainText('1 of 4 profiles');
+	await expect(page.locator('.profiles-list__grid-summary')).toContainText('1 profile');
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toContainText(['Grace Hopper']);
 	await expect(filters).not.toHaveClass(/profiles-list__filters--updating-results/);
 	await expect(filters).toHaveClass(/profiles-list__filters--results-updated/);
@@ -1643,11 +1642,11 @@ test(`Let a newer explicit Show request supersede an older one`, async ({ page }
 	await valueInput.press('Enter');
 	await page.getByRole('button', { name: 'Show 1 match', exact: true }).click();
 
-	await expect(page.locator('.profiles-list__grid-summary')).toContainText('1 of 4 profiles');
+	await expect(page.locator('.profiles-list__grid-summary')).toContainText('1 profile');
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toContainText(['Ada Lovelace']);
 	releaseGraceGrid();
 	await page.waitForTimeout(100);
-	await expect(page.locator('.profiles-list__grid-summary')).toContainText('1 of 4 profiles');
+	await expect(page.locator('.profiles-list__grid-summary')).toContainText('1 profile');
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toContainText(['Ada Lovelace']);
 });
 
@@ -1689,8 +1688,8 @@ test(`Paginate profiles on the server`, async ({ page }) => {
 	await expect(pageSizeCombobox).toHaveAccessibleName('Profiles per page');
 	await expect(pageSize.locator('sl-option')).toHaveText(['25', '50', '100']);
 	await expect(pageNavigation.locator('sl-button')).toHaveCount(2);
-	await expect(previousPage).toHaveAttribute('aria-label', 'Previous page');
-	await expect(nextPage).toHaveAttribute('aria-label', 'Next page');
+	await expect(previousPage).toHaveAccessibleName('Previous page');
+	await expect(nextPage).toHaveAccessibleName('Next page');
 	await expect(previousPage).toHaveAttribute('aria-disabled', 'true');
 	await expect(nextPage).toHaveAttribute('aria-disabled', 'false');
 	await expect(pageSize).toHaveJSProperty('value', '50');
@@ -1718,7 +1717,8 @@ test(`Paginate profiles on the server`, async ({ page }) => {
 	expect(desktopLayout.resultsLeftInset).toBeGreaterThan(0);
 	expect(requests.at(-1)?.searchParams.get('first')).toBe('0');
 	expect(requests.at(-1)?.searchParams.get('limit')).toBe('100');
-	expect(requests.at(-1)?.searchParams.get('includeSchema')).toBe('false');
+	expect(requests.at(-1)?.searchParams.has('includeSchema')).toBe(false);
+	expect(JSON.parse(requests.at(-1)!.searchParams.get('schema')!)).toEqual(profileSchema);
 	expect(requests.at(-1)?.searchParams.get('properties')?.split(',').sort()).toEqual([
 		'billing_address',
 		'country',
@@ -1731,11 +1731,11 @@ test(`Paginate profiles on the server`, async ({ page }) => {
 	]);
 	const requestCountBeforeCachedPage = requests.length;
 
-	await nextPage.click();
+	await pagination.locator('.profiles-list__pagination-next').click();
 	await expect(rows).toHaveCount(5);
 	await expect(page.locator('.profiles-list .grid__row--active')).toHaveCount(0);
 	await expect(page.locator('.profile-drawer')).toHaveCount(0);
-	await expect(nextPage).toBeFocused();
+	await expect(nextPage).toBeDisabled();
 	await expect(pagination.locator('.profiles-list__pagination-range')).toHaveText('51–55 of 55');
 	await expect(previousPage).toHaveAttribute('aria-disabled', 'false');
 	await expect(nextPage).toHaveAttribute('aria-disabled', 'true');
@@ -1837,7 +1837,7 @@ test(`Navigate continuously across cached profile page boundaries`, async ({ pag
 	await expect.poll(() => requests.length).toBeGreaterThan(requestCountBeforeBoundary);
 	expect(requests.at(-1)?.searchParams.get('first')).toBe('100');
 	expect(requests.at(-1)?.searchParams.get('limit')).toBe('50');
-	expect(requests.at(-1)?.searchParams.get('expectedDatasetVersion')).toBe('profiles-v1');
+	expect(JSON.parse(requests.at(-1)!.searchParams.get('schema')!)).toEqual(profileSchema);
 
 	const requestCountBeforeReverse = requests.length;
 	await page.keyboard.press('ArrowUp');
@@ -1874,7 +1874,6 @@ test(`Deduplicate a pending continuation and lock boundary navigation`, async ({
 				profiles: responseProfiles.slice(100, 150),
 				schema: profileSchema,
 				total: responseProfiles.length,
-				datasetVersion: 'profiles-v1',
 				hasNext: true,
 			},
 		});
@@ -1929,7 +1928,6 @@ test(`Retry a failed speculative continuation only when its boundary is requeste
 				profiles: responseProfiles.slice(100, 150),
 				schema: profileSchema,
 				total: responseProfiles.length,
-				datasetVersion: 'profiles-v1',
 				hasNext: true,
 			},
 		});
@@ -1963,7 +1961,7 @@ test(`Retry a failed speculative continuation only when its boundary is requeste
 	await expect(rows.first()).toHaveClass(/grid__row--active/);
 });
 
-test(`Reject a mismatching continuation without replacing the current page`, async ({ page }) => {
+test(`Keep the current page when continuation arguments no longer align with the schema`, async ({ page }) => {
 	const responseProfiles = Array.from({ length: 120 }, (_, index) => ({
 		...profiles[index % profiles.length],
 		kpid: `versioned-navigation-profile-${index + 1}`,
@@ -1977,13 +1975,8 @@ test(`Reject a mismatching continuation without replacing the current page`, asy
 			return;
 		}
 		await route.fulfill({
-			json: {
-				profiles: responseProfiles.slice(100),
-				schema: profileSchema,
-				total: responseProfiles.length,
-				datasetVersion: 'profiles-v2',
-				hasNext: false,
-			},
+			status: 422,
+			json: { error: { code: 'SchemaNotAligned', message: 'Profile schema has changed' } },
 		});
 	});
 	await page.goto(`${adminURL}/profile-unification/profiles`);
@@ -2218,7 +2211,6 @@ test(`Ignore late profile attributes and keep the non-modal panel from taking fo
 					...(profiles.find((candidate) => candidate.kpid === kpid)?.attributes ?? {}),
 					customer_id: kpid === 'profile-1' ? 'late-profile-one' : 'current-profile-two',
 				},
-				datasetVersion: 'profiles-v1',
 			},
 		});
 	});
@@ -2239,7 +2231,7 @@ test(`Ignore late profile attributes and keep the non-modal panel from taking fo
 	await expect(page.locator('.profile-drawer__kpid-value')).toHaveText('profile-2');
 });
 
-test(`Reject mismatching profile attributes and mark the exploration stale`, async ({ page }) => {
+test(`Report incompatible attribute schema without replacing displayed results`, async ({ page }) => {
 	const summary = {
 		...profiles[0],
 		attributes: {
@@ -2249,17 +2241,15 @@ test(`Reject mismatching profile attributes and mark the exploration stale`, asy
 			country: 'GB',
 		},
 	};
-	let expectedDatasetVersion: string | null = null;
+	let requestedSchema: ObjectType | null = null;
 
 	await mockProfiles(page, { responseProfiles: [summary] });
 	await page.route('**/v1/profiles/*/attributes*', async (route) => {
 		const url = new URL(route.request().url());
-		expectedDatasetVersion = url.searchParams.get('expectedDatasetVersion');
+		requestedSchema = JSON.parse(url.searchParams.get('schema')!);
 		await route.fulfill({
-			json: {
-				attributes: { ...summary.attributes, customer_id: 'must-not-be-shown' },
-				datasetVersion: 'profiles-v2',
-			},
+			status: 422,
+			json: { error: { code: 'SchemaNotAligned', message: 'Profile schema has changed' } },
 		});
 	});
 	await page.goto(`${adminURL}/profile-unification/profiles`);
@@ -2269,7 +2259,7 @@ test(`Reject mismatching profile attributes and mark the exploration stale`, asy
 	await expect(page.locator('.profiles-list__stale-notice')).toBeVisible();
 	await expect(page.locator('.profile-drawer')).not.toContainText('must-not-be-shown');
 	await expect(grid).toBeFocused();
-	expect(expectedDatasetVersion).toBe('profiles-v1');
+	expect(requestedSchema).toEqual(profileSchema);
 });
 
 test(`Navigate flat profile rows with the keyboard`, async ({ page }) => {
@@ -2391,4 +2381,170 @@ test(`Show the empty state without keyboard hints`, async ({ page }) => {
 	await expect(page.locator('.profiles-list__grid-summary')).toContainText('0 profiles');
 	await expect(page.locator('.profiles-list .grid__no-rows')).toContainText('No profiles to show');
 	await expect(page.locator('.profiles-list .grid-keyboard-hints')).toHaveCount(0);
+});
+
+test('Reload attributes when reopening a profile and handle its disappearance locally', async ({ page }) => {
+	await mockProfiles(page);
+	let attributeReads = 0;
+	await page.route('**/v1/profiles/*/attributes*', async (route) => {
+		const url = new URL(route.request().url());
+		expect(JSON.parse(url.searchParams.get('schema')!)).toEqual(profileSchema);
+		expect(url.searchParams.has('expectedDatasetVersion')).toBe(false);
+		attributeReads++;
+		if (attributeReads === 3) {
+			await route.fulfill({
+				status: 404,
+				json: { error: { code: 'NotFound', message: 'Profile no longer exists' } },
+			});
+			return;
+		}
+		await route.fulfill({
+			json: { attributes: { ...profiles[0].attributes, customer_id: 'live-' + attributeReads } },
+		});
+	});
+	await page.goto(`${adminURL}/profile-unification/profiles`);
+	const firstRow = page.locator('.profiles-list .grid__row--clickable').first();
+	await firstRow.click();
+	await expect(page.locator('.profile-drawer')).toContainText('live-1');
+	await page.getByRole('button', { name: 'Close profile details' }).click();
+	await firstRow.click();
+	await expect(page.locator('.profile-drawer')).toContainText('live-2');
+	await page.getByRole('button', { name: 'Close profile details' }).click();
+	await firstRow.click();
+	await expect(page.locator('.profile-drawer')).toContainText('This profile no longer exists.');
+	await expect(page.locator('.profile-drawer')).not.toContainText('live-2');
+	await expect(page.locator('.profiles-list__stale-notice')).toHaveCount(0);
+	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(4);
+});
+
+test('Allow an empty continuation and keep Previous and Refresh usable', async ({ page }) => {
+	const responseProfiles = Array.from({ length: 120 }, (_, index) => ({
+		...profiles[0],
+		kpid: 'live-page-' + index,
+	}));
+	await mockProfiles(page, { responseProfiles });
+	await page.route('**/v1/profiles?*', async (route) => {
+		if (Number(new URL(route.request().url()).searchParams.get('first')) < 100) {
+			await route.fallback();
+			return;
+		}
+		await route.fulfill({ json: { profiles: [], schema: profileSchema, total: 2, hasNext: false } });
+	});
+	await page.goto(`${adminURL}/profile-unification/profiles`);
+	const pagination = page.getByRole('navigation', { name: 'Profiles pagination' });
+	await pagination.locator('.profiles-list__pagination-next').click();
+	await expect(page.locator('.profiles-list__pagination-range')).toContainText('51–100');
+	await pagination.locator('.profiles-list__pagination-next').click();
+	await expect(page.locator('.profiles-list__pagination-range')).toHaveText('No profiles on this page');
+	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(0);
+	await expect(pagination.getByRole('button', { name: 'Next page' })).toHaveAttribute('aria-disabled', 'true');
+	await pagination.locator('.profiles-list__pagination-previous').click();
+	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(50);
+	await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+	await expect(page.locator('.profiles-list__pagination-range')).toHaveText('1–50 of 120');
+});
+
+test('Reuse adjacent cached pages but refetch an evicted page against live data', async ({ page }) => {
+	const responseProfiles = Array.from({ length: 360 }, (_, index) => ({
+		...profiles[0],
+		kpid: 'cache-profile-' + index,
+	}));
+	let firstPageReads = 0;
+	await mockProfiles(page, { responseProfiles });
+	await page.route('**/v1/profiles?*', async (route) => {
+		const url = new URL(route.request().url());
+		if (url.searchParams.get('first') === '0') {
+			firstPageReads++;
+			const limit = Number(url.searchParams.get('limit'));
+			await route.fulfill({
+				json: {
+					profiles: responseProfiles.slice(0, limit).map((profile) => ({
+						...profile,
+						attributes: { ...profile.attributes, customer_id: 'observation-' + firstPageReads },
+					})),
+					schema: profileSchema,
+					total: 360,
+					hasNext: true,
+				},
+			});
+			return;
+		}
+		await route.fallback();
+	});
+	await page.goto(`${adminURL}/profile-unification/profiles`);
+	const pagination = page.getByRole('navigation', { name: 'Profiles pagination' });
+	await expect(page.locator('.profiles-list .grid__row--clickable').first()).toContainText('observation-1');
+	await pagination.locator('.profiles-list__pagination-next').click();
+	await expect(page.locator('.profiles-list__pagination-range')).toHaveText('51–100 of 360');
+	await pagination.locator('.profiles-list__pagination-previous').click();
+	await expect(page.locator('.profiles-list__pagination-range')).toHaveText('1–50 of 360');
+	expect(firstPageReads).toBe(1);
+	for (let pageNumber = 1; pageNumber <= 5; pageNumber++) {
+		await pagination.locator('.profiles-list__pagination-next').click();
+		await expect(page.locator('.profiles-list__pagination-range')).toHaveText(
+			`${pageNumber * 50 + 1}–${pageNumber * 50 + 50} of 360`,
+		);
+	}
+	for (let pageNumber = 4; pageNumber >= 0; pageNumber--) {
+		await pagination.locator('.profiles-list__pagination-previous').click();
+		await expect(page.locator('.profiles-list__pagination-range')).toHaveText(
+			`${pageNumber * 50 + 1}–${pageNumber * 50 + 50} of 360`,
+		);
+	}
+	expect(firstPageReads).toBe(2);
+	await expect(page.locator('.profiles-list .grid__row--clickable').first()).toContainText('observation-2');
+});
+
+test('Refresh keeps filter arguments and reloads the schema only after reset confirmation', async ({ page }) => {
+	await mockProfiles(page, {
+		profilesForRequest: (url) => (url.searchParams.has('filter') ? [profiles[1]] : profiles),
+	});
+	let schemaReads = 0;
+	let incompatible = false;
+	const requests: URL[] = [];
+	await page.route('**/v1/profiles/schema', async (route) => {
+		schemaReads++;
+		await route.fulfill({ json: profileSchema });
+	});
+	await page.route('**/v1/profiles?*', async (route) => {
+		const url = new URL(route.request().url());
+		requests.push(url);
+		if (incompatible && url.searchParams.has('filter')) {
+			await route.fulfill({
+				status: 422,
+				json: { error: { code: 'SchemaNotAligned', message: 'Profile schema has changed' } },
+			});
+			return;
+		}
+		await route.fallback();
+	});
+	await page.goto(`${adminURL}/profile-unification/profiles`);
+	const { filters, valueInput } = await openFirstNameFilter(page);
+	await valueInput.fill('Grace');
+	await valueInput.press('Enter');
+	await page.getByRole('button', { name: 'Show 1 match', exact: true }).click();
+	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(1);
+	const applied = requests.at(-1)!.searchParams.get('filter');
+	await valueInput.fill('Uncommitted draft');
+	incompatible = true;
+	await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+	await expect(page.locator('.profiles-list__stale-notice')).toBeVisible();
+	expect(requests.at(-1)!.searchParams.get('filter')).toBe(applied);
+	expect(JSON.parse(requests.at(-1)!.searchParams.get('schema')!)).toEqual(profileSchema);
+	expect(schemaReads).toBe(1);
+	await expect(valueInput).toHaveValue('Uncommitted draft');
+	await page.locator('.profiles-list__stale-notice').getByRole('button', { name: 'Reset view' }).click();
+	const dialog = page.locator('sl-dialog', { hasText: 'Reset profile view?' });
+	await expect(dialog).toBeVisible();
+	await dialog.getByRole('button', { name: 'Cancel' }).click();
+	await expect(valueInput).toHaveValue('Uncommitted draft');
+	expect(schemaReads).toBe(1);
+	await page.locator('.profiles-list__stale-notice').getByRole('button', { name: 'Reset view' }).click();
+	await dialog.getByRole('button', { name: 'Reset view' }).click();
+	await expect.poll(() => schemaReads).toBe(2);
+	await expect(filters).toContainText('No filters');
+	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(4);
+	expect(requests.at(-1)!.searchParams.has('filter')).toBe(false);
+	await filters.getByRole('button', { name: 'Edit', exact: true }).click();
+	await expect(filters.getByRole('button', { name: 'Undo', exact: true })).toBeDisabled();
 });

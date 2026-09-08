@@ -24,7 +24,7 @@ func Test_renderCountQuery(t *testing.T) {
 		Where: warehouses.NewBaseExpr(
 			warehouses.Column{Name: "id", Type: types.Int(32)}, warehouses.OpIs, 1,
 		),
-		OrderBy: []warehouses.RowOrder{{Column: warehouses.Column{Name: "name", Type: types.String()}}},
+		OrderBy: []warehouses.Column{{Name: "name", Type: types.String()}},
 		First:   10,
 		Limit:   20,
 	}
@@ -35,6 +35,35 @@ func Test_renderCountQuery(t *testing.T) {
 	}
 	if statement != `SELECT COUNT(*) FROM "PROFILES" WHERE "ID" = 1` {
 		t.Fatalf("unexpected count query %q", statement)
+	}
+
+}
+
+// TestQueryOrderDirection verifies that the common direction applies to every sort column.
+func TestQueryOrderDirection(t *testing.T) {
+
+	db, _ := newCheckReadOnlyTestDB(t, []checkReadOnlyQuery{{
+		match: `ORDER BY "_UPDATED_AT" DESC, "_KPID" DESC`,
+		cols:  []string{"_KPID"},
+	}})
+	defer db.Close()
+	warehouse := &Snowflake{db: db}
+	rows, _, err := warehouse.Query(t.Context(), warehouses.RowQuery{
+		Table:   "profiles",
+		Columns: []warehouses.Column{{Name: "_kpid", Type: types.UUID()}},
+		OrderBy: []warehouses.Column{
+			{Name: "_updated_at", Type: types.DateTime()},
+			{Name: "_kpid", Type: types.UUID()},
+		},
+		OrderDesc: true,
+		Limit:     2,
+	}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = rows.Close()
+	if err != nil {
+		t.Fatal(err)
 	}
 
 }

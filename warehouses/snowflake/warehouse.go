@@ -369,12 +369,6 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []wareh
 	return nil
 }
 
-// ProfileDatasetVersion returns the version of the currently published
-// profiles dataset.
-func (warehouse *Snowflake) ProfileDatasetVersion(ctx context.Context) (int, error) {
-	return warehouse.publishedProfilesVersion(ctx)
-}
-
 // Truncate truncates the specified table.
 func (warehouse *Snowflake) Truncate(ctx context.Context, table string) error {
 	db, err := warehouse.openDB(ctx)

@@ -574,15 +574,15 @@ class Profiles {
 
 	count = async (
 		filter: Filter | null,
-		expectedDatasetVersion?: string,
+		schema?: ObjectType,
 		signal?: AbortSignal,
 	): Promise<CountProfilesResponse> => {
 		const params: Array<[string, any]> = [];
+		if (schema != null) {
+			params.push(['schema', JSON.stringify(schema)]);
+		}
 		if (filter != null) {
 			params.push(['filter', JSON.stringify(filter)]);
-		}
-		if (expectedDatasetVersion != null) {
-			params.push(['expectedDatasetVersion', expectedDatasetVersion]);
 		}
 		return await call(
 			`${this.apiURL}/profiles/count` + queryString(params),
@@ -600,7 +600,7 @@ class Profiles {
 		orderDesc: boolean,
 		first: number,
 		limit: number,
-		expectedDatasetVersion?: string,
+		schema: ObjectType,
 		signal?: AbortSignal,
 	): Promise<FindProfilesResponse> => {
 		let params = [];
@@ -612,20 +612,13 @@ class Profiles {
 		params.push(['orderDesc', orderDesc]);
 		params.push(['first', first]);
 		params.push(['limit', limit]);
-		params.push(['includeSchema', false]);
-		if (expectedDatasetVersion != null) {
-			params.push(['expectedDatasetVersion', expectedDatasetVersion]);
-		}
+		params.push(['schema', JSON.stringify(schema)]);
 		return await call(`${this.apiURL}/profiles` + queryString(params), http.GET, this.workspaceID, undefined, {
 			signal,
 		});
 	};
 
-	events = async (
-		kpid: string,
-		expectedDatasetVersion?: string,
-		signal?: AbortSignal,
-	): Promise<ProfileEventsResponse> => {
+	events = async (kpid: string, signal?: AbortSignal): Promise<ProfileEventsResponse> => {
 		let params = [];
 		let properties = [
 			'kpid',
@@ -647,9 +640,6 @@ class Profiles {
 		];
 		params.push(['properties', properties.join(',')]);
 		params.push(['limit', 10]);
-		if (expectedDatasetVersion != null) {
-			params.push(['expectedDatasetVersion', expectedDatasetVersion]);
-		}
 		return await call(
 			`${this.apiURL}/profiles/${encodeURIComponent(kpid)}/events` + queryString(params),
 			http.GET,
@@ -659,13 +649,8 @@ class Profiles {
 		);
 	};
 
-	attributes = async (
-		kpid: string,
-		expectedDatasetVersion?: string,
-		signal?: AbortSignal,
-	): Promise<profileAttributesResponse> => {
-		const params: Array<[string, any]> =
-			expectedDatasetVersion == null ? [] : [['expectedDatasetVersion', expectedDatasetVersion]];
+	attributes = async (kpid: string, schema: ObjectType, signal?: AbortSignal): Promise<profileAttributesResponse> => {
+		const params: Array<[string, any]> = [['schema', JSON.stringify(schema)]];
 		return await call(
 			`${this.apiURL}/profiles/${encodeURIComponent(kpid)}/attributes` + queryString(params),
 			http.GET,
@@ -679,16 +664,12 @@ class Profiles {
 		kpid: string,
 		first: number,
 		limit: number,
-		expectedDatasetVersion?: string,
 		signal?: AbortSignal,
 	): Promise<IdentitiesResponse> => {
 		const params: any[] = [
 			['first', first],
 			['limit', limit],
 		];
-		if (expectedDatasetVersion != null) {
-			params.push(['expectedDatasetVersion', expectedDatasetVersion]);
-		}
 		return await call(
 			`${this.apiURL}/profiles/${encodeURIComponent(kpid)}/identities` + queryString(params),
 			http.GET,

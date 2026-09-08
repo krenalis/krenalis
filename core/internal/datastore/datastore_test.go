@@ -24,21 +24,16 @@ func (negativeProfileCountWarehouse) Count(context.Context, warehouses.RowQuery)
 	return -1, nil
 }
 
-// ProfileDatasetVersion returns a published profile dataset version.
-func (negativeProfileCountWarehouse) ProfileDatasetVersion(context.Context) (int, error) {
-	return 1, nil
-}
-
 // TestProfileCountRejectsNegativeWarehouseValue verifies that profile counts are validated at the warehouse boundary.
 func TestProfileCountRejectsNegativeWarehouseValue(t *testing.T) {
 
 	store := &Store{mc: newModeCoordinator(state.Normal)}
 	store.wh.Store(warehouses.Warehouse(negativeProfileCountWarehouse{}))
-	total, datasetVersion, err := store.ProfileCount(t.Context(), nil, "")
+	total, err := store.ProfileCount(t.Context(), nil, types.Type{})
 	if err != nil {
 
-		if total != 0 || datasetVersion != "" {
-			t.Fatalf("expected zero values with the error, got total=%d version=%q", total, datasetVersion)
+		if total != 0 {
+			t.Fatalf("expected a zero count with the error, got %d", total)
 		}
 		unavailableErr, ok := errors.AsType[*UnavailableError](err)
 		if !ok {
