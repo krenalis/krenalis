@@ -154,7 +154,7 @@ func Test_Merge(t *testing.T) {
 		Table:   table.Name,
 		Columns: table.Columns,
 	}
-	count, err := dw.Count(t.Context(), query)
+	count, err := dw.Count(t.Context(), table.Name, nil, nil)
 	if err != nil {
 		t.Fatalf("cannot count: %s", err)
 	}

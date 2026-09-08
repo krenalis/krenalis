@@ -200,9 +200,9 @@ type Warehouse interface {
 	// information, maximum character count, enum values, etc...).
 	ColumnTypeDescription(t types.Type) (string, error)
 
-	// Count returns the number of rows matched by query. First, Limit, OrderBy,
-	// and Columns do not affect the result.
-	Count(ctx context.Context, query RowQuery) (int, error)
+	// Count returns the number of rows in table after applying joins and where.
+	// A nil where expression does not filter the rows.
+	Count(ctx context.Context, table string, joins []Join, where Expr) (int, error)
 
 	// Delete deletes rows from the specified table that match the provided where
 	// expression. Returns an error if the expression is nil.

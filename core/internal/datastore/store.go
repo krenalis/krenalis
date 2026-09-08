@@ -455,10 +455,7 @@ func (store *Store) ProfileCount(ctx context.Context, where *state.Where, schema
 			return 0, unavailableError(err)
 		}
 	}
-	total, err := store.warehouse().Count(ctx, warehouses.RowQuery{
-		Table: "profiles",
-		Where: expression,
-	})
+	total, err := store.warehouse().Count(ctx, "profiles", nil, expression)
 	if err != nil {
 		return 0, unavailableError(err)
 	}

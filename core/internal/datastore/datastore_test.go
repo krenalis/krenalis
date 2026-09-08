@@ -20,7 +20,7 @@ type negativeProfileCountWarehouse struct {
 }
 
 // Count returns a negative row count.
-func (negativeProfileCountWarehouse) Count(context.Context, warehouses.RowQuery) (int, error) {
+func (negativeProfileCountWarehouse) Count(context.Context, string, []warehouses.Join, warehouses.Expr) (int, error) {
 	return -1, nil
 }
 
