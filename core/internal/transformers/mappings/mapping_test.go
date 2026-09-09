@@ -6,6 +6,7 @@ package mappings
 
 import (
 	"bytes"
+	"fmt"
 	"reflect"
 	"slices"
 	"testing"
@@ -543,4 +544,37 @@ func Test_storeValue(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestNewErrorOrder checks that destination paths determine which compilation
+// error is returned first.
+func TestNewErrorOrder(t *testing.T) {
+
+	outSchema := types.Object([]types.Property{
+		{Name: "b", Type: types.String()}, {Name: "a", Type: types.String()},
+	})
+	tests := []struct {
+		name        string
+		expressions map[string]string
+	}{
+		{"compilation errors", map[string]string{"b": "upper()", "a": "lower()"}},
+		{"lookup and compilation errors", map[string]string{"missing": "''", "a": "lower()"}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			for range 100 {
+				_, err := New(test.expressions, types.Type{}, outSchema, false, nil)
+				if err != nil {
+					want := "'lower' function requires a single argument"
+					if err.Error() != want {
+						t.Fatalf("got %q, want %q", err, want)
+					}
+					continue
+				}
+				t.Fatal("expected a compilation error")
+			}
+		})
+	}
+
 }

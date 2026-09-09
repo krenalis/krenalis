@@ -6,12 +6,12 @@ package mappings
 
 import (
 	"cmp"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
 
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -71,6 +71,7 @@ type mappingExpr struct {
 // date, and time values as strings.
 //
 // The source type can be the invalid type if expressions do not contain paths.
+// Expressions are compiled in alphabetical order of their destination paths.
 //
 // It returns a types.PathNotExistError error if a path in expressions does not
 // exist in the source schema.
@@ -87,17 +88,25 @@ func New(expressions map[string]string, inSchema, outSchema types.Type, inPlace 
 		}
 		return nil, errors.New("outSchema is not an object")
 	}
-	// Compile the expressions.
+	// Sort and validate the destination paths before compiling expressions.
 	me := make([]mappingExpr, len(expressions))
 	i := 0
+	for path := range expressions {
+		me[i].path = path
+		i++
+	}
+	err := sortMappingExpressions(me)
+	if err != nil {
+		return nil, err
+	}
 	properties := outSchema.Properties()
-	for path, expr := range expressions {
+	for i := range me {
+		path := me[i].path
 		p, err := properties.ByPath(path)
 		if err != nil {
 			return nil, err
 		}
-		me[i].path = path
-		me[i].expr, me[i].properties, err = Compile(expr, inSchema, p.Type)
+		me[i].expr, me[i].properties, err = Compile(expressions[path], inSchema, p.Type)
 		if err != nil {
 			return nil, err
 		}
@@ -106,21 +115,16 @@ func New(expressions map[string]string, inSchema, outSchema types.Type, inPlace 
 		me[i].createRequired = p.CreateRequired
 		me[i].updateRequired = p.UpdateRequired
 		me[i].timeLayouts = layouts
-		i++
-	}
-	err := sortMappingExpressions(me)
-	if err != nil {
-		return nil, err
 	}
 	return &Mapping{expressions: me, inPlace: inPlace}, nil
 }
 
 // InPaths returns the input property paths, i.e., the property paths found in
 // the expressions, sorted alphabetically. The returned properties are
-// guaranteed to be unique. If no property are present, it returns an empty
+// guaranteed to be unique. If no properties are present, it returns an empty
 // slice.
 //
-// If the expressions contain a map or json indexing, Properties does not return
+// If the expressions contain map or JSON indexing, InPaths does not return
 // the key. For example, for the expression x.y.z, it returns {"x"} if x is a
 // JSON object, and returns {"x.z"} if x is a map of objects.
 func (mapping *Mapping) InPaths() []string {
