@@ -30,7 +30,7 @@ func Test_checkSchemaAlignment(t *testing.T) {
 		{p1: types.Property{Type: types.String().WithMaxLength(100)}, p2: types.Property{Type: types.String().WithMaxLength(100)}},
 		{p1: types.Property{Type: types.String().WithMaxBytes(50)}, p2: types.Property{Type: types.String().WithMaxBytes(50)}},
 		{p1: types.Property{Type: types.String().WithPattern(regexp.MustCompile(`^\d+`))}, p2: types.Property{Type: types.String().WithPattern(regexp.MustCompile(`^\d+`))}, mode: &createOnlyMode},
-		{p1: types.Property{Type: types.String().WithPattern(regexp.MustCompile(`^\d+`)).WithMaxBytes(10)}, p2: types.Property{Type: types.String().WithPattern(regexp.MustCompile(`^\d+`)).WithMaxBytes(10)}},
+		{p1: types.Property{Type: types.String().WithPattern(regexp.MustCompile(`^\d{1,10}$`))}, p2: types.Property{Type: types.String().WithPattern(regexp.MustCompile(`^\d{1,10}$`))}},
 		{p1: types.Property{Type: types.Boolean()}, p2: types.Property{Type: types.Boolean()}},
 		{p1: types.Property{Type: types.Int(32)}, p2: types.Property{Type: types.Int(32)}, mode: &createOnlyMode},
 		{p1: types.Property{Type: types.Int(32).WithIntRange(-10, 100)}, p2: types.Property{Type: types.Int(32).WithIntRange(-10, 100)}},
