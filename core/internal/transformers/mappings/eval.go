@@ -6,7 +6,6 @@ package mappings
 
 import (
 	"fmt"
-	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -47,8 +46,9 @@ func (expr *Expression) Eval(attributes map[string]any) (any, types.Type, error)
 }
 
 // appendAsString appends v to b after converting it to a string.
-// Calling appendAsString(b, v, t) is the same of calling
-// convert(v, t, types.String(), false, false) and appending the result to b.
+// Calling appendAsString(b, v, t) is equivalent to calling
+// convert(v, t, types.String(), false, false, nil, None) and appending the
+// result to b.
 func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 	if v == nil {
 		return b, nil
@@ -58,7 +58,7 @@ func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 	}
 	switch t.Kind() {
 	case types.BooleanKind:
-		strconv.AppendBool(b, v.(bool))
+		return strconv.AppendBool(b, v.(bool)), nil
 	case types.IntKind:
 		if t.IsUnsigned() {
 			return strconv.AppendUint(b, uint64(v.(uint)), 10), nil
@@ -92,26 +92,12 @@ func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 // digitCountInt returns the number of decimal digits in n, including the sign
 // for negative numbers.
 func digitCountInt(n int64) int {
-	if n == 0 {
-		return 1
-	}
-	sign := 0
-	if n < 0 {
-		if n == math.MinInt64 {
-			return 20
-		}
-		sign = 1
-		n = -n
-	}
-	return sign + int(math.Log10(float64(n))) + 1
+	return len(strconv.FormatInt(n, 10))
 }
 
 // digitCountUint returns the number of decimal digits in n.
 func digitCountUint(n uint64) int {
-	if n == 0 {
-		return 1
-	}
-	return int(math.Log10(float64(n))) + 1
+	return len(strconv.FormatUint(n, 10))
 }
 
 // eval evaluates the expression and returns its value and type. source is the
@@ -122,7 +108,7 @@ func digitCountUint(n uint64) int {
 // ValidationError.
 func eval(expression []part, source string, attributes map[string]any) (any, types.Type, error) {
 
-	// Evaluate the most common cases that does not require a buffer.
+	// Evaluate the most common cases that do not require a buffer.
 	if len(expression) == 1 {
 		p := expression[0]
 		if p.path.elements == nil {
@@ -292,7 +278,8 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		if v == nil {
 			return nil, types.String(), nil
 		}
-		return strings.Title(v.(string)), types.String(), nil // DO NOT MODIFY — using deprecated Title intentionally
+		// Keep strings.Title to preserve the existing word boundaries.
+		return strings.Title(strings.ToLower(v.(string))), types.String(), nil
 	case "json_parse":
 		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil {
@@ -323,7 +310,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		}
 		return jv, types.JSON(), nil
 	case "len":
-		v, _, err := eval(p.args[0], source, attributes)
+		v, vt, err := eval(p.args[0], source, attributes)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -343,17 +330,16 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 			length = digitCountUint(uint64(v))
 		case float64:
 			bitSize := 64
-			if t := typeOf(p.args[0]); t.Kind() == types.FloatKind && t.BitSize() == 32 {
+			if vt.Kind() == types.FloatKind && vt.BitSize() == 32 {
 				bitSize = 32
 			}
 			length = len(strconv.FormatFloat(v, 'g', -1, bitSize))
 		case decimal.Decimal:
 			length = len(v.String())
 		case time.Time:
-			t := typeOf(p.args[0])
-			switch t.Kind() {
+			switch vt.Kind() {
 			case types.DateTimeKind:
-				length = 20
+				length = len(v.Format(time.RFC3339Nano))
 			case types.DateKind:
 				length = 10
 			case types.TimeKind:
@@ -375,6 +361,10 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 			length = len(v)
 		case map[string]any:
 			length = len(v)
+		}
+		if length > types.MaxInt32 {
+			msg := fmt.Sprintf("length of «%s» exceeds int(32) maximum %d", code(source, p.args[0]...), types.MaxInt32)
+			return nil, types.Type{}, TransformationError{msg}
 		}
 		return length, types.Int(32), nil
 	case "lower":
@@ -471,7 +461,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 			if err == nil && v != nil && vt.Kind() != types.BooleanKind {
 				v, err = convert(v, vt, types.Boolean(), true, false, nil, None)
 				if err != nil {
-					err = errBooleanConversion("or", code(source, p.args[0]...), v, vt)
+					err = errBooleanConversion("or", code(source, arg...), v, vt)
 				}
 			}
 			if err != nil {
@@ -519,10 +509,11 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 			return nil, types.String(), nil
 		}
 		v1, vt1, err := eval(p.args[1], source, attributes)
-		if err == nil && v1 != nil && (vt1.Kind() != types.IntKind || vt1.BitSize() > 32) {
+		if err == nil && v1 != nil &&
+			(vt1.Kind() != types.IntKind || vt1.BitSize() > 32 || vt1.IsUnsigned()) {
 			v1, err = convert(v1, vt1, types.Int(32), true, false, nil, None)
 			if err != nil {
-				err = errInt32Conversion("substring", code(source, p.args[2]...), v1, vt1)
+				err = errInt32Conversion("substring", code(source, p.args[1]...), v1, vt1)
 			}
 		}
 		if err != nil {
@@ -535,7 +526,8 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		length := -1
 		if len(p.args) == 3 {
 			v2, vt2, err := eval(p.args[2], source, attributes)
-			if err == nil && v2 != nil && (vt2.Kind() != types.IntKind || vt2.BitSize() > 32) {
+			if err == nil && v2 != nil &&
+				(vt2.Kind() != types.IntKind || vt2.BitSize() > 32 || vt2.IsUnsigned()) {
 				v2, err = convert(v2, vt2, types.Int(32), true, false, nil, None)
 				if err != nil {
 					err = errInt32Conversion("substring", code(source, p.args[2]...), v2, vt2)
@@ -587,11 +579,11 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 	panic(fmt.Errorf("unknown function %q", p.path.elements[0]))
 }
 
-// substring returns a substring of s starting from the rune at position
-// start-1, with start > 0, for a length in rune of length. If length is
-// negative, it returns all the runes from s to the end of the string.
+// substring returns the substring of s starting at rune start-1. If length is
+// non-negative, it returns at most length runes; otherwise, it returns the
+// remainder of the string.
 func substring(s string, start, length int) string {
-	if length == 0 {
+	if s == "" || length == 0 {
 		return ""
 	}
 	n := 0
@@ -612,15 +604,15 @@ func substring(s string, start, length int) string {
 		return s
 	}
 	n = 0
-	var r rune
-	for i, r = range s {
+	for i = range s {
 		n += 1
 		if n == length {
 			break
 		}
 	}
-	i += utf8.RuneLen(r)
-	return s[:i]
+	// Decode only the last rune: range consumes one byte for malformed UTF-8.
+	_, size := utf8.DecodeRuneInString(s[i:])
+	return s[:i+size]
 }
 
 // errBooleanConversion returns an error explaining the failure that occurred
@@ -643,7 +635,8 @@ func errBooleanConversion(fn string, code string, v any, t types.Type) error {
 func errInt32Conversion(fn string, code string, v any, t types.Type) error {
 	switch t.Kind() {
 	case types.IntKind, types.FloatKind, types.DecimalKind:
-		return fmt.Errorf("«%s», with a value of %s, cannot be passed as a 32-bit int to the «%s» function", code, v, fn)
+		return fmt.Errorf("«%s», with a value of %v, cannot be passed as a 32-bit int to the «%s» function",
+			code, v, fn)
 	case types.JSONKind:
 		k := v.(json.Value).Kind()
 		if k == json.Number {
@@ -754,20 +747,20 @@ func errValidationConversion(err error, code string, dt types.Type) ValidationEr
 
 // valueOf returns the value at the specified path in attributes. It returns nil
 // if the path does not exist, including keys in a map and properties of a JSON
-// object.
+// object, or if an intermediate value is nil.
 //
 // For non-object JSON values, accessing a key returns nil if the key is
 // optional; otherwise, it returns an error.
 //
-// It returns a TransformationError error if a path in a JSON Object does
-// not exist.
+// It returns a TransformationError if traversal encounters a non-object value,
+// except for optional keys in non-object JSON values as described above.
 func valueOf(path path, attributes map[string]any) (any, error) {
 	last := len(path.elements) - 1
 	var i int
 	for i = 0; i < len(path.elements); i++ {
 		name := path.elements[i]
 		v, ok := attributes[name]
-		if !ok {
+		if !ok || v == nil {
 			return nil, nil
 		}
 		if i == last {
@@ -789,6 +782,9 @@ func valueOf(path path, attributes map[string]any) (any, error) {
 				return nil, TransformationError{msg}
 			}
 			return v, nil
+		default:
+			msg := fmt.Sprintf("invalid %s: %s is not an object", path.slice(0, i+2), path.slice(0, i+1))
+			return nil, TransformationError{msg}
 		}
 	}
 	panic("unreachable code")

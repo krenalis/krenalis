@@ -6,7 +6,9 @@ package mappings
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
+	"regexp"
 	"testing"
 	"time"
 
@@ -237,7 +239,14 @@ func Test_Compile(t *testing.T) {
 		// initcap.
 		{expr: "initcap('new york')", dt: types.String(), expected: "New York"},
 		{expr: "initcap(' new york ')", dt: types.String(), expected: " New York "},
-		{expr: "initcap('neW YORK')", dt: types.String(), expected: "NeW YORK"},
+		{expr: "initcap('neW YORK')", dt: types.String(), expected: "New York"},
+		{expr: "initcap('NEW YORK')", dt: types.String(), expected: "New York"},
+		{expr: `initcap("JOHN O'CONNOR")`, dt: types.String(), expected: "John O'Connor"},
+		{expr: "initcap('ÉMILIE BRONTË')", dt: types.String(), expected: "Émilie Brontë"},
+		{expr: "initcap('ANNE-MARIE')", dt: types.String(), expected: "Anne-Marie"},
+		{expr: "initcap(' NEW\\tYORK\\n')", dt: types.String(), expected: " New\tYork\n"},
+		{expr: "initcap('')", dt: types.String(), expected: ""},
+		{expr: "initcap(if(true, 'NEW YORK', null))", dt: types.String(), expected: "New York"},
 		{expr: "initcap(null)", dt: types.String(), expected: nil},
 		{expr: "initcap()", dt: types.String(), compileErr: errors.New("'initcap' function requires a single argument")},
 		{expr: "initcap('a', 5)", dt: types.String(), compileErr: errors.New("'initcap' function requires a single argument")},
@@ -590,6 +599,104 @@ func Test_typeOf(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestLiteralConversionDiagnostics checks that conversion errors display the
+// literal's textual value.
+func TestLiteralConversionDiagnostics(t *testing.T) {
+
+	enum := types.String().WithValues("yes", "no")
+	pattern := types.String().WithPattern(regexp.MustCompile(`^x$`))
+	tests := []struct {
+		source      string
+		destination types.Type
+		want        string
+	}{
+		{"256", types.Int(8).Unsigned(), "number 256 is greater than 255"},
+		{"-129", types.Int(8), "number -129 is less than -128"},
+		{"-1", types.Int(8).Unsigned(), "number -1 is not a int(8) value"},
+		{"'256'", types.Int(8).Unsigned(), "number 256 is greater than 255"},
+		{"42", enum, `"42" is not one of the allowed values`},
+		{"true", enum, `"true" is not one of the allowed values`},
+		{"1.5", enum, `"1.5" is not one of the allowed values`},
+		{"65", pattern, `"65" does not match /^x$/`},
+		{"true", pattern, `"true" does not match /^x$/`},
+		{"42", types.String().WithMaxLength(1), `"42" exceeds the 1-char limit`},
+		{"true", types.String().WithMaxLength(3), `"true" exceeds the 3-char limit`},
+		{"42", types.String().WithMaxBytes(1), `"42" exceeds the 1-byte limit`},
+		{"false", types.String().WithMaxBytes(4), `"false" exceeds the 4-byte limit`},
+		{`'a\nb'`, types.String().WithMaxLength(2), `"a\nb" exceeds the 2-char limit`},
+	}
+
+	for _, test := range tests {
+		t.Run(test.source+"/"+test.want, func(t *testing.T) {
+			_, _, err := Compile(test.source, types.Type{}, test.destination)
+			if err != nil {
+				if err.Error() != test.want {
+					t.Fatalf("got %q, want %q", err, test.want)
+				}
+				return
+			}
+			t.Fatal("expected a literal conversion error")
+		})
+	}
+
+}
+
+// TestMapKeys checks case-sensitive uniqueness and preserves the spelling of
+// distinct keys.
+func TestMapKeys(t *testing.T) {
+
+	tests := []struct {
+		first, second string
+		duplicate     bool
+	}{
+		{"Foo", "foo", false},
+		{"foo", "Foo", false},
+		{"École", "école", false},
+		{"Σ", "ς", false},
+		{"σ", "ς", false},
+		{"K", "K", false},
+		{"k", "K", false},
+		{"S", "ſ", false},
+		{"ǅ", "ǆ", false},
+		{"Foo", "Foo", true},
+		{"École", "École", true},
+		{"", "", true},
+		{"Foo", "Bar", false},
+		{"École", "Ecole", false},
+		{"ß", "SS", false},
+		{"İ", "i", false},
+		{"", "Foo", false},
+	}
+	for _, test := range tests {
+		t.Run(test.first+"/"+test.second, func(t *testing.T) {
+
+			source := fmt.Sprintf("map(%q, 1, %q, 2)", test.first, test.second)
+			dt := types.Map(types.JSON())
+			expr, _, err := Compile(source, types.Type{}, dt)
+			if err != nil {
+				if !test.duplicate || err.Error() != "duplicate key in 'map' function" {
+					t.Fatal(err)
+				}
+				return
+			}
+			if test.duplicate {
+				t.Fatal("expected compilation to reject duplicate keys")
+			}
+
+			got, typ, err := expr.Eval(nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := map[string]any{test.first: json.Value("1"), test.second: json.Value("2")}
+			if !types.Equal(typ, dt) || !reflect.DeepEqual(got, want) {
+				t.Fatalf("got %#v (%s), want %#v (%s)", got, typ, want, dt)
+			}
+
+		})
+	}
+
 }
 
 // TestExpressionDestinationType distinguishes literal coercion from deferred

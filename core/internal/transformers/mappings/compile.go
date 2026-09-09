@@ -580,7 +580,7 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 			var msg string
 			switch err {
 			case errRangeConversion:
-				msg = fmt.Sprintf("number %s is not a %s value", p.value, dt)
+				msg = fmt.Sprintf("number %v is not a %s value", p.value, dt)
 			case errMinConversion:
 				var n any
 				switch dt.Kind() {
@@ -595,7 +595,7 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 				case types.DecimalKind:
 					n, _ = dt.DecimalRange()
 				}
-				msg = fmt.Sprintf("number %s is less than %v", p.value, n)
+				msg = fmt.Sprintf("number %v is less than %v", p.value, n)
 			case errMaxConversion:
 				var n any
 				switch dt.Kind() {
@@ -610,17 +610,17 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 				case types.DecimalKind:
 					_, n = dt.DecimalRange()
 				}
-				msg = fmt.Sprintf("number %s is greater than %v", p.value, n)
+				msg = fmt.Sprintf("number %v is greater than %v", p.value, n)
 			case errEnumConversion:
-				msg = fmt.Sprintf("%q is not one of the allowed values", p.value)
+				msg = fmt.Sprintf("%q is not one of the allowed values", fmt.Sprint(p.value))
 			case errPatternConversion:
-				msg = fmt.Sprintf("%q does not match /%s/", p.value, dt.Pattern())
+				msg = fmt.Sprintf("%q does not match /%s/", fmt.Sprint(p.value), dt.Pattern())
 			case errMaxBytesConversion:
 				n, _ := dt.MaxBytes()
-				msg = fmt.Sprintf("%q exceeds the %d-byte limit", p.value, n)
+				msg = fmt.Sprintf("%q exceeds the %d-byte limit", fmt.Sprint(p.value), n)
 			case errMaxLengthConversion:
 				n, _ := dt.MaxLength()
-				msg = fmt.Sprintf("%q exceeds the %d-char limit", p.value, n)
+				msg = fmt.Sprintf("%q exceeds the %d-char limit", fmt.Sprint(p.value), n)
 			default:
 				var s string
 				switch v := p.value.(type) {

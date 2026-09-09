@@ -32,7 +32,7 @@ func TestErrorHelpers(t *testing.T) {
 		t.Fatalf("unexpected boolean json error: %v", bErr)
 	}
 	iErr := errInt32Conversion("fn", "x", 5.5, types.Float(64))
-	if iErr.Error() != "«x», with a value of %!s(float64=5.5), cannot be passed as a 32-bit int to the «fn» function" {
+	if iErr.Error() != "«x», with a value of 5.5, cannot be passed as a 32-bit int to the «fn» function" {
 		t.Fatalf("unexpected int error: %v", iErr)
 	}
 	ji := json.Value("\"foo\"")
@@ -57,7 +57,8 @@ func Test_appendAsString(t *testing.T) {
 	}{
 		{nil, types.String(), "start", nil},
 		{"foo", types.String(), "startfoo", nil},
-		{true, types.Boolean(), "start", errInvalidConversion},
+		{true, types.Boolean(), "starttrue", nil},
+		{false, types.Boolean(), "startfalse", nil},
 		{int(3), types.Int(32), "start3", nil},
 		{uint(4), types.Int(16).Unsigned(), "start4", nil},
 		{1.5, types.Float(64), "start1.5", nil},
@@ -300,6 +301,57 @@ func Test_valueOf(t *testing.T) {
 			t.Fatalf("%s. unexpected value\nexpected %v (type %T)\ngot      %v (type %T)", test.path, test.expected, test.expected, got, got)
 		}
 
+	}
+
+}
+
+// TestOrConversionArgumentError checks the failing argument's diagnostic and
+// short-circuit evaluation.
+func TestOrConversionArgumentError(t *testing.T) {
+
+	schema := types.Object([]types.Property{{Name: "value", Type: types.String()}})
+	outSchema := types.Object([]types.Property{{Name: "out", Type: types.Boolean()}})
+	tests := []struct {
+		source   string
+		argument string
+	}{
+		{"or(value, false)", "value"},
+		{"or(false, value)", "value"},
+		{"or(false, false, lower(value))", "lower(value)"},
+		{"or(true, value)", ""},
+	}
+
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+
+			mapping, err := New(map[string]string{"out": test.source}, schema, outSchema, false, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			got, err := mapping.Transform(map[string]any{"value": "not-a-boolean"}, None)
+			if err != nil {
+				if test.argument == "" {
+					t.Fatal(err)
+				}
+				if _, ok := errors.AsType[TransformationError](err); !ok {
+					t.Fatalf("got %T, want TransformationError: %v", err, err)
+				}
+				want := fmt.Sprintf("«%s» (type string) does not represent a boolean "+
+					"when passed to the «or» function while mapping to «out»", test.argument)
+				if err.Error() != want {
+					t.Fatalf("got %q, want %q", err, want)
+				}
+				return
+			}
+			if test.argument != "" {
+				t.Fatal("expected a boolean conversion error")
+			}
+			if got["out"] != true {
+				t.Fatalf("got %#v, want out=true", got)
+			}
+
+		})
 	}
 
 }
@@ -1199,6 +1251,48 @@ func TestArrayShortDates(t *testing.T) {
 
 }
 
+// TestConcatenationBoolean checks boolean values in prefixes, suffixes, and
+// selected expressions.
+func TestConcatenationBoolean(t *testing.T) {
+
+	schema := types.Object([]types.Property{{Name: "flag", Type: types.Boolean(), Nullable: true}})
+	tests := []struct {
+		expression string
+		value      any
+		want       string
+	}{
+		{"flag '!'", true, "true!"},
+		{"flag '!'", false, "false!"},
+		{"flag '!'", nil, "!"},
+		{"'!' flag", true, "!true"},
+		{"'[' flag ']'", false, "[false]"},
+		{"flag flag", true, "truetrue"},
+		{"if(true, flag, null) '!'", true, "true!"},
+		{"coalesce(flag, null) '!'", false, "false!"},
+		{"not(flag) '!'", false, "true!"},
+	}
+	for _, test := range tests {
+
+		t.Run(test.expression+"/"+test.want, func(t *testing.T) {
+
+			expr, _, err := Compile(test.expression, schema, types.String())
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, typ, err := expr.Eval(map[string]any{"flag": test.value})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != test.want || !types.Equal(typ, types.String()) {
+				t.Fatalf("got %#v (%s), want %q (string)", got, typ, test.want)
+			}
+
+		})
+
+	}
+
+}
+
 // TestMapTemporalStrings uses the textual representation of each temporal type.
 func TestMapTemporalStrings(t *testing.T) {
 
@@ -1248,6 +1342,105 @@ func TestMapTemporalStrings(t *testing.T) {
 
 }
 
+// TestLenSelectedValues checks that selecting a value preserves the length of
+// its typed representation.
+func TestLenSelectedValues(t *testing.T) {
+
+	tests := []struct {
+		name  string
+		typ   types.Type
+		value any
+		want  int
+	}{
+		{"date", types.Date(), time.Date(2026, 9, 8, 0, 0, 0, 0, time.UTC), 10},
+		{"datetime", types.DateTime(), time.Date(2026, 9, 8, 12, 34, 56, 0, time.UTC), 20},
+		{"datetime millis", types.DateTime(), time.Date(2026, 9, 8, 12, 34, 56, 125000000, time.UTC), 24},
+		{"datetime one nano", types.DateTime(), time.Date(2026, 9, 8, 12, 34, 56, 1, time.UTC), 30},
+		{"datetime nanos", types.DateTime(), time.Date(2026, 9, 8, 12, 34, 56, 123456789, time.UTC), 30},
+		{"time", types.Time(), time.Date(1970, 1, 1, 12, 34, 56, 125000000, time.UTC), 12},
+		{"float32", types.Float(32), float64(float32(0.1)), 3},
+		{"float64", types.Float(64), float64(float32(0.1)), 19},
+	}
+	expressions := []string{
+		"len(value)",
+		"len(value '')",
+		"len(if(true, value, null))",
+		"len(if(false, null, value))",
+		"len(coalesce(null, value))",
+		"len(coalesce(if(false, value), value))",
+	}
+	for _, test := range tests {
+		for _, expression := range expressions {
+
+			t.Run(test.name+"/"+expression, func(t *testing.T) {
+
+				schema := types.Object([]types.Property{{Name: "value", Type: test.typ}})
+				expr, _, err := Compile(expression, schema, types.Int(32))
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, typ, err := expr.Eval(map[string]any{"value": test.value})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got != test.want || !types.Equal(typ, types.Int(32)) {
+					t.Fatalf("got %v (%s), want %d (int(32))", got, typ, test.want)
+				}
+
+			})
+
+		}
+	}
+
+}
+
+// TestLenIntegerBoundaries checks exact digit counts near decimal powers and
+// integer limits.
+func TestLenIntegerBoundaries(t *testing.T) {
+
+	tests := []struct {
+		typ   types.Type
+		value any
+		want  int
+	}{
+		{types.Int(64), int(0), 1},
+		{types.Int(64), int(999999999999999), 15},
+		{types.Int(64), int(99999999999999999), 17},
+		{types.Int(64), int(999999999999999999), 18},
+		{types.Int(64), int(1000000000000000000), 19},
+		{types.Int(64), int(1000000000000000001), 19},
+		{types.Int(64), int(-999999999999999999), 19},
+		{types.Int(64), int(9223372036854775807), 19},
+		{types.Int(64), int(-9223372036854775808), 20},
+		{types.Int(64).Unsigned(), uint(0), 1},
+		{types.Int(64).Unsigned(), uint(999999999999999999), 18},
+		{types.Int(64).Unsigned(), uint(9999999999999999999), 19},
+		{types.Int(64).Unsigned(), uint(10000000000000000000), 20},
+		{types.Int(64).Unsigned(), uint(18446744073709551615), 20},
+	}
+	for _, test := range tests {
+
+		t.Run(fmt.Sprintf("%T/%v", test.value, test.value), func(t *testing.T) {
+
+			schema := types.Object([]types.Property{{Name: "value", Type: test.typ}})
+			expr, _, err := Compile("len(value)", schema, types.Int(32))
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, typ, err := expr.Eval(map[string]any{"value": test.value})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != test.want || !types.Equal(typ, types.Int(32)) {
+				t.Fatalf("got %v (%s), want %d (int(32))", got, typ, test.want)
+			}
+
+		})
+
+	}
+
+}
+
 // TestMapEncodingFailure checks that failed JSON encoding stops map evaluation
 // with a transformation error.
 func TestMapEncodingFailure(t *testing.T) {
@@ -1287,6 +1480,255 @@ func TestMapEncodingFailure(t *testing.T) {
 
 		}
 
+	}
+
+}
+
+// TestNullAncestor checks that a null container never redirects path lookup to
+// a containing object.
+func TestNullAncestor(t *testing.T) {
+
+	object := types.Object([]types.Property{{Name: "name", Type: types.String()}})
+	nested := types.Object([]types.Property{
+		{Name: "child", Type: object, Nullable: true}, {Name: "name", Type: types.String()},
+	})
+	tests := []struct {
+		name, path string
+		parentType types.Type
+		parent     any
+		want       any
+	}{
+		{"object", "parent.name", object, nil, nil},
+		{"map", "parent['name']", types.Map(types.String()), nil, nil},
+		{"typed nil", "parent.name", object, map[string]any(nil), nil},
+		{"nested", "parent.child.name", nested, map[string]any{"child": nil, "name": "PARENT"}, nil},
+		{"populated", "parent.name", object, map[string]any{"name": "nested"}, "nested"},
+	}
+	for _, test := range tests {
+
+		for _, form := range []string{"path", "lower", "concatenation"} {
+
+			t.Run(test.name+"/"+form, func(t *testing.T) {
+
+				source, want := test.path, test.want
+				switch form {
+				case "lower":
+					source = "lower(" + source + ")"
+				case "concatenation":
+					source += " '!'"
+					want = "!"
+					if test.want != nil {
+						want = test.want.(string) + "!"
+					}
+				}
+				inSchema := types.Object([]types.Property{
+					{Name: "parent", Type: test.parentType, Nullable: true}, {Name: "name", Type: types.Int(32)},
+				})
+				outSchema := types.Object([]types.Property{{Name: "out", Type: types.String(), Nullable: true}})
+				mapping, err := New(map[string]string{"out": source}, inSchema, outSchema, false, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				got, err := mapping.Transform(map[string]any{"parent": test.parent, "name": 123}, None)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !reflect.DeepEqual(got, map[string]any{"out": want}) {
+					t.Fatalf("got %#v, want out=%#v", got, want)
+				}
+
+			})
+
+		}
+
+	}
+
+}
+
+// TestSubstringArguments checks dynamic integer arguments and errors
+// identifying the invalid argument.
+func TestSubstringArguments(t *testing.T) {
+
+	tests := []struct {
+		name       string
+		expression string
+		typ        types.Type
+		position   any
+		length     any
+		want       string
+		message    string
+	}{
+		{
+			name: "invalid start with two arguments", expression: "substring('abc', position)",
+			typ: types.String(), position: "bad",
+			message: "«position», of type string, cannot be passed as int to the «substring» function",
+		},
+		{
+			name: "invalid start with three arguments", expression: "substring('abc', position, length)",
+			typ: types.String(), position: "bad", length: "1",
+			message: "«position», of type string, cannot be passed as int to the «substring» function",
+		},
+		{
+			name: "invalid length", expression: "substring('abc', position, length)",
+			typ: types.String(), position: "1", length: "bad",
+			message: "«length», of type string, cannot be passed as int to the «substring» function",
+		},
+		{
+			name: "unsigned start", expression: "substring('abc', position)",
+			typ: types.Int(32).Unsigned(), position: uint(2), want: "bc",
+		},
+		{
+			name: "unsigned length", expression: "substring('abc', 1, length)",
+			typ: types.Int(32).Unsigned(), length: uint(2), want: "ab",
+		},
+		{
+			name: "unsigned start and length", expression: "substring('aé🙂z', position, length)",
+			typ: types.Int(16).Unsigned(), position: uint(2), length: uint(2), want: "é🙂",
+		},
+		{
+			name: "zero unsigned start", expression: "substring('abc', position)",
+			typ: types.Int(8).Unsigned(), position: uint(0), want: "abc",
+		},
+		{
+			name: "start beyond string", expression: "substring('abc', position)",
+			typ: types.Int(32).Unsigned(), position: uint(2147483647), want: "",
+		},
+		{
+			name: "start overflow", expression: "substring('abc', position)",
+			typ: types.Int(32).Unsigned(), position: uint(2147483648),
+			message: "«position», with a value of 2147483648, " +
+				"cannot be passed as a 32-bit int to the «substring» function",
+		},
+		{
+			name: "length overflow", expression: "substring('abc', 1, length)",
+			typ: types.Int(32).Unsigned(), length: uint(2147483648),
+			message: "«length», with a value of 2147483648, " +
+				"cannot be passed as a 32-bit int to the «substring» function",
+		},
+	}
+	for _, test := range tests {
+
+		t.Run(test.name, func(t *testing.T) {
+
+			inSchema := types.Object([]types.Property{
+				{Name: "position", Type: test.typ, Nullable: true},
+				{Name: "length", Type: test.typ, Nullable: true},
+			})
+			outSchema := types.Object([]types.Property{{Name: "out", Type: types.String()}})
+			mapping, err := New(map[string]string{"out": test.expression}, inSchema, outSchema, false, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := mapping.Transform(map[string]any{"position": test.position, "length": test.length}, None)
+			if err != nil {
+				if test.message == "" {
+					t.Fatal(err)
+				}
+				if _, ok := errors.AsType[TransformationError](err); !ok {
+					t.Fatalf("got %T (%v), want TransformationError", err, err)
+				}
+				want := test.message + " while mapping to «out»"
+				if err.Error() != want {
+					t.Fatalf("got %q, want %q", err, want)
+				}
+				return
+			}
+			if test.message != "" {
+				t.Fatalf("got %#v, want an argument conversion error", got)
+			}
+			want := map[string]any{"out": test.want}
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("got %#v, want %#v", got, want)
+			}
+
+		})
+
+	}
+
+}
+
+// TestSubstringEmptyString checks the empty result for all valid start and
+// length combinations.
+func TestSubstringEmptyString(t *testing.T) {
+
+	expressions := []string{
+		"substring('', 1)",
+		"substring('', 1, 1)",
+		"substring('', 0, 1)",
+		"substring('', -1, 1)",
+		"substring('', 1, 0)",
+		"substring('', 2, 1)",
+	}
+	for _, expression := range expressions {
+
+		t.Run(expression, func(t *testing.T) {
+
+			expr, _, err := Compile(expression, types.Type{}, types.String())
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, typ, err := expr.Eval(nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != "" || !types.Equal(typ, types.String()) {
+				t.Fatalf("got %#v (%s), want an empty string", got, typ)
+			}
+
+		})
+
+	}
+
+}
+
+// TestSubstringUTF8Boundary checks byte widths, including malformed input
+// outside the UTF-8 precondition.
+func TestSubstringUTF8Boundary(t *testing.T) {
+
+	tests := []struct {
+		name          string
+		value         string
+		start, length int
+		want          string
+	}{
+		{"valid multibyte rune", "é🙂x", 2, 1, "🙂"},
+		{"valid replacement rune", "\uFFFDx", 1, 1, "\uFFFD"},
+		{"valid replacement at end", "é\uFFFD", 2, 10, "\uFFFD"},
+		{"invalid byte", "\xff", 1, 1, "\xff"},
+		{"invalid byte before ASCII", "\xffab", 1, 1, "\xff"},
+		{"invalid byte before multibyte rune", "\xffé", 1, 1, "\xff"},
+		{"invalid byte at end", "é\xff", 2, 1, "\xff"},
+		{"invalid byte before replacement rune", "\xff\uFFFD", 1, 1, "\xff"},
+		{"replacement rune before invalid byte", "\uFFFD\xff", 1, 1, "\uFFFD"},
+		{"continuation byte", "\x80", 1, 1, "\x80"},
+		{"truncated rune", "\xe2\x82", 1, 1, "\xe2"},
+		{"truncated rune to end", "\xe2\x82", 1, 10, "\xe2\x82"},
+		{"overlong encoding", "\xc0\xaf", 1, 1, "\xc0"},
+		{"surrogate encoding", "\xed\xa0\x80", 1, 1, "\xed"},
+		{"out of range rune", "\xf4\x90\x80\x80", 1, 1, "\xf4"},
+	}
+	inSchema := types.Object([]types.Property{
+		{Name: "value", Type: types.String()},
+		{Name: "start", Type: types.Int(32)},
+		{Name: "length", Type: types.Int(32)},
+	})
+	outSchema := types.Object([]types.Property{{Name: "out", Type: types.String()}})
+	mapping, err := New(map[string]string{"out": "substring(value, start, length)"}, inSchema, outSchema, false, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			attributes := map[string]any{"value": test.value, "start": test.start, "length": test.length}
+			out, err := mapping.Transform(attributes, None)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := out["out"]; got != test.want {
+				t.Fatalf("got %q, want %q", got, test.want)
+			}
+		})
 	}
 
 }
