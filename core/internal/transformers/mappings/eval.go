@@ -23,12 +23,15 @@ import (
 // It is set to true during tests to ensure deterministic output.
 var encodeSorted = false
 
-// Eval evaluates the expression using the provided attributes, which must
-// conform to the expression's source schema, and returns the result in the
-// destination type.
+// Eval evaluates the expression using attributes, which must conform to the
+// source schema, and returns the value and its actual type. A nil result may
+// have an invalid type when no result type is known.
 //
-// During evaluation, JSON properties in the map may be replaced with their
-// unmarshaled values.
+// Literals have already been converted by Compile. Dynamic arguments are
+// converted when required by the function receiving them. Calls to if and
+// coalesce return their selected argument with its actual type. Eval does not
+// convert the final result to Compile's destination type; Mapping.Transform
+// does that.
 //
 // If a property transformation fails, Eval returns a TransformationError.
 func (expr *Expression) Eval(attributes map[string]any) (any, types.Type, error) {
@@ -313,15 +316,13 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 						"«%s» is a JSON %s and cannot be passed as a string value to the «json_parse» function", code(source, p.args[0]...), k)
 				}
 				v = value.String()
-				vt = types.String()
-				_ = vt // the assignment 'vt = types.String()' is ineffective, it is done for the future in case we need to use 'vt'; so, the assignment '_ = vt' is to avoid the 'staticcheck' ineffective error.
 			}
 		}
 		if err != nil {
 			return nil, types.Type{}, err
 		}
 		if v == nil {
-			return nil, types.String(), nil
+			return nil, types.JSON(), nil
 		}
 		jv := json.Value(v.(string))
 		if !json.Valid(jv) {

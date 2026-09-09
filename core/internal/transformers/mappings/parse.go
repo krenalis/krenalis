@@ -140,9 +140,12 @@ type part struct {
 	// Function call arguments.
 	args [][]part
 
-	// If there is a path, it represents the type of the property or the type of the function call.
-	// Otherwise, it represents the type of the value. For some function calls, as coalesce, it is
-	// the invalid type, indicating that the call can return different types.
+	// Static type of the value, property, or call, excluding any literal prefix.
+	// Literals use their type after compile-time conversion; paths use the schema's type.
+	// Most calls record their result type. coalesce uses the invalid type because
+	// its result may vary; if records the destination type after checking both branches.
+	// The latter describes compatibility, not the selected value's actual type.
+	// Runtime code must use the type returned by eval for conversion decisions.
 	typ types.Type
 
 	// Positions in the source code, with expr.source[start:end] extracting the source code.

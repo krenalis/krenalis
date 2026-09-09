@@ -5,13 +5,13 @@
 package mappings
 
 import (
-	"errors"
 	"fmt"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
@@ -30,10 +30,20 @@ type Expression struct {
 // used for evaluation, along with the property paths referenced in the
 // expression.
 //
-// The schema defines the structure of the paths used in the expression, while
-// dt specifies the destination type.
+// schema supplies the types of referenced properties, and dt is the destination
+// type. Compile checks each part of the expression against the type required by
+// its context. It rejects conversions that are known to be incompatible, but a
+// conversion may still fail for a particular value during evaluation or
+// transformation.
 //
-// If schema is invalid, the expression will be compiled without path resolution.
+// Literal values are converted to the type required by their context during compilation.
+// Function calls are not evaluated, even when all their arguments are literals.
+// Function calls may be nested up to 50 levels.
+// [Expression.Eval] returns the evaluated value with its actual type, which may
+// differ from dt. [Mapping.Transform] performs the final conversion to dt.
+//
+// schema must be an object type. It may be the invalid type only when the
+// expression contains no property paths. dt must be valid.
 func Compile(expr string, schema, dt types.Type) (*Expression, []string, error) {
 	if schema.Valid() && schema.Kind() != types.ObjectKind {
 		return nil, nil, errors.New("schema is not an object")
@@ -107,6 +117,9 @@ func checkArray(args [][]part, schema, dt types.Type, nullable bool, attributes 
 }
 
 // checkCoalesce type checks a call to 'coalesce' with the given arguments.
+// Each argument is checked against dt and may be null. The result type is
+// left unknown because evaluation returns the first non-null argument with
+// its actual type, without converting it to dt.
 func checkCoalesce(args [][]part, schema, dt types.Type, nullable bool, attributes map[string]struct{}) (types.Type, error) {
 	if len(args) < 1 {
 		return types.Type{}, errors.New("'coalesce' function requires at least one argument")
@@ -146,6 +159,9 @@ func checkEq(args [][]part, schema, dt types.Type, nullable bool, attributes map
 }
 
 // checkIf type checks a call to 'if' with the given arguments.
+// Both result branches are checked against dt. Returning dt summarizes those
+// checks; it does not mean that evaluation converts the selected branch to dt.
+// With no destination type, the result type remains unknown.
 func checkIf(args [][]part, schema, dt types.Type, nullable bool, attributes map[string]struct{}) (types.Type, error) {
 	n := len(args)
 	if n < 2 || n > 3 {
@@ -178,18 +194,49 @@ func checkInitCap(args [][]part, schema, dt types.Type, nullable bool, attribute
 	if err != nil {
 		return types.Type{}, err
 	}
-	return dt, nil
+	return types.String(), nil
 }
 
 // checkJSONParse type checks a call to 'json_parse' with the given arguments.
 func checkJSONParse(args [][]part, schema, dt types.Type, nullable bool, attributes map[string]struct{}) (types.Type, error) {
+
 	if len(args) != 1 {
 		return types.Type{}, errors.New("'json_parse' function requires a single argument")
 	}
+
+	// Preserve literal coercion to string before checking the possible result types.
 	err := typeCheck(args[0], schema, types.String(), true, attributes)
 	if err != nil {
 		return types.Type{}, err
 	}
+
+	// Selectors return their arguments without conversion, so inspect every result
+	// branch instead of their contextual or unknown annotation. A concatenation
+	// produces a string; other functions have already checked their own arguments.
+	results := [][]part{args[0]}
+	for len(results) > 0 {
+
+		result := results[len(results)-1]
+		results = results[:len(results)-1]
+		p := result[0]
+		if len(result) == 1 && p.value == nil && p.args != nil {
+			switch p.path.elements[0] {
+			case "if":
+				results = append(results, p.args[1:]...)
+				continue
+			case "coalesce":
+				results = append(results, p.args...)
+				continue
+			}
+		}
+
+		st := typeOf(result)
+		if st.Valid() && st.Kind() != types.StringKind && st.Kind() != types.JSONKind {
+			return types.Type{}, fmt.Errorf("argument of 'json_parse(...)' has type %s, want string or json", st)
+		}
+
+	}
+
 	return types.JSON(), nil
 }
 
@@ -215,7 +262,7 @@ func checkLower(args [][]part, schema, dt types.Type, nullable bool, attributes 
 	if err != nil {
 		return types.Type{}, err
 	}
-	return dt, nil
+	return types.String(), nil
 }
 
 // checkLTrim type checks a call to 'ltrim' with the given arguments.
@@ -297,7 +344,7 @@ func checkNot(args [][]part, schema, dt types.Type, nullable bool, attributes ma
 	if err != nil {
 		return types.Type{}, err
 	}
-	return dt, nil
+	return types.Boolean(), nil
 }
 
 // checkOr type checks a call to 'or' with the given arguments.
@@ -347,7 +394,7 @@ func checkSubstring(args [][]part, schema, dt types.Type, nullable bool, attribu
 			return types.Type{}, err
 		}
 	}
-	return dt, nil
+	return types.String(), nil
 }
 
 // checkTrim type checks a call to 'trim' with the given arguments.
@@ -372,13 +419,23 @@ func checkUpper(args [][]part, schema, dt types.Type, nullable bool, attributes 
 	if err != nil {
 		return types.Type{}, err
 	}
-	return dt, nil
+	return types.String(), nil
 }
 
-// typeCheck type checks the expression expr. schema is the schema of the
-// properties in the expression, dt is the destination type, and nullable
-// indicates whether that value can be nil. An invalid schema can be passed to
-// type check an expression without paths.
+// typeCheck checks expr in a context requiring dt, resolves property types from
+// schema, and collects referenced property paths in attributes. An invalid dt
+// means there is no required type, as with arguments to len, eq, and ne.
+// schema may be invalid when expr has no property paths.
+//
+// Function checkers pass their parameter types as dt to recursive calls and
+// return a static result type for asType to check against the enclosing dt.
+// An invalid result type defers the conversion check to runtime. checkIf
+// instead returns dt after checking both result branches against it.
+//
+// Concatenation requires its parts to be convertible to string and produces a
+// string, which is then checked against dt. nullable permits null during
+// literal conversion; it does not prove that a dynamic expression is non-null.
+// Required output properties are validated by Mapping.Transform.
 func typeCheck(expr []part, schema, dt types.Type, nullable bool, attributes map[string]struct{}) error {
 
 	typ := dt
@@ -503,8 +560,13 @@ func typeCheck(expr []part, schema, dt types.Type, nullable bool, attributes map
 	return nil
 }
 
-// asType reports whether expr can be converted to type dt. If expr contains
-// only a value, it is converted to dt.
+// asType checks whether expr can be converted to dt. If the parser represented
+// expr as a single literal value, asType converts that value and updates its
+// stored type. It does not evaluate function calls or property paths.
+//
+// For other expressions, asType checks only their static type. An unknown type
+// defers the check to runtime. A successful type check does not guarantee
+// that a particular runtime value satisfies dt's representation or constraints.
 func asType(expr []part, dt types.Type, nullable bool) error {
 	p := expr[0]
 	if len(expr) == 1 && p.path.elements == nil {
@@ -585,7 +647,7 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 	st := types.String()
 	if len(expr) == 1 && p.value == nil {
 		st = p.typ
-		// If it is not valid, it should not be validated.
+		// An unknown source type requires no validation at compile time.
 		if !st.Valid() {
 			return nil
 		}
@@ -596,7 +658,10 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 	return nil
 }
 
-// typeOf returns the type of the expression expr.
+// typeOf returns the static type recorded for expr, or the invalid type when it
+// is unknown. A concatenation has type string. Function annotations may
+// describe compatibility with a context rather than the actual result type,
+// notably for if; runtime code must use the type returned by eval instead.
 func typeOf(expr []part) types.Type {
 	p := expr[0]
 	if len(expr) > 1 || p.value != nil && p.path.elements != nil {
