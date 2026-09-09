@@ -17,6 +17,7 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 
@@ -305,4 +306,88 @@ func Test_normalize_errors(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestNormalizeUnixFloatRange rejects non-finite and out-of-range float values
+// before integer conversion.
+func TestNormalizeUnixFloatRange(t *testing.T) {
+
+	values := []float64{
+		math.NaN(), math.Inf(1), math.Inf(-1), math.MaxFloat64, -math.MaxFloat64,
+		float64(math.MaxInt64), math.Nextafter(float64(math.MinInt64), math.Inf(-1)),
+	}
+
+	for _, layout := range []string{"unix", "unixmilli", "unixmicro", "unixnano"} {
+		for _, value := range values {
+			t.Run(fmt.Sprintf("%s/%g", layout, value), func(t *testing.T) {
+				got, err := normalize("at", types.DateTime(), value, false, &state.TimeLayouts{DateTime: layout})
+				if err != nil {
+					if _, ok := errors.AsType[InputValidationError](err); !ok {
+						t.Fatalf("got %T (%v), want InputValidationError", err, err)
+					}
+					return
+				}
+				t.Fatalf("got %v, want InputValidationError", got)
+			})
+		}
+	}
+
+}
+
+// TestNormalizeUnixNano verifies integer boundaries, float64 rounding, and
+// fractional nanosecond conversion.
+func TestNormalizeUnixNano(t *testing.T) {
+
+	tests := []struct {
+		name    string
+		value   any
+		want    int64
+		invalid bool
+	}{
+		{"minimum string", "-9223372036854775808", math.MinInt64, false},
+		{"below minimum string", "-9223372036854775809", 0, true},
+		{"maximum string", "9223372036854775807", math.MaxInt64, false},
+		{"above maximum string", "9223372036854775808", 0, true},
+		{"minimum float", float64(math.MinInt64), math.MinInt64, false},
+		{"below minimum float", math.Nextafter(float64(math.MinInt64), math.Inf(-1)), 0, true},
+		{"above minimum float", math.Nextafter(float64(math.MinInt64), 0), math.MinInt64 + 1024, false},
+		{"last valid float", math.Nextafter(float64(math.MaxInt64), 0), math.MaxInt64 - 1023, false},
+		{"rounded maximum float", float64(math.MaxInt64), 0, true},
+		{"above maximum float", math.Nextafter(float64(math.MaxInt64), math.Inf(1)), 0, true},
+		{"zero", 0.0, 0, false},
+		{"positive fractional nanoseconds", 1.75, 1, false},
+		{"negative fractional nanoseconds", -1.75, -1, false},
+	}
+	for _, test := range tests {
+
+		for _, nullable := range []bool{false, true} {
+
+			t.Run(fmt.Sprintf("%s/nullable=%t", test.name, nullable), func(t *testing.T) {
+
+				got, err := normalize("at", types.DateTime(), test.value, nullable,
+					&state.TimeLayouts{DateTime: "unixnano"})
+				if err != nil {
+					if !test.invalid {
+						t.Fatal(err)
+					}
+					if _, ok := errors.AsType[InputValidationError](err); !ok {
+						t.Fatalf("got %T (%v), want InputValidationError", err, err)
+					}
+					return
+				}
+				if test.invalid {
+					t.Fatalf("got %v, want InputValidationError", got)
+				}
+
+				want := time.Unix(0, test.want)
+				if !got.(time.Time).Equal(want) {
+					t.Fatalf("got %s, want %s", got, want)
+				}
+
+			})
+
+		}
+
+	}
+
 }
