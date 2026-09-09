@@ -5,7 +5,6 @@
 package mappings
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"net/netip"
@@ -18,6 +17,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 
@@ -149,11 +149,11 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			return v, errInvalidConversion
 		}
 		if values := dt.Values(); values != nil {
-			if s == "" && nullable {
-				return nil, nil
-			}
 			if slices.Contains(values, s) {
 				return s, nil
+			}
+			if s == "" && nullable {
+				return nil, nil
 			}
 			return v, errEnumConversion
 		} else if re := dt.Pattern(); re != nil {

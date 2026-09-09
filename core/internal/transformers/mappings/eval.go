@@ -7,7 +7,6 @@ package mappings
 import (
 	"fmt"
 	"math"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -246,7 +245,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 			}
 		}
 		return nil, p.typ, nil
-	case "eq":
+	case "eq", "ne":
 		v0, t0, err := eval(p.args[0], source, attributes)
 		if err != nil {
 			return nil, types.Type{}, err
@@ -261,13 +260,11 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		if v1 == nil {
 			return nil, types.Boolean(), nil
 		}
-		if !types.Equal(t0, t1) {
-			v0, err = convert(v0, t0, t1, true, false, nil, None)
-			if err != nil {
-				return false, types.Boolean(), nil
-			}
+		equal := equalValues(v0, v1, t0, t1)
+		if p.path.elements[0] == "ne" {
+			equal = !equal
 		}
-		return reflect.DeepEqual(v0, v1), types.Boolean(), nil
+		return equal, types.Boolean(), nil
 	case "if":
 		v0, vt0, err := eval(p.args[0], source, attributes)
 		if err == nil && v0 != nil && vt0.Kind() != types.BooleanKind {
@@ -450,28 +447,6 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 			m[key] = v
 		}
 		return m, types.Map(types.JSON()), nil
-	case "ne":
-		v0, t0, err := eval(p.args[0], source, attributes)
-		if err != nil {
-			return nil, types.Type{}, err
-		}
-		if v0 == nil {
-			return nil, types.Boolean(), nil
-		}
-		v1, t1, err := eval(p.args[1], source, attributes)
-		if err != nil {
-			return nil, types.Type{}, err
-		}
-		if v1 == nil {
-			return nil, types.Boolean(), nil
-		}
-		if !types.Equal(t0, t1) {
-			v0, err = convert(v0, t0, t1, true, false, nil, None)
-			if err != nil {
-				return true, types.Boolean(), nil
-			}
-		}
-		return !reflect.DeepEqual(v0, v1), types.Boolean(), nil
 	case "not":
 		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && vt.Kind() != types.BooleanKind {

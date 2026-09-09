@@ -36,5 +36,5 @@ A value `v` is converted to `nil` if the destination property is nullable and on
 * `v` is `nil`
 * `v` is **json** `null`, and the destination type is not **json**
 * `v` is an empty **string**, and `v` is not constant, and the destination type is neither **string** nor **json** 
-* `v` is an empty **string**, and the destination type is **string** with enums
+* `v` is an empty **string**, and the destination type is **string** with enums that do not include the empty string
 * `v` is an empty **string**, and the destination type is **string** with a regular expression, and `v` does not match

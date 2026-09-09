@@ -5,6 +5,7 @@
 package mappings
 
 import (
+	"fmt"
 	"math"
 	"regexp"
 	"testing"
@@ -20,6 +21,7 @@ import (
 
 func TestConvert(t *testing.T) {
 
+	emptyEnum := types.String().WithValues("", "yes")
 	tests := []struct {
 		t1, t2   types.Type
 		value    any
@@ -34,6 +36,13 @@ func TestConvert(t *testing.T) {
 		{types.String(), types.String(), "foo", "foo", true, nil, nil},
 		{types.String(), types.String().WithValues("foo", "boo"), "", nil, true, nil, nil},
 		{types.String(), types.String().WithValues("foo", "boo"), "boo", "boo", true, nil, nil},
+		{types.String(), emptyEnum, "", "", true, nil, nil},
+		{types.String(), emptyEnum, "", "", false, nil, nil},
+		{emptyEnum, emptyEnum, "", "", true, nil, nil},
+		{types.JSON(), emptyEnum, json.Value(`""`), "", true, nil, nil},
+		{types.String(), emptyEnum, nil, nil, true, nil, nil},
+		{types.JSON(), emptyEnum, json.Value("null"), nil, true, nil, nil},
+		{types.String(), types.String().WithValues("yes"), "", nil, false, nil, errEnumConversion},
 		{types.String(), types.String().WithPattern(regexp.MustCompile(`^bo+$`)), "", nil, true, nil, nil},
 		{types.String(), types.String().WithPattern(regexp.MustCompile(`^bo+$`)), "boo", "boo", true, nil, nil},
 		{types.Boolean(), types.String(), true, "true", true, nil, nil},
@@ -367,4 +376,59 @@ func TestParseUint(t *testing.T) {
 			t.Fatalf("%s: expected %d, got %d", tt.in, tt.n, got)
 		}
 	}
+}
+
+// TestEnumEmptyStringMapping preserves allowed empty strings in optional,
+// nullable, and required output properties.
+func TestEnumEmptyStringMapping(t *testing.T) {
+
+	enum := types.String().WithValues("", "yes")
+	outSchema := types.Object([]types.Property{
+		{Name: "optional", Type: enum},
+		{Name: "nullable", Type: enum, Nullable: true},
+		{Name: "required", Type: enum, CreateRequired: true, UpdateRequired: true},
+		{Name: "nullableRequired", Type: enum, Nullable: true, CreateRequired: true, UpdateRequired: true},
+	})
+	tests := []struct {
+		name, source string
+		typ          types.Type
+		value        any
+	}{
+		{"literal", "''", types.String(), ""},
+		{"string", "value", types.String(), ""},
+		{"enum", "value", enum, ""},
+		{"JSON", "value", types.JSON(), json.Value(`""`)},
+		{"selector", "coalesce(value)", enum, ""},
+	}
+
+	for _, test := range tests {
+		for _, purpose := range []Purpose{None, Create, Update} {
+			t.Run(fmt.Sprintf("%s/purpose=%d", test.name, purpose), func(t *testing.T) {
+
+				inSchema := types.Object([]types.Property{{Name: "value", Type: test.typ}})
+				expressions := map[string]string{
+					"optional": test.source, "nullable": test.source,
+					"required": test.source, "nullableRequired": test.source,
+				}
+				mapping, err := New(expressions, inSchema, outSchema, false, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				got, err := mapping.Transform(map[string]any{"value": test.value}, purpose)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				for name := range expressions {
+					value, present := got[name]
+					if !present || value != "" {
+						t.Fatalf("got %#v, want %s to contain an empty string", got, name)
+					}
+				}
+
+			})
+		}
+	}
+
 }
