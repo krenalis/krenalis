@@ -41,7 +41,7 @@ func Compile(expr string, schema, dt types.Type) (*Expression, []string, error) 
 	if !dt.Valid() {
 		return nil, nil, errors.New("destination type is the invalid type")
 	}
-	parts, src, err := parse(expr, 0, len(expr))
+	parts, src, err := parse(expr, 0, len(expr), 0)
 	if err != nil {
 		return nil, nil, err
 	}

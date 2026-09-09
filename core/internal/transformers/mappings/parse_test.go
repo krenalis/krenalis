@@ -5,11 +5,13 @@
 package mappings
 
 import (
-	"errors"
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -68,7 +70,7 @@ func Test_parseExpression(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, src, err := parse(test.src, 0, len(test.src))
+		got, src, err := parse(test.src, 0, len(test.src), 0)
 		if err != nil {
 			if test.err == nil {
 				t.Fatalf("%q. unexpected error: %s", test.src, err)
@@ -329,6 +331,430 @@ func Test_parseString(t *testing.T) {
 		if src != test.unparsed {
 			t.Fatalf("%q. expected unparsed string %q, got %q", test.src, test.unparsed, src)
 		}
+	}
+
+}
+
+// TestIntegerLiteralTypes checks the inferred types before contextual
+// conversion can change them.
+func TestIntegerLiteralTypes(t *testing.T) {
+
+	tests := []struct {
+		source string
+		want   types.Type
+	}{
+		{"0", types.Int(32)},
+		{"2147483647", types.Int(32)},
+		{"-2147483648", types.Int(32)},
+		{"2147483648", types.Int(64)},
+		{"-2147483649", types.Int(64)},
+		{"9223372036854775807", types.Int(64)},
+		{"-9223372036854775808", types.Int(64)},
+		{"9223372036854775808", types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale)},
+		{"-9223372036854775809", types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale)},
+		{"1.5", types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale)},
+	}
+
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+
+			parts, rest, err := parse(test.source, 0, len(test.source), 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if len(parts) != 1 || rest != "" {
+				t.Fatalf("got %d parts and remainder %q, want one complete literal", len(parts), rest)
+			}
+			if fmt.Sprint(parts[0].value) != test.source || !types.Equal(parts[0].typ, test.want) {
+				t.Fatalf("got %v (%s), want %s (%s)", parts[0].value, parts[0].typ, test.source, test.want)
+			}
+
+		})
+	}
+
+}
+
+// TestNullLiteralConcatenation checks that null contributes no characters,
+// while a lone null remains nil.
+func TestNullLiteralConcatenation(t *testing.T) {
+
+	tests := []struct {
+		source string
+		want   any
+	}{
+		{`null`, nil},
+		{`null 'x'`, "x"},
+		{`'x' null`, "x"},
+		{`null true`, "true"},
+		{`null false`, "false"},
+		{`null 42`, "42"},
+		{`null 1.5`, "1.5"},
+		{`null null`, ""},
+		{`null null 'x'`, "x"},
+		{`null 'x' null 'y'`, "xy"},
+		{`null lower('X') 'y'`, "xy"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.source, func(t *testing.T) {
+
+			expr, _, err := Compile(test.source, types.Type{}, types.String())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			got, typ, err := expr.Eval(nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if got != test.want || !types.Equal(typ, types.String()) {
+				t.Fatalf("got %#v (%s), want %#v (string)", got, typ, test.want)
+			}
+
+		})
+	}
+
+}
+
+// TestCompileFunctionDepth checks the nesting boundary through compilation and
+// evaluation.
+func TestCompileFunctionDepth(t *testing.T) {
+	for _, depth := range []int{0, 1, 49, 50, 51} {
+		t.Run(fmt.Sprint(depth), func(t *testing.T) {
+
+			source := strings.Repeat("not(", depth) + "value" + strings.Repeat(")", depth)
+			schema := types.Object([]types.Property{{Name: "value", Type: types.Boolean()}})
+			expr, _, err := Compile(source, schema, types.Boolean())
+			if err != nil {
+				if depth <= 50 {
+					t.Fatal(err)
+				}
+				if want := "function calls cannot be nested more than 50 levels"; err.Error() != want {
+					t.Fatalf("got %q, want %q", err, want)
+				}
+				return
+			}
+			if depth > 50 {
+				t.Fatal("expected compilation to reject more than 50 nested calls")
+			}
+
+			got, typ, err := expr.Eval(map[string]any{"value": true})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if want := depth%2 == 0; got != want || !types.Equal(typ, types.Boolean()) {
+				t.Fatalf("got %v (%s), want %v (boolean)", got, typ, want)
+			}
+
+		})
+	}
+}
+
+// TestCompileFunctionDepthShapes checks that only enclosing calls contribute to
+// nesting depth.
+func TestCompileFunctionDepthShapes(t *testing.T) {
+
+	tests := []struct {
+		name, source string
+		typ          types.Type
+		want         any
+		tooDeep      bool
+	}{
+		{
+			"zero-argument call at level 50", strings.Repeat("coalesce(", 49) + "array()" + strings.Repeat(")", 49),
+			types.Array(types.JSON()), []any{}, false,
+		},
+		{
+			"zero-argument call at level 51", strings.Repeat("coalesce(", 50) + "array()" + strings.Repeat(")", 50),
+			types.Array(types.JSON()), nil, true,
+		},
+		{
+			"sibling calls at level 50",
+			strings.Repeat("coalesce(", 49) + "lower('X') upper('x')" + strings.Repeat(")", 49),
+			types.String(), "xX", false,
+		},
+		{"many sibling calls", strings.Repeat("lower('X') ", 60), types.String(), strings.Repeat("x", 60), false},
+		{"many arguments", "coalesce(" + strings.Repeat("null, ", 60) + "'x')", types.String(), "x", false},
+		{
+			"function syntax in literal", strings.Repeat("lower(", 50) + "'not((('" + strings.Repeat(")", 50),
+			types.String(), "not(((", false,
+		},
+		{
+			"unselected branch at level 50",
+			"if(false, " + strings.Repeat("lower(", 49) + "'X'" + strings.Repeat(")", 49) + ", 'ok')",
+			types.String(), "ok", false,
+		},
+		{
+			"unselected branch at level 51",
+			"if(false, " + strings.Repeat("lower(", 50) + "'X'" + strings.Repeat(")", 50) + ", 'ok')",
+			types.String(), nil, true,
+		},
+		{
+			"reject before parsing deeper arguments",
+			strings.Repeat("coalesce(", 51) + "@" + strings.Repeat(")", 51), types.String(), nil, true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+
+			expr, _, err := Compile(test.source, types.Type{}, test.typ)
+			if err != nil {
+				if !test.tooDeep {
+					t.Fatal(err)
+				}
+				if want := "function calls cannot be nested more than 50 levels"; err.Error() != want {
+					t.Fatalf("got %q, want %q", err, want)
+				}
+				return
+			}
+			if test.tooDeep {
+				t.Fatal("expected compilation to reject more than 50 nested calls")
+			}
+
+			got, typ, err := expr.Eval(nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, test.want) || !types.Equal(typ, test.typ) {
+				t.Fatalf("got %#v (%s), want %#v (%s)", got, typ, test.want, test.typ)
+			}
+
+		})
+	}
+
+}
+
+// TestMappingFunctionDepth checks that mapping construction also enforces the
+// nesting limit.
+func TestMappingFunctionDepth(t *testing.T) {
+	for _, depth := range []int{50, 51} {
+		t.Run(fmt.Sprint(depth), func(t *testing.T) {
+
+			source := strings.Repeat("not(", depth) + "true" + strings.Repeat(")", depth)
+			outSchema := types.Object([]types.Property{{Name: "out", Type: types.Boolean()}})
+			mapping, err := New(map[string]string{"out": source}, types.Type{}, outSchema, false, nil)
+			if err != nil {
+				if depth <= 50 {
+					t.Fatal(err)
+				}
+				if want := "function calls cannot be nested more than 50 levels"; err.Error() != want {
+					t.Fatalf("got %q, want %q", err, want)
+				}
+				return
+			}
+			if depth > 50 {
+				t.Fatal("expected mapping construction to reject more than 50 nested calls")
+			}
+
+			got, err := mapping.Transform(nil, None)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got["out"] != true {
+				t.Fatalf("got %#v, want out=true", got)
+			}
+
+		})
+	}
+}
+
+// TestCompileLeadingDecimalPoint checks numeric literals and disambiguated
+// property paths through Compile.
+func TestCompileLeadingDecimalPoint(t *testing.T) {
+
+	tests := []struct {
+		source string
+		want   float64
+	}{
+		{".5", 0.5}, {".25", 0.25}, {".5e2", 50}, {".5e-2", 0.005},
+		{".0", 0}, {"0.5", 0.5}, {"-.5", -0.5}, {".value", 7}, {".true", 9},
+	}
+	schema := types.Object([]types.Property{
+		{Name: "value", Type: types.Float(64)}, {Name: "true", Type: types.Float(64)},
+	})
+	for _, test := range tests {
+
+		t.Run(test.source, func(t *testing.T) {
+
+			expr, _, err := Compile(test.source, schema, types.Float(64))
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, typ, err := expr.Eval(map[string]any{"value": 7.0, "true": 9.0})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != test.want || !types.Equal(typ, types.Float(64)) {
+				t.Fatalf("got %v (%s), want %v (float(64))", got, typ, test.want)
+			}
+
+		})
+
+	}
+
+}
+
+// TestCompileStringEscapes rejects unsupported escapes while preserving
+// literal backslashes and supported escapes.
+func TestCompileStringEscapes(t *testing.T) {
+
+	tests := []struct {
+		content, want, unknown string
+	}{
+		{`\q`, "", `\q`},
+		{`prefix\q`, "", `\q`},
+		{`\n\q`, "", `\q`},
+		{`\u0041\q`, "", `\q`},
+		{`\x41`, "", `\x`},
+		{`\0`, "", `\0`},
+		{`\é`, "", `\é`},
+		{`\\q`, `\q`, ""},
+		{`\'\"`, `'"`, ""},
+		{`\a\b\f\n\r\t\v`, "\a\b\f\n\r\t\v", ""},
+		{`\u0041\U0001F600`, "A😀", ""},
+	}
+
+	for _, quote := range []string{"'", `"`} {
+		for _, test := range tests {
+
+			source := quote + test.content + quote
+
+			t.Run(fmt.Sprintf("%q", source), func(t *testing.T) {
+
+				expr, _, err := Compile(source, types.Type{}, types.String())
+				if err != nil {
+					if test.unknown == "" {
+						t.Fatal(err)
+					}
+					want := fmt.Sprintf("unknown escape sequence %q", test.unknown)
+					if err.Error() != want {
+						t.Fatalf("got %q, want %q", err, want)
+					}
+					return
+				}
+				if test.unknown != "" {
+					t.Fatalf("accepted unsupported escape %q", test.unknown)
+				}
+
+				got, typ, err := expr.Eval(nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got != test.want || !types.Equal(typ, types.String()) {
+					t.Fatalf("got %#v (%s), want %q (string)", got, typ, test.want)
+				}
+
+			})
+
+		}
+	}
+
+}
+
+// TestCompileStringNUL rejects NUL bytes regardless of their position relative
+// to escapes.
+func TestCompileStringNUL(t *testing.T) {
+
+	contents := []string{
+		"\x00x", "\x00x\\n", "\x00x\\u0041", "\x00x\\U00000041",
+		"x\\n\x00", "x\\u0041\x00", "\\u0000", "\\U00000000",
+		"x\\'\x00\\n", "x\\\"\x00\\n",
+		"x\\'\\\x00", "x\\\"\\\x00",
+	}
+	for _, quote := range []string{"'", `"`} {
+
+		for _, content := range contents {
+
+			source := quote + content + quote
+			t.Run(fmt.Sprintf("%q", source), func(t *testing.T) {
+
+				for _, parser := range []string{"parseString", "Compile"} {
+
+					t.Run(parser, func(t *testing.T) {
+
+						var err error
+						if parser == "parseString" {
+							_, _, err = parseString(source)
+						} else {
+							_, _, err = Compile(source, types.Type{}, types.String())
+						}
+
+						if err != nil {
+							if !errors.Is(err, errZeroByteInString) {
+								t.Fatalf("got %v, want %v", err, errZeroByteInString)
+							}
+							return
+						}
+						t.Fatal("accepted a NUL byte")
+
+					})
+
+				}
+
+			})
+
+		}
+
+	}
+
+}
+
+// TestCompileUnicodeEscapes checks escape boundaries and rejects incomplete or
+// invalid code points without panic.
+func TestCompileUnicodeEscapes(t *testing.T) {
+
+	tests := []struct {
+		source  string
+		want    string
+		invalid bool
+	}{
+		{`'\u0041'`, "A", false},
+		{`'\u0041BC'`, "ABC", false},
+		{`'x\u0041'`, "xA", false},
+		{`'\u0041\u0042'`, "AB", false},
+		{`"\u0041B"`, "AB", false},
+		{`'\U0001F600x'`, "😀x", false},
+		{`'\U0010FFFF'`, "\U0010FFFF", false},
+		{`'\u0041' 'B'`, "AB", false},
+		{`'A\nB'`, "A\nB", false},
+		{`'\'\u0041`, "", true},
+		{`'\'\U00000041`, "", true},
+		{`'\u00`, "", true},
+		{`'\u00x1'`, "", true},
+		{`'\u0000'`, "", true},
+		{`'\uD800'`, "", true},
+		{`'\uDFFF'`, "", true},
+		{`'\U00110000'`, "", true},
+		{`'\U80000000'`, "", true},
+		{`'\UFFFFFFFFx'`, "", true},
+	}
+	for _, test := range tests {
+
+		t.Run(test.source, func(t *testing.T) {
+
+			expr, _, err := Compile(test.source, types.Type{}, types.String())
+			if err != nil {
+				if !test.invalid {
+					t.Fatal(err)
+				}
+				return
+			}
+			if test.invalid {
+				t.Fatal("expected a compilation error")
+			}
+			got, typ, err := expr.Eval(nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != test.want || !types.Equal(typ, types.String()) {
+				t.Fatalf("got %q (%s), want %q (string)", got, typ, test.want)
+			}
+
+		})
+
 	}
 
 }
