@@ -413,6 +413,7 @@ func TestScalarEquality(t *testing.T) {
 		{"JSON number and JSON string", types.JSON(), types.JSON(), `1`, `"1"`, false},
 		{"JSON boolean and native int8", types.JSON(), types.Int(8), `true`, `1`, false},
 		{"JSON string and native string", types.JSON(), types.String(), `"01"`, `"01"`, true},
+		{"JSON date", types.JSON(), types.Date(), `"2026-09-08"`, `"2026-09-08"`, true},
 		{"numeric control", types.Float(64), types.Int(32), `1.4`, `1`, false},
 		{"whole float", types.Float(64), types.Int(32), `1.0`, `1`, true},
 		{

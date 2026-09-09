@@ -608,6 +608,7 @@ func TestExpressionDestinationType(t *testing.T) {
 		{"lower(value)", types.Int(32), "42", types.String()},
 		{"if(true, value, 0)", types.Int(32), "42", types.String()},
 		{"coalesce(value, 0)", types.Int(32), "42", types.String()},
+		{"array(value)", types.Array(types.Int(32)), []any{42}, types.Array(types.Int(32))},
 	}
 	for _, test := range tests {
 

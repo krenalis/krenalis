@@ -183,71 +183,8 @@ func (mapping *Mapping) Transform(attributes map[string]any, purpose Purpose) (m
 		if v != nil {
 			v, err = convert(v, vt, e.dt, true, mapping.inPlace, e.timeLayouts, purpose)
 			if err != nil {
-				var msg string
-				switch err {
-				case errRangeConversion:
-					msg = fmt.Sprintf("number «%s» is not a «%s» value while mapping to «%s»", code(e.expr.source), e.dt, code(e.path))
-				case errMinConversion:
-					var n any
-					switch e.dt.Kind() {
-					case types.IntKind:
-						if e.dt.IsUnsigned() {
-							n, _ = e.dt.UnsignedRange()
-						} else {
-							n, _ = e.dt.IntRange()
-						}
-					case types.FloatKind:
-						n, _ = e.dt.FloatRange()
-					case types.DecimalKind:
-						n, _ = e.dt.DecimalRange()
-					}
-					msg = fmt.Sprintf("number «%s» is less than %v while mapping to «%s»", code(e.expr.source), n, code(e.path))
-				case errMaxConversion:
-					var n any
-					switch e.dt.Kind() {
-					case types.IntKind:
-						if e.dt.IsUnsigned() {
-							_, n = e.dt.UnsignedRange()
-						} else {
-							_, n = e.dt.IntRange()
-						}
-					case types.FloatKind:
-						_, n = e.dt.FloatRange()
-					case types.DecimalKind:
-						_, n = e.dt.DecimalRange()
-					}
-					msg = fmt.Sprintf("number «%s» is greater than %v while mapping to «%s»", code(e.expr.source), n, code(e.path))
-				case errParseConversion:
-					var to string
-					switch e.dt.Kind() {
-					case types.DateTimeKind:
-						to = "a date time in ISO 8601 format"
-					case types.DateKind:
-						to = "a date in ISO 8601 format"
-					case types.TimeKind:
-						to = "a time in ISO 8601 format"
-					case types.UUIDKind:
-						to = "a UUID"
-					case types.IPKind:
-						to = "an IP address"
-					}
-					msg = fmt.Sprintf("«%s» is not parsable as %s while mapping to «%s»", code(e.expr.source), to, code(e.path))
-				case errYearRangeConversion:
-					msg = fmt.Sprintf("year of «%s» is not in range [1,9999] while mapping to «%s»", code(e.expr.source), code(e.path))
-				case errEnumConversion:
-					msg = fmt.Sprintf("«%s» is not one of the allowed values while mapping to «%s»", code(e.expr.source), code(e.path))
-				case errPatternConversion:
-					msg = fmt.Sprintf("«%s» does not match «/%s/» while mapping to «%s»", code(e.expr.source), e.dt.Pattern(), code(e.path))
-				case errMaxBytesConversion:
-					n, _ := e.dt.MaxBytes()
-					msg = fmt.Sprintf("«%s» exceeds the %d-byte limit while mapping to «%s»", code(e.expr.source), n, code(e.path))
-				case errMaxLengthConversion:
-					n, _ := e.dt.MaxLength()
-					msg = fmt.Sprintf("«%s» exceeds the %d-char limit while mapping to «%s»", code(e.expr.source), n, code(e.path))
-				default:
-					msg = fmt.Sprintf("«%s» is not convertible to the «%s» type while mapping to «%s»", code(e.expr.source), e.dt.String(), code(e.path))
-				}
-				return nil, ValidationError{msg}
+				err = errValidationConversion(err, code(e.expr.source), e.dt)
+				return nil, ValidationError{fmt.Sprintf("%s while mapping to «%s»", err, code(e.path))}
 			}
 		}
 		if v == nil && !e.nullable {

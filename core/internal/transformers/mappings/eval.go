@@ -33,6 +33,8 @@ var encodeSorted = false
 // does that.
 //
 // If a property transformation fails, Eval returns a TransformationError.
+// If an array element cannot be converted to its contextual type, it returns a
+// ValidationError.
 func (expr *Expression) Eval(attributes map[string]any) (any, types.Type, error) {
 	v, st, err := eval(expr.parts, expr.source, attributes)
 	if err != nil {
@@ -116,8 +118,8 @@ func digitCountUint(n uint64) int {
 // source code of the expression, used in error messages, and attributes are the
 // attributes.
 //
-// If an error occurs, it will be either errInvalidConversion or a
-// TransformationError.
+// Errors may include errInvalidConversion, TransformationError, and
+// ValidationError.
 func eval(expression []part, source string, attributes map[string]any) (any, types.Type, error) {
 
 	// Evaluate the most common cases that does not require a buffer.
@@ -182,8 +184,8 @@ func eval(expression []part, source string, attributes map[string]any) (any, typ
 // type. source is the source code of the expression, used in error messages,
 // and attributes are the attributes.
 //
-// If it returns an error, it is either errInvalidConversion or a
-// TransformationError.
+// Errors may include errInvalidConversion, TransformationError, and
+// ValidationError.
 func evalCall(p part, source string, attributes map[string]any) (any, types.Type, error) {
 	switch name := p.path.elements[0]; name {
 	case "and":
@@ -213,27 +215,20 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		return true, types.Boolean(), nil
 	case "array":
 		arr := make([]any, len(p.args))
+		et := p.typ.Elem()
 		for i, arg := range p.args {
-			v, _, err := eval(arg, source, attributes)
+			v, vt, err := eval(arg, source, attributes)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
-			switch v.(type) {
-			case nil:
-				v = json.Value("null")
-			case json.Value:
-			default:
-				if encodeSorted {
-					var b json.Buffer
-					_ = b.EncodeSorted(v)
-					v, _ = b.Value()
-				} else {
-					v, _ = json.Marshal(v)
-				}
+			arr[i], err = convert(v, vt, et, false, false, nil, None)
+			if err != nil {
+				// The element type comes from the destination schema, so a conversion
+				// failure is a validation error even though it occurs during evaluation.
+				return nil, types.Type{}, errValidationConversion(err, code(source, arg...), et)
 			}
-			arr[i] = v
 		}
-		return arr, types.Array(types.JSON()), nil
+		return arr, p.typ, nil
 	case "coalesce":
 		for _, arg := range p.args {
 			v, vt, err := eval(arg, source, attributes)
@@ -420,7 +415,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 			key := p.args[i][0].value.(string)
 
 			valExpr := p.args[i+1]
-			v, _, err := eval(valExpr, source, attributes)
+			v, vt, err := eval(valExpr, source, attributes)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -436,12 +431,19 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 				v = json.Value("null")
 			case json.Value:
 			default:
+				v = formatJSONTimes(v, vt)
 				if encodeSorted {
 					var b json.Buffer
-					_ = b.EncodeSorted(v)
-					v, _ = b.Value()
+					err = b.EncodeSorted(v)
+					if err != nil {
+						return nil, types.Type{}, err
+					}
+					v, err = b.Value()
 				} else {
-					v, _ = json.Marshal(v)
+					v, err = json.Marshal(v)
+				}
+				if err != nil {
+					return nil, types.Type{}, err
 				}
 			}
 			m[key] = v
@@ -661,6 +663,93 @@ func errInt32Conversion(fn string, code string, v any, t types.Type) error {
 func errStringConversion(fn string, code string, v any) error {
 	k := v.(json.Value).Kind()
 	return fmt.Errorf("«%s» (a JSON %s) cannot be converted to a string value to be passed to the «%s» function", code, k, fn)
+}
+
+// errValidationConversion describes a failed conversion to dt as a
+// ValidationError. code identifies the expression; Mapping.Transform adds the
+// destination path. convert does not retain the failing type inside a
+// container, so constraints are described only when they can be read from dt
+// itself.
+func errValidationConversion(err error, code string, dt types.Type) ValidationError {
+
+	msg := fmt.Sprintf("«%s» is not convertible to the «%s» type", code, dt)
+	switch err {
+	case errRangeConversion:
+		msg = fmt.Sprintf("number «%s» is not a «%s» value", code, dt)
+	case errMinConversion:
+		var n any
+		switch dt.Kind() {
+		case types.IntKind:
+			if dt.IsUnsigned() {
+				n, _ = dt.UnsignedRange()
+			} else {
+				n, _ = dt.IntRange()
+			}
+		case types.FloatKind:
+			n, _ = dt.FloatRange()
+		case types.DecimalKind:
+			n, _ = dt.DecimalRange()
+		}
+		if n != nil {
+			msg = fmt.Sprintf("number «%s» is less than %v", code, n)
+		}
+	case errMaxConversion:
+		var n any
+		switch dt.Kind() {
+		case types.IntKind:
+			if dt.IsUnsigned() {
+				_, n = dt.UnsignedRange()
+			} else {
+				_, n = dt.IntRange()
+			}
+		case types.FloatKind:
+			_, n = dt.FloatRange()
+		case types.DecimalKind:
+			_, n = dt.DecimalRange()
+		}
+		if n != nil {
+			msg = fmt.Sprintf("number «%s» is greater than %v", code, n)
+		}
+	case errParseConversion:
+		var to string
+		switch dt.Kind() {
+		case types.DateTimeKind:
+			to = "a date time in ISO 8601 format"
+		case types.DateKind:
+			to = "a date in ISO 8601 format"
+		case types.TimeKind:
+			to = "a time in ISO 8601 format"
+		case types.UUIDKind:
+			to = "a UUID"
+		case types.IPKind:
+			to = "an IP address"
+		}
+		if to != "" {
+			msg = fmt.Sprintf("«%s» is not parsable as %s", code, to)
+		}
+	case errYearRangeConversion:
+		msg = fmt.Sprintf("year of «%s» is not in range [1,9999]", code)
+	case errUnixNanoConversion:
+		msg = fmt.Sprintf("«%s» is outside the range supported by the «unixnano» datetime format", code)
+	case errEnumConversion:
+		msg = fmt.Sprintf("«%s» is not one of the allowed values", code)
+	case errPatternConversion:
+		if dt.Kind() == types.StringKind {
+			msg = fmt.Sprintf("«%s» does not match «/%s/»", code, dt.Pattern())
+		}
+	case errMaxBytesConversion:
+		if dt.Kind() == types.StringKind {
+			n, _ := dt.MaxBytes()
+			msg = fmt.Sprintf("«%s» exceeds the %d-byte limit", code, n)
+		}
+	case errMaxLengthConversion:
+		if dt.Kind() == types.StringKind {
+			n, _ := dt.MaxLength()
+			msg = fmt.Sprintf("«%s» exceeds the %d-char limit", code, n)
+		}
+	}
+
+	return ValidationError{msg}
 }
 
 // valueOf returns the value at the specified path in attributes. It returns nil
