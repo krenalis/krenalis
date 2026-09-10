@@ -161,7 +161,7 @@ func Filter(t Type, f func(p Property) bool) Type {
 	for i, p := range ps {
 		names[p.Name] = i
 	}
-	return Type{kind: ObjectKind, vl: Properties{properties: ps, names: names}}
+	return Type{kind: ObjectKind, generic: hasGenericProperty(ps), vl: Properties{properties: ps, names: names}}
 }
 
 // ParseUUID parses s as a UUID in the standard form xxxx-xxxx-xxxx-xxxxxxxxxxxx
@@ -241,7 +241,7 @@ func Prune(t Type, f func(path string) bool) Type {
 	for i, p := range pp {
 		names[p.Name] = i
 	}
-	return Type{kind: ObjectKind, vl: Properties{properties: pp, names: names}}
+	return Type{kind: ObjectKind, generic: hasGenericProperty(pp), vl: Properties{properties: pp, names: names}}
 }
 
 // PruneAtPath returns the subset of t that contains only the properties along
@@ -303,7 +303,7 @@ func asRole(t Type, role Role) (Type, bool) {
 	for i, p := range ppc {
 		names[p.Name] = i
 	}
-	return Type{kind: ObjectKind, vl: Properties{properties: ppc, names: names}}, true
+	return Type{kind: ObjectKind, generic: t.generic, vl: Properties{properties: ppc, names: names}}, true
 }
 
 // baseChar returns the base character for a given accented character.
@@ -315,6 +315,16 @@ func baseChar(r rune) rune {
 		}
 	}
 	return r
+}
+
+// hasGenericProperty reports whether any property of pp has a generic type.
+func hasGenericProperty(pp []Property) bool {
+	for i := range pp {
+		if pp[i].Type.generic {
+			return true
+		}
+	}
+	return false
 }
 
 // prune is a recursive helper called by Prune. It returns the pruned
@@ -350,6 +360,7 @@ func prune(pp []Property, path string, f func(string) bool) ([]Property, bool) {
 					names[p.Name] = i
 				}
 				p := pp[i]
+				p.Type.generic = hasGenericProperty(properties)
 				p.Type.vl = Properties{properties: properties, names: names}
 				ps = append(ps, p)
 				continue
