@@ -185,10 +185,10 @@ func (u *Usage) MetricsPerDate(ctx context.Context, organization string, start, 
 	}
 
 	// Retrieve the last profile state before start for each workspace
-	// and all rows in [start, end), using the same calculation timestamp.
+	// and all rows in [start, end).
 	// Previous-state rows have a NULL day.
 	query := `(SELECT DISTINCT ON (m.workspace)
-	statement_timestamp(), m.workspace, NULL::date, m.profiles,
+	m.workspace, NULL::date, m.profiles,
 	0::bigint, NULL::timestamptz, 0::bigint
 FROM usage_metrics AS m
 WHERE m.organization = $1` + scope + `
@@ -196,7 +196,7 @@ WHERE m.organization = $1` + scope + `
 	AND m.observed_at IS NOT NULL
 ORDER BY m.workspace, m.day DESC)
 UNION ALL
-SELECT statement_timestamp(), m.workspace, m.day, m.profiles,
+SELECT m.workspace, m.day, m.profiles,
 	m.profile_seconds, (m.day + m.observed_at) AT TIME ZONE 'UTC', m.events
 FROM usage_metrics AS m
 WHERE m.organization = $1` + scope + `
@@ -210,12 +210,11 @@ WHERE m.organization = $1` + scope + `
 
 	days := int(end.Sub(start) / (24 * time.Hour))
 	stored := make(map[string]*usageStoredWorkspace)
-	calculatedAt := time.Now().UTC()
 	for rows.Next() {
 		var workspace string
 		var day *time.Time
 		var v usageStoredDay
-		err := rows.Scan(&calculatedAt, &workspace, &day, &v.profiles, &v.profileSeconds, &v.observedAt, &v.events)
+		err := rows.Scan(&workspace, &day, &v.profiles, &v.profileSeconds, &v.observedAt, &v.events)
 		if err != nil {
 			return nil, err
 		}
@@ -242,7 +241,7 @@ WHERE m.organization = $1` + scope + `
 		return nil, err
 	}
 
-	calculatedAt = calculatedAt.UTC()
+	calculatedAt := time.Now().UTC()
 	if workspaces == nil {
 		organizationSeries, err := newUsageSeries("", start, calculatedAt, days)
 		if err != nil {
