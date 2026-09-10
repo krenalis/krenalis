@@ -105,6 +105,7 @@
 }
 
 .privacy__dialog-code::part(base),
+.privacy__dialog-alias::part(base),
 .privacy__dialog-event-path::part(base),
 .privacy__dialog-profile-path::part(base) {
 	font-family: var(--monospace-fonts);
