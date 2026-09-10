@@ -50,13 +50,15 @@ func Test_normalize(t *testing.T) {
 	aDateTime := time.Date(2023, 5, 3, 15, 47, 22, 769802537, time.UTC)
 	aDate := time.Date(2023, 5, 3, 0, 0, 0, 0, time.UTC)
 
-	tests := []struct {
+	type testCase struct {
 		typ      types.Type
 		value    any
 		expected any
 		null     bool
 		layout   *state.TimeLayouts
-	}{
+	}
+
+	tests := []testCase{
 		// string.
 		{types.String(), "foo", "foo", false, nil},
 		{types.String().WithValues("foo", "boo"), "boo", "boo", false, nil},
@@ -188,6 +190,28 @@ func Test_normalize(t *testing.T) {
 		{types.Map(types.String()), map[string]string(nil), nil, true, nil},
 	}
 
+	// Unix nanosecond boundaries and fractional values.
+	for _, test := range []struct {
+		value any
+		want  int64
+	}{
+		{"-9223372036854775808", math.MinInt64},
+		{"9223372036854775807", math.MaxInt64},
+		{float64(math.MinInt64), math.MinInt64},
+		{math.Nextafter(float64(math.MinInt64), 0), math.MinInt64 + 1024},
+		{math.Nextafter(float64(math.MaxInt64), 0), math.MaxInt64 - 1023},
+		{0.0, 0},
+		{1.75, 1},
+		{-1.75, -1},
+	} {
+		for _, nullable := range []bool{false, true} {
+			tests = append(tests, testCase{
+				types.DateTime(), test.value, time.Unix(0, test.want), nullable,
+				&state.TimeLayouts{DateTime: "unixnano"},
+			})
+		}
+	}
+
 	for _, test := range tests {
 		t.Run(fmt.Sprint(test.typ), func(t *testing.T) {
 			got, err := normalize("k", test.typ, test.value, test.null, test.layout)
@@ -205,19 +229,24 @@ func Test_normalize(t *testing.T) {
 			}
 		})
 	}
+
 }
 
 func Test_normalize_errors(t *testing.T) {
+
 	timeLayout := &state.TimeLayouts{Time: "15:04"}
 
-	tests := []struct {
-		name         string
-		typ          types.Type
-		value        any
-		nullable     bool
-		layout       *state.TimeLayouts
-		wantContains string
-	}{
+	type testCase struct {
+		name           string
+		typ            types.Type
+		value          any
+		nullable       bool
+		layout         *state.TimeLayouts
+		wantContains   string
+		wantInputError bool
+	}
+
+	tests := []testCase{
 		{name: "nilNotNullable", typ: types.String(), value: nil, wantContains: "has value null but it is not nullable"},
 		{name: "textInvalidType", typ: types.String(), value: 5, wantContains: "has type int"},
 		{name: "textInvalidUTF8", typ: types.String(), value: string([]byte{0xff}), wantContains: "does not contain valid UTF-8 characters"},
@@ -295,99 +324,40 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "mapInvalidType", typ: types.Map(types.String()), value: 5, wantContains: "has type int that is not allowed for type map"},
 	}
 
+	// Invalid Unix timestamps must be rejected for every time unit, even when nullable.
+	for _, layout := range []string{"unix", "unixmilli", "unixmicro", "unixnano"} {
+		for _, value := range []any{
+			math.NaN(), math.Inf(1), math.Inf(-1), math.MaxFloat64, -math.MaxFloat64,
+			float64(math.MaxInt64), math.Nextafter(float64(math.MinInt64), math.Inf(-1)),
+			math.Nextafter(float64(math.MaxInt64), math.Inf(1)),
+			"-9223372036854775809", "9223372036854775808",
+		} {
+			for _, nullable := range []bool{false, true} {
+				tests = append(tests, testCase{
+					name: fmt.Sprintf("%s/%T/%v/nullable=%t", layout, value, value, nullable),
+					typ:  types.DateTime(), value: value, nullable: nullable,
+					layout: &state.TimeLayouts{DateTime: layout}, wantInputError: true,
+				})
+			}
+		}
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := normalize("k", tt.typ, tt.value, tt.nullable, tt.layout)
-			if err == nil {
-				t.Fatalf("expected error, got value %#v", got)
+			if err != nil {
+				if tt.wantInputError {
+					if _, ok := errors.AsType[InputValidationError](err); !ok {
+						t.Fatalf("got %T (%v), want InputValidationError", err, err)
+					}
+				}
+				if tt.wantContains != "" && !strings.Contains(err.Error(), tt.wantContains) {
+					t.Fatalf("expected error containing %q, got %q", tt.wantContains, err)
+				}
+				return
 			}
-			if tt.wantContains != "" && !strings.Contains(err.Error(), tt.wantContains) {
-				t.Fatalf("expected error containing %q, got %q", tt.wantContains, err)
-			}
+			t.Fatalf("expected error, got value %#v", got)
 		})
-	}
-}
-
-// TestNormalizeUnixFloatRange rejects non-finite and out-of-range float values
-// before integer conversion.
-func TestNormalizeUnixFloatRange(t *testing.T) {
-
-	values := []float64{
-		math.NaN(), math.Inf(1), math.Inf(-1), math.MaxFloat64, -math.MaxFloat64,
-		float64(math.MaxInt64), math.Nextafter(float64(math.MinInt64), math.Inf(-1)),
-	}
-
-	for _, layout := range []string{"unix", "unixmilli", "unixmicro", "unixnano"} {
-		for _, value := range values {
-			t.Run(fmt.Sprintf("%s/%g", layout, value), func(t *testing.T) {
-				got, err := normalize("at", types.DateTime(), value, false, &state.TimeLayouts{DateTime: layout})
-				if err != nil {
-					if _, ok := errors.AsType[InputValidationError](err); !ok {
-						t.Fatalf("got %T (%v), want InputValidationError", err, err)
-					}
-					return
-				}
-				t.Fatalf("got %v, want InputValidationError", got)
-			})
-		}
-	}
-
-}
-
-// TestNormalizeUnixNano verifies integer boundaries, float64 rounding, and
-// fractional nanosecond conversion.
-func TestNormalizeUnixNano(t *testing.T) {
-
-	tests := []struct {
-		name    string
-		value   any
-		want    int64
-		invalid bool
-	}{
-		{"minimum string", "-9223372036854775808", math.MinInt64, false},
-		{"below minimum string", "-9223372036854775809", 0, true},
-		{"maximum string", "9223372036854775807", math.MaxInt64, false},
-		{"above maximum string", "9223372036854775808", 0, true},
-		{"minimum float", float64(math.MinInt64), math.MinInt64, false},
-		{"below minimum float", math.Nextafter(float64(math.MinInt64), math.Inf(-1)), 0, true},
-		{"above minimum float", math.Nextafter(float64(math.MinInt64), 0), math.MinInt64 + 1024, false},
-		{"last valid float", math.Nextafter(float64(math.MaxInt64), 0), math.MaxInt64 - 1023, false},
-		{"rounded maximum float", float64(math.MaxInt64), 0, true},
-		{"above maximum float", math.Nextafter(float64(math.MaxInt64), math.Inf(1)), 0, true},
-		{"zero", 0.0, 0, false},
-		{"positive fractional nanoseconds", 1.75, 1, false},
-		{"negative fractional nanoseconds", -1.75, -1, false},
-	}
-	for _, test := range tests {
-
-		for _, nullable := range []bool{false, true} {
-
-			t.Run(fmt.Sprintf("%s/nullable=%t", test.name, nullable), func(t *testing.T) {
-
-				got, err := normalize("at", types.DateTime(), test.value, nullable,
-					&state.TimeLayouts{DateTime: "unixnano"})
-				if err != nil {
-					if !test.invalid {
-						t.Fatal(err)
-					}
-					if _, ok := errors.AsType[InputValidationError](err); !ok {
-						t.Fatalf("got %T (%v), want InputValidationError", err, err)
-					}
-					return
-				}
-				if test.invalid {
-					t.Fatalf("got %v, want InputValidationError", got)
-				}
-
-				want := time.Unix(0, test.want)
-				if !got.(time.Time).Equal(want) {
-					t.Fatalf("got %s, want %s", got, want)
-				}
-
-			})
-
-		}
-
 	}
 
 }
