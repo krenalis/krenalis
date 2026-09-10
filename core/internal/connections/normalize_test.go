@@ -75,6 +75,14 @@ func Test_normalize(t *testing.T) {
 		{types.Int(32), -9261.0, -9261, false, nil},
 		{types.Int(32), []byte(nil), nil, true, nil},
 		{types.Int(32), []byte("-57"), -57, true, nil},
+		// int(64).
+		{types.Int(64), float64(-0x1p63), int(math.MinInt64), false, nil},
+		{types.Int(64), math.Nextafter(0x1p63, 0), int(math.MaxInt64 - 1023), false, nil},
+		{types.Int(64), float64(9007199254740994), 9007199254740994, false, nil},
+		{types.Int(64), int64(math.MaxInt64), int(math.MaxInt64), false, nil},
+		{types.Int(64), "9223372036854775807", int(math.MaxInt64), false, nil},
+		{types.Int(64), float32(-0x1p63), int(math.MinInt64), false, nil},
+		{types.Int(64), math.Nextafter32(0x1p63, 0), int(math.MaxInt64 - (1<<39 - 1)), false, nil},
 		// unsigned int(8).
 		{types.Int(8).Unsigned(), uint(3), uint(3), false, nil},
 		{types.Int(8).Unsigned(), 3.0, uint(3), false, nil},
@@ -227,6 +235,46 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "booleanWrongString", typ: types.Boolean(), value: "maybe", wantContains: "string value but it is not 'true' or 'false'"},
 		{name: "booleanInvalidType", typ: types.Boolean(), value: 1, wantContains: "has type int that is not allowed for type boolean"},
 		{name: "intFractionalFloat", typ: types.Int(32), value: 1.5, wantContains: "float64 value that cannot represent an int(32) value"},
+		{
+			name: "intFloat64Upper", typ: types.Int(64), value: float64(math.MaxInt64),
+			wantContains: "has a float64 value that cannot represent an int(64) value",
+		},
+		{
+			name: "intFloat64BelowLower", typ: types.Int(64), value: math.Nextafter(-0x1p63, math.Inf(-1)),
+			wantContains: "has a float64 value that cannot represent an int(64) value",
+		},
+		{
+			name: "intFloat64Huge", typ: types.Int(64), value: math.MaxFloat64,
+			wantContains: "has a float64 value that cannot represent an int(64) value",
+		},
+		{
+			name: "intFloat64NaN", typ: types.Int(64), value: math.NaN(),
+			wantContains: "has a float64 value that cannot represent an int(64) value",
+		},
+		{
+			name: "intFloat64Inf", typ: types.Int(64), value: math.Inf(1),
+			wantContains: "has a float64 value that cannot represent an int(64) value",
+		},
+		{
+			name: "intFloat32Upper", typ: types.Int(64), value: float32(math.MaxInt64),
+			wantContains: "has a float32 value that cannot represent an int(64) value",
+		},
+		{
+			name: "intFloat32BelowLower", typ: types.Int(64), value: math.Nextafter32(-0x1p63, float32(math.Inf(-1))),
+			wantContains: "has a float32 value that cannot represent an int(64) value",
+		},
+		{
+			name: "intFloat32Huge", typ: types.Int(64), value: float32(math.MaxFloat32),
+			wantContains: "has a float32 value that cannot represent an int(64) value",
+		},
+		{
+			name: "intFloat32NaN", typ: types.Int(64), value: float32(math.NaN()),
+			wantContains: "has a float32 value that cannot represent an int(64) value",
+		},
+		{
+			name: "intFloat32Inf", typ: types.Int(64), value: float32(math.Inf(-1)),
+			wantContains: "has a float32 value that cannot represent an int(64) value",
+		},
 		{name: "intOutOfRange", typ: types.Int(8), value: 200, wantContains: "has value which is not in the range"},
 		{name: "intStringParseError", typ: types.Int(32), value: "abc", wantContains: "string value that does not represent an int value"},
 		{name: "intBytesParseError", typ: types.Int(32), value: []byte("abc"), wantContains: "has a []byte value that cannot represent an int value"},
