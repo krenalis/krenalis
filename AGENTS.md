@@ -43,7 +43,9 @@ Keep the receiver name the type already uses. The facade types in `core/` (`Conn
 
 ## Imports
 
-Outside the implementation and compatibility tests of `tools/errors`, always import `github.com/krenalis/krenalis/tools/errors` instead of the standard-library `errors` package. The repository package exposes every standard `errors` name in addition to repository-specific functionality.
+In `cmd`, `core`, and their subpackages, always import `github.com/krenalis/krenalis/tools/errors` instead of the standard-library `errors` package. The repository package exposes every standard `errors` name in addition to repository-specific functionality.
+
+In other packages, prefer the standard-library `errors` package. Import `github.com/krenalis/krenalis/tools/errors` only when its repository-specific functionality is needed. The implementation and compatibility tests of `tools/errors` use the standard-library package as required to avoid an import cycle.
 
 Use an imported package's default name unless Go requires disambiguation because of an actual identifier conflict. Do not alias an import merely to avoid reusing the same name for a variable, field, or selector when the language permits it.
 
