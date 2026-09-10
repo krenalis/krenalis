@@ -324,6 +324,39 @@ owning workspace from their consequences. Accept them when they are safe for
 Krenalis. Establishing truthfulness or authenticity requires an independent
 integrity mechanism.
 
+# Uniformity across data warehouses
+
+Every supported data warehouse has its own package under `warehouses/`, and
+they all implement the same interfaces. Keep those packages as similar to one
+another as the platforms allow: whoever knows one should know them all, and a
+change made to one should be easy to apply to the others. Do not treat one
+platform as the reference implementation and the others as ports; the same
+rules apply to all of them, including any platform added later.
+
+Mirror the code: the same file names for the same responsibilities, the same
+declaration order inside a file, the same type, function, and variable names,
+the same signatures, the same error messages, and the same shape of the code
+inside each function. When a feature, a fix, or a validation is added to one
+warehouse, add it to the others in the same form, unless the platform makes it
+inapplicable.
+
+Apply the rule to tests as well: the same test files, the same test names, the
+same table-driven cases, and comparable fixtures, so that the coverage of one
+warehouse can be compared with the coverage of another at a glance. When a case
+applies to every platform, write it the same way everywhere instead of giving
+each platform its own structure. When a case applies to only one platform, keep
+it recognizable as the exception it is.
+
+Similarity is a means, not an end. Platforms genuinely differ in SQL dialect,
+type system, quoting rules, driver behavior, and supported features, and those
+differences must be expressed naturally where they occur. Do not distort code
+to make packages match: no pointless abstraction, no dead or unreachable code
+kept only for symmetry, no test that asserts nothing on a platform where the
+case cannot arise, and no renaming of a concept that a platform names
+differently for a good reason. When a divergence is necessary, keep it local
+and confined to the part that truly differs, leaving the surrounding code
+identical.
+
 # `core` and `cmd` conventions
 
 ## API errors and validation
