@@ -104,6 +104,12 @@
 	margin-top: 15px;
 }
 
+.privacy__dialog-code::part(base),
+.privacy__dialog-event-path::part(base),
+.privacy__dialog-profile-path::part(base) {
+	font-family: var(--monospace-fonts);
+}
+
 .privacy__dialog-alias + .privacy__dialog-alias {
 	margin-top: 8px;
 }
