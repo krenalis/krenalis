@@ -887,11 +887,10 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 		t.real = real
 	}
-	if elementType.Valid() || elementType.Generic() {
+	if elementType.Valid() {
 		if t.kind != ArrayKind && t.kind != MapKind {
 			return Type{}, errors.New("unexpected element type for non-array and non-map type")
 		}
-		t.generic = elementType.generic
 		t.vl = elementType
 	} else {
 		if t.kind == ArrayKind || t.kind == MapKind {
@@ -932,12 +931,6 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		if t.kind != ObjectKind {
 			return Type{}, errors.New("unexpected properties for non-object type")
 		}
-		for _, p := range properties {
-			if p.Type.generic {
-				t.generic = true
-				break
-			}
-		}
 		names := make(map[string]int, len(properties))
 		for i, p := range properties {
 			names[p.Name] = i
@@ -969,7 +962,7 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 		key := tok.(string)
 
 		if key == "type" {
-			if p.Type.Valid() || p.Type.Generic() {
+			if p.Type.Valid() {
 				return Property{}, errors.New("repeated 'type' key")
 			}
 			p.Type, err = unmarshalType(dec)
@@ -1065,7 +1058,7 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 	if p.Name == "" {
 		return Property{}, errors.New("missing property name")
 	}
-	if !p.Type.Valid() && !p.Type.Generic() {
+	if !p.Type.Valid() {
 		return Property{}, errors.New("missing property type")
 	}
 
