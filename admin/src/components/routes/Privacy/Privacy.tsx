@@ -388,15 +388,24 @@ const PurposeDialog = ({ isOpen, purposeToEdit, profileSchema, onClose, onSaved 
 	const [eventPathError, setEventPathError] = useState<string>('');
 	const [profilePathError, setProfilePathError] = useState<string>('');
 	const [isSaving, setIsSaving] = useState<boolean>(false);
+	const [validationErrorVersion, setValidationErrorVersion] = useState<number>(0);
 
 	const { api, handleError } = useContext(AppContext);
 
 	const inputRef = useRef<any>();
 	const eventPathInputRef = useRef<any>();
 	const profilePathInputRef = useRef<any>();
+	const formRef = useRef<any>();
 	const selectEventPathAfterWarning = useRef<boolean>(false);
 
 	const isEditing = purposeToEdit != null;
+
+	useLayoutEffect(() => {
+		if (validationErrorVersion === 0) {
+			return;
+		}
+		formRef.current?.querySelector('.privacy__dialog-error')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+	}, [validationErrorVersion]);
 
 	useEffect(() => {
 		if (!isOpen) {
@@ -433,6 +442,12 @@ const PurposeDialog = ({ isOpen, purposeToEdit, profileSchema, onClose, onSaved 
 
 	const onInputName = (e: any) => setName(e.target.value);
 	const onInputCode = (e: any) => setCode(e.target.value);
+
+	const showValidationError = (setError: React.Dispatch<React.SetStateAction<string>>, message: string) => {
+		setError(message);
+		setValidationErrorVersion((version) => version + 1);
+	};
+
 	const onInputAlias = (e: any, index: number) => {
 		const value = e.target.value;
 		setAliases((aliases) => aliases.map((alias, i) => (i === index ? value : alias)));
@@ -512,13 +527,13 @@ const PurposeDialog = ({ isOpen, purposeToEdit, profileSchema, onClose, onSaved 
 		try {
 			validatePurposeField('Name', name);
 		} catch (err) {
-			setNameError(err.message);
+			showValidationError(setNameError, err.message);
 			return;
 		}
 		try {
 			validatePurposeCode(code);
 		} catch (err) {
-			setCodeError(err.message);
+			showValidationError(setCodeError, err.message);
 			return;
 		}
 		try {
@@ -534,24 +549,24 @@ const PurposeDialog = ({ isOpen, purposeToEdit, profileSchema, onClose, onSaved 
 				s.add(alias);
 			}
 		} catch (err) {
-			setAliasesError(err.message);
+			showValidationError(setAliasesError, err.message);
 			return;
 		}
 		try {
 			validatePurposePath('Event path', eventPathToSave);
 		} catch (err) {
-			setEventPathError(err.message);
+			showValidationError(setEventPathError, err.message);
 			return;
 		}
 		try {
 			validatePurposePath('Profile path', profilePathToSave);
 		} catch (err) {
-			setProfilePathError(err.message);
+			showValidationError(setProfilePathError, err.message);
 			return;
 		}
 		const profilePathMessage = checkProfilePath(shownProfilePath, profileSchema);
 		if (profilePathMessage !== '') {
-			setProfilePathError(profilePathMessage);
+			showValidationError(setProfilePathError, profilePathMessage);
 			return;
 		}
 
@@ -572,11 +587,12 @@ const PurposeDialog = ({ isOpen, purposeToEdit, profileSchema, onClose, onSaved 
 		} catch (err) {
 			setIsSaving(false);
 			if (err instanceof UnprocessableError && err.code === 'ConsentPurposeCodeExists') {
-				setCodeError('A purpose with this code already exists');
+				showValidationError(setCodeError, 'A purpose with this code already exists');
 				return;
 			}
 			if (err instanceof UnprocessableError && err.code === 'ConsentPurposeAliasExists') {
-				setAliasesError(
+				showValidationError(
+					setAliasesError,
 					aliasesToSave.length === 1
 						? 'This alias is already the code or an alias of another purpose'
 						: 'One of these aliases is already the code or an alias of another purpose',
@@ -605,7 +621,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, profileSchema, onClose, onSaved 
 				open={isOpen}
 				onSlAfterHide={onSlAfterHide}
 			>
-				<div className='privacy__dialog-form'>
+				<div className='privacy__dialog-form' ref={formRef}>
 					<SlInput
 						size='small'
 						className='privacy__dialog-name'
