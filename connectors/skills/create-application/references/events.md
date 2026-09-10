@@ -36,7 +36,7 @@ func (c *MyApp) EventTypeSchema(ctx context.Context, eventType string) (types.Ty
 		return types.Object([]types.Property{
 			{
 				Name:           "event_name",
-				Type:           types.String().WithMaxLength(255).WithPattern(purchaseNameRE),
+				Type:           types.String().WithPattern(purchaseNameRE),
 				Prefilled:      "event",
 				CreateRequired: true,
 				Description:    "Event name",
