@@ -380,12 +380,9 @@ func (app *Application) userSchema(ctx context.Context, role state.Role) (types.
 	if err != nil {
 		return types.Type{}, connectorError(fmt.Errorf("cannot get user schema: %s", err))
 	}
-	if schema.Generic() {
+	if !schema.Valid() || schema.Generic() {
 		return types.Type{}, connectorError(fmt.Errorf(
 			"connector %s returned an invalid %s schema", app.connector, strings.ToLower(role.String())))
-	}
-	if !schema.Valid() {
-		return types.Type{}, connectorError(fmt.Errorf("connector %s returned an invalid %s schema", app.connector, strings.ToLower(role.String())))
 	}
 	schema = types.AsRole(schema, types.Role(role))
 	app.users.schemas[role-1] = schema
