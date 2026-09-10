@@ -592,6 +592,7 @@ func Test_Decoder(t *testing.T) {
 // TestDecoderResetClearsType verifies that a generic request is not decoded
 // using the endpoint type from a previous request.
 func TestDecoderResetClearsType(t *testing.T) {
+
 	dec := &decoder{}
 	for _, test := range []struct {
 		path string
@@ -614,6 +615,7 @@ func TestDecoderResetClearsType(t *testing.T) {
 		return
 	}
 	t.Fatal("expected an event decoding error")
+
 }
 
 // Test_mergeDefaultContext verifies the merge semantics for event-level and
