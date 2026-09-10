@@ -124,6 +124,40 @@ func Test_Parameter(t *testing.T) {
 	})
 }
 
+func Test_Generic(t *testing.T) {
+
+	tests := []struct {
+		name    string
+		typ     Type
+		generic bool
+	}{
+		{"parameter", Parameter("T"), true},
+		{"string", String(), false},
+		{"array of string", Array(String()), false},
+		{"array of parameter", Array(Parameter("T")), true},
+		{"map of string", Map(String()), false},
+		{"map of parameter", Map(Parameter("T")), true},
+		{"array of map of parameter", Array(Map(Parameter("T"))), true},
+		{"map of array of parameter", Map(Array(Parameter("T"))), true},
+		{"object with string property", Object([]Property{{Name: "a", Type: String()}}), false},
+		{"object with parameter property", Object([]Property{{Name: "a", Type: Parameter("T")}}), true},
+		{"object with array of parameter property", Object([]Property{{Name: "a", Type: Array(Parameter("T"))}}), true},
+		{"object with map of parameter property", Object([]Property{{Name: "a", Type: Map(Parameter("T"))}}), true},
+		{"array of non-generic object", Array(Object([]Property{{Name: "a", Type: String()}})), false},
+		{"array of generic object", Array(Object([]Property{{Name: "a", Type: Parameter("T")}})), true},
+		{"map of generic object", Map(Object([]Property{{Name: "a", Type: Parameter("T")}})), true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := test.typ.Generic(); got != test.generic {
+				t.Fatalf("expected generic %t, got %t", test.generic, got)
+			}
+		})
+	}
+
+}
+
 func Test_Ranges(t *testing.T) {
 
 	for _, s := range []int{8, 16, 24, 32, 64} {
