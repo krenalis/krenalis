@@ -313,6 +313,12 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"kind":"array","minElements":2,"maxElements":8,"uniqueElements":true,"elementType":{"kind":"decimal","precision":1}}`,
 			Type: Array(Decimal(1, 0)).WithMinElements(2).WithMaxElements(8).WithUnique(),
 		}, {
+			Data: `{"kind":"array","elementType":{"kind":"T"}}`,
+			Type: Array(Parameter("T")),
+		}, {
+			Data: `{"kind":"map","elementType":{"kind":"T"}}`,
+			Type: Map(Parameter("T")),
+		}, {
 			Data: `{"kind":"object","properties":[{"name":"email","type":{"kind":"string"},"description":""},{"name":"size","type":{"kind":"decimal","precision":1},"description":""}]}`,
 			Type: Object([]Property{{Name: "email", Type: String()}, {Name: "size", Type: Decimal(1, 0)}}),
 		}, {
@@ -327,6 +333,9 @@ func TestTypeSerialization(t *testing.T) {
 		}, {
 			Data: `{"kind":"object","properties":[{"name":"birthday","prefilled":"mm/dd/yyyy","type":{"kind":"date"},"description":""}]}`,
 			Type: Object([]Property{{Name: "birthday", Prefilled: "mm/dd/yyyy", Type: Date()}}),
+		}, {
+			Data: `{"kind":"object","properties":[{"name":"items","type":{"kind":"array","elementType":{"kind":"T"}},"description":""}]}`,
+			Type: Object([]Property{{Name: "items", Type: Array(Parameter("T"))}}),
 		},
 	}
 	for _, test := range tests {
