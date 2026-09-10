@@ -35,6 +35,9 @@ const PropertyDetailsPanel = ({ identifierPosition, onClose, primarySource, prop
 					</PropertyDetail>
 				</div>
 				<div className='property-details-panel__section property-details-panel__section--metadata'>
+					<PropertyDetail label='Display name'>
+						{property.displayName || <span className='property-details-panel__empty-value'>—</span>}
+					</PropertyDetail>
 					<PropertyDetail label='Description' className='property-details-panel__description'>
 						{property.description || <span className='property-details-panel__empty-value'>—</span>}
 					</PropertyDetail>
