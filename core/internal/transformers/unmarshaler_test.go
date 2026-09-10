@@ -30,6 +30,10 @@ func Test_Unmarshal(t *testing.T) {
 			Type: types.String().WithMaxLength(10),
 		},
 		{
+			Name: "String_bytes",
+			Type: types.String().WithMaxBytes(3),
+		},
+		{
 			Name: "String_values",
 			Type: types.String().WithValues("a", "b", "c"),
 		},
@@ -401,6 +405,12 @@ func Test_Unmarshal(t *testing.T) {
 			schema:   schema,
 			data:     `{"records":[{"value":{"String":"some long text"}}]}`,
 			records:  []Record{{Err: newRecordValidationError("String", `property «String» exceeds the 10-char limit`)}},
+		},
+		{
+			language: state.Python,
+			schema:   schema,
+			data:     `{"records":[{"value":{"String_bytes":"éé"}}]}`,
+			records:  []Record{{Err: newRecordValidationError("String_bytes", `property «String_bytes» exceeds the 3-byte limit`)}},
 		},
 		{
 			language: state.Python,
