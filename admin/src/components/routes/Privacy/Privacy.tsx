@@ -308,8 +308,8 @@ const Privacy = () => {
 					</SlButton>
 				</div>
 				<div className='privacy__description'>
-					Pipelines can require a purpose, so they only deliver an event when user consent has been given for
-					it.
+					Pipelines can require consent for a purpose, so they only process events or profiles when the user
+					has consented to it.
 				</div>
 				<Grid
 					className='privacy__grid'
