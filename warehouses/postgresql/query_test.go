@@ -48,14 +48,9 @@ func Test_appendJoins(t *testing.T) {
 func TestQueryOrdering(t *testing.T) {
 
 	warehouse, pool := newTestPostgreSQLWarehouse(t)
-	_, err := pool.Exec(t.Context(), `CREATE TABLE "query_ordering" ("a" INTEGER NOT NULL, "b" INTEGER NOT NULL)`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = pool.Exec(t.Context(), `INSERT INTO "query_ordering" VALUES (2, 1), (2, 2), (1, 3)`)
-	if err != nil {
-		t.Fatal(err)
-	}
+	mustExecSQL(t, pool, `CREATE TABLE "query_ordering" ("a" INTEGER NOT NULL, "b" INTEGER NOT NULL)`)
+	mustExecSQL(t, pool, `INSERT INTO "query_ordering" VALUES (2, 1), (2, 2), (1, 3)`)
+
 	columns := []warehouses.Column{
 		{Name: "a", Type: types.Int(32)},
 		{Name: "b", Type: types.Int(32)},
