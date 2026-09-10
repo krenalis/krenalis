@@ -21,6 +21,7 @@ func TestParseErrors(t *testing.T) {
 		{"[]", "invalid type syntax"},
 		{"{\"kind\":\"string\"}{", "invalid token { after top-level value"},
 		{"{\"bitSize\":8}", "missing 'kind' key"},
+		{"{\"kind\":\"custom\"}", `unknown type kind "custom"`},
 		{"{\"kind\":\"int\",\"bitSize\":8,\"bitSize\":16}", "repeated 'bitSize' key"},
 		{"{\"kind\":\"string\",\"pattern\":\"a\",\"values\":[\"b\"]}", "values cannot be provided if pattern is provided"},
 	}
@@ -45,6 +46,10 @@ func TestPropertySerialization(t *testing.T) {
 		{
 			Property: Property{Name: "Qwerty"},
 			Err:      "missing property type",
+		},
+		{
+			Property: Property{Name: "a", Type: Parameter("custom")},
+			Expected: `{"name":"a","type":{"kind":"custom"},"description":""}`,
 		},
 		{
 			Property: Property{Name: "a", Type: String()},
@@ -150,8 +155,8 @@ func TestPropertyDeserialization(t *testing.T) {
 			Err:  "invalid character '{' looking for beginning of object key string",
 		},
 		{
-			JSON:     `{"name":"a","type":{"kind":"custom"}}`,
-			Property: Property{Name: "a", Type: Parameter("custom")},
+			JSON: `{"name":"a","type":{"kind":"custom"}}`,
+			Err:  `unknown type kind "custom"`,
 		},
 	}
 	for _, test := range tests {
