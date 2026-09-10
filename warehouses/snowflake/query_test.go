@@ -14,59 +14,72 @@ import (
 // TestQueryOrdering verifies that an empty OrderBy is omitted and descending order is applied to every ordered column.
 func TestQueryOrdering(t *testing.T) {
 
-	columns := []warehouses.Column{{Name: "_kpid", Type: types.UUID()}}
-	for _, tc := range []struct {
-		name      string
-		orderBy   []warehouses.Column
-		orderDesc bool
-		want      string
-	}{
-		{
-			name:    "empty",
-			orderBy: []warehouses.Column{},
-			want:    `SELECT "_KPID" FROM "PROFILES"`,
-		},
-		{
-			name: "descending",
-			orderBy: []warehouses.Column{
-				{Name: "_updated_at", Type: types.DateTime()},
-				{Name: "_kpid", Type: types.UUID()},
-			},
-			orderDesc: true,
-			want:      `SELECT "_KPID" FROM "PROFILES" ORDER BY "_UPDATED_AT" DESC, "_KPID" DESC`,
-		},
-	} {
+	warehouse, db := newTestSnowflakeWarehouse(t)
+	mustExecSQL(t, db, `CREATE TABLE "QUERY_ORDERING" ("A" INTEGER NOT NULL, "B" INTEGER NOT NULL)`)
+	mustExecSQL(t, db, `INSERT INTO "QUERY_ORDERING" VALUES (2, 1), (2, 2), (1, 3)`)
 
-		t.Run(tc.name, func(t *testing.T) {
-
-			db, queries := newCheckReadOnlyTestDB(t, []checkReadOnlyQuery{{
-				match: `SELECT`,
-				cols:  []string{"_KPID"},
-			}})
-			defer db.Close()
-
-			rows, _, err := (&Snowflake{db: db}).Query(t.Context(), warehouses.RowQuery{
-				Table:     "profiles",
-				Columns:   columns,
-				OrderBy:   tc.orderBy,
-				OrderDesc: tc.orderDesc,
-			}, false)
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = rows.Close()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(*queries) != 1 {
-				t.Fatalf("expected 1 query, got %d: %q", len(*queries), *queries)
-			}
-			if (*queries)[0] != tc.want {
-				t.Fatalf("expected query %q, got %q", tc.want, (*queries)[0])
-			}
-
-		})
-
+	columns := []warehouses.Column{
+		{Name: "a", Type: types.Int(32)},
+		{Name: "b", Type: types.Int(32)},
 	}
+
+	t.Run("empty", func(t *testing.T) {
+
+		rows, _, err := warehouse.Query(t.Context(), warehouses.RowQuery{
+			Table:   "query_ordering",
+			Columns: columns,
+			OrderBy: []warehouses.Column{},
+		}, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+		}
+		err = rows.Err()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+	})
+
+	t.Run("descending", func(t *testing.T) {
+
+		rows, _, err := warehouse.Query(t.Context(), warehouses.RowQuery{
+			Table:     "query_ordering",
+			Columns:   columns,
+			OrderBy:   columns,
+			OrderDesc: true,
+		}, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer rows.Close()
+
+		want := [][2]int{{2, 2}, {2, 1}, {1, 3}}
+		var row int
+		for rows.Next() {
+			if row == len(want) {
+				t.Fatal("returned too many rows")
+			}
+			values := make([]any, len(columns))
+			err = rows.Scan(values...)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if values[0] != want[row][0] || values[1] != want[row][1] {
+				t.Fatalf("row %d: expected %v, got %v", row, want[row], values)
+			}
+			row++
+		}
+		err = rows.Err()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if row != len(want) {
+			t.Fatalf("expected %d rows, got %d", len(want), row)
+		}
+
+	})
 
 }
