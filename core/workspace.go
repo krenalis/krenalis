@@ -39,15 +39,14 @@ const (
 // Workspace represents a workspace.
 type Workspace struct {
 	core                           *Core
-	organization                   *Organization
 	store                          *datastore.Store
 	workspace                      *state.Workspace
 	ID                             string            `json:"id"`
 	Name                           string            `json:"name"`
 	ProfileSchema                  types.Type        `json:"profileSchema"`
-	PrimarySources                 map[string]string `json:"primarySources,format:emitnull"`
+	PrimarySources                 map[string]string `json:"primarySources"`
 	ResolveIdentitiesOnBatchImport bool              `json:"resolveIdentitiesOnBatchImport"`
-	Identifiers                    []string          `json:"identifiers,format:emitnull"`
+	Identifiers                    []string          `json:"identifiers"`
 	WarehouseMode                  WarehouseMode     `json:"warehouseMode"`
 	UIPreferences                  UIPreferences     `json:"uiPreferences"`
 }
@@ -68,6 +67,7 @@ const (
 	ReceiveStep          = PipelineStep(metrics.ReceiveStep)
 	InputValidationStep  = PipelineStep(metrics.InputValidationStep)
 	FilterStep           = PipelineStep(metrics.FilterStep)
+	ConsentStep          = PipelineStep(metrics.ConsentStep)
 	TransformationStep   = PipelineStep(metrics.TransformationStep)
 	OutputValidationStep = PipelineStep(metrics.OutputValidationStep)
 	FinalizeStep         = PipelineStep(metrics.FinalizeStep)
@@ -81,6 +81,8 @@ func (step PipelineStep) String() string {
 		return "InputValidation"
 	case FilterStep:
 		return "Filter"
+	case ConsentStep:
+		return "Consent"
 	case TransformationStep:
 		return "Transformation"
 	case OutputValidationStep:
@@ -101,6 +103,8 @@ func ParsePipelineStep(step string) (PipelineStep, error) {
 		return InputValidationStep, nil
 	case "Filter":
 		return FilterStep, nil
+	case "Consent":
+		return ConsentStep, nil
 	case "Transformation":
 		return TransformationStep, nil
 	case "OutputValidation":
@@ -227,11 +231,16 @@ func (this *Workspace) Attributes(ctx context.Context, kpid string) (json.Value,
 	}
 
 	properties := this.workspace.ProfileSchema.Properties().Names()
-	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"_kpid"},
-		Operator: state.OpIs,
-		Values:   []any{kpid},
-	}}}
+	where := &state.Where{
+		Operator: state.OpAnd,
+		Rules: []state.WhereRule{
+			&state.WhereCondition{
+				Property: []string{"_kpid"},
+				Operator: state.OpIs,
+				Values:   []any{kpid},
+			},
+		},
+	}
 
 	// Retrieve the profile attributes.
 	profiles, _, err := this.store.Profiles(ctx, datastore.Query{
@@ -302,7 +311,7 @@ func (this *Workspace) AuthToken(ctx context.Context, connector, redirectionURI,
 		return "", errors.BadRequest("connector %s does not support authorization", connector)
 	}
 
-	auth, err := this.core.connections.GrantAuthorization(ctx, c, code, redirectionURI)
+	auth, err := this.core.connections.GrantAuthorization(ctx, c, this.workspace.Organization().ID, code, redirectionURI)
 	if err != nil {
 		if err, ok := err.(*connections.UnavailableError); ok {
 			return "", errors.Unavailable("%w", err)
@@ -416,6 +425,17 @@ func (this *Workspace) Connections() []*Connection {
 		return a.Name < b.Name || a.Name == b.Name && a.ID == b.ID
 	})
 	return infos
+}
+
+// ConsumeRateLimitCapacity consumes the specified number of units from the
+// workspace's request rate-limit capacity. units must be at least 1.
+//
+// ConsumeRateLimitCapacity returns errors.TooManyRequests when the requested
+// capacity is unavailable. It returns errors.Unavailable when a temporary
+// condition makes capacity availability impossible to determine.
+func (this *Workspace) ConsumeRateLimitCapacity(ctx context.Context, units int) error {
+	this.core.mustBeOpen()
+	return translateRateLimitError(this.workspace.ConsumeRateLimitCapacity(ctx, units))
 }
 
 // CreateConnection creates a new connection. authToken is an authorization
@@ -573,7 +593,8 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 			clientSecret = c.OAuth.ClientSecret
 		}
 		conf := &connections.ConnectorConfig{
-			Role: n.Role,
+			Role:         n.Role,
+			Organization: this.workspace.Organization().ID,
 		}
 		conf.OAuth.Account = n.Account.Code
 		conf.OAuth.ClientSecret = clientSecret
@@ -713,9 +734,14 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 //
 // If filter is non-nil, only events that satisfy the filter will be observed.
 //
-// It returns an errors.UnprocessableError with code TooManyListeners, if there
-// are already too many listeners.
-func (this *Workspace) CreateEventListener(connection string, size int, filter *Filter) (string, error) {
+// If requiredConsents is non-nil, only events whose consents satisfy its
+// purposes, according to its operator, will be observed. Its purposes must be
+// at most MaxRequiredConsentPurposes and must not contain duplicates.
+//
+// It returns an errors.UnprocessableError error with code:
+//
+//   - TooManyListeners, if there are already too many listeners.
+func (this *Workspace) CreateEventListener(connection string, size int, filter *Filter, requiredConsents *RequiredConsents) (string, error) {
 	this.core.mustBeOpen()
 	if connection != "" && !IsValidID(connection) {
 		return "", errors.BadRequest("identifier %q is not a valid connection identifier", connection)
@@ -747,11 +773,32 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 		}
 		where = convertFilterToWhere(filter, schemas.Event)
 	}
+	var rc *state.RequiredConsents
+	if requiredConsents != nil {
+		if op := requiredConsents.Operator; op != PurposesAnd && op != PurposesOr {
+			return "", errors.BadRequest(`required consents operator %q is not valid. It must be "and" or "or"`, op)
+		}
+		if len(requiredConsents.Purposes) > MaxRequiredConsentPurposes {
+			return "", errors.BadRequest("required consent purposes must be at most %d", MaxRequiredConsentPurposes)
+		}
+		rc = &state.RequiredConsents{
+			Operator: state.ConsentPurposesOperator(requiredConsents.Operator),
+			Purposes: slices.Clone(requiredConsents.Purposes),
+		}
+		for i, code := range rc.Purposes {
+			if err := validateConsentPurposeCode(code); err != nil {
+				return "", errors.BadRequest("%s", err)
+			}
+			if slices.Contains(rc.Purposes[i+1:], code) {
+				return "", errors.BadRequest("required consent purpose %q is duplicated", code)
+			}
+		}
+	}
 	observer, ok := this.core.collector.Observer(this.workspace.ID)
 	if !ok {
 		return "", errors.New("observer either has not been created yet or has already been removed")
 	}
-	id, err := observer.CreateListener(connections, size, where)
+	id, err := observer.CreateListener(connections, size, where, rc)
 	if err != nil {
 		if err == collector.ErrTooManyListeners {
 			err = errors.Unprocessable(TooManyListeners, "there are already %d listeners", MaxEventListeners)
@@ -772,10 +819,11 @@ func (this *Workspace) Delete(ctx context.Context) error {
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		// Mark the pipeline functions as discontinued.
 		now := time.Now().UTC()
-		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
-			"SELECT p.transformation_id, $1\n"+
+		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, organization, discontinued_at)\n"+
+			"SELECT p.transformation_id, w.organization, $1\n"+
 			"FROM pipelines AS p\n"+
 			"INNER JOIN connections AS c ON p.connection = c.id\n"+
+			"INNER JOIN workspaces AS w ON c.workspace = w.id\n"+
 			"WHERE p.transformation_id != '' AND c.workspace = $2\n"+
 			"ON CONFLICT (id) DO NOTHING", now, n.ID)
 		if err != nil {
@@ -927,11 +975,16 @@ func (this *Workspace) Identities(ctx context.Context, kpid string, first, limit
 	if limit < 1 || limit > 1000 {
 		return nil, 0, errors.BadRequest("limit %d is not valid", limit)
 	}
-	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"_kpid"},
-		Operator: state.OpIs,
-		Values:   []any{kpid},
-	}}}
+	where := &state.Where{
+		Operator: state.OpAnd,
+		Rules: []state.WhereRule{
+			&state.WhereCondition{
+				Property: []string{"_kpid"},
+				Operator: state.OpIs,
+				Values:   []any{kpid},
+			},
+		},
+	}
 	ws := &Workspace{
 		core:      this.core,
 		store:     this.store,
@@ -1046,15 +1099,15 @@ func (this *Workspace) PipelineRun(ctx context.Context, id string) (*PipelineRun
 	var run PipelineRun
 	err := this.core.db.QueryRow(ctx,
 		"SELECT r.id, r.pipeline, r.start_time, r.end_time, r.passed_0, r.passed_1, r.passed_2, r.passed_3,"+
-			" r.passed_4, r.passed_5, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4,"+
-			" r.failed_5, r.error\n"+
+			" r.passed_4, r.passed_5, r.passed_6, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4,"+
+			" r.failed_5, r.failed_6, r.error\n"+
 			"FROM pipelines_runs r\n"+
 			"INNER JOIN pipelines p ON p.id = r.pipeline\n"+
 			"INNER JOIN connections c ON c.id = p.connection\n"+
 			"WHERE c.workspace = $1 AND r.id = $2", this.workspace.ID, id).Scan(
 		&run.ID, &run.Pipeline, &run.StartTime, &run.EndTime, &run.Passed[0], &run.Passed[1], &run.Passed[2], &run.Passed[3],
-		&run.Passed[4], &run.Passed[5], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
-		&run.Failed[5], &run.Error)
+		&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
+		&run.Failed[5], &run.Failed[6], &run.Error)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.NotFound("pipeline run %s does not exist", id)
@@ -1062,8 +1115,8 @@ func (this *Workspace) PipelineRun(ctx context.Context, id string) (*PipelineRun
 		return nil, err
 	}
 	if run.EndTime == nil {
-		run.Passed = [6]int{}
-		run.Failed = [6]int{}
+		run.Passed = [7]int{}
+		run.Failed = [7]int{}
 	}
 	return &run, nil
 }
@@ -1076,7 +1129,7 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 	runs := []*PipelineRun{}
 	err := this.core.db.QueryScan(ctx,
 		"SELECT r.id, r.pipeline, r.start_time, r.end_time, r.passed_0, r.passed_1, r.passed_2, r.passed_3,"+
-			" r.passed_4, r.passed_5, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4, r.failed_5, r.error\n"+
+			" r.passed_4, r.passed_5, r.passed_6, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4, r.failed_5, r.failed_6, r.error\n"+
 			"FROM pipelines_runs r\n"+
 			"INNER JOIN pipelines p ON p.id = r.pipeline\n"+
 			"INNER JOIN connections c ON c.id = p.connection\n"+
@@ -1086,8 +1139,8 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 			for rows.Next() {
 				var run PipelineRun
 				if err = rows.Scan(&run.ID, &run.Pipeline, &run.StartTime, &run.EndTime, &run.Passed[0], &run.Passed[1], &run.Passed[2], &run.Passed[3],
-					&run.Passed[4], &run.Passed[5], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
-					&run.Failed[5], &run.Error); err != nil {
+					&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
+					&run.Failed[5], &run.Failed[6], &run.Error); err != nil {
 					return err
 				}
 				runs = append(runs, &run)
@@ -1100,8 +1153,8 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 
 	for _, run := range runs {
 		if run.EndTime == nil {
-			run.Passed = [6]int{}
-			run.Failed = [6]int{}
+			run.Passed = [7]int{}
+			run.Failed = [7]int{}
 		}
 	}
 
@@ -1437,7 +1490,8 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 		clientSecret = c.OAuth.ClientSecret
 	}
 	conf := &connections.ConnectorConfig{
-		Role: state.Role(role),
+		Role:         state.Role(role),
+		Organization: this.workspace.Organization().ID,
 	}
 	conf.OAuth.Account = account.Code
 	conf.OAuth.ClientSecret = clientSecret
@@ -1494,7 +1548,7 @@ func (this *Workspace) StartIdentityResolution(ctx context.Context) error {
 func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSettings json.Value) error {
 	this.core.mustBeOpen()
 	ws := this.workspace
-	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, ws.Warehouse.Platform, settings)
+	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, settings)
 	if err != nil {
 		if err, ok := err.(*warehouses.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
@@ -1502,7 +1556,7 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 		return err
 	}
 	if mcpSettings != nil {
-		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Warehouse.Platform, mcpSettings)
+		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsError); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
@@ -1512,7 +1566,7 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 		if bytes.Equal(settings, mcpSettings) {
 			return errors.Unprocessable(InvalidWarehouseSettings, "the MCP settings must be different from the data warehouse settings")
 		}
-		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Platform, mcpSettings)
+		err = this.core.datastore.CheckMCPSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
 				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
@@ -1692,7 +1746,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 
 	ws := this.workspace
 
-	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, ws.Warehouse.Platform, settings)
+	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, settings)
 	if err != nil {
 		if err, ok := err.(*warehouses.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
@@ -1701,7 +1755,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 	}
 
 	if mcpSettings != nil {
-		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Warehouse.Platform, mcpSettings)
+		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsError); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
@@ -1711,7 +1765,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 		if bytes.Equal(settings, mcpSettings) {
 			return errors.Unprocessable(InvalidWarehouseSettings, "the MCP settings must be different from the data warehouse settings")
 		}
-		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Platform, mcpSettings)
+		err = this.core.datastore.CheckMCPSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
 				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)

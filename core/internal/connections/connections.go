@@ -81,25 +81,21 @@ func (err *UnavailableError) Error() string {
 // the placeholder is allowed.
 type PlaceholderReplacer func(name string) (string, bool)
 
-// Records is the iterator interface used to iterate over the records read from
-// apps, databases, and files.
+// Records is an interface for iterating over records read from apps, databases,
+// and files.
 type Records interface {
 
-	// All returns an iterator to iterate over the records. After All completes, it
-	// is also necessary to check the result of Err for any potential errors.
+	// All returns a sequence of records. When the sequence is iterated, Close is
+	// called automatically when iteration finishes or is stopped early. Err must
+	// be checked afterward.
 	All(ctx context.Context) iter.Seq[Record]
 
-	// Close closes the iterator. It is automatically called by the For method
-	// before returning. Close is idempotent and does not impact the result of Err.
+	// Close releases resources associated with Records and is idempotent. Callers
+	// must call Close if iteration is never started.
 	Close() error
 
-	// Err returns any error encountered during iteration, excluding errors returned
-	// by the yield function, which may have occurred after an explicit or implicit
-	// Close.
+	// Err returns any error encountered during iteration or cleanup.
 	Err() error
-
-	// Last reports whether the last record has been read.
-	Last() bool
 }
 
 type EventType = connectors.EventType
@@ -152,7 +148,7 @@ type Connections struct {
 
 // New returns a new *Connections value.
 func New(state *state.State) *Connections {
-	h := httpclient.New(state, http.DefaultTransport)
+	h := httpclient.New(state, http.DefaultTransport.(*http.Transport))
 	return &Connections{state: state, http: h}
 }
 
@@ -200,15 +196,17 @@ func (c *Connections) AuthorizationEndpoint(connector *state.Connector, role sta
 
 // GrantAuthorization grants an OAuth authorization for an application
 // connector, using the provided authorization code and redirection URI.
+// organization is the ID of the organization on behalf of which the
+// authorization is granted.
 //
 // This method can only be called on a connector that implements OAuth.
-func (c *Connections) GrantAuthorization(ctx context.Context, connector *state.Connector, code, redirectionURI string) (*Authorization, error) {
-	accessToken, refreshToken, expiresIn, err := c.http.GrantAuthorization(ctx, connector, code, redirectionURI)
+func (c *Connections) GrantAuthorization(ctx context.Context, connector *state.Connector, organization, code, redirectionURI string) (*Authorization, error) {
+	accessToken, refreshToken, expiresIn, err := c.http.GrantAuthorization(ctx, connector, organization, code, redirectionURI)
 	if err != nil {
 		return nil, &UnavailableError{Err: fmt.Errorf("cannot get authorization token from %s: %s", connector.Label, err)}
 	}
 	app, err := connectors.RegisteredApplication(connector.Code).New(&connectors.ApplicationEnv{
-		HTTPClient: c.http.ConnectorClient(connector, connector.OAuth.ClientSecret, accessToken),
+		HTTPClient: c.http.ConnectorClient(connector, organization, connector.OAuth.ClientSecret, accessToken),
 	})
 	if err != nil {
 		return nil, connectorError(err)

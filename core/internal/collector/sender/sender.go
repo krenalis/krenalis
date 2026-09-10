@@ -226,13 +226,13 @@ func (s *Sender) Close(ctx context.Context) {
 	return
 }
 
-// CreateEvent creates a new event with the given pipeline, type, schema, and
-// original event.
+// CreateEvent creates a new event using the given pipeline, type, schema,
+// attributes, and acknowledgment.
 //
-// The returned event must be passed to SendEvent (optionally after setting the
-// Properties field) or to DiscardEvent if it should be discarded.
-func (s *Sender) CreateEvent(pipeline, typ string, schema types.Type, event streams.Event) *Event {
-	anonymousID, ok := event.Attributes["anonymousId"].(string)
+// The caller must pass the returned event to SendEvent, optionally after
+// setting Properties, or to DiscardEvent if the event should not be sent.
+func (s *Sender) CreateEvent(pipeline, typ string, schema types.Type, attributes map[string]any, ack streams.Ack) *Event {
+	anonymousID, ok := attributes["anonymousId"].(string)
 	if !ok {
 		panic("CreateEvent called with an event missing anonymousId")
 	}
@@ -246,19 +246,17 @@ func (s *Sender) CreateEvent(pipeline, typ string, schema types.Type, event stre
 	sequence := u.queue.next()
 	s.mu.Unlock()
 	ev := &Event{
-		Event: connectors.Event{
-			Received: connections.ReceivedEvent(event.Attributes),
-			Type: connectors.EventTypeInfo{
-				ID:     typ,
-				Schema: schema,
-			},
-			DestinationPipeline: pipeline,
+		Received: connections.ReceivedEvent(attributes),
+		Type: connectors.EventTypeInfo{
+			ID:     typ,
+			Schema: schema,
 		},
-		createdAt: time.Now().UTC(),
-		pipeline:  pipeline,
-		user:      u,
-		sequence:  sequence,
-		ack:       event.Ack,
+		DestinationPipeline: pipeline,
+		createdAt:           time.Now().UTC(),
+		pipeline:            pipeline,
+		user:                u,
+		sequence:            sequence,
+		ack:                 ack,
 	}
 	return ev
 }

@@ -21,6 +21,7 @@ func TestParseErrors(t *testing.T) {
 		{"[]", "invalid type syntax"},
 		{"{\"kind\":\"string\"}{", "invalid token { after top-level value"},
 		{"{\"bitSize\":8}", "missing 'kind' key"},
+		{"{\"kind\":\"custom\"}", `unknown type kind "custom"`},
 		{"{\"kind\":\"int\",\"bitSize\":8,\"bitSize\":16}", "repeated 'bitSize' key"},
 		{"{\"kind\":\"string\",\"pattern\":\"a\",\"values\":[\"b\"]}", "values cannot be provided if pattern is provided"},
 	}
@@ -47,6 +48,10 @@ func TestPropertySerialization(t *testing.T) {
 			Err:      "missing property type",
 		},
 		{
+			Property: Property{Name: "a", Type: Parameter("custom")},
+			Expected: `{"name":"a","type":{"kind":"custom"},"description":""}`,
+		},
+		{
 			Property: Property{Name: "a", Type: String()},
 			Expected: `{"name":"a","type":{"kind":"string"},"description":""}`,
 		},
@@ -57,6 +62,11 @@ func TestPropertySerialization(t *testing.T) {
 		{
 			Property: Property{Name: "a", Type: String(), Description: "some description"},
 			Expected: `{"name":"a","type":{"kind":"string"},"description":"some description"}`,
+		},
+		{
+			Property: Property{Name: "first_name", Type: String(), DisplayName: "First name", Description: "some description"},
+			Expected: `{"name":"first_name","type":{"kind":"string"},` +
+				`"displayName":"First name","description":"some description"}`,
 		},
 		{
 			Property: Property{Name: "a", Prefilled: "<prefilled>", Type: String(), Description: "some description"},
@@ -146,12 +156,24 @@ func TestPropertyDeserialization(t *testing.T) {
 			Property: Property{Name: "a", Type: Int(32)},
 		},
 		{
+			JSON:     `{"name":"first_name","displayName":"First name","description":"","type":{"kind":"string"}}`,
+			Property: Property{Name: "first_name", Type: String(), DisplayName: "First name"},
+		},
+		{
+			JSON: `{"name":"a","displayName":false,"type":{"kind":"string"}}`,
+			Err:  "unexpected value for property display name",
+		},
+		{
+			JSON: `{"name":"a","displayName":"A","displayName":"B","type":{"kind":"string"}}`,
+			Err:  "repeated 'displayName' key",
+		},
+		{
 			JSON: `{{`,
 			Err:  "invalid character '{' looking for beginning of object key string",
 		},
 		{
-			JSON:     `{"name":"a","type":{"kind":"custom"}}`,
-			Property: Property{Name: "a", Type: Parameter("custom")},
+			JSON: `{"name":"a","type":{"kind":"custom"}}`,
+			Err:  `unknown type kind "custom"`,
 		},
 	}
 	for _, test := range tests {
@@ -187,6 +209,11 @@ func TestPropertySerializationDeserialization(t *testing.T) {
 			`{"name":"Apple","type":{"kind":"string","values":["g","c"]},"description":"Some description..."}`,
 			Property{Name: "Apple", Type: String().WithValues("g", "c"), Description: "Some description..."},
 			`{"name":"Apple","type":{"kind":"string","values":["g","c"]},"description":"Some description..."}`,
+		},
+		{
+			`{"name":"first_name","type":{"kind":"string"},"displayName":"First name","description":"Given name"}`,
+			Property{Name: "first_name", Type: String(), DisplayName: "First name", Description: "Given name"},
+			`{"name":"first_name","type":{"kind":"string"},"displayName":"First name","description":"Given name"}`,
 		},
 	}
 	for _, test := range tests {
@@ -286,17 +313,29 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"kind":"array","minElements":2,"maxElements":8,"uniqueElements":true,"elementType":{"kind":"decimal","precision":1}}`,
 			Type: Array(Decimal(1, 0)).WithMinElements(2).WithMaxElements(8).WithUnique(),
 		}, {
+			Data: `{"kind":"array","elementType":{"kind":"T"}}`,
+			Type: Array(Parameter("T")),
+		}, {
+			Data: `{"kind":"map","elementType":{"kind":"T"}}`,
+			Type: Map(Parameter("T")),
+		}, {
 			Data: `{"kind":"object","properties":[{"name":"email","type":{"kind":"string"},"description":""},{"name":"size","type":{"kind":"decimal","precision":1},"description":""}]}`,
 			Type: Object([]Property{{Name: "email", Type: String()}, {Name: "size", Type: Decimal(1, 0)}}),
 		}, {
 			Data: `{"kind":"object","properties":[{"name":"email","type":{"kind":"string"},"nullable":true,"description":""}]}`,
 			Type: Object([]Property{{Name: "email", Type: String(), Nullable: true}}),
 		}, {
+			Data: `{"kind":"object","properties":[{"name":"first_name","type":{"kind":"string"},"displayName":"First name","description":""}]}`,
+			Type: Object([]Property{{Name: "first_name", Type: String(), DisplayName: "First name"}}),
+		}, {
 			Data: `{"kind":"object","properties":[{"name":"birthday","type":{"kind":"date"},"description":""}]}`,
 			Type: Object([]Property{{Name: "birthday", Type: Date()}}),
 		}, {
 			Data: `{"kind":"object","properties":[{"name":"birthday","prefilled":"mm/dd/yyyy","type":{"kind":"date"},"description":""}]}`,
 			Type: Object([]Property{{Name: "birthday", Prefilled: "mm/dd/yyyy", Type: Date()}}),
+		}, {
+			Data: `{"kind":"object","properties":[{"name":"items","type":{"kind":"array","elementType":{"kind":"T"}},"description":""}]}`,
+			Type: Object([]Property{{Name: "items", Type: Array(Parameter("T"))}}),
 		},
 	}
 	for _, test := range tests {

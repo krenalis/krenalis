@@ -41,8 +41,8 @@ func TestOrganizationDisabled(t *testing.T) {
 	}
 
 	// Test that the call to the method that sets the state of an organization
-	// fails if the organizations key is not provided.
-	t.Run("set status without organizations API key is rejected", func(t *testing.T) {
+	// fails if the platform management API key is not provided.
+	t.Run("set status without platform management API key is rejected", func(t *testing.T) {
 		err := k.TrySetOrganizationStatus(orgID, false, http.Header{"Krenalis-Workspace": nil})
 		statusErr, ok := err.(*krenalistester.StatusCodeError)
 		if !ok {
@@ -314,8 +314,8 @@ func TestOrganizationDisabled(t *testing.T) {
 		}
 	})
 
-	// Updating the organization's name uses the organizations API key, so it
-	// must remain functional even while the organization is disabled.
+	// Updating the organization's name uses the platform management API key, so
+	// it must remain functional even while the organization is disabled.
 	t.Run("update organization name still works", func(t *testing.T) {
 		k.UpdateOrganization(orgID, "ACME inc (renamed while disabled)", krenalistester.DefaultOrganizationLimits)
 		got := k.Organization(orgID)

@@ -84,6 +84,7 @@ interface ProfileEventContext {
 	app?: ProfileEventContextApp;
 	browser?: ProfileEventContextBrowser;
 	campaign?: ProfileEventContextCampaign;
+	consents?: Record<string, boolean>;
 	device?: ProfileEventContextDevice;
 	ip?: string;
 	library?: ProfileEventContextLibrary;

@@ -146,7 +146,7 @@ func (br *Brevo) EventTypes(ctx context.Context) ([]*connectors.EventType, error
 	}}, nil
 }
 
-var eventNameRE = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+var eventNameRE = regexp.MustCompile(`^[A-Za-z0-9_-]{1,255}$`)
 
 // EventTypeSchema returns the schema of the specified event type.
 func (br *Brevo) EventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
@@ -156,7 +156,7 @@ func (br *Brevo) EventTypeSchema(ctx context.Context, eventType string) (types.T
 	return types.Object([]types.Property{
 		{
 			Name:           "event_name",
-			Type:           types.String().WithMaxLength(255).WithPattern(eventNameRE),
+			Type:           types.String().WithPattern(eventNameRE),
 			CreateRequired: true,
 			Description:    "Event name",
 		},

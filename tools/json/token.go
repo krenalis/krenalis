@@ -5,10 +5,9 @@
 package json
 
 import (
+	"encoding/json/jsontext"
 	"strconv"
 	"strings"
-
-	"github.com/krenalis/krenalis/tools/json/internal/json/jsontext"
 )
 
 type Token struct {

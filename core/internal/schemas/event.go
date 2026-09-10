@@ -52,6 +52,12 @@ var Event = types.Object([]types.Property{
 				Description:  "Campaign",
 			},
 			{
+				Name:         "consents",
+				Type:         types.Map(types.Boolean()),
+				ReadOptional: true,
+				Description:  "Consents",
+			},
+			{
 				Name: "device",
 				Type: types.Object([]types.Property{
 					{Name: "id", Type: types.String(), ReadOptional: true, Description: "Id"},

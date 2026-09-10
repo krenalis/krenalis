@@ -64,6 +64,7 @@ test(`Add "Import customers" pipeline on Dummy`, async ({ page }) => {
 		"name": "Import Dummy customers",
 		"enabled": true,
 		"filter": null,
+		"requiredConsents": null,
 		"inSchema": {
 			"kind": "object",
 			"properties": [
@@ -176,8 +177,8 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 		"name": "Export customers",
 		"enabled": true,
 		"filter": {
-			"logical": "or",
-			"conditions": [
+			"operator": "or",
+			"rules": [
 				{
 					"property": "email",
 					"operator": "is one of",
@@ -196,6 +197,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 				}
 			]
 		},
+		"requiredConsents": null,
 		"inSchema": {
 			"kind": "object",
 			"properties": [
@@ -332,6 +334,7 @@ test(`Add "Send Add to Cart" pipeline on Dummy`, async ({ page }) => {
 		"name": "Send Add to Cart",
 		"enabled": false,
 		"filter": null,
+		"requiredConsents": null,
 		"inSchema": null,
 		"outSchema": {
 			"kind": "object",
@@ -424,6 +427,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 		"name": "Import users",
 		"enabled": true,
 		"filter": null,
+		"requiredConsents": null,
 		"inSchema": {
 			"kind": "object",
 			"properties": [
@@ -570,8 +574,8 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 		"name": "Export users",
 		"enabled": true,
 		"filter": {
-			"logical": "or",
-			"conditions": [
+			"operator": "or",
+			"rules": [
 				{
 					"property": "email",
 					"operator": "is one of",
@@ -590,6 +594,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 				}
 			]
 		},
+		"requiredConsents": null,
 		"inSchema": {
 			"kind": "object",
 			"properties": [
@@ -768,6 +773,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 			"name": "Import users",
 			"enabled": true,
 			"filter": null,
+			"requiredConsents": null,
 			"inSchema": {
 				"kind": "object",
 				"properties": [
@@ -925,8 +931,8 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 			"name": "Export users",
 			"enabled": true,
 			"filter": {
-				"logical": "or",
-				"conditions": [
+				"operator": "or",
+				"rules": [
 					{
 						"property": "email",
 						"operator": "is one of",
@@ -945,6 +951,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 					}
 				]
 			},
+			"requiredConsents": null,
 			"inSchema": {
 				"kind": "object",
 				"properties": [
@@ -1231,7 +1238,7 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 	await page.locator('.pipeline__filters-add-condition').click();
 	await page.locator('.pipeline__filters-add-condition').click();
 
-	let filters = page.locator('.pipeline__filters-filter');
+	const filters = page.locator('.pipeline__filters-filter');
 
 	await filters.nth(0).locator('.pipeline__filters-property sl-input').click();
 	await filters
@@ -1242,6 +1249,47 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 
 	await filters.nth(0).locator('.pipeline__filters-value-input sl-option[value="track"]').click(); // value select should open automatically after selecting the operator
 
+	const jsonCondition = filters.nth(1);
+	const jsonPropertyInput = jsonCondition.locator('.pipeline__filters-property sl-input');
+	await jsonPropertyInput.click();
+	await jsonCondition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^traits$/ }).click();
+	const jsonPathInput = jsonCondition.locator('.pipeline__filters-path >> input');
+	await jsonPathInput.fill('email');
+	const jsonOperatorSelect = jsonCondition.locator('.pipeline__filters-operator');
+	await expect(jsonOperatorSelect).toHaveJSProperty('value', '0');
+	const jsonValueInput = jsonCondition.locator('.pipeline__filters-value-input');
+	await jsonValueInput.locator('input').fill('a@example.com');
+
+	await jsonPropertyInput.click();
+	await jsonCondition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^properties$/ }).click();
+	await expect(jsonPropertyInput).toHaveJSProperty('value', 'properties');
+	await expect(jsonPathInput).toHaveValue('email');
+	await expect(jsonOperatorSelect).toHaveJSProperty('value', '0');
+	await expect(jsonValueInput).toHaveJSProperty('value', 'a@example.com');
+
+	await jsonPropertyInput.click();
+	await jsonCondition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^traits$/ }).click();
+
+	for (const operator of [
+		{ name: 'exists', index: 24 },
+		{ name: 'does not exist', index: 25 },
+	]) {
+		const condition = filters.nth(1);
+		await condition.locator('.pipeline__filters-property sl-input').click();
+		await condition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^traits$/ }).click();
+		const pathInput = condition.locator('.pipeline__filters-path >> input');
+		await pathInput.fill('email');
+		const operatorSelect = condition.locator('.pipeline__filters-operator');
+		const operatorOption = operatorSelect.locator(`sl-option[value="${operator.index}"]`);
+		await expect(operatorOption).toHaveText(operator.name);
+		await operatorSelect.click();
+		await operatorOption.click();
+		await expect(operatorSelect).toHaveJSProperty('value', String(operator.index));
+		await pathInput.fill('');
+		await expect(operatorSelect).toHaveJSProperty('value', '');
+		await condition.locator('.pipeline__filters-remove-condition').click();
+	}
+
 	const expectedBody = `
 	{
 		"target": "Event",
@@ -1249,8 +1297,8 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 		"name": "Import events into warehouse",
 		"enabled": false,
 		"filter": {
-			"logical": "and",
-			"conditions": [
+			"operator": "and",
+			"rules": [
 				{
 					"property": "type",
 					"operator": "is",
@@ -1260,6 +1308,7 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 				}
 			]
 		},
+		"requiredConsents": null,
 		"inSchema": null,
 		"outSchema": null,
 		"transformation": null
@@ -1311,8 +1360,8 @@ test(`Add "Import users" pipeline on JavaScript`, async ({ page }) => {
 		"name": "Import users into warehouse",
 		"enabled": false,
 		"filter": {
-			"logical": "or",
-			"conditions": [
+			"operator": "or",
+			"rules": [
 				{
 					"property": "type",
 					"operator": "is",
@@ -1322,11 +1371,11 @@ test(`Add "Import users" pipeline on JavaScript`, async ({ page }) => {
 				},
 				{
 					"property": "traits",
-         			"operator": "is not empty",
-         			"values": null
-       			}
+					"operator": "is not empty"
+				}
 			]
 		},
+		"requiredConsents": null,
 		"inSchema": null,
 		"outSchema": null,
 		"transformation": null

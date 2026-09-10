@@ -4,6 +4,7 @@ import {
 	updateMappingProperty,
 	getSampleIdentifiers,
 	updateMappingPropertyError,
+	pipelineObjectLabels,
 } from './Pipeline.helpers';
 import {
 	getSchemaComboboxItems,
@@ -17,7 +18,9 @@ import {
 	TransformedProperty,
 	doesUpdatedAtColumnNeedFormat,
 	flattenSchema,
+	getFilterConditions,
 	isRecursiveType,
+	omitEmptyFilterRules,
 	propertyTypesAreEqual,
 	splitPropertyAndPath,
 	transformInPipelineToSet,
@@ -68,13 +71,17 @@ import { Sample } from './Pipeline.types';
 import { UnprocessableError } from '../../../lib/api/errors';
 import ConnectionContext from '../../../context/ConnectionContext';
 import Workspace from '../../../lib/api/types/workspace';
-import { PipelineToSet, Filter, TransformationFunction, TransformationPurpose } from '../../../lib/api/types/pipeline';
+import {
+	PipelineToSet,
+	RequiredConsents,
+	TransformationFunction,
+	TransformationPurpose,
+} from '../../../lib/api/types/pipeline';
 import TransformedConnector from '../../../lib/core/connector';
 import { Combobox } from '../../base/Combobox/Combobox';
 import { ComboboxItem } from '../../base/Combobox/Combobox.types';
 import JSONbig from 'json-bigint';
 import pipelineContext from '../../../context/PipelineContext';
-import TransformedConnection from '../../../lib/core/connection';
 import appContext from '../../../context/AppContext';
 import { mapExpressionArguments, buildMapExpression } from '../../../utils/mapExpression';
 import { isPlainObject } from '../../../utils/isPlainObject';
@@ -803,7 +810,9 @@ const TransformationBox = ({
 
 	const onOpenTransformation = () => {
 		// Validate the filter to prevent Bad Request when loading the samples.
-		let conditions = pipeline.filter?.conditions.filter((condition) => condition.property !== '') || [];
+		const conditions = pipeline.filter
+			? getFilterConditions(pipeline.filter).filter((condition) => condition.property !== '')
+			: [];
 		for (const condition of conditions) {
 			const propertyName = condition.property;
 			const [base, path] = splitPropertyAndPath(propertyName, flatInputSchema);
@@ -1034,7 +1043,7 @@ const TransformationBox = ({
 				);
 			}
 		}
-		const [sourceHeader, destinationHeader] = transformationHeaders(connection, pipeline);
+		const [sourceHeader, destinationHeader] = pipelineObjectLabels(connection, pipeline);
 		body = (
 			<div className='pipeline__transformation-mappings'>
 				{!isCompletelyOpen && (
@@ -1304,16 +1313,18 @@ const FullscreenTransformation = ({
 	}, [outputSchema]);
 
 	const normalizedFilter = useMemo(() => {
-		// Exclude empty conditions from the filter.
-		let f: Filter | null = null;
-		if (pipeline.filter != null) {
-			let conditions = pipeline.filter.conditions.filter((condition) => condition.property !== '');
-			if (conditions.length > 0) {
-				f = { logical: pipeline.filter.logical, conditions: conditions };
-			}
-		}
-		return f;
+		return pipeline.filter == null ? null : omitEmptyFilterRules(pipeline.filter);
 	}, [pipeline.filter]);
+
+	const normalizedConsents = useMemo(() => {
+		// Discard the required consents (and their operator) when no purpose
+		// has been selected.
+		let consents: RequiredConsents | null = null;
+		if (pipeline.requiredConsents != null && pipeline.requiredConsents.purposes.length > 0) {
+			consents = pipeline.requiredConsents;
+		}
+		return consents;
+	}, [pipeline.requiredConsents]);
 
 	const { startListening, stopListening } = useEventListener(
 		(newly: EventListenerEvent[]) => {
@@ -1322,6 +1333,7 @@ const FullscreenTransformation = ({
 		null,
 		connection.id,
 		normalizedFilter,
+		normalizedConsents,
 	);
 
 	useEffect(() => {
@@ -1344,7 +1356,7 @@ const FullscreenTransformation = ({
 
 	useEffect(() => {
 		setEvents([]);
-	}, [pipeline.filter]);
+	}, [pipeline.filter, pipeline.requiredConsents]);
 
 	useEffect(() => {
 		setShowOnlyInSelected(false);
@@ -2305,7 +2317,7 @@ const FullscreenTransformation = ({
 		);
 	}
 
-	const [sourceHeader, destinationHeader] = transformationHeaders(connection, pipeline, 'full');
+	const [sourceHeader, destinationHeader] = pipelineObjectLabels(connection, pipeline, 'full');
 	const outputSchemaTabLabel = isAppEventsExport ? 'Parameters' : 'Schema';
 	return (
 		<div
@@ -3417,7 +3429,9 @@ const TransformationProperty = ({
 										</span>
 									</span>
 									<span className='fullscreen-transformation__property-type'>
-										<span>{krenalisTypeName}</span>
+										<span className='fullscreen-transformation__property-storage-type'>
+											{krenalisTypeName}
+										</span>
 										{side === 'input' && property.readOptional && <span>- optional</span>}
 										{isRequired && (
 											<span
@@ -3550,63 +3564,4 @@ function removeQuotes(v: any | null) {
 	}
 	return v.replace(/^"|"$/g, '');
 }
-type TransformationHeaderMode = 'compact' | 'full';
-
-const TRANSFORMATION_HEADERS: Record<TransformationHeaderMode, Record<string, [string, string]>> = {
-	compact: {
-		'source:sdk': ['Event schema', 'Profile schema'],
-		'source:webhook': ['Event schema', 'Profile schema'],
-		'source:database': ['Database user schema', 'Profile schema'],
-		'source:file': ['File user schema', 'Profile schema'],
-		'source:application': ['Application user schema', 'Profile schema'],
-		'destination:event': ['Event schema', 'Sending event parameters'],
-		'destination:database': ['Profile schema', 'Database table schema'],
-		'destination:application': ['Profile schema', 'Application user schema'],
-	},
-	full: {
-		'source:sdk': ['Event', 'Profile'],
-		'source:webhook': ['Event', 'Profile'],
-		'source:database': ['Database user', 'Profile'],
-		'source:file': ['File user', 'Profile'],
-		'source:application': ['Application user', 'Profile'],
-		'destination:event': ['Event', 'Sending event'],
-		'destination:database': ['Profile', 'Database table'],
-		'destination:application': ['Profile', 'Application user'],
-	},
-};
-
-// transformationHeaders reports the input and output headers for a transformation.
-// The returned values are fully formatted for the requested mode.
-function transformationHeaders(
-	connection: TransformedConnection,
-	pipeline: TransformedPipeline,
-	mode: TransformationHeaderMode = 'compact',
-): [string, string] {
-	let scenario = 'source:app';
-
-	if (connection.isSource) {
-		if (connection.isSDK) {
-			scenario = 'source:sdk';
-		} else if (connection.isWebhook) {
-			scenario = 'source:webhook';
-		} else if (connection.isDatabase) {
-			scenario = 'source:database';
-		} else if (connection.isFileStorage || connection.isFile) {
-			scenario = 'source:file';
-		} else {
-			scenario = 'source:application';
-		}
-	} else {
-		if (pipeline.target === 'Event') {
-			scenario = 'destination:event';
-		} else if (connection.isDatabase) {
-			scenario = 'destination:database';
-		} else {
-			scenario = 'destination:application';
-		}
-	}
-
-	return TRANSFORMATION_HEADERS[mode][scenario];
-}
-
 export default PipelineTransformation;

@@ -459,6 +459,17 @@ func loadConfig(ctx context.Context, source string) (*Config, error) {
 		}
 		settings.NATS.NKey = ed25519.NewKeyFromSeed(seed)
 	}
+	settings.NATS.AckWait = natsopts.DefaultAckWait
+	if wait := conf.Get("KRENALIS_NATS_ACK_WAIT"); wait != "" {
+		ackWait, err := time.ParseDuration(wait)
+		if err != nil {
+			return nil, fmt.Errorf("invalid duration value specified for KRENALIS_NATS_ACK_WAIT: %s", err)
+		}
+		if ackWait < natsopts.MinAckWait {
+			return nil, fmt.Errorf("KRENALIS_NATS_ACK_WAIT must be at least %s", natsopts.MinAckWait)
+		}
+		settings.NATS.AckWait = ackWait
+	}
 	switch storage := conf.Get("KRENALIS_NATS_STORAGE"); strings.ToLower(storage) {
 	case "", "file":
 		settings.NATS.Storage = natsopts.FileStorage

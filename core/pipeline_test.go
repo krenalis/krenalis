@@ -84,3 +84,35 @@ func TestTargetUnmarshalJSONRejectsInvalidValues(t *testing.T) {
 		})
 	}
 }
+
+// TestTransformationMarshalJSON verifies that nil and empty Mapping values
+// are encoded differently.
+func TestTransformationMarshalJSON(t *testing.T) {
+	tests := []struct {
+		name           string
+		transformation Transformation
+		want           string
+	}{
+		{
+			name:           "nil mapping",
+			transformation: Transformation{},
+			want:           `{"mapping":null,"function":null}`,
+		},
+		{
+			name:           "empty mapping",
+			transformation: Transformation{Mapping: map[string]string{}},
+			want:           `{"mapping":{},"function":null}`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := json.Marshal(test.transformation)
+			if err != nil {
+				t.Fatalf("json.Marshal() error = %v", err)
+			}
+			if string(got) != test.want {
+				t.Fatalf("json.Marshal() = %q, want %q", got, test.want)
+			}
+		})
+	}
+}

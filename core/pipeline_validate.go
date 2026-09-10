@@ -164,6 +164,27 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			usedInPaths = properties
 		}
 	}
+	// Validate the required consents.
+	requiredConsentsAllowed := dispatchEventsToAplications || importEventsIntoWarehouse || importUserIdentitiesFromEvents
+	if len(pipeline.RequiredConsents.Purposes) > 0 {
+		if !requiredConsentsAllowed {
+			return errors.BadRequest("required consents are not allowed")
+		}
+		if len(pipeline.RequiredConsents.Purposes) > MaxRequiredConsentPurposes {
+			return errors.BadRequest("required consent purposes must be at most %d", MaxRequiredConsentPurposes)
+		}
+		for i, code := range pipeline.RequiredConsents.Purposes {
+			if err := validateConsentPurposeCode(code); err != nil {
+				return errors.BadRequest("%s", err)
+			}
+			if slices.Contains(pipeline.RequiredConsents.Purposes[i+1:], code) {
+				return errors.BadRequest("required consent purpose %q is duplicated", code)
+			}
+		}
+		if op := pipeline.RequiredConsents.Operator; op != PurposesAnd && op != PurposesOr {
+			return errors.BadRequest(`required consents operator %q is not valid. It must be "and" or "or"`, op)
+		}
+	}
 	// Validate the transformation.
 	var usedOutPaths []string
 	var mappingInPaths int

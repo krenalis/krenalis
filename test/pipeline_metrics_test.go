@@ -152,7 +152,7 @@ func assertPipelineMetricsRange(t *testing.T, res pipelineMetricsResponse) {
 }
 
 // assertMetricSeriesBuckets verifies that a metric series includes the expected
-// number of passed and failed buckets, each with the six pipeline step
+// number of passed and failed buckets, each with the seven pipeline step
 // counters.
 func assertMetricSeriesBuckets(t *testing.T, series map[string]json.Value, expectedBuckets int) {
 	t.Helper()
@@ -176,8 +176,8 @@ func assertMetricSeriesBuckets(t *testing.T, series map[string]json.Value, expec
 				}
 				counterCount++
 			}
-			if counterCount != 6 {
-				t.Fatalf("expected metric series %q bucket %d to contain six counters, got %d", key, bucketIndex, counterCount)
+			if counterCount != 7 {
+				t.Fatalf("expected metric series %q bucket %d to contain seven counters, got %d", key, bucketIndex, counterCount)
 			}
 			bucketCount++
 		}

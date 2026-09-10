@@ -25,6 +25,14 @@ const (
 	pipelinesMetricsTimeslotIndex                                      = "pipelines_metrics_timeslot_idx"
 )
 
+const consentPurposesTable = `
+	CREATE TABLE IF NOT EXISTS consent_purposes (
+		workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+		code varchar(100) NOT NULL CHECK (code ~ '^[A-Za-z_][0-9A-Za-z_]{0,99}$'),
+		name varchar(100) NOT NULL,
+		PRIMARY KEY (workspace, code)
+	)`
+
 const organizationConnectorReferencesView = `
 	CREATE OR REPLACE VIEW organization_connector_references AS
 	SELECT
@@ -126,18 +134,80 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			return err
 		}
 		queries := []string{
+			`ALTER TABLE metadata ADD COLUMN IF NOT EXISTS requests_rate_per_minute integer NOT NULL DEFAULT 100 CHECK (requests_rate_per_minute BETWEEN 60 AND 20000)`,
+			`ALTER TABLE metadata ADD COLUMN IF NOT EXISTS requests_max_capacity integer NOT NULL DEFAULT 100 CHECK (requests_max_capacity BETWEEN 1 AND 10000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS members_limit integer NOT NULL DEFAULT 10000 CHECK (members_limit BETWEEN 1 AND 10000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS access_keys_limit integer NOT NULL DEFAULT 1000 CHECK (access_keys_limit BETWEEN 0 AND 1000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspaces_limit integer NOT NULL DEFAULT 1000 CHECK (workspaces_limit BETWEEN 0 AND 1000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS connectors_limit integer NOT NULL DEFAULT 1000 CHECK (connectors_limit BETWEEN 0 AND 1000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS connections_limit integer NOT NULL DEFAULT 10000 CHECK (connections_limit BETWEEN 0 AND 10000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS pipelines_limit integer NOT NULL DEFAULT 10000 CHECK (pipelines_limit BETWEEN 0 AND 10000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS organization_requests_rate_per_minute integer NOT NULL DEFAULT 1000 CHECK (organization_requests_rate_per_minute BETWEEN 60 AND 20000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS organization_requests_max_capacity integer NOT NULL DEFAULT 1000 CHECK (organization_requests_max_capacity BETWEEN 1 AND 10000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspace_requests_rate_per_minute integer NOT NULL DEFAULT 1000 CHECK (workspace_requests_rate_per_minute BETWEEN 60 AND 20000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspace_requests_max_capacity integer NOT NULL DEFAULT 1000 CHECK (workspace_requests_max_capacity BETWEEN 1 AND 10000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspace_events_rate_per_minute integer NOT NULL DEFAULT 1000 CHECK (workspace_events_rate_per_minute BETWEEN 1000 AND 1000000)`,
+			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspace_events_max_capacity integer NOT NULL DEFAULT 20000 CHECK (workspace_events_max_capacity BETWEEN 20000 AND 100000)`,
 			`ALTER TABLE organizations ALTER COLUMN members_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN access_keys_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN workspaces_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN connectors_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN connections_limit DROP DEFAULT`,
 			`ALTER TABLE organizations ALTER COLUMN pipelines_limit DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN organization_requests_rate_per_minute DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN organization_requests_max_capacity DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN workspace_requests_rate_per_minute DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN workspace_requests_max_capacity DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN workspace_events_rate_per_minute DROP DEFAULT`,
+			`ALTER TABLE organizations ALTER COLUMN workspace_events_max_capacity DROP DEFAULT`,
+			`ALTER TABLE metadata ALTER COLUMN requests_rate_per_minute DROP DEFAULT`,
+			`ALTER TABLE metadata ALTER COLUMN requests_max_capacity DROP DEFAULT`,
+			`CREATE TABLE IF NOT EXISTS rate_limit_buckets (
+				subject_kind varchar(12) NOT NULL CHECK (subject_kind IN ('platform', 'organization', 'workspace', 'events')),
+				subject_id varchar(12) NOT NULL CHECK (
+					(subject_kind = 'platform' AND subject_id = 'platform')
+					OR (subject_kind <> 'platform' AND subject_id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$')
+				),
+				organization varchar(12) REFERENCES organizations ON DELETE CASCADE,
+				workspace varchar(12) REFERENCES workspaces ON DELETE CASCADE,
+				available_units integer NOT NULL,
+				capacity_units integer NOT NULL,
+				rate_per_minute integer NOT NULL,
+				last_refill_at timestamptz NOT NULL,
+				refill_remainder integer NOT NULL,
+				PRIMARY KEY (subject_kind, subject_id),
+				CHECK (available_units >= 0),
+				CHECK (
+					(subject_kind IN ('platform', 'organization', 'workspace') AND capacity_units BETWEEN 1 AND 10000)
+					OR (subject_kind = 'events' AND capacity_units BETWEEN 20000 AND 100000)
+				),
+				CHECK (available_units <= capacity_units),
+				CHECK (
+					(subject_kind IN ('platform', 'organization', 'workspace') AND rate_per_minute BETWEEN 60 AND 20000)
+					OR (subject_kind = 'events' AND rate_per_minute BETWEEN 1000 AND 1000000)
+				),
+				CHECK (refill_remainder >= 0 AND refill_remainder < 60000000),
+				CHECK (
+					(
+						subject_kind = 'platform'
+						AND subject_id = 'platform'
+						AND organization IS NULL
+						AND workspace IS NULL
+					)
+					OR
+					(
+						subject_kind = 'organization'
+						AND subject_id = organization
+						AND workspace IS NULL
+					)
+					OR
+					(
+						subject_kind IN ('workspace', 'events')
+						AND subject_id = workspace
+						AND organization IS NULL
+					)
+				)
+			)`,
 			`CREATE INDEX IF NOT EXISTS ` + workspacesOrganizationIndex + ` ON workspaces (organization)`,
 			`CREATE INDEX IF NOT EXISTS ` + connectionsWorkspaceIndex + ` ON connections (workspace)`,
 			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS organization varchar(12) REFERENCES organizations ON DELETE CASCADE`,
@@ -245,14 +315,83 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsWorkspaceTimeslotIndex + ` ON pipelines_metrics (workspace, timeslot)`,
 			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsConnectionTimeslotIndex + ` ON pipelines_metrics (connection, timeslot)`,
 			`CREATE INDEX IF NOT EXISTS ` + pipelinesMetricsTimeslotIndex + ` ON pipelines_metrics (timeslot)`,
+			`DO $$
+				BEGIN
+					IF NOT EXISTS (
+						SELECT FROM pg_attribute
+						WHERE attrelid = 'discontinued_functions'::regclass
+							AND attname = 'organization'
+							AND NOT attisdropped
+					) THEN
+						ALTER TABLE discontinued_functions
+							ADD COLUMN organization varchar(12) REFERENCES organizations ON DELETE SET NULL;
+
+						ALTER TABLE discontinued_functions ADD COLUMN discontinued_at_reordered timestamp(0);
+						UPDATE discontinued_functions SET discontinued_at_reordered = discontinued_at;
+						ALTER TABLE discontinued_functions DROP COLUMN discontinued_at;
+						ALTER TABLE discontinued_functions
+							RENAME COLUMN discontinued_at_reordered TO discontinued_at;
+						ALTER TABLE discontinued_functions ALTER COLUMN discontinued_at SET NOT NULL;
+					END IF;
+				END $$`,
 			organizationConnectorReferencesView,
 			nodeIDUpgrade,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'InviteMember' AFTER 'EndPipelineRun'`,
+			consentPurposesTable,
+			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'AddConsentPurpose'`,
+			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'DeleteConsentPurpose'`,
+			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateConsentPurpose'`,
+			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents varchar(100)[] NOT NULL DEFAULT '{}'`,
+			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents_operator varchar(3) NOT NULL DEFAULT 'and' CHECK (required_consents_operator IN ('and', 'or'))`,
+			`UPDATE pipelines
+				SET filter = regexp_replace(
+					(
+						CASE
+							WHEN filter ? 'logical'
+								AND filter ? 'conditions'
+								AND NOT (filter ? 'operator')
+								AND NOT (filter ? 'rules')
+							THEN jsonb_build_object(
+								'operator', filter->'logical',
+								'rules', (
+									SELECT COALESCE(
+										jsonb_agg(rule ORDER BY position),
+										'[]'::jsonb
+									)
+									FROM jsonb_array_elements(filter->'conditions') WITH ORDINALITY AS rules(rule, position)
+								)
+							)
+							ELSE filter
+						END
+					)::text,
+					'"operator"[[:space:]]*:[[:space:]]*"OpIsNotBetween"',
+					'"operator":"IsNotBetween"',
+					'g'
+				)::jsonb
+				WHERE filter IS NOT NULL
+					AND (
+						(
+							filter ? 'logical'
+							AND filter ? 'conditions'
+							AND NOT (filter ? 'operator')
+							AND NOT (filter ? 'rules')
+						)
+						OR filter::text ~ '"operator"[[:space:]]*:[[:space:]]*"OpIsNotBetween"'
+					)`,
+			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS passed_6 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS failed_6 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_metrics ALTER COLUMN passed_6 DROP DEFAULT`,
+			`ALTER TABLE pipelines_metrics ALTER COLUMN failed_6 DROP DEFAULT`,
+			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS passed_6 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS failed_6 integer NOT NULL DEFAULT 0`,
 		}
 		for _, query := range queries {
 			if _, err := tx.Exec(ctx, query); err != nil {
 				return fmt.Errorf("cannot execute upgrade query %q: %s", query, err)
 			}
+		}
+		if _, err := tx.Exec(ctx, createRateLimiterLeasesFunction); err != nil {
+			return fmt.Errorf("cannot create rate-limit lease function: %s", err)
 		}
 		return nil
 	})

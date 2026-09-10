@@ -12,6 +12,8 @@ import (
 	"github.com/krenalis/krenalis/test/krenalistester"
 )
 
+const organizationRequestCannotSpecifyWorkspace = "organization request cannot specify a workspace"
+
 // TestWorkspaceScopedAPIKeyCannotManageOrganizationWorkspaces checks that a
 // workspace-scoped API key cannot access organization-wide workspace endpoints.
 func TestWorkspaceScopedAPIKeyCannotManageOrganizationWorkspaces(t *testing.T) {
@@ -32,7 +34,7 @@ func TestWorkspaceScopedAPIKeyCannotManageOrganizationWorkspaces(t *testing.T) {
 	t.Run("list workspaces", func(t *testing.T) {
 		var response any
 		err := k.TryCall("GET", "/v1/workspaces", headers, nil, &response)
-		assertWorkspaceScopedKeyRejected(t, err, "workspaces cannot be listed with a workspace restricted API key")
+		assertWorkspaceScopedKeyRejected(t, err)
 	})
 
 	t.Run("create workspace", func(t *testing.T) {
@@ -40,7 +42,7 @@ func TestWorkspaceScopedAPIKeyCannotManageOrganizationWorkspaces(t *testing.T) {
 			"name": "attacker-workspace",
 		}
 		err := k.TryCall("POST", "/v1/workspaces", headers, body, nil)
-		assertWorkspaceScopedKeyRejected(t, err, "workspaces cannot be created with a workspace restricted API key")
+		assertWorkspaceScopedKeyRejected(t, err)
 	})
 
 	t.Run("test workspace creation", func(t *testing.T) {
@@ -48,11 +50,11 @@ func TestWorkspaceScopedAPIKeyCannotManageOrganizationWorkspaces(t *testing.T) {
 			"name": "attacker-workspace",
 		}
 		err := k.TryCall("POST", "/v1/workspaces/test", headers, body, nil)
-		assertWorkspaceScopedKeyRejected(t, err, "workspace creation cannot be tested with a workspace restricted API key")
+		assertWorkspaceScopedKeyRejected(t, err)
 	})
 }
 
-func assertWorkspaceScopedKeyRejected(t *testing.T, err error, wantMessage string) {
+func assertWorkspaceScopedKeyRejected(t *testing.T, err error) {
 	t.Helper()
 	if err == nil {
 		t.Fatal("expected request to be rejected, got nil")
@@ -64,7 +66,7 @@ func assertWorkspaceScopedKeyRejected(t *testing.T, err error, wantMessage strin
 	if statusErr.Response.Code != http.StatusUnauthorized {
 		t.Fatalf("expected HTTP status %d, got %d: %s", http.StatusUnauthorized, statusErr.Response.Code, statusErr.Response.Text)
 	}
-	if !strings.Contains(statusErr.Response.Text, wantMessage) {
-		t.Fatalf("expected response to contain %q, got %q", wantMessage, statusErr.Response.Text)
+	if !strings.Contains(statusErr.Response.Text, organizationRequestCannotSpecifyWorkspace) {
+		t.Fatalf("expected response to contain %q, got %q", organizationRequestCannotSpecifyWorkspace, statusErr.Response.Text)
 	}
 }

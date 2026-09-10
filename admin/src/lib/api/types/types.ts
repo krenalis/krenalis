@@ -30,6 +30,7 @@ interface Property {
 	updateRequired: boolean;
 	readOptional: boolean;
 	nullable: boolean;
+	displayName?: string;
 	description: string;
 }
 

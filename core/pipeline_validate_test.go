@@ -78,9 +78,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
@@ -239,14 +239,14 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
 						},
-						{
+						&FilterCondition{
 							Property: "id",
 							Operator: OpIsNot,
 							Values:   []string{"1234567890"},
@@ -411,9 +411,9 @@ func Test_validatePipeline(t *testing.T) {
 			name: "GOOD: Source/SDK/Event - with filters",
 			pipeline: PipelineToSet{
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "anonymousId",
 							Operator: OpIsNot,
 							Values:   []string{"abc"},
@@ -425,6 +425,54 @@ func Test_validatePipeline(t *testing.T) {
 			target:                  state.TargetEvent,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.SDK,
+		},
+		{
+			name: "GOOD: Source/SDK/Event - with required consents",
+			pipeline: PipelineToSet{
+				Name: "Import events into the data warehouse",
+				RequiredConsents: RequiredConsents{
+					Operator: PurposesAnd,
+					Purposes: []string{"marketing", "analytics"},
+				},
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.SDK,
+		},
+		{
+			name: "GOOD: Source/SDK/User - with required consents",
+			pipeline: PipelineToSet{
+				Name:     "Import users",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+				RequiredConsents: RequiredConsents{
+					Operator: PurposesAnd,
+					Purposes: []string{"marketing"},
+				},
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.SDK,
+		},
+		{
+			name: "GOOD: Source/Webhook/Event - with required consents",
+			pipeline: PipelineToSet{
+				Name: "Import events into the data warehouse",
+				RequiredConsents: RequiredConsents{
+					Operator: PurposesOr,
+					Purposes: []string{"marketing"},
+				},
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.Webhook,
 		},
 		{
 			name: "GOOD: Source/Webhook/User - with mapping",
@@ -550,9 +598,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
@@ -596,6 +644,108 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "traits.email",
 					},
 				},
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+		},
+		{
+			name: "GOOD: Destination/Application/Event - with required consents",
+			pipeline: PipelineToSet{
+				Name:     "Dispatch events to application",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+				RequiredConsents: RequiredConsents{
+					Operator: PurposesAnd,
+					Purposes: []string{"marketing", "analytics"},
+				},
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+		},
+		{
+			name: "BAD: Destination/Application/Event - duplicated required consent purpose",
+			pipeline: PipelineToSet{
+				Name:     "Dispatch events to application",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+				RequiredConsents: RequiredConsents{Purposes: []string{"marketing", "marketing"}},
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+			err:                     `required consent purpose "marketing" is duplicated`,
+		},
+		{
+			name: "BAD: Source/Application/User - required consents are not allowed",
+			pipeline: PipelineToSet{
+				Name: "Import users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.String()},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String(), ReadOptional: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				RequiredConsents: RequiredConsents{Purposes: []string{"marketing"}},
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Source,
+			connectionConnectorType: state.Application,
+			err:                     "required consents are not allowed",
+		},
+		{
+			name: "GOOD: Destination/Application/Event - missing required consents operator defaults to and",
+			pipeline: PipelineToSet{
+				Name:     "Dispatch events to application",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+				RequiredConsents: RequiredConsents{Purposes: []string{"marketing"}},
+			},
+			target:                  state.TargetEvent,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+		},
+		{
+			name: "GOOD: Destination/Application/Event - required consents operator without required consent purposes",
+			pipeline: PipelineToSet{
+				Name:     "Dispatch events to application",
+				InSchema: types.Type{},
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "traits.email",
+					},
+				},
+				RequiredConsents: RequiredConsents{Operator: PurposesAnd},
 			},
 			target:                  state.TargetEvent,
 			connectionRole:          state.Destination,
@@ -778,9 +928,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{Property: "first_name", Operator: OpIs, Values: []string{"Bob"}},
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{Property: "first_name", Operator: OpIs, Values: []string{"Bob"}},
 					},
 				},
 				InSchema: types.Object([]types.Property{
@@ -2515,9 +2665,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "_id",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
@@ -2553,9 +2703,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "_id",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
@@ -2943,14 +3093,14 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
 						},
-						{
+						&FilterCondition{
 							Property: "id",
 							Operator: OpIsNot,
 							Values:   []string{"1234567890"},
@@ -2983,9 +3133,9 @@ func Test_validatePipeline(t *testing.T) {
 			name: "BAD: Source/SDK/Event - cannot provide input schema",
 			pipeline: PipelineToSet{
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "anonymousId",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
@@ -3123,9 +3273,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
@@ -3232,9 +3382,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
@@ -3516,20 +3666,20 @@ type testProvider struct{}
 
 var _ transformers.FunctionProvider = testProvider{}
 
-func (testProvider) Call(ctx context.Context, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
+func (testProvider) Call(ctx context.Context, organization, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
 	panic("not implemented")
 }
 func (testProvider) Close(ctx context.Context) error { panic("not implemented") }
-func (testProvider) Create(ctx context.Context, name string, language state.Language, source string) (string, string, error) {
+func (testProvider) Create(ctx context.Context, organization, name string, language state.Language, source string) (string, string, error) {
 	panic("not implemented")
 }
-func (testProvider) Delete(ctx context.Context, id string) error {
+func (testProvider) Delete(ctx context.Context, organization, id string) error {
 	panic("not implemented")
 }
 func (testProvider) SupportLanguage(language state.Language) bool {
 	return language == state.JavaScript || language == state.Python
 }
-func (testProvider) Update(ctx context.Context, id, source string) (string, error) {
+func (testProvider) Update(ctx context.Context, organization, id, source string) (string, error) {
 	panic("not implemented")
 }
 

@@ -84,9 +84,12 @@ func (d *destinations) QueueEvent(connection string, event streams.Event) {
 	d.mu.Lock()
 	pipelines := d.pipelines[connection]
 	d.mu.Unlock()
-	for _, id := range event.Destinations {
-		if p, _ := pipelines.find(id); p != nil {
-			p.QueueEvent(event)
+	for _, destination := range event.Destinations {
+		pipeline, _ := pipelines.find(destination.ID)
+		if pipeline == nil {
+			destination.Ack.Acknowledge()
+		} else {
+			pipeline.QueueEvent(event.Attributes, destination.Ack)
 		}
 	}
 }
@@ -394,7 +397,7 @@ func (d *destinations) onUpdatePipeline(n state.UpdatePipeline) {
 		if t.Mapping == nil && t.Function == nil {
 			pipeline.transformer = nil
 		} else {
-			pipeline.transformer, _ = transformers.New(p, d.provider, nil)
+			pipeline.transformer, _ = transformers.New(p.Organization().ID, p, d.provider, nil)
 		}
 	}
 	pipelines = pipelines.replace(index, &pipeline)

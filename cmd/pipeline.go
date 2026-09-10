@@ -141,7 +141,7 @@ func (pipeline pipeline) Update(_ http.ResponseWriter, r *http.Request) (any, er
 // id authenticates the request and returns the pipeline identified by the 'id'
 // path parameter.
 func (pipeline pipeline) id(r *http.Request) (*core.Pipeline, error) {
-	ws, err := workspace{pipeline.apisServer}.workspace(r)
+	ws, err := pipeline.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}

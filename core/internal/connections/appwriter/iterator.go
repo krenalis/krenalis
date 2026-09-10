@@ -15,6 +15,7 @@ import (
 // sequence of records.
 type iterator struct {
 	writer    *Writer
+	op        op
 	index     int // read index in writer.records, set by the writer.
 	consumed  bool
 	iterating bool
@@ -23,7 +24,7 @@ type iterator struct {
 }
 
 func newIterator(w *Writer) *iterator {
-	it := iterator{writer: w}
+	it := iterator{writer: w, op: opAll}
 	return &it
 }
 
@@ -32,7 +33,7 @@ func (it *iterator) All() iter.Seq[connectors.Record] {
 		panic(it.writer.connector + " connector: Upsert method called Records.All after the records were consumed")
 	}
 	it.consumed = true
-	return it.seq(opAll)
+	return it.seq()
 }
 
 func (it *iterator) Discard(err error) {
@@ -78,7 +79,7 @@ func (it *iterator) Peek() (connectors.Record, bool) {
 	if trace {
 		fmt.Printf("iterator.Peek: iterator %p peek a record\n", it)
 	}
-	record, ok := it.writer.read(opAll, false)
+	record, ok := it.writer.read(it.op, false)
 	if !ok {
 		return connectors.Record{}, false
 	}
@@ -107,25 +108,24 @@ func (it *iterator) Same() iter.Seq[connectors.Record] {
 		panic(it.writer.connector + " connector: Upsert method called Records.Some after the records were consumed")
 	}
 	it.consumed = true
-	op := opUpdate
+	it.op = opUpdate
 	if record, _ := it.writer.read(opAll, false); record.ID == "" {
-		op = opCreate
+		it.op = opCreate
 	}
-	return it.seq(op)
+	return it.seq()
 }
 
-// seq returns a sequence of records. If op is not opAll, it restricts the
-// sequence to records of type creation (opCreate) or update (opUpdate).
-func (it *iterator) seq(op op) iter.Seq[connectors.Record] {
+// seq returns a sequence of records.
+func (it *iterator) seq() iter.Seq[connectors.Record] {
 	return func(yield func(record connectors.Record) bool) {
 		if trace {
-			fmt.Printf("iterator.seq: iterator %p starting to read %s records\n", it, op)
+			fmt.Printf("iterator.seq: iterator %p starting to read %s records\n", it, it.op)
 		}
 		it.iterating = true
 		for {
 			it.postponed = false
 			it.discarded = false
-			record, ok := it.writer.read(op, true)
+			record, ok := it.writer.read(it.op, true)
 			if !ok {
 				if trace {
 					fmt.Printf("iterator.seq: iterator %p finished reading the records; no more are available\n", it)

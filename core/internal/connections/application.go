@@ -147,7 +147,7 @@ func (app *Application) PreviewSendEvent(ctx context.Context, event connectors.E
 	if app.err != nil {
 		return nil, app.err
 	}
-	eventTypeSchema, err := app.inner.(connectors.EventSender).EventTypeSchema(ctx, event.Type.ID)
+	eventTypeSchema, err := app.eventTypeSchema(ctx, event.Type.ID)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -215,7 +215,7 @@ func (app *Application) SchemaAsRole(ctx context.Context, role state.Role, targe
 		if role != state.Destination {
 			panic("invalid role")
 		}
-		schema, err := app.inner.(connectors.EventSender).EventTypeSchema(ctx, eventType)
+		schema, err := app.eventTypeSchema(ctx, eventType)
 		if err != nil {
 			return types.Type{}, connectorError(err)
 		}
@@ -345,6 +345,19 @@ func (app *Application) Writer(ctx context.Context, outSchema types.Type, export
 	return writer, nil
 }
 
+// eventTypeSchema returns the event type schema provided by the connector and
+// rejects generic schemas.
+func (app *Application) eventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
+	schema, err := app.inner.(connectors.EventSender).EventTypeSchema(ctx, eventType)
+	if err != nil {
+		return types.Type{}, err
+	}
+	if schema.Generic() {
+		return types.Type{}, fmt.Errorf("connector %s returned an invalid event schema", app.connector)
+	}
+	return schema, nil
+}
+
 // userSchema returns the user schema with the provided role.
 // If the connector returns an error, it returns an *UnavailableError error.
 // It panics if role is not Source or Destination.
@@ -367,8 +380,9 @@ func (app *Application) userSchema(ctx context.Context, role state.Role) (types.
 	if err != nil {
 		return types.Type{}, connectorError(fmt.Errorf("cannot get user schema: %s", err))
 	}
-	if !schema.Valid() {
-		return types.Type{}, connectorError(fmt.Errorf("connector %s returned an invalid %s schema", app.connector, strings.ToLower(role.String())))
+	if !schema.Valid() || schema.Generic() {
+		return types.Type{}, connectorError(fmt.Errorf(
+			"connector %s returned an invalid %s schema", app.connector, strings.ToLower(role.String())))
 	}
 	schema = types.AsRole(schema, types.Role(role))
 	app.users.schemas[role-1] = schema
@@ -401,6 +415,7 @@ func (iter *singleEventIterator) All() iter.Seq[*connectors.Event] {
 	return func(yield func(event *connectors.Event) bool) {
 		iter.iterating = true
 		yield(iter.event)
+		iter.iterating = false
 	}
 }
 
@@ -466,6 +481,7 @@ func (iter *singleEventIterator) SameUser() iter.Seq[*connectors.Event] {
 	return func(yield func(event *connectors.Event) bool) {
 		iter.iterating = true
 		yield(iter.event)
+		iter.iterating = false
 	}
 }
 
@@ -541,19 +557,20 @@ type appRecords struct {
 	updatedAt   time.Time
 	connector   string
 	inner       any
-	last        bool
 	err         error
 	closed      bool
 }
 
+// All returns an iterator over the application records.
 func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 
 	return func(yield func(Record) bool) {
 
 		if r.closed {
-			r.err = errors.New("connectors: For called on a closed Records")
+			r.err = errors.New("connectors: All called on a closed Records")
 			return
 		}
+		defer r.Close()
 
 		var cursor string
 
@@ -585,9 +602,6 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 				return
 			}
 
-			// previous is the previous read record.
-			var previous Record
-
 			for _, user := range users {
 
 				if err := ctx.Err(); err != nil {
@@ -606,18 +620,21 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 				processedIDs[user.ID] = struct{}{}
 
 				record := Record{
-					ID:        user.ID,
-					UpdatedAt: user.UpdatedAt.UTC().Truncate(time.Microsecond),
+					ID:  user.ID,
+					Err: user.Err,
 					// Associations:   user.Associations, TODO(marco): Implement groups
 				}
 
-				// Validate the update time.
-				if err = validateUpdatedAt(record.UpdatedAt); err != nil {
-					record.Err = errors.New("record's update time is before 1900 or in the future")
-				}
-				if !r.updatedAt.IsZero() && record.UpdatedAt.Before(r.updatedAt) {
-					r.err = fmt.Errorf("%s returned a record whose update time is earlier than the required minimum", r.connector)
-					return
+				if record.Err == nil {
+					record.UpdatedAt = user.UpdatedAt.UTC().Truncate(time.Microsecond)
+					// Validate the update time.
+					if err = validateUpdatedAt(record.UpdatedAt); err != nil {
+						record.Err = errors.New("record's update time is before 1900 or in the future")
+					}
+					if !r.updatedAt.IsZero() && record.UpdatedAt.Before(r.updatedAt) {
+						r.err = fmt.Errorf("%s returned a record whose update time is earlier than the required minimum", r.connector)
+						return
+					}
 				}
 
 				if record.Err == nil {
@@ -646,20 +663,10 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 					}
 				}
 
-				if previous.ID != "" {
-					if !yield(previous) {
-						return
-					}
-				}
-				previous = record
-
-			}
-
-			if previous.ID != "" {
-				r.last = true
-				if !yield(previous) {
+				if !yield(record) {
 					return
 				}
+
 			}
 
 			if eof {
@@ -679,10 +686,6 @@ func (r *appRecords) Close() error {
 
 func (r *appRecords) Err() error {
 	return r.err
-}
-
-func (r *appRecords) Last() bool {
-	return r.last
 }
 
 type schema struct {

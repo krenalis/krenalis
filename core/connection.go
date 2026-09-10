@@ -275,9 +275,7 @@ func (this *Connection) ApplicationUsers(ctx context.Context, schema types.Type,
 			return nil, "", errors.Unavailable("%s has returned an invalid user; %s", this.application().Connector(), user.Err)
 		}
 		users = append(users, user.Attributes)
-		if records.Last() {
-			last = user
-		}
+		last = user
 		if len(users) == 100 {
 			break
 		}
@@ -327,6 +325,11 @@ func (this *Connection) ApplicationUsers(ctx context.Context, schema types.Type,
 func (this *Connection) CreatePipeline(ctx context.Context, target Target, eventType string, pipeline PipelineToSet) (string, error) {
 
 	this.core.mustBeOpen()
+
+	// Normalize the required consents.
+	if pipeline.RequiredConsents.Purposes == nil {
+		pipeline.RequiredConsents.Purposes = []string{}
+	}
 
 	// Retrieve the format, if specified in the pipeline.
 	var format *state.Connector
@@ -421,6 +424,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		EventType:          eventType,
 		InSchema:           inSchema,
 		OutSchema:          pipeline.OutSchema,
+		RequiredConsents:   toStateRequiredConsents(pipeline.RequiredConsents),
 		Transformation:     toStateTransformation(pipeline.Transformation, inSchema, pipeline.OutSchema),
 		Query:              pipeline.Query,
 		Format:             pipeline.Format,
@@ -478,7 +482,8 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	var function state.TransformationFunction
 	if fn := n.Transformation.Function; fn != nil {
 		name := transformationFunctionName(n.ID)
-		fn.ID, fn.Version, err = this.core.functionProvider.Create(ctx, name, fn.Language, fn.Source)
+		organization := this.connection.Organization().ID
+		fn.ID, fn.Version, err = this.core.functionProvider.Create(ctx, organization, name, fn.Language, fn.Source)
 		if err != nil {
 			return "", err
 		}
@@ -488,7 +493,8 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	// Format settings.
 	if format != nil && pipeline.FormatSettings != nil {
 		conf := &connections.ConnectorConfig{
-			Role: this.connection.Role,
+			Role:         this.connection.Role,
+			Organization: this.connection.Organization().ID,
 		}
 		n.FormatSettings, err = this.core.connections.UpdatedSettings(ctx, format, conf, pipeline.FormatSettings)
 		if err != nil {
@@ -543,20 +549,21 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 				}
 			}
 			query := "INSERT INTO pipelines (id, connection, target, event_type, name, enabled,\n" +
-				"schedule_start, schedule_period, in_schema, out_schema, filter, transformation_mapping,\n" +
-				"transformation_id, transformation_version, transformation_language, transformation_source,\n" +
-				"transformation_preserve_json, transformation_in_paths, transformation_out_paths, query, format, path,\n" +
-				"sheet, compression, order_by, format_settings, export_mode, matching_in, matching_out,\n" +
-				"update_on_duplicates, table_name, table_key, user_id_column, updated_at_column,\n" +
-				"updated_at_format, incremental)\n" +
+				"schedule_start, schedule_period, in_schema, out_schema, filter, required_consents,\n" +
+				"required_consents_operator, transformation_mapping, transformation_id, transformation_version,\n" +
+				"transformation_language, transformation_source, transformation_preserve_json, transformation_in_paths,\n" +
+				"transformation_out_paths, query, format, path, sheet, compression, order_by, format_settings,\n" +
+				"export_mode, matching_in, matching_out, update_on_duplicates, table_name, table_key, \n" +
+				"user_id_column, updated_at_column, updated_at_format, incremental)\n" +
 				"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,\n" +
-				"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36)"
+				"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38)"
 			_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 				n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
-				n.Filter, mapping, function.ID, function.Version, function.Language, function.Source, function.PreserveJSON,
-				n.Transformation.InPaths, n.Transformation.OutPaths, n.Query, formatCode, n.Path, n.Sheet,
-				n.Compression, n.OrderBy, n.FormatSettings, n.ExportMode, n.Matching.In, n.Matching.Out, n.UpdateOnDuplicates,
-				n.TableName, n.TableKey, n.UserIDColumn, n.UpdatedAtColumn, n.UpdatedAtFormat, n.Incremental)
+				n.Filter, n.RequiredConsents.Purposes, n.RequiredConsents.Operator, mapping, function.ID, function.Version,
+				function.Language, function.Source, function.PreserveJSON, n.Transformation.InPaths, n.Transformation.OutPaths,
+				n.Query, formatCode, n.Path, n.Sheet, n.Compression, n.OrderBy, n.FormatSettings, n.ExportMode, n.Matching.In,
+				n.Matching.Out, n.UpdateOnDuplicates, n.TableName, n.TableKey, n.UserIDColumn, n.UpdatedAtColumn, n.UpdatedAtFormat,
+				n.Incremental)
 			if err != nil {
 				if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "pipelines_connection_fkey" {
 					err = errors.Unprocessable(ConnectionNotExist, "connection %s does not exist", n.Connection)
@@ -643,9 +650,11 @@ func (this *Connection) Delete(ctx context.Context) error {
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		// Mark the connection's functions as discontinued.
 		now := time.Now().UTC()
-		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
-			"SELECT p.transformation_id, $1\n"+
+		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, organization, discontinued_at)\n"+
+			"SELECT p.transformation_id, w.organization, $1\n"+
 			"FROM pipelines AS p\n"+
+			"INNER JOIN connections AS c ON p.connection = c.id\n"+
+			"INNER JOIN workspaces AS w ON c.workspace = w.id\n"+
 			"WHERE p.transformation_id != '' AND p.connection = $2\n"+
 			"ON CONFLICT (id) DO NOTHING", now, n.ID)
 		if err != nil {
@@ -884,8 +893,8 @@ type PipelineRun struct {
 	Pipeline  string     `json:"pipeline"`
 	StartTime time.Time  `json:"startTime"`
 	EndTime   *time.Time `json:"endTime"`
-	Passed    [6]int     `json:"passed"`
-	Failed    [6]int     `json:"failed"`
+	Passed    [7]int     `json:"passed"`
+	Failed    [7]int     `json:"failed"`
 	Error     string     `json:"error"`
 }
 
@@ -1036,11 +1045,16 @@ func (this *Connection) Identities(ctx context.Context, first, limit int) ([]Ide
 		store:     this.store,
 		workspace: this.connection.Workspace(),
 	}
-	where := &state.Where{Logical: state.OpAnd, Conditions: []state.WhereCondition{{
-		Property: []string{"_connection"},
-		Operator: state.OpIs,
-		Values:   []any{this.connection.ID},
-	}}}
+	where := &state.Where{
+		Operator: state.OpAnd,
+		Rules: []state.WhereRule{
+			&state.WhereCondition{
+				Property: []string{"_connection"},
+				Operator: state.OpIs,
+				Values:   []any{this.connection.ID},
+			},
+		},
+	}
 	identities, total, err := ws.identities(ctx, where, first, limit)
 	if err != nil {
 		return nil, 0, err
@@ -1526,6 +1540,8 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			},
 		}
 
+		organization := this.connection.Organization().ID
+
 		// provider is a temporary function provider.
 		var provider transformers.FunctionProvider
 
@@ -1573,13 +1589,13 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			// the same).
 			pipeline.Transformation.InPaths = pipeline.InSchema.Properties().SortedNames()
 			pipeline.Transformation.OutPaths = pipeline.OutSchema.Properties().SortedNames()
-			provider = newTempTransformerProvider(name, pipeline.Transformation.Function.Language, pipeline.Transformation.Function.Source, this.core.functionProvider)
+			provider = newTempTransformerProvider(organization, name, pipeline.Transformation.Function.Language, pipeline.Transformation.Function.Source, this.core.functionProvider)
 		default:
 			return nil, errors.BadRequest("transformation mapping or function is required")
 		}
 
 		// Transform the attributes.
-		transformer, err := transformers.New(pipeline, provider, nil)
+		transformer, err := transformers.New(organization, pipeline, provider, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -2413,42 +2429,43 @@ type ConnectionToSet struct {
 // call and deletes it after the call returns. Any call to a method that is not
 // CallFunction panics.
 type tempFunctionProvider struct {
-	name     string                        // function name.
-	language state.Language                // language.
-	source   string                        // source code.
-	provider transformers.FunctionProvider // underlying function provider.
+	organization string                        // ID of the organization performing the transformation.
+	name         string                        // function name.
+	language     state.Language                // language.
+	source       string                        // source code.
+	provider     transformers.FunctionProvider // underlying function provider.
 }
 
-func newTempTransformerProvider(name string, language state.Language, source string, provider transformers.FunctionProvider) *tempFunctionProvider {
-	return &tempFunctionProvider{name, language, source, provider}
+func newTempTransformerProvider(organization, name string, language state.Language, source string, provider transformers.FunctionProvider) *tempFunctionProvider {
+	return &tempFunctionProvider{organization, name, language, source, provider}
 }
 
-func (tp *tempFunctionProvider) Call(ctx context.Context, _, _ string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
-	id, version, err := tp.provider.Create(ctx, tp.name, tp.language, tp.source)
+func (tp *tempFunctionProvider) Call(ctx context.Context, _, _, _ string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
+	id, version, err := tp.provider.Create(ctx, tp.organization, tp.name, tp.language, tp.source)
 	if err != nil {
 		return err
 	}
 	defer func() {
 		go func() {
-			err := tp.provider.Delete(context.Background(), id)
+			err := tp.provider.Delete(context.Background(), tp.organization, id)
 			if err != nil {
 				slog.Warn("core: cannot delete transformation function", "id", id, "error", err)
 			}
 		}()
 	}()
-	return tp.provider.Call(ctx, id, version, inSchema, outSchema, preserveJSON, records)
+	return tp.provider.Call(ctx, tp.organization, id, version, inSchema, outSchema, preserveJSON, records)
 }
 
 func (tp *tempFunctionProvider) Close(_ context.Context) error { panic("not supported") }
-func (tp *tempFunctionProvider) Create(_ context.Context, _ string, _ state.Language, _ string) (string, string, error) {
+func (tp *tempFunctionProvider) Create(_ context.Context, _, _ string, _ state.Language, _ string) (string, string, error) {
 	panic("not supported")
 }
-func (tp *tempFunctionProvider) Delete(_ context.Context, _ string) error {
+func (tp *tempFunctionProvider) Delete(_ context.Context, _, _ string) error {
 	panic("not supported")
 }
 func (tp *tempFunctionProvider) SupportLanguage(_ state.Language) bool {
 	panic("not supported")
 }
-func (tp *tempFunctionProvider) Update(_ context.Context, _, _ string) (string, error) {
+func (tp *tempFunctionProvider) Update(_ context.Context, _, _, _ string) (string, error) {
 	panic("not supported")
 }

@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/dialer"
 	"github.com/krenalis/krenalis/core/internal/state"
 )
 
@@ -56,8 +57,11 @@ func (c *Connections) MessageBroker(connection *state.Connection) (*MessageBroke
 	broker := &MessageBroker{
 		connector: connection.Connector().Code,
 	}
+	organization := connection.Organization()
 	inner, err := connectors.RegisteredMessageBroker(connection.Connector().Code).New(&connectors.MessageBrokerEnv{
 		Settings: newConnectionSettingStore(c.state, connection),
+		Dial:     dialer.Dial(organization.ID),
+		DialWith: dialer.DialWith(organization.ID),
 	})
 	if err != nil {
 		return nil, connectorError(err)

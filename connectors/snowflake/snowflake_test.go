@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"reflect"
 	"slices"
@@ -21,6 +22,16 @@ import (
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
+
+// testDialWith is the connectors.DialWith given to the connector by the tests.
+// It returns dial, or a plain net.Dialer dial function if dial is nil.
+func testDialWith(dial connectors.DialFunc) connectors.DialFunc {
+	if dial != nil {
+		return dial
+	}
+	var d net.Dialer
+	return d.DialContext
+}
 
 func Test_Columns(t *testing.T) {
 	// The KRENALIS_SKIP_SNOWFLAKE_TESTS environment variable is set by 'go run
@@ -45,6 +56,7 @@ func Test_Columns(t *testing.T) {
 	jsonSettings := testEnv.Settings().JSON()
 	env := connectors.DatabaseEnv{
 		Settings: newTestSettingsStore(jsonSettings),
+		DialWith: testDialWith,
 	}
 	connector, err := New(&env)
 	if err != nil {
@@ -189,6 +201,7 @@ func Test_Merge_Query(t *testing.T) {
 	jsonSettings := testEnv.Settings().JSON()
 	env := connectors.DatabaseEnv{
 		Settings: newTestSettingsStore(jsonSettings),
+		DialWith: testDialWith,
 	}
 	connector, err := New(&env)
 	if err != nil {

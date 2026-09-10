@@ -35,6 +35,20 @@ func TestOrganizationResourceLimits(t *testing.T) {
 			Connectors:  6,
 			Connections: 7,
 			Pipelines:   8,
+			Rates: krenalistester.RateLimits{
+				OrganizationSpecific: krenalistester.RateLimit{
+					RatePerMinute: 101,
+					MaxCapacity:   11,
+				},
+				WorkspaceSpecific: krenalistester.RateLimit{
+					RatePerMinute: 202,
+					MaxCapacity:   22,
+				},
+				EventsSpecific: krenalistester.RateLimit{
+					RatePerMinute: 1303,
+					MaxCapacity:   20_033,
+				},
+			},
 		}
 		id := k.CreateOrganization("Limited organization", true, limits)
 		org := k.Organization(id)
@@ -86,6 +100,23 @@ func TestOrganizationResourceLimits(t *testing.T) {
 
 		_, err = k.TryCreatePipeline(dummy, "User", organizationLimitsUserPipeline())
 		expectAPIError(t, err, http.StatusUnprocessableEntity, string(core.PipelinesLimitReached))
+	})
+
+	t.Run("rate limits are updated", func(t *testing.T) {
+		org := k.Organization(activeOrg.ID)
+		limits := org.Limits
+		limits.Rates.OrganizationSpecific.RatePerMinute = 301
+		limits.Rates.OrganizationSpecific.MaxCapacity = 31
+		limits.Rates.WorkspaceSpecific.RatePerMinute = 402
+		limits.Rates.WorkspaceSpecific.MaxCapacity = 42
+		limits.Rates.EventsSpecific.RatePerMinute = 1503
+		limits.Rates.EventsSpecific.MaxCapacity = 20_053
+		k.UpdateOrganization(org.ID, org.Name, limits)
+
+		org = k.Organization(activeOrg.ID)
+		if org.Limits.Rates != limits.Rates {
+			t.Fatalf("expected rate limits %#v, got %#v", limits.Rates, org.Limits.Rates)
+		}
 	})
 }
 

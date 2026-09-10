@@ -47,6 +47,10 @@ type Consumer interface {
 	Events(ctx context.Context) (<-chan Event, error)
 
 	// Close closes the consumer and its events channel.
+	//
+	// No call to Events may be in progress when Close is called, and Events must not
+	// be called afterward. Close may be called more than once, but calls must not
+	// overlap. Calls made after the first one has completed have no effect.
 	Close()
 }
 
@@ -71,15 +75,24 @@ type BatchPublisher interface {
 	Done(ctx context.Context) error
 }
 
-// Ack acknowledges an event read from a stream.
+// Ack acknowledges that an event has been processed for one destination.
 type Ack interface {
-	// Acknowledge acknowledges the event.
+	// Acknowledge reports that processing for the destination is complete.
 	Acknowledge()
 }
 
+// Destination identifies an event destination and its acknowledgment.
+type Destination struct {
+	ID  string // empty when the destination is implied by the consumed topic
+	Ack Ack
+}
+
 // Event represents an event read from the stream.
+//
+// Destinations contains at least one destination. When the destination is
+// implied by the consumed topic, the slice contains a single destination with
+// an empty ID.
 type Event struct {
 	Attributes   map[string]any
-	Destinations []string
-	Ack          Ack
+	Destinations []Destination
 }

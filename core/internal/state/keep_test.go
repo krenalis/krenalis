@@ -6,7 +6,10 @@ package state
 
 import (
 	"slices"
+	"sync"
 	"testing"
+
+	"github.com/krenalis/krenalis/core/internal/state/ratelimiter"
 )
 
 func TestAddAndRemoveLinkedConnection(t *testing.T) {
@@ -60,4 +63,69 @@ func TestAddAndRemoveLinkedConnection(t *testing.T) {
 		}
 	}
 
+}
+
+// TestReplaceOrganizationPreservesRateLimitBucket verifies that replacing an
+// organization retains its local rate-limit bucket.
+func TestReplaceOrganizationPreservesRateLimitBucket(t *testing.T) {
+	const organizationID = "111111111111"
+	bucket := new(ratelimiter.Limiter).NewBucket("test", organizationID, 1, 1)
+	organization := &Organization{
+		mu:         new(sync.Mutex),
+		workspaces: map[string]*Workspace{},
+		bucket:     bucket,
+		ID:         organizationID,
+	}
+	state := &State{
+		mu:            new(sync.Mutex),
+		organizations: map[string]*Organization{organizationID: organization},
+	}
+
+	updated := state.replaceOrganization(organizationID, func(organization *Organization) {
+		organization.Name = "updated"
+	})
+
+	if updated.bucket != bucket {
+		t.Fatal("organization update replaced its rate-limit bucket")
+	}
+}
+
+// TestReplaceWorkspacePreservesRateLimitBuckets verifies that replacing a
+// workspace retains both of its local rate-limit buckets.
+func TestReplaceWorkspacePreservesRateLimitBuckets(t *testing.T) {
+	const (
+		organizationID = "111111111111"
+		workspaceID    = "222222222222"
+	)
+	organization := &Organization{
+		mu:         new(sync.Mutex),
+		workspaces: map[string]*Workspace{},
+		ID:         organizationID,
+	}
+	bucket := new(ratelimiter.Limiter).NewBucket("test", workspaceID, 1, 1)
+	eventBucket := new(ratelimiter.Limiter).NewBucket("test-events", workspaceID, 1, 1)
+	workspace := &Workspace{
+		mu:           new(sync.Mutex),
+		organization: organization,
+		bucket:       bucket,
+		eventBucket:  eventBucket,
+		ID:           workspaceID,
+	}
+	organization.workspaces[workspaceID] = workspace
+	state := &State{
+		mu:            new(sync.Mutex),
+		organizations: map[string]*Organization{organizationID: organization},
+		workspaces:    map[string]*Workspace{workspaceID: workspace},
+	}
+
+	updated := state.replaceWorkspace(workspaceID, func(workspace *Workspace) {
+		workspace.Name = "updated"
+	})
+
+	if updated.bucket != bucket {
+		t.Fatal("workspace update replaced its rate-limit bucket")
+	}
+	if updated.eventBucket != eventBucket {
+		t.Fatal("workspace update replaced its event rate-limit bucket")
+	}
 }

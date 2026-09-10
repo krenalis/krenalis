@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"hash/fnv"
+	"iter"
 	"log/slog"
 	"slices"
 	"strconv"
@@ -36,6 +37,8 @@ const numShards = 1
 // stream implements streams.Stream.
 type stream struct {
 	nc *nats.Conn
+
+	ackWait time.Duration
 
 	mu sync.RWMutex
 
@@ -89,7 +92,14 @@ type streamOptions struct {
 // definitively closed or if the initial connection attempt fails.
 func Connect(options natsopts.Options) (streams.Stream, error) {
 
-	s := &stream{}
+	ackWait := options.AckWait
+	if ackWait == 0 {
+		ackWait = natsopts.DefaultAckWait
+	} else if ackWait < natsopts.MinAckWait {
+		return nil, fmt.Errorf("NATS consumer AckWait must be at least %s", natsopts.MinAckWait)
+	}
+
+	s := &stream{ackWait: ackWait}
 	s.js.wait = make(chan struct{})
 	nKeyConnected := false
 
@@ -438,141 +448,57 @@ func (s *stream) Batch(ctx context.Context) (streams.BatchPublisher, error) {
 // the specified topic. Events belonging to the same shard are sent on the
 // channel in order, ensuring per-user ordering is preserved.
 func (s *stream) Consume(topic string, size int) streams.Consumer {
-	ctx, cancel := context.WithCancel(context.Background())
-	consumer := &consumer{
-		stream: s,
-		events: make(chan streams.Event, size),
-		cancel: cancel,
-	}
-	done := ctx.Done()
-	go func() {
-		ccs := make([]jetstream.ConsumeContext, 0, numShards)
-		var wg sync.WaitGroup
-		var mu sync.Mutex
-		closing := false
-		defer func() {
-			mu.Lock()
-			closing = true
-			mu.Unlock()
-			// Stop the consumers.
-			for _, cc := range ccs {
-				cc.Stop()
-			}
-			wg.Wait()
-			// The channel is closed only after no callback can send to it.
-			close(consumer.events)
-		}()
-		err := s.waitStream(ctx)
-		if err != nil {
-			return
-		}
-		for shard := range numShards {
-			consumerName := "EVENTS_" + topic + "_" + strconv.Itoa(shard)
-			filterSubject := "events.v1." + topic + "." + strconv.Itoa(shard)
-			var cc jetstream.ConsumeContext
-			bo := backoff.New(10)
-			for bo.Next(ctx) {
-				jsConsumer, err := s.js.jetStream.CreateOrUpdateConsumer(ctx, "EVENTS", jetstream.ConsumerConfig{
-					Name:          consumerName,
-					Durable:       consumerName,
-					FilterSubject: filterSubject,
-					AckPolicy:     jetstream.AckExplicitPolicy,
-					MaxAckPending: -1,
-				})
-				if err != nil {
-					if ctx.Err() != nil {
-						return
-					}
-					slog.Warn("cannot create or update a NATS consumer", "name", consumerName)
-					continue
-				}
-				cc, err = jsConsumer.Consume(func(msg jetstream.Msg) {
-					mu.Lock()
-					if closing {
-						mu.Unlock()
-						_ = msg.Nak()
-						return
-					}
-					wg.Add(1)
-					mu.Unlock()
-					defer wg.Done()
-					var event streams.Event
-					var err error
-					defer func() {
-						if err != nil {
-							err := msg.TermWithReason(err.Error())
-							if err != nil {
-								slog.Warn(fmt.Sprintf("collector: cannot ack event: %s", err))
-							}
-						}
-					}()
-					event.Attributes, err = types.Decode[map[string]any](bytes.NewReader(msg.Data()), schemas.Event)
-					if err != nil {
-						err = fmt.Errorf("invalid event data: %s", err)
-						return
-					}
-					if header := msg.Headers(); header != nil {
-						if destinations, ok := header["destinations"]; ok {
-							for _, d := range destinations {
-								if !isValidDestination(d) {
-									err = fmt.Errorf("invalid event destination: %q", d)
-									return
-								}
-							}
-							event.Destinations = destinations
-						}
-					}
-					event.Ack = &ack{msg: msg}
-					select {
-					case consumer.events <- event:
-					case <-done:
-						if err := msg.Nak(); err != nil {
-							slog.Warn("cannot send nack for a NATS message", "error", err)
-						}
-						return
-					}
-				})
-				if err != nil && ctx.Err() == nil {
-					if errors.Is(err, jetstream.ErrConsumerDoesNotExist) {
-						continue
-					}
-					slog.Warn("cannot consume messages from a NATS consumer", "consumer", consumerName)
-					continue
-				}
-				break
-			}
-			if ctx.Err() != nil {
-				return
-			}
-			ccs = append(ccs, cc)
-		}
-		<-done
-	}()
-	return consumer
-}
-
-// ack acknowledges a NATS event.
-type ack struct {
-	msg jetstream.Msg
-}
-
-// Acknowledge acknowledges the event.
-func (a *ack) Acknowledge() {
-	if err := a.msg.Ack(); err != nil {
-		slog.Warn(fmt.Sprintf("collector: cannot ack event: %s", err))
-	}
+	return newConsumer(s, topic, size)
 }
 
 // consumer implements the streams.Consumer interface.
 type consumer struct {
 	stream *stream
+	topic  string
 	events chan streams.Event
-	cancel context.CancelFunc
+	acks   *ackManager
+	close  struct {
+		cancel context.CancelFunc // stops shard consumption
+		closed bool               // indicates whether Close has been called
+		sync.WaitGroup
+	}
 }
 
-// Close closes the consumer and eventually closes the events channel.
+// newConsumer creates a consumer and starts consuming events from topic.
+func newConsumer(s *stream, topic string, size int) *consumer {
+	ctx, cancel := context.WithCancel(context.Background())
+	c := &consumer{
+		stream: s,
+		topic:  topic,
+		events: make(chan streams.Event, size),
+		acks:   newAckManager(s.ackWait),
+	}
+	c.close.cancel = cancel
+	for shard := range numShards {
+		c.close.Go(func() {
+			sc := newShardConsumer(c, shard)
+			for message := range sc.Messages(ctx) {
+				c.processMessage(ctx, message)
+			}
+		})
+	}
+	return c
+}
+
+// Close closes the consumer and its events channel.
+//
+// No call to Events may be in progress when Close is called, and Events must not
+// be called afterward. Close may be called more than once, but calls must not
+// overlap. Calls made after the first one has completed have no effect.
 func (c *consumer) Close() {
-	c.cancel()
+	if c.close.closed {
+		return
+	}
+	c.close.closed = true
+	c.close.cancel()
+	c.close.Wait()
+	c.acks.Close()
+	close(c.events)
 }
 
 // Events returns the events channel.
@@ -585,6 +511,191 @@ func (c *consumer) Events(ctx context.Context) (<-chan streams.Event, error) {
 		return nil, err
 	}
 	return c.events, nil
+}
+
+// processMessage decodes and validates a NATS message, then delivers the
+// resulting event to the consumer. If ctx is canceled, it stops acknowledgment
+// tracking and negatively acknowledges the message.
+func (c *consumer) processMessage(ctx context.Context, message fetchedMsg) {
+	msg := message.msg
+	eventAck := message.ack
+	select {
+	case <-ctx.Done():
+		message.nack()
+		return
+	default:
+	}
+
+	var event streams.Event
+	var err error
+	defer func() {
+		if err != nil {
+			eventAck.Stop()
+			termErr := msg.TermWithReason(err.Error())
+			if termErr != nil {
+				slog.Warn("collector: cannot terminate invalid event", "error", termErr)
+			}
+		}
+	}()
+	event.Attributes, err = types.Decode[map[string]any](bytes.NewReader(msg.Data()), schemas.Event)
+	if err != nil {
+		err = fmt.Errorf("invalid event data: %s", err)
+		return
+	}
+	var destinations []string
+	if header := msg.Headers(); header != nil {
+		if ids, ok := header["destinations"]; ok {
+			for _, id := range ids {
+				if !isValidDestination(id) {
+					err = fmt.Errorf("invalid event destination: %q", id)
+					return
+				}
+			}
+			destinations = ids
+		}
+	}
+	event.Destinations = destinationsForMessage(eventAck, destinations)
+	select {
+	case c.events <- event:
+	case <-ctx.Done():
+		message.nack()
+	}
+}
+
+// maxMessagesPerFetch preserves the NATS client's default pull size while
+// bounding the number of messages waiting to be processed for each shard.
+const maxMessagesPerFetch = jetstream.DefaultMaxMessages
+
+// minFetchBatchSize prevents slow message processing from reducing fetches to
+// individual messages. Adding one before the division rounds the result up,
+// ensuring the threshold remains positive when maxMessagesPerFetch is one.
+const minFetchBatchSize = (maxMessagesPerFetch + 1) / 2
+
+// fetchedMsg represents a message fetched from a stream for one shard.
+type fetchedMsg struct {
+	msg jetstream.Msg
+	ack *ack
+}
+
+// nack stops acknowledgment tracking and negatively acknowledges the message.
+func (message fetchedMsg) nack() {
+	message.ack.Stop()
+	err := message.msg.Nak()
+	if err != nil {
+		slog.Warn("cannot send nack for a NATS message", "error", err)
+	}
+}
+
+// shardConsumer fetches and buffers messages for one shard.
+type shardConsumer struct {
+	consumer *consumer
+	shard    int
+}
+
+// newShardConsumer returns a consumer for one shard.
+func newShardConsumer(consumer *consumer, shard int) *shardConsumer {
+	return &shardConsumer{consumer: consumer, shard: shard}
+}
+
+// Messages returns an iterator over messages fetched from the shard.
+func (sc *shardConsumer) Messages(ctx context.Context) iter.Seq[fetchedMsg] {
+	return func(yield func(fetchedMsg) bool) {
+		if err := sc.consumer.stream.waitStream(ctx); err != nil {
+			return
+		}
+
+		fetchCtx, cancel := context.WithCancel(ctx)
+		pending := make(chan fetchedMsg, maxMessagesPerFetch)
+		// spaceAvailable wakes the fetch loop as processing frees pending slots.
+		spaceAvailable := make(chan struct{}, 1)
+		go sc.fetch(fetchCtx, pending, spaceAvailable)
+		defer func() {
+			cancel()
+			for message := range pending {
+				message.nack()
+			}
+		}()
+
+		for message := range pending {
+			if !yield(message) {
+				return
+			}
+			select {
+			case spaceAvailable <- struct{}{}:
+			default:
+			}
+		}
+	}
+}
+
+// fetch keeps pending filled with tracked messages until fetching stops.
+func (sc *shardConsumer) fetch(ctx context.Context, pending chan<- fetchedMsg, spaceAvailable <-chan struct{}) {
+	defer close(pending)
+
+	c := sc.consumer
+	consumerName := "EVENTS_" + c.topic + "_" + strconv.Itoa(sc.shard)
+	filterSubject := "events.v1." + c.topic + "." + strconv.Itoa(sc.shard)
+	bo := backoff.New(10)
+
+	for bo.Next(ctx) {
+		jsConsumer, err := c.stream.js.jetStream.CreateOrUpdateConsumer(ctx, "EVENTS", jetstream.ConsumerConfig{
+			Name:          consumerName,
+			Durable:       consumerName,
+			FilterSubject: filterSubject,
+			AckPolicy:     jetstream.AckExplicitPolicy,
+			AckWait:       c.stream.ackWait,
+			MaxDeliver:    -1,
+			MaxAckPending: -1,
+		})
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			slog.Warn("cannot create or update a NATS consumer", "name", consumerName)
+			continue
+		}
+
+		for ctx.Err() == nil {
+			// Wait for enough room to keep fetches batched. The resulting batch size
+			// also guarantees that every returned message fits in pending.
+			for cap(pending)-len(pending) < minFetchBatchSize {
+				select {
+				case <-spaceAvailable:
+				case <-ctx.Done():
+					return
+				}
+			}
+
+			batchSize := cap(pending) - len(pending)
+			batch, err := jsConsumer.Fetch(batchSize, jetstream.FetchContext(ctx))
+			if err != nil {
+				if ctx.Err() != nil {
+					return
+				}
+				if !errors.Is(err, jetstream.ErrConsumerDoesNotExist) {
+					slog.Warn("cannot fetch messages from a NATS consumer", "consumer", consumerName, "error", err)
+				}
+				break
+			}
+
+			for msg := range batch.Messages() {
+				// batchSize reserves enough queue capacity for the whole batch.
+				pending <- fetchedMsg{msg: msg, ack: c.acks.Track(msg)}
+			}
+			if ctx.Err() != nil {
+				return
+			}
+			if err := batch.Error(); err != nil {
+				if !errors.Is(err, jetstream.ErrConsumerDoesNotExist) {
+					slog.Warn("cannot fetch messages from a NATS consumer", "consumer", consumerName, "error", err)
+				}
+				break
+			}
+
+			// A completed fetch marks the end of a sequence of transient errors.
+			bo.Reset()
+		}
+	}
 }
 
 // batch implements the streams.Batch interface.
@@ -640,6 +751,210 @@ func (batch *batch) Publish(ctx context.Context, topics []string, event map[stri
 		batch.futures = append(batch.futures, future)
 	}
 	return nil
+}
+
+// heartbeatsPerAckWait controls the heartbeat frequency. A JetStream
+// InProgress heartbeat is sent every AckWait / heartbeatsPerAckWait.
+const heartbeatsPerAckWait = 3
+
+// ackManager tracks message acknowledgments that require periodic heartbeats.
+type ackManager struct {
+	cancel          context.CancelFunc
+	wg              sync.WaitGroup
+	mu              sync.Mutex
+	pending         map[*ack]struct{} // message acknowledgments being tracked; protected by mu
+	pendingSnapshot []*ack
+}
+
+// newAckManager returns an acknowledgment manager that sends heartbeats at
+// intervals derived from ackWait.
+func newAckManager(ackWait time.Duration) *ackManager {
+	ctx, cancel := context.WithCancel(context.Background())
+	m := &ackManager{
+		cancel:  cancel,
+		pending: make(map[*ack]struct{}),
+	}
+	m.wg.Go(func() {
+		m.run(ctx, ackWait/heartbeatsPerAckWait)
+	})
+	return m
+}
+
+// Close stops sending acknowledgment heartbeats and clears pending entries.
+func (m *ackManager) Close() {
+	m.cancel()
+	m.wg.Wait()
+	m.mu.Lock()
+	clear(m.pending)
+	m.mu.Unlock()
+}
+
+// Remove stops tracking a message acknowledgment.
+func (m *ackManager) Remove(a *ack) {
+	m.mu.Lock()
+	delete(m.pending, a)
+	m.mu.Unlock()
+}
+
+// Track starts tracking a message until it is acknowledged or tracking is
+// stopped.
+func (m *ackManager) Track(msg jetstream.Msg) *ack {
+	a := &ack{msg: msg, manager: m, remaining: 1}
+	m.mu.Lock()
+	m.pending[a] = struct{}{}
+	m.mu.Unlock()
+	return a
+}
+
+// inProgress sends InProgress heartbeats for all tracked acknowledgments.
+func (m *ackManager) inProgress(ctx context.Context) {
+	// Take a snapshot so heartbeats can be sent without holding the lock.
+	m.mu.Lock()
+	if len(m.pending) == 0 {
+		m.mu.Unlock()
+		return
+	}
+	pending := slices.Grow(m.pendingSnapshot[:0], len(m.pending))
+	for ack := range m.pending {
+		pending = append(pending, ack)
+	}
+	m.mu.Unlock()
+	defer func() {
+		// Reuse the snapshot's backing array on the next call without retaining
+		// references to acknowledgments after this pass returns.
+		clear(pending)
+		m.pendingSnapshot = pending
+	}()
+
+	var lastErrMsg string
+
+	// Notify NATS that each tracked message is still being processed.
+	for _, ack := range pending {
+		if ctx.Err() != nil {
+			return
+		}
+		err := ack.InProgress()
+		if err != nil {
+			if errors.Is(err, jetstream.ErrMsgAlreadyAckd) {
+				m.Remove(ack)
+				continue
+			}
+			if errMsg := err.Error(); errMsg != lastErrMsg {
+				slog.Warn("cannot notify NATS that the message is still being processed", "error", errMsg)
+				lastErrMsg = errMsg
+			}
+		}
+	}
+}
+
+// run sends acknowledgment heartbeats until the context is canceled.
+func (m *ackManager) run(ctx context.Context, heartbeatInterval time.Duration) {
+	ticker := time.NewTicker(heartbeatInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			m.inProgress(ctx)
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+// ack coordinates the destination acknowledgments of a NATS message and tracks
+// it until every destination has completed or tracking is stopped.
+type ack struct {
+	mu        sync.Mutex // protects done, remaining, and destinationAck.done
+	done      bool       // whether tracking has finished; protected by mu
+	msg       jetstream.Msg
+	manager   *ackManager
+	remaining int // number of destinations that have not acknowledged the message; protected by mu
+}
+
+// destinationAck acknowledges one destination of a NATS message.
+type destinationAck struct {
+	parent *ack
+	done   bool // whether the destination has acknowledged the message; protected by parent.mu
+}
+
+// Acknowledge marks the destination as complete. The last destination stops
+// tracking the message and sends its acknowledgment to NATS.
+func (d *destinationAck) Acknowledge() {
+	a := d.parent
+	a.mu.Lock()
+	if d.done || a.done {
+		a.mu.Unlock()
+		return
+	}
+	d.done = true
+	a.remaining--
+	if a.remaining != 0 {
+		a.mu.Unlock()
+		return
+	}
+	a.done = true
+	a.mu.Unlock()
+
+	a.manager.Remove(a)
+	if err := a.msg.Ack(); err != nil {
+		slog.Warn("cannot ack NATS event", "error", err)
+	}
+}
+
+// InProgress tells NATS that the message is still being processed.
+func (a *ack) InProgress() error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.done {
+		return nil
+	}
+	err := a.msg.InProgress()
+	if err != nil {
+		if errors.Is(err, jetstream.ErrMsgAlreadyAckd) {
+			a.done = true
+		}
+		return err
+	}
+	return nil
+}
+
+// Stop stops tracking the message without acknowledging it.
+func (a *ack) Stop() {
+	if a.finish() {
+		a.manager.Remove(a)
+	}
+}
+
+// finish marks tracking as finished and reports whether it was finished by
+// this call.
+func (a *ack) finish() bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.done {
+		return false
+	}
+	a.done = true
+	return true
+}
+
+// destinationsForMessage returns the destinations and their acknowledgments for
+// a NATS message. A message without explicit destinations has one destination
+// whose ID is empty.
+func destinationsForMessage(parent *ack, ids []string) []streams.Destination {
+	switch n := len(ids); n {
+	case 0:
+		return []streams.Destination{{Ack: &destinationAck{parent: parent}}}
+	default:
+		parent.mu.Lock()
+		parent.remaining = n
+		parent.mu.Unlock()
+		destinations := make([]streams.Destination, n)
+		for i := range destinations {
+			destinations[i].ID = ids[i]
+			destinations[i].Ack = &destinationAck{parent: parent}
+		}
+		return destinations
+	}
 }
 
 // isValidDestination reports whether s is a valid destination identifier.

@@ -17,6 +17,12 @@ import (
 	"github.com/krenalis/analytics-go"
 )
 
+const (
+	pipelineProcessingSteps = 7
+	transformationStep      = 4
+	outputValidationStep    = 5
+)
+
 func TestDispatchEventsToDummy(t *testing.T) {
 
 	// Create a test HTTP server that will receive request sent to it from
@@ -30,7 +36,6 @@ func TestDispatchEventsToDummy(t *testing.T) {
 		select {
 		case request <- string(body):
 		default:
-			panic("request already written")
 		}
 	}))
 	defer ts.Close()
@@ -40,14 +45,16 @@ func TestDispatchEventsToDummy(t *testing.T) {
 		t.Skip()
 	}
 	k := krenalistester.NewKrenalisInstance(t)
+	k.SetNATSAckWait("1s")
 	k.Start()
 	defer k.Stop()
 
 	// Create a connection that exports to Dummy
 	dummyID := k.CreateDummyWithSettings("Dummy", krenalistester.Destination, krenalistester.DummySettings{
 		URLForDispatchingEvents: ts.URL,
+		OperationDelay:          "3s",
 	})
-	k.CreateEventPipeline(dummyID, "send_identity", krenalistester.PipelineToSet{
+	pipelineID := k.CreateEventPipeline(dummyID, "send_identity", krenalistester.PipelineToSet{
 		Name:    "Send events",
 		Enabled: true,
 		Transformation: &krenalistester.Transformation{
@@ -75,12 +82,59 @@ func TestDispatchEventsToDummy(t *testing.T) {
 	var received string
 	select {
 	case received = <-request:
-	case <-time.After(5 * time.Second):
-		t.Fatalf("no events received within time limit")
+	case <-time.After(10 * time.Second):
+		t.Fatalf("expected an event within 10 seconds, got none")
 	}
 	const expected = `{"email":"dummy@email.example.com"}`
 	if received != expected {
-		t.Fatalf("expected %q, but Dummy sent %q", expected, received)
+		t.Fatalf("expected %q, got %q", expected, received)
 	}
 
+	// The dispatch takes longer than AckWait. Without heartbeats NATS redelivers
+	// the event while the first dispatch is still waiting, causing these
+	// processing metrics to be incremented more than once.
+	passed := waitPipelinePassedMetrics(t, k, pipelineID)
+	if got := passed[transformationStep]; got != 1 {
+		t.Fatalf("expected one transformation, got %d", got)
+	}
+	if got := passed[outputValidationStep]; got != 1 {
+		t.Fatalf("expected one output validation, got %d", got)
+	}
+}
+
+// waitPipelinePassedMetrics waits until processing metrics for pipelineID are
+// visible and returns their totals across all minute buckets.
+func waitPipelinePassedMetrics(t *testing.T, k *krenalistester.Krenalis, pipelineID string) [pipelineProcessingSteps]int {
+	t.Helper()
+	poll := time.NewTicker(100 * time.Millisecond)
+	defer poll.Stop()
+	timeout := time.NewTimer(5 * time.Second)
+	defer timeout.Stop()
+	var totals [pipelineProcessingSteps]int
+	var series int
+	for {
+		var response struct {
+			Metrics []struct {
+				Passed [][pipelineProcessingSteps]int `json:"passed"`
+			} `json:"metrics"`
+		}
+		k.Call("GET", "/v1/pipelines/metrics/minutes/2?pipelines="+pipelineID, nil, nil, &response)
+		totals = [pipelineProcessingSteps]int{}
+		series = len(response.Metrics)
+		if series == 1 {
+			for _, bucket := range response.Metrics[0].Passed {
+				for step, count := range bucket {
+					totals[step] += count
+				}
+			}
+			if totals[transformationStep] > 0 && totals[outputValidationStep] > 0 {
+				return totals
+			}
+		}
+		select {
+		case <-poll.C:
+		case <-timeout.C:
+			t.Fatalf("expected pipeline processing metrics, got %d series with totals %v", series, totals)
+		}
+	}
 }

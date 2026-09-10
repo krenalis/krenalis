@@ -16,13 +16,12 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/testconnector"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/validation"
-
-	"github.com/google/uuid"
 )
 
 const (
@@ -79,7 +78,7 @@ func TestSendEvents(t *testing.T) {
 
 		anonymousID := "anon-identify-01"
 		userID := "user_891273"
-		messageID := uuid.NewString()
+		messageID := uuid.New().String()
 		sessionUUID, err := makeSessionUUIDv7(anonymousID, sessionID)
 		if err != nil {
 			t.Fatalf("expected session UUID generation to succeed, got %v", err)
@@ -160,7 +159,7 @@ func TestSendEvents(t *testing.T) {
 		anonymousID := "anon-group-01"
 		userID := "user_73155"
 		groupID := "company-413"
-		messageID := uuid.NewString()
+		messageID := uuid.New().String()
 		sessionUUID, err := makeSessionUUIDv7(anonymousID, sessionID)
 		if err != nil {
 			t.Fatalf("expected session UUID generation to succeed, got %v", err)
@@ -234,9 +233,9 @@ func TestSendEvents(t *testing.T) {
 
 	t.Run("track", func(t *testing.T) {
 
-		anonymousID := uuid.NewString()
+		anonymousID := uuid.New().String()
 		userID := "user_4891"
-		messageID := uuid.NewString()
+		messageID := uuid.New().String()
 		const explicitSessionID = "01946b9f-859b-7cce-ab5c-f9e68680be6e"
 
 		received := map[string]any{
@@ -308,8 +307,8 @@ func TestSendEvents(t *testing.T) {
 
 	t.Run("page", func(t *testing.T) {
 
-		anonymousID := uuid.NewString()
-		messageID := uuid.NewString()
+		anonymousID := uuid.New().String()
+		messageID := uuid.New().String()
 		sessionUUID, err := makeSessionUUIDv7(anonymousID, sessionID)
 		if err != nil {
 			t.Fatalf("expected session UUID generation to succeed, got %v", err)
@@ -383,9 +382,9 @@ func TestSendEvents(t *testing.T) {
 
 	t.Run("screen", func(t *testing.T) {
 
-		anonymousID := uuid.NewString()
+		anonymousID := uuid.New().String()
 		userID := "user_70351"
-		messageID := uuid.NewString()
+		messageID := uuid.New().String()
 		sessionUUID, err := makeSessionUUIDv7(anonymousID, sessionID)
 		if err != nil {
 			t.Fatalf("expected session UUID generation to succeed, got %v", err)
@@ -459,7 +458,7 @@ func TestSendEvents(t *testing.T) {
 
 		anonymousID := "anon_492"
 		userID := "user_982"
-		messageID := uuid.NewString()
+		messageID := uuid.New().String()
 		sessionUUID, err := makeSessionUUIDv7(anonymousID, sessionID)
 		if err != nil {
 			t.Fatalf("expected session UUID generation to succeed, got %v", err)
@@ -559,11 +558,11 @@ func TestMakeSessionUUIDv7(t *testing.T) {
 			if err != nil {
 				t.Fatalf("expected a valid UUID, got %v", err)
 			}
-			if parsed.Version() != 7 {
-				t.Fatalf("expected version 7, got %d", parsed.Version())
+			if version := parsed[6] >> 4; version != 7 {
+				t.Fatalf("expected version 7, got %d", version)
 			}
-			if parsed.Variant() != uuid.RFC4122 {
-				t.Fatalf("expected RFC4122 variant, got %d", parsed.Variant())
+			if variant := parsed[8] >> 6; variant != 0b10 {
+				t.Fatalf("expected RFC 9562 variant, got %02b", variant)
 			}
 
 			if ts := uuidTimestamp(parsed); ts != tc.sessionID-1000 {

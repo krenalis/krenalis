@@ -42,6 +42,11 @@ func buildKrenalis(t *testing.T, repo, krenalisDir string) {
 	// and for the Admin.
 	execCmd(t, tmpdir, "go", "mod", "edit", "-replace", "github.com/krenalis/krenalis="+repo)
 
+	// Edit the go.mod so that our Snowflake fork is used.
+	// See https://github.com/krenalis/krenalis/issues/2368.
+	// Keep in sync with the version within "go.mod".
+	execCmd(t, tmpdir, "go", "mod", "edit", "-replace", "github.com/snowflakedb/gosnowflake/v2=github.com/krenalis/gosnowflake/v2@v2.1.0-patched")
+
 	// Copy the file with the connectors and warehouse imports, replacing the
 	// package name "krenalistester" with "main".
 	testImports, err := os.ReadFile(filepath.Join(repo, "test", "krenalistester", "test_imports.go"))
@@ -105,6 +110,19 @@ func generateAssets(ctx context.Context, repo string) error {
 		return fmt.Errorf("command 'go generate' executed in directory '%s' failed: %s", cmd.Dir, err)
 	}
 	return nil
+}
+
+// environWithoutKrenalisVars returns the environment of the current process
+// without the variables that configure Krenalis.
+func environWithoutKrenalisVars() []string {
+	var env []string
+	for _, v := range os.Environ() {
+		if key, _, ok := strings.Cut(v, "="); ok && strings.HasPrefix(key, "KRENALIS_") {
+			continue
+		}
+		env = append(env, v)
+	}
+	return env
 }
 
 func launchKrenalis(ctx context.Context, env []string) error {

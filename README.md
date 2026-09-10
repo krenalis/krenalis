@@ -60,7 +60,7 @@ Navigate to the directory where you want to run Krenalis and execute:
 
 ```
 mkdir -p storage
-curl -fO "https://raw.githubusercontent.com/krenalis/krenalis/refs/tags/v0.42.0/compose.yaml"
+curl -fO "https://raw.githubusercontent.com/krenalis/krenalis/refs/tags/v0.43.0/compose.yaml"
 if [ ! -f .env ]; then printf "KRENALIS_KMS=key:%s\n" "$(openssl rand -base64 32)" > .env; fi
 docker compose up
 ```
@@ -69,7 +69,7 @@ docker compose up
 
 To build the standalone executable, run `go generate && go build` in the root directory of this repository:
 
-1. [Install Go 1.26](https://go.dev/doc/install) (*if you haven't already*)
+1. [Install Go 1.27](https://go.dev/doc/install) (*if you haven't already*)
 2. Clone or download this repository
 3. Check out the latest release
 4. Run `go generate`

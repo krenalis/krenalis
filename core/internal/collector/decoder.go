@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+	"uuid"
 
 	"github.com/krenalis/krenalis/core/internal/events"
 	"github.com/krenalis/krenalis/tools/base58"
@@ -28,7 +29,6 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/LumenResearch/uasurfer"
-	"github.com/google/uuid"
 	"github.com/oschwald/maxminddb-golang/v2"
 	"github.com/relvacode/iso8601"
 	"golang.org/x/text/unicode/norm"
@@ -47,7 +47,6 @@ var (
 type decoder struct {
 	payload *bytes.Buffer
 	dec     json.Decoder
-	batch   json.Value
 	maxmind *maxminddb.Reader
 
 	receivedAt   time.Time
@@ -57,6 +56,7 @@ type decoder struct {
 	connectionId string
 	context      map[string]any
 	typ          string
+	eventCount   int
 }
 
 type remoteAddr struct {
@@ -90,6 +90,15 @@ func (d *decoder) ConnectionId() (string, bool) {
 		return "", false
 	}
 	return d.connectionId, true
+}
+
+// maxBatchEventCount bounds the number of events in a batch request.
+const maxBatchEventCount = 20_000
+
+// EventCount returns the number of events in the request.
+// The returned count is always >= 1 after a successful Reset.
+func (d *decoder) EventCount() int {
+	return d.eventCount
 }
 
 // Events returns an iterator to iterate over events. connectionId represents
@@ -147,7 +156,6 @@ func (d *decoder) Events(connectionId string, fallbackToRequestIP bool) iter.Seq
 //   - a badRequestError: if the request's body is not valid.
 func (d *decoder) Reset(r *http.Request) error {
 
-	d.batch = nil
 	d.receivedAt = time.Now().UTC()
 	d.remoteAddr = remoteAddr{}
 	d.sentAt = time.Time{}
@@ -155,6 +163,7 @@ func (d *decoder) Reset(r *http.Request) error {
 	d.connectionId = ""
 	d.context = nil
 	d.typ = ""
+	d.eventCount = 1
 
 	if r.Method != "POST" {
 		return errMethodNotAllowed
@@ -243,6 +252,16 @@ func (d *decoder) Reset(r *http.Request) error {
 	kind := d.dec.PeekKind()
 	if kind == '[' {
 		// It is a batch-event request with a JSON array as body.
+		events, eventCount, err := d.readBatch(body)
+		if err != nil {
+			return err
+		}
+		if eventCount == 0 {
+			return errors.BadRequest("batch must contain at least one event")
+		}
+		d.eventCount = eventCount
+		d.payload = bytes.NewBuffer(events)
+		d.dec.Reset(d.payload)
 		d.typ = "batch"
 		d.sentAt = d.receivedAt
 		return nil
@@ -256,6 +275,7 @@ func (d *decoder) Reset(r *http.Request) error {
 	if err != nil {
 		return errRead(err)
 	}
+	events := body
 	var tok json.Token
 	for {
 		tok, err = d.dec.ReadToken()
@@ -268,14 +288,14 @@ func (d *decoder) Reset(r *http.Request) error {
 		key := tok.String()
 		switch key {
 		case "batch":
-			batch, err := d.dec.ReadValue()
+			// It is a batch-event request. Parse only the slice of events.
+			batch, eventCount, err := d.readBatch(body)
 			if err != nil {
-				return errRead(err)
+				return err
 			}
-			if !batch.IsArray() {
-				return errors.BadRequest("property 'batch' is not a valid array")
-			}
-			d.batch = batch
+			d.typ = "batch"
+			d.eventCount = eventCount
+			events = batch
 		case "context":
 			kind := d.dec.PeekKind()
 			if kind != '{' {
@@ -322,14 +342,10 @@ func (d *decoder) Reset(r *http.Request) error {
 			d.connectionId = connectionId
 		}
 	}
-	if d.batch == nil {
-		// It is a single-event request. Reparse the entire request body.
-		d.payload = bytes.NewBuffer(body)
-	} else {
-		// It is a batch-event request. Parse only the slice of events.
-		d.typ = "batch"
-		d.payload = bytes.NewBuffer(d.batch)
+	if d.typ == "batch" && d.eventCount == 0 {
+		return errors.BadRequest("batch must contain at least one event")
 	}
+	d.payload = bytes.NewBuffer(events)
 	d.dec.Reset(d.payload)
 
 	if d.sentAt.IsZero() {
@@ -545,7 +561,7 @@ func (d *decoder) decodeEvent(connectionId string, fallbackToRequestIP bool) (ev
 			}
 			return nil, errors.BadRequest("either 'anonymousId' or 'userId' properties are required for a %s event", typ)
 		}
-		event["anonymousId"] = uuid.NewString()
+		event["anonymousId"] = uuid.New().String()
 	}
 
 	// Category.
@@ -686,7 +702,7 @@ func (d *decoder) decodeEvent(connectionId string, fallbackToRequestIP bool) (ev
 
 	// Message ID.
 	if _, ok := event["messageId"]; !ok {
-		event["messageId"] = "krenalis-" + uuid.NewString()
+		event["messageId"] = "krenalis-" + uuid.New().String()
 	}
 
 	// Name.
@@ -859,6 +875,17 @@ func (d *decoder) decodeContext() (map[string]any, error) {
 				return nil, errors.BadRequest("property 'context.traits' is not a valid object")
 			}
 			context["traits"], _ = d.dec.ReadValue()
+		case "consents":
+			if kind != '{' {
+				return nil, errors.BadRequest("property 'context.consents' is not a valid object")
+			}
+			consents, err := d.decodeConsents()
+			if err != nil {
+				return nil, err
+			}
+			if consents != nil {
+				context["consents"] = consents
+			}
 		default:
 			section, ok := contextSections[name]
 			if !ok {
@@ -1114,6 +1141,54 @@ func (d *decoder) decodeContextSection(section *contextSection) (map[string]any,
 	return sec, nil
 }
 
+// decodeConsents decodes and returns 'context.consents'.
+//
+// Before returning, decodeConsents attempts to advance the decoder so that the
+// next token is the one following the end of the object, even in case of error.
+func (d *decoder) decodeConsents() (map[string]any, error) {
+
+	skipOut := true
+	defer func() {
+		if skipOut {
+			_ = d.dec.SkipOut()
+		}
+	}()
+
+	_ = d.dec.SkipToken() // skip the first token.
+
+	var consents map[string]any
+
+	for {
+		tok, err := d.dec.ReadToken()
+		if err != nil {
+			return nil, err
+		}
+		if tok.Kind() == '}' {
+			skipOut = false
+			break
+		}
+		purpose := tok.String()
+		if purpose == "" {
+			return nil, errors.BadRequest("property 'context.consents' contains an empty purpose")
+		}
+		tok, err = d.dec.ReadToken()
+		if err != nil {
+			return nil, err
+		}
+		if tok.Kind() != json.True && tok.Kind() != json.False {
+			return nil, errors.BadRequest("value of %q in 'context.consents' is not a valid boolean", purpose)
+		}
+		v := tok.Bool()
+		if consents == nil {
+			consents = map[string]any{purpose: v}
+		} else {
+			consents[purpose] = v
+		}
+	}
+
+	return consents, nil
+}
+
 // parseRemoteAddr parses s as an IPv4 or IPv6 address, including IPv4-mapped
 // addresses such as "::ffff:192.0.2.1", and stores the result in d.remoteAddr.
 func (d *decoder) parseRemoteAddr(s string) error {
@@ -1135,6 +1210,35 @@ func (d *decoder) parseRemoteAddr(s string) error {
 		d.remoteAddr.stronglyAnonymous = netip.PrefixFrom(addr, 16).Masked().Addr().String()
 	}
 	return nil
+}
+
+// readBatch parses the next JSON array, counts its elements, and returns the
+// exact slice of body that contains it. The decoder is left immediately after
+// the closing bracket.
+func (d *decoder) readBatch(body []byte) ([]byte, int, error) {
+	tok, err := d.dec.ReadToken()
+	if err != nil {
+		return nil, 0, errRead(err)
+	}
+	if tok.Kind() != '[' {
+		return nil, 0, errors.BadRequest("property 'batch' is not a valid array")
+	}
+	start := int(d.dec.ByteOffset()) - 1
+	count := 0
+	for d.dec.PeekKind() != ']' {
+		if err := d.dec.SkipValue(); err != nil {
+			return nil, 0, errRead(err)
+		}
+		count++
+		if count > maxBatchEventCount {
+			return nil, 0, errors.BadRequest("batch contains too many events")
+		}
+	}
+	if err := d.dec.SkipToken(); err != nil { // Skip the ']' token.
+		return nil, 0, errRead(err)
+	}
+	end := int(d.dec.ByteOffset())
+	return body[start:end], count, nil
 }
 
 // errRead checks whether the provided error is a JSON parsing error. If it is,

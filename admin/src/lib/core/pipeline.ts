@@ -7,6 +7,8 @@ import {
 	ExpressionToBeExtracted,
 	Filter,
 	FilterCondition,
+	FilterRule,
+	RequiredConsents,
 	FilterOperator,
 	Mapping,
 	Matching,
@@ -74,6 +76,48 @@ const FILTER_OPERATORS: FilterOperator[] = [
 	'exists',
 	'does not exist',
 ];
+
+const MAX_FILTER_DEPTH = 4;
+const MAX_FILTER_RULE_COUNT = 100;
+
+// isFilterGroup reports whether rule is a filter group.
+const isFilterGroup = (rule: FilterRule): rule is Filter => 'rules' in rule;
+
+// getFilterConditions returns every condition in filter in traversal order.
+const getFilterConditions = (filter: Filter): FilterCondition[] => {
+	const conditions: FilterCondition[] = [];
+	for (const rule of filter.rules) {
+		if (isFilterGroup(rule)) {
+			conditions.push(...getFilterConditions(rule));
+		} else {
+			conditions.push(rule);
+		}
+	}
+	return conditions;
+};
+
+// mapFilterConditions applies transform to every condition in filter.
+const mapFilterConditions = (filter: Filter, transform: (condition: FilterCondition) => FilterCondition): Filter => ({
+	operator: filter.operator,
+	rules: filter.rules.map((rule) => (isFilterGroup(rule) ? mapFilterConditions(rule, transform) : transform(rule))),
+});
+
+// omitEmptyFilterRules removes draft conditions and groups that contain no
+// complete rules. It returns null when the root group becomes empty.
+const omitEmptyFilterRules = (filter: Filter): Filter | null => {
+	const rules: FilterRule[] = [];
+	for (const rule of filter.rules) {
+		if (isFilterGroup(rule)) {
+			const group = omitEmptyFilterRules(rule);
+			if (group != null) {
+				rules.push(group);
+			}
+		} else if (rule.property !== '') {
+			rules.push(rule);
+		}
+	}
+	return rules.length === 0 ? null : { operator: filter.operator, rules };
+};
 
 const UNARY_OPERATORS = new Set<FilterOperator>([
 	'is true',
@@ -210,6 +254,7 @@ interface TransformedTransformation {
 
 type PipelineTypeField =
 	| 'Filter'
+	| 'Consents'
 	| 'Transformation'
 	| 'Matching'
 	| 'UpdateOnDuplicates'
@@ -252,6 +297,7 @@ interface TransformedPipeline {
 	inSchema: ObjectType | null;
 	outSchema: ObjectType | null;
 	filter: Filter | null;
+	requiredConsents: RequiredConsents | null;
 	transformation: TransformedTransformation | null;
 	query?: string | null;
 	path?: string | null;
@@ -598,22 +644,10 @@ const transformPipeline = (
 	}
 
 	if (pipeline.filter) {
-		const conditions: FilterCondition[] = [];
-		for (const condition of pipeline.filter.conditions) {
-			let cond = { ...condition };
-			let values: string[] | null = [];
-			if (condition.values == null) {
-				values = null;
-			} else {
-				for (const v of condition.values) {
-					const formatted = formatString(v);
-					values.push(formatted);
-				}
-			}
-			cond.values = values;
-			conditions.push(cond);
-		}
-		pipeline.filter.conditions = conditions;
+		pipeline.filter = mapFilterConditions(pipeline.filter, (condition) => ({
+			...condition,
+			values: (condition.values ?? []).map((value) => formatString(value)),
+		}));
 	}
 
 	return {
@@ -629,6 +663,7 @@ const transformPipeline = (
 		inSchema: pipeline.inSchema,
 		outSchema: pipeline.outSchema,
 		filter: pipeline.filter,
+		requiredConsents: pipeline.requiredConsents,
 		transformation: {
 			mapping: pipelineMapping != null ? transformPipelineMapping(pipelineMapping, outputSchema) : null,
 			function: pipeline.transformation?.function,
@@ -941,38 +976,35 @@ const transformInPipelineToSet = async (
 			inSchema = { kind: 'object', properties: [] };
 		}
 
-		let f = { logical: pipeline.filter.logical, conditions: [] };
-
-		// Exclude conditions that have empty properties.
-		let conditions = pipeline.filter.conditions.filter((condition) => condition.property !== '');
-
 		const isEventImport = connection.isSource && pipelineType.target === 'Event';
 		const isEventBasedUserImport = connection.isEventBased && connection.isSource && pipelineType.target === 'User';
 		const isAppEventsExport =
 			connection.isApplication && connection.isDestination && pipelineType.target === 'Event';
-
-		for (const condition of conditions) {
-			const propertyName = condition.property;
-			const [base, path] = splitPropertyAndPath(propertyName, flattenedInputSchema);
-			const property = flattenedInputSchema[base];
-			let c: FilterCondition;
-			try {
-				c = validateAndNormalizeFilterCondition(
+		const draftFilter = omitEmptyFilterRules(pipeline.filter);
+		if (draftFilter != null) {
+			filter = mapFilterConditions(draftFilter, (condition) => {
+				const propertyName = condition.property;
+				const [base, path] = splitPropertyAndPath(propertyName, flattenedInputSchema);
+				const property = flattenedInputSchema[base];
+				const normalized = validateAndNormalizeFilterCondition(
 					condition,
 					property,
 					path,
 					propertyName,
 					isEventBasedUserImport || isAppEventsExport || isEventImport ? ['kpid'] : null,
 				);
-			} catch (err) {
-				throw err;
-			}
-			addPropertyToSchema(base, property.full, inSchema, flattenedInputSchema, property.indentation === 0);
-			f.conditions.push(c);
-		}
+				addPropertyToSchema(base, property.full, inSchema, flattenedInputSchema, property.indentation === 0);
 
-		if (f.conditions.length > 0) {
-			filter = f;
+				return normalized;
+			});
+		}
+	}
+
+	let requiredConsents: RequiredConsents = null;
+	if (pipeline.requiredConsents != null) {
+		const purposes = Array.from(new Set(pipeline.requiredConsents.purposes));
+		if (purposes.length > 0) {
+			requiredConsents = { operator: pipeline.requiredConsents.operator, purposes: purposes };
 		}
 	}
 
@@ -1091,6 +1123,7 @@ const transformInPipelineToSet = async (
 		name: pipeline.name,
 		enabled: pipeline.enabled,
 		filter: filter,
+		requiredConsents: requiredConsents,
 		inSchema: inSchema && inSchema.properties.length > 0 ? inSchema : null,
 		outSchema: outSchema && outSchema.properties.length > 0 ? outSchema : null,
 		transformation: mapping == null && func == null ? null : { mapping: mapping, function: func },
@@ -1150,6 +1183,7 @@ const computeDefaultPipeline = (
 			pipelineType.target == 'User' &&
 			(connection.isApplication || connection.isDatabase || connection.isFileStorage),
 		filter: null,
+		requiredConsents: null,
 		transformation: {
 			mapping: flattenSchema(outputSchema, true),
 			function: null,
@@ -1163,10 +1197,10 @@ const computeDefaultPipeline = (
 			pipeline.filter = eventType.defaultFilter;
 		} else if ((connection.isSDK || connection.isWebhook) && pipelineType.target === 'User') {
 			pipeline.filter = {
-				logical: 'or',
-				conditions: [
+				operator: 'or',
+				rules: [
 					{ property: 'type', operator: 'is', values: ['identify'] },
-					{ property: 'traits', operator: 'is not empty', values: null },
+					{ property: 'traits', operator: 'is not empty' },
 				],
 			};
 		}
@@ -1214,6 +1248,51 @@ const hasFilters = (connection: TransformedConnection, target: PipelineTarget) =
 	return !(connection.role === 'Source' && connection.connector.type === 'Database' && target === 'User');
 };
 
+const isEventDriven = (connection: TransformedConnection, target: PipelineTarget) => {
+	if (connection.role === 'Destination') {
+		// The events are dispatched to an application.
+		return connection.connector.type === 'Application' && target === 'Event';
+	}
+	// The events are imported into the warehouse, either as events or as user
+	// identities extracted from them.
+	return connection.isEventBased && (target === 'Event' || target === 'User');
+};
+
+// hasInputValidationStep reports whether the pipelines of a given connection,
+// and with the given target, validate the records they read.
+const hasInputValidationStep = (connection: TransformedConnection, target: PipelineTarget) => {
+	return !isEventDriven(connection, target);
+};
+
+// hasFilterStep reports whether the pipelines of a given connection, and with
+// the given target, count the records their filter discards. Exports and
+// database imports filter the records while reading them, so they have no step
+// to report.
+const hasFilterStep = (connection: TransformedConnection, target: PipelineTarget) => {
+	return (
+		isEventDriven(connection, target) || (connection.role === 'Source' && connection.connector.type !== 'Database')
+	);
+};
+
+const hasRequiredConsents = (connection: TransformedConnection, target: PipelineTarget) => {
+	// Required consents are allowed on any pipeline that handles events.
+	return isEventDriven(connection, target);
+};
+
+const hasTransformations = (connection: TransformedConnection, target: PipelineTarget) => {
+	const type = connection.connector.type;
+	if (type === 'Application' || type === 'Database') {
+		return true;
+	}
+	if (type === 'FileStorage') {
+		return connection.role === 'Source';
+	}
+	if (type === 'SDK' || type === 'Webhook') {
+		return connection.role === 'Source' && (target === 'User' || target === 'Group');
+	}
+	return false;
+};
+
 const computePipelineTypeFields = (connection: TransformedConnection, pipelineType: PipelineType) => {
 	const fields: PipelineTypeField[] = [];
 
@@ -1221,18 +1300,14 @@ const computePipelineTypeFields = (connection: TransformedConnection, pipelineTy
 		fields.push('Filter');
 	}
 
+	if (hasRequiredConsents(connection, pipelineType.target)) {
+		fields.push('Consents');
+	}
+
 	const type = connection.connector.type;
 
-	if (type === 'Application') {
+	if (hasTransformations(connection, pipelineType.target)) {
 		fields.push('Transformation');
-	} else if (type === 'Database') {
-		fields.push('Transformation');
-	} else if (type === 'FileStorage' && connection.role === 'Source') {
-		fields.push('Transformation');
-	} else if (type === 'SDK' || type == 'Webhook') {
-		if (connection.role === 'Source' && (pipelineType.target === 'User' || pipelineType.target === 'Group')) {
-			fields.push('Transformation');
-		}
 	}
 
 	if (
@@ -1913,13 +1988,14 @@ const validateAndNormalizeFilterCondition = (
 		}
 	}
 
-	let values: string[] | null = [];
-	if (isJsonOrText && condition.values != null) {
+	const conditionValues = condition.values ?? [];
+	let values: string[] = [];
+	if (isJsonOrText) {
 		const stringType = property.type === 'string' ? (property.full.type as StringType) : null;
 		const propertyValues = stringType?.values ?? null;
 		const allowsEmptySelection = propertyValues != null && propertyValues.includes('');
 
-		for (const [i, v] of condition.values.entries()) {
+		for (const [i, v] of conditionValues.entries()) {
 			const isFirstValueEmpty = i === 0 && v === '';
 			const isSecondBetweenEmpty = i === 1 && v === '' && isBetweenOperator(condition.operator);
 			if ((isFirstValueEmpty || isSecondBetweenEmpty) && !allowsEmptySelection) {
@@ -1941,20 +2017,23 @@ const validateAndNormalizeFilterCondition = (
 			values.push(parsed);
 		}
 	} else {
-		values = condition.values;
+		values = conditionValues;
 	}
 
 	try {
-		validateFilterConditionValues(property.full.type, condition.values, propertyName);
+		validateFilterConditionValues(property.full.type, conditionValues, propertyName);
 	} catch (err) {
 		throw err;
 	}
 
-	const c: FilterCondition = { property: condition.property, operator: condition.operator, values: values };
+	const c: FilterCondition = { property: condition.property, operator: condition.operator };
+	if (!isUnaryOperator(condition.operator)) {
+		c.values = values;
+	}
 	return c;
 };
 
-const validateFilterConditionValues = (type: Type, values: string[] | null, propertyName: string) => {
+const validateFilterConditionValues = (type: Type, values: string[], propertyName: string) => {
 	const throwIfInvalid = (isValid: boolean, typeKind: string, unsigned?: boolean) => {
 		if (!isValid) {
 			throw new Error(
@@ -1962,10 +2041,6 @@ const validateFilterConditionValues = (type: Type, values: string[] | null, prop
 			);
 		}
 	};
-
-	if (values == null) {
-		return;
-	}
 
 	for (const v of values) {
 		if (type.kind === 'int') {
@@ -2046,11 +2121,17 @@ const propertyTypesAreEqual = (aType: Type, bType: Type): boolean => {
 export {
 	SCHEDULE_PERIODS,
 	FILTER_OPERATORS,
+	MAX_FILTER_DEPTH,
+	MAX_FILTER_RULE_COUNT,
 	EXPORT_MODE_OPTIONS,
 	flattenSchema,
 	isRecursiveType,
 	computeDefaultPipeline,
 	hasFilters,
+	hasInputValidationStep,
+	hasFilterStep,
+	hasRequiredConsents,
+	hasTransformations,
 	computePipelineTypeFields,
 	transformPipelineType,
 	transformPipeline,
@@ -2058,6 +2139,8 @@ export {
 	checkMapping,
 	checkFunctionPath,
 	getCompatibleFilterOperators,
+	getFilterConditions,
+	isFilterGroup,
 	isUnaryOperator,
 	isBetweenOperator,
 	isOneOfOperator,
@@ -2069,6 +2152,7 @@ export {
 	validateAndNormalizeFilterCondition,
 	validateMatching,
 	propertyTypesAreEqual,
+	omitEmptyFilterRules,
 };
 
 export type {
