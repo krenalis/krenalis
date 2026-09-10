@@ -5,9 +5,11 @@
 package initdb
 
 import (
+	"maps"
 	"testing"
 
 	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/tools/base58"
 )
 
 // TestUpgrade verifies that database upgrades are applied and are idempotent.
@@ -41,6 +43,12 @@ func TestUpgrade(t *testing.T) {
 			id varchar(12) PRIMARY KEY,
 			organization varchar(12) NOT NULL REFERENCES organizations (id)
 		);
+		CREATE TABLE consent_purposes (
+			workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+			code varchar(100) NOT NULL CHECK (code ~ '^[A-Za-z_][0-9A-Za-z_]{0,99}$'),
+			name varchar(100) NOT NULL,
+			PRIMARY KEY (workspace, code)
+		);
 		CREATE TYPE role AS ENUM ('Source', 'Destination');
 		CREATE TYPE pipeline_target AS ENUM ('Event', 'User', 'Group');
 		CREATE TABLE connections (
@@ -54,7 +62,9 @@ func TestUpgrade(t *testing.T) {
 			connection varchar(12) NOT NULL REFERENCES connections (id),
 			target pipeline_target NOT NULL,
 			filter jsonb,
-			format varchar
+			format varchar,
+			required_consents varchar(100)[] NOT NULL DEFAULT '{}',
+			required_consents_operator varchar(3) NOT NULL DEFAULT 'and' CHECK (required_consents_operator IN ('and', 'or'))
 		);
 		CREATE TABLE pipelines_metrics (
 			pipeline varchar(12) NOT NULL REFERENCES pipelines ON DELETE CASCADE,
@@ -90,6 +100,9 @@ func TestUpgrade(t *testing.T) {
 		CREATE INDEX pipelines_metrics_pipeline_idx ON pipelines_metrics (pipeline);
 		INSERT INTO organizations (id, name, enabled) VALUES ('111111111111', 'ACME inc', true);
 		INSERT INTO workspaces (id, organization) VALUES ('222222222222', '111111111111');
+		INSERT INTO consent_purposes (workspace, code, name) VALUES
+			('222222222222', 'marketing', 'Marketing'),
+			('222222222222', 'analytics', 'Analytics');
 		INSERT INTO connections (id, workspace, connector, role) VALUES ('333333333333', '222222222222', 'dummy', 'Source');
 		INSERT INTO pipelines (id, connection, target, filter, format) VALUES
 			(
@@ -119,6 +132,7 @@ func TestUpgrade(t *testing.T) {
 				'{"operator":"And","rules":[{"rules":[{"property":["b"],"operator":"OpIsNotBetween","values":[25,30]},{"property":["literal"],"operator":"Contains","values":["OpIsNotBetween"]}],"operator":"Or"}]}',
 				NULL
 			);
+		UPDATE pipelines SET required_consents = ARRAY['marketing', 'analytics'] WHERE id = '444444444444';
 		INSERT INTO pipelines_metrics (
 			pipeline, timeslot,
 			passed_0, passed_1, passed_2, passed_3, passed_4, passed_5,
@@ -162,10 +176,13 @@ func TestUpgrade(t *testing.T) {
 	assertDiscontinuedFunctionsUpgrade(t, database)
 	assertRateLimitLeaseFunction(t, database)
 	assertConsentStepColumns(t, database)
-	assertConsentPurposePathColumns(t, database)
+	consentPurposeIDs := assertConsentPurposeUpgrade(t, database)
 
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatalf("expected second upgrade to succeed, got %s", err)
+	}
+	if got := assertConsentPurposeUpgrade(t, database); !maps.Equal(got, consentPurposeIDs) {
+		t.Fatalf("expected consent purpose identifiers to remain %v, got %v", consentPurposeIDs, got)
 	}
 	assertPipelineFiltersUpgraded(t, database)
 	assertPipelineMetricsSurvivePipelineDelete(t, database)
@@ -740,18 +757,77 @@ func assertConsentStepColumns(t *testing.T, database *db.DB) {
 	}
 }
 
-// assertConsentPurposePathColumns verifies that the property path columns added
-// by the consent management upgrades were added to the consent purposes,
-// keeping their default.
-func assertConsentPurposePathColumns(t *testing.T, database *db.DB) {
+// assertConsentPurposeUpgrade verifies that consent purposes and pipeline
+// requirements use identifiers, and returns the identifiers by purpose code.
+func assertConsentPurposeUpgrade(t *testing.T, database *db.DB) map[string]string {
 	t.Helper()
 
-	for _, column := range []string{"event_path", "profile_path"} {
+	assertColumnExists(t, database, "consent_purposes", "id")
+	assertConstraintExists(t, database, "consent_purposes", "consent_purposes_id_check")
+	assertConstraintExists(t, database, "consent_purposes", "consent_purposes_pkey")
+	assertConstraintExists(t, database, "consent_purposes", "consent_purposes_workspace_code_key")
+	var primaryKey string
+	err := database.QueryRow(t.Context(), `SELECT pg_get_constraintdef(oid)
+		FROM pg_constraint
+		WHERE conrelid = 'consent_purposes'::regclass
+			AND conname = 'consent_purposes_pkey'`).Scan(&primaryKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if primaryKey != "PRIMARY KEY (id)" {
+		t.Fatalf("expected consent purposes primary key on id, got %s", primaryKey)
+	}
+	for _, column := range []string{"aliases", "event_path", "profile_path"} {
 		assertColumnExists(t, database, "consent_purposes", column)
 		if !hasDefault(t, database, "consent_purposes", column) {
 			t.Fatalf("expected column consent_purposes.%s to have a default, got no default", column)
 		}
 	}
+
+	ids := map[string]string{}
+	for code, name := range map[string]string{"analytics": "Analytics", "marketing": "Marketing"} {
+		var id, gotName, eventPath, profilePath string
+		var aliases []string
+		err = database.QueryRow(t.Context(), `SELECT id, name, aliases, event_path, profile_path
+			FROM consent_purposes WHERE workspace = '222222222222' AND code = $1`, code).
+			Scan(&id, &gotName, &aliases, &eventPath, &profilePath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(id) != 12 || !base58.IsValid(id) {
+			t.Fatalf("expected valid identifier for consent purpose %q, got %q", code, id)
+		}
+		if gotName != name || len(aliases) != 0 || eventPath != "" || profilePath != "" {
+			t.Fatalf("unexpected upgraded consent purpose %q values: name=%q aliases=%v event_path=%q profile_path=%q",
+				code, gotName, aliases, eventPath, profilePath)
+		}
+		ids[code] = id
+	}
+
+	var requiredConsents []string
+	err = database.QueryRow(t.Context(), "SELECT required_consents FROM pipelines WHERE id = '444444444444'").
+		Scan(&requiredConsents)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(requiredConsents) != 2 || requiredConsents[0] != ids["marketing"] || requiredConsents[1] != ids["analytics"] {
+		t.Fatalf("expected pipeline required consents [%s %s], got %v", ids["marketing"], ids["analytics"], requiredConsents)
+	}
+
+	var requiredConsentsType string
+	err = database.QueryRow(t.Context(), `SELECT format_type(a.atttypid, a.atttypmod)
+		FROM pg_attribute a
+		WHERE a.attrelid = 'pipelines'::regclass
+			AND a.attname = 'required_consents'
+			AND NOT a.attisdropped`).Scan(&requiredConsentsType)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if requiredConsentsType != "character varying(12)[]" {
+		t.Fatalf("expected pipelines.required_consents type character varying(12)[], got %s", requiredConsentsType)
+	}
+
+	return ids
 }
 
 // hasDefault reports whether table.column has a database default.
