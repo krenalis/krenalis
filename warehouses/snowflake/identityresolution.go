@@ -299,10 +299,7 @@ func (warehouse *Snowflake) finalizePublishedProfiles(ctx context.Context, db *s
 		return snowflake(err)
 	}
 
-	obsoleteProfilesVersions, err := obsoleteProfilesTableVersions(ctx, db, publishedProfilesVersion)
-	if err != nil {
-		return err
-	}
+	obsoleteProfilesVersions, readErr := obsoleteProfilesTableVersions(ctx, db, publishedProfilesVersion)
 	for _, version := range obsoleteProfilesVersions {
 		name := fmt.Sprintf("KRENALIS_PROFILES_%d", version)
 		_, err := db.ExecContext(ctx, `DROP TABLE IF EXISTS `+quoteIdent(name))
@@ -311,7 +308,7 @@ func (warehouse *Snowflake) finalizePublishedProfiles(ctx context.Context, db *s
 		}
 	}
 
-	return nil
+	return readErr
 }
 
 // maxObsoleteProfilesTableVersions limits memory usage and DDL work per
@@ -322,10 +319,12 @@ const maxObsoleteProfilesTableVersions = 1024
 // that are older than publishedProfilesVersion. Non-initial versions are
 // included only if their associated operations have completed.
 //
-// publishedProfilesVersion must be in the range [0, math.MaxInt32]. Returned
-// versions are in the range [0, publishedProfilesVersion), where zero
-// represents the initial version. The function fails if the result exceeds
-// maxObsoleteProfilesTableVersions instead of returning a partial list.
+// publishedProfilesVersion must be in the range [0, math.MaxInt32].
+// Returned versions are in the range [0, publishedProfilesVersion), where zero
+// represents the initial version.
+//
+// If the result exceeds maxObsoleteProfilesTableVersions, the function returns
+// the versions read up to that limit together with an error.
 func obsoleteProfilesTableVersions(ctx context.Context, db *sql.DB, publishedProfilesVersion int) ([]int, error) {
 
 	rows, err := db.QueryContext(ctx, `SELECT "V"."VERSION"
@@ -351,7 +350,7 @@ func obsoleteProfilesTableVersions(ctx context.Context, db *sql.DB, publishedPro
 	var versions []int
 	for rows.Next() {
 		if len(versions) == maxObsoleteProfilesTableVersions {
-			return nil, fmt.Errorf("warehouse returned too many obsolete profile table versions")
+			return versions, fmt.Errorf("warehouse returned too many obsolete profile table versions")
 		}
 		var version int
 		err = rows.Scan(&version)
