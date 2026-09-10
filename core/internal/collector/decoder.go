@@ -50,18 +50,20 @@ type decoder struct {
 	batch   json.Value
 	maxmind *maxminddb.Reader
 
-	receivedAt time.Time
-	remoteAddr struct {
-		ip                 netip.Addr
-		identifiable       string // e.g. 192.168.1.42 or 2001:db8:face:12::1
-		partiallyAnonymous string // e.g. 192.168.1.0 (/24) or 2001:db8:face:: (/48)
-		stronglyAnonymous  string // e.g. 192.168.0.0 (/16) or 2001:db8:: (/32)
-	}
+	receivedAt   time.Time
+	remoteAddr   remoteAddr
 	sentAt       time.Time
 	writeKey     string
 	connectionId string
 	context      map[string]any
 	typ          string
+}
+
+type remoteAddr struct {
+	ip                 netip.Addr
+	identifiable       string // e.g. 192.168.1.42 or 2001:db8:face:12::1
+	partiallyAnonymous string // e.g. 192.168.1.0 (/24) or 2001:db8:face:: (/48)
+	stronglyAnonymous  string // e.g. 192.168.0.0 (/16) or 2001:db8:: (/32)
 }
 
 // newDecoder returns a new decoder.
@@ -145,6 +147,15 @@ func (d *decoder) Events(connectionId string, fallbackToRequestIP bool) iter.Seq
 //   - a badRequestError: if the request's body is not valid.
 func (d *decoder) Reset(r *http.Request) error {
 
+	d.batch = nil
+	d.receivedAt = time.Now().UTC()
+	d.remoteAddr = remoteAddr{}
+	d.sentAt = time.Time{}
+	d.writeKey = ""
+	d.connectionId = ""
+	d.context = nil
+	d.typ = ""
+
 	if r.Method != "POST" {
 		return errMethodNotAllowed
 	}
@@ -165,10 +176,6 @@ func (d *decoder) Reset(r *http.Request) error {
 			return errors.BadRequest("request's content length must be in the range [1,%d]", maxRequestSize)
 		}
 	}
-
-	d.batch = nil
-	d.receivedAt = time.Now().UTC()
-	d.remoteAddr.ip = netip.Addr{}
 
 	// If the 'X-Forwarded-For' header is present, use it to determine
 	// the client's IP address. Also accept non-standard formats such as
@@ -202,12 +209,6 @@ func (d *decoder) Reset(r *http.Request) error {
 			return errors.New("unexpected IP address from RemoteAddr")
 		}
 	}
-
-	d.sentAt = time.Time{}
-	d.writeKey = ""
-	d.connectionId = ""
-	d.context = nil
-	d.typ = ""
 
 	path, _ := strings.CutPrefix(r.URL.Path, "/events")
 	switch path {
