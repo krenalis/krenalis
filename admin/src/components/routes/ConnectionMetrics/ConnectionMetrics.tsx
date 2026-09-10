@@ -677,45 +677,50 @@ const ConnectionMetrics = () => {
 					</div>
 					<div className='connection-metrics__funnel'>
 						<div className='connection-metrics__funnel-heading'>Pipeline</div>
-						<div className='connection-metrics__funnel-content'>
-							<div className='connection-metrics__funnel-passed'>
-								<div className='connection-metrics__funnel-initial' id={`funnel-circle-initial`}>
-									{isUsersSelected
-										? formatNumber(userFunnelData[0].passed + userFunnelData[0].failed)
-										: formatNumber(eventFunnelData[0].passed + eventFunnelData[0].failed)}
-								</div>
-								{Array.from(steps.entries()).map(([i, s]) => {
-									return (
-										<div className='connection-metrics__funnel-step' key={`funnel-passed-${i}`}>
-											<div className='connection-metrics__funnel-title'>
-												{stepTermByIdentifier[s]}
+						<div className='connection-metrics__funnel-scroll'>
+							<div
+								className='connection-metrics__funnel-content'
+								style={{ '--funnel-column-count': steps.length + 2 } as React.CSSProperties}
+							>
+								<div className='connection-metrics__funnel-passed'>
+									<div className='connection-metrics__funnel-initial' id={`funnel-circle-initial`}>
+										{isUsersSelected
+											? formatNumber(userFunnelData[0].passed + userFunnelData[0].failed)
+											: formatNumber(eventFunnelData[0].passed + eventFunnelData[0].failed)}
+									</div>
+									{Array.from(steps.entries()).map(([i, s]) => {
+										return (
+											<div className='connection-metrics__funnel-step' key={`funnel-passed-${i}`}>
+												<div className='connection-metrics__funnel-title'>
+													{stepTermByIdentifier[s]}
+												</div>
+												<div
+													className='connection-metrics__funnel-circle'
+													id={`funnel-circle-passed-${i}`}
+												/>
 											</div>
-											<div
-												className='connection-metrics__funnel-circle'
-												id={`funnel-circle-passed-${i}`}
-											/>
-										</div>
-									);
-								})}
-								<div className='connection-metrics__funnel-final' id={`funnel-circle-final`}>
-									{isUsersSelected
-										? formatNumber(userFunnelData[FINALIZE_INDEX].passed)
-										: formatNumber(eventFunnelData[FINALIZE_INDEX].passed)}
+										);
+									})}
+									<div className='connection-metrics__funnel-final' id={`funnel-circle-final`}>
+										{isUsersSelected
+											? formatNumber(userFunnelData[FINALIZE_INDEX].passed)
+											: formatNumber(eventFunnelData[FINALIZE_INDEX].passed)}
+									</div>
 								</div>
+								<div className='connection-metrics__funnel-failed'>
+									<div key='funnel-initial-empty' />
+									{Array.from(steps.entries()).map(([i, _]) => {
+										return (
+											<div
+												key={`funnel-failed-${i}`}
+												className='connection-metrics__funnel-circle'
+												id={`funnel-circle-failed-${i}`}
+											/>
+										);
+									})}
+								</div>
+								{funnelArrows}
 							</div>
-							<div className='connection-metrics__funnel-failed'>
-								<div key='funnel-initial-empty' />
-								{Array.from(steps.entries()).map(([i, _]) => {
-									return (
-										<div
-											key={`funnel-failed-${i}`}
-											className='connection-metrics__funnel-circle'
-											id={`funnel-circle-failed-${i}`}
-										/>
-									);
-								})}
-							</div>
-							{funnelArrows}
 						</div>
 					</div>
 					<div className='connection-metrics__errors'>
