@@ -20,7 +20,7 @@ import { SchemaContext } from '../../../context/SchemaContext';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { toKrenalisStringType } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
-import { SchemaPropertyIdentifierBadge } from '../Schema/SchemaPropertyGrid';
+import { SchemaPropertyIdentifierBadge, SchemaPropertyName } from '../Schema/SchemaPropertyGrid';
 import { SchemaPropertyConsent } from '../Schema/SchemaPropertyConsent';
 import { getConsentPurposesByPropertyPath } from '../Schema/SchemaPropertyConsent.helpers';
 
@@ -46,6 +46,7 @@ interface PropertyToEdit {
 	createRequired?: boolean;
 	updateRequired?: boolean;
 	nullable?: boolean;
+	displayName?: string;
 	description?: string;
 	isEditable?: boolean;
 }
@@ -71,6 +72,7 @@ interface SelectPropertyOptions {
 interface PropertyFieldChanges {
 	name: boolean;
 	type: boolean;
+	displayName: boolean;
 	description: boolean;
 	primarySource: boolean;
 }
@@ -354,6 +356,7 @@ const useSchemaEdit = (
 			readOptional: true,
 			createRequired: false,
 			updateRequired: false,
+			displayName: property.displayName,
 			description: property.description,
 			isEditable: true,
 		};
@@ -473,6 +476,7 @@ const useSchemaEdit = (
 			readOptional: current.readOptional,
 			createRequired: current.createRequired,
 			updateRequired: current.updateRequired,
+			displayName: property.displayName,
 			description: property.description,
 			isEditable: current.isEditable ? current.isEditable : false,
 		};
@@ -707,6 +711,7 @@ const getPropertyFieldChanges = (
 	return {
 		name: property.name !== initialProperty.name,
 		type: JSON.stringify(property.type) !== JSON.stringify(initialProperty.type),
+		displayName: (property.displayName || '') !== (initialProperty.displayName || ''),
 		description: (property.description || '') !== (initialProperty.description || ''),
 		primarySource: primarySource !== initialPrimarySource,
 	};
@@ -798,7 +803,7 @@ const getVisiblePropertyKeys = (
 	for (const [key, property] of Object.entries(schema)) {
 		const matchesSearch =
 			term === '' ||
-			[property.name, property.description, toKrenalisStringType(property.type)]
+			[property.name, property.displayName, property.description, toKrenalisStringType(property.type)]
 				.filter(Boolean)
 				.join(' ')
 				.toLocaleLowerCase()
@@ -985,7 +990,7 @@ const buildRow = (
 	}
 	return {
 		cells: [
-			property.name,
+			<SchemaPropertyName property={property} />,
 			typeCell,
 			identifierPosition == null ? null : <SchemaPropertyIdentifierBadge position={identifierPosition} />,
 			property.description || <span className='schema-edit__empty-cell'>—</span>,

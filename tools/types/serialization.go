@@ -26,7 +26,10 @@ var errNullToken = errors.New("invalid type syntax")
 var null = []byte("null")
 
 // Parse parses the JSON-encoded data and returns the decoded type.
-// If data represents JSON null, Parse returns an error.
+// If data is JSON null, Parse returns an error.
+//
+// Parse accepts only recognized concrete kinds; generic type parameters cannot
+// be parsed from JSON.
 func Parse(data string) (Type, error) {
 	dec := json.NewDecoder(strings.NewReader(norm.NFC.String(data)))
 	dec.UseNumber()
@@ -44,7 +47,10 @@ func Parse(data string) (Type, error) {
 }
 
 // MarshalJSON marshals t into JSON.
-// If t is not valid, it is marshalled as 'null'.
+// If t is invalid, it is marshaled as 'null'.
+//
+// Generic types are intentionally encoded for documentation with their
+// parameter names used as kinds.
 func (t Type) MarshalJSON() ([]byte, error) {
 	if !t.Valid() && !t.Generic() {
 		return null, nil
@@ -54,8 +60,11 @@ func (t Type) MarshalJSON() ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// UnmarshalJSON parses the JSON-encoded data and stores the result in the type
-// pointed by t.
+// UnmarshalJSON parses the JSON-encoded data and stores the result in the value
+// pointed to by t.
+//
+// It accepts only recognized concrete kinds; generic type parameters cannot be
+// unmarshaled from JSON.
 func (t *Type) UnmarshalJSON(data []byte) error {
 	dec := json.NewDecoder(bytes.NewReader(norm.NFC.Bytes(data)))
 	dec.UseNumber()
@@ -214,6 +223,8 @@ func marshalType(b *bytes.Buffer, t Type) {
 }
 
 // MarshalJSON marshals p into JSON.
+//
+// Properties with generic types are supported.
 func (p Property) MarshalJSON() ([]byte, error) {
 	var b bytes.Buffer
 	err := marshalProperty(&b, p)
@@ -225,6 +236,8 @@ func (p Property) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON parses the JSON-encoded data and stores the result in the
 // property pointed by p.
+//
+// Properties with generic types cannot be unmarshaled from JSON.
 func (p *Property) UnmarshalJSON(data []byte) error {
 	dec := json.NewDecoder(bytes.NewReader(norm.NFC.Bytes(data)))
 	dec.UseNumber()
@@ -273,6 +286,10 @@ func marshalProperty(b *bytes.Buffer, p Property) error {
 	}
 	if p.Nullable {
 		b.WriteString(`,"nullable":true`)
+	}
+	if p.DisplayName != "" {
+		b.WriteString(`,"displayName":`)
+		_ = marshalString(b, p.DisplayName)
 	}
 	b.WriteString(`,"description":`)
 	_ = marshalString(b, p.Description)
@@ -573,8 +590,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	}
 	t.kind, _ = KindByName(kind)
 	if t.kind == InvalidKind {
-		t.generic = true
-		t.vl = kind
+		return Type{}, fmt.Errorf("unknown type kind %q", kind)
 	}
 	if pattern != nil {
 		if t.kind != StringKind {
@@ -875,11 +891,10 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 		t.real = real
 	}
-	if elementType.Valid() || elementType.Generic() {
+	if elementType.Valid() {
 		if t.kind != ArrayKind && t.kind != MapKind {
 			return Type{}, errors.New("unexpected element type for non-array and non-map type")
 		}
-		t.generic = elementType.generic
 		t.vl = elementType
 	} else {
 		if t.kind == ArrayKind || t.kind == MapKind {
@@ -920,12 +935,6 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		if t.kind != ObjectKind {
 			return Type{}, errors.New("unexpected properties for non-object type")
 		}
-		for _, p := range properties {
-			if p.Type.generic {
-				t.generic = true
-				break
-			}
-		}
 		names := make(map[string]int, len(properties))
 		for i, p := range properties {
 			names[p.Name] = i
@@ -941,7 +950,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 func unmarshalProperty(dec *json.Decoder) (Property, error) {
 
 	var p Property
-	var hasPrefilled, hasCreateRequired, hasUpdateRequired, hasReadOptional, hasNullable, hasDescription bool
+	var hasPrefilled, hasCreateRequired, hasUpdateRequired, hasReadOptional, hasNullable, hasDisplayName, hasDescription bool
 
 	// Read property keys and values.
 	for {
@@ -957,7 +966,7 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 		key := tok.(string)
 
 		if key == "type" {
-			if p.Type.Valid() || p.Type.Generic() {
+			if p.Type.Valid() {
 				return Property{}, errors.New("repeated 'type' key")
 			}
 			p.Type, err = unmarshalType(dec)
@@ -1035,6 +1044,15 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 				return Property{}, errors.New("unexpected value for 'nullable' key of property")
 			}
 			hasNullable = true
+		case "displayName":
+			if hasDisplayName {
+				return Property{}, errors.New("repeated 'displayName' key")
+			}
+			p.DisplayName, ok = tok.(string)
+			if !ok {
+				return Property{}, errors.New("unexpected value for property display name")
+			}
+			hasDisplayName = true
 		case "description":
 			if hasDescription {
 				return Property{}, errors.New("repeated 'description' key")
@@ -1053,7 +1071,7 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 	if p.Name == "" {
 		return Property{}, errors.New("missing property name")
 	}
-	if !p.Type.Valid() && !p.Type.Generic() {
+	if !p.Type.Valid() {
 		return Property{}, errors.New("missing property type")
 	}
 

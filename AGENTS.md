@@ -43,7 +43,9 @@ Keep the receiver name the type already uses. The facade types in `core/` (`Conn
 
 ## Imports
 
-Outside the implementation and compatibility tests of `tools/errors`, always import `github.com/krenalis/krenalis/tools/errors` instead of the standard-library `errors` package. The repository package exposes every standard `errors` name in addition to repository-specific functionality.
+In `cmd`, `core`, and their subpackages, always import `github.com/krenalis/krenalis/tools/errors` instead of the standard-library `errors` package. The repository package exposes every standard `errors` name in addition to repository-specific functionality.
+
+In other packages, prefer the standard-library `errors` package. Import `github.com/krenalis/krenalis/tools/errors` only when its repository-specific functionality is needed. The implementation and compatibility tests of `tools/errors` use the standard-library package as required to avoid an import cycle.
 
 Use an imported package's default name unless Go requires disambiguation because of an actual identifier conflict. Do not alias an import merely to avoid reusing the same name for a variable, field, or selector when the language permits it.
 
@@ -167,11 +169,64 @@ Exported methods in `core/internal/metrics` are an exception: they must assume t
 
 ## Block spacing
 
-If a brace-delimited code block contains any blank line, make all of its boundaries visible: leave the first line after the opening brace and the last line before the closing brace blank, and separate the complete construct that owns the block from the surrounding code with blank lines. Apply this rule to function and method bodies as well.
+Apply the following procedure to every brace-delimited block, be it a function or method body or a block nested inside one. Decide each block on its own, from the inside out.
 
-When a function or method body ends with a `return`, place the final separating blank line immediately before the `return` instead of between the `return` and the closing brace.
+1. Choose the internal spacing. Looking only at the statements of the block, and ignoring any blank line adjacent to its braces, insert a blank line wherever it genuinely helps readability, typically by separating logically distinct groups of statements. A single-statement block never needs one, and neither does a short cohesive block; a guard or a `return` does not earn a blank line on its own.
+2. Pad the boundaries. If step 1 left at least one internal blank line, leave a blank line immediately after the opening brace and another immediately before the closing brace. If it left none, the block contains no blank line at all: never pad an otherwise compact block.
+3. Place the closing pad before a final `return`. When a padded block ends with a `return`, its trailing blank line goes immediately before that `return`, with no blank line between the `return` and the closing brace. A `return` inside a nested block is not the enclosing block's final statement.
 
-When appropriate, code that initializes a variable may be confined to its own block. Declare the variable that receives the result outside the block and place the block immediately after that declaration, without an intervening blank line:
+Only two shapes are therefore valid:
+
+- A compact block, with no blank line anywhere inside it.
+- A separated block, whose internal blank lines are matched by a blank line after the opening brace and one before the closing brace, the latter moved above a final `return`.
+
+Separate the complete construct that owns the block from surrounding code with blank lines. Keep declaration comments attached to their declarations.
+
+When reviewing existing code within the scope of a change, run step 1 independently of blank lines that are only boundary padding, including padding before a final `return`. Remove that padding if no useful internal separation remains.
+
+Short, cohesive bodies stay compact, with or without a final `return`:
+
+```go
+func nonNegative(n int) int {
+    if n < 0 {
+        return 0
+    }
+    return n
+}
+
+func (c *cache) resetStats() {
+    c.hits = 0
+    c.misses = 0
+}
+```
+
+The following examples illustrate boundary placement once internal blank lines have been chosen to separate logical steps. They do not prescribe where to separate statements in other functions or methods:
+
+```go
+func sortedKeys(entries map[string]int) []string {
+
+    keys := make([]string, 0, len(entries))
+    for key := range entries {
+        keys = append(keys, key)
+    }
+
+    slices.Sort(keys)
+
+    return keys
+}
+
+func (c *cache) reset() {
+
+    clear(c.entries)
+    clear(c.pending)
+
+    c.hits = 0
+    c.misses = 0
+
+}
+```
+
+When appropriate, code that initializes a variable may be confined to its own block. As an exception to separating a block from surrounding code, keep the result variable's declaration immediately before its initialization block, without an intervening blank line:
 
 ```go
 var x int
@@ -268,6 +323,39 @@ whose sole purpose is detecting or correcting such values, or protecting the
 owning workspace from their consequences. Accept them when they are safe for
 Krenalis. Establishing truthfulness or authenticity requires an independent
 integrity mechanism.
+
+# Uniformity across data warehouses
+
+Every supported data warehouse has its own package under `warehouses/`, and
+they all implement the same interfaces. Keep those packages as similar to one
+another as the platforms allow: whoever knows one should know them all, and a
+change made to one should be easy to apply to the others. Do not treat one
+platform as the reference implementation and the others as ports; the same
+rules apply to all of them, including any platform added later.
+
+Mirror the code: the same file names for the same responsibilities, the same
+declaration order inside a file, the same type, function, and variable names,
+the same signatures, the same error messages, and the same shape of the code
+inside each function. When a feature, a fix, or a validation is added to one
+warehouse, add it to the others in the same form, unless the platform makes it
+inapplicable.
+
+Apply the rule to tests as well: the same test files, the same test names, the
+same table-driven cases, and comparable fixtures, so that the coverage of one
+warehouse can be compared with the coverage of another at a glance. When a case
+applies to every platform, write it the same way everywhere instead of giving
+each platform its own structure. When a case applies to only one platform, keep
+it recognizable as the exception it is.
+
+Similarity is a means, not an end. Platforms genuinely differ in SQL dialect,
+type system, quoting rules, driver behavior, and supported features, and those
+differences must be expressed naturally where they occur. Do not distort code
+to make packages match: no pointless abstraction, no dead or unreachable code
+kept only for symmetry, no test that asserts nothing on a platform where the
+case cannot arise, and no renaming of a concept that a platform names
+differently for a good reason. When a divergence is necessary, keep it local
+and confined to the part that truly differs, leaving the surrounding code
+identical.
 
 # `core` and `cmd` conventions
 

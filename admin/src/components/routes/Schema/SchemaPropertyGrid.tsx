@@ -5,6 +5,7 @@ import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import { Property } from '../../../lib/api/types/types';
 import { GridNestedRowsIndentation } from '../../base/Grid/Grid.types';
 
 const schemaPropertyGridNestedRowsIndentation: GridNestedRowsIndentation = { base: 34, step: 20 };
@@ -16,6 +17,15 @@ const schemaPropertyGridClassNamePrefixes = {
 
 type SchemaPropertyGridView = keyof typeof schemaPropertyGridClassNamePrefixes;
 type SchemaPropertyGridClassNamePrefix = (typeof schemaPropertyGridClassNamePrefixes)[SchemaPropertyGridView];
+
+const SchemaPropertyName = ({ property }: { property: Property }) => (
+	<div className='schema-property-grid__property-name'>
+		<div>{property.name}</div>
+		{property.displayName && (
+			<div className='schema-property-grid__property-display-name'>{property.displayName}</div>
+		)}
+	</div>
+);
 
 const SchemaPropertyIdentifierBadge = ({ position }: { position: number }) => (
 	<SlBadge className='schema-property-grid__identifier' pill variant='neutral'>
@@ -311,6 +321,7 @@ const SchemaPropertyGridToolbar = ({
 export {
 	SchemaPropertyGridSummary,
 	SchemaPropertyGridToolbar,
+	SchemaPropertyName,
 	SchemaPropertyIdentifierBadge,
 	SchemaPropertyIdentifierLabel,
 	SchemaPropertyIdentifierValue,

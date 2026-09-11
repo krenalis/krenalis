@@ -146,6 +146,7 @@ type Property struct {
 	UpdateRequired bool
 	ReadOptional   bool
 	Nullable       bool
+	DisplayName    string
 	Description    string
 }
 
@@ -315,7 +316,7 @@ func IP() Type {
 
 // Array returns an array type with elements of type t.
 func Array(t Type) Type {
-	return Type{kind: ArrayKind, s: MaxElements, vl: t}
+	return Type{kind: ArrayKind, generic: t.generic, s: MaxElements, vl: t}
 }
 
 // Object returns an object type with the given properties.
@@ -332,7 +333,7 @@ func Object(properties []Property) Type {
 
 // Map returns a map type with value type t.
 func Map(t Type) Type {
-	return Type{kind: MapKind, vl: t}
+	return Type{kind: MapKind, generic: t.generic, vl: t}
 }
 
 // ObjectOf is like Object but returns an error instead of panicking if any.
@@ -367,6 +368,10 @@ func ObjectOf(properties []Property) (Type, error) {
 		} else if !property.Type.Valid() {
 			return Type{}, errors.New("invalid property type")
 		}
+		displayName, err := normalizedUTF8(property.DisplayName)
+		if err != nil {
+			return Type{}, err
+		}
 		description, err := normalizedUTF8(property.Description)
 		if err != nil {
 			return Type{}, err
@@ -379,6 +384,7 @@ func ObjectOf(properties []Property) (Type, error) {
 			UpdateRequired: property.UpdateRequired,
 			ReadOptional:   property.ReadOptional,
 			Nullable:       property.Nullable,
+			DisplayName:    displayName,
 			Description:    description,
 		}
 	}

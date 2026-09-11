@@ -278,6 +278,13 @@ func Test_Decode(t *testing.T) {
 			err:  newErrInvalidValue(`is longer than 10 characters: "some long text"`, "String"),
 		},
 		{
+			typ: Object([]Property{
+				{Name: "String", Type: String().WithMaxBytes(3)},
+			}),
+			data: `{"String":"éé"}`,
+			err:  newErrInvalidValue(`is longer than 3 bytes: "éé"`, "String"),
+		},
+		{
 			data: `{"Text_values":"foo"}`,
 			err:  newErrInvalidValue(`has an invalid value: "foo"; valid values are "a", "b", and "c"`, "Text_values"),
 		},
