@@ -373,7 +373,6 @@ const PurposeDialog = ({ isOpen, purposeToEdit, profileSchema, onClose, onSaved 
 	const [profilePath, setProfilePath] = useState<string>('');
 	const [isEventPathCustom, setIsEventPathCustom] = useState<boolean>(false);
 	const [isProfilePathCustom, setIsProfilePathCustom] = useState<boolean>(false);
-	const [isWarningOpen, setIsWarningOpen] = useState<boolean>(false);
 	const [nameError, setNameError] = useState<string>('');
 	const [codeError, setCodeError] = useState<string>('');
 	const [aliasesError, setAliasesError] = useState<string>('');
@@ -388,7 +387,6 @@ const PurposeDialog = ({ isOpen, purposeToEdit, profileSchema, onClose, onSaved 
 	const eventPathInputRef = useRef<any>();
 	const profilePathInputRef = useRef<any>();
 	const formRef = useRef<any>();
-	const selectEventPathAfterWarning = useRef<boolean>(false);
 
 	const isEditing = purposeToEdit != null;
 
@@ -410,8 +408,6 @@ const PurposeDialog = ({ isOpen, purposeToEdit, profileSchema, onClose, onSaved 
 		setProfilePath(isEditing ? purposeToEdit.profilePath : '');
 		setIsEventPathCustom(isEditing && purposeToEdit.eventPath !== `context.consents.${purposeToEdit.code}`);
 		setIsProfilePathCustom(isEditing && purposeToEdit.profilePath !== `consents.${purposeToEdit.code}`);
-		setIsWarningOpen(false);
-		selectEventPathAfterWarning.current = false;
 		setNameError('');
 		setCodeError('');
 		setAliasesError('');
@@ -471,18 +467,9 @@ const PurposeDialog = ({ isOpen, purposeToEdit, profileSchema, onClose, onSaved 
 	const onCustomizeEventPath = () => {
 		setEventPath(defaultEventPath);
 		setIsEventPathCustom(true);
-		selectEventPathAfterWarning.current = true;
-		setIsWarningOpen(false);
-	};
-
-	const onWarningClosed = () => {
-		setIsWarningOpen(false);
-		if (selectEventPathAfterWarning.current) {
-			selectEventPathAfterWarning.current = false;
-			setTimeout(() => {
-				eventPathInputRef.current?.select();
-			}, 0);
-		}
+		setTimeout(() => {
+			eventPathInputRef.current?.select();
+		}, 0);
 	};
 
 	const onResetEventPath = () => {
@@ -707,7 +694,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, profileSchema, onClose, onSaved 
 							<PathAction
 								isCustom={isEventPathCustom}
 								isDefaultValue={eventPath === defaultEventPath}
-								onCustomize={() => setIsWarningOpen(true)}
+								onCustomize={onCustomizeEventPath}
 								onReset={onResetEventPath}
 							/>
 						</SlInput>
@@ -715,6 +702,13 @@ const PurposeDialog = ({ isOpen, purposeToEdit, profileSchema, onClose, onSaved 
 							<div className='privacy__dialog-error'>
 								<SlIcon slot='icon' name='exclamation-octagon' />
 								{eventPathError}
+							</div>
+						)}
+						{isEventPathCustom && !eventPath.startsWith('context.consents') && (
+							<div className='privacy__dialog-warning'>
+								<SlIcon slot='icon' name='exclamation-triangle' />
+								Krenalis SDKs send consents in context.consents. Use a path outside it only if you
+								deliver the consent there yourself.
 							</div>
 						)}
 
@@ -749,27 +743,6 @@ const PurposeDialog = ({ isOpen, purposeToEdit, profileSchema, onClose, onSaved 
 					</SlButton>
 				</div>
 			</SlDialog>
-			<AlertDialog
-				variant='danger'
-				isOpen={isWarningOpen}
-				onClose={onWarningClosed}
-				title='Are you sure?'
-				actions={
-					<>
-						<SlButton onClick={() => setIsWarningOpen(false)}>Cancel</SlButton>
-						<SlButton
-							variant='danger'
-							className='privacy__dialog-customize-event-path'
-							onClick={onCustomizeEventPath}
-						>
-							Edit
-						</SlButton>
-					</>
-				}
-			>
-				Krenalis SDKs integrate with CMPs to send the consents automatically in the context of the event. Change
-				this path only if you manually deliver them somewhere else.
-			</AlertDialog>
 		</>
 	);
 };
