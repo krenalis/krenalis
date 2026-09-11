@@ -164,12 +164,12 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				v = src
 			case float32:
 				f := float64(src)
-				if src < 0 || math.IsInf(f, 1) || f != math.Trunc(f) {
+				if src < 0 || f >= 0x1p64 || f != math.Trunc(f) {
 					return nil, inputValidationErrorf(name, "has a float32 value that cannot represent an unsigned int(%d) value", typ.BitSize())
 				}
 				v = uint64(src)
 			case float64:
-				if src < 0 || math.IsInf(src, 1) || src != math.Trunc(src) {
+				if src < 0 || src >= 0x1p64 || src != math.Trunc(src) {
 					return nil, inputValidationErrorf(name, "has a float64 value that cannot represent an unsigned int(%d) value", typ.BitSize())
 				}
 				v = uint64(src)
