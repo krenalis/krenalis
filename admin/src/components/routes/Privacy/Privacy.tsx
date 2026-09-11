@@ -441,7 +441,8 @@ const PurposeDialog = ({ isOpen, purposeToEdit, profileSchema, onClose, onSaved 
 		setAliases((aliases) => aliases.map((alias, i) => (i === index ? value : alias)));
 	};
 
-	const onAddAlias = () => setAliases((aliases) => [...aliases, '']);
+	const onAddAlias = (index: number) =>
+		setAliases((aliases) => [...aliases.slice(0, index + 1), '', ...aliases.slice(index + 1)]);
 
 	const onRemoveAlias = (index: number) =>
 		setAliases((aliases) => {
@@ -631,37 +632,40 @@ const PurposeDialog = ({ isOpen, purposeToEdit, profileSchema, onClose, onSaved 
 					)}
 
 					{aliases.map((alias, i) => (
-						<SlInput
-							size='small'
+						<div
+							className={`privacy__dialog-alias-row${i === 0 ? ' privacy__dialog-alias-row--with-label' : ''}`}
 							key={i}
-							className='privacy__dialog-alias'
-							label={i === 0 ? 'Aliases' : undefined}
-							value={alias}
-							onSlInput={(e) => onInputAlias(e, i)}
-							disabled={isEventPathCustom}
-							helpText={
-								i === aliases.length - 1
-									? 'The other codes with which the consent for this purpose can be given in an event'
-									: undefined
-							}
 						>
-							{(aliases.length > 1 || alias !== '') && (
+							<SlInput
+								size='small'
+								className='privacy__dialog-alias'
+								label={i === 0 ? 'Aliases' : undefined}
+								value={alias}
+								onSlInput={(e) => onInputAlias(e, i)}
+								disabled={isEventPathCustom}
+								helpText={
+									i === aliases.length - 1
+										? 'The other codes with which the consent for this purpose can be given in an event'
+										: undefined
+								}
+							/>
+							<div className='privacy__dialog-alias-actions'>
 								<AliasAction
-									icon='x-lg'
+									className='privacy__dialog-alias-add'
+									icon='plus-circle'
+									label='Add another alias'
+									isDisabled={isEventPathCustom || aliases.length >= MAX_ALIASES}
+									onClick={() => onAddAlias(i)}
+								/>
+								<AliasAction
+									className='privacy__dialog-alias-remove'
+									icon='x-circle'
 									label='Remove this alias'
-									isDisabled={isEventPathCustom}
+									isDisabled={isEventPathCustom || (aliases.length === 1 && alias === '')}
 									onClick={() => onRemoveAlias(i)}
 								/>
-							)}
-							{i === aliases.length - 1 && aliases.length < MAX_ALIASES && (
-								<AliasAction
-									icon='plus-lg'
-									label='Add another alias'
-									isDisabled={isEventPathCustom || alias === ''}
-									onClick={onAddAlias}
-								/>
-							)}
-						</SlInput>
+							</div>
+						</div>
 					))}
 					{aliasesError && (
 						<div className='privacy__dialog-error'>
@@ -791,25 +795,25 @@ const PathAction = ({ isCustom, isDefaultValue, onCustomize, onReset }: PathActi
 };
 
 interface AliasActionProps {
+	className: string;
 	icon: string;
 	label: string;
 	isDisabled: boolean;
 	onClick: () => void;
 }
 
-// AliasAction is a button shown within an alias input, to remove that alias or
-// to add another one.
-const AliasAction = ({ icon, label, isDisabled, onClick }: AliasActionProps) => (
-	<SlTooltip slot='suffix' content={label} hoist>
+// AliasAction is a button shown beside an alias input, to remove that alias or
+// add another one.
+const AliasAction = ({ className, icon, label, isDisabled, onClick }: AliasActionProps) => (
+	<SlTooltip className={className} content={label} hoist>
 		<SlButton
 			className='privacy__dialog-alias-action'
-			variant='text'
 			size='small'
-			circle
 			disabled={isDisabled}
+			aria-label={label}
 			onClick={onClick}
 		>
-			<SlIcon name={icon} />
+			<SlIcon name={icon} slot='prefix' />
 		</SlButton>
 	</SlTooltip>
 );
