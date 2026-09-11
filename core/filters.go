@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"fmt"
 	"math"
-	"net/netip"
 	"slices"
 	"strconv"
 	"strings"
@@ -248,8 +247,7 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 				}
 				v = jv
 			case types.IPKind:
-				addr, _ := netip.ParseAddr(value)
-				v = addr.String()
+				v, _ = types.NormalizeIP(value)
 			default:
 				panic(fmt.Errorf("unexpected type for property %s", cond.Property))
 			}
@@ -954,8 +952,7 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 		case types.UUIDKind:
 			_, valid = types.ParseUUID(value)
 		case types.IPKind:
-			_, err := netip.ParseAddr(value)
-			valid = err == nil
+			_, valid = types.NormalizeIP(value)
 		default:
 			return "", fmt.Errorf("unexpected type for property %q", cond.Property)
 		}

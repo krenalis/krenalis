@@ -92,6 +92,30 @@ func Marshal(data any, schema Type) (json.Value, error) {
 	return marshal(nil, data, schema)
 }
 
+// NormalizeIP normalizes value and returns its canonical form for use wherever
+// a value of type ip is required. It reports whether value is a valid IP
+// address.
+//
+// If value is a string, it is parsed with [netip.ParseAddr]; if parsing fails,
+// NormalizeIP returns "", false.
+func NormalizeIP[T string | netip.Addr](value T) (string, bool) {
+	var addr netip.Addr
+	switch v := any(value).(type) {
+	case string:
+		var err error
+		addr, err = netip.ParseAddr(v)
+		if err != nil {
+			return "", false
+		}
+	case netip.Addr:
+		addr = v
+	}
+	if !addr.IsValid() {
+		return "", false
+	}
+	return addr.Unmap().WithZone("").String(), true
+}
+
 var (
 	nan         = []byte("NaN")
 	posInfinity = []byte("Infinity")
@@ -452,8 +476,8 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 		}
 	case IPKind:
 		if v.Kind() == '"' {
-			if ip, err := netip.ParseAddr(string(d.unquoteString(v))); err == nil {
-				return ip.String(), nil
+			if ip, ok := NormalizeIP(string(d.unquoteString(v))); ok {
+				return ip, nil
 			}
 		}
 	case ArrayKind, ObjectKind, MapKind:

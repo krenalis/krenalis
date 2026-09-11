@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"net/netip"
 	"regexp"
 	"slices"
 	"strconv"
@@ -714,8 +713,8 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		}
 	case types.IPKind:
 		if v.Kind() == '"' {
-			if ip, err := netip.ParseAddr(d.unquoteString(v)); err == nil {
-				return ip.String(), nil
+			if ip, ok := types.NormalizeIP(d.unquoteString(v)); ok {
+				return ip, nil
 			}
 		}
 	}

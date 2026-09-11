@@ -158,7 +158,7 @@ func Test_normalize(t *testing.T) {
 		{types.IP(), "2001:0db8:0000:0000:0000:ff00:0042:8329", "2001:db8::ff00:42:8329", false, nil},
 		{types.IP(), "2001:0db8:85a3::8a2e:0370:7334/64", "2001:db8:85a3::8a2e:370:7334", false, nil},
 		{types.IP(), "fe80::1ff:fe23:4567:890a%eth0", "fe80::1ff:fe23:4567:890a", false, nil},
-		{types.IP(), "::ffff:192.168.1.10", "::ffff:192.168.1.10", false, nil},
+		{types.IP(), "::ffff:192.168.1.10", "192.168.1.10", false, nil},
 		{types.IP(), "", nil, true, nil},
 		{types.IP(), net.ParseIP("127.0.0.1"), "127.0.0.1", false, nil},
 		{types.IP(), net.ParseIP("192.168.1.1"), "192.168.1.1", false, nil},
@@ -167,7 +167,7 @@ func Test_normalize(t *testing.T) {
 		{types.IP(), netip.MustParseAddr("127.0.0.1"), "127.0.0.1", false, nil},
 		{types.IP(), netip.MustParseAddr("2001:0db8:0000:0000:0000:ff00:0042:8329"), "2001:db8::ff00:42:8329", false, nil},
 		{types.IP(), netip.MustParseAddr("fe80::1ff:fe23:4567:890a%eth0"), "fe80::1ff:fe23:4567:890a", false, nil},
-		{types.IP(), netip.MustParseAddr("::ffff:192.168.1.10"), "::ffff:192.168.1.10", false, nil},
+		{types.IP(), netip.MustParseAddr("::ffff:192.168.1.10"), "192.168.1.10", false, nil},
 		{types.IP(), net.IP(nil), nil, true, nil},
 		// array.
 		{types.Array(types.Int(32)), []any{1, 2}, []any{1, 2}, false, nil},
