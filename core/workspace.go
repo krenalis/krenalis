@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/collector"
@@ -224,9 +225,11 @@ func (this *Workspace) Attributes(ctx context.Context, kpid string, schema types
 
 	this.core.mustBeOpen()
 
-	if _, ok := types.ParseUUID(kpid); !ok {
+	id, err := uuid.Parse(kpid)
+	if err != nil {
 		return nil, errors.BadRequest("profile %q is not a valid profile identifier", kpid)
 	}
+	kpid = id.String()
 	if schema.Kind() != types.ObjectKind || schema.Generic() {
 		return nil, errors.BadRequest("schema is not a concrete object type")
 	}
@@ -975,9 +978,11 @@ func (this *Workspace) Identities(ctx context.Context, kpid string, first, limit
 
 	this.core.mustBeOpen()
 
-	if _, ok := types.ParseUUID(kpid); !ok {
+	id, err := uuid.Parse(kpid)
+	if err != nil {
 		return nil, 0, errors.BadRequest("profile %q is not a valid KPID", kpid)
 	}
+	kpid = id.String()
 	if first < 0 {
 		return nil, 0, errors.BadRequest("first %d is not valid", first)
 	}

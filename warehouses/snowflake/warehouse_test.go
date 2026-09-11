@@ -268,6 +268,14 @@ func (loader *testSettingsLoader) Load(ctx context.Context, dst any) error {
 	return json.Unmarshal(loader.settings, dst)
 }
 
+func mustExecSQL(t *testing.T, db *sql.DB, statement string) {
+	t.Helper()
+	_, err := db.ExecContext(t.Context(), statement)
+	if err != nil {
+		t.Fatalf("cannot execute SQL %q: %s", statement, err)
+	}
+}
+
 // newTestSnowflakeWarehouse creates a Snowflake test environment and opens a
 // warehouse connection to it.
 func newTestSnowflakeWarehouse(t *testing.T) (*Snowflake, *sql.DB) {

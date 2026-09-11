@@ -92,6 +92,22 @@ func Marshal(data any, schema Type) (json.Value, error) {
 	return marshal(nil, data, schema)
 }
 
+// NormalizeUUID normalizes s and returns its canonical form for use wherever
+// a UUID value is required.
+//
+// The boolean return value reports whether s is a UUID in the standard form
+// xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
+func NormalizeUUID(s string) (string, bool) {
+	if len(s) != 36 {
+		return "", false
+	}
+	id, err := uuid.Parse(s)
+	if err != nil {
+		return "", false
+	}
+	return id.String(), true
+}
+
 var (
 	nan         = []byte("NaN")
 	posInfinity = []byte("Infinity")
@@ -330,7 +346,7 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 				if n, ok := t.MaxLength(); ok && utf8.RuneCountInString(s) > n {
 					return nil, newErrInvalidValue(fmt.Sprintf("is longer than %d characters: %s", n, d.formatString(v)), "")
 				}
-				if n, ok := t.MaxBytes(); ok && utf8.RuneCountInString(s) > n {
+				if n, ok := t.MaxBytes(); ok && len(s) > n {
 					return nil, newErrInvalidValue(fmt.Sprintf("is longer than %d bytes: %s", n, d.formatString(v)), "")
 				}
 				return s, nil
@@ -442,8 +458,8 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 		}
 	case UUIDKind:
 		if v.Kind() == '"' {
-			if u, err := uuid.Parse(string(v.AppendUnquote(nil))); err == nil {
-				return u.String(), nil
+			if u, ok := NormalizeUUID(string(v.AppendUnquote(nil))); ok {
+				return u, nil
 			}
 		}
 	case JSONKind:

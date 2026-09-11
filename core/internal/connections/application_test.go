@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -26,6 +27,82 @@ func (recordFetcherFunc) RecordSchema(context.Context, connectors.Targets, conne
 
 func (f recordFetcherFunc) Records(ctx context.Context, target connectors.Targets, updatedAt time.Time, cursor string, schema types.Type) ([]connectors.Record, string, error) {
 	return f(ctx, target, updatedAt, cursor, schema)
+}
+
+type staticSchemaConnector struct {
+	connectors.EventSender
+	connectors.RecordFetcher
+	result types.Type
+}
+
+func (connector staticSchemaConnector) EventTypeSchema(context.Context, string) (types.Type, error) {
+	return connector.result, nil
+}
+
+func (connector staticSchemaConnector) RecordSchema(context.Context, connectors.Targets, connectors.Role) (types.Type, error) {
+	return connector.result, nil
+}
+
+// TestApplicationRejectsGenericSchemas verifies that generic schemas returned
+// by application connectors are rejected.
+func TestApplicationRejectsGenericSchemas(t *testing.T) {
+
+	schemaWithTypeParameter := types.Object([]types.Property{{Name: "value", Type: types.Parameter("value")}})
+
+	for _, tc := range []struct {
+		name    string
+		role    state.Role
+		target  state.Target
+		preview bool
+		want    string
+	}{
+		{
+			name:   "event schema",
+			role:   state.Destination,
+			target: state.TargetEvent,
+			want:   "connector test returned an invalid event schema",
+		},
+		{
+			name:    "event preview",
+			preview: true,
+			want:    "connector test returned an invalid event schema",
+		},
+		{
+			name:   "user schema",
+			role:   state.Source,
+			target: state.TargetUser,
+			want:   "connector test returned an invalid source schema",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+
+			app := &Application{
+				connector: "test",
+				users:     schema{lock: make(chan struct{}, 1)},
+				inner:     staticSchemaConnector{result: schemaWithTypeParameter},
+			}
+
+			var err error
+			if tc.preview {
+				_, err = app.PreviewSendEvent(t.Context(), connectors.Event{Type: connectors.EventTypeInfo{ID: "event"}})
+			} else {
+				_, err = app.SchemaAsRole(t.Context(), tc.role, tc.target, "event")
+			}
+
+			if err != nil {
+				if _, ok := errors.AsType[*UnavailableError](err); !ok {
+					t.Fatalf("expected *UnavailableError, got %T (%v)", err, err)
+				}
+				if err.Error() != tc.want {
+					t.Fatalf("expected error %q, got %q", tc.want, err)
+				}
+				return
+			}
+			t.Fatal("expected a schema with a type parameter to be rejected")
+
+		})
+	}
+
 }
 
 // TestAppRecordsPaging verifies paging, deduplication, and lazy record processing.

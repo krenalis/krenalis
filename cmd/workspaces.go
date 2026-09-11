@@ -773,7 +773,7 @@ func (workspace workspace) ProfileEvents(_ http.ResponseWriter, r *http.Request)
 
 	// Parse the KPID.
 	kpid := r.PathValue("kpid")
-	if _, ok := types.ParseUUID(kpid); !ok {
+	if _, ok := types.NormalizeUUID(kpid); !ok {
 		return nil, errors.BadRequest("value %q is not a valid KPID", kpid)
 	}
 

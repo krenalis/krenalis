@@ -1,3 +1,11 @@
+# Krenalis
+
+Go monorepo. Dependencies are vendored in `vendor/`. This file holds the conventions that every change must follow.
+
+# Changes
+
+Keep the diff as small as the change allows. Touch only the lines the change needs: no drive-by reformatting, renaming, reordering, or rewrapping of a comment you happened to read. When the same fix can be written in two ways, pick the one that leaves more of the surrounding lines untouched. Reread your own diff before reporting it: every hunk should be one you can justify.
+
 # Review process
 
 When assessing a change against existing practices, use the code as it existed before the changes under review as the source of precedent. Do not treat code introduced or altered by the current change as evidence of an established convention.
@@ -23,9 +31,21 @@ After the type groups, place package-level functions in alphabetical order.
 
 Place package-level constants and variables at the beginning of the file when they have broad relevance. When one is specific to a single function or method, or is otherwise of secondary importance, declare it immediately before the function or method that uses it.
 
+## Layout and naming
+
+An exported function or method never calls another exported function or method of the same package. Extract a shared unexported one and call that from both.
+
+Declare a variable as close as possible to where it is used, as long as the code stays readable.
+
+A field guarded by a mutex carries a `// protected by mu` comment, so the guard shows up in the editor when reading the field's documentation.
+
+Keep the receiver name the type already uses. The facade types in `core/` (`Connection`, `Connector`, `Organization`, `Pipeline`, `Workspace`) use `this`; leave it as it is.
+
 ## Imports
 
-Outside the implementation and compatibility tests of `tools/errors`, always import `github.com/krenalis/krenalis/tools/errors` instead of the standard-library `errors` package. The repository package exposes every standard `errors` name in addition to repository-specific functionality.
+In `cmd`, `core`, and their subpackages, always import `github.com/krenalis/krenalis/tools/errors` instead of the standard-library `errors` package. The repository package exposes every standard `errors` name in addition to repository-specific functionality.
+
+In other packages, prefer the standard-library `errors` package. Import `github.com/krenalis/krenalis/tools/errors` only when its repository-specific functionality is needed. The implementation and compatibility tests of `tools/errors` use the standard-library package as required to avoid an import cycle.
 
 Use an imported package's default name unless Go requires disambiguation because of an actual identifier conflict. Do not alias an import merely to avoid reusing the same name for a variable, field, or selector when the language permits it.
 
@@ -149,18 +169,20 @@ Exported methods in `core/internal/metrics` are an exception: they must assume t
 
 ## Block spacing
 
-Choose internal spacing for readability first: use blank lines when they help distinguish logical groups of statements. Keep short, cohesive blocks compact when no such separation is useful. This applies to function and method bodies too; neither a guard nor a `return` requires a blank line on its own.
+Apply the following procedure to every brace-delimited block, be it a function or method body or a block nested inside one. Decide each block on its own, from the inside out.
 
-When reviewing existing code within the scope of a change, make this decision independently of blank lines used only to satisfy the boundary rule below, including padding before a final `return`. Remove that padding if no useful internal separation remains.
+1. Choose the internal spacing. Looking only at the statements of the block, and ignoring any blank line adjacent to its braces, insert a blank line wherever it genuinely helps readability, typically by separating logically distinct groups of statements. A single-statement block never needs one, and neither does a short cohesive block; a guard or a `return` does not earn a blank line on its own.
+2. Pad the boundaries. If step 1 left at least one internal blank line, leave a blank line immediately after the opening brace and another immediately before the closing brace. If it left none, the block contains no blank line at all: never pad an otherwise compact block.
+3. Place the closing pad before a final `return`. When a padded block ends with a `return`, its trailing blank line goes immediately before that `return`, with no blank line between the `return` and the closing brace. A `return` inside a nested block is not the enclosing block's final statement.
 
-Once the internal spacing has been chosen, make the boundaries of every brace-delimited code block containing a blank line visible:
+Only two shapes are therefore valid:
 
-- Leave a blank line immediately after the opening brace.
-- If a function or method body ends with a top-level `return`, leave a blank line immediately before that statement and none between it and the closing brace.
-- In every other case, including a function or method body without a final `return`, leave a blank line immediately before the closing brace.
-- Separate the complete construct that owns the block from surrounding code with blank lines. Keep declaration comments attached to their declarations.
+- A compact block, with no blank line anywhere inside it.
+- A separated block, whose internal blank lines are matched by a blank line after the opening brace and one before the closing brace, the latter moved above a final `return`.
 
-A `return` inside a nested block does not count as the body's final `return`. These boundary requirements are conditional on internal blank lines; do not add blank lines solely to pad an otherwise compact block.
+Separate the complete construct that owns the block from surrounding code with blank lines. Keep declaration comments attached to their declarations.
+
+When reviewing existing code within the scope of a change, run step 1 independently of blank lines that are only boundary padding, including padding before a final `return`. Remove that padding if no useful internal separation remains.
 
 Short, cohesive bodies stay compact, with or without a final `return`:
 
@@ -216,7 +238,9 @@ var x int
 
 ## Declaration comments
 
-Every package-level type, function, variable, and constant, as well as every method, must have a declaration comment written in the style of the Go standard library, except for the grouped declarations and self-explanatory test fixture constants described below.
+Every exported package-level type, function, variable, and constant, as well as every exported method, must have a declaration comment written in the style of the Go standard library, except for the grouped declarations and self-explanatory test fixture constants described below. An unexported declaration does not need one, but add it when the declaration is long, takes or returns several values, or its behavior is not obvious from the code.
+
+Keep comments compact: one precise sentence beats three loose ones, and do not restate what the code already says.
 
 When a variable or constant belongs to a parenthesized `var` or `const` declaration whose other members do not have individual declaration comments, do not add an individual comment only to that member. Preserve the established comment style consistently throughout the group.
 
@@ -229,6 +253,22 @@ A short comment for a package-level variable or constant may appear on the same 
 ## Error messages
 
 Never begin an error message with the article `the`.
+
+## Correctness
+
+Anything arriving from outside — request bodies, settings, API values, connector responses — is validated and bounded before use, unless there is a stated reason not to.
+
+# Reuse
+
+Before writing something new, look for the same thing already done elsewhere in the repo, and reuse it or follow it.
+
+Prefer the standard library, or an existing helper under `tools/`, over a hand-rolled version.
+
+When deleting something, look for what it leaves behind: callers, columns, fixtures, documentation, constants that are now dead.
+
+# Dependencies
+
+Do not state what a vendored library does from its API surface or from memory. Read it in `vendor/` and follow the call chain up to the caller that matters: an option that looks dropped along one path often arrives by another. Cite file and line when reporting such behavior.
 
 # Database constraints
 
@@ -284,6 +324,39 @@ owning workspace from their consequences. Accept them when they are safe for
 Krenalis. Establishing truthfulness or authenticity requires an independent
 integrity mechanism.
 
+# Uniformity across data warehouses
+
+Every supported data warehouse has its own package under `warehouses/`, and
+they all implement the same interfaces. Keep those packages as similar to one
+another as the platforms allow: whoever knows one should know them all, and a
+change made to one should be easy to apply to the others. Do not treat one
+platform as the reference implementation and the others as ports; the same
+rules apply to all of them, including any platform added later.
+
+Mirror the code: the same file names for the same responsibilities, the same
+declaration order inside a file, the same type, function, and variable names,
+the same signatures, the same error messages, and the same shape of the code
+inside each function. When a feature, a fix, or a validation is added to one
+warehouse, add it to the others in the same form, unless the platform makes it
+inapplicable.
+
+Apply the rule to tests as well: the same test files, the same test names, the
+same table-driven cases, and comparable fixtures, so that the coverage of one
+warehouse can be compared with the coverage of another at a glance. When a case
+applies to every platform, write it the same way everywhere instead of giving
+each platform its own structure. When a case applies to only one platform, keep
+it recognizable as the exception it is.
+
+Similarity is a means, not an end. Platforms genuinely differ in SQL dialect,
+type system, quoting rules, driver behavior, and supported features, and those
+differences must be expressed naturally where they occur. Do not distort code
+to make packages match: no pointless abstraction, no dead or unreachable code
+kept only for symmetry, no test that asserts nothing on a platform where the
+case cannot arise, and no renaming of a concept that a platform names
+differently for a good reason. When a divergence is necessary, keep it local
+and confined to the part that truly differs, leaving the surrounding code
+identical.
+
 # `core` and `cmd` conventions
 
 ## API errors and validation
@@ -306,6 +379,8 @@ Use `tools/errors.NotFoundError` only when the value concerned was supplied thro
 API endpoint handlers in `cmd` parse values from paths, query strings, and request bodies into the argument types accepted by `core`. If parsing fails, return a `tools/errors` error compatible with the invalid-argument error that `core` would expose instead of passing a plainly malformed value. Once parsing succeeds, do not duplicate semantic validation in `cmd`: let the exported `core` method validate the argument and propagate its API-ready error directly.
 
 Methods in `core` that serve an endpoint must select their error according to where that endpoint receives each argument, even though this couples them to the endpoint shape. Return the final API-ready error from `core` so that `cmd` can propagate it without translation.
+
+A method of `core` that can return an `errors.UnprocessableError` documents it and lists the codes. Handlers in `cmd/api.go` never document unprocessable errors.
 
 ## Core entry guards
 

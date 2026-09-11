@@ -165,20 +165,6 @@ func Filter(t Type, f func(p Property) bool) Type {
 	return Type{kind: ObjectKind, vl: Properties{properties: ps, names: names}}
 }
 
-// ParseUUID parses s as a UUID in the standard form xxxx-xxxx-xxxx-xxxxxxxxxxxx
-// and returns it in the canonical form without uppercase letters. The boolean
-// return value reports whether s is a UUID in the standard form.
-func ParseUUID(s string) (string, bool) {
-	if len(s) != 36 {
-		return "", false
-	}
-	id, err := uuid.Parse(s)
-	if err != nil {
-		return "", false
-	}
-	return id.String(), true
-}
-
 // PropertyName returns a sanitized version of s that is safe to use as a
 // property name.
 // If a valid name cannot be produced, it returns an empty string and false.
