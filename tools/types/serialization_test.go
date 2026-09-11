@@ -21,6 +21,9 @@ func TestParseErrors(t *testing.T) {
 		{"[]", "invalid type syntax"},
 		{"{\"kind\":\"string\"}{", "invalid token { after top-level value"},
 		{"{\"bitSize\":8}", "missing 'kind' key"},
+		{"{\"kind\":\"custom\"}", `unknown type kind "custom"`},
+		{"{\"kind\":\"array\",\"elementType\":{\"kind\":\"T\"}}", `unknown type kind "T"`},
+		{"{\"kind\":\"map\",\"elementType\":{\"kind\":\"T\"}}", `unknown type kind "T"`},
 		{"{\"kind\":\"int\",\"bitSize\":8,\"bitSize\":16}", "repeated 'bitSize' key"},
 		{"{\"kind\":\"string\",\"pattern\":\"a\",\"values\":[\"b\"]}", "values cannot be provided if pattern is provided"},
 	}
@@ -45,6 +48,10 @@ func TestPropertySerialization(t *testing.T) {
 		{
 			Property: Property{Name: "Qwerty"},
 			Err:      "missing property type",
+		},
+		{
+			Property: Property{Name: "a", Type: Parameter("custom")},
+			Expected: `{"name":"a","type":{"kind":"custom"},"description":""}`,
 		},
 		{
 			Property: Property{Name: "a", Type: String()},
@@ -167,8 +174,8 @@ func TestPropertyDeserialization(t *testing.T) {
 			Err:  "invalid character '{' looking for beginning of object key string",
 		},
 		{
-			JSON:     `{"name":"a","type":{"kind":"custom"}}`,
-			Property: Property{Name: "a", Type: Parameter("custom")},
+			JSON: `{"name":"a","type":{"kind":"custom"}}`,
+			Err:  `unknown type kind "custom"`,
 		},
 	}
 	for _, test := range tests {
@@ -353,4 +360,35 @@ func TestTypeSerialization(t *testing.T) {
 		}
 	}
 
+}
+
+func TestGenericTypeSerialization(t *testing.T) {
+	tests := []struct {
+		Type Type
+		Data string
+	}{
+		{
+			Type: Parameter("T"),
+			Data: `{"kind":"T"}`,
+		}, {
+			Type: Array(Parameter("T")),
+			Data: `{"kind":"array","elementType":{"kind":"T"}}`,
+		}, {
+			Type: Map(Parameter("T")),
+			Data: `{"kind":"map","elementType":{"kind":"T"}}`,
+		}, {
+			Type: Object([]Property{{Name: "items", Type: Array(Parameter("T"))}}),
+			Data: `{"kind":"object","properties":[{"name":"items","type":{"kind":"array","elementType":{"kind":"T"}},"description":""}]}`,
+		},
+	}
+	for _, test := range tests {
+		b, err := test.Type.MarshalJSON()
+		if err != nil {
+			t.Errorf("%s: %s", test.Data, err)
+			continue
+		}
+		if data := string(b); test.Data != data {
+			t.Errorf("\nexpected\t%s\ngot\t\t\t%s", test.Data, data)
+		}
+	}
 }

@@ -2,54 +2,21 @@
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
-package postgresql
+package snowflake
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// Test_appendJoins renders join clauses and checks for errors on invalid join
-// conditions.
-func Test_appendJoins(t *testing.T) {
-	join := warehouses.Join{
-		Type:  warehouses.InnerJoin,
-		Table: "t2",
-		Condition: warehouses.NewBaseExpr(
-			warehouses.Column{Name: "id", Type: types.Int(32)},
-			warehouses.OpIs,
-			warehouses.Column{Name: "fk", Type: types.Int(32)},
-		),
-	}
-	var b strings.Builder
-	if err := appendJoins(&b, []warehouses.Join{join}); err != nil {
-		t.Fatal(err)
-	}
-	expected := " JOIN \"t2\" ON \"id\" = \"fk\""
-	if b.String() != expected {
-		t.Fatalf("expected %q, got %q", expected, b.String())
-	}
-
-	bad := warehouses.Join{
-		Type:      warehouses.InnerJoin,
-		Table:     "t3",
-		Condition: warehouses.NewBaseExpr(warehouses.Column{Name: "bad name", Type: types.Int(32)}, warehouses.OpIs, 1),
-	}
-	b.Reset()
-	if err := appendJoins(&b, []warehouses.Join{bad}); err == nil {
-		t.Fatal("expected error for bad join condition")
-	}
-}
-
 // TestQueryOrdering verifies that an empty OrderBy is omitted and descending order is applied to every ordered column.
 func TestQueryOrdering(t *testing.T) {
 
-	warehouse, pool := newTestPostgreSQLWarehouse(t)
-	mustExecSQL(t, pool, `CREATE TABLE "query_ordering" ("a" INTEGER NOT NULL, "b" INTEGER NOT NULL)`)
-	mustExecSQL(t, pool, `INSERT INTO "query_ordering" VALUES (2, 1), (2, 2), (1, 3)`)
+	warehouse, db := newTestSnowflakeWarehouse(t)
+	mustExecSQL(t, db, `CREATE TABLE "QUERY_ORDERING" ("A" INTEGER NOT NULL, "B" INTEGER NOT NULL)`)
+	mustExecSQL(t, db, `INSERT INTO "QUERY_ORDERING" VALUES (2, 1), (2, 2), (1, 3)`)
 
 	columns := []warehouses.Column{
 		{Name: "a", Type: types.Int(32)},
