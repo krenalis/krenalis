@@ -385,7 +385,3 @@ A method of `core` that can return an `errors.UnprocessableError` documents it a
 ## Core entry guards
 
 Every exported method in `core` that is called by `cmd` must execute `<receiver>.core.mustBeOpen()` as its first statement. If the method body contains any blank line, leave a blank line immediately after the opening brace and another immediately after the guard statement.
-
-# Before finishing
-
-Run `go build ./...`, `go vet ./...`, and `gofmt -l` over what you touched. Add tests where the package already has them. Report plainly what passed, what failed, and what you did not run.

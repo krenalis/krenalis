@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"time"
 	"unicode/utf8"
-	"uuid"
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/util"
@@ -588,11 +587,11 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 	case types.UUIDKind:
 		switch sk {
 		case types.StringKind:
-			u, err := uuid.Parse(v.(string))
-			if err != nil {
+			u, ok := types.NormalizeUUID(v.(string))
+			if !ok {
 				return v, errParseConversion
 			}
-			return u.String(), nil
+			return u, nil
 		case types.UUIDKind:
 			return v.(string), nil
 		case types.JSONKind:
@@ -600,11 +599,11 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			if !v.IsString() {
 				return v, errInvalidConversion
 			}
-			u, err := uuid.Parse(string(v.Bytes()))
-			if err != nil {
+			u, ok := types.NormalizeUUID(string(v.Bytes()))
+			if !ok {
 				return v, errParseConversion
 			}
-			return u.String(), nil
+			return u, nil
 		}
 	case types.JSONKind:
 		if sk == types.JSONKind {

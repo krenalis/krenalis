@@ -239,7 +239,7 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 			case types.YearKind:
 				v, _ = parseYear(value)
 			case types.UUIDKind:
-				v, _ = types.ParseUUID(value)
+				v, _ = types.NormalizeUUID(value)
 			case types.JSONKind:
 				jv := state.JSONConditionValue{String: value}
 				if d, err := decimal.Parse(jv.String, 0, 0); err == nil {
@@ -950,7 +950,7 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 		case types.YearKind:
 			_, valid = parseYear(value)
 		case types.UUIDKind:
-			_, valid = types.ParseUUID(value)
+			_, valid = types.NormalizeUUID(value)
 		case types.IPKind:
 			_, valid = types.NormalizeIP(value)
 		default:

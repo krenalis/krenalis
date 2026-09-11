@@ -14,7 +14,6 @@ import (
 	"strconv"
 	"time"
 	"unicode/utf8"
-	"uuid"
 
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
@@ -579,11 +578,11 @@ func ValidateYearString(name string, year string) (any, error) {
 
 // ValidateUUID validates a uuid value.
 func ValidateUUID(name string, s string) (any, error) {
-	u, err := uuid.Parse(s)
-	if err != nil {
-		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not a time type", s, name)
+	u, ok := types.NormalizeUUID(s)
+	if !ok {
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not a uuid type", s, name)
 	}
-	return u.String(), nil
+	return u, nil
 }
 
 // ValidateJSON validates a json value.

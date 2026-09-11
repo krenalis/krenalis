@@ -116,6 +116,22 @@ func NormalizeIP[T string | netip.Addr](value T) (string, bool) {
 	return addr.Unmap().WithZone("").String(), true
 }
 
+// NormalizeUUID normalizes s and returns its canonical form for use wherever
+// a UUID value is required.
+//
+// The boolean return value reports whether s is a UUID in the standard form
+// xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
+func NormalizeUUID(s string) (string, bool) {
+	if len(s) != 36 {
+		return "", false
+	}
+	id, err := uuid.Parse(s)
+	if err != nil {
+		return "", false
+	}
+	return id.String(), true
+}
+
 var (
 	nan         = []byte("NaN")
 	posInfinity = []byte("Infinity")
@@ -466,8 +482,8 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 		}
 	case UUIDKind:
 		if v.Kind() == '"' {
-			if u, err := uuid.Parse(string(v.AppendUnquote(nil))); err == nil {
-				return u.String(), nil
+			if u, ok := NormalizeUUID(string(v.AppendUnquote(nil))); ok {
+				return u, nil
 			}
 		}
 	case JSONKind:

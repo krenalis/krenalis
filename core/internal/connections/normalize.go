@@ -597,7 +597,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			if src == "" && nullable {
 				return nil, nil
 			}
-			v, ok := types.ParseUUID(src)
+			v, ok := types.NormalizeUUID(src)
 			if !ok {
 				return nil, inputValidationErrorf(name, "has a string value that cannot represent a uuid value")
 			}
