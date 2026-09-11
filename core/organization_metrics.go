@@ -39,6 +39,7 @@ type UsageMetricDay struct {
 // is nil, it returns the organization-level series unless workspaceScope
 // restricts the request to a single workspace. If workspaces is non-nil, it
 // returns one series for each selected workspace within the request scope.
+// The organization-level series includes usage from deleted workspaces.
 //
 // It returns an errors.UnprocessableError with code MetricResultTooLarge
 // when an organization total cannot be represented by the result type.
