@@ -164,6 +164,9 @@
 }
 
 .privacy__dialog-save {
-	margin-top: 30px;
-	display: block;
+    margin-top: 30px;
+    display: block;
+    width: fit-content;
+    min-width: 200px;
+    margin-left: auto;
 }
