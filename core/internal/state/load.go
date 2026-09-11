@@ -432,15 +432,17 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 
 	// Read all consent purposes.
-	err = tx.QueryScan(ctx, "SELECT workspace, code, name FROM consent_purposes",
+	err = tx.QueryScan(ctx, "SELECT workspace, id, code, name, aliases, event_path, profile_path"+
+		" FROM consent_purposes",
 		func(rows *db.Rows) error {
 			for rows.Next() {
 				cp := ConsentPurpose{}
 				var workspaceID string
-				if err := rows.Scan(&workspaceID, &cp.Code, &cp.Name); err != nil {
-					return fmt.Errorf("loading consent purpose %s: %s", cp.Code, err)
+				if err := rows.Scan(&workspaceID, &cp.ID, &cp.Code, &cp.Name, &cp.Aliases, &cp.EventPath,
+					&cp.ProfilePath); err != nil {
+					return fmt.Errorf("loading consent purpose %s: %s", cp.ID, err)
 				}
-				state.workspaces[workspaceID].consentPurposes[cp.Code] = &cp
+				state.workspaces[workspaceID].consentPurposes[cp.ID] = NewConsentPurpose(cp)
 			}
 			return nil
 		})
@@ -544,10 +546,11 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				var rawInSchema, rawOutSchema, filter, mapping []byte
 				var function TransformationFunction
 				var format *string
+				var requiredConsentIDs RequiredConsentsByIDs
 				pipeline := Pipeline{}
 				err := rows.Scan(&pipeline.ID, &connectionID, &pipeline.Target, &eventType, &pipeline.Name,
 					&pipeline.Enabled, &pipeline.ScheduleStart, &pipeline.SchedulePeriod, &rawInSchema, &rawOutSchema,
-					&filter, &pipeline.RequiredConsents.Purposes, &pipeline.RequiredConsents.Operator, &mapping, &function.ID,
+					&filter, &requiredConsentIDs.Purposes, &requiredConsentIDs.Operator, &mapping, &function.ID,
 					&function.Version, &function.Language, &function.Source, &function.PreserveJSON, &pipeline.Transformation.InPaths,
 					&pipeline.Transformation.OutPaths, &pipeline.Query, &format, &pipeline.Path, &pipeline.Sheet, &pipeline.Compression,
 					&pipeline.OrderBy, &pipeline.FormatSettings, &pipeline.ExportMode, &pipeline.Matching.In, &pipeline.Matching.Out,
@@ -568,6 +571,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				pipeline.connection = c
 				pipeline.organization = c.organization
 				pipeline.EventType = eventType
+				pipeline.RequiredConsents = c.workspace.resolveRequiredConsents(requiredConsentIDs)
 				err = pipeline.InSchema.UnmarshalJSON(rawInSchema)
 				if err != nil {
 					return fmt.Errorf("loading input schema for pipeline %s: %s", pipeline.ID, err)

@@ -26,6 +26,7 @@ Additional information,,,,,,,,,,
 ,Identity and Update Time Properties (and Format),No,Required,Required,No,No,No,No,No,No
 ,Additional Required Information,-,Query,-,-,-,"Export mode, matching properties, settings about duplicated users",-,Table name and table key,Order by property path
 ,File Connector,No,No,"Yes, with Path, Sheet and settings",No,No,No,No,No,"Yes, with Path, Sheet and settings"
+,Required Consents,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes
 Pipeline,,,,,,,,,,
 ,Pipelines steps,All,No Filter,All,No Input validation,"No Input validation, Transformation, and Output validation",No Filter,No Input validation,No Filter,"No Filter, Transformation, and Output validation"
 Scheduler,,,,,,,,,,

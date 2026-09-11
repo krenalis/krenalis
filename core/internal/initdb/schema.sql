@@ -147,10 +147,15 @@ CREATE TABLE access_keys (
 );
 
 CREATE TABLE consent_purposes (
+    id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
     workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
     code varchar(100) NOT NULL CHECK (code ~ '^[A-Za-z_][0-9A-Za-z_]{0,99}$'),
     name varchar(100) NOT NULL,
-    PRIMARY KEY (workspace, code)
+    aliases varchar(100)[] NOT NULL DEFAULT '{}',
+    event_path varchar(1024) NOT NULL DEFAULT '',
+    profile_path varchar(1024) NOT NULL DEFAULT '',
+    UNIQUE (workspace, code),
+    PRIMARY KEY (id)
 );
 
 CREATE TYPE role AS ENUM ('Source', 'Destination');
@@ -196,7 +201,7 @@ CREATE TABLE pipelines (
     in_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     out_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     filter jsonb,
-    required_consents varchar(100)[] NOT NULL DEFAULT '{}',
+    required_consents varchar(12)[] NOT NULL DEFAULT '{}',
     required_consents_operator varchar(3) NOT NULL DEFAULT 'and' CHECK (required_consents_operator IN ('and', 'or')),
     transformation_mapping jsonb,
     transformation_id varchar(200) NOT NULL DEFAULT '',
@@ -272,6 +277,8 @@ CREATE TABLE pipelines_runs (
     passed_4 integer NOT NULL DEFAULT 0,
     passed_5 integer NOT NULL DEFAULT 0,
     passed_6 integer NOT NULL DEFAULT 0,
+    passed_7 integer NOT NULL DEFAULT 0,
+    passed_8 integer NOT NULL DEFAULT 0,
     failed_0 integer NOT NULL DEFAULT 0,
     failed_1 integer NOT NULL DEFAULT 0,
     failed_2 integer NOT NULL DEFAULT 0,
@@ -279,6 +286,8 @@ CREATE TABLE pipelines_runs (
     failed_4 integer NOT NULL DEFAULT 0,
     failed_5 integer NOT NULL DEFAULT 0,
     failed_6 integer NOT NULL DEFAULT 0,
+    failed_7 integer NOT NULL DEFAULT 0,
+    failed_8 integer NOT NULL DEFAULT 0,
     error varchar NOT NULL DEFAULT '',
     PRIMARY KEY (id)
 );
@@ -317,6 +326,8 @@ CREATE TABLE pipelines_metrics (
     passed_4 integer NOT NULL,
     passed_5 integer NOT NULL,
     passed_6 integer NOT NULL,
+    passed_7 integer NOT NULL,
+    passed_8 integer NOT NULL,
     failed_0 integer NOT NULL,
     failed_1 integer NOT NULL,
     failed_2 integer NOT NULL,
@@ -324,6 +335,8 @@ CREATE TABLE pipelines_metrics (
     failed_4 integer NOT NULL,
     failed_5 integer NOT NULL,
     failed_6 integer NOT NULL,
+    failed_7 integer NOT NULL,
+    failed_8 integer NOT NULL,
     PRIMARY KEY (pipeline, timeslot)
 );
 

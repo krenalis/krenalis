@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"slices"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -924,11 +925,11 @@ func (workspace *Workspace) Connections() []*Connection {
 	return connections
 }
 
-// ConsentPurpose returns the consent purpose of the workspace with the given
-// code. The boolean return value reports whether the consent purpose exists.
-func (workspace *Workspace) ConsentPurpose(code string) (*ConsentPurpose, bool) {
+// ConsentPurpose returns the consent purpose of the workspace with identifier
+// id. The boolean return value reports whether the consent purpose exists.
+func (workspace *Workspace) ConsentPurpose(id string) (*ConsentPurpose, bool) {
 	workspace.mu.Lock()
-	cp, ok := workspace.consentPurposes[code]
+	cp, ok := workspace.consentPurposes[id]
 	workspace.mu.Unlock()
 	return cp, ok
 }
@@ -968,6 +969,22 @@ func (workspace *Workspace) ConsumeEventRateLimitCapacity(ctx context.Context, e
 // condition makes capacity availability impossible to determine.
 func (workspace *Workspace) ConsumeRateLimitCapacity(ctx context.Context, units int) error {
 	return workspace.bucket.Consume(ctx, units)
+}
+
+// resolveRequiredConsents returns the required consents of a pipeline of the
+// workspace, given the required consent purposes referred to by identifier.
+//
+// It must be called on a frozen state.
+func (workspace *Workspace) resolveRequiredConsents(byIDs RequiredConsentsByIDs) RequiredConsents {
+	rc := RequiredConsents{Operator: byIDs.Operator}
+	if len(byIDs.Purposes) == 0 {
+		return rc
+	}
+	rc.Purposes = make([]*ConsentPurpose, len(byIDs.Purposes))
+	for i, id := range byIDs.Purposes {
+		rc.Purposes[i] = workspace.consentPurposes[id]
+	}
+	return rc
 }
 
 // EncryptWarehouseSettings encrypts the given settings with the settings key.
@@ -1335,8 +1352,65 @@ func (account *Account) Connector() *Connector {
 
 // ConsentPurpose represents a consent purpose.
 type ConsentPurpose struct {
+	ID   string
 	Code string
 	Name string
+	// Aliases are the additional codes with which the consent for the purpose
+	// can be given in an event.
+	Aliases []string
+	// EventPath and ProfilePath are the configured paths of the properties that
+	// hold the consent given for the purpose, in an event and in a profile
+	// respectively. They are empty when they are not configured.
+	EventPath   string
+	ProfilePath string
+	// eventPropertyPaths and profilePropertyPath are the paths actually read,
+	// resolved by resolvePropertyPaths.
+	eventPropertyPaths  [][]string
+	profilePropertyPath []string
+}
+
+// NewConsentPurpose returns a new consent purpose with the paths of its
+// properties resolved.
+func NewConsentPurpose(purpose ConsentPurpose) *ConsentPurpose {
+	cp := new(ConsentPurpose)
+	*cp = purpose
+	cp.resolvePropertyPaths()
+	return cp
+}
+
+// EventPropertyPaths returns the paths of the properties of an event that hold
+// the consent given for the purpose. The consent is given when any of them
+// holds it.
+func (purpose *ConsentPurpose) EventPropertyPaths() [][]string {
+	return purpose.eventPropertyPaths
+}
+
+// ProfilePropertyPath returns the path of the property of a profile that
+// holds the consent given for the purpose.
+func (purpose *ConsentPurpose) ProfilePropertyPath() []string {
+	return purpose.profilePropertyPath
+}
+
+// resolvePropertyPaths resolves the configured paths of the properties that
+// hold the consent given for the purpose. When the event path is the default,
+// the consent can also be given with any of the aliases of the purpose, so a
+// path is resolved for each of them too.
+func (purpose *ConsentPurpose) resolvePropertyPaths() {
+	purpose.eventPropertyPaths = nil
+	purpose.profilePropertyPath = nil
+	if purpose.EventPath != "" {
+		purpose.eventPropertyPaths = [][]string{strings.Split(purpose.EventPath, ".")}
+	}
+	if purpose.EventPath == "context.consents."+purpose.Code {
+		purpose.eventPropertyPaths = make([][]string, 0, 1+len(purpose.Aliases))
+		purpose.eventPropertyPaths = append(purpose.eventPropertyPaths, []string{"context", "consents", purpose.Code})
+		for _, alias := range purpose.Aliases {
+			purpose.eventPropertyPaths = append(purpose.eventPropertyPaths, []string{"context", "consents", alias})
+		}
+	}
+	if purpose.ProfilePath != "" {
+		purpose.profilePropertyPath = strings.Split(purpose.ProfilePath, ".")
+	}
 }
 
 // Strategy represents a strategy.
@@ -1882,7 +1956,15 @@ const (
 // RequiredConsents represents the consent purposes required by a pipeline.
 type RequiredConsents struct {
 	Operator ConsentPurposesOperator
-	Purposes []string // consent purpose codes.
+	Purposes []*ConsentPurpose
+}
+
+// RequiredConsentsByIDs represents the consent purposes required by a pipeline,
+// referred to by their identifiers. It is used where the consent purposes
+// cannot be referred to by pointer.
+type RequiredConsentsByIDs struct {
+	Operator ConsentPurposesOperator
+	Purposes []string // consent purpose identifiers.
 }
 
 // ConsentPurposesOperator represents the logical operator applied to the

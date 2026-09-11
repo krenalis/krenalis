@@ -933,19 +933,41 @@ class Workspaces {
 		return await call(`${this.apiURL}/consent-purposes`, http.GET, this.workspaceID);
 	};
 
-	addConsentPurpose = async (code: string, name: string): Promise<void> => {
-		return await call(`${this.apiURL}/consent-purposes`, http.POST, this.workspaceID, { code, name });
-	};
-
-	updateConsentPurpose = async (code: string, newCode: string, name: string): Promise<void> => {
-		return await call(`${this.apiURL}/consent-purposes/${code}`, http.PUT, this.workspaceID, {
-			code: newCode,
+	addConsentPurpose = async (
+		code: string,
+		name: string,
+		aliases: string[],
+		eventPath: string,
+		profilePath: string,
+	): Promise<void> => {
+		return await call(`${this.apiURL}/consent-purposes`, http.POST, this.workspaceID, {
+			code,
 			name,
+			aliases,
+			eventPath,
+			profilePath,
 		});
 	};
 
-	deleteConsentPurpose = async (code: string): Promise<void> => {
-		return await call(`${this.apiURL}/consent-purposes/${code}`, http.DELETE, this.workspaceID);
+	updateConsentPurpose = async (
+		id: string,
+		code: string,
+		name: string,
+		aliases: string[],
+		eventPath: string,
+		profilePath: string,
+	): Promise<void> => {
+		return await call(`${this.apiURL}/consent-purposes/${id}`, http.PUT, this.workspaceID, {
+			code,
+			name,
+			aliases,
+			eventPath,
+			profilePath,
+		});
+	};
+
+	deleteConsentPurpose = async (id: string): Promise<void> => {
+		return await call(`${this.apiURL}/consent-purposes/${id}`, http.DELETE, this.workspaceID);
 	};
 }
 

@@ -10,6 +10,7 @@ import (
 	"log/slog"
 
 	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/tools/base58"
 )
 
 const (
@@ -27,10 +28,12 @@ const (
 
 const consentPurposesTable = `
 	CREATE TABLE IF NOT EXISTS consent_purposes (
+		id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
 		workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
 		code varchar(100) NOT NULL CHECK (code ~ '^[A-Za-z_][0-9A-Za-z_]{0,99}$'),
 		name varchar(100) NOT NULL,
-		PRIMARY KEY (workspace, code)
+		UNIQUE (workspace, code),
+		PRIMARY KEY (id)
 	)`
 
 const organizationConnectorReferencesView = `
@@ -341,7 +344,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'AddConsentPurpose'`,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'DeleteConsentPurpose'`,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateConsentPurpose'`,
-			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents varchar(100)[] NOT NULL DEFAULT '{}'`,
+			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents varchar(12)[] NOT NULL DEFAULT '{}'`,
 			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents_operator varchar(3) NOT NULL DEFAULT 'and' CHECK (required_consents_operator IN ('and', 'or'))`,
 			`UPDATE pipelines
 				SET filter = regexp_replace(
@@ -384,11 +387,30 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TABLE pipelines_metrics ALTER COLUMN failed_6 DROP DEFAULT`,
 			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS passed_6 integer NOT NULL DEFAULT 0`,
 			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS failed_6 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS passed_7 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS failed_7 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_metrics ALTER COLUMN passed_7 DROP DEFAULT`,
+			`ALTER TABLE pipelines_metrics ALTER COLUMN failed_7 DROP DEFAULT`,
+			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS passed_7 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS failed_7 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS passed_8 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS failed_8 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_metrics ALTER COLUMN passed_8 DROP DEFAULT`,
+			`ALTER TABLE pipelines_metrics ALTER COLUMN failed_8 DROP DEFAULT`,
+			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS passed_8 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS failed_8 integer NOT NULL DEFAULT 0`,
+			`ALTER TABLE consent_purposes ADD COLUMN IF NOT EXISTS aliases varchar(100)[] NOT NULL DEFAULT '{}'`,
+			`ALTER TABLE consent_purposes ADD COLUMN IF NOT EXISTS event_path varchar(1024) NOT NULL DEFAULT ''`,
+			`ALTER TABLE consent_purposes ADD COLUMN IF NOT EXISTS profile_path varchar(1024) NOT NULL DEFAULT ''`,
 		}
 		for _, query := range queries {
 			if _, err := tx.Exec(ctx, query); err != nil {
 				return fmt.Errorf("cannot execute upgrade query %q: %s", query, err)
 			}
+		}
+		err = upgradeConsentPurposes(ctx, tx)
+		if err != nil {
+			return err
 		}
 		if _, err := tx.Exec(ctx, createRateLimiterLeasesFunction); err != nil {
 			return fmt.Errorf("cannot create rate-limit lease function: %s", err)
@@ -464,4 +486,107 @@ func upgradeColumnExists(ctx context.Context, tx *db.Tx, table, column string) (
 		WHERE table_schema = current_schema()
 			AND table_name = $1
 			AND column_name = $2`, table, column)
+}
+
+// upgradeConsentPurposes assigns identifiers to consent purposes and replaces
+// their codes with those identifiers in pipeline requirements.
+func upgradeConsentPurposes(ctx context.Context, tx *db.Tx) error {
+
+	hasID, err := upgradeColumnExists(ctx, tx, "consent_purposes", "id")
+	if err != nil {
+		return err
+	}
+	if hasID {
+		return nil
+	}
+
+	_, err = tx.Exec(ctx, `ALTER TABLE consent_purposes ADD COLUMN id varchar(12)
+		CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$')`)
+	if err != nil {
+		return fmt.Errorf("cannot add consent purpose identifiers: %s", err)
+	}
+
+	type consentPurpose struct {
+		workspace string
+		code      string
+		id        string
+	}
+	purposes := []consentPurpose{}
+	err = tx.QueryScan(ctx, "SELECT workspace, code FROM consent_purposes ORDER BY workspace, code", func(rows *db.Rows) error {
+
+		for rows.Next() {
+			purpose := consentPurpose{}
+			err := rows.Scan(&purpose.workspace, &purpose.code)
+			if err != nil {
+				return err
+			}
+			purposes = append(purposes, purpose)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("cannot read consent purposes to upgrade: %s", err)
+	}
+
+	knownIDs := map[string]bool{}
+	for i := range purposes {
+		for {
+			purposes[i].id = base58.Generate(12)
+			if !knownIDs[purposes[i].id] {
+				break
+			}
+		}
+		knownIDs[purposes[i].id] = true
+		_, err = tx.Exec(ctx, "UPDATE consent_purposes SET id = $1 WHERE workspace = $2 AND code = $3",
+			purposes[i].id, purposes[i].workspace, purposes[i].code)
+		if err != nil {
+			return fmt.Errorf("cannot assign identifier to consent purpose %q: %s", purposes[i].code, err)
+		}
+	}
+
+	missingPurpose, err := tx.QueryExists(ctx, `
+		SELECT
+		FROM pipelines p
+		JOIN connections c ON c.id = p.connection
+		CROSS JOIN LATERAL unnest(p.required_consents) AS required(code)
+		LEFT JOIN consent_purposes cp ON cp.workspace = c.workspace AND cp.code = required.code
+		WHERE cp.id IS NULL`)
+	if err != nil {
+		return fmt.Errorf("cannot validate pipeline consent requirements to upgrade: %s", err)
+	}
+	if missingPurpose {
+		return fmt.Errorf("cannot upgrade pipeline consent requirements: a required consent purpose does not exist")
+	}
+	_, err = tx.Exec(ctx, `UPDATE pipelines p
+		SET required_consents = migrated.ids
+		FROM (
+			SELECT p.id, array_agg(cp.id ORDER BY required.position) AS ids
+			FROM pipelines p
+			JOIN connections c ON c.id = p.connection
+			CROSS JOIN LATERAL unnest(p.required_consents) WITH ORDINALITY AS required(code, position)
+			JOIN consent_purposes cp ON cp.workspace = c.workspace AND cp.code = required.code
+			GROUP BY p.id
+		) migrated
+		WHERE p.id = migrated.id`)
+	if err != nil {
+		return fmt.Errorf("cannot upgrade pipeline consent requirements: %s", err)
+	}
+
+	queries := []string{
+		`ALTER TABLE pipelines ALTER COLUMN required_consents TYPE varchar(12)[]
+			USING required_consents::varchar(12)[]`,
+		`ALTER TABLE consent_purposes ALTER COLUMN id SET NOT NULL`,
+		`ALTER TABLE consent_purposes DROP CONSTRAINT consent_purposes_pkey`,
+		`ALTER TABLE consent_purposes ADD UNIQUE (workspace, code)`,
+		`ALTER TABLE consent_purposes ADD PRIMARY KEY (id)`,
+	}
+	for _, query := range queries {
+		_, err = tx.Exec(ctx, query)
+		if err != nil {
+			return fmt.Errorf("cannot execute consent purpose upgrade query %q: %s", query, err)
+		}
+	}
+
+	return nil
 }
