@@ -22,6 +22,8 @@ func TestParseErrors(t *testing.T) {
 		{"{\"kind\":\"string\"}{", "invalid token { after top-level value"},
 		{"{\"bitSize\":8}", "missing 'kind' key"},
 		{"{\"kind\":\"custom\"}", `unknown type kind "custom"`},
+		{"{\"kind\":\"array\",\"elementType\":{\"kind\":\"T\"}}", `unknown type kind "T"`},
+		{"{\"kind\":\"map\",\"elementType\":{\"kind\":\"T\"}}", `unknown type kind "T"`},
 		{"{\"kind\":\"int\",\"bitSize\":8,\"bitSize\":16}", "repeated 'bitSize' key"},
 		{"{\"kind\":\"string\",\"pattern\":\"a\",\"values\":[\"b\"]}", "values cannot be provided if pattern is provided"},
 	}
@@ -313,12 +315,6 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"kind":"array","minElements":2,"maxElements":8,"uniqueElements":true,"elementType":{"kind":"decimal","precision":1}}`,
 			Type: Array(Decimal(1, 0)).WithMinElements(2).WithMaxElements(8).WithUnique(),
 		}, {
-			Data: `{"kind":"array","elementType":{"kind":"T"}}`,
-			Type: Array(Parameter("T")),
-		}, {
-			Data: `{"kind":"map","elementType":{"kind":"T"}}`,
-			Type: Map(Parameter("T")),
-		}, {
 			Data: `{"kind":"object","properties":[{"name":"email","type":{"kind":"string"},"description":""},{"name":"size","type":{"kind":"decimal","precision":1},"description":""}]}`,
 			Type: Object([]Property{{Name: "email", Type: String()}, {Name: "size", Type: Decimal(1, 0)}}),
 		}, {
@@ -333,9 +329,6 @@ func TestTypeSerialization(t *testing.T) {
 		}, {
 			Data: `{"kind":"object","properties":[{"name":"birthday","prefilled":"mm/dd/yyyy","type":{"kind":"date"},"description":""}]}`,
 			Type: Object([]Property{{Name: "birthday", Prefilled: "mm/dd/yyyy", Type: Date()}}),
-		}, {
-			Data: `{"kind":"object","properties":[{"name":"items","type":{"kind":"array","elementType":{"kind":"T"}},"description":""}]}`,
-			Type: Object([]Property{{Name: "items", Type: Array(Parameter("T"))}}),
 		},
 	}
 	for _, test := range tests {
@@ -358,4 +351,35 @@ func TestTypeSerialization(t *testing.T) {
 		}
 	}
 
+}
+
+func TestGenericTypeSerialization(t *testing.T) {
+	tests := []struct {
+		Type Type
+		Data string
+	}{
+		{
+			Type: Parameter("T"),
+			Data: `{"kind":"T"}`,
+		}, {
+			Type: Array(Parameter("T")),
+			Data: `{"kind":"array","elementType":{"kind":"T"}}`,
+		}, {
+			Type: Map(Parameter("T")),
+			Data: `{"kind":"map","elementType":{"kind":"T"}}`,
+		}, {
+			Type: Object([]Property{{Name: "items", Type: Array(Parameter("T"))}}),
+			Data: `{"kind":"object","properties":[{"name":"items","type":{"kind":"array","elementType":{"kind":"T"}},"description":""}]}`,
+		},
+	}
+	for _, test := range tests {
+		b, err := test.Type.MarshalJSON()
+		if err != nil {
+			t.Errorf("%s: %s", test.Data, err)
+			continue
+		}
+		if data := string(b); test.Data != data {
+			t.Errorf("\nexpected\t%s\ngot\t\t\t%s", test.Data, data)
+		}
+	}
 }
