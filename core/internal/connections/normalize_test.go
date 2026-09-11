@@ -17,6 +17,7 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 
@@ -49,13 +50,15 @@ func Test_normalize(t *testing.T) {
 	aDateTime := time.Date(2023, 5, 3, 15, 47, 22, 769802537, time.UTC)
 	aDate := time.Date(2023, 5, 3, 0, 0, 0, 0, time.UTC)
 
-	tests := []struct {
+	type testCase struct {
 		typ      types.Type
 		value    any
 		expected any
 		null     bool
 		layout   *state.TimeLayouts
-	}{
+	}
+
+	tests := []testCase{
 		// string.
 		{types.String(), "foo", "foo", false, nil},
 		{types.String().WithValues("foo", "boo"), "boo", "boo", false, nil},
@@ -75,6 +78,13 @@ func Test_normalize(t *testing.T) {
 		{types.Int(32), -9261.0, -9261, false, nil},
 		{types.Int(32), []byte(nil), nil, true, nil},
 		{types.Int(32), []byte("-57"), -57, true, nil},
+		// int(64).
+		{types.Int(64), float64(-0x1p63), int(math.MinInt64), false, nil},
+		{types.Int(64), math.Nextafter(0x1p63, 0), int(math.MaxInt64 - 1023), false, nil},
+		{types.Int(64), int64(math.MaxInt64), int(math.MaxInt64), false, nil},
+		{types.Int(64), "9223372036854775807", int(math.MaxInt64), false, nil},
+		{types.Int(64), float32(-0x1p63), int(math.MinInt64), false, nil},
+		{types.Int(64), math.Nextafter32(0x1p63, 0), int(math.MaxInt64 - (1<<39 - 1)), false, nil},
 		// unsigned int(8).
 		{types.Int(8).Unsigned(), uint(3), uint(3), false, nil},
 		{types.Int(8).Unsigned(), 3.0, uint(3), false, nil},
@@ -83,6 +93,11 @@ func Test_normalize(t *testing.T) {
 		{types.Int(32).Unsigned(), uint(47303), uint(47303), false, nil},
 		{types.Int(32).Unsigned(), 47303.0, uint(47303), false, nil},
 		{types.Int(32).Unsigned(), []byte(nil), nil, true, nil},
+		// unsigned int(64).
+		{types.Int(64).Unsigned(), float64(0), uint(0), false, nil},
+		{types.Int(64).Unsigned(), float32(0), uint(0), false, nil},
+		{types.Int(64).Unsigned(), math.Nextafter(0x1p64, 0), uint(math.MaxUint64 - 2047), false, nil},
+		{types.Int(64).Unsigned(), math.Nextafter32(0x1p64, 0), uint(math.MaxUint64 - (1<<40 - 1)), false, nil},
 		// float(32).
 		{types.Float(32), float64(float32(12.79)), float64(float32(12.79)), false, nil},
 		{types.Float(32), math.NaN(), math.NaN(), false, nil},
@@ -131,6 +146,10 @@ func Test_normalize(t *testing.T) {
 		// year.
 		{types.Year(), 2023, 2023, false, nil},
 		{types.Year(), 2023.0, 2023, false, nil},
+		{types.Year(), float64(1), 1, false, nil},
+		{types.Year(), float64(9999), 9999, false, nil},
+		{types.Year(), float32(1), 1, false, nil},
+		{types.Year(), float32(9999), 9999, false, nil},
 		{types.Year(), []byte(nil), nil, true, nil},
 		// uuid.
 		{types.UUID(), "123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174000", false, nil},
@@ -187,6 +206,28 @@ func Test_normalize(t *testing.T) {
 		{types.Map(types.String()), map[string]string(nil), nil, true, nil},
 	}
 
+	// Unix nanosecond boundaries and fractional values.
+	for _, test := range []struct {
+		value any
+		want  int64
+	}{
+		{"-9223372036854775808", math.MinInt64},
+		{"9223372036854775807", math.MaxInt64},
+		{float64(math.MinInt64), math.MinInt64},
+		{math.Nextafter(float64(math.MinInt64), 0), math.MinInt64 + 1024},
+		{math.Nextafter(float64(math.MaxInt64), 0), math.MaxInt64 - 1023},
+		{0.0, 0},
+		{1.75, 1},
+		{-1.75, -1},
+	} {
+		for _, nullable := range []bool{false, true} {
+			tests = append(tests, testCase{
+				types.DateTime(), test.value, time.Unix(0, test.want), nullable,
+				&state.TimeLayouts{DateTime: "unixnano"},
+			})
+		}
+	}
+
 	for _, test := range tests {
 		t.Run(fmt.Sprint(test.typ), func(t *testing.T) {
 			got, err := normalize("k", test.typ, test.value, test.null, test.layout)
@@ -204,19 +245,24 @@ func Test_normalize(t *testing.T) {
 			}
 		})
 	}
+
 }
 
 func Test_normalize_errors(t *testing.T) {
+
 	timeLayout := &state.TimeLayouts{Time: "15:04"}
 
-	tests := []struct {
-		name         string
-		typ          types.Type
-		value        any
-		nullable     bool
-		layout       *state.TimeLayouts
-		wantContains string
-	}{
+	type testCase struct {
+		name           string
+		typ            types.Type
+		value          any
+		nullable       bool
+		layout         *state.TimeLayouts
+		wantContains   string
+		wantInputError bool
+	}
+
+	tests := []testCase{
 		{name: "nilNotNullable", typ: types.String(), value: nil, wantContains: "has value null but it is not nullable"},
 		{name: "textInvalidType", typ: types.String(), value: 5, wantContains: "has type int"},
 		{name: "textInvalidUTF8", typ: types.String(), value: string([]byte{0xff}), wantContains: "does not contain valid UTF-8 characters"},
@@ -227,6 +273,12 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "booleanWrongString", typ: types.Boolean(), value: "maybe", wantContains: "string value but it is not 'true' or 'false'"},
 		{name: "booleanInvalidType", typ: types.Boolean(), value: 1, wantContains: "has type int that is not allowed for type boolean"},
 		{name: "intFractionalFloat", typ: types.Int(32), value: 1.5, wantContains: "float64 value that cannot represent an int(32) value"},
+		{name: "intFloat64Upper", typ: types.Int(64), value: float64(math.MaxInt64), wantContains: "has a float64 value that cannot represent an int(64) value"},
+		{name: "intFloat64BelowLower", typ: types.Int(64), value: math.Nextafter(-0x1p63, math.Inf(-1)), wantContains: "has a float64 value that cannot represent an int(64) value"},
+		{name: "intFloat64NaN", typ: types.Int(64), value: math.NaN(), wantContains: "has a float64 value that cannot represent an int(64) value"},
+		{name: "intFloat32Upper", typ: types.Int(64), value: float32(math.MaxInt64), wantContains: "has a float32 value that cannot represent an int(64) value"},
+		{name: "intFloat32BelowLower", typ: types.Int(64), value: math.Nextafter32(-0x1p63, float32(math.Inf(-1))), wantContains: "has a float32 value that cannot represent an int(64) value"},
+		{name: "intFloat32NaN", typ: types.Int(64), value: float32(math.NaN()), wantContains: "has a float32 value that cannot represent an int(64) value"},
 		{name: "intOutOfRange", typ: types.Int(8), value: 200, wantContains: "has value which is not in the range"},
 		{name: "intStringParseError", typ: types.Int(32), value: "abc", wantContains: "string value that does not represent an int value"},
 		{name: "intBytesParseError", typ: types.Int(32), value: []byte("abc"), wantContains: "has a []byte value that cannot represent an int value"},
@@ -237,6 +289,14 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "unsignedStringParseError", typ: types.Int(16).Unsigned(), value: "bad", wantContains: "has a string value that cannot represent an unsigned int value"},
 		{name: "unsignedBytesParseError", typ: types.Int(16).Unsigned(), value: []byte("bad"), wantContains: "has a []byte value that cannot represent an unsigned int value"},
 		{name: "unsignedNegativeFloat", typ: types.Int(16).Unsigned(), value: -2.5, wantContains: "has a float64 value that cannot represent an unsigned int(16) value"},
+		{name: "unsignedFloat64Upper", typ: types.Int(64).Unsigned(), value: float64(0x1p64), wantContains: "has a float64 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat64Negative", typ: types.Int(64).Unsigned(), value: float64(-1), wantContains: "has a float64 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat64Fractional", typ: types.Int(64).Unsigned(), value: float64(1.5), wantContains: "has a float64 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat64NaN", typ: types.Int(64).Unsigned(), value: float64(math.NaN()), wantContains: "has a float64 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat32Upper", typ: types.Int(64).Unsigned(), value: float32(0x1p64), wantContains: "has a float32 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat32Negative", typ: types.Int(64).Unsigned(), value: float32(-1), wantContains: "has a float32 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat32Fractional", typ: types.Int(64).Unsigned(), value: float32(1.5), wantContains: "has a float32 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat32NaN", typ: types.Int(64).Unsigned(), value: float32(math.NaN()), wantContains: "has a float32 value that cannot represent an unsigned int(64) value"},
 		{name: "unsignedDecimalNegative", typ: types.Int(16).Unsigned(), value: decimal.MustInt(-1), wantContains: "has a decimal.decimal value that cannot represent an unsigned int value"},
 		{name: "unsignedInvalidType", typ: types.Int(16).Unsigned(), value: true, wantContains: "has type bool that is not allowed for type int(16)"},
 		{name: "floatIntNotRepresentable", typ: types.Float(32), value: 1 << 26, wantContains: "has an int value that cannot represent a float(32) value"},
@@ -264,6 +324,15 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "timeInvalidType", typ: types.Time(), value: 12, layout: &state.TimeLayouts{}, wantContains: "has type int that is not allowed for type time"},
 		{name: "timeInvalidBytes", typ: types.Time(), value: []byte("bad"), layout: &state.TimeLayouts{}, wantContains: "has a []byte value that cannot represent a time value"},
 		{name: "yearFractional", typ: types.Year(), value: 2024.5, wantContains: "has a float64 value that cannot represent a year value"},
+		{name: "yearFloat64BelowRange", typ: types.Year(), value: float64(0), wantContains: "has a float64 value that cannot represent a year value"},
+		{name: "yearFloat64AboveRange", typ: types.Year(), value: float64(10000), wantContains: "has a float64 value that cannot represent a year value"},
+		{name: "yearFloat64Huge", typ: types.Year(), value: math.MaxFloat64, wantContains: "has a float64 value that cannot represent a year value"},
+		{name: "yearFloat64NaN", typ: types.Year(), value: math.NaN(), wantContains: "has a float64 value that cannot represent a year value"},
+		{name: "yearFloat32BelowRange", typ: types.Year(), value: float32(0), wantContains: "has a float32 value that cannot represent a year value"},
+		{name: "yearFloat32AboveRange", typ: types.Year(), value: float32(10000), wantContains: "has a float32 value that cannot represent a year value"},
+		{name: "yearFloat32Huge", typ: types.Year(), value: float32(math.MaxFloat32), wantContains: "has a float32 value that cannot represent a year value"},
+		{name: "yearFloat32NaN", typ: types.Year(), value: float32(math.NaN()), wantContains: "has a float32 value that cannot represent a year value"},
+		{name: "yearFloat32Fractional", typ: types.Year(), value: float32(2024.5), wantContains: "has a float32 value that cannot represent a year value"},
 		{name: "yearOutOfRange", typ: types.Year(), value: 0, wantContains: "has value which is not in the range [1, 9999]"},
 		{name: "yearStringParse", typ: types.Year(), value: "bad", wantContains: "has a string value that cannot represent a year value"},
 		{name: "yearInvalidType", typ: types.Year(), value: true, wantContains: "has type bool that is not allowed for type year"},
@@ -294,15 +363,40 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "mapInvalidType", typ: types.Map(types.String()), value: 5, wantContains: "has type int that is not allowed for type map"},
 	}
 
+	// Invalid Unix timestamps must be rejected for every time unit, even when nullable.
+	for _, layout := range []string{"unix", "unixmilli", "unixmicro", "unixnano"} {
+		for _, value := range []any{
+			math.NaN(), math.Inf(1), math.Inf(-1), math.MaxFloat64, -math.MaxFloat64,
+			float64(math.MaxInt64), math.Nextafter(float64(math.MinInt64), math.Inf(-1)),
+			math.Nextafter(float64(math.MaxInt64), math.Inf(1)),
+			"-9223372036854775809", "9223372036854775808",
+		} {
+			for _, nullable := range []bool{false, true} {
+				tests = append(tests, testCase{
+					name: fmt.Sprintf("%s/%T/%v/nullable=%t", layout, value, value, nullable),
+					typ:  types.DateTime(), value: value, nullable: nullable,
+					layout: &state.TimeLayouts{DateTime: layout}, wantInputError: true,
+				})
+			}
+		}
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := normalize("k", tt.typ, tt.value, tt.nullable, tt.layout)
-			if err == nil {
-				t.Fatalf("expected error, got value %#v", got)
+			if err != nil {
+				if tt.wantInputError {
+					if _, ok := errors.AsType[InputValidationError](err); !ok {
+						t.Fatalf("got %T (%v), want InputValidationError", err, err)
+					}
+				}
+				if tt.wantContains != "" && !strings.Contains(err.Error(), tt.wantContains) {
+					t.Fatalf("expected error containing %q, got %q", tt.wantContains, err)
+				}
+				return
 			}
-			if tt.wantContains != "" && !strings.Contains(err.Error(), tt.wantContains) {
-				t.Fatalf("expected error containing %q, got %q", tt.wantContains, err)
-			}
+			t.Fatalf("expected error, got value %#v", got)
 		})
 	}
+
 }

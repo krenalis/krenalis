@@ -164,12 +164,12 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				v = src
 			case float32:
 				f := float64(src)
-				if src < 0 || math.IsInf(f, 1) || f != math.Trunc(f) {
+				if src < 0 || f >= 0x1p64 || f != math.Trunc(f) {
 					return nil, inputValidationErrorf(name, "has a float32 value that cannot represent an unsigned int(%d) value", typ.BitSize())
 				}
 				v = uint64(src)
 			case float64:
-				if src < 0 || math.IsInf(src, 1) || src != math.Trunc(src) {
+				if src < 0 || src >= 0x1p64 || src != math.Trunc(src) {
 					return nil, inputValidationErrorf(name, "has a float64 value that cannot represent an unsigned int(%d) value", typ.BitSize())
 				}
 				v = uint64(src)
@@ -233,12 +233,12 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			v = int64(src)
 		case float32:
 			f := float64(src)
-			if math.IsInf(f, 0) || f != math.Trunc(f) {
+			if f < -0x1p63 || f >= 0x1p63 || f != math.Trunc(f) {
 				return nil, inputValidationErrorf(name, "has a float32 value that cannot represent an int(%d) value", typ.BitSize())
 			}
 			v = int64(f)
 		case float64:
-			if math.IsInf(src, 0) || src != math.Trunc(src) {
+			if src < -0x1p63 || src >= 0x1p63 || src != math.Trunc(src) {
 				return nil, inputValidationErrorf(name, "has a float64 value that cannot represent an int(%d) value", typ.BitSize())
 			}
 			v = int64(src)
@@ -557,15 +557,15 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			v = int64(src)
 		case float32:
 			f := float64(src)
-			if math.IsInf(f, 0) || f != math.Trunc(f) {
+			if f < types.MinYear || f > types.MaxYear || f != math.Trunc(f) {
 				return nil, inputValidationErrorf(name, "has a float32 value that cannot represent a year value")
 			}
 			v = int64(f)
 		case float64:
-			v = int64(src)
-			if math.IsInf(src, 0) || src != math.Trunc(src) {
+			if src < types.MinYear || src > types.MaxYear || src != math.Trunc(src) {
 				return nil, inputValidationErrorf(name, "has a float64 value that cannot represent a year value")
 			}
+			v = int64(src)
 		case decimal.Decimal:
 			v, err = src.Int64()
 			if err != nil {
@@ -597,7 +597,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			if src == "" && nullable {
 				return nil, nil
 			}
-			v, ok := types.ParseUUID(src)
+			v, ok := types.NormalizeUUID(src)
 			if !ok {
 				return nil, inputValidationErrorf(name, "has a string value that cannot represent a uuid value")
 			}
@@ -840,10 +840,16 @@ func dateTimeFromUnixInt(n int64, layout string) (time.Time, bool) {
 }
 
 // dateTimeFromUnixFloat returns the local Time corresponding to the provided
-// Unix time. Unix time is expressed in seconds, milliseconds, microseconds or
-// nanoseconds according to layout.
-// The second return value reports whether the layout is appropriate.
+// Unix time. Unix time is expressed in seconds, milliseconds, microseconds, or
+// nanoseconds, as specified by layout.
+// The second return value reports whether layout is supported and n can
+// be converted to int64.
 func dateTimeFromUnixFloat(n float64, layout string) (time.Time, bool) {
+	// MaxInt64 rounds to 2^63 when represented as a float64, so the upper
+	// bound is exclusive.
+	if math.IsNaN(n) || n < math.MinInt64 || n >= math.MaxInt64 {
+		return time.Time{}, false
+	}
 	switch layout {
 	case "unix":
 		sec := int64(n)
