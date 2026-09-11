@@ -473,7 +473,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, profileSchema, onClose, onSaved 
 	};
 
 	const onResetEventPath = () => {
-		setEventPath('');
+		setEventPath(defaultEventPath);
 		setEventPathError('');
 		setIsEventPathCustom(false);
 	};
@@ -487,7 +487,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, profileSchema, onClose, onSaved 
 	};
 
 	const onResetProfilePath = () => {
-		setProfilePath('');
+		setProfilePath(defaultProfilePath);
 		setProfilePathError('');
 		setIsProfilePathCustom(false);
 	};
@@ -755,23 +755,32 @@ interface PathActionProps {
 }
 
 // PathAction is the button shown within a path input. It unlocks the path for
-// editing or reset it to the default if it already edited. While the path is
+// editing or resets it to the default if it is already edited. While the path is
 // edited but it still holds the default value there is nothing to reset, so
 // the button is disabled.
-const PathAction = ({ isCustom, isDefaultValue, onCustomize, onReset }: PathActionProps) => (
-	<SlTooltip slot='suffix' content={isCustom ? 'Reset to the default path' : 'Edit the path'} hoist>
+const PathAction = ({ isCustom, isDefaultValue, onCustomize, onReset }: PathActionProps) => {
+	const button = (
 		<SlButton
 			className='privacy__dialog-path-action'
 			variant='text'
 			size='small'
-			circle
+			slot={isCustom ? undefined : 'suffix'}
 			disabled={isCustom && isDefaultValue}
+			onPointerDown={(event) => event.preventDefault()}
 			onClick={isCustom ? onReset : onCustomize}
 		>
-			<SlIcon name={isCustom ? 'arrow-counterclockwise' : 'pencil'} />
+			{isCustom ? 'Reset' : 'Change'}
 		</SlButton>
-	</SlTooltip>
-);
+	);
+	if (!isCustom) {
+		return button;
+	}
+	return (
+		<SlTooltip slot='suffix' content='Reset to the default path' hoist>
+			{button}
+		</SlTooltip>
+	);
+};
 
 interface AliasActionProps {
 	icon: string;

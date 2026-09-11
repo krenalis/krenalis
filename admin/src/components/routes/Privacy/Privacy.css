@@ -152,14 +152,28 @@
 	margin-top: 0;
 }
 
-.privacy__dialog-alias-action::part(base),
-.privacy__dialog-path-action::part(base) {
+.privacy__dialog-alias-action::part(base) {
 	color: var(--sl-color-neutral-500);
 	font-size: 15px;
 }
 
-.privacy__dialog-alias-action::part(base):hover,
-.privacy__dialog-path-action::part(base):hover {
+.privacy__dialog-path-action {
+	--sl-input-height-small: 20px;
+
+	margin-right: 5px;
+	transform: translate(3px, -1px);
+}
+
+.privacy__dialog-path-action::part(base) {
+	font-weight: 400;
+	padding-inline: 4px;
+}
+
+.privacy__dialog-path-action::part(label) {
+	padding: 0;
+}
+
+.privacy__dialog-alias-action::part(base):hover {
 	color: var(--sl-color-primary-600);
 }
 
