@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -175,6 +176,27 @@ func (store *Store) AlterProfileSchema(ctx context.Context, opID string, schema 
 func (store *Store) ColumnTypeDescription(t types.Type) (string, error) {
 	store.mustBeOpen()
 	return store.warehouse().ColumnTypeDescription(t)
+}
+
+// CountProfiles returns the exact number of profiles in the workspace's data
+// warehouse. If the warehouse is in maintenance mode, it returns
+// ErrMaintenanceMode. Warehouse errors are returned as *UnavailableError.
+func (store *Store) CountProfiles(ctx context.Context) (int, error) {
+	store.mustBeOpen()
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
+	if err != nil {
+		return 0, err
+	}
+	defer done()
+	count, err := store.warehouse().Count(ctx, "profiles")
+	if err != nil {
+		return 0, unavailableError(err)
+	}
+	if count < 0 || count > math.MaxInt32 {
+		return 0, unavailableError(fmt.Errorf("warehouse returned profile count outside the supported range: %d", count))
+	}
+
+	return count, nil
 }
 
 // DeleteDestinationProfiles deletes the destination profiles of the provided

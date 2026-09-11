@@ -136,6 +136,17 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 		queries := []string{
 			`ALTER TABLE metadata ADD COLUMN IF NOT EXISTS requests_rate_per_minute integer NOT NULL DEFAULT 100 CHECK (requests_rate_per_minute BETWEEN 60 AND 20000)`,
 			`ALTER TABLE metadata ADD COLUMN IF NOT EXISTS requests_max_capacity integer NOT NULL DEFAULT 100 CHECK (requests_max_capacity BETWEEN 1 AND 10000)`,
+			`CREATE TABLE IF NOT EXISTS usage_metrics (
+				organization varchar(12) NOT NULL REFERENCES organizations ON DELETE CASCADE,
+				workspace varchar(12) NOT NULL,
+				day date NOT NULL,
+				profiles bigint NOT NULL DEFAULT 0,
+				profile_seconds bigint NOT NULL DEFAULT 0,
+				observed_at time without time zone,
+				events bigint NOT NULL DEFAULT 0,
+				PRIMARY KEY (organization, workspace, day)
+			)`,
+			`CREATE INDEX IF NOT EXISTS usage_metrics_organization_day_idx ON usage_metrics (organization, day)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS members_limit integer NOT NULL DEFAULT 10000 CHECK (members_limit BETWEEN 1 AND 10000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS access_keys_limit integer NOT NULL DEFAULT 1000 CHECK (access_keys_limit BETWEEN 0 AND 1000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspaces_limit integer NOT NULL DEFAULT 1000 CHECK (workspaces_limit BETWEEN 0 AND 1000)`,
