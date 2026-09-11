@@ -14,6 +14,8 @@ import (
 	"github.com/krenalis/krenalis/tools/decimal"
 )
 
+const uniqueMapThreshold = 20
+
 // FirstDuplicate returns the index of the first element equal to an earlier
 // element, or -1 if there are no duplicates. It does not modify values.
 // The element type must be a non-generic scalar permitted by [Type.WithUnique].
@@ -27,17 +29,9 @@ import (
 // compare equal, as do positive and negative zero.
 //
 // Go representations and decimal scales are validated as values are scanned.
-// Slices with fewer than 100 elements use direct comparisons; slices with 100
+// Slices with fewer than 20 elements use direct comparisons; slices with 20
 // or more elements use a map with memory proportional to their length.
 func FirstDuplicate(values []any, elementType Type) (int, error) {
-	return firstDuplicate(values, elementType, false)
-}
-
-const uniqueMapThreshold = 100
-
-// firstDuplicate allows Decode to force map-based duplicate detection
-// regardless of the slice length.
-func firstDuplicate(values []any, elementType Type, useMap bool) (int, error) {
 
 	if !elementType.Valid() || elementType.Generic() {
 		return -1, fmt.Errorf("element type must be a non-generic scalar")
@@ -82,7 +76,7 @@ func firstDuplicate(values []any, elementType Type, useMap bool) (int, error) {
 
 	var keys [uniqueMapThreshold]any
 	var seen map[any]struct{}
-	if useMap || len(values) >= uniqueMapThreshold {
+	if len(values) >= uniqueMapThreshold {
 		seen = make(map[any]struct{}, len(values))
 	}
 	for i, value := range values {
