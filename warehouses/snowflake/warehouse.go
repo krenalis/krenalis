@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"regexp"
 	"slices"
 	"strconv"
@@ -466,8 +467,11 @@ func (warehouse *Snowflake) openDB(ctx context.Context) (*sql.DB, error) {
 	return db, nil
 }
 
-// maxProfilesVersion returns the greatest recorded profile schema version.
-// The returned version is always non-negative.
+// maxProfilesVersion returns the highest recorded version of the profiles
+// table.
+//
+// The returned version is in the range [0, math.MaxInt32]. Zero represents the
+// initial version and is returned when no version has been recorded.
 func (warehouse *Snowflake) maxProfilesVersion(ctx context.Context) (int, error) {
 	db, err := warehouse.openDB(ctx)
 	if err != nil {
@@ -478,14 +482,17 @@ func (warehouse *Snowflake) maxProfilesVersion(ctx context.Context) (int, error)
 	if err != nil {
 		return 0, snowflake(err)
 	}
-	if v < 0 {
-		return 0, fmt.Errorf("warehouse returned a negative profile schema version")
+	if v < 0 || v > math.MaxInt32 {
+		return 0, fmt.Errorf("warehouse returned an invalid profile table version")
 	}
 	return v, nil
 }
 
-// publishedProfilesVersion returns the greatest successfully published profile
-// schema version. The returned version is always non-negative.
+// publishedProfilesVersion returns the highest successfully published version
+// of the profiles table.
+//
+// The returned version is in the range [0, math.MaxInt32]. Zero represents the
+// initial version and is returned when no version has been published.
 func (warehouse *Snowflake) publishedProfilesVersion(ctx context.Context) (int, error) {
 	db, err := warehouse.openDB(ctx)
 	if err != nil {
@@ -499,8 +506,8 @@ func (warehouse *Snowflake) publishedProfilesVersion(ctx context.Context) (int, 
 	if err != nil {
 		return 0, snowflake(err)
 	}
-	if version < 0 {
-		return 0, fmt.Errorf("warehouse returned a negative published profile schema version")
+	if version < 0 || version > math.MaxInt32 {
+		return 0, fmt.Errorf("warehouse returned an invalid published profile table version")
 	}
 	return version, nil
 }
