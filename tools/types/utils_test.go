@@ -183,6 +183,27 @@ func Test_AsRole(t *testing.T) {
 				{Name: "Custom", Type: Parameter("custom")},
 			}),
 		},
+		{
+			object: Object([]Property{
+				{
+					Name: "Address",
+					Type: Object([]Property{
+						{Name: "Street", Type: String(), ReadOptional: true},
+						{Name: "Custom", Type: Parameter("custom")},
+					}),
+				},
+			}),
+			role: Destination,
+			expected: Object([]Property{
+				{
+					Name: "Address",
+					Type: Object([]Property{
+						{Name: "Street", Type: String()},
+						{Name: "Custom", Type: Parameter("custom")},
+					}),
+				},
+			}),
+		},
 	}
 	for _, cas := range cases {
 		t.Run("", func(t *testing.T) {
@@ -332,7 +353,7 @@ func Test_Filter(t *testing.T) {
 		}
 	})
 
-	g := Object([]Property{
+	genericObject := Object([]Property{
 		{Name: "a", Type: String()},
 		{Name: "b", Type: Parameter("custom")},
 		{Name: "c", Type: Int(32)},
@@ -343,7 +364,7 @@ func Test_Filter(t *testing.T) {
 			{Name: "a", Type: String()},
 			{Name: "b", Type: Parameter("custom")},
 		})
-		got := Filter(g, func(p Property) bool {
+		got := Filter(genericObject, func(p Property) bool {
 			return p.Name != "c"
 		})
 		if err := sameType(expected, got); err != nil {
@@ -356,7 +377,7 @@ func Test_Filter(t *testing.T) {
 			{Name: "a", Type: String()},
 			{Name: "c", Type: Int(32)},
 		})
-		got := Filter(g, func(p Property) bool {
+		got := Filter(genericObject, func(p Property) bool {
 			return p.Name != "b"
 		})
 		if err := sameType(expected, got); err != nil {
@@ -365,16 +386,20 @@ func Test_Filter(t *testing.T) {
 	})
 
 	t.Run("Generic object through an array and a map expected", func(t *testing.T) {
-		c := Object([]Property{
+		containerObject := Object([]Property{
 			{Name: "a", Type: Array(Parameter("custom"))},
 			{Name: "b", Type: Map(Parameter("custom"))},
 			{Name: "c", Type: Int(32)},
 		})
-		got := Filter(c, func(p Property) bool {
+		expected := Object([]Property{
+			{Name: "a", Type: Array(Parameter("custom"))},
+			{Name: "b", Type: Map(Parameter("custom"))},
+		})
+		got := Filter(containerObject, func(p Property) bool {
 			return p.Name != "c"
 		})
-		if !got.Generic() {
-			t.Fatal("expected a generic type, got a non-generic one")
+		if err := sameType(expected, got); err != nil {
+			t.Fatalf("expected %v, got %v", expected, got)
 		}
 	})
 
@@ -640,9 +665,16 @@ func Test_Prune(t *testing.T) {
 				{Name: "z", Type: String()},
 			})},
 		})
+		expected := Object([]Property{
+			{Name: "a", Type: String()},
+			{Name: "b", Type: Object([]Property{
+				{Name: "x", Type: Array(Parameter("custom"))},
+				{Name: "y", Type: Map(Parameter("custom"))},
+			})},
+		})
 		got := Prune(containerObject, func(path string) bool { return path != "b.z" })
-		if !got.Generic() {
-			t.Fatal("expected a generic type, got a non-generic one")
+		if err := sameType(got, expected); err != nil {
+			t.Fatalf("\nexpected: %#v\ngot:      %#v", expected, got)
 		}
 	})
 }
