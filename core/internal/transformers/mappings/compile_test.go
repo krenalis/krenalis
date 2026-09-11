@@ -6,7 +6,9 @@ package mappings
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
+	"regexp"
 	"testing"
 	"time"
 
@@ -237,7 +239,14 @@ func Test_Compile(t *testing.T) {
 		// initcap.
 		{expr: "initcap('new york')", dt: types.String(), expected: "New York"},
 		{expr: "initcap(' new york ')", dt: types.String(), expected: " New York "},
-		{expr: "initcap('neW YORK')", dt: types.String(), expected: "NeW YORK"},
+		{expr: "initcap('neW YORK')", dt: types.String(), expected: "New York"},
+		{expr: "initcap('NEW YORK')", dt: types.String(), expected: "New York"},
+		{expr: `initcap("JOHN O'CONNOR")`, dt: types.String(), expected: "John O'Connor"},
+		{expr: "initcap('ÉMILIE BRONTË')", dt: types.String(), expected: "Émilie Brontë"},
+		{expr: "initcap('ANNE-MARIE')", dt: types.String(), expected: "Anne-Marie"},
+		{expr: "initcap(' NEW\\tYORK\\n')", dt: types.String(), expected: " New\tYork\n"},
+		{expr: "initcap('')", dt: types.String(), expected: ""},
+		{expr: "initcap(if(true, 'NEW YORK', null))", dt: types.String(), expected: "New York"},
 		{expr: "initcap(null)", dt: types.String(), expected: nil},
 		{expr: "initcap()", dt: types.String(), compileErr: errors.New("'initcap' function requires a single argument")},
 		{expr: "initcap('a', 5)", dt: types.String(), compileErr: errors.New("'initcap' function requires a single argument")},
@@ -590,4 +599,360 @@ func Test_typeOf(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestLiteralConversionDiagnostics checks that conversion errors display the
+// literal's textual value.
+func TestLiteralConversionDiagnostics(t *testing.T) {
+
+	enum := types.String().WithValues("yes", "no")
+	pattern := types.String().WithPattern(regexp.MustCompile(`^x$`))
+	tests := []struct {
+		source      string
+		destination types.Type
+		want        string
+	}{
+		{"256", types.Int(8).Unsigned(), "number 256 is greater than 255"},
+		{"-129", types.Int(8), "number -129 is less than -128"},
+		{"-1", types.Int(8).Unsigned(), "number -1 is not a int(8) value"},
+		{"'256'", types.Int(8).Unsigned(), "number 256 is greater than 255"},
+		{"42", enum, `"42" is not one of the allowed values`},
+		{"true", enum, `"true" is not one of the allowed values`},
+		{"1.5", enum, `"1.5" is not one of the allowed values`},
+		{"65", pattern, `"65" does not match /^x$/`},
+		{"true", pattern, `"true" does not match /^x$/`},
+		{"42", types.String().WithMaxLength(1), `"42" exceeds the 1-char limit`},
+		{"true", types.String().WithMaxLength(3), `"true" exceeds the 3-char limit`},
+		{"42", types.String().WithMaxBytes(1), `"42" exceeds the 1-byte limit`},
+		{"false", types.String().WithMaxBytes(4), `"false" exceeds the 4-byte limit`},
+		{`'a\nb'`, types.String().WithMaxLength(2), `"a\nb" exceeds the 2-char limit`},
+	}
+
+	for _, test := range tests {
+		t.Run(test.source+"/"+test.want, func(t *testing.T) {
+			_, _, err := Compile(test.source, types.Type{}, test.destination)
+			if err != nil {
+				if err.Error() != test.want {
+					t.Fatalf("got %q, want %q", err, test.want)
+				}
+				return
+			}
+			t.Fatal("expected a literal conversion error")
+		})
+	}
+
+}
+
+// TestMapKeys checks case-sensitive uniqueness and preserves the spelling of
+// distinct keys.
+func TestMapKeys(t *testing.T) {
+
+	tests := []struct {
+		first, second string
+		duplicate     bool
+	}{
+		{"Foo", "foo", false},
+		{"foo", "Foo", false},
+		{"École", "école", false},
+		{"Σ", "ς", false},
+		{"σ", "ς", false},
+		{"K", "K", false},
+		{"k", "K", false},
+		{"S", "ſ", false},
+		{"ǅ", "ǆ", false},
+		{"Foo", "Foo", true},
+		{"École", "École", true},
+		{"", "", true},
+		{"Foo", "Bar", false},
+		{"École", "Ecole", false},
+		{"ß", "SS", false},
+		{"İ", "i", false},
+		{"", "Foo", false},
+	}
+	for _, test := range tests {
+		t.Run(test.first+"/"+test.second, func(t *testing.T) {
+
+			source := fmt.Sprintf("map(%q, 1, %q, 2)", test.first, test.second)
+			dt := types.Map(types.JSON())
+			expr, _, err := Compile(source, types.Type{}, dt)
+			if err != nil {
+				if !test.duplicate || err.Error() != "duplicate key in 'map' function" {
+					t.Fatal(err)
+				}
+				return
+			}
+			if test.duplicate {
+				t.Fatal("expected compilation to reject duplicate keys")
+			}
+
+			got, typ, err := expr.Eval(nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := map[string]any{test.first: json.Value("1"), test.second: json.Value("2")}
+			if !types.Equal(typ, dt) || !reflect.DeepEqual(got, want) {
+				t.Fatalf("got %#v (%s), want %#v (%s)", got, typ, want, dt)
+			}
+
+		})
+	}
+
+}
+
+// TestExpressionDestinationType distinguishes literal coercion from deferred
+// result conversion.
+func TestExpressionDestinationType(t *testing.T) {
+
+	schema := types.Object([]types.Property{{Name: "value", Type: types.String()}})
+	tests := []struct {
+		expression  string
+		destination types.Type
+		want        any
+		wantType    types.Type
+	}{
+		{"'42'", types.Int(32), 42, types.Int(32)},
+		{"value", types.Int(32), "42", types.String()},
+		{"lower(value)", types.Int(32), "42", types.String()},
+		{"if(true, value, 0)", types.Int(32), "42", types.String()},
+		{"coalesce(value, 0)", types.Int(32), "42", types.String()},
+		{"array(value)", types.Array(types.Int(32)), []any{42}, types.Array(types.Int(32))},
+	}
+	for _, test := range tests {
+
+		t.Run(test.expression, func(t *testing.T) {
+
+			expr, _, err := Compile(test.expression, schema, test.destination)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, typ, err := expr.Eval(map[string]any{"value": "42"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, test.want) || !types.Equal(typ, test.wantType) {
+				t.Fatalf("got %#v (%s), want %#v (%s)", got, typ, test.want, test.wantType)
+			}
+
+		})
+
+	}
+
+}
+
+// TestFunctionResultConversions checks conversions of function results in their
+// surrounding context.
+func TestFunctionResultConversions(t *testing.T) {
+
+	tests := []struct {
+		expression  string
+		destination types.Type
+		want        any
+	}{
+		{"initcap('true')", types.Boolean(), true},
+		{"lower('42')", types.Int(32), 42},
+		{"substring(250, 2, 2)", types.Int(32), 50},
+		{"upper('yes')", types.Boolean(), true},
+		{"not(false)", types.Int(8), 1},
+		{"substring('abc', lower('2'), 1)", types.String(), "b"},
+		{"lower(if(true, 12, 'abc'))", types.String(), "12"},
+		{"if(true, substring(250, 2, 2), 0)", types.Int(32), 50},
+		{"coalesce(upper(null), substring(250, 2, 2))", types.Int(32), 50},
+		{"eq(lower('YES'), true)", types.Boolean(), true},
+	}
+	for _, test := range tests {
+
+		t.Run(test.expression, func(t *testing.T) {
+
+			outSchema := types.Object([]types.Property{{Name: "out", Type: test.destination}})
+			mapping, err := New(map[string]string{"out": test.expression}, types.Type{}, outSchema, false, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := mapping.Transform(nil, None)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, map[string]any{"out": test.want}) {
+				t.Fatalf("got %#v, want out=%#v", got, test.want)
+			}
+
+		})
+
+	}
+
+}
+
+// TestFunctionResultIncompatibleTypes rejects known incompatible results,
+// including nested calls.
+func TestFunctionResultIncompatibleTypes(t *testing.T) {
+
+	tests := []struct {
+		expression  string
+		destination types.Type
+	}{
+		{"initcap('abc')", types.Array(types.String())},
+		{"lower('abc')", types.Map(types.String())},
+		{"substring('abc', 1)", types.Object([]types.Property{{Name: "s", Type: types.String()}})},
+		{"upper('abc')", types.Array(types.String())},
+		{"not(true)", types.Int(32)},
+		{"if(true, upper('abc'), null)", types.Array(types.String())},
+		{"coalesce(null, lower('abc'))", types.Map(types.String())},
+		{"eq(initcap('abc'), array('abc'))", types.Boolean()},
+		{"ne(lower('abc'), array('abc'))", types.Boolean()},
+		{"eq(substring('abc', 1), array('abc'))", types.Boolean()},
+		{"ne(upper('abc'), array('abc'))", types.Boolean()},
+		{"eq(not(true), 42)", types.Boolean()},
+	}
+	for _, test := range tests {
+
+		t.Run(test.expression, func(t *testing.T) {
+			_, _, err := Compile(test.expression, types.Type{}, test.destination)
+			if err != nil {
+				return
+			}
+			t.Fatalf("expected compilation to reject conversion to %s", test.destination)
+		})
+
+	}
+
+}
+
+// TestJSONParseArguments checks literal coercion and runtime validation of
+// strings and dynamic values.
+func TestJSONParseArguments(t *testing.T) {
+
+	schema := types.Object([]types.Property{
+		{Name: "text", Type: types.String(), Nullable: true},
+		{Name: "value", Type: types.JSON(), Nullable: true},
+	})
+	tests := []struct {
+		name       string
+		expression string
+		attributes map[string]any
+		want       any
+		wantErr    bool
+	}{
+		{name: "boolean literal", expression: "json_parse(false)", want: json.Value("false")},
+		{name: "number literal", expression: "json_parse(42)", want: json.Value("42")},
+		{name: "selected literal", expression: "json_parse(if(true, false, '0'))", want: json.Value("false")},
+		{name: "fallback literal", expression: "json_parse(coalesce(null, 42))", want: json.Value("42")},
+		{
+			name: "nested literal", expression: "json_parse(if(true, coalesce(null, 42), false))",
+			want: json.Value("42"),
+		},
+		{
+			name: "converted selector", expression: "json_parse(lower(if(true, not(false), not(true))))",
+			want: json.Value("true"),
+		},
+		{
+			name: "concatenated selector", expression: "json_parse('[' if(true, len('abc'), len('de')) ']')",
+			want: json.Value("[3]"),
+		},
+		{
+			name: "prefixed selector", expression: "json_parse('1' coalesce(len('abc'), len('de')))",
+			want: json.Value("13"),
+		},
+		{name: "null literal", expression: "json_parse(null)"},
+		{name: "implicit null", expression: "json_parse(if(false, '42'))"},
+		{
+			name: "string property", expression: "json_parse(text)",
+			attributes: map[string]any{"text": "false"}, want: json.Value("false"),
+		},
+		{
+			name: "JSON string", expression: "json_parse(value)",
+			attributes: map[string]any{"value": json.Value(`"42"`)}, want: json.Value("42"),
+		},
+		{
+			name: "selected string", expression: "json_parse(if(true, text, value))",
+			attributes: map[string]any{"text": "42", "value": json.Value("false")}, want: json.Value("42"),
+		},
+		{
+			name: "nested JSON string", expression: "json_parse(coalesce(text, if(true, value, '0')))",
+			attributes: map[string]any{"value": json.Value(`"42"`)}, want: json.Value("42"),
+		},
+		{
+			name: "invalid text", expression: "json_parse(text)",
+			attributes: map[string]any{"text": "abc"}, wantErr: true,
+		},
+		{
+			name: "JSON boolean", expression: "json_parse(value)",
+			attributes: map[string]any{"value": json.Value("false")}, wantErr: true,
+		},
+		{
+			name: "selected JSON boolean", expression: "json_parse(if(false, text, value))",
+			attributes: map[string]any{"text": "42", "value": json.Value("false")}, wantErr: true,
+		},
+		{
+			name: "fallback JSON boolean", expression: "json_parse(coalesce(text, value))",
+			attributes: map[string]any{"text": nil, "value": json.Value("false")}, wantErr: true,
+		},
+	}
+	for _, test := range tests {
+
+		t.Run(test.name, func(t *testing.T) {
+
+			expr, _, err := Compile(test.expression, schema, types.JSON())
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, typ, err := expr.Eval(test.attributes)
+			if err != nil {
+				if !test.wantErr {
+					t.Fatal(err)
+				}
+				return
+			}
+			if test.wantErr {
+				t.Fatal("expected evaluation to reject the argument")
+			}
+			if !reflect.DeepEqual(got, test.want) || !types.Equal(typ, types.JSON()) {
+				t.Fatalf("got %#v (%s), want %#v (json)", got, typ, test.want)
+			}
+
+		})
+
+	}
+
+}
+
+// TestJSONParseIncompatibleTypes rejects arguments whose known types cannot be
+// parsed as JSON text.
+func TestJSONParseIncompatibleTypes(t *testing.T) {
+
+	schema := types.Object([]types.Property{
+		{Name: "flag", Type: types.Boolean()},
+		{Name: "number", Type: types.Int(32)},
+		{Name: "day", Type: types.Date()},
+		{Name: "text", Type: types.String(), Nullable: true},
+	})
+	expressions := []string{
+		"json_parse(flag)",
+		"json_parse(number)",
+		"json_parse(day)",
+		"json_parse(not(true))",
+		"json_parse(len('abc'))",
+		"json_parse(if(true, not(false), not(true)))",
+		"json_parse(coalesce(not(false), not(true)))",
+		"json_parse(if(true, number, number))",
+		"json_parse(coalesce(day, day))",
+		"json_parse(if(flag, not(false)))",
+		"json_parse(if(flag, not(false), 'true'))",
+		"json_parse(if(flag, 'true', not(false)))",
+		"json_parse(coalesce(text, number))",
+		"json_parse(coalesce(number, text))",
+		"json_parse(if(flag, coalesce(not(false), not(true)), 'true'))",
+		"json_parse(coalesce(text, if(flag, len('abc'), len('de'))))",
+	}
+	for _, expression := range expressions {
+
+		t.Run(expression, func(t *testing.T) {
+			_, _, err := Compile(expression, schema, types.JSON())
+			if err != nil {
+				return
+			}
+			t.Fatal("expected compilation to reject the argument type")
+		})
+
+	}
+
 }

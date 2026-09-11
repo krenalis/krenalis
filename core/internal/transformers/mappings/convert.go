@@ -5,12 +5,13 @@
 package mappings
 
 import (
-	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"net/netip"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 	"uuid"
@@ -18,6 +19,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 
@@ -36,6 +38,7 @@ var (
 	errParseConversion     = errors.New("cannot parse")
 	errRangeConversion     = errors.New("out of range")
 	errPatternConversion   = errors.New("pattern mismatch")
+	errUnixNanoConversion  = errors.New("datetime out of range for unixnano")
 	errYearRangeConversion = errors.New("year not in range [1,9999]")
 )
 
@@ -60,10 +63,13 @@ var (
 // nullable is true, it returns nil.
 //
 // If inPlace is true, the conversion is permitted to modify array, object, and
-// map values directly within the value being converted.
+// map values directly within the value being converted. Conversions to a
+// different type copy containers so other expressions can still read their
+// source representation.
 //
 // layouts represents, if not nil, the layouts used to format datetime, date,
-// and time values as strings.
+// and time values as strings or timestamps. Formatting copies containers even
+// when inPlace is true, so shared references retain their source representation.
 //
 // purpose specifies the reason for the transformation. If Create or Update,
 // then all the properties required for creation or the update must be present
@@ -79,8 +85,14 @@ var (
 //   - errParseConversion
 //   - errRangeConversion
 //   - errPatternConversion
+//   - errUnixNanoConversion
 //   - errYearRangeConversion
 func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.TimeLayouts, purpose Purpose) (any, error) {
+	if inPlace && (layouts != nil || !types.Equal(st, dt)) {
+		// Type changes and formatting may change values or remove properties.
+		// Another element or expression may still use the source container.
+		inPlace = false
+	}
 	sk := st.Kind()
 	dk := dt.Kind()
 	if nullable {
@@ -149,11 +161,11 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			return v, errInvalidConversion
 		}
 		if values := dt.Values(); values != nil {
-			if s == "" && nullable {
-				return nil, nil
-			}
 			if slices.Contains(values, s) {
 				return s, nil
+			}
+			if s == "" && nullable {
+				return nil, nil
 			}
 			return v, errEnumConversion
 		} else if re := dt.Pattern(); re != nil {
@@ -338,22 +350,29 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			}
 		case types.FloatKind:
 			n = v.(float64)
-			if dt.IsReal() && !st.IsReal() && (math.IsNaN(n) || math.IsInf(n, 0)) {
-				return v, errRangeConversion
-			}
 			if dt.BitSize() == 32 && st.BitSize() != 32 {
 				n = float64(float32(n))
 			}
 		case types.IntKind:
-			if st.IsUnsigned() {
+			if dt.BitSize() == 32 {
+				// Convert directly to float32 to avoid rounding through float64 first.
+				if st.IsUnsigned() {
+					n = float64(float32(v.(uint)))
+				} else {
+					n = float64(float32(v.(int)))
+				}
+			} else if st.IsUnsigned() {
 				n = float64(v.(uint))
 			} else {
 				n = float64(v.(int))
 			}
 		case types.DecimalKind:
-			n, _ = v.(decimal.Decimal).Float64()
-			if dt.BitSize() == 32 {
-				n = float64(float32(n))
+			// Parse at the target precision to avoid rounding through float64 first.
+			n, err = strconv.ParseFloat(v.(decimal.Decimal).String(), dt.BitSize())
+			if err != nil {
+				if errors.Is(err, strconv.ErrRange) {
+					return v, errRangeConversion
+				}
 			}
 		case types.JSONKind:
 			v := v.(json.Value)
@@ -366,6 +385,9 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		}
 		if err != nil {
 			return v, errInvalidConversion
+		}
+		if dt.IsReal() && (math.IsNaN(n) || math.IsInf(n, 0)) {
+			return v, errRangeConversion
 		}
 		min, max := dt.FloatRange()
 		if n < min {
@@ -382,7 +404,15 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		case types.StringKind:
 			n, err = decimal.Parse(v.(string), dt.Precision(), dt.Scale())
 		case types.DecimalKind:
-			n, _ = v.(decimal.Decimal)
+			n = v.(decimal.Decimal)
+			// A value inside the numeric range can still have excess fractional digits.
+			_, err = decimal.Parse(n.String(), dt.Precision(), dt.Scale())
+			if err != nil {
+				if err == decimal.ErrRange {
+					return v, errRangeConversion
+				}
+				return v, errInvalidConversion
+			}
 		case types.IntKind:
 			if st.IsUnsigned() {
 				n, err = decimal.Uint(v.(uint), dt.Precision(), dt.Scale())
@@ -461,6 +491,9 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			case "unixmicro":
 				return t.UnixMicro(), nil
 			case "unixnano":
+				if t.Before(time.Unix(0, math.MinInt64)) || t.After(time.Unix(0, math.MaxInt64)) {
+					return v, errUnixNanoConversion
+				}
 				return t.UnixNano(), nil
 			default:
 				layout := layouts.DateTime
@@ -533,6 +566,8 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			if !ok {
 				return v, errParseConversion
 			}
+		default:
+			return v, errInvalidConversion
 		}
 		if layouts != nil {
 			layout := layouts.Time
@@ -611,17 +646,17 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		if sk == types.JSONKind {
 			return v, nil
 		}
-		// TODO(marco): time types are not correctly marshaled
+		jsonValue := formatJSONTimes(v, st)
 		if encodeSorted {
 			var b json.Buffer
-			err := b.EncodeSorted(v)
+			err := b.EncodeSorted(jsonValue)
 			if err != nil {
 				return v, errInvalidConversion
 			}
 			value, _ := b.Value()
 			return value, nil
 		}
-		value, err := json.Marshal(v)
+		value, err := json.Marshal(jsonValue)
 		if err != nil {
 			return v, errInvalidConversion
 		}
@@ -682,10 +717,12 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				return v, errInvalidConversion
 			}
 			if dt.Unique() {
-				for i, it := range d {
-					if slices.Contains(d[i:], it) {
-						return v, errInvalidConversion
-					}
+				duplicate, err := types.FirstDuplicate(d, et)
+				if err != nil {
+					return v, errInvalidConversion
+				}
+				if duplicate >= 0 {
+					return v, errInvalidConversion
 				}
 			}
 			return d, nil
@@ -697,7 +734,8 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			}
 			it1 := st.Elem()
 			it2 := dt.Elem()
-			if !types.Equal(it1, it2) {
+			// Equal types still need time formatting and validation of required properties.
+			if !types.Equal(it1, it2) || layouts != nil || purpose != None {
 				if !inPlace {
 					d = make([]any, len(s))
 				}
@@ -709,11 +747,14 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 					}
 				}
 			}
-			if !st.Unique() && dt.Unique() {
-				for i, item := range d {
-					if slices.Contains(d[i:], item) {
-						return v, errInvalidConversion
-					}
+			// Converting elements can introduce duplicates even when the source is unique.
+			if dt.Unique() && (!st.Unique() || !types.Equal(it1, it2) || layouts != nil) {
+				duplicate, err := types.FirstDuplicate(d, it2)
+				if err != nil {
+					return v, errInvalidConversion
+				}
+				if duplicate >= 0 {
+					return v, errInvalidConversion
 				}
 			}
 			return d, nil
@@ -723,7 +764,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		dProperties := dt.Properties()
 		switch sk {
 		case types.ObjectKind:
-			if types.Equal(st, dt) {
+			if types.Equal(st, dt) && layouts == nil && purpose == None {
 				return v, nil
 			}
 			s := v.(map[string]any)
@@ -738,15 +779,6 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				if !ok {
 					if inPlace {
 						delete(d, name)
-					}
-					continue
-				}
-				if value == nil {
-					if !dp.Nullable {
-						return v, errInvalidConversion
-					}
-					if !inPlace {
-						d[name] = nil
 					}
 					continue
 				}
@@ -829,7 +861,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		case types.MapKind:
 			vt1 := st.Elem()
 			vt2 := dt.Elem()
-			if types.Equal(vt1, vt2) {
+			if types.Equal(vt1, vt2) && layouts == nil && purpose == None {
 				return v, nil
 			}
 			s := v.(map[string]any)
@@ -855,7 +887,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			var err error
 			for _, p := range st.Properties().All() {
 				if value, ok := s[p.Name]; ok {
-					d[p.Name], err = convert(value, p.Type, vt, true, inPlace, layouts, purpose)
+					d[p.Name], err = convert(value, p.Type, vt, false, inPlace, layouts, purpose)
 					if err != nil {
 						return nil, err
 					}
@@ -882,26 +914,34 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 	return v, errInvalidConversion
 }
 
+// convertStringToDate parses supported calendar formats and Excel serial dates.
+// Calendar years are interpreted literally, without inferring a century.
+// Excel serial fractions are discarded, and the fictitious day 60 is rejected.
+// It returns errParseConversion for invalid dates and errYearRangeConversion
+// for years outside [1,9999].
 func convertStringToDate(s string) (time.Time, error) {
 	month, day, year := -1, -1, -1
-	if len(s) == 10 {
-		if s[4] == '-' && s[7] == '-' {
-			year, month, day = parseUint(s[0:4]), parseUint(s[5:7]), parseUint(s[8:10]) // yyyy-mm-dd
-		} else if s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.' {
-			month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:10]) // mm/dd/yyyy, mm.dd.yyyy
-		}
-	} else if len(s) == 8 {
-		if s[2] == '-' && s[5] == '-' {
-			year, month, day = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[5:8]) // yy-mm-dd
-		} else if s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.' {
-			month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:10]) // mm/dd/yy, mm.dd.yy
-		}
+	if len(s) == 10 && s[4] == '-' && s[7] == '-' {
+		year, month, day = parseUint(s[0:4]), parseUint(s[5:7]), parseUint(s[8:10]) // yyyy-mm-dd
+	} else if len(s) == 10 && (s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.') {
+		month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:10]) // mm/dd/yyyy, mm.dd.yyyy
+	} else if len(s) == 8 && s[2] == '-' && s[5] == '-' {
+		year, month, day = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:8]) // yy-mm-dd
+	} else if len(s) == 8 && (s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.') {
+		month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:8]) // mm/dd/yy, mm.dd.yy
 	} else if isSimpleFloat(s) {
 		// Parse as Excel serial date-time.
 		// https://support.microsoft.com/en-us/office/datevalue-function-df8b07d4-7761-4a93-bc33-b7471bbff252
-		days, err := strconv.ParseFloat(s, 64)
+		// Read whole days directly so fractional digits cannot round into another day.
+		whole, _, _ := strings.Cut(s, ".")
+		days, err := strconv.Atoi(whole)
 		if err != nil {
-			return time.Time{}, errParseConversion
+			// isSimpleFloat already validated the syntax, so only integer overflow can fail.
+			return time.Time{}, errYearRangeConversion
+		}
+		// Serial 2958466 is 10000-01-01, beyond the supported year range.
+		if days >= 2958466 {
+			return time.Time{}, errYearRangeConversion
 		}
 		if days == 60 {
 			// 1900-02-29 does not exist. Excel returns it for compatibility with Lotus 1-2-3.
@@ -910,8 +950,8 @@ func convertStringToDate(s string) (time.Time, error) {
 		if days > 60 {
 			days--
 		}
-		t := excelEpoch.Add(time.Duration(days) * 24 * time.Hour)
-		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC), nil
+		t := excelEpoch.AddDate(0, 0, days)
+		year, month, day = t.Year(), int(t.Month()), t.Day()
 	}
 	if month < 1 || month > 12 || day < 1 || day > 31 {
 		return time.Time{}, errParseConversion
@@ -960,6 +1000,44 @@ func floatToUint(n float64) (uint, error) {
 		return 0, errRangeConversion
 	}
 	return uint(math.Round(n)), nil
+}
+
+// formatJSONTimes formats date and time values using their source type before
+// JSON encoding, copying containers so their native values remain usable.
+func formatJSONTimes(v any, t types.Type) any {
+
+	if v == nil {
+		return nil
+	}
+
+	switch t.Kind() {
+	case types.DateKind:
+		return v.(time.Time).Format(time.DateOnly)
+	case types.TimeKind:
+		return v.(time.Time).Format("15:04:05.999999999")
+	case types.ArrayKind:
+		d := slices.Clone(v.([]any))
+		for i, value := range d {
+			d[i] = formatJSONTimes(value, t.Elem())
+		}
+		return d
+	case types.ObjectKind:
+		d := maps.Clone(v.(map[string]any))
+		for _, p := range t.Properties().All() {
+			if value, ok := d[p.Name]; ok {
+				d[p.Name] = formatJSONTimes(value, p.Type)
+			}
+		}
+		return d
+	case types.MapKind:
+		d := maps.Clone(v.(map[string]any))
+		for key, value := range d {
+			d[key] = formatJSONTimes(value, t.Elem())
+		}
+		return d
+	}
+
+	return v
 }
 
 func isSimpleFloat(s string) bool {

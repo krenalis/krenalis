@@ -6,8 +6,6 @@ package mappings
 
 import (
 	"fmt"
-	"math"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -23,14 +21,19 @@ import (
 // It is set to true during tests to ensure deterministic output.
 var encodeSorted = false
 
-// Eval evaluates the expression using the provided attributes, which must
-// conform to the expression's source schema, and returns the result in the
-// destination type.
+// Eval evaluates the expression using attributes, which must conform to the
+// source schema, and returns the value and its actual type. A nil result may
+// have an invalid type when no result type is known.
 //
-// During evaluation, JSON properties in the map may be replaced with their
-// unmarshaled values.
+// Literals have already been converted by Compile. Dynamic arguments are
+// converted when required by the function receiving them. Calls to if and
+// coalesce return their selected argument with its actual type. Eval does not
+// convert the final result to Compile's destination type; Mapping.Transform
+// does that.
 //
 // If a property transformation fails, Eval returns a TransformationError.
+// If an array element cannot be converted to its contextual type, it returns a
+// ValidationError.
 func (expr *Expression) Eval(attributes map[string]any) (any, types.Type, error) {
 	v, st, err := eval(expr.parts, expr.source, attributes)
 	if err != nil {
@@ -43,8 +46,9 @@ func (expr *Expression) Eval(attributes map[string]any) (any, types.Type, error)
 }
 
 // appendAsString appends v to b after converting it to a string.
-// Calling appendAsString(b, v, t) is the same of calling
-// convert(v, t, types.String(), false, false) and appending the result to b.
+// Calling appendAsString(b, v, t) is equivalent to calling
+// convert(v, t, types.String(), false, false, nil, None) and appending the
+// result to b.
 func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 	if v == nil {
 		return b, nil
@@ -54,7 +58,7 @@ func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 	}
 	switch t.Kind() {
 	case types.BooleanKind:
-		strconv.AppendBool(b, v.(bool))
+		return strconv.AppendBool(b, v.(bool)), nil
 	case types.IntKind:
 		if t.IsUnsigned() {
 			return strconv.AppendUint(b, uint64(v.(uint)), 10), nil
@@ -88,37 +92,23 @@ func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 // digitCountInt returns the number of decimal digits in n, including the sign
 // for negative numbers.
 func digitCountInt(n int64) int {
-	if n == 0 {
-		return 1
-	}
-	sign := 0
-	if n < 0 {
-		if n == math.MinInt64 {
-			return 20
-		}
-		sign = 1
-		n = -n
-	}
-	return sign + int(math.Log10(float64(n))) + 1
+	return len(strconv.FormatInt(n, 10))
 }
 
 // digitCountUint returns the number of decimal digits in n.
 func digitCountUint(n uint64) int {
-	if n == 0 {
-		return 1
-	}
-	return int(math.Log10(float64(n))) + 1
+	return len(strconv.FormatUint(n, 10))
 }
 
 // eval evaluates the expression and returns its value and type. source is the
 // source code of the expression, used in error messages, and attributes are the
 // attributes.
 //
-// If an error occurs, it will be either errInvalidConversion or a
-// TransformationError.
+// Errors may include errInvalidConversion, TransformationError, and
+// ValidationError.
 func eval(expression []part, source string, attributes map[string]any) (any, types.Type, error) {
 
-	// Evaluate the most common cases that does not require a buffer.
+	// Evaluate the most common cases that do not require a buffer.
 	if len(expression) == 1 {
 		p := expression[0]
 		if p.path.elements == nil {
@@ -180,8 +170,8 @@ func eval(expression []part, source string, attributes map[string]any) (any, typ
 // type. source is the source code of the expression, used in error messages,
 // and attributes are the attributes.
 //
-// If it returns an error, it is either errInvalidConversion or a
-// TransformationError.
+// Errors may include errInvalidConversion, TransformationError, and
+// ValidationError.
 func evalCall(p part, source string, attributes map[string]any) (any, types.Type, error) {
 	switch name := p.path.elements[0]; name {
 	case "and":
@@ -211,27 +201,20 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		return true, types.Boolean(), nil
 	case "array":
 		arr := make([]any, len(p.args))
+		et := p.typ.Elem()
 		for i, arg := range p.args {
-			v, _, err := eval(arg, source, attributes)
+			v, vt, err := eval(arg, source, attributes)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
-			switch v.(type) {
-			case nil:
-				v = json.Value("null")
-			case json.Value:
-			default:
-				if encodeSorted {
-					var b json.Buffer
-					_ = b.EncodeSorted(v)
-					v, _ = b.Value()
-				} else {
-					v, _ = json.Marshal(v)
-				}
+			arr[i], err = convert(v, vt, et, false, false, nil, None)
+			if err != nil {
+				// The element type comes from the destination schema, so a conversion
+				// failure is a validation error even though it occurs during evaluation.
+				return nil, types.Type{}, errValidationConversion(err, code(source, arg...), et)
 			}
-			arr[i] = v
 		}
-		return arr, types.Array(types.JSON()), nil
+		return arr, p.typ, nil
 	case "coalesce":
 		for _, arg := range p.args {
 			v, vt, err := eval(arg, source, attributes)
@@ -243,7 +226,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 			}
 		}
 		return nil, p.typ, nil
-	case "eq":
+	case "eq", "ne":
 		v0, t0, err := eval(p.args[0], source, attributes)
 		if err != nil {
 			return nil, types.Type{}, err
@@ -258,13 +241,11 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		if v1 == nil {
 			return nil, types.Boolean(), nil
 		}
-		if !types.Equal(t0, t1) {
-			v0, err = convert(v0, t0, t1, true, false, nil, None)
-			if err != nil {
-				return false, types.Boolean(), nil
-			}
+		equal := equalValues(v0, v1, t0, t1)
+		if p.path.elements[0] == "ne" {
+			equal = !equal
 		}
-		return reflect.DeepEqual(v0, v1), types.Boolean(), nil
+		return equal, types.Boolean(), nil
 	case "if":
 		v0, vt0, err := eval(p.args[0], source, attributes)
 		if err == nil && v0 != nil && vt0.Kind() != types.BooleanKind {
@@ -297,7 +278,8 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		if v == nil {
 			return nil, types.String(), nil
 		}
-		return strings.Title(v.(string)), types.String(), nil // DO NOT MODIFY — using deprecated Title intentionally
+		// Keep strings.Title to preserve the existing word boundaries.
+		return strings.Title(strings.ToLower(v.(string))), types.String(), nil
 	case "json_parse":
 		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil {
@@ -313,15 +295,13 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 						"«%s» is a JSON %s and cannot be passed as a string value to the «json_parse» function", code(source, p.args[0]...), k)
 				}
 				v = value.String()
-				vt = types.String()
-				_ = vt // the assignment 'vt = types.String()' is ineffective, it is done for the future in case we need to use 'vt'; so, the assignment '_ = vt' is to avoid the 'staticcheck' ineffective error.
 			}
 		}
 		if err != nil {
 			return nil, types.Type{}, err
 		}
 		if v == nil {
-			return nil, types.String(), nil
+			return nil, types.JSON(), nil
 		}
 		jv := json.Value(v.(string))
 		if !json.Valid(jv) {
@@ -330,7 +310,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		}
 		return jv, types.JSON(), nil
 	case "len":
-		v, _, err := eval(p.args[0], source, attributes)
+		v, vt, err := eval(p.args[0], source, attributes)
 		if err != nil {
 			return nil, types.Type{}, err
 		}
@@ -350,17 +330,16 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 			length = digitCountUint(uint64(v))
 		case float64:
 			bitSize := 64
-			if t := typeOf(p.args[0]); t.Kind() == types.FloatKind && t.BitSize() == 32 {
+			if vt.Kind() == types.FloatKind && vt.BitSize() == 32 {
 				bitSize = 32
 			}
 			length = len(strconv.FormatFloat(v, 'g', -1, bitSize))
 		case decimal.Decimal:
 			length = len(v.String())
 		case time.Time:
-			t := typeOf(p.args[0])
-			switch t.Kind() {
+			switch vt.Kind() {
 			case types.DateTimeKind:
-				length = 20
+				length = len(v.Format(time.RFC3339Nano))
 			case types.DateKind:
 				length = 10
 			case types.TimeKind:
@@ -382,6 +361,10 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 			length = len(v)
 		case map[string]any:
 			length = len(v)
+		}
+		if length > types.MaxInt32 {
+			msg := fmt.Sprintf("length of «%s» exceeds int(32) maximum %d", code(source, p.args[0]...), types.MaxInt32)
+			return nil, types.Type{}, TransformationError{msg}
 		}
 		return length, types.Int(32), nil
 	case "lower":
@@ -422,7 +405,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 			key := p.args[i][0].value.(string)
 
 			valExpr := p.args[i+1]
-			v, _, err := eval(valExpr, source, attributes)
+			v, vt, err := eval(valExpr, source, attributes)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -438,39 +421,24 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 				v = json.Value("null")
 			case json.Value:
 			default:
+				v = formatJSONTimes(v, vt)
 				if encodeSorted {
 					var b json.Buffer
-					_ = b.EncodeSorted(v)
-					v, _ = b.Value()
+					err = b.EncodeSorted(v)
+					if err != nil {
+						return nil, types.Type{}, err
+					}
+					v, err = b.Value()
 				} else {
-					v, _ = json.Marshal(v)
+					v, err = json.Marshal(v)
+				}
+				if err != nil {
+					return nil, types.Type{}, err
 				}
 			}
 			m[key] = v
 		}
 		return m, types.Map(types.JSON()), nil
-	case "ne":
-		v0, t0, err := eval(p.args[0], source, attributes)
-		if err != nil {
-			return nil, types.Type{}, err
-		}
-		if v0 == nil {
-			return nil, types.Boolean(), nil
-		}
-		v1, t1, err := eval(p.args[1], source, attributes)
-		if err != nil {
-			return nil, types.Type{}, err
-		}
-		if v1 == nil {
-			return nil, types.Boolean(), nil
-		}
-		if !types.Equal(t0, t1) {
-			v0, err = convert(v0, t0, t1, true, false, nil, None)
-			if err != nil {
-				return true, types.Boolean(), nil
-			}
-		}
-		return !reflect.DeepEqual(v0, v1), types.Boolean(), nil
 	case "not":
 		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && vt.Kind() != types.BooleanKind {
@@ -493,7 +461,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 			if err == nil && v != nil && vt.Kind() != types.BooleanKind {
 				v, err = convert(v, vt, types.Boolean(), true, false, nil, None)
 				if err != nil {
-					err = errBooleanConversion("or", code(source, p.args[0]...), v, vt)
+					err = errBooleanConversion("or", code(source, arg...), v, vt)
 				}
 			}
 			if err != nil {
@@ -541,10 +509,11 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 			return nil, types.String(), nil
 		}
 		v1, vt1, err := eval(p.args[1], source, attributes)
-		if err == nil && v1 != nil && (vt1.Kind() != types.IntKind || vt1.BitSize() > 32) {
+		if err == nil && v1 != nil &&
+			(vt1.Kind() != types.IntKind || vt1.BitSize() > 32 || vt1.IsUnsigned()) {
 			v1, err = convert(v1, vt1, types.Int(32), true, false, nil, None)
 			if err != nil {
-				err = errInt32Conversion("substring", code(source, p.args[2]...), v1, vt1)
+				err = errInt32Conversion("substring", code(source, p.args[1]...), v1, vt1)
 			}
 		}
 		if err != nil {
@@ -557,7 +526,8 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		length := -1
 		if len(p.args) == 3 {
 			v2, vt2, err := eval(p.args[2], source, attributes)
-			if err == nil && v2 != nil && (vt2.Kind() != types.IntKind || vt2.BitSize() > 32) {
+			if err == nil && v2 != nil &&
+				(vt2.Kind() != types.IntKind || vt2.BitSize() > 32 || vt2.IsUnsigned()) {
 				v2, err = convert(v2, vt2, types.Int(32), true, false, nil, None)
 				if err != nil {
 					err = errInt32Conversion("substring", code(source, p.args[2]...), v2, vt2)
@@ -609,11 +579,11 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 	panic(fmt.Errorf("unknown function %q", p.path.elements[0]))
 }
 
-// substring returns a substring of s starting from the rune at position
-// start-1, with start > 0, for a length in rune of length. If length is
-// negative, it returns all the runes from s to the end of the string.
+// substring returns the substring of s starting at rune start-1. If length is
+// non-negative, it returns at most length runes; otherwise, it returns the
+// remainder of the string.
 func substring(s string, start, length int) string {
-	if length == 0 {
+	if s == "" || length == 0 {
 		return ""
 	}
 	n := 0
@@ -634,15 +604,15 @@ func substring(s string, start, length int) string {
 		return s
 	}
 	n = 0
-	var r rune
-	for i, r = range s {
+	for i = range s {
 		n += 1
 		if n == length {
 			break
 		}
 	}
-	i += utf8.RuneLen(r)
-	return s[:i]
+	// Decode only the last rune: range consumes one byte for malformed UTF-8.
+	_, size := utf8.DecodeRuneInString(s[i:])
+	return s[:i+size]
 }
 
 // errBooleanConversion returns an error explaining the failure that occurred
@@ -665,7 +635,8 @@ func errBooleanConversion(fn string, code string, v any, t types.Type) error {
 func errInt32Conversion(fn string, code string, v any, t types.Type) error {
 	switch t.Kind() {
 	case types.IntKind, types.FloatKind, types.DecimalKind:
-		return fmt.Errorf("«%s», with a value of %s, cannot be passed as a 32-bit int to the «%s» function", code, v, fn)
+		return fmt.Errorf("«%s», with a value of %v, cannot be passed as a 32-bit int to the «%s» function",
+			code, v, fn)
 	case types.JSONKind:
 		k := v.(json.Value).Kind()
 		if k == json.Number {
@@ -687,22 +658,109 @@ func errStringConversion(fn string, code string, v any) error {
 	return fmt.Errorf("«%s» (a JSON %s) cannot be converted to a string value to be passed to the «%s» function", code, k, fn)
 }
 
+// errValidationConversion describes a failed conversion to dt as a
+// ValidationError. code identifies the expression; Mapping.Transform adds the
+// destination path. convert does not retain the failing type inside a
+// container, so constraints are described only when they can be read from dt
+// itself.
+func errValidationConversion(err error, code string, dt types.Type) ValidationError {
+
+	msg := fmt.Sprintf("«%s» is not convertible to the «%s» type", code, dt)
+	switch err {
+	case errRangeConversion:
+		msg = fmt.Sprintf("number «%s» is not a «%s» value", code, dt)
+	case errMinConversion:
+		var n any
+		switch dt.Kind() {
+		case types.IntKind:
+			if dt.IsUnsigned() {
+				n, _ = dt.UnsignedRange()
+			} else {
+				n, _ = dt.IntRange()
+			}
+		case types.FloatKind:
+			n, _ = dt.FloatRange()
+		case types.DecimalKind:
+			n, _ = dt.DecimalRange()
+		}
+		if n != nil {
+			msg = fmt.Sprintf("number «%s» is less than %v", code, n)
+		}
+	case errMaxConversion:
+		var n any
+		switch dt.Kind() {
+		case types.IntKind:
+			if dt.IsUnsigned() {
+				_, n = dt.UnsignedRange()
+			} else {
+				_, n = dt.IntRange()
+			}
+		case types.FloatKind:
+			_, n = dt.FloatRange()
+		case types.DecimalKind:
+			_, n = dt.DecimalRange()
+		}
+		if n != nil {
+			msg = fmt.Sprintf("number «%s» is greater than %v", code, n)
+		}
+	case errParseConversion:
+		var to string
+		switch dt.Kind() {
+		case types.DateTimeKind:
+			to = "a date time in ISO 8601 format"
+		case types.DateKind:
+			to = "a date in ISO 8601 format"
+		case types.TimeKind:
+			to = "a time in ISO 8601 format"
+		case types.UUIDKind:
+			to = "a UUID"
+		case types.IPKind:
+			to = "an IP address"
+		}
+		if to != "" {
+			msg = fmt.Sprintf("«%s» is not parsable as %s", code, to)
+		}
+	case errYearRangeConversion:
+		msg = fmt.Sprintf("year of «%s» is not in range [1,9999]", code)
+	case errUnixNanoConversion:
+		msg = fmt.Sprintf("«%s» is outside the range supported by the «unixnano» datetime format", code)
+	case errEnumConversion:
+		msg = fmt.Sprintf("«%s» is not one of the allowed values", code)
+	case errPatternConversion:
+		if dt.Kind() == types.StringKind {
+			msg = fmt.Sprintf("«%s» does not match «/%s/»", code, dt.Pattern())
+		}
+	case errMaxBytesConversion:
+		if dt.Kind() == types.StringKind {
+			n, _ := dt.MaxBytes()
+			msg = fmt.Sprintf("«%s» exceeds the %d-byte limit", code, n)
+		}
+	case errMaxLengthConversion:
+		if dt.Kind() == types.StringKind {
+			n, _ := dt.MaxLength()
+			msg = fmt.Sprintf("«%s» exceeds the %d-char limit", code, n)
+		}
+	}
+
+	return ValidationError{msg}
+}
+
 // valueOf returns the value at the specified path in attributes. It returns nil
 // if the path does not exist, including keys in a map and properties of a JSON
-// object.
+// object, or if an intermediate value is nil.
 //
 // For non-object JSON values, accessing a key returns nil if the key is
 // optional; otherwise, it returns an error.
 //
-// It returns a TransformationError error if a path in a JSON Object does
-// not exist.
+// It returns a TransformationError if traversal encounters a non-object value,
+// except for optional keys in non-object JSON values as described above.
 func valueOf(path path, attributes map[string]any) (any, error) {
 	last := len(path.elements) - 1
 	var i int
 	for i = 0; i < len(path.elements); i++ {
 		name := path.elements[i]
 		v, ok := attributes[name]
-		if !ok {
+		if !ok || v == nil {
 			return nil, nil
 		}
 		if i == last {
@@ -724,6 +782,9 @@ func valueOf(path path, attributes map[string]any) (any, error) {
 				return nil, TransformationError{msg}
 			}
 			return v, nil
+		default:
+			msg := fmt.Sprintf("invalid %s: %s is not an object", path.slice(0, i+2), path.slice(0, i+1))
+			return nil, TransformationError{msg}
 		}
 	}
 	panic("unreachable code")

@@ -6,12 +6,12 @@ package mappings
 
 import (
 	"cmp"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
 
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -47,6 +47,7 @@ func (err ValidationError) Error() string {
 type Mapping struct {
 	inPlace     bool
 	expressions []mappingExpr
+	outSchema   types.Type
 }
 
 type mappingExpr struct {
@@ -65,12 +66,15 @@ type mappingExpr struct {
 // respectively.
 //
 // If inPlace is true, a transformation is permitted to modify array, object,
-// and map values directly within the value being transformed.
+// and map values directly within the value being transformed. Conversions that
+// change a container's type or format temporal values copy containers to
+// preserve source values shared by multiple expressions or elements.
 //
 // If layouts is not nil, it specifies the layouts used to format datetime,
 // date, and time values as strings.
 //
 // The source type can be the invalid type if expressions do not contain paths.
+// Expressions are compiled in alphabetical order of their destination paths.
 //
 // It returns a types.PathNotExistError error if a path in expressions does not
 // exist in the source schema.
@@ -87,17 +91,25 @@ func New(expressions map[string]string, inSchema, outSchema types.Type, inPlace 
 		}
 		return nil, errors.New("outSchema is not an object")
 	}
-	// Compile the expressions.
+	// Sort and validate the destination paths before compiling expressions.
 	me := make([]mappingExpr, len(expressions))
 	i := 0
+	for path := range expressions {
+		me[i].path = path
+		i++
+	}
+	err := sortMappingExpressions(me)
+	if err != nil {
+		return nil, err
+	}
 	properties := outSchema.Properties()
-	for path, expr := range expressions {
+	for i := range me {
+		path := me[i].path
 		p, err := properties.ByPath(path)
 		if err != nil {
 			return nil, err
 		}
-		me[i].path = path
-		me[i].expr, me[i].properties, err = Compile(expr, inSchema, p.Type)
+		me[i].expr, me[i].properties, err = Compile(expressions[path], inSchema, p.Type)
 		if err != nil {
 			return nil, err
 		}
@@ -106,21 +118,16 @@ func New(expressions map[string]string, inSchema, outSchema types.Type, inPlace 
 		me[i].createRequired = p.CreateRequired
 		me[i].updateRequired = p.UpdateRequired
 		me[i].timeLayouts = layouts
-		i++
 	}
-	err := sortMappingExpressions(me)
-	if err != nil {
-		return nil, err
-	}
-	return &Mapping{expressions: me, inPlace: inPlace}, nil
+	return &Mapping{expressions: me, inPlace: inPlace, outSchema: outSchema}, nil
 }
 
 // InPaths returns the input property paths, i.e., the property paths found in
 // the expressions, sorted alphabetically. The returned properties are
-// guaranteed to be unique. If no property are present, it returns an empty
+// guaranteed to be unique. If no properties are present, it returns an empty
 // slice.
 //
-// If the expressions contain a map or json indexing, Properties does not return
+// If the expressions contain map or JSON indexing, InPaths does not return
 // the key. For example, for the expression x.y.z, it returns {"x"} if x is a
 // JSON object, and returns {"x.z"} if x is a map of objects.
 func (mapping *Mapping) InPaths() []string {
@@ -153,17 +160,16 @@ func (mapping *Mapping) OutPaths() []string {
 	return paths
 }
 
-// Transform transforms attributes, that must conform to the expression's source
-// schema, and returns the result that conforms to the expression's output
-// schema.
+// Transform transforms attributes that must conform to the mapping's source
+// schema and returns a result conforming to its output schema.
 //
 // purpose specifies the reason for the transformation. If Create or Update,
 // then all the properties required for creation or the update must be present
 // in the returned value.
 //
 // If an expression evaluates to nil and the corresponding property cannot be
-// null, that property will be omitted from the returned result, provided this
-// is allowed by the purpose.
+// null, a JSON property receives JSON null; other properties are omitted from
+// the returned result, provided this is allowed by the purpose.
 //
 // If an error occurs during attribute transformation or final validation, a
 // TransformationError or ValidationError is returned.
@@ -180,74 +186,13 @@ func (mapping *Mapping) Transform(attributes map[string]any, purpose Purpose) (m
 			}
 			return nil, TransformationError{fmt.Sprintf("%s while mapping to «%s»", err, code(e.path))}
 		}
-		if v != nil {
-			v, err = convert(v, vt, e.dt, true, mapping.inPlace, e.timeLayouts, purpose)
+		if v != nil || (!e.nullable && e.dt.Kind() == types.JSONKind) {
+			// A nil result for a non-nullable JSON property must become JSON null.
+			nullable := v != nil
+			v, err = convert(v, vt, e.dt, nullable, mapping.inPlace, e.timeLayouts, purpose)
 			if err != nil {
-				var msg string
-				switch err {
-				case errRangeConversion:
-					msg = fmt.Sprintf("number «%s» is not a «%s» value while mapping to «%s»", code(e.expr.source), e.dt, code(e.path))
-				case errMinConversion:
-					var n any
-					switch e.dt.Kind() {
-					case types.IntKind:
-						if e.dt.IsUnsigned() {
-							n, _ = e.dt.UnsignedRange()
-						} else {
-							n, _ = e.dt.IntRange()
-						}
-					case types.FloatKind:
-						n, _ = e.dt.FloatRange()
-					case types.DecimalKind:
-						n, _ = e.dt.DecimalRange()
-					}
-					msg = fmt.Sprintf("number «%s» is less than %v while mapping to «%s»", code(e.expr.source), n, code(e.path))
-				case errMaxConversion:
-					var n any
-					switch e.dt.Kind() {
-					case types.IntKind:
-						if e.dt.IsUnsigned() {
-							_, n = e.dt.UnsignedRange()
-						} else {
-							_, n = e.dt.IntRange()
-						}
-					case types.FloatKind:
-						_, n = e.dt.FloatRange()
-					case types.DecimalKind:
-						_, n = e.dt.DecimalRange()
-					}
-					msg = fmt.Sprintf("number «%s» is greater than %v while mapping to «%s»", code(e.expr.source), n, code(e.path))
-				case errParseConversion:
-					var to string
-					switch e.dt.Kind() {
-					case types.DateTimeKind:
-						to = "a date time in ISO 8601 format"
-					case types.DateKind:
-						to = "a date in ISO 8601 format"
-					case types.TimeKind:
-						to = "a time in ISO 8601 format"
-					case types.UUIDKind:
-						to = "a UUID"
-					case types.IPKind:
-						to = "an IP address"
-					}
-					msg = fmt.Sprintf("«%s» is not parsable as %s while mapping to «%s»", code(e.expr.source), to, code(e.path))
-				case errYearRangeConversion:
-					msg = fmt.Sprintf("year of «%s» is not in range [1,9999] while mapping to «%s»", code(e.expr.source), code(e.path))
-				case errEnumConversion:
-					msg = fmt.Sprintf("«%s» is not one of the allowed values while mapping to «%s»", code(e.expr.source), code(e.path))
-				case errPatternConversion:
-					msg = fmt.Sprintf("«%s» does not match «/%s/» while mapping to «%s»", code(e.expr.source), e.dt.Pattern(), code(e.path))
-				case errMaxBytesConversion:
-					n, _ := e.dt.MaxBytes()
-					msg = fmt.Sprintf("«%s» exceeds the %d-byte limit while mapping to «%s»", code(e.expr.source), n, code(e.path))
-				case errMaxLengthConversion:
-					n, _ := e.dt.MaxLength()
-					msg = fmt.Sprintf("«%s» exceeds the %d-char limit while mapping to «%s»", code(e.expr.source), n, code(e.path))
-				default:
-					msg = fmt.Sprintf("«%s» is not convertible to the «%s» type while mapping to «%s»", code(e.expr.source), e.dt.String(), code(e.path))
-				}
-				return nil, ValidationError{msg}
+				err = errValidationConversion(err, code(e.expr.source), e.dt)
+				return nil, ValidationError{fmt.Sprintf("%s while mapping to «%s»", err, code(e.path))}
 			}
 		}
 		if v == nil && !e.nullable {
@@ -259,6 +204,14 @@ func (mapping *Mapping) Transform(attributes map[string]any, purpose Purpose) (m
 			continue
 		}
 		storeValue(out, e.path, v)
+	}
+	// Paths such as parent.x construct objects after their values are converted.
+	// Check their required properties without reconverting formatted time values.
+	if purpose == Create || purpose == Update {
+		err := validateRequired(out, mapping.outSchema, purpose, "")
+		if err != nil {
+			return nil, err
+		}
 	}
 	return out, nil
 }
@@ -295,4 +248,53 @@ func storeValue(value map[string]any, path string, v any) {
 		}
 		value = object
 	}
+}
+
+// validateRequired checks the presence of required properties in v and its
+// containers according to typ and purpose. It returns a ValidationError with
+// the missing property's path. Absent or null optional ancestors do not require
+// their descendants. Scalar values may already have been formatted for output.
+func validateRequired(v any, typ types.Type, purpose Purpose, path string) error {
+	if v == nil {
+		return nil
+	}
+	switch typ.Kind() {
+	case types.ObjectKind:
+		object := v.(map[string]any)
+		for _, p := range typ.Properties().All() {
+			propertyPath := p.Name
+			if path != "" {
+				propertyPath = path + "." + p.Name
+			}
+			value, ok := object[p.Name]
+			if !ok {
+				if purpose == Create && p.CreateRequired {
+					return ValidationError{fmt.Sprintf("«%s» is missing but it is required for creation", code(propertyPath))}
+				}
+				if purpose == Update && p.UpdateRequired {
+					return ValidationError{fmt.Sprintf("«%s» is missing but it is required for update", code(propertyPath))}
+				}
+				continue
+			}
+			err := validateRequired(value, p.Type, purpose, propertyPath)
+			if err != nil {
+				return err
+			}
+		}
+	case types.ArrayKind:
+		for i, value := range v.([]any) {
+			err := validateRequired(value, typ.Elem(), purpose, fmt.Sprintf("%s[%d]", path, i))
+			if err != nil {
+				return err
+			}
+		}
+	case types.MapKind:
+		for key, value := range v.(map[string]any) {
+			err := validateRequired(value, typ.Elem(), purpose, fmt.Sprintf("%s[%q]", path, key))
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

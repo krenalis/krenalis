@@ -5,15 +5,18 @@
 package mappings
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/types"
 )
+
+const maxFunctionDepth = 50
 
 var (
 	errInvalidNumber      = errors.New("number syntax is not valid")
@@ -97,21 +100,21 @@ func (p path) String() string {
 	return s.String()
 }
 
-// decorators represents the bit flags for the indexing ("x?") and optional
-// ("[x]") decorators.
+// decorators represents the bit flags for the indexing ("[x]") and optional
+// ("x?") decorators.
 type decorators uint8
 
 const (
-	indexing decorators = 1 << iota // indexing represents the "x?" decorator
-	optional                        // optional represents the "[x]" decorator
+	indexing decorators = 1 << iota // indexing represents the "[x]" decorator
+	optional                        // optional represents the "x?" decorator
 )
 
-// indexing reports whether d has the indexing ("x?") decorator
+// indexing reports whether d has the indexing ("[x]") decorator.
 func (d decorators) indexing() bool {
 	return d&indexing != 0
 }
 
-// optional reports whether d has the optional ("[x]") decorator.
+// optional reports whether d has the optional ("x?") decorator.
 func (d decorators) optional() bool {
 	return d&optional != 0
 }
@@ -137,18 +140,21 @@ type part struct {
 	// Function call arguments.
 	args [][]part
 
-	// If there is a path, it represents the type of the property or the type of the function call.
-	// Otherwise, it represents the type of the value. For some function calls, as coalesce, it is
-	// the invalid type, indicating that the call can return different types.
+	// Static type of the value, property, or call, excluding any literal prefix.
+	// Literals use their type after compile-time conversion; paths use the schema's type.
+	// Most calls record their result type. coalesce uses the invalid type because
+	// its result may vary; if records the destination type after checking both branches.
+	// The latter describes compatibility, not the selected value's actual type.
+	// Runtime code must use the type returned by eval for conversion decisions.
 	typ types.Type
 
 	// Positions in the source code, with expr.source[start:end] extracting the source code.
 	start, end int
 }
 
-// appendValue appends v to p.value, converting it to type string is necessary,
-// and returns the appended value and its new type.
-// multipart reports whether p is a part of a multipart expression.
+// appendValue appends v to p.value, converting v to a string when necessary,
+// and returns the resulting value and type. multipart indicates whether p
+// belongs to a multipart expression.
 func (p part) appendValue(v any, multipart bool) (any, types.Type) {
 	// If a value is not already present, it sets it.
 	if !multipart && p.typ.Kind() == types.InvalidKind {
@@ -161,6 +167,9 @@ func (p part) appendValue(v any, multipart bool) (any, types.Type) {
 			i, err := decimalToInt(v)
 			if err != nil {
 				return v, types.Decimal(types.MaxDecimalPrecision, types.MaxDecimalScale)
+			}
+			if i < types.MinInt32 || i > types.MaxInt32 {
+				return i, types.Int(64)
 			}
 			return i, types.Int(32)
 		case bool:
@@ -181,7 +190,7 @@ func (p part) appendValue(v any, multipart bool) (any, types.Type) {
 	// Append the value.
 	t := types.String()
 	switch p.typ.Kind() {
-	case types.InvalidKind:
+	case types.InvalidKind, types.JSONKind:
 		return s, t
 	case types.StringKind:
 		return p.value.(string) + s, t
@@ -203,8 +212,9 @@ func isPathByte(c byte) bool {
 // parse parses an expression from the provided source string and returns the
 // parsed expression along with the remaining unparsed source. If no expression
 // is found, it returns nil. Leading and trailing spaces are trimmed, except
-// when they occur within a string.
-func parse(src string, start, end int) ([]part, string, error) {
+// when they occur within a string. depth is the number of enclosing function
+// calls.
+func parse(src string, start, end, depth int) ([]part, string, error) {
 	var expr []part
 	var err error
 	var dot bool
@@ -224,14 +234,18 @@ Expression:
 				}
 				p.value, p.typ = p.appendValue(s, len(expr) > 0)
 			case '.':
-				src = src[1:]
-				if len(src) == 0 {
+				if len(src) == 1 {
 					return nil, "", io.ErrUnexpectedEOF
 				}
-				if c := src[0]; !('0' <= c && c <= '9' || 'a' <= c && c <= 'z' || c == '_' || 'A' <= c && c <= 'Z') {
-					return nil, "", errors.New("unexpected period")
+				if c := src[1]; c < '0' || c > '9' {
+					if !isPathByte(c) {
+						return nil, "", errors.New("unexpected period")
+					}
+					src = src[1:]
+					dot = true
+					continue Expr
 				}
-				dot = true
+				fallthrough
 			case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-':
 				var n decimal.Decimal
 				n, src, err = parseNumber(src)
@@ -292,6 +306,9 @@ Expression:
 				if !ok || len(p.path.elements) > 1 {
 					return nil, "", fmt.Errorf("function %q does not exist", p.path)
 				}
+				if depth >= maxFunctionDepth {
+					return nil, "", fmt.Errorf("function calls cannot be nested more than %d levels", maxFunctionDepth)
+				}
 				p.args = make([][]part, 0, n)
 				for {
 					src = skipSpaces(src)
@@ -302,7 +319,7 @@ Expression:
 						break
 					}
 					var arg []part
-					arg, src, err = parse(src, end-len(src), end)
+					arg, src, err = parse(src, end-len(src), end, depth+1)
 					if err != nil {
 						return nil, "", err
 					}
@@ -463,11 +480,11 @@ func parseString(src string) (string, string, error) {
 		return "", "", errNoTerminatedString
 	}
 	src = src[1:]
+	if strings.IndexByte(src[:t], '\x00') != -1 {
+		return "", "", errZeroByteInString
+	}
 	p := strings.IndexByte(src[:t], '\\')
 	if p == -1 {
-		if strings.IndexByte(src[:t], '\x00') != -1 {
-			return "", "", errZeroByteInString
-		}
 		return src[:t], src[t+1:], nil
 	}
 	var b strings.Builder
@@ -483,6 +500,8 @@ LOOP:
 			}
 			p, src = 0, src[p+1:]
 			switch c := src[0]; c {
+			case '\x00':
+				return "", "", errZeroByteInString
 			case 'u', 'U':
 				var n = 4
 				if c == 'U' {
@@ -509,11 +528,11 @@ LOOP:
 				if r == 0x00 {
 					return "", "", errZeroByteInString
 				}
-				if 0xD800 <= r && r < 0xE000 || r > '\U0010FFFF' {
-					return "", "", fmt.Errorf("U+%X is not valid Unicode code point", r)
+				if !utf8.ValidRune(r) {
+					return "", "", fmt.Errorf("U+%X is not valid Unicode code point", uint32(r))
 				}
 				b.WriteRune(r)
-				src = src[2+n:]
+				src = src[1+n:]
 			case 'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', '\'', '"':
 				switch c {
 				case 'a':
@@ -533,6 +552,9 @@ LOOP:
 				}
 				b.WriteByte(c)
 				src = src[1:]
+			default:
+				r, _ := utf8.DecodeRuneInString(src)
+				return "", "", fmt.Errorf("unknown escape sequence %q", "\\"+string(r))
 			}
 		case '\x00':
 			return "", "", errZeroByteInString
@@ -563,8 +585,8 @@ func skipSpaces(src string) string {
 	return ""
 }
 
-// code returns the substring of s representing the source code of p. If s is
-// empty, it returns an empty string, and if p is empty, it returns s wrapped.
+// code returns the portion of s corresponding to p. If s is empty, it returns
+// an empty string; if p is empty, it returns all of s.
 // In the returned string, the character `»` is replaced with `≫`.
 func code(s string, p ...part) string {
 	if s == "" {

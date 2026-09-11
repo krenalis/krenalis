@@ -6,11 +6,14 @@ package mappings
 
 import (
 	"bytes"
+	"fmt"
 	"reflect"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 
@@ -152,7 +155,7 @@ func Test_Transform(t *testing.T) {
 		{
 			name:        `A nil property assigned to a non-nullable property -> no properties`,
 			expressions: map[string]string{"A": "c.z"},
-			attributes:  map[string]any{"c.z": nil},
+			attributes:  map[string]any{"c": map[string]any{"z": nil}},
 			expected:    map[string]any{},
 		},
 		{
@@ -169,7 +172,7 @@ func Test_Transform(t *testing.T) {
 		{
 			name:        `A nil property assigned to a nullable property -> nil`,
 			expressions: map[string]string{"B": "c.z"},
-			attributes:  map[string]any{"c.z": nil},
+			attributes:  map[string]any{"c": map[string]any{"z": nil}},
 			expected:    map[string]any{"B": nil},
 		},
 
@@ -184,20 +187,20 @@ func Test_Transform(t *testing.T) {
 			expected:    map[string]any{"C": json.Value(`"boo"`)},
 		},
 		{
-			name:        `null assigned to a non-nullable json property -> the string as JSON`,
+			name:        `null assigned to a non-nullable json property -> JSON null`,
 			expressions: map[string]string{"C": "null"},
-			expected:    map[string]any{}, // TODO(marco): review.
+			expected:    map[string]any{"C": json.Value("null")},
 		},
 		{
-			name:        `A property without a value assigned to a non-nullable json property -> no properties`,
+			name:        `A property without a value assigned to a non-nullable json property -> JSON null`,
 			expressions: map[string]string{"C": "a"},
-			expected:    map[string]any{},
+			expected:    map[string]any{"C": json.Value("null")},
 		},
 		{
-			name:        `A property with a nil value assigned to a non-nullable json property -> nil as JSON`,
+			name:        `A property with a nil value assigned to a non-nullable json property -> JSON null`,
 			expressions: map[string]string{"C": "c.z"},
-			attributes:  map[string]any{"c.z": nil},
-			expected:    map[string]any{},
+			attributes:  map[string]any{"c": map[string]any{"z": nil}},
+			expected:    map[string]any{"C": json.Value("null")},
 		},
 		{
 			name:        `A property without a value assigned to a map(json) key -> no properties`,
@@ -207,7 +210,7 @@ func Test_Transform(t *testing.T) {
 		{
 			name:        `A property with a nil value assigned to a map(json) key -> no properties`,
 			expressions: map[string]string{"C": "map('k', c.z, 'h', 5)"},
-			attributes:  map[string]any{"c.z": nil},
+			attributes:  map[string]any{"c": map[string]any{"z": nil}},
 			expected:    map[string]any{"C": json.Value(`{"h":5}`)},
 		},
 		{
@@ -233,14 +236,14 @@ func Test_Transform(t *testing.T) {
 			expected:    map[string]any{"D": nil},
 		},
 		{
-			name:        `A property without a value assigned to a non-nullable json property -> nil`,
+			name:        `A property without a value assigned to a nullable json property -> nil`,
 			expressions: map[string]string{"D": "a"},
 			expected:    map[string]any{"D": nil},
 		},
 		{
-			name:        `A property with a nil value assigned to a non-nullable json property -> nil`,
+			name:        `A property with a nil value assigned to a nullable json property -> nil`,
 			expressions: map[string]string{"D": "c.z"},
-			attributes:  map[string]any{"c.z": nil},
+			attributes:  map[string]any{"c": map[string]any{"z": nil}},
 			expected:    map[string]any{"D": nil},
 		},
 		{
@@ -251,18 +254,18 @@ func Test_Transform(t *testing.T) {
 		},
 
 		{
-			name:        `A json property without a value assigned to a non-nullable json property -> no properties`,
+			name:        `A json property without a value assigned to a non-nullable json property -> JSON null`,
 			expressions: map[string]string{"C": "d"},
-			expected:    map[string]any{},
+			expected:    map[string]any{"C": json.Value("null")},
 		},
 		{
-			name:        `A json property with a nil value assigned to a non-nullable json property -> no properties`,
+			name:        `A json property with a nil value assigned to a non-nullable json property -> JSON null`,
 			expressions: map[string]string{"C": "e"},
 			attributes:  map[string]any{"e": nil},
-			expected:    map[string]any{},
+			expected:    map[string]any{"C": json.Value("null")},
 		},
 		{
-			name:        `A json property with a JSON null value assigned to a non-nullable json property -> no properties`,
+			name:        `A json property with a JSON null value assigned to a non-nullable json property -> JSON null`,
 			expressions: map[string]string{"C": "d"},
 			attributes:  map[string]any{"d": json.Value(`null`)},
 			expected:    map[string]any{"C": json.Value(`null`)},
@@ -279,7 +282,7 @@ func Test_Transform(t *testing.T) {
 			expected:    map[string]any{"D": nil},
 		},
 		{
-			name:        `A json property with a JSON null value assigned to a nullable json property -> no properties`,
+			name:        `A json property with a JSON null value assigned to a nullable json property -> JSON null`,
 			expressions: map[string]string{"D": "e"},
 			attributes:  map[string]any{"e": json.Value(`null`)},
 			expected:    map[string]any{"D": json.Value(`null`)},
@@ -320,14 +323,14 @@ func Test_Transform(t *testing.T) {
 		{
 			name:        `null assigned to a non nullable create required property -> error`,
 			expressions: map[string]string{"F": "c.z"},
-			attributes:  map[string]any{"c.z": nil},
+			attributes:  map[string]any{"c": map[string]any{"z": nil}},
 			purpose:     Create,
 			err:         ValidationError{msg: `«c.z» is null but it is required for creation while mapping to «F»`},
 		},
 		{
 			name:        `null assigned to a non nullable update required property -> error`,
 			expressions: map[string]string{"G": "c.z"},
-			attributes:  map[string]any{"c.z": nil},
+			attributes:  map[string]any{"c": map[string]any{"z": nil}},
 			purpose:     Update,
 			err:         ValidationError{msg: `«c.z» is null but it is required for update while mapping to «G»`},
 		},
@@ -357,6 +360,8 @@ func Test_Transform(t *testing.T) {
 
 }
 
+// Test_inPlace checks output values with either allocation policy and preserves
+// input when inPlace is false.
 func Test_inPlace(t *testing.T) {
 
 	clone := func(v map[string]any, t types.Type) map[string]any {
@@ -423,9 +428,6 @@ func Test_inPlace(t *testing.T) {
 					t.Fatalf("expected %#v, got %#v", test.expected, got)
 				}
 				if inPlace {
-					if !reflect.DeepEqual(z["in"], got["out"]) {
-						t.Fatal("expected changed value, got unchanged")
-					}
 					return
 				}
 				if !reflect.DeepEqual(v, z) {
@@ -435,6 +437,7 @@ func Test_inPlace(t *testing.T) {
 			}
 		})
 	}
+
 }
 
 func Test_sortMappingExpressions(t *testing.T) {
@@ -543,4 +546,330 @@ func Test_storeValue(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestMappingJSONNull checks null results assigned to optional, nullable,
+// required, and nested JSON properties.
+func TestMappingJSONNull(t *testing.T) {
+
+	inSchema := types.Object([]types.Property{
+		{Name: "value", Type: types.String(), Nullable: true, ReadOptional: true},
+		{Name: "document", Type: types.JSON(), Nullable: true, ReadOptional: true},
+		{Name: "parent", Nullable: true, ReadOptional: true, Type: types.Object([]types.Property{
+			{Name: "value", Type: types.String(), Nullable: true, ReadOptional: true},
+		})},
+	})
+	properties := []types.Property{
+		{Name: "optional", Type: types.JSON()},
+		{Name: "nullable", Type: types.JSON(), Nullable: true},
+		{Name: "required", Type: types.JSON(), CreateRequired: true, UpdateRequired: true},
+		{Name: "nullableRequired", Type: types.JSON(), Nullable: true, CreateRequired: true, UpdateRequired: true},
+		{Name: "unmapped", Type: types.JSON()},
+	}
+	outSchema := types.Object(append(properties, types.Property{Name: "parent", Type: types.Object(properties)}))
+	tests := []struct {
+		name, source string
+		attributes   map[string]any
+		nullableWant any
+	}{
+		{"literal", "null", nil, nil},
+		{"missing string", "value", nil, nil},
+		{"nil string", "value", map[string]any{"value": nil}, nil},
+		{"missing JSON", "document", nil, nil},
+		{"nil JSON", "document", map[string]any{"document": nil}, nil},
+		{"JSON null", "document", map[string]any{"document": json.Value("null")}, json.Value("null")},
+		{"missing ancestor", "parent.value", nil, nil},
+		{"nil ancestor", "parent.value", map[string]any{"parent": nil}, nil},
+		{"nil descendant", "parent.value", map[string]any{"parent": map[string]any{"value": nil}}, nil},
+		{"missing JSON key", "document.value", map[string]any{"document": json.Value("{}")}, nil},
+		{"if", "if(true, value, document)", nil, nil},
+		{"coalesce", "coalesce(value, document)", nil, nil},
+		{"json_parse nil", "json_parse(null)", nil, nil},
+		{"json_parse null", "json_parse('null')", nil, json.Value("null")},
+	}
+
+	for _, test := range tests {
+		for _, purpose := range []Purpose{None, Create, Update} {
+			for _, inPlace := range []bool{false, true} {
+				t.Run(fmt.Sprintf("%s/purpose=%d/inPlace=%t", test.name, purpose, inPlace), func(t *testing.T) {
+
+					expressions := map[string]string{}
+					for _, prefix := range []string{"", "parent."} {
+						for _, name := range []string{"optional", "nullable", "required", "nullableRequired"} {
+							expressions[prefix+name] = test.source
+						}
+					}
+					mapping, err := New(expressions, inSchema, outSchema, inPlace, nil)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					got, err := mapping.Transform(test.attributes, purpose)
+					if err != nil {
+						t.Fatal(err)
+					}
+					want := map[string]any{
+						"optional": json.Value("null"), "nullable": test.nullableWant,
+						"required": json.Value("null"), "nullableRequired": test.nullableWant,
+						"parent": map[string]any{
+							"optional": json.Value("null"), "nullable": test.nullableWant,
+							"required": json.Value("null"), "nullableRequired": test.nullableWant,
+						},
+					}
+					if !reflect.DeepEqual(got, want) {
+						t.Fatalf("got %#v, want %#v", got, want)
+					}
+
+				})
+			}
+		}
+	}
+
+}
+
+// TestNewErrorOrder checks that destination paths determine which compilation
+// error is returned first.
+func TestNewErrorOrder(t *testing.T) {
+
+	outSchema := types.Object([]types.Property{
+		{Name: "b", Type: types.String()}, {Name: "a", Type: types.String()},
+	})
+	tests := []struct {
+		name        string
+		expressions map[string]string
+	}{
+		{"compilation errors", map[string]string{"b": "upper()", "a": "lower()"}},
+		{"lookup and compilation errors", map[string]string{"missing": "''", "a": "lower()"}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			for range 100 {
+				_, err := New(test.expressions, types.Type{}, outSchema, false, nil)
+				if err != nil {
+					want := "'lower' function requires a single argument"
+					if err.Error() != want {
+						t.Fatalf("got %q, want %q", err, want)
+					}
+					continue
+				}
+				t.Fatal("expected a compilation error")
+			}
+		})
+	}
+
+}
+
+// TestMappingRequiredAncestors checks that descendants are required only in
+// present, non-null objects.
+func TestMappingRequiredAncestors(t *testing.T) {
+
+	tests := []struct {
+		name           string
+		expressions    map[string]string
+		parentRequired bool
+		xNullable      bool
+		want           map[string]any
+		wantError      bool
+	}{
+		{"absent optional parent", map[string]string{"other": "'ok'"}, false, false,
+			map[string]any{"other": "ok"}, false},
+		{"null optional parent", map[string]string{"parent": "null"}, false, false,
+			map[string]any{"parent": nil}, false},
+		{"absent required parent", map[string]string{"other": "'ok'"}, true, false,
+			map[string]any{"other": "ok"}, true},
+		{"null required nullable parent", map[string]string{"parent": "null"}, true, false,
+			map[string]any{"parent": nil}, false},
+		{"omitted null leaf", map[string]string{"parent.x": "null"}, false, false,
+			map[string]any{}, false},
+		{"stored null leaf", map[string]string{"parent.x": "null"}, false, true,
+			map[string]any{"parent": map[string]any{"x": nil}}, true},
+	}
+	for _, test := range tests {
+
+		for _, purpose := range []Purpose{None, Create, Update} {
+
+			for _, inPlace := range []bool{false, true} {
+
+				t.Run(fmt.Sprintf("%s/purpose=%d/inPlace=%t", test.name, purpose, inPlace), func(t *testing.T) {
+
+					parent := types.Object([]types.Property{
+						{Name: "x", Type: types.String(), Nullable: test.xNullable},
+						{Name: "missing", Type: types.String(), CreateRequired: true, UpdateRequired: true},
+					})
+					schema := types.Object([]types.Property{
+						{
+							Name: "parent", Type: parent, Nullable: true,
+							CreateRequired: test.parentRequired, UpdateRequired: test.parentRequired,
+						},
+						{Name: "other", Type: types.String()},
+					})
+					mapping, err := New(test.expressions, types.Type{}, schema, inPlace, nil)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					got, err := mapping.Transform(nil, purpose)
+					wantError := test.wantError && purpose != None
+					if err != nil {
+						if !wantError {
+							t.Fatal(err)
+						}
+						if _, ok := errors.AsType[ValidationError](err); !ok {
+							t.Fatalf("got %T (%v), want ValidationError", err, err)
+						}
+						return
+					}
+					if wantError {
+						t.Fatalf("got %#v, want a missing property error", got)
+					}
+					if !reflect.DeepEqual(got, test.want) {
+						t.Fatalf("got %#v, want %#v", got, test.want)
+					}
+
+				})
+
+			}
+
+		}
+
+	}
+
+}
+
+// TestMappingRequiredPaths validates root and nested required properties after
+// individual field assignments.
+func TestMappingRequiredPaths(t *testing.T) {
+
+	inSchema := types.Object([]types.Property{{Name: "value", Type: types.String()}})
+	for _, requiredOn := range []Purpose{Create, Update} {
+
+		for _, prefix := range []string{"", "parent.", "parent.child."} {
+
+			for _, complete := range []bool{false, true} {
+
+				for _, purpose := range []Purpose{None, Create, Update} {
+
+					for _, inPlace := range []bool{false, true} {
+
+						name := fmt.Sprintf("%s/requiredOn=%d/complete=%t/purpose=%d/inPlace=%t",
+							prefix, requiredOn, complete, purpose, inPlace)
+						t.Run(name, func(t *testing.T) {
+
+							outSchema := types.Object([]types.Property{
+								{Name: "x", Type: types.String()},
+								{
+									Name: "missing", Type: types.String(),
+									CreateRequired: requiredOn == Create, UpdateRequired: requiredOn == Update,
+								},
+							})
+							expressions := map[string]string{prefix + "x": "value"}
+							want := map[string]any{"x": "hello"}
+							if complete {
+								expressions[prefix+"missing"] = "'present'"
+								want["missing"] = "present"
+							}
+							if prefix == "parent.child." {
+								outSchema = types.Object([]types.Property{{Name: "child", Type: outSchema}})
+								want = map[string]any{"child": want}
+							}
+							if prefix != "" {
+								outSchema = types.Object([]types.Property{{Name: "parent", Type: outSchema}})
+								want = map[string]any{"parent": want}
+							}
+
+							mapping, err := New(expressions, inSchema, outSchema, inPlace, nil)
+							if err != nil {
+								t.Fatal(err)
+							}
+							got, err := mapping.Transform(map[string]any{"value": "hello"}, purpose)
+							wantError := purpose == requiredOn && !complete
+							if err != nil {
+								if !wantError {
+									t.Fatal(err)
+								}
+								if _, ok := errors.AsType[ValidationError](err); !ok {
+									t.Fatalf("got %T (%v), want ValidationError", err, err)
+								}
+								reason := "creation"
+								if purpose == Update {
+									reason = "update"
+								}
+								message := fmt.Sprintf("«%smissing» is missing but it is required for %s",
+									prefix, reason)
+								if err.Error() != message {
+									t.Fatalf("got %q, want %q", err, message)
+								}
+								return
+							}
+							if wantError {
+								t.Fatalf("got %#v, want a missing property error", got)
+							}
+							if !reflect.DeepEqual(got, want) {
+								t.Fatalf("got %#v, want %#v", got, want)
+							}
+
+						})
+
+					}
+
+				}
+
+			}
+
+		}
+
+	}
+
+}
+
+// TestMappingRequiredTimeFormatting checks structural validation after temporal
+// values have been formatted.
+func TestMappingRequiredTimeFormatting(t *testing.T) {
+
+	object := types.Object([]types.Property{
+		{Name: "at", Type: types.DateTime(), CreateRequired: true, UpdateRequired: true},
+	})
+	parent := types.Object([]types.Property{
+		{Name: "at", Type: types.DateTime(), CreateRequired: true, UpdateRequired: true},
+		{Name: "dates", Type: types.Array(types.Date()), CreateRequired: true, UpdateRequired: true},
+		{Name: "objects", Type: types.Map(object), CreateRequired: true, UpdateRequired: true},
+	})
+	outSchema := types.Object([]types.Property{{Name: "parent", Type: parent}})
+	expressions := map[string]string{"parent.at": "at", "parent.dates": "dates", "parent.objects": "objects"}
+	at := time.Date(2026, 9, 8, 12, 34, 56, 125000000, time.UTC)
+	date := time.Date(2026, 9, 8, 0, 0, 0, 0, time.UTC)
+	want := map[string]any{"parent": map[string]any{
+		"at": at.Unix(), "dates": []any{"2026-09-08"},
+		"objects": map[string]any{"key": map[string]any{"at": at.Unix()}},
+	}}
+	for _, purpose := range []Purpose{None, Create, Update} {
+
+		for _, inPlace := range []bool{false, true} {
+
+			t.Run(fmt.Sprintf("purpose=%d/inPlace=%t", purpose, inPlace), func(t *testing.T) {
+
+				layouts := &state.TimeLayouts{DateTime: "unix", Date: time.DateOnly}
+				mapping, err := New(expressions, parent, outSchema, inPlace, layouts)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				input := map[string]any{
+					"at": at, "dates": []any{date}, "objects": map[string]any{"key": map[string]any{"at": at}},
+				}
+				got, err := mapping.Transform(input, purpose)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !reflect.DeepEqual(got, want) {
+					t.Fatalf("got %#v, want %#v", got, want)
+				}
+
+			})
+
+		}
+
+	}
+
 }
