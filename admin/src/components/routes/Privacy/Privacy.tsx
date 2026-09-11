@@ -738,9 +738,17 @@ const PurposeDialog = ({ isOpen, purposeToEdit, profileSchema, onClose, onSaved 
 						)}
 					</div>
 
-					<SlButton loading={isSaving} className='privacy__dialog-save' variant='primary' onClick={onSave}>
-						{isEditing ? 'Save' : 'Add'}
-					</SlButton>
+					<div className='privacy__dialog-actions'>
+						<SlButton onClick={onClose}>Cancel</SlButton>
+						<SlButton
+							loading={isSaving}
+							className='privacy__dialog-save'
+							variant='primary'
+							onClick={onSave}
+						>
+							{isEditing ? 'Save' : 'Add'}
+						</SlButton>
+					</div>
 				</div>
 			</SlDialog>
 		</>
