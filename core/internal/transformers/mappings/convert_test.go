@@ -210,6 +210,7 @@ func TestConvert(t *testing.T) {
 
 		// ip.
 		{types.IP(), types.IP(), "2001:db8::ff00:42:8329", "2001:db8::ff00:42:8329", true, nil, nil},
+		{types.IP(), types.IP(), "::ffff:192.0.2.1", "192.0.2.1", true, nil, nil},
 		{types.String(), types.IP(), "2001:0db8:0000:0000:0000:ff00:0042:8329", "2001:db8::ff00:42:8329", true, nil, nil},
 		{types.JSON(), types.IP(), json.Value(`"2001:0db8:0000:0000:0000:ff00:0042:8329"`), "2001:db8::ff00:42:8329", true, nil, nil},
 
