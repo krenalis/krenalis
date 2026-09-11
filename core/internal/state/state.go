@@ -1364,8 +1364,7 @@ type ConsentPurpose struct {
 	EventPath   string
 	ProfilePath string
 	// eventPropertyPaths and profilePropertyPath are the paths actually read,
-	// resolved by resolvePropertyPaths: they are always set, and default to the
-	// code of the purpose when the configured path is empty.
+	// resolved by resolvePropertyPaths.
 	eventPropertyPaths  [][]string
 	profilePropertyPath []string
 }
@@ -1392,26 +1391,24 @@ func (purpose *ConsentPurpose) ProfilePropertyPath() []string {
 	return purpose.profilePropertyPath
 }
 
-// resolvePropertyPaths resolves the paths of the properties that hold the
-// consent given for the purpose. Paths that are not configured default to the
-// code of the purpose, in the consents of the context for an event and in the
-// "consents" field of the profile for a profile. In an event the consent can
-// also be given with any of the aliases of the purpose, so a path is resolved
-// for each of them too. The aliases are not resolved when the event path is
-// customized, because that path alone holds the consent.
+// resolvePropertyPaths resolves the configured paths of the properties that
+// hold the consent given for the purpose. When the event path is the default,
+// the consent can also be given with any of the aliases of the purpose, so a
+// path is resolved for each of them too.
 func (purpose *ConsentPurpose) resolvePropertyPaths() {
-	if purpose.EventPath == "" {
+	purpose.eventPropertyPaths = nil
+	purpose.profilePropertyPath = nil
+	if purpose.EventPath != "" {
+		purpose.eventPropertyPaths = [][]string{strings.Split(purpose.EventPath, ".")}
+	}
+	if purpose.EventPath == "context.consents."+purpose.Code {
 		purpose.eventPropertyPaths = make([][]string, 0, 1+len(purpose.Aliases))
 		purpose.eventPropertyPaths = append(purpose.eventPropertyPaths, []string{"context", "consents", purpose.Code})
 		for _, alias := range purpose.Aliases {
 			purpose.eventPropertyPaths = append(purpose.eventPropertyPaths, []string{"context", "consents", alias})
 		}
-	} else {
-		purpose.eventPropertyPaths = [][]string{strings.Split(purpose.EventPath, ".")}
 	}
-	if purpose.ProfilePath == "" {
-		purpose.profilePropertyPath = []string{"consents", purpose.Code}
-	} else {
+	if purpose.ProfilePath != "" {
 		purpose.profilePropertyPath = strings.Split(purpose.ProfilePath, ".")
 	}
 }

@@ -117,14 +117,6 @@ const checkProfilePath = (path: string, schema: FlatSchema): string => {
 	return '';
 };
 
-const pathToSave = (isCustom: boolean, value: string, defaultValue: string) => {
-	if (!isCustom || value === defaultValue) {
-		// Leave the path empty when the default is used.
-		return '';
-	}
-	return value;
-};
-
 const Privacy = () => {
 	const [purposes, setPurposes] = useState<ConsentPurpose[]>();
 	const [profileSchema, setProfileSchema] = useState<ObjectType>();
@@ -416,8 +408,8 @@ const PurposeDialog = ({ isOpen, purposeToEdit, profileSchema, onClose, onSaved 
 		setAliases(isEditing && purposeToEdit.aliases.length > 0 ? [...purposeToEdit.aliases] : ['']);
 		setEventPath(isEditing ? purposeToEdit.eventPath : '');
 		setProfilePath(isEditing ? purposeToEdit.profilePath : '');
-		setIsEventPathCustom(isEditing && purposeToEdit.eventPath !== '');
-		setIsProfilePathCustom(isEditing && purposeToEdit.profilePath !== '');
+		setIsEventPathCustom(isEditing && purposeToEdit.eventPath !== `context.consents.${purposeToEdit.code}`);
+		setIsProfilePathCustom(isEditing && purposeToEdit.profilePath !== `consents.${purposeToEdit.code}`);
 		setIsWarningOpen(false);
 		selectEventPathAfterWarning.current = false;
 		setNameError('');
@@ -521,8 +513,8 @@ const PurposeDialog = ({ isOpen, purposeToEdit, profileSchema, onClose, onSaved 
 		setProfilePathError('');
 
 		const aliasesToSave = aliases.filter((alias) => alias !== '');
-		const eventPathToSave = pathToSave(isEventPathCustom, eventPath, defaultEventPath);
-		const profilePathToSave = pathToSave(isProfilePathCustom, profilePath, defaultProfilePath);
+		const eventPathToSave = shownEventPath;
+		const profilePathToSave = shownProfilePath;
 
 		try {
 			validatePurposeField('Name', name);

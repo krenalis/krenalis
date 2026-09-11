@@ -61,6 +61,9 @@ func satisfies(purposes []*state.ConsentPurpose, matchAll bool, grants func(*sta
 // schema, so it can lead to a property that does not exist or that holds a
 // value of any other kind: the consent is then not given.
 func granted(attributes map[string]any, path []string) bool {
+	if len(path) == 0 {
+		return false
+	}
 	v, ok := properties.Read(attributes, path)
 	if !ok {
 		return false

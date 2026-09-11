@@ -272,6 +272,9 @@ func addRequiredConsentProperties(schema, profileSchema types.Type, purposes []*
 			continue
 		}
 		path := strings.Join(purpose.ProfilePropertyPath(), ".")
+		if path == "" {
+			continue
+		}
 		property, propertyPath, err := retrieveProperty(profileSchema.Properties(), path)
 		if err != nil {
 			// The property does not exist, so there is nothing to read and the
@@ -345,8 +348,8 @@ func validateConsentPurposeToSet(purpose ConsentPurposeToSet) error {
 }
 
 // validateConsentPurposePath validates the consent purpose property path with
-// the given field name. An empty path is valid and means that the default path
-// is used.
+// the given field name. An empty path is valid and means that the property that
+// holds the consent is not known.
 func validateConsentPurposePath(field, path string) error {
 	if path == "" {
 		return nil

@@ -156,7 +156,13 @@ const WorkspaceCreate = () => {
 				const newApi = new API(window.location.origin, id);
 				await newApi.workspaces.updateWarehouse(name, 'Normal', settings, mcpSettings, false);
 				for (const purpose of initialConsentPurposes) {
-					await newApi.workspaces.addConsentPurpose(purpose.code, purpose.name, [], '', '');
+					await newApi.workspaces.addConsentPurpose(
+						purpose.code,
+						purpose.name,
+						[],
+						`context.consents.${purpose.code}`,
+						`consents.${purpose.code}`,
+					);
 				}
 			} catch (err) {
 				handleError(err);
