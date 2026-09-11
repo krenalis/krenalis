@@ -12,6 +12,7 @@ arrows-collapse.svg
 arrows-expand.svg
 bar-chart.svg
 bookmark-check.svg
+box-arrow-in-up-right.svg
 box-arrow-right.svg
 braces-asterisk.svg
 braces.svg
@@ -66,6 +67,7 @@ question-circle.svg
 question-lg.svg
 search.svg
 send.svg
+shield-check.svg
 shuffle.svg
 sliders2.svg
 terminal.svg

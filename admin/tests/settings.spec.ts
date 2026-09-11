@@ -9,6 +9,13 @@ test.afterEach(async ({ page }) => {
 	await logout(page);
 });
 
+test(`Show consent management in the settings menu`, async ({ page }) => {
+	await page.goto(`${adminURL}/settings/privacy`);
+	await expect(
+		page.locator('.sidebar__sub-item-text').getByText('Consent management', { exact: true }),
+	).toBeVisible();
+});
+
 test(`Change the workspace name`, async ({ page }) => {
 	await page.goto(`${adminURL}/settings/general`);
 	await page.locator('.general-settings__name >> input').fill('Test workspace');

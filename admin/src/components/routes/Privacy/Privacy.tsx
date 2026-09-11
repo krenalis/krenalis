@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import './Privacy.css';
 import AppContext from '../../../context/AppContext';
 import { ConsentPurpose } from '../../../lib/api/types/workspace';
@@ -118,6 +119,7 @@ const checkProfilePath = (path: string, schema: FlatSchema): string => {
 };
 
 const Privacy = () => {
+	const [searchParams, setSearchParams] = useSearchParams();
 	const [purposes, setPurposes] = useState<ConsentPurpose[]>();
 	const [profileSchema, setProfileSchema] = useState<ObjectType>();
 	const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -178,6 +180,17 @@ const Privacy = () => {
 		};
 		fetchData();
 	}, [isLoading]);
+
+	useEffect(() => {
+		const purposeID = searchParams.get('purpose');
+		if (purposes == null || purposeID == null) {
+			return;
+		}
+		setPurposeToEdit(purposes.find((purpose) => purpose.id === purposeID));
+		const nextSearchParams = new URLSearchParams(searchParams);
+		nextSearchParams.delete('purpose');
+		setSearchParams(nextSearchParams, { replace: true });
+	}, [purposes, searchParams, setSearchParams]);
 
 	// The profile schema is read to check that the profile path of a purpose
 	// leads to a property that can hold the consent given for it.

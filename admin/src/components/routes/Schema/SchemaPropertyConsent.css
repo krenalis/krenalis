@@ -1,0 +1,200 @@
+.schema-property-consent {
+	--schema-consent-popup-muted-text: #716d7b;
+	--arrow-color: var(--bg-gray);
+}
+
+.schema-property-consent::part(popup) {
+	z-index: var(--sl-z-index-tooltip);
+}
+
+.schema-property-consent[active]::part(popup) {
+	animation: schema-property-consent-popup-in 140ms ease-out;
+}
+
+.schema-property-consent::part(arrow) {
+	background-color: var(--bg-gray);
+	border: 1px solid var(--sl-color-neutral-300);
+	box-sizing: border-box;
+}
+
+.schema-property-consent__trigger {
+	appearance: none;
+	background: none;
+	border: 0;
+	color: var(--sl-color-primary-600);
+	cursor: inherit;
+	display: inline-block;
+	font: inherit;
+	margin-left: 3px;
+	padding: 0;
+	position: relative;
+	top: -1px;
+	white-space: nowrap;
+}
+
+.schema-property-consent__trigger:focus-visible {
+	border-radius: 2px;
+	outline: 2px solid var(--sl-color-primary-500);
+	outline-offset: 2px;
+}
+
+.schema-property-consent__trigger sl-icon {
+	font-size: 14px;
+	margin-right: 4px;
+	vertical-align: -0.125em;
+}
+
+.schema-property-consent__trigger-label {
+	border-bottom: 1px dashed currentColor;
+}
+
+.schema-property-consent__popup {
+	background-color: var(--bg-gray);
+	border: 1px solid var(--sl-color-neutral-300);
+	border-radius: var(--radius);
+	box-shadow: var(--sl-shadow-medium);
+	box-sizing: border-box;
+	color: #2d2a36;
+	cursor: default;
+	display: grid;
+	font-size: 13px;
+	gap: 12px;
+	grid-template-columns: 26px minmax(0, 1fr);
+	max-height: min(420px, var(--auto-size-available-height, 420px));
+	overflow: auto;
+	padding: 20px 20px 16px;
+	position: relative;
+	width: min(390px, calc(100vw - 24px));
+}
+
+.schema-property-consent__popup-icon {
+	color: var(--sl-color-primary-600);
+	font-size: 26px;
+}
+
+.schema-property-consent__popup--boolean {
+	padding-bottom: 22px;
+}
+
+.schema-property-consent__popup-content {
+	min-width: 0;
+}
+
+.schema-property-consent__popup-title {
+	font-size: 16px;
+	font-weight: 700;
+	margin-bottom: 12px;
+	padding-right: 28px;
+}
+
+.schema-property-consent__open-purpose-action {
+	position: absolute;
+	right: 14px;
+	top: 14px;
+}
+
+.schema-property-consent__open-purpose::part(base) {
+	color: var(--sl-color-primary-600);
+	font-size: 18px;
+	min-height: 28px;
+	padding: 0;
+}
+
+.schema-property-consent__open-purpose::part(label) {
+	padding: 0;
+}
+
+.schema-property-consent__open-purpose sl-icon {
+	pointer-events: none;
+}
+
+.schema-property-consent__purpose + .schema-property-consent__purpose {
+	border-top: 1px solid var(--sl-color-neutral-200);
+	margin-top: 14px;
+	padding-top: 14px;
+}
+
+.schema-property-consent__purpose-name {
+	font-weight: 600;
+	margin-bottom: 9px;
+	overflow-wrap: anywhere;
+}
+
+.schema-property-consent__purpose-field {
+	align-items: baseline;
+	display: grid;
+	gap: 12px;
+	grid-template-columns: max-content minmax(0, 1fr);
+}
+
+.schema-property-consent__purpose-field + .schema-property-consent__purpose-field {
+	margin-top: 6px;
+}
+
+.schema-property-consent__purpose-field > span {
+	color: var(--schema-consent-popup-muted-text);
+}
+
+.schema-property-consent__purpose-field code {
+	font-family: var(--monospace-fonts);
+	overflow-wrap: anywhere;
+}
+
+.schema-property-consent__pagination {
+	align-items: center;
+	display: flex;
+	grid-column: 1 / -1;
+	justify-content: space-between;
+	margin-top: 4px;
+}
+
+.schema-property-consent__pagination-status {
+	color: var(--schema-consent-popup-muted-text);
+	margin-left: 8px;
+}
+
+.schema-property-consent__pagination-actions {
+	display: flex;
+	gap: 6px;
+}
+
+.schema-property-consent__pagination-button {
+	width: 28px;
+}
+
+.schema-property-consent__pagination-button::part(base) {
+	color: var(--sl-color-primary-600);
+	font-size: 18px;
+	min-height: 28px;
+	padding: 0;
+}
+
+.schema-property-consent__pagination-button::part(label) {
+	padding: 0;
+}
+
+.schema-property-consent__pagination-button[disabled]::part(base),
+.schema-property-consent__pagination-button[disabled] sl-icon {
+	color: var(--sl-color-neutral-400);
+}
+
+.schema-property-consent__pagination-button sl-icon {
+	filter: drop-shadow(0.3px 0 0 currentColor) drop-shadow(-0.3px 0 0 currentColor);
+	pointer-events: none;
+}
+
+@keyframes schema-property-consent-popup-in {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.schema-property-consent[active]::part(popup) {
+		animation: none;
+	}
+}
