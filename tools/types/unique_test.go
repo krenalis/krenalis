@@ -49,14 +49,16 @@ func TestFirstDuplicate(t *testing.T) {
 		{"datetime monotonic clock", DateTime(), []any{withMonotonic, withMonotonic.Round(0)}, 1},
 		{"date ignores time", Date(), []any{instant, instant.Add(time.Hour)}, 1},
 		{
-			"date ignores location", Date(),
+			"date ignores location identity", Date(),
 			[]any{time.Date(2026, 9, 8, 1, 2, 3, 0, time.UTC), time.Date(2026, 9, 8, 20, 30, 0, 0, zone)}, 1,
 		},
+		{"date uses calendar in own location", Date(), []any{instant, time.Date(2026, 9, 9, 0, 30, 0, 0, zone)}, -1},
 		{"time ignores date", Time(), []any{instant, instant.AddDate(0, 1, 0)}, 1},
 		{
-			"time ignores location", Time(),
+			"time ignores location identity", Time(),
 			[]any{instant, time.Date(2030, 1, 1, 12, 30, 0, 125000000, zone)}, 1,
 		},
+		{"time uses clock in own location", Time(), []any{instant, instant.In(zone)}, -1},
 		{"time nanoseconds", Time(), []any{instant, instant.Add(time.Nanosecond)}, -1},
 		{"date strings", Date(), []any{"2026-09-08", "2026-10-08", "2026-09-08"}, 2},
 		{

@@ -18,19 +18,20 @@ const uniqueMapThreshold = 20
 
 // FirstDuplicate returns the index of the first element equal to an earlier
 // element, or -1 if there are no duplicates. It does not modify values.
-// The element type must be a non-generic scalar permitted by [Type.WithUnique].
+// The element type must be a non-generic scalar supported by [Type.WithUnique].
 // Elements must use the corresponding Go representation. Temporal elements
-// may instead all be strings or, for datetimes, int64 timestamps. Strings are
-// compared verbatim, without parsing.
+// may alternatively be represented uniformly as strings or, for datetimes,
+// as int64 timestamps. Strings are compared verbatim, without parsing.
 //
-// Decimals are compared numerically, datetimes by instant, dates by calendar
-// date, and times by clock time including nanoseconds. The locations and
-// monotonic clock metadata of time.Time values are ignored. All NaN values
-// compare equal, as do positive and negative zero.
+// Decimals are compared numerically and datetimes by instant. Dates are
+// compared by calendar fields and times by clock fields, including
+// nanoseconds, in each value's own location. Location identity and monotonic
+// clock metadata are ignored. All NaN values compare equal, as do positive
+// and negative zero.
 //
 // Go representations and decimal scales are validated as values are scanned.
-// Slices with fewer than 20 elements use direct comparisons; slices with 20
-// or more elements use a map with memory proportional to their length.
+// Small slices use direct comparisons; larger slices use a map with memory
+// proportional to their length.
 func FirstDuplicate(values []any, elementType Type) (int, error) {
 
 	if !elementType.Valid() || elementType.Generic() {
