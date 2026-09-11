@@ -6,7 +6,6 @@ package types
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"maps"
@@ -19,6 +18,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 )
 
@@ -664,4 +664,148 @@ var value = map[string]any{
 	"Array":                     []any{"foo", "boo"},
 	"Object":                    map[string]any{"a": 9, "b": false},
 	"Map":                       map[string]any{"a": 1, "b": 2, "c": 3},
+}
+
+// TestDecodeArrayUnique checks the optional constraint after decoding and normalization.
+func TestDecodeArrayUnique(t *testing.T) {
+
+	tests := []struct {
+		name      string
+		element   Type
+		source    string
+		duplicate int
+	}{
+		{"empty", String(), `[]`, -1},
+		{"singleton", String(), `["a"]`, -1},
+		{"distinct", Int(32), `[1,2,3]`, -1},
+		{"first duplicate", Int(32), `[1,2,2,1]`, 2},
+		{"signed int64", Int(64), `["9223372036854775807","9223372036854775807"]`, 1},
+		{"unsigned int64", Int(64).Unsigned(), `["18446744073709551615","18446744073709551615"]`, 1},
+		{"strings", String(), `["a","b","a"]`, 2},
+		{"string case", String(), `["Foo","foo"]`, -1},
+		{"booleans", Boolean(), `[true,false,true]`, 2},
+		{"decimal representations", Decimal(6, 2), `[1.50,15e-1]`, 1},
+		{"decimal signed zero", Decimal(6, 2), `[0,-0.00]`, 1},
+		{"decimal signs", Decimal(6, 2), `[-1.28,1.28]`, -1},
+		{"decimal precision", Decimal(20, 0), `[9007199254740992,9007199254740993]`, -1},
+		{"large decimal representations", Decimal(76, 2), `[1e25,10000000000000000000000000.00]`, 1},
+		{"float32 normalization", Float(32), `[16777216,16777217]`, 1},
+		{"float signed zero", Float(64), `[0,-0]`, 1},
+		{"NaN", Float(64), `["NaN","NaN"]`, 1},
+		{"NaN32", Float(32), `["NaN",0,"NaN"]`, 2},
+		{"escaped NaN", Float(64), `["NaN","\u004eaN"]`, 1},
+		{"one NaN", Float(64), `[0,"NaN","Infinity","-Infinity"]`, -1},
+		{"infinity", Float(64), `["Infinity","Infinity"]`, 1},
+		{"negative infinity", Float(64), `["-Infinity","-Infinity"]`, 1},
+		{
+			"datetime offsets", DateTime(),
+			`["2026-09-08T10:00:00Z","2026-09-08T12:00:00+02:00"]`, 1,
+		},
+		{"dates", Date(), `["2026-09-08","2026-09-08"]`, 1},
+		{"times", Time(), `["10:00:00.1","10:00:00.100"]`, 1},
+		{"years", Year(), `[2025,2026,2025]`, 2},
+		{
+			"UUID case", UUID(),
+			`["550e8400-e29b-41d4-a716-446655440000","550E8400-E29B-41D4-A716-446655440000"]`, 1,
+		},
+		{"IP normalization", IP(), `["2001:db8::1","2001:0db8:0:0:0:0:0:1"]`, 1},
+	}
+
+	for _, test := range tests {
+		for _, unique := range []bool{false, true} {
+			for _, nested := range []bool{false, true} {
+				t.Run(fmt.Sprintf("%s/unique=%t/nested=%t", test.name, unique, nested), func(t *testing.T) {
+
+					typ := Array(test.element)
+					if unique {
+						typ = typ.WithUnique()
+					}
+					source := test.source
+					path := fmt.Sprintf("[%d]", test.duplicate)
+					if nested {
+						typ = Array(Object([]Property{{Name: "values", Type: typ}}))
+						source = `[{"values":` + source + `}]`
+						path = "[0].values" + path
+					}
+
+					got, err := Decode[[]any](strings.NewReader(source), typ)
+					if err != nil {
+						if !unique || test.duplicate < 0 {
+							t.Fatal(err)
+						}
+						validation, ok := errors.AsType[*SchemaValidationError](err)
+						if !ok {
+							t.Fatalf("got %T: %v, want SchemaValidationError", err, err)
+						}
+						if validation.path != path || validation.msg != "duplicates an earlier array element" {
+							t.Fatalf("got %v, want a duplicate at %s", err, path)
+						}
+						if got != nil {
+							t.Fatalf("got partial value %#v with error", got)
+						}
+						return
+					}
+					if unique && test.duplicate >= 0 {
+						t.Fatalf("got %#v, want a duplicate element error", got)
+					}
+					if nested {
+						got = got[0].(map[string]any)["values"].([]any)
+					}
+					if want := json.Value(test.source).NumElement(); len(got) != want {
+						t.Fatalf("got %d values, want %d", len(got), want)
+					}
+					if test.name == "one NaN" {
+						if !math.IsNaN(got[1].(float64)) ||
+							!math.IsInf(got[2].(float64), 1) || !math.IsInf(got[3].(float64), -1) {
+							t.Fatalf("got %#v, want NaN and infinities with their original signs", got)
+						}
+					}
+
+				})
+			}
+		}
+	}
+
+}
+
+// TestDecodeArrayUniqueErrors checks interaction with validation and JSON syntax errors.
+func TestDecodeArrayUniqueErrors(t *testing.T) {
+
+	tests := []struct {
+		name, source string
+		typ          Type
+		message      string
+		syntax       bool
+	}{
+		{"maximum count", `[1,2,3]`, Array(Int(32)).WithMaxElements(2).WithUnique(), "contains more than 2 elements", false},
+		{"minimum count", `[1]`, Array(Int(32)).WithMinElements(2).WithUnique(), "contains less than 2 elements", false},
+		{"real NaN", `["NaN"]`, Array(Float(64).Real()).WithUnique(), "is not a real", false},
+		{"real infinity", `["Infinity"]`, Array(Float(32).Real()).WithUnique(), "is not a real", false},
+		{"invalid third element", `[1,2,"bad"]`, Array(Int(32)).WithUnique(), `"[2]"`, false},
+		{"malformed after duplicate", `[1,1,`, Array(Int(32)).WithUnique(), "", true},
+		{"malformed after array", `[1,1] ?`, Array(Int(32)).WithUnique(), "", true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := Decode[[]any](strings.NewReader(test.source), test.typ)
+			if err != nil {
+				if test.syntax {
+					if _, ok := errors.AsType[*json.SyntaxError](err); !ok {
+						t.Fatalf("got %T: %v, want SyntaxError", err, err)
+					}
+					return
+				}
+				if _, ok := errors.AsType[*SchemaValidationError](err); !ok {
+					t.Fatalf("got %T: %v, want SchemaValidationError", err, err)
+				}
+				if !strings.Contains(err.Error(), test.message) {
+					t.Fatalf("got %q, want %q in the message", err, test.message)
+				}
+				return
+			}
+			t.Fatal("expected an error")
+		})
+	}
+
 }

@@ -6,7 +6,6 @@ package types
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -20,6 +19,7 @@ import (
 	"uuid"
 
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 
 	"github.com/relvacode/iso8601"
@@ -188,13 +188,23 @@ func (d decoder) unmarshal(t Type) (_ any, err error) {
 				return nil, err
 			}
 			elements = append(elements, elem)
-			i++
 		}
 		if _, err := d.readToken(); err != nil {
 			return nil, err
 		}
 		if len(elements) < minElements {
 			return nil, newErrInvalidValue(fmt.Sprintf("contains less than %d elements", minElements), "")
+		}
+		if t.Unique() {
+			duplicate, err := firstDuplicate(elements, t.Elem(), true)
+			if err != nil {
+				return nil, newErrInvalidValue(err.Error(), "")
+			}
+			if duplicate >= 0 {
+				err := &SchemaValidationError{kind: invalidValue, msg: "duplicates an earlier array element"}
+				err.appendIndexToPath(duplicate)
+				return nil, err
+			}
 		}
 		return elements, nil
 	case '{':
@@ -381,14 +391,15 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 				return n, nil
 			}
 		case '"':
-			if bytes.Equal(v, nan) || bytes.Equal(v, posInfinity) || bytes.Equal(v, negInfinity) {
+			s := d.unquoteString(v)
+			if bytes.Equal(s, nan) || bytes.Equal(s, posInfinity) || bytes.Equal(s, negInfinity) {
 				if t.IsReal() {
 					return nil, newErrInvalidValue(fmt.Sprintf("is not a real: %s", string(v)), "")
 				}
 				var n float64
-				if bytes.Equal(v, nan) {
+				if bytes.Equal(s, nan) {
 					n = math.NaN()
-				} else if v[0] == 'p' {
+				} else if bytes.Equal(s, posInfinity) {
 					n = math.Inf(1)
 				} else {
 					n = math.Inf(-1)
