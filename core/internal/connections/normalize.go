@@ -557,15 +557,15 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			v = int64(src)
 		case float32:
 			f := float64(src)
-			if math.IsInf(f, 0) || f != math.Trunc(f) {
+			if f < types.MinYear || f > types.MaxYear || f != math.Trunc(f) {
 				return nil, inputValidationErrorf(name, "has a float32 value that cannot represent a year value")
 			}
 			v = int64(f)
 		case float64:
-			v = int64(src)
-			if math.IsInf(src, 0) || src != math.Trunc(src) {
+			if src < types.MinYear || src > types.MaxYear || src != math.Trunc(src) {
 				return nil, inputValidationErrorf(name, "has a float64 value that cannot represent a year value")
 			}
+			v = int64(src)
 		case decimal.Decimal:
 			v, err = src.Int64()
 			if err != nil {
