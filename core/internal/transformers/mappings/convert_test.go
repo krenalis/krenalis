@@ -190,8 +190,10 @@ func TestConvert(t *testing.T) {
 
 		// uuid.
 		{types.UUID(), types.UUID(), "123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174000", true, nil, nil},
-		{types.String(), types.UUID(), "123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174000", true, nil, nil},
-		{types.JSON(), types.UUID(), json.Value(`"123e4567-e89b-12d3-a456-426614174000"`), "123e4567-e89b-12d3-a456-426614174000", true, nil, nil},
+		{types.String(), types.UUID(), "123E4567-E89B-12D3-A456-426614174000", "123e4567-e89b-12d3-a456-426614174000", true, nil, nil},
+		{types.JSON(), types.UUID(), json.Value(`"123E4567-E89B-12D3-A456-426614174000"`), "123e4567-e89b-12d3-a456-426614174000", true, nil, nil},
+		{types.String(), types.UUID(), "123e4567e89b12d3a456426614174000", nil, true, nil, errParseConversion},
+		{types.JSON(), types.UUID(), json.Value(`"123e4567e89b12d3a456426614174000"`), nil, true, nil, errParseConversion},
 
 		// json.
 		{types.Int(32), types.JSON(), nil, nil, true, nil, nil},
