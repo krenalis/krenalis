@@ -17,7 +17,6 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
-	"uuid"
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/decimal"
@@ -553,7 +552,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 				if n, ok := t.MaxLength(); ok && utf8.RuneCountInString(s) > n {
 					return nil, newRecordValidationError("", fmt.Sprintf("exceeds the %d-char limit", n))
 				}
-				if n, ok := t.MaxBytes(); ok && utf8.RuneCountInString(s) > n {
+				if n, ok := t.MaxBytes(); ok && len(s) > n {
 					return nil, newRecordValidationError("", fmt.Sprintf("exceeds the %d-byte limit", n))
 				}
 				return s, nil
@@ -700,8 +699,8 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		}
 	case types.UUIDKind:
 		if v.Kind() == '"' {
-			if u, err := uuid.Parse(string(v.AppendUnquote(nil))); err == nil {
-				return u.String(), nil
+			if u, ok := types.NormalizeUUID(string(v.AppendUnquote(nil))); ok {
+				return u, nil
 			}
 		}
 	case types.JSONKind:
