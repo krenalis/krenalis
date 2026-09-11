@@ -321,8 +321,8 @@ func baseChar(r rune) rune {
 
 // prune is a recursive helper called by Prune. It returns the pruned
 // properties, whether any of them has a generic type, and a boolean indicating
-// whether all properties were pruned. If no property is pruned, it returns nil,
-// false and false. If all are pruned, it returns nil, false and true.
+// whether anything was pruned. If no property is pruned, it returns nil, false
+// and false. If all are pruned, it returns nil, false and true.
 func prune(pp []Property, path string, f func(string) bool) ([]Property, bool, bool) {
 	var ps []Property
 	var generic bool
