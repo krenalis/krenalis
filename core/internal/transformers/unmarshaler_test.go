@@ -597,6 +597,32 @@ func Test_UnmarshalEdgeCases(t *testing.T) {
 		}
 	})
 
+	t.Run("UUID normalization", func(t *testing.T) {
+		schema := types.Object([]types.Property{{Name: "a", Type: types.UUID()}})
+		records := []Record{{}}
+		data := strings.NewReader(`{"records":[{"value":{"a":"550E8400-E29B-41D4-A716-446655440000"}}]}`)
+		err := Unmarshal(data, records, schema, state.JavaScript, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := records[0].Attributes["a"]; got != "550e8400-e29b-41d4-a716-446655440000" {
+			t.Fatalf("got %q", got)
+		}
+	})
+
+	t.Run("non-standard UUID", func(t *testing.T) {
+		schema := types.Object([]types.Property{{Name: "a", Type: types.UUID()}})
+		records := []Record{{}}
+		data := strings.NewReader(`{"records":[{"value":{"a":"550e8400e29b41d4a716446655440000"}}]}`)
+		err := Unmarshal(data, records, schema, state.JavaScript, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if records[0].Err == nil || records[0].Err.Error() != "property «a» has a value that is not of type «string»" {
+			t.Fatalf("unexpected record error: %v", records[0].Err)
+		}
+	})
+
 	t.Run("more results than expected", func(t *testing.T) {
 		data := strings.NewReader(`{"records":[{"value":{}},{"value":{}}]}`)
 		err := Unmarshal(data, make([]Record, 1), simple, state.JavaScript, false)

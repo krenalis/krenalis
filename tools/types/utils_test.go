@@ -344,20 +344,6 @@ func Test_IsValidPropertyPath(t *testing.T) {
 	}
 }
 
-func Test_ParseUUID(t *testing.T) {
-	t.Run("valid", func(t *testing.T) {
-		id, ok := ParseUUID("F47AC10B-58CC-4372-A567-0E02B2C3D479")
-		if !ok || id != "f47ac10b-58cc-4372-a567-0e02b2c3d479" {
-			t.Fatalf("unexpected result %q %t", id, ok)
-		}
-	})
-	t.Run("invalid", func(t *testing.T) {
-		if id, ok := ParseUUID("invalid"); ok || id != "" {
-			t.Fatalf("expected failure, got %q %t", id, ok)
-		}
-	})
-}
-
 func Test_PropertyName(t *testing.T) {
 
 	tests := []struct {
