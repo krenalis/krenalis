@@ -1,12 +1,16 @@
 123.svg
 activity.svg
 arrow-clockwise.svg
+arrow-counterclockwise.svg
 arrow-down-circle.svg
 arrow-down-right-square.svg
 arrow-left.svg
+arrow-return-left.svg
+arrow-return-right.svg
 arrow-right-short.svg
 arrow-right.svg
 arrow-up-circle.svg
+arrow-up-left-square.svg
 arrow-up-right-square.svg
 arrows-collapse.svg
 arrows-expand.svg

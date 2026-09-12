@@ -123,6 +123,7 @@ const REQUEST_PATTERNS = [
 	'/pipelines/runs',
 	'/pipelines/runs/:id',
 	'/profiles',
+	'/profiles/count',
 	'/profiles/!kpid/attributes',
 	'/profiles/!kpid/events',
 	'/profiles/!kpid/identities',

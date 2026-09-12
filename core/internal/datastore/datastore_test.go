@@ -5,10 +5,50 @@
 package datastore
 
 import (
+	"context"
 	"testing"
 
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 )
+
+// negativeProfileCountWarehouse returns an invalid profile count.
+type negativeProfileCountWarehouse struct {
+	warehouses.Warehouse
+}
+
+// Count returns a negative row count.
+func (negativeProfileCountWarehouse) Count(context.Context, string, []warehouses.Join, warehouses.Expr) (int, error) {
+	return -1, nil
+}
+
+// TestProfileCountRejectsNegativeWarehouseValue verifies that profile counts are validated at the warehouse boundary.
+func TestProfileCountRejectsNegativeWarehouseValue(t *testing.T) {
+
+	store := &Store{mc: newModeCoordinator(state.Normal)}
+	store.wh.Store(warehouses.Warehouse(negativeProfileCountWarehouse{}))
+	total, err := store.ProfileCount(t.Context(), nil, types.Type{})
+	if err != nil {
+
+		if total != 0 {
+			t.Fatalf("expected a zero count with the error, got %d", total)
+		}
+		unavailableErr, ok := errors.AsType[*UnavailableError](err)
+		if !ok {
+			t.Fatalf("expected an *UnavailableError error, got %T", err)
+		}
+		if unavailableErr.Err.Error() != "profile count is negative" {
+			t.Fatalf("unexpected underlying error: %s", unavailableErr.Err)
+		}
+
+		return
+	}
+
+	t.Fatal("expected an error")
+
+}
 
 func Test_CheckConflictingProperties(t *testing.T) {
 	tests := []struct {

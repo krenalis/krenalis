@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"fmt"
 	"log/slog"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -54,6 +55,10 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 	maxProfilesVersion, err := warehouse.maxProfilesVersion(ctx)
 	if err != nil {
 		return err
+	}
+	// Ensure the next version fits in the INTEGER column before creating the table.
+	if maxProfilesVersion >= math.MaxInt32 {
+		return fmt.Errorf("profile table version limit reached")
 	}
 	publishedProfilesVersion, err := warehouse.publishedProfilesVersion(ctx)
 	if err != nil {

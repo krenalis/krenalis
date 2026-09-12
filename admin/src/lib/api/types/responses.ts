@@ -109,7 +109,11 @@ interface ResponseProfile {
 
 interface FindProfilesResponse {
 	profiles: ResponseProfile[];
-	schema: ObjectType;
+	total: number;
+	hasNext: boolean;
+}
+
+interface CountProfilesResponse {
 	total: number;
 }
 
@@ -224,6 +228,7 @@ export type {
 	ExecQueryResponse,
 	PipelineRun,
 	FindProfilesResponse,
+	CountProfilesResponse,
 	Member,
 	MemberAvatar,
 	MemberInvitationResponse,

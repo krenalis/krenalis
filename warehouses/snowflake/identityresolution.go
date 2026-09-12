@@ -10,6 +10,7 @@ import (
 	_ "embed"
 	"fmt"
 	"log/slog"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -54,6 +55,10 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	maxProfilesVersion, err := warehouse.maxProfilesVersion(ctx)
 	if err != nil {
 		return err
+	}
+	// Ensure the next version stays within the supported range before creating the table.
+	if maxProfilesVersion >= math.MaxInt32 {
+		return fmt.Errorf("profile table version limit reached")
 	}
 	publishedProfilesVersion, err := warehouse.publishedProfilesVersion(ctx)
 	if err != nil {
@@ -309,9 +314,20 @@ func (warehouse *Snowflake) finalizePublishedProfiles(ctx context.Context, db *s
 	return nil
 }
 
-// obsoleteProfilesTableVersions returns existing profiles table versions older
-// than publishedProfilesVersion whose operations have completed.
+// maxObsoleteProfilesTableVersions limits memory usage and DDL work per
+// cleanup.
+const maxObsoleteProfilesTableVersions = 1024
+
+// obsoleteProfilesTableVersions returns versions of existing profiles tables
+// that are older than publishedProfilesVersion. Non-initial versions are
+// included only if their associated operations have completed.
+//
+// publishedProfilesVersion must be in the range [0, math.MaxInt32]. Returned
+// versions are in the range [0, publishedProfilesVersion), where zero
+// represents the initial version. The function fails if the result exceeds
+// maxObsoleteProfilesTableVersions instead of returning a partial list.
 func obsoleteProfilesTableVersions(ctx context.Context, db *sql.DB, publishedProfilesVersion int) ([]int, error) {
+
 	rows, err := db.QueryContext(ctx, `SELECT "V"."VERSION"
 		FROM "KRENALIS_PROFILE_SCHEMA_VERSIONS" "V"
 		JOIN "KRENALIS_SYSTEM_OPERATIONS" "O" ON "O"."ID" = "V"."OPERATION"
@@ -325,7 +341,8 @@ func obsoleteProfilesTableVersions(ctx context.Context, db *sql.DB, publishedPro
 		FROM INFORMATION_SCHEMA.TABLES "T"
 		WHERE "T"."TABLE_SCHEMA" = CURRENT_SCHEMA()
 			AND "T"."TABLE_NAME" = 'KRENALIS_PROFILES_0'
-			AND ? > 0`, publishedProfilesVersion, publishedProfilesVersion)
+			AND ? > 0
+		LIMIT `+strconv.Itoa(maxObsoleteProfilesTableVersions+1), publishedProfilesVersion, publishedProfilesVersion)
 	if err != nil {
 		return nil, snowflake(err)
 	}
@@ -333,16 +350,21 @@ func obsoleteProfilesTableVersions(ctx context.Context, db *sql.DB, publishedPro
 
 	var versions []int
 	for rows.Next() {
+		if len(versions) == maxObsoleteProfilesTableVersions {
+			return nil, fmt.Errorf("warehouse returned too many obsolete profile table versions")
+		}
 		var version int
-		if err := rows.Scan(&version); err != nil {
+		err = rows.Scan(&version)
+		if err != nil {
 			return nil, snowflake(err)
 		}
 		if version < 0 || version >= publishedProfilesVersion {
-			return nil, fmt.Errorf("warehouse returned an invalid obsolete profile schema version %d", version)
+			return nil, fmt.Errorf("warehouse returned an invalid obsolete profile table version %d", version)
 		}
 		versions = append(versions, version)
 	}
-	if err := rows.Err(); err != nil {
+	err = rows.Err()
+	if err != nil {
 		return nil, snowflake(err)
 	}
 

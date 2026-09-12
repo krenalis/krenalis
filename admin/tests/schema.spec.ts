@@ -1677,7 +1677,7 @@ test(`Show materialized type catalogs, restrict transitions, and preserve physic
 		'money · decimal(18,4) · min -0.5, max 1.25',
 	);
 	await expect(propertyPanel.locator('[data-type-option="decimal"] .schema-property-type')).toHaveText(
-		'decimal(10,0) · Decimal number with fixed precision',
+		'decimal · Decimal number with fixed precision',
 	);
 	await typeTrigger.click();
 	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Materialized money');
@@ -1877,7 +1877,7 @@ test(`Confirm Profile role removal when a type becomes incompatible`, async ({ p
 	const request = (await alterRequestPromise).postDataJSON();
 	expect(request.assignedRoles.photo).toBe('');
 	const avatarURL = request.schema.properties.find((property) => property.name === 'new_avatar_url');
-	expect(avatarURL.type).toEqual({ kind: 'string', maxLength: 300 });
+	expect(avatarURL.type).toEqual({ kind: 'string' });
 });
 
 test(`Delete a property and its Profile role together`, async ({ page }) => {

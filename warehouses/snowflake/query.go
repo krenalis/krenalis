@@ -13,6 +13,27 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
+// Count returns the number of rows in table after applying joins and where.
+// A nil where expression does not filter the rows.
+func (warehouse *Snowflake) Count(ctx context.Context, table string, joins []warehouses.Join, where warehouses.Expr) (int, error) {
+
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return 0, snowflake(err)
+	}
+	statement, err := renderCountQuery(table, joins, where)
+	if err != nil {
+		return 0, err
+	}
+	var total int
+	err = db.QueryRowContext(ctx, statement).Scan(&total)
+	if err != nil {
+		return 0, snowflake(err)
+	}
+
+	return total, nil
+}
+
 // Query executes a query and returns the results as Rows.
 func (warehouse *Snowflake) Query(ctx context.Context, query warehouses.RowQuery, withTotal bool) (warehouses.Rows, int, error) {
 
@@ -34,24 +55,16 @@ func (warehouse *Snowflake) Query(ctx context.Context, query warehouses.RowQuery
 
 	var b strings.Builder
 
-	// Count the total number of records.
 	var total int
 	if withTotal {
-		b.WriteString(`SELECT COUNT(*) FROM `)
-		b.WriteString(quoteIdent(query.Table))
-		err := appendJoins(&b, query.Joins)
-		if err != nil {
-			return nil, 0, err
+		statement, countErr := renderCountQuery(query.Table, query.Joins, query.Where)
+		if countErr != nil {
+			return nil, 0, countErr
 		}
-		if query.Where != nil {
-			b.WriteString(` WHERE `)
-			b.WriteString(whereExpr)
-		}
-		err = db.QueryRowContext(ctx, b.String()).Scan(&total)
+		err = db.QueryRowContext(ctx, statement).Scan(&total)
 		if err != nil {
 			return nil, 0, snowflake(err)
 		}
-		b.Reset()
 	}
 
 	// Build the query.
@@ -127,4 +140,25 @@ func appendJoins(b *strings.Builder, joins []warehouses.Join) error {
 		}
 	}
 	return nil
+}
+
+// renderCountQuery renders a query that counts rows in table after applying joins and where.
+func renderCountQuery(table string, joins []warehouses.Join, where warehouses.Expr) (string, error) {
+
+	var b strings.Builder
+	b.WriteString(`SELECT COUNT(*) FROM `)
+	b.WriteString(quoteIdent(table))
+	err := appendJoins(&b, joins)
+	if err != nil {
+		return "", err
+	}
+	if where != nil {
+		b.WriteString(` WHERE `)
+		err = renderExpr(&b, where)
+		if err != nil {
+			return "", fmt.Errorf("cannot build WHERE expression: %s", err)
+		}
+	}
+
+	return b.String(), nil
 }

@@ -387,7 +387,11 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 							onSearchChange={setSearch}
 							search={search}
 						>
-							<SlTooltip className='schema-edit__toolbar-tooltip' content='Filter properties' hoist>
+							<SlTooltip
+								className='app-tooltip schema-edit__toolbar-tooltip'
+								content='Filter properties'
+								hoist
+							>
 								<SlDropdown
 									className='schema-edit__filter'
 									placement='bottom-end'
@@ -422,7 +426,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 						<Grid
 							rows={rows}
 							columns={columns}
-							keyboardNavigation={isGridKeyboardNavigationEnabled}
+							keyboardNavigation={isGridKeyboardNavigationEnabled ? 'tree' : undefined}
 							gridColumnsWidths={schemaEditGridColumns}
 							nestedRowsIndentation={schemaPropertyGridNestedRowsIndentation}
 							noRowsIcon='search'

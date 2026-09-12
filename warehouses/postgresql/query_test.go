@@ -116,3 +116,47 @@ func TestQueryOrdering(t *testing.T) {
 	})
 
 }
+
+// Test_renderCountQuery verifies counts with optional joins and filters.
+func Test_renderCountQuery(t *testing.T) {
+
+	id := warehouses.Column{Name: "id", Type: types.Int(32)}
+	joins := []warehouses.Join{{
+		Type:      warehouses.InnerJoin,
+		Table:     "identities",
+		Condition: warehouses.NewBaseExpr(id, warehouses.OpIs, warehouses.Column{Name: "fk", Type: types.Int(32)}),
+	}}
+	where := warehouses.NewBaseExpr(id, warehouses.OpIs, 1)
+
+	for _, tc := range []struct {
+		name  string
+		joins []warehouses.Join
+		where warehouses.Expr
+		want  string
+	}{
+		{name: "all rows", want: `SELECT COUNT(*) FROM "profiles"`},
+		{name: "filtered rows", where: where, want: `SELECT COUNT(*) FROM "profiles" WHERE "id" = 1`},
+		{
+			name:  "joined rows",
+			joins: joins,
+			want:  `SELECT COUNT(*) FROM "profiles" JOIN "identities" ON "id" = "fk"`,
+		},
+		{
+			name:  "filtered joined rows",
+			joins: joins,
+			where: where,
+			want:  `SELECT COUNT(*) FROM "profiles" JOIN "identities" ON "id" = "fk" WHERE "id" = 1`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			statement, err := renderCountQuery("profiles", tc.joins, tc.where)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if statement != tc.want {
+				t.Fatalf("expected %q, got %q", tc.want, statement)
+			}
+		})
+	}
+
+}

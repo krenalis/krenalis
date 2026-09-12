@@ -86,6 +86,52 @@ func Test_CheckReadOnlyAccess_acceptsExpectedReadOnlySurface(t *testing.T) {
 	}
 }
 
+// TestPublishedProfilesVersion validates versions returned by the published
+// operation metadata before using them to identify a published profile table.
+func TestPublishedProfilesVersion(t *testing.T) {
+
+	tests := []struct {
+		name      string
+		value     driver.Value
+		expected  int
+		expectErr bool
+	}{
+		{name: "valid", value: "42", expected: 42},
+		{name: "missing", value: nil, expectErr: true},
+		{name: "not numeric", value: "invalid", expectErr: true},
+		{name: "outside integer range", value: "2147483648", expectErr: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+
+			db, _ := newCheckReadOnlyTestDB(t, []checkReadOnlyQuery{
+				{
+					match: `KRENALIS_PROFILE_SCHEMA_VERSIONS`,
+					cols:  []string{"VERSION"},
+					rows:  [][]driver.Value{{test.value}},
+				},
+			})
+			defer db.Close()
+
+			version, err := (&Snowflake{db: db}).publishedProfilesVersion(t.Context())
+			if err != nil {
+				if !test.expectErr {
+					t.Fatal(err)
+				}
+				return
+			}
+			if test.expectErr {
+				t.Fatalf("expected an error, got version %d", version)
+			}
+			if version != test.expected {
+				t.Fatalf("expected version %d, got %d", test.expected, version)
+			}
+
+		})
+	}
+
+}
+
 // assertSettingsNotReadOnly fails the test unless err wraps a
 // warehouses.SettingsNotReadOnly value.
 func assertSettingsNotReadOnly(t *testing.T, err error) {

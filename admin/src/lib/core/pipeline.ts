@@ -980,23 +980,20 @@ const transformInPipelineToSet = async (
 		const isEventBasedUserImport = connection.isEventBased && connection.isSource && pipelineType.target === 'User';
 		const isAppEventsExport =
 			connection.isApplication && connection.isDestination && pipelineType.target === 'Event';
-		const draftFilter = omitEmptyFilterRules(pipeline.filter);
-		if (draftFilter != null) {
-			filter = mapFilterConditions(draftFilter, (condition) => {
-				const propertyName = condition.property;
-				const [base, path] = splitPropertyAndPath(propertyName, flattenedInputSchema);
+		const hiddenProperties = isEventBasedUserImport || isAppEventsExport || isEventImport ? ['kpid'] : null;
+		filter = validateAndNormalizeFilter(
+			pipeline.filter,
+			pipelineType.inputSchema,
+			connection.role,
+			pipelineType.target,
+			hiddenProperties,
+		);
+		if (filter != null) {
+			for (const condition of getFilterConditions(filter)) {
+				const [base] = splitPropertyAndPath(condition.property, flattenedInputSchema);
 				const property = flattenedInputSchema[base];
-				const normalized = validateAndNormalizeFilterCondition(
-					condition,
-					property,
-					path,
-					propertyName,
-					isEventBasedUserImport || isAppEventsExport || isEventImport ? ['kpid'] : null,
-				);
 				addPropertyToSchema(base, property.full, inSchema, flattenedInputSchema, property.indentation === 0);
-
-				return normalized;
-			});
+			}
 		}
 	}
 
@@ -2033,6 +2030,77 @@ const validateAndNormalizeFilterCondition = (
 	return c;
 };
 
+// validateAndNormalizeFilter removes completely empty draft rules, validates
+// every remaining condition and returns the representation expected by the
+// API. Partially configured conditions are errors rather than being silently
+// discarded.
+const validateAndNormalizeFilter = (
+	filter: Filter,
+	schema: ObjectType,
+	role: Role,
+	target: PipelineTarget,
+	propertiesToHide?: string[] | null,
+): Filter | null => {
+	const flatSchema = flattenSchema(schema);
+
+	const normalizeGroup = (group: Filter): Filter | null => {
+		const rules: FilterRule[] = [];
+		for (const rule of group.rules) {
+			if (isFilterGroup(rule)) {
+				const normalizedGroup = normalizeGroup(rule);
+				if (normalizedGroup != null) {
+					rules.push(normalizedGroup);
+				}
+				continue;
+			}
+
+			const values = rule.values ?? [];
+			const isEmptyDraft =
+				rule.property.trim() === '' &&
+				rule.operator === '' &&
+				values.every((value) => typeof value === 'string' && value.trim() === '');
+			if (isEmptyDraft) {
+				continue;
+			}
+			if (rule.property.trim() === '') {
+				throw new Error('Property of filter condition is required');
+			}
+			if (rule.operator !== '' && !isUnaryOperator(rule.operator)) {
+				const requiredValueCount = isBetweenOperator(rule.operator) ? 2 : 1;
+				if (values.length < requiredValueCount) {
+					throw new Error(`The filter value on the property "${rule.property.trim()}" is required`);
+				}
+			}
+
+			const propertyName = rule.property.trim();
+			const [base, path] = splitPropertyAndPath(propertyName, flatSchema);
+			const property = flatSchema[base];
+			const normalizedCondition = validateAndNormalizeFilterCondition(
+				{ ...rule, property: propertyName },
+				property,
+				path,
+				propertyName,
+				propertiesToHide,
+			);
+			const operatorIndex = FILTER_OPERATORS.indexOf(normalizedCondition.operator as FilterOperator);
+			if (
+				normalizedCondition.operator !== '' &&
+				!getCompatibleFilterOperators(property, path !== '', role, target).includes(operatorIndex)
+			) {
+				throw new Error(
+					`Operator "${normalizedCondition.operator}" cannot be used with property "${propertyName}"`,
+				);
+			}
+
+			rules.push(normalizedCondition);
+		}
+
+		return rules.length === 0 ? null : { operator: group.operator, rules };
+	};
+
+	return normalizeGroup(filter);
+};
+
 const validateFilterConditionValues = (type: Type, values: string[], propertyName: string) => {
 	const throwIfInvalid = (isValid: boolean, typeKind: string, unsigned?: boolean) => {
 		if (!isValid) {
@@ -2149,6 +2217,7 @@ export {
 	getSiblingPaths,
 	doesUpdatedAtColumnNeedFormat,
 	computeDefaultTransformationFunction,
+	validateAndNormalizeFilter,
 	validateAndNormalizeFilterCondition,
 	validateMatching,
 	propertyTypesAreEqual,

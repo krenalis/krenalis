@@ -215,6 +215,7 @@ func (dummy *Dummy) RecordSchema(ctx context.Context, target connectors.Targets,
 			{Name: "street", Type: types.String(), Nullable: true, Description: "Street"},
 			{Name: "postal_code", Type: types.String(), Nullable: true, Description: "Postal code"},
 			{Name: "city", Type: types.String(), Nullable: true, Description: "City"},
+			{Name: "country", Type: types.String().AsCountry(types.ISO3166Alpha2), Nullable: true, Description: "Country"},
 		}), Nullable: true, Description: "Address"},
 	}...)
 	return types.Object(properties), nil
