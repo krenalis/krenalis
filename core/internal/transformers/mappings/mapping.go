@@ -6,12 +6,12 @@ package mappings
 
 import (
 	"cmp"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
 
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -236,6 +236,12 @@ func (mapping *Mapping) Transform(attributes map[string]any, purpose Purpose) (m
 					msg = fmt.Sprintf("year of «%s» is not in range [1,9999] while mapping to «%s»", code(e.expr.source), code(e.path))
 				case errEnumConversion:
 					msg = fmt.Sprintf("«%s» is not one of the allowed values while mapping to «%s»", code(e.expr.source), code(e.path))
+				case errCountryAlpha2Conversion:
+					msg = fmt.Sprintf("«%s» is not a 2-letters country code while mapping to «%s»", code(e.expr.source), code(e.path))
+				case errCountryAlpha3Conversion:
+					msg = fmt.Sprintf("«%s» is not a 3-letters country code while mapping to «%s»", code(e.expr.source), code(e.path))
+				case errPhoneConversion:
+					msg = fmt.Sprintf("«%s» is not a valid phone number while mapping to «%s»", code(e.expr.source), code(e.path))
 				case errPatternConversion:
 					msg = fmt.Sprintf("«%s» does not match «/%s/» while mapping to «%s»", code(e.expr.source), e.dt.Pattern(), code(e.path))
 				case errMaxBytesConversion:

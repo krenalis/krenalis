@@ -6,7 +6,6 @@ package types
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -20,7 +19,9 @@ import (
 	"uuid"
 
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/validation"
 
 	"github.com/relvacode/iso8601"
 )
@@ -330,6 +331,23 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 	case StringKind:
 		if v.Kind() == '"' {
 			s := string(d.unquoteString(v))
+			switch t.Semantic() {
+			case CountrySemantic:
+				switch t.CountryFormat() {
+				case ISO3166Alpha2:
+					if !validation.IsValidCountryCodeAlpha2(s) {
+						return nil, newErrInvalidValue("contains an invalid country code", "")
+					}
+				case ISO3166Alpha3:
+					if !validation.IsValidCountryCodeAlpha3(s) {
+						return nil, newErrInvalidValue("contains an invalid country code", "")
+					}
+				}
+			case PhoneSemantic:
+				if len(s) > 16 {
+					return nil, newErrInvalidValue("is longer that 16 bytes", "")
+				}
+			}
 			if values := t.Values(); values != nil {
 				if !slices.Contains(values, s) {
 					return nil, newErrInvalidValue(fmt.Sprintf("has an invalid value: %s; valid values are %s",

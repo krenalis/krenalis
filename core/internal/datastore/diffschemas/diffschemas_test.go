@@ -88,6 +88,16 @@ func TestDiff(t *testing.T) {
 			expectedOps: []warehouses.AlterOperation{},
 		},
 		{
+			name: "Semantic removed from existing property",
+			fromSchema: types.Object([]types.Property{
+				{Name: "a", Type: types.String().AsEmail(), Nullable: true},
+			}),
+			toSchema: types.Object([]types.Property{
+				{Name: "a", Type: types.String(), Nullable: true},
+			}),
+			expectedErr: `error on property "a": type changes are not supported`,
+		},
+		{
 			name: "Changes in descriptions are not influent",
 			fromSchema: types.Object([]types.Property{
 				{Name: "a", Type: types.String(), Nullable: true, Description: "old description"},
