@@ -855,8 +855,8 @@ func (workspace workspace) ProfileCount(_ http.ResponseWriter, r *http.Request) 
 	return map[string]any{"total": total}, nil
 }
 
-// Profiles returns profiles, their projected schema, an estimate of their total
-// number without applying first and limit, and the continuation state.
+// Profiles returns profiles, an estimate of their total number without applying
+// first and limit, and the continuation state.
 func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any, error) {
 
 	ws, err := workspace.admitWorkspaceRequest(r, x1)
@@ -904,7 +904,7 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 	if err != nil {
 		return nil, errors.BadRequest("invalid schema")
 	}
-	profiles, schema, total, hasNext, err := ws.Profiles(
+	profiles, total, hasNext, err := ws.Profiles(
 		r.Context(), schema, properties, filter, order, orderDesc, first, limit)
 	if err != nil {
 		return nil, err
@@ -926,11 +926,7 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 		b.write(s)
 		b.writeByte('}')
 	}
-	b.writeString(`]`)
-	b.writeString(`,"schema":`)
-	schemaJSON, _ := schema.MarshalJSON()
-	b.write(schemaJSON)
-	b.writeString(`,"total":`)
+	b.writeString(`],"total":`)
 	buf := b.availableBuffer()
 	b.write(strconv.AppendInt(buf, int64(total), 10))
 	b.writeString(`,"hasNext":`)

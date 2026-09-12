@@ -1250,8 +1250,8 @@ type Profile struct {
 	Attributes map[string]any `json:"attributes"`
 }
 
-// Profiles returns profiles matching filter, their projected schema, total
-// count, and whether another row follows the requested range.
+// Profiles returns profiles matching filter, their total count, and whether
+// another row follows the requested range.
 // schema describes the request's properties, filter, and ordering; only
 // dependencies used by the request must align with the current schema.
 // If properties is nil, all properties in schema are returned. Otherwise,
@@ -1262,12 +1262,12 @@ type Profile struct {
 // errors.UnprocessableError with code MaintenanceMode, PropertyNotExist,
 // OrderNotExist, OrderTypeNotSortable, or SchemaNotAligned. Invalid arguments
 // return errors.BadRequestError; warehouse failures return errors.UnavailableError.
-func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properties []string, filter *Filter, order string, orderDesc bool, first, limit int) ([]Profile, types.Type, int, bool, error) {
+func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properties []string, filter *Filter, order string, orderDesc bool, first, limit int) ([]Profile, int, bool, error) {
 
 	this.core.mustBeOpen()
 
 	if schema.Kind() != types.ObjectKind || schema.Generic() {
-		return nil, types.Type{}, 0, false, errors.BadRequest("schema is not a concrete object type")
+		return nil, 0, false, errors.BadRequest("schema is not a concrete object type")
 	}
 	profileProperties := schema.Properties()
 
@@ -1276,22 +1276,22 @@ func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properti
 		properties = profileProperties.Names()
 	} else {
 		if len(properties) == 0 {
-			return nil, types.Type{}, 0, false, errors.BadRequest("properties is empty")
+			return nil, 0, false, errors.BadRequest("properties is empty")
 		}
 		seen := map[string]bool{}
 		for _, name := range properties {
 			if seen[name] {
-				return nil, types.Type{}, 0, false, errors.BadRequest("property %q is repeated", name)
+				return nil, 0, false, errors.BadRequest("property %q is repeated", name)
 			}
 			seen[name] = true
 			if _, ok := profileProperties.ByName(name); !ok {
 				if name == "" {
-					return nil, types.Type{}, 0, false, errors.BadRequest("a property name is empty")
+					return nil, 0, false, errors.BadRequest("a property name is empty")
 				}
 				if !types.IsValidPropertyName(name) {
-					return nil, types.Type{}, 0, false, errors.BadRequest("property name %q is not valid", name)
+					return nil, 0, false, errors.BadRequest("property name %q is not valid", name)
 				}
-				return nil, types.Type{}, 0, false, errors.Unprocessable(
+				return nil, 0, false, errors.Unprocessable(
 					PropertyNotExist, "property name %s does not exist", name)
 			}
 		}
@@ -1305,10 +1305,10 @@ func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properti
 		filterPaths, err := validateFilter(filter, schema, state.Destination, state.TargetUser)
 		if err != nil {
 			if pathErr, ok := errors.AsType[types.PathNotExistError](err); ok {
-				return nil, types.Type{}, 0, false, errors.Unprocessable(
+				return nil, 0, false, errors.Unprocessable(
 					PropertyNotExist, "filter's property %s does not exist", pathErr.Path)
 			}
-			return nil, types.Type{}, 0, false, errors.BadRequest("filter is not valid: %s", err)
+			return nil, 0, false, errors.BadRequest("filter is not valid: %s", err)
 		}
 		where = convertFilterToWhere(filter, schema)
 		paths = append(paths, filterPaths...)
@@ -1321,14 +1321,14 @@ func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properti
 		orderProperty, ok := profileProperties.ByName(order)
 		if !ok {
 			if !types.IsValidPropertyName(order) {
-				return nil, types.Type{}, 0, false, errors.BadRequest("order %q is not a valid property name", order)
+				return nil, 0, false, errors.BadRequest("order %q is not a valid property name", order)
 			}
-			return nil, types.Type{}, 0, false, errors.Unprocessable(
+			return nil, 0, false, errors.Unprocessable(
 				OrderNotExist, "order %s does not exist in schema", order)
 		}
 		switch orderProperty.Type.Kind() {
 		case types.JSONKind, types.ArrayKind, types.ObjectKind, types.MapKind:
-			return nil, types.Type{}, 0, false, errors.Unprocessable(OrderTypeNotSortable,
+			return nil, 0, false, errors.Unprocessable(OrderTypeNotSortable,
 				"cannot sort by %s: property has type %s", order, orderProperty.Type)
 		}
 	} else {
@@ -1337,10 +1337,10 @@ func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properti
 
 	// Validate first and limit.
 	if first < 0 || first > maxInt32 {
-		return nil, types.Type{}, 0, false, errors.BadRequest("first %d in not valid", first)
+		return nil, 0, false, errors.BadRequest("first %d in not valid", first)
 	}
 	if limit < 1 || limit > 1000 {
-		return nil, types.Type{}, 0, false, errors.BadRequest("limit %d is not valid", limit)
+		return nil, 0, false, errors.BadRequest("limit %d is not valid", limit)
 	}
 
 	// Restrict the schema to the request's dependencies.
@@ -1364,27 +1364,20 @@ func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properti
 	}, dependencies)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
-			return nil, types.Type{}, 0, false, errors.Unprocessable(
+			return nil, 0, false, errors.Unprocessable(
 				MaintenanceMode, "data warehouse is in maintenance mode")
 		}
 		if errors.Is(err, datastore.ErrWorkspaceNotExist) {
-			return nil, types.Type{}, 0, false, errors.NotFound("workspace does not exist")
+			return nil, 0, false, errors.NotFound("workspace does not exist")
 		}
 		if schemaErr, ok := errors.AsType[*schemas.Error](err); ok {
-			return nil, types.Type{}, 0, false, errors.Unprocessable(SchemaNotAligned, "%s", schemaErr)
+			return nil, 0, false, errors.Unprocessable(SchemaNotAligned, "%s", schemaErr)
 		}
 		if err, ok := errors.AsType[*datastore.UnavailableError](err); ok {
-			return nil, types.Type{}, 0, false, errors.Unavailable("%s", err)
+			return nil, 0, false, errors.Unavailable("%s", err)
 		}
-		return nil, types.Type{}, 0, false, errors.New(err.Error())
+		return nil, 0, false, errors.New(err.Error())
 	}
-
-	// Create the schema to return, with only the requested properties.
-	props := make([]types.Property, len(properties))
-	for i, name := range properties {
-		props[i], _ = profileProperties.ByName(name)
-	}
-	schema = types.Object(props)
 
 	profiles := make([]Profile, len(rows))
 	for i, row := range rows {
@@ -1395,7 +1388,7 @@ func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properti
 		delete(row, "_updated_at")
 	}
 
-	return profiles, schema, total, hasNext, nil
+	return profiles, total, hasNext, nil
 }
 
 const maxReadOnlyResponseSize = 10 * 1024 * 1024 // 10 MiB.

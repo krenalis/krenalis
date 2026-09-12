@@ -135,7 +135,7 @@ func TestEvents(t *testing.T) {
 	k.RunIdentityResolutionAndWait()
 
 	// Retrieve the profile imported from the event.
-	profiles, _, total := k.Profiles([]string{"email"}, "", false, 0, 100)
+	profiles, total := k.Profiles([]string{"email"}, "", false, 0, 100)
 	const expectedProfilesTotal = 10 + 1 // 10 imported from Dummy, 1 imported from JavaScript, with the identity call
 	if expectedProfilesTotal != total {
 		t.Fatalf("expected %d profiles, got %d", expectedProfilesTotal, total)

@@ -109,7 +109,6 @@ interface ResponseProfile {
 
 interface FindProfilesResponse {
 	profiles: ResponseProfile[];
-	schema: ObjectType;
 	total: number;
 	hasNext: boolean;
 }

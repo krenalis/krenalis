@@ -181,7 +181,7 @@ waitLoop:
 	k.RunIdentityResolutionAndWait()
 
 	// Check that there is actually only one profile in the workspace.
-	_, _, total = k.Profiles([]string{"email"}, "", false, 0, 100)
+	_, total = k.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 1 {
 		t.Fatalf("expected only one profile in the workspace, got %d instead", total)
 	}

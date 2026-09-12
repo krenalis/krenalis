@@ -689,17 +689,17 @@ func (k *Krenalis) ProfilePropertiesSuitableAsIdentifiers() types.Type {
 	return schema
 }
 
-// Profiles returns the profiles in the given range, together with their schema
-// and total count.
-func (k *Krenalis) Profiles(properties []string, order string, orderDesc bool, first, limit int) (users []Profile, schema types.Type, total int) {
+// Profiles returns the profiles in the given range and their total count.
+func (k *Krenalis) Profiles(properties []string, order string, orderDesc bool, first, limit int) (users []Profile, total int) {
+	var schema types.Type
 	k.Call("GET", "/v1/profiles/schema", nil, nil, &schema)
-	users, schema, total, _ = k.ProfilesWithSchema(schema, properties, order, orderDesc, first, limit)
-	return users, schema, total
+	users, total, _ = k.ProfilesWithSchema(schema, properties, order, orderDesc, first, limit)
+	return users, total
 }
 
-// ProfilesWithSchema returns profiles interpreted using schema, their projected
-// schema, total count, and continuation state.
-func (k *Krenalis) ProfilesWithSchema(schema types.Type, properties []string, order string, orderDesc bool, first, limit int) ([]Profile, types.Type, int, bool) {
+// ProfilesWithSchema returns profiles queried using schema, their total
+// count, and continuation state.
+func (k *Krenalis) ProfilesWithSchema(schema types.Type, properties []string, order string, orderDesc bool, first, limit int) ([]Profile, int, bool) {
 	schemaJSON, err := schema.MarshalJSON()
 	must(k.t, err)
 	queryString := url.Values{
@@ -711,13 +711,12 @@ func (k *Krenalis) ProfilesWithSchema(schema types.Type, properties []string, or
 		"limit":      []string{strconv.Itoa(limit)},
 	}
 	var response struct {
-		Profiles []Profile  `json:"profiles"`
-		Schema   types.Type `json:"schema"`
-		Total    int        `json:"total"`
-		HasNext  bool       `json:"hasNext"`
+		Profiles []Profile `json:"profiles"`
+		Total    int       `json:"total"`
+		HasNext  bool      `json:"hasNext"`
 	}
 	k.Call("GET", "/v1/profiles?"+queryString.Encode(), nil, nil, &response)
-	return response.Profiles, response.Schema, response.Total, response.HasNext
+	return response.Profiles, response.Total, response.HasNext
 }
 
 // RepairWarehouse repairs the warehouse.
