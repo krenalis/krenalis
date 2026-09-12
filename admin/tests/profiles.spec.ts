@@ -164,7 +164,6 @@ const mockProfiles = async (
 		await route.fulfill({
 			json: {
 				profiles: resultProfiles,
-				schema,
 				total: matchingProfiles.length,
 				hasNext: first + resultProfiles.length < matchingProfiles.length,
 			},
@@ -655,25 +654,15 @@ test(`Preview a completed filter and show its profiles explicitly`, async ({ pag
 	expect(propertyMenuLayout.position).toBe('fixed');
 	expect(propertyMenuLayout.lastItemBottom).toBeLessThanOrEqual(propertyMenuLayout.viewportBottom);
 	expect(propertyMenuLayout.lastItemIsVisible).toBe(true);
-	const lastNameItem = property.locator('sl-menu-item', {
-		has: page.locator('.schema-combobox-item__name', { hasText: /^Last name$/ }),
-	});
-	await lastNameItem.hover();
-	await lastNameItem.click();
-	await expect(property.locator('input')).toHaveValue('Last name');
-	await expect(emptyConditionRemoveButton).toBeVisible();
-	await property.locator('sl-input').click();
 	await property.locator('input').fill('First');
 	await property.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^First name$/ }).click();
 	await expect(property.locator('input')).toHaveValue('First name');
+	await expect(emptyConditionRemoveButton).toBeVisible();
 	await expect(filters.locator('.pipeline__filters-logical')).toHaveJSProperty('hoist', true);
 	const operatorSelect = condition.locator('.pipeline__filters-operator');
 	await expect(operatorSelect).toHaveJSProperty('hoist', true);
-	await operatorSelect.evaluate(async (select: any) => {
-		await select.hide();
-		await select.show();
-	});
 	await expect(operatorSelect).toHaveJSProperty('open', true);
+	await expect(operatorSelect.locator('sl-option[value="4"]')).toBeVisible();
 	const operatorMenuLayout = await operatorSelect.evaluate((select) => {
 		const visibleOption = select.querySelector('sl-option[value="4"]');
 		if (!(visibleOption instanceof HTMLElement)) {
@@ -1872,7 +1861,6 @@ test(`Deduplicate a pending continuation and lock boundary navigation`, async ({
 		await route.fulfill({
 			json: {
 				profiles: responseProfiles.slice(100, 150),
-				schema: profileSchema,
 				total: responseProfiles.length,
 				hasNext: true,
 			},
@@ -1926,7 +1914,6 @@ test(`Retry a failed speculative continuation only when its boundary is requeste
 		await route.fulfill({
 			json: {
 				profiles: responseProfiles.slice(100, 150),
-				schema: profileSchema,
 				total: responseProfiles.length,
 				hasNext: true,
 			},
@@ -2428,7 +2415,7 @@ test('Allow an empty continuation and keep Previous and Refresh usable', async (
 			await route.fallback();
 			return;
 		}
-		await route.fulfill({ json: { profiles: [], schema: profileSchema, total: 2, hasNext: false } });
+		await route.fulfill({ json: { profiles: [], total: 2, hasNext: false } });
 	});
 	await page.goto(`${adminURL}/profile-unification/profiles`);
 	const pagination = page.getByRole('navigation', { name: 'Profiles pagination' });
@@ -2462,7 +2449,6 @@ test('Reuse adjacent cached pages but refetch an evicted page against live data'
 						...profile,
 						attributes: { ...profile.attributes, customer_id: 'observation-' + firstPageReads },
 					})),
-					schema: profileSchema,
 					total: 360,
 					hasNext: true,
 				},
