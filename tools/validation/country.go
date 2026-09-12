@@ -1,0 +1,611 @@
+// Copyright 2026 Open2b. All rights reserved.
+// Use of this source code is governed by an Elastic License 2.0
+// that can be found in the LICENSE file.
+
+package validation
+
+import "strings"
+
+// countryCodes contains all ISO 3166-1 alpha-2 codes and formerly assigned
+// alpha-2 codes from ISO 3166-3, except those handled in the fast path.
+const countryCodes = "" +
+	"AD" +
+	"AE" +
+	"AF" +
+	"AG" +
+	"AI" +
+	"AL" +
+	"AM" +
+	"AN" +
+	"AO" +
+	"AQ" +
+	"AR" +
+	"AS" +
+	"AT" +
+	"AU" +
+	"AW" +
+	"AX" +
+	"AZ" +
+	"BA" +
+	"BB" +
+	"BD" +
+	"BE" +
+	"BF" +
+	"BG" +
+	"BH" +
+	"BI" +
+	"BJ" +
+	"BL" +
+	"BM" +
+	"BN" +
+	"BO" +
+	"BQ" +
+	"BR" +
+	"BS" +
+	"BT" +
+	"BU" +
+	"BV" +
+	"BW" +
+	"BY" +
+	"BZ" +
+	"CA" +
+	"CC" +
+	"CD" +
+	"CF" +
+	"CG" +
+	"CH" +
+	"CI" +
+	"CK" +
+	"CL" +
+	"CM" +
+	"CN" +
+	"CO" +
+	"CR" +
+	"CS" +
+	"CT" +
+	"CU" +
+	"CV" +
+	"CW" +
+	"CX" +
+	"CY" +
+	"CZ" +
+	"DD" +
+	"DJ" +
+	"DK" +
+	"DM" +
+	"DO" +
+	"DY" +
+	"DZ" +
+	"EC" +
+	"EE" +
+	"EG" +
+	"EH" +
+	"ER" +
+	"ET" +
+	"FI" +
+	"FJ" +
+	"FK" +
+	"FM" +
+	"FO" +
+	"FQ" +
+	"FX" +
+	"GA" +
+	"GD" +
+	"GE" +
+	"GF" +
+	"GG" +
+	"GH" +
+	"GI" +
+	"GL" +
+	"GM" +
+	"GN" +
+	"GP" +
+	"GQ" +
+	"GR" +
+	"GS" +
+	"GT" +
+	"GU" +
+	"GW" +
+	"GY" +
+	"HK" +
+	"HM" +
+	"HN" +
+	"HR" +
+	"HT" +
+	"HU" +
+	"HV" +
+	"ID" +
+	"IE" +
+	"IL" +
+	"IM" +
+	"IN" +
+	"IO" +
+	"IQ" +
+	"IR" +
+	"IS" +
+	"JE" +
+	"JM" +
+	"JO" +
+	"JP" +
+	"JT" +
+	"KE" +
+	"KG" +
+	"KH" +
+	"KI" +
+	"KM" +
+	"KN" +
+	"KP" +
+	"KR" +
+	"KW" +
+	"KY" +
+	"KZ" +
+	"LA" +
+	"LB" +
+	"LC" +
+	"LI" +
+	"LK" +
+	"LR" +
+	"LS" +
+	"LT" +
+	"LU" +
+	"LV" +
+	"LY" +
+	"MA" +
+	"MC" +
+	"MD" +
+	"ME" +
+	"MF" +
+	"MG" +
+	"MH" +
+	"MI" +
+	"MK" +
+	"ML" +
+	"MM" +
+	"MN" +
+	"MO" +
+	"MP" +
+	"MQ" +
+	"MR" +
+	"MS" +
+	"MT" +
+	"MU" +
+	"MV" +
+	"MW" +
+	"MX" +
+	"MY" +
+	"MZ" +
+	"NA" +
+	"NC" +
+	"NE" +
+	"NF" +
+	"NG" +
+	"NH" +
+	"NI" +
+	"NL" +
+	"NO" +
+	"NP" +
+	"NQ" +
+	"NR" +
+	"NT" +
+	"NU" +
+	"NZ" +
+	"OM" +
+	"PA" +
+	"PC" +
+	"PE" +
+	"PF" +
+	"PG" +
+	"PH" +
+	"PK" +
+	"PL" +
+	"PM" +
+	"PN" +
+	"PR" +
+	"PS" +
+	"PT" +
+	"PU" +
+	"PW" +
+	"PY" +
+	"PZ" +
+	"QA" +
+	"RE" +
+	"RH" +
+	"RO" +
+	"RS" +
+	"RU" +
+	"RW" +
+	"SA" +
+	"SB" +
+	"SC" +
+	"SD" +
+	"SE" +
+	"SG" +
+	"SH" +
+	"SI" +
+	"SJ" +
+	"SK" +
+	"SL" +
+	"SM" +
+	"SN" +
+	"SO" +
+	"SR" +
+	"SS" +
+	"ST" +
+	"SU" +
+	"SV" +
+	"SX" +
+	"SY" +
+	"SZ" +
+	"TC" +
+	"TD" +
+	"TF" +
+	"TG" +
+	"TH" +
+	"TJ" +
+	"TK" +
+	"TL" +
+	"TM" +
+	"TN" +
+	"TO" +
+	"TP" +
+	"TR" +
+	"TT" +
+	"TV" +
+	"TW" +
+	"TZ" +
+	"UA" +
+	"UG" +
+	"UM" +
+	"UY" +
+	"UZ" +
+	"VA" +
+	"VC" +
+	"VD" +
+	"VE" +
+	"VG" +
+	"VI" +
+	"VN" +
+	"VU" +
+	"WF" +
+	"WK" +
+	"WS" +
+	"YD" +
+	"YE" +
+	"YT" +
+	"YU" +
+	"ZA" +
+	"ZM" +
+	"ZR" +
+	"ZW"
+
+// IsValidCountryCodeAlpha2 returns true when code is a valid current or
+// formerly assigned ISO 3166 alpha-2 country code.
+func IsValidCountryCodeAlpha2(code string) bool {
+	// Fast path.
+	switch code {
+	case "US", "GB", "DE", "FR", "IT", "ES":
+		return true
+	}
+	// Slow path.
+	if len(code) != 2 {
+		return false
+	}
+	for start := 0; start < len(countryCodes); {
+		i := strings.Index(countryCodes[start:], code)
+		if i == -1 {
+			return false
+		}
+		i += start
+		// Accept matches only at two-byte code boundaries.
+		if i%2 == 0 {
+			return true
+		}
+		start = i + 1
+	}
+	return false
+}
+
+// countryAlpha3Codes contains all ISO 3166-1 alpha-3 codes and formerly
+// assigned alpha-3 codes from ISO 3166-3, except those handled in the fast
+// path.
+const countryAlpha3Codes = "" +
+	"ABW" +
+	"AFG" +
+	"AFI" +
+	"AGO" +
+	"AIA" +
+	"ALA" +
+	"ALB" +
+	"AND" +
+	"ANT" +
+	"ARE" +
+	"ARG" +
+	"ARM" +
+	"ASM" +
+	"ATA" +
+	"ATB" +
+	"ATF" +
+	"ATG" +
+	"ATN" +
+	"AUS" +
+	"AUT" +
+	"AZE" +
+	"BDI" +
+	"BEL" +
+	"BEN" +
+	"BES" +
+	"BFA" +
+	"BGD" +
+	"BGR" +
+	"BHR" +
+	"BHS" +
+	"BIH" +
+	"BLM" +
+	"BLR" +
+	"BLZ" +
+	"BMU" +
+	"BOL" +
+	"BRA" +
+	"BRB" +
+	"BRN" +
+	"BTN" +
+	"BUR" +
+	"BVT" +
+	"BWA" +
+	"BYS" +
+	"CAF" +
+	"CAN" +
+	"CCK" +
+	"CHE" +
+	"CHL" +
+	"CHN" +
+	"CIV" +
+	"CMR" +
+	"COD" +
+	"COG" +
+	"COK" +
+	"COL" +
+	"COM" +
+	"CPV" +
+	"CRI" +
+	"CSK" +
+	"CTE" +
+	"CUB" +
+	"CUW" +
+	"CXR" +
+	"CYM" +
+	"CYP" +
+	"CZE" +
+	"DDR" +
+	"DHY" +
+	"DJI" +
+	"DMA" +
+	"DNK" +
+	"DOM" +
+	"DZA" +
+	"ECU" +
+	"EGY" +
+	"ERI" +
+	"ESH" +
+	"EST" +
+	"ETH" +
+	"FIN" +
+	"FJI" +
+	"FLK" +
+	"FRO" +
+	"FSM" +
+	"FXX" +
+	"GAB" +
+	"GEL" +
+	"GEO" +
+	"GGY" +
+	"GHA" +
+	"GIB" +
+	"GIN" +
+	"GLP" +
+	"GMB" +
+	"GNB" +
+	"GNQ" +
+	"GRC" +
+	"GRD" +
+	"GRL" +
+	"GTM" +
+	"GUF" +
+	"GUM" +
+	"GUY" +
+	"HKG" +
+	"HMD" +
+	"HND" +
+	"HRV" +
+	"HTI" +
+	"HUN" +
+	"HVO" +
+	"IDN" +
+	"IMN" +
+	"IND" +
+	"IOT" +
+	"IRL" +
+	"IRN" +
+	"IRQ" +
+	"ISL" +
+	"ISR" +
+	"JAM" +
+	"JEY" +
+	"JOR" +
+	"JPN" +
+	"JTN" +
+	"KAZ" +
+	"KEN" +
+	"KGZ" +
+	"KHM" +
+	"KIR" +
+	"KNA" +
+	"KOR" +
+	"KWT" +
+	"LAO" +
+	"LBN" +
+	"LBR" +
+	"LBY" +
+	"LCA" +
+	"LIE" +
+	"LKA" +
+	"LSO" +
+	"LTU" +
+	"LUX" +
+	"LVA" +
+	"MAC" +
+	"MAF" +
+	"MAR" +
+	"MCO" +
+	"MDA" +
+	"MDG" +
+	"MDV" +
+	"MEX" +
+	"MHL" +
+	"MID" +
+	"MKD" +
+	"MLI" +
+	"MLT" +
+	"MMR" +
+	"MNE" +
+	"MNG" +
+	"MNP" +
+	"MOZ" +
+	"MRT" +
+	"MSR" +
+	"MTQ" +
+	"MUS" +
+	"MWI" +
+	"MYS" +
+	"MYT" +
+	"NAM" +
+	"NCL" +
+	"NER" +
+	"NFK" +
+	"NGA" +
+	"NHB" +
+	"NIC" +
+	"NIU" +
+	"NLD" +
+	"NOR" +
+	"NPL" +
+	"NRU" +
+	"NTZ" +
+	"NZL" +
+	"OMN" +
+	"PAK" +
+	"PAN" +
+	"PCI" +
+	"PCN" +
+	"PCZ" +
+	"PER" +
+	"PHL" +
+	"PLW" +
+	"PNG" +
+	"POL" +
+	"PRI" +
+	"PRK" +
+	"PRT" +
+	"PRY" +
+	"PSE" +
+	"PUS" +
+	"PYF" +
+	"QAT" +
+	"REU" +
+	"RHO" +
+	"ROU" +
+	"RUS" +
+	"RWA" +
+	"SAU" +
+	"SCG" +
+	"SDN" +
+	"SEN" +
+	"SGP" +
+	"SGS" +
+	"SHN" +
+	"SJM" +
+	"SKM" +
+	"SLB" +
+	"SLE" +
+	"SLV" +
+	"SMR" +
+	"SOM" +
+	"SPM" +
+	"SRB" +
+	"SSD" +
+	"STP" +
+	"SUN" +
+	"SUR" +
+	"SVK" +
+	"SVN" +
+	"SWE" +
+	"SWZ" +
+	"SXM" +
+	"SYC" +
+	"SYR" +
+	"TCA" +
+	"TCD" +
+	"TGO" +
+	"THA" +
+	"TJK" +
+	"TKL" +
+	"TKM" +
+	"TLS" +
+	"TMP" +
+	"TON" +
+	"TTO" +
+	"TUN" +
+	"TUR" +
+	"TUV" +
+	"TWN" +
+	"TZA" +
+	"UGA" +
+	"UKR" +
+	"UMI" +
+	"URY" +
+	"UZB" +
+	"VAT" +
+	"VCT" +
+	"VDR" +
+	"VEN" +
+	"VGB" +
+	"VIR" +
+	"VNM" +
+	"VUT" +
+	"WAK" +
+	"WLF" +
+	"WSM" +
+	"YEM" +
+	"YMD" +
+	"YUG" +
+	"ZAF" +
+	"ZAR" +
+	"ZMB" +
+	"ZWE"
+
+// IsValidCountryCodeAlpha3 returns true when code is a valid current or formerly
+// assigned ISO 3166 alpha-3 country code.
+func IsValidCountryCodeAlpha3(code string) bool {
+	// Fast path.
+	switch code {
+	case "USA", "GBR", "DEU", "FRA", "ITA", "ESP":
+		return true
+	}
+	// Slow path.
+	if len(code) != 3 {
+		return false
+	}
+	for start := 0; start < len(countryAlpha3Codes); {
+		i := strings.Index(countryAlpha3Codes[start:], code)
+		if i == -1 {
+			return false
+		}
+		i += start
+		// Accept matches only at three-byte code boundaries.
+		if i%3 == 0 {
+			return true
+		}
+		start = i + 1
+	}
+	return false
+}

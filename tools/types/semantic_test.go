@@ -138,12 +138,17 @@ func Test_TypeSemanticConfiguration(t *testing.T) {
 		t.Fatalf("expected country format %s, got %s", ISO3166Alpha3, got)
 	}
 	phone := String().AsPhone()
-	for _, type_ := range []Type{country, phone} {
-		if maxBytes, ok := type_.MaxBytes(); ok || maxBytes != 0 {
-			t.Fatalf("expected max bytes 0 and false, got %d and %t", maxBytes, ok)
+	constraintTests := []Type{
+		country,
+		phone,
+		String().AsCountry(ISO3166Alpha2),
+	}
+	for _, typ := range constraintTests {
+		if maxBytes, ok := typ.MaxBytes(); ok || maxBytes != 0 {
+			t.Fatalf("expected no maxBytes constraint, got %d and %t", maxBytes, ok)
 		}
-		if maxLength, ok := type_.MaxLength(); ok || maxLength != 0 {
-			t.Fatalf("expected max length 0 and false, got %d and %t", maxLength, ok)
+		if maxLength, ok := typ.MaxLength(); ok || maxLength != 0 {
+			t.Fatalf("expected no maxLength constraint, got %d and %t", maxLength, ok)
 		}
 	}
 	money := Decimal(10, 2).AsMoney()

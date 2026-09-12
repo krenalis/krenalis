@@ -6,7 +6,6 @@ package transformers
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -20,8 +19,10 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/tools/validation"
 )
 
 var (
@@ -538,6 +539,25 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 	case types.StringKind:
 		if v.Kind() == '"' {
 			s := d.unquoteString(v)
+			switch t.Semantic() {
+			case types.CountrySemantic:
+				switch t.CountryFormat() {
+				case types.ISO3166Alpha2:
+					if !validation.IsValidCountryCodeAlpha2(s) {
+						return nil, newRecordValidationError("", "is not a 2-letters country code")
+					}
+				case types.ISO3166Alpha3:
+					if !validation.IsValidCountryCodeAlpha3(s) {
+						return nil, newRecordValidationError("", "is not a 3-letters country code")
+					}
+				}
+				return s, nil
+			case types.PhoneSemantic:
+				if len(s) > 16 {
+					return nil, newRecordValidationError("", "is not a valid phone number")
+				}
+				return s, nil
+			}
 			if values := t.Values(); values != nil {
 				if !slices.Contains(values, s) {
 					return nil, newRecordValidationError("", "is not one of the allowed values")

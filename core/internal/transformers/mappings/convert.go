@@ -19,6 +19,7 @@ import (
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/tools/validation"
 
 	"github.com/relvacode/iso8601"
 )
@@ -26,16 +27,19 @@ import (
 var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 
 var (
-	errMaxBytesConversion  = errors.New("invalid max bytes")
-	errMaxLengthConversion = errors.New("invalid max length")
-	errEnumConversion      = errors.New("not a valid enum value")
-	errInvalidConversion   = errors.New("cannot convert")
-	errMaxConversion       = errors.New("too large")
-	errMinConversion       = errors.New("too small")
-	errParseConversion     = errors.New("cannot parse")
-	errRangeConversion     = errors.New("out of range")
-	errPatternConversion   = errors.New("pattern mismatch")
-	errYearRangeConversion = errors.New("year not in range [1,9999]")
+	errCountryAlpha2Conversion = errors.New("not a valid 2-letters country code")
+	errCountryAlpha3Conversion = errors.New("not a valid 3-letters country code")
+	errEnumConversion          = errors.New("not a valid enum value")
+	errInvalidConversion       = errors.New("cannot convert")
+	errMaxBytesConversion      = errors.New("invalid max bytes")
+	errMaxConversion           = errors.New("too large")
+	errMaxLengthConversion     = errors.New("invalid max length")
+	errMinConversion           = errors.New("too small")
+	errParseConversion         = errors.New("cannot parse")
+	errPatternConversion       = errors.New("pattern mismatch")
+	errPhoneConversion         = errors.New("not a valid phone number")
+	errRangeConversion         = errors.New("out of range")
+	errYearRangeConversion     = errors.New("year not in range [1,9999]")
 )
 
 const (
@@ -146,6 +150,25 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			s = v.String()
 		default:
 			return v, errInvalidConversion
+		}
+		switch dt.Semantic() {
+		case types.CountrySemantic:
+			switch dt.CountryFormat() {
+			case types.ISO3166Alpha2:
+				if !validation.IsValidCountryCodeAlpha2(s) {
+					return v, errCountryAlpha2Conversion
+				}
+			case types.ISO3166Alpha3:
+				if !validation.IsValidCountryCodeAlpha3(s) {
+					return v, errCountryAlpha3Conversion
+				}
+			}
+			return s, nil
+		case types.PhoneSemantic:
+			if len(s) > 16 {
+				return v, errPhoneConversion
+			}
+			return s, nil
 		}
 		if values := dt.Values(); values != nil {
 			if s == "" && nullable {

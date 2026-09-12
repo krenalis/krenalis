@@ -19,6 +19,7 @@ import (
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/tools/validation"
 )
 
 // Platform represents a warehouse platform.
@@ -625,6 +626,25 @@ func ValidateIP(name string, s string) (any, error) {
 func ValidateString(name string, t types.Type, s string) (any, error) {
 	if !utf8.ValidString(s) {
 		return nil, fmt.Errorf("data warehouse returned a value for column %s, which contains invalid UTF-8 characters", name)
+	}
+	switch t.Semantic() {
+	case types.CountrySemantic:
+		switch t.CountryFormat() {
+		case types.ISO3166Alpha2:
+			if !validation.IsValidCountryCodeAlpha2(s) {
+				return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a 2-letters country code", name)
+			}
+		case types.ISO3166Alpha3:
+			if !validation.IsValidCountryCodeAlpha3(s) {
+				return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a 3-letters country code", name)
+			}
+		}
+		return s, nil
+	case types.PhoneSemantic:
+		if len(s) > 16 {
+			return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a valid phone number", name)
+		}
+		return s, nil
 	}
 	if values := t.Values(); values != nil {
 		if !slices.Contains(values, s) {
