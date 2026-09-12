@@ -266,6 +266,11 @@ func init() {
 		panic(err)
 	}
 
+	// Only the first 10 customers are taken. The others, with the current
+	// implementation of Dummy, remain defined in the JSON file but are not
+	// used.
+	rawCustomers = rawCustomers[:10]
+
 	now := time.Now().UTC()
 
 	customersLock.Lock()

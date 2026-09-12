@@ -9,6 +9,9 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/krenalis/krenalis/test/krenalistester"
@@ -22,17 +25,40 @@ func TestProfilesPagination(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
+
+	const (
+		pageSize     = 200
+		profileCount = 2*pageSize + 1
+	)
+	storage := krenalistester.NewTempStorage(t)
+	defer storage.Remove()
+	users := make([]map[string]string, profileCount)
+	for i := range users {
+		id := strconv.Itoa(i)
+		users[i] = map[string]string{"id": id, "email": "profile-" + id + "@example.com"}
+	}
+	content, err := json.Marshal(users)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = os.WriteFile(filepath.Join(storage.Root(), "users.json"), content, 0644)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	k := krenalistester.NewKrenalisInstance(t)
+	k.SetFileSystemRoot(storage.Root())
 	k.Start()
 	defer k.Stop()
 
 	k.UpdateIdentityResolutionSettings(false, nil)
-	dummy := k.CreateDummy("Dummy", krenalistester.Source)
-	pipeline := k.CreatePipeline(dummy, "User", krenalistester.PipelineToSet{
-		Name:    "Import users from Dummy",
+	source := k.CreateSourceFileSystem()
+	pipeline := k.CreatePipeline(source, "User", krenalistester.PipelineToSet{
+		Name:    "Import users from JSON",
 		Enabled: true,
 		InSchema: types.Object([]types.Property{
-			{Name: "email", Type: types.String(), Nullable: true},
+			{Name: "id", Type: types.JSON()},
+			{Name: "email", Type: types.JSON()},
 		}),
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
@@ -40,6 +66,12 @@ func TestProfilesPagination(t *testing.T) {
 		Transformation: &krenalistester.Transformation{
 			Mapping: map[string]string{"email": "email"},
 		},
+		UserIDColumn: "id",
+		Path:         "users.json",
+		Format:       "json",
+		FormatSettings: krenalistester.SettingsProperties(map[string]bool{
+			"id": true, "email": true,
+		}),
 	})
 	run := k.StartPipelineRun(pipeline)
 	k.WaitForRunsCompletion(run)
@@ -52,11 +84,10 @@ func TestProfilesPagination(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	const pageSize = 200
-	firstPage, _, expectedTotal, hasNext := k.ProfilesWithSchema(
+	firstPage, expectedTotal, hasNext := k.ProfilesWithSchema(
 		requestSchema, []string{"email"}, "", true, 0, pageSize)
-	if expectedTotal <= pageSize {
-		t.Fatalf("expected more than %d profiles, got %d", pageSize, expectedTotal)
+	if expectedTotal != profileCount {
+		t.Fatalf("expected %d profiles, got %d", profileCount, expectedTotal)
 	}
 	if len(firstPage) != pageSize {
 		t.Fatalf("expected %d profiles in the first page, got %d", pageSize, len(firstPage))
@@ -71,8 +102,8 @@ func TestProfilesPagination(t *testing.T) {
 		"limit":      []string{"1"},
 		"schema":     []string{string(schemaJSON)},
 	}.Encode(), nil, nil, &summaryResponse)
-	if _, ok := summaryResponse["schema"]; !ok {
-		t.Fatal("expected the projected schema in the response")
+	if _, ok := summaryResponse["schema"]; ok {
+		t.Fatal("unexpected schema in profiles response")
 	}
 	var countResponse struct {
 		Total int `json:"total"`
@@ -105,7 +136,7 @@ func TestProfilesPagination(t *testing.T) {
 	}
 	profiles := firstPage
 	for first := pageSize; first < expectedTotal; first += pageSize {
-		page, _, total, pageHasNext := k.ProfilesWithSchema(
+		page, total, pageHasNext := k.ProfilesWithSchema(
 			requestSchema, []string{"email"}, "", true, first, pageSize)
 		if total != expectedTotal {
 			t.Fatalf("expected a total of %d profiles, got %d", expectedTotal, total)
@@ -161,7 +192,7 @@ func TestProfilesPagination(t *testing.T) {
 		t.Fatal("attributes do not match the requested profile")
 	}
 
-	empty, _, _, emptyHasNext := k.ProfilesWithSchema(
+	empty, _, emptyHasNext := k.ProfilesWithSchema(
 		requestSchema, []string{"email"}, "", true, expectedTotal, pageSize)
 	if len(empty) != 0 || emptyHasNext {
 		t.Fatalf("unexpected empty range: profiles=%d hasNext=%t", len(empty), emptyHasNext)
@@ -313,9 +344,13 @@ func TestProfilesPagination(t *testing.T) {
 		Name: "new_property", Type: types.String(), ReadOptional: true,
 	})
 	k.AlterProfileSchemaAndWait(types.Object(newProperties), nil, nil)
-	page, projectedSchema, _, _ := k.ProfilesWithSchema(partialSchema, nil, "", true, 0, 1)
-	if len(page) != 1 || !types.Equal(projectedSchema, partialSchema) {
-		t.Fatal("omitting properties must return only the supplied schema")
+	page, _, _ := k.ProfilesWithSchema(partialSchema, nil, "", true, 0, 1)
+	if len(page) != 1 {
+		t.Fatalf("expected one profile, got %d", len(page))
+	}
+	_, hasEmail := page[0].Attributes["email"]
+	if len(page[0].Attributes) != 1 || !hasEmail {
+		t.Fatal("omitting properties must return only attributes from the supplied schema")
 	}
 	k.RunIdentityResolutionAndWait()
 	k.ProfilesWithSchema(partialSchema, nil, "", true, 0, 1)
