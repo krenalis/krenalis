@@ -281,6 +281,8 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 			let nextValueType = valueType;
 			if (canEditType && (getTypeSemantic(selection) != null || valueType?.kind !== option.kind)) {
 				nextValueType = selection;
+			} else if (canEditType && valueType != null && getTypeSemantic(valueType) != null) {
+				nextValueType = withoutSemantic(valueType);
 			}
 			if (nextValueType == null) {
 				return;
@@ -424,6 +426,22 @@ const getPropertyTypeOption = (type: Type | null): PropertyTypeOption | undefine
 	const valueType = getPropertyValueType(type);
 	const id: PropertyTypeOptionID | undefined = getTypeSemantic(valueType) ?? valueType?.kind;
 	return PROPERTY_TYPE_OPTIONS.find((option) => option.id === id);
+};
+
+const withoutSemantic = (type: Type): Type => {
+	const result = { ...type };
+	if ('semantic' in result) {
+		delete result.semantic;
+	}
+	if (result.kind === 'string') {
+		delete result.format;
+	} else if (result.kind === 'decimal') {
+		delete result.currency;
+		delete result.unit;
+	} else if (result.kind === 'int' || result.kind === 'float') {
+		delete result.unit;
+	}
+	return result;
 };
 
 const wrapPropertyValueType = (type: Type, structure: PropertyStructure): Type => {

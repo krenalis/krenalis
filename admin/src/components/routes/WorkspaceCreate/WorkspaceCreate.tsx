@@ -1,7 +1,6 @@
 import React, { useState, useContext, useRef, useEffect } from 'react';
 import './WorkspaceCreate.css';
 import { ObjectType } from '../../../lib/api/types/types';
-import { UIPreferences } from '../../../lib/api/types/workspace';
 import API from '../../../lib/api/api';
 import appContext from '../../../context/AppContext';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
@@ -92,25 +91,9 @@ const WorkspaceCreate = () => {
 			};
 		}
 
-		let uiProperties: UIPreferences = {
-			profile: {
-				image: '',
-				firstName: 'first_name',
-				lastName: 'last_name',
-				extra: 'email',
-			},
-		};
-
 		if (action == 'test') {
 			try {
-				await api.workspaces.testCreation(
-					name,
-					InitialSchema as ObjectType,
-					warehouse,
-					'Normal',
-					settings,
-					uiProperties,
-				);
+				await api.workspaces.testCreation(name, InitialSchema as ObjectType, warehouse, 'Normal', settings);
 			} catch (err) {
 				setTimeout(() => {
 					setIsCheckingWarehouse(false);
@@ -135,7 +118,6 @@ const WorkspaceCreate = () => {
 					warehouse,
 					'Normal',
 					settings,
-					uiProperties,
 				);
 				id = res.id;
 			} catch (err) {

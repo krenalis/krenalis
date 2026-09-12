@@ -25,13 +25,22 @@ import Type, {
 	Semantic,
 	StringType,
 } from '../../../lib/api/types/types';
+import { ProfileRoleAssignments, ProfileRoleID } from '../../../lib/api/types/workspace';
 import TransformedConnection from '../../../lib/core/connection';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
+import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { COMMON_CURRENCY_OPTION_COUNT, CURRENCY_OPTIONS } from '../../helpers/currencies';
 import {
+	getCompatibleProfileRoles,
+	getProfileRole,
+	isProfileRoleCompatible,
+	PROFILE_ROLES,
+} from '../../helpers/profileRoles';
+import {
 	DURATION_UNIT_OPTIONS,
 	getPropertyValueType,
+	getTypeSemantic,
 	isSuitableAsIdentifier,
 	replacePropertyValueType,
 	UNIT_OF_MEASURE_OPTIONS,
@@ -42,9 +51,10 @@ import {
 	SchemaPropertyInfoTooltip,
 	SchemaPropertyPrimarySourceLabel,
 } from '../Schema/SchemaPropertyGrid';
+import { ProfileRoleSelector } from './ProfileRoleSelector';
+import { PropertyTypeSelector, type PropertyTypeSelectorRef } from './PropertyTypeSelector';
 import { getParentPropertyKey } from './SchemaEdit.helpers';
 import { PropertyFieldChanges, PropertyParent, PropertyToEdit } from './useSchemaEdit';
-import { PropertyTypeSelector, type PropertyTypeSelectorRef } from './PropertyTypeSelector';
 
 const INT_BITSIZES: string[] = ['8', '16', '24', '32', '64'];
 const FLOAT_BITSIZES: string[] = ['32', '64'];
@@ -106,25 +116,42 @@ const removeReadOnlyTypeControlFromTabOrder = (control: SlCheckboxElement | SlIn
 };
 
 interface PropertyFormProps {
+	assignedRole: ProfileRoleID | null;
+	assignedRoles: ProfileRoleAssignments;
 	fieldChanges?: PropertyFieldChanges;
 	formID: string;
 	identifierPosition?: number;
 	propertyToEdit: PropertyToEdit;
 	primarySources: Record<string, string>;
 	parents?: PropertyParent[];
+	propertyPaths: Readonly<Record<string, string>>;
 	showParent?: boolean;
-	onSave: (property: PropertyToEdit, primarySource: string | null) => void;
+	onSave: (
+		property: PropertyToEdit,
+		primarySource: string | null,
+		assignedRole: ProfileRoleID | null,
+		rolesToUnassign: readonly ProfileRoleID[],
+	) => void;
 	onDirtyChange?: (dirty: boolean) => void;
 	onValidityChange?: (valid: boolean) => void;
 }
 
+interface PendingTypeChange {
+	description: React.ReactNode;
+	rolesToUnassign: ProfileRoleID[];
+	type: Type;
+}
+
 const PropertyForm = ({
+	assignedRole: assignedRoleToEdit,
+	assignedRoles,
 	fieldChanges,
 	formID,
 	identifierPosition,
 	propertyToEdit,
 	primarySources,
 	parents,
+	propertyPaths,
 	showParent,
 	onSave,
 	onDirtyChange,
@@ -132,6 +159,11 @@ const PropertyForm = ({
 }: PropertyFormProps) => {
 	const [property, setProperty] = useState<PropertyToEdit>(() => structuredClone(propertyToEdit));
 	const [primarySource, setPrimarySource] = useState<string | null>(primarySources[propertyToEdit.key] || null);
+	const [assignedRole, setAssignedRole] = useState<ProfileRoleID | null>(assignedRoleToEdit);
+	const [descendantRolesToUnassign, setDescendantRolesToUnassign] = useState<ProfileRoleID[]>([]);
+	const [roleToReassign, setRoleToReassign] = useState<ProfileRoleID | null>(null);
+	const [pendingTypeChange, setPendingTypeChange] = useState<PendingTypeChange | null>(null);
+	const [typeSelectorRevision, setTypeSelectorRevision] = useState(0);
 	const [decimalTypeInputs, setDecimalTypeInputs] = useState<DecimalTypeInputs>(() =>
 		getDecimalTypeInputs(propertyToEdit.type),
 	);
@@ -169,6 +201,11 @@ const PropertyForm = ({
 		const nextNumericRangeInputs = getNumericRangeInputs(propertyToEdit.type);
 		setProperty(nextProperty);
 		setPrimarySource(nextPrimarySource);
+		setAssignedRole(assignedRoleToEdit);
+		setDescendantRolesToUnassign([]);
+		setRoleToReassign(null);
+		setPendingTypeChange(null);
+		setTypeSelectorRevision(0);
 		setDecimalTypeInputs(nextDecimalTypeInputs);
 		setNumericRangeInputs(nextNumericRangeInputs);
 		setIsNameEditable(propertyToEdit.key == null);
@@ -179,6 +216,8 @@ const PropertyForm = ({
 			nextPrimarySource,
 			nextDecimalTypeInputs,
 			nextNumericRangeInputs,
+			assignedRoleToEdit,
+			[],
 		);
 		onDirtyChange?.(false);
 		setTimeout(() => {
@@ -198,17 +237,23 @@ const PropertyForm = ({
 				}
 			}
 		});
-	}, [propertyToEdit]);
+	}, [assignedRoleToEdit, propertyToEdit]);
 
 	useEffect(() => {
 		if (initialState.current === '') {
 			return;
 		}
 		onDirtyChange?.(
-			propertyFormStateKey(property, primarySource, decimalTypeInputs, numericRangeInputs) !==
-				initialState.current,
+			propertyFormStateKey(
+				property,
+				primarySource,
+				decimalTypeInputs,
+				numericRangeInputs,
+				assignedRole,
+				descendantRolesToUnassign,
+			) !== initialState.current,
 		);
-	}, [property, primarySource, decimalTypeInputs, numericRangeInputs]);
+	}, [assignedRole, descendantRolesToUnassign, property, primarySource, decimalTypeInputs, numericRangeInputs]);
 
 	useEffect(() => {
 		const type = getPropertyValueType(property.type);
@@ -330,7 +375,7 @@ const PropertyForm = ({
 		});
 	};
 
-	const onChangeType = (type: Type | null) => {
+	const applyTypeChange = (type: Type | null) => {
 		updateProperty((nextProperty) => {
 			nextProperty.type = type;
 		});
@@ -340,6 +385,93 @@ const PropertyForm = ({
 			setPrimarySource(null);
 		}
 		setTypeError(null);
+	};
+
+	const onChangeType = (type: Type | null) => {
+		if (type == null) {
+			applyTypeChange(type);
+			return;
+		}
+		const proposedProperty = { ...property, type };
+		const rolesToUnassign: ProfileRoleID[] = [];
+		if (assignedRole != null && !isProfileRoleCompatible(assignedRole, proposedProperty)) {
+			rolesToUnassign.push(assignedRole);
+		}
+		if (propertyToEdit.key != null && propertyToEdit.type?.kind === 'object' && type.kind !== 'object') {
+			for (const role of PROFILE_ROLES) {
+				if (
+					assignedRoles[role.id].startsWith(`${propertyToEdit.key}.`) &&
+					!descendantRolesToUnassign.includes(role.id)
+				) {
+					rolesToUnassign.push(role.id);
+				}
+			}
+		}
+		const uniqueRolesToUnassign = [...new Set(rolesToUnassign)];
+		if (uniqueRolesToUnassign.length === 0) {
+			if (type.kind === 'object') {
+				setDescendantRolesToUnassign([]);
+			}
+			applyTypeChange(type);
+			return;
+		}
+
+		const typeLabel = getTypeSemantic(getPropertyValueType(type)) || type.kind;
+		let description: React.ReactNode;
+		if (uniqueRolesToUnassign.length === 1 && uniqueRolesToUnassign[0] === assignedRole) {
+			const role = getProfileRole(uniqueRolesToUnassign[0]);
+			description =
+				type.kind === 'array' ? (
+					<>
+						Changing this property to an array will remove the <code>{role.label}</code> role from this
+						property.
+					</>
+				) : (
+					<>
+						Changing the type to <code>{typeLabel}</code> will remove the <code>{role.label}</code> role
+						from this property.
+					</>
+				);
+		} else {
+			const roleLabels = uniqueRolesToUnassign.map((role) => getProfileRole(role).label).join(', ');
+			description = (
+				<>
+					Changing the type to <code>{typeLabel}</code> will remove these roles: {roleLabels}.
+				</>
+			);
+		}
+		setTypeSelectorRevision((current) => current + 1);
+		setPendingTypeChange({ description, rolesToUnassign: uniqueRolesToUnassign, type });
+	};
+
+	const onChangeAssignedRole = (role: ProfileRoleID | null) => {
+		if (role == null || role === assignedRole) {
+			setAssignedRole(role);
+			return;
+		}
+		const assignedPropertyKey = assignedRoles[role];
+		if (assignedPropertyKey !== '' && assignedPropertyKey !== propertyToEdit.key) {
+			setRoleToReassign(role);
+			return;
+		}
+		setAssignedRole(role);
+	};
+
+	const onConfirmReassign = () => {
+		setAssignedRole(roleToReassign);
+		setRoleToReassign(null);
+	};
+
+	const onConfirmTypeChange = () => {
+		if (pendingTypeChange == null) {
+			return;
+		}
+		if (assignedRole != null && pendingTypeChange.rolesToUnassign.includes(assignedRole)) {
+			setAssignedRole(null);
+		}
+		setDescendantRolesToUnassign(pendingTypeChange.rolesToUnassign.filter((role) => role !== assignedRole));
+		applyTypeChange(pendingTypeChange.type);
+		setPendingTypeChange(null);
 	};
 
 	const onChangeBitSize = (event) => {
@@ -522,12 +654,19 @@ const PropertyForm = ({
 			return;
 		}
 		try {
-			onSave(property, primarySource);
+			onSave(property, primarySource, assignedRole, descendantRolesToUnassign);
 		} catch (err) {
 			setNameError(err.message);
 			return;
 		}
-		initialState.current = propertyFormStateKey(property, primarySource, decimalTypeInputs, numericRangeInputs);
+		initialState.current = propertyFormStateKey(
+			property,
+			primarySource,
+			decimalTypeInputs,
+			numericRangeInputs,
+			assignedRole,
+			descendantRolesToUnassign,
+		);
 		onDirtyChange?.(false);
 	};
 
@@ -557,6 +696,10 @@ const PropertyForm = ({
 		valueType?.kind === 'int' && valueType.semantic === 'duration'
 			? DURATION_UNIT_OPTIONS.find((option) => option.value === valueType.unit)
 			: undefined;
+	const propertyParentPath = propertyPaths[parentKey] ?? '';
+	const propertyPath = propertyParentPath === '' ? property.name : `${propertyParentPath}.${property.name}`;
+	const showAssignedRole = getCompatibleProfileRoles(property).length > 0 || assignedRole != null;
+	const reassignedRole = roleToReassign == null ? null : getProfileRole(roleToReassign);
 	let minimumPlaceholder = '';
 	let maximumPlaceholder = '';
 	let minimumTooltip: { content: string; label: string } | undefined;
@@ -690,6 +833,7 @@ const PropertyForm = ({
 					<PropertyFormLabel modified={fieldChanges?.type}>Type</PropertyFormLabel>
 				</div>
 				<PropertyTypeSelector
+					key={typeSelectorRevision}
 					ref={typeSelectorRef}
 					type={property.type}
 					canEditType={canEditType}
@@ -1052,6 +1196,25 @@ const PropertyForm = ({
 					)}
 				</div>
 			)}
+			{showAssignedRole && (
+				<div className='property-form__control property-form__assigned-role'>
+					<div className='property-form__label'>
+						<PropertyFormLabel modified={fieldChanges?.profileRole}>
+							Assigned role <span className='property-form__optional-label'>(optional)</span>
+						</PropertyFormLabel>
+					</div>
+					<div className='property-form__assigned-role-description'>
+						Specifies which profile concept this property represents.
+					</div>
+					<ProfileRoleSelector
+						assignedRole={assignedRole}
+						assignedRoles={assignedRoles}
+						onChange={onChangeAssignedRole}
+						property={property}
+						propertyPaths={propertyPaths}
+					/>
+				</div>
+			)}
 			<SlInput
 				className='property-form__control property-form__display-name'
 				value={property.displayName || ''}
@@ -1127,6 +1290,49 @@ const PropertyForm = ({
 					)}
 				</div>
 			)}
+			<AlertDialog
+				isOpen={roleToReassign != null}
+				onClose={() => setRoleToReassign(null)}
+				title='Reassign role?'
+				actions={
+					<>
+						<SlButton onClick={() => setRoleToReassign(null)}>Cancel</SlButton>
+						<SlButton variant='primary' onClick={onConfirmReassign}>
+							Reassign
+						</SlButton>
+					</>
+				}
+			>
+				{reassignedRole != null && (
+					<p>
+						{reassignedRole.label} is currently assigned to{' '}
+						<code>{propertyPaths[assignedRoles[reassignedRole.id]]}</code>. Reassign the{' '}
+						{reassignedRole.label} role to <code>{propertyPath}</code>?
+						{assignedRole != null && assignedRole !== reassignedRole.id && (
+							<>
+								{' '}
+								This will remove the <code>{getProfileRole(assignedRole).label}</code> role from{' '}
+								<code>{propertyPath}</code>.
+							</>
+						)}
+					</p>
+				)}
+			</AlertDialog>
+			<AlertDialog
+				isOpen={pendingTypeChange != null}
+				onClose={() => setPendingTypeChange(null)}
+				title='Change type?'
+				actions={
+					<>
+						<SlButton onClick={() => setPendingTypeChange(null)}>Cancel</SlButton>
+						<SlButton variant='primary' onClick={onConfirmTypeChange}>
+							Change type
+						</SlButton>
+					</>
+				}
+			>
+				<p>{pendingTypeChange?.description}</p>
+			</AlertDialog>
 		</form>
 	);
 };
@@ -1168,8 +1374,17 @@ const propertyFormStateKey = (
 	primarySource: string | null,
 	decimalTypeInputs: DecimalTypeInputs,
 	numericRangeInputs: NumericRangeInputs,
+	assignedRole: ProfileRoleID | null,
+	rolesToUnassign: readonly ProfileRoleID[],
 ): string => {
-	return JSON.stringify({ property, primarySource, decimalTypeInputs, numericRangeInputs });
+	return JSON.stringify({
+		property,
+		primarySource,
+		decimalTypeInputs,
+		numericRangeInputs,
+		assignedRole,
+		rolesToUnassign,
+	});
 };
 
 const validatePropertyType = (

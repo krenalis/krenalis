@@ -60,6 +60,47 @@ func (k *Krenalis) AlterProfileSchemaAndWait(schema types.Type, primarySources m
 		"primarySources": primarySources,
 		"rePaths":        rePaths,
 	}
+	k.alterProfileSchemaAndWait(req)
+}
+
+// AlterProfileSchemaWithAssignedRolesAndWait alters the profile schema and its
+// assigned roles and waits for the operation to complete before returning.
+func (k *Krenalis) AlterProfileSchemaWithAssignedRolesAndWait(schema types.Type, assignedRoles ProfileRoleAssignments, primarySources map[string]string, rePaths map[string]any) {
+	req := map[string]any{
+		"schema":         schema,
+		"assignedRoles":  assignedRoles,
+		"primarySources": primarySources,
+		"rePaths":        rePaths,
+	}
+	k.alterProfileSchemaAndWait(req)
+}
+
+// TryAlterProfileSchema alters the profile schema, returning an error if it
+// fails. Unlike AlterProfileSchemaAndWait, it does not wait for completion.
+func (k *Krenalis) TryAlterProfileSchema(schema types.Type, primarySources map[string]string, rePaths map[string]any) error {
+	req := map[string]any{
+		"schema":         schema,
+		"primarySources": primarySources,
+		"rePaths":        rePaths,
+	}
+	return k.TryCall("PUT", "/v1/profiles/schema", nil, req, nil)
+}
+
+// TryAlterProfileSchemaWithAssignedRoles alters the profile schema and its
+// assigned roles, returning an error if it fails.
+func (k *Krenalis) TryAlterProfileSchemaWithAssignedRoles(schema types.Type, assignedRoles ProfileRoleAssignments, primarySources map[string]string, rePaths map[string]any) error {
+	req := map[string]any{
+		"schema":         schema,
+		"assignedRoles":  assignedRoles,
+		"primarySources": primarySources,
+		"rePaths":        rePaths,
+	}
+	return k.TryCall("PUT", "/v1/profiles/schema", nil, req, nil)
+}
+
+// alterProfileSchemaAndWait alters a profile schema with req and waits for it
+// to complete before returning.
+func (k *Krenalis) alterProfileSchemaAndWait(req map[string]any) {
 	ts := time.Now().UTC()
 	k.Call("PUT", "/v1/profiles/schema", nil, req, nil)
 	// Waits for the alter schema that was started following the call to this
@@ -77,17 +118,6 @@ func (k *Krenalis) AlterProfileSchemaAndWait(schema types.Type, primarySources m
 			break
 		}
 	}
-}
-
-// TryAlterProfileSchema alters the profile schema, returning an error if it
-// fails. Unlike AlterProfileSchemaAndWait, it does not wait for completion.
-func (k *Krenalis) TryAlterProfileSchema(schema types.Type, primarySources map[string]string, rePaths map[string]any) error {
-	req := map[string]any{
-		"schema":         schema,
-		"primarySources": primarySources,
-		"rePaths":        rePaths,
-	}
-	return k.TryCall("PUT", "/v1/profiles/schema", nil, req, nil)
 }
 
 // CanGetEvents reports whether the events (passing the given properties) can be
@@ -851,8 +881,7 @@ func (k *Krenalis) TestWarehouseUpdate(settings json.Value) {
 
 // TestWorkspaceCreation tests creating a workspace with the given parameters,
 // returning an error if it fails.
-func (k *Krenalis) TestWorkspaceCreation(name string, profileSchema types.Type,
-	uiPreferences UIPreferences, whPlatform string, whSettings json.Value, mode WarehouseMode) error {
+func (k *Krenalis) TestWorkspaceCreation(name string, profileSchema types.Type, whPlatform string, whSettings json.Value, mode WarehouseMode) error {
 	headers := http.Header{
 		"Krenalis-Workspace": nil,
 	}
@@ -864,7 +893,6 @@ func (k *Krenalis) TestWorkspaceCreation(name string, profileSchema types.Type,
 			"mode":     mode,
 			"settings": whSettings,
 		},
-		"uiPreferences": uiPreferences,
 	}
 	return k.TryCall("POST", "/v1/workspaces/test", headers, body, nil)
 }

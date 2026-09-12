@@ -14,6 +14,7 @@ import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import { ProfileRoleID } from '../../../lib/api/types/workspace';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import Grid from '../../base/Grid/Grid';
 import { GridKeyboardHints } from '../../base/Grid/GridKeyboardHints';
@@ -21,11 +22,13 @@ import { useDocumentGridKeyboardNavigation } from '../../base/Grid/useDocumentGr
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
 import { FullscreenContext } from '../../../context/FullscreenContext';
 import { SchemaContext } from '../../../context/SchemaContext';
+import { getAssignedProfileRole, PROFILE_ROLES } from '../../helpers/profileRoles';
 import { EditableProperty, getParentPropertyKey, newPropertyToEdit } from './SchemaEdit.helpers';
 import { PropertyPanel } from './PropertyPanel';
 import { PropertyToEdit, PropertyToRemove, SelectPropertyOptions, useSchemaEdit } from './useSchemaEdit';
 
-const schemaEditGridColumns = 'minmax(180px, 0.7fr) minmax(310px, 1.45fr) 86px minmax(170px, 0.65fr) 90px';
+const schemaEditGridColumns =
+	'minmax(180px, 0.7fr) minmax(300px, 1.35fr) 86px minmax(130px, 0.5fr) minmax(170px, 0.65fr) 90px';
 
 interface SchemaEditProps {
 	initialPropertyKey?: string | null;
@@ -89,6 +92,8 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		propertyParents,
 		selectedPropertyFieldChanges,
 		propertyStatuses,
+		assignedRoles,
+		propertyPaths,
 		primarySources,
 		queries,
 		hasSchemaChanges,
@@ -208,16 +213,26 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		setPropertyToEdit(property);
 	};
 
-	const onSaveProperty = (property: PropertyToEdit, primarySource: string | null) => {
+	const onSaveProperty = (
+		property: PropertyToEdit,
+		primarySource: string | null,
+		assignedRole: ProfileRoleID | null,
+		rolesToUnassign: readonly ProfileRoleID[],
+	) => {
 		setAnimatePropertyActions(false);
 		if (property.key == null) {
-			const addedProperty = onAddProperty(property, primarySource, selectedPropertyBeforeAddRef.current?.key);
+			const addedProperty = onAddProperty(
+				property,
+				primarySource,
+				assignedRole,
+				selectedPropertyBeforeAddRef.current?.key,
+			);
 			selectedPropertyBeforeAddRef.current = null;
 			setPropertyToEdit(addedProperty);
 			setPropertyDraftDirty(false);
 			return;
 		}
-		onEditProperty(property, primarySource);
+		onEditProperty(property, primarySource, assignedRole, rolesToUnassign);
 		resetPropertyDraft(property);
 		setPropertyDraftDirty(false);
 	};
@@ -311,6 +326,16 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		onCancelChanges();
 	};
 	const isDiscardingNewProperty = propertyToRemove?.isNew === true;
+	const propertyInPanelAssignedRole =
+		propertyInPanel?.key == null ? null : getAssignedProfileRole(assignedRoles, propertyInPanel.key);
+	const rolesUnassignedByRemoval =
+		propertyToRemove == null
+			? []
+			: PROFILE_ROLES.filter(
+					(role) =>
+						assignedRoles[role.id] === propertyToRemove.key ||
+						assignedRoles[role.id].startsWith(`${propertyToRemove.key}.`),
+				);
 
 	return (
 		<div className='schema-edit'>
@@ -407,6 +432,8 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 						/>
 					</div>
 					<PropertyPanel
+						assignedRole={propertyInPanelAssignedRole}
+						assignedRoles={assignedRoles}
 						animateActions={animatePropertyActions}
 						dirty={propertyDraftDirty}
 						fieldChanges={propertyInPanel == null ? undefined : selectedPropertyFieldChanges}
@@ -416,6 +443,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 						property={propertyInPanel}
 						parents={propertyParents}
 						primarySources={primarySources}
+						propertyPaths={propertyPaths}
 						status={propertyStatuses[propertyInPanel?.key]}
 						onClose={onCancelProperty}
 						onActionsAnimationFinish={() => setAnimatePropertyActions(false)}
@@ -506,6 +534,20 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 					{isDiscardingNewProperty
 						? " hasn't been added to the schema yet. Discarding it will remove it from your pending changes."
 						: ' will be deleted when you apply your schema changes.'}
+					{rolesUnassignedByRemoval.length > 0 && (
+						<>
+							{' '}
+							{isDiscardingNewProperty ? 'Discarding' : 'Deleting'} it will also unassign{' '}
+							{rolesUnassignedByRemoval.length === 1 ? 'the ' : 'these roles: '}
+							{rolesUnassignedByRemoval.map((role, index) => (
+								<React.Fragment key={role.id}>
+									{index > 0 && ', '}
+									<code>{role.label}</code>
+								</React.Fragment>
+							))}
+							{rolesUnassignedByRemoval.length === 1 ? ' role.' : '.'}
+						</>
+					)}
 				</p>
 			</AlertDialog>
 			<AlertDialog
