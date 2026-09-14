@@ -34,26 +34,6 @@ func SatisfiesProfile(purposes []*state.ConsentPurpose, matchAll bool, profile m
 	})
 }
 
-// satisfies reports whether the required consent purposes are satisfied, given
-// that grants reports whether the consent for a purpose is given. If matchAll
-// is true, the consent must be given for every required purpose; otherwise,
-// one purpose is enough.
-func satisfies(purposes []*state.ConsentPurpose, matchAll bool, grants func(*state.ConsentPurpose) bool) bool {
-	if len(purposes) == 0 {
-		return true
-	}
-	for _, purpose := range purposes {
-		if grants(purpose) {
-			if !matchAll {
-				return true
-			}
-		} else if matchAll {
-			return false
-		}
-	}
-	return matchAll
-}
-
 // granted reports whether the property of the given attributes with the given
 // path holds a granted consent. The consent can be held by a boolean property
 // or by a boolean value inside a JSON property, but not by a JSON property that
@@ -75,4 +55,24 @@ func granted(attributes map[string]any, path []string) bool {
 		return properties.InJSON(attributes, path) && v.Bool()
 	}
 	return false
+}
+
+// satisfies reports whether the required consent purposes are satisfied, given
+// that grants reports whether the consent for a purpose is given. If matchAll
+// is true, the consent must be given for every required purpose; otherwise,
+// one purpose is enough.
+func satisfies(purposes []*state.ConsentPurpose, matchAll bool, grants func(*state.ConsentPurpose) bool) bool {
+	if len(purposes) == 0 {
+		return true
+	}
+	for _, purpose := range purposes {
+		if grants(purpose) {
+			if !matchAll {
+				return true
+			}
+		} else if matchAll {
+			return false
+		}
+	}
+	return matchAll
 }
