@@ -326,8 +326,10 @@ func checkConsentPurposeCodes(ctx context.Context, tx *db.Tx, workspace, id, cod
 		"FROM consent_purposes AS cp, UNNEST(ARRAY[cp.code] || cp.aliases) AS k\n"+
 		"WHERE cp.workspace = $1 AND cp.id <> $2 AND k = ANY($3)\n"+
 		"LIMIT 1", workspace, id, keys).Scan(&conflicting)
-	if err != nil && err != sql.ErrNoRows {
-		return err
+	if err != nil {
+		if err != sql.ErrNoRows {
+			return err
+		}
 	}
 	if conflicting == "" {
 		return nil

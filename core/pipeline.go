@@ -944,8 +944,10 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 				"FROM UNNEST($1::varchar[]) AS purpose\n"+
 				"WHERE NOT EXISTS (SELECT 1 FROM consent_purposes AS cp WHERE cp.id = purpose AND cp.workspace = $2)\n"+
 				"LIMIT 1", n.RequiredConsents.Purposes, c.Workspace().ID).Scan(&missing)
-			if err != nil && err != sql.ErrNoRows {
-				return nil, err
+			if err != nil {
+				if err != sql.ErrNoRows {
+					return nil, err
+				}
 			}
 			if missing != "" {
 				return nil, errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", missing)
