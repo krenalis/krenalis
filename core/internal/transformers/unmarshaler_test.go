@@ -646,8 +646,8 @@ func Test_UnmarshalEdgeCases(t *testing.T) {
 		rec := []Record{{}}
 		data := strings.NewReader(`{"records":[{"value":{"a":["x","x"]}}]}`)
 		err := Unmarshal(data, rec, sch, state.JavaScript, false)
-		if err != errInvalidResponseFormat {
-			t.Fatalf("expected errInvalidResponseFormat, got %v", err)
+		if err != nil {
+			t.Fatal(err)
 		}
 		if rec[0].Err == nil || rec[0].Err.Error() != "property «a» contains a duplicated value" {
 			t.Fatalf("unexpected record error: %v", rec[0].Err)
@@ -659,8 +659,8 @@ func Test_UnmarshalEdgeCases(t *testing.T) {
 		rec := []Record{{}}
 		less := strings.NewReader(`{"records":[{"value":{"a":[1]}}]}`)
 		err := Unmarshal(less, rec, sch, state.JavaScript, false)
-		if err != errInvalidResponseFormat {
-			t.Fatalf("expected errInvalidResponseFormat for less elements, got %v", err)
+		if err != nil {
+			t.Fatal(err)
 		}
 		if rec[0].Err == nil || rec[0].Err.Error() != "property «a» contains less than 2 elements" {
 			t.Fatalf("unexpected error for less elements: %v", rec[0].Err)
