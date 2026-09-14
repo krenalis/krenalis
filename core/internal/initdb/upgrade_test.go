@@ -5,7 +5,9 @@
 package initdb
 
 import (
+	"fmt"
 	"maps"
+	"slices"
 	"testing"
 
 	"github.com/krenalis/krenalis/core/internal/db"
@@ -86,7 +88,26 @@ func TestUpgrade(t *testing.T) {
 		CREATE TABLE pipelines_runs (
 			id varchar(12) PRIMARY KEY,
 			pipeline varchar(12) NOT NULL REFERENCES pipelines (id),
-			node uuid
+			node uuid,
+			passed_0 integer NOT NULL DEFAULT 0,
+			passed_1 integer NOT NULL DEFAULT 0,
+			passed_2 integer NOT NULL DEFAULT 0,
+			passed_3 integer NOT NULL DEFAULT 0,
+			passed_4 integer NOT NULL DEFAULT 0,
+			passed_5 integer NOT NULL DEFAULT 0,
+			failed_0 integer NOT NULL DEFAULT 0,
+			failed_1 integer NOT NULL DEFAULT 0,
+			failed_2 integer NOT NULL DEFAULT 0,
+			failed_3 integer NOT NULL DEFAULT 0,
+			failed_4 integer NOT NULL DEFAULT 0,
+			failed_5 integer NOT NULL DEFAULT 0
+		);
+		CREATE TABLE pipelines_errors (
+			pipeline varchar(12) NOT NULL REFERENCES pipelines ON DELETE CASCADE,
+			timeslot integer NOT NULL,
+			step smallint NOT NULL,
+			count integer NOT NULL,
+			message varchar NOT NULL
 		);
 		CREATE TABLE election (
 			number integer PRIMARY KEY,
@@ -142,7 +163,19 @@ func TestUpgrade(t *testing.T) {
 			1, 2, 3, 4, 5, 6,
 			7, 8, 9, 10, 11, 12
 		);
-		INSERT INTO pipelines_runs (id, pipeline, node) VALUES ('555555555555', '444444444444', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
+		INSERT INTO pipelines_runs (
+			id, pipeline, node,
+			passed_0, passed_1, passed_2, passed_3, passed_4, passed_5,
+			failed_0, failed_1, failed_2, failed_3, failed_4, failed_5
+		) VALUES (
+			'555555555555', '444444444444', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+			13, 14, 15, 16, 17, 18,
+			19, 20, 21, 22, 23, 24
+		);
+		INSERT INTO pipelines_errors (pipeline, timeslot, step, count, message) VALUES
+			('444444444444', 1, 3, 1, 'transformation'),
+			('444444444444', 1, 4, 1, 'output validation'),
+			('444444444444', 1, 5, 1, 'finalize');
 		INSERT INTO election (number, leader, date) VALUES (1, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', NOW());
 		INSERT INTO discontinued_functions (id, discontinued_at) VALUES ('arn:aws:lambda:eu-west-1:1:function:transform.js', NOW());
 		INSERT INTO metadata (installation_id, kms_encrypted_cookie_key, kms_encrypted_oauth_key, kms_encrypted_notification_key, kms_encrypted_api_key_pepper)
@@ -176,6 +209,7 @@ func TestUpgrade(t *testing.T) {
 	assertDiscontinuedFunctionsUpgrade(t, database)
 	assertRateLimitLeaseFunction(t, database)
 	assertConsentStepColumns(t, database)
+	assertPipelineMetricStepsUpgraded(t, database)
 	consentPurposeIDs := assertConsentPurposeUpgrade(t, database)
 
 	if err := Upgrade(ctx, database); err != nil {
@@ -184,8 +218,60 @@ func TestUpgrade(t *testing.T) {
 	if got := assertConsentPurposeUpgrade(t, database); !maps.Equal(got, consentPurposeIDs) {
 		t.Fatalf("expected consent purpose identifiers to remain %v, got %v", consentPurposeIDs, got)
 	}
+	assertPipelineMetricStepsUpgraded(t, database)
 	assertPipelineFiltersUpgraded(t, database)
 	assertPipelineMetricsSurvivePipelineDelete(t, database)
+}
+
+// assertPipelineMetricStepsUpgraded verifies that indices from the released
+// six-step metrics layout retain their original meanings.
+func assertPipelineMetricStepsUpgraded(t *testing.T, database *db.DB) {
+	t.Helper()
+	assertPipelineMetricStepValues(t, database, "pipelines_metrics", "pipeline", "444444444444",
+		[]int32{1, 2, 3, 0, 0, 4, 5, 0, 6}, []int32{7, 8, 9, 0, 0, 10, 11, 0, 12})
+	assertPipelineMetricStepValues(t, database, "pipelines_runs", "id", "555555555555",
+		[]int32{13, 14, 15, 0, 0, 16, 17, 0, 18}, []int32{19, 20, 21, 0, 0, 22, 23, 0, 24})
+	assertPipelineErrorSteps(t, database, map[string]int16{
+		"transformation":    5,
+		"output validation": 6,
+		"finalize":          8,
+	})
+}
+
+// assertPipelineErrorSteps verifies the persisted step for each error message.
+func assertPipelineErrorSteps(t *testing.T, database *db.DB, expected map[string]int16) {
+	t.Helper()
+	for message, expectedStep := range expected {
+		var step int16
+		err := database.QueryRow(t.Context(), "SELECT step FROM pipelines_errors WHERE message = $1", message).Scan(&step)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if step != expectedStep {
+			t.Fatalf("expected pipeline error %q to have step %d, got %d", message, expectedStep, step)
+		}
+	}
+}
+
+// assertPipelineMetricStepValues verifies all passed and failed counters in a
+// pipeline metrics or run row.
+func assertPipelineMetricStepValues(t *testing.T, database *db.DB, table, key, id string, expectedPassed, expectedFailed []int32) {
+	t.Helper()
+	query := fmt.Sprintf(`
+		SELECT
+			ARRAY[passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, passed_7, passed_8],
+			ARRAY[failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6, failed_7, failed_8]
+		FROM %s
+		WHERE %s = $1`, table, key)
+	var passed, failed []int32
+	err := database.QueryRow(t.Context(), query, id).Scan(&passed, &failed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(passed, expectedPassed) || !slices.Equal(failed, expectedFailed) {
+		t.Fatalf("expected %s %s=%q counters passed=%v failed=%v, got passed=%v failed=%v",
+			table, key, id, expectedPassed, expectedFailed, passed, failed)
+	}
 }
 
 func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
@@ -591,6 +677,8 @@ func assertPipelineMetricsUpgrade(t *testing.T, database *db.DB) {
 		"passed_4",
 		"passed_5",
 		"passed_6",
+		"passed_7",
+		"passed_8",
 		"failed_0",
 		"failed_1",
 		"failed_2",
@@ -598,6 +686,8 @@ func assertPipelineMetricsUpgrade(t *testing.T, database *db.DB) {
 		"failed_4",
 		"failed_5",
 		"failed_6",
+		"failed_7",
+		"failed_8",
 	} {
 		expectedConstraints = append(expectedConstraints, "pipelines_metrics_"+column+"_not_null")
 	}
@@ -748,6 +838,8 @@ func assertConsentStepColumns(t *testing.T, database *db.DB) {
 	t.Helper()
 
 	for _, column := range []string{"passed_6", "failed_6", "passed_7", "failed_7", "passed_8", "failed_8"} {
+		assertColumnExists(t, database, "pipelines_runs", column)
+		assertColumnExists(t, database, "pipelines_metrics", column)
 		if !hasDefault(t, database, "pipelines_runs", column) {
 			t.Fatalf("expected column pipelines_runs.%s to have a default, got no default", column)
 		}

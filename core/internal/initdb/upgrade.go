@@ -102,6 +102,74 @@ const nodeIDUpgrade = `
 		END IF;
 	END $$`
 
+// pipelineMetricStepsUpgrade adds the consent steps and remaps the old six-step
+// layout.
+const pipelineMetricStepsUpgrade = `
+	DO $$
+	BEGIN
+		IF NOT EXISTS (
+			SELECT FROM pg_attribute
+			WHERE attrelid = 'pipelines_metrics'::regclass
+				AND attname = 'passed_6'
+				AND NOT attisdropped
+		) THEN
+			ALTER TABLE pipelines_metrics ADD COLUMN passed_6 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_metrics ADD COLUMN passed_7 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_metrics ADD COLUMN passed_8 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_runs ADD COLUMN passed_6 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_runs ADD COLUMN passed_7 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_runs ADD COLUMN passed_8 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_metrics ADD COLUMN failed_6 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_metrics ADD COLUMN failed_7 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_metrics ADD COLUMN failed_8 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_runs ADD COLUMN failed_6 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_runs ADD COLUMN failed_7 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_runs ADD COLUMN failed_8 integer NOT NULL DEFAULT 0;
+
+			UPDATE pipelines_metrics SET
+				passed_3 = 0,
+				passed_4 = 0,
+				passed_5 = passed_3,
+				passed_6 = passed_4,
+				passed_7 = 0,
+				passed_8 = passed_5,
+				failed_3 = 0,
+				failed_4 = 0,
+				failed_5 = failed_3,
+				failed_6 = failed_4,
+				failed_7 = 0,
+				failed_8 = failed_5;
+
+			UPDATE pipelines_runs SET
+				passed_3 = 0,
+				passed_4 = 0,
+				passed_5 = passed_3,
+				passed_6 = passed_4,
+				passed_7 = 0,
+				passed_8 = passed_5,
+				failed_3 = 0,
+				failed_4 = 0,
+				failed_5 = failed_3,
+				failed_6 = failed_4,
+				failed_7 = 0,
+				failed_8 = failed_5;
+
+			UPDATE pipelines_errors SET step = CASE
+				WHEN step = 3 THEN 5
+				WHEN step = 4 THEN 6
+				WHEN step = 5 THEN 8
+			END
+			WHERE step BETWEEN 3 AND 5;
+
+			ALTER TABLE pipelines_metrics ALTER COLUMN passed_6 DROP DEFAULT;
+			ALTER TABLE pipelines_metrics ALTER COLUMN passed_7 DROP DEFAULT;
+			ALTER TABLE pipelines_metrics ALTER COLUMN passed_8 DROP DEFAULT;
+			ALTER TABLE pipelines_metrics ALTER COLUMN failed_6 DROP DEFAULT;
+			ALTER TABLE pipelines_metrics ALTER COLUMN failed_7 DROP DEFAULT;
+			ALTER TABLE pipelines_metrics ALTER COLUMN failed_8 DROP DEFAULT;
+		END IF;
+	END $$`
+
 // Upgrade applies idempotent updates to an existing Krenalis PostgreSQL
 // database.
 func Upgrade(ctx context.Context, database *db.DB) error {
@@ -381,24 +449,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 						)
 						OR filter::text ~ '"operator"[[:space:]]*:[[:space:]]*"OpIsNotBetween"'
 					)`,
-			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS passed_6 integer NOT NULL DEFAULT 0`,
-			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS failed_6 integer NOT NULL DEFAULT 0`,
-			`ALTER TABLE pipelines_metrics ALTER COLUMN passed_6 DROP DEFAULT`,
-			`ALTER TABLE pipelines_metrics ALTER COLUMN failed_6 DROP DEFAULT`,
-			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS passed_6 integer NOT NULL DEFAULT 0`,
-			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS failed_6 integer NOT NULL DEFAULT 0`,
-			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS passed_7 integer NOT NULL DEFAULT 0`,
-			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS failed_7 integer NOT NULL DEFAULT 0`,
-			`ALTER TABLE pipelines_metrics ALTER COLUMN passed_7 DROP DEFAULT`,
-			`ALTER TABLE pipelines_metrics ALTER COLUMN failed_7 DROP DEFAULT`,
-			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS passed_7 integer NOT NULL DEFAULT 0`,
-			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS failed_7 integer NOT NULL DEFAULT 0`,
-			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS passed_8 integer NOT NULL DEFAULT 0`,
-			`ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS failed_8 integer NOT NULL DEFAULT 0`,
-			`ALTER TABLE pipelines_metrics ALTER COLUMN passed_8 DROP DEFAULT`,
-			`ALTER TABLE pipelines_metrics ALTER COLUMN failed_8 DROP DEFAULT`,
-			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS passed_8 integer NOT NULL DEFAULT 0`,
-			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS failed_8 integer NOT NULL DEFAULT 0`,
+			pipelineMetricStepsUpgrade,
 			`ALTER TABLE consent_purposes ADD COLUMN IF NOT EXISTS aliases varchar(100)[] NOT NULL DEFAULT '{}'`,
 			`ALTER TABLE consent_purposes ADD COLUMN IF NOT EXISTS event_path varchar(1024) NOT NULL DEFAULT ''`,
 			`ALTER TABLE consent_purposes ADD COLUMN IF NOT EXISTS profile_path varchar(1024) NOT NULL DEFAULT ''`,

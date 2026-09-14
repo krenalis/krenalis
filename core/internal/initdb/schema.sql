@@ -270,24 +270,24 @@ CREATE TABLE pipelines_runs (
     start_time timestamp NOT NULL,
     ping_time timestamp NOT NULL,
     end_time timestamp,
-    passed_0 integer NOT NULL DEFAULT 0,
-    passed_1 integer NOT NULL DEFAULT 0,
-    passed_2 integer NOT NULL DEFAULT 0,
-    passed_3 integer NOT NULL DEFAULT 0,
-    passed_4 integer NOT NULL DEFAULT 0,
-    passed_5 integer NOT NULL DEFAULT 0,
-    passed_6 integer NOT NULL DEFAULT 0,
-    passed_7 integer NOT NULL DEFAULT 0,
-    passed_8 integer NOT NULL DEFAULT 0,
-    failed_0 integer NOT NULL DEFAULT 0,
-    failed_1 integer NOT NULL DEFAULT 0,
-    failed_2 integer NOT NULL DEFAULT 0,
-    failed_3 integer NOT NULL DEFAULT 0,
-    failed_4 integer NOT NULL DEFAULT 0,
-    failed_5 integer NOT NULL DEFAULT 0,
-    failed_6 integer NOT NULL DEFAULT 0,
-    failed_7 integer NOT NULL DEFAULT 0,
-    failed_8 integer NOT NULL DEFAULT 0,
+    passed_0 integer NOT NULL DEFAULT 0, -- Receive
+    passed_1 integer NOT NULL DEFAULT 0, -- InputValidation
+    passed_2 integer NOT NULL DEFAULT 0, -- Filter
+    passed_3 integer NOT NULL DEFAULT 0, -- EventConsent
+    passed_4 integer NOT NULL DEFAULT 0, -- ExportProfileConsent
+    passed_5 integer NOT NULL DEFAULT 0, -- Transformation
+    passed_6 integer NOT NULL DEFAULT 0, -- OutputValidation
+    passed_7 integer NOT NULL DEFAULT 0, -- ImportProfileConsent
+    passed_8 integer NOT NULL DEFAULT 0, -- Finalize
+    failed_0 integer NOT NULL DEFAULT 0, -- Receive
+    failed_1 integer NOT NULL DEFAULT 0, -- InputValidation
+    failed_2 integer NOT NULL DEFAULT 0, -- Filter
+    failed_3 integer NOT NULL DEFAULT 0, -- EventConsent
+    failed_4 integer NOT NULL DEFAULT 0, -- ExportProfileConsent
+    failed_5 integer NOT NULL DEFAULT 0, -- Transformation
+    failed_6 integer NOT NULL DEFAULT 0, -- OutputValidation
+    failed_7 integer NOT NULL DEFAULT 0, -- ImportProfileConsent
+    failed_8 integer NOT NULL DEFAULT 0, -- Finalize
     error varchar NOT NULL DEFAULT '',
     PRIMARY KEY (id)
 );
@@ -319,24 +319,24 @@ CREATE TABLE pipelines_metrics (
     pipeline varchar(12) NOT NULL,
     target pipeline_target NOT NULL,
     timeslot integer NOT NULL,
-    passed_0 integer NOT NULL,
-    passed_1 integer NOT NULL,
-    passed_2 integer NOT NULL,
-    passed_3 integer NOT NULL,
-    passed_4 integer NOT NULL,
-    passed_5 integer NOT NULL,
-    passed_6 integer NOT NULL,
-    passed_7 integer NOT NULL,
-    passed_8 integer NOT NULL,
-    failed_0 integer NOT NULL,
-    failed_1 integer NOT NULL,
-    failed_2 integer NOT NULL,
-    failed_3 integer NOT NULL,
-    failed_4 integer NOT NULL,
-    failed_5 integer NOT NULL,
-    failed_6 integer NOT NULL,
-    failed_7 integer NOT NULL,
-    failed_8 integer NOT NULL,
+    passed_0 integer NOT NULL, -- Receive
+    passed_1 integer NOT NULL, -- InputValidation
+    passed_2 integer NOT NULL, -- Filter
+    passed_3 integer NOT NULL, -- EventConsent
+    passed_4 integer NOT NULL, -- ExportProfileConsent
+    passed_5 integer NOT NULL, -- Transformation
+    passed_6 integer NOT NULL, -- OutputValidation
+    passed_7 integer NOT NULL, -- ImportProfileConsent
+    passed_8 integer NOT NULL, -- Finalize
+    failed_0 integer NOT NULL, -- Receive
+    failed_1 integer NOT NULL, -- InputValidation
+    failed_2 integer NOT NULL, -- Filter
+    failed_3 integer NOT NULL, -- EventConsent
+    failed_4 integer NOT NULL, -- ExportProfileConsent
+    failed_5 integer NOT NULL, -- Transformation
+    failed_6 integer NOT NULL, -- OutputValidation
+    failed_7 integer NOT NULL, -- ImportProfileConsent
+    failed_8 integer NOT NULL, -- Finalize
     PRIMARY KEY (pipeline, timeslot)
 );
 
