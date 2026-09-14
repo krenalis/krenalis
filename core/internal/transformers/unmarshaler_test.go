@@ -672,11 +672,9 @@ func Test_UnmarshalEdgeCases(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error for more elements: %v", err)
 		}
-		if rec[0].Err != nil {
-			t.Fatalf("did not expect record error for more elements: %v", rec[0].Err)
-		}
-		if got := rec[0].Attributes["a"]; got == nil || len(got.([]any)) != 4 {
-			t.Fatalf("expected 4 elements, got %v", got)
+		want := "property «a» contains more than 3 elements"
+		if rec[0].Err == nil || rec[0].Err.Error() != want {
+			t.Fatalf("expected %q, got %v", want, rec[0].Err)
 		}
 	})
 }

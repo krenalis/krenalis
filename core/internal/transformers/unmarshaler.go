@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"net/netip"
 	"regexp"
 	"slices"
 	"strconv"
@@ -379,7 +378,6 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 				return nil, err
 			}
 			arr = append(arr, elem)
-			i++
 		}
 		if _, err := d.readToken(); err != nil {
 			return nil, err
@@ -733,8 +731,8 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		}
 	case types.IPKind:
 		if v.Kind() == '"' {
-			if ip, err := netip.ParseAddr(d.unquoteString(v)); err == nil {
-				return ip.String(), nil
+			if ip, ok := types.NormalizeIP(d.unquoteString(v)); ok {
+				return ip, nil
 			}
 		}
 	}

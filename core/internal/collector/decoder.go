@@ -620,7 +620,8 @@ func (d *decoder) decodeEvent(connectionId string, fallbackToRequestIP bool) (ev
 			if addr.IsMulticast() {
 				return nil, errors.BadRequest("property 'ip' cannot be a multicast IP address")
 			}
-			context["ip"] = addr.String()
+			normalizedIP, _ := types.NormalizeIP(addr)
+			context["ip"] = normalizedIP
 			locationIP = addr
 		}
 	} else if fallbackToRequestIP {

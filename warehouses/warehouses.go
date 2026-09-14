@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"math"
 	"net"
-	"net/netip"
 	"reflect"
 	"slices"
 	"strconv"
@@ -615,11 +614,11 @@ func ValidateJSON(name string, v any) (any, error) {
 
 // ValidateIP validates an ip value.
 func ValidateIP(name string, s string) (any, error) {
-	ip, err := netip.ParseAddr(s)
-	if err != nil {
+	ip, ok := types.NormalizeIP(s)
+	if !ok {
 		return nil, fmt.Errorf("data warehouse returned a value for column %s which is not an ip type", name)
 	}
-	return ip.String(), nil
+	return ip, nil
 }
 
 // ValidateString validates a string value.
