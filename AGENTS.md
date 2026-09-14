@@ -244,7 +244,7 @@ Every exported package-level type, function, variable, and constant, as well as 
 
 Keep comments compact: one precise sentence beats three loose ones, and do not restate what the code already says.
 
-Limit each line of declaration comments starting in column 1 to 78 characters, including comment markers and spaces; comments on the same line as code are exempt.
+Limit each line of declaration comments starting in column 1 to 80 characters, including comment markers and spaces; comments on the same line as code are exempt.
 
 When a variable or constant belongs to a parenthesized `var` or `const` declaration whose other members do not have individual declaration comments, do not add an individual comment only to that member. Preserve the established comment style consistently throughout the group.
 
