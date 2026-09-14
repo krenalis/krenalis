@@ -704,10 +704,12 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				return v, errInvalidConversion
 			}
 			if dt.Unique() {
-				for i, it := range d {
-					if slices.Contains(d[i:], it) {
-						return v, errInvalidConversion
-					}
+				duplicate, err := types.FirstDuplicate(d, et)
+				if err != nil {
+					return v, errInvalidConversion
+				}
+				if duplicate != -1 {
+					return v, errInvalidConversion
 				}
 			}
 			return d, nil
@@ -719,7 +721,8 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			}
 			it1 := st.Elem()
 			it2 := dt.Elem()
-			if !types.Equal(it1, it2) {
+			sameType := types.Equal(it1, it2)
+			if !sameType {
 				if !inPlace {
 					d = make([]any, len(s))
 				}
@@ -731,11 +734,13 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 					}
 				}
 			}
-			if !st.Unique() && dt.Unique() {
-				for i, item := range d {
-					if slices.Contains(d[i:], item) {
-						return v, errInvalidConversion
-					}
+			if dt.Unique() && (!sameType || !st.Unique()) {
+				duplicate, err := types.FirstDuplicate(d, it2)
+				if err != nil {
+					return v, errInvalidConversion
+				}
+				if duplicate != -1 {
+					return v, errInvalidConversion
 				}
 			}
 			return d, nil
