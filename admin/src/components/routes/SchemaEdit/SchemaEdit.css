@@ -177,13 +177,12 @@
 	padding-top: 8px;
 }
 
-.schema-edit__schema-panel .draggable-wrapper__handle,
-.schema-edit__schema-panel .grid__nested-rows .draggable-wrapper__handle {
-	height: 36px;
+.schema-edit__schema-panel .draggable-wrapper__handle {
+	height: var(--schema-property-grid-row-height);
 	justify-content: center;
 	left: 0;
 	padding: 0;
-	top: 1px;
+	top: 0;
 	transform: none;
 	width: 20px;
 }

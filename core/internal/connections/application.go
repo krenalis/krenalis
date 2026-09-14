@@ -188,7 +188,7 @@ func (app *Application) PreviewSendEvent(ctx context.Context, event connectors.E
 	if app.err != nil {
 		return nil, app.err
 	}
-	eventTypeSchema, err := app.inner.(connectors.EventSender).EventTypeSchema(ctx, event.Type.ID)
+	eventTypeSchema, err := app.eventTypeSchema(ctx, event.Type.ID)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -256,7 +256,7 @@ func (app *Application) SchemaAsRole(ctx context.Context, role state.Role, targe
 		if role != state.Destination {
 			panic("invalid role")
 		}
-		schema, err := app.inner.(connectors.EventSender).EventTypeSchema(ctx, eventType)
+		schema, err := app.eventTypeSchema(ctx, eventType)
 		if err != nil {
 			return types.Type{}, connectorError(err)
 		}
@@ -386,6 +386,19 @@ func (app *Application) Writer(ctx context.Context, outSchema types.Type, export
 	return writer, nil
 }
 
+// eventTypeSchema returns the event type schema provided by the connector and
+// rejects generic schemas.
+func (app *Application) eventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
+	schema, err := app.inner.(connectors.EventSender).EventTypeSchema(ctx, eventType)
+	if err != nil {
+		return types.Type{}, err
+	}
+	if schema.Generic() {
+		return types.Type{}, fmt.Errorf("connector %s returned an invalid event schema", app.connector)
+	}
+	return schema, nil
+}
+
 // userSchema returns the user schema with the provided role.
 // If the connector returns an error, it returns an *UnavailableError error.
 // It panics if role is not Source or Destination.
@@ -408,8 +421,9 @@ func (app *Application) userSchema(ctx context.Context, role state.Role) (types.
 	if err != nil {
 		return types.Type{}, connectorError(fmt.Errorf("cannot get user schema: %s", err))
 	}
-	if !schema.Valid() {
-		return types.Type{}, connectorError(fmt.Errorf("connector %s returned an invalid %s schema", app.connector, strings.ToLower(role.String())))
+	if !schema.Valid() || schema.Generic() {
+		return types.Type{}, connectorError(fmt.Errorf(
+			"connector %s returned an invalid %s schema", app.connector, strings.ToLower(role.String())))
 	}
 	schema = types.AsRole(schema, types.Role(role))
 	app.users.schemas[role-1] = schema

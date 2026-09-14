@@ -8,7 +8,7 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"net/netip"
+	"net"
 	"reflect"
 	"slices"
 	"strconv"
@@ -18,8 +18,6 @@ import (
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
-
-	"github.com/google/uuid"
 )
 
 // Platform represents a warehouse platform.
@@ -36,9 +34,19 @@ func (platform Platform) ReflectType() reflect.Type {
 	return platform.ct
 }
 
-// New returns a new data warehouse instance.
-func (platform Platform) New(settings SettingsLoader) Warehouse {
-	out := platform.newFunc.Call([]reflect.Value{reflect.ValueOf(settings)})
+// New returns a new data warehouse instance. If dialWith is provided, it is
+// used to establish network connections; otherwise, the warehouse uses its own
+// dialer.
+func (platform Platform) New(settings SettingsLoader, dialWith DialWith) Warehouse {
+	if dialWith == nil {
+		dialWith = func(dial DialFunc) DialFunc {
+			if dial != nil {
+				return dial
+			}
+			return new(net.Dialer).DialContext
+		}
+	}
+	out := platform.newFunc.Call([]reflect.Value{reflect.ValueOf(settings), reflect.ValueOf(dialWith)})
 	d, _ := reflect.TypeAssert[Warehouse](out[0])
 	return d
 }
@@ -49,8 +57,17 @@ type SettingsLoader interface {
 	Load(ctx context.Context, dst any) error
 }
 
+type (
+	// A DialFunc establishes an outbound network connection to the given address.
+	DialFunc = func(ctx context.Context, network, address string) (net.Conn, error)
+
+	// A DialWith wraps the dial function of a warehouse, returning the dial
+	// function to be used in its place.
+	DialWith = func(dial DialFunc) DialFunc
+)
+
 // NewFunc represents functions that create new warehouse platform instance.
-type NewFunc[T Warehouse] func(SettingsLoader) T
+type NewFunc[T Warehouse] func(SettingsLoader, DialWith) T
 
 // AlterOperation represents an operation that alters the columns of the profile
 // tables.
@@ -409,17 +426,55 @@ func IsValidSchemaName(name string) bool {
 	return IsValidIdentifier(name)
 }
 
-// OperationError represents an error that occurred in the data warehouse during
-// an Identity Resolution or profile schema update operation.
-type OperationError struct{ err error }
+// MaxOperationErrorBytes is the maximum supported size of an operation error
+// message.
+const MaxOperationErrorBytes = 4 << 10 // 4 KiB
 
-// NewOperationError returns a new *OperationError.
+// OperationError represents an error that occurred in the data warehouse during
+// an Identity Resolution or profile schema update operation. Its message is
+// valid UTF-8 and at most MaxOperationErrorBytes bytes long.
+type OperationError struct{ message string }
+
+// NewOperationError returns a new *OperationError. Messages longer than
+// MaxOperationErrorBytes are abbreviated at a Unicode character boundary with
+// a trailing "[...]". If the resulting message is not valid UTF-8, it is
+// replaced with a fixed message. NewOperationError panics if err is nil.
 func NewOperationError(err error) *OperationError {
-	return &OperationError{err: err}
+	if err == nil {
+		panic("warehouses.NewOperationError: nil error")
+	}
+	const invalidMessage = "warehouse operation failed with an invalid error message"
+	message := err.Error()
+	if len(message) > MaxOperationErrorBytes {
+		const suffix = "[...]"
+		end := MaxOperationErrorBytes - len(suffix)
+		for i := 0; i < utf8.UTFMax-1 && !utf8.RuneStart(message[end]); i++ {
+			end--
+		}
+		if !utf8.RuneStart(message[end]) {
+			return &OperationError{message: invalidMessage}
+		}
+		message = message[:end] + suffix
+	}
+	if !utf8.ValidString(message) {
+		message = invalidMessage
+	}
+	return &OperationError{message: message}
 }
 
+// NewPersistedOperationError returns an *OperationError for a message read from
+// a warehouse. Messages that are not valid UTF-8 or exceed
+// MaxOperationErrorBytes are replaced with a fixed message.
+func NewPersistedOperationError(message string) *OperationError {
+	if len(message) > MaxOperationErrorBytes || !utf8.ValidString(message) {
+		message = "warehouse operation failed with an invalid or oversized error message"
+	}
+	return &OperationError{message: message}
+}
+
+// Error returns the operation error message.
 func (err OperationError) Error() string {
-	return err.err.Error()
+	return err.message
 }
 
 // ValidateInt validates an int value.
@@ -523,11 +578,11 @@ func ValidateYearString(name string, year string) (any, error) {
 
 // ValidateUUID validates a uuid value.
 func ValidateUUID(name string, s string) (any, error) {
-	u, err := uuid.Parse(s)
-	if err != nil {
-		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not a time type", s, name)
+	u, ok := types.NormalizeUUID(s)
+	if !ok {
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not a uuid type", s, name)
 	}
-	return u.String(), nil
+	return u, nil
 }
 
 // ValidateJSON validates a json value.
@@ -558,11 +613,11 @@ func ValidateJSON(name string, v any) (any, error) {
 
 // ValidateIP validates an ip value.
 func ValidateIP(name string, s string) (any, error) {
-	ip, err := netip.ParseAddr(s)
-	if err != nil {
+	ip, ok := types.NormalizeIP(s)
+	if !ok {
 		return nil, fmt.Errorf("data warehouse returned a value for column %s which is not an ip type", name)
 	}
-	return ip.String(), nil
+	return ip, nil
 }
 
 // ValidateString validates a string value.

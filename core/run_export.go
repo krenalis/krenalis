@@ -57,7 +57,7 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	var transformer *transformers.Transformer
 	if t := this.pipeline.Transformation; t.Mapping != nil || t.Function != nil {
 		var err error
-		transformer, err = transformers.New(pipeline, this.core.functionProvider, &connector.TimeLayouts)
+		transformer, err = transformers.New(pipeline.Organization().ID, pipeline, this.core.functionProvider, &connector.TimeLayouts)
 		if err != nil {
 			return err
 		}
@@ -491,7 +491,7 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 	case types.UUIDKind:
 		switch in.Kind() {
 		case types.StringKind:
-			u, ok := types.ParseUUID(v.(string))
+			u, ok := types.NormalizeUUID(v.(string))
 			if !ok {
 				return nil, errMatchingPropertyConversion(inPath, outPath)
 			}

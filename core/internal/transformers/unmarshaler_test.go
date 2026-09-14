@@ -30,6 +30,10 @@ func Test_Unmarshal(t *testing.T) {
 			Type: types.String().WithMaxLength(10),
 		},
 		{
+			Name: "String_bytes",
+			Type: types.String().WithMaxBytes(3),
+		},
+		{
 			Name: "String_values",
 			Type: types.String().WithValues("a", "b", "c"),
 		},
@@ -405,6 +409,12 @@ func Test_Unmarshal(t *testing.T) {
 		{
 			language: state.Python,
 			schema:   schema,
+			data:     `{"records":[{"value":{"String_bytes":"éé"}}]}`,
+			records:  []Record{{Err: newRecordValidationError("String_bytes", `property «String_bytes» exceeds the 3-byte limit`)}},
+		},
+		{
+			language: state.Python,
+			schema:   schema,
 			data:     `{"records":[{"value":{"String_values":"c"}}]}`,
 			records:  []Record{{Attributes: map[string]any{"String_values": "c"}}},
 		},
@@ -584,6 +594,32 @@ func Test_UnmarshalEdgeCases(t *testing.T) {
 		err := Unmarshal(buf, make([]Record, 1), simple, state.Language(7), false)
 		if err == nil || err.Error() != "core/transformers: language is not valid" {
 			t.Fatalf("expected language error, got %v", err)
+		}
+	})
+
+	t.Run("UUID normalization", func(t *testing.T) {
+		schema := types.Object([]types.Property{{Name: "a", Type: types.UUID()}})
+		records := []Record{{}}
+		data := strings.NewReader(`{"records":[{"value":{"a":"550E8400-E29B-41D4-A716-446655440000"}}]}`)
+		err := Unmarshal(data, records, schema, state.JavaScript, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := records[0].Attributes["a"]; got != "550e8400-e29b-41d4-a716-446655440000" {
+			t.Fatalf("got %q", got)
+		}
+	})
+
+	t.Run("non-standard UUID", func(t *testing.T) {
+		schema := types.Object([]types.Property{{Name: "a", Type: types.UUID()}})
+		records := []Record{{}}
+		data := strings.NewReader(`{"records":[{"value":{"a":"550e8400e29b41d4a716446655440000"}}]}`)
+		err := Unmarshal(data, records, schema, state.JavaScript, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if records[0].Err == nil || records[0].Err.Error() != "property «a» has a value that is not of type «string»" {
+			t.Fatalf("unexpected record error: %v", records[0].Err)
 		}
 	})
 
