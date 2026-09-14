@@ -607,7 +607,6 @@ func Test_Prune(t *testing.T) {
 			}
 		})
 	}
-
 	genericObject := Object([]Property{
 		{Name: "a", Type: String()},
 		{Name: "b", Type: Object([]Property{
@@ -615,7 +614,6 @@ func Test_Prune(t *testing.T) {
 			{Name: "y", Type: String()},
 		})},
 	})
-
 	t.Run("Keeping a generic property", func(t *testing.T) {
 		expected := Object([]Property{
 			{Name: "b", Type: Object([]Property{
@@ -628,7 +626,6 @@ func Test_Prune(t *testing.T) {
 			t.Fatalf("\nexpected: %#v\ngot:      %#v", expected, got)
 		}
 	})
-
 	t.Run("Pruning a generic property", func(t *testing.T) {
 		expected := Object([]Property{
 			{Name: "a", Type: String()},
@@ -641,7 +638,6 @@ func Test_Prune(t *testing.T) {
 			t.Fatalf("\nexpected: %#v\ngot:      %#v", expected, got)
 		}
 	})
-
 	t.Run("Keeping a generic property through an array and a map", func(t *testing.T) {
 		containerObject := Object([]Property{
 			{Name: "a", Type: String()},
