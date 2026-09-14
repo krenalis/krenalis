@@ -377,7 +377,6 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 				return nil, err
 			}
 			arr = append(arr, elem)
-			i++
 		}
 		if _, err := d.readToken(); err != nil {
 			return nil, err
