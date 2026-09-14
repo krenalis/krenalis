@@ -173,8 +173,6 @@ func (iw *identityWriter) transformAndWrite(events []streams.Event) {
 				errMsg = "pipeline has been deleted"
 			} else if _, ok := errors.AsType[*schemas.Error](err); ok {
 				errMsg = err.Error()
-			} else if ctxErr := ctx.Err(); ctxErr != nil {
-				errMsg = ctxErr.Error()
 			} else {
 				errMsg = "an internal error occurred"
 				slog.Error("cannot write event identity", "pipeline", iw.pipeline, "error", err)
