@@ -6,6 +6,7 @@ package types
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -15,148 +16,67 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 	"uuid"
 
 	"github.com/krenalis/krenalis/tools/decimal"
-	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/validation"
 
+	"github.com/nyaruka/phonenumbers/v2"
 	"github.com/relvacode/iso8601"
 )
 
-// Decode reads JSON from r and decodes it, validating it against t. t must be a
-// valid non-generic type, and T must be the Go type that corresponds to t.
-//
-// It returns a json.SyntaxError if the data being unmarshaled is not valid
-// JSON, and it returns a *SchemaValidationError if an error occurs during
-// schema validation. Specifically, if a required property is missing, it
-// results in a schema validation error.
-//
-// The following are the expected JSON values for each type:
-//
-//   - string: a JSON String
-//   - boolean: true or false
-//   - int (8, 16, 24, and 32 bits): a JSON Number representing an integer
-//   - int (64 bits): a JSON String representing an integer
-//   - float: a JSON Number, or one of "NaN", "Infinity" or "-Infinity"
-//   - decimal: a JSON String representing a JSON Number
-//   - datetime: a JSON String representing a time in the ISO8601 format
-//   - date: a JSON String representing a date in the ISO8601 format, formatted
-//     as the Go time format "2006-01-02"
-//   - time: a JSON String representing a time in the ISO8601 format, formatted
-//     as the Go time format "15:04:05.999999999"
-//   - year: a JSON Number representing an integer
-//   - uuid: a JSON String representing a UUID
-//   - json: a JSON value; JSON null is always interpreted as Value("null")
-//   - ip: a JSON String representing an IP number
-//   - array: a JSON Array
-//   - object: a JSON Object
-//   - map: a JSON Object
-func Decode[T any](r io.Reader, t Type) (T, error) {
-	if r == nil {
-		var zero T
-		return zero, errors.New("r is nil")
-	}
-	if t.Generic() {
-		var zero T
-		return zero, errors.New("json: type is a generic type")
-	}
-	if t.Kind() == InvalidKind {
-		var zero T
-		return zero, errors.New("json: type is the invalid type")
-	}
-	v, err := decode(r, t)
-	vt, ok := v.(T)
-	if err == nil && !ok {
-		err = fmt.Errorf("json: Decode[%T] called with type kind %s", vt, t.Kind())
-	}
-	return vt, err
+// SchemaValidationError represents a validation error related to the output
+// schema. It can be returned by DecodeBySchema for each single result in the
+// Result.Error field.
+type SchemaValidationError struct {
+	kind schemaValidationKind
+	msg  string
+	path string
 }
 
-// Marshal encodes the given data, based on the provided schema, into JSON, and
-// returns it. schema must be a valid non-generic type.
-//
-// For json properties, both nil and json.Value("null") are marshaled as JSON
-// null.
-//
-// Unlike Decode, this function does not validate the data. Its behavior is
-// undefined if the value does not validate against the type.
-func Marshal(data any, schema Type) (json.Value, error) {
-	if schema.Generic() {
-		return nil, errors.New("json: schema is a generic type")
-	}
-	if schema.Kind() == InvalidKind {
-		return nil, errors.New("json: schema is the invalid type")
-	}
-	return marshal(nil, data, schema)
-}
-
-// NormalizeIP normalizes value and returns its canonical form for use wherever
-// a value of type ip is required. It reports whether value is a valid IP
-// address.
-//
-// If value is a string, it is parsed with [netip.ParseAddr]; if parsing fails,
-// NormalizeIP returns "", false.
-func NormalizeIP[T string | netip.Addr](value T) (string, bool) {
-	var addr netip.Addr
-	switch v := any(value).(type) {
-	case string:
-		var err error
-		addr, err = netip.ParseAddr(v)
-		if err != nil {
-			return "", false
+func (err *SchemaValidationError) Error() string {
+	switch err.kind {
+	case propertyNotExist:
+		return fmt.Sprintf("property %q does not exist", err.path)
+	case missingProperty:
+		return fmt.Sprintf("non-optional property %q is missing", err.path)
+	case invalidValue:
+		if err.path != "" && err.path[len(err.path)-1] == ']' {
+			return fmt.Sprintf("%q %s", err.path, err.msg)
 		}
-	case netip.Addr:
-		addr = v
+		return fmt.Sprintf("property %q %s", err.path, err.msg)
 	}
-	if !addr.IsValid() {
-		return "", false
-	}
-	return addr.Unmap().WithZone("").String(), true
+	panic("invalid SchemaValidationError's kind")
 }
 
-// NormalizeUUID normalizes s and returns its canonical form for use wherever
-// a UUID value is required.
-//
-// The boolean return value reports whether s is a UUID in the standard form
-// xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
-func NormalizeUUID(s string) (string, bool) {
-	if len(s) != 36 {
-		return "", false
+func (err *SchemaValidationError) appendIndexToPath(i int) {
+	path := err.path
+	err.path = "[" + strconv.Itoa(i) + "]"
+	if path != "" {
+		err.path += "." + path
 	}
-	id, err := uuid.Parse(s)
-	if err != nil {
-		return "", false
-	}
-	return id.String(), true
 }
 
-var (
-	nan         = []byte("NaN")
-	posInfinity = []byte("Infinity")
-	negInfinity = []byte("-Infinity")
+func (err *SchemaValidationError) appendNameToPath(name string) {
+	if err.path == "" {
+		err.path = name
+	} else if err.path[0] == '[' {
+		err.path = name + err.path
+	} else {
+		err.path = name + "." + err.path
+	}
+}
+
+type schemaValidationKind int
+
+const (
+	propertyNotExist schemaValidationKind = iota
+	missingProperty
+	invalidValue
 )
-
-func decode(r io.Reader, t Type) (any, error) {
-	d := decoder{dec: json.NewDecoder(r)}
-	value, err := d.unmarshal(t)
-	if err != nil {
-		if _, ok := err.(*SchemaValidationError); ok {
-			// Consume the remaining tokens to return a ErrSyntaxInvalid error
-			// in case of a syntax error, instead of the validation error.
-			if err := d.consumeTokens(); err != nil {
-				return nil, err
-			}
-		}
-		return nil, err
-	}
-	if _, err := d.readToken(); err != io.EOF {
-		return nil, json.NewSyntaxError(err, 0)
-	}
-	return value, nil
-}
 
 // decoder implements a decoder for JSON.
 type decoder struct {
@@ -174,6 +94,12 @@ func (d decoder) consumeTokens() error {
 		return nil
 	}
 	return err
+}
+
+// formatString formats a JSON string into a formatted string.
+func (d decoder) formatString(v json.Value) string {
+	b := v.AppendUnquote(nil)
+	return `"` + strings.ReplaceAll(strings.ReplaceAll(string(b), `\`, `\\`), `"`, `\"`) + `"`
 }
 
 // peek peeks the next token kind.
@@ -353,11 +279,11 @@ func (d decoder) unquoteString(v []byte) []byte {
 	return json.Value(v).AppendUnquote(nil)
 }
 
-// formatString formats a JSON string into a formatted string.
-func (d decoder) formatString(v json.Value) string {
-	b := v.AppendUnquote(nil)
-	return `"` + strings.ReplaceAll(strings.ReplaceAll(string(b), `\`, `\\`), `"`, `\"`) + `"`
-}
+var (
+	nan         = []byte("NaN")
+	posInfinity = []byte("Infinity")
+	negInfinity = []byte("-Infinity")
+)
 
 // value returns the unmarshalled value of v according to t.
 func (d decoder) value(v json.Value, t Type) (any, error) {
@@ -378,8 +304,8 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 					}
 				}
 			case PhoneSemantic:
-				if len(s) > 16 {
-					return nil, newErrInvalidValue("is longer that 16 bytes", "")
+				if !IsPhone(s) {
+					return nil, newErrInvalidValue("is not a valid canonical phone number", "")
 				}
 			}
 			if values := t.Values(); values != nil {
@@ -544,6 +470,169 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 		return nil, fmt.Errorf("json: unxpected kind '%s'", string(v.Kind()))
 	}
 	return nil, newErrInvalidValue("does not have a valid value: "+value, "")
+}
+
+// Decode reads JSON from r and decodes it, validating it against t. t must be a
+// valid non-generic type, and T must be the Go type that corresponds to t.
+//
+// It returns a json.SyntaxError if the data being unmarshaled is not valid
+// JSON, and it returns a *SchemaValidationError if an error occurs during
+// schema validation. Specifically, if a required property is missing, it
+// results in a schema validation error.
+//
+// The following are the expected JSON values for each type:
+//
+//   - string: a JSON String
+//   - boolean: true or false
+//   - int (8, 16, 24, and 32 bits): a JSON Number representing an integer
+//   - int (64 bits): a JSON String representing an integer
+//   - float: a JSON Number, or one of "NaN", "Infinity" or "-Infinity"
+//   - decimal: a JSON String representing a JSON Number
+//   - datetime: a JSON String representing a time in the ISO8601 format
+//   - date: a JSON String representing a date in the ISO8601 format, formatted
+//     as the Go time format "2006-01-02"
+//   - time: a JSON String representing a time in the ISO8601 format, formatted
+//     as the Go time format "15:04:05.999999999"
+//   - year: a JSON Number representing an integer
+//   - uuid: a JSON String representing a UUID
+//   - json: a JSON value; JSON null is always interpreted as Value("null")
+//   - ip: a JSON String representing an IP number
+//   - array: a JSON Array
+//   - object: a JSON Object
+//   - map: a JSON Object
+func Decode[T any](r io.Reader, t Type) (T, error) {
+	if r == nil {
+		var zero T
+		return zero, errors.New("r is nil")
+	}
+	if t.Generic() {
+		var zero T
+		return zero, errors.New("json: type is a generic type")
+	}
+	if t.Kind() == InvalidKind {
+		var zero T
+		return zero, errors.New("json: type is the invalid type")
+	}
+	v, err := decode(r, t)
+	vt, ok := v.(T)
+	if err == nil && !ok {
+		err = fmt.Errorf("json: Decode[%T] called with type kind %s", vt, t.Kind())
+	}
+	return vt, err
+}
+
+// IsPhone reports whether s is a canonical E.164 phone value for use
+// wherever a value with the phone semantic is required.
+func IsPhone(s string) bool {
+	normalized, ok := normalizePhone(s, "")
+	return ok && normalized == s
+}
+
+// Marshal encodes the given data, based on the provided schema, into JSON, and
+// returns it. schema must be a valid non-generic type.
+//
+// For json properties, both nil and json.Value("null") are marshaled as JSON
+// null.
+//
+// Unlike Decode, this function does not validate the data. Its behavior is
+// undefined if the value does not validate against the type.
+func Marshal(data any, schema Type) (json.Value, error) {
+	if schema.Generic() {
+		return nil, errors.New("json: schema is a generic type")
+	}
+	if schema.Kind() == InvalidKind {
+		return nil, errors.New("json: schema is the invalid type")
+	}
+	return marshal(nil, data, schema)
+}
+
+// NormalizeIP normalizes value and returns its canonical form for use wherever
+// a value of type ip is required. It reports whether value is a valid IP
+// address.
+//
+// If value is a string, it is parsed with [netip.ParseAddr]; if parsing fails,
+// NormalizeIP returns "", false.
+func NormalizeIP[T string | netip.Addr](value T) (string, bool) {
+	var addr netip.Addr
+	switch v := any(value).(type) {
+	case string:
+		var err error
+		addr, err = netip.ParseAddr(v)
+		if err != nil {
+			return "", false
+		}
+	case netip.Addr:
+		addr = v
+	}
+	if !addr.IsValid() {
+		return "", false
+	}
+	return addr.Unmap().WithZone("").String(), true
+}
+
+// NormalizePhone normalizes s and returns its canonical E.164 form for use
+// wherever a value with the phone semantic is required.
+//
+// s must represent a single complete international phone number beginning
+// with '+'.
+//
+// The boolean return value reports whether s can be normalized to E.164.
+func NormalizePhone(s string) (string, bool) {
+	return normalizePhone(s, "")
+}
+
+// NormalizePhoneInRegion normalizes s using region as the parsing context and
+// returns its canonical E.164 form for use wherever a value with the phone
+// semantic is required.
+//
+// s must represent a single complete national or international phone number.
+// region must be an uppercase two-letter CLDR region code recognized by the
+// phone number parser, even when s is already an international number.
+// region is used only as parsing context and does not restrict the number's
+// country. See https://unicode.org/reports/tr35/#unicode_region_subtag.
+//
+// The boolean return value reports whether region is recognized and s can be
+// normalized to E.164.
+func NormalizePhoneInRegion(s, region string) (string, bool) {
+	if len(region) != 2 || !phonenumbers.GetSupportedRegions()[region] {
+		return "", false
+	}
+	return normalizePhone(s, region)
+}
+
+// NormalizeUUID normalizes s and returns its canonical form for use wherever
+// a UUID value is required.
+//
+// The boolean return value reports whether s is a UUID in the standard form
+// xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
+func NormalizeUUID(s string) (string, bool) {
+	if len(s) != 36 {
+		return "", false
+	}
+	id, err := uuid.Parse(s)
+	if err != nil {
+		return "", false
+	}
+	return id.String(), true
+}
+
+func decode(r io.Reader, t Type) (any, error) {
+	d := decoder{dec: json.NewDecoder(r)}
+	value, err := d.unmarshal(t)
+	if err != nil {
+		if _, ok := err.(*SchemaValidationError); ok {
+			// Consume the remaining tokens to return a ErrSyntaxInvalid error
+			// in case of a syntax error, instead of the validation error.
+			if err := d.consumeTokens(); err != nil {
+				return nil, err
+			}
+		}
+		return nil, err
+	}
+	if _, err := d.readToken(); err != io.EOF {
+		return nil, json.NewSyntaxError(err, 0)
+	}
+	return value, nil
 }
 
 // formatValues formats values to be used in an error message.
@@ -722,56 +811,6 @@ func marshal(b []byte, data any, t Type) (json.Value, error) {
 	return b, nil
 }
 
-// SchemaValidationError represents a validation error related to the output
-// schema. It can be returned by DecodeBySchema for each single result in the
-// Result.Error field.
-type SchemaValidationError struct {
-	kind schemaValidationKind
-	msg  string
-	path string
-}
-
-type schemaValidationKind int
-
-const (
-	propertyNotExist schemaValidationKind = iota
-	missingProperty
-	invalidValue
-)
-
-func (err *SchemaValidationError) Error() string {
-	switch err.kind {
-	case propertyNotExist:
-		return fmt.Sprintf("property %q does not exist", err.path)
-	case missingProperty:
-		return fmt.Sprintf("non-optional property %q is missing", err.path)
-	case invalidValue:
-		if err.path != "" && err.path[len(err.path)-1] == ']' {
-			return fmt.Sprintf("%q %s", err.path, err.msg)
-		}
-		return fmt.Sprintf("property %q %s", err.path, err.msg)
-	}
-	panic("invalid SchemaValidationError's kind")
-}
-
-func (err *SchemaValidationError) appendIndexToPath(i int) {
-	path := err.path
-	err.path = "[" + strconv.Itoa(i) + "]"
-	if path != "" {
-		err.path += "." + path
-	}
-}
-
-func (err *SchemaValidationError) appendNameToPath(name string) {
-	if err.path == "" {
-		err.path = name
-	} else if err.path[0] == '[' {
-		err.path = name + err.path
-	} else {
-		err.path = name + "." + err.path
-	}
-}
-
 // newErrInvalidValue returns a new SchemaValidationError with kind
 // invalidValue.
 func newErrInvalidValue(msg, path string) error {
@@ -788,4 +827,82 @@ func newErrMissingProperty(path string) error {
 // propertyNotExist.
 func newErrPropertyNotExist(path string) error {
 	return &SchemaValidationError{kind: propertyNotExist, path: path}
+}
+
+// normalizePhone normalizes s to E.164, using region when provided to parse
+// national numbers and international dialing prefixes.
+func normalizePhone(s, region string) (string, bool) {
+
+	if region == "" && (s == "" || s[0] != '+') {
+		return "", false
+	}
+	if !validPhoneInput(s) {
+		return "", false
+	}
+
+	// Only the first candidate can span the entire input, so one invalid candidate
+	// is enough to reject the input.
+	for match := range phonenumbers.FindNumbersWithLeniency(s, region, phonenumbers.POSSIBLE, 1) {
+		if match.Start() != 0 || match.End() != len(s) {
+			return "", false
+		}
+		number := match.Number()
+		// Extensions are not part of E.164.
+		if number.GetExtension() != "" {
+			return "", false
+		}
+		// Require a complete, structurally possible number. A number possible only
+		// locally cannot provide an unambiguous E.164 value.
+		if phonenumbers.IsPossibleNumberWithReason(number) != phonenumbers.IS_POSSIBLE {
+			return "", false
+		}
+		canonical := phonenumbers.Format(number, phonenumbers.E164)
+		if len(canonical) > 16 {
+			return "", false
+		}
+		// Reparse the canonical form to ensure normalization is stable. Some
+		// possible-but-unallocated numbers lose another national prefix on each parse.
+		reparsed, err := phonenumbers.Parse(canonical, "")
+		if err != nil {
+			return "", false
+		}
+		if phonenumbers.IsPossibleNumberWithReason(reparsed) != phonenumbers.IS_POSSIBLE ||
+			phonenumbers.Format(reparsed, phonenumbers.E164) != canonical {
+			return "", false
+		}
+		return canonical, true
+	}
+
+	return "", false
+}
+
+// phonePunctuation contains the punctuation accepted by the phonenumbers
+// package, excluding alphabetic 'x' because carrier placeholders and extensions
+// are not supported.
+const phonePunctuation = "-\u2010\u2011\u2012\u2013\u2014\u2015\u2212\u30FC\uFF0D\uFF0E\uFF0F " +
+	"\u00A0\u00AD\u200B\u2060\u3000()\uFF08\uFF09\uFF3B\uFF3D.[]/~\u2053\u223C\uFF5E"
+
+// validPhoneInput reports whether s satisfies the phone input grammar checked
+// before parsing.
+func validPhoneInput(s string) bool {
+	if s == "" || len(s) > 250 || !utf8.ValidString(s) {
+		return false
+	}
+	first, _ := utf8.DecodeRuneInString(s)
+	last, _ := utf8.DecodeLastRuneInString(s)
+	if unicode.IsSpace(first) || unicode.IsSpace(last) {
+		return false
+	}
+	for i, r := range s {
+		if r == '+' {
+			if i != 0 {
+				return false
+			}
+			continue
+		}
+		if !unicode.IsDigit(r) && !strings.ContainsRune(phonePunctuation, r) {
+			return false
+		}
+	}
+	return true
 }

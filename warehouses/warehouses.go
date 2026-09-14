@@ -640,8 +640,8 @@ func ValidateString(name string, t types.Type, s string) (any, error) {
 		}
 		return s, nil
 	case types.PhoneSemantic:
-		if len(s) > 16 {
-			return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a valid phone number", name)
+		if !types.IsPhone(s) {
+			return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a valid canonical phone number", name)
 		}
 		return s, nil
 	}

@@ -126,6 +126,12 @@ func Equal(t1, t2 Type) bool {
 	panic("unreachable code")
 }
 
+// EqualSemantics reports whether two types have the same semantics and semantic
+// options. Types with no semantics are considered equivalent.
+func EqualSemantics(t1, t2 Type) bool {
+	return t1.semantic == t2.semantic && t1.semanticOption == t2.semanticOption
+}
+
 // Filter returns a subset of object t containing only the properties for which
 // f returns true, preserving their original order in t.
 // If f returns false for all properties, the result is an invalid schema.

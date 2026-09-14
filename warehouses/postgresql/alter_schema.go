@@ -231,7 +231,7 @@ func typeToPostgresType(t types.Type) string {
 				return "character(3)"
 			}
 		case types.PhoneSemantic:
-			return "character(16)"
+			return "character varying(16)"
 		}
 		var maxLength int
 		if l, ok := t.MaxBytes(); ok {

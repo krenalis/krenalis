@@ -112,7 +112,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				}
 			}
 		case types.PhoneSemantic:
-			if len(v) > 16 {
+			var ok bool
+			v, ok = types.NormalizePhone(v)
+			if !ok {
 				return v, inputValidationErrorf(name, "is not a valid phone number")
 			}
 		}

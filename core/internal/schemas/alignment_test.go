@@ -66,6 +66,46 @@ func Test_checkSchemaAlignment(t *testing.T) {
 			mode: &createOrUpdate,
 		},
 		{p1: types.Property{Type: types.Map(types.String().WithMaxLength(60))}, p2: types.Property{Type: types.Map(types.String().WithMaxLength(60))}},
+		{p1: types.Property{Type: types.String().AsPhone()}, p2: types.Property{Type: types.String().AsPhone()}},
+		{
+			p1:  types.Property{Type: types.String()},
+			p2:  types.Property{Type: types.String().AsPhone()},
+			err: `semantic of the "foo" property's type has changed from none to phone`,
+		},
+		{
+			p1:  types.Property{Type: types.String().AsPhone()},
+			p2:  types.Property{Type: types.String().AsEmail()},
+			err: `semantic of the "foo" property's type has changed from phone to email`,
+		},
+		{
+			p1:  types.Property{Type: types.String().AsCountry(types.ISO3166Alpha2)},
+			p2:  types.Property{Type: types.String().AsCountry(types.ISO3166Alpha3)},
+			err: `country format of the "foo" property's type has changed from alpha-2 to alpha-3`,
+		},
+		{
+			p1:  types.Property{Type: types.Int(64).AsDuration(types.Second)},
+			p2:  types.Property{Type: types.Int(64).AsDuration(types.Minute)},
+			err: `duration unit of the "foo" property's type has changed from second to minute`,
+		},
+		{
+			p1:  types.Property{Type: types.Decimal(10, 2).AsMeasurement(types.Kilogram)},
+			p2:  types.Property{Type: types.Decimal(10, 2).AsMeasurement(types.Gram)},
+			err: `unit of measure of the "foo" property's type has changed from kg to g`,
+		},
+		{
+			p1:  types.Property{Type: types.Decimal(10, 2).AsMoney()},
+			p2:  types.Property{Type: types.Decimal(10, 2).AsMoney().WithCurrency("EUR")},
+			err: `currency of the "foo" property's type has changed from none to EUR`,
+		},
+		{
+			p1: types.Property{Type: types.Object([]types.Property{
+				{Name: "nested", Type: types.String().AsPhone()},
+			})},
+			p2: types.Property{Type: types.Object([]types.Property{
+				{Name: "nested", Type: types.String()},
+			})},
+			err: `semantic of the "foo.nested" property's type has changed from phone to none`,
+		},
 		{p1: types.Property{Type: types.String()}, p2: types.Property{Type: types.String().WithMaxLength(100)}, err: `character length of the "foo" property's type has changed from unbounded to 100`},
 		{p1: types.Property{Type: types.String().WithMaxLength(5)}, p2: types.Property{Type: types.String()}, err: `character length of the "foo" property's type has changed from 5 to unbounded`},
 		{p1: types.Property{Type: types.String().WithMaxLength(50)}, p2: types.Property{Type: types.String().WithMaxLength(60)}, err: `character length of the "foo" property's type has changed from 50 to 60`},

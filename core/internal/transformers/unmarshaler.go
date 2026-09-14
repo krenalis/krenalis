@@ -392,7 +392,8 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 				return nil, newRecordValidationError("", "contains a duplicated value")
 			}
 		}
-		if _, err := d.readToken(); err != nil {
+		_, err = d.readToken()
+		if err != nil {
 			return nil, err
 		}
 		return arr, nil
@@ -554,10 +555,11 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 				}
 				return s, nil
 			case types.PhoneSemantic:
-				if len(s) > 16 {
+				normalized, ok := types.NormalizePhone(s)
+				if !ok {
 					return nil, newRecordValidationError("", "is not a valid phone number")
 				}
-				return s, nil
+				return normalized, nil
 			}
 			if values := t.Values(); values != nil {
 				if !slices.Contains(values, s) {

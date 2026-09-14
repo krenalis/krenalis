@@ -5,7 +5,6 @@
 package mappings
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"slices"
@@ -16,6 +15,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/tools/validation"
@@ -164,7 +164,8 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			}
 			return s, nil
 		case types.PhoneSemantic:
-			if len(s) > 16 {
+			s, ok := types.NormalizePhone(s)
+			if !ok {
 				return v, errPhoneConversion
 			}
 			return s, nil

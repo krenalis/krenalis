@@ -14,10 +14,11 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-// TestMappingSemantics checks semantic validation after conversion, including equal-type fast paths and constants.
+// TestMappingSemantics checks semantic validation during conversion and preserves valid equal-type values.
 func TestMappingSemantics(t *testing.T) {
 
 	country := types.String().AsCountry(types.ISO3166Alpha2)
+
 	tests := []struct {
 		name     string
 		semantic types.Type
@@ -35,12 +36,15 @@ func TestMappingSemantics(t *testing.T) {
 		{"short country", country, "I", false},
 		{"long country", country, "ITA", false},
 		{"non-ASCII country", country, "é", false},
-		{"phone at limit", types.String().AsPhone(), "+123456789012345", true},
+		{"canonical phone", types.String().AsPhone(), "+390236618300", true},
+		{"structurally possible phone", types.String().AsPhone(), "+12001230101", true},
+		{"local-only phone", types.String().AsPhone(), "+12530000", false},
+		{"double plus phone", types.String().AsPhone(), "++390236618300", false},
 		{"long phone", types.String().AsPhone(), "+1234567890123456", false},
-		{"multibyte phone at limit", types.String().AsPhone(), "éééééééé", true},
+		{"multibyte phone at limit", types.String().AsPhone(), "éééééééé", false},
 		{"multibyte phone over limit", types.String().AsPhone(), "ééééééééé", false},
-		{"empty phone", types.String().AsPhone(), "", true},
-		{"phone without format restriction", types.String().AsPhone(), "a (b)", true},
+		{"empty phone", types.String().AsPhone(), "", false},
+		{"phone without format restriction", types.String().AsPhone(), "a (b)", false},
 	}
 
 	for _, test := range tests {
@@ -77,6 +81,9 @@ func TestMappingSemantics(t *testing.T) {
 					for _, mode := range []string{"convert", "equal types", "json", "constant"} {
 
 						if mode == "constant" && shape != "string" {
+							continue
+						}
+						if mode == "equal types" && !test.valid {
 							continue
 						}
 

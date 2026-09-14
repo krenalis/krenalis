@@ -678,21 +678,23 @@ func Test_UnmarshalEdgeCases(t *testing.T) {
 		less := strings.NewReader(`{"records":[{"value":{"a":[1]}}]}`)
 		err := Unmarshal(less, rec, sch, state.JavaScript, false)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("expected no error, got %v", err)
 		}
 		if rec[0].Err == nil || rec[0].Err.Error() != "property «a» contains less than 2 elements" {
-			t.Fatalf("unexpected error for less elements: %v", rec[0].Err)
+			t.Fatalf("expected record error %q, got %v", "property «a» contains less than 2 elements", rec[0].Err)
 		}
 		rec[0].Err = nil
 		rec[0].Attributes = nil
 		more := strings.NewReader(`{"records":[{"value":{"a":[1,2,3,4]}}]}`)
 		err = Unmarshal(more, rec, sch, state.JavaScript, false)
 		if err != nil {
-			t.Fatalf("unexpected error for more elements: %v", err)
+			t.Fatalf("expected no error, got %v", err)
 		}
-		want := "property «a» contains more than 3 elements"
-		if rec[0].Err == nil || rec[0].Err.Error() != want {
-			t.Fatalf("expected %q, got %v", want, rec[0].Err)
+		if rec[0].Err == nil || rec[0].Err.Error() != "property «a» contains more than 3 elements" {
+			t.Fatalf("expected record error %q, got %v", "property «a» contains more than 3 elements", rec[0].Err)
+		}
+		if rec[0].Attributes != nil {
+			t.Fatalf("expected nil attributes, got %#v", rec[0].Attributes)
 		}
 	})
 }

@@ -240,6 +240,51 @@ func Test_TypeSemanticCopyOnWrite(t *testing.T) {
 	}
 }
 
+// TestEqualSemantics tests semantic equality while ignoring kind and other
+// non-semantic type properties.
+func TestEqualSemantics(t *testing.T) {
+
+	tests := []struct {
+		name      string
+		t1        Type
+		t2        Type
+		wantEqual bool
+	}{
+		{"without semantics", String(), Int(64), true},
+		{"equal phone", String().AsPhone(), String().AsPhone(), true},
+		{"missing and present", String(), String().AsPhone(), false},
+		{"different semantics", String().AsEmail(), String().AsPhone(), false},
+		{"equal country", String().AsCountry(ISO3166Alpha2), String().AsCountry(ISO3166Alpha2), true},
+		{"different country format", String().AsCountry(ISO3166Alpha2), String().AsCountry(ISO3166Alpha3), false},
+		{"equal duration with different constraints", Int(32).AsDuration(Second), Int(64).AsDuration(Second), true},
+		{"different duration unit", Int(64).AsDuration(Second), Int(64).AsDuration(Minute), false},
+		{"equal measurement", Decimal(10, 2).AsMeasurement(Kilogram), Int(64).AsMeasurement(Kilogram), true},
+		{"different measurement unit", Decimal(10, 2).AsMeasurement(Kilogram), Int(64).AsMeasurement(Gram), false},
+		{"money without currency", Decimal(10, 2).AsMoney(), Decimal(18, 4).AsMoney(), true},
+		{
+			"equal money currency", Decimal(10, 2).AsMoney().WithCurrency("EUR"),
+			Decimal(18, 4).AsMoney().WithCurrency("EUR"), true,
+		},
+		{
+			"different money currency", Decimal(10, 2).AsMoney().WithCurrency("EUR"),
+			Decimal(10, 2).AsMoney().WithCurrency("USD"), false,
+		},
+		{"missing money currency", Decimal(10, 2).AsMoney(), Decimal(10, 2).AsMoney().WithCurrency("EUR"), false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := EqualSemantics(test.t1, test.t2); got != test.wantEqual {
+				t.Fatalf("expected equality %t, got %t", test.wantEqual, got)
+			}
+			if got := EqualSemantics(test.t2, test.t1); got != test.wantEqual {
+				t.Fatalf("expected reverse equality %t, got %t", test.wantEqual, got)
+			}
+		})
+	}
+
+}
+
 // Test_TypeSemanticEquality tests equality with semantic kinds and options.
 func Test_TypeSemanticEquality(t *testing.T) {
 	tests := []struct {

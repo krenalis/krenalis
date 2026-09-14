@@ -21,6 +21,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/transformers"
 	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/tools/validation"
 )
 
 // exportProfiles exports the profiles for the pipeline.
@@ -426,17 +427,31 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 		default:
 			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
-		if n, ok := ex.MaxBytes(); ok && len(s) > n {
-			return nil, errMatchingPropertyConversion(inPath, outPath)
-		}
-		if n, ok := ex.MaxLength(); ok && utf8.RuneCountInString(s) > n {
-			return nil, errMatchingPropertyConversion(inPath, outPath)
-		}
-		if values := ex.Values(); values != nil && !slices.Contains(values, s) {
-			return nil, errMatchingPropertyConversion(inPath, outPath)
-		}
-		if re := ex.Pattern(); re != nil && !re.MatchString(s) {
-			return nil, errMatchingPropertyConversion(inPath, outPath)
+		switch ex.Semantic() {
+		case types.CountrySemantic:
+			switch ex.CountryFormat() {
+			case types.ISO3166Alpha2:
+				if !validation.IsValidCountryCodeAlpha2(s) {
+					return nil, errMatchingPropertyConversion(inPath, outPath)
+				}
+			case types.ISO3166Alpha3:
+				if !validation.IsValidCountryCodeAlpha3(s) {
+					return nil, errMatchingPropertyConversion(inPath, outPath)
+				}
+			}
+		default:
+			if n, ok := ex.MaxBytes(); ok && len(s) > n {
+				return nil, errMatchingPropertyConversion(inPath, outPath)
+			}
+			if n, ok := ex.MaxLength(); ok && utf8.RuneCountInString(s) > n {
+				return nil, errMatchingPropertyConversion(inPath, outPath)
+			}
+			if values := ex.Values(); values != nil && !slices.Contains(values, s) {
+				return nil, errMatchingPropertyConversion(inPath, outPath)
+			}
+			if re := ex.Pattern(); re != nil && !re.MatchString(s) {
+				return nil, errMatchingPropertyConversion(inPath, outPath)
+			}
 		}
 		return s, nil
 	case types.IntKind:
