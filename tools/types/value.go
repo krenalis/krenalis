@@ -228,7 +228,6 @@ func (d decoder) unmarshal(t Type) (_ any, err error) {
 				return nil, err
 			}
 			elements = append(elements, elem)
-			i++
 		}
 		if _, err := d.readToken(); err != nil {
 			return nil, err
