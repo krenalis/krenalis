@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"net/netip"
 	"slices"
 	"strconv"
 	"time"
@@ -628,23 +627,23 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 	case types.IPKind:
 		switch sk {
 		case types.StringKind:
-			ip, err := netip.ParseAddr(v.(string))
-			if err != nil {
+			ip, ok := types.NormalizeIP(v.(string))
+			if !ok {
 				return v, errParseConversion
 			}
-			return ip.String(), nil
-		case types.IPKind:
-			return v.(string), nil
+			return ip, nil
 		case types.JSONKind:
 			v := v.(json.Value)
 			if !v.IsString() {
 				return v, errInvalidConversion
 			}
-			ip, err := netip.ParseAddr(v.String())
-			if err != nil {
+			ip, ok := types.NormalizeIP(v.String())
+			if !ok {
 				return v, errParseConversion
 			}
-			return ip.String(), nil
+			return ip, nil
+		case types.IPKind:
+			return v.(string), nil
 		}
 	case types.ArrayKind:
 		switch sk {

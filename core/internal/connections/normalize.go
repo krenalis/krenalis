@@ -673,10 +673,6 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			if !ok {
 				return nil, inputValidationErrorf(name, "has a net.IP value that cannot represent a valid ip value")
 			}
-			// Unmap an IPv6-mapped IPv4 address as the net.IP.String method does.
-			if addr.Is4In6() {
-				addr = addr.Unmap()
-			}
 		case netip.Addr:
 			addr = ip
 		default:
@@ -685,7 +681,8 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		if !addr.IsValid() {
 			return nil, inputValidationErrorf(name, "is not a valid IP address")
 		}
-		return addr.WithZone("").String(), nil
+		ip, _ := types.NormalizeIP(addr)
+		return ip, nil
 	case types.ArrayKind:
 		if s, ok := src.(string); ok {
 			// Snowflake only supports json as the item type. The driver returns the value as a JSON array.

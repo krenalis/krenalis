@@ -11,6 +11,7 @@ import (
 	"io"
 	"maps"
 	"math"
+	"net/netip"
 	"reflect"
 	"regexp"
 	"slices"
@@ -323,6 +324,53 @@ func Test_Decode(t *testing.T) {
 			}
 			if err := equalValues(object, test.expected, got); err != nil {
 				t.Fatalf("Decode:\n\texpected value %#v\n\tgot value      %#v\n\terror:   %s", test.expected, got, err)
+			}
+		})
+	}
+
+}
+
+// Test_NormalizeIP checks IP address normalization and validation.
+func Test_NormalizeIP(t *testing.T) {
+
+	tests := []struct {
+		name, value, want string
+		valid             bool
+	}{
+		{"IPv4", "192.0.2.1", "192.0.2.1", true},
+		{"IPv6", "2001:0db8:0000:0000:0000:ff00:0042:8329", "2001:db8::ff00:42:8329", true},
+		{"zoned IPv6", "fe80::1ff:fe23:4567:890a%eth0", "fe80::1ff:fe23:4567:890a", true},
+		{"IPv4-mapped IPv6", "::ffff:192.0.2.1", "192.0.2.1", true},
+		{"prefix", "192.0.2.1/24", "", false},
+		{"invalid", "not an IP address", "", false},
+		{"empty", "", "", false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, valid := NormalizeIP(test.value)
+			if got != test.want || valid != test.valid {
+				t.Fatalf("got (%q, %t), want (%q, %t)", got, valid, test.want, test.valid)
+			}
+		})
+	}
+
+	for _, test := range []struct {
+		name  string
+		value netip.Addr
+		want  string
+		valid bool
+	}{
+		{"IPv4 address", netip.MustParseAddr("192.0.2.1"), "192.0.2.1", true},
+		{"IPv6 address", netip.MustParseAddr("2001:0db8:0000:0000:0000:ff00:0042:8329"), "2001:db8::ff00:42:8329", true},
+		{"zoned IPv6 address", netip.MustParseAddr("fe80::1%eth0"), "fe80::1", true},
+		{"IPv4-mapped IPv6 address", netip.MustParseAddr("::ffff:192.0.2.1"), "192.0.2.1", true},
+		{"invalid address", netip.Addr{}, "", false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			got, valid := NormalizeIP(test.value)
+			if got != test.want || valid != test.valid {
+				t.Fatalf("got (%q, %t), want (%q, %t)", got, valid, test.want, test.valid)
 			}
 		})
 	}
