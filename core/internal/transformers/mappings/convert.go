@@ -626,7 +626,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		return value, nil
 	case types.IPKind:
 		switch sk {
-		case types.StringKind, types.IPKind:
+		case types.StringKind:
 			ip, ok := types.NormalizeIP(v.(string))
 			if !ok {
 				return v, errParseConversion
@@ -642,6 +642,8 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				return v, errParseConversion
 			}
 			return ip, nil
+		case types.IPKind:
+			return v.(string), nil
 		}
 	case types.ArrayKind:
 		switch sk {
