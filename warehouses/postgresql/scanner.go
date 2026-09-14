@@ -294,7 +294,10 @@ func (s *scanner) scanArray(src any) ([]any, error) {
 			if !ok {
 				return nil, errInvalidData
 			}
-			values[i], _ = types.NormalizeIP(addr)
+			values[i], ok = types.NormalizeIP(addr)
+			if !ok {
+				return nil, errInvalidData
+			}
 			p += l
 		}
 	case
