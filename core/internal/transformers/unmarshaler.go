@@ -364,12 +364,13 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 		}
 		min := t.MinElements()
 		max := t.MaxElements()
+		et := t.Elem()
 		arr := []any{}
 		for i := 0; d.peekKind() != ']'; i++ {
 			if i == max {
 				return nil, newRecordValidationError("", fmt.Sprintf("contains more than %d %s", max, d.opts.terms.Elements))
 			}
-			elem, err := d.unmarshal(t.Elem(), preserveJSON, purpose)
+			elem, err := d.unmarshal(et, preserveJSON, purpose)
 			if err != nil {
 				if e, ok := err.(RecordValidationError); ok {
 					err = e.addIndexToPath(i)
@@ -383,10 +384,12 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 			return nil, newRecordValidationError("", fmt.Sprintf("contains less than %d %s", min, d.opts.terms.Elements))
 		}
 		if t.Unique() {
-			for i, elem := range arr {
-				if slices.Contains(arr[i+1:], elem) {
-					return nil, newRecordValidationError("", "contains a duplicated value")
-				}
+			duplicate, err := types.FirstDuplicate(arr, et)
+			if err != nil {
+				return nil, err
+			}
+			if duplicate != -1 {
+				return nil, newRecordValidationError("", "contains a duplicated value")
 			}
 		}
 		if _, err := d.readToken(); err != nil {
