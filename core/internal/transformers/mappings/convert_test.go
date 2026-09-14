@@ -190,8 +190,10 @@ func TestConvert(t *testing.T) {
 
 		// uuid.
 		{types.UUID(), types.UUID(), "123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174000", true, nil, nil},
-		{types.String(), types.UUID(), "123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174000", true, nil, nil},
-		{types.JSON(), types.UUID(), json.Value(`"123e4567-e89b-12d3-a456-426614174000"`), "123e4567-e89b-12d3-a456-426614174000", true, nil, nil},
+		{types.String(), types.UUID(), "123E4567-E89B-12D3-A456-426614174000", "123e4567-e89b-12d3-a456-426614174000", true, nil, nil},
+		{types.JSON(), types.UUID(), json.Value(`"123E4567-E89B-12D3-A456-426614174000"`), "123e4567-e89b-12d3-a456-426614174000", true, nil, nil},
+		{types.String(), types.UUID(), "123e4567e89b12d3a456426614174000", nil, true, nil, errParseConversion},
+		{types.JSON(), types.UUID(), json.Value(`"123e4567e89b12d3a456426614174000"`), nil, true, nil, errParseConversion},
 
 		// json.
 		{types.Int(32), types.JSON(), nil, nil, true, nil, nil},
@@ -208,8 +210,11 @@ func TestConvert(t *testing.T) {
 
 		// ip.
 		{types.IP(), types.IP(), "2001:db8::ff00:42:8329", "2001:db8::ff00:42:8329", true, nil, nil},
+		{types.IP(), types.IP(), "192.0.2.1", "192.0.2.1", true, nil, nil},
 		{types.String(), types.IP(), "2001:0db8:0000:0000:0000:ff00:0042:8329", "2001:db8::ff00:42:8329", true, nil, nil},
+		{types.String(), types.IP(), "::ffff:192.0.2.1", "192.0.2.1", true, nil, nil},
 		{types.JSON(), types.IP(), json.Value(`"2001:0db8:0000:0000:0000:ff00:0042:8329"`), "2001:db8::ff00:42:8329", true, nil, nil},
+		{types.JSON(), types.IP(), json.Value(`"::ffff:192.0.2.1"`), "192.0.2.1", true, nil, nil},
 
 		// array.
 		{types.Array(types.Int(32)), types.Array(types.Int(32)), []any{1, 2, 3}, []any{1, 2, 3}, true, nil, nil},

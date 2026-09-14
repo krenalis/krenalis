@@ -11,6 +11,7 @@ import (
 	"io"
 	"maps"
 	"math"
+	"net/netip"
 	"reflect"
 	"regexp"
 	"slices"
@@ -161,7 +162,7 @@ func Test_Decode(t *testing.T) {
 		},
 	})
 
-	data := `{"String":"some text","Text_values":"c","Text_regexp":"foo","Text_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Decimal":1752.064,"DateTime":"2023-10-17T09:34:25.836540129Z","Date":"2023-10-17","Time":"09:34:25.836540129","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo": 5,"boo": true},"JSON_null":null,"IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":9,"b":null},"Map":{"a":1,"b":2,"c":3}}`
+	data := `{"String":"some text","Text_values":"c","Text_regexp":"foo","Text_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Decimal":1752.064,"DateTime":"2023-10-17T09:34:25.836540129Z","Date":"2023-10-17","Time":"09:34:25.836540129","Year":2023,"UUID":"550E8400-E29B-41D4-A716-446655440000","JSON":{"foo": 5,"boo": true},"JSON_null":null,"IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":9,"b":null},"Map":{"a":1,"b":2,"c":3}}`
 	expected := map[string]any{
 		"String":      "some text",
 		"Text_values": "c",
@@ -274,6 +275,10 @@ func Test_Decode(t *testing.T) {
 			err:  newErrInvalidValue(`does not have a valid value: "2023-02-30"`, "Date"),
 		},
 		{
+			data: `{"UUID":"550e8400e29b41d4a716446655440000"}`,
+			err:  newErrInvalidValue(`does not have a valid value: "550e8400e29b41d4a716446655440000"`, "UUID"),
+		},
+		{
 			data: `{"String":"some long text"}`,
 			err:  newErrInvalidValue(`is longer than 10 characters: "some long text"`, "String"),
 		},
@@ -325,6 +330,53 @@ func Test_Decode(t *testing.T) {
 
 }
 
+// Test_NormalizeIP checks IP address normalization and validation.
+func Test_NormalizeIP(t *testing.T) {
+
+	tests := []struct {
+		name, value, want string
+		valid             bool
+	}{
+		{"IPv4", "192.0.2.1", "192.0.2.1", true},
+		{"IPv6", "2001:0db8:0000:0000:0000:ff00:0042:8329", "2001:db8::ff00:42:8329", true},
+		{"zoned IPv6", "fe80::1ff:fe23:4567:890a%eth0", "fe80::1ff:fe23:4567:890a", true},
+		{"IPv4-mapped IPv6", "::ffff:192.0.2.1", "192.0.2.1", true},
+		{"prefix", "192.0.2.1/24", "", false},
+		{"invalid", "not an IP address", "", false},
+		{"empty", "", "", false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, valid := NormalizeIP(test.value)
+			if got != test.want || valid != test.valid {
+				t.Fatalf("got (%q, %t), want (%q, %t)", got, valid, test.want, test.valid)
+			}
+		})
+	}
+
+	for _, test := range []struct {
+		name  string
+		value netip.Addr
+		want  string
+		valid bool
+	}{
+		{"IPv4 address", netip.MustParseAddr("192.0.2.1"), "192.0.2.1", true},
+		{"IPv6 address", netip.MustParseAddr("2001:0db8:0000:0000:0000:ff00:0042:8329"), "2001:db8::ff00:42:8329", true},
+		{"zoned IPv6 address", netip.MustParseAddr("fe80::1%eth0"), "fe80::1", true},
+		{"IPv4-mapped IPv6 address", netip.MustParseAddr("::ffff:192.0.2.1"), "192.0.2.1", true},
+		{"invalid address", netip.Addr{}, "", false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			got, valid := NormalizeIP(test.value)
+			if got != test.want || valid != test.valid {
+				t.Fatalf("got (%q, %t), want (%q, %t)", got, valid, test.want, test.valid)
+			}
+		})
+	}
+
+}
+
 func Test_Marshal(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -368,6 +420,37 @@ func Test_Marshal(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Test_NormalizeUUID checks that UUIDs are canonicalized and invalid or non-standard forms are rejected.
+func Test_NormalizeUUID(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		id, ok := NormalizeUUID("F47AC10B-58CC-4372-A567-0E02B2C3D479")
+		if !ok || id != "f47ac10b-58cc-4372-a567-0e02b2c3d479" {
+			t.Fatalf("unexpected result %q %t", id, ok)
+		}
+	})
+	t.Run("invalid", func(t *testing.T) {
+		if id, ok := NormalizeUUID("invalid"); ok || id != "" {
+			t.Fatalf("expected failure, got %q %t", id, ok)
+		}
+	})
+	t.Run("malformed", func(t *testing.T) {
+		if id, ok := NormalizeUUID("F47AC10B-58CC-4372-A567-0E02B2C3D47Z"); ok || id != "" {
+			t.Fatalf("expected failure, got %q %t", id, ok)
+		}
+	})
+	t.Run("non-standard", func(t *testing.T) {
+		for _, s := range []string{
+			"F47AC10B58CC4372A5670E02B2C3D479",
+			"{F47AC10B-58CC-4372-A567-0E02B2C3D479}",
+			"urn:uuid:F47AC10B-58CC-4372-A567-0E02B2C3D479",
+		} {
+			if id, ok := NormalizeUUID(s); ok || id != "" {
+				t.Fatalf("expected failure for %q, got %q %t", s, id, ok)
+			}
+		}
+	})
 }
 
 // equalValues reports whether v1 and v2 are equal according to the type t.
