@@ -18,19 +18,6 @@
 		'Segoe UI Emoji';
 	--monospace-fonts: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
 
-	/* set shoelace primary colors */
-	--sl-color-primary-50: #e3e4f7 !important;
-	--sl-color-primary-100: #d0d0f1 !important;
-	--sl-color-primary-200: #b8b9ea !important;
-	--sl-color-primary-300: #999ae1 !important;
-	--sl-color-primary-400: #8183da !important;
-	--sl-color-primary-500: #696bd3 !important;
-	--sl-color-primary-600: #6062d0 !important;
-	--sl-color-primary-700: #4244c7 !important;
-	--sl-color-primary-800: #3437b1 !important;
-	--sl-color-primary-900: #2a2c8e !important;
-	--sl-color-primary-950: #21226e !important;
-
 	/* assign shoelace primary colors */
 	--color-primary-50: var(--sl-color-primary-50);
 	--color-primary-100: var(--sl-color-primary-100);

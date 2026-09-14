@@ -14,6 +14,7 @@ import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import '@shoelace-style/shoelace/dist/themes/light.css';
 import '@awesome.me/webawesome/dist/styles/layers.css';
 import '@awesome.me/webawesome/dist/styles/themes/default.css';
+import '../../../shoelace-compat.css';
 import { useApp } from './useApp';
 import { UnauthorizedError, UnprocessableError } from '../../../lib/api/errors';
 import * as Sentry from '@sentry/react';
