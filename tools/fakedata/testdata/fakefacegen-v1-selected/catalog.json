@@ -1,0 +1,12 @@
+{
+  "catalog_version": 1,
+  "seed": 726381,
+  "count": 50,
+  "spec_version": "spec-v1",
+  "prompt_version": "portrait-v1",
+  "model": "gpt-image-2",
+  "quality": "low",
+  "size": "1024x1024",
+  "format": "webp",
+  "background": "opaque"
+}
