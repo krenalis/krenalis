@@ -928,14 +928,19 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 			function = *fn
 		}
 		if formatCode != nil {
-			if err := checkUpdatePipelineConnectorLimit(ctx, tx, n.ID, *formatCode); err != nil {
+			err := checkUpdatePipelineConnectorLimit(ctx, tx, n.ID, *formatCode)
+			if err != nil {
 				return nil, err
 			}
+		}
+		err := lockWorkspace(ctx, tx, c.Workspace().ID)
+		if err != nil {
+			return nil, err
 		}
 		// Check that the required consent purposes exist.
 		if len(n.RequiredConsents.Purposes) > 0 {
 			var missing string
-			err := tx.QueryRow(ctx, "SELECT purpose\n"+
+			err = tx.QueryRow(ctx, "SELECT purpose\n"+
 				"FROM UNNEST($1::varchar[]) AS purpose\n"+
 				"WHERE NOT EXISTS (SELECT 1 FROM consent_purposes AS cp WHERE cp.id = purpose AND cp.workspace = $2)\n"+
 				"LIMIT 1", n.RequiredConsents.Purposes, c.Workspace().ID).Scan(&missing)
@@ -948,7 +953,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 		}
 		// Mark the pipeline’s function as discontinued if its identifier changes.
 		now := time.Now().UTC()
-		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, organization, discontinued_at)\n"+
+		_, err = tx.Exec(ctx, "INSERT INTO discontinued_functions (id, organization, discontinued_at)\n"+
 			"SELECT p.transformation_id, w.organization, $1\n"+
 			"FROM pipelines AS p\n"+
 			"INNER JOIN connections AS c ON p.connection = c.id\n"+

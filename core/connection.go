@@ -527,10 +527,19 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	for {
 		n.ID = generateID(this.connection.Pipeline)
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			// Check the connector and pipeline limits.
+			err := checkCreatePipelineLimits(ctx, tx, org.ID, n.Format)
+			if err != nil {
+				return nil, err
+			}
+			err = lockWorkspace(ctx, tx, c.Workspace().ID)
+			if err != nil {
+				return nil, err
+			}
 			// Check that the required consent purposes exist.
 			if len(n.RequiredConsents.Purposes) > 0 {
 				var missing string
-				err := tx.QueryRow(ctx, "SELECT purpose\n"+
+				err = tx.QueryRow(ctx, "SELECT purpose\n"+
 					"FROM UNNEST($1::varchar[]) AS purpose\n"+
 					"WHERE NOT EXISTS (SELECT 1 FROM consent_purposes AS cp WHERE cp.id = purpose AND cp.workspace = $2)\n"+
 					"LIMIT 1", n.RequiredConsents.Purposes, c.Workspace().ID).Scan(&missing)
@@ -540,10 +549,6 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 				if missing != "" {
 					return nil, errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", missing)
 				}
-			}
-			// Check the connector and pipeline limits.
-			if err := checkCreatePipelineLimits(ctx, tx, org.ID, n.Format); err != nil {
-				return nil, err
 			}
 			switch n.Target {
 			case state.TargetEvent:
@@ -575,7 +580,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 				"user_id_column, updated_at_column, updated_at_format, incremental)\n" +
 				"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,\n" +
 				"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38)"
-			_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
+			_, err = tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 				n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
 				n.Filter, n.RequiredConsents.Purposes, n.RequiredConsents.Operator, mapping, function.ID, function.Version,
 				function.Language, function.Source, function.PreserveJSON, n.Transformation.InPaths, n.Transformation.OutPaths,

@@ -2210,6 +2210,18 @@ func filterWorkspacePipelines(ws *state.Workspace, pipelines []string) []string 
 	return pipelines
 }
 
+// lockWorkspace locks the workspace with the given identifier until tx ends.
+func lockWorkspace(ctx context.Context, tx *db.Tx, workspace string) error {
+	locked, err := tx.QueryExists(ctx, "SELECT FROM workspaces WHERE id = $1 FOR UPDATE", workspace)
+	if err != nil {
+		return err
+	}
+	if !locked {
+		return fmt.Errorf("cannot lock workspace %s: it does not exist", workspace)
+	}
+	return nil
+}
+
 // validateUIPreferences validates whether the given UI preferences are valid or
 // not, returning an error if they are not.
 func validateUIPreferences(preferences UIPreferences) error {

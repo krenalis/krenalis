@@ -15,6 +15,46 @@ type valuerStringer interface {
 	String() string
 }
 
+// TestResolveRequiredConsents verifies that required purposes are resolved and
+// missing purposes are rejected.
+func TestResolveRequiredConsents(t *testing.T) {
+
+	const (
+		purposeID   = "111111111111"
+		workspaceID = "222222222222"
+	)
+	purpose := &ConsentPurpose{ID: purposeID}
+	workspace := &Workspace{
+		ID:              workspaceID,
+		consentPurposes: map[string]*ConsentPurpose{purposeID: purpose},
+	}
+
+	resolved, err := workspace.resolveRequiredConsents(RequiredConsentsByIDs{
+		Purposes: []string{purposeID},
+		Operator: PurposesOr,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resolved.Purposes) != 1 || resolved.Purposes[0] != purpose {
+		t.Fatalf("resolved purposes = %v, want [%p]", resolved.Purposes, purpose)
+	}
+	if resolved.Operator != PurposesOr {
+		t.Fatalf("resolved operator = %v, want %v", resolved.Operator, PurposesOr)
+	}
+
+	_, err = workspace.resolveRequiredConsents(RequiredConsentsByIDs{Purposes: []string{"333333333333"}})
+	if err != nil {
+		const want = "required consent purpose 333333333333 does not exist in workspace 222222222222"
+		if err.Error() != want {
+			t.Fatalf("error = %q, want %q", err, want)
+		}
+		return
+	}
+	t.Fatal("resolveRequiredConsents did not return an error for a missing purpose")
+
+}
+
 // TestValuerStringerConsistency verifies that String and Value agree.
 func TestValuerStringerConsistency(t *testing.T) {
 	tests := []struct {

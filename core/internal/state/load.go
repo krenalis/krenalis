@@ -571,7 +571,10 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				pipeline.connection = c
 				pipeline.organization = c.organization
 				pipeline.EventType = eventType
-				pipeline.RequiredConsents = c.workspace.resolveRequiredConsents(requiredConsentIDs)
+				pipeline.RequiredConsents, err = c.workspace.resolveRequiredConsents(requiredConsentIDs)
+				if err != nil {
+					return fmt.Errorf("loading pipeline %s: %s", pipeline.ID, err)
+				}
 				err = pipeline.InSchema.UnmarshalJSON(rawInSchema)
 				if err != nil {
 					return fmt.Errorf("loading input schema for pipeline %s: %s", pipeline.ID, err)

@@ -974,17 +974,23 @@ func (workspace *Workspace) ConsumeRateLimitCapacity(ctx context.Context, units 
 // resolveRequiredConsents returns the required consents of a pipeline of the
 // workspace, given the required consent purposes referred to by identifier.
 //
+// It returns an error if a referred consent purpose does not exist.
+//
 // It must be called on a frozen state.
-func (workspace *Workspace) resolveRequiredConsents(byIDs RequiredConsentsByIDs) RequiredConsents {
+func (workspace *Workspace) resolveRequiredConsents(byIDs RequiredConsentsByIDs) (RequiredConsents, error) {
 	rc := RequiredConsents{Operator: byIDs.Operator}
 	if len(byIDs.Purposes) == 0 {
-		return rc
+		return rc, nil
 	}
 	rc.Purposes = make([]*ConsentPurpose, len(byIDs.Purposes))
 	for i, id := range byIDs.Purposes {
-		rc.Purposes[i] = workspace.consentPurposes[id]
+		purpose, ok := workspace.consentPurposes[id]
+		if !ok {
+			return RequiredConsents{}, fmt.Errorf("required consent purpose %s does not exist in workspace %s", id, workspace.ID)
+		}
+		rc.Purposes[i] = purpose
 	}
-	return rc
+	return rc, nil
 }
 
 // EncryptWarehouseSettings encrypts the given settings with the settings key.

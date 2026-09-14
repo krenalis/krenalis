@@ -7,6 +7,7 @@ package state
 import (
 	"bytes"
 	stdjson "encoding/json"
+	"fmt"
 	"log/slog"
 	"slices"
 	"strings"
@@ -627,7 +628,10 @@ func (state *State) createPipeline(n notification) string {
 	}
 	c := state.connections[e.Connection]
 	format := state.connectors[e.Format]
-	requiredConsents := c.workspace.resolveRequiredConsents(e.RequiredConsents)
+	requiredConsents, err := c.workspace.resolveRequiredConsents(e.RequiredConsents)
+	if err != nil {
+		panic(fmt.Errorf("state: cannot create pipeline %s: %s", e.ID, err))
+	}
 	pipeline := &Pipeline{
 		mu:                 new(sync.Mutex),
 		ID:                 e.ID,
@@ -1816,7 +1820,10 @@ func (state *State) updatePipeline(n notification) string {
 	}
 	oldFormat := state.pipelines[e.ID].format
 	ws := state.pipelines[e.ID].connection.workspace
-	requiredConsents := ws.resolveRequiredConsents(e.RequiredConsents)
+	requiredConsents, err := ws.resolveRequiredConsents(e.RequiredConsents)
+	if err != nil {
+		panic(fmt.Errorf("state: cannot update pipeline %s: %s", e.ID, err))
+	}
 	p := state.replacePipeline(e.ID, func(p *Pipeline) {
 		p.format = format
 		p.propertiesToUnset = e.PropertiesToUnset

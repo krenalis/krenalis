@@ -77,10 +77,15 @@ func (this *Workspace) AddConsentPurpose(ctx context.Context, purpose ConsentPur
 	}
 	n.ID = generateID(this.workspace.ConsentPurpose)
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		if err := checkConsentPurposeCodes(ctx, tx, n.Workspace, n.ID, n.Code, n.Aliases); err != nil {
+		err := lockWorkspace(ctx, tx, n.Workspace)
+		if err != nil {
 			return nil, err
 		}
-		_, err := tx.Exec(ctx, "INSERT INTO consent_purposes (workspace, id, code, name, aliases, event_path,"+
+		err = checkConsentPurposeCodes(ctx, tx, n.Workspace, n.ID, n.Code, n.Aliases)
+		if err != nil {
+			return nil, err
+		}
+		_, err = tx.Exec(ctx, "INSERT INTO consent_purposes (workspace, id, code, name, aliases, event_path,"+
 			" profile_path) VALUES ($1, $2, $3, $4, $5, $6, $7)",
 			n.Workspace, n.ID, n.Code, n.Name, n.Aliases, n.EventPath, n.ProfilePath)
 		if err != nil {
@@ -141,8 +146,12 @@ func (this *Workspace) DeleteConsentPurpose(ctx context.Context, id string) erro
 		ID:        id,
 	}
 	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		err := lockWorkspace(ctx, tx, n.Workspace)
+		if err != nil {
+			return nil, err
+		}
 		var inUse bool
-		err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM pipelines p JOIN connections c ON p.connection = c.id "+
+		err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM pipelines p JOIN connections c ON p.connection = c.id "+
 			"WHERE c.workspace = $1 AND $2 = ANY(p.required_consents))", n.Workspace, n.ID).Scan(&inUse)
 		if err != nil {
 			return nil, err
@@ -202,7 +211,12 @@ func (this *Workspace) UpdateConsentPurpose(ctx context.Context, id string, purp
 		ProfilePath: purpose.ProfilePath,
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		if err := checkConsentPurposeCodes(ctx, tx, n.Workspace, n.ID, n.Code, n.Aliases); err != nil {
+		err := lockWorkspace(ctx, tx, n.Workspace)
+		if err != nil {
+			return nil, err
+		}
+		err = checkConsentPurposeCodes(ctx, tx, n.Workspace, n.ID, n.Code, n.Aliases)
+		if err != nil {
 			return nil, err
 		}
 		result, err := tx.Exec(ctx, "UPDATE consent_purposes SET code = $1, name = $2, aliases = $3,"+
