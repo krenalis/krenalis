@@ -141,6 +141,8 @@ return n, nil
 
 ## Tests
 
+Test failure messages must use the form `expected ..., got ...`.
+
 In tests, use `t.Context()` for operations whose lifetime follows the test. Pass `t.Context()` directly instead of first assigning it to a local variable when its scope of use is small; name it only when it spans a broader portion of the test or must be used to derive another context. When a test helper already accepts `*testing.T`, obtain that context inside the helper instead of also passing a `context.Context`. Accept a separate context only when callers intentionally need to supply a context with different values, deadline, cancellation state, or lifetime.
 
 Use the standard-library `testing/synctest` package when testing concurrent or asynchronous Go code whose behavior depends on timers, deadlines, or goroutine quiescence and can run entirely inside a synctest bubble. Prefer its virtual time and `synctest.Wait` to real sleeps or polling. Do not use it around real network I/O, system calls, or external processes unless those dependencies are replaced with fakes that operate entirely within the bubble.
@@ -241,6 +243,8 @@ var x int
 Every exported package-level type, function, variable, and constant, as well as every exported method, must have a declaration comment written in the style of the Go standard library, except for the grouped declarations and self-explanatory test fixture constants described below. An unexported declaration does not need one, but add it when the declaration is long, takes or returns several values, or its behavior is not obvious from the code.
 
 Keep comments compact: one precise sentence beats three loose ones, and do not restate what the code already says.
+
+Limit each line of declaration comments starting in column 1 to 80 characters, including comment markers and spaces; comments on the same line as code are exempt.
 
 When a variable or constant belongs to a parenthesized `var` or `const` declaration whose other members do not have individual declaration comments, do not add an individual comment only to that member. Preserve the established comment style consistently throughout the group.
 
