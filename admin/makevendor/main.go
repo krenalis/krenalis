@@ -209,9 +209,10 @@ func makeVendor() error {
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
-		for _, license := range []string{"LICENSE", "license", "License"} {
+		for _, license := range []string{"LICENSE", "license", "License", "LICENSE.md", "license.md", "License.md"} {
 			src = filepath.Join("admin/node_modules", dir, license)
-			dst = filepath.Join("admin/node_modules_vendor", dir, strings.ToUpper(license))
+			ext := filepath.Ext(license)
+			dst = filepath.Join("admin/node_modules_vendor", dir, strings.ToUpper(strings.TrimSuffix(license, ext))+ext)
 			err = copyFile(dst, src)
 			if err != nil && !errors.Is(err, os.ErrNotExist) {
 				return err
