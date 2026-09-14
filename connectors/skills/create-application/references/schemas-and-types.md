@@ -66,6 +66,22 @@ This makes the constraint visible to Krenalis (and UIs), and avoids per-call def
 
 If you need a constraint that is not covered above, check the `types.Type` methods in `tools/types/types.go` in this repo.
 
+### String constraint combinations
+
+For each string type, choose one of these constraint forms, or leave it unconstrained:
+
+- Length limits: `WithMaxLength` (characters), `WithMaxBytes` (bytes), or both. Each limit must be in `[1, types.MaxStringLen]` and may be set only once.
+- Allowed values: `WithValues(...)`, without a pattern or length limits.
+- Pattern: `WithPattern(...)`, without allowed values or length limits. The pattern must be non-nil and may be set only once.
+
+Unsupported combinations panic in the Go constructors, regardless of the order of modifier calls.
+
+Translate the provider's complete rule, rather than mechanically chaining every modifier mentioned in its specification. A single pattern can sometimes express both format and length, as in the ASCII pattern above. Verify that this preserves the provider's character/byte semantics. If the schema cannot express the full rule, use a supported constraint form and validate only the remaining API-specific requirements in the connector; do not silently drop them.
+
+For dynamic fields, validate metadata and compile provider-supplied patterns before calling the constructors. Return a schema-building error for malformed metadata or unsupported combinations that the connector cannot represent faithfully; do not pass a nil pattern or rely on recovering a constructor panic. Use `regexp.MustCompile` only for fixed patterns authored in the connector.
+
+Test schema construction for the chosen combinations. If metadata controls constraints, cover valid combinations and rejected metadata through the connector's schema method, checking that invalid metadata returns an error rather than panicking.
+
 ## Record attribute values (import/export)
 
 Krenalis supports a canonical set of value types for each schema property type. Your connector must map between:
