@@ -62,7 +62,7 @@ type ConsentPurposeToSet struct {
 func (this *Workspace) AddConsentPurpose(ctx context.Context, purpose ConsentPurposeToSet) error {
 	this.core.mustBeOpen()
 	if err := validateConsentPurposeToSet(purpose); err != nil {
-		return err
+		return errors.BadRequest("%s", err)
 	}
 	if purpose.Aliases == nil {
 		purpose.Aliases = []string{}
@@ -187,7 +187,7 @@ func (this *Workspace) UpdateConsentPurpose(ctx context.Context, id string, purp
 		return errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
 	}
 	if err := validateConsentPurposeToSet(purpose); err != nil {
-		return err
+		return errors.BadRequest("%s", err)
 	}
 	if purpose.Aliases == nil {
 		purpose.Aliases = []string{}
@@ -342,23 +342,22 @@ func checkConsentPurposeCodes(ctx context.Context, tx *db.Tx, workspace, id, cod
 }
 
 // validateConsentPurposeToSet validates the code, the name, the aliases and the
-// paths of the given consent purpose. It returns an errors.BadRequestError
-// error if one of them is not valid.
+// paths of the given consent purpose.
 func validateConsentPurposeToSet(purpose ConsentPurposeToSet) error {
 	if err := validateConsentPurposeCode(purpose.Code); err != nil {
-		return errors.BadRequest("%s", err)
+		return err
 	}
 	if err := util.ValidateStringField("name", purpose.Name, 100); err != nil {
-		return errors.BadRequest("%s", err)
+		return err
 	}
 	if err := validateConsentPurposeAliases(purpose.Code, purpose.Aliases); err != nil {
-		return errors.BadRequest("%s", err)
+		return err
 	}
 	if err := validateConsentPurposePath("eventPath", purpose.EventPath); err != nil {
-		return errors.BadRequest("%s", err)
+		return err
 	}
 	if err := validateConsentPurposePath("profilePath", purpose.ProfilePath); err != nil {
-		return errors.BadRequest("%s", err)
+		return err
 	}
 	return nil
 }
