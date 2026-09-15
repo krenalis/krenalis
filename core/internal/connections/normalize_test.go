@@ -188,6 +188,7 @@ func Test_normalize(t *testing.T) {
 		// array.
 		{types.Array(types.Int(32)), []any{1, 2}, []any{1, 2}, false, nil},
 		{types.Array(types.Int(32)), []any{1.0, 2.0}, []any{1, 2}, false, nil},
+		{types.Array(types.String()).WithUnique(), []any{"foo", "boo"}, []any{"foo", "boo"}, false, nil},
 		{types.Array(types.Array(types.String())), []any{[]any{"foo"}, []any{"foo"}}, []any{[]any{"foo"}, []any{"foo"}}, false, nil},
 		{types.Array(types.Int(32)), []any(nil), nil, true, nil},
 		{types.Array(types.Int(32)), []int(nil), nil, true, nil},
@@ -258,6 +259,7 @@ func Test_normalize_errors(t *testing.T) {
 		value          any
 		nullable       bool
 		layout         *state.TimeLayouts
+		want           string
 		wantContains   string
 		wantInputError bool
 	}
@@ -353,7 +355,9 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "arrayStringInvalidJSON", typ: types.Array(types.JSON()), value: "[bad", wantContains: "has a string value but is not valid JSON"},
 		{name: "arrayStringTooManyElements", typ: types.Array(types.JSON()).WithMaxElements(1), value: "[1,2]", wantContains: "is an array with more than 1 elements"},
 		{name: "arrayStringTooFewElements", typ: types.Array(types.JSON()).WithMinElements(2), value: "[1]", wantContains: "is an array with less than 2 elements"},
-		{name: "arrayUniqueDuplicated", typ: types.Array(types.Int(32)).WithUnique(), value: []any{1, 1}, wantContains: "contains the duplicated value 1"},
+		{name: "arrayUniqueDuplicated", typ: types.Array(types.Int(32)).WithUnique(), value: []any{1, 1}, want: "property 'k' contains a duplicated value"},
+		{name: "arrayUniqueDuplicatedNaNs", typ: types.Array(types.Float(64)).WithUnique(), value: []any{math.NaN(), math.NaN()}, want: "property 'k' contains a duplicated value"},
+		{name: "arrayUniqueEquivalentDecimals", typ: types.Array(types.Decimal(6, 2)).WithUnique(), value: []any{decimal.New(15, 1), decimal.MustParse("1.50")}, want: "property 'k' contains a duplicated value"},
 		{name: "objectMissingRequired", typ: types.Object([]types.Property{{Name: "foo", Type: types.String()}}), value: map[string]any{}, wantContains: "property 'k.foo' does not have a value, but the property is not optional for reading"},
 		{name: "objectPropertyError", typ: types.Object([]types.Property{{Name: "foo", Type: types.Int(32)}}), value: map[string]any{"foo": "bad"}, wantContains: "property 'k.foo' has a string value that does not represent an int value"},
 		{name: "objectInvalidType", typ: types.Object([]types.Property{{Name: "foo", Type: types.String()}}), value: 5, wantContains: "has type int that is not allowed for type object"},
@@ -389,6 +393,9 @@ func Test_normalize_errors(t *testing.T) {
 					if _, ok := errors.AsType[InputValidationError](err); !ok {
 						t.Fatalf("got %T (%v), want InputValidationError", err, err)
 					}
+				}
+				if tt.want != "" && err.Error() != tt.want {
+					t.Fatalf("expected error %q, got %q", tt.want, err)
 				}
 				if tt.wantContains != "" && !strings.Contains(err.Error(), tt.wantContains) {
 					t.Fatalf("expected error containing %q, got %q", tt.wantContains, err)
