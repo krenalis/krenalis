@@ -70,17 +70,19 @@ If you need a constraint that is not covered above, check the `types.Type` metho
 
 For each string type, choose one of these constraint forms, or leave it unconstrained:
 
-- Length limits: `WithMaxLength` (characters), `WithMaxBytes` (bytes), or both. Each limit must be in `[1, types.MaxStringLen]` and may be set only once.
-- Allowed values: `WithValues(...)`, without a pattern or length limits.
+- Length limits: `WithMaxLength` (Unicode code points), `WithMaxBytes` (UTF-8 bytes), or both. Each limit must be in `[1, types.MaxStringLen]` and may be set only once.
+- Allowed values: `WithValues(...)`, without a pattern or length limits. The list must be non-empty and contain valid UTF-8 strings; it may be set only once.
 - Pattern: `WithPattern(...)`, without allowed values or length limits. The pattern must be non-nil and may be set only once.
 
-Unsupported combinations panic in the Go constructors, regardless of the order of modifier calls.
+Unsupported combinations panic in the Go type methods, regardless of the order of modifier calls. JSON deserialization rejects the same combinations with an error.
 
-Translate the provider's complete rule, rather than mechanically chaining every modifier mentioned in its specification. A single pattern can sometimes express both format and length, as in the ASCII pattern above. Verify that this preserves the provider's character/byte semantics. If the schema cannot express the full rule, use a supported constraint form and validate only the remaining API-specific requirements in the connector; do not silently drop them.
+Choose a representation that preserves the provider's set of allowed values. A constraint already implied by that representation needs no separate modifier. For example, `WithPattern(regexp.MustCompile("^[A-Za-z0-9_-]{1,255}$"))` enforces both the allowed alphabet and a length of 1–255 characters; every matched character is ASCII and occupies one UTF-8 byte. This equivalence between character and byte counts does not hold for arbitrary Unicode strings. Likewise, `WithValues(...)` alone is sufficient when every listed value already satisfies the provider's pattern and length requirements.
 
-For dynamic fields, validate metadata and compile provider-supplied patterns before calling the constructors. Return a schema-building error for malformed metadata or unsupported combinations that the connector cannot represent faithfully; do not pass a nil pattern or rely on recovering a constructor panic. Use `regexp.MustCompile` only for fixed patterns authored in the connector.
+If no supported schema form expresses the full rule, choose one that accepts all valid provider values and enforce the remaining requirements in the connector. Do not silently discard constraints or exclude valid values merely to fit a schema form.
 
-Test schema construction for the chosen combinations. If metadata controls constraints, cover valid combinations and rejected metadata through the connector's schema method, checking that invalid metadata returns an error rather than panicking.
+For dynamic fields, validate metadata before constructing types and compile provider-supplied patterns with `regexp.Compile`, handling compilation errors. Successful compilation alone does not establish equivalence with the provider's regex semantics. Return an error from the schema method for malformed metadata or rules the connector cannot enforce faithfully; do not rely on recovering a constructor panic. Use `regexp.MustCompile` only for fixed patterns authored in the connector.
+
+Test the schemas returned by `RecordSchema` / `EventTypeSchema` with accepted and rejected values, including length boundaries. Also test any requirements enforced separately in the connector. If metadata controls constraints, cover valid combinations and verify that invalid metadata returns an error rather than panicking.
 
 ## Record attribute values (import/export)
 
