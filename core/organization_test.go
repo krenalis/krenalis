@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/krenalis/krenalis/tools/errors"
 )
 
 // TestPipelineMetricsPerDateRejectsTooManyEntryDays verifies that requests
@@ -261,6 +263,58 @@ func TestValidatePipelineMetricsSelectionRejectsEmptyGroup(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestValidateMemberEmail verifies that ValidateMemberEmail accepts valid email
+// addresses and reports the invalid ones as unprocessable.
+func TestValidateMemberEmail(t *testing.T) {
+
+	valid := []string{
+		"admin@example.com",
+		"first.last+tag@sub.example.co.uk",
+		"user_name-1@example-domain.com",
+		"a?b^c#d=e@example.com",
+	}
+	for _, email := range valid {
+		t.Run(email, func(t *testing.T) {
+			err := ValidateMemberEmail(email)
+			if err != nil {
+				t.Fatalf("expected no error, got %v", err)
+			}
+		})
+	}
+
+	invalid := []struct {
+		name  string
+		email string
+	}{
+		{name: "empty", email: ""},
+		{name: "without at sign", email: "admin.example.com"},
+		{name: "without local part", email: "@example.com"},
+		{name: "without domain", email: "admin@"},
+		{name: "with a domain without dot", email: "admin@example"},
+		{name: "with a space", email: "admin @example.com"},
+		{name: "longer than 255 runes", email: strings.Repeat("a", 250) + "@example.com"},
+		{name: "with the NUL byte", email: "admin\x00@example.com"},
+		{name: "with invalid UTF-8", email: "admin\xff@example.com"},
+	}
+	for _, test := range invalid {
+		t.Run(test.name, func(t *testing.T) {
+			err := ValidateMemberEmail(test.email)
+			if err != nil {
+				e, ok := errors.AsType[*errors.UnprocessableError](err)
+				if !ok {
+					t.Fatalf("expected *errors.UnprocessableError, got %T", err)
+				}
+				if e.Code != InvalidEmail {
+					t.Fatalf("expected code %s, got %s", InvalidEmail, e.Code)
+				}
+				return
+			}
+			t.Fatal("expected error, got nil")
+		})
+	}
+
 }
 
 func validMetricIDs(count int) []string {

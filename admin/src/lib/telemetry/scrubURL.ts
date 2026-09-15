@@ -110,6 +110,7 @@ const REQUEST_PATTERNS = [
 	'/members/reset-password',
 	'/members/reset-password/!token',
 	'/metrics/usage/dates/:start/:end',
+	'/onboarding',
 	'/pipelines',
 	'/pipelines/:id',
 	'/pipelines/:id/runs',
