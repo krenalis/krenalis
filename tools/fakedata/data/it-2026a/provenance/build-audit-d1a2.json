@@ -1,0 +1,395 @@
+{
+  "automatic_matcher_reaudit": {
+    "affected_municipalities": [
+      {
+        "corrected_automatic_set": [
+          "39050",
+          "39053"
+        ],
+        "istat_code": "021023",
+        "municipality": "Cornedo all'Isarco/Karneid",
+        "original_automatic_set": [
+          "39053"
+        ],
+        "was_initially_uncovered": false
+      },
+      {
+        "corrected_automatic_set": [
+          "39030",
+          "39037"
+        ],
+        "istat_code": "021075",
+        "municipality": "Rodengo/Rodeneck",
+        "original_automatic_set": [
+          "39037"
+        ],
+        "was_initially_uncovered": false
+      },
+      {
+        "corrected_automatic_set": [
+          "39038",
+          "39050"
+        ],
+        "istat_code": "021077",
+        "municipality": "San Candido/Innichen",
+        "original_automatic_set": [
+          "39038"
+        ],
+        "was_initially_uncovered": false
+      },
+      {
+        "corrected_automatic_set": [
+          "39020",
+          "39029"
+        ],
+        "istat_code": "021095",
+        "municipality": "Stelvio/Stilfs",
+        "original_automatic_set": [
+          "39029"
+        ],
+        "was_initially_uncovered": false
+      },
+      {
+        "corrected_automatic_set": [
+          "39040",
+          "39049"
+        ],
+        "istat_code": "021107",
+        "municipality": "Val di Vizze/Pfitsch",
+        "original_automatic_set": [
+          "39049"
+        ],
+        "was_initially_uncovered": false
+      }
+    ],
+    "after": {
+      "ambiguous_records": 0,
+      "automatic_records": 8429,
+      "municipalities_covered": 7749,
+      "municipalities_uncovered": 147,
+      "unmatched_records": 9986
+    },
+    "already_covered_set_changes_ignored_by_a2": [
+      {
+        "corrected_matcher_set": [
+          "39050",
+          "39053"
+        ],
+        "istat_code": "021023",
+        "municipality": "Cornedo all'Isarco/Karneid",
+        "original_automatic_set_preserved_for_A2": [
+          "39053"
+        ]
+      },
+      {
+        "corrected_matcher_set": [
+          "39030",
+          "39037"
+        ],
+        "istat_code": "021075",
+        "municipality": "Rodengo/Rodeneck",
+        "original_automatic_set_preserved_for_A2": [
+          "39037"
+        ]
+      },
+      {
+        "corrected_matcher_set": [
+          "39038",
+          "39050"
+        ],
+        "istat_code": "021077",
+        "municipality": "San Candido/Innichen",
+        "original_automatic_set_preserved_for_A2": [
+          "39038"
+        ]
+      },
+      {
+        "corrected_matcher_set": [
+          "39020",
+          "39029"
+        ],
+        "istat_code": "021095",
+        "municipality": "Stelvio/Stilfs",
+        "original_automatic_set_preserved_for_A2": [
+          "39029"
+        ]
+      },
+      {
+        "corrected_matcher_set": [
+          "39040",
+          "39049"
+        ],
+        "istat_code": "021107",
+        "municipality": "Val di Vizze/Pfitsch",
+        "original_automatic_set_preserved_for_A2": [
+          "39049"
+        ]
+      }
+    ],
+    "before": {
+      "ambiguous_records": 0,
+      "automatic_records": 8346,
+      "municipalities_covered": 7749,
+      "municipalities_uncovered": 147,
+      "unmatched_records": 10069
+    },
+    "classification": "AUTOMATIC MATCHER IMPLEMENTATION GAP",
+    "corrected_name_fields": [
+      "COMUNE",
+      "COMUNE_IT",
+      "COMUNE_A"
+    ],
+    "exact_approved_alias_field_added": [
+      "situas_2026.COMUNE_A",
+      "situas_2025.COMUNE_A"
+    ],
+    "implementation_gaps_found": 1,
+    "level_1_manual_mapping_note": "No additional explicit source relation was available. GeoNames admin code3 remains excluded because its documentation says only third-order subdivision/community and the D1-A contract prohibits treating it as IstatCode.",
+    "level_1_manual_mappings": [],
+    "newly_automatic_records": [],
+    "newly_covered_municipalities": [],
+    "previous_name_fields": [
+      "COMUNE",
+      "COMUNE_IT"
+    ],
+    "situas_2025_COMUNE_A_records": 124,
+    "situas_2026_COMUNE_A_records": 124
+  },
+  "effective_coverage": {
+    "automatic_only": 7749,
+    "municipalities_total": 7896,
+    "proposed_override": 147,
+    "still_uncovered": 0,
+    "still_uncovered_istat_codes": []
+  },
+  "human_review_proposed_postal": {
+    "deduplicated_municipality_count": 251,
+    "selected_by_category": {
+      "largest_municipalities": 20,
+      "medium_municipalities": 20,
+      "multi_cap_municipalities": 10,
+      "municipality_cap_mappings": 40,
+      "region:01": 1,
+      "region:02": 1,
+      "region:03": 1,
+      "region:04": 1,
+      "region:05": 1,
+      "region:06": 1,
+      "region:07": 1,
+      "region:08": 1,
+      "region:09": 1,
+      "region:10": 1,
+      "region:11": 1,
+      "region:12": 1,
+      "region:13": 1,
+      "region:14": 1,
+      "region:15": 1,
+      "region:16": 1,
+      "region:17": 1,
+      "region:18": 1,
+      "region:19": 1,
+      "region:20": 1,
+      "sardinia_uts:113": 1,
+      "sardinia_uts:114": 1,
+      "sardinia_uts:115": 1,
+      "sardinia_uts:116": 1,
+      "sardinia_uts:117": 1,
+      "sardinia_uts:119": 1,
+      "sardinia_uts:312": 1,
+      "sardinia_uts:318": 1,
+      "small_municipalities": 20,
+      "state_prov:AG": 1,
+      "state_prov:AL": 1,
+      "state_prov:AN": 1,
+      "state_prov:AO": 1,
+      "state_prov:AP": 1,
+      "state_prov:AQ": 1,
+      "state_prov:AR": 1,
+      "state_prov:AT": 1,
+      "state_prov:AV": 1,
+      "state_prov:BA": 1,
+      "state_prov:BG": 1,
+      "state_prov:BI": 1,
+      "state_prov:BL": 1,
+      "state_prov:BN": 1,
+      "state_prov:BO": 1,
+      "state_prov:BR": 1,
+      "state_prov:BS": 1,
+      "state_prov:BT": 1,
+      "state_prov:BZ": 1,
+      "state_prov:CA": 1,
+      "state_prov:CB": 1,
+      "state_prov:CE": 1,
+      "state_prov:CH": 1,
+      "state_prov:CL": 1,
+      "state_prov:CN": 1,
+      "state_prov:CO": 1,
+      "state_prov:CR": 1,
+      "state_prov:CS": 1,
+      "state_prov:CT": 1,
+      "state_prov:CZ": 1,
+      "state_prov:EN": 1,
+      "state_prov:FC": 1,
+      "state_prov:FE": 1,
+      "state_prov:FG": 1,
+      "state_prov:FI": 1,
+      "state_prov:FM": 1,
+      "state_prov:FR": 1,
+      "state_prov:GE": 1,
+      "state_prov:GO": 1,
+      "state_prov:GR": 1,
+      "state_prov:IM": 1,
+      "state_prov:IS": 1,
+      "state_prov:KR": 1,
+      "state_prov:LC": 1,
+      "state_prov:LE": 1,
+      "state_prov:LI": 1,
+      "state_prov:LO": 1,
+      "state_prov:LT": 1,
+      "state_prov:LU": 1,
+      "state_prov:MB": 1,
+      "state_prov:MC": 1,
+      "state_prov:ME": 1,
+      "state_prov:MI": 1,
+      "state_prov:MN": 1,
+      "state_prov:MO": 1,
+      "state_prov:MS": 1,
+      "state_prov:MT": 1,
+      "state_prov:NA": 1,
+      "state_prov:NO": 1,
+      "state_prov:NU": 1,
+      "state_prov:OG": 1,
+      "state_prov:OR": 1,
+      "state_prov:OT": 1,
+      "state_prov:PA": 1,
+      "state_prov:PC": 1,
+      "state_prov:PD": 1,
+      "state_prov:PE": 1,
+      "state_prov:PG": 1,
+      "state_prov:PI": 1,
+      "state_prov:PN": 1,
+      "state_prov:PO": 1,
+      "state_prov:PR": 1,
+      "state_prov:PT": 1,
+      "state_prov:PU": 1,
+      "state_prov:PV": 1,
+      "state_prov:PZ": 1,
+      "state_prov:RA": 1,
+      "state_prov:RC": 1,
+      "state_prov:RE": 1,
+      "state_prov:RG": 1,
+      "state_prov:RI": 1,
+      "state_prov:RM": 1,
+      "state_prov:RN": 1,
+      "state_prov:RO": 1,
+      "state_prov:SA": 1,
+      "state_prov:SI": 1,
+      "state_prov:SO": 1,
+      "state_prov:SP": 1,
+      "state_prov:SR": 1,
+      "state_prov:SS": 1,
+      "state_prov:SU": 1,
+      "state_prov:SV": 1,
+      "state_prov:TA": 1,
+      "state_prov:TE": 1,
+      "state_prov:TN": 1,
+      "state_prov:TO": 1,
+      "state_prov:TP": 1,
+      "state_prov:TR": 1,
+      "state_prov:TS": 1,
+      "state_prov:TV": 1,
+      "state_prov:UD": 1,
+      "state_prov:VA": 1,
+      "state_prov:VB": 1,
+      "state_prov:VC": 1,
+      "state_prov:VE": 1,
+      "state_prov:VI": 1,
+      "state_prov:VR": 1,
+      "state_prov:VS": 1,
+      "state_prov:VT": 1,
+      "state_prov:VV": 1,
+      "temporal_sentinel": 4,
+      "unusual_municipality_names": 10
+    },
+    "sha256": "f6398dd8a922a1988017f7386679e835cfc85df2bdfd11dded542077dfd7e3d0"
+  },
+  "ipa": {
+    "active_universe_code_rows": 23727,
+    "conflicting_evidence": [],
+    "distinct_active_universe_municipality_codes": 7892,
+    "distinct_syntactically_valid_municipality_codes": 7893,
+    "invalid_CAP_evidence_for_remaining_uncovered": [],
+    "invalid_CAP_evidence_global": [],
+    "invalid_municipality_code_rows": [],
+    "raw_rows": 23728,
+    "remaining_uncovered_with_at_least_one_exact_IPA_match": 147,
+    "remaining_uncovered_with_no_IPA_match": 0,
+    "rows_with_valid_CAP": 23728,
+    "rows_with_valid_Codice_comune_ISTAT": 23728,
+    "syntactically_valid_code_rows": 23728,
+    "syntactically_valid_code_rows_outside_territorial_U": [
+      {
+        "Codice_IPA": "17UW94ZL",
+        "Codice_comune_ISTAT": "024129",
+        "physical_row_reference": "Sheet1 row 72"
+      }
+    ],
+    "territorial_U_codes_absent_from_IPA": [
+      "018082",
+      "021014",
+      "024027",
+      "024071"
+    ]
+  },
+  "proposed_overrides": {
+    "CAP_cardinality_histogram": {
+      "1": 137,
+      "15": 1,
+      "2": 8,
+      "5": 1
+    },
+    "more_than_8_reductions": [
+      {
+        "complete_evidence_supported_set": [
+          "89100",
+          "89112",
+          "89121",
+          "89122",
+          "89123",
+          "89124",
+          "89125",
+          "89126",
+          "89127",
+          "89128",
+          "89129",
+          "89131",
+          "89132",
+          "89133",
+          "89135"
+        ],
+        "istat_code": "080063",
+        "municipality": "Reggio di Calabria",
+        "selected_runtime_set": [
+          "89100",
+          "89121",
+          "89123",
+          "89125",
+          "89127",
+          "89129",
+          "89132",
+          "89135"
+        ]
+      }
+    ],
+    "municipalities_with_1_evidenced_CAP": 137,
+    "municipalities_with_more_than_1_evidenced_CAP": 10,
+    "municipalities_with_more_than_8_evidenced_CAP": 1,
+    "override_rows": 147
+  },
+  "resolution": {
+    "initial_uncovered": 147,
+    "resolved_from_IPA": 147,
+    "resolved_from_existing_approved_evidence": 0,
+    "still_unresolved": 0
+  }
+}

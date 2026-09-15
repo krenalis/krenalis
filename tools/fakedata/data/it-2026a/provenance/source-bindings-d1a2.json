@@ -1,0 +1,369 @@
+{
+  "automatic_matcher_reaudit": {
+    "approved_name_fields_after_correction": [
+      "COMUNE",
+      "COMUNE_IT",
+      "COMUNE_A"
+    ],
+    "correction": "Include the official SITUAS COMUNE_A language-name field; no string splitting or heuristic aliasing.",
+    "d1a_previous_name_fields": [
+      "COMUNE",
+      "COMUNE_IT"
+    ],
+    "normalizer_toolchain_reference": {
+      "d1a_binding": "toolchain_lock",
+      "source_bindings_sha256": "d0c5789829b323486e5f5fde8eed741c103f039c1f684e80a5ae4ee15c87b732"
+    },
+    "physical_field_evidence": {
+      "COMUNE_A_records_2025": 124,
+      "COMUNE_A_records_2026": 124,
+      "use": "Consume COMUNE_A exactly as stored as an official language-name alias; do not split COMUNE or any field."
+    }
+  },
+  "d1a_source_bindings_reference": {
+    "local_filename": "reports/source-bindings.json",
+    "sha256": "d0c5789829b323486e5f5fde8eed741c103f039c1f684e80a5ae4ee15c87b732"
+  },
+  "ipa_enti": {
+    "archive_members": [
+      {
+        "compressed_byte_length": 335,
+        "member": "[Content_Types].xml",
+        "member_byte_length": 1167,
+        "member_sha256": "d922d7af45a35a5613fc4bc66aa64635e127b0c538d7e78b2e028f8b4e23b812"
+      },
+      {
+        "compressed_byte_length": 233,
+        "member": "_rels/.rels",
+        "member_byte_length": 587,
+        "member_sha256": "1285b20099c64699001f9d90ea040ca1c177fa99bc3ae8a841128874820f01a4"
+      },
+      {
+        "compressed_byte_length": 232,
+        "member": "xl/_rels/workbook.xml.rels",
+        "member_byte_length": 697,
+        "member_sha256": "596e47c094f3062e266034ee698571b56b247550b9e1035f0300d54d2f0692b2"
+      },
+      {
+        "compressed_byte_length": 2589512,
+        "member": "xl/worksheets/sheet1.xml",
+        "member_byte_length": 18446963,
+        "member_sha256": "96361f4d80fead2b2e7f014774cb0871cd5d475a9e72f95a88932812ec3aff8b"
+      },
+      {
+        "compressed_byte_length": 328,
+        "member": "xl/workbook.xml",
+        "member_byte_length": 550,
+        "member_sha256": "43fb8fd7534fe4fc258a970c5e5b32929ddf426ea1b4d15c54d2c96e3e0a5822"
+      },
+      {
+        "compressed_byte_length": 1543575,
+        "member": "xl/sharedStrings.xml",
+        "member_byte_length": 8211177,
+        "member_sha256": "f0185b64aaca726daa9ceff8aa6349e451f137f9597eea093f77c28676fa4f62"
+      },
+      {
+        "compressed_byte_length": 600,
+        "member": "xl/styles.xml",
+        "member_byte_length": 1781,
+        "member_sha256": "c56bc4d96b3131321c78dc3078ea8a2138d79ad3a37de8b195a52c68881f19fa"
+      },
+      {
+        "compressed_byte_length": 1456,
+        "member": "xl/theme/theme1.xml",
+        "member_byte_length": 6994,
+        "member_sha256": "75104b2164c20dab2578383d827deac3a7eec077c3f7c99a4099a551fdebb134"
+      },
+      {
+        "compressed_byte_length": 133774,
+        "member": "xl/worksheets/_rels/sheet1.xml.rels",
+        "member_byte_length": 1534810,
+        "member_sha256": "dde6e6be852bf9677f9b6385d3461b419ef4ad239e22d35acf1f9a586b64c3bc"
+      },
+      {
+        "compressed_byte_length": 293,
+        "member": "docProps/core.xml",
+        "member_byte_length": 592,
+        "member_sha256": "b852f86f58afa729e7dce5e341e54d67c39ca114487704d2449a2660ea65c88a"
+      },
+      {
+        "compressed_byte_length": 375,
+        "member": "docProps/app.xml",
+        "member_byte_length": 784,
+        "member_sha256": "aaf87fd9766ba5ed8c0542b38411d0c6b1a5980408edf8daebf1ecd5045f2300"
+      }
+    ],
+    "bom": "not applicable to XLSX container; consumed XML parts declare UTF-8 and have no BOM",
+    "column_count": 34,
+    "column_positions_1_based": {
+      "Acronimo": 11,
+      "CAP": 17,
+      "Codice_Categoria": 5,
+      "Codice_IPA": 1,
+      "Codice_ISTAT": 10,
+      "Codice_MIUR": 9,
+      "Codice_ateco": 7,
+      "Codice_catastale_comune": 16,
+      "Codice_comune_ISTAT": 15,
+      "Codice_fiscale_ente": 3,
+      "Codice_natura": 6,
+      "Cognome_responsabile": 13,
+      "Data_aggiornamento": 34,
+      "Denominazione_ente": 2,
+      "Ente_in_liquidazione": 8,
+      "Indirizzo": 18,
+      "Mail1": 19,
+      "Mail2": 21,
+      "Mail3": 23,
+      "Mail4": 25,
+      "Mail5": 27,
+      "Nome_responsabile": 12,
+      "Sito_istituzionale": 29,
+      "Tipo_Mail1": 20,
+      "Tipo_Mail2": 22,
+      "Tipo_Mail3": 24,
+      "Tipo_Mail4": 26,
+      "Tipo_Mail5": 28,
+      "Tipologia": 4,
+      "Titolo_responsabile": 14,
+      "Url_facebook": 30,
+      "Url_linkedin": 31,
+      "Url_twitter": 32,
+      "Url_youtube": 33
+    },
+    "data_row_count": 23728,
+    "encoding": "XLSX OOXML ZIP container; consumed XML parts declare UTF-8",
+    "entity_address_identity_fields": [
+      "Codice_IPA",
+      "Denominazione_ente",
+      "Indirizzo"
+    ],
+    "exact_header": [
+      "Codice_IPA",
+      "Denominazione_ente",
+      "Codice_fiscale_ente",
+      "Tipologia",
+      "Codice_Categoria",
+      "Codice_natura",
+      "Codice_ateco",
+      "Ente_in_liquidazione",
+      "Codice_MIUR",
+      "Codice_ISTAT",
+      "Acronimo",
+      "Nome_responsabile",
+      "Cognome_responsabile",
+      "Titolo_responsabile",
+      "Codice_comune_ISTAT",
+      "Codice_catastale_comune",
+      "CAP",
+      "Indirizzo",
+      "Mail1",
+      "Tipo_Mail1",
+      "Mail2",
+      "Tipo_Mail2",
+      "Mail3",
+      "Tipo_Mail3",
+      "Mail4",
+      "Tipo_Mail4",
+      "Mail5",
+      "Tipo_Mail5",
+      "Sito_istituzionale",
+      "Url_facebook",
+      "Url_linkedin",
+      "Url_twitter",
+      "Url_youtube",
+      "Data_aggiornamento"
+    ],
+    "format": "Microsoft Excel 2007+ XLSX / OOXML",
+    "municipality_code_field": "Codice_comune_ISTAT",
+    "municipality_code_field_dictionary": {
+      "CHARACTER_MAXIMUM_LENGTH": 6,
+      "COLUMN_COMMENT": "Codice ISTAT del comune in cui ha sede l'ente",
+      "COLUMN_NAME": "Codice_comune_ISTAT",
+      "DATA_TYPE": "char"
+    },
+    "municipality_place_text_field": null,
+    "municipality_place_text_field_status": "not present in the exact 34-column workbook header",
+    "non_municipality_entity_code_field": "Codice_ISTAT",
+    "non_municipality_entity_code_field_dictionary": {
+      "CHARACTER_MAXIMUM_LENGTH": "",
+      "COLUMN_COMMENT": "Codice dell'ente negli elenchi ISTAT",
+      "COLUMN_NAME": "Codice_ISTAT",
+      "DATA_TYPE": "int"
+    },
+    "postal_code_field": "CAP",
+    "postal_code_field_dictionary": {
+      "CHARACTER_MAXIMUM_LENGTH": 5,
+      "COLUMN_COMMENT": "CAP della sede dell'ente",
+      "COLUMN_NAME": "CAP",
+      "DATA_TYPE": "char"
+    },
+    "row_selector": "all physical worksheet rows 2 through 23729 after exact row-1 header",
+    "sheet_dimension": "A1:AH23729",
+    "sheet_member": "xl/worksheets/sheet1.xml",
+    "sheet_name": "Sheet1",
+    "sheets": [
+      "Sheet1"
+    ],
+    "update_date_field": "Data_aggiornamento",
+    "update_date_field_dictionary": {
+      "CHARACTER_MAXIMUM_LENGTH": 10,
+      "COLUMN_COMMENT": "Maggiore tra la data di aggiornamento dati dell'Ente e data verifica (stringa nel formato yyyy-mm-dd)",
+      "COLUMN_NAME": "Data_aggiornamento",
+      "DATA_TYPE": "char"
+    },
+    "worksheet_cell_type_counts_by_column": {
+      "A": {
+        "s": 23729
+      },
+      "AA": {
+        "s": 745
+      },
+      "AB": {
+        "s": 745
+      },
+      "AC": {
+        "s": 22885
+      },
+      "AD": {
+        "s": 2520
+      },
+      "AE": {
+        "s": 123
+      },
+      "AF": {
+        "s": 644
+      },
+      "AG": {
+        "s": 981
+      },
+      "AH": {
+        "s": 23729
+      },
+      "B": {
+        "s": 23729
+      },
+      "C": {
+        "s": 23728
+      },
+      "D": {
+        "s": 23729
+      },
+      "E": {
+        "s": 23729
+      },
+      "F": {
+        "s": 10282
+      },
+      "G": {
+        "s": 11566
+      },
+      "H": {
+        "s": 221
+      },
+      "I": {
+        "s": 8051
+      },
+      "J": {
+        "s": 10138
+      },
+      "K": {
+        "s": 5513
+      },
+      "L": {
+        "s": 23729
+      },
+      "M": {
+        "s": 23729
+      },
+      "N": {
+        "s": 23728
+      },
+      "O": {
+        "s": 23729
+      },
+      "P": {
+        "s": 23729
+      },
+      "Q": {
+        "s": 23729
+      },
+      "R": {
+        "s": 23729
+      },
+      "S": {
+        "s": 23729
+      },
+      "T": {
+        "s": 23729
+      },
+      "U": {
+        "s": 18639
+      },
+      "V": {
+        "s": 18639
+      },
+      "W": {
+        "s": 3424
+      },
+      "X": {
+        "s": 3424
+      },
+      "Y": {
+        "s": 1385
+      },
+      "Z": {
+        "s": 1385
+      }
+    }
+  },
+  "ipa_metadata_enti": {
+    "bom": true,
+    "encoding": "UTF-8 with BOM",
+    "exact_object_fields": [
+      "COLUMN_NAME",
+      "COLUMN_COMMENT",
+      "DATA_TYPE",
+      "CHARACTER_MAXIMUM_LENGTH"
+    ],
+    "field_definition_count": 34,
+    "format": "JSON array",
+    "ordered_column_names": [
+      "Codice_IPA",
+      "Denominazione_ente",
+      "Codice_fiscale_ente",
+      "Tipologia",
+      "Codice_Categoria",
+      "Codice_natura",
+      "Codice_ateco",
+      "Ente_in_liquidazione",
+      "Codice_MIUR",
+      "Codice_ISTAT",
+      "Acronimo",
+      "Nome_responsabile",
+      "Cognome_responsabile",
+      "Titolo_responsabile",
+      "Codice_comune_ISTAT",
+      "Codice_catastale_comune",
+      "CAP",
+      "Indirizzo",
+      "Mail1",
+      "Tipo_Mail1",
+      "Mail2",
+      "Tipo_Mail2",
+      "Mail3",
+      "Tipo_Mail3",
+      "Mail4",
+      "Tipo_Mail4",
+      "Mail5",
+      "Tipo_Mail5",
+      "Sito_istituzionale",
+      "Url_facebook",
+      "Url_linkedin",
+      "Url_twitter",
+      "Url_youtube",
+      "Data_aggiornamento"
+    ]
+  },
+  "schema_version": "it-2026a-d1-a2-source-bindings-v1"
+}

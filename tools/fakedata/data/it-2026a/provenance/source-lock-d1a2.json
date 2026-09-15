@@ -1,0 +1,102 @@
+{
+  "d1a_source_lock_reference": {
+    "local_filename": "reports/source-lock.json",
+    "sha256": "89a71a4ff2be404f17d1c834393427c5b35c64c5e8b053595a72912b84eadb22"
+  },
+  "inputs": [
+    {
+      "acquisition_method": "official_resource_page_followed_by_direct_http_get",
+      "archive_members_consumed": [
+        {
+          "compressed_byte_length": 232,
+          "member": "xl/_rels/workbook.xml.rels",
+          "member_byte_length": 697,
+          "member_sha256": "596e47c094f3062e266034ee698571b56b247550b9e1035f0300d54d2f0692b2"
+        },
+        {
+          "compressed_byte_length": 2589512,
+          "member": "xl/worksheets/sheet1.xml",
+          "member_byte_length": 18446963,
+          "member_sha256": "96361f4d80fead2b2e7f014774cb0871cd5d475a9e72f95a88932812ec3aff8b"
+        },
+        {
+          "compressed_byte_length": 328,
+          "member": "xl/workbook.xml",
+          "member_byte_length": 550,
+          "member_sha256": "43fb8fd7534fe4fc258a970c5e5b32929ddf426ea1b4d15c54d2c96e3e0a5822"
+        },
+        {
+          "compressed_byte_length": 1543575,
+          "member": "xl/sharedStrings.xml",
+          "member_byte_length": 8211177,
+          "member_sha256": "f0185b64aaca726daa9ceff8aa6349e451f137f9597eea093f77c28676fa4f62"
+        }
+      ],
+      "byte_length": 4272001,
+      "etag": "\"1789355804.7827697-4272001-173283458\"",
+      "final_url": "https://indicepa.gov.it/ipa-dati/dataset/5baa3eb8-266e-455a-8de8-b1f434c279b2/resource/d09adf99-dc10-4349-8c53-27b1e5aa97b6/download/enti.xlsx",
+      "license_evidence_sha256": "1c84728f9943e1cb33ba5bc5ff1e0f694ee3aad346be9e8fa658714446b5205e",
+      "license_identifier": "CC-BY-4.0",
+      "license_locator": "https://www.indicepa.it/ipa-dati/dataset/enti/resource/d09adf99-dc10-4349-8c53-27b1e5aa97b6",
+      "local_filename": "raw/ipa-enti.xlsx",
+      "media_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "product": "Indice dei domicili digitali della Pubblica Amministrazione — dataset Enti",
+      "publisher": "AgID / IndicePA",
+      "reference_date_status": "not_declared",
+      "request_parameters": {},
+      "requested_url": "https://indicepa.gov.it/ipa-dati/dataset/5baa3eb8-266e-455a-8de8-b1f434c279b2/resource/d09adf99-dc10-4349-8c53-27b1e5aa97b6/download/enti.xlsx",
+      "resource_page_url": "https://www.indicepa.it/ipa-dati/dataset/enti/resource/d09adf99-dc10-4349-8c53-27b1e5aa97b6",
+      "response_content_length": 4272001,
+      "retrieved_at_utc": "2026-09-14T21:58:00Z",
+      "sha256": "59516fa44373fb68b51fbda4b37fe4b739e4b5ad86629f0f16e317d76180b894",
+      "source_id": "agid_ipa_enti_current",
+      "source_last_modified": "Mon, 14 Sep 2026 03:16:44 GMT",
+      "source_reference_date": null
+    },
+    {
+      "acquisition_method": "official_resource_page_followed_by_direct_http_get",
+      "archive_members_consumed": [],
+      "byte_length": 6492,
+      "etag": "\"1789355794.909746-6492-119871616\"",
+      "final_url": "https://indicepa.gov.it/ipa-dati/dataset/5baa3eb8-266e-455a-8de8-b1f434c279b2/resource/61c36f27-e9a9-47de-a4c5-71bc16a28d63/download/metadata_enti.json",
+      "license_evidence_sha256": "cceb94008d4fcf987da8e7ba905ab055d002ac1094b5595cf062e9f5b188c9d5",
+      "license_identifier": "CC-BY-4.0",
+      "license_locator": "https://www.indicepa.it/ipa-dati/dataset/enti/resource/61c36f27-e9a9-47de-a4c5-71bc16a28d63",
+      "local_filename": "raw/ipa-metadata-enti.json",
+      "media_type": "application/json",
+      "product": "IPA Enti physical data dictionary metadata_enti.json",
+      "publisher": "AgID / IndicePA",
+      "reference_date_status": "not_applicable_data_dictionary",
+      "request_parameters": {},
+      "requested_url": "https://indicepa.gov.it/ipa-dati/dataset/5baa3eb8-266e-455a-8de8-b1f434c279b2/resource/61c36f27-e9a9-47de-a4c5-71bc16a28d63/download/metadata_enti.json",
+      "response_content_length": 6492,
+      "retrieved_at_utc": "2026-09-14T21:58:28Z",
+      "sha256": "732e05b816c2ddef798d44756aba2a5140d9a935f6e6cfd645904e2896c27c7c",
+      "source_id": "agid_ipa_enti_metadata_current",
+      "source_last_modified": "Mon, 14 Sep 2026 03:16:34 GMT",
+      "source_reference_date": null
+    }
+  ],
+  "license_evidence": [
+    {
+      "byte_length": 32682,
+      "local_filename": "extracted/ipa-resource-page.html",
+      "media_type": "text/html; charset=utf-8",
+      "requested_url": "https://www.indicepa.it/ipa-dati/dataset/enti/resource/d09adf99-dc10-4349-8c53-27b1e5aa97b6",
+      "retrieved_at_utc": "2026-09-14T21:51:02Z",
+      "sha256": "1c84728f9943e1cb33ba5bc5ff1e0f694ee3aad346be9e8fa658714446b5205e",
+      "statement": "Resource page identifies CC BY 4.0 and links the controlled-vocabulary licence A21_CCBY40."
+    },
+    {
+      "byte_length": 22999,
+      "local_filename": "extracted/ipa-metadata-resource-page.html",
+      "media_type": "text/html; charset=utf-8",
+      "requested_url": "https://www.indicepa.it/ipa-dati/dataset/enti/resource/61c36f27-e9a9-47de-a4c5-71bc16a28d63",
+      "retrieved_at_utc": "2026-09-14T21:58:20Z",
+      "sha256": "cceb94008d4fcf987da8e7ba905ab055d002ac1094b5595cf062e9f5b188c9d5",
+      "statement": "Metadata resource page identifies CC BY 4.0."
+    }
+  ],
+  "schema_version": "it-2026a-d1-a2-source-lock-v1",
+  "working_directory": "/private/tmp/krenalis-it-2026a-d1a"
+}

@@ -1,0 +1,4221 @@
+{
+  "geonames": {
+    "admin_code1": {
+      "documentation_meaning": "1st-order subdivision (state)",
+      "position_1_based": 5
+    },
+    "admin_code1_distinct_pairs": 20,
+    "admin_code1_distribution": [
+      {
+        "admin_code1": "01",
+        "admin_name1": "Abruzzi",
+        "count": 679
+      },
+      {
+        "admin_code1": "02",
+        "admin_name1": "Basilicata",
+        "count": 213
+      },
+      {
+        "admin_code1": "03",
+        "admin_name1": "Calabria",
+        "count": 884
+      },
+      {
+        "admin_code1": "04",
+        "admin_name1": "Campania",
+        "count": 1222
+      },
+      {
+        "admin_code1": "05",
+        "admin_name1": "Emilia-Romagna",
+        "count": 1531
+      },
+      {
+        "admin_code1": "06",
+        "admin_name1": "Friuli-Venezia Giulia",
+        "count": 563
+      },
+      {
+        "admin_code1": "07",
+        "admin_name1": "Lazio",
+        "count": 904
+      },
+      {
+        "admin_code1": "08",
+        "admin_name1": "Liguria",
+        "count": 600
+      },
+      {
+        "admin_code1": "09",
+        "admin_name1": "Lombardia",
+        "count": 2501
+      },
+      {
+        "admin_code1": "10",
+        "admin_name1": "Marche",
+        "count": 574
+      },
+      {
+        "admin_code1": "11",
+        "admin_name1": "Molise",
+        "count": 175
+      },
+      {
+        "admin_code1": "12",
+        "admin_name1": "Piemonte",
+        "count": 1807
+      },
+      {
+        "admin_code1": "13",
+        "admin_name1": "Puglia",
+        "count": 467
+      },
+      {
+        "admin_code1": "14",
+        "admin_name1": "Sardegna",
+        "count": 629
+      },
+      {
+        "admin_code1": "15",
+        "admin_name1": "Sicilia",
+        "count": 956
+      },
+      {
+        "admin_code1": "16",
+        "admin_name1": "Toscana",
+        "count": 1439
+      },
+      {
+        "admin_code1": "17",
+        "admin_name1": "Trentino-Alto Adige",
+        "count": 1199
+      },
+      {
+        "admin_code1": "18",
+        "admin_name1": "Umbria",
+        "count": 430
+      },
+      {
+        "admin_code1": "19",
+        "admin_name1": "Valle D'Aosta",
+        "count": 136
+      },
+      {
+        "admin_code1": "20",
+        "admin_name1": "Veneto",
+        "count": 1506
+      }
+    ],
+    "admin_code2": {
+      "documentation_meaning": "2nd-order subdivision (county/province)",
+      "italy_observation": "all valid observed values satisfy ^[A-Z]{2}$ and are supported as province abbreviations by comparison with SITUAS 2025/2026",
+      "position_1_based": 7
+    },
+    "admin_code2_distinct_pairs": 107,
+    "admin_code2_distribution": [
+      {
+        "admin_code2": "AG",
+        "admin_name2": "Agrigento",
+        "count": 59
+      },
+      {
+        "admin_code2": "AL",
+        "admin_name2": "Alessandria",
+        "count": 267
+      },
+      {
+        "admin_code2": "AN",
+        "admin_name2": "Ancona",
+        "count": 156
+      },
+      {
+        "admin_code2": "AR",
+        "admin_name2": "Arezzo",
+        "count": 157
+      },
+      {
+        "admin_code2": "AP",
+        "admin_name2": "Ascoli Piceno",
+        "count": 80
+      },
+      {
+        "admin_code2": "AT",
+        "admin_name2": "Asti",
+        "count": 179
+      },
+      {
+        "admin_code2": "AV",
+        "admin_name2": "Avellino",
+        "count": 205
+      },
+      {
+        "admin_code2": "BA",
+        "admin_name2": "Bari",
+        "count": 101
+      },
+      {
+        "admin_code2": "BT",
+        "admin_name2": "Barletta-Andria-Trani",
+        "count": 12
+      },
+      {
+        "admin_code2": "BL",
+        "admin_name2": "Belluno",
+        "count": 177
+      },
+      {
+        "admin_code2": "BN",
+        "admin_name2": "Benevento",
+        "count": 118
+      },
+      {
+        "admin_code2": "BG",
+        "admin_name2": "Bergamo",
+        "count": 347
+      },
+      {
+        "admin_code2": "BI",
+        "admin_name2": "Biella",
+        "count": 120
+      },
+      {
+        "admin_code2": "BO",
+        "admin_name2": "Bologna",
+        "count": 246
+      },
+      {
+        "admin_code2": "BZ",
+        "admin_name2": "Bolzano-Bozen",
+        "count": 756
+      },
+      {
+        "admin_code2": "BS",
+        "admin_name2": "Brescia",
+        "count": 385
+      },
+      {
+        "admin_code2": "BR",
+        "admin_name2": "Brindisi",
+        "count": 42
+      },
+      {
+        "admin_code2": "CA",
+        "admin_name2": "Cagliari",
+        "count": 101
+      },
+      {
+        "admin_code2": "CL",
+        "admin_name2": "Caltanissetta",
+        "count": 27
+      },
+      {
+        "admin_code2": "CB",
+        "admin_name2": "Campobasso",
+        "count": 95
+      },
+      {
+        "admin_code2": "CE",
+        "admin_name2": "Caserta",
+        "count": 238
+      },
+      {
+        "admin_code2": "CT",
+        "admin_name2": "Catania",
+        "count": 153
+      },
+      {
+        "admin_code2": "CZ",
+        "admin_name2": "Catanzaro",
+        "count": 160
+      },
+      {
+        "admin_code2": "CH",
+        "admin_name2": "Chieti",
+        "count": 166
+      },
+      {
+        "admin_code2": "CO",
+        "admin_name2": "Como",
+        "count": 237
+      },
+      {
+        "admin_code2": "CS",
+        "admin_name2": "Cosenza",
+        "count": 314
+      },
+      {
+        "admin_code2": "CR",
+        "admin_name2": "Cremona",
+        "count": 171
+      },
+      {
+        "admin_code2": "KR",
+        "admin_name2": "Crotone",
+        "count": 46
+      },
+      {
+        "admin_code2": "CN",
+        "admin_name2": "Cuneo",
+        "count": 392
+      },
+      {
+        "admin_code2": "EN",
+        "admin_name2": "Enna",
+        "count": 29
+      },
+      {
+        "admin_code2": "FM",
+        "admin_name2": "Fermo",
+        "count": 70
+      },
+      {
+        "admin_code2": "FE",
+        "admin_name2": "Ferrara",
+        "count": 119
+      },
+      {
+        "admin_code2": "FI",
+        "admin_name2": "Firenze",
+        "count": 264
+      },
+      {
+        "admin_code2": "FG",
+        "admin_name2": "Foggia",
+        "count": 99
+      },
+      {
+        "admin_code2": "FC",
+        "admin_name2": "Forli",
+        "count": 139
+      },
+      {
+        "admin_code2": "FR",
+        "admin_name2": "Frosinone",
+        "count": 178
+      },
+      {
+        "admin_code2": "GE",
+        "admin_name2": "Genova",
+        "count": 240
+      },
+      {
+        "admin_code2": "GO",
+        "admin_name2": "Gorizia",
+        "count": 60
+      },
+      {
+        "admin_code2": "GR",
+        "admin_name2": "Grosseto",
+        "count": 161
+      },
+      {
+        "admin_code2": "IM",
+        "admin_name2": "Imperia",
+        "count": 109
+      },
+      {
+        "admin_code2": "IS",
+        "admin_name2": "Isernia",
+        "count": 80
+      },
+      {
+        "admin_code2": "AQ",
+        "admin_name2": "L'Aquila",
+        "count": 249
+      },
+      {
+        "admin_code2": "SP",
+        "admin_name2": "La Spezia",
+        "count": 129
+      },
+      {
+        "admin_code2": "LT",
+        "admin_name2": "Latina",
+        "count": 108
+      },
+      {
+        "admin_code2": "LE",
+        "admin_name2": "Lecce",
+        "count": 160
+      },
+      {
+        "admin_code2": "LC",
+        "admin_name2": "Lecco",
+        "count": 130
+      },
+      {
+        "admin_code2": "LI",
+        "admin_name2": "Livorno",
+        "count": 87
+      },
+      {
+        "admin_code2": "LO",
+        "admin_name2": "Lodi",
+        "count": 81
+      },
+      {
+        "admin_code2": "LU",
+        "admin_name2": "Lucca",
+        "count": 191
+      },
+      {
+        "admin_code2": "MC",
+        "admin_name2": "Macerata",
+        "count": 116
+      },
+      {
+        "admin_code2": "MN",
+        "admin_name2": "Mantova",
+        "count": 165
+      },
+      {
+        "admin_code2": "MS",
+        "admin_name2": "Massa-Carrara",
+        "count": 104
+      },
+      {
+        "admin_code2": "MT",
+        "admin_name2": "Matera",
+        "count": 48
+      },
+      {
+        "admin_code2": "ME",
+        "admin_name2": "Messina",
+        "count": 343
+      },
+      {
+        "admin_code2": "MI",
+        "admin_name2": "Milano",
+        "count": 279
+      },
+      {
+        "admin_code2": "MO",
+        "admin_name2": "Modena",
+        "count": 294
+      },
+      {
+        "admin_code2": "MB",
+        "admin_name2": "Monza e Brianza",
+        "count": 90
+      },
+      {
+        "admin_code2": "NA",
+        "admin_name2": "Napoli",
+        "count": 240
+      },
+      {
+        "admin_code2": "NO",
+        "admin_name2": "Novara",
+        "count": 120
+      },
+      {
+        "admin_code2": "NU",
+        "admin_name2": "Nuoro",
+        "count": 126
+      },
+      {
+        "admin_code2": "OR",
+        "admin_name2": "Oristano",
+        "count": 118
+      },
+      {
+        "admin_code2": "PD",
+        "admin_name2": "Padova",
+        "count": 235
+      },
+      {
+        "admin_code2": "PA",
+        "admin_name2": "Palermo",
+        "count": 182
+      },
+      {
+        "admin_code2": "PR",
+        "admin_name2": "Parma",
+        "count": 225
+      },
+      {
+        "admin_code2": "PV",
+        "admin_name2": "Pavia",
+        "count": 240
+      },
+      {
+        "admin_code2": "PG",
+        "admin_name2": "Perugia",
+        "count": 306
+      },
+      {
+        "admin_code2": "PU",
+        "admin_name2": "Pesaro E Urbino",
+        "count": 152
+      },
+      {
+        "admin_code2": "PE",
+        "admin_name2": "Pescara",
+        "count": 98
+      },
+      {
+        "admin_code2": "PC",
+        "admin_name2": "Piacenza",
+        "count": 146
+      },
+      {
+        "admin_code2": "PI",
+        "admin_name2": "Pisa",
+        "count": 167
+      },
+      {
+        "admin_code2": "PT",
+        "admin_name2": "Pistoia",
+        "count": 129
+      },
+      {
+        "admin_code2": "PN",
+        "admin_name2": "Pordenone",
+        "count": 131
+      },
+      {
+        "admin_code2": "PZ",
+        "admin_name2": "Potenza",
+        "count": 165
+      },
+      {
+        "admin_code2": "PO",
+        "admin_name2": "Prato",
+        "count": 43
+      },
+      {
+        "admin_code2": "RG",
+        "admin_name2": "Ragusa",
+        "count": 28
+      },
+      {
+        "admin_code2": "RA",
+        "admin_name2": "Ravenna",
+        "count": 110
+      },
+      {
+        "admin_code2": "RC",
+        "admin_name2": "Reggio Di Calabria",
+        "count": 255
+      },
+      {
+        "admin_code2": "RE",
+        "admin_name2": "Reggio Nell'Emilia",
+        "count": 161
+      },
+      {
+        "admin_code2": "RI",
+        "admin_name2": "Rieti",
+        "count": 168
+      },
+      {
+        "admin_code2": "RN",
+        "admin_name2": "Rimini",
+        "count": 91
+      },
+      {
+        "admin_code2": "RM",
+        "admin_name2": "Roma",
+        "count": 348
+      },
+      {
+        "admin_code2": "RO",
+        "admin_name2": "Rovigo",
+        "count": 126
+      },
+      {
+        "admin_code2": "SA",
+        "admin_name2": "Salerno",
+        "count": 421
+      },
+      {
+        "admin_code2": "SS",
+        "admin_name2": "Sassari",
+        "count": 208
+      },
+      {
+        "admin_code2": "SV",
+        "admin_name2": "Savona",
+        "count": 122
+      },
+      {
+        "admin_code2": "SI",
+        "admin_name2": "Siena",
+        "count": 136
+      },
+      {
+        "admin_code2": "SR",
+        "admin_name2": "Siracusa",
+        "count": 41
+      },
+      {
+        "admin_code2": "SO",
+        "admin_name2": "Sondrio",
+        "count": 155
+      },
+      {
+        "admin_code2": "SU",
+        "admin_name2": "Sud Sardegna",
+        "count": 76
+      },
+      {
+        "admin_code2": "TA",
+        "admin_name2": "Taranto",
+        "count": 53
+      },
+      {
+        "admin_code2": "TE",
+        "admin_name2": "Teramo",
+        "count": 166
+      },
+      {
+        "admin_code2": "TR",
+        "admin_name2": "Terni",
+        "count": 124
+      },
+      {
+        "admin_code2": "TO",
+        "admin_name2": "Torino",
+        "count": 491
+      },
+      {
+        "admin_code2": "TP",
+        "admin_name2": "Trapani",
+        "count": 94
+      },
+      {
+        "admin_code2": "TN",
+        "admin_name2": "Trento",
+        "count": 443
+      },
+      {
+        "admin_code2": "TV",
+        "admin_name2": "Treviso",
+        "count": 261
+      },
+      {
+        "admin_code2": "TS",
+        "admin_name2": "Trieste",
+        "count": 58
+      },
+      {
+        "admin_code2": "UD",
+        "admin_name2": "Udine",
+        "count": 314
+      },
+      {
+        "admin_code2": "AO",
+        "admin_name2": "Valle D'Aosta",
+        "count": 136
+      },
+      {
+        "admin_code2": "VA",
+        "admin_name2": "Varese",
+        "count": 221
+      },
+      {
+        "admin_code2": "VE",
+        "admin_name2": "Venezia",
+        "count": 192
+      },
+      {
+        "admin_code2": "VB",
+        "admin_name2": "Verbano-Cusio-Ossola",
+        "count": 129
+      },
+      {
+        "admin_code2": "VC",
+        "admin_name2": "Vercelli",
+        "count": 109
+      },
+      {
+        "admin_code2": "VR",
+        "admin_name2": "Verona",
+        "count": 274
+      },
+      {
+        "admin_code2": "VV",
+        "admin_name2": "Vibo Valentia",
+        "count": 109
+      },
+      {
+        "admin_code2": "VI",
+        "admin_name2": "Vicenza",
+        "count": 241
+      },
+      {
+        "admin_code2": "VT",
+        "admin_name2": "Viterbo",
+        "count": 102
+      }
+    ],
+    "admin_code3": {
+      "documentation_meaning": "3rd-order subdivision (community)",
+      "istat_code_use": "prohibited; not used as IstatCode",
+      "position_1_based": 9
+    },
+    "admin_code3_distribution": [
+      {
+        "admin_code3": "",
+        "admin_name3": "",
+        "count": 17985
+      },
+      {
+        "admin_code3": "078003",
+        "admin_name3": "Acri",
+        "count": 1
+      },
+      {
+        "admin_code3": "",
+        "admin_name3": "Alessandria",
+        "count": 1
+      },
+      {
+        "admin_code3": "022235",
+        "admin_name3": "Altavalle",
+        "count": 4
+      },
+      {
+        "admin_code3": "037062",
+        "admin_name3": "Alto Reno Terme",
+        "count": 8
+      },
+      {
+        "admin_code3": "022236",
+        "admin_name3": "Altopiano Della Vigolana",
+        "count": 4
+      },
+      {
+        "admin_code3": "022237",
+        "admin_name3": "Amblar-Don",
+        "count": 2
+      },
+      {
+        "admin_code3": "011001",
+        "admin_name3": "Ameglia",
+        "count": 2
+      },
+      {
+        "admin_code3": "075005",
+        "admin_name3": "Andrano",
+        "count": 1
+      },
+      {
+        "admin_code3": "038001",
+        "admin_name3": "Argenta",
+        "count": 8
+      },
+      {
+        "admin_code3": "058009",
+        "admin_name3": "Ariccia",
+        "count": 2
+      },
+      {
+        "admin_code3": "005005",
+        "admin_name3": "Asti",
+        "count": 9
+      },
+      {
+        "admin_code3": "076007",
+        "admin_name3": "Avigliano",
+        "count": 4
+      },
+      {
+        "admin_code3": "022007",
+        "admin_name3": "Avio",
+        "count": 1
+      },
+      {
+        "admin_code3": "021006",
+        "admin_name3": "Badia",
+        "count": 4
+      },
+      {
+        "admin_code3": "051003",
+        "admin_name3": "Badia Tedalda",
+        "count": 2
+      },
+      {
+        "admin_code3": "039003",
+        "admin_name3": "Bagnara Di Romagna",
+        "count": 1
+      },
+      {
+        "admin_code3": "040001",
+        "admin_name3": "Bagno Di Romagna",
+        "count": 1
+      },
+      {
+        "admin_code3": "001018",
+        "admin_name3": "Baldissero Torinese",
+        "count": 1
+      },
+      {
+        "admin_code3": "055007",
+        "admin_name3": "Baschi",
+        "count": 1
+      },
+      {
+        "admin_code3": "051004",
+        "admin_name3": "Bibbiena",
+        "count": 3
+      },
+      {
+        "admin_code3": "022238",
+        "admin_name3": "Borgo Chiese",
+        "count": 3
+      },
+      {
+        "admin_code3": "022239",
+        "admin_name3": "Borgo Lares",
+        "count": 2
+      },
+      {
+        "admin_code3": "020071",
+        "admin_name3": "Borgo Virgilio",
+        "count": 9
+      },
+      {
+        "admin_code3": "001030",
+        "admin_name3": "Borgofranco D'Ivrea",
+        "count": 1
+      },
+      {
+        "admin_code3": "103078",
+        "admin_name3": "Borgomezzavalle",
+        "count": 2
+      },
+      {
+        "admin_code3": "057007",
+        "admin_name3": "Borgorose",
+        "count": 1
+      },
+      {
+        "admin_code3": "051005",
+        "admin_name3": "Bucine",
+        "count": 2
+      },
+      {
+        "admin_code3": "065021",
+        "admin_name3": "Camerota",
+        "count": 3
+      },
+      {
+        "admin_code3": "065022",
+        "admin_name3": "Campagna",
+        "count": 1
+      },
+      {
+        "admin_code3": "096086",
+        "admin_name3": "Campiglia Cervo",
+        "count": 3
+      },
+      {
+        "admin_code3": "081004",
+        "admin_name3": "Campobello Di Mazara",
+        "count": 1
+      },
+      {
+        "admin_code3": "027005",
+        "admin_name3": "Caorle",
+        "count": 1
+      },
+      {
+        "admin_code3": "107003",
+        "admin_name3": "Carbonia",
+        "count": 2
+      },
+      {
+        "admin_code3": "011009",
+        "admin_name3": "Carro",
+        "count": 1
+      },
+      {
+        "admin_code3": "050040",
+        "admin_name3": "Casciana Terme Lari",
+        "count": 1
+      },
+      {
+        "admin_code3": "039005",
+        "admin_name3": "Casola Valsenio",
+        "count": 1
+      },
+      {
+        "admin_code3": "051008",
+        "admin_name3": "Castel Focognano",
+        "count": 1
+      },
+      {
+        "admin_code3": "058022",
+        "admin_name3": "Castel Gandolfo",
+        "count": 2
+      },
+      {
+        "admin_code3": "022240",
+        "admin_name3": "Castel Ivano",
+        "count": 3
+      },
+      {
+        "admin_code3": "037020",
+        "admin_name3": "Castel San Pietro Terme",
+        "count": 2
+      },
+      {
+        "admin_code3": "050009",
+        "admin_name3": "Castelfranco Di Sotto",
+        "count": 2
+      },
+      {
+        "admin_code3": "051040",
+        "admin_name3": "Castelfranco Piandiscò",
+        "count": 1
+      },
+      {
+        "admin_code3": "081005",
+        "admin_name3": "Castellammare Del Golfo",
+        "count": 1
+      },
+      {
+        "admin_code3": "001066",
+        "admin_name3": "Castellamonte",
+        "count": 1
+      },
+      {
+        "admin_code3": "054009",
+        "admin_name3": "Castiglione Del Lago",
+        "count": 4
+      },
+      {
+        "admin_code3": "080025",
+        "admin_name3": "Caulonia",
+        "count": 4
+      },
+      {
+        "admin_code3": "022241",
+        "admin_name3": "Cembra Lisignago",
+        "count": 2
+      },
+      {
+        "admin_code3": "071020",
+        "admin_name3": "Cerignola",
+        "count": 1
+      },
+      {
+        "admin_code3": "058029",
+        "admin_name3": "Cerveteri",
+        "count": 2
+      },
+      {
+        "admin_code3": "057016",
+        "admin_name3": "Cittaducale",
+        "count": 1
+      },
+      {
+        "admin_code3": "054013",
+        "admin_name3": "Città di Castello",
+        "count": 2
+      },
+      {
+        "admin_code3": "013251",
+        "admin_name3": "Colverde",
+        "count": 3
+      },
+      {
+        "admin_code3": "038006",
+        "admin_name3": "Comacchio",
+        "count": 2
+      },
+      {
+        "admin_code3": "057025",
+        "admin_name3": "Contigliano",
+        "count": 1
+      },
+      {
+        "admin_code3": "022242",
+        "admin_name3": "Contà",
+        "count": 3
+      },
+      {
+        "admin_code3": "078157",
+        "admin_name3": "Corigliano-Rossano",
+        "count": 1
+      },
+      {
+        "admin_code3": "018191",
+        "admin_name3": "Cornale E Bastida",
+        "count": 3
+      },
+      {
+        "admin_code3": "034012",
+        "admin_name3": "Corniglio",
+        "count": 1
+      },
+      {
+        "admin_code3": "018192",
+        "admin_name3": "Corteolona E Genzone",
+        "count": 2
+      },
+      {
+        "admin_code3": "005050",
+        "admin_name3": "Costigliole D'Asti",
+        "count": 1
+      },
+      {
+        "admin_code3": "039009",
+        "admin_name3": "Cotignola",
+        "count": 3
+      },
+      {
+        "admin_code3": "050041",
+        "admin_name3": "Crespina Lorenzana",
+        "count": 2
+      },
+      {
+        "admin_code3": "079036",
+        "admin_name3": "Cropani",
+        "count": 2
+      },
+      {
+        "admin_code3": "022233",
+        "admin_name3": "Dimaro Folgarida",
+        "count": 2
+      },
+      {
+        "admin_code3": "046036",
+        "admin_name3": "Fabbriche Di Vergemoli",
+        "count": 2
+      },
+      {
+        "admin_code3": "042017",
+        "admin_name3": "Fabriano",
+        "count": 1
+      },
+      {
+        "admin_code3": "079047",
+        "admin_name3": "Falerna",
+        "count": 2
+      },
+      {
+        "admin_code3": "074007",
+        "admin_name3": "Fasano",
+        "count": 4
+      },
+      {
+        "admin_code3": "034013",
+        "admin_name3": "Felino",
+        "count": 1
+      },
+      {
+        "admin_code3": "048015",
+        "admin_name3": "Fiesole",
+        "count": 1
+      },
+      {
+        "admin_code3": "048052",
+        "admin_name3": "Figline E Incisa Valdarno",
+        "count": 1
+      },
+      {
+        "admin_code3": "038027",
+        "admin_name3": "Fiscaglia",
+        "count": 3
+      },
+      {
+        "admin_code3": "058120",
+        "admin_name3": "Fiumicino",
+        "count": 5
+      },
+      {
+        "admin_code3": "039011",
+        "admin_name3": "Fusignano",
+        "count": 1
+      },
+      {
+        "admin_code3": "053010",
+        "admin_name3": "Gavorrano",
+        "count": 2
+      },
+      {
+        "admin_code3": "014032",
+        "admin_name3": "Gordona",
+        "count": 2
+      },
+      {
+        "admin_code3": "079061",
+        "admin_name3": "Guardavalle",
+        "count": 1
+      },
+      {
+        "admin_code3": "054024",
+        "admin_name3": "Gubbio",
+        "count": 1
+      },
+      {
+        "admin_code3": "097092",
+        "admin_name3": "La Valletta Brianza",
+        "count": 3
+      },
+      {
+        "admin_code3": "034018",
+        "admin_name3": "Langhirano",
+        "count": 2
+      },
+      {
+        "admin_code3": "058050",
+        "admin_name3": "Lanuvio",
+        "count": 2
+      },
+      {
+        "admin_code3": "058115",
+        "admin_name3": "Lariano",
+        "count": 1
+      },
+      {
+        "admin_code3": "059011",
+        "admin_name3": "Latina",
+        "count": 4
+      },
+      {
+        "admin_code3": "030046",
+        "admin_name3": "Latisana",
+        "count": 1
+      },
+      {
+        "admin_code3": "075035",
+        "admin_name3": "Lecce",
+        "count": 1
+      },
+      {
+        "admin_code3": "096085",
+        "admin_name3": "Lessona",
+        "count": 2
+      },
+      {
+        "admin_code3": "083041",
+        "admin_name3": "Lipari",
+        "count": 1
+      },
+      {
+        "admin_code3": "078068",
+        "admin_name3": "Longobucco",
+        "count": 1
+      },
+      {
+        "admin_code3": "012142",
+        "admin_name3": "Maccagno Con Pino E Veddasca",
+        "count": 2
+      },
+      {
+        "admin_code3": "022243",
+        "admin_name3": "Madruzzo",
+        "count": 3
+      },
+      {
+        "admin_code3": "053014",
+        "admin_name3": "Manciano",
+        "count": 1
+      },
+      {
+        "admin_code3": "047007",
+        "admin_name3": "Marliana",
+        "count": 2
+      },
+      {
+        "admin_code3": "054027",
+        "admin_name3": "Marsciano",
+        "count": 1
+      },
+      {
+        "admin_code3": "087023",
+        "admin_name3": "Mascali",
+        "count": 1
+      },
+      {
+        "admin_code3": "053015",
+        "admin_name3": "Massa Marittima",
+        "count": 1
+      },
+      {
+        "admin_code3": "046018",
+        "admin_name3": "Massarosa",
+        "count": 3
+      },
+      {
+        "admin_code3": "081012",
+        "admin_name3": "Mazara Del Vallo",
+        "count": 1
+      },
+      {
+        "admin_code3": "034020",
+        "admin_name3": "Medesano",
+        "count": 2
+      },
+      {
+        "admin_code3": "018090",
+        "admin_name3": "Mezzana Bigli",
+        "count": 1
+      },
+      {
+        "admin_code3": "058060",
+        "admin_name3": "Monte Compatri",
+        "count": 3
+      },
+      {
+        "admin_code3": "058064",
+        "admin_name3": "Monte Porzio Catone",
+        "count": 2
+      },
+      {
+        "admin_code3": "080053",
+        "admin_name3": "Montebello Ionico",
+        "count": 2
+      },
+      {
+        "admin_code3": "034023",
+        "admin_name3": "Montechiarugolo",
+        "count": 1
+      },
+      {
+        "admin_code3": "065071",
+        "admin_name3": "Montecorice",
+        "count": 1
+      },
+      {
+        "admin_code3": "065076",
+        "admin_name3": "Montesano Sulla Marcellana",
+        "count": 4
+      },
+      {
+        "admin_code3": "099029",
+        "admin_name3": "Montescudo - Monte Colombo",
+        "count": 2
+      },
+      {
+        "admin_code3": "036026",
+        "admin_name3": "Montese",
+        "count": 2
+      },
+      {
+        "admin_code3": "051026",
+        "admin_name3": "Montevarchi",
+        "count": 1
+      },
+      {
+        "admin_code3": "005121",
+        "admin_name3": "Montiglio Monferrato",
+        "count": 1
+      },
+      {
+        "admin_code3": "064121",
+        "admin_name3": "Montoro",
+        "count": 7
+      },
+      {
+        "admin_code3": "058070",
+        "admin_name3": "Nemi",
+        "count": 1
+      },
+      {
+        "admin_code3": "086012",
+        "admin_name3": "Nicosia",
+        "count": 1
+      },
+      {
+        "admin_code3": "079087",
+        "admin_name3": "Nocera Terinese",
+        "count": 1
+      },
+      {
+        "admin_code3": "053018",
+        "admin_name3": "Orbetello",
+        "count": 4
+      },
+      {
+        "admin_code3": "015166",
+        "admin_name3": "Paderno Dugnano",
+        "count": 1
+      },
+      {
+        "admin_code3": "",
+        "admin_name3": "Parma",
+        "count": 1
+      },
+      {
+        "admin_code3": "017136",
+        "admin_name3": "Passirano",
+        "count": 1
+      },
+      {
+        "admin_code3": "046022",
+        "admin_name3": "Pescaglia",
+        "count": 2
+      },
+      {
+        "admin_code3": "037047",
+        "admin_name3": "Pianoro",
+        "count": 2
+      },
+      {
+        "admin_code3": "076060",
+        "admin_name3": "Pietragalla",
+        "count": 1
+      },
+      {
+        "admin_code3": "022234",
+        "admin_name3": "Pieve Di Bono-Prezzo",
+        "count": 2
+      },
+      {
+        "admin_code3": "077020",
+        "admin_name3": "Pisticci",
+        "count": 2
+      },
+      {
+        "admin_code3": "099028",
+        "admin_name3": "Poggio Torriana",
+        "count": 2
+      },
+      {
+        "admin_code3": "034050",
+        "admin_name3": "Polesine Zibello",
+        "count": 3
+      },
+      {
+        "admin_code3": "058079",
+        "admin_name3": "Pomezia",
+        "count": 4
+      },
+      {
+        "admin_code3": "059018",
+        "admin_name3": "Ponza",
+        "count": 1
+      },
+      {
+        "admin_code3": "051031",
+        "admin_name3": "Poppi",
+        "count": 3
+      },
+      {
+        "admin_code3": "022244",
+        "admin_name3": "Porte Di Rendena",
+        "count": 5
+      },
+      {
+        "admin_code3": "027029",
+        "admin_name3": "Portogruaro",
+        "count": 1
+      },
+      {
+        "admin_code3": "051041",
+        "admin_name3": "Pratovecchio Stia",
+        "count": 1
+      },
+      {
+        "admin_code3": "022230",
+        "admin_name3": "Predaia",
+        "count": 6
+      },
+      {
+        "admin_code3": "022245",
+        "admin_name3": "Primiero San Martino Di Castrozza",
+        "count": 4
+      },
+      {
+        "admin_code3": "047017",
+        "admin_name3": "Quarrata",
+        "count": 1
+      },
+      {
+        "admin_code3": "025070",
+        "admin_name3": "Quero Vas",
+        "count": 3
+      },
+      {
+        "admin_code3": "048035",
+        "admin_name3": "Reggello",
+        "count": 1
+      },
+      {
+        "admin_code3": "057059",
+        "admin_name3": "Rieti",
+        "count": 1
+      },
+      {
+        "admin_code3": "038029",
+        "admin_name3": "Riva del Po",
+        "count": 2
+      },
+      {
+        "admin_code3": "030188",
+        "admin_name3": "Rivignano Teor",
+        "count": 4
+      },
+      {
+        "admin_code3": "058088",
+        "admin_name3": "Rocca Priora",
+        "count": 2
+      },
+      {
+        "admin_code3": "065107",
+        "admin_name3": "Roccagloriosa",
+        "count": 1
+      },
+      {
+        "admin_code3": "",
+        "admin_name3": "Roma",
+        "count": 1
+      },
+      {
+        "admin_code3": "075064",
+        "admin_name3": "Ruffano",
+        "count": 1
+      },
+      {
+        "admin_code3": "048037",
+        "admin_name3": "Rufina",
+        "count": 1
+      },
+      {
+        "admin_code3": "059024",
+        "admin_name3": "Sabaudia",
+        "count": 1
+      },
+      {
+        "admin_code3": "034031",
+        "admin_name3": "Sala Baganza",
+        "count": 1
+      },
+      {
+        "admin_code3": "048038",
+        "admin_name3": "San Casciano In Val Di Pesa",
+        "count": 5
+      },
+      {
+        "admin_code3": "065119",
+        "admin_name3": "San Giovanni A Piro",
+        "count": 1
+      },
+      {
+        "admin_code3": "050031",
+        "admin_name3": "San Giuliano Terme",
+        "count": 2
+      },
+      {
+        "admin_code3": "021080",
+        "admin_name3": "San Leonardo In Passiria",
+        "count": 1
+      },
+      {
+        "admin_code3": "021080",
+        "admin_name3": "San Leonardo in Passiria - St. Leonhard in Passeier",
+        "count": 1
+      },
+      {
+        "admin_code3": "080073",
+        "admin_name3": "San Lorenzo",
+        "count": 4
+      },
+      {
+        "admin_code3": "022231",
+        "admin_name3": "San Lorenzo Dorsino",
+        "count": 3
+      },
+      {
+        "admin_code3": "027034",
+        "admin_name3": "San Michele Al Tagliamento",
+        "count": 2
+      },
+      {
+        "admin_code3": "016252",
+        "admin_name3": "Sant'Omobono Terme",
+        "count": 1
+      },
+      {
+        "admin_code3": "027035",
+        "admin_name3": "Santa Maria Di Sala",
+        "count": 1
+      },
+      {
+        "admin_code3": "065127",
+        "admin_name3": "Santa Marina",
+        "count": 1
+      },
+      {
+        "admin_code3": "058097",
+        "admin_name3": "Santa Marinella",
+        "count": 1
+      },
+      {
+        "admin_code3": "027036",
+        "admin_name3": "Santo Stino Di Livenza",
+        "count": 1
+      },
+      {
+        "admin_code3": "026078",
+        "admin_name3": "Sarmede",
+        "count": 1
+      },
+      {
+        "admin_code3": "065136",
+        "admin_name3": "Sassano",
+        "count": 1
+      },
+      {
+        "admin_code3": "031022",
+        "admin_name3": "Savogna D'Isonzo",
+        "count": 1
+      },
+      {
+        "admin_code3": "048053",
+        "admin_name3": "Scarperia E San Piero",
+        "count": 1
+      },
+      {
+        "admin_code3": "027037",
+        "admin_name3": "Scorzè",
+        "count": 1
+      },
+      {
+        "admin_code3": "022246",
+        "admin_name3": "Sella Giudicarie",
+        "count": 4
+      },
+      {
+        "admin_code3": "046028",
+        "admin_name3": "Seravezza",
+        "count": 1
+      },
+      {
+        "admin_code3": "010058",
+        "admin_name3": "Serra Riccò",
+        "count": 1
+      },
+      {
+        "admin_code3": "047020",
+        "admin_name3": "Serravalle Pistoiese",
+        "count": 3
+      },
+      {
+        "admin_code3": "080088",
+        "admin_name3": "Siderno",
+        "count": 1
+      },
+      {
+        "admin_code3": "046037",
+        "admin_name3": "Sillano Giuncugnano",
+        "count": 3
+      },
+      {
+        "admin_code3": "091085",
+        "admin_name3": "Siniscola",
+        "count": 11
+      },
+      {
+        "admin_code3": "034049",
+        "admin_name3": "Sissa Trecasali",
+        "count": 5
+      },
+      {
+        "admin_code3": "036044",
+        "admin_name3": "Soliera",
+        "count": 1
+      },
+      {
+        "admin_code3": "026083",
+        "admin_name3": "Susegana",
+        "count": 1
+      },
+      {
+        "admin_code3": "104025",
+        "admin_name3": "Tempio Pausania",
+        "count": 1
+      },
+      {
+        "admin_code3": "079147",
+        "admin_name3": "Tiriolo",
+        "count": 1
+      },
+      {
+        "admin_code3": "058104",
+        "admin_name3": "Tivoli",
+        "count": 1
+      },
+      {
+        "admin_code3": "081021",
+        "admin_name3": "Trapani",
+        "count": 3
+      },
+      {
+        "admin_code3": "022247",
+        "admin_name3": "Tre Ville",
+        "count": 3
+      },
+      {
+        "admin_code3": "042050",
+        "admin_name3": "Trecastelli",
+        "count": 7
+      },
+      {
+        "admin_code3": "013252",
+        "admin_name3": "Tremezzina",
+        "count": 1
+      },
+      {
+        "admin_code3": "",
+        "admin_name3": "Trento",
+        "count": 1
+      },
+      {
+        "admin_code3": "075088",
+        "admin_name3": "Tricase",
+        "count": 1
+      },
+      {
+        "admin_code3": "054056",
+        "admin_name3": "Umbertide",
+        "count": 1
+      },
+      {
+        "admin_code3": "061095",
+        "admin_name3": "Vairano Patenora",
+        "count": 1
+      },
+      {
+        "admin_code3": "016253",
+        "admin_name3": "Val Brembilla",
+        "count": 2
+      },
+      {
+        "admin_code3": "022232",
+        "admin_name3": "Valdaone",
+        "count": 4
+      },
+      {
+        "admin_code3": "081022",
+        "admin_name3": "Valderice",
+        "count": 1
+      },
+      {
+        "admin_code3": "026087",
+        "admin_name3": "Valdobbiadene",
+        "count": 1
+      },
+      {
+        "admin_code3": "012131",
+        "admin_name3": "Valganna",
+        "count": 1
+      },
+      {
+        "admin_code3": "041068",
+        "admin_name3": "Vallefoglia",
+        "count": 3
+      },
+      {
+        "admin_code3": "022248",
+        "admin_name3": "Vallelaghi",
+        "count": 5
+      },
+      {
+        "admin_code3": "037061",
+        "admin_name3": "Valsamoggia",
+        "count": 1
+      },
+      {
+        "admin_code3": "093053",
+        "admin_name3": "Valvasone Arzene",
+        "count": 3
+      },
+      {
+        "admin_code3": "011029",
+        "admin_name3": "Varese Ligure",
+        "count": 1
+      },
+      {
+        "admin_code3": "035046",
+        "admin_name3": "Ventasso",
+        "count": 9
+      },
+      {
+        "admin_code3": "097091",
+        "admin_name3": "Verderio",
+        "count": 1
+      },
+      {
+        "admin_code3": "020066",
+        "admin_name3": "Viadana",
+        "count": 3
+      },
+      {
+        "admin_code3": "063086",
+        "admin_name3": "Vico Equense",
+        "count": 2
+      },
+      {
+        "admin_code3": "050038",
+        "admin_name3": "Vicopisano",
+        "count": 1
+      },
+      {
+        "admin_code3": "105023",
+        "admin_name3": "Villagrande Strisaili",
+        "count": 1
+      },
+      {
+        "admin_code3": "022249",
+        "admin_name3": "Ville d’Anaunia",
+        "count": 3
+      }
+    ],
+    "archive_member": "IT.txt",
+    "archive_members": [
+      {
+        "compressed_byte_length": 1195,
+        "crc32": "03161423",
+        "is_directory": false,
+        "member": "readme.txt",
+        "member_byte_length": 2893,
+        "member_sha256": "4e149bfffa351fe3d99690aa48bb05e35035df187ea4933a01b85e983817ffdc"
+      },
+      {
+        "compressed_byte_length": 255489,
+        "crc32": "d64eaf7a",
+        "is_directory": false,
+        "member": "IT.txt",
+        "member_byte_length": 1200831,
+        "member_sha256": "e1f4f49e42242d4cb2f9454d17e4adf2b795b9bb8d49fb304cd7165ab7e99b2f"
+      }
+    ],
+    "bom": false,
+    "column_count_distribution": {
+      "12": 18415,
+      "other": 0
+    },
+    "column_count_expected": 12,
+    "column_positions_1_based": {
+      "accuracy": 12,
+      "admin code1": 5,
+      "admin code2": 7,
+      "admin code3": 9,
+      "admin name1": 4,
+      "admin name2": 6,
+      "admin name3": 8,
+      "country code": 1,
+      "latitude": 10,
+      "longitude": 11,
+      "place name": 3,
+      "postal code": 2
+    },
+    "country_code_distribution": {
+      "IT": 18415
+    },
+    "delimiter": "U+0009 TAB",
+    "encoding": "UTF-8",
+    "exact_header": null,
+    "line_count": 18415,
+    "malformed_row_count": 0,
+    "postal_code_format_distribution": {
+      "five_ascii_digits": 18415
+    },
+    "quoting": "none observed or documented; positional tab-separated fields",
+    "reference_date_status": "not_declared"
+  },
+  "istat_sardinia_crosswalk": {
+    "archive_member": "Codici-statistici-e-denominazioni-delle-unità-amministrative-della-Sardegna/Elenco codici e denominazioni delle unità amministrative della Sardegna.csv",
+    "archive_members": [
+      {
+        "compressed_byte_length": 0,
+        "crc32": "00000000",
+        "is_directory": true,
+        "member": "Codici-statistici-e-denominazioni-delle-unità-amministrative-della-Sardegna/",
+        "member_byte_length": 0,
+        "member_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "compressed_byte_length": 4600,
+        "crc32": "b0d7b629",
+        "is_directory": false,
+        "member": "Codici-statistici-e-denominazioni-delle-unità-amministrative-della-Sardegna/Elenco codici e denominazioni delle unità amministrative della Sardegna.csv",
+        "member_byte_length": 31773,
+        "member_sha256": "38c6eb9941a827bff94cb66fefcb5de377671f5254f3d880d45069cd3b2be225"
+      },
+      {
+        "compressed_byte_length": 25257,
+        "crc32": "edba3800",
+        "is_directory": false,
+        "member": "Codici-statistici-e-denominazioni-delle-unità-amministrative-della-Sardegna/Elenco codici e denominazioni delle unità amministrative della Sardegna.xlsx",
+        "member_byte_length": 29882,
+        "member_sha256": "3b6d730bae046be8ac41e299f3c4d5ba3214328148c970b33e669dd6f9ba7a07"
+      }
+    ],
+    "bom": false,
+    "delimiter": ";",
+    "encoding": "ISO-8859-1",
+    "exact_header": [
+      "Denominazione Provincia/\nCittà metropolitana",
+      "Codice Provincia/\nCittà metropolitana",
+      "Codice Comune",
+      "Denominazione Comune",
+      "Codice Comune precedente",
+      "Codice Provincia/\nCittà metropolitana precedente",
+      "Denominazione Provincia/\nCittà metropolitana\n(ripartizione precedente)"
+    ],
+    "header_logical_record": 2,
+    "logical_data_row_count": 377,
+    "member_line_endings": "mixed CRLF record endings and embedded LF inside quoted header fields",
+    "quoting": "double quote; RFC-style doubled quote escaping",
+    "row_selector": "all 377 logical data records after title and header",
+    "title_record": [
+      "Codici statistici e denominazioni delle unità amministrative rispondenti ai nuovi assetti territoriali della Sardegna. In vigore dal 1° gennaio 2026",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ]
+  },
+  "posas": {
+    "age_representation": "Età column; ASCII decimal 0..100 for published age rows",
+    "all_age_marker": "999",
+    "archive_members": [
+      {
+        "compressed_byte_length": 169168,
+        "data_row_count": 31824,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 31827,
+        "member": "POSAS_2026_it_001_Torino.csv",
+        "member_byte_length": 1053394,
+        "member_sha256": "67eb12908a1bbdda795d2533be73271f0bd0411c4a3d8118fb714fb42b5b7952"
+      },
+      {
+        "compressed_byte_length": 38352,
+        "data_row_count": 8364,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 8367,
+        "member": "POSAS_2026_it_002_Vercelli.csv",
+        "member_byte_length": 264173,
+        "member_sha256": "ac765310b82aaad440065ee0a8281e6b1d8241b0fe6596772f4117f8663a0622"
+      },
+      {
+        "compressed_byte_length": 47025,
+        "data_row_count": 8874,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 8877,
+        "member": "POSAS_2026_it_003_Novara.csv",
+        "member_byte_length": 293382,
+        "member_sha256": "dc28d4f1edd6d950090b09dcb5e7ffb79c334be575ad6f144de29c26300df411"
+      },
+      {
+        "compressed_byte_length": 118226,
+        "data_row_count": 25194,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 25197,
+        "member": "POSAS_2026_it_004_Cuneo.csv",
+        "member_byte_length": 813612,
+        "member_sha256": "4c3488caeb1dbc808ff4166f120c75093e0d37b0ad7fea45d64a9b616d46cfe2"
+      },
+      {
+        "compressed_byte_length": 53775,
+        "data_row_count": 11934,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 11937,
+        "member": "POSAS_2026_it_005_Asti.csv",
+        "member_byte_length": 404652,
+        "member_sha256": "c3b7243a1e50cb10a556f172c7248416db410fc6d22f5d921208bd3e697ab566"
+      },
+      {
+        "compressed_byte_length": 87181,
+        "data_row_count": 19074,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 19077,
+        "member": "POSAS_2026_it_006_Alessandria.csv",
+        "member_byte_length": 646428,
+        "member_sha256": "055a13b99ed0fe4fb24a6829e4b5fe66aacfc652632371d03411271c88181903"
+      },
+      {
+        "compressed_byte_length": 34444,
+        "data_row_count": 7548,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 7551,
+        "member": "POSAS_2026_it_007_Valle_dAosta-Vallee_dAoste.csv",
+        "member_byte_length": 238068,
+        "member_sha256": "f95686dbd94b46746996978f4338b9de941a762beae8d4d8d64ff0ec0ff0231b"
+      },
+      {
+        "compressed_byte_length": 32272,
+        "data_row_count": 6732,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 6735,
+        "member": "POSAS_2026_it_008_Imperia.csv",
+        "member_byte_length": 220289,
+        "member_sha256": "8adb7f8f6b6ec659adba15f973f47868a0b278530ba10597d26a050be382464d"
+      },
+      {
+        "compressed_byte_length": 37086,
+        "data_row_count": 7038,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 7041,
+        "member": "POSAS_2026_it_009_Savona.csv",
+        "member_byte_length": 226006,
+        "member_sha256": "c8bc68ed6274c1f5ded9beabb0cddb7ad97ebf6a73f81c1b1e878145761da90f"
+      },
+      {
+        "compressed_byte_length": 37675,
+        "data_row_count": 6834,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 6837,
+        "member": "POSAS_2026_it_010_Genova.csv",
+        "member_byte_length": 220743,
+        "member_sha256": "62f706282d004d4bd895f6c40348c14db9883db7825cfac382c3daa50a40d849"
+      },
+      {
+        "compressed_byte_length": 19067,
+        "data_row_count": 3264,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 3267,
+        "member": "POSAS_2026_it_011_La_Spezia.csv",
+        "member_byte_length": 109709,
+        "member_sha256": "add1139bb0ac5df7ece372e76c8ae062d9449102ba379e24b6e37afab714d90f"
+      },
+      {
+        "compressed_byte_length": 82605,
+        "data_row_count": 13872,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 13875,
+        "member": "POSAS_2026_it_012_Varese.csv",
+        "member_byte_length": 479810,
+        "member_sha256": "be0154c4d104f6f11bcdfcad43173bfefb315f037b2a8c4f34d10495e614f658"
+      },
+      {
+        "compressed_byte_length": 81251,
+        "data_row_count": 14994,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 14997,
+        "member": "POSAS_2026_it_013_Como.csv",
+        "member_byte_length": 493443,
+        "member_sha256": "4268455a17e456311d3c8319d3aee0bb4c6d689d44d7435f437fbe496634af3e"
+      },
+      {
+        "compressed_byte_length": 39198,
+        "data_row_count": 7854,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 7857,
+        "member": "POSAS_2026_it_014_Sondrio.csv",
+        "member_byte_length": 253895,
+        "member_sha256": "9accd9a898b5836bb638efbcbcf93d9a9933c6ca7e5ff3ecd47e03410f8d1a55"
+      },
+      {
+        "compressed_byte_length": 95376,
+        "data_row_count": 13566,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 13569,
+        "member": "POSAS_2026_it_015_Milano.csv",
+        "member_byte_length": 483078,
+        "member_sha256": "9ef7bf77a67c086465f60fb72814e60330b7f43a91bffa78e9f19b13c0d08e14"
+      },
+      {
+        "compressed_byte_length": 138184,
+        "data_row_count": 24786,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 24789,
+        "member": "POSAS_2026_it_016_Bergamo.csv",
+        "member_byte_length": 828530,
+        "member_sha256": "3c7e29bc700c9a8faaa24cb9290a6c1e5ad91780d60b6912a96b9019fb08c8fd"
+      },
+      {
+        "compressed_byte_length": 122415,
+        "data_row_count": 20910,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 20913,
+        "member": "POSAS_2026_it_017_Brescia.csv",
+        "member_byte_length": 694264,
+        "member_sha256": "7a1a716618d75132da2e3c82bf11d778041b8bd2a83285e819296301adf993ff"
+      },
+      {
+        "compressed_byte_length": 95024,
+        "data_row_count": 18870,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 18873,
+        "member": "POSAS_2026_it_018_Pavia.csv",
+        "member_byte_length": 644943,
+        "member_sha256": "87cc9721a17ad9d2f8f7914741eb0b42e654bed53ddbe533204ceca724c80b59"
+      },
+      {
+        "compressed_byte_length": 60015,
+        "data_row_count": 11526,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 11529,
+        "member": "POSAS_2026_it_019_Cremona.csv",
+        "member_byte_length": 406902,
+        "member_sha256": "8482238e5f1420edbf8449c7b3137158d438bfd0f57b548af63e3d305cb4ff2f"
+      },
+      {
+        "compressed_byte_length": 40523,
+        "data_row_count": 6528,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 6531,
+        "member": "POSAS_2026_it_020_Mantova.csv",
+        "member_byte_length": 233004,
+        "member_sha256": "a406d02ad32b78b71aaa19cfd5787969e546979f859a5bcb31ce3b3000b8438e"
+      },
+      {
+        "compressed_byte_length": 70470,
+        "data_row_count": 11832,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 11835,
+        "member": "POSAS_2026_it_021_Bolzano-Bozen.csv",
+        "member_byte_length": 535162,
+        "member_sha256": "3f9a85f8a76dbe59ecca98fdbb3daf05f31de64a00285e5dcad5c690304aac79"
+      },
+      {
+        "compressed_byte_length": 86043,
+        "data_row_count": 16932,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 16935,
+        "member": "POSAS_2026_it_022_Trento.csv",
+        "member_byte_length": 546575,
+        "member_sha256": "b3f9a6bb39fc35a09a557c72c16d75354bb7001187ea5f650bda3984916d5bd1"
+      },
+      {
+        "compressed_byte_length": 63900,
+        "data_row_count": 9996,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 9999,
+        "member": "POSAS_2026_it_023_Verona.csv",
+        "member_byte_length": 363347,
+        "member_sha256": "b6eef339c6fae65a0e5322358e7590250fbfe575fabfe58c2297d617b841b209"
+      },
+      {
+        "compressed_byte_length": 71363,
+        "data_row_count": 11526,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 11529,
+        "member": "POSAS_2026_it_024_Vicenza.csv",
+        "member_byte_length": 399593,
+        "member_sha256": "61ae745b4fb78e98abecd5e32c674422395d228fe71e7ab36f3e42ce322be7d1"
+      },
+      {
+        "compressed_byte_length": 32922,
+        "data_row_count": 6120,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 6123,
+        "member": "POSAS_2026_it_025_Belluno.csv",
+        "member_byte_length": 222455,
+        "member_sha256": "d0d930adcba9ad7c8ed371aec9df465917551fb296a38ae4a9bcfc02f31657b7"
+      },
+      {
+        "compressed_byte_length": 63427,
+        "data_row_count": 9588,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 9591,
+        "member": "POSAS_2026_it_026_Treviso.csv",
+        "member_byte_length": 345409,
+        "member_sha256": "d9cb6625933a1ad347741d693437bece583e544315f18678ff1842e5a17d29cd"
+      },
+      {
+        "compressed_byte_length": 32499,
+        "data_row_count": 4488,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 4491,
+        "member": "POSAS_2026_it_027_Venezia.csv",
+        "member_byte_length": 161152,
+        "member_sha256": "bacc7cc9c071a39f8707f5b207ba1ff34219e7e9ea5428c29b7f734f61eb3b3e"
+      },
+      {
+        "compressed_byte_length": 66775,
+        "data_row_count": 10302,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 10305,
+        "member": "POSAS_2026_it_028_Padova.csv",
+        "member_byte_length": 367908,
+        "member_sha256": "0dad1260f336d66f125a07a9ada8d614371c5ba3291bcad73c9032dba2cd8ebf"
+      },
+      {
+        "compressed_byte_length": 28917,
+        "data_row_count": 5100,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 5103,
+        "member": "POSAS_2026_it_029_Rovigo.csv",
+        "member_byte_length": 174507,
+        "member_sha256": "a93c5e974bc9bf219989246bf6405eb737d836ee1ced48ddc35b4dc6aab2dd69"
+      },
+      {
+        "compressed_byte_length": 74030,
+        "data_row_count": 13668,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 13671,
+        "member": "POSAS_2026_it_030_Udine.csv",
+        "member_byte_length": 460876,
+        "member_sha256": "1e5aab1f008324c1f02edeff9f822325672f3025e62cd2b947620e1252ae3bd7"
+      },
+      {
+        "compressed_byte_length": 15421,
+        "data_row_count": 2550,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 2553,
+        "member": "POSAS_2026_it_031_Gorizia.csv",
+        "member_byte_length": 96596,
+        "member_sha256": "cf6cd79833b71e3df348db2f76e1f8e99f4825849db6107205e4ad27225a3d20"
+      },
+      {
+        "compressed_byte_length": 4670,
+        "data_row_count": 612,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 615,
+        "member": "POSAS_2026_it_032_Trieste.csv",
+        "member_byte_length": 26086,
+        "member_sha256": "bbc9da17ce3791da322572b3c6c3837f76aa9e68a1ec6e1d8a091173bbe76c65"
+      },
+      {
+        "compressed_byte_length": 27713,
+        "data_row_count": 4692,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 4695,
+        "member": "POSAS_2026_it_033_Piacenza.csv",
+        "member_byte_length": 163855,
+        "member_sha256": "5ad194fb35d78dea7e713417c5addd5a528639ffdf2e74a7dbd035a7d322f8cf"
+      },
+      {
+        "compressed_byte_length": 28137,
+        "data_row_count": 4488,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 4491,
+        "member": "POSAS_2026_it_034_Parma.csv",
+        "member_byte_length": 155289,
+        "member_sha256": "3f422fd13930bc24eba6d61cc69ce0343e5ba5437516ee0c1ffdf111970946b4"
+      },
+      {
+        "compressed_byte_length": 28971,
+        "data_row_count": 4284,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 4287,
+        "member": "POSAS_2026_it_035_Reggio_nellEmilia.csv",
+        "member_byte_length": 150492,
+        "member_sha256": "c8e3be28552cde36ccf3dbcf3660063632593283c923e16a0d5e4b873672ba15"
+      },
+      {
+        "compressed_byte_length": 32913,
+        "data_row_count": 4794,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 4797,
+        "member": "POSAS_2026_it_036_Modena.csv",
+        "member_byte_length": 172227,
+        "member_sha256": "dd716d75c666772aa01fd0323a17992871d64b5cba03c93014412eadc83834b5"
+      },
+      {
+        "compressed_byte_length": 39632,
+        "data_row_count": 5610,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 5613,
+        "member": "POSAS_2026_it_037_Bologna.csv",
+        "member_byte_length": 213236,
+        "member_sha256": "8749945e5660e4e728ad10e40fe80bf795e8879f78433196449d7b5c838a059d"
+      },
+      {
+        "compressed_byte_length": 15310,
+        "data_row_count": 2142,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 2145,
+        "member": "POSAS_2026_it_038_Ferrara.csv",
+        "member_byte_length": 73462,
+        "member_sha256": "e516eda29ad0cc630f52b5bbb28ae408cd802d3a9282ab43c9089a679003ea20"
+      },
+      {
+        "compressed_byte_length": 13600,
+        "data_row_count": 1836,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 1839,
+        "member": "POSAS_2026_it_039_Ravenna.csv",
+        "member_byte_length": 65123,
+        "member_sha256": "7eab1b9ea979820bacf7d55a5afc682a908597902d0ab1c83c9e6b9eb3d26632"
+      },
+      {
+        "compressed_byte_length": 20315,
+        "data_row_count": 3060,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 3063,
+        "member": "POSAS_2026_it_040_Forli-Cesena.csv",
+        "member_byte_length": 110332,
+        "member_sha256": "36c37c42c66478e4961ab8dae9a726196fe97ceec76a623690329696ffac19a9"
+      },
+      {
+        "compressed_byte_length": 29974,
+        "data_row_count": 5100,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 5103,
+        "member": "POSAS_2026_it_041_Pesaro_e_Urbino.csv",
+        "member_byte_length": 176558,
+        "member_sha256": "78b9eca6de96e68a79bb10e643b936376acf49895c4bac2722b245d5a8dd1d5c"
+      },
+      {
+        "compressed_byte_length": 30413,
+        "data_row_count": 4794,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 4797,
+        "member": "POSAS_2026_it_042_Ancona.csv",
+        "member_byte_length": 166485,
+        "member_sha256": "54378ee3e158e4808124b5d7917d7f3fb2b3d9dcec52144fad9a85df8653d3b4"
+      },
+      {
+        "compressed_byte_length": 32055,
+        "data_row_count": 5610,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 5613,
+        "member": "POSAS_2026_it_043_Macerata.csv",
+        "member_byte_length": 192206,
+        "member_sha256": "fa054c5deccd732771ee92bca3310269239a1a42ccb313b865c94f64647adceb"
+      },
+      {
+        "compressed_byte_length": 19725,
+        "data_row_count": 3366,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 3369,
+        "member": "POSAS_2026_it_044_Ascoli_Piceno.csv",
+        "member_byte_length": 119937,
+        "member_sha256": "792c8050d80a36c52963b2a8a750877340b2bfc1e7414edd5a4818fb0a763ce1"
+      },
+      {
+        "compressed_byte_length": 11137,
+        "data_row_count": 1734,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 1737,
+        "member": "POSAS_2026_it_045_Massa-Carrara.csv",
+        "member_byte_length": 57517,
+        "member_sha256": "481142b1860e7e49899a5387ab1f682f4dff7d45ae48340b21fbcaac262bf70a"
+      },
+      {
+        "compressed_byte_length": 21791,
+        "data_row_count": 3366,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 3369,
+        "member": "POSAS_2026_it_046_Lucca.csv",
+        "member_byte_length": 122562,
+        "member_sha256": "7bfd0216b0c01202968a717effa32c021bb81740c9a9fe7885dbed642373f9c1"
+      },
+      {
+        "compressed_byte_length": 14781,
+        "data_row_count": 2040,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 2043,
+        "member": "POSAS_2026_it_047_Pistoia.csv",
+        "member_byte_length": 75515,
+        "member_sha256": "ad686a6984b657ef7c0d5b772db947fd00f6d657caf2f676ba9b3d9f53eb13e5"
+      },
+      {
+        "compressed_byte_length": 31145,
+        "data_row_count": 4182,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 4185,
+        "member": "POSAS_2026_it_048_Firenze.csv",
+        "member_byte_length": 155314,
+        "member_sha256": "c5947644b119ea7408bf062f2f77e3c9ab0547b862bfe496c1e308e9e5c76e6b"
+      },
+      {
+        "compressed_byte_length": 13353,
+        "data_row_count": 1938,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 1941,
+        "member": "POSAS_2026_it_049_Livorno.csv",
+        "member_byte_length": 68890,
+        "member_sha256": "72b268b5b0f2315b748f3d0e0d9e659cf7a83ed21c112ff28419aace87161f10"
+      },
+      {
+        "compressed_byte_length": 25196,
+        "data_row_count": 3774,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 3777,
+        "member": "POSAS_2026_it_050_Pisa.csv",
+        "member_byte_length": 137594,
+        "member_sha256": "f92e9ffa50c968f35931dde42f8bfe8ea1bb6733df11fde2922810f9208c3ea9"
+      },
+      {
+        "compressed_byte_length": 24084,
+        "data_row_count": 3672,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 3675,
+        "member": "POSAS_2026_it_051_Arezzo.csv",
+        "member_byte_length": 138669,
+        "member_sha256": "9cce04c7e7856400115109b40ecbc3a90a8af38d684a1b8c04578abf71f0697e"
+      },
+      {
+        "compressed_byte_length": 22934,
+        "data_row_count": 3570,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 3573,
+        "member": "POSAS_2026_it_052_Siena.csv",
+        "member_byte_length": 130157,
+        "member_sha256": "e39c5700a1da2eb78ea694a519d6ccac1e42f5940d37d15d5b68ebe854d51235"
+      },
+      {
+        "compressed_byte_length": 17858,
+        "data_row_count": 2856,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 2859,
+        "member": "POSAS_2026_it_053_Grosseto.csv",
+        "member_byte_length": 101204,
+        "member_sha256": "f2d4161a326fecd76a3d5655faafc6e1a694abcc7d03681d7076cfb9ad8fe163"
+      },
+      {
+        "compressed_byte_length": 38057,
+        "data_row_count": 6018,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 6021,
+        "member": "POSAS_2026_it_054_Perugia.csv",
+        "member_byte_length": 211535,
+        "member_sha256": "f4c0fafc48f4401057e1203e8052b456513251a4d01bfe1f38db6dece2adce69"
+      },
+      {
+        "compressed_byte_length": 18713,
+        "data_row_count": 3366,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 3369,
+        "member": "POSAS_2026_it_055_Terni.csv",
+        "member_byte_length": 110973,
+        "member_sha256": "5eb2aea6a9315c1ea945d70921e5900db330d270c4e80cd0233b97fe5a2c176f"
+      },
+      {
+        "compressed_byte_length": 35499,
+        "data_row_count": 6120,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 6123,
+        "member": "POSAS_2026_it_056_Viterbo.csv",
+        "member_byte_length": 206859,
+        "member_sha256": "ab4c749410ababde58848e6d40906562b190828a4712f33738663a57c41e65a2"
+      },
+      {
+        "compressed_byte_length": 35241,
+        "data_row_count": 7446,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 7449,
+        "member": "POSAS_2026_it_057_Rieti.csv",
+        "member_byte_length": 249074,
+        "member_sha256": "02cb45ea95c59afd2ed9e60e69ad5ac28901e8a102ac62cdfa704ddf02ba2ea6"
+      },
+      {
+        "compressed_byte_length": 78484,
+        "data_row_count": 12342,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 12345,
+        "member": "POSAS_2026_it_058_Roma.csv",
+        "member_byte_length": 426647,
+        "member_sha256": "83f8a28e345946c2e59a83d62e79843edaf381a8db49ca48a45f7862ba3df20a"
+      },
+      {
+        "compressed_byte_length": 23195,
+        "data_row_count": 3366,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 3369,
+        "member": "POSAS_2026_it_059_Latina.csv",
+        "member_byte_length": 113250,
+        "member_sha256": "75e3f851e74933aeb5113409f04cc705f95e7ab0ff77e327c1a36bbfe9745cd5"
+      },
+      {
+        "compressed_byte_length": 52838,
+        "data_row_count": 9282,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 9285,
+        "member": "POSAS_2026_it_060_Frosinone.csv",
+        "member_byte_length": 317641,
+        "member_sha256": "b6bd8ebf27ac036ee44d0424146ad951c23ca92c1f2a17a374c7a4ab8551e78f"
+      },
+      {
+        "compressed_byte_length": 67001,
+        "data_row_count": 10608,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 10611,
+        "member": "POSAS_2026_it_061_Caserta.csv",
+        "member_byte_length": 380136,
+        "member_sha256": "c4fffaff7e208e32a925e50110c0b537e0de34f45e7b35f99b9d90b33e72c38a"
+      },
+      {
+        "compressed_byte_length": 42722,
+        "data_row_count": 7956,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 7959,
+        "member": "POSAS_2026_it_062_Benevento.csv",
+        "member_byte_length": 281540,
+        "member_sha256": "f27c321b473ebbe20c80ea0a4212fb50e3d1348b37220bea9b68f2e4c33ed40d"
+      },
+      {
+        "compressed_byte_length": 70074,
+        "data_row_count": 9384,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 9387,
+        "member": "POSAS_2026_it_063_Napoli.csv",
+        "member_byte_length": 343075,
+        "member_sha256": "0f1124510dfde7c31a9ba08adfc874d78ceb9d99315a80097f5a8a6e79a736b4"
+      },
+      {
+        "compressed_byte_length": 64499,
+        "data_row_count": 12036,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 12039,
+        "member": "POSAS_2026_it_064_Avellino.csv",
+        "member_byte_length": 418296,
+        "member_sha256": "b0cb743715db36578a8922547084653986e349093b26f6e387c959707bead50c"
+      },
+      {
+        "compressed_byte_length": 92415,
+        "data_row_count": 16116,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 16119,
+        "member": "POSAS_2026_it_065_Salerno.csv",
+        "member_byte_length": 554168,
+        "member_sha256": "c3e8d360d6717462be1282a79130134c592394eb8bdd885250f9e7a89b139b18"
+      },
+      {
+        "compressed_byte_length": 53092,
+        "data_row_count": 11016,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 11019,
+        "member": "POSAS_2026_it_066_LAquila.csv",
+        "member_byte_length": 373280,
+        "member_sha256": "852fb468bc72c10881da1c52f87aa7b156f72f59b321dc646a7d6bcbc5153295"
+      },
+      {
+        "compressed_byte_length": 29066,
+        "data_row_count": 4794,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 4797,
+        "member": "POSAS_2026_it_067_Teramo.csv",
+        "member_byte_length": 168400,
+        "member_sha256": "38f6ac40456dc32334867e43e8963d43af7f657b925ae75f3974d51f1a2f8cd6"
+      },
+      {
+        "compressed_byte_length": 26265,
+        "data_row_count": 4692,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 4695,
+        "member": "POSAS_2026_it_068_Pescara.csv",
+        "member_byte_length": 163408,
+        "member_sha256": "ceb8dc8db8952f9fab7d122d5a1127e2e72a8c87705747ea5d5309239d5e3fbe"
+      },
+      {
+        "compressed_byte_length": 54318,
+        "data_row_count": 10608,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 10611,
+        "member": "POSAS_2026_it_069_Chieti.csv",
+        "member_byte_length": 358969,
+        "member_sha256": "c0dcba5785b2ccd112b497b37670a757df65a89495f8bd08a229de2825f701b0"
+      },
+      {
+        "compressed_byte_length": 42220,
+        "data_row_count": 8568,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 8571,
+        "member": "POSAS_2026_it_070_Campobasso.csv",
+        "member_byte_length": 291769,
+        "member_sha256": "64a4a49d2cdd8685ecf6df6e37b8f0f43ea4c3f9dce9a4f4e0213dbf5a414af7"
+      },
+      {
+        "compressed_byte_length": 38118,
+        "data_row_count": 6222,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 6225,
+        "member": "POSAS_2026_it_071_Foggia.csv",
+        "member_byte_length": 226152,
+        "member_sha256": "168e8225dbaa13a94997373b56a50d8962f9c44f0626ffa1889d52c7a95d684c"
+      },
+      {
+        "compressed_byte_length": 32305,
+        "data_row_count": 4182,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 4185,
+        "member": "POSAS_2026_it_072_Bari.csv",
+        "member_byte_length": 151604,
+        "member_sha256": "c9bda6c31513d0541c61f403660f0da7dd1e008c8e88ad8c61278d79fddc78fd"
+      },
+      {
+        "compressed_byte_length": 21243,
+        "data_row_count": 2958,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 2961,
+        "member": "POSAS_2026_it_073_Taranto.csv",
+        "member_byte_length": 101885,
+        "member_sha256": "c74e79e403a242ac353056b148a264701fbce2ebb1c881035a6af2f00d66e2ad"
+      },
+      {
+        "compressed_byte_length": 15463,
+        "data_row_count": 2040,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 2043,
+        "member": "POSAS_2026_it_074_Brindisi.csv",
+        "member_byte_length": 77049,
+        "member_sha256": "e6b1aff5ceae7c091ef74152bfed4c4fe80cd1292c960c686c929f77ee3c63b3"
+      },
+      {
+        "compressed_byte_length": 62005,
+        "data_row_count": 9792,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 9795,
+        "member": "POSAS_2026_it_075_Lecce.csv",
+        "member_byte_length": 331972,
+        "member_sha256": "46b1fcd7966def202aee0510a99681b69969f487607fcc4a3350236b9645be0b"
+      },
+      {
+        "compressed_byte_length": 54103,
+        "data_row_count": 10200,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 10203,
+        "member": "POSAS_2026_it_076_Potenza.csv",
+        "member_byte_length": 343080,
+        "member_sha256": "f9b99e1a91a68a9dc6d661d11c44999781399b4b8acdae857cecc2cbd226e2e2"
+      },
+      {
+        "compressed_byte_length": 18461,
+        "data_row_count": 3162,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 3165,
+        "member": "POSAS_2026_it_077_Matera.csv",
+        "member_byte_length": 103306,
+        "member_sha256": "6453668544b49efe16eae4b3d95abbc0dadaf2176a60d8eb6b2498d117552fdd"
+      },
+      {
+        "compressed_byte_length": 83730,
+        "data_row_count": 15300,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 15303,
+        "member": "POSAS_2026_it_078_Cosenza.csv",
+        "member_byte_length": 528051,
+        "member_sha256": "32430e7a55cb53971dc261ed4242c173d0695877b456e356e9713b47132af651"
+      },
+      {
+        "compressed_byte_length": 43286,
+        "data_row_count": 8160,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 8163,
+        "member": "POSAS_2026_it_079_Catanzaro.csv",
+        "member_byte_length": 272102,
+        "member_sha256": "94b093c25f9fb17c78f20f80211d8080f2a64679d2c92c5451d9dd6e46b623e8"
+      },
+      {
+        "compressed_byte_length": 54194,
+        "data_row_count": 9894,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 9897,
+        "member": "POSAS_2026_it_080_Reggio_di_Calabria.csv",
+        "member_byte_length": 336035,
+        "member_sha256": "bf2475194401e6e517df9cc41b17b9f3f3fadbaf0f5870889c012bec8ad953f9"
+      },
+      {
+        "compressed_byte_length": 18181,
+        "data_row_count": 2550,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 2553,
+        "member": "POSAS_2026_it_081_Trapani.csv",
+        "member_byte_length": 90015,
+        "member_sha256": "17abd936fd8d1daab427bee0f19386eba83d4b325ee3ba078244846aa899e6ff"
+      },
+      {
+        "compressed_byte_length": 51277,
+        "data_row_count": 8364,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 8367,
+        "member": "POSAS_2026_it_082_Palermo.csv",
+        "member_byte_length": 289040,
+        "member_sha256": "15e8b6c0a95a943e1d665e29cb638d6f2b857b9e283b38f4fe3e7b5c94be80bc"
+      },
+      {
+        "compressed_byte_length": 60489,
+        "data_row_count": 11016,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 11019,
+        "member": "POSAS_2026_it_083_Messina.csv",
+        "member_byte_length": 379809,
+        "member_sha256": "57cf1adfbf95b4f3680fd237b86c6e6617117ffbb0df5e4caf4517b4a4af4298"
+      },
+      {
+        "compressed_byte_length": 28617,
+        "data_row_count": 4386,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 4389,
+        "member": "POSAS_2026_it_084_Agrigento.csv",
+        "member_byte_length": 158226,
+        "member_sha256": "d510912d98180f9373d42b778908b63d4abd11e1c1ab5b1f7745622fce7094c5"
+      },
+      {
+        "compressed_byte_length": 14570,
+        "data_row_count": 2244,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 2247,
+        "member": "POSAS_2026_it_085_Caltanissetta.csv",
+        "member_byte_length": 75974,
+        "member_sha256": "0471558a51fd826f0ee176580faac24f2bd3a9fb839bbe2ea49652fe9f9fbb99"
+      },
+      {
+        "compressed_byte_length": 13477,
+        "data_row_count": 2040,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 2043,
+        "member": "POSAS_2026_it_086_Enna.csv",
+        "member_byte_length": 68903,
+        "member_sha256": "c2fe946c2127dd495c2c72dd89ed189bf97f28215a04c4c9ec84815e2e2bfe84"
+      },
+      {
+        "compressed_byte_length": 41707,
+        "data_row_count": 5916,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 5919,
+        "member": "POSAS_2026_it_087_Catania.csv",
+        "member_byte_length": 217715,
+        "member_sha256": "f491c1c497f64c96d4cb227c7437873a98c212f125b7c9a8b7bf1de208c081b7"
+      },
+      {
+        "compressed_byte_length": 9569,
+        "data_row_count": 1224,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 1227,
+        "member": "POSAS_2026_it_088_Ragusa.csv",
+        "member_byte_length": 42682,
+        "member_sha256": "ef666664e7f4bd5f91ccbcae6bcb7268c00d9fb2261dc7dce29f9eb2be3a5798"
+      },
+      {
+        "compressed_byte_length": 15384,
+        "data_row_count": 2142,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 2145,
+        "member": "POSAS_2026_it_089_Siracusa.csv",
+        "member_byte_length": 73144,
+        "member_sha256": "acb24c3549687d25616b0ac08eaabf448b5b1ccb0d866d3a80a231eaa9248245"
+      },
+      {
+        "compressed_byte_length": 49296,
+        "data_row_count": 9384,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 9387,
+        "member": "POSAS_2026_it_090_Sassari.csv",
+        "member_byte_length": 292509,
+        "member_sha256": "3d0ca657b89c824f809d26ecbc0645caa32643ba5bdc55455230cdabfc22b859"
+      },
+      {
+        "compressed_byte_length": 36861,
+        "data_row_count": 7548,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 7551,
+        "member": "POSAS_2026_it_091_Nuoro.csv",
+        "member_byte_length": 220298,
+        "member_sha256": "c16dfe84d5f2de725356a84498aa2b85a1c07dfa00eae3c043903c6531645c73"
+      },
+      {
+        "compressed_byte_length": 13209,
+        "data_row_count": 1734,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 1737,
+        "member": "POSAS_2026_it_092_Cagliari.csv",
+        "member_byte_length": 59740,
+        "member_sha256": "887769fadabc64992ffa822c4581f8464c0b5779195a25ae84acedd13762f3f5"
+      },
+      {
+        "compressed_byte_length": 30703,
+        "data_row_count": 5100,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 5103,
+        "member": "POSAS_2026_it_093_Pordenone.csv",
+        "member_byte_length": 178916,
+        "member_sha256": "b58e27160133d897960f9a644868027e6c4f7446eb280cb138b071d56ef9abe8"
+      },
+      {
+        "compressed_byte_length": 24578,
+        "data_row_count": 5304,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 5307,
+        "member": "POSAS_2026_it_094_Isernia.csv",
+        "member_byte_length": 187577,
+        "member_sha256": "339189c82829d886e4e016895c6232c4ca11a9d0b8e0df913d30de538baa29c0"
+      },
+      {
+        "compressed_byte_length": 40436,
+        "data_row_count": 8874,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 8877,
+        "member": "POSAS_2026_it_095_Oristano.csv",
+        "member_byte_length": 272436,
+        "member_sha256": "7f74de91448d15221e7ea97da0955b8fd1dcf1eb948c2a9321d0cdc9f4cdd28d"
+      },
+      {
+        "compressed_byte_length": 36076,
+        "data_row_count": 7548,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 7551,
+        "member": "POSAS_2026_it_096_Biella.csv",
+        "member_byte_length": 238751,
+        "member_sha256": "9ded6bd19d5cc047e279ef94d6c4f8eb1e7a422c11afe4a86575d02a8b7ed60c"
+      },
+      {
+        "compressed_byte_length": 46845,
+        "data_row_count": 8568,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 8571,
+        "member": "POSAS_2026_it_097_Lecco.csv",
+        "member_byte_length": 278539,
+        "member_sha256": "bc0c38742ce03fd87c035f56e514de42cea57e56e46a304a7f06912f59790aea"
+      },
+      {
+        "compressed_byte_length": 33790,
+        "data_row_count": 6120,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 6123,
+        "member": "POSAS_2026_it_098_Lodi.csv",
+        "member_byte_length": 223919,
+        "member_sha256": "e873e9e37ad8ce046db8153dbfe06510c68abd3814b6cc816f75f0631c7217c2"
+      },
+      {
+        "compressed_byte_length": 17984,
+        "data_row_count": 2754,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 2757,
+        "member": "POSAS_2026_it_099_Rimini.csv",
+        "member_byte_length": 100269,
+        "member_sha256": "ae286593e9e22bbb0de8539c306223517cc20b5b56be17d4a0252377c2ecd78d"
+      },
+      {
+        "compressed_byte_length": 5575,
+        "data_row_count": 714,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 717,
+        "member": "POSAS_2026_it_100_Prato.csv",
+        "member_byte_length": 24403,
+        "member_sha256": "7d832b33007d9743ce539c034fd4eb63b85f0a1fc4c93f09e792e3fae8c195e8"
+      },
+      {
+        "compressed_byte_length": 16168,
+        "data_row_count": 2754,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 2757,
+        "member": "POSAS_2026_it_101_Crotone.csv",
+        "member_byte_length": 93637,
+        "member_sha256": "5c0ad94059a78303e0a3b138459cff6866671e379b403f52f38bfe5784816291"
+      },
+      {
+        "compressed_byte_length": 26594,
+        "data_row_count": 5100,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 5103,
+        "member": "POSAS_2026_it_102_Vibo_Valentia.csv",
+        "member_byte_length": 164712,
+        "member_sha256": "2aac2431cd0cec9092ae3d0b5f82df71519625b81bea04859ec063d06af1eec9"
+      },
+      {
+        "compressed_byte_length": 35541,
+        "data_row_count": 7548,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 7551,
+        "member": "POSAS_2026_it_103_Verbano-Cusio-Ossola.csv",
+        "member_byte_length": 242057,
+        "member_sha256": "9919eb31be37dcb23cf3d415b24eff3b9cebae97a631d5e38793a0768fe46f90"
+      },
+      {
+        "compressed_byte_length": 39762,
+        "data_row_count": 5610,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 5613,
+        "member": "POSAS_2026_it_108_Monza_e_della_Brianza.csv",
+        "member_byte_length": 193878,
+        "member_sha256": "817d94e4a100fb4464a6e145da7f005df8e260e4201259a9360c38d485596219"
+      },
+      {
+        "compressed_byte_length": 22250,
+        "data_row_count": 4080,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 4083,
+        "member": "POSAS_2026_it_109_Fermo.csv",
+        "member_byte_length": 146634,
+        "member_sha256": "8ec1a4d3e3537405174607859b91de2a44ea72aaff4776b6465b364a71887eab"
+      },
+      {
+        "compressed_byte_length": 8470,
+        "data_row_count": 1020,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 1023,
+        "member": "POSAS_2026_it_110_Barletta-Andria-Trani.csv",
+        "member_byte_length": 38907,
+        "member_sha256": "6a266749a0772cc660d0e33170c33bcf73d2bfcb269620d6a3eb4a5e8550088f"
+      },
+      {
+        "compressed_byte_length": 56827,
+        "data_row_count": 10914,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 10917,
+        "member": "POSAS_2026_it_111_Sud_Sardegna.csv",
+        "member_byte_length": 342568,
+        "member_sha256": "125e538f1dc8ffeac225ccc79cf4e84fe745dea6834dc90e795c04b922b684e5"
+      },
+      {
+        "compressed_byte_length": 4579472,
+        "data_row_count": 805392,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 805395,
+        "member": "POSAS_2026_it_Comuni.csv",
+        "member_byte_length": 27569141,
+        "member_sha256": "a4c0f87fdf23618578c2a8bff25425103d0e3794cfbdbeee3aff2be4b3414f87"
+      },
+      {
+        "compressed_byte_length": 108868,
+        "data_row_count": 10914,
+        "exact_header": [
+          "Codice provincia",
+          "Provincia",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 10917,
+        "member": "POSAS_2026_it_Province.csv",
+        "member_byte_length": 375200,
+        "member_sha256": "4f9fe44430b5915e6fdc2292be1bbcfe91d51626c1008e54fb555b13453e3c02"
+      },
+      {
+        "compressed_byte_length": 23506,
+        "data_row_count": 2040,
+        "exact_header": [
+          "Codice regione",
+          "Regione",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 2043,
+        "member": "POSAS_2026_it_Regioni.csv",
+        "member_byte_length": 77167,
+        "member_sha256": "1720b8693e7ddb17ca3387b1de6b6687cf6ffa02f4a8536cd6fae5bb7f310d68"
+      },
+      {
+        "compressed_byte_length": 6648,
+        "data_row_count": 510,
+        "exact_header": [
+          "Codice ripartizione",
+          "Ripartizione",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "logical_record_count": 513,
+        "member": "POSAS_2026_it_Ripartizioni.csv",
+        "member_byte_length": 18013,
+        "member_sha256": "4e55065b9c848ba6e457fc7cca5292295d2c509115740eb15b48894109424426"
+      }
+    ],
+    "bom": true,
+    "delimiter": ";",
+    "encoding": "UTF-8",
+    "members_consumed": {
+      "POSAS_2026_it_Comuni.csv": {
+        "data_row_count": 805392,
+        "exact_header": [
+          "Codice comune",
+          "Comune",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "header_logical_record": 2,
+        "member_byte_length": 27569141,
+        "member_sha256": "a4c0f87fdf23618578c2a8bff25425103d0e3794cfbdbeee3aff2be4b3414f87",
+        "municipality_count": 7896
+      },
+      "POSAS_2026_it_Regioni.csv": {
+        "data_row_count": 2040,
+        "exact_header": [
+          "Codice regione",
+          "Regione",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "header_logical_record": 2,
+        "member_byte_length": 77167,
+        "member_sha256": "1720b8693e7ddb17ca3387b1de6b6687cf6ffa02f4a8536cd6fae5bb7f310d68"
+      },
+      "POSAS_2026_it_Ripartizioni.csv": {
+        "data_row_count": 510,
+        "exact_header": [
+          "Codice ripartizione",
+          "Ripartizione",
+          "Età",
+          "Totale maschi",
+          "Totale femmine",
+          "Totale"
+        ],
+        "header_logical_record": 2,
+        "member_byte_length": 18013,
+        "member_sha256": "4e55065b9c848ba6e457fc7cca5292295d2c509115740eb15b48894109424426"
+      }
+    },
+    "municipality_code_representation": "Codice comune, position 1, quoted six-character decimal string with leading zeros",
+    "national_total_representation": null,
+    "national_total_status": "not present as a direct Italy row or archive member; fallback municipal summation used",
+    "population_value": "Totale, position 6, non-negative ASCII decimal integer; verified equal to Totale maschi + Totale femmine",
+    "quoting": "double quote; string fields quoted in observed files",
+    "row_selectors": {
+      "age_weights": "municipality member rows with Età exact integer 21..75; Totale both-sex value",
+      "municipality_population": "municipality member rows with Età exactly 999; Totale both-sex value"
+    },
+    "sex_representation": "separate Totale maschi, Totale femmine, Totale columns; Totale is both-sex total",
+    "territorial_level_representation": "encoded by aggregate member and identifier/header, not by an explicit level column",
+    "title_logical_record": 1,
+    "title_value": "Popolazione residente per età e sesso al 1° gennaio 2026 (stima)",
+    "trailing_note_logical_record": "Nota: lo stato civile è in corso di validazione."
+  },
+  "situas_municipalities_2025_12_31": {
+    "bom": false,
+    "column_positions": "not applicable; named JSON object fields",
+    "encoding": "UTF-8 JSON with non-ASCII represented by JSON escapes in observed bytes",
+    "exact_object_field_order": [
+      "COD_RIP",
+      "COD_REG",
+      "COD_PROV_STORICO",
+      "COD_UTS",
+      "PRO_COM_T",
+      "PRO_COM",
+      "COMUNE",
+      "COMUNE_IT",
+      "DEN_RIP",
+      "DEN_REG",
+      "DEN_UTS",
+      "TIPO_UTS",
+      "CC_REG",
+      "CC_UTS",
+      "SIGLA_AUTOMOBILISTICA",
+      "COD_CATASTO",
+      "COD_COM_FISCALE",
+      "COM_NUTS1_2024",
+      "COM_NUTS2_2024",
+      "COM_NUTS3_2024"
+    ],
+    "field_json_type_counts": {
+      "CC_REG": {
+        "integer": 7896
+      },
+      "CC_UTS": {
+        "integer": 7896
+      },
+      "COD_CATASTO": {
+        "string": 7896
+      },
+      "COD_COM_FISCALE": {
+        "string": 7896
+      },
+      "COD_PROV_STORICO": {
+        "string": 7896
+      },
+      "COD_REG": {
+        "string": 7896
+      },
+      "COD_RIP": {
+        "integer": 7896
+      },
+      "COD_UTS": {
+        "string": 7896
+      },
+      "COMUNE": {
+        "string": 7896
+      },
+      "COMUNE_A": {
+        "string": 124
+      },
+      "COMUNE_IT": {
+        "string": 7896
+      },
+      "COM_NUTS1_2024": {
+        "string": 7896
+      },
+      "COM_NUTS2_2024": {
+        "string": 7896
+      },
+      "COM_NUTS3_2024": {
+        "string": 7896
+      },
+      "DEN_REG": {
+        "string": 7896
+      },
+      "DEN_RIP": {
+        "string": 7896
+      },
+      "DEN_UTS": {
+        "string": 7896
+      },
+      "PRO_COM": {
+        "integer": 7896
+      },
+      "PRO_COM_T": {
+        "string": 7896
+      },
+      "SIGLA_AUTOMOBILISTICA": {
+        "string": 7896
+      },
+      "TIPO_UTS": {
+        "integer": 7896
+      }
+    },
+    "field_presence_counts": {
+      "CC_REG": 7896,
+      "CC_UTS": 7896,
+      "COD_CATASTO": 7896,
+      "COD_COM_FISCALE": 7896,
+      "COD_PROV_STORICO": 7896,
+      "COD_REG": 7896,
+      "COD_RIP": 7896,
+      "COD_UTS": 7896,
+      "COMUNE": 7896,
+      "COMUNE_A": 124,
+      "COMUNE_IT": 7896,
+      "COM_NUTS1_2024": 7896,
+      "COM_NUTS2_2024": 7896,
+      "COM_NUTS3_2024": 7896,
+      "DEN_REG": 7896,
+      "DEN_RIP": 7896,
+      "DEN_UTS": 7896,
+      "PRO_COM": 7896,
+      "PRO_COM_T": 7896,
+      "SIGLA_AUTOMOBILISTICA": 7896,
+      "TIPO_UTS": 7896
+    },
+    "municipality_code_representation": "PRO_COM_T string, six ASCII digits",
+    "object_field_order_variants": [
+      {
+        "count": 7772,
+        "exact_field_order": [
+          "COD_RIP",
+          "COD_REG",
+          "COD_PROV_STORICO",
+          "COD_UTS",
+          "PRO_COM_T",
+          "PRO_COM",
+          "COMUNE",
+          "COMUNE_IT",
+          "DEN_RIP",
+          "DEN_REG",
+          "DEN_UTS",
+          "TIPO_UTS",
+          "CC_REG",
+          "CC_UTS",
+          "SIGLA_AUTOMOBILISTICA",
+          "COD_CATASTO",
+          "COD_COM_FISCALE",
+          "COM_NUTS1_2024",
+          "COM_NUTS2_2024",
+          "COM_NUTS3_2024"
+        ]
+      },
+      {
+        "count": 124,
+        "exact_field_order": [
+          "COD_RIP",
+          "COD_REG",
+          "COD_PROV_STORICO",
+          "COD_UTS",
+          "PRO_COM_T",
+          "PRO_COM",
+          "COMUNE",
+          "COMUNE_IT",
+          "COMUNE_A",
+          "DEN_RIP",
+          "DEN_REG",
+          "DEN_UTS",
+          "TIPO_UTS",
+          "CC_REG",
+          "CC_UTS",
+          "SIGLA_AUTOMOBILISTICA",
+          "COD_CATASTO",
+          "COD_COM_FISCALE",
+          "COM_NUTS1_2024",
+          "COM_NUTS2_2024",
+          "COM_NUTS3_2024"
+        ]
+      }
+    ],
+    "province_abbreviation_field": "SIGLA_AUTOMOBILISTICA",
+    "province_uts_identifier_field": "COD_UTS",
+    "row_count": 7896,
+    "row_selector": "all objects in top-level resultset array",
+    "territorial_level_representation": "report 61 metadata declares Comune; every resultset object is a municipality",
+    "top_level_exact_key": "resultset"
+  },
+  "situas_municipalities_2026_01_01": {
+    "bom": false,
+    "column_positions": "not applicable; named JSON object fields",
+    "encoding": "UTF-8 JSON with non-ASCII represented by JSON escapes in observed bytes",
+    "exact_object_field_order": [
+      "COD_RIP",
+      "COD_REG",
+      "COD_PROV_STORICO",
+      "COD_UTS",
+      "PRO_COM_T",
+      "PRO_COM",
+      "COMUNE",
+      "COMUNE_IT",
+      "DEN_RIP",
+      "DEN_REG",
+      "DEN_UTS",
+      "TIPO_UTS",
+      "CC_REG",
+      "CC_UTS",
+      "SIGLA_AUTOMOBILISTICA",
+      "COD_CATASTO",
+      "COD_COM_FISCALE",
+      "COM_NUTS1_2024",
+      "COM_NUTS2_2024",
+      "COM_NUTS3_2024"
+    ],
+    "field_json_type_counts": {
+      "CC_REG": {
+        "integer": 7896
+      },
+      "CC_UTS": {
+        "integer": 7896
+      },
+      "COD_CATASTO": {
+        "string": 7896
+      },
+      "COD_COM_FISCALE": {
+        "string": 7896
+      },
+      "COD_PROV_STORICO": {
+        "string": 7896
+      },
+      "COD_REG": {
+        "string": 7896
+      },
+      "COD_RIP": {
+        "integer": 7896
+      },
+      "COD_UTS": {
+        "string": 7896
+      },
+      "COMUNE": {
+        "string": 7896
+      },
+      "COMUNE_A": {
+        "string": 124
+      },
+      "COMUNE_IT": {
+        "string": 7896
+      },
+      "COM_NUTS1_2024": {
+        "string": 7896
+      },
+      "COM_NUTS2_2024": {
+        "string": 7896
+      },
+      "COM_NUTS3_2024": {
+        "string": 7896
+      },
+      "DEN_REG": {
+        "string": 7896
+      },
+      "DEN_RIP": {
+        "string": 7896
+      },
+      "DEN_UTS": {
+        "string": 7896
+      },
+      "PRO_COM": {
+        "integer": 7896
+      },
+      "PRO_COM_T": {
+        "string": 7896
+      },
+      "SIGLA_AUTOMOBILISTICA": {
+        "string": 7896
+      },
+      "TIPO_UTS": {
+        "integer": 7896
+      }
+    },
+    "field_presence_counts": {
+      "CC_REG": 7896,
+      "CC_UTS": 7896,
+      "COD_CATASTO": 7896,
+      "COD_COM_FISCALE": 7896,
+      "COD_PROV_STORICO": 7896,
+      "COD_REG": 7896,
+      "COD_RIP": 7896,
+      "COD_UTS": 7896,
+      "COMUNE": 7896,
+      "COMUNE_A": 124,
+      "COMUNE_IT": 7896,
+      "COM_NUTS1_2024": 7896,
+      "COM_NUTS2_2024": 7896,
+      "COM_NUTS3_2024": 7896,
+      "DEN_REG": 7896,
+      "DEN_RIP": 7896,
+      "DEN_UTS": 7896,
+      "PRO_COM": 7896,
+      "PRO_COM_T": 7896,
+      "SIGLA_AUTOMOBILISTICA": 7896,
+      "TIPO_UTS": 7896
+    },
+    "municipality_code_representation": "PRO_COM_T string, six ASCII digits",
+    "municipality_name_fields": [
+      "COMUNE",
+      "COMUNE_IT"
+    ],
+    "object_field_order_variants": [
+      {
+        "count": 7772,
+        "exact_field_order": [
+          "COD_RIP",
+          "COD_REG",
+          "COD_PROV_STORICO",
+          "COD_UTS",
+          "PRO_COM_T",
+          "PRO_COM",
+          "COMUNE",
+          "COMUNE_IT",
+          "DEN_RIP",
+          "DEN_REG",
+          "DEN_UTS",
+          "TIPO_UTS",
+          "CC_REG",
+          "CC_UTS",
+          "SIGLA_AUTOMOBILISTICA",
+          "COD_CATASTO",
+          "COD_COM_FISCALE",
+          "COM_NUTS1_2024",
+          "COM_NUTS2_2024",
+          "COM_NUTS3_2024"
+        ]
+      },
+      {
+        "count": 124,
+        "exact_field_order": [
+          "COD_RIP",
+          "COD_REG",
+          "COD_PROV_STORICO",
+          "COD_UTS",
+          "PRO_COM_T",
+          "PRO_COM",
+          "COMUNE",
+          "COMUNE_IT",
+          "COMUNE_A",
+          "DEN_RIP",
+          "DEN_REG",
+          "DEN_UTS",
+          "TIPO_UTS",
+          "CC_REG",
+          "CC_UTS",
+          "SIGLA_AUTOMOBILISTICA",
+          "COD_CATASTO",
+          "COD_COM_FISCALE",
+          "COM_NUTS1_2024",
+          "COM_NUTS2_2024",
+          "COM_NUTS3_2024"
+        ]
+      }
+    ],
+    "province_abbreviation_field": "SIGLA_AUTOMOBILISTICA",
+    "province_uts_identifier_field": "COD_UTS",
+    "region_identifier_field": "COD_REG",
+    "region_name_field": "DEN_REG",
+    "row_count": 7896,
+    "row_selector": "all objects in top-level resultset array",
+    "territorial_level_representation": "report 61 metadata declares Comune; every resultset object is a municipality",
+    "top_level_exact_key": "resultset"
+  },
+  "situas_uts_2025_12_31": {
+    "bom": false,
+    "column_positions": "not applicable; named JSON object fields",
+    "encoding": "UTF-8 JSON",
+    "exact_object_field_order": [
+      "COD_RIP",
+      "COD_REG",
+      "COD_PROV_STORICO",
+      "COD_UTS",
+      "DEN_UTS",
+      "DEN_RIP",
+      "DEN_REG",
+      "TIPO_UTS",
+      "DESC_TIPO_UTS",
+      "SIGLA_AUTOMOBILISTICA",
+      "COD_PROV_FISCALE",
+      "COD_NUTS3_2024"
+    ],
+    "field_json_type_counts": {
+      "COD_NUTS3_2024": {
+        "string": 107
+      },
+      "COD_PROV_FISCALE": {
+        "string": 107
+      },
+      "COD_PROV_STORICO": {
+        "string": 107
+      },
+      "COD_REG": {
+        "string": 107
+      },
+      "COD_RIP": {
+        "integer": 107
+      },
+      "COD_UTS": {
+        "string": 107
+      },
+      "DEN_REG": {
+        "string": 107
+      },
+      "DEN_RIP": {
+        "string": 107
+      },
+      "DEN_UTS": {
+        "string": 107
+      },
+      "DESC_TIPO_UTS": {
+        "string": 107
+      },
+      "SIGLA_AUTOMOBILISTICA": {
+        "string": 107
+      },
+      "TIPO_UTS": {
+        "integer": 107
+      }
+    },
+    "field_presence_counts": {
+      "COD_NUTS3_2024": 107,
+      "COD_PROV_FISCALE": 107,
+      "COD_PROV_STORICO": 107,
+      "COD_REG": 107,
+      "COD_RIP": 107,
+      "COD_UTS": 107,
+      "DEN_REG": 107,
+      "DEN_RIP": 107,
+      "DEN_UTS": 107,
+      "DESC_TIPO_UTS": 107,
+      "SIGLA_AUTOMOBILISTICA": 107,
+      "TIPO_UTS": 107
+    },
+    "object_field_order_variants": [
+      {
+        "count": 107,
+        "exact_field_order": [
+          "COD_RIP",
+          "COD_REG",
+          "COD_PROV_STORICO",
+          "COD_UTS",
+          "DEN_UTS",
+          "DEN_RIP",
+          "DEN_REG",
+          "TIPO_UTS",
+          "DESC_TIPO_UTS",
+          "SIGLA_AUTOMOBILISTICA",
+          "COD_PROV_FISCALE",
+          "COD_NUTS3_2024"
+        ]
+      }
+    ],
+    "province_abbreviation_field": "SIGLA_AUTOMOBILISTICA",
+    "province_uts_identifier_field": "COD_UTS",
+    "row_count": 107,
+    "row_selector": "all objects in top-level resultset array",
+    "territorial_level_representation": "report 64 metadata declares Provincia/Uts",
+    "top_level_exact_key": "resultset"
+  },
+  "situas_uts_2026_01_01": {
+    "bom": false,
+    "column_positions": "not applicable; named JSON object fields",
+    "encoding": "UTF-8 JSON",
+    "exact_object_field_order": [
+      "COD_RIP",
+      "COD_REG",
+      "COD_PROV_STORICO",
+      "COD_UTS",
+      "DEN_UTS",
+      "DEN_RIP",
+      "DEN_REG",
+      "TIPO_UTS",
+      "DESC_TIPO_UTS",
+      "SIGLA_AUTOMOBILISTICA",
+      "COD_PROV_FISCALE",
+      "COD_NUTS3_2024"
+    ],
+    "field_json_type_counts": {
+      "COD_NUTS3_2024": {
+        "string": 105
+      },
+      "COD_PROV_FISCALE": {
+        "string": 110
+      },
+      "COD_PROV_STORICO": {
+        "string": 110
+      },
+      "COD_REG": {
+        "string": 110
+      },
+      "COD_RIP": {
+        "integer": 110
+      },
+      "COD_UTS": {
+        "string": 110
+      },
+      "DEN_REG": {
+        "string": 110
+      },
+      "DEN_RIP": {
+        "string": 110
+      },
+      "DEN_UTS": {
+        "string": 110
+      },
+      "DESC_TIPO_UTS": {
+        "string": 110
+      },
+      "SIGLA_AUTOMOBILISTICA": {
+        "string": 110
+      },
+      "TIPO_UTS": {
+        "integer": 110
+      }
+    },
+    "field_presence_counts": {
+      "COD_NUTS3_2024": 105,
+      "COD_PROV_FISCALE": 110,
+      "COD_PROV_STORICO": 110,
+      "COD_REG": 110,
+      "COD_RIP": 110,
+      "COD_UTS": 110,
+      "DEN_REG": 110,
+      "DEN_RIP": 110,
+      "DEN_UTS": 110,
+      "DESC_TIPO_UTS": 110,
+      "SIGLA_AUTOMOBILISTICA": 110,
+      "TIPO_UTS": 110
+    },
+    "object_field_order_variants": [
+      {
+        "count": 105,
+        "exact_field_order": [
+          "COD_RIP",
+          "COD_REG",
+          "COD_PROV_STORICO",
+          "COD_UTS",
+          "DEN_UTS",
+          "DEN_RIP",
+          "DEN_REG",
+          "TIPO_UTS",
+          "DESC_TIPO_UTS",
+          "SIGLA_AUTOMOBILISTICA",
+          "COD_PROV_FISCALE",
+          "COD_NUTS3_2024"
+        ]
+      },
+      {
+        "count": 5,
+        "exact_field_order": [
+          "COD_RIP",
+          "COD_REG",
+          "COD_PROV_STORICO",
+          "COD_UTS",
+          "DEN_UTS",
+          "DEN_RIP",
+          "DEN_REG",
+          "TIPO_UTS",
+          "DESC_TIPO_UTS",
+          "SIGLA_AUTOMOBILISTICA",
+          "COD_PROV_FISCALE"
+        ]
+      }
+    ],
+    "province_abbreviation_field": "SIGLA_AUTOMOBILISTICA",
+    "province_uts_identifier_field": "COD_UTS",
+    "row_count": 110,
+    "row_selector": "all objects in top-level resultset array",
+    "territorial_level_representation": "report 64 metadata declares Provincia/Uts",
+    "top_level_exact_key": "resultset"
+  },
+  "toolchain_lock": {
+    "case_folding_table": {
+      "byte_length": 84690,
+      "sha256": "cdd49e55eae3bbf1f0a3f6580c974a0263cb86a6a08daa10fbf705b4808a56f7",
+      "url": "https://www.unicode.org/Public/15.0.0/ucd/CaseFolding.txt",
+      "version_header": "# CaseFolding-15.0.0.txt"
+    },
+    "full_case_folding": "official CaseFolding.txt mappings with status C or F; non-Turkic",
+    "normalization_library": {
+      "extension_byte_length": 2626112,
+      "extension_local_filename": "toolchain/unicodedata2.cpython-313-darwin.so",
+      "extension_sha256": "b9b8c3b6e437dac1f8efde9adf98bdb69a71c075c75dfc6957d63687a293c918",
+      "package": "unicodedata2==15.0.0",
+      "unidata_version": "15.0.0"
+    },
+    "normalizer_tests": {
+      "L’Aquila": "laquila",
+      "San Giovanni": "san giovanni",
+      "Straße": "strasse",
+      "Tripi - Abakainon": "tripi abakainon",
+      "ÀÉÎÕÜ": "aeiou"
+    },
+    "prop_list_table": {
+      "byte_length": 132360,
+      "sha256": "e05c0a2811d113dae4abd832884199a3ea8d187ee1b872d8240a788a96540bfd",
+      "url": "https://www.unicode.org/Public/15.0.0/ucd/PropList.txt",
+      "version_header": "# PropList-15.0.0.txt",
+      "white_space_code_point_count": 25
+    },
+    "python": {
+      "implementation": "CPython",
+      "version": "3.13.2"
+    },
+    "unicode_semantics": "15.0.0"
+  }
+}

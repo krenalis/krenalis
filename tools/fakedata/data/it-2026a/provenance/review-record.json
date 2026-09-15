@@ -1,0 +1,20 @@
+{
+  "market_data_version": "it-2026a",
+  "d1a_empirical_review": "PASS",
+  "postal_override_review": "PASS",
+  "plausibility_review": "PASS",
+  "reviewer": null,
+  "review_timestamp": null,
+  "reviewed_artifacts": {
+    "human-review.md": {
+      "sha256": "e2fe588b80e75657c4206f05f169fc32c8c8f402e1f84b22caebe3251116eb3e"
+    },
+    "human-review-proposed-postal.md": {
+      "sha256": "f6398dd8a922a1988017f7386679e835cfc85df2bdfd11dded542077dfd7e3d0"
+    },
+    "postal-override-review.md": {
+      "sha256": "056ac3731a16f9862a552537762fd93501f1631ef52028538473a621e5d07625"
+    }
+  }
+}
+
