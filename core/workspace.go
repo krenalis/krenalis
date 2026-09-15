@@ -65,13 +65,15 @@ type UIPreferences struct {
 type PipelineStep int
 
 const (
-	ReceiveStep          = PipelineStep(metrics.ReceiveStep)
-	InputValidationStep  = PipelineStep(metrics.InputValidationStep)
-	FilterStep           = PipelineStep(metrics.FilterStep)
-	ConsentStep          = PipelineStep(metrics.ConsentStep)
-	TransformationStep   = PipelineStep(metrics.TransformationStep)
-	OutputValidationStep = PipelineStep(metrics.OutputValidationStep)
-	FinalizeStep         = PipelineStep(metrics.FinalizeStep)
+	ReceiveStep              = PipelineStep(metrics.ReceiveStep)
+	InputValidationStep      = PipelineStep(metrics.InputValidationStep)
+	FilterStep               = PipelineStep(metrics.FilterStep)
+	EventConsentStep         = PipelineStep(metrics.EventConsentStep)
+	ExportProfileConsentStep = PipelineStep(metrics.ExportProfileConsentStep)
+	TransformationStep       = PipelineStep(metrics.TransformationStep)
+	OutputValidationStep     = PipelineStep(metrics.OutputValidationStep)
+	ImportProfileConsentStep = PipelineStep(metrics.ImportProfileConsentStep)
+	FinalizeStep             = PipelineStep(metrics.FinalizeStep)
 )
 
 func (step PipelineStep) String() string {
@@ -82,12 +84,16 @@ func (step PipelineStep) String() string {
 		return "InputValidation"
 	case FilterStep:
 		return "Filter"
-	case ConsentStep:
-		return "Consent"
+	case EventConsentStep:
+		return "EventConsent"
+	case ExportProfileConsentStep:
+		return "ExportProfileConsent"
 	case TransformationStep:
 		return "Transformation"
 	case OutputValidationStep:
 		return "OutputValidation"
+	case ImportProfileConsentStep:
+		return "ImportProfileConsent"
 	case FinalizeStep:
 		return "Finalize"
 	}
@@ -104,12 +110,16 @@ func ParsePipelineStep(step string) (PipelineStep, error) {
 		return InputValidationStep, nil
 	case "Filter":
 		return FilterStep, nil
-	case "Consent":
-		return ConsentStep, nil
+	case "EventConsent":
+		return EventConsentStep, nil
+	case "ExportProfileConsent":
+		return ExportProfileConsentStep, nil
 	case "Transformation":
 		return TransformationStep, nil
 	case "OutputValidation":
 		return OutputValidationStep, nil
+	case "ImportProfileConsent":
+		return ImportProfileConsentStep, nil
 	case "Finalize":
 		return FinalizeStep, nil
 	}
@@ -743,6 +753,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 //
 // It returns an errors.UnprocessableError error with code:
 //
+//   - ConsentPurposeNotExist, if a required consent purpose does not exist.
 //   - TooManyListeners, if there are already too many listeners.
 func (this *Workspace) CreateEventListener(connection string, size int, filter *Filter, requiredConsents *RequiredConsents) (string, error) {
 	this.core.mustBeOpen()
@@ -786,15 +797,20 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 		}
 		rc = &state.RequiredConsents{
 			Operator: state.ConsentPurposesOperator(requiredConsents.Operator),
-			Purposes: slices.Clone(requiredConsents.Purposes),
+			Purposes: make([]*state.ConsentPurpose, len(requiredConsents.Purposes)),
 		}
-		for i, code := range rc.Purposes {
-			if err := validateConsentPurposeCode(code); err != nil {
-				return "", errors.BadRequest("%s", err)
+		for i, id := range requiredConsents.Purposes {
+			if !IsValidID(id) {
+				return "", errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
 			}
-			if slices.Contains(rc.Purposes[i+1:], code) {
-				return "", errors.BadRequest("required consent purpose %q is duplicated", code)
+			if slices.Contains(requiredConsents.Purposes[i+1:], id) {
+				return "", errors.BadRequest("required consent purpose %s is duplicated", id)
 			}
+			cp, ok := this.workspace.ConsentPurpose(id)
+			if !ok {
+				return "", errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", id)
+			}
+			rc.Purposes[i] = cp
 		}
 	}
 	observer, ok := this.core.collector.Observer(this.workspace.ID)
@@ -1104,15 +1120,15 @@ func (this *Workspace) PipelineRun(ctx context.Context, id string) (*PipelineRun
 	var run PipelineRun
 	err := this.core.db.QueryRow(ctx,
 		"SELECT r.id, r.pipeline, r.start_time, r.end_time, r.passed_0, r.passed_1, r.passed_2, r.passed_3,"+
-			" r.passed_4, r.passed_5, r.passed_6, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4,"+
-			" r.failed_5, r.failed_6, r.error\n"+
+			" r.passed_4, r.passed_5, r.passed_6, r.passed_7, r.passed_8, r.failed_0, r.failed_1, r.failed_2, r.failed_3,"+
+			" r.failed_4, r.failed_5, r.failed_6, r.failed_7, r.failed_8, r.error\n"+
 			"FROM pipelines_runs r\n"+
 			"INNER JOIN pipelines p ON p.id = r.pipeline\n"+
 			"INNER JOIN connections c ON c.id = p.connection\n"+
 			"WHERE c.workspace = $1 AND r.id = $2", this.workspace.ID, id).Scan(
 		&run.ID, &run.Pipeline, &run.StartTime, &run.EndTime, &run.Passed[0], &run.Passed[1], &run.Passed[2], &run.Passed[3],
-		&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
-		&run.Failed[5], &run.Failed[6], &run.Error)
+		&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Passed[7], &run.Passed[8], &run.Failed[0], &run.Failed[1], &run.Failed[2],
+		&run.Failed[3], &run.Failed[4], &run.Failed[5], &run.Failed[6], &run.Failed[7], &run.Failed[8], &run.Error)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.NotFound("pipeline run %s does not exist", id)
@@ -1120,8 +1136,8 @@ func (this *Workspace) PipelineRun(ctx context.Context, id string) (*PipelineRun
 		return nil, err
 	}
 	if run.EndTime == nil {
-		run.Passed = [7]int{}
-		run.Failed = [7]int{}
+		run.Passed = [9]int{}
+		run.Failed = [9]int{}
 	}
 	return &run, nil
 }
@@ -1134,7 +1150,7 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 	runs := []*PipelineRun{}
 	err := this.core.db.QueryScan(ctx,
 		"SELECT r.id, r.pipeline, r.start_time, r.end_time, r.passed_0, r.passed_1, r.passed_2, r.passed_3,"+
-			" r.passed_4, r.passed_5, r.passed_6, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4, r.failed_5, r.failed_6, r.error\n"+
+			" r.passed_4, r.passed_5, r.passed_6, r.passed_7, r.passed_8, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4, r.failed_5, r.failed_6, r.failed_7, r.failed_8, r.error\n"+
 			"FROM pipelines_runs r\n"+
 			"INNER JOIN pipelines p ON p.id = r.pipeline\n"+
 			"INNER JOIN connections c ON c.id = p.connection\n"+
@@ -1144,8 +1160,8 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 			for rows.Next() {
 				var run PipelineRun
 				if err = rows.Scan(&run.ID, &run.Pipeline, &run.StartTime, &run.EndTime, &run.Passed[0], &run.Passed[1], &run.Passed[2], &run.Passed[3],
-					&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
-					&run.Failed[5], &run.Failed[6], &run.Error); err != nil {
+					&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Passed[7], &run.Passed[8], &run.Failed[0], &run.Failed[1], &run.Failed[2],
+					&run.Failed[3], &run.Failed[4], &run.Failed[5], &run.Failed[6], &run.Failed[7], &run.Failed[8], &run.Error); err != nil {
 					return err
 				}
 				runs = append(runs, &run)
@@ -1158,8 +1174,8 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 
 	for _, run := range runs {
 		if run.EndTime == nil {
-			run.Passed = [7]int{}
-			run.Failed = [7]int{}
+			run.Passed = [9]int{}
+			run.Failed = [9]int{}
 		}
 	}
 
@@ -2197,6 +2213,18 @@ func filterWorkspacePipelines(ws *state.Workspace, pipelines []string) []string 
 		return ok
 	})
 	return pipelines
+}
+
+// lockWorkspace locks the workspace with the given identifier until tx ends.
+func lockWorkspace(ctx context.Context, tx *db.Tx, workspace string) error {
+	locked, err := tx.QueryExists(ctx, "SELECT FROM workspaces WHERE id = $1 FOR UPDATE", workspace)
+	if err != nil {
+		return err
+	}
+	if !locked {
+		return fmt.Errorf("cannot lock workspace %s: it does not exist", workspace)
+	}
+	return nil
 }
 
 // validateUIPreferences validates whether the given UI preferences are valid or

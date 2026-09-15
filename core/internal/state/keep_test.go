@@ -65,6 +65,34 @@ func TestAddAndRemoveLinkedConnection(t *testing.T) {
 
 }
 
+func TestReplaceConsentPurposeClearsResolvedPaths(t *testing.T) {
+
+	const purposeID = "111111111111"
+	purpose := NewConsentPurpose(ConsentPurpose{
+		ID:          purposeID,
+		Code:        "marketing",
+		EventPath:   "context.consents.marketing",
+		ProfilePath: "consents.marketing",
+	})
+	workspace := &Workspace{
+		mu:              &sync.Mutex{},
+		consentPurposes: map[string]*ConsentPurpose{purposeID: purpose},
+	}
+
+	updated := workspace.replaceConsentPurpose(purposeID, func(purpose *ConsentPurpose) {
+		purpose.EventPath = ""
+		purpose.ProfilePath = ""
+	})
+
+	if len(updated.EventPropertyPaths()) != 0 {
+		t.Fatalf("expected no resolved event paths, got %v", updated.EventPropertyPaths())
+	}
+	if len(updated.ProfilePropertyPath()) != 0 {
+		t.Fatalf("expected no resolved profile path, got %v", updated.ProfilePropertyPath())
+	}
+
+}
+
 // TestReplaceOrganizationPreservesRateLimitBucket verifies that replacing an
 // organization retains its local rate-limit bucket.
 func TestReplaceOrganizationPreservesRateLimitBucket(t *testing.T) {

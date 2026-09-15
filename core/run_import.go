@@ -13,6 +13,7 @@ import (
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/connections"
+	"github.com/krenalis/krenalis/core/internal/consents"
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/filters"
 	"github.com/krenalis/krenalis/core/internal/metrics"
@@ -139,6 +140,15 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 			user.Attributes = record.Attributes
 			this.core.metrics.TransformationPassed(pipeline.ID, 1)
 			this.core.metrics.OutputValidationPassed(pipeline.ID, 1)
+			if !consents.SatisfiesProfile(
+				pipeline.RequiredConsents.Purposes,
+				pipeline.RequiredConsents.Operator != state.PurposesOr,
+				user.Attributes,
+			) {
+				this.core.metrics.ImportProfileConsentFailed(pipeline.ID, 1)
+				continue
+			}
+			this.core.metrics.ImportProfileConsentPassed(pipeline.ID, 1)
 			_ = iw.Write(ctx, datastore.Identity{
 				ID:         user.ID,
 				Attributes: user.Attributes,

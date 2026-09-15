@@ -1274,9 +1274,47 @@ const hasFilterStep = (connection: TransformedConnection, target: PipelineTarget
 	);
 };
 
+// isBatchProfileImport reports whether the pipelines of a given connection, and
+// with the given target, import profiles into the warehouse reading them in
+// batch from the source.
+const isBatchProfileImport = (connection: TransformedConnection, target: PipelineTarget) => {
+	return connection.role === 'Source' && !connection.isEventBased && target === 'User';
+};
+
+// isProfileExport reports whether the pipelines of a given connection, and with
+// the given target, export profiles read from the warehouse.
+const isProfileExport = (connection: TransformedConnection, target: PipelineTarget) => {
+	return connection.role === 'Destination' && target === 'User';
+};
+
+// hasEventConsentStep reports whether the pipelines of a given connection, and
+// with the given target, count the events their required consents discard.
+const hasEventConsentStep = (connection: TransformedConnection, target: PipelineTarget) => {
+	return isEventDriven(connection, target) && target === 'Event';
+};
+
+// hasImportProfileConsentStep reports whether the pipelines of a given
+// connection, and with the given target, count the profiles their required
+// consents discard after transforming them.
+const hasImportProfileConsentStep = (connection: TransformedConnection, target: PipelineTarget) => {
+	return (isEventDriven(connection, target) && target === 'User') || isBatchProfileImport(connection, target);
+};
+
+// hasExportProfileConsentStep reports whether the pipelines of a given
+// connection, and with the given target, count the profiles their required
+// consents discard before transforming them.
+const hasExportProfileConsentStep = (connection: TransformedConnection, target: PipelineTarget) => {
+	return isProfileExport(connection, target);
+};
+
+// hasRequiredConsents reports whether the pipelines of a given connection, and
+// with the given target, can require the consent for a purpose.
 const hasRequiredConsents = (connection: TransformedConnection, target: PipelineTarget) => {
-	// Required consents are allowed on any pipeline that handles events.
-	return isEventDriven(connection, target);
+	return (
+		hasEventConsentStep(connection, target) ||
+		hasImportProfileConsentStep(connection, target) ||
+		hasExportProfileConsentStep(connection, target)
+	);
 };
 
 const hasTransformations = (connection: TransformedConnection, target: PipelineTarget) => {
@@ -2130,7 +2168,9 @@ export {
 	hasFilters,
 	hasInputValidationStep,
 	hasFilterStep,
-	hasRequiredConsents,
+	hasEventConsentStep,
+	hasExportProfileConsentStep,
+	hasImportProfileConsentStep,
 	hasTransformations,
 	computePipelineTypeFields,
 	transformPipelineType,

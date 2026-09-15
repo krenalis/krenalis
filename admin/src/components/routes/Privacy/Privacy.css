@@ -3,7 +3,7 @@
 }
 
 .privacy {
-	max-width: 900px;
+	max-width: 1200px;
 	margin: auto;
 	padding: 30px;
 }
@@ -41,6 +41,22 @@
 	border-radius: 5px;
 }
 
+.privacy__grid-aliases {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+}
+
+.privacy__grid-aliases-empty {
+	color: var(--sl-color-neutral-500);
+}
+
+.privacy__grid-aliases-more {
+	color: var(--sl-color-neutral-500);
+	font-size: 13px;
+}
+
 .privacy__grid-pipelines {
 	display: flex;
 	flex-wrap: wrap;
@@ -62,43 +78,162 @@
 	border-radius: var(--sl-border-radius-medium);
 }
 
+.privacy__dialog::part(panel) {
+	max-height: calc(100% - var(--sl-spacing-2x-large) - (var(--header-height) + 50px));
+}
+
 .privacy__dialog-error {
 	color: var(--sl-color-danger-600);
 	display: flex;
 	align-items: center;
 	gap: 7px;
 	margin-top: 3px;
-	font-size: 15px;
+	font-size: 13px;
 }
 
 .privacy__dialog-error sl-icon {
 	color: var(--sl-color-danger-600);
-	font-size: 14px;
+	font-size: 13px;
 	flex-shrink: 0;
 }
 
-.privacy__dialog-warning {
-	color: var(--sl-color-warning-700);
-	display: flex;
-	align-items: start;
-	gap: 7px;
-	margin-top: 3px;
-	font-size: 15px;
-}
-
-.privacy__dialog-warning sl-icon {
-	color: var(--sl-color-warning-700);
-	font-size: 14px;
-	position: relative;
-	top: 5px;
-	flex-shrink: 0;
-}
-
-.privacy__dialog-code {
+.privacy__dialog-code,
+.privacy__dialog-event-path,
+.privacy__dialog-profile-path {
 	margin-top: 15px;
 }
 
-.privacy__dialog-save {
+.privacy__dialog-code::part(base),
+.privacy__dialog-alias::part(base),
+.privacy__dialog-event-path::part(base),
+.privacy__dialog-profile-path::part(base) {
+	font-family: var(--monospace-fonts);
+}
+
+.privacy__dialog-alias-row {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	margin-top: 15px;
+}
+
+.privacy__dialog-alias-row + .privacy__dialog-alias-row {
+	margin-top: 8px;
+}
+
+.privacy__dialog-alias {
+	flex: 1;
+	min-width: 0;
+}
+
+.privacy__dialog-alias-actions {
+	display: grid;
+	grid-template-columns: 25px 25px;
+	gap: 4px;
+	flex: 0 0 54px;
+	margin-top: 1px;
+}
+
+.privacy__dialog-alias-row--with-label .privacy__dialog-alias-actions {
+	margin-top: 29px;
+}
+
+.privacy__dialog-warning {
+	color: var(--sl-color-warning-600);
+	display: flex;
+	align-items: start;
+	gap: 7px;
+	margin-top: 8px;
+	font-size: 13px;
+}
+
+.privacy__dialog-warning sl-icon {
+    font-size: 13px;
+    flex-shrink: 0;
+    position: relative;
+    top: 5px;
+}
+
+.privacy__dialog-paths {
+    border: 1px solid var(--border-primary);
+    padding: 20px 20px;
+    margin-top: 30px;
+    border-radius: 5px;
+    position: relative;
+}
+
+.privacy__dialog-title {
+    position: absolute;
+    top: -13px;
+    background-color: #fff;
+    padding: 0 10px;
+    left: 10px;
+    color: var(--sl-color-neutral-800);
+}
+
+.privacy__dialog-event-path {
+	margin-top: 0;
+}
+
+.privacy__dialog-alias-action::part(base) {
+	border: 0;
+	padding: 0;
+	cursor: pointer;
+}
+
+.privacy__dialog-alias-action[disabled]::part(base) {
+	cursor: not-allowed;
+}
+
+.privacy__dialog-alias-action::part(label) {
+	display: none;
+}
+
+.privacy__dialog-alias-action sl-icon {
+	font-size: 20px;
+	width: 25px;
+	transition: color 0.3s;
+}
+
+.privacy__dialog-alias-add {
+	grid-column: 1;
+}
+
+.privacy__dialog-alias-add sl-icon {
+	color: var(--sl-color-primary-600);
+}
+
+.privacy__dialog-alias-remove {
+	grid-column: 2;
+}
+
+.privacy__dialog-alias-remove:hover sl-icon {
+	color: var(--sl-color-danger-600);
+}
+
+.privacy__dialog-path-action {
+	--sl-input-height-small: 20px;
+
+	margin-right: 5px;
+	transform: translate(3px, -1px);
+}
+
+.privacy__dialog-path-action::part(base) {
+	font-weight: 400;
+	padding-inline: 4px;
+}
+
+.privacy__dialog-path-action::part(label) {
+	padding: 0;
+}
+
+.privacy__dialog-actions {
 	margin-top: 30px;
-	display: block;
+	display: flex;
+	justify-content: flex-end;
+	gap: 10px;
+}
+
+.privacy__dialog-save {
+	min-width: 150px;
 }

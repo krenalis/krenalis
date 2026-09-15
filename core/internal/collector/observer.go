@@ -126,6 +126,23 @@ func (observer *Observer) DeleteListener(id string) {
 	observer.Unlock()
 }
 
+// replaceConsentPurpose replaces, in the required consents of every listener,
+// the consent purpose having the same identifier as cp with cp itself.
+func (observer *Observer) replaceConsentPurpose(cp *state.ConsentPurpose) {
+	observer.Lock()
+	for _, listener := range observer.listeners {
+		if listener.requiredConsents == nil {
+			continue
+		}
+		for i, purpose := range listener.requiredConsents.Purposes {
+			if purpose.ID == cp.ID {
+				listener.requiredConsents.Purposes[i] = cp
+			}
+		}
+	}
+	observer.Unlock()
+}
+
 // Events returns the observed events listen to by the specified listener and
 // the number of omitted events. If the listener does not exist, it returns
 // the ErrEventListenerNotFound error.
@@ -178,7 +195,7 @@ func (observer *Observer) addEvent(event events.Event) {
 			continue
 		}
 		if rc := listener.requiredConsents; rc != nil &&
-			!consents.Satisfies(rc.Purposes, rc.Operator != state.PurposesOr, event) {
+			!consents.SatisfiesEvent(rc.Purposes, rc.Operator != state.PurposesOr, event) {
 			continue
 		}
 		listener.Lock()

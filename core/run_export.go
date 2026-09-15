@@ -14,8 +14,10 @@ import (
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/core/internal/connections"
+	"github.com/krenalis/krenalis/core/internal/consents"
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/metrics"
+	"github.com/krenalis/krenalis/core/internal/properties"
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/transformers"
@@ -63,6 +65,25 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 		}
 	}
 
+	// Only the properties in the input schema are read from the profiles, so
+	// the properties that hold the required consents are added to it when the
+	// pipeline does not already declare them. They are then removed from every
+	// profile, after its consents have been checked, so that they are not
+	// exported.
+	inSchema := pipeline.InSchema
+	var addedConsentPropertyPaths [][]string
+	if len(pipeline.RequiredConsents.Purposes) > 0 {
+		profileSchema := pipeline.Connection().Workspace().ProfileSchema
+		schema, added, err := addRequiredConsentProperties(inSchema, profileSchema, pipeline.RequiredConsents.Purposes)
+		if err != nil {
+			return newPipelineError(metrics.ExportProfileConsentStep, err)
+		}
+		inSchema = schema
+		for path := range added {
+			addedConsentPropertyPaths = append(addedConsentPropertyPaths, strings.Split(path, "."))
+		}
+	}
+
 	// Read the users.
 	query := datastore.Query{Where: pipeline.Filter}
 	if connector.Type == state.FileStorage {
@@ -77,7 +98,7 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 			UpdateOnDuplicates: pipeline.UpdateOnDuplicates,
 		}
 	}
-	records, err := store.ProfileRecords(ctx, query, pipeline.InSchema, matching)
+	records, err := store.ProfileRecords(ctx, query, inSchema, matching)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
 			return newPipelineError(metrics.ReceiveStep, err)
@@ -163,7 +184,7 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	profiles := make([]Profile, 0, 100)
 	transformationRecords := make([]transformers.Record, 0, 100)
 
-	var readCount int // Total number of records successfully read from the warehouse so far.
+	var readCount int // Number of records read from the warehouse and queued for the export so far.
 
 	if connector.Type == state.FileStorage {
 		defer func() {
@@ -176,6 +197,8 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 Records:
 	for record := range records.All(ctx) {
 
+		var profile Profile
+
 		prometheus.Increment("Pipeline.exportProfiles.iterations_over_records_All", 1)
 
 		if record.Err != nil {
@@ -186,14 +209,11 @@ Records:
 			goto Next
 		}
 
-		readCount++
 		this.core.metrics.ReceivePassed(pipeline.ID, 1)
 
-		switch connector.Type {
-		default:
-			profiles = append(profiles, Profile{Record: record})
-		case state.Application:
-			profile := Profile{Record: record}
+		profile = Profile{Record: record}
+
+		if connector.Type == state.Application {
 			// Update: use ExternalID as the profile ID.
 			if isUpdate := record.ExternalID != ""; isUpdate {
 				profile.ID = record.ExternalID
@@ -207,10 +227,27 @@ Records:
 					goto Next
 				}
 			}
-			profiles = append(profiles, profile)
 		}
 
 		this.core.metrics.InputValidationPassed(pipeline.ID, 1)
+
+		// The profile is exported only if it has the consents required by the
+		// pipeline.
+		if !consents.SatisfiesProfile(pipeline.RequiredConsents.Purposes,
+			pipeline.RequiredConsents.Operator != state.PurposesOr, record.Attributes) {
+			this.core.metrics.ExportProfileConsentFailed(pipeline.ID, 1)
+			goto Next
+		}
+		this.core.metrics.ExportProfileConsentPassed(pipeline.ID, 1)
+
+		// Remove the properties that have been read only to check the consents,
+		// which the pipeline does not declare and must not export.
+		for _, path := range addedConsentPropertyPaths {
+			properties.Delete(record.Attributes, path)
+		}
+
+		readCount++
+		profiles = append(profiles, profile)
 
 	Next:
 
