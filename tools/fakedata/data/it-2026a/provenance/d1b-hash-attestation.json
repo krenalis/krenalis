@@ -1,0 +1,15 @@
+{
+  "curator_A": "krenalis-curator-a-01",
+  "curator_A_attested": true,
+  "frozen": true,
+  "manifest_sha256": "7ca96b02d978da7902a3557c12ba2ad6b083572951a789bfa8df7344574ee2e6",
+  "output_license_status": "deferred_to_project_policy",
+  "reviewer_B": "krenalis-reviewer-b-01",
+  "reviewer_B_attested": true,
+  "runtime_assets": {
+    "first_names.csv": "ed249d8095d3133d90a662bb3dc4d592941d9aa1de1d476a8000b392761ed8db",
+    "last_names.csv": "d44f1859847b5c94066d20c0846fb16859827802bdf878d59e17dc26a046f96b",
+    "street_names.csv": "13a757c70266ad96f0c1f9d76ff32597995090009e860eec86a1dded5b5095ec"
+  },
+  "schema_version": "d1b-hash-attestation-v1"
+}

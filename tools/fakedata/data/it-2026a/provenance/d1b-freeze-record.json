@@ -1,0 +1,38 @@
+{
+  "contract_version": "L1-D1-B-rectified-2026-09-15",
+  "curator_A": "krenalis-curator-a-01",
+  "curator_A_attested": true,
+  "final_materialization_audit_sha256": "5558df7d8cccf40e1ef51478d6c5e650a82e1aa8628f8e2666f0496ae5e87303",
+  "frozen": true,
+  "frozen_at": "2026-09-15T12:11:22Z",
+  "manifest_sha256": "7ca96b02d978da7902a3557c12ba2ad6b083572951a789bfa8df7344574ee2e6",
+  "market_data_version": "it-2026a",
+  "output_license_status": "deferred_to_project_policy",
+  "provenance_references": [
+    "state/d1b-final-hash-attestation.json",
+    "state/d1b-reviewer-b-decisions.json",
+    "reports/d1b-final-materialization-audit.json"
+  ],
+  "reviewer_B": "krenalis-reviewer-b-01",
+  "reviewer_B_attested": true,
+  "reviewer_B_decision_archive_sha256": "f439e323cac93b04ec4071b58e9d34a6261f2d6a87b892d7604cdcc1b25be1d1",
+  "runtime_assets": {
+    "first_names.csv": {
+      "repository_path": "tools/fakedata/data/it-2026a/first_names.csv",
+      "sha256": "ed249d8095d3133d90a662bb3dc4d592941d9aa1de1d476a8000b392761ed8db",
+      "workspace_path": "state/final-output/first_names.csv"
+    },
+    "last_names.csv": {
+      "repository_path": "tools/fakedata/data/it-2026a/last_names.csv",
+      "sha256": "d44f1859847b5c94066d20c0846fb16859827802bdf878d59e17dc26a046f96b",
+      "workspace_path": "state/final-output/last_names.csv"
+    },
+    "street_names.csv": {
+      "repository_path": "tools/fakedata/data/it-2026a/street_names.csv",
+      "sha256": "13a757c70266ad96f0c1f9d76ff32597995090009e860eec86a1dded5b5095ec",
+      "workspace_path": "state/final-output/street_names.csv"
+    }
+  },
+  "schema_version": "d1b-freeze-record-v1",
+  "status": "FROZEN"
+}

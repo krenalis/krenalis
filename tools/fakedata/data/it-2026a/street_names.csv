@@ -1,0 +1,401 @@
+name,weight
+Abruzzo,1
+Ada Gobetti,1
+Ada Negri,1
+Adda,1
+Adriatico,2
+Agostino Depretis,2
+Alcide De Gasperi,4
+Alda Merini,2
+Alessandro Manzoni,4
+Alessandro Volta,4
+Alpi,4
+Alto Adige,1
+Amedeo Avogadro,1
+Amedeo Modigliani,1
+Amelia Rosselli,1
+Andrea Costa,1
+Angelo Secchi,2
+Anita Garibaldi,4
+Anna Kuliscioff,2
+Anna Magnani,2
+Antonio Fogazzaro,2
+Antonio Gramsci,1
+Antonio Meucci,2
+Antonio Vivaldi,4
+Aosta,1
+Appennini,4
+Archimede,4
+Arno,2
+Aurelio Saffi,2
+Bari,1
+Basilicata,1
+Beppe Fenoglio,2
+Beppo Levi,2
+Bettino Ricasoli,2
+Bologna,2
+Bruno Buozzi,1
+Bruno de Finetti,2
+Cagliari,2
+Calabria,2
+Camilla Ravera,1
+Camillo Benso di Cavour,4
+Camillo Golgi,1
+Campania,1
+Caravaggio,4
+Carlo Alberto Dalla Chiesa,2
+Carlo Cattaneo,2
+Carlo Collodi,1
+Carlo Goldoni,2
+Carlo Levi,1
+Carlo Pisacane,4
+Cesare Battisti,4
+Cesare Pavese,1
+Ciro Menotti,1
+Claudio Monteverdi,2
+Clemente Rebora,1
+Conero,1
+Cornelia Fabri,1
+Corrado Alvaro,2
+Cristina Campo,1
+Daniele Manin,1
+Dante Alighieri,4
+degli Abeti,1
+degli Aceri,1
+degli Aranci,2
+degli Olmi,1
+degli Ontani,2
+degli Ulivi,4
+dei Caduti,1
+dei Castagni,4
+dei Ciclamini,2
+dei Ciliegi,1
+dei Cipressi,4
+dei Corbezzoli,2
+dei Diritti,1
+dei Faggi,2
+dei Fiordalisi,2
+dei Gelsi,2
+dei Ginepri,1
+dei Larici,1
+dei Lavoratori,2
+dei Lecci,1
+dei Limoni,2
+dei Mandorli,1
+dei Melograni,2
+dei Narcisi,1
+dei Noccioli,1
+dei Noci,1
+dei Papaveri,2
+dei Partigiani,2
+dei Peschi,2
+dei Pini,4
+dei Pioppi,4
+dei Platani,4
+dei Ruscelli,1
+dei Salici,2
+dei Tigli,4
+del Biancospino,2
+del Borgo,1
+del Campanile,1
+del Castello,2
+del Convento,2
+del Dialogo,1
+del Glicine,4
+del Lago,1
+del Lavoro,2
+del Mercato,2
+del Mulino,1
+del Porto,1
+del Pozzo,1
+del Prato,1
+del Progresso,1
+del Rispetto,1
+del Rosmarino,1
+del Volontariato,1
+dell'Accoglienza,1
+dell'Alba,1
+dell'Amicizia,2
+dell'Arco,1
+dell'Edera,2
+dell'Indipendenza,2
+dell'Italia Libera,2
+dell'Uguaglianza,2
+dell'Unità,4
+della Cittadinanza,2
+della Comunità,1
+della Concordia,1
+della Cooperazione,2
+della Corte,1
+della Costituzione,4
+della Cura,1
+della Democrazia,4
+della Dignità,1
+della Fiducia,1
+della Fratellanza,2
+della Ginestra,2
+della Giustizia,4
+della Lavanda,2
+della Legalità,1
+della Libertà,4
+della Memoria,2
+della Mimosa,2
+della Pace,4
+della Partecipazione,2
+della Pieve,1
+della Pineta,1
+della Repubblica,2
+della Resistenza,4
+della Responsabilità,1
+della Rinascita,2
+della Rocca,2
+della Solidarietà,4
+della Speranza,2
+della Tolleranza,1
+della Torre,1
+della Vittoria,2
+delle Acacie,4
+delle Azalee,2
+delle Camelie,2
+delle Colline,1
+delle Dalie,1
+delle Donne,1
+delle Felci,2
+delle Fonti,1
+delle Fornaci,1
+delle Gardenie,1
+delle Ginestre,1
+delle Magnolie,2
+delle Margherite,2
+delle Ortensie,2
+delle Primule,1
+delle Querce,2
+delle Robinie,4
+delle Rose,4
+delle Valli,1
+delle Viole,4
+Dino Campana,1
+Dolomiti,2
+Domenico Pacini,1
+Don Giovanni Minzoni,2
+Donatello,2
+Edmondo De Amicis,2
+Edoardo Amaldi,2
+Eduardo De Filippo,1
+Eleonora Duse,1
+Elsa Morante,2
+Emilio Lussu,1
+Emma Castelnuovo,1
+Enrico Berlinguer,1
+Enrico De Nicola,1
+Enrico Fermi,4
+Enrico Toti,2
+Etna,2
+Eugenio Montale,2
+Europa,2
+Evangelista Torricelli,2
+Fausta Cialente,1
+Federigo Enriques,2
+Federigo Tozzi,2
+Ferruccio Parri,1
+Filippo Turati,2
+Firenze,2
+Francesco Petrarca,2
+Fratelli Bandiera,1
+Friuli,2
+Gabriele D'Annunzio,2
+Gaetano Donizetti,1
+Galileo Galilei,4
+Gaspara Stampa,1
+Genova,2
+Giacomo Leopardi,4
+Giacomo Matteotti,4
+Giacomo Puccini,4
+Gian Lorenzo Bernini,2
+Gianni Rodari,2
+Gioachino Rossini,4
+Giordano Bruno,4
+Giorgio Caproni,1
+Giorgio de Chirico,1
+Giorgio La Pira,1
+Giosuè Carducci,4
+Giotto,2
+Giovanni Amendola,2
+Giovanni Battista Beccaria,2
+Giovanni Boccaccio,4
+Giovanni Falcone,2
+Giovanni Gronchi,2
+Giovanni Pascoli,4
+Giovanni Poleni,1
+Giovanni Schiaparelli,1
+Giovanni Segantini,2
+Giovanni Verga,1
+Giulio Natta,2
+Giuseppe Colombo,2
+Giuseppe Di Vittorio,2
+Giuseppe Dossetti,1
+Giuseppe Garibaldi,4
+Giuseppe La Farina,2
+Giuseppe Mazzini,2
+Giuseppe Montanelli,1
+Giuseppe Parini,2
+Giuseppe Peano,1
+Giuseppe Ungaretti,1
+Giuseppe Verdi,4
+Goffredo Mameli,2
+Gran Sasso,2
+Grazia Deledda,1
+Gregorio Ricci-Curbastro,1
+Guglielmo Marconi,4
+I Maggio,4
+I Novembre,2
+II Giugno,2
+II Novembre,1
+Ionio,1
+Ippolito Nievo,1
+Irma Bandiera,1
+Isonzo,1
+Italia,4
+Italo Calvino,2
+Italo Svevo,2
+IV Novembre,4
+Lago di Garda,1
+Lalla Romano,1
+Laura Bassi,1
+Lazio,1
+Lazzaro Spallanzani,1
+Leonardo da Vinci,4
+Leonardo Sciascia,2
+Lidia Menapace,1
+Liguria,2
+Lombardia,1
+Ludovico Ariosto,4
+Luigi Capuana,1
+Luigi Einaudi,1
+Luigi Galvani,2
+Luigi Pirandello,2
+Luigi Sturzo,4
+Macedonio Melloni,1
+Marche,2
+Maria Gaetana Agnesi,2
+Maria Montessori,4
+Matera,2
+Matilde Serao,2
+Mauro Picone,1
+Mediterraneo,4
+Michelangelo Buonarroti,2
+Milano,4
+Molise,2
+Monte Bianco,1
+Napoli,4
+Natalia Ginzburg,2
+Nazario Sauro,4
+Niccolò Machiavelli,2
+Nilde Iotti,1
+Nino Bixio,4
+Ombrone,1
+Orso Mario Corbino,2
+Palermo,2
+Paolo Borsellino,2
+Peppino Impastato,2
+Perugia,2
+Pia Nalli,1
+Piemonte,2
+Pier Paolo Pasolini,1
+Piero Calamandrei,4
+Piero della Francesca,2
+Piero Gobetti,1
+Pietro Bembo,1
+Po,4
+Primo Levi,1
+Puglia,1
+Quintino Sella,1
+Raffaele Piria,1
+Raffaello Sanzio,4
+Ravenna,2
+Renato Guttuso,2
+Rita Atria,1
+Rita Levi-Montalcini,4
+Roma,4
+Rosario Livatino,1
+Salvatore Quasimodo,1
+Salvo D'Acquisto,2
+San Benedetto,2
+San Domenico,1
+San Francesco,4
+San Giorgio,2
+San Giovanni,4
+San Lorenzo,2
+San Marco,4
+San Martino,2
+San Michele,4
+San Nicola,2
+San Paolo,4
+San Pietro,2
+San Rocco,2
+San Sebastiano,2
+Sandro Penna,2
+Sandro Pertini,2
+Sant'Agata,2
+Sant'Ambrogio,2
+Sant'Anna,2
+Sant'Antonio,4
+Santa Caterina,1
+Santa Chiara,1
+Santa Croce,1
+Santa Lucia,4
+Santa Maria,4
+Santa Rita,2
+Santa Teresa,1
+Santo Stefano,1
+Sardegna,4
+Sibilla Aleramo,2
+Sicilia,4
+Sidney Sonnino,2
+Stanislao Cannizzaro,2
+Tagliamento,1
+Teresa Mattei,2
+Tevere,4
+Ticino,1
+Tina Anselmi,2
+Tintoretto,1
+Tirreno,1
+Tiziano Vecellio,1
+Tommaso Campanella,1
+Torino,4
+Torquato Tasso,4
+Toscana,2
+Totò,1
+Trento,2
+Trieste,1
+Tullio Levi-Civita,2
+Ugo Foscolo,4
+Ugo La Malfa,1
+Ulisse Dini,1
+Umberto Saba,2
+Umbria,1
+Urbano Rattazzi,2
+V Maggio,1
+Valle d'Aosta,1
+Veneto,2
+Venezia,2
+Verona,1
+Vesuvio,1
+VI Gennaio,1
+VIII Dicembre,1
+VIII Marzo,4
+Vito Volterra,2
+Vittoria Colonna,1
+Vittorio Alfieri,1
+Vittorio Emanuele II,4
+XIX Luglio,2
+XV Agosto,1
+XVI Ottobre,1
+XVII Marzo,2
+XX Settembre,4
+XXI Marzo,2
+XXIII Maggio,2
+XXIV Maggio,1
+XXIX Giugno,1
+XXV Aprile,2
+XXVII Gennaio,2
