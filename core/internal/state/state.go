@@ -855,12 +855,12 @@ type Workspace struct {
 	organization                   *Organization
 	Name                           string
 	ProfileSchema                  types.Type // without meta properties.
+	AssignedRoles                  ProfileRoleAssignments
 	PrimarySources                 map[string]string
 	accounts                       map[int]*Account
 	consentPurposes                map[string]*ConsentPurpose
 	ResolveIdentitiesOnBatchImport bool
 	Identifiers                    []string
-	UIPreferences                  UIPreferences
 	IR                             struct {
 		ID        *string    // nil means no IR in execution.
 		StartTime *time.Time // nil means IR was never started.
@@ -872,10 +872,21 @@ type Workspace struct {
 		EndTime        *time.Time // nil means profile schema alteration is running or has never started.
 		Err            *string    // pointer to empty string if no errors occurred during last execution of alter profile schema.
 		Schema         types.Type
+		AssignedRoles  ProfileRoleAssignments
 		PrimarySources map[string]string // nil if, and only if, schema alteration is not in execution.
 		Operations     []warehouses.AlterOperation
 	}
 	pipelinesToPurge []string // never nil
+}
+
+// ProfileRoleAssignments maps each Profile role to the path of the property
+// assigned to it. An empty path means no property is assigned to that role.
+type ProfileRoleAssignments struct {
+	FirstName string
+	LastName  string
+	Email     string
+	Country   string
+	Photo     string
 }
 
 // Account returns the account with identifier id. The boolean return value
@@ -1090,16 +1101,6 @@ func (workspace *Workspace) WarehouseMCPSettings(ctx context.Context) (json.Valu
 		return nil, errors.New("invalid settings")
 	}
 	return data, nil
-}
-
-// UIPreferences represents the UI preferences of a workspace.
-type UIPreferences struct {
-	Profile struct {
-		Image     string // property path.
-		FirstName string // property path.
-		LastName  string // property path.
-		Extra     string // property path.
-	}
 }
 
 // TimeLayouts represents the layouts used to format datetime, date, and time
