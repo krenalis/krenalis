@@ -1,18 +1,20 @@
-import React, { useContext, useEffect, useState, forwardRef } from 'react';
+import React, { useContext, useEffect, useRef, useState, forwardRef } from 'react';
 import Section from '../../base/Section/Section';
 import PipelineContext from '../../../context/PipelineContext';
 import AppContext from '../../../context/AppContext';
 import { ConsentPurpose } from '../../../lib/api/types/workspace';
 import { ConsentPurposesOperator } from '../../../lib/api/types/pipeline';
-import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
+import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 
 const PipelineConsents = forwardRef<any>((_, ref) => {
-	const { pipeline, pipelineType, setPipeline } = useContext(PipelineContext);
+	const { pipeline, pipelineType, setPipeline, connection, isImport } = useContext(PipelineContext);
 
 	const [purposes, setPurposes] = useState<ConsentPurpose[]>([]);
 	const [isEnabled, setIsEnabled] = useState((pipeline.requiredConsents?.purposes.length ?? 0) > 0);
+
+	const operatorRef = useRef<any>(null);
 
 	const { api, handleError } = useContext(AppContext);
 
@@ -31,6 +33,39 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 		};
 		fetchPurposes();
 	}, []);
+
+	useEffect(() => {
+		const select = operatorRef.current;
+		if (select == null || isEnabled) {
+			return;
+		}
+
+		const onMouseDown = (e: MouseEvent) => {
+			e.preventDefault();
+			e.stopPropagation();
+			select.focus();
+		};
+
+		const onKeyDown = (e: KeyboardEvent) => {
+			if (e.key === 'Tab' || e.key === 'Escape' || e.altKey || e.ctrlKey || e.metaKey) {
+				return;
+			}
+			e.preventDefault();
+			e.stopPropagation();
+		};
+
+		// sl-select has no read-only state, so when the consents are off the
+		// operator is kept enabled and focusable, but the interactions that
+		// would open the listbox or change the value are blocked.
+		select.addEventListener('mousedown', onMouseDown, true);
+		select.addEventListener('keydown', onKeyDown, true);
+
+		return () => {
+			// restore select interactions.
+			select.removeEventListener('mousedown', onMouseDown, true);
+			select.removeEventListener('keydown', onKeyDown, true);
+		};
+	}, [isEnabled]);
 
 	const setEnabled = (enabled: boolean) => {
 		const p = structuredClone(pipeline);
@@ -72,38 +107,44 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 	const selectedPurposeIDs = pipeline.requiredConsents?.purposes ?? [];
 
 	const isEventTarget = pipelineType.target === 'Event';
-	const subject = isEventTarget ? 'An event' : 'A profile';
-	const subjects = isEventTarget ? 'events' : 'profiles';
+	const usersTerm = connection.connector.terms.users?.trim()
+		? connection.connector.terms.users.toLowerCase()
+		: 'users';
+	const subjects = isEventTarget ? 'events' : isImport ? usersTerm : 'profiles';
+	const actionVerb = isImport ? 'import' : isEventTarget ? 'send' : 'export';
+	const actionParticiple = isImport ? 'imported' : isEventTarget ? 'sent' : 'exported';
 
 	return (
 		<Section
 			className='pipeline__consents'
-			title='Privacy'
-			description={`Choose whether this pipeline should require consent for specific purposes before processing ${subjects}.`}
+			title='Consent requirements'
+			description={`Define which consent purposes ${subjects} must have before they can be ${actionParticiple}.`}
 			padded={true}
 			ref={ref}
 			annotated={true}
 		>
 			<div className='pipeline__consents-toggle'>
-				<SlCheckbox checked={isEnabled} onSlChange={onToggle} disabled={purposes.length === 0} />
+				<SlSwitch checked={isEnabled} onSlChange={onToggle} disabled={purposes.length === 0} />
 				<div
 					className={`pipeline__consents-logical-sentence${
 						purposes.length === 0 ? ' pipeline__consents-logical-sentence--disabled' : ''
 					}`}
 					onClick={onSentenceClick}
 				>
-					{`${subject} must have consent for`}
+					{`Only ${actionVerb} ${subjects} ${subjects === 'events' ? 'that have consent for' : 'who have consented to'}`}
 					<SlSelect
-						className='pipeline__consents-logical-select'
+						ref={operatorRef}
+						className={`pipeline__consents-logical-select${
+							isEnabled ? '' : ' pipeline__consents-logical-select--readonly'
+						}`}
 						size='small'
 						value={pipeline.requiredConsents?.operator || 'and'}
 						onSlChange={onChangeOperator}
-						disabled={!isEnabled}
 					>
 						<SlOption value='and'>all</SlOption>
 						<SlOption value='or'>any</SlOption>
 					</SlSelect>
-					of the selected purposes to be processed by this pipeline.
+					of the selected purposes.
 				</div>
 			</div>
 			<div className='pipeline__consents-details'>
@@ -111,7 +152,7 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 					className='pipeline__consents-select'
 					multiple
 					clearable
-					placeholder={purposes.length === 0 ? 'No purposes defined yet' : 'Select the required purposes'}
+					placeholder={purposes.length === 0 ? 'No purposes defined yet' : 'Select consent purposes'}
 					value={selectedPurposeIDs}
 					onSlChange={onChangePurposes}
 					disabled={!isEnabled || purposes.length === 0}
