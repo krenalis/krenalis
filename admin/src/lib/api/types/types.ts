@@ -183,9 +183,9 @@ export type {
 	TypeKind,
 	IntBitSize,
 	FloatBitSize,
-	MapType,
-	Semantic,
 	CountryFormat,
 	UnitOfMeasure,
 	DurationUnit,
+	MapType,
+	Semantic,
 };
