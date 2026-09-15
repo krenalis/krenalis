@@ -375,7 +375,7 @@ func TestConvertArrayUniqueness(t *testing.T) {
 					t.Fatal(err)
 				}
 				if err != errInvalidConversion {
-					t.Fatalf("got error %v, want %v", err, errInvalidConversion)
+					t.Fatalf("expected error %v, got %v", errInvalidConversion, err)
 				}
 				if !cmp.Equal(got, test.value) {
 					t.Fatalf("got value %#v with error, want original value %#v", got, test.value)
