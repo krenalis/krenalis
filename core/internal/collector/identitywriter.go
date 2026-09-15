@@ -168,18 +168,17 @@ func (iw *identityWriter) transformAndWrite(events []streams.Event) {
 			UpdatedAt:   event.Attributes["timestamp"].(time.Time),
 		}, event.Destinations[0].Ack)
 		if err != nil {
-			var errMsg string
+			var msg string
 			if errors.Is(err, datastore.ErrPipelineNotExist) {
-				errMsg = "pipeline has been deleted"
+				msg = "pipeline has been deleted"
 			} else if _, ok := errors.AsType[*schemas.Error](err); ok {
-				errMsg = err.Error()
+				msg = err.Error()
 			} else {
-				errMsg = "an internal error occurred"
-				slog.Error("cannot write event identity", "pipeline", iw.pipeline, "error", err)
+				msg = "an internal error occurred"
+				slog.Error("core/events/collector: cannot write event identity", "pipeline", iw.pipeline, "error", err)
 			}
-			iw.metrics.FinalizeFailed(iw.pipeline, 1, errMsg)
+			iw.metrics.FinalizeFailed(iw.pipeline, 1, msg)
 			event.Destinations[0].Ack.Acknowledge()
-			continue
 		}
 	}
 
