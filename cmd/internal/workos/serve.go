@@ -89,6 +89,7 @@ func (wo *WorkOS) Onboard(ctx context.Context, organizationName, adminEmail stri
 	}
 
 	onboarded = true
+
 	return nil
 }
 
