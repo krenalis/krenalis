@@ -13,8 +13,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
-	"fmt"
+		"fmt"
 	"io"
 	"log/slog"
 	"math/big"
@@ -26,6 +25,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/core"
+"github.com/krenalis/krenalis/tools/errors"
 
 	"github.com/golang-jwt/jwt/v5"
 )
