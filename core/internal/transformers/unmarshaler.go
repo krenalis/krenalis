@@ -10,14 +10,12 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"net/netip"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
-	"uuid"
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/decimal"
@@ -379,10 +377,6 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 				return nil, err
 			}
 			arr = append(arr, elem)
-			i++
-		}
-		if _, err := d.readToken(); err != nil {
-			return nil, err
 		}
 		if len(arr) < min {
 			return nil, newRecordValidationError("", fmt.Sprintf("contains less than %d %s", min, d.opts.terms.Elements))
@@ -393,6 +387,9 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 					return nil, newRecordValidationError("", "contains a duplicated value")
 				}
 			}
+		}
+		if _, err := d.readToken(); err != nil {
+			return nil, err
 		}
 		return arr, nil
 	case '{':
@@ -553,7 +550,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 				if n, ok := t.MaxLength(); ok && utf8.RuneCountInString(s) > n {
 					return nil, newRecordValidationError("", fmt.Sprintf("exceeds the %d-char limit", n))
 				}
-				if n, ok := t.MaxBytes(); ok && utf8.RuneCountInString(s) > n {
+				if n, ok := t.MaxBytes(); ok && len(s) > n {
 					return nil, newRecordValidationError("", fmt.Sprintf("exceeds the %d-byte limit", n))
 				}
 				return s, nil
@@ -700,8 +697,8 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		}
 	case types.UUIDKind:
 		if v.Kind() == '"' {
-			if u, err := uuid.Parse(string(v.AppendUnquote(nil))); err == nil {
-				return u.String(), nil
+			if u, ok := types.NormalizeUUID(string(v.AppendUnquote(nil))); ok {
+				return u, nil
 			}
 		}
 	case types.JSONKind:
@@ -714,8 +711,8 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		}
 	case types.IPKind:
 		if v.Kind() == '"' {
-			if ip, err := netip.ParseAddr(d.unquoteString(v)); err == nil {
-				return ip.String(), nil
+			if ip, ok := types.NormalizeIP(d.unquoteString(v)); ok {
+				return ip, nil
 			}
 		}
 	}

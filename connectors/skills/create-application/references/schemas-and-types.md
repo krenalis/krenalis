@@ -37,7 +37,7 @@ Example (preferred):
 return types.Object([]types.Property{
 	{
 		Name:         "event_name",
-		Type:         types.String().WithMaxLength(255).WithPattern(eventNameRE),
+		Type:         types.String().WithPattern(eventNameRE),
 		CreateRequired: true,
 	},
 	{
@@ -59,7 +59,7 @@ Common examples:
 - Maximum string length: `types.String().WithMaxLength(255)`
 - Maximum string bytes: `types.String().WithMaxBytes(1024)`
 - String allowed values (enum-like): `types.String().WithValues("a", "b", "c")`
-- String regex/pattern: `types.String().WithMaxLength(255).WithPattern(regexp.MustCompile("^[A-Za-z0-9_-]+$"))`
+- String regex/pattern: `types.String().WithPattern(regexp.MustCompile("^[A-Za-z0-9_-]{1,255}$"))`
 - Array size limits: `types.Array(types.String()).WithMinElements(1).WithMaxElements(100)`
 
 This makes the constraint visible to Krenalis (and UIs), and avoids per-call defensive validation code in connectors.

@@ -517,7 +517,7 @@ func Test_convertFilterToWhere(t *testing.T) {
 					&FilterCondition{Property: "l", Operator: OpIs, Values: []string{"foo"}},
 					&FilterCondition{Property: "l", Operator: OpIsOneOf, Values: []string{"foo", "56.19", "boo"}},
 					&FilterCondition{Property: "l.x", Operator: OpExists},
-					&FilterCondition{Property: "m", Operator: OpIsNot, Values: []string{"192.168.1.1"}},
+					&FilterCondition{Property: "m", Operator: OpIsNot, Values: []string{"::ffff:192.168.1.1"}},
 					&FilterCondition{Property: "n", Operator: OpIs, Values: []string{"boo"}},
 					&FilterCondition{Property: "o", Operator: OpIsNull},
 					&FilterCondition{Property: "o", Operator: OpContains, Values: []string{"boo"}},

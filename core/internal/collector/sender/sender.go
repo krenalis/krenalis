@@ -91,7 +91,7 @@ func (e *Event) CreatedAt() time.Time {
 //  3. Call the SendEvent method.
 type Sender struct {
 	connector string // application connector.
-	metrics   *metrics.Collector
+	metrics   *metrics.Pipelines
 
 	prometheus struct {
 		queueAvailable *prometheus.GaugeFunc
@@ -165,8 +165,8 @@ func (q *queue) assertTotal(n int) {
 }
 
 // New returns a new Sender. app is the application instance, and metrics is the
-// metrics collector, or nil if no metrics are collected.
-func New(app Application, metrics *metrics.Collector) *Sender {
+// pipeline metrics collector, or nil if no metrics are collected.
+func New(app Application, metrics *metrics.Pipelines) *Sender {
 	s := &Sender{
 		connector:       app.Connector(),
 		waitTime:        app.WaitTime,

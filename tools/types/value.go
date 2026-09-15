@@ -6,7 +6,6 @@ package types
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -20,6 +19,7 @@ import (
 	"uuid"
 
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 
 	"github.com/relvacode/iso8601"
@@ -90,6 +90,46 @@ func Marshal(data any, schema Type) (json.Value, error) {
 		return nil, errors.New("json: schema is the invalid type")
 	}
 	return marshal(nil, data, schema)
+}
+
+// NormalizeIP normalizes value and returns its canonical form for use wherever
+// a value of type ip is required. It reports whether value is a valid IP
+// address.
+//
+// If value is a string, it is parsed with [netip.ParseAddr]; if parsing fails,
+// NormalizeIP returns "", false.
+func NormalizeIP[T string | netip.Addr](value T) (string, bool) {
+	var addr netip.Addr
+	switch v := any(value).(type) {
+	case string:
+		var err error
+		addr, err = netip.ParseAddr(v)
+		if err != nil {
+			return "", false
+		}
+	case netip.Addr:
+		addr = v
+	}
+	if !addr.IsValid() {
+		return "", false
+	}
+	return addr.Unmap().WithZone("").String(), true
+}
+
+// NormalizeUUID normalizes s and returns its canonical form for use wherever
+// a UUID value is required.
+//
+// The boolean return value reports whether s is a UUID in the standard form
+// xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
+func NormalizeUUID(s string) (string, bool) {
+	if len(s) != 36 {
+		return "", false
+	}
+	id, err := uuid.Parse(s)
+	if err != nil {
+		return "", false
+	}
+	return id.String(), true
 }
 
 var (
@@ -188,13 +228,23 @@ func (d decoder) unmarshal(t Type) (_ any, err error) {
 				return nil, err
 			}
 			elements = append(elements, elem)
-			i++
 		}
 		if _, err := d.readToken(); err != nil {
 			return nil, err
 		}
 		if len(elements) < minElements {
 			return nil, newErrInvalidValue(fmt.Sprintf("contains less than %d elements", minElements), "")
+		}
+		if t.Unique() {
+			duplicate, err := FirstDuplicate(elements, t.Elem())
+			if err != nil {
+				return nil, newErrInvalidValue(err.Error(), "")
+			}
+			if duplicate >= 0 {
+				err := &SchemaValidationError{kind: invalidValue, msg: "duplicates an earlier array element"}
+				err.appendIndexToPath(duplicate)
+				return nil, err
+			}
 		}
 		return elements, nil
 	case '{':
@@ -330,7 +380,7 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 				if n, ok := t.MaxLength(); ok && utf8.RuneCountInString(s) > n {
 					return nil, newErrInvalidValue(fmt.Sprintf("is longer than %d characters: %s", n, d.formatString(v)), "")
 				}
-				if n, ok := t.MaxBytes(); ok && utf8.RuneCountInString(s) > n {
+				if n, ok := t.MaxBytes(); ok && len(s) > n {
 					return nil, newErrInvalidValue(fmt.Sprintf("is longer than %d bytes: %s", n, d.formatString(v)), "")
 				}
 				return s, nil
@@ -381,14 +431,15 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 				return n, nil
 			}
 		case '"':
-			if bytes.Equal(v, nan) || bytes.Equal(v, posInfinity) || bytes.Equal(v, negInfinity) {
+			s := d.unquoteString(v)
+			if bytes.Equal(s, nan) || bytes.Equal(s, posInfinity) || bytes.Equal(s, negInfinity) {
 				if t.IsReal() {
 					return nil, newErrInvalidValue(fmt.Sprintf("is not a real: %s", string(v)), "")
 				}
 				var n float64
-				if bytes.Equal(v, nan) {
+				if bytes.Equal(s, nan) {
 					n = math.NaN()
-				} else if v[0] == 'p' {
+				} else if bytes.Equal(s, posInfinity) {
 					n = math.Inf(1)
 				} else {
 					n = math.Inf(-1)
@@ -442,8 +493,8 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 		}
 	case UUIDKind:
 		if v.Kind() == '"' {
-			if u, err := uuid.Parse(string(v.AppendUnquote(nil))); err == nil {
-				return u.String(), nil
+			if u, ok := NormalizeUUID(string(v.AppendUnquote(nil))); ok {
+				return u, nil
 			}
 		}
 	case JSONKind:
@@ -452,8 +503,8 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 		}
 	case IPKind:
 		if v.Kind() == '"' {
-			if ip, err := netip.ParseAddr(string(d.unquoteString(v))); err == nil {
-				return ip.String(), nil
+			if ip, ok := NormalizeIP(string(d.unquoteString(v))); ok {
+				return ip, nil
 			}
 		}
 	case ArrayKind, ObjectKind, MapKind:
