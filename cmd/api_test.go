@@ -5,9 +5,89 @@
 package cmd
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"slices"
+	"strings"
 	"testing"
+
+	"github.com/krenalis/krenalis/cmd/internal/workos"
+	"github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/tools/errors"
 )
+
+// TestOnboard verifies how the onboarding endpoint handles a request when
+// WorkOS is disabled, when the honeypot field is filled in, and when the
+// request is malformed or carries an invalid admin email address.
+func TestOnboard(t *testing.T) {
+
+	// The WorkOS of the enabled server has no Core: a request that reaches the
+	// creation of an organization fails the test.
+	enabled := api{&apisServer{workOS: &workos.WorkOS{}}}
+	disabled := api{&apisServer{}}
+
+	t.Run("reports not found when WorkOS is disabled", func(t *testing.T) {
+		body := `{"organizationName":"Acme","adminEmail":"admin@example.com"}`
+		_, err := disabled.Onboard(nil, newOnboardingRequest(body))
+		if err != nil {
+			if _, ok := errors.AsType[*errors.NotFoundError](err); !ok {
+				t.Fatalf("expected *errors.NotFoundError, got %T", err)
+			}
+			return
+		}
+		t.Fatal("expected error, got nil")
+	})
+
+	t.Run("ignores a request that fills in the honeypot", func(t *testing.T) {
+		body := `{"organizationName":"Acme","adminEmail":"admin@example.com","website":"https://example.com"}`
+		result, err := enabled.Onboard(nil, newOnboardingRequest(body))
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if result != nil {
+			t.Errorf("expected no result, got %v", result)
+		}
+	})
+
+	t.Run("rejects a request without body", func(t *testing.T) {
+		r := httptest.NewRequest(http.MethodPost, "/onboarding", nil)
+		_, err := enabled.Onboard(nil, r)
+		if err != nil {
+			if err.Error() != "request's body is missing" {
+				t.Fatalf("expected error %q, got %q", "request's body is missing", err)
+			}
+			return
+		}
+		t.Fatal("expected error, got nil")
+	})
+
+	t.Run("rejects a malformed body", func(t *testing.T) {
+		_, err := enabled.Onboard(nil, newOnboardingRequest(`{"organizationName":`))
+		if err != nil {
+			if _, ok := errors.AsType[*errors.BadRequestError](err); !ok {
+				t.Fatalf("expected *errors.BadRequestError, got %T", err)
+			}
+			return
+		}
+		t.Fatal("expected error, got nil")
+	})
+
+	t.Run("rejects an invalid admin email", func(t *testing.T) {
+		_, err := enabled.Onboard(nil, newOnboardingRequest(`{"organizationName":"Acme","adminEmail":"admin"}`))
+		if err != nil {
+			e, ok := errors.AsType[*errors.UnprocessableError](err)
+			if !ok {
+				t.Fatalf("expected *errors.UnprocessableError, got %T", err)
+			}
+			if e.Code != core.InvalidEmail {
+				t.Fatalf("expected code %s, got %s", core.InvalidEmail, e.Code)
+			}
+			return
+		}
+		t.Fatal("expected error, got nil")
+	})
+
+}
 
 // TestSplitQueryParameters verifies comma-separated query parameter splitting.
 func TestSplitQueryParameters(t *testing.T) {
@@ -78,4 +158,12 @@ func TestSplitQueryParameters(t *testing.T) {
 			}
 		})
 	}
+}
+
+// newOnboardingRequest returns a POST request to the onboarding endpoint with
+// the given JSON body.
+func newOnboardingRequest(body string) *http.Request {
+	r := httptest.NewRequest(http.MethodPost, "/onboarding", strings.NewReader(body))
+	r.Header.Set("Content-Type", "application/json")
+	return r
 }
