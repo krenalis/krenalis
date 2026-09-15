@@ -43,6 +43,7 @@ import {
 	ExecQueryResponse,
 	PipelineRun,
 	FindProfilesResponse,
+	CountProfilesResponse,
 	Member,
 	MemberInvitationResponse,
 	MemberToSet,
@@ -571,6 +572,27 @@ class Profiles {
 		this.workspaceID = workspaceID;
 	}
 
+	count = async (
+		filter: Filter | null,
+		schema?: ObjectType,
+		signal?: AbortSignal,
+	): Promise<CountProfilesResponse> => {
+		const params: Array<[string, any]> = [];
+		if (schema != null) {
+			params.push(['schema', JSON.stringify(schema)]);
+		}
+		if (filter != null) {
+			params.push(['filter', JSON.stringify(filter)]);
+		}
+		return await call(
+			`${this.apiURL}/profiles/count` + queryString(params),
+			http.GET,
+			this.workspaceID,
+			undefined,
+			{ signal },
+		);
+	};
+
 	find = async (
 		properties: string[],
 		filter: Filter | null,
@@ -578,6 +600,8 @@ class Profiles {
 		orderDesc: boolean,
 		first: number,
 		limit: number,
+		schema: ObjectType,
+		signal?: AbortSignal,
 	): Promise<FindProfilesResponse> => {
 		let params = [];
 		params.push(['properties', properties.join(',')]);
@@ -588,10 +612,13 @@ class Profiles {
 		params.push(['orderDesc', orderDesc]);
 		params.push(['first', first]);
 		params.push(['limit', limit]);
-		return await call(`${this.apiURL}/profiles` + queryString(params), http.GET, this.workspaceID);
+		params.push(['schema', JSON.stringify(schema)]);
+		return await call(`${this.apiURL}/profiles` + queryString(params), http.GET, this.workspaceID, undefined, {
+			signal,
+		});
 	};
 
-	events = async (kpid: string): Promise<ProfileEventsResponse> => {
+	events = async (kpid: string, signal?: AbortSignal): Promise<ProfileEventsResponse> => {
 		let params = [];
 		let properties = [
 			'kpid',
@@ -612,33 +639,43 @@ class Profiles {
 			'userId',
 		];
 		params.push(['properties', properties.join(',')]);
-		let filter = {
-			operator: 'and',
-			rules: [
-				{
-					property: 'kpid',
-					operator: 'is',
-					values: [kpid],
-				},
-			],
-		};
-		params.push(['filter', JSON.stringify(filter)]);
-		params.push(['order', 'timestamp']);
-		params.push(['orderDesc', true]);
-		params.push(['first', 0]);
 		params.push(['limit', 10]);
-		return await call(`${this.apiURL}/events` + queryString(params), http.GET, this.workspaceID);
-	};
-
-	attributes = async (kpid: string): Promise<profileAttributesResponse> => {
-		return await call(`${this.apiURL}/profiles/${encodeURIComponent(kpid)}/attributes`, http.GET, this.workspaceID);
-	};
-
-	identities = async (kpid: string, first: number, limit: number): Promise<IdentitiesResponse> => {
 		return await call(
-			`${this.apiURL}/profiles/${encodeURIComponent(kpid)}/identities?first=${first}&limit=${limit}`,
+			`${this.apiURL}/profiles/${encodeURIComponent(kpid)}/events` + queryString(params),
 			http.GET,
 			this.workspaceID,
+			undefined,
+			{ signal },
+		);
+	};
+
+	attributes = async (kpid: string, schema: ObjectType, signal?: AbortSignal): Promise<profileAttributesResponse> => {
+		const params: Array<[string, any]> = [['schema', JSON.stringify(schema)]];
+		return await call(
+			`${this.apiURL}/profiles/${encodeURIComponent(kpid)}/attributes` + queryString(params),
+			http.GET,
+			this.workspaceID,
+			undefined,
+			{ signal },
+		);
+	};
+
+	identities = async (
+		kpid: string,
+		first: number,
+		limit: number,
+		signal?: AbortSignal,
+	): Promise<IdentitiesResponse> => {
+		const params: any[] = [
+			['first', first],
+			['limit', limit],
+		];
+		return await call(
+			`${this.apiURL}/profiles/${encodeURIComponent(kpid)}/identities` + queryString(params),
+			http.GET,
+			this.workspaceID,
+			undefined,
+			{ signal },
 		);
 	};
 }

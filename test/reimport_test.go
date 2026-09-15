@@ -66,7 +66,7 @@ func TestReimport(t *testing.T) {
 		t.Logf("%s: value %#v matches the expected value", msg, expected)
 	}
 	const expectedTotal = 10
-	profiles, _, total := k.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
+	profiles, total := k.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
 	if total != expectedTotal {
 		t.Fatalf("expected a total of %d profiles, got %d", expectedTotal, total)
 	}
@@ -111,7 +111,7 @@ func TestReimport(t *testing.T) {
 	// Check the profiles again.
 	//
 	// This time the first name must be nil, while the last name should have a value.
-	profiles, _, total = k.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
+	profiles, total = k.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
 	if total != expectedTotal {
 		t.Fatalf("expected a total of %d profiles, got %d", expectedTotal, total)
 	}

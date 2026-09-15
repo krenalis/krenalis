@@ -50,7 +50,7 @@ func TestDummyImportNotRequired(t *testing.T) {
 	// Test that the "favorite_movie.title" property, which has been imported
 	// from a not required property in Dummy, has been imported just for some
 	// profiles.
-	profiles, _, total := k.Profiles([]string{"email", "favorite_movie"}, "email", false, 0, 100)
+	profiles, total := k.Profiles([]string{"email", "favorite_movie"}, "email", false, 0, 100)
 	if total != 10 {
 		t.Fatalf("expected 10 profiles, got %d instead", total)
 	}

@@ -642,11 +642,18 @@ func (workspace workspace) Attributes(_ http.ResponseWriter, r *http.Request) (a
 		return nil, err
 	}
 	kpid := r.PathValue("kpid")
-	attributes, err := ws.Attributes(r.Context(), kpid)
+	var schema types.Type
+	err = json.Unmarshal([]byte(r.URL.Query().Get("schema")), &schema)
+	if err != nil {
+		return nil, errors.BadRequest("invalid schema")
+	}
+	attributes, err := ws.Attributes(r.Context(), kpid, schema)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"attributes": attributes}, nil
+	return map[string]any{
+		"attributes": attributes,
+	}, nil
 }
 
 // Update updates the name of a workspace.
@@ -814,8 +821,42 @@ func (workspace workspace) ProfileSchema(_ http.ResponseWriter, r *http.Request)
 	return ws.ProfileSchema, nil
 }
 
-// Profiles returns the profiles, the profile schema of a workspace, and an
-// estimate of their total number without applying first and limit.
+// ProfileCount returns the number of profiles matched by the optional filter.
+func (workspace workspace) ProfileCount(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
+	if err != nil {
+		return nil, err
+	}
+
+	q := r.URL.Query()
+	var filter *core.Filter
+	if f := q.Get("filter"); f != "" {
+		err = json.Unmarshal([]byte(f), &filter)
+		if err != nil {
+			return nil, errors.BadRequest("invalid filter")
+		}
+		if filter == nil {
+			return nil, errors.BadRequest("filter cannot be null")
+		}
+	}
+	var schema types.Type
+	if value, ok := q["schema"]; ok {
+		err = json.Unmarshal([]byte(value[0]), &schema)
+		if err != nil {
+			return nil, errors.BadRequest("invalid schema")
+		}
+	}
+	total, err := ws.ProfileCount(r.Context(), filter, schema)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]any{"total": total}, nil
+}
+
+// Profiles returns profiles, an estimate of their total number without applying
+// first and limit, and the continuation state.
 func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any, error) {
 
 	ws, err := workspace.admitWorkspaceRequest(r, x1)
@@ -826,6 +867,9 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 	// Read and parse the parameters from the query string.
 	q := r.URL.Query()
 	properties := splitQueryParameters(q["properties"])
+	if _, present := q["properties"]; present && properties == nil {
+		properties = []string{}
+	}
 	var filter *core.Filter
 	if f := q.Get("filter"); f != "" {
 		err := json.Unmarshal([]byte(f), &filter)
@@ -855,7 +899,13 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 		limit = 100
 	}
 
-	profiles, schema, total, err := ws.Profiles(r.Context(), properties, filter, order, orderDesc, first, limit)
+	var schema types.Type
+	err = json.Unmarshal([]byte(q.Get("schema")), &schema)
+	if err != nil {
+		return nil, errors.BadRequest("invalid schema")
+	}
+	profiles, total, hasNext, err := ws.Profiles(
+		r.Context(), schema, properties, filter, order, orderDesc, first, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -876,12 +926,12 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 		b.write(s)
 		b.writeByte('}')
 	}
-	b.writeString(`],"schema":`)
-	buf, _ := schema.MarshalJSON()
-	b.write(buf)
-	b.writeString(`,"total":`)
-	buf = b.availableBuffer()
+	b.writeString(`],"total":`)
+	buf := b.availableBuffer()
 	b.write(strconv.AppendInt(buf, int64(total), 10))
+	b.writeString(`,"hasNext":`)
+	buf = b.availableBuffer()
+	b.write(strconv.AppendBool(buf, hasNext))
 	b.writeByte('}')
 	b.flush()
 
