@@ -149,7 +149,7 @@ func (w *EventIdentityWriter) Write(ctx context.Context, identity Identity, ack 
 		return ErrPipelineNotExist
 	}
 	if !aligned {
-		return &schemas.Error{Msg: "pipeline output schema is no aligned with the profile schema"}
+		return &schemas.Error{Msg: "pipeline output schema is not aligned with the profile schema"}
 	}
 
 	if !key.isAnonymous {
