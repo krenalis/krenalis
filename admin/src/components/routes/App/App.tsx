@@ -11,7 +11,7 @@ import { useNavigate, useLocation, matchPath } from 'react-router-dom';
 import { registerIconLibrary as registerShoelaceIconLibrary } from '@shoelace-style/shoelace/dist/utilities/icon-library.js';
 import { registerIconLibrary } from '@awesome.me/webawesome/dist/components/icon/library.js';
 import type SlAlert from '@shoelace-style/shoelace/dist/components/alert/alert.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import '@shoelace-style/shoelace/dist/themes/light.css';
 import '@awesome.me/webawesome/dist/styles/layers.css';
 import '@awesome.me/webawesome/dist/styles/themes/default.css';

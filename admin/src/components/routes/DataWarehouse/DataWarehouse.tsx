@@ -10,7 +10,7 @@ import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import Section from '../../base/Section/Section';
 import DataWarehouseSettings from './DataWarehouseSettings';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import { WAREHOUSES_ASSETS_PATH } from '../../../constants/paths';
 
 const DataWarehouse = () => {

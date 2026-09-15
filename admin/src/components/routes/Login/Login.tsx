@@ -1,7 +1,7 @@
 import React, { FormEvent, useState, useContext, useEffect } from 'react';
 import './Login.css';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import AppContext from '../../../context/AppContext';
 import { Link } from '../../base/Link/Link';
 import { useSearchParams } from 'react-router-dom';

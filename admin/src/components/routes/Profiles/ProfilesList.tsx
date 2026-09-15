@@ -6,7 +6,7 @@ import Grid from '../../base/Grid/Grid';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';

@@ -313,6 +313,12 @@ sl-icon::part(svg) {
 	overflow: visible !important;
 }
 
+/* Web Awesome lightens the indicator and makes the track opaque; keep what Shoelace drew. */
+wa-spinner {
+	--indicator-color: var(--wa-color-brand-40);
+	--track-color: rgb(128 128 128 / 25%);
+}
+
 /* || Radix */
 
 .radix-themes:where([data-gray-color='slate']) {

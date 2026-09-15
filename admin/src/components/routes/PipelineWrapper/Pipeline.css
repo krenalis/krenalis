@@ -5,7 +5,7 @@
 	align-items: center;
 }
 
-.pipeline--loading sl-spinner {
+.pipeline--loading wa-spinner {
 	position: relative;
 	bottom: 50px;
 }
@@ -1745,7 +1745,7 @@ inherit the disabled style */
 	background-color: #fafbff;
 }
 
-.fullscreen-transformation__output-panel sl-spinner {
+.fullscreen-transformation__output-panel wa-spinner {
 	display: block;
 	margin: 15px auto;
 }
@@ -2080,7 +2080,7 @@ inherit the disabled style */
 	left: -52px;
 }
 
-.pipeline sl-drawer sl-spinner {
+.pipeline sl-drawer wa-spinner {
 	display: block;
 	margin: auto;
 	margin-top: 50px !important;

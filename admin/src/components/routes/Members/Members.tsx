@@ -4,7 +4,7 @@ import AppContext from '../../../context/AppContext';
 import ListTile from '../../base/ListTile/ListTile';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import { Member } from '../../../lib/api/types/responses';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
