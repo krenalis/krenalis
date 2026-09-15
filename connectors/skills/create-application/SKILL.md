@@ -518,6 +518,7 @@ Guiding rules:
   - `ReadOptional` describes the read path, not the fact that a property may be used for destination matching.
   - If the vendor metadata or docs indicate that a property is read-only or not writable, the destination schema must exclude it even if the source schema includes it.
 - Avoid invalid property names (`types.IsValidPropertyName(...)`).
+- String constraints are not freely composable; follow the [supported combinations](references/schemas-and-types.md#string-constraint-combinations) when translating API specifications or dynamic field metadata.
 
 Full schema and value-mapping guidance (import/export canonical types, `types.Marshal`, missing vs null):
 
