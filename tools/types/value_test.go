@@ -243,6 +243,16 @@ func Test_Decode(t *testing.T) {
 			err:  newErrInvalidValue("cannot be an array", ""),
 		},
 		{
+			typ:  Object([]Property{{Name: "Array", Type: Array(Int(32))}}),
+			data: `{"Array":[1,"two"]}`,
+			err:  newErrInvalidValue(`does not have a valid value: "two"`, "Array[1]"),
+		},
+		{
+			typ:  Object([]Property{{Name: "Array", Type: Array(Int(32)).WithMaxElements(3)}}),
+			data: `{"Array":[1,2,3,4]}`,
+			err:  newErrInvalidValue("contains more than 3 elements", "Array"),
+		},
+		{
 			data: `{"Object":{"d":5}}`,
 			err:  newErrPropertyNotExist("Object.d"),
 		},
