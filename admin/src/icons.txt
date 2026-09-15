@@ -10,6 +10,7 @@ arrow-up-circle.svg
 arrow-up-right-square.svg
 arrows-collapse.svg
 arrows-expand.svg
+backspace.svg
 bar-chart.svg
 bookmark-check.svg
 box-arrow-right.svg
@@ -22,7 +23,9 @@ caret-right-fill.svg
 chat-dots.svg
 check-lg.svg
 check2-circle.svg
+chevron-contract.svg
 chevron-down.svg
+chevron-expand.svg
 chevron-left.svg
 chevron-right.svg
 circle-fill.svg
@@ -39,6 +42,7 @@ exclamation-octagon.svg
 exclamation-triangle.svg
 file-earmark-code.svg
 filetype-json.svg
+filter.svg
 fonts.svg
 gear.svg
 grip-vertical.svg
@@ -61,16 +65,20 @@ play-circle.svg
 play.svg
 plug.svg
 plus-circle.svg
+plus-lg.svg
 plus.svg
 question-circle.svg
 question-lg.svg
 search.svg
 send.svg
+shield-check.svg
 shuffle.svg
 sliders2.svg
+table.svg
 terminal.svg
 three-dots-vertical.svg
 three-dots.svg
+trash.svg
 trash3.svg
 type-bold.svg
 x-circle.svg

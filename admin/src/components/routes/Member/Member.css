@@ -17,7 +17,7 @@
 	animation: fade-in-entrance 0.5s;
 }
 
-.member__content sl-spinner {
+.member__content wa-spinner {
 	display: block;
 	margin: 20px auto;
 }

@@ -9,7 +9,7 @@ import ConnectionContext from '../../../context/ConnectionContext';
 import { Outlet } from 'react-router-dom';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import { Pipeline, PipelineType } from '../../../lib/api/types/pipeline';
 import { LinkedConnections } from '../ConnectionSettings/LinkedConnections';
 import Section from '../../base/Section/Section';

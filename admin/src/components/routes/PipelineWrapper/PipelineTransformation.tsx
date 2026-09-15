@@ -52,7 +52,7 @@ import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.
 import SlSplitPanel from '@shoelace-style/shoelace/dist/react/split-panel/index.js';
 import SlAlert from '@shoelace-style/shoelace/dist/react/alert/index.js';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
 import SlRelativeTime from '@shoelace-style/shoelace/dist/react/relative-time/index.js';

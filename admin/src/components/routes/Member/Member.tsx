@@ -2,7 +2,7 @@ import React, { useContext, useState, useEffect, useRef, useMemo, useLayoutEffec
 import './Member.css';
 import appContext from '../../../context/AppContext';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
