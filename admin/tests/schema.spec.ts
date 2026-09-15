@@ -159,7 +159,7 @@ test(`Show, paginate, and refresh consent purposes on profile schema properties`
 	await expect(booleanPopup).toBeVisible();
 	await expect(booleanPopup.locator('.schema-property-consent__popup-title')).toHaveText('Consent purpose');
 	await expect(booleanPopup.locator('.schema-property-consent__purpose-name')).toHaveText(['Marketing']);
-	await expect(booleanPopup).toContainText('context.consents.marketing');
+	await expect(booleanPopup).toContainText('Event path:Unknown');
 	await expect(booleanPopup).toContainText('consent_boolean');
 	await booleanTrigger.click();
 	await expect(booleanPopup).toBeVisible();
@@ -191,7 +191,7 @@ test(`Show, paginate, and refresh consent purposes on profile schema properties`
 	await expect(nextPurpose).toBeEnabled();
 	await nextPurpose.click();
 	await expect(jsonPopup.locator('.schema-property-consent__purpose-name')).toHaveText(['Personalization']);
-	await expect(jsonPopup).toContainText('context.consents.personalization');
+	await expect(jsonPopup).toContainText('Event path:Unknown');
 	await expect(jsonPopup).toContainText('consent_json.personalization');
 	await expect(jsonPopup.locator('.schema-property-consent__pagination-status')).toHaveText('2 of 2');
 	await expect(previousPurpose).toBeEnabled();

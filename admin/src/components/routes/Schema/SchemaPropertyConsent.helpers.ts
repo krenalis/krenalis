@@ -2,12 +2,6 @@ import { ConsentPurpose } from '../../../lib/api/types/workspace';
 import { ObjectType } from '../../../lib/api/types/types';
 import { flattenSchema, splitPropertyAndPath } from '../../../lib/core/pipeline';
 
-const getConsentPurposeEventPath = (purpose: ConsentPurpose): string =>
-	purpose.eventPath || `context.consents.${purpose.code}`;
-
-const getConsentPurposeProfilePath = (purpose: ConsentPurpose): string =>
-	purpose.profilePath || `consents.${purpose.code}`;
-
 const getConsentPurposesByPropertyPath = (
 	schema: ObjectType,
 	purposes: ConsentPurpose[],
@@ -18,7 +12,7 @@ const getConsentPurposesByPropertyPath = (
 		return result;
 	}
 	for (const purpose of purposes) {
-		const [propertyPath, insidePath] = splitPropertyAndPath(getConsentPurposeProfilePath(purpose), flatSchema);
+		const [propertyPath, insidePath] = splitPropertyAndPath(purpose.profilePath, flatSchema);
 		if (propertyPath === '') {
 			continue;
 		}
@@ -35,4 +29,4 @@ const getConsentPurposesByPropertyPath = (
 	return result;
 };
 
-export { getConsentPurposeEventPath, getConsentPurposeProfilePath, getConsentPurposesByPropertyPath };
+export { getConsentPurposesByPropertyPath };

@@ -6,7 +6,6 @@ import SlPopup from '@shoelace-style/shoelace/dist/react/popup/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import AppContext from '../../../context/AppContext';
 import { ConsentPurpose } from '../../../lib/api/types/workspace';
-import { getConsentPurposeEventPath, getConsentPurposeProfilePath } from './SchemaPropertyConsent.helpers';
 
 const HOVER_DELAY = 300;
 
@@ -142,11 +141,11 @@ const SchemaPropertyConsent = ({ isJSON, purposes }: SchemaPropertyConsentProps)
 							</div>
 							<div className='schema-property-consent__purpose-field'>
 								<span>Event path:</span>
-								<code>{getConsentPurposeEventPath(purpose)}</code>
+								{purpose.eventPath === '' ? 'Unknown' : <code>{purpose.eventPath}</code>}
 							</div>
 							<div className='schema-property-consent__purpose-field'>
 								<span>Profile path:</span>
-								<code>{getConsentPurposeProfilePath(purpose)}</code>
+								{purpose.profilePath === '' ? 'Unknown' : <code>{purpose.profilePath}</code>}
 							</div>
 						</div>
 					))}
