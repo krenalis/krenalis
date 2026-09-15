@@ -212,7 +212,7 @@ func (d decoder) unmarshal(t Type) (_ any, err error) {
 			return nil, newErrInvalidValue(fmt.Sprintf("contains less than %d elements", minElements), "")
 		}
 		if t.Unique() {
-			duplicate, err := firstDuplicate(elements, t.Elem(), true)
+			duplicate, err := FirstDuplicate(elements, t.Elem())
 			if err != nil {
 				return nil, newErrInvalidValue(err.Error(), "")
 			}
