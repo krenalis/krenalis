@@ -378,9 +378,6 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 			}
 			arr = append(arr, elem)
 		}
-		if _, err := d.readToken(); err != nil {
-			return nil, err
-		}
 		if len(arr) < min {
 			return nil, newRecordValidationError("", fmt.Sprintf("contains less than %d %s", min, d.opts.terms.Elements))
 		}
@@ -390,6 +387,9 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 					return nil, newRecordValidationError("", "contains a duplicated value")
 				}
 			}
+		}
+		if _, err := d.readToken(); err != nil {
+			return nil, err
 		}
 		return arr, nil
 	case '{':
