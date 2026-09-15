@@ -12,9 +12,11 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/metrics"
+	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/streams"
 	"github.com/krenalis/krenalis/core/internal/transformers"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/prometheus"
 )
 
@@ -165,7 +167,22 @@ func (iw *identityWriter) transformAndWrite(events []streams.Event) {
 			Attributes:  record.Attributes,
 			UpdatedAt:   event.Attributes["timestamp"].(time.Time),
 		}, event.Destinations[0].Ack)
-		_ = err // TODO(marco): handle the error
+		if err != nil {
+			var errMsg string
+			if errors.Is(err, datastore.ErrPipelineNotExist) {
+				errMsg = "pipeline has been deleted"
+			} else if _, ok := errors.AsType[*schemas.Error](err); ok {
+				errMsg = err.Error()
+			} else if ctxErr := ctx.Err(); ctxErr != nil {
+				errMsg = ctxErr.Error()
+			} else {
+				errMsg = "an internal error occurred"
+				slog.Error("cannot write event identity", "pipeline", iw.pipeline, "error", err)
+			}
+			iw.metrics.FinalizeFailed(iw.pipeline, 1, errMsg)
+			event.Destinations[0].Ack.Acknowledge()
+			continue
+		}
 	}
 
 }

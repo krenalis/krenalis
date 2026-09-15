@@ -20,6 +20,7 @@ import (
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/tools/validation"
 
 	"github.com/relvacode/iso8601"
 )
@@ -97,6 +98,25 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		}
 		if !utf8.ValidString(v) {
 			return nil, inputValidationErrorf(name, "does not contain valid UTF-8 characters")
+		}
+		switch typ.Semantic() {
+		case types.CountrySemantic:
+			switch typ.CountryFormat() {
+			case types.ISO3166Alpha2:
+				if !validation.IsValidCountryCodeAlpha2(v) {
+					return v, inputValidationErrorf(name, "is not a 2-letters country code")
+				}
+			case types.ISO3166Alpha3:
+				if !validation.IsValidCountryCodeAlpha3(v) {
+					return v, inputValidationErrorf(name, "is not a 3-letters country code")
+				}
+			}
+		case types.PhoneSemantic:
+			var ok bool
+			v, ok = types.NormalizePhone(v)
+			if !ok {
+				return v, inputValidationErrorf(name, "is not a valid phone number")
+			}
 		}
 		if values := typ.Values(); values != nil {
 			if !slices.Contains(values, v) {
@@ -729,10 +749,12 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			}
 		}
 		if typ.Unique() {
-			for i, e := range a {
-				if slices.Contains(a[i:], e) {
-					return nil, inputValidationErrorf(name, "contains the duplicated value %v", e)
-				}
+			duplicate, err := types.FirstDuplicate(a, t)
+			if err != nil {
+				return nil, err
+			}
+			if duplicate != -1 {
+				return nil, inputValidationErrorf(name, "contains a duplicated value")
 			}
 		}
 		return a, nil

@@ -217,6 +217,15 @@ func TestPropertySerializationDeserialization(t *testing.T) {
 			Property{Name: "first_name", Type: String(), DisplayName: "First name", Description: "Given name"},
 			`{"name":"first_name","type":{"kind":"string"},"displayName":"First name","description":"Given name"}`,
 		},
+		{
+			`{"name":"amount","type":{"kind":"decimal","currency":"EUR","semantic":"money",` +
+				`"precision":10,"scale":2},"description":"Amount"}`,
+			Property{
+				Name: "amount", Type: Decimal(10, 2).AsMoney().WithCurrency("EUR"), Description: "Amount",
+			},
+			`{"name":"amount","type":{"kind":"decimal","semantic":"money","currency":"EUR",` +
+				`"precision":10,"scale":2},"description":"Amount"}`,
+		},
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {

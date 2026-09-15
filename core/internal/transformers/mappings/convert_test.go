@@ -304,6 +304,109 @@ func TestConvert(t *testing.T) {
 
 }
 
+// TestConvertArrayUniqueness checks that convert enforces the destination
+// array's uniqueness constraint after converting its elements.
+func TestConvertArrayUniqueness(t *testing.T) {
+
+	tests := []struct {
+		name        string
+		value       any
+		source      types.Type
+		destination types.Type
+		expected    any
+		wantError   bool
+	}{
+		{
+			name:        "distinct JSON values",
+			value:       json.Value(`[1,2]`),
+			source:      types.JSON(),
+			destination: types.Array(types.Int(32)).WithUnique(),
+			expected:    []any{1, 2},
+		},
+		{
+			name:        "duplicate JSON values",
+			value:       json.Value(`[1,1]`),
+			source:      types.JSON(),
+			destination: types.Array(types.Int(32)).WithUnique(),
+			wantError:   true,
+		},
+		{
+			name:        "distinct array values",
+			value:       []any{1, 2},
+			source:      types.Array(types.Int(32)),
+			destination: types.Array(types.Int(32)).WithUnique(),
+			expected:    []any{1, 2},
+		},
+		{
+			name:        "duplicate array values",
+			value:       []any{1, 1},
+			source:      types.Array(types.Int(32)),
+			destination: types.Array(types.Int(32)).WithUnique(),
+			wantError:   true,
+		},
+		{
+			name:        "duplicates allowed after conversion",
+			value:       []any{1.2, 1.4},
+			source:      types.Array(types.Float(64)).WithUnique(),
+			destination: types.Array(types.Int(32)),
+			expected:    []any{1, 1},
+		},
+		{
+			name:        "duplicates rejected after conversion",
+			value:       []any{1.2, 1.4},
+			source:      types.Array(types.Float(64)).WithUnique(),
+			destination: types.Array(types.Int(32)).WithUnique(),
+			wantError:   true,
+		},
+		{
+			name:        "phone duplicates allowed after normalization",
+			value:       []any{"+39 02-36618 300", "+390236618300"},
+			source:      types.Array(types.String()).WithUnique(),
+			destination: types.Array(types.String().AsPhone()),
+			expected:    []any{"+390236618300", "+390236618300"},
+		},
+		{
+			name:        "phone duplicates rejected after normalization",
+			value:       []any{"+39 02-36618 300", "+390236618300"},
+			source:      types.Array(types.String()).WithUnique(),
+			destination: types.Array(types.String().AsPhone()).WithUnique(),
+			wantError:   true,
+		},
+		{
+			name:        "equivalent decimals",
+			value:       []any{decimal.New(15, 1), decimal.MustParse("1.50")},
+			source:      types.Array(types.Decimal(6, 2)),
+			destination: types.Array(types.Decimal(6, 2)).WithUnique(),
+			wantError:   true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := convert(test.value, test.source, test.destination, false, false, nil, None)
+			if err != nil {
+				if !test.wantError {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				if err != errInvalidConversion {
+					t.Fatalf("expected error %v, got %v", errInvalidConversion, err)
+				}
+				if !cmp.Equal(got, test.value) {
+					t.Fatalf("expected original value %#v with error, got %#v", test.value, got)
+				}
+				return
+			}
+			if test.wantError {
+				t.Fatalf("expected error %v, got value %#v", errInvalidConversion, got)
+			}
+			if !cmp.Equal(got, test.expected) {
+				t.Fatalf("expected value %#v, got %#v", test.expected, got)
+			}
+		})
+	}
+
+}
+
 // TestConvertStringToDate checks parsing of various date formats.
 func TestConvertStringToDate(t *testing.T) {
 	tests := []struct {

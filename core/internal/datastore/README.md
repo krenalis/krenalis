@@ -54,3 +54,28 @@ This table is based on the following principles:
 [^arraymapcomposite]: Supporting `array(T)` or `map(T)`, where `T` is of type `array`, `object` or `map`, would open up major implementation issues, especially in the Admin console, which would need to expose a way to handle the creation and mapping to these types. However, it should be noted that it is not yet clear whether such types could actually be supported and used in data warehouses, and so it might not be worth the effort anyway.
 
 [^issue-956]: Currently, the minimum and maximum value for numeric types is allowed for profile schema properties but cannot be specified when declaring types using the Admin console. See the issue [#956](https://github.com/krenalis/krenalis/issues/956) for more details.
+
+### Semantic types
+
+A semantic is part of a type but does not affect its data warehouse representation.
+
+| Semantic                | Type restrictions                                                                    |
+|-------------------------|--------------------------------------------------------------------------------------|
+| `AsEmail()`             | String                                                                               |
+| `AsPhone()`             | String without `maxBytes`, `maxLength`, `pattern` or `values`                        |
+| `AsURL()`               | String                                                                               |
+| `AsCountry(format)`     | String without `maxBytes`, `maxLength`, `pattern` or `values`; `format` is required  |
+| `AsMoney()`             | Decimal; currency is optional                                                        |
+| `AsPercentage()`        | Decimal                                                                              |
+| `AsMeasurement(unit)`   | Integer, decimal or real float; `unit` is required                                   |
+| `AsDuration(unit)`      | Integer, decimal or real float; `unit` is required                                   |
+
+For arrays and maps, the semantic belongs to the element or value type, for example `Array(String().AsPhone())`.
+
+### Semantic restrictions in profile schemas
+
+Once a property is materialized, its type, including its semantic and semantic options, cannot be changed. Profile schemas also require:
+
+* `AsCountry(format)` to use `ISO3166Alpha2`;
+* `AsMoney()`, `AsPercentage()` and `AsMeasurement(unit)` to use a decimal with precision 18 and scale 4;
+* `AsDuration(unit)` to use a signed 64-bit integer.

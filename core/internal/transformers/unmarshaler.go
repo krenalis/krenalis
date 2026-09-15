@@ -6,7 +6,6 @@ package transformers
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -19,8 +18,10 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/tools/validation"
 )
 
 var (
@@ -364,12 +365,13 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 		}
 		min := t.MinElements()
 		max := t.MaxElements()
+		et := t.Elem()
 		arr := []any{}
 		for i := 0; d.peekKind() != ']'; i++ {
 			if i == max {
 				return nil, newRecordValidationError("", fmt.Sprintf("contains more than %d %s", max, d.opts.terms.Elements))
 			}
-			elem, err := d.unmarshal(t.Elem(), preserveJSON, purpose)
+			elem, err := d.unmarshal(et, preserveJSON, purpose)
 			if err != nil {
 				if e, ok := err.(RecordValidationError); ok {
 					err = e.addIndexToPath(i)
@@ -378,18 +380,21 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 			}
 			arr = append(arr, elem)
 		}
-		if _, err := d.readToken(); err != nil {
-			return nil, err
-		}
 		if len(arr) < min {
 			return nil, newRecordValidationError("", fmt.Sprintf("contains less than %d %s", min, d.opts.terms.Elements))
 		}
 		if t.Unique() {
-			for i, elem := range arr {
-				if slices.Contains(arr[i+1:], elem) {
-					return nil, newRecordValidationError("", "contains a duplicated value")
-				}
+			duplicate, err := types.FirstDuplicate(arr, et)
+			if err != nil {
+				return nil, err
 			}
+			if duplicate != -1 {
+				return nil, newRecordValidationError("", "contains a duplicated value")
+			}
+		}
+		_, err = d.readToken()
+		if err != nil {
+			return nil, err
 		}
 		return arr, nil
 	case '{':
@@ -536,6 +541,26 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 	case types.StringKind:
 		if v.Kind() == '"' {
 			s := d.unquoteString(v)
+			switch t.Semantic() {
+			case types.CountrySemantic:
+				switch t.CountryFormat() {
+				case types.ISO3166Alpha2:
+					if !validation.IsValidCountryCodeAlpha2(s) {
+						return nil, newRecordValidationError("", "is not a 2-letters country code")
+					}
+				case types.ISO3166Alpha3:
+					if !validation.IsValidCountryCodeAlpha3(s) {
+						return nil, newRecordValidationError("", "is not a 3-letters country code")
+					}
+				}
+				return s, nil
+			case types.PhoneSemantic:
+				normalized, ok := types.NormalizePhone(s)
+				if !ok {
+					return nil, newRecordValidationError("", "is not a valid phone number")
+				}
+				return normalized, nil
+			}
 			if values := t.Values(); values != nil {
 				if !slices.Contains(values, s) {
 					return nil, newRecordValidationError("", "is not one of the allowed values")

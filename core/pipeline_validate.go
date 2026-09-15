@@ -344,6 +344,9 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 				return errors.BadRequest("input matching property cannot be converted to the output matching property")
 			}
 		}
+		if !types.EqualSemantics(in.Type, out.Type) {
+			return errors.BadRequest("input and output matching properties do not have the same semantic and semantic options")
+		}
 		// Check that the output property has not been transformed.
 		// This includes checks on the property itself and all its parent paths.
 		if tr := pipeline.Transformation; tr != nil {
