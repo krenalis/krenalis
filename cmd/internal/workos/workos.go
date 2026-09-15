@@ -13,7 +13,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-		"fmt"
+	"fmt"
 	"io"
 	"log/slog"
 	"math/big"
@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/core"
-"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/errors"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -323,21 +323,6 @@ func (wo *WorkOS) createOrganization(ctx context.Context, name, externalID strin
 	return res.ID, nil
 }
 
-// sendInvitation sends a WorkOS invitation email that invites the given email
-// address as an admin of the WorkOS organization with the given ID.
-func (wo *WorkOS) sendInvitation(ctx context.Context, email, organizationID string) error {
-	body := map[string]string{
-		"email":           email,
-		"organization_id": organizationID,
-		"role_slug":       "admin",
-	}
-	err := wo.call(ctx, http.MethodPost, "/user_management/invitations", http.StatusCreated, body, nil)
-	if err != nil {
-		return fmt.Errorf("failed to send the WorkOS invitation: %s", err)
-	}
-	return nil
-}
-
 // organizationExternalID fetches and returns the external ID of the WorkOS
 // organization with the given ID. The external ID of a WorkOS organization is
 // the identifier of its linked organization in Krenalis.
@@ -362,6 +347,21 @@ func (wo *WorkOS) organizationExternalID(ctx context.Context, orgID string) (str
 		return "", errOrganizationNotLinked
 	}
 	return orgRes.ExternalID, nil
+}
+
+// sendInvitation sends a WorkOS invitation email that invites the given email
+// address as an admin of the WorkOS organization with the given ID.
+func (wo *WorkOS) sendInvitation(ctx context.Context, email, organizationID string) error {
+	body := map[string]string{
+		"email":           email,
+		"organization_id": organizationID,
+		"role_slug":       "admin",
+	}
+	err := wo.call(ctx, http.MethodPost, "/user_management/invitations", http.StatusCreated, body, nil)
+	if err != nil {
+		return fmt.Errorf("failed to send the WorkOS invitation: %s", err)
+	}
+	return nil
 }
 
 // user fetches and returns the WorkOS user with the given ID.
