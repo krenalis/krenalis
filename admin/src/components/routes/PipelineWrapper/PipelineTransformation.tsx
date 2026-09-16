@@ -5,6 +5,7 @@ import {
 	getSampleIdentifiers,
 	updateMappingPropertyError,
 	pipelineObjectLabels,
+	propertyAnnotation,
 } from './Pipeline.helpers';
 import {
 	getSchemaComboboxItems,
@@ -93,6 +94,16 @@ const updatedAtFormats = {
 	iso8601: 'ISO8601',
 	excel: 'Excel',
 };
+
+// PropertyAnnotation shows the display name and the description of a property,
+// giving less emphasis to the description.
+const PropertyAnnotation = ({ property }: { property: Property }) => (
+	<>
+		{property.displayName && <span className='property-annotation__display-name'>{property.displayName}</span>}
+		{property.displayName && property.description && ' – '}
+		{property.description}
+	</>
+);
 
 const PipelineTransformation = forwardRef<any>((_, ref) => {
 	const [transformationLanguages, setTransformationLanguages] = useState<string[]>();
@@ -925,6 +936,7 @@ const TransformationBox = ({
 			}
 
 			const typeName = toKrenalisStringType(property.full.type, property.full.nullable);
+			const annotation = propertyAnnotation(property.full);
 
 			if (property.type === 'map') {
 				mappings.push(
@@ -1033,9 +1045,9 @@ const TransformationBox = ({
 									</span>
 								)}
 							</div>
-							{property.full.description && (
+							{annotation && (
 								<div className='pipeline__transformation-output-property-description'>
-									{property.full.description}
+									<PropertyAnnotation property={property.full} />
 								</div>
 							)}
 						</div>
@@ -2867,6 +2879,7 @@ const MapMapping = ({
 		(property.value !== '' && !hasFilledPairs && !hasMultiplePairs && !isResetting);
 
 	const typeName = toKrenalisStringType(property.full.type, property.full.nullable);
+	const annotation = propertyAnnotation(property.full);
 
 	return (
 		<>
@@ -2928,9 +2941,9 @@ const MapMapping = ({
 						</span>
 					)}
 				</div>
-				{property.full.description && (
+				{annotation && (
 					<div className='pipeline__transformation-output-property-description'>
-						{property.full.description}
+						<PropertyAnnotation property={property.full} />
 					</div>
 				)}
 			</div>
@@ -3093,9 +3106,10 @@ const TransformationNestedProperties = ({
 	if (searchTerm === '') {
 		isSearched = true;
 	} else {
+		const annotation = propertyAnnotation(property);
 		isSearched =
 			property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-			(property.description != '' && property.description.toLowerCase().includes(searchTerm.toLowerCase()));
+			(annotation != '' && annotation.toLowerCase().includes(searchTerm.toLowerCase()));
 	}
 
 	let hasSearchedChildren = false;
@@ -3109,10 +3123,10 @@ const TransformationNestedProperties = ({
 					continue;
 				}
 				const name = flatSchema[key].full.name;
-				const description = flatSchema[key].full.description;
+				const annotation = propertyAnnotation(flatSchema[key].full);
 				const isSearched =
 					name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-					(description != '' && description.toLowerCase().includes(searchTerm.toLowerCase()));
+					(annotation != '' && annotation.toLowerCase().includes(searchTerm.toLowerCase()));
 				if (isSearched) {
 					hasSearchedChildren = true;
 					break;
@@ -3125,10 +3139,10 @@ const TransformationNestedProperties = ({
 			const s = flattenSchema(property.type as ArrayType | MapType);
 			for (const key in s) {
 				const name = s[key].full.name;
-				const description = s[key].full.description;
+				const annotation = propertyAnnotation(s[key].full);
 				const isSearched =
 					name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-					(description != '' && description.toLowerCase().includes(searchTerm.toLowerCase()));
+					(annotation != '' && annotation.toLowerCase().includes(searchTerm.toLowerCase()));
 				if (isSearched) {
 					hasSearchedChildren = true;
 					break;
@@ -3323,11 +3337,13 @@ const TransformationProperty = ({
 		onChangeSelectedPath(path);
 	};
 
+	const annotation = propertyAnnotation(property);
+
 	let isSearched = true;
 	if (searchTerm != null && searchTerm !== '') {
 		isSearched =
 			property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-			(property.description != '' && property.description.toLowerCase().includes(searchTerm.toLowerCase()));
+			(annotation != '' && annotation.toLowerCase().includes(searchTerm.toLowerCase()));
 	}
 
 	if (!isSearched) {
@@ -3361,10 +3377,10 @@ const TransformationProperty = ({
 	}
 
 	let description = null;
-	if (property.description) {
+	if (annotation) {
 		description = (
 			<div className='fullscreen-transformation__property-description' ref={descriptionRef}>
-				{property.description}
+				<PropertyAnnotation property={property} />
 			</div>
 		);
 	}
@@ -3462,7 +3478,7 @@ const TransformationProperty = ({
 							</div>
 							{description != null &&
 								(showDescriptionTooltip ? (
-									<SlTooltip content={property.description} hoist={true}>
+									<SlTooltip content={annotation} hoist={true}>
 										{description}
 									</SlTooltip>
 								) : (

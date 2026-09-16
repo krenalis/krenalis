@@ -8,7 +8,7 @@
 				"maxLength": 36,
 				"kind": "string"
 			},
-			"displayName": "Customer ID"
+			"description": "Customer ID"
 		},
 		{
 			"name": "first_name",
@@ -17,7 +17,7 @@
 				"maxLength": 100,
 				"kind": "string"
 			},
-			"displayName": "First name"
+			"description": "First name"
 		},
 		{
 			"name": "last_name",
@@ -26,7 +26,7 @@
 				"maxLength": 100,
 				"kind": "string"
 			},
-			"displayName": "Last name"
+			"description": "Last name"
 		},
 		{
 			"name": "email",
@@ -35,7 +35,7 @@
 				"maxLength": 254,
 				"kind": "string"
 			},
-			"displayName": "Email"
+			"description": "Email"
 		},
 		{
 			"name": "phone_number",
@@ -44,7 +44,7 @@
 				"maxLength": 20,
 				"kind": "string"
 			},
-			"displayName": "Phone number"
+			"description": "Phone number"
 		},
 		{
 			"name": "birth_date",
@@ -52,7 +52,7 @@
 			"type": {
 				"kind": "date"
 			},
-			"displayName": "Birth date"
+			"description": "Birth date"
 		},
 		{
 			"name": "gender",
@@ -60,7 +60,7 @@
 			"type": {
 				"kind": "string"
 			},
-			"displayName": "Gender"
+			"description": "Gender"
 		},
 		{
 			"name": "address",
@@ -75,7 +75,7 @@
 							"maxLength": 255,
 							"kind": "string"
 						},
-						"displayName": "Street"
+						"description": "Street"
 					},
 					{
 						"name": "city",
@@ -84,7 +84,7 @@
 							"maxLength": 100,
 							"kind": "string"
 						},
-						"displayName": "City"
+						"description": "City"
 					},
 					{
 						"name": "postal_code",
@@ -93,7 +93,7 @@
 							"maxLength": 20,
 							"kind": "string"
 						},
-						"displayName": "Postal code"
+						"description": "Postal code"
 					},
 					{
 						"name": "country",
@@ -102,11 +102,11 @@
 							"maxLength": 2,
 							"kind": "string"
 						},
-						"displayName": "Country"
+						"description": "Country"
 					}
 				]
 			},
-			"displayName": "Address"
+			"description": "Address"
 		},
 		{
 			"name": "preferences",
@@ -120,7 +120,7 @@
 						"type": {
 							"kind": "boolean"
 						},
-						"displayName": "Newsletter subscription"
+						"description": "Newsletter subscription"
 					},
 					{
 						"name": "categories",
@@ -131,7 +131,7 @@
 								"kind": "string"
 							}
 						},
-						"displayName": "Preferences categories"
+						"description": "Preferences categories"
 					},
 					{
 						"name": "language",
@@ -140,11 +140,11 @@
 							"kind": "string",
 							"maxLength": 2
 						},
-						"displayName": "Language"
+						"description": "Language"
 					}
 				]
 			},
-			"displayName": "Preferences"
+			"description": "Preferences"
 		}
 	]
 }
