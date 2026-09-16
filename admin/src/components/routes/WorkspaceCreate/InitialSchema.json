@@ -8,7 +8,8 @@
 				"maxLength": 36,
 				"kind": "string"
 			},
-			"description": "Customer ID"
+			"displayName": "Customer ID",
+			"description": "Identifier of the customer in the source system"
 		},
 		{
 			"name": "first_name",
@@ -17,7 +18,8 @@
 				"maxLength": 100,
 				"kind": "string"
 			},
-			"description": "First name"
+			"displayName": "First name",
+			"description": "Given name of the customer"
 		},
 		{
 			"name": "last_name",
@@ -26,7 +28,8 @@
 				"maxLength": 100,
 				"kind": "string"
 			},
-			"description": "Last name"
+			"displayName": "Last name",
+			"description": "Family name of the customer"
 		},
 		{
 			"name": "email",
@@ -35,7 +38,8 @@
 				"maxLength": 254,
 				"kind": "string"
 			},
-			"description": "Email"
+			"displayName": "Email",
+			"description": "Email address of the customer"
 		},
 		{
 			"name": "phone_number",
@@ -44,7 +48,8 @@
 				"maxLength": 20,
 				"kind": "string"
 			},
-			"description": "Phone number"
+			"displayName": "Phone number",
+			"description": "Phone number of the customer"
 		},
 		{
 			"name": "birth_date",
@@ -52,7 +57,8 @@
 			"type": {
 				"kind": "date"
 			},
-			"description": "Birth date"
+			"displayName": "Birth date",
+			"description": "Date of birth of the customer"
 		},
 		{
 			"name": "gender",
@@ -60,7 +66,8 @@
 			"type": {
 				"kind": "string"
 			},
-			"description": "Gender"
+			"displayName": "Gender",
+			"description": "Gender of the customer"
 		},
 		{
 			"name": "address",
@@ -75,7 +82,8 @@
 							"maxLength": 255,
 							"kind": "string"
 						},
-						"description": "Street"
+						"displayName": "Street",
+						"description": "Street name and number"
 					},
 					{
 						"name": "city",
@@ -84,7 +92,8 @@
 							"maxLength": 100,
 							"kind": "string"
 						},
-						"description": "City"
+						"displayName": "City",
+						"description": "City where the customer lives"
 					},
 					{
 						"name": "postal_code",
@@ -93,7 +102,8 @@
 							"maxLength": 20,
 							"kind": "string"
 						},
-						"description": "Postal code"
+						"displayName": "Postal code",
+						"description": "Postal code of the city"
 					},
 					{
 						"name": "country",
@@ -102,11 +112,13 @@
 							"maxLength": 2,
 							"kind": "string"
 						},
-						"description": "Country"
+						"displayName": "Country",
+						"description": "ISO 3166-1 alpha-2 code of the country"
 					}
 				]
 			},
-			"description": "Address"
+			"displayName": "Address",
+			"description": "Postal address of the customer"
 		},
 		{
 			"name": "preferences",
@@ -120,7 +132,8 @@
 						"type": {
 							"kind": "boolean"
 						},
-						"description": "Newsletter subscription"
+						"displayName": "Newsletter subscription",
+						"description": "Whether the customer is subscribed to the newsletter"
 					},
 					{
 						"name": "categories",
@@ -131,7 +144,8 @@
 								"kind": "string"
 							}
 						},
-						"description": "Preferences categories"
+						"displayName": "Preferences categories",
+						"description": "Categories the customer is interested in"
 					},
 					{
 						"name": "language",
@@ -140,11 +154,13 @@
 							"kind": "string",
 							"maxLength": 2
 						},
-						"description": "Language"
+						"displayName": "Language",
+						"description": "ISO 639-1 code of the language preferred by the customer"
 					}
 				]
 			},
-			"description": "Preferences"
+			"displayName": "Preferences",
+			"description": "Preferences expressed by the customer"
 		}
 	]
 }

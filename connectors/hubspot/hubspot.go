@@ -148,7 +148,7 @@ func (hs *HubSpot) saveSettings(ctx context.Context, settings json.Value) error 
 var propertyGroups = []struct {
 	Name        string
 	HSName      string
-	Description string
+	DisplayName string
 }{
 	{"contact", "contactinformation", "Contact Information"},
 	{"emails", "emailinformation", "Email Information"},
@@ -206,7 +206,8 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target connectors.Targets, 
 			Name:        r.Name,
 			Type:        typ,
 			Nullable:    true,
-			Description: r.Label,
+			DisplayName: r.Label,
+			Description: r.Description,
 		}
 		if typ.Kind() == types.StringKind {
 			if len(r.Options) == 0 {
@@ -260,7 +261,7 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target connectors.Targets, 
 		properties = append(properties, types.Property{
 			Name:        group.Name,
 			Type:        types.Object(pp),
-			Description: group.Description,
+			DisplayName: group.DisplayName,
 		})
 		delete(groups, group.HSName)
 	}
