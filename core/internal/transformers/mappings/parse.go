@@ -454,8 +454,8 @@ func parsePredeclaredIdentifier(src string) (any, types.Type, string) {
 	return nil, types.Type{}, src
 }
 
-// parseString parses a string literal and returns the parsed string and the
-// remaining source. It expects src to start with ' or ".
+// parseString parses a string and returns the parsed string and the remaining
+// unparsed source. It expects that src starts with ' or ".
 func parseString(src string) (string, string, error) {
 	quote := src[0]
 	// First the common case: string without escape sequences.
@@ -490,7 +490,7 @@ LOOP:
 					n = 8
 				}
 				if n >= len(src) {
-					return "", "", errNoTerminatedString
+					return "", "", errors.New("hexadecimal escape is incomplete")
 				}
 				var r uint32
 				for i := 0; i < n; i++ {
@@ -510,7 +510,7 @@ LOOP:
 				if r == 0x00 {
 					return "", "", errZeroByteInString
 				}
-				if r > utf8.MaxRune || !utf8.ValidRune(rune(r)) {
+				if !utf8.ValidRune(rune(r)) {
 					return "", "", fmt.Errorf("U+%X is not valid Unicode code point", r)
 				}
 				b.WriteRune(rune(r))
@@ -534,8 +534,10 @@ LOOP:
 				}
 				b.WriteByte(c)
 				src = src[1:]
+			case '\x00':
+				return "", "", errZeroByteInString
 			default:
-				// Unknown escapes discard the backslash; the loop reads the character.
+				return "", "", fmt.Errorf("unknown escape character %q", c)
 			}
 		case '\x00':
 			return "", "", errZeroByteInString
