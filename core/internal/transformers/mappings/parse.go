@@ -10,6 +10,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/types"
@@ -453,8 +454,8 @@ func parsePredeclaredIdentifier(src string) (any, types.Type, string) {
 	return nil, types.Type{}, src
 }
 
-// parseString parses a string and returns the parsed string and the remaining
-// unparsed source. It expects that src starts with ' or ".
+// parseString parses a string literal and returns the parsed string and the
+// remaining source. It expects src to start with ' or ".
 func parseString(src string) (string, string, error) {
 	quote := src[0]
 	// First the common case: string without escape sequences.
@@ -463,11 +464,11 @@ func parseString(src string) (string, string, error) {
 		return "", "", errNoTerminatedString
 	}
 	src = src[1:]
+	if strings.IndexByte(src[:t], '\x00') != -1 {
+		return "", "", errZeroByteInString
+	}
 	p := strings.IndexByte(src[:t], '\\')
 	if p == -1 {
-		if strings.IndexByte(src[:t], '\x00') != -1 {
-			return "", "", errZeroByteInString
-		}
 		return src[:t], src[t+1:], nil
 	}
 	var b strings.Builder
@@ -488,20 +489,20 @@ LOOP:
 				if c == 'U' {
 					n = 8
 				}
-				if p+n >= len(src) {
+				if n >= len(src) {
 					return "", "", errNoTerminatedString
 				}
-				var r rune
+				var r uint32
 				for i := 0; i < n; i++ {
 					r = r * 16
-					c = src[p+1+i]
+					c = src[i+1]
 					switch {
 					case '0' <= c && c <= '9':
-						r += rune(c - '0')
+						r += uint32(c - '0')
 					case 'a' <= c && c <= 'f':
-						r += rune(c - 'a' + 10)
+						r += uint32(c - 'a' + 10)
 					case 'A' <= c && c <= 'F':
-						r += rune(c - 'A' + 10)
+						r += uint32(c - 'A' + 10)
 					default:
 						return "", "", fmt.Errorf("hexadecimal escape has an invalid character %q", c)
 					}
@@ -509,11 +510,11 @@ LOOP:
 				if r == 0x00 {
 					return "", "", errZeroByteInString
 				}
-				if 0xD800 <= r && r < 0xE000 || r > '\U0010FFFF' {
+				if r > utf8.MaxRune || !utf8.ValidRune(rune(r)) {
 					return "", "", fmt.Errorf("U+%X is not valid Unicode code point", r)
 				}
-				b.WriteRune(r)
-				src = src[2+n:]
+				b.WriteRune(rune(r))
+				src = src[1+n:]
 			case 'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', '\'', '"':
 				switch c {
 				case 'a':
@@ -533,6 +534,8 @@ LOOP:
 				}
 				b.WriteByte(c)
 				src = src[1:]
+			default:
+				// Unknown escapes discard the backslash; the loop reads the character.
 			}
 		case '\x00':
 			return "", "", errZeroByteInString
