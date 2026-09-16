@@ -158,13 +158,13 @@ func (br *Brevo) EventTypeSchema(ctx context.Context, eventType string) (types.T
 			Name:           "event_name",
 			Type:           types.String().WithPattern(eventNameRE),
 			CreateRequired: true,
-			Description:    "Event name",
+			DisplayName:    "Event name",
 		},
 		{
 			Name:        "event_properties",
 			Type:        types.Map(types.JSON()),
 			Prefilled:   "properties",
-			Description: "Event properties",
+			DisplayName: "Event properties",
 		},
 		{
 			Name: "identifiers",
@@ -172,42 +172,45 @@ func (br *Brevo) EventTypeSchema(ctx context.Context, eventType string) (types.T
 				{
 					Name:        "contact_id",
 					Type:        types.Int(64),
+					DisplayName: "Contact ID",
 					Description: "Internal Brevo contact ID; it takes precedence over all other identifiers",
 				},
 				{
 					Name:        "email_id",
 					Type:        types.String(),
-					Description: "Email address",
+					DisplayName: "Email address",
 				},
 				{
 					Name:        "ext_id",
 					Type:        types.String(),
-					Description: "External identifier",
+					DisplayName: "External identifier",
 				},
 				{
 					Name:        "phone_id",
 					Type:        types.String(),
-					Description: "SMS identifier",
+					DisplayName: "SMS identifier",
 				},
 				{
 					Name:        "whatsapp_id",
 					Type:        types.String(),
-					Description: "WhatsApp identifier",
+					DisplayName: "WhatsApp identifier",
 				},
 				{
 					Name:        "landline_number_id",
 					Type:        types.String(),
-					Description: "Landline identifier",
+					DisplayName: "Landline identifier",
 				},
 			}),
 			CreateRequired: true,
-			Description:    "Contact identifiers associated with the event; at least one is required",
+			DisplayName:    "Contact identifiers",
+			Description:    "Identifiers of the contact associated with the event; at least one is required",
 		},
 		{
 			Name:        "contact_properties",
 			Type:        types.Map(types.JSON()),
 			Prefilled:   "traits",
-			Description: "Contact properties to update alongside the event",
+			DisplayName: "Contact properties",
+			Description: "Properties to update on the contact alongside the event",
 		},
 		{
 			Name: "object",
@@ -215,7 +218,8 @@ func (br *Brevo) EventTypeSchema(ctx context.Context, eventType string) (types.T
 				{
 					Name:        "type",
 					Type:        types.String(),
-					Description: "Associated object type (e.g., subscription)",
+					DisplayName: "Object type",
+					Description: "Type of the associated object, for example a subscription",
 				},
 				{
 					Name: "identifiers",
@@ -223,17 +227,19 @@ func (br *Brevo) EventTypeSchema(ctx context.Context, eventType string) (types.T
 						{
 							Name:        "ext_id",
 							Type:        types.String(),
-							Description: "External object ID",
+							DisplayName: "External object ID",
 						},
 						{
 							Name:        "id",
 							Type:        types.String(),
-							Description: "Internal object ID",
+							DisplayName: "Internal object ID",
 						},
 					}),
-					Description: "Associated object identifiers",
+					DisplayName: "Object identifiers",
+					Description: "Identifiers of the associated object",
 				},
 			}),
+			DisplayName: "Object",
 			Description: "Optional object associated with the event",
 		},
 	}), nil
@@ -273,7 +279,7 @@ func (br *Brevo) RecordSchema(ctx context.Context, target connectors.Targets, ro
 			{
 				Name:        "id",
 				Type:        types.Int(64),
-				Description: "Brevo contact ID",
+				DisplayName: "Brevo contact ID",
 			},
 		}
 	}
@@ -283,7 +289,7 @@ func (br *Brevo) RecordSchema(ctx context.Context, target connectors.Targets, ro
 			Name:        "EMAIL",
 			Type:        types.String(),
 			Nullable:    true,
-			Description: "Email address",
+			DisplayName: "Email address",
 		},
 	}
 
@@ -308,19 +314,21 @@ func (br *Brevo) RecordSchema(ctx context.Context, target connectors.Targets, ro
 		}
 		switch attr.Name {
 		case "EXT_ID":
-			attribute.Description = "External identifier"
+			attribute.DisplayName = "External identifier"
 		case "FIRSTNAME":
-			attribute.Description = "First name"
+			attribute.DisplayName = "First name"
 		case "LASTNAME":
-			attribute.Description = "Last name"
+			attribute.DisplayName = "Last name"
 		case "LANDLINE_NUMBER":
-			attribute.Description = "Landline phone number"
+			attribute.DisplayName = "Landline phone number"
 		case "SMS":
+			attribute.DisplayName = "SMS phone number"
 			attribute.Description = "Phone number used for SMS, including country code"
 		case "WHATSAPP":
+			attribute.DisplayName = "WhatsApp phone number"
 			attribute.Description = "Phone number used for WhatsApp messages, including country code"
 		default:
-			attribute.Description = formatAttributeDescription(attr.Name)
+			attribute.DisplayName = formatAttributeDisplayName(attr.Name)
 		}
 
 		switch attr.Type {
@@ -351,8 +359,7 @@ func (br *Brevo) RecordSchema(ctx context.Context, target connectors.Targets, ro
 				return types.Type{}, fmt.Errorf("Brevo returned an empty enumeration for attribute %q", attr.Name)
 			}
 			var description strings.Builder
-			description.WriteString(attribute.Description)
-			description.WriteString(`; allowed values: "`)
+			description.WriteString(`Allowed values: "`)
 			values := make([]string, 0, len(attr.Enumeration))
 			for i, option := range attr.Enumeration {
 				value := strconv.Itoa(option.Value)
@@ -385,17 +392,18 @@ func (br *Brevo) RecordSchema(ctx context.Context, target connectors.Targets, ro
 			{
 				Name:        "listUnsubscribed",
 				Type:        types.Array(types.Int(64)),
+				DisplayName: "Unsubscribed lists",
 				Description: "IDs of the lists unsubscribed from",
 			},
 			{
 				Name:        "createdAt",
 				Type:        types.DateTime(),
-				Description: "Creation timestamp",
+				DisplayName: "Creation timestamp",
 			},
 			{
 				Name:        "modifiedAt",
 				Type:        types.DateTime(),
-				Description: "Last modification timestamp",
+				DisplayName: "Last modification timestamp",
 			},
 		}...)
 	}
@@ -404,16 +412,19 @@ func (br *Brevo) RecordSchema(ctx context.Context, target connectors.Targets, ro
 		{
 			Name:        "emailBlacklisted",
 			Type:        types.Boolean(),
+			DisplayName: "Email blacklisted",
 			Description: "Whether blacklisted from receiving emails",
 		},
 		{
 			Name:        "smsBlacklisted",
 			Type:        types.Boolean(),
+			DisplayName: "SMS blacklisted",
 			Description: "Whether blacklisted from receiving SMS messages",
 		},
 		{
 			Name:        "listIds",
 			Type:        types.Array(types.Int(64)),
+			DisplayName: "Lists",
 			Description: "IDs of the lists it belongs to",
 		},
 	}...)
@@ -899,9 +910,9 @@ func hasSendEventsIdentifiers(identifiers map[string]any) bool {
 	return false
 }
 
-// formatAttributeDescription formats an attribute name in UPPER_SNAKE_CASE
-// (e.g. "EXT_ID") into a human-readable description such as "Ext id".
-func formatAttributeDescription(name string) string {
+// formatAttributeDisplayName formats an attribute name in UPPER_SNAKE_CASE
+// (e.g. "EXT_ID") into a human-readable display name such as "Ext id".
+func formatAttributeDisplayName(name string) string {
 	b := make([]byte, len(name))
 	for i := 0; i < len(name); i++ {
 		c := name[i]

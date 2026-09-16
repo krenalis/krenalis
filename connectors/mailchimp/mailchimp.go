@@ -127,13 +127,14 @@ func (mc *Mailchimp) RecordSchema(ctx context.Context, target connectors.Targets
 		path:       "/lists/" + url.PathEscape(s.Audience) + "/merge-fields",
 		queryString: url.Values{
 			"count":  []string{"1000"},
-			"fields": []string{"merge_fields.tag,merge_fields.name,merge_fields.type,merge_fields.required,merge_fields.display_order,merge_fields.options.choices"},
+			"fields": []string{"merge_fields.tag,merge_fields.name,merge_fields.help_text,merge_fields.type,merge_fields.required,merge_fields.display_order,merge_fields.options.choices"},
 		},
 	}
 	var response struct {
 		MergeFields []struct {
 			Tag          string `json:"tag"`
 			Name         string `json:"name"`
+			HelpText     string `json:"help_text"`
 			Type         string `json:"type"`
 			Required     bool   `json:"required"`
 			DisplayOrder int    `json:"display_order"`
@@ -199,7 +200,8 @@ func (mc *Mailchimp) RecordSchema(ctx context.Context, target connectors.Targets
 		}
 		field.Name = f.Tag
 		field.UpdateRequired = f.Required
-		field.Description = f.Name
+		field.DisplayName = f.Name
+		field.Description = f.HelpText
 		fields = append(fields, field)
 	}
 
@@ -209,7 +211,7 @@ func (mc *Mailchimp) RecordSchema(ctx context.Context, target connectors.Targets
 	properties[2] = types.Property{
 		Name:        "merge_fields",
 		Type:        types.Object(fields),
-		Description: "Audience fields",
+		DisplayName: "Audience fields",
 	}
 	copy(properties[3:], staticProperties[2:])
 
@@ -333,12 +335,12 @@ func (mc *Mailchimp) Records(ctx context.Context, target connectors.Targets, upd
 
 // addressType is the types.Type corresponding to the Mailchimp "address" type.
 var addressType = types.Object([]types.Property{
-	{Name: "addr1", Type: types.String(), UpdateRequired: true, Description: "Street Address"},
-	{Name: "addr2", Type: types.String(), Description: "Address Line 2"},
-	{Name: "city", Type: types.String(), UpdateRequired: true, Description: "City"},
-	{Name: "state", Type: types.String(), UpdateRequired: true, Description: "State/Province/Region"},
-	{Name: "zip", Type: types.String(), UpdateRequired: true, Description: "Postal/Zip Code"},
-	{Name: "country", Type: types.String(), Description: "Country"},
+	{Name: "addr1", Type: types.String(), UpdateRequired: true, DisplayName: "Street Address"},
+	{Name: "addr2", Type: types.String(), DisplayName: "Address Line 2"},
+	{Name: "city", Type: types.String(), UpdateRequired: true, DisplayName: "City"},
+	{Name: "state", Type: types.String(), UpdateRequired: true, DisplayName: "State/Province/Region"},
+	{Name: "zip", Type: types.String(), UpdateRequired: true, DisplayName: "Postal/Zip Code"},
+	{Name: "country", Type: types.String(), DisplayName: "Country"},
 })
 
 // ServeUI serves the connector's user interface.
@@ -860,173 +862,173 @@ func init() {
 			Name:           "email_address",
 			Type:           types.String(),
 			CreateRequired: true,
-			Description:    "Email address",
+			DisplayName:    "Email address",
 		},
 		{
 			Name:           "status",
 			Type:           types.String().WithValues("subscribed", "unsubscribed", "cleaned", "pending", "transactional", "archived"),
 			CreateRequired: true,
-			Description:    "Status",
+			DisplayName:    "Status",
 		},
 		{
 			Name:        "id",
 			Type:        types.String(),
-			Description: "ID",
+			DisplayName: "ID",
 		},
 		{
 			Name:        "unique_email_id",
 			Type:        types.String(),
-			Description: "Unique email ID",
+			DisplayName: "Unique email ID",
 		},
 		{
 			Name:        "contact_id",
 			Type:        types.String(),
-			Description: "Contact ID",
+			DisplayName: "Contact ID",
 		},
 		{
 			Name:        "full_name",
 			Type:        types.String(),
-			Description: "Full name",
+			DisplayName: "Full name",
 		},
 		{
 			Name:        "web_id",
 			Type:        types.Int(32),
-			Description: "Web ID",
+			DisplayName: "Web ID",
 		},
 		{
 			Name:        "email_type",
 			Type:        types.String().WithValues("html", "text"),
-			Description: "Email type",
+			DisplayName: "Email type",
 		},
 		{
 			Name:         "unsubscribe_reason",
 			Type:         types.String(),
 			ReadOptional: true,
-			Description:  "Unsubscribe reason",
+			DisplayName:  "Unsubscribe reason",
 		},
 		{
 			Name:        "consents_to_one_to_one_messaging",
 			Type:        types.Boolean(),
-			Description: "Consents to 1:1 messaging",
+			DisplayName: "Consents to 1:1 messaging",
 		},
 		{
 			Name:        "interests",
 			Type:        types.Map(types.Boolean()),
 			Nullable:    true,
-			Description: "Interests",
+			DisplayName: "Interests",
 		},
 		{
 			Name: "stats",
 			Type: types.Object([]types.Property{
-				{Name: "avg_open_rate", Type: types.Decimal(14, 2), Description: "Average open rate"},
-				{Name: "avg_click_rate", Type: types.Decimal(14, 2), Description: "Average click-through rate"},
+				{Name: "avg_open_rate", Type: types.Decimal(14, 2), DisplayName: "Average open rate"},
+				{Name: "avg_click_rate", Type: types.Decimal(14, 2), DisplayName: "Average click-through rate"},
 				{Name: "ecommerce_data", Type: types.Object([]types.Property{
-					{Name: "total_revenue", Type: types.Decimal(14, 2), Description: "Total revenue"},
-					{Name: "number_of_orders", Type: types.Decimal(14, 2), Description: "Number of orders"},
-					{Name: "currency_code", Type: types.String().WithMaxLength(3), Description: "Currency code"},
-				}), ReadOptional: true, Nullable: true, Description: "Ecommerce"},
+					{Name: "total_revenue", Type: types.Decimal(14, 2), DisplayName: "Total revenue"},
+					{Name: "number_of_orders", Type: types.Decimal(14, 2), DisplayName: "Number of orders"},
+					{Name: "currency_code", Type: types.String().WithMaxLength(3), DisplayName: "Currency code"},
+				}), ReadOptional: true, Nullable: true, DisplayName: "Ecommerce"},
 			}),
-			Description: "Stats",
+			DisplayName: "Stats",
 		},
 		{
 			Name:        "ip_signup",
 			Type:        types.IP(),
 			Nullable:    true,
-			Description: "Sign-up IP address",
+			DisplayName: "Sign-up IP address",
 		},
 		{
 			Name:        "timestamp_signup",
 			Type:        types.DateTime(),
 			Nullable:    true,
-			Description: "Sign-up date",
+			DisplayName: "Sign-up date",
 		},
 		{
 			Name:        "ip_opt",
 			Type:        types.IP(),
-			Description: "Opt-in IP address",
+			DisplayName: "Opt-in IP address",
 		},
 		{
 			Name:        "timestamp_opt",
 			Type:        types.DateTime(),
-			Description: "Opt-in date",
+			DisplayName: "Opt-in date",
 		},
 		{
 			Name:        "member_rating",
 			Type:        types.Int(8).WithIntRange(1, 5),
-			Description: "Star rating",
+			DisplayName: "Star rating",
 		},
 		{
 			Name:        "last_changed",
 			Type:        types.DateTime(),
-			Description: "Last info update",
+			DisplayName: "Last info update",
 		},
 		{
 			Name:        "language",
 			Type:        types.String().WithMaxLength(5),
-			Description: "Language",
+			DisplayName: "Language",
 		},
 		{
 			Name:        "vip",
 			Type:        types.Boolean(),
-			Description: "VIP status",
+			DisplayName: "VIP status",
 		},
 		{
 			Name:        "email_client",
 			Type:        types.String(),
-			Description: "Email client",
+			DisplayName: "Email client",
 		},
 		{
 			Name: "location",
 			Type: types.Object([]types.Property{
-				{Name: "latitude", Type: types.Decimal(14, 2), Description: "Latitude"},
-				{Name: "longitude", Type: types.Decimal(14, 2), Description: "Longitude"},
-				{Name: "gmtoff", Type: types.Int(32), Description: "GMT offset"},
-				{Name: "dstoff", Type: types.Int(32), Description: "DST offset"},
-				{Name: "country_code", Type: types.String().WithMaxLength(2), Description: "Country code"},
-				{Name: "timezone", Type: types.String(), Description: "Location timezone"},
-				{Name: "region", Type: types.String(), Description: "Location region"},
+				{Name: "latitude", Type: types.Decimal(14, 2), DisplayName: "Latitude"},
+				{Name: "longitude", Type: types.Decimal(14, 2), DisplayName: "Longitude"},
+				{Name: "gmtoff", Type: types.Int(32), DisplayName: "GMT offset"},
+				{Name: "dstoff", Type: types.Int(32), DisplayName: "DST offset"},
+				{Name: "country_code", Type: types.String().WithMaxLength(2), DisplayName: "Country code"},
+				{Name: "timezone", Type: types.String(), DisplayName: "Location timezone"},
+				{Name: "region", Type: types.String(), DisplayName: "Location region"},
 			}),
-			Description: "Location",
+			DisplayName: "Location",
 		},
 		{
 			Name: "marketing_permissions",
 			Type: types.Object([]types.Property{
-				{Name: "marketing_permission_id", Type: types.String(), Description: "ID"},
-				{Name: "text", Type: types.String(), Description: "Text"},
-				{Name: "enabled", Type: types.Boolean(), Description: "Opt-in"},
+				{Name: "marketing_permission_id", Type: types.String(), DisplayName: "ID"},
+				{Name: "text", Type: types.String(), DisplayName: "Text"},
+				{Name: "enabled", Type: types.Boolean(), DisplayName: "Opt-in"},
 			}),
 			ReadOptional: true,
 			Nullable:     true,
-			Description:  "Marketing permissions",
+			DisplayName:  "Marketing permissions",
 		},
 		{
 			Name: "last_note",
 			Type: types.Object([]types.Property{
-				{Name: "note_id", Type: types.Int(32), Description: "ID"},
-				{Name: "created_at", Type: types.DateTime(), Description: "Creation"},
-				{Name: "created_by", Type: types.String(), Description: "Author"},
-				{Name: "note", Type: types.String(), Description: "Content"},
+				{Name: "note_id", Type: types.Int(32), DisplayName: "ID"},
+				{Name: "created_at", Type: types.DateTime(), DisplayName: "Creation"},
+				{Name: "created_by", Type: types.String(), DisplayName: "Author"},
+				{Name: "note", Type: types.String(), DisplayName: "Content"},
 			}),
 			ReadOptional: true,
-			Description:  "Last note",
+			DisplayName:  "Last note",
 		},
 		{
 			Name:        "source",
 			Type:        types.String(),
-			Description: "Subscriber source",
+			DisplayName: "Subscriber source",
 		},
 		{
 			Name:        "tags_count",
 			Type:        types.Int(32),
-			Description: "Tag count",
+			DisplayName: "Tag count",
 		},
 		{
 			Name: "tags",
 			Type: types.Array(types.Object([]types.Property{
-				{Name: "id", Type: types.Int(32), Description: "ID"},
-				{Name: "name", Type: types.String(), Description: "Name"},
+				{Name: "id", Type: types.Int(32), DisplayName: "ID"},
+				{Name: "name", Type: types.String(), DisplayName: "Name"},
 			})),
-			Description: "Tags",
+			DisplayName: "Tags",
 		},
 	}
 }
