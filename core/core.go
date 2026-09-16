@@ -1697,10 +1697,7 @@ func (core *Core) executeAlterProfileSchema(workspace, opID string, schema types
 		}
 		insertPrimarySources = "INSERT INTO primary_sources (source, path) VALUES " + b.String()
 	}
-	// Map the column names of the new schema to their property paths. Replacing
-	// every underscore of a column name with a dot is not the inverse of
-	// building the name by joining the property names with an underscore, as a
-	// property name can itself contain underscores.
+	// Map the column names of the new schema to their property paths.
 	newPaths := map[string]string{}
 	for path, property := range schema.Properties().WalkObjects() {
 		if property.Type.Kind() != types.ObjectKind {
