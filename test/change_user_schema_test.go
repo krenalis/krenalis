@@ -311,6 +311,70 @@ func TestChangeProfileSchema(t *testing.T) {
 
 }
 
+// TestChangeProfileSchemaIdentifiersWithUnderscores checks that the identifiers
+// follow the properties they refer to when a property whose name contains an
+// underscore is renamed or dropped.
+func TestChangeProfileSchemaIdentifiersWithUnderscores(t *testing.T) {
+
+	// Test's header (copy-paste me in other tests).
+	if testing.Short() {
+		t.Skip()
+	}
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
+
+	identifiers := []string{"dummy_id", "food_preferences.drink", "android.id"}
+	k.UpdateIdentityResolutionSettings(true, identifiers)
+
+	// Rename the property "dummy_id" to "dummy_identifier" and the object
+	// property "food_preferences" to "preferences".
+	ws := k.Workspace()
+	var properties []types.Property
+	for _, p := range ws.ProfileSchema.Properties().All() {
+		switch p.Name {
+		case "dummy_id":
+			p.Name = "dummy_identifier"
+		case "food_preferences":
+			p.Name = "preferences"
+		}
+		properties = append(properties, p)
+	}
+	schema := types.Object(properties)
+	rePaths := map[string]any{"dummy_identifier": "dummy_id", "preferences": "food_preferences"}
+	k.AlterProfileSchemaAndWait(schema, nil, rePaths)
+	identifiers = []string{"dummy_identifier", "preferences.drink", "android.id"}
+
+	ws = k.Workspace()
+	if !types.Equal(schema, ws.ProfileSchema) {
+		t.Fatal("expected equal schemas, got different schemas")
+	}
+	if !slices.Equal(identifiers, ws.Identifiers) {
+		t.Fatalf("expected identifiers %v, got %v", identifiers, ws.Identifiers)
+	}
+
+	// Drop the property "dummy_identifier".
+	properties = nil
+	for _, p := range schema.Properties().All() {
+		if p.Name == "dummy_identifier" {
+			continue
+		}
+		properties = append(properties, p)
+	}
+	schema = types.Object(properties)
+	k.AlterProfileSchemaAndWait(schema, nil, nil)
+	identifiers = []string{"preferences.drink", "android.id"}
+
+	ws = k.Workspace()
+	if !types.Equal(schema, ws.ProfileSchema) {
+		t.Fatal("expected equal schemas, got different schemas")
+	}
+	if !slices.Equal(identifiers, ws.Identifiers) {
+		t.Fatalf("expected identifiers %v, got %v", identifiers, ws.Identifiers)
+	}
+
+}
+
 // checkSchemaProperties is used internally by the tests and checks that the
 // profiles schema does not contain 'nullable' or 'required' properties.
 func checkSchemaProperties(schema types.Type) error {
