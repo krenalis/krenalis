@@ -156,7 +156,7 @@ var propertyGroups = []struct {
 	{"activity", "contact_activity", "Contact activity"},
 	{"contact_lifecycle", "contactlcs", "Contact Lifecycle Stage Properties"},
 	{"facebook", "facebook_ads_properties", "Facebook Ads Properties"},
-	{"conversion", "conversioninformation", "Conversion Onformation"},
+	{"conversion", "conversioninformation", "Conversion Information"},
 	{"deals", "deal_information", "Deal Information"},
 	{"sales", "sales_properties", "Sales Properties"},
 	{"orders", "order_information", "Order Information"},

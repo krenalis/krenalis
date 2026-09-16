@@ -123,7 +123,7 @@ func (ph *PostHog) EventTypeSchema(ctx context.Context, eventType string) (types
 		Name:        "session_id",
 		Type:        types.UUID(),
 		DisplayName: "Session ID",
-		Description: "UUIDv7 — if not set, Krenalis generates one automatically.",
+		Description: "UUIDv7; if not set, Krenalis generates one automatically",
 	}
 	switch eventType {
 	case "identify":
@@ -133,7 +133,7 @@ func (ph *PostHog) EventTypeSchema(ctx context.Context, eventType string) (types
 		}), nil
 	case "alias":
 		return types.Object([]types.Property{
-			{Name: "properties", Type: types.Map(types.JSON()), DisplayName: "Event properties", Description: "Leave empty unless you want to send additional properties."},
+			{Name: "properties", Type: types.Map(types.JSON()), DisplayName: "Event properties", Description: "Leave empty unless you want to send additional properties"},
 			sessionID,
 		}), nil
 	case "group":

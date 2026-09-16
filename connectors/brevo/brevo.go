@@ -173,7 +173,7 @@ func (br *Brevo) EventTypeSchema(ctx context.Context, eventType string) (types.T
 					Name:        "contact_id",
 					Type:        types.Int(64),
 					DisplayName: "Contact ID",
-					Description: "Internal Brevo contact ID; it takes precedence over all other identifiers",
+					Description: "Internal Brevo ID; it takes precedence over all other identifiers",
 				},
 				{
 					Name:        "email_id",
@@ -203,7 +203,7 @@ func (br *Brevo) EventTypeSchema(ctx context.Context, eventType string) (types.T
 			}),
 			CreateRequired: true,
 			DisplayName:    "Contact identifiers",
-			Description:    "Identifiers of the contact associated with the event; at least one is required",
+			Description:    "At least one is required",
 		},
 		{
 			Name:        "contact_properties",
@@ -236,7 +236,6 @@ func (br *Brevo) EventTypeSchema(ctx context.Context, eventType string) (types.T
 						},
 					}),
 					DisplayName: "Object identifiers",
-					Description: "Identifiers of the associated object",
 				},
 			}),
 			DisplayName: "Object",
