@@ -122,6 +122,9 @@ func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records conne
 						}
 					}
 					columns[i].Name = name
+					if name != header {
+						columns[i].DisplayName = header
+					}
 					nameOfHeader[header] = name
 				} else {
 					name := columnNumberToName(i + 1)
