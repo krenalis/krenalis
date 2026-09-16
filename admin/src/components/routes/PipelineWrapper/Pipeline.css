@@ -1374,7 +1374,7 @@ inherit the disabled style */
 }
 
 .property-annotation__display-name {
-	color: var(--sl-color-neutral-600);
+	color: var(--text-light);
 }
 
 .fullscreen-transformation--function .fullscreen-transformation__property-wrapper {
