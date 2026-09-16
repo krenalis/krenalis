@@ -110,79 +110,27 @@ func (dummy *Dummy) EventTypeSchema(ctx context.Context, eventType string) (type
 	switch eventType {
 	case "send_add_to_cart":
 		return types.Object([]types.Property{
-			{
-				Name:           "email",
-				Type:           types.String(),
-				CreateRequired: true,
-				DisplayName:    "Email",
-				Description:    "Email address of the customer who added the item to the cart",
-			},
-			{
-				Name:        "itemName",
-				Type:        types.String(),
-				DisplayName: "Item name",
-				Description: "Name of the item added to the cart",
-			},
-			{
-				Name:        "itemId",
-				Type:        types.Int(32),
-				DisplayName: "Item ID",
-				Description: "Identifier of the item added to the cart",
-			},
+			{Name: "email", Type: types.String(), CreateRequired: true, DisplayName: "Email"},
+			{Name: "itemName", Type: types.String(), DisplayName: "Item name"},
+			{Name: "itemId", Type: types.Int(32), DisplayName: "Item ID"},
 		}), nil
 	case "send_custom_event":
 		return types.Object([]types.Property{
-			{
-				Name:        "email",
-				Type:        types.String(),
-				DisplayName: "Email",
-				Description: "Email address of the customer the event refers to",
-			},
+			{Name: "email", Type: types.String(), DisplayName: "Email"},
 		}), nil
 	case "send_identity":
 		return types.Object([]types.Property{
-			{
-				Name:           "email",
-				CreateRequired: true,
-				Type:           types.String(),
-				DisplayName:    "Email",
-				Description:    "Email address that identifies the customer",
-			},
-			{
-				Name: "traits",
-				Type: types.Object([]types.Property{
-					{
-						Name: "address",
-						Type: types.Object([]types.Property{
-							{
-								Name:        "street1",
-								Type:        types.String(),
-								DisplayName: "Street",
-								Description: "First line of the street address",
-							},
-							{
-								Name:        "street2",
-								Type:        types.String(),
-								DisplayName: "Street (second line)",
-								Description: "Second line of the street address",
-							},
-						}),
-						DisplayName: "Address",
-						Description: "Postal address of the customer",
-					},
-				}),
-				DisplayName: "Traits",
-				Description: "Additional information about the customer",
-			},
+			{Name: "email", CreateRequired: true, Type: types.String(), DisplayName: "Email"},
+			{Name: "traits", Type: types.Object([]types.Property{
+				{Name: "address", Type: types.Object([]types.Property{
+					{Name: "street1", Type: types.String(), DisplayName: "Street"},
+					{Name: "street2", Type: types.String(), DisplayName: "Street (second line)"},
+				}), DisplayName: "Address"},
+			}), DisplayName: "Traits", Description: "Additional information about the customer"},
 		}), nil
 	case "send_generic_event":
 		return types.Object([]types.Property{
-			{
-				Name:        "properties",
-				Type:        types.JSON(),
-				DisplayName: "Properties",
-				Description: "Arbitrary properties sent with the event",
-			},
+			{Name: "properties", Type: types.JSON(), DisplayName: "Properties"},
 		}), nil
 	case "send_event_with_no_schema":
 		return types.Type{}, nil
@@ -249,95 +197,25 @@ func (dummy *Dummy) RecordSchema(ctx context.Context, target connectors.Targets,
 	}
 	var properties []types.Property
 	if role == connectors.Source {
-		properties = append(properties, types.Property{
-			Name:        "dummyId",
-			Type:        types.String(),
-			DisplayName: "Dummy ID",
-			Description: "Identifier of the customer in Dummy",
-		})
+		properties = append(properties, types.Property{Name: "dummyId", Type: types.String(), DisplayName: "Dummy ID"})
 	}
 	properties = append(properties, []types.Property{
-		{
-			Name:        "email",
-			Type:        types.String(),
-			Nullable:    true,
-			DisplayName: "Email",
-			Description: "Email address of the customer",
-		},
-		{
-			Name:        "firstName",
-			Type:        types.String(),
-			Nullable:    true,
-			DisplayName: "First name",
-			Description: "Given name of the customer",
-		},
-		{
-			Name:        "fullName",
-			Type:        types.String(),
-			Nullable:    true,
-			DisplayName: "Full name",
-			Description: "Given name and family name of the customer",
-		},
-		{
-			Name:        "lastName",
-			Type:        types.String(),
-			Nullable:    true,
-			DisplayName: "Last name",
-			Description: "Family name of the customer",
-		},
-		{
-			Name:        "favouriteDrink",
-			Type:        types.String().WithValues("tea", "beer", "wine", "water"),
-			Nullable:    true,
-			DisplayName: "Favourite drink",
-			Description: "Drink the customer likes the most",
-		},
-		{
-			Name:         "favourite_movie",
-			Type:         types.String(),
-			ReadOptional: true,
-			DisplayName:  "Favourite movie",
-			Description:  "Movie the customer likes the most",
-		},
+		{Name: "email", Type: types.String(), Nullable: true, DisplayName: "Email"},
+		{Name: "firstName", Type: types.String(), Nullable: true, DisplayName: "First name"},
+		{Name: "fullName", Type: types.String(), Nullable: true, DisplayName: "Full name"},
+		{Name: "lastName", Type: types.String(), Nullable: true, DisplayName: "Last name"},
+		{Name: "favouriteDrink", Type: types.String().WithValues("tea", "beer", "wine", "water"), Nullable: true, DisplayName: "Favourite drink"},
+		{Name: "favourite_movie", Type: types.String(), ReadOptional: true, DisplayName: "Favourite movie"},
 	}...)
 	if role == connectors.Destination {
-		properties = append(properties, types.Property{
-			Name:        "additionalProperties",
-			Type:        types.Map(types.String()),
-			DisplayName: "Additional properties",
-			Description: "Custom properties to store on the customer",
-		})
+		properties = append(properties, types.Property{Name: "additionalProperties", Type: types.Map(types.String()), DisplayName: "Additional properties"})
 	}
 	properties = append(properties, []types.Property{
-		{
-			Name: "address",
-			Type: types.Object([]types.Property{
-				{
-					Name:        "street",
-					Type:        types.String(),
-					Nullable:    true,
-					DisplayName: "Street",
-					Description: "Street name and number",
-				},
-				{
-					Name:        "postal_code",
-					Type:        types.String(),
-					Nullable:    true,
-					DisplayName: "Postal code",
-					Description: "Postal code of the city",
-				},
-				{
-					Name:        "city",
-					Type:        types.String(),
-					Nullable:    true,
-					DisplayName: "City",
-					Description: "City where the customer lives",
-				},
-			}),
-			Nullable:    true,
-			DisplayName: "Address",
-			Description: "Postal address of the customer",
-		},
+		{Name: "address", Type: types.Object([]types.Property{
+			{Name: "street", Type: types.String(), Nullable: true, DisplayName: "Street"},
+			{Name: "postal_code", Type: types.String(), Nullable: true, DisplayName: "Postal code"},
+			{Name: "city", Type: types.String(), Nullable: true, DisplayName: "City"},
+		}), Nullable: true, DisplayName: "Address"},
 	}...)
 	return types.Object(properties), nil
 }
