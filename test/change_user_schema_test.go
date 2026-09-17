@@ -311,10 +311,10 @@ func TestChangeProfileSchema(t *testing.T) {
 
 }
 
-// TestChangeProfileSchemaIdentifiersWithUnderscores checks that the identifiers
-// follow the properties they refer to when a property whose name contains an
-// underscore is renamed or dropped.
-func TestChangeProfileSchemaIdentifiersWithUnderscores(t *testing.T) {
+// TestChangeProfileSchemaUpdatesIdentifiersForPropertiesWithUnderscores checks
+// that identifiers are updated when referenced properties with underscores are
+// renamed and removed when those properties are dropped.
+func TestChangeProfileSchemaUpdatesIdentifiersForPropertiesWithUnderscores(t *testing.T) {
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {
