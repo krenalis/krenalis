@@ -3,7 +3,8 @@ import Grid from '../../base/Grid/Grid';
 import { SCHEDULE_PERIODS } from '../../../lib/core/pipeline';
 import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
@@ -275,14 +276,14 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 						<SlDropdown hoist={true}>
 							<SlButton
 								slot='trigger'
-								variant='default'
-								size='small'
+								appearance='outlined'
+								size='s'
 								className='connection-pipelines__scheduler-button'
 							>
-								<SlIcon slot='prefix' name='clock' />
+								<WaIcon slot='start' name='clock' />
 								Schedule: {pipeline.schedulePeriod || 'Off'}
-								<SlIcon
-									slot='suffix'
+								<WaIcon
+									slot='end'
 									className={`connection-pipelines__scheduler-dot connection-pipelines__scheduler-dot--${scheduleDotVariant}`}
 									name='circle-fill'
 								/>
@@ -305,8 +306,8 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 				)}
 				<SlButton
 					className='connection-pipelines__manage-button'
-					variant='default'
-					size='small'
+					appearance='outlined'
+					size='s'
 					onClick={() => onManageClick(pipeline)}
 				>
 					Manage...
@@ -319,11 +320,11 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 				>
 					<SlButton
 						slot='trigger'
-						variant='default'
-						size='small'
+						appearance='outlined'
+						size='s'
 						className='connection-pipelines__menu-button'
 					>
-						<SlIcon slot='prefix' name='three-dots-vertical' />
+						<WaIcon slot='start' name='three-dots-vertical' />
 					</SlButton>
 					<SlMenu className='connection-pipelines__menu'>
 						{isPipelineRunSupported && (
@@ -391,7 +392,9 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 				className='connection-pipelines__grid-alert'
 				actions={
 					<>
-						<SlButton onClick={closeAlertDialog}>Cancel</SlButton>
+						<SlButton appearance='outlined' onClick={closeAlertDialog}>
+							Cancel
+						</SlButton>
 						<SlButton
 							variant='danger'
 							onClick={onConfirmDeletePipeline}

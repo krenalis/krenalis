@@ -243,7 +243,7 @@
 	justify-content: space-between;
 }
 
-.connectors-list__documentation-drawer-label sl-button::part(base) {
+.connectors-list__documentation-drawer-label wa-button::part(button) {
 	min-width: 110px;
 }
 

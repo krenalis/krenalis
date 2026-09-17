@@ -5,7 +5,7 @@ import AppContext from '../../../context/AppContext';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { MemberInvitationResponse } from '../../../lib/api/types/responses';
 import { validateMemberToSet } from '../../../lib/core/member';
 
@@ -153,7 +153,7 @@ const SignUp = () => {
 						{error}
 					</div>
 				)}
-				<SlButton className='signup__button' variant='primary' type='submit' loading={isLoading}>
+				<SlButton className='signup__button' variant='brand' type='submit' loading={isLoading}>
 					Sign up
 				</SlButton>
 			</form>

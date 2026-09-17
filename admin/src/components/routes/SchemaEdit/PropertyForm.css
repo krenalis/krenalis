@@ -18,7 +18,7 @@
 	transform: translate(3px, -1px);
 }
 
-.property-form__change-name::part(base) {
+.property-form__change-name::part(button) {
 	font-weight: 400;
 	padding-inline: 4px;
 }

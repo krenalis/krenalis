@@ -1,6 +1,7 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import './PropertyTypeSelector.css';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
@@ -287,13 +288,14 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 							onSlAfterHide={onStructureMenuAfterHide}
 						>
 							<SlButton
+								appearance='outlined'
 								className='property-type-selector__structure-trigger'
 								slot='trigger'
-								caret={canEditType}
+								withCaret={canEditType}
 								aria-disabled={!canEditType || undefined}
 								aria-label={`Structure: ${selectedStructureOption.label}`}
 							>
-								<SlIcon slot='prefix' name={selectedStructureOption.icon} />
+								<WaIcon slot='start' name={selectedStructureOption.icon} />
 								{selectedStructureOption.triggerLabel}
 							</SlButton>
 							<SlMenu className='property-type-selector__structure-menu' onSlSelect={onSelectStructure}>
@@ -333,16 +335,17 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 								onSlAfterHide={() => setSearch('')}
 							>
 								<SlButton
+									appearance='outlined'
 									className='property-type-selector__trigger'
 									slot='trigger'
-									caret={canEditType}
+									withCaret={canEditType}
 									aria-disabled={!canEditType || undefined}
 									aria-label={
 										selectedOption != null ? `Type: ${selectedOption.label}` : 'Select type'
 									}
 								>
 									{selectedOption != null && (
-										<PropertyTypeOptionIcon option={selectedOption} slot='prefix' />
+										<PropertyTypeOptionIcon option={selectedOption} slot='start' />
 									)}
 									{selectedOption != null ? (
 										selectedOption.label

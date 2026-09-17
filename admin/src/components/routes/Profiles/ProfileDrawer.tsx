@@ -5,12 +5,13 @@ import AppContext from '../../../context/AppContext';
 import ProfilesContext from '../../../context/ProfilesContext';
 import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
 import SlTab from '@shoelace-style/shoelace/dist/react/tab/index.js';
-import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
+import SlAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlTabGroup from '@shoelace-style/shoelace/dist/react/tab-group/index.js';
 import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
 import SlTabPanel from '@shoelace-style/shoelace/dist/react/tab-panel/index.js';
 import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import toJSDate from '../../../utils/toJSDate';
@@ -151,7 +152,9 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 				<SlIconButton name='chevron-right' onClick={() => onNavigate('next')} />
 			</div>
 			<div className='profile-drawer__top-section'>
-				<SlAvatar className='profile-drawer__image' image={profileImage != null ? String(profileImage) : ''} />
+				<SlAvatar className='profile-drawer__image' image={profileImage != null ? String(profileImage) : ''}>
+					<WaIcon slot='icon' name='person-fill' />
+				</SlAvatar>
 				<div className='profile-drawer__profile-properties'>
 					<span className='profile-drawer__first-name'>
 						{profileFirstName != null ? profileFirstName : ''}

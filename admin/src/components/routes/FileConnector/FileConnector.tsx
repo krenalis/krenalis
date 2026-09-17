@@ -3,7 +3,7 @@ import React, { useState, useLayoutEffect, useContext, useMemo } from 'react';
 import appContext from '../../../context/AppContext';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { useParams, useLocation } from 'react-router-dom';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import TransformedConnection from '../../../lib/core/connection';
@@ -119,8 +119,8 @@ const FileConnector = () => {
 								className='file-connector__pipeline-type'
 								action={
 									<SlButton
-										size='small'
-										variant='primary'
+										size='s'
+										variant='brand'
 										onClick={() => {
 											onAddPipelineType('user');
 										}}
@@ -138,8 +138,8 @@ const FileConnector = () => {
 								className='file-connector__pipeline-type'
 								action={
 									<SlButton
-										size='small'
-										variant='primary'
+										size='s'
+										variant='brand'
 										onClick={() => {
 											onAddPipelineType('group');
 										}}

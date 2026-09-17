@@ -1,7 +1,8 @@
 import React, { ReactNode, useEffect, useId, useRef, useState } from 'react';
 import './SchemaPropertyGrid.css';
-import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
@@ -137,24 +138,26 @@ const SchemaPropertyGridExpansionButtons = ({
 		<div className={`${classNamePrefix}__expansion-buttons`}>
 			<SlTooltip className={`${classNamePrefix}__toolbar-tooltip`} content='Expand all properties' hoist>
 				<SlButton
+					appearance='outlined'
 					className={`${classNamePrefix}__expand-all-button ${buttonClassName}`}
-					size='small'
+					size='s'
 					aria-label='Expand all properties'
 					disabled={disabled}
 					onClick={onExpand}
 				>
-					<SlIcon name='chevron-expand' />
+					<WaIcon name='chevron-expand' />
 				</SlButton>
 			</SlTooltip>
 			<SlTooltip className={`${classNamePrefix}__toolbar-tooltip`} content='Collapse all properties' hoist>
 				<SlButton
+					appearance='outlined'
 					className={`${classNamePrefix}__collapse-all-button ${buttonClassName}`}
-					size='small'
+					size='s'
 					aria-label='Collapse all properties'
 					disabled={disabled}
 					onClick={onCollapse}
 				>
-					<SlIcon name='chevron-contract' />
+					<WaIcon name='chevron-contract' />
 				</SlButton>
 			</SlTooltip>
 		</div>
@@ -222,12 +225,13 @@ const SchemaPropertySearch = ({
 			) : (
 				<SlTooltip className={`${classNamePrefix}__toolbar-tooltip`} content='Search properties' hoist>
 					<SlButton
+						appearance='outlined'
 						className={`${classNamePrefix}__search-button ${classNamePrefix}__toolbar-icon-button`}
-						size='small'
+						size='s'
 						aria-label='Search properties'
 						onClick={onClick}
 					>
-						<SlIcon name='search' />
+						<WaIcon name='search' />
 					</SlButton>
 				</SlTooltip>
 			)}

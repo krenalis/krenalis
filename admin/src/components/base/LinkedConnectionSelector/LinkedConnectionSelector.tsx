@@ -4,9 +4,9 @@ import { useLinkedConnectionsGrid } from './useLinkedConnectionsGrid';
 import TransformedConnection from '../../../lib/core/connection';
 import { ConnectionRole } from '../../../lib/api/types/connection';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
 import LittleLogo from '../LittleLogo/LittleLogo';
 import Grid from '../Grid/Grid';
@@ -102,8 +102,8 @@ const LinkedConnectionSelector = ({
 							</div>
 							{hasSelectableConnections && (
 								<SlDropdown className='linked-connection-selector__dropdown'>
-									<SlButton slot='trigger' caret>
-										<SlIcon slot='prefix' name='plus' />
+									<SlButton appearance='outlined' slot='trigger' withCaret>
+										<SlIcon slot='start' name='plus' />
 										Link event {role === 'Source' ? 'destination' : 'source'}...
 									</SlButton>
 									<SlMenu onSlSelect={onSelectLinkedConnection}>

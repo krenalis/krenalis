@@ -2,9 +2,10 @@ import React, { useContext, useState, useEffect, useRef, useMemo, useLayoutEffec
 import './Member.css';
 import appContext from '../../../context/AppContext';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import SlAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import * as icons from '../../../constants/icons';
 import { MemberAvatar, MemberToSet } from '../../../lib/api/types/responses';
@@ -263,7 +264,9 @@ const Member = () => {
 									password-toggle
 								/>
 								{isUpdate && password === null && (
-									<SlButton onClick={onPasswordEnable}>Change</SlButton>
+									<SlButton appearance='outlined' onClick={onPasswordEnable}>
+										Change
+									</SlButton>
 								)}
 							</div>
 							{!isUpdate && (
@@ -295,7 +298,9 @@ const Member = () => {
 											</div>
 										)}
 									</div>
-									<SlAvatar image={avatar ? `data:${avatar.mimeType};base64, ${avatar.image}` : ''} />
+									<SlAvatar image={avatar ? `data:${avatar.mimeType};base64, ${avatar.image}` : ''}>
+										<WaIcon slot='icon' name='person-fill' />
+									</SlAvatar>
 									<input
 										ref={fileInputRef}
 										type='file'
@@ -312,11 +317,13 @@ const Member = () => {
 							)}
 							<div className='member__buttons'>
 								<Link path='organization/members'>
-									<SlButton className='member__cancel-button'>Cancel</SlButton>
+									<SlButton appearance='outlined' className='member__cancel-button'>
+										Cancel
+									</SlButton>
 								</Link>
 								<SlButton
 									className='member__save-button'
-									variant='primary'
+									variant='brand'
 									loading={isSaving}
 									type='submit'
 								>

@@ -1,6 +1,6 @@
 import React from 'react';
 import './NotFound.css';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { Link } from '../../base/Link/Link';
 
 const NotFound = () => {
@@ -12,7 +12,7 @@ const NotFound = () => {
 					<div className='not-found__title'>404</div>
 					<div className='not-found__description'>The page you searched for does not exist</div>
 					<Link path='connections'>
-						<SlButton className='not-found__go-back' size='large' variant='default'>
+						<SlButton className='not-found__go-back' size='l' appearance='outlined'>
 							Go to connections
 						</SlButton>
 					</Link>

@@ -3,7 +3,7 @@ import './ResetPasswordToken.css';
 import appContext from '../../../context/AppContext';
 import { useParams } from 'react-router-dom';
 import { NotFoundError } from '../../../lib/api/errors';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { validateMemberPassword } from '../../../lib/core/member';
@@ -136,7 +136,7 @@ const ResetPasswordToken = () => {
 					<SlButton
 						className='reset-password-token__button'
 						type='submit'
-						variant='primary'
+						variant='brand'
 						loading={isLoading}
 						disabled={passwordError !== ''}
 					>

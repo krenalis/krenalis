@@ -1,6 +1,6 @@
 import React, { FormEvent, useContext, useState, useEffect } from 'react';
 import './ResetPassword.css';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import appContext from '../../../context/AppContext';
@@ -83,7 +83,7 @@ const ResetPassword = () => {
 							<SlButton
 								className='reset-password__button'
 								type='submit'
-								variant='primary'
+								variant='brand'
 								loading={isLoading}
 							>
 								Send reset email

@@ -4,9 +4,10 @@ import Section from '../../base/Section/Section';
 import * as icons from '../../../constants/icons';
 import { useContext } from 'react';
 import AppContext from '../../../context/AppContext';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
@@ -143,7 +144,7 @@ const IdentityResolutionSettings = () => {
 						The current profile schema doesn't include any property that can be used as an identifier
 					</div>
 					<Link path='profile-unification/schema'>
-						<SlButton variant='primary' className='identifiers__no-schema-button'>
+						<SlButton variant='brand' className='identifiers__no-schema-button'>
 							See schema
 						</SlButton>
 					</Link>
@@ -175,8 +176,13 @@ const IdentityResolutionSettings = () => {
 										size='small'
 									/>
 									<SlDropdown>
-										<SlButton size='small' className='identifiers__identifier-menu' slot='trigger'>
-											<SlIcon slot='prefix' name='three-dots'></SlIcon>
+										<SlButton
+											appearance='outlined'
+											size='s'
+											className='identifiers__identifier-menu'
+											slot='trigger'
+										>
+											<WaIcon slot='start' name='three-dots'></WaIcon>
 										</SlButton>
 										<SlMenu>
 											<SlMenuItem
@@ -209,12 +215,12 @@ const IdentityResolutionSettings = () => {
 						})}
 						<SlButton
 							className='identifiers__add'
-							size='small'
+							size='s'
 							variant='neutral'
 							onClick={onAddIdentifier}
-							circle
+							pill
 						>
-							<SlIcon name='plus' />
+							<WaIcon name='plus' />
 						</SlButton>
 					</Section>
 					<Section
@@ -232,12 +238,7 @@ const IdentityResolutionSettings = () => {
 							databases
 						</SlCheckbox>
 					</Section>
-					<SlButton
-						className='identifiers__save-button'
-						onClick={onSave}
-						variant='primary'
-						loading={isSaving}
-					>
+					<SlButton className='identifiers__save-button' onClick={onSave} variant='brand' loading={isSaving}>
 						Save
 					</SlButton>
 				</div>

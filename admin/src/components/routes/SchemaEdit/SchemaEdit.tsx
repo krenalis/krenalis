@@ -6,12 +6,13 @@ import {
 } from '../Schema/SchemaPropertyGrid';
 import './SchemaEdit.css';
 import { useBeforeUnload, useBlocker } from 'react-router-dom';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import { buttonVariant } from '../../../utils/buttonVariant';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
@@ -321,12 +322,16 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 					<div className='schema-edit__header-description'>Update the structure of unified profiles.</div>
 				</div>
 				<div className='schema-edit__header-buttons'>
-					<SlButton className='schema-edit__header-cancel-button' onClick={onCancelEdit}>
+					<SlButton
+						appearance='outlined'
+						className='schema-edit__header-cancel-button'
+						onClick={onCancelEdit}
+					>
 						Cancel
 					</SlButton>
 					<SlButton
 						className='schema-edit__header-apply-button'
-						variant='primary'
+						variant='brand'
 						onClick={onReviewChangesClick}
 						disabled={!hasSchemaChanges && !hasUnsavedPropertyChanges}
 					>
@@ -346,8 +351,13 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 								: `${changeCount} pending ${changeCount === 1 ? 'change' : 'changes'}`}
 						</div>
 					</SchemaPropertyGridSummary>
-					<SlButton variant='text' className='schema-edit__add-property' onClick={onAddClick}>
-						<SlIcon name='plus-lg' slot='prefix' />
+					<SlButton
+						variant='brand'
+						appearance='plain'
+						className='schema-edit__add-property'
+						onClick={onAddClick}
+					>
+						<SlIcon name='plus-lg' slot='start' />
 						Add a new property
 					</SlButton>
 				</div>
@@ -372,9 +382,10 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 									hoist
 								>
 									<SlButton
+										appearance='outlined'
 										className='schema-edit__filter-button schema-edit__toolbar-icon-button'
 										slot='trigger'
-										size='small'
+										size='s'
 										aria-label='Filter properties'
 									>
 										<SlIcon name='filter' />
@@ -467,13 +478,18 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 								</div>
 							)}
 							<div className='schema-edit__queries-buttons' slot='footer'>
-								<SlButton size='small' onClick={onCancelChanges} disabled={isConfirmChangesLoading}>
+								<SlButton
+									appearance='outlined'
+									size='s'
+									onClick={onCancelChanges}
+									disabled={isConfirmChangesLoading}
+								>
 									Cancel
 								</SlButton>
 								<SlButton
 									className='schema-edit__apply-alter-button'
-									size='small'
-									variant={hasNoWarehouseQueries ? 'primary' : 'danger'}
+									size='s'
+									{...buttonVariant(hasNoWarehouseQueries ? 'primary' : 'danger')}
 									onClick={onConfirmChanges}
 									loading={isConfirmChangesLoading}
 								>
@@ -491,7 +507,9 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 				title={isDiscardingNewProperty ? 'Discard property?' : 'Delete property?'}
 				actions={
 					<>
-						<SlButton onClick={() => setPropertyToRemove(null)}>Cancel</SlButton>
+						<SlButton appearance='outlined' onClick={() => setPropertyToRemove(null)}>
+							Cancel
+						</SlButton>
 						<SlButton
 							variant='danger'
 							className='schema-edit__confirm-remove-property'
@@ -517,8 +535,10 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 				title='Discard unsaved changes?'
 				actions={
 					<>
-						<SlButton onClick={onKeepEditing}>Keep editing</SlButton>
-						<SlButton variant='primary' onClick={onDiscardChangesAndLeave}>
+						<SlButton appearance='outlined' onClick={onKeepEditing}>
+							Keep editing
+						</SlButton>
+						<SlButton variant='brand' onClick={onDiscardChangesAndLeave}>
 							Discard and leave
 						</SlButton>
 					</>

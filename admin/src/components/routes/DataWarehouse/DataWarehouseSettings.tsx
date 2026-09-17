@@ -1,5 +1,5 @@
 import React, { useContext, useState, useLayoutEffect, useRef } from 'react';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
@@ -210,7 +210,7 @@ const DataWarehouseSettings = ({
 			<div className='warehouse-settings__buttons'>
 				<SlButton
 					disabled={isCheckLoading || isPipelineButtonLoading}
-					variant='default'
+					appearance='outlined'
 					onClick={onCancelClick}
 				>
 					Cancel
@@ -218,7 +218,7 @@ const DataWarehouseSettings = ({
 				<SlButton
 					disabled={isCheckLoading || isPipelineButtonLoading}
 					loading={isCheckLoading}
-					variant='default'
+					appearance='outlined'
 					onClick={onCheck}
 				>
 					Check
@@ -226,7 +226,7 @@ const DataWarehouseSettings = ({
 				<SlButton
 					disabled={isCheckLoading || isPipelineButtonLoading}
 					loading={isPipelineButtonLoading}
-					variant='primary'
+					variant='brand'
 					onClick={onSave}
 				>
 					Save

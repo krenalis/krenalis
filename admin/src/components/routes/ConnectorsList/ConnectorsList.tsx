@@ -4,10 +4,10 @@ import { Role } from '../../../lib/api/types/types';
 import AppContext from '../../../context/AppContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
-import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { authURLResponse } from '../../../lib/api/types/responses';
 import { useLocation } from 'react-router-dom';
 import TransformedConnector from '../../../lib/core/connector';
@@ -264,7 +264,7 @@ const ConnectorsList = () => {
 					<span>{selectedConnector?.label}</span>
 					<SlButton
 						className='connectors-list__documentation-add'
-						variant='primary'
+						variant='brand'
 						onClick={onConnectorAdd}
 						disabled={selectedConnector?.oauth != null && !selectedConnector?.oauth.configured}
 					>

@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import './PropertyForm.css';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
@@ -551,9 +551,10 @@ const PropertyForm = ({
 					{isEditing && !isNameEditable && (
 						<SlButton
 							className='property-form__change-name'
-							size='small'
+							size='s'
 							slot='suffix'
-							variant='text'
+							variant='brand'
+							appearance='plain'
 							onPointerDown={(event) => event.preventDefault()}
 							onClick={onChangeName}
 						>
