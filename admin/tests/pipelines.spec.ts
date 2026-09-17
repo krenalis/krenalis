@@ -68,10 +68,10 @@ test(`Add "Import customers" pipeline on Dummy`, async ({ page }) => {
 		"inSchema": {
 			"kind": "object",
 			"properties": [
-				{ "name": "email", "type": { "kind": "string" }, "displayName": "Email", "description": "Email address of the customer", "nullable": true },
-				{ "name": "dummyId", "type": { "kind": "string" }, "displayName": "Dummy ID", "description": "Identifier of the customer in Dummy" },
-				{ "name": "firstName", "type": { "kind": "string" }, "displayName": "First name", "description": "Given name of the customer", "nullable": true },
-				{ "name": "lastName", "type": { "kind": "string" }, "displayName": "Last name", "description": "Family name of the customer", "nullable": true }
+				{ "name": "email", "type": { "kind": "string" }, "description": "Email", "nullable": true },
+				{ "name": "dummyId", "type": { "kind": "string" }, "description": "Dummy ID" },
+				{ "name": "firstName", "type": { "kind": "string" }, "description": "First name", "nullable": true },
+				{ "name": "lastName", "type": { "kind": "string" }, "description": "Last name", "nullable": true }
 			]
 		},
 		"outSchema": {
@@ -247,8 +247,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string"
 					},
 					"nullable": true,
-					"displayName": "First name",
-					"description": "Given name of the customer"
+					"description": "First name"
 				},
 				{
 					"name": "lastName",
@@ -256,8 +255,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string"
 					},
 					"nullable": true,
-					"displayName": "Last name",
-					"description": "Family name of the customer"
+					"description": "Last name"
 				},
 				{
 					"name": "email",
@@ -265,8 +263,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string"
 					},
 					"nullable": true,
-					"displayName": "Email",
-					"description": "Email address of the customer"
+					"description": "Email"
 				}
 			]
 		},
@@ -348,8 +345,7 @@ test(`Add "Send Add to Cart" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string"
 					},
 					"createRequired": true,
-					"displayName": "Email",
-					"description": "Email address of the customer who added the item to the cart"
+					"description": "Email"
 				}
 			]
 		},
