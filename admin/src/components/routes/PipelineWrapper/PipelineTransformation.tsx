@@ -6,6 +6,7 @@ import {
 	updateMappingPropertyError,
 	pipelineObjectLabels,
 	propertyAnnotation,
+	propertyAnnotationSeparator,
 } from './Pipeline.helpers';
 import {
 	getSchemaComboboxItems,
@@ -100,7 +101,7 @@ const updatedAtFormats = {
 const PropertyAnnotation = ({ property }: { property: Property }) => (
 	<>
 		{property.displayName && <span className='property-annotation__display-name'>{property.displayName}</span>}
-		{property.displayName && property.description && ' – '}
+		{property.displayName && property.description && propertyAnnotationSeparator}
 		{property.description}
 	</>
 );

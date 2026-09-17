@@ -149,11 +149,13 @@ const checkIfPropertyExists = (property: string, schema: FlatSchema, toHide?: st
 	return '';
 };
 
+const propertyAnnotationSeparator = ' – ';
+
 // propertyAnnotation returns the display name and the description of a
 // property, combined in the text that accompanies its name.
 const propertyAnnotation = (property: Property): string => {
 	if (property.displayName && property.description) {
-		return `${property.displayName} – ${property.description}`;
+		return `${property.displayName}${propertyAnnotationSeparator}${property.description}`;
 	}
 	return property.displayName || property.description;
 };
@@ -221,4 +223,5 @@ export {
 	getSampleIdentifiers,
 	pipelineObjectLabels,
 	propertyAnnotation,
+	propertyAnnotationSeparator,
 };
