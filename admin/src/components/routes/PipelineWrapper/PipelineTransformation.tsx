@@ -1046,7 +1046,7 @@ const TransformationBox = ({
 								)}
 							</div>
 							{annotation && (
-								<div className='pipeline__transformation-output-property-description'>
+								<div className='pipeline__transformation-output-property-annotation'>
 									<PropertyAnnotation property={property.full} />
 								</div>
 							)}
@@ -2942,7 +2942,7 @@ const MapMapping = ({
 					)}
 				</div>
 				{annotation && (
-					<div className='pipeline__transformation-output-property-description'>
+					<div className='pipeline__transformation-output-property-annotation'>
 						<PropertyAnnotation property={property.full} />
 					</div>
 				)}
@@ -3261,21 +3261,21 @@ const TransformationProperty = ({
 	setIsExpanded,
 	isOutMatchingProperty,
 }: TransformationPropertyProps) => {
-	const [showDescriptionTooltip, setShowDescriptionTooltip] = useState<boolean>(false);
+	const [showAnnotationTooltip, setShowAnnotationTooltip] = useState<boolean>(false);
 
 	const { workspaces, selectedWorkspace } = useContext(AppContext);
 	const { isImport, pipelineType, pipeline } = useContext(PipelineContext);
 
-	const descriptionRef = useRef(null);
+	const annotationRef = useRef(null);
 
 	useEffect(() => {
-		if (descriptionRef.current == null) {
+		if (annotationRef.current == null) {
 			return;
 		}
-		const el = descriptionRef.current;
+		const el = annotationRef.current;
 		const hasEllipsis = el.scrollWidth > el.clientWidth;
-		setShowDescriptionTooltip(hasEllipsis);
-	}, [descriptionRef.current]);
+		setShowAnnotationTooltip(hasEllipsis);
+	}, [annotationRef.current]);
 
 	let path = property.name;
 	if (parentName) {
@@ -3376,10 +3376,10 @@ const TransformationProperty = ({
 		}
 	}
 
-	let description = null;
+	let annotationElement = null;
 	if (annotation) {
-		description = (
-			<div className='fullscreen-transformation__property-description' ref={descriptionRef}>
+		annotationElement = (
+			<div className='fullscreen-transformation__property-annotation' ref={annotationRef}>
 				<PropertyAnnotation property={property} />
 			</div>
 		);
@@ -3476,13 +3476,13 @@ const TransformationProperty = ({
 									)}
 								</div>
 							</div>
-							{description != null &&
-								(showDescriptionTooltip ? (
+							{annotationElement != null &&
+								(showAnnotationTooltip ? (
 									<SlTooltip content={annotation} hoist={true}>
-										{description}
+										{annotationElement}
 									</SlTooltip>
 								) : (
-									description
+									annotationElement
 								))}
 						</div>
 						<div className='fullscreen-transformation__property-right-column'>
