@@ -91,7 +91,8 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 		if err != nil {
 			return fmt.Errorf("cannot create profiles table (with name %s): %s", quoteIdent(newProfilesName), err)
 		}
-		// Add the identity count columns if they are not already present.
+		// Add the logical identity count columns if they are not already present.
+		// This ALTER TABLE is temporary and will be removed in a future release.
 		_, err = tx.Exec(ctx, `ALTER TABLE `+quoteIdent(newProfilesName)+
 			` ADD COLUMN IF NOT EXISTS "_anonymous_count" integer NOT NULL,`+
 			` ADD COLUMN IF NOT EXISTS "_recognized_count" integer NOT NULL`)
