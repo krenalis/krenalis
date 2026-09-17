@@ -1701,7 +1701,8 @@ func (core *Core) executeAlterProfileSchema(workspace, opID string, schema types
 	newPaths := map[string]string{}
 	for path, property := range schema.Properties().WalkObjects() {
 		if property.Type.Kind() != types.ObjectKind {
-			newPaths[strings.ReplaceAll(path, ".", "_")] = path
+			column := strings.ReplaceAll(path, ".", "_")
+			newPaths[column] = path
 		}
 	}
 	// Update the identifiers.
