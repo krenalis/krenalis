@@ -9,7 +9,7 @@ import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import ConfirmByTyping from '../../base/ConfirmByTyping/ConfirmByTyping';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
+import SlDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
 import { ObjectType } from '../../../lib/api/types/types';
 import { getUIPreferencesComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import { flattenSchema } from '../../../lib/core/pipeline';

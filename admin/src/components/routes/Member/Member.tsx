@@ -4,7 +4,8 @@ import appContext from '../../../context/AppContext';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
+import SlAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import * as icons from '../../../constants/icons';
 import { MemberAvatar, MemberToSet } from '../../../lib/api/types/responses';
@@ -295,7 +296,9 @@ const Member = () => {
 											</div>
 										)}
 									</div>
-									<SlAvatar image={avatar ? `data:${avatar.mimeType};base64, ${avatar.image}` : ''} />
+									<SlAvatar image={avatar ? `data:${avatar.mimeType};base64, ${avatar.image}` : ''}>
+										<WaIcon slot='icon' name='person-fill' />
+									</SlAvatar>
 									<input
 										ref={fileInputRef}
 										type='file'

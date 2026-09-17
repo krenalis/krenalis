@@ -37,7 +37,7 @@ import useEventListener from '../../../hooks/useEventListener';
 import AppContext from '../../../context/AppContext';
 import PipelineContext from '../../../context/PipelineContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlAnimation from '@shoelace-style/shoelace/dist/react/animation/index.js';
+import SlAnimation from '@awesome.me/webawesome/dist/react/animation/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
@@ -50,12 +50,12 @@ import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
 import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
 import SlSplitPanel from '@shoelace-style/shoelace/dist/react/split-panel/index.js';
-import SlAlert from '@shoelace-style/shoelace/dist/react/alert/index.js';
+import SlCallout from '@awesome.me/webawesome/dist/react/callout/index.js';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
-import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
+import SlBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
-import SlRelativeTime from '@shoelace-style/shoelace/dist/react/relative-time/index.js';
+import SlRelativeTime from '@awesome.me/webawesome/dist/react/relative-time/index.js';
 import {
 	ApplicationUsersResponse,
 	ExecQueryResponse,
@@ -1072,10 +1072,10 @@ const TransformationBox = ({
 					sync={isFullscreenTransformationOpen}
 				/>
 				{isTransformationLanguageDeprecated && (
-					<SlAlert variant='danger' className='pipeline__transformation-language-deprecated' open>
+					<SlCallout variant='danger' className='pipeline__transformation-language-deprecated'>
 						<SlIcon slot='icon' name='exclamation-circle' />
 						{selectedLanguage} is not supported anymore
-					</SlAlert>
+					</SlCallout>
 				)}
 			</div>
 		);
@@ -1194,7 +1194,7 @@ const TransformationBox = ({
 							playbackRate={1.2}
 							iterations={1}
 							play={isEditButtonAnimated}
-							onSlFinish={() => setIsEditButtonAnimated(false)}
+							onWaFinish={() => setIsEditButtonAnimated(false)}
 						>
 							<SlButton
 								className='transformation-box__fullscreen-button'

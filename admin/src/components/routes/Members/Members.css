@@ -43,9 +43,8 @@
 	grid-template-columns: 55px 1fr;
 }
 
-.members__member .list-tile__icon sl-avatar::part(base) {
-	width: 40px;
-	height: 40px;
+.members__member .list-tile__icon wa-avatar {
+	--size: 40px;
 }
 
 .members__member:last-child {

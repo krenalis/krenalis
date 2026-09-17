@@ -5,10 +5,11 @@ import ListTile from '../../base/ListTile/ListTile';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import { Member } from '../../../lib/api/types/responses';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
-import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
+import SlAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
+import SlBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
@@ -144,7 +145,9 @@ const Members = () => {
 													? `data:${member.avatar.mimeType};base64, ${member.avatar.image}`
 													: ''
 											}
-										/>
+										>
+											<WaIcon slot='icon' name='person-fill' />
+										</SlAvatar>
 									}
 									action={
 										<div className='members__member-pipelines'>

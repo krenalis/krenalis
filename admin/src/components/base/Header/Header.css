@@ -81,12 +81,8 @@
 }
 
 .header__account-avatar {
+	--size: 40px;
 	cursor: pointer;
-}
-
-.header__account-avatar::part(base) {
-	width: 40px;
-	height: 40px;
 	font-size: 18px;
 }
 
@@ -183,9 +179,8 @@
 	align-items: start;
 }
 
-.header__account-menu-heading sl-avatar::part(base) {
-	width: 35px;
-	height: 35px;
+.header__account-menu-heading wa-avatar {
+	--size: 35px;
 	font-size: 15px;
 }
 

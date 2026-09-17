@@ -11,7 +11,7 @@ import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
+import SlDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
 import { ConnectionToSet } from '../../../lib/api/types/connection';
 
 interface GeneralProps {

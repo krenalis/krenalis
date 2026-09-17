@@ -1,6 +1,6 @@
 import React, { ReactNode, useEffect, useId, useRef, useState } from 'react';
 import './SchemaPropertyGrid.css';
-import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
+import SlBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';

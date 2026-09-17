@@ -681,7 +681,7 @@ test(`Keep an unsaved property selected when selecting another property`, async 
 	await expect(page.locator('.schema-edit .grid__row[data-id="phone_numbers"]')).not.toHaveClass(
 		/grid__row--selected/,
 	);
-	await expect(propertyPanel.locator('sl-animation')).toHaveJSProperty('play', true);
+	await expect(propertyPanel.locator('wa-animation')).toHaveJSProperty('play', true);
 	await propertyPanel.locator('.property-panel__cancel').click();
 	await expect(applyButton).toHaveAttribute('disabled');
 });

@@ -313,10 +313,42 @@ sl-icon::part(svg) {
 	overflow: visible !important;
 }
 
-/* Web Awesome lightens the indicator and makes the track opaque; keep what Shoelace drew. */
+/* Web Awesome lightens the indicator and makes the track opaque; keep what
+Shoelace drew. */
 wa-spinner {
 	--indicator-color: var(--wa-color-brand-40);
 	--track-color: rgb(128 128 128 / 25%);
+}
+
+/* Web Awesome darkens the neutral badge, lightens the danger one, drops the
+   white border and changes the metrics; keep what Shoelace drew. */
+wa-badge {
+	--wa-color-neutral-fill-loud: var(--wa-color-neutral-40);
+	--wa-color-danger-fill-loud: var(--wa-color-danger-40);
+	padding: 0.35em 0.6em;
+	font-size: max(12px, 0.75em);
+	vertical-align: baseline;
+	border-color: var(--wa-color-surface-default);
+}
+
+/* The Admin never fills these, and when empty they move the badge's baseline.
+*/
+wa-badge::part(start),
+wa-badge::part(end) {
+	display: none;
+}
+
+/* Web Awesome lightens the avatar and sizes its icon from --size; keep what
+Shoelace drew. */
+wa-avatar {
+	font-size: 1.5rem;
+	color: var(--wa-color-surface-default);
+	background-color: var(--wa-color-neutral-60);
+}
+
+/* Web Awesome lightens the divider; keep what Shoelace drew. */
+wa-divider {
+	--color: var(--wa-color-neutral-80);
 }
 
 /* || Radix */

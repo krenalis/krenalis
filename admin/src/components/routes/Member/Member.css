@@ -48,9 +48,8 @@
 	margin-bottom: 15px;
 }
 
-.member__avatar-box sl-avatar::part(base) {
-	width: 60px;
-	height: 60px;
+.member__avatar-box wa-avatar {
+	--size: 60px;
 }
 
 .member__avatar-label {

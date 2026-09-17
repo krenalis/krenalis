@@ -1,10 +1,11 @@
 import React, { forwardRef, ReactNode, useContext, useEffect, useRef } from 'react';
 import './Header.css';
-import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
+import SlAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
+import SlDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { Link } from '..//Link/Link';
@@ -153,7 +154,9 @@ const AccountDropdown = forwardRef<any, AccountDropdownProps>(
 
 		return (
 			<SlDropdown distance={17} ref={ref}>
-				<SlAvatar slot='trigger' className='header__account-avatar' image={imageSrc} />
+				<SlAvatar slot='trigger' className='header__account-avatar' image={imageSrc}>
+					<WaIcon slot='icon' name='person-fill' />
+				</SlAvatar>
 				<SlMenu className='header__account-menu-wrapper'>
 					{isPasswordless && (
 						<div className='header__passwordless-tooltip'>
@@ -173,7 +176,9 @@ const AccountDropdown = forwardRef<any, AccountDropdownProps>(
 					)}
 					<div className='header__account-menu'>
 						<div className='header__account-menu-heading'>
-							<SlAvatar slot='trigger' className='header__account-menu-heading-avatar' image={imageSrc} />
+							<SlAvatar slot='trigger' className='header__account-menu-heading-avatar' image={imageSrc}>
+								<WaIcon slot='icon' name='person-fill' />
+							</SlAvatar>
 							<div className='header__account-menu-heading-text'>
 								<div className='header__account-menu-heading-name'>{account.name}</div>
 								<div className='header__account-menu-heading-email'>{account.email}</div>

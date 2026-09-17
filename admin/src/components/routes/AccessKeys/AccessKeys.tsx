@@ -11,7 +11,7 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
-import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
+import SlDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import { NotFoundError } from '../../../lib/api/errors';
 import { RelativeTime } from '../../base/RelativeTime/RelativeTime';

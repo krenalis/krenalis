@@ -58,6 +58,7 @@ people.svg
 person-arms-up.svg
 person-check.svg
 person-exclamation.svg
+person-fill.svg
 person-workspace.svg
 person.svg
 phone.svg

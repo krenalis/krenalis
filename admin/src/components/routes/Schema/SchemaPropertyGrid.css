@@ -285,7 +285,7 @@
 	white-space: nowrap;
 }
 
-.schema-property-grid__identifier::part(base) {
+.schema-property-grid__identifier {
 	background-color: var(--sl-color-neutral-100);
 	border: 0;
 	color: var(--sl-color-neutral-700);

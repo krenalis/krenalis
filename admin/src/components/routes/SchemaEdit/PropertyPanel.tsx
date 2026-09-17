@@ -1,6 +1,6 @@
 import React from 'react';
 import './PropertyPanel.css';
-import SlAnimation from '@shoelace-style/shoelace/dist/react/animation/index.js';
+import SlAnimation from '@awesome.me/webawesome/dist/react/animation/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
@@ -59,7 +59,7 @@ const PropertyPanel = ({
 				playbackRate={1.2}
 				iterations={1}
 				play={animateActions}
-				onSlFinish={onActionsAnimationFinish}
+				onWaFinish={onActionsAnimationFinish}
 			>
 				<div className='property-panel__form-actions'>
 					<SlButton className='property-panel__cancel' size='small' onClick={onClose}>
