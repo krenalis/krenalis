@@ -84,7 +84,7 @@
 	color: var(--sl-color-danger-600);
 }
 
-.members__invite-dialog sl-button {
+.members__invite-dialog wa-button {
 	display: block;
 	margin: auto;
 	margin-top: 30px;

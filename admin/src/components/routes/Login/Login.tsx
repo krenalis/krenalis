@@ -1,6 +1,6 @@
 import React, { FormEvent, useState, useContext, useEffect } from 'react';
 import './Login.css';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import AppContext from '../../../context/AppContext';
 import { Link } from '../../base/Link/Link';
@@ -189,7 +189,7 @@ const Login = () => {
 						enable this behavior. */}
 					<input type='submit' style={{ display: 'none' }} />
 
-					<SlButton className='login__button' type='submit' variant='primary' loading={isLoading}>
+					<SlButton className='login__button' type='submit' variant='brand' loading={isLoading}>
 						Login
 					</SlButton>
 				</form>

@@ -114,14 +114,14 @@
 	width: 179px;
 }
 
-.header__passwordless-create-account::part(base) {
+.header__passwordless-create-account::part(button) {
 	background-color: #eee;
 	color: #08044d;
 	line-height: 2.1rem;
 	padding-bottom: 1px;
 }
 
-.header__passwordless-create-account::part(base):hover {
+.header__passwordless-create-account::part(button):hover {
 	color: #39357b;
 }
 

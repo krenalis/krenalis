@@ -6,7 +6,7 @@ import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { Link } from '..//Link/Link';
 import appContext from '../../../context/AppContext';
@@ -168,7 +168,11 @@ const AccountDropdown = forwardRef<any, AccountDropdownProps>(
 								default ones.
 							</div>
 							<Link path='organization/members/add'>
-								<SlButton className='header__passwordless-create-account' size='small'>
+								<SlButton
+									appearance='outlined'
+									className='header__passwordless-create-account'
+									size='s'
+								>
 									Create my account
 								</SlButton>
 							</Link>

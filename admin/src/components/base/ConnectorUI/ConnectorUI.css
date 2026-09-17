@@ -30,6 +30,6 @@
 	flex-wrap: wrap;
 }
 
-.connector-ui__buttons sl-button {
+.connector-ui__buttons wa-button {
 	min-width: 150px;
 }

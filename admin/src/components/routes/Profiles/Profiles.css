@@ -41,7 +41,7 @@
 	margin-bottom: 6px;
 }
 
-.profiles-list__identity-resolution-button::part(base) {
+.profiles-list__identity-resolution-button::part(button) {
 	min-width: 220px;
 }
 

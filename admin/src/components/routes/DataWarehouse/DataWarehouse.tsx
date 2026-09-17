@@ -9,7 +9,7 @@ import Grid from '../../base/Grid/Grid';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import Section from '../../base/Section/Section';
 import DataWarehouseSettings from './DataWarehouseSettings';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import { WAREHOUSES_ASSETS_PATH } from '../../../constants/paths';
 
@@ -184,11 +184,7 @@ const WarehouseInfo = ({
 					</div>
 					<div className='warehouse-info__name'>{warehouse.name}</div>
 				</div>
-				<SlButton
-					className='warehouse-info__change-settings-button'
-					variant='primary'
-					onClick={onChangeSettings}
-				>
+				<SlButton className='warehouse-info__change-settings-button' variant='brand' onClick={onChangeSettings}>
 					Modify...
 				</SlButton>
 			</div>

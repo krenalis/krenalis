@@ -5,7 +5,7 @@ import FeedbackButton, { FeedbackButtonRef } from '../../base/FeedbackButton/Fee
 import NotFound from '../NotFound/NotFound';
 import ConnectorUI from '../../base/ConnectorUI/ConnectorUI';
 import AppContext from '../../../context/AppContext';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
@@ -263,7 +263,7 @@ const ConnectorSettings = () => {
 			<div className='connector-settings__save-wrapper'>
 				<SlButton
 					className='connector-settings__save-button'
-					variant='primary'
+					variant='brand'
 					onClick={() => onButtonClick('save')}
 				>
 					Add

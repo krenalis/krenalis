@@ -118,8 +118,8 @@
 	width: 34px;
 }
 
-.schema-grid__toolbar-icon-button::part(base),
-.schema-edit__toolbar-icon-button::part(base) {
+.schema-grid__toolbar-icon-button::part(button),
+.schema-edit__toolbar-icon-button::part(button) {
 	align-items: center;
 	background-color: transparent;
 	border: 0;
@@ -143,19 +143,19 @@
 	width: 100%;
 }
 
-.schema-grid__toolbar-icon-button sl-icon,
-.schema-edit__toolbar-icon-button sl-icon {
+.schema-grid__toolbar-icon-button wa-icon,
+.schema-edit__toolbar-icon-button wa-icon {
 	display: block;
 }
 
-.schema-grid__toolbar-icon-button::part(base):hover,
-.schema-edit__toolbar-icon-button::part(base):hover {
+.schema-grid__toolbar-icon-button::part(button):hover,
+.schema-edit__toolbar-icon-button::part(button):hover {
 	background-color: color-mix(in srgb, var(--sl-color-primary-50) 75%, var(--bg-primary));
 	color: var(--sl-color-primary-600);
 }
 
-.schema-grid__toolbar-icon-button::part(base):active,
-.schema-edit__toolbar-icon-button::part(base):active {
+.schema-grid__toolbar-icon-button::part(button):active,
+.schema-edit__toolbar-icon-button::part(button):active {
 	background-color: var(--sl-color-primary-50);
 }
 

@@ -7,8 +7,8 @@ import PipelineTypesDialog from './PipelineTypesDialog';
 import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
 import { Outlet } from 'react-router-dom';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import { Pipeline, PipelineType } from '../../../lib/api/types/pipeline';
 import { LinkedConnections } from '../ConnectionSettings/LinkedConnections';
@@ -247,8 +247,8 @@ const ConnectionPipelines = () => {
 									className={`connection-pipelines__pipeline-type connection-pipelines__pipeline-type--${pipelineType.target.toLowerCase()}`}
 									action={
 										<SlButton
-											size='small'
-											variant='primary'
+											size='s'
+											variant='brand'
 											onClick={() => {
 												onSelectPipelineType(pipelineType);
 											}}
@@ -264,13 +264,14 @@ const ConnectionPipelines = () => {
 					<>
 						<Flex alignItems={'center'}>
 							<SlButton
-								variant='text'
+								variant='brand'
+								appearance='plain'
 								onClick={() => {
 									setIsPipelineTypesDialogOpen(true);
 								}}
 								className='connection-pipelines__add'
 							>
-								<SlIcon slot='suffix' name='plus-circle' />
+								<SlIcon slot='end' name='plus-circle' />
 								Add a new pipeline
 							</SlButton>
 						</Flex>

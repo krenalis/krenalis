@@ -33,7 +33,7 @@ test(`Add "Import customers" pipeline on Dummy`, async ({ page }) => {
 
 	await expect(name).toBeAttached();
 
-	let button = name.locator('..').locator('..').locator('sl-button');
+	let button = name.locator('..').locator('..').locator('wa-button');
 	await button.click();
 	await expect(page.locator('.pipeline__header')).toBeAttached();
 
@@ -129,7 +129,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 
 	await expect(name).toBeAttached();
 
-	let button = name.locator('..').locator('..').locator('sl-button');
+	let button = name.locator('..').locator('..').locator('wa-button');
 	await button.click();
 	await expect(page.locator('.pipeline__header')).toBeAttached();
 
@@ -316,7 +316,7 @@ test(`Add "Send Add to Cart" pipeline on Dummy`, async ({ page }) => {
 
 	await expect(name).toBeAttached();
 
-	let button = name.locator('..').locator('..').locator('sl-button');
+	let button = name.locator('..').locator('..').locator('wa-button');
 	await button.click();
 	await expect(page.locator('.pipeline__header')).toBeAttached();
 
@@ -391,7 +391,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 
 	await expect(name).toBeAttached();
 
-	let button = name.locator('..').locator('..').locator('sl-button');
+	let button = name.locator('..').locator('..').locator('wa-button');
 	await button.click();
 	await expect(page.locator('.pipeline__header')).toBeAttached();
 
@@ -531,7 +531,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 
 	await expect(name).toBeAttached();
 
-	let button = name.locator('..').locator('..').locator('sl-button');
+	let button = name.locator('..').locator('..').locator('wa-button');
 	await button.click();
 	await expect(page.locator('.pipeline__header')).toBeAttached();
 
@@ -540,7 +540,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 
 	// Table.
 	await page.locator('.pipeline__destination_table sl-input >> input').fill('users');
-	await page.locator('.pipeline__destination_table sl-button').click();
+	await page.locator('.pipeline__destination_table wa-button').click();
 
 	await expect(page.locator('.pipeline__destination_table-key-section')).toBeAttached();
 	await expect(page.locator('.pipeline__transformation')).toBeAttached();
@@ -734,7 +734,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 
 	await expect(name).toBeAttached();
 
-	let button = name.locator('..').locator('..').locator('sl-button');
+	let button = name.locator('..').locator('..').locator('wa-button');
 	await button.click();
 	await expect(page.locator('.pipeline__header')).toBeAttached();
 
@@ -911,7 +911,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 
 	await expect(name).toBeAttached();
 
-	let button = name.locator('..').locator('..').locator('sl-button');
+	let button = name.locator('..').locator('..').locator('wa-button');
 	await button.click();
 	await expect(page.locator('.pipeline__header')).toBeAttached();
 
@@ -1229,7 +1229,7 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 
 	await expect(name).toBeAttached();
 
-	let button = name.locator('..').locator('..').locator('sl-button');
+	let button = name.locator('..').locator('..').locator('wa-button');
 	await button.click();
 	await expect(page.locator('.pipeline__header')).toBeAttached();
 
@@ -1349,7 +1349,7 @@ test(`Add "Import users" pipeline on JavaScript`, async ({ page }) => {
 
 	await expect(name).toBeAttached();
 
-	let button = name.locator('..').locator('..').locator('sl-button');
+	let button = name.locator('..').locator('..').locator('wa-button');
 	await button.click();
 	await expect(page.locator('.pipeline__header')).toBeAttached();
 

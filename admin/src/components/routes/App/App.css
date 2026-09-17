@@ -123,31 +123,32 @@ body {
 
 /* || Shoelace */
 
-sl-button {
+wa-button {
 	position: relative;
 }
 
-sl-button[variant='default']::part(base) {
+wa-button[appearance='outlined']::part(button) {
 	background-color: var(--bg-gray);
 }
 
-sl-button[variant='text']::part(base) {
+wa-button[appearance='plain']::part(button) {
 	font-weight: 600;
 }
 
-sl-button[variant='text']::part(label) {
+wa-button[appearance='plain']::part(label) {
 	padding-right: 10px;
 }
 
-sl-button[variant='text'] sl-icon {
+wa-button[appearance='plain'] wa-icon {
 	color: var(--sl-color-primary-600);
 }
 
-sl-button[disabled]::part(base) {
+wa-button[disabled],
+wa-button[disabled]::part(button) {
 	cursor: default;
 }
 
-sl-button > a {
+wa-button > a {
 	position: absolute;
 	left: 0;
 	top: 0;
@@ -349,6 +350,287 @@ wa-avatar {
 /* Web Awesome lightens the divider; keep what Shoelace drew. */
 wa-divider {
 	--color: var(--wa-color-neutral-80);
+}
+
+/* Web Awesome buttons, drawn as Shoelace drew them. This is Shoelace's button
+   stylesheet ported onto the wa-button parts: :where() keeps it at zero
+   specificity, so every rule the Admin writes for a button still wins, as it
+   did over Shoelace's shadow styles. */
+
+wa-button {
+	--wa-button-transform-active: none;
+	cursor: pointer;
+}
+
+/* Web Awesome sizes the host too; Shoelace sized only the inner button. */
+:where(wa-button) {
+	font-size: inherit;
+}
+
+:where(wa-button)::part(button) {
+	align-items: stretch;
+	width: 100%;
+	height: auto;
+	aspect-ratio: auto;
+	padding: 0;
+	border-style: solid;
+	border-width: var(--sl-input-border-width);
+	font-family: var(--sl-input-font-family);
+	font-weight: var(--sl-font-weight-semibold);
+	transition:
+		var(--sl-transition-x-fast) background-color,
+		var(--sl-transition-x-fast) color,
+		var(--sl-transition-x-fast) border,
+		var(--sl-transition-x-fast) box-shadow;
+}
+
+:where(wa-button)::part(button):focus-visible {
+	outline: var(--sl-focus-ring);
+	outline-offset: var(--sl-focus-ring-offset);
+}
+
+:where(wa-button) > [slot='start'],
+:where(wa-button) > [slot='end'] {
+	margin-inline: 0;
+}
+
+:where(wa-button)::part(label) {
+	display: inline-block;
+}
+
+:where(wa-button) > wa-icon:not([slot]) {
+	vertical-align: -2px;
+}
+
+/* Sizes */
+
+:where(wa-button[size='s'])::part(button) {
+	min-height: var(--sl-input-height-small);
+	font-size: var(--sl-button-font-size-small);
+	line-height: calc(var(--sl-input-height-small) - var(--sl-input-border-width) * 2);
+}
+
+:where(wa-button[size='m'])::part(button) {
+	min-height: var(--sl-input-height-medium);
+	font-size: var(--sl-button-font-size-medium);
+	line-height: calc(var(--sl-input-height-medium) - var(--sl-input-border-width) * 2);
+}
+
+:where(wa-button[size='l'])::part(button) {
+	min-height: var(--sl-input-height-large);
+	font-size: var(--sl-button-font-size-large);
+	line-height: calc(var(--sl-input-height-large) - var(--sl-input-border-width) * 2);
+}
+
+:where(wa-button[size='s']) {
+	--wa-form-control-border-radius: var(--sl-input-border-radius-small);
+}
+
+:where(wa-button[size='m']) {
+	--wa-form-control-border-radius: var(--sl-input-border-radius-medium);
+}
+
+:where(wa-button[size='l']) {
+	--wa-form-control-border-radius: var(--sl-input-border-radius-large);
+}
+
+:where(wa-button[size='s'])::part(label) {
+	padding: 0 var(--sl-spacing-small);
+}
+
+:where(wa-button[size='m'])::part(label) {
+	padding: 0 var(--sl-spacing-medium);
+}
+
+:where(wa-button[size='l'])::part(label) {
+	padding: 0 var(--sl-spacing-large);
+}
+
+:where(wa-button[size='s']:has(> [slot='start']))::part(button),
+:where(wa-button[size='s']:has(> [slot='start']))::part(label) {
+	padding-inline-start: var(--sl-spacing-x-small);
+}
+
+:where(wa-button[size='m']:has(> [slot='start']), wa-button[size='l']:has(> [slot='start']))::part(button),
+:where(wa-button[size='m']:has(> [slot='start']), wa-button[size='l']:has(> [slot='start']))::part(label) {
+	padding-inline-start: var(--sl-spacing-small);
+}
+
+:where(wa-button[size='s']:has(> [slot='end']), wa-button[size='s'][with-caret])::part(button),
+:where(wa-button[size='s']:has(> [slot='end']), wa-button[size='s'][with-caret])::part(label) {
+	padding-inline-end: var(--sl-spacing-x-small);
+}
+
+:where(
+	wa-button[size='m']:has(> [slot='end']),
+	wa-button[size='m'][with-caret],
+	wa-button[size='l']:has(> [slot='end']),
+	wa-button[size='l'][with-caret]
+)::part(button),
+:where(
+	wa-button[size='m']:has(> [slot='end']),
+	wa-button[size='m'][with-caret],
+	wa-button[size='l']:has(> [slot='end']),
+	wa-button[size='l'][with-caret]
+)::part(label) {
+	padding-inline-end: var(--sl-spacing-small);
+}
+
+/* Pill: Shoelace's circle */
+
+:where(wa-button[pill]) {
+	--wa-border-radius-pill: 50%;
+}
+
+:where(wa-button[pill])::part(button) {
+	width: var(--sl-input-height-medium);
+}
+
+:where(wa-button[pill][size='s'])::part(button) {
+	width: var(--sl-input-height-small);
+}
+
+:where(wa-button[pill][size='l'])::part(button) {
+	width: var(--sl-input-height-large);
+}
+
+/* Caret */
+
+/* Web Awesome draws Font Awesome's chevron; the mask cuts the box down to Shoelace's thinner one. */
+:where(wa-button)::part(caret) {
+	align-self: stretch;
+	width: 1em;
+	min-width: 1em;
+	height: auto;
+	margin-inline-start: 0;
+	background-color: currentColor;
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")
+		center / 1em 1em no-repeat;
+}
+
+/* Loading */
+
+:where(wa-button)::part(spinner) {
+	--track-color: rgb(128 128 128 / 25%);
+}
+
+/* Default (outlined) */
+
+:where(wa-button[appearance='outlined'])::part(button) {
+	background-color: var(--sl-color-neutral-0);
+	border-color: var(--sl-input-border-color);
+	color: var(--sl-color-neutral-700);
+}
+
+:where(wa-button[appearance='outlined']:not([disabled]))::part(button):hover {
+	background-color: var(--sl-color-primary-50);
+	border-color: var(--sl-color-primary-300);
+	color: var(--sl-color-primary-700);
+}
+
+:where(wa-button[appearance='outlined']:not([disabled]))::part(button):active {
+	background-color: var(--sl-color-primary-100);
+	border-color: var(--sl-color-primary-400);
+	color: var(--sl-color-primary-700);
+}
+
+/* Solid variants (accent) */
+
+:where(wa-button[appearance='accent'][variant='brand'])::part(button) {
+	--_fill: var(--sl-color-primary-600);
+	--_fill-hover: var(--sl-color-primary-500);
+}
+
+:where(wa-button[appearance='accent'][variant='success'])::part(button) {
+	--_fill: var(--sl-color-success-600);
+	--_fill-hover: var(--sl-color-success-500);
+}
+
+:where(wa-button[appearance='accent'][variant='neutral'])::part(button) {
+	--_fill: var(--sl-color-neutral-600);
+	--_fill-hover: var(--sl-color-neutral-500);
+}
+
+:where(wa-button[appearance='accent'][variant='warning'])::part(button) {
+	--_fill: var(--sl-color-warning-600);
+	--_fill-hover: var(--sl-color-warning-500);
+}
+
+:where(wa-button[appearance='accent'][variant='danger'])::part(button) {
+	--_fill: var(--sl-color-danger-600);
+	--_fill-hover: var(--sl-color-danger-500);
+}
+
+:where(wa-button[appearance='accent'])::part(button),
+:where(wa-button[appearance='accent'])::part(button):active {
+	background-color: var(--_fill);
+	border-color: var(--_fill);
+	color: var(--sl-color-neutral-0);
+}
+
+:where(wa-button[appearance='accent']:not([disabled]))::part(button):hover {
+	background-color: var(--_fill-hover);
+	border-color: var(--_fill-hover);
+}
+
+/* Text (plain) */
+
+:where(wa-button[appearance='plain'])::part(button) {
+	background-color: transparent;
+	border-color: transparent;
+	color: var(--sl-color-primary-600);
+}
+
+:where(wa-button[appearance='plain']:not([disabled]))::part(button):hover,
+:where(wa-button[appearance='plain']:not([disabled]))::part(button):focus-visible {
+	background-color: transparent;
+	border-color: transparent;
+	color: var(--sl-color-primary-500);
+}
+
+:where(wa-button[appearance='plain']:not([disabled]))::part(button):active {
+	background-color: transparent;
+	border-color: transparent;
+	color: var(--sl-color-primary-700);
+}
+
+/* Groups */
+
+:where(wa-button-group) > wa-button:not(:first-child),
+:where(wa-button-group) > :not(:first-child) wa-button {
+	margin-inline-start: calc(-1 * var(--sl-input-border-width));
+}
+
+:where(wa-button-group wa-button:not([appearance='outlined']):not(:hover))::part(button)::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	inset-inline-start: 0;
+	bottom: 0;
+	border-left: solid 1px rgb(128 128 128 / 33%);
+	mix-blend-mode: multiply;
+}
+
+:where(wa-button-group) > :first-child::part(button)::after,
+:where(wa-button-group) > :first-child wa-button::part(button)::after {
+	content: none;
+}
+
+/* Shoelace icons are a 1em square block; Web Awesome's default canvas is 1.25em
+   wide and centres a flex item. */
+wa-icon {
+	display: inline-block;
+	width: 1em;
+	min-width: 1em;
+	height: 1em;
+	min-height: 1em;
+	vertical-align: baseline;
+}
+
+wa-icon::part(svg) {
+	display: block;
+	width: 100%;
+	height: 100%;
 }
 
 /* || Radix */

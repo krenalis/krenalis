@@ -6,7 +6,7 @@ import { ConsentPurposesResponse } from '../../../lib/api/types/responses';
 import { UnprocessableError } from '../../../lib/api/errors';
 import Grid from '../../base/Grid/Grid';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
@@ -168,10 +168,10 @@ const Privacy = () => {
 				);
 			const actionsCell = (
 				<div className='privacy__grid-buttons'>
-					<SlButton variant='default' size='small' onClick={() => setPurposeToEdit(p)}>
+					<SlButton appearance='outlined' size='s' onClick={() => setPurposeToEdit(p)}>
 						Edit...
 					</SlButton>
-					<SlButton variant='danger' size='small' onClick={() => onDeletePurpose(p)}>
+					<SlButton variant='danger' size='s' onClick={() => onDeletePurpose(p)}>
 						Delete
 					</SlButton>
 				</div>
@@ -188,7 +188,7 @@ const Privacy = () => {
 			<div className='privacy__content'>
 				<div className='privacy__title'>
 					<p className='privacy__title-text'>Consent purposes</p>
-					<SlButton size='small' variant='primary' onClick={() => setIsCreating(true)}>
+					<SlButton size='s' variant='brand' onClick={() => setIsCreating(true)}>
 						Add a new purpose
 					</SlButton>
 				</div>
@@ -216,10 +216,14 @@ const Privacy = () => {
 					}
 					actions={
 						purposeToDeletePipelines.length > 0 ? (
-							<SlButton onClick={onCloseDeleteDialog}>Close</SlButton>
+							<SlButton appearance='outlined' onClick={onCloseDeleteDialog}>
+								Close
+							</SlButton>
 						) : (
 							<>
-								<SlButton onClick={onCloseDeleteDialog}>Cancel</SlButton>
+								<SlButton appearance='outlined' onClick={onCloseDeleteDialog}>
+									Cancel
+								</SlButton>
 								<SlButton variant='danger' onClick={onConfirmDelete} loading={isDeleting}>
 									Delete
 								</SlButton>
@@ -372,7 +376,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, pipelines, onClose, onSaved }: P
 						{`This purpose is used by ${pipelines.length} ${pipelines.length === 1 ? 'pipeline' : 'pipelines'}. Changing its code may cause events to be filtered incorrectly.`}
 					</div>
 				)}
-				<SlButton loading={isSaving} className='privacy__dialog-save' variant='primary' onClick={onSave}>
+				<SlButton loading={isSaving} className='privacy__dialog-save' variant='brand' onClick={onSave}>
 					{isEditing ? 'Save' : 'Add'}
 				</SlButton>
 			</div>

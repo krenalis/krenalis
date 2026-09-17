@@ -6,9 +6,9 @@ import AppContext from '../../../context/AppContext';
 import PipelineContext from '../../../context/PipelineContext';
 import { UnprocessableError, NotFoundError } from '../../../lib/api/errors';
 import { CONFIRM_ANIMATION_DURATION, ERROR_ANIMATION_DURATION } from './Pipeline.constants';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
@@ -805,10 +805,11 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 							})}
 						</SlSelect>
 						<SlButton
+							appearance='outlined'
 							onClick={onSheetsReload}
 							disabled={pipeline.path == null || pipeline.path === '' || areSheetsLoading}
 						>
-							<SlIcon slot='prefix' name='arrow-clockwise' />
+							<SlIcon slot='start' name='arrow-clockwise' />
 							Reload
 						</SlButton>
 					</div>
@@ -857,7 +858,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 					<SlButton
 						className='pipeline__file-preview'
 						variant='neutral'
-						size='small'
+						size='s'
 						onClick={onFilePreview}
 						loading={isLoadingPreview}
 						disabled={isLoadingPreview}

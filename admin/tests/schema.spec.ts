@@ -1218,8 +1218,8 @@ test(`Preview schema changes only when applying them`, async ({ page }) => {
 	await expect(dialog.locator('.schema-edit__no-query')).toHaveText(
 		'These changes affect only the schema definition. The data warehouse will not be modified.',
 	);
-	await expect(dialog.locator('.schema-edit__apply-alter-button')).toHaveAttribute('variant', 'primary');
-	await dialog.locator('.schema-edit__queries-buttons sl-button').first().click();
+	await expect(dialog.locator('.schema-edit__apply-alter-button')).toHaveAttribute('variant', 'brand');
+	await dialog.locator('.schema-edit__queries-buttons wa-button').first().click();
 
 	await openProperty(page, 'email');
 	await displayName.fill(originalDisplayName);
@@ -1591,8 +1591,8 @@ test(`Edit schema property`, async ({ page }) => {
 	await editSchema(page);
 
 	await openProperty(page, 'foo');
-	await expect(page.locator('.property-type-selector__structure-trigger')).toHaveJSProperty('caret', false);
-	await expect(page.locator('.property-type-selector__trigger')).toHaveJSProperty('caret', false);
+	await expect(page.locator('.property-type-selector__structure-trigger')).toHaveJSProperty('withCaret', false);
+	await expect(page.locator('.property-type-selector__trigger')).toHaveJSProperty('withCaret', false);
 	const changeNameButton = page.locator('.property-panel .property-form__change-name');
 	const nameInput = page.locator('.property-panel .property-form__name-input');
 	await expect(nameInput).toHaveAttribute('readonly', '');
@@ -2629,7 +2629,7 @@ test(`Do not restore focus to the delete action after closing its dialog`, async
 			{ once: true },
 		);
 	});
-	await removeDialog.locator('sl-button').filter({ hasText: 'Cancel' }).click();
+	await removeDialog.locator('wa-button').filter({ hasText: 'Cancel' }).click();
 	await expect(removeDialog).toHaveAttribute('data-after-hide-settled', 'true');
 	await expect(grid).toBeFocused();
 	await expect(deleteTooltip).toHaveAttribute('data-focus-return-count', '0');
