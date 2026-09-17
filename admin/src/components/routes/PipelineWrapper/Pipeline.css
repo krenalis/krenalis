@@ -700,6 +700,10 @@ sl-button.pipeline__filters-remove-rule[variant='text']::part(label) {
 	line-height: 1.8;
 }
 
+.property-annotation__display-name {
+	color: var(--text-light);
+}
+
 .pipeline__transformation-output-property--map > sl-input {
 	display: inline-block;
 	max-width: 150px;
@@ -1371,10 +1375,6 @@ inherit the disabled style */
 	overflow: hidden;
 	text-overflow: ellipsis;
 	line-height: 1.5;
-}
-
-.property-annotation__display-name {
-	color: var(--text-light);
 }
 
 .fullscreen-transformation--function .fullscreen-transformation__property-wrapper {
