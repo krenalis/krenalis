@@ -1700,7 +1700,7 @@ func (core *Core) executeAlterProfileSchema(workspace, opID string, schema types
 	// Map the column names of the new schema to their property paths.
 	pathByColumn := map[string]string{}
 	for path, property := range schema.Properties().WalkObjects() {
-		if property.Type.Kind() != types.ObjectKind {
+		if suitableAsIdentifier(property.Type) {
 			column := strings.ReplaceAll(path, ".", "_")
 			pathByColumn[column] = path
 		}
