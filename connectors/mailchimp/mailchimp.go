@@ -168,6 +168,9 @@ func (mc *Mailchimp) RecordSchema(ctx context.Context, target connectors.Targets
 						continue Choices
 					}
 				}
+				if strings.Contains(value, "\x00") {
+					return types.Type{}, fmt.Errorf("merge field %q has an invalid choice", f.Tag)
+				}
 				values = append(values, value)
 			}
 			if values == nil {
@@ -204,11 +207,15 @@ func (mc *Mailchimp) RecordSchema(ctx context.Context, target connectors.Targets
 	}
 
 	// Build the schema.
+	fieldsType, err := types.ObjectOf(fields)
+	if err != nil {
+		return types.Type{}, fmt.Errorf("cannot create schema from merge fields: %s", err)
+	}
 	properties := make([]types.Property, len(staticProperties)+1)
 	copy(properties[:2], staticProperties[:2])
 	properties[2] = types.Property{
 		Name:        "merge_fields",
-		Type:        types.Object(fields),
+		Type:        fieldsType,
 		Description: "Audience fields",
 	}
 	copy(properties[3:], staticProperties[2:])

@@ -169,9 +169,13 @@ func (ml *MailerLite) RecordSchema(ctx context.Context, target connectors.Target
 		types.Property{Name: "groups", Type: types.Array(types.String()), ReadOptional: true, Description: "Group IDs"},
 	)
 	if len(fields) > 0 {
+		fieldsType, err := types.ObjectOf(fields)
+		if err != nil {
+			return types.Type{}, fmt.Errorf("cannot create schema from fields: %s", err)
+		}
 		properties = append(properties, types.Property{
 			Name:        "fields",
-			Type:        types.Object(fields),
+			Type:        fieldsType,
 			Description: "Subscriber fields",
 		})
 	}

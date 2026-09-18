@@ -364,6 +364,28 @@ func TestRecordSchemaDynamicFields(t *testing.T) {
 
 }
 
+// TestRecordSchemaDynamicFieldsRejectsInvalidDescription checks that a custom
+// field whose name contains a NUL byte makes RecordSchema return an error
+// instead of panicking.
+func TestRecordSchemaDynamicFieldsRejectsInvalidDescription(t *testing.T) {
+
+	fields := json.Value(`[
+		{"id":"1","name":"Bad\u0000Field","key":"bad_field","type":"text"}
+	]`)
+	ml := &MailerLite{
+		env: &connectors.ApplicationEnv{
+			Settings:   &testSettingsStore{},
+			HTTPClient: fieldsHTTPClient(t, fields),
+		},
+	}
+
+	_, err := ml.RecordSchema(t.Context(), connectors.TargetUser, connectors.Source)
+	if err == nil {
+		t.Fatal("expected an error, got none")
+	}
+
+}
+
 // TestRecordSchemaNoCustomFields checks the empty custom field case.
 func TestRecordSchemaNoCustomFields(t *testing.T) {
 
