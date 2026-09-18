@@ -11,10 +11,11 @@ import (
 	"github.com/krenalis/krenalis/tools/errors"
 )
 
-// TestOnboardRejectsInvalidAdminEmail verifies that Onboard rejects an invalid
-// admin email address before creating any organization. Its WorkOS has no
-// Core, so a rejection that does not happen first fails the test.
-func TestOnboardRejectsInvalidAdminEmail(t *testing.T) {
+// TestSignupOrganizationRejectsInvalidAdminEmail verifies that
+// SignupOrganization rejects an invalid admin email address before creating any
+// organization. Its WorkOS has no Core, so a rejection that does not happen
+// first fails the test.
+func TestSignupOrganizationRejectsInvalidAdminEmail(t *testing.T) {
 
 	wo := &WorkOS{}
 
@@ -31,7 +32,7 @@ func TestOnboardRejectsInvalidAdminEmail(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := wo.Onboard(t.Context(), "Acme", test.email)
+			err := wo.SignupOrganization(t.Context(), "Acme", test.email)
 			if err != nil {
 				if _, ok := errors.AsType[*errors.BadRequestError](err); !ok {
 					t.Fatalf("expected *errors.BadRequestError, got %T", err)

@@ -156,14 +156,14 @@ func Test_verifyCertificate(t *testing.T) {
 	})
 }
 
-// Test_serveOnboardingHTMLPage checks that serveOnboardingHTMLPage writes the
-// embedded onboarding page and the headers that keep it out of search engines.
-func Test_serveOnboardingHTMLPage(t *testing.T) {
+// Test_serveSignupHTMLPage checks that serveSignupHTMLPage writes the embedded
+// signup page and the headers that keep it out of search engines.
+func Test_serveSignupHTMLPage(t *testing.T) {
 
 	const robotsTag = "noindex, nofollow, noarchive, nosnippet, notranslate, noimageindex"
 
 	w := httptest.NewRecorder()
-	err := serveOnboardingHTMLPage(w, httptest.NewRequest(http.MethodGet, "/onboarding", nil))
+	err := serveSignupHTMLPage(w, httptest.NewRequest(http.MethodGet, "/signup", nil))
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -178,7 +178,7 @@ func Test_serveOnboardingHTMLPage(t *testing.T) {
 		t.Errorf("expected X-Robots-Tag %q, got %q", robotsTag, got)
 	}
 
-	page, err := static.ReadFile("static/onboarding.html")
+	page, err := static.ReadFile("static/signup.html")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -186,7 +186,7 @@ func Test_serveOnboardingHTMLPage(t *testing.T) {
 		t.Errorf("expected content length %d, got %q", len(page), got)
 	}
 	if !bytes.Equal(w.Body.Bytes(), page) {
-		t.Errorf("expected the embedded onboarding page, got %q", w.Body.String())
+		t.Errorf("expected the embedded signup page, got %q", w.Body.String())
 	}
 
 }

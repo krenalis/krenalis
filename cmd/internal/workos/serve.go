@@ -22,13 +22,13 @@ import (
 // maxPayloadSize is the maximum size in bytes for a webhook or action payload.
 const maxPayloadSize = 64 * 1024
 
-// onboardingRollbackTimeout bounds the deletion of the organization of a failed
-// onboarding, which runs on a context detached from the request.
-const onboardingRollbackTimeout = 30 * time.Second
+// signupRollbackTimeout bounds the deletion of the organization of a failed
+// signup, which runs on a context detached from the request.
+const signupRollbackTimeout = 30 * time.Second
 
-// onboardingLimits are the resource limits granted to an organization created
-// through onboarding.
-var onboardingLimits = core.OrganizationLimits{
+// signupLimits are the resource limits granted to an organization created
+// through signup.
+var signupLimits = core.OrganizationLimits{
 	Members:     core.MembersLimit,
 	AccessKeys:  core.AccessKeysLimit,
 	Workspaces:  core.WorkspacesLimit,
@@ -40,62 +40,6 @@ var onboardingLimits = core.OrganizationLimits{
 		WorkspaceSpecific:    core.RateLimit{RatePerMinute: 1_000, MaxCapacity: 1_000},
 		EventsSpecific:       core.RateLimit{RatePerMinute: 1_000, MaxCapacity: 20_000},
 	},
-}
-
-// Onboard creates an enabled organization in Krenalis, creates the WorkOS
-// organization linked to it, and sends a WorkOS invitation email that invites
-// adminEmail as an admin of the organization. If a step after the Krenalis
-// organization has been created fails, that organization is deleted again.
-//
-// It returns an errors.BadRequestError if adminEmail is not a valid email
-// address.
-func (wo *WorkOS) Onboard(ctx context.Context, organizationName, adminEmail string) error {
-
-	organizationName = strings.TrimSpace(norm.NFC.String(organizationName))
-	adminEmail = strings.TrimSpace(norm.NFC.String(adminEmail))
-
-	if err := core.ValidateMemberEmail(adminEmail); err != nil {
-		return errors.BadRequest("%s", err)
-	}
-
-	id, err := wo.core.CreateOrganization(ctx, organizationName, true, onboardingLimits)
-	if err != nil {
-		return err
-	}
-
-	var onboarded bool
-	defer func() {
-		if onboarded {
-			return
-		}
-		// Detach the deletion from ctx, which is canceled when the client
-		// disconnects, so that it is attempted even then.
-		deleteCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), onboardingRollbackTimeout)
-		defer cancel()
-		org, err := wo.core.Organization(id)
-		if err != nil {
-			slog.Error("failed to get the organization of a failed onboarding", "organization", id, "error", err)
-			return
-		}
-		err = org.Delete(deleteCtx)
-		if err != nil {
-			slog.Error("failed to delete the organization of a failed onboarding", "organization", id, "error", err)
-		}
-	}()
-
-	workosOrganizationID, err := wo.createOrganization(ctx, organizationName, id)
-	if err != nil {
-		return err
-	}
-
-	err = wo.sendInvitation(ctx, adminEmail, workosOrganizationID)
-	if err != nil {
-		return err
-	}
-
-	onboarded = true
-
-	return nil
 }
 
 // ServeHTTP serves action and webhook requests.
@@ -168,6 +112,63 @@ func (wo *WorkOS) ServeLogin(r *http.Request) (string, string, error) {
 	}
 
 	return org.ID, member, nil
+}
+
+// SignupOrganization creates an enabled organization in Krenalis, creates the
+// WorkOS organization linked to it, and sends a WorkOS invitation email that
+// invites adminEmail as an admin of the organization. If a step after the
+// Krenalis organization has been created fails, that organization is deleted
+// again.
+//
+// It returns an errors.BadRequestError if adminEmail is not a valid email
+// address.
+func (wo *WorkOS) SignupOrganization(ctx context.Context, organizationName, adminEmail string) error {
+
+	organizationName = strings.TrimSpace(norm.NFC.String(organizationName))
+	adminEmail = strings.TrimSpace(norm.NFC.String(adminEmail))
+
+	if err := core.ValidateMemberEmail(adminEmail); err != nil {
+		return errors.BadRequest("%s", err)
+	}
+
+	id, err := wo.core.CreateOrganization(ctx, organizationName, true, signupLimits)
+	if err != nil {
+		return err
+	}
+
+	var signedUp bool
+	defer func() {
+		if signedUp {
+			return
+		}
+		// Detach the deletion from ctx, which is canceled when the client
+		// disconnects, so that it is attempted even then.
+		deleteCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), signupRollbackTimeout)
+		defer cancel()
+		org, err := wo.core.Organization(id)
+		if err != nil {
+			slog.Error("failed to get the organization of a failed signup", "organization", id, "error", err)
+			return
+		}
+		err = org.Delete(deleteCtx)
+		if err != nil {
+			slog.Error("failed to delete the organization of a failed signup", "organization", id, "error", err)
+		}
+	}()
+
+	workosOrganizationID, err := wo.createOrganization(ctx, organizationName, id)
+	if err != nil {
+		return err
+	}
+
+	err = wo.sendInvitation(ctx, adminEmail, workosOrganizationID)
+	if err != nil {
+		return err
+	}
+
+	signedUp = true
+
+	return nil
 }
 
 // serveAction handles the user registration action. It verifies the request

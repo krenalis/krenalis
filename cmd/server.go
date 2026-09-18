@@ -164,16 +164,16 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 		case r.URL.Path == "/admin" || strings.HasPrefix(r.URL.Path, "/admin/"):
 			admin.ServeHTTP(w, r)
 			return
-		case r.URL.Path == "/onboarding":
+		case r.URL.Path == "/signup":
 			if workOS != nil {
 				if r.Method != "GET" {
 					w.Header().Set("Allow", "GET")
 					http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 					return
 				}
-				err := serveOnboardingHTMLPage(w, r)
+				err := serveSignupHTMLPage(w, r)
 				if err != nil {
-					slog.Error("failed to serve the onboarding HTML page", "error", err)
+					slog.Error("failed to serve the signup HTML page", "error", err)
 				}
 				return
 			}
@@ -369,15 +369,15 @@ func serveMCPServerHTMLIndex(w http.ResponseWriter) error {
 	return nil
 }
 
-// serveOnboardingHTMLPage serves the onboarding HTML page.
-func serveOnboardingHTMLPage(w http.ResponseWriter, r *http.Request) error {
+// serveSignupHTMLPage serves the signup HTML page.
+func serveSignupHTMLPage(w http.ResponseWriter, r *http.Request) error {
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet, notranslate, noimageindex")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	page, err := static.ReadFile("static/onboarding.html")
+	page, err := static.ReadFile("static/signup.html")
 	if err != nil {
-		return errors.New("embedded file 'static/onboarding.html' not found in executable")
+		return errors.New("embedded file 'static/signup.html' not found in executable")
 	}
-	http.ServeContent(w, r, "onboarding.html", time.Time{}, bytes.NewReader(page))
+	http.ServeContent(w, r, "signup.html", time.Time{}, bytes.NewReader(page))
 	return nil
 }
 
