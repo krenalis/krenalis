@@ -5,10 +5,9 @@
 package json
 
 import (
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"io"
-
-	"github.com/krenalis/krenalis/tools/json/internal/json"
-	"github.com/krenalis/krenalis/tools/json/internal/json/jsontext"
 )
 
 type Decoder struct {

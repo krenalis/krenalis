@@ -8,11 +8,10 @@ import (
 	"bytes"
 	"fmt"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
-
-	"github.com/google/uuid"
 )
 
 // These data types are copy-paste of the types defined within the APIs.
@@ -93,11 +92,23 @@ const (
 	CreateOrUpdate ExportMode = "CreateOrUpdate"
 )
 
-type Filter struct {
-	Logical    FilterLogical     `json:"logical"`
-	Conditions []FilterCondition `json:"conditions"`
+// FilterRule represents a condition or a nested filter group.
+// It is implemented by *FilterCondition and *Filter.
+type FilterRule interface {
+	filterRule()
 }
 
+// Filter represents a logical expression whose rules are combined using AND or OR.
+type Filter struct {
+	Operator FilterLogical `json:"operator"`
+	Rules    []FilterRule  `json:"rules"`
+}
+
+// filterRule marks Filter as a filter rule.
+func (*Filter) filterRule() {}
+
+// FilterLogical represents the logical operator of a filter.
+// It can be OpAnd or OpOr.
 type FilterLogical string
 
 const (
@@ -105,12 +116,17 @@ const (
 	OpOr  FilterLogical = "or"
 )
 
+// FilterCondition represents a single filter condition.
 type FilterCondition struct {
 	Property string         `json:"property"`
 	Operator FilterOperator `json:"operator"`
 	Values   []string       `json:"values"`
 }
 
+// filterRule marks FilterCondition as a filter rule.
+func (*FilterCondition) filterRule() {}
+
+// FilterOperator represents a filter condition operator.
 type FilterOperator string
 
 const (

@@ -513,11 +513,9 @@ func (p *bodyBufferPool) Put(bb *bodyBufferState) {
 // bodyBufPool is a pool of reusable *bodyBufferState instances to reduce
 // allocations.
 var bodyBufPool = &bodyBufferPool{
-	Pool: sync.Pool{
-		New: func() any {
-			bb := &bodyBufferState{}
-			bb.gzipW = *gzip.NewWriter(nil)
-			return bb
-		},
+	New: func() any {
+		bb := &bodyBufferState{}
+		bb.gzipW = *gzip.NewWriter(nil)
+		return bb
 	},
 }

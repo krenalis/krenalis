@@ -85,7 +85,7 @@ type countIdentity struct {
 func TestCountIdentitiesNoPipelines(t *testing.T) {
 	for _, platform := range []string{"PostgreSQL", "Snowflake"} {
 		t.Run(platform, func(t *testing.T) {
-			dw := warehouses.Registered(platform).New(countIdentitiesSettingsLoader{})
+			dw := warehouses.Registered(platform).New(countIdentitiesSettingsLoader{}, nil)
 			t.Cleanup(func() {
 				if err := dw.Close(); err != nil {
 					t.Error(err)
@@ -421,7 +421,7 @@ func newCountIdentitiesWarehouse(t *testing.T, platform string) warehouses.Wareh
 		panic("unsupported warehouse platform " + platform)
 	}
 
-	dw := warehouses.Registered(platform).New(countIdentitiesSettingsLoader{settings: settings})
+	dw := warehouses.Registered(platform).New(countIdentitiesSettingsLoader{settings: settings}, nil)
 	t.Cleanup(func() {
 		if err := dw.Close(); err != nil {
 			t.Error(err)

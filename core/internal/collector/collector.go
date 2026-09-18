@@ -490,7 +490,7 @@ func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
 		if w, ok := c.identityWriters.Load(p.ID); ok {
 			var transformer *transformers.Transformer
 			if p.Transformation.Mapping != nil || p.Transformation.Function != nil {
-				transformer, _ = transformers.New(p, c.functionProvider, nil)
+				transformer, _ = transformers.New(p.Organization().ID, p, c.functionProvider, nil)
 			}
 			w.(*identityWriter).SetTransformer(transformer)
 		}
@@ -803,9 +803,6 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 
 	var ingestedEvents int
 	receivedAt := dec.receivedAt
-	defer func() {
-		c.metrics.Usage.IngestedEvents(ws.Organization().ID, ws.ID, receivedAt, ingestedEvents)
-	}()
 
 	// Decode the events.
 	for event, err := range dec.Events(connection.ID, connector.FallbackToRequestIP) {
@@ -915,6 +912,9 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+
+	// Failed batches are not counted, even if some events were already published.
+	c.metrics.Usage.IngestedEvents(ws.Organization().ID, ws.ID, receivedAt, ingestedEvents)
 
 	for _, pipeline := range pendingReceivePassed {
 		c.metrics.Pipelines.ReceivePassed(pipeline, 1)

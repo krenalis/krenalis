@@ -67,7 +67,7 @@ func New(base int) *Backoff {
 // so as soon as possible after cancellation.
 func (bo *Backoff) AfterFunc(ctx context.Context, f func(ctx context.Context)) bool {
 	if bo.attempt > 0 {
-		if bo.attempt == bo.attempts {
+		if bo.attempts != 0 && bo.attempt >= bo.attempts {
 			return false
 		}
 		if bo.waitTime == 0 {
@@ -108,7 +108,7 @@ func (bo *Backoff) Attempt() int {
 // made, otherwise, it returns false.
 func (bo *Backoff) Next(ctx context.Context) bool {
 	if bo.attempt > 0 {
-		if bo.attempt == bo.attempts {
+		if bo.attempts != 0 && bo.attempt >= bo.attempts {
 			return false
 		}
 		if bo.waitTime == 0 {
@@ -124,6 +124,7 @@ func (bo *Backoff) Next(ctx context.Context) bool {
 		bo.waitTime = 0
 		select {
 		case <-ctx.Done():
+			bo.timer.Stop()
 			return false
 		case <-bo.timer.C:
 		}
@@ -134,8 +135,16 @@ func (bo *Backoff) Next(ctx context.Context) bool {
 	return true
 }
 
-// SetAttempts sets the attempts. Use backoff.NoLimit for unlimited attempts.
-// It panics if attempts is zero or negative.
+// Reset clears the attempt counter and next wait time while preserving the
+// configured attempts, base, and cap. It must not be called while an AfterFunc
+// callback is pending.
+func (bo *Backoff) Reset() {
+	bo.attempt = 0
+	bo.waitTime = 0
+}
+
+// SetAttempts limits the backoff to attempts total attempts. A Backoff returned
+// by New has no attempt limit. It panics if attempts is zero or negative.
 func (bo *Backoff) SetAttempts(attempts int) {
 	if attempts <= 0 {
 		panic("backoff: attempts is zero or negative")
@@ -189,7 +198,7 @@ func (bo *Backoff) Stop() bool {
 // already been called or if there are no other retry attempts.
 func (bo *Backoff) WaitTime() time.Duration {
 	if bo.attempt > 0 {
-		if bo.attempt == bo.attempts {
+		if bo.attempts != 0 && bo.attempt >= bo.attempts {
 			return 0
 		}
 		if bo.waitTime == 0 {

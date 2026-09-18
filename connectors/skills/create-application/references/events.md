@@ -25,7 +25,7 @@ Use it to choose the right iteration method and payload-building pattern.
 - Use schema constraints aggressively:
   - `CreateRequired` for required fields
   - `Prefilled` for recommended mapping expressions
-  - `WithPattern`, `WithMaxLength`, `WithValues`, and similar methods for constraints the type system can express
+  - For value constraints, follow [Express constraints in the schema](schemas-and-types.md#express-constraints-in-the-schema-prefer-schema-over-runtime-checks), including the supported string constraint combinations.
 
 Example:
 
@@ -36,7 +36,7 @@ func (c *MyApp) EventTypeSchema(ctx context.Context, eventType string) (types.Ty
 		return types.Object([]types.Property{
 			{
 				Name:           "event_name",
-				Type:           types.String().WithMaxLength(255).WithPattern(purchaseNameRE),
+				Type:           types.String().WithPattern(purchaseNameRE),
 				Prefilled:      "event",
 				CreateRequired: true,
 				Description:    "Event name",

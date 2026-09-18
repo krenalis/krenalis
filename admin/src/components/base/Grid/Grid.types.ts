@@ -14,8 +14,11 @@ interface StandardGridRow {
 	id?: string; // the id inserted in the 'data-id' attribute of the row. Can be used to select the row via JS and CSS.
 	key?: string;
 	onClick?: () => void;
+	onToggleExpansion?: () => void;
 	animation?: string;
 	selected?: boolean;
+	expanded?: boolean;
+	forceExpanded?: boolean; // expands without changing the row's stored expansion state
 }
 
 interface SortableGridRow extends StandardGridRow {
@@ -30,9 +33,32 @@ interface GridCell {
 	alignment?: string;
 }
 
+interface GridNestedRowsIndentation {
+	base: number;
+	step: number;
+}
+
+interface GridRef {
+	collapse: () => void;
+	expand: () => void;
+	expandRow: (id: string) => void;
+	focus: () => void;
+	navigate: (key: string, shiftKey?: boolean) => boolean;
+}
+
 interface SortableRowComponent {
 	id: string;
 	row: ReactNode;
 }
 
-export type { GridColumn, GridRow, GridCell, StandardGridRow, NestedGridRows, SortableGridRow, SortableRowComponent };
+export type {
+	GridColumn,
+	GridRow,
+	GridCell,
+	GridNestedRowsIndentation,
+	GridRef,
+	StandardGridRow,
+	NestedGridRows,
+	SortableGridRow,
+	SortableRowComponent,
+};

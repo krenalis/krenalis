@@ -6,6 +6,8 @@ package json
 
 import (
 	"bytes"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"iter"
@@ -13,8 +15,6 @@ import (
 	"sync"
 
 	"github.com/krenalis/krenalis/tools/decimal"
-	"github.com/krenalis/krenalis/tools/json/internal/json"
-	"github.com/krenalis/krenalis/tools/json/internal/json/jsontext"
 )
 
 var (

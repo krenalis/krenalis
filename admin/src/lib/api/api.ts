@@ -614,8 +614,8 @@ class Profiles {
 		];
 		params.push(['properties', properties.join(',')]);
 		let filter = {
-			logical: 'and',
-			conditions: [
+			operator: 'and',
+			rules: [
 				{
 					property: 'kpid',
 					operator: 'is',

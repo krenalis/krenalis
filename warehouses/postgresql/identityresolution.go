@@ -42,13 +42,16 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 		return nil
 	}
 
+	deferFinalization := true
 	defer func() {
-		err = warehouse.finalizeIdentityResolution(ctx, pool, opID, err)
+		if deferFinalization {
+			err = warehouse.finalizeIdentityResolution(ctx, pool, opID, err)
+		}
 	}()
 
-	// Determine the current version of the "krenalis_profiles" table and create a copy
-	// of it with the incremented version.
-	profilesVersion, err := warehouse.profilesVersion(ctx)
+	// Determine the greatest recorded version of the "krenalis_profiles" table
+	// and allocate the next version.
+	maxProfilesVersion, err := warehouse.maxProfilesVersion(ctx)
 	if err != nil {
 		return err
 	}
@@ -56,14 +59,14 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 	if err != nil {
 		return err
 	}
-	newProfilesVersion := profilesVersion + 1
+	newProfilesVersion := maxProfilesVersion + 1
 	newProfilesName := fmt.Sprintf("krenalis_profiles_%d", newProfilesVersion)
 
 	// Prepare a candidate profiles version without exposing partial Identity
 	// Resolution results.
 	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
 		removePreviousProfilesTable := false
-		if profilesVersion != publishedProfilesVersion {
+		if maxProfilesVersion != publishedProfilesVersion {
 			// The latest unpublished profiles version may belong to an operation
 			// that is still running. Replace it only if that operation failed.
 			err = tx.QueryRow(ctx, `SELECT EXISTS (
@@ -73,21 +76,23 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 				WHERE "v"."version" = $1
 					AND "o"."completed_at" IS NOT NULL
 					AND "o"."error" <> ''
-			)`, profilesVersion).Scan(&removePreviousProfilesTable)
+			)`, maxProfilesVersion).Scan(&removePreviousProfilesTable)
 			if err != nil {
 				return err
 			}
 			if !removePreviousProfilesTable {
 				return fmt.Errorf(
-					"profiles version %d is unpublished but does not belong to a failed operation", profilesVersion)
+					"profiles version %d is unpublished but does not belong to a failed operation", maxProfilesVersion)
 			}
 		}
-		// Create the candidate table by copying the schema from the current profiles table.
-		_, err := tx.Exec(ctx, fmt.Sprintf(`CREATE TABLE %s (LIKE "krenalis_profiles_%d")`, quoteIdent(newProfilesName), profilesVersion))
+		// Create the candidate table by copying the schema from the published profiles table.
+		_, err := tx.Exec(ctx, fmt.Sprintf(`CREATE TABLE %s (LIKE "krenalis_profiles_%d")`,
+			quoteIdent(newProfilesName), publishedProfilesVersion))
 		if err != nil {
 			return fmt.Errorf("cannot create profiles table (with name %s): %s", quoteIdent(newProfilesName), err)
 		}
-		// Add the identity count columns if they are not already present.
+		// Add the logical identity count columns if they are not already present.
+		// This ALTER TABLE is temporary and will be removed in a future release.
 		_, err = tx.Exec(ctx, `ALTER TABLE `+quoteIdent(newProfilesName)+
 			` ADD COLUMN IF NOT EXISTS "_anonymous_count" integer NOT NULL,`+
 			` ADD COLUMN IF NOT EXISTS "_recognized_count" integer NOT NULL`)
@@ -102,8 +107,8 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 			return err
 		}
 		if removePreviousProfilesTable {
-			// Drop the failed candidate table after preserving its schema changes.
-			_, err = tx.Exec(ctx, `DROP TABLE IF EXISTS "krenalis_profiles_`+strconv.Itoa(profilesVersion)+`"`)
+			// Drop the failed candidate table.
+			_, err = tx.Exec(ctx, `DROP TABLE IF EXISTS "krenalis_profiles_`+strconv.Itoa(maxProfilesVersion)+`"`)
 			if err != nil {
 				return err
 			}
@@ -182,8 +187,9 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 		mergeProfiles.WriteString(quoteIdent(c.Name))
 		mergeProfiles.WriteByte(',')
 	}
-	// Write the "_identities" column.
+	// Write the "_identities" column containing the raw identities.
 	mergeProfiles.WriteString(`ARRAY_AGG(DISTINCT "_pk"), `)
+	// Write the "_anonymous_count" and "_recognized_count" columns containing the logical identity counts.
 	mergeProfiles.WriteString(`COUNT(DISTINCT ("_connection", "_identity_id")) FILTER (WHERE "_is_anonymous"), `)
 	mergeProfiles.WriteString(`COUNT(DISTINCT ("_connection", "_identity_id")) FILTER (WHERE NOT "_is_anonymous"), `)
 	// Write the "_kpid" column.
@@ -241,6 +247,8 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 		return err
 	}
 
+	// Publish the new profiles version, remove the previous profiles table, and
+	// mark the operation as completed atomically.
 	err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
 
 		// Replace the current "profiles" view with a new one using the "CREATE OR REPLACE VIEW"
@@ -258,6 +266,12 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 
 		return warehouse.setOperationAsCompleted(ctx, tx, opID, nil)
 	})
+
+	// Reconcile an ambiguous commit result with the persisted operation state.
+	// Publication and cleanup were part of the same transaction, so no further
+	// finalization is needed after a persisted success.
+	deferFinalization = false
+	err = warehouse.finalizeIdentityResolution(ctx, pool, opID, err)
 	if err != nil {
 		return err
 	}

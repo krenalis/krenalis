@@ -120,7 +120,8 @@ func Test_Merge_Query(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	env := connectors.DatabaseEnv{Settings: newTestSettingsStore(settings)}
+	var dialer net.Dialer
+	env := connectors.DatabaseEnv{Settings: newTestSettingsStore(settings), Dial: dialer.DialContext}
 	connector, err := New(&env)
 	if err != nil {
 		t.Fatal(err)

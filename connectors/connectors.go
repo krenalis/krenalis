@@ -7,11 +7,11 @@ package connectors
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"reflect"
 	"strings"
-
-	"github.com/google/uuid"
+	"uuid"
 )
 
 // Categories represents connector categories.
@@ -59,6 +59,16 @@ func (c Categories) String() string {
 		return fmt.Sprintf("<unexpected category %d>", c)
 	}
 }
+
+type (
+	// A DialFunc establishes an outbound network connection to the given
+	// address.
+	DialFunc = func(ctx context.Context, network, address string) (net.Conn, error)
+
+	// A DialWith wraps the dial function of a connector, returning the dial
+	// function to be used in its place.
+	DialWith = func(dial DialFunc) DialFunc
+)
 
 type Documentation struct {
 	Source      RoleDocumentation
@@ -149,7 +159,7 @@ func (role Role) String() string {
 // UUID returns a random version 4 UUID. For example, it can be used as an
 // idempotency key.
 func UUID() string {
-	return uuid.NewString()
+	return uuid.New().String()
 }
 
 var errorQuoteReplacer = strings.NewReplacer("»", "≫")

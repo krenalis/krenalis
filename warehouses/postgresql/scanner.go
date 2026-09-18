@@ -14,11 +14,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -149,11 +149,11 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 			// returned by PostgreSQL include the subnet mask, which must be
 			// removed.
 			rawIP, _, _ := strings.Cut(v, "/") // "127.0.0.1/32" -> "127.0.0.1"
-			ip, err := netip.ParseAddr(rawIP)
-			if err != nil {
+			ip, ok := types.NormalizeIP(rawIP)
+			if !ok {
 				return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not an ip type", v, name)
 			}
-			return ip.String(), nil
+			return ip, nil
 		}
 	case types.ArrayKind:
 		v, err := s.scanArray(v)
@@ -294,7 +294,10 @@ func (s *scanner) scanArray(src any) ([]any, error) {
 			if !ok {
 				return nil, errInvalidData
 			}
-			values[i] = addr.String()
+			values[i], ok = types.NormalizeIP(addr)
+			if !ok {
+				return nil, errInvalidData
+			}
 			p += l
 		}
 	case
@@ -379,7 +382,7 @@ func (s *scanner) scanArray(src any) ([]any, error) {
 		}
 		for i := range values {
 			p += 4 // skip length
-			values[i] = uuid.Must(uuid.FromBytes(data[p : p+16])).String()
+			values[i] = uuid.UUID(data[p : p+16]).String()
 			p += 16
 		}
 	case 114: // json

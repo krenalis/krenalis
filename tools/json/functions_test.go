@@ -6,6 +6,7 @@ package json
 
 import (
 	"bytes"
+	"math"
 	"reflect"
 	"testing"
 )
@@ -157,6 +158,17 @@ func Test_IndentSorted(t *testing.T) {
 			t.Fatalf("unexpected value.\nexpected: %q\ngot:      %q\n", test.expected, got)
 		}
 	}
+}
+
+// Test_Marshal verifies that Marshal returns semantic encoding errors.
+func Test_Marshal(t *testing.T) {
+
+	_, err := Marshal(math.Inf(1))
+	if err != nil {
+		return
+	}
+	t.Fatal("expected error, got no error")
+
 }
 
 func Test_Quote(t *testing.T) {

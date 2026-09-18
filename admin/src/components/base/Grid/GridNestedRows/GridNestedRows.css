@@ -56,8 +56,8 @@
 }
 
 .grid__nested-rows--expanded > .grid__row--parent {
-	border-top: 1px solid var(--border-primary);
-	border-bottom: 1px solid var(--border-primary);
+	border-top: 1px solid var(--grid-row-separator-color, var(--border-primary));
+	border-bottom: 1px solid var(--grid-row-separator-color, var(--border-primary));
 }
 
 .grid__nested-rows--expanded > .draggable-wrapper {
@@ -144,7 +144,7 @@
 .grid__nested-rows > .grid__nested-rows--children:last-child,
 .grid__nested-rows > .draggable-wrapper > .grid__row--children:last-child,
 .grid__nested-rows > .draggable-wrapper > .grid__nested-rows--children:last-child {
-	border-bottom: 1px solid var(--border-primary) !important;
+	border-bottom: 1px solid var(--grid-row-separator-color, var(--border-primary)) !important;
 }
 
 .grid__nested-rows.grid-el--last > .grid__row--children:last-child,

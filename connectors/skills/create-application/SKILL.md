@@ -482,6 +482,8 @@ All HTTP calls must go through:
 res, err := c.env.HTTPClient.Do(req)
 ```
 
+`env.HTTPClient` is the connector's only outbound network path. Never build your own `http.Client`, `http.Transport`, `net.Dialer`, or any other custom dialing path: besides applying rate limits and retries, `env.HTTPClient` uses the transport of the organization on behalf of which the connector runs, and Krenalis counts the bytes it sends to attribute the network usage to that organization. Requests sent outside it are not attributed to anyone.
+
 Build request bodies via `BodyBuffer` (pooled buffers, optional gzip, and retriable bodies). Full guidance (including redirects and flush/truncate patterns):
 
 - [references/http.md](references/http.md)
@@ -516,6 +518,7 @@ Guiding rules:
   - `ReadOptional` describes the read path, not the fact that a property may be used for destination matching.
   - If the vendor metadata or docs indicate that a property is read-only or not writable, the destination schema must exclude it even if the source schema includes it.
 - Avoid invalid property names (`types.IsValidPropertyName(...)`).
+- String constraints are not freely composable; follow the [supported combinations](references/schemas-and-types.md#string-constraint-combinations) when translating API specifications or dynamic field metadata.
 
 Full schema and value-mapping guidance (import/export canonical types, `types.Marshal`, missing vs null):
 
@@ -614,7 +617,7 @@ Before finishing, ensure:
 - `ApplicationSpec.Code` is non-empty and contains only `[a-z0-9-]`
 - OAuth + endpoint groups satisfy registry validation (if applicable)
 - `ServeUI` exists iff `HasSettings` is true
-- requests use BodyBuffer + `env.HTTPClient`
+- requests use BodyBuffer + `env.HTTPClient`, and the connector never creates its own `http.Client`, `http.Transport`, or dialer
 - embedded connector documentation matches actual implemented behavior (do not claim unsupported capabilities)
 - package comments and function/method comments exist for exported and non-exported declarations that need them, with concise Go-style wording
 - schemas match real API behavior: properties that may be absent on the read path are marked `ReadOptional`, and role-dependent schema flags are used coherently
@@ -637,6 +640,7 @@ Before presenting the final result, run this checklist against your own implemen
 - discovery used API specification first (or includes explicit negative evidence that no usable spec was found)
 - `RecordSchema(..., role)` returns the correct schema for the requested role; non-writable/read-only properties are excluded from the destination schema when applicable
 - response bodies are always closed, and connectors do not add manual drain code just to make connection reuse work
+- every outbound request goes through `env.HTTPClient`, so its bytes are attributed to the organization's network usage
 - package comments and leading Go-style comments cover exported declarations and the non-exported package-level functions and methods whose behavior is not obvious from the code
 
 If any checklist item is violated, include a short `Skill deviations` section in the output with:

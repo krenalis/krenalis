@@ -828,7 +828,7 @@ func (workspace workspace) ProfileEvents(_ http.ResponseWriter, r *http.Request)
 
 	// Parse the KPID.
 	kpid := r.PathValue("kpid")
-	if _, ok := types.ParseUUID(kpid); !ok {
+	if _, ok := types.NormalizeUUID(kpid); !ok {
 		return nil, errors.BadRequest("value %q is not a valid KPID", kpid)
 	}
 
@@ -847,9 +847,9 @@ func (workspace workspace) ProfileEvents(_ http.ResponseWriter, r *http.Request)
 	properties := splitQueryParameters(q["properties"])
 
 	filter := &core.Filter{
-		Logical: core.OpAnd,
-		Conditions: []core.FilterCondition{
-			{
+		Operator: core.OpAnd,
+		Rules: []core.FilterRule{
+			&core.FilterCondition{
 				Property: "kpid",
 				Operator: core.OpIs,
 				Values:   []string{kpid},

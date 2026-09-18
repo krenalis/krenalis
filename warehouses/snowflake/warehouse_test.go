@@ -105,7 +105,7 @@ func Test_Merge(t *testing.T) {
 		}
 	}()
 
-	dw := warehouses.Registered("Snowflake").New(newTestSettingsLoader(testEnv.Settings().JSON()))
+	dw := warehouses.Registered("Snowflake").New(newTestSettingsLoader(testEnv.Settings().JSON()), nil)
 	defer dw.Close()
 
 	db, err := dw.(*Snowflake).openDB(t.Context())
@@ -261,6 +261,14 @@ func (loader *testSettingsLoader) Load(ctx context.Context, dst any) error {
 	return json.Unmarshal(loader.settings, dst)
 }
 
+func mustExecSQL(t *testing.T, db *sql.DB, statement string) {
+	t.Helper()
+	_, err := db.ExecContext(t.Context(), statement)
+	if err != nil {
+		t.Fatalf("cannot execute SQL %q: %s", statement, err)
+	}
+}
+
 // newTestSnowflakeWarehouse creates a Snowflake test environment and opens a
 // warehouse connection to it.
 func newTestSnowflakeWarehouse(t *testing.T) (*Snowflake, *sql.DB) {
@@ -280,7 +288,7 @@ func newTestSnowflakeWarehouse(t *testing.T) (*Snowflake, *sql.DB) {
 		}
 	})
 
-	warehouse := warehouses.Registered("Snowflake").New(newTestSettingsLoader(testEnv.Settings().JSON())).(*Snowflake)
+	warehouse := warehouses.Registered("Snowflake").New(newTestSettingsLoader(testEnv.Settings().JSON()), nil).(*Snowflake)
 	t.Cleanup(func() {
 		if err := warehouse.Close(); err != nil {
 			t.Error(err)
