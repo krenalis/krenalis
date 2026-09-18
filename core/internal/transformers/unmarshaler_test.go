@@ -641,26 +641,44 @@ func Test_UnmarshalEdgeCases(t *testing.T) {
 		}
 	})
 
-	t.Run("array unique duplicated", func(t *testing.T) {
-		sch := types.Object([]types.Property{{Name: "a", Type: types.Array(types.String()).WithUnique()}})
-		rec := []Record{{}}
-		data := strings.NewReader(`{"records":[{"value":{"a":["x","x"]}}]}`)
-		err := Unmarshal(data, rec, sch, state.JavaScript, false)
-		if err != errInvalidResponseFormat {
-			t.Fatalf("expected errInvalidResponseFormat, got %v", err)
-		}
-		if rec[0].Err == nil || rec[0].Err.Error() != "property «a» contains a duplicated value" {
-			t.Fatalf("unexpected record error: %v", rec[0].Err)
-		}
-	})
+	for _, test := range []struct {
+		name      string
+		element   types.Type
+		value     string
+		duplicate bool
+	}{
+		{"array unique distinct strings", types.String(), `["x","y"]`, false},
+		{"array unique duplicated strings", types.String(), `["x","x"]`, true},
+		{"array unique duplicated NaNs", types.Float(64), `["NaN","NaN"]`, true},
+		{"array unique equivalent decimals", types.Decimal(6, 2), `["1.5","1.50"]`, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			schema := types.Object([]types.Property{{Name: "a", Type: types.Array(test.element).WithUnique()}})
+			records := []Record{{}}
+			data := strings.NewReader(`{"records":[{"value":{"a":` + test.value + `}}]}`)
+			err := Unmarshal(data, records, schema, state.JavaScript, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if test.duplicate {
+				if records[0].Err == nil || records[0].Err.Error() != "property «a» contains a duplicated value" {
+					t.Fatalf("unexpected record error: %v", records[0].Err)
+				}
+				return
+			}
+			if records[0].Err != nil {
+				t.Fatal(records[0].Err)
+			}
+		})
+	}
 
 	t.Run("array element bounds", func(t *testing.T) {
 		sch := types.Object([]types.Property{{Name: "a", Type: types.Array(types.Int(32)).WithMinElements(2).WithMaxElements(3)}})
 		rec := []Record{{}}
 		less := strings.NewReader(`{"records":[{"value":{"a":[1]}}]}`)
 		err := Unmarshal(less, rec, sch, state.JavaScript, false)
-		if err != errInvalidResponseFormat {
-			t.Fatalf("expected errInvalidResponseFormat for less elements, got %v", err)
+		if err != nil {
+			t.Fatal(err)
 		}
 		if rec[0].Err == nil || rec[0].Err.Error() != "property «a» contains less than 2 elements" {
 			t.Fatalf("unexpected error for less elements: %v", rec[0].Err)
@@ -672,11 +690,9 @@ func Test_UnmarshalEdgeCases(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error for more elements: %v", err)
 		}
-		if rec[0].Err != nil {
-			t.Fatalf("did not expect record error for more elements: %v", rec[0].Err)
-		}
-		if got := rec[0].Attributes["a"]; got == nil || len(got.([]any)) != 4 {
-			t.Fatalf("expected 4 elements, got %v", got)
+		want := "property «a» contains more than 3 elements"
+		if rec[0].Err == nil || rec[0].Err.Error() != want {
+			t.Fatalf("expected %q, got %v", want, rec[0].Err)
 		}
 	})
 }

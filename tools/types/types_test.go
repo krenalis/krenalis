@@ -222,6 +222,36 @@ func Test_Len(t *testing.T) {
 
 }
 
+// Test_StringConstraintPanics checks that combining incompatible string
+// constraints or passing a nil pattern causes a panic.
+func Test_StringConstraintPanics(t *testing.T) {
+
+	pattern := regexp.MustCompile(`a`)
+	tests := []struct {
+		name  string
+		apply func()
+	}{
+		{"pattern then max bytes", func() { String().WithPattern(pattern).WithMaxBytes(1) }},
+		{"pattern then max length", func() { String().WithPattern(pattern).WithMaxLength(1) }},
+		{"max bytes then pattern", func() { String().WithMaxBytes(1).WithPattern(pattern) }},
+		{"max length then pattern", func() { String().WithMaxLength(1).WithPattern(pattern) }},
+		{"nil pattern", func() { String().WithPattern(nil) }},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			defer func() {
+				if recover() == nil {
+					t.Fatal("expected panic, got none")
+				}
+			}()
+
+			test.apply()
+		})
+	}
+
+}
+
 func Test_ObjectOf_Errors(t *testing.T) {
 
 	// Test InvalidPropertyNameError.
