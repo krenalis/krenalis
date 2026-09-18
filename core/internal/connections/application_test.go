@@ -380,6 +380,7 @@ func TestApplicationEventType(t *testing.T) {
 		expected := &EventType{ID: "create-contact / 購入", OrderingGroup: "contacts"}
 		app := &Application{inner: &testEventSender{eventTypes: []*EventType{
 			nil,
+			{ID: "\xff"},
 			{ID: "invalid-id"},
 			expected,
 		}}}
@@ -420,12 +421,12 @@ func TestApplicationEventType(t *testing.T) {
 	})
 
 	t.Run("repeated", func(t *testing.T) {
-		app := &Application{inner: &testEventSender{eventTypes: []*EventType{
+		app := &Application{connector: "test", inner: &testEventSender{eventTypes: []*EventType{
 			{ID: "createContact"},
 			{ID: "createContact"},
 		}}}
 		_, err := app.EventType(t.Context(), "createContact")
-		expected := `event type ID "createContact" is repeated`
+		expected := `connector test returned multiple event types with the same ID (createContact)`
 		if err != nil {
 			if err.Error() != expected {
 				t.Fatalf("expected %q, got %q", expected, err.Error())

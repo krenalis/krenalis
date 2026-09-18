@@ -112,6 +112,8 @@ func (app *Application) Connector() string {
 
 // EventType returns the application's event type with the specified ID. The
 // returned event type is owned by the connector and must not be modified.
+// It validates only the matching event type and rejects duplicates of its ID;
+// nil entries and other event types are ignored.
 // If the event type does not exist, it returns connectors.ErrEventTypeNotExist.
 // If the connector returns an error, it returns an *UnavailableError error.
 // It panics if the application does not support the event target.
@@ -129,7 +131,7 @@ func (app *Application) EventType(ctx context.Context, id string) (*EventType, e
 			continue
 		}
 		if et != nil {
-			return nil, fmt.Errorf("event type ID %q is repeated", id)
+			return nil, fmt.Errorf("connector %s returned multiple event types with the same ID (%s)", app.connector, id)
 		}
 		et = candidate
 	}
