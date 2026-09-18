@@ -56,7 +56,7 @@ Many `tools/types` constructors and modifiers panic on an invalid argument inste
 
 Calling one with a dynamic argument — anything read from an API response, vendor metadata, or other external input — is not fine: a value the provider changes or corrupts would crash the connector at runtime. Before such a value reaches a panicking call, do one of:
 
-- Validate the value exhaustively first, when that is possible without excessive complexity (for example, `types.IsValidPropertyName(...)` before using an external field name as a property name).
+- Validate the value exhaustively first, when that is possible without excessive complexity.
 - Prefer the corresponding error-returning form when one exists, and propagate its error. Today the only such form in `tools/types` is `types.ObjectOf(...)`, the error-returning counterpart of `types.Object(...)`.
 
 For a panicking call with no error-returning counterpart (`WithValues`, `WithPattern`, `WithMaxLength`, etc.), exhaustive validation of the dynamic value before the call is the only option.
