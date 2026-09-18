@@ -17,6 +17,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -162,7 +163,7 @@ func Test_serveOnboardingHTMLPage(t *testing.T) {
 	const robotsTag = "noindex, nofollow, noarchive, nosnippet, notranslate, noimageindex"
 
 	w := httptest.NewRecorder()
-	err := serveOnboardingHTMLPage(w)
+	err := serveOnboardingHTMLPage(w, httptest.NewRequest(http.MethodGet, "/onboarding", nil))
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -180,6 +181,9 @@ func Test_serveOnboardingHTMLPage(t *testing.T) {
 	page, err := static.ReadFile("static/onboarding.html")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
+	}
+	if got := w.Header().Get("Content-Length"); got != strconv.Itoa(len(page)) {
+		t.Errorf("expected content length %d, got %q", len(page), got)
 	}
 	if !bytes.Equal(w.Body.Bytes(), page) {
 		t.Errorf("expected the embedded onboarding page, got %q", w.Body.String())
