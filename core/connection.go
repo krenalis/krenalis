@@ -369,8 +369,8 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		return "", errors.BadRequest("pipelines with target '%s' on %s %s connections cannot specify an event type", target, role, typ)
 	}
 	if eventType != "" {
-		if len(eventType) > connectors.MaxEventTypeIdentifierLen || !types.IsValidPropertyName(eventType) {
-			return "", errors.BadRequest("value %q is not a valid event type ID", eventType)
+		if err := util.ValidateStringField("eventType", eventType, 100); err != nil {
+			return "", errors.BadRequest("%s", err)
 		}
 	}
 
@@ -395,8 +395,6 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		return "", err
 	}
 
-	// Only for destination event pipeline checks that the out schema is aligned with the event type's schema.
-	// See issue https://github.com/krenalis/krenalis/issues/2086.
 	var orderingGroup string
 	if eventType != "" {
 		app := this.application()
@@ -410,7 +408,9 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 			}
 			return "", err
 		}
-		orderingGroup = connectors.OrderingGroup(et)
+		orderingGroup = et.OrderingGroup
+		// Only for destination event pipeline checks that the out schema is aligned with the event type's schema.
+		// See issue https://github.com/krenalis/krenalis/issues/2086.
 		eventTypeSchema, err := app.Schema(ctx, state.TargetEvent, eventType)
 		if err != nil {
 			return "", err
@@ -568,7 +568,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 				"required_consents_operator, transformation_mapping, transformation_id, transformation_version,\n" +
 				"transformation_language, transformation_source, transformation_preserve_json, transformation_in_paths,\n" +
 				"transformation_out_paths, query, format, path, sheet, compression, order_by, format_settings,\n" +
-				"export_mode, matching_in, matching_out, update_on_duplicates, table_name, table_key,\n" +
+				"export_mode, matching_in, matching_out, update_on_duplicates, table_name, table_key, \n" +
 				"user_id_column, updated_at_column, updated_at_format, incremental)\n" +
 				"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,\n" +
 				"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39)"
@@ -577,8 +577,8 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 				n.Filter, n.RequiredConsents.Purposes, n.RequiredConsents.Operator, mapping, function.ID, function.Version,
 				function.Language, function.Source, function.PreserveJSON, n.Transformation.InPaths, n.Transformation.OutPaths,
 				n.Query, formatCode, n.Path, n.Sheet, n.Compression, n.OrderBy, n.FormatSettings, n.ExportMode, n.Matching.In,
-				n.Matching.Out, n.UpdateOnDuplicates, n.TableName, n.TableKey, n.UserIDColumn, n.UpdatedAtColumn,
-				n.UpdatedAtFormat, n.Incremental)
+				n.Matching.Out, n.UpdateOnDuplicates, n.TableName, n.TableKey, n.UserIDColumn, n.UpdatedAtColumn, n.UpdatedAtFormat,
+				n.Incremental)
 			if err != nil {
 				if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "pipelines_connection_fkey" {
 					err = errors.Unprocessable(ConnectionNotExist, "connection %s does not exist", n.Connection)
@@ -1474,7 +1474,7 @@ func (this *Connection) PipelineTypes(ctx context.Context) ([]PipelineType, erro
 						Description:   et.Description,
 						Target:        TargetEvent,
 						EventType:     new(et.ID),
-						OrderingGroup: new(connectors.OrderingGroup(et)),
+						OrderingGroup: new(et.OrderingGroup),
 					})
 				}
 			}
@@ -1515,8 +1515,9 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 	if !c.Connector().DestinationTargets.Contains(state.TargetEvent) {
 		return nil, errors.BadRequest("connection %s does not support events", c.ID)
 	}
-	if len(typ) > connectors.MaxEventTypeIdentifierLen || !types.IsValidPropertyName(typ) {
-		return nil, errors.BadRequest("value %q is not a valid event type ID", typ)
+	err := util.ValidateStringField("type", typ, 100)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
 	}
 	if event == nil {
 		return nil, errors.BadRequest("event is missing")
@@ -2068,9 +2069,6 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 	}
 	// Check if the event type is supported by the connection.
 	if eventType != "" {
-		if len(eventType) > connectors.MaxEventTypeIdentifierLen || !types.IsValidPropertyName(eventType) {
-			return types.Type{}, errors.BadRequest("value %q is not a valid event type ID", eventType)
-		}
 		schema, err := this.application().Schema(ctx, state.Target(target), eventType)
 		if err != nil {
 			if err == connectors.ErrEventTypeNotExist {

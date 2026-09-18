@@ -99,25 +99,23 @@ const nodeIDUpgrade = `
 		END IF;
 	END $$`
 
-// pipelineEventTypeUpgrade adds persisted ordering groups and event type
-// identifier length limits.
+// pipelineEventTypeUpgrade adds persisted ordering groups.
 const pipelineEventTypeUpgrade = `
 	ALTER TABLE pipelines
-		ADD COLUMN IF NOT EXISTS ordering_group varchar(25);
+		ADD COLUMN IF NOT EXISTS ordering_group varchar(16);
 
 	UPDATE pipelines p
 	SET ordering_group = CASE
 		WHEN p.event_type = '' THEN ''
 		WHEN c.connector IN ('dummy', 'google-analytics', 'mixpanel', 'posthog') THEN 'events'
-		ELSE p.event_type
+		WHEN c.connector IN ('brevo', 'klaviyo') THEN 'create_event'
 	END
 	FROM connections c
 	WHERE c.id = p.connection
 		AND p.ordering_group IS NULL;
 
 	ALTER TABLE pipelines
-		ALTER COLUMN event_type TYPE varchar(25),
-		ALTER COLUMN ordering_group TYPE varchar(25),
+		ALTER COLUMN ordering_group TYPE varchar(16),
 		ALTER COLUMN ordering_group SET NOT NULL`
 
 // pipelineOrderingGroupUpgrade moves ordering_group after event_type while

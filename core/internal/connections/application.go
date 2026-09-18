@@ -21,6 +21,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/filters"
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -736,14 +737,11 @@ type schema struct {
 
 // validateEventType validates an event type provided by a connector.
 func validateEventType(connector string, eventType *EventType) error {
-	if !types.IsValidPropertyName(eventType.ID) || len(eventType.ID) > connectors.MaxEventTypeIdentifierLen {
-		return fmt.Errorf("connector %s returned an invalid event type ID (%q)", connector, eventType.ID)
+	if err := util.ValidateStringField("event type", eventType.ID, 100); err != nil {
+		return err
 	}
-	if eventType.OrderingGroup != "" {
-		if !types.IsValidPropertyName(eventType.OrderingGroup) ||
-			len(eventType.OrderingGroup) > connectors.MaxEventTypeIdentifierLen {
-			return fmt.Errorf("connector %s returned an invalid ordering group (%q)", connector, eventType.OrderingGroup)
-		}
+	if !types.IsValidPropertyName(eventType.OrderingGroup) || len(eventType.OrderingGroup) > connectors.MaxOrderingGroupLen {
+		return fmt.Errorf("connector %s returned an invalid ordering group (%q)", connector, eventType.OrderingGroup)
 	}
 	return nil
 }

@@ -231,16 +231,15 @@ func (r FailureReason) String() string {
 	panic(fmt.Errorf("unexpected FailureReason %d", r))
 }
 
-// MaxEventTypeIdentifierLen is the maximum length of event type and ordering
-// group identifiers.
-const MaxEventTypeIdentifierLen = 25
+// MaxOrderingGroupLen is the maximum length of an event ordering group.
+const MaxOrderingGroupLen = 16
 
 // EventType represents a type of event that can be sent to an application.
 type EventType struct {
 	// ID is the identifier of the event type. It must be unique for every event
-	// type of the connection and follow the syntax of a property name.
+	// type of the connection.
 	//
-	// It cannot be longer than MaxEventTypeIdentifierLen characters.
+	// It cannot be longer than 100 runes.
 	ID string
 
 	// Name is the name of the event type to be displayed.
@@ -251,9 +250,8 @@ type EventType struct {
 
 	// OrderingGroup defines the per-user delivery order shared by event types.
 	// Events whose types have the same ordering group are delivered in their
-	// original order for each user. If empty, ID is used. If set, it must follow
-	// the syntax of a property name and cannot be longer than
-	// MaxEventTypeIdentifierLen characters.
+	// original order for each user. It must be non-empty, follow the syntax of
+	// a property name, and cannot be longer than MaxOrderingGroupLen characters.
 	OrderingGroup string
 
 	// DefaultFilter is the default filter to use for pipelines.
@@ -700,13 +698,4 @@ type ReceivedEventContextScreen interface {
 type ReceivedEventContextSession interface {
 	ID() (int, bool)
 	Start() (bool, bool)
-}
-
-// OrderingGroup returns the ordering group of an event type.
-// That is the event type's OrderingGroup, or, if empty, the event type ID.
-func OrderingGroup(eventType *EventType) string {
-	if eventType.OrderingGroup == "" {
-		return eventType.ID
-	}
-	return eventType.OrderingGroup
 }

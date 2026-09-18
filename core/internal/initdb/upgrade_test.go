@@ -216,7 +216,7 @@ func TestUpgradePipelineOrderingGroup(t *testing.T) {
 			'view', (SELECT jsonb_agg(to_jsonb(v) ORDER BY resource) FROM organization_connector_references v)
 		)::text`
 
-	for _, name := range []string{"missing", "appended", "installed", "empty"} {
+	for _, name := range []string{"missing", "appended", "installed", "empty", "brevo", "klaviyo"} {
 
 		t.Run(name, func(t *testing.T) {
 
@@ -238,7 +238,7 @@ func TestUpgradePipelineOrderingGroup(t *testing.T) {
 						order_by, format_settings, export_mode, matching_in, matching_out, update_on_duplicates,
 						table_name, table_key, user_id_column, updated_at_column, updated_at_format, incremental,
 						cursor, health, properties_to_unset)
-					VALUES ('444444444444', '333333333333', 'Event', 'send_event', 'events', 'Pipeline', true,
+					VALUES ('444444444444', '333333333333', 'Event', repeat('界', 99) || '-', 'events', 'Pipeline', true,
 						17, 5, '{"in":1}', '{"out":2}', '{"operator":"And","rules":[]}', '{purpose}',
 						'or', '{"mapping":3}', 'function', 'v1', 'Python', 'source', true,
 						'{in}', '{out}', 'SELECT 1', 'json', '/path', 'Sheet', 'Gzip',
@@ -254,6 +254,19 @@ func TestUpgradePipelineOrderingGroup(t *testing.T) {
 					VALUES ('444444444444', 1, 0, 1, 'error')`)
 				if err != nil {
 					t.Fatal(err)
+				}
+
+				if name == "brevo" || name == "klaviyo" {
+					_, err = database.Exec(t.Context(), "UPDATE connections SET connector = $1", name)
+					if err != nil {
+						t.Fatal(err)
+					}
+					_, err = database.Exec(t.Context(), `
+						UPDATE pipelines SET event_type = 'create_event', ordering_group = 'create_event'
+						WHERE target = 'Event'`)
+					if err != nil {
+						t.Fatal(err)
+					}
 				}
 
 			}
@@ -599,7 +612,13 @@ func assertPipelineEventTypesUpgraded(t *testing.T, database *db.DB) {
 		t.Fatal("expected ordering_group immediately after event_type, got intervening columns")
 	}
 
-	for _, column := range []string{"event_type", "ordering_group"} {
+	for _, column := range []struct {
+		name   string
+		length int
+	}{
+		{"event_type", 100},
+		{"ordering_group", 16},
+	} {
 
 		var length int
 		err := database.QueryRow(t.Context(), `
@@ -607,12 +626,12 @@ func assertPipelineEventTypesUpgraded(t *testing.T, database *db.DB) {
 			FROM information_schema.columns
 			WHERE table_schema = current_schema()
 				AND table_name = 'pipelines'
-				AND column_name = $1`, column).Scan(&length)
+				AND column_name = $1`, column.name).Scan(&length)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if length != 25 {
-			t.Fatalf("expected pipelines.%s to have length 25, got %d", column, length)
+		if length != column.length {
+			t.Fatalf("expected pipelines.%s to have length %d, got %d", column.name, column.length, length)
 		}
 
 	}

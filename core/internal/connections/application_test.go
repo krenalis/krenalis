@@ -114,6 +114,7 @@ func TestApplicationRejectsGenericSchemas(t *testing.T) {
 
 		})
 	}
+
 }
 
 // TestAppRecordsPaging verifies paging, deduplication, and lazy record processing.
@@ -308,15 +309,36 @@ func TestValidateEventType(t *testing.T) {
 		err       string
 	}{
 		{name: "valid", eventType: &EventType{ID: "createContact", OrderingGroup: "contacts"}},
+		{name: "dynamic ID", eventType: &EventType{ID: "create-contact / 購入", OrderingGroup: "contacts"}},
+		{name: "100 rune ID", eventType: &EventType{ID: strings.Repeat("界", 100), OrderingGroup: "contacts"}},
 		{
-			name:      "invalid ID",
-			eventType: &EventType{ID: "create-contact"},
-			err:       `connector test returned an invalid event type ID ("create-contact")`,
+			name:      "16 character ordering group",
+			eventType: &EventType{ID: "contact", OrderingGroup: strings.Repeat("a", 16)},
+		},
+		{
+			name:      "empty ID",
+			eventType: &EventType{OrderingGroup: "contacts"},
+			err:       "event type is empty",
 		},
 		{
 			name:      "long ID",
-			eventType: &EventType{ID: strings.Repeat("a", 26)},
-			err:       `connector test returned an invalid event type ID ("aaaaaaaaaaaaaaaaaaaaaaaaaa")`,
+			eventType: &EventType{ID: strings.Repeat("界", 101), OrderingGroup: "contacts"},
+			err:       "event type is longer than 100 runes",
+		},
+		{
+			name:      "invalid UTF-8 ID",
+			eventType: &EventType{ID: "\xff", OrderingGroup: "contacts"},
+			err:       "event type contains invalid UTF-8 encoded characters",
+		},
+		{
+			name:      "NUL in ID",
+			eventType: &EventType{ID: "contact\x00", OrderingGroup: "contacts"},
+			err:       "event type contains the NUL byte",
+		},
+		{
+			name:      "empty ordering group",
+			eventType: &EventType{ID: "contact"},
+			err:       `connector test returned an invalid ordering group ("")`,
 		},
 		{
 			name:      "invalid ordering group",
@@ -325,8 +347,8 @@ func TestValidateEventType(t *testing.T) {
 		},
 		{
 			name:      "long ordering group",
-			eventType: &EventType{ID: "contact", OrderingGroup: strings.Repeat("a", 26)},
-			err:       `connector test returned an invalid ordering group ("aaaaaaaaaaaaaaaaaaaaaaaaaa")`,
+			eventType: &EventType{ID: "contact", OrderingGroup: strings.Repeat("a", 17)},
+			err:       `connector test returned an invalid ordering group ("aaaaaaaaaaaaaaaaa")`,
 		},
 	}
 
@@ -355,7 +377,7 @@ func TestValidateEventType(t *testing.T) {
 func TestApplicationEventType(t *testing.T) {
 
 	t.Run("valid", func(t *testing.T) {
-		expected := &EventType{ID: "createContact", OrderingGroup: "contacts"}
+		expected := &EventType{ID: "create-contact / 購入", OrderingGroup: "contacts"}
 		app := &Application{inner: &testEventSender{eventTypes: []*EventType{
 			nil,
 			{ID: "invalid-id"},
@@ -375,7 +397,7 @@ func TestApplicationEventType(t *testing.T) {
 			{ID: "invalid-id"},
 		}}}
 		_, err := app.EventType(t.Context(), "invalid-id")
-		expected := `connector test returned an invalid event type ID ("invalid-id")`
+		expected := `connector test returned an invalid ordering group ("")`
 		if err != nil {
 			if err.Error() != expected {
 				t.Fatalf("expected %q, got %q", expected, err.Error())
@@ -412,6 +434,47 @@ func TestApplicationEventType(t *testing.T) {
 		}
 		t.Fatalf("expected %q, got nil", expected)
 	})
+
+}
+
+// TestApplicationEventTypes verifies independent IDs and mandatory ordering groups.
+func TestApplicationEventTypes(t *testing.T) {
+
+	for _, test := range []struct {
+		name       string
+		eventTypes []*EventType
+		err        string
+	}{
+		{
+			name: "independent namespaces",
+			eventTypes: []*EventType{
+				{ID: "contacts", OrderingGroup: "events"},
+				{ID: "create-contact / 購入", OrderingGroup: "contacts"},
+			},
+		},
+		{
+			name:       "empty ordering group",
+			eventTypes: []*EventType{{ID: "contacts"}},
+			err:        `connector test returned an invalid ordering group ("")`,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			app := &Application{connector: "test", inner: &testEventSender{eventTypes: test.eventTypes}}
+			got, err := app.EventTypes(t.Context())
+			if err != nil {
+				if test.err == "" || err.Error() != test.err {
+					t.Fatalf("expected error %q, got %v", test.err, err)
+				}
+				return
+			}
+			if test.err != "" {
+				t.Fatalf("expected error %q, got nil", test.err)
+			}
+			if !slices.Equal(got, test.eventTypes) {
+				t.Fatalf("expected event types %v, got %v", test.eventTypes, got)
+			}
+		})
+	}
 
 }
 
