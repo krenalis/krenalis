@@ -22,6 +22,10 @@ import (
 // maxPayloadSize is the maximum size in bytes for a webhook or action payload.
 const maxPayloadSize = 64 * 1024
 
+// signupTimeout bounds a signup, which runs on a context detached from the
+// request so that a disconnecting client cannot interrupt it halfway.
+const signupTimeout = time.Minute
+
 // signupRollbackTimeout bounds the deletion of the organization of a failed
 // signup, which runs on a context detached from the request.
 const signupRollbackTimeout = 30 * time.Second
@@ -118,7 +122,8 @@ func (wo *WorkOS) ServeLogin(r *http.Request) (string, string, error) {
 // WorkOS organization linked to it, and sends a WorkOS invitation email that
 // invites adminEmail as an admin of the organization. If a step after the
 // Krenalis organization has been created fails, that organization is deleted
-// again.
+// again. It runs on a context detached from ctx, so that canceling ctx does
+// not interrupt it halfway.
 //
 // It returns an errors.BadRequestError if adminEmail is not a valid email
 // address.
@@ -131,6 +136,11 @@ func (wo *WorkOS) SignupOrganization(ctx context.Context, organizationName, admi
 		return errors.BadRequest("%s", err)
 	}
 
+	// Detach the signup from ctx, which is canceled when the client
+	// disconnects, so that a disconnection cannot leave it halfway.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), signupTimeout)
+	defer cancel()
+
 	id, err := wo.core.CreateOrganization(ctx, organizationName, true, signupLimits)
 	if err != nil {
 		return err
@@ -141,8 +151,8 @@ func (wo *WorkOS) SignupOrganization(ctx context.Context, organizationName, admi
 		if signedUp {
 			return
 		}
-		// Detach the deletion from ctx, which is canceled when the client
-		// disconnects, so that it is attempted even then.
+		// Detach the deletion from ctx, whose deadline may have expired, so
+		// that it is attempted even then.
 		deleteCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), signupRollbackTimeout)
 		defer cancel()
 		org, err := wo.core.Organization(id)
