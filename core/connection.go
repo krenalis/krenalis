@@ -1469,13 +1469,12 @@ func (this *Connection) PipelineTypes(ctx context.Context) ([]PipelineType, erro
 				}
 				// Destination/Application/Event.
 				for _, et := range eventTypes {
-					orderingGroup := connectors.OrderingGroup(et)
 					pipelineTypes = append(pipelineTypes, PipelineType{
 						Name:          et.Name,
 						Description:   et.Description,
 						Target:        TargetEvent,
 						EventType:     new(et.ID),
-						OrderingGroup: new(orderingGroup),
+						OrderingGroup: new(connectors.OrderingGroup(et)),
 					})
 				}
 			}
