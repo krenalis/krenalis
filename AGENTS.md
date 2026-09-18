@@ -268,7 +268,7 @@ Anything arriving from outside — request bodies, settings, API values, connect
 
 Apply these conventions to the TypeScript and React code under `admin/`.
 
-- In every boolean context, use a boolean expression. Do not rely on the truthiness of strings, numbers, objects, or other non-boolean values. Write checks such as `name !== ''`, `items.length > 0`, and `value != null` instead of `name`, `items.length`, and `value`.
+- In every boolean context, use a boolean expression. Do not rely on the truthiness of strings, numbers, objects, or other non-boolean values. Write checks such as `name !== ''`, `items.length > 0`, and `value != null` instead of `name`, `items.length`, and `value`. In JSX expression containers, however, prefer idiomatic React patterns when they are clearer and conventional, such as `{condition && <Component />}`, rather than forcing an explicit boolean comparison solely to satisfy this rule.
 - Name boolean values with a predicate prefix such as `is`, `has`, `can`, or `should` when that makes their meaning clearer.
 - Use `===` and `!==` for value comparisons. The intentional exception is `value == null` or `value != null` when a single check must cover both `null` and `undefined`.
 - Use an `interface` for object shapes and a `type` for unions, tuples, and aliases that do not describe object shapes.
