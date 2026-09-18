@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/tools/backoff"
@@ -167,6 +168,9 @@ func (mc *Mailchimp) RecordSchema(ctx context.Context, target connectors.Targets
 					if value == value2 {
 						continue Choices
 					}
+				}
+				if !utf8.ValidString(value) || strings.Contains(value, "\x00") {
+					return types.Type{}, fmt.Errorf("merge field %q has an invalid choice", f.Tag)
 				}
 				values = append(values, value)
 			}

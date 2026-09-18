@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/tools/json"
@@ -225,6 +226,9 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target connectors.Targets, 
 				for _, option := range r.Options {
 					if option.Hidden {
 						continue
+					}
+					if !utf8.ValidString(option.Value) || strings.Contains(option.Value, "\x00") {
+						return types.Type{}, fmt.Errorf("property %q has an invalid option value", r.Name)
 					}
 					values = append(values, option.Value)
 				}
