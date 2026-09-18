@@ -517,7 +517,7 @@ Guiding rules:
   - These flags are role-dependent. A shared schema is fine only when source and destination differ by role-dependent flags alone.
   - `ReadOptional` describes the read path, not the fact that a property may be used for destination matching.
   - If the vendor metadata or docs indicate that a property is read-only or not writable, the destination schema must exclude it even if the source schema includes it.
-- Avoid invalid property names (`types.IsValidPropertyName(...)`).
+- Mapping an application field name to a Krenalis property name is not a single check: whether you verify it against the application's own syntax, convert it bidirectionally, or validate it with `types.IsValidPropertyName(...)` and drop it on failure depends on how the application's naming syntax relates to Krenalis's. See [property name syntax](references/schemas-and-types.md#property-name-syntax).
 - String constraints are not freely composable; follow the [supported combinations](references/schemas-and-types.md#string-constraint-combinations) when translating API specifications or dynamic field metadata.
 - Panicking `types` calls (`types.Object`, `WithValues`, `WithPattern`, `WithMaxLength`, ...) are only safe with static, connector-defined arguments. For a dynamic argument (from an API response or vendor metadata), validate it exhaustively first or use an error-returning form (`types.ObjectOf(...)` instead of `types.Object(...)`), and return an error from the schema method on failure instead of dropping the property. See [static vs. dynamic values](references/schemas-and-types.md#static-vs-dynamic-values-in-panicking-types-calls).
 

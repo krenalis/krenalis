@@ -24,7 +24,7 @@ Guidelines:
 - Concretely: if you build a schema inside a `role == connectors.Source` branch, do not use destination-only flags unless there is a specific, documented reason. If you build a schema inside a `role == connectors.Destination` branch, do not use source/read-only flags unless there is a specific, documented reason.
 - Use `Description` only when it adds information beyond the property name. Do not copy the property name into `Description`; if you have nothing more useful to say, leave it empty.
 - Determine field types from official specifications and/or officially documented or observed payload shapes, not from field names. If a field's type remains ambiguous, treat that as an explicit assumption to verify rather than silently fixing the type by inference from the name.
-- Be careful with reserved/invalid property names; prefer `types.IsValidPropertyName(...)` when mapping external field names.
+- Do not default to a single check when mapping an external field name to a Krenalis property name; the right approach (verify against the application's own syntax, convert bidirectionally, or validate and drop) depends on the relationship between the application's naming syntax and Krenalis's. See [Property name syntax](#property-name-syntax) below.
 - When building schemas from vendor-provided field lists (dynamic/custom fields), prefer `types.ObjectOf(...)` over `types.Object(...)` so in-flight schema expansions don't require a code release. See [Static vs. dynamic values in panicking `types` calls](#static-vs-dynamic-values-in-panicking-types-calls) below for the general rule.
 
 ## Schema formatting (readability rule)
@@ -62,6 +62,19 @@ Calling one with a dynamic argument — anything read from an API response, vend
 For a panicking call with no error-returning counterpart (`WithValues`, `WithPattern`, `WithMaxLength`, etc.), exhaustive validation of the dynamic value before the call is the only option.
 
 Either way, do not handle a validation failure by silently dropping just that property or field and continuing to build the schema; that produces a schema Krenalis and its users cannot see is incomplete. Return an error from the schema method (`RecordSchema` / `EventTypeSchema`) so the connector reports a clear failure instead.
+
+The one documented exception is an application property name that fails Krenalis's property name syntax with no viable mapping back to the application; see [Property name syntax](#property-name-syntax) below for when dropping that property is the correct, documented behavior instead of returning an error.
+
+## Property name syntax
+
+Krenalis property names must satisfy `types.IsValidPropertyName(...)`: an ASCII letter or underscore, followed by ASCII letters, digits, or underscores (`tools/types/properties.go`). Applications rarely use exactly this syntax for their own field names, so work out the relationship between the application's syntax and Krenalis's before writing the mapping code, in this order:
+
+1. **Learn the application's property-name syntax** from its API/vendor documentation. If it is not documented, the only assumption you can make is that a property name can be an arbitrary sequence of Unicode characters.
+2. **If the application's syntax is a subset of Krenalis's** (every name the application can produce is already a valid Krenalis property name), do not check the name with `types.IsValidPropertyName(...)`: it can never fail, so the check is redundant. Instead, validate the name against the application's own documented syntax. A name that fails that check means the connector's assumption about the application is wrong — a connector bug you want to surface — not a Krenalis validity problem.
+3. **If the application's syntax only partially overlaps Krenalis's, and a bidirectional mapping between the two exists,** validate the name against the application's syntax as in the previous case, and additionally convert it in both directions: into a valid Krenalis property name when building the schema and reading values, and back to the original application name when writing values through `Upsert` / `SendEvents`.
+4. **Otherwise**, validate the name with `types.IsValidPropertyName(...)`. When it fails, discard the property: do not include it in the schema.
+
+This decision process concerns property *names* only; it does not apply to other fields such as `Description` or `DisplayName`.
 
 ## Express constraints in the schema (prefer schema over runtime checks)
 
