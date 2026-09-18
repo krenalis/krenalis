@@ -702,8 +702,8 @@ type ReceivedEventContextSession interface {
 	Start() (bool, bool)
 }
 
-// OrderingGroup returns the effective ordering group of an event type. If no
-// group is set, it returns the event type ID.
+// OrderingGroup returns the ordering group of an event type.
+// That is the event type's OrderingGroup, or, if empty, the event type ID.
 func OrderingGroup(eventType *EventType) string {
 	if eventType.OrderingGroup == "" {
 		return eventType.ID
