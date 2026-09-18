@@ -96,8 +96,7 @@ const updatedAtFormats = {
 	excel: 'Excel',
 };
 
-// PropertyAnnotation shows the display name and the description of a property,
-// giving less emphasis to the description.
+// PropertyAnnotation renders the annotation for a property.
 const PropertyAnnotation = ({ property }: { property: Property }) => (
 	<>
 		{property.displayName && <span className='property-annotation__display-name'>{property.displayName}</span>}
