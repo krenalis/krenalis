@@ -72,7 +72,12 @@ func (wo *WorkOS) Onboard(ctx context.Context, organizationName, adminEmail stri
 		// disconnects, so that it is attempted even then.
 		deleteCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), onboardingRollbackTimeout)
 		defer cancel()
-		err := wo.deleteOnboardedOrganization(deleteCtx, id)
+		org, err := wo.core.Organization(id)
+		if err != nil {
+			slog.Error("failed to get the organization of a failed onboarding", "organization", id, "error", err)
+			return
+		}
+		err = org.Delete(deleteCtx)
 		if err != nil {
 			slog.Error("failed to delete the organization of a failed onboarding", "organization", id, "error", err)
 		}
@@ -163,15 +168,6 @@ func (wo *WorkOS) ServeLogin(r *http.Request) (string, string, error) {
 	}
 
 	return org.ID, member, nil
-}
-
-// deleteOnboardedOrganization deletes the organization created by Onboard.
-func (wo *WorkOS) deleteOnboardedOrganization(ctx context.Context, id string) error {
-	org, err := wo.core.Organization(id)
-	if err != nil {
-		return err
-	}
-	return org.Delete(ctx)
 }
 
 // serveAction handles the user registration action. It verifies the request
