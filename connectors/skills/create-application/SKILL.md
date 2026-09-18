@@ -519,6 +519,7 @@ Guiding rules:
   - If the vendor metadata or docs indicate that a property is read-only or not writable, the destination schema must exclude it even if the source schema includes it.
 - Avoid invalid property names (`types.IsValidPropertyName(...)`).
 - String constraints are not freely composable; follow the [supported combinations](references/schemas-and-types.md#string-constraint-combinations) when translating API specifications or dynamic field metadata.
+- Panicking `types` calls (`types.Object`, `WithValues`, `WithPattern`, `WithMaxLength`, ...) are only safe with static, connector-defined arguments. For a dynamic argument (from an API response or vendor metadata), validate it exhaustively first or use an error-returning form (`types.ObjectOf(...)` instead of `types.Object(...)`), and return an error from the schema method on failure instead of dropping the property. See [static vs. dynamic values](references/schemas-and-types.md#static-vs-dynamic-values-in-panicking-types-calls).
 
 Full schema and value-mapping guidance (import/export canonical types, `types.Marshal`, missing vs null):
 

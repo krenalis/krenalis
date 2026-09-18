@@ -25,7 +25,7 @@ Guidelines:
 - Use `Description` only when it adds information beyond the property name. Do not copy the property name into `Description`; if you have nothing more useful to say, leave it empty.
 - Determine field types from official specifications and/or officially documented or observed payload shapes, not from field names. If a field's type remains ambiguous, treat that as an explicit assumption to verify rather than silently fixing the type by inference from the name.
 - Be careful with reserved/invalid property names; prefer `types.IsValidPropertyName(...)` when mapping external field names.
-- When building schemas from vendor-provided field lists (dynamic/custom fields), prefer `types.ObjectOf(...)` over `types.Object(...)` so in-flight schema expansions don't require a code release.
+- When building schemas from vendor-provided field lists (dynamic/custom fields), prefer `types.ObjectOf(...)` over `types.Object(...)` so in-flight schema expansions don't require a code release. See [Static vs. dynamic values in panicking `types` calls](#static-vs-dynamic-values-in-panicking-types-calls) below for the general rule.
 
 ## Schema formatting (readability rule)
 
@@ -49,6 +49,19 @@ return types.Object([]types.Property{
 ```
 
 That example illustrates read-side optionality. If you reuse the same static schema for both roles, do so only when source and destination differ by role-dependent flags alone. If the API distinguishes readable fields from writable ones, `RecordSchema(..., role)` must reflect that distinction for the requested role. If you keep a separate destination-only schema, omit `ReadOptional: true` unless there is a specific, documented reason to keep it. Symmetrically, if you keep a separate source-only schema, omit `CreateRequired` / `UpdateRequired` unless there is a specific, documented reason to keep them. Destination matching through `Records()` does not change this readability rule.
+
+## Static vs. dynamic values in panicking `types` calls
+
+Many `tools/types` constructors and modifiers panic on an invalid argument instead of returning an error: `types.Object(...)`, `WithValues(...)`, `WithPattern(...)`, `WithMaxLength(...)`, and most other `With*` methods. Calling one of these with an argument that is static — a literal, or a value fully determined by connector code — is fine: a panic there means a bug in the connector, caught during development or testing.
+
+Calling one with a dynamic argument — anything read from an API response, vendor metadata, or other external input — is not fine: a value the provider changes or corrupts would crash the connector at runtime. Before such a value reaches a panicking call, do one of:
+
+- Validate the value exhaustively first, when that is possible without excessive complexity (for example, `types.IsValidPropertyName(...)` before using an external field name as a property name).
+- Prefer the corresponding error-returning form when one exists, and propagate its error. Today the only such form in `tools/types` is `types.ObjectOf(...)`, the error-returning counterpart of `types.Object(...)`.
+
+For a panicking call with no error-returning counterpart (`WithValues`, `WithPattern`, `WithMaxLength`, etc.), exhaustive validation of the dynamic value before the call is the only option.
+
+Either way, do not handle a validation failure by silently dropping just that property or field and continuing to build the schema; that produces a schema Krenalis and its users cannot see is incomplete. Return an error from the schema method (`RecordSchema` / `EventTypeSchema`) so the connector reports a clear failure instead.
 
 ## Express constraints in the schema (prefer schema over runtime checks)
 
