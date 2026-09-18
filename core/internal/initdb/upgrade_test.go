@@ -266,7 +266,6 @@ func TestUpgradePipelineOrderingGroup(t *testing.T) {
 			if name != "installed" {
 				_, err = database.Exec(t.Context(), `
 					ALTER TABLE pipelines DROP COLUMN ordering_group;
-					ALTER TABLE pipelines DROP CONSTRAINT pipelines_event_type_check;
 					ALTER TABLE pipelines ALTER COLUMN event_type TYPE varchar(100)`)
 				if err != nil {
 					t.Fatal(err)
@@ -643,8 +642,8 @@ func assertPipelineEventTypesUpgraded(t *testing.T, database *db.DB) {
 		t.Fatalf("expected empty event type and ordering group, got %q and %q", eventType, orderingGroup)
 	}
 
-	assertConstraintExists(t, database, "pipelines", "pipelines_event_type_check")
-	assertConstraintExists(t, database, "pipelines", "pipelines_ordering_group_check")
+	assertConstraintDoesNotExist(t, database, "pipelines", "pipelines_event_type_check")
+	assertConstraintDoesNotExist(t, database, "pipelines", "pipelines_ordering_group_check")
 
 }
 

@@ -100,7 +100,7 @@ const nodeIDUpgrade = `
 	END $$`
 
 // pipelineEventTypeUpgrade adds persisted ordering groups and event type
-// identifier constraints.
+// identifier length limits.
 const pipelineEventTypeUpgrade = `
 	ALTER TABLE pipelines
 		ADD COLUMN IF NOT EXISTS ordering_group varchar(25);
@@ -118,31 +118,7 @@ const pipelineEventTypeUpgrade = `
 	ALTER TABLE pipelines
 		ALTER COLUMN event_type TYPE varchar(25),
 		ALTER COLUMN ordering_group TYPE varchar(25),
-		ALTER COLUMN ordering_group SET NOT NULL;
-
-	DO $$
-	BEGIN
-		IF NOT EXISTS (
-			SELECT FROM pg_constraint
-			WHERE conrelid = 'pipelines'::regclass
-				AND conname = 'pipelines_event_type_check'
-		) THEN
-			ALTER TABLE pipelines
-				ADD CONSTRAINT pipelines_event_type_check
-				CHECK (event_type = '' OR event_type ~ '^[A-Za-z_][A-Za-z0-9_]*$');
-		END IF;
-
-		IF NOT EXISTS (
-			SELECT FROM pg_constraint
-			WHERE conrelid = 'pipelines'::regclass
-				AND conname = 'pipelines_ordering_group_check'
-		) THEN
-			ALTER TABLE pipelines
-				ADD CONSTRAINT pipelines_ordering_group_check
-				CHECK ((event_type = '' AND ordering_group = '') OR
-					(event_type <> '' AND ordering_group ~ '^[A-Za-z_][A-Za-z0-9_]*$'));
-		END IF;
-	END $$`
+		ALTER COLUMN ordering_group SET NOT NULL`
 
 // pipelineOrderingGroupUpgrade moves ordering_group after event_type while
 // preserving the table and the relative order of its other columns.
