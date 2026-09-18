@@ -187,8 +187,9 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 		mergeProfiles.WriteString(quoteIdent(c.Name))
 		mergeProfiles.WriteByte(',')
 	}
-	// Write the "_identities" column.
+	// Write the "_identities" column containing the raw identities.
 	mergeProfiles.WriteString(`ARRAY_AGG(DISTINCT "_pk"), `)
+	// Write the "_anonymous_count" and "_recognized_count" columns containing the logical identity counts.
 	mergeProfiles.WriteString(`COUNT(DISTINCT ("_connection", "_identity_id")) FILTER (WHERE "_is_anonymous"), `)
 	mergeProfiles.WriteString(`COUNT(DISTINCT ("_connection", "_identity_id")) FILTER (WHERE NOT "_is_anonymous"), `)
 	// Write the "_kpid" column.

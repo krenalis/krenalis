@@ -190,8 +190,9 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 		mergeProfiles.WriteString(quoteIdent(c.Name))
 		mergeProfiles.WriteByte(',')
 	}
-	// Write the "_identities" column.
+	// Write the "_IDENTITIES" column containing the raw identities.
 	mergeProfiles.WriteString(`ARRAY_AGG(DISTINCT "_PK"), `)
+	// Write the "_ANONYMOUS_COUNT" and "_RECOGNIZED_COUNT" columns containing the logical identity counts.
 	mergeProfiles.WriteString(`COUNT(DISTINCT
 		CASE WHEN "_IS_ANONYMOUS" THEN "_CONNECTION" END,
 		CASE WHEN "_IS_ANONYMOUS" THEN "_IDENTITY_ID" END
