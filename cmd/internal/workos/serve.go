@@ -5,10 +5,12 @@
 package workos
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/tools/errors"
@@ -19,6 +21,30 @@ import (
 
 // maxPayloadSize is the maximum size in bytes for a webhook or action payload.
 const maxPayloadSize = 64 * 1024
+
+// signupTimeout bounds a signup, which runs on a context detached from the
+// request so that a disconnecting client cannot interrupt it halfway.
+const signupTimeout = time.Minute
+
+// signupRollbackTimeout bounds the deletion of the organization of a failed
+// signup, which runs on a context detached from the request.
+const signupRollbackTimeout = 30 * time.Second
+
+// signupLimits are the resource limits granted to an organization created
+// through signup.
+var signupLimits = core.OrganizationLimits{
+	Members:     core.MembersLimit,
+	AccessKeys:  core.AccessKeysLimit,
+	Workspaces:  core.WorkspacesLimit,
+	Connectors:  core.ConnectorsLimit,
+	Connections: core.ConnectionsLimit,
+	Pipelines:   core.PipelinesLimit,
+	Rates: core.RateLimits{
+		OrganizationSpecific: core.RateLimit{RatePerMinute: 1_000, MaxCapacity: 1_000},
+		WorkspaceSpecific:    core.RateLimit{RatePerMinute: 1_000, MaxCapacity: 1_000},
+		EventsSpecific:       core.RateLimit{RatePerMinute: 1_000, MaxCapacity: 20_000},
+	},
+}
 
 // ServeHTTP serves action and webhook requests.
 func (wo *WorkOS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -90,6 +116,69 @@ func (wo *WorkOS) ServeLogin(r *http.Request) (string, string, error) {
 	}
 
 	return org.ID, member, nil
+}
+
+// SignupOrganization creates an enabled organization in Krenalis, creates the
+// WorkOS organization linked to it, and sends a WorkOS invitation email that
+// invites adminEmail as an admin of the organization. If a step after the
+// Krenalis organization has been created fails, that organization is deleted
+// again. It runs on a context detached from ctx, so that canceling ctx does
+// not interrupt it halfway.
+//
+// It returns an errors.BadRequestError if adminEmail is not a valid email
+// address.
+func (wo *WorkOS) SignupOrganization(ctx context.Context, organizationName, adminEmail string) error {
+
+	organizationName = strings.TrimSpace(norm.NFC.String(organizationName))
+	adminEmail = strings.TrimSpace(norm.NFC.String(adminEmail))
+
+	if err := core.ValidateMemberEmail(adminEmail); err != nil {
+		return errors.BadRequest("%s", err)
+	}
+
+	// Detach the signup from ctx, which is canceled when the client
+	// disconnects, so that a disconnection cannot leave it halfway.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), signupTimeout)
+	defer cancel()
+
+	id, err := wo.core.CreateOrganization(ctx, organizationName, true, signupLimits)
+	if err != nil {
+		return err
+	}
+
+	var signedUp bool
+	defer func() {
+		if signedUp {
+			return
+		}
+		// Detach the deletion from ctx, whose deadline may have expired, so
+		// that it is attempted even then.
+		deleteCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), signupRollbackTimeout)
+		defer cancel()
+		org, err := wo.core.Organization(id)
+		if err != nil {
+			slog.Error("failed to get the organization of a failed signup", "organization", id, "error", err)
+			return
+		}
+		err = org.Delete(deleteCtx)
+		if err != nil {
+			slog.Error("failed to delete the organization of a failed signup", "organization", id, "error", err)
+		}
+	}()
+
+	workosOrganizationID, err := wo.createOrganization(ctx, organizationName, id)
+	if err != nil {
+		return err
+	}
+
+	err = wo.sendInvitation(ctx, adminEmail, workosOrganizationID)
+	if err != nil {
+		return err
+	}
+
+	signedUp = true
+
+	return nil
 }
 
 // serveAction handles the user registration action. It verifies the request
