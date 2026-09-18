@@ -3378,7 +3378,7 @@ const TransformationProperty = ({
 	}
 
 	let annotationElement = null;
-	if (annotation) {
+	if (annotation !== '') {
 		annotationElement = (
 			<div className='fullscreen-transformation__property-annotation' ref={annotationRef}>
 				<PropertyAnnotation property={property} />
