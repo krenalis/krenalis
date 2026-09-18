@@ -144,6 +144,88 @@ const pipelineEventTypeUpgrade = `
 		END IF;
 	END $$`
 
+// pipelineOrderingGroupUpgrade moves ordering_group after event_type while
+// preserving the table and the relative order of its other columns.
+const pipelineOrderingGroupUpgrade = `
+	DO $$
+	DECLARE
+		event_position smallint;
+		group_position smallint;
+		moved_columns text[];
+		moved_positions smallint[];
+		constraint_queries text[];
+		index_query text;
+		assignments text;
+		column_definition record;
+		query text;
+	BEGIN
+		LOCK TABLE pipelines IN ACCESS EXCLUSIVE MODE;
+		SELECT attnum INTO event_position FROM pg_attribute
+		WHERE attrelid = 'pipelines'::regclass AND attname = 'event_type' AND NOT attisdropped;
+		SELECT attnum INTO group_position FROM pg_attribute
+		WHERE attrelid = 'pipelines'::regclass AND attname = 'ordering_group' AND NOT attisdropped;
+		IF NOT EXISTS (
+			SELECT FROM pg_attribute
+			WHERE attrelid = 'pipelines'::regclass AND NOT attisdropped
+				AND attnum > event_position AND attnum < group_position
+		) THEN
+			RETURN;
+		END IF;
+
+		SELECT array_agg(attname::text ORDER BY attnum), array_agg(attnum ORDER BY attnum)
+		INTO moved_columns, moved_positions
+		FROM pg_attribute
+		WHERE attrelid = 'pipelines'::regclass AND NOT attisdropped
+			AND attnum > event_position AND attname <> 'ordering_group';
+		SELECT array_agg(format('ALTER TABLE pipelines ADD CONSTRAINT %I %s', conname, pg_get_constraintdef(oid)))
+		INTO constraint_queries
+		FROM pg_constraint
+		WHERE conrelid = 'pipelines'::regclass AND contype = 'c' AND conkey && moved_positions;
+		SELECT pg_get_indexdef(to_regclass('pipelines_transformation_id_idx')) INTO index_query;
+
+		CREATE TEMP TABLE pipelines_ordering_backup (LIKE pipelines INCLUDING ALL) ON COMMIT DROP;
+		INSERT INTO pg_temp.pipelines_ordering_backup SELECT * FROM pipelines;
+		DROP VIEW organization_connector_references;
+
+		FOR column_definition IN
+			SELECT attname, format_type(atttypid, atttypmod) AS data_type
+			FROM pg_attribute
+			WHERE attrelid = 'pg_temp.pipelines_ordering_backup'::regclass AND attname = ANY(moved_columns)
+			ORDER BY attnum
+		LOOP
+			EXECUTE format('ALTER TABLE pipelines DROP COLUMN %1$I, ADD COLUMN %1$I %2$s',
+				column_definition.attname, column_definition.data_type);
+		END LOOP;
+
+		SELECT string_agg(format('%1$I = b.%1$I', name), ', ') INTO assignments
+		FROM unnest(moved_columns) AS name;
+		EXECUTE format('UPDATE pipelines p SET %s FROM pg_temp.pipelines_ordering_backup b WHERE p.id = b.id',
+			assignments);
+
+		FOR column_definition IN
+			SELECT a.attname, a.attnotnull, pg_get_expr(d.adbin, d.adrelid) AS default_expression
+			FROM pg_attribute a
+			LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
+			WHERE a.attrelid = 'pg_temp.pipelines_ordering_backup'::regclass AND a.attname = ANY(moved_columns)
+			ORDER BY a.attnum
+		LOOP
+			IF column_definition.attnotnull THEN
+				EXECUTE format('ALTER TABLE pipelines ALTER COLUMN %I SET NOT NULL', column_definition.attname);
+			END IF;
+			IF column_definition.default_expression IS NOT NULL THEN
+				EXECUTE format('ALTER TABLE pipelines ALTER COLUMN %I SET DEFAULT %s',
+					column_definition.attname, column_definition.default_expression);
+			END IF;
+		END LOOP;
+
+		FOREACH query IN ARRAY coalesce(constraint_queries, ARRAY[]::text[]) LOOP
+			EXECUTE query;
+		END LOOP;
+		IF index_query IS NOT NULL THEN
+			EXECUTE index_query;
+		END IF;
+	END $$`
+
 // Upgrade applies idempotent updates to an existing Krenalis PostgreSQL
 // database.
 func Upgrade(ctx context.Context, database *db.DB) error {
@@ -441,6 +523,8 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TABLE pipelines_metrics ALTER COLUMN failed_6 DROP DEFAULT`,
 			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS passed_6 integer NOT NULL DEFAULT 0`,
 			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS failed_6 integer NOT NULL DEFAULT 0`,
+			pipelineOrderingGroupUpgrade,
+			organizationConnectorReferencesView,
 		}
 		for _, query := range queries {
 			if _, err := tx.Exec(ctx, query); err != nil {
