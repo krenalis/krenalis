@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/tools/errors"
 )
 
@@ -34,12 +33,8 @@ func TestOnboardRejectsInvalidAdminEmail(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			err := wo.Onboard(t.Context(), "Acme", test.email)
 			if err != nil {
-				e, ok := errors.AsType[*errors.UnprocessableError](err)
-				if !ok {
-					t.Fatalf("expected *errors.UnprocessableError, got %T", err)
-				}
-				if e.Code != core.InvalidEmail {
-					t.Fatalf("expected code %s, got %s", core.InvalidEmail, e.Code)
+				if _, ok := errors.AsType[*errors.BadRequestError](err); !ok {
+					t.Fatalf("expected *errors.BadRequestError, got %T", err)
 				}
 				return
 			}

@@ -1645,15 +1645,10 @@ func sendMail(mail *emailToSend, config *SMTPConfig) error {
 	return err
 }
 
-// ValidateMemberEmail validates a member's email address.
-//
-// It returns an errors.UnprocessableError with code InvalidEmail if the email
-// address is not valid.
+// ValidateMemberEmail validates a member's email address and returns an error
+// if it is not valid.
 func ValidateMemberEmail(email string) error {
-	if err := validateMemberEmail(email); err != nil {
-		return errors.Unprocessable(InvalidEmail, "%s", err)
-	}
-	return nil
+	return validateMemberEmail(email)
 }
 
 // validateMemberEmail validates a member's email and returns an error if it is

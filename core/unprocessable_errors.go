@@ -29,7 +29,6 @@ const (
 	IdentityResolutionInExecution errors.Code = "IdentityResolutionInExecution"
 	InspectionMode                errors.Code = "InspectionMode"
 	InvalidAlterSchema            errors.Code = "InvalidAlterSchema"
-	InvalidEmail                  errors.Code = "InvalidEmail"
 	InvalidEvent                  errors.Code = "InvalidEvent"
 	InvalidPath                   errors.Code = "InvalidPath"
 	InvalidPlaceholder            errors.Code = "InvalidPlaceholder"

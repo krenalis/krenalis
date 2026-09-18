@@ -9,8 +9,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/krenalis/krenalis/tools/errors"
 )
 
 // TestPipelineMetricsPerDateRejectsTooManyEntryDays verifies that requests
@@ -266,7 +264,7 @@ func TestValidatePipelineMetricsSelectionRejectsEmptyGroup(t *testing.T) {
 }
 
 // TestValidateMemberEmail verifies that ValidateMemberEmail accepts valid email
-// addresses and reports the invalid ones as unprocessable.
+// addresses and rejects the invalid ones.
 func TestValidateMemberEmail(t *testing.T) {
 
 	valid := []string{
@@ -301,17 +299,9 @@ func TestValidateMemberEmail(t *testing.T) {
 	for _, test := range invalid {
 		t.Run(test.name, func(t *testing.T) {
 			err := ValidateMemberEmail(test.email)
-			if err != nil {
-				e, ok := errors.AsType[*errors.UnprocessableError](err)
-				if !ok {
-					t.Fatalf("expected *errors.UnprocessableError, got %T", err)
-				}
-				if e.Code != InvalidEmail {
-					t.Fatalf("expected code %s, got %s", InvalidEmail, e.Code)
-				}
-				return
+			if err == nil {
+				t.Fatal("expected error, got nil")
 			}
-			t.Fatal("expected error, got nil")
 		})
 	}
 

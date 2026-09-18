@@ -47,15 +47,15 @@ var onboardingLimits = core.OrganizationLimits{
 // adminEmail as an admin of the organization. If a step after the Krenalis
 // organization has been created fails, that organization is deleted again.
 //
-// It returns an errors.UnprocessableError with code core.InvalidEmail if
-// adminEmail is not a valid email address.
+// It returns an errors.BadRequestError if adminEmail is not a valid email
+// address.
 func (wo *WorkOS) Onboard(ctx context.Context, organizationName, adminEmail string) error {
 
 	organizationName = strings.TrimSpace(norm.NFC.String(organizationName))
 	adminEmail = strings.TrimSpace(norm.NFC.String(adminEmail))
 
 	if err := core.ValidateMemberEmail(adminEmail); err != nil {
-		return err
+		return errors.BadRequest("%s", err)
 	}
 
 	id, err := wo.core.CreateOrganization(ctx, organizationName, true, onboardingLimits)

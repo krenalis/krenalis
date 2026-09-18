@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/krenalis/krenalis/cmd/internal/workos"
-	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/tools/errors"
 )
 
@@ -75,12 +74,8 @@ func TestOnboard(t *testing.T) {
 	t.Run("rejects an invalid admin email", func(t *testing.T) {
 		_, err := enabled.Onboard(nil, newOnboardingRequest(`{"organizationName":"Acme","adminEmail":"admin"}`))
 		if err != nil {
-			e, ok := errors.AsType[*errors.UnprocessableError](err)
-			if !ok {
-				t.Fatalf("expected *errors.UnprocessableError, got %T", err)
-			}
-			if e.Code != core.InvalidEmail {
-				t.Fatalf("expected code %s, got %s", core.InvalidEmail, e.Code)
+			if _, ok := errors.AsType[*errors.BadRequestError](err); !ok {
+				t.Fatalf("expected *errors.BadRequestError, got %T", err)
 			}
 			return
 		}

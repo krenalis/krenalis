@@ -96,7 +96,8 @@ document.getElementById("form").addEventListener("submit", async (e) => {
     errorEl.textContent = "";
 
     const orgName = document.getElementById("orgName").value;
-    const email = document.getElementById("email").value;
+    // Normalize and trim the email as the server does before validating it.
+    const email = document.getElementById("email").value.normalize("NFC").trim();
 
     if ([...orgName].length === 0) {
         orgErrorEl.textContent = "Organization name is required";
@@ -115,6 +116,12 @@ document.getElementById("form").addEventListener("submit", async (e) => {
 
     if ([...email].length > 255) {
         emailErrorEl.textContent = "Email must not be longer than 255 characters";
+        return;
+    }
+
+    // Keep this pattern in sync with emailRegExp in core/organization.go.
+    if (!/^[\w_.+\-=?^#]+@(?:[a-zA-Z0-9\-]+\.)+\w+$/.test(email)) {
+        emailErrorEl.textContent = "Email is not valid";
         return;
     }
 
@@ -143,12 +150,8 @@ document.getElementById("form").addEventListener("submit", async (e) => {
         } catch {
             // Do nothing
         }
-        const errorCode = data?.error?.code;
-        if (errorCode != null && errorCode === "InvalidEmail") {
-            emailErrorEl.textContent = "Email is not valid";
-        } else {
-            errorEl.textContent = "An unexpected error occurred";
-        }
+        console.error("onboarding failed", resp.status, data?.error?.code, data?.error?.message);
+        errorEl.textContent = "An unexpected error occurred";
     } catch (err) {
         errorEl.textContent = "An unexpected error occurred. Please check your network connection and try again";
     } finally {
