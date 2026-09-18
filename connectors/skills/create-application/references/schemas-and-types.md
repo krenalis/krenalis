@@ -22,7 +22,8 @@ Guidelines:
 - If some fields are read-only or otherwise not writable, the destination schema must exclude them even if the source schema includes them.
 - If you keep separate source and destination schemas in code, keep them role-coherent for readability: avoid `ReadOptional: true` in a destination-only schema, and avoid `CreateRequired` / `UpdateRequired` in a source-only schema unless there is a specific, documented reason.
 - Concretely: if you build a schema inside a `role == connectors.Source` branch, do not use destination-only flags unless there is a specific, documented reason. If you build a schema inside a `role == connectors.Destination` branch, do not use source/read-only flags unless there is a specific, documented reason.
-- Use `Description` only when it adds information beyond the property name. Do not copy the property name into `Description`; if you have nothing more useful to say, leave it empty.
+- Use `DisplayName` for the human-readable label of the property, and `Description` only when it adds information beyond that label. Do not copy the label into `Description`; if you have nothing more useful to say, leave it empty.
+- When the application exposes its own label or description for a field, map them to `DisplayName` and `Description` instead of deriving them.
 - Determine field types from official specifications and/or officially documented or observed payload shapes, not from field names. If a field's type remains ambiguous, treat that as an explicit assumption to verify rather than silently fixing the type by inference from the name.
 - Be careful with reserved/invalid property names; prefer `types.IsValidPropertyName(...)` when mapping external field names.
 - When building schemas from vendor-provided field lists (dynamic/custom fields), prefer `types.ObjectOf(...)` over `types.Object(...)` so in-flight schema expansions don't require a code release.
