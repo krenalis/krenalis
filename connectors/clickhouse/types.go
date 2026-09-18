@@ -130,7 +130,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 			if !ok {
 				return types.Type{}, false, ""
 			}
-			if !utf8.ValidString(item) || strings.Contains(item, "\x00") {
+			if strings.Contains(item, "\x00") {
 				return types.Type{}, false, ""
 			}
 			if s, ok = trimEqual(s); ok {

@@ -342,7 +342,7 @@ func (br *Brevo) RecordSchema(ctx context.Context, target connectors.Targets, ro
 			slices.Sort(options)
 			options = slices.Compact(options)
 			for _, option := range options {
-				if !utf8.ValidString(option) || strings.Contains(option, "\x00") {
+				if strings.Contains(option, "\x00") {
 					return types.Type{}, fmt.Errorf("attribute %q has an invalid option", attr.Name)
 				}
 			}
