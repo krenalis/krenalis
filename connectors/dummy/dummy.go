@@ -151,29 +151,34 @@ func (dummy *Dummy) EventTypes(ctx context.Context) ([]*connectors.EventType, er
 	}
 	return []*connectors.EventType{
 		{
-			ID:          "send_add_to_cart",
-			Name:        "Send Add to Cart",
-			Description: "Send an Add to Cart event to Dummy",
+			ID:            "send_add_to_cart",
+			Name:          "Send Add to Cart",
+			Description:   "Send an Add to Cart event to Dummy",
+			OrderingGroup: "events",
 		},
 		{
-			ID:          "send_custom_event",
-			Name:        "Send custom event",
-			Description: "Send a custom event to Dummy",
+			ID:            "send_custom_event",
+			Name:          "Send custom event",
+			Description:   "Send a custom event to Dummy",
+			OrderingGroup: "events",
 		},
 		{
-			ID:          "send_identity",
-			Name:        "Send Identity",
-			Description: "Send an Identity to Dummy",
+			ID:            "send_identity",
+			Name:          "Send Identity",
+			Description:   "Send an Identity to Dummy",
+			OrderingGroup: "events",
 		},
 		{
-			ID:          "send_generic_event",
-			Name:        "Send generic event",
-			Description: "Send a generic event, useful for testing",
+			ID:            "send_generic_event",
+			Name:          "Send generic event",
+			Description:   "Send a generic event, useful for testing",
+			OrderingGroup: "events",
 		},
 		{
-			ID:          "send_event_with_no_schema",
-			Name:        "Send event with no schema",
-			Description: "Send an event which does not require mapping",
+			ID:            "send_event_with_no_schema",
+			Name:          "Send event with no schema",
+			Description:   "Send an event which does not require mapping",
+			OrderingGroup: "events",
 		},
 	}, nil
 }

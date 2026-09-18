@@ -139,9 +139,10 @@ type contactInfo struct {
 // EventTypes returns the event types.
 func (br *Brevo) EventTypes(ctx context.Context) ([]*connectors.EventType, error) {
 	return []*connectors.EventType{{
-		ID:          "create_event",
-		Name:        "Create event",
-		Description: "Create a Brevo event",
+		ID:            "create_event",
+		Name:          "Create event",
+		Description:   "Create a Brevo event",
+		OrderingGroup: "create_event",
 	}}, nil
 }
 

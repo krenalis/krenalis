@@ -15,6 +15,10 @@ Use it to choose the right iteration method and payload-building pattern.
 ## EventTypes
 
 - Return stable event type IDs (<= 100 runes), names, descriptions, and optionally `DefaultFilter`.
+- Set `OrderingGroup` to the same value on event types whose events must remain
+  ordered for each user. Every event type must have a non-empty ordering group
+  that follows the property name syntax and cannot be longer than 16 characters.
+- Do not change an ID or ordering group after the connector has been released.
 - Return only event types the connector actually supports.
 
 ## EventTypeSchema
