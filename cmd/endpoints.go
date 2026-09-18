@@ -107,8 +107,8 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"POST   /members/invitations":                         organization.InviteMember,    /* Admin console only */
 		"POST   /members/login":                               s.login,                      /* Admin console only */
 		"POST   /members/logout":                              s.logout,                     /* Admin console only */
-		"POST   /onboarding":                                  api.Onboard,                  /* Onboarding page only */
-		"POST   /organizations":                               api.CreateOrganization,       /* Needs platform management API key */
+		"POST   /onboarding":                                  api.Onboard,
+		"POST   /organizations":                               api.CreateOrganization, /* Needs platform management API key */
 		"POST   /pipelines":                                   connection.CreatePipeline,
 		"POST   /pipelines/{id}/runs":                         pipeline.Run,
 		"POST   /pipelines/{id}/ui-event":                     pipeline.ServeUI,       /* Admin console only */
