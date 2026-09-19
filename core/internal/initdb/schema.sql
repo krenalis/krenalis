@@ -341,6 +341,25 @@ CREATE TABLE usage_metrics (
 CREATE INDEX usage_metrics_organization_day_idx
     ON usage_metrics (organization, day);
 
+CREATE TABLE identity_metrics (
+    workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+    day date NOT NULL,
+    observed_at time without time zone NOT NULL,
+    identities_anonymous bigint NOT NULL,
+    identities_recognized bigint NOT NULL,
+    identities_without_profile bigint NOT NULL,
+    PRIMARY KEY (workspace, day)
+);
+
+CREATE TABLE identity_connection_metrics (
+    connection varchar(12) NOT NULL REFERENCES connections ON DELETE CASCADE,
+    day date NOT NULL,
+    identities_anonymous bigint NOT NULL,
+    identities_recognized bigint NOT NULL,
+    identities_without_profile bigint NOT NULL,
+    PRIMARY KEY (connection, day)
+);
+
 CREATE INDEX pipelines_metrics_workspace_timeslot_idx ON pipelines_metrics (workspace, timeslot);
 CREATE INDEX pipelines_metrics_connection_timeslot_idx ON pipelines_metrics (connection, timeslot);
 CREATE INDEX pipelines_metrics_timeslot_idx ON pipelines_metrics (timeslot);

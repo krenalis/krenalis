@@ -53,6 +53,39 @@ const organizationConnectorReferencesView = `
 	JOIN workspaces ws ON ws.id = c.workspace
 	WHERE p.format IS NOT NULL`
 
+const identityMetricsUpgrade = `
+	CREATE TABLE IF NOT EXISTS identity_metrics (
+		workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+		day date NOT NULL,
+		observed_at time without time zone NOT NULL,
+		identities_anonymous bigint NOT NULL,
+		identities_recognized bigint NOT NULL,
+		identities_without_profile bigint NOT NULL,
+		PRIMARY KEY (workspace, day)
+	);
+
+	CREATE TABLE IF NOT EXISTS identity_connection_metrics (
+		connection varchar(12) NOT NULL REFERENCES connections ON DELETE CASCADE,
+		day date NOT NULL,
+		identities_anonymous bigint NOT NULL,
+		identities_recognized bigint NOT NULL,
+		identities_without_profile bigint NOT NULL,
+		PRIMARY KEY (connection, day)
+	);
+
+	INSERT INTO identity_metrics
+		(workspace, day, observed_at,
+		 identities_anonymous, identities_recognized, identities_without_profile)
+	SELECT w.id,
+		(CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::date,
+		(CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::time,
+		0, 0, 0
+	FROM workspaces AS w
+	WHERE NOT EXISTS (
+		SELECT FROM identity_metrics AS m WHERE m.workspace = w.id
+	)
+	ON CONFLICT (workspace, day) DO NOTHING`
+
 const nodeIDUpgrade = `
 	DO $$
 	BEGIN
@@ -136,6 +169,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 		queries := []string{
 			`ALTER TABLE metadata ADD COLUMN IF NOT EXISTS requests_rate_per_minute integer NOT NULL DEFAULT 100 CHECK (requests_rate_per_minute BETWEEN 60 AND 20000)`,
 			`ALTER TABLE metadata ADD COLUMN IF NOT EXISTS requests_max_capacity integer NOT NULL DEFAULT 100 CHECK (requests_max_capacity BETWEEN 1 AND 10000)`,
+			identityMetricsUpgrade,
 			`CREATE TABLE IF NOT EXISTS usage_metrics (
 				organization varchar(12) NOT NULL REFERENCES organizations ON DELETE CASCADE,
 				workspace varchar(12) NOT NULL,

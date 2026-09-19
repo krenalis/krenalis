@@ -66,6 +66,8 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /members/current":                             api.Member,                           /* Admin console only */
 		"GET    /members/invitations/{token}":                 api.MemberInvitation,                 /* Admin console only */
 		"GET    /members/reset-password/{token}":              api.ValidateMemberPasswordResetToken, /* Admin console only */
+		"GET    /metrics/identities/dates/{start}/{end}":      workspace.IdentityMetricsPerDate,
+		"GET    /metrics/identities/latest":                   workspace.LatestIdentityMetric,
 		"GET    /metrics/usage/dates/{start}/{end}":           organization.UsageMetricsPerDate,
 		"GET    /organizations/{id}":                          api.Organization,  /* Needs platform management API key */
 		"GET    /organizations":                               api.Organizations, /* Needs platform management API key */
@@ -107,7 +109,8 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"POST   /members/invitations":                         organization.InviteMember,    /* Admin console only */
 		"POST   /members/login":                               s.login,                      /* Admin console only */
 		"POST   /members/logout":                              s.logout,                     /* Admin console only */
-		"POST   /organizations":                               api.CreateOrganization,       /* Needs platform management API key */
+		"POST   /metrics/identities/refresh":                  workspace.RefreshIdentityMetrics,
+		"POST   /organizations":                               api.CreateOrganization, /* Needs platform management API key */
 		"POST   /pipelines":                                   connection.CreatePipeline,
 		"POST   /pipelines/{id}/runs":                         pipeline.Run,
 		"POST   /pipelines/{id}/ui-event":                     pipeline.ServeUI,       /* Admin console only */

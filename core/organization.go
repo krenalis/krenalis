@@ -575,6 +575,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 	if err != nil {
 		return "", err
 	}
+	observedAt := time.Now().UTC().Truncate(time.Microsecond)
 
 	// Create the workspace.
 	for {
@@ -606,6 +607,14 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 						return nil, errors.Unprocessable(OrganizationNotExist, "organization %s does not exist", n.Organization)
 					}
 				}
+				return nil, err
+			}
+			// Insert an identity metrics row with zero counts.
+			_, err = tx.Exec(ctx, `INSERT INTO identity_metrics
+				(workspace, day, observed_at, identities_anonymous, identities_recognized, identities_without_profile)
+				VALUES ($1, $2, $3, 0, 0, 0)`, n.ID, observedAt.Truncate(24*time.Hour),
+				observedAt.Format("15:04:05.999999"))
+			if err != nil {
 				return nil, err
 			}
 			return n, nil
