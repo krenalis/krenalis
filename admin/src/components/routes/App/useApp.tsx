@@ -63,6 +63,7 @@ const useApp = (
 	const feedbackObserverRef = useRef<MutationObserver | null>(null);
 
 	useEffect(() => {
+		let cancelled = false;
 		const loadAppState = async () => {
 			const stopLoading = () => {
 				setTimeout(() => {
@@ -215,6 +216,9 @@ const useApp = (
 					),
 				);
 			}
+			if (cancelled) {
+				return;
+			}
 			setConnectors(transformedConnectors);
 
 			let member: Member;
@@ -317,6 +321,7 @@ const useApp = (
 		loadAppState();
 
 		return () => {
+			cancelled = true;
 			feedbackObserverRef.current?.disconnect();
 			feedbackObserverRef.current = null;
 		};

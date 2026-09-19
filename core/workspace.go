@@ -44,6 +44,7 @@ type Workspace struct {
 	workspace                      *state.Workspace
 	ID                             string                 `json:"id"`
 	Name                           string                 `json:"name"`
+	Synthetic                      bool                   `json:"synthetic"`
 	ProfileSchema                  types.Type             `json:"profileSchema"`
 	AssignedRoles                  ProfileRoleAssignments `json:"assignedRoles"`
 	PrimarySources                 map[string]string      `json:"primarySources"`
@@ -316,6 +317,9 @@ func (this *Workspace) AuthToken(ctx context.Context, connector, redirectionURI,
 	if !ok {
 		return "", errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", connector)
 	}
+	if err := this.core.connections.CheckConnector(this.workspace, c, state.Source); err != nil {
+		return "", errors.BadRequest("%s", err)
+	}
 	if c.OAuth == nil {
 		return "", errors.BadRequest("connector %s does not support authorization", connector)
 	}
@@ -490,6 +494,9 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	if !ok {
 		return "", errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", connection.Connector)
 	}
+	if err := this.core.connections.CheckConnector(this.workspace, c, state.Role(connection.Role)); err != nil {
+		return "", errors.BadRequest("%s", err)
+	}
 	switch c.Type {
 	case state.File:
 		return "", errors.BadRequest("connections cannot have type file")
@@ -604,6 +611,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		conf := &connections.ConnectorConfig{
 			Role:         n.Role,
 			Organization: this.workspace.Organization().ID,
+			Workspace:    this.workspace,
 		}
 		conf.OAuth.Account = n.Account.Code
 		conf.OAuth.ClientSecret = clientSecret
@@ -1566,6 +1574,9 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 	if !ok {
 		return nil, errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", connector)
 	}
+	if err := this.core.connections.CheckConnector(this.workspace, c, state.Role(role)); err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
 
 	if role == Source && !c.HasSourceSettings || role == Destination && !c.HasDestinationSettings {
 		return nil, errors.BadRequest("connector %s does not have %s settings", connector, strings.ToLower(role.String()))
@@ -1595,6 +1606,7 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 	conf := &connections.ConnectorConfig{
 		Role:         state.Role(role),
 		Organization: this.workspace.Organization().ID,
+		Workspace:    this.workspace,
 	}
 	conf.OAuth.Account = account.Code
 	conf.OAuth.ClientSecret = clientSecret

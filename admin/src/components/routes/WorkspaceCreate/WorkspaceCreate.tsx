@@ -7,6 +7,7 @@ import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import { PostgreSQLSettings } from '../../base/PostgreSQLSettings/PostgreSQLSettings';
 import { SnowflakeSettings } from '../../base/SnowflakeSettings/SnowflakeSettings';
 import { WarehouseSettings } from '../../../lib/api/types/warehouse';
@@ -23,6 +24,7 @@ const snowflakeIcon = <ExternalLogo slot='prefix' code='snowflake' path={WAREHOU
 
 const WorkspaceCreate = () => {
 	const [name, setName] = useState<string>('');
+	const [synthetic, setSynthetic] = useState<boolean>(false);
 	const [selectedWarehouse, setSelectedWarehouse] = useState<string>(
 		localStorage.getItem(IS_DOCKER_KEY) != null ? 'PostgreSQL-Docker' : 'Snowflake',
 	);
@@ -93,7 +95,7 @@ const WorkspaceCreate = () => {
 
 		if (action == 'test') {
 			try {
-				await api.workspaces.testCreation(name, InitialSchema as ObjectType, warehouse, 'Normal', settings);
+				await api.workspaces.testCreation(name, InitialSchema as ObjectType, warehouse, 'Normal', settings, synthetic);
 			} catch (err) {
 				setTimeout(() => {
 					setIsCheckingWarehouse(false);
@@ -118,6 +120,7 @@ const WorkspaceCreate = () => {
 					warehouse,
 					'Normal',
 					settings,
+					synthetic,
 				);
 				id = res.id;
 			} catch (err) {
@@ -224,6 +227,19 @@ const WorkspaceCreate = () => {
 						)}
 					</div>
 				)}
+			</Section>
+			<Section
+				title='Mode'
+				description='Synthetic mode is permanent for this workspace.'
+				padded={true}
+				annotated={true}
+			>
+				<SlCheckbox
+					checked={synthetic}
+					onSlChange={(event) => setSynthetic((event.target as HTMLInputElement).checked)}
+				>
+					Synthetic
+				</SlCheckbox>
 			</Section>
 			<div className='workspace-create__buttons'>
 				{hasWorkspaces && (

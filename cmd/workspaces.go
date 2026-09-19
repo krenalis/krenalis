@@ -666,11 +666,15 @@ func (workspace workspace) Update(_ http.ResponseWriter, r *http.Request) (any, 
 		return nil, err
 	}
 	var body struct {
-		Name string `json:"name"`
+		Synthetic json.Value `json:"synthetic"`
+		Name      string     `json:"name"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
+	}
+	if len(body.Synthetic) != 0 {
+		return nil, errors.BadRequest("synthetic is immutable")
 	}
 	err = ws.Update(r.Context(), body.Name)
 	return nil, err

@@ -89,6 +89,11 @@ const GeneralSettings = () => {
 	return (
 		<div className='general-settings'>
 			<div className='general-settings__title'>General</div>
+			<div>
+				Mode:{' '}
+				{workspaces.find((workspace) => workspace.id === selectedWorkspace)?.synthetic ? 'Synthetic' : 'Normal'}{' '}
+				(permanent)
+			</div>
 			<SlInput
 				className='general-settings__name'
 				maxlength={100}

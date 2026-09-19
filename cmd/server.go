@@ -9,7 +9,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"expvar"
 	"fmt"
 	"io"
@@ -28,6 +27,8 @@ import (
 	"github.com/krenalis/krenalis/cmd/internal/mcp"
 	"github.com/krenalis/krenalis/cmd/internal/workos"
 	corePkg "github.com/krenalis/krenalis/core"
+	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/fakedata"
 	"github.com/krenalis/krenalis/tools/prometheus"
 
 	"github.com/getsentry/sentry-go"
@@ -45,6 +46,17 @@ const telemetryLevelAll = corePkg.TelemetryLevelAll
 // initDBIfEmpty, a member specific for Docker scenarios is initialized.
 func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, initDockerMember bool) error {
 
+	var photoHandler http.Handler
+	var catalog *fakedata.FaceCatalog
+	if config.SyntheticPhotosDir != "" {
+		var err error
+		catalog, err = fakedata.LoadFaceCatalog(ctx, config.SyntheticPhotosDir)
+		if err != nil {
+			return fmt.Errorf("load KRENALIS_SYNTHETIC_PHOTOS_DIR: %w", err)
+		}
+		photoHandler = catalog.Handler()
+	}
+
 	conf := corePkg.Config{
 		KMS:                           config.KMS,
 		OrganizationsAPIKey:           config.OrganizationsAPIKey,
@@ -57,6 +69,8 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 		SentryTelemetryLevel:          config.SentryTelemetryLevel,
 		MaxQueuedEventsPerDestination: config.MaxQueuedEventsPerDestination,
 		PrometheusMetricsEnabled:      config.PrometheusMetricsEnabled,
+		Synthetic:                     config.Synthetic,
+		SyntheticCatalog:              catalog,
 	}
 	conf.DatabaseInitialization.InitIfEmpty = initDBIfEmpty
 	conf.DatabaseInitialization.InitDockerMember = initDockerMember
@@ -155,6 +169,11 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 		}
 
 		switch {
+		case strings.HasPrefix(r.URL.Path, "/photos/"):
+			if photoHandler != nil {
+				photoHandler.ServeHTTP(w, r)
+				return
+			}
 		case strings.HasPrefix(r.URL.Path, "/v1/"):
 			apisServer.ServeHTTP(w, r)
 			return

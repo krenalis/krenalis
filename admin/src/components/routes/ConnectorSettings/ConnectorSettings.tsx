@@ -58,10 +58,10 @@ const ConnectorSettings = () => {
 
 	useEffect(() => {
 		const connector = connectors.find((c) => c.code === connectorCode);
-		if (connector.isFile) {
+		if (connector?.isFile) {
 			redirect(`connectors/file/${connector.code}?role=${connectionRole}`);
 		}
-	}, []);
+	}, [connectors, connectorCode, connectionRole]);
 
 	useEffect(() => {
 		if (newConnectionID !== '') {
@@ -70,9 +70,17 @@ const ConnectorSettings = () => {
 	}, [newConnectionID]);
 
 	useEffect(() => {
+		let cancelled = false;
+		setConnector(null);
+		setNotFound(false);
+		setIsLoading(true);
 		const fetchData = async () => {
 			const connector = connectors.find((c) => c.code === connectorCode);
-			if (connector == null) {
+			if (
+				connector == null ||
+				(connectionRole !== 'Source' && connectionRole !== 'Destination') ||
+				(connectionRole === 'Source' ? connector.asSource == null : connector.asDestination == null)
+			) {
 				setNotFound(true);
 				setIsLoading(false);
 				return;
@@ -92,6 +100,7 @@ const ConnectorSettings = () => {
 			try {
 				ui = await api.connectors.ui(selectedWorkspace, connectorCode, connectionRole, authToken);
 			} catch (err) {
+				if (cancelled) return;
 				setIsLoading(false);
 				if (err instanceof NotFoundError) {
 					redirect('connectors');
@@ -112,13 +121,17 @@ const ConnectorSettings = () => {
 				handleError(err);
 				return;
 			}
+			if (cancelled) return;
 			setFields(ui.fields);
 			setButtons(ui.buttons);
 			setSettings(ui.settings);
 			setIsLoading(false);
 		};
 		fetchData();
-	}, []);
+		return () => {
+			cancelled = true;
+		};
+	}, [connectors, connectorCode, connectionRole, selectedWorkspace]);
 
 	const onButtonClick = async (eventName: string, confirmationButtonIndex?: number) => {
 		let confirmationButton: FeedbackButtonRef | null = null;

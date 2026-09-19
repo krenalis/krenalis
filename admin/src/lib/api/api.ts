@@ -85,7 +85,7 @@ class API {
 		this.apiURL = apiURL;
 		this.workspaceID = workspaceID;
 		this.workspaces = new Workspaces(origin, apiURL, workspaceID);
-		this.connectors = new Connectors(origin, apiURL);
+		this.connectors = new Connectors(origin, apiURL, workspaceID);
 	}
 
 	login = async (email: string, password: string, isUnique?: boolean): Promise<[string, string]> => {
@@ -709,6 +709,7 @@ class Workspaces {
 		warehousePlatform: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
+		synthetic: boolean,
 	): Promise<CreateWorkspaceResponse> => {
 		return await call(`${this.apiURL}/workspaces`, http.POST, null, {
 			name: name,
@@ -718,6 +719,7 @@ class Workspaces {
 				mode: warehouseMode,
 				settings: warehouseSettings,
 			},
+			synthetic,
 		});
 	};
 
@@ -727,6 +729,7 @@ class Workspaces {
 		warehousePlatform: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
+		synthetic: boolean,
 	): Promise<void> => {
 		return await call(`${this.apiURL}/workspaces/test`, http.POST, null, {
 			name: name,
@@ -736,6 +739,7 @@ class Workspaces {
 				mode: warehouseMode,
 				settings: warehouseSettings,
 			},
+			synthetic,
 		});
 	};
 
@@ -986,21 +990,24 @@ class Workspaces {
 class Connectors {
 	origin: string;
 	apiURL: string;
+	workspaceID: string;
 
-	constructor(origin: string, apiURL: string) {
+	constructor(origin: string, apiURL: string, workspaceID: string) {
 		this.origin = origin;
 		this.apiURL = apiURL;
+		this.workspaceID = workspaceID;
 	}
 
 	authURL = async (connector: string, role: Role, redirectURI: string): Promise<authURLResponse> => {
 		return await call(
 			`${this.apiURL}/connections/auth-url?connector=${connector}&role=${role}&redirectURI=${encodeURIComponent(redirectURI)}`,
 			http.GET,
+			this.workspaceID,
 		);
 	};
 
 	find = async (): Promise<Connector[]> => {
-		const res = await call(`${this.apiURL}/connectors`, http.GET);
+		const res = await call(`${this.apiURL}/connectors`, http.GET, this.workspaceID || null);
 		return res.connectors as Connector[];
 	};
 

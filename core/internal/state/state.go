@@ -854,6 +854,7 @@ type Workspace struct {
 	ID                             string
 	organization                   *Organization
 	Name                           string
+	Synthetic                      bool
 	ProfileSchema                  types.Type // without meta properties.
 	AssignedRoles                  ProfileRoleAssignments
 	PrimarySources                 map[string]string

@@ -521,6 +521,7 @@ type Warehouse struct {
 // name must be between 1 and 100 runes long.
 //
 // warehouse.Mode specifies the initial mode of the workspace's data warehouse.
+// synthetic selects the immutable Synthetic mode and requires a prepared scenario.
 //
 // It returns an errors.UnprocessableError error with code:
 //
@@ -529,9 +530,12 @@ type Warehouse struct {
 //   - WarehousePlatformNotExist, if a warehouse platform does not exist.
 //   - WarehouseNotInitializable, if the warehouse is not initializable.
 //   - WorkspacesLimitReached, if the organization cannot have more workspaces.
-func (this *Organization) CreateWorkspace(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse) (string, error) {
+func (this *Organization) CreateWorkspace(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse, synthetic bool) (string, error) {
 
 	this.core.mustBeOpen()
+	if synthetic && this.core.connections.SyntheticUnavailable() {
+		return "", errors.BadRequest("Synthetic scenario is not available")
+	}
 
 	settings, err := this.validateWorkspaceCreation(ctx, name, profileSchema, warehouse)
 	if err != nil {
@@ -554,6 +558,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 	n := state.CreateWorkspace{
 		Organization:                   this.organization.ID,
 		Name:                           name,
+		Synthetic:                      synthetic,
 		ProfileSchema:                  profileSchema,
 		ResolveIdentitiesOnBatchImport: true,
 	}
@@ -589,11 +594,11 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 				return nil, errors.Unprocessable(WorkspacesLimitReached, "organization cannot have more than %d workspaces", limit)
 			}
 			// Add the workspace.
-			_, err = tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name,"+
+			_, err = tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name, synthetic,"+
 				" profile_schema, resolve_identities_on_batch_import, warehouse_name, warehouse_mode,"+
 				" warehouse_settings, kms_encrypted_warehouse_settings_key, kms_encrypted_warehouse_mcp_settings_key)"+
-				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
-				n.ID, n.Organization, n.Name, encodedProfileSchema, n.ResolveIdentitiesOnBatchImport,
+				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+				n.ID, n.Organization, n.Name, n.Synthetic, encodedProfileSchema, n.ResolveIdentitiesOnBatchImport,
 				n.Warehouse.Platform, n.Warehouse.Mode, n.Warehouse.Settings, n.Warehouse.SettingsKey,
 				n.Warehouse.MCPSettingsKey)
 			if err != nil {
@@ -1241,6 +1246,7 @@ INNER JOIN updated_pipelines AS p ON ended_runs.pipeline = p.id
 
 // TestWorkspaceCreation tests a workspace creation. It tests that a warehouse
 // with the provided platform and settings can be initialized.
+// A Synthetic workspace requires a prepared scenario before warehouse access.
 //
 // It returns an errors.UnprocessableError error with code:
 //
@@ -1249,8 +1255,11 @@ INNER JOIN updated_pipelines AS p ON ended_runs.pipeline = p.id
 //   - WarehouseNotInitializable, if the warehouse intended for connection is
 //     not initializable.
 //   - WorkspacesLimitReached, if the organization cannot have more workspaces.
-func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse) error {
+func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse, synthetic bool) error {
 	this.core.mustBeOpen()
+	if synthetic && this.core.connections.SyntheticUnavailable() {
+		return errors.BadRequest("Synthetic scenario is not available")
+	}
 	_, err := this.validateWorkspaceCreation(ctx, name, profileSchema, warehouse)
 	return err
 }
@@ -1417,6 +1426,7 @@ func (this *Organization) Workspace(id string) (*Workspace, error) {
 		workspace:                      ws,
 		ID:                             ws.ID,
 		Name:                           ws.Name,
+		Synthetic:                      ws.Synthetic,
 		ProfileSchema:                  ws.ProfileSchema,
 		AssignedRoles:                  ProfileRoleAssignments(ws.AssignedRoles),
 		PrimarySources:                 maps.Clone(ws.PrimarySources),
@@ -1443,6 +1453,7 @@ func (this *Organization) Workspaces() []*Workspace {
 			workspace:                      ws,
 			ID:                             ws.ID,
 			Name:                           ws.Name,
+			Synthetic:                      ws.Synthetic,
 			ProfileSchema:                  ws.ProfileSchema,
 			AssignedRoles:                  ProfileRoleAssignments(ws.AssignedRoles),
 			PrimarySources:                 maps.Clone(ws.PrimarySources),

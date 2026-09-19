@@ -134,6 +134,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			return err
 		}
 		queries := []string{
+			`ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS synthetic boolean NOT NULL DEFAULT false`,
 			`ALTER TABLE metadata ADD COLUMN IF NOT EXISTS requests_rate_per_minute integer NOT NULL DEFAULT 100 CHECK (requests_rate_per_minute BETWEEN 60 AND 20000)`,
 			`ALTER TABLE metadata ADD COLUMN IF NOT EXISTS requests_max_capacity integer NOT NULL DEFAULT 100 CHECK (requests_max_capacity BETWEEN 1 AND 10000)`,
 			`CREATE TABLE IF NOT EXISTS usage_metrics (

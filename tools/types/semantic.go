@@ -26,8 +26,8 @@ const (
 	URLSemantic                         // web URL
 )
 
-// semanticName contains the JSON names of all semantics except NoSemantic.
-var semanticName = []string{
+// semanticName contains the names of all semantics except NoSemantic.
+var semanticName = [...]string{
 	"country",
 	"duration",
 	"email",
@@ -66,7 +66,7 @@ const (
 	ISO3166Alpha3                          // three-letter ISO 3166-1 alpha-3 code
 )
 
-// countryFormatName contains the JSON names of all valid country formats.
+// countryFormatName contains the names of all valid country formats.
 var countryFormatName = [...]string{
 	"alpha-2",
 	"alpha-3",
@@ -105,7 +105,7 @@ const (
 	Week                                    // week
 )
 
-// durationUnitName contains the JSON names of all valid duration units.
+// durationUnitName contains the names of all valid duration units.
 var durationUnitName = [...]string{
 	"millisecond",
 	"second",
@@ -161,8 +161,8 @@ const (
 	Mile                                      // mile
 )
 
-// unitOfMeasureName contains the JSON names of all valid units of measure.
-var unitOfMeasureName = []string{
+// unitOfMeasureName contains the names of all valid units of measure.
+var unitOfMeasureName = [...]string{
 	"g",
 	"kg",
 	"mm",

@@ -110,6 +110,7 @@ func TestReplaceWorkspacePreservesRateLimitBuckets(t *testing.T) {
 		bucket:       bucket,
 		eventBucket:  eventBucket,
 		ID:           workspaceID,
+		Synthetic:    true,
 	}
 	organization.workspaces[workspaceID] = workspace
 	state := &State{
@@ -127,5 +128,8 @@ func TestReplaceWorkspacePreservesRateLimitBuckets(t *testing.T) {
 	}
 	if updated.eventBucket != eventBucket {
 		t.Fatal("workspace update replaced its event rate-limit bucket")
+	}
+	if !updated.Synthetic || !organization.workspaces[workspaceID].Synthetic {
+		t.Fatalf("expected synthetic mode after workspace replacement, got normal")
 	}
 }

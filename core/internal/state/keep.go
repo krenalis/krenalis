@@ -662,6 +662,7 @@ type CreateWorkspace struct {
 	ID                             string
 	Organization                   string
 	Name                           string
+	Synthetic                      bool
 	ProfileSchema                  types.Type
 	ResolveIdentitiesOnBatchImport bool
 	Warehouse                      struct {
@@ -688,6 +689,7 @@ func (state *State) createWorkspace(n notification) string {
 		ID:                             e.ID,
 		organization:                   organization,
 		Name:                           e.Name,
+		Synthetic:                      e.Synthetic,
 		ProfileSchema:                  e.ProfileSchema,
 		PrimarySources:                 map[string]string{},
 		accounts:                       map[int]*Account{},

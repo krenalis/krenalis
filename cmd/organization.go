@@ -143,6 +143,7 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 		return nil, err
 	}
 	var body struct {
+		Synthetic     json.Value     `json:"synthetic"`
 		Name          string         `json:"name"`
 		ProfileSchema types.Type     `json:"profileSchema"`
 		Warehouse     core.Warehouse `json:"warehouse"`
@@ -151,7 +152,10 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	id, err := org.CreateWorkspace(r.Context(), body.Name, body.ProfileSchema, body.Warehouse)
+	if len(body.Synthetic) != 0 && string(body.Synthetic) != "true" && string(body.Synthetic) != "false" {
+		return nil, errors.BadRequest("synthetic must be a boolean")
+	}
+	id, err := org.CreateWorkspace(r.Context(), body.Name, body.ProfileSchema, body.Warehouse, string(body.Synthetic) == "true")
 	if err != nil {
 		if err2, ok := err.(*errors.UnprocessableError); ok && err2.Code == core.OrganizationNotExist {
 			return nil, errors.Unauthorized("API key in the Authorization header of the request does not exist")
@@ -418,6 +422,7 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 		return nil, err
 	}
 	var body struct {
+		Synthetic     json.Value     `json:"synthetic"`
 		Name          string         `json:"name"`
 		ProfileSchema types.Type     `json:"profileSchema"`
 		Warehouse     core.Warehouse `json:"warehouse"`
@@ -426,7 +431,10 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = org.TestWorkspaceCreation(r.Context(), body.Name, body.ProfileSchema, body.Warehouse)
+	if len(body.Synthetic) != 0 && string(body.Synthetic) != "true" && string(body.Synthetic) != "false" {
+		return nil, errors.BadRequest("synthetic must be a boolean")
+	}
+	err = org.TestWorkspaceCreation(r.Context(), body.Name, body.ProfileSchema, body.Warehouse, string(body.Synthetic) == "true")
 	return nil, err
 }
 

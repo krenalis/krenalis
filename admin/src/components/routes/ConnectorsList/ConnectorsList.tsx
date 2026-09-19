@@ -28,7 +28,9 @@ const ConnectorsList = () => {
 		new URLSearchParams(window.location.search).get('category') ?? 'All',
 	);
 
-	const { api, handleError, connectors, setTitle, redirect, publicMetadata } = useContext(AppContext);
+	const { api, handleError, connectors, setTitle, redirect, publicMetadata, workspaces, selectedWorkspace } =
+		useContext(AppContext);
+	const isSynthetic = workspaces?.find((workspace) => workspace.id === selectedWorkspace)?.synthetic === true;
 
 	const location = useLocation();
 
@@ -46,8 +48,10 @@ const ConnectorsList = () => {
 	}, [connectors]);
 
 	const searchedConnectors: any[] = useMemo(() => {
-		const sortedConnectors = connectors.sort((a, b) => (a.label.toLowerCase() <= b.label.toLowerCase() ? -1 : 1));
-		const sortedAdditionalPotentialConnectors = additionalPotentialConnectors.sort((a, b) =>
+		const sortedConnectors = [...connectors].sort((a, b) =>
+			a.label.toLowerCase() <= b.label.toLowerCase() ? -1 : 1,
+		);
+		const sortedAdditionalPotentialConnectors = [...additionalPotentialConnectors].sort((a, b) =>
 			a.label.toLowerCase() <= b.label.toLowerCase() ? -1 : 1,
 		);
 		let searchedConnectors = [];
@@ -112,6 +116,11 @@ const ConnectorsList = () => {
 	}, [connectionRole]);
 
 	useEffect(() => {
+		if (isSynthetic) {
+			setAdditionalPotentialConnectors([]);
+			return;
+		}
+		let cancelled = false;
 		const fetchPotentialConnectors = async () => {
 			let connectors: PotentialConnector[];
 			try {
@@ -120,7 +129,9 @@ const ConnectorsList = () => {
 				console.error(err);
 				return;
 			}
-			setAdditionalPotentialConnectors(connectors);
+			if (!cancelled) {
+				setAdditionalPotentialConnectors(connectors);
+			}
 		};
 		if (publicMetadata.potentialConnectorsURL == null) {
 			// When potentialConnectorsURL is `null`, no call should be made to
@@ -128,7 +139,10 @@ const ConnectorsList = () => {
 			return;
 		}
 		fetchPotentialConnectors();
-	}, [existingConnectorCodes]);
+		return () => {
+			cancelled = true;
+		};
+	}, [existingConnectorCodes, isSynthetic]);
 
 	const onConnectorAdd = async () => {
 		let c = selectedConnector;

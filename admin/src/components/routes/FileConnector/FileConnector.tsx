@@ -23,13 +23,19 @@ const FileConnector = () => {
 	const file = useMemo(() => {
 		const code = params.code;
 		const f = connectors.find((c) => c.code === code);
-		if (f == null) {
+		const requestedRole = new URL(document.location.href).searchParams.get('role') || 'Source';
+		if (
+			f == null ||
+			!f.isFile ||
+			(requestedRole !== 'Source' && requestedRole !== 'Destination') ||
+			(requestedRole === 'Source' ? f.asSource == null : f.asDestination == null)
+		) {
 			handleError(`Connector with code ${code} doesn't exist`);
 			redirect('connectors');
 			return;
 		}
 		return f;
-	}, [params.code]);
+	}, [params.code, connectors, location]);
 
 	const role = useMemo(() => {
 		const r = new URL(document.location.href).searchParams.get('role');
@@ -48,10 +54,10 @@ const FileConnector = () => {
 			}
 		}
 		return s;
-	}, [connectors]);
+	}, [connections, role]);
 
 	useLayoutEffect(() => {
-		setTitle(`Add ${file.label} file`);
+		if (file) setTitle(`Add ${file.label} file`);
 	}, [file]);
 
 	const onStorageChange = (e) => {
@@ -62,6 +68,8 @@ const FileConnector = () => {
 		const id = storages.find((s) => s.id === selectedStorage).id;
 		redirect(`connections/${id}/pipelines/add/${target}?format=${file.code}`);
 	};
+
+	if (!file) return null;
 
 	return (
 		<div className='file-connector'>

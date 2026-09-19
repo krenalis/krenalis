@@ -17,6 +17,7 @@ interface Workspace {
 	assignedRoles: ProfileRoleAssignments;
 	id: string;
 	name: string;
+	synthetic: boolean;
 	resolveIdentitiesOnBatchImport: boolean;
 	identifiers: Identifiers;
 	warehouseMode: WarehouseMode;

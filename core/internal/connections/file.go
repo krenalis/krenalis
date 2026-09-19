@@ -8,7 +8,6 @@ import (
 	"archive/zip"
 	"compress/gzip"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"iter"
@@ -22,9 +21,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/connectors"
-	"github.com/krenalis/krenalis/core/internal/dialer"
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/klauspost/compress/snappy"
@@ -66,6 +65,7 @@ var storageTimeout = 10 * time.Second
 type File struct {
 	connector   string
 	state       *state.State
+	connections *Connections
 	pipeline    *state.Pipeline
 	timeLayouts *state.TimeLayouts
 	inner       any // used as fileReadConnection | fileReadSeekConnection | fileWriteConnection | fileContentTypeConnection
@@ -80,6 +80,7 @@ func (c *Connections) File(pipeline *state.Pipeline) *File {
 	file := &File{
 		connector:   connection.Connector().Code,
 		state:       c.state,
+		connections: c,
 		pipeline:    pipeline,
 		timeLayouts: &format.TimeLayouts,
 	}
@@ -206,12 +207,8 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer) 
 func (file *File) storage() (any, error) {
 	storage := file.pipeline.Connection()
 	connector := storage.Connector()
-	organization := storage.Organization()
-	return connectors.RegisteredFileStorage(connector.Code).New(&connectors.FileStorageEnv{
-		Settings: newConnectionSettingStore(file.state, storage),
-		Dial:     dialer.Dial(organization.ID),
-		DialWith: dialer.DialWith(organization.ID),
-	})
+	return file.connections.newFileStorage(connector.Code, storage.Role,
+		newConnectionSettingStore(file.state, storage), storage.Organization().ID, storage.Workspace())
 }
 
 // IsValidSheetName reports whether name is a valid sheet name.

@@ -56,6 +56,7 @@ CREATE TABLE workspaces (
     id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
     organization varchar(12) NOT NULL REFERENCES organizations ON DELETE CASCADE,
     name varchar(100) NOT NULL,
+    synthetic boolean NOT NULL DEFAULT false,
     warehouse_name varchar NOT NULL,
     warehouse_mode warehouse_mode NOT NULL,
     warehouse_settings bytea NOT NULL,

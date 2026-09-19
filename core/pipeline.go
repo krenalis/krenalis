@@ -733,6 +733,17 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 	}
 
 	c := this.pipeline.Connection()
+	if c.Workspace().Synthetic {
+		if err := this.core.connections.CheckConnector(c.Workspace(), c.Connector(), c.Role); err != nil {
+			return errors.BadRequest("%s", err)
+		}
+		if pipeline.Format == "" {
+			return errors.BadRequest("Synthetic workspace requires CSV source format")
+		}
+		if format != nil && !connections.SupportsSynthetic(format, state.Source) {
+			return errors.BadRequest("Synthetic workspace supports only CSV source format")
+		}
+	}
 
 	// Validate the pipeline.
 	v := validationState{}
@@ -843,6 +854,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 		conf := &connections.ConnectorConfig{
 			Role:         this.pipeline.Connection().Role,
 			Organization: this.pipeline.Organization().ID,
+			Workspace:    this.pipeline.Connection().Workspace(),
 		}
 		n.FormatSettings, err = this.core.connections.UpdatedSettings(ctx, format, conf, pipeline.FormatSettings)
 		if err != nil {
