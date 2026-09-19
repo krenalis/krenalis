@@ -82,7 +82,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	k.RunIdentityResolutionAndWait()
 
 	// Ensure that there are 10 profiles.
-	_, _, total := k.Profiles([]string{"email"}, "", false, 0, 1000)
+	_, total := k.Profiles([]string{"email"}, "", false, 0, 1000)
 	if total != 10 {
 		t.Fatalf("expected 10 profiles, got %d", total)
 	}
@@ -128,7 +128,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	k.RunIdentityResolutionAndWait()
 
 	// Ensure that there are 13 profiles (10 from Dummy + 3 from CSV).
-	_, _, total = k.Profiles([]string{"email"}, "", false, 0, 1000)
+	_, total = k.Profiles([]string{"email"}, "", false, 0, 1000)
 	if total != 13 {
 		t.Fatalf("expected 13 profiles, got %d", total)
 	}
@@ -181,7 +181,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	}
 
 	// Ensure that there are 14 profiles (10 from Dummy + 3 from CSV + 1 from event).
-	_, _, total = k.Profiles([]string{"email"}, "", false, 0, 1000)
+	_, total = k.Profiles([]string{"email"}, "", false, 0, 1000)
 	if total != 14 {
 		t.Fatalf("expected 14 profiles, got %d", total)
 	}
@@ -191,7 +191,7 @@ func Test_ImportFromManyConnections(t *testing.T) {
 	k.RunIdentityResolutionAndWait()
 
 	// Ensure that there are 10 profiles.
-	profiles, _, total := k.Profiles([]string{"email"}, "", false, 0, 1000)
+	profiles, total := k.Profiles([]string{"email"}, "", false, 0, 1000)
 	if total != 10 {
 		t.Fatalf("expected 10 users, got %d", total)
 	}

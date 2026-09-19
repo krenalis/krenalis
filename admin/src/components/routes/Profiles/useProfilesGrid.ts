@@ -1,26 +1,31 @@
-import { useMemo } from 'react';
+import { createElement, useMemo } from 'react';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import { ProfileProperty } from './Profiles.types';
 import { ResponseProfile } from '../../../lib/api/types/responses';
+import { CountryFormat } from '../../../lib/api/types/types';
+import { ProfileRoleAssignments } from '../../../lib/api/types/workspace';
+import { ProfileCell } from './ProfileCell';
 
 const useProfilesGrid = (
 	profiles: ResponseProfile[],
 	profilesProperties: ProfileProperty[],
-	selectedProfile: string,
+	profilesProjection: string[],
+	assignedRoles: ProfileRoleAssignments | undefined,
+	countryFormat: CountryFormat | undefined,
+	activeProfileID: string,
 	onProfileClick: (kpid: string) => void,
 ) => {
+	const projectedRoots = useMemo(() => new Set(profilesProjection), [profilesProjection]);
 	const profilesRows = useMemo(() => {
 		// compute the rows for the grid component.
 		const rows: GridRow[] = [];
 		for (const profile of profiles) {
-			// copy the profile to prevent changes in-place.
-			let profileCopy = { ...profile };
-			const isSelected = profileCopy.kpid === selectedProfile;
-			const attributes = profileCopy.attributes;
+			const isActive = profile.kpid === activeProfileID;
+			const attributes = profile.attributes;
 
 			const cells: any[] = [];
 			for (const p of profilesProperties) {
-				if (!p.isUsed) {
+				if (!p.isUsed || !projectedRoots.has(p.name.split('.')[0])) {
 					continue;
 				}
 				const path = p.name;
@@ -41,32 +46,43 @@ const useProfilesGrid = (
 
 			const row: GridRow = {
 				onClick: () => onProfileClick(profile.kpid),
-				cells: [profileCopy.updatedAt, ...cells],
-				selected: isSelected,
+				cells: [
+					createElement(ProfileCell, {
+						assignedRoles,
+						attributes,
+						countryFormat,
+						profileID: profile.kpid,
+					}),
+					...cells,
+				],
+				id: profile.kpid,
+				key: profile.kpid,
+				active: isActive,
 			};
 			rows.push(row);
 		}
 		return rows;
-	}, [profiles, profilesProperties, onProfileClick]);
+	}, [profiles, profilesProperties, projectedRoots, assignedRoles, countryFormat, activeProfileID, onProfileClick]);
 
 	const profileColumns = useMemo(() => {
 		// compute the columns for the grid component.
 		const profileColumns: GridColumn[] = [];
 		profileColumns.push({
-			name: 'Last updated',
-			type: 'datetime',
-			explanation: 'Last time the profile was updated in its source.',
+			key: 'profile',
+			name: 'Profile',
 		});
 		for (const p of profilesProperties) {
-			if (p.isUsed) {
+			if (p.isUsed && projectedRoots.has(p.name.split('.')[0])) {
 				profileColumns.push({
-					name: p.name,
+					key: p.name,
+					name: p.label,
+					reorderable: true,
 					type: p.type,
 				});
 			}
 		}
 		return profileColumns;
-	}, [profilesProperties]);
+	}, [profilesProperties, projectedRoots]);
 
 	return { profilesRows, profileColumns };
 };

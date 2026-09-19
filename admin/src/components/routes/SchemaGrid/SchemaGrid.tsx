@@ -154,7 +154,7 @@ const SchemaGrid = () => {
 							ref={gridRef}
 							columns={columns}
 							rows={rows}
-							keyboardNavigation={isGridKeyboardNavigationEnabled}
+							keyboardNavigation={isGridKeyboardNavigationEnabled ? 'tree' : undefined}
 							gridColumnsWidths={schemaGridColumns}
 							nestedRowsIndentation={schemaPropertyGridNestedRowsIndentation}
 							isLoading={isLoadingSchema || isAltering}

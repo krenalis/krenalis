@@ -104,7 +104,7 @@ func TestImportExportUsersToDummy(t *testing.T) {
 		})
 		run := k.StartPipelineRun(importUsersID)
 		k.WaitForRunsCompletion(run)
-		profiles, _, _ := k.Profiles([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
+		profiles, _ := k.Profiles([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
 		if len(profiles) == 0 {
 			t.Fatal("no profiles re-imported from Dummy")
 		}
