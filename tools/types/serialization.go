@@ -486,6 +486,12 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			if values != nil {
 				return Type{}, errors.New("pattern cannot be provided if values are provided")
 			}
+			if maxBytes != 0 {
+				return Type{}, errors.New("pattern cannot be provided if max bytes is provided")
+			}
+			if maxLength != 0 {
+				return Type{}, errors.New("pattern cannot be provided if max length is provided")
+			}
 			if expr, ok := tok.(string); ok {
 				pattern, _ = regexp.Compile(expr)
 			}
@@ -498,6 +504,12 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			}
 			if pattern != nil {
 				return Type{}, errors.New("values cannot be provided if pattern is provided")
+			}
+			if maxBytes != 0 {
+				return Type{}, errors.New("values cannot be provided if max bytes is provided")
+			}
+			if maxLength != 0 {
+				return Type{}, errors.New("values cannot be provided if max length is provided")
 			}
 			if tok != json.Delim('[') {
 				return Type{}, errors.New("invalid values")
@@ -546,8 +558,14 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			}
 			hasScale = true
 		case "maxBytes":
-			if maxBytes > 0 {
+			if maxBytes != 0 {
 				return Type{}, errors.New("repeated 'maxBytes' key")
+			}
+			if pattern != nil {
+				return Type{}, errors.New("max bytes cannot be provided if pattern is provided")
+			}
+			if values != nil {
+				return Type{}, errors.New("max bytes cannot be provided if values are provided")
 			}
 			n, ok := tok.(json.Number)
 			if !ok {
@@ -558,8 +576,14 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				return Type{}, errors.New("invalid length in bytes")
 			}
 		case "maxLength":
-			if maxLength > 0 {
+			if maxLength != 0 {
 				return Type{}, errors.New("repeated 'maxLength' key")
+			}
+			if pattern != nil {
+				return Type{}, errors.New("max length cannot be provided if pattern is provided")
+			}
+			if values != nil {
+				return Type{}, errors.New("max length cannot be provided if values are provided")
 			}
 			n, ok := tok.(json.Number)
 			if !ok {

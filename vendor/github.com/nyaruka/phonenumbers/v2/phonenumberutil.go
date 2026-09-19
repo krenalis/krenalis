@@ -1,0 +1,3156 @@
+// Port of java/libphonenumber/src/com/google/i18n/phonenumbers/PhoneNumberUtil.java.
+package phonenumbers
+
+import (
+	"errors"
+	"iter"
+	"math"
+	"regexp"
+	"strconv"
+	"strings"
+	"unicode"
+
+	"github.com/nyaruka/phonenumbers/v2/internal/character"
+	"github.com/nyaruka/phonenumbers/v2/internal/regexcache"
+	"github.com/nyaruka/phonenumbers/v2/internal/stringbuilder"
+	"github.com/nyaruka/phonenumbers/v2/metadata"
+	"google.golang.org/protobuf/proto"
+)
+
+const (
+	// minLengthForNSN is the minimum and maximum length of the national significant number.
+	minLengthForNSN = 2
+	// maxLengthForNSN: The ITU says the maximum length should be 15, but we have
+	// found longer numbers in Germany.
+	maxLengthForNSN = 17
+	// maxLengthCountryCode is the maximum length of the country calling code.
+	maxLengthCountryCode = 3
+	// maxInputStringLength caps input strings for parsing at 250 chars.
+	// This prevents malicious input from overflowing the regular-expression
+	// engine.
+	maxInputStringLength = 250
+
+	// unknownRegion is the region-code for the unknown region.
+	unknownRegion = "ZZ"
+
+	nanpaCountryCode = 1
+
+	// The plusSign signifies the international prefix.
+	plusSign = '+'
+
+	starSign = '*'
+
+	rfc3966ExtnPrefix     = ";ext="
+	rfc3966Prefix         = "tel:"
+	rfc3966PhoneContext   = ";phone-context="
+	rfc3966IsdnSubaddress = ";isub="
+
+	// Regular expression of acceptable punctuation found in phone
+	// numbers. This excludes punctuation found as a leading character
+	// only. This consists of dash characters, white space characters,
+	// full stops, slashes, square brackets, parentheses and tildes. It
+	// also includes the letter 'x' as that is found as a placeholder
+	// for carrier information in some phone numbers. Full-width variants
+	// are also present.
+	validPunctuation = "-x\u2010-\u2015\u2212\u30FC\uFF0D-\uFF0F " +
+		"\u00A0\u00AD\u200B\u2060\u3000()\uFF08\uFF09\uFF3B\uFF3D." +
+		"\\[\\]/~\u2053\u223C\uFF5E"
+
+	digitsClass = "\\p{Nd}"
+
+	// We accept alpha characters in phone numbers, ASCII only, upper
+	// and lower case.
+	validAlpha = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	plusChars  = "+\uFF0B"
+)
+
+var (
+	// Map of country calling codes that use a mobile token before the
+	// area code. One example of when this is relevant is when determining
+	// the length of the national destination code, which should be the
+	// length of the area code plus the length of the mobile token.
+	mobileTokenMappings = map[int]string{
+		54: "9",
+	}
+
+	// A map that contains characters that are essential when dialling.
+	// That means any of the characters in this map must not be removed
+	// from a number when dialling, otherwise the call will not reach
+	// the intended destination.
+	diallableCharMappings = map[rune]rune{
+		'1':      '1',
+		'2':      '2',
+		'3':      '3',
+		'4':      '4',
+		'5':      '5',
+		'6':      '6',
+		'7':      '7',
+		'8':      '8',
+		'9':      '9',
+		'0':      '0',
+		plusSign: plusSign,
+		'*':      '*',
+		'#':      '#',
+	}
+
+	// Combined map of digit and alpha (letter to digit) mappings, used to
+	// convert alpha characters in a phone number to their dialpad digits.
+	alphaPhoneMappings = map[rune]rune{
+		'0': '0',
+		'1': '1',
+		'2': '2',
+		'3': '3',
+		'4': '4',
+		'5': '5',
+		'6': '6',
+		'7': '7',
+		'8': '8',
+		'9': '9',
+		'A': '2',
+		'B': '2',
+		'C': '2',
+		'D': '3',
+		'E': '3',
+		'F': '3',
+		'G': '4',
+		'H': '4',
+		'I': '4',
+		'J': '5',
+		'K': '5',
+		'L': '5',
+		'M': '6',
+		'N': '6',
+		'O': '6',
+		'P': '7',
+		'Q': '7',
+		'R': '7',
+		'S': '7',
+		'T': '8',
+		'U': '8',
+		'V': '8',
+		'W': '9',
+		'X': '9',
+		'Y': '9',
+		'Z': '9',
+	}
+
+	// Separate map of all symbols that we wish to retain when formatting
+	// alpha numbers. This includes digits, ASCII letters and number
+	// grouping symbols such as "-" and " ".
+	allPlusNumberGroupingSymbols = map[rune]rune{
+		'1':      '1',
+		'2':      '2',
+		'3':      '3',
+		'4':      '4',
+		'5':      '5',
+		'6':      '6',
+		'7':      '7',
+		'8':      '8',
+		'9':      '9',
+		'0':      '0',
+		plusSign: plusSign,
+		'*':      '*',
+		'A':      'A',
+		'B':      'B',
+		'C':      'C',
+		'D':      'D',
+		'E':      'E',
+		'F':      'F',
+		'G':      'G',
+		'H':      'H',
+		'I':      'I',
+		'J':      'J',
+		'K':      'K',
+		'L':      'L',
+		'M':      'M',
+		'N':      'N',
+		'O':      'O',
+		'P':      'P',
+		'Q':      'Q',
+		'R':      'R',
+		'S':      'S',
+		'T':      'T',
+		'U':      'U',
+		'V':      'V',
+		'W':      'W',
+		'X':      'X',
+		'Y':      'Y',
+		'Z':      'Z',
+		'a':      'A',
+		'b':      'B',
+		'c':      'C',
+		'd':      'D',
+		'e':      'E',
+		'f':      'F',
+		'g':      'G',
+		'h':      'H',
+		'i':      'I',
+		'j':      'J',
+		'k':      'K',
+		'l':      'L',
+		'm':      'M',
+		'n':      'N',
+		'o':      'O',
+		'p':      'P',
+		'q':      'Q',
+		'r':      'R',
+		's':      'S',
+		't':      'T',
+		'u':      'U',
+		'v':      'V',
+		'w':      'W',
+		'x':      'X',
+		'y':      'Y',
+		'z':      'Z',
+		'-':      '-',
+		'\uFF0D': '-',
+		'\u2010': '-',
+		'\u2011': '-',
+		'\u2012': '-',
+		'\u2013': '-',
+		'\u2014': '-',
+		'\u2015': '-',
+		'\u2212': '-',
+		'/':      '/',
+		'\uFF0F': '/',
+		' ':      ' ',
+		'\u3000': ' ',
+		'\u2060': ' ',
+		'.':      '.',
+		'\uFF0E': '.',
+	}
+
+	// Pattern that makes it easy to distinguish whether a region has a
+	// unique international dialing prefix or not. If a region has a
+	// unique international prefix (e.g. 011 in USA), it will be
+	// represented as a string that contains a sequence of ASCII digits.
+	// If there are multiple available international prefixes in a
+	// region, they will be represented as a regex string that always
+	// contains character(s) other than ASCII digits.
+	// Note this regex also includes tilde, which signals waiting for the tone.
+	// Anchored to require a full match, mirroring Java's Pattern.matches(): Go's
+	// MatchString is a partial (unanchored) match, which would wrongly treat a
+	// regex IDD prefix like "0[0-3][0-9]" as a unique prefix (matching its leading
+	// "0") instead of falling back to international "+" formatting.
+	uniqueInternationalPrefix = regexp.MustCompile("^(?:[\\d]+(?:[~\u2053\u223C\uFF5E][\\d]+)?)$")
+
+	plusCharsPattern      = regexp.MustCompile("[" + plusChars + "]+")
+	separatorPattern      = regexp.MustCompile("[" + validPunctuation + "]+")
+	notSeparatorPattern   = regexp.MustCompile("[^" + validPunctuation + "]+")
+	capturingDigitPattern = regexp.MustCompile("(" + digitsClass + ")")
+
+	// Regular expression of acceptable characters that may start a
+	// phone number for the purposes of parsing. This allows us to
+	// strip away meaningless prefixes to phone numbers that may be
+	// mistakenly given to us. This consists of digits, the plus symbol
+	// and arabic-indic digits. This does not contain alpha characters,
+	// although they may be used later in the number. It also does not
+	// include other punctuation, as this will be stripped later during
+	// parsing and is of no information value when parsing a number.
+	validStartChar        = "[" + plusChars + digitsClass + "]"
+	validStartCharPattern = regexp.MustCompile(validStartChar)
+
+	// Regular expression of characters typically used to start a second
+	// phone number for the purposes of parsing. This allows us to strip
+	// off parts of the number that are actually the start of another
+	// number, such as for: (530) 583-6985 x302/x2303 -> the second
+	// extension here makes this actually two phone numbers,
+	// (530) 583-6985 x302 and (530) 583-6985 x2303. We remove the second
+	// extension so that the first number is parsed correctly.
+	secondNumberStart        = "[\\\\/] *x"
+	secondNumberStartPattern = regexp.MustCompile(secondNumberStart)
+
+	// Regular expression of trailing characters that we want to remove.
+	// We remove all characters that are not alpha or numerical characters.
+	// The hash character is retained here, as it may signify the previous
+	// block was an extension.
+	unwantedEndChars       = "[^\\p{N}\\p{L}#]+$"
+	unwantedEndCharPattern = regexp.MustCompile(unwantedEndChars)
+
+	// We use this pattern to check if the phone number has at least three
+	// letters in it - if so, then we treat it as a number where some
+	// phone-number digits are represented by letters.
+	validAlphaPhonePattern = regexp.MustCompile("^(?:.*?[A-Za-z]){3}.*$")
+
+	// Regular expression of viable phone numbers. This is location
+	// independent. Checks we have at least three leading digits, and
+	// only valid punctuation, alpha characters and digits in the phone
+	// number. Does not include extension data. The symbol 'x' is allowed
+	// here as valid punctuation since it is often used as a placeholder
+	// for carrier codes, for example in Brazilian phone numbers. We also
+	// allow multiple "+" characters at the start.
+	// Corresponds to the following:
+	// [digits]{minLengthNsn}|
+	// plus_sign*(
+	//    ([punctuation]|[star])*[digits]
+	// ){3,}([punctuation]|[star]|[digits]|[alpha])*
+	//
+	// The first reg-ex is to allow short numbers (two digits long) to be
+	// parsed if they are entered as "15" etc, but only if there is no
+	// punctuation in them. The second expression restricts the number of
+	// digits to three or more, but then allows them to be in
+	// international form, and to have alpha-characters and punctuation.
+	//
+	// Note validPunctuation starts with a -, so must be the first in the range.
+	validPhoneNumber = digitsClass + "{" + strconv.Itoa(minLengthForNSN) + "}" + "|" +
+		"[" + plusChars + "]*(?:[" + validPunctuation + string(starSign) +
+		"]*" + digitsClass + "){3,}[" +
+		validPunctuation + string(starSign) + validAlpha + digitsClass + "]*"
+
+	// Default extension prefix to use when formatting. This will be put
+	// in front of any extension component of the number, after the main
+	// national number is formatted. For example, if you wish the default
+	// extension formatting to be " extn: 3456", then you should specify
+	// " extn: " here as the default extension prefix. This can be
+	// overridden by region-specific preferences.
+	defaultExtnPrefix = " ext. "
+
+	// We cap the maximum length of an extension based on the ambiguity of
+	// the way the extension is prefixed. As per ITU, the officially allowed
+	// length for extensions is actually 40, but we don't support this since
+	// we haven't seen real examples and this introduces many false
+	// interpretations as the extension labels are not standardized.
+
+	possibleSeparatorsBetweenNumberAndExtLabel = "[ \u00A0\\t,]*"
+	// Optional full stop (.) or colon, followed by zero or more spaces/tabs/commas.
+	possibleCharsAfterExtLabel = "[:\\.\uFF0E]?[ \u00A0\\t,-]*"
+	optionalExtnSuffix         = "#?"
+
+	// Here the extension is called out in a more explicit way, i.e.
+	// mentioning it with obvious patterns like "ext.".
+	// Canonical-equivalence doesn't seem to be an option with Android
+	// java, so we allow two options for representing the accented o -
+	// the character itself, and one in the unicode decomposed form
+	// with the combining acute accent.
+	explicitExtLabels = "(?:e?xt(?:ensi(?:o\u0301?|\u00F3))?n?|" +
+		"\uFF45?\uFF58\uFF54\uFF4E?|\u0434\u043E\u0431|anexo)"
+	// One-character symbols that can be used to indicate an extension,
+	// and less commonly used or more ambiguous extension labels.
+	ambiguousExtLabels = "(?:[x\uFF58#\uFF03~\uFF5E]|int|\uFF49\uFF4E\uFF54)"
+	ambiguousSeparator = "[- ]+"
+
+	// Regexp of all possible ways to write extensions, for use when
+	// parsing. This will be run as a case-insensitive regexp match.
+	// maybeStripExtension iterates over all submatches of this pattern
+	// and assumes that every capturing group corresponds to the
+	// extension digits. When modifying this regexp, ensure that any
+	// non-extension grouping uses non-capturing groups (?:...) so as
+	// not to introduce additional capturing groups that would break
+	// extension parsing.
+	//
+	// The first regular expression covers RFC 3966 format, where the
+	// extension is added using ";ext=". The second is a more generic
+	// expression where the extension is mentioned with explicit labels like "ext:". In both
+	// cases we allow more digits. The third captures when single
+	// character extension labels or less commonly used labels are used,
+	// with fewer extension digits to reduce false positives. The fourth
+	// covers American numbers where the extension is written with a
+	// hash at the end, such as "- 503#".
+	extnPatternsForMatching = rfc3966ExtnPrefix + "(" + digitsClass + "{1,20})" + "|" +
+		possibleSeparatorsBetweenNumberAndExtLabel + explicitExtLabels +
+		possibleCharsAfterExtLabel + "(" + digitsClass + "{1,20})" + optionalExtnSuffix + "|" +
+		possibleSeparatorsBetweenNumberAndExtLabel + ambiguousExtLabels +
+		possibleCharsAfterExtLabel + "(" + digitsClass + "{1,9})" + optionalExtnSuffix + "|" +
+		ambiguousSeparator + "(" + digitsClass + "{1,6})#"
+
+	// Additional patterns supported when parsing extensions, not when matching.
+	// ",," is commonly used for auto dialling the extension when connected.
+	// Semi-colon works on iPhone and Android to pop up a button with the
+	// extension number following.
+	possibleSeparatorsNumberExtLabelNoComma = "[ \u00A0\\t]*"
+	autoDiallingAndExtLabelsFound           = "(?:,{2}|;)"
+
+	extnPatternsForParsing = extnPatternsForMatching + "|" +
+		possibleSeparatorsNumberExtLabelNoComma + autoDiallingAndExtLabelsFound +
+		possibleCharsAfterExtLabel + "(" + digitsClass + "{1,15})" + optionalExtnSuffix + "|" +
+		possibleSeparatorsNumberExtLabelNoComma + "(?:,)+" +
+		possibleCharsAfterExtLabel + "(" + digitsClass + "{1,9})" + optionalExtnSuffix
+
+	// Regexp of all known extension prefixes used by different regions
+	// followed by 1 or more valid digits, for use when parsing.
+	extnPattern = regexp.MustCompile("(?i)(?:" + extnPatternsForParsing + ")$")
+
+	// We append optionally the extension pattern to the end here, as a
+	// valid phone number may have an extension prefix appended,
+	// followed by 1 or more digits.
+	validPhoneNumberPattern = regexp.MustCompile(
+		"(?i)^(" + validPhoneNumber + "(?:" + extnPatternsForParsing + ")?)$")
+
+	nonDigitsPattern = regexp.MustCompile(`(\D+)`)
+
+	// The firstGroupPattern was originally set to $1 but there are some
+	// countries for which the first group is not used in the national
+	// pattern (e.g. Argentina) so the $1 group does not match correctly.
+	// Therefore, we use \d, so that the first group actually used in the
+	// pattern will be matched.
+	firstGroupPattern = regexp.MustCompile(`(\$\d)`)
+	npPattern         = regexp.MustCompile(`\$NP`)
+	fgPattern         = regexp.MustCompile(`\$FG`)
+	ccPattern         = regexp.MustCompile(`\$CC`)
+
+	// A pattern that is used to determine if the national prefix
+	// formatting rule has the first group only, i.e., does not start
+	// with the national prefix. Note that the pattern explicitly allows
+	// for unbalanced parentheses.
+	firstGroupOnlyPrefixPattern = regexp.MustCompile(`^\(?\$1\)?$`)
+
+	REGION_CODE_FOR_NON_GEO_ENTITY = "001"
+
+	// Regular expression of valid global-number-digits for the phone-context parameter, following the
+	// syntax defined in RFC3966.
+	rfc3966VisualSeparator           = "[\\-\\.\\(\\)]?"
+	rfc3966PhoneDigit                = "(" + digitsClass + "|" + rfc3966VisualSeparator + ")"
+	rfc3966GlobalNumberDigits        = "^\\" + string(plusSign) + rfc3966PhoneDigit + "*" + digitsClass + rfc3966PhoneDigit + "*$"
+	rfc3966GlobalNumberDigitsPattern = regexp.MustCompile(rfc3966GlobalNumberDigits)
+
+	// Regular expression of valid domainname for the phone-context parameter, following the syntax
+	// defined in RFC3966.
+	alphanum                 = validAlpha + digitsClass
+	rfc3966Domainlabel       = "[" + alphanum + "]+((\\-)*[" + alphanum + "])*"
+	rfc3966Toplabel          = "[" + validAlpha + "]+((\\-)*[" + alphanum + "])*"
+	rfc3966Domainname        = "^(" + rfc3966Domainlabel + "\\.)*" + rfc3966Toplabel + "\\.?$"
+	rfc3966DomainnamePattern = regexp.MustCompile(rfc3966Domainname)
+
+	// Set of country codes that have geographically assigned mobile numbers (see geoMobileCountries
+	// below) which are not based on *area codes*. For example, in China mobile numbers start with a
+	// carrier indicator, and beyond that are geographically assigned: this carrier indicator is not
+	// considered to be an area code.
+	geoMobileCountriesWithoutMobileAreaCodes = map[int32]bool{
+		86: true, // China
+	}
+
+	// Set of country codes that doesn't have national prefix, but it has area codes.
+	countriesWithoutNationalPrefixWithAreaCodes = map[int32]bool{
+		52: true, // Mexico
+	}
+
+	// Set of country calling codes that have geographically assigned mobile numbers. This may not be
+	// complete; we add calling codes case by case, as we find geographical mobile numbers or hear
+	// from user reports. Note that countries like the US, where we can't distinguish between
+	// fixed-line or mobile numbers, are not listed here, since we consider FIXED_LINE_OR_MOBILE to be
+	// a possibly geographically-related type anyway (like FIXED_LINE).
+	geoMobileCountries = map[int32]bool{
+		52: true, // Mexico
+		54: true, // Argentina
+		55: true, // Brazil
+		62: true, // Indonesia: some prefixes only (fixed CMDA wireless)
+		86: true, // China
+	}
+)
+
+// Attempts to extract a possible number from the string passed in.
+// This currently strips all leading characters that cannot be used to
+// start a phone number. Characters that can be used to start a phone
+// number are defined in the validStartCharPattern. If none of these
+// characters are found in the number passed in, an empty string is
+// returned. This function also attempts to strip off any alternative
+// extensions or endings if two or more are present, such as in the case
+// of: (530) 583-6985 x302/x2303. The second extension here makes this
+// actually two phone numbers, (530) 583-6985 x302 and (530) 583-6985 x2303.
+// We remove the second extension so that the first number is parsed correctly.
+func extractPossibleNumber(number string) string {
+	if validStartCharPattern.MatchString(number) {
+		start := validStartCharPattern.FindIndex([]byte(number))[0]
+		number = number[start:]
+		// Remove trailing non-alpha non-numerical characters.
+		indices := unwantedEndCharPattern.FindIndex([]byte(number))
+		if len(indices) > 0 {
+			number = number[0:indices[0]]
+		}
+		// Check for extra numbers at the end.
+		indices = secondNumberStartPattern.FindIndex([]byte(number))
+		if len(indices) > 0 {
+			number = number[0:indices[0]]
+		}
+		return number
+	}
+	return ""
+}
+
+// Checks to see if the string of characters could possibly be a phone
+// number at all. At the moment, checks to see that the string begins
+// with at least 2 digits, ignoring any punctuation commonly found in
+// phone numbers. This method does not require the number to be
+// normalized in advance - but does assume that leading non-number symbols
+// have been removed, such as by the method extractPossibleNumber.
+// @VisibleForTesting
+func isViablePhoneNumber(number string) bool {
+	if len(number) < minLengthForNSN {
+		return false
+	}
+
+	return validPhoneNumberPattern.MatchString(number)
+}
+
+// Normalizes a string of characters representing a phone number. This
+// performs the following conversions:
+//
+//   - Punctuation is stripped.
+//
+//   - For ALPHA/VANITY numbers:
+//
+//   - Letters are converted to their numeric representation on a telephone
+//     keypad. The keypad used here is the one defined in ITU Recommendation
+//     E.161. This is only done if there are 3 or more letters in the
+//     number, to lessen the risk that such letters are typos.
+//
+//   - For other numbers:
+//
+//   - Wide-ascii digits are converted to normal ASCII (European) digits.
+//
+//   - Arabic-Indic numerals are converted to European numerals.
+//
+//   - Spurious alpha characters are stripped.
+func normalize(number string) string {
+	if validAlphaPhonePattern.MatchString(number) {
+		return normalizeHelper(number, alphaPhoneMappings, true)
+	}
+	return NormalizeDigitsOnly(number)
+}
+
+// Normalizes a string of characters representing a phone number. This
+// converts wide-ascii and arabic-indic numerals to European numerals,
+// and strips punctuation and alpha characters.
+func NormalizeDigitsOnly(number string) string {
+	return normalizeDigits(number, false /* strip non-digits */)
+}
+
+func normalizeDigits(number string, keepNonDigits bool) string {
+	buf := number
+	var normalizedDigits = stringbuilder.New(nil)
+	for _, c := range buf {
+		if v, ok := character.Digit(c); ok {
+			normalizedDigits.WriteRune(v)
+		} else if keepNonDigits {
+			normalizedDigits.WriteRune(c)
+		}
+	}
+	return normalizedDigits.String()
+}
+
+// Normalizes a string of characters representing a phone number. This
+// strips all characters which are not diallable on a mobile phone
+// keypad (including all non-ASCII digits).
+func NormalizeDiallableCharsOnly(number string) string {
+	return normalizeHelper(
+		number, diallableCharMappings, true /* remove non matches */)
+}
+
+// Converts all alpha characters in a number to their respective digits
+// on a keypad, but retains existing formatting.
+func ConvertAlphaCharactersInNumber(number string) string {
+	return normalizeHelper(number, alphaPhoneMappings, false)
+}
+
+// Gets the length of the geographical area code from the PhoneNumber
+// object passed in, so that clients could use it to split a national
+// significant number into geographical area code and subscriber number. It
+// works in such a way that the resultant subscriber number should be
+// diallable, at least on some devices. An example of how this could be used:
+//
+//	number, err := Parse("16502530000", "US")
+//	// ... deal with err appropriately ...
+//	nationalSignificantNumber := GetNationalSignificantNumber(number)
+//	var areaCode, subscriberNumber string
+//
+//	areaCodeLength := GetLengthOfGeographicalAreaCode(number)
+//	if areaCodeLength > 0 {
+//		areaCode = nationalSignificantNumber[0:areaCodeLength]
+//		subscriberNumber = nationalSignificantNumber[areaCodeLength:]
+//	} else {
+//		areaCode = ""
+//		subscriberNumber = nationalSignificantNumber
+//	}
+//
+// N.B.: area code is a very ambiguous concept, so the I18N team generally
+// recommends against using it for most purposes, but recommends using the
+// more general national_number instead. Read the following carefully before
+// deciding to use this method:
+//
+//   - geographical area codes change over time, and this method honors those changes;
+//     therefore, it doesn't guarantee the stability of the result it produces.
+//   - subscriber numbers may not be diallable from all devices (notably mobile
+//     devices, which typically requires the full national_number to be dialled
+//     in most regions).
+//   - most non-geographical numbers have no area codes, including numbers from
+//     non-geographical entities
+//   - some geographical numbers have no area codes.
+func GetLengthOfGeographicalAreaCode(number *PhoneNumber) int {
+	metadata := getMetadataForRegion(GetRegionCodeForNumber(number))
+	if metadata == nil {
+		return 0
+	}
+
+	numType := GetNumberType(number)
+	countryCallingCode := number.GetCountryCode()
+
+	// If a country doesn't use a national prefix, and this number doesn't have an Italian leading
+	// zero, we assume it is a closed dialling plan with no area codes.
+	// Note:this is our general assumption, but there are exceptions which are tracked in
+	// countriesWithoutNationalPrefixWithAreaCodes.
+	if len(metadata.GetNationalPrefix()) == 0 && !number.GetItalianLeadingZero() && !countriesWithoutNationalPrefixWithAreaCodes[countryCallingCode] {
+		return 0
+	}
+
+	// Note this is a rough heuristic; it doesn't cover Indonesia well, for example, where area
+	// codes are present for some mobile phones but not for others. We have no better way of
+	// representing this in the metadata at this point.
+	if numType == MOBILE && geoMobileCountriesWithoutMobileAreaCodes[countryCallingCode] {
+		return 0
+	}
+
+	if !IsNumberGeographical(number) {
+		return 0
+	}
+
+	return GetLengthOfNationalDestinationCode(number)
+}
+
+// Gets the length of the national destination code (NDC) from the
+// PhoneNumber object passed in, so that clients could use it to split a
+// national significant number into NDC and subscriber number. The NDC of
+// a phone number is normally the first group of digit(s) right after the
+// country calling code when the number is formatted in the international
+// format, if there is a subscriber number part that follows. An example
+// of how this could be used:
+//
+//	number, err := Parse("18002530000", "US")
+//	// ... deal with err appropriately ...
+//	nationalSignificantNumber := GetNationalSignificantNumber(number)
+//	var nationalDestinationCode, subscriberNumber string
+//
+//	nationalDestinationCodeLength := GetLengthOfNationalDestinationCode(number)
+//	if nationalDestinationCodeLength > 0 {
+//		nationalDestinationCode = nationalSignificantNumber[0:nationalDestinationCodeLength]
+//		subscriberNumber = nationalSignificantNumber[nationalDestinationCodeLength:]
+//	} else {
+//		nationalDestinationCode = ""
+//		subscriberNumber = nationalSignificantNumber
+//	}
+//
+// Refer to the unittests to see the difference between this function and
+// GetLengthOfGeographicalAreaCode().
+func GetLengthOfNationalDestinationCode(number *PhoneNumber) int {
+	var copiedProto *PhoneNumber
+	if len(number.GetExtension()) > 0 {
+		// We don't want to alter the proto given to us, but we don't
+		// want to include the extension when we format it, so we copy
+		// it and clear the extension here.
+		copiedProto = &PhoneNumber{}
+		proto.Merge(copiedProto, number)
+		copiedProto.Extension = nil
+	} else {
+		copiedProto = number
+	}
+
+	nationalSignificantNumber := Format(copiedProto, INTERNATIONAL)
+	numberGroups := nonDigitsPattern.Split(nationalSignificantNumber, -1)
+
+	// The pattern will start with "+COUNTRY_CODE " so the first group
+	// will always be the empty string (before the + symbol) and the
+	// second group will be the country calling code. The third group
+	// will be area code if it is not the last group.
+	if len(numberGroups) <= 3 {
+		return 0
+	}
+	if GetNumberType(number) == MOBILE {
+		// For example Argentinian mobile numbers, when formatted in
+		// the international format, are in the form of +54 9 NDC XXXX....
+		// As a result, we take the length of the third group (NDC) and
+		// add the length of the second group (which is the mobile token),
+		// which also forms part of the national significant number. This
+		// assumes that the mobile token is always formatted separately
+		// from the rest of the phone number.
+		mobileToken := GetCountryMobileToken(int(number.GetCountryCode()))
+		if mobileToken != "" {
+			return len(numberGroups[2]) + len(numberGroups[3])
+		}
+	}
+	return len(numberGroups[2])
+}
+
+// Returns the mobile token for the provided country calling code if it
+// has one, otherwise returns an empty string. A mobile token is a number
+// inserted before the area code when dialing a mobile number from that
+// country from abroad.
+func GetCountryMobileToken(countryCallingCode int) string {
+	if val, ok := mobileTokenMappings[countryCallingCode]; ok {
+		return val
+	}
+	return ""
+}
+
+// Normalizes a string of characters representing a phone number by replacing
+// all characters found in the accompanying map with the values therein,
+// and stripping all other characters if removeNonMatches is true.
+func normalizeHelper(number string,
+	normalizationReplacements map[rune]rune,
+	removeNonMatches bool) string {
+
+	var normalizedNumber = stringbuilder.New(nil)
+	for _, character := range number {
+		newDigit, ok := normalizationReplacements[unicode.ToUpper(character)]
+		if ok {
+			normalizedNumber.WriteRune(newDigit)
+		} else if !removeNonMatches {
+			normalizedNumber.WriteRune(character)
+		}
+		// If neither of the above are true, we remove this character.
+	}
+	return normalizedNumber.String()
+}
+
+// GetSupportedRegions returns all regions the library has metadata for.
+func GetSupportedRegions() map[string]bool {
+	return metadata.SupportedRegions()
+}
+
+// GetSupportedCallingCodes returns all country calling codes the library has metadata for, covering both non-geographical
+// entities (global network calling codes) and those used for geographical entities. This could be
+// used to populate a drop-down box of country calling codes for a phone-number widget, for
+// instance.
+func GetSupportedCallingCodes() map[int]bool {
+	return metadata.SupportedCallingCodes()
+}
+
+// GetSupportedGlobalNetworkCallingCodes returns all global network calling codes the library has metadata for.
+func GetSupportedGlobalNetworkCallingCodes() map[int]bool {
+	return metadata.CountryCodesForNonGeographicalRegion()
+}
+
+// allPhoneNumberTypes lists every PhoneNumberType, used to iterate types like
+// Java's PhoneNumberType.values().
+var allPhoneNumberTypes = []PhoneNumberType{
+	FIXED_LINE, MOBILE, FIXED_LINE_OR_MOBILE, TOLL_FREE, PREMIUM_RATE,
+	SHARED_COST, VOIP, PERSONAL_NUMBER, PAGER, UAN, VOICEMAIL, UNKNOWN,
+}
+
+// descHasData returns true if there is any data set for a particular
+// PhoneNumberDesc. An absent descriptor is marked with possibleLength [-1]
+// (matching upstream).
+func descHasData(desc *PhoneNumberDesc) bool {
+	if desc == nil {
+		return false
+	}
+	// Checking most properties since we don't know what's present, since a custom
+	// build may have some of them removed.
+	return len(desc.GetExampleNumber()) > 0 ||
+		descHasPossibleNumberData(desc) ||
+		desc.NationalNumberPattern != nil
+}
+
+// getSupportedTypesForMetadata returns the types we have metadata for based on
+// the given PhoneMetadata, excluding FIXED_LINE_OR_MOBILE and UNKNOWN.
+func getSupportedTypesForMetadata(metadata *PhoneMetadata) map[PhoneNumberType]bool {
+	types := make(map[PhoneNumberType]bool)
+	for _, typ := range allPhoneNumberTypes {
+		// Never return FIXED_LINE_OR_MOBILE (a convenience type) or UNKNOWN.
+		if typ == FIXED_LINE_OR_MOBILE || typ == UNKNOWN {
+			continue
+		}
+		if descHasData(getNumberDescByType(metadata, typ)) {
+			types[typ] = true
+		}
+	}
+	return types
+}
+
+// GetSupportedTypesForRegion returns the types for a given region which the
+// library has metadata for. Will not include FIXED_LINE_OR_MOBILE or UNKNOWN.
+// No types are returned for invalid or unknown region codes.
+func GetSupportedTypesForRegion(regionCode string) map[PhoneNumberType]bool {
+	if !isValidRegionCode(regionCode) {
+		return map[PhoneNumberType]bool{}
+	}
+	return getSupportedTypesForMetadata(getMetadataForRegion(regionCode))
+}
+
+// GetSupportedTypesForNonGeoEntity returns the types for a country-code
+// belonging to a non-geographical entity which the library has metadata for.
+// Will not include FIXED_LINE_OR_MOBILE or UNKNOWN. No types are returned for
+// country calling codes that do not map to a known non-geographical entity.
+func GetSupportedTypesForNonGeoEntity(countryCallingCode int) map[PhoneNumberType]bool {
+	metadata := getMetadataForNonGeographicalRegion(countryCallingCode)
+	if metadata == nil {
+		return map[PhoneNumberType]bool{}
+	}
+	return getSupportedTypesForMetadata(metadata)
+}
+
+// Helper function to check if the national prefix formatting rule has the
+// first group only, i.e., does not start with the national prefix.
+func formattingRuleHasFirstGroupOnly(nationalPrefixFormattingRule string) bool {
+	return len(nationalPrefixFormattingRule) == 0 ||
+		firstGroupOnlyPrefixPattern.MatchString(nationalPrefixFormattingRule)
+}
+
+// Tests whether a phone number has a geographical association. It checks
+// if the number is associated to a certain region in the country where it
+// belongs to. Note that this doesn't verify if the number is actually in use.
+//
+// A similar method is implemented as PhoneNumberOfflineGeocoder.canBeGeocoded,
+// which performs a looser check, since it only prevents cases where prefixes
+// overlap for geocodable and non-geocodable numbers. Also, if new phone
+// number types were added, we should check if this other method should be
+// updated too.
+func IsNumberGeographical(phoneNumber *PhoneNumber) bool {
+	return IsNumberGeographicalForType(GetNumberType(phoneNumber), int(phoneNumber.GetCountryCode()))
+}
+
+// Overload of IsNumberGeographical(PhoneNumber), since calculating the phone
+// number type is expensive; if we have already done this, we don't want to do
+// it again.
+func IsNumberGeographicalForType(phoneNumberType PhoneNumberType, countryCallingCode int) bool {
+	return phoneNumberType == FIXED_LINE ||
+		phoneNumberType == FIXED_LINE_OR_MOBILE ||
+		(geoMobileCountries[int32(countryCallingCode)] && phoneNumberType == MOBILE)
+}
+
+// Helper function to check region code is not unknown or null.
+func isValidRegionCode(regionCode string) bool {
+	valid := metadata.SupportedRegions()[regionCode]
+	return len(regionCode) != 0 && valid
+}
+
+// Helper function to check the country calling code is valid.
+func hasValidCountryCallingCode(countryCallingCode int) bool {
+	_, containsKey := metadata.CountryCodeToRegion()[countryCallingCode]
+	return containsKey
+}
+
+// Formats a phone number in the specified format using default rules. Note
+// that this does not promise to produce a phone number that the user can
+// dial from where they are - although we do format in either 'national' or
+// 'international' format depending on what the client asks for, we do not
+// currently support a more abbreviated format, such as for users in the
+// same "area" who could potentially dial the number without area code.
+// Note that if the phone number has a country calling code of 0 or an
+// otherwise invalid country calling code, we cannot work out which
+// formatting rules to apply so we return the national significant number
+// with no formatting applied.
+func Format(number *PhoneNumber, numberFormat PhoneNumberFormat) string {
+	if number.GetNationalNumber() == 0 {
+		// Unparseable numbers that kept their raw input just use that, unless default country was
+		// specified and the format is E164. In that case, we prepend the raw input with the country
+		// code
+		rawInput := number.GetRawInput()
+		if len(rawInput) > 0 &&
+			number.CountryCode != nil &&
+			number.GetCountryCodeSource() == PhoneNumber_FROM_DEFAULT_COUNTRY &&
+			numberFormat == E164 {
+			countryCallingCode := int(number.GetCountryCode())
+			formattedNumber := stringbuilder.NewString(rawInput)
+			prefixNumberWithCountryCallingCode(countryCallingCode, numberFormat, formattedNumber)
+			return formattedNumber.String()
+		} else if len(rawInput) > 0 || number.CountryCode == nil {
+			return rawInput
+		}
+	}
+	var formattedNumber = stringbuilder.New(nil)
+	formatWithBuf(number, numberFormat, formattedNumber)
+	return formattedNumber.String()
+}
+
+// formatWithBuf formats number into the supplied buffer. It mirrors upstream's
+// format(PhoneNumber, PhoneNumberFormat, StringBuilder) overload and backs the
+// public Format. It is unexported because the buffer type is internal and the
+// allocation reuse it would offer is negligible anyway: formatting must prepend
+// the country calling code, which rebuilds the buffer on every call.
+func formatWithBuf(number *PhoneNumber, numberFormat PhoneNumberFormat, formattedNumber *stringbuilder.Builder) {
+	// Clear the StringBuilder first.
+	formattedNumber.Reset()
+	countryCallingCode := int(number.GetCountryCode())
+	nationalSignificantNumber := GetNationalSignificantNumber(number)
+
+	if numberFormat == E164 {
+		// Early exit for E164 case (even if the country calling code
+		// is invalid) since no formatting of the national number needs
+		// to be applied. Extensions are not formatted.
+		formattedNumber.WriteString(nationalSignificantNumber)
+		prefixNumberWithCountryCallingCode(countryCallingCode, E164, formattedNumber)
+		return
+	} else if !hasValidCountryCallingCode(countryCallingCode) {
+		formattedNumber.WriteString(nationalSignificantNumber)
+		return
+	}
+	// Note GetRegionCodeForCountryCode() is used because formatting
+	// information for regions which share a country calling code is
+	// contained by only one region for performance reasons. For
+	// example, for NANPA regions it will be contained in the metadata for US.
+	regionCode := GetRegionCodeForCountryCode(countryCallingCode)
+
+	// Metadata cannot be null because the country calling code is
+	// valid (which means that the region code cannot be ZZ and must
+	// be one of our supported region codes).
+	metadata := getMetadataForRegionOrCallingCode(countryCallingCode, regionCode)
+
+	formattedNumber.WriteString(formatNsn(nationalSignificantNumber, metadata, numberFormat))
+	maybeAppendFormattedExtension(number, metadata, numberFormat, formattedNumber)
+	prefixNumberWithCountryCallingCode(countryCallingCode, numberFormat, formattedNumber)
+}
+
+// FormatByPattern formats a phone number in the specified format using client-defined
+// formatting rules. Note that if the phone number has a country calling
+// code of zero or an otherwise invalid country calling code, we cannot
+// work out things like whether there should be a national prefix applied,
+// or how to format extensions, so we return the national significant
+// number with no formatting applied.
+func FormatByPattern(number *PhoneNumber,
+	numberFormat PhoneNumberFormat,
+	userDefinedFormats []*NumberFormat) string {
+
+	countryCallingCode := int(number.GetCountryCode())
+	nationalSignificantNumber := GetNationalSignificantNumber(number)
+	if !hasValidCountryCallingCode(countryCallingCode) {
+		return nationalSignificantNumber
+	}
+	// Note GetRegionCodeForCountryCode() is used because formatting
+	// information for regions which share a country calling code is
+	// contained by only one region for performance reasons. For example,
+	// for NANPA regions it will be contained in the metadata for US.
+	regionCode := GetRegionCodeForCountryCode(countryCallingCode)
+	// Metadata cannot be null because the country calling code is valid
+	metadata := getMetadataForRegionOrCallingCode(countryCallingCode, regionCode)
+
+	formattedNumber := stringbuilder.New(nil)
+
+	formattingPattern := chooseFormattingPatternForNumber(
+		userDefinedFormats, nationalSignificantNumber)
+	if formattingPattern == nil {
+		// If no pattern above is matched, we format the number as a whole.
+		formattedNumber.WriteString(nationalSignificantNumber)
+	} else {
+		numFormatCopy := &NumberFormat{}
+		// Before we do a replacement of the national prefix pattern
+		// $NP with the national prefix, we need to copy the rule so
+		// that subsequent replacements for different numbers have the
+		// appropriate national prefix.
+		proto.Merge(numFormatCopy, formattingPattern)
+		nationalPrefixFormattingRule := formattingPattern.GetNationalPrefixFormattingRule()
+		if len(nationalPrefixFormattingRule) > 0 {
+			nationalPrefix := metadata.GetNationalPrefix()
+			if len(nationalPrefix) > 0 {
+				// Replace $NP with national prefix and $FG with the
+				// first group ($1). Java does rule.replace(FG_STRING, "$1"),
+				// inserting the literal characters "$1" so the first group is
+				// substituted later by formatNsnUsingPattern. Use a literal
+				// replacement here because Go's ReplaceAllString would treat
+				// "$1" as a group reference into fgPattern (which has no
+				// groups), leaving a stray backslash instead.
+				nationalPrefixFormattingRule =
+					npPattern.ReplaceAllString(
+						nationalPrefixFormattingRule, nationalPrefix)
+				nationalPrefixFormattingRule =
+					fgPattern.ReplaceAllLiteralString(
+						nationalPrefixFormattingRule, "$1")
+				numFormatCopy.NationalPrefixFormattingRule =
+					&nationalPrefixFormattingRule
+			} else {
+				// We don't want to have a rule for how to format the
+				// national prefix if there isn't one.
+				numFormatCopy.NationalPrefixFormattingRule = nil
+			}
+		}
+		formattedNumber.WriteString(
+			formatNsnUsingPattern(
+				nationalSignificantNumber, numFormatCopy, numberFormat))
+	}
+	maybeAppendFormattedExtension(number, metadata, numberFormat, formattedNumber)
+	prefixNumberWithCountryCallingCode(countryCallingCode, numberFormat, formattedNumber)
+	return formattedNumber.String()
+}
+
+// Formats a phone number in national format for dialing using the carrier
+// as specified in the carrierCode. The carrierCode will always be used
+// regardless of whether the phone number already has a preferred domestic
+// carrier code stored. If carrierCode contains an empty string, returns
+// the number in national format without any carrier code.
+func FormatNationalNumberWithCarrierCode(number *PhoneNumber, carrierCode string) string {
+	countryCallingCode := int(number.GetCountryCode())
+	nationalSignificantNumber := GetNationalSignificantNumber(number)
+	if !hasValidCountryCallingCode(countryCallingCode) {
+		return nationalSignificantNumber
+	}
+	// Note GetRegionCodeForCountryCode() is used because formatting
+	// information for regions which share a country calling code is
+	// contained by only one region for performance reasons. For
+	// example, for NANPA regions it will be contained in the metadata for US.
+	regionCode := GetRegionCodeForCountryCode(countryCallingCode)
+	// Metadata cannot be null because the country calling code is valid.
+	metadata := getMetadataForRegionOrCallingCode(countryCallingCode, regionCode)
+
+	formattedNumber := stringbuilder.New(nil)
+	formattedNumber.WriteString(
+		formatNsnWithCarrier(
+			nationalSignificantNumber,
+			metadata,
+			NATIONAL,
+			carrierCode))
+	maybeAppendFormattedExtension(number, metadata, NATIONAL, formattedNumber)
+	prefixNumberWithCountryCallingCode(
+		countryCallingCode,
+		NATIONAL,
+		formattedNumber)
+	return formattedNumber.String()
+}
+
+func getMetadataForRegionOrCallingCode(countryCallingCode int, regionCode string) *PhoneMetadata {
+	if REGION_CODE_FOR_NON_GEO_ENTITY == regionCode {
+		return getMetadataForNonGeographicalRegion(countryCallingCode)
+	}
+	return getMetadataForRegion(regionCode)
+}
+
+// Formats a phone number in national format for dialing using the carrier
+// as specified in the preferredDomesticCarrierCode field of the PhoneNumber
+// object passed in. If that is missing, use the fallbackCarrierCode passed
+// in instead. If there is no preferredDomesticCarrierCode, and the
+// fallbackCarrierCode contains an empty string, return the number in
+// national format without any carrier code.
+//
+// Use formatNationalNumberWithCarrierCode instead if the carrier code
+// passed in should take precedence over the number's
+// preferredDomesticCarrierCode when formatting.
+func FormatNationalNumberWithPreferredCarrierCode(
+	number *PhoneNumber,
+	fallbackCarrierCode string) string {
+
+	pref := number.GetPreferredDomesticCarrierCode()
+	if number.GetPreferredDomesticCarrierCode() == "" {
+		pref = fallbackCarrierCode
+	}
+	return FormatNationalNumberWithCarrierCode(number, pref)
+}
+
+// Returns a number formatted in such a way that it can be dialed from a
+// mobile phone in a specific region. If the number cannot be reached from
+// the region (e.g. some countries block toll-free numbers from being
+// called outside of the country), the method returns an empty string.
+func FormatNumberForMobileDialing(
+	number *PhoneNumber,
+	regionCallingFrom string,
+	withFormatting bool) string {
+
+	countryCallingCode := int(number.GetCountryCode())
+	if !hasValidCountryCallingCode(countryCallingCode) {
+		return number.GetRawInput() // go impl defaults to ""
+	}
+
+	formattedNumber := ""
+	// Clear the extension, as that part cannot normally be dialed
+	// together with the main number.
+	var numberNoExt = &PhoneNumber{}
+	proto.Merge(numberNoExt, number)
+	numberNoExt.Extension = nil // can we assume this is safe? (no nil-pointer?)
+	regionCode := GetRegionCodeForCountryCode(countryCallingCode)
+	numberType := GetNumberType(numberNoExt)
+	isValidNumber := numberType != UNKNOWN
+	if regionCallingFrom == regionCode {
+		isFixedLineOrMobile :=
+			numberType == FIXED_LINE ||
+				numberType == MOBILE ||
+				numberType == FIXED_LINE_OR_MOBILE
+		// Carrier codes may be needed in some countries. We handle this here.
+		if regionCode == "BR" && isFixedLineOrMobile {
+			// Historically, we set this to an empty string when parsing with
+			// raw input if none was found in the input string. However, this
+			// doesn't result in a number we can dial. For this reason, we
+			// treat the empty string the same as if it isn't set at all.
+			if numberNoExt.GetPreferredDomesticCarrierCode() != "" {
+				formattedNumber =
+					FormatNationalNumberWithPreferredCarrierCode(numberNoExt, "")
+			} else {
+				// Brazilian fixed line and mobile numbers need to be dialed
+				// with a carrier code when called within Brazil. Without
+				// that, most of the carriers won't connect the call.
+				// Because of that, we return an empty string here.
+				formattedNumber = ""
+			}
+		} else if countryCallingCode == nanpaCountryCode {
+			// For NANPA countries, we output international format for
+			// numbers that can be dialed internationally, since that
+			// always works, except for numbers which might potentially be
+			// short numbers, which are always dialled in national format.
+			regionMetadata := getMetadataForRegion(regionCallingFrom)
+			if CanBeInternationallyDialled(numberNoExt) && testNumberLength(GetNationalSignificantNumber(numberNoExt), regionMetadata, UNKNOWN) != TOO_SHORT {
+				formattedNumber = Format(numberNoExt, INTERNATIONAL)
+			} else {
+				formattedNumber = Format(numberNoExt, NATIONAL)
+			}
+		} else {
+			// For non-geographical countries, and Mexican and Chilean fixed
+			// line and mobile numbers, we output international format for
+			// numbers that can be dialed internationally as that always
+			// works.
+
+			// MX fixed line and mobile numbers should always be formatted
+			// in international format, even when dialed within MX. For
+			// national format to work, a carrier code needs to be used,
+			// and the correct carrier code depends on if the caller and
+			// callee are from the same local area. It is trickier to get
+			// that to work correctly than using international format, which
+			// is tested to work fine on all carriers. CL fixed line
+			// numbers need the national prefix when dialing in the national
+			// format, but don't have it when used for display. The reverse
+			// is true for mobile numbers. As a result, we output them in
+			// the international format to make it work.
+			if (regionCode == REGION_CODE_FOR_NON_GEO_ENTITY ||
+				((regionCode == "MX" || regionCode == "CL" || regionCode == "UZ") &&
+					isFixedLineOrMobile)) &&
+				CanBeInternationallyDialled(numberNoExt) {
+				formattedNumber = Format(numberNoExt, INTERNATIONAL)
+			} else {
+				formattedNumber = Format(numberNoExt, NATIONAL)
+			}
+		}
+	} else if isValidNumber && CanBeInternationallyDialled(numberNoExt) {
+		// We assume that short numbers are not diallable from outside
+		// their region, so if a number is not a valid regular length
+		// phone number, we treat it as if it cannot be internationally
+		// dialled.
+		if withFormatting {
+			return Format(numberNoExt, INTERNATIONAL)
+		}
+		return Format(numberNoExt, E164)
+	}
+	if withFormatting {
+		return formattedNumber
+	}
+	return NormalizeDiallableCharsOnly(formattedNumber)
+}
+
+// Formats a phone number for out-of-country dialing purposes. If no
+// regionCallingFrom is supplied, we format the number in its
+// INTERNATIONAL format. If the country calling code is the same as that
+// of the region where the number is from, then NATIONAL formatting will
+// be applied.
+//
+// If the number itself has a country calling code of zero or an otherwise
+// invalid country calling code, then we return the number with no
+// formatting applied.
+//
+// Note this function takes care of the case for calling inside of NANPA and
+// between Russia and Kazakhstan (who share the same country calling code).
+// In those cases, no international prefix is used. For regions which have
+// multiple international prefixes, the number in its INTERNATIONAL format
+// will be returned instead.
+func FormatOutOfCountryCallingNumber(
+	number *PhoneNumber,
+	regionCallingFrom string) string {
+
+	if !isValidRegionCode(regionCallingFrom) {
+		return Format(number, INTERNATIONAL)
+	}
+	countryCallingCode := int(number.GetCountryCode())
+	nationalSignificantNumber := GetNationalSignificantNumber(number)
+	if !hasValidCountryCallingCode(countryCallingCode) {
+		return nationalSignificantNumber
+	}
+	if countryCallingCode == nanpaCountryCode {
+		if IsNANPACountry(regionCallingFrom) {
+			// For NANPA regions, return the national format for these
+			// regions but prefix it with the country calling code.
+			return strconv.Itoa(countryCallingCode) + " " + Format(number, NATIONAL)
+		}
+	} else if countryCallingCode == getCountryCodeForValidRegion(regionCallingFrom) {
+		// If regions share a country calling code, the country calling
+		// code need not be dialled. This also applies when dialling
+		// within a region, so this if clause covers both these cases.
+		// Technically this is the case for dialling from La Reunion to
+		// other overseas departments of France (French Guiana, Martinique,
+		// Guadeloupe), but not vice versa - so we don't cover this edge
+		// case for now and for those cases return the version including
+		// country calling code.
+		// Details here: http://www.petitfute.com/voyage/225-info-pratiques-reunion
+		return Format(number, NATIONAL)
+	}
+	// Metadata cannot be null because we checked 'isValidRegionCode()' above.
+	metadataForRegionCallingFrom := getMetadataForRegion(regionCallingFrom)
+	internationalPrefix := metadataForRegionCallingFrom.GetInternationalPrefix()
+
+	// For regions that have multiple international prefixes, the
+	// international format of the number is returned, unless there is
+	// a preferred international prefix.
+	internationalPrefixForFormatting := ""
+	metPref := metadataForRegionCallingFrom.GetPreferredInternationalPrefix()
+	if metPref != "" {
+		internationalPrefixForFormatting = metPref
+	} else if uniqueInternationalPrefix.MatchString(internationalPrefix) {
+		internationalPrefixForFormatting = internationalPrefix
+	}
+
+	regionCode := GetRegionCodeForCountryCode(countryCallingCode)
+	// Metadata cannot be null because the country calling code is valid.
+	metadataForRegion :=
+		getMetadataForRegionOrCallingCode(countryCallingCode, regionCode)
+	formattedNationalNumber :=
+		formatNsn(
+			nationalSignificantNumber, metadataForRegion, INTERNATIONAL)
+	formattedNumber := stringbuilder.New([]byte(formattedNationalNumber))
+	maybeAppendFormattedExtension(number, metadataForRegion, INTERNATIONAL,
+		formattedNumber)
+	if len(internationalPrefixForFormatting) > 0 {
+		formattedNumber.InsertString(0, internationalPrefixForFormatting+" "+
+			strconv.Itoa(countryCallingCode)+" ")
+	} else {
+		prefixNumberWithCountryCallingCode(
+			countryCallingCode, INTERNATIONAL, formattedNumber)
+	}
+	return formattedNumber.String()
+}
+
+// Formats a phone number using the original phone number format that the
+// number is parsed from. The original format is embedded in the
+// country_code_source field of the PhoneNumber object passed in. If such
+// information is missing, the number will be formatted into the NATIONAL
+// format by default. When the number contains a leading zero and this is
+// unexpected for this country, or we don't have a formatting pattern for
+// the number, the method returns the raw input when it is available.
+//
+// Note this method guarantees no digit will be inserted, removed or
+// modified as a result of formatting.
+func FormatInOriginalFormat(number *PhoneNumber, regionCallingFrom string) string {
+	rawInput := number.GetRawInput()
+	if len(rawInput) > 0 && !hasFormattingPatternForNumber(number) {
+		// We check if we have the formatting pattern because without that, we might format the number
+		// as a group without national prefix.
+		return rawInput
+	}
+	if number.GetCountryCodeSource() == 0 {
+		return Format(number, NATIONAL)
+	}
+	var formattedNumber string
+	switch number.GetCountryCodeSource() {
+	case PhoneNumber_FROM_NUMBER_WITH_PLUS_SIGN:
+		formattedNumber = Format(number, INTERNATIONAL)
+	case PhoneNumber_FROM_NUMBER_WITH_IDD:
+		formattedNumber = FormatOutOfCountryCallingNumber(number, regionCallingFrom)
+	case PhoneNumber_FROM_NUMBER_WITHOUT_PLUS_SIGN:
+		formattedNumber = Format(number, INTERNATIONAL)[1:]
+	case PhoneNumber_FROM_DEFAULT_COUNTRY:
+		// Fall-through to default case.
+		fallthrough
+	default:
+		regionCode := GetRegionCodeForCountryCode(int(number.GetCountryCode()))
+		// We strip non-digits from the NDD here, and from the raw
+		// input later, so that we can compare them easily.
+		nationalPrefix := GetNddPrefixForRegion(
+			regionCode, true /* strip non-digits */)
+		nationalFormat := Format(number, NATIONAL)
+		if len(nationalPrefix) == 0 {
+			// If the region doesn't have a national prefix at all,
+			// we can safely return the national format without worrying
+			// about a national prefix being added.
+			formattedNumber = nationalFormat
+			break
+		}
+		// Otherwise, we check if the original number was entered with
+		// a national prefix.
+		if rawInputContainsNationalPrefix(rawInput, nationalPrefix, regionCode) {
+			// If so, we can safely return the national format.
+			formattedNumber = nationalFormat
+			break
+		}
+		// Metadata cannot be null here because GetNddPrefixForRegion()
+		// (above) returns null if there is no metadata for the region.
+		metadata := getMetadataForRegion(regionCode)
+		nationalNumber := GetNationalSignificantNumber(number)
+		formatRule :=
+			chooseFormattingPatternForNumber(metadata.GetNumberFormat(), nationalNumber)
+		// The format rule could still be null here if the national
+		// number was 0 and there was no raw input (this should not
+		// be possible for numbers generated by the phonenumber library
+		// as they would also not have a country calling code and we
+		// would have exited earlier).
+		if formatRule == nil {
+			formattedNumber = nationalFormat
+			break
+		}
+		// When the format we apply to this number doesn't contain
+		// national prefix, we can just return the national format.
+		// TODO: Refactor the code below with the code in
+		// isNationalPrefixPresentIfRequired.
+		candidateNationalPrefixRule := formatRule.GetNationalPrefixFormattingRule()
+		// We assume that the first-group symbol will never be _before_
+		// the national prefix.
+		indexOfFirstGroup := strings.Index(candidateNationalPrefixRule, "$1")
+		if indexOfFirstGroup <= 0 {
+			formattedNumber = nationalFormat
+			break
+		}
+		candidateNationalPrefixRule =
+			candidateNationalPrefixRule[0:indexOfFirstGroup]
+		candidateNationalPrefixRule = NormalizeDigitsOnly(candidateNationalPrefixRule)
+		if len(candidateNationalPrefixRule) == 0 {
+			// National prefix not used when formatting this number.
+			formattedNumber = nationalFormat
+			break
+		}
+		// Otherwise, we need to remove the national prefix from our output.
+		numFormatCopy := &NumberFormat{}
+		proto.Merge(numFormatCopy, formatRule)
+		numFormatCopy.NationalPrefixFormattingRule = nil
+		var numberFormats = []*NumberFormat{numFormatCopy}
+		formattedNumber = FormatByPattern(number, NATIONAL, numberFormats)
+	}
+	rawInput = number.GetRawInput()
+	// If no digit is inserted/removed/modified as a result of our
+	// formatting, we return the formatted phone number; otherwise we
+	// return the raw input the user entered.
+	if len(formattedNumber) != 0 && len(rawInput) > 0 {
+		normalizedFormattedNumber := NormalizeDiallableCharsOnly(formattedNumber)
+		normalizedRawInput := NormalizeDiallableCharsOnly(rawInput)
+		if normalizedFormattedNumber != normalizedRawInput {
+			formattedNumber = rawInput
+		}
+	}
+	return formattedNumber
+}
+
+// Check if rawInput, which is assumed to be in the national format, has
+// a national prefix. The national prefix is assumed to be in digits-only
+// form.
+func rawInputContainsNationalPrefix(rawInput, nationalPrefix, regionCode string) bool {
+	normalizedNationalNumber := NormalizeDigitsOnly(rawInput)
+	if strings.HasPrefix(normalizedNationalNumber, nationalPrefix) {
+		// Some Japanese numbers (e.g. 00777123) might be mistaken to
+		// contain the national prefix when written without it
+		// (e.g. 0777123) if we just do prefix matching. To tackle that,
+		// we check the validity of the number if the assumed national
+		// prefix is removed (777123 won't be valid in Japan).
+		num, err := Parse(normalizedNationalNumber[len(nationalPrefix):], regionCode)
+		if err != nil {
+			return false
+		}
+		return IsValidNumber(num)
+
+	}
+	return false
+}
+
+func hasFormattingPatternForNumber(number *PhoneNumber) bool {
+	countryCallingCode := int(number.GetCountryCode())
+	phoneNumberRegion := GetRegionCodeForCountryCode(countryCallingCode)
+	metadata := getMetadataForRegionOrCallingCode(
+		countryCallingCode, phoneNumberRegion)
+	if metadata == nil {
+		return false
+	}
+	nationalNumber := GetNationalSignificantNumber(number)
+	formatRule := chooseFormattingPatternForNumber(
+		metadata.GetNumberFormat(), nationalNumber)
+	return formatRule != nil
+}
+
+// Formats a phone number for out-of-country dialing purposes.
+//
+// Note that in this version, if the number was entered originally using
+// alpha characters and this version of the number is stored in raw_input,
+// this representation of the number will be used rather than the digit
+// representation. Grouping information, as specified by characters
+// such as "-" and " ", will be retained.
+//
+// Caveats:
+//
+//   - This will not produce good results if the country calling code is
+//     both present in the raw input _and_ is the start of the national
+//     number. This is not a problem in the regions which typically use
+//     alpha numbers.
+//   - This will also not produce good results if the raw input has any
+//     grouping information within the first three digits of the national
+//     number, and if the function needs to strip preceding digits/words
+//     in the raw input before these digits. Normally people group the
+//     first three digits together so this is not a huge problem - and will
+//     be fixed if it proves to be so.
+func FormatOutOfCountryKeepingAlphaChars(
+	number *PhoneNumber,
+	regionCallingFrom string) string {
+
+	rawInput := number.GetRawInput()
+	// If there is no raw input, then we can't keep alpha characters
+	// because there aren't any. In this case, we return
+	// formatOutOfCountryCallingNumber.
+	if len(rawInput) == 0 {
+		return FormatOutOfCountryCallingNumber(number, regionCallingFrom)
+	}
+	countryCode := int(number.GetCountryCode())
+	if !hasValidCountryCallingCode(countryCode) {
+		return rawInput
+	}
+	// Strip any prefix such as country calling code, IDD, that was
+	// present. We do this by comparing the number in raw_input with
+	// the parsed number. To do this, first we normalize punctuation.
+	// We retain number grouping symbols such as " " only.
+	rawInput = normalizeHelper(rawInput, allPlusNumberGroupingSymbols, true)
+	// Now we trim everything before the first three digits in the
+	// parsed number. We choose three because all valid alpha numbers
+	// have 3 digits at the start - if it does not, then we don't trim
+	// anything at all. Similarly, if the national number was less than
+	// three digits, we don't trim anything at all.
+	nationalNumber := GetNationalSignificantNumber(number)
+	if len(nationalNumber) > 3 {
+		firstNationalNumberDigit := strings.Index(rawInput, nationalNumber[0:3])
+		if firstNationalNumberDigit > -1 {
+			rawInput = rawInput[firstNationalNumberDigit:]
+		}
+	}
+	metadataForRegionCallingFrom := getMetadataForRegion(regionCallingFrom)
+	if countryCode == nanpaCountryCode {
+		if IsNANPACountry(regionCallingFrom) {
+			return strconv.Itoa(countryCode) + " " + rawInput
+		}
+	} else if metadataForRegionCallingFrom != nil &&
+		countryCode == getCountryCodeForValidRegion(regionCallingFrom) {
+		formattingPattern :=
+			chooseFormattingPatternForNumber(
+				metadataForRegionCallingFrom.GetNumberFormat(),
+				nationalNumber)
+		if formattingPattern == nil {
+			// If no pattern above is matched, we format the original input.
+			return rawInput
+		}
+		newFormat := &NumberFormat{}
+		proto.Merge(newFormat, formattingPattern)
+		// The first group is the first group of digits that the user
+		// wrote together.
+		newFormat.Pattern = proto.String("(\\d+)(.*)")
+		// Here we just concatenate them back together after the national
+		// prefix has been fixed.
+		newFormat.Format = proto.String("$1$2")
+		// Now we format using this pattern instead of the default pattern,
+		// but with the national prefix prefixed if necessary. This will not
+		// work in the cases where the pattern (and not the leading digits)
+		// decide whether a national prefix needs to be used, since we
+		// have overridden the pattern to match anything, but that is not
+		// the case in the metadata to date.
+		return formatNsnUsingPattern(rawInput, newFormat, NATIONAL)
+	}
+	var internationalPrefixForFormatting = ""
+	// If an unsupported region-calling-from is entered, or a country
+	// with multiple international prefixes, the international format
+	// of the number is returned, unless there is a preferred international
+	// prefix.
+	if metadataForRegionCallingFrom != nil {
+		internationalPrefix := metadataForRegionCallingFrom.GetInternationalPrefix()
+		internationalPrefixForFormatting = internationalPrefix
+		if !uniqueInternationalPrefix.MatchString(internationalPrefix) {
+			internationalPrefixForFormatting =
+				metadataForRegionCallingFrom.GetPreferredInternationalPrefix()
+		}
+	}
+	var formattedNumber = stringbuilder.New([]byte(rawInput))
+	regionCode := GetRegionCodeForCountryCode(countryCode)
+	// Metadata cannot be null because the country calling code is valid.
+	var metadataForRegion *PhoneMetadata = getMetadataForRegionOrCallingCode(countryCode, regionCode)
+	// Strip any extension from the raw input before appending the formatted extension.
+	maybeStripExtension(formattedNumber)
+	maybeAppendFormattedExtension(number, metadataForRegion,
+		INTERNATIONAL, formattedNumber)
+	if len(internationalPrefixForFormatting) > 0 {
+		formattedNumber.InsertString(0, internationalPrefixForFormatting+" "+
+			strconv.Itoa(countryCode)+" ")
+	} else {
+		// Invalid region entered as country-calling-from (so no metadata
+		// was found for it) or the region chosen has multiple international
+		// dialling prefixes.
+		prefixNumberWithCountryCallingCode(countryCode,
+			INTERNATIONAL,
+			formattedNumber)
+	}
+	return formattedNumber.String()
+}
+
+// Gets the national significant number of the a phone number. Note a
+// national significant number doesn't contain a national prefix or
+// any formatting.
+func GetNationalSignificantNumber(number *PhoneNumber) string {
+	// If leading zero(s) have been set, we prefix this now. Note this is not a national prefix.
+	// Defensively cap the number of leading zeros to avoid OOM from malicious input.
+	nationalNumber := stringbuilder.New(nil)
+	if number.GetItalianLeadingZero() && number.GetNumberOfLeadingZeros() > 0 {
+		numberOfLeadingZeros := int(number.GetNumberOfLeadingZeros())
+		if numberOfLeadingZeros > 10 {
+			numberOfLeadingZeros = 10
+		}
+		zeros := make([]byte, numberOfLeadingZeros)
+		for i := range zeros {
+			zeros[i] = '0'
+		}
+		nationalNumber.Write(zeros)
+	}
+	asStr := strconv.FormatUint(number.GetNationalNumber(), 10)
+	nationalNumber.WriteString(asStr)
+
+	return nationalNumber.String()
+}
+
+// A helper function that is used by format and formatByPattern.
+func prefixNumberWithCountryCallingCode(
+	countryCallingCode int,
+	numberFormat PhoneNumberFormat,
+	formattedNumber *stringbuilder.Builder) {
+
+	newBuf := stringbuilder.New(nil)
+	switch numberFormat {
+	case E164:
+		newBuf.WriteString(string(plusSign))
+		newBuf.Write(strconv.AppendInt([]byte{}, int64(countryCallingCode), 10))
+		newBuf.Write(formattedNumber.Bytes())
+	case INTERNATIONAL:
+		newBuf.WriteString(string(plusSign))
+		newBuf.Write(strconv.AppendInt([]byte{}, int64(countryCallingCode), 10))
+		newBuf.WriteString(" ")
+		newBuf.Write(formattedNumber.Bytes())
+	case RFC3966:
+		newBuf.WriteString(rfc3966Prefix)
+		newBuf.WriteString(string(plusSign))
+		newBuf.Write(strconv.AppendInt([]byte{}, int64(countryCallingCode), 10))
+		newBuf.WriteString("-")
+		newBuf.Write(formattedNumber.Bytes())
+	case NATIONAL:
+		fallthrough
+	default:
+		newBuf.Write(formattedNumber.Bytes())
+	}
+	formattedNumber.ResetWith(newBuf.Bytes())
+}
+
+// Simple wrapper of formatNsn for the common case of no carrier code.
+func formatNsn(
+	number string, metadata *PhoneMetadata, numberFormat PhoneNumberFormat) string {
+	return formatNsnWithCarrier(number, metadata, numberFormat, "")
+}
+
+// Note in some regions, the national number can be written in two
+// completely different ways depending on whether it forms part of the
+// NATIONAL format or INTERNATIONAL format. The numberFormat parameter
+// here is used to specify which format to use for those cases. If a
+// carrierCode is specified, this will be inserted into the formatted
+// string to replace $CC.
+func formatNsnWithCarrier(number string, metadata *PhoneMetadata, numberFormat PhoneNumberFormat, carrierCode string) string {
+	var intlNumberFormats []*NumberFormat = metadata.GetIntlNumberFormat()
+	// When the intlNumberFormats exists, we use that to format national
+	// number for the INTERNATIONAL format instead of using the
+	// numberDesc.numberFormats.
+	var availableFormats []*NumberFormat = metadata.GetIntlNumberFormat()
+	if len(intlNumberFormats) == 0 || numberFormat == NATIONAL {
+		availableFormats = metadata.GetNumberFormat()
+	}
+	var formattingPattern *NumberFormat = chooseFormattingPatternForNumber(availableFormats, number)
+	if formattingPattern == nil {
+		return number
+	}
+	return formatNsnUsingPatternWithCarrier(
+		number, formattingPattern, numberFormat, carrierCode)
+}
+
+func chooseFormattingPatternForNumber(
+	availableFormats []*NumberFormat,
+	nationalNumber string) *NumberFormat {
+
+	for _, numFormat := range availableFormats {
+		leadingDigitsPattern := numFormat.GetLeadingDigitsPattern()
+		size := len(leadingDigitsPattern)
+
+		patP := `^(?:` + numFormat.GetPattern() + `)$` // Strictly match
+		m := regexcache.For(patP)
+
+		if size == 0 {
+			mat := m.FindString(nationalNumber)
+			if m.MatchString(nationalNumber) && len(mat) == len(nationalNumber) {
+				return numFormat
+			} else {
+				continue
+			}
+		}
+
+		// We always use the last leading_digits_pattern, as it is the
+		// most detailed.
+		reg := regexcache.For(leadingDigitsPattern[size-1])
+
+		inds := reg.FindStringIndex(nationalNumber)
+		if len(inds) > 0 && inds[0] == 0 && m.MatchString(nationalNumber) { // inds[0] == 0 ensures strict match of leading digits
+			return numFormat
+		}
+	}
+	return nil
+}
+
+// Simple wrapper of formatNsnUsingPattern for the common case of no carrier code.
+func formatNsnUsingPattern(
+	nationalNumber string,
+	formattingPattern *NumberFormat,
+	numberFormat PhoneNumberFormat) string {
+	return formatNsnUsingPatternWithCarrier(
+		nationalNumber, formattingPattern, numberFormat, "")
+}
+
+// Note that carrierCode is optional - if null or an empty string, no
+// carrier code replacement will take place.
+func formatNsnUsingPatternWithCarrier(
+	nationalNumber string,
+	formattingPattern *NumberFormat,
+	numberFormat PhoneNumberFormat,
+	carrierCode string) string {
+
+	numberFormatRule := formattingPattern.GetFormat()
+	m := regexcache.For(formattingPattern.GetPattern())
+
+	formattedNationalNumber := ""
+	if numberFormat == NATIONAL &&
+		len(carrierCode) > 0 &&
+		len(formattingPattern.GetDomesticCarrierCodeFormattingRule()) > 0 {
+		// Replace the $CC in the formatting rule with the desired carrier code.
+		carrierCodeFormattingRule := formattingPattern.GetDomesticCarrierCodeFormattingRule()
+		i := 1
+		carrierCodeFormattingRule =
+			ccPattern.ReplaceAllStringFunc(carrierCodeFormattingRule,
+				func(s string) string {
+					if i > 0 {
+						i -= 1
+						return carrierCode
+					}
+					return s
+				})
+		// Now replace the $FG in the formatting rule with the first group
+		// and the carrier code combined in the appropriate way. Mirror Java's
+		// firstGroupMatcher.replaceFirst(rule): replace only the first $-token,
+		// expanding "$1" in the rule to that matched token (firstGroupPattern's
+		// group 1) rather than inserting the rule literally. So for a format whose
+		// first token is "$2" and a carrier rule of "$CC $1", the "$1" expands to
+		// "$2" rather than being left literal (which would emit the wrong group).
+		fgp := numberFormatRule
+		if loc := firstGroupPattern.FindStringSubmatchIndex(numberFormatRule); loc != nil {
+			expanded := firstGroupPattern.ExpandString(
+				nil, carrierCodeFormattingRule, numberFormatRule, loc)
+			fgp = numberFormatRule[:loc[0]] + string(expanded) + numberFormatRule[loc[1]:]
+		}
+		formattedNationalNumber = m.ReplaceAllString(nationalNumber, fgp)
+	} else {
+		// Use the national prefix formatting rule instead.
+		nationalPrefixFormattingRule :=
+			formattingPattern.GetNationalPrefixFormattingRule()
+		if numberFormat == NATIONAL &&
+			len(nationalPrefixFormattingRule) > 0 {
+			// Mirror Java's firstGroupMatcher.replaceFirst(rule): replace only
+			// the first $-token, expanding "$1" in the rule to that matched
+			// token (firstGroupPattern's group 1) rather than inserting the
+			// rule literally. So a rule of "$1" leaves the matched token
+			// unchanged, while "0$1" prefixes it with "0".
+			fgp := numberFormatRule
+			if loc := firstGroupPattern.FindStringSubmatchIndex(numberFormatRule); loc != nil {
+				expanded := firstGroupPattern.ExpandString(
+					nil, nationalPrefixFormattingRule, numberFormatRule, loc)
+				fgp = numberFormatRule[:loc[0]] + string(expanded) + numberFormatRule[loc[1]:]
+			}
+			formattedNationalNumber = m.ReplaceAllString(nationalNumber, fgp)
+		} else {
+			formattedNationalNumber = m.ReplaceAllString(
+				nationalNumber,
+				numberFormatRule,
+			)
+		}
+	}
+	if numberFormat == RFC3966 {
+		// Strip any leading punctuation.
+		inds := separatorPattern.FindStringIndex(formattedNationalNumber)
+		if len(inds) > 0 && inds[0] == 0 {
+			formattedNationalNumber = formattedNationalNumber[inds[1]:]
+		}
+		allStr := notSeparatorPattern.FindAllString(formattedNationalNumber, -1)
+		formattedNationalNumber = strings.Join(allStr, "-")
+	}
+	return formattedNationalNumber
+}
+
+// Gets a valid number for the specified region.
+func GetExampleNumber(regionCode string) *PhoneNumber {
+	return GetExampleNumberForTypeInRegion(regionCode, FIXED_LINE)
+}
+
+// GetInvalidExampleNumber returns an invalid number for the specified region.
+// This is useful for unit-testing purposes, where you want to test what happens
+// with an invalid number. Returns nil when an unsupported region or the region
+// 001 (Earth) is passed in.
+func GetInvalidExampleNumber(regionCode string) *PhoneNumber {
+	if !isValidRegionCode(regionCode) {
+		return nil
+	}
+	// We start off with a valid fixed-line number since every country supports
+	// this, then try to make it invalid by shortening it.
+	desc := getNumberDescByType(getMetadataForRegion(regionCode), FIXED_LINE)
+	exampleNumber := desc.GetExampleNumber()
+	if exampleNumber == "" {
+		// This shouldn't happen; we have a test for this.
+		return nil
+	}
+	for phoneNumberLength := len(exampleNumber) - 1; phoneNumberLength >= minLengthForNSN; phoneNumberLength-- {
+		numberToTry := exampleNumber[:phoneNumberLength]
+		possiblyValidNumber, err := Parse(numberToTry, regionCode)
+		// Shouldn't error: we already checked the length and the region code.
+		if err == nil && !IsValidNumber(possiblyValidNumber) {
+			return possiblyValidNumber
+		}
+	}
+	// We have a test to check that this doesn't happen for any of our supported regions.
+	return nil
+}
+
+// Gets a valid number for the specified region and number type.
+//
+// This is the upstream getExampleNumberForType(String, PhoneNumberType)
+// overload; GetExampleNumberForType is the region-less variant.
+func GetExampleNumberForTypeInRegion(regionCode string, typ PhoneNumberType) *PhoneNumber {
+	// Check the region code is valid.
+	if !isValidRegionCode(regionCode) {
+		return nil
+	}
+	// PhoneNumberDesc (pointer?)
+	var desc = getNumberDescByType(getMetadataForRegion(regionCode), typ)
+	exNum := desc.GetExampleNumber()
+	if len(exNum) > 0 {
+		num, err := Parse(exNum, regionCode)
+		if err != nil {
+			return nil
+		}
+		return num
+	}
+	return nil
+}
+
+// Gets a valid number for the specified number type (it may belong to any
+// country).
+func GetExampleNumberForType(typ PhoneNumberType) *PhoneNumber {
+	for regionCode := range GetSupportedRegions() {
+		exampleNumber := GetExampleNumberForTypeInRegion(regionCode, typ)
+		if exampleNumber != nil {
+			return exampleNumber
+		}
+	}
+	// If there wasn't an example number for a region, try the non-geographical entities.
+	for countryCallingCode := range GetSupportedGlobalNetworkCallingCodes() {
+		desc := getNumberDescByType(getMetadataForNonGeographicalRegion(countryCallingCode), typ)
+		if exNum := desc.GetExampleNumber(); len(exNum) > 0 {
+			num, err := Parse("+"+strconv.Itoa(countryCallingCode)+exNum, unknownRegion)
+			if err == nil {
+				return num
+			}
+		}
+	}
+	// There are no example numbers of this type for any country in the library.
+	return nil
+}
+
+// Gets a valid number for the specified country calling code for a non-geographical entity.
+func GetExampleNumberForNonGeoEntity(countryCallingCode int) *PhoneNumber {
+	var metadata *PhoneMetadata = getMetadataForNonGeographicalRegion(countryCallingCode)
+	if metadata == nil {
+		return nil
+	}
+
+	// For geographical entities, fixed-line data is always present. However, for non-geographical
+	// entities, this is not the case, so we have to go through different types to find the
+	// example number.
+	descPriority := []*PhoneNumberDesc{metadata.GetMobile(), metadata.GetTollFree(),
+		metadata.GetSharedCost(), metadata.GetVoip(), metadata.GetVoicemail(), metadata.GetUan(), metadata.GetPremiumRate()}
+
+	for _, desc := range descPriority {
+		if desc != nil && desc.GetExampleNumber() != "" {
+			num, err := Parse("+"+strconv.Itoa(countryCallingCode)+desc.GetExampleNumber(), "ZZ")
+			if err != nil {
+				return nil
+			}
+			return num
+		}
+	}
+	return nil
+}
+
+// Appends the formatted extension of a phone number to formattedNumber,
+// if the phone number had an extension specified.
+func maybeAppendFormattedExtension(
+	number *PhoneNumber,
+	metadata *PhoneMetadata,
+	numberFormat PhoneNumberFormat,
+	formattedNumber *stringbuilder.Builder) {
+
+	extension := number.GetExtension()
+	if len(extension) == 0 {
+		return
+	}
+
+	prefExtn := metadata.GetPreferredExtnPrefix()
+	if numberFormat == RFC3966 {
+		formattedNumber.WriteString(rfc3966ExtnPrefix)
+	} else if len(prefExtn) > 0 {
+		formattedNumber.WriteString(prefExtn)
+	} else {
+		formattedNumber.WriteString(defaultExtnPrefix)
+	}
+	formattedNumber.WriteString(extension)
+}
+
+func getNumberDescByType(
+	metadata *PhoneMetadata,
+	typ PhoneNumberType) *PhoneNumberDesc {
+
+	switch typ {
+	case PREMIUM_RATE:
+		return metadata.GetPremiumRate()
+	case TOLL_FREE:
+		return metadata.GetTollFree()
+	case MOBILE:
+		return metadata.GetMobile()
+	case FIXED_LINE:
+		fallthrough
+	case FIXED_LINE_OR_MOBILE:
+		return metadata.GetFixedLine()
+	case SHARED_COST:
+		return metadata.GetSharedCost()
+	case VOIP:
+		return metadata.GetVoip()
+	case PERSONAL_NUMBER:
+		return metadata.GetPersonalNumber()
+	case PAGER:
+		return metadata.GetPager()
+	case UAN:
+		return metadata.GetUan()
+	case VOICEMAIL:
+		return metadata.GetVoicemail()
+	default:
+		return metadata.GetGeneralDesc()
+	}
+}
+
+// Gets the type of a phone number.
+func GetNumberType(number *PhoneNumber) PhoneNumberType {
+	var regionCode string = GetRegionCodeForNumber(number)
+	var metadata *PhoneMetadata = getMetadataForRegionOrCallingCode(
+		int(number.GetCountryCode()), regionCode)
+	if metadata == nil {
+		return UNKNOWN
+	}
+	var nationalSignificantNumber = GetNationalSignificantNumber(number)
+	return getNumberTypeHelper(nationalSignificantNumber, metadata)
+}
+
+func getNumberTypeHelper(nationalNumber string, metadata *PhoneMetadata) PhoneNumberType {
+	if !isNumberMatchingDesc(nationalNumber, metadata.GetGeneralDesc()) {
+		return UNKNOWN
+	}
+
+	if isNumberMatchingDesc(nationalNumber, metadata.GetPremiumRate()) {
+		return PREMIUM_RATE
+	}
+	if isNumberMatchingDesc(nationalNumber, metadata.GetTollFree()) {
+		return TOLL_FREE
+	}
+	if isNumberMatchingDesc(nationalNumber, metadata.GetSharedCost()) {
+		return SHARED_COST
+	}
+	if isNumberMatchingDesc(nationalNumber, metadata.GetVoip()) {
+		return VOIP
+	}
+	if isNumberMatchingDesc(nationalNumber, metadata.GetPersonalNumber()) {
+		return PERSONAL_NUMBER
+	}
+	if isNumberMatchingDesc(nationalNumber, metadata.GetPager()) {
+		return PAGER
+	}
+	if isNumberMatchingDesc(nationalNumber, metadata.GetUan()) {
+		return UAN
+	}
+	if isNumberMatchingDesc(nationalNumber, metadata.GetVoicemail()) {
+		return VOICEMAIL
+	}
+
+	var isFixedLine = isNumberMatchingDesc(
+		nationalNumber, metadata.GetFixedLine())
+
+	if isFixedLine {
+		if metadata.GetSameMobileAndFixedLinePattern() {
+			return FIXED_LINE_OR_MOBILE
+		} else if isNumberMatchingDesc(nationalNumber, metadata.GetMobile()) {
+			return FIXED_LINE_OR_MOBILE
+		}
+		return FIXED_LINE
+	}
+	// Otherwise, test to see if the number is mobile. Only do this if
+	// certain that the patterns for mobile and fixed line aren't the same.
+	if !metadata.GetSameMobileAndFixedLinePattern() &&
+		isNumberMatchingDesc(nationalNumber, metadata.GetMobile()) {
+		return MOBILE
+	}
+	return UNKNOWN
+}
+
+// Returns the metadata for the given region code or nil if the region
+// code is invalid or unknown.
+func getMetadataForRegion(regionCode string) *PhoneMetadata {
+	if !isValidRegionCode(regionCode) {
+		return nil
+	}
+	val, _ := metadata.RegionMetadata(regionCode)
+	return val
+}
+
+func getMetadataForNonGeographicalRegion(countryCallingCode int) *PhoneMetadata {
+	_, ok := metadata.CountryCodeToRegion()[countryCallingCode]
+	if !ok {
+		return nil
+	}
+	val, _ := metadata.NonGeoMetadata(countryCallingCode)
+	return val
+}
+
+func isNumberPossibleForDesc(nationalNumber string, numberDesc *PhoneNumberDesc) bool {
+	// Check if any possible number lengths are present; if so, we use them to avoid checking the
+	// validation pattern if they don't match. If they are absent, this means they match the general
+	// description, which we have already checked before checking a specific number type.
+	actualLength := int32(len(nationalNumber))
+	if len(numberDesc.PossibleLength) > 0 {
+		found := false
+		for _, l := range numberDesc.PossibleLength {
+			if actualLength == l {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	possiblePattern := "^(?:" + numberDesc.GetNationalNumberPattern() + ")$" // Strictly match
+	pat := regexcache.For(possiblePattern)
+	return pat.MatchString(nationalNumber)
+}
+
+func isNumberMatchingDesc(nationalNumber string, numberDesc *PhoneNumberDesc) bool {
+	patP := "^(?:" + numberDesc.GetNationalNumberPattern() + ")$" // Strictly match
+	pat := regexcache.For(patP)
+	return isNumberPossibleForDesc(nationalNumber, numberDesc) &&
+		pat.MatchString(nationalNumber)
+
+}
+
+// Tests whether a phone number matches a valid pattern. Note this doesn't
+// verify the number is actually in use, which is impossible to tell by
+// just looking at a number itself.
+func IsValidNumber(number *PhoneNumber) bool {
+	var regionCode string = GetRegionCodeForNumber(number)
+	return IsValidNumberForRegion(number, regionCode)
+}
+
+// Tests whether a phone number is valid for a certain region. Note this
+// doesn't verify the number is actually in use, which is impossible to
+// tell by just looking at a number itself. If the country calling code is
+// not the same as the country calling code for the region, this immediately
+// exits with false. After this, the specific number pattern rules for the
+// region are examined. This is useful for determining for example whether
+// a particular number is valid for Canada, rather than just a valid NANPA
+// number.
+// Warning: In most cases, you want to use IsValidNumber() instead. For
+// example, this method will mark numbers from British Crown dependencies
+// such as the Isle of Man as invalid for the region "GB" (United Kingdom),
+// since it has its own region code, "IM", which may be undesirable.
+func IsValidNumberForRegion(number *PhoneNumber, regionCode string) bool {
+	var countryCode int = int(number.GetCountryCode())
+	var metadata *PhoneMetadata = getMetadataForRegionOrCallingCode(countryCode, regionCode)
+	if metadata == nil || (REGION_CODE_FOR_NON_GEO_ENTITY != regionCode && countryCode != getCountryCodeForValidRegion(regionCode)) {
+		// Either the region code was invalid, or the country calling
+		// code for this number does not match that of the region code.
+		return false
+	}
+	nationalSignificantNumber := GetNationalSignificantNumber(number)
+	return getNumberTypeHelper(nationalSignificantNumber, metadata) != UNKNOWN
+}
+
+// Returns the region where a phone number is from. This could be used for
+// geocoding at the region level.
+func GetRegionCodeForNumber(number *PhoneNumber) string {
+	var countryCode int = int(number.GetCountryCode())
+	var regions []string = metadata.CountryCodeToRegion()[countryCode]
+	if len(regions) == 0 {
+		return ""
+	}
+	if len(regions) == 1 {
+		return regions[0]
+	}
+	return getRegionCodeForNumberFromRegionList(number, regions)
+}
+
+func getRegionCodeForNumberFromRegionList(
+	number *PhoneNumber,
+	regionCodes []string) string {
+
+	var nationalNumber string = GetNationalSignificantNumber(number)
+	for _, regionCode := range regionCodes {
+		// If leadingDigits is present, use this. Otherwise, do
+		// full validation. Metadata cannot be null because the
+		// region codes come from the country calling code map.
+		var metadata *PhoneMetadata = getMetadataForRegion(regionCode)
+		if len(metadata.GetLeadingDigits()) > 0 {
+			patP := "^(?:" + metadata.GetLeadingDigits() + ")" // Non capturing grouping to support OR'ed alternatives (e.g. 555|1[78]|2)
+			pat := regexcache.For(patP)
+			if pat.MatchString(nationalNumber) {
+				return regionCode
+			}
+		} else if getNumberTypeHelper(nationalNumber, metadata) != UNKNOWN {
+			return regionCode
+		}
+	}
+	return ""
+}
+
+// Returns the region code that matches the specific country calling code.
+// In the case of no region code being found, ZZ will be returned. In the
+// case of multiple regions, the one designated in the metadata as the
+// "main" region for this calling code will be returned. If the
+// countryCallingCode entered is valid but doesn't match a specific region
+// (such as in the case of non-geographical calling codes like 800) the
+// value "001" will be returned (corresponding to the value for World in
+// the UN M.49 schema).
+func GetRegionCodeForCountryCode(countryCallingCode int) string {
+	var regionCodes []string = metadata.CountryCodeToRegion()[countryCallingCode]
+	if len(regionCodes) == 0 {
+		return unknownRegion
+	}
+	return regionCodes[0]
+}
+
+// Returns a list with the region codes that match the specific country
+// calling code. For non-geographical country calling codes, the region
+// code 001 is returned. Also, in the case of no region code being found,
+// an empty list is returned.
+func GetRegionCodesForCountryCode(countryCallingCode int) []string {
+	var regionCodes []string = metadata.CountryCodeToRegion()[countryCallingCode]
+	return regionCodes
+}
+
+// Returns the country calling code for a specific region. For example, this
+// would be 1 for the United States, and 64 for New Zealand.
+func GetCountryCodeForRegion(regionCode string) int {
+	if !isValidRegionCode(regionCode) {
+		return 0
+	}
+	return getCountryCodeForValidRegion(regionCode)
+}
+
+// Returns the country calling code for a specific region. For example,
+// this would be 1 for the United States, and 64 for New Zealand. Assumes
+// the region is already valid.
+func getCountryCodeForValidRegion(regionCode string) int {
+	var metadata *PhoneMetadata = getMetadataForRegion(regionCode)
+	return int(metadata.GetCountryCode())
+}
+
+// Returns the national dialling prefix for a specific region. For example,
+// this would be 1 for the United States, and 0 for New Zealand. Set
+// stripNonDigits to true to strip symbols like "~" (which indicates a
+// wait for a dialling tone) from the prefix returned. If no national prefix
+// is present, we return null.
+//
+// Warning: Do not use this method for do-your-own formatting - for some
+// regions, the national dialling prefix is used only for certain types
+// of numbers. Use the library's formatting functions to prefix the
+// national prefix when required.
+func GetNddPrefixForRegion(regionCode string, stripNonDigits bool) string {
+	var metadata *PhoneMetadata = getMetadataForRegion(regionCode)
+	if metadata == nil {
+		return ""
+	}
+	var nationalPrefix string = metadata.GetNationalPrefix()
+	// If no national prefix was found, we return an empty string.
+	if len(nationalPrefix) == 0 {
+		return ""
+	}
+	if stripNonDigits {
+		// Note: if any other non-numeric symbols are ever used in
+		// national prefixes, these would have to be removed here as well.
+		nationalPrefix = strings.Replace(nationalPrefix, "~", "", -1)
+	}
+	return nationalPrefix
+}
+
+// Checks if this is a region under the North American Numbering Plan
+// Administration (NANPA).
+func IsNANPACountry(regionCode string) bool {
+	return metadata.IsNANPARegion(regionCode)
+}
+
+func hasAtLeastThreeAlphaChars(number string) bool {
+	alphaCount := 0
+	for i := 0; i < len(number); i++ {
+		c := number[i]
+		if (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') {
+			alphaCount++
+			if alphaCount >= 3 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// Checks if the number is a valid vanity (alpha) number such as 800
+// MICROSOFT. A valid vanity number will start with at least 3 digits and
+// will have three or more alpha characters. This does not do
+// region-specific checks - to work out if this number is actually valid
+// for a region, it should be parsed and methods such as
+// IsPossibleNumberWithReason() and IsValidNumber() should be used.
+func IsAlphaNumber(number string) bool {
+	if len(number) > maxInputStringLength {
+		return false
+	}
+	if !isViablePhoneNumber(number) {
+		// Number is too short, or doesn't match the basic phone
+		// number pattern.
+		return false
+	}
+	strippedNumber := stringbuilder.NewString(number)
+	maybeStripExtension(strippedNumber)
+	return hasAtLeastThreeAlphaChars(strippedNumber.String())
+}
+
+// Convenience wrapper around IsPossibleNumberWithReason(). Instead of
+// returning the reason for failure, this method returns a boolean value.
+func IsPossibleNumber(number *PhoneNumber) bool {
+	possible := IsPossibleNumberWithReason(number)
+	return possible == IS_POSSIBLE || possible == IS_POSSIBLE_LOCAL_ONLY
+}
+
+// IsPossibleNumberFromRegion checks whether a phone number is a possible number
+// given a number in the form of a string, and the region where the number could
+// be dialled from. It provides a more lenient check than IsValidNumber. See
+// IsPossibleNumber for details.
+//
+// This method first parses the number, then invokes IsPossibleNumber with the
+// resultant PhoneNumber object.
+//
+// regionDialingFrom is the region we expect the number to be dialled from. Note
+// this is different from the region where the number belongs. For example, the
+// number +1 650 253 0000 belongs to the US. When written in this form, it can
+// be dialled from any region. When written as 650 253 0000, it can only be
+// dialled from within the US.
+func IsPossibleNumberFromRegion(number string, regionDialingFrom string) bool {
+	num, err := Parse(number, regionDialingFrom)
+	if err != nil {
+		return false
+	}
+	return IsPossibleNumber(num)
+}
+
+// descHasPossibleNumberData returns true if there is any possible-length data
+// set for a PhoneNumberDesc. An empty possibleLength means numbers of this type
+// inherit from the general desc (so the type is supported); a single -1 entry
+// means no numbers exist for the type.
+func descHasPossibleNumberData(desc *PhoneNumberDesc) bool {
+	return len(desc.PossibleLength) != 1 || desc.PossibleLength[0] != -1
+}
+
+func mergeLengths(l1 []int32, l2 []int32) []int32 {
+	merged := make([]int32, len(l1)+len(l2))
+	l1i, l2i := 0, 0
+
+	for i := 0; i < len(merged); i++ {
+		if l1i < len(l1) {
+			if l2i < len(l2) {
+				if l1[l1i] <= l2[l2i] {
+					merged[i] = l1[l1i]
+					l1i++
+				} else {
+					merged[i] = l2[l2i]
+					l2i++
+				}
+			} else {
+				merged[i] = l1[l1i]
+				l1i++
+			}
+		} else {
+			merged[i] = l2[l2i]
+			l2i++
+		}
+	}
+
+	return merged
+}
+
+// Helper method to check a number against possible lengths for this number type, and determine
+// whether it matches, or is too short or too long.
+func testNumberLength(number string, metadata *PhoneMetadata, numberType PhoneNumberType) ValidationResult {
+	desc := getNumberDescByType(metadata, numberType)
+
+	// There should always be "possibleLengths" set for every element. This is declared in the XML
+	// schema which is verified by PhoneNumberMetadataSchemaTest.
+	// For size efficiency, where a sub-description (e.g. fixed-line) has the same possibleLengths
+	// as the parent, this is missing, so we fall back to the general desc (where no numbers of the
+	// type exist at all, there is one possible length (-1) which is guaranteed not to match the
+	// length of any real phone number).
+	possibleLengths := desc.PossibleLength
+	if len(possibleLengths) == 0 {
+		possibleLengths = metadata.GeneralDesc.PossibleLength
+	}
+	localLengths := desc.PossibleLengthLocalOnly
+
+	if numberType == FIXED_LINE_OR_MOBILE {
+		if !descHasPossibleNumberData(getNumberDescByType(metadata, FIXED_LINE)) {
+			// The rare case has been encountered where no fixedLine data is available (true for some
+			// non-geographical entities), so we just check mobile.
+			return testNumberLength(number, metadata, MOBILE)
+		} else {
+			mobileDesc := getNumberDescByType(metadata, MOBILE)
+			if descHasPossibleNumberData(mobileDesc) {
+				// Note that when adding the possible lengths from mobile, we have to again check they
+				// aren't empty since if they are this indicates they are the same as the general desc and
+				// should be obtained from there.
+				mobileLengths := mobileDesc.PossibleLength
+				if len(mobileLengths) == 0 {
+					mobileLengths = metadata.GeneralDesc.PossibleLength
+				}
+				possibleLengths = mergeLengths(possibleLengths, mobileLengths)
+
+				if len(localLengths) == 0 {
+					localLengths = mobileDesc.PossibleLengthLocalOnly
+				} else {
+					localLengths = mergeLengths(localLengths, mobileDesc.PossibleLengthLocalOnly)
+				}
+			}
+		}
+	}
+
+	// If the type is not supported at all (indicated by the possible lengths containing -1 at this
+	// point) we return invalid length.
+	if possibleLengths[0] == -1 {
+		return INVALID_LENGTH
+	}
+
+	actualLength := int32(len(number))
+
+	// This is safe because there is never an overlap between the possible lengths and the local-only
+	// lengths; this is checked at build time.
+	for _, l := range localLengths {
+		if l == actualLength {
+			return IS_POSSIBLE_LOCAL_ONLY
+		}
+	}
+	minimumLength := possibleLengths[0]
+	if minimumLength == actualLength {
+		return IS_POSSIBLE
+	} else if minimumLength > actualLength {
+		return TOO_SHORT
+	} else if possibleLengths[len(possibleLengths)-1] < actualLength {
+		return TOO_LONG
+	}
+
+	// We skip the first element; we've already checked it.
+	for _, l := range possibleLengths[1:] {
+		if l == actualLength {
+			return IS_POSSIBLE
+		}
+	}
+	return INVALID_LENGTH
+}
+
+// Check whether a phone number is a possible number. It provides a more
+// lenient check than IsValidNumber() in the following sense:
+//
+//   - It only checks the length of phone numbers. In particular, it
+//     doesn't check starting digits of the number.
+//   - It doesn't attempt to figure out the type of the number, but uses
+//     general rules which applies to all types of phone numbers in a
+//     region. Therefore, it is much faster than isValidNumber.
+//   - For fixed line numbers, many regions have the concept of area code,
+//     which together with subscriber number constitute the national
+//     significant number. It is sometimes okay to dial the subscriber number
+//     only when dialing in the same area. This function will return true
+//     if the subscriber-number-only version is passed in. On the other hand,
+//     because isValidNumber validates using information on both starting
+//     digits (for fixed line numbers, that would most likely be area codes)
+//     and length (obviously includes the length of area codes for fixed
+//     line numbers), it will return false for the subscriber-number-only
+//     version.
+func IsPossibleNumberWithReason(number *PhoneNumber) ValidationResult {
+	nationalNumber := GetNationalSignificantNumber(number)
+	countryCode := int(number.GetCountryCode())
+	// Note: For Russian Fed and NANPA numbers, we just use the rules
+	// from the default region (US or Russia) since the
+	// getRegionCodeForNumber will not work if the number is possible
+	// but not valid. This would need to be revisited if the possible
+	// number pattern ever differed between various regions within
+	// those plans.
+	if !hasValidCountryCallingCode(countryCode) {
+		return INVALID_COUNTRY_CODE
+	}
+	regionCode := GetRegionCodeForCountryCode(countryCode)
+	// Metadata cannot be null because the country calling code is valid.
+	var metadata *PhoneMetadata = getMetadataForRegionOrCallingCode(countryCode, regionCode)
+	var generalNumDesc *PhoneNumberDesc = metadata.GetGeneralDesc()
+	// Handling case of numbers with no metadata.
+	if len(generalNumDesc.GetNationalNumberPattern()) == 0 {
+		numberLength := len(nationalNumber)
+		if numberLength < minLengthForNSN {
+			return TOO_SHORT
+		} else if numberLength > maxLengthForNSN {
+			return TOO_LONG
+		} else {
+			return IS_POSSIBLE
+		}
+	}
+	return testNumberLength(nationalNumber, metadata, UNKNOWN)
+}
+
+// IsPossibleNumberForTypeWithReason checks whether a phone number is a possible
+// number of a particular type. For most number types, this is the same result
+// as IsPossibleNumberWithReason. See that method for details.
+func IsPossibleNumberForTypeWithReason(number *PhoneNumber, numberType PhoneNumberType) ValidationResult {
+	nationalNumber := GetNationalSignificantNumber(number)
+	countryCode := int(number.GetCountryCode())
+	// Note: For regions that share a country calling code, like NANPA numbers, we
+	// just use the rules from the default region since getRegionCodeForNumber will
+	// not work if the number is possible but not valid.
+	if !hasValidCountryCallingCode(countryCode) {
+		return INVALID_COUNTRY_CODE
+	}
+	regionCode := GetRegionCodeForCountryCode(countryCode)
+	// Metadata cannot be nil because the country calling code is valid.
+	metadata := getMetadataForRegionOrCallingCode(countryCode, regionCode)
+	return testNumberLength(nationalNumber, metadata, numberType)
+}
+
+// IsPossibleNumberForType returns true if the number is a possible number of the
+// given type (a more lenient check than IsValidNumberForRegion).
+func IsPossibleNumberForType(number *PhoneNumber, numberType PhoneNumberType) bool {
+	result := IsPossibleNumberForTypeWithReason(number, numberType)
+	return result == IS_POSSIBLE || result == IS_POSSIBLE_LOCAL_ONLY
+}
+
+// Attempts to extract a valid number from a phone number that is too long
+// to be valid, and resets the PhoneNumber object passed in to that valid
+// version. If no valid number could be extracted, the PhoneNumber object
+// passed in will not be modified.
+func TruncateTooLongNumber(number *PhoneNumber) bool {
+	if IsValidNumber(number) {
+		return true
+	}
+	numberCopy := &PhoneNumber{}
+	proto.Merge(numberCopy, number)
+	nationalNumber := number.GetNationalNumber()
+	nationalNumber /= 10
+	numberCopy.NationalNumber = proto.Uint64(nationalNumber)
+	if IsPossibleNumberWithReason(numberCopy) == TOO_SHORT || nationalNumber == 0 {
+		return false
+	}
+	for !IsValidNumber(numberCopy) {
+		nationalNumber /= 10
+		numberCopy.NationalNumber = proto.Uint64(nationalNumber)
+		if IsPossibleNumberWithReason(numberCopy) == TOO_SHORT ||
+			nationalNumber == 0 {
+			return false
+		}
+	}
+
+	number.NationalNumber = proto.Uint64(nationalNumber)
+	return true
+}
+
+// GetAsYouTypeFormatter (the analogue of Java's getAsYouTypeFormatter) is defined
+// alongside the AsYouTypeFormatter type in asyoutypeformatter.go.
+
+// Extracts country calling code from fullNumber, returns it and places
+// the remaining number in nationalNumber. It assumes that the leading plus
+// sign or IDD has already been removed. Returns 0 if fullNumber doesn't
+// start with a valid country calling code, and leaves nationalNumber
+// unmodified.
+func extractCountryCode(fullNumber, nationalNumber *stringbuilder.Builder) int {
+	fullNumBytes := fullNumber.Bytes()
+	if len(fullNumBytes) == 0 || fullNumBytes[0] == '0' {
+		// Country codes do not begin with a '0'.
+		return 0
+	}
+	var (
+		potentialCountryCode int
+		numberLength         = len(fullNumBytes)
+	)
+	for i := 1; i <= maxLengthCountryCode && i <= numberLength; i++ {
+		potentialCountryCode, _ = strconv.Atoi(string(fullNumBytes[0:i]))
+		if _, ok := metadata.CountryCodeToRegion()[potentialCountryCode]; ok {
+			nationalNumber.Write(fullNumBytes[i:])
+			return potentialCountryCode
+		}
+	}
+	return 0
+}
+
+// Tries to extract a country calling code from a number. This method will
+// return zero if no country calling code is considered to be present.
+// Country calling codes are extracted in the following ways:
+//
+//   - by stripping the international dialing prefix of the region the
+//     person is dialing from, if this is present in the number, and looking
+//     at the next digits
+//   - by stripping the '+' sign if present and then looking at the next digits
+//   - by comparing the start of the number and the country calling code of
+//     the default region. If the number is not considered possible for the
+//     numbering plan of the default region initially, but starts with the
+//     country calling code of this region, validation will be reattempted
+//     after stripping this country calling code. If this number is considered a
+//     possible number, then the first digits will be considered the country
+//     calling code and removed as such.
+//
+// It will throw a NumberParseException if the number starts with a '+' but
+// the country calling code supplied after this does not match that of any
+// known region.
+func maybeExtractCountryCode(
+	number string,
+	defaultRegionMetadata *PhoneMetadata,
+	nationalNumber *stringbuilder.Builder,
+	keepRawInput bool,
+	phoneNumber *PhoneNumber) (int, error) {
+
+	if len(number) == 0 {
+		return 0, nil
+	}
+	fullNumber := stringbuilder.NewString(number)
+	// Set the default prefix to be something that will never match.
+	possibleCountryIddPrefix := "NonMatch"
+	if defaultRegionMetadata != nil {
+		possibleCountryIddPrefix = defaultRegionMetadata.GetInternationalPrefix()
+	}
+
+	countryCodeSource :=
+		maybeStripInternationalPrefixAndNormalize(fullNumber, possibleCountryIddPrefix)
+	if keepRawInput {
+		phoneNumber.CountryCodeSource = &countryCodeSource
+	}
+	if countryCodeSource != PhoneNumber_FROM_DEFAULT_COUNTRY {
+		if len(fullNumber.String()) <= minLengthForNSN {
+			return 0, ErrTooShortAfterIDD
+		}
+		potentialCountryCode := extractCountryCode(fullNumber, nationalNumber)
+		if potentialCountryCode != 0 {
+			phoneNumber.CountryCode = proto.Int32(int32(potentialCountryCode))
+			return potentialCountryCode, nil
+		}
+
+		// If this fails, they must be using a strange country calling code
+		// that we don't recognize, or that doesn't exist.
+		return 0, ErrInvalidCountryCode
+	} else if defaultRegionMetadata != nil {
+		// Check to see if the number starts with the country calling code
+		// for the default region. If so, we remove the country calling
+		// code, and do some checks on the validity of the number before
+		// and after.
+		defaultCountryCode := int(defaultRegionMetadata.GetCountryCode())
+		defaultCountryCodeString := strconv.Itoa(defaultCountryCode)
+		normalizedNumber := fullNumber.String()
+		if strings.HasPrefix(normalizedNumber, defaultCountryCodeString) {
+			var (
+				potentialNationalNumber = stringbuilder.NewString(
+					normalizedNumber[len(defaultCountryCodeString):])
+				generalDesc        = defaultRegionMetadata.GetGeneralDesc()
+				patP               = `^(?:` + generalDesc.GetNationalNumberPattern() + `)$` // Strictly match
+				validNumberPattern = regexcache.For(patP)
+			)
+			maybeStripNationalPrefixAndCarrierCode(
+				potentialNationalNumber,
+				defaultRegionMetadata,
+				stringbuilder.New(nil) /* Don't need the carrier code */)
+
+			// If the number was not valid before but is valid now, or
+			// if it was too long before, we consider the number with
+			// the country calling code stripped to be a better result and
+			// keep that instead.
+			fullValid := validNumberPattern.MatchString(fullNumber.String())
+			nationalValid := validNumberPattern.MatchString(potentialNationalNumber.String())
+			lengthValid := testNumberLength(fullNumber.String(), defaultRegionMetadata, UNKNOWN)
+
+			if (!fullValid && nationalValid) || lengthValid == TOO_LONG {
+				nationalNumber.Write(potentialNationalNumber.Bytes())
+				if keepRawInput {
+					val := PhoneNumber_FROM_NUMBER_WITHOUT_PLUS_SIGN
+					phoneNumber.CountryCodeSource = &val
+				}
+				phoneNumber.CountryCode = proto.Int32(int32(defaultCountryCode))
+				return defaultCountryCode, nil
+			}
+		}
+	}
+	// No country calling code present.
+	phoneNumber.CountryCode = proto.Int32(0)
+	return 0, nil
+}
+
+// Strips the IDD from the start of the number if present. Helper function
+// used by maybeStripInternationalPrefixAndNormalize.
+func parsePrefixAsIdd(iddPattern *regexp.Regexp, number *stringbuilder.Builder) bool {
+	numStr := number.String()
+	ind := iddPattern.FindStringIndex(numStr)
+	if len(ind) == 0 || ind[0] != 0 {
+		return false
+	}
+	matchEnd := ind[1] // ind is a two element slice
+	// Only strip this if the first digit after the match is not
+	// a 0, since country calling codes cannot begin with 0.
+	find := capturingDigitPattern.FindAllString(numStr[matchEnd:], -1)
+	if len(find) > 0 {
+		if NormalizeDigitsOnly(find[0]) == "0" {
+			return false
+		}
+	}
+
+	numBytes := []byte(numStr)
+	number.ResetWith(numBytes[matchEnd:])
+	return true
+}
+
+// Strips any international prefix (such as +, 00, 011) present in the
+// number provided, normalizes the resulting number, and indicates if
+// an international prefix was present.
+func maybeStripInternationalPrefixAndNormalize(
+	number *stringbuilder.Builder,
+	possibleIddPrefix string) PhoneNumber_CountryCodeSource {
+
+	numBytes := number.Bytes()
+	if len(numBytes) == 0 {
+		return PhoneNumber_FROM_DEFAULT_COUNTRY
+	}
+	// Check to see if the number begins with one or more plus signs.
+	ind := plusCharsPattern.FindIndex(numBytes) // Return is an int pair [start,end]
+	if len(ind) > 0 && ind[0] == 0 {            // Strictly match from string start
+		number.ResetWith(numBytes[ind[1]:])
+		// Can now normalize the rest of the number since we've consumed
+		// the "+" sign at the start.
+		number.ResetWithString(normalize(number.String()))
+		return PhoneNumber_FROM_NUMBER_WITH_PLUS_SIGN
+	}
+
+	// Attempt to parse the first digits as an international prefix.
+	iddPattern := regexcache.For(possibleIddPrefix)
+	number.ResetWithString(normalize(string(numBytes)))
+	if parsePrefixAsIdd(iddPattern, number) {
+		return PhoneNumber_FROM_NUMBER_WITH_IDD
+	}
+	return PhoneNumber_FROM_DEFAULT_COUNTRY
+}
+
+// Strips any national prefix (such as 0, 1) present in the number provided.
+// @VisibleForTesting
+func maybeStripNationalPrefixAndCarrierCode(
+	number *stringbuilder.Builder,
+	metadata *PhoneMetadata,
+	carrierCode *stringbuilder.Builder) bool {
+
+	numberLength := len(number.String())
+	possibleNationalPrefix := metadata.GetNationalPrefixForParsing()
+	if numberLength == 0 || len(possibleNationalPrefix) == 0 {
+		// Early return for numbers of zero length.
+		return false
+	}
+	possibleNationalPrefix = "^(?:" + possibleNationalPrefix + ")" // Strictly match from string start
+	// Attempt to parse the first digits as a national prefix.
+	prefixMatcher := regexcache.For(possibleNationalPrefix)
+	if prefixMatcher.MatchString(number.String()) {
+		natRulePattern := "^(?:" + metadata.GetGeneralDesc().GetNationalNumberPattern() + ")$" // Strictly match
+		nationalNumberRule := regexcache.For(natRulePattern)
+		// Check if the original number is viable.
+		isViableOriginalNumber := nationalNumberRule.Match(number.Bytes())
+		// prefixMatcher.group(numOfGroups) == null implies nothing was
+		// captured by the capturing groups in possibleNationalPrefix;
+		// therefore, no transformation is necessary, and we just
+		// remove the national prefix.
+		groups := prefixMatcher.FindSubmatchIndex(number.Bytes())
+		numOfGroups := len(groups)/2 - 1 // groups is a list of index pairs, idx0,idx1 defines the whole match, idx2+ submatches.
+		// Subtract one to ignore group(0) in count
+		transformRule := metadata.GetNationalPrefixTransformRule()
+		if len(transformRule) == 0 || groups[numOfGroups*2] < 0 { // Negative idx means subgroup did not match
+			// If the original number was viable, and the resultant number
+			// is not, we return.
+			if isViableOriginalNumber &&
+				!nationalNumberRule.MatchString(
+					number.String()[groups[1]:]) { // groups[1] == last match idx
+				return false
+			}
+			if carrierCode != nil &&
+				numOfGroups > 0 &&
+				groups[2] >= 0 && groups[3] >= 0 { // Ensure group(1) matched before slicing
+				carrierCode.Write(number.Bytes()[groups[2]:groups[3]]) // always extract group(1) as carrier code
+			}
+			number.ResetWith(number.Bytes()[groups[1]:])
+			return true
+		} else {
+			// Check that the resultant number is still viable. If not,
+			// return. Check this by copying the string buffer and
+			// making the transformation on the copy first.
+			numString := number.String()
+			transformedNumBytes := []byte(prefixMatcher.ReplaceAllString(numString, transformRule))
+			if isViableOriginalNumber &&
+				!nationalNumberRule.Match(transformedNumBytes) {
+				return false
+			}
+			if carrierCode != nil && numOfGroups > 1 && groups[2] != -1 { // Check group(1) got a submatch
+				carrC := numString[groups[2]:groups[3]] // group(1) idxs
+				carrierCode.WriteString(carrC)
+			}
+			number.ResetWith(transformedNumBytes)
+			return true
+		}
+	}
+	return false
+}
+
+// Strips any extension (as in, the part of the number dialled after the
+// call is connected, usually indicated with extn, ext, x or similar) from
+// the end of the number, and returns it.
+// @VisibleForTesting
+func maybeStripExtension(number *stringbuilder.Builder) string {
+	// If we find a potential extension, and the number preceding this is
+	// a viable number, we assume it is an extension.
+	numStr := number.String()
+	ind := extnPattern.FindStringIndex(numStr)
+	if len(ind) > 0 && isViablePhoneNumber(numStr[0:ind[0]]) {
+		// The numbers are captured into groups in the regular expression.
+		for _, extension := range extnPattern.FindStringSubmatch(numStr)[1:] {
+			if len(extension) == 0 {
+				continue
+			}
+
+			// We go through the capturing groups until we find one
+			// that captured some digits. If none did, then we will
+			// return the empty string.
+			number.ResetWithString(numStr[0:ind[0]])
+			return extension
+		}
+	}
+	return ""
+}
+
+// Checks to see that the region code used is valid, or if it is not valid,
+// that the number to parse starts with a + symbol so that we can attempt
+// to infer the region from the number. Returns false if it cannot use the
+// region provided and the region cannot be inferred.
+func checkRegionForParsing(numberToParse, defaultRegion string) bool {
+	if !isValidRegionCode(defaultRegion) {
+		// If the number is null or empty, we can't infer the region.
+		if len(numberToParse) == 0 ||
+			!plusCharsPattern.MatchString(numberToParse) {
+			return false
+		}
+	}
+	return true
+}
+
+// Parses a string and returns it in proto buffer format. This method will
+// throw a NumberParseException if the number is not considered to be a
+// possible number. Note that validation of whether the number is actually
+// a valid number for a particular region is not performed. This can be
+// done separately with IsValidNumber().
+func Parse(numberToParse, defaultRegion string) (*PhoneNumber, error) {
+	var phoneNumber *PhoneNumber = &PhoneNumber{}
+	err := ParseToNumber(numberToParse, defaultRegion, phoneNumber)
+	return phoneNumber, err
+}
+
+// Same as Parse(string, string), but accepts mutable PhoneNumber as a
+// parameter to decrease object creation when invoked many times.
+func ParseToNumber(numberToParse, defaultRegion string, phoneNumber *PhoneNumber) error {
+	return parseHelper(numberToParse, defaultRegion, false, true, phoneNumber)
+}
+
+// Parses a string and returns it in proto buffer format. This method
+// differs from Parse() in that it always populates the raw_input field of
+// the protocol buffer with numberToParse as well as the country_code_source
+// field.
+func ParseAndKeepRawInput(
+	numberToParse, defaultRegion string) (*PhoneNumber, error) {
+	var phoneNumber *PhoneNumber = &PhoneNumber{}
+	return phoneNumber, ParseAndKeepRawInputToNumber(
+		numberToParse, defaultRegion, phoneNumber)
+}
+
+// Same as ParseAndKeepRawInput(String, String), but accepts a mutable
+// PhoneNumber as a parameter to decrease object creation when invoked many
+// times.
+func ParseAndKeepRawInputToNumber(
+	numberToParse, defaultRegion string,
+	phoneNumber *PhoneNumber) error {
+	return parseHelper(numberToParse, defaultRegion, true, true, phoneNumber)
+}
+
+// FindNumbers returns an iterator over all phone-number matches in text. It is a
+// shortcut for FindNumbersWithLeniency with VALID leniency and no limit on the
+// number of invalid candidates tried. defaultRegion is the region to assume for
+// numbers not written in international format; pass "" or "ZZ" to only consider
+// numbers with a leading plus.
+//
+// Range over the result with for/range:
+//
+//	for m := range phonenumbers.FindNumbers(text, "US") {
+//		fmt.Println(m.RawString(), m.Start(), m.End())
+//	}
+func FindNumbers(text, defaultRegion string) iter.Seq[*PhoneNumberMatch] {
+	return FindNumbersWithLeniency(text, defaultRegion, VALID, math.MaxInt)
+}
+
+// FindNumbersWithLeniency returns an iterator over all phone-number matches in
+// text at the given leniency. maxTries caps the number of invalid candidates
+// tried before giving up, to bound degenerate inputs with many false positives
+// (use math.MaxInt for no practical limit). Must be >= 0.
+func FindNumbersWithLeniency(text, defaultRegion string, leniency Leniency, maxTries int) iter.Seq[*PhoneNumberMatch] {
+	return func(yield func(*PhoneNumberMatch) bool) {
+		m := newPhoneNumberMatcher(text, defaultRegion, leniency, maxTries)
+		for m.hasNext() {
+			if !yield(m.next()) {
+				return
+			}
+		}
+	}
+}
+
+// A helper function to set the values related to leading zeros in a
+// PhoneNumber.
+func setItalianLeadingZerosForPhoneNumber(
+	nationalNum string, phoneNumber *PhoneNumber) {
+	if len(nationalNum) < 2 || nationalNum[0] != '0' {
+		phoneNumber.ItalianLeadingZero = nil
+		return
+	}
+
+	phoneNumber.ItalianLeadingZero = proto.Bool(true)
+	numLeadZeros := 1
+	// Note that if the national number is all "0"s, the last "0"
+	// is not counted as a leading zero.
+	for numLeadZeros < len(nationalNum)-1 && nationalNum[numLeadZeros] == '0' {
+		numLeadZeros++
+	}
+	if numLeadZeros != 1 {
+		phoneNumber.NumberOfLeadingZeros = proto.Int32(int32(numLeadZeros))
+	}
+}
+
+var (
+	ErrInvalidCountryCode = errors.New("invalid country code")
+	ErrNotANumber         = errors.New("the phone number supplied is not a number")
+	ErrTooShortNSN        = errors.New("the string supplied is too short to be a phone number")
+)
+
+// Parses a string and fills up the phoneNumber. This method is the same
+// as the public Parse() method, with the exception that it allows the
+// default region to be null, for use by IsNumberMatch(). checkRegion should
+// be set to false if it is permitted for the default region to be null or
+// unknown ("ZZ").
+func parseHelper(
+	numberToParse, defaultRegion string,
+	keepRawInput, checkRegion bool,
+	phoneNumber *PhoneNumber) error {
+	if len(numberToParse) == 0 {
+		return ErrNotANumber
+	} else if len(numberToParse) > maxInputStringLength {
+		return ErrNumTooLong
+	}
+
+	nationalNumber := stringbuilder.New(nil)
+	err := buildNationalNumberForParsing(numberToParse, nationalNumber)
+	if err != nil {
+		return err
+	}
+
+	if !isViablePhoneNumber(nationalNumber.String()) {
+		return ErrNotANumber
+	}
+
+	// Check the region supplied is valid, or that the extracted number
+	// starts with some sort of + sign so the number's region can be determined.
+	if checkRegion &&
+		!checkRegionForParsing(nationalNumber.String(), defaultRegion) {
+		return ErrInvalidCountryCode
+	}
+
+	if keepRawInput {
+		phoneNumber.RawInput = proto.String(numberToParse)
+	}
+	// Attempt to parse extension first, since it doesn't require
+	// region-specific data and we want to have the non-normalised
+	// number here.
+	extension := maybeStripExtension(nationalNumber)
+	if len(extension) > 0 {
+		phoneNumber.Extension = proto.String(extension)
+	}
+	var regionMetadata *PhoneMetadata = getMetadataForRegion(defaultRegion)
+	// Check to see if the number is given in international format so we
+	// know whether this number is from the default region or not.
+	normalizedNationalNumber := stringbuilder.New(nil)
+	// TODO: This method should really just take in the string buffer that
+	// has already been created, and just remove the prefix, rather than
+	// taking in a string and then outputting a string buffer.
+	countryCode, err := maybeExtractCountryCode(
+		nationalNumber.String(), regionMetadata,
+		normalizedNationalNumber, keepRawInput, phoneNumber)
+	if err != nil {
+		// There might be a plus at the beginning
+		inds := plusCharsPattern.FindStringIndex(nationalNumber.String())
+		if err == ErrInvalidCountryCode && len(inds) > 0 {
+			// Strip the plus-char, and try again.
+			countryCode, err = maybeExtractCountryCode(
+				nationalNumber.String()[inds[1]:], regionMetadata,
+				normalizedNationalNumber, keepRawInput, phoneNumber)
+			if err != nil {
+				return err
+			} else if countryCode == 0 {
+				return ErrInvalidCountryCode
+			}
+		} else {
+			return err
+		}
+	}
+	if countryCode != 0 {
+		phoneNumberRegion := GetRegionCodeForCountryCode(countryCode)
+		if phoneNumberRegion != defaultRegion {
+			// Metadata cannot be null because the country calling
+			// code is valid.
+			regionMetadata = getMetadataForRegionOrCallingCode(
+				countryCode, phoneNumberRegion)
+		}
+	} else {
+		// If no extracted country calling code, use the region supplied
+		// instead. The national number is just the normalized version of
+		// the number we were given to parse.
+		normalizedNationalNumber.WriteString(normalize(nationalNumber.String()))
+		if len(defaultRegion) != 0 {
+			countryCode = int(regionMetadata.GetCountryCode())
+			phoneNumber.CountryCode = proto.Int32(int32(countryCode))
+		} else if keepRawInput {
+			phoneNumber.CountryCodeSource = nil
+		}
+	}
+	if len(normalizedNationalNumber.String()) < minLengthForNSN {
+		return ErrTooShortNSN
+	}
+
+	if regionMetadata != nil {
+		carrierCode := stringbuilder.New(nil)
+		bufferCopy := make([]byte, normalizedNationalNumber.Len())
+		copy(bufferCopy, normalizedNationalNumber.Bytes())
+		potentialNationalNumber := stringbuilder.New(bufferCopy)
+		maybeStripNationalPrefixAndCarrierCode(
+			potentialNationalNumber, regionMetadata, carrierCode)
+		// We require that the NSN remaining after stripping the national
+		// prefix and carrier code be of a possible length for the region.
+		// Otherwise, we don't do the stripping, since the original number
+		// could be a valid short number.
+		validationResult := testNumberLength(potentialNationalNumber.String(), regionMetadata, UNKNOWN)
+		if validationResult != TOO_SHORT && validationResult != IS_POSSIBLE_LOCAL_ONLY && validationResult != INVALID_LENGTH {
+			normalizedNationalNumber = potentialNationalNumber
+			if keepRawInput && carrierCode.Len() > 0 {
+				phoneNumber.PreferredDomesticCarrierCode =
+					proto.String(carrierCode.String())
+			}
+		}
+	}
+	lengthOfNationalNumber := len(normalizedNationalNumber.String())
+	if lengthOfNationalNumber < minLengthForNSN {
+		return ErrTooShortNSN
+	}
+	if lengthOfNationalNumber > maxLengthForNSN {
+		return ErrNumTooLong
+	}
+	setItalianLeadingZerosForPhoneNumber(
+		normalizedNationalNumber.String(), phoneNumber)
+	val, _ := strconv.ParseUint(normalizedNationalNumber.String(), 10, 64)
+	phoneNumber.NationalNumber = proto.Uint64(val)
+	return nil
+}
+
+// Extracts the value of the phone-context parameter of numberToExtractFrom where the index of
+// ";phone-context=" is the parameter indexOfPhoneContext, following the syntax defined in
+// RFC3966.
+func extractPhoneContext(numberToExtractFrom string, indexOfPhoneContext int) string {
+	// If no phone-context parameter is present
+	if indexOfPhoneContext == -1 {
+		return ""
+	}
+
+	phoneContextStart := indexOfPhoneContext + len(rfc3966PhoneContext)
+	// If phone-context parameter is empty
+	if phoneContextStart >= len(numberToExtractFrom) {
+		return ""
+	}
+
+	// find end of this phone-context (go doesn't have a indexOf(s, after))
+	phoneContextEnd := strings.IndexRune(numberToExtractFrom[phoneContextStart:], ';')
+	if phoneContextEnd != -1 {
+		phoneContextEnd += phoneContextStart
+	}
+
+	// If phone-context is not the last parameter
+	if phoneContextEnd != -1 {
+		return numberToExtractFrom[phoneContextStart:phoneContextEnd]
+	} else {
+		return numberToExtractFrom[phoneContextStart:]
+	}
+}
+
+// Returns whether the value of phoneContext follows the syntax defined in RFC3966.
+func isPhoneContextValid(phoneContext string) bool {
+	if len(phoneContext) == 0 {
+		return false
+	}
+
+	// Does phone-context value match pattern of global-number-digits or domainname
+	return rfc3966GlobalNumberDigitsPattern.MatchString(phoneContext) || rfc3966DomainnamePattern.MatchString(phoneContext)
+}
+
+// Converts numberToParse to a form that we can parse and write it to
+// nationalNumber if it is written in RFC3966; otherwise extract a possible
+// number out of it and write to nationalNumber.
+func buildNationalNumberForParsing(
+	numberToParse string,
+	nationalNumber *stringbuilder.Builder) error {
+
+	indexOfPhoneContext := strings.Index(numberToParse, rfc3966PhoneContext)
+
+	phoneContext := extractPhoneContext(numberToParse, indexOfPhoneContext)
+	if indexOfPhoneContext >= 0 && !isPhoneContextValid(phoneContext) {
+		return ErrNotANumber
+	}
+	if indexOfPhoneContext > 0 {
+		// If the phone context contains a phone number prefix, we need to capture it, whereas domains
+		// will be ignored.
+		if phoneContext[0] == plusSign {
+			// Additional parameters might follow the phone context. If so, we will remove them here
+			// because the parameters after phone context are not important for parsing the phone
+			// number.
+			nationalNumber.WriteString(phoneContext)
+		}
+
+		// Now append everything between the "tel:" prefix and the phone-context. This should include
+		// the national number, an optional extension or isdn-subaddress component. Note we also
+		// handle the case when "tel:" is missing, as we have seen in some of the phone number inputs.
+		// In that case, we append everything from the beginning.
+		// Only honor the "tel:" prefix when it actually appears before the
+		// phone-context. A "tel:" occurring after it is part of a trailing
+		// parameter and must be ignored, otherwise the slice below could have a
+		// start index greater than its end index.
+		indexOfRfc3966Prefix := strings.Index(numberToParse, rfc3966Prefix)
+		indexOfNationalNumber := 0
+		if indexOfRfc3966Prefix >= 0 && indexOfRfc3966Prefix < indexOfPhoneContext {
+			indexOfNationalNumber = indexOfRfc3966Prefix + len(rfc3966Prefix)
+		}
+		nationalNumber.WriteString(numberToParse[indexOfNationalNumber:indexOfPhoneContext])
+	} else {
+		// Extract a possible number from the string passed in (this
+		// strips leading characters that could not be the start of a
+		// phone number.)
+		nationalNumber.WriteString(extractPossibleNumber(numberToParse))
+	}
+
+	// Delete the isdn-subaddress and everything after it if it is present.
+	// Note extension won't appear at the same time with isdn-subaddress
+	// according to paragraph 5.3 of the RFC3966 spec,
+	indexOfIsdn := strings.Index(nationalNumber.String(), rfc3966IsdnSubaddress)
+	if indexOfIsdn > 0 {
+		natNumBytes := nationalNumber.Bytes()
+		nationalNumber.ResetWith(natNumBytes[:indexOfIsdn])
+	}
+	// If both phone context and isdn-subaddress are absent but other
+	// parameters are present, the parameters are left in nationalNumber.
+	// This is because we are concerned about deleting content from a
+	// potential number string when there is no strong evidence that the
+	// number is actually written in RFC3966.
+	return nil
+}
+
+// Takes two phone numbers and compares them for equality.
+//
+// Returns EXACT_MATCH if the country_code, NSN, presence of a leading zero
+// for Italian numbers and any extension present are the same.
+// Returns NSN_MATCH if either or both has no region specified, and the NSNs
+// and extensions are the same.
+// Returns SHORT_NSN_MATCH if either or both has no region specified, or the
+// region specified is the same, and one NSN could be a shorter version of
+// the other number. This includes the case where one has an extension
+// specified, and the other does not.
+// Returns NO_MATCH otherwise.
+// For example, the numbers +1 345 657 1234 and 657 1234 are a SHORT_NSN_MATCH.
+// The numbers +1 345 657 1234 and 345 657 are a NO_MATCH.
+func IsNumberMatchWithNumbers(firstNumberIn, secondNumberIn *PhoneNumber) MatchType {
+	// We only care about the fields that uniquely define a number, so we copy
+	// these across explicitly.
+	firstNumber := copyCoreFieldsOnly(firstNumberIn)
+	secondNumber := copyCoreFieldsOnly(secondNumberIn)
+
+	// Early exit if both had extensions and these are different.
+	if firstNumber.GetExtension() != "" && secondNumber.GetExtension() != "" &&
+		firstNumber.GetExtension() != secondNumber.GetExtension() {
+		return NO_MATCH
+	}
+	var (
+		firstNumberCountryCode  = firstNumber.GetCountryCode()
+		secondNumberCountryCode = secondNumber.GetCountryCode()
+	)
+	// Both had country_code specified.
+	if firstNumberCountryCode != 0 && secondNumberCountryCode != 0 {
+		if proto.Equal(firstNumber, secondNumber) {
+			return EXACT_MATCH
+		} else if firstNumberCountryCode == secondNumberCountryCode &&
+			isNationalNumberSuffixOfTheOther(firstNumber, secondNumber) {
+			// A SHORT_NSN_MATCH occurs if there is a difference because of
+			// the presence or absence of an 'Italian leading zero', the
+			// presence or absence of an extension, or one NSN being a
+			// shorter variant of the other.
+			return SHORT_NSN_MATCH
+		}
+		// This is not a match.
+		return NO_MATCH
+	}
+	// Checks cases where one or both country_code fields were not
+	// specified. To make equality checks easier, we first set the
+	// country_code fields to be equal.
+	firstNumber.CountryCode = proto.Int32(secondNumberCountryCode)
+	// If all else was the same, then this is an NSN_MATCH.
+	if proto.Equal(firstNumber, secondNumber) {
+		return NSN_MATCH
+	}
+	if isNationalNumberSuffixOfTheOther(firstNumber, secondNumber) {
+		return SHORT_NSN_MATCH
+	}
+	return NO_MATCH
+}
+
+// copyCoreFieldsOnly returns a copy of the number keeping only the fields that
+// uniquely define it, so two numbers can be compared with proto.Equal. Mirrors
+// upstream PhoneNumberUtil.copyCoreFieldsOnly: raw_input, country_code_source,
+// preferred_domestic_carrier_code and empty extensions are dropped, and
+// number_of_leading_zeros is only relevant (and so only copied) when
+// italian_leading_zero is true.
+func copyCoreFieldsOnly(in *PhoneNumber) *PhoneNumber {
+	out := &PhoneNumber{
+		CountryCode:    proto.Int32(in.GetCountryCode()),
+		NationalNumber: proto.Uint64(in.GetNationalNumber()),
+	}
+	if len(in.GetExtension()) > 0 {
+		out.Extension = proto.String(in.GetExtension())
+	}
+	if in.GetItalianLeadingZero() {
+		out.ItalianLeadingZero = proto.Bool(true)
+		// This field is only relevant if there are leading zeros at all.
+		out.NumberOfLeadingZeros = proto.Int32(in.GetNumberOfLeadingZeros())
+	}
+	return out
+}
+
+// Returns true when one national number is the suffix of the other or both
+// are the same.
+func isNationalNumberSuffixOfTheOther(firstNumber, secondNumber *PhoneNumber) bool {
+	var (
+		firstNumberNationalNumber = strconv.FormatUint(
+			firstNumber.GetNationalNumber(), 10)
+		secondNumberNationalNumber = strconv.FormatUint(
+			secondNumber.GetNationalNumber(), 10)
+	)
+	// Note that endsWith returns true if the numbers are equal.
+	return strings.HasSuffix(firstNumberNationalNumber, secondNumberNationalNumber) ||
+		strings.HasSuffix(secondNumberNationalNumber, firstNumberNationalNumber)
+}
+
+// Takes two phone numbers as strings and compares them for equality. This is
+// a convenience wrapper for IsNumberMatch(PhoneNumber, PhoneNumber). No
+// default region is known.
+func IsNumberMatch(firstNumber, secondNumber string) MatchType {
+	firstNumberAsProto, err := Parse(firstNumber, unknownRegion)
+	if err == nil {
+		return IsNumberMatchWithOneNumber(firstNumberAsProto, secondNumber)
+	} else if err != ErrInvalidCountryCode {
+		return NOT_A_NUMBER
+	}
+
+	secondNumberAsProto, err := Parse(secondNumber, unknownRegion)
+	if err == nil {
+		return IsNumberMatchWithOneNumber(secondNumberAsProto, firstNumber)
+	} else if err != ErrInvalidCountryCode {
+		return NOT_A_NUMBER
+	}
+
+	var firstNumberProto, secondNumberProto PhoneNumber
+	err = parseHelper(firstNumber, "", false, false, &firstNumberProto)
+	if err != nil {
+		return NOT_A_NUMBER
+	}
+	err = parseHelper(secondNumber, "", false, false, &secondNumberProto)
+	if err != nil {
+		return NOT_A_NUMBER
+	}
+	return IsNumberMatchWithNumbers(&firstNumberProto, &secondNumberProto)
+}
+
+// Takes two phone numbers and compares them for equality. This is a
+// convenience wrapper for IsNumberMatch(PhoneNumber, PhoneNumber). No
+// default region is known.
+func IsNumberMatchWithOneNumber(
+	firstNumber *PhoneNumber, secondNumber string) MatchType {
+	// First see if the second number has an implicit country calling
+	// code, by attempting to parse it.
+	secondNumberAsProto, err := Parse(secondNumber, unknownRegion)
+	if err == nil {
+		return IsNumberMatchWithNumbers(firstNumber, secondNumberAsProto)
+	}
+	if err != ErrInvalidCountryCode {
+		return NOT_A_NUMBER
+	}
+	// The second number has no country calling code. EXACT_MATCH is no
+	// longer possible. We parse it as if the region was the same as that
+	// for the first number, and if EXACT_MATCH is returned, we replace
+	// this with NSN_MATCH.
+	firstNumberRegion := GetRegionCodeForCountryCode(int(firstNumber.GetCountryCode()))
+
+	if firstNumberRegion != unknownRegion {
+		secondNumberWithFirstNumberRegion, err :=
+			Parse(secondNumber, firstNumberRegion)
+		if err != nil {
+			return NOT_A_NUMBER
+		}
+		match := IsNumberMatchWithNumbers(
+			firstNumber, secondNumberWithFirstNumberRegion)
+		if match == EXACT_MATCH {
+			return NSN_MATCH
+		}
+		return match
+	} else {
+		// If the first number didn't have a valid country calling
+		// code, then we parse the second number without one as well.
+		secondNumberProto := &PhoneNumber{}
+		err := parseHelper(secondNumber, "", false, false, secondNumberProto)
+		if err != nil {
+			return NOT_A_NUMBER
+		}
+		return IsNumberMatchWithNumbers(firstNumber, secondNumberProto)
+	}
+}
+
+// Returns true if the number can be dialled from outside the region, or
+// unknown. If the number can only be dialled from within the region,
+// returns false. Does not check the number is a valid number. Note that,
+// at the moment, this method does not handle short numbers (which are
+// currently all presumed to not be diallable from outside their country).
+func CanBeInternationallyDialled(number *PhoneNumber) bool {
+	metadata := getMetadataForRegion(GetRegionCodeForNumber(number))
+	if metadata == nil {
+		// Note numbers belonging to non-geographical entities
+		// (e.g. +800 numbers) are always internationally diallable,
+		// and will be caught here.
+		return true
+	}
+	nationalSignificantNumber := GetNationalSignificantNumber(number)
+	return !isNumberMatchingDesc(
+		nationalSignificantNumber, metadata.GetNoInternationalDialling())
+}
+
+// Returns true if the supplied region supports mobile number portability.
+// Returns false for invalid, unknown or regions that don't support mobile
+// number portability.
+func IsMobileNumberPortableRegion(regionCode string) bool {
+	metadata := getMetadataForRegion(regionCode)
+	if metadata == nil {
+		return false
+	}
+	return metadata.GetMobileNumberPortableRegion()
+}

@@ -204,6 +204,7 @@ func (dummy *Dummy) RecordSchema(ctx context.Context, target connectors.Targets,
 		{Name: "firstName", Type: types.String(), Nullable: true, Description: "First name"},
 		{Name: "fullName", Type: types.String(), Nullable: true, Description: "Full name"},
 		{Name: "lastName", Type: types.String(), Nullable: true, Description: "Last name"},
+		{Name: "phone", Type: types.String().AsPhone(), Nullable: true, Description: "Phone"},
 		{Name: "favouriteDrink", Type: types.String().WithValues("tea", "beer", "wine", "water"), Nullable: true, Description: "Favourite drink"},
 		{Name: "favourite_movie", Type: types.String(), ReadOptional: true, Description: "Favourite movie"},
 	}...)
@@ -215,6 +216,7 @@ func (dummy *Dummy) RecordSchema(ctx context.Context, target connectors.Targets,
 			{Name: "street", Type: types.String(), Nullable: true, Description: "Street"},
 			{Name: "postal_code", Type: types.String(), Nullable: true, Description: "Postal code"},
 			{Name: "city", Type: types.String(), Nullable: true, Description: "City"},
+			{Name: "country", Type: types.String().AsCountry(types.ISO3166Alpha2), Nullable: true, Description: "Country"},
 		}), Nullable: true, Description: "Address"},
 	}...)
 	return types.Object(properties), nil
@@ -353,7 +355,7 @@ func (dummy *Dummy) ServeUI(ctx context.Context, event string, settings json.Val
 
 // nonRequiredProperties contains the names of the properties that are both in
 // the source and destination schema and are not requires for create.
-var nonRequiredProperties = []string{"email", "firstName", "lastName", "fullName", "favouriteDrink", "address"}
+var nonRequiredProperties = []string{"email", "firstName", "lastName", "fullName", "phone", "favouriteDrink", "address"}
 
 // Upsert updates or creates records in the API for the specified target.
 func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records, schema types.Type) error {
@@ -406,6 +408,9 @@ func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, recor
 					}
 					if _, ok := address["city"]; !ok {
 						address["city"] = nil
+					}
+					if _, ok := address["country"]; !ok {
+						address["country"] = nil
 					}
 				}
 			}

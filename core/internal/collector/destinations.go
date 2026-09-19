@@ -25,7 +25,7 @@ type destinations struct {
 	state       *state.State
 	connections *connections.Connections
 	provider    transformers.FunctionProvider
-	metrics     *metrics.Collector
+	metrics     *metrics.Pipelines
 
 	// senders maps a connection ID to its sender.
 	// No mutex is needed since all accesses occur while the state is frozen.
@@ -44,7 +44,7 @@ type destinations struct {
 }
 
 // newDestinations returns a new destinations instance.
-func newDestinations(st *state.State, connections *connections.Connections, provider transformers.FunctionProvider, metrics *metrics.Collector) *destinations {
+func newDestinations(st *state.State, connections *connections.Connections, provider transformers.FunctionProvider, metrics *metrics.Pipelines) *destinations {
 
 	d := destinations{
 		state:       st,
