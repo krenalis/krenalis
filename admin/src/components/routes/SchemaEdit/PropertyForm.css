@@ -81,6 +81,13 @@
 	margin-inline-start: 4px;
 }
 
+.property-form__assigned-role-description {
+	color: var(--text-light);
+	font-size: 12px;
+	line-height: 1.35;
+	margin: -1px 1px 7px;
+}
+
 .property-form__currency-option-code {
 	font-family: var(--monospace-fonts);
 }

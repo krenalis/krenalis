@@ -328,10 +328,13 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		" warehouse_mode, warehouse_settings, kms_encrypted_warehouse_settings_key, warehouse_mcp_settings,"+
 		" kms_encrypted_warehouse_mcp_settings_key, alter_profile_schema_id, alter_profile_schema_schema,"+
 		" alter_profile_schema_primary_sources, alter_profile_schema_operations,"+
+		" alter_profile_schema_role_first_name, alter_profile_schema_role_last_name,"+
+		" alter_profile_schema_role_email, alter_profile_schema_role_country, alter_profile_schema_role_photo,"+
 		" alter_profile_schema_start_time, alter_profile_schema_end_time, alter_profile_schema_error,"+
-		" profile_schema, resolve_identities_on_batch_import, identifiers, ir_id, ir_start_time,"+
-		" ir_end_time, ui_profile_image, ui_profile_first_name, ui_profile_last_name, ui_profile_extra,"+
-		" pipelines_to_purge FROM workspaces",
+		" profile_schema, profile_role_first_name, profile_role_last_name,"+
+		" profile_role_email, profile_role_country, profile_role_photo,"+
+		" resolve_identities_on_batch_import, identifiers, ir_id, ir_start_time,"+
+		" ir_end_time, pipelines_to_purge FROM workspaces",
 		func(rows *db.Rows) error {
 			for rows.Next() {
 				var organizationID, warehousePlatform string
@@ -349,11 +352,14 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 					&warehouseMode, &ws.Warehouse.settings, &settingsKey, &ws.Warehouse.mcpSettings, &mcpSettingsKey,
 					&ws.AlterProfileSchema.ID, &alterProfileSchemaSchema,
 					&ws.AlterProfileSchema.PrimarySources, &ws.AlterProfileSchema.Operations,
+					&ws.AlterProfileSchema.AssignedRoles.FirstName, &ws.AlterProfileSchema.AssignedRoles.LastName,
+					&ws.AlterProfileSchema.AssignedRoles.Email, &ws.AlterProfileSchema.AssignedRoles.Country,
+					&ws.AlterProfileSchema.AssignedRoles.Photo,
 					&ws.AlterProfileSchema.StartTime, &ws.AlterProfileSchema.EndTime,
-					&ws.AlterProfileSchema.Err, &profileSchema, &ws.ResolveIdentitiesOnBatchImport,
+					&ws.AlterProfileSchema.Err, &profileSchema, &ws.AssignedRoles.FirstName,
+					&ws.AssignedRoles.LastName, &ws.AssignedRoles.Email, &ws.AssignedRoles.Country,
+					&ws.AssignedRoles.Photo, &ws.ResolveIdentitiesOnBatchImport,
 					&ws.Identifiers, &ws.IR.ID, &ws.IR.StartTime, &ws.IR.EndTime,
-					&ws.UIPreferences.Profile.Image, &ws.UIPreferences.Profile.FirstName,
-					&ws.UIPreferences.Profile.LastName, &ws.UIPreferences.Profile.Extra,
 					&ws.pipelinesToPurge); err != nil {
 					return fmt.Errorf("loading workspace %s: %s", ws.ID, err)
 				}
