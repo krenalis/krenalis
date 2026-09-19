@@ -6,19 +6,21 @@ package types
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"maps"
 	"math"
+	"net/netip"
 	"reflect"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 )
 
@@ -242,6 +244,16 @@ func Test_Decode(t *testing.T) {
 			err:  newErrInvalidValue("cannot be an array", ""),
 		},
 		{
+			typ:  Object([]Property{{Name: "Array", Type: Array(Int(32))}}),
+			data: `{"Array":[1,"two"]}`,
+			err:  newErrInvalidValue(`does not have a valid value: "two"`, "Array[1]"),
+		},
+		{
+			typ:  Object([]Property{{Name: "Array", Type: Array(Int(32)).WithMaxElements(3)}}),
+			data: `{"Array":[1,2,3,4]}`,
+			err:  newErrInvalidValue("contains more than 3 elements", "Array"),
+		},
+		{
 			data: `{"Object":{"d":5}}`,
 			err:  newErrPropertyNotExist("Object.d"),
 		},
@@ -329,6 +341,53 @@ func Test_Decode(t *testing.T) {
 
 }
 
+// Test_NormalizeIP checks IP address normalization and validation.
+func Test_NormalizeIP(t *testing.T) {
+
+	tests := []struct {
+		name, value, want string
+		valid             bool
+	}{
+		{"IPv4", "192.0.2.1", "192.0.2.1", true},
+		{"IPv6", "2001:0db8:0000:0000:0000:ff00:0042:8329", "2001:db8::ff00:42:8329", true},
+		{"zoned IPv6", "fe80::1ff:fe23:4567:890a%eth0", "fe80::1ff:fe23:4567:890a", true},
+		{"IPv4-mapped IPv6", "::ffff:192.0.2.1", "192.0.2.1", true},
+		{"prefix", "192.0.2.1/24", "", false},
+		{"invalid", "not an IP address", "", false},
+		{"empty", "", "", false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, valid := NormalizeIP(test.value)
+			if got != test.want || valid != test.valid {
+				t.Fatalf("got (%q, %t), want (%q, %t)", got, valid, test.want, test.valid)
+			}
+		})
+	}
+
+	for _, test := range []struct {
+		name  string
+		value netip.Addr
+		want  string
+		valid bool
+	}{
+		{"IPv4 address", netip.MustParseAddr("192.0.2.1"), "192.0.2.1", true},
+		{"IPv6 address", netip.MustParseAddr("2001:0db8:0000:0000:0000:ff00:0042:8329"), "2001:db8::ff00:42:8329", true},
+		{"zoned IPv6 address", netip.MustParseAddr("fe80::1%eth0"), "fe80::1", true},
+		{"IPv4-mapped IPv6 address", netip.MustParseAddr("::ffff:192.0.2.1"), "192.0.2.1", true},
+		{"invalid address", netip.Addr{}, "", false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			got, valid := NormalizeIP(test.value)
+			if got != test.want || valid != test.valid {
+				t.Fatalf("got (%q, %t), want (%q, %t)", got, valid, test.want, test.valid)
+			}
+		})
+	}
+
+}
+
 func Test_Marshal(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -372,37 +431,6 @@ func Test_Marshal(t *testing.T) {
 			}
 		})
 	}
-}
-
-// Test_NormalizeUUID checks that UUIDs are canonicalized and invalid or non-standard forms are rejected.
-func Test_NormalizeUUID(t *testing.T) {
-	t.Run("valid", func(t *testing.T) {
-		id, ok := NormalizeUUID("F47AC10B-58CC-4372-A567-0E02B2C3D479")
-		if !ok || id != "f47ac10b-58cc-4372-a567-0e02b2c3d479" {
-			t.Fatalf("unexpected result %q %t", id, ok)
-		}
-	})
-	t.Run("invalid", func(t *testing.T) {
-		if id, ok := NormalizeUUID("invalid"); ok || id != "" {
-			t.Fatalf("expected failure, got %q %t", id, ok)
-		}
-	})
-	t.Run("malformed", func(t *testing.T) {
-		if id, ok := NormalizeUUID("F47AC10B-58CC-4372-A567-0E02B2C3D47Z"); ok || id != "" {
-			t.Fatalf("expected failure, got %q %t", id, ok)
-		}
-	})
-	t.Run("non-standard", func(t *testing.T) {
-		for _, s := range []string{
-			"F47AC10B58CC4372A5670E02B2C3D479",
-			"{F47AC10B-58CC-4372-A567-0E02B2C3D479}",
-			"urn:uuid:F47AC10B-58CC-4372-A567-0E02B2C3D479",
-		} {
-			if id, ok := NormalizeUUID(s); ok || id != "" {
-				t.Fatalf("expected failure for %q, got %q %t", s, id, ok)
-			}
-		}
-	})
 }
 
 // equalValues reports whether v1 and v2 are equal according to the type t.
@@ -699,4 +727,656 @@ var value = map[string]any{
 	"Array":                     []any{"foo", "boo"},
 	"Object":                    map[string]any{"a": 9, "b": false},
 	"Map":                       map[string]any{"a": 1, "b": 2, "c": 3},
+}
+
+// TestDecodeArrayUnique checks the optional constraint after decoding and normalization.
+func TestDecodeArrayUnique(t *testing.T) {
+
+	tests := []struct {
+		name      string
+		element   Type
+		source    string
+		duplicate int
+	}{
+		{"empty", String(), `[]`, -1},
+		{"singleton", String(), `["a"]`, -1},
+		{"distinct", Int(32), `[1,2,3]`, -1},
+		{"first duplicate", Int(32), `[1,2,2,1]`, 2},
+		{"signed int64", Int(64), `["9223372036854775807","9223372036854775807"]`, 1},
+		{"unsigned int64", Int(64).Unsigned(), `["18446744073709551615","18446744073709551615"]`, 1},
+		{"strings", String(), `["a","b","a"]`, 2},
+		{"string case", String(), `["Foo","foo"]`, -1},
+		{"booleans", Boolean(), `[true,false,true]`, 2},
+		{"decimal representations", Decimal(6, 2), `[1.50,15e-1]`, 1},
+		{"decimal signed zero", Decimal(6, 2), `[0,-0.00]`, 1},
+		{"decimal signs", Decimal(6, 2), `[-1.28,1.28]`, -1},
+		{"decimal precision", Decimal(20, 0), `[9007199254740992,9007199254740993]`, -1},
+		{"large decimal representations", Decimal(76, 2), `[1e25,10000000000000000000000000.00]`, 1},
+		{"float32 normalization", Float(32), `[16777216,16777217]`, 1},
+		{"float signed zero", Float(64), `[0,-0]`, 1},
+		{"NaN", Float(64), `["NaN","NaN"]`, 1},
+		{"NaN32", Float(32), `["NaN",0,"NaN"]`, 2},
+		{"escaped NaN", Float(64), `["NaN","\u004eaN"]`, 1},
+		{"one NaN", Float(64), `[0,"NaN","Infinity","-Infinity"]`, -1},
+		{"infinity", Float(64), `["Infinity","Infinity"]`, 1},
+		{"negative infinity", Float(64), `["-Infinity","-Infinity"]`, 1},
+		{
+			"datetime offsets", DateTime(),
+			`["2026-09-08T10:00:00Z","2026-09-08T12:00:00+02:00"]`, 1,
+		},
+		{"dates", Date(), `["2026-09-08","2026-09-08"]`, 1},
+		{"times", Time(), `["10:00:00.1","10:00:00.100"]`, 1},
+		{"years", Year(), `[2025,2026,2025]`, 2},
+		{
+			"UUID case", UUID(),
+			`["550e8400-e29b-41d4-a716-446655440000","550E8400-E29B-41D4-A716-446655440000"]`, 1,
+		},
+		{"IP normalization", IP(), `["2001:db8::1","2001:0db8:0:0:0:0:0:1"]`, 1},
+	}
+
+	for _, test := range tests {
+		for _, unique := range []bool{false, true} {
+			for _, nested := range []bool{false, true} {
+				t.Run(fmt.Sprintf("%s/unique=%t/nested=%t", test.name, unique, nested), func(t *testing.T) {
+
+					typ := Array(test.element)
+					if unique {
+						typ = typ.WithUnique()
+					}
+					source := test.source
+					path := fmt.Sprintf("[%d]", test.duplicate)
+					if nested {
+						typ = Array(Object([]Property{{Name: "values", Type: typ}}))
+						source = `[{"values":` + source + `}]`
+						path = "[0].values" + path
+					}
+
+					got, err := Decode[[]any](strings.NewReader(source), typ)
+					if err != nil {
+						if !unique || test.duplicate < 0 {
+							t.Fatal(err)
+						}
+						validation, ok := errors.AsType[*SchemaValidationError](err)
+						if !ok {
+							t.Fatalf("got %T: %v, want SchemaValidationError", err, err)
+						}
+						if validation.path != path || validation.msg != "duplicates an earlier array element" {
+							t.Fatalf("got %v, want a duplicate at %s", err, path)
+						}
+						if got != nil {
+							t.Fatalf("got partial value %#v with error", got)
+						}
+						return
+					}
+					if unique && test.duplicate >= 0 {
+						t.Fatalf("got %#v, want a duplicate element error", got)
+					}
+					if nested {
+						got = got[0].(map[string]any)["values"].([]any)
+					}
+					if want := json.Value(test.source).NumElement(); len(got) != want {
+						t.Fatalf("got %d values, want %d", len(got), want)
+					}
+					if test.name == "one NaN" {
+						if !math.IsNaN(got[1].(float64)) ||
+							!math.IsInf(got[2].(float64), 1) || !math.IsInf(got[3].(float64), -1) {
+							t.Fatalf("got %#v, want NaN and infinities with their original signs", got)
+						}
+					}
+
+				})
+			}
+		}
+	}
+
+}
+
+// TestDecodeArrayUniqueErrors checks interaction with validation and JSON syntax errors.
+func TestDecodeArrayUniqueErrors(t *testing.T) {
+
+	tests := []struct {
+		name, source string
+		typ          Type
+		message      string
+		syntax       bool
+	}{
+		{"maximum count", `[1,2,3]`, Array(Int(32)).WithMaxElements(2).WithUnique(), "contains more than 2 elements", false},
+		{"minimum count", `[1]`, Array(Int(32)).WithMinElements(2).WithUnique(), "contains less than 2 elements", false},
+		{"real NaN", `["NaN"]`, Array(Float(64).Real()).WithUnique(), "is not a real", false},
+		{"real infinity", `["Infinity"]`, Array(Float(32).Real()).WithUnique(), "is not a real", false},
+		{"invalid third element", `[1,2,"bad"]`, Array(Int(32)).WithUnique(), `"[2]"`, false},
+		{"malformed after duplicate", `[1,1,`, Array(Int(32)).WithUnique(), "", true},
+		{"malformed after array", `[1,1] ?`, Array(Int(32)).WithUnique(), "", true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := Decode[[]any](strings.NewReader(test.source), test.typ)
+			if err != nil {
+				if test.syntax {
+					if _, ok := errors.AsType[*json.SyntaxError](err); !ok {
+						t.Fatalf("got %T: %v, want SyntaxError", err, err)
+					}
+					return
+				}
+				if _, ok := errors.AsType[*SchemaValidationError](err); !ok {
+					t.Fatalf("got %T: %v, want SchemaValidationError", err, err)
+				}
+				if !strings.Contains(err.Error(), test.message) {
+					t.Fatalf("got %q, want %q in the message", err, test.message)
+				}
+				return
+			}
+			t.Fatal("expected an error")
+		})
+	}
+
+}
+
+// TestDecodePhone checks canonical phone decoding at string leaves.
+func TestDecodePhone(t *testing.T) {
+
+	phone := String().AsPhone()
+	tests := []struct {
+		name  string
+		typ   Type
+		input string
+		want  any
+	}{
+		{"canonical", phone, `"+390236618300"`, "+390236618300"},
+		{"possible", phone, `"+12001230101"`, "+12001230101"},
+		{"escaped canonical", phone, `"\u002b390236618300"`, "+390236618300"},
+		{"formatted", phone, `"+39 02-36618 300"`, nil},
+		{"local only", phone, `"+12530000"`, nil},
+		{"double plus", phone, `"++390236618300"`, nil},
+		{
+			"array", Array(phone).WithMaxElements(2), `["+39 02-36618 300","+12001230101"]`,
+			nil,
+		},
+		{
+			"nested", Array(Map(phone)), `[{"home":"+39 02-36618 300"}]`,
+			nil,
+		},
+		{
+			"nested canonical", Array(Map(phone)), `[{"home":"+390236618300"}]`,
+			[]any{map[string]any{"home": "+390236618300"}},
+		},
+		{"ordinary string", String(), `"+39 02-36618 300"`, "+39 02-36618 300"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := Decode[any](strings.NewReader(test.input), test.typ)
+			valid := test.want != nil
+			if err != nil {
+				if valid {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				if _, ok := errors.AsType[*SchemaValidationError](err); !ok {
+					t.Fatalf("expected a SchemaValidationError, got %T", err)
+				}
+				return
+			}
+			if !valid || !reflect.DeepEqual(got, test.want) {
+				t.Fatalf("expected value %#v and valid=%t, got %#v and no error", test.want, valid, got)
+			}
+		})
+	}
+
+}
+
+// TestDecodeSemantics checks semantic constraints and nested containers.
+func TestDecodeSemantics(t *testing.T) {
+
+	country := String().AsCountry(ISO3166Alpha2)
+	tests := []struct {
+		name     string
+		semantic Type
+		value    string
+		valid    bool
+	}{
+		{"current country", country, "IT", true},
+		{"alpha-3 country", String().AsCountry(ISO3166Alpha3), "ITA", true},
+		{"former alpha-3 country", String().AsCountry(ISO3166Alpha3), "ANT", true},
+		{"unknown alpha-3 country", String().AsCountry(ISO3166Alpha3), "ZZZ", false},
+		{"reserved alpha-3 country", String().AsCountry(ISO3166Alpha3), "EUR", false},
+		{"empty alpha-3 country", String().AsCountry(ISO3166Alpha3), "", false},
+		{"short alpha-3 country", String().AsCountry(ISO3166Alpha3), "IT", false},
+		{"lowercase alpha-3 country", String().AsCountry(ISO3166Alpha3), "ita", false},
+		{"mixed case alpha-3 country", String().AsCountry(ISO3166Alpha3), "Ita", false},
+		{"numeric alpha-3 country", String().AsCountry(ISO3166Alpha3), "380", false},
+		{"non-ASCII alpha-3 country", String().AsCountry(ISO3166Alpha3), "éA", false},
+		{"long alpha-3 country", String().AsCountry(ISO3166Alpha3), "ITAL", false},
+		{"former country", country, "AN", true},
+		{"unknown country", country, "ZZ", false},
+		{"reserved country", country, "UK", false},
+		{"lowercase country", country, "it", false},
+		{"empty country", country, "", false},
+		{"short country", country, "I", false},
+		{"long country", country, "ITA", false},
+		{"non-ASCII country", country, "é", false},
+		{"canonical phone", String().AsPhone(), "+390236618300", true},
+		{"formatted phone", String().AsPhone(), "+39 02-36618 300", false},
+		{"structurally possible phone", String().AsPhone(), "+12001230101", true},
+		{"local-only phone", String().AsPhone(), "+12530000", false},
+		{"double plus phone", String().AsPhone(), "++390236618300", false},
+		{"long phone", String().AsPhone(), "+1234567890123456", false},
+		{"empty phone", String().AsPhone(), "", false},
+		{"phone without format restriction", String().AsPhone(), "a (b)", false},
+	}
+
+	for _, test := range tests {
+
+		t.Run(test.name, func(t *testing.T) {
+
+			for _, shape := range []string{"string", "array", "map", "nested", "object"} {
+
+				t.Run(shape, func(t *testing.T) {
+
+					typ := test.semantic
+					data := strconv.Quote(test.value)
+					switch shape {
+					case "array":
+						typ = Array(typ)
+						data = "[" + data + "]"
+					case "map":
+						typ = Map(typ)
+						data = "{\"home\":" + data + "}"
+					case "nested":
+						typ = Array(Map(Array(typ)))
+						data = "[{\"home\":[" + data + "]}]"
+					case "object":
+						typ = Object([]Property{{Name: "inner", Type: typ}})
+						data = "{\"inner\":" + data + "}"
+					}
+					schema := Object([]Property{{Name: "value", Type: typ}})
+					input := strings.NewReader("{\"value\":" + data + "}")
+					_, err := Decode[map[string]any](input, schema)
+					if err != nil {
+						if test.valid {
+							t.Fatalf("expected no error, got %v", err)
+						}
+						if _, ok := errors.AsType[*SchemaValidationError](err); !ok {
+							t.Fatalf("expected SchemaValidationError, got %T", err)
+						}
+						return
+					}
+					if !test.valid {
+						t.Fatal("expected a SchemaValidationError, got nil")
+					}
+
+				})
+
+			}
+
+		})
+
+	}
+
+}
+
+// TestSemanticConstraintsRoundTrip checks that semantics do not introduce
+// string constraints.
+func TestSemanticConstraintsRoundTrip(t *testing.T) {
+
+	typesToTest := []Type{
+		String().AsCountry(ISO3166Alpha2),
+		String().AsCountry(ISO3166Alpha3),
+		String().AsPhone(),
+	}
+	for _, typ := range typesToTest {
+		data, err := typ.MarshalJSON()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if strings.Contains(string(data), "maxBytes") || strings.Contains(string(data), "maxLength") {
+			t.Fatalf("expected no serialized string constraints, got %s", data)
+		}
+		var got Type
+		err = got.UnmarshalJSON(data)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if n, ok := got.MaxBytes(); ok || n != 0 {
+			t.Fatalf("expected no maxBytes constraint, got %d and %t", n, ok)
+		}
+		if n, ok := got.MaxLength(); ok || n != 0 {
+			t.Fatalf("expected no maxLength constraint, got %d and %t", n, ok)
+		}
+	}
+
+}
+
+// BenchmarkDecodePhones measures materialization of a batch of canonical phone
+// strings.
+func BenchmarkDecodePhones(b *testing.B) {
+
+	input := "[" + strings.Repeat(`"+390236618300",`, 511) + `"+390236618300"]`
+	typ := Array(String().AsPhone())
+	b.ReportAllocs()
+	b.SetBytes(int64(len(input)))
+	for b.Loop() {
+		_, err := Decode[[]any](strings.NewReader(input), typ)
+		if err != nil {
+			b.Fatalf("expected no error, got %v", err)
+		}
+	}
+
+}
+
+// BenchmarkNormalizePhone measures representative normalization and rejection
+// paths.
+func BenchmarkNormalizePhone(b *testing.B) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"canonical", "+390236618300"},
+		{"formatted", "+39 02-36618 300"},
+		{"invalid", "++390236618300"},
+	}
+	for _, test := range tests {
+		b.Run(test.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				NormalizePhone(test.input)
+			}
+		})
+	}
+}
+
+// BenchmarkNormalizePhoneInRegion measures representative normalization paths
+// using a parsing region.
+func BenchmarkNormalizePhoneInRegion(b *testing.B) {
+	tests := []struct {
+		name   string
+		input  string
+		region string
+	}{
+		{"national", "02-36618 300", "IT"},
+		{"international", "+390236618300", "IT"},
+		{"invalid", "2530000", "US"},
+	}
+
+	for _, test := range tests {
+		b.Run(test.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				NormalizePhoneInRegion(test.input, test.region)
+			}
+		})
+	}
+}
+
+// FuzzNormalizePhone checks canonical output and idempotence for arbitrary
+// input.
+func FuzzNormalizePhone(f *testing.F) {
+	for _, s := range []string{
+		"",
+		"+",
+		"+390236618300",
+		"+39 02-36618 300",
+		"+393401234567",
+		"+３９０２３６６１８３００",
+		"0236618300",
+		"+12530000",
+		"+12001230101",
+		"+270000000",
+		"+390236618300 x42",
+		" +390236618300",
+		"++390236618300",
+		"tel:+390236618300",
+	} {
+		f.Add(s)
+	}
+	f.Fuzz(func(t *testing.T, s string) {
+		canonical, ok := NormalizePhone(s)
+		if !ok {
+			if canonical != "" {
+				t.Fatalf("expected an empty result after failed normalization, got %q", canonical)
+			}
+			return
+		}
+		if len(canonical) < 2 ||
+			len(canonical) > 16 ||
+			canonical[0] != '+' ||
+			canonical[1] < '1' ||
+			canonical[1] > '9' {
+			t.Fatalf("expected canonical E.164 output, got %q", canonical)
+		}
+		for _, r := range canonical[1:] {
+			if r < '0' || r > '9' {
+				t.Fatalf("expected ASCII digits after '+', got %q", canonical)
+			}
+		}
+		if again, ok := NormalizePhone(canonical); !ok || again != canonical {
+			t.Fatalf(
+				"expected repeated normalization of %q to return %q and true, got %q and %t",
+				s, canonical, again, ok,
+			)
+		}
+	})
+}
+
+// TestIsPhone checks whether phone values are already in canonical E.164 form.
+func TestIsPhone(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  bool
+	}{
+		{"canonical", "+390236618300", true},
+		{"structurally possible", "+12001230101", true},
+		{"formatted", "+39 02-36618 300", false},
+		{"national", "0236618300", false},
+		{"local-only", "+12530000", false},
+		{"invalid", "not a phone", false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := IsPhone(test.input); got != test.want {
+				t.Fatalf("expected IsPhone(%q) to return %t, got %t", test.input, test.want, got)
+			}
+		})
+	}
+}
+
+// TestNormalizePhone checks international phone normalization and whole-input
+// validation.
+func TestNormalizePhone(t *testing.T) {
+
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"+390236618300", "+390236618300"},
+		{"+39 02-36618 300", "+390236618300"},
+		{"+39 (02) 36618.300", "+390236618300"},
+		{"+39\u00a002\u201136618300", "+390236618300"},
+		{"+３９０２３６６１８３００", "+390236618300"},
+		{"+٣٩٠٢٣٦٦١٨٣٠٠", "+390236618300"},
+		{"+393401234567", "+393401234567"},
+		{"+1 (650) 253-0000", "+16502530000"},
+		{"+80012345678", "+80012345678"},
+		{"", ""},
+		{"+", ""},
+		{"++390236618300", ""},
+		{"+ +390236618300", ""},
+		{"(+39)0236618300", ""},
+		{"3902+36618300", ""},
+		{"＋390236618300", ""},
+		{"+39＋0236618300", ""},
+		{"00390236618300", ""},
+		{"011390236618300", ""},
+		{"0236618300", ""},
+		{"390236618300", ""},
+		{" +390236618300", ""},
+		{"+390236618300 ", ""},
+		{"\u00a0+390236618300", ""},
+		{"+390236618300\u200b", ""},
+		{"Call +390236618300", ""},
+		{"+390236618300 please", ""},
+		{"tel:+390236618300", ""},
+		{"tel:+390236618300;isub=42", ""},
+		{"tel:0236618300;phone-context=+39;ext=42", ""},
+		{"+1-800-FLOWERS", ""},
+		{"+390236618300 x42", ""},
+		{"+390236618300 ext. 42", ""},
+		{"+390236618300#42", ""},
+		{"+390236618300;42", ""},
+		{"+390236618300,42", ""},
+		{"+390236618300/+16502530000", ""},
+		{"+390236618300 6502530000", ""},
+		{"+39\t0236618300", ""},
+		{"+390236618300\n", ""},
+		{"+390236618300\xff", ""},
+		{"+12001230101", "+12001230101"}, // structurally possible even if not classified as valid
+		{"+12530000", ""},                // possible only locally: missing an area code
+		{"+270000000", ""},               // canonical output must be stable when parsed again
+		{"+3902", ""},
+		{"+9990236618300", ""},
+		{"+49301234567890123", ""}, // numbering-plan lengths must still fit E.164
+		{"+" + strings.Repeat("1", 250), ""},
+	}
+
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			t.Parallel()
+			got, ok := NormalizePhone(test.input)
+			wantOK := test.want != ""
+			if got != test.want || ok != wantOK {
+				t.Fatalf("expected NormalizePhone(%q) to return %q and %t, got %q and %t", test.input, test.want, wantOK, got, ok)
+			}
+		})
+	}
+
+}
+
+// TestValidPhoneInput checks the input grammar before phone parsing.
+func TestValidPhoneInput(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		valid bool
+	}{
+		{"at byte limit", "+" + strings.Repeat("1", 249), true},
+		{"over byte limit", "+" + strings.Repeat("1", 250), false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := validPhoneInput(test.input); got != test.valid {
+				t.Fatalf("expected validPhoneInput(%q) to return %t, got %t", test.input, test.valid, got)
+			}
+		})
+	}
+}
+
+// TestNormalizePhoneInRegion checks parsing with a region without restricting
+// the number's country.
+func TestNormalizePhoneInRegion(t *testing.T) {
+
+	tests := []struct {
+		input  string
+		region string
+		want   string
+	}{
+		{"02-36618 300", "IT", "+390236618300"},
+		{"340 1234567", "IT", "+393401234567"},
+		{"0039 02-36618 300", "IT", "+390236618300"},
+		{"0039 02-36618 300", "US", ""},
+		{"011 39 02-36618 300", "US", "+390236618300"},
+		{"(650) 253-0000", "US", "+16502530000"},
+		{"200 123-0101", "US", "+12001230101"},
+		{"2530000", "US", ""},
+		{"020 7946 0018", "GB", "+442079460018"},
+		{"20 7946 0018", "GB", "+442079460018"},
+		{"+390236618300", "US", "+390236618300"},
+		{"+390236618300", "XK", "+390236618300"},
+		{"+80012345678", "IT", "+80012345678"},
+		{"+390236618300", "it", ""},
+		{"+390236618300", "ZZ", ""},
+		{"+390236618300", "001", ""},
+		{"+390236618300", "", ""},
+		{"0236618300", "", ""},
+		{"++390236618300", "IT", ""},
+		{"(650) 253-0000 ext. 42", "US", ""},
+		{"tel:0236618300;phone-context=+39", "IT", ""},
+	}
+
+	for _, test := range tests {
+		t.Run(test.region+"/"+test.input, func(t *testing.T) {
+			got, ok := NormalizePhoneInRegion(test.input, test.region)
+			wantOK := test.want != ""
+			if got != test.want || ok != wantOK {
+				t.Fatalf("expected %q and %t, got %q and %t", test.want, wantOK, got, ok)
+			}
+			if ok {
+				if canonical, valid := NormalizePhone(got); !valid || canonical != got {
+					t.Fatalf("expected independently canonical output %q, got %q and valid=%t", got, canonical, valid)
+				}
+			}
+		})
+	}
+
+}
+
+// FuzzNormalizePhoneInRegion checks normalization with a region and canonical
+// output stability.
+func FuzzNormalizePhoneInRegion(f *testing.F) {
+	for _, s := range []string{
+		"02-36618 300",
+		"340 1234567",
+		"0039 02-36618 300",
+		"+33 6 12 34 56 78",
+		"2530000",
+	} {
+		f.Add(s)
+	}
+	f.Fuzz(func(t *testing.T, s string) {
+		canonical, ok := NormalizePhoneInRegion(s, "IT")
+		if !ok {
+			if canonical != "" {
+				t.Fatalf("expected an empty result after failed normalization, got %q", canonical)
+			}
+			return
+		}
+		if again, valid := NormalizePhone(canonical); !valid || again != canonical {
+			t.Fatalf(
+				"expected regional result %q to normalize to itself and true, got %q and %t for input %q",
+				canonical, again, valid, s,
+			)
+		}
+	})
+}
+
+// Test_NormalizeUUID checks that UUIDs are canonicalized and invalid or
+// non-standard forms are rejected.
+func Test_NormalizeUUID(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		id, ok := NormalizeUUID("F47AC10B-58CC-4372-A567-0E02B2C3D479")
+		if !ok || id != "f47ac10b-58cc-4372-a567-0e02b2c3d479" {
+			t.Fatalf("unexpected result %q %t", id, ok)
+		}
+	})
+	t.Run("invalid", func(t *testing.T) {
+		if id, ok := NormalizeUUID("invalid"); ok || id != "" {
+			t.Fatalf("expected failure, got %q %t", id, ok)
+		}
+	})
+	t.Run("malformed", func(t *testing.T) {
+		if id, ok := NormalizeUUID("F47AC10B-58CC-4372-A567-0E02B2C3D47Z"); ok || id != "" {
+			t.Fatalf("expected failure, got %q %t", id, ok)
+		}
+	})
+	t.Run("non-standard", func(t *testing.T) {
+		for _, s := range []string{
+			"F47AC10B58CC4372A5670E02B2C3D479",
+			"{F47AC10B-58CC-4372-A567-0E02B2C3D479}",
+			"urn:uuid:F47AC10B-58CC-4372-A567-0E02B2C3D479",
+		} {
+			if id, ok := NormalizeUUID(s); ok || id != "" {
+				t.Fatalf("expected failure for %q, got %q %t", s, id, ok)
+			}
+		}
+	})
 }

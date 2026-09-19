@@ -5,10 +5,8 @@
 package mappings
 
 import (
-	"errors"
 	"fmt"
 	"math"
-	"net/netip"
 	"slices"
 	"strconv"
 	"time"
@@ -17,8 +15,10 @@ import (
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/tools/validation"
 
 	"github.com/relvacode/iso8601"
 )
@@ -26,16 +26,19 @@ import (
 var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 
 var (
-	errMaxBytesConversion  = errors.New("invalid max bytes")
-	errMaxLengthConversion = errors.New("invalid max length")
-	errEnumConversion      = errors.New("not a valid enum value")
-	errInvalidConversion   = errors.New("cannot convert")
-	errMaxConversion       = errors.New("too large")
-	errMinConversion       = errors.New("too small")
-	errParseConversion     = errors.New("cannot parse")
-	errRangeConversion     = errors.New("out of range")
-	errPatternConversion   = errors.New("pattern mismatch")
-	errYearRangeConversion = errors.New("year not in range [1,9999]")
+	errCountryAlpha2Conversion = errors.New("not a valid 2-letters country code")
+	errCountryAlpha3Conversion = errors.New("not a valid 3-letters country code")
+	errEnumConversion          = errors.New("not a valid enum value")
+	errInvalidConversion       = errors.New("cannot convert")
+	errMaxBytesConversion      = errors.New("invalid max bytes")
+	errMaxConversion           = errors.New("too large")
+	errMaxLengthConversion     = errors.New("invalid max length")
+	errMinConversion           = errors.New("too small")
+	errParseConversion         = errors.New("cannot parse")
+	errPatternConversion       = errors.New("pattern mismatch")
+	errPhoneConversion         = errors.New("not a valid phone number")
+	errRangeConversion         = errors.New("out of range")
+	errYearRangeConversion     = errors.New("year not in range [1,9999]")
 )
 
 const (
@@ -146,6 +149,26 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			s = v.String()
 		default:
 			return v, errInvalidConversion
+		}
+		switch dt.Semantic() {
+		case types.CountrySemantic:
+			switch dt.CountryFormat() {
+			case types.ISO3166Alpha2:
+				if !validation.IsValidCountryCodeAlpha2(s) {
+					return v, errCountryAlpha2Conversion
+				}
+			case types.ISO3166Alpha3:
+				if !validation.IsValidCountryCodeAlpha3(s) {
+					return v, errCountryAlpha3Conversion
+				}
+			}
+			return s, nil
+		case types.PhoneSemantic:
+			s, ok := types.NormalizePhone(s)
+			if !ok {
+				return v, errPhoneConversion
+			}
+			return s, nil
 		}
 		if values := dt.Values(); values != nil {
 			if s == "" && nullable {
@@ -628,23 +651,23 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 	case types.IPKind:
 		switch sk {
 		case types.StringKind:
-			ip, err := netip.ParseAddr(v.(string))
-			if err != nil {
+			ip, ok := types.NormalizeIP(v.(string))
+			if !ok {
 				return v, errParseConversion
 			}
-			return ip.String(), nil
-		case types.IPKind:
-			return v.(string), nil
+			return ip, nil
 		case types.JSONKind:
 			v := v.(json.Value)
 			if !v.IsString() {
 				return v, errInvalidConversion
 			}
-			ip, err := netip.ParseAddr(v.String())
-			if err != nil {
+			ip, ok := types.NormalizeIP(v.String())
+			if !ok {
 				return v, errParseConversion
 			}
-			return ip.String(), nil
+			return ip, nil
+		case types.IPKind:
+			return v.(string), nil
 		}
 	case types.ArrayKind:
 		switch sk {
@@ -681,10 +704,12 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				return v, errInvalidConversion
 			}
 			if dt.Unique() {
-				for i, it := range d {
-					if slices.Contains(d[i:], it) {
-						return v, errInvalidConversion
-					}
+				duplicate, err := types.FirstDuplicate(d, et)
+				if err != nil {
+					return v, errInvalidConversion
+				}
+				if duplicate != -1 {
+					return v, errInvalidConversion
 				}
 			}
 			return d, nil
@@ -696,7 +721,8 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			}
 			it1 := st.Elem()
 			it2 := dt.Elem()
-			if !types.Equal(it1, it2) {
+			sameType := types.Equal(it1, it2)
+			if !sameType {
 				if !inPlace {
 					d = make([]any, len(s))
 				}
@@ -708,11 +734,13 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 					}
 				}
 			}
-			if !st.Unique() && dt.Unique() {
-				for i, item := range d {
-					if slices.Contains(d[i:], item) {
-						return v, errInvalidConversion
-					}
+			if dt.Unique() && (!sameType || !st.Unique()) {
+				duplicate, err := types.FirstDuplicate(d, it2)
+				if err != nil {
+					return v, errInvalidConversion
+				}
+				if duplicate != -1 {
+					return v, errInvalidConversion
 				}
 			}
 			return d, nil

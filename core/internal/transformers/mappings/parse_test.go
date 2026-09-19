@@ -279,6 +279,7 @@ func Test_parsePredeclaredIdentifier(t *testing.T) {
 
 }
 
+// Test_parseString checks mapping string literals and the remaining source.
 func Test_parseString(t *testing.T) {
 
 	tests := []struct {
@@ -297,38 +298,78 @@ func Test_parseString(t *testing.T) {
 		{`"hello world`, ``, ``, errNoTerminatedString},
 		{`"\a \b \f \n \r \t \v \\ \' \""`, "\a \b \f \n \r \t \v \\ ' \"", ``, nil},
 		{`"\a`, ``, ``, errNoTerminatedString},
+		{`"\"`, ``, ``, errNoTerminatedString},
+		{`"\"abc\`, ``, ``, errNoTerminatedString},
 		{"\"\\t \x00\"", ``, ``, errZeroByteInString},
 		{"\"\x00\"", ``, ``, errZeroByteInString},
+		{"\"\x00\\t\"", ``, ``, errZeroByteInString},
+		{"\"\\\" \x00\"", ``, ``, errZeroByteInString},
+		{"\"\\\"\\\x00\"", ``, ``, errZeroByteInString},
 		{`"\u0000"`, ``, ``, errZeroByteInString},
 		{`"\u123`, ``, ``, errNoTerminatedString},
 		{`"\u1234`, ``, ``, errNoTerminatedString},
 		{`"\U00000000"`, ``, ``, errZeroByteInString},
 		{`"\U1234567`, ``, ``, errNoTerminatedString},
+		{`"\"\u12`, ``, ``, errors.New("hexadecimal escape is incomplete")},
+		{`"\"\U1234567`, ``, ``, errors.New("hexadecimal escape is incomplete")},
+		{`"\u12"`, ``, ``, errors.New("hexadecimal escape is incomplete")},
+		{`"\u12" rest`, ``, ``, errors.New(`hexadecimal escape has an invalid character '"'`)},
+		{`'\U12'`, ``, ``, errors.New("hexadecimal escape is incomplete")},
+		{`'\U12' remaining source`, ``, ``, errors.New(`hexadecimal escape has an invalid character '\''`)},
+		{`"\u12G4"`, ``, ``, errors.New("hexadecimal escape has an invalid character 'G'")},
 		{`"hello" foo "word"`, `hello`, ` foo "word"`, nil},
 		{`'hello' foo 'word'`, `hello`, ` foo 'word'`, nil},
+		{`"say \"yes\"" rest`, `say "yes"`, ` rest`, nil},
+		{`'it\'s' rest`, `it's`, ` rest`, nil},
+		{`"a\\b" rest`, `a\b`, ` rest`, nil},
+		{`"\q" rest`, ``, ``, errors.New("unknown escape character 'q'")},
+		{`"\q\u0061"`, ``, ``, errors.New("unknown escape character 'q'")},
+		{`'\q'`, ``, ``, errors.New("unknown escape character 'q'")},
+		{`"\\q" rest`, `\q`, ` rest`, nil},
+		{"\"a\nb\" rest", "a\nb", ` rest`, nil},
+		{"\"hello\" \x00", `hello`, " \x00", nil},
 		{`"à" ò`, `à`, ` ò`, nil},
+		{`"\u0061"`, `a`, ``, nil},
+		{`"\u00e9"`, `é`, ``, nil},
+		{`"\u0061X" rest`, `aX`, ` rest`, nil},
+		{`'\U0001F600'`, `😀`, ``, nil},
+		{`'\U0001F600X' rest`, `😀X`, ` rest`, nil},
+		{`"\u0061\u0062"`, `ab`, ``, nil},
+		{`"\U0001F600\u0061"`, `😀a`, ``, nil},
+		{`"\U0010FFFF"`, "\U0010FFFF", ``, nil},
+		{`"\uD7FF"`, "\uD7FF", ``, nil},
+		{`"\uD800"`, ``, ``, errors.New("U+D800 is not valid Unicode code point")},
+		{`"\uDFFF"`, ``, ``, errors.New("U+DFFF is not valid Unicode code point")},
+		{`"\uE000"`, "\uE000", ``, nil},
+		{`"\U00110000"`, ``, ``, errors.New("U+110000 is not valid Unicode code point")},
+		{`"\UFFFFFFFF"`, ``, ``, errors.New("U+FFFFFFFF is not valid Unicode code point")},
 	}
 
 	for _, test := range tests {
-		got, src, err := parseString(test.src)
-		if err != nil {
-			if test.err == nil {
-				t.Fatalf("%q. unexpected error: %s", test.src, err)
+		t.Run(test.src, func(t *testing.T) {
+			got, src, err := parseString(test.src)
+			if err != nil {
+				if test.err == nil {
+					t.Fatalf("expected no error, got %s", err)
+				}
+				if (test.err == errNoTerminatedString || test.err == errZeroByteInString) && err != test.err {
+					t.Fatalf("expected sentinel error %q, got a different error %q", test.err, err)
+				}
+				if err.Error() != test.err.Error() {
+					t.Fatalf("expected error %q, got error %q", test.err.Error(), err.Error())
+				}
+				return
 			}
-			if err.Error() != test.err.Error() {
-				t.Fatalf("%q. expected error %q, got error %q", test.src, test.err.Error(), err.Error())
+			if test.err != nil {
+				t.Fatalf("expected error %q, got no error", test.err)
 			}
-			continue
-		}
-		if test.err != nil {
-			t.Fatalf("%q. expected error %q, got no error", test.src, test.err)
-		}
-		if got != test.expected {
-			t.Fatalf("%q. expected string %q, got %q", test.src, test.expected, got)
-		}
-		if src != test.unparsed {
-			t.Fatalf("%q. expected unparsed string %q, got %q", test.src, test.unparsed, src)
-		}
+			if got != test.expected {
+				t.Fatalf("expected string %q, got %q", test.expected, got)
+			}
+			if src != test.unparsed {
+				t.Fatalf("expected unparsed string %q, got %q", test.unparsed, src)
+			}
+		})
 	}
 
 }
