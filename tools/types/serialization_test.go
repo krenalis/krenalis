@@ -26,6 +26,14 @@ func TestParseErrors(t *testing.T) {
 		{"{\"kind\":\"map\",\"elementType\":{\"kind\":\"T\"}}", `unknown type kind "T"`},
 		{"{\"kind\":\"int\",\"bitSize\":8,\"bitSize\":16}", "repeated 'bitSize' key"},
 		{"{\"kind\":\"string\",\"pattern\":\"a\",\"values\":[\"b\"]}", "values cannot be provided if pattern is provided"},
+		{"{\"kind\":\"string\",\"pattern\":\"a\",\"maxBytes\":1}", "max bytes cannot be provided if pattern is provided"},
+		{"{\"kind\":\"string\",\"maxBytes\":1,\"pattern\":\"a\"}", "pattern cannot be provided if max bytes is provided"},
+		{"{\"kind\":\"string\",\"pattern\":\"a\",\"maxLength\":1}", "max length cannot be provided if pattern is provided"},
+		{"{\"kind\":\"string\",\"maxLength\":1,\"pattern\":\"a\"}", "pattern cannot be provided if max length is provided"},
+		{"{\"kind\":\"string\",\"values\":[\"a\"],\"maxBytes\":1}", "max bytes cannot be provided if values are provided"},
+		{"{\"kind\":\"string\",\"maxBytes\":1,\"values\":[\"a\"]}", "values cannot be provided if max bytes is provided"},
+		{"{\"kind\":\"string\",\"values\":[\"a\"],\"maxLength\":1}", "max length cannot be provided if values are provided"},
+		{"{\"kind\":\"string\",\"maxLength\":1,\"values\":[\"a\"]}", "values cannot be provided if max length is provided"},
 	}
 	for _, tc := range tests {
 		_, err := Parse(tc.data)

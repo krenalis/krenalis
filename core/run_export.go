@@ -21,6 +21,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/transformers"
 	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/tools/validation"
 )
 
 // exportProfiles exports the profiles for the pipeline.
@@ -100,10 +101,10 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 		ack = func(ids []string, err error) {
 			prometheus.Increment("Pipeline.exportProfiles.ack.calls", 1)
 			if err != nil {
-				this.core.metrics.FinalizeFailed(pipeline.ID, len(ids), err.Error())
+				this.core.metrics.Pipelines.FinalizeFailed(pipeline.ID, len(ids), err.Error())
 				return
 			}
-			this.core.metrics.FinalizePassed(pipeline.ID, len(ids))
+			this.core.metrics.Pipelines.FinalizePassed(pipeline.ID, len(ids))
 		}
 	}
 
@@ -168,7 +169,7 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	if connector.Type == state.FileStorage {
 		defer func() {
 			if readCount > 0 {
-				this.core.metrics.FinalizeFailed(pipeline.ID, readCount, err.Error())
+				this.core.metrics.Pipelines.FinalizeFailed(pipeline.ID, readCount, err.Error())
 			}
 		}()
 	}
@@ -179,7 +180,7 @@ Records:
 		prometheus.Increment("Pipeline.exportProfiles.iterations_over_records_All", 1)
 
 		if record.Err != nil {
-			this.core.metrics.ReceiveFailed(pipeline.ID, 1, record.Err.Error())
+			this.core.metrics.Pipelines.ReceiveFailed(pipeline.ID, 1, record.Err.Error())
 			if connector.Type == state.FileStorage {
 				return newPipelineError(metrics.ReceiveStep, record.Err)
 			}
@@ -187,7 +188,7 @@ Records:
 		}
 
 		readCount++
-		this.core.metrics.ReceivePassed(pipeline.ID, 1)
+		this.core.metrics.Pipelines.ReceivePassed(pipeline.ID, 1)
 
 		switch connector.Type {
 		default:
@@ -203,14 +204,14 @@ Records:
 				value, _ := getAttribute(record.Attributes, pipeline.Matching.In)
 				profile.MatchingValue, err = convertToExternal(value, matchingIn.Type, matchingOut.Type, pipeline.Matching.In, pipeline.Matching.Out)
 				if err != nil {
-					this.core.metrics.InputValidationFailed(pipeline.ID, 1, err.Error())
+					this.core.metrics.Pipelines.InputValidationFailed(pipeline.ID, 1, err.Error())
 					goto Next
 				}
 			}
 			profiles = append(profiles, profile)
 		}
 
-		this.core.metrics.InputValidationPassed(pipeline.ID, 1)
+		this.core.metrics.Pipelines.InputValidationPassed(pipeline.ID, 1)
 
 	Next:
 
@@ -251,20 +252,20 @@ Records:
 				if err := record.Err; err != nil {
 					switch err.(type) {
 					case transformers.RecordTransformationError:
-						this.core.metrics.TransformationFailed(pipeline.ID, 1, err.Error())
+						this.core.metrics.Pipelines.TransformationFailed(pipeline.ID, 1, err.Error())
 					case transformers.RecordValidationError:
-						this.core.metrics.TransformationPassed(pipeline.ID, 1)
-						this.core.metrics.OutputValidationFailed(pipeline.ID, 1, err.Error())
+						this.core.metrics.Pipelines.TransformationPassed(pipeline.ID, 1)
+						this.core.metrics.Pipelines.OutputValidationFailed(pipeline.ID, 1, err.Error())
 					}
 					continue
 				}
-				this.core.metrics.TransformationPassed(pipeline.ID, 1)
-				this.core.metrics.OutputValidationPassed(pipeline.ID, 1)
+				this.core.metrics.Pipelines.TransformationPassed(pipeline.ID, 1)
+				this.core.metrics.Pipelines.OutputValidationPassed(pipeline.ID, 1)
 				if user.MatchingValue != nil {
 					setAttribute(record.Attributes, pipeline.Matching.Out, user.MatchingValue)
 				}
 				if connector.Type == state.Application && len(record.Attributes) == 0 {
-					this.core.metrics.FinalizePassed(pipeline.ID, 1)
+					this.core.metrics.Pipelines.FinalizePassed(pipeline.ID, 1)
 					continue
 				}
 				// In the case of exporting to the database, make sure that
@@ -273,7 +274,7 @@ Records:
 				if connector.Type == state.Database {
 					key := record.Attributes[pipeline.TableKey]
 					if _, ok := alreadyExportedKeys[key]; ok {
-						this.core.metrics.FinalizeFailed(pipeline.ID, 1,
+						this.core.metrics.Pipelines.FinalizeFailed(pipeline.ID, 1,
 							fmt.Sprintf("cannot export multiple profiles having the same value for %q, which is used as export table key", pipeline.TableKey))
 						continue
 					}
@@ -304,7 +305,7 @@ Records:
 	}
 
 	if connector.Type == state.FileStorage {
-		this.core.metrics.FinalizePassed(pipeline.ID, readCount)
+		this.core.metrics.Pipelines.FinalizePassed(pipeline.ID, readCount)
 		readCount = 0 // prevents them from being flagged as failed in the metrics
 	}
 
@@ -426,17 +427,31 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 		default:
 			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
-		if n, ok := ex.MaxBytes(); ok && len(s) > n {
-			return nil, errMatchingPropertyConversion(inPath, outPath)
-		}
-		if n, ok := ex.MaxLength(); ok && utf8.RuneCountInString(s) > n {
-			return nil, errMatchingPropertyConversion(inPath, outPath)
-		}
-		if values := ex.Values(); values != nil && !slices.Contains(values, s) {
-			return nil, errMatchingPropertyConversion(inPath, outPath)
-		}
-		if re := ex.Pattern(); re != nil && !re.MatchString(s) {
-			return nil, errMatchingPropertyConversion(inPath, outPath)
+		switch ex.Semantic() {
+		case types.CountrySemantic:
+			switch ex.CountryFormat() {
+			case types.ISO3166Alpha2:
+				if !validation.IsValidCountryCodeAlpha2(s) {
+					return nil, errMatchingPropertyConversion(inPath, outPath)
+				}
+			case types.ISO3166Alpha3:
+				if !validation.IsValidCountryCodeAlpha3(s) {
+					return nil, errMatchingPropertyConversion(inPath, outPath)
+				}
+			}
+		default:
+			if n, ok := ex.MaxBytes(); ok && len(s) > n {
+				return nil, errMatchingPropertyConversion(inPath, outPath)
+			}
+			if n, ok := ex.MaxLength(); ok && utf8.RuneCountInString(s) > n {
+				return nil, errMatchingPropertyConversion(inPath, outPath)
+			}
+			if values := ex.Values(); values != nil && !slices.Contains(values, s) {
+				return nil, errMatchingPropertyConversion(inPath, outPath)
+			}
+			if re := ex.Pattern(); re != nil && !re.MatchString(s) {
+				return nil, errMatchingPropertyConversion(inPath, outPath)
+			}
 		}
 		return s, nil
 	case types.IntKind:

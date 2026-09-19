@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"math"
 	"net"
-	"net/netip"
 	"reflect"
 	"slices"
 	"strconv"
@@ -19,6 +18,7 @@ import (
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/tools/validation"
 )
 
 // Platform represents a warehouse platform.
@@ -198,6 +198,9 @@ type Warehouse interface {
 	// and may therefore include additional human-readable details (such as type
 	// information, maximum character count, enum values, etc...).
 	ColumnTypeDescription(t types.Type) (string, error)
+
+	// Count returns the number of rows in table.
+	Count(ctx context.Context, table string) (int, error)
 
 	// Delete deletes rows from the specified table that match the provided where
 	// expression. Returns an error if the expression is nil.
@@ -614,17 +617,36 @@ func ValidateJSON(name string, v any) (any, error) {
 
 // ValidateIP validates an ip value.
 func ValidateIP(name string, s string) (any, error) {
-	ip, err := netip.ParseAddr(s)
-	if err != nil {
+	ip, ok := types.NormalizeIP(s)
+	if !ok {
 		return nil, fmt.Errorf("data warehouse returned a value for column %s which is not an ip type", name)
 	}
-	return ip.String(), nil
+	return ip, nil
 }
 
 // ValidateString validates a string value.
 func ValidateString(name string, t types.Type, s string) (any, error) {
 	if !utf8.ValidString(s) {
 		return nil, fmt.Errorf("data warehouse returned a value for column %s, which contains invalid UTF-8 characters", name)
+	}
+	switch t.Semantic() {
+	case types.CountrySemantic:
+		switch t.CountryFormat() {
+		case types.ISO3166Alpha2:
+			if !validation.IsValidCountryCodeAlpha2(s) {
+				return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a 2-letters country code", name)
+			}
+		case types.ISO3166Alpha3:
+			if !validation.IsValidCountryCodeAlpha3(s) {
+				return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a 3-letters country code", name)
+			}
+		}
+		return s, nil
+	case types.PhoneSemantic:
+		if !types.IsPhone(s) {
+			return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a valid canonical phone number", name)
+		}
+		return s, nil
 	}
 	if values := t.Values(); values != nil {
 		if !slices.Contains(values, s) {

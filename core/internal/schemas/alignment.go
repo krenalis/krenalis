@@ -136,6 +136,50 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 	if k1 != k2 {
 		return &Error{Msg: fmt.Sprintf("%q property's type has changed from %s to %s", name, t1, t2)}
 	}
+	if t1.Semantic() != t2.Semantic() {
+		return &Error{Msg: fmt.Sprintf(
+			"semantic of the %q property's type has changed from %s to %s", name, t1.Semantic(), t2.Semantic(),
+		)}
+	}
+	if !types.EqualSemantics(t1, t2) {
+		switch t1.Semantic() {
+		case types.CountrySemantic:
+			if t1.CountryFormat() != t2.CountryFormat() {
+				return &Error{Msg: fmt.Sprintf(
+					"country format of the %q property's type has changed from %s to %s",
+					name, t1.CountryFormat(), t2.CountryFormat(),
+				)}
+			}
+		case types.DurationSemantic:
+			if t1.DurationUnit() != t2.DurationUnit() {
+				return &Error{Msg: fmt.Sprintf(
+					"duration unit of the %q property's type has changed from %s to %s",
+					name, t1.DurationUnit(), t2.DurationUnit(),
+				)}
+			}
+		case types.MeasurementSemantic:
+			if t1.UnitOfMeasure() != t2.UnitOfMeasure() {
+				return &Error{Msg: fmt.Sprintf(
+					"unit of measure of the %q property's type has changed from %s to %s",
+					name, t1.UnitOfMeasure(), t2.UnitOfMeasure(),
+				)}
+			}
+		case types.MoneySemantic:
+			currency1, ok1 := t1.Currency()
+			currency2, ok2 := t2.Currency()
+			if currency1 != currency2 || ok1 != ok2 {
+				if !ok1 {
+					currency1 = "none"
+				}
+				if !ok2 {
+					currency2 = "none"
+				}
+				return &Error{Msg: fmt.Sprintf(
+					"currency of the %q property's type has changed from %s to %s", name, currency1, currency2,
+				)}
+			}
+		}
+	}
 	switch k1 {
 	case types.StringKind:
 		c1, ok1 := t1.MaxLength()
