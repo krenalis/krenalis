@@ -27,7 +27,7 @@ var maxQueuedEventIdentityTime = 200 * time.Millisecond
 type identityWriter struct {
 	pipeline    string // pipeline identifier
 	writer      *datastore.EventIdentityWriter
-	metrics     *metrics.Collector
+	metrics     *metrics.Pipelines
 	mu          sync.Mutex                // for transformer, identities, and timer
 	transformer *transformers.Transformer // protected by mu
 	events      []streams.Event           // protected by mu
@@ -37,7 +37,7 @@ type identityWriter struct {
 // newIdentityWriter returns a new identityWriter for the provided pipeline.
 //
 // It must be called on a frozen state.
-func newIdentityWriter(ds *datastore.Datastore, pipeline *state.Pipeline, provider transformers.FunctionProvider, metrics *metrics.Collector) *identityWriter {
+func newIdentityWriter(ds *datastore.Datastore, pipeline *state.Pipeline, provider transformers.FunctionProvider, metrics *metrics.Pipelines) *identityWriter {
 	iw := &identityWriter{
 		pipeline: pipeline.ID,
 		metrics:  metrics,
@@ -168,20 +168,17 @@ func (iw *identityWriter) transformAndWrite(events []streams.Event) {
 			UpdatedAt:   event.Attributes["timestamp"].(time.Time),
 		}, event.Destinations[0].Ack)
 		if err != nil {
-			var errMsg string
+			var msg string
 			if errors.Is(err, datastore.ErrPipelineNotExist) {
-				errMsg = "pipeline has been deleted"
+				msg = "pipeline has been deleted"
 			} else if _, ok := errors.AsType[*schemas.Error](err); ok {
-				errMsg = err.Error()
-			} else if ctxErr := ctx.Err(); ctxErr != nil {
-				errMsg = ctxErr.Error()
+				msg = err.Error()
 			} else {
-				errMsg = "an internal error occurred"
-				slog.Error("cannot write event identity", "pipeline", iw.pipeline, "error", err)
+				msg = "an internal error occurred"
+				slog.Error("core/events/collector: cannot write event identity", "pipeline", iw.pipeline, "error", err)
 			}
-			iw.metrics.FinalizeFailed(iw.pipeline, 1, errMsg)
+			iw.metrics.FinalizeFailed(iw.pipeline, 1, msg)
 			event.Destinations[0].Ack.Acknowledge()
-			continue
 		}
 	}
 

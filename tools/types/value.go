@@ -6,7 +6,6 @@ package types
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -21,6 +20,7 @@ import (
 	"uuid"
 
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/validation"
 

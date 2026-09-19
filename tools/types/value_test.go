@@ -6,7 +6,6 @@ package types
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"maps"
@@ -21,7 +20,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/tools/decimal"
-	kerrors "github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 )
 
@@ -243,6 +242,16 @@ func Test_Decode(t *testing.T) {
 		{
 			data: `[{"Boolean":true}]`,
 			err:  newErrInvalidValue("cannot be an array", ""),
+		},
+		{
+			typ:  Object([]Property{{Name: "Array", Type: Array(Int(32))}}),
+			data: `{"Array":[1,"two"]}`,
+			err:  newErrInvalidValue(`does not have a valid value: "two"`, "Array[1]"),
+		},
+		{
+			typ:  Object([]Property{{Name: "Array", Type: Array(Int(32)).WithMaxElements(3)}}),
+			data: `{"Array":[1,2,3,4]}`,
+			err:  newErrInvalidValue("contains more than 3 elements", "Array"),
 		},
 		{
 			data: `{"Object":{"d":5}}`,
@@ -787,7 +796,7 @@ func TestDecodeArrayUnique(t *testing.T) {
 						if !unique || test.duplicate < 0 {
 							t.Fatal(err)
 						}
-						validation, ok := kerrors.AsType[*SchemaValidationError](err)
+						validation, ok := errors.AsType[*SchemaValidationError](err)
 						if !ok {
 							t.Fatalf("got %T: %v, want SchemaValidationError", err, err)
 						}
@@ -845,12 +854,12 @@ func TestDecodeArrayUniqueErrors(t *testing.T) {
 			_, err := Decode[[]any](strings.NewReader(test.source), test.typ)
 			if err != nil {
 				if test.syntax {
-					if _, ok := kerrors.AsType[*json.SyntaxError](err); !ok {
+					if _, ok := errors.AsType[*json.SyntaxError](err); !ok {
 						t.Fatalf("got %T: %v, want SyntaxError", err, err)
 					}
 					return
 				}
-				if _, ok := kerrors.AsType[*SchemaValidationError](err); !ok {
+				if _, ok := errors.AsType[*SchemaValidationError](err); !ok {
 					t.Fatalf("got %T: %v, want SchemaValidationError", err, err)
 				}
 				if !strings.Contains(err.Error(), test.message) {
@@ -986,7 +995,7 @@ func TestDecodeSemantics(t *testing.T) {
 						if test.valid {
 							t.Fatalf("expected no error, got %v", err)
 						}
-						if _, ok := kerrors.AsType[*SchemaValidationError](err); !ok {
+						if _, ok := errors.AsType[*SchemaValidationError](err); !ok {
 							t.Fatalf("expected SchemaValidationError, got %T", err)
 						}
 						return
