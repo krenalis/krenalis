@@ -8,256 +8,135 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
+	"strconv"
 	"testing"
 
-	_ "github.com/krenalis/krenalis/connectors/s3"
-	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/fakedata"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
+// TestSyntheticABIdentityResolution verifies the complete ordinary FileSystem
+// import path for the two Synthetic World source outputs.
 func TestSyntheticABIdentityResolution(t *testing.T) {
+
 	if testing.Short() {
 		t.Skip()
 	}
 
-	photoDir := syntheticCatalogFixture(t)
-	canonicalizeSyntheticCatalogFixture(t, photoDir)
-	catalogBytes, err := os.ReadFile(filepath.Join(photoDir, "catalog.json"))
+	photoDirectory := syntheticCatalogFixture(t)
+	canonicalizeSyntheticCatalogFixture(t, photoDirectory)
+	catalog, err := fakedata.LoadFaceCatalog(t.Context(), photoDirectory)
 	if err != nil {
-		t.Fatalf("expected successful operation, got %v", err)
+		t.Fatalf("expected complete face catalog, got %v", err)
 	}
-	catalogSHA256 := sha256.Sum256(catalogBytes)
-	catalogSHA256Text := hex.EncodeToString(catalogSHA256[:])
-	catalog, err := fakedata.LoadFaceCatalog(t.Context(), photoDir)
+
+	namespace, err := fakedata.NewIdentityNamespace("workspace-test", 1)
 	if err != nil {
-		t.Fatalf("expected successful operation, got %v", err)
+		t.Fatalf("expected identity namespace, got %v", err)
 	}
+	world, err := fakedata.NewWorld(fakedata.WorldConfig{
+		IdentityNamespace: namespace,
+		WorldSeed:         726381,
+		ReferenceDate:     "2026-01-01",
+		FaceCatalog:       catalog,
+	})
+	if err != nil {
+		t.Fatalf("expected source world base, got %v", err)
+	}
+	sourceWorld, err := fakedata.NewSourceWorld(world, []fakedata.CountryShare{{
+		Code: "IT", Version: fakedata.MarketDataVersion, Weight: 1,
+	}})
+	if err != nil {
+		t.Fatalf("expected source world, got %v", err)
+	}
+
+	sources := []syntheticSourceFixture{
+		{name: "customers-a.csv", sourceID: "a", config: fakedata.SourceInstanceConfig{
+			ID: "a", Version: "demo-v1", CoverageNumerator: 1, CoverageDenominator: 1,
+			DuplicateNumerator: 1, DuplicateDenominator: 1,
+		}},
+		{name: "customers-b.csv", sourceID: "b", config: fakedata.SourceInstanceConfig{
+			ID: "b", Version: "demo-v1", CoverageNumerator: 1, CoverageDenominator: 1,
+			DuplicateNumerator: 0, DuplicateDenominator: 1,
+		}},
+	}
+	storageDirectory := t.TempDir()
+	for index := range sources {
+		sources[index].instance, err = fakedata.NewSourceInstance(sourceWorld, sources[index].config)
+		if err != nil {
+			t.Fatalf("expected source instance %s, got %v", sources[index].sourceID, err)
+		}
+		sources[index].records = writeSyntheticSourceCSV(t, filepath.Join(storageDirectory, sources[index].name),
+			sources[index].instance, catalog, 20)
+	}
+
 	k := krenalistester.NewKrenalisInstance(t)
-	config := core.SyntheticConfig{
-		Namespace: "workspace-test", Generation: 1, Seed: 726381, ReferenceDate: "2026-01-01", PersonCount: 20,
-		PhotoOrigin: "http://" + k.Addr(), SourceAID: "a", SourceAVersion: "demo-v1",
-		SourceACoverageNumerator: 1, SourceACoverageDenominator: 1,
-		SourceADuplicateNumerator: 1, SourceADuplicateDenominator: 1,
-		SourceBID: "b", SourceBVersion: "demo-v1", SourceBCoverageNumerator: 1,
-		SourceBCoverageDenominator: 1, SourceBDuplicateNumerator: 0, SourceBDuplicateDenominator: 1,
-	}
-	k.SetSyntheticPhotosDir(photoDir)
-	k.SetSyntheticConfig(&config)
+	k.PopulateProfileSchema(false)
+	k.SetFileSystemRoot(storageDirectory)
+	k.SetSyntheticPhotosDir(photoDirectory)
 	k.Start()
 	defer k.Stop()
 
-	settings := &krenalistester.DBSettings{}
-	err = json.Unmarshal(krenalistester.PostgresWarehouseSettings(), settings)
-	if err != nil {
-		t.Fatalf("expected successful operation, got %v", err)
+	k.UpdateIdentityResolutionSettings(false, []string{"email"})
+	for index := range sources {
+		sources[index].connection = k.CreateSourceFileSystem()
 	}
-	pool, err := krenalistester.ConnectionPool(t.Context(), settings)
-	if err != nil {
-		t.Fatalf("expected successful operation, got %v", err)
-	}
-	_, err = pool.Exec(t.Context(), "CREATE DATABASE test_synthetic_ab_profiles")
-	pool.Close()
-	if err != nil {
-		t.Fatalf("expected successful operation, got %v", err)
-	}
-	settings.Database = "test_synthetic_ab_profiles"
 
-	profileSchema := types.Object([]types.Property{
+	properties := k.Workspace().ProfileSchema.Properties().Slice()
+	properties = append(properties, []types.Property{
 		{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
-		{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		{Name: "phone", Type: types.String().WithMaxLength(300), ReadOptional: true},
-		{Name: "photo_url", Type: types.String().WithMaxLength(2048), ReadOptional: true},
-	})
-	request := map[string]any{
-		"name": "synthetic-ab", "synthetic": true, "profileSchema": profileSchema,
-		"warehouse": map[string]any{
-			"platform": "PostgreSQL", "mode": "Normal", "settings": settings,
-		},
-		"uiPreferences": map[string]any{"profile": map[string]string{
-			"image": "photo_url", "firstName": "first_name", "lastName": "last_name", "extra": "email",
-		}},
+		{Name: "photo_url", Type: types.String().AsURL(), ReadOptional: true},
+		{Name: "country", Type: types.String().AsCountry(types.ISO3166Alpha2), ReadOptional: true},
+	}...)
+	profileSchema := types.Object(properties)
+	assignedRoles := krenalistester.ProfileRoleAssignments{
+		FirstName: "first_name", LastName: "last_name", Country: "country", Photo: "photo_url",
 	}
-	var workspace struct {
-		ID string `json:"id"`
+	primarySources := map[string]string{}
+	for _, property := range profileSchema.Properties().Slice() {
+		primarySources[property.Name] = sources[1].connection
 	}
-	k.Call("POST", "/v1/workspaces", http.Header{"Krenalis-Workspace": nil}, request, &workspace)
-	k.SetWorkspaceID(workspace.ID)
+	k.AlterProfileSchemaWithAssignedRolesAndWait(profileSchema, assignedRoles, primarySources, nil)
 
-	k.UpdateIdentityResolutionSettings(false, []string{"email"})
-	settingsValue := krenalistester.JSONEncodeSettings(map[string]any{
-		"accessKeyID": "AAAAAAAAAAAAAAAAAAAA", "secretAccessKey": "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-		"region": "us-east-1", "bucket": "demo",
-	})
-	connectionA := k.CreateConnection(krenalistester.ConnectionToCreate{Name: "Synthetic A", Role: krenalistester.Source,
-		Connector: "s3", Settings: settingsValue})
-	connectionB := k.CreateConnection(krenalistester.ConnectionToCreate{Name: "Synthetic B", Role: krenalistester.Source,
-		Connector: "s3", Settings: settingsValue})
-
-	k.AlterProfileSchemaAndWait(profileSchema, map[string]string{
-		"first_name": connectionB, "last_name": connectionB, "email": connectionB,
-		"phone": connectionB, "photo_url": connectionB,
-	}, nil)
-
-	namespace, err := fakedata.NewIdentityNamespace(config.Namespace, config.Generation)
-	if err != nil {
-		t.Fatalf("expected successful operation, got %v", err)
-	}
-	base, err := fakedata.NewWorld(fakedata.WorldConfig{IdentityNamespace: namespace, WorldSeed: config.Seed,
-		ReferenceDate: config.ReferenceDate, FaceCatalog: catalog})
-	if err != nil {
-		t.Fatalf("expected successful operation, got %v", err)
-	}
-	sourceWorld, err := fakedata.NewSourceWorld(base, []fakedata.CountryShare{{Code: "IT", Version: fakedata.MarketDataVersion, Weight: 1}})
-	if err != nil {
-		t.Fatalf("expected successful operation, got %v", err)
-	}
-	sources := []struct {
-		connection string
-		pipeline   string
-		name       string
-		sourceID   string
-		instance   *fakedata.SourceInstance
-	}{
-		{connection: connectionA, name: "customers-a.csv", sourceID: "a"},
-		{connection: connectionB, name: "customers-b.csv", sourceID: "b"},
-	}
-	instances := []fakedata.SourceInstanceConfig{
-		{ID: "a", Version: "demo-v1", CoverageNumerator: 1, CoverageDenominator: 1,
-			DuplicateNumerator: 1, DuplicateDenominator: 1},
-		{ID: "b", Version: "demo-v1", CoverageNumerator: 1, CoverageDenominator: 1,
-			DuplicateNumerator: 0, DuplicateDenominator: 1},
-	}
-	for i := range sources {
-		sources[i].instance, err = fakedata.NewSourceInstance(sourceWorld, instances[i])
-		if err != nil {
-			t.Fatalf("expected successful operation, got %v", err)
-		}
-	}
-
-	type expectedIdentity struct {
-		record fakedata.SourceRecord
-	}
-	expected := map[string]expectedIdentity{}
-	expectedGroups := map[string]map[string]struct{}{}
-	oracleBySourceRecord := map[string]string{}
-	for i, source := range sources {
-		for index := fakedata.PersonIndex(1); index <= config.PersonCount; index++ {
-			records, err := source.instance.Records(index)
-			if err != nil {
-				t.Fatalf("expected successful operation, got %v", err)
-			}
-			oracleRecords, err := sourceWorld.Oracle(source.instance, index)
-			if err != nil {
-				t.Fatalf("expected successful operation, got %v", err)
-			}
-			if len(records) != len(oracleRecords) {
-				t.Fatalf("expected Oracle coverage for %s person %d, got %d records and %d mappings", instances[i].ID, index, len(records), len(oracleRecords))
-			}
-			for _, record := range records {
-				key := source.connection + "\x00" + record.ID
-				if _, ok := expected[key]; ok {
-					t.Fatalf("expected unique identity key, got %q twice", key)
-				}
-				expected[key] = expectedIdentity{record: record}
-				group := key
-				if record.Email != nil {
-					group = "email\x00" + *record.Email
-				}
-				if expectedGroups[group] == nil {
-					expectedGroups[group] = map[string]struct{}{}
-				}
-				expectedGroups[group][key] = struct{}{}
-			}
-			for _, oracleRecord := range oracleRecords {
-				if oracleRecord.SourceInstanceID != source.sourceID {
-					t.Fatalf("expected Oracle source %q, got %q", source.sourceID, oracleRecord.SourceInstanceID)
-				}
-				if oracleRecord.SourceRecordID == "" {
-					t.Fatal("expected non-empty Oracle source record ID")
-				}
-				if oracleRecord.PersonID == "" {
-					t.Fatal("expected non-empty Oracle person ID")
-				}
-				key := oracleRecord.SourceInstanceID + "\x00" + oracleRecord.SourceRecordID
-				if _, ok := oracleBySourceRecord[key]; ok {
-					t.Fatalf("expected unique Oracle key, got %q twice", key)
-				}
-				oracleBySourceRecord[key] = oracleRecord.PersonID
-			}
-		}
-	}
-	connectionBySourceID := map[string]string{"a": connectionA, "b": connectionB}
-	oracle := map[string]string{}
-	for sourceRecordKey, personID := range oracleBySourceRecord {
-		sourceID, recordID, ok := strings.Cut(sourceRecordKey, "\x00")
-		if !ok {
-			t.Fatalf("expected Oracle key with source and record ID, got %q", sourceRecordKey)
-		}
-		connection, ok := connectionBySourceID[sourceID]
-		if !ok {
-			t.Fatalf("expected connection for Oracle source %q", sourceID)
-		}
-		key := connection + "\x00" + recordID
-		if _, ok := oracle[key]; ok {
-			t.Fatalf("expected unique Oracle connection key, got %q twice", key)
-		}
-		oracle[key] = personID
-	}
-	if len(expected) != 60 || len(oracle) != len(expected) {
-		t.Fatalf("expected 60 identities and complete Oracle, got %d identities and %d mappings", len(expected), len(oracle))
-	}
-	for key := range expected {
-		if _, ok := oracle[key]; !ok {
-			t.Fatalf("expected Oracle mapping for observed key %q", key)
-		}
-	}
-	for key := range oracle {
-		if _, ok := expected[key]; !ok {
-			t.Fatalf("expected Oracle key to be observed, got %q", key)
-		}
-	}
-	personIDs := map[string]struct{}{}
-	for _, personID := range oracle {
-		personIDs[personID] = struct{}{}
-	}
-	if len(personIDs) != 20 {
-		t.Fatalf("expected 20 Oracle persons, got %d", len(personIDs))
-	}
-
-	makePipeline := func(source struct {
-		connection string
-		pipeline   string
-		name       string
-		sourceID   string
-		instance   *fakedata.SourceInstance
-	}) string {
-		input := types.Object([]types.Property{
-			{Name: "source_record_id", Type: types.String()}, {Name: "first_name", Type: types.String()},
-			{Name: "last_name", Type: types.String()}, {Name: "email", Type: types.String()},
-			{Name: "phone", Type: types.String()}, {Name: "photo_url", Type: types.String()},
-		})
-		return k.CreatePipeline(source.connection, "User", krenalistester.PipelineToSet{
-			Name: "Import " + source.name, Enabled: true, Path: source.name, Format: "csv",
-			UserIDColumn: "source_record_id", InSchema: input, OutSchema: profileSchema,
+	for index := range sources {
+		sources[index].pipeline = k.CreatePipeline(sources[index].connection, "User", krenalistester.PipelineToSet{
+			Name:         "Import " + sources[index].name,
+			Enabled:      true,
+			Path:         sources[index].name,
+			Format:       "csv",
+			UserIDColumn: "source_record_id",
+			InSchema: types.Object([]types.Property{
+				{Name: "source_record_id", Type: types.String()},
+				{Name: "first_name", Type: types.String()},
+				{Name: "last_name", Type: types.String()},
+				{Name: "email", Type: types.String()},
+				{Name: "phone", Type: types.String()},
+				{Name: "photo_url", Type: types.String()},
+				{Name: "country", Type: types.String()},
+			}),
+			OutSchema: profileSchema,
 			Transformation: &krenalistester.Transformation{Mapping: map[string]string{
-				"first_name": "first_name", "last_name": "last_name",
-				"email": "if(eq(email, ''), null, email)", "phone": "phone", "photo_url": "photo_url",
-			}}, FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
+				"first_name": "first_name",
+				"last_name":  "last_name",
+				"email":      "if(eq(email, ''), null, email)",
+				"phone":      "phone",
+				"photo_url":  "photo_url",
+				"country":    "if(eq(country, ''), null, country)",
+			}},
+			FormatSettings: krenalistester.JSONEncodeSettings(map[string]any{
 				"separator": ",", "hasColumnNames": true,
 			}),
 		})
 	}
-	for i := range sources {
-		sources[i].pipeline = makePipeline(sources[i])
-	}
+
 	runs := []string{k.StartPipelineRun(sources[0].pipeline), k.StartPipelineRun(sources[1].pipeline)}
 	k.WaitForRunsCompletion(runs...)
 	for _, runID := range runs {
@@ -267,132 +146,106 @@ func TestSyntheticABIdentityResolution(t *testing.T) {
 		}
 	}
 
+	expected, expectedGroups := expectedSyntheticIdentities(sources)
 	for _, source := range sources {
 		identities, total := k.ConnectionIdentities(source.connection, 0, 100)
-		want := 40
-		if source.name == "customers-b.csv" {
-			want = 20
-		}
-		if total != want || len(identities) != want {
-			t.Fatalf("expected %d identities for %s, got total %d and %d rows", want, source.name, total, len(identities))
+		if total != len(source.records) || len(identities) != len(source.records) {
+			t.Fatalf("expected %d identities for %s, got total %d and %d rows", len(source.records), source.name, total, len(identities))
 		}
 		for _, identity := range identities {
-			if identity.Connection != source.connection || identity.Pipeline != source.pipeline {
-				t.Fatalf("expected identity from connection %s and pipeline %s, got %+v", source.connection, source.pipeline, identity)
-			}
 			key := source.connection + "\x00" + identity.UserID
 			if _, ok := expected[key]; !ok {
-				t.Fatalf("expected observed source record %q", key)
+				t.Fatalf("expected identity from generated source records, got %q", key)
+			}
+			if identity.Pipeline != source.pipeline {
+				t.Fatalf("expected pipeline %s for %q, got %s", source.pipeline, key, identity.Pipeline)
 			}
 		}
 	}
 
 	k.RunIdentityResolutionAndWait()
-	profiles, _, total := k.Profiles([]string{"first_name", "last_name", "email", "phone", "photo_url"}, "", false, 0, 100)
+	profiles, total := k.Profiles([]string{"first_name", "last_name", "email", "phone", "photo_url", "country"}, "", false, 0, 100)
 	if total != len(expectedGroups) || len(profiles) != total {
 		t.Fatalf("expected %d profiles from observed email partition, got total %d and %d rows", len(expectedGroups), total, len(profiles))
 	}
+
 	actualGroups := map[string]map[string]struct{}{}
+	profileRecords := map[string][]fakedata.SourceRecord{}
 	identityProfile := map[string]string{}
-	profileRecords := map[string][]expectedIdentity{}
 	for _, profile := range profiles {
 		identities, identityTotal := k.Identities(profile.KPID, 0, 100)
 		if identityTotal != len(identities) || identityTotal == 0 {
-			t.Fatalf("expected complete identities for profile %s, got total %d and %d rows", profile.KPID, identityTotal, len(identities))
+			t.Fatalf("expected complete non-empty identities for profile %s, got total %d and %d rows", profile.KPID, identityTotal, len(identities))
 		}
 		group := map[string]struct{}{}
 		for _, identity := range identities {
 			key := identity.Connection + "\x00" + identity.UserID
-			value, ok := expected[key]
+			item, ok := expected[key]
 			if !ok {
-				t.Fatalf("expected profile identity in Oracle coverage, got %q", key)
+				t.Fatalf("expected profile identity in generated source records, got %q", key)
 			}
 			if _, ok := identityProfile[key]; ok {
 				t.Fatalf("expected identity %q in one profile, got duplicate", key)
 			}
 			identityProfile[key] = profile.KPID.String()
 			group[key] = struct{}{}
-			profileRecords[profile.KPID.String()] = append(profileRecords[profile.KPID.String()], value)
+			profileRecords[profile.KPID.String()] = append(profileRecords[profile.KPID.String()], item)
 		}
 		actualGroups[profile.KPID.String()] = group
 	}
 	if len(identityProfile) != len(expected) {
-		t.Fatalf("expected all 60 identities in profiles, got %d", len(identityProfile))
+		t.Fatalf("expected all %d identities in profiles, got %d", len(expected), len(identityProfile))
 	}
-	for groupName, want := range expectedGroups {
-		found := false
+	for name, want := range expectedGroups {
+		matched := false
 		for _, got := range actualGroups {
-			if sameIdentitySet(want, got) {
-				found = true
+			if sameSyntheticIdentitySet(want, got) {
+				matched = true
 				break
 			}
 		}
-		if !found {
-			t.Fatalf("expected profile partition for %q, got no matching profile", groupName)
+		if !matched {
+			t.Fatalf("expected profile partition for %q, got no matching profile", name)
 		}
 	}
-
-	correct, incorrect, missed := 0, 0, 0
-	keys := make([]string, 0, len(expected))
-	for key := range expected {
-		keys = append(keys, key)
-	}
-	for i, left := range keys {
-		for _, right := range keys[i+1:] {
-			sameProfile := identityProfile[left] == identityProfile[right]
-			samePerson := oracle[left] == oracle[right]
-			switch {
-			case sameProfile && samePerson:
-				correct++
-			case sameProfile:
-				incorrect++
-			case samePerson:
-				missed++
-			}
-		}
-	}
-	t.Logf("identity resolution pairs: correct=%d incorrect=%d missed=%d; Oracle persons=%d identities=%d profiles=%d", correct, incorrect, missed, len(personIDs), len(expected), total)
 
 	for profileID, records := range profileRecords {
-		profile := findProfile(profiles, profileID)
-		for _, field := range []string{"first_name", "last_name", "email", "phone", "photo_url"} {
+		profile := syntheticProfileByID(t, profiles, profileID)
+		for _, field := range []string{"first_name", "last_name", "email", "phone", "photo_url", "country"} {
 			values := map[string]struct{}{}
-			for _, item := range records {
-				value := observedValue(item.record, field, catalog, config.PhotoOrigin)
-				if value != "" {
+			for _, record := range records {
+				if value := observedSyntheticValue(t, record, field, catalog); value != "" {
 					values[value] = struct{}{}
 				}
 			}
-			actual, present := profile.Attributes[field]
+			actual, exists := profile.Attributes[field]
 			if len(values) == 0 {
-				if present && actual != nil && actual != "" {
+				if exists && actual != nil && actual != "" {
 					t.Fatalf("expected absent %s for profile %s, got %v", field, profileID, actual)
 				}
 				continue
 			}
 			value, ok := actual.(string)
-			if !present || !ok {
+			if !exists || !ok {
 				t.Fatalf("expected observed %s for profile %s, got %v", field, profileID, actual)
 			}
 			if _, ok := values[value]; !ok {
 				t.Fatalf("expected observed %s value for profile %s, got %q", field, profileID, value)
 			}
 		}
-		allAbsentEmail := true
-		for _, item := range records {
-			if item.record.Email != nil {
-				allAbsentEmail = false
-				break
-			}
-		}
-		if allAbsentEmail {
-			if _, ok := profile.Attributes["email"]; ok {
-				t.Fatalf("expected no reconstructed email for profile %s, got %v", profileID, profile.Attributes["email"])
-			}
-		}
 	}
 
-	t.Logf("synthetic snapshot: catalog_sha256=%s catalog_checksum=%x snapshot_id=%s workspace_id=%s expected_profiles=%d api_profiles=%d", catalogSHA256Text, catalog.Checksum(), base.SnapshotID(), workspace.ID, len(expectedGroups), total)
+	verifySyntheticPhotoServed(t, k, sources, catalog)
+}
+
+type syntheticSourceFixture struct {
+	name       string
+	sourceID   string
+	config     fakedata.SourceInstanceConfig
+	instance   *fakedata.SourceInstance
+	records    []fakedata.SourceRecord
+	connection string
+	pipeline   string
 }
 
 func canonicalizeSyntheticCatalogFixture(t *testing.T, directory string) {
@@ -401,53 +254,67 @@ func canonicalizeSyntheticCatalogFixture(t *testing.T, directory string) {
 		path := filepath.Join(directory, name)
 		data, err := os.ReadFile(path)
 		if err != nil {
-			t.Fatalf("expected successful operation, got %v", err)
+			t.Fatalf("expected catalog metadata %s, got %v", name, err)
 		}
 		data, err = json.Canonicalize(data)
 		if err != nil {
-			t.Fatalf("expected successful operation, got %v", err)
+			t.Fatalf("expected canonical %s metadata, got %v", name, err)
 		}
 		err = os.WriteFile(path, data, 0o644)
 		if err != nil {
-			t.Fatalf("expected successful operation, got %v", err)
+			t.Fatalf("expected canonicalized %s metadata, got %v", name, err)
 		}
 	}
 }
 
-func findProfile(profiles []krenalistester.Profile, id string) krenalistester.Profile {
-	for _, profile := range profiles {
-		if profile.KPID.String() == id {
-			return profile
+func expectedSyntheticIdentities(sources []syntheticSourceFixture) (map[string]fakedata.SourceRecord, map[string]map[string]struct{}) {
+	expected := map[string]fakedata.SourceRecord{}
+	groups := map[string]map[string]struct{}{}
+	for _, source := range sources {
+		for _, record := range source.records {
+			key := source.connection + "\x00" + record.ID
+			expected[key] = record
+			group := key
+			if record.Email != nil {
+				group = "email\x00" + *record.Email
+			}
+			if groups[group] == nil {
+				groups[group] = map[string]struct{}{}
+			}
+			groups[group][key] = struct{}{}
 		}
 	}
-	panic(fmt.Sprintf("profile %s not found", id))
+	return expected, groups
 }
 
-func observedValue(record fakedata.SourceRecord, field string, catalog *fakedata.FaceCatalog, origin string) string {
+func observedSyntheticValue(t *testing.T, record fakedata.SourceRecord, field string, catalog *fakedata.FaceCatalog) string {
+	t.Helper()
 	switch field {
 	case "first_name":
-		return sourceString(record.FirstName)
+		return syntheticString(record.FirstName)
 	case "last_name":
-		return sourceString(record.LastName)
+		return syntheticString(record.LastName)
 	case "email":
-		return sourceString(record.Email)
+		return syntheticString(record.Email)
 	case "phone":
-		return sourceString(record.Phone)
+		return syntheticString(record.Phone)
 	case "photo_url":
 		if record.PhotoID == nil {
 			return ""
 		}
 		asset, err := catalog.Asset(*record.PhotoID, fakedata.PhotoSize256)
 		if err != nil {
-			panic(err)
+			t.Fatalf("expected observed photo asset, got %v", err)
 		}
-		return strings.TrimSuffix(origin, "/") + asset.Path
-	default:
-		panic(fmt.Sprintf("unknown observed field %q", field))
+		return asset.Path
+	case "country":
+		return syntheticString(record.Country)
 	}
+	t.Fatalf("expected known source field, got %q", field)
+	return ""
 }
 
-func sameIdentitySet(left, right map[string]struct{}) bool {
+func sameSyntheticIdentitySet(left, right map[string]struct{}) bool {
 	if len(left) != len(right) {
 		return false
 	}
@@ -459,9 +326,177 @@ func sameIdentitySet(left, right map[string]struct{}) bool {
 	return true
 }
 
-func sourceString(value *string) string {
+func syntheticCatalogFixture(t *testing.T) string {
+	t.Helper()
+	root := filepath.Join("..", "tools", "fakedata", "testdata", "fakefacegen-v1-selected")
+	directory := t.TempDir()
+	var catalog, manifest map[string]any
+	var specs []map[string]any
+	for _, item := range []struct {
+		name string
+		out  any
+	}{{"catalog.json", &catalog}, {"specs.json", &specs}, {"manifest.json", &manifest}} {
+		data, err := os.ReadFile(filepath.Join(root, item.name))
+		if err != nil {
+			t.Fatalf("expected face catalog fixture %s, got %v", item.name, err)
+		}
+		err = json.Unmarshal(data, item.out)
+		if err != nil {
+			t.Fatalf("expected valid face catalog fixture %s, got %v", item.name, err)
+		}
+	}
+	catalog["count"] = 2
+	newSpecs := make([]map[string]any, 0, 2)
+	newAssets := make([]map[string]any, 0, 2)
+	for index, sourceID := range []string{"face-000013", "face-000037"} {
+		id := fmt.Sprintf("face-%06d", index+1)
+		for _, spec := range specs {
+			if spec["id"] == sourceID {
+				spec["id"] = id
+				newSpecs = append(newSpecs, spec)
+				break
+			}
+		}
+		for _, item := range manifest["assets"].([]any) {
+			asset := item.(map[string]any)
+			if asset["id"] == sourceID {
+				asset["id"] = id
+				asset["spec_id"] = id
+				asset["file"] = "masters/" + id + ".webp"
+				newAssets = append(newAssets, asset)
+				break
+			}
+		}
+		for _, size := range []int{64, 128, 256, 512, 1024} {
+			folder := filepath.Join("derived", strconv.Itoa(size))
+			if size == 1024 {
+				folder = "masters"
+			}
+			data, err := os.ReadFile(filepath.Join(root, folder, sourceID+".webp"))
+			if err != nil {
+				t.Fatalf("expected face fixture %s/%s, got %v", folder, sourceID, err)
+			}
+			path := filepath.Join(directory, folder)
+			err = os.MkdirAll(path, 0o755)
+			if err != nil {
+				t.Fatalf("expected face fixture directory %s, got %v", path, err)
+			}
+			err = os.WriteFile(filepath.Join(path, id+".webp"), data, 0o644)
+			if err != nil {
+				t.Fatalf("expected face fixture asset %s, got %v", id, err)
+			}
+		}
+	}
+	manifest["assets"] = newAssets
+	for _, item := range []struct {
+		name  string
+		value any
+	}{{"catalog.json", catalog}, {"specs.json", newSpecs}, {"manifest.json", manifest}} {
+		data, err := json.Marshal(item.value)
+		if err != nil {
+			t.Fatalf("expected face fixture JSON %s, got %v", item.name, err)
+		}
+		err = os.WriteFile(filepath.Join(directory, item.name), data, 0o644)
+		if err != nil {
+			t.Fatalf("expected face fixture metadata %s, got %v", item.name, err)
+		}
+	}
+	return directory
+}
+
+func syntheticProfileByID(t *testing.T, profiles []krenalistester.Profile, id string) krenalistester.Profile {
+	t.Helper()
+	for _, profile := range profiles {
+		if profile.KPID.String() == id {
+			return profile
+		}
+	}
+	t.Fatalf("expected profile %s, got none", id)
+	return krenalistester.Profile{}
+}
+
+func syntheticString(value *string) string {
 	if value == nil {
 		return ""
 	}
 	return *value
+}
+
+func verifySyntheticPhotoServed(t *testing.T, k *krenalistester.Krenalis, sources []syntheticSourceFixture, catalog *fakedata.FaceCatalog) {
+	t.Helper()
+	for _, source := range sources {
+		for _, record := range source.records {
+			if record.PhotoID == nil {
+				continue
+			}
+			asset, err := catalog.Asset(*record.PhotoID, fakedata.PhotoSize256)
+			if err != nil {
+				t.Fatalf("expected photo asset, got %v", err)
+			}
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+k.Addr()+asset.Path, nil)
+			if err != nil {
+				t.Fatalf("expected photo request, got %v", err)
+			}
+			res, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatalf("expected served photo, got %v", err)
+			}
+			body, readErr := io.ReadAll(res.Body)
+			closeErr := res.Body.Close()
+			if readErr != nil {
+				t.Fatalf("expected photo body, got %v", readErr)
+			}
+			if closeErr != nil {
+				t.Fatalf("expected closed photo body, got %v", closeErr)
+			}
+			if res.StatusCode != http.StatusOK || res.Header.Get("Content-Type") != "image/webp" {
+				t.Fatalf("expected served WebP photo, got status %d and type %q", res.StatusCode, res.Header.Get("Content-Type"))
+			}
+			digest := sha256.Sum256(body)
+			if got := hex.EncodeToString(digest[:]); got != asset.ContentSHA256 {
+				t.Fatalf("expected photo checksum %s, got %s", asset.ContentSHA256, got)
+			}
+			return
+		}
+	}
+	t.Fatal("expected at least one observed photo")
+}
+
+func writeSyntheticSourceCSV(t *testing.T, path string, instance *fakedata.SourceInstance, catalog *fakedata.FaceCatalog, personCount int) []fakedata.SourceRecord {
+	t.Helper()
+	file, err := os.Create(path)
+	if err != nil {
+		t.Fatalf("expected CSV destination %s, got %v", path, err)
+	}
+	writer, err := fakedata.NewSourceCSVWriter(file, catalog)
+	if err != nil {
+		_ = file.Close()
+		t.Fatalf("expected source CSV writer, got %v", err)
+	}
+	records := []fakedata.SourceRecord{}
+	for index := fakedata.PersonIndex(1); index <= fakedata.PersonIndex(personCount); index++ {
+		generated, err := instance.Records(index)
+		if err != nil {
+			_ = file.Close()
+			t.Fatalf("expected source records for person %d, got %v", index, err)
+		}
+		for _, record := range generated {
+			err = writer.Write(t.Context(), record)
+			if err != nil {
+				_ = file.Close()
+				t.Fatalf("expected CSV record %s, got %v", record.ID, err)
+			}
+			records = append(records, record)
+		}
+	}
+	err = writer.Flush(t.Context())
+	if err != nil {
+		_ = file.Close()
+		t.Fatalf("expected flushed source CSV, got %v", err)
+	}
+	err = file.Close()
+	if err != nil {
+		t.Fatalf("expected closed source CSV, got %v", err)
+	}
+	return records
 }

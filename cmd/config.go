@@ -25,7 +25,6 @@ import (
 	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/core/natsopts"
 	"github.com/krenalis/krenalis/tools/errors"
-	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/validation"
 )
 
@@ -58,7 +57,6 @@ type Config struct {
 	NATS               core.NATSConfig
 	MaxMindDBPath      string
 	SyntheticPhotosDir string
-	Synthetic          *core.SyntheticConfig
 	MemberEmailFrom    string
 	SMTP               struct {
 		Host     string
@@ -132,18 +130,6 @@ func loadConfig(ctx context.Context, source string) (*Config, error) {
 
 	settings := &Config{}
 	settings.SyntheticPhotosDir = conf.Get("KRENALIS_SYNTHETIC_PHOTOS_DIR")
-	if raw := conf.Get("KRENALIS_SYNTHETIC_CONFIG"); raw != "" {
-		// This scenario has only fixed scalar fields; 8192 bytes is ample.
-		if len(raw) > 8192 {
-			return nil, errors.New("KRENALIS_SYNTHETIC_CONFIG exceeds 8192 bytes")
-		}
-		var scenario *core.SyntheticConfig
-		err = json.Unmarshal([]byte(raw), &scenario)
-		if err != nil || scenario == nil {
-			return nil, fmt.Errorf("KRENALIS_SYNTHETIC_CONFIG must be a JSON object: %v", err)
-		}
-		settings.Synthetic = scenario
-	}
 
 	if kms, ok := conf.Lookup("KRENALIS_KMS"); ok {
 		backend, options, found := strings.Cut(kms, ":")

@@ -54,6 +54,55 @@ const (
 	eventMaxUnits    = eventLeaseSize
 )
 
+// Environment identifies a workspace's immutable application environment.
+type Environment int8
+
+const (
+	Production Environment = iota
+	Development
+)
+
+// Scan implements the sql.Scanner interface.
+func (env *Environment) Scan(src any) error {
+	s, ok := src.(string)
+	if !ok {
+		return fmt.Errorf("cannot scan a %T value into an Environment value", src)
+	}
+	var value Environment
+	switch s {
+	case "production":
+		value = Production
+	case "development":
+		value = Development
+	default:
+		return fmt.Errorf("invalid Environment: %s", s)
+	}
+	*env = value
+	return nil
+}
+
+// String returns the string representation of env.
+// It panics if env is not a valid Environment value.
+func (env Environment) String() string {
+	value, err := env.Value()
+	if err != nil {
+		panic(err)
+	}
+	return value.(string)
+}
+
+// Value implements driver.Valuer interface.
+// It returns an error if env is not a valid Environment.
+func (env Environment) Value() (driver.Value, error) {
+	switch env {
+	case Production:
+		return "production", nil
+	case Development:
+		return "development", nil
+	}
+	return nil, fmt.Errorf("not a valid Environment: %d", env)
+}
+
 // election represents a leader election.
 type election struct {
 	number   int
@@ -854,7 +903,7 @@ type Workspace struct {
 	ID                             string
 	organization                   *Organization
 	Name                           string
-	Synthetic                      bool
+	Environment                    Environment
 	ProfileSchema                  types.Type // without meta properties.
 	AssignedRoles                  ProfileRoleAssignments
 	PrimarySources                 map[string]string

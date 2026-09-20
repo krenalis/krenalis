@@ -666,15 +666,19 @@ func (workspace workspace) Update(_ http.ResponseWriter, r *http.Request) (any, 
 		return nil, err
 	}
 	var body struct {
-		Synthetic json.Value `json:"synthetic"`
-		Name      string     `json:"name"`
+		Environment json.Value `json:"environment"`
+		Synthetic   json.Value `json:"synthetic"`
+		Name        string     `json:"name"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
+	if len(body.Environment) != 0 {
+		return nil, errors.BadRequest("environment is immutable")
+	}
 	if len(body.Synthetic) != 0 {
-		return nil, errors.BadRequest("synthetic is immutable")
+		return nil, errors.BadRequest("synthetic is not supported")
 	}
 	err = ws.Update(r.Context(), body.Name)
 	return nil, err

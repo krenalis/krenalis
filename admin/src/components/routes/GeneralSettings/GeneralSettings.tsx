@@ -56,6 +56,7 @@ const GeneralSettings = () => {
 	};
 
 	const isDeleteConfirmed = deleteConfirmationInput === name;
+	const env = workspaces.find((workspace) => workspace.id === selectedWorkspace)?.environment;
 
 	const onDelete = () => {
 		setDeleteConfirmationInput('');
@@ -89,11 +90,7 @@ const GeneralSettings = () => {
 	return (
 		<div className='general-settings'>
 			<div className='general-settings__title'>General</div>
-			<div>
-				Mode:{' '}
-				{workspaces.find((workspace) => workspace.id === selectedWorkspace)?.synthetic ? 'Synthetic' : 'Normal'}{' '}
-				(permanent)
-			</div>
+			<div>Environment: {env === 'development' ? 'Development' : 'Production'} (permanent)</div>
 			<SlInput
 				className='general-settings__name'
 				maxlength={100}

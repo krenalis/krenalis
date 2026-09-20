@@ -51,12 +51,13 @@ CREATE UNIQUE INDEX reset_password_token_index ON members (reset_password_token)
 CREATE UNIQUE INDEX members_workos_user_id_idx ON members (organization, workos_user_id) WHERE workos_user_id <> '';
 
 CREATE TYPE warehouse_mode AS ENUM ('Normal', 'Inspection', 'Maintenance');
+CREATE TYPE workspace_environment AS ENUM ('production', 'development');
 
 CREATE TABLE workspaces (
     id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
     organization varchar(12) NOT NULL REFERENCES organizations ON DELETE CASCADE,
     name varchar(100) NOT NULL,
-    synthetic boolean NOT NULL DEFAULT false,
+    environment workspace_environment NOT NULL DEFAULT 'production',
     warehouse_name varchar NOT NULL,
     warehouse_mode warehouse_mode NOT NULL,
     warehouse_settings bytea NOT NULL,

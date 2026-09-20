@@ -306,6 +306,9 @@ func (s *SourceInstance) Records(index PersonIndex) ([]SourceRecord, error) {
 		if person.PhotoID != "" {
 			record.PhotoID = &person.PhotoID
 		}
+		if person.Address.Country != "" {
+			record.Country = &person.Address.Country
+		}
 		if ordinal == 0 {
 			record.FirstName = &person.FirstName
 			record.LastName = &person.LastName
@@ -384,7 +387,8 @@ func (s *SourceInstance) recordID(index PersonIndex, ordinal int) string {
 
 // SourceRecord is an ordinary local observation with no canonical identity.
 // A nil field means absent; an empty present string remains distinct.
-// PhotoID refers to a catalog asset, not to a person.
+// PhotoID refers to a catalog asset, not to a person. Country is the observed
+// address country.
 type SourceRecord struct {
 	ID        string
 	FirstName *string
@@ -392,6 +396,7 @@ type SourceRecord struct {
 	Email     *string
 	Phone     *string
 	PhotoID   *string
+	Country   *string
 }
 
 // OracleRecord is hidden evaluation truth, never part of ordinary CSV output.

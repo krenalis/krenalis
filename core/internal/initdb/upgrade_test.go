@@ -146,18 +146,6 @@ func TestUpgrade(t *testing.T) {
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatal(err)
 	}
-	var synthetic bool
-	err = database.QueryRow(ctx, "SELECT synthetic FROM workspaces WHERE id = '222222222222'").Scan(&synthetic)
-	if err != nil {
-		t.Fatalf("expected persisted workspace mode, got %v", err)
-	}
-	if synthetic {
-		t.Fatalf("expected preexisting workspace to be normal, got synthetic")
-	}
-	_, err = database.Exec(ctx, "UPDATE workspaces SET synthetic = true WHERE id = '222222222222'")
-	if err != nil {
-		t.Fatalf("expected mode update in isolated fixture, got %v", err)
-	}
 	assertOrganizationLimits(t, database)
 	assertOrganizationLimitsHaveNoDefaults(t, database)
 	assertIndexExists(t, database, workspacesOrganizationIndex)
@@ -185,13 +173,6 @@ func TestUpgrade(t *testing.T) {
 
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatalf("expected second upgrade to succeed, got %s", err)
-	}
-	err = database.QueryRow(ctx, "SELECT synthetic FROM workspaces WHERE id = '222222222222'").Scan(&synthetic)
-	if err != nil {
-		t.Fatalf("expected persisted workspace mode after upgrade, got %v", err)
-	}
-	if !synthetic {
-		t.Fatalf("expected synthetic workspace to survive upgrade, got normal")
 	}
 	assertPipelineFiltersUpgraded(t, database)
 	assertPipelineMetricsSurvivePipelineDelete(t, database)

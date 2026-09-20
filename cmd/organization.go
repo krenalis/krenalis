@@ -143,6 +143,7 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 		return nil, err
 	}
 	var body struct {
+		Environment   json.Value     `json:"environment"`
 		Synthetic     json.Value     `json:"synthetic"`
 		Name          string         `json:"name"`
 		ProfileSchema types.Type     `json:"profileSchema"`
@@ -152,10 +153,17 @@ func (organization organization) CreateWorkspace(_ http.ResponseWriter, r *http.
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	if len(body.Synthetic) != 0 && string(body.Synthetic) != "true" && string(body.Synthetic) != "false" {
-		return nil, errors.BadRequest("synthetic must be a boolean")
+	if len(body.Synthetic) != 0 {
+		return nil, errors.BadRequest("synthetic is not supported")
 	}
-	id, err := org.CreateWorkspace(r.Context(), body.Name, body.ProfileSchema, body.Warehouse, string(body.Synthetic) == "true")
+	env := core.Production
+	if len(body.Environment) != 0 {
+		err = body.Environment.Unmarshal(&env)
+		if err != nil {
+			return nil, errors.BadRequest("environment is not valid: %s", err)
+		}
+	}
+	id, err := org.CreateWorkspace(r.Context(), body.Name, body.ProfileSchema, body.Warehouse, env)
 	if err != nil {
 		if err2, ok := err.(*errors.UnprocessableError); ok && err2.Code == core.OrganizationNotExist {
 			return nil, errors.Unauthorized("API key in the Authorization header of the request does not exist")
@@ -422,6 +430,7 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 		return nil, err
 	}
 	var body struct {
+		Environment   json.Value     `json:"environment"`
 		Synthetic     json.Value     `json:"synthetic"`
 		Name          string         `json:"name"`
 		ProfileSchema types.Type     `json:"profileSchema"`
@@ -431,10 +440,17 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	if len(body.Synthetic) != 0 && string(body.Synthetic) != "true" && string(body.Synthetic) != "false" {
-		return nil, errors.BadRequest("synthetic must be a boolean")
+	if len(body.Synthetic) != 0 {
+		return nil, errors.BadRequest("synthetic is not supported")
 	}
-	err = org.TestWorkspaceCreation(r.Context(), body.Name, body.ProfileSchema, body.Warehouse, string(body.Synthetic) == "true")
+	env := core.Production
+	if len(body.Environment) != 0 {
+		err = body.Environment.Unmarshal(&env)
+		if err != nil {
+			return nil, errors.BadRequest("environment is not valid: %s", err)
+		}
+	}
+	err = org.TestWorkspaceCreation(r.Context(), body.Name, body.ProfileSchema, body.Warehouse, env)
 	return nil, err
 }
 

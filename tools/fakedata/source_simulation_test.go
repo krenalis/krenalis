@@ -149,6 +149,24 @@ func TestSourceSimulationCountries(t *testing.T) {
 		}
 	}
 
+	frWorld, err := NewSourceWorld(base, []CountryShare{{Code: "FR", Version: "test-v1", Weight: 1, Generator: fake}})
+	if err != nil {
+		t.Fatalf("expected French source world, got %v", err)
+	}
+	duplicated := mustSource(t, frWorld, "french", 100, 100)
+	records, err := duplicated.Records(1)
+	if err != nil {
+		t.Fatalf("expected French source records, got %v", err)
+	}
+	if len(records) != 2 {
+		t.Fatalf("expected two French observations, got %d", len(records))
+	}
+	for _, record := range records {
+		if record.Country == nil || *record.Country != "FR" {
+			t.Fatalf("expected observed French address country, got %#v", record.Country)
+		}
+	}
+
 }
 
 // TestSourceSimulationMembership checks all two-source subsets and count cases.
@@ -470,7 +488,7 @@ func TestSourceSimulationCSVAndOracle(t *testing.T) {
 	outputs := [2]bytes.Buffer{}
 	allTruth := []OracleRecord{}
 	for i, source := range sources {
-		csvWriter, err := NewSourceCSVWriter(&outputs[i], world.base.faceCatalog, "https://photos.example.test")
+		csvWriter, err := NewSourceCSVWriter(&outputs[i], world.base.faceCatalog)
 		if err != nil {
 			t.Fatalf("expected CSV writer, got %v", err)
 		}
@@ -503,7 +521,7 @@ func TestSourceSimulationCSVAndOracle(t *testing.T) {
 			t.Fatalf("expected fixed CSV header and records, got %#v", parsed)
 		}
 		for _, row := range parsed[1:] {
-			if len(row) != 6 || !strings.HasPrefix(row[0], "sr_v2_"+source.ID()+"_") {
+			if len(row) != 7 || !strings.HasPrefix(row[0], "sr_v2_"+source.ID()+"_") {
 				t.Fatalf("expected ordinary source-local row, got %#v", row)
 			}
 		}
@@ -516,7 +534,7 @@ func TestSourceSimulationCSVAndOracle(t *testing.T) {
 
 	literal := "literal@example.test"
 	var received bytes.Buffer
-	adapter, err := NewSourceCSVWriter(&received, world.base.faceCatalog, "https://photos.example.test")
+	adapter, err := NewSourceCSVWriter(&received, world.base.faceCatalog)
 	if err != nil {
 		t.Fatalf("expected standalone CSV adapter, got %v", err)
 	}
@@ -528,7 +546,7 @@ func TestSourceSimulationCSVAndOracle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected supplied row flush, got %v", err)
 	}
-	if !strings.Contains(received.String(), "local,,,literal@example.test,,") {
+	if !strings.Contains(received.String(), "local,,,literal@example.test,,,") {
 		t.Fatalf("expected unchanged supplied observation and empty absences, got %q", received.String())
 	}
 
@@ -559,7 +577,7 @@ func TestSourceCSVPhotoURL(t *testing.T) {
 	}
 
 	var output bytes.Buffer
-	writer, err := NewSourceCSVWriter(&output, world.base.faceCatalog, "https://photos.example.test/")
+	writer, err := NewSourceCSVWriter(&output, world.base.faceCatalog)
 	if err != nil {
 		t.Fatalf("expected photo CSV writer, got %v", err)
 	}
@@ -593,68 +611,19 @@ func TestSourceCSVPhotoURL(t *testing.T) {
 		t.Fatalf("expected parseable photo CSV, got %v", err)
 	}
 
-	if len(rows) != 4 || rows[1][5] != "https://photos.example.test"+asset.Path ||
-		rows[2][5] != rows[1][5] || rows[3][5] != "" {
-		t.Fatalf("expected two asset URLs and one empty cell, got %#v", rows)
+	if len(rows) != 4 || rows[1][5] != asset.Path || rows[2][5] != rows[1][5] || rows[3][5] != "" ||
+		rows[3][6] != "" || strings.HasPrefix(rows[1][5], "//") {
+		t.Fatalf("expected two root-relative asset paths and empty absent cells, got %#v", rows)
 	}
 
-	request := httptest.NewRequest(http.MethodGet, rows[1][5], nil)
+	request := httptest.NewRequest(http.MethodGet, "http://photos.example.test"+rows[1][5], nil)
 	response := httptest.NewRecorder()
 	world.base.faceCatalog.Handler().ServeHTTP(response, request)
 	contentSHA := sha256.Sum256(response.Body.Bytes())
 	if response.Code != http.StatusOK || response.Header().Get("Content-Type") != "image/webp" ||
 		hex.EncodeToString(contentSHA[:]) != asset.ContentSHA256 {
-		t.Fatalf("expected CSV URL to resolve to verified photo bytes, got %d %s %x",
+		t.Fatalf("expected CSV photo path to resolve to verified photo bytes, got %d %s %x",
 			response.Code, response.Header().Get("Content-Type"), contentSHA)
-	}
-
-	for _, origin := range []string{"", "ftp://photos.example.test", "https://user@photos.example.test",
-		"https://photos.example.test/path", "https://photos.example.test/?q=1", "https://photos.example.test/#",
-		"https://photos.example.test:0", "https://photos.example.test:65536",
-		"https://" + strings.Repeat("a", 254)} {
-		_, err = NewSourceCSVWriter(&bytes.Buffer{}, world.base.faceCatalog, origin)
-		if err != nil {
-			continue
-		}
-		t.Fatalf("expected invalid origin %q, got nil", origin)
-	}
-	for _, origin := range []string{"https://photos.example.test:443/", "http://photos.example.test:00080/"} {
-		var normalizedOutput bytes.Buffer
-		normalizedWriter, err := NewSourceCSVWriter(&normalizedOutput, world.base.faceCatalog, origin)
-		if err != nil {
-			t.Fatalf("expected valid origin %q, got %v", origin, err)
-		}
-		err = normalizedWriter.Write(t.Context(), records[0])
-		if err != nil {
-			t.Fatalf("expected CSV row for %q, got %v", origin, err)
-		}
-		err = normalizedWriter.Flush(t.Context())
-		if err != nil {
-			t.Fatalf("expected flushed CSV for %q, got %v", origin, err)
-		}
-		normalizedRows, err := csv.NewReader(&normalizedOutput).ReadAll()
-		if err != nil {
-			t.Fatalf("expected parseable CSV for %q, got %v", origin, err)
-		}
-		if got, want := normalizedRows[1][5], strings.TrimSuffix(origin, "/")+asset.Path; got != want {
-			t.Fatalf("expected preserved URL %q, got %q", want, got)
-		}
-	}
-	for _, bounded := range []struct {
-		origin string
-		want   string
-	}{
-		{"https://" + strings.Repeat("a", 2040), "host length in bytes"},
-		{"https://" + strings.Repeat("a", 2041), "invalid CSV destination, photo catalog, or HTTP origin"},
-	} {
-		_, err = NewSourceCSVWriter(&bytes.Buffer{}, world.base.faceCatalog, bounded.origin)
-		if err != nil {
-			if !strings.Contains(err.Error(), bounded.want) {
-				t.Fatalf("expected origin length error containing %q, got %v", bounded.want, err)
-			}
-			continue
-		}
-		t.Fatalf("expected invalid %d-byte origin, got nil", len(bounded.origin))
 	}
 	for _, bounded := range []struct {
 		photoID string
@@ -674,7 +643,7 @@ func TestSourceCSVPhotoURL(t *testing.T) {
 		t.Fatalf("expected invalid %d-byte photo reference, got nil", len(bounded.photoID))
 	}
 
-	_, err = NewSourceCSVWriter(&bytes.Buffer{}, nil, "https://photos.example.test")
+	_, err = NewSourceCSVWriter(&bytes.Buffer{}, nil)
 	if err != nil {
 		return
 	}
@@ -752,7 +721,7 @@ func TestSourceSimulationValidationAndStreaming(t *testing.T) {
 		t.Fatal("expected cross-World Oracle rejection, got nil")
 	}
 
-	failing, err := NewSourceCSVWriter(failingCSVWriter{}, world.base.faceCatalog, "https://photos.example.test")
+	failing, err := NewSourceCSVWriter(failingCSVWriter{}, world.base.faceCatalog)
 	if err != nil {
 		t.Fatalf("expected buffered CSV writer, got %v", err)
 	}
@@ -762,7 +731,7 @@ func TestSourceSimulationValidationAndStreaming(t *testing.T) {
 	}
 
 	counting := &countingCSVWriter{}
-	adapter, err := NewSourceCSVWriter(counting, world.base.faceCatalog, "https://photos.example.test")
+	adapter, err := NewSourceCSVWriter(counting, world.base.faceCatalog)
 	if err != nil {
 		t.Fatalf("expected counting CSV writer, got %v", err)
 	}

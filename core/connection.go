@@ -339,17 +339,6 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 
 	c := this.connection
 	connector := c.Connector()
-	if c.Workspace().Synthetic {
-		if err := this.core.connections.CheckConnector(c.Workspace(), connector, c.Role); err != nil {
-			return "", errors.BadRequest("%s", err)
-		}
-		if pipeline.Format == "" {
-			return "", errors.BadRequest("Synthetic workspace requires CSV source format")
-		}
-		if format != nil && !connections.SupportsSynthetic(format, state.Source) {
-			return "", errors.BadRequest("Synthetic workspace supports only CSV source format")
-		}
-	}
 
 	// Validate the target.
 	if target != TargetUser && target != TargetGroup && target != TargetEvent {
@@ -506,7 +495,6 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		conf := &connections.ConnectorConfig{
 			Role:         this.connection.Role,
 			Organization: this.connection.Organization().ID,
-			Workspace:    this.connection.Workspace(),
 		}
 		n.FormatSettings, err = this.core.connections.UpdatedSettings(ctx, format, conf, pipeline.FormatSettings)
 		if err != nil {
@@ -969,15 +957,6 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 	if !formatConnector.SourceTargets.Contains(state.TargetUser) {
 		return nil, types.Type{}, nil, errors.BadRequest("format %q does not support reading of users", format)
 	}
-	if c.Workspace().Synthetic {
-		if err := this.core.connections.CheckConnector(c.Workspace(), c.Connector(), c.Role); err != nil {
-			return nil, types.Type{}, nil, errors.BadRequest("%s", err)
-		}
-		if err := this.core.connections.CheckConnector(c.Workspace(), formatConnector, state.Source); err != nil {
-			return nil, types.Type{}, nil, errors.BadRequest("%s", err)
-		}
-	}
-
 	// Validate the sheet.
 	if formatConnector.HasSheets {
 		if sheet == "" {
@@ -1706,9 +1685,6 @@ func (this *Connection) ServeUI(ctx context.Context, event string, settings json
 	// before saving to database
 	c := this.connection
 	connector := c.Connector()
-	if err := this.core.connections.CheckConnector(c.Workspace(), connector, c.Role); err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
 	if c.Role == state.Source && !connector.HasSourceSettings {
 		return nil, errors.BadRequest("connector %s does not have source settings", connector.Code)
 	}

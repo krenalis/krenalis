@@ -9,13 +9,10 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"strings"
 	"unicode/utf8"
-
-	"github.com/krenalis/krenalis/tools/validation"
 )
 
-var sourceCSVHeader = []string{"source_record_id", "first_name", "last_name", "email", "phone", "photo_url"}
+var sourceCSVHeader = []string{"source_record_id", "first_name", "last_name", "email", "phone", "photo_url", "country"}
 
 // SourceCSVWriter serializes already generated ordinary records incrementally.
 // It writes a header, comma-separated UTF-8 fields, and LF line endings.
@@ -23,30 +20,22 @@ var sourceCSVHeader = []string{"source_record_id", "first_name", "last_name", "e
 type SourceCSVWriter struct {
 	writer  *csv.Writer
 	catalog *FaceCatalog
-	origin  string
 }
 
 // NewSourceCSVWriter starts one CSV output with its fixed header.
-func NewSourceCSVWriter(dst io.Writer, catalog *FaceCatalog, origin string) (*SourceCSVWriter, error) {
+func NewSourceCSVWriter(dst io.Writer, catalog *FaceCatalog) (*SourceCSVWriter, error) {
 
-	if dst == nil || catalog == nil || origin == "" || len(origin) > 2048 {
-		return nil, fmt.Errorf("invalid CSV destination, photo catalog, or HTTP origin")
-	}
-	_, err := validation.ParseURL(origin, validation.NoPath|validation.NoQuery)
-	if err != nil {
-		return nil, fmt.Errorf("invalid CSV HTTP origin: %w", err)
-	}
-	if strings.HasSuffix(strings.TrimSuffix(origin, "/"), ":") {
-		return nil, fmt.Errorf("invalid CSV HTTP origin port")
+	if dst == nil || catalog == nil {
+		return nil, fmt.Errorf("invalid CSV destination or photo catalog")
 	}
 
 	writer := csv.NewWriter(dst)
-	err = writer.Write(sourceCSVHeader)
+	err := writer.Write(sourceCSVHeader)
 	if err != nil {
 		return nil, err
 	}
 
-	return &SourceCSVWriter{writer: writer, catalog: catalog, origin: strings.TrimSuffix(origin, "/")}, nil
+	return &SourceCSVWriter{writer: writer, catalog: catalog}, nil
 }
 
 // Flush sends buffered CSV bytes to the destination and reports writer errors.
@@ -71,7 +60,7 @@ func (w *SourceCSVWriter) Write(ctx context.Context, record SourceRecord) error 
 		return fmt.Errorf("invalid CSV record or context")
 	}
 
-	fields := [6]string{record.ID}
+	fields := [7]string{record.ID}
 	for i, field := range [...]*string{record.FirstName, record.LastName, record.Email, record.Phone} {
 		if field != nil {
 			if len(*field) > 1024 || !utf8.ValidString(*field) {
@@ -88,7 +77,13 @@ func (w *SourceCSVWriter) Write(ctx context.Context, record SourceRecord) error 
 		if err != nil {
 			return fmt.Errorf("resolve CSV photo asset: %w", err)
 		}
-		fields[5] = w.origin + asset.Path
+		fields[5] = asset.Path
+	}
+	if record.Country != nil {
+		if len(*record.Country) > 1024 || !utf8.ValidString(*record.Country) {
+			return fmt.Errorf("invalid CSV observation")
+		}
+		fields[6] = *record.Country
 	}
 
 	err := ctx.Err()

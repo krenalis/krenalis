@@ -7,10 +7,10 @@ import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import { PostgreSQLSettings } from '../../base/PostgreSQLSettings/PostgreSQLSettings';
 import { SnowflakeSettings } from '../../base/SnowflakeSettings/SnowflakeSettings';
 import { WarehouseSettings } from '../../../lib/api/types/warehouse';
+import { WorkspaceEnvironment } from '../../../lib/api/types/workspace';
 import InitialSchema from './InitialSchema.json';
 import * as icons from '../../../constants/icons';
 import { IS_DOCKER_KEY } from '../../../constants/storage';
@@ -24,7 +24,7 @@ const snowflakeIcon = <ExternalLogo slot='prefix' code='snowflake' path={WAREHOU
 
 const WorkspaceCreate = () => {
 	const [name, setName] = useState<string>('');
-	const [synthetic, setSynthetic] = useState<boolean>(false);
+	const [env, setEnv] = useState<WorkspaceEnvironment>('production');
 	const [selectedWarehouse, setSelectedWarehouse] = useState<string>(
 		localStorage.getItem(IS_DOCKER_KEY) != null ? 'PostgreSQL-Docker' : 'Snowflake',
 	);
@@ -95,7 +95,14 @@ const WorkspaceCreate = () => {
 
 		if (action == 'test') {
 			try {
-				await api.workspaces.testCreation(name, InitialSchema as ObjectType, warehouse, 'Normal', settings, synthetic);
+				await api.workspaces.testCreation(
+					name,
+					InitialSchema as ObjectType,
+					warehouse,
+					'Normal',
+					settings,
+					env,
+				);
 			} catch (err) {
 				setTimeout(() => {
 					setIsCheckingWarehouse(false);
@@ -120,7 +127,7 @@ const WorkspaceCreate = () => {
 					warehouse,
 					'Normal',
 					settings,
-					synthetic,
+					env,
 				);
 				id = res.id;
 			} catch (err) {
@@ -229,17 +236,18 @@ const WorkspaceCreate = () => {
 				)}
 			</Section>
 			<Section
-				title='Mode'
-				description='Synthetic mode is permanent for this workspace.'
+				title='Environment'
+				description='Environment is permanent for this workspace.'
 				padded={true}
 				annotated={true}
 			>
-				<SlCheckbox
-					checked={synthetic}
-					onSlChange={(event) => setSynthetic((event.target as HTMLInputElement).checked)}
+				<SlSelect
+					value={env}
+					onSlChange={(event) => setEnv((event.target as HTMLSelectElement).value as WorkspaceEnvironment)}
 				>
-					Synthetic
-				</SlCheckbox>
+					<SlOption value='production'>Production</SlOption>
+					<SlOption value='development'>Development</SlOption>
+				</SlSelect>
 			</Section>
 			<div className='workspace-create__buttons'>
 				{hasWorkspaces && (

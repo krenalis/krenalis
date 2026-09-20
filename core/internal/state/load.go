@@ -324,7 +324,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 
 	// Read all workspaces.
 	state.workspaces = map[string]*Workspace{}
-	err = tx.QueryScan(ctx, "SELECT id, organization, name, synthetic, warehouse_name,"+
+	err = tx.QueryScan(ctx, "SELECT id, organization, name, environment, warehouse_name,"+
 		" warehouse_mode, warehouse_settings, kms_encrypted_warehouse_settings_key, warehouse_mcp_settings,"+
 		" kms_encrypted_warehouse_mcp_settings_key, alter_profile_schema_id, alter_profile_schema_schema,"+
 		" alter_profile_schema_primary_sources, alter_profile_schema_operations,"+
@@ -348,7 +348,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 					consentPurposes: map[string]*ConsentPurpose{},
 				}
 				var settingsKey, mcpSettingsKey []byte
-				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &ws.Synthetic, &warehousePlatform,
+				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &ws.Environment, &warehousePlatform,
 					&warehouseMode, &ws.Warehouse.settings, &settingsKey, &ws.Warehouse.mcpSettings, &mcpSettingsKey,
 					&ws.AlterProfileSchema.ID, &alterProfileSchemaSchema,
 					&ws.AlterProfileSchema.PrimarySources, &ws.AlterProfileSchema.Operations,

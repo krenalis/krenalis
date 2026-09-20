@@ -18,8 +18,7 @@ type connector struct {
 // AuthURL returns a URL that directs to the consent page of an OAuth 2.0
 // provider.
 func (connector connector) AuthURL(_ http.ResponseWriter, r *http.Request) (any, error) {
-	ws, err := connector.admitWorkspaceRequest(r, x1)
-	if err != nil {
+	if _, _, err := connector.admitWorkspaceOptionalRequest(r, x1); err != nil {
 		return nil, err
 	}
 	q := r.URL.Query()
@@ -37,7 +36,7 @@ func (connector connector) AuthURL(_ http.ResponseWriter, r *http.Request) (any,
 		return nil, errors.BadRequest("unexpected connection role '%s'", role)
 	}
 	redirectURI := q.Get("redirectURI")
-	authURL, err := c.AuthURL(ws, role, redirectURI)
+	authURL, err := c.AuthURL(role, redirectURI)
 	if err != nil {
 		return nil, err
 	}

@@ -76,9 +76,6 @@ func (c *Connections) ServeConnectionUI(ctx context.Context, connection *state.C
 	var err error
 	settingsStore := newConnectionSettingStore(c.state, connection)
 	organization := connection.Organization()
-	if err := c.CheckConnector(connection.Workspace(), connection.Connector(), connection.Role); err != nil {
-		return nil, err
-	}
 	switch connector := connection.Connector(); connector.Type {
 	case state.Application:
 		inner, err = connectors.RegisteredApplication(connector.Code).New(&connectors.ApplicationEnv{
@@ -97,7 +94,11 @@ func (c *Connections) ServeConnectionUI(ctx context.Context, connection *state.C
 		defer database.(databaseConnection).Close()
 		inner = database
 	case state.FileStorage:
-		inner, err = c.newFileStorage(connector.Code, connection.Role, settingsStore, organization.ID, connection.Workspace())
+		inner, err = connectors.RegisteredFileStorage(connector.Code).New(&connectors.FileStorageEnv{
+			Settings: settingsStore,
+			Dial:     dialer.Dial(organization.ID),
+			DialWith: dialer.DialWith(organization.ID),
+		})
 	case state.MessageBroker:
 		inner, err = connectors.RegisteredMessageBroker(connector.Code).New(&connectors.MessageBrokerEnv{
 			Settings: settingsStore,
@@ -124,8 +125,7 @@ func (c *Connections) ServeConnectionUI(ctx context.Context, connection *state.C
 }
 
 type ConnectorConfig struct {
-	Role      state.Role
-	Workspace *state.Workspace
+	Role state.Role
 
 	// Organization is the ID of the organization on behalf of which the
 	// connector is used.
@@ -148,9 +148,6 @@ type ConnectorConfig struct {
 //
 // It panics if the connector has no settings.
 func (c *Connections) ServeConnectorUI(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, event string, settings json.Value) (json.Value, error) {
-	if err := c.CheckConnector(conf.Workspace, connector, conf.Role); err != nil {
-		return nil, err
-	}
 	var inner any
 	var err error
 	settingStore := newUISettingStore(nil)
@@ -174,7 +171,11 @@ func (c *Connections) ServeConnectorUI(ctx context.Context, connector *state.Con
 	case state.File:
 		inner, err = connectors.RegisteredFile(code).New(&connectors.FileEnv{Settings: settingStore})
 	case state.FileStorage:
-		inner, err = c.newFileStorage(code, conf.Role, settingStore, conf.Organization, conf.Workspace)
+		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{
+			Settings: settingStore,
+			Dial:     dialer.Dial(conf.Organization),
+			DialWith: dialer.DialWith(conf.Organization),
+		})
 	case state.MessageBroker:
 		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{
 			Settings: settingStore,
@@ -207,9 +208,6 @@ func (c *Connections) ServeConnectorUI(ctx context.Context, connector *state.Con
 //
 // It panics if the connector has no settings.
 func (c *Connections) UpdatedSettings(ctx context.Context, connector *state.Connector, conf *ConnectorConfig, settings json.Value) (json.Value, error) {
-	if err := c.CheckConnector(conf.Workspace, connector, conf.Role); err != nil {
-		return nil, err
-	}
 	var inner any
 	var err error
 	settingStore := newUISettingStore(nil)
@@ -233,7 +231,11 @@ func (c *Connections) UpdatedSettings(ctx context.Context, connector *state.Conn
 	case state.File:
 		inner, err = connectors.RegisteredFile(code).New(&connectors.FileEnv{Settings: settingStore})
 	case state.FileStorage:
-		inner, err = c.newFileStorage(code, conf.Role, settingStore, conf.Organization, conf.Workspace)
+		inner, err = connectors.RegisteredFileStorage(code).New(&connectors.FileStorageEnv{
+			Settings: settingStore,
+			Dial:     dialer.Dial(conf.Organization),
+			DialWith: dialer.DialWith(conf.Organization),
+		})
 	case state.MessageBroker:
 		inner, err = connectors.RegisteredMessageBroker(code).New(&connectors.MessageBrokerEnv{
 			Settings: settingStore,

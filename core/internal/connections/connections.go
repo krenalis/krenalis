@@ -21,7 +21,6 @@ import (
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/connections/httpclient"
 	"github.com/krenalis/krenalis/core/internal/state"
-	"github.com/krenalis/krenalis/core/internal/synthetic"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -143,15 +142,14 @@ type Writer interface {
 // Connections provides access to application, database, file, file storage,
 // SDK, and message broker connections.
 type Connections struct {
-	state     *state.State
-	http      *httpclient.HTTP
-	synthetic *synthetic.Scenario
+	state *state.State
+	http  *httpclient.HTTP
 }
 
 // New returns a new *Connections value.
-func New(state *state.State, scenario *synthetic.Scenario) *Connections {
+func New(state *state.State) *Connections {
 	h := httpclient.New(state, http.DefaultTransport.(*http.Transport))
-	return &Connections{state: state, http: h, synthetic: scenario}
+	return &Connections{state: state, http: h}
 }
 
 // AuthorizationEndpoint returns the OAuth authorization endpoint URI for the

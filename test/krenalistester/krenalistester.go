@@ -29,7 +29,6 @@ import (
 	"github.com/krenalis/krenalis/cmd"
 	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/test/testimages"
-	toolsjson "github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -74,7 +73,6 @@ type Krenalis struct {
 	// Options.
 	fileSystemRoot        string
 	syntheticPhotosDir    string
-	syntheticConfig       *core.SyntheticConfig
 	natsAckWait           string
 	populateProfileSchema bool
 }
@@ -182,11 +180,6 @@ func (k *Krenalis) SetSyntheticPhotosDir(directory string) {
 	k.syntheticPhotosDir = directory
 }
 
-// SetSyntheticConfig fixes the Source Simulation scenario before Start.
-func (k *Krenalis) SetSyntheticConfig(config *core.SyntheticConfig) {
-	k.syntheticConfig = config
-}
-
 // SetNATSAckWait sets the NATS ack wait duration.
 func (k *Krenalis) SetNATSAckWait(duration string) {
 	k.natsAckWait = duration
@@ -199,14 +192,6 @@ func (k *Krenalis) SetNATSAckWait(duration string) {
 func (k *Krenalis) Start() {
 
 	ctx := context.Background()
-	var syntheticConfigJSON string
-	if k.syntheticConfig != nil {
-		data, err := toolsjson.Marshal(k.syntheticConfig)
-		if err != nil {
-			k.t.Fatal(err)
-		}
-		syntheticConfigJSON = string(data)
-	}
 
 	// In case of an error during the starting of Krenalis, stop it.
 	var initOk bool
@@ -384,7 +369,6 @@ func (k *Krenalis) Start() {
 			"KRENALIS_TRANSFORMERS_LOCAL_FUNCTIONS_DIR=" + k.transformationsTempDir,
 			"KRENALIS_CONNECTOR_FILESYSTEM_ROOT=" + k.fileSystemRoot,
 			"KRENALIS_SYNTHETIC_PHOTOS_DIR=" + k.syntheticPhotosDir,
-			"KRENALIS_SYNTHETIC_CONFIG=" + syntheticConfigJSON,
 			fmt.Sprintf("KRENALIS_NATS_URL=nats://%s:%d", testsSettings.NATS.URL, testsSettings.NATS.Port),
 			"KRENALIS_NATS_USER=" + testsSettings.NATS.User,
 			"KRENALIS_NATS_PASSWORD=" + testsSettings.NATS.Password,
@@ -436,7 +420,6 @@ func (k *Krenalis) Start() {
 		setts.Transformers.Local.FunctionsDir = k.transformationsTempDir
 		setts.MaxQueuedEventsPerDestination = 50_000
 		setts.SyntheticPhotosDir = k.syntheticPhotosDir
-		setts.Synthetic = k.syntheticConfig
 		err := os.Setenv("KRENALIS_CONNECTOR_FILESYSTEM_ROOT", k.fileSystemRoot)
 		if err != nil {
 			k.t.Fatal(err)
@@ -663,31 +646,6 @@ func (k *Krenalis) SetWorkspaceID(id string) {
 		panic("workspace ID is empty")
 	}
 	k.ws = id
-}
-
-// OpenCoreWithoutSynthetic reloads the test database with no Synthetic scenario.
-// The caller must close the returned Core before stopping the test containers.
-func (k *Krenalis) OpenCoreWithoutSynthetic(ctx context.Context) *core.Core {
-	settings := testsSettings
-	conf := core.Config{
-		DB: core.DBConfig{
-			Host: settings.Database.Host, Port: settings.Database.Port, Username: settings.Database.Username,
-			Password: settings.Database.Password, Database: settings.Database.Database, Schema: settings.Database.Schema,
-		},
-		KMS:                           testKMS(),
-		OrganizationsAPIKey:           settings.OrganizationsAPIKey,
-		FunctionProvider:              core.LocalConfig{PythonExecutable: settings.PythonExecutable, FunctionsDir: k.transformationsTempDir},
-		SentryTelemetryLevel:          core.TelemetryLevelNone,
-		MaxQueuedEventsPerDestination: 50_000,
-	}
-	conf.NATS.Servers = []string{fmt.Sprintf("nats://%s:%d", settings.NATS.URL, settings.NATS.Port)}
-	conf.NATS.User = settings.NATS.User
-	conf.NATS.Password = settings.NATS.Password
-	loaded, err := core.New(ctx, &conf)
-	if err != nil {
-		k.t.Fatalf("expected persisted Core to reopen, got %v", err)
-	}
-	return loaded
 }
 
 func ConnectionPool(ctx context.Context, s *DBSettings) (*pgxpool.Pool, error) {

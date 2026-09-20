@@ -12,6 +12,42 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
+// TestEnvironmentJSON verifies the public Environment representation.
+func TestEnvironmentJSON(t *testing.T) {
+	for _, test := range []struct {
+		env  Environment
+		want string
+	}{
+		{env: Production, want: `"production"`},
+		{env: Development, want: `"development"`},
+	} {
+		encoded, err := json.Marshal(test.env)
+		if err != nil {
+			t.Fatalf("expected Environment encoding, got %v", err)
+		}
+		if string(encoded) != test.want {
+			t.Fatalf("expected Environment JSON %q, got %q", test.want, encoded)
+		}
+
+		var decoded Environment
+		err = json.Unmarshal(encoded, &decoded)
+		if err != nil {
+			t.Fatalf("expected Environment decoding, got %v", err)
+		}
+		if decoded != test.env {
+			t.Fatalf("expected Environment %d, got %d", test.env, decoded)
+		}
+	}
+
+	for _, value := range []string{`null`, `"preview"`, `1`} {
+		var env Environment
+		err := json.Unmarshal([]byte(value), &env)
+		if err == nil {
+			t.Fatalf("expected invalid Environment JSON %s, got success", value)
+		}
+	}
+}
+
 // TestSuitableAsIdentifier verifies which types are suitable as identifiers.
 func TestSuitableAsIdentifier(t *testing.T) {
 	tests := []struct {

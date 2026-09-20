@@ -28,9 +28,7 @@ const ConnectorsList = () => {
 		new URLSearchParams(window.location.search).get('category') ?? 'All',
 	);
 
-	const { api, handleError, connectors, setTitle, redirect, publicMetadata, workspaces, selectedWorkspace } =
-		useContext(AppContext);
-	const isSynthetic = workspaces?.find((workspace) => workspace.id === selectedWorkspace)?.synthetic === true;
+	const { api, handleError, connectors, setTitle, redirect, publicMetadata } = useContext(AppContext);
 
 	const location = useLocation();
 
@@ -116,10 +114,6 @@ const ConnectorsList = () => {
 	}, [connectionRole]);
 
 	useEffect(() => {
-		if (isSynthetic) {
-			setAdditionalPotentialConnectors([]);
-			return;
-		}
 		let cancelled = false;
 		const fetchPotentialConnectors = async () => {
 			let connectors: PotentialConnector[];
@@ -142,7 +136,7 @@ const ConnectorsList = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [existingConnectorCodes, isSynthetic]);
+	}, [existingConnectorCodes]);
 
 	const onConnectorAdd = async () => {
 		let c = selectedConnector;

@@ -24,6 +24,8 @@ func TestValuerStringerConsistency(t *testing.T) {
 	}{
 		{"AccessKeyTypeAPI", AccessKeyTypeAPI, "API"},
 		{"AccessKeyTypeMCP", AccessKeyTypeMCP, "MCP"},
+		{"Production", Production, "production"},
+		{"Development", Development, "development"},
 		{"Normal", Normal, "Normal"},
 		{"Inspection", Inspection, "Inspection"},
 		{"Maintenance", Maintenance, "Maintenance"},
@@ -73,6 +75,7 @@ func TestValuerStringerInvalidValues(t *testing.T) {
 		v    valuerStringer
 	}{
 		{"AccessKeyType", AccessKeyType(-1)},
+		{"Environment", Environment(-1)},
 		{"WarehouseMode", WarehouseMode(-1)},
 		{"ConnectorType", ConnectorType(-1)},
 		{"WebhooksPer", WebhooksPer(-1)},
@@ -100,5 +103,31 @@ func TestValuerStringerInvalidValues(t *testing.T) {
 			}()
 			_ = tt.v.String()
 		})
+	}
+}
+
+// TestEnvironmentScan verifies PostgreSQL enum labels decode to Environment.
+func TestEnvironmentScan(t *testing.T) {
+	for _, test := range []struct {
+		value string
+		want  Environment
+	}{
+		{value: "production", want: Production},
+		{value: "development", want: Development},
+	} {
+		var got Environment
+		err := got.Scan(test.value)
+		if err != nil {
+			t.Fatalf("expected Environment scan, got %v", err)
+		}
+		if got != test.want {
+			t.Fatalf("expected Environment %d, got %d", test.want, got)
+		}
+	}
+
+	var env Environment
+	err := env.Scan("preview")
+	if err == nil {
+		t.Fatal("expected invalid Environment error, got success")
 	}
 }

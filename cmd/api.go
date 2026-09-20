@@ -118,11 +118,10 @@ func (api api) ConnectorDocumentation(_ http.ResponseWriter, r *http.Request) (a
 
 // Connectors returns the connectors.
 func (api api) Connectors(_ http.ResponseWriter, r *http.Request) (any, error) {
-	_, ws, err := api.admitWorkspaceOptionalRequest(r, x1)
-	if err != nil {
+	if _, _, err := api.admitWorkspaceOptionalRequest(r, x1); err != nil {
 		return nil, err
 	}
-	return map[string]any{"connectors": api.core.Connectors(ws)}, nil
+	return map[string]any{"connectors": api.core.Connectors()}, nil
 }
 
 // organizationLimits contains the limits used when creating or updating an

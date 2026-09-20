@@ -36,7 +36,6 @@ import (
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/streams"
 	"github.com/krenalis/krenalis/core/internal/streams/nats"
-	"github.com/krenalis/krenalis/core/internal/synthetic"
 	"github.com/krenalis/krenalis/core/internal/transformers"
 	"github.com/krenalis/krenalis/core/internal/transformers/lambda"
 	"github.com/krenalis/krenalis/core/internal/transformers/local"
@@ -46,7 +45,6 @@ import (
 	"github.com/krenalis/krenalis/tools/backoff"
 	"github.com/krenalis/krenalis/tools/base58"
 	"github.com/krenalis/krenalis/tools/errors"
-	"github.com/krenalis/krenalis/tools/fakedata"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/kms"
 	"github.com/krenalis/krenalis/tools/types"
@@ -110,8 +108,6 @@ type Config struct {
 	SentryTelemetryLevel          TelemetryLevel
 	MaxQueuedEventsPerDestination int
 	PrometheusMetricsEnabled      bool
-	Synthetic                     *SyntheticConfig
-	SyntheticCatalog              *fakedata.FaceCatalog
 	DatabaseInitialization        struct {
 		// InitIfEmpty controls whether the PostgreSQL database should be
 		// initialized in case it is empty.
@@ -208,14 +204,6 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 			coreActive.Store(false)
 		}
 	}()
-	var scenario *synthetic.Scenario
-	if conf.Synthetic != nil {
-		scenario, err = synthetic.New(*conf.Synthetic, conf.SyntheticCatalog)
-		if err != nil {
-			return nil, fmt.Errorf("invalid KRENALIS_SYNTHETIC_CONFIG: %w", err)
-		}
-	}
-
 	// Open connection to PostgreSQL.
 	ps := conf.DB
 	db, err := dbpkg.Open(&dbpkg.Options{
@@ -351,7 +339,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}()
 
 	// Init the connections.
-	core.connections = connections.New(core.state, scenario)
+	core.connections = connections.New(core.state)
 
 	// Connect to the NATS server.
 	core.stream, err = nats.Connect(conf.NATS.Options)
@@ -702,16 +690,12 @@ func (core *Core) ConnectorDocumentation(code string) (*ConnectorDocumentation, 
 	return &doc, nil
 }
 
-// Connectors returns the connectors available to workspace, or the general
-// catalog when workspace is nil.
-func (core *Core) Connectors(workspace *Workspace) []*Connector {
+// Connectors returns the connectors.
+func (core *Core) Connectors() []*Connector {
 	core.mustBeOpen()
 	cc := core.state.Connectors()
-	connectors := make([]*Connector, 0, len(cc))
-	for _, c := range cc {
-		if workspace != nil && workspace.workspace.Synthetic && !connections.SupportsSynthetic(c, state.Source) {
-			continue
-		}
+	connectors := make([]*Connector, len(cc))
+	for i, c := range cc {
 		connector := Connector{
 			core:          core,
 			connector:     c,
@@ -733,7 +717,7 @@ func (core *Core) Connectors(workspace *Workspace) []*Connector {
 				Summary:     c.Documentation.Source.Summary,
 			}
 		}
-		if c.DestinationTargets != 0 && (workspace == nil || !workspace.workspace.Synthetic) {
+		if c.DestinationTargets != 0 {
 			connector.AsDestination = &DestinationConnector{
 				Targets:     stateToCoreTargets(c.DestinationTargets),
 				HasSettings: c.HasDestinationSettings,
@@ -750,7 +734,7 @@ func (core *Core) Connectors(workspace *Workspace) []*Connector {
 				}
 			}
 		}
-		connectors = append(connectors, &connector)
+		connectors[i] = &connector
 	}
 	slices.SortFunc(connectors, func(a, b *Connector) int {
 		if a.Code < b.Code {

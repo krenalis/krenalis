@@ -3,6 +3,8 @@ import { WarehouseMode } from './warehouse';
 
 type PrimarySources = Record<string, string>;
 
+type WorkspaceEnvironment = 'production' | 'development';
+
 type ProfileRoleID = 'firstName' | 'lastName' | 'email' | 'country' | 'photo';
 
 interface ProfileRoleAssignments {
@@ -17,7 +19,7 @@ interface Workspace {
 	assignedRoles: ProfileRoleAssignments;
 	id: string;
 	name: string;
-	synthetic: boolean;
+	environment: WorkspaceEnvironment;
 	resolveIdentitiesOnBatchImport: boolean;
 	identifiers: Identifiers;
 	warehouseMode: WarehouseMode;
@@ -53,4 +55,5 @@ export type {
 	ConsentPurpose,
 	ProfileRoleAssignments,
 	ProfileRoleID,
+	WorkspaceEnvironment,
 };

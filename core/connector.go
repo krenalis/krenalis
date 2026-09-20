@@ -37,18 +37,10 @@ type Connector struct {
 //
 // After granting permissions, the provider redirects the user to the URL
 // specified by redirectURI.
-// workspace is the authenticated workspace requesting authorization.
-//
 // If the connector is not configured for OAuth (i.e., ClientID or ClientSecret
 // is empty), it returns an errors.UnavailableError error.
-func (this *Connector) AuthURL(workspace *Workspace, role Role, redirectURI string) (string, error) {
+func (this *Connector) AuthURL(role Role, redirectURI string) (string, error) {
 	this.core.mustBeOpen()
-	if workspace == nil || workspace.core != this.core {
-		return "", errors.BadRequest("workspace is not valid for this connector")
-	}
-	if err := this.core.connections.CheckConnector(workspace.workspace, this.connector, state.Role(role)); err != nil {
-		return "", errors.BadRequest("%s", err)
-	}
 	if this.connector.OAuth == nil {
 		return "", errors.BadRequest("connector %s does not support OAuth", this.connector.Code)
 	}

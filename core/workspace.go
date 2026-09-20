@@ -44,13 +44,64 @@ type Workspace struct {
 	workspace                      *state.Workspace
 	ID                             string                 `json:"id"`
 	Name                           string                 `json:"name"`
-	Synthetic                      bool                   `json:"synthetic"`
+	Environment                    Environment            `json:"environment"`
 	ProfileSchema                  types.Type             `json:"profileSchema"`
 	AssignedRoles                  ProfileRoleAssignments `json:"assignedRoles"`
 	PrimarySources                 map[string]string      `json:"primarySources"`
 	ResolveIdentitiesOnBatchImport bool                   `json:"resolveIdentitiesOnBatchImport"`
 	Identifiers                    []string               `json:"identifiers"`
 	WarehouseMode                  WarehouseMode          `json:"warehouseMode"`
+}
+
+// Environment identifies a workspace's immutable application environment.
+type Environment int8
+
+const (
+	Production Environment = iota
+	Development
+)
+
+// MarshalJSON implements the json.Marshaler interface.
+// It panics if env is not a valid Environment value.
+func (env Environment) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + env.String() + `"`), nil
+}
+
+// String returns the string representation of env.
+// It panics if env is not a valid Environment value.
+func (env Environment) String() string {
+	return state.Environment(env).String()
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (env *Environment) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(data, null) {
+		return errors.BadRequest("environment cannot be null")
+	}
+	var value any
+	err := json.Unmarshal(data, &value)
+	if err != nil {
+		return err
+	}
+	s, ok := value.(string)
+	if !ok {
+		return fmt.Errorf("json: cannot scan a %T value into an Environment value", value)
+	}
+	var parsed Environment
+	switch s {
+	case "production":
+		parsed = Production
+	case "development":
+		parsed = Development
+	default:
+		return fmt.Errorf("json: invalid Environment: %s", s)
+	}
+	*env = parsed
+	return nil
+}
+
+func isValidEnvironment(env Environment) bool {
+	return env == Production || env == Development
 }
 
 // ProfileRoleAssignments maps each Profile role to the path of the property
@@ -317,9 +368,6 @@ func (this *Workspace) AuthToken(ctx context.Context, connector, redirectionURI,
 	if !ok {
 		return "", errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", connector)
 	}
-	if err := this.core.connections.CheckConnector(this.workspace, c, state.Source); err != nil {
-		return "", errors.BadRequest("%s", err)
-	}
 	if c.OAuth == nil {
 		return "", errors.BadRequest("connector %s does not support authorization", connector)
 	}
@@ -494,9 +542,6 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	if !ok {
 		return "", errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", connection.Connector)
 	}
-	if err := this.core.connections.CheckConnector(this.workspace, c, state.Role(connection.Role)); err != nil {
-		return "", errors.BadRequest("%s", err)
-	}
 	switch c.Type {
 	case state.File:
 		return "", errors.BadRequest("connections cannot have type file")
@@ -611,7 +656,6 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		conf := &connections.ConnectorConfig{
 			Role:         n.Role,
 			Organization: this.workspace.Organization().ID,
-			Workspace:    this.workspace,
 		}
 		conf.OAuth.Account = n.Account.Code
 		conf.OAuth.ClientSecret = clientSecret
@@ -1574,10 +1618,6 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 	if !ok {
 		return nil, errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", connector)
 	}
-	if err := this.core.connections.CheckConnector(this.workspace, c, state.Role(role)); err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-
 	if role == Source && !c.HasSourceSettings || role == Destination && !c.HasDestinationSettings {
 		return nil, errors.BadRequest("connector %s does not have %s settings", connector, strings.ToLower(role.String()))
 	}
@@ -1606,7 +1646,6 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 	conf := &connections.ConnectorConfig{
 		Role:         state.Role(role),
 		Organization: this.workspace.Organization().ID,
-		Workspace:    this.workspace,
 	}
 	conf.OAuth.Account = account.Code
 	conf.OAuth.ClientSecret = clientSecret
