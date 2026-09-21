@@ -359,6 +359,20 @@ func TestConvertArrayUniqueness(t *testing.T) {
 			wantError:   true,
 		},
 		{
+			name:        "phone duplicates allowed after normalization",
+			value:       []any{"+39 02-36618 300", "+390236618300"},
+			source:      types.Array(types.String()).WithUnique(),
+			destination: types.Array(types.String().AsPhone()),
+			expected:    []any{"+390236618300", "+390236618300"},
+		},
+		{
+			name:        "phone duplicates rejected after normalization",
+			value:       []any{"+39 02-36618 300", "+390236618300"},
+			source:      types.Array(types.String()).WithUnique(),
+			destination: types.Array(types.String().AsPhone()).WithUnique(),
+			wantError:   true,
+		},
+		{
 			name:        "equivalent decimals",
 			value:       []any{decimal.New(15, 1), decimal.MustParse("1.50")},
 			source:      types.Array(types.Decimal(6, 2)),
@@ -372,21 +386,21 @@ func TestConvertArrayUniqueness(t *testing.T) {
 			got, err := convert(test.value, test.source, test.destination, false, false, nil, None)
 			if err != nil {
 				if !test.wantError {
-					t.Fatal(err)
+					t.Fatalf("expected no error, got %v", err)
 				}
 				if err != errInvalidConversion {
 					t.Fatalf("expected error %v, got %v", errInvalidConversion, err)
 				}
 				if !cmp.Equal(got, test.value) {
-					t.Fatalf("got value %#v with error, want original value %#v", got, test.value)
+					t.Fatalf("expected original value %#v with error, got %#v", test.value, got)
 				}
 				return
 			}
 			if test.wantError {
-				t.Fatalf("got value %#v, want an error", got)
+				t.Fatalf("expected error %v, got value %#v", errInvalidConversion, got)
 			}
 			if !cmp.Equal(got, test.expected) {
-				t.Fatalf("got value %#v, want %#v", got, test.expected)
+				t.Fatalf("expected value %#v, got %#v", test.expected, got)
 			}
 		})
 	}
