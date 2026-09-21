@@ -152,7 +152,7 @@ func (ml *MailerLite) RecordSchema(ctx context.Context, target connectors.Target
 				Name:        field.Key,
 				Type:        typ,
 				Nullable:    true,
-				Description: field.Name,
+				DisplayName: field.Name,
 			})
 		}
 		if response.Meta.LastPage == 0 || response.Meta.CurrentPage >= response.Meta.LastPage {
@@ -162,38 +162,38 @@ func (ml *MailerLite) RecordSchema(ctx context.Context, target connectors.Target
 
 	var properties []types.Property
 	if role == connectors.Source {
-		properties = append(properties, types.Property{Name: "id", Type: types.String(), Description: "Subscriber ID"})
+		properties = append(properties, types.Property{Name: "id", Type: types.String(), DisplayName: "Subscriber ID"})
 	}
 	properties = append(properties,
-		types.Property{Name: "email", Type: types.String(), CreateRequired: true, Description: "Email address, used only when creating a subscriber"},
-		types.Property{Name: "groups", Type: types.Array(types.String()), ReadOptional: true, Description: "Group IDs"},
+		types.Property{Name: "email", Type: types.String(), CreateRequired: true, DisplayName: "Email address", Description: "Used only when creating a subscriber"},
+		types.Property{Name: "groups", Type: types.Array(types.String()), ReadOptional: true, DisplayName: "Group IDs"},
 	)
 	if len(fields) > 0 {
 		properties = append(properties, types.Property{
 			Name:        "fields",
 			Type:        types.Object(fields),
-			Description: "Subscriber fields",
+			DisplayName: "Subscriber fields",
 		})
 	}
 	properties = append(properties,
-		types.Property{Name: "status", Type: subscriberStatusType(), Description: "Subscriber status"},
-		types.Property{Name: "source", Type: types.String(), ReadOptional: true, Description: "Subscriber source"},
-		types.Property{Name: "sent", Type: types.Int(32), ReadOptional: true, Description: "Number of sent emails"},
-		types.Property{Name: "opens_count", Type: types.Int(32), ReadOptional: true, Description: "Number of opens"},
-		types.Property{Name: "clicks_count", Type: types.Int(32), ReadOptional: true, Description: "Number of clicks"},
-		types.Property{Name: "open_rate", Type: types.Float(64), ReadOptional: true, Description: "Open rate"},
-		types.Property{Name: "click_rate", Type: types.Float(64), ReadOptional: true, Description: "Click rate"},
-		types.Property{Name: "ip_address", Type: types.IP(), Nullable: true, ReadOptional: true, Description: "Subscriber IP address"},
-		types.Property{Name: "subscribed_at", Type: types.DateTime(), Nullable: true, ReadOptional: true, Description: "Subscription timestamp"},
-		types.Property{Name: "unsubscribed_at", Type: types.DateTime(), Nullable: true, ReadOptional: true, Description: "Unsubscribe timestamp"},
-		types.Property{Name: "created_at", Type: types.DateTime(), Description: "Creation timestamp"},
-		types.Property{Name: "updated_at", Type: types.DateTime(), Description: "Last update timestamp"},
-		types.Property{Name: "opted_in_at", Type: types.DateTime(), Nullable: true, ReadOptional: true, Description: "Opt-in timestamp"},
-		types.Property{Name: "optin_ip", Type: types.IP(), Nullable: true, ReadOptional: true, Description: "Opt-in IP address"},
+		types.Property{Name: "status", Type: subscriberStatusType(), DisplayName: "Subscriber status"},
+		types.Property{Name: "source", Type: types.String(), ReadOptional: true, DisplayName: "Subscriber source"},
+		types.Property{Name: "sent", Type: types.Int(32), ReadOptional: true, DisplayName: "Number of sent emails"},
+		types.Property{Name: "opens_count", Type: types.Int(32), ReadOptional: true, DisplayName: "Number of opens"},
+		types.Property{Name: "clicks_count", Type: types.Int(32), ReadOptional: true, DisplayName: "Number of clicks"},
+		types.Property{Name: "open_rate", Type: types.Float(64), ReadOptional: true, DisplayName: "Open rate"},
+		types.Property{Name: "click_rate", Type: types.Float(64), ReadOptional: true, DisplayName: "Click rate"},
+		types.Property{Name: "ip_address", Type: types.IP(), Nullable: true, ReadOptional: true, DisplayName: "Subscriber IP address"},
+		types.Property{Name: "subscribed_at", Type: types.DateTime(), Nullable: true, ReadOptional: true, DisplayName: "Subscription timestamp"},
+		types.Property{Name: "unsubscribed_at", Type: types.DateTime(), Nullable: true, ReadOptional: true, DisplayName: "Unsubscribe timestamp"},
+		types.Property{Name: "created_at", Type: types.DateTime(), DisplayName: "Creation timestamp"},
+		types.Property{Name: "updated_at", Type: types.DateTime(), DisplayName: "Last update timestamp"},
+		types.Property{Name: "opted_in_at", Type: types.DateTime(), Nullable: true, ReadOptional: true, DisplayName: "Opt-in timestamp"},
+		types.Property{Name: "optin_ip", Type: types.IP(), Nullable: true, ReadOptional: true, DisplayName: "Opt-in IP address"},
 	)
 	if role == connectors.Destination {
 		properties = append(properties,
-			types.Property{Name: "resubscribe", Type: types.Boolean(), Description: "Resubscribe a previously unsubscribed subscriber when allowed by MailerLite"},
+			types.Property{Name: "resubscribe", Type: types.Boolean(), DisplayName: "Resubscribe", Description: "Resubscribe a previously unsubscribed subscriber when allowed by MailerLite"},
 		)
 	}
 
