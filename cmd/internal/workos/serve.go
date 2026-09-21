@@ -122,8 +122,7 @@ func (wo *WorkOS) ServeLogin(r *http.Request) (string, string, error) {
 // WorkOS organization linked to it, and sends a WorkOS invitation email that
 // invites adminEmail as an admin of the organization. If a step after the
 // Krenalis organization has been created fails, that organization is deleted
-// again. It runs on a context detached from ctx, so that canceling ctx does
-// not interrupt it halfway.
+// again.
 //
 // It returns an errors.BadRequestError if adminEmail is not a valid email
 // address.
