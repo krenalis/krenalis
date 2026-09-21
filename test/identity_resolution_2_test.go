@@ -173,7 +173,7 @@ func TestIdentityResolution2(t *testing.T) {
 	// Check that there is only one profile, and that its properties have been
 	// merged correctly.
 
-	profiles, _, total := k.Profiles(schema.Properties().Names(), "", false, 0, 100)
+	profiles, total := k.Profiles(schema.Properties().Names(), "", false, 0, 100)
 	if total != 1 {
 		t.Fatalf("expected just 1 profile (which is the merge of the 3 identities), got %d instead", total)
 	}
@@ -205,7 +205,7 @@ func TestIdentityResolution2(t *testing.T) {
 
 	k.RunIdentityResolutionAndWait()
 
-	profiles, _, total = k.Profiles(schema.Properties().Names(), "", false, 0, 100)
+	profiles, total = k.Profiles(schema.Properties().Names(), "", false, 0, 100)
 	if total != 1 {
 		t.Fatalf("expected just 1 profile (which is the merge of the 3 identities), got %d instead", total)
 	}

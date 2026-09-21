@@ -224,13 +224,13 @@ const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 	await page.locator('.pipeline__filters-add-condition').click();
 
 	const rootFilter = page.locator('.pipeline__filters-group--root');
-	const rootRemoveConditionButton = rootFilter.getByRole('button', { name: 'Remove condition' });
+	const rootRemoveConditionButton = rootFilter.getByRole('button', { name: 'Remove condition 1', exact: true });
 	const rootRemoveConditionTooltip = rootFilter.locator(
 		':scope > .pipeline__filters-group-rules > .pipeline__filters-rule:not(.pipeline__filters-rule--group) .pipeline__filters-remove-condition-wrapper > sl-tooltip',
 	);
 	await expect(rootRemoveConditionButton).toHaveJSProperty('disabled', false);
 	await expect(rootRemoveConditionTooltip).toHaveCount(1);
-	await expect(rootRemoveConditionTooltip).toHaveJSProperty('content', 'Remove condition');
+	await expect(rootRemoveConditionTooltip).toHaveJSProperty('content', 'Remove condition 1');
 
 	await page.locator('.pipeline__filters-add-condition').click();
 	await page.locator('.pipeline__filters-add-condition').click();
@@ -270,12 +270,15 @@ const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 	await expect(nestedRemoveConditionButtons.first()).toHaveJSProperty('disabled', false);
 	await expect(nestedRemoveConditionButtons.nth(1)).toHaveJSProperty('disabled', false);
 	await expect(nestedRemoveConditionTooltips).toHaveCount(2);
-	await expect(nestedRemoveConditionTooltips.first()).toHaveJSProperty('content', 'Remove condition');
-	await expect(nestedRemoveConditionTooltips.nth(1)).toHaveJSProperty('content', 'Remove condition');
+	await expect(nestedRemoveConditionButtons.first()).toHaveAccessibleName('Remove condition 4');
+	await expect(nestedRemoveConditionButtons.nth(1)).toHaveAccessibleName('Remove condition 5');
+	await expect(nestedRemoveConditionTooltips.first()).toHaveJSProperty('content', 'Remove condition 4');
+	await expect(nestedRemoveConditionTooltips.nth(1)).toHaveJSProperty('content', 'Remove condition 5');
 
 	await nestedRemoveConditionButtons.nth(1).click();
 	await expect(nestedRemoveConditionButtons).toHaveCount(1);
 	await expect(nestedRemoveConditionButtons.first()).toHaveJSProperty('disabled', true);
+	await expect(nestedGroup.locator('.pipeline__filters-property sl-input')).toBeFocused();
 	await nestedGroup.locator('.pipeline__filters-add-group').click();
 	await expect(nestedRemoveGroupTooltip).toHaveJSProperty('content', 'Remove groups');
 	await expect(nestedRemoveConditionButtons.first()).toHaveJSProperty('disabled', false);
@@ -340,9 +343,16 @@ const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 	await filters.nth(1).locator('.pipeline__filters-operator sl-option[value="6"]').click(); // option is "is between".
 	await filters.nth(1).locator('.pipeline__filters-value-input:nth-child(2) >> input').fill('1200');
 	await page.waitForTimeout(2000);
-	await filters.nth(1).locator('.pipeline__filters-value-input:nth-child(4) >> input').fill('1800');
+	const lastBetweenValue = filters.nth(1).locator('.pipeline__filters-value-input:nth-child(4) >> input');
+	await lastBetweenValue.fill('1800');
+	await lastBetweenValue.focus();
+	await page.keyboard.press('Tab');
+	await expect(filters.nth(1).getByRole('button', { name: 'Remove condition 2', exact: true })).toBeFocused();
 
 	await filters.nth(2).locator('.pipeline__filters-remove-condition').click(); // remove the last filter.
+	await expect(filters).toHaveCount(2);
+	await expect(filters.nth(1).locator('.pipeline__filters-property sl-input')).toBeFocused();
+	await expect(page.locator('.filter-editor__announcement')).toHaveText('Condition removed');
 
 	await expect(rootActions.locator('.pipeline__filters-add-condition')).toContainText('Add a condition');
 	await expect(rootActions.locator('.pipeline__filters-add-group')).toContainText('Add a group');

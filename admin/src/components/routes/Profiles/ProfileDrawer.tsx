@@ -3,9 +3,7 @@ import { useProfileDrawer } from './useProfileDrawer';
 import { ProfileTab } from './Profiles.types';
 import AppContext from '../../../context/AppContext';
 import ProfilesContext from '../../../context/ProfilesContext';
-import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
 import SlTab from '@shoelace-style/shoelace/dist/react/tab/index.js';
-import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
 import SlTabGroup from '@shoelace-style/shoelace/dist/react/tab-group/index.js';
 import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
 import SlTabPanel from '@shoelace-style/shoelace/dist/react/tab-panel/index.js';
@@ -18,18 +16,42 @@ import { Link } from '../../base/Link/Link';
 import { PROFILES_EXPANDED_ATTRIBUTES_KEY, PROFILES_TAB_KEY } from '../../../constants/storage';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
+import { ProfileSchemaProperties } from './Profiles.types';
+import { getProfileAttributeString, getProfilePropertyLabel } from './Profiles.helpers';
+import { ProfileThumbnail } from './ProfileThumbnail';
 
-interface ProfileDrawerProps {
-	selectedProfile: string;
-	setSelectedProfile: React.Dispatch<React.SetStateAction<string>>;
-}
-
-const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerProps) => {
+const ProfileDrawer = () => {
 	const [selectedTab, setSelectedTab] = useState<ProfileTab>();
 
 	const { connections, workspaces, selectedWorkspace } = useContext(AppContext);
-	const { profileIDList } = useContext(ProfilesContext);
-	const { isLoading, attributes, events, identities } = useProfileDrawer(selectedProfile, selectedTab);
+	const {
+		activeProfileID,
+		canNavigateNextProfile,
+		canNavigatePreviousProfile,
+		profileSchema,
+		profilesExecutionID,
+		profilesQueryKey,
+		markProfileSchemaNotAligned,
+		navigateProfile,
+		profileSchemaProperties,
+		profiles,
+		setActiveProfileID,
+	} = useContext(ProfilesContext);
+	const {
+		attributes,
+		events,
+		identities,
+		isAttributesLoading,
+		isEventsLoading,
+		isIdentitiesLoading,
+		isProfileMissing,
+	} = useProfileDrawer(
+		activeProfileID,
+		selectedTab,
+		profileSchema,
+		`${profilesExecutionID}:${profilesQueryKey}`,
+		markProfileSchemaNotAligned,
+	);
 
 	const workspace = useMemo(
 		() => workspaces.find((w) => w.id === selectedWorkspace),
@@ -49,7 +71,7 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 			return;
 		}
 		setSelectedTab('attributes');
-	}, [selectedProfile]);
+	}, [activeProfileID]);
 
 	useEffect(() => {
 		try {
@@ -60,64 +82,16 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 		}
 	}, [selectedTab]);
 
-	const onNavigate = async (direction: 'previous' | 'next') => {
-		const i = profileIDList.findIndex((id) => id === selectedProfile);
-		let newProfileID: string;
-		if (direction === 'previous') {
-			if (i - 1 < 0) {
-				// if the index is overflowing the start of the profiles list,
-				// select the last profile.
-				newProfileID = profileIDList[profileIDList.length - 1];
-			} else {
-				// select the previous profile.
-				newProfileID = profileIDList[i - 1];
-			}
-		} else if (direction === 'next') {
-			if (i + 1 >= profileIDList.length) {
-				// if the index is overflowing the end of the profiles list, select
-				// the first profile.
-				newProfileID = profileIDList[0];
-			} else {
-				// select the next profile.
-				newProfileID = profileIDList[i + 1];
-			}
-		}
-		setSelectedProfile(newProfileID);
-	};
-
 	const onSelectTab = (e: any) => {
 		setSelectedTab(e.detail.name);
 	};
 
-	const onClose = (e: any) => {
-		if (
-			e.target.classList.contains('drawer-attribute__value-copy') ||
-			e.target.classList.contains('profile-drawer__action')
-		) {
-			e.stopPropagation();
-			return;
-		}
-		setSelectedProfile('');
-	};
-
-	const getValueFromPath = (path: string): string | undefined => {
-		if (attributes == null || path === '') {
-			return undefined;
-		}
-		let value: any = attributes;
-		for (const part of path.split('.')) {
-			if (typeof value !== 'object' || value === null || !(part in value)) {
-				return undefined;
-			}
-			value = value[part];
-		}
-		return typeof value === 'string' ? value : undefined;
-	};
-
-	const profilePhoto = getValueFromPath(workspace.assignedRoles.photo);
-	const profileFirstName = getValueFromPath(workspace.assignedRoles.firstName);
-	const profileLastName = getValueFromPath(workspace.assignedRoles.lastName);
-	const profileEmail = getValueFromPath(workspace.assignedRoles.email);
+	const summary = profiles.find((profile) => profile.kpid === activeProfileID);
+	const displayedAttributes = isProfileMissing ? undefined : (attributes ?? summary?.attributes);
+	const profilePhoto = getProfileAttributeString(displayedAttributes, workspace?.assignedRoles.photo ?? '');
+	const profileFirstName = getProfileAttributeString(displayedAttributes, workspace?.assignedRoles.firstName ?? '');
+	const profileLastName = getProfileAttributeString(displayedAttributes, workspace?.assignedRoles.lastName ?? '');
+	const profileEmail = getProfileAttributeString(displayedAttributes, workspace?.assignedRoles.email ?? '');
 
 	const spinner = (
 		<SlSpinner
@@ -130,20 +104,40 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 		></SlSpinner>
 	);
 
+	if (activeProfileID === '') {
+		return null;
+	}
+
 	return (
-		<SlDrawer
-			className={`profile-drawer${isLoading ? ' profile-drawer--loading' : ''}`}
-			open={selectedProfile !== ''}
-			contained
-			style={{ '--size': '600px' } as React.CSSProperties}
-			onSlHide={onClose}
-		>
+		<aside className='profile-drawer' aria-label='Profile details'>
 			<div className='profile-drawer__navigation'>
-				<SlIconButton name='chevron-left' onClick={() => onNavigate('previous')} />
-				<SlIconButton name='chevron-right' onClick={() => onNavigate('next')} />
+				<SlIconButton
+					name='chevron-left'
+					label='Previous profile'
+					disabled={!canNavigatePreviousProfile}
+					onClick={() => navigateProfile('previous')}
+				/>
+				<SlIconButton
+					name='chevron-right'
+					label='Next profile'
+					disabled={!canNavigateNextProfile}
+					onClick={() => navigateProfile('next')}
+				/>
+				<SlIconButton
+					className='profile-drawer__close'
+					name='x-lg'
+					label='Close profile details'
+					onClick={() => setActiveProfileID('')}
+				/>
 			</div>
 			<div className='profile-drawer__top-section'>
-				<SlAvatar className='profile-drawer__photo' image={profilePhoto ?? ''} />
+				<ProfileThumbnail
+					className='profile-drawer__profile-thumbnail'
+					firstName={profileFirstName}
+					lastName={profileLastName}
+					photo={profilePhoto}
+					profileID={activeProfileID}
+				/>
 				<div className='profile-drawer__profile-properties'>
 					<span className='profile-drawer__first-name'>{profileFirstName ?? ''}</span>{' '}
 					<span className='profile-drawer__last-name'>{profileLastName ?? ''}</span>
@@ -159,10 +153,13 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 						>
 							<SlIcon name='info-circle-fill' />
 						</SlTooltip>
-						KPID: <span className='profile-drawer__kpid-value'>{selectedProfile}</span>
+						KPID: <span className='profile-drawer__kpid-value'>{activeProfileID}</span>
 					</span>
 				</div>
 			</div>
+			{isProfileMissing && (
+				<p role='status'>This profile no longer exists. You can continue browsing or refresh the list.</p>
+			)}
 			<SlTabGroup onSlTabShow={onSelectTab}>
 				<SlTab slot='nav' panel='attributes' active={selectedTab === 'attributes'}>
 					Attributes
@@ -175,16 +172,27 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 				</SlTab>
 				<SlTabPanel name='attributes'>
 					<div className='profile-drawer__attributes'>
-						{isLoading ? (
+						{isAttributesLoading && attributes == null ? (
 							spinner
-						) : attributes && Object.keys(attributes).length > 0 ? (
-							Object.entries(attributes).map(([name, value]) => {
+						) : displayedAttributes && Object.keys(displayedAttributes).length > 0 ? (
+							Object.entries(displayedAttributes).map(([name, value]) => {
+								const path = name;
 								if (typeof value === 'object') {
-									return <DrawerNestedAttributes name={name} value={value} indentation={1} />;
+									return (
+										<DrawerNestedAttributes
+											key={path}
+											name={name}
+											path={path}
+											profileSchemaProperties={profileSchemaProperties}
+											value={value}
+											indentation={1}
+										/>
+									);
 								} else {
 									return (
 										<DrawerAttribute
-											name={name}
+											key={path}
+											label={getProfilePropertyLabel(path, profileSchemaProperties)}
 											value={value}
 											isParent={false}
 											isIndented={false}
@@ -203,7 +211,7 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 					<div
 						className={`profile-drawer__events${selectedTab === 'events' ? ' profile-drawer__events--selected' : ''}`}
 					>
-						{isLoading ? (
+						{isEventsLoading ? (
 							spinner
 						) : events && events.length > 0 ? (
 							events.map((event) => {
@@ -232,7 +240,7 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 					<div
 						className={`profile-drawer__identities${selectedTab === 'identities' ? ' profile-drawer__identities--selected' : ''}`}
 					>
-						{isLoading ? (
+						{isIdentitiesLoading ? (
 							spinner
 						) : identities && identities.length > 0 ? (
 							identities.map((identity) => {
@@ -293,12 +301,12 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 					</div>
 				</SlTabPanel>
 			</SlTabGroup>
-		</SlDrawer>
+		</aside>
 	);
 };
 
 interface DrawerAttributeProps {
-	name: string;
+	label: string;
 	value: any;
 	isParent: boolean;
 	isIndented: boolean;
@@ -306,7 +314,7 @@ interface DrawerAttributeProps {
 	setIsExpanded?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const DrawerAttribute = ({ name, value, isParent, isIndented, isExpanded, setIsExpanded }: DrawerAttributeProps) => {
+const DrawerAttribute = ({ label, value, isParent, isIndented, isExpanded, setIsExpanded }: DrawerAttributeProps) => {
 	const preview = useMemo(() => {
 		if (!isParent) {
 			return '';
@@ -342,7 +350,7 @@ const DrawerAttribute = ({ name, value, isParent, isIndented, isExpanded, setIsE
 			</span>
 			<span className='profile-drawer__attribute-key'>
 				{isIndented && <span className='profile-drawer__indentation-icon' />}
-				{name}
+				{label}
 				{!isParent && ':'}
 			</span>
 			{isParent ? (
@@ -369,11 +377,19 @@ const DrawerAttribute = ({ name, value, isParent, isIndented, isExpanded, setIsE
 
 interface DrawerNestedAttributesProps {
 	name: string;
+	path: string;
+	profileSchemaProperties: ProfileSchemaProperties;
 	value: Record<string, any>;
 	indentation: number;
 }
 
-const DrawerNestedAttributes = ({ name, value, indentation }: DrawerNestedAttributesProps) => {
+const DrawerNestedAttributes = ({
+	name,
+	path,
+	profileSchemaProperties,
+	value,
+	indentation,
+}: DrawerNestedAttributesProps) => {
 	const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
 	const isFirstLoad = useRef<boolean>(true);
@@ -436,7 +452,7 @@ const DrawerNestedAttributes = ({ name, value, indentation }: DrawerNestedAttrib
 	return (
 		<div className={`drawer-nested-attributes${isExpanded ? ' drawer-nested-attributes--expand' : ''}`}>
 			<DrawerAttribute
-				name={name}
+				label={getProfilePropertyLabel(path, profileSchemaProperties)}
 				value={value}
 				isParent={true}
 				isIndented={indentation > 1}
@@ -449,10 +465,28 @@ const DrawerNestedAttributes = ({ name, value, indentation }: DrawerNestedAttrib
 			>
 				{isExpanded &&
 					Object.entries(value).map(([name, value]) => {
+						const childPath = `${path}.${name}`;
 						if (typeof value === 'object') {
-							return <DrawerNestedAttributes name={name} value={value} indentation={indentation + 1} />;
+							return (
+								<DrawerNestedAttributes
+									key={childPath}
+									name={name}
+									path={childPath}
+									profileSchemaProperties={profileSchemaProperties}
+									value={value}
+									indentation={indentation + 1}
+								/>
+							);
 						} else {
-							return <DrawerAttribute name={name} value={value} isParent={false} isIndented={true} />;
+							return (
+								<DrawerAttribute
+									key={childPath}
+									label={getProfilePropertyLabel(childPath, profileSchemaProperties)}
+									value={value}
+									isParent={false}
+									isIndented={true}
+								/>
+							);
 						}
 					})}
 			</div>

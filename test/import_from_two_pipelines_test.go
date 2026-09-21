@@ -114,7 +114,7 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 		t.Logf("%s: value %#v matches the expected value", msg, expected)
 	}
 	const expectedTotal = 2
-	profiles, _, total := k.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
+	profiles, total := k.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
 	if total != expectedTotal {
 		t.Fatalf("expected a total of %d profiles, got %d", expectedTotal, total)
 	}
@@ -133,7 +133,7 @@ func TestImportUsersFromFileWithTwoPipelines(t *testing.T) {
 	k.RunIdentityResolutionAndWait()
 
 	// Check the profiles.
-	profiles, _, total = k.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
+	profiles, total = k.Profiles([]string{"email", "first_name", "last_name"}, "email", false, 0, 2)
 	if total != expectedTotal {
 		t.Fatalf("expected a total of %d profiles, got %d", expectedTotal, total)
 	}

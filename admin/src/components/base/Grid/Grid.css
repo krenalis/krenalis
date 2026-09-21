@@ -13,6 +13,11 @@
 	outline: none;
 }
 
+.grid--active-items:focus-visible {
+	outline: 2px solid var(--sl-color-primary-500);
+	outline-offset: -2px;
+}
+
 .grid::-webkit-scrollbar {
 	width: 10px;
 	height: 10px;
@@ -68,6 +73,7 @@ sl-popup::part(arrow) {
 	background-color: var(--sl-color-primary-500);
 }
 
+.grid__row--active .grid__cell,
 .grid__row--selected .grid__cell {
 	background-color: var(--grid-selected-row-background) !important;
 }
@@ -81,6 +87,7 @@ sl-popup::part(arrow) {
 	transition: background-color 0.3s;
 }
 
+.grid__row--active .grid__cell-content-object,
 .grid__row--selected .grid__cell-content-object {
 	background-color: var(--sl-color-primary-100);
 }
