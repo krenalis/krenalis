@@ -126,7 +126,7 @@ func (dummy *Dummy) EventTypeSchema(ctx context.Context, eventType string) (type
 					{Name: "street1", Type: types.String(), DisplayName: "Street"},
 					{Name: "street2", Type: types.String(), DisplayName: "Street (second line)"},
 				}), DisplayName: "Address"},
-			}), DisplayName: "Traits", Description: "Additional information about the customer"},
+			}), DisplayName: "Traits"},
 		}), nil
 	case "send_generic_event":
 		return types.Object([]types.Property{
