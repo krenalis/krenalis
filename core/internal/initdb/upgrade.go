@@ -151,7 +151,14 @@ const pipelineOrderingGroupUpgrade = `
 		FROM pg_attribute
 		WHERE attrelid = 'pipelines'::regclass AND NOT attisdropped
 			AND attnum > event_position AND attname <> 'ordering_group';
-		SELECT array_agg(format('ALTER TABLE pipelines ADD CONSTRAINT %I %s', conname, pg_get_constraintdef(oid)))
+		SELECT array_agg(format('ALTER TABLE pipelines ADD CONSTRAINT %I %s', conname,
+			CASE conname
+				-- Keep this constraint in its schema form because its deparsed
+				-- definition is not round-trip stable.
+				WHEN 'pipelines_required_consents_operator_check' THEN
+					'CHECK (required_consents_operator IN (''and'', ''or''))'
+				ELSE pg_get_constraintdef(oid)
+			END))
 		INTO constraint_queries
 		FROM pg_constraint
 		WHERE conrelid = 'pipelines'::regclass AND contype = 'c' AND conkey && moved_positions;
