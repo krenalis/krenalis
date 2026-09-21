@@ -1697,19 +1697,28 @@ func (core *Core) executeAlterProfileSchema(workspace, opID string, schema types
 		}
 		insertPrimarySources = "INSERT INTO primary_sources (source, path) VALUES " + b.String()
 	}
+	// Map the column names of the new schema to their property paths.
+	pathByColumn := map[string]string{}
+	for path, property := range schema.Properties().WalkObjects() {
+		if suitableAsIdentifier(property.Type) {
+			column := strings.ReplaceAll(path, ".", "_")
+			pathByColumn[column] = path
+		}
+	}
 	// Update the identifiers.
 	nEnd.Identifiers = make([]string, 0, len(ws.Identifiers))
 Identifiers:
 	for _, identifier := range ws.Identifiers {
+		column := strings.ReplaceAll(identifier, ".", "_")
 		for _, operation := range operations {
 			if operation.Operation == warehouses.OperationAddColumn {
 				continue
 			}
-			if path := strings.ReplaceAll(operation.Column, "_", "."); path != identifier {
+			if operation.Column != column {
 				continue
 			}
 			if operation.Operation == warehouses.OperationRenameColumn {
-				nEnd.Identifiers = append(nEnd.Identifiers, strings.ReplaceAll(operation.NewColumn, "_", "."))
+				nEnd.Identifiers = append(nEnd.Identifiers, pathByColumn[operation.NewColumn])
 			}
 			continue Identifiers
 		}

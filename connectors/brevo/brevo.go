@@ -73,8 +73,7 @@ func New(env *connectors.ApplicationEnv) (*Brevo, error) {
 }
 
 type Brevo struct {
-	env      *connectors.ApplicationEnv
-	settings *innerSettings
+	env *connectors.ApplicationEnv
 
 	mu                 sync.Mutex
 	cachedSourceAttrs  types.Type
@@ -623,13 +622,23 @@ func (br *Brevo) Upsert(ctx context.Context, target connectors.Targets, records 
 // call sends an authenticated request to the Brevo API and decodes the expected
 // response.
 func (br *Brevo) call(ctx context.Context, method, url string, body *connectors.BodyBuffer, expectedStatus int, response any) error {
+	var s innerSettings
+	if err := br.env.Settings.Load(ctx, &s); err != nil {
+		return err
+	}
+	return br.callWithSettings(ctx, s, method, url, body, expectedStatus, response)
+}
+
+// callWithSettings sends an authenticated request to the Brevo API using the
+// specified settings and decodes the expected response.
+func (br *Brevo) callWithSettings(ctx context.Context, settings innerSettings, method, url string, body *connectors.BodyBuffer, expectedStatus int, response any) error {
 
 	req, err := body.NewRequest(ctx, method, url)
 	if err != nil {
 		return err
 	}
 
-	req.Header.Set("Api-Key", br.settings.APIKey)
+	req.Header.Set("Api-Key", settings.APIKey)
 
 	res, err := br.env.HTTPClient.Do(req)
 	if err != nil {
@@ -669,10 +678,8 @@ func (br *Brevo) saveSettings(ctx context.Context, settings json.Value) error {
 		}
 	}
 	// Check whether the configured API key can access the Brevo account endpoint.
-	previous := br.settings
-	br.settings = &s
-	if err := br.call(ctx, http.MethodGet, apiBaseURL+"/account", nil, http.StatusOK, nil); err != nil {
-		br.settings = previous
+	err = br.callWithSettings(ctx, s, http.MethodGet, apiBaseURL+"/account", nil, http.StatusOK, nil)
+	if err != nil {
 		if err, ok := err.(*brevoError); ok {
 			if err.StatusCode == http.StatusUnauthorized || err.StatusCode == http.StatusForbidden {
 				return connectors.NewInvalidSettingsError("«api_key» is not valid or cannot access the Brevo API")
@@ -693,6 +700,12 @@ const (
 func (br *Brevo) sendEvents(ctx context.Context, events connectors.Events, preview bool) (*http.Request, error) {
 
 	// See https://developers.brevo.com/docs/event-endpoints and https://developers.brevo.com/docs/event-endpoints#create-events-in-batch.
+
+	var s innerSettings
+	err := br.env.Settings.Load(ctx, &s)
+	if err != nil {
+		return nil, err
+	}
 
 	bb := br.env.HTTPClient.GetBodyBuffer(connectors.NoEncoding)
 	defer bb.Close()
@@ -803,7 +816,7 @@ Events:
 		return nil, err
 	}
 
-	key := br.settings.APIKey
+	key := s.APIKey
 	if preview {
 		key = "[REDACTED]"
 	}
