@@ -207,7 +207,6 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target connectors.Targets, 
 			Type:        typ,
 			Nullable:    true,
 			DisplayName: r.Label,
-			Description: r.Description,
 		}
 		if typ.Kind() == types.StringKind {
 			if len(r.Options) == 0 {

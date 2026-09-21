@@ -127,14 +127,13 @@ func (mc *Mailchimp) RecordSchema(ctx context.Context, target connectors.Targets
 		path:       "/lists/" + url.PathEscape(s.Audience) + "/merge-fields",
 		queryString: url.Values{
 			"count":  []string{"1000"},
-			"fields": []string{"merge_fields.tag,merge_fields.name,merge_fields.help_text,merge_fields.type,merge_fields.required,merge_fields.display_order,merge_fields.options.choices"},
+			"fields": []string{"merge_fields.tag,merge_fields.name,merge_fields.type,merge_fields.required,merge_fields.display_order,merge_fields.options.choices"},
 		},
 	}
 	var response struct {
 		MergeFields []struct {
 			Tag          string `json:"tag"`
 			Name         string `json:"name"`
-			HelpText     string `json:"help_text"`
 			Type         string `json:"type"`
 			Required     bool   `json:"required"`
 			DisplayOrder int    `json:"display_order"`
@@ -201,7 +200,6 @@ func (mc *Mailchimp) RecordSchema(ctx context.Context, target connectors.Targets
 		field.Name = f.Tag
 		field.UpdateRequired = f.Required
 		field.DisplayName = f.Name
-		field.Description = f.HelpText
 		fields = append(fields, field)
 	}
 
