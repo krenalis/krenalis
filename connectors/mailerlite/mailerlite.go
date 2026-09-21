@@ -193,7 +193,7 @@ func (ml *MailerLite) RecordSchema(ctx context.Context, target connectors.Target
 	)
 	if role == connectors.Destination {
 		properties = append(properties,
-			types.Property{Name: "resubscribe", Type: types.Boolean(), DisplayName: "Resubscribe", Description: "Applies to previously unsubscribed subscribers, when allowed by MailerLite"},
+			types.Property{Name: "resubscribe", Type: types.Boolean(), DisplayName: "Resubscribe", Description: "Resubscribe a previously unsubscribed subscriber when allowed by MailerLite"},
 		)
 	}
 
