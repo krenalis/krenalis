@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/collector"
@@ -174,12 +175,12 @@ func (this *Workspace) PipelineErrors(ctx context.Context, start, end time.Time,
 	}
 
 	// Validate step.
-	var s *metrics.Step
+	var s *metrics.PipelineStep
 	if step != nil {
 		if *step < ReceiveStep || *step > FinalizeStep {
 			return nil, errors.BadRequest("step %d is not valid", *step)
 		}
-		s = (*metrics.Step)(step)
+		s = (*metrics.PipelineStep)(step)
 	}
 
 	// validate first and limit.
@@ -195,7 +196,7 @@ func (this *Workspace) PipelineErrors(ctx context.Context, start, end time.Time,
 		return []PipelineError{}, nil
 	}
 
-	metricsErrors, err := this.core.metrics.Errors(ctx, start, end, pipelines, s, first, limit)
+	metricsErrors, err := this.core.metrics.Pipelines.Errors(ctx, start, end, pipelines, s, first, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -225,10 +226,12 @@ func (this *Workspace) Attributes(ctx context.Context, kpid string) (json.Value,
 
 	ws := this.workspace
 
-	// Validate the KPID.
-	if _, ok := types.ParseUUID(kpid); !ok {
+	// Parse the KPID.
+	id, err := uuid.Parse(kpid)
+	if err != nil {
 		return nil, errors.BadRequest("profile %q is not a valid profile identifier", kpid)
 	}
+	kpid = id.String()
 
 	properties := this.workspace.ProfileSchema.Properties().Names()
 	where := &state.Where{
@@ -813,13 +816,24 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 // If the workspace does not exist anymore, it returns an errors.NotFound error.
 func (this *Workspace) Delete(ctx context.Context) error {
 	this.core.mustBeOpen()
+	organization := this.workspace.Organization().ID
 	n := state.DeleteWorkspace{
 		ID: this.workspace.ID,
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		// Mark the pipeline functions as discontinued.
+		// Lock the workspace to serialize deletion with every other operation.
+		exists, err := tx.QueryExists(ctx,
+			"SELECT FROM workspaces WHERE id = $1 AND organization = $2 FOR UPDATE",
+			n.ID, organization)
+		if err != nil {
+			return nil, err
+		}
+		if !exists {
+			return nil, errors.NotFound("workspace %s does not exist", n.ID)
+		}
 		now := time.Now().UTC()
-		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, organization, discontinued_at)\n"+
+		// Mark the pipeline functions as discontinued.
+		_, err = tx.Exec(ctx, "INSERT INTO discontinued_functions (id, organization, discontinued_at)\n"+
 			"SELECT p.transformation_id, w.organization, $1\n"+
 			"FROM pipelines AS p\n"+
 			"INNER JOIN connections AS c ON p.connection = c.id\n"+
@@ -829,8 +843,15 @@ func (this *Workspace) Delete(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
+		// Record the terminal profile state in the same transaction.
+		// The usage history, including this terminal observation, is retained after the workspace is deleted.
+		err = this.core.metrics.Usage.RecordProfileObservation(ctx, tx, organization, n.ID, 0, now)
+		if err != nil {
+			return nil, err
+		}
 		// Delete the workspace.
-		result, err := tx.Exec(ctx, "DELETE FROM workspaces WHERE id = $1", n.ID)
+		result, err := tx.Exec(ctx, "DELETE FROM workspaces WHERE id = $1 AND organization = $2",
+			n.ID, organization)
 		if err != nil {
 			return nil, err
 		}
@@ -966,9 +987,11 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 // the data warehouse is in maintenance mode.
 func (this *Workspace) Identities(ctx context.Context, kpid string, first, limit int) ([]Identity, int, error) {
 	this.core.mustBeOpen()
-	if _, ok := types.ParseUUID(kpid); !ok {
+	id, err := uuid.Parse(kpid)
+	if err != nil {
 		return nil, 0, errors.BadRequest("profile %q is not a valid KPID", kpid)
 	}
+	kpid = id.String()
 	if first < 0 {
 		return nil, 0, errors.BadRequest("first %d is not valid", first)
 	}

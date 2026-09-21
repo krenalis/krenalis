@@ -43,7 +43,9 @@ Keep the receiver name the type already uses. The facade types in `core/` (`Conn
 
 ## Imports
 
-Outside the implementation and compatibility tests of `tools/errors`, always import `github.com/krenalis/krenalis/tools/errors` instead of the standard-library `errors` package. The repository package exposes every standard `errors` name in addition to repository-specific functionality.
+In `cmd`, `core`, and their subpackages, always import `github.com/krenalis/krenalis/tools/errors` instead of the standard-library `errors` package. The repository package exposes every standard `errors` name in addition to repository-specific functionality.
+
+In other packages, prefer the standard-library `errors` package. Import `github.com/krenalis/krenalis/tools/errors` only when its repository-specific functionality is needed. The implementation and compatibility tests of `tools/errors` use the standard-library package as required to avoid an import cycle.
 
 Use an imported package's default name unless Go requires disambiguation because of an actual identifier conflict. Do not alias an import merely to avoid reusing the same name for a variable, field, or selector when the language permits it.
 
@@ -89,6 +91,8 @@ if err := f(); err != nil {
     return err
 }
 ```
+
+Calls to `(*sql.Row).Scan` and `(*sql.Rows).Scan` are an exception. Place them in the initializer of the error check to follow the Go convention for scanning SQL results.
 
 Perform any classification of the returned error, including `errors.Is` checks for sentinel errors and `errors.AsType` checks for typed errors, inside that non-nil branch rather than using classification as a substitute for the `err != nil` check. In tests that expect a particular error, enter the `err != nil` branch, verify the error there, and fail after the branch when the call returned nil.
 
@@ -138,6 +142,8 @@ return n, nil
 ```
 
 ## Tests
+
+Test failure messages must use the form `expected ..., got ...`.
 
 In tests, use `t.Context()` for operations whose lifetime follows the test. Pass `t.Context()` directly instead of first assigning it to a local variable when its scope of use is small; name it only when it spans a broader portion of the test or must be used to derive another context. When a test helper already accepts `*testing.T`, obtain that context inside the helper instead of also passing a `context.Context`. Accept a separate context only when callers intentionally need to supply a context with different values, deadline, cancellation state, or lifetime.
 
@@ -240,6 +246,8 @@ Every exported package-level type, function, variable, and constant, as well as 
 
 Keep comments compact: one precise sentence beats three loose ones, and do not restate what the code already says.
 
+Limit each line of declaration comments starting in column 1 to 80 characters, including comment markers and spaces; comments on the same line as code are exempt.
+
 When a variable or constant belongs to a parenthesized `var` or `const` declaration whose other members do not have individual declaration comments, do not add an individual comment only to that member. Preserve the established comment style consistently throughout the group.
 
 An unexported package-level constant or constant group in a `_test.go` file may omit its declaration comment when its identifiers and surrounding context already make both its fixture role and meaning clear. Do not add a comment that merely labels such constants as test fixtures or states that tests use them. Keep the comment when it conveys non-obvious semantics, constraints, relationships, or reasons for particular values.
@@ -255,6 +263,20 @@ Never begin an error message with the article `the`.
 ## Correctness
 
 Anything arriving from outside — request bodies, settings, API values, connector responses — is validated and bounded before use, unless there is a stated reason not to.
+
+# Admin conventions
+
+Apply these conventions to the TypeScript and React code under `admin/`.
+
+- In every boolean context, use a boolean expression. Do not rely on the truthiness of strings, numbers, objects, or other non-boolean values. Write checks such as `name !== ''`, `items.length > 0`, and `value != null` instead of `name`, `items.length`, and `value`. In JSX expression containers, however, prefer idiomatic React patterns when they are clearer and conventional, such as `{condition && <Component />}`, rather than forcing an explicit boolean comparison solely to satisfy this rule.
+- Name boolean values with a predicate prefix such as `is`, `has`, `can`, or `should` when that makes their meaning clearer.
+- Use `===` and `!==` for value comparisons. The intentional exception is `value == null` or `value != null` when a single check must cover both `null` and `undefined`.
+- Use an `interface` for object shapes and a `type` for unions, tuples, and aliases that do not describe object shapes.
+- Prefer the existing domain and API types stored in `admin/src/lib/` over recreating their shapes locally.
+- Use PascalCase for components and types, and camelCase for functions, variables, and ordinary const values. Use uppercase snake case for module-level constants representing fixed keys, limits, delays, and similar configuration values.
+- Write function components and custom hooks as arrow functions assigned to `const`.
+- Type the component's props with an interface named `<ComponentName>Props` immediately before the component, unless the type is shared from another module. Destructure and type the props in the component's parameter list; do not use `React.FC`.
+- Keep component-specific styles in a separate `.css` file in the same directory as the component, and import that stylesheet from the component file. Follow the existing BEM-style class names: a block such as `schema-grid`, elements such as `schema-grid__search`, and modifiers such as `schema-grid--loading`.
 
 # Reuse
 
@@ -322,6 +344,39 @@ owning workspace from their consequences. Accept them when they are safe for
 Krenalis. Establishing truthfulness or authenticity requires an independent
 integrity mechanism.
 
+# Uniformity across data warehouses
+
+Every supported data warehouse has its own package under `warehouses/`, and
+they all implement the same interfaces. Keep those packages as similar to one
+another as the platforms allow: whoever knows one should know them all, and a
+change made to one should be easy to apply to the others. Do not treat one
+platform as the reference implementation and the others as ports; the same
+rules apply to all of them, including any platform added later.
+
+Mirror the code: the same file names for the same responsibilities, the same
+declaration order inside a file, the same type, function, and variable names,
+the same signatures, the same error messages, and the same shape of the code
+inside each function. When a feature, a fix, or a validation is added to one
+warehouse, add it to the others in the same form, unless the platform makes it
+inapplicable.
+
+Apply the rule to tests as well: the same test files, the same test names, the
+same table-driven cases, and comparable fixtures, so that the coverage of one
+warehouse can be compared with the coverage of another at a glance. When a case
+applies to every platform, write it the same way everywhere instead of giving
+each platform its own structure. When a case applies to only one platform, keep
+it recognizable as the exception it is.
+
+Similarity is a means, not an end. Platforms genuinely differ in SQL dialect,
+type system, quoting rules, driver behavior, and supported features, and those
+differences must be expressed naturally where they occur. Do not distort code
+to make packages match: no pointless abstraction, no dead or unreachable code
+kept only for symmetry, no test that asserts nothing on a platform where the
+case cannot arise, and no renaming of a concept that a platform names
+differently for a good reason. When a divergence is necessary, keep it local
+and confined to the part that truly differs, leaving the surrounding code
+identical.
+
 # `core` and `cmd` conventions
 
 ## API errors and validation
@@ -350,7 +405,3 @@ A method of `core` that can return an `errors.UnprocessableError` documents it a
 ## Core entry guards
 
 Every exported method in `core` that is called by `cmd` must execute `<receiver>.core.mustBeOpen()` as its first statement. If the method body contains any blank line, leave a blank line immediately after the opening brace and another immediately after the guard statement.
-
-# Before finishing
-
-Run `go build ./...`, `go vet ./...`, and `gofmt -l` over what you touched. Add tests where the package already has them. Report plainly what passed, what failed, and what you did not run.

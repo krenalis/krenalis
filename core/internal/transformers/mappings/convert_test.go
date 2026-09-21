@@ -190,8 +190,10 @@ func TestConvert(t *testing.T) {
 
 		// uuid.
 		{types.UUID(), types.UUID(), "123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174000", true, nil, nil},
-		{types.String(), types.UUID(), "123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174000", true, nil, nil},
-		{types.JSON(), types.UUID(), json.Value(`"123e4567-e89b-12d3-a456-426614174000"`), "123e4567-e89b-12d3-a456-426614174000", true, nil, nil},
+		{types.String(), types.UUID(), "123E4567-E89B-12D3-A456-426614174000", "123e4567-e89b-12d3-a456-426614174000", true, nil, nil},
+		{types.JSON(), types.UUID(), json.Value(`"123E4567-E89B-12D3-A456-426614174000"`), "123e4567-e89b-12d3-a456-426614174000", true, nil, nil},
+		{types.String(), types.UUID(), "123e4567e89b12d3a456426614174000", nil, true, nil, errParseConversion},
+		{types.JSON(), types.UUID(), json.Value(`"123e4567e89b12d3a456426614174000"`), nil, true, nil, errParseConversion},
 
 		// json.
 		{types.Int(32), types.JSON(), nil, nil, true, nil, nil},
@@ -208,8 +210,11 @@ func TestConvert(t *testing.T) {
 
 		// ip.
 		{types.IP(), types.IP(), "2001:db8::ff00:42:8329", "2001:db8::ff00:42:8329", true, nil, nil},
+		{types.IP(), types.IP(), "192.0.2.1", "192.0.2.1", true, nil, nil},
 		{types.String(), types.IP(), "2001:0db8:0000:0000:0000:ff00:0042:8329", "2001:db8::ff00:42:8329", true, nil, nil},
+		{types.String(), types.IP(), "::ffff:192.0.2.1", "192.0.2.1", true, nil, nil},
 		{types.JSON(), types.IP(), json.Value(`"2001:0db8:0000:0000:0000:ff00:0042:8329"`), "2001:db8::ff00:42:8329", true, nil, nil},
+		{types.JSON(), types.IP(), json.Value(`"::ffff:192.0.2.1"`), "192.0.2.1", true, nil, nil},
 
 		// array.
 		{types.Array(types.Int(32)), types.Array(types.Int(32)), []any{1, 2, 3}, []any{1, 2, 3}, true, nil, nil},
@@ -295,6 +300,95 @@ func TestConvert(t *testing.T) {
 			}
 			t.Fatalf("expected %T(%v), got %T(%v)", test.expected, test.expected, got, got)
 		}
+	}
+
+}
+
+// TestConvertArrayUniqueness checks that convert enforces the destination
+// array's uniqueness constraint after converting its elements.
+func TestConvertArrayUniqueness(t *testing.T) {
+
+	tests := []struct {
+		name        string
+		value       any
+		source      types.Type
+		destination types.Type
+		expected    any
+		wantError   bool
+	}{
+		{
+			name:        "distinct JSON values",
+			value:       json.Value(`[1,2]`),
+			source:      types.JSON(),
+			destination: types.Array(types.Int(32)).WithUnique(),
+			expected:    []any{1, 2},
+		},
+		{
+			name:        "duplicate JSON values",
+			value:       json.Value(`[1,1]`),
+			source:      types.JSON(),
+			destination: types.Array(types.Int(32)).WithUnique(),
+			wantError:   true,
+		},
+		{
+			name:        "distinct array values",
+			value:       []any{1, 2},
+			source:      types.Array(types.Int(32)),
+			destination: types.Array(types.Int(32)).WithUnique(),
+			expected:    []any{1, 2},
+		},
+		{
+			name:        "duplicate array values",
+			value:       []any{1, 1},
+			source:      types.Array(types.Int(32)),
+			destination: types.Array(types.Int(32)).WithUnique(),
+			wantError:   true,
+		},
+		{
+			name:        "duplicates allowed after conversion",
+			value:       []any{1.2, 1.4},
+			source:      types.Array(types.Float(64)).WithUnique(),
+			destination: types.Array(types.Int(32)),
+			expected:    []any{1, 1},
+		},
+		{
+			name:        "duplicates rejected after conversion",
+			value:       []any{1.2, 1.4},
+			source:      types.Array(types.Float(64)).WithUnique(),
+			destination: types.Array(types.Int(32)).WithUnique(),
+			wantError:   true,
+		},
+		{
+			name:        "equivalent decimals",
+			value:       []any{decimal.New(15, 1), decimal.MustParse("1.50")},
+			source:      types.Array(types.Decimal(6, 2)),
+			destination: types.Array(types.Decimal(6, 2)).WithUnique(),
+			wantError:   true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := convert(test.value, test.source, test.destination, false, false, nil, None)
+			if err != nil {
+				if !test.wantError {
+					t.Fatal(err)
+				}
+				if err != errInvalidConversion {
+					t.Fatalf("expected error %v, got %v", errInvalidConversion, err)
+				}
+				if !cmp.Equal(got, test.value) {
+					t.Fatalf("got value %#v with error, want original value %#v", got, test.value)
+				}
+				return
+			}
+			if test.wantError {
+				t.Fatalf("got value %#v, want an error", got)
+			}
+			if !cmp.Equal(got, test.expected) {
+				t.Fatalf("got value %#v, want %#v", got, test.expected)
+			}
+		})
 	}
 
 }
