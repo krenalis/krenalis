@@ -3,25 +3,24 @@ import { WarehouseMode } from './warehouse';
 
 type PrimarySources = Record<string, string>;
 
-interface Profile {
-	image: string;
+type ProfileRoleID = 'firstName' | 'lastName' | 'email' | 'country' | 'photo';
+
+interface ProfileRoleAssignments {
 	firstName: string;
 	lastName: string;
-	extra: string;
-}
-
-interface UIPreferences {
-	profile: Profile;
+	email: string;
+	country: string;
+	photo: string;
 }
 
 interface Workspace {
+	assignedRoles: ProfileRoleAssignments;
 	id: string;
 	name: string;
 	resolveIdentitiesOnBatchImport: boolean;
 	identifiers: Identifiers;
 	warehouseMode: WarehouseMode;
 	primarySources: PrimarySources;
-	uiPreferences: UIPreferences;
 }
 
 interface CreateWorkspaceResponse {
@@ -47,10 +46,10 @@ interface ConsentPurpose {
 export default Workspace;
 export type {
 	CreateWorkspaceResponse,
-	UIPreferences,
-	Profile,
 	PrimarySources,
 	LatestIdentityResolution,
 	LatestAlterProfileSchema,
 	ConsentPurpose,
+	ProfileRoleAssignments,
+	ProfileRoleID,
 };
