@@ -794,6 +794,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 						"type": {
 							"kind": "string"
 						},
+						"displayName": "first_name",
 						"description": ""
 					},
 					{
