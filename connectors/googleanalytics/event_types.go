@@ -236,7 +236,7 @@ func init() {
 				{Name: "page_location", Prefilled: "context.page.url", Type: types.String(), DisplayName: "Page URL"},
 				{Name: "page_referrer", Prefilled: "context.page.referrer", Type: types.String(), DisplayName: "Previous page URL"},
 				{Name: "page_title", Prefilled: "context.page.title", Type: types.String(), DisplayName: "Page title"},
-				{Name: "engagement_time_msec", Prefilled: "1", Type: genericNumberType, DisplayName: "Engagement time in milliseconds"},
+				{Name: "engagement_time_msec", Prefilled: "1", Type: genericNumberType, DisplayName: "Engagement time", Description: "Measured in milliseconds"},
 			}),
 		},
 		{
