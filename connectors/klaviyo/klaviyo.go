@@ -108,7 +108,7 @@ func (ky *Klaviyo) EventTypeSchema(ctx context.Context, eventType string) (types
 			{Name: "metric_name", Type: types.String().WithMaxLength(200), CreateRequired: true, DisplayName: "Metric name"},
 			{Name: "email", Type: types.String().WithMaxBytes(100), CreateRequired: true, DisplayName: "Email"},
 			{Name: "value", Type: types.Float(64).Real(), DisplayName: "Value"},
-			{Name: "value_currency", Type: types.String().WithMaxBytes(3), DisplayName: "Currency", Description: "ISO currency code"},
+			{Name: "value_currency", Type: types.String().WithMaxBytes(3), DisplayName: "Currency (ISO code)"},
 			{Name: "properties", Type: types.Map(types.JSON()), DisplayName: "Properties"},
 		}), nil
 	}
@@ -251,13 +251,13 @@ func (ky *Klaviyo) RecordSchema(ctx context.Context, target connectors.Targets, 
 			Name:        "external_id",
 			Type:        types.String(),
 			Nullable:    true,
-			DisplayName: "External ID",
+			DisplayName: "External Id",
 		},
 		{
 			Name:        "anonymous_id",
 			Type:        types.String(),
 			Nullable:    true,
-			DisplayName: "Anonymous ID",
+			DisplayName: "Anonymous Id",
 		},
 		{
 			Name:        "first_name",
