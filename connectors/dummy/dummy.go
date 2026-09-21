@@ -110,27 +110,27 @@ func (dummy *Dummy) EventTypeSchema(ctx context.Context, eventType string) (type
 	switch eventType {
 	case "send_add_to_cart":
 		return types.Object([]types.Property{
-			{Name: "email", Type: types.String(), CreateRequired: true, Description: "Email"},
-			{Name: "itemName", Type: types.String(), Description: "Item name"},
-			{Name: "itemId", Type: types.Int(32), Description: "Item ID"},
+			{Name: "email", Type: types.String(), CreateRequired: true, DisplayName: "Email"},
+			{Name: "itemName", Type: types.String(), DisplayName: "Item name"},
+			{Name: "itemId", Type: types.Int(32), DisplayName: "Item ID"},
 		}), nil
 	case "send_custom_event":
 		return types.Object([]types.Property{
-			{Name: "email", Type: types.String(), Description: "Email"},
+			{Name: "email", Type: types.String(), DisplayName: "Email"},
 		}), nil
 	case "send_identity":
 		return types.Object([]types.Property{
-			{Name: "email", CreateRequired: true, Type: types.String(), Description: "Email"},
+			{Name: "email", CreateRequired: true, Type: types.String(), DisplayName: "Email"},
 			{Name: "traits", Type: types.Object([]types.Property{
 				{Name: "address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.String(), Description: "Street"},
-					{Name: "street2", Type: types.String(), Description: "Street (second line)"},
-				}), Description: "Address"},
-			}), Description: "Traits"},
+					{Name: "street1", Type: types.String(), DisplayName: "Street"},
+					{Name: "street2", Type: types.String(), DisplayName: "Street (second line)"},
+				}), DisplayName: "Address"},
+			}), DisplayName: "Traits"},
 		}), nil
 	case "send_generic_event":
 		return types.Object([]types.Property{
-			{Name: "properties", Type: types.JSON(), Description: "Properties"},
+			{Name: "properties", Type: types.JSON(), DisplayName: "Properties"},
 		}), nil
 	case "send_event_with_no_schema":
 		return types.Type{}, nil
@@ -197,27 +197,27 @@ func (dummy *Dummy) RecordSchema(ctx context.Context, target connectors.Targets,
 	}
 	var properties []types.Property
 	if role == connectors.Source {
-		properties = append(properties, types.Property{Name: "dummyId", Type: types.String(), Description: "Dummy ID"})
+		properties = append(properties, types.Property{Name: "dummyId", Type: types.String(), DisplayName: "Dummy ID"})
 	}
 	properties = append(properties, []types.Property{
-		{Name: "email", Type: types.String(), Nullable: true, Description: "Email"},
-		{Name: "firstName", Type: types.String(), Nullable: true, Description: "First name"},
-		{Name: "fullName", Type: types.String(), Nullable: true, Description: "Full name"},
-		{Name: "lastName", Type: types.String(), Nullable: true, Description: "Last name"},
-		{Name: "phone", Type: types.String().AsPhone(), Nullable: true, Description: "Phone"},
-		{Name: "favouriteDrink", Type: types.String().WithValues("tea", "beer", "wine", "water"), Nullable: true, Description: "Favourite drink"},
-		{Name: "favourite_movie", Type: types.String(), ReadOptional: true, Description: "Favourite movie"},
+		{Name: "email", Type: types.String(), Nullable: true, DisplayName: "Email"},
+		{Name: "firstName", Type: types.String(), Nullable: true, DisplayName: "First name"},
+		{Name: "fullName", Type: types.String(), Nullable: true, DisplayName: "Full name"},
+		{Name: "lastName", Type: types.String(), Nullable: true, DisplayName: "Last name"},
+		{Name: "phone", Type: types.String().AsPhone(), Nullable: true, DisplayName: "Phone"},
+		{Name: "favouriteDrink", Type: types.String().WithValues("tea", "beer", "wine", "water"), Nullable: true, DisplayName: "Favourite drink"},
+		{Name: "favourite_movie", Type: types.String(), ReadOptional: true, DisplayName: "Favourite movie"},
 	}...)
 	if role == connectors.Destination {
-		properties = append(properties, types.Property{Name: "additionalProperties", Type: types.Map(types.String()), Description: "Additional properties"})
+		properties = append(properties, types.Property{Name: "additionalProperties", Type: types.Map(types.String()), DisplayName: "Additional properties"})
 	}
 	properties = append(properties, []types.Property{
 		{Name: "address", Type: types.Object([]types.Property{
-			{Name: "street", Type: types.String(), Nullable: true, Description: "Street"},
-			{Name: "postal_code", Type: types.String(), Nullable: true, Description: "Postal code"},
-			{Name: "city", Type: types.String(), Nullable: true, Description: "City"},
-			{Name: "country", Type: types.String().AsCountry(types.ISO3166Alpha2), Nullable: true, Description: "Country"},
-		}), Nullable: true, Description: "Address"},
+			{Name: "street", Type: types.String(), Nullable: true, DisplayName: "Street"},
+			{Name: "postal_code", Type: types.String(), Nullable: true, DisplayName: "Postal code"},
+			{Name: "city", Type: types.String(), Nullable: true, DisplayName: "City"},
+			{Name: "country", Type: types.String().AsCountry(types.ISO3166Alpha2), Nullable: true, DisplayName: "Country"},
+		}), Nullable: true, DisplayName: "Address"},
 	}...)
 	return types.Object(properties), nil
 }
