@@ -348,6 +348,11 @@ func (br *Brevo) RecordSchema(ctx context.Context, target connectors.Targets, ro
 			options := slices.Clone(attr.MultiCategoryOptions)
 			slices.Sort(options)
 			options = slices.Compact(options)
+			for _, option := range options {
+				if strings.Contains(option, "\x00") {
+					return types.Type{}, fmt.Errorf("Brevo returned an option for attribute %q that contains a NUL byte", attr.Name)
+				}
+			}
 			attribute.Type = types.Array(types.String().WithValues(options...))
 		default:
 			if attr.Category != "category" {
