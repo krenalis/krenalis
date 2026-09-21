@@ -118,11 +118,11 @@ func (wo *WorkOS) ServeLogin(r *http.Request) (string, string, error) {
 	return org.ID, member, nil
 }
 
-// SignupOrganization creates an enabled organization in Krenalis, creates the
-// WorkOS organization linked to it, and sends a WorkOS invitation email that
-// invites adminEmail as an admin of the organization. If a step after the
-// Krenalis organization has been created fails, that organization is deleted
-// again.
+// SignupOrganization signs up an organization in Krenalis as enabled, creates
+// the corresponding WorkOS organization, and sends a WorkOS invitation email to
+// adminEmail, inviting them to join as an admin. If the signup does not
+// complete successfully, it attempts to delete the Krenalis organization it
+// created.
 //
 // It returns an errors.BadRequestError if adminEmail is not a valid email
 // address.
