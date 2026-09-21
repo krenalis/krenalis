@@ -141,7 +141,7 @@ func (wo *WorkOS) SignupOrganization(ctx context.Context, organizationName, admi
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), signupTimeout)
 	defer cancel()
 
-	id, err := wo.core.CreateOrganization(ctx, organizationName, true, signupLimits)
+	organizationID, err := wo.core.CreateOrganization(ctx, organizationName, true, signupLimits)
 	if err != nil {
 		return err
 	}
@@ -155,18 +155,18 @@ func (wo *WorkOS) SignupOrganization(ctx context.Context, organizationName, admi
 		// that it is attempted even then.
 		deleteCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), signupRollbackTimeout)
 		defer cancel()
-		org, err := wo.core.Organization(id)
+		org, err := wo.core.Organization(organizationID)
 		if err != nil {
-			slog.Error("failed to get the organization of a failed signup", "organization", id, "error", err)
+			slog.Error("failed to get the organization of a failed signup", "organization", organizationID, "error", err)
 			return
 		}
 		err = org.Delete(deleteCtx)
 		if err != nil {
-			slog.Error("failed to delete the organization of a failed signup", "organization", id, "error", err)
+			slog.Error("failed to delete the organization of a failed signup", "organization", organizationID, "error", err)
 		}
 	}()
 
-	workosOrganizationID, err := wo.createOrganization(ctx, organizationName, id)
+	workosOrganizationID, err := wo.createOrganization(ctx, organizationName, organizationID)
 	if err != nil {
 		return err
 	}
