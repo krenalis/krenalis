@@ -131,6 +131,7 @@ const REQUEST_PATTERNS = [
 	'/profiles/schema/latest-alter',
 	'/profiles/schema/preview',
 	'/profiles/schema/suitable-as-identifiers',
+	'/signup',
 	'/system/transformations/languages',
 	'/transformations',
 	'/ui',

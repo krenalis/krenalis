@@ -341,11 +341,8 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 	this.core.mustBeOpen()
 
 	// Validate email.
-	if err := util.ValidateStringField("email", email, 255); err != nil {
+	if err := validateMemberEmail(email); err != nil {
 		return "", errors.BadRequest("%s", err)
-	}
-	if !emailRegExp.MatchString(email) {
-		return "", errors.BadRequest("email is not a valid email address")
 	}
 	// Validate password.
 	if password == "" {
@@ -1646,6 +1643,12 @@ func sendMail(mail *emailToSend, config *SMTPConfig) error {
 		}
 	}
 	return err
+}
+
+// ValidateMemberEmail validates a member's email address and returns an error
+// if it is not valid.
+func ValidateMemberEmail(email string) error {
+	return validateMemberEmail(email)
 }
 
 // validateMemberEmail validates a member's email and returns an error if it is

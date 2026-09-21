@@ -58,7 +58,7 @@ interface Property {
 	updateRequired: boolean;
 	readOptional: boolean;
 	nullable: boolean;
-	displayName?: string;
+	displayName: string;
 	description: string;
 }
 
