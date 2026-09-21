@@ -171,7 +171,7 @@ func (ml *MailerLite) RecordSchema(ctx context.Context, target connectors.Target
 	if len(fields) > 0 {
 		fieldsType, err := types.ObjectOf(fields)
 		if err != nil {
-			return types.Type{}, fmt.Errorf("cannot create schema from fields: %s", err)
+			return types.Type{}, fmt.Errorf("MailerLite returned invalid fields: %s", err)
 		}
 		properties = append(properties, types.Property{
 			Name:        "fields",

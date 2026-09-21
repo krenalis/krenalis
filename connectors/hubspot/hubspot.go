@@ -227,7 +227,7 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target connectors.Targets, 
 						continue
 					}
 					if strings.Contains(option.Value, "\x00") {
-						return types.Type{}, fmt.Errorf("property %q has an invalid option value", r.Name)
+						return types.Type{}, fmt.Errorf("HubSpot returned an option for property %q that contains a NUL byte", r.Name)
 					}
 					values = append(values, option.Value)
 				}
@@ -262,7 +262,7 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target connectors.Targets, 
 		})
 		groupType, err := types.ObjectOf(pp)
 		if err != nil {
-			return types.Type{}, fmt.Errorf("cannot create schema from properties: %s", err)
+			return types.Type{}, fmt.Errorf("HubSpot returned invalid properties: %s", err)
 		}
 		properties = append(properties, types.Property{
 			Name:        group.Name,
@@ -280,7 +280,7 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target connectors.Targets, 
 		for _, name := range names {
 			groupType, err := types.ObjectOf(groups[name])
 			if err != nil {
-				return types.Type{}, fmt.Errorf("cannot create schema from properties: %s", err)
+				return types.Type{}, fmt.Errorf("HubSpot returned invalid properties: %s", err)
 			}
 			properties = append(properties, types.Property{
 				Name:         name,
