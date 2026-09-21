@@ -364,10 +364,10 @@ func TestRecordSchemaDynamicFields(t *testing.T) {
 
 }
 
-// TestRecordSchemaDynamicFieldsRejectsInvalidDescription checks that a custom
+// TestRecordSchemaDynamicFieldsRejectsInvalidDisplayName checks that a custom
 // field whose name contains a NUL byte makes RecordSchema return an error
 // instead of panicking.
-func TestRecordSchemaDynamicFieldsRejectsInvalidDescription(t *testing.T) {
+func TestRecordSchemaDynamicFieldsRejectsInvalidDisplayName(t *testing.T) {
 
 	fields := json.Value(`[
 		{"id":"1","name":"Bad\u0000Field","key":"bad_field","type":"text"}

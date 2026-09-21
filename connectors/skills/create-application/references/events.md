@@ -39,20 +39,20 @@ func (c *MyApp) EventTypeSchema(ctx context.Context, eventType string) (types.Ty
 				Type:           types.String().WithPattern(purchaseNameRE),
 				Prefilled:      "event",
 				CreateRequired: true,
-				Description:    "Event name",
+				DisplayName:    "Event name",
 			},
 			{
 				Name:           "email",
 				Type:           types.String().WithMaxBytes(320),
 				Prefilled:      "traits.email",
 				CreateRequired: true,
-				Description:    "Customer email",
+				DisplayName:    "Customer email",
 			},
 			{
 				Name:        "properties",
 				Type:        types.Map(types.JSON()),
 				Prefilled:   "properties",
-				Description: "Event properties",
+				DisplayName: "Event properties",
 			},
 		}), nil
 	default:
