@@ -96,15 +96,6 @@ const updatedAtFormats = {
 	excel: 'Excel',
 };
 
-// PropertyAnnotation renders the annotation for a property.
-const PropertyAnnotation = ({ property }: { property: Property }) => (
-	<>
-		{property.displayName && <span className='property-annotation__display-name'>{property.displayName}</span>}
-		{property.displayName && property.description && propertyAnnotationSeparator}
-		{property.description}
-	</>
-);
-
 const PipelineTransformation = forwardRef<any>((_, ref) => {
 	const [transformationLanguages, setTransformationLanguages] = useState<string[]>();
 	const [selectedLanguage, setSelectedLanguage] = useState<string>('');
@@ -627,6 +618,54 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 	);
 });
 
+interface PropertyAnnotationProps {
+	className: string;
+	property: Property;
+}
+
+const PropertyAnnotation = ({ className, property }: PropertyAnnotationProps) => {
+	const [isOverflowing, setIsOverflowing] = useState<boolean>(false);
+
+	const displayName = property.displayName ?? '';
+	const description = property.description ?? '';
+	const annotation = propertyAnnotation(property);
+	const annotationRef = useRef<HTMLDivElement>(null);
+
+	useLayoutEffect(() => {
+		const annotationElement = annotationRef.current;
+		if (annotationElement == null) {
+			return;
+		}
+
+		const updateIsOverflowing = () => {
+			setIsOverflowing(annotationElement.scrollWidth > annotationElement.clientWidth);
+		};
+
+		updateIsOverflowing();
+
+		const resizeObserver = new ResizeObserver(updateIsOverflowing);
+		resizeObserver.observe(annotationElement);
+
+		return () => {
+			resizeObserver.disconnect();
+		};
+	}, [annotation]);
+
+	if (annotation === '') {
+		return null;
+	}
+
+	return (
+		<SlTooltip className='property-annotation__tooltip' content={annotation} disabled={!isOverflowing} hoist={true}>
+			<div className={className} ref={annotationRef}>
+				{displayName !== '' && <span className='property-annotation__display-name'>{displayName}</span>}
+				{displayName !== '' && description !== '' && propertyAnnotationSeparator}
+				{description}
+			</div>
+		</SlTooltip>
+	);
+};
+
 interface TransformationBoxProps {
 	transformationType: 'mappings' | 'function' | '';
 	setTransformationType: React.Dispatch<React.SetStateAction<'mappings' | 'function' | ''>>;
@@ -936,7 +975,6 @@ const TransformationBox = ({
 			}
 
 			const typeName = toKrenalisStringType(property.full.type, property.full.nullable);
-			const annotation = propertyAnnotation(property.full);
 
 			if (property.type === 'map') {
 				mappings.push(
@@ -1045,11 +1083,10 @@ const TransformationBox = ({
 									</span>
 								)}
 							</div>
-							{annotation && (
-								<div className='pipeline__transformation-output-property-annotation'>
-									<PropertyAnnotation property={property.full} />
-								</div>
-							)}
+							<PropertyAnnotation
+								className='pipeline__transformation-output-property-annotation'
+								property={property.full}
+							/>
 						</div>
 					</React.Fragment>,
 				);
@@ -2879,7 +2916,6 @@ const MapMapping = ({
 		(property.value !== '' && !hasFilledPairs && !hasMultiplePairs && !isResetting);
 
 	const typeName = toKrenalisStringType(property.full.type, property.full.nullable);
-	const annotation = propertyAnnotation(property.full);
 
 	return (
 		<>
@@ -2941,11 +2977,10 @@ const MapMapping = ({
 						</span>
 					)}
 				</div>
-				{annotation && (
-					<div className='pipeline__transformation-output-property-annotation'>
-						<PropertyAnnotation property={property.full} />
-					</div>
-				)}
+				<PropertyAnnotation
+					className='pipeline__transformation-output-property-annotation'
+					property={property.full}
+				/>
 			</div>
 			{pairs.map(([key, value], i) => {
 				const elementType = (property.full.type as MapType).elementType;
@@ -3261,21 +3296,8 @@ const TransformationProperty = ({
 	setIsExpanded,
 	isOutMatchingProperty,
 }: TransformationPropertyProps) => {
-	const [showAnnotationTooltip, setShowAnnotationTooltip] = useState<boolean>(false);
-
 	const { workspaces, selectedWorkspace } = useContext(AppContext);
 	const { isImport, pipelineType, pipeline } = useContext(PipelineContext);
-
-	const annotationRef = useRef(null);
-
-	useEffect(() => {
-		if (annotationRef.current == null) {
-			return;
-		}
-		const el = annotationRef.current;
-		const hasEllipsis = el.scrollWidth > el.clientWidth;
-		setShowAnnotationTooltip(hasEllipsis);
-	}, [annotationRef.current]);
 
 	let path = property.name;
 	if (parentName) {
@@ -3376,15 +3398,6 @@ const TransformationProperty = ({
 		}
 	}
 
-	let annotationElement = null;
-	if (annotation !== '') {
-		annotationElement = (
-			<div className='fullscreen-transformation__property-annotation' ref={annotationRef}>
-				<PropertyAnnotation property={property} />
-			</div>
-		);
-	}
-
 	return (
 		<div
 			className={`fullscreen-transformation__property-wrapper${isParent ? ' fullscreen-transformation__property-wrapper--parent' : ''}${isFlagged ? ' fullscreen-transformation__property-wrapper--selected' : ''}${isOutMatchingProperty && transformationType === 'function' ? ' fullscreen-transformation__property-wrapper--is-out-matching' : ''}`}
@@ -3476,14 +3489,10 @@ const TransformationProperty = ({
 									)}
 								</div>
 							</div>
-							{annotationElement != null &&
-								(showAnnotationTooltip ? (
-									<SlTooltip content={annotation} hoist={true}>
-										{annotationElement}
-									</SlTooltip>
-								) : (
-									annotationElement
-								))}
+							<PropertyAnnotation
+								className='fullscreen-transformation__property-annotation'
+								property={property}
+							/>
 						</div>
 						<div className='fullscreen-transformation__property-right-column'>
 							{languageTypeName && (
