@@ -779,7 +779,8 @@ sl-button.pipeline__filters-remove-rule[variant='text']::part(label) {
 .pipeline__transformation-output-property-copy {
 	position: absolute;
 	inset: 0;
-	z-index: 1;
+	/* Keep the copy tooltip above fullscreen section headers. */
+	z-index: 11;
 	display: block;
 }
 
@@ -1101,6 +1102,9 @@ inherit the disabled style */
 	position: fixed;
 	left: 0;
 	top: 90px;
+	/* Keep the fullscreen above the pipeline header but below higher overlays.
+	*/
+	z-index: 1000;
 	width: 100%;
 	height: calc(100% - 90px);
 	visibility: hidden;
@@ -1121,7 +1125,9 @@ inherit the disabled style */
 	visibility: visible;
 	opacity: 1;
 	transform-origin: bottom center;
-	transform: scale(1);
+	/* transform: scale(1) here would trap hoisted tooltips inside scrolling
+	panels. */
+	transform: none;
 }
 
 .pipeline__transformation-function-minimized .monaco-editor-overlaymessage {
@@ -1458,6 +1464,7 @@ inherit the disabled style */
 .fullscreen-transformation__property-copy {
 	position: absolute;
 	inset: 0;
+	z-index: 11;
 	display: block;
 }
 
