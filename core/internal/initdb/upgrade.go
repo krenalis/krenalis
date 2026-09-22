@@ -131,13 +131,15 @@ const pipelineDeliveryEndpointUpgrade = `
 		ALTER COLUMN delivery_endpoint TYPE varchar(25),
 		ALTER COLUMN delivery_endpoint SET NOT NULL`
 
-// pipelineOrderingGroupUpgrade moves ordering_group after event_type while
-// preserving the table and the relative order of its other columns.
+// pipelineOrderingGroupUpgrade moves ordering_group and delivery_endpoint after
+// event_type while preserving the table and the relative order of its other
+// columns.
 const pipelineOrderingGroupUpgrade = `
 	DO $$
 	DECLARE
 		event_position smallint;
 		group_position smallint;
+		delivery_position smallint;
 		moved_columns text[];
 		moved_positions smallint[];
 		constraint_queries text[];
@@ -151,10 +153,13 @@ const pipelineOrderingGroupUpgrade = `
 		WHERE attrelid = 'pipelines'::regclass AND attname = 'event_type' AND NOT attisdropped;
 		SELECT attnum INTO group_position FROM pg_attribute
 		WHERE attrelid = 'pipelines'::regclass AND attname = 'ordering_group' AND NOT attisdropped;
-		IF NOT EXISTS (
+		SELECT attnum INTO delivery_position FROM pg_attribute
+		WHERE attrelid = 'pipelines'::regclass AND attname = 'delivery_endpoint' AND NOT attisdropped;
+		IF group_position > event_position AND delivery_position > group_position AND NOT EXISTS (
 			SELECT FROM pg_attribute
 			WHERE attrelid = 'pipelines'::regclass AND NOT attisdropped
-				AND attnum > event_position AND attnum < group_position
+				AND ((attnum > event_position AND attnum < group_position)
+					OR (attnum > group_position AND attnum < delivery_position))
 		) THEN
 			RETURN;
 		END IF;

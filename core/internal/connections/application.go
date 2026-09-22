@@ -143,10 +143,14 @@ func (app *Application) EventType(ctx context.Context, id string) (*EventType, e
 		return nil, err
 	}
 	for _, candidate := range eventTypes {
-		if candidate != nil && candidate.OrderingGroup == et.OrderingGroup && candidate.DeliveryEndpoint != et.DeliveryEndpoint {
-			return nil, fmt.Errorf(
-				"connector %s returned different delivery endpoints for ordering group %q", app.connector, et.OrderingGroup)
+		if candidate == nil || candidate.OrderingGroup != et.OrderingGroup {
+			continue
 		}
+		if candidate.DeliveryEndpoint == et.DeliveryEndpoint {
+			continue
+		}
+		return nil, fmt.Errorf(
+			"connector %s returned different delivery endpoints for ordering group %q", app.connector, et.OrderingGroup)
 	}
 	return et, nil
 }
@@ -175,10 +179,14 @@ func (app *Application) EventTypes(ctx context.Context) ([]*EventType, error) {
 				return nil, fmt.Errorf(
 					"connector %s returned multiple event types with the same ID (%s)", app.connector, eventType.ID)
 			}
-			if next != nil && next.OrderingGroup == eventType.OrderingGroup && next.DeliveryEndpoint != eventType.DeliveryEndpoint {
-				return nil, fmt.Errorf(
-					"connector %s returned different delivery endpoints for ordering group %q", app.connector, eventType.OrderingGroup)
+			if next == nil || next.OrderingGroup != eventType.OrderingGroup {
+				continue
 			}
+			if next.DeliveryEndpoint == eventType.DeliveryEndpoint {
+				continue
+			}
+			return nil, fmt.Errorf(
+				"connector %s returned different delivery endpoints for ordering group %q", app.connector, eventType.OrderingGroup)
 		}
 	}
 	return eventTypes, nil
@@ -756,9 +764,11 @@ func validateEventType(connector string, eventType *EventType) error {
 	if !types.IsValidPropertyName(eventType.OrderingGroup) || len(eventType.OrderingGroup) > connectors.MaxOrderingGroupLen {
 		return fmt.Errorf("connector %s returned an invalid ordering group (%q)", connector, eventType.OrderingGroup)
 	}
-	if eventType.DeliveryEndpoint != "" &&
-		(!types.IsValidPropertyName(eventType.DeliveryEndpoint) || len(eventType.DeliveryEndpoint) > connectors.MaxDeliveryEndpointLen) {
-		return fmt.Errorf("connector %s returned an invalid delivery endpoint (%q)", connector, eventType.DeliveryEndpoint)
+	if eventType.DeliveryEndpoint != "" {
+		if !types.IsValidPropertyName(eventType.DeliveryEndpoint) ||
+			len(eventType.DeliveryEndpoint) > connectors.MaxDeliveryEndpointLen {
+			return fmt.Errorf("connector %s returned an invalid delivery endpoint (%q)", connector, eventType.DeliveryEndpoint)
+		}
 	}
 	return nil
 }

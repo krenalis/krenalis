@@ -216,7 +216,7 @@ func TestUpgradePipelineOrderingGroup(t *testing.T) {
 			'view', (SELECT jsonb_agg(to_jsonb(v) ORDER BY resource) FROM organization_connector_references v)
 		)::text`
 
-	for _, name := range []string{"missing", "appended", "installed", "empty", "brevo", "klaviyo"} {
+	for _, name := range []string{"missing", "appended", "delivery-appended", "installed", "empty", "brevo", "klaviyo"} {
 
 		t.Run(name, func(t *testing.T) {
 
@@ -230,7 +230,8 @@ func TestUpgradePipelineOrderingGroup(t *testing.T) {
 					FROM organizations LIMIT 1;
 					INSERT INTO connections (id, workspace, connector, role, kms_encrypted_settings_key)
 					VALUES ('333333333333', '222222222222', 'dummy', 'Source', '\x');
-					INSERT INTO pipelines (id, connection, target, event_type, ordering_group, delivery_endpoint, name, enabled,
+					INSERT INTO pipelines (id, connection, target, event_type, ordering_group, delivery_endpoint,
+						name, enabled,
 						schedule_start, schedule_period, in_schema, out_schema, filter, required_consents,
 						required_consents_operator, transformation_mapping, transformation_id, transformation_version,
 						transformation_language, transformation_source, transformation_preserve_json,
@@ -276,10 +277,20 @@ func TestUpgradePipelineOrderingGroup(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if name != "installed" {
+			if name != "delivery-appended" && name != "installed" {
 				_, err = database.Exec(t.Context(), `
 					ALTER TABLE pipelines DROP COLUMN ordering_group;
 					ALTER TABLE pipelines ALTER COLUMN event_type TYPE varchar(100)`)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			if name == "delivery-appended" {
+				_, err = database.Exec(t.Context(), `
+					ALTER TABLE pipelines DROP COLUMN delivery_endpoint;
+					ALTER TABLE pipelines ADD COLUMN delivery_endpoint varchar(25);
+					UPDATE pipelines SET delivery_endpoint = '';
+					ALTER TABLE pipelines ALTER COLUMN delivery_endpoint SET NOT NULL`)
 				if err != nil {
 					t.Fatal(err)
 				}

@@ -263,6 +263,7 @@ type EventType struct {
 	// must follow the syntax of a property name and be no longer than
 	// MaxDeliveryEndpointLen characters.
 	DeliveryEndpoint string
+
 	// DefaultFilter is the default filter to use for pipelines.
 	DefaultFilter string
 }

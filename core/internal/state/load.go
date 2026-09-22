@@ -546,14 +546,16 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				var function TransformationFunction
 				var format *string
 				pipeline := Pipeline{}
-				err := rows.Scan(&pipeline.ID, &connectionID, &pipeline.Target, &eventType, &pipeline.OrderingGroup, &pipeline.DeliveryEndpoint, &pipeline.Name,
-					&pipeline.Enabled, &pipeline.ScheduleStart, &pipeline.SchedulePeriod, &rawInSchema, &rawOutSchema,
-					&filter, &pipeline.RequiredConsents.Purposes, &pipeline.RequiredConsents.Operator, &mapping, &function.ID,
-					&function.Version, &function.Language, &function.Source, &function.PreserveJSON, &pipeline.Transformation.InPaths,
-					&pipeline.Transformation.OutPaths, &pipeline.Query, &format, &pipeline.Path, &pipeline.Sheet, &pipeline.Compression,
-					&pipeline.OrderBy, &pipeline.FormatSettings, &pipeline.ExportMode, &pipeline.Matching.In, &pipeline.Matching.Out,
-					&pipeline.UpdateOnDuplicates, &pipeline.TableName, &pipeline.TableKey, &pipeline.UserIDColumn, &pipeline.UpdatedAtColumn,
-					&pipeline.UpdatedAtFormat, &pipeline.Incremental, &pipeline.Health, &pipeline.propertiesToUnset)
+				err := rows.Scan(&pipeline.ID, &connectionID, &pipeline.Target, &eventType, &pipeline.OrderingGroup,
+					&pipeline.DeliveryEndpoint, &pipeline.Name, &pipeline.Enabled, &pipeline.ScheduleStart,
+					&pipeline.SchedulePeriod, &rawInSchema, &rawOutSchema, &filter, &pipeline.RequiredConsents.Purposes,
+					&pipeline.RequiredConsents.Operator, &mapping, &function.ID, &function.Version, &function.Language,
+					&function.Source, &function.PreserveJSON, &pipeline.Transformation.InPaths,
+					&pipeline.Transformation.OutPaths, &pipeline.Query, &format, &pipeline.Path, &pipeline.Sheet,
+					&pipeline.Compression, &pipeline.OrderBy, &pipeline.FormatSettings, &pipeline.ExportMode,
+					&pipeline.Matching.In, &pipeline.Matching.Out, &pipeline.UpdateOnDuplicates, &pipeline.TableName,
+					&pipeline.TableKey, &pipeline.UserIDColumn, &pipeline.UpdatedAtColumn, &pipeline.UpdatedAtFormat,
+					&pipeline.Incremental, &pipeline.Health, &pipeline.propertiesToUnset)
 				if err != nil {
 					return fmt.Errorf("loading pipeline %s: %s", pipeline.ID, err)
 				}

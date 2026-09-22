@@ -303,13 +303,17 @@ func TestAppRecordsPreservesConnectorRecordError(t *testing.T) {
 // TestValidateEventType verifies validation of event type IDs, ordering groups,
 // and delivery endpoints.
 func TestValidateEventType(t *testing.T) {
+
 	tests := []struct {
 		name      string
 		eventType *EventType
 		err       string
 	}{
 		{name: "valid", eventType: &EventType{ID: "createContact", OrderingGroup: "contacts"}},
-		{name: "explicit delivery endpoint", eventType: &EventType{ID: "createContact", OrderingGroup: "contacts", DeliveryEndpoint: "contacts"}},
+		{
+			name:      "explicit delivery endpoint",
+			eventType: &EventType{ID: "createContact", OrderingGroup: "contacts", DeliveryEndpoint: "contacts"},
+		},
 		{name: "dynamic ID", eventType: &EventType{ID: "create-contact / 購入", OrderingGroup: "contacts"}},
 		{name: "100 rune ID", eventType: &EventType{ID: strings.Repeat("界", 100), OrderingGroup: "contacts"}},
 		{
@@ -380,6 +384,7 @@ func TestValidateEventType(t *testing.T) {
 			}
 		})
 	}
+
 }
 
 // TestApplicationEventType verifies that EventType validates only matching
