@@ -566,7 +566,7 @@ func (k *Krenalis) TryOrganizations(first, limit int) ([]Organization, error) {
 func organizationsHeaders() http.Header {
 	return http.Header{
 		"Krenalis-Workspace": nil, // so that Call does not add automatically the header.
-		"Authorization":      []string{"Bearer " + testsSettings.OrganizationsAPIKey},
+		"Authorization":      []string{"Bearer " + testsSettings.PlatformManagementAPIKey},
 	}
 }
 

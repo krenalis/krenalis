@@ -237,10 +237,10 @@ func (s *apisServer) authenticatePlatformRequest(r *http.Request) error {
 	if !found {
 		return errors.BadRequest("Authorization header is invalid; it should be in the format 'Authorization: Bearer <YOUR_PLATFORM_MANAGEMENT_API_KEY>'")
 	}
-	if !strings.HasPrefix(token, "org_") {
-		return errors.BadRequest("platform management APIs require specific keys for authentication (these are keys that begin with 'org_')")
+	if !strings.HasPrefix(token, "plat_") {
+		return errors.BadRequest("platform management APIs require specific keys for authentication (these are keys that begin with 'plat_')")
 	}
-	if s.organizationsAPIKey == "" || token != s.organizationsAPIKey {
+	if s.platformManagementAPIKey == "" || token != s.platformManagementAPIKey {
 		return errors.Unauthorized("platform management API key in the Authorization header of the request is not valid")
 	}
 	return nil

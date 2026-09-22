@@ -94,7 +94,7 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 	runsOnHTTPS := config.HTTP.TLS.Enabled || strings.HasPrefix(config.HTTP.ExternalURL, "https://")
 	apisServer := newAPIsServer(core, runsOnHTTPS, config.JavaScriptSDKURL,
 		config.HTTP.ExternalURL, config.HTTP.ExternalEventURL, config.ExternalAssetsURLs,
-		config.PotentialConnectorsURL, config.InviteMembersViaEmail, config.OrganizationsAPIKey, workOS,
+		config.PotentialConnectorsURL, config.InviteMembersViaEmail, config.PlatformManagementAPIKey, workOS,
 		config.SentryTelemetryLevel, sentryErrorTunnel)
 
 	admin, err := newAdmin(assetsFS)

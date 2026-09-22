@@ -70,18 +70,18 @@ type apisServer struct {
 		// codec creates and parses API Sync-Token values.
 		codec *synctoken.Codec
 	}
-	httpSecretKey          httpSecretKeyFunc
-	mux                    *http.ServeMux
-	runsOnHTTPS            bool
-	javaScriptSDKURL       string
-	externalURL            string
-	externalEventURL       string
-	externalAssetsURLs     []string
-	potentialConnectorsURL string // must be a valid URL or empty string (which means: do not load the JSON file).
-	inviteMembersViaEmail  bool
-	organizationsAPIKey    string // can be empty (which means that the platform management API cannot be used)
-	workOS                 *workos.WorkOS
-	sentryTelemetry        struct {
+	httpSecretKey            httpSecretKeyFunc
+	mux                      *http.ServeMux
+	runsOnHTTPS              bool
+	javaScriptSDKURL         string
+	externalURL              string
+	externalEventURL         string
+	externalAssetsURLs       []string
+	potentialConnectorsURL   string // must be a valid URL or empty string (which means: do not load the JSON file).
+	inviteMembersViaEmail    bool
+	platformManagementAPIKey string // can be empty (which means that the platform management API cannot be used)
+	workOS                   *workos.WorkOS
+	sentryTelemetry          struct {
 		level       core.TelemetryLevel
 		errorTunnel *sentryErrorTunnel
 	}
@@ -92,21 +92,21 @@ type apisServer struct {
 // runsOnHTTPs indicates if the server runs on HTTPS.
 func newAPIsServer(core *core.Core, runsOnHTTPS bool, javaScriptSDKURL, externalURL,
 	externalEventURL string, externalAssetsURLs []string, potentialConnectorsURL string,
-	inviteMembersViaEmail bool, organizationsAPIKey string, workOS *workos.WorkOS,
+	inviteMembersViaEmail bool, platformManagementAPIKey string, workOS *workos.WorkOS,
 	sentryTelemetryLevel core.TelemetryLevel, sentryErrorTunnel *sentryErrorTunnel) *apisServer {
 
 	s := &apisServer{
-		core:                   core,
-		httpSecretKey:          core.HTTPSecretKey,
-		runsOnHTTPS:            runsOnHTTPS,
-		javaScriptSDKURL:       javaScriptSDKURL,
-		externalURL:            externalURL,
-		externalEventURL:       externalEventURL,
-		externalAssetsURLs:     externalAssetsURLs,
-		potentialConnectorsURL: potentialConnectorsURL,
-		inviteMembersViaEmail:  inviteMembersViaEmail,
-		organizationsAPIKey:    organizationsAPIKey,
-		workOS:                 workOS,
+		core:                     core,
+		httpSecretKey:            core.HTTPSecretKey,
+		runsOnHTTPS:              runsOnHTTPS,
+		javaScriptSDKURL:         javaScriptSDKURL,
+		externalURL:              externalURL,
+		externalEventURL:         externalEventURL,
+		externalAssetsURLs:       externalAssetsURLs,
+		potentialConnectorsURL:   potentialConnectorsURL,
+		inviteMembersViaEmail:    inviteMembersViaEmail,
+		platformManagementAPIKey: platformManagementAPIKey,
+		workOS:                   workOS,
 	}
 
 	s.sentryTelemetry.level = sentryTelemetryLevel
