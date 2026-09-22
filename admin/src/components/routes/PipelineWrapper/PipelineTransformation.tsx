@@ -5,6 +5,8 @@ import {
 	getSampleIdentifiers,
 	updateMappingPropertyError,
 	pipelineObjectLabels,
+	propertyAnnotation,
+	propertyAnnotationSeparator,
 } from './Pipeline.helpers';
 import {
 	getSchemaComboboxItems,
@@ -93,6 +95,15 @@ const updatedAtFormats = {
 	iso8601: 'ISO8601',
 	excel: 'Excel',
 };
+
+// PropertyAnnotation renders the annotation for a property.
+const PropertyAnnotation = ({ property }: { property: Property }) => (
+	<>
+		{property.displayName && <span className='property-annotation__display-name'>{property.displayName}</span>}
+		{property.displayName && property.description && propertyAnnotationSeparator}
+		{property.description}
+	</>
+);
 
 const PipelineTransformation = forwardRef<any>((_, ref) => {
 	const [transformationLanguages, setTransformationLanguages] = useState<string[]>();
@@ -925,6 +936,7 @@ const TransformationBox = ({
 			}
 
 			const typeName = toKrenalisStringType(property.full.type, property.full.nullable);
+			const annotation = propertyAnnotation(property.full);
 
 			if (property.type === 'map') {
 				mappings.push(
@@ -1033,9 +1045,9 @@ const TransformationBox = ({
 									</span>
 								)}
 							</div>
-							{property.full.description && (
-								<div className='pipeline__transformation-output-property-description'>
-									{property.full.description}
+							{annotation && (
+								<div className='pipeline__transformation-output-property-annotation'>
+									<PropertyAnnotation property={property.full} />
 								</div>
 							)}
 						</div>
@@ -2867,6 +2879,7 @@ const MapMapping = ({
 		(property.value !== '' && !hasFilledPairs && !hasMultiplePairs && !isResetting);
 
 	const typeName = toKrenalisStringType(property.full.type, property.full.nullable);
+	const annotation = propertyAnnotation(property.full);
 
 	return (
 		<>
@@ -2928,9 +2941,9 @@ const MapMapping = ({
 						</span>
 					)}
 				</div>
-				{property.full.description && (
-					<div className='pipeline__transformation-output-property-description'>
-						{property.full.description}
+				{annotation && (
+					<div className='pipeline__transformation-output-property-annotation'>
+						<PropertyAnnotation property={property.full} />
 					</div>
 				)}
 			</div>
@@ -3093,9 +3106,10 @@ const TransformationNestedProperties = ({
 	if (searchTerm === '') {
 		isSearched = true;
 	} else {
+		const annotation = propertyAnnotation(property);
 		isSearched =
 			property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-			(property.description != '' && property.description.toLowerCase().includes(searchTerm.toLowerCase()));
+			(annotation != '' && annotation.toLowerCase().includes(searchTerm.toLowerCase()));
 	}
 
 	let hasSearchedChildren = false;
@@ -3109,10 +3123,10 @@ const TransformationNestedProperties = ({
 					continue;
 				}
 				const name = flatSchema[key].full.name;
-				const description = flatSchema[key].full.description;
+				const annotation = propertyAnnotation(flatSchema[key].full);
 				const isSearched =
 					name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-					(description != '' && description.toLowerCase().includes(searchTerm.toLowerCase()));
+					(annotation != '' && annotation.toLowerCase().includes(searchTerm.toLowerCase()));
 				if (isSearched) {
 					hasSearchedChildren = true;
 					break;
@@ -3125,10 +3139,10 @@ const TransformationNestedProperties = ({
 			const s = flattenSchema(property.type as ArrayType | MapType);
 			for (const key in s) {
 				const name = s[key].full.name;
-				const description = s[key].full.description;
+				const annotation = propertyAnnotation(s[key].full);
 				const isSearched =
 					name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-					(description != '' && description.toLowerCase().includes(searchTerm.toLowerCase()));
+					(annotation != '' && annotation.toLowerCase().includes(searchTerm.toLowerCase()));
 				if (isSearched) {
 					hasSearchedChildren = true;
 					break;
@@ -3247,21 +3261,21 @@ const TransformationProperty = ({
 	setIsExpanded,
 	isOutMatchingProperty,
 }: TransformationPropertyProps) => {
-	const [showDescriptionTooltip, setShowDescriptionTooltip] = useState<boolean>(false);
+	const [showAnnotationTooltip, setShowAnnotationTooltip] = useState<boolean>(false);
 
 	const { workspaces, selectedWorkspace } = useContext(AppContext);
 	const { isImport, pipelineType, pipeline } = useContext(PipelineContext);
 
-	const descriptionRef = useRef(null);
+	const annotationRef = useRef(null);
 
 	useEffect(() => {
-		if (descriptionRef.current == null) {
+		if (annotationRef.current == null) {
 			return;
 		}
-		const el = descriptionRef.current;
+		const el = annotationRef.current;
 		const hasEllipsis = el.scrollWidth > el.clientWidth;
-		setShowDescriptionTooltip(hasEllipsis);
-	}, [descriptionRef.current]);
+		setShowAnnotationTooltip(hasEllipsis);
+	}, [annotationRef.current]);
 
 	let path = property.name;
 	if (parentName) {
@@ -3323,11 +3337,13 @@ const TransformationProperty = ({
 		onChangeSelectedPath(path);
 	};
 
+	const annotation = propertyAnnotation(property);
+
 	let isSearched = true;
 	if (searchTerm != null && searchTerm !== '') {
 		isSearched =
 			property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-			(property.description != '' && property.description.toLowerCase().includes(searchTerm.toLowerCase()));
+			(annotation != '' && annotation.toLowerCase().includes(searchTerm.toLowerCase()));
 	}
 
 	if (!isSearched) {
@@ -3360,11 +3376,11 @@ const TransformationProperty = ({
 		}
 	}
 
-	let description = null;
-	if (property.description) {
-		description = (
-			<div className='fullscreen-transformation__property-description' ref={descriptionRef}>
-				{property.description}
+	let annotationElement = null;
+	if (annotation !== '') {
+		annotationElement = (
+			<div className='fullscreen-transformation__property-annotation' ref={annotationRef}>
+				<PropertyAnnotation property={property} />
 			</div>
 		);
 	}
@@ -3460,13 +3476,13 @@ const TransformationProperty = ({
 									)}
 								</div>
 							</div>
-							{description != null &&
-								(showDescriptionTooltip ? (
-									<SlTooltip content={property.description} hoist={true}>
-										{description}
+							{annotationElement != null &&
+								(showAnnotationTooltip ? (
+									<SlTooltip content={annotation} hoist={true}>
+										{annotationElement}
 									</SlTooltip>
 								) : (
-									description
+									annotationElement
 								))}
 						</div>
 						<div className='fullscreen-transformation__property-right-column'>
