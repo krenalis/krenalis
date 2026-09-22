@@ -616,6 +616,45 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 	);
 });
 
+interface PropertyDescriptionProps {
+	className: string;
+	description: string;
+}
+
+const PropertyDescription = ({ className, description }: PropertyDescriptionProps) => {
+	const [isOverflowing, setIsOverflowing] = useState<boolean>(false);
+
+	const descriptionRef = useRef<HTMLDivElement>(null);
+
+	useLayoutEffect(() => {
+		const descriptionElement = descriptionRef.current;
+		if (descriptionElement == null) {
+			return;
+		}
+
+		const updateIsOverflowing = () => {
+			setIsOverflowing(descriptionElement.scrollWidth > descriptionElement.clientWidth);
+		};
+
+		updateIsOverflowing();
+
+		const resizeObserver = new ResizeObserver(updateIsOverflowing);
+		resizeObserver.observe(descriptionElement);
+
+		return () => {
+			resizeObserver.disconnect();
+		};
+	}, [description]);
+
+	return (
+		<SlTooltip content={description} disabled={!isOverflowing} hoist={true}>
+			<div className={className} ref={descriptionRef}>
+				{description}
+			</div>
+		</SlTooltip>
+	);
+};
+
 interface TransformationBoxProps {
 	transformationType: 'mappings' | 'function' | '';
 	setTransformationType: React.Dispatch<React.SetStateAction<'mappings' | 'function' | ''>>;
@@ -1033,10 +1072,11 @@ const TransformationBox = ({
 									</span>
 								)}
 							</div>
-							{property.full.description && (
-								<div className='pipeline__transformation-output-property-description'>
-									{property.full.description}
-								</div>
+							{property.full.description !== '' && (
+								<PropertyDescription
+									className='pipeline__transformation-output-property-description'
+									description={property.full.description}
+								/>
 							)}
 						</div>
 					</React.Fragment>,
@@ -2928,10 +2968,11 @@ const MapMapping = ({
 						</span>
 					)}
 				</div>
-				{property.full.description && (
-					<div className='pipeline__transformation-output-property-description'>
-						{property.full.description}
-					</div>
+				{property.full.description !== '' && (
+					<PropertyDescription
+						className='pipeline__transformation-output-property-description'
+						description={property.full.description}
+					/>
 				)}
 			</div>
 			{pairs.map(([key, value], i) => {
@@ -3247,21 +3288,8 @@ const TransformationProperty = ({
 	setIsExpanded,
 	isOutMatchingProperty,
 }: TransformationPropertyProps) => {
-	const [showDescriptionTooltip, setShowDescriptionTooltip] = useState<boolean>(false);
-
 	const { workspaces, selectedWorkspace } = useContext(AppContext);
 	const { isImport, pipelineType, pipeline } = useContext(PipelineContext);
-
-	const descriptionRef = useRef(null);
-
-	useEffect(() => {
-		if (descriptionRef.current == null) {
-			return;
-		}
-		const el = descriptionRef.current;
-		const hasEllipsis = el.scrollWidth > el.clientWidth;
-		setShowDescriptionTooltip(hasEllipsis);
-	}, [descriptionRef.current]);
 
 	let path = property.name;
 	if (parentName) {
@@ -3360,15 +3388,6 @@ const TransformationProperty = ({
 		}
 	}
 
-	let description = null;
-	if (property.description) {
-		description = (
-			<div className='fullscreen-transformation__property-description' ref={descriptionRef}>
-				{property.description}
-			</div>
-		);
-	}
-
 	return (
 		<div
 			className={`fullscreen-transformation__property-wrapper${isParent ? ' fullscreen-transformation__property-wrapper--parent' : ''}${isFlagged ? ' fullscreen-transformation__property-wrapper--selected' : ''}${isOutMatchingProperty && transformationType === 'function' ? ' fullscreen-transformation__property-wrapper--is-out-matching' : ''}`}
@@ -3460,14 +3479,12 @@ const TransformationProperty = ({
 									)}
 								</div>
 							</div>
-							{description != null &&
-								(showDescriptionTooltip ? (
-									<SlTooltip content={property.description} hoist={true}>
-										{description}
-									</SlTooltip>
-								) : (
-									description
-								))}
+							{property.description !== '' && (
+								<PropertyDescription
+									className='fullscreen-transformation__property-description'
+									description={property.description}
+								/>
+							)}
 						</div>
 						<div className='fullscreen-transformation__property-right-column'>
 							{languageTypeName && (

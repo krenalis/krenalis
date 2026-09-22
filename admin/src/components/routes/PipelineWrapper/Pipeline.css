@@ -605,13 +605,13 @@ sl-button.pipeline__filters-remove-rule[variant='text']::part(label) {
 
 .pipeline__transformation-mappings {
 	display: grid;
-	grid-template-columns: calc(50% - 35px) 30px calc(50% - 35px);
+	grid-template-columns: minmax(0, calc(50% - 35px)) 30px minmax(0, calc(50% - 35px));
 	gap: 20px;
 	align-items: start;
 }
 
 .fullscreen-transformation .pipeline__transformation-mappings {
-	grid-template-columns: minmax(200px, 600px) 30px 1fr;
+	grid-template-columns: minmax(200px, 1fr) 30px minmax(0, 1fr);
 }
 
 .pipeline__transformation-mapping:last-child {
@@ -673,11 +673,17 @@ sl-button.pipeline__filters-remove-rule[variant='text']::part(label) {
 	font-size: 14px;
 	line-height: 0.8;
 	top: 2px;
+	min-width: 0;
 }
 
 .pipeline__transformation-output-property-key {
 	padding-right: 5px;
 	font-weight: 500;
+}
+
+.pipeline__transformation-output-property-head,
+.pipeline__transformation-output-property--map {
+	white-space: nowrap;
 }
 
 .pipeline__transformation-output-property-type,
@@ -694,6 +700,8 @@ sl-button.pipeline__filters-remove-rule[variant='text']::part(label) {
 
 .pipeline__transformation-output-property-description {
 	color: var(--sl-color-neutral-600);
+	/* Descriptions must not determine the mappings' scrollable width. */
+	contain: inline-size;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -1072,14 +1080,6 @@ inherit the disabled style */
 
 .transformation-box--mappings .transformation-box__body {
 	padding: 20px 30px;
-}
-
-.fullscreen-transformation .pipeline__transformation-mappings {
-	padding-bottom: 30px;
-}
-
-.fullscreen-transformation .pipeline__transformation-output-property-description {
-	max-width: 400px;
 }
 
 .pipeline__transformation-function {
@@ -1799,7 +1799,7 @@ inherit the disabled style */
 
 .fullscreen-transformation__right-panel {
 	position: relative;
-	overflow: auto;
+	overflow: hidden;
 	max-height: 100%;
 	background-color: var(--bg-gray);
 }
@@ -1824,6 +1824,7 @@ inherit the disabled style */
 	border-radius: 0;
 	box-shadow: none;
 	border: 0;
+	height: 100%;
 }
 
 .fullscreen-transformation__editor-panel .transformation-box__header {
@@ -1832,10 +1833,12 @@ inherit the disabled style */
 	height: 60px;
 	border-top: 1px solid var(--border-primary);
 	border-bottom: 2px solid var(--border-primary);
-	position: sticky;
-	top: 0;
-	left: 0;
+	position: relative;
 	z-index: 10;
+}
+
+.fullscreen-transformation__editor-panel .transformation-box__body {
+	overflow: auto;
 }
 
 .fullscreen-transformation__editor-panel .transformation-box__header-title {
