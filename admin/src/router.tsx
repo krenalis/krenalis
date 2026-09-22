@@ -39,6 +39,8 @@ import { WorkspacesWrapper } from './components/routes/WorkspacesWrapper/Workspa
 import { AccessKeys } from './components/routes/AccessKeys/AccessKeys';
 import { ResetPassword } from './components/routes/ResetPassword/ResetPassword';
 import { ResetPasswordToken } from './components/routes/ResetPasswordToken/ResetPasswordToken';
+import { SimulatedAccounts } from './components/routes/SimulatedAccounts/SimulatedAccounts';
+import { Development } from './components/routes/Development/Development';
 
 const router = createBrowserRouter([
 	{
@@ -96,6 +98,10 @@ const router = createBrowserRouter([
 						],
 					},
 					{ path: 'connections', element: <ConnectionsMap /> },
+					{ path: 'development', element: <Development /> },
+					{ path: 'simulated-accounts', element: <SimulatedAccounts /> },
+					{ path: 'simulated-accounts/create', element: <SimulatedAccounts /> },
+					{ path: 'simulated-accounts/:id', element: <SimulatedAccounts /> },
 					{ path: 'oauth/authorize', element: <OAuth /> },
 					{
 						path: 'settings',

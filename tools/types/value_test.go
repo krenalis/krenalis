@@ -1380,3 +1380,1859 @@ func Test_NormalizeUUID(t *testing.T) {
 		}
 	})
 }
+
+// requireMarshalValidateError verifies that MarshalValidate failed without
+// returning partial JSON, and that the validation error has the expected kind
+// and path. If contains is not empty, the error message must contain it too.
+func requireMarshalValidateError(
+	t *testing.T,
+	got json.Value,
+	err error,
+	kind schemaValidationKind,
+	path string,
+	contains string,
+) {
+	t.Helper()
+
+	if err == nil {
+		t.Fatal("expected an error, got nil")
+	}
+	if got != nil {
+		t.Fatalf("expected nil JSON on error, got %q", got)
+	}
+
+	validation, ok := errors.AsType[*SchemaValidationError](err)
+	if !ok {
+		t.Fatalf("expected *SchemaValidationError, got %T: %v", err, err)
+	}
+	if validation.kind != kind {
+		t.Fatalf("expected validation kind %v, got %v", kind, validation.kind)
+	}
+	if validation.path != path {
+		t.Fatalf("expected validation path %q, got %q", path, validation.path)
+	}
+	if contains != "" && !strings.Contains(validation.msg, contains) {
+		t.Fatalf(
+			"expected validation message to contain %q, got %q",
+			contains,
+			validation.msg,
+		)
+	}
+}
+
+// requireSameValidationLocation verifies that MarshalValidate and Decode report
+// the same validation kind at the same path. Their messages are allowed to
+// differ because they validate different input representations.
+func requireSameValidationLocation(t *testing.T, gotErr, decodeErr error) {
+	t.Helper()
+
+	got, ok := errors.AsType[*SchemaValidationError](gotErr)
+	if !ok {
+		t.Fatalf(
+			"MarshalValidate returned %T: %v, want *SchemaValidationError",
+			gotErr,
+			gotErr,
+		)
+	}
+
+	want, ok := errors.AsType[*SchemaValidationError](decodeErr)
+	if !ok {
+		t.Fatalf(
+			"Decode returned %T: %v, want *SchemaValidationError",
+			decodeErr,
+			decodeErr,
+		)
+	}
+
+	if got.kind != want.kind || got.path != want.path {
+		t.Fatalf(
+			"validation location differs: MarshalValidate kind=%v path=%q; Decode kind=%v path=%q",
+			got.kind,
+			got.path,
+			want.kind,
+			want.path,
+		)
+	}
+}
+
+// TestMarshalValidate checks that valid canonical Go values produce the same
+// JSON as Marshal. It also verifies that decoding and marshaling the result
+// again does not change the JSON.
+func TestMarshalValidate(t *testing.T) {
+	got, err := MarshalValidate(value, schema)
+	if err != nil {
+		t.Fatalf("MarshalValidate: unexpected error: %v", err)
+	}
+
+	want, err := Marshal(value, schema)
+	if err != nil {
+		t.Fatalf("Marshal: unexpected error: %v", err)
+	}
+
+	if !bytes.Equal(got, want) {
+		t.Fatalf(
+			"MarshalValidate differs from Marshal:\nwant: %s\ngot:  %s",
+			want,
+			got,
+		)
+	}
+
+	decoded, err := Decode[map[string]any](bytes.NewReader(got), schema)
+	if err != nil {
+		t.Fatalf(
+			"Decode(MarshalValidate(...)): unexpected error: %v",
+			err,
+		)
+	}
+
+	encodedAgain, err := Marshal(decoded, schema)
+	if err != nil {
+		t.Fatalf("Marshal(decoded): unexpected error: %v", err)
+	}
+
+	if !bytes.Equal(got, encodedAgain) {
+		t.Fatalf(
+			"JSON changed after MarshalValidate -> Decode -> Marshal:\nfirst:  %s\nsecond: %s",
+			got,
+			encodedAgain,
+		)
+	}
+}
+
+// TestMarshalValidateCanonicalRepresentation verifies that MarshalValidate
+// accepts only the canonical Go values used for export. Values that import
+// normalization could convert must be rejected instead of normalized here.
+func TestMarshalValidateCanonicalRepresentation(t *testing.T) {
+	optionalObject := Object([]Property{{
+		Name:         "a",
+		Type:         String(),
+		ReadOptional: true,
+	}})
+
+	tests := []struct {
+		name  string
+		typ   Type
+		value any
+		valid bool
+	}{
+		// String values.
+		{"string", String(), "hello", true},
+		{"string as bytes", String(), []byte("hello"), false},
+
+		// Boolean values.
+		{"boolean", Boolean(), true, true},
+		{"boolean as string", Boolean(), "true", false},
+
+		// Signed integers.
+		{"signed int", Int(32), int(12), true},
+		{"signed int as int8", Int(32), int8(12), false},
+		{"signed int as int16", Int(32), int16(12), false},
+		{"signed int as int32", Int(32), int32(12), false},
+		{"signed int as int64", Int(32), int64(12), false},
+		{"signed int as uint", Int(32), uint(12), false},
+		{"signed int as float64", Int(32), float64(12), false},
+		{"signed int as string", Int(32), "12", false},
+
+		// Unsigned integers.
+		{"unsigned int", Int(32).Unsigned(), uint(12), true},
+		{"unsigned int as int", Int(32).Unsigned(), int(12), false},
+		{"unsigned int as uint8", Int(32).Unsigned(), uint8(12), false},
+		{"unsigned int as uint32", Int(32).Unsigned(), uint32(12), false},
+		{"unsigned int as string", Int(32).Unsigned(), "12", false},
+
+		// Floating-point values.
+		{"float64", Float(64), float64(1.25), true},
+		{"float32 as float32", Float(32), float32(1.25), false},
+		{"float as int", Float(64), int(1), false},
+		{
+			"canonical float32 carried by float64",
+			Float(32),
+			float64(float32(57.16038)),
+			true,
+		},
+		{
+			"non-canonical float32 carried by float64",
+			Float(32),
+			float64(57.16038),
+			false,
+		},
+		{"float NaN", Float(64), math.NaN(), true},
+		{"float positive infinity", Float(64), math.Inf(1), true},
+		{"float negative infinity", Float(64), math.Inf(-1), true},
+
+		// Decimal values.
+		{
+			"decimal",
+			Decimal(10, 3),
+			decimal.MustParse("1752.064"),
+			true,
+		},
+		{"decimal as string", Decimal(10, 3), "1752.064", false},
+		{
+			"decimal as float64",
+			Decimal(10, 3),
+			float64(1752.064),
+			false,
+		},
+
+		// Datetime values.
+		{
+			"datetime",
+			DateTime(),
+			time.Date(
+				2026, 9, 20,
+				12, 30, 45, 123456789,
+				time.UTC,
+			),
+			true,
+		},
+		{
+			"datetime with zero-offset non-UTC location",
+			DateTime(),
+			time.Date(
+				2026, 9, 20,
+				12, 30, 45, 0,
+				time.FixedZone("UTC", 0),
+			),
+			false,
+		},
+		{
+			"datetime with non-zero offset",
+			DateTime(),
+			time.Date(
+				2026, 9, 20,
+				12, 30, 45, 0,
+				time.FixedZone("CEST", 2*60*60),
+			),
+			false,
+		},
+		{
+			"datetime as string",
+			DateTime(),
+			"2026-09-20T12:30:45Z",
+			false,
+		},
+
+		// Date values.
+		{
+			"date",
+			Date(),
+			time.Date(2026, 9, 20, 0, 0, 0, 0, time.UTC),
+			true,
+		},
+		{
+			"date with time component",
+			Date(),
+			time.Date(2026, 9, 20, 12, 0, 0, 0, time.UTC),
+			false,
+		},
+		{
+			"date with zero-offset non-UTC location",
+			Date(),
+			time.Date(
+				2026, 9, 20,
+				0, 0, 0, 0,
+				time.FixedZone("UTC", 0),
+			),
+			false,
+		},
+		{"date as string", Date(), "2026-09-20", false},
+
+		// Time values.
+		{
+			"time",
+			Time(),
+			time.Date(
+				1970, 1, 1,
+				12, 30, 45, 123456789,
+				time.UTC,
+			),
+			true,
+		},
+		{
+			"time with wrong date",
+			Time(),
+			time.Date(2026, 1, 1, 12, 30, 45, 0, time.UTC),
+			false,
+		},
+		{
+			"time with zero-offset non-UTC location",
+			Time(),
+			time.Date(
+				1970, 1, 1,
+				12, 30, 45, 0,
+				time.FixedZone("UTC", 0),
+			),
+			false,
+		},
+		{"time as string", Time(), "12:30:45", false},
+
+		// Year values.
+		{"year", Year(), int(2026), true},
+		{"year as int32", Year(), int32(2026), false},
+		{"year as string", Year(), "2026", false},
+
+		// UUID values.
+		{
+			"uuid",
+			UUID(),
+			"550e8400-e29b-41d4-a716-446655440000",
+			true,
+		},
+		{
+			"uuid uppercase",
+			UUID(),
+			"550E8400-E29B-41D4-A716-446655440000",
+			false,
+		},
+		{
+			"uuid as bytes",
+			UUID(),
+			[]byte("550e8400-e29b-41d4-a716-446655440000"),
+			false,
+		},
+
+		// JSON values.
+		{"JSON object", JSON(), json.Value(`{"a":1}`), true},
+		{"JSON array", JSON(), json.Value(`[1,2,3]`), true},
+		{"JSON string", JSON(), json.Value(`"hello"`), true},
+		{"JSON number", JSON(), json.Value(`12.5`), true},
+		{"JSON boolean", JSON(), json.Value(`true`), true},
+		{"JSON null", JSON(), json.Value(`null`), true},
+		{"JSON typed nil", JSON(), json.Value(nil), false},
+		{"JSON as bytes", JSON(), []byte(`{"a":1}`), false},
+		{"JSON as Go string", JSON(), `{"a":1}`, false},
+
+		// IP values.
+		{"IPv4", IP(), "192.0.2.1", true},
+		{"canonical IPv6", IP(), "2001:db8::1", true},
+		{
+			"expanded IPv6",
+			IP(),
+			"2001:0db8:0000:0000:0000:0000:0000:0001",
+			false,
+		},
+		{
+			"IPv4-mapped IPv6",
+			IP(),
+			"::ffff:192.0.2.1",
+			false,
+		},
+		{
+			"IP as netip.Addr",
+			IP(),
+			netip.MustParseAddr("192.0.2.1"),
+			false,
+		},
+
+		// Arrays.
+		{
+			"array",
+			Array(String()),
+			[]any{"a", "b"},
+			true,
+		},
+		{
+			"array as []string",
+			Array(String()),
+			[]string{"a", "b"},
+			false,
+		},
+		{
+			"array typed nil",
+			Array(String()),
+			[]any(nil),
+			false,
+		},
+
+		// Objects.
+		{
+			"object",
+			Object([]Property{{Name: "a", Type: Int(32)}}),
+			map[string]any{"a": int(1)},
+			true,
+		},
+		{
+			"object typed nil",
+			optionalObject,
+			map[string]any(nil),
+			false,
+		},
+		{
+			"object as struct",
+			optionalObject,
+			struct{ A string }{A: "a"},
+			false,
+		},
+
+		// Maps.
+		{
+			"map",
+			Map(Int(32)),
+			map[string]any{"a": int(1)},
+			true,
+		},
+		{
+			"map as map[string]int",
+			Map(Int(32)),
+			map[string]int{"a": 1},
+			false,
+		},
+		{
+			"map typed nil",
+			Map(Int(32)),
+			map[string]any(nil),
+			false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := MarshalValidate(test.value, test.typ)
+
+			if !test.valid {
+				requireMarshalValidateError(
+					t,
+					got,
+					err,
+					invalidValue,
+					"",
+					"",
+				)
+				return
+			}
+
+			if err != nil {
+				t.Fatalf(
+					"expected no error, got %T: %v",
+					err,
+					err,
+				)
+			}
+			if !json.Valid(got) {
+				t.Fatalf(
+					"MarshalValidate returned invalid JSON: %q",
+					got,
+				)
+			}
+
+			want, err := Marshal(test.value, test.typ)
+			if err != nil {
+				t.Fatalf(
+					"Marshal: unexpected error: %v",
+					err,
+				)
+			}
+			if !bytes.Equal(got, want) {
+				t.Fatalf(
+					"MarshalValidate differs from Marshal: want %s, got %s",
+					want,
+					got,
+				)
+			}
+		})
+	}
+}
+
+// TestMarshalValidateConstraints verifies the constraints carried by Type once
+// the input is already using the canonical Go representation.
+func TestMarshalValidateConstraints(t *testing.T) {
+	tests := []struct {
+		name     string
+		typ      Type
+		value    any
+		valid    bool
+		path     string
+		contains string
+	}{
+		// Allowed string values.
+		{
+			"string allowed value",
+			String().WithValues("a", "b", "c"),
+			"b",
+			true,
+			"",
+			"",
+		},
+		{
+			"string unsupported value",
+			String().WithValues("a", "b", "c"),
+			"d",
+			false,
+			"",
+			"invalid value",
+		},
+		{
+			"empty allowed value",
+			String().WithValues("", "a"),
+			"",
+			true,
+			"",
+			"",
+		},
+
+		// String patterns.
+		{
+			"string regexp match",
+			String().WithPattern(regexp.MustCompile(`oo$`)),
+			"foo",
+			true,
+			"",
+			"",
+		},
+		{
+			"string regexp mismatch",
+			String().WithPattern(regexp.MustCompile(`oo$`)),
+			"faa",
+			false,
+			"",
+			"regular expression",
+		},
+
+		// String length limits.
+		{
+			"string max characters boundary",
+			String().WithMaxLength(2),
+			"éé",
+			true,
+			"",
+			"",
+		},
+		{
+			"string too many characters",
+			String().WithMaxLength(1),
+			"éé",
+			false,
+			"",
+			"longer than",
+		},
+		{
+			"string max bytes boundary",
+			String().WithMaxBytes(4),
+			"éé",
+			true,
+			"",
+			"",
+		},
+		{
+			"string too many bytes",
+			String().WithMaxBytes(3),
+			"éé",
+			false,
+			"",
+			"longer than",
+		},
+		{
+			"invalid UTF-8 string",
+			String(),
+			string([]byte{0xff}),
+			false,
+			"",
+			"UTF-8",
+		},
+
+		// Signed integer ranges.
+		{
+			"signed int minimum",
+			Int(8).WithIntRange(-20, 20),
+			int(-20),
+			true,
+			"",
+			"",
+		},
+		{
+			"signed int maximum",
+			Int(8).WithIntRange(-20, 20),
+			int(20),
+			true,
+			"",
+			"",
+		},
+		{
+			"signed int below minimum",
+			Int(8).WithIntRange(-20, 20),
+			int(-21),
+			false,
+			"",
+			"out of range",
+		},
+		{
+			"signed int above maximum",
+			Int(8).WithIntRange(-20, 20),
+			int(21),
+			false,
+			"",
+			"out of range",
+		},
+
+		// Unsigned integer ranges.
+		{
+			"unsigned int minimum",
+			Int(8).Unsigned().WithUnsignedRange(10, 20),
+			uint(10),
+			true,
+			"",
+			"",
+		},
+		{
+			"unsigned int maximum",
+			Int(8).Unsigned().WithUnsignedRange(10, 20),
+			uint(20),
+			true,
+			"",
+			"",
+		},
+		{
+			"unsigned int below minimum",
+			Int(8).Unsigned().WithUnsignedRange(10, 20),
+			uint(9),
+			false,
+			"",
+			"out of range",
+		},
+		{
+			"unsigned int above maximum",
+			Int(8).Unsigned().WithUnsignedRange(10, 20),
+			uint(21),
+			false,
+			"",
+			"out of range",
+		},
+
+		// Float ranges and real-only values.
+		{
+			"float minimum",
+			Float(64).WithFloatRange(-20.5, 8),
+			float64(-20.5),
+			true,
+			"",
+			"",
+		},
+		{
+			"float maximum",
+			Float(64).WithFloatRange(-20.5, 8),
+			float64(8),
+			true,
+			"",
+			"",
+		},
+		{
+			"float below minimum",
+			Float(64).WithFloatRange(-20.5, 8),
+			float64(-20.5001),
+			false,
+			"",
+			"out of range",
+		},
+		{
+			"float above maximum",
+			Float(64).WithFloatRange(-20.5, 8),
+			float64(8.0001),
+			false,
+			"",
+			"out of range",
+		},
+		{
+			"real finite",
+			Float(64).Real(),
+			float64(1.5),
+			true,
+			"",
+			"",
+		},
+		{
+			"real NaN",
+			Float(64).Real(),
+			math.NaN(),
+			false,
+			"",
+			"not a real",
+		},
+		{
+			"real positive infinity",
+			Float(64).Real(),
+			math.Inf(1),
+			false,
+			"",
+			"not a real",
+		},
+		{
+			"real negative infinity",
+			Float(64).Real(),
+			math.Inf(-1),
+			false,
+			"",
+			"not a real",
+		},
+
+		// Decimal precision, scale and ranges.
+		{
+			"decimal valid scale",
+			Decimal(5, 2),
+			decimal.MustParse("123.45"),
+			true,
+			"",
+			"",
+		},
+		{
+			"decimal unrepresentable scale",
+			Decimal(5, 2),
+			decimal.MustParse("1.234"),
+			false,
+			"",
+			"",
+		},
+		{
+			"decimal precision overflow",
+			Decimal(5, 2),
+			decimal.MustParse("1000.00"),
+			false,
+			"",
+			"out of range",
+		},
+		{
+			"decimal custom minimum",
+			Decimal(5, 2).WithDecimalRange(
+				decimal.MustParse("-10.50"),
+				decimal.MustParse("8.25"),
+			),
+			decimal.MustParse("-10.50"),
+			true,
+			"",
+			"",
+		},
+		{
+			"decimal custom maximum",
+			Decimal(5, 2).WithDecimalRange(
+				decimal.MustParse("-10.50"),
+				decimal.MustParse("8.25"),
+			),
+			decimal.MustParse("8.25"),
+			true,
+			"",
+			"",
+		},
+		{
+			"decimal outside custom range",
+			Decimal(5, 2).WithDecimalRange(
+				decimal.MustParse("-10.50"),
+				decimal.MustParse("8.25"),
+			),
+			decimal.MustParse("8.26"),
+			false,
+			"",
+			"out of range",
+		},
+
+		// Year boundaries.
+		{
+			"minimum year",
+			Year(),
+			int(MinYear),
+			true,
+			"",
+			"",
+		},
+		{
+			"maximum year",
+			Year(),
+			int(MaxYear),
+			true,
+			"",
+			"",
+		},
+		{
+			"year below minimum",
+			Year(),
+			int(0),
+			false,
+			"",
+			"out of range",
+		},
+		{
+			"year above maximum",
+			Year(),
+			int(10000),
+			false,
+			"",
+			"out of range",
+		},
+
+		// Datetime and date year boundaries.
+		{
+			"minimum datetime year",
+			DateTime(),
+			time.Date(
+				MinYear, 1, 1,
+				0, 0, 0, 0,
+				time.UTC,
+			),
+			true,
+			"",
+			"",
+		},
+		{
+			"maximum datetime year",
+			DateTime(),
+			time.Date(
+				MaxYear, 12, 31,
+				23, 59, 59, 999999999,
+				time.UTC,
+			),
+			true,
+			"",
+			"",
+		},
+		{
+			"datetime year zero",
+			DateTime(),
+			time.Date(
+				0, 1, 1,
+				0, 0, 0, 0,
+				time.UTC,
+			),
+			false,
+			"",
+			"year",
+		},
+		{
+			"datetime year 10000",
+			DateTime(),
+			time.Date(
+				10000, 1, 1,
+				0, 0, 0, 0,
+				time.UTC,
+			),
+			false,
+			"",
+			"year",
+		},
+		{
+			"minimum date year",
+			Date(),
+			time.Date(
+				MinYear, 1, 1,
+				0, 0, 0, 0,
+				time.UTC,
+			),
+			true,
+			"",
+			"",
+		},
+		{
+			"maximum date year",
+			Date(),
+			time.Date(
+				MaxYear, 12, 31,
+				0, 0, 0, 0,
+				time.UTC,
+			),
+			true,
+			"",
+			"",
+		},
+
+		// String semantics currently checked by Decode.
+		{
+			"country alpha-2",
+			String().AsCountry(ISO3166Alpha2),
+			"IT",
+			true,
+			"",
+			"",
+		},
+		{
+			"country lowercase",
+			String().AsCountry(ISO3166Alpha2),
+			"it",
+			false,
+			"",
+			"country code",
+		},
+		{
+			"country unknown",
+			String().AsCountry(ISO3166Alpha2),
+			"ZZ",
+			false,
+			"",
+			"country code",
+		},
+		{
+			"country alpha-3",
+			String().AsCountry(ISO3166Alpha3),
+			"ITA",
+			true,
+			"",
+			"",
+		},
+		{
+			"phone canonical",
+			String().AsPhone(),
+			"+390236618300",
+			true,
+			"",
+			"",
+		},
+		{
+			"phone structurally possible",
+			String().AsPhone(),
+			"+12001230101",
+			true,
+			"",
+			"",
+		},
+		{
+			"phone formatted but non-canonical",
+			String().AsPhone(),
+			"+39 02-36618 300",
+			false,
+			"",
+			"canonical phone",
+		},
+		{
+			"phone local-only",
+			String().AsPhone(),
+			"+12530000",
+			false,
+			"",
+			"canonical phone",
+		},
+
+		// JSON syntax.
+		{
+			"valid arbitrary JSON",
+			JSON(),
+			json.Value(`{"a":[1,true,null]}`),
+			true,
+			"",
+			"",
+		},
+		{
+			"invalid JSON",
+			JSON(),
+			json.Value(`{"a":`),
+			false,
+			"",
+			"valid JSON",
+		},
+
+		// Array size constraints.
+		{
+			"array minimum",
+			Array(Int(32)).
+				WithMinElements(2).
+				WithMaxElements(3),
+			[]any{int(1), int(2)},
+			true,
+			"",
+			"",
+		},
+		{
+			"array maximum",
+			Array(Int(32)).
+				WithMinElements(2).
+				WithMaxElements(3),
+			[]any{int(1), int(2), int(3)},
+			true,
+			"",
+			"",
+		},
+		{
+			"array below minimum",
+			Array(Int(32)).
+				WithMinElements(2).
+				WithMaxElements(3),
+			[]any{int(1)},
+			false,
+			"",
+			"less than 2 elements",
+		},
+		{
+			"array above maximum",
+			Array(Int(32)).
+				WithMinElements(2).
+				WithMaxElements(3),
+			[]any{int(1), int(2), int(3), int(4)},
+			false,
+			"",
+			"more than 3 elements",
+		},
+
+		// Array uniqueness.
+		{
+			"unique array",
+			Array(Int(32)).WithUnique(),
+			[]any{int(1), int(2), int(3)},
+			true,
+			"",
+			"",
+		},
+		{
+			"duplicate array",
+			Array(Int(32)).WithUnique(),
+			[]any{int(1), int(2), int(2)},
+			false,
+			"[2]",
+			"duplicates",
+		},
+		{
+			"duplicate NaN",
+			Array(Float(64)).WithUnique(),
+			[]any{math.NaN(), math.NaN()},
+			false,
+			"[1]",
+			"duplicates",
+		},
+
+		// Map keys.
+		{
+			"valid map key",
+			Map(Int(32)),
+			map[string]any{"a": int(1)},
+			true,
+			"",
+			"",
+		},
+		{
+			"invalid UTF-8 map key",
+			Map(Int(32)),
+			map[string]any{
+				string([]byte{0xff}): int(1),
+			},
+			false,
+			"",
+			"UTF-8",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := MarshalValidate(test.value, test.typ)
+
+			if !test.valid {
+				requireMarshalValidateError(
+					t,
+					got,
+					err,
+					invalidValue,
+					test.path,
+					test.contains,
+				)
+				return
+			}
+
+			if err != nil {
+				t.Fatalf(
+					"expected no error, got %T: %v",
+					err,
+					err,
+				)
+			}
+			if !json.Valid(got) {
+				t.Fatalf(
+					"MarshalValidate returned invalid JSON: %q",
+					got,
+				)
+			}
+
+			want, err := Marshal(test.value, test.typ)
+			if err != nil {
+				t.Fatalf(
+					"Marshal: unexpected error: %v",
+					err,
+				)
+			}
+			if !bytes.Equal(got, want) {
+				t.Fatalf(
+					"MarshalValidate differs from Marshal: want %s, got %s",
+					want,
+					got,
+				)
+			}
+		})
+	}
+}
+
+// TestMarshalValidateNullability covers nil values, typed nils, nullable
+// properties, and the difference between a nil json.Value and JSON null.
+func TestMarshalValidateNullability(t *testing.T) {
+	optionalObject := Object([]Property{{
+		Name:         "a",
+		Type:         String(),
+		ReadOptional: true,
+	}})
+
+	tests := []struct {
+		name     string
+		typ      Type
+		nullable bool
+		value    any
+		valid    bool
+	}{
+		{
+			"nullable string nil",
+			String(),
+			true,
+			nil,
+			true,
+		},
+		{
+			"non-nullable string nil",
+			String(),
+			false,
+			nil,
+			false,
+		},
+
+		{
+			"nullable JSON nil",
+			JSON(),
+			true,
+			nil,
+			true,
+		},
+		{
+			"nullable JSON typed nil",
+			JSON(),
+			true,
+			json.Value(nil),
+			true,
+		},
+		{
+			"non-nullable JSON nil",
+			JSON(),
+			false,
+			nil,
+			false,
+		},
+		{
+			"non-nullable JSON typed nil",
+			JSON(),
+			false,
+			json.Value(nil),
+			false,
+		},
+		{
+			"non-nullable JSON null",
+			JSON(),
+			false,
+			json.Value(`null`),
+			true,
+		},
+
+		{
+			"nullable array typed nil",
+			Array(String()),
+			true,
+			[]any(nil),
+			true,
+		},
+		{
+			"non-nullable array typed nil",
+			Array(String()),
+			false,
+			[]any(nil),
+			false,
+		},
+
+		{
+			"nullable object typed nil",
+			optionalObject,
+			true,
+			map[string]any(nil),
+			true,
+		},
+		{
+			"non-nullable object typed nil",
+			optionalObject,
+			false,
+			map[string]any(nil),
+			false,
+		},
+
+		{
+			"nullable map typed nil",
+			Map(String()),
+			true,
+			map[string]any(nil),
+			true,
+		},
+		{
+			"non-nullable map typed nil",
+			Map(String()),
+			false,
+			map[string]any(nil),
+			false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			typ := Object([]Property{{
+				Name:     "value",
+				Type:     test.typ,
+				Nullable: test.nullable,
+			}})
+
+			got, err := MarshalValidate(
+				map[string]any{"value": test.value},
+				typ,
+			)
+
+			if test.valid {
+				if err != nil {
+					t.Fatalf(
+						"expected no error, got %T: %v",
+						err,
+						err,
+					)
+				}
+				if string(got) != `{"value":null}` {
+					t.Fatalf(
+						`expected {"value":null}, got %s`,
+						got,
+					)
+				}
+				return
+			}
+
+			requireMarshalValidateError(
+				t,
+				got,
+				err,
+				invalidValue,
+				"value",
+				"cannot be null",
+			)
+		})
+	}
+
+	t.Run("top-level nil", func(t *testing.T) {
+		got, err := MarshalValidate(nil, String())
+
+		requireMarshalValidateError(
+			t,
+			got,
+			err,
+			invalidValue,
+			"",
+			"cannot be null",
+		)
+	})
+}
+
+// TestMarshalValidateObjectsAndPaths covers object membership, required and
+// optional properties, nil elements in containers, and nested error paths.
+func TestMarshalValidateObjectsAndPaths(t *testing.T) {
+	t.Run("unknown property", func(t *testing.T) {
+		typ := Object([]Property{{
+			Name: "a",
+			Type: Int(32),
+		}})
+
+		got, err := MarshalValidate(
+			map[string]any{
+				"a":     int(1),
+				"extra": int(2),
+			},
+			typ,
+		)
+
+		requireMarshalValidateError(
+			t,
+			got,
+			err,
+			propertyNotExist,
+			"extra",
+			"",
+		)
+	})
+
+	t.Run("missing required property", func(t *testing.T) {
+		typ := Object([]Property{{
+			Name: "a",
+			Type: Int(32),
+		}})
+
+		got, err := MarshalValidate(
+			map[string]any{},
+			typ,
+		)
+
+		requireMarshalValidateError(
+			t,
+			got,
+			err,
+			missingProperty,
+			"a",
+			"",
+		)
+	})
+
+	t.Run("missing optional property", func(t *testing.T) {
+		typ := Object([]Property{{
+			Name:         "a",
+			Type:         Int(32),
+			ReadOptional: true,
+		}})
+
+		got, err := MarshalValidate(
+			map[string]any{},
+			typ,
+		)
+		if err != nil {
+			t.Fatalf(
+				"expected no error, got %v",
+				err,
+			)
+		}
+		if string(got) != `{}` {
+			t.Fatalf(
+				"expected {}, got %s",
+				got,
+			)
+		}
+	})
+
+	t.Run("nested invalid value path", func(t *testing.T) {
+		typ := Object([]Property{{
+			Name: "accounts",
+			Type: Array(Object([]Property{{
+				Name: "age",
+				Type: Int(8),
+			}})),
+		}})
+
+		input := map[string]any{
+			"accounts": []any{
+				map[string]any{
+					"age": int(20),
+				},
+				map[string]any{
+					"age": int(300),
+				},
+			},
+		}
+
+		got, err := MarshalValidate(input, typ)
+
+		requireMarshalValidateError(
+			t,
+			got,
+			err,
+			invalidValue,
+			"accounts[1].age",
+			"out of range",
+		)
+	})
+
+	t.Run("nested missing property path", func(t *testing.T) {
+		typ := Object([]Property{{
+			Name: "profile",
+			Type: Object([]Property{{
+				Name: "age",
+				Type: Int(8),
+			}}),
+		}})
+
+		got, err := MarshalValidate(
+			map[string]any{
+				"profile": map[string]any{},
+			},
+			typ,
+		)
+
+		requireMarshalValidateError(
+			t,
+			got,
+			err,
+			missingProperty,
+			"profile.age",
+			"",
+		)
+	})
+
+	t.Run("nested unknown property path", func(t *testing.T) {
+		typ := Object([]Property{{
+			Name: "profile",
+			Type: Object([]Property{{
+				Name: "age",
+				Type: Int(8),
+			}}),
+		}})
+
+		got, err := MarshalValidate(
+			map[string]any{
+				"profile": map[string]any{
+					"age":   int(20),
+					"extra": true,
+				},
+			},
+			typ,
+		)
+
+		requireMarshalValidateError(
+			t,
+			got,
+			err,
+			propertyNotExist,
+			"profile.extra",
+			"",
+		)
+	})
+
+	t.Run("array element type path", func(t *testing.T) {
+		got, err := MarshalValidate(
+			[]any{"a", int(1)},
+			Array(String()),
+		)
+
+		requireMarshalValidateError(
+			t,
+			got,
+			err,
+			invalidValue,
+			"[1]",
+			"",
+		)
+	})
+
+	t.Run("array nil element", func(t *testing.T) {
+		got, err := MarshalValidate(
+			[]any{"a", nil},
+			Array(String()),
+		)
+
+		requireMarshalValidateError(
+			t,
+			got,
+			err,
+			invalidValue,
+			"[1]",
+			"cannot be null",
+		)
+	})
+
+	t.Run("JSON null array element", func(t *testing.T) {
+		got, err := MarshalValidate(
+			[]any{
+				json.Value(`null`),
+			},
+			Array(JSON()),
+		)
+		if err != nil {
+			t.Fatalf(
+				"expected no error, got %v",
+				err,
+			)
+		}
+		if string(got) != `[null]` {
+			t.Fatalf(
+				"expected [null], got %s",
+				got,
+			)
+		}
+	})
+
+	t.Run("nil JSON array element", func(t *testing.T) {
+		got, err := MarshalValidate(
+			[]any{nil},
+			Array(JSON()),
+		)
+
+		requireMarshalValidateError(
+			t,
+			got,
+			err,
+			invalidValue,
+			"[0]",
+			"cannot be null",
+		)
+	})
+
+	t.Run("map nil element", func(t *testing.T) {
+		got, err := MarshalValidate(
+			map[string]any{
+				"a": nil,
+			},
+			Map(String()),
+		)
+
+		requireMarshalValidateError(
+			t,
+			got,
+			err,
+			invalidValue,
+			"",
+			"cannot be null",
+		)
+	})
+
+	t.Run("map element keeps Decode path semantics", func(t *testing.T) {
+		typ := Object([]Property{{
+			Name: "labels",
+			Type: Map(Int(32)),
+		}})
+
+		got, err := MarshalValidate(
+			map[string]any{
+				"labels": map[string]any{
+					"a": "1",
+				},
+			},
+			typ,
+		)
+
+		requireMarshalValidateError(
+			t,
+			got,
+			err,
+			invalidValue,
+			"labels",
+			"",
+		)
+	})
+}
+
+// TestMarshalValidateMatchesDecodeValidation verifies that MarshalValidate and
+// Decode point to the same schema error when they are validating the same
+// logical value. Non-canonical Go representations are covered separately,
+// because Decode is allowed to normalize input while MarshalValidate is not.
+func TestMarshalValidateMatchesDecodeValidation(t *testing.T) {
+	tests := []struct {
+		name   string
+		typ    Type
+		value  any
+		source string
+	}{
+		{
+			"string values",
+			String().WithValues("a", "b"),
+			"c",
+			`"c"`,
+		},
+		{
+			"string pattern",
+			String().WithPattern(regexp.MustCompile(`oo$`)),
+			"bar",
+			`"bar"`,
+		},
+		{
+			"string max length",
+			String().WithMaxLength(1),
+			"ab",
+			`"ab"`,
+		},
+		{
+			"country",
+			String().AsCountry(ISO3166Alpha2),
+			"ZZ",
+			`"ZZ"`,
+		},
+		{
+			"phone",
+			String().AsPhone(),
+			"+39 02-36618 300",
+			`"+39 02-36618 300"`,
+		},
+		{
+			"signed range",
+			Int(8).WithIntRange(-20, 20),
+			int(21),
+			`21`,
+		},
+		{
+			"unsigned range",
+			Int(8).Unsigned().WithUnsignedRange(10, 20),
+			uint(9),
+			`9`,
+		},
+		{
+			"float range",
+			Float(64).WithFloatRange(-20.5, 8),
+			float64(8.1),
+			`8.1`,
+		},
+		{
+			"real NaN",
+			Float(64).Real(),
+			math.NaN(),
+			`"NaN"`,
+		},
+		{
+			"decimal range",
+			Decimal(5, 2).WithDecimalRange(
+				decimal.MustParse("-10.50"),
+				decimal.MustParse("8.25"),
+			),
+			decimal.MustParse("8.26"),
+			`8.26`,
+		},
+		{
+			"year",
+			Year(),
+			int(10000),
+			`10000`,
+		},
+		{
+			"array minimum",
+			Array(Int(32)).WithMinElements(2),
+			[]any{int(1)},
+			`[1]`,
+		},
+		{
+			"array maximum",
+			Array(Int(32)).WithMaxElements(2),
+			[]any{int(1), int(2), int(3)},
+			`[1,2,3]`,
+		},
+		{
+			"array unique",
+			Array(Int(32)).WithUnique(),
+			[]any{int(1), int(2), int(2)},
+			`[1,2,2]`,
+		},
+		{
+			"nested invalid value",
+			Object([]Property{{
+				Name: "accounts",
+				Type: Array(Object([]Property{{
+					Name: "age",
+					Type: Int(8),
+				}})),
+			}}),
+			map[string]any{
+				"accounts": []any{
+					map[string]any{
+						"age": int(300),
+					},
+				},
+			},
+			`{"accounts":[{"age":300}]}`,
+		},
+		{
+			"unknown property",
+			Object([]Property{{
+				Name: "a",
+				Type: Int(32),
+			}}),
+			map[string]any{
+				"a":     int(1),
+				"extra": int(2),
+			},
+			`{"a":1,"extra":2}`,
+		},
+		{
+			"missing property",
+			Object([]Property{{
+				Name: "a",
+				Type: Int(32),
+			}}),
+			map[string]any{},
+			`{}`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, gotErr := MarshalValidate(
+				test.value,
+				test.typ,
+			)
+			if gotErr == nil {
+				t.Fatalf(
+					"MarshalValidate returned %s, want validation error",
+					got,
+				)
+			}
+			if got != nil {
+				t.Fatalf(
+					"MarshalValidate returned partial JSON %q with error",
+					got,
+				)
+			}
+
+			_, decodeErr := Decode[any](
+				strings.NewReader(test.source),
+				test.typ,
+			)
+			if decodeErr == nil {
+				t.Fatal(
+					"Decode returned no error for reference invalid value",
+				)
+			}
+
+			requireSameValidationLocation(
+				t,
+				gotErr,
+				decodeErr,
+			)
+		})
+	}
+}
+
+// TestMarshalValidateDoesNotModifyInput verifies that validation leaves the
+// caller's values untouched, including JSON formatting and unknown object
+// properties.
+func TestMarshalValidateDoesNotModifyInput(t *testing.T) {
+	t.Run("valid input", func(t *testing.T) {
+		typ := Object([]Property{
+			{
+				Name: "JSON",
+				Type: JSON(),
+			},
+			{
+				Name: "Array",
+				Type: Array(Object([]Property{{
+					Name: "name",
+					Type: String(),
+				}})),
+			},
+			{
+				Name: "Map",
+				Type: Map(Int(32)),
+			},
+		})
+
+		input := map[string]any{
+			"JSON": json.Value(
+				`{ "a": 1, "b": [ true, null ] }`,
+			),
+			"Array": []any{
+				map[string]any{
+					"name": "Alice",
+				},
+			},
+			"Map": map[string]any{
+				"b": int(2),
+				"a": int(1),
+			},
+		}
+
+		want := map[string]any{
+			"JSON": json.Value(
+				`{ "a": 1, "b": [ true, null ] }`,
+			),
+			"Array": []any{
+				map[string]any{
+					"name": "Alice",
+				},
+			},
+			"Map": map[string]any{
+				"b": int(2),
+				"a": int(1),
+			},
+		}
+
+		_, err := MarshalValidate(input, typ)
+		if err != nil {
+			t.Fatalf(
+				"expected no error, got %v",
+				err,
+			)
+		}
+
+		if !reflect.DeepEqual(input, want) {
+			t.Fatalf(
+				"MarshalValidate modified valid input:\nwant: %#v\ngot:  %#v",
+				want,
+				input,
+			)
+		}
+	})
+
+	t.Run("invalid object keeps unknown property", func(t *testing.T) {
+		typ := Object([]Property{{
+			Name: "known",
+			Type: Int(32),
+		}})
+
+		input := map[string]any{
+			"known": int(1),
+			"extra": int(2),
+		}
+		want := maps.Clone(input)
+
+		got, err := MarshalValidate(
+			input,
+			typ,
+		)
+
+		requireMarshalValidateError(
+			t,
+			got,
+			err,
+			propertyNotExist,
+			"extra",
+			"",
+		)
+
+		if !reflect.DeepEqual(input, want) {
+			t.Fatalf(
+				"MarshalValidate modified invalid input:\nwant: %#v\ngot:  %#v",
+				want,
+				input,
+			)
+		}
+	})
+}
+
+// TestMarshalValidateSchemaErrors verifies that MarshalValidate enforces the
+// same schema preconditions as Marshal.
+func TestMarshalValidateSchemaErrors(t *testing.T) {
+	tests := []struct {
+		name string
+		typ  Type
+		want string
+	}{
+		{
+			"invalid type",
+			Type{},
+			"json: schema is the invalid type",
+		},
+		{
+			"generic type",
+			Parameter("T"),
+			"json: schema is a generic type",
+		},
+		{
+			"nested generic type",
+			Array(Parameter("T")),
+			"json: schema is a generic type",
+		},
+		{
+			"object containing generic type",
+			Object([]Property{{
+				Name: "value",
+				Type: Parameter("T"),
+			}}),
+			"json: schema is a generic type",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := MarshalValidate(
+				nil,
+				test.typ,
+			)
+
+			if err == nil {
+				t.Fatal("expected an error, got nil")
+			}
+			if got != nil {
+				t.Fatalf(
+					"expected nil JSON on error, got %q",
+					got,
+				)
+			}
+			if err.Error() != test.want {
+				t.Fatalf(
+					"expected error %q, got %q",
+					test.want,
+					err,
+				)
+			}
+		})
+	}
+}

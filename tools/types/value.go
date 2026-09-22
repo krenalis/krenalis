@@ -534,8 +534,8 @@ func IsPhone(s string) bool {
 // For json properties, both nil and json.Value("null") are marshaled as JSON
 // null.
 //
-// Unlike Decode, this function does not validate the data. Its behavior is
-// undefined if the value does not validate against the type.
+// Unlike MarshalValidate, this function does not validate the data.
+// Its behavior is undefined if the value does not validate against the type.
 func Marshal(data any, schema Type) (json.Value, error) {
 	if schema.Generic() {
 		return nil, errors.New("json: schema is a generic type")
@@ -544,6 +544,33 @@ func Marshal(data any, schema Type) (json.Value, error) {
 		return nil, errors.New("json: schema is the invalid type")
 	}
 	return marshal(nil, data, schema)
+}
+
+// MarshalValidate encodes and validates the given data, based on the provided
+// schema, into JSON, and returns it. schema must be a valid non-generic type.
+//
+// For json properties, both nil and json.Value("null") are marshaled as JSON
+// null.
+//
+// Unlike Marshal, this function returns a *SchemaValidationError if data does
+// not conform to schema.
+func MarshalValidate(data any, schema Type) (json.Value, error) {
+	if schema.Generic() {
+		return nil, errors.New("json: schema is a generic type")
+	}
+	if schema.Kind() == InvalidKind {
+		return nil, errors.New("json: schema is the invalid type")
+	}
+	return marshalValidate(nil, data, schema, false)
+}
+
+// newErrInvalidGoType returns a schema validation error when data does not use
+// the canonical Go representation required by a Krenalis type.
+func newErrInvalidGoType(data any, expected string) error {
+	return newErrInvalidValue(
+		fmt.Sprintf("has Go type %T, expected %s", data, expected),
+		"",
+	)
 }
 
 // NormalizeIP normalizes value and returns its canonical form for use wherever
@@ -809,6 +836,542 @@ func marshal(b []byte, data any, t Type) (json.Value, error) {
 		}
 	}
 	return b, nil
+}
+
+// marshalValidate validates data against t and appends its JSON representation
+// to b.
+//
+// nullable indicates whether nil is allowed at this position. It is true only
+// for nullable object properties.
+func marshalValidate(b []byte, data any, t Type, nullable bool) (json.Value, error) {
+
+	if data == nil {
+		if nullable {
+			return append(b, "null"...), nil
+		}
+		return nil, newErrInvalidValue("cannot be null", "")
+	}
+
+	switch t.Kind() {
+	case StringKind:
+		v, ok := data.(string)
+		if !ok {
+			return nil, newErrInvalidGoType(data, "string")
+		}
+		if !utf8.ValidString(v) {
+			return nil, newErrInvalidValue("does not contain valid UTF-8 characters", "")
+		}
+
+		quoted, _ := json.Quote([]byte(v))
+
+		switch t.Semantic() {
+		case CountrySemantic:
+			switch t.CountryFormat() {
+			case ISO3166Alpha2:
+				if !validation.IsValidCountryCodeAlpha2(v) {
+					return nil, newErrInvalidValue("contains an invalid country code", "")
+				}
+			case ISO3166Alpha3:
+				if !validation.IsValidCountryCodeAlpha3(v) {
+					return nil, newErrInvalidValue("contains an invalid country code", "")
+				}
+			}
+
+		case PhoneSemantic:
+			if !IsPhone(v) {
+				return nil, newErrInvalidValue("is not a valid canonical phone number", "")
+			}
+		}
+
+		if values := t.Values(); values != nil {
+			if !slices.Contains(values, v) {
+				return nil, newErrInvalidValue(
+					fmt.Sprintf(
+						"has an invalid value: %s; valid values are %s",
+						decoder{}.formatString(quoted),
+						formatValues(values),
+					),
+					"",
+				)
+			}
+		} else if rx := t.Pattern(); rx != nil {
+			if !rx.MatchString(v) {
+				return nil, newErrInvalidValue(
+					fmt.Sprintf(
+						"has an invalid value: %s; it does not match the property's regular expression",
+						decoder{}.formatString(quoted),
+					),
+					"",
+				)
+			}
+		} else {
+			if n, ok := t.MaxLength(); ok && utf8.RuneCountInString(v) > n {
+				return nil, newErrInvalidValue(
+					fmt.Sprintf(
+						"is longer than %d characters: %s",
+						n,
+						decoder{}.formatString(quoted),
+					),
+					"",
+				)
+			}
+
+			if n, ok := t.MaxBytes(); ok && len(v) > n {
+				return nil, newErrInvalidValue(
+					fmt.Sprintf(
+						"is longer than %d bytes: %s",
+						n,
+						decoder{}.formatString(quoted),
+					),
+					"",
+				)
+			}
+		}
+
+		return append(b, quoted...), nil
+
+	case BooleanKind:
+		v, ok := data.(bool)
+		if !ok {
+			return nil, newErrInvalidGoType(data, "bool")
+		}
+		return marshal(b, v, t)
+
+	case IntKind:
+		if t.IsUnsigned() {
+			v, ok := data.(uint)
+			if !ok {
+				return nil, newErrInvalidGoType(data, "uint")
+			}
+
+			min, max := t.UnsignedRange()
+			n := uint64(v)
+			if n < min || n > max {
+				return nil, newErrInvalidValue(
+					fmt.Sprintf("is out of range [%d, %d]: %d", min, max, n),
+					"",
+				)
+			}
+
+			return marshal(b, v, t)
+		}
+
+		v, ok := data.(int)
+		if !ok {
+			return nil, newErrInvalidGoType(data, "int")
+		}
+
+		min, max := t.IntRange()
+		n := int64(v)
+		if n < min || n > max {
+			return nil, newErrInvalidValue(
+				fmt.Sprintf("is out of range [%d, %d]: %d", min, max, n),
+				"",
+			)
+		}
+
+		return marshal(b, v, t)
+
+	case FloatKind:
+		v, ok := data.(float64)
+		if !ok {
+			return nil, newErrInvalidGoType(data, "float64")
+		}
+
+		// Decode materializes a float(32) as a float64 containing exactly the
+		// value representable by float32. Do not silently round here.
+		if t.BitSize() == 32 &&
+			!math.IsNaN(v) &&
+			float64(float32(v)) != v {
+			return nil, newErrInvalidValue(
+				fmt.Sprintf("does not have a valid float32 value: %g", v),
+				"",
+			)
+		}
+
+		if math.IsNaN(v) {
+			if t.IsReal() {
+				return nil, newErrInvalidValue(`is not a real: "NaN"`, "")
+			}
+			return marshal(b, v, t)
+		}
+
+		if math.IsInf(v, 0) && t.IsReal() {
+			if v > 0 {
+				return nil, newErrInvalidValue(`is not a real: "Infinity"`, "")
+			}
+			return nil, newErrInvalidValue(`is not a real: "-Infinity"`, "")
+		}
+
+		min, max := t.FloatRange()
+		if v < min || v > max {
+			return nil, newErrInvalidValue(
+				fmt.Sprintf("is out of range [%g, %g]: %g", min, max, v),
+				"",
+			)
+		}
+
+		return marshal(b, v, t)
+
+	case DecimalKind:
+		v, ok := data.(decimal.Decimal)
+		if !ok {
+			return nil, newErrInvalidGoType(data, "decimal.Decimal")
+		}
+
+		// The value must be exactly representable at the schema scale. This is
+		// the same representation check already used by FirstDuplicate.
+		if _, err := v.Binary(t.Scale()); err != nil {
+			return nil, newErrInvalidValue(
+				fmt.Sprintf(
+					"cannot be represented at decimal scale %d: %s",
+					t.Scale(),
+					v,
+				),
+				"",
+			)
+		}
+
+		min, max := t.DecimalRange()
+		if v.Less(min) || v.Greater(max) {
+			return nil, newErrInvalidValue(
+				fmt.Sprintf("is out of range [%s, %s]: %s", min, max, v),
+				"",
+			)
+		}
+
+		return marshal(b, v, t)
+
+	case DateTimeKind:
+		v, ok := data.(time.Time)
+		if !ok {
+			return nil, newErrInvalidGoType(data, "time.Time")
+		}
+
+		if v.Location() != time.UTC {
+			return nil, newErrInvalidValue("does not use time.UTC", "")
+		}
+
+		if y := v.Year(); y < MinYear || y > MaxYear {
+			return nil, newErrInvalidValue(
+				fmt.Sprintf("has a year not in range [%d, %d]", MinYear, MaxYear),
+				"",
+			)
+		}
+
+		return marshal(b, v, t)
+
+	case DateKind:
+		v, ok := data.(time.Time)
+		if !ok {
+			return nil, newErrInvalidGoType(data, "time.Time")
+		}
+
+		if v.Location() != time.UTC {
+			return nil, newErrInvalidValue("does not use time.UTC", "")
+		}
+
+		if y := v.Year(); y < MinYear || y > MaxYear {
+			return nil, newErrInvalidValue(
+				fmt.Sprintf("has a year not in range [%d, %d]", MinYear, MaxYear),
+				"",
+			)
+		}
+
+		hour, minute, second := v.Clock()
+		if hour != 0 || minute != 0 || second != 0 || v.Nanosecond() != 0 {
+			return nil, newErrInvalidValue("has a non-zero time component", "")
+		}
+
+		return marshal(b, v, t)
+
+	case TimeKind:
+		v, ok := data.(time.Time)
+		if !ok {
+			return nil, newErrInvalidGoType(data, "time.Time")
+		}
+
+		if v.Location() != time.UTC {
+			return nil, newErrInvalidValue("does not use time.UTC", "")
+		}
+
+		year, month, day := v.Date()
+		if year != 1970 || month != time.January || day != 1 {
+			return nil, newErrInvalidValue(
+				"does not use January 1, 1970 as its date",
+				"",
+			)
+		}
+
+		return marshal(b, v, t)
+
+	case YearKind:
+		v, ok := data.(int)
+		if !ok {
+			return nil, newErrInvalidGoType(data, "int")
+		}
+
+		if v < MinYear || v > MaxYear {
+			return nil, newErrInvalidValue(
+				fmt.Sprintf(
+					"is out of range [%d, %d]: %d",
+					MinYear,
+					MaxYear,
+					v,
+				),
+				"",
+			)
+		}
+
+		return marshal(b, v, t)
+
+	case UUIDKind:
+		v, ok := data.(string)
+		if !ok {
+			return nil, newErrInvalidGoType(data, "string")
+		}
+
+		normalized, ok := NormalizeUUID(v)
+		if !ok || normalized != v {
+			quoted, _ := json.Quote([]byte(v))
+			return nil, newErrInvalidValue(
+				"does not have a valid canonical UUID value: "+
+					decoder{}.formatString(quoted),
+				"",
+			)
+		}
+
+		return marshal(b, v, t)
+
+	case JSONKind:
+		v, ok := data.(json.Value)
+		if !ok {
+			return nil, newErrInvalidGoType(data, "json.Value")
+		}
+
+		// A nil json.Value is a nil Go value, not the JSON null.
+		if v == nil {
+			if nullable {
+				return append(b, "null"...), nil
+			}
+			return nil, newErrInvalidValue("cannot be null", "")
+		}
+
+		value, err := json.Compact(v)
+		if err != nil {
+			return nil, newErrInvalidValue("does not contain valid JSON", "")
+		}
+
+		return append(b, value...), nil
+
+	case IPKind:
+		v, ok := data.(string)
+		if !ok {
+			return nil, newErrInvalidGoType(data, "string")
+		}
+
+		normalized, ok := NormalizeIP(v)
+		if !ok || normalized != v {
+			quoted, _ := json.Quote([]byte(v))
+			return nil, newErrInvalidValue(
+				"does not have a valid canonical IP value: "+
+					decoder{}.formatString(quoted),
+				"",
+			)
+		}
+
+		return marshal(b, v, t)
+
+	case ArrayKind:
+		v, ok := data.([]any)
+		if !ok {
+			return nil, newErrInvalidGoType(data, "[]any")
+		}
+
+		if v == nil {
+			if nullable {
+				return append(b, "null"...), nil
+			}
+			return nil, newErrInvalidValue("cannot be null", "")
+		}
+
+		n := len(v)
+		if max := t.MaxElements(); n > max {
+			return nil, newErrInvalidValue(
+				fmt.Sprintf("contains more than %d elements", max),
+				"",
+			)
+		}
+
+		if min := t.MinElements(); n < min {
+			return nil, newErrInvalidValue(
+				fmt.Sprintf("contains less than %d elements", min),
+				"",
+			)
+		}
+
+		b = append(b, '[')
+
+		for i, item := range v {
+			if i > 0 {
+				b = append(b, ',')
+			}
+
+			var err error
+			b, err = marshalValidate(b, item, t.Elem(), false)
+			if err != nil {
+				if err, ok := err.(*SchemaValidationError); ok {
+					err.appendIndexToPath(i)
+				}
+				return nil, err
+			}
+		}
+
+		if t.Unique() {
+			duplicate, err := FirstDuplicate(v, t.Elem())
+			if err != nil {
+				// Elements have already been validated above, so this should
+				// only occur if FirstDuplicate and MarshalValidate disagree
+				// about the canonical representation.
+				return nil, newErrInvalidValue(err.Error(), "")
+			}
+			if duplicate >= 0 {
+				err := &SchemaValidationError{
+					kind: invalidValue,
+					msg:  "duplicates an earlier array element",
+				}
+				err.appendIndexToPath(duplicate)
+				return nil, err
+			}
+		}
+
+		b = append(b, ']')
+		return b, nil
+
+	case ObjectKind:
+		v, ok := data.(map[string]any)
+		if !ok {
+			return nil, newErrInvalidGoType(data, "map[string]any")
+		}
+
+		if v == nil {
+			if nullable {
+				return append(b, "null"...), nil
+			}
+			return nil, newErrInvalidValue("cannot be null", "")
+		}
+
+		properties := t.Properties()
+
+		// Marshal silently ignores unknown properties. MarshalValidate must not:
+		// otherwise validation could succeed only because data was discarded.
+		for name := range v {
+			if _, ok := properties.ByName(name); !ok {
+				return nil, newErrPropertyNotExist(name)
+			}
+		}
+
+		// Check required properties before producing the object.
+		for _, p := range properties.All() {
+			if p.ReadOptional {
+				continue
+			}
+			if _, ok := v[p.Name]; !ok {
+				return nil, newErrMissingProperty(p.Name)
+			}
+		}
+
+		b = append(b, '{')
+		n := 0
+
+		for _, p := range properties.All() {
+			value, ok := v[p.Name]
+			if !ok {
+				continue
+			}
+
+			if n > 0 {
+				b = append(b, ',')
+			}
+
+			b = append(b, '"')
+			b = append(b, p.Name...)
+			b = append(b, '"', ':')
+
+			var err error
+			b, err = marshalValidate(b, value, p.Type, p.Nullable)
+			if err != nil {
+				if err, ok := err.(*SchemaValidationError); ok {
+					err.appendNameToPath(p.Name)
+				}
+				return nil, err
+			}
+
+			n++
+		}
+
+		b = append(b, '}')
+		return b, nil
+
+	case MapKind:
+		v, ok := data.(map[string]any)
+		if !ok {
+			return nil, newErrInvalidGoType(data, "map[string]any")
+		}
+
+		if v == nil {
+			if nullable {
+				return append(b, "null"...), nil
+			}
+			return nil, newErrInvalidValue("cannot be null", "")
+		}
+
+		type entry struct {
+			k string
+			v any
+		}
+
+		entries := make([]entry, 0, len(v))
+		for k, value := range v {
+			if !utf8.ValidString(k) {
+				return nil, newErrInvalidValue(
+					"contains a map key that is not valid UTF-8",
+					"",
+				)
+			}
+			entries = append(entries, entry{k: k, v: value})
+		}
+
+		slices.SortFunc(entries, func(a, b entry) int {
+			return strings.Compare(a.k, b.k)
+		})
+
+		b = append(b, '{')
+
+		for i, e := range entries {
+			if i > 0 {
+				b = append(b, ',')
+			}
+
+			quoted, _ := json.Quote([]byte(e.k))
+			b = append(b, quoted...)
+			b = append(b, ':')
+
+			var err error
+			b, err = marshalValidate(b, e.v, t.Elem(), false)
+			if err != nil {
+				// Keep the same path semantics as Decode: map keys are not
+				// currently added to SchemaValidationError paths.
+				return nil, err
+			}
+		}
+
+		b = append(b, '}')
+		return b, nil
+
+	default:
+		return nil, fmt.Errorf("json: unexpected type %s", t)
+	}
 }
 
 // newErrInvalidValue returns a new SchemaValidationError with kind

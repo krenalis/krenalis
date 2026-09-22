@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
@@ -77,6 +78,8 @@ func (state *State) keep() {
 			org = state.createOrganization(n)
 		case "CreatePipeline":
 			org = state.createPipeline(n)
+		case "CreateSimulatedAccount":
+			org = state.createSimulatedAccount(n)
 		case "CreateWorkspace":
 			org = state.createWorkspace(n)
 		case "CreateEventWriteKey":
@@ -97,6 +100,8 @@ func (state *State) keep() {
 			org = state.deleteOrganization(n)
 		case "DeletePipeline":
 			org = state.deletePipeline(n)
+		case "DeleteSimulatedAccount":
+			org = state.deleteSimulatedAccount(n)
 		case "DeleteWorkspace":
 			org = state.deleteWorkspace(n)
 		case "ElectLeader":
@@ -151,6 +156,10 @@ func (state *State) keep() {
 			org = state.updateOrganization(n)
 		case "UpdatePipeline":
 			org = state.updatePipeline(n)
+		case "UpdateSimulatedAccount":
+			org = state.updateSimulatedAccount(n)
+		case "UpdateSimulatedAccountGeneration":
+			org = state.updateSimulatedAccountGeneration(n)
 		case "UpdateWarehouse":
 			org = state.updateWarehouse(n)
 		case "UpdateWarehouseMode":
@@ -657,6 +666,57 @@ func (state *State) createPipeline(n notification) string {
 	return c.organization.ID
 }
 
+// CreateSimulatedAccount is the event sent when a simulated account is created.
+type CreateSimulatedAccount struct {
+	ID                      string
+	Workspace               string
+	Name                    string
+	UserCount               int
+	DuplicateRecordPercent  string
+	Countries               json.Value
+	Status                  SimulatedAccountStatus
+	GenerationPolicyVersion string
+	GeneratedRecordCount    int
+	GenerationCheckpoint    json.Value
+	GenerationError         string
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+}
+
+// createSimulatedAccount adds a simulated account.
+func (state *State) createSimulatedAccount(n notification) string {
+	e := CreateSimulatedAccount{}
+	if !decodeNotification(n, &e) {
+		return ""
+	}
+	ws := state.workspaces[e.Workspace]
+	duplicateRecordPercent, err := decimal.Parse(e.DuplicateRecordPercent, 5, 2)
+	if err != nil {
+		return ""
+	}
+	account := &SimulatedAccount{
+		mu:                      &sync.Mutex{},
+		workspace:               ws,
+		ID:                      e.ID,
+		Name:                    e.Name,
+		Status:                  e.Status,
+		UserCount:               e.UserCount,
+		DuplicateRecordPercent:  duplicateRecordPercent,
+		Countries:               e.Countries,
+		GenerationPolicyVersion: e.GenerationPolicyVersion,
+		GeneratedRecordCount:    e.GeneratedRecordCount,
+		GenerationCheckpoint:    e.GenerationCheckpoint,
+		GenerationError:         e.GenerationError,
+		CreatedAt:               e.CreatedAt,
+		UpdatedAt:               e.UpdatedAt,
+	}
+	ws.mu.Lock()
+	ws.simulatedAccounts[account.ID] = account
+	ws.mu.Unlock()
+	dispatchNotification(state, e)
+	return ws.organization.ID
+}
+
 // CreateWorkspace is the event sent when a workspace is created.
 type CreateWorkspace struct {
 	ID                             string
@@ -694,6 +754,7 @@ func (state *State) createWorkspace(n notification) string {
 		PrimarySources:                 map[string]string{},
 		accounts:                       map[int]*Account{},
 		consentPurposes:                map[string]*ConsentPurpose{},
+		simulatedAccounts:              map[string]*SimulatedAccount{},
 		ResolveIdentitiesOnBatchImport: e.ResolveIdentitiesOnBatchImport,
 		Identifiers:                    []string{},
 		pipelinesToPurge:               []string{},
@@ -1056,6 +1117,26 @@ func (state *State) deletePipeline(n notification) string {
 	}
 	dispatchNotification(state, e)
 	return org.ID
+}
+
+// DeleteSimulatedAccount is the event sent when a simulated account is deleted.
+type DeleteSimulatedAccount struct {
+	Workspace string
+	ID        string
+}
+
+// deleteSimulatedAccount removes a simulated account.
+func (state *State) deleteSimulatedAccount(n notification) string {
+	e := DeleteSimulatedAccount{}
+	if !decodeNotification(n, &e) {
+		return ""
+	}
+	ws := state.workspaces[e.Workspace]
+	ws.mu.Lock()
+	delete(ws.simulatedAccounts, e.ID)
+	ws.mu.Unlock()
+	dispatchNotification(state, e)
+	return ws.organization.ID
 }
 
 // DeleteWorkspace is the event sent when a workspace is deleted.
@@ -1809,6 +1890,73 @@ func (state *State) updatePipeline(n notification) string {
 	}
 	dispatchNotification(state, e)
 	return org.ID
+}
+
+// UpdateSimulatedAccount is the event sent when a simulated account is renamed.
+type UpdateSimulatedAccount struct {
+	Workspace string
+	ID        string
+	Name      string
+	UpdatedAt time.Time
+}
+
+// updateSimulatedAccount updates a simulated account.
+func (state *State) updateSimulatedAccount(n notification) string {
+	e := UpdateSimulatedAccount{}
+	if !decodeNotification(n, &e) {
+		return ""
+	}
+	ws := state.workspaces[e.Workspace]
+	ws.mu.Lock()
+	account := ws.simulatedAccounts[e.ID]
+	if account != nil {
+		updated := *account
+		updated.Name = e.Name
+		updated.UpdatedAt = e.UpdatedAt
+		ws.simulatedAccounts[e.ID] = &updated
+	}
+	ws.mu.Unlock()
+	if account == nil {
+		return ""
+	}
+	dispatchNotification(state, e)
+	return ws.organization.ID
+}
+
+// UpdateSimulatedAccountGeneration reports persisted generation progress.
+type UpdateSimulatedAccountGeneration struct {
+	Workspace            string
+	ID                   string
+	Status               SimulatedAccountStatus
+	GeneratedRecordCount int
+	GenerationCheckpoint json.Value
+	GenerationError      string
+	UpdatedAt            time.Time
+}
+
+func (state *State) updateSimulatedAccountGeneration(n notification) string {
+	e := UpdateSimulatedAccountGeneration{}
+	if !decodeNotification(n, &e) {
+		return ""
+	}
+	ws := state.workspaces[e.Workspace]
+	ws.mu.Lock()
+	account := ws.simulatedAccounts[e.ID]
+	if account != nil {
+		updated := *account
+		updated.Status = e.Status
+		updated.GeneratedRecordCount = e.GeneratedRecordCount
+		updated.GenerationCheckpoint = e.GenerationCheckpoint
+		updated.GenerationError = e.GenerationError
+		updated.UpdatedAt = e.UpdatedAt
+		ws.simulatedAccounts[e.ID] = &updated
+	}
+	ws.mu.Unlock()
+	if account == nil {
+		return ""
+	}
+	dispatchNotification(state, e)
+	return ws.organization.ID
 }
 
 // UpdateWarehouse is the event sent when a warehouse is updated.

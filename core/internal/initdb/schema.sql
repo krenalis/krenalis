@@ -52,6 +52,7 @@ CREATE UNIQUE INDEX members_workos_user_id_idx ON members (organization, workos_
 
 CREATE TYPE warehouse_mode AS ENUM ('Normal', 'Inspection', 'Maintenance');
 CREATE TYPE workspace_environment AS ENUM ('production', 'development');
+CREATE TYPE simulated_account_status AS ENUM ('Preparing', 'Ready', 'Failed');
 
 CREATE TABLE workspaces (
     id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
@@ -160,6 +161,25 @@ CREATE TABLE consent_purposes (
     name varchar(100) NOT NULL,
     PRIMARY KEY (workspace, code)
 );
+
+CREATE TABLE simulated_accounts (
+    id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
+    workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+    name varchar(100) NOT NULL,
+    status simulated_account_status NOT NULL,
+    user_count integer NOT NULL,
+    duplicate_record_percent numeric(5,2) NOT NULL,
+    countries jsonb NOT NULL,
+    generation_policy_version varchar NOT NULL,
+    generated_record_count integer NOT NULL,
+    generation_checkpoint jsonb,
+    generation_error text NOT NULL,
+    created_at timestamp NOT NULL,
+    updated_at timestamp NOT NULL,
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX simulated_accounts_workspace_idx ON simulated_accounts (workspace);
 
 CREATE TYPE role AS ENUM ('Source', 'Destination');
 
@@ -404,6 +424,7 @@ CREATE TYPE notification_name AS ENUM (
     'CreateEventWriteKey',
     'CreateOrganization',
     'CreatePipeline',
+    'CreateSimulatedAccount',
     'CreateWorkspace',
     'DeleteAccessKey',
     'DeleteConnection',
@@ -413,6 +434,7 @@ CREATE TYPE notification_name AS ENUM (
     'DeleteMembers',
     'DeleteOrganization',
     'DeletePipeline',
+    'DeleteSimulatedAccount',
     'DeleteWorkspace',
     'EndAlterProfileSchema',
     'EndIdentityResolution',
@@ -438,6 +460,8 @@ CREATE TYPE notification_name AS ENUM (
     'UpdateIdentityResolutionSettings',
     'UpdateOrganization',
     'UpdatePipeline',
+    'UpdateSimulatedAccount',
+    'UpdateSimulatedAccountGeneration',
     'UpdateWarehouse',
     'UpdateWarehouseMode',
     'UpdateWorkspace'

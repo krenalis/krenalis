@@ -65,6 +65,7 @@ import {
 	ConsentPurposesResponse,
 } from './types/responses';
 import { AccessKeyType } from './types/organization';
+import { SimulatedAccount, SimulatedAccountToCreate } from './types/simulatedAccount';
 
 const API_BASE_PATH = '/v1';
 
@@ -681,6 +682,32 @@ class Profiles {
 	};
 }
 
+class SimulatedAccounts {
+	constructor(private apiURL: string, private workspaceID: string) {}
+
+	find = async (signal?: AbortSignal): Promise<SimulatedAccount[]> => {
+		const res = await call(`${this.apiURL}/simulated-accounts`, http.GET, this.workspaceID, undefined, { signal });
+		return res.simulatedAccounts;
+	};
+
+	get = async (id: string, signal?: AbortSignal): Promise<SimulatedAccount> => {
+		return await call(`${this.apiURL}/simulated-accounts/${id}`, http.GET, this.workspaceID, undefined, { signal });
+	};
+
+	create = async (account: SimulatedAccountToCreate): Promise<string> => {
+		const res = await call(`${this.apiURL}/simulated-accounts`, http.POST, this.workspaceID, account);
+		return res.id;
+	};
+
+	rename = async (id: string, name: string): Promise<void> => {
+		return await call(`${this.apiURL}/simulated-accounts/${id}`, http.PUT, this.workspaceID, { name });
+	};
+
+	delete = async (id: string): Promise<void> => {
+		return await call(`${this.apiURL}/simulated-accounts/${id}`, http.DELETE, this.workspaceID);
+	};
+}
+
 class Workspaces {
 	origin: string;
 	apiURL: string;
@@ -688,6 +715,7 @@ class Workspaces {
 	connections: Connections;
 	eventListeners: EventListeners;
 	profiles: Profiles;
+	simulatedAccounts: SimulatedAccounts;
 
 	constructor(origin: string, apiURL: string, workspaceID: string) {
 		this.origin = origin;
@@ -696,6 +724,7 @@ class Workspaces {
 		this.connections = new Connections(apiURL, workspaceID);
 		this.eventListeners = new EventListeners(apiURL, workspaceID);
 		this.profiles = new Profiles(apiURL, workspaceID);
+		this.simulatedAccounts = new SimulatedAccounts(apiURL, workspaceID);
 	}
 
 	// Organization-scoped workspace endpoints must not send Krenalis-Workspace.

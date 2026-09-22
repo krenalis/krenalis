@@ -27,6 +27,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"DELETE /connections/{id}/event-write-keys/{key}":     connection.DeleteEventWriteKey,
 		"DELETE /connections/{src}/links/{dst}":               connection.UnlinkConnection,
 		"DELETE /consent-purposes/{code}":                     workspace.DeleteConsentPurpose,
+		"DELETE /simulated-accounts/{id}":                     workspace.DeleteSimulatedAccount, /* Admin console only */
 		"DELETE /events/listeners/{id}":                       workspace.DeleteEventListener,
 		"DELETE /keys/{key}":                                  organization.DeleteAccessKey, /* Admin console only */
 		"DELETE /members/{id}":                                organization.DeleteMember,    /* Admin console only */
@@ -55,6 +56,8 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /connectors/{code}":                           api.Connector,
 		"GET    /connectors/{code}/documentation":             api.ConnectorDocumentation,
 		"GET    /consent-purposes":                            workspace.ConsentPurposes,
+		"GET    /simulated-accounts":                          workspace.SimulatedAccounts, /* Admin console only */
+		"GET    /simulated-accounts/{id}":                     workspace.SimulatedAccount,  /* Admin console only */
 		"GET    /events":                                      workspace.Events,
 		"GET    /events/listeners/{id}":                       workspace.ListenedEvents,
 		"GET    /events/schema":                               api.EventSchema,
@@ -98,6 +101,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"POST   /connections/{id}/ui-event":                   connection.ServeUI, /* Admin console only */
 		"POST   /connections/{src}/links/{dst}":               connection.LinkConnection,
 		"POST   /consent-purposes":                            workspace.AddConsentPurpose,
+		"POST   /simulated-accounts":                          workspace.CreateSimulatedAccount, /* Admin console only */
 		"POST   /events":                                      workspace.IngestEvents,
 		"POST   /events/listeners":                            workspace.CreateEventListener,
 		"POST   /events/{type}":                               workspace.IngestEvents,
@@ -122,6 +126,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"POST   /workspaces/test":                             organization.TestWorkspaceCreation,
 		"PUT    /connections/{id}":                            connection.Update,
 		"PUT    /consent-purposes/{code}":                     workspace.UpdateConsentPurpose,
+		"PUT    /simulated-accounts/{id}":                     workspace.RenameSimulatedAccount, /* Admin console only */
 		"PUT    /identity-resolution/settings":                workspace.UpdateIdentityResolutionSettings,
 		"PUT    /keys/{key}":                                  organization.UpdateAccessKey,    /* Admin console only */
 		"PUT    /members/current":                             organization.UpdateMember,       /* Admin console only */

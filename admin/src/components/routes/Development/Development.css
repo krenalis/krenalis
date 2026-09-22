@@ -1,0 +1,20 @@
+.development {
+	min-height: calc(100% - 70px);
+	background-color: var(--bg-gray);
+}
+
+.development__content {
+	max-width: 900px;
+	margin: 0 auto;
+	padding: 30px;
+	animation: fade-in-entrance 0.5s;
+}
+
+.development__item {
+	margin-top: 15px;
+}
+
+.development__content a:focus-visible {
+	outline: 2px solid var(--sl-color-primary-600);
+	outline-offset: 2px;
+}

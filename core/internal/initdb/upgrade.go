@@ -33,6 +33,31 @@ const consentPurposesTable = `
 		PRIMARY KEY (workspace, code)
 	)`
 
+const simulatedAccountsTable = `
+	DO $$
+	BEGIN
+		IF NOT EXISTS (SELECT FROM pg_type WHERE typname = 'simulated_account_status') THEN
+			CREATE TYPE simulated_account_status AS ENUM ('Preparing', 'Ready', 'Failed');
+		END IF;
+	END $$;
+	CREATE TABLE IF NOT EXISTS simulated_accounts (
+		id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
+		workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+		name varchar(100) NOT NULL,
+		status simulated_account_status NOT NULL,
+		user_count integer NOT NULL,
+		duplicate_record_percent numeric(5,2) NOT NULL,
+		countries jsonb NOT NULL,
+		generation_policy_version varchar NOT NULL,
+		generated_record_count integer NOT NULL,
+		generation_checkpoint jsonb,
+		generation_error text NOT NULL,
+		created_at timestamp NOT NULL,
+		updated_at timestamp NOT NULL,
+		PRIMARY KEY (id)
+	);
+	CREATE INDEX IF NOT EXISTS simulated_accounts_workspace_idx ON simulated_accounts (workspace)`
+
 const organizationConnectorReferencesView = `
 	CREATE OR REPLACE VIEW organization_connector_references AS
 	SELECT
@@ -352,6 +377,12 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'AddConsentPurpose'`,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'DeleteConsentPurpose'`,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateConsentPurpose'`,
+			simulatedAccountsTable,
+			`ALTER TABLE simulated_accounts DROP COLUMN IF EXISTS connector`,
+			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'CreateSimulatedAccount'`,
+			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'DeleteSimulatedAccount'`,
+			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateSimulatedAccount'`,
+			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateSimulatedAccountGeneration'`,
 			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents varchar(100)[] NOT NULL DEFAULT '{}'`,
 			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents_operator varchar(3) NOT NULL DEFAULT 'and' CHECK (required_consents_operator IN ('and', 'or'))`,
 			`UPDATE pipelines

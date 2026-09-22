@@ -5,6 +5,7 @@
 package state
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/warehouses"
 )
@@ -342,10 +344,11 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				var profileSchema []byte
 				var alterProfileSchemaSchema []byte
 				ws := &Workspace{
-					mu:              new(sync.Mutex),
-					connections:     map[string]*Connection{},
-					accounts:        map[int]*Account{},
-					consentPurposes: map[string]*ConsentPurpose{},
+					mu:                new(sync.Mutex),
+					connections:       map[string]*Connection{},
+					accounts:          map[int]*Account{},
+					consentPurposes:   map[string]*ConsentPurpose{},
+					simulatedAccounts: map[string]*SimulatedAccount{},
 				}
 				var settingsKey, mcpSettingsKey []byte
 				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &ws.Environment, &warehousePlatform,
@@ -435,6 +438,39 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		})
 	if err != nil {
 		return fmt.Errorf("cannot load accounts: %s", err)
+	}
+
+	// Read all simulated accounts.
+	err = tx.QueryScan(ctx, "SELECT id, workspace, name, status, user_count,"+
+		" duplicate_record_percent::text, countries, generation_policy_version, generated_record_count,"+
+		" generation_checkpoint, generation_error, created_at, updated_at FROM simulated_accounts",
+		func(rows *db.Rows) error {
+			for rows.Next() {
+				account := SimulatedAccount{mu: new(sync.Mutex)}
+				var workspaceID, duplicateRecordPercent string
+				var countries, checkpoint []byte
+				if err := rows.Scan(&account.ID, &workspaceID, &account.Name, &account.Status,
+					&account.UserCount, &duplicateRecordPercent, &countries, &account.GenerationPolicyVersion,
+					&account.GeneratedRecordCount, &checkpoint, &account.GenerationError, &account.CreatedAt,
+					&account.UpdatedAt); err != nil {
+					return fmt.Errorf("loading simulated account %s: %s", account.ID, err)
+				}
+				account.DuplicateRecordPercent, err = decimal.Parse(duplicateRecordPercent, 5, 2)
+				if err != nil {
+					return fmt.Errorf("loading simulated account %s: invalid duplicate record percent: %s", account.ID, err)
+				}
+				account.Countries = json.Value(bytes.Clone(countries))
+				account.GenerationCheckpoint = json.Value(bytes.Clone(checkpoint))
+				account.workspace = state.workspaces[workspaceID]
+				if account.workspace == nil {
+					return fmt.Errorf("loading simulated account %s: workspace %s does not exist", account.ID, workspaceID)
+				}
+				account.workspace.simulatedAccounts[account.ID] = &account
+			}
+			return nil
+		})
+	if err != nil {
+		return fmt.Errorf("cannot load simulated accounts: %s", err)
 	}
 
 	// Read all consent purposes.

@@ -1,0 +1,232 @@
+.simulated-accounts {
+	background: var(--bg-gray);
+	overflow: auto;
+	padding: 30px;
+}
+
+.simulated-accounts__header {
+	align-items: flex-start;
+	display: flex;
+	gap: 20px;
+	justify-content: space-between;
+	margin-bottom: 24px;
+}
+
+.simulated-accounts h1 {
+	font-size: 25px;
+	font-weight: 500;
+	margin: 0;
+}
+
+.simulated-accounts h2 {
+	font-size: 17px;
+	font-weight: 500;
+	margin: 0 0 16px;
+}
+
+.simulated-accounts p {
+	color: var(--text-light);
+	font-size: 14px;
+	margin: 7px 0 0;
+}
+
+.simulated-accounts__back {
+	display: inline-block;
+	font-size: 13px;
+	margin-bottom: 22px;
+}
+
+.simulated-accounts__list,
+.simulated-accounts__card,
+.simulated-accounts__form,
+.simulated-accounts__empty {
+	background: white;
+	border: 1px solid var(--border-primary);
+	border-radius: var(--radius);
+}
+
+.simulated-accounts__row {
+	align-items: center;
+	color: inherit;
+	display: grid;
+	gap: 20px;
+	grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) 16px;
+	min-height: 78px;
+	padding: 14px 20px;
+	text-decoration: none;
+}
+
+.simulated-accounts__row + .simulated-accounts__row {
+	border-top: 1px solid var(--border-primary);
+}
+
+.simulated-accounts__row:hover {
+	background: var(--sl-color-neutral-50);
+}
+
+.simulated-accounts__row:focus-visible,
+.simulated-accounts__back:focus-visible,
+.simulated-accounts input:focus-visible,
+.simulated-accounts select:focus-visible {
+	outline: 2px solid var(--sl-color-primary-600);
+	outline-offset: 2px;
+}
+
+.simulated-accounts__row-name {
+	align-items: center;
+	display: flex;
+	gap: 12px;
+}
+
+.simulated-accounts__row-name strong,
+.simulated-accounts__row-name span,
+.simulated-accounts__status span {
+	display: block;
+}
+
+.simulated-accounts__row-name span,
+.simulated-accounts__status span {
+	color: var(--text-light);
+	font-size: 13px;
+	margin-top: 3px;
+}
+
+.simulated-accounts__status strong {
+	font-size: 13px;
+}
+
+.simulated-accounts__progress {
+	font-size: 13px;
+	margin-top: 5px;
+}
+
+.simulated-accounts__progress progress {
+	accent-color: var(--sl-color-primary-600);
+	display: block;
+	max-width: 320px;
+	width: 100%;
+}
+
+.simulated-accounts__loading,
+.simulated-accounts__error {
+	align-items: center;
+	display: flex;
+	font-size: 14px;
+	gap: 10px;
+	margin-bottom: 16px;
+}
+
+.simulated-accounts__error {
+	color: var(--sl-color-danger-700);
+}
+
+.simulated-accounts__empty {
+	padding: 50px 25px;
+	text-align: center;
+}
+
+.simulated-accounts__empty sl-button {
+	margin-top: 22px;
+}
+
+.simulated-accounts__form,
+.simulated-accounts__card {
+	margin-bottom: 18px;
+	max-width: 640px;
+	padding: 24px;
+}
+
+.simulated-accounts__form {
+	display: grid;
+	gap: 20px;
+}
+
+.simulated-accounts__form label,
+.simulated-accounts__field {
+	display: grid;
+	font-size: 14px;
+	font-weight: 500;
+	gap: 8px;
+}
+
+.simulated-accounts__field > span,
+.simulated-accounts__form small {
+	color: var(--text-light);
+}
+
+.simulated-accounts__form small {
+	font-size: 12px;
+	font-weight: 400;
+}
+
+.simulated-accounts input,
+.simulated-accounts select {
+	background: white;
+	border: 1px solid var(--sl-color-neutral-300);
+	border-radius: var(--radius);
+	box-sizing: border-box;
+	color: inherit;
+	font: inherit;
+	font-weight: 400;
+	min-height: 38px;
+	padding: 7px 10px;
+	text-align: left;
+	width: 100%;
+}
+
+.simulated-accounts__suffix {
+	align-items: center;
+	display: flex;
+	gap: 10px;
+}
+
+.simulated-accounts__actions,
+.simulated-accounts__rename {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.simulated-accounts__actions {
+	justify-content: flex-end;
+}
+
+.simulated-accounts__rename input {
+	flex: 1 1 240px;
+}
+
+.simulated-accounts__card .simulated-accounts__field + .simulated-accounts__field {
+	border-top: 1px solid var(--border-primary);
+	margin-top: 18px;
+	padding-top: 18px;
+}
+
+.simulated-accounts__danger {
+	border-color: var(--sl-color-danger-500);
+}
+
+.simulated-accounts__danger p {
+	margin-bottom: 16px;
+}
+
+@media (max-width: 760px) {
+	.simulated-accounts {
+		padding: 20px;
+	}
+	.simulated-accounts__header {
+		align-items: stretch;
+		flex-direction: column;
+	}
+	.simulated-accounts__row {
+		grid-template-columns: 1fr 16px;
+	}
+	.simulated-accounts__row .simulated-accounts__status {
+		grid-column: 1;
+		grid-row: 2;
+	}
+	.simulated-accounts__row > sl-icon {
+		grid-column: 2;
+		grid-row: 1;
+	}
+}

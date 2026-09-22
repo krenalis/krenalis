@@ -45,6 +45,7 @@ import (
 	"github.com/krenalis/krenalis/tools/backoff"
 	"github.com/krenalis/krenalis/tools/base58"
 	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/fakedata"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/kms"
 	"github.com/krenalis/krenalis/tools/types"
@@ -73,6 +74,8 @@ type Core struct {
 	functionProvider  transformers.FunctionProvider
 	pipelineCleaner   *pipelineCleaner
 	pipelineScheduler *pipelineScheduler
+	simulatedCatalog  *fakedata.FaceCatalog
+	simulatedWorker   *simulatedAccountWorker
 	localLiveRuns     cancelContexts
 	memberEmailFrom   string
 	smtp              *SMTPConfig
@@ -108,6 +111,7 @@ type Config struct {
 	SentryTelemetryLevel          TelemetryLevel
 	MaxQueuedEventsPerDestination int
 	PrometheusMetricsEnabled      bool
+	SimulatedFaceCatalog          *fakedata.FaceCatalog
 	DatabaseInitialization        struct {
 		// InitIfEmpty controls whether the PostgreSQL database should be
 		// initialized in case it is empty.
@@ -381,6 +385,8 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}()
 
 	core.close.ctx, core.close.cancelCtx = context.WithCancel(context.Background())
+	core.simulatedCatalog = conf.SimulatedFaceCatalog
+	core.simulatedWorker = newSimulatedAccountWorker(core)
 
 	// Instantiate a warehouses.Warehouse, used by the MCP server, for every workspace.
 	core.mcp = map[string]warehouses.Warehouse{}
@@ -419,6 +425,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	core.state.AddListener(core.onStartIdentityResolution)
 	core.state.AddListener(core.onUpdateWarehouse)
 	core.state.Unfreeze()
+	core.simulatedWorker.Start()
 
 	// Try to start live runs that have not started yet.
 	for _, run := range core.state.LiveRuns() {
@@ -580,6 +587,7 @@ func (core *Core) Close(ctx context.Context) {
 	}
 	// Cancel pipeline runs initiated via the API.
 	core.close.cancelCtx()
+	core.simulatedWorker.Close()
 	// Close the pipeline scheduler.
 	core.pipelineScheduler.Close()
 	// Wait for the completion of pipelines initiated via API.
@@ -1959,6 +1967,7 @@ func (core *Core) onDeleteWorkspace(n state.DeleteWorkspace) {
 
 // onElectLeader is called when a leader is elected.
 func (core *Core) onElectLeader(n state.ElectLeader) {
+	core.simulatedWorker.leaderChanged()
 	if !core.state.IsLeader() {
 		return
 	}

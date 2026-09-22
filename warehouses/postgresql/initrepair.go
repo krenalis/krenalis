@@ -122,6 +122,7 @@ func (warehouse *PostgreSQL) initRepairDatabaseObjects(ctx context.Context, prof
 		createEventsTable,
 		createSystemOperationsTable,
 		createProfileSchemaVersionsTable,
+		createSimulatedAccountRecordsTable,
 		identitiesSQLSchema(profileColumns),
 		identitiesIndex(),
 		profilesSQLSchema("krenalis_profiles_0", profileColumns),

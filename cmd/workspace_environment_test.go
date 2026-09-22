@@ -33,7 +33,12 @@ func TestWorkspaceEnvironment(t *testing.T) {
 	k := krenalistester.NewKrenalisInstance(t)
 	k.SetFileSystemRoot(storageDir)
 	k.Start()
-	defer k.Stop()
+	stopped := false
+	defer func() {
+		if !stopped {
+			k.Stop()
+		}
+	}()
 
 	var production struct {
 		ID          string `json:"id"`
@@ -87,9 +92,13 @@ func TestWorkspaceEnvironment(t *testing.T) {
 			return
 		}
 		defer pool.Close()
-		_, err = pool.Exec(ctx, "DROP DATABASE "+database)
+		_, err = pool.Exec(ctx, "DROP DATABASE "+database+" WITH (FORCE)")
 		if err != nil {
 			t.Errorf("expected isolated warehouse database cleanup, got %v", err)
+		}
+		if !stopped {
+			k.Stop()
+			stopped = true
 		}
 	}()
 	settings.Database = database
@@ -181,6 +190,128 @@ func TestWorkspaceEnvironment(t *testing.T) {
 	if path := k.AbsolutePath(s3, "customers-a.csv"); path != "s3://demo/customers-a.csv" {
 		t.Fatalf("expected normal S3 absolute path, got %q", path)
 	}
+
+	accountRequest := map[string]any{
+		"name": "Empty account", "userCount": 0,
+		"duplicateRecordPercent": 0, "countries": map[string]int{"IT": 40},
+	}
+	k.SetWorkspaceID(production.ID)
+	assertHTTPError(t, k.TryCall("POST", "/v1/simulated-accounts", nil, accountRequest, nil), http.StatusUnprocessableEntity,
+		"SimulatedAccountsRequireDevelopment")
+	var productionAccountCount int
+	k.QueryRowTestDatabase(t.Context(), &productionAccountCount, "SELECT COUNT(*) FROM simulated_accounts WHERE workspace = $1", production.ID)
+	if productionAccountCount != 0 {
+		t.Fatalf("expected no simulated accounts in production, got %d", productionAccountCount)
+	}
+
+	k.SetWorkspaceID(created.ID)
+	apiKey := k.CreateWorkspaceRestrictedAPIKey("simulated account test")
+	assertHTTPError(t, k.TryCall("GET", "/v1/simulated-accounts", http.Header{
+		"Authorization": {"Bearer " + apiKey},
+	}, nil, nil), http.StatusUnauthorized, "")
+	assertHTTPError(t, k.TryCall("GET", "/v1/simulated-accounts", http.Header{
+		"Krenalis-Workspace": nil,
+	}, nil, nil), http.StatusForbidden, "Krenalis-Workspace header is missing")
+
+	var account struct {
+		ID string `json:"id"`
+	}
+	k.Call("POST", "/v1/simulated-accounts", nil, accountRequest, &account)
+	var detail struct {
+		ID                      string         `json:"id"`
+		Name                    string         `json:"name"`
+		Status                  string         `json:"status"`
+		UserCount               int            `json:"userCount"`
+		DuplicateRecordPercent  float64        `json:"duplicateRecordPercent"`
+		Countries               map[string]int `json:"countries"`
+		GenerationPolicyVersion string         `json:"generationPolicyVersion"`
+		GeneratedRecordCount    int            `json:"generatedRecordCount"`
+		GenerationError         string         `json:"generationError"`
+	}
+	k.Call("GET", "/v1/simulated-accounts/"+account.ID, nil, nil, &detail)
+	if detail.ID != account.ID || detail.Name != "Empty account" || detail.Status != "Ready" ||
+		detail.UserCount != 0 || detail.DuplicateRecordPercent != 0 || detail.Countries["IT"] != 40 ||
+		detail.GenerationPolicyVersion != "empty-v1" || detail.GeneratedRecordCount != 0 || detail.GenerationError != "" {
+		t.Fatalf("expected empty ready simulated account metadata, got %+v", detail)
+	}
+	var detailFields map[string]json.Value
+	k.Call("GET", "/v1/simulated-accounts/"+account.ID, nil, nil, &detailFields)
+	if _, ok := detailFields["connector"]; ok {
+		t.Fatalf("expected simulated account response without connector, got %s", detailFields["connector"])
+	}
+	var accounts struct {
+		Accounts []struct {
+			ID string `json:"id"`
+		} `json:"simulatedAccounts"`
+	}
+	k.Call("GET", "/v1/simulated-accounts", nil, nil, &accounts)
+	if len(accounts.Accounts) != 1 || accounts.Accounts[0].ID != account.ID {
+		t.Fatalf("expected one listed simulated account, got %+v", accounts.Accounts)
+	}
+	k.Call("PUT", "/v1/simulated-accounts/"+account.ID, nil, map[string]string{"name": "Renamed account"}, nil)
+	k.Call("GET", "/v1/simulated-accounts/"+account.ID, nil, nil, &detail)
+	if detail.Name != "Renamed account" {
+		t.Fatalf("expected renamed simulated account, got %q", detail.Name)
+	}
+
+	k.SetWorkspaceID(production.ID)
+	assertHTTPError(t, k.TryCall("GET", "/v1/simulated-accounts/"+account.ID, nil, nil, nil), http.StatusNotFound, "")
+	k.SetWorkspaceID(created.ID)
+
+	warehousePool, err := krenalistester.ConnectionPool(t.Context(), settings)
+	if err != nil {
+		t.Fatalf("expected simulated account warehouse pool, got %v", err)
+	}
+	_, err = warehousePool.Exec(t.Context(), `INSERT INTO krenalis_simulated_account_records
+		(simulated_account_id, external_id, data) VALUES ($1, 'account-record', '{}'::jsonb),
+		('other-account', 'other-record', '{}'::jsonb)`, account.ID)
+	if err != nil {
+		warehousePool.Close()
+		t.Fatalf("expected simulated account warehouse fixture, got %v", err)
+	}
+	k.Call("DELETE", "/v1/simulated-accounts/"+account.ID, nil, nil, nil)
+	var accountRecords, otherRecords int
+	err = warehousePool.QueryRow(t.Context(), "SELECT COUNT(*) FROM krenalis_simulated_account_records WHERE simulated_account_id = $1", account.ID).Scan(&accountRecords)
+	if err != nil {
+		warehousePool.Close()
+		t.Fatalf("expected deleted account record count, got %v", err)
+	}
+	err = warehousePool.QueryRow(t.Context(), "SELECT COUNT(*) FROM krenalis_simulated_account_records WHERE simulated_account_id = 'other-account'").Scan(&otherRecords)
+	warehousePool.Close()
+	if err != nil {
+		t.Fatalf("expected preserved account record count, got %v", err)
+	}
+	if accountRecords != 0 || otherRecords != 1 {
+		t.Fatalf("expected account cleanup isolation, got account=%d other=%d", accountRecords, otherRecords)
+	}
+
+	var secondAccount struct {
+		ID string `json:"id"`
+	}
+	k.Call("POST", "/v1/simulated-accounts", nil, map[string]any{
+		"name": "Failed cleanup", "userCount": 0,
+	}, &secondAccount)
+	k.ExecQueryTestDatabase(t.Context(), "UPDATE simulated_accounts SET status = 'Preparing' WHERE id = $1", secondAccount.ID)
+	assertHTTPError(t, k.TryCall("DELETE", "/v1/simulated-accounts/"+secondAccount.ID, nil, nil, nil), http.StatusUnprocessableEntity,
+		"SimulatedAccountPreparing")
+	k.ExecQueryTestDatabase(t.Context(), "UPDATE simulated_accounts SET status = 'Ready' WHERE id = $1", secondAccount.ID)
+	warehousePool, err = krenalistester.ConnectionPool(t.Context(), settings)
+	if err != nil {
+		t.Fatalf("expected simulated account warehouse pool, got %v", err)
+	}
+	_, err = warehousePool.Exec(t.Context(), "DROP TABLE krenalis_simulated_account_records")
+	warehousePool.Close()
+	if err != nil {
+		t.Fatalf("expected simulated account warehouse fixture removal, got %v", err)
+	}
+	assertHTTPError(t, k.TryCall("DELETE", "/v1/simulated-accounts/"+secondAccount.ID, nil, nil, nil), http.StatusServiceUnavailable, "")
+	var metadataCount int
+	k.QueryRowTestDatabase(t.Context(), &metadataCount, "SELECT COUNT(*) FROM simulated_accounts WHERE id = $1", secondAccount.ID)
+	if metadataCount != 1 {
+		t.Fatalf("expected metadata to survive failed cleanup, got %d rows", metadataCount)
+	}
+	k.Call("POST", "/v1/warehouse/repair", nil, nil, nil)
+	k.Call("DELETE", "/v1/simulated-accounts/"+secondAccount.ID, nil, nil, nil)
 }
 
 func assertEnvironmentBadRequest(t *testing.T, err error, message string) {
@@ -196,6 +327,23 @@ func assertEnvironmentBadRequest(t *testing.T, err error, message string) {
 		t.Fatalf("expected HTTP 400, got %d: %s", status.Response.Code, status.Response.Text)
 	}
 	if !strings.Contains(status.Response.Text, message) {
+		t.Fatalf("expected error containing %q, got %q", message, status.Response.Text)
+	}
+}
+
+func assertHTTPError(t *testing.T, err error, code int, message string) {
+	t.Helper()
+	if err == nil {
+		t.Fatalf("expected HTTP %d, got success", code)
+	}
+	status, ok := err.(*krenalistester.StatusCodeError)
+	if !ok {
+		t.Fatalf("expected HTTP status error, got %T", err)
+	}
+	if status.Response.Code != code {
+		t.Fatalf("expected HTTP %d, got %d: %s", code, status.Response.Code, status.Response.Text)
+	}
+	if message != "" && !strings.Contains(status.Response.Text, message) {
 		t.Fatalf("expected error containing %q, got %q", message, status.Response.Text)
 	}
 }

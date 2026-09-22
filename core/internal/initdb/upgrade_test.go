@@ -142,6 +142,27 @@ func TestUpgrade(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	_, err = database.Exec(ctx, `
+		CREATE TYPE simulated_account_status AS ENUM ('Preparing', 'Ready', 'Failed');
+		CREATE TABLE simulated_accounts (
+			id varchar(12) PRIMARY KEY,
+			workspace varchar(12) NOT NULL REFERENCES workspaces (id),
+			connector varchar NOT NULL,
+			name varchar(100) NOT NULL,
+			status simulated_account_status NOT NULL,
+			user_count integer NOT NULL,
+			duplicate_record_percent numeric(5,2) NOT NULL,
+			countries jsonb NOT NULL,
+			generation_policy_version varchar NOT NULL,
+			generated_record_count integer NOT NULL,
+			generation_checkpoint jsonb,
+			generation_error text NOT NULL,
+			created_at timestamp NOT NULL,
+			updated_at timestamp NOT NULL
+		)`)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatal(err)
@@ -170,6 +191,7 @@ func TestUpgrade(t *testing.T) {
 	assertDiscontinuedFunctionsUpgrade(t, database)
 	assertRateLimitLeaseFunction(t, database)
 	assertConsentStepColumns(t, database)
+	assertSimulatedAccountsTable(t, database)
 
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatalf("expected second upgrade to succeed, got %s", err)
@@ -177,6 +199,32 @@ func TestUpgrade(t *testing.T) {
 	assertPipelineFiltersUpgraded(t, database)
 	assertPipelineMetricsSurvivePipelineDelete(t, database)
 	assertUsageMetricsUpgrade(t, database)
+}
+
+func assertSimulatedAccountsTable(t *testing.T, database *db.DB) {
+	t.Helper()
+	var exists bool
+	err := database.QueryRow(t.Context(), "SELECT to_regclass('simulated_accounts') IS NOT NULL").Scan(&exists)
+	if err != nil {
+		t.Fatalf("expected simulated accounts table query, got %v", err)
+	}
+	if !exists {
+		t.Fatal("expected simulated accounts table to exist")
+	}
+	var statusType string
+	err = database.QueryRow(t.Context(), "SELECT typname FROM pg_type WHERE typname = 'simulated_account_status'").Scan(&statusType)
+	if err != nil {
+		t.Fatalf("expected simulated account status type query, got %v", err)
+	}
+	if statusType != "simulated_account_status" {
+		t.Fatalf("expected simulated account status type, got %q", statusType)
+	}
+	assertColumnDoesNotExist(t, database, "simulated_accounts", "connector")
+}
+
+func TestInitializeSimulatedAccountsSchema(t *testing.T) {
+	database := newInitializedTestDatabase(t)
+	assertColumnDoesNotExist(t, database, "simulated_accounts", "connector")
 }
 
 // assertUsageMetricsUpgrade verifies the schema and defaults of the upgraded

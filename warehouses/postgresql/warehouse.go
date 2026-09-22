@@ -37,6 +37,8 @@ var (
 	createSystemOperationsTable string
 	//go:embed tables/profile_schema_versions.sql
 	createProfileSchemaVersionsTable string
+	//go:embed tables/simulated_account_records.sql
+	createSimulatedAccountRecordsTable string
 )
 
 var _ warehouses.Warehouse = &PostgreSQL{}

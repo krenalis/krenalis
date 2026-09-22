@@ -81,6 +81,22 @@ var destinationsProfilesTable = warehouses.Table{
 	Keys: []string{"_pipeline", "_external_id"},
 }
 
+var simulatedAccountRecordsTable = warehouses.Table{
+	Name: "krenalis_simulated_account_records",
+	Columns: []warehouses.Column{
+		{Name: "simulated_account_id", Type: types.String()},
+		{Name: "external_id", Type: types.String()},
+		{Name: "data", Type: types.JSON()},
+	},
+	Keys: []string{"simulated_account_id", "external_id"},
+}
+
+// SimulatedAccountRecord is one ordinary record to materialize.
+type SimulatedAccountRecord struct {
+	ID   string
+	Data json.Value
+}
+
 type Store struct {
 	ds               *Datastore
 	wh               atomic.Value // warehouse
@@ -216,6 +232,62 @@ func (store *Store) DeleteDestinationProfiles(ctx context.Context, pipeline stri
 	where := warehouses.NewBaseExpr(
 		warehouses.Column{Name: "_pipeline", Type: types.String()}, warehouses.OpIs, pipeline)
 	return store.warehouse().Delete(ctx, "krenalis_destination_profiles", where)
+}
+
+// DeleteSimulatedAccountRecords deletes the records of the provided simulated
+// account.
+//
+// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
+// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
+// If an error occurs with the data warehouse, it returns an *UnavailableError
+// error.
+func (store *Store) DeleteSimulatedAccountRecords(ctx context.Context, account string) error {
+	store.mustBeOpen()
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
+	if err != nil {
+		return err
+	}
+	defer done()
+	where := warehouses.NewBaseExpr(
+		warehouses.Column{Name: "simulated_account_id", Type: types.String()}, warehouses.OpIs, account)
+	err = store.warehouse().Delete(ctx, "krenalis_simulated_account_records", where)
+	return unavailableError(err)
+}
+
+// CountSimulatedAccountRecords counts records belonging to one account.
+func (store *Store) CountSimulatedAccountRecords(ctx context.Context, account string) (int, error) {
+	store.mustBeOpen()
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
+	if err != nil {
+		return 0, err
+	}
+	defer done()
+	where := warehouses.NewBaseExpr(
+		warehouses.Column{Name: "simulated_account_id", Type: types.String()}, warehouses.OpIs, account)
+	count, err := store.warehouse().Count(ctx, simulatedAccountRecordsTable.Name, nil, where)
+	if err != nil {
+		return 0, unavailableError(err)
+	}
+	if count < 0 || count > math.MaxInt32 {
+		return 0, unavailableError(fmt.Errorf("warehouse returned simulated account count outside the supported range"))
+	}
+	return count, nil
+}
+
+// MergeSimulatedAccountRecords writes an idempotent batch for one account.
+func (store *Store) MergeSimulatedAccountRecords(ctx context.Context, account string, records []SimulatedAccountRecord) error {
+	store.mustBeOpen()
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
+	if err != nil {
+		return err
+	}
+	defer done()
+	rows := make([][]any, len(records))
+	for i, record := range records {
+		rows[i] = []any{account, record.ID, record.Data}
+	}
+	err = store.warehouse().Merge(ctx, simulatedAccountRecordsTable, rows, nil)
+	return unavailableError(err)
 }
 
 // Events returns the events according to the provided query. The returned

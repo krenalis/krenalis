@@ -51,6 +51,10 @@ const getCurrentRoute = (location: Location, connections: TransformedConnection[
 				currentRoute = 'connections/destinations';
 			}
 		}
+	} else if (fragments.includes('simulated-accounts')) {
+		currentRoute = 'development/simulated-accounts';
+	} else if (fragments.includes('development')) {
+		currentRoute = 'development';
 	} else if (fragments.includes('users')) {
 		currentRoute = 'users';
 	} else if (fragments.includes('profile-unification')) {

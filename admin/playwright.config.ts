@@ -61,6 +61,11 @@ export default defineConfig({
 			use: { ...devices['Desktop Chrome'] },
 			testMatch: ['tests/settings.spec.ts'],
 		},
+		{
+			name: 'simulated-accounts.spec.ts',
+			use: { ...devices['Desktop Chrome'] },
+			testMatch: ['tests/simulatedAccounts.spec.ts'],
+		},
 
 		// {
 		// 	name: 'firefox',

@@ -80,6 +80,20 @@ const sidebarItems: sidebarItem[] = [
 			{ name: 'settings/privacy', label: 'Privacy', link: 'settings/privacy', icon: 'shield-check' },
 		],
 	},
+	{
+		name: 'development',
+		label: 'Development',
+		link: 'development',
+		icon: 'terminal',
+		subItems: [
+			{
+				name: 'development/simulated-accounts',
+				label: 'Simulated accounts',
+				link: 'simulated-accounts',
+				icon: 'database',
+			},
+		],
+	},
 ];
 
 interface SidebarProps {
@@ -94,9 +108,11 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 
 	const location = useLocation();
 	const currentRoute = getCurrentRoute(location, connections);
+	const isDevelopment = workspaces.find((workspace) => workspace.id === selectedWorkspace)?.environment === 'development';
 
 	const items: ReactNode[] = [];
 	for (const item of sidebarItems) {
+		if (item.name === 'development' && !isDevelopment) continue;
 		const isSelected = item.name === currentRoute;
 		const hasSubItems = item.subItems != null;
 		let isChildrenSelected = false;

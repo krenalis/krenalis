@@ -59,6 +59,7 @@ type Krenalis struct {
 	// channel must be closed; this allows the testing framework to wait for
 	// Krenalis to correctly exit before finishing the tests.
 	krenalisRunning        chan struct{}
+	serverEnv              []string
 	transformationsTempDir string
 	httpClient             *http.Client
 	ws                     string
@@ -377,8 +378,9 @@ func (k *Krenalis) Start() {
 			buildKrenalis(k.t, k.repo, krenalisDir)
 			krenalisAlreadyBuilt = true
 		}
+		k.serverEnv = env
+		k.krenalisRunning = make(chan struct{})
 		go func() {
-			k.krenalisRunning = make(chan struct{})
 			defer func() {
 				close(k.krenalisRunning)
 			}()
@@ -428,8 +430,8 @@ func (k *Krenalis) Start() {
 		if err != nil {
 			k.t.Fatal(err)
 		}
+		k.krenalisRunning = make(chan struct{})
 		go func() {
-			k.krenalisRunning = make(chan struct{})
 			defer func() {
 				close(k.krenalisRunning)
 			}()
@@ -503,6 +505,47 @@ func (k *Krenalis) Start() {
 	time.Sleep(3 * time.Second)
 
 	initOk = true
+}
+
+// RestartServer restarts the external Krenalis process without replacing its
+// test databases, warehouse, or NATS server.
+func (k *Krenalis) RestartServer(ctx context.Context) {
+	if k.serverEnv == nil {
+		k.t.Fatal("expected an externally launched server, got none")
+	}
+	k.cancel()
+	select {
+	case <-k.krenalisRunning:
+	case <-ctx.Done():
+		k.t.Fatalf("expected previous server to stop, got %v", ctx.Err())
+	}
+	ctx, cancel := context.WithCancel(ctx)
+	k.cancel = cancel
+	k.krenalisRunning = make(chan struct{})
+	go func() {
+		defer close(k.krenalisRunning)
+		err := launchKrenalis(ctx, k.serverEnv)
+		if err != nil && ctx.Err() == nil {
+			log.Printf("[error] %s", err)
+		}
+	}()
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		select {
+		case <-k.krenalisRunning:
+			k.t.Fatal("expected restarted server to run, got exit")
+		default:
+		}
+		conn, err := net.DialTimeout("tcp", k.Addr(), 500*time.Millisecond)
+		if err == nil {
+			_ = conn.Close()
+			return
+		}
+		if time.Now().After(deadline) {
+			k.t.Fatalf("expected restarted server to listen, got %v", err)
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 }
 
 // CountEventsInWarehouse returns the counts of events stored in the "events"

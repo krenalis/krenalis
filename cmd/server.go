@@ -69,6 +69,7 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 		SentryTelemetryLevel:          config.SentryTelemetryLevel,
 		MaxQueuedEventsPerDestination: config.MaxQueuedEventsPerDestination,
 		PrometheusMetricsEnabled:      config.PrometheusMetricsEnabled,
+		SimulatedFaceCatalog:          catalog,
 	}
 	conf.DatabaseInitialization.InitIfEmpty = initDBIfEmpty
 	conf.DatabaseInitialization.InitDockerMember = initDockerMember

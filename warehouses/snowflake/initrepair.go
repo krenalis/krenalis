@@ -109,6 +109,7 @@ func (warehouse *Snowflake) initRepairDatabaseObjects(ctx context.Context, profi
 		`CREATE OR REPLACE VIEW "EVENTS" AS SELECT * FROM "KRENALIS_EVENTS"`,
 		createOperationsTable,
 		createProfileSchemaVersionTable,
+		createSimulatedAccountRecordsTable,
 		identitiesSQLSchema(profileColumns),
 		profilesSQLSchema("krenalis_profiles_0", profileColumns),
 	}

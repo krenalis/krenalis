@@ -6,6 +6,7 @@ package state
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"database/sql/driver"
 	"errors"
@@ -22,6 +23,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/core/internal/state/ratelimiter"
 	"github.com/krenalis/krenalis/tools/base58"
+	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/kms"
 	"github.com/krenalis/krenalis/tools/prometheus"
@@ -101,6 +103,58 @@ func (env Environment) Value() (driver.Value, error) {
 		return "development", nil
 	}
 	return nil, fmt.Errorf("not a valid Environment: %d", env)
+}
+
+// SimulatedAccountStatus identifies the state of a simulated account.
+type SimulatedAccountStatus int8
+
+const (
+	SimulatedAccountPreparing SimulatedAccountStatus = iota
+	SimulatedAccountReady
+	SimulatedAccountFailed
+)
+
+// Scan implements the sql.Scanner interface.
+func (status *SimulatedAccountStatus) Scan(src any) error {
+	s, ok := src.(string)
+	if !ok {
+		return fmt.Errorf("cannot scan a %T value into a SimulatedAccountStatus value", src)
+	}
+	var value SimulatedAccountStatus
+	switch s {
+	case "Preparing":
+		value = SimulatedAccountPreparing
+	case "Ready":
+		value = SimulatedAccountReady
+	case "Failed":
+		value = SimulatedAccountFailed
+	default:
+		return fmt.Errorf("invalid SimulatedAccountStatus: %s", s)
+	}
+	*status = value
+	return nil
+}
+
+// String returns the string representation of status.
+func (status SimulatedAccountStatus) String() string {
+	value, err := status.Value()
+	if err != nil {
+		panic(err)
+	}
+	return value.(string)
+}
+
+// Value implements driver.Valuer.
+func (status SimulatedAccountStatus) Value() (driver.Value, error) {
+	switch status {
+	case SimulatedAccountPreparing:
+		return "Preparing", nil
+	case SimulatedAccountReady:
+		return "Ready", nil
+	case SimulatedAccountFailed:
+		return "Failed", nil
+	}
+	return nil, fmt.Errorf("not a valid SimulatedAccountStatus: %d", status)
 }
 
 // election represents a leader election.
@@ -467,6 +521,23 @@ func (state *State) Pipelines() []*Pipeline {
 		return pipelines[i].ID < pipelines[j].ID
 	})
 	return pipelines
+}
+
+// SimulatedAccount returns the simulated account with identifier id.
+// The boolean return value reports whether the account exists.
+func (state *State) SimulatedAccount(id string) (*SimulatedAccount, bool) {
+	state.mu.Lock()
+	workspaces := make([]*Workspace, 0, len(state.workspaces))
+	for _, ws := range state.workspaces {
+		workspaces = append(workspaces, ws)
+	}
+	state.mu.Unlock()
+	for _, ws := range workspaces {
+		if account, ok := ws.SimulatedAccount(id); ok {
+			return account, true
+		}
+	}
+	return nil, false
 }
 
 // Transaction executes f in a transaction.
@@ -909,6 +980,7 @@ type Workspace struct {
 	PrimarySources                 map[string]string
 	accounts                       map[int]*Account
 	consentPurposes                map[string]*ConsentPurpose
+	simulatedAccounts              map[string]*SimulatedAccount
 	ResolveIdentitiesOnBatchImport bool
 	Identifiers                    []string
 	IR                             struct {
@@ -1115,6 +1187,32 @@ func (workspace *Workspace) PipelinesToPurge() []string {
 // the number of events in the corresponding successful consumption.
 func (workspace *Workspace) RestoreEventRateLimitCapacity(eventCount int) error {
 	return workspace.eventBucket.Restore(eventCount)
+}
+
+// SimulatedAccount returns the simulated account with the given identifier.
+// The boolean return value reports whether the account exists.
+func (workspace *Workspace) SimulatedAccount(id string) (*SimulatedAccount, bool) {
+	workspace.mu.Lock()
+	account, ok := workspace.simulatedAccounts[id]
+	workspace.mu.Unlock()
+	return account, ok
+}
+
+// SimulatedAccounts returns all the simulated accounts of the workspace.
+func (workspace *Workspace) SimulatedAccounts() []*SimulatedAccount {
+	workspace.mu.Lock()
+	accounts := make([]*SimulatedAccount, 0, len(workspace.simulatedAccounts))
+	for _, account := range workspace.simulatedAccounts {
+		accounts = append(accounts, account)
+	}
+	workspace.mu.Unlock()
+	slices.SortFunc(accounts, func(a, b *SimulatedAccount) int {
+		if a.Name != b.Name {
+			return cmp.Compare(a.Name, b.Name)
+		}
+		return cmp.Compare(a.ID, b.ID)
+	})
+	return accounts
 }
 
 // WarehouseSettings returns the warehouse settings.
@@ -1382,6 +1480,32 @@ func (account *Account) Connector() *Connector {
 	c := account.connector
 	account.mu.Unlock()
 	return c
+}
+
+// SimulatedAccount represents a simulated account.
+type SimulatedAccount struct {
+	mu                      *sync.Mutex
+	workspace               *Workspace
+	ID                      string
+	Name                    string
+	Status                  SimulatedAccountStatus
+	UserCount               int
+	DuplicateRecordPercent  decimal.Decimal
+	Countries               json.Value
+	GenerationPolicyVersion string
+	GeneratedRecordCount    int
+	GenerationCheckpoint    json.Value
+	GenerationError         string
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+}
+
+// Workspace returns the workspace of the simulated account.
+func (account *SimulatedAccount) Workspace() *Workspace {
+	account.mu.Lock()
+	workspace := account.workspace
+	account.mu.Unlock()
+	return workspace
 }
 
 // ConsentPurpose represents a consent purpose.

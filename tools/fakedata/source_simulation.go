@@ -16,7 +16,8 @@ import (
 	"strings"
 )
 
-const sourceSimulationVersion = "source-v1"
+// SourceSimulationVersion identifies the source observation protocol.
+const SourceSimulationVersion = "source-v1"
 
 // CountryGenerator generates deterministic Layer 1 data at a stable index.
 // Its Person ID must use the SourceWorld's identity namespace and index.
@@ -238,7 +239,7 @@ func newSourceInstance(world *SourceWorld, config SourceInstanceConfig) (*Source
 	if err != nil {
 		return nil, err
 	}
-	protocol, err := StringComponent("simulation-version", sourceSimulationVersion)
+	protocol, err := StringComponent("simulation-version", SourceSimulationVersion)
 	if err != nil {
 		return nil, err
 	}
