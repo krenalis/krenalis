@@ -56,7 +56,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 	if err != nil {
 		return err
 	}
-	// Ensure the next version fits in the INTEGER column before creating the table.
+	// Ensure the next version fits in the integer column before creating the table.
 	if maxProfilesVersion >= math.MaxInt32 {
 		return fmt.Errorf("profile table version limit reached")
 	}
