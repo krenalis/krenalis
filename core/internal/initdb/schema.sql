@@ -176,6 +176,7 @@ CREATE TABLE simulated_accounts (
     generation_error text NOT NULL,
     created_at timestamp NOT NULL,
     updated_at timestamp NOT NULL,
+    CONSTRAINT simulated_accounts_workspace_id_key UNIQUE (workspace, id),
     PRIMARY KEY (id)
 );
 
@@ -194,6 +195,7 @@ CREATE TYPE sending_mode as ENUM ('Client', 'Server', 'ClientAndServer');
 CREATE TABLE connections (
     id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
     workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+    simulated_account varchar(12),
     name varchar(100) NOT NULL DEFAULT '',
     connector varchar,
     role role NOT NULL,
@@ -204,10 +206,15 @@ CREATE TABLE connections (
     settings bytea,
     kms_encrypted_settings_key bytea NOT NULL,
     health health NOT NULL DEFAULT 'Healthy',
+    CONSTRAINT connections_workspace_simulated_account_fkey
+        FOREIGN KEY (workspace, simulated_account)
+        REFERENCES simulated_accounts (workspace, id)
+        ON DELETE RESTRICT,
     PRIMARY KEY (id)
 );
 
 CREATE INDEX connections_workspace_idx ON connections (workspace);
+CREATE INDEX connections_workspace_simulated_account_idx ON connections (workspace, simulated_account);
 
 CREATE TYPE export_mode AS ENUM ('', 'CreateOnly', 'UpdateOnly', 'CreateOrUpdate');
 CREATE TYPE transformation_language AS ENUM ('JavaScript', 'Python');

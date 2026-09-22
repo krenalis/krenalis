@@ -493,15 +493,16 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	// Read all connections.
 	state.connections = map[string]*Connection{}
 	err = tx.QueryScan(ctx, "SELECT id, workspace, name, connector, role,"+
-		" account, strategy, sending_mode, linked_connections, settings,"+
+		" simulated_account, account, strategy, sending_mode, linked_connections, settings,"+
 		" kms_encrypted_settings_key, health FROM connections", func(rows *db.Rows) error {
 		for rows.Next() {
 			var workspaceID string
+			var simulatedAccount *string
 			var account int
 			var connector string
 			var settingsKey []byte
 			c := Connection{}
-			if err := rows.Scan(&c.ID, &workspaceID, &c.Name, &connector, &c.Role,
+			if err := rows.Scan(&c.ID, &workspaceID, &c.Name, &connector, &c.Role, &simulatedAccount,
 				&account, &c.Strategy, &c.SendingMode, &c.LinkedConnections, &c.settings,
 				&settingsKey, &c.Health,
 			); err != nil {
@@ -519,6 +520,13 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 			c.pipelines = map[string]*Pipeline{}
 			if account > 0 {
 				c.account = ws.accounts[account]
+			}
+			if simulatedAccount != nil {
+				c.simulatedAccount = ws.simulatedAccounts[*simulatedAccount]
+				if c.simulatedAccount == nil {
+					return fmt.Errorf("loading connection %s: simulated account %s does not exist in workspace %s",
+						c.ID, *simulatedAccount, workspaceID)
+				}
 			}
 			if c.SendingMode == nil && c.Role == Destination && c.connector.SendingMode != nil {
 				if sm := *c.connector.SendingMode; sm == Client {

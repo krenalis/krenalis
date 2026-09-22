@@ -358,6 +358,28 @@ func (state *State) Connections() []*Connection {
 	return connections
 }
 
+// ConnectionsBySimulatedAccount returns the connections that reference a
+// simulated account in the workspace, ordered by identifier.
+func (state *State) ConnectionsBySimulatedAccount(ctx context.Context, workspace, simulatedAccount string) ([]string, error) {
+	connections := []string{}
+	err := state.db.QueryScan(ctx, "SELECT id FROM connections WHERE workspace = $1 AND simulated_account = $2 "+
+		"ORDER BY id",
+		workspace, simulatedAccount, func(rows *db.Rows) error {
+			for rows.Next() {
+				var id string
+				if err := rows.Scan(&id); err != nil {
+					return err
+				}
+				connections = append(connections, id)
+			}
+			return nil
+		})
+	if err != nil {
+		return nil, err
+	}
+	return connections, nil
+}
+
 // Connector returns the connector with the provided code.
 // The boolean return value reports whether the connector exists.
 func (state *State) Connector(code string) (*Connector, bool) {
@@ -1528,6 +1550,7 @@ type Connection struct {
 	connector         *Connector
 	Role              Role
 	account           *Account
+	simulatedAccount  *SimulatedAccount
 	Strategy          *Strategy
 	SendingMode       *SendingMode
 	LinkedConnections []string // Non-nil if events are supported; otherwise nil.
@@ -1628,6 +1651,15 @@ func (connection *Connection) Settings(ctx context.Context) (json.Value, error) 
 		return nil, errors.New("invalid settings")
 	}
 	return data, nil
+}
+
+// SimulatedAccount returns the simulated account of the connection. The
+// boolean return value reports whether the connection has an account.
+func (connection *Connection) SimulatedAccount() (*SimulatedAccount, bool) {
+	connection.mu.Lock()
+	account := connection.simulatedAccount
+	connection.mu.Unlock()
+	return account, account != nil
 }
 
 // Workspace returns the workspace of the connection.

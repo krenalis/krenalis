@@ -257,6 +257,59 @@ func TestWorkspaceEnvironment(t *testing.T) {
 	k.SetWorkspaceID(production.ID)
 	assertHTTPError(t, k.TryCall("GET", "/v1/simulated-accounts/"+account.ID, nil, nil, nil), http.StatusNotFound, "")
 	k.SetWorkspaceID(created.ID)
+	firstConnection := k.CreateConnection(krenalistester.ConnectionToCreate{
+		Name:             "Simulated source 1",
+		Role:             krenalistester.Source,
+		Connector:        "dummy",
+		Settings:         json.Value("{}"),
+		SimulatedAccount: account.ID,
+	})
+	secondConnection := k.CreateConnection(krenalistester.ConnectionToCreate{
+		Name:             "Simulated source 2",
+		Role:             krenalistester.Source,
+		Connector:        "dummy",
+		Settings:         json.Value("{}"),
+		SimulatedAccount: account.ID,
+	})
+	k.SetWorkspaceID(production.ID)
+	_, err = k.TryCreateConnection(krenalistester.ConnectionToCreate{
+		Name:             "Cross-workspace source",
+		Role:             krenalistester.Source,
+		Connector:        "dummy",
+		Settings:         json.Value("{}"),
+		SimulatedAccount: account.ID,
+	})
+	assertHTTPError(t, err, http.StatusUnprocessableEntity, "SimulatedAccountNotExist")
+	k.SetWorkspaceID(created.ID)
+	k.RestartServer(t.Context())
+	var connections struct {
+		Connections []struct {
+			ID               string `json:"id"`
+			SimulatedAccount string `json:"simulatedAccount"`
+		} `json:"connections"`
+	}
+	k.Call("GET", "/v1/connections", nil, nil, &connections)
+	refs := 0
+	for _, connection := range connections.Connections {
+		if connection.SimulatedAccount == account.ID {
+			refs++
+		}
+	}
+	if refs != 2 {
+		t.Fatalf("expected 2 simulated account references after restart, got %d", refs)
+	}
+	k.Call("PUT", "/v1/connections/"+firstConnection, nil, map[string]any{
+		"name": "Simulated source 1", "simulatedAccount": "",
+	}, nil)
+	var referenceCount int
+	k.QueryRowTestDatabase(t.Context(), &referenceCount,
+		"SELECT COUNT(*) FROM connections WHERE workspace = $1 AND simulated_account = $2", created.ID, account.ID)
+	if referenceCount != 1 {
+		t.Fatalf("expected 1 simulated account reference after clearing, got %d", referenceCount)
+	}
+	k.Call("PUT", "/v1/connections/"+firstConnection, nil, map[string]any{
+		"name": "Simulated source 1", "simulatedAccount": account.ID,
+	}, nil)
 
 	warehousePool, err := krenalistester.ConnectionPool(t.Context(), settings)
 	if err != nil {
@@ -269,7 +322,8 @@ func TestWorkspaceEnvironment(t *testing.T) {
 		warehousePool.Close()
 		t.Fatalf("expected simulated account warehouse fixture, got %v", err)
 	}
-	k.Call("DELETE", "/v1/simulated-accounts/"+account.ID, nil, nil, nil)
+	assertHTTPError(t, k.TryCall("DELETE", "/v1/simulated-accounts/"+account.ID, nil, nil, nil),
+		http.StatusUnprocessableEntity, "SimulatedAccountInUse")
 	var accountRecords, otherRecords int
 	err = warehousePool.QueryRow(t.Context(), "SELECT COUNT(*) FROM krenalis_simulated_account_records WHERE simulated_account_id = $1", account.ID).Scan(&accountRecords)
 	if err != nil {
@@ -281,9 +335,27 @@ func TestWorkspaceEnvironment(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected preserved account record count, got %v", err)
 	}
-	if accountRecords != 0 || otherRecords != 1 {
-		t.Fatalf("expected account cleanup isolation, got account=%d other=%d", accountRecords, otherRecords)
+	if accountRecords != 1 || otherRecords != 1 {
+		t.Fatalf("expected referenced account cleanup isolation, got account=%d other=%d", accountRecords, otherRecords)
 	}
+	k.DeleteConnection(firstConnection)
+	k.QueryRowTestDatabase(t.Context(), &referenceCount,
+		"SELECT COUNT(*) FROM connections WHERE workspace = $1 AND simulated_account = $2", created.ID, account.ID)
+	if referenceCount != 1 {
+		t.Fatalf("expected last connection reference to remain, got %d", referenceCount)
+	}
+	var metadataCount int
+	k.QueryRowTestDatabase(t.Context(), &metadataCount, "SELECT COUNT(*) FROM simulated_accounts WHERE id = $1", account.ID)
+	if metadataCount != 1 {
+		t.Fatalf("expected simulated account metadata to remain, got %d", metadataCount)
+	}
+	k.DeleteConnection(secondConnection)
+	k.QueryRowTestDatabase(t.Context(), &referenceCount,
+		"SELECT COUNT(*) FROM connections WHERE workspace = $1 AND simulated_account = $2", created.ID, account.ID)
+	if referenceCount != 0 {
+		t.Fatalf("expected no simulated account references after connection deletion, got %d", referenceCount)
+	}
+	k.Call("DELETE", "/v1/simulated-accounts/"+account.ID, nil, nil, nil)
 
 	var secondAccount struct {
 		ID string `json:"id"`
@@ -305,7 +377,6 @@ func TestWorkspaceEnvironment(t *testing.T) {
 		t.Fatalf("expected simulated account warehouse fixture removal, got %v", err)
 	}
 	assertHTTPError(t, k.TryCall("DELETE", "/v1/simulated-accounts/"+secondAccount.ID, nil, nil, nil), http.StatusServiceUnavailable, "")
-	var metadataCount int
 	k.QueryRowTestDatabase(t.Context(), &metadataCount, "SELECT COUNT(*) FROM simulated_accounts WHERE id = $1", secondAccount.ID)
 	if metadataCount != 1 {
 		t.Fatalf("expected metadata to survive failed cleanup, got %d rows", metadataCount)

@@ -130,8 +130,9 @@ func (this *Workspace) CreateSimulatedAccount(ctx context.Context, name string, 
 //
 // It returns an errors.NotFoundError error if the account does not exist. It
 // returns an errors.UnprocessableError with code SimulatedAccountPreparing if
-// the account is still being prepared, or InspectionMode or MaintenanceMode if
-// warehouse cleanup is unavailable in the current mode.
+// the account is still being prepared, SimulatedAccountInUse if the account is
+// referenced by a connection, or InspectionMode or MaintenanceMode if warehouse
+// cleanup is unavailable in the current mode.
 func (this *Workspace) DeleteSimulatedAccount(ctx context.Context, id string) error {
 	this.core.mustBeOpen()
 	if !IsValidID(id) {
@@ -155,12 +156,27 @@ func (this *Workspace) DeleteSimulatedAccount(ctx context.Context, id string) er
 		default:
 			return nil, fmt.Errorf("simulated account %s has an invalid status", n.ID)
 		}
+		var connectionID string
+		err = tx.QueryRow(ctx, "SELECT id FROM connections WHERE workspace = $1 AND simulated_account = $2 "+
+			"ORDER BY id LIMIT 1",
+			n.Workspace, n.ID).Scan(&connectionID)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, err
+		}
+		if err == nil {
+			return nil, errors.Unprocessable(SimulatedAccountInUse,
+				"simulated account %s is referenced by connection %s", n.ID, connectionID)
+		}
 		err = this.store.DeleteSimulatedAccountRecords(ctx, n.ID)
 		if err != nil {
 			return nil, simulatedAccountWarehouseError(err)
 		}
 		result, err := tx.Exec(ctx, "DELETE FROM simulated_accounts WHERE id = $1 AND workspace = $2", n.ID, n.Workspace)
 		if err != nil {
+			if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "connections_workspace_simulated_account_fkey" {
+				return nil, errors.Unprocessable(SimulatedAccountInUse,
+					"simulated account %s is referenced by one or more connections", n.ID)
+			}
 			return nil, err
 		}
 		if result.RowsAffected() == 0 {

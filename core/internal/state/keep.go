@@ -446,6 +446,7 @@ type CreateConnection struct {
 	Strategy          *Strategy    // strategy
 	SendingMode       *SendingMode // sending mode
 	LinkedConnections []string     // linked connections
+	SimulatedAccount  string       // simulated account identifier, can be empty
 	EventWriteKey     string       // event write key to add
 	Settings          []byte
 	SettingsKey       []byte
@@ -487,6 +488,10 @@ func (state *State) createConnection(n notification) string {
 			ws.mu.Unlock()
 		}
 	}
+	var simulatedAccount *SimulatedAccount
+	if e.SimulatedAccount != "" {
+		simulatedAccount = ws.simulatedAccounts[e.SimulatedAccount]
+	}
 	c := &Connection{
 		mu:                new(sync.Mutex),
 		organization:      ws.organization,
@@ -496,6 +501,7 @@ func (state *State) createConnection(n notification) string {
 		connector:         connector,
 		Role:              e.Role,
 		account:           a,
+		simulatedAccount:  simulatedAccount,
 		Strategy:          e.Strategy,
 		SendingMode:       e.SendingMode,
 		LinkedConnections: e.LinkedConnections,
@@ -1482,8 +1488,9 @@ func (state *State) setAccount(n notification) string {
 // SetConnectionSettings is the event sent when the settings of a connection is
 // changed.
 type SetConnectionSettings struct {
-	Connection string
-	Settings   []byte
+	Connection       string
+	Settings         []byte
+	SimulatedAccount *string
 }
 
 // setConnectionSettings sets the settings of a connection.
@@ -1495,6 +1502,13 @@ func (state *State) setConnectionSettings(n notification) string {
 	c := state.connections[e.Connection]
 	c.mu.Lock()
 	c.settings = e.Settings
+	if e.SimulatedAccount != nil {
+		if *e.SimulatedAccount == "" {
+			c.simulatedAccount = nil
+		} else {
+			c.simulatedAccount = c.workspace.simulatedAccounts[*e.SimulatedAccount]
+		}
+	}
 	c.mu.Unlock()
 	dispatchNotification(state, e)
 	return c.organization.ID
@@ -1692,10 +1706,11 @@ func (state *State) unlinkConnection(n notification) string {
 
 // UpdateConnection is the event sent when a connection is updated.
 type UpdateConnection struct {
-	Connection  string
-	Name        string
-	Strategy    *Strategy
-	SendingMode *SendingMode
+	Connection       string
+	Name             string
+	Strategy         *Strategy
+	SendingMode      *SendingMode
+	SimulatedAccount *string
 }
 
 // updateConnection updates a connection.
@@ -1708,6 +1723,13 @@ func (state *State) updateConnection(n notification) string {
 		c.Name = e.Name
 		c.Strategy = e.Strategy
 		c.SendingMode = e.SendingMode
+		if e.SimulatedAccount != nil {
+			if *e.SimulatedAccount == "" {
+				c.simulatedAccount = nil
+			} else {
+				c.simulatedAccount = c.workspace.simulatedAccounts[*e.SimulatedAccount]
+			}
+		}
 	})
 	dispatchNotification(state, e)
 	return c.organization.ID

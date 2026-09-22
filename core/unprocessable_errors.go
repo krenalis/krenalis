@@ -54,6 +54,8 @@ const (
 	PropertyNotExist                    errors.Code = "PropertyNotExist"
 	SchemaNotAligned                    errors.Code = "SchemaNotAligned"
 	SheetNotExist                       errors.Code = "SheetNotExist"
+	SimulatedAccountInUse               errors.Code = "SimulatedAccountInUse"
+	SimulatedAccountNotExist            errors.Code = "SimulatedAccountNotExist"
 	SimulatedAccountPreparing           errors.Code = "SimulatedAccountPreparing"
 	SimulatedAccountsRequireDevelopment errors.Code = "SimulatedAccountsRequireDevelopment"
 	SingleEventWriteKey                 errors.Code = "SingleEventWriteKey"

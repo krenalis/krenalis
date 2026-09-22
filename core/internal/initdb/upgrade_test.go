@@ -5,6 +5,7 @@
 package initdb
 
 import (
+	"database/sql"
 	"testing"
 	"time"
 
@@ -192,6 +193,7 @@ func TestUpgrade(t *testing.T) {
 	assertRateLimitLeaseFunction(t, database)
 	assertConsentStepColumns(t, database)
 	assertSimulatedAccountsTable(t, database)
+	assertSimulatedAccountConnectionSchema(t, database)
 
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatalf("expected second upgrade to succeed, got %s", err)
@@ -222,9 +224,50 @@ func assertSimulatedAccountsTable(t *testing.T, database *db.DB) {
 	assertColumnDoesNotExist(t, database, "simulated_accounts", "connector")
 }
 
+func assertSimulatedAccountConnectionSchema(t *testing.T, database *db.DB) {
+	t.Helper()
+	var nullable string
+	err := database.QueryRow(t.Context(), `SELECT is_nullable FROM information_schema.columns
+		WHERE table_schema = current_schema() AND table_name = 'connections' AND
+			column_name = 'simulated_account'`).Scan(&nullable)
+	if err != nil {
+		t.Fatalf("expected simulated account nullability query, got %v", err)
+	}
+	if nullable != "YES" {
+		t.Fatalf("expected connections.simulated_account to be nullable, got %q", nullable)
+	}
+	var simulatedAccount sql.NullString
+	err = database.QueryRow(t.Context(), "SELECT simulated_account FROM connections WHERE id = $1",
+		"333333333333").Scan(&simulatedAccount)
+	if err != nil {
+		t.Fatalf("expected simulated account binding query, got %v", err)
+	}
+	if simulatedAccount.Valid {
+		t.Fatalf("expected existing connection simulated account to be NULL, got %q", simulatedAccount.String)
+	}
+	assertColumnExists(t, database, "connections", "simulated_account")
+	assertConstraintExists(t, database, "simulated_accounts", simulatedAccountsWorkspaceIDKey)
+	assertConstraintExists(t, database, "connections", connectionsWorkspaceSimulatedAccountForeignKey)
+	assertIndexExists(t, database, connectionsWorkspaceSimulatedAccountIndex)
+}
+
 func TestInitializeSimulatedAccountsSchema(t *testing.T) {
 	database := newInitializedTestDatabase(t)
 	assertColumnDoesNotExist(t, database, "simulated_accounts", "connector")
+	assertColumnExists(t, database, "connections", "simulated_account")
+	var nullable string
+	err := database.QueryRow(t.Context(), `SELECT is_nullable FROM information_schema.columns
+		WHERE table_schema = current_schema() AND table_name = 'connections' AND
+			column_name = 'simulated_account'`).Scan(&nullable)
+	if err != nil {
+		t.Fatalf("expected simulated account nullability query, got %v", err)
+	}
+	if nullable != "YES" {
+		t.Fatalf("expected connections.simulated_account to be nullable, got %q", nullable)
+	}
+	assertConstraintExists(t, database, "simulated_accounts", simulatedAccountsWorkspaceIDKey)
+	assertConstraintExists(t, database, "connections", connectionsWorkspaceSimulatedAccountForeignKey)
+	assertIndexExists(t, database, connectionsWorkspaceSimulatedAccountIndex)
 }
 
 // assertUsageMetricsUpgrade verifies the schema and defaults of the upgraded

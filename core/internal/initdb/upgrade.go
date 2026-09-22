@@ -15,6 +15,9 @@ import (
 const (
 	workspacesOrganizationIndex                                        = "workspaces_organization_idx"
 	connectionsWorkspaceIndex                                          = "connections_workspace_idx"
+	connectionsWorkspaceSimulatedAccountIndex                          = "connections_workspace_simulated_account_idx"
+	connectionsWorkspaceSimulatedAccountForeignKey                     = "connections_workspace_simulated_account_fkey"
+	simulatedAccountsWorkspaceIDKey                                    = "simulated_accounts_workspace_id_key"
 	pipelinesMetricsPipelineIndex                                      = "pipelines_metrics_pipeline_idx"
 	pipelinesMetricsOrganizationWorkspaceTimeslotIndex                 = "pipelines_metrics_organization_workspace_timeslot_idx"
 	pipelinesMetricsOrganizationWorkspaceConnectionTargetTimeslotIndex = "pipelines_metrics_org_ws_conn_target_timeslot_idx"
@@ -379,6 +382,33 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateConsentPurpose'`,
 			simulatedAccountsTable,
 			`ALTER TABLE simulated_accounts DROP COLUMN IF EXISTS connector`,
+			`ALTER TABLE connections ADD COLUMN IF NOT EXISTS simulated_account varchar(12)`,
+			`DO $$
+				BEGIN
+					IF NOT EXISTS (
+						SELECT FROM pg_constraint
+						WHERE conrelid = 'simulated_accounts'::regclass
+							AND conname = '` + simulatedAccountsWorkspaceIDKey + `'
+					) THEN
+						ALTER TABLE simulated_accounts
+							ADD CONSTRAINT ` + simulatedAccountsWorkspaceIDKey + ` UNIQUE (workspace, id);
+					END IF;
+				END $$`,
+			`DO $$
+				BEGIN
+					IF NOT EXISTS (
+						SELECT FROM pg_constraint
+						WHERE conrelid = 'connections'::regclass
+							AND conname = '` + connectionsWorkspaceSimulatedAccountForeignKey + `'
+					) THEN
+						ALTER TABLE connections
+							ADD CONSTRAINT ` + connectionsWorkspaceSimulatedAccountForeignKey + `
+							FOREIGN KEY (workspace, simulated_account)
+							REFERENCES simulated_accounts (workspace, id)
+							ON DELETE RESTRICT;
+					END IF;
+				END $$`,
+			`CREATE INDEX IF NOT EXISTS ` + connectionsWorkspaceSimulatedAccountIndex + ` ON connections (workspace, simulated_account)`,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'CreateSimulatedAccount'`,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'DeleteSimulatedAccount'`,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateSimulatedAccount'`,
