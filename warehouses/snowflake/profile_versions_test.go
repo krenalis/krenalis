@@ -71,27 +71,30 @@ func (*profileVersionTx) Commit() error { return nil }
 // Rollback completes the test transaction.
 func (*profileVersionTx) Rollback() error { return nil }
 
-// TestFinalizePublishedProfilesDeletesBoundedBatch verifies that finalization deletes a bounded batch before reporting
-// that more obsolete profile tables remain.
-func TestFinalizePublishedProfilesDeletesBoundedBatch(t *testing.T) {
+// TestFinalizePublishedProfilesDeletesAtMostBatchLimit verifies that
+// finalization deletes no more than one batch of obsolete profile tables.
+func TestFinalizePublishedProfilesDeletesAtMostBatchLimit(t *testing.T) {
 
-	const publishedVersion = maxObsoleteProfilesTableVersions + 1
-	rows := make([][]driver.Value, maxObsoleteProfilesTableVersions+1)
-	for version := range rows {
-		rows[version] = []driver.Value{int64(version)}
+	const maxTables = 10
+	const publishedVersion = math.MaxInt32
+	rows := make([][]driver.Value, maxTables+1)
+	for i := range rows[:maxTables] {
+		rows[i] = []driver.Value{int64(maxTables - i - 1)}
 	}
+	rows[maxTables] = []driver.Value{int64(maxTables)}
 	responses := []checkReadOnlyQuery{
 		{match: `MAX("VERSION")`, cols: []string{"VERSION"}, rows: [][]driver.Value{{int64(publishedVersion)}}},
 		{match: `MAX("V"."VERSION")`, cols: []string{"VERSION"}, rows: [][]driver.Value{{int64(publishedVersion)}}},
 		{match: `SELECT EXISTS`, cols: []string{"EXISTS"}, rows: [][]driver.Value{{true}}},
 		{match: `CREATE OR REPLACE VIEW`},
 		{
-			match: "LIMIT " + strconv.Itoa(maxObsoleteProfilesTableVersions+1),
-			cols:  []string{"VERSION"},
-			rows:  rows,
+			suffix:  "LIMIT " + strconv.Itoa(maxTables),
+			cols:    []string{"VERSION"},
+			rows:    rows,
+			maxRows: maxTables,
 		},
 	}
-	for version := range maxObsoleteProfilesTableVersions {
+	for version := range maxTables {
 		responses = append(responses, checkReadOnlyQuery{
 			match: `DROP TABLE IF EXISTS "KRENALIS_PROFILES_` + strconv.Itoa(version) + `"`,
 		})
@@ -99,11 +102,8 @@ func TestFinalizePublishedProfilesDeletesBoundedBatch(t *testing.T) {
 	db, queries := newProfileVersionTestDB(t, responses)
 	defer db.Close()
 	err := (&Snowflake{db: db}).finalizePublishedProfiles(t.Context(), db, "published-operation", nil)
-	if err == nil {
-		t.Fatal("expected an error for the remaining obsolete profile table version")
-	}
-	if err.Error() != "warehouse returned too many obsolete profile table versions" {
-		t.Fatalf("unexpected cleanup error: %v", err)
+	if err != nil {
+		t.Fatalf("expected bounded cleanup to succeed, got %v", err)
 	}
 	if len(*queries) != len(responses) {
 		t.Fatalf("expected %d statements, got %d", len(responses), len(*queries))
@@ -111,13 +111,14 @@ func TestFinalizePublishedProfilesDeletesBoundedBatch(t *testing.T) {
 
 }
 
-// TestObsoleteProfilesTableVersionsResultValidation verifies that invalid
-// results are rejected and that too many results produce a bounded cleanup
-// list and an error.
-func TestObsoleteProfilesTableVersionsResultValidation(t *testing.T) {
+// TestDropObsoleteProfileTables verifies that obsolete profile table versions
+// are validated before any tables are dropped and valid versions are dropped
+// in ascending order.
+func TestDropObsoleteProfileTables(t *testing.T) {
 
-	const publishedProfilesVersion = maxObsoleteProfilesTableVersions + 10
-	limitValues := make([]driver.Value, maxObsoleteProfilesTableVersions)
+	const maxTables = 10
+	const publishedProfilesVersion = maxTables + 10
+	limitValues := make([]driver.Value, maxTables)
 	for i := range limitValues {
 		limitValues[i] = int64(i)
 	}
@@ -126,20 +127,28 @@ func TestObsoleteProfilesTableVersionsResultValidation(t *testing.T) {
 	for _, tc := range []struct {
 		name         string
 		values       []driver.Value
+		wantDropped  []int
 		wantError    string
 		wantAnyError bool
-		wantPartial  bool
 	}{
 		{name: "empty"},
-		{name: "valid", values: []driver.Value{int64(0), int64(1)}},
-		{name: "last valid", values: []driver.Value{int64(publishedProfilesVersion - 1)}},
-		{name: "duplicates", values: []driver.Value{int64(1), int64(1)}},
-		{name: "limit", values: limitValues},
+		{name: "valid", values: []driver.Value{int64(0), int64(1)}, wantDropped: []int{0, 1}},
 		{
-			name:        "surplus",
-			values:      surplusValues,
-			wantError:   "warehouse returned too many obsolete profile table versions",
-			wantPartial: true,
+			name:        "sorted before dropping",
+			values:      []driver.Value{int64(7), int64(2), int64(5)},
+			wantDropped: []int{2, 5, 7},
+		},
+		{
+			name:        "last valid",
+			values:      []driver.Value{int64(publishedProfilesVersion - 1)},
+			wantDropped: []int{publishedProfilesVersion - 1},
+		},
+		{name: "duplicates", values: []driver.Value{int64(1), int64(1)}, wantDropped: []int{1, 1}},
+		{name: "limit", values: limitValues, wantDropped: []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}},
+		{
+			name:      "surplus",
+			values:    surplusValues,
+			wantError: "warehouse returned an unexpected number of profile table versions",
 		},
 		{
 			name:      "negative",
@@ -173,29 +182,26 @@ func TestObsoleteProfilesTableVersionsResultValidation(t *testing.T) {
 			for i, value := range tc.values {
 				rows[i] = []driver.Value{value}
 			}
-			db, _ := newCheckReadOnlyTestDB(t, []checkReadOnlyQuery{{
-				match: "LIMIT " + strconv.Itoa(maxObsoleteProfilesTableVersions+1),
-				cols:  []string{"VERSION"},
-				rows:  rows,
-			}})
+			responses := []checkReadOnlyQuery{{
+				suffix: "LIMIT " + strconv.Itoa(maxTables),
+				cols:   []string{"VERSION"},
+				rows:   rows,
+			}}
+			for _, version := range tc.wantDropped {
+				responses = append(responses, checkReadOnlyQuery{
+					match: `DROP TABLE IF EXISTS "KRENALIS_PROFILES_` + strconv.Itoa(version) + `"`,
+				})
+			}
+			db, queries := newProfileVersionTestDB(t, responses)
 			defer db.Close()
-			versions, err := obsoleteProfilesTableVersions(t.Context(), db, publishedProfilesVersion)
+			err := dropObsoleteProfileTables(t.Context(), db, publishedProfilesVersion, maxTables)
 			if db.Stats().InUse != 0 {
 				t.Fatal("result rows were not closed")
 			}
+			if got, want := len(*queries), 1+len(tc.wantDropped); got != want {
+				t.Fatalf("expected %d statements, got %d", want, got)
+			}
 			if err != nil {
-				if tc.wantPartial {
-					if len(versions) != len(limitValues) {
-						t.Fatalf("expected %d cleanup versions, got %d", len(limitValues), len(versions))
-					}
-					for i, version := range versions {
-						if int64(version) != limitValues[i] {
-							t.Fatalf("row %d: unexpected version %d", i, version)
-						}
-					}
-				} else if len(versions) != 0 {
-					t.Fatalf("returned a partial cleanup list: %v", versions)
-				}
 				if tc.wantError != "" {
 					if err.Error() != tc.wantError {
 						t.Fatalf("unexpected validation error: %v", err)
@@ -208,15 +214,7 @@ func TestObsoleteProfilesTableVersionsResultValidation(t *testing.T) {
 				t.Fatal(err)
 			}
 			if tc.wantError != "" || tc.wantAnyError {
-				t.Fatalf("expected an error, got versions %v", versions)
-			}
-			if len(versions) != len(tc.values) {
-				t.Fatalf("unexpected version count %d without an error", len(versions))
-			}
-			for i, version := range versions {
-				if int64(version) != tc.values[i] {
-					t.Fatalf("row %d: unexpected version %d", i, version)
-				}
+				t.Fatal("expected an error, got nil")
 			}
 
 		})
