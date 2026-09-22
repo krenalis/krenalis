@@ -371,8 +371,8 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		return "", errors.BadRequest("pipelines with target '%s' on %s %s connections cannot specify an event type", target, role, typ)
 	}
 	if eventType != "" {
-		if len(eventType) > connectors.MaxEventTypeIdentifierLen || !types.IsValidPropertyName(eventType) {
-			return "", errors.BadRequest("value %q is not a valid event type ID", eventType)
+		if err := util.ValidateStringField("eventType", eventType, 100); err != nil {
+			return "", errors.BadRequest("%s", err)
 		}
 	}
 
@@ -397,8 +397,6 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		return "", err
 	}
 
-	// Only for destination event pipeline checks that the out schema is aligned with the event type's schema.
-	// See issue https://github.com/krenalis/krenalis/issues/2086.
 	var orderingGroup, deliveryEndpoint string
 	if eventType != "" {
 		app := this.application()
@@ -407,10 +405,15 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 			if err == connectors.ErrEventTypeNotExist {
 				return "", errors.Unprocessable(EventTypeNotExist, "connection %s does not have event type %q", c.ID, eventType)
 			}
+			if _, ok := err.(*connections.UnavailableError); ok {
+				err = errors.Unavailable("%s", err)
+			}
 			return "", err
 		}
-		orderingGroup = connectors.OrderingGroup(et)
+		orderingGroup = et.OrderingGroup
 		deliveryEndpoint = et.DeliveryEndpoint
+		// Only for destination event pipeline checks that the out schema is aligned with the event type's schema.
+		// See issue https://github.com/krenalis/krenalis/issues/2086.
 		eventTypeSchema, err := app.Schema(ctx, state.TargetEvent, eventType)
 		if err != nil {
 			return "", err
@@ -498,7 +501,8 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	var function state.TransformationFunction
 	if fn := n.Transformation.Function; fn != nil {
 		name := transformationFunctionName(n.ID)
-		fn.ID, fn.Version, err = this.core.functionProvider.Create(ctx, name, fn.Language, fn.Source)
+		organization := this.connection.Organization().ID
+		fn.ID, fn.Version, err = this.core.functionProvider.Create(ctx, organization, name, fn.Language, fn.Source)
 		if err != nil {
 			return "", err
 		}
@@ -508,7 +512,8 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	// Format settings.
 	if format != nil && pipeline.FormatSettings != nil {
 		conf := &connections.ConnectorConfig{
-			Role: this.connection.Role,
+			Role:         this.connection.Role,
+			Organization: this.connection.Organization().ID,
 		}
 		n.FormatSettings, err = this.core.connections.UpdatedSettings(ctx, format, conf, pipeline.FormatSettings)
 		if err != nil {
@@ -664,9 +669,11 @@ func (this *Connection) Delete(ctx context.Context) error {
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		// Mark the connection's functions as discontinued.
 		now := time.Now().UTC()
-		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
-			"SELECT p.transformation_id, $1\n"+
+		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, organization, discontinued_at)\n"+
+			"SELECT p.transformation_id, w.organization, $1\n"+
 			"FROM pipelines AS p\n"+
+			"INNER JOIN connections AS c ON p.connection = c.id\n"+
+			"INNER JOIN workspaces AS w ON c.workspace = w.id\n"+
 			"WHERE p.transformation_id != '' AND p.connection = $2\n"+
 			"ON CONFLICT (id) DO NOTHING", now, n.ID)
 		if err != nil {
@@ -1466,13 +1473,12 @@ func (this *Connection) PipelineTypes(ctx context.Context) ([]PipelineType, erro
 				}
 				// Destination/Application/Event.
 				for _, et := range eventTypes {
-					orderingGroup := connectors.OrderingGroup(et)
 					pipelineTypes = append(pipelineTypes, PipelineType{
 						Name:             et.Name,
 						Description:      et.Description,
 						Target:           TargetEvent,
 						EventType:        new(et.ID),
-						OrderingGroup:    new(orderingGroup),
+						OrderingGroup:    new(et.OrderingGroup),
 						DeliveryEndpoint: new(et.DeliveryEndpoint),
 					})
 				}
@@ -1514,8 +1520,9 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 	if !c.Connector().DestinationTargets.Contains(state.TargetEvent) {
 		return nil, errors.BadRequest("connection %s does not support events", c.ID)
 	}
-	if len(typ) > connectors.MaxEventTypeIdentifierLen || !types.IsValidPropertyName(typ) {
-		return nil, errors.BadRequest("value %q is not a valid event type ID", typ)
+	err := util.ValidateStringField("type", typ, 100)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
 	}
 	if event == nil {
 		return nil, errors.BadRequest("event is missing")
@@ -1553,6 +1560,8 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 				Mapping: transformation.Mapping,
 			},
 		}
+
+		organization := this.connection.Organization().ID
 
 		// provider is a temporary function provider.
 		var provider transformers.FunctionProvider
@@ -1601,13 +1610,13 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 			// the same).
 			pipeline.Transformation.InPaths = pipeline.InSchema.Properties().SortedNames()
 			pipeline.Transformation.OutPaths = pipeline.OutSchema.Properties().SortedNames()
-			provider = newTempTransformerProvider(name, pipeline.Transformation.Function.Language, pipeline.Transformation.Function.Source, this.core.functionProvider)
+			provider = newTempTransformerProvider(organization, name, pipeline.Transformation.Function.Language, pipeline.Transformation.Function.Source, this.core.functionProvider)
 		default:
 			return nil, errors.BadRequest("transformation mapping or function is required")
 		}
 
 		// Transform the attributes.
-		transformer, err := transformers.New(pipeline, provider, nil)
+		transformer, err := transformers.New(organization, pipeline, provider, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -2065,9 +2074,6 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 	}
 	// Check if the event type is supported by the connection.
 	if eventType != "" {
-		if len(eventType) > connectors.MaxEventTypeIdentifierLen || !types.IsValidPropertyName(eventType) {
-			return types.Type{}, errors.BadRequest("value %q is not a valid event type ID", eventType)
-		}
 		schema, err := this.application().Schema(ctx, state.Target(target), eventType)
 		if err != nil {
 			if err == connectors.ErrEventTypeNotExist {
@@ -2444,42 +2450,43 @@ type ConnectionToSet struct {
 // call and deletes it after the call returns. Any call to a method that is not
 // CallFunction panics.
 type tempFunctionProvider struct {
-	name     string                        // function name.
-	language state.Language                // language.
-	source   string                        // source code.
-	provider transformers.FunctionProvider // underlying function provider.
+	organization string                        // ID of the organization performing the transformation.
+	name         string                        // function name.
+	language     state.Language                // language.
+	source       string                        // source code.
+	provider     transformers.FunctionProvider // underlying function provider.
 }
 
-func newTempTransformerProvider(name string, language state.Language, source string, provider transformers.FunctionProvider) *tempFunctionProvider {
-	return &tempFunctionProvider{name, language, source, provider}
+func newTempTransformerProvider(organization, name string, language state.Language, source string, provider transformers.FunctionProvider) *tempFunctionProvider {
+	return &tempFunctionProvider{organization, name, language, source, provider}
 }
 
-func (tp *tempFunctionProvider) Call(ctx context.Context, _, _ string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
-	id, version, err := tp.provider.Create(ctx, tp.name, tp.language, tp.source)
+func (tp *tempFunctionProvider) Call(ctx context.Context, _, _, _ string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
+	id, version, err := tp.provider.Create(ctx, tp.organization, tp.name, tp.language, tp.source)
 	if err != nil {
 		return err
 	}
 	defer func() {
 		go func() {
-			err := tp.provider.Delete(context.Background(), id)
+			err := tp.provider.Delete(context.Background(), tp.organization, id)
 			if err != nil {
 				slog.Warn("core: cannot delete transformation function", "id", id, "error", err)
 			}
 		}()
 	}()
-	return tp.provider.Call(ctx, id, version, inSchema, outSchema, preserveJSON, records)
+	return tp.provider.Call(ctx, tp.organization, id, version, inSchema, outSchema, preserveJSON, records)
 }
 
 func (tp *tempFunctionProvider) Close(_ context.Context) error { panic("not supported") }
-func (tp *tempFunctionProvider) Create(_ context.Context, _ string, _ state.Language, _ string) (string, string, error) {
+func (tp *tempFunctionProvider) Create(_ context.Context, _, _ string, _ state.Language, _ string) (string, string, error) {
 	panic("not supported")
 }
-func (tp *tempFunctionProvider) Delete(_ context.Context, _ string) error {
+func (tp *tempFunctionProvider) Delete(_ context.Context, _, _ string) error {
 	panic("not supported")
 }
 func (tp *tempFunctionProvider) SupportLanguage(_ state.Language) bool {
 	panic("not supported")
 }
-func (tp *tempFunctionProvider) Update(_ context.Context, _, _ string) (string, error) {
+func (tp *tempFunctionProvider) Update(_ context.Context, _, _, _ string) (string, error) {
 	panic("not supported")
 }

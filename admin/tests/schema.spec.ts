@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Locator } from '@playwright/test';
 import { login, logout, adminURL, logValidationErrors } from './utils';
 import { ObjectType, Property } from '../src/lib/api/types/types';
 
@@ -72,6 +72,13 @@ const expectPassiveInformationTooltip = async (info) => {
 	expect(await info.evaluate((element: HTMLElement) => element.tabIndex)).toBe(-1);
 	await expect(tooltip).toHaveJSProperty('trigger', 'hover');
 	await expect(tooltip.locator(`[id="${descriptionID}"]`)).toHaveCount(1);
+};
+
+const getVerticalCenter = async (locator: Locator): Promise<number> => {
+	return locator.evaluate((element) => {
+		const bounds = element.getBoundingClientRect();
+		return bounds.top + bounds.height / 2;
+	});
 };
 
 test.beforeEach(async ({ page }) => {
@@ -370,6 +377,7 @@ test(`Keep profile schema search selection and expansion consistent`, async ({ p
 						updateRequired: false,
 						readOptional: true,
 						nullable: false,
+						displayName: '',
 						description: '',
 					},
 				],
@@ -378,6 +386,7 @@ test(`Keep profile schema search selection and expansion consistent`, async ({ p
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -558,6 +567,7 @@ test(`Keep an object expanded when reordering it`, async ({ page }) => {
 							updateRequired: false,
 							readOptional: true,
 							nullable: false,
+							displayName: '',
 							description: '',
 						},
 					],
@@ -566,6 +576,7 @@ test(`Keep an object expanded when reordering it`, async ({ page }) => {
 				updateRequired: false,
 				readOptional: true,
 				nullable: false,
+				displayName: '',
 				description: '',
 			},
 			{
@@ -577,6 +588,7 @@ test(`Keep an object expanded when reordering it`, async ({ page }) => {
 				updateRequired: false,
 				readOptional: true,
 				nullable: false,
+				displayName: '',
 				description: '',
 			},
 		);
@@ -763,10 +775,14 @@ test(`Keep an unsaved property visible while filtering`, async ({ page }) => {
 	await expect(page.locator('.schema-edit .grid__row[data-id="dummy_id"]')).toHaveClass(/grid__row--selected/);
 });
 
-test(`View property details and keep the selection when editing`, async ({ page }) => {
+test(`Keep property details aligned and selected while viewing and editing`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
 		const schema = (await response.json()) as ObjectType;
+		const email = schema.properties.find((property) => property.name === 'email');
+		if (email != null) {
+			email.displayName = 'Email address';
+		}
 		schema.properties.push({
 			name: 'address',
 			prefilled: '',
@@ -776,6 +792,7 @@ test(`View property details and keep the selection when editing`, async ({ page 
 				properties: [
 					{
 						name: 'country',
+						displayName: 'Country',
 						prefilled: '',
 						role: 'Both',
 						type: { kind: 'string', maxLength: 2 },
@@ -791,6 +808,7 @@ test(`View property details and keep the selection when editing`, async ({ page 
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -804,6 +822,7 @@ test(`View property details and keep the selection when editing`, async ({ page 
 	await expect(panel.locator('.property-details-panel__label')).toContainText([
 		'Name',
 		'Type',
+		'Display name',
 		'Description',
 		'Identifier',
 		'Primary source',
@@ -818,9 +837,17 @@ test(`View property details and keep the selection when editing`, async ({ page 
 		page.getByText('This property has no primary source, so the most recent value from any source is used.'),
 	).toBeVisible();
 	const emailCells = await emailRow.locator('.grid__cell-content').allInnerTexts();
+	await expect(emailRow.locator('.schema-property-grid__property-display-name')).toHaveText('Email address');
+	const emailRowBottom = await emailRow.evaluate((row) => row.getBoundingClientRect().bottom);
+	const emailPropertyCellBottom = await emailRow
+		.locator('.grid__cell')
+		.first()
+		.evaluate((cell) => cell.getBoundingClientRect().bottom);
+	expect(emailPropertyCellBottom).toBeLessThanOrEqual(emailRowBottom);
 	await expect(panel.locator('.property-details-panel__value')).toHaveText([
-		emailCells[0],
+		'email',
 		emailCells[1],
+		'Email address',
 		emailCells[3],
 		'Not an identifier',
 		emailCells[4],
@@ -838,7 +865,17 @@ test(`View property details and keep the selection when editing`, async ({ page 
 	await expect(panel).toHaveCount(0);
 
 	const addressRow = page.locator('.schema-grid .grid__row[data-id="address"]');
-	await addressRow.locator('xpath=preceding-sibling::*[contains(@class, "grid__row-expand")]').click();
+	await expect(addressRow.locator('.schema-property-grid__property-display-name')).toHaveCount(0);
+	expect(await addressRow.evaluate((element) => getComputedStyle(element).height)).toBe('54px');
+	const addressRowCenter = await getVerticalCenter(addressRow);
+	const addressNameCenter = await getVerticalCenter(addressRow.locator('.schema-property-grid__property-name'));
+	expect(Math.abs(addressNameCenter - addressRowCenter)).toBeLessThan(1);
+	expect(await addressRow.evaluate((element) => element.getBoundingClientRect().height)).toBe(
+		await emailRow.evaluate((element) => element.getBoundingClientRect().height),
+	);
+	const addressExpand = addressRow.locator('xpath=preceding-sibling::*[contains(@class, "grid__row-expand")]');
+	expect((await getVerticalCenter(addressExpand)) - addressRowCenter).toBeCloseTo(1);
+	await addressExpand.click();
 	await expect(addressRow).toHaveClass(/grid__row--selected/);
 	panel = page.locator('.property-details-panel');
 	await expect(
@@ -894,7 +931,9 @@ test(`View property details and keep the selection when editing`, async ({ page 
 	await expect(panel).toHaveCount(1);
 	await expect(page.locator('.schema-edit .property-panel .property-panel__title')).toHaveText('Property');
 	await expect(page.locator('.property-panel .property-form__name-input')).toHaveJSProperty('value', 'country');
+	await expect(page.locator('.property-panel .property-form__display-name')).toHaveJSProperty('value', 'Country');
 	const selectedRow = page.locator('.schema-edit .grid__row[data-id="address.country"]');
+	await expect(selectedRow.locator('.schema-property-grid__property-display-name')).toHaveText('Country');
 	await expect(selectedRow).toBeVisible();
 	await expect(selectedRow).toHaveClass(/grid__row--selected/);
 });
@@ -976,6 +1015,7 @@ test(`Keep object types unchanged after canceling the schema review`, async ({ p
 						updateRequired: false,
 						readOptional: true,
 						nullable: false,
+						displayName: '',
 						description: '',
 					},
 				],
@@ -984,6 +1024,7 @@ test(`Keep object types unchanged after canceling the schema review`, async ({ p
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -1116,6 +1157,7 @@ test(`Preserve create-required on top-level properties in the schema preview`, a
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -1157,8 +1199,11 @@ test(`Preview schema changes only when applying them`, async ({ page }) => {
 	});
 	await openProperty(page, 'email');
 	const propertyPanel = page.locator('.property-panel');
+	const displayName = propertyPanel.locator('sl-input input[name="displayName"]');
 	const description = propertyPanel.locator('sl-textarea textarea[name="description"]');
+	const originalDisplayName = await displayName.inputValue();
 	const originalDescription = await description.inputValue();
+	await displayName.fill('Email address');
 	await description.fill('Updated description');
 
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
@@ -1174,7 +1219,9 @@ test(`Preview schema changes only when applying them`, async ({ page }) => {
 		(response) => response.url().includes('/profiles/schema/preview') && response.request().method() === 'PUT',
 	);
 	await applyButton.click();
-	await metadataPreviewResponse;
+	const metadataPreview = await metadataPreviewResponse;
+	const metadataSchema = metadataPreview.request().postDataJSON().schema as ObjectType;
+	expect(metadataSchema.properties.find((property) => property.name === 'email')?.displayName).toBe('Email address');
 	const dialog = page.locator('.schema-edit__queries');
 	await expect(dialog).toHaveAttribute('label', 'Apply schema changes?');
 	await expect(dialog.locator('.schema-edit__no-query')).toHaveText(
@@ -1184,6 +1231,7 @@ test(`Preview schema changes only when applying them`, async ({ page }) => {
 	await dialog.locator('.schema-edit__queries-buttons sl-button').first().click();
 
 	await openProperty(page, 'email');
+	await displayName.fill(originalDisplayName);
 	await description.fill(originalDescription);
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
 	await propertyPanel.locator('.property-panel__save').click();
@@ -1633,6 +1681,7 @@ test(`Restore the original property name without leaving pending changes`, async
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -1691,6 +1740,7 @@ test(`Remove a renamed property without sending its stale RePath`, async ({ page
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -1732,6 +1782,7 @@ test(`Remove a replacement property without sending its stale RePath`, async ({ 
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -1778,6 +1829,7 @@ test(`Do not show modified field indicators on a replacement property`, async ({
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: 'Original description',
 		});
 		await route.fulfill({ response, json: schema });
@@ -1812,6 +1864,7 @@ test(`Rename an existing property to a deleted property's name`, async ({ page }
 				updateRequired: false,
 				readOptional: true,
 				nullable: false,
+				displayName: '',
 				description: '',
 			},
 			{
@@ -1823,6 +1876,7 @@ test(`Rename an existing property to a deleted property's name`, async ({ page }
 				updateRequired: false,
 				readOptional: true,
 				nullable: false,
+				displayName: '',
 				description: '',
 			},
 		);
@@ -1929,6 +1983,7 @@ test(`Reuse a property name more than once before applying schema changes`, asyn
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -1975,6 +2030,7 @@ test(`Remove a replacement property's RePath when renaming it`, async ({ page })
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -2020,6 +2076,7 @@ test(`Allow matching property names under different object parents`, async ({ pa
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		schema.properties.push(
@@ -2090,6 +2147,7 @@ test(`Support hasOwnProperty as a profile schema property name`, async ({ page }
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		schema.properties.push(
@@ -2140,6 +2198,7 @@ test(`Ignore inherited primary sources for prototype property names`, async ({ p
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -2160,7 +2219,7 @@ test(`Ignore inherited primary sources for prototype property names`, async ({ p
 	await expect(page.locator('.schema-edit__change-count')).toContainText('No pending changes');
 });
 
-test(`Add schema object property with sub-property`, async ({ page }) => {
+test(`Persist and clear display names on an object and its sub-property`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
 
 	await editSchema(page);
@@ -2172,6 +2231,8 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 	}, 'test_obj');
 
 	const propertyPanel = page.locator('.property-panel');
+	const displayNameInput = propertyPanel.locator('sl-input input[name="displayName"]');
+	await displayNameInput.fill('Test object');
 	await propertyPanel.locator('.property-type-selector__structure-trigger').click();
 	await propertyPanel.locator('[data-structure-option="object"]').click();
 	await expect(propertyPanel.locator('.property-type-selector__structure-trigger')).toContainText('object');
@@ -2196,6 +2257,7 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 		el.value = value;
 		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
 	}, 'test_sub_prop_1');
+	await displayNameInput.fill('Test sub-property');
 
 	await selectPropertyType(page, 'string');
 
@@ -2239,6 +2301,41 @@ test(`Add schema object property with sub-property`, async ({ page }) => {
 			hasText: 'test_sub_prop_1',
 		}),
 	).toBeAttached();
+	await expect(objectRow.locator('.schema-property-grid__property-display-name')).toHaveText('Test object');
+	const subPropertyRow = page.locator('.grid__row[data-id="test_obj.test_sub_prop_1"]');
+	await expect(subPropertyRow.locator('.schema-property-grid__property-display-name')).toHaveText(
+		'Test sub-property',
+	);
+
+	await editSchema(page);
+	await openProperty(page, 'test_obj');
+	await displayNameInput.fill('');
+	await propertyPanel.locator('.property-panel__save').click();
+	await expandAllObjects(page);
+	await openProperty(page, 'test_obj.test_sub_prop_1');
+	await displayNameInput.fill('');
+	await propertyPanel.locator('.property-panel__save').click();
+	await page.locator('.schema-edit__header-apply-button').click();
+	const alterRequestPromise = page.waitForRequest(
+		(request) => request.url().endsWith('/profiles/schema') && request.method() === 'PUT',
+	);
+	await page.locator('.schema-edit__apply-alter-button').click();
+	const alterRequest = await alterRequestPromise;
+	const clearedSchema = alterRequest.postDataJSON().schema as ObjectType;
+	const clearedObject = clearedSchema.properties.find((property) => property.name === 'test_obj');
+	expect(clearedObject).not.toHaveProperty('displayName');
+	const clearedSubProperty = (clearedObject?.type as ObjectType).properties.find(
+		(property) => property.name === 'test_sub_prop_1',
+	);
+	expect(clearedSubProperty).not.toHaveProperty('displayName');
+
+	await expect(page.locator('.schema-grid')).toBeAttached();
+	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
+	await page.reload();
+
+	await expect(objectRow.locator('.schema-property-grid__property-display-name')).toHaveCount(0);
+	await expandAllObjects(page);
+	await expect(subPropertyRow.locator('.schema-property-grid__property-display-name')).toHaveCount(0);
 });
 
 test(`Remove nested properties when changing a new object to another type`, async ({ page }) => {
@@ -2304,6 +2401,7 @@ test(`Reject descendant changes while renaming an object property`, async ({ pag
 						updateRequired: false,
 						readOptional: true,
 						nullable: false,
+						displayName: '',
 						description: '',
 					},
 				],
@@ -2312,6 +2410,7 @@ test(`Reject descendant changes while renaming an object property`, async ({ pag
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -2392,6 +2491,7 @@ test(`Reject an existing object property after removing all its sub-properties`,
 							updateRequired: false,
 							readOptional: true,
 							nullable: false,
+							displayName: '',
 							description: '',
 						},
 					],
@@ -2400,6 +2500,7 @@ test(`Reject an existing object property after removing all its sub-properties`,
 				updateRequired: false,
 				readOptional: true,
 				nullable: false,
+				displayName: '',
 				description: '',
 			},
 			{
@@ -2411,6 +2512,7 @@ test(`Reject an existing object property after removing all its sub-properties`,
 				updateRequired: false,
 				readOptional: true,
 				nullable: false,
+				displayName: '',
 				description: '',
 			},
 		);
@@ -2455,6 +2557,7 @@ test(`Count an object removal once after changing its children`, async ({ page }
 						updateRequired: false,
 						readOptional: true,
 						nullable: false,
+						displayName: '',
 						description: '',
 					},
 					{
@@ -2466,6 +2569,7 @@ test(`Count an object removal once after changing its children`, async ({ page }
 						updateRequired: false,
 						readOptional: true,
 						nullable: false,
+						displayName: '',
 						description: '',
 					},
 				],
@@ -2474,6 +2578,7 @@ test(`Count an object removal once after changing its children`, async ({ page }
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });

@@ -19,6 +19,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/collector"
@@ -27,6 +28,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/db"
 	dbpkg "github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/core/internal/dialer"
 	"github.com/krenalis/krenalis/core/internal/initdb"
 	"github.com/krenalis/krenalis/core/internal/metrics"
 	"github.com/krenalis/krenalis/core/internal/requestid"
@@ -49,7 +51,6 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/getsentry/sentry-go"
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -67,7 +68,7 @@ type Core struct {
 	state             *state.State
 	datastore         *datastore.Datastore
 	connections       *connections.Connections
-	metrics           *metrics.Collector
+	metrics           *metrics.Metrics
 	collector         *collector.Collector
 	functionProvider  transformers.FunctionProvider
 	pipelineCleaner   *pipelineCleaner
@@ -106,6 +107,7 @@ type Config struct {
 	OAuthCredentials              map[string]*OAuthCredentials
 	SentryTelemetryLevel          TelemetryLevel
 	MaxQueuedEventsPerDestination int
+	PrometheusMetricsEnabled      bool
 	DatabaseInitialization        struct {
 		// InitIfEmpty controls whether the PostgreSQL database should be
 		// initialized in case it is empty.
@@ -299,8 +301,17 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	defer func() {
 		if err != nil {
 			core.state.Close(ctx)
+			// Disable the per-organization egress counting, if it has been
+			// enabled below, once the state has stopped dispatching
+			// notifications.
+			dialer.DisableCounting()
 		}
 	}()
+
+	// Make the dialer package count the network usage of organizations.
+	if conf.PrometheusMetricsEnabled {
+		dialer.EnableCounting(core.state)
+	}
 
 	// Add the Krenalis installation ID tag to Sentry.
 	if conf.SentryTelemetryLevel != TelemetryLevelNone {
@@ -318,7 +329,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}()
 
 	// Init the datastore.
-	core.datastore, err = datastore.New(core.state, core.metrics)
+	core.datastore, err = datastore.New(core.state, &core.metrics.Pipelines)
 	if err != nil {
 		return nil, fmt.Errorf("core: cannot init the datastore: %s", err)
 	}
@@ -377,7 +388,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	for _, ws := range core.state.Workspaces() {
 		var dw warehouses.Warehouse
 		if ws.HasWarehouseMCPSettings() {
-			dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
+			dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
 		}
 		core.mcp[ws.ID] = dw
 	}
@@ -592,6 +603,9 @@ func (core *Core) Close(ctx context.Context) {
 	core.state.Close(ctx)
 	// Unregister the database connection pool metrics.
 	core.dbPoolMetrics.Unregister()
+	// Disable the per-organization egress counting, so that a new Core can
+	// enable it again in the same process.
+	dialer.DisableCounting()
 	// Close NATS connection.
 	_ = core.stream.Close()
 	// Close PostgreSQL connections.
@@ -1073,7 +1087,7 @@ func (core *Core) WaitStateVersion(ctx context.Context, version int) error {
 // DataTransformation represents transformation passed to (*Core).TransformData
 // and (*Connection).PreviewSendEvent methods.
 type DataTransformation struct {
-	Mapping  map[string]string           `json:"mapping,format:emitnull"`
+	Mapping  map[string]string           `json:"mapping"`
 	Function *DataTransformationFunction `json:"function"`
 }
 
@@ -1096,20 +1110,30 @@ const (
 )
 
 // TransformData transforms data using a mapping or a function transformation
-// and returns the transformed data. inSchema is the schema of data, and
-// outSchema is the schema of the transformed data. Only one of mapping and
-// transformation must be non-nil. purpose indicates the intent of the
-// transformation and can be "Import", "Create", or "Update".
+// and returns the transformed data. organization is the ID of the organization
+// performing the transformation. inSchema is the schema of data, and outSchema
+// is the schema of the transformed data. Only one of mapping and transformation
+// must be non-nil. purpose indicates the intent of the transformation and can
+// be "Import", "Create", or "Update".
+//
+// It returns an errors.NotFound error if the organization does not exist.
 //
 // It returns an errors.UnprocessableError error with code:
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
 //   - UnsupportedLanguage, if the transformation language is not supported.
-func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outSchema types.Type, transformation DataTransformation, purpose Purpose) (json.Value, error) {
+func (core *Core) TransformData(ctx context.Context, organization string, data []byte,
+	inSchema, outSchema types.Type, transformation DataTransformation, purpose Purpose) (json.Value, error) {
 
 	core.mustBeOpen()
 
 	// Validate the parameters.
+	if !IsValidID(organization) {
+		return nil, errors.BadRequest("identifier %q is not a valid organization identifier", organization)
+	}
+	if _, ok := core.state.Organization(organization); !ok {
+		return nil, errors.NotFound("organization %s does not exist", organization)
+	}
 	if !inSchema.Valid() {
 		return nil, errors.BadRequest("input schema is not valid")
 	}
@@ -1179,7 +1203,8 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 		// no need to list sub-property paths (as the behavior is the same).
 		pipeline.Transformation.InPaths = pipeline.InSchema.Properties().SortedNames()
 		pipeline.Transformation.OutPaths = pipeline.OutSchema.Properties().SortedNames()
-		provider = newTempTransformerProvider(name, pipeline.Transformation.Function.Language, pipeline.Transformation.Function.Source, core.functionProvider)
+		provider = newTempTransformerProvider(organization, name, pipeline.Transformation.Function.Language,
+			pipeline.Transformation.Function.Source, core.functionProvider)
 	default:
 		return nil, errors.BadRequest("mapping (or function) is required")
 	}
@@ -1190,7 +1215,7 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 	}
 
 	// Transform the attributes.
-	transformer, err := transformers.New(pipeline, provider, nil)
+	transformer, err := transformers.New(organization, pipeline, provider, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1341,7 +1366,7 @@ func (core *Core) endLiveRun(ctx context.Context, run *state.PipelineRun, reason
 	}
 
 	// Waits for the metrics to be saved.
-	core.metrics.WaitStore()
+	core.metrics.Pipelines.WaitStore()
 
 	n := state.EndPipelineRun{
 		ID:       run.ID,
@@ -1438,11 +1463,11 @@ func (core *Core) onRunPipeline(n state.RunPipeline) {
 
 // pipelineError represents a pipeline error.
 type pipelineError struct {
-	step metrics.Step
+	step metrics.PipelineStep
 	err  error
 }
 
-func newPipelineError(step metrics.Step, err error) *pipelineError {
+func newPipelineError(step metrics.PipelineStep, err error) *pipelineError {
 	return &pipelineError{step, err}
 }
 
@@ -1672,19 +1697,28 @@ func (core *Core) executeAlterProfileSchema(workspace, opID string, schema types
 		}
 		insertPrimarySources = "INSERT INTO primary_sources (source, path) VALUES " + b.String()
 	}
+	// Map the column names of the new schema to their property paths.
+	pathByColumn := map[string]string{}
+	for path, property := range schema.Properties().WalkObjects() {
+		if suitableAsIdentifier(property.Type) {
+			column := strings.ReplaceAll(path, ".", "_")
+			pathByColumn[column] = path
+		}
+	}
 	// Update the identifiers.
 	nEnd.Identifiers = make([]string, 0, len(ws.Identifiers))
 Identifiers:
 	for _, identifier := range ws.Identifiers {
+		column := strings.ReplaceAll(identifier, ".", "_")
 		for _, operation := range operations {
 			if operation.Operation == warehouses.OperationAddColumn {
 				continue
 			}
-			if path := strings.ReplaceAll(operation.Column, "_", "."); path != identifier {
+			if operation.Column != column {
 				continue
 			}
 			if operation.Operation == warehouses.OperationRenameColumn {
-				nEnd.Identifiers = append(nEnd.Identifiers, strings.ReplaceAll(operation.NewColumn, "_", "."))
+				nEnd.Identifiers = append(nEnd.Identifiers, pathByColumn[operation.NewColumn])
 			}
 			continue Identifiers
 		}
@@ -1748,12 +1782,17 @@ Identifiers:
 
 // executeIdentityResolution executes the Identity Resolution, not returning
 // until it has completed (with success or with an operation error).
-func (core *Core) executeIdentityResolution(workspace, opID string) {
+func (core *Core) executeIdentityResolution(workspaceID, opID string) {
 	ctx := core.close.ctx
-	store, ok := core.datastore.Store(workspace)
+	store, ok := core.datastore.Store(workspaceID)
 	if !ok {
 		return
 	}
+	workspace, ok := core.state.Workspace(workspaceID)
+	if !ok {
+		return
+	}
+	organizationID := workspace.Organization().ID
 	// Keep calling 'ResolveIdentities' until it (1) returns successfully,
 	// (2) returns with a *warehouses.OperationError, or (3) the context is
 	// canceled.
@@ -1762,55 +1801,100 @@ func (core *Core) executeIdentityResolution(workspace, opID string) {
 	var unknownErrorMsg string
 	for bo.Next(ctx) {
 		err := store.ResolveIdentities(ctx, opID)
-		// In case of success, go on and send an EndIdentityResolution
-		// notification.
-		if err == nil {
-			break
+		if err != nil {
+			// If the context has expired, just return.
+			if ctx.Err() != nil {
+				unknownErrorMsg = ""
+				return
+			}
+			// If the workspace no longer exists, stop the operation.
+			if errors.Is(err, datastore.ErrWorkspaceNotExist) {
+				return
+			}
+			// In case of OperationError log it, then go on and send an
+			// EndIdentityResolution notification.
+			if operationError, ok := errors.AsType[*warehouses.OperationError](err); ok {
+				slog.Error("identity resolution ended with an error", "error", operationError)
+				unknownErrorMsg = ""
+				break
+			}
+			// In case of unknown error, try again.
+			loggedError := warehouses.NewOperationError(err)
+			if msg := loggedError.Error(); unknownErrorMsg != msg {
+				slog.Warn("failed to check the identity resolution status; retrying", "error", loggedError)
+				unknownErrorMsg = msg
+			}
+			continue
 		}
-		// If the context has expired, just return.
-		if ctx.Err() != nil {
-			unknownErrorMsg = ""
-			return
-		}
-		// In case of OperationError log it, then go on and send an
-		// EndIdentityResolution notification.
-		if err2, ok := err.(*warehouses.OperationError); ok {
-			slog.Error("identity resolution ended with an error", "error", err2)
-			unknownErrorMsg = ""
-			break
-		}
-		// In case of unknown error, try again.
-		if msg := err.Error(); unknownErrorMsg != msg {
-			slog.Warn("failed to check the identity resolution status; retrying", "error", err)
-			unknownErrorMsg = msg
-		}
+		break
+	}
+	if ctx.Err() != nil {
+		return
 	}
 	if unknownErrorMsg != "" {
 		slog.Info("Identity resolution status checked successfully")
 		unknownErrorMsg = ""
 	}
-	nEnd := state.EndIdentityResolution{
-		Workspace: workspace,
+	// Count the currently visible profiles even if the Identity Resolution ended
+	// with an OperationError, because the profiles view may already have been
+	// replaced.
+	var profileCount int
+	bo = backoff.New(200)
+	bo.SetCap(5 * time.Minute)
+	for bo.Next(ctx) {
+		var err error
+		profileCount, err = store.CountProfiles(ctx)
+		if err == nil {
+			break
+		}
+		if msg := err.Error(); unknownErrorMsg != msg {
+			slog.Warn("failed to count profiles after Identity Resolution; retrying", "error", err)
+			unknownErrorMsg = msg
+		}
+	}
+	if ctx.Err() != nil {
+		return
+	}
+	if unknownErrorMsg != "" {
+		slog.Info("Profiles counted successfully after Identity Resolution")
+	}
+	n := state.EndIdentityResolution{
+		Workspace: workspaceID,
 		ID:        opID,
-		EndTime:   time.Now().UTC(),
 	}
 	bo.Reset()
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
-			query := "UPDATE workspaces SET ir_id = NULL, ir_end_time = $1 WHERE id = $2 AND ir_id = $3"
-			res, err := tx.Exec(ctx, query, nEnd.EndTime, nEnd.Workspace, nEnd.ID)
+			// Lock the workspace to serialize completion with every other operation.
+			var pending bool
+			query := `SELECT COALESCE(ir_id = $1, false)
+				FROM workspaces
+				WHERE id = $2 AND organization = $3
+				FOR UPDATE`
+			err := tx.QueryRow(ctx, query, n.ID, n.Workspace, organizationID).Scan(&pending)
+			if err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					return nil, nil
+				}
+				return nil, err
+			}
+			if !pending {
+				return nil, nil
+			}
+			n.EndTime = time.Now().UTC()
+			// Record the resulting profile count in the same transaction that completes
+			// the Identity Resolution.
+			err = core.metrics.Usage.RecordProfileObservation(ctx, tx, organizationID, n.Workspace, profileCount, n.EndTime)
 			if err != nil {
 				return nil, err
 			}
-			if res.RowsAffected() == 0 {
-				// This happens in cases where the query has been executed
-				// more than once (because an error occurred), but in fact
-				// the database has already been modified, so we don't want
-				// to send the notification more than once.
-				return nil, nil
+			query = "UPDATE workspaces SET ir_id = NULL, ir_end_time = $1 WHERE id = $2 AND organization = $3 AND ir_id = $4"
+			_, err = tx.Exec(ctx, query, n.EndTime, n.Workspace, organizationID, n.ID)
+			if err != nil {
+				return nil, err
 			}
-			return nEnd, nil
+			return n, nil
 		})
 		if err != nil {
 			if ctx.Err() != nil {
@@ -1829,7 +1913,7 @@ func (core *Core) onCreateWorkspace(n state.CreateWorkspace) {
 	ws, _ := core.state.Workspace(n.ID)
 	var dw warehouses.Warehouse
 	if ws.HasWarehouseMCPSettings() {
-		dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
+		dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
 	}
 	core.mcpMu.Lock()
 	core.mcp[ws.ID] = dw
@@ -1923,7 +2007,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 	ws, _ := core.state.Workspace(n.Workspace)
 	if ws.HasWarehouseMCPSettings() {
 		// Open the new warehouse.
-		newWarehouse = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
+		newWarehouse = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
 	}
 	core.mcpMu.Lock()
 	oldWarehouse = core.mcp[n.Workspace]
@@ -1972,10 +2056,7 @@ func (core *Core) removeMCPWarehouse(ws string) {
 //     not exist.
 func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema types.Type, primarySources map[string]string, operations []warehouses.AlterOperation) error {
 	core.mustBeOpen()
-	opID, err := uuid.NewUUID()
-	if err != nil {
-		return err
-	}
+	opID := uuid.New()
 	n := state.StartAlterProfileSchema{
 		Workspace:      ws,
 		ID:             opID.String(),
@@ -2004,7 +2085,7 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema
 		}
 		connQuery.WriteByte(')')
 	}
-	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+	err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		// Check if primary sources connections exist.
 		if len(primarySources) > 0 {
 			var count int
@@ -2016,11 +2097,10 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema
 				return nil, errors.Unprocessable(ConnectionNotExist, "a primary source does not exist")
 			}
 		}
-		// Check that there are no other operations in progress on the
-		// warehouse.
+		// Lock the workspace and check that no other warehouse operation is in progress.
 		var ongoingOp bool
-		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
-		err = tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
+		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1 FOR UPDATE`
+		err := tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return nil, errors.NotFound("workspace %s does not exist", n.Workspace)
@@ -2055,18 +2135,15 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema
 // code OperationAlreadyExecuting.
 func (core *Core) startIdentityResolution(ctx context.Context, ws string) error {
 	core.mustBeOpen()
-	opID, err := uuid.NewUUID()
-	if err != nil {
-		return err
-	}
+	opID := uuid.New()
 	n := state.StartIdentityResolution{
 		Workspace: ws,
 		ID:        opID.String(),
 		StartTime: time.Now().UTC(),
 	}
-	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+	err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		var ongoingOp bool
-		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1`
+		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1 FOR UPDATE`
 		err := tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)
 		if err != nil {
 			return nil, err

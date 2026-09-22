@@ -19,8 +19,7 @@ import (
 	"io"
 	"os"
 	"strings"
-
-	"github.com/google/uuid"
+	"uuid"
 )
 
 // CalculateFileDebugID calculates the Sentry's Debug ID, deterministically,
@@ -156,7 +155,7 @@ func calculateFileDebugIDFromContent(content []byte) string {
 	checksum := md5.Sum(content)
 	// Create an UUID, representing the Debug ID, corresponding to the
 	// 128 bits of the MD5 checksum.
-	debugID, _ := uuid.FromBytes(checksum[:])
+	debugID := uuid.UUID(checksum)
 	return debugID.String()
 }
 

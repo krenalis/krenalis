@@ -153,7 +153,7 @@ func Test_Merge(t *testing.T) {
 	}
 
 	// Open the data warehouse.
-	dw := warehouses.Registered("PostgreSQL").New(newTestSettingsLoader(settings))
+	dw := warehouses.Registered("PostgreSQL").New(newTestSettingsLoader(settings), nil)
 	defer dw.Close()
 
 	pool, _, err := dw.(*PostgreSQL).connectionPool(context.Background(), false)
@@ -585,7 +585,7 @@ func newTestPostgreSQLWarehouse(t *testing.T) (*PostgreSQL, *pgxpool.Pool) {
 		t.Fatal(err)
 	}
 
-	dw := warehouses.Registered("PostgreSQL").New(newTestSettingsLoader(settings))
+	dw := warehouses.Registered("PostgreSQL").New(newTestSettingsLoader(settings), nil)
 	t.Cleanup(func() {
 		if err := dw.Close(); err != nil {
 			t.Error(err)

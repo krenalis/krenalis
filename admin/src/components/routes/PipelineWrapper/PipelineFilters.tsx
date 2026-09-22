@@ -227,7 +227,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		const values = filterConditionValues(condition);
 		condition.operator = operator;
 		if (isUnaryOperator(operator)) {
-			condition.values = [];
+			delete condition.values;
 		} else if (isBetweenOperator(operator)) {
 			condition.values = values.slice(0, 2);
 			while (condition.values.length < 2) {

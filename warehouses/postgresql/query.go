@@ -75,16 +75,16 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 		b.WriteString(whereExpr)
 	}
 
-	if query.OrderBy != nil {
+	if len(query.OrderBy) > 0 {
 		b.WriteString(" ORDER BY ")
 		for i, column := range query.OrderBy {
 			if i > 0 {
 				b.WriteString(", ")
 			}
 			b.WriteString(quoteIdent(column.Name))
-		}
-		if query.OrderDesc {
-			b.WriteString(" DESC")
+			if query.OrderDesc {
+				b.WriteString(" DESC")
+			}
 		}
 	}
 

@@ -68,10 +68,10 @@ test(`Add "Import customers" pipeline on Dummy`, async ({ page }) => {
 		"inSchema": {
 			"kind": "object",
 			"properties": [
-				{ "name": "email", "type": { "kind": "string" }, "description": "Email", "nullable": true },
-				{ "name": "dummyId", "type": { "kind": "string" }, "description": "Dummy ID" },
-				{ "name": "firstName", "type": { "kind": "string" }, "description": "First name", "nullable": true },
-				{ "name": "lastName", "type": { "kind": "string" }, "description": "Last name", "nullable": true }
+				{ "name": "email", "type": { "kind": "string" }, "displayName": "Email", "description": "", "nullable": true },
+				{ "name": "dummyId", "type": { "kind": "string" }, "displayName": "Dummy ID", "description": "" },
+				{ "name": "firstName", "type": { "kind": "string" }, "displayName": "First name", "description": "", "nullable": true },
+				{ "name": "lastName", "type": { "kind": "string" }, "displayName": "Last name", "description": "", "nullable": true }
 			]
 		},
 		"outSchema": {
@@ -247,7 +247,8 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string"
 					},
 					"nullable": true,
-					"description": "First name"
+					"displayName": "First name",
+					"description": ""
 				},
 				{
 					"name": "lastName",
@@ -255,7 +256,8 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string"
 					},
 					"nullable": true,
-					"description": "Last name"
+					"displayName": "Last name",
+					"description": ""
 				},
 				{
 					"name": "email",
@@ -263,7 +265,8 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string"
 					},
 					"nullable": true,
-					"description": "Email"
+					"displayName": "Email",
+					"description": ""
 				}
 			]
 		},
@@ -345,7 +348,8 @@ test(`Add "Send Add to Cart" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string"
 					},
 					"createRequired": true,
-					"description": "Email"
+					"displayName": "Email",
+					"description": ""
 				}
 			]
 		},
@@ -782,6 +786,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 						"type": {
 							"kind": "string"
 						},
+						"displayName": " email",
 						"description": ""
 					},
 					{
@@ -789,6 +794,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 						"type": {
 							"kind": "string"
 						},
+						"displayName": "first_name",
 						"description": ""
 					},
 					{
@@ -796,6 +802,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 						"type": {
 							"kind": "string"
 						},
+						"displayName": " last_name",
 						"description": ""
 					}
 				]

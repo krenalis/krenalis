@@ -530,6 +530,46 @@ func (organization organization) Update(_ http.ResponseWriter, r *http.Request) 
 	return nil, err
 }
 
+// UsageMetricsPerDate returns daily profile and event usage metrics for a date
+// interval.
+func (organization organization) UsageMetricsPerDate(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	// Authenticate and rate-limit the request.
+	org, ws, err := organization.admitWorkspaceOptionalRequest(r, x1)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse start.
+	start, err := time.Parse(time.DateOnly, r.PathValue("start"))
+	if err != nil {
+		return nil, errors.NotFound("start is not valid")
+	}
+
+	// Parse end.
+	end, err := time.Parse(time.DateOnly, r.PathValue("end"))
+	if err != nil {
+		return nil, errors.NotFound("end is not valid")
+	}
+
+	// Set workspace scope.
+	var workspaceScope string
+	if ws != nil {
+		workspaceScope = ws.ID
+	}
+
+	// Parse workspace selection.
+	var workspaces []string
+	if values, ok := r.URL.Query()["workspaces"]; ok {
+		workspaces = splitQueryParameters(values)
+		if workspaces == nil {
+			return nil, errors.BadRequest("workspaces must not be empty when provided")
+		}
+	}
+
+	return org.UsageMetricsPerDate(r.Context(), start, end, workspaceScope, workspaces)
+}
+
 // Workspace returns the current workspace.
 func (organization organization) Workspace(_ http.ResponseWriter, r *http.Request) (any, error) {
 	workspace, err := organization.admitWorkspaceRequest(r, x1)

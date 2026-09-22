@@ -2,7 +2,11 @@ module github.com/krenalis/krenalis
 
 // Keep in sync with the version within ".github/workflows/*.yml".
 // Keep in sync with the version within "Dockerfile".
-go 1.26
+go 1.27
+
+// Use our Snowflake driver fork. See https://github.com/krenalis/krenalis/issues/2368.
+// Keep in sync with the version within "test/krenalistester/build_run_krenalis.go".
+replace github.com/snowflakedb/gosnowflake/v2 => github.com/krenalis/gosnowflake/v2 v2.1.0-patched
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.47.0
@@ -24,7 +28,6 @@ require (
 	github.com/go-sql-driver/mysql v1.10.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/go-cmp v0.7.0
-	github.com/google/uuid v1.6.0
 	github.com/gorilla/securecookie v1.1.2
 	github.com/itchyny/timefmt-go v0.1.8
 	github.com/jackc/pgx/v5 v5.10.0
@@ -37,6 +40,7 @@ require (
 	github.com/oschwald/maxminddb-golang/v2 v2.4.1
 	github.com/pkg/sftp v1.13.11
 	github.com/prometheus/client_golang v1.24.0
+	github.com/prometheus/client_model v0.6.2
 	github.com/rabbitmq/amqp091-go v1.11.0
 	github.com/relvacode/iso8601 v1.8.0
 	github.com/snowflakedb/gosnowflake/v2 v2.1.0
@@ -46,9 +50,9 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.43.0
 	github.com/twmb/franz-go v1.21.0
 	github.com/xuri/excelize/v2 v2.11.0
-	golang.org/x/crypto v0.54.0
-	golang.org/x/net v0.57.0
-	golang.org/x/text v0.40.0
+	golang.org/x/crypto v0.57.0
+	golang.org/x/net v0.59.0
+	golang.org/x/text v0.42.0
 )
 
 require (
@@ -106,6 +110,7 @@ require (
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/flatbuffers v25.12.19+incompatible // indirect
 	github.com/google/jsonschema-go v0.4.2 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
@@ -133,7 +138,6 @@ require (
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
-	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.70.0 // indirect
 	github.com/prometheus/procfs v0.21.1 // indirect
 	github.com/richardlehane/mscfb v1.0.7 // indirect
@@ -163,9 +167,9 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/term v0.45.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/term v0.46.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

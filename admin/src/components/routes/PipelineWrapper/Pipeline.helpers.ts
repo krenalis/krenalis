@@ -1,5 +1,6 @@
 import { getHierarchicalPaths, TransformedPipeline, FlatSchema } from '../../../lib/core/pipeline';
 import TransformedConnection from '../../../lib/core/connection';
+import { Property } from '../../../lib/api/types/types';
 import { SampleIdentifiers } from './Pipeline.types';
 
 type PipelineObjectLabelMode = 'compact' | 'full' | 'plural';
@@ -148,6 +149,20 @@ const checkIfPropertyExists = (property: string, schema: FlatSchema, toHide?: st
 	return '';
 };
 
+const propertyAnnotationSeparator = ' – ';
+
+// propertyAnnotation returns the display name and the description of a
+// property, combined in the text that accompanies its name.
+const propertyAnnotation = (property: Property): string => {
+	if (property.description === '') {
+		return property.displayName;
+	}
+	if (property.displayName === '') {
+		return property.description;
+	}
+	return `${property.displayName}${propertyAnnotationSeparator}${property.description}`;
+};
+
 const firstNameIdentifiers = [
 	'firstname',
 	'Firstname',
@@ -210,4 +225,6 @@ export {
 	checkIfPropertyExists,
 	getSampleIdentifiers,
 	pipelineObjectLabels,
+	propertyAnnotation,
+	propertyAnnotationSeparator,
 };
