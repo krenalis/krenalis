@@ -712,6 +712,10 @@ sl-button.pipeline__filters-remove-rule[variant='text']::part(label) {
 	color: var(--text-light);
 }
 
+.property-annotation__tooltip {
+	--max-width: min(400px, calc(100vw - 32px));
+}
+
 .pipeline__transformation-output-property--map > sl-input {
 	display: inline-block;
 	max-width: 150px;

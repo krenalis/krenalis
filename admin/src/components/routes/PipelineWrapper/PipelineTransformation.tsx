@@ -656,7 +656,7 @@ const PropertyAnnotation = ({ className, property }: PropertyAnnotationProps) =>
 	}
 
 	return (
-		<SlTooltip content={annotation} disabled={!isOverflowing} hoist={true}>
+		<SlTooltip className='property-annotation__tooltip' content={annotation} disabled={!isOverflowing} hoist={true}>
 			<div className={className} ref={annotationRef}>
 				{displayName !== '' && <span className='property-annotation__display-name'>{displayName}</span>}
 				{displayName !== '' && description !== '' && propertyAnnotationSeparator}
