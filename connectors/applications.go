@@ -231,6 +231,9 @@ func (r FailureReason) String() string {
 	panic(fmt.Errorf("unexpected FailureReason %d", r))
 }
 
+// MaxOrderingGroupLen is the maximum length of an event ordering group.
+const MaxOrderingGroupLen = 16
+
 // EventType represents a type of event that can be sent to an application.
 type EventType struct {
 	// ID is the identifier of the event type. It must be unique for every event
@@ -244,6 +247,12 @@ type EventType struct {
 
 	// Description is the description of the event type to be displayed.
 	Description string
+
+	// OrderingGroup defines the per-user delivery order shared by event types.
+	// Events whose types have the same ordering group are delivered in their
+	// original order for each user. It must be non-empty, follow the syntax of
+	// a property name, and cannot be longer than MaxOrderingGroupLen characters.
+	OrderingGroup string
 
 	// DefaultFilter is the default filter to use for pipelines.
 	DefaultFilter string
@@ -431,7 +440,8 @@ type EventSender interface {
 	// ErrEventTypeNotExist error.
 	EventTypeSchema(ctx context.Context, eventType string) (types.Type, error)
 
-	// EventTypes returns the event types of the connector's instance.
+	// EventTypes returns the event types of the connector's instance. The caller
+	// must not modify the returned slice or event types.
 	EventTypes(ctx context.Context) ([]*EventType, error)
 
 	// PreviewSendEvents builds and returns the HTTP request that would be used

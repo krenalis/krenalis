@@ -189,6 +189,7 @@ CREATE TABLE pipelines (
     connection varchar(12) NOT NULL REFERENCES connections ON DELETE CASCADE,
     target pipeline_target NOT NULL,
     event_type varchar(100) NOT NULL,
+    ordering_group varchar(16) NOT NULL,
     name varchar(60) NOT NULL DEFAULT '',
     enabled boolean NOT NULL DEFAULT FALSE,
     schedule_start smallint NOT NULL DEFAULT 0 CHECK (schedule_start >= 0 AND schedule_start < 1440),

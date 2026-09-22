@@ -383,6 +383,7 @@ func (this *Workspace) Connection(ctx context.Context, id string) (*Connection, 
 				ID:            et.ID,
 				Name:          et.Name,
 				Description:   et.Description,
+				OrderingGroup: et.OrderingGroup,
 				DefaultFilter: et.DefaultFilter,
 			}
 		}

@@ -110,8 +110,9 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"POST   /organizations":                               api.CreateOrganization,       /* Needs platform management API key */
 		"POST   /pipelines":                                   connection.CreatePipeline,
 		"POST   /pipelines/{id}/runs":                         pipeline.Run,
-		"POST   /pipelines/{id}/ui-event":                     pipeline.ServeUI,       /* Admin console only */
-		"POST   /sentry/errors":                               s.forwardSentryError,   /* Admin console only */
+		"POST   /pipelines/{id}/ui-event":                     pipeline.ServeUI,     /* Admin console only */
+		"POST   /sentry/errors":                               s.forwardSentryError, /* Admin console only */
+		"POST   /signup":                                      api.Signup,
 		"POST   /transformations":                             api.TransformData,      /* Admin console only */
 		"POST   /ui":                                          workspace.ServeUI,      /* Admin console only */
 		"POST   /ui-event":                                    workspace.ServeUI,      /* Admin console only */
