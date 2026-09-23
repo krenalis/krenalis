@@ -155,8 +155,12 @@ func (app *Application) EventType(ctx context.Context, id string) (*EventType, e
 	return et, nil
 }
 
-// EventTypes returns the application's event types. The returned slice and
-// event types are owned by the connector and must not be modified.
+// EventTypes returns the application's event types.
+//
+// It returns the event types obtained directly from the connector, after
+// validation. The caller must not modify the returned slice or any of the event
+// types it contains.
+//
 // If the connector returns an error, it returns an *UnavailableError error.
 // It panics if the application does not support the event target.
 func (app *Application) EventTypes(ctx context.Context) ([]*EventType, error) {
