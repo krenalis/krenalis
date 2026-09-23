@@ -233,6 +233,26 @@ func Test_Merge_Query(t *testing.T) {
 
 }
 
+// Test_ColumnType_RejectsEnumValueWithInvalidUTF8 checks that an Enum8/Enum16
+// value that is not valid UTF-8, even though the type is, makes columnType
+// report the type as unsupported instead of panicking.
+func Test_ColumnType_RejectsEnumValueWithInvalidUTF8(t *testing.T) {
+	typ, _ := columnType(`Enum8('a\é' = 1, 'c' = 2)`)
+	if typ.Valid() {
+		t.Fatalf("expected an invalid type, got %s", typ)
+	}
+}
+
+// Test_ColumnType_RejectsEnumValueWithNULByte checks that an Enum8/Enum16
+// value containing a NUL byte makes columnType report the type as
+// unsupported instead of panicking.
+func Test_ColumnType_RejectsEnumValueWithNULByte(t *testing.T) {
+	typ, _ := columnType("Enum8('a\x00b' = 1, 'c' = 2)")
+	if typ.Valid() {
+		t.Fatalf("expected an invalid type, got %s", typ)
+	}
+}
+
 type testSettingsStore struct {
 	settings json.Value
 }

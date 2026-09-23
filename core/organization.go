@@ -341,11 +341,8 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 	this.core.mustBeOpen()
 
 	// Validate email.
-	if err := util.ValidateStringField("email", email, 255); err != nil {
+	if err := validateMemberEmail(email); err != nil {
 		return "", errors.BadRequest("%s", err)
-	}
-	if !emailRegExp.MatchString(email) {
-		return "", errors.BadRequest("email is not a valid email address")
 	}
 	// Validate password.
 	if password == "" {
@@ -925,8 +922,7 @@ const maxEntryDays = 60_000 // maximum product between the number of entries in 
 // If workspace is not empty, the request is restricted to that workspace.
 //
 // The dates are truncated to UTC days, must be no earlier than 1970-01-01 and
-// no later than 2262-04-10, and the day of the start date must be before the
-// day of the end date.
+// no later than 2262-04-10, and the start day must be before the end day.
 //
 // Exactly one of workspaces, connections, and pipelines in selection must be
 // non-nil, with between 1 and 1,000 entries.
@@ -936,6 +932,9 @@ const maxEntryDays = 60_000 // maximum product between the number of entries in 
 //
 // The number of entries in the selection multiplied by the number of days in
 // the date range cannot exceed 60,000.
+//
+// It returns an errors.UnprocessableError with code MetricResultTooLarge when
+// an aggregated count cannot be represented by the result type.
 func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end time.Time, workspace string, selection MetricSelection) (Metrics, error) {
 
 	this.core.mustBeOpen()
@@ -976,13 +975,17 @@ func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end
 	}
 
 	// Retrieve metrics for the filtered selection.
-	m, err := this.core.metrics.MetricsPerDate(ctx, start, end, metrics.Selection{
+	m, err := this.core.metrics.Pipelines.MetricsPerDate(ctx, start, end, metrics.PipelineSelection{
 		Workspaces:  selection.Workspaces,
 		Connections: selection.Connections,
 		Pipelines:   selection.Pipelines,
-		Target:      metrics.Target(selection.Target),
+		Target:      metrics.PipelineTarget(selection.Target),
 	})
 	if err != nil {
+		if errors.Is(err, metrics.ErrMetricResultTooLarge) {
+			return Metrics{}, errors.Unprocessable(MetricResultTooLarge,
+				"requested pipeline metric total exceeds the supported range; request metrics with a finer time unit or select fewer workspaces, connections, or pipelines")
+		}
 		return Metrics{}, err
 	}
 
@@ -1011,6 +1014,9 @@ func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end
 //
 // Target is required when selecting workspaces or connections and optional
 // when selecting pipelines.
+//
+// It returns an errors.UnprocessableError with code MetricResultTooLarge when
+// an aggregated count cannot be represented by the result type.
 func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number int, unit MetricUnit, workspace string, selection MetricSelection) (Metrics, error) {
 
 	this.core.mustBeOpen()
@@ -1053,13 +1059,17 @@ func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number
 	}
 
 	// Retrieve metrics for the filtered selection.
-	m, err := this.core.metrics.MetricsPerTimeUnit(ctx, number, resolution, metrics.Selection{
+	m, err := this.core.metrics.Pipelines.MetricsPerTimeUnit(ctx, number, resolution, metrics.PipelineSelection{
 		Workspaces:  selection.Workspaces,
 		Connections: selection.Connections,
 		Pipelines:   selection.Pipelines,
-		Target:      metrics.Target(selection.Target),
+		Target:      metrics.PipelineTarget(selection.Target),
 	})
 	if err != nil {
+		if errors.Is(err, metrics.ErrMetricResultTooLarge) {
+			return Metrics{}, errors.Unprocessable(MetricResultTooLarge,
+				"requested pipeline metric total exceeds the supported range; request metrics with a finer time unit or select fewer workspaces, connections, or pipelines")
+		}
 		return Metrics{}, err
 	}
 
@@ -1131,7 +1141,7 @@ func (this *Organization) SetStatus(ctx context.Context, enabled bool) error {
 	}
 
 	// Waits for the metrics to be saved.
-	this.core.metrics.WaitStore()
+	this.core.metrics.Pipelines.WaitStore()
 
 	n := state.SetOrganizationStatus{
 		ID:      this.organization.ID,
@@ -1641,6 +1651,12 @@ func sendMail(mail *emailToSend, config *SMTPConfig) error {
 		}
 	}
 	return err
+}
+
+// ValidateMemberEmail validates a member's email address and returns an error
+// if it is not valid.
+func ValidateMemberEmail(email string) error {
+	return validateMemberEmail(email)
 }
 
 // validateMemberEmail validates a member's email and returns an error if it is

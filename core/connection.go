@@ -68,6 +68,7 @@ type EventType struct {
 	ID            string `json:"id"`
 	Name          string `json:"name"`
 	Description   string `json:"description"`
+	OrderingGroup string `json:"orderingGroup"`
 	DefaultFilter string `json:"defaultFilter"`
 }
 
@@ -103,10 +104,11 @@ var dummyGroupsSchema = types.Object([]types.Property{
 
 // PipelineType represents a pipeline type.
 type PipelineType struct {
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Target      Target  `json:"target"`
-	EventType   *string `json:"eventType"`
+	Name          string  `json:"name"`
+	Description   string  `json:"description"`
+	Target        Target  `json:"target"`
+	EventType     *string `json:"eventType"`
+	OrderingGroup *string `json:"orderingGroup"`
 }
 
 // AbsolutePath returns the absolute representation of the given path, based
@@ -397,10 +399,22 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		return "", err
 	}
 
-	// Only for destination event pipeline checks that the out schema is aligned with the event type's schema.
-	// See issue https://github.com/krenalis/krenalis/issues/2086.
+	var orderingGroup string
 	if eventType != "" {
 		app := this.application()
+		et, err := app.EventType(ctx, eventType)
+		if err != nil {
+			if err == connectors.ErrEventTypeNotExist {
+				return "", errors.Unprocessable(EventTypeNotExist, "connection %s does not have event type %q", c.ID, eventType)
+			}
+			if _, ok := err.(*connections.UnavailableError); ok {
+				err = errors.Unavailable("%s", err)
+			}
+			return "", err
+		}
+		orderingGroup = et.OrderingGroup
+		// Only for destination event pipeline checks that the out schema is aligned with the event type's schema.
+		// See issue https://github.com/krenalis/krenalis/issues/2086.
 		eventTypeSchema, err := app.Schema(ctx, state.TargetEvent, eventType)
 		if err != nil {
 			return "", err
@@ -426,6 +440,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		Name:               pipeline.Name,
 		Enabled:            pipeline.Enabled,
 		EventType:          eventType,
+		OrderingGroup:      orderingGroup,
 		InSchema:           inSchema,
 		OutSchema:          pipeline.OutSchema,
 		RequiredConsents:   toStateRequiredConsents(pipeline.RequiredConsents),
@@ -573,7 +588,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 					return nil, err
 				}
 			}
-			query := "INSERT INTO pipelines (id, connection, target, event_type, name, enabled,\n" +
+			query := "INSERT INTO pipelines (id, connection, target, event_type, ordering_group, name, enabled,\n" +
 				"schedule_start, schedule_period, in_schema, out_schema, filter, required_consents,\n" +
 				"required_consents_operator, transformation_mapping, transformation_id, transformation_version,\n" +
 				"transformation_language, transformation_source, transformation_preserve_json, transformation_in_paths,\n" +
@@ -581,9 +596,9 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 				"export_mode, matching_in, matching_out, update_on_duplicates, table_name, table_key, \n" +
 				"user_id_column, updated_at_column, updated_at_format, incremental)\n" +
 				"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,\n" +
-				"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38)"
+				"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39)"
 			_, err = tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
-				n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
+				n.OrderingGroup, n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
 				n.Filter, n.RequiredConsents.Purposes, n.RequiredConsents.Operator, mapping, function.ID, function.Version,
 				function.Language, function.Source, function.PreserveJSON, n.Transformation.InPaths, n.Transformation.OutPaths,
 				n.Query, formatCode, n.Path, n.Sheet, n.Compression, n.OrderBy, n.FormatSettings, n.ExportMode, n.Matching.In,
@@ -1480,10 +1495,11 @@ func (this *Connection) PipelineTypes(ctx context.Context) ([]PipelineType, erro
 				// Destination/Application/Event.
 				for _, et := range eventTypes {
 					pipelineTypes = append(pipelineTypes, PipelineType{
-						Name:        et.Name,
-						Description: et.Description,
-						Target:      TargetEvent,
-						EventType:   new(et.ID),
+						Name:          et.Name,
+						Description:   et.Description,
+						Target:        TargetEvent,
+						EventType:     new(et.ID),
+						OrderingGroup: new(et.OrderingGroup),
 					})
 				}
 			}
@@ -1573,7 +1589,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		// Validate the mapping and the transformation.
 		switch {
 		case transformation.Mapping != nil:
-			mapping, err := mappings.New(transformation.Mapping, schemas.Event, outSchema, false, nil)
+			mapping, err := mappings.New(transformation.Mapping, schemas.Event, outSchema, false)
 			if err != nil {
 				return nil, errors.BadRequest("mapping is not valid: %s", err)
 			}
@@ -1620,7 +1636,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		}
 
 		// Transform the attributes.
-		transformer, err := transformers.New(organization, pipeline, provider, nil)
+		transformer, err := transformers.New(organization, pipeline, provider)
 		if err != nil {
 			return nil, err
 		}

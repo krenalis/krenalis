@@ -192,6 +192,7 @@ CREATE TABLE pipelines (
     connection varchar(12) NOT NULL REFERENCES connections ON DELETE CASCADE,
     target pipeline_target NOT NULL,
     event_type varchar(100) NOT NULL,
+    ordering_group varchar(16) NOT NULL,
     name varchar(60) NOT NULL DEFAULT '',
     enabled boolean NOT NULL DEFAULT FALSE,
     schedule_start smallint NOT NULL DEFAULT 0 CHECK (schedule_start >= 0 AND schedule_start < 1440),
@@ -337,6 +338,20 @@ CREATE TABLE pipelines_metrics (
     failed_8 integer NOT NULL, -- Finalize
     PRIMARY KEY (pipeline, timeslot)
 );
+
+CREATE TABLE usage_metrics (
+    organization varchar(12) NOT NULL REFERENCES organizations ON DELETE CASCADE,
+    workspace varchar(12) NOT NULL,
+    day date NOT NULL,
+    profiles bigint NOT NULL DEFAULT 0,
+    profile_seconds bigint NOT NULL DEFAULT 0,
+    observed_at time without time zone,
+    events bigint NOT NULL DEFAULT 0,
+    PRIMARY KEY (organization, workspace, day)
+);
+
+CREATE INDEX usage_metrics_organization_day_idx
+    ON usage_metrics (organization, day);
 
 CREATE INDEX pipelines_metrics_workspace_timeslot_idx ON pipelines_metrics (workspace, timeslot);
 CREATE INDEX pipelines_metrics_connection_timeslot_idx ON pipelines_metrics (connection, timeslot);

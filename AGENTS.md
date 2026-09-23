@@ -92,6 +92,8 @@ if err := f(); err != nil {
 }
 ```
 
+Calls to `(*sql.Row).Scan` and `(*sql.Rows).Scan` are an exception. Place them in the initializer of the error check to follow the Go convention for scanning SQL results.
+
 Perform any classification of the returned error, including `errors.Is` checks for sentinel errors and `errors.AsType` checks for typed errors, inside that non-nil branch rather than using classification as a substitute for the `err != nil` check. In tests that expect a particular error, enter the `err != nil` branch, verify the error there, and fail after the branch when the call returned nil.
 
 Never attach an `else` block to an `if err != nil { ... }` error check. Restructure the control flow using a more readable alternative; this may be a `switch`, but need not be one.
@@ -140,6 +142,8 @@ return n, nil
 ```
 
 ## Tests
+
+Test failure messages must use the form `expected ..., got ...`.
 
 In tests, use `t.Context()` for operations whose lifetime follows the test. Pass `t.Context()` directly instead of first assigning it to a local variable when its scope of use is small; name it only when it spans a broader portion of the test or must be used to derive another context. When a test helper already accepts `*testing.T`, obtain that context inside the helper instead of also passing a `context.Context`. Accept a separate context only when callers intentionally need to supply a context with different values, deadline, cancellation state, or lifetime.
 
@@ -242,6 +246,8 @@ Every exported package-level type, function, variable, and constant, as well as 
 
 Keep comments compact: one precise sentence beats three loose ones, and do not restate what the code already says.
 
+Limit each line of declaration comments starting in column 1 to 80 characters, including comment markers and spaces; comments on the same line as code are exempt.
+
 When a variable or constant belongs to a parenthesized `var` or `const` declaration whose other members do not have individual declaration comments, do not add an individual comment only to that member. Preserve the established comment style consistently throughout the group.
 
 An unexported package-level constant or constant group in a `_test.go` file may omit its declaration comment when its identifiers and surrounding context already make both its fixture role and meaning clear. Do not add a comment that merely labels such constants as test fixtures or states that tests use them. Keep the comment when it conveys non-obvious semantics, constraints, relationships, or reasons for particular values.
@@ -257,6 +263,20 @@ Never begin an error message with the article `the`.
 ## Correctness
 
 Anything arriving from outside — request bodies, settings, API values, connector responses — is validated and bounded before use, unless there is a stated reason not to.
+
+# Admin conventions
+
+Apply these conventions to the TypeScript and React code under `admin/`.
+
+- In every boolean context, use a boolean expression. Do not rely on the truthiness of strings, numbers, objects, or other non-boolean values. Write checks such as `name !== ''`, `items.length > 0`, and `value != null` instead of `name`, `items.length`, and `value`. In JSX expression containers, however, prefer idiomatic React patterns when they are clearer and conventional, such as `{condition && <Component />}`, rather than forcing an explicit boolean comparison solely to satisfy this rule.
+- Name boolean values with a predicate prefix such as `is`, `has`, `can`, or `should` when that makes their meaning clearer.
+- Use `===` and `!==` for value comparisons. The intentional exception is `value == null` or `value != null` when a single check must cover both `null` and `undefined`.
+- Use an `interface` for object shapes and a `type` for unions, tuples, and aliases that do not describe object shapes.
+- Prefer the existing domain and API types stored in `admin/src/lib/` over recreating their shapes locally.
+- Use PascalCase for components and types, and camelCase for functions, variables, and ordinary const values. Use uppercase snake case for module-level constants representing fixed keys, limits, delays, and similar configuration values.
+- Write function components and custom hooks as arrow functions assigned to `const`.
+- Type the component's props with an interface named `<ComponentName>Props` immediately before the component, unless the type is shared from another module. Destructure and type the props in the component's parameter list; do not use `React.FC`.
+- Keep component-specific styles in a separate `.css` file in the same directory as the component, and import that stylesheet from the component file. Follow the existing BEM-style class names: a block such as `schema-grid`, elements such as `schema-grid__search`, and modifiers such as `schema-grid--loading`.
 
 # Reuse
 
@@ -385,7 +405,3 @@ A method of `core` that can return an `errors.UnprocessableError` documents it a
 ## Core entry guards
 
 Every exported method in `core` that is called by `cmd` must execute `<receiver>.core.mustBeOpen()` as its first statement. If the method body contains any blank line, leave a blank line immediately after the opening brace and another immediately after the guard statement.
-
-# Before finishing
-
-Run `go build ./...`, `go vet ./...`, and `gofmt -l` over what you touched. Add tests where the package already has them. Report plainly what passed, what failed, and what you did not run.

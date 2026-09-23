@@ -13,9 +13,11 @@ import (
 	"github.com/krenalis/krenalis/core/internal/consents"
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/metrics"
+	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/streams"
 	"github.com/krenalis/krenalis/core/internal/transformers"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/prometheus"
 )
 
@@ -26,8 +28,8 @@ var maxQueuedEventIdentityTime = 200 * time.Millisecond
 type identityWriter struct {
 	pipeline         string // pipeline identifier
 	writer           *datastore.EventIdentityWriter
-	metrics          *metrics.Collector
-	mu               sync.Mutex                // for transformer, requiredConsents, identities, and timer
+	metrics          *metrics.Pipelines
+	mu               sync.Mutex                // for transformer, requiredConsents, events, and timer
 	transformer      *transformers.Transformer // protected by mu
 	requiredConsents state.RequiredConsents    // protected by mu
 	events           []streams.Event           // protected by mu
@@ -37,7 +39,7 @@ type identityWriter struct {
 // newIdentityWriter returns a new identityWriter for the provided pipeline.
 //
 // It must be called on a frozen state.
-func newIdentityWriter(ds *datastore.Datastore, pipeline *state.Pipeline, provider transformers.FunctionProvider, metrics *metrics.Collector) *identityWriter {
+func newIdentityWriter(ds *datastore.Datastore, pipeline *state.Pipeline, provider transformers.FunctionProvider, metrics *metrics.Pipelines) *identityWriter {
 	iw := &identityWriter{
 		pipeline:         pipeline.ID,
 		metrics:          metrics,
@@ -47,7 +49,7 @@ func newIdentityWriter(ds *datastore.Datastore, pipeline *state.Pipeline, provid
 	store, _ := ds.Store(ws.ID)
 	iw.writer = store.NewEventIdentityWriter(pipeline.ID)
 	if t := pipeline.Transformation; t.Mapping != nil || t.Function != nil {
-		iw.transformer, _ = transformers.New(ws.Organization().ID, pipeline, provider, nil)
+		iw.transformer, _ = transformers.New(ws.Organization().ID, pipeline, provider)
 	}
 	return iw
 }
@@ -192,7 +194,19 @@ func (iw *identityWriter) transformAndWrite(events []streams.Event) {
 			Attributes:  record.Attributes,
 			UpdatedAt:   event.Attributes["timestamp"].(time.Time),
 		}, event.Destinations[0].Ack)
-		_ = err // TODO(marco): handle the error
+		if err != nil {
+			var msg string
+			if errors.Is(err, datastore.ErrPipelineNotExist) {
+				msg = "pipeline has been deleted"
+			} else if _, ok := errors.AsType[*schemas.Error](err); ok {
+				msg = err.Error()
+			} else {
+				msg = "an internal error occurred"
+				slog.Error("core/events/collector: cannot write event identity", "pipeline", iw.pipeline, "error", err)
+			}
+			iw.metrics.FinalizeFailed(iw.pipeline, 1, msg)
+			event.Destinations[0].Ack.Acknowledge()
+		}
 	}
 
 }

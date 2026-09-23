@@ -751,20 +751,27 @@ func (t Type) MaxBytes() (int, bool) {
 
 // WithMaxBytes returns t configured with a maximum of n bytes. n must be in the
 // range [1, MaxStringLen].
-// It panics if t is not a string type, if t already specifies a maximum number
-// of bytes, if t already has values, or if n is out of range.
+//
+// It panics if:
+//   - t is not a string type
+//   - n is not in range [1, MaxStringLen]
+//   - t already has values or a pattern
+//   - t is already restricted by max bytes
 func (t Type) WithMaxBytes(n int) Type {
 	if t.kind != StringKind {
 		panic("cannot set max byte length of a non-string type")
 	}
-	if t.p > 0 {
-		panic("max bytes already specified")
-	}
-	if n < 1 || MaxStringLen < n {
+	if n < 1 || n > MaxStringLen {
 		panic("invalid max bytes")
 	}
-	if _, ok := t.vl.([]string); ok {
+	switch t.vl.(type) {
+	case []string:
 		panic("t already has values")
+	case *regexp.Regexp:
+		panic("t already has a pattern")
+	}
+	if t.p != 0 {
+		panic("t already has max bytes")
 	}
 	t.p = int32(uint32(n))
 	return t
@@ -780,21 +787,28 @@ func (t Type) MaxLength() (int, bool) {
 	return int(uint32(t.s)), t.s != 0
 }
 
-// WithMaxLength returns t with a maximum length of l of a string type. l must
-// be in range [1, MaxStringLen]. Panics if t is not a string type, or if l is
-// not in range, or if t has already a char length, or if t already has values.
+// WithMaxLength returns t with a maximum length of l of a string type.
+//
+// It panics if:
+//   - t is not a string type
+//   - l is not in range [1, MaxStringLen]
+//   - t already has values or a pattern
+//   - t is already restricted by max length
 func (t Type) WithMaxLength(l int) Type {
 	if t.kind != StringKind {
 		panic("cannot set max length of non-string types")
 	}
-	if t.s > 0 {
-		panic("repeated length in characters")
-	}
-	if l < 1 || MaxStringLen < l {
+	if l < 1 || l > MaxStringLen {
 		panic("invalid string length")
 	}
-	if _, ok := t.vl.([]string); ok {
+	switch t.vl.(type) {
+	case []string:
 		panic("t already has values")
+	case *regexp.Regexp:
+		panic("t already has a pattern")
+	}
+	if t.s != 0 {
+		panic("t already has max length")
 	}
 	t.s = int32(uint32(l))
 	return t
@@ -811,16 +825,30 @@ func (t Type) Pattern() *regexp.Regexp {
 }
 
 // WithPattern returns t with the pattern p.
-// Panics if t is not a string type, or t has already a pattern or has values.
+//
+// It panics if:
+//   - t is not a string type
+//   - p is nil
+//   - t already has values or a pattern
+//   - t is already restricted by max bytes or max length
 func (t Type) WithPattern(p *regexp.Regexp) Type {
 	if t.kind != StringKind {
 		panic("cannot set pattern for a non-string type")
 	}
+	if p == nil {
+		panic("pattern is nil")
+	}
 	switch t.vl.(type) {
 	case []string:
-		panic("cannot set pattern when t has values")
+		panic("t already has values")
 	case *regexp.Regexp:
 		panic("t already has a pattern")
+	}
+	if t.p != 0 {
+		panic("t already has max bytes")
+	}
+	if t.s != 0 {
+		panic("t already has max length")
 	}
 	t.vl = p
 	return t
@@ -847,8 +875,8 @@ func (t Type) Values() []string {
 //   - t is not a string type
 //   - no values are provided
 //   - any value is not valid UTF-8
-//   - t already has values or a regular expression
-//   - t is already restricted by byte or character length
+//   - t already has values or a pattern
+//   - t is already restricted by max bytes or max length
 //
 // The empty string is allowed as one of the values.
 func (t Type) WithValues(values ...string) Type {
@@ -865,10 +893,10 @@ func (t Type) WithValues(values ...string) Type {
 		panic("t already has a pattern")
 	}
 	if t.p != 0 {
-		panic("t already has a maximum byte length")
+		panic("t already has max bytes")
 	}
 	if t.s != 0 {
-		panic("t already has a maximum character length")
+		panic("t already has max length")
 	}
 	vl := make([]string, len(values))
 	for i, s := range values {

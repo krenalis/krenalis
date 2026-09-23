@@ -540,7 +540,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 
 	// Read all pipelines.
-	err = tx.QueryScan(ctx, "SELECT id, connection, target, event_type, name, enabled, schedule_start,\n"+
+	err = tx.QueryScan(ctx, "SELECT id, connection, target, event_type, ordering_group, name, enabled, schedule_start,\n"+
 		"schedule_period, in_schema, out_schema, filter, required_consents, required_consents_operator,\n"+
 		"transformation_mapping, transformation_id, transformation_version, transformation_language,\n"+
 		"transformation_source, transformation_preserve_json, transformation_in_paths, transformation_out_paths,\n"+
@@ -556,7 +556,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				var format *string
 				var requiredConsentIDs RequiredConsentsByIDs
 				pipeline := Pipeline{}
-				err := rows.Scan(&pipeline.ID, &connectionID, &pipeline.Target, &eventType, &pipeline.Name,
+				err := rows.Scan(&pipeline.ID, &connectionID, &pipeline.Target, &eventType, &pipeline.OrderingGroup, &pipeline.Name,
 					&pipeline.Enabled, &pipeline.ScheduleStart, &pipeline.SchedulePeriod, &rawInSchema, &rawOutSchema,
 					&filter, &requiredConsentIDs.Purposes, &requiredConsentIDs.Operator, &mapping, &function.ID,
 					&function.Version, &function.Language, &function.Source, &function.PreserveJSON, &pipeline.Transformation.InPaths,

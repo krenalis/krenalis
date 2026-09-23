@@ -215,7 +215,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			if !outSchema.Valid() {
 				return errors.BadRequest("output schema is required by the mapping")
 			}
-			transformer, err := mappings.New(tr.Mapping, inSchema, outSchema, false, nil)
+			transformer, err := mappings.New(tr.Mapping, inSchema, outSchema, false)
 			if err != nil {
 				return errors.BadRequest("invalid mapping: %s", err)
 			}

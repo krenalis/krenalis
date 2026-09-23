@@ -102,64 +102,105 @@ const nodeIDUpgrade = `
 		END IF;
 	END $$`
 
-// pipelineMetricStepsUpgrade adds the consent steps and remaps the old six-step
-// layout.
+// pipelineMetricStepsUpgrade adds the consent steps and remaps the old six- or
+// seven-step layouts.
 const pipelineMetricStepsUpgrade = `
 	DO $$
+	DECLARE
+		has_event_consent boolean;
 	BEGIN
-		IF NOT EXISTS (
+		SELECT EXISTS (
 			SELECT FROM pg_attribute
 			WHERE attrelid = 'pipelines_metrics'::regclass
 				AND attname = 'passed_6'
 				AND NOT attisdropped
+		) INTO has_event_consent;
+		IF NOT EXISTS (
+			SELECT FROM pg_attribute
+			WHERE attrelid = 'pipelines_metrics'::regclass
+				AND attname = 'passed_8'
+				AND NOT attisdropped
 		) THEN
-			ALTER TABLE pipelines_metrics ADD COLUMN passed_6 integer NOT NULL DEFAULT 0;
-			ALTER TABLE pipelines_metrics ADD COLUMN passed_7 integer NOT NULL DEFAULT 0;
-			ALTER TABLE pipelines_metrics ADD COLUMN passed_8 integer NOT NULL DEFAULT 0;
-			ALTER TABLE pipelines_runs ADD COLUMN passed_6 integer NOT NULL DEFAULT 0;
-			ALTER TABLE pipelines_runs ADD COLUMN passed_7 integer NOT NULL DEFAULT 0;
-			ALTER TABLE pipelines_runs ADD COLUMN passed_8 integer NOT NULL DEFAULT 0;
-			ALTER TABLE pipelines_metrics ADD COLUMN failed_6 integer NOT NULL DEFAULT 0;
-			ALTER TABLE pipelines_metrics ADD COLUMN failed_7 integer NOT NULL DEFAULT 0;
-			ALTER TABLE pipelines_metrics ADD COLUMN failed_8 integer NOT NULL DEFAULT 0;
-			ALTER TABLE pipelines_runs ADD COLUMN failed_6 integer NOT NULL DEFAULT 0;
-			ALTER TABLE pipelines_runs ADD COLUMN failed_7 integer NOT NULL DEFAULT 0;
-			ALTER TABLE pipelines_runs ADD COLUMN failed_8 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS passed_6 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS passed_7 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS passed_8 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS passed_6 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS passed_7 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS passed_8 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS failed_6 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS failed_7 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_metrics ADD COLUMN IF NOT EXISTS failed_8 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS failed_6 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS failed_7 integer NOT NULL DEFAULT 0;
+			ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS failed_8 integer NOT NULL DEFAULT 0;
 
-			UPDATE pipelines_metrics SET
-				passed_3 = 0,
-				passed_4 = 0,
-				passed_5 = passed_3,
-				passed_6 = passed_4,
-				passed_7 = 0,
-				passed_8 = passed_5,
-				failed_3 = 0,
-				failed_4 = 0,
-				failed_5 = failed_3,
-				failed_6 = failed_4,
-				failed_7 = 0,
-				failed_8 = failed_5;
+			IF has_event_consent THEN
+				UPDATE pipelines_metrics SET
+					passed_4 = 0,
+					passed_5 = passed_4,
+					passed_6 = passed_5,
+					passed_7 = 0,
+					passed_8 = passed_6,
+					failed_4 = 0,
+					failed_5 = failed_4,
+					failed_6 = failed_5,
+					failed_7 = 0,
+					failed_8 = failed_6;
 
-			UPDATE pipelines_runs SET
-				passed_3 = 0,
-				passed_4 = 0,
-				passed_5 = passed_3,
-				passed_6 = passed_4,
-				passed_7 = 0,
-				passed_8 = passed_5,
-				failed_3 = 0,
-				failed_4 = 0,
-				failed_5 = failed_3,
-				failed_6 = failed_4,
-				failed_7 = 0,
-				failed_8 = failed_5;
+				UPDATE pipelines_runs SET
+					passed_4 = 0,
+					passed_5 = passed_4,
+					passed_6 = passed_5,
+					passed_7 = 0,
+					passed_8 = passed_6,
+					failed_4 = 0,
+					failed_5 = failed_4,
+					failed_6 = failed_5,
+					failed_7 = 0,
+					failed_8 = failed_6;
 
-			UPDATE pipelines_errors SET step = CASE
-				WHEN step = 3 THEN 5
-				WHEN step = 4 THEN 6
-				WHEN step = 5 THEN 8
-			END
-			WHERE step BETWEEN 3 AND 5;
+				UPDATE pipelines_errors SET step = CASE
+					WHEN step = 4 THEN 5
+					WHEN step = 5 THEN 6
+					WHEN step = 6 THEN 8
+				END
+				WHERE step BETWEEN 4 AND 6;
+			ELSE
+				UPDATE pipelines_metrics SET
+					passed_3 = 0,
+					passed_4 = 0,
+					passed_5 = passed_3,
+					passed_6 = passed_4,
+					passed_7 = 0,
+					passed_8 = passed_5,
+					failed_3 = 0,
+					failed_4 = 0,
+					failed_5 = failed_3,
+					failed_6 = failed_4,
+					failed_7 = 0,
+					failed_8 = failed_5;
+
+				UPDATE pipelines_runs SET
+					passed_3 = 0,
+					passed_4 = 0,
+					passed_5 = passed_3,
+					passed_6 = passed_4,
+					passed_7 = 0,
+					passed_8 = passed_5,
+					failed_3 = 0,
+					failed_4 = 0,
+					failed_5 = failed_3,
+					failed_6 = failed_4,
+					failed_7 = 0,
+					failed_8 = failed_5;
+
+				UPDATE pipelines_errors SET step = CASE
+					WHEN step = 3 THEN 5
+					WHEN step = 4 THEN 6
+					WHEN step = 5 THEN 8
+				END
+				WHERE step BETWEEN 3 AND 5;
+			END IF;
 
 			ALTER TABLE pipelines_metrics ALTER COLUMN passed_6 DROP DEFAULT;
 			ALTER TABLE pipelines_metrics ALTER COLUMN passed_7 DROP DEFAULT;
@@ -167,6 +208,114 @@ const pipelineMetricStepsUpgrade = `
 			ALTER TABLE pipelines_metrics ALTER COLUMN failed_6 DROP DEFAULT;
 			ALTER TABLE pipelines_metrics ALTER COLUMN failed_7 DROP DEFAULT;
 			ALTER TABLE pipelines_metrics ALTER COLUMN failed_8 DROP DEFAULT;
+		END IF;
+	END $$`
+
+// pipelineEventTypeUpgrade adds persisted ordering groups.
+const pipelineEventTypeUpgrade = `
+	ALTER TABLE pipelines
+		ADD COLUMN IF NOT EXISTS ordering_group varchar(16);
+
+	UPDATE pipelines p
+	SET ordering_group = CASE
+		WHEN p.event_type = '' THEN ''
+		WHEN c.connector IN ('dummy', 'google-analytics', 'mixpanel', 'posthog') THEN 'events'
+		WHEN c.connector IN ('brevo', 'klaviyo') THEN 'create_event'
+	END
+	FROM connections c
+	WHERE c.id = p.connection
+		AND p.ordering_group IS NULL;
+
+	ALTER TABLE pipelines
+		ALTER COLUMN ordering_group TYPE varchar(16),
+		ALTER COLUMN ordering_group SET NOT NULL`
+
+// pipelineOrderingGroupUpgrade moves ordering_group after event_type while
+// preserving the table and the relative order of its other columns.
+const pipelineOrderingGroupUpgrade = `
+	DO $$
+	DECLARE
+		event_position smallint;
+		group_position smallint;
+		moved_columns text[];
+		moved_positions smallint[];
+		constraint_queries text[];
+		index_query text;
+		assignments text;
+		column_definition record;
+		query text;
+	BEGIN
+		LOCK TABLE pipelines IN ACCESS EXCLUSIVE MODE;
+		SELECT attnum INTO event_position FROM pg_attribute
+		WHERE attrelid = 'pipelines'::regclass AND attname = 'event_type' AND NOT attisdropped;
+		SELECT attnum INTO group_position FROM pg_attribute
+		WHERE attrelid = 'pipelines'::regclass AND attname = 'ordering_group' AND NOT attisdropped;
+		IF NOT EXISTS (
+			SELECT FROM pg_attribute
+			WHERE attrelid = 'pipelines'::regclass AND NOT attisdropped
+				AND attnum > event_position AND attnum < group_position
+		) THEN
+			RETURN;
+		END IF;
+
+		SELECT array_agg(attname::text ORDER BY attnum), array_agg(attnum ORDER BY attnum)
+		INTO moved_columns, moved_positions
+		FROM pg_attribute
+		WHERE attrelid = 'pipelines'::regclass AND NOT attisdropped
+			AND attnum > event_position AND attname <> 'ordering_group';
+		SELECT array_agg(format('ALTER TABLE pipelines ADD CONSTRAINT %I %s', conname,
+			CASE conname
+				-- Keep this constraint in its schema form because its deparsed
+				-- definition is not round-trip stable.
+				WHEN 'pipelines_required_consents_operator_check' THEN
+					'CHECK (required_consents_operator IN (''and'', ''or''))'
+				ELSE pg_get_constraintdef(oid)
+			END))
+		INTO constraint_queries
+		FROM pg_constraint
+		WHERE conrelid = 'pipelines'::regclass AND contype = 'c' AND conkey && moved_positions;
+		SELECT pg_get_indexdef(to_regclass('pipelines_transformation_id_idx')) INTO index_query;
+
+		CREATE TEMP TABLE pipelines_ordering_backup (LIKE pipelines INCLUDING ALL) ON COMMIT DROP;
+		INSERT INTO pg_temp.pipelines_ordering_backup SELECT * FROM pipelines;
+		DROP VIEW organization_connector_references;
+
+		FOR column_definition IN
+			SELECT attname, format_type(atttypid, atttypmod) AS data_type
+			FROM pg_attribute
+			WHERE attrelid = 'pg_temp.pipelines_ordering_backup'::regclass AND attname = ANY(moved_columns)
+			ORDER BY attnum
+		LOOP
+			EXECUTE format('ALTER TABLE pipelines DROP COLUMN %1$I, ADD COLUMN %1$I %2$s',
+				column_definition.attname, column_definition.data_type);
+		END LOOP;
+
+		SELECT string_agg(format('%1$I = b.%1$I', name), ', ') INTO assignments
+		FROM unnest(moved_columns) AS name;
+		EXECUTE format('UPDATE pipelines p SET %s FROM pg_temp.pipelines_ordering_backup b WHERE p.id = b.id',
+			assignments);
+
+		FOR column_definition IN
+			SELECT a.attname, a.attnotnull, pg_get_expr(d.adbin, d.adrelid) AS default_expression
+			FROM pg_attribute a
+			LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
+			WHERE a.attrelid = 'pg_temp.pipelines_ordering_backup'::regclass AND a.attname = ANY(moved_columns)
+			ORDER BY a.attnum
+		LOOP
+			IF column_definition.attnotnull THEN
+				EXECUTE format('ALTER TABLE pipelines ALTER COLUMN %I SET NOT NULL', column_definition.attname);
+			END IF;
+			IF column_definition.default_expression IS NOT NULL THEN
+				EXECUTE format('ALTER TABLE pipelines ALTER COLUMN %I SET DEFAULT %s',
+					column_definition.attname, column_definition.default_expression);
+			END IF;
+		END LOOP;
+
+		FOREACH query IN ARRAY coalesce(constraint_queries, ARRAY[]::text[]) LOOP
+			EXECUTE query;
+		END LOOP;
+		IF index_query IS NOT NULL THEN
+			EXECUTE index_query;
 		END IF;
 	END $$`
 
@@ -207,6 +356,17 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 		queries := []string{
 			`ALTER TABLE metadata ADD COLUMN IF NOT EXISTS requests_rate_per_minute integer NOT NULL DEFAULT 100 CHECK (requests_rate_per_minute BETWEEN 60 AND 20000)`,
 			`ALTER TABLE metadata ADD COLUMN IF NOT EXISTS requests_max_capacity integer NOT NULL DEFAULT 100 CHECK (requests_max_capacity BETWEEN 1 AND 10000)`,
+			`CREATE TABLE IF NOT EXISTS usage_metrics (
+				organization varchar(12) NOT NULL REFERENCES organizations ON DELETE CASCADE,
+				workspace varchar(12) NOT NULL,
+				day date NOT NULL,
+				profiles bigint NOT NULL DEFAULT 0,
+				profile_seconds bigint NOT NULL DEFAULT 0,
+				observed_at time without time zone,
+				events bigint NOT NULL DEFAULT 0,
+				PRIMARY KEY (organization, workspace, day)
+			)`,
+			`CREATE INDEX IF NOT EXISTS usage_metrics_organization_day_idx ON usage_metrics (organization, day)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS members_limit integer NOT NULL DEFAULT 10000 CHECK (members_limit BETWEEN 1 AND 10000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS access_keys_limit integer NOT NULL DEFAULT 1000 CHECK (access_keys_limit BETWEEN 0 AND 1000)`,
 			`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS workspaces_limit integer NOT NULL DEFAULT 1000 CHECK (workspaces_limit BETWEEN 0 AND 1000)`,
@@ -407,6 +567,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 				END $$`,
 			organizationConnectorReferencesView,
 			nodeIDUpgrade,
+			pipelineEventTypeUpgrade,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'InviteMember' AFTER 'EndPipelineRun'`,
 			consentPurposesTable,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'AddConsentPurpose'`,
@@ -450,6 +611,8 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 						OR filter::text ~ '"operator"[[:space:]]*:[[:space:]]*"OpIsNotBetween"'
 					)`,
 			pipelineMetricStepsUpgrade,
+			pipelineOrderingGroupUpgrade,
+			organizationConnectorReferencesView,
 		}
 		for _, query := range queries {
 			if _, err := tx.Exec(ctx, query); err != nil {

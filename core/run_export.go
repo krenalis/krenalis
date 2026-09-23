@@ -59,7 +59,7 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	var transformer *transformers.Transformer
 	if t := this.pipeline.Transformation; t.Mapping != nil || t.Function != nil {
 		var err error
-		transformer, err = transformers.New(pipeline.Organization().ID, pipeline, this.core.functionProvider, &connector.TimeLayouts)
+		transformer, err = transformers.New(pipeline.Organization().ID, pipeline, this.core.functionProvider)
 		if err != nil {
 			return err
 		}
@@ -121,10 +121,10 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 		ack = func(ids []string, err error) {
 			prometheus.Increment("Pipeline.exportProfiles.ack.calls", 1)
 			if err != nil {
-				this.core.metrics.FinalizeFailed(pipeline.ID, len(ids), err.Error())
+				this.core.metrics.Pipelines.FinalizeFailed(pipeline.ID, len(ids), err.Error())
 				return
 			}
-			this.core.metrics.FinalizePassed(pipeline.ID, len(ids))
+			this.core.metrics.Pipelines.FinalizePassed(pipeline.ID, len(ids))
 		}
 	}
 
@@ -189,7 +189,7 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	if connector.Type == state.FileStorage {
 		defer func() {
 			if readCount > 0 {
-				this.core.metrics.FinalizeFailed(pipeline.ID, readCount, err.Error())
+				this.core.metrics.Pipelines.FinalizeFailed(pipeline.ID, readCount, err.Error())
 			}
 		}()
 	}
@@ -202,14 +202,14 @@ Records:
 		prometheus.Increment("Pipeline.exportProfiles.iterations_over_records_All", 1)
 
 		if record.Err != nil {
-			this.core.metrics.ReceiveFailed(pipeline.ID, 1, record.Err.Error())
+			this.core.metrics.Pipelines.ReceiveFailed(pipeline.ID, 1, record.Err.Error())
 			if connector.Type == state.FileStorage {
 				return newPipelineError(metrics.ReceiveStep, record.Err)
 			}
 			goto Next
 		}
 
-		this.core.metrics.ReceivePassed(pipeline.ID, 1)
+		this.core.metrics.Pipelines.ReceivePassed(pipeline.ID, 1)
 
 		profile = Profile{Record: record}
 
@@ -223,22 +223,22 @@ Records:
 				value, _ := getAttribute(record.Attributes, pipeline.Matching.In)
 				profile.MatchingValue, err = convertToExternal(value, matchingIn.Type, matchingOut.Type, pipeline.Matching.In, pipeline.Matching.Out)
 				if err != nil {
-					this.core.metrics.InputValidationFailed(pipeline.ID, 1, err.Error())
+					this.core.metrics.Pipelines.InputValidationFailed(pipeline.ID, 1, err.Error())
 					goto Next
 				}
 			}
 		}
 
-		this.core.metrics.InputValidationPassed(pipeline.ID, 1)
+		this.core.metrics.Pipelines.InputValidationPassed(pipeline.ID, 1)
 
 		// The profile is exported only if it has the consents required by the
 		// pipeline.
 		if !consents.SatisfiesProfile(pipeline.RequiredConsents.Purposes,
 			pipeline.RequiredConsents.Operator != state.PurposesOr, record.Attributes) {
-			this.core.metrics.ExportProfileConsentFailed(pipeline.ID, 1)
+			this.core.metrics.Pipelines.ExportProfileConsentFailed(pipeline.ID, 1)
 			goto Next
 		}
-		this.core.metrics.ExportProfileConsentPassed(pipeline.ID, 1)
+		this.core.metrics.Pipelines.ExportProfileConsentPassed(pipeline.ID, 1)
 
 		// Remove the properties that have been read only to check the consents,
 		// which the pipeline does not declare and must not export.
@@ -288,20 +288,20 @@ Records:
 				if err := record.Err; err != nil {
 					switch err.(type) {
 					case transformers.RecordTransformationError:
-						this.core.metrics.TransformationFailed(pipeline.ID, 1, err.Error())
+						this.core.metrics.Pipelines.TransformationFailed(pipeline.ID, 1, err.Error())
 					case transformers.RecordValidationError:
-						this.core.metrics.TransformationPassed(pipeline.ID, 1)
-						this.core.metrics.OutputValidationFailed(pipeline.ID, 1, err.Error())
+						this.core.metrics.Pipelines.TransformationPassed(pipeline.ID, 1)
+						this.core.metrics.Pipelines.OutputValidationFailed(pipeline.ID, 1, err.Error())
 					}
 					continue
 				}
-				this.core.metrics.TransformationPassed(pipeline.ID, 1)
-				this.core.metrics.OutputValidationPassed(pipeline.ID, 1)
+				this.core.metrics.Pipelines.TransformationPassed(pipeline.ID, 1)
+				this.core.metrics.Pipelines.OutputValidationPassed(pipeline.ID, 1)
 				if user.MatchingValue != nil {
 					setAttribute(record.Attributes, pipeline.Matching.Out, user.MatchingValue)
 				}
 				if connector.Type == state.Application && len(record.Attributes) == 0 {
-					this.core.metrics.FinalizePassed(pipeline.ID, 1)
+					this.core.metrics.Pipelines.FinalizePassed(pipeline.ID, 1)
 					continue
 				}
 				// In the case of exporting to the database, make sure that
@@ -310,7 +310,7 @@ Records:
 				if connector.Type == state.Database {
 					key := record.Attributes[pipeline.TableKey]
 					if _, ok := alreadyExportedKeys[key]; ok {
-						this.core.metrics.FinalizeFailed(pipeline.ID, 1,
+						this.core.metrics.Pipelines.FinalizeFailed(pipeline.ID, 1,
 							fmt.Sprintf("cannot export multiple profiles having the same value for %q, which is used as export table key", pipeline.TableKey))
 						continue
 					}
@@ -341,7 +341,7 @@ Records:
 	}
 
 	if connector.Type == state.FileStorage {
-		this.core.metrics.FinalizePassed(pipeline.ID, readCount)
+		this.core.metrics.Pipelines.FinalizePassed(pipeline.ID, readCount)
 		readCount = 0 // prevents them from being flagged as failed in the metrics
 	}
 
@@ -528,7 +528,7 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 	case types.UUIDKind:
 		switch in.Kind() {
 		case types.StringKind:
-			u, ok := types.ParseUUID(v.(string))
+			u, ok := types.NormalizeUUID(v.(string))
 			if !ok {
 				return nil, errMatchingPropertyConversion(inPath, outPath)
 			}
