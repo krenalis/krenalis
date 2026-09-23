@@ -470,8 +470,10 @@ func TestApplicationEventType(t *testing.T) {
 
 }
 
-// TestApplicationEventTypes verifies independent IDs and mandatory ordering groups.
-func TestApplicationEventTypes(t *testing.T) {
+// TestApplicationEventTypesOrderingGroups verifies that event type IDs and
+// ordering groups use independent namespaces, and that ordering groups are
+// non-empty and have consistent delivery endpoints.
+func TestApplicationEventTypesOrderingGroups(t *testing.T) {
 
 	for _, test := range []struct {
 		name       string
