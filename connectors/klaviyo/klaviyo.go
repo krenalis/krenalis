@@ -119,9 +119,10 @@ func (ky *Klaviyo) EventTypeSchema(ctx context.Context, eventType string) (types
 func (ky *Klaviyo) EventTypes(ctx context.Context) ([]*connectors.EventType, error) {
 	return []*connectors.EventType{
 		{
-			ID:          "create_event",
-			Name:        "Create event",
-			Description: "Create an event on Klaviyo",
+			ID:            "create_event",
+			Name:          "Create event",
+			Description:   "Create an event on Klaviyo",
+			OrderingGroup: "create_event",
 		},
 	}, nil
 }
