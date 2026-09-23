@@ -1564,7 +1564,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		// Validate the mapping and the transformation.
 		switch {
 		case transformation.Mapping != nil:
-			mapping, err := mappings.New(transformation.Mapping, schemas.Event, outSchema, false, nil)
+			mapping, err := mappings.New(transformation.Mapping, schemas.Event, outSchema, false)
 			if err != nil {
 				return nil, errors.BadRequest("mapping is not valid: %s", err)
 			}
@@ -1611,7 +1611,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		}
 
 		// Transform the attributes.
-		transformer, err := transformers.New(organization, pipeline, provider, nil)
+		transformer, err := transformers.New(organization, pipeline, provider)
 		if err != nil {
 			return nil, err
 		}
