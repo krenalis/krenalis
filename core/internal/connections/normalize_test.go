@@ -188,6 +188,7 @@ func Test_normalize(t *testing.T) {
 		// array.
 		{types.Array(types.Int(32)), []any{1, 2}, []any{1, 2}, false, nil},
 		{types.Array(types.Int(32)), []any{1.0, 2.0}, []any{1, 2}, false, nil},
+		{types.Array(types.String()).WithUnique(), []any{"foo", "boo"}, []any{"foo", "boo"}, false, nil},
 		{types.Array(types.Array(types.String())), []any{[]any{"foo"}, []any{"foo"}}, []any{[]any{"foo"}, []any{"foo"}}, false, nil},
 		{types.Array(types.Int(32)), []any(nil), nil, true, nil},
 		{types.Array(types.Int(32)), []int(nil), nil, true, nil},
@@ -258,6 +259,7 @@ func Test_normalize_errors(t *testing.T) {
 		value          any
 		nullable       bool
 		layout         *state.TimeLayouts
+		want           string
 		wantContains   string
 		wantInputError bool
 	}
@@ -290,13 +292,17 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "unsignedBytesParseError", typ: types.Int(16).Unsigned(), value: []byte("bad"), wantContains: "has a []byte value that cannot represent an unsigned int value"},
 		{name: "unsignedNegativeFloat", typ: types.Int(16).Unsigned(), value: -2.5, wantContains: "has a float64 value that cannot represent an unsigned int(16) value"},
 		{name: "unsignedFloat64Upper", typ: types.Int(64).Unsigned(), value: float64(0x1p64), wantContains: "has a float64 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat64Huge", typ: types.Int(64).Unsigned(), value: math.MaxFloat64, wantContains: "has a float64 value that cannot represent an unsigned int(64) value"},
 		{name: "unsignedFloat64Negative", typ: types.Int(64).Unsigned(), value: float64(-1), wantContains: "has a float64 value that cannot represent an unsigned int(64) value"},
 		{name: "unsignedFloat64Fractional", typ: types.Int(64).Unsigned(), value: float64(1.5), wantContains: "has a float64 value that cannot represent an unsigned int(64) value"},
 		{name: "unsignedFloat64NaN", typ: types.Int(64).Unsigned(), value: float64(math.NaN()), wantContains: "has a float64 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat64Inf", typ: types.Int(64).Unsigned(), value: float64(math.Inf(1)), wantContains: "has a float64 value that cannot represent an unsigned int(64) value"},
 		{name: "unsignedFloat32Upper", typ: types.Int(64).Unsigned(), value: float32(0x1p64), wantContains: "has a float32 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat32Huge", typ: types.Int(64).Unsigned(), value: float32(math.MaxFloat32), wantContains: "has a float32 value that cannot represent an unsigned int(64) value"},
 		{name: "unsignedFloat32Negative", typ: types.Int(64).Unsigned(), value: float32(-1), wantContains: "has a float32 value that cannot represent an unsigned int(64) value"},
 		{name: "unsignedFloat32Fractional", typ: types.Int(64).Unsigned(), value: float32(1.5), wantContains: "has a float32 value that cannot represent an unsigned int(64) value"},
 		{name: "unsignedFloat32NaN", typ: types.Int(64).Unsigned(), value: float32(math.NaN()), wantContains: "has a float32 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat32Inf", typ: types.Int(64).Unsigned(), value: float32(math.Inf(1)), wantContains: "has a float32 value that cannot represent an unsigned int(64) value"},
 		{name: "unsignedDecimalNegative", typ: types.Int(16).Unsigned(), value: decimal.MustInt(-1), wantContains: "has a decimal.decimal value that cannot represent an unsigned int value"},
 		{name: "unsignedInvalidType", typ: types.Int(16).Unsigned(), value: true, wantContains: "has type bool that is not allowed for type int(16)"},
 		{name: "floatIntNotRepresentable", typ: types.Float(32), value: 1 << 26, wantContains: "has an int value that cannot represent a float(32) value"},
@@ -353,7 +359,9 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "arrayStringInvalidJSON", typ: types.Array(types.JSON()), value: "[bad", wantContains: "has a string value but is not valid JSON"},
 		{name: "arrayStringTooManyElements", typ: types.Array(types.JSON()).WithMaxElements(1), value: "[1,2]", wantContains: "is an array with more than 1 elements"},
 		{name: "arrayStringTooFewElements", typ: types.Array(types.JSON()).WithMinElements(2), value: "[1]", wantContains: "is an array with less than 2 elements"},
-		{name: "arrayUniqueDuplicated", typ: types.Array(types.Int(32)).WithUnique(), value: []any{1, 1}, wantContains: "contains the duplicated value 1"},
+		{name: "arrayUniqueDuplicated", typ: types.Array(types.Int(32)).WithUnique(), value: []any{1, 1}, want: "property 'k' contains a duplicated value"},
+		{name: "arrayUniqueDuplicatedNaNs", typ: types.Array(types.Float(64)).WithUnique(), value: []any{math.NaN(), math.NaN()}, want: "property 'k' contains a duplicated value"},
+		{name: "arrayUniqueEquivalentDecimals", typ: types.Array(types.Decimal(6, 2)).WithUnique(), value: []any{decimal.New(15, 1), decimal.MustParse("1.50")}, want: "property 'k' contains a duplicated value"},
 		{name: "objectMissingRequired", typ: types.Object([]types.Property{{Name: "foo", Type: types.String()}}), value: map[string]any{}, wantContains: "property 'k.foo' does not have a value, but the property is not optional for reading"},
 		{name: "objectPropertyError", typ: types.Object([]types.Property{{Name: "foo", Type: types.Int(32)}}), value: map[string]any{"foo": "bad"}, wantContains: "property 'k.foo' has a string value that does not represent an int value"},
 		{name: "objectInvalidType", typ: types.Object([]types.Property{{Name: "foo", Type: types.String()}}), value: 5, wantContains: "has type int that is not allowed for type object"},
@@ -389,6 +397,9 @@ func Test_normalize_errors(t *testing.T) {
 					if _, ok := errors.AsType[InputValidationError](err); !ok {
 						t.Fatalf("got %T (%v), want InputValidationError", err, err)
 					}
+				}
+				if tt.want != "" && err.Error() != tt.want {
+					t.Fatalf("expected error %q, got %q", tt.want, err)
 				}
 				if tt.wantContains != "" && !strings.Contains(err.Error(), tt.wantContains) {
 					t.Fatalf("expected error containing %q, got %q", tt.wantContains, err)

@@ -605,13 +605,13 @@ wa-button.pipeline__filters-remove-rule[appearance='plain']::part(label) {
 
 .pipeline__transformation-mappings {
 	display: grid;
-	grid-template-columns: calc(50% - 35px) 30px calc(50% - 35px);
+	grid-template-columns: minmax(0, calc(50% - 35px)) 30px minmax(0, calc(50% - 35px));
 	gap: 20px;
 	align-items: start;
 }
 
 .fullscreen-transformation .pipeline__transformation-mappings {
-	grid-template-columns: minmax(200px, 600px) 30px 1fr;
+	grid-template-columns: minmax(200px, 1fr) 30px minmax(0, 1fr);
 }
 
 .pipeline__transformation-mapping:last-child {
@@ -673,6 +673,7 @@ wa-button.pipeline__filters-remove-rule[appearance='plain']::part(label) {
 	font-size: 14px;
 	line-height: 0.8;
 	top: 2px;
+	min-width: 0;
 }
 
 .pipeline__transformation-output-property-key {
@@ -680,8 +681,13 @@ wa-button.pipeline__filters-remove-rule[appearance='plain']::part(label) {
 	font-weight: 500;
 }
 
+.pipeline__transformation-output-property-head,
+.pipeline__transformation-output-property--map {
+	white-space: nowrap;
+}
+
 .pipeline__transformation-output-property-type,
-.pipeline__transformation-output-property-description {
+.pipeline__transformation-output-property-annotation {
 	font-size: 12px;
 	margin-right: 5px;
 }
@@ -692,12 +698,22 @@ wa-button.pipeline__filters-remove-rule[appearance='plain']::part(label) {
 	word-spacing: -2px;
 }
 
-.pipeline__transformation-output-property-description {
-	color: var(--sl-color-neutral-600);
+.pipeline__transformation-output-property-annotation {
+	color: var(--sl-color-neutral-500);
+	/* Annotations must not determine the mappings' scrollable width. */
+	contain: inline-size;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	line-height: 1.8;
+}
+
+.property-annotation__display-name {
+	color: var(--text-light);
+}
+
+.property-annotation__tooltip {
+	--max-width: min(400px, calc(100vw - 32px));
 }
 
 .pipeline__transformation-output-property--map > sl-input {
@@ -767,7 +783,8 @@ wa-button.pipeline__filters-remove-rule[appearance='plain']::part(label) {
 .pipeline__transformation-output-property-copy {
 	position: absolute;
 	inset: 0;
-	z-index: 1;
+	/* Keep the copy tooltip above fullscreen section headers. */
+	z-index: 11;
 	display: block;
 }
 
@@ -1069,14 +1086,6 @@ inherit the disabled style */
 	padding: 20px 30px;
 }
 
-.fullscreen-transformation .pipeline__transformation-mappings {
-	padding-bottom: 30px;
-}
-
-.fullscreen-transformation .pipeline__transformation-output-property-description {
-	max-width: 400px;
-}
-
 .pipeline__transformation-function {
 	height: 100%;
 }
@@ -1092,6 +1101,9 @@ inherit the disabled style */
 	position: fixed;
 	left: 0;
 	top: 90px;
+	/* Keep the fullscreen above the pipeline header but below higher overlays.
+	*/
+	z-index: 1000;
 	width: 100%;
 	height: calc(100% - 90px);
 	visibility: hidden;
@@ -1112,7 +1124,9 @@ inherit the disabled style */
 	visibility: visible;
 	opacity: 1;
 	transform-origin: bottom center;
-	transform: scale(1);
+	/* transform: scale(1) here would trap hoisted tooltips inside scrolling
+	panels. */
+	transform: none;
 }
 
 .pipeline__transformation-function-minimized .monaco-editor-overlaymessage {
@@ -1359,8 +1373,8 @@ inherit the disabled style */
 	margin-right: 1px;
 }
 
-.fullscreen-transformation__property-description {
-	color: var(--sl-color-neutral-600);
+.fullscreen-transformation__property-annotation {
+	color: var(--sl-color-neutral-500);
 	font-size: 12px;
 	white-space: nowrap;
 	overflow: hidden;
@@ -1390,7 +1404,7 @@ inherit the disabled style */
 .fullscreen-transformation__property-wrapper--is-out-matching .fullscreen-transformation__property-type,
 .fullscreen-transformation__property-wrapper--is-out-matching .fullscreen-transformation__property-language-type,
 .fullscreen-transformation__property-wrapper--is-out-matching .fullscreen-transformation__property-disabled-info,
-.fullscreen-transformation__property-wrapper--is-out-matching .fullscreen-transformation__property-description {
+.fullscreen-transformation__property-wrapper--is-out-matching .fullscreen-transformation__property-annotation {
 	opacity: 0.6;
 }
 
@@ -1449,6 +1463,7 @@ inherit the disabled style */
 .fullscreen-transformation__property-copy {
 	position: absolute;
 	inset: 0;
+	z-index: 11;
 	display: block;
 }
 
@@ -1794,7 +1809,7 @@ inherit the disabled style */
 
 .fullscreen-transformation__right-panel {
 	position: relative;
-	overflow: auto;
+	overflow: hidden;
 	max-height: 100%;
 	background-color: var(--bg-gray);
 }
@@ -1819,6 +1834,7 @@ inherit the disabled style */
 	border-radius: 0;
 	box-shadow: none;
 	border: 0;
+	height: 100%;
 }
 
 .fullscreen-transformation__editor-panel .transformation-box__header {
@@ -1827,10 +1843,12 @@ inherit the disabled style */
 	height: 60px;
 	border-top: 1px solid var(--border-primary);
 	border-bottom: 2px solid var(--border-primary);
-	position: sticky;
-	top: 0;
-	left: 0;
+	position: relative;
 	z-index: 10;
+}
+
+.fullscreen-transformation__editor-panel .transformation-box__body {
+	overflow: auto;
 }
 
 .fullscreen-transformation__editor-panel .transformation-box__header-title {
