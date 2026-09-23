@@ -362,8 +362,8 @@ func TestValidateEventType(t *testing.T) {
 		},
 		{
 			name:      "long delivery endpoint",
-			eventType: &EventType{ID: "contact", OrderingGroup: "contacts", DeliveryEndpoint: strings.Repeat("a", 26)},
-			err:       `connector test returned an invalid delivery endpoint ("aaaaaaaaaaaaaaaaaaaaaaaaaa")`,
+			eventType: &EventType{ID: "contact", OrderingGroup: "contacts", DeliveryEndpoint: strings.Repeat("a", 17)},
+			err:       `connector test returned an invalid delivery endpoint ("aaaaaaaaaaaaaaaaa")`,
 		},
 	}
 
