@@ -88,12 +88,13 @@ type ConnectorSpec interface {
 // A SetSettingsFunc value is a function used by connectors to set settings.
 type SetSettingsFunc func(context.Context, any) error
 
-// TimeLayouts represents the layouts for time values.
-// If a layout is left empty, it is ISO 8601.
+// TimeLayouts represents the layouts used to parse time values returned by a
+// connector. If a layout is left empty, it is ISO 8601. Time values passed to a
+// connector are always time.Time values.
 type TimeLayouts struct {
-	DateTime string // if left empty, values are formatted with the layout "2006-01-02T15:04:05.999Z"
-	Date     string // if left empty, values are formatted with the layout "2006-01-02"
-	Time     string // if left empty, values are formatted with the layout "15:04:05.999Z"
+	DateTime string
+	Date     string
+	Time     string
 }
 
 type SettingsStore interface {

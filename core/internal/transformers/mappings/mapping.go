@@ -10,7 +10,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/types"
 )
@@ -57,7 +56,6 @@ type mappingExpr struct {
 	nullable       bool
 	createRequired bool
 	updateRequired bool
-	timeLayouts    *state.TimeLayouts
 }
 
 // New returns a new mapping that transforms values according to the provided
@@ -67,14 +65,11 @@ type mappingExpr struct {
 // If inPlace is true, a transformation is permitted to modify array, object,
 // and map values directly within the value being transformed.
 //
-// If layouts is not nil, it specifies the layouts used to format datetime,
-// date, and time values as strings.
-//
 // The source type can be the invalid type if expressions do not contain paths.
 //
 // It returns a types.PathNotExistError error if a path in expressions does not
 // exist in the source schema.
-func New(expressions map[string]string, inSchema, outSchema types.Type, inPlace bool, layouts *state.TimeLayouts) (*Mapping, error) {
+func New(expressions map[string]string, inSchema, outSchema types.Type, inPlace bool) (*Mapping, error) {
 	if len(expressions) == 0 {
 		return nil, errors.New("there are no expressions")
 	}
@@ -105,7 +100,6 @@ func New(expressions map[string]string, inSchema, outSchema types.Type, inPlace 
 		me[i].nullable = p.Nullable
 		me[i].createRequired = p.CreateRequired
 		me[i].updateRequired = p.UpdateRequired
-		me[i].timeLayouts = layouts
 		i++
 	}
 	err := sortMappingExpressions(me)
@@ -181,7 +175,7 @@ func (mapping *Mapping) Transform(attributes map[string]any, purpose Purpose) (m
 			return nil, TransformationError{fmt.Sprintf("%s while mapping to «%s»", err, code(e.path))}
 		}
 		if v != nil {
-			v, err = convert(v, vt, e.dt, true, mapping.inPlace, e.timeLayouts, purpose)
+			v, err = convert(v, vt, e.dt, true, mapping.inPlace, purpose)
 			if err != nil {
 				var msg string
 				switch err {
