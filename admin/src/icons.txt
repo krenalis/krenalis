@@ -22,6 +22,7 @@ calendar-date.svg
 caret-right-fill.svg
 chat-dots.svg
 check-lg.svg
+check.svg
 check2-circle.svg
 chevron-contract.svg
 chevron-down.svg
