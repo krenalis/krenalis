@@ -288,7 +288,7 @@ func TestUpgradePipelineOrderingGroup(t *testing.T) {
 			if name == "delivery-appended" {
 				_, err = database.Exec(t.Context(), `
 					ALTER TABLE pipelines DROP COLUMN delivery_endpoint;
-					ALTER TABLE pipelines ADD COLUMN delivery_endpoint varchar(25);
+					ALTER TABLE pipelines ADD COLUMN delivery_endpoint varchar(16);
 					UPDATE pipelines SET delivery_endpoint = '';
 					ALTER TABLE pipelines ALTER COLUMN delivery_endpoint SET NOT NULL`)
 				if err != nil {
