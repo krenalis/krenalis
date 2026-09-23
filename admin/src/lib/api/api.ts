@@ -23,6 +23,8 @@ import Workspace, {
 	LatestIdentityResolution,
 	LatestAlterProfileSchema,
 	PrimarySources,
+	EventConsentLocation,
+	ProfileConsentLocation,
 } from './types/workspace';
 import {
 	AccessKeyResponse,
@@ -934,35 +936,27 @@ class Workspaces {
 	};
 
 	addConsentPurpose = async (
-		code: string,
 		name: string,
-		aliases: string[],
-		eventPath: string,
-		profilePath: string,
+		eventConsentLocations: EventConsentLocation[],
+		profileConsentLocation: ProfileConsentLocation | null,
 	): Promise<void> => {
 		return await call(`${this.apiURL}/consent-purposes`, http.POST, this.workspaceID, {
-			code,
 			name,
-			aliases,
-			eventPath,
-			profilePath,
+			eventConsentLocations,
+			profileConsentLocation,
 		});
 	};
 
 	updateConsentPurpose = async (
 		id: string,
-		code: string,
 		name: string,
-		aliases: string[],
-		eventPath: string,
-		profilePath: string,
+		eventConsentLocations: EventConsentLocation[],
+		profileConsentLocation: ProfileConsentLocation | null,
 	): Promise<void> => {
 		return await call(`${this.apiURL}/consent-purposes/${id}`, http.PUT, this.workspaceID, {
-			code,
 			name,
-			aliases,
-			eventPath,
-			profilePath,
+			eventConsentLocations,
+			profileConsentLocation,
 		});
 	};
 

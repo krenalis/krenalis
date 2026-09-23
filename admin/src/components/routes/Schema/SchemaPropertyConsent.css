@@ -72,7 +72,7 @@
 	font-size: 26px;
 }
 
-.schema-property-consent__popup--boolean {
+.schema-property-consent__popup--without-pagination {
 	padding-bottom: 22px;
 }
 
@@ -135,9 +135,26 @@
 	color: var(--schema-consent-popup-muted-text);
 }
 
+.schema-property-consent__purpose-field--empty {
+	visibility: hidden;
+}
+
 .schema-property-consent__purpose-field code {
 	font-family: var(--monospace-fonts);
 	overflow-wrap: anywhere;
+}
+
+.schema-property-consent__event-paths {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+}
+
+.schema-property-consent__event-paths code {
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .schema-property-consent__pagination {

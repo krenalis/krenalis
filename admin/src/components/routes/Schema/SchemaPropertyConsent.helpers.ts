@@ -1,6 +1,6 @@
 import { ConsentPurpose } from '../../../lib/api/types/workspace';
 import { ObjectType } from '../../../lib/api/types/types';
-import { flattenSchema, splitPropertyAndPath } from '../../../lib/core/pipeline';
+import { flattenSchema } from '../../../lib/core/pipeline';
 
 const getConsentPurposesByPropertyPath = (
 	schema: ObjectType,
@@ -12,13 +12,18 @@ const getConsentPurposesByPropertyPath = (
 		return result;
 	}
 	for (const purpose of purposes) {
-		const [propertyPath, insidePath] = splitPropertyAndPath(purpose.profilePath, flatSchema);
-		if (propertyPath === '') {
+		const location = purpose.profileConsentLocation;
+		if (location == null) {
+			continue;
+		}
+		const propertyPath = location.property;
+		const key = location.jsonKey || null;
+		if (flatSchema[propertyPath] == null) {
 			continue;
 		}
 		const kind = flatSchema[propertyPath].type;
-		const isBooleanConsent = kind === 'boolean' && insidePath === '';
-		const isJSONConsent = kind === 'json' && insidePath !== '';
+		const isBooleanConsent = kind === 'boolean' && key == null;
+		const isJSONConsent = kind === 'json' && key != null;
 		if (!isBooleanConsent && !isJSONConsent) {
 			continue;
 		}

@@ -6,19 +6,20 @@ import SlPopup from '@shoelace-style/shoelace/dist/react/popup/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import AppContext from '../../../context/AppContext';
 import { ConsentPurpose } from '../../../lib/api/types/workspace';
+import { formatProfileConsentLocation } from '../../../utils/consentPurposePaths';
 
 const HOVER_DELAY = 300;
 
 interface SchemaPropertyConsentProps {
-	isJSON: boolean;
 	purposes: ConsentPurpose[] | undefined;
 }
 
-const SchemaPropertyConsent = ({ isJSON, purposes }: SchemaPropertyConsentProps) => {
+const SchemaPropertyConsent = ({ purposes }: SchemaPropertyConsentProps) => {
 	const [isHovered, setIsHovered] = useState(false);
 	const [isFocused, setIsFocused] = useState(false);
 	const [selectedPurposeID, setSelectedPurposeID] = useState<string>();
 	const hoverTimeoutRef = useRef<number>();
+	const triggerRef = useRef<HTMLButtonElement>(null);
 	const popupID = useId();
 	const { redirect } = useContext(AppContext);
 
@@ -29,15 +30,20 @@ const SchemaPropertyConsent = ({ isJSON, purposes }: SchemaPropertyConsentProps)
 	}
 
 	const isOpen = isHovered || isFocused;
-	const popupTitle = isJSON ? 'Consent purposes' : 'Consent purpose';
-	const selectedPurposeIndex = isJSON
-		? Math.max(
-				purposes.findIndex((purpose) => purpose.id === selectedPurposeID),
-				0,
-			)
-		: 0;
+	const hasMultiplePurposes = purposes.length > 1;
+	const popupTitle = hasMultiplePurposes ? 'Consent purposes' : 'Consent purpose';
+	const selectedPurposeIndex = Math.max(
+		purposes.findIndex((purpose) => purpose.id === selectedPurposeID),
+		0,
+	);
 	const selectedPurpose = purposes[selectedPurposeIndex];
-	const displayedPurposes = isJSON ? purposes.slice(selectedPurposeIndex, selectedPurposeIndex + 1) : purposes;
+	const displayedPurposes = purposes.slice(selectedPurposeIndex, selectedPurposeIndex + 1);
+	const selectPurpose = (index: number) => {
+		if (index === 0 || index === purposes.length - 1) {
+			triggerRef.current?.focus();
+		}
+		setSelectedPurposeID(purposes[index].id);
+	};
 	const clearHoverTimeout = () => {
 		window.clearTimeout(hoverTimeoutRef.current);
 		hoverTimeoutRef.current = undefined;
@@ -97,6 +103,7 @@ const SchemaPropertyConsent = ({ isJSON, purposes }: SchemaPropertyConsentProps)
 			}}
 		>
 			<button
+				ref={triggerRef}
 				className='schema-property-consent__trigger'
 				type='button'
 				slot='anchor'
@@ -107,7 +114,7 @@ const SchemaPropertyConsent = ({ isJSON, purposes }: SchemaPropertyConsentProps)
 				<span className='schema-property-consent__trigger-label'>Consent</span>
 			</button>
 			<div
-				className={`schema-property-consent__popup${isJSON ? '' : ' schema-property-consent__popup--boolean'}`}
+				className={`schema-property-consent__popup${hasMultiplePurposes ? '' : ' schema-property-consent__popup--without-pagination'}`}
 				id={popupID}
 				role='region'
 				aria-label={popupTitle}
@@ -118,6 +125,7 @@ const SchemaPropertyConsent = ({ isJSON, purposes }: SchemaPropertyConsentProps)
 						className='schema-property-consent__open-purpose-tooltip'
 						content='Open consent purpose'
 						hoist
+						trigger='hover'
 					>
 						<SlButton
 							className='schema-property-consent__open-purpose'
@@ -130,27 +138,43 @@ const SchemaPropertyConsent = ({ isJSON, purposes }: SchemaPropertyConsentProps)
 						</SlButton>
 					</SlTooltip>
 				</div>
-				<div className='schema-property-consent__popup-content' aria-live={isJSON ? 'polite' : undefined}>
+				<div
+					className='schema-property-consent__popup-content'
+					aria-live={hasMultiplePurposes ? 'polite' : undefined}
+				>
 					<div className='schema-property-consent__popup-title'>{popupTitle}</div>
 					{displayedPurposes.map((purpose) => (
 						<div className='schema-property-consent__purpose' key={purpose.id}>
 							<div className='schema-property-consent__purpose-name'>{purpose.name}</div>
-							<div className='schema-property-consent__purpose-field'>
-								<span>Code:</span>
-								<code>{purpose.code}</code>
+							<div
+								className={`schema-property-consent__purpose-field${purpose.eventConsentLocations.length === 0 ? ' schema-property-consent__purpose-field--empty' : ''}`}
+								aria-hidden={purpose.eventConsentLocations.length === 0}
+							>
+								<span>Consent in events:</span>
+								<div className='schema-property-consent__event-paths'>
+									{purpose.eventConsentLocations.length === 0 ? (
+										<code>{'\u00a0'}</code>
+									) : (
+										purpose.eventConsentLocations.map((location, index) => (
+											<code key={index} title={location.purposeCode}>
+												{location.purposeCode}
+											</code>
+										))
+									)}
+								</div>
 							</div>
 							<div className='schema-property-consent__purpose-field'>
-								<span>Event path:</span>
-								{purpose.eventPath === '' ? 'Unknown' : <code>{purpose.eventPath}</code>}
-							</div>
-							<div className='schema-property-consent__purpose-field'>
-								<span>Profile path:</span>
-								{purpose.profilePath === '' ? 'Unknown' : <code>{purpose.profilePath}</code>}
+								<span>Consent in profiles:</span>
+								{purpose.profileConsentLocation == null ? (
+									'Unknown'
+								) : (
+									<code>{formatProfileConsentLocation(purpose.profileConsentLocation)}</code>
+								)}
 							</div>
 						</div>
 					))}
 				</div>
-				{isJSON && (
+				{hasMultiplePurposes && (
 					<div className='schema-property-consent__pagination'>
 						<span className='schema-property-consent__pagination-status'>
 							{selectedPurposeIndex + 1} of {purposes.length}
@@ -163,7 +187,7 @@ const SchemaPropertyConsent = ({ isJSON, purposes }: SchemaPropertyConsentProps)
 								circle
 								title='Previous consent purpose'
 								disabled={selectedPurposeIndex === 0}
-								onClick={() => setSelectedPurposeID(purposes[selectedPurposeIndex - 1].id)}
+								onClick={() => selectPurpose(selectedPurposeIndex - 1)}
 							>
 								<SlIcon name='chevron-left' aria-hidden='true' />
 							</SlButton>
@@ -174,7 +198,7 @@ const SchemaPropertyConsent = ({ isJSON, purposes }: SchemaPropertyConsentProps)
 								circle
 								title='Next consent purpose'
 								disabled={selectedPurposeIndex === purposes.length - 1}
-								onClick={() => setSelectedPurposeID(purposes[selectedPurposeIndex + 1].id)}
+								onClick={() => selectPurpose(selectedPurposeIndex + 1)}
 							>
 								<SlIcon name='chevron-right' aria-hidden='true' />
 							</SlButton>

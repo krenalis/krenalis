@@ -3,13 +3,11 @@ import { login, logout, adminURL, logValidationErrors } from './utils';
 import { ObjectType, Property } from '../src/lib/api/types/types';
 import { ConsentPurpose } from '../src/lib/api/types/workspace';
 
-const createConsentPurpose = (id: string, code: string, name: string, profilePath: string): ConsentPurpose => ({
+const createConsentPurpose = (id: string, name: string, property: string, jsonKey?: string): ConsentPurpose => ({
 	id,
-	code,
 	name,
-	aliases: [],
-	eventPath: '',
-	profilePath,
+	eventConsentLocations: [],
+	profileConsentLocation: { property, ...(jsonKey == null ? {} : { jsonKey }) },
 });
 
 const createSchemaProperty = (name: string, type: Property['type']): Property => ({
@@ -112,14 +110,16 @@ test.afterEach(async ({ page }) => {
 });
 
 test(`Show, paginate, and refresh consent purposes on profile schema properties`, async ({ page }) => {
-	const booleanPurpose = createConsentPurpose('boolean-purpose', 'marketing', 'Marketing', 'consent_boolean');
+	const booleanPurpose = createConsentPurpose('boolean-purpose', 'Marketing', 'consent_boolean');
+	const booleanPurposeTwo = createConsentPurpose('boolean-purpose-two', 'Newsletter', 'consent_boolean');
 	let purposes = [
 		booleanPurpose,
+		booleanPurposeTwo,
 		{
-			...createConsentPurpose('json-purpose-one', 'analytics', 'Analytics', 'consent_json.analytics'),
-			eventPath: 'privacy.events.analytics',
+			...createConsentPurpose('json-purpose-one', 'Analytics', 'consent_json', 'analytics'),
+			eventConsentLocations: [{ purposeCode: 'analytics' }, { purposeCode: '#ANALYTICS' }],
 		},
-		createConsentPurpose('json-purpose-two', 'personalization', 'Personalization', 'consent_json.personalization'),
+		createConsentPurpose('json-purpose-two', 'Personalization', 'consent_json', 'personalization'),
 	];
 	await page.route('**/v1/consent-purposes', async (route) => {
 		await route.fulfill({ json: { purposes } });
@@ -157,10 +157,27 @@ test(`Show, paginate, and refresh consent purposes on profile schema properties`
 	await expect(booleanPopup).not.toBeVisible();
 	await booleanTrigger.hover();
 	await expect(booleanPopup).toBeVisible();
-	await expect(booleanPopup.locator('.schema-property-consent__popup-title')).toHaveText('Consent purpose');
+	await expect(booleanPopup.locator('.schema-property-consent__popup-title')).toHaveText('Consent purposes');
 	await expect(booleanPopup.locator('.schema-property-consent__purpose-name')).toHaveText(['Marketing']);
-	await expect(booleanPopup).toContainText('Event path:Unknown');
+	await expect(booleanPopup.getByText('Consent in events:', { exact: true })).not.toBeVisible();
 	await expect(booleanPopup).toContainText('consent_boolean');
+	await expect(booleanPopup.locator('.schema-property-consent__pagination-status')).toHaveText('1 of 2');
+	const firstBooleanPopupHeight = await booleanPopup.evaluate((element) => element.getBoundingClientRect().height);
+	const previousBooleanPurpose = booleanPopup.getByRole('button', { name: 'Previous consent purpose' });
+	const nextBooleanPurpose = booleanPopup.getByRole('button', { name: 'Next consent purpose' });
+	const booleanPurposeTooltip = booleanPopup.locator('.schema-property-consent__open-purpose-tooltip');
+	await expect(previousBooleanPurpose).toBeDisabled();
+	await expect(nextBooleanPurpose).toBeEnabled();
+	await nextBooleanPurpose.click();
+	await expect(booleanPopup.locator('.schema-property-consent__purpose-name')).toHaveText(['Newsletter']);
+	await expect(booleanPopup.locator('.schema-property-consent__pagination-status')).toHaveText('2 of 2');
+	await expect(booleanPurposeTooltip).not.toHaveJSProperty('open', true);
+	expect(await booleanPopup.evaluate((element) => element.getBoundingClientRect().height)).toBeCloseTo(firstBooleanPopupHeight, 1);
+	await expect(previousBooleanPurpose).toBeEnabled();
+	await expect(nextBooleanPurpose).toBeDisabled();
+	await previousBooleanPurpose.click();
+	await expect(booleanPopup.locator('.schema-property-consent__purpose-name')).toHaveText(['Marketing']);
+	await expect(booleanPurposeTooltip).not.toHaveJSProperty('open', true);
 	await booleanTrigger.click();
 	await expect(booleanPopup).toBeVisible();
 	await expect(booleanRow).not.toHaveClass(/grid__row--selected/);
@@ -182,8 +199,19 @@ test(`Show, paginate, and refresh consent purposes on profile schema properties`
 			.evaluate((element) => element.getBoundingClientRect().width),
 	).toBeGreaterThan(250);
 	await expect(jsonPopup.locator('.schema-property-consent__purpose-name')).toHaveText(['Analytics']);
-	await expect(jsonPopup).toContainText('privacy.events.analytics');
-	await expect(jsonPopup).toContainText('consent_json.analytics');
+	const eventPathCodes = jsonPopup.locator('.schema-property-consent__event-paths code');
+	await expect(eventPathCodes).toHaveText(['analytics', '#ANALYTICS']);
+	await expect(eventPathCodes.nth(0)).toBeVisible();
+	await expect(eventPathCodes.nth(1)).toBeVisible();
+	const eventPathBounds = await eventPathCodes.evaluateAll((codes) =>
+		codes.map((code) => {
+			const { x, y, height } = code.getBoundingClientRect();
+			return { x, y, height };
+		}),
+	);
+	expect(eventPathBounds[1].x).toBeCloseTo(eventPathBounds[0].x, 1);
+	expect(eventPathBounds[1].y).toBeGreaterThanOrEqual(eventPathBounds[0].y + eventPathBounds[0].height);
+	await expect(jsonPopup).toContainText('consent_json["analytics"]');
 	await expect(jsonPopup.locator('.schema-property-consent__pagination-status')).toHaveText('1 of 2');
 	const previousPurpose = jsonPopup.getByRole('button', { name: 'Previous consent purpose' });
 	const nextPurpose = jsonPopup.getByRole('button', { name: 'Next consent purpose' });
@@ -191,8 +219,8 @@ test(`Show, paginate, and refresh consent purposes on profile schema properties`
 	await expect(nextPurpose).toBeEnabled();
 	await nextPurpose.click();
 	await expect(jsonPopup.locator('.schema-property-consent__purpose-name')).toHaveText(['Personalization']);
-	await expect(jsonPopup).toContainText('Event path:Unknown');
-	await expect(jsonPopup).toContainText('consent_json.personalization');
+	await expect(jsonPopup.getByText('Consent in events:', { exact: true })).not.toBeVisible();
+	await expect(jsonPopup).toContainText('consent_json["personalization"]');
 	await expect(jsonPopup.locator('.schema-property-consent__pagination-status')).toHaveText('2 of 2');
 	await expect(previousPurpose).toBeEnabled();
 	await expect(nextPurpose).toBeDisabled();
@@ -224,17 +252,23 @@ test(`Show, paginate, and refresh consent purposes on profile schema properties`
 	await refreshPurposes();
 	await expect(editBooleanRow.locator('.schema-property-consent')).toHaveCount(0);
 
-	purposes = [{ ...booleanPurpose, id: 'new-boolean-purpose', name: 'New marketing' }];
+	purposes = [
+		{ ...booleanPurpose, id: 'new-boolean-purpose', name: 'New marketing' },
+		{ ...booleanPurposeTwo, id: 'new-boolean-purpose-two', name: 'New newsletter' },
+	];
 	await refreshPurposes();
 	await editBooleanTrigger.hover();
-	await expect(editBooleanRow.locator('.schema-property-consent__purpose-name')).toHaveText(['New marketing']);
+	const editBooleanPopup = editBooleanRow.locator('.schema-property-consent__popup');
+	await expect(editBooleanPopup.locator('.schema-property-consent__purpose-name')).toHaveText(['New marketing']);
+	await editBooleanPopup.getByRole('button', { name: 'Next consent purpose' }).click();
+	await expect(editBooleanPopup.locator('.schema-property-consent__purpose-name')).toHaveText(['New newsletter']);
 	const openPurposeTooltip = editBooleanRow.locator('.schema-property-consent__open-purpose-tooltip');
 	await expect(openPurposeTooltip).toHaveJSProperty('content', 'Open consent purpose');
 	await expect(openPurposeTooltip.locator('sl-icon')).toHaveAttribute('name', 'box-arrow-in-up-right');
 	await editBooleanRow.locator('.schema-property-consent__open-purpose').click();
 	await expect(page).toHaveURL(`${adminURL}/settings/privacy`);
 	await expect(page.locator('.alert-dialog', { hasText: 'Discard unsaved changes?' })).toHaveCount(0);
-	await expect(page.locator('.privacy__dialog[open] .privacy__dialog-name input')).toHaveValue('New marketing');
+	await expect(page.locator('.privacy__dialog[open] .privacy__dialog-name input')).toHaveValue('New newsletter');
 });
 
 test(`Update consent associations while editing profile schema properties`, async ({ page }) => {
@@ -242,9 +276,9 @@ test(`Update consent associations while editing profile schema properties`, asyn
 		await route.fulfill({
 			json: {
 				purposes: [
-					createConsentPurpose('renamed-purpose', 'renamed', 'Renamed purpose', 'property_to_rename'),
-					createConsentPurpose('boolean-purpose', 'boolean', 'Boolean purpose', 'replacement_property'),
-					createConsentPurpose('json-purpose', 'json', 'JSON purpose', 'replacement_property.value'),
+					createConsentPurpose('renamed-purpose', 'Renamed purpose', 'property_to_rename'),
+					createConsentPurpose('boolean-purpose', 'Boolean purpose', 'replacement_property'),
+					createConsentPurpose('json-purpose', 'JSON purpose', 'replacement_property', 'value'),
 				],
 			},
 		});

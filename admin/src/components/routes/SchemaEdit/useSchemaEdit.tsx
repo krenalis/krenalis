@@ -972,7 +972,7 @@ const buildRow = (
 	const typeCell: ReactNode = (
 		<>
 			<span className='schema-edit__property-technical-type'>{toKrenalisStringType(property.type)}</span>
-			<SchemaPropertyConsent isJSON={property.type.kind === 'json'} purposes={consentPurposes} />
+			<SchemaPropertyConsent purposes={consentPurposes} />
 		</>
 	);
 	let primarySourceCell: ReactNode;

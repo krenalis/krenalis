@@ -7,12 +7,57 @@ package state
 import (
 	"database/sql/driver"
 	"fmt"
+	"slices"
 	"testing"
 )
 
 type valuerStringer interface {
 	driver.Valuer
 	String() string
+}
+
+// TestNewConsentPurpose checks event location normalization and literal purpose codes.
+func TestNewConsentPurpose(t *testing.T) {
+
+	tests := []struct {
+		name      string
+		locations []EventConsentLocation
+	}{
+		{name: "nil event locations"},
+		{name: "empty event locations", locations: []EventConsentLocation{}},
+		{
+			name: "literal purpose codes",
+			locations: []EventConsentLocation{
+				{PurposeCode: "vendor.marketing"},
+				{PurposeCode: "#CFK567"},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+
+			purpose := NewConsentPurpose(ConsentPurpose{EventConsentLocations: test.locations})
+			if purpose.EventConsentLocations == nil || !slices.Equal(purpose.EventConsentLocations, test.locations) {
+				t.Fatalf("event locations = %#v, want non-nil with values %v", purpose.EventConsentLocations, test.locations)
+			}
+			paths := purpose.EventPropertyPaths()
+			if paths == nil || len(paths) != len(test.locations) {
+				t.Fatalf("event paths = %#v, want non-nil with %d paths", paths, len(test.locations))
+			}
+			for i, location := range test.locations {
+				want := []string{"context", "consents", location.PurposeCode}
+				if !slices.Equal(paths[i], want) {
+					t.Fatalf("event path %d = %v, want %v", i, paths[i], want)
+				}
+			}
+			if purpose.ProfileConsentLocation != nil || purpose.ProfilePropertyPath() != nil {
+				t.Fatal("expected the absent profile location and its path to remain nil")
+			}
+
+		})
+	}
+
 }
 
 // TestResolveRequiredConsents verifies that required purposes are resolved and

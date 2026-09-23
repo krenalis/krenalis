@@ -14,13 +14,19 @@ import (
 // satisfy the required consent purposes.
 func SatisfiesEvent(purposes []*state.ConsentPurpose, matchAll bool, event map[string]any) bool {
 	return satisfies(purposes, matchAll, func(purpose *state.ConsentPurpose) bool {
-		// The consent can be given with the code of the purpose or with any of
-		// its aliases, so every property path resolved for the purpose is read
-		// until one of them grants the consent.
+		// Only missing keys are skipped; the first present key decides the consent.
 		for _, path := range purpose.EventPropertyPaths() {
-			if granted(event, path) {
-				return true
+			value, exists := properties.Read(event, path)
+			if !exists {
+				continue
 			}
+			switch value := value.(type) {
+			case bool:
+				return value
+			case json.Value:
+				return value.Bool()
+			}
+			return false
 		}
 		return false
 	})
@@ -30,31 +36,37 @@ func SatisfiesEvent(purposes []*state.ConsentPurpose, matchAll bool, event map[s
 // satisfy the required consent purposes.
 func SatisfiesProfile(purposes []*state.ConsentPurpose, matchAll bool, profile map[string]any) bool {
 	return satisfies(purposes, matchAll, func(purpose *state.ConsentPurpose) bool {
-		return granted(profile, purpose.ProfilePropertyPath())
+		location := purpose.ProfileConsentLocation
+		if location == nil {
+			return false
+		}
+		return granted(profile, purpose.ProfilePropertyPath(), location.JSONKey)
 	})
 }
 
-// granted reports whether the property of the given attributes with the given
-// path holds a granted consent. The consent can be held by a boolean property
-// or by a boolean value inside a JSON property, but not by a JSON property that
-// is itself a boolean. The path of a consent purpose is checked against no
-// schema, so it can lead to a property that does not exist or that holds a
-// value of any other kind: the consent is then not given.
-func granted(attributes map[string]any, path []string) bool {
-	if len(path) == 0 {
+// granted reports whether the schema property or its explicit JSON key grants
+// consent.
+func granted(attributes map[string]any, path []string, key string) bool {
+
+	if len(path) == 0 || properties.InJSON(attributes, path) {
 		return false
 	}
 	v, ok := properties.Read(attributes, path)
 	if !ok {
 		return false
 	}
-	switch v := v.(type) {
-	case bool:
-		return v
-	case json.Value:
-		return properties.InJSON(attributes, path) && v.Bool()
+
+	if key == "" {
+		value, ok := v.(bool)
+		return ok && value
 	}
-	return false
+	object, ok := v.(json.Value)
+	if !ok || !object.IsObject() {
+		return false
+	}
+	value, exists := object.Get([]string{key})
+
+	return exists && value.Bool()
 }
 
 // satisfies reports whether the required consent purposes are satisfied, given

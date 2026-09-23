@@ -169,7 +169,7 @@ const buildRow = (
 	const typeCell: ReactNode = (
 		<>
 			<span className='schema-grid__technical-type'>{toKrenalisStringType(property.type)}</span>
-			<SchemaPropertyConsent isJSON={property.type.kind === 'json'} purposes={consentPurposes} />
+			<SchemaPropertyConsent purposes={consentPurposes} />
 		</>
 	);
 	let primarySourceCell: ReactNode = <span className='schema-grid__empty-cell'>—</span>;

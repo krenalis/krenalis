@@ -945,7 +945,7 @@ func (workspace *Workspace) ConsentPurposes() []*ConsentPurpose {
 	}
 	workspace.mu.Unlock()
 	sort.Slice(purposes, func(i, j int) bool {
-		return purposes[i].Code < purposes[j].Code
+		return purposes[i].ID < purposes[j].ID
 	})
 	return purposes
 }
@@ -1358,65 +1358,64 @@ func (account *Account) Connector() *Connector {
 
 // ConsentPurpose represents a consent purpose.
 type ConsentPurpose struct {
-	ID   string
-	Code string
-	Name string
-	// Aliases are the additional codes with which the consent for the purpose
-	// can be given in an event.
-	Aliases []string
-	// EventPath and ProfilePath are the configured paths of the properties that
-	// hold the consent given for the purpose, in an event and in a profile
-	// respectively. They are empty when they are not configured.
-	EventPath   string
-	ProfilePath string
+	ID                     string
+	Name                   string
+	EventConsentLocations  []EventConsentLocation // never nil
+	ProfileConsentLocation *ProfileConsentLocation
 	// eventPropertyPaths and profilePropertyPath are the paths actually read,
 	// resolved by resolvePropertyPaths.
-	eventPropertyPaths  [][]string
+	eventPropertyPaths  [][]string // never nil
 	profilePropertyPath []string
 }
 
 // NewConsentPurpose returns a new consent purpose with the paths of its
 // properties resolved.
 func NewConsentPurpose(purpose ConsentPurpose) *ConsentPurpose {
-	cp := new(ConsentPurpose)
+	cp := &ConsentPurpose{}
 	*cp = purpose
 	cp.resolvePropertyPaths()
 	return cp
 }
 
 // EventPropertyPaths returns the paths of the properties of an event that hold
-// the consent given for the purpose. The consent is given when any of them
-// holds it.
+// the consent given for the purpose, in order of precedence.
 func (purpose *ConsentPurpose) EventPropertyPaths() [][]string {
 	return purpose.eventPropertyPaths
 }
 
-// ProfilePropertyPath returns the path of the property of a profile that
-// holds the consent given for the purpose.
+// ProfilePropertyPath returns the schema property path holding the Boolean
+// consent or JSON object.
 func (purpose *ConsentPurpose) ProfilePropertyPath() []string {
 	return purpose.profilePropertyPath
 }
 
 // resolvePropertyPaths resolves the configured paths of the properties that
-// hold the consent given for the purpose. When the event path is the default,
-// the consent can also be given with any of the aliases of the purpose, so a
-// path is resolved for each of them too.
+// hold the consent given for the purpose.
 func (purpose *ConsentPurpose) resolvePropertyPaths() {
-	purpose.eventPropertyPaths = nil
 	purpose.profilePropertyPath = nil
-	if purpose.EventPath != "" {
-		purpose.eventPropertyPaths = [][]string{strings.Split(purpose.EventPath, ".")}
+	if purpose.EventConsentLocations == nil {
+		purpose.EventConsentLocations = []EventConsentLocation{}
 	}
-	if purpose.EventPath == "context.consents."+purpose.Code {
-		purpose.eventPropertyPaths = make([][]string, 0, 1+len(purpose.Aliases))
-		purpose.eventPropertyPaths = append(purpose.eventPropertyPaths, []string{"context", "consents", purpose.Code})
-		for _, alias := range purpose.Aliases {
-			purpose.eventPropertyPaths = append(purpose.eventPropertyPaths, []string{"context", "consents", alias})
-		}
+	purpose.eventPropertyPaths = make([][]string, len(purpose.EventConsentLocations))
+	for i, location := range purpose.EventConsentLocations {
+		purpose.eventPropertyPaths[i] = []string{"context", "consents", location.PurposeCode}
 	}
-	if purpose.ProfilePath != "" {
-		purpose.profilePropertyPath = strings.Split(purpose.ProfilePath, ".")
+	if location := purpose.ProfileConsentLocation; location != nil && types.IsValidPropertyPath(location.Property) {
+		purpose.profilePropertyPath = strings.Split(location.Property, ".")
 	}
+}
+
+// EventConsentLocation identifies a property under context.consents that is checked
+// for the consent value in incoming events.
+type EventConsentLocation struct {
+	PurposeCode string
+}
+
+// ProfileConsentLocation identifies the profile schema property and optional JSON key
+// used to represent the consent value for a purpose.
+type ProfileConsentLocation struct {
+	Property string
+	JSONKey  string
 }
 
 // Strategy represents a strategy.

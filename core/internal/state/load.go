@@ -432,15 +432,23 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 
 	// Read all consent purposes.
-	err = tx.QueryScan(ctx, "SELECT workspace, id, code, name, aliases, event_path, profile_path"+
+	err = tx.QueryScan(ctx, "SELECT workspace, id, name, event_purpose_codes, profile_property, profile_json_key"+
 		" FROM consent_purposes",
 		func(rows *db.Rows) error {
 			for rows.Next() {
 				cp := ConsentPurpose{}
 				var workspaceID string
-				if err := rows.Scan(&workspaceID, &cp.ID, &cp.Code, &cp.Name, &cp.Aliases, &cp.EventPath,
-					&cp.ProfilePath); err != nil {
+				var purposeCodes []string
+				var property, jsonKey string
+				if err := rows.Scan(&workspaceID, &cp.ID, &cp.Name, &purposeCodes, &property, &jsonKey); err != nil {
 					return fmt.Errorf("loading consent purpose %s: %s", cp.ID, err)
+				}
+				cp.EventConsentLocations = make([]EventConsentLocation, len(purposeCodes))
+				for i, code := range purposeCodes {
+					cp.EventConsentLocations[i] = EventConsentLocation{PurposeCode: code}
+				}
+				if property != "" {
+					cp.ProfileConsentLocation = &ProfileConsentLocation{Property: property, JSONKey: jsonKey}
 				}
 				state.workspaces[workspaceID].consentPurposes[cp.ID] = NewConsentPurpose(cp)
 			}

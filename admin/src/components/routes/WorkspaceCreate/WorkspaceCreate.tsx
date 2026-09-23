@@ -22,13 +22,12 @@ const postgresqlIcon = <ExternalLogo slot='prefix' code='postgresql' path={WAREH
 
 const snowflakeIcon = <ExternalLogo slot='prefix' code='snowflake' path={WAREHOUSES_ASSETS_PATH} />;
 
-// The consent purposes added to a workspace when it is created. Their codes are
-// the names of the properties of the "consents" property of InitialSchema, so
-// that the default paths of each purpose lead to its property.
+// The consent purposes added to a workspace when it is created. Their purpose
+// codes match the names of the properties under "consents" in InitialSchema.
 const initialConsentPurposes = [
-	{ code: 'marketing', name: 'Marketing communications' },
-	{ code: 'profiling', name: 'Profiling' },
-	{ code: 'analytics', name: 'Analytics' },
+	{ purposeCode: 'marketing', name: 'Marketing communications' },
+	{ purposeCode: 'profiling', name: 'Profiling' },
+	{ purposeCode: 'analytics', name: 'Analytics' },
 ];
 
 const WorkspaceCreate = () => {
@@ -156,13 +155,9 @@ const WorkspaceCreate = () => {
 				const newApi = new API(window.location.origin, id);
 				await newApi.workspaces.updateWarehouse(name, 'Normal', settings, mcpSettings, false);
 				for (const purpose of initialConsentPurposes) {
-					await newApi.workspaces.addConsentPurpose(
-						purpose.code,
-						purpose.name,
-						[],
-						`context.consents.${purpose.code}`,
-						`consents.${purpose.code}`,
-					);
+					await newApi.workspaces.addConsentPurpose(purpose.name, [{ purposeCode: purpose.purposeCode }], {
+						property: `consents.${purpose.purposeCode}`,
+					});
 				}
 			} catch (err) {
 				handleError(err);

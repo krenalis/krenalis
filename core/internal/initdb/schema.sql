@@ -149,12 +149,10 @@ CREATE TABLE access_keys (
 CREATE TABLE consent_purposes (
     id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
     workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
-    code varchar(100) NOT NULL CHECK (code ~ '^[A-Za-z_][0-9A-Za-z_]{0,99}$'),
     name varchar(100) NOT NULL,
-    aliases varchar(100)[] NOT NULL DEFAULT '{}',
-    event_path varchar(1024) NOT NULL DEFAULT '',
-    profile_path varchar(1024) NOT NULL DEFAULT '',
-    UNIQUE (workspace, code),
+    event_purpose_codes varchar(1024)[] NOT NULL DEFAULT '{}',
+    profile_property varchar(1024) NOT NULL DEFAULT '',
+    profile_json_key varchar(1024) NOT NULL DEFAULT '',
     PRIMARY KEY (id)
 );
 

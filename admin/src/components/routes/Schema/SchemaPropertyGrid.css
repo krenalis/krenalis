@@ -326,7 +326,13 @@
 }
 
 .schema-property-grid__tooltip-content {
-	white-space: pre-line;
+	display: grid;
+	gap: var(--sl-spacing-x-small);
+
+	p {
+		margin: 0;
+		white-space: pre-line;
+	}
 }
 
 .schema-property-grid__tooltip::part(base__popup) {
