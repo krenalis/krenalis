@@ -741,11 +741,6 @@ wa-button.pipeline__filters-remove-rule[appearance='plain']::part(label) {
 	cursor: not-allowed;
 }
 
-.pipeline__transformation-output-property-remove::part(label),
-.pipeline__transformation-output-property-add::part(label) {
-	display: none;
-}
-
 .pipeline__transformation-output-property-remove wa-icon,
 .pipeline__transformation-output-property-add wa-icon {
 	font-size: 20px;

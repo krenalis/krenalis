@@ -182,7 +182,7 @@ const IdentityResolutionSettings = () => {
 											className='identifiers__identifier-menu'
 											slot='trigger'
 										>
-											<WaIcon slot='start' name='three-dots'></WaIcon>
+											<WaIcon name='three-dots'></WaIcon>
 										</SlButton>
 										<SlMenu>
 											<SlMenuItem

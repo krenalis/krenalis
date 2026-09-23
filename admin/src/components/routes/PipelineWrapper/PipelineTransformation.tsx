@@ -3047,7 +3047,7 @@ const MapMapping = ({
 									onClick={areChildrenMappingDisabled ? null : () => onAddPair(i)}
 									disabled={areChildrenMappingDisabled}
 								>
-									<WaIcon name='plus-circle' slot='start' />
+									<WaIcon name='plus-circle' />
 								</SlButton>
 							</SlTooltip>
 							<SlTooltip content={pairs.length === 1 ? 'Clear key' : 'Remove key'} hoist={true}>
@@ -3066,7 +3066,7 @@ const MapMapping = ({
 									}
 									disabled={areChildrenMappingDisabled || (pairs.length === 1 && !hasFilledPairs)}
 								>
-									<WaIcon name='x-circle' slot='start' />
+									<WaIcon name='x-circle' />
 								</SlButton>
 							</SlTooltip>
 							{hasDuplicatedKey && (

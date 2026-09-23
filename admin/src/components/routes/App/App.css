@@ -446,6 +446,18 @@ wa-button {
 	padding: 0 var(--sl-spacing-large);
 }
 
+:where(wa-button[size='s']:state(icon-button))::part(button) {
+	width: var(--sl-input-height-small);
+}
+
+:where(wa-button[size='m']:state(icon-button))::part(button) {
+	width: var(--sl-input-height-medium);
+}
+
+:where(wa-button[size='l']:state(icon-button))::part(button) {
+	width: var(--sl-input-height-large);
+}
+
 :where(wa-button[size='s']:has(> [slot='start']))::part(button),
 :where(wa-button[size='s']:has(> [slot='start']))::part(label) {
 	padding-inline-start: var(--sl-spacing-x-small);

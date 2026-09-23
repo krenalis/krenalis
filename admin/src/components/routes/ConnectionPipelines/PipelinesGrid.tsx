@@ -324,7 +324,7 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 						size='s'
 						className='connection-pipelines__menu-button'
 					>
-						<WaIcon slot='start' name='three-dots-vertical' />
+						<WaIcon name='three-dots-vertical' />
 					</SlButton>
 					<SlMenu className='connection-pipelines__menu'>
 						{isPipelineRunSupported && (
