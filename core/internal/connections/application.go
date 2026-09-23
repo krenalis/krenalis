@@ -110,13 +110,13 @@ func (app *Application) Connector() string {
 	return app.connector
 }
 
-// EventType returns the application's event type with the specified ID. The
-// returned event type is owned by the connector and must not be modified.
-// It validates the matching event type, rejects duplicates of its ID, and
-// verifies that its ordering group uses a single delivery endpoint. Nil entries
-// and event types in other ordering groups are ignored.
+// EventType returns the application's event type with the specified ID.
+//
+// It returns the event type obtained directly from the connector, after
+// validation. The caller must not modify the returned value.
+//
 // If the event type does not exist, it returns connectors.ErrEventTypeNotExist.
-// If the connector returns an error, it returns an *UnavailableError error.
+// If the connector returns an error, it returns an *UnavailableError.
 // It panics if the application does not support the event target.
 func (app *Application) EventType(ctx context.Context, id string) (*EventType, error) {
 	if app.err != nil {
