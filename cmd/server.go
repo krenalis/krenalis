@@ -47,7 +47,6 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 
 	conf := corePkg.Config{
 		KMS:                           config.KMS,
-		OrganizationsAPIKey:           config.OrganizationsAPIKey,
 		DB:                            config.DB,
 		NATS:                          config.NATS,
 		MaxMindDBPath:                 config.MaxMindDBPath,

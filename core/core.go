@@ -99,8 +99,7 @@ type Config struct {
 	DB                            DBConfig
 	NATS                          NATSConfig
 	KMS                           string
-	OrganizationsAPIKey           string // can be empty (which means that the platform management API cannot be used)
-	FunctionProvider              any    // must be a LambdaConfig or LocalConfig value
+	FunctionProvider              any // must be a LambdaConfig or LocalConfig value
 	MaxMindDBPath                 string
 	MemberEmailFrom               string
 	SMTP                          SMTPConfig
