@@ -631,7 +631,7 @@ func assertPipelineEventTypesUpgraded(t *testing.T, database *db.DB) {
 	}{
 		{"event_type", 100},
 		{"ordering_group", 16},
-		{"delivery_endpoint", 25},
+		{"delivery_endpoint", 16},
 	} {
 		var length int
 		err := database.QueryRow(t.Context(), `

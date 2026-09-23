@@ -121,14 +121,14 @@ const pipelineEventTypeUpgrade = `
 // pipelineDeliveryEndpointUpgrade adds persisted delivery endpoints.
 const pipelineDeliveryEndpointUpgrade = `
 	ALTER TABLE pipelines
-		ADD COLUMN IF NOT EXISTS delivery_endpoint varchar(25);
+		ADD COLUMN IF NOT EXISTS delivery_endpoint varchar(16);
 
 	UPDATE pipelines
 	SET delivery_endpoint = ''
 	WHERE delivery_endpoint IS NULL;
 
 	ALTER TABLE pipelines
-		ALTER COLUMN delivery_endpoint TYPE varchar(25),
+		ALTER COLUMN delivery_endpoint TYPE varchar(16),
 		ALTER COLUMN delivery_endpoint SET NOT NULL`
 
 // pipelineOrderingGroupUpgrade moves ordering_group and delivery_endpoint after

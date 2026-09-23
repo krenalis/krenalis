@@ -21,7 +21,7 @@ Use it to choose the right iteration method and payload-building pattern.
 - Set `DeliveryEndpoint` when event types use separate destination endpoints.
   Event types in the same ordering group must use the same delivery endpoint.
   An empty value identifies the connector's default endpoint. Explicit endpoint
-  identifiers follow the property name syntax and cannot be longer than 25
+  identifiers follow the property name syntax and cannot be longer than 16
   characters.
 - Do not change an ID, ordering group, or delivery endpoint after the connector
   has been released.

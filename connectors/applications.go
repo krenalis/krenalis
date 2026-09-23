@@ -235,7 +235,7 @@ func (r FailureReason) String() string {
 const MaxOrderingGroupLen = 16
 
 // MaxDeliveryEndpointLen is the maximum length of a delivery endpoint.
-const MaxDeliveryEndpointLen = 25
+const MaxDeliveryEndpointLen = 16
 
 // EventType represents a type of event that can be sent to an application.
 type EventType struct {
