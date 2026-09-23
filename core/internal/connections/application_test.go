@@ -430,7 +430,7 @@ func TestApplicationEventType(t *testing.T) {
 			{ID: "updateContact", OrderingGroup: "contacts", DeliveryEndpoint: "contacts"},
 		}}}
 		_, err := app.EventType(t.Context(), "createContact")
-		expected := `connector test returned different delivery endpoints for ordering group "contacts"`
+		expected := `connector test returned a different DeliveryEndpoint for ordering group "contacts"`
 		if err != nil {
 			if err.Error() != expected {
 				t.Fatalf("expected %q, got %q", expected, err.Error())
@@ -496,7 +496,7 @@ func TestApplicationEventTypes(t *testing.T) {
 				{ID: "createContact", OrderingGroup: "contacts"},
 				{ID: "updateContact", OrderingGroup: "contacts", DeliveryEndpoint: "contacts"},
 			},
-			err: `connector test returned different delivery endpoints for ordering group "contacts"`,
+			err: `connector test returned a different DeliveryEndpoint for ordering group "contacts"`,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {

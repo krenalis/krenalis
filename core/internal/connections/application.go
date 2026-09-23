@@ -150,7 +150,7 @@ func (app *Application) EventType(ctx context.Context, id string) (*EventType, e
 			continue
 		}
 		return nil, fmt.Errorf(
-			"connector %s returned different delivery endpoints for ordering group %q", app.connector, et.OrderingGroup)
+			"connector %s returned a different DeliveryEndpoint for ordering group %q", app.connector, et.OrderingGroup)
 	}
 	return et, nil
 }
@@ -190,7 +190,7 @@ func (app *Application) EventTypes(ctx context.Context) ([]*EventType, error) {
 				continue
 			}
 			return nil, fmt.Errorf(
-				"connector %s returned different delivery endpoints for ordering group %q", app.connector, eventType.OrderingGroup)
+				"connector %s returned a different DeliveryEndpoint for ordering group %q", app.connector, eventType.OrderingGroup)
 		}
 	}
 	return eventTypes, nil
