@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -354,6 +353,7 @@ func dropObsoleteProfileTables(ctx context.Context, db *sql.DB, publishedVersion
 		WHERE "T"."TABLE_SCHEMA" = CURRENT_SCHEMA()
 			AND "T"."TABLE_NAME" = 'KRENALIS_PROFILES_0'
 			AND ? > 0
+		ORDER BY "VERSION" ASC
 		LIMIT `+strconv.Itoa(maxTables), publishedVersion, publishedVersion)
 	if err != nil {
 		return snowflake(err)
@@ -379,8 +379,6 @@ func dropObsoleteProfileTables(ctx context.Context, db *sql.DB, publishedVersion
 	if err != nil {
 		return snowflake(err)
 	}
-
-	slices.Sort(versions)
 
 	for _, v := range versions {
 		_, err = db.ExecContext(ctx, `DROP TABLE IF EXISTS "KRENALIS_PROFILES_`+strconv.Itoa(v)+`"`)
