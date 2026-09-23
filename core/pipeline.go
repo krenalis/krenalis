@@ -1562,7 +1562,7 @@ func toStateTransformation(transformation *Transformation, inSchema, outSchema t
 		return tr
 	}
 	if m := transformation.Mapping; m != nil {
-		m, _ := mappings.New(transformation.Mapping, inSchema, outSchema, false, nil)
+		m, _ := mappings.New(transformation.Mapping, inSchema, outSchema, false)
 		return state.Transformation{
 			Mapping:  transformation.Mapping,
 			InPaths:  m.InPaths(),

@@ -1102,8 +1102,8 @@ type UIPreferences struct {
 	}
 }
 
-// TimeLayouts represents the layouts used to format datetime, date, and time
-// values.
+// TimeLayouts represents the layouts used to parse datetime, date, and time
+// values returned by a connector.
 type TimeLayouts struct {
 	DateTime string
 	Date     string

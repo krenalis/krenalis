@@ -511,7 +511,7 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 		if s, ok := p.value.(string); ok && s == "" {
 			nullable = false
 		}
-		v, err := convert(p.value, p.typ, dt, nullable, false, nil, None)
+		v, err := convert(p.value, p.typ, dt, nullable, false, None)
 		if err != nil {
 			if p.value == nil {
 				return fmt.Errorf("null is not convertible to the %s type", dt)

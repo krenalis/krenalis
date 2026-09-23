@@ -1162,7 +1162,7 @@ func (core *Core) TransformData(ctx context.Context, organization string, data [
 	// Validate the mapping and the transformation.
 	switch {
 	case transformation.Mapping != nil:
-		mapping, err := mappings.New(transformation.Mapping, inSchema, outSchema, false, nil)
+		mapping, err := mappings.New(transformation.Mapping, inSchema, outSchema, false)
 		if err != nil {
 			return nil, errors.BadRequest("mapping is not valid: %s", err)
 		}
@@ -1214,7 +1214,7 @@ func (core *Core) TransformData(ctx context.Context, organization string, data [
 	}
 
 	// Transform the attributes.
-	transformer, err := transformers.New(organization, pipeline, provider, nil)
+	transformer, err := transformers.New(organization, pipeline, provider)
 	if err != nil {
 		return nil, err
 	}
