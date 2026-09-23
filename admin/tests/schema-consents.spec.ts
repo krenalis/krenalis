@@ -13,6 +13,7 @@ const property = (name: string, type: Type): Property => ({
 	updateRequired: false,
 	readOptional: true,
 	nullable: false,
+	displayName: '',
 	description: '',
 });
 
