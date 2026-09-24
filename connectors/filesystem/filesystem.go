@@ -87,17 +87,30 @@ type innerSettings struct {
 
 // AbsolutePath returns the absolute representation of the given path name.
 func (fs *FileSystem) AbsolutePath(ctx context.Context, name string) (string, error) {
-	return fs.absolutePath(ctx, name, true)
+	name, err := relativeName(name)
+	if err != nil {
+		return "", err
+	}
+	confMu.Lock()
+	defer confMu.Unlock()
+	if displayedRoot != "" {
+		return filepath.Join(displayedRoot, name), nil
+	}
+	return filepath.Join(root, name), nil
 }
 
 // Reader opens a file and returns a ReadCloser from which to read its content.
 func (fs *FileSystem) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
+	name, err := relativeName(name)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
 	dir, err := openRoot()
 	if err != nil {
 		return nil, time.Time{}, rewritePathError(err)
 	}
 	defer dir.Close()
-	f, err := dir.Open(strings.TrimPrefix(filepath.ToSlash(name), "/"))
+	f, err := dir.Open(name)
 	if err != nil {
 		return nil, time.Time{}, rewritePathError(err)
 	}
@@ -165,12 +178,15 @@ func (fs *FileSystem) ServeUI(ctx context.Context, event string, settings json.V
 
 // Write writes the data read from r into the file with the given path name.
 func (fs *FileSystem) Write(ctx context.Context, r io.Reader, name, contentType string) error {
+	name, err := relativeName(name)
+	if err != nil {
+		return err
+	}
 	dir, err := openRoot()
 	if err != nil {
 		return rewritePathError(err)
 	}
 	defer dir.Close()
-	name = strings.TrimPrefix(filepath.ToSlash(name), "/")
 	tmpName := name + ".tmp"
 	f, err := dir.OpenFile(tmpName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
@@ -210,35 +226,6 @@ func (fs *FileSystem) Write(ctx context.Context, r io.Reader, name, contentType 
 	return rewritePathError(err)
 }
 
-// absolutePath returns the absolute representation of the given path name.
-//
-// forDisplaying indicates whether the returned path will be used in a purely
-// visual context, where it is necessary to use the displayed path, if
-// available, or otherwise whether the returned path must be a real path on the
-// filesystem (e.g. in cases where the connector needs to access files).
-func (fs *FileSystem) absolutePath(ctx context.Context, name string, forDisplaying bool) (string, error) {
-	originalName := name
-	name = filepath.ToSlash(name)
-	if name[0] == '/' {
-		if name == "/" {
-			return "", connectors.InvalidPathErrorf("path name cannot be “%s“", originalName)
-		}
-		name = name[1:]
-	}
-	if name[len(name)-1] == '/' {
-		return "", connectors.InvalidPathErrorf("path name cannot end with a slash")
-	}
-	if name == "." || !fsPkg.ValidPath(name) {
-		return "", connectors.InvalidPathErrorf("path name cannot contains “.” or “..” or empty elements")
-	}
-	confMu.Lock()
-	defer confMu.Unlock()
-	if forDisplaying && displayedRoot != "" {
-		return filepath.Join(displayedRoot, name), nil
-	}
-	return filepath.Join(root, name), nil
-}
-
 // saveSettings saves the settings.
 func (fs *FileSystem) saveSettings(ctx context.Context, settings json.Value) error {
 	var s innerSettings
@@ -255,6 +242,26 @@ func openRoot() (*os.Root, error) {
 	confMu.Lock()
 	defer confMu.Unlock()
 	return os.OpenRoot(root)
+}
+
+// relativeName validates the path name name and returns it relative to the
+// root. It returns an *InvalidPathError if name is not valid.
+func relativeName(name string) (string, error) {
+	originalName := name
+	name = filepath.ToSlash(name)
+	if name[0] == '/' {
+		if name == "/" {
+			return "", connectors.InvalidPathErrorf("path name cannot be “%s“", originalName)
+		}
+		name = name[1:]
+	}
+	if name[len(name)-1] == '/' {
+		return "", connectors.InvalidPathErrorf("path name cannot end with a slash")
+	}
+	if name == "." || !fsPkg.ValidPath(name) {
+		return "", connectors.InvalidPathErrorf("path name cannot contains “.” or “..” or empty elements")
+	}
+	return name, nil
 }
 
 // rewritePathError, if err is a *fs.PathError error, returns a new
