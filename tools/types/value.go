@@ -416,10 +416,12 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 						return nil, newErrInvalidValue("contains an invalid country code", "")
 					}
 				}
+				return s, nil
 			case PhoneSemantic:
 				if !IsPhone(s) {
 					return nil, newErrInvalidValue("is not a valid canonical phone number", "")
 				}
+				return s, nil
 			}
 			if values := t.Values(); values != nil {
 				if !slices.Contains(values, s) {
