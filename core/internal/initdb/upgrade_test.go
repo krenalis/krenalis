@@ -175,6 +175,7 @@ func TestUpgrade(t *testing.T) {
 	assertPipelineMetricsUpgrade(t, database)
 	assertPipelineMetricsColumnOrder(t, database)
 	assertUsageMetricsUpgrade(t, database)
+	assertIdentityMetricsUpgrade(t, database)
 	assertStateRequestSyncSchemaUpgraded(t, database)
 	assertDiscontinuedFunctionsUpgrade(t, database)
 	assertRateLimitLeaseFunction(t, database)
@@ -187,6 +188,36 @@ func TestUpgrade(t *testing.T) {
 	assertPipelineEventTypesUpgraded(t, database)
 	assertPipelineMetricsSurvivePipelineDelete(t, database)
 	assertUsageMetricsUpgrade(t, database)
+	assertIdentityMetricsUpgrade(t, database)
+}
+
+// assertIdentityMetricsUpgrade verifies that the upgrade creates the identity
+// metric tables and seeds an initial observation for every existing workspace.
+func assertIdentityMetricsUpgrade(t *testing.T, database *db.DB) {
+	t.Helper()
+	for table, want := range map[string]string{
+		"identity_metrics":            "workspace,day",
+		"identity_connection_metrics": "connection,day",
+	} {
+		if got := identityMetricPrimaryKey(t, database, table); got != want {
+			t.Fatalf("expected %s primary key %q, got %q", table, want, got)
+		}
+	}
+	assertConstraintExists(t, database, "identity_metrics", "identity_metrics_workspace_fkey")
+	assertConstraintExists(t, database, "identity_connection_metrics", "identity_connection_metrics_connection_fkey")
+
+	var count int
+	err := database.QueryRow(t.Context(), `SELECT COUNT(*) FROM identity_metrics
+		WHERE workspace = '222222222222'
+			AND identities_anonymous = 0
+			AND identities_recognized = 0
+			AND identities_without_profile = 0`).Scan(&count)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("expected one initial zero identity observation, got %d", count)
+	}
 }
 
 // TestUpgradePipelineOrderingGroup verifies column order, schema and data

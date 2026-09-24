@@ -63,6 +63,7 @@ import {
 	ConsentPurposesResponse,
 } from './types/responses';
 import { AccessKeyType } from './types/organization';
+import { IdentityMetric, IdentityMetricDay } from './types/metrics';
 
 const API_BASE_PATH = '/v1';
 
@@ -727,6 +728,23 @@ class Workspaces {
 
 	profilePropertiesSuitableAsIdentifiers = async (): Promise<ObjectType> => {
 		return await call(`${this.apiURL}/profiles/schema/suitable-as-identifiers`, http.GET, this.workspaceID);
+	};
+
+	identityMetricsPerDate = async (start: string, end: string, connection?: string): Promise<IdentityMetricDay[]> => {
+		const query = connection == null ? '' : `?connection=${encodeURIComponent(connection)}`;
+		return await call(
+			`${this.apiURL}/metrics/identities/dates/${encodeURIComponent(start)}/${encodeURIComponent(end)}${query}`,
+			http.GET,
+			this.workspaceID,
+		);
+	};
+
+	latestIdentityMetric = async (): Promise<IdentityMetric> => {
+		return await call(`${this.apiURL}/metrics/identities/latest`, http.GET, this.workspaceID);
+	};
+
+	refreshIdentityMetrics = async (): Promise<void> => {
+		return await call(`${this.apiURL}/metrics/identities/refresh`, http.POST, this.workspaceID);
 	};
 
 	createConnection = async (connection: ConnectionToAdd, authToken: string): Promise<string> => {

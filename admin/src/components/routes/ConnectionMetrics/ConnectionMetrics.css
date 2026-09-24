@@ -26,26 +26,6 @@
 	background: var(--bg-primary);
 }
 
-.connection-metrics__tabs-date-range {
-	position: relative;
-}
-
-.connection-metrics__tabs-date-range-picker {
-	position: absolute;
-	opacity: 0;
-	visibility: hidden;
-	transition: opacity 0.3s;
-	left: 0;
-	top: 40px;
-	z-index: 999;
-	box-shadow: 0px 0px 18px 1px var(--sl-color-neutral-300);
-}
-
-.connection-metrics__tabs-date-range-picker--open {
-	visibility: visible;
-	opacity: 1;
-}
-
 .connection-metrics__pipelines::part(form-control) {
 	display: flex;
 	align-items: center;
@@ -180,7 +160,7 @@
 		grid-template-columns: repeat(9, 70px);
 	}
 
-	.connection-metrics__tabs-date-range-picker {
+	.connection-metrics__tabs .segmented-date-range-control__picker {
 		left: unset;
 		right: 0;
 	}
