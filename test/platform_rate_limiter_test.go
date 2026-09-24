@@ -12,7 +12,7 @@ import (
 	"github.com/krenalis/krenalis/test/krenalistester"
 )
 
-// TestPlatformRateLimiter verifies that platform management API endpoints
+// TestPlatformRateLimiter verifies that Platform Management API endpoints
 // consume the global platform budget and expose retry guidance when it is
 // exhausted.
 func TestPlatformRateLimiter(t *testing.T) {

@@ -13,7 +13,7 @@
 //
 // # Krenalis quota model
 //
-// Krenalis has one global budget for requests to the platform management API.
+// Krenalis has one global budget for requests to the Platform Management API.
 // It also gives each organization a separate organization-level budget for
 // normal requests and each workspace independent budgets for normal requests
 // and event ingestion. Every rate-limited request is subject to exactly one of
@@ -21,7 +21,7 @@
 // not to API keys. The global platform budget belongs to the single platform
 // subject.
 //
-// A request to the platform management API consumes the global platform budget.
+// A request to the Platform Management API consumes the global platform budget.
 // A normal request without a workspace consumes the authenticated
 // organization's organization-level request budget. A normal request associated
 // with a workspace consumes that workspace's request budget. Event ingestion

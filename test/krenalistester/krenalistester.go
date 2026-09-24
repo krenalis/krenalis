@@ -346,7 +346,7 @@ func (k *Krenalis) Start() {
 			"KRENALIS_POTENTIAL_CONNECTORS_URL=https://assets.krenalis.com/admin/connectors/potentials.json",
 			"KRENALIS_TELEMETRY_LEVEL=none",
 			"KRENALIS_KMS=" + testKMS(),
-			"KRENALIS_ORGANIZATIONS_API_KEY=" + testsSettings.OrganizationsAPIKey,
+			"KRENALIS_PLATFORM_MANAGEMENT_API_KEY=" + testsSettings.PlatformManagementAPIKey,
 			"KRENALIS_PROMETHEUS_METRICS_ENABLED=true",
 			"KRENALIS_HTTP_HOST=" + testsSettings.HTTP.Host,
 			"KRENALIS_HTTP_PORT=" + strconv.Itoa(testsSettings.HTTP.Port),
@@ -384,7 +384,7 @@ func (k *Krenalis) Start() {
 		// Keep these in sync with the environment variables set above.
 		setts := cmd.Config{}
 		setts.KMS = testKMS()
-		setts.OrganizationsAPIKey = testsSettings.OrganizationsAPIKey
+		setts.PlatformManagementAPIKey = testsSettings.PlatformManagementAPIKey
 		setts.JavaScriptSDKURL = "https://cdn.krenalis.com/krenalis.min.js"
 		setts.SentryTelemetryLevel = core.TelemetryLevelNone
 		setts.ExternalAssetsURLs = []string{"https://assets.krenalis.com/"}
