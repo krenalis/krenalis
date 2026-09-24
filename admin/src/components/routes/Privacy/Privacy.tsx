@@ -56,11 +56,9 @@ const validatePurposeName = (value: string) => {
 	}
 };
 
-// checkProfileConsentLocation returns the message to show when the property that holds the
-// consent given for a purpose does not exist in the profile schema or has a
-// type that cannot hold a consent, and an empty message otherwise. The API does
-// not check the profile path against the profile schema, so a purpose written
-// outside the Admin can be read from a property that no profile has.
+// checkProfileConsentLocation returns the message to show when location does
+// not lead to a profile schema property that can hold a consent, and an empty
+// string otherwise.
 const checkProfileConsentLocation = (location: ProfileConsentLocation | null, schema: FlatSchema | null): string => {
 	if (location == null) {
 		return '';
@@ -75,14 +73,16 @@ const checkProfileConsentLocation = (location: ProfileConsentLocation | null, sc
 	if (kind == null) {
 		return `Profile path "${path}" does not exist in the profile schema`;
 	}
-	if (key != null && kind === 'json') {
-		return '';
-	}
-	if (key == null && kind === 'json') {
-		return `Profile path "${path}" is a JSON property, which holds a consent only in a value inside it`;
-	}
-	if (key != null || kind !== 'boolean') {
+	if (kind === 'json') {
+		if (key == null) {
+			return `Profile path "${path}" is a JSON property, which holds a consent only in a value inside it`;
+		}
+	} else if (kind !== 'boolean') {
 		return `Profile path "${path}" is a ${kind} property, which cannot hold a consent`;
+	} else if (key != null) {
+		// The Admin UI never adds a key to a boolean property, but a purpose
+		// created or updated through the API can have one.
+		return `Profile path "${path}" is a boolean property, which holds a consent itself and has no keys`;
 	}
 	return '';
 };
