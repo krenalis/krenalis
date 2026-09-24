@@ -281,7 +281,7 @@ func (state *State) Connectors() []*Connector {
 }
 
 // ConsumeRateLimitCapacity consumes the specified number of units from the
-// request rate-limit capacity for the platform management API. Units must be at
+// request rate-limit capacity for the Platform Management API. Units must be at
 // least 1.
 //
 // ConsumeRateLimitCapacity returns a CapacityExceededError when the requested
@@ -1102,8 +1102,8 @@ type UIPreferences struct {
 	}
 }
 
-// TimeLayouts represents the layouts used to format datetime, date, and time
-// values.
+// TimeLayouts represents the layouts used to parse datetime, date, and time
+// values returned by a connector.
 type TimeLayouts struct {
 	DateTime string
 	Date     string
@@ -1689,6 +1689,7 @@ type Pipeline struct {
 	Enabled            bool
 	EventType          string
 	OrderingGroup      string
+	DeliveryEndpoint   string
 	ScheduleStart      int16
 	SchedulePeriod     int16
 	InSchema           types.Type

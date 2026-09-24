@@ -397,7 +397,7 @@ func (d *destinations) onUpdatePipeline(n state.UpdatePipeline) {
 		if t.Mapping == nil && t.Function == nil {
 			pipeline.transformer = nil
 		} else {
-			pipeline.transformer, _ = transformers.New(p.Organization().ID, p, d.provider, nil)
+			pipeline.transformer, _ = transformers.New(p.Organization().ID, p, d.provider)
 		}
 	}
 	pipelines = pipelines.replace(index, &pipeline)

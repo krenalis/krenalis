@@ -118,13 +118,28 @@ const pipelineEventTypeUpgrade = `
 		ALTER COLUMN ordering_group TYPE varchar(16),
 		ALTER COLUMN ordering_group SET NOT NULL`
 
-// pipelineOrderingGroupUpgrade moves ordering_group after event_type while
-// preserving the table and the relative order of its other columns.
+// pipelineDeliveryEndpointUpgrade adds persisted delivery endpoints.
+const pipelineDeliveryEndpointUpgrade = `
+	ALTER TABLE pipelines
+		ADD COLUMN IF NOT EXISTS delivery_endpoint varchar(16);
+
+	UPDATE pipelines
+	SET delivery_endpoint = ''
+	WHERE delivery_endpoint IS NULL;
+
+	ALTER TABLE pipelines
+		ALTER COLUMN delivery_endpoint TYPE varchar(16),
+		ALTER COLUMN delivery_endpoint SET NOT NULL`
+
+// pipelineOrderingGroupUpgrade moves ordering_group and delivery_endpoint after
+// event_type while preserving the table and the relative order of its other
+// columns.
 const pipelineOrderingGroupUpgrade = `
 	DO $$
 	DECLARE
 		event_position smallint;
 		group_position smallint;
+		delivery_position smallint;
 		moved_columns text[];
 		moved_positions smallint[];
 		constraint_queries text[];
@@ -138,10 +153,13 @@ const pipelineOrderingGroupUpgrade = `
 		WHERE attrelid = 'pipelines'::regclass AND attname = 'event_type' AND NOT attisdropped;
 		SELECT attnum INTO group_position FROM pg_attribute
 		WHERE attrelid = 'pipelines'::regclass AND attname = 'ordering_group' AND NOT attisdropped;
-		IF NOT EXISTS (
+		SELECT attnum INTO delivery_position FROM pg_attribute
+		WHERE attrelid = 'pipelines'::regclass AND attname = 'delivery_endpoint' AND NOT attisdropped;
+		IF group_position > event_position AND delivery_position > group_position AND NOT EXISTS (
 			SELECT FROM pg_attribute
 			WHERE attrelid = 'pipelines'::regclass AND NOT attisdropped
-				AND attnum > event_position AND attnum < group_position
+				AND ((attnum > event_position AND attnum < group_position)
+					OR (attnum > group_position AND attnum < delivery_position))
 		) THEN
 			RETURN;
 		END IF;
@@ -150,7 +168,8 @@ const pipelineOrderingGroupUpgrade = `
 		INTO moved_columns, moved_positions
 		FROM pg_attribute
 		WHERE attrelid = 'pipelines'::regclass AND NOT attisdropped
-			AND attnum > event_position AND attname <> 'ordering_group';
+			AND attnum > event_position AND attname <> 'ordering_group'
+			AND (attname <> 'delivery_endpoint' OR attnum < group_position);
 		SELECT array_agg(format('ALTER TABLE pipelines ADD CONSTRAINT %I %s', conname,
 			CASE conname
 				-- Keep this constraint in its schema form because its deparsed
@@ -456,6 +475,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			organizationConnectorReferencesView,
 			nodeIDUpgrade,
 			pipelineEventTypeUpgrade,
+			pipelineDeliveryEndpointUpgrade,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'InviteMember' AFTER 'EndPipelineRun'`,
 			consentPurposesTable,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'AddConsentPurpose'`,

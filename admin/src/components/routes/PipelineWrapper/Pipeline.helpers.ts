@@ -154,13 +154,15 @@ const propertyAnnotationSeparator = ' – ';
 // propertyAnnotation returns the display name and the description of a
 // property, combined in the text that accompanies its name.
 const propertyAnnotation = (property: Property): string => {
-	if (property.description === '') {
-		return property.displayName;
+	const displayName = property.displayName ?? '';
+	const description = property.description ?? '';
+	if (description === '') {
+		return displayName;
 	}
-	if (property.displayName === '') {
-		return property.description;
+	if (displayName === '') {
+		return description;
 	}
-	return `${property.displayName}${propertyAnnotationSeparator}${property.description}`;
+	return `${displayName}${propertyAnnotationSeparator}${description}`;
 };
 
 const firstNameIdentifiers = [

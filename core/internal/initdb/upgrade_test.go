@@ -216,7 +216,7 @@ func TestUpgradePipelineOrderingGroup(t *testing.T) {
 			'view', (SELECT jsonb_agg(to_jsonb(v) ORDER BY resource) FROM organization_connector_references v)
 		)::text`
 
-	for _, name := range []string{"missing", "appended", "installed", "empty", "brevo", "klaviyo"} {
+	for _, name := range []string{"missing", "appended", "delivery-appended", "installed", "empty", "brevo", "klaviyo"} {
 
 		t.Run(name, func(t *testing.T) {
 
@@ -230,7 +230,8 @@ func TestUpgradePipelineOrderingGroup(t *testing.T) {
 					FROM organizations LIMIT 1;
 					INSERT INTO connections (id, workspace, connector, role, kms_encrypted_settings_key)
 					VALUES ('333333333333', '222222222222', 'dummy', 'Source', '\x');
-					INSERT INTO pipelines (id, connection, target, event_type, ordering_group, name, enabled,
+					INSERT INTO pipelines (id, connection, target, event_type, ordering_group, delivery_endpoint,
+						name, enabled,
 						schedule_start, schedule_period, in_schema, out_schema, filter, required_consents,
 						required_consents_operator, transformation_mapping, transformation_id, transformation_version,
 						transformation_language, transformation_source, transformation_preserve_json,
@@ -238,16 +239,16 @@ func TestUpgradePipelineOrderingGroup(t *testing.T) {
 						order_by, format_settings, export_mode, matching_in, matching_out, update_on_duplicates,
 						table_name, table_key, user_id_column, updated_at_column, updated_at_format, incremental,
 						cursor, health, properties_to_unset)
-					VALUES ('444444444444', '333333333333', 'Event', repeat('界', 99) || '-', 'events', 'Pipeline', true,
+					VALUES ('444444444444', '333333333333', 'Event', repeat('界', 99) || '-', 'events', '', 'Pipeline', true,
 						17, 5, '{"in":1}', '{"out":2}', '{"operator":"And","rules":[]}', '{purpose}',
 						'or', '{"mapping":3}', 'function', 'v1', 'Python', 'source', true,
 						'{in}', '{out}', 'SELECT 1', 'json', '/path', 'Sheet', 'Gzip',
 						'name', '{"setting":4}', 'CreateOnly', 'in', 'out', true,
 						'profiles', 'id', 'uid', 'updated', 'format', true,
 						'2026-01-02 03:04:05', 'RecentError', '{property}');
-					INSERT INTO pipelines (id, connection, target, event_type, ordering_group,
+					INSERT INTO pipelines (id, connection, target, event_type, ordering_group, delivery_endpoint,
 						transformation_language, matching_in, matching_out, table_key, update_on_duplicates)
-					VALUES ('666666666666', '333333333333', 'User', '', '', 'JavaScript', '', '', '', false);
+					VALUES ('666666666666', '333333333333', 'User', '', '', '', 'JavaScript', '', '', '', false);
 					INSERT INTO pipelines_runs (id, pipeline, start_time, ping_time)
 					VALUES ('555555555555', '444444444444', '2026-01-02 03:04:05', '2026-01-02 03:04:06');
 					INSERT INTO pipelines_errors (pipeline, timeslot, step, count, message)
@@ -276,10 +277,20 @@ func TestUpgradePipelineOrderingGroup(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if name != "installed" {
+			if name != "delivery-appended" && name != "installed" {
 				_, err = database.Exec(t.Context(), `
 					ALTER TABLE pipelines DROP COLUMN ordering_group;
 					ALTER TABLE pipelines ALTER COLUMN event_type TYPE varchar(100)`)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			if name == "delivery-appended" {
+				_, err = database.Exec(t.Context(), `
+					ALTER TABLE pipelines DROP COLUMN delivery_endpoint;
+					ALTER TABLE pipelines ADD COLUMN delivery_endpoint varchar(16);
+					UPDATE pipelines SET delivery_endpoint = '';
+					ALTER TABLE pipelines ALTER COLUMN delivery_endpoint SET NOT NULL`)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -590,26 +601,28 @@ func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
 }
 
 // assertPipelineEventTypesUpgraded verifies event type identifier limits and
-// persisted ordering groups.
+// persisted ordering and delivery metadata.
 func assertPipelineEventTypesUpgraded(t *testing.T, database *db.DB) {
 
 	t.Helper()
 
 	var adjacent bool
 	err := database.QueryRow(t.Context(), `
-		SELECT g.attnum > e.attnum AND NOT EXISTS (
+		SELECT g.attnum > e.attnum AND d.attnum > g.attnum AND NOT EXISTS (
 			SELECT FROM pg_attribute a
 			WHERE a.attrelid = e.attrelid AND NOT a.attisdropped
-				AND a.attnum > e.attnum AND a.attnum < g.attnum
+				AND ((a.attnum > e.attnum AND a.attnum < g.attnum)
+					OR (a.attnum > g.attnum AND a.attnum < d.attnum))
 		)
 		FROM pg_attribute e
 		JOIN pg_attribute g ON g.attrelid = e.attrelid AND g.attname = 'ordering_group' AND NOT g.attisdropped
+		JOIN pg_attribute d ON d.attrelid = e.attrelid AND d.attname = 'delivery_endpoint' AND NOT d.attisdropped
 		WHERE e.attrelid = 'pipelines'::regclass AND e.attname = 'event_type' AND NOT e.attisdropped`).Scan(&adjacent)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !adjacent {
-		t.Fatal("expected ordering_group immediately after event_type, got intervening columns")
+		t.Fatal("expected ordering_group and delivery_endpoint immediately after event_type, got intervening columns")
 	}
 
 	for _, column := range []struct {
@@ -618,8 +631,8 @@ func assertPipelineEventTypesUpgraded(t *testing.T, database *db.DB) {
 	}{
 		{"event_type", 100},
 		{"ordering_group", 16},
+		{"delivery_endpoint", 16},
 	} {
-
 		var length int
 		err := database.QueryRow(t.Context(), `
 			SELECT character_maximum_length
@@ -636,11 +649,11 @@ func assertPipelineEventTypesUpgraded(t *testing.T, database *db.DB) {
 
 	}
 
-	var eventType, orderingGroup string
+	var eventType, orderingGroup, deliveryEndpoint string
 	err = database.QueryRow(t.Context(), `
-		SELECT event_type, ordering_group
+		SELECT event_type, ordering_group, delivery_endpoint
 		FROM pipelines
-		WHERE id = '888888888888'`).Scan(&eventType, &orderingGroup)
+		WHERE id = '888888888888'`).Scan(&eventType, &orderingGroup, &deliveryEndpoint)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -649,21 +662,27 @@ func assertPipelineEventTypesUpgraded(t *testing.T, database *db.DB) {
 			"expected event type %q and ordering group %q, got %q and %q",
 			"send_event_with_no_schema", "events", eventType, orderingGroup)
 	}
+	if deliveryEndpoint != "" {
+		t.Fatalf("expected empty delivery endpoint, got %q", deliveryEndpoint)
+	}
 
 	err = database.QueryRow(t.Context(), `
-		SELECT event_type, ordering_group
+		SELECT event_type, ordering_group, delivery_endpoint
 		FROM pipelines
-		WHERE id = '444444444444'`).Scan(&eventType, &orderingGroup)
+		WHERE id = '444444444444'`).Scan(&eventType, &orderingGroup, &deliveryEndpoint)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if eventType != "" || orderingGroup != "" {
 		t.Fatalf("expected empty event type and ordering group, got %q and %q", eventType, orderingGroup)
 	}
+	if deliveryEndpoint != "" {
+		t.Fatalf("expected empty delivery endpoint, got %q", deliveryEndpoint)
+	}
 
 	assertConstraintDoesNotExist(t, database, "pipelines", "pipelines_event_type_check")
 	assertConstraintDoesNotExist(t, database, "pipelines", "pipelines_ordering_group_check")
-
+	assertConstraintDoesNotExist(t, database, "pipelines", "pipelines_delivery_endpoint_check")
 }
 
 func assertStateRequestSyncSchemaUpgraded(t *testing.T, database *db.DB) {
