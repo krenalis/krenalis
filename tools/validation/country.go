@@ -6,6 +6,60 @@ package validation
 
 import "strings"
 
+// IsValidCountryCodeAlpha2 returns true when code is a valid current or
+// formerly assigned ISO 3166 alpha-2 country code.
+func IsValidCountryCodeAlpha2(code string) bool {
+	// Fast path.
+	switch code {
+	case "US", "GB", "DE", "FR", "IT", "ES":
+		return true
+	}
+	// Slow path.
+	if len(code) != 2 {
+		return false
+	}
+	for start := 0; start < len(countryCodes); {
+		i := strings.Index(countryCodes[start:], code)
+		if i == -1 {
+			return false
+		}
+		i += start
+		// Accept matches only at two-byte code boundaries.
+		if i%2 == 0 {
+			return true
+		}
+		start = i + 1
+	}
+	return false
+}
+
+// IsValidCountryCodeAlpha3 returns true when code is a valid current or formerly
+// assigned ISO 3166 alpha-3 country code.
+func IsValidCountryCodeAlpha3(code string) bool {
+	// Fast path.
+	switch code {
+	case "USA", "GBR", "DEU", "FRA", "ITA", "ESP":
+		return true
+	}
+	// Slow path.
+	if len(code) != 3 {
+		return false
+	}
+	for start := 0; start < len(countryAlpha3Codes); {
+		i := strings.Index(countryAlpha3Codes[start:], code)
+		if i == -1 {
+			return false
+		}
+		i += start
+		// Accept matches only at three-byte code boundaries.
+		if i%3 == 0 {
+			return true
+		}
+		start = i + 1
+	}
+	return false
+}
+
 // countryCodes contains all ISO 3166-1 alpha-2 codes and formerly assigned
 // alpha-2 codes from ISO 3166-3, except those handled in the fast path.
 const countryCodes = "" +
@@ -277,33 +331,6 @@ const countryCodes = "" +
 	"ZM" +
 	"ZR" +
 	"ZW"
-
-// IsValidCountryCodeAlpha2 returns true when code is a valid current or
-// formerly assigned ISO 3166 alpha-2 country code.
-func IsValidCountryCodeAlpha2(code string) bool {
-	// Fast path.
-	switch code {
-	case "US", "GB", "DE", "FR", "IT", "ES":
-		return true
-	}
-	// Slow path.
-	if len(code) != 2 {
-		return false
-	}
-	for start := 0; start < len(countryCodes); {
-		i := strings.Index(countryCodes[start:], code)
-		if i == -1 {
-			return false
-		}
-		i += start
-		// Accept matches only at two-byte code boundaries.
-		if i%2 == 0 {
-			return true
-		}
-		start = i + 1
-	}
-	return false
-}
 
 // countryAlpha3Codes contains all ISO 3166-1 alpha-3 codes and formerly
 // assigned alpha-3 codes from ISO 3166-3, except those handled in the fast
@@ -582,30 +609,3 @@ const countryAlpha3Codes = "" +
 	"ZAR" +
 	"ZMB" +
 	"ZWE"
-
-// IsValidCountryCodeAlpha3 returns true when code is a valid current or formerly
-// assigned ISO 3166 alpha-3 country code.
-func IsValidCountryCodeAlpha3(code string) bool {
-	// Fast path.
-	switch code {
-	case "USA", "GBR", "DEU", "FRA", "ITA", "ESP":
-		return true
-	}
-	// Slow path.
-	if len(code) != 3 {
-		return false
-	}
-	for start := 0; start < len(countryAlpha3Codes); {
-		i := strings.Index(countryAlpha3Codes[start:], code)
-		if i == -1 {
-			return false
-		}
-		i += start
-		// Accept matches only at three-byte code boundaries.
-		if i%3 == 0 {
-			return true
-		}
-		start = i + 1
-	}
-	return false
-}
