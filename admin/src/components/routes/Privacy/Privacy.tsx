@@ -420,32 +420,22 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 				? { property: profilePropertyPath }
 				: { property: profilePropertyPath, jsonKey: profileJSONKey };
 
-	const isProfilePropertyUsedByOtherPurposes =
-		profilePropertyPath !== '' &&
-		!isProfilePropertyJSON &&
-		profileSchema?.[profilePropertyPath]?.type === 'boolean' &&
-		purposes?.some(
-			(purpose) =>
-				purpose.id !== purposeToEdit?.id && purpose.profileConsentLocation?.property === profilePropertyPath,
-		) === true;
-
-	const isProfileJSONLocationUsedByOtherPurposes =
-		hasProfileJSONKeyLostFocus &&
-		profilePropertyPath !== '' &&
-		isProfilePropertyJSON &&
-		profileSchema?.[profilePropertyPath]?.type === 'json' &&
+	const isProfileLocationUsedByOtherPurposes =
+		profileConsentLocation != null &&
+		(!isProfilePropertyJSON || hasProfileJSONKeyLostFocus) &&
+		checkProfileConsentLocation(profileConsentLocation, profileSchema) === '' &&
 		purposes?.some(
 			(purpose) =>
 				purpose.id !== purposeToEdit?.id &&
 				purpose.profileConsentLocation?.property === profilePropertyPath &&
-				purpose.profileConsentLocation.jsonKey === profileJSONKey,
+				(purpose.profileConsentLocation.jsonKey || null) === profileJSONKey,
 		) === true;
 
-	const profilePathWarning = isProfilePropertyUsedByOtherPurposes
-		? 'This property is also used by other purposes.'
-		: isProfileJSONLocationUsedByOtherPurposes
+	const profilePathWarning = !isProfileLocationUsedByOtherPurposes
+		? ''
+		: isProfilePropertyJSON
 			? 'This property and key are also used by other purposes.'
-			: '';
+			: 'This property is also used by other purposes.';
 
 	useLayoutEffect(() => {
 		if (validationErrorVersion === 0) {
