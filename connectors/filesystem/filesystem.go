@@ -92,8 +92,12 @@ func (fs *FileSystem) AbsolutePath(ctx context.Context, name string) (string, er
 
 // Reader opens a file and returns a ReadCloser from which to read its content.
 func (fs *FileSystem) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
-	path, _ := fs.absolutePath(ctx, name, false)
-	f, err := os.Open(path)
+	dir, err := openRoot()
+	if err != nil {
+		return nil, time.Time{}, rewritePathError(err)
+	}
+	defer dir.Close()
+	f, err := dir.Open(strings.TrimPrefix(filepath.ToSlash(name), "/"))
 	if err != nil {
 		return nil, time.Time{}, rewritePathError(err)
 	}
@@ -161,14 +165,19 @@ func (fs *FileSystem) ServeUI(ctx context.Context, event string, settings json.V
 
 // Write writes the data read from r into the file with the given path name.
 func (fs *FileSystem) Write(ctx context.Context, r io.Reader, name, contentType string) error {
-	path, _ := fs.absolutePath(ctx, name, false)
-	tmpPath := path + ".tmp"
-	f, err := os.OpenFile(tmpPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	dir, err := openRoot()
+	if err != nil {
+		return rewritePathError(err)
+	}
+	defer dir.Close()
+	name = strings.TrimPrefix(filepath.ToSlash(name), "/")
+	tmpName := name + ".tmp"
+	f, err := dir.OpenFile(tmpName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return rewritePathError(err)
 	}
 	defer func() {
-		err := os.Remove(tmpPath)
+		err := dir.Remove(tmpName)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			err = rewritePathError(err)
 			slog.Warn("connectors/filesystem: cannot remove temporary file created by File System", "error", err)
@@ -197,7 +206,7 @@ func (fs *FileSystem) Write(ctx context.Context, r io.Reader, name, contentType 
 	if s.SimulateHighIOLatency {
 		simulateHighIOLatency()
 	}
-	err = os.Rename(tmpPath, path)
+	err = dir.Rename(tmpName, name)
 	return rewritePathError(err)
 }
 
@@ -240,24 +249,34 @@ func (fs *FileSystem) saveSettings(ctx context.Context, settings json.Value) err
 	return fs.env.Settings.Store(ctx, s)
 }
 
+// openRoot opens the root directory, so that file accesses cannot escape from
+// it, even through symbolic links.
+func openRoot() (*os.Root, error) {
+	confMu.Lock()
+	defer confMu.Unlock()
+	return os.OpenRoot(root)
+}
+
 // rewritePathError, if err is a *fs.PathError error, returns a new
-// *fs.PathError such that its path is consistent with the displayed root of the
-// connection.
+// *fs.PathError such that its path is absolute and consistent with the
+// displayed root of the connection, if set.
 //
-// For all other error types, if the error is nil, or if the displayed root is
-// not set, the error is returned as it is.
+// For all other error types, or if the error is nil, the error is returned as
+// it is.
 func rewritePathError(err error) error {
 	confMu.Lock()
 	defer confMu.Unlock()
-	if displayedRoot == "" {
-		return err
-	}
 	if pErr, ok := err.(*fsPkg.PathError); ok {
 		// From the path of the fs.PathError, remove the prefix that refers to
-		// the root.
+		// the root, if present, as errors returned by the os.Root methods have
+		// a path relative to the root.
 		path := strings.TrimPrefix(pErr.Path, root)
-		// Prepend the displayed root as prefix.
-		path = filepath.Join(displayedRoot, path)
+		// Prepend the displayed root, or the root if it is not set, as prefix.
+		rootToShow := root
+		if displayedRoot != "" {
+			rootToShow = displayedRoot
+		}
+		path = filepath.Join(rootToShow, path)
 		return &fsPkg.PathError{
 			Op:   pErr.Op,
 			Path: path,
