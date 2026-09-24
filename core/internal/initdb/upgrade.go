@@ -99,13 +99,9 @@ const nodeIDUpgrade = `
 		END IF;
 	END $$`
 
-// pipelineEventTypeUpgrade aligns event type metadata with the current schema.
+// pipelineEventTypeUpgrade adds persisted ordering groups.
 const pipelineEventTypeUpgrade = `
 	ALTER TABLE pipelines
-		DROP CONSTRAINT IF EXISTS pipelines_event_type_check,
-		DROP CONSTRAINT IF EXISTS pipelines_ordering_group_check,
-		DROP CONSTRAINT IF EXISTS pipelines_delivery_endpoint_check,
-		ALTER COLUMN event_type TYPE varchar(100),
 		ADD COLUMN IF NOT EXISTS ordering_group varchar(16);
 
 	UPDATE pipelines p
