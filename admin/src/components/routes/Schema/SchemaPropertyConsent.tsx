@@ -18,9 +18,11 @@ const SchemaPropertyConsent = ({ purposes }: SchemaPropertyConsentProps) => {
 	const [isHovered, setIsHovered] = useState(false);
 	const [isFocused, setIsFocused] = useState(false);
 	const [selectedPurposeID, setSelectedPurposeID] = useState<string>();
+
 	const hoverTimeoutRef = useRef<number>();
 	const triggerRef = useRef<HTMLButtonElement>(null);
 	const popupID = useId();
+
 	const { redirect } = useContext(AppContext);
 
 	useEffect(() => () => window.clearTimeout(hoverTimeoutRef.current), []);
@@ -38,16 +40,19 @@ const SchemaPropertyConsent = ({ purposes }: SchemaPropertyConsentProps) => {
 	);
 	const selectedPurpose = purposes[selectedPurposeIndex];
 	const displayedPurposes = purposes.slice(selectedPurposeIndex, selectedPurposeIndex + 1);
+
 	const selectPurpose = (index: number) => {
 		if (index === 0 || index === purposes.length - 1) {
 			triggerRef.current?.focus();
 		}
 		setSelectedPurposeID(purposes[index].id);
 	};
+
 	const clearHoverTimeout = () => {
 		window.clearTimeout(hoverTimeoutRef.current);
 		hoverTimeoutRef.current = undefined;
 	};
+
 	const handlePointerEnter = (event: React.PointerEvent<HTMLElement>) => {
 		const focusedElement = document.activeElement;
 		if (focusedElement instanceof HTMLElement) {
@@ -61,10 +66,12 @@ const SchemaPropertyConsent = ({ purposes }: SchemaPropertyConsentProps) => {
 			hoverTimeoutRef.current = window.setTimeout(() => setIsHovered(true), HOVER_DELAY);
 		}
 	};
+
 	const handlePointerLeave = () => {
 		clearHoverTimeout();
 		setIsHovered(false);
 	};
+
 	const openPurpose = () => {
 		clearHoverTimeout();
 		setIsHovered(false);

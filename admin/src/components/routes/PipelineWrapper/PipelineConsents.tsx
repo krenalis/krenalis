@@ -54,9 +54,8 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 			e.stopPropagation();
 		};
 
-		// sl-select has no read-only state, so when the consents are off the
-		// operator is kept enabled and focusable, but the interactions that
-		// would open the listbox or change the value are blocked.
+		// When the consents are disabled, keep the operator readable as part of
+		// the sentence, but prevent it from being changed.
 		select.addEventListener('mousedown', onMouseDown, true);
 		select.addEventListener('keydown', onKeyDown, true);
 
@@ -107,9 +106,7 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 	const selectedPurposeIDs = pipeline.requiredConsents?.purposes ?? [];
 
 	const isEventTarget = pipelineType.target === 'Event';
-	const usersTerm = connection.connector.terms.users?.trim()
-		? connection.connector.terms.users.toLowerCase()
-		: 'users';
+	const usersTerm = connection.connector.terms.users.toLowerCase();
 	const subjects = isEventTarget ? 'events' : isImport ? usersTerm : 'profiles';
 	const actionVerb = isImport ? 'import' : isEventTarget ? 'send' : 'export';
 	const actionParticiple = isImport ? 'imported' : isEventTarget ? 'sent' : 'exported';
