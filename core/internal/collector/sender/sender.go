@@ -359,7 +359,7 @@ func (s *Sender) discard(err error) {
 	// Update the iterator.
 	s.iterator.numConsumed--
 	if s.iterator.numConsumed == 0 {
-		s.iterator.sameUser.anonymousID = ""
+		s.iterator.sameUser.anonymousID = nil
 		s.iterator.index = i + 1
 	}
 	trace("Sender.discard: iterator %p; discard index %d, current %d; pipeline %s, message ID %q\n",
@@ -557,9 +557,9 @@ func (s *Sender) read(consume bool) (*Event, bool) {
 			continue
 		}
 		if same := s.iterator.sameUser; same.enabled {
-			if same.anonymousID == "" {
-				s.iterator.sameUser.anonymousID = e.ordering.key.anonymousID
-			} else if same.anonymousID != e.ordering.key.anonymousID {
+			if same.anonymousID == nil {
+				s.iterator.sameUser.anonymousID = &e.ordering.key.anonymousID
+			} else if *same.anonymousID != e.ordering.key.anonymousID {
 				continue
 			}
 		}

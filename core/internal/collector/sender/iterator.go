@@ -23,8 +23,8 @@ type iterator struct {
 	// Events.SameUser iteration to include events from all of the user's ordering
 	// groups.
 	sameUser struct {
-		enabled     bool   // whether the iterator is restricted to events from the same user.
-		anonymousID string // anonymous ID to match; empty when no user is selected.
+		enabled     bool    // whether the iterator is restricted to events from the same user.
+		anonymousID *string // anonymous ID to match; nil when no user is selected.
 	}
 
 	numConsumed int // number of consumed events
