@@ -7,7 +7,7 @@ import { PrimarySources } from '../../../lib/api/types/workspace';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { toKrenalisStringType } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
-import { SchemaPropertyIdentifierBadge } from '../Schema/SchemaPropertyGrid';
+import { SchemaPropertyIdentifierBadge, SchemaPropertyName } from '../Schema/SchemaPropertyGrid';
 
 const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Property' },
@@ -102,7 +102,7 @@ const getRows = (
 		const matches =
 			includeAll ||
 			search === '' ||
-			[property.name, property.description, toKrenalisStringType(property.type)]
+			[property.name, property.displayName, property.description, toKrenalisStringType(property.type)]
 				.filter(Boolean)
 				.join(' ')
 				.toLocaleLowerCase()
@@ -168,7 +168,7 @@ const buildRow = (
 	}
 	return {
 		cells: [
-			property.name,
+			<SchemaPropertyName property={property} />,
 			typeCell,
 			identifierPosition == null ? null : <SchemaPropertyIdentifierBadge position={identifierPosition} />,
 			property.description || <span className='schema-grid__empty-cell'>—</span>,

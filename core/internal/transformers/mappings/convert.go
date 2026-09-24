@@ -8,19 +8,16 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"net/netip"
 	"slices"
 	"strconv"
 	"time"
 	"unicode/utf8"
 
-	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 
-	"github.com/google/uuid"
 	"github.com/relvacode/iso8601"
 )
 
@@ -62,9 +59,6 @@ var (
 // If inPlace is true, the conversion is permitted to modify array, object, and
 // map values directly within the value being converted.
 //
-// layouts represents, if not nil, the layouts used to format datetime, date,
-// and time values as strings.
-//
 // purpose specifies the reason for the transformation. If Create or Update,
 // then all the properties required for creation or the update must be present
 // in the returned value.
@@ -80,7 +74,7 @@ var (
 //   - errRangeConversion
 //   - errPatternConversion
 //   - errYearRangeConversion
-func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.TimeLayouts, purpose Purpose) (any, error) {
+func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) (any, error) {
 	sk := st.Kind()
 	dk := dt.Kind()
 	if nullable {
@@ -452,24 +446,6 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		default:
 			return v, errInvalidConversion
 		}
-		if layouts != nil {
-			switch layouts.DateTime {
-			case "unix":
-				return t.Unix(), nil
-			case "unixmilli":
-				return t.UnixMilli(), nil
-			case "unixmicro":
-				return t.UnixMicro(), nil
-			case "unixnano":
-				return t.UnixNano(), nil
-			default:
-				layout := layouts.DateTime
-				if layout == "" {
-					layout = "2006-01-02T15:04:05.999Z"
-				}
-				return t.Format(layout), nil
-			}
-		}
 		return t, nil
 	case types.DateKind:
 		var t time.Time
@@ -501,13 +477,6 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 		default:
 			return v, errInvalidConversion
 		}
-		if layouts != nil {
-			layout := layouts.Date
-			if layout == "" {
-				layout = "2006-01-02"
-			}
-			return t.Format(layout), nil
-		}
 		return t, nil
 	case types.TimeKind:
 		var t time.Time
@@ -533,13 +502,6 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			if !ok {
 				return v, errParseConversion
 			}
-		}
-		if layouts != nil {
-			layout := layouts.Time
-			if layout == "" {
-				layout = "15:04:05.999Z"
-			}
-			return t.Format(layout), nil
 		}
 		return t, nil
 	case types.YearKind:
@@ -589,11 +551,11 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 	case types.UUIDKind:
 		switch sk {
 		case types.StringKind:
-			u, err := uuid.Parse(v.(string))
-			if err != nil {
+			u, ok := types.NormalizeUUID(v.(string))
+			if !ok {
 				return v, errParseConversion
 			}
-			return u.String(), nil
+			return u, nil
 		case types.UUIDKind:
 			return v.(string), nil
 		case types.JSONKind:
@@ -601,11 +563,11 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			if !v.IsString() {
 				return v, errInvalidConversion
 			}
-			u, err := uuid.ParseBytes(v.Bytes())
-			if err != nil {
+			u, ok := types.NormalizeUUID(string(v.Bytes()))
+			if !ok {
 				return v, errParseConversion
 			}
-			return u.String(), nil
+			return u, nil
 		}
 	case types.JSONKind:
 		if sk == types.JSONKind {
@@ -629,23 +591,23 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 	case types.IPKind:
 		switch sk {
 		case types.StringKind:
-			ip, err := netip.ParseAddr(v.(string))
-			if err != nil {
+			ip, ok := types.NormalizeIP(v.(string))
+			if !ok {
 				return v, errParseConversion
 			}
-			return ip.String(), nil
-		case types.IPKind:
-			return v.(string), nil
+			return ip, nil
 		case types.JSONKind:
 			v := v.(json.Value)
 			if !v.IsString() {
 				return v, errInvalidConversion
 			}
-			ip, err := netip.ParseAddr(v.String())
-			if err != nil {
+			ip, ok := types.NormalizeIP(v.String())
+			if !ok {
 				return v, errParseConversion
 			}
-			return ip.String(), nil
+			return ip, nil
+		case types.IPKind:
+			return v.(string), nil
 		}
 	case types.ArrayKind:
 		switch sk {
@@ -661,7 +623,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				if min > 1 || max == 0 {
 					return v, errInvalidConversion
 				}
-				elem, err := convert(s, types.JSON(), et, false, inPlace, layouts, purpose)
+				elem, err := convert(s, types.JSON(), et, false, inPlace, purpose)
 				if err != nil {
 					return nil, err
 				}
@@ -672,7 +634,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				if i == max {
 					return v, errInvalidConversion
 				}
-				e, err := convert(elem, types.JSON(), et, false, inPlace, layouts, purpose)
+				e, err := convert(elem, types.JSON(), et, false, inPlace, purpose)
 				if err != nil {
 					return nil, err
 				}
@@ -682,10 +644,12 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				return v, errInvalidConversion
 			}
 			if dt.Unique() {
-				for i, it := range d {
-					if slices.Contains(d[i:], it) {
-						return v, errInvalidConversion
-					}
+				duplicate, err := types.FirstDuplicate(d, et)
+				if err != nil {
+					return v, errInvalidConversion
+				}
+				if duplicate != -1 {
+					return v, errInvalidConversion
 				}
 			}
 			return d, nil
@@ -697,23 +661,26 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			}
 			it1 := st.Elem()
 			it2 := dt.Elem()
-			if !types.Equal(it1, it2) {
+			sameType := types.Equal(it1, it2)
+			if !sameType {
 				if !inPlace {
 					d = make([]any, len(s))
 				}
 				var err error
 				for i, item := range s {
-					d[i], err = convert(item, it1, it2, false, inPlace, layouts, purpose)
+					d[i], err = convert(item, it1, it2, false, inPlace, purpose)
 					if err != nil {
 						return nil, err
 					}
 				}
 			}
-			if !st.Unique() && dt.Unique() {
-				for i, item := range d {
-					if slices.Contains(d[i:], item) {
-						return v, errInvalidConversion
-					}
+			if dt.Unique() && (!sameType || !st.Unique()) {
+				duplicate, err := types.FirstDuplicate(d, it2)
+				if err != nil {
+					return v, errInvalidConversion
+				}
+				if duplicate != -1 {
+					return v, errInvalidConversion
 				}
 			}
 			return d, nil
@@ -754,7 +721,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				if !ok {
 					panic(fmt.Sprintf("unknown property %s", name))
 				}
-				d[name], err = convert(value, sp.Type, dp.Type, dp.Nullable, inPlace, layouts, purpose)
+				d[name], err = convert(value, sp.Type, dp.Type, dp.Nullable, inPlace, purpose)
 				if err != nil {
 					return nil, err
 				}
@@ -769,7 +736,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			var err error
 			for _, p := range dProperties.All() {
 				if value, ok := s[p.Name]; ok {
-					d[p.Name], err = convert(value, vt, p.Type, p.Nullable, inPlace, layouts, purpose)
+					d[p.Name], err = convert(value, vt, p.Type, p.Nullable, inPlace, purpose)
 					if err != nil {
 						return nil, err
 					}
@@ -795,7 +762,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 				if !ok {
 					continue
 				}
-				d[name], err = convert(value, types.JSON(), p.Type, p.Nullable, inPlace, layouts, purpose)
+				d[name], err = convert(value, types.JSON(), p.Type, p.Nullable, inPlace, purpose)
 				if err != nil {
 					return nil, err
 				}
@@ -839,7 +806,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			}
 			var err error
 			for key, value := range s {
-				d[key], err = convert(value, vt1, vt2, false, inPlace, layouts, purpose)
+				d[key], err = convert(value, vt1, vt2, false, inPlace, purpose)
 				if err != nil {
 					return nil, err
 				}
@@ -855,7 +822,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			var err error
 			for _, p := range st.Properties().All() {
 				if value, ok := s[p.Name]; ok {
-					d[p.Name], err = convert(value, p.Type, vt, true, inPlace, layouts, purpose)
+					d[p.Name], err = convert(value, p.Type, vt, true, inPlace, purpose)
 					if err != nil {
 						return nil, err
 					}
@@ -871,7 +838,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, layouts *state.Ti
 			d := make(map[string]any)
 			var err error
 			for name, value := range s.Properties() {
-				d[name], err = convert(value, types.JSON(), vt, false, inPlace, layouts, purpose)
+				d[name], err = convert(value, types.JSON(), vt, false, inPlace, purpose)
 				if err != nil {
 					return nil, err
 				}

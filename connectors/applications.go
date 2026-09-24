@@ -231,16 +231,18 @@ func (r FailureReason) String() string {
 	panic(fmt.Errorf("unexpected FailureReason %d", r))
 }
 
-// MaxEventTypeIdentifierLen is the maximum length of event type, ordering
-// group, and delivery endpoint identifiers.
-const MaxEventTypeIdentifierLen = 25
+// MaxOrderingGroupLen is the maximum length of an event ordering group.
+const MaxOrderingGroupLen = 16
+
+// MaxDeliveryEndpointLen is the maximum length of a delivery endpoint.
+const MaxDeliveryEndpointLen = 16
 
 // EventType represents a type of event that can be sent to an application.
 type EventType struct {
 	// ID is the identifier of the event type. It must be unique for every event
-	// type of the connection and follow the syntax of a property name.
+	// type of the connection.
 	//
-	// It cannot be longer than MaxEventTypeIdentifierLen characters.
+	// It cannot be longer than 100 runes.
 	ID string
 
 	// Name is the name of the event type to be displayed.
@@ -251,29 +253,19 @@ type EventType struct {
 
 	// OrderingGroup defines the per-user delivery order shared by event types.
 	// Events whose types have the same ordering group are delivered in their
-	// original order for each user. If empty, ID is used. If set, it must follow
-	// the syntax of a property name and cannot be longer than
-	// MaxEventTypeIdentifierLen characters.
+	// original order for each user. It must be non-empty, follow the syntax of
+	// a property name, and cannot be longer than MaxOrderingGroupLen characters.
 	OrderingGroup string
 
 	// DeliveryEndpoint identifies the destination endpoint used for events of
 	// this type. Event types in the same ordering group must use the same endpoint.
 	// An empty value selects the connector's default endpoint. If set, the value
 	// must follow the syntax of a property name and be no longer than
-	// MaxEventTypeIdentifierLen characters.
+	// MaxDeliveryEndpointLen characters.
 	DeliveryEndpoint string
 
 	// DefaultFilter is the default filter to use for pipelines.
 	DefaultFilter string
-}
-
-// OrderingGroup returns the effective ordering group of an event type. If no
-// group is set, it returns the event type ID.
-func OrderingGroup(eventType *EventType) string {
-	if eventType.OrderingGroup == "" {
-		return eventType.ID
-	}
-	return eventType.OrderingGroup
 }
 
 // RecordFetcher is implemented by application connectors that support fetching

@@ -25,7 +25,7 @@ type destinations struct {
 	state       *state.State
 	connections *connections.Connections
 	provider    transformers.FunctionProvider
-	metrics     *metrics.Collector
+	metrics     *metrics.Pipelines
 
 	// senders maps a connection ID to its sender.
 	// No mutex is needed since all accesses occur while the state is frozen.
@@ -44,7 +44,7 @@ type destinations struct {
 }
 
 // newDestinations returns a new destinations instance.
-func newDestinations(st *state.State, connections *connections.Connections, provider transformers.FunctionProvider, metrics *metrics.Collector) *destinations {
+func newDestinations(st *state.State, connections *connections.Connections, provider transformers.FunctionProvider, metrics *metrics.Pipelines) *destinations {
 
 	d := destinations{
 		state:       st,
@@ -397,7 +397,7 @@ func (d *destinations) onUpdatePipeline(n state.UpdatePipeline) {
 		if t.Mapping == nil && t.Function == nil {
 			pipeline.transformer = nil
 		} else {
-			pipeline.transformer, _ = transformers.New(p, d.provider, nil)
+			pipeline.transformer, _ = transformers.New(p.Organization().ID, p, d.provider)
 		}
 	}
 	pipelines = pipelines.replace(index, &pipeline)

@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/collector"
@@ -44,9 +45,9 @@ type Workspace struct {
 	ID                             string            `json:"id"`
 	Name                           string            `json:"name"`
 	ProfileSchema                  types.Type        `json:"profileSchema"`
-	PrimarySources                 map[string]string `json:"primarySources,format:emitnull"`
+	PrimarySources                 map[string]string `json:"primarySources"`
 	ResolveIdentitiesOnBatchImport bool              `json:"resolveIdentitiesOnBatchImport"`
-	Identifiers                    []string          `json:"identifiers,format:emitnull"`
+	Identifiers                    []string          `json:"identifiers"`
 	WarehouseMode                  WarehouseMode     `json:"warehouseMode"`
 	UIPreferences                  UIPreferences     `json:"uiPreferences"`
 }
@@ -174,12 +175,12 @@ func (this *Workspace) PipelineErrors(ctx context.Context, start, end time.Time,
 	}
 
 	// Validate step.
-	var s *metrics.Step
+	var s *metrics.PipelineStep
 	if step != nil {
 		if *step < ReceiveStep || *step > FinalizeStep {
 			return nil, errors.BadRequest("step %d is not valid", *step)
 		}
-		s = (*metrics.Step)(step)
+		s = (*metrics.PipelineStep)(step)
 	}
 
 	// validate first and limit.
@@ -195,7 +196,7 @@ func (this *Workspace) PipelineErrors(ctx context.Context, start, end time.Time,
 		return []PipelineError{}, nil
 	}
 
-	metricsErrors, err := this.core.metrics.Errors(ctx, start, end, pipelines, s, first, limit)
+	metricsErrors, err := this.core.metrics.Pipelines.Errors(ctx, start, end, pipelines, s, first, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -225,10 +226,12 @@ func (this *Workspace) Attributes(ctx context.Context, kpid string) (json.Value,
 
 	ws := this.workspace
 
-	// Validate the KPID.
-	if _, ok := types.ParseUUID(kpid); !ok {
+	// Parse the KPID.
+	id, err := uuid.Parse(kpid)
+	if err != nil {
 		return nil, errors.BadRequest("profile %q is not a valid profile identifier", kpid)
 	}
+	kpid = id.String()
 
 	properties := this.workspace.ProfileSchema.Properties().Names()
 	where := &state.Where{
@@ -311,7 +314,7 @@ func (this *Workspace) AuthToken(ctx context.Context, connector, redirectionURI,
 		return "", errors.BadRequest("connector %s does not support authorization", connector)
 	}
 
-	auth, err := this.core.connections.GrantAuthorization(ctx, c, code, redirectionURI)
+	auth, err := this.core.connections.GrantAuthorization(ctx, c, this.workspace.Organization().ID, code, redirectionURI)
 	if err != nil {
 		if err, ok := err.(*connections.UnavailableError); ok {
 			return "", errors.Unavailable("%w", err)
@@ -380,7 +383,7 @@ func (this *Workspace) Connection(ctx context.Context, id string) (*Connection, 
 				ID:               et.ID,
 				Name:             et.Name,
 				Description:      et.Description,
-				OrderingGroup:    connectors.OrderingGroup(et),
+				OrderingGroup:    et.OrderingGroup,
 				DeliveryEndpoint: et.DeliveryEndpoint,
 				DefaultFilter:    et.DefaultFilter,
 			}
@@ -595,7 +598,8 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 			clientSecret = c.OAuth.ClientSecret
 		}
 		conf := &connections.ConnectorConfig{
-			Role: n.Role,
+			Role:         n.Role,
+			Organization: this.workspace.Organization().ID,
 		}
 		conf.OAuth.Account = n.Account.Code
 		conf.OAuth.ClientSecret = clientSecret
@@ -814,23 +818,42 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 // If the workspace does not exist anymore, it returns an errors.NotFound error.
 func (this *Workspace) Delete(ctx context.Context) error {
 	this.core.mustBeOpen()
+	organization := this.workspace.Organization().ID
 	n := state.DeleteWorkspace{
 		ID: this.workspace.ID,
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		// Mark the pipeline functions as discontinued.
+		// Lock the workspace to serialize deletion with every other operation.
+		exists, err := tx.QueryExists(ctx,
+			"SELECT FROM workspaces WHERE id = $1 AND organization = $2 FOR UPDATE",
+			n.ID, organization)
+		if err != nil {
+			return nil, err
+		}
+		if !exists {
+			return nil, errors.NotFound("workspace %s does not exist", n.ID)
+		}
 		now := time.Now().UTC()
-		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
-			"SELECT p.transformation_id, $1\n"+
+		// Mark the pipeline functions as discontinued.
+		_, err = tx.Exec(ctx, "INSERT INTO discontinued_functions (id, organization, discontinued_at)\n"+
+			"SELECT p.transformation_id, w.organization, $1\n"+
 			"FROM pipelines AS p\n"+
 			"INNER JOIN connections AS c ON p.connection = c.id\n"+
+			"INNER JOIN workspaces AS w ON c.workspace = w.id\n"+
 			"WHERE p.transformation_id != '' AND c.workspace = $2\n"+
 			"ON CONFLICT (id) DO NOTHING", now, n.ID)
 		if err != nil {
 			return nil, err
 		}
+		// Record the terminal profile state in the same transaction.
+		// The usage history, including this terminal observation, is retained after the workspace is deleted.
+		err = this.core.metrics.Usage.RecordProfileObservation(ctx, tx, organization, n.ID, 0, now)
+		if err != nil {
+			return nil, err
+		}
 		// Delete the workspace.
-		result, err := tx.Exec(ctx, "DELETE FROM workspaces WHERE id = $1", n.ID)
+		result, err := tx.Exec(ctx, "DELETE FROM workspaces WHERE id = $1 AND organization = $2",
+			n.ID, organization)
 		if err != nil {
 			return nil, err
 		}
@@ -966,9 +989,11 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 // the data warehouse is in maintenance mode.
 func (this *Workspace) Identities(ctx context.Context, kpid string, first, limit int) ([]Identity, int, error) {
 	this.core.mustBeOpen()
-	if _, ok := types.ParseUUID(kpid); !ok {
+	id, err := uuid.Parse(kpid)
+	if err != nil {
 		return nil, 0, errors.BadRequest("profile %q is not a valid KPID", kpid)
 	}
+	kpid = id.String()
 	if first < 0 {
 		return nil, 0, errors.BadRequest("first %d is not valid", first)
 	}
@@ -1490,7 +1515,8 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 		clientSecret = c.OAuth.ClientSecret
 	}
 	conf := &connections.ConnectorConfig{
-		Role: state.Role(role),
+		Role:         state.Role(role),
+		Organization: this.workspace.Organization().ID,
 	}
 	conf.OAuth.Account = account.Code
 	conf.OAuth.ClientSecret = clientSecret
@@ -1547,7 +1573,7 @@ func (this *Workspace) StartIdentityResolution(ctx context.Context) error {
 func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSettings json.Value) error {
 	this.core.mustBeOpen()
 	ws := this.workspace
-	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, ws.Warehouse.Platform, settings)
+	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, settings)
 	if err != nil {
 		if err, ok := err.(*warehouses.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
@@ -1555,7 +1581,7 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 		return err
 	}
 	if mcpSettings != nil {
-		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Warehouse.Platform, mcpSettings)
+		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsError); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
@@ -1565,7 +1591,7 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 		if bytes.Equal(settings, mcpSettings) {
 			return errors.Unprocessable(InvalidWarehouseSettings, "the MCP settings must be different from the data warehouse settings")
 		}
-		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Platform, mcpSettings)
+		err = this.core.datastore.CheckMCPSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
 				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
@@ -1745,7 +1771,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 
 	ws := this.workspace
 
-	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, ws.Warehouse.Platform, settings)
+	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, settings)
 	if err != nil {
 		if err, ok := err.(*warehouses.SettingsError); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
@@ -1754,7 +1780,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 	}
 
 	if mcpSettings != nil {
-		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Warehouse.Platform, mcpSettings)
+		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsError); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
@@ -1764,7 +1790,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 		if bytes.Equal(settings, mcpSettings) {
 			return errors.Unprocessable(InvalidWarehouseSettings, "the MCP settings must be different from the data warehouse settings")
 		}
-		err = this.core.datastore.CheckMCPSettings(ctx, ws.Warehouse.Platform, mcpSettings)
+		err = this.core.datastore.CheckMCPSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
 			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
 				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)

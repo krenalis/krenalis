@@ -35,11 +35,6 @@ const passUIFlagToPlaywright = false
 
 func TestAdmin(t *testing.T) {
 
-	// See https://github.com/krenalis/krenalis/issues/2116.
-	if os.Getenv("KRENALIS_TEST_SKIP_ADMIN_TESTS") == "true" {
-		t.Skip("Admin test skipped as KRENALIS_TEST_SKIP_ADMIN_TESTS is set to true")
-	}
-
 	fsTempDir := krenalistester.NewTempStorage(t)
 
 	// Test's header (copy-paste me in other tests).

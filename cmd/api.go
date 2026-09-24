@@ -409,6 +409,35 @@ func (api api) SendMemberPasswordReset(_ http.ResponseWriter, r *http.Request) (
 	return nil, err
 }
 
+// Signup creates an organization and invites its admin by email. It is served
+// only when WorkOS is enabled.
+//
+// Authentication is not required to call Signup.
+func (api api) Signup(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if api.workOS == nil {
+		return nil, errors.NotFound("signup is not enabled")
+	}
+	if err := validateRequiredBody(r, false); err != nil {
+		return nil, err
+	}
+	var body struct {
+		OrganizationName string `json:"organizationName"`
+		AdminEmail       string `json:"adminEmail"`
+		Website          string `json:"website"` // honeypot, must be empty.
+	}
+	err := json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	// Requests that fill in the honeypot come from a bot: report a success
+	// without creating anything, so that the bot has nothing to learn.
+	if body.Website != "" {
+		return nil, nil
+	}
+	err = api.workOS.SignupOrganization(r.Context(), body.OrganizationName, body.AdminEmail)
+	return nil, err
+}
+
 // ValidateMemberPasswordResetToken validates the given password reset token.
 //
 // Authentication is not required to call ValidateMemberPasswordResetToken.
@@ -442,7 +471,8 @@ func (api api) TransformData(_ http.ResponseWriter, r *http.Request) (any, error
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
 	}
-	if _, _, _, err := api.authenticateAdminRequest(r); err != nil {
+	org, _, _, err := api.authenticateAdminRequest(r)
+	if err != nil {
 		return nil, err
 	}
 	var body struct {
@@ -452,11 +482,11 @@ func (api api) TransformData(_ http.ResponseWriter, r *http.Request) (any, error
 		Transformation core.DataTransformation `json:"transformation"`
 		Purpose        core.Purpose            `json:"purpose"`
 	}
-	err := json.Decode(r.Body, &body)
+	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	data, err := api.core.TransformData(r.Context(), body.Data, body.InSchema, body.OutSchema, body.Transformation, body.Purpose)
+	data, err := api.core.TransformData(r.Context(), org.ID, body.Data, body.InSchema, body.OutSchema, body.Transformation, body.Purpose)
 	if err != nil {
 		return nil, err
 	}

@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -51,7 +50,6 @@ func Test_Compile(t *testing.T) {
 		dt         types.Type
 		purpose    Purpose
 		nullable   bool
-		layouts    *state.TimeLayouts
 		compileErr error
 		evalErr    error
 		convertErr error
@@ -452,7 +450,7 @@ func Test_Compile(t *testing.T) {
 				t.Fatalf("unexpected eval error: %s", err)
 			}
 			if v != nil {
-				v, err = convert(v, vt, test.dt, true, false, test.layouts, test.purpose)
+				v, err = convert(v, vt, test.dt, true, false, test.purpose)
 			}
 			if test.convertErr != nil {
 				if err == nil {
