@@ -300,7 +300,8 @@ func TestAppRecordsPreservesConnectorRecordError(t *testing.T) {
 	}
 }
 
-// TestValidateEventType verifies event type ID and ordering group validation.
+// TestValidateEventType verifies validation of event type IDs, ordering groups,
+// and delivery endpoints.
 func TestValidateEventType(t *testing.T) {
 
 	tests := []struct {
@@ -309,6 +310,10 @@ func TestValidateEventType(t *testing.T) {
 		err       string
 	}{
 		{name: "valid", eventType: &EventType{ID: "createContact", OrderingGroup: "contacts"}},
+		{
+			name:      "explicit delivery endpoint",
+			eventType: &EventType{ID: "createContact", OrderingGroup: "contacts", DeliveryEndpoint: "contacts"},
+		},
 		{name: "dynamic ID", eventType: &EventType{ID: "create-contact / 購入", OrderingGroup: "contacts"}},
 		{name: "100 rune ID", eventType: &EventType{ID: strings.Repeat("界", 100), OrderingGroup: "contacts"}},
 		{
@@ -350,6 +355,16 @@ func TestValidateEventType(t *testing.T) {
 			eventType: &EventType{ID: "contact", OrderingGroup: strings.Repeat("a", 17)},
 			err:       `connector test returned an invalid ordering group ("aaaaaaaaaaaaaaaaa")`,
 		},
+		{
+			name:      "invalid delivery endpoint",
+			eventType: &EventType{ID: "contact", OrderingGroup: "contacts", DeliveryEndpoint: "contact-events"},
+			err:       `connector test returned an invalid delivery endpoint ("contact-events")`,
+		},
+		{
+			name:      "long delivery endpoint",
+			eventType: &EventType{ID: "contact", OrderingGroup: "contacts", DeliveryEndpoint: strings.Repeat("a", 17)},
+			err:       `connector test returned an invalid delivery endpoint ("aaaaaaaaaaaaaaaaa")`,
+		},
 	}
 
 	for _, test := range tests {
@@ -373,7 +388,8 @@ func TestValidateEventType(t *testing.T) {
 }
 
 // TestApplicationEventType verifies that EventType validates only matching
-// event types while detecting missing and repeated IDs.
+// event types while detecting missing and repeated IDs and inconsistent
+// delivery endpoints.
 func TestApplicationEventType(t *testing.T) {
 
 	t.Run("valid", func(t *testing.T) {
@@ -399,6 +415,22 @@ func TestApplicationEventType(t *testing.T) {
 		}}}
 		_, err := app.EventType(t.Context(), "invalid-id")
 		expected := `connector test returned an invalid ordering group ("")`
+		if err != nil {
+			if err.Error() != expected {
+				t.Fatalf("expected %q, got %q", expected, err.Error())
+			}
+			return
+		}
+		t.Fatalf("expected %q, got nil", expected)
+	})
+
+	t.Run("different delivery endpoints", func(t *testing.T) {
+		app := &Application{connector: "test", inner: &testEventSender{eventTypes: []*EventType{
+			{ID: "createContact", OrderingGroup: "contacts"},
+			{ID: "updateContact", OrderingGroup: "contacts", DeliveryEndpoint: "contacts"},
+		}}}
+		_, err := app.EventType(t.Context(), "createContact")
+		expected := `connector test returned a different DeliveryEndpoint for ordering group "contacts"`
 		if err != nil {
 			if err.Error() != expected {
 				t.Fatalf("expected %q, got %q", expected, err.Error())
@@ -438,8 +470,10 @@ func TestApplicationEventType(t *testing.T) {
 
 }
 
-// TestApplicationEventTypes verifies independent IDs and mandatory ordering groups.
-func TestApplicationEventTypes(t *testing.T) {
+// TestApplicationEventTypesOrderingGroups verifies that event type IDs and
+// ordering groups use independent namespaces, and that ordering groups are
+// non-empty and have consistent delivery endpoints.
+func TestApplicationEventTypesOrderingGroups(t *testing.T) {
 
 	for _, test := range []struct {
 		name       string
@@ -457,6 +491,14 @@ func TestApplicationEventTypes(t *testing.T) {
 			name:       "empty ordering group",
 			eventTypes: []*EventType{{ID: "contacts"}},
 			err:        `connector test returned an invalid ordering group ("")`,
+		},
+		{
+			name: "different delivery endpoints",
+			eventTypes: []*EventType{
+				{ID: "createContact", OrderingGroup: "contacts"},
+				{ID: "updateContact", OrderingGroup: "contacts", DeliveryEndpoint: "contacts"},
+			},
+			err: `connector test returned a different DeliveryEndpoint for ordering group "contacts"`,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
