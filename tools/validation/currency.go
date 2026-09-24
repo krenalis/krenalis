@@ -9,8 +9,6 @@ import (
 )
 
 // IsValidCurrencyCode returns true when code is a valid ISO 4217 currency identifier.
-// Keep the accepted codes synchronized with CURRENCY_OPTIONS in
-// admin/src/components/helpers/currencies.ts.
 func IsValidCurrencyCode(code string) bool {
 	// Fast path.
 	switch code {
