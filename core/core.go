@@ -746,7 +746,7 @@ func (core *Core) Connectors() []*Connector {
 }
 
 // ConsumeRateLimitCapacity consumes the specified number of units from the
-// request rate-limit capacity for the platform management API. Units must be at
+// request rate-limit capacity for the Platform Management API. Units must be at
 // least 1.
 //
 // ConsumeRateLimitCapacity returns errors.TooManyRequests when the requested
