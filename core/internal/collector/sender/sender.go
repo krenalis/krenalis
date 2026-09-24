@@ -247,19 +247,17 @@ func (s *Sender) CreateEvent(pipeline, typ, orderingGroup string, schema types.T
 	sequence := o.queue.next()
 	s.mu.Unlock()
 	ev := &Event{
-		Event: connectors.Event{
-			Received: connections.ReceivedEvent(attributes),
-			Type: connectors.EventTypeInfo{
-				ID:     typ,
-				Schema: schema,
-			},
-			DestinationPipeline: pipeline,
+		Received: connections.ReceivedEvent(attributes),
+		Type: connectors.EventTypeInfo{
+			ID:     typ,
+			Schema: schema,
 		},
-		createdAt: time.Now().UTC(),
-		pipeline:  pipeline,
-		ordering:  o,
-		sequence:  sequence,
-		ack:       ack,
+		DestinationPipeline: pipeline,
+		createdAt:           time.Now().UTC(),
+		pipeline:            pipeline,
+		ordering:            o,
+		sequence:            sequence,
+		ack:                 ack,
 	}
 	return ev
 }
