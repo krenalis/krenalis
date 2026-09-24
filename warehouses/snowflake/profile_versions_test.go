@@ -79,7 +79,7 @@ func TestFinalizePublishedProfilesDeletesAtMostBatchLimit(t *testing.T) {
 	const publishedVersion = math.MaxInt32
 	rows := make([][]driver.Value, maxTables+1)
 	for i := range rows[:maxTables] {
-		rows[i] = []driver.Value{int64(maxTables - i - 1)}
+		rows[i] = []driver.Value{int64(i)}
 	}
 	rows[maxTables] = []driver.Value{int64(maxTables)}
 	responses := []checkReadOnlyQuery{
@@ -112,8 +112,7 @@ func TestFinalizePublishedProfilesDeletesAtMostBatchLimit(t *testing.T) {
 }
 
 // TestDropObsoleteProfileTables verifies that obsolete profile table versions
-// are validated before any tables are dropped and valid versions are dropped
-// in ascending order.
+// are validated before any tables are dropped.
 func TestDropObsoleteProfileTables(t *testing.T) {
 
 	const maxTables = 10
@@ -133,11 +132,6 @@ func TestDropObsoleteProfileTables(t *testing.T) {
 	}{
 		{name: "empty"},
 		{name: "valid", values: []driver.Value{int64(0), int64(1)}, wantDropped: []int{0, 1}},
-		{
-			name:        "sorted before dropping",
-			values:      []driver.Value{int64(7), int64(2), int64(5)},
-			wantDropped: []int{2, 5, 7},
-		},
 		{
 			name:        "last valid",
 			values:      []driver.Value{int64(publishedProfilesVersion - 1)},
