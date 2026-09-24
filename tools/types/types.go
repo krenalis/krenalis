@@ -757,7 +757,7 @@ func (t Type) MaxBytes() (int, bool) {
 //
 // It panics if:
 //   - t is not a string type
-//   - t's semantic does not allow string constraints
+//   - t's semantic is either country or phone
 //   - n is not in range [1, MaxStringLen]
 //   - t already has values or a pattern
 //   - t is already restricted by max bytes
@@ -798,7 +798,7 @@ func (t Type) MaxLength() (int, bool) {
 //
 // It panics if:
 //   - t is not a string type
-//   - t's semantic does not allow string constraints
+//   - t's semantic is either country or phone
 //   - l is not in range [1, MaxStringLen]
 //   - t already has values or a pattern
 //   - t is already restricted by max length
@@ -839,7 +839,7 @@ func (t Type) Pattern() *regexp.Regexp {
 //
 // It panics if:
 //   - t is not a string type
-//   - t's semantic does not allow string constraints
+//   - t's semantic is either country or phone
 //   - p is nil
 //   - t already has values or a pattern
 //   - t is already restricted by max bytes or max length
@@ -888,7 +888,7 @@ func (t Type) Values() []string {
 //
 // It panics if:
 //   - t is not a string type
-//   - t's semantic does not allow string constraints
+//   - t's semantic is either country or phone
 //   - no values are provided
 //   - any value is not valid UTF-8
 //   - t already has values or a pattern
