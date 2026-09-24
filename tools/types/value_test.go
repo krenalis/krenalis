@@ -433,6 +433,38 @@ func Test_Marshal(t *testing.T) {
 	}
 }
 
+// Test_NormalizeUUID checks that UUIDs are canonicalized and invalid or
+// non-standard forms are rejected.
+func Test_NormalizeUUID(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		id, ok := NormalizeUUID("F47AC10B-58CC-4372-A567-0E02B2C3D479")
+		if !ok || id != "f47ac10b-58cc-4372-a567-0e02b2c3d479" {
+			t.Fatalf("unexpected result %q %t", id, ok)
+		}
+	})
+	t.Run("invalid", func(t *testing.T) {
+		if id, ok := NormalizeUUID("invalid"); ok || id != "" {
+			t.Fatalf("expected failure, got %q %t", id, ok)
+		}
+	})
+	t.Run("malformed", func(t *testing.T) {
+		if id, ok := NormalizeUUID("F47AC10B-58CC-4372-A567-0E02B2C3D47Z"); ok || id != "" {
+			t.Fatalf("expected failure, got %q %t", id, ok)
+		}
+	})
+	t.Run("non-standard", func(t *testing.T) {
+		for _, s := range []string{
+			"F47AC10B58CC4372A5670E02B2C3D479",
+			"{F47AC10B-58CC-4372-A567-0E02B2C3D479}",
+			"urn:uuid:F47AC10B-58CC-4372-A567-0E02B2C3D479",
+		} {
+			if id, ok := NormalizeUUID(s); ok || id != "" {
+				t.Fatalf("expected failure for %q, got %q %t", s, id, ok)
+			}
+		}
+	})
+}
+
 // equalValues reports whether v1 and v2 are equal according to the type t.
 // v1 is supposed to conform to type t, and v2 is checked for equality with v1.
 func equalValues(t Type, v1, v2 any) error {
@@ -1345,38 +1377,6 @@ func FuzzNormalizePhoneInRegion(f *testing.F) {
 				"expected regional result %q to normalize to itself and true, got %q and %t for input %q",
 				canonical, again, valid, s,
 			)
-		}
-	})
-}
-
-// Test_NormalizeUUID checks that UUIDs are canonicalized and invalid or
-// non-standard forms are rejected.
-func Test_NormalizeUUID(t *testing.T) {
-	t.Run("valid", func(t *testing.T) {
-		id, ok := NormalizeUUID("F47AC10B-58CC-4372-A567-0E02B2C3D479")
-		if !ok || id != "f47ac10b-58cc-4372-a567-0e02b2c3d479" {
-			t.Fatalf("unexpected result %q %t", id, ok)
-		}
-	})
-	t.Run("invalid", func(t *testing.T) {
-		if id, ok := NormalizeUUID("invalid"); ok || id != "" {
-			t.Fatalf("expected failure, got %q %t", id, ok)
-		}
-	})
-	t.Run("malformed", func(t *testing.T) {
-		if id, ok := NormalizeUUID("F47AC10B-58CC-4372-A567-0E02B2C3D47Z"); ok || id != "" {
-			t.Fatalf("expected failure, got %q %t", id, ok)
-		}
-	})
-	t.Run("non-standard", func(t *testing.T) {
-		for _, s := range []string{
-			"F47AC10B58CC4372A5670E02B2C3D479",
-			"{F47AC10B-58CC-4372-A567-0E02B2C3D479}",
-			"urn:uuid:F47AC10B-58CC-4372-A567-0E02B2C3D479",
-		} {
-			if id, ok := NormalizeUUID(s); ok || id != "" {
-				t.Fatalf("expected failure for %q, got %q %t", s, id, ok)
-			}
 		}
 	})
 }
