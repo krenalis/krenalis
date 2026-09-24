@@ -236,8 +236,7 @@ func (fs *FileSystem) saveSettings(ctx context.Context, settings json.Value) err
 	return fs.env.Settings.Store(ctx, s)
 }
 
-// openRoot opens the root directory, so that file accesses cannot escape from
-// it, even through symbolic links.
+// openRoot opens the root directory.
 func openRoot() (*os.Root, error) {
 	confMu.Lock()
 	defer confMu.Unlock()
