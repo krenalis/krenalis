@@ -291,6 +291,7 @@ func Test_Sender_DiscardedOutOfOrderEvent(t *testing.T) {
 // with different pipelines.
 func Test_Sender_OrderingGroupPreservesOrder(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
+
 		var delivered []string
 
 		app := newTestApplication()
@@ -322,6 +323,7 @@ func Test_Sender_OrderingGroupPreservesOrder(t *testing.T) {
 		if !slices.Equal(delivered, expected) {
 			t.Fatalf("expected delivered events %v, got %v", expected, delivered)
 		}
+
 	})
 }
 
@@ -329,6 +331,7 @@ func Test_Sender_OrderingGroupPreservesOrder(t *testing.T) {
 // an earlier event does not block the same user's events in another group.
 func Test_Sender_OrderingGroupsAreIndependent(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
+
 		var delivered []string
 
 		app := newTestApplication()
@@ -370,6 +373,7 @@ func Test_Sender_OrderingGroupsAreIndependent(t *testing.T) {
 		if !slices.Equal(delivered, expected) {
 			t.Fatalf("expected delivered events %v after contacts are unblocked, got %v", expected, delivered)
 		}
+
 	})
 }
 
@@ -377,6 +381,7 @@ func Test_Sender_OrderingGroupsAreIndependent(t *testing.T) {
 // events for one user even when they belong to different ordering groups.
 func Test_Sender_SameUserIncludesOrderingGroups(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
+
 		var batches [][]string
 
 		app := newTestApplication()
@@ -411,6 +416,7 @@ func Test_Sender_SameUserIncludesOrderingGroups(t *testing.T) {
 		if !slices.Equal(batches[0], expected) {
 			t.Fatalf("expected first user batch %v, got %v", expected, batches[0])
 		}
+
 	})
 }
 
