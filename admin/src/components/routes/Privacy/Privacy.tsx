@@ -88,7 +88,6 @@ const checkProfileConsentLocation = (location: ProfileConsentLocation | null, sc
 };
 
 const Privacy = () => {
-	const [searchParams, setSearchParams] = useSearchParams();
 	const [purposes, setPurposes] = useState<ConsentPurpose[]>();
 	const [profileSchema, setProfileSchema] = useState<ObjectType>();
 	const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -96,6 +95,8 @@ const Privacy = () => {
 	const [purposeToEdit, setPurposeToEdit] = useState<ConsentPurpose | null>();
 	const [purposeToDelete, setPurposeToDelete] = useState<ConsentPurpose | null>();
 	const [isDeleting, setIsDeleting] = useState<boolean>(false);
+
+	const [searchParams, setSearchParams] = useSearchParams();
 
 	const { api, connections, handleError, setTitle, redirect } = useContext(AppContext);
 
@@ -156,6 +157,9 @@ const Privacy = () => {
 			return;
 		}
 		setPurposeToEdit(purposes.find((purpose) => purpose.id === purposeID));
+
+		// Remove the parameter once handled, otherwise the dialog would reopen
+		// every time the purposes are reloaded, for example after saving.
 		const nextSearchParams = new URLSearchParams(searchParams);
 		nextSearchParams.delete('purpose');
 		setSearchParams(nextSearchParams, { replace: true });
@@ -241,7 +245,7 @@ const Privacy = () => {
 						)}
 					</div>
 				);
-			const profilePathCell =
+			const profileConsentLocationCell =
 				p.profileConsentLocation == null ? (
 					<span className='privacy__grid-paths-empty'>-</span>
 				) : (
@@ -276,7 +280,7 @@ const Privacy = () => {
 				</div>
 			);
 			return {
-				cells: [p.name, eventConsentLocationsCell, profilePathCell, pipelinesCell, actionsCell],
+				cells: [p.name, eventConsentLocationsCell, profileConsentLocationCell, pipelinesCell, actionsCell],
 				key: p.id,
 			};
 		});
@@ -398,7 +402,6 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 	const formRef = useRef<any>();
 	const profilePathDropdownRef = useRef<any>();
 
-	const isEditing = purposeToEdit != null;
 	const profilePathOptions = useMemo(
 		() =>
 			Object.entries(profileSchema ?? {}).filter(
@@ -406,27 +409,30 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 			),
 		[profileSchema],
 	);
-	const originalProfile = purposeToEdit?.profileConsentLocation;
-	const isProfilePathJSON = profileJSONKey !== null;
+
+	const isEditing = purposeToEdit != null;
+
+	const isProfilePropertyJSON = profileJSONKey !== null;
 	const profileConsentLocation: ProfileConsentLocation | null =
 		profilePropertyPath === ''
 			? null
 			: profileJSONKey === null
 				? { property: profilePropertyPath }
 				: { property: profilePropertyPath, jsonKey: profileJSONKey };
-	const profilePathInputValue = isProfilePathJSON ? profileJSONKey : profilePropertyPath;
+
 	const isProfilePropertyUsedByOtherPurposes =
 		profilePropertyPath !== '' &&
-		!isProfilePathJSON &&
+		!isProfilePropertyJSON &&
 		profileSchema?.[profilePropertyPath]?.type === 'boolean' &&
 		purposes?.some(
 			(purpose) =>
 				purpose.id !== purposeToEdit?.id && purpose.profileConsentLocation?.property === profilePropertyPath,
 		) === true;
+
 	const isProfileJSONLocationUsedByOtherPurposes =
 		hasProfileJSONKeyLostFocus &&
 		profilePropertyPath !== '' &&
-		isProfilePathJSON &&
+		isProfilePropertyJSON &&
 		profileSchema?.[profilePropertyPath]?.type === 'json' &&
 		purposes?.some(
 			(purpose) =>
@@ -434,6 +440,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 				purpose.profileConsentLocation?.property === profilePropertyPath &&
 				purpose.profileConsentLocation.jsonKey === profileJSONKey,
 		) === true;
+
 	const profilePathWarning = isProfilePropertyUsedByOtherPurposes
 		? 'This property is also used by other purposes.'
 		: isProfileJSONLocationUsedByOtherPurposes
@@ -501,6 +508,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 		if (!isOpen) {
 			return;
 		}
+		const originalProfile = purposeToEdit?.profileConsentLocation;
 		setName(isEditing ? purposeToEdit.name : '');
 		setPurposeCodes(
 			isEditing && purposeToEdit.eventConsentLocations.length > 0
@@ -722,7 +730,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 			return;
 		}
 		try {
-			if (isProfilePathJSON) {
+			if (isProfilePropertyJSON) {
 				validateConsentKey(profileJSONKey);
 			}
 			const message = checkProfileConsentLocation(profileConsentLocation, profileSchema);
@@ -876,15 +884,15 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 						>
 							<SlInput
 								slot='trigger'
-								className={`privacy__dialog-profile-path${isProfilePathJSON ? ' privacy__dialog-profile-path--json' : ''}`}
-								value={profilePathInputValue}
-								onSlInput={isProfilePathJSON ? onInputProfileJSONPath : undefined}
-								onSlBlur={isProfilePathJSON ? onBlurProfileJSONPath : undefined}
-								onClickCapture={isProfilePathJSON ? onClickProfileJSONPath : undefined}
-								onKeyDownCapture={isProfilePathJSON ? onKeyDownProfileJSONPath : undefined}
-								onKeyUpCapture={isProfilePathJSON ? onKeyUpProfileJSONPath : undefined}
-								placeholder={isProfilePathJSON ? 'key' : 'Select a profile property'}
-								readonly={!isProfilePathJSON}
+								className={`privacy__dialog-profile-path${isProfilePropertyJSON ? ' privacy__dialog-profile-path--json' : ''}`}
+								value={isProfilePropertyJSON ? profileJSONKey : profilePropertyPath}
+								onSlInput={isProfilePropertyJSON ? onInputProfileJSONPath : undefined}
+								onSlBlur={isProfilePropertyJSON ? onBlurProfileJSONPath : undefined}
+								onClickCapture={isProfilePropertyJSON ? onClickProfileJSONPath : undefined}
+								onKeyDownCapture={isProfilePropertyJSON ? onKeyDownProfileJSONPath : undefined}
+								onKeyUpCapture={isProfilePropertyJSON ? onKeyUpProfileJSONPath : undefined}
+								placeholder={isProfilePropertyJSON ? 'key' : 'Select a profile property'}
+								readonly={!isProfilePropertyJSON}
 							>
 								<span
 									className='schema-property-grid__label-content privacy__dialog-path-label'
@@ -896,7 +904,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 										label='About profile property'
 									/>
 								</span>
-								{isProfilePathJSON && (
+								{isProfilePropertyJSON && (
 									<span className='privacy__dialog-profile-path-prefix' slot='prefix'>
 										{profilePropertyPath}.
 									</span>
