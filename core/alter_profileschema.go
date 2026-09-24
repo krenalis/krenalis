@@ -204,23 +204,23 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 				return fmt.Errorf("profile schema properties cannot have type %s(%s)", p.Type.Kind(), k)
 			}
 		}
-		semanticType := p.Type
-		for semanticType.Kind() == types.ArrayKind || semanticType.Kind() == types.MapKind {
-			semanticType = semanticType.Elem()
+		// Check semantic.
+		st := p.Type
+		if k := st.Kind(); k == types.ArrayKind || k == types.MapKind {
+			st = p.Type.Elem()
 		}
-		switch semanticType.Semantic() {
+		switch st.Semantic() {
 		case types.CountrySemantic:
-			if semanticType.CountryFormat() != types.ISO3166Alpha2 {
+			if st.CountryFormat() != types.ISO3166Alpha2 {
 				return errors.New("profile schema properties with country semantic must use ISO 3166 alpha-2 format")
 			}
 		case types.MoneySemantic, types.PercentageSemantic, types.MeasurementSemantic:
-			if semanticType.Kind() != types.DecimalKind || semanticType.Precision() != 18 || semanticType.Scale() != 4 {
-				return fmt.Errorf(
-					"profile schema properties with %s semantic must have decimal(18,4) values", semanticType.Semantic(),
-				)
+			if st.Kind() != types.DecimalKind || st.Precision() != 18 || st.Scale() != 4 {
+				return fmt.Errorf("profile schema properties with %s semantic must have decimal(18,4) values",
+					st.Semantic())
 			}
 		case types.DurationSemantic:
-			if semanticType.Kind() != types.IntKind || semanticType.BitSize() != 64 || semanticType.IsUnsigned() {
+			if st.Kind() != types.IntKind || st.BitSize() != 64 || st.IsUnsigned() {
 				return errors.New("profile schema properties with duration semantic must have signed int(64) values")
 			}
 		}
