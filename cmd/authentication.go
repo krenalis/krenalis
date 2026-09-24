@@ -39,7 +39,7 @@ func (s *apisServer) admitOrganizationRequest(r *http.Request, rateLimitCost int
 }
 
 // admitPlatformRequest authenticates a platform-only request and applies the
-// rate-limit budget for the platform management API.
+// rate-limit budget for the Platform Management API.
 //
 // See also [admitOrganizationRequest], [admitWorkspaceOptionalRequest] and
 // [admitWorkspaceRequest].
@@ -222,13 +222,13 @@ func (s *apisServer) authenticateAdminRequest(r *http.Request) (org *core.Organi
 	return org, ws, session.Member, nil
 }
 
-// authenticatePlatformRequest authenticates a request to the platform
-// management API using a platform management API key from the Authorization
+// authenticatePlatformRequest authenticates a request to the Platform
+// Management API using a Platform Management API key from the Authorization
 // header.
 func (s *apisServer) authenticatePlatformRequest(r *http.Request) error {
 	auth, ok := r.Header["Authorization"]
 	if !ok {
-		return errors.Unauthorized("Authorization header with the platform management API key is not present in the request")
+		return errors.Unauthorized("Authorization header with the Platform Management API key is not present in the request")
 	}
 	if len(auth) > 1 {
 		return errors.BadRequest("request contains multiple Authorization headers")
@@ -238,10 +238,10 @@ func (s *apisServer) authenticatePlatformRequest(r *http.Request) error {
 		return errors.BadRequest("Authorization header is invalid; it should be in the format 'Authorization: Bearer <YOUR_PLATFORM_MANAGEMENT_API_KEY>'")
 	}
 	if !strings.HasPrefix(token, "plat_") {
-		return errors.BadRequest("platform management APIs require specific keys for authentication (these are keys that begin with 'plat_')")
+		return errors.BadRequest("Platform Management APIs require specific keys for authentication (these are keys that begin with 'plat_')")
 	}
 	if s.platformManagementAPIKey == "" || token != s.platformManagementAPIKey {
-		return errors.Unauthorized("platform management API key in the Authorization header of the request is not valid")
+		return errors.Unauthorized("Platform Management API key in the Authorization header of the request is not valid")
 	}
 	return nil
 }

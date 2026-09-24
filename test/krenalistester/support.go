@@ -561,8 +561,8 @@ func (k *Krenalis) TryOrganizations(first, limit int) ([]Organization, error) {
 	return response.Organizations, err
 }
 
-// organizationsHeaders returns the headers needed to call the platform
-// management API.
+// organizationsHeaders returns the headers needed to call the Platform
+// Management API.
 func organizationsHeaders() http.Header {
 	return http.Header{
 		"Krenalis-Workspace": nil, // so that Call does not add automatically the header.
@@ -752,7 +752,7 @@ func (s sendEventCallback) Failure(msg analytics.Message, err error) {
 }
 
 // SetOrganizationStatus enables or disables an organization through the
-// platform management API.
+// Platform Management API.
 func (k *Krenalis) SetOrganizationStatus(id string, enabled bool) {
 	must(k.t, k.TrySetOrganizationStatus(id, enabled, organizationsHeaders()))
 }
