@@ -372,7 +372,7 @@ var parameters = map[string]string{
 	"/nats/token":                             "NATS_TOKEN",
 	"/nats/url":                               "NATS_URL",
 	"/nats/user":                              "NATS_USER",
-	"/organizations-api-key":                  "ORGANIZATIONS_API_KEY",
+	"/platform-management-api-key":            "PLATFORM_MANAGEMENT_API_KEY",
 	"/potential-connectors-url":               "POTENTIAL_CONNECTORS_URL",
 	"/prometheus-metrics-enabled":             "PROMETHEUS_METRICS_ENABLED",
 	"/smtp/host":                              "SMTP_HOST",
