@@ -207,9 +207,9 @@ func (pp Properties) SortedNames() []string {
 //	    fmt.Printf("%s: %s\n", path, property.Type.Kind)
 //	}
 //
-// Unlike WalkObjects, WalkAll also descends into array and map elements.
-// For a property "x" of type array(T) or map(T) with a sub-property "y",
-// the resulting path is "x.y".
+// Unlike WalkObjects, WalkAll traverses array and map element types to reach
+// nested object properties. For a property "x" containing a nested property
+// "y" through an array or map, the resulting path is "x.y".
 func (pp Properties) WalkAll() iter.Seq2[string, Property] {
 	return pp.walk(true)
 }
@@ -223,14 +223,14 @@ func (pp Properties) WalkAll() iter.Seq2[string, Property] {
 //	}
 //
 // Unlike WalkAll, WalkObjects does not descend into array or map elements.
-// Iteration is limited to object properties only.
+// It still yields array and map properties, and descends only into objects.
 func (pp Properties) WalkObjects() iter.Seq2[string, Property] {
 	return pp.walk(false)
 }
 
 // walk is the shared implementation of WalkAll and WalkObjects.
-// If traverseArrayMap is true, iteration also descends into array and map
-// elements. If false, iteration is limited to object properties only.
+// If traverseArrayMap is true, it descends through array and map types to
+// reach nested objects. Otherwise, it descends only through object types.
 func (pp Properties) walk(traverseArrayMap bool) iter.Seq2[string, Property] {
 	return func(yield func(path string, property Property) bool) {
 		type entry struct {
@@ -246,6 +246,10 @@ func (pp Properties) walk(traverseArrayMap bool) iter.Seq2[string, Property] {
 			var e entry
 			n := len(entries)
 			e, entries = entries[n-1], entries[:n-1]
+			path := e.base + e.prop.Name
+			if !yield(path, *e.prop) {
+				return
+			}
 			t := e.prop.Type
 			if traverseArrayMap {
 				for t.kind == MapKind || t.kind == ArrayKind {
@@ -254,12 +258,10 @@ func (pp Properties) walk(traverseArrayMap bool) iter.Seq2[string, Property] {
 			}
 			if t.kind == ObjectKind {
 				properties := t.vl.(Properties).properties
+				base := path + "."
 				for i := len(properties) - 1; i >= 0; i-- {
-					entries = append(entries, entry{base: e.base + e.prop.Name + ".", prop: &properties[i]})
+					entries = append(entries, entry{base: base, prop: &properties[i]})
 				}
-			}
-			if !yield(e.base+e.prop.Name, *e.prop) {
-				return
 			}
 		}
 	}
