@@ -17,8 +17,7 @@ import { useSchemaGrid } from './useSchemaGrid';
 import { GridKeyboardHints } from '../../base/Grid/GridKeyboardHints';
 import { useDocumentGridKeyboardNavigation } from '../../base/Grid/useDocumentGridKeyboardNavigation';
 
-const schemaGridColumns =
-	'minmax(160px, 0.65fr) minmax(200px, 0.85fr) 86px minmax(250px, 1.75fr) minmax(150px, 0.55fr)';
+const schemaGridColumns = 'minmax(180px, 0.75fr) minmax(300px, 1.6fr) 86px minmax(170px, 0.65fr)';
 
 interface SchemaGridOutletContext {
 	selectedPropertyPath: string | null;

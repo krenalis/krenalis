@@ -263,11 +263,6 @@
 	padding-right: 14px;
 }
 
-.schema-grid__technical-type,
-.schema-edit__property-technical-type {
-	font-family: var(--monospace-fonts);
-}
-
 .schema-property-grid__property-name {
 	line-height: 1.35;
 	min-width: 0;
