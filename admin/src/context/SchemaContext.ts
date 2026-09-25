@@ -1,8 +1,10 @@
 import { createContext } from 'react';
 import { ObjectType } from '../lib/api/types/types';
+import { ConsentPurpose } from '../lib/api/types/workspace';
 
 interface SchemaContextType {
 	schema: ObjectType;
+	consentPurposes: ConsentPurpose[];
 	isLoadingSchema: boolean;
 	setIsLoadingSchema: React.Dispatch<React.SetStateAction<boolean>>;
 	latestAlterError: string | null;

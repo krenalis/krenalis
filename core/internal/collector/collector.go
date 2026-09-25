@@ -112,6 +112,7 @@ func New(db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datast
 	st.AddListener(c.onSetOrganizationStatus)
 	st.AddListener(c.onSetPipelineStatus)
 	st.AddListener(c.onUnlinkConnection)
+	st.AddListener(c.onUpdateConsentPurpose)
 	st.AddListener(c.onUpdatePipeline)
 	for _, org := range st.Organizations() {
 		if org.Enabled {
@@ -479,6 +480,29 @@ func (c *Collector) onUnlinkConnection(n state.UnlinkConnection) {
 	}
 }
 
+// onUpdateConsentPurpose is called when a consent purpose is updated.
+func (c *Collector) onUpdateConsentPurpose(n state.UpdateConsentPurpose) {
+	ws, ok := c.state.Workspace(n.Workspace)
+	if !ok {
+		return
+	}
+	if observer, ok := c.observers.Load(n.Workspace); ok {
+		if cp, ok := ws.ConsentPurpose(n.ID); ok {
+			observer.replaceConsentPurpose(cp)
+		}
+	}
+	// The state has already replaced the purpose in the pipelines that require
+	// it, so the identity writers only need to read their required consents
+	// again.
+	for _, connection := range ws.Connections() {
+		for _, p := range connection.Pipelines() {
+			if w, ok := c.identityWriters.Load(p.ID); ok {
+				w.(*identityWriter).SetRequiredConsents(p.RequiredConsents)
+			}
+		}
+	}
+}
+
 // onUpdatePipeline is called when a pipeline is updated.
 func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
 	p, _ := c.state.Pipeline(n.ID)
@@ -486,13 +510,15 @@ func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
 		return
 	}
 	if p.Enabled {
-		// The transformation might have changed.
+		// The transformation and the required consents might have changed.
 		if w, ok := c.identityWriters.Load(p.ID); ok {
+			iw := w.(*identityWriter)
 			var transformer *transformers.Transformer
 			if p.Transformation.Mapping != nil || p.Transformation.Function != nil {
 				transformer, _ = transformers.New(p.Organization().ID, p, c.functionProvider)
 			}
-			w.(*identityWriter).SetTransformer(transformer)
+			iw.SetTransformer(transformer)
+			iw.SetRequiredConsents(p.RequiredConsents)
 		}
 	}
 	connection := p.Connection()
@@ -837,7 +863,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				continue
 			}
 			pendingFilterPassed = append(pendingFilterPassed, p.ID)
-			if !consents.Satisfies(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
+			if !consents.SatisfiesEvent(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
 				pendingConsentFailed = append(pendingConsentFailed, p.ID)
 				continue
 			}
@@ -858,11 +884,6 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				continue
 			}
 			pendingFilterPassed = append(pendingFilterPassed, p.ID)
-			if !consents.Satisfies(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
-				pendingConsentFailed = append(pendingConsentFailed, p.ID)
-				continue
-			}
-			pendingConsentPassed = append(pendingConsentPassed, p.ID)
 			if _, ok := c.identityWriters.Load(p.ID); ok {
 				topics = append(topics, "pipeline-"+p.ID)
 			}
@@ -884,7 +905,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 					continue
 				}
 				pendingFilterPassed = append(pendingFilterPassed, p.ID)
-				if !consents.Satisfies(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
+				if !consents.SatisfiesEvent(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
 					pendingConsentFailed = append(pendingConsentFailed, p.ID)
 					continue
 				}
@@ -920,10 +941,10 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		c.metrics.Pipelines.ReceivePassed(pipeline, 1)
 	}
 	for _, pipeline := range pendingConsentPassed {
-		c.metrics.Pipelines.ConsentPassed(pipeline, 1)
+		c.metrics.Pipelines.EventConsentPassed(pipeline, 1)
 	}
 	for _, pipeline := range pendingConsentFailed {
-		c.metrics.Pipelines.ConsentFailed(pipeline, 1)
+		c.metrics.Pipelines.EventConsentFailed(pipeline, 1)
 	}
 	for _, pipeline := range pendingFilterPassed {
 		c.metrics.Pipelines.FilterPassed(pipeline, 1)

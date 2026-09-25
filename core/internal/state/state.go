@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"slices"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -924,11 +925,11 @@ func (workspace *Workspace) Connections() []*Connection {
 	return connections
 }
 
-// ConsentPurpose returns the consent purpose of the workspace with the given
-// code. The boolean return value reports whether the consent purpose exists.
-func (workspace *Workspace) ConsentPurpose(code string) (*ConsentPurpose, bool) {
+// ConsentPurpose returns the consent purpose of the workspace with identifier
+// id. The boolean return value reports whether the consent purpose exists.
+func (workspace *Workspace) ConsentPurpose(id string) (*ConsentPurpose, bool) {
 	workspace.mu.Lock()
-	cp, ok := workspace.consentPurposes[code]
+	cp, ok := workspace.consentPurposes[id]
 	workspace.mu.Unlock()
 	return cp, ok
 }
@@ -944,7 +945,7 @@ func (workspace *Workspace) ConsentPurposes() []*ConsentPurpose {
 	}
 	workspace.mu.Unlock()
 	sort.Slice(purposes, func(i, j int) bool {
-		return purposes[i].Code < purposes[j].Code
+		return purposes[i].ID < purposes[j].ID
 	})
 	return purposes
 }
@@ -968,6 +969,28 @@ func (workspace *Workspace) ConsumeEventRateLimitCapacity(ctx context.Context, e
 // condition makes capacity availability impossible to determine.
 func (workspace *Workspace) ConsumeRateLimitCapacity(ctx context.Context, units int) error {
 	return workspace.bucket.Consume(ctx, units)
+}
+
+// resolveRequiredConsents returns the required consents of a pipeline of the
+// workspace, given the required consent purposes referred to by identifier.
+//
+// It returns an error if a referred consent purpose does not exist.
+//
+// It must be called on a frozen state.
+func (workspace *Workspace) resolveRequiredConsents(byIDs RequiredConsentsByIDs) (RequiredConsents, error) {
+	rc := RequiredConsents{Operator: byIDs.Operator}
+	if len(byIDs.Purposes) == 0 {
+		return rc, nil
+	}
+	rc.Purposes = make([]*ConsentPurpose, len(byIDs.Purposes))
+	for i, id := range byIDs.Purposes {
+		purpose, ok := workspace.consentPurposes[id]
+		if !ok {
+			return RequiredConsents{}, fmt.Errorf("required consent purpose %s does not exist in workspace %s", id, workspace.ID)
+		}
+		rc.Purposes[i] = purpose
+	}
+	return rc, nil
 }
 
 // EncryptWarehouseSettings encrypts the given settings with the settings key.
@@ -1335,8 +1358,64 @@ func (account *Account) Connector() *Connector {
 
 // ConsentPurpose represents a consent purpose.
 type ConsentPurpose struct {
-	Code string
-	Name string
+	ID                     string
+	Name                   string
+	EventConsentLocations  []EventConsentLocation // never nil
+	ProfileConsentLocation *ProfileConsentLocation
+	// eventPropertyPaths and profilePropertyPath are the paths actually read,
+	// resolved by resolvePropertyPaths.
+	eventPropertyPaths  [][]string // never nil
+	profilePropertyPath []string
+}
+
+// NewConsentPurpose returns a new consent purpose with the paths of its
+// properties resolved.
+func NewConsentPurpose(purpose ConsentPurpose) *ConsentPurpose {
+	cp := &ConsentPurpose{}
+	*cp = purpose
+	cp.resolvePropertyPaths()
+	return cp
+}
+
+// EventPropertyPaths returns the paths of the properties of an event that hold
+// the consent given for the purpose, in order of precedence.
+func (purpose *ConsentPurpose) EventPropertyPaths() [][]string {
+	return purpose.eventPropertyPaths
+}
+
+// ProfilePropertyPath returns the schema property path holding the Boolean
+// consent or JSON object.
+func (purpose *ConsentPurpose) ProfilePropertyPath() []string {
+	return purpose.profilePropertyPath
+}
+
+// resolvePropertyPaths resolves the configured paths of the properties that
+// hold the consent given for the purpose.
+func (purpose *ConsentPurpose) resolvePropertyPaths() {
+	purpose.profilePropertyPath = nil
+	if purpose.EventConsentLocations == nil {
+		purpose.EventConsentLocations = []EventConsentLocation{}
+	}
+	purpose.eventPropertyPaths = make([][]string, len(purpose.EventConsentLocations))
+	for i, location := range purpose.EventConsentLocations {
+		purpose.eventPropertyPaths[i] = []string{"context", "consents", location.PurposeCode}
+	}
+	if location := purpose.ProfileConsentLocation; location != nil && types.IsValidPropertyPath(location.Property) {
+		purpose.profilePropertyPath = strings.Split(location.Property, ".")
+	}
+}
+
+// EventConsentLocation identifies a property under context.consents that is checked
+// for the consent value in incoming events.
+type EventConsentLocation struct {
+	PurposeCode string
+}
+
+// ProfileConsentLocation identifies the profile schema property and optional JSON key
+// used to represent the consent value for a purpose.
+type ProfileConsentLocation struct {
+	Property string
+	JSONKey  string
 }
 
 // Strategy represents a strategy.
@@ -1884,7 +1963,15 @@ const (
 // RequiredConsents represents the consent purposes required by a pipeline.
 type RequiredConsents struct {
 	Operator ConsentPurposesOperator
-	Purposes []string // consent purpose codes.
+	Purposes []*ConsentPurpose
+}
+
+// RequiredConsentsByIDs represents the consent purposes required by a pipeline,
+// referred to by their identifiers. It is used where the consent purposes
+// cannot be referred to by pointer.
+type RequiredConsentsByIDs struct {
+	Operator ConsentPurposesOperator
+	Purposes []string // consent purpose identifiers.
 }
 
 // ConsentPurposesOperator represents the logical operator applied to the

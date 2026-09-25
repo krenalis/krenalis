@@ -57,10 +57,10 @@ func TestPipelineMetricsPerDateParsesExactAggregates(t *testing.T) {
 	start := time.Date(2026, time.August, 5, 0, 0, 0, 0, time.UTC)
 	_, err := database.Exec(t.Context(), `INSERT INTO pipelines_metrics
 		(organization, workspace, connection, pipeline, target, timeslot,
-		passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6,
-		failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6)
+		passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, passed_7, passed_8,
+		failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6, failed_7, failed_8)
 		VALUES ($1, 'workspace111', 'pipelineconn', 'pipeline1111', 'Event', $2,
-		7, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0)`, organization, TimeSlotFromTime(start))
+		7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0)`, organization, TimeSlotFromTime(start))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,10 +88,10 @@ func TestPipelineMetricsPerDateParsesExactAggregates(t *testing.T) {
 	for _, pipeline := range []string{"overflowp111", "overflowp222"} {
 		_, err := database.Exec(t.Context(), `INSERT INTO pipelines_metrics
 			(organization, workspace, connection, pipeline, target, timeslot,
-			passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6,
-			failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6)
+			passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, passed_7, passed_8,
+			failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6, failed_7, failed_8)
 			VALUES ($1, 'workspace111', 'pipelineconn', $2, 'Event', $3,
-			$4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)`, organization, pipeline,
+			$4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)`, organization, pipeline,
 			TimeSlotFromTime(start), math.MaxInt)
 		if err != nil {
 			t.Fatal(err)
@@ -147,13 +147,15 @@ func Test_PipelinesPassedFailed(t *testing.T) {
 // each PipelineStep.
 func Test_PipelineStepString(t *testing.T) {
 	tests := map[PipelineStep]string{
-		ReceiveStep:          "Receive",
-		InputValidationStep:  "InputValidation",
-		FilterStep:           "Filter",
-		ConsentStep:          "Consent",
-		TransformationStep:   "Transformation",
-		OutputValidationStep: "OutputValidation",
-		FinalizeStep:         "Finalize",
+		ReceiveStep:              "Receive",
+		InputValidationStep:      "InputValidation",
+		FilterStep:               "Filter",
+		EventConsentStep:         "EventConsent",
+		ExportProfileConsentStep: "ExportProfileConsent",
+		TransformationStep:       "Transformation",
+		OutputValidationStep:     "OutputValidation",
+		ImportProfileConsentStep: "ImportProfileConsent",
+		FinalizeStep:             "Finalize",
 	}
 	for s, want := range tests {
 		if got := s.String(); got != want {

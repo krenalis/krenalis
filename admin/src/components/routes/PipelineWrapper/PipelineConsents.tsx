@@ -1,20 +1,20 @@
-import React, { useContext, useEffect, useState, forwardRef } from 'react';
+import React, { useContext, useEffect, useRef, useState, forwardRef } from 'react';
 import Section from '../../base/Section/Section';
 import PipelineContext from '../../../context/PipelineContext';
 import AppContext from '../../../context/AppContext';
 import { ConsentPurpose } from '../../../lib/api/types/workspace';
 import { ConsentPurposesOperator } from '../../../lib/api/types/pipeline';
-import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
+import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 
 const PipelineConsents = forwardRef<any>((_, ref) => {
-	const { pipeline, setPipeline } = useContext(PipelineContext);
+	const { pipeline, pipelineType, setPipeline, connection, isImport } = useContext(PipelineContext);
 
 	const [purposes, setPurposes] = useState<ConsentPurpose[]>([]);
-	const [arePurposesLoaded, setArePurposesLoaded] = useState(false);
 	const [isEnabled, setIsEnabled] = useState((pipeline.requiredConsents?.purposes.length ?? 0) > 0);
+
+	const operatorRef = useRef<any>(null);
 
 	const { api, handleError } = useContext(AppContext);
 
@@ -27,7 +27,6 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 			try {
 				const res = await api.workspaces.consentPurposes();
 				setPurposes(res.purposes);
-				setArePurposesLoaded(true);
 			} catch (err) {
 				handleError(err);
 			}
@@ -35,15 +34,37 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 		fetchPurposes();
 	}, []);
 
-	const selectedCodes = pipeline.requiredConsents?.purposes ?? [];
+	useEffect(() => {
+		const select = operatorRef.current;
+		if (select == null || isEnabled) {
+			return;
+		}
 
-	// undefinedCodes are the required codes that are no longer the code of a
-	// purpose of the workspace, because the purpose has been deleted or its
-	// code has been changed. The pipeline does not process any event until they
-	// are removed, so they are listed as options to let the user remove them.
-	const undefinedCodes = arePurposesLoaded
-		? selectedCodes.filter((code) => !purposes.some((p) => p.code === code))
-		: [];
+		const onMouseDown = (e: MouseEvent) => {
+			e.preventDefault();
+			e.stopPropagation();
+			select.focus();
+		};
+
+		const onKeyDown = (e: KeyboardEvent) => {
+			if (e.key === 'Tab' || e.key === 'Escape' || e.altKey || e.ctrlKey || e.metaKey) {
+				return;
+			}
+			e.preventDefault();
+			e.stopPropagation();
+		};
+
+		// When the consents are disabled, keep the operator readable as part of
+		// the sentence, but prevent it from being changed.
+		select.addEventListener('mousedown', onMouseDown, true);
+		select.addEventListener('keydown', onKeyDown, true);
+
+		return () => {
+			// restore select interactions.
+			select.removeEventListener('mousedown', onMouseDown, true);
+			select.removeEventListener('keydown', onKeyDown, true);
+		};
+	}, [isEnabled]);
 
 	const setEnabled = (enabled: boolean) => {
 		const p = structuredClone(pipeline);
@@ -82,35 +103,45 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 		setPipeline(p);
 	};
 
+	const selectedPurposeIDs = pipeline.requiredConsents?.purposes ?? [];
+
+	const isEventTarget = pipelineType.target === 'Event';
+	const usersTerm = connection.connector.terms.users.toLowerCase();
+	const subjects = isEventTarget ? 'events' : isImport ? usersTerm : 'profiles';
+	const actionVerb = isImport ? 'import' : isEventTarget ? 'send' : 'export';
+	const actionParticiple = isImport ? 'imported' : isEventTarget ? 'sent' : 'exported';
+
 	return (
 		<Section
 			className='pipeline__consents'
-			title='Privacy'
-			description='Choose whether this pipeline should require consent for specific purposes before processing events.'
+			title='Consent requirements'
+			description={`Define which consent purposes ${subjects} must have before they can be ${actionParticiple}.`}
 			padded={true}
 			ref={ref}
 			annotated={true}
 		>
 			<div className='pipeline__consents-toggle'>
-				<SlCheckbox checked={isEnabled} onSlChange={onToggle} disabled={purposes.length === 0} />
+				<SlSwitch checked={isEnabled} onSlChange={onToggle} disabled={purposes.length === 0} />
 				<div
 					className={`pipeline__consents-logical-sentence${
 						purposes.length === 0 ? ' pipeline__consents-logical-sentence--disabled' : ''
 					}`}
 					onClick={onSentenceClick}
 				>
-					An event must have consent for
+					{`Only ${actionVerb} ${subjects} ${subjects === 'events' ? 'that have consent for' : 'who have consented to'}`}
 					<SlSelect
-						className='pipeline__consents-logical-select'
+						ref={operatorRef}
+						className={`pipeline__consents-logical-select${
+							isEnabled ? '' : ' pipeline__consents-logical-select--readonly'
+						}`}
 						size='small'
 						value={pipeline.requiredConsents?.operator || 'and'}
 						onSlChange={onChangeOperator}
-						disabled={!isEnabled}
 					>
 						<SlOption value='and'>all</SlOption>
 						<SlOption value='or'>any</SlOption>
 					</SlSelect>
-					of the selected purposes to be processed by this pipeline.
+					of the selected purposes.
 				</div>
 			</div>
 			<div className='pipeline__consents-details'>
@@ -118,30 +149,17 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 					className='pipeline__consents-select'
 					multiple
 					clearable
-					placeholder={purposes.length === 0 ? 'No purposes defined yet' : 'Select the required purposes'}
-					value={selectedCodes}
+					placeholder={purposes.length === 0 ? 'No purposes defined yet' : 'Select consent purposes'}
+					value={selectedPurposeIDs}
 					onSlChange={onChangePurposes}
-					disabled={!isEnabled || (purposes.length === 0 && undefinedCodes.length === 0)}
+					disabled={!isEnabled || purposes.length === 0}
 				>
 					{purposes.map((p) => (
-						<SlOption key={p.code} value={p.code}>
+						<SlOption key={p.id} value={p.id}>
 							{p.name}
 						</SlOption>
 					))}
-					{undefinedCodes.map((code) => (
-						<SlOption key={code} value={code} className='pipeline__consents-undefined-option'>
-							{code}
-						</SlOption>
-					))}
 				</SlSelect>
-				{undefinedCodes.length > 0 && (
-					<div className='pipeline__consents-warning'>
-						<SlIcon slot='icon' name='exclamation-triangle' />
-						{undefinedCodes.length === 1
-							? `The "${undefinedCodes[0]}" purpose no longer exists. This pipeline does not process any event until you remove it or define the purpose again.`
-							: `The ${undefinedCodes.map((c) => `"${c}"`).join(', ')} purposes no longer exist. This pipeline does not process any event until you remove them or define the purposes again.`}
-					</div>
-				)}
 			</div>
 		</Section>
 	);

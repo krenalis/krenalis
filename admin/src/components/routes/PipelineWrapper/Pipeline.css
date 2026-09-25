@@ -2160,7 +2160,11 @@ inherit the disabled style */
 	display: flex;
 	flex-flow: row;
 	align-items: flex-start;
-	gap: 3px;
+	gap: 10px;
+}
+
+.pipeline__consents-toggle sl-switch::part(base) {
+	margin-top: 1px;
 }
 
 .pipeline__consents-details {
@@ -2175,24 +2179,6 @@ inherit the disabled style */
 	border: 0;
 	color: var(--sl-color-success-900);
 	font-weight: 500;
-}
-
-.pipeline__consents-undefined-option::part(label) {
-	color: var(--sl-color-neutral-500);
-	font-style: italic;
-}
-
-.pipeline__consents-warning {
-	display: flex;
-	align-items: center;
-	gap: 7px;
-	color: var(--sl-color-warning-700);
-	font-size: 15px;
-}
-
-.pipeline__consents-warning sl-icon {
-	color: var(--sl-color-warning-700);
-	font-size: 14px;
 }
 
 .pipeline__consents-logical-sentence {
@@ -2211,4 +2197,8 @@ inherit the disabled style */
 
 .pipeline__consents-logical-select {
 	width: 90px;
+}
+
+.pipeline__consents-logical-select--readonly::part(combobox) {
+	cursor: default;
 }

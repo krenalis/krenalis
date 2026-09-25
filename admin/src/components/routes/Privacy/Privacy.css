@@ -3,7 +3,7 @@
 }
 
 .privacy {
-	max-width: 900px;
+	max-width: 1200px;
 	margin: auto;
 	padding: 30px;
 }
@@ -33,12 +33,28 @@
 	gap: 10px;
 }
 
-.privacy__grid-code {
+.privacy__grid-path {
 	font-family: var(--monospace-fonts);
 	background-color: var(--sl-color-neutral-100);
 	font-size: 13px;
 	padding: 2px 8px;
 	border-radius: 5px;
+}
+
+.privacy__grid-paths {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+}
+
+.privacy__grid-paths-empty {
+	color: var(--sl-color-neutral-500);
+}
+
+.privacy__grid-paths-more {
+	color: var(--sl-color-neutral-500);
+	font-size: 13px;
 }
 
 .privacy__grid-pipelines {
@@ -62,43 +78,218 @@
 	border-radius: var(--sl-border-radius-medium);
 }
 
-.privacy__dialog-error {
-	color: var(--sl-color-danger-600);
+.privacy__dialog::part(panel) {
+	max-height: calc(100% - var(--sl-spacing-2x-large) - (var(--header-height) + 50px));
+	background-color: var(--bg-gray);
+}
+
+.privacy__dialog {
+	--body-spacing: calc(var(--sl-spacing-large) + 12px);
+	--header-spacing: calc(var(--sl-spacing-large) + 12px);
+	--width: calc(31rem + 24px);
+}
+
+.privacy__dialog-error,
+.privacy__dialog-warning,
+.privacy__dialog-profile-path-message {
 	display: flex;
 	align-items: center;
 	gap: 7px;
 	margin-top: 3px;
-	font-size: 15px;
+	font-size: 13px;
+	position: relative;
+	top: 2px;
+	left: 3px;
+}
+
+.privacy__dialog-error {
+	color: var(--sl-color-danger-600);
+}
+
+.privacy__dialog-error sl-icon,
+.privacy__dialog-warning sl-icon,
+.privacy__dialog-profile-path-message sl-icon {
+	font-size: 13px;
+	flex-shrink: 0;
 }
 
 .privacy__dialog-error sl-icon {
 	color: var(--sl-color-danger-600);
-	font-size: 14px;
-	flex-shrink: 0;
 }
 
 .privacy__dialog-warning {
-	color: var(--sl-color-warning-700);
-	display: flex;
-	align-items: start;
-	gap: 7px;
-	margin-top: 3px;
-	font-size: 15px;
+	color: var(--sl-color-warning-600);
 }
 
 .privacy__dialog-warning sl-icon {
-	color: var(--sl-color-warning-700);
-	font-size: 14px;
-	position: relative;
-	top: 5px;
-	flex-shrink: 0;
+	color: var(--sl-color-warning-600);
 }
 
-.privacy__dialog-code {
+.privacy__dialog-message--hidden {
+	visibility: hidden;
+}
+
+.privacy__dialog-profile-path {
+	width: 100%;
+}
+
+.privacy__dialog-name,
+.privacy__dialog-purpose-code,
+.privacy__dialog-profile-path {
+	--sl-input-font-size-medium: var(--sl-font-size-small);
+	--sl-input-label-font-size-medium: var(--sl-input-label-font-size-small);
+}
+
+.privacy__dialog-path-label {
+	font-size: var(--sl-input-label-font-size-small);
+}
+
+.privacy__dialog-purpose-code::part(base),
+.privacy__dialog-profile-path::part(base) {
+	font-family: var(--monospace-fonts);
+}
+
+.privacy__dialog-purpose-code::part(input),
+.privacy__dialog-profile-path::part(input) {
+	transform: translateY(1px);
+}
+
+.privacy__dialog-profile-path:not(.privacy__dialog-profile-path--json)::part(base) {
+	cursor: default;
+}
+
+.privacy__dialog-profile-path:not(.privacy__dialog-profile-path--json)::part(input) {
+	caret-color: transparent;
+}
+
+.privacy__dialog-profile-path-dropdown {
+	display: block;
+	width: calc(100% - 62px);
+	margin-top: 17px;
+}
+
+.privacy__dialog-profile-path-clear::part(base) {
+	color: var(--sl-input-icon-color);
+	padding: 0;
+}
+
+.privacy__dialog-profile-path-clear:hover::part(base) {
+	color: var(--sl-input-icon-color-hover);
+}
+
+.privacy__dialog-purpose-code::part(input),
+.privacy__dialog-profile-path--json::part(input) {
+	padding-inline-start: 5px;
+}
+
+.privacy__dialog-purpose-code::part(prefix),
+.privacy__dialog-profile-path--json::part(prefix) {
+	background-color: var(--sl-input-background-color-disabled);
+}
+
+.privacy__dialog-purpose-code-prefix,
+.privacy__dialog-profile-path-prefix {
+	color: var(--sl-input-color);
+	font-family: var(--monospace-fonts);
+	margin-inline-end: 5px;
+	transform: translateY(1px);
+}
+
+.privacy__dialog-profile-path:not(.privacy__dialog-profile-path--json)::part(input)::placeholder {
+	font-family: var(--system-fonts);
+}
+
+.privacy__dialog-purpose-code-row {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.privacy__dialog-purpose-code-row--with-label {
+	margin-top: 0;
+}
+
+.privacy__dialog-purpose-code {
+	flex: 1;
+	min-width: 0;
+}
+
+.privacy__dialog-purpose-code-actions {
+	display: grid;
+	grid-template-columns: 25px 25px;
+	gap: 4px;
+	flex: 0 0 54px;
+	margin-top: 7px;
+}
+
+.privacy__dialog-purpose-code-row--with-label .privacy__dialog-purpose-code-actions {
+	margin-top: 34px;
+}
+
+.privacy__dialog-paths {
 	margin-top: 15px;
 }
 
+.privacy__dialog-profile-path-menu {
+	max-height: 300px;
+	overflow-y: auto;
+}
+
+.privacy__dialog-profile-path-menu sl-menu-item::part(base) {
+	font-family: var(--monospace-fonts);
+	font-size: var(--sl-input-font-size-small);
+	padding-block: var(--sl-spacing-3x-small);
+}
+
+.privacy__dialog-profile-path-option-type {
+	color: var(--sl-color-neutral-500);
+	font-family: var(--monospace-fonts);
+}
+
+.privacy__dialog-purpose-code-action::part(base) {
+	border: 0;
+	padding: 0;
+	cursor: pointer;
+}
+
+.privacy__dialog-purpose-code-action[disabled]::part(base) {
+	cursor: not-allowed;
+}
+
+.privacy__dialog-purpose-code-action::part(label) {
+	display: none;
+}
+
+.privacy__dialog-purpose-code-action sl-icon {
+	font-size: 20px;
+	width: 25px;
+	transition: color 0.3s;
+}
+
+.privacy__dialog-purpose-code-add {
+	grid-column: 1;
+}
+
+.privacy__dialog-purpose-code-add sl-icon {
+	color: var(--sl-color-primary-600);
+}
+
+.privacy__dialog-purpose-code-remove {
+	grid-column: 2;
+}
+
+.privacy__dialog-purpose-code-remove:hover sl-icon {
+	color: var(--sl-color-danger-600);
+}
+
+.privacy__dialog-actions {
+	margin-top: 42px;
+	display: flex;
+	justify-content: flex-end;
+	gap: 10px;
+}
+
 .privacy__dialog-save {
-	margin-top: 30px;
-	display: block;
+	min-width: 150px;
 }

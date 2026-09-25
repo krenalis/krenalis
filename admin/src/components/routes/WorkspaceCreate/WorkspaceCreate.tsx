@@ -22,6 +22,14 @@ const postgresqlIcon = <ExternalLogo slot='prefix' code='postgresql' path={WAREH
 
 const snowflakeIcon = <ExternalLogo slot='prefix' code='snowflake' path={WAREHOUSES_ASSETS_PATH} />;
 
+// The consent purposes added to a workspace when it is created. Their purpose
+// codes match the names of the properties under "consents" in InitialSchema.
+const initialConsentPurposes = [
+	{ purposeCode: 'marketing', name: 'Marketing communications' },
+	{ purposeCode: 'profiling', name: 'Profiling' },
+	{ purposeCode: 'analytics', name: 'Analytics' },
+];
+
 const WorkspaceCreate = () => {
 	const [name, setName] = useState<string>('');
 	const [selectedWarehouse, setSelectedWarehouse] = useState<string>(
@@ -146,6 +154,11 @@ const WorkspaceCreate = () => {
 			try {
 				const newApi = new API(window.location.origin, id);
 				await newApi.workspaces.updateWarehouse(name, 'Normal', settings, mcpSettings, false);
+				for (const purpose of initialConsentPurposes) {
+					await newApi.workspaces.addConsentPurpose(purpose.name, [{ purposeCode: purpose.purposeCode }], {
+						property: `consents.${purpose.purposeCode}`,
+					});
+				}
 			} catch (err) {
 				handleError(err);
 				return;

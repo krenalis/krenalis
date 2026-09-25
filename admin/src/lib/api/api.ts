@@ -23,6 +23,8 @@ import Workspace, {
 	LatestIdentityResolution,
 	LatestAlterProfileSchema,
 	PrimarySources,
+	EventConsentLocation,
+	ProfileConsentLocation,
 } from './types/workspace';
 import {
 	AccessKeyResponse,
@@ -933,19 +935,33 @@ class Workspaces {
 		return await call(`${this.apiURL}/consent-purposes`, http.GET, this.workspaceID);
 	};
 
-	addConsentPurpose = async (code: string, name: string): Promise<void> => {
-		return await call(`${this.apiURL}/consent-purposes`, http.POST, this.workspaceID, { code, name });
-	};
-
-	updateConsentPurpose = async (code: string, newCode: string, name: string): Promise<void> => {
-		return await call(`${this.apiURL}/consent-purposes/${code}`, http.PUT, this.workspaceID, {
-			code: newCode,
+	addConsentPurpose = async (
+		name: string,
+		eventConsentLocations: EventConsentLocation[],
+		profileConsentLocation: ProfileConsentLocation | null,
+	): Promise<void> => {
+		return await call(`${this.apiURL}/consent-purposes`, http.POST, this.workspaceID, {
 			name,
+			eventConsentLocations,
+			profileConsentLocation,
 		});
 	};
 
-	deleteConsentPurpose = async (code: string): Promise<void> => {
-		return await call(`${this.apiURL}/consent-purposes/${code}`, http.DELETE, this.workspaceID);
+	updateConsentPurpose = async (
+		id: string,
+		name: string,
+		eventConsentLocations: EventConsentLocation[],
+		profileConsentLocation: ProfileConsentLocation | null,
+	): Promise<void> => {
+		return await call(`${this.apiURL}/consent-purposes/${id}`, http.PUT, this.workspaceID, {
+			name,
+			eventConsentLocations,
+			profileConsentLocation,
+		});
+	};
+
+	deleteConsentPurpose = async (id: string): Promise<void> => {
+		return await call(`${this.apiURL}/consent-purposes/${id}`, http.DELETE, this.workspaceID);
 	};
 }
 

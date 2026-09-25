@@ -77,7 +77,7 @@ const sidebarItems: sidebarItem[] = [
 				link: 'settings/data-warehouse',
 				icon: 'database',
 			},
-			{ name: 'settings/privacy', label: 'Privacy', link: 'settings/privacy', icon: 'shield-check' },
+			{ name: 'settings/privacy', label: 'Consent management', link: 'settings/privacy', icon: 'shield-check' },
 		],
 	},
 ];

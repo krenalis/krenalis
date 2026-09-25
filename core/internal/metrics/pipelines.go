@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	numSteps         = 7
+	numSteps         = 9
 	timeslotDuration = time.Minute
 	maxTimeslot      = int32(math.MaxInt64 / timeslotDuration) // 153722867
 )
@@ -54,12 +54,15 @@ const (
 	ReceiveStep PipelineStep = iota
 	InputValidationStep
 	FilterStep
-	ConsentStep
+	EventConsentStep
+	ExportProfileConsentStep
 	TransformationStep
 	OutputValidationStep
+	ImportProfileConsentStep
 	FinalizeStep
 )
 
+// String returns the name of the pipeline step.
 func (s PipelineStep) String() string {
 	switch s {
 	case ReceiveStep:
@@ -68,12 +71,16 @@ func (s PipelineStep) String() string {
 		return "InputValidation"
 	case FilterStep:
 		return "Filter"
-	case ConsentStep:
-		return "Consent"
+	case EventConsentStep:
+		return "EventConsent"
+	case ExportProfileConsentStep:
+		return "ExportProfileConsent"
 	case TransformationStep:
 		return "Transformation"
 	case OutputValidationStep:
 		return "OutputValidation"
+	case ImportProfileConsentStep:
+		return "ImportProfileConsent"
 	case FinalizeStep:
 		return "Finalize"
 	}
@@ -171,16 +178,42 @@ func (p *Pipelines) Failed(step PipelineStep, pipeline string, count int, messag
 	p.Unlock()
 }
 
-// ConsentFailed increases the failed count for the Consent step and pipeline by
-// the given count. It is safe to call concurrently from multiple goroutines.
-func (p *Pipelines) ConsentFailed(pipeline string, count int) {
-	p.Failed(ConsentStep, pipeline, count, "")
+// EventConsentFailed increases the failed count for the EventConsent step and
+// pipeline by the given count. It is safe to call concurrently from multiple
+// goroutines.
+func (p *Pipelines) EventConsentFailed(pipeline string, count int) {
+	p.Failed(EventConsentStep, pipeline, count, "")
 }
 
-// ConsentPassed increases the passed count for the Consent step and pipeline by
-// the given count. It is safe to call concurrently from multiple goroutines.
-func (p *Pipelines) ConsentPassed(pipeline string, count int) {
-	p.Passed(ConsentStep, pipeline, count)
+// EventConsentPassed increases the passed count for the EventConsent step and
+// pipeline by the given count. It is safe to call concurrently from multiple
+// goroutines.
+func (p *Pipelines) EventConsentPassed(pipeline string, count int) {
+	p.Passed(EventConsentStep, pipeline, count)
+}
+
+// ExportProfileConsentFailed increases the failed count for the
+// ExportProfileConsent step and pipeline by the given count.
+func (p *Pipelines) ExportProfileConsentFailed(pipeline string, count int) {
+	p.Failed(ExportProfileConsentStep, pipeline, count, "")
+}
+
+// ExportProfileConsentPassed increases the passed count for the
+// ExportProfileConsent step and pipeline by the given count.
+func (p *Pipelines) ExportProfileConsentPassed(pipeline string, count int) {
+	p.Passed(ExportProfileConsentStep, pipeline, count)
+}
+
+// ImportProfileConsentFailed increases the failed count for the
+// ImportProfileConsent step and pipeline by the given count.
+func (p *Pipelines) ImportProfileConsentFailed(pipeline string, count int) {
+	p.Failed(ImportProfileConsentStep, pipeline, count, "")
+}
+
+// ImportProfileConsentPassed increases the passed count for the
+// ImportProfileConsent step and pipeline by the given count.
+func (p *Pipelines) ImportProfileConsentPassed(pipeline string, count int) {
+	p.Passed(ImportProfileConsentStep, pipeline, count)
 }
 
 // FilterFailed increases the failed count for the Filter step and pipeline by
@@ -337,6 +370,8 @@ func (p *Pipelines) aggregate(timeslot int32, unit time.Duration) {
 		SUM(passed_4) AS passed_4,
 		SUM(passed_5) AS passed_5,
 		SUM(passed_6) AS passed_6,
+		SUM(passed_7) AS passed_7,
+		SUM(passed_8) AS passed_8,
 		SUM(failed_0) AS failed_0,
 		SUM(failed_1) AS failed_1,
 		SUM(failed_2) AS failed_2,
@@ -344,14 +379,16 @@ func (p *Pipelines) aggregate(timeslot int32, unit time.Duration) {
 		SUM(failed_4) AS failed_4,
 		SUM(failed_5) AS failed_5,
 		SUM(failed_6) AS failed_6,
+		SUM(failed_7) AS failed_7,
+		SUM(failed_8) AS failed_8,
 		ARRAY_AGG(ctid) AS row_ctids
 	FROM pipelines_metrics
 	WHERE timeslot < $2 AND timeslot % $1 <> 0
 	GROUP BY organization, workspace, connection, pipeline, target, slot
 ),
 inserted AS (
-	INSERT INTO pipelines_metrics (organization, workspace, connection, pipeline, target, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6)
-	SELECT organization, workspace, connection, pipeline, target, slot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6
+	INSERT INTO pipelines_metrics (organization, workspace, connection, pipeline, target, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, passed_7, passed_8, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6, failed_7, failed_8)
+	SELECT organization, workspace, connection, pipeline, target, slot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, passed_7, passed_8, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6, failed_7, failed_8
 	FROM aggregated
 	ON CONFLICT (pipeline, timeslot)
 	DO UPDATE SET
@@ -362,13 +399,17 @@ inserted AS (
 		passed_4 = pipelines_metrics.passed_4 + EXCLUDED.passed_4,
 		passed_5 = pipelines_metrics.passed_5 + EXCLUDED.passed_5,
 		passed_6 = pipelines_metrics.passed_6 + EXCLUDED.passed_6,
+		passed_7 = pipelines_metrics.passed_7 + EXCLUDED.passed_7,
+		passed_8 = pipelines_metrics.passed_8 + EXCLUDED.passed_8,
 		failed_0 = pipelines_metrics.failed_0 + EXCLUDED.failed_0,
 		failed_1 = pipelines_metrics.failed_1 + EXCLUDED.failed_1,
 		failed_2 = pipelines_metrics.failed_2 + EXCLUDED.failed_2,
 		failed_3 = pipelines_metrics.failed_3 + EXCLUDED.failed_3,
 		failed_4 = pipelines_metrics.failed_4 + EXCLUDED.failed_4,
 		failed_5 = pipelines_metrics.failed_5 + EXCLUDED.failed_5,
-		failed_6 = pipelines_metrics.failed_6 + EXCLUDED.failed_6
+		failed_6 = pipelines_metrics.failed_6 + EXCLUDED.failed_6,
+		failed_7 = pipelines_metrics.failed_7 + EXCLUDED.failed_7,
+		failed_8 = pipelines_metrics.failed_8 + EXCLUDED.failed_8
 )
 DELETE FROM pipelines_metrics
 WHERE ctid = ANY (SELECT unnest(row_ctids) FROM aggregated)`
@@ -455,7 +496,7 @@ func (p *Pipelines) store(timeslot int32, metrics map[string]*pipelineMetrics) {
 
 	b := &p.buf
 	b.Reset()
-	b.WriteString("WITH t(organization, workspace, connection, pipeline, target, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6) AS (\n\tVALUES ")
+	b.WriteString("WITH t(organization, workspace, connection, pipeline, target, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, passed_7, passed_8, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6, failed_7, failed_8) AS (\n\tVALUES ")
 	i := 0
 	for pipeline, m := range metrics {
 		hasErrors = hasErrors || len(m.errors) > 0
@@ -482,13 +523,13 @@ func (p *Pipelines) store(timeslot int32, metrics map[string]*pipelineMetrics) {
 		b.WriteByte(',')
 		b.WriteString(strconv.FormatInt(int64(timeslot), 10))
 		b.WriteByte(',')
-		for j := range 7 {
+		for j := range numSteps {
 			b.WriteString(strconv.Itoa(m.passed[j]))
 			b.WriteByte(',')
 		}
-		for j := range 7 {
+		for j := range numSteps {
 			b.WriteString(strconv.Itoa(m.failed[j]))
-			if j != 6 {
+			if j != numSteps-1 {
 				b.WriteByte(',')
 			}
 		}
@@ -499,7 +540,7 @@ func (p *Pipelines) store(timeslot int32, metrics map[string]*pipelineMetrics) {
 	if i > 0 {
 
 		b.WriteString("\n) INSERT INTO pipelines_metrics AS m " +
-			`(organization, workspace, connection, pipeline, target, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6)` +
+			`(organization, workspace, connection, pipeline, target, timeslot, passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, passed_7, passed_8, failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6, failed_7, failed_8)` +
 			` SELECT t.* FROM t WHERE EXISTS (SELECT 1 FROM organizations o WHERE o.id = t.organization)` +
 			` ON CONFLICT (pipeline, timeslot) DO UPDATE SET ` +
 			`passed_0 = m.passed_0 + EXCLUDED.passed_0, ` +
@@ -509,13 +550,17 @@ func (p *Pipelines) store(timeslot int32, metrics map[string]*pipelineMetrics) {
 			`passed_4 = m.passed_4 + EXCLUDED.passed_4, ` +
 			`passed_5 = m.passed_5 + EXCLUDED.passed_5, ` +
 			`passed_6 = m.passed_6 + EXCLUDED.passed_6, ` +
+			`passed_7 = m.passed_7 + EXCLUDED.passed_7, ` +
+			`passed_8 = m.passed_8 + EXCLUDED.passed_8, ` +
 			`failed_0 = m.failed_0 + EXCLUDED.failed_0, ` +
 			`failed_1 = m.failed_1 + EXCLUDED.failed_1, ` +
 			`failed_2 = m.failed_2 + EXCLUDED.failed_2, ` +
 			`failed_3 = m.failed_3 + EXCLUDED.failed_3, ` +
 			`failed_4 = m.failed_4 + EXCLUDED.failed_4, ` +
 			`failed_5 = m.failed_5 + EXCLUDED.failed_5, ` +
-			`failed_6 = m.failed_6 + EXCLUDED.failed_6`)
+			`failed_6 = m.failed_6 + EXCLUDED.failed_6, ` +
+			`failed_7 = m.failed_7 + EXCLUDED.failed_7, ` +
+			`failed_8 = m.failed_8 + EXCLUDED.failed_8`)
 
 		query := b.String()
 
@@ -700,8 +745,8 @@ func (p *Pipelines) queryMetrics(ctx context.Context, start, end time.Time, reso
 	case selection.Pipelines != nil:
 		query.WriteString("pipeline, ")
 	}
-	query.WriteString("timeslot/$1 AS slot, SUM(passed_0::numeric)::text, SUM(passed_1::numeric)::text, SUM(passed_2::numeric)::text, SUM(passed_3::numeric)::text, SUM(passed_4::numeric)::text, SUM(passed_5::numeric)::text, SUM(passed_6::numeric)::text," +
-		" SUM(failed_0::numeric)::text, SUM(failed_1::numeric)::text, SUM(failed_2::numeric)::text, SUM(failed_3::numeric)::text, SUM(failed_4::numeric)::text, SUM(failed_5::numeric)::text, SUM(failed_6::numeric)::text\n" +
+	query.WriteString("timeslot/$1 AS slot, SUM(passed_0::numeric)::text, SUM(passed_1::numeric)::text, SUM(passed_2::numeric)::text, SUM(passed_3::numeric)::text, SUM(passed_4::numeric)::text, SUM(passed_5::numeric)::text, SUM(passed_6::numeric)::text, SUM(passed_7::numeric)::text, SUM(passed_8::numeric)::text," +
+		" SUM(failed_0::numeric)::text, SUM(failed_1::numeric)::text, SUM(failed_2::numeric)::text, SUM(failed_3::numeric)::text, SUM(failed_4::numeric)::text, SUM(failed_5::numeric)::text, SUM(failed_6::numeric)::text, SUM(failed_7::numeric)::text, SUM(failed_8::numeric)::text\n" +
 		"FROM pipelines_metrics\nWHERE timeslot BETWEEN $2 AND $3")
 	switch {
 	case selection.Workspaces != nil:
@@ -757,8 +802,8 @@ func (p *Pipelines) queryMetrics(ctx context.Context, start, end time.Time, reso
 		var passed, failed [numSteps]int
 		var passedValues, failedValues [numSteps]string
 		err = rows.Scan(&id, &slot,
-			&passedValues[0], &passedValues[1], &passedValues[2], &passedValues[3], &passedValues[4], &passedValues[5], &passedValues[6],
-			&failedValues[0], &failedValues[1], &failedValues[2], &failedValues[3], &failedValues[4], &failedValues[5], &failedValues[6])
+			&passedValues[0], &passedValues[1], &passedValues[2], &passedValues[3], &passedValues[4], &passedValues[5], &passedValues[6], &passedValues[7], &passedValues[8],
+			&failedValues[0], &failedValues[1], &failedValues[2], &failedValues[3], &failedValues[4], &failedValues[5], &failedValues[6], &failedValues[7], &failedValues[8])
 		if err != nil {
 			return PipelineMetrics{}, err
 		}

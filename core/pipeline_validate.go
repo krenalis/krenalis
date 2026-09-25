@@ -60,6 +60,10 @@ type validationState struct {
 
 	// provider is the transformers.FunctionProvider instantiated on the Core.
 	provider transformers.FunctionProvider
+
+	// knownConsentPurposeIDs is the set of identifiers of the consent purposes
+	// defined in the pipeline's workspace.
+	knownConsentPurposeIDs map[string]bool
 }
 
 // validatePipelineToSet validates the given PipelineToSet, in the context of
@@ -67,6 +71,7 @@ type validationState struct {
 //
 // It returns an errors.UnprocessableError error with code:
 //
+//   - ConsentPurposeNotExist, if a required consent purpose does not exist.
 //   - FormatNotExist, if the pipeline is on file and the specified format does
 //     not exist.
 //   - UnsupportedLanguage, if the transformation language is not supported.
@@ -78,7 +83,9 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(v.connection.connector.typ, v.connection.role, v.target)
 	dispatchEventsToAplications := isDispatchingEventsToApplications(v.connection.connector.typ, v.connection.role, v.target)
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(v.connection.connector.typ, v.connection.role, v.target)
+	importUsersIntoWarehouse := isImportingUsersIntoWarehouse(v.connection.connector.typ, v.connection.role, v.target)
 	exportUsersToFile := isExportUsersToFile(v.connection.connector.typ, v.connection.role, v.target)
+	exportProfiles := isExportingProfiles(v.connection.connector.typ, v.connection.role, v.target)
 
 	allowConstantTransformation := importUserIdentitiesFromEvents || dispatchEventsToAplications
 
@@ -165,7 +172,8 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		}
 	}
 	// Validate the required consents.
-	requiredConsentsAllowed := dispatchEventsToAplications || importEventsIntoWarehouse || importUserIdentitiesFromEvents
+	requiredConsentsAllowed := dispatchEventsToAplications || importEventsIntoWarehouse ||
+		importUserIdentitiesFromEvents || importUsersIntoWarehouse || exportProfiles
 	if len(pipeline.RequiredConsents.Purposes) > 0 {
 		if !requiredConsentsAllowed {
 			return errors.BadRequest("required consents are not allowed")
@@ -173,12 +181,15 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		if len(pipeline.RequiredConsents.Purposes) > MaxRequiredConsentPurposes {
 			return errors.BadRequest("required consent purposes must be at most %d", MaxRequiredConsentPurposes)
 		}
-		for i, code := range pipeline.RequiredConsents.Purposes {
-			if err := validateConsentPurposeCode(code); err != nil {
-				return errors.BadRequest("%s", err)
+		for i, id := range pipeline.RequiredConsents.Purposes {
+			if !IsValidID(id) {
+				return errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
 			}
-			if slices.Contains(pipeline.RequiredConsents.Purposes[i+1:], code) {
-				return errors.BadRequest("required consent purpose %q is duplicated", code)
+			if slices.Contains(pipeline.RequiredConsents.Purposes[i+1:], id) {
+				return errors.BadRequest("required consent purpose %s is duplicated", id)
+			}
+			if !v.knownConsentPurposeIDs[id] {
+				return errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", id)
 			}
 		}
 		if op := pipeline.RequiredConsents.Operator; op != PurposesAnd && op != PurposesOr {
