@@ -379,6 +379,24 @@ func Test_Unmarshal(t *testing.T) {
 		{
 			language: state.JavaScript,
 			schema:   schema,
+			data:     `{"records":[{"value":{"Array":[1]}}]}`,
+			records:  []Record{{Err: newRecordValidationError("Array[0]", `property «Array[0]» has a value that is not of type «string»`)}},
+		},
+		{
+			language: state.JavaScript,
+			schema:   schema,
+			data:     `{"records":[{"value":{"Map":{"home":"x"}}}]}`,
+			records:  []Record{{Err: newRecordValidationError(`Map["home"]`, `property «Map["home"]» has a value that is not of type «number»`)}},
+		},
+		{
+			language: state.JavaScript,
+			schema:   types.Object([]types.Property{{Name: "Nested", Type: types.Array(types.Map(types.Array(types.Int(32))))}}),
+			data:     `{"records":[{"value":{"Nested":[{"home":["x"]}]}}]}`,
+			records:  []Record{{Err: newRecordValidationError(`Nested[0]["home"][0]`, `property «Nested[0]["home"][0]» has a value that is not of type «number»`)}},
+		},
+		{
+			language: state.JavaScript,
+			schema:   schema,
 			data:     `{"records":[{"value":{"Int8":21}}]}`,
 			records:  []Record{{Err: newRecordValidationError("Int8", `property «Int8» is greater than 20`)}},
 		},
