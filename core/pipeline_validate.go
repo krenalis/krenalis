@@ -324,7 +324,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			return errors.BadRequest("output schema must be valid")
 		}
 		if !types.IsValidPropertyPath(pipeline.Matching.Out) {
-			return errors.BadRequest("output matching property %q is not a valid property name", pipeline.Matching.Out)
+			return errors.BadRequest("output matching property %q is not a valid property path", pipeline.Matching.Out)
 		}
 		out, err := outProperties.ByPath(pipeline.Matching.Out)
 		if err != nil {
