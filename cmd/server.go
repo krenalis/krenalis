@@ -10,7 +10,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
-	"expvar"
 	"fmt"
 	"io"
 	"io/fs"
@@ -28,7 +27,6 @@ import (
 	"github.com/krenalis/krenalis/cmd/internal/mcp"
 	"github.com/krenalis/krenalis/cmd/internal/workos"
 	corePkg "github.com/krenalis/krenalis/core"
-	"github.com/krenalis/krenalis/tools/prometheus"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -187,9 +185,6 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 				prometheusMetricsHandler.ServeHTTP(w, r)
 				return
 			}
-		case prometheus.Enabled && strings.HasPrefix(r.URL.Path, "/debug/vars"):
-			expvar.Handler().ServeHTTP(w, r)
-			return
 		default:
 		}
 

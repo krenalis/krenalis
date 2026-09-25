@@ -29,7 +29,6 @@ import (
 	"github.com/krenalis/krenalis/tools/base58"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
-	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/validation"
 
 	"github.com/oschwald/maxminddb-golang/v2"
@@ -807,7 +806,6 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	// Decode the events.
 	for event, err := range dec.Events(connection.ID, connector.FallbackToRequestIP) {
 
-		prometheus.Increment("Collector.serveEvents.decoded_events", 1)
 		if err != nil {
 			continue
 		}
@@ -936,7 +934,6 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// Send a successful response to the client.
-	prometheus.Increment("Collector.writeOK.calls", 1)
 	w.Header().Set("Content-Type", "text/plain")
 
 	return nil

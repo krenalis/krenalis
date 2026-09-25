@@ -17,7 +17,6 @@ import (
 	"github.com/krenalis/krenalis/core/internal/streams"
 	"github.com/krenalis/krenalis/core/internal/transformers"
 	"github.com/krenalis/krenalis/tools/errors"
-	"github.com/krenalis/krenalis/tools/prometheus"
 )
 
 var maxQueuedIdentities = 1000
@@ -75,8 +74,6 @@ func (iw *identityWriter) SetTransformer(transformer *transformers.Transformer) 
 // Write writes the identity of the provided event into the data warehouse.
 func (iw *identityWriter) Write(event streams.Event) error {
 
-	prometheus.Increment("Collector.IdentityWriter.Write.calls", 1)
-
 	iw.mu.Lock()
 
 	// If the pipeline lacks a transformation, write the identity directly to the store.
@@ -117,9 +114,6 @@ func (iw *identityWriter) Write(event streams.Event) error {
 }
 
 func (iw *identityWriter) transformAndWrite(events []streams.Event) {
-
-	prometheus.Increment("Collector.IdentityWriter.transformAndWrite.calls", 1)
-	prometheus.Increment("Collector.IdentityWriter.transformAndWrite.passed_identities", len(events))
 
 	records := make([]transformers.Record, len(events))
 	for i, event := range events {
