@@ -117,21 +117,22 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			if !ok {
 				return v, inputValidationErrorf(name, "is not a valid phone number")
 			}
-		}
-		if values := typ.Values(); values != nil {
-			if !slices.Contains(values, v) {
-				return nil, inputValidationErrorf(name, "contains an unsupported value")
-			}
-		} else if rx := typ.Pattern(); rx != nil {
-			if !rx.MatchString(v) {
-				return nil, inputValidationErrorf(name, "contains an unsupported value")
-			}
-		} else {
-			if l, ok := typ.MaxBytes(); ok && len(v) > l {
-				return nil, inputValidationErrorf(name, "has a value longer than %d bytes", l)
-			}
-			if l, ok := typ.MaxLength(); ok && utf8.RuneCountInString(v) > l {
-				return nil, inputValidationErrorf(name, "has a value longer than %d characters", l)
+		default:
+			if values := typ.Values(); values != nil {
+				if !slices.Contains(values, v) {
+					return nil, inputValidationErrorf(name, "contains an unsupported value")
+				}
+			} else if rx := typ.Pattern(); rx != nil {
+				if !rx.MatchString(v) {
+					return nil, inputValidationErrorf(name, "contains an unsupported value")
+				}
+			} else {
+				if l, ok := typ.MaxBytes(); ok && len(v) > l {
+					return nil, inputValidationErrorf(name, "has a value longer than %d bytes", l)
+				}
+				if l, ok := typ.MaxLength(); ok && utf8.RuneCountInString(v) > l {
+					return nil, inputValidationErrorf(name, "has a value longer than %d characters", l)
+				}
 			}
 		}
 		return v, nil
