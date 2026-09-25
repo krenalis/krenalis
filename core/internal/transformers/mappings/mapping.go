@@ -6,11 +6,11 @@ package mappings
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
 
-	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/types"
 )
 

@@ -5,6 +5,7 @@
 package mappings
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"slices"
@@ -14,7 +15,6 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/decimal"
-	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/tools/validation"

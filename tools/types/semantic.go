@@ -5,9 +5,9 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 
-	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/validation"
 )
 
