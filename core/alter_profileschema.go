@@ -152,7 +152,7 @@ func (this *Workspace) PreviewAlterProfileSchema(ctx context.Context, schema typ
 // error in case it contains properties which are not allowed in data warehouse
 // profile schemas.
 func checkAllowedPropertyProfileSchema(schema types.Type) error {
-	for _, p := range schema.Properties().All() {
+	for _, p := range schema.Properties().WalkAll() {
 		if datastore.IsMetaProperty(p.Name) {
 			return errors.New("profile schema cannot have meta properties")
 		}
@@ -171,6 +171,7 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 		if p.Nullable {
 			return fmt.Errorf("profile schema properties cannot be nullable")
 		}
+		semanticType := p.Type
 		switch p.Type.Kind() {
 		case types.StringKind:
 			if p.Type.Values() != nil {
@@ -180,9 +181,17 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 				return fmt.Errorf("profile schema properties with type string cannot specify pattern")
 			}
 		case types.ArrayKind:
-			k := p.Type.Elem().Kind()
-			if k == types.ArrayKind || k == types.ObjectKind || k == types.MapKind {
-				return fmt.Errorf("profile schema properties cannot have type %s(%s)", p.Type.Kind(), k)
+			et := p.Type.Elem()
+			switch et.Kind() {
+			case types.StringKind:
+				if et.Values() != nil {
+					return fmt.Errorf("profile schema properties of type array(string) cannot specify values for their element type")
+				}
+				if et.Pattern() != nil {
+					return fmt.Errorf("profile schema properties of type array(string) cannot specify a pattern for their element type")
+				}
+			case types.ArrayKind, types.ObjectKind, types.MapKind:
+				return fmt.Errorf("profile schema properties cannot have type %s(%s)", p.Type.Kind(), et.Kind())
 			}
 			if p.Type.Unique() {
 				return fmt.Errorf("profile schema properties with type array cannot specify unique elements")
@@ -193,36 +202,45 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 			if p.Type.MaxElements() != types.MaxElements {
 				return fmt.Errorf("profile schema properties with type array cannot specify maximum elements count")
 			}
-		case types.ObjectKind:
-			err := checkAllowedPropertyProfileSchema(p.Type)
-			if err != nil {
-				return err
-			}
+			semanticType = et
 		case types.MapKind:
-			k := p.Type.Elem().Kind()
-			if k == types.ArrayKind || k == types.ObjectKind || k == types.MapKind {
-				return fmt.Errorf("profile schema properties cannot have type %s(%s)", p.Type.Kind(), k)
+			et := p.Type.Elem()
+			switch et.Kind() {
+			case types.StringKind:
+				if et.Values() != nil {
+					return fmt.Errorf("profile schema properties of type map(string) cannot specify values for their element type")
+				}
+				if et.Pattern() != nil {
+					return fmt.Errorf("profile schema properties of type map(string) cannot specify a pattern for their element type")
+				}
+			case types.ArrayKind, types.ObjectKind, types.MapKind:
+				return fmt.Errorf("profile schema properties cannot have type %s(%s)", p.Type.Kind(), et.Kind())
 			}
+			semanticType = et
 		}
-		// Check semantic.
-		st := p.Type
-		if k := st.Kind(); k == types.ArrayKind || k == types.MapKind {
-			st = p.Type.Elem()
+		if err := checkAllowedSemanticProfileSchema(semanticType); err != nil {
+			return err
 		}
-		switch st.Semantic() {
-		case types.CountrySemantic:
-			if st.CountryFormat() != types.ISO3166Alpha2 {
-				return errors.New("profile schema properties with country semantic must use ISO 3166 alpha-2 format")
-			}
-		case types.MoneySemantic, types.PercentageSemantic, types.MeasurementSemantic:
-			if st.Kind() != types.DecimalKind || st.Precision() != 18 || st.Scale() != 4 {
-				return fmt.Errorf("profile schema properties with %s semantic must have decimal(18,4) values",
-					st.Semantic())
-			}
-		case types.DurationSemantic:
-			if st.Kind() != types.IntKind || st.BitSize() != 64 || st.IsUnsigned() {
-				return errors.New("profile schema properties with duration semantic must have signed int(64) values")
-			}
+	}
+	return nil
+}
+
+// checkAllowedSemanticProfileSchema returns an error if t does not meet the
+// semantic restrictions for profile schema properties.
+func checkAllowedSemanticProfileSchema(t types.Type) error {
+	switch t.Semantic() {
+	case types.CountrySemantic:
+		if t.CountryFormat() != types.ISO3166Alpha2 {
+			return errors.New("profile schema properties with country semantic must use ISO 3166 alpha-2 format")
+		}
+	case types.MoneySemantic, types.PercentageSemantic, types.MeasurementSemantic:
+		if t.Kind() != types.DecimalKind || t.Precision() != 18 || t.Scale() != 4 {
+			return fmt.Errorf("profile schema properties with %s semantic must have decimal(18,4) values",
+				t.Semantic())
+		}
+	case types.DurationSemantic:
+		if t.Kind() != types.IntKind || t.BitSize() != 64 || t.IsUnsigned() {
+			return errors.New("profile schema properties with duration semantic must have signed int(64) values")
 		}
 	}
 	return nil
