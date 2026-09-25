@@ -152,7 +152,7 @@ func (this *Workspace) PreviewAlterProfileSchema(ctx context.Context, schema typ
 // error in case it contains properties which are not allowed in data warehouse
 // profile schemas.
 func checkAllowedPropertyProfileSchema(schema types.Type) error {
-	for _, p := range schema.Properties().All() {
+	for _, p := range schema.Properties().WalkAll() {
 		if datastore.IsMetaProperty(p.Name) {
 			return errors.New("profile schema cannot have meta properties")
 		}
@@ -193,15 +193,19 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 			if p.Type.MaxElements() != types.MaxElements {
 				return fmt.Errorf("profile schema properties with type array cannot specify maximum elements count")
 			}
-		case types.ObjectKind:
-			err := checkAllowedPropertyProfileSchema(p.Type)
-			if err != nil {
-				return err
-			}
+			fallthrough
 		case types.MapKind:
-			k := p.Type.Elem().Kind()
-			if k == types.ArrayKind || k == types.ObjectKind || k == types.MapKind {
-				return fmt.Errorf("profile schema properties cannot have type %s(%s)", p.Type.Kind(), k)
+			et := p.Type.Elem()
+			switch et.Kind() {
+			case types.StringKind:
+				if et.Values() != nil {
+					return fmt.Errorf("profile schema properties with type string cannot specify values")
+				}
+				if et.Pattern() != nil {
+					return fmt.Errorf("profile schema properties with type string cannot specify pattern")
+				}
+			case types.ArrayKind, types.ObjectKind, types.MapKind:
+				return fmt.Errorf("profile schema properties cannot have type %s(%s)", p.Type.Kind(), et.Kind())
 			}
 		}
 	}

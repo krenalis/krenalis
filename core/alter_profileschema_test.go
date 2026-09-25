@@ -5,6 +5,7 @@
 package core
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/krenalis/krenalis/core/internal/datastore/diffschemas"
@@ -121,6 +122,14 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 			err: "profile schema properties with type array cannot specify maximum elements count",
 		},
 		{
+			name: "Array with string with values item",
+			schema: types.Object([]types.Property{
+				{Name: "first_name", Type: types.String(), ReadOptional: true},
+				{Name: "data", Type: types.Array(types.String().WithValues("a", "b")), ReadOptional: true},
+			}),
+			err: "profile schema properties with type string cannot specify values",
+		},
+		{
 			name: "Map with object item",
 			schema: types.Object([]types.Property{
 				{Name: "first_name", Type: types.String(), ReadOptional: true},
@@ -129,6 +138,15 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 				})), ReadOptional: true},
 			}),
 			err: "profile schema properties cannot have type map(object)",
+		},
+		{
+			name: "Map with string with pattern item",
+			schema: types.Object([]types.Property{
+				{Name: "first_name", Type: types.String(), ReadOptional: true},
+				{Name: "data", Type: types.Map(
+					types.String().WithPattern(regexp.MustCompile(`^a+$`))), ReadOptional: true},
+			}),
+			err: "profile schema properties with type string cannot specify pattern",
 		},
 		{
 			name: "String with values",
