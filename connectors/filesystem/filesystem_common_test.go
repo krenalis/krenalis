@@ -34,7 +34,7 @@ func TestInvalidName(t *testing.T) {
 
 	fs := &FileSystem{env: &connectors.FileStorageEnv{Settings: newTestSettingsStore(t, innerSettings{})}}
 
-	names := []string{"/", ".", "./b", "a/", "a/./b", "a/../b", "a//b"}
+	names := []string{"", "/",".", "./b", "a/", "a/./b", "a/../b", "a//b"}
 
 	t.Run("Reader", func(t *testing.T) {
 		for _, name := range names {

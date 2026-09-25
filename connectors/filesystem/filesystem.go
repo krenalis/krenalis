@@ -87,7 +87,7 @@ type innerSettings struct {
 
 // AbsolutePath returns the absolute representation of the given path name.
 func (fs *FileSystem) AbsolutePath(ctx context.Context, name string) (string, error) {
-	name, err := relativeName(name)
+	name, err := parseName(name)
 	if err != nil {
 		return "", err
 	}
@@ -101,7 +101,7 @@ func (fs *FileSystem) AbsolutePath(ctx context.Context, name string) (string, er
 
 // Reader opens a file and returns a ReadCloser from which to read its content.
 func (fs *FileSystem) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
-	name, err := relativeName(name)
+	name, err := parseName(name)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
@@ -178,7 +178,7 @@ func (fs *FileSystem) ServeUI(ctx context.Context, event string, settings json.V
 
 // Write writes the data read from r into the file with the given path name.
 func (fs *FileSystem) Write(ctx context.Context, r io.Reader, name, contentType string) error {
-	name, err := relativeName(name)
+	name, err := parseName(name)
 	if err != nil {
 		return err
 	}
@@ -243,24 +243,22 @@ func openRoot() (*os.Root, error) {
 	return os.OpenRoot(root)
 }
 
-// relativeName validates the path name name and returns it relative to the
-// root. It returns an *InvalidPathError if name is not valid.
-func relativeName(name string) (string, error) {
-	originalName := name
-	name = filepath.ToSlash(name)
-	if name[0] == '/' {
-		if name == "/" {
-			return "", connectors.InvalidPathErrorf("path name cannot be “%s“", originalName)
-		}
-		name = name[1:]
+// parseName parses the path name name, which may begin with a slash and, on
+// Windows, use backslashes as separators, and returns it in the form used by
+// io/fs and os.Root. It returns an *InvalidPathError if name is not valid or
+// does not refer to a file.
+func parseName(name string) (string, error) {
+	rel := strings.TrimPrefix(filepath.ToSlash(name), "/")
+	if rel == "" {
+		return "", connectors.InvalidPathErrorf("path name cannot be “%s”", name)
 	}
-	if name[len(name)-1] == '/' {
+	if strings.HasSuffix(rel, "/") {
 		return "", connectors.InvalidPathErrorf("path name cannot end with a slash")
 	}
-	if name == "." || !fsPkg.ValidPath(name) {
-		return "", connectors.InvalidPathErrorf("path name cannot contains “.” or “..” or empty elements")
+	if rel == "." || !fsPkg.ValidPath(rel) {
+		return "", connectors.InvalidPathErrorf("path name cannot contain “.” or “..” or empty elements")
 	}
-	return name, nil
+	return rel, nil
 }
 
 // rewritePathError, if err is a *fs.PathError or an *os.LinkError error,
