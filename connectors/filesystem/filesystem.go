@@ -239,8 +239,9 @@ func (fs *FileSystem) saveSettings(ctx context.Context, settings json.Value) err
 // openRoot opens the root directory.
 func openRoot() (*os.Root, error) {
 	confMu.Lock()
-	defer confMu.Unlock()
-	return os.OpenRoot(root)
+	dir := root
+	confMu.Unlock()
+	return os.OpenRoot(dir)
 }
 
 // parseName parses the path name name, which may begin with a slash and, on
