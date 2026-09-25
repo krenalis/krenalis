@@ -138,13 +138,7 @@ const SignUp = () => {
 			<h1 className='signup__title'>Sign up to {organizationName}</h1>
 			<form onSubmit={onSignUp}>
 				<SlInput className='signup__email' label='Email' value={invitedEmail} disabled />
-				<SlInput
-					className='signup__name'
-					label='Name'
-					value={name}
-					onInput={onNameChange}
-					required
-				/>
+				<SlInput className='signup__name' label='Name' value={name} onInput={onNameChange} required />
 				<SlInput
 					type='password'
 					className='signup__password'

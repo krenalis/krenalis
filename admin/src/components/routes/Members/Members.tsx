@@ -361,14 +361,7 @@ const InviteMemberDialog = ({ isOpen, setIsOpen, setIsLoadingMembers }: InviteMe
 				An invitation to create a new team member account will be sent to the email address provided.
 			</div>
 			<form onSubmit={onInviteMember}>
-				<SlInput
-					ref={inputRef}
-					label='Email'
-					type='email'
-					value={email}
-					onInput={onUpdateEmail}
-					required
-				/>
+				<SlInput ref={inputRef} label='Email' type='email' value={email} onInput={onUpdateEmail} required />
 				{error && (
 					<div className='members__invite-dialog-error'>
 						<SlIcon slot='icon' name='exclamation-octagon' />
