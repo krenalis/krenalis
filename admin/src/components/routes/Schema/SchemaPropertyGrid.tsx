@@ -4,7 +4,7 @@ import SlBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { Property } from '../../../lib/api/types/types';
 import { GridNestedRowsIndentation } from '../../base/Grid/Grid.types';
@@ -213,14 +213,14 @@ const SchemaPropertySearch = ({
 				<SlInput
 					ref={searchRef}
 					className={`${classNamePrefix}__search`}
-					size='small'
+					size='s'
 					placeholder='Search a property...'
-					clearable
+					withClear
 					value={value}
-					onSlInput={(event: any) => onChange(event.target.value)}
+					onInput={(event: any) => onChange(event.target.value)}
 				>
-					<SlIcon name='search' slot='prefix' />
-					<SlIcon name='backspace' slot='clear-icon' />
+					<WaIcon name='search' slot='start' />
+					<WaIcon name='backspace' slot='clear-icon' />
 				</SlInput>
 			) : (
 				<SlTooltip className={`${classNamePrefix}__toolbar-tooltip`} content='Search properties' hoist>

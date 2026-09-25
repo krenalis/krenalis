@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect, useRef, useMemo, useLayoutEffect, useCallback } from 'react';
 import './Member.css';
 import appContext from '../../../context/AppContext';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
@@ -237,7 +237,7 @@ const Member = () => {
 									label='Name'
 									name='name'
 									value={name}
-									onSlInput={onUpdateName}
+									onInput={onUpdateName}
 									required
 								/>
 							</div>
@@ -247,7 +247,7 @@ const Member = () => {
 									type='email'
 									name='email'
 									value={email}
-									onSlInput={onUpdateEmail}
+									onInput={onUpdateEmail}
 									required
 								/>
 							</div>
@@ -259,10 +259,13 @@ const Member = () => {
 									name='password'
 									disabled={isUpdate && password === null}
 									required={!isUpdate || password !== null}
-									onSlInput={onUpdatePassword}
+									onInput={onUpdatePassword}
 									value={isUpdate && password === null ? '••••••••••••••••' : password}
-									password-toggle
-								/>
+									passwordToggle
+								>
+									<WaIcon name='eye' slot='show-password-icon' />
+									<WaIcon name='eye-slash' slot='hide-password-icon' />
+								</SlInput>
 								{isUpdate && password === null && (
 									<SlButton appearance='outlined' onClick={onPasswordEnable}>
 										Change
@@ -276,10 +279,13 @@ const Member = () => {
 										label='Confirm password'
 										name='confirm-password'
 										required={true}
-										onSlInput={onUpdatePassword2}
+										onInput={onUpdatePassword2}
 										value={password2}
-										password-toggle
-									/>
+										passwordToggle
+									>
+										<WaIcon name='eye' slot='show-password-icon' />
+										<WaIcon name='eye-slash' slot='hide-password-icon' />
+									</SlInput>
 								</div>
 							)}
 							<div className='member__avatar'>

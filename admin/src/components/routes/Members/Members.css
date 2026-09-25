@@ -65,11 +65,11 @@
 	margin-bottom: 10px;
 }
 
-.members__invite-dialog sl-input {
+.members__invite-dialog wa-input {
 	margin-bottom: 15px;
 }
 
-.members__invite-dialog sl-input::part(form-control-label)::after {
+.members__invite-dialog wa-input::part(form-control-label)::after {
 	color: var(--sl-color-danger-500);
 }
 

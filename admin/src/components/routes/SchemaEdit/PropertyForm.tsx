@@ -3,13 +3,12 @@ import './PropertyForm.css';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlRadioButton from '@shoelace-style/shoelace/dist/react/radio-button/index.js';
 import SlRadioGroup from '@shoelace-style/shoelace/dist/react/radio-group/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlTextarea from '@shoelace-style/shoelace/dist/react/textarea/index.js';
-import type SlTextareaElement from '@shoelace-style/shoelace/dist/components/textarea/textarea.component.js';
+import SlTextarea from '@awesome.me/webawesome/dist/react/textarea/index.js';
 import AppContext from '../../../context/AppContext';
 import Type, {
 	DecimalType,
@@ -66,16 +65,6 @@ interface PropertyTypeError {
 	location: 'type' | 'string-constraints' | 'decimal-constraints' | 'numeric-range';
 	message: string;
 }
-
-const disableShoelaceTextareaHeightReset = (textarea: SlTextareaElement | null) => {
-	if (textarea == null) {
-		return;
-	}
-	// Shoelace 2.20 resets the inline height whenever its ResizeObserver runs,
-	// which prevents the browser's vertical resize handle from working.
-	// See https://github.com/shoelace-style/shoelace/pull/2465.
-	Reflect.set(textarea, 'setTextareaHeight', () => undefined);
-};
 
 interface PropertyFormProps {
 	fieldChanges?: PropertyFieldChanges;
@@ -496,12 +485,12 @@ const PropertyForm = ({
 		<div className='property-form__numeric-range'>
 			<SlInput
 				className='property-form__minimum'
-				size='small'
+				size='s'
 				value={numericRangeInputs.minimum.value}
 				type='number'
 				step={numericRangeStep}
 				placeholder={minimumPlaceholder}
-				onSlInput={(event) => onInputNumericRange('minimum', event)}
+				onInput={(event) => onInputNumericRange('minimum', event)}
 			>
 				<PropertyFormLabel slot='label' tooltip={minimumTooltip}>
 					Min
@@ -512,12 +501,12 @@ const PropertyForm = ({
 			</span>
 			<SlInput
 				className='property-form__maximum'
-				size='small'
+				size='s'
 				value={numericRangeInputs.maximum.value}
 				type='number'
 				step={numericRangeStep}
 				placeholder={maximumPlaceholder}
-				onSlInput={(event) => onInputNumericRange('maximum', event)}
+				onInput={(event) => onInputNumericRange('maximum', event)}
 			>
 				<PropertyFormLabel slot='label' tooltip={maximumTooltip}>
 					Max
@@ -540,9 +529,9 @@ const PropertyForm = ({
 					name='name'
 					placeholder='first_name'
 					readonly={!isNameEditable}
-					onSlBlur={onBlurName}
-					onSlFocus={onFocusName}
-					onSlInput={onInputName}
+					onBlur={onBlurName}
+					onFocus={onFocusName}
+					onInput={onInputName}
 					onKeyDown={onKeyDownName}
 				>
 					<PropertyFormLabel slot='label' modified={fieldChanges?.name}>
@@ -552,7 +541,7 @@ const PropertyForm = ({
 						<SlButton
 							className='property-form__change-name'
 							size='s'
-							slot='suffix'
+							slot='end'
 							variant='brand'
 							appearance='plain'
 							onPointerDown={(event) => event.preventDefault()}
@@ -582,23 +571,23 @@ const PropertyForm = ({
 				<div className='property-form__constraints property-form__constraints--length'>
 					<SlInput
 						label='Max characters'
-						size='small'
+						size='s'
 						value={valueType.maxLength == null ? '' : String(valueType.maxLength)}
 						type='number'
 						min={1}
 						max={MAX_STRING_LENGTH}
 						step={1}
-						onSlInput={onInputMaxLength}
+						onInput={onInputMaxLength}
 					/>
 					<SlInput
 						label='Max bytes'
-						size='small'
+						size='s'
 						value={valueType.maxBytes == null ? '' : String(valueType.maxBytes)}
 						type='number'
 						min={1}
 						max={MAX_STRING_LENGTH}
 						step={1}
-						onSlInput={onInputMaxBytes}
+						onInput={onInputMaxBytes}
 					/>
 					{typeError?.location === 'string-constraints' && (
 						<PropertyFormError name='string-constraints'>{typeError.message}</PropertyFormError>
@@ -649,22 +638,22 @@ const PropertyForm = ({
 					<SlInput
 						className='property-form__precision'
 						label='Precision'
-						size='small'
+						size='s'
 						value={decimalTypeInputs.precision}
 						type='number'
 						max={MAX_DECIMAL_PRECISION}
 						maxlength={2}
-						onSlInput={onInputPrecision}
+						onInput={onInputPrecision}
 					/>
 					<SlInput
 						className='property-form__scale'
 						label='Scale'
-						size='small'
+						size='s'
 						value={decimalTypeInputs.scale}
 						type='number'
 						max={MAX_DECIMAL_SCALE}
 						maxlength={2}
-						onSlInput={onInputScale}
+						onInput={onInputScale}
 					/>
 					{typeError?.location === 'decimal-constraints' ? (
 						<PropertyFormError name='decimal-constraints'>{typeError.message}</PropertyFormError>
@@ -695,7 +684,7 @@ const PropertyForm = ({
 				value={property.displayName || ''}
 				name='displayName'
 				placeholder='First name'
-				onSlInput={onInputDisplayName}
+				onInput={onInputDisplayName}
 			>
 				<PropertyFormLabel slot='label' modified={fieldChanges?.displayName}>
 					Display name <span className='property-form__optional-label'>(optional)</span>
@@ -703,11 +692,10 @@ const PropertyForm = ({
 			</SlInput>
 			<SlTextarea
 				className='property-form__control property-form__description'
-				ref={disableShoelaceTextareaHeightReset}
 				value={property.description || ''}
 				name='description'
 				placeholder='Describe what this property represents…'
-				onSlInput={onInputDescription}
+				onInput={onInputDescription}
 			>
 				<PropertyFormLabel slot='label' modified={fieldChanges?.description}>
 					Description <span className='property-form__optional-label'>(optional)</span>

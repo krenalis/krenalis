@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import PipelineContext from '../../../context/PipelineContext';
 import AppContext from '../../../context/AppContext';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
 import { PipelineIssues } from './PipelineIssues';
@@ -108,7 +108,7 @@ const PipelineHeader = () => {
 							<SlInput
 								className='pipeline__header-name-input'
 								value={pipeline != null ? pipeline.name : pipelineType.name}
-								onSlInput={onUpdateName}
+								onInput={onUpdateName}
 								maxlength={60}
 							></SlInput>
 							<SlIconButton name='check-lg' label='Confirm' onClick={() => setIsNameEditable(false)} />

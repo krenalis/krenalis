@@ -3,7 +3,8 @@ import './ConnectorsList.css';
 import { Role } from '../../../lib/api/types/types';
 import AppContext from '../../../context/AppContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
 import SlBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
@@ -219,10 +220,10 @@ const ConnectorsList = () => {
 				<SlInput
 					className='connectors-list__search-bar'
 					value={searchTerm}
-					onSlInput={onSearchTermUpdate}
+					onInput={onSearchTermUpdate}
 					placeholder='Search for a connector...'
 				>
-					<SlIcon name='search' slot='prefix' />
+					<WaIcon name='search' slot='start' />
 				</SlInput>
 				<div className='connectors-list__categories'>
 					{categories.map((c) => {

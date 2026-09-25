@@ -7,7 +7,7 @@ import PipelineContext from '../../../context/PipelineContext';
 import { UnprocessableError, NotFoundError } from '../../../lib/api/errors';
 import { CONFIRM_ANIMATION_DURATION, ERROR_ANIMATION_DURATION } from './Pipeline.constants';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
@@ -748,7 +748,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 					name='path'
 					value={pipeline.path!}
 					type='text'
-					onSlInput={onUpdatePath}
+					onInput={onUpdatePath}
 					placeholder={`${pipelineType.target.toLowerCase() + 's'}.${fileExtension}`}
 					ref={pathInputRef}
 				>
@@ -820,7 +820,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 						value={pipeline.sheet!}
 						label='Sheet'
 						type='text'
-						onSlInput={onUpdateSheet}
+						onInput={onUpdateSheet}
 					/>
 				))}
 			<SlSelect

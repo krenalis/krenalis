@@ -7,7 +7,7 @@ import ConnectorUI from '../../base/ConnectorUI/ConnectorUI';
 import AppContext from '../../../context/AppContext';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
@@ -318,7 +318,7 @@ const ConnectorSettings = () => {
 								value={name}
 								label='Name'
 								type='text'
-								onSlInput={(e) => {
+								onInput={(e) => {
 									const target = e.currentTarget as any;
 									setName(target!.value);
 								}}

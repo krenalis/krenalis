@@ -243,8 +243,8 @@ sl-drawer::part(base) {
 /* TODO: why this doesn't work? */
 
 input::placeholder,
-sl-input::part(input)::placeholder,
-sl-textarea::part(textarea)::placeholder {
+wa-input::part(input)::placeholder,
+wa-textarea::part(textarea)::placeholder {
 	color: var(--sl-color-neutral-400);
 	font-weight: 100;
 }
@@ -350,6 +350,273 @@ wa-avatar {
 /* Web Awesome lightens the divider; keep what Shoelace drew. */
 wa-divider {
 	--color: var(--wa-color-neutral-80);
+}
+
+/* Web Awesome inputs and textareas, drawn as Shoelace drew them. */
+:where(wa-input, wa-textarea) {
+	--wa-form-control-padding-inline: 0;
+	--wa-form-control-required-content-offset: -2px;
+	--wa-form-control-required-content-color: inherit;
+	font-family: var(--system-fonts) !important;
+	font-size: inherit;
+	font-weight: var(--sl-input-font-weight);
+	line-height: inherit;
+	letter-spacing: normal;
+}
+
+:where(wa-input, wa-textarea)::part(form-control-label) {
+	align-self: flex-start;
+	color: var(--sl-input-color);
+	font-family: var(--system-fonts);
+	font-weight: inherit;
+	line-height: 1.5;
+	margin-block-end: 0;
+	padding-bottom: 0;
+	display: inline-block;
+}
+
+:where(wa-input, wa-textarea)::part(form-control-label)::before {
+	content: '';
+	line-height: calc(1.5em + 4px + 0.125rem);
+	vertical-align: top;
+}
+
+:where(wa-input, wa-textarea)::part(hint) {
+	color: var(--sl-color-neutral-500);
+	font-family: var(--system-fonts);
+	font-weight: inherit;
+	line-height: 1.5;
+	margin-block-start: 0.125rem;
+}
+
+:where(wa-input[size='s'], wa-textarea[size='s'])::part(form-control-label) {
+	font-size: var(--sl-font-size-small);
+}
+
+:where(wa-input[size='s'], wa-textarea[size='s'])::part(hint) {
+	font-size: 0.75rem;
+}
+
+:where(wa-input[size='m'], wa-textarea[size='m'])::part(form-control-label) {
+	font-size: var(--sl-font-size-medium);
+}
+
+:where(wa-input[size='m'], wa-textarea[size='m'])::part(hint) {
+	font-size: var(--sl-font-size-small);
+}
+
+:where(wa-input[size='l'], wa-textarea[size='l'])::part(form-control-label) {
+	font-size: 1.25rem;
+}
+
+:where(wa-input[size='l'], wa-textarea[size='l'])::part(hint) {
+	font-size: var(--sl-font-size-medium);
+}
+
+:where(wa-input)::part(input-wrapper),
+:where(wa-textarea)::part(textarea-wrapper) {
+	background-color: var(--sl-input-background-color);
+	border: solid var(--sl-input-border-width) var(--sl-input-border-color);
+	border-radius: var(--sl-input-border-radius-medium);
+	color: var(--sl-input-color);
+	font-family: var(--system-fonts);
+	font-weight: var(--sl-input-font-weight);
+	line-height: 1.5;
+	letter-spacing: normal;
+	outline: none;
+	transition:
+		var(--sl-transition-fast) color,
+		var(--sl-transition-fast) border,
+		var(--sl-transition-fast) box-shadow,
+		var(--sl-transition-fast) background-color;
+}
+
+:where(wa-input:not([disabled]):hover)::part(input-wrapper),
+:where(wa-textarea:not([disabled]):hover)::part(textarea-wrapper) {
+	background-color: var(--sl-input-background-color-hover);
+	border-color: var(--sl-input-border-color-hover);
+	color: var(--sl-color-neutral-700);
+}
+
+:where(wa-input:not([disabled]):focus-within)::part(input-wrapper),
+:where(wa-textarea:not([disabled]):focus-within)::part(textarea-wrapper) {
+	background-color: var(--sl-input-background-color);
+	border-color: var(--sl-input-border-color-focus);
+	box-shadow: 0 0 0 var(--sl-focus-ring-width) var(--sl-input-focus-ring-color);
+	color: var(--sl-color-neutral-700);
+}
+
+:where(wa-input[disabled])::part(input-wrapper),
+:where(wa-textarea[disabled])::part(textarea-wrapper) {
+	background-color: var(--sl-color-neutral-100);
+	border-color: var(--sl-input-border-color);
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+wa-input[disabled]::part(input),
+wa-textarea[disabled]::part(textarea) {
+	color: var(--sl-color-neutral-900);
+}
+
+wa-input[disabled]::part(input)::placeholder,
+wa-textarea[disabled]::part(textarea)::placeholder {
+	color: var(--sl-color-neutral-600);
+}
+
+:where(wa-input[appearance='filled'])::part(input-wrapper),
+:where(wa-textarea[appearance='filled'])::part(textarea-wrapper) {
+	background-color: var(--sl-color-neutral-100);
+	border: none;
+}
+
+:where(wa-input[appearance='filled']:not([disabled]):focus-within)::part(input-wrapper),
+:where(wa-textarea[appearance='filled']:not([disabled]):focus-within)::part(textarea-wrapper) {
+	outline: solid var(--sl-focus-ring-width) var(--sl-color-primary-600);
+	outline-offset: 1px;
+	box-shadow: none;
+}
+
+/* Clip what the wrapper holds to its rounded border, as Shoelace did. */
+:where(wa-input)::part(input-wrapper) {
+	overflow: hidden;
+}
+
+:where(wa-input)::part(input) {
+	background-color: inherit;
+	color: inherit;
+	line-height: normal;
+}
+
+:where(wa-input)::part(start),
+:where(wa-input)::part(end),
+:where(wa-input)::part(clear-button),
+:where(wa-input)::part(password-toggle-button) {
+	color: var(--sl-color-neutral-500);
+}
+
+:where(wa-input)::part(clear-button),
+:where(wa-input)::part(password-toggle-button) {
+	height: auto;
+	aspect-ratio: auto;
+	margin: 0;
+	border-radius: 0;
+}
+
+:where(wa-input)::part(clear-button):hover,
+:where(wa-input)::part(password-toggle-button):hover {
+	color: var(--sl-color-neutral-600);
+}
+
+:where(wa-input)::part(clear-button):focus-visible,
+:where(wa-input)::part(password-toggle-button):focus-visible {
+	outline: none;
+}
+
+:where(wa-input[size='s'])::part(input-wrapper) {
+	height: var(--sl-input-height-small);
+	border-radius: var(--sl-input-border-radius-small);
+	font-size: var(--sl-font-size-small);
+}
+
+:where(wa-input[size='s'])::part(input) {
+	height: calc(var(--sl-input-height-small) - var(--sl-input-border-width) * 2);
+	padding: 0 0.75rem;
+}
+
+:where(wa-input[size='s']) > [slot='start'] {
+	margin-inline-start: 0.75rem;
+}
+
+:where(wa-input[size='s']) > [slot='end'] {
+	margin-inline-end: 0.75rem;
+}
+
+:where(wa-input[size='s'])::part(clear-button),
+:where(wa-input[size='s'])::part(password-toggle-button) {
+	width: calc(1em + 1.5rem);
+}
+
+:where(wa-input:not([size]), wa-input[size='m'])::part(input-wrapper) {
+	height: var(--sl-input-height-medium);
+	font-size: var(--sl-font-size-medium);
+}
+
+:where(wa-input:not([size]), wa-input[size='m'])::part(input) {
+	height: calc(var(--sl-input-height-medium) - var(--sl-input-border-width) * 2);
+	padding: 0 var(--sl-input-spacing-medium);
+}
+
+:where(wa-input:not([size]), wa-input[size='m']) > [slot='start'] {
+	margin-inline-start: var(--sl-input-spacing-medium);
+}
+
+:where(wa-input:not([size]), wa-input[size='m']) > [slot='end'] {
+	margin-inline-end: var(--sl-input-spacing-medium);
+}
+
+:where(wa-input:not([size]), wa-input[size='m'])::part(clear-button),
+:where(wa-input:not([size]), wa-input[size='m'])::part(password-toggle-button) {
+	width: calc(1em + var(--sl-input-spacing-medium) * 2);
+}
+
+:where(wa-input[size='l'])::part(input-wrapper) {
+	height: var(--sl-input-height-large);
+	border-radius: var(--sl-input-border-radius-large);
+	font-size: 1.25rem;
+}
+
+:where(wa-input[size='l'])::part(input) {
+	height: calc(var(--sl-input-height-large) - var(--sl-input-border-width) * 2);
+	padding: 0 1.25rem;
+}
+
+:where(wa-input[size='l']) > [slot='start'] {
+	margin-inline-start: 1.25rem;
+}
+
+:where(wa-input[size='l']) > [slot='end'] {
+	margin-inline-end: 1.25rem;
+}
+
+:where(wa-input[size='l'])::part(clear-button),
+:where(wa-input[size='l'])::part(password-toggle-button) {
+	width: calc(1em + 2.5rem);
+}
+
+:where(wa-textarea)::part(textarea-wrapper) {
+	line-height: 1.8;
+}
+
+:where(wa-textarea)::part(textarea) {
+	color: var(--sl-input-color);
+	line-height: 1.4;
+}
+
+:where(wa-textarea[size='s'])::part(textarea-wrapper) {
+	border-radius: var(--sl-input-border-radius-small);
+	font-size: var(--sl-font-size-small);
+}
+
+:where(wa-textarea[size='s'])::part(textarea) {
+	padding: 0.5em 0.75rem;
+}
+
+:where(wa-textarea:not([size]), wa-textarea[size='m'])::part(textarea-wrapper) {
+	font-size: var(--sl-font-size-medium);
+}
+
+:where(wa-textarea:not([size]), wa-textarea[size='m'])::part(textarea) {
+	padding: 0.5em var(--sl-input-spacing-medium);
+}
+
+:where(wa-textarea[size='l'])::part(textarea-wrapper) {
+	border-radius: var(--sl-input-border-radius-large);
+	font-size: 1.25rem;
+}
+
+:where(wa-textarea[size='l'])::part(textarea) {
+	padding: 0.5em 1.25rem;
 }
 
 /* Web Awesome buttons, drawn as Shoelace drew them. This is Shoelace's button

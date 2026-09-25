@@ -1,7 +1,7 @@
 import React, { FormEvent, useContext, useState, useEffect } from 'react';
 import './ResetPassword.css';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import appContext from '../../../context/AppContext';
 import { Link } from '../../base/Link/Link';
@@ -71,7 +71,7 @@ const ResetPassword = () => {
 								type='email'
 								className='reset-password__email'
 								inputMode='email'
-								onSlInput={onEmailChange}
+								onInput={onEmailChange}
 								name='email'
 								value={email}
 								placeholder='Your email'

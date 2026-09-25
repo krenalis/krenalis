@@ -4,8 +4,9 @@ import appContext from '../../../context/AppContext';
 import { useParams } from 'react-router-dom';
 import { NotFoundError } from '../../../lib/api/errors';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { validateMemberPassword } from '../../../lib/core/member';
 import { debounce } from '../../../utils/debounce';
 
@@ -111,22 +112,28 @@ const ResetPasswordToken = () => {
 					<SlInput
 						type='password'
 						className='reset-password-token__password'
-						onSlInput={debounce(onPasswordInput, 500)}
+						onInput={debounce(onPasswordInput, 500)}
 						name='password'
 						value={password}
 						placeholder='Password'
 						required
-						password-toggle
-					/>
+						passwordToggle
+					>
+						<WaIcon name='eye' slot='show-password-icon' />
+						<WaIcon name='eye-slash' slot='hide-password-icon' />
+					</SlInput>
 					<SlInput
 						type='password'
 						className='reset-password-token__password-2'
-						onSlInput={debounce(onPassword2Input, 500)}
+						onInput={debounce(onPassword2Input, 500)}
 						name='password-2'
 						value={password2}
 						placeholder='Confirm password'
-						password-toggle
-					/>
+						passwordToggle
+					>
+						<WaIcon name='eye' slot='show-password-icon' />
+						<WaIcon name='eye-slash' slot='hide-password-icon' />
+					</SlInput>
 					{passwordError !== '' && (
 						<div className='reset-password__password-error'>
 							<SlIcon name='exclamation-circle' />

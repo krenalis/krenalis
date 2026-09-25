@@ -4,7 +4,7 @@ import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
@@ -358,9 +358,9 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 										className='property-type-selector__search'
 										placeholder='Search types...'
 										value={search}
-										onSlInput={(event: any) => setSearch(event.target.value)}
+										onInput={(event: any) => setSearch(event.target.value)}
 									>
-										<SlIcon slot='prefix' name='search' />
+										<WaIcon slot='start' name='search' />
 									</SlInput>
 									{Object.entries(groupedOptions).map(([group, groupOptions], groupIndex) => (
 										<React.Fragment key={group}>

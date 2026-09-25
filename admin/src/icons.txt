@@ -41,6 +41,8 @@ exclamation-circle-fill.svg
 exclamation-circle.svg
 exclamation-octagon.svg
 exclamation-triangle.svg
+eye-slash.svg
+eye.svg
 file-earmark-code.svg
 filetype-json.svg
 filter.svg
@@ -83,6 +85,7 @@ three-dots.svg
 trash.svg
 trash3.svg
 type-bold.svg
+x-circle-fill.svg
 x-circle.svg
 x-lg.svg
 x.svg

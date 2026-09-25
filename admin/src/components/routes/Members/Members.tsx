@@ -11,7 +11,7 @@ import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { validateMemberEmail } from '../../../lib/core/member';
 import { Link } from '../../base/Link/Link';
@@ -361,7 +361,14 @@ const InviteMemberDialog = ({ isOpen, setIsOpen, setIsLoadingMembers }: InviteMe
 				An invitation to create a new team member account will be sent to the email address provided.
 			</div>
 			<form onSubmit={onInviteMember}>
-				<SlInput ref={inputRef} label='Email' type='email' value={email} onSlInput={onUpdateEmail} required />
+				<SlInput
+					ref={inputRef}
+					label='Email'
+					type='email'
+					value={email}
+					onInput={onUpdateEmail}
+					required
+				/>
 				{error && (
 					<div className='members__invite-dialog-error'>
 						<SlIcon slot='icon' name='exclamation-octagon' />

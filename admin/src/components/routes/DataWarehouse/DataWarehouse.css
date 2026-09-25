@@ -108,17 +108,17 @@
 	padding-left: 0;
 }
 
-.warehouse-settings__main-form > sl-input,
-.warehouse-settings__mcp-form > sl-input {
+.warehouse-settings__main-form > wa-input,
+.warehouse-settings__mcp-form > wa-input {
 	margin-bottom: 20px;
 }
 
-.warehouse-settings__main-form > sl-input:first-child {
+.warehouse-settings__main-form > wa-input:first-child {
 	margin-top: -8px;
 }
 
-.warehouse-settings__main-form > sl-input:last-child,
-.warehouse-settings__mcp-form > sl-input:last-child {
+.warehouse-settings__main-form > wa-input:last-child,
+.warehouse-settings__mcp-form > wa-input:last-child {
 	margin-bottom: 0;
 }
 

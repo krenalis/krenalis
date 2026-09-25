@@ -7,7 +7,7 @@ import { CONFIRM_ANIMATION_DURATION } from '../PipelineWrapper/Pipeline.constant
 import appContext from '../../../context/AppContext';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import ConfirmByTyping from '../../base/ConfirmByTyping/ConfirmByTyping';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
 import { ObjectType } from '../../../lib/api/types/types';
@@ -172,7 +172,7 @@ const GeneralSettings = () => {
 				label="Workspace's name"
 				name='workspace-name'
 				value={name}
-				onSlInput={onNameInput}
+				onInput={onNameInput}
 			/>
 			<div className='general-settings__profile-properties'>
 				<div className='general-settings__profile-properties-title'>Displayed profile properties</div>

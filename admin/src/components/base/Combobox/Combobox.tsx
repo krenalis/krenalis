@@ -1,9 +1,10 @@
 import React, { ReactNode, useState, useMemo, useRef, useEffect, useLayoutEffect, useContext } from 'react';
 import './Combobox.css';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlTabGroup from '@shoelace-style/shoelace/dist/react/tab-group/index.js';
 import SlTabPanel from '@shoelace-style/shoelace/dist/react/tab-panel/index.js';
 import SlTab from '@shoelace-style/shoelace/dist/react/tab/index.js';
@@ -33,11 +34,14 @@ interface ComboboxProps {
 	className?: string;
 	error?: string;
 	caret?: boolean;
+	clearable?: boolean;
 	controlled?: boolean;
 	autoResize?: boolean;
 	disabled?: boolean;
 	indentation?: number;
 	children?: ReactNode;
+	label?: string;
+	helpText?: string;
 	syncOnChange?: any;
 	propertiesToHide?: string[] | null;
 	[key: string]: any;
@@ -59,11 +63,14 @@ const Combobox = ({
 	className,
 	error,
 	caret = false,
+	clearable = false,
 	controlled = false,
 	autoResize,
-	disabled,
+	disabled = false,
 	indentation,
 	children,
+	label,
+	helpText,
 	syncOnChange,
 	propertiesToHide,
 	...rest
@@ -160,7 +167,7 @@ const Combobox = ({
 		}
 
 		setTimeout(() => {
-			const inputSuffix = inputRef.current.shadowRoot?.querySelector('[part="suffix"]');
+			const inputSuffix = inputRef.current.shadowRoot?.querySelector('[part="end"]');
 			inputSuffix.addEventListener('click', () => {
 				inputRef.current.focus();
 				setIsOpen(true);
@@ -406,9 +413,9 @@ const Combobox = ({
 			textWidth = 100; // min width.
 		}
 
-		const prefix = inputRef.current.shadowRoot.querySelector('span[part="prefix"]');
+		const prefix = inputRef.current.shadowRoot.querySelector('[part="start"]');
 		const prefixWidth = prefix?.offsetWidth || 0;
-		const suffix = inputRef.current.shadowRoot.querySelector('span[part="suffix"]');
+		const suffix = inputRef.current.shadowRoot.querySelector('[part="end"]');
 		const suffixWidth = suffix?.offsetWidth || 0;
 
 		const wrapper = inputRef.current.closest('.combobox');
@@ -574,21 +581,23 @@ const Combobox = ({
 			<div className='combobox-input'>
 				<SlInput
 					data-is-combobox-input
-					onSlInput={disabled ? undefined : onInput}
-					onSlFocus={onInputFocus}
+					onInput={disabled ? undefined : onInput}
+					onFocus={onInputFocus}
 					disabled={disabled}
 					autocomplete='off'
-					size={size}
+					size={size === 'small' ? 's' : size === 'large' ? 'l' : 'm'}
+					withClear={clearable}
+					hint={helpText}
+					label={label}
 					ref={inputRef}
 					{...rest}
 				>
 					{children}
+					<WaIcon name='x-circle-fill' slot='clear-icon' />
 					{error && val !== '' && (
-						<SlIcon className='combobox-input__error-icon' name='exclamation-circle' slot='suffix'></SlIcon>
+						<WaIcon className='combobox-input__error-icon' name='exclamation-circle' slot='end'></WaIcon>
 					)}
-					{caret && (
-						<SlIcon className='combobox-input__caret-icon' name='chevron-down' slot='suffix'></SlIcon>
-					)}
+					{caret && <WaIcon className='combobox-input__caret-icon' name='chevron-down' slot='end'></WaIcon>}
 				</SlInput>
 				{error && (
 					<div

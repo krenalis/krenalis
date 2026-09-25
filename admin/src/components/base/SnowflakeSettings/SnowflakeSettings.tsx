@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import './SnowflakeSettings.css';
 import { WarehouseSettings } from '../../../lib/api/types/warehouse';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 
 interface settingsProps {
 	setSettings: React.Dispatch<React.SetStateAction<any>>;
@@ -39,7 +40,7 @@ const SnowflakeSettings = ({ setSettings, settings, precompileDefault, inputRef 
 				placeholder='ABCDEFG-TUVWXYZ'
 				minlength={3}
 				maxlength={255}
-				onSlInput={onSettingInput}
+				onInput={onSettingInput}
 				value={settings?.account || ''}
 			/>
 			<SlInput
@@ -49,7 +50,7 @@ const SnowflakeSettings = ({ setSettings, settings, precompileDefault, inputRef 
 				type='text'
 				minlength={1}
 				maxlength={255}
-				onSlInput={onSettingInput}
+				onInput={onSettingInput}
 				value={settings?.username || ''}
 				ref={inputRef}
 			/>
@@ -60,10 +61,13 @@ const SnowflakeSettings = ({ setSettings, settings, precompileDefault, inputRef 
 				type='password'
 				minlength={1}
 				maxlength={255}
-				onSlInput={onSettingInput}
+				onInput={onSettingInput}
 				value={settings?.password || ''}
-				password-toggle
-			/>
+				passwordToggle
+			>
+				<WaIcon name='eye' slot='show-password-icon' />
+				<WaIcon name='eye-slash' slot='hide-password-icon' />
+			</SlInput>
 			<SlInput
 				name='role'
 				label='Role'
@@ -71,7 +75,7 @@ const SnowflakeSettings = ({ setSettings, settings, precompileDefault, inputRef 
 				type='text'
 				minlength={1}
 				maxlength={255}
-				onSlInput={onSettingInput}
+				onInput={onSettingInput}
 				value={settings?.role || ''}
 			/>
 			<SlInput
@@ -81,7 +85,7 @@ const SnowflakeSettings = ({ setSettings, settings, precompileDefault, inputRef 
 				type='text'
 				minlength={1}
 				maxlength={255}
-				onSlInput={onSettingInput}
+				onInput={onSettingInput}
 				value={settings?.database || ''}
 			/>
 			<SlInput
@@ -91,7 +95,7 @@ const SnowflakeSettings = ({ setSettings, settings, precompileDefault, inputRef 
 				type='text'
 				minlength={1}
 				maxlength={255}
-				onSlInput={onSettingInput}
+				onInput={onSettingInput}
 				value={settings?.schema || ''}
 			/>
 			<SlInput
@@ -101,7 +105,7 @@ const SnowflakeSettings = ({ setSettings, settings, precompileDefault, inputRef 
 				type='text'
 				minlength={1}
 				maxlength={255}
-				onSlInput={onSettingInput}
+				onInput={onSettingInput}
 				value={settings?.warehouse || ''}
 			/>
 		</>

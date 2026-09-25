@@ -10,7 +10,7 @@
 	margin-bottom: 15px;
 }
 
-.general-settings sl-input::part(form-control-label) {
+.general-settings wa-input::part(form-control-label) {
 	font-weight: 400;
 }
 

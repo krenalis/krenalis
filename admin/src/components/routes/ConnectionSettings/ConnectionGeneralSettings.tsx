@@ -7,7 +7,7 @@ import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import ConfirmByTyping from '../../base/ConfirmByTyping/ConfirmByTyping';
 import Flex from '../../base/Flex/Flex';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
@@ -100,7 +100,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 				label='Name'
 				className='connection-settings__name-field'
 				value={connectionToSet.name}
-				onSlInput={onNameInput}
+				onInput={onNameInput}
 				maxlength={100}
 			/>
 

@@ -6,7 +6,7 @@ import { AccessKey, AccessKeyResponse, CreateAccessKeyResponse } from '../../../
 import Grid from '../../base/Grid/Grid';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
@@ -362,7 +362,7 @@ const EditAccessKeyDialog = ({
 					ref={inputRef}
 					label='Name'
 					value={name}
-					onSlInput={onInputName}
+					onInput={onInputName}
 				/>
 				{error && (
 					<div className='access-keys__dialog-error'>
@@ -531,7 +531,7 @@ const CreateAccessKeyDialog = ({
 						be the last time it will be visible to you
 					</div>
 					<div className='access-keys__key-copy'>
-						<SlInput readonly value={token} filled />
+						<SlInput readonly value={token} appearance='filled' />
 						<SlCopyButton value={token} />
 					</div>
 					<SlButton size='s' className='access-keys__dialog-done' variant='brand' onClick={onDone}>
@@ -545,7 +545,7 @@ const CreateAccessKeyDialog = ({
 						ref={inputRef}
 						label='Name'
 						value={name}
-						onSlInput={onInputName}
+						onInput={onInputName}
 					/>
 					{nameError && (
 						<div className='access-keys__dialog-error'>

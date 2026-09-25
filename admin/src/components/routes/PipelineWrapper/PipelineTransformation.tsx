@@ -40,7 +40,7 @@ import AppContext from '../../../context/AppContext';
 import PipelineContext from '../../../context/PipelineContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlAnimation from '@awesome.me/webawesome/dist/react/animation/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { buttonVariant } from '../../../utils/buttonVariant';
@@ -555,12 +555,12 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 									{isCustomUpdatedAtFormatSelected && (
 										<div className='pipeline__transformation-updated-at-custom-format'>
 											<SlInput
-												onSlInput={onInputUpdatedAtCustomFormat}
+												onInput={onInputUpdatedAtCustomFormat}
 												value={pipeline.updatedAtFormat}
 												name='updatedAtCustomFormat'
 												placeholder='%Y-%m-%d'
-												helpText='C89 "strftime" format string'
-												size='small'
+												hint='C89 "strftime" format string'
+												size='s'
 												ref={updatedAtCustomFormatInputRef}
 											></SlInput>
 										</div>
@@ -1038,7 +1038,7 @@ const TransformationBox = ({
 							propertiesToHide={propertiesToHide}
 						>
 							{isIdentifier && (
-								<div className='pipeline__transformation-property-icon' slot='prefix'>
+								<div className='pipeline__transformation-property-icon' slot='start'>
 									<SlTooltip content='Used as identifier in Identity Resolution' hoist={true}>
 										<SlIcon
 											name='person-check'
@@ -2055,13 +2055,14 @@ const FullscreenTransformation = ({
 			<div className='fullscreen-transformation__panel-schema'>
 				<SlInput
 					className='fullscreen-transformation__panel-schema-search'
-					onSlInput={onInputInSearchTerm}
+					onInput={onInputInSearchTerm}
 					value={inSearchTerm}
 					placeholder='Search a property...'
-					size='small'
-					clearable
+					size='s'
+					withClear
 				>
-					<SlIcon name='search' slot='prefix' />
+					<WaIcon name='search' slot='start' />
+					<WaIcon name='x-circle-fill' slot='clear-icon' />
 				</SlInput>
 				{transformationType === 'function' && (
 					<SlSwitch
@@ -2464,13 +2465,14 @@ const FullscreenTransformation = ({
 								<div className='fullscreen-transformation__panel-schema'>
 									<SlInput
 										className='fullscreen-transformation__panel-schema-search'
-										onSlInput={onInputOutSearchTerm}
+										onInput={onInputOutSearchTerm}
 										value={outSearchTerm}
 										placeholder='Search a property...'
-										size='small'
-										clearable
+										size='s'
+										withClear
 									>
-										<SlIcon name='search' slot='prefix' />
+										<WaIcon name='search' slot='start' />
+										<WaIcon name='x-circle-fill' slot='clear-icon' />
 									</SlInput>
 									{transformationType === 'function' && (
 										<SlSwitch
@@ -2732,8 +2734,8 @@ const MapMapping = ({
 					`.pipeline__body .pipeline__transformation-section > .section__content .pipeline__transformation-mappings .pipeline__transformation-input-property[data-id="${propertyPath}"] ~ .pipeline__transformation-input-property[data-id="${index}"]`,
 				);
 			}
-			const comboboxInput = combobox.querySelector('sl-input');
-			const keyInput = combobox.nextElementSibling.nextElementSibling.querySelector('sl-input') as HTMLElement;
+			const comboboxInput = combobox.querySelector('wa-input');
+			const keyInput = combobox.nextElementSibling.nextElementSibling.querySelector('wa-input') as HTMLElement;
 			const hasAlreadyError = logicalErrors[index] != null;
 			const hasFocus = comboboxInput.shadowRoot.activeElement !== null || document.activeElement === keyInput;
 			if (hasFocus && !hasAlreadyError) {
@@ -2852,7 +2854,7 @@ const MapMapping = ({
 			}
 			const focusKey = () => {
 				const keyContainer = newPairCombobox.nextElementSibling.nextElementSibling;
-				const keyInput = keyContainer.querySelector('sl-input') as HTMLElement;
+				const keyInput = keyContainer.querySelector('wa-input') as HTMLElement;
 				keyInput.focus();
 			};
 			const panelBottom = panel.scrollTop + panel.clientHeight;
@@ -3031,10 +3033,10 @@ const MapMapping = ({
 						>
 							"{' '}
 							<SlInput
-								size='small'
+								size='s'
 								value={key}
 								disabled={areChildrenMappingDisabled}
-								onSlInput={(e: any) => {
+								onInput={(e: any) => {
 									onUpdatePair(i, 'key', e.target.value);
 								}}
 							/>{' '}

@@ -8,7 +8,7 @@ import Grid from '../../base/Grid/Grid';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
@@ -348,8 +348,8 @@ const PurposeDialog = ({ isOpen, purposeToEdit, pipelines, onClose, onSaved }: P
 					ref={inputRef}
 					label='Name'
 					value={name}
-					onSlInput={onInputName}
-					helpText='A recognizable name for this purpose'
+					onInput={onInputName}
+					hint='A recognizable name for this purpose'
 				/>
 				{nameError && (
 					<div className='privacy__dialog-error'>
@@ -361,8 +361,8 @@ const PurposeDialog = ({ isOpen, purposeToEdit, pipelines, onClose, onSaved }: P
 					className='privacy__dialog-code'
 					label='Code'
 					value={code}
-					onSlInput={onInputCode}
-					helpText='The code of the purpose. It must match the code you use to track consents within your CMP'
+					onInput={onInputCode}
+					hint='The code of the purpose. It must match the code you use to track consents within your CMP'
 				/>
 				{codeError && (
 					<div className='privacy__dialog-error'>

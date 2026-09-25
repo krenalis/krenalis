@@ -5,7 +5,7 @@ import PipelineContext from '../../../context/PipelineContext';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { Combobox } from '../../base/Combobox/Combobox';
@@ -344,10 +344,10 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		);
 		const pathInput = isJSON ? (
 			<SlInput
-				size='small'
+				size='s'
 				className='pipeline__filters-path'
 				value={propertyPath}
-				onSlInput={(event: any) => onInputPath(path, event.target.value)}
+				onInput={(event: any) => onInputPath(path, event.target.value)}
 				name={`path-${id}`}
 				disabled={isDisabled}
 				placeholder='Path (optional)'
@@ -640,19 +640,20 @@ const PipelineFilterValueControl = ({
 		onValueChange(v);
 	};
 
-	const removeButton = removable ? (
-		<SlButton
-			slot='suffix'
-			appearance='outlined'
-			size='s'
-			pill
-			className='pipeline__filters-value-remove'
-			onClick={onRemove}
-			disabled={disabled}
-		>
-			<SlIcon name='x' />
-		</SlButton>
-	) : null;
+	const removeButton = (slot: 'end' | 'suffix') =>
+		removable ? (
+			<SlButton
+				slot={slot}
+				appearance='outlined'
+				size='s'
+				pill
+				className='pipeline__filters-value-remove'
+				onClick={onRemove}
+				disabled={disabled}
+			>
+				<SlIcon name='x' />
+			</SlButton>
+		) : null;
 
 	if (options.length > 0) {
 		return (
@@ -670,7 +671,7 @@ const PipelineFilterValueControl = ({
 							{option === '' ? '\u00A0' : option}
 						</SlOption>
 					))}
-					{removeButton}
+					{removeButton('suffix')}
 				</SlSelect>
 			</div>
 		);
@@ -678,14 +679,14 @@ const PipelineFilterValueControl = ({
 
 	return (
 		<SlInput
-			size='small'
+			size='s'
 			className='pipeline__filters-value-input'
 			value={value ?? ''}
-			onSlInput={handleInput}
+			onInput={handleInput}
 			name={name}
 			disabled={disabled}
 		>
-			{removeButton}
+			{removeButton('end')}
 		</SlInput>
 	);
 };

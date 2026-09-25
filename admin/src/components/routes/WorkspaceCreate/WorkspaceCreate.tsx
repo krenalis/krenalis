@@ -4,7 +4,7 @@ import { ObjectType } from '../../../lib/api/types/types';
 import { UIPreferences } from '../../../lib/api/types/workspace';
 import API from '../../../lib/api/api';
 import appContext from '../../../context/AppContext';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
@@ -178,7 +178,7 @@ const WorkspaceCreate = () => {
 					className='workspace-create__name'
 					maxlength={100}
 					value={name}
-					onSlInput={onNameInput}
+					onInput={onNameInput}
 					ref={nameInputRef}
 					placeholder='My workspace'
 				/>

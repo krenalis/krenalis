@@ -67,7 +67,7 @@
 	margin-bottom: 5px;
 }
 
-.pipeline__header-name-input::part(base) {
+.pipeline__header-name-input::part(input-wrapper) {
 	font-size: 14px;
 }
 
@@ -467,7 +467,8 @@ wa-button.pipeline__filters-remove-rule[appearance='plain']::part(label) {
 	height: 30px !important;
 }
 
-.pipeline__filters-value-control--removable .pipeline__filters-value-input::part(suffix) {
+.pipeline__filters-value-control--removable sl-select.pipeline__filters-value-input::part(suffix),
+.pipeline__filters-value-control--removable wa-input.pipeline__filters-value-input::part(end) {
 	margin-left: 0;
 	position: relative;
 	left: 26px;
@@ -511,7 +512,7 @@ wa-button.pipeline__filters-remove-rule[appearance='plain']::part(label) {
 	gap: 30px;
 }
 
-.pipeline__destination_table sl-input {
+.pipeline__destination_table wa-input {
 	width: min(375px, 100%);
 }
 
@@ -626,7 +627,7 @@ wa-button.pipeline__filters-remove-rule[appearance='plain']::part(label) {
 	top: 6px;
 }
 
-.pipeline__transformation-input-property::part(base) {
+.pipeline__transformation-input-property wa-input::part(input-wrapper) {
 	font-family: var(--monospace-fonts) !important;
 }
 
@@ -716,12 +717,12 @@ wa-button.pipeline__filters-remove-rule[appearance='plain']::part(label) {
 	--max-width: min(400px, calc(100vw - 32px));
 }
 
-.pipeline__transformation-output-property--map > sl-input {
+.pipeline__transformation-output-property--map > wa-input {
 	display: inline-block;
 	max-width: 150px;
 }
 
-.pipeline__transformation-output-property--map > sl-input::part(input) {
+.pipeline__transformation-output-property--map > wa-input::part(input) {
 	font-family: var(--monospace-fonts);
 }
 
@@ -1169,7 +1170,7 @@ inherit the disabled style */
 	background-color: var(--bg-primary);
 }
 
-.fullscreen-transformation__panel-schema-search::part(base) {
+.fullscreen-transformation__panel-schema-search::part(input-wrapper) {
 	border-radius: 0;
 	border: 0;
 	border-bottom: 1px solid var(--border-primary);
@@ -1914,7 +1915,7 @@ inherit the disabled style */
 	margin-top: 3px;
 }
 
-.pipeline__matching-properties sl-input::part(form-control-label) {
+.pipeline__matching-properties wa-input::part(form-control-label) {
 	font-size: 13px;
 }
 

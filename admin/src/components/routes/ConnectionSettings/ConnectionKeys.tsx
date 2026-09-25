@@ -3,7 +3,7 @@ import Flex from '../../base/Flex/Flex';
 import AppContext from '../../../context/AppContext';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
 import TransformedConnection from '../../../lib/core/connection';
 
@@ -92,7 +92,7 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 					return (
 						<Flex key={key} alignItems='center' gap={30}>
 							<div className='connection-settings__key-copy'>
-								<SlInput readonly value={key} filled />
+								<SlInput readonly value={key} appearance='filled' />
 								<SlCopyButton value={key} />
 							</div>
 							<SlButton variant='danger' onClick={() => onDeleteWriteKey(key)}>
@@ -107,7 +107,12 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 			</SlButton>
 			<div className='connection-settings__keys-endpoint'>
 				<div className='connection-settings__keys-endpoint-copy'>
-					<SlInput readonly label='Endpoint' value={`${window.location.origin}/v1/events`} filled />
+					<SlInput
+						readonly
+						label='Endpoint'
+						value={`${window.location.origin}/v1/events`}
+						appearance='filled'
+					/>
 					<SlCopyButton value={`${window.location.origin}/v1/events`} />
 				</div>
 			</div>
