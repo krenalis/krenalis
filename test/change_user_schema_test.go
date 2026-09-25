@@ -94,8 +94,8 @@ func TestChangeProfileSchema(t *testing.T) {
 	}
 
 	// Add a single property.
-	schema := types.Object(append(file.Schema.Properties().Slice(), types.Property{
-		Name: "new_prop", Type: types.String(), ReadOptional: true,
+	schema := types.Object(append(descriptionSchema.Properties().Slice(), types.Property{
+		Name: "new_prop", Type: types.String().AsEmail(), ReadOptional: true,
 	}))
 	queries = k.PreviewAlterProfileSchema(schema, nil)
 	expectedQueries := []string{"BEGIN;",

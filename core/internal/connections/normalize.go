@@ -20,6 +20,7 @@ import (
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/tools/validation"
 
 	"github.com/relvacode/iso8601"
 )
@@ -98,20 +99,40 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		if !utf8.ValidString(v) {
 			return nil, inputValidationErrorf(name, "does not contain valid UTF-8 characters")
 		}
-		if values := typ.Values(); values != nil {
-			if !slices.Contains(values, v) {
-				return nil, inputValidationErrorf(name, "contains an unsupported value")
+		switch typ.Semantic() {
+		case types.CountrySemantic:
+			switch typ.CountryFormat() {
+			case types.ISO3166Alpha2:
+				if !validation.IsValidCountryCodeAlpha2(v) {
+					return v, inputValidationErrorf(name, "is not a 2-letters country code")
+				}
+			case types.ISO3166Alpha3:
+				if !validation.IsValidCountryCodeAlpha3(v) {
+					return v, inputValidationErrorf(name, "is not a 3-letters country code")
+				}
 			}
-		} else if rx := typ.Pattern(); rx != nil {
-			if !rx.MatchString(v) {
-				return nil, inputValidationErrorf(name, "contains an unsupported value")
+		case types.PhoneSemantic:
+			var ok bool
+			v, ok = types.NormalizePhone(v)
+			if !ok {
+				return v, inputValidationErrorf(name, "is not a valid phone number")
 			}
-		} else {
-			if l, ok := typ.MaxBytes(); ok && len(v) > l {
-				return nil, inputValidationErrorf(name, "has a value longer than %d bytes", l)
-			}
-			if l, ok := typ.MaxLength(); ok && utf8.RuneCountInString(v) > l {
-				return nil, inputValidationErrorf(name, "has a value longer than %d characters", l)
+		default:
+			if values := typ.Values(); values != nil {
+				if !slices.Contains(values, v) {
+					return nil, inputValidationErrorf(name, "contains an unsupported value")
+				}
+			} else if rx := typ.Pattern(); rx != nil {
+				if !rx.MatchString(v) {
+					return nil, inputValidationErrorf(name, "contains an unsupported value")
+				}
+			} else {
+				if l, ok := typ.MaxBytes(); ok && len(v) > l {
+					return nil, inputValidationErrorf(name, "has a value longer than %d bytes", l)
+				}
+				if l, ok := typ.MaxLength(); ok && utf8.RuneCountInString(v) > l {
+					return nil, inputValidationErrorf(name, "has a value longer than %d characters", l)
+				}
 			}
 		}
 		return v, nil

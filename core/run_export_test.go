@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/core/internal/connections"
 	"github.com/krenalis/krenalis/tools/types"
@@ -57,6 +58,102 @@ func TestConvertToExternal(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestConvertToExternalSemantics checks that matching country and phone types
+// pass their values through unchanged.
+func TestConvertToExternalSemantics(t *testing.T) {
+
+	countryAlpha2 := types.String().AsCountry(types.ISO3166Alpha2)
+	countryAlpha3 := types.String().AsCountry(types.ISO3166Alpha3)
+	phone := types.String().AsPhone()
+
+	tests := []struct {
+		name   string
+		in, ex types.Type
+		value  string
+	}{
+		{"current country", countryAlpha2, countryAlpha2, "IT"},
+		{"former country", countryAlpha2, countryAlpha2, "AN"},
+		{"alpha-3 country", countryAlpha3, countryAlpha3, "ITA"},
+		{"matching country semantics skip validation", countryAlpha2, countryAlpha2, "ZZ"},
+		{"matching phone semantics preserve value", phone, phone, "+390236618300"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := convertToExternal(test.value, test.in, test.ex, "source", "target")
+			if err != nil {
+				t.Fatalf("expected no error, got %v", err)
+			}
+			if got != test.value {
+				t.Fatalf("expected %#v, got %#v", test.value, got)
+			}
+		})
+	}
+
+}
+
+// TestConvertToExternalStringConstraintsWithSemantics verifies that matching
+// semantics do not bypass string constraints.
+func TestConvertToExternalStringConstraintsWithSemantics(t *testing.T) {
+
+	const (
+		value        = "bob@example.com"
+		unicodeValue = "é@example.com"
+	)
+
+	var (
+		email              = types.String().AsEmail()
+		valueBytes         = len(value)
+		valueLength        = utf8.RuneCountInString(value)
+		unicodeValueBytes  = len(unicodeValue)
+		unicodeValueLength = utf8.RuneCountInString(unicodeValue)
+	)
+
+	tests := []struct {
+		name    string
+		value   string
+		in      types.Type
+		ex      types.Type
+		wantErr bool
+	}{
+		{"max bytes at limit", value, email, email.WithMaxBytes(valueBytes), false},
+		{"max bytes exceeded", value, email, email.WithMaxBytes(valueBytes - 1), true},
+		{"max length at limit", value, email, email.WithMaxLength(valueLength), false},
+		{"max length exceeded", value, email, email.WithMaxLength(valueLength - 1), true},
+		{"Unicode constraints at limits", unicodeValue, email, email.WithMaxBytes(unicodeValueBytes).WithMaxLength(unicodeValueLength), false},
+		{"Unicode max bytes exceeded", unicodeValue, email, email.WithMaxBytes(unicodeValueBytes - 1).WithMaxLength(unicodeValueLength), true},
+		{"Unicode max length exceeded", unicodeValue, email, email.WithMaxBytes(unicodeValueBytes).WithMaxLength(unicodeValueLength - 1), true},
+		{"values match", value, email, email.WithValues(value), false},
+		{"values mismatch", value, email, email.WithValues("other@example.com"), true},
+		{"pattern matches", value, email, email.WithPattern(regexp.MustCompile(`^bob@`)), false},
+		{"pattern mismatch", value, email, email.WithPattern(regexp.MustCompile(`^other@`)), true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := convertToExternal(test.value, test.in, test.ex, "in", "ex")
+			if err != nil {
+				if !test.wantErr {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				wantErr := errMatchingPropertyConversion("in", "ex")
+				if !reflect.DeepEqual(wantErr, err) {
+					t.Fatalf("expected error %#v, got %#v", wantErr, err)
+				}
+				return
+			}
+			if test.wantErr {
+				wantErr := errMatchingPropertyConversion("in", "ex")
+				t.Fatalf("expected error %#v, got nil", wantErr)
+			}
+			if got != test.value {
+				t.Fatalf("expected %#v, got %#v", test.value, got)
+			}
+		})
+	}
+
 }
 
 func TestGetAttribute(t *testing.T) {

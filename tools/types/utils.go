@@ -76,7 +76,8 @@ func Equal(t1, t2 Type) bool {
 		t1.unsigned == t2.unsigned &&
 		t1.unique == t2.unique &&
 		t1.real == t2.real &&
-		t1.p == t2.p && t1.s == t2.s
+		t1.p == t2.p && t1.s == t2.s &&
+		t1.semantic == t2.semantic && t1.semanticOption == t2.semanticOption
 	if !almostEqual {
 		return false
 	}
@@ -123,6 +124,12 @@ func Equal(t1, t2 Type) bool {
 		return ok && vl1.String() == vl2.String()
 	}
 	panic("unreachable code")
+}
+
+// EqualSemantics reports whether two types have the same semantics and semantic
+// options. Types with no semantics are considered equivalent.
+func EqualSemantics(t1, t2 Type) bool {
+	return t1.semantic == t2.semantic && t1.semanticOption == t2.semanticOption
 }
 
 // Filter returns a subset of object t containing only the properties for which
