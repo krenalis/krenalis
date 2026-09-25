@@ -7,7 +7,9 @@
 package filesystem
 
 import (
+	"errors"
 	"io"
+	fsPkg "io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -60,7 +62,7 @@ func TestPathConvert(t *testing.T) {
 
 }
 
-func TestSymlinkOutsideRoot(t *testing.T) {
+func TestSymlinks(t *testing.T) {
 
 	// Mutex access to 'root' is not necessary as it is essential that these
 	// tests are run non-concurrently.
@@ -77,21 +79,42 @@ func TestSymlinkOutsideRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = os.Symlink(filepath.Join(outside, "secret"), filepath.Join(root, "file"))
+	err = os.WriteFile(filepath.Join(root, "a.csv"), []byte("data"), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = os.Symlink(outside, filepath.Join(root, "dir"))
-	if err != nil {
-		t.Fatal(err)
+	links := map[string]string{
+		"file":             filepath.Join(outside, "secret"),
+		"relative-outside": filepath.Join("..", "outside", "secret"),
+		"dir":              outside,
+		"absolute-inside":  filepath.Join(root, "a.csv"),
+		"relative-inside":  "a.csv",
+	}
+	for name, target := range links {
+		err := os.Symlink(target, filepath.Join(root, name))
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	fs := &FileSystem{env: &connectors.FileStorageEnv{Settings: newTestSettingsStore(t, innerSettings{})}}
 
 	t.Run("Reader", func(t *testing.T) {
-		_, _, err := fs.Reader(t.Context(), "file")
-		if err == nil {
-			t.Fatal("expected an error, got nil")
+		for _, name := range []string{"file", "relative-outside", "dir/secret", "absolute-inside"} {
+			r, _, err := fs.Reader(t.Context(), name)
+			if err != nil {
+				pErr, ok := errors.AsType[*fsPkg.PathError](err)
+				if !ok {
+					t.Errorf("%q: expected *fs.PathError, got %T (%s)", name, err, err)
+					continue
+				}
+				if pErr.Path != filepath.Join(root, name) {
+					t.Errorf("%q: expected path %q, got %q", name, filepath.Join(root, name), pErr.Path)
+				}
+				continue
+			}
+			_ = r.Close()
+			t.Errorf("%q: expected *fs.PathError, got nil", name)
 		}
 	})
 
@@ -102,28 +125,34 @@ func TestSymlinkOutsideRoot(t *testing.T) {
 		}
 		for _, name := range []string{"file", "file.tmp"} {
 			_, err := os.Lstat(filepath.Join(outside, name))
-			if !os.IsNotExist(err) {
-				t.Fatalf("expected %s to not exist outside the root, got error %v", name, err)
+			if err != nil {
+				if !errors.Is(err, fsPkg.ErrNotExist) {
+					t.Fatalf("expected %s to not exist outside the root, got error %s", name, err)
+				}
+				continue
 			}
+			t.Fatalf("expected %s to not exist outside the root, got it", name)
 		}
 	})
 
 	t.Run("Inside root", func(t *testing.T) {
-		err := fs.Write(t.Context(), strings.NewReader("data"), "/a.csv", "text/csv")
+		err := fs.Write(t.Context(), strings.NewReader("data"), "/b.csv", "text/csv")
 		if err != nil {
 			t.Fatalf("expected no error, got %s", err)
 		}
-		r, _, err := fs.Reader(t.Context(), "a.csv")
-		if err != nil {
-			t.Fatalf("expected no error, got %s", err)
-		}
-		defer r.Close()
-		data, err := io.ReadAll(r)
-		if err != nil {
-			t.Fatalf("expected no error, got %s", err)
-		}
-		if string(data) != "data" {
-			t.Fatalf("expected %q, got %q", "data", data)
+		for _, name := range []string{"b.csv", "relative-inside"} {
+			r, _, err := fs.Reader(t.Context(), name)
+			if err != nil {
+				t.Fatalf("%q: expected no error, got %s", name, err)
+			}
+			data, err := io.ReadAll(r)
+			_ = r.Close()
+			if err != nil {
+				t.Fatalf("%q: expected no error, got %s", name, err)
+			}
+			if string(data) != "data" {
+				t.Fatalf("%q: expected %q, got %q", name, "data", data)
+			}
 		}
 	})
 

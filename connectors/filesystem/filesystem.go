@@ -263,32 +263,36 @@ func relativeName(name string) (string, error) {
 	return name, nil
 }
 
-// rewritePathError, if err is a *fs.PathError error, returns a new
-// *fs.PathError such that its path is absolute and consistent with the
-// displayed root of the connection, if set.
+// rewritePathError, if err is a *fs.PathError or an *os.LinkError error,
+// returns a new error of the same type such that its paths are absolute and
+// consistent with the displayed root of the connection, if set.
 //
 // For all other error types, or if the error is nil, the error is returned as
 // it is.
 func rewritePathError(err error) error {
+
 	confMu.Lock()
 	defer confMu.Unlock()
-	if pErr, ok := err.(*fsPkg.PathError); ok {
-		// From the path of the fs.PathError, remove the prefix that refers to
-		// the root, if present, as errors returned by the os.Root methods have
-		// a path relative to the root.
-		path := strings.TrimPrefix(pErr.Path, root)
-		// Prepend the displayed root, or the root if it is not set, as prefix.
-		rootToShow := root
-		if displayedRoot != "" {
-			rootToShow = displayedRoot
-		}
-		path = filepath.Join(rootToShow, path)
-		return &fsPkg.PathError{
-			Op:   pErr.Op,
-			Path: path,
-			Err:  pErr.Err,
-		}
+
+	rootToShow := root
+	if displayedRoot != "" {
+		rootToShow = displayedRoot
 	}
+
+	// rewrite removes from path the prefix that refers to the root, if
+	// present, as errors returned by the os.Root methods have a path relative
+	// to the root, and prepends the root to show.
+	rewrite := func(path string) string {
+		return filepath.Join(rootToShow, strings.TrimPrefix(path, root))
+	}
+
+	switch e := err.(type) {
+	case *fsPkg.PathError:
+		return &fsPkg.PathError{Op: e.Op, Path: rewrite(e.Path), Err: e.Err}
+	case *os.LinkError:
+		return &os.LinkError{Op: e.Op, Old: rewrite(e.Old), New: rewrite(e.New), Err: e.Err}
+	}
+
 	return err
 }
 
