@@ -244,10 +244,9 @@ func openRoot() (*os.Root, error) {
 	return os.OpenRoot(dir)
 }
 
-// parseName parses the path name name, which may begin with a slash and, on
-// Windows, use backslashes as separators, and returns it in the form used by
-// io/fs and os.Root. It returns an *InvalidPathError if name is not valid or
-// does not refer to a file.
+// parseName parses the given path name and returns it in the form used by io/fs
+// and os.Root. It returns an *InvalidPathError if name is not valid or does not
+// refer to a file.
 func parseName(name string) (string, error) {
 	rel := strings.TrimPrefix(filepath.ToSlash(name), "/")
 	if rel == "" {
