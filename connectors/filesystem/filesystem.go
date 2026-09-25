@@ -87,7 +87,7 @@ type innerSettings struct {
 
 // AbsolutePath returns the absolute representation of the given path name.
 func (fs *FileSystem) AbsolutePath(ctx context.Context, name string) (string, error) {
-	name, err := parseName(name)
+	name, err := parsePathName(name)
 	if err != nil {
 		return "", err
 	}
@@ -101,7 +101,7 @@ func (fs *FileSystem) AbsolutePath(ctx context.Context, name string) (string, er
 
 // Reader opens a file and returns a ReadCloser from which to read its content.
 func (fs *FileSystem) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
-	name, err := parseName(name)
+	name, err := parsePathName(name)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
@@ -178,7 +178,7 @@ func (fs *FileSystem) ServeUI(ctx context.Context, event string, settings json.V
 
 // Write writes the data read from r into the file with the given path name.
 func (fs *FileSystem) Write(ctx context.Context, r io.Reader, name, contentType string) error {
-	name, err := parseName(name)
+	name, err := parsePathName(name)
 	if err != nil {
 		return err
 	}
@@ -244,10 +244,10 @@ func openRoot() (*os.Root, error) {
 	return os.OpenRoot(dir)
 }
 
-// parseName parses the given path name and returns it in the form used by io/fs
-// and os.Root. It returns an *InvalidPathError if name is not valid or does not
-// refer to a file.
-func parseName(name string) (string, error) {
+// parsePathName parses the given path name and returns it in the form used by
+// io/fs and os.Root. It returns an *InvalidPathError if name is not valid or
+// does not refer to a file.
+func parsePathName(name string) (string, error) {
 	rel := strings.TrimPrefix(filepath.ToSlash(name), "/")
 	if rel == "" {
 		return "", connectors.InvalidPathErrorf("path name cannot be “%s”", name)
