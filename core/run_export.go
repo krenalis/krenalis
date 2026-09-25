@@ -19,7 +19,6 @@ import (
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/transformers"
-	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -33,7 +32,6 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	pipeline := this.pipeline
 	store := this.connection.store
 	connector := pipeline.Connection().Connector()
-	prometheus.Increment("Pipeline.exportUsers.calls", 1)
 
 	// Synchronize destinations users with the application's users.
 	if connector.Type == state.Application {
@@ -98,7 +96,6 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	var ack func([]string, error)
 	if connector.Type != state.FileStorage {
 		ack = func(ids []string, err error) {
-			prometheus.Increment("Pipeline.exportProfiles.ack.calls", 1)
 			if err != nil {
 				this.core.metrics.Pipelines.FinalizeFailed(pipeline.ID, len(ids), err.Error())
 				return
@@ -175,8 +172,6 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 
 Records:
 	for record := range records.All(ctx) {
-
-		prometheus.Increment("Pipeline.exportProfiles.iterations_over_records_All", 1)
 
 		if record.Err != nil {
 			this.core.metrics.Pipelines.ReceiveFailed(pipeline.ID, 1, record.Err.Error())
