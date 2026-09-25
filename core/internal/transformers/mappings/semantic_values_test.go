@@ -112,7 +112,7 @@ func TestMappingSemantics(t *testing.T) {
 								expr = "'" + test.value + "'"
 							}
 							inSchema := types.Object([]types.Property{{Name: "source", Type: inputType}})
-							mapping, err := New(map[string]string{"target": expr}, inSchema, outSchema, false, nil)
+							mapping, err := New(map[string]string{"target": expr}, inSchema, outSchema, false)
 							if err != nil {
 								if test.valid {
 									t.Fatal(err)
