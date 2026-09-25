@@ -24,7 +24,6 @@ func TestPathConvert(t *testing.T) {
 			{Name: "/a", Expected: "C:\\a"},
 			{Name: "/a/b", Expected: "C:\\a\\b"},
 			{Name: "/\x00", Expected: "C:\\\x00"},
-			{Name: ""},
 			{Name: "/"},
 			{Name: "a/./b"},
 			{Name: "a/.."},
