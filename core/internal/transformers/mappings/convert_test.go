@@ -371,21 +371,21 @@ func TestConvertArrayUniqueness(t *testing.T) {
 			got, err := convert(test.value, test.source, test.destination, false, false, None)
 			if err != nil {
 				if !test.wantError {
-					t.Fatalf("expected no error, got %v", err)
+					t.Fatal(err)
 				}
 				if err != errInvalidConversion {
 					t.Fatalf("expected error %v, got %v", errInvalidConversion, err)
 				}
 				if !cmp.Equal(got, test.value) {
-					t.Fatalf("expected original value %#v with error, got %#v", test.value, got)
+					t.Fatalf("got value %#v with error, want original value %#v", got, test.value)
 				}
 				return
 			}
 			if test.wantError {
-				t.Fatalf("expected error %v, got value %#v", errInvalidConversion, got)
+				t.Fatalf("got value %#v, want an error", got)
 			}
 			if !cmp.Equal(got, test.expected) {
-				t.Fatalf("expected value %#v, got %#v", test.expected, got)
+				t.Fatalf("got value %#v, want %#v", got, test.expected)
 			}
 		})
 	}
