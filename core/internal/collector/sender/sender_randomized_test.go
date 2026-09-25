@@ -26,22 +26,24 @@ var (
 )
 
 type senderRandomTest struct {
-	events      int
-	seed        uint64
-	shuffle     bool
-	users       int
-	invalidRate float64
+	events         int
+	seed           uint64
+	shuffle        bool
+	users          int
+	multipleGroups bool
+	invalidRate    float64
 }
 
 // Test_Sender_Randomized tests the sender using seeded pseudo-random workloads,
-// including out-of-order event submission, multiple users, invalid events, and
-// all methods provided by connectors.Events.
+// including out-of-order event submission, multiple users and ordering groups,
+// invalid events, and all methods provided by connectors.Events.
 //
-// It verifies that each event is finalized exactly once and that all valid
-// events are consumed exactly once, in creation order for each user. Each
-// scenario runs inside a synctest bubble, using virtual time and explicit
-// completion synchronization instead of real-time polling.
+// It verifies that each event is finalized exactly once and that every valid
+// event is consumed exactly once, in creation order within each ordering group
+// for each user. Each scenario runs inside a synctest bubble, using virtual
+// time and explicit completion synchronization instead of real-time polling.
 func Test_Sender_Randomized(t *testing.T) {
+
 	tests := []senderRandomTest{
 		{events: 0, seed: 0, users: 1},
 		{events: 1, seed: 25, users: 1},
@@ -50,17 +52,17 @@ func Test_Sender_Randomized(t *testing.T) {
 		{events: 4, seed: 40, shuffle: true, users: 1, invalidRate: 0.1},
 		{events: 4, seed: 40, shuffle: true, users: 1, invalidRate: 1},
 		{events: 500, seed: 63, users: 76, invalidRate: 0.008},
-		{events: 500, seed: 11, shuffle: true, users: 55, invalidRate: 0.12},
+		{events: 500, seed: 11, shuffle: true, users: 55, multipleGroups: true, invalidRate: 0.12},
 		{events: 333, seed: 47, users: 100, invalidRate: 0.075},
 		{events: 8_000, seed: 90, shuffle: true, users: 111, invalidRate: 0.187},
 		{events: 15_000, seed: 142, users: 333, invalidRate: 0.09},
-		{events: 20_000, seed: 28, shuffle: true, users: 200, invalidRate: 0.045},
+		{events: 20_000, seed: 28, shuffle: true, users: 200, multipleGroups: true, invalidRate: 0.045},
 	}
 
 	var coverage senderRandomCoverage
 	for _, test := range tests {
-		name := fmt.Sprintf("events=%d,seed=%d,users=%d,shuffle=%t,invalid=%g",
-			test.events, test.seed, test.users, test.shuffle, test.invalidRate)
+		name := fmt.Sprintf("events=%d,seed=%d,users=%d,shuffle=%t,multipleGroups=%t,invalid=%g",
+			test.events, test.seed, test.users, test.shuffle, test.multipleGroups, test.invalidRate)
 		t.Run(name, func(t *testing.T) {
 			var testCoverage senderRandomCoverage
 			synctest.Test(t, func(t *testing.T) {
@@ -70,10 +72,16 @@ func Test_Sender_Randomized(t *testing.T) {
 		})
 	}
 	coverage.assert(t)
+
 }
 
 func testSenderRandomScenario(t *testing.T, test senderRandomTest) senderRandomCoverage {
+
 	rng := rand.New(rand.NewPCG(test.seed, ^test.seed))
+	// Keep the existing user, validity, and shuffle choices unchanged.
+	groupSeed := test.seed + 1
+	groupRNG := rand.New(rand.NewPCG(groupSeed, ^groupSeed))
+	orderingGroups := [...]string{"events", "contacts", "orders"}
 
 	app := newSenderRandomApplication(test.seed, test.events)
 	s := New(app, nil)
@@ -89,29 +97,56 @@ func testSenderRandomScenario(t *testing.T, test senderRandomTest) senderRandomC
 	}
 
 	expectedEvents := make(map[string]senderRandomExpectedEvent, test.events)
-	validEventsByUser := make(map[string][]string)
+	validEventsByOrdering := map[orderingKey][]string{}
 	events := make([]*Event, 0, test.events)
 
 	for i := range test.events {
 		anonymousID := anonymousIDs[rng.IntN(test.users)]
+		group := orderingGroups[0]
+		if test.multipleGroups {
+			group = orderingGroups[groupRNG.IntN(len(orderingGroups))]
+		}
+		ordering := orderingKey{group: group, anonymousID: anonymousID}
 		messageID := fmt.Sprintf("message-%d", i)
 		valid := rng.Float64() >= test.invalidRate
 		typ := "Valid"
 		if !valid {
 			typ = "Invalid"
 		}
-		event := s.CreateEvent(testPipelineID, typ, types.Type{}, map[string]any{
+		event := s.CreateEvent(testPipelineID, typ, group, types.Type{}, map[string]any{
 			"anonymousId": anonymousID,
 			"messageId":   messageID,
 		}, nopAck{})
 		expectedEvents[messageID] = senderRandomExpectedEvent{
-			anonymousID: anonymousID,
-			valid:       valid,
+			ordering: ordering,
+			valid:    valid,
 		}
 		if valid {
-			validEventsByUser[anonymousID] = append(validEventsByUser[anonymousID], messageID)
+			validEventsByOrdering[ordering] = append(validEventsByOrdering[ordering], messageID)
 		}
 		events = append(events, event)
+	}
+
+	if test.multipleGroups {
+		groupsByUser := map[string]string{}
+		hasMultipleGroups := false
+		hasRepeatedOrdering := false
+		for ordering, ids := range validEventsByOrdering {
+			if len(ids) > 1 {
+				hasRepeatedOrdering = true
+			}
+			if group, ok := groupsByUser[ordering.anonymousID]; ok && group != ordering.group {
+				hasMultipleGroups = true
+			} else {
+				groupsByUser[ordering.anonymousID] = ordering.group
+			}
+		}
+		if !hasMultipleGroups {
+			t.Error("expected a user with valid events in multiple groups, got none")
+		}
+		if !hasRepeatedOrdering {
+			t.Error("expected an ordering with multiple valid events, got none")
+		}
 	}
 
 	if test.shuffle {
@@ -127,22 +162,18 @@ func testSenderRandomScenario(t *testing.T, test senderRandomTest) senderRandomC
 	s.Close(t.Context())
 
 	snapshot := app.snapshot()
-	assertSenderRandomScenario(t, test, snapshot, expectedEvents, validEventsByUser)
+	assertSenderRandomScenario(t, test, snapshot, expectedEvents, validEventsByOrdering)
+
 	return snapshot.coverage
 }
 
 type senderRandomExpectedEvent struct {
-	anonymousID string
-	valid       bool
+	ordering orderingKey
+	valid    bool
 }
 
-func assertSenderRandomScenario(
-	t *testing.T,
-	test senderRandomTest,
-	snapshot senderRandomSnapshot,
-	expectedEvents map[string]senderRandomExpectedEvent,
-	validEventsByUser map[string][]string,
-) {
+func assertSenderRandomScenario(t *testing.T, test senderRandomTest, snapshot senderRandomSnapshot, expectedEvents map[string]senderRandomExpectedEvent, validEventsByOrdering map[orderingKey][]string) {
+
 	t.Helper()
 
 	for _, failure := range snapshot.failures {
@@ -152,31 +183,33 @@ func assertSenderRandomScenario(
 		t.Errorf("finalized %d events, want %d", len(snapshot.results), test.events)
 	}
 
-	// Events may be interleaved across users, but each user's valid events must
-	// be consumed exactly once and in creation order.
-	consumedByUser := make(map[string]int)
+	// Events may be interleaved across orderings, but each ordering's valid
+	// events must be consumed exactly once and in creation order.
+	consumedByOrdering := map[orderingKey]int{}
 	for i, messageID := range snapshot.consumed {
 		expectedEvent, exists := expectedEvents[messageID]
 		if !exists {
 			t.Errorf("consumed event %d: unexpected message ID %q", i, messageID)
 			continue
 		}
-		anonymousID := expectedEvent.anonymousID
-		expected := consumedByUser[anonymousID]
-		ids := validEventsByUser[anonymousID]
+		ordering := expectedEvent.ordering
+		expected := consumedByOrdering[ordering]
+		ids := validEventsByOrdering[ordering]
 		if expected >= len(ids) {
-			t.Errorf("consumed event %d: unexpected message ID %q for user %q", i, messageID, anonymousID)
+			t.Errorf("expected no further events for group %q and user %q, got %q at position %d",
+				ordering.group, ordering.anonymousID, messageID, i)
 			continue
 		}
 		if ids[expected] != messageID {
-			t.Errorf("consumed event %d for user %q: got %q, want %q",
-				i, anonymousID, messageID, ids[expected])
+			t.Errorf("expected event %q for group %q and user %q at position %d, got %q",
+				ids[expected], ordering.group, ordering.anonymousID, i, messageID)
 		}
-		consumedByUser[anonymousID]++
+		consumedByOrdering[ordering]++
 	}
-	for anonymousID, ids := range validEventsByUser {
-		if got := consumedByUser[anonymousID]; got != len(ids) {
-			t.Errorf("user %q consumed %d valid events, want %d", anonymousID, got, len(ids))
+	for ordering, ids := range validEventsByOrdering {
+		if got := consumedByOrdering[ordering]; got != len(ids) {
+			t.Errorf("expected %d valid events for group %q and user %q, got %d",
+				len(ids), ordering.group, ordering.anonymousID, got)
 		}
 	}
 
@@ -206,6 +239,7 @@ func assertSenderRandomScenario(
 			t.Errorf("event %q was not finalized", messageID)
 		}
 	}
+
 }
 
 type senderRandomResult struct {
