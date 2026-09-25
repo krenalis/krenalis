@@ -127,7 +127,7 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 				{Name: "first_name", Type: types.String(), ReadOptional: true},
 				{Name: "data", Type: types.Array(types.String().WithValues("a", "b")), ReadOptional: true},
 			}),
-			err: "profile schema properties with type string cannot specify values",
+			err: "profile schema properties of type array(string) cannot specify values for their element type",
 		},
 		{
 			name: "Map with object item",
@@ -146,7 +146,7 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 				{Name: "data", Type: types.Map(
 					types.String().WithPattern(regexp.MustCompile(`^a+$`))), ReadOptional: true},
 			}),
-			err: "profile schema properties with type string cannot specify pattern",
+			err: "profile schema properties of type map(string) cannot specify a pattern for their element type",
 		},
 		{
 			name: "String with values",
