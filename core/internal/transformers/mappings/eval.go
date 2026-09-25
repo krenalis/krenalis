@@ -189,7 +189,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		for _, arg := range p.args {
 			v, vt, err := eval(arg, source, attributes)
 			if err == nil && v != nil && vt.Kind() != types.BooleanKind {
-				v, err = convert(v, vt, types.Boolean(), true, false, nil, None)
+				v, err = convert(v, vt, types.Boolean(), true, false, None)
 				if err != nil {
 					err = errBooleanConversion("and", code(source, arg...), v, vt)
 				}
@@ -259,7 +259,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 			return nil, types.Boolean(), nil
 		}
 		if !types.Equal(t0, t1) {
-			v0, err = convert(v0, t0, t1, true, false, nil, None)
+			v0, err = convert(v0, t0, t1, true, false, None)
 			if err != nil {
 				return false, types.Boolean(), nil
 			}
@@ -268,7 +268,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 	case "if":
 		v0, vt0, err := eval(p.args[0], source, attributes)
 		if err == nil && v0 != nil && vt0.Kind() != types.BooleanKind {
-			v0, err = convert(v0, vt0, types.Boolean(), true, false, nil, None)
+			v0, err = convert(v0, vt0, types.Boolean(), true, false, None)
 			if err != nil {
 				err = errBooleanConversion("if", code(source, p.args[0]...), v0, vt0)
 			}
@@ -286,7 +286,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 	case "initcap":
 		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && vt.Kind() != types.StringKind {
-			v, err = convert(v, vt, types.String(), true, false, nil, None)
+			v, err = convert(v, vt, types.String(), true, false, None)
 			if err != nil {
 				err = errStringConversion("initcap", code(source, p.args[0]...), v)
 			}
@@ -387,7 +387,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 	case "lower":
 		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && vt.Kind() != types.StringKind {
-			v, err = convert(v, vt, types.String(), true, false, nil, None)
+			v, err = convert(v, vt, types.String(), true, false, None)
 			if err != nil {
 				if err != nil {
 					err = errStringConversion("lower", code(source, p.args[0]...), v)
@@ -404,7 +404,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 	case "ltrim":
 		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && vt.Kind() != types.StringKind {
-			v, err = convert(v, vt, types.String(), true, false, nil, None)
+			v, err = convert(v, vt, types.String(), true, false, None)
 			if err != nil {
 				err = errStringConversion("ltrim", code(source, p.args[0]...), v)
 			}
@@ -465,7 +465,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 			return nil, types.Boolean(), nil
 		}
 		if !types.Equal(t0, t1) {
-			v0, err = convert(v0, t0, t1, true, false, nil, None)
+			v0, err = convert(v0, t0, t1, true, false, None)
 			if err != nil {
 				return true, types.Boolean(), nil
 			}
@@ -474,7 +474,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 	case "not":
 		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && vt.Kind() != types.BooleanKind {
-			v, err = convert(v, vt, types.Boolean(), true, false, nil, None)
+			v, err = convert(v, vt, types.Boolean(), true, false, None)
 			if err != nil {
 				err = errBooleanConversion("not", code(source, p.args[0]...), v, vt)
 			}
@@ -491,7 +491,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		for _, arg := range p.args {
 			v, vt, err := eval(arg, source, attributes)
 			if err == nil && v != nil && vt.Kind() != types.BooleanKind {
-				v, err = convert(v, vt, types.Boolean(), true, false, nil, None)
+				v, err = convert(v, vt, types.Boolean(), true, false, None)
 				if err != nil {
 					err = errBooleanConversion("or", code(source, p.args[0]...), v, vt)
 				}
@@ -514,7 +514,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 	case "rtrim":
 		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && vt.Kind() != types.StringKind {
-			v, err = convert(v, vt, types.String(), true, false, nil, None)
+			v, err = convert(v, vt, types.String(), true, false, None)
 			if err != nil {
 				err = errStringConversion("rtrim", code(source, p.args[0]...), v)
 			}
@@ -529,7 +529,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 	case "substring":
 		v0, vt0, err := eval(p.args[0], source, attributes)
 		if err == nil && v0 != nil && vt0.Kind() != types.StringKind {
-			v0, err = convert(v0, vt0, types.String(), true, false, nil, None)
+			v0, err = convert(v0, vt0, types.String(), true, false, None)
 			if err != nil {
 				err = errStringConversion("substring", code(source, p.args[0]...), v0)
 			}
@@ -542,7 +542,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		}
 		v1, vt1, err := eval(p.args[1], source, attributes)
 		if err == nil && v1 != nil && (vt1.Kind() != types.IntKind || vt1.BitSize() > 32) {
-			v1, err = convert(v1, vt1, types.Int(32), true, false, nil, None)
+			v1, err = convert(v1, vt1, types.Int(32), true, false, None)
 			if err != nil {
 				err = errInt32Conversion("substring", code(source, p.args[2]...), v1, vt1)
 			}
@@ -558,7 +558,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		if len(p.args) == 3 {
 			v2, vt2, err := eval(p.args[2], source, attributes)
 			if err == nil && v2 != nil && (vt2.Kind() != types.IntKind || vt2.BitSize() > 32) {
-				v2, err = convert(v2, vt2, types.Int(32), true, false, nil, None)
+				v2, err = convert(v2, vt2, types.Int(32), true, false, None)
 				if err != nil {
 					err = errInt32Conversion("substring", code(source, p.args[2]...), v2, vt2)
 				}
@@ -578,7 +578,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 	case "trim":
 		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && vt.Kind() != types.StringKind {
-			v, err = convert(v, vt, types.String(), true, false, nil, None)
+			v, err = convert(v, vt, types.String(), true, false, None)
 			if err != nil {
 				err = errStringConversion("trim", code(source, p.args[0]...), v)
 			}
@@ -593,7 +593,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 	case "upper":
 		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && vt.Kind() != types.StringKind {
-			v, err = convert(v, vt, types.String(), true, false, nil, None)
+			v, err = convert(v, vt, types.String(), true, false, None)
 			if err != nil {
 				err = errStringConversion("upper", code(source, p.args[0]...), v)
 			}

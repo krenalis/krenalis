@@ -234,6 +234,9 @@ func (r FailureReason) String() string {
 // MaxOrderingGroupLen is the maximum length of an event ordering group.
 const MaxOrderingGroupLen = 16
 
+// MaxDeliveryEndpointLen is the maximum length of a delivery endpoint.
+const MaxDeliveryEndpointLen = 16
+
 // EventType represents a type of event that can be sent to an application.
 type EventType struct {
 	// ID is the identifier of the event type. It must be unique for every event
@@ -253,6 +256,13 @@ type EventType struct {
 	// original order for each user. It must be non-empty, follow the syntax of
 	// a property name, and cannot be longer than MaxOrderingGroupLen characters.
 	OrderingGroup string
+
+	// DeliveryEndpoint identifies the destination endpoint used for events of
+	// this type. Event types in the same ordering group must use the same endpoint.
+	// An empty value selects the connector's default endpoint. If set, the value
+	// must follow the syntax of a property name and be no longer than
+	// MaxDeliveryEndpointLen characters.
+	DeliveryEndpoint string
 
 	// DefaultFilter is the default filter to use for pipelines.
 	DefaultFilter string

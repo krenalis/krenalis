@@ -110,12 +110,13 @@ func (app *Application) Connector() string {
 	return app.connector
 }
 
-// EventType returns the application's event type with the specified ID. The
-// returned event type is owned by the connector and must not be modified.
-// It validates only the matching event type and rejects duplicates of its ID;
-// nil entries and other event types are ignored.
+// EventType returns the application's event type with the specified ID.
+//
+// It returns the event type obtained directly from the connector, after
+// validation. The caller must not modify the returned value.
+//
 // If the event type does not exist, it returns connectors.ErrEventTypeNotExist.
-// If the connector returns an error, it returns an *UnavailableError error.
+// If the connector returns an error, it returns an *UnavailableError.
 // It panics if the application does not support the event target.
 func (app *Application) EventType(ctx context.Context, id string) (*EventType, error) {
 	if app.err != nil {
@@ -141,11 +142,25 @@ func (app *Application) EventType(ctx context.Context, id string) (*EventType, e
 	if err := validateEventType(app.connector, et); err != nil {
 		return nil, err
 	}
+	for _, candidate := range eventTypes {
+		if candidate == nil || candidate.OrderingGroup != et.OrderingGroup {
+			continue
+		}
+		if candidate.DeliveryEndpoint == et.DeliveryEndpoint {
+			continue
+		}
+		return nil, fmt.Errorf(
+			"connector %s returned a different DeliveryEndpoint for ordering group %q", app.connector, et.OrderingGroup)
+	}
 	return et, nil
 }
 
-// EventTypes returns the application's event types. The returned slice and
-// event types are owned by the connector and must not be modified.
+// EventTypes returns the application's event types.
+//
+// It returns the event types obtained directly from the connector, after
+// validation. The caller must not modify the returned slice or any of the event
+// types it contains.
+//
 // If the connector returns an error, it returns an *UnavailableError error.
 // It panics if the application does not support the event target.
 func (app *Application) EventTypes(ctx context.Context) ([]*EventType, error) {
@@ -168,6 +183,14 @@ func (app *Application) EventTypes(ctx context.Context) ([]*EventType, error) {
 				return nil, fmt.Errorf(
 					"connector %s returned multiple event types with the same ID (%s)", app.connector, eventType.ID)
 			}
+			if next == nil || next.OrderingGroup != eventType.OrderingGroup {
+				continue
+			}
+			if next.DeliveryEndpoint == eventType.DeliveryEndpoint {
+				continue
+			}
+			return nil, fmt.Errorf(
+				"connector %s returned a different DeliveryEndpoint for ordering group %q", app.connector, eventType.OrderingGroup)
 		}
 	}
 	return eventTypes, nil
@@ -744,6 +767,12 @@ func validateEventType(connector string, eventType *EventType) error {
 	}
 	if !types.IsValidPropertyName(eventType.OrderingGroup) || len(eventType.OrderingGroup) > connectors.MaxOrderingGroupLen {
 		return fmt.Errorf("connector %s returned an invalid ordering group (%q)", connector, eventType.OrderingGroup)
+	}
+	if eventType.DeliveryEndpoint != "" {
+		if !types.IsValidPropertyName(eventType.DeliveryEndpoint) ||
+			len(eventType.DeliveryEndpoint) > connectors.MaxDeliveryEndpointLen {
+			return fmt.Errorf("connector %s returned an invalid delivery endpoint (%q)", connector, eventType.DeliveryEndpoint)
+		}
 	}
 	return nil
 }
