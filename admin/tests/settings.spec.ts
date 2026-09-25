@@ -27,10 +27,10 @@ test(`Change the workspace name`, async ({ page }) => {
 test(`Change the UI user profile properties`, async ({ page }) => {
 	await page.goto(`${adminURL}/settings/general`);
 
-	const userProfileFirstName = page.locator('.general-settings__user-profile-first-name sl-input >> input');
-	const userProfileLastName = page.locator('.general-settings__user-profile-last-name sl-input >> input');
-	const userProfileAdditionalLine = page.locator('.general-settings__user-profile-extra sl-input >> input');
-	const userProfileImage = page.locator('.general-settings__profile-image sl-input >> input');
+	const userProfileFirstName = page.locator('.general-settings__user-profile-first-name wa-input >> input');
+	const userProfileLastName = page.locator('.general-settings__user-profile-last-name wa-input >> input');
+	const userProfileAdditionalLine = page.locator('.general-settings__user-profile-extra wa-input >> input');
+	const userProfileImage = page.locator('.general-settings__profile-image wa-input >> input');
 
 	await userProfileFirstName.fill('first_name');
 	await userProfileLastName.fill('last_name');
@@ -99,18 +99,18 @@ test(`Change the identifiers`, async ({ page }) => {
 	expect(await page.locator('.identifiers__identifier').count()).toBe(3);
 
 	// Fill the identifiers.
-	const identifiers = page.locator('.identifiers__identifier sl-input');
+	const identifiers = page.locator('.identifiers__identifier wa-input');
 	await identifiers.nth(0).evaluate((el: any, value) => {
 		el.value = value;
-		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+		el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
 	}, 'email');
 	await identifiers.nth(1).evaluate((el: any, value) => {
 		el.value = value;
-		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+		el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
 	}, 'first_name');
 	await identifiers.nth(2).evaluate((el: any, value) => {
 		el.value = value;
-		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+		el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
 	}, 'last_name');
 
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
@@ -119,7 +119,7 @@ test(`Change the identifiers`, async ({ page }) => {
 	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await page.reload();
 
-	const identInputs = page.locator('.identifiers__identifier sl-input >> input');
+	const identInputs = page.locator('.identifiers__identifier wa-input >> input');
 	await expect(identInputs.nth(0)).toHaveValue('email');
 	await expect(identInputs.nth(1)).toHaveValue('first_name');
 	await expect(identInputs.nth(2)).toHaveValue('last_name');
@@ -136,7 +136,7 @@ test(`Sort the identifiers`, async ({ page }) => {
 	await page.click('.identifiers__save-button');
 	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await page.reload();
-	const identInputs = page.locator('.identifiers__identifier sl-input >> input');
+	const identInputs = page.locator('.identifiers__identifier wa-input >> input');
 	await expect(identInputs.nth(0)).toHaveValue('first_name');
 	await expect(identInputs.nth(1)).toHaveValue('last_name');
 	await expect(identInputs.nth(2)).toHaveValue('email');

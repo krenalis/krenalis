@@ -2,7 +2,8 @@ import React, { useContext, ReactNode, useState, useEffect } from 'react';
 import './Sidebar.css';
 import AppContext from '../../../context/AppContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import { useLocation } from 'react-router-dom';
 import getCurrentRoute from './getCurrentRoute';
 import Workspace from '../../../lib/api/types/workspace';
@@ -265,11 +266,11 @@ const WorkspaceSelector = ({
 				<SlInput
 					className='workspace-selector__dialog-search'
 					value={searchTerm}
-					size='small'
+					size='s'
 					placeholder='Search workspace'
-					onSlInput={onSearchTermChange}
+					onInput={onSearchTermChange}
 				>
-					<SlIcon name='search' slot='prefix' />
+					<WaIcon name='search' slot='start' />
 				</SlInput>
 				{options}
 				<div className='workspace-selector__dialog-view-all' onClick={onViewAllWorkspaces}>

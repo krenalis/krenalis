@@ -41,7 +41,7 @@
 	margin-bottom: 6px;
 }
 
-.profiles-list__identity-resolution-button::part(base) {
+.profiles-list__identity-resolution-button::part(button) {
 	min-width: 220px;
 }
 
@@ -245,7 +245,7 @@
 	font-family: var(--monospace-fonts);
 }
 
-.profile-drawer sl-spinner {
+.profile-drawer wa-spinner {
 	margin: 15px auto;
 	display: block;
 }
@@ -255,8 +255,8 @@
 	visibility: hidden;
 }
 
-.profile-drawer__events > sl-spinner,
-.profile-drawer__identities > sl-spinner {
+.profile-drawer__events > wa-spinner,
+.profile-drawer__identities > wa-spinner {
 	visibility: visible;
 }
 

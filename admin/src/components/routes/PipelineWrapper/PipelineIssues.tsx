@@ -1,7 +1,7 @@
 import React from 'react';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { ConnectionRole, ConnectorType } from '../../../lib/api/types/connection';
 
 interface PipelineIssuesProps {
@@ -34,8 +34,8 @@ const PipelineIssues = ({ issues, type, role, show = true, slot }: PipelineIssue
 			placement='bottom'
 			hoist
 		>
-			<SlButton variant='warning' slot='trigger' caret>
-				<SlIcon slot='prefix' name='exclamation-triangle' />
+			<SlButton variant='warning' slot='trigger' withCaret>
+				<SlIcon slot='start' name='exclamation-triangle' />
 				{`${count === 1 ? '1 issue' : count + ' issues'} with the ${labelTarget}`}
 			</SlButton>
 			<div className='pipeline__issues-list'>

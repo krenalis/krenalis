@@ -1,9 +1,10 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import './PropertyTypeSelector.css';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
@@ -287,13 +288,14 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 							onSlAfterHide={onStructureMenuAfterHide}
 						>
 							<SlButton
+								appearance='outlined'
 								className='property-type-selector__structure-trigger'
 								slot='trigger'
-								caret={canEditType}
+								withCaret={canEditType}
 								aria-disabled={!canEditType || undefined}
 								aria-label={`Structure: ${selectedStructureOption.label}`}
 							>
-								<SlIcon slot='prefix' name={selectedStructureOption.icon} />
+								<WaIcon slot='start' name={selectedStructureOption.icon} />
 								{selectedStructureOption.triggerLabel}
 							</SlButton>
 							<SlMenu className='property-type-selector__structure-menu' onSlSelect={onSelectStructure}>
@@ -333,16 +335,17 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 								onSlAfterHide={() => setSearch('')}
 							>
 								<SlButton
+									appearance='outlined'
 									className='property-type-selector__trigger'
 									slot='trigger'
-									caret={canEditType}
+									withCaret={canEditType}
 									aria-disabled={!canEditType || undefined}
 									aria-label={
 										selectedOption != null ? `Type: ${selectedOption.label}` : 'Select type'
 									}
 								>
 									{selectedOption != null && (
-										<PropertyTypeOptionIcon option={selectedOption} slot='prefix' />
+										<PropertyTypeOptionIcon option={selectedOption} slot='start' />
 									)}
 									{selectedOption != null ? (
 										selectedOption.label
@@ -355,9 +358,9 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 										className='property-type-selector__search'
 										placeholder='Search types...'
 										value={search}
-										onSlInput={(event: any) => setSearch(event.target.value)}
+										onInput={(event: any) => setSearch(event.target.value)}
 									>
-										<SlIcon slot='prefix' name='search' />
+										<WaIcon slot='start' name='search' />
 									</SlInput>
 									{Object.entries(groupedOptions).map(([group, groupOptions], groupIndex) => (
 										<React.Fragment key={group}>

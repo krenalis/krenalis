@@ -4,9 +4,9 @@ import { getFilterPropertyComboboxItems } from '../../helpers/getSchemaComboboxI
 import PipelineContext from '../../../context/PipelineContext';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { Combobox } from '../../base/Combobox/Combobox';
 import {
@@ -344,10 +344,10 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		);
 		const pathInput = isJSON ? (
 			<SlInput
-				size='small'
+				size='s'
 				className='pipeline__filters-path'
 				value={propertyPath}
-				onSlInput={(event: any) => onInputPath(path, event.target.value)}
+				onInput={(event: any) => onInputPath(path, event.target.value)}
 				name={`path-${id}`}
 				disabled={isDisabled}
 				placeholder='Path (optional)'
@@ -427,8 +427,8 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 					<SlButton
 						className='pipeline__filters-add-value'
 						key='add-button'
-						variant='default'
-						size='small'
+						appearance='outlined'
+						size='s'
 						disabled={isDisabled}
 						onClick={() => onAddValue(path)}
 					>
@@ -441,8 +441,9 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		const removeButton = (
 			<SlButton
 				className='pipeline__filters-remove-condition pipeline__filters-remove-rule'
-				size='small'
-				variant='text'
+				size='s'
+				variant='brand'
+				appearance='plain'
 				onClick={() => onRemoveRule(path)}
 				disabled={isRemoveDisabled}
 			>
@@ -510,8 +511,9 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 							<SlTooltip content={removeGroupTooltip} hoist={true}>
 								<SlButton
 									className='pipeline__filters-remove-group pipeline__filters-remove-rule'
-									size='small'
-									variant='text'
+									size='s'
+									variant='brand'
+									appearance='plain'
 									onClick={() => onRemoveRule(groupPath)}
 									disabled={isDisabled}
 								>
@@ -547,24 +549,26 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 				<div className='pipeline__filters-group-actions'>
 					<SlButton
 						className='pipeline__filters-add-condition'
-						size='medium'
-						variant='text'
+						size='m'
+						variant='brand'
+						appearance='plain'
 						onClick={() => onAddCondition(groupPath)}
 						disabled={isDisabled || filterRuleCount >= MAX_FILTER_RULE_COUNT}
 					>
-						<SlIcon slot='prefix' name='plus-circle' />
+						<SlIcon slot='start' name='plus-circle' />
 						Add a condition
 					</SlButton>
 					<SlButton
 						className='pipeline__filters-add-group'
-						size='medium'
-						variant='text'
+						size='m'
+						variant='brand'
+						appearance='plain'
 						onClick={() => onAddGroup(groupPath)}
 						disabled={
 							isDisabled || depth >= MAX_FILTER_DEPTH || filterRuleCount > MAX_FILTER_RULE_COUNT - 2
 						}
 					>
-						<SlIcon slot='prefix' name='plus-circle' />
+						<SlIcon slot='start' name='plus-circle' />
 						Add a group
 					</SlButton>
 				</div>
@@ -591,12 +595,13 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 			{pipeline.filter == null ? (
 				<SlButton
 					className='pipeline__filters-add-condition'
-					size='medium'
-					variant='text'
+					size='m'
+					variant='brand'
+					appearance='plain'
 					onClick={() => onAddCondition([])}
 					disabled={isDisabled || filterRuleCount >= MAX_FILTER_RULE_COUNT}
 				>
-					<SlIcon slot='prefix' name='plus-circle' />
+					<SlIcon slot='start' name='plus-circle' />
 					Add filter
 				</SlButton>
 			) : (
@@ -635,19 +640,20 @@ const PipelineFilterValueControl = ({
 		onValueChange(v);
 	};
 
-	const removeButton = removable ? (
-		<SlButton
-			slot='suffix'
-			variant='default'
-			size='small'
-			circle
-			className='pipeline__filters-value-remove'
-			onClick={onRemove}
-			disabled={disabled}
-		>
-			<SlIcon name='x' />
-		</SlButton>
-	) : null;
+	const removeButton = (slot: 'end' | 'suffix') =>
+		removable ? (
+			<SlButton
+				slot={slot}
+				appearance='outlined'
+				size='s'
+				pill
+				className='pipeline__filters-value-remove'
+				onClick={onRemove}
+				disabled={disabled}
+			>
+				<SlIcon name='x' />
+			</SlButton>
+		) : null;
 
 	if (options.length > 0) {
 		return (
@@ -665,7 +671,7 @@ const PipelineFilterValueControl = ({
 							{option === '' ? '\u00A0' : option}
 						</SlOption>
 					))}
-					{removeButton}
+					{removeButton('suffix')}
 				</SlSelect>
 			</div>
 		);
@@ -673,14 +679,14 @@ const PipelineFilterValueControl = ({
 
 	return (
 		<SlInput
-			size='small'
+			size='s'
 			className='pipeline__filters-value-input'
 			value={value ?? ''}
-			onSlInput={handleInput}
+			onInput={handleInput}
 			name={name}
 			disabled={disabled}
 		>
-			{removeButton}
+			{removeButton('end')}
 		</SlInput>
 	);
 };
