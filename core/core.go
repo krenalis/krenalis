@@ -1725,6 +1725,16 @@ Identifiers:
 	}
 	for {
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+			// Lock and check the operation before modifying schema or sources.
+			pending, err := tx.QueryExists(ctx,
+				"SELECT FROM workspaces WHERE id = $1 AND alter_profile_schema_id = $2 FOR UPDATE",
+				nEnd.Workspace, nEnd.ID)
+			if err != nil {
+				return nil, err
+			}
+			if !pending {
+				return nil, nil
+			}
 			if nEnd.Err == "" {
 				// These columns should be updated only in case of success,
 				// otherwise, in case of error, the current ones should be left.
