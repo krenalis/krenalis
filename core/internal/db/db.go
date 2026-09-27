@@ -41,6 +41,23 @@ func (err TxCommitRollbackError) Error() string {
 	return fmt.Sprintf("transaction rolled back during commit: %s", err.Err)
 }
 
+// IsolationLevel specifies a transaction's isolation level.
+type IsolationLevel int
+
+const (
+	LevelDefault IsolationLevel = iota
+	LevelReadUncommitted
+	LevelReadCommitted
+	LevelRepeatableRead
+	LevelSerializable
+)
+
+// TxOptions specifies the isolation level and access mode of a transaction.
+type TxOptions struct {
+	Isolation IsolationLevel
+	ReadOnly  bool
+}
+
 // Result is the result returned by a call to the Exec method.
 type Result struct {
 	ct pgconn.CommandTag
@@ -137,6 +154,34 @@ func Open(opts *Options) (*DB, error) {
 // to the entire transaction, unlike the behavior in the standard sql package.
 func (db *DB) Begin(ctx context.Context) (*Tx, error) {
 	tx, err := db.db.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return &Tx{tx, false, nil}, nil
+}
+
+// BeginTx begins a new transaction with the specified options.
+// The provided context only affects the Begin method and does not propagate
+// to the entire transaction, unlike the behavior in the standard sql package.
+func (db *DB) BeginTx(ctx context.Context, opts TxOptions) (*Tx, error) {
+	var pgxOpts pgx.TxOptions
+	switch opts.Isolation {
+	case LevelDefault:
+	case LevelReadUncommitted:
+		pgxOpts.IsoLevel = pgx.ReadUncommitted
+	case LevelReadCommitted:
+		pgxOpts.IsoLevel = pgx.ReadCommitted
+	case LevelRepeatableRead:
+		pgxOpts.IsoLevel = pgx.RepeatableRead
+	case LevelSerializable:
+		pgxOpts.IsoLevel = pgx.Serializable
+	default:
+		return nil, fmt.Errorf("unsupported isolation level: %d", opts.Isolation)
+	}
+	if opts.ReadOnly {
+		pgxOpts.AccessMode = pgx.ReadOnly
+	}
+	tx, err := db.db.BeginTx(ctx, pgxOpts)
 	if err != nil {
 		return nil, err
 	}
