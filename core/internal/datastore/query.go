@@ -12,6 +12,7 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
 
@@ -54,7 +55,8 @@ type Query struct {
 // "exists" and "does not exist" operators are mapped to warehouses.OpIsNotNull
 // and warehouses.OpIsNull, respectively. For object properties, "exists"
 // matches if any descendant column is non-null, while "does not exist" matches
-// if all descendant columns are null.
+// if all descendant columns are null. For "is true" and "is false" on a JSON
+// key, the last property path segment is stored in warehouses.BaseExpr.Key.
 func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Column) (warehouses.Expr, error) {
 
 	if where == nil {
@@ -108,6 +110,16 @@ func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Col
 				}
 				expr.Operands[i] = warehouses.NewBaseExpr(column, op, rule.Values...)
 				continue
+			}
+			if len(rule.Property) > 1 && (rule.Operator == state.OpIsTrue || rule.Operator == state.OpIsFalse) {
+				key := rule.Property[len(rule.Property)-1]
+				parentPath := path[:len(path)-len(key)-1]
+				if column, ok := columnByProperty[parentPath]; ok && column.Type.Kind() == types.JSONKind {
+					op := warehouses.NewBaseExpr(column, warehouses.Operator(rule.Operator))
+					op.Key = key
+					expr.Operands[i] = op
+					continue
+				}
 			}
 			var descendantColumns []warehouses.Column
 			n := len(path)
