@@ -5,6 +5,7 @@
 package postgresql
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -42,6 +43,49 @@ func Test_appendJoins(t *testing.T) {
 	if err := appendJoins(&b, []warehouses.Join{bad}); err == nil {
 		t.Fatal("expected error for bad join condition")
 	}
+}
+
+// TestCounts checks unconditional and conditional row counts.
+func TestCounts(t *testing.T) {
+
+	warehouse, pool := newTestPostgreSQLWarehouse(t)
+	mustExecSQL(t, pool, `CREATE TABLE "count_conditions" ("flag" BOOLEAN, "other_flag" BOOLEAN)`)
+	mustExecSQL(t, pool, `INSERT INTO "count_conditions" VALUES
+		(TRUE, TRUE), (TRUE, FALSE), (FALSE, TRUE), (NULL, TRUE)`)
+
+	flag := warehouses.NewBaseExpr(warehouses.Column{Name: "flag", Type: types.Boolean()}, warehouses.OpIsTrue)
+	falseFlag := warehouses.NewBaseExpr(warehouses.Column{Name: "flag", Type: types.Boolean()}, warehouses.OpIsFalse)
+	otherFlag := warehouses.NewBaseExpr(warehouses.Column{Name: "other_flag", Type: types.Boolean()}, warehouses.OpIsTrue)
+	conditions := []warehouses.Expr{
+		nil,
+		flag,
+		falseFlag,
+		otherFlag,
+		warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{flag, otherFlag}),
+	}
+
+	totalCounts, err := warehouse.Counts(t.Context(), "count_conditions", nil)
+	if err != nil {
+		t.Fatalf("expected counts, got %v", err)
+	}
+	if !slices.Equal(totalCounts, []int{4}) {
+		t.Fatalf("expected counts [4], got %v", totalCounts)
+	}
+
+	_, err = warehouse.Counts(t.Context(), "count_conditions", []warehouses.Expr{})
+	if err == nil {
+		t.Fatalf("expected an error, got %v", err)
+	}
+
+	counts, err := warehouse.Counts(t.Context(), "count_conditions", conditions)
+	if err != nil {
+		t.Fatalf("expected counts, got %v", err)
+	}
+	want := []int{4, 2, 1, 3, 1}
+	if !slices.Equal(counts, want) {
+		t.Fatalf("expected counts %v, got %v", want, counts)
+	}
+
 }
 
 // TestQueryOrdering verifies that an empty OrderBy is omitted and descending order is applied to every ordered column.
