@@ -160,7 +160,7 @@ func (q *queue) assertTotal(n int) {
 		}
 	}
 	if n != total {
-		panic(fmt.Sprintf("core/events/collector/sender: expected %d queued, got %d", n, total))
+		panic(fmt.Sprintf("core/internal/collector/sender: expected %d queued, got %d", n, total))
 	}
 }
 
@@ -610,7 +610,7 @@ func (s *Sender) read(consume bool) (*Event, bool) {
 // It must be called holding the s.mu mutex.
 func (s *Sender) releaseOrderings() {
 	if s.iterator != nil {
-		panic("core/events/collector/sender: releaseOrderings called while an iteration is still in progress")
+		panic("core/internal/collector/sender: releaseOrderings called while an iteration is still in progress")
 	}
 	if len(s.releasableOrderings) == 0 {
 		return
@@ -792,7 +792,7 @@ func (s *Sender) _assertAvailable(n int) {
 		}
 	}
 	if n != available {
-		panic(fmt.Sprintf("core/events/collector/sender: expected %d available, got %d", n, available))
+		panic(fmt.Sprintf("core/internal/collector/sender: expected %d available, got %d", n, available))
 	}
 }
 
@@ -807,7 +807,7 @@ func (s *Sender) _assertQueueTotal(n int) {
 		}
 	}
 	if n != total {
-		panic(fmt.Sprintf("core/events/collector/sender: expected %d queued, got %d", n, total))
+		panic(fmt.Sprintf("core/internal/collector/sender: expected %d queued, got %d", n, total))
 	}
 }
 

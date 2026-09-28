@@ -134,7 +134,7 @@ func (iw *identityWriter) transformAndWrite(events []streams.Event) {
 			iw.metrics.TransformationFailed(iw.pipeline, len(records), err2.Error())
 		} else {
 			iw.metrics.TransformationFailed(iw.pipeline, len(records), "an internal error occurred")
-			slog.Error("core/events/collector: unexpected error occurred transforming event", "error", err)
+			slog.Error("core/internal/collector: unexpected error occurred transforming event", "error", err)
 		}
 		return
 	}
@@ -169,7 +169,7 @@ func (iw *identityWriter) transformAndWrite(events []streams.Event) {
 				msg = err.Error()
 			} else {
 				msg = "an internal error occurred"
-				slog.Error("core/events/collector: cannot write event identity", "pipeline", iw.pipeline, "error", err)
+				slog.Error("core/internal/collector: cannot write event identity", "pipeline", iw.pipeline, "error", err)
 			}
 			iw.metrics.FinalizeFailed(iw.pipeline, 1, msg)
 			event.Destinations[0].Ack.Acknowledge()

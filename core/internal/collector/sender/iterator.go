@@ -77,7 +77,7 @@ func (it *iterator) First() *connectors.Event {
 	event, ok := it.sender.read(true)
 	it.sender.iterated()
 	if !ok {
-		panic("core/events/collector/sender: iterator has called Sender.read, but no events are available")
+		panic("core/internal/collector/sender: iterator has called Sender.read, but no events are available")
 	}
 	return &event.Event
 }

@@ -53,7 +53,20 @@ func (err RecordValidationError) Error() string {
 }
 
 func (err RecordValidationError) addIndexToPath(i int) RecordValidationError {
-	err.path = "[" + strconv.Itoa(i) + "]." + err.path
+	index := "[" + strconv.Itoa(i) + "]"
+	if err.path != "" && err.path[0] != '[' {
+		index += "."
+	}
+	err.path = index + err.path
+	return err
+}
+
+func (err RecordValidationError) addMapKeyToPath(key string) RecordValidationError {
+	name := "[" + strconv.Quote(key) + "]"
+	if err.path != "" && err.path[0] != '[' {
+		name += "."
+	}
+	err.path = name + err.path
 	return err
 }
 
@@ -507,6 +520,9 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 				// Read the property's value.
 				value, err := d.unmarshal(t.Elem(), preserveJSON, purpose)
 				if err != nil {
+					if e, ok := err.(RecordValidationError); ok {
+						err = e.addMapKeyToPath(name)
+					}
 					return nil, err
 				}
 				m[name] = value
