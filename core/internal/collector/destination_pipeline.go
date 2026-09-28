@@ -231,7 +231,7 @@ func (dp *destinationPipeline) transform() {
 			msg = context.Cause(dp.queue.close.ctx).Error()
 		} else {
 			msg = "an internal error has occurred"
-			slog.Error("core/events/collector: cannot transform events", "pipeline", dp.id, "error", err)
+			slog.Error("core/internal/collector: cannot transform events", "pipeline", dp.id, "error", err)
 		}
 		dp.queue.metrics.TransformationFailed(dp.id, n, msg)
 		return
