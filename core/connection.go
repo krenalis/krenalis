@@ -317,6 +317,8 @@ func (this *Connection) ApplicationUsers(ctx context.Context, schema types.Type,
 //
 //   - ConnectionNotExist, if the connection does not exist.
 //   - ConnectorsLimitReached, if the organization cannot have more connectors.
+//   - ConsentPurposeLocationNotSet, if a required consent purpose has no
+//     consent location for the target of the pipeline.
 //   - ConsentPurposeNotExist, if a required consent purpose does not exist.
 //   - EventTypeNotExist, if the event type does not exist for the connection.
 //   - FormatNotExist, if the format of the pipeline does not exist.
@@ -569,6 +571,24 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 				}
 				if missing != "" {
 					return nil, errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", missing)
+				}
+				// Check that the required consent purposes have a consent
+				// location for the target of the pipeline.
+				location, isUnset := "profile", "profile_property = ''"
+				if n.Target == state.TargetEvent {
+					location, isUnset = "event", "event_purpose_codes = '{}'"
+				}
+				var unset string
+				if err := tx.QueryRow(ctx, "SELECT id FROM consent_purposes\n"+
+					"WHERE workspace = $1 AND id = ANY($2) AND "+isUnset+"\n"+
+					"LIMIT 1", c.Workspace().ID, n.RequiredConsents.Purposes).Scan(&unset); err != nil {
+					if err != sql.ErrNoRows {
+						return nil, err
+					}
+				}
+				if unset != "" {
+					return nil, errors.Unprocessable(ConsentPurposeLocationNotSet,
+						"consent purpose %s has no %s consent location", unset, location)
 				}
 			}
 			switch n.Target {

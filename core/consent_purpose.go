@@ -172,6 +172,11 @@ func (this *Workspace) DeleteConsentPurpose(ctx context.Context, id string) erro
 //
 // It returns an errors.NotFoundError error if the consent purpose does not
 // exist.
+//
+// It returns an errors.UnprocessableError error with code
+// ConsentPurposeLocationInUse if the consent purpose has no event or profile
+// consent location, and it is required by one or more pipelines that read that
+// location.
 func (this *Workspace) UpdateConsentPurpose(ctx context.Context, id string, purpose ConsentPurposeToSet) error {
 
 	this.core.mustBeOpen()
@@ -205,6 +210,29 @@ func (this *Workspace) UpdateConsentPurpose(ctx context.Context, id string, purp
 		err := lockWorkspace(ctx, tx, n.Workspace)
 		if err != nil {
 			return nil, err
+		}
+		for _, location := range []struct {
+			target  state.Target
+			name    string
+			isEmpty bool
+		}{
+			{state.TargetEvent, "event", len(purposeCodes) == 0},
+			{state.TargetUser, "profile", property == ""},
+		} {
+			if !location.isEmpty {
+				continue
+			}
+			inUse, err := tx.QueryExists(ctx, "SELECT FROM pipelines AS p\n"+
+				"JOIN connections AS c ON p.connection = c.id\n"+
+				"WHERE c.workspace = $1 AND p.target = $2 AND $3 = ANY(p.required_consents)",
+				n.Workspace, location.target, n.ID)
+			if err != nil {
+				return nil, err
+			}
+			if inUse {
+				return nil, errors.Unprocessable(ConsentPurposeLocationInUse,
+					"consent purpose %s is required by pipelines that read its %s consent location", n.ID, location.name)
+			}
 		}
 		result, err := tx.Exec(ctx, "UPDATE consent_purposes"+
 			" SET name = $1, event_purpose_codes = $2, profile_property = $3, profile_json_key = $4"+

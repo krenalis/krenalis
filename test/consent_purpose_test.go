@@ -5,11 +5,14 @@
 package test
 
 import (
+	"net/http"
 	"reflect"
 	"testing"
 
+	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // TestConsentPurposeLocationsAPI checks canonical responses and replacement
@@ -125,5 +128,101 @@ func TestConsentPurposeLocationsAPI(t *testing.T) {
 
 		})
 	}
+
+}
+
+// TestConsentPurposeLocationsRequiredByPipelines checks that a pipeline can
+// require only the consent purposes with a consent location for its target, and
+// that such a location cannot be removed while a pipeline requires it.
+func TestConsentPurposeLocationsRequiredByPipelines(t *testing.T) {
+
+	if testing.Short() {
+		t.Skip()
+	}
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
+
+	eventLocations := []any{map[string]any{"purposeCode": "marketing"}}
+	profileLocation := map[string]any{"property": "marketing"}
+
+	k.Call("POST", "v1/consent-purposes", nil, map[string]any{
+		"name":                  "Marketing",
+		"eventConsentLocations": eventLocations,
+	}, nil)
+	var response struct {
+		Purposes []struct {
+			ID string `json:"id"`
+		} `json:"purposes"`
+	}
+	k.Call("GET", "v1/consent-purposes", nil, nil, &response)
+	if len(response.Purposes) != 1 {
+		t.Fatalf("expected one purpose, got %v", response.Purposes)
+	}
+	purpose := response.Purposes[0].ID
+	requiredConsents := &krenalistester.RequiredConsents{Operator: "and", Purposes: []string{purpose}}
+
+	// An event pipeline can require a purpose with an event consent location.
+	javaScript := k.CreateJavaScriptSource("JavaScript", nil)
+	k.CreatePipeline(javaScript, "Event", krenalistester.PipelineToSet{
+		Name:             "Import events",
+		Enabled:          true,
+		RequiredConsents: requiredConsents,
+	})
+
+	// A profile pipeline cannot require a purpose without a profile consent
+	// location.
+	dummy := k.CreateDummy("Dummy", krenalistester.Source)
+	userPipeline := krenalistester.PipelineToSet{
+		Name:    "Import users",
+		Enabled: true,
+		InSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.String(), Nullable: true},
+		}),
+		OutSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+		}),
+		Transformation: &krenalistester.Transformation{
+			Mapping: map[string]string{"email": "email"},
+		},
+		RequiredConsents: requiredConsents,
+	}
+	_, err := k.TryCreatePipeline(dummy, "User", userPipeline)
+	expectAPIError(t, err, http.StatusUnprocessableEntity, string(core.ConsentPurposeLocationNotSet))
+
+	// The event consent location cannot be removed while the event pipeline
+	// requires the purpose.
+	err = k.TryCall("PUT", "v1/consent-purposes/"+purpose, nil, map[string]any{
+		"name":                   "Marketing",
+		"profileConsentLocation": profileLocation,
+	}, nil)
+	expectAPIError(t, err, http.StatusUnprocessableEntity, string(core.ConsentPurposeLocationInUse))
+
+	// Once the purpose has a profile consent location, a profile pipeline can
+	// require it, and that location cannot be removed.
+	k.Call("PUT", "v1/consent-purposes/"+purpose, nil, map[string]any{
+		"name":                   "Marketing",
+		"eventConsentLocations":  eventLocations,
+		"profileConsentLocation": profileLocation,
+	}, nil)
+	userPipelineID := k.CreatePipeline(dummy, "User", userPipeline)
+	err = k.TryCall("PUT", "v1/consent-purposes/"+purpose, nil, map[string]any{
+		"name":                  "Marketing",
+		"eventConsentLocations": eventLocations,
+	}, nil)
+	expectAPIError(t, err, http.StatusUnprocessableEntity, string(core.ConsentPurposeLocationInUse))
+
+	// Once the profile pipeline no longer requires the purpose, the profile
+	// consent location can be removed, and the pipeline cannot require the
+	// purpose again.
+	userPipeline.RequiredConsents = nil
+	k.UpdatePipeline(userPipelineID, userPipeline)
+	k.Call("PUT", "v1/consent-purposes/"+purpose, nil, map[string]any{
+		"name":                  "Marketing",
+		"eventConsentLocations": eventLocations,
+	}, nil)
+	userPipeline.RequiredConsents = requiredConsents
+	err = k.TryUpdatePipeline(userPipelineID, userPipeline)
+	expectAPIError(t, err, http.StatusUnprocessableEntity, string(core.ConsentPurposeLocationNotSet))
 
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext, useMemo } from 'react';
+import { useEffect, useState, useContext, useMemo, useRef } from 'react';
 import {
 	computeDefaultPipeline,
 	computePipelineTypeFields,
@@ -9,6 +9,8 @@ import {
 	transformInPipelineToSet,
 	flattenSchema,
 	checkFunctionPath,
+	getConsentPropertyPaths,
+	validateRequiredConsents,
 } from '../../../lib/core/pipeline';
 import AppContext from '../../../context/AppContext';
 import TransformedConnection, { getPipelineTypeFromConnection } from '../../../lib/core/connection';
@@ -21,6 +23,7 @@ import {
 	ConnectorSettings,
 } from '../../../lib/api/types/responses';
 import { ObjectType } from '../../../lib/api/types/types';
+import { ConsentPurpose } from '../../../lib/api/types/workspace';
 import { FullscreenContext } from '../../../context/FullscreenContext';
 
 const usePipeline = (
@@ -44,6 +47,10 @@ const usePipeline = (
 	const [selectedOutPaths, setSelectedOutPaths] = useState<string[]>([]);
 	const [issues, setIssues] = useState<string[]>([]);
 	const [showIssues, setShowIssues] = useState<boolean>(true);
+	const [consentPurposes, setConsentPurposes] = useState<ConsentPurpose[] | null>(null);
+
+	const consentPurposesRequestRef = useRef<number>(0);
+	const consentPurposeNamesRef = useRef(new Map<string, string>());
 
 	const { api, handleError, redirect, connectors } = useContext(AppContext);
 	const { closeFullscreen } = useContext(FullscreenContext);
@@ -78,6 +85,46 @@ const usePipeline = (
 			setSelectedOutPaths(outPaths);
 		}
 	}, [pipelineType?.inputSchema, pipelineType?.outputSchema]);
+
+	// refreshConsentPurposes reads the consent purposes again and returns them.
+	// It returns null if they cannot be read, or if they have been requested
+	// again in the meantime.
+	const refreshConsentPurposes = async (): Promise<ConsentPurpose[] | null> => {
+		const request = ++consentPurposesRequestRef.current;
+		let purposes: ConsentPurpose[];
+		try {
+			const res = await api.workspaces.consentPurposes();
+			purposes = res.purposes;
+		} catch (err) {
+			handleError(err);
+			return null;
+		}
+		// Discard the purposes of an earlier request.
+		if (request !== consentPurposesRequestRef.current) {
+			return null;
+		}
+		for (const p of purposes) {
+			consentPurposeNamesRef.current.set(p.id, p.name);
+		}
+		setConsentPurposes(purposes);
+		return purposes;
+	};
+
+	useEffect(() => {
+		if (pipelineType == null || !pipelineType.fields.includes('Consents')) {
+			return;
+		}
+		refreshConsentPurposes();
+		// Reload the purposes when the user comes back from configuring them in
+		// another tab.
+		const onFocus = () => {
+			refreshConsentPurposes();
+		};
+		window.addEventListener('focus', onFocus);
+		return () => {
+			window.removeEventListener('focus', onFocus);
+		};
+	}, [pipelineType?.fields]);
 
 	useEffect(() => {
 		if (isLoading || pipelineType.outputSchema == null || isEditing) {
@@ -347,6 +394,9 @@ const usePipeline = (
 				selectedInPaths,
 				selectedOutPaths,
 			);
+			if (consentPurposes != null) {
+				validateRequiredConsents(pipeline, pipelineType, connection, consentPurposes, selectedOutPaths);
+			}
 		} catch (err) {
 			return err;
 		}
@@ -364,6 +414,22 @@ const usePipeline = (
 				);
 			}
 		} catch (err) {
+			const isConsentsErr =
+				err instanceof UnprocessableError &&
+				(err.code === 'ConsentPurposeNotExist' || err.code === 'ConsentPurposeLocationNotSet');
+			if (isConsentsErr) {
+				// A required purpose has been deleted, or its consent location
+				// has been removed, after the purposes have been read. Read
+				// them again to show which one.
+				const purposes = await refreshConsentPurposes();
+				if (purposes != null) {
+					try {
+						validateRequiredConsents(pipeline, pipelineType, connection, purposes, selectedOutPaths);
+					} catch (consentsErr) {
+						return consentsErr;
+					}
+				}
+			}
 			return err;
 		}
 
@@ -440,6 +506,34 @@ const usePipeline = (
 		isFileConnectorChanged,
 	]);
 
+	const consentPropertyPaths = useMemo(() => {
+		if (pipeline == null || pipelineType == null) {
+			return new Map<string, ConsentPurpose[]>();
+		}
+		return getConsentPropertyPaths(pipeline, pipelineType, connection, consentPurposes ?? []);
+	}, [pipeline, pipelineType, connection, consentPurposes]);
+
+	// deletedConsentPurposes are the required purposes deleted after they have
+	// been read, kept so that the user can see and remove them.
+	const deletedConsentPurposes = useMemo(() => {
+		const deleted: ConsentPurpose[] = [];
+		if (consentPurposes == null || pipeline?.requiredConsents == null) {
+			return deleted;
+		}
+		for (const id of pipeline.requiredConsents.purposes) {
+			if (consentPurposes.some((p) => p.id === id)) {
+				continue;
+			}
+			deleted.push({
+				id: id,
+				name: consentPurposeNamesRef.current.get(id) ?? id,
+				eventConsentLocations: [],
+				profileConsentLocation: null,
+			});
+		}
+		return deleted;
+	}, [consentPurposes, pipeline?.requiredConsents]);
+
 	return {
 		isEditing,
 		isImport,
@@ -471,6 +565,9 @@ const usePipeline = (
 		setIssues,
 		showIssues,
 		setShowIssues,
+		consentPurposes: consentPurposes ?? [],
+		deletedConsentPurposes,
+		consentPropertyPaths,
 	};
 };
 

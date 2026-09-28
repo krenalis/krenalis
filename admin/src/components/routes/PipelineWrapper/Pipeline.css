@@ -2181,6 +2181,46 @@ inherit the disabled style */
 	font-weight: 500;
 }
 
+.pipeline__consents-select::part(invalid-tag__base) {
+	background-color: var(--sl-color-danger-100);
+	border: 0;
+	color: var(--sl-color-danger-900);
+	font-weight: 500;
+}
+
+.pipeline__consents-option-message {
+	color: var(--sl-color-danger-600);
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.pipeline__consents-errors {
+	display: flex;
+	flex-flow: column;
+	gap: 8px;
+}
+
+.pipeline__consents-error {
+	color: var(--sl-color-danger-600);
+	display: flex;
+	align-items: start;
+	gap: 6px;
+	font-size: 13px;
+	font-weight: 500;
+}
+
+.pipeline__consents-error sl-icon {
+	flex-shrink: 0;
+	position: relative;
+	top: 2px;
+	font-size: 16px;
+}
+
+.pipeline__consents-error a {
+	color: inherit;
+	text-decoration: underline;
+}
+
 .pipeline__consents-logical-sentence {
 	display: flex;
 	flex-flow: row wrap;

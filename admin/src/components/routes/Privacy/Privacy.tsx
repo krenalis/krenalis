@@ -387,6 +387,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 	const [purposeCodesError, setPurposeCodesError] = useState<string>('');
 	const [duplicatePurposeCodeError, setDuplicatePurposeCodeError] = useState<string>('');
 	const [profilePathError, setProfilePathError] = useState<string>('');
+	const [saveError, setSaveError] = useState<string>('');
 	const [hasProfileJSONKeyLostFocus, setHasProfileJSONKeyLostFocus] = useState<boolean>(false);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 	const [newPurposeCodeIndex, setNewPurposeCodeIndex] = useState<number | null>(null);
@@ -511,6 +512,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 		setPurposeCodesError('');
 		setDuplicatePurposeCodeError('');
 		setProfilePathError('');
+		setSaveError('');
 		setHasProfileJSONKeyLostFocus((originalProfile?.jsonKey ?? '') !== '');
 		setNewPurposeCodeIndex(null);
 		setIsRemovingPurposeCode(false);
@@ -699,6 +701,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 		setNameError('');
 		setPurposeCodesError('');
 		setProfilePathError('');
+		setSaveError('');
 
 		const purposeCodesToSave = purposeCodes.filter((purposeCode) => purposeCode !== '');
 
@@ -750,6 +753,20 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 			}
 		} catch (err) {
 			setIsSaving(false);
+			if (err instanceof UnprocessableError && err.code === 'ConsentPurposeLocationInUse') {
+				// Keep the dialog open, so that the user can restore the location.
+				const locations =
+					purposeCodesToSave.length > 0
+						? 'profile'
+						: profileConsentLocation != null
+							? 'event'
+							: 'event or profile';
+				setSaveError(
+					`This purpose is required by pipelines that read its ${locations} consent location. ` +
+						'To remove the location, first remove the purpose from those pipelines.',
+				);
+				return;
+			}
 			onClose();
 			setTimeout(() => {
 				handleError(err);
@@ -941,6 +958,12 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 						</div>
 					</div>
 
+					{saveError !== '' && (
+						<div className='privacy__dialog-error privacy__dialog-save-error'>
+							<SlIcon slot='icon' name='exclamation-octagon' />
+							{saveError}
+						</div>
+					)}
 					<div className='privacy__dialog-actions'>
 						<SlButton onClick={onClose}>Cancel</SlButton>
 						<SlButton

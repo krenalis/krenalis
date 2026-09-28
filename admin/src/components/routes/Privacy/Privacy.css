@@ -290,6 +290,24 @@
 	gap: 10px;
 }
 
+.privacy__dialog-save-error {
+	margin-top: 8px;
+	align-items: flex-start;
+}
+
+.privacy__dialog-save-error sl-icon {
+	position: relative;
+	top: 3px;
+}
+
+.privacy__dialog-paths:has(+ .privacy__dialog-save-error) > .privacy__dialog-message--hidden {
+	display: none;
+}
+
+.privacy__dialog-save-error + .privacy__dialog-actions {
+	margin-top: 20px;
+}
+
 .privacy__dialog-save {
 	min-width: 150px;
 }

@@ -1,38 +1,43 @@
 import React, { useContext, useEffect, useRef, useState, forwardRef } from 'react';
 import Section from '../../base/Section/Section';
 import PipelineContext from '../../../context/PipelineContext';
-import AppContext from '../../../context/AppContext';
 import { ConsentPurpose } from '../../../lib/api/types/workspace';
 import { ConsentPurposesOperator } from '../../../lib/api/types/pipeline';
+import { getMissingConsentLocation, isOutputPathTransformed } from '../../../lib/core/pipeline';
+import { UI_BASE_PATH } from '../../../constants/paths';
+import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import type SlOptionElement from '@shoelace-style/shoelace/dist/components/option/option.js';
+
+interface PurposeError {
+	purpose: ConsentPurpose;
+	message: string;
+	isDeleted: boolean;
+}
 
 const PipelineConsents = forwardRef<any>((_, ref) => {
-	const { pipeline, pipelineType, setPipeline, connection, isImport } = useContext(PipelineContext);
+	const {
+		pipeline,
+		pipelineType,
+		setPipeline,
+		connection,
+		isImport,
+		consentPurposes: purposes,
+		deletedConsentPurposes,
+		consentPropertyPaths,
+		selectedOutPaths,
+	} = useContext(PipelineContext);
 
-	const [purposes, setPurposes] = useState<ConsentPurpose[]>([]);
 	const [isEnabled, setIsEnabled] = useState((pipeline.requiredConsents?.purposes.length ?? 0) > 0);
 
 	const operatorRef = useRef<any>(null);
-
-	const { api, handleError } = useContext(AppContext);
+	const purposeTagsRef = useRef(new WeakMap<SlOptionElement, HTMLElement>());
 
 	useEffect(() => {
 		setIsEnabled((pipeline.requiredConsents?.purposes.length ?? 0) > 0);
 	}, [pipeline.id]);
-
-	useEffect(() => {
-		const fetchPurposes = async () => {
-			try {
-				const res = await api.workspaces.consentPurposes();
-				setPurposes(res.purposes);
-			} catch (err) {
-				handleError(err);
-			}
-		};
-		fetchPurposes();
-	}, []);
 
 	useEffect(() => {
 		const select = operatorRef.current;
@@ -82,7 +87,7 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 	};
 
 	const onSentenceClick = (e: React.MouseEvent) => {
-		if (purposes.length === 0) {
+		if (!hasPurposes) {
 			return;
 		}
 		if ((e.target as HTMLElement).closest('sl-select')) {
@@ -104,6 +109,68 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 	};
 
 	const selectedPurposeIDs = pipeline.requiredConsents?.purposes ?? [];
+	const hasPurposes = purposes.length > 0 || deletedConsentPurposes.length > 0;
+
+	// Collect the selected purposes that have been deleted, or that no longer
+	// have the consent location read by the pipeline.
+	const purposeErrors: PurposeError[] = [];
+	for (const id of selectedPurposeIDs) {
+		const purpose = purposes.find((p) => p.id === id);
+		if (purpose == null) {
+			const deleted = deletedConsentPurposes.find((p) => p.id === id);
+			if (deleted != null) {
+				purposeErrors.push({
+					purpose: deleted,
+					message: `Consent purpose "${deleted.name}" no longer exists. Remove it from the selected purposes.`,
+					isDeleted: true,
+				});
+			}
+			continue;
+		}
+		const location = getMissingConsentLocation(purpose, pipelineType, connection);
+		if (location != null) {
+			purposeErrors.push({
+				purpose,
+				message: `Consent purpose "${purpose.name}" has no ${location} consent location.`,
+				isDeleted: false,
+			});
+		}
+	}
+
+	// Show the tags of these purposes in red. The other tags are the same as
+	// the default ones of the select.
+	const invalidPurposeIDs = new Set(purposeErrors.map(({ purpose }) => purpose.id));
+	const getPurposeTag = (option: SlOptionElement): HTMLElement => {
+		// The select renders its tags again when it loses the focus, which
+		// happens on the mousedown on a remove button. Reuse the tag of the
+		// option and change it only when needed, as a tag replaced or changed
+		// at that moment does not receive the click.
+		let tag = purposeTagsRef.current.get(option);
+		if (tag == null) {
+			tag = document.createElement('sl-tag');
+			tag.setAttribute('part', 'tag');
+			tag.setAttribute('size', 'medium');
+			tag.setAttribute('removable', '');
+			purposeTagsRef.current.set(option, tag);
+		}
+		const isInvalid = invalidPurposeIDs.has(option.value);
+		const exportParts = `base:${isInvalid ? 'invalid-tag__base' : 'tag__base'}, content:tag__content, remove-button:tag__remove-button, remove-button__base:tag__remove-button__base`;
+		if (tag.getAttribute('exportparts') !== exportParts) {
+			tag.setAttribute('exportparts', exportParts);
+		}
+		const label = option.getTextLabel();
+		if (tag.textContent !== label) {
+			tag.textContent = label;
+		}
+		return tag;
+	};
+
+	// Collect the profile properties holding a required consent that the
+	// transformation does not return.
+	const untransformedConsentPaths = [...consentPropertyPaths].filter(
+		([path]) => !isOutputPathTransformed(path, pipeline, pipelineType, selectedOutPaths),
+	);
+	const hasTransformationFunction = pipeline.transformation?.function != null;
 
 	const isEventTarget = pipelineType.target === 'Event';
 	const usersTerm = connection.connector.terms.users.toLowerCase();
@@ -121,10 +188,10 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 			annotated={true}
 		>
 			<div className='pipeline__consents-toggle'>
-				<SlSwitch checked={isEnabled} onSlChange={onToggle} disabled={purposes.length === 0} />
+				<SlSwitch checked={isEnabled} onSlChange={onToggle} disabled={!hasPurposes} />
 				<div
 					className={`pipeline__consents-logical-sentence${
-						purposes.length === 0 ? ' pipeline__consents-logical-sentence--disabled' : ''
+						hasPurposes ? '' : ' pipeline__consents-logical-sentence--disabled'
 					}`}
 					onClick={onSentenceClick}
 				>
@@ -151,15 +218,70 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 					clearable
 					placeholder={purposes.length === 0 ? 'No purposes defined yet' : 'Select consent purposes'}
 					value={selectedPurposeIDs}
+					getTag={getPurposeTag}
 					onSlChange={onChangePurposes}
-					disabled={!isEnabled || purposes.length === 0}
+					disabled={!isEnabled || !hasPurposes}
 				>
-					{purposes.map((p) => (
-						<SlOption key={p.id} value={p.id}>
+					{purposes.map((p) => {
+						// A purpose without the consent location read by the pipeline
+						// cannot be selected.
+						const location = getMissingConsentLocation(p, pipelineType, connection);
+						return (
+							<SlOption key={p.id} value={p.id} disabled={location != null}>
+								{p.name}
+								{location != null && (
+									<span slot='suffix' className='pipeline__consents-option-message'>
+										{`has no ${location} consent location`}
+									</span>
+								)}
+							</SlOption>
+						);
+					})}
+					{deletedConsentPurposes.map((p) => (
+						<SlOption key={p.id} value={p.id} disabled>
 							{p.name}
+							<span slot='suffix' className='pipeline__consents-option-message'>
+								no longer exists
+							</span>
 						</SlOption>
 					))}
 				</SlSelect>
+				{(purposeErrors.length > 0 || untransformedConsentPaths.length > 0) && (
+					<div className='pipeline__consents-errors'>
+						{purposeErrors.map(({ purpose, message, isDeleted }) => (
+							<div key={purpose.id} className='pipeline__consents-error'>
+								<SlIcon name='exclamation-circle' />
+								<span>
+									{message}
+									{!isDeleted && (
+										<>
+											{' '}
+											<a
+												href={`${UI_BASE_PATH}settings/privacy?purpose=${encodeURIComponent(purpose.id)}`}
+												target='_blank'
+												rel='noopener'
+											>
+												Configure the purpose
+											</a>
+										</>
+									)}
+								</span>
+							</div>
+						))}
+						{untransformedConsentPaths.map(([path, pathPurposes]) => (
+							<div key={path} className='pipeline__consents-error'>
+								<SlIcon name='exclamation-circle' />
+								<span>
+									{`Consent for ${pathPurposes.map((p) => `"${p.name}"`).join(', ')} is read from the profile property "${path}": ${
+										hasTransformationFunction
+											? 'select it as an output property of the transformation function in Full mode'
+											: 'map it in the transformation'
+									}`}
+								</span>
+							</div>
+						))}
+					</div>
+				)}
 			</div>
 		</Section>
 	);
