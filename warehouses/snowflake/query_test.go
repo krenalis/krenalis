@@ -5,6 +5,7 @@
 package snowflake
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/krenalis/krenalis/tools/types"
@@ -81,5 +82,50 @@ func TestQueryOrdering(t *testing.T) {
 		}
 
 	})
+
+}
+
+// TestCounts checks unconditional and conditional row counts.
+func TestCounts(t *testing.T) {
+
+	warehouse, db := newTestSnowflakeWarehouse(t)
+	mustExecSQL(t, db, `CREATE TABLE "COUNT_CONDITIONS" ("FLAG" BOOLEAN, "DATA" VARIANT)`)
+	mustExecSQL(t, db, `INSERT INTO "COUNT_CONDITIONS"
+		SELECT COLUMN1, PARSE_JSON(COLUMN2) FROM VALUES
+		(TRUE, '{"key":true,"a.b":true}'), (FALSE, '{"key":false,"a":{"b":true}}'), (NULL, '{}'),
+		(TRUE, '{"key":"true"}'), (NULL, '{"key":true}'), (NULL, NULL)`)
+
+	flag := warehouses.NewBaseExpr(warehouses.Column{Name: "flag", Type: types.Boolean()}, warehouses.OpIsTrue)
+	data := warehouses.NewBaseExpr(warehouses.Column{Name: "data", Type: types.JSON()}, warehouses.OpIsTrue)
+	data.Key = "key"
+	falseData := warehouses.NewBaseExpr(warehouses.Column{Name: "data", Type: types.JSON()}, warehouses.OpIsFalse)
+	falseData.Key = "key"
+	dottedKey := warehouses.NewBaseExpr(warehouses.Column{Name: "data", Type: types.JSON()}, warehouses.OpIsTrue)
+	dottedKey.Key = "a.b"
+	conditions := []warehouses.Expr{
+		nil,
+		flag,
+		data,
+		falseData,
+		dottedKey,
+		warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{flag, data}),
+	}
+
+	totalCounts, err := warehouse.Counts(t.Context(), "count_conditions", nil)
+	if err != nil {
+		t.Fatalf("expected counts, got %v", err)
+	}
+	if !slices.Equal(totalCounts, []int{6}) {
+		t.Fatalf("expected counts [6], got %v", totalCounts)
+	}
+
+	counts, err := warehouse.Counts(t.Context(), "count_conditions", conditions)
+	if err != nil {
+		t.Fatalf("expected counts, got %v", err)
+	}
+	want := []int{6, 2, 2, 1, 1, 1}
+	if !slices.Equal(counts, want) {
+		t.Fatalf("expected counts %v, got %v", want, counts)
+	}
 
 }

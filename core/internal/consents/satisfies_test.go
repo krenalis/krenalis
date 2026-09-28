@@ -26,7 +26,7 @@ var givenConsentsCases = []struct {
 		want:     true,
 	},
 	{
-		name:     "AND: all required consents are true",
+		name:     "all: all required consents are true",
 		required: []string{"marketing", "analytics"},
 		matchAll: true,
 		given: map[string]any{
@@ -37,7 +37,7 @@ var givenConsentsCases = []struct {
 		want: true,
 	},
 	{
-		name:     "AND: one required consent is false",
+		name:     "all: one required consent is false",
 		required: []string{"marketing", "analytics"},
 		matchAll: true,
 		given: map[string]any{
@@ -47,7 +47,7 @@ var givenConsentsCases = []struct {
 		want: false,
 	},
 	{
-		name:     "AND: one required consent is missing",
+		name:     "all: one required consent is missing",
 		required: []string{"marketing", "analytics"},
 		matchAll: true,
 		given: map[string]any{
@@ -56,7 +56,7 @@ var givenConsentsCases = []struct {
 		want: false,
 	},
 	{
-		name:     "AND: required consent is not a bool",
+		name:     "all: required consent is not a bool",
 		required: []string{"marketing"},
 		matchAll: true,
 		given: map[string]any{
@@ -65,14 +65,14 @@ var givenConsentsCases = []struct {
 		want: false,
 	},
 	{
-		name:     "AND: no consent is given",
+		name:     "all: no consent is given",
 		required: []string{"marketing"},
 		matchAll: true,
 		given:    map[string]any{},
 		want:     false,
 	},
 	{
-		name:     "OR: all required consents are true",
+		name:     "any: all required consents are true",
 		required: []string{"marketing", "analytics"},
 		matchAll: false,
 		given: map[string]any{
@@ -82,7 +82,7 @@ var givenConsentsCases = []struct {
 		want: true,
 	},
 	{
-		name:     "OR: one required consent is true",
+		name:     "any: one required consent is true",
 		required: []string{"marketing", "analytics"},
 		matchAll: false,
 		given: map[string]any{
@@ -92,7 +92,7 @@ var givenConsentsCases = []struct {
 		want: true,
 	},
 	{
-		name:     "OR: one required consent is missing and the other is true",
+		name:     "any: one required consent is missing and the other is true",
 		required: []string{"marketing", "analytics"},
 		matchAll: false,
 		given: map[string]any{
@@ -101,7 +101,7 @@ var givenConsentsCases = []struct {
 		want: true,
 	},
 	{
-		name:     "OR: every required consent is missing",
+		name:     "any: every required consent is missing",
 		required: []string{"marketing", "analytics"},
 		matchAll: false,
 		given: map[string]any{
@@ -110,7 +110,7 @@ var givenConsentsCases = []struct {
 		want: false,
 	},
 	{
-		name:     "OR: no required consent is true",
+		name:     "any: no required consent is true",
 		required: []string{"marketing", "analytics"},
 		matchAll: false,
 		given: map[string]any{
@@ -120,7 +120,7 @@ var givenConsentsCases = []struct {
 		want: false,
 	},
 	{
-		name:     "OR: no consent is given",
+		name:     "any: no consent is given",
 		required: []string{"marketing"},
 		matchAll: false,
 		given:    map[string]any{},
@@ -128,7 +128,80 @@ var givenConsentsCases = []struct {
 	},
 }
 
+// BenchmarkSatisfiesEvent measures event consent checks.
+func BenchmarkSatisfiesEvent(b *testing.B) {
+	purposes := []*state.ConsentPurpose{
+		purposeWithEventKeys("marketing", "mkt"),
+		purposeWithEventKeys("analytics"),
+	}
+	event := map[string]any{
+		"context": map[string]any{
+			"consents": map[string]any{"mkt": true, "analytics": json.Value("true")},
+		},
+	}
+	tests := []struct {
+		name     string
+		purposes []*state.ConsentPurpose
+		matchAll bool
+	}{
+		{name: "all", purposes: purposes, matchAll: true},
+		{name: "any", purposes: purposes},
+		{
+			name: "fallback-location",
+			purposes: []*state.ConsentPurpose{
+				purposeWithEventKeys("marketing", "missing", "missing2", "mkt"),
+				purposeWithEventKeys("analytics"),
+			},
+			matchAll: true,
+		},
+	}
+	for _, test := range tests {
+		b.Run(test.name, func(b *testing.B) {
+			var got bool
+			b.ReportAllocs()
+			for b.Loop() {
+				got = SatisfiesEvent(test.purposes, test.matchAll, event)
+			}
+			if !got {
+				b.Fatal("expected consent, got false")
+			}
+		})
+	}
+}
+
+// BenchmarkSatisfiesProfile measures profile consent checks.
+func BenchmarkSatisfiesProfile(b *testing.B) {
+	purposes := []*state.ConsentPurpose{
+		purposeWithLocations("marketing", "", "privacy.marketing"),
+		purposeWithLocations("analytics", "", "consents", "analytics"),
+	}
+	profile := map[string]any{
+		"privacy":  map[string]any{"marketing": true},
+		"consents": json.Value(`{"analytics":true}`),
+	}
+	tests := []struct {
+		name     string
+		matchAll bool
+	}{
+		{name: "all", matchAll: true},
+		{name: "any"},
+	}
+	for _, test := range tests {
+		b.Run(test.name, func(b *testing.B) {
+			var got bool
+			b.ReportAllocs()
+			for b.Loop() {
+				got = SatisfiesProfile(purposes, test.matchAll, profile)
+			}
+			if !got {
+				b.Fatal("expected consent, got false")
+			}
+		})
+	}
+}
+
 func TestSatisfiesEvent(t *testing.T) {
+
 	for _, c := range givenConsentsCases {
 		t.Run(c.name, func(t *testing.T) {
 			event := map[string]any{
@@ -138,7 +211,7 @@ func TestSatisfiesEvent(t *testing.T) {
 			}
 			got := SatisfiesEvent(requiredPurposes(c.required), c.matchAll, event)
 			if got != c.want {
-				t.Fatalf("got %v, want %v", got, c.want)
+				t.Fatalf("expected %v, got %v", c.want, got)
 			}
 		})
 	}
@@ -151,14 +224,14 @@ func TestSatisfiesEvent(t *testing.T) {
 		want     bool
 	}{
 		{
-			name:     "AND: missing context",
+			name:     "all: missing context",
 			required: []string{"marketing"},
 			matchAll: true,
 			event:    map[string]any{},
 			want:     false,
 		},
 		{
-			name:     "AND: missing consents",
+			name:     "all: missing consents",
 			required: []string{"marketing"},
 			matchAll: true,
 			event: map[string]any{
@@ -167,7 +240,7 @@ func TestSatisfiesEvent(t *testing.T) {
 			want: false,
 		},
 		{
-			name:     "OR: missing context",
+			name:     "any: missing context",
 			required: []string{"marketing"},
 			matchAll: false,
 			event:    map[string]any{},
@@ -185,19 +258,21 @@ func TestSatisfiesEvent(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			got := SatisfiesEvent(requiredPurposes(c.required), c.matchAll, c.event)
 			if got != c.want {
-				t.Fatalf("got %v, want %v", got, c.want)
+				t.Fatalf("expected %v, got %v", c.want, got)
 			}
 		})
 	}
+
 }
 
 func TestSatisfiesProfile(t *testing.T) {
+
 	for _, c := range givenConsentsCases {
 		t.Run(c.name, func(t *testing.T) {
 			profile := map[string]any{"consents": c.given}
 			got := SatisfiesProfile(requiredPurposes(c.required), c.matchAll, profile)
 			if got != c.want {
-				t.Fatalf("got %v, want %v", got, c.want)
+				t.Fatalf("expected %v, got %v", c.want, got)
 			}
 		})
 	}
@@ -210,14 +285,14 @@ func TestSatisfiesProfile(t *testing.T) {
 		want     bool
 	}{
 		{
-			name:     "AND: missing consents",
+			name:     "all: missing consents",
 			required: []string{"marketing"},
 			matchAll: true,
 			profile:  map[string]any{},
 			want:     false,
 		},
 		{
-			name:     "AND: consents is not an object",
+			name:     "all: consents is not an object",
 			required: []string{"marketing"},
 			matchAll: true,
 			profile: map[string]any{
@@ -226,7 +301,7 @@ func TestSatisfiesProfile(t *testing.T) {
 			want: false,
 		},
 		{
-			name:     "OR: missing consents",
+			name:     "any: missing consents",
 			required: []string{"marketing"},
 			matchAll: false,
 			profile:  map[string]any{},
@@ -244,10 +319,11 @@ func TestSatisfiesProfile(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			got := SatisfiesProfile(requiredPurposes(c.required), c.matchAll, c.profile)
 			if got != c.want {
-				t.Fatalf("got %v, want %v", got, c.want)
+				t.Fatalf("expected %v, got %v", c.want, got)
 			}
 		})
 	}
+
 }
 
 // TestSatisfiesProfileJSONKeys checks explicit JSON keys without implicit JSON
@@ -262,13 +338,13 @@ func TestSatisfiesProfileJSONKeys(t *testing.T) {
 		want     bool
 	}{
 		{
-			name:  "literal dot",
+			name:  "literal dot in JSON key",
 			key:   "a.b",
 			value: json.Value(`{"a.b":true,"a":{"b":false}}`),
 			want:  true,
 		},
 		{
-			name:  "spaces",
+			name:  "spaces in JSON key",
 			key:   " purpose code ",
 			value: json.Value(`{" purpose code ":true}`),
 			want:  true,
@@ -280,20 +356,20 @@ func TestSatisfiesProfileJSONKeys(t *testing.T) {
 			want:  true,
 		},
 		{
-			name:     "dotted path",
+			name:     "property path does not traverse JSON",
 			property: "consents.marketing",
 			value:    json.Value(`{"marketing":true}`),
 			want:     false,
 		},
 		{
-			name:     "JSON prefix",
+			name:     "property path does not traverse into JSON",
 			property: "consents.nested",
 			key:      "marketing",
 			value:    json.Value(`{"nested":{"marketing":true}}`),
 			want:     false,
 		},
 		{
-			name:  "bare JSON Boolean",
+			name:  "bare JSON boolean is not accepted",
 			value: json.Value("true"),
 			want:  false,
 		},
@@ -303,56 +379,65 @@ func TestSatisfiesProfileJSONKeys(t *testing.T) {
 			want:  false,
 		},
 		{
-			name:  "missing",
+			name:  "missing JSON key",
 			key:   "marketing",
 			value: json.Value(`{}`),
 			want:  false,
 		},
 		{
-			name:  "false",
+			name:  "false JSON value",
 			key:   "marketing",
 			value: json.Value(`{"marketing":false}`),
 			want:  false,
 		},
 		{
-			name:  "null",
+			name:  "null JSON value",
 			key:   "marketing",
 			value: json.Value(`{"marketing":null}`),
 			want:  false,
 		},
 		{
-			name:  "string",
+			name:  "string JSON value",
 			key:   "marketing",
 			value: json.Value(`{"marketing":"true"}`),
 			want:  false,
 		},
 		{
-			name:  "number",
+			name:  "number JSON value",
 			key:   "marketing",
 			value: json.Value(`{"marketing":1}`),
 			want:  false,
 		},
 		{
-			name:  "array",
+			name:  "JSON array",
 			key:   "0",
 			value: json.Value(`[true]`),
 			want:  false,
 		},
 		{
-			name:  "schema object instead of JSON",
+			name:  "map instead of JSON value",
 			key:   "marketing",
 			value: map[string]any{"marketing": true},
 			want:  false,
 		},
 		{
-			name: "literal backslash escape", key: `\u0061`,
-			value: json.Value(`{"\\u0061":true,"a":false}`), want: true,
+			name:  "literal backslash escape in key",
+			key:   `\u0061`,
+			value: json.Value(`{"\\u0061":true,"a":false}`),
+			want:  true,
 		},
 		{
-			name: "control characters in key", key: "a\n",
-			value: json.Value(`{"a\n":true}`), want: true,
+			name:  "control characters in key",
+			key:   "a\n",
+			value: json.Value(`{"a\n":true}`),
+			want:  true,
 		},
-		{name: "Boolean property with a JSON key", key: "marketing", value: true, want: false},
+		{
+			name:  "bool property does not support JSON key",
+			key:   "marketing",
+			value: true,
+			want:  false,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -363,15 +448,15 @@ func TestSatisfiesProfileJSONKeys(t *testing.T) {
 			purpose := purposeWithLocations("marketing", "", property, test.key)
 			got := SatisfiesProfile([]*state.ConsentPurpose{purpose}, true, map[string]any{"consents": test.value})
 			if got != test.want {
-				t.Fatalf("got %v, want %v", got, test.want)
+				t.Fatalf("expected %v, got %v", test.want, got)
 			}
 		})
 	}
 
 }
 
-// TestSatisfiesWithConfiguredProfilePaths checks consent values at configured profile locations.
-func TestSatisfiesWithConfiguredProfilePaths(t *testing.T) {
+// TestSatisfiesProfileLocations checks consent values at profile locations.
+func TestSatisfiesProfileLocations(t *testing.T) {
 	cases := []struct {
 		name       string
 		purposes   []*state.ConsentPurpose
@@ -380,7 +465,7 @@ func TestSatisfiesWithConfiguredProfilePaths(t *testing.T) {
 		want       bool
 	}{
 		{
-			name:     "nested profile path",
+			name:     "nested profile property grants consent",
 			purposes: []*state.ConsentPurpose{purposeWithLocations("marketing", "", "privacy.marketing")},
 			matchAll: true,
 			attributes: map[string]any{
@@ -389,7 +474,7 @@ func TestSatisfiesWithConfiguredProfilePaths(t *testing.T) {
 			want: true,
 		},
 		{
-			name:     "the profile path holds a value that is not a bool",
+			name:     "profile property is not a bool",
 			purposes: []*state.ConsentPurpose{purposeWithLocations("marketing", "", "privacy.marketing")},
 			matchAll: true,
 			attributes: map[string]any{
@@ -398,7 +483,7 @@ func TestSatisfiesWithConfiguredProfilePaths(t *testing.T) {
 			want: false,
 		},
 		{
-			name:     "the profile path holds an object",
+			name:     "profile property is an object",
 			purposes: []*state.ConsentPurpose{purposeWithLocations("marketing", "", "privacy")},
 			matchAll: true,
 			attributes: map[string]any{
@@ -407,7 +492,7 @@ func TestSatisfiesWithConfiguredProfilePaths(t *testing.T) {
 			want: false,
 		},
 		{
-			name:     "profile path inside a JSON property",
+			name:     "JSON key grants consent",
 			purposes: []*state.ConsentPurpose{purposeWithLocations("marketing", "", "privacy", "marketing")},
 			matchAll: true,
 			attributes: map[string]any{
@@ -416,7 +501,7 @@ func TestSatisfiesWithConfiguredProfilePaths(t *testing.T) {
 			want: true,
 		},
 		{
-			name:     "the profile path holds a JSON property that is a bool",
+			name:     "bare JSON boolean is not accepted",
 			purposes: []*state.ConsentPurpose{purposeWithLocations("marketing", "", "privacy")},
 			matchAll: true,
 			attributes: map[string]any{
@@ -425,7 +510,7 @@ func TestSatisfiesWithConfiguredProfilePaths(t *testing.T) {
 			want: false,
 		},
 		{
-			name:     "the profile path holds a JSON property nested in an object that is a bool",
+			name:     "nested bare JSON boolean is not accepted",
 			purposes: []*state.ConsentPurpose{purposeWithLocations("marketing", "", "privacy.marketing")},
 			matchAll: true,
 			attributes: map[string]any{
@@ -434,7 +519,7 @@ func TestSatisfiesWithConfiguredProfilePaths(t *testing.T) {
 			want: false,
 		},
 		{
-			name:     "the profile path inside a JSON property holds a value that is not a bool",
+			name:     "JSON key value is not a bool",
 			purposes: []*state.ConsentPurpose{purposeWithLocations("marketing", "", "privacy", "marketing")},
 			matchAll: true,
 			attributes: map[string]any{
@@ -443,14 +528,14 @@ func TestSatisfiesWithConfiguredProfilePaths(t *testing.T) {
 			want: false,
 		},
 		{
-			name:       "the profile path does not exist",
+			name:       "profile property does not exist",
 			purposes:   []*state.ConsentPurpose{purposeWithLocations("marketing", "", "privacy.marketing")},
 			matchAll:   true,
 			attributes: map[string]any{},
 			want:       false,
 		},
 		{
-			name: "AND: every purpose is read from its own profile path",
+			name: "all: each purpose is granted at its configured profile location",
 			purposes: []*state.ConsentPurpose{
 				purposeWithLocations("marketing", "", "privacy.marketing"),
 				purposeWithLocations("analytics", "", "analyticsConsent"),
@@ -463,15 +548,15 @@ func TestSatisfiesWithConfiguredProfilePaths(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "OR: only the purpose read from the nested profile path is granted",
+			name: "any: a later configured profile location grants consent",
 			purposes: []*state.ConsentPurpose{
 				purposeWithLocations("marketing", "", "privacy.marketing"),
 				purposeWithLocations("analytics", "", "analyticsConsent"),
 			},
 			matchAll: false,
 			attributes: map[string]any{
-				"privacy":          map[string]any{"marketing": true},
-				"analyticsConsent": false,
+				"privacy":          map[string]any{"marketing": false},
+				"analyticsConsent": true,
 			},
 			want: true,
 		},
@@ -480,162 +565,173 @@ func TestSatisfiesWithConfiguredProfilePaths(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			got := SatisfiesProfile(c.purposes, c.matchAll, c.attributes)
 			if got != c.want {
-				t.Fatalf("got %v, want %v", got, c.want)
+				t.Fatalf("expected %v, got %v", c.want, got)
 			}
 		})
 	}
 }
 
-func TestSatisfiesWithUnknownPath(t *testing.T) {
+func TestSatisfiesEventWithoutConfiguredLocation(t *testing.T) {
 
 	cases := []struct {
-		name       string
-		purposes   []*state.ConsentPurpose
-		matchAll   bool
-		attributes map[string]any
-		event      bool
-		want       bool
+		name     string
+		purposes []*state.ConsentPurpose
+		matchAll bool
+		event    map[string]any
+		want     bool
 	}{
 		{
-			name:       "AND: unknown event path",
-			purposes:   []*state.ConsentPurpose{purposeWithLocations("marketing", "", "consents.marketing")},
-			matchAll:   true,
-			attributes: map[string]any{"context": map[string]any{"consents": map[string]any{"marketing": true}}},
-			event:      true,
-			want:       false,
+			name:     "all: consent value exists without configured event location",
+			purposes: []*state.ConsentPurpose{purposeWithLocations("marketing", "", "consents.marketing")},
+			matchAll: true,
+			event:    map[string]any{"context": map[string]any{"consents": map[string]any{"marketing": true}}},
+			want:     false,
 		},
 		{
-			name:       "OR: unknown event path",
-			purposes:   []*state.ConsentPurpose{purposeWithLocations("marketing", "", "consents.marketing")},
-			attributes: map[string]any{"context": map[string]any{"consents": map[string]any{"marketing": true}}},
-			event:      true,
-			want:       false,
+			name:     "any: consent value exists without configured event location",
+			purposes: []*state.ConsentPurpose{purposeWithLocations("marketing", "", "consents.marketing")},
+			event:    map[string]any{"context": map[string]any{"consents": map[string]any{"marketing": true}}},
+			want:     false,
 		},
 		{
-			name: "OR: unknown event path and another purpose is granted",
+			name: "any: another purpose has a configured event location",
 			purposes: []*state.ConsentPurpose{
 				purposeWithLocations("marketing", "", "consents.marketing"),
 				purposeWithLocations("analytics", "analytics", "consents.analytics"),
 			},
-			attributes: map[string]any{"context": map[string]any{"consents": map[string]any{"analytics": true}}},
-			event:      true,
-			want:       true,
-		},
-		{
-			name:       "AND: unknown profile path",
-			purposes:   []*state.ConsentPurpose{purposeWithLocations("marketing", "marketing", "")},
-			matchAll:   true,
-			attributes: map[string]any{"consents": map[string]any{"marketing": true}},
-			want:       false,
-		},
-		{
-			name:       "OR: unknown profile path",
-			purposes:   []*state.ConsentPurpose{purposeWithLocations("marketing", "marketing", "")},
-			attributes: map[string]any{"consents": map[string]any{"marketing": true}},
-			want:       false,
-		},
-		{
-			name: "OR: unknown profile path and another purpose is granted",
-			purposes: []*state.ConsentPurpose{
-				purposeWithLocations("marketing", "marketing", ""),
-				purposeWithLocations("analytics", "analytics", "consents.analytics"),
-			},
-			attributes: map[string]any{"consents": map[string]any{"analytics": true}},
-			want:       true,
+			event: map[string]any{"context": map[string]any{"consents": map[string]any{"analytics": true}}},
+			want:  true,
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			var got bool
-			if c.event {
-				got = SatisfiesEvent(c.purposes, c.matchAll, c.attributes)
-			} else {
-				got = SatisfiesProfile(c.purposes, c.matchAll, c.attributes)
-			}
+			got := SatisfiesEvent(c.purposes, c.matchAll, c.event)
 			if got != c.want {
-				t.Fatalf("got %v, want %v", got, c.want)
+				t.Fatalf("expected %v, got %v", c.want, got)
 			}
 		})
 	}
 
 }
 
-// TestSatisfiesWithMultipleEventPaths checks event path precedence and AND/OR
-// combinations of consent purposes.
-func TestSatisfiesWithMultipleEventPaths(t *testing.T) {
+func TestSatisfiesProfileWithoutConfiguredLocation(t *testing.T) {
+
+	cases := []struct {
+		name     string
+		purposes []*state.ConsentPurpose
+		matchAll bool
+		profile  map[string]any
+		want     bool
+	}{
+		{
+			name:     "all: consent value exists without configured profile location",
+			purposes: []*state.ConsentPurpose{purposeWithLocations("marketing", "marketing", "")},
+			matchAll: true,
+			profile:  map[string]any{"consents": map[string]any{"marketing": true}},
+			want:     false,
+		},
+		{
+			name:     "any: consent value exists without configured profile location",
+			purposes: []*state.ConsentPurpose{purposeWithLocations("marketing", "marketing", "")},
+			profile:  map[string]any{"consents": map[string]any{"marketing": true}},
+			want:     false,
+		},
+		{
+			name: "any: another purpose has a configured profile location",
+			purposes: []*state.ConsentPurpose{
+				purposeWithLocations("marketing", "marketing", ""),
+				purposeWithLocations("analytics", "analytics", "consents.analytics"),
+			},
+			profile: map[string]any{"consents": map[string]any{"analytics": true}},
+			want:    true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := SatisfiesProfile(c.purposes, c.matchAll, c.profile)
+			if got != c.want {
+				t.Fatalf("expected %v, got %v", c.want, got)
+			}
+		})
+	}
+
+}
+
+// TestSatisfiesEventLocations checks event location precedence and all/any
+// consent matching.
+func TestSatisfiesEventLocations(t *testing.T) {
 	cases := []struct {
 		name     string
 		purposes []*state.ConsentPurpose
 		matchAll bool
 		given    map[string]any
-		profile  bool
 		want     bool
 	}{
 		{
-			name:     "the consent is given with the first path",
+			name:     "consent is granted at the first location",
 			purposes: []*state.ConsentPurpose{purposeWithEventKeys("marketing", "mkt", "#CFK567")},
 			matchAll: true,
 			given:    map[string]any{"marketing": true},
 			want:     true,
 		},
 		{
-			name:     "the consent is given with another path",
+			name:     "consent is granted at a fallback location",
 			purposes: []*state.ConsentPurpose{purposeWithEventKeys("marketing", "mkt", "#CFK567")},
 			matchAll: true,
 			given:    map[string]any{"mkt": true},
 			want:     true,
 		},
 		{
-			name:     "the consent is given with a special event name",
+			name:     "location with special characters is supported",
 			purposes: []*state.ConsentPurpose{purposeWithEventKeys("marketing", "mkt", "#CFK567")},
 			matchAll: true,
 			given:    map[string]any{"#CFK567": true},
 			want:     true,
 		},
 		{
-			name:     "an event name containing a period is read as one key",
+			name:     "location containing a period is read as one key",
 			purposes: []*state.ConsentPurpose{purposeWithEventKeys("marketing", "vendor.marketing")},
 			matchAll: true,
 			given:    map[string]any{"vendor.marketing": true},
 			want:     true,
 		},
 		{
-			name:     "the first path denies the consent and another grants it",
+			name:     "first present location denies consent",
 			purposes: []*state.ConsentPurpose{purposeWithEventKeys("marketing", "mkt")},
 			matchAll: true,
 			given:    map[string]any{"marketing": false, "mkt": true},
 			want:     false,
 		},
 		{
-			name:     "the first present path is null and another grants consent",
+			name:     "first present location is null",
 			purposes: []*state.ConsentPurpose{purposeWithEventKeys("marketing", "mkt")},
 			matchAll: true,
 			given:    map[string]any{"marketing": nil, "mkt": true},
 			want:     false,
 		},
 		{
-			name:     "the first present path is not a bool and another grants consent",
+			name:     "first present location is not a bool",
 			purposes: []*state.ConsentPurpose{purposeWithEventKeys("marketing", "mkt")},
 			matchAll: true,
 			given:    map[string]any{"marketing": "true", "mkt": true},
 			want:     false,
 		},
 		{
-			name:     "another path denies the consent and the first grants it",
+			name:     "first present location grants consent",
 			purposes: []*state.ConsentPurpose{purposeWithEventKeys("marketing", "mkt")},
 			matchAll: true,
 			given:    map[string]any{"marketing": true, "mkt": false},
 			want:     true,
 		},
 		{
-			name:     "none of the paths grant the consent",
+			name:     "fallback location denies consent",
 			purposes: []*state.ConsentPurpose{purposeWithEventKeys("marketing", "mkt", "#CFK567")},
 			matchAll: true,
 			given:    map[string]any{"mkt": false, "other": true},
 			want:     false,
 		},
 		{
-			name: "AND: each purpose is granted with one of its paths",
+			name: "all: each purpose is granted at one of its locations",
 			purposes: []*state.ConsentPurpose{
 				purposeWithEventKeys("marketing", "mkt"),
 				purposeWithEventKeys("analytics", "#CFK567"),
@@ -645,7 +741,7 @@ func TestSatisfiesWithMultipleEventPaths(t *testing.T) {
 			want:     true,
 		},
 		{
-			name: "OR: only the purpose granted with another path satisfies the consents",
+			name: "any: one purpose is granted at a fallback location",
 			purposes: []*state.ConsentPurpose{
 				purposeWithEventKeys("marketing", "mkt"),
 				purposeWithEventKeys("analytics", "#CFK567"),
@@ -654,49 +750,45 @@ func TestSatisfiesWithMultipleEventPaths(t *testing.T) {
 			given:    map[string]any{"mkt": true},
 			want:     true,
 		},
-		{
-			name:     "additional event paths are ignored on a profile",
-			purposes: []*state.ConsentPurpose{purposeWithEventKeys("marketing", "mkt")},
-			matchAll: true,
-			given:    map[string]any{"mkt": true},
-			profile:  true,
-			want:     false,
-		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			var got bool
-			if c.profile {
-				got = SatisfiesProfile(c.purposes, c.matchAll, map[string]any{"consents": c.given})
-			} else {
-				event := map[string]any{"context": map[string]any{"consents": c.given}}
-				got = SatisfiesEvent(c.purposes, c.matchAll, event)
-			}
+			event := map[string]any{"context": map[string]any{"consents": c.given}}
+			got := SatisfiesEvent(c.purposes, c.matchAll, event)
 			if got != c.want {
-				t.Fatalf("got %v, want %v", got, c.want)
+				t.Fatalf("expected %v, got %v", c.want, got)
 			}
 		})
 	}
 }
 
-// purposeWithEventKeys returns a consent purpose whose event paths lead to the
+func TestSatisfiesProfileIgnoresEventLocations(t *testing.T) {
+	if got := SatisfiesProfile(
+		[]*state.ConsentPurpose{purposeWithEventKeys("marketing", "mkt")},
+		true,
+		map[string]any{"consents": map[string]any{"mkt": true}},
+	); got {
+		t.Fatalf("expected false, got %v", got)
+	}
+}
+
+// purposeWithEventKeys returns a consent purpose with event locations for the
 // given keys under context.consents.
-func purposeWithEventKeys(key string, otherKeys ...string) *state.ConsentPurpose {
+func purposeWithEventKeys(eventKey string, otherKeys ...string) *state.ConsentPurpose {
 	eventLocations := make([]state.EventConsentLocation, len(otherKeys)+1)
-	eventLocations[0] = state.EventConsentLocation{PurposeCode: key}
+	eventLocations[0] = state.EventConsentLocation{PurposeCode: eventKey}
 	for i, code := range otherKeys {
 		eventLocations[i+1] = state.EventConsentLocation{PurposeCode: code}
 	}
-	return state.NewConsentPurpose(state.ConsentPurpose{
-		ID:                     key,
-		Name:                   key,
-		EventConsentLocations:  eventLocations,
-		ProfileConsentLocation: &state.ProfileConsentLocation{Property: "consents." + key},
-	})
+	return &state.ConsentPurpose{
+		ID:                    eventKey,
+		Name:                  eventKey,
+		EventConsentLocations: eventLocations,
+	}
 }
 
-// requiredPurposes returns the consent purposes with the given identifiers, each one
-// with the default property paths.
+// requiredPurposes returns consent purposes for the given IDs with their
+// default event and profile locations.
 func requiredPurposes(ids []string) []*state.ConsentPurpose {
 	purposes := make([]*state.ConsentPurpose, len(ids))
 	for i, id := range ids {
@@ -705,18 +797,18 @@ func requiredPurposes(ids []string) []*state.ConsentPurpose {
 	return purposes
 }
 
-// purposeWithLocations returns a purpose with the given event consent name and
-// profile property and optional JSON key.
-func purposeWithLocations(id, eventName, profileProperty string, jsonKeys ...string) *state.ConsentPurpose {
+// purposeWithLocations returns a purpose with the given event consent key,
+// profile property, and optional JSON key.
+func purposeWithLocations(id, eventKey, profileProperty string, jsonKey ...string) *state.ConsentPurpose {
 	purpose := state.ConsentPurpose{ID: id, Name: id}
-	if eventName != "" {
-		purpose.EventConsentLocations = []state.EventConsentLocation{{PurposeCode: eventName}}
+	if eventKey != "" {
+		purpose.EventConsentLocations = []state.EventConsentLocation{{PurposeCode: eventKey}}
 	}
 	if profileProperty != "" {
 		purpose.ProfileConsentLocation = &state.ProfileConsentLocation{Property: profileProperty}
-		if len(jsonKeys) > 0 {
-			purpose.ProfileConsentLocation.JSONKey = jsonKeys[0]
+		if len(jsonKey) > 0 {
+			purpose.ProfileConsentLocation.JSONKey = jsonKey[0]
 		}
 	}
-	return state.NewConsentPurpose(purpose)
+	return &purpose
 }

@@ -115,6 +115,30 @@ func Test_renderExpr(t *testing.T) {
 			query: `NOT "active"`,
 		},
 		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.JSON()}, warehouses.OpIsTrue),
+			query: `"properties" IS NOT DISTINCT FROM 'true'::jsonb`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.JSON()}, warehouses.OpIsFalse),
+			query: `"properties" IS NOT DISTINCT FROM 'false'::jsonb`,
+		},
+		{
+			expr: &warehouses.BaseExpr{
+				Column:   warehouses.Column{Name: "properties", Type: types.JSON()},
+				Key:      "enabled",
+				Operator: warehouses.OpIsTrue,
+			},
+			query: `("properties" -> 'enabled') IS NOT DISTINCT FROM 'true'::jsonb`,
+		},
+		{
+			expr: &warehouses.BaseExpr{
+				Column:   warehouses.Column{Name: "properties", Type: types.JSON()},
+				Key:      "archived",
+				Operator: warehouses.OpIsFalse,
+			},
+			query: `("properties" -> 'archived') IS NOT DISTINCT FROM 'false'::jsonb`,
+		},
+		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpIsNull),
 			query: `"id" IS NULL`,
 		},

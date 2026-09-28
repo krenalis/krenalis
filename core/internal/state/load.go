@@ -450,7 +450,7 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				if property != "" {
 					cp.ProfileConsentLocation = &ProfileConsentLocation{Property: property, JSONKey: jsonKey}
 				}
-				state.workspaces[workspaceID].consentPurposes[cp.ID] = NewConsentPurpose(cp)
+				state.workspaces[workspaceID].consentPurposes[cp.ID] = &cp
 			}
 			return nil
 		})

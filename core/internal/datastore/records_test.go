@@ -90,6 +90,8 @@ func Test_Records(t *testing.T) {
 			{Name: "other_id", Type: types.String()},
 			{Name: "name", Type: types.String()},
 			{Name: "age", Type: types.Int(8)},
+			{Name: "marketing", Type: types.Boolean()},
+			{Name: "consents", Type: types.JSON()},
 		},
 		Keys: []string{"_kpid"},
 	}
@@ -112,13 +114,13 @@ func Test_Records(t *testing.T) {
 	now := time.Now().UTC()
 
 	initUsers := [][]any{
-		{"e5a5c059-bc78-4c9c-b4d1-e9fb187562b1", 0, 1, now, "1", "1", "Jake Thompson", 43},
-		{"943a0a39-fd0b-4f7b-a113-59046fb8a511", 0, 1, now, "2", "2", "Emily Davis", 58},
-		{"2a3654ca-a387-49c3-8eb8-8420ab8a7532", 0, 1, now, "3", "3", "Michael Carter", 31},
-		{"243abf79-cbc3-4c6e-8739-e1406f2f6b51", 0, 1, now, "2", "2", "Sophia Harris", 19},
-		{"445ab9fa-5689-4870-bc39-2d01c2a71b00", 0, 1, now, "6", "6", "Emily Johnson", 25},
-		{"ce8f366d-7144-4ec0-96e7-d0dc35597c02", 0, 1, now, "7", "7", "James Williams", 77},
-		{"a415976f-279e-4653-ab6a-64ea7f74e174", 0, 1, now, "7", "7", "Daniel Brown", 12},
+		{"e5a5c059-bc78-4c9c-b4d1-e9fb187562b1", 0, 1, now, "1", "1", "Jake Thompson", 43, true, json.Value(`{"ads":true}`)},
+		{"943a0a39-fd0b-4f7b-a113-59046fb8a511", 0, 1, now, "2", "2", "Emily Davis", 58, nil, json.Value(`{"ads":true}`)},
+		{"2a3654ca-a387-49c3-8eb8-8420ab8a7532", 0, 1, now, "3", "3", "Michael Carter", 31, true, json.Value(`{"ads":false}`)},
+		{"243abf79-cbc3-4c6e-8739-e1406f2f6b51", 0, 1, now, "2", "2", "Sophia Harris", 19, false, json.Value(`{"ads":"true"}`)},
+		{"445ab9fa-5689-4870-bc39-2d01c2a71b00", 0, 1, now, "6", "6", "Emily Johnson", 25, true, json.Value(`{}`)},
+		{"ce8f366d-7144-4ec0-96e7-d0dc35597c02", 0, 1, now, "7", "7", "James Williams", 77, nil, nil},
+		{"a415976f-279e-4653-ab6a-64ea7f74e174", 0, 1, now, "7", "7", "Daniel Brown", 12, true, json.Value(`{"ads":true}`)},
 	}
 	err = dw.Merge(ctx, profilesTable, initUsers, nil)
 	if err != nil {
@@ -222,11 +224,13 @@ func Test_Records(t *testing.T) {
 	}
 
 	profileColumnByProperty := map[string]warehouses.Column{
-		"_kpid":    {Name: "_kpid", Type: types.UUID()},
-		"id":       {Name: "id", Type: types.String()},
-		"other.id": {Name: "other_id", Type: types.String()},
-		"name":     {Name: "name", Type: types.String()},
-		"age":      {Name: "age", Type: types.Int(8)},
+		"_kpid":     {Name: "_kpid", Type: types.UUID()},
+		"id":        {Name: "id", Type: types.String()},
+		"other.id":  {Name: "other_id", Type: types.String()},
+		"name":      {Name: "name", Type: types.String()},
+		"age":       {Name: "age", Type: types.Int(8)},
+		"marketing": {Name: "marketing", Type: types.Boolean()},
+		"consents":  {Name: "consents", Type: types.JSON()},
 	}
 
 	for _, test := range tests {
@@ -248,7 +252,7 @@ func Test_Records(t *testing.T) {
 					UpdateOnDuplicates: test.updateOnDuplicates,
 				}
 
-				r, err := records(ctx, dw, query, "_kpid", profileColumnByProperty, true, matching)
+				r, err := records(ctx, dw, query, ConsentCondition{}, "_kpid", profileColumnByProperty, true, matching)
 				if err != nil {
 					t.Fatalf("cannot read records: %s", err)
 				}
@@ -294,5 +298,74 @@ func Test_Records(t *testing.T) {
 		})
 
 	}
+
+	t.Run("filters and consents", func(t *testing.T) {
+
+		filter := &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
+			&state.WhereCondition{Property: []string{"age"}, Operator: state.OpIsGreaterThan, Values: []any{30}},
+		}}
+		marketing := state.ProfileConsentLocation{Property: "marketing"}
+		ads := state.ProfileConsentLocation{Property: "consents", JSONKey: "ads"}
+		jsonConsent := ConsentCondition{Operator: state.OpAnd, Locations: []state.ProfileConsentLocation{ads}}
+		allConsents := ConsentCondition{Operator: state.OpAnd, Locations: []state.ProfileConsentLocation{marketing, ads}}
+		anyConsent := ConsentCondition{Operator: state.OpOr, Locations: []state.ProfileConsentLocation{marketing, ads}}
+		tests := []struct {
+			name                    string
+			where                   *state.Where
+			condition               ConsentCondition
+			matching                *Matching
+			limit                   int
+			expectedFilterRejected  int
+			expectedConsentRejected int
+			expectedRecords         int
+		}{
+			{"JSON consent", filter, jsonConsent, nil, 0, 3, 2, 2},
+			{"all consents", filter, allConsents, nil, 0, 3, 3, 1},
+			{"any consent", filter, anyConsent, nil, 0, 3, 1, 3},
+			{"matching returns none", filter, jsonConsent,
+				&Matching{Pipeline: pipelineID, InProperty: "id", ExportMode: state.CreateOnly}, 0, 3, 2, 0},
+			{"limited results", filter, jsonConsent, nil, 1, 3, 2, 1},
+			{"empty OR consent accepts all", filter, ConsentCondition{Operator: state.OpOr}, nil, 0, 3, 0, 4},
+			{"no conditions", nil, ConsentCondition{Operator: state.OpOr}, nil, 0, 0, 0, 7},
+			{"JSON consent without filter", nil, jsonConsent, nil, 0, 0, 4, 3},
+		}
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+
+				query := Query{table: "profiles", Properties: []string{"id"}, Where: test.where, Limit: test.limit}
+				r, err := records(t.Context(), dw, query, test.condition, "_kpid", profileColumnByProperty, true, test.matching)
+				if err != nil {
+					t.Fatalf("expected records, got %v", err)
+				}
+				defer r.Close()
+				if r.FilterRejectedCount != test.expectedFilterRejected {
+					t.Errorf("expected %d filter rejections, got %d", test.expectedFilterRejected, r.FilterRejectedCount)
+				}
+				if r.ConsentRejectedCount != test.expectedConsentRejected {
+					t.Errorf("expected %d consent rejections, got %d", test.expectedConsentRejected, r.ConsentRejectedCount)
+				}
+
+				var count int
+				for record := range r.All(t.Context()) {
+					if len(record.Attributes) != 1 {
+						t.Fatalf("expected only the requested id property, got %v", record.Attributes)
+					}
+					id, ok := record.Attributes["id"]
+					if !ok || id == nil {
+						t.Fatalf("expected a non-nil id property, got %v", record.Attributes)
+					}
+					count++
+				}
+				if err := r.Err(); err != nil {
+					t.Fatalf("expected no iteration error, got %v", err)
+				}
+				if count != test.expectedRecords {
+					t.Errorf("expected %d records, got %d", test.expectedRecords, count)
+				}
+
+			})
+		}
+
+	})
 
 }

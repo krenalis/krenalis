@@ -65,18 +65,15 @@ func TestAddAndRemoveLinkedConnection(t *testing.T) {
 
 }
 
-// TestReplaceConsentPurposeClearsResolvedPaths checks that replacement clears cached consent paths.
-func TestReplaceConsentPurposeClearsResolvedPaths(t *testing.T) {
+// TestReplaceConsentPurpose checks that replacing a consent purpose does not
+// modify the original.
+func TestReplaceConsentPurpose(t *testing.T) {
 
 	const purposeID = "111111111111"
-	purpose := NewConsentPurpose(ConsentPurpose{
+	purpose := &ConsentPurpose{
 		ID:                     purposeID,
 		EventConsentLocations:  []EventConsentLocation{{PurposeCode: "marketing"}},
 		ProfileConsentLocation: &ProfileConsentLocation{Property: "consents", JSONKey: "a.b"},
-	})
-	if len(purpose.EventPropertyPaths()) == 0 || len(purpose.ProfilePropertyPath()) == 0 ||
-		purpose.ProfileConsentLocation.JSONKey != "a.b" {
-		t.Fatal("expected the original consent paths to be resolved")
 	}
 	workspace := &Workspace{
 		mu:              &sync.Mutex{},
@@ -84,25 +81,30 @@ func TestReplaceConsentPurposeClearsResolvedPaths(t *testing.T) {
 	}
 
 	updated := workspace.replaceConsentPurpose(purposeID, func(purpose *ConsentPurpose) {
-		purpose.EventConsentLocations = nil
+		purpose.EventConsentLocations = []EventConsentLocation{}
 		purpose.ProfileConsentLocation = nil
 	})
 
-	if updated.EventConsentLocations == nil || len(updated.EventConsentLocations) != 0 {
-		t.Fatalf("expected non-nil empty event locations, got %#v", updated.EventConsentLocations)
+	if updated.EventConsentLocations == nil {
+		t.Fatal("expected non-nil event consent locations, got nil")
 	}
-	if updated.EventPropertyPaths() == nil || len(updated.EventPropertyPaths()) != 0 {
-		t.Fatalf("expected non-nil empty event paths, got %#v", updated.EventPropertyPaths())
-	}
-	if updated.ProfilePropertyPath() != nil {
-		t.Fatalf("expected no resolved profile path, got %#v", updated.ProfilePropertyPath())
+	if len(updated.EventConsentLocations) != 0 {
+		t.Fatalf("expected 0 event consent locations, got %d", len(updated.EventConsentLocations))
 	}
 	if updated.ProfileConsentLocation != nil {
-		t.Fatalf("expected no profile consent location, got %v", updated.ProfileConsentLocation)
+		t.Fatalf("expected no profile consent location, got %#v", updated.ProfileConsentLocation)
 	}
-	if len(purpose.EventPropertyPaths()) == 0 || len(purpose.ProfilePropertyPath()) == 0 ||
-		purpose.ProfileConsentLocation == nil || purpose.ProfileConsentLocation.JSONKey != "a.b" {
-		t.Fatal("replacement changed the original consent purpose")
+	if len(purpose.EventConsentLocations) != 1 {
+		t.Fatalf("expected 1 original event consent location, got %d", len(purpose.EventConsentLocations))
+	}
+	if purpose.EventConsentLocations[0].PurposeCode != "marketing" {
+		t.Fatalf("expected original purpose code %q, got %q", "marketing", purpose.EventConsentLocations[0].PurposeCode)
+	}
+	if purpose.ProfileConsentLocation == nil {
+		t.Fatal("expected original profile consent location, got nil")
+	}
+	if purpose.ProfileConsentLocation.JSONKey != "a.b" {
+		t.Fatalf("expected original JSON key %q, got %q", "a.b", purpose.ProfileConsentLocation.JSONKey)
 	}
 
 }

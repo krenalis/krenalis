@@ -214,16 +214,13 @@ func (workspace *Workspace) replaceAccount(id int, f func(*Account)) *Account {
 	return aa
 }
 
-// replaceConsentPurpose calls the function f passing a copy of the consent
-// purpose with identifier id. After f is returned, it resolves the paths of the
-// properties of the copy, replaces the consent purpose with the copy in the
-// workspace and returns the latter.
+// replaceConsentPurpose calls f with a copy of the consent purpose, replaces
+// the purpose in the workspace, and returns the copy.
 func (workspace *Workspace) replaceConsentPurpose(id string, f func(*ConsentPurpose)) *ConsentPurpose {
-	cp := workspace.consentPurposes[id]
-	cc := &ConsentPurpose{}
-	*cc = *cp
+	c := workspace.consentPurposes[id]
+	cc := new(ConsentPurpose)
+	*cc = *c
 	f(cc)
-	cc.resolvePropertyPaths()
 	workspace.mu.Lock()
 	workspace.consentPurposes[id] = cc
 	workspace.mu.Unlock()
@@ -376,13 +373,13 @@ func (state *State) addConsentPurpose(n notification) string {
 	if !decodeNotification(n, &e) {
 		return ""
 	}
-	ws := state.workspaces[e.Workspace]
-	cp := NewConsentPurpose(ConsentPurpose{
+	cp := &ConsentPurpose{
 		ID:                     e.ID,
 		Name:                   e.Name,
 		EventConsentLocations:  e.EventConsentLocations,
 		ProfileConsentLocation: e.ProfileConsentLocation,
-	})
+	}
+	ws := state.workspaces[e.Workspace]
 	ws.mu.Lock()
 	ws.consentPurposes[cp.ID] = cp
 	ws.mu.Unlock()
@@ -1673,7 +1670,7 @@ func (state *State) updateConsentPurpose(n notification) string {
 		return ""
 	}
 	ws := state.workspaces[e.Workspace]
-	old := ws.consentPurposes[e.ID]
+	previous := ws.consentPurposes[e.ID]
 	cp := ws.replaceConsentPurpose(e.ID, func(cp *ConsentPurpose) {
 		cp.Name = e.Name
 		cp.EventConsentLocations = e.EventConsentLocations
@@ -1682,16 +1679,13 @@ func (state *State) updateConsentPurpose(n notification) string {
 	// Replace the consent purpose in the pipelines that require it.
 	for _, c := range ws.connections {
 		for _, p := range c.pipelines {
-			if !slices.Contains(p.RequiredConsents.Purposes, old) {
+			i := slices.Index(p.RequiredConsents.Purposes, previous)
+			if i == -1 {
 				continue
 			}
+			purposes := slices.Clone(p.RequiredConsents.Purposes)
+			purposes[i] = cp
 			state.replacePipeline(p.ID, func(p *Pipeline) {
-				purposes := slices.Clone(p.RequiredConsents.Purposes)
-				for i, purpose := range purposes {
-					if purpose == old {
-						purposes[i] = cp
-					}
-				}
 				p.RequiredConsents.Purposes = purposes
 			})
 		}

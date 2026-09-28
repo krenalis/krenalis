@@ -14,7 +14,6 @@ import (
 	"runtime"
 	"slices"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -1362,47 +1361,6 @@ type ConsentPurpose struct {
 	Name                   string
 	EventConsentLocations  []EventConsentLocation // never nil
 	ProfileConsentLocation *ProfileConsentLocation
-	// eventPropertyPaths and profilePropertyPath are the paths actually read,
-	// resolved by resolvePropertyPaths.
-	eventPropertyPaths  [][]string // never nil
-	profilePropertyPath []string
-}
-
-// NewConsentPurpose returns a new consent purpose with the paths of its
-// properties resolved.
-func NewConsentPurpose(purpose ConsentPurpose) *ConsentPurpose {
-	cp := &ConsentPurpose{}
-	*cp = purpose
-	cp.resolvePropertyPaths()
-	return cp
-}
-
-// EventPropertyPaths returns the paths of the properties of an event that hold
-// the consent given for the purpose, in order of precedence.
-func (purpose *ConsentPurpose) EventPropertyPaths() [][]string {
-	return purpose.eventPropertyPaths
-}
-
-// ProfilePropertyPath returns the schema property path holding the Boolean
-// consent or JSON object.
-func (purpose *ConsentPurpose) ProfilePropertyPath() []string {
-	return purpose.profilePropertyPath
-}
-
-// resolvePropertyPaths resolves the configured paths of the properties that
-// hold the consent given for the purpose.
-func (purpose *ConsentPurpose) resolvePropertyPaths() {
-	purpose.profilePropertyPath = nil
-	if purpose.EventConsentLocations == nil {
-		purpose.EventConsentLocations = []EventConsentLocation{}
-	}
-	purpose.eventPropertyPaths = make([][]string, len(purpose.EventConsentLocations))
-	for i, location := range purpose.EventConsentLocations {
-		purpose.eventPropertyPaths[i] = []string{"context", "consents", location.PurposeCode}
-	}
-	if location := purpose.ProfileConsentLocation; location != nil && types.IsValidPropertyPath(location.Property) {
-		purpose.profilePropertyPath = strings.Split(location.Property, ".")
-	}
 }
 
 // EventConsentLocation identifies a property under context.consents that is checked
@@ -1963,7 +1921,7 @@ const (
 // RequiredConsents represents the consent purposes required by a pipeline.
 type RequiredConsents struct {
 	Operator ConsentPurposesOperator
-	Purposes []*ConsentPurpose
+	Purposes []*ConsentPurpose // no nil
 }
 
 // RequiredConsentsByIDs represents the consent purposes required by a pipeline,

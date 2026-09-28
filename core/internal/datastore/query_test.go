@@ -38,6 +38,35 @@ func TestConvertWhereSimple(t *testing.T) {
 	}
 }
 
+// TestConvertWhereJSONBooleanOperators tests IS TRUE and IS FALSE on JSON
+// properties.k
+func TestConvertWhereJSONBooleanOperators(t *testing.T) {
+
+	column := warehouses.Column{Name: "j", Type: types.JSON()}
+	where := &state.Where{
+		Operator: state.OpAnd,
+		Rules: []state.WhereRule{
+			&state.WhereCondition{Property: []string{"j", "enabled"}, Operator: state.OpIsTrue},
+			&state.WhereCondition{Property: []string{"j", "archived"}, Operator: state.OpIsFalse},
+		},
+	}
+
+	got, err := convertWhere(where, map[string]warehouses.Column{"j": column})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	enabledExpr := warehouses.NewBaseExpr(column, warehouses.OpIsTrue)
+	enabledExpr.Key = "enabled"
+	archivedExpr := warehouses.NewBaseExpr(column, warehouses.OpIsFalse)
+	archivedExpr.Key = "archived"
+	want := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{enabledExpr, archivedExpr})
+	if !reflect.DeepEqual(want, got) {
+		t.Fatalf("expected %#v, got %#v", want, got)
+	}
+
+}
+
 // TestConvertWhereMultiple tests convertWhere with multiple conditions.
 func TestConvertWhereMultiple(t *testing.T) {
 	colA := warehouses.Column{Name: "a", Type: types.Int(32)}

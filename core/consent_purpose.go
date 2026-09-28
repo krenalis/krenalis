@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/core/internal/state"
@@ -257,64 +256,6 @@ func knownConsentPurposeIDs(ws *state.Workspace) map[string]bool {
 		ids[cp.ID] = true
 	}
 	return ids
-}
-
-// addRequiredConsentProperties adds to the given schema, when they are not
-// already in it, the properties that hold the consents given for the purposes
-// required by a pipeline, so that they are read together with the properties
-// the pipeline declares. The properties are taken as they are from the given
-// profile schema, so that the schema stays aligned with it.
-//
-// It returns the resulting schema and the set of the paths of the properties
-// that have been added, which the caller must remove from what it reads before
-// processing it, given that the pipeline does not declare them.
-//
-// A location with a JSON key adds the JSON property. A purpose whose property
-// does not exist or has an incompatible type is skipped: the consent it
-// requires is then never given.
-//
-// It returns an error if the schema has a non-object property along the path of
-// the property that holds a consent.
-func addRequiredConsentProperties(schema, profileSchema types.Type, purposes []*state.ConsentPurpose) (types.Type, map[string]bool, error) {
-	if schema.Kind() != types.ObjectKind || profileSchema.Kind() != types.ObjectKind {
-		return schema, nil, nil
-	}
-	var added map[string]bool
-	for _, purpose := range purposes {
-		if purpose == nil || purpose.ProfileConsentLocation == nil {
-			continue
-		}
-		path := strings.Join(purpose.ProfilePropertyPath(), ".")
-		if path == "" {
-			continue
-		}
-		property, err := profileSchema.Properties().ByPath(path)
-		if err != nil {
-			// The property does not exist, so there is nothing to read and the
-			// consent for the purpose is not given.
-			continue
-		}
-		requiredKind := types.BooleanKind
-		if purpose.ProfileConsentLocation.JSONKey != "" {
-			requiredKind = types.JSONKind
-		}
-		if property.Type.Kind() != requiredKind {
-			// The property type does not match the configured consent path.
-			continue
-		}
-		s, isAdded, err := types.AddPropertyAtPath(schema, path, property)
-		if err != nil {
-			return schema, nil, fmt.Errorf("cannot read the consent for consent purpose %s: %s", purpose.ID, err)
-		}
-		if isAdded {
-			if added == nil {
-				added = map[string]bool{}
-			}
-			added[path] = true
-			schema = s
-		}
-	}
-	return schema, added, nil
 }
 
 // validateConsentPurposeToSet validates the name and consent locations of the
