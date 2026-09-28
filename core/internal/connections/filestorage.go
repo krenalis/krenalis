@@ -40,7 +40,8 @@ type fileStorageAbsolutePathConnection interface {
 type fileStorageReaderConnection interface {
 	// Reader opens a file and returns a ReadCloser from which to read its content.
 	// name is the path name of the file to read and the returned time.Time is the
-	// last update time of the file.
+	// last update time of the file. name has already been validated by
+	// AbsolutePath.
 	//
 	// The use of the provided context is extended to the Read method calls.
 	// After the context is canceled, any subsequent Read invocations will result in
@@ -50,7 +51,8 @@ type fileStorageReaderConnection interface {
 
 type fileStorageWriteConnection interface {
 	// Write writes the data read from r into the file with the given path name.
-	// contentType is the file's content type.
+	// contentType is the file's content type. name has already been validated by
+	// AbsolutePath.
 	Write(ctx context.Context, r io.Reader, name, contentType string) error
 }
 
@@ -122,6 +124,8 @@ func (storage *FileStorage) Connector() string {
 // did not prevent the file from being processed. These issues are reported as a
 // slice of strings. The slice will be nil if there are no issues.
 //
+// If name is not valid for the storage, it returns a
+// *connectors.InvalidPathError.
 // If the settings are invalid, it returns a *connectors.InvalidSettingsError. If
 // the file has no columns, it returns ErrNoColumnsFound. If the file does not
 // have the specified sheet, it returns connectors.ErrSheetNotExist. If the
@@ -198,6 +202,8 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 // settings, if the file connector has settings, represents its settings.
 // compression indicates if the file is compressed and how.
 //
+// If name is not valid for the storage, it returns a
+// *connectors.InvalidPathError.
 // If the settings are invalid, it returns a *connectors.InvalidSettingsError.
 // If the connector returns an error, it returns an *UnavailableError. This
 // method panics if the file connector does not support sheets.
