@@ -22,7 +22,6 @@ import (
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/tools/json"
-	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -227,7 +226,6 @@ func (dummy *Dummy) RecordSchema(ctx context.Context, target connectors.Targets,
 
 // Records returns the records of the specified target.
 func (dummy *Dummy) Records(ctx context.Context, target connectors.Targets, updatedAt time.Time, cursor string, schema types.Type) ([]connectors.Record, string, error) {
-	prometheus.Increment("Dummy.Records.calls", 1)
 	var s innerSettings
 	err := dummy.env.Settings.Load(ctx, &s)
 	if err != nil {
@@ -382,10 +380,7 @@ func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, recor
 	n := 0
 	for record := range records.All() {
 
-		prometheus.Increment("Dummy.Upsert.records_read_from_iterator", 1)
-
 		if dummy.customerExportRandomlyFails(&s) {
-			prometheus.Increment("Dummy.Upsert.export_failed", 1)
 			recordsError[n] = errors.New("writing of customer record failed (due to a causal failure probability configured in Dummy)")
 			n++
 			continue
@@ -394,7 +389,6 @@ func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, recor
 		var id string
 		if record.IsCreate() {
 			// Add a new customers into the in-memory customers.
-			prometheus.Increment("Dummy.Upsert.customers_created", 1)
 			customer := maps.Clone(record.Attributes)
 			id = newDummyId()
 			customer["dummyId"] = id
@@ -419,12 +413,10 @@ func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, recor
 			// Update the in-memory customers.
 			customer, ok := allCustomers[record.ID]
 			if !ok {
-				prometheus.Increment("Dummy.Upsert.updated_customers_not_found", 1)
 				recordsError[n] = errors.New("the customer to update does not exist in Dummy")
 				n++
 				continue
 			}
-			prometheus.Increment("Dummy.Upsert.updated_customers", 1)
 			maps.Copy(customer, record.Attributes)
 			id = record.ID
 		}
@@ -457,7 +449,6 @@ func (dummy *Dummy) applyOperationDelay(ctx context.Context, operationDelay stri
 	defer timer.Stop()
 	select {
 	case <-timer.C:
-		prometheus.Increment("Dummy.applyOperationDelay.applied_delays", 1)
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()

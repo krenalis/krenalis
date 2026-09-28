@@ -441,7 +441,7 @@ func opIsTrue(v any) bool {
 	case bool:
 		return v
 	case json.Value:
-		return v.Bool()
+		return v.IsTrue()
 	}
 	return false
 }
@@ -451,7 +451,7 @@ func opIsFalse(v any) bool {
 	case bool:
 		return !v
 	case json.Value:
-		return !v.Bool()
+		return v.IsFalse()
 	}
 	return false
 }

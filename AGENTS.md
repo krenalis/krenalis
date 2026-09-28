@@ -240,6 +240,8 @@ var x int
 }
 ```
 
+A function whose body is only a `synctest.Test` call is a single-statement block: keep it compact even when the function passed to `synctest.Test` is padded.
+
 ## Declaration comments
 
 Every exported package-level type, function, variable, and constant, as well as every exported method, must have a declaration comment written in the style of the Go standard library, except for the grouped declarations and self-explanatory test fixture constants described below. An unexported declaration does not need one, but add it when the declaration is long, takes or returns several values, or its behavior is not obvious from the code.

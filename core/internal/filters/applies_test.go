@@ -434,6 +434,7 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsTrue, v: false, expected: false},
 		{op: state.OpIsTrue, v: json.Value(`true`), expected: true},
 		{op: state.OpIsTrue, v: json.Value(`false`), expected: false},
+		{op: state.OpIsTrue, v: json.Value(`5`), expected: false},
 		{op: state.OpIsTrue, v: 5, expected: false},
 		{op: state.OpIsTrue, v: nil, expected: false},
 
@@ -443,6 +444,7 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsFalse, v: false, expected: true},
 		{op: state.OpIsFalse, v: json.Value(`true`), expected: false},
 		{op: state.OpIsFalse, v: json.Value(`false`), expected: true},
+		{op: state.OpIsFalse, v: json.Value(`5`), expected: false},
 		{op: state.OpIsFalse, v: 5, expected: false},
 		{op: state.OpIsFalse, v: nil, expected: false},
 

@@ -20,7 +20,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/tools/json"
-	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
@@ -187,8 +186,6 @@ func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where war
 
 // Merge performs a table merge operation.
 func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.Table, rows [][]any, deleted []any) error {
-	prometheus.Increment("warehouses.PostgreSQL.Merge.calls", 1)
-	prometheus.Increment("warehouses.PostgreSQL.Merge.passed_rows", len(rows))
 	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return err
@@ -215,9 +212,6 @@ var immutableMergeIdentitiesColumns = []string{
 // MergeIdentities merges existing identities, deletes them, and inserts new
 // ones.
 func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []warehouses.Column, rows []map[string]any) error {
-
-	prometheus.Increment("warehouses.PostgreSQL.MergeIdentities.calls", 1)
-	prometheus.Increment("warehouses.PostgreSQL.MergeIdentities.passed_rows", len(rows))
 
 	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
