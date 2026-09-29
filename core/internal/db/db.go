@@ -161,7 +161,7 @@ func (db *DB) Begin(ctx context.Context) (*Tx, error) {
 }
 
 // BeginTx begins a new transaction with the specified options.
-// The provided context only affects the Begin method and does not propagate
+// The provided context only affects the BeginTx method and does not propagate
 // to the entire transaction, unlike the behavior in the standard sql package.
 func (db *DB) BeginTx(ctx context.Context, opts TxOptions) (*Tx, error) {
 	var pgxOpts pgx.TxOptions
