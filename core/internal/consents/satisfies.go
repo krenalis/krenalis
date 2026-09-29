@@ -12,7 +12,8 @@ import (
 )
 
 // SatisfiesEvent reports whether the given event satisfies the required
-// consent purposes.
+// consent purposes. Each purpose should have at least one event consent
+// location, and each location's purpose code should be non-empty.
 func SatisfiesEvent(op state.ConsentPurposesOperator, purposes []*state.ConsentPurpose, event map[string]any) bool {
 
 	if len(purposes) == 0 {
@@ -57,7 +58,7 @@ func SatisfiesEvent(op state.ConsentPurposesOperator, purposes []*state.ConsentP
 }
 
 // SatisfiesProfile reports whether the given profile attributes satisfy the
-// required consent purposes.
+// required consent purposes. Each purpose must have a profile consent location.
 func SatisfiesProfile(op state.ConsentPurposesOperator, purposes []*state.ConsentPurpose, attributes map[string]any) bool {
 
 	if len(purposes) == 0 {
@@ -67,33 +68,31 @@ func SatisfiesProfile(op state.ConsentPurposesOperator, purposes []*state.Consen
 	for _, purpose := range purposes {
 		var granted bool
 		loc := purpose.ProfileConsentLocation
-		if loc != nil {
-			var value any
-			var found bool
-			path := loc.Property
-			current := attributes
-			// Traverse nested maps only; JSON values require an explicit key.
-			for {
-				name, rest, hasMore := strings.Cut(path, ".")
-				value, found = current[name]
-				if !found || !hasMore {
-					break
-				}
-				next, ok := value.(map[string]any)
-				if !ok {
-					found = false
-					break
-				}
-				current = next
-				path = rest
+		var value any
+		var found bool
+		path := loc.Property
+		current := attributes
+		// Traverse nested maps only; JSON values require an explicit key.
+		for {
+			name, rest, hasMore := strings.Cut(path, ".")
+			value, found = current[name]
+			if !found || !hasMore {
+				break
 			}
-			if found {
-				if loc.JSONKey == "" {
-					granted, _ = value.(bool)
-				} else if object, ok := value.(json.Value); ok && object.IsObject() {
-					v, exists := object.Get([]string{loc.JSONKey})
-					granted = exists && v.Bool()
-				}
+			next, ok := value.(map[string]any)
+			if !ok {
+				found = false
+				break
+			}
+			current = next
+			path = rest
+		}
+		if found {
+			if loc.JSONKey == "" {
+				granted, _ = value.(bool)
+			} else if object, ok := value.(json.Value); ok && object.IsObject() {
+				v, exists := object.Get([]string{loc.JSONKey})
+				granted = exists && v.Bool()
 			}
 		}
 		if op == state.PurposesAnd {

@@ -616,51 +616,6 @@ func TestSatisfiesEventWithoutConfiguredLocation(t *testing.T) {
 
 }
 
-func TestSatisfiesProfileWithoutConfiguredLocation(t *testing.T) {
-
-	cases := []struct {
-		name     string
-		purposes []*state.ConsentPurpose
-		operator state.ConsentPurposesOperator
-		profile  map[string]any
-		want     bool
-	}{
-		{
-			name:     "all: consent value exists without configured profile location",
-			purposes: []*state.ConsentPurpose{purposeWithLocations("marketing", "marketing", "")},
-			operator: state.PurposesAnd,
-			profile:  map[string]any{"consents": map[string]any{"marketing": true}},
-			want:     false,
-		},
-		{
-			name:     "any: consent value exists without configured profile location",
-			purposes: []*state.ConsentPurpose{purposeWithLocations("marketing", "marketing", "")},
-			operator: state.PurposesOr,
-			profile:  map[string]any{"consents": map[string]any{"marketing": true}},
-			want:     false,
-		},
-		{
-			name: "any: another purpose has a configured profile location",
-			purposes: []*state.ConsentPurpose{
-				purposeWithLocations("marketing", "marketing", ""),
-				purposeWithLocations("analytics", "analytics", "consents.analytics"),
-			},
-			operator: state.PurposesOr,
-			profile:  map[string]any{"consents": map[string]any{"analytics": true}},
-			want:     true,
-		},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			got := SatisfiesProfile(c.operator, c.purposes, c.profile)
-			if got != c.want {
-				t.Fatalf("expected %v, got %v", c.want, got)
-			}
-		})
-	}
-
-}
-
 // TestSatisfiesEventLocations checks event location precedence and all/any
 // consent matching.
 func TestSatisfiesEventLocations(t *testing.T) {
@@ -769,7 +724,7 @@ func TestSatisfiesEventLocations(t *testing.T) {
 func TestSatisfiesProfileIgnoresEventLocations(t *testing.T) {
 	if got := SatisfiesProfile(
 		state.PurposesAnd,
-		[]*state.ConsentPurpose{purposeWithEventKeys("marketing", "mkt")},
+		[]*state.ConsentPurpose{purposeWithLocations("marketing", "mkt", "consents.marketing")},
 		map[string]any{"consents": map[string]any{"mkt": true}},
 	); got {
 		t.Fatalf("expected false, got %v", got)
