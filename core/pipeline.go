@@ -903,10 +903,10 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 	}
 
 	update := "UPDATE pipelines SET\n" +
-		"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, required_consents = $6, required_consents_operator = $7, " +
-		"transformation_mapping = $8, transformation_id = $9, transformation_version = $10, transformation_language = $11, " +
-		"transformation_source = $12, transformation_preserve_json = $13, transformation_in_paths = $14, " +
-		"transformation_out_paths = $15, query = $16, format = $17, path = $18, sheet = $19, " +
+		"name = $1, enabled = $2, in_schema = $3, out_schema = $4, filter = $5, required_consents_purposes = $6, " +
+		"required_consents_operator = $7, transformation_mapping = $8, transformation_id = $9, transformation_version = $10, " +
+		"transformation_language = $11, transformation_source = $12, transformation_preserve_json = $13, " +
+		"transformation_in_paths = $14, transformation_out_paths = $15, query = $16, format = $17, path = $18, sheet = $19, " +
 		"compression = $20, order_by = $21, format_settings = $22, export_mode = $23, matching_in = $24, " +
 		"matching_out = $25, update_on_duplicates = $26, table_name = $27, table_key = $28, " +
 		"user_id_column = $29, updated_at_column = $30, updated_at_format = $31, incremental = $32, " +

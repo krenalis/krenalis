@@ -201,7 +201,7 @@ CREATE TABLE pipelines (
     in_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     out_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     filter jsonb,
-    required_consents varchar(12)[] NOT NULL DEFAULT '{}',
+    required_consents_purposes varchar(12)[] NOT NULL DEFAULT '{}',
     required_consents_operator varchar(3) NOT NULL DEFAULT 'and' CHECK (required_consents_operator IN ('and', 'or')),
     transformation_mapping jsonb,
     transformation_id varchar(200) NOT NULL DEFAULT '',

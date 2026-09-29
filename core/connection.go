@@ -613,7 +613,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 				}
 			}
 			query := "INSERT INTO pipelines (id, connection, target, event_type, ordering_group, delivery_endpoint,\n" +
-				"name, enabled, schedule_start, schedule_period, in_schema, out_schema, filter, required_consents,\n" +
+				"name, enabled, schedule_start, schedule_period, in_schema, out_schema, filter, required_consents_purposes,\n" +
 				"required_consents_operator, transformation_mapping, transformation_id, transformation_version,\n" +
 				"transformation_language, transformation_source, transformation_preserve_json, transformation_in_paths,\n" +
 				"transformation_out_paths, query, format, path, sheet, compression, order_by, format_settings,\n" +

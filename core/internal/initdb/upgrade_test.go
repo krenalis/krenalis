@@ -269,7 +269,7 @@ func TestUpgradePipelineOrderingGroup(t *testing.T) {
 					VALUES ('333333333333', '222222222222', 'dummy', 'Source', '\x');
 					INSERT INTO pipelines (id, connection, target, event_type, ordering_group, delivery_endpoint,
 						name, enabled,
-						schedule_start, schedule_period, in_schema, out_schema, filter, required_consents,
+						schedule_start, schedule_period, in_schema, out_schema, filter, required_consents_purposes,
 						required_consents_operator, transformation_mapping, transformation_id, transformation_version,
 						transformation_language, transformation_source, transformation_preserve_json,
 						transformation_in_paths, transformation_out_paths, query, format, path, sheet, compression,
@@ -1223,7 +1223,7 @@ func assertConsentPurposeSchema(t *testing.T, database *db.DB) {
 	}
 
 	var requiredConsents []string
-	err = database.QueryRow(t.Context(), "SELECT required_consents FROM pipelines WHERE id = '444444444444'").
+	err = database.QueryRow(t.Context(), "SELECT required_consents_purposes FROM pipelines WHERE id = '444444444444'").
 		Scan(&requiredConsents)
 	if err != nil {
 		t.Fatal(err)
@@ -1236,13 +1236,13 @@ func assertConsentPurposeSchema(t *testing.T, database *db.DB) {
 	err = database.QueryRow(t.Context(), `SELECT format_type(a.atttypid, a.atttypmod)
 		FROM pg_attribute a
 		WHERE a.attrelid = 'pipelines'::regclass
-			AND a.attname = 'required_consents'
+			AND a.attname = 'required_consents_purposes'
 			AND NOT a.attisdropped`).Scan(&requiredConsentsType)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if requiredConsentsType != "character varying(12)[]" {
-		t.Fatalf("expected pipelines.required_consents type character varying(12)[], got %s", requiredConsentsType)
+		t.Fatalf("expected pipelines.required_consents_purposes type character varying(12)[], got %s", requiredConsentsType)
 	}
 }
 

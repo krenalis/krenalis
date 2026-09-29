@@ -147,7 +147,7 @@ func (this *Workspace) DeleteConsentPurpose(ctx context.Context, id string) erro
 		}
 		var inUse bool
 		err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM pipelines p JOIN connections c ON p.connection = c.id "+
-			"WHERE c.workspace = $1 AND $2 = ANY(p.required_consents))", n.Workspace, n.ID).Scan(&inUse)
+			"WHERE c.workspace = $1 AND $2 = ANY(p.required_consents_purposes))", n.Workspace, n.ID).Scan(&inUse)
 		if err != nil {
 			return nil, err
 		}
@@ -223,7 +223,7 @@ func (this *Workspace) UpdateConsentPurpose(ctx context.Context, id string, purp
 			}
 			inUse, err := tx.QueryExists(ctx, "SELECT FROM pipelines AS p\n"+
 				"JOIN connections AS c ON p.connection = c.id\n"+
-				"WHERE c.workspace = $1 AND p.target = $2 AND $3 = ANY(p.required_consents)",
+				"WHERE c.workspace = $1 AND p.target = $2 AND $3 = ANY(p.required_consents_purposes)",
 				n.Workspace, location.target, n.ID)
 			if err != nil {
 				return nil, err
