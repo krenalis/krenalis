@@ -1764,16 +1764,9 @@ Identifiers:
 				" alter_profile_schema_schema = 'null', alter_profile_schema_primary_sources = 'null'," +
 				" alter_profile_schema_operations = 'null', alter_profile_schema_end_time = $1," +
 				" alter_profile_schema_error = $2 WHERE id = $3 AND alter_profile_schema_id = $4"
-			res, err := tx.Exec(ctx, query, nEnd.EndTime, nEnd.Err, nEnd.Workspace, nEnd.ID)
+			_, err = tx.Exec(ctx, query, nEnd.EndTime, nEnd.Err, nEnd.Workspace, nEnd.ID)
 			if err != nil {
 				return nil, err
-			}
-			if res.RowsAffected() == 0 {
-				// This happens in cases where the query has been executed
-				// more than once (because an error occurred), but in fact
-				// the database has already been modified, so we don't want
-				// to send the notification more than once.
-				return nil, nil
 			}
 			return nEnd, nil
 		})
