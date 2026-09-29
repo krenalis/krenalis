@@ -10,6 +10,7 @@ import (
 	"log/slog"
 
 	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/tools/base58"
 )
 
 const (
@@ -243,15 +244,17 @@ const pipelineDeliveryEndpointUpgrade = `
 		ALTER COLUMN delivery_endpoint TYPE varchar(16),
 		ALTER COLUMN delivery_endpoint SET NOT NULL`
 
-// pipelineOrderingGroupUpgrade moves ordering_group and delivery_endpoint after
-// event_type while preserving the table and the relative order of its other
-// columns.
-const pipelineOrderingGroupUpgrade = `
+// pipelineColumnOrderUpgrade places ordering_group and delivery_endpoint after
+// event_type and the required consent columns after filter.
+const pipelineColumnOrderUpgrade = `
 	DO $$
 	DECLARE
 		event_position smallint;
 		group_position smallint;
 		delivery_position smallint;
+		filter_position smallint;
+		consent_operator_position smallint;
+		consent_purposes_position smallint;
 		moved_columns text[];
 		moved_positions smallint[];
 		constraint_queries text[];
@@ -267,16 +270,35 @@ const pipelineOrderingGroupUpgrade = `
 		WHERE attrelid = 'pipelines'::regclass AND attname = 'ordering_group' AND NOT attisdropped;
 		SELECT attnum INTO delivery_position FROM pg_attribute
 		WHERE attrelid = 'pipelines'::regclass AND attname = 'delivery_endpoint' AND NOT attisdropped;
+		SELECT attnum INTO filter_position FROM pg_attribute
+		WHERE attrelid = 'pipelines'::regclass AND attname = 'filter' AND NOT attisdropped;
+		SELECT attnum INTO consent_operator_position FROM pg_attribute
+		WHERE attrelid = 'pipelines'::regclass AND attname = 'required_consents_operator' AND NOT attisdropped;
+		SELECT attnum INTO consent_purposes_position FROM pg_attribute
+		WHERE attrelid = 'pipelines'::regclass AND attname = 'required_consents_purposes' AND NOT attisdropped;
 		IF group_position > event_position AND delivery_position > group_position AND NOT EXISTS (
 			SELECT FROM pg_attribute
 			WHERE attrelid = 'pipelines'::regclass AND NOT attisdropped
 				AND ((attnum > event_position AND attnum < group_position)
 					OR (attnum > group_position AND attnum < delivery_position))
-		) THEN
+		) AND (filter_position < event_position OR (
+			consent_operator_position > filter_position AND consent_purposes_position > consent_operator_position
+			AND NOT EXISTS (
+				SELECT FROM pg_attribute
+				WHERE attrelid = 'pipelines'::regclass AND NOT attisdropped
+					AND ((attnum > filter_position AND attnum < consent_operator_position)
+						OR (attnum > consent_operator_position AND attnum < consent_purposes_position))
+			)
+		)) THEN
 			RETURN;
 		END IF;
 
-		SELECT array_agg(attname::text ORDER BY attnum), array_agg(attnum ORDER BY attnum)
+		SELECT array_agg(attname::text ORDER BY
+			CASE WHEN attname = 'required_consents_purposes' THEN consent_operator_position ELSE attnum END,
+			attname = 'required_consents_purposes'),
+			array_agg(attnum ORDER BY
+				CASE WHEN attname = 'required_consents_purposes' THEN consent_operator_position ELSE attnum END,
+				attname = 'required_consents_purposes')
 		INTO moved_columns, moved_positions
 		FROM pg_attribute
 		WHERE attrelid = 'pipelines'::regclass AND NOT attisdropped
@@ -303,7 +325,7 @@ const pipelineOrderingGroupUpgrade = `
 			SELECT attname, format_type(atttypid, atttypmod) AS data_type
 			FROM pg_attribute
 			WHERE attrelid = 'pg_temp.pipelines_ordering_backup'::regclass AND attname = ANY(moved_columns)
-			ORDER BY attnum
+			ORDER BY array_position(moved_columns, attname::text)
 		LOOP
 			EXECUTE format('ALTER TABLE pipelines DROP COLUMN %1$I, ADD COLUMN %1$I %2$s',
 				column_definition.attname, column_definition.data_type);
@@ -369,6 +391,10 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			return err
 		}
 		err = renameConstraintIfExists(ctx, tx, "notifications", "notifications_id_not_null", "notifications_version_not_null")
+		if err != nil {
+			return err
+		}
+		err = upgradeConsentPurposes(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -593,8 +619,8 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'AddConsentPurpose'`,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'DeleteConsentPurpose'`,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateConsentPurpose'`,
-			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents_purposes varchar(12)[] NOT NULL DEFAULT '{}'`,
 			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents_operator varchar(3) NOT NULL DEFAULT 'and' CHECK (required_consents_operator IN ('and', 'or'))`,
+			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents_purposes varchar(12)[] NOT NULL DEFAULT '{}'`,
 			`UPDATE pipelines
 				SET filter = regexp_replace(
 					(
@@ -631,7 +657,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 						OR filter::text ~ '"operator"[[:space:]]*:[[:space:]]*"OpIsNotBetween"'
 					)`,
 			pipelineMetricStepsUpgrade,
-			pipelineOrderingGroupUpgrade,
+			pipelineColumnOrderUpgrade,
 			organizationConnectorReferencesView,
 		}
 		for _, query := range queries {
@@ -649,6 +675,121 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 	}
 
 	slog.Info("PostgreSQL database upgraded successfully")
+
+	return nil
+}
+
+// upgradeConsentPurposes converts purpose codes to IDs without discarding
+// purpose definitions or pipeline requirements.
+func upgradeConsentPurposes(ctx context.Context, tx *db.Tx) error {
+
+	hasCodes, err := upgradeColumnExists(ctx, tx, "consent_purposes", "code")
+	if err != nil {
+		return err
+	}
+	hasRequirements, err := upgradeColumnExists(ctx, tx, "pipelines", "required_consents")
+	if err != nil {
+		return err
+	}
+	if !hasCodes && !hasRequirements {
+		return nil
+	}
+	if !hasCodes || !hasRequirements {
+		return fmt.Errorf("cannot upgrade consent purposes: legacy columns are incomplete")
+	}
+	hasPurposeIDs, err := upgradeColumnExists(ctx, tx, "pipelines", "required_consents_purposes")
+	if err != nil {
+		return err
+	}
+	if hasPurposeIDs {
+		return fmt.Errorf("cannot upgrade consent purposes: old and new pipeline columns coexist")
+	}
+
+	missing, err := tx.QueryExists(ctx, `SELECT FROM pipelines p
+		JOIN connections c ON c.id = p.connection
+		CROSS JOIN LATERAL unnest(p.required_consents) AS r(code)
+		LEFT JOIN consent_purposes cp ON cp.workspace = c.workspace AND cp.code = r.code
+		WHERE cp.code IS NULL`)
+	if err != nil {
+		return err
+	}
+	if missing {
+		return fmt.Errorf("cannot upgrade consent purposes: a pipeline refers to a missing purpose")
+	}
+
+	type purpose struct {
+		workspace string
+		code      string
+	}
+	purposes := []purpose{}
+	err = tx.QueryScan(ctx, "SELECT workspace, code FROM consent_purposes ORDER BY workspace, code", func(rows *db.Rows) error {
+		for rows.Next() {
+			var p purpose
+			if err := rows.Scan(&p.workspace, &p.code); err != nil {
+				return err
+			}
+			purposes = append(purposes, p)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(ctx, `
+		ALTER TABLE pipelines ADD COLUMN required_consents_purposes varchar(12)[] NOT NULL DEFAULT '{}';
+		ALTER TABLE consent_purposes
+			ADD COLUMN id varchar(12) CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
+			ADD COLUMN event_purpose_codes varchar(1024)[] NOT NULL DEFAULT '{}',
+			ADD COLUMN profile_property varchar(1024) NOT NULL DEFAULT '',
+			ADD COLUMN profile_json_key varchar(1024) NOT NULL DEFAULT '';
+		CREATE TEMP TABLE consent_purpose_upgrade_map (
+			workspace varchar(12) NOT NULL,
+			code varchar(100) NOT NULL,
+			id varchar(12) NOT NULL UNIQUE,
+			PRIMARY KEY (workspace, code)
+		) ON COMMIT DROP`)
+	if err != nil {
+		return err
+	}
+
+	usedIDs := map[string]bool{}
+	for _, p := range purposes {
+		id := base58.Generate(12)
+		for usedIDs[id] {
+			id = base58.Generate(12)
+		}
+		usedIDs[id] = true
+		_, err = tx.Exec(ctx, `UPDATE consent_purposes
+			SET id = $1, event_purpose_codes = ARRAY[code]
+			WHERE workspace = $2 AND code = $3`, id, p.workspace, p.code)
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec(ctx, `INSERT INTO pg_temp.consent_purpose_upgrade_map (workspace, code, id)
+			VALUES ($1, $2, $3)`, p.workspace, p.code, id)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = tx.Exec(ctx, `UPDATE pipelines p
+		SET required_consents_purposes = ARRAY(
+			SELECT m.id
+			FROM unnest(p.required_consents) WITH ORDINALITY AS r(code, position)
+			JOIN connections c ON c.id = p.connection
+			JOIN pg_temp.consent_purpose_upgrade_map m ON m.workspace = c.workspace AND m.code = r.code
+			ORDER BY r.position
+		);
+		ALTER TABLE consent_purposes
+			DROP CONSTRAINT consent_purposes_pkey,
+			DROP COLUMN code,
+			ALTER COLUMN id SET NOT NULL,
+			ADD PRIMARY KEY (id);
+		ALTER TABLE pipelines DROP COLUMN required_consents`)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

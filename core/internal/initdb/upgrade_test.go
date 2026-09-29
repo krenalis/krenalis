@@ -44,6 +44,12 @@ func TestUpgrade(t *testing.T) {
 			id varchar(12) PRIMARY KEY,
 			organization varchar(12) NOT NULL REFERENCES organizations (id)
 		);
+		CREATE TABLE consent_purposes (
+			workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+			code varchar(100) NOT NULL CHECK (code ~ '^[A-Za-z_][0-9A-Za-z_]{0,99}$'),
+			name varchar(100) NOT NULL,
+			PRIMARY KEY (workspace, code)
+		);
 		CREATE TYPE role AS ENUM ('Source', 'Destination');
 		CREATE TYPE pipeline_target AS ENUM ('Event', 'User', 'Group');
 		CREATE TABLE connections (
@@ -57,6 +63,8 @@ func TestUpgrade(t *testing.T) {
 			connection varchar(12) NOT NULL REFERENCES connections (id),
 			target pipeline_target NOT NULL,
 			filter jsonb,
+			required_consents varchar(100)[] NOT NULL DEFAULT '{}',
+			required_consents_operator varchar(3) NOT NULL DEFAULT 'and' CHECK (required_consents_operator IN ('and', 'or')),
 			event_type varchar(100) NOT NULL,
 			format varchar
 		);
@@ -113,6 +121,9 @@ func TestUpgrade(t *testing.T) {
 		CREATE INDEX pipelines_metrics_pipeline_idx ON pipelines_metrics (pipeline);
 		INSERT INTO organizations (id, name, enabled) VALUES ('111111111111', 'ACME inc', true);
 		INSERT INTO workspaces (id, organization) VALUES ('222222222222', '111111111111');
+		INSERT INTO consent_purposes (workspace, code, name) VALUES
+			('222222222222', 'marketing_newsletters', 'Marketing newsletters'),
+			('222222222222', 'analytics', 'Analytics');
 		INSERT INTO connections (id, workspace, connector, role) VALUES
 			('333333333333', '222222222222', 'dummy', 'Source'),
 			('999999999999', '222222222222', 'dummy', 'Destination');
@@ -155,6 +166,8 @@ func TestUpgrade(t *testing.T) {
 				NULL,
 				NULL
 			);
+		UPDATE pipelines SET required_consents = '{marketing_newsletters,analytics}', required_consents_operator = 'or'
+		WHERE id = '444444444444';
 		INSERT INTO pipelines_metrics (
 			pipeline, timeslot,
 			passed_0, passed_1, passed_2, passed_3, passed_4, passed_5,
@@ -269,16 +282,16 @@ func TestUpgradePipelineOrderingGroup(t *testing.T) {
 					VALUES ('333333333333', '222222222222', 'dummy', 'Source', '\x');
 					INSERT INTO pipelines (id, connection, target, event_type, ordering_group, delivery_endpoint,
 						name, enabled,
-						schedule_start, schedule_period, in_schema, out_schema, filter, required_consents_purposes,
-						required_consents_operator, transformation_mapping, transformation_id, transformation_version,
+						schedule_start, schedule_period, in_schema, out_schema, filter, required_consents_operator,
+						required_consents_purposes, transformation_mapping, transformation_id, transformation_version,
 						transformation_language, transformation_source, transformation_preserve_json,
 						transformation_in_paths, transformation_out_paths, query, format, path, sheet, compression,
 						order_by, format_settings, export_mode, matching_in, matching_out, update_on_duplicates,
 						table_name, table_key, user_id_column, updated_at_column, updated_at_format, incremental,
 						cursor, health, properties_to_unset)
 					VALUES ('444444444444', '333333333333', 'Event', repeat('界', 99) || '-', 'events', '', 'Pipeline', true,
-						17, 5, '{"in":1}', '{"out":2}', '{"operator":"And","rules":[]}', '{purpose}',
-						'or', '{"mapping":3}', 'function', 'v1', 'Python', 'source', true,
+						17, 5, '{"in":1}', '{"out":2}', '{"operator":"And","rules":[]}', 'or',
+						'{purpose}', '{"mapping":3}', 'function', 'v1', 'Python', 'source', true,
 						'{in}', '{out}', 'SELECT 1', 'json', '/path', 'Sheet', 'Gzip',
 						'name', '{"setting":4}', 'CreateOnly', 'in', 'out', true,
 						'profiles', 'id', 'uid', 'updated', 'format', true,
@@ -1223,13 +1236,37 @@ func assertConsentPurposeSchema(t *testing.T, database *db.DB) {
 	}
 
 	var requiredConsents []string
-	err = database.QueryRow(t.Context(), "SELECT required_consents_purposes FROM pipelines WHERE id = '444444444444'").
-		Scan(&requiredConsents)
+	var requiredConsentsOperator string
+	err = database.QueryRow(t.Context(), `SELECT required_consents_purposes, required_consents_operator
+		FROM pipelines WHERE id = '444444444444'`).Scan(&requiredConsents, &requiredConsentsOperator)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(requiredConsents) != 0 {
-		t.Fatalf("expected pipeline required consents to be empty, got %v", requiredConsents)
+	if requiredConsentsOperator != "or" {
+		t.Fatalf("expected required consents operator or, got %q", requiredConsentsOperator)
+	}
+	if len(requiredConsents) != 2 || requiredConsents[0] == requiredConsents[1] {
+		t.Fatalf("expected two distinct required consent purpose IDs, got %v", requiredConsents)
+	}
+	for i, purpose := range []struct {
+		code string
+		name string
+	}{
+		{"marketing_newsletters", "Marketing newsletters"},
+		{"analytics", "Analytics"},
+	} {
+		var codes []string
+		var name, property, jsonKey string
+		err = database.QueryRow(t.Context(), `SELECT event_purpose_codes, name, profile_property, profile_json_key
+			FROM consent_purposes WHERE workspace = '222222222222' AND id = $1`, requiredConsents[i]).
+			Scan(&codes, &name, &property, &jsonKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !slices.Equal(codes, []string{purpose.code}) || name != purpose.name || property != "" || jsonKey != "" {
+			t.Fatalf("expected migrated purpose %q with name %q and no profile location, got codes=%v name=%q property=%q JSON key=%q",
+				purpose.code, purpose.name, codes, name, property, jsonKey)
+		}
 	}
 
 	var requiredConsentsType string
