@@ -7,7 +7,6 @@ package state
 import (
 	"bytes"
 	stdjson "encoding/json"
-	"fmt"
 	"log/slog"
 	"slices"
 	"strings"
@@ -623,9 +622,12 @@ func (state *State) createPipeline(n notification) string {
 	}
 	c := state.connections[e.Connection]
 	format := state.connectors[e.Format]
-	requiredConsents, err := c.workspace.resolveRequiredConsents(e.RequiredConsents)
-	if err != nil {
-		panic(fmt.Errorf("state: cannot create pipeline %s: %s", e.ID, err))
+	requiredConsents := RequiredConsents{
+		Operator: e.RequiredConsents.Operator,
+		Purposes: make([]*ConsentPurpose, len(e.RequiredConsents.Purposes)),
+	}
+	for i, id := range e.RequiredConsents.Purposes {
+		requiredConsents.Purposes[i] = c.workspace.consentPurposes[id]
 	}
 	pipeline := &Pipeline{
 		mu:                 new(sync.Mutex),
@@ -1808,11 +1810,14 @@ func (state *State) updatePipeline(n notification) string {
 	if e.Filter != nil {
 		filter, _ = unmarshalWhere(e.Filter, e.InSchema)
 	}
-	oldFormat := state.pipelines[e.ID].format
-	ws := state.pipelines[e.ID].connection.workspace
-	requiredConsents, err := ws.resolveRequiredConsents(e.RequiredConsents)
-	if err != nil {
-		panic(fmt.Errorf("state: cannot update pipeline %s: %s", e.ID, err))
+	previous := state.pipelines[e.ID]
+	ws := previous.connection.workspace
+	requiredConsents := RequiredConsents{
+		Operator: e.RequiredConsents.Operator,
+		Purposes: make([]*ConsentPurpose, len(e.RequiredConsents.Purposes)),
+	}
+	for i, id := range e.RequiredConsents.Purposes {
+		requiredConsents.Purposes[i] = ws.consentPurposes[id]
 	}
 	p := state.replacePipeline(e.ID, func(p *Pipeline) {
 		p.format = format
@@ -1842,9 +1847,9 @@ func (state *State) updatePipeline(n notification) string {
 	})
 	org := p.organization
 	// When the format changes, both oldFormat and format are non-nil.
-	if oldFormat != format {
+	if previous.format != format {
 		org.mu.Lock()
-		org.usage.updatePipelineFormat(oldFormat, format)
+		org.usage.updatePipelineFormat(previous.format, format)
 		org.mu.Unlock()
 	}
 	dispatchNotification(state, e)
