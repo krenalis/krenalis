@@ -559,8 +559,8 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				pipeline := Pipeline{}
 				err := rows.Scan(&pipeline.ID, &connectionID, &pipeline.Target, &eventType, &pipeline.OrderingGroup,
 					&pipeline.DeliveryEndpoint, &pipeline.Name, &pipeline.Enabled, &pipeline.ScheduleStart,
-					&pipeline.SchedulePeriod, &rawInSchema, &rawOutSchema, &filter, &purposes,
-					&pipeline.RequiredConsents.Operator, &mapping, &function.ID, &function.Version, &function.Language,
+					&pipeline.SchedulePeriod, &rawInSchema, &rawOutSchema, &filter, &pipeline.RequiredConsents.Operator,
+					&purposes, &mapping, &function.ID, &function.Version, &function.Language,
 					&function.Source, &function.PreserveJSON, &pipeline.Transformation.InPaths,
 					&pipeline.Transformation.OutPaths, &pipeline.Query, &format, &pipeline.Path, &pipeline.Sheet,
 					&pipeline.Compression, &pipeline.OrderBy, &pipeline.FormatSettings, &pipeline.ExportMode,
