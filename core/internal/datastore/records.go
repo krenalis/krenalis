@@ -67,7 +67,9 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, c
 				return nil, &ConsentConditionError{Msg: fmt.Sprintf("consent property «%s» does not exist", loc.Property)}
 			}
 			expr := warehouses.NewBaseExpr(column, warehouses.OpIsTrue)
-			expr.Key = loc.JSONKey
+			if loc.JSONKey != "" {
+				expr.Keys = []string{loc.JSONKey}
+			}
 			operands[i] = expr
 		}
 		consentWhere = warehouses.NewMultiExpr(warehouses.LogicalOperator(consentCondition.Operator), operands)
