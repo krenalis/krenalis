@@ -481,13 +481,10 @@ func (c *Collector) onUnlinkConnection(n state.UnlinkConnection) {
 
 // onUpdateConsentPurpose is called when a consent purpose is updated.
 func (c *Collector) onUpdateConsentPurpose(n state.UpdateConsentPurpose) {
-	ws, ok := c.state.Workspace(n.Workspace)
-	if !ok {
-		return
-	}
 	// The state has already replaced the purpose in the pipelines that require
 	// it, so the identity writers only need to read their required consents
 	// again.
+	ws, _ := c.state.Workspace(n.Workspace)
 	for _, connection := range ws.Connections() {
 		for _, p := range connection.Pipelines() {
 			if w, ok := c.identityWriters.Load(p.ID); ok {
