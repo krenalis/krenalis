@@ -198,8 +198,11 @@ type Warehouse interface {
 	// information, maximum character count, enum values, etc...).
 	ColumnTypeDescription(t types.Type) (string, error)
 
-	// Count returns the number of rows in table.
-	Count(ctx context.Context, table string) (int, error)
+	// Counts returns one row count for each condition on the table.
+	// A nil slice of conditions, or a nil condition, counts all rows.
+	// A non-nil empty slice of conditions is invalid. Each result is between
+	// zero and math.MaxInt32. All counts use the same snapshot of the table.
+	Counts(ctx context.Context, table string, conditions []Expr) ([]int, error)
 
 	// Delete deletes rows from the specified table that match the provided where
 	// expression. Returns an error if the expression is nil.

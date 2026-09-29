@@ -728,12 +728,12 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 							t.Fatal(err)
 						}
 					}
-					profileCount, err := dw.Count(ctx, "profiles")
+					profileCounts, err := dw.Counts(ctx, "profiles", nil)
 					if err != nil {
 						t.Fatal(err)
 					}
-					if profileCount != len(gotProfiles) {
-						t.Fatalf("expected exact profile count %d, got %d", len(gotProfiles), profileCount)
+					if profileCounts[0] != len(gotProfiles) {
+						t.Fatalf("expected exact profile count %d, got %d", len(gotProfiles), profileCounts[0])
 					}
 					// The returned profiles are sorted solely by email, as it is
 					// only possible to sort profiles by one property. Therefore,
