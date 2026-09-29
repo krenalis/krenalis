@@ -32,11 +32,11 @@ require (
 	github.com/itchyny/timefmt-go v0.1.8
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
-	github.com/klauspost/compress v1.19.1
+	github.com/klauspost/compress v1.20.0
 	github.com/krenalis/analytics-go v0.0.8
 	github.com/mark3labs/mcp-go v0.58.0
-	github.com/nats-io/nats.go v1.52.0
-	github.com/nats-io/nkeys v0.4.15
+	github.com/nats-io/nats.go v1.54.0
+	github.com/nats-io/nkeys v0.4.16
 	github.com/oschwald/maxminddb-golang/v2 v2.4.1
 	github.com/pkg/sftp v1.13.11
 	github.com/prometheus/client_golang v1.24.0
