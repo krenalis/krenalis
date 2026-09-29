@@ -151,7 +151,7 @@ Use the standard-library `testing/synctest` package when testing concurrent or a
 
 When running the complete Admin test suite, you may use `go run ./test/commit -just-test-admin` to receive each individual test result without waiting for the complete suite to finish. This command is optional.
 
-When a test starts a container with testcontainers and reads one of its mapped ports, its wait strategy must include `wait.ForListeningPort` for that port. `WithWaitStrategy` replaces the module's default strategy, and a log-only wait can return before the port is mapped (notably on Docker Desktop), making `MappedPort` fail.
+When a test starts a container with testcontainers and reads one of its mapped ports, its wait strategy must include `wait.ForListeningPort` for that port. A wait on a log message or on another port can return before that port is mapped and listening (notably on Docker Desktop), making `MappedPort` fail. Some modules, such as `postgres`, set no default wait strategy, and `WithWaitStrategy` replaces any default a module sets; to keep a module's default, add the port wait with `WithAdditionalWaitStrategy`. For PostgreSQL, use `postgres.BasicWaitStrategies()`, which already includes it.
 
 ## Behavioral contracts
 

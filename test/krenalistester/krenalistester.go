@@ -35,7 +35,6 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/nats"
 	_postgres "github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // launchKrenalisExternally determines if Krenalis should be launched externally
@@ -232,11 +231,7 @@ func (k *Krenalis) Start() {
 			_postgres.WithDatabase("test_postgres"),
 			_postgres.WithUsername("test_postgres"),
 			_postgres.WithPassword("test_postgres"),
-			testcontainers.WithWaitStrategy(
-				wait.ForLog("database system is ready to accept connections").
-					WithOccurrence(2).
-					WithStartupTimeout(60*time.Second),
-				wait.ForListeningPort("5432/tcp")),
+			_postgres.BasicWaitStrategies(),
 		)
 		k.stopPostgresContainer = func() error {
 			return testcontainers.TerminateContainer(postgresContainer)
@@ -266,11 +261,7 @@ func (k *Krenalis) Start() {
 			_postgres.WithDatabase("test_warehouse"),
 			_postgres.WithUsername("test_warehouse"),
 			_postgres.WithPassword("test_warehouse"),
-			testcontainers.WithWaitStrategy(
-				wait.ForLog("database system is ready to accept connections").
-					WithOccurrence(2).
-					WithStartupTimeout(60*time.Second),
-				wait.ForListeningPort("5432/tcp")),
+			_postgres.BasicWaitStrategies(),
 		)
 		k.stopWarehouseContainer = func() error {
 			return testcontainers.TerminateContainer(warehouseContainer)

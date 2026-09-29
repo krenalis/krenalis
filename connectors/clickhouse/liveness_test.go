@@ -19,6 +19,7 @@ import (
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/clickhouse"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // Test_PooledConnectionLiveness checks that the ClickHouse driver still detects
@@ -36,6 +37,7 @@ func Test_PooledConnectionLiveness(t *testing.T) {
 		clickhouse.WithUsername(username),
 		clickhouse.WithPassword(password),
 		clickhouse.WithDatabase(database),
+		testcontainers.WithAdditionalWaitStrategy(wait.ForListeningPort("9000/tcp")),
 	)
 	defer func() {
 		if err := testcontainers.TerminateContainer(container); err != nil {

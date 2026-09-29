@@ -16,7 +16,6 @@ import (
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 
 	_ "github.com/krenalis/krenalis/connectors/postgresql"
 	"github.com/krenalis/krenalis/core/internal/datastore"
@@ -40,8 +39,7 @@ func TestAlterProfileSchemaFinalization(t *testing.T) {
 	}
 	container, err := postgres.Run(t.Context(), testimages.PostgreSQL,
 		postgres.WithDatabase("krenalis"), postgres.WithUsername("krenalis"), postgres.WithPassword("krenalis"),
-		testcontainers.WithWaitStrategy(wait.ForLog("database system is ready to accept connections").
-			WithOccurrence(2).WithStartupTimeout(time.Minute), wait.ForListeningPort("5432/tcp")))
+		postgres.BasicWaitStrategies())
 	if err != nil {
 		t.Fatalf("expected PostgreSQL container, got %v", err)
 	}
