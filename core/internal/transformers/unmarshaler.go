@@ -405,7 +405,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 				return nil, newRecordValidationError("", "contains a duplicated value")
 			}
 		}
-		if _, err = d.readToken(); err != nil {
+		if _, err := d.readToken(); err != nil {
 			return nil, err
 		}
 		return arr, nil
