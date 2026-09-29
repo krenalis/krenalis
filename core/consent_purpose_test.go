@@ -11,58 +11,68 @@ import (
 	"github.com/krenalis/krenalis/tools/json"
 )
 
-// TestConsentPurposeLocationsJSON checks optional fields and invalid locations
-// in API requests.
+// TestConsentPurposeLocationsJSON checks optional and invalid consent locations
+// in API request JSON.
 func TestConsentPurposeLocationsJSON(t *testing.T) {
 
 	tests := []struct {
-		locations string
-		wantError bool
+		name                string
+		locations           string
+		wantDecodeError     bool
+		wantValidationError bool
 	}{
-		{``, false},
-		{`,"eventConsentLocations":null,"profileConsentLocation":null`, false},
-		{`,"eventConsentLocations":[]`, false},
-		{`,"eventConsentLocations":[{"purposeCode":"marketing"},{"purposeCode":"Marketing"}]`, false},
-		{`,"eventConsentLocations":[null]`, true},
-		{`,"eventConsentLocations":[{}]`, true},
-		{`,"eventConsentLocations":[{"purposeCode":null}]`, true},
-		{`,"eventConsentLocations":[{"purposeCode":""}]`, true},
-		{`,"eventConsentLocations":["marketing"]`, true},
-		{`,"eventConsentLocations":{}`, true},
-		{`,"profileConsentLocation":{"property":"marketing"}`, false},
-		{`,"profileConsentLocation":{"property":"marketing","jsonKey":null}`, false},
-		{`,"profileConsentLocation":{"property":"consents","jsonKey":"a.b"}`, false},
-		{`,"profileConsentLocation":{"property":"missing","jsonKey":"key"}`, false},
-		{`,"profileConsentLocation":{}`, true},
-		{`,"profileConsentLocation":""`, true},
-		{`,"profileConsentLocation":[]`, true},
-		{`,"profileConsentLocation":{"property":null}`, true},
-		{`,"profileConsentLocation":{"property":""}`, true},
-		{`,"profileConsentLocation":{"property":"marketing","jsonKey":""}`, false},
-		{`,"profileConsentLocation":{"property":"consents","jsonKey":1}`, true},
+		{name: "locations omitted"},
+		{name: "null event locations", locations: `,"eventConsentLocations":null`},
+		{name: "null profile location", locations: `,"profileConsentLocation":null`},
+		{name: "empty event locations", locations: `,"eventConsentLocations":[]`},
+		{name: "case-sensitive purpose codes", locations: `,"eventConsentLocations":[{"purposeCode":"marketing"},{"purposeCode":"Marketing"}]`},
+		{name: "null event location", locations: `,"eventConsentLocations":[null]`, wantValidationError: true},
+		{name: "empty event location", locations: `,"eventConsentLocations":[{}]`, wantValidationError: true},
+		{name: "null purpose code", locations: `,"eventConsentLocations":[{"purposeCode":null}]`, wantValidationError: true},
+		{name: "empty purpose code", locations: `,"eventConsentLocations":[{"purposeCode":""}]`, wantValidationError: true},
+		{name: "string event location", locations: `,"eventConsentLocations":["marketing"]`, wantDecodeError: true},
+		{name: "object event locations", locations: `,"eventConsentLocations":{}`, wantDecodeError: true},
+		{name: "boolean profile location", locations: `,"profileConsentLocation":{"property":"marketing"}`},
+		{name: "null profile JSON key", locations: `,"profileConsentLocation":{"property":"marketing","jsonKey":null}`},
+		{name: "dotted profile JSON key", locations: `,"profileConsentLocation":{"property":"consents","jsonKey":"a.b"}`},
+		{name: "arbitrary profile property", locations: `,"profileConsentLocation":{"property":"missing","jsonKey":"key"}`},
+		{name: "empty profile location", locations: `,"profileConsentLocation":{}`, wantValidationError: true},
+		{name: "string profile location", locations: `,"profileConsentLocation":""`, wantDecodeError: true},
+		{name: "array profile location", locations: `,"profileConsentLocation":[]`, wantDecodeError: true},
+		{name: "null profile property", locations: `,"profileConsentLocation":{"property":null}`, wantValidationError: true},
+		{name: "empty profile property", locations: `,"profileConsentLocation":{"property":""}`, wantValidationError: true},
+		{name: "empty profile JSON key", locations: `,"profileConsentLocation":{"property":"marketing","jsonKey":""}`},
+		{name: "numeric profile JSON key", locations: `,"profileConsentLocation":{"property":"consents","jsonKey":1}`, wantDecodeError: true},
 	}
 
 	for _, test := range tests {
-		t.Run(test.locations, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
+
+			if test.wantDecodeError && test.wantValidationError {
+				t.Fatal("expected only one error stage, got both decoding and validation")
+			}
 
 			var purpose ConsentPurposeToSet
 			err := json.Unmarshal([]byte(`{"name":"Marketing"`+test.locations+`}`), &purpose)
 			if err != nil {
-				if !test.wantError {
-					t.Fatalf("unexpected JSON decoding error: %s", err)
+				if !test.wantDecodeError {
+					t.Fatalf("expected no JSON decoding error, got %v", err)
 				}
 				return
+			}
+			if test.wantDecodeError {
+				t.Fatal("expected a JSON decoding error, got nil")
 			}
 
 			err = validateConsentPurposeToSet(purpose)
 			if err != nil {
-				if !test.wantError {
-					t.Fatalf("expected valid consent locations, got %s", err)
+				if !test.wantValidationError {
+					t.Fatalf("expected no validation error, got %v", err)
 				}
 				return
 			}
-			if test.wantError {
-				t.Fatal("expected invalid consent locations, got no error")
+			if test.wantValidationError {
+				t.Fatal("expected a validation error, got nil")
 			}
 
 		})
@@ -73,7 +83,7 @@ func TestConsentPurposeLocationsJSON(t *testing.T) {
 // TestValidateConsentPurposeToSet checks consent location constraints.
 func TestValidateConsentPurposeToSet(t *testing.T) {
 
-	key := ` say "yes".\u0061 `
+	keyWithLiteralEscape := ` say "yes".\u0061 `
 	invisibleKey := " \t\n\x01\u200b"
 	nulKey := "a\x00"
 	keyAtLimit := strings.Repeat("😀", 1024)
@@ -89,7 +99,12 @@ func TestValidateConsentPurposeToSet(t *testing.T) {
 		{name: "too many event locations", eventCodes: []string{"a", "b", "c", "d", "e", "f"}, wantError: true},
 		{name: "hash-prefixed purpose code", eventCodes: []string{"#CFK567"}},
 		{name: "dotted purpose code", eventCodes: []string{"vendor.marketing"}},
+		{name: "purpose codes are case-sensitive", eventCodes: []string{"marketing", "Marketing"}},
 		{name: "duplicated purpose code", eventCodes: []string{"marketing", "marketing"}, wantError: true},
+		{
+			name: "non-adjacent duplicated purpose code", eventCodes: []string{"marketing", "analytics", "marketing"},
+			wantError: true,
+		},
 		{name: "empty purpose code", eventCodes: []string{""}, wantError: true},
 		{name: "empty purpose code among valid codes", eventCodes: []string{"a", "", "b"}, wantError: true},
 		{name: "whitespace-only purpose code", eventCodes: []string{" \t\n"}},
@@ -97,8 +112,11 @@ func TestValidateConsentPurposeToSet(t *testing.T) {
 		{name: "NUL in purpose code", eventCodes: []string{nulKey}, wantError: true},
 		{name: "purpose code at code point limit", eventCodes: []string{keyAtLimit}},
 		{name: "purpose code over code point limit", eventCodes: []string{keyOverLimit}, wantError: true},
-		{name: "Boolean profile location", profileLocation: &ProfileConsentLocation{Property: "consents.marketing"}},
-		{name: "JSON profile location", profileLocation: &ProfileConsentLocation{Property: "consents", JSONKey: key}},
+		{name: "boolean profile location", profileLocation: &ProfileConsentLocation{Property: "consents.marketing"}},
+		{
+			name:            "JSON profile location",
+			profileLocation: &ProfileConsentLocation{Property: "consents", JSONKey: keyWithLiteralEscape},
+		},
 		{name: "empty profile property", profileLocation: &ProfileConsentLocation{}, wantError: true},
 		{
 			name: "bracketed profile property", wantError: true,
@@ -129,6 +147,10 @@ func TestValidateConsentPurposeToSet(t *testing.T) {
 			profileLocation: &ProfileConsentLocation{Property: "consents", JSONKey: nulKey},
 		},
 		{
+			name:            "JSON key at code point limit",
+			profileLocation: &ProfileConsentLocation{Property: "consents", JSONKey: keyAtLimit},
+		},
+		{
 			name:            "independent property and JSON key limits",
 			profileLocation: &ProfileConsentLocation{Property: strings.Repeat("a", 1024), JSONKey: keyAtLimit},
 		},
@@ -149,12 +171,12 @@ func TestValidateConsentPurposeToSet(t *testing.T) {
 			err := validateConsentPurposeToSet(purpose)
 			if err != nil {
 				if !test.wantError {
-					t.Fatalf("unexpected error: %s", err)
+					t.Fatalf("expected no validation error, got %v", err)
 				}
 				return
 			}
 			if test.wantError {
-				t.Fatal("expected an error, got nil")
+				t.Fatal("expected a validation error, got nil")
 			}
 
 		})
