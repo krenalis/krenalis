@@ -140,11 +140,7 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 			user.Attributes = record.Attributes
 			this.core.metrics.Pipelines.TransformationPassed(pipeline.ID, 1)
 			this.core.metrics.Pipelines.OutputValidationPassed(pipeline.ID, 1)
-			if !consents.SatisfiesProfile(
-				pipeline.RequiredConsents.Operator,
-				pipeline.RequiredConsents.Purposes,
-				user.Attributes,
-			) {
+			if rc := pipeline.RequiredConsents; !consents.SatisfiesProfile(rc.Operator, rc.Purposes, user.Attributes) {
 				this.core.metrics.Pipelines.ImportProfileConsentFailed(pipeline.ID, 1)
 				continue
 			}
