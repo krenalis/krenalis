@@ -116,9 +116,9 @@ func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Col
 				for n := len(rule.Property) - 1; n > 0; n-- {
 					parentPath = parentPath[:len(parentPath)-len(rule.Property[n])-1]
 					if column, ok := columnByProperty[parentPath]; ok && column.Type.Kind() == types.JSONKind {
-						op := warehouses.NewBaseExpr(column, warehouses.Operator(rule.Operator))
-						op.Keys = rule.Property[n:]
-						expr.Operands[i] = op
+						operand := warehouses.NewBaseExpr(column, warehouses.Operator(rule.Operator))
+						operand.Keys = rule.Property[n:]
+						expr.Operands[i] = operand
 						break
 					}
 				}
