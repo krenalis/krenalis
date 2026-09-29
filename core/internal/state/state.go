@@ -1903,8 +1903,7 @@ type RequiredConsents struct {
 }
 
 // RequiredConsentsByIDs represents the consent purposes required by a pipeline,
-// referred to by their identifiers. It is used where the consent purposes
-// cannot be referred to by pointer.
+// identified by their IDs.
 type RequiredConsentsByIDs struct {
 	Operator ConsentPurposesOperator
 	Purposes []string // consent purpose identifiers.
