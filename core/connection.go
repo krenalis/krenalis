@@ -613,8 +613,8 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 				}
 			}
 			query := "INSERT INTO pipelines (id, connection, target, event_type, ordering_group, delivery_endpoint,\n" +
-				"name, enabled, schedule_start, schedule_period, in_schema, out_schema, filter, required_consents_purposes,\n" +
-				"required_consents_operator, transformation_mapping, transformation_id, transformation_version,\n" +
+				"name, enabled, schedule_start, schedule_period, in_schema, out_schema, filter, required_consents_operator,\n" +
+				"required_consents_purposes, transformation_mapping, transformation_id, transformation_version,\n" +
 				"transformation_language, transformation_source, transformation_preserve_json, transformation_in_paths,\n" +
 				"transformation_out_paths, query, format, path, sheet, compression, order_by, format_settings,\n" +
 				"export_mode, matching_in, matching_out, update_on_duplicates, table_name, table_key,\n" +
@@ -624,7 +624,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 			_, err = tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 				n.OrderingGroup, n.DeliveryEndpoint, n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod,
 				rawInSchema, rawOutSchema,
-				n.Filter, n.RequiredConsents.Purposes, n.RequiredConsents.Operator, mapping, function.ID, function.Version,
+				n.Filter, n.RequiredConsents.Operator, n.RequiredConsents.Purposes, mapping, function.ID, function.Version,
 				function.Language, function.Source, function.PreserveJSON, n.Transformation.InPaths, n.Transformation.OutPaths,
 				n.Query, formatCode, n.Path, n.Sheet, n.Compression, n.OrderBy, n.FormatSettings, n.ExportMode, n.Matching.In,
 				n.Matching.Out, n.UpdateOnDuplicates, n.TableName, n.TableKey, n.UserIDColumn, n.UpdatedAtColumn,
