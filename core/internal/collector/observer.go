@@ -177,8 +177,7 @@ func (observer *Observer) addEvent(event events.Event) {
 		if !filters.Applies(listener.filter, event) {
 			continue
 		}
-		if rc := listener.requiredConsents; rc != nil &&
-			!consents.SatisfiesEvent(rc.Operator, rc.Purposes, event) {
+		if rc := listener.requiredConsents; rc != nil && !consents.SatisfiesEvent(rc.Operator, rc.Purposes, event) {
 			continue
 		}
 		listener.Lock()
