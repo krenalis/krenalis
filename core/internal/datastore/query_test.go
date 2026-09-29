@@ -365,6 +365,32 @@ func TestConvertWhereRejectsMissingRules(t *testing.T) {
 	}
 }
 
+// TestConvertWhereRejectsNestedPropertyOnBooleanColumn verifies that nested
+// properties cannot be accessed on a boolean column.
+func TestConvertWhereRejectsNestedPropertyOnBooleanColumn(t *testing.T) {
+
+	where := &state.Where{
+		Operator: state.OpAnd,
+		Rules: []state.WhereRule{
+			&state.WhereCondition{Property: []string{"j", "enabled"}, Operator: state.OpIsTrue},
+		},
+	}
+	columns := map[string]warehouses.Column{
+		"j": {Name: "j", Type: types.Boolean()},
+	}
+	expected := `property "j.enabled" does not map to any warehouse columns`
+
+	_, err := convertWhere(where, columns)
+	if err != nil {
+		if err.Error() != expected {
+			t.Fatalf("expected error %q, got %q", expected, err)
+		}
+		return
+	}
+	t.Fatalf("expected error %q, got nil", expected)
+
+}
+
 // TestConvertWhereRejectsUnsupportedObjectOperator tests convertWhere with an
 // operator that cannot be translated for an object property.
 func TestConvertWhereRejectsUnsupportedObjectOperator(t *testing.T) {
