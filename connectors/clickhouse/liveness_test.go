@@ -2,6 +2,10 @@
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
+// The ClickHouse driver checks pooled connections through syscall.Conn only on
+// these systems (see its conn_check.go) and pings them on the others.
+//go:build linux || darwin || dragonfly || freebsd || netbsd || openbsd || solaris || illumos
+
 package clickhouse
 
 import (
