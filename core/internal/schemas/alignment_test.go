@@ -108,6 +108,7 @@ func Test_checkSchemaAlignment(t *testing.T) {
 		{p1: types.Property{Type: types.Array(types.Array(types.UUID()))}, p2: types.Property{Type: types.Array(types.Array(types.String()))}, err: `«foo[][]» property's type has changed from «uuid» to «string»`},
 		{p1: types.Property{Type: types.Array(types.Boolean()).WithMinElements(1)}, p2: types.Property{Type: types.Array(types.Boolean())}, err: `minimum number of «foo» property elements has been changed from 1 to 0`},
 		{p1: types.Property{Type: types.Array(types.Boolean()).WithMinElements(10)}, p2: types.Property{Type: types.Array(types.Boolean()).WithMinElements(12)}, err: `minimum number of «foo» property elements has been changed from 10 to 12`},
+		{p1: types.Property{Type: types.Array(types.Boolean()).WithMaxElements(3)}, p2: types.Property{Type: types.Array(types.Boolean()).WithMaxElements(5)}, err: `maximum number of «foo» property elements has been changed from 3 to 5`},
 		{p1: types.Property{Type: types.Array(types.UUID()).WithUnique()}, p2: types.Property{Type: types.Array(types.UUID())}, err: `«foo» property elements were initially required to be unique, but it is no longer required`},
 		{p1: types.Property{Type: types.Array(types.IP())}, p2: types.Property{Type: types.Array(types.IP()).WithUnique()}, err: `«foo» property elements were not required to be unique, but now it is required`},
 		{p1: types.Property{Type: types.Object([]types.Property{{Name: "a", Type: types.Float(32)}})}, p2: types.Property{Type: types.JSON()}, err: `«foo» property's type has changed from «object» to «json»`},

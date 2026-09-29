@@ -254,7 +254,7 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 		n1 = t1.MaxElements()
 		n2 = t2.MaxElements()
 		if n1 != n2 {
-			return &Error{Msg: fmt.Sprintf("minimum number of «%s» property elements has been changed from %d to %d", name, n1, n2)}
+			return &Error{Msg: fmt.Sprintf("maximum number of «%s» property elements has been changed from %d to %d", name, n1, n2)}
 		}
 		if t1.Unique() {
 			return &Error{Msg: fmt.Sprintf("«%s» property elements were initially required to be unique, but it is no longer required", name)}
