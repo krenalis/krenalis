@@ -1,6 +1,7 @@
 import { ConnectorSettings } from './responses';
 import { Compression } from './connection';
 import Type, { ObjectType } from './types';
+import { EventConsentLocation } from './workspace';
 
 type PipelineTarget = 'Event' | 'User' | 'Group';
 
@@ -24,6 +25,11 @@ type ConsentPurposesOperator = 'and' | 'or';
 interface RequiredConsents {
 	operator: ConsentPurposesOperator;
 	purposes: string[];
+}
+
+interface EventListenerConsents {
+	operator: ConsentPurposesOperator;
+	purposes: EventConsentLocation[][];
 }
 
 type Mapping = Record<string, string>;
@@ -200,6 +206,7 @@ export type {
 	FilterRule,
 	ConsentPurposesOperator,
 	RequiredConsents,
+	EventListenerConsents,
 	FilterCondition,
 	Pipeline,
 	PipelineType,

@@ -733,6 +733,13 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	return n.ID, nil
 }
 
+// EventListenerConsents represents the consents required by an event
+// listener. Each purpose is represented by its event consent locations.
+type EventListenerConsents struct {
+	Operator ConsentPurposesOperator  `json:"operator"`
+	Purposes [][]EventConsentLocation `json:"purposes"`
+}
+
 // CreateEventListener creates an event listener for the workspace that listens
 // to events and returns its identifier.
 //
@@ -751,13 +758,12 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 //
 // If requiredConsents is non-nil, only events whose consents satisfy its
 // purposes, according to its operator, will be observed. Its purposes must be
-// at most MaxRequiredConsentPurposes and must not contain duplicates.
+// at most MaxRequiredConsentPurposes, and each must have at least one event
+// consent location.
 //
-// It returns an errors.UnprocessableError error with code:
-//
-//   - ConsentPurposeNotExist, if a required consent purpose does not exist.
-//   - TooManyListeners, if there are already too many listeners.
-func (this *Workspace) CreateEventListener(connection string, size int, filter *Filter, requiredConsents *RequiredConsents) (string, error) {
+// It returns an errors.UnprocessableError error with code TooManyListeners if
+// there are already too many listeners.
+func (this *Workspace) CreateEventListener(connection string, size int, filter *Filter, requiredConsents *EventListenerConsents) (string, error) {
 	this.core.mustBeOpen()
 	if connection != "" && !IsValidID(connection) {
 		return "", errors.BadRequest("identifier %q is not a valid connection identifier", connection)
@@ -801,16 +807,16 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 			Operator: state.ConsentPurposesOperator(requiredConsents.Operator),
 			Purposes: make([]*state.ConsentPurpose, len(requiredConsents.Purposes)),
 		}
-		for i, id := range requiredConsents.Purposes {
-			if !IsValidID(id) {
-				return "", errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
+		for i, locations := range requiredConsents.Purposes {
+			if len(locations) == 0 {
+				return "", errors.BadRequest("required consent purpose %d has no event consent locations", i)
 			}
-			if slices.Contains(requiredConsents.Purposes[i+1:], id) {
-				return "", errors.BadRequest("required consent purpose %s is duplicated", id)
+			if err := validateEventConsentLocations(locations); err != nil {
+				return "", errors.BadRequest("%s", err)
 			}
-			cp, ok := this.workspace.ConsentPurpose(id)
-			if !ok {
-				return "", errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", id)
+			cp := &state.ConsentPurpose{EventConsentLocations: make([]state.EventConsentLocation, len(locations))}
+			for j, loc := range locations {
+				cp.EventConsentLocations[j] = state.EventConsentLocation(loc)
 			}
 			rc.Purposes[i] = cp
 		}

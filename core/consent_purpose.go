@@ -265,19 +265,8 @@ func validateConsentPurposeToSet(purpose ConsentPurposeToSet) error {
 		return err
 	}
 	// Validate event consent locations.
-	if len(purpose.EventConsentLocations) > maxConsentPurposeEventLocations {
-		return fmt.Errorf("consent purpose can have at most %d event consent locations",
-			maxConsentPurposeEventLocations)
-	}
-	seenPurposeCodes := map[string]bool{}
-	for _, loc := range purpose.EventConsentLocations {
-		if err := util.ValidateStringField("purposeCode", loc.PurposeCode, maxConsentLocationStringLen); err != nil {
-			return err
-		}
-		if seenPurposeCodes[loc.PurposeCode] {
-			return fmt.Errorf("purpose code %q is duplicated", loc.PurposeCode)
-		}
-		seenPurposeCodes[loc.PurposeCode] = true
+	if err := validateEventConsentLocations(purpose.EventConsentLocations); err != nil {
+		return err
 	}
 	// Validate the profile consent location.
 	if loc := purpose.ProfileConsentLocation; loc != nil {
@@ -292,6 +281,26 @@ func validateConsentPurposeToSet(purpose ConsentPurposeToSet) error {
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+// validateEventConsentLocations validates the event consent locations of a
+// consent purpose.
+func validateEventConsentLocations(locations []EventConsentLocation) error {
+	if len(locations) > maxConsentPurposeEventLocations {
+		return fmt.Errorf("consent purpose can have at most %d event consent locations",
+			maxConsentPurposeEventLocations)
+	}
+	seenPurposeCodes := map[string]bool{}
+	for _, loc := range locations {
+		if err := util.ValidateStringField("purposeCode", loc.PurposeCode, maxConsentLocationStringLen); err != nil {
+			return err
+		}
+		if seenPurposeCodes[loc.PurposeCode] {
+			return fmt.Errorf("purpose code %q is duplicated", loc.PurposeCode)
+		}
+		seenPurposeCodes[loc.PurposeCode] = true
 	}
 	return nil
 }

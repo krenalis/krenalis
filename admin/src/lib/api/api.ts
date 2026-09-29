@@ -13,7 +13,7 @@ import {
 	PipelineStep,
 	PipelineMetrics,
 	Filter,
-	RequiredConsents,
+	EventListenerConsents,
 } from './types/pipeline';
 import { Connector, ConnectorDocumentation } from './types/connector';
 import { WarehouseMode, WarehouseResponse, WarehouseSettings } from './types/warehouse';
@@ -537,7 +537,7 @@ class EventListeners {
 		connection: string | null,
 		size: number | null,
 		filter: Filter | null,
-		requiredConsents?: RequiredConsents | null,
+		requiredConsents?: EventListenerConsents | null,
 	): Promise<CreateEventListenerResponse> => {
 		return await call(`${this.apiURL}/events/listeners`, http.POST, this.workspaceID, {
 			connection,

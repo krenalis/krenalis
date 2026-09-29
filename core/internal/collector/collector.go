@@ -485,11 +485,6 @@ func (c *Collector) onUpdateConsentPurpose(n state.UpdateConsentPurpose) {
 	if !ok {
 		return
 	}
-	if observer, ok := c.observers.Load(n.Workspace); ok {
-		if cp, ok := ws.ConsentPurpose(n.ID); ok {
-			observer.replaceConsentPurpose(cp)
-		}
-	}
 	// The state has already replaced the purpose in the pipelines that require
 	// it, so the identity writers only need to read their required consents
 	// again.

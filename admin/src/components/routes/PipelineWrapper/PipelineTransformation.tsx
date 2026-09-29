@@ -72,10 +72,10 @@ import { EventListenerEvent } from '../../../hooks/useEventListener';
 import { Sample } from './Pipeline.types';
 import { UnprocessableError } from '../../../lib/api/errors';
 import ConnectionContext from '../../../context/ConnectionContext';
-import Workspace from '../../../lib/api/types/workspace';
+import Workspace, { EventConsentLocation } from '../../../lib/api/types/workspace';
 import {
 	PipelineToSet,
-	RequiredConsents,
+	EventListenerConsents,
 	TransformationFunction,
 	TransformationPurpose,
 } from '../../../lib/api/types/pipeline';
@@ -1359,6 +1359,7 @@ const FullscreenTransformation = ({
 		setSelectedInPaths,
 		selectedOutPaths,
 		setSelectedOutPaths,
+		consentPurposes,
 	} = useContext(PipelineContext);
 
 	const firstNameIdentifier = useRef<string>('');
@@ -1390,14 +1391,24 @@ const FullscreenTransformation = ({
 		if (isEventBasedUserImport) {
 			return null;
 		}
-		// Discard the required consents (and their operator) when no purpose
-		// has been selected.
-		let consents: RequiredConsents | null = null;
-		if (pipeline.requiredConsents != null && pipeline.requiredConsents.purposes.length > 0) {
-			consents = pipeline.requiredConsents;
+		// Skip the purposes that no longer exist or have no event consent
+		// location, as they never apply to the events, and discard the required
+		// consents (and their operator) when no purpose remains.
+		let consents: EventListenerConsents | null = null;
+		if (pipeline.requiredConsents != null) {
+			const purposes: EventConsentLocation[][] = [];
+			for (const id of pipeline.requiredConsents.purposes) {
+				const purpose = consentPurposes.find((p) => p.id === id);
+				if (purpose != null && purpose.eventConsentLocations.length > 0) {
+					purposes.push(purpose.eventConsentLocations);
+				}
+			}
+			if (purposes.length > 0) {
+				consents = { operator: pipeline.requiredConsents.operator, purposes: purposes };
+			}
 		}
 		return consents;
-	}, [isEventBasedUserImport, pipeline.requiredConsents]);
+	}, [isEventBasedUserImport, pipeline.requiredConsents, consentPurposes]);
 
 	const { startListening, stopListening } = useEventListener(
 		(newly: EventListenerEvent[]) => {
@@ -1429,7 +1440,7 @@ const FullscreenTransformation = ({
 
 	useEffect(() => {
 		setEvents([]);
-	}, [pipeline.filter, pipeline.requiredConsents]);
+	}, [pipeline.filter, JSON.stringify(normalizedConsents)]);
 
 	useEffect(() => {
 		setShowOnlyInSelected(false);
