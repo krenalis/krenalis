@@ -162,13 +162,15 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 			}
 			b.WriteString(qname)
 		case types.JSONKind:
-			if baseExpr.Key == "" {
+			if len(baseExpr.Keys) == 0 {
 				b.WriteString(qname)
 			} else {
 				b.WriteByte('(')
 				b.WriteString(qname)
-				b.WriteString(" -> ")
-				quoteString(b, baseExpr.Key)
+				for _, key := range baseExpr.Keys {
+					b.WriteString(" -> ")
+					quoteString(b, key)
+				}
 				b.WriteByte(')')
 			}
 			b.WriteString(" IS NOT DISTINCT FROM ")

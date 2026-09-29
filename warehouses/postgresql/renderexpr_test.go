@@ -125,7 +125,7 @@ func Test_renderExpr(t *testing.T) {
 		{
 			expr: &warehouses.BaseExpr{
 				Column:   warehouses.Column{Name: "properties", Type: types.JSON()},
-				Key:      "enabled",
+				Keys:     []string{"enabled"},
 				Operator: warehouses.OpIsTrue,
 			},
 			query: `("properties" -> 'enabled') IS NOT DISTINCT FROM 'true'::jsonb`,
@@ -133,10 +133,42 @@ func Test_renderExpr(t *testing.T) {
 		{
 			expr: &warehouses.BaseExpr{
 				Column:   warehouses.Column{Name: "properties", Type: types.JSON()},
-				Key:      "archived",
+				Keys:     []string{"archived"},
 				Operator: warehouses.OpIsFalse,
 			},
 			query: `("properties" -> 'archived') IS NOT DISTINCT FROM 'false'::jsonb`,
+		},
+		{
+			expr: &warehouses.BaseExpr{
+				Column:   warehouses.Column{Name: "properties", Type: types.JSON()},
+				Keys:     []string{"a", "b"},
+				Operator: warehouses.OpIsTrue,
+			},
+			query: `("properties" -> 'a' -> 'b') IS NOT DISTINCT FROM 'true'::jsonb`,
+		},
+		{
+			expr: &warehouses.BaseExpr{
+				Column:   warehouses.Column{Name: "properties", Type: types.JSON()},
+				Keys:     []string{"a", "b"},
+				Operator: warehouses.OpIsFalse,
+			},
+			query: `("properties" -> 'a' -> 'b') IS NOT DISTINCT FROM 'false'::jsonb`,
+		},
+		{
+			expr: &warehouses.BaseExpr{
+				Column:   warehouses.Column{Name: "properties", Type: types.JSON()},
+				Keys:     []string{"a.b"},
+				Operator: warehouses.OpIsTrue,
+			},
+			query: `("properties" -> 'a.b') IS NOT DISTINCT FROM 'true'::jsonb`,
+		},
+		{
+			expr: &warehouses.BaseExpr{
+				Column:   warehouses.Column{Name: "properties", Type: types.JSON()},
+				Keys:     []string{"a'b", "c'd"},
+				Operator: warehouses.OpIsFalse,
+			},
+			query: `("properties" -> 'a''b' -> 'c''d') IS NOT DISTINCT FROM 'false'::jsonb`,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpIsNull),

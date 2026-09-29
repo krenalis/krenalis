@@ -148,13 +148,13 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 			b.WriteString(qname)
 		case types.JSONKind:
 			b.WriteString("AS_BOOLEAN(")
-			if baseExpr.Key == "" {
-				b.WriteString(qname)
-			} else {
+			for range baseExpr.Keys {
 				b.WriteString("GET(")
-				b.WriteString(qname)
+			}
+			b.WriteString(qname)
+			for _, key := range baseExpr.Keys {
 				b.WriteString(", ")
-				quoteString(b, baseExpr.Key)
+				quoteString(b, key)
 				b.WriteByte(')')
 			}
 			b.WriteString(") IS NOT DISTINCT FROM ")

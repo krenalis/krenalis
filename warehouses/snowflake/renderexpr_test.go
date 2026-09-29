@@ -116,7 +116,7 @@ func Test_renderExpr(t *testing.T) {
 		{
 			expr: &warehouses.BaseExpr{
 				Column:   warehouses.Column{Name: "properties", Type: types.JSON()},
-				Key:      "enabled",
+				Keys:     []string{"enabled"},
 				Operator: warehouses.OpIsTrue,
 			},
 			query: `AS_BOOLEAN(GET("PROPERTIES", 'enabled')) IS NOT DISTINCT FROM TRUE`,
@@ -124,10 +124,42 @@ func Test_renderExpr(t *testing.T) {
 		{
 			expr: &warehouses.BaseExpr{
 				Column:   warehouses.Column{Name: "properties", Type: types.JSON()},
-				Key:      "archived",
+				Keys:     []string{"archived"},
 				Operator: warehouses.OpIsFalse,
 			},
 			query: `AS_BOOLEAN(GET("PROPERTIES", 'archived')) IS NOT DISTINCT FROM FALSE`,
+		},
+		{
+			expr: &warehouses.BaseExpr{
+				Column:   warehouses.Column{Name: "properties", Type: types.JSON()},
+				Keys:     []string{"a", "b"},
+				Operator: warehouses.OpIsTrue,
+			},
+			query: `AS_BOOLEAN(GET(GET("PROPERTIES", 'a'), 'b')) IS NOT DISTINCT FROM TRUE`,
+		},
+		{
+			expr: &warehouses.BaseExpr{
+				Column:   warehouses.Column{Name: "properties", Type: types.JSON()},
+				Keys:     []string{"a", "b"},
+				Operator: warehouses.OpIsFalse,
+			},
+			query: `AS_BOOLEAN(GET(GET("PROPERTIES", 'a'), 'b')) IS NOT DISTINCT FROM FALSE`,
+		},
+		{
+			expr: &warehouses.BaseExpr{
+				Column:   warehouses.Column{Name: "properties", Type: types.JSON()},
+				Keys:     []string{"a.b"},
+				Operator: warehouses.OpIsTrue,
+			},
+			query: `AS_BOOLEAN(GET("PROPERTIES", 'a.b')) IS NOT DISTINCT FROM TRUE`,
+		},
+		{
+			expr: &warehouses.BaseExpr{
+				Column:   warehouses.Column{Name: "properties", Type: types.JSON()},
+				Keys:     []string{"a'b", "c'd"},
+				Operator: warehouses.OpIsFalse,
+			},
+			query: `AS_BOOLEAN(GET(GET("PROPERTIES", 'a\'b'), 'c\'d')) IS NOT DISTINCT FROM FALSE`,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpIsNull),
