@@ -214,7 +214,8 @@ func (pp Properties) WalkAll() iter.Seq2[string, Property] {
 	return pp.walk(true)
 }
 
-// WalkObjects returns an iterator over all properties in depth-first order.
+// WalkObjects returns an iterator over properties in depth-first order. It
+// recursively walks object properties, but does not walk into arrays or maps.
 //
 // Example:
 //
@@ -222,8 +223,7 @@ func (pp Properties) WalkAll() iter.Seq2[string, Property] {
 //	    fmt.Printf("%s: %s\n", path, property.Type.Kind)
 //	}
 //
-// Unlike WalkAll, WalkObjects does not descend into array or map elements.
-// It still yields array and map properties, and descends only into objects.
+// To also walk into arrays and maps, use WalkAll instead.
 func (pp Properties) WalkObjects() iter.Seq2[string, Property] {
 	return pp.walk(false)
 }
