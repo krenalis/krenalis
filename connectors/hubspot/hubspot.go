@@ -210,7 +210,16 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target connectors.Targets, 
 		}
 		if typ.Kind() == types.StringKind {
 			if len(r.Options) == 0 {
-				property.Type.WithMaxLength(65536)
+				// HubSpot limits values written through the CRM (and therefore
+				// through the API) to 65536 characters, but values submitted
+				// through forms can be longer, and such values may then be
+				// returned by the API when reading. Therefore, destination
+				// schemas are limited, while source schemas are not.
+				//
+				// See https://knowledge.hubspot.com/properties/property-field-types-in-hubspot.
+				if role == connectors.Destination {
+					property.Type = typ.WithMaxLength(65536)
+				}
 			} else {
 				var n int
 				for _, option := range r.Options {

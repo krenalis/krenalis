@@ -148,10 +148,7 @@ func TestAdmin(t *testing.T) {
 
 	// Prepare and run the Admin tests.
 	adminDir := filepath.Join("..", "admin")
-
-	// TODO(Gianluca): commented as workaround for https://github.com/krenalis/krenalis/issues/2164.
-	// run(t, "npm", []string{"install"}, adminDir, fsTempDir.Root())
-
+	run(t, "npm", []string{"install"}, adminDir, fsTempDir.Root())
 	run(t, "npx", []string{"playwright", "install", "chromium"}, adminDir, fsTempDir.Root())
 	if passUIFlagToPlaywright {
 		run(t, "npx", []string{"playwright", "test", "--ui"}, adminDir, fsTempDir.Root())
