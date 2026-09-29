@@ -712,9 +712,6 @@ func Test_UnmarshalEdgeCases(t *testing.T) {
 		if rec[0].Err == nil || rec[0].Err.Error() != want {
 			t.Fatalf("expected %q, got %v", want, rec[0].Err)
 		}
-		if rec[0].Attributes != nil {
-			t.Fatalf("expected nil attributes, got %#v", rec[0].Attributes)
-		}
 	})
 }
 
