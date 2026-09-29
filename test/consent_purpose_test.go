@@ -15,9 +15,9 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-// TestConsentPurposeLocationsAPI checks canonical responses and replacement
-// semantics for consent locations.
-func TestConsentPurposeLocationsAPI(t *testing.T) {
+// TestConsentPurposeLocationsCanonicalization checks that consent locations
+// are returned in canonical form.
+func TestConsentPurposeLocationsCanonicalization(t *testing.T) {
 
 	if testing.Short() {
 		t.Skip()
@@ -29,100 +29,98 @@ func TestConsentPurposeLocationsAPI(t *testing.T) {
 	tests := []struct {
 		name      string
 		locations string
-		want      string
+		want      core.ConsentPurposeToSet
 	}{
 		{
 			name: "omitted locations",
-			want: `"eventConsentLocations":[],"profileConsentLocation":null`,
+			want: core.ConsentPurposeToSet{Name: "Marketing", EventConsentLocations: []core.EventConsentLocation{}},
 		},
 		{
 			name:      "null locations",
 			locations: `,"eventConsentLocations":null,"profileConsentLocation":null`,
-			want:      `"eventConsentLocations":[],"profileConsentLocation":null`,
+			want:      core.ConsentPurposeToSet{Name: "Marketing", EventConsentLocations: []core.EventConsentLocation{}},
 		},
 		{
 			name:      "empty event locations",
 			locations: `,"eventConsentLocations":[]`,
-			want:      `"eventConsentLocations":[],"profileConsentLocation":null`,
+			want:      core.ConsentPurposeToSet{Name: "Marketing", EventConsentLocations: []core.EventConsentLocation{}},
 		},
 		{
 			name:      "omitted JSON key",
 			locations: `,"profileConsentLocation":{"property":"marketing"}`,
-			want:      `"eventConsentLocations":[],"profileConsentLocation":{"property":"marketing"}`,
+			want: core.ConsentPurposeToSet{
+				Name:                  "Marketing",
+				EventConsentLocations: []core.EventConsentLocation{},
+				ProfileConsentLocation: &core.ProfileConsentLocation{
+					Property: "marketing",
+				},
+			},
 		},
 		{
 			name:      "null JSON key",
 			locations: `,"profileConsentLocation":{"property":"marketing","jsonKey":null}`,
-			want:      `"eventConsentLocations":[],"profileConsentLocation":{"property":"marketing"}`,
+			want: core.ConsentPurposeToSet{
+				Name:                  "Marketing",
+				EventConsentLocations: []core.EventConsentLocation{},
+				ProfileConsentLocation: &core.ProfileConsentLocation{
+					Property: "marketing",
+				},
+			},
 		},
 		{
 			name:      "empty JSON key",
 			locations: `,"profileConsentLocation":{"property":"marketing","jsonKey":""}`,
-			want:      `"eventConsentLocations":[],"profileConsentLocation":{"property":"marketing"}`,
+			want: core.ConsentPurposeToSet{
+				Name:                  "Marketing",
+				EventConsentLocations: []core.EventConsentLocation{},
+				ProfileConsentLocation: &core.ProfileConsentLocation{
+					Property: "marketing",
+				},
+			},
 		},
 		{
 			name: "literal keys and event order",
 			locations: `,"eventConsentLocations":[{"purposeCode":"a.b"},{"purposeCode":"A.B"}],` +
 				`"profileConsentLocation":{"property":"consents","jsonKey":" purpose.\"code\"\\u0061 "}`,
-			want: `"eventConsentLocations":[{"purposeCode":"a.b"},{"purposeCode":"A.B"}],` +
-				`"profileConsentLocation":{"property":"consents","jsonKey":" purpose.\"code\"\\u0061 "}`,
+			want: core.ConsentPurposeToSet{
+				Name: "Marketing",
+				EventConsentLocations: []core.EventConsentLocation{
+					{PurposeCode: "a.b"},
+					{PurposeCode: "A.B"},
+				},
+				ProfileConsentLocation: &core.ProfileConsentLocation{
+					Property: "consents",
+					JSONKey:  ` purpose."code"\u0061 `,
+				},
+			},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 
-			k.Call("POST", "v1/consent-purposes", nil, json.Value(`{"name":"Marketing"`+test.locations+`}`), nil)
-			var response struct {
-				Purposes []map[string]any `json:"purposes"`
+			body := json.Value(`{"name":"Marketing"` + test.locations + `}`)
+			k.Call("POST", "v1/consent-purposes", nil, body, nil)
+			got := getOnlyConsentPurpose(t, k)
+			if got.ID == "" {
+				t.Fatalf("expected a purpose ID, got %q", got.ID)
 			}
-			k.Call("GET", "v1/consent-purposes", nil, nil, &response)
-			if len(response.Purposes) != 1 {
-				t.Fatalf("expected one purpose, got %v", response.Purposes)
-			}
-			got := response.Purposes[0]
-			id, ok := got["id"].(string)
-			if !ok || id == "" {
-				t.Fatalf("expected a purpose ID, got %v", got["id"])
-			}
-			delete(got, "id")
-			var want map[string]any
-			err := json.Unmarshal([]byte(`{"name":"Marketing",`+test.want+`}`), &want)
-			if err != nil {
-				t.Fatal(err)
+			id := got.ID
+
+			want := core.ConsentPurpose{
+				ID:                     id,
+				Name:                   test.want.Name,
+				EventConsentLocations:  test.want.EventConsentLocations,
+				ProfileConsentLocation: test.want.ProfileConsentLocation,
 			}
 			if !reflect.DeepEqual(got, want) {
-				t.Fatalf("purpose = %v, want %v", got, want)
+				t.Fatalf("expected purpose %v, got %v", want, got)
 			}
 
-			k.Call("PUT", "v1/consent-purposes/"+id, nil, json.Value(`{"name":"Marketing"`+test.locations+`}`), nil)
-			k.Call("GET", "v1/consent-purposes", nil, nil, &response)
-			want["id"] = id
-			if len(response.Purposes) != 1 || !reflect.DeepEqual(response.Purposes[0], want) {
-				t.Fatalf("unchanged purposes = %v, want %v", response.Purposes, want)
-			}
-
-			replacement := map[string]any{
-				"name": "Marketing",
-				"eventConsentLocations": []any{
-					map[string]any{"purposeCode": "updated"},
-					map[string]any{"purposeCode": "#CFK567"},
-				},
-				"profileConsentLocation": map[string]any{"property": "consents", "jsonKey": "updated.key"},
-			}
-			k.Call("PUT", "v1/consent-purposes/"+id, nil, replacement, nil)
-			k.Call("GET", "v1/consent-purposes", nil, nil, &response)
-			replacement["id"] = id
-			if len(response.Purposes) != 1 || !reflect.DeepEqual(response.Purposes[0], replacement) {
-				t.Fatalf("updated purposes = %v, want %v", response.Purposes, replacement)
-			}
-
-			k.Call("PUT", "v1/consent-purposes/"+id, nil, map[string]any{"name": "Marketing"}, nil)
-			k.Call("GET", "v1/consent-purposes", nil, nil, &response)
-			want["eventConsentLocations"] = []any{}
-			want["profileConsentLocation"] = nil
-			if len(response.Purposes) != 1 || !reflect.DeepEqual(response.Purposes[0], want) {
-				t.Fatalf("replaced purposes = %v, want %v", response.Purposes, want)
+			k.Call("PUT", "v1/consent-purposes/"+id, nil, body, nil)
+			got = getOnlyConsentPurpose(t, k)
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("expected purpose after unchanged update %v, got %v", want, got)
 			}
 			k.Call("DELETE", "v1/consent-purposes/"+id, nil, nil, nil)
 
@@ -131,10 +129,86 @@ func TestConsentPurposeLocationsAPI(t *testing.T) {
 
 }
 
-// TestConsentPurposeLocationsRequiredByPipelines checks that a pipeline can
-// require only the consent purposes with a consent location for its target, and
-// that such a location cannot be removed while a pipeline requires it.
-func TestConsentPurposeLocationsRequiredByPipelines(t *testing.T) {
+// TestConsentPurposeLocationsReplacement checks that PUT fully replaces
+// consent locations rather than preserving existing values.
+func TestConsentPurposeLocationsReplacement(t *testing.T) {
+
+	if testing.Short() {
+		t.Skip()
+	}
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
+
+	initial := core.ConsentPurposeToSet{
+		Name: "Marketing",
+		EventConsentLocations: []core.EventConsentLocation{
+			{PurposeCode: "initial"},
+		},
+		ProfileConsentLocation: &core.ProfileConsentLocation{
+			Property: "initial",
+			JSONKey:  "initial.key",
+		},
+	}
+	k.Call("POST", "v1/consent-purposes", nil, initial, nil)
+	initialGot := getOnlyConsentPurpose(t, k)
+	if initialGot.ID == "" {
+		t.Fatalf("expected a purpose ID, got %q", initialGot.ID)
+	}
+	initialWant := core.ConsentPurpose{
+		ID:                     initialGot.ID,
+		Name:                   initial.Name,
+		EventConsentLocations:  initial.EventConsentLocations,
+		ProfileConsentLocation: initial.ProfileConsentLocation,
+	}
+	if !reflect.DeepEqual(initialGot, initialWant) {
+		t.Fatalf("expected initial purpose %v, got %v", initialWant, initialGot)
+	}
+	id := initialGot.ID
+
+	update := core.ConsentPurposeToSet{
+		Name: "Marketing",
+		EventConsentLocations: []core.EventConsentLocation{
+			{PurposeCode: "updated"},
+			{PurposeCode: "#CFK567"},
+		},
+		ProfileConsentLocation: &core.ProfileConsentLocation{
+			Property: "consents",
+			JSONKey:  "updated.key",
+		},
+	}
+	k.Call("PUT", "v1/consent-purposes/"+id, nil, update, nil)
+	updated := core.ConsentPurpose{
+		ID:                     id,
+		Name:                   update.Name,
+		EventConsentLocations:  update.EventConsentLocations,
+		ProfileConsentLocation: update.ProfileConsentLocation,
+	}
+	got := getOnlyConsentPurpose(t, k)
+	if !reflect.DeepEqual(got, updated) {
+		t.Fatalf("expected purpose after replacement %v, got %v", updated, got)
+	}
+
+	k.Call("PUT", "v1/consent-purposes/"+id, nil, map[string]any{"name": "Marketing"}, nil)
+	want := core.ConsentPurpose{
+		ID:                    id,
+		Name:                  "Marketing",
+		EventConsentLocations: []core.EventConsentLocation{},
+	}
+	got = getOnlyConsentPurpose(t, k)
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("expected purpose after clearing locations %v, got %v", want, got)
+	}
+
+	k.Call("DELETE", "v1/consent-purposes/"+id, nil, nil, nil)
+
+}
+
+// TestPipelineRequiredConsentPurposeLocations checks that a pipeline can
+// require a purpose only when that purpose has a location for the pipeline
+// target, and that the location cannot be removed while a pipeline requires
+// the purpose.
+func TestPipelineRequiredConsentPurposeLocations(t *testing.T) {
 
 	if testing.Short() {
 		t.Skip()
@@ -150,17 +224,8 @@ func TestConsentPurposeLocationsRequiredByPipelines(t *testing.T) {
 		"name":                  "Marketing",
 		"eventConsentLocations": eventLocations,
 	}, nil)
-	var response struct {
-		Purposes []struct {
-			ID string `json:"id"`
-		} `json:"purposes"`
-	}
-	k.Call("GET", "v1/consent-purposes", nil, nil, &response)
-	if len(response.Purposes) != 1 {
-		t.Fatalf("expected one purpose, got %v", response.Purposes)
-	}
-	purpose := response.Purposes[0].ID
-	requiredConsents := &krenalistester.RequiredConsents{Operator: "and", Purposes: []string{purpose}}
+	purposeID := getOnlyConsentPurpose(t, k).ID
+	requiredConsents := &krenalistester.RequiredConsents{Operator: "and", Purposes: []string{purposeID}}
 
 	// An event pipeline can require a purpose with an event consent location.
 	javaScript := k.CreateJavaScriptSource("JavaScript", nil)
@@ -170,7 +235,7 @@ func TestConsentPurposeLocationsRequiredByPipelines(t *testing.T) {
 		RequiredConsents: requiredConsents,
 	})
 
-	// A profile pipeline cannot require a purpose without a profile consent
+	// A user pipeline cannot require a purpose without a profile consent
 	// location.
 	dummy := k.CreateDummy("Dummy", krenalistester.Source)
 	userPipeline := krenalistester.PipelineToSet{
@@ -192,32 +257,32 @@ func TestConsentPurposeLocationsRequiredByPipelines(t *testing.T) {
 
 	// The event consent location cannot be removed while the event pipeline
 	// requires the purpose.
-	err = k.TryCall("PUT", "v1/consent-purposes/"+purpose, nil, map[string]any{
+	err = k.TryCall("PUT", "v1/consent-purposes/"+purposeID, nil, map[string]any{
 		"name":                   "Marketing",
 		"profileConsentLocation": profileLocation,
 	}, nil)
 	expectAPIError(t, err, http.StatusUnprocessableEntity, string(core.ConsentPurposeLocationInUse))
 
-	// Once the purpose has a profile consent location, a profile pipeline can
+	// Once the purpose has a profile consent location, a user pipeline can
 	// require it, and that location cannot be removed.
-	k.Call("PUT", "v1/consent-purposes/"+purpose, nil, map[string]any{
+	k.Call("PUT", "v1/consent-purposes/"+purposeID, nil, map[string]any{
 		"name":                   "Marketing",
 		"eventConsentLocations":  eventLocations,
 		"profileConsentLocation": profileLocation,
 	}, nil)
 	userPipelineID := k.CreatePipeline(dummy, "User", userPipeline)
-	err = k.TryCall("PUT", "v1/consent-purposes/"+purpose, nil, map[string]any{
+	err = k.TryCall("PUT", "v1/consent-purposes/"+purposeID, nil, map[string]any{
 		"name":                  "Marketing",
 		"eventConsentLocations": eventLocations,
 	}, nil)
 	expectAPIError(t, err, http.StatusUnprocessableEntity, string(core.ConsentPurposeLocationInUse))
 
-	// Once the profile pipeline no longer requires the purpose, the profile
-	// consent location can be removed, and the pipeline cannot require the
+	// Once the user pipeline no longer requires the purpose, the profile
+	// consent location can be removed. The pipeline then cannot require the
 	// purpose again.
 	userPipeline.RequiredConsents = nil
 	k.UpdatePipeline(userPipelineID, userPipeline)
-	k.Call("PUT", "v1/consent-purposes/"+purpose, nil, map[string]any{
+	k.Call("PUT", "v1/consent-purposes/"+purposeID, nil, map[string]any{
 		"name":                  "Marketing",
 		"eventConsentLocations": eventLocations,
 	}, nil)
@@ -225,4 +290,17 @@ func TestConsentPurposeLocationsRequiredByPipelines(t *testing.T) {
 	err = k.TryUpdatePipeline(userPipelineID, userPipeline)
 	expectAPIError(t, err, http.StatusUnprocessableEntity, string(core.ConsentPurposeLocationNotSet))
 
+}
+
+func getOnlyConsentPurpose(t *testing.T, k *krenalistester.Krenalis) core.ConsentPurpose {
+	t.Helper()
+
+	var response struct {
+		Purposes []core.ConsentPurpose `json:"purposes"`
+	}
+	k.Call("GET", "v1/consent-purposes", nil, nil, &response)
+	if len(response.Purposes) != 1 {
+		t.Fatalf("expected one purpose, got %v", response.Purposes)
+	}
+	return response.Purposes[0]
 }
