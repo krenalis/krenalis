@@ -108,7 +108,10 @@ func Test_Merge_Query(t *testing.T) {
 				"MYSQL_DATABASE":             database,
 				"MYSQL_ALLOW_EMPTY_PASSWORD": "true",
 			},
-			WaitingFor: wait.ForLog("port: 3306  MySQL Community Server").WithStartupTimeout(3 * time.Minute),
+			WaitingFor: wait.ForAll(
+				wait.ForLog("port: 3306  MySQL Community Server").WithStartupTimeout(3*time.Minute),
+				wait.ForListeningPort("3306/tcp"),
+			),
 		}
 		genericContainerReq := testcontainers.GenericContainerRequest{
 			ContainerRequest: req,

@@ -41,7 +41,7 @@ func TestAlterProfileSchemaFinalization(t *testing.T) {
 	container, err := postgres.Run(t.Context(), testimages.PostgreSQL,
 		postgres.WithDatabase("krenalis"), postgres.WithUsername("krenalis"), postgres.WithPassword("krenalis"),
 		testcontainers.WithWaitStrategy(wait.ForLog("database system is ready to accept connections").
-			WithOccurrence(2).WithStartupTimeout(time.Minute)))
+			WithOccurrence(2).WithStartupTimeout(time.Minute), wait.ForListeningPort("5432/tcp")))
 	if err != nil {
 		t.Fatalf("expected PostgreSQL container, got %v", err)
 	}

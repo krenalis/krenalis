@@ -235,7 +235,8 @@ func (k *Krenalis) Start() {
 			testcontainers.WithWaitStrategy(
 				wait.ForLog("database system is ready to accept connections").
 					WithOccurrence(2).
-					WithStartupTimeout(60*time.Second)),
+					WithStartupTimeout(60*time.Second),
+				wait.ForListeningPort("5432/tcp")),
 		)
 		k.stopPostgresContainer = func() error {
 			return testcontainers.TerminateContainer(postgresContainer)
@@ -268,7 +269,8 @@ func (k *Krenalis) Start() {
 			testcontainers.WithWaitStrategy(
 				wait.ForLog("database system is ready to accept connections").
 					WithOccurrence(2).
-					WithStartupTimeout(60*time.Second)),
+					WithStartupTimeout(60*time.Second),
+				wait.ForListeningPort("5432/tcp")),
 		)
 		k.stopWarehouseContainer = func() error {
 			return testcontainers.TerminateContainer(warehouseContainer)

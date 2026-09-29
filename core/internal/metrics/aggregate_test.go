@@ -35,7 +35,8 @@ func newAggregateMetricsTestDatabase(t *testing.T) (*db.DB, string) {
 		testcontainers.WithWaitStrategy(
 			wait.ForLog("database system is ready to accept connections").
 				WithOccurrence(2).
-				WithStartupTimeout(60*time.Second)),
+				WithStartupTimeout(60*time.Second),
+			wait.ForListeningPort("5432/tcp")),
 	)
 	if err != nil {
 		t.Fatal(err)

@@ -65,7 +65,8 @@ func TestAdmin(t *testing.T) {
 			testcontainers.WithWaitStrategy(
 				wait.ForLog("database system is ready to accept connections").
 					WithOccurrence(2).
-					WithStartupTimeout(60*time.Second)),
+					WithStartupTimeout(60*time.Second),
+				wait.ForListeningPort("5432/tcp")),
 		)
 		defer func() {
 			err := testcontainers.TerminateContainer(container)
