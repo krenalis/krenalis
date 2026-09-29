@@ -200,6 +200,7 @@ func (warehouse *Snowflake) Counts(ctx context.Context, table string, conditions
 	if len(conditions) == 0 {
 		return nil, errors.New("conditions are empty")
 	}
+
 	db, err := warehouse.openDB(ctx)
 	if err != nil {
 		return nil, snowflake(err)
