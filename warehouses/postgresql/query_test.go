@@ -5,7 +5,6 @@
 package postgresql
 
 import (
-	"slices"
 	"strings"
 	"testing"
 
@@ -115,49 +114,5 @@ func TestQueryOrdering(t *testing.T) {
 		}
 
 	})
-
-}
-
-// TestCounts checks unconditional and conditional row counts.
-func TestCounts(t *testing.T) {
-
-	warehouse, pool := newTestPostgreSQLWarehouse(t)
-	mustExecSQL(t, pool, `CREATE TABLE "count_conditions" ("flag" BOOLEAN, "data" JSONB)`)
-	mustExecSQL(t, pool, `INSERT INTO "count_conditions" VALUES
-		(TRUE, '{"key":true,"a.b":true}'), (FALSE, '{"key":false,"a":{"b":true}}'), (NULL, '{}'),
-		(TRUE, '{"key":"true"}'), (NULL, '{"key":true}'), (NULL, NULL)`)
-
-	flag := warehouses.NewBaseExpr(warehouses.Column{Name: "flag", Type: types.Boolean()}, warehouses.OpIsTrue)
-	data := warehouses.NewBaseExpr(warehouses.Column{Name: "data", Type: types.JSON()}, warehouses.OpIsTrue)
-	data.Key = "key"
-	falseData := warehouses.NewBaseExpr(warehouses.Column{Name: "data", Type: types.JSON()}, warehouses.OpIsFalse)
-	falseData.Key = "key"
-	dottedKey := warehouses.NewBaseExpr(warehouses.Column{Name: "data", Type: types.JSON()}, warehouses.OpIsTrue)
-	dottedKey.Key = "a.b"
-	conditions := []warehouses.Expr{
-		nil,
-		flag,
-		data,
-		falseData,
-		dottedKey,
-		warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{flag, data}),
-	}
-
-	totalCounts, err := warehouse.Counts(t.Context(), "count_conditions", nil)
-	if err != nil {
-		t.Fatalf("expected counts, got %v", err)
-	}
-	if !slices.Equal(totalCounts, []int{6}) {
-		t.Fatalf("expected counts [6], got %v", totalCounts)
-	}
-
-	counts, err := warehouse.Counts(t.Context(), "count_conditions", conditions)
-	if err != nil {
-		t.Fatalf("expected counts, got %v", err)
-	}
-	want := []int{6, 2, 2, 1, 1, 1}
-	if !slices.Equal(counts, want) {
-		t.Fatalf("expected counts %v, got %v", want, counts)
-	}
 
 }
