@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/types"
@@ -173,13 +174,15 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 		}
 		for _, v1 := range vs1 {
 			if !slices.Contains(vs2, v1) {
-				return &Error{Msg: fmt.Sprintf("«%s» property allowed value «%s» but it is no longer allowed", name, v1)}
+				v := strings.ReplaceAll(v1, `»`, `≫`)
+				return &Error{Msg: fmt.Sprintf("«%s» property allowed value «%s» but it is no longer allowed", name, v)}
 			}
 		}
 		if len(vs1) < len(vs2) {
 			for _, v2 := range vs2 {
 				if !slices.Contains(vs1, v2) {
-					return &Error{Msg: fmt.Sprintf("«%s» property previously disallowed value «%s» but it now allows it", name, v2)}
+					v := strings.ReplaceAll(v2, `»`, `≫`)
+					return &Error{Msg: fmt.Sprintf("«%s» property previously disallowed value «%s» but it now allows it", name, v)}
 				}
 			}
 		}
@@ -187,10 +190,10 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 		re2 := t2.Pattern()
 		var v1, v2 = "none", "none"
 		if re1 != nil {
-			v1 = `"` + re1.String() + `"`
+			v1 = `"` + strings.ReplaceAll(re1.String(), `»`, `≫`) + `"`
 		}
 		if re2 != nil {
-			v2 = `"` + re2.String() + `"`
+			v2 = `"` + strings.ReplaceAll(re2.String(), `»`, `≫`) + `"`
 		}
 		return &Error{Msg: fmt.Sprintf("regular expression of the «%s» property's type has changed from %s to %s", name, v1, v2)}
 	case types.IntKind:
