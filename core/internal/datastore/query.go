@@ -55,8 +55,8 @@ type Query struct {
 // "exists" and "does not exist" operators are mapped to warehouses.OpIsNotNull
 // and warehouses.OpIsNull, respectively. For object properties, "exists"
 // matches if any descendant column is non-null, while "does not exist" matches
-// if all descendant columns are null. For "is true" and "is false" on a JSON
-// key, the last property path segment is stored in warehouses.BaseExpr.Key.
+// if all descendant columns are null. For "is true" and "is false" on JSON,
+// path segments after the column are stored in warehouses.BaseExpr.Keys.
 func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Column) (warehouses.Expr, error) {
 
 	if where == nil {
@@ -112,12 +112,17 @@ func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Col
 				continue
 			}
 			if len(rule.Property) > 1 && (rule.Operator == state.OpIsTrue || rule.Operator == state.OpIsFalse) {
-				key := rule.Property[len(rule.Property)-1]
-				parentPath := path[:len(path)-len(key)-1]
-				if column, ok := columnByProperty[parentPath]; ok && column.Type.Kind() == types.JSONKind {
-					op := warehouses.NewBaseExpr(column, warehouses.Operator(rule.Operator))
-					op.Key = key
-					expr.Operands[i] = op
+				parentPath := path
+				for n := len(rule.Property) - 1; n > 0; n-- {
+					parentPath = parentPath[:len(parentPath)-len(rule.Property[n])-1]
+					if column, ok := columnByProperty[parentPath]; ok && column.Type.Kind() == types.JSONKind {
+						op := warehouses.NewBaseExpr(column, warehouses.Operator(rule.Operator))
+						op.Keys = rule.Property[n:]
+						expr.Operands[i] = op
+						break
+					}
+				}
+				if expr.Operands[i] != nil {
 					continue
 				}
 			}

@@ -718,11 +718,12 @@ const (
 )
 
 // BaseExpr represents an SQL expression that applies an operator to a column.
-// For OpIsTrue and OpIsFalse on JSON columns, Key selects an object key; an
-// empty Key applies these operators to the entire column.
+// For OpIsTrue and OpIsFalse on JSON columns, Keys specifies successive object
+// keys. Each key is treated literally, including any dots. If Keys is empty,
+// these operators apply to the entire column.
 type BaseExpr struct {
 	Column   Column
-	Key      string
+	Keys     []string
 	Operator Operator
 	Values   []any // may be nil for unary expressions.
 }
