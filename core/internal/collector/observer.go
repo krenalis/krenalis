@@ -195,7 +195,7 @@ func (observer *Observer) addEvent(event events.Event) {
 			continue
 		}
 		if rc := listener.requiredConsents; rc != nil &&
-			!consents.SatisfiesEvent(rc.Purposes, rc.Operator != state.PurposesOr, event) {
+			!consents.SatisfiesEvent(rc.Operator, rc.Purposes, event) {
 			continue
 		}
 		listener.Lock()

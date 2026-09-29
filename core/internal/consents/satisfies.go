@@ -7,24 +7,32 @@ package consents
 import (
 	"strings"
 
-	"github.com/krenalis/krenalis/core/internal/properties"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/json"
 )
 
 // SatisfiesEvent reports whether the given event satisfies the required
 // consent purposes.
-func SatisfiesEvent(purposes []*state.ConsentPurpose, matchAll bool, event map[string]any) bool {
+func SatisfiesEvent(op state.ConsentPurposesOperator, purposes []*state.ConsentPurpose, event map[string]any) bool {
 
 	if len(purposes) == 0 {
 		return true
+	}
+
+	context, ok := event["context"].(map[string]any)
+	if !ok {
+		return false
+	}
+	consents, ok := context["consents"].(map[string]any)
+	if !ok {
+		return false
 	}
 
 	for _, purpose := range purposes {
 		var granted bool
 		// Only missing locations are skipped; the first location found determines the consent.
 		for _, loc := range purpose.EventConsentLocations {
-			value, exists := properties.Read(event, []string{"context", "consents", loc.PurposeCode})
+			value, exists := consents[loc.PurposeCode]
 			if !exists {
 				continue
 			}
@@ -36,21 +44,21 @@ func SatisfiesEvent(purposes []*state.ConsentPurpose, matchAll bool, event map[s
 			}
 			break
 		}
-		if matchAll {
+		if op == state.PurposesAnd {
 			if !granted {
 				return false
 			}
-		} else if granted {
+		} else if op == state.PurposesOr && granted {
 			return true
 		}
 	}
 
-	return matchAll
+	return op == state.PurposesAnd
 }
 
-// SatisfiesProfile reports whether the given profile satisfies the required
-// consent purposes.
-func SatisfiesProfile(purposes []*state.ConsentPurpose, matchAll bool, profile map[string]any) bool {
+// SatisfiesProfile reports whether the given profile attributes satisfy the
+// required consent purposes.
+func SatisfiesProfile(op state.ConsentPurposesOperator, purposes []*state.ConsentPurpose, attributes map[string]any) bool {
 
 	if len(purposes) == 0 {
 		return true
@@ -63,11 +71,11 @@ func SatisfiesProfile(purposes []*state.ConsentPurpose, matchAll bool, profile m
 			var value any
 			var found bool
 			path := loc.Property
-			attributes := profile
+			current := attributes
 			// Traverse nested maps only; JSON values require an explicit key.
 			for {
 				name, rest, hasMore := strings.Cut(path, ".")
-				value, found = attributes[name]
+				value, found = current[name]
 				if !found || !hasMore {
 					break
 				}
@@ -76,7 +84,7 @@ func SatisfiesProfile(purposes []*state.ConsentPurpose, matchAll bool, profile m
 					found = false
 					break
 				}
-				attributes = next
+				current = next
 				path = rest
 			}
 			if found {
@@ -88,14 +96,14 @@ func SatisfiesProfile(purposes []*state.ConsentPurpose, matchAll bool, profile m
 				}
 			}
 		}
-		if matchAll {
+		if op == state.PurposesAnd {
 			if !granted {
 				return false
 			}
-		} else if granted {
+		} else if op == state.PurposesOr && granted {
 			return true
 		}
 	}
 
-	return matchAll
+	return op == state.PurposesAnd
 }

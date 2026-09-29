@@ -861,7 +861,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				continue
 			}
 			pendingFilterPassed = append(pendingFilterPassed, p.ID)
-			if !consents.SatisfiesEvent(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
+			if !consents.SatisfiesEvent(p.RequiredConsents.Operator, p.RequiredConsents.Purposes, event) {
 				pendingConsentFailed = append(pendingConsentFailed, p.ID)
 				continue
 			}
@@ -903,7 +903,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 					continue
 				}
 				pendingFilterPassed = append(pendingFilterPassed, p.ID)
-				if !consents.SatisfiesEvent(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
+				if !consents.SatisfiesEvent(p.RequiredConsents.Operator, p.RequiredConsents.Purposes, event) {
 					pendingConsentFailed = append(pendingConsentFailed, p.ID)
 					continue
 				}

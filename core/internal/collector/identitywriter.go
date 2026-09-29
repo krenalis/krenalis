@@ -93,7 +93,7 @@ func (iw *identityWriter) Write(event streams.Event) error {
 		// Without a transformation the identity has no attributes, so there is
 		// no profile to read the consents from. The output of the pipeline is
 		// the event itself, so the consents are read from it.
-		if !consents.SatisfiesEvent(requiredConsents.Purposes, requiredConsents.Operator != state.PurposesOr, event.Attributes) {
+		if !consents.SatisfiesEvent(requiredConsents.Operator, requiredConsents.Purposes, event.Attributes) {
 			iw.metrics.ImportProfileConsentFailed(iw.pipeline, 1)
 			event.Destinations[0].Ack.Acknowledge()
 			return nil
@@ -173,7 +173,7 @@ func (iw *identityWriter) transformAndWrite(events []streams.Event) {
 		}
 		iw.metrics.TransformationPassed(iw.pipeline, 1)
 		iw.metrics.OutputValidationPassed(iw.pipeline, 1)
-		if !consents.SatisfiesProfile(requiredConsents.Purposes, requiredConsents.Operator != state.PurposesOr, record.Attributes) {
+		if !consents.SatisfiesProfile(requiredConsents.Operator, requiredConsents.Purposes, record.Attributes) {
 			iw.metrics.ImportProfileConsentFailed(iw.pipeline, 1)
 			events[i].Destinations[0].Ack.Acknowledge()
 			continue
