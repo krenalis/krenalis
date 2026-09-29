@@ -720,10 +720,13 @@ const (
 	OpOr
 )
 
-// BaseExpr represents an SQL expression that refers to a property, on which an
-// operator is applied, an eventually an operand, if the operator is binary.
+// BaseExpr represents an SQL expression that applies an operator to a column.
+// For OpIsTrue and OpIsFalse on JSON columns, Keys specifies successive object
+// keys. Each key is treated literally, including any dots. If Keys is empty,
+// these operators apply to the entire column.
 type BaseExpr struct {
 	Column   Column
+	Keys     []string
 	Operator Operator
 	Values   []any // may be nil for unary expressions.
 }
