@@ -248,16 +248,6 @@ func (this *Workspace) UpdateConsentPurpose(ctx context.Context, id string, purp
 	return err
 }
 
-// knownConsentPurposeIDs returns the set of identifiers of the consent purposes
-// defined in the workspace.
-func knownConsentPurposeIDs(ws *state.Workspace) map[string]bool {
-	ids := make(map[string]bool)
-	for _, cp := range ws.ConsentPurposes() {
-		ids[cp.ID] = true
-	}
-	return ids
-}
-
 // validateConsentPurposeToSet validates the name and consent locations of the
 // given consent purpose.
 func validateConsentPurposeToSet(purpose ConsentPurposeToSet) error {

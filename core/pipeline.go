@@ -771,9 +771,6 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 		v.format.hasSettings = c.Role == state.Source && format.HasSourceSettings || c.Role == state.Destination && format.HasDestinationSettings
 	}
 	v.provider = this.core.functionProvider
-	if len(pipeline.RequiredConsents.Purposes) > 0 {
-		v.knownConsentPurposeIDs = knownConsentPurposeIDs(c.Workspace())
-	}
 	err := validatePipelineToSet(pipeline, v)
 	if err != nil {
 		return err
