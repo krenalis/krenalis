@@ -446,7 +446,7 @@ func sameType(t1, t2 Type) error {
 	}
 	// Semantic.
 	if t1.semantic != t2.semantic {
-		return fmt.Errorf("expected type semantic %s, got %s", t1.semantic, t2.semantic)
+		return fmt.Errorf("expected semantic %s, got %s", t1.semantic, t2.semantic)
 	}
 	// Semantic option.
 	if t1.semanticOption != t2.semanticOption {

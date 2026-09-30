@@ -32,6 +32,15 @@ const (
 	MaxTableNameSize       = 1024   // maximum allowed length for a database table name.
 )
 
+const (
+	countrySemanticMismatchErr = "external matching property has country semantic, so " +
+		"internal matching property must have the same semantic and format"
+	phoneSemanticMismatchErr = "external matching property has phone semantic, so " +
+		"internal matching property must have the same semantic"
+	semanticMismatchErr = "both the internal and external matching properties have semantics, " +
+		"but their semantics do not match"
+)
+
 // validationState is a state for the validation of a pipeline.
 type validationState struct {
 
@@ -204,7 +213,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			if !outSchema.Valid() {
 				return errors.BadRequest("output schema is required by the mapping")
 			}
-			transformer, err := mappings.New(tr.Mapping, inSchema, outSchema, false, nil)
+			transformer, err := mappings.New(tr.Mapping, inSchema, outSchema, false)
 			if err != nil {
 				return errors.BadRequest("invalid mapping: %s", err)
 			}
@@ -324,7 +333,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			return errors.BadRequest("output schema must be valid")
 		}
 		if !types.IsValidPropertyPath(pipeline.Matching.Out) {
-			return errors.BadRequest("output matching property %q is not a valid property name", pipeline.Matching.Out)
+			return errors.BadRequest("output matching property %q is not a valid property path", pipeline.Matching.Out)
 		}
 		out, err := outProperties.ByPath(pipeline.Matching.Out)
 		if err != nil {
@@ -344,8 +353,20 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 				return errors.BadRequest("input matching property cannot be converted to the output matching property")
 			}
 		}
-		if !types.EqualSemantics(in.Type, out.Type) {
-			return errors.BadRequest("input and output matching properties do not have the same semantic and semantic options")
+		// Check the semantics.
+		switch out.Type.Semantic() {
+		case types.CountrySemantic:
+			if in.Type.Semantic() != types.CountrySemantic || in.Type.CountryFormat() != out.Type.CountryFormat() {
+				return errors.BadRequest(countrySemanticMismatchErr)
+			}
+		case types.PhoneSemantic:
+			if in.Type.Semantic() != types.PhoneSemantic {
+				return errors.BadRequest(phoneSemanticMismatchErr)
+			}
+		default:
+			if !types.EqualSemantics(in.Type, out.Type) {
+				return errors.BadRequest(semanticMismatchErr)
+			}
 		}
 		// Check that the output property has not been transformed.
 		// This includes checks on the property itself and all its parent paths.
@@ -747,14 +768,14 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 // canBeUsedAsMatchingProp reports whether a type with kind k can be used as a
 // matching property when exporting users to an application.
 func canBeUsedAsMatchingProp(k types.Kind) bool {
-	// Only int, uint, uuid, and string types are allowed.
+	// Only int, uuid, and string types are allowed.
 	return k == types.StringKind || k == types.IntKind || k == types.UUIDKind
 }
 
 // canBeUsedAsTableKey reports whether a type with kind k can be used as a
 // table key when exporting users to databases.
 func canBeUsedAsTableKey(k types.Kind) bool {
-	// Only int, uint, uuid, and string types are allowed.
+	// Only int, uuid, and string types are allowed.
 	return k == types.StringKind || k == types.IntKind || k == types.UUIDKind
 }
 

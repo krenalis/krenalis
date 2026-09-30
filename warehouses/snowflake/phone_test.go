@@ -5,32 +5,37 @@
 package snowflake
 
 import (
+	"encoding/json"
 	"reflect"
-	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-// TestPhoneColumnType checks phone storage without fixed-width padding and preserves country storage.
-func TestPhoneColumnType(t *testing.T) {
+// TestPhoneAndCountryColumnTypes checks the warehouse column types used for
+// phone and country values.
+func TestPhoneAndCountryColumnTypes(t *testing.T) {
 	for _, test := range []struct {
+		name string
 		typ  types.Type
 		want string
 	}{
-		{types.String().AsPhone(), "VARCHAR(16)"},
-		{types.Array(types.String().AsPhone()), "ARRAY"},
-		{types.String().AsCountry(types.ISO3166Alpha2), "VARCHAR(2)"},
-		{types.String().AsCountry(types.ISO3166Alpha3), "VARCHAR(3)"},
+		{"phone", types.String().AsPhone(), "VARCHAR(16)"},
+		{"phone array", types.Array(types.String().AsPhone()), "ARRAY"},
+		{"country alpha2", types.String().AsCountry(types.ISO3166Alpha2), "VARCHAR(2)"},
+		{"country alpha3", types.String().AsCountry(types.ISO3166Alpha3), "VARCHAR(3)"},
 	} {
-		if got := typeToSnowflakeType(test.typ); got != test.want {
-			t.Fatalf("expected %q, got %q", test.want, got)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			if got := typeToSnowflakeType(test.typ); got != test.want {
+				t.Fatalf("expected %q, got %q", test.want, got)
+			}
+		})
 	}
 }
 
-// TestScannerPhone checks that warehouse phone values are canonical at every string leaf.
+// TestScannerPhone checks that phone values are canonical across supported
+// container shapes.
 func TestScannerPhone(t *testing.T) {
 
 	tests := []struct {
@@ -38,9 +43,9 @@ func TestScannerPhone(t *testing.T) {
 		input string
 		valid bool
 	}{
-		{"canonical", "+390236618300", true},
-		{"possible", "+12001230101", true},
-		{"local only", "+12530000", false},
+		{"canonical E.164", "+390236618300", true},
+		{"possible but not valid", "+12001230101", true},
+		{"too short", "+12530000", false},
 		{"formatted", "+39 02-36618 300", false},
 		{"double plus", "++390236618300", false},
 		{"padding", "+390236618300 ", false},
@@ -49,26 +54,29 @@ func TestScannerPhone(t *testing.T) {
 		{"empty", "", false},
 	}
 	for _, test := range tests {
-		for _, shape := range []string{"string", "array", "map", "nested"} {
+		for _, shape := range []string{"string", "array", "map", "array of maps"} {
 			t.Run(test.name+"/"+shape, func(t *testing.T) {
 
 				typ := types.String().AsPhone()
 				var raw any = test.input
 				var want any = test.input
-				data := strconv.Quote(test.input)
 				switch shape {
 				case "array":
 					typ = types.Array(typ)
 					want = []any{test.input}
-					raw = "[" + data + "]"
 				case "map":
 					typ = types.Map(typ)
 					want = map[string]any{"home": test.input}
-					raw = `{"home":` + data + `}`
-				case "nested":
+				case "array of maps":
 					typ = types.Array(types.Map(typ))
 					want = []any{map[string]any{"home": test.input}}
-					raw = `[{"home":` + data + `}]`
+				}
+				if shape != "string" {
+					data, err := json.Marshal(want)
+					if err != nil {
+						t.Fatalf("expected value to marshal, got %v", err)
+					}
+					raw = string(data)
 				}
 				s := &scanner{}
 				got, err := s.normalize("phone", typ, raw)
@@ -81,8 +89,11 @@ func TestScannerPhone(t *testing.T) {
 					}
 					return
 				}
-				if !test.valid || !reflect.DeepEqual(got, want) {
-					t.Fatalf("expected unchanged value %#v and valid=%t, got %#v and no error", want, test.valid, got)
+				if !test.valid {
+					t.Fatalf("expected an error, got %#v", got)
+				}
+				if !reflect.DeepEqual(got, want) {
+					t.Fatalf("expected unchanged value %#v, got %#v", want, got)
 				}
 
 			})
@@ -91,7 +102,8 @@ func TestScannerPhone(t *testing.T) {
 
 }
 
-// TestScannerPhoneEscapedJSON accepts equivalent JSON encodings, not alternative phone representations.
+// TestScannerPhoneEscapedJSON accepts equivalent JSON encodings, not
+// alternative phone representations.
 func TestScannerPhoneEscapedJSON(t *testing.T) {
 	s := &scanner{}
 	raw := `{"home":"\u002b390236618300"}`

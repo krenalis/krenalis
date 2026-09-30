@@ -6,6 +6,7 @@ package transformers
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -18,7 +19,6 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/decimal"
-	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/tools/validation"
@@ -54,7 +54,20 @@ func (err RecordValidationError) Error() string {
 }
 
 func (err RecordValidationError) addIndexToPath(i int) RecordValidationError {
-	err.path = "[" + strconv.Itoa(i) + "]." + err.path
+	index := "[" + strconv.Itoa(i) + "]"
+	if err.path != "" && err.path[0] != '[' {
+		index += "."
+	}
+	err.path = index + err.path
+	return err
+}
+
+func (err RecordValidationError) addMapKeyToPath(key string) RecordValidationError {
+	name := "[" + strconv.Quote(key) + "]"
+	if err.path != "" && err.path[0] != '[' {
+		name += "."
+	}
+	err.path = name + err.path
 	return err
 }
 
@@ -392,8 +405,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 				return nil, newRecordValidationError("", "contains a duplicated value")
 			}
 		}
-		_, err = d.readToken()
-		if err != nil {
+		if _, err := d.readToken(); err != nil {
 			return nil, err
 		}
 		return arr, nil
@@ -509,6 +521,9 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 				// Read the property's value.
 				value, err := d.unmarshal(t.Elem(), preserveJSON, purpose)
 				if err != nil {
+					if e, ok := err.(RecordValidationError); ok {
+						err = e.addMapKeyToPath(name)
+					}
 					return nil, err
 				}
 				m[name] = value

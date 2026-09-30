@@ -82,36 +82,42 @@ func (ph *PostHog) EventTypes(ctx context.Context) ([]*connectors.EventType, err
 			ID:            "identify",
 			Name:          "Identify",
 			Description:   "Send Identify events to PostHog",
+			OrderingGroup: "events",
 			DefaultFilter: "type is 'identify'",
 		},
 		{
 			ID:            "group",
 			Name:          "Group identify",
 			Description:   "Send Group identify events to PostHog",
+			OrderingGroup: "events",
 			DefaultFilter: "type is 'group'",
 		},
 		{
 			ID:            "alias",
 			Name:          "Alias",
 			Description:   "Send Alias events to PostHog",
+			OrderingGroup: "events",
 			DefaultFilter: "type is 'alias'",
 		},
 		{
 			ID:            "page",
 			Name:          "Pageview",
 			Description:   "Send Pageview events to PostHog",
+			OrderingGroup: "events",
 			DefaultFilter: "type is 'page'",
 		},
 		{
 			ID:            "screen",
 			Name:          "Screen",
 			Description:   "Send Screen events to PostHog",
+			OrderingGroup: "events",
 			DefaultFilter: "type is 'screen'",
 		},
 		{
 			ID:            "track",
 			Name:          "Track",
 			Description:   "Send Track events to PostHog",
+			OrderingGroup: "events",
 			DefaultFilter: "type is 'track'",
 		},
 	}, nil
@@ -122,34 +128,35 @@ func (ph *PostHog) EventTypeSchema(ctx context.Context, eventType string) (types
 	sessionID := types.Property{
 		Name:        "session_id",
 		Type:        types.UUID(),
-		Description: "Session ID (UUIDv7) — if not set, Krenalis generates one automatically.",
+		DisplayName: "Session ID",
+		Description: "UUIDv7; if not set, Krenalis generates one automatically",
 	}
 	switch eventType {
 	case "identify":
 		return types.Object([]types.Property{
-			{Name: "properties", Prefilled: `traits`, Type: types.Map(types.JSON()), Description: "Event properties"},
+			{Name: "properties", Prefilled: `traits`, Type: types.Map(types.JSON()), DisplayName: "Event properties"},
 			sessionID,
 		}), nil
 	case "alias":
 		return types.Object([]types.Property{
-			{Name: "properties", Type: types.Map(types.JSON()), Description: "Event properties - leave empty unless you want to send additional properties."},
+			{Name: "properties", Type: types.Map(types.JSON()), DisplayName: "Event properties", Description: "Leave empty unless you want to send additional properties"},
 			sessionID,
 		}), nil
 	case "group":
 		return types.Object([]types.Property{
-			{Name: "group_type", Prefilled: `"company"`, Type: types.String().WithMaxLength(400), CreateRequired: true, Description: "Group type"},
-			{Name: "properties", Prefilled: `traits`, Type: types.Map(types.JSON()), Description: "Event properties"},
+			{Name: "group_type", Prefilled: `"company"`, Type: types.String().WithMaxLength(400), CreateRequired: true, DisplayName: "Group type"},
+			{Name: "properties", Prefilled: `traits`, Type: types.Map(types.JSON()), DisplayName: "Event properties"},
 			sessionID,
 		}), nil
 	case "track":
 		return types.Object([]types.Property{
-			{Name: "event", Prefilled: `event`, Type: types.String(), CreateRequired: true, Description: "Event name"},
-			{Name: "properties", Prefilled: `properties`, Type: types.Map(types.JSON()), Description: "Event properties"},
+			{Name: "event", Prefilled: `event`, Type: types.String(), CreateRequired: true, DisplayName: "Event name"},
+			{Name: "properties", Prefilled: `properties`, Type: types.Map(types.JSON()), DisplayName: "Event properties"},
 			sessionID,
 		}), nil
 	case "page", "screen":
 		return types.Object([]types.Property{
-			{Name: "properties", Prefilled: `properties`, Type: types.Map(types.JSON()), Description: "Event properties"},
+			{Name: "properties", Prefilled: `properties`, Type: types.Map(types.JSON()), DisplayName: "Event properties"},
 			sessionID,
 		}), nil
 	}

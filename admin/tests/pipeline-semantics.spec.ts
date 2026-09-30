@@ -16,6 +16,7 @@ const matchingProperty = (type: Type, updateRequired = false): Property => ({
 	updateRequired,
 	readOptional: false,
 	nullable: false,
+	displayName: '',
 	description: '',
 });
 

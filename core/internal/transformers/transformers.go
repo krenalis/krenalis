@@ -13,7 +13,6 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/transformers/mappings"
-	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -58,19 +57,18 @@ type Transformer struct {
 // pipeline. organization is the ID of the organization on whose behalf the
 // transformation function is called and must not be empty. provider is the
 // transformer provider used for transformation functions and should be nil for
-// mappings. layouts, if not nil, represents the layouts used to format
-// datetime, date, and time values as strings.
+// mappings.
 //
 // It only accesses the ID, InSchema, OutSchema, and Transformation fields of
 // pipeline.
 //
 // It returns a types.PathNotExistError error if a path in the mapping does not
 // exist in the source schema.
-func New(organization string, pipeline *state.Pipeline, provider FunctionProvider, layouts *state.TimeLayouts) (*Transformer, error) {
+func New(organization string, pipeline *state.Pipeline, provider FunctionProvider) (*Transformer, error) {
 
 	if m := pipeline.Transformation.Mapping; m != nil {
 		inPlace := pipeline.Target != state.TargetEvent
-		mapping, err := mappings.New(m, pipeline.InSchema, pipeline.OutSchema, inPlace, layouts)
+		mapping, err := mappings.New(m, pipeline.InSchema, pipeline.OutSchema, inPlace)
 		if err != nil {
 			return nil, err
 		}
@@ -120,9 +118,6 @@ func New(organization string, pipeline *state.Pipeline, provider FunctionProvide
 // ErrFunctionNotExist, and if an error occurs during function execution, it
 // returns a FunctionExecError.
 func (t *Transformer) Transform(ctx context.Context, records []Record) error {
-
-	prometheus.Increment("Transformer.Transform.calls", 1)
-	prometheus.Increment("Transformer.Transform.passed_records", len(records))
 
 	// Transform using the mapping.
 	if t.mapping != nil {

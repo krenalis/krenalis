@@ -151,6 +151,8 @@ Use the standard-library `testing/synctest` package when testing concurrent or a
 
 When running the complete Admin test suite, you may use `go run ./test/commit -just-test-admin` to receive each individual test result without waiting for the complete suite to finish. This command is optional.
 
+When a test starts a container with testcontainers and reads one of its mapped ports, its wait strategy must include `wait.ForListeningPort` for that port; otherwise, notably on Docker Desktop, `MappedPort` can fail. For PostgreSQL, use `postgres.BasicWaitStrategies()`, which includes it.
+
 ## Behavioral contracts
 
 A function or method must return a non-nil error whenever it does not perform the behavior promised primarily by its name and secondarily by its declaration comment. Do not report success after silently skipping, failing, or only partially completing a promised operation.
@@ -239,6 +241,8 @@ var x int
     x = compute()
 }
 ```
+
+A function whose body is only a `synctest.Test` call is a single-statement block: keep it compact even when the function passed to `synctest.Test` is padded.
 
 ## Declaration comments
 

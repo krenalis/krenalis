@@ -23,6 +23,7 @@ const createSchema = (keys: string[], addedKeys: string[] = []): EditableSchema 
 			createRequired: false,
 			updateRequired: false,
 			nullable: false,
+			displayName: '',
 			description: '',
 			isEditable: addedKeySet.has(key),
 		};

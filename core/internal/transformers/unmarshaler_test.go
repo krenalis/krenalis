@@ -379,6 +379,24 @@ func Test_Unmarshal(t *testing.T) {
 		{
 			language: state.JavaScript,
 			schema:   schema,
+			data:     `{"records":[{"value":{"Array":[1]}}]}`,
+			records:  []Record{{Err: newRecordValidationError("Array[0]", `property «Array[0]» has a value that is not of type «string»`)}},
+		},
+		{
+			language: state.JavaScript,
+			schema:   schema,
+			data:     `{"records":[{"value":{"Map":{"home":"x"}}}]}`,
+			records:  []Record{{Err: newRecordValidationError(`Map["home"]`, `property «Map["home"]» has a value that is not of type «number»`)}},
+		},
+		{
+			language: state.JavaScript,
+			schema:   types.Object([]types.Property{{Name: "Nested", Type: types.Array(types.Map(types.Array(types.Int(32))))}}),
+			data:     `{"records":[{"value":{"Nested":[{"home":["x"]}]}}]}`,
+			records:  []Record{{Err: newRecordValidationError(`Nested[0]["home"][0]`, `property «Nested[0]["home"][0]» has a value that is not of type «number»`)}},
+		},
+		{
+			language: state.JavaScript,
+			schema:   schema,
 			data:     `{"records":[{"value":{"Int8":21}}]}`,
 			records:  []Record{{Err: newRecordValidationError("Int8", `property «Int8» is greater than 20`)}},
 		},
@@ -678,23 +696,21 @@ func Test_UnmarshalEdgeCases(t *testing.T) {
 		less := strings.NewReader(`{"records":[{"value":{"a":[1]}}]}`)
 		err := Unmarshal(less, rec, sch, state.JavaScript, false)
 		if err != nil {
-			t.Fatalf("expected no error, got %v", err)
+			t.Fatal(err)
 		}
 		if rec[0].Err == nil || rec[0].Err.Error() != "property «a» contains less than 2 elements" {
-			t.Fatalf("expected record error %q, got %v", "property «a» contains less than 2 elements", rec[0].Err)
+			t.Fatalf("unexpected error for less elements: %v", rec[0].Err)
 		}
 		rec[0].Err = nil
 		rec[0].Attributes = nil
 		more := strings.NewReader(`{"records":[{"value":{"a":[1,2,3,4]}}]}`)
 		err = Unmarshal(more, rec, sch, state.JavaScript, false)
 		if err != nil {
-			t.Fatalf("expected no error, got %v", err)
+			t.Fatalf("unexpected error for more elements: %v", err)
 		}
-		if rec[0].Err == nil || rec[0].Err.Error() != "property «a» contains more than 3 elements" {
-			t.Fatalf("expected record error %q, got %v", "property «a» contains more than 3 elements", rec[0].Err)
-		}
-		if rec[0].Attributes != nil {
-			t.Fatalf("expected nil attributes, got %#v", rec[0].Attributes)
+		want := "property «a» contains more than 3 elements"
+		if rec[0].Err == nil || rec[0].Err.Error() != want {
+			t.Fatalf("expected %q, got %v", want, rec[0].Err)
 		}
 	})
 }

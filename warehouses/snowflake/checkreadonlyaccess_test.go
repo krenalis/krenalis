@@ -98,10 +98,12 @@ func assertSettingsNotReadOnly(t *testing.T, err error) {
 // checkReadOnlyQuery describes one expected SQL query and the rows or error
 // returned by the fake CheckReadOnlyAccess database connection.
 type checkReadOnlyQuery struct {
-	match string
-	cols  []string
-	rows  [][]driver.Value
-	err   error
+	match   string
+	suffix  string
+	cols    []string
+	rows    [][]driver.Value
+	maxRows int
+	err     error
 }
 
 // newCheckReadOnlyTestDB returns a database backed by a fake driver that
@@ -178,13 +180,20 @@ func (c *checkReadOnlyConn) QueryContext(_ context.Context, query string, _ []dr
 
 	response := connector.responses[connector.next]
 	connector.next++
-	if !strings.Contains(query, response.match) {
+	if response.match != "" && !strings.Contains(query, response.match) {
 		connector.t.Fatalf("query %d: expected to contain %q, got:\n%s", connector.next, response.match, query)
+	}
+	if response.suffix != "" && !strings.HasSuffix(query, response.suffix) {
+		connector.t.Fatalf("query %d: expected suffix %q, got:\n%s", connector.next, response.suffix, query)
 	}
 	if response.err != nil {
 		return nil, response.err
 	}
-	return &checkReadOnlyRows{cols: response.cols, rows: response.rows}, nil
+	rows := response.rows
+	if response.maxRows > 0 && len(rows) > response.maxRows {
+		rows = rows[:response.maxRows]
+	}
+	return &checkReadOnlyRows{cols: response.cols, rows: rows}, nil
 }
 
 // checkReadOnlyRows implements driver.Rows over an in-memory row slice.

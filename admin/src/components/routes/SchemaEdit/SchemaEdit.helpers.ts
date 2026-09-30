@@ -12,7 +12,7 @@ interface EditableProperty {
 	createRequired: boolean;
 	updateRequired: boolean;
 	nullable: boolean;
-	displayName?: string;
+	displayName: string;
 	description: string;
 	isEditable?: boolean;
 }
