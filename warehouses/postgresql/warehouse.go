@@ -150,15 +150,57 @@ func (warehouse *PostgreSQL) ColumnTypeDescription(t types.Type) (string, error)
 	return typeToPostgresType(t), nil
 }
 
-// Count returns the number of rows in table.
-func (warehouse *PostgreSQL) Count(ctx context.Context, table string) (int, error) {
+// Counts returns one row count for each condition on the table.
+func (warehouse *PostgreSQL) Counts(ctx context.Context, table string, conditions []warehouses.Expr) ([]int, error) {
+
+	if conditions == nil {
+		conditions = []warehouses.Expr{nil}
+	}
+	if len(conditions) == 0 {
+		return nil, errors.New("conditions are empty")
+	}
+
 	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	var count int
-	err = pool.QueryRow(ctx, `SELECT COUNT(*) FROM `+quoteIdent(table)).Scan(&count)
-	return count, err
+
+	var b strings.Builder
+	b.WriteString("SELECT ")
+	for i, condition := range conditions {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		if condition == nil {
+			b.WriteString("COUNT(*)")
+			continue
+		}
+		b.WriteString("COUNT(CASE WHEN ")
+		err = renderExpr(&b, condition)
+		if err != nil {
+			return nil, fmt.Errorf("cannot build count condition: %s", err)
+		}
+		b.WriteString(" THEN 1 END)")
+	}
+	b.WriteString(" FROM ")
+	b.WriteString(quoteIdent(table))
+
+	counts := make([]int, len(conditions))
+	values := make([]any, len(counts))
+	for i := range counts {
+		values[i] = &counts[i]
+	}
+	err = pool.QueryRow(ctx, b.String()).Scan(values...)
+	if err != nil {
+		return nil, err
+	}
+	for _, count := range counts {
+		if count < 0 || count > math.MaxInt32 {
+			return nil, fmt.Errorf("warehouse returned count outside the supported range: %d", count)
+		}
+	}
+
+	return counts, nil
 }
 
 // Delete deletes rows from the specified table that match the provided where

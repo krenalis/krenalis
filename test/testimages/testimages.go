@@ -14,5 +14,5 @@ const (
 	ClickHouse = "clickhouse/clickhouse-server:25.8-alpine"
 	MySQL      = "mysql:9.7"
 	PostgreSQL = "postgres:18.4-alpine3.24"
-	NATS       = "nats:2.14-alpine3.22"
+	NATS       = "nats:2.15-alpine3.22"
 )
