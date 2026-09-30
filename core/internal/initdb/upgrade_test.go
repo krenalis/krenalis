@@ -239,6 +239,59 @@ func TestUpgrade(t *testing.T) {
 	assertUsageMetricsUpgrade(t, database)
 }
 
+// TestUpgradePipelineMetricSteps verifies the seven-step upgrade and its
+// idempotence, including counter order and preservation of run errors.
+func TestUpgradePipelineMetricSteps(t *testing.T) {
+
+	database := newTestDatabase(t)
+	query := `CREATE TABLE pipelines_metrics (pipeline varchar PRIMARY KEY, timeslot integer NOT NULL`
+	runQuery := `CREATE TABLE pipelines_runs (id varchar PRIMARY KEY`
+	for i := range 7 {
+		query += fmt.Sprintf(", passed_%d integer NOT NULL", i)
+		runQuery += fmt.Sprintf(", passed_%d integer NOT NULL DEFAULT 0", i)
+	}
+	for i := range 7 {
+		query += fmt.Sprintf(", failed_%d integer NOT NULL", i)
+		runQuery += fmt.Sprintf(", failed_%d integer NOT NULL DEFAULT 0", i)
+	}
+	query += `);` + runQuery + `, error varchar NOT NULL DEFAULT '');
+		CREATE TABLE pipelines_errors (message varchar, step smallint);
+		INSERT INTO pipelines_metrics VALUES ('444444444444', 1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14);
+		INSERT INTO pipelines_runs VALUES ('555555555555', 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 'saved error');
+		INSERT INTO pipelines_errors VALUES ('transformation', 4), ('output validation', 5), ('finalize', 6)`
+	_, err := database.Exec(t.Context(), query)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for range 2 {
+		_, err = database.Exec(t.Context(), pipelineMetricStepsUpgrade)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertPipelineMetricStepValues(t, database, "pipelines_metrics", "pipeline", "444444444444",
+			[]int32{1, 2, 3, 4, 0, 5, 6, 0, 7}, []int32{8, 9, 10, 11, 0, 12, 13, 0, 14})
+		assertPipelineMetricStepValues(t, database, "pipelines_runs", "id", "555555555555",
+			[]int32{1, 2, 3, 4, 0, 5, 6, 0, 7}, []int32{8, 9, 10, 11, 0, 12, 13, 0, 14})
+		assertPipelineErrorSteps(t, database, map[string]int16{
+			"transformation":    5,
+			"output validation": 6,
+			"finalize":          8,
+		})
+		assertConsentStepColumns(t, database)
+
+		var runError string
+		err = database.QueryRow(t.Context(), "SELECT error FROM pipelines_runs WHERE id = '555555555555'").Scan(&runError)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if runError != "saved error" {
+			t.Fatalf("expected saved run error, got %q", runError)
+		}
+	}
+
+}
+
 // TestUpgradePipelineOrderingGroup verifies column order, schema and data
 // preservation, and idempotence on a complete pipelines table.
 func TestUpgradePipelineOrderingGroup(t *testing.T) {
@@ -522,10 +575,40 @@ func assertPipelineErrorSteps(t *testing.T, database *db.DB, expected map[string
 	}
 }
 
-// assertPipelineMetricStepValues verifies all passed and failed counters in a
+// assertPipelineMetricStepValues verifies the order and values of counters in a
 // pipeline metrics or run row.
 func assertPipelineMetricStepValues(t *testing.T, database *db.DB, table, key, id string, expectedPassed, expectedFailed []int32) {
+
 	t.Helper()
+
+	expectedColumns := []string{}
+	for _, prefix := range []string{"passed", "failed"} {
+		for i := range 9 {
+			expectedColumns = append(expectedColumns, fmt.Sprintf("%s_%d", prefix, i))
+		}
+	}
+	if table == "pipelines_runs" {
+		hasError, err := database.QueryExists(t.Context(), `SELECT FROM information_schema.columns
+			WHERE table_schema = current_schema() AND table_name = $1 AND column_name = 'error'`, table)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if hasError {
+			expectedColumns = append(expectedColumns, "error")
+		}
+	}
+	var columns []string
+	err := database.QueryRow(t.Context(), `SELECT array_agg(column_name::text ORDER BY ordinal_position)
+		FROM information_schema.columns
+		WHERE table_schema = current_schema() AND table_name = $1
+			AND (column_name ~ '^(passed|failed)_[0-8]$' OR column_name = 'error')`, table).Scan(&columns)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(columns, expectedColumns) {
+		t.Fatalf("expected %s step columns %v, got %v", table, expectedColumns, columns)
+	}
+
 	query := fmt.Sprintf(`
 		SELECT
 			ARRAY[passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, passed_7, passed_8],
@@ -533,7 +616,7 @@ func assertPipelineMetricStepValues(t *testing.T, database *db.DB, table, key, i
 		FROM %s
 		WHERE %s = $1`, table, key)
 	var passed, failed []int32
-	err := database.QueryRow(t.Context(), query, id).Scan(&passed, &failed)
+	err = database.QueryRow(t.Context(), query, id).Scan(&passed, &failed)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -541,6 +624,7 @@ func assertPipelineMetricStepValues(t *testing.T, database *db.DB, table, key, i
 		t.Fatalf("expected %s %s=%q counters passed=%v failed=%v, got passed=%v failed=%v",
 			table, key, id, expectedPassed, expectedFailed, passed, failed)
 	}
+
 }
 
 func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
@@ -1208,6 +1292,18 @@ func assertConsentStepColumns(t *testing.T, database *db.DB) {
 func assertConsentPurposeSchema(t *testing.T, database *db.DB) {
 	t.Helper()
 
+	var columns []string
+	err := database.QueryRow(t.Context(), `SELECT array_agg(column_name::text ORDER BY ordinal_position)
+		FROM information_schema.columns
+		WHERE table_schema = current_schema() AND table_name = 'consent_purposes'`).Scan(&columns)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedColumns := []string{"id", "workspace", "name", "event_purpose_codes", "profile_property", "profile_json_key"}
+	if !slices.Equal(columns, expectedColumns) {
+		t.Fatalf("expected consent purpose columns %v, got %v", expectedColumns, columns)
+	}
+
 	for _, column := range []string{
 		"id", "workspace", "name", "event_purpose_codes", "profile_property", "profile_json_key",
 	} {
@@ -1219,7 +1315,7 @@ func assertConsentPurposeSchema(t *testing.T, database *db.DB) {
 	assertConstraintExists(t, database, "consent_purposes", "consent_purposes_id_check")
 	assertConstraintExists(t, database, "consent_purposes", "consent_purposes_pkey")
 	var primaryKey string
-	err := database.QueryRow(t.Context(), `SELECT pg_get_constraintdef(oid)
+	err = database.QueryRow(t.Context(), `SELECT pg_get_constraintdef(oid)
 		FROM pg_constraint
 		WHERE conrelid = 'consent_purposes'::regclass
 			AND conname = 'consent_purposes_pkey'`).Scan(&primaryKey)
