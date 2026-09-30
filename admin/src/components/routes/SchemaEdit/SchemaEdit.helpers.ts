@@ -29,6 +29,7 @@ const transformSchema = (schema: ObjectType): EditableSchema | null => {
 			const name = `${parentName}.${property.name}`;
 			const flattened: EditableProperty = {
 				...property,
+				description: property.description ?? '',
 				indentation: parentIndentation,
 				root: name.substring(0, name.indexOf('.')),
 			};
@@ -46,6 +47,7 @@ const transformSchema = (schema: ObjectType): EditableSchema | null => {
 		const indentation = 0;
 		const flattened: EditableProperty = {
 			...property,
+			description: property.description ?? '',
 			indentation: indentation,
 			root: property.name,
 		};
