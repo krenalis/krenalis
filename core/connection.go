@@ -345,6 +345,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	}
 
 	c := this.connection
+	ws := c.Workspace()
 	connector := c.Connector()
 
 	// Validate the target.
@@ -550,43 +551,13 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 			if err != nil {
 				return nil, err
 			}
-			err = lockWorkspace(ctx, tx, c.Workspace().ID)
+			err = lockWorkspace(ctx, tx, ws.ID)
 			if err != nil {
 				return nil, err
 			}
-			// Check that the required consent purposes exist.
-			if len(n.RequiredConsents.Purposes) > 0 {
-				var missing string
-				err = tx.QueryRow(ctx, "SELECT purpose\n"+
-					"FROM UNNEST($1::varchar[]) AS purpose\n"+
-					"WHERE NOT EXISTS (SELECT 1 FROM consent_purposes AS cp WHERE cp.id = purpose AND cp.workspace = $2)\n"+
-					"LIMIT 1", n.RequiredConsents.Purposes, c.Workspace().ID).Scan(&missing)
-				if err != nil {
-					if err != sql.ErrNoRows {
-						return nil, err
-					}
-				}
-				if missing != "" {
-					return nil, errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", missing)
-				}
-				// Check that the required consent purposes have a consent
-				// location for the target of the pipeline.
-				location, isUnset := "profile", "profile_property = ''"
-				if n.Target == state.TargetEvent {
-					location, isUnset = "event", "event_purpose_codes = '{}'"
-				}
-				var unset string
-				if err := tx.QueryRow(ctx, "SELECT id FROM consent_purposes\n"+
-					"WHERE workspace = $1 AND id = ANY($2) AND "+isUnset+"\n"+
-					"LIMIT 1", c.Workspace().ID, n.RequiredConsents.Purposes).Scan(&unset); err != nil {
-					if err != sql.ErrNoRows {
-						return nil, err
-					}
-				}
-				if unset != "" {
-					return nil, errors.Unprocessable(ConsentPurposeLocationNotSet,
-						"consent purpose %s has no %s consent location", unset, location)
-				}
+			err = checkRequiredConsentPurposesTx(ctx, tx, ws.ID, "", n.Target, n.RequiredConsents.Purposes)
+			if err != nil {
+				return nil, err
 			}
 			switch n.Target {
 			case state.TargetEvent:

@@ -754,6 +754,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 	}
 
 	c := this.pipeline.Connection()
+	ws := c.Workspace()
 
 	// Validate the pipeline.
 	v := validationState{}
@@ -938,43 +939,13 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 				return nil, err
 			}
 		}
-		err := lockWorkspace(ctx, tx, c.Workspace().ID)
+		err := lockWorkspace(ctx, tx, ws.ID)
 		if err != nil {
 			return nil, err
 		}
-		// Check that the required consent purposes exist.
-		if len(n.RequiredConsents.Purposes) > 0 {
-			var missing string
-			err = tx.QueryRow(ctx, "SELECT purpose\n"+
-				"FROM UNNEST($1::varchar[]) AS purpose\n"+
-				"WHERE NOT EXISTS (SELECT 1 FROM consent_purposes AS cp WHERE cp.id = purpose AND cp.workspace = $2)\n"+
-				"LIMIT 1", n.RequiredConsents.Purposes, c.Workspace().ID).Scan(&missing)
-			if err != nil {
-				if err != sql.ErrNoRows {
-					return nil, err
-				}
-			}
-			if missing != "" {
-				return nil, errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", missing)
-			}
-			// Check that the required consent purposes have a consent location
-			// for the target of the pipeline.
-			location, isUnset := "profile", "profile_property = ''"
-			if this.pipeline.Target == state.TargetEvent {
-				location, isUnset = "event", "event_purpose_codes = '{}'"
-			}
-			var unset string
-			if err := tx.QueryRow(ctx, "SELECT id FROM consent_purposes\n"+
-				"WHERE workspace = $1 AND id = ANY($2) AND "+isUnset+"\n"+
-				"LIMIT 1", c.Workspace().ID, n.RequiredConsents.Purposes).Scan(&unset); err != nil {
-				if err != sql.ErrNoRows {
-					return nil, err
-				}
-			}
-			if unset != "" {
-				return nil, errors.Unprocessable(ConsentPurposeLocationNotSet,
-					"consent purpose %s has no %s consent location", unset, location)
-			}
+		err = checkRequiredConsentPurposesTx(ctx, tx, ws.ID, n.ID, this.pipeline.Target, n.RequiredConsents.Purposes)
+		if err != nil {
+			return nil, err
 		}
 		// Mark the pipeline’s function as discontinued if its identifier changes.
 		now := time.Now().UTC()
@@ -1484,6 +1455,78 @@ func (period *SchedulePeriod) UnmarshalJSON(data []byte) error {
 		return errors.BadRequest(`schedule period can be "5m", "15m", "30m", "1h", "2h", "3h", "6h", "8h", "12h", or "24h"`)
 	}
 	*period = p
+	return nil
+}
+
+// checkRequiredConsentPurposesTx checks that the purposes exist in the
+// workspace and have a consent location configured for the target. It is
+// called within the transactions that create and update a pipeline.
+//
+// If existingPipeline is non-empty, only newly added purposes are checked.
+// The caller must hold the workspace lock.
+//
+// It returns an errors.UnprocessableError with code ConsentPurposeNotExist or
+// ConsentPurposeLocationNotSet if a purpose is missing or has no consent
+// location configured for the target.
+func checkRequiredConsentPurposesTx(ctx context.Context, tx *db.Tx, workspace, existingPipeline string, target state.Target, ids []string) error {
+
+	if len(ids) == 0 {
+		return nil
+	}
+
+	if existingPipeline != "" {
+
+		// Purposes already required cannot be deleted or lose their required
+		// location, so only additions need validation.
+		var current []string
+		if err := tx.QueryRow(ctx, "SELECT required_consents_purposes FROM pipelines WHERE id = $1",
+			existingPipeline).Scan(&current); err != nil {
+			if err != sql.ErrNoRows {
+				return err
+			}
+		}
+
+		var added []string
+		for _, id := range ids {
+			if !slices.Contains(current, id) {
+				added = append(added, id)
+			}
+		}
+		if len(added) == 0 {
+			return nil
+		}
+		ids = added
+
+	}
+
+	var missing string
+	err := tx.QueryRow(ctx, "SELECT purpose\n"+
+		"FROM UNNEST($1::varchar[]) AS purpose\n"+
+		"WHERE NOT EXISTS (SELECT 1 FROM consent_purposes AS cp WHERE cp.id = purpose AND cp.workspace = $2)\n"+
+		"LIMIT 1", ids, workspace).Scan(&missing)
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
+	if missing != "" {
+		return errors.Unprocessable(ConsentPurposeNotExist, "consent purpose %s does not exist", missing)
+	}
+
+	location, isUnset := "profile", "profile_property = ''"
+	if target == state.TargetEvent {
+		location, isUnset = "event", "event_purpose_codes = '{}'"
+	}
+	var unset string
+	err = tx.QueryRow(ctx, "SELECT id FROM consent_purposes\n"+
+		"WHERE workspace = $1 AND id = ANY($2) AND "+isUnset+"\n"+
+		"LIMIT 1", workspace, ids).Scan(&unset)
+	if err != sql.ErrNoRows {
+		if err != nil {
+			return err
+		}
+		return errors.Unprocessable(ConsentPurposeLocationNotSet,
+			"consent purpose %s has no %s consent location", unset, location)
+	}
+
 	return nil
 }
 
