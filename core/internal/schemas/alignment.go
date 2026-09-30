@@ -26,7 +26,7 @@ func (err *Error) Error() string {
 //
 // Alignment means that all properties of t1 must be present in t2 with the
 //   - same Type and Nullable.
-//   - same ReadOptional, if exportMode is nil.G
+//   - same ReadOptional, if exportMode is nil.
 //   - same CreateRequired, if exportMode is CreateOnly or CreateOrUpdate.
 //   - same UpdateRequired, if exportMode is UpdateOnly or CreateOrUpdate.
 //
