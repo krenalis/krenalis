@@ -942,7 +942,7 @@ const PropertyForm = ({
 							onSlChange={onChangeMeasurementUnit}
 						>
 							<PropertyFormLabel slot='label'>Unit</PropertyFormLabel>
-							{!valueType.unit && (
+							{(valueType.unit == null || valueType.unit.length === 0) && (
 								<SlOption className='property-form__unit-placeholder' value='' disabled />
 							)}
 							{UNIT_OF_MEASURE_OPTIONS.map((option, index) => (
@@ -995,7 +995,7 @@ const PropertyForm = ({
 							onSlChange={onChangeDurationUnit}
 						>
 							<PropertyFormLabel slot='label'>Unit</PropertyFormLabel>
-							{!valueType.unit && (
+							{(valueType.unit == null || valueType.unit.length === 0) && (
 								<SlOption className='property-form__unit-placeholder' value='' disabled />
 							)}
 							{DURATION_UNIT_OPTIONS.map((option) => (
@@ -1157,7 +1157,11 @@ const validatePropertyType = (
 		return { location: 'type', message: 'Type cannot be empty' };
 	}
 	const type = getPropertyValueType(property.type);
-	if (type.kind === 'decimal' && type.semantic === 'measurement' && !type.unit) {
+	if (
+		type.kind === 'decimal' &&
+		type.semantic === 'measurement' &&
+		(type.unit == null || type.unit.length === 0)
+	) {
 		return { location: 'measurement-unit', message: 'Unit is required' };
 	}
 	if (type.kind === 'string') {
@@ -1186,7 +1190,7 @@ const validatePropertyType = (
 			return error;
 		}
 	}
-	if (type.kind === 'int' && type.semantic === 'duration' && !type.unit) {
+	if (type.kind === 'int' && type.semantic === 'duration' && (type.unit == null || type.unit.length === 0)) {
 		return { location: 'duration-unit', message: 'Unit is required' };
 	}
 	return null;

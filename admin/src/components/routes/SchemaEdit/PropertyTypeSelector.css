@@ -222,10 +222,6 @@
 	margin: 0 1px 6px;
 }
 
-.property-type-selector__type-change-note-base-type {
-	font-family: var(--monospace-fonts);
-}
-
 .property-type-selector__option::part(base) {
 	align-items: center;
 	border-radius: var(--radius);

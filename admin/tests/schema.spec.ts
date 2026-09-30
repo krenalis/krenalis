@@ -1,6 +1,6 @@
 import { test, expect, type Locator } from '@playwright/test';
 import { login, logout, adminURL, logValidationErrors } from './utils';
-import { ObjectType, Property } from '../src/lib/api/types/types';
+import Type, { ObjectType, Property } from '../src/lib/api/types/types';
 
 const selectPropertyType = async (page, option: string) => {
 	const panel = page.locator('.property-panel');
@@ -1465,6 +1465,101 @@ test(`Create profile schema properties with semantic defaults and options`, asyn
 	expect(previewResponse.status()).toBe(200);
 	await expect(page.locator('.schema-edit__queries')).toHaveAttribute('label', 'Review changes');
 });
+
+for (const [semantic, kind, structure] of [
+	['email', 'string', 'one'],
+	['phone', 'string', 'array'],
+	['url', 'string', 'map'],
+	['country', 'string', 'one'],
+	['duration', 'int', 'array'],
+	['money', 'decimal', 'one'],
+	['percentage', 'decimal', 'array'],
+	['measurement', 'decimal', 'map'],
+] as const) {
+	test(`Return a new ${structure} property from ${semantic} to pure ${kind}`, async ({ page }) => {
+		await page.route('**/v1/profiles/schema/preview', async (route) => {
+			await route.fulfill({ json: { queries: [] } });
+		});
+		await page.route('**/v1/profiles/schema', async (route) => {
+			if (route.request().method() === 'PUT') {
+				await route.fulfill({ status: 200 });
+				return;
+			}
+			await route.continue();
+		});
+
+		await page.goto(`${adminURL}/profile-unification/schema`);
+		await editSchema(page);
+		await page.locator('.schema-edit__add-property').click();
+		const propertyPanel = page.locator('.property-panel');
+		const name = `plain_${semantic}`;
+		await propertyPanel.locator('.property-form__name-input input').fill(name);
+		if (structure !== 'one') {
+			await propertyPanel.locator('.property-type-selector__structure-trigger').click();
+			await propertyPanel.locator(`[data-structure-option="${structure}"]`).click();
+		}
+		await selectPropertyType(page, semantic);
+		if (semantic === 'money' || semantic === 'measurement' || semantic === 'duration') {
+			const control = propertyPanel.locator(
+				`.property-form__${semantic === 'money' ? 'currency' : `${semantic}-unit`}`,
+			);
+			const value = semantic === 'money' ? 'EUR' : semantic === 'measurement' ? 'kg' : 'second';
+			await control.click();
+			await control.locator(`sl-option[value="${value}"]`).click();
+			await expect(control).toHaveJSProperty('value', value);
+		}
+		if (kind === 'decimal') {
+			await propertyPanel.locator('.property-form__minimum input').fill('-10.5');
+			await propertyPanel.locator('.property-form__maximum input').fill('10.5');
+		}
+		await selectPropertyType(page, kind);
+		await expect(propertyPanel.locator('.property-type-selector__trigger .schema-property-type')).toHaveText(kind);
+		await expect(
+			propertyPanel.locator(
+				'.property-form__country-format, .property-form__currency, ' +
+					'.property-form__measurement-unit, .property-form__duration-unit',
+			),
+		).toHaveCount(0);
+		if (kind === 'decimal') {
+			await expect(propertyPanel.locator('.property-form__precision input')).toHaveValue('18');
+			await expect(propertyPanel.locator('.property-form__scale input')).toHaveValue('4');
+			await expect(propertyPanel.locator('.property-form__minimum input')).toHaveValue('-10.5');
+			await expect(propertyPanel.locator('.property-form__maximum input')).toHaveValue('10.5');
+		} else if (kind === 'int') {
+			await expect(propertyPanel.locator('.property-form__bit-size')).toHaveJSProperty('value', '64');
+			await expect(propertyPanel.locator('.property-form__integer-sign')).toHaveJSProperty('value', 'signed');
+		} else {
+			await expect(propertyPanel.locator('.property-form__constraints--length')).toBeVisible();
+		}
+		await propertyPanel.locator('.property-panel__save').click();
+		await expect(page.locator(`.schema-edit .grid__row[data-id="${name}"]`)).toBeVisible();
+
+		const previewRequestPromise = page.waitForRequest(
+			(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
+		);
+		await page.locator('.schema-edit__header-apply-button').click();
+		const previewRequest = await previewRequestPromise;
+		const alterRequestPromise = page.waitForRequest(
+			(request) => request.url().endsWith('/profiles/schema') && request.method() === 'PUT',
+		);
+		await page.locator('.schema-edit__apply-alter-button').click();
+		const alterRequest = await alterRequestPromise;
+		const valueType: Type =
+			kind === 'decimal'
+				? { kind, precision: 18, scale: 4, minimum: -10.5, maximum: 10.5 }
+				: kind === 'int'
+					? { kind, bitSize: 64, unsigned: false }
+					: { kind };
+		for (const request of [previewRequest, alterRequest]) {
+			const schema = request.postDataJSON().schema as ObjectType;
+			const property = schema.properties.find((property) => property.name === name);
+			expect(property?.type).toEqual(
+				structure === 'one' ? valueType : { kind: structure, elementType: valueType },
+			);
+		}
+		await expect(page.locator('.schema-edit')).toHaveCount(0);
+	});
+}
 
 test(`Show materialized type catalogs, restrict transitions, and preserve physical configuration`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {

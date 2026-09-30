@@ -43,7 +43,11 @@ const PropertyDetailsPanel = ({ identifierPosition, onClose, primarySource, prop
 					</PropertyDetail>
 					{semanticDetail != null && (
 						<PropertyDetail label={semanticDetail.label}>
-							{semanticDetail.value || <span className='property-details-panel__empty-value'>—</span>}
+							{semanticDetail.value != null && semanticDetail.value !== '' ? (
+								semanticDetail.value
+							) : (
+								<span className='property-details-panel__empty-value'>—</span>
+							)}
 						</PropertyDetail>
 					)}
 				</div>

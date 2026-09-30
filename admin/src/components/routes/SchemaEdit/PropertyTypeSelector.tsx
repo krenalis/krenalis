@@ -281,6 +281,18 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 			let nextValueType = valueType;
 			if (canEditType && (getTypeSemantic(selection) != null || valueType?.kind !== option.kind)) {
 				nextValueType = selection;
+			} else if (canEditType && valueType != null && 'semantic' in valueType) {
+				nextValueType = { ...valueType };
+				delete nextValueType.semantic;
+				if (nextValueType.kind === 'string') {
+					delete nextValueType.format;
+				}
+				if (nextValueType.kind === 'decimal') {
+					delete nextValueType.currency;
+				}
+				if ('unit' in nextValueType) {
+					delete nextValueType.unit;
+				}
 			}
 			if (nextValueType == null) {
 				return;
