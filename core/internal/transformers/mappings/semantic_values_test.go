@@ -7,6 +7,7 @@ package mappings
 import (
 	"reflect"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/krenalis/krenalis/tools/errors"
@@ -14,27 +15,32 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-// TestMappingSemantics checks semantic validation during conversion and preserves valid equal-type values.
-func TestMappingSemantics(t *testing.T) {
+// TestMappingSemanticValidation checks country and phone semantic validation
+// across mapping paths and ensures valid values are preserved.
+func TestMappingSemanticValidation(t *testing.T) {
 
 	country := types.String().AsCountry(types.ISO3166Alpha2)
 
 	tests := []struct {
-		name     string
-		semantic types.Type
-		value    string
-		valid    bool
+		name  string
+		typ   types.Type
+		value string
+		valid bool
 	}{
-		{"current country", country, "IT", true},
-		{"alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "ITA", true},
-		{"long alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "ITAL", false},
+		{"current country", country, "US", true},
+		{"alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "USA", true},
+		{"long alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "USAA", false},
+		{"former alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "ANT", true},
+		{"unknown alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "ZZZ", false},
+		{"reserved alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "EUR", false},
+		{"lowercase alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "usa", false},
 		{"former country", country, "AN", true},
 		{"unknown country", country, "ZZ", false},
 		{"reserved country", country, "UK", false},
-		{"lowercase country", country, "it", false},
+		{"lowercase country", country, "us", false},
 		{"empty country", country, "", false},
 		{"short country", country, "I", false},
-		{"long country", country, "ITA", false},
+		{"long country", country, "USA", false},
 		{"non-ASCII country", country, "é", false},
 		{"canonical phone", types.String().AsPhone(), "+390236618300", true},
 		{"structurally possible phone", types.String().AsPhone(), "+12001230101", true},
@@ -55,7 +61,7 @@ func TestMappingSemantics(t *testing.T) {
 
 				t.Run(shape, func(t *testing.T) {
 
-					typ := test.semantic
+					typ := test.typ
 					var value any = test.value
 					data := strconv.Quote(test.value)
 					switch shape {
@@ -77,7 +83,6 @@ func TestMappingSemantics(t *testing.T) {
 						data = "{\"inner\":" + data + "}"
 					}
 					outSchema := types.Object([]types.Property{{Name: "target", Type: typ}})
-					target, _ := outSchema.Properties().ByName("target")
 					for _, mode := range []string{"convert", "equal types", "json", "constant"} {
 
 						if mode == "constant" && shape != "string" {
@@ -105,32 +110,38 @@ func TestMappingSemantics(t *testing.T) {
 									inputType = types.Object([]types.Property{{Name: "inner", Type: inputType}})
 								}
 							case "equal types":
-								inputType = target.Type
+								inputType = typ
 							case "json":
 								inputType, inputValue = types.JSON(), json.Value(data)
 							case "constant":
-								expr = "'" + test.value + "'"
+								expr = strconv.Quote(test.value)
 							}
 							inSchema := types.Object([]types.Property{{Name: "source", Type: inputType}})
 							mapping, err := New(map[string]string{"target": expr}, inSchema, outSchema, false)
 							if err != nil {
 								if test.valid {
-									t.Fatal(err)
+									t.Fatalf("expected mapping creation to succeed, got %v", err)
+								}
+								if mode != "constant" {
+									t.Fatalf("expected mapping creation to succeed for %s mode, got %v", mode, err)
+								}
+								if !strings.Contains(err.Error(), " is not convertible to the ") {
+									t.Fatalf("expected constant conversion error, got %v", err)
 								}
 								return
 							}
 							got, err := mapping.Transform(map[string]any{"source": inputValue}, Create)
 							if err != nil {
 								if test.valid {
-									t.Fatal(err)
+									t.Fatalf("expected transformation to succeed, got %v", err)
 								}
 								if _, ok := errors.AsType[ValidationError](err); !ok {
-									t.Fatalf("expected ValidationError, got %T", err)
+									t.Fatalf("expected ValidationError, got %T: %v", err, err)
 								}
 								return
 							}
 							if !test.valid {
-								t.Fatal("invalid value was accepted")
+								t.Fatalf("expected invalid value to be rejected, got %#v", got["target"])
 							}
 							if !reflect.DeepEqual(got["target"], value) {
 								t.Fatalf("value changed: got %#v, want %#v", got["target"], value)
