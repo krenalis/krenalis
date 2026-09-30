@@ -1157,11 +1157,7 @@ const validatePropertyType = (
 		return { location: 'type', message: 'Type cannot be empty' };
 	}
 	const type = getPropertyValueType(property.type);
-	if (
-		type.kind === 'decimal' &&
-		type.semantic === 'measurement' &&
-		(type.unit == null || type.unit.length === 0)
-	) {
+	if (type.kind === 'decimal' && type.semantic === 'measurement' && (type.unit == null || type.unit.length === 0)) {
 		return { location: 'measurement-unit', message: 'Unit is required' };
 	}
 	if (type.kind === 'string') {
