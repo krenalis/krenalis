@@ -7,7 +7,6 @@ package metrics
 import (
 	"encoding/base64"
 	"testing"
-	"time"
 
 	_ "github.com/krenalis/krenalis/connectors/dummy"
 	"github.com/krenalis/krenalis/core/internal/db"
@@ -18,7 +17,6 @@ import (
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // newAggregateMetricsTestDatabase starts PostgreSQL and initializes the
@@ -32,10 +30,7 @@ func newAggregateMetricsTestDatabase(t *testing.T) (*db.DB, string) {
 		postgres.WithDatabase("krenalis"),
 		postgres.WithUsername("krenalis"),
 		postgres.WithPassword("krenalis"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(60*time.Second)),
+		postgres.BasicWaitStrategies(),
 	)
 	if err != nil {
 		t.Fatal(err)
