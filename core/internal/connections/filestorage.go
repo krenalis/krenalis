@@ -79,7 +79,8 @@ func (c *Connections) FileStorage(storage *state.Connection) *FileStorage {
 //
 // If nameReplacer is not nil, then the placeholders in name are replaced using
 // it; in this case, a *PlaceholderError error may be returned in case of an
-// error with placeholders.
+// error with placeholders, and an InvalidPathError if the resulting name is
+// longer than 1024 runes.
 //
 // If the connector returns an error or a path that is not valid UTF-8, it
 // returns an *UnavailableError.
@@ -92,6 +93,9 @@ func (storage *FileStorage) AbsolutePath(ctx context.Context, name string, nameR
 		name, err = ReplacePlaceholders(name, nameReplacer)
 		if err != nil {
 			return "", err
+		}
+		if utf8.RuneCountInString(name) > 1024 {
+			return "", connectors.InvalidPathErrorf("path is longer than 1024 runes after placeholder replacement")
 		}
 	}
 	path, err := storage.inner.(fileStorageAbsolutePathConnection).AbsolutePath(ctx, name)

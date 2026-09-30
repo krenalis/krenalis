@@ -1557,6 +1557,29 @@ func Test_validatePipeline(t *testing.T) {
 			formatHasSheets:         false,
 			err:                     "path is longer than 1024 runes",
 		},
+		{
+			name: "BAD: Destination/FileStorage/User - path too long after placeholder replacement",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
+					{Name: "last_name", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Type{},
+				Format:    "csv",
+				Path:      strings.Repeat("a", 1018) + "${now}",
+				OrderBy:   "email",
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.FileStorage,
+			formatType:              state.File,
+			formatTargets:           state.UsersFlag,
+			formatHasSettings:       false,
+			formatHasSheets:         false,
+			err:                     "path is longer than 1024 runes after placeholder replacement",
+		},
 
 		{
 			name: "BAD: Source/FileStorage/User - path cannot contain a placeholder",

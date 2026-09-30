@@ -118,7 +118,8 @@ type PipelineType struct {
 // cannot be longer than MaxFilePathSize runes, and must be UTF-8 encoded.
 //
 // It returns an errors.UnprocessableError error with code:
-//   - InvalidPath, if path is not valid for the file storage connector.
+//   - InvalidPath, if path is not valid for the file storage connector or, for
+//     destination connections, is too long after placeholder replacement.
 //   - InvalidPlaceholder, if path for source connections contains a placeholder
 //     or path for destination connections contains an invalid placeholder.
 func (this *Connection) AbsolutePath(ctx context.Context, path string) (string, error) {
