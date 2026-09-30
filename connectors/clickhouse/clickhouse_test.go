@@ -23,6 +23,7 @@ import (
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/clickhouse"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // Test_Merge_Query tests the Merge and Query methods on supported types. It
@@ -91,6 +92,7 @@ func Test_Merge_Query(t *testing.T) {
 		clickhouse.WithUsername(username),
 		clickhouse.WithPassword(password),
 		clickhouse.WithDatabase(database),
+		testcontainers.WithAdditionalWaitStrategy(wait.ForListeningPort("9000/tcp")),
 	)
 	defer func() {
 		if err := testcontainers.TerminateContainer(clickHouseContainer); err != nil {
@@ -231,6 +233,26 @@ func Test_Merge_Query(t *testing.T) {
 		t.Fatalf("cannot scan row: %s", err)
 	}
 
+}
+
+// Test_ColumnType_RejectsEnumValueWithInvalidUTF8 checks that an Enum8/Enum16
+// value that is not valid UTF-8, even though the type is, makes columnType
+// report the type as unsupported instead of panicking.
+func Test_ColumnType_RejectsEnumValueWithInvalidUTF8(t *testing.T) {
+	typ, _ := columnType(`Enum8('a\é' = 1, 'c' = 2)`)
+	if typ.Valid() {
+		t.Fatalf("expected an invalid type, got %s", typ)
+	}
+}
+
+// Test_ColumnType_RejectsEnumValueWithNULByte checks that an Enum8/Enum16
+// value containing a NUL byte makes columnType report the type as
+// unsupported instead of panicking.
+func Test_ColumnType_RejectsEnumValueWithNULByte(t *testing.T) {
+	typ, _ := columnType("Enum8('a\x00b' = 1, 'c' = 2)")
+	if typ.Valid() {
+		t.Fatalf("expected an invalid type, got %s", typ)
+	}
 }
 
 type testSettingsStore struct {

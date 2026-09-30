@@ -101,6 +101,8 @@ interface Pipeline {
 	name: string;
 	enabled: boolean;
 	eventType: string | null;
+	orderingGroup: string | null;
+	deliveryEndpoint: string | null;
 	running: boolean;
 	scheduleStart: number | null;
 	schedulePeriod: SchedulePeriod | null;
@@ -131,6 +133,8 @@ interface PipelineType {
 	description: string;
 	target: PipelineTarget;
 	eventType: string;
+	orderingGroup: string | null;
+	deliveryEndpoint: string | null;
 }
 
 interface PipelineToSet {

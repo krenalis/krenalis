@@ -377,6 +377,7 @@ test(`Keep profile schema search selection and expansion consistent`, async ({ p
 						updateRequired: false,
 						readOptional: true,
 						nullable: false,
+						displayName: '',
 						description: '',
 					},
 				],
@@ -385,6 +386,7 @@ test(`Keep profile schema search selection and expansion consistent`, async ({ p
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -565,6 +567,7 @@ test(`Keep an object expanded when reordering it`, async ({ page }) => {
 							updateRequired: false,
 							readOptional: true,
 							nullable: false,
+							displayName: '',
 							description: '',
 						},
 					],
@@ -573,6 +576,7 @@ test(`Keep an object expanded when reordering it`, async ({ page }) => {
 				updateRequired: false,
 				readOptional: true,
 				nullable: false,
+				displayName: '',
 				description: '',
 			},
 			{
@@ -584,6 +588,7 @@ test(`Keep an object expanded when reordering it`, async ({ page }) => {
 				updateRequired: false,
 				readOptional: true,
 				nullable: false,
+				displayName: '',
 				description: '',
 			},
 		);
@@ -803,6 +808,7 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -1009,6 +1015,7 @@ test(`Keep object types unchanged after canceling the schema review`, async ({ p
 						updateRequired: false,
 						readOptional: true,
 						nullable: false,
+						displayName: '',
 						description: '',
 					},
 				],
@@ -1017,6 +1024,7 @@ test(`Keep object types unchanged after canceling the schema review`, async ({ p
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -1149,6 +1157,7 @@ test(`Preserve create-required on top-level properties in the schema preview`, a
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -1672,6 +1681,7 @@ test(`Restore the original property name without leaving pending changes`, async
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -1730,6 +1740,7 @@ test(`Remove a renamed property without sending its stale RePath`, async ({ page
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -1771,6 +1782,7 @@ test(`Remove a replacement property without sending its stale RePath`, async ({ 
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -1817,6 +1829,7 @@ test(`Do not show modified field indicators on a replacement property`, async ({
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: 'Original description',
 		});
 		await route.fulfill({ response, json: schema });
@@ -1851,6 +1864,7 @@ test(`Rename an existing property to a deleted property's name`, async ({ page }
 				updateRequired: false,
 				readOptional: true,
 				nullable: false,
+				displayName: '',
 				description: '',
 			},
 			{
@@ -1862,6 +1876,7 @@ test(`Rename an existing property to a deleted property's name`, async ({ page }
 				updateRequired: false,
 				readOptional: true,
 				nullable: false,
+				displayName: '',
 				description: '',
 			},
 		);
@@ -1968,6 +1983,7 @@ test(`Reuse a property name more than once before applying schema changes`, asyn
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -2014,6 +2030,7 @@ test(`Remove a replacement property's RePath when renaming it`, async ({ page })
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -2059,6 +2076,7 @@ test(`Allow matching property names under different object parents`, async ({ pa
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		schema.properties.push(
@@ -2129,6 +2147,7 @@ test(`Support hasOwnProperty as a profile schema property name`, async ({ page }
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		schema.properties.push(
@@ -2179,6 +2198,7 @@ test(`Ignore inherited primary sources for prototype property names`, async ({ p
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -2381,6 +2401,7 @@ test(`Reject descendant changes while renaming an object property`, async ({ pag
 						updateRequired: false,
 						readOptional: true,
 						nullable: false,
+						displayName: '',
 						description: '',
 					},
 				],
@@ -2389,6 +2410,7 @@ test(`Reject descendant changes while renaming an object property`, async ({ pag
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -2469,6 +2491,7 @@ test(`Reject an existing object property after removing all its sub-properties`,
 							updateRequired: false,
 							readOptional: true,
 							nullable: false,
+							displayName: '',
 							description: '',
 						},
 					],
@@ -2477,6 +2500,7 @@ test(`Reject an existing object property after removing all its sub-properties`,
 				updateRequired: false,
 				readOptional: true,
 				nullable: false,
+				displayName: '',
 				description: '',
 			},
 			{
@@ -2488,6 +2512,7 @@ test(`Reject an existing object property after removing all its sub-properties`,
 				updateRequired: false,
 				readOptional: true,
 				nullable: false,
+				displayName: '',
 				description: '',
 			},
 		);
@@ -2532,6 +2557,7 @@ test(`Count an object removal once after changing its children`, async ({ page }
 						updateRequired: false,
 						readOptional: true,
 						nullable: false,
+						displayName: '',
 						description: '',
 					},
 					{
@@ -2543,6 +2569,7 @@ test(`Count an object removal once after changing its children`, async ({ page }
 						updateRequired: false,
 						readOptional: true,
 						nullable: false,
+						displayName: '',
 						description: '',
 					},
 				],
@@ -2551,6 +2578,7 @@ test(`Count an object removal once after changing its children`, async ({ page }
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });

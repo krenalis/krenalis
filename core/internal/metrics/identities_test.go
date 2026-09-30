@@ -422,14 +422,14 @@ func TestIdentitiesRefresh(t *testing.T) {
 		UPDATE connections SET connector = 'dummy';
 		UPDATE connections SET role = 'Destination' WHERE id = '111111111114';
 		INSERT INTO pipelines
-			(id, connection, target, event_type, transformation_language,
+			(id, connection, target, event_type, ordering_group, delivery_endpoint, transformation_language,
 			matching_in, matching_out, update_on_duplicates, table_key)
 		VALUES
-			('722222222222', '111111111113', 'User', '', 'JavaScript', '', '', false, ''),
-			('733333333333', '111111111112', 'Group', '', 'JavaScript', '', '', false, ''),
-			('744444444444', '111111111114', 'User', '', 'JavaScript', '', '', false, ''),
-			('711111111111', '111111111112', 'User', '', 'JavaScript', '', '', false, ''),
-			('755555555555', '333333333334', 'User', '', 'JavaScript', '', '', false, '')`)
+			('722222222222', '111111111113', 'User', '', '', '', 'JavaScript', '', '', false, ''),
+			('733333333333', '111111111112', 'Group', '', '', '', 'JavaScript', '', '', false, ''),
+			('744444444444', '111111111114', 'User', '', '', '', 'JavaScript', '', '', false, ''),
+			('711111111111', '111111111112', 'User', '', '', '', 'JavaScript', '', '', false, ''),
+			('755555555555', '333333333334', 'User', '', '', '', 'JavaScript', '', '', false, '')`)
 	if err != nil {
 		t.Fatal(err)
 	}

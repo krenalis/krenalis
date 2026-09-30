@@ -12,6 +12,7 @@ import (
 	"math"
 	"slices"
 	"time"
+	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/dialer"
@@ -80,7 +81,8 @@ func (c *Connections) FileStorage(storage *state.Connection) *FileStorage {
 // it; in this case, a *PlaceholderError error may be returned in case of an
 // error with placeholders.
 //
-// If the connector returns an error, it returns an *UnavailableError.
+// If the connector returns an error or a path that is not valid UTF-8, it
+// returns an *UnavailableError.
 func (storage *FileStorage) AbsolutePath(ctx context.Context, name string, nameReplacer PlaceholderReplacer) (string, error) {
 	if storage.err != nil {
 		return "", storage.err
@@ -93,7 +95,13 @@ func (storage *FileStorage) AbsolutePath(ctx context.Context, name string, nameR
 		}
 	}
 	path, err := storage.inner.(fileStorageAbsolutePathConnection).AbsolutePath(ctx, name)
-	return path, connectorError(err)
+	if err != nil {
+		return "", connectorError(err)
+	}
+	if !utf8.ValidString(path) {
+		return "", &UnavailableError{Err: fmt.Errorf("connector %s returned a non-UTF-8 absolute path", storage.connector)}
+	}
+	return path, nil
 }
 
 // Connector returns the name of the file storage connector.

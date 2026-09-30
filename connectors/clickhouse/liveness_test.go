@@ -2,6 +2,10 @@
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
+// The ClickHouse driver checks pooled connections through syscall.Conn only on
+// these systems (see its conn_check.go) and pings them on the others.
+//go:build linux || darwin || dragonfly || freebsd || netbsd || openbsd || solaris || illumos
+
 package clickhouse
 
 import (
@@ -19,6 +23,7 @@ import (
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/clickhouse"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // Test_PooledConnectionLiveness checks that the ClickHouse driver still detects
@@ -36,6 +41,7 @@ func Test_PooledConnectionLiveness(t *testing.T) {
 		clickhouse.WithUsername(username),
 		clickhouse.WithPassword(password),
 		clickhouse.WithDatabase(database),
+		testcontainers.WithAdditionalWaitStrategy(wait.ForListeningPort("9000/tcp")),
 	)
 	defer func() {
 		if err := testcontainers.TerminateContainer(container); err != nil {

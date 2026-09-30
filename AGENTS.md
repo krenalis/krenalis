@@ -16,7 +16,7 @@ Apply review rules to code introduced or modified by the change under review. Do
 
 ## Line length
 
-Allow Go code lines to be up to 120 characters long without wrapping. A line may exceed 120 characters when a more specific convention requires it, notably the rule that keeps exported signatures on one line.
+Allow Go code lines to be up to 120 characters long without wrapping. A line may exceed 120 characters when a more specific convention requires it, notably the rule that keeps exported signatures on one line. The 120-character limit does not apply to `_test.go` files, whose lines may be as long as needed.
 
 ## File organization
 
@@ -151,6 +151,8 @@ Use the standard-library `testing/synctest` package when testing concurrent or a
 
 When running the complete Admin test suite, you may use `go run ./test/commit -just-test-admin` to receive each individual test result without waiting for the complete suite to finish. This command is optional.
 
+When a test starts a container with testcontainers and reads one of its mapped ports, its wait strategy must include `wait.ForListeningPort` for that port; otherwise, notably on Docker Desktop, `MappedPort` can fail. For PostgreSQL, use `postgres.BasicWaitStrategies()`, which includes it.
+
 ## Behavioral contracts
 
 A function or method must return a non-nil error whenever it does not perform the behavior promised primarily by its name and secondarily by its declaration comment. Do not report success after silently skipping, failing, or only partially completing a promised operation.
@@ -240,6 +242,8 @@ var x int
 }
 ```
 
+A function whose body is only a `synctest.Test` call is a single-statement block: keep it compact even when the function passed to `synctest.Test` is padded.
+
 ## Declaration comments
 
 Every exported package-level type, function, variable, and constant, as well as every exported method, must have a declaration comment written in the style of the Go standard library, except for the grouped declarations and self-explanatory test fixture constants described below. An unexported declaration does not need one, but add it when the declaration is long, takes or returns several values, or its behavior is not obvious from the code.
@@ -263,6 +267,20 @@ Never begin an error message with the article `the`.
 ## Correctness
 
 Anything arriving from outside — request bodies, settings, API values, connector responses — is validated and bounded before use, unless there is a stated reason not to.
+
+# Admin conventions
+
+Apply these conventions to the TypeScript and React code under `admin/`.
+
+- In every boolean context, use a boolean expression. Do not rely on the truthiness of strings, numbers, objects, or other non-boolean values. Write checks such as `name !== ''`, `items.length > 0`, and `value != null` instead of `name`, `items.length`, and `value`. In JSX expression containers, however, prefer idiomatic React patterns when they are clearer and conventional, such as `{condition && <Component />}`, rather than forcing an explicit boolean comparison solely to satisfy this rule.
+- Name boolean values with a predicate prefix such as `is`, `has`, `can`, or `should` when that makes their meaning clearer.
+- Use `===` and `!==` for value comparisons. The intentional exception is `value == null` or `value != null` when a single check must cover both `null` and `undefined`.
+- Use an `interface` for object shapes and a `type` for unions, tuples, and aliases that do not describe object shapes.
+- Prefer the existing domain and API types stored in `admin/src/lib/` over recreating their shapes locally.
+- Use PascalCase for components and types, and camelCase for functions, variables, and ordinary const values. Use uppercase snake case for module-level constants representing fixed keys, limits, delays, and similar configuration values.
+- Write function components and custom hooks as arrow functions assigned to `const`.
+- Type the component's props with an interface named `<ComponentName>Props` immediately before the component, unless the type is shared from another module. Destructure and type the props in the component's parameter list; do not use `React.FC`.
+- Keep component-specific styles in a separate `.css` file in the same directory as the component, and import that stylesheet from the component file. Follow the existing BEM-style class names: a block such as `schema-grid`, elements such as `schema-grid__search`, and modifiers such as `schema-grid--loading`.
 
 # Reuse
 

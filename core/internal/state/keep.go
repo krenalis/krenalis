@@ -559,6 +559,8 @@ type CreatePipeline struct {
 	Connection         string
 	Target             Target
 	EventType          string
+	OrderingGroup      string
+	DeliveryEndpoint   string
 	Name               string
 	Enabled            bool
 	ScheduleStart      int16
@@ -613,6 +615,8 @@ func (state *State) createPipeline(n notification) string {
 		Name:               e.Name,
 		Enabled:            e.Enabled,
 		EventType:          e.EventType,
+		OrderingGroup:      e.OrderingGroup,
+		DeliveryEndpoint:   e.DeliveryEndpoint,
 		ScheduleStart:      e.ScheduleStart,
 		SchedulePeriod:     e.SchedulePeriod,
 		InSchema:           e.InSchema,

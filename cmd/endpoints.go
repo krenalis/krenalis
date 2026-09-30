@@ -30,7 +30,7 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"DELETE /events/listeners/{id}":                       workspace.DeleteEventListener,
 		"DELETE /keys/{key}":                                  organization.DeleteAccessKey, /* Admin console only */
 		"DELETE /members/{id}":                                organization.DeleteMember,    /* Admin console only */
-		"DELETE /organizations/{id}":                          organization.Delete,          /* Needs platform management API key */
+		"DELETE /organizations/{id}":                          organization.Delete,          /* Needs Platform Management API key */
 		"DELETE /pipelines/{id}":                              pipeline.Delete,
 		"DELETE /workspaces/current":                          workspace.Delete,
 		"GET    /{$}":                                         api.Index,
@@ -69,8 +69,8 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /metrics/identities/dates/{start}/{end}":      workspace.IdentityMetricsPerDate,
 		"GET    /metrics/identities/latest":                   workspace.LatestIdentityMetric,
 		"GET    /metrics/usage/dates/{start}/{end}":           organization.UsageMetricsPerDate,
-		"GET    /organizations/{id}":                          api.Organization,  /* Needs platform management API key */
-		"GET    /organizations":                               api.Organizations, /* Needs platform management API key */
+		"GET    /organizations/{id}":                          api.Organization,  /* Needs Platform Management API key */
+		"GET    /organizations":                               api.Organizations, /* Needs Platform Management API key */
 		"GET    /pipelines/errors/{start}/{end}":              workspace.PipelineErrors,
 		"GET    /pipelines/metrics/dates/{start}/{end}":       organization.PipelineMetricsPerDate,
 		"GET    /pipelines/metrics/days/{days}":               organization.PipelineMetricsPerDay,
@@ -110,11 +110,12 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"POST   /members/login":                               s.login,                      /* Admin console only */
 		"POST   /members/logout":                              s.logout,                     /* Admin console only */
 		"POST   /metrics/identities/refresh":                  workspace.RefreshIdentityMetrics,
-		"POST   /organizations":                               api.CreateOrganization, /* Needs platform management API key */
+		"POST   /organizations":                               api.CreateOrganization, /* Needs Platform Management API key */
 		"POST   /pipelines":                                   connection.CreatePipeline,
 		"POST   /pipelines/{id}/runs":                         pipeline.Run,
-		"POST   /pipelines/{id}/ui-event":                     pipeline.ServeUI,       /* Admin console only */
-		"POST   /sentry/errors":                               s.forwardSentryError,   /* Admin console only */
+		"POST   /pipelines/{id}/ui-event":                     pipeline.ServeUI,     /* Admin console only */
+		"POST   /sentry/errors":                               s.forwardSentryError, /* Admin console only */
+		"POST   /signup":                                      api.Signup,
 		"POST   /transformations":                             api.TransformData,      /* Admin console only */
 		"POST   /ui":                                          workspace.ServeUI,      /* Admin console only */
 		"POST   /ui-event":                                    workspace.ServeUI,      /* Admin console only */
@@ -130,8 +131,8 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"PUT    /members/invitations/{token}":                 api.AcceptInvitation,            /* Admin console only */
 		"PUT    /members/reset-password":                      api.SendMemberPasswordReset,     /* Admin console only */
 		"PUT    /members/reset-password/{token}":              api.ChangeMemberPasswordByToken, /* Admin console only */
-		"PUT    /organizations/{id}":                          organization.Update,             /* Needs platform management API key */
-		"PUT    /organizations/{id}/status":                   organization.SetStatus,          /* Needs platform management API key */
+		"PUT    /organizations/{id}":                          organization.Update,             /* Needs Platform Management API key */
+		"PUT    /organizations/{id}/status":                   organization.SetStatus,          /* Needs Platform Management API key */
 		"PUT    /pipelines/{id}":                              pipeline.Update,
 		"PUT    /pipelines/{id}/schedule":                     pipeline.SetSchedulePeriod,
 		"PUT    /pipelines/{id}/status":                       pipeline.SetStatus,

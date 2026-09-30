@@ -8,8 +8,10 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
+	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -54,6 +56,10 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	maxProfilesVersion, err := warehouse.maxProfilesVersion(ctx)
 	if err != nil {
 		return err
+	}
+	// Ensure the next version stays within the supported range before creating the table.
+	if maxProfilesVersion >= math.MaxInt32 {
+		return fmt.Errorf("profile table version limit reached")
 	}
 	publishedProfilesVersion, err := warehouse.publishedProfilesVersion(ctx)
 	if err != nil {
@@ -276,8 +282,8 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 }
 
 // finalizePublishedProfiles replaces the staged profiles view with its final
-// definition and removes obsolete profile tables, but only for the operation
-// that published the latest recorded profiles version.
+// definition and removes a bounded batch of obsolete profile tables, but only
+// if this operation published the latest recorded profiles version.
 func (warehouse *Snowflake) finalizePublishedProfiles(ctx context.Context, db *sql.DB, opID string, profileColumns []warehouses.Column) error {
 	maxProfilesVersion, err := warehouse.maxProfilesVersion(ctx)
 	if err != nil {
@@ -309,25 +315,31 @@ func (warehouse *Snowflake) finalizePublishedProfiles(ctx context.Context, db *s
 		return snowflake(err)
 	}
 
-	obsoleteProfilesVersions, err := obsoleteProfilesTableVersions(ctx, db, publishedProfilesVersion)
+	const maxObsoleteProfileTablesToDrop = 10
+	err = dropObsoleteProfileTables(ctx, db, publishedProfilesVersion, maxObsoleteProfileTablesToDrop)
 	if err != nil {
 		return err
-	}
-	for _, version := range obsoleteProfilesVersions {
-		name := fmt.Sprintf("KRENALIS_PROFILES_%d", version)
-		_, err := db.ExecContext(ctx, `DROP TABLE IF EXISTS `+quoteIdent(name))
-		if err != nil {
-			return snowflake(err)
-		}
 	}
 
 	return nil
 }
 
-// obsoleteProfilesTableVersions returns existing profiles table versions older
-// than publishedProfilesVersion whose operations have completed.
-func obsoleteProfilesTableVersions(ctx context.Context, db *sql.DB, publishedProfilesVersion int) ([]int, error) {
-	rows, err := db.QueryContext(ctx, `SELECT "V"."VERSION"
+// dropObsoleteProfileTables drops obsolete profile tables, i.e. tables whose
+// version is less than publishedVersion. It drops at most maxTables tables.
+//
+// publishedVersion must be in the range [0, math.MaxInt32]. If publishedVersion
+// is 0, it does nothing.
+func dropObsoleteProfileTables(ctx context.Context, db *sql.DB, publishedVersion, maxTables int) error {
+
+	if publishedVersion < 0 || publishedVersion > math.MaxInt32 {
+		return errors.New("published profile version is out of range")
+	}
+	if publishedVersion == 0 {
+		return nil
+	}
+
+	rows, err := db.QueryContext(ctx,
+		`SELECT "V"."VERSION"
 		FROM "KRENALIS_PROFILE_SCHEMA_VERSIONS" "V"
 		JOIN "KRENALIS_SYSTEM_OPERATIONS" "O" ON "O"."ID" = "V"."OPERATION"
 		JOIN INFORMATION_SCHEMA.TABLES "T"
@@ -340,28 +352,42 @@ func obsoleteProfilesTableVersions(ctx context.Context, db *sql.DB, publishedPro
 		FROM INFORMATION_SCHEMA.TABLES "T"
 		WHERE "T"."TABLE_SCHEMA" = CURRENT_SCHEMA()
 			AND "T"."TABLE_NAME" = 'KRENALIS_PROFILES_0'
-			AND ? > 0`, publishedProfilesVersion, publishedProfilesVersion)
+			AND ? > 0
+		ORDER BY "VERSION" ASC
+		LIMIT `+strconv.Itoa(maxTables), publishedVersion, publishedVersion)
 	if err != nil {
-		return nil, snowflake(err)
+		return snowflake(err)
 	}
 	defer rows.Close()
 
 	var versions []int
 	for rows.Next() {
-		var version int
-		if err := rows.Scan(&version); err != nil {
-			return nil, snowflake(err)
+		if len(versions) == maxTables {
+			return fmt.Errorf("warehouse returned an unexpected number of profile table versions")
 		}
-		if version < 0 || version >= publishedProfilesVersion {
-			return nil, fmt.Errorf("warehouse returned an invalid obsolete profile schema version %d", version)
+		var version int
+		err = rows.Scan(&version)
+		if err != nil {
+			return snowflake(err)
+		}
+		if version < 0 || version >= publishedVersion {
+			return fmt.Errorf("warehouse returned an invalid obsolete profile table version %d", version)
 		}
 		versions = append(versions, version)
 	}
-	if err := rows.Err(); err != nil {
-		return nil, snowflake(err)
+	err = rows.Err()
+	if err != nil {
+		return snowflake(err)
 	}
 
-	return versions, nil
+	for _, v := range versions {
+		_, err = db.ExecContext(ctx, `DROP TABLE IF EXISTS "KRENALIS_PROFILES_`+strconv.Itoa(v)+`"`)
+		if err != nil {
+			return snowflake(err)
+		}
+	}
+
+	return nil
 }
 
 // finalizeIdentityResolution returns nil on local success. On failure, it

@@ -99,8 +99,7 @@ type Config struct {
 	DB                            DBConfig
 	NATS                          NATSConfig
 	KMS                           string
-	OrganizationsAPIKey           string // can be empty (which means that the platform management API cannot be used)
-	FunctionProvider              any    // must be a LambdaConfig or LocalConfig value
+	FunctionProvider              any // must be a LambdaConfig or LocalConfig value
 	MaxMindDBPath                 string
 	MemberEmailFrom               string
 	SMTP                          SMTPConfig
@@ -747,7 +746,7 @@ func (core *Core) Connectors() []*Connector {
 }
 
 // ConsumeRateLimitCapacity consumes the specified number of units from the
-// request rate-limit capacity for the platform management API. Units must be at
+// request rate-limit capacity for the Platform Management API. Units must be at
 // least 1.
 //
 // ConsumeRateLimitCapacity returns errors.TooManyRequests when the requested
@@ -1163,7 +1162,7 @@ func (core *Core) TransformData(ctx context.Context, organization string, data [
 	// Validate the mapping and the transformation.
 	switch {
 	case transformation.Mapping != nil:
-		mapping, err := mappings.New(transformation.Mapping, inSchema, outSchema, false, nil)
+		mapping, err := mappings.New(transformation.Mapping, inSchema, outSchema, false)
 		if err != nil {
 			return nil, errors.BadRequest("mapping is not valid: %s", err)
 		}
@@ -1215,7 +1214,7 @@ func (core *Core) TransformData(ctx context.Context, organization string, data [
 	}
 
 	// Transform the attributes.
-	transformer, err := transformers.New(organization, pipeline, provider, nil)
+	transformer, err := transformers.New(organization, pipeline, provider)
 	if err != nil {
 		return nil, err
 	}
@@ -1734,6 +1733,16 @@ Identifiers:
 	}
 	for {
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+			// Lock and check the operation before modifying schema or sources.
+			pending, err := tx.QueryExists(ctx,
+				"SELECT FROM workspaces WHERE id = $1 AND alter_profile_schema_id = $2 FOR UPDATE",
+				nEnd.Workspace, nEnd.ID)
+			if err != nil {
+				return nil, err
+			}
+			if !pending {
+				return nil, nil
+			}
 			if nEnd.Err == "" {
 				// These columns should be updated only in case of success,
 				// otherwise, in case of error, the current ones should be left.
@@ -1763,16 +1772,9 @@ Identifiers:
 				" alter_profile_schema_schema = 'null', alter_profile_schema_primary_sources = 'null'," +
 				" alter_profile_schema_operations = 'null', alter_profile_schema_end_time = $1," +
 				" alter_profile_schema_error = $2 WHERE id = $3 AND alter_profile_schema_id = $4"
-			res, err := tx.Exec(ctx, query, nEnd.EndTime, nEnd.Err, nEnd.Workspace, nEnd.ID)
+			_, err = tx.Exec(ctx, query, nEnd.EndTime, nEnd.Err, nEnd.Workspace, nEnd.ID)
 			if err != nil {
 				return nil, err
-			}
-			if res.RowsAffected() == 0 {
-				// This happens in cases where the query has been executed
-				// more than once (because an error occurred), but in fact
-				// the database has already been modified, so we don't want
-				// to send the notification more than once.
-				return nil, nil
 			}
 			return nEnd, nil
 		})
