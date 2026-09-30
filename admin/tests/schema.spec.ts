@@ -267,9 +267,11 @@ test(`Show, paginate, and refresh consent purposes on profile schema properties`
 	await expect(openPurposeTooltip).toHaveJSProperty('content', 'Open consent purpose');
 	await expect(openPurposeTooltip.locator('sl-icon')).toHaveAttribute('name', 'box-arrow-in-up-right');
 	await editBooleanRow.locator('.schema-property-consent__open-purpose').click();
-	await expect(page).toHaveURL(`${adminURL}/settings/privacy`);
+	await expect(page).toHaveURL(`${adminURL}/settings/consent-management`);
 	await expect(page.locator('.alert-dialog', { hasText: 'Discard unsaved changes?' })).toHaveCount(0);
-	await expect(page.locator('.privacy__dialog[open] .privacy__dialog-name input')).toHaveValue('New newsletter');
+	await expect(page.locator('.consent-management__dialog[open] .consent-management__dialog-name input')).toHaveValue(
+		'New newsletter',
+	);
 });
 
 test(`Update consent associations while editing profile schema properties`, async ({ page }) => {
@@ -345,8 +347,10 @@ test(`Update consent associations while editing profile schema properties`, asyn
 	await replacementRow.locator('.schema-property-consent__open-purpose').click();
 	await expect(discardDialog).toBeVisible();
 	await discardDialog.getByText('Discard and leave', { exact: true }).click();
-	await expect(page).toHaveURL(`${adminURL}/settings/privacy`);
-	await expect(page.locator('.privacy__dialog[open] .privacy__dialog-name input')).toHaveValue('Boolean purpose');
+	await expect(page).toHaveURL(`${adminURL}/settings/consent-management`);
+	await expect(page.locator('.consent-management__dialog[open] .consent-management__dialog-name input')).toHaveValue(
+		'Boolean purpose',
+	);
 });
 
 test(`Disable profile schema editing until the schema has loaded`, async ({ page }) => {

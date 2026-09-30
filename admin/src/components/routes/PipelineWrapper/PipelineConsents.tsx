@@ -257,7 +257,7 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 										<>
 											{' '}
 											<a
-												href={`${UI_BASE_PATH}settings/privacy?purpose=${encodeURIComponent(purpose.id)}`}
+												href={`${UI_BASE_PATH}settings/consent-management?purpose=${encodeURIComponent(purpose.id)}`}
 												target='_blank'
 												rel='noopener'
 											>

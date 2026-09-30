@@ -10,7 +10,8 @@ test.afterEach(async ({ page }) => {
 });
 
 test(`Show consent management in the settings menu`, async ({ page }) => {
-	await page.goto(`${adminURL}/settings/privacy`);
+	await page.goto(`${adminURL}/settings/consent-management`);
+	await expect(page.locator('.header__title')).toHaveText('Settings / Consent management');
 	await expect(
 		page.locator('.sidebar__sub-item-text').getByText('Consent management', { exact: true }),
 	).toBeVisible();
@@ -64,23 +65,26 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 		});
 	});
 
-	await page.goto(`${adminURL}/settings/privacy`);
+	await page.goto(`${adminURL}/settings/consent-management`);
 	await page.getByRole('button', { name: 'Add consent purpose' }).click();
 
-	const dialog = page.locator('.privacy__dialog[open]');
+	const dialog = page.locator('.consent-management__dialog[open]');
 	await dialog.locator('[part="overlay"]').dispatchEvent('click');
 	await expect(dialog).toHaveJSProperty('open', true);
-	await expect(dialog.locator('.privacy__dialog-name')).toHaveJSProperty('size', 'medium');
-	await expect(dialog.locator('.privacy__dialog-purpose-code')).toHaveJSProperty('size', 'medium');
-	await expect(dialog.locator('.privacy__dialog-name [part="form-control-label"]')).toHaveCSS('font-size', '14px');
-	await expect(dialog.locator('.privacy__dialog-profile-path-dropdown')).toHaveCSS('margin-top', '17px');
+	await expect(dialog.locator('.consent-management__dialog-name')).toHaveJSProperty('size', 'medium');
+	await expect(dialog.locator('.consent-management__dialog-purpose-code')).toHaveJSProperty('size', 'medium');
+	await expect(dialog.locator('.consent-management__dialog-name [part="form-control-label"]')).toHaveCSS(
+		'font-size',
+		'14px',
+	);
+	await expect(dialog.locator('.consent-management__dialog-profile-path-dropdown')).toHaveCSS('margin-top', '17px');
 
-	const profilePath = dialog.locator('.privacy__dialog-profile-path');
+	const profilePath = dialog.locator('.consent-management__dialog-profile-path');
 	await expect(profilePath).toHaveJSProperty('size', 'medium');
 	await expect(profilePath.locator('input')).toHaveCSS('caret-color', 'rgba(0, 0, 0, 0)');
 	await expect(profilePath.locator('input')).toHaveCSS('cursor', 'default');
-	await expect(dialog.locator('.privacy__dialog-path-label').nth(0)).toHaveCSS('font-size', '14px');
-	await expect(dialog.locator('.privacy__dialog-path-label').nth(1)).toHaveCSS('font-size', '14px');
+	await expect(dialog.locator('.consent-management__dialog-path-label').nth(0)).toHaveCSS('font-size', '14px');
+	await expect(dialog.locator('.consent-management__dialog-path-label').nth(1)).toHaveCSS('font-size', '14px');
 	await expect(dialog.getByRole('img', { name: 'About profile property' })).toBeVisible();
 	const pathDescriptions = dialog.locator('.schema-property-grid__tooltip-content');
 	await expect(pathDescriptions.nth(0).locator('p')).toHaveText([
@@ -91,21 +95,21 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 		'Consent for this purpose is represented in profiles using a profile property. Select a boolean property, or select a json property and specify the key.',
 	]);
 	await profilePath.click();
-	const options = dialog.locator('.privacy__dialog-profile-path-menu sl-menu-item');
+	const options = dialog.locator('.consent-management__dialog-profile-path-menu sl-menu-item');
 	await expect(options).toHaveCount(4);
-	await expect(options.locator('.privacy__dialog-profile-path-option')).toHaveText([
+	await expect(options.locator('.consent-management__dialog-profile-path-option')).toHaveText([
 		'accepted',
 		'nested.metadata',
 		'nested.allowed',
 		'attributes',
 	]);
-	await expect(options.locator('.privacy__dialog-profile-path-option-type')).toHaveText([
+	await expect(options.locator('.consent-management__dialog-profile-path-option-type')).toHaveText([
 		'boolean',
 		'json',
 		'boolean',
 		'json',
 	]);
-	await expect(options.locator('.privacy__dialog-profile-path-option-type').nth(0)).toHaveCSS(
+	await expect(options.locator('.consent-management__dialog-profile-path-option-type').nth(0)).toHaveCSS(
 		'font-family',
 		/monospace/,
 	);
@@ -119,10 +123,10 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 	await expect(profilePath.locator('input')).toHaveCSS('cursor', 'default');
 	await expect(profilePath.locator('input')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 1)');
 	await expect(options.nth(0)).not.toBeVisible();
-	const profilePathMessage = dialog.locator('.privacy__dialog-profile-path-message');
+	const profilePathMessage = dialog.locator('.consent-management__dialog-profile-path-message');
 	await expect(profilePathMessage).toHaveText('This property is also used by other purposes.');
 	await expect(profilePathMessage.locator('sl-icon')).toHaveAttribute('name', 'exclamation-triangle');
-	const profilePathDropdown = dialog.locator('.privacy__dialog-profile-path-dropdown');
+	const profilePathDropdown = dialog.locator('.consent-management__dialog-profile-path-dropdown');
 	await profilePathDropdown.evaluate((dropdown) => {
 		dropdown.setAttribute('data-show-count', '0');
 		dropdown.addEventListener('sl-show', () => {
@@ -143,7 +147,7 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 	await expect(profilePath).toHaveJSProperty('readonly', false);
 	await expect(profilePath.locator('[slot="prefix"]')).toHaveText('nested.metadata.');
 	await expect(profilePath.locator('input')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 1)');
-	const purposeCodePrefix = dialog.locator('.privacy__dialog-purpose-code [part="prefix"]');
+	const purposeCodePrefix = dialog.locator('.consent-management__dialog-purpose-code [part="prefix"]');
 	const purposeCodePrefixBackground = await purposeCodePrefix.evaluate(
 		(prefix) => getComputedStyle(prefix).backgroundColor,
 	);
@@ -165,7 +169,7 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 
 	await profilePath.click();
 	await options.nth(3).click();
-	await dialog.locator('.privacy__dialog-name input').fill('Marketing');
+	await dialog.locator('.consent-management__dialog-name input').fill('Marketing');
 	await profilePath.locator('input').fill('marketing');
 	await expect(profilePathMessage).not.toBeVisible();
 	await profilePath.locator('input').blur();
@@ -174,7 +178,7 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 	const savedPurpose = page.waitForRequest(
 		(request) => request.url().endsWith('/v1/consent-purposes') && request.method() === 'POST',
 	);
-	await dialog.locator('.privacy__dialog-save').click();
+	await dialog.locator('.consent-management__dialog-save').click();
 	expect((await savedPurpose).postDataJSON()).toEqual({
 		name: 'Marketing',
 		eventConsentLocations: [],
@@ -196,76 +200,80 @@ test(`Add and remove purpose codes of a consent purpose`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		await route.fulfill({ json: { kind: 'object', properties: [] } });
 	});
-	await page.goto(`${adminURL}/settings/privacy`);
+	await page.goto(`${adminURL}/settings/consent-management`);
 	await page.getByRole('button', { name: 'Add consent purpose' }).click();
 
-	const dialog = page.locator('.privacy__dialog[open]');
-	const rows = dialog.locator('.privacy__dialog-purpose-code-row');
+	const dialog = page.locator('.consent-management__dialog[open]');
+	const rows = dialog.locator('.consent-management__dialog-purpose-code-row');
 	const inputs = rows.locator('input');
-	await dialog.locator('.privacy__dialog-name input').fill('Marketing');
-	await expect(rows.locator('.privacy__dialog-purpose-code-remove')).toHaveCount(0);
+	await dialog.locator('.consent-management__dialog-name input').fill('Marketing');
+	await expect(rows.locator('.consent-management__dialog-purpose-code-remove')).toHaveCount(0);
 	await inputs.nth(0).fill('marketing');
 
 	// A blank row is removable, but the only non-empty row is not.
-	await rows.nth(0).locator('.privacy__dialog-purpose-code-add sl-button').click();
+	await rows.nth(0).locator('.consent-management__dialog-purpose-code-add sl-button').click();
 	await expect(inputs).toHaveCount(2);
 	await expect(inputs.nth(1)).toBeFocused();
 	await expect.poll(() => rows.nth(1).evaluate((row) => row.getAnimations().length)).toBe(0);
 	await expect(inputs.nth(1)).toBeFocused();
-	await expect(rows.nth(0).locator('.privacy__dialog-purpose-code-remove')).toHaveCount(0);
-	await rows.nth(1).locator('.privacy__dialog-purpose-code-remove sl-button').click();
+	await expect(rows.nth(0).locator('.consent-management__dialog-purpose-code-remove')).toHaveCount(0);
+	await rows.nth(1).locator('.consent-management__dialog-purpose-code-remove sl-button').click();
 	await expect(inputs).toHaveCount(1);
 	await expect(inputs.nth(0)).toHaveValue('marketing');
 
 	// The first row can be removed when another row has a value.
-	await rows.nth(0).locator('.privacy__dialog-purpose-code-add sl-button').click();
+	await rows.nth(0).locator('.consent-management__dialog-purpose-code-add sl-button').click();
 	await expect(inputs.nth(1)).toBeFocused();
 	await inputs.nth(1).fill('oldmarketing');
-	await expect(rows.locator('.privacy__dialog-purpose-code-remove')).toHaveCount(2);
-	await rows.nth(0).locator('.privacy__dialog-purpose-code-add sl-button').click();
+	await expect(rows.locator('.consent-management__dialog-purpose-code-remove')).toHaveCount(2);
+	await rows.nth(0).locator('.consent-management__dialog-purpose-code-add sl-button').click();
 	await expect(inputs).toHaveCount(3);
 	await expect(inputs.nth(1)).toHaveValue('');
 	await expect(inputs.nth(1)).toBeFocused();
 	await expect(inputs.nth(2)).toHaveValue('oldmarketing');
-	await rows.nth(1).locator('.privacy__dialog-purpose-code-remove sl-button').click();
+	await rows.nth(1).locator('.consent-management__dialog-purpose-code-remove sl-button').click();
 	await expect(inputs).toHaveCount(2);
 	await expect(inputs.nth(0)).toHaveValue('marketing');
 	await expect(inputs.nth(1)).toHaveValue('oldmarketing');
-	const firstPurposeCodeRemove = rows.nth(0).locator('.privacy__dialog-purpose-code-remove');
+	const firstPurposeCodeRemove = rows.nth(0).locator('.consent-management__dialog-purpose-code-remove');
 	await firstPurposeCodeRemove.hover();
 	await expect(firstPurposeCodeRemove).toHaveJSProperty('open', true);
 	await firstPurposeCodeRemove.locator('sl-button').dblclick();
 	await expect(inputs).toHaveCount(1);
 	await expect(inputs.nth(0)).toHaveValue('oldmarketing');
-	await expect(dialog.locator('.privacy__dialog-path-label').nth(0)).toContainText('Consent in events');
+	await expect(dialog.locator('.consent-management__dialog-path-label').nth(0)).toContainText('Consent in events');
 
 	// Keys are literal strings, and no more than five inputs can be added.
 	const purposeCodes = ['oldmarketing', '#CFK567', 'purpose code', 'a.b', 'last'];
 	for (let i = 1; i < purposeCodes.length; i++) {
 		await rows
 			.nth(i - 1)
-			.locator('.privacy__dialog-purpose-code-add sl-button')
+			.locator('.consent-management__dialog-purpose-code-add sl-button')
 			.click();
 		await expect(inputs).toHaveCount(i + 1);
 		await expect(inputs.nth(i)).toBeFocused();
 		await inputs.nth(i).fill(purposeCodes[i]);
 	}
-	const addButtons = rows.locator('.privacy__dialog-purpose-code-add sl-button button');
+	const addButtons = rows.locator('.consent-management__dialog-purpose-code-add sl-button button');
 	await expect(addButtons).toHaveCount(5);
 	for (const button of await addButtons.all()) {
 		await expect(button).toBeDisabled();
 	}
 	await inputs.nth(4).fill(purposeCodes[0]);
-	await expect(dialog.locator('.privacy__dialog-error')).toHaveCount(0);
+	await expect(dialog.locator('.consent-management__dialog-error')).toHaveCount(0);
 	await inputs.nth(4).blur();
-	await expect(dialog.locator('.privacy__dialog-error')).toHaveText('Purpose code "oldmarketing" is duplicated');
-	await dialog.locator('.privacy__dialog-save').click();
-	await expect(dialog.locator('.privacy__dialog-error')).toHaveText('Purpose code "oldmarketing" is duplicated');
+	await expect(dialog.locator('.consent-management__dialog-error')).toHaveText(
+		'Purpose code "oldmarketing" is duplicated',
+	);
+	await dialog.locator('.consent-management__dialog-save').click();
+	await expect(dialog.locator('.consent-management__dialog-error')).toHaveText(
+		'Purpose code "oldmarketing" is duplicated',
+	);
 	await inputs.nth(4).fill(purposeCodes[4]);
 	const savedPurpose = page.waitForRequest(
 		(request) => request.url().endsWith('/v1/consent-purposes') && request.method() === 'POST',
 	);
-	await dialog.locator('.privacy__dialog-save').click();
+	await dialog.locator('.consent-management__dialog-save').click();
 	expect((await savedPurpose).postDataJSON()).toEqual({
 		name: 'Marketing',
 		eventConsentLocations: purposeCodes.map((purposeCode) => ({ purposeCode })),
@@ -297,8 +305,8 @@ test(`Edit a consent purpose without setting the initial focus`, async ({ page }
 			json: { kind: 'object', properties: [{ name: 'accepted', type: { kind: 'boolean' } }] },
 		});
 	});
-	await page.goto(`${adminURL}/settings/privacy`);
-	const dialog = page.locator('.privacy__dialog').nth(1);
+	await page.goto(`${adminURL}/settings/consent-management`);
+	const dialog = page.locator('.consent-management__dialog').nth(1);
 	await dialog.evaluate((dialog) => {
 		dialog.setAttribute('data-focus-count', '0');
 		dialog.addEventListener('focusin', () => {
@@ -314,14 +322,14 @@ test(`Edit a consent purpose without setting the initial focus`, async ({ page }
 	await page.getByRole('button', { name: 'Edit...' }).click();
 	await expect(dialog).toHaveAttribute('data-initial-focus', 'false');
 	await expect(dialog).toHaveAttribute('data-focus-count', '0');
-	await expect(dialog.locator('.privacy__dialog-purpose-code input')).toHaveValue('marketing');
-	await expect(dialog.locator('.privacy__dialog-profile-path input')).toHaveValue('accepted');
-	await dialog.locator('.privacy__dialog-name input').fill('Marketing communications');
+	await expect(dialog.locator('.consent-management__dialog-purpose-code input')).toHaveValue('marketing');
+	await expect(dialog.locator('.consent-management__dialog-profile-path input')).toHaveValue('accepted');
+	await dialog.locator('.consent-management__dialog-name input').fill('Marketing communications');
 	await expect(dialog).toHaveAttribute('data-focus-count', /^[1-9]\d*$/);
 	const savedPurpose = page.waitForRequest(
 		(request) => request.url().endsWith('/v1/consent-purposes/purpose') && request.method() === 'PUT',
 	);
-	await dialog.locator('.privacy__dialog-save').click();
+	await dialog.locator('.consent-management__dialog-save').click();
 	expect((await savedPurpose).postDataJSON()).toEqual({
 		name: 'Marketing communications',
 		eventConsentLocations: [{ purposeCode: 'marketing' }],
@@ -355,18 +363,18 @@ test(`Validate existing consent locations and allow clearing an invalid profile 
 			json: { kind: 'object', properties: [{ name: 'consents', type: { kind: 'json' } }] },
 		});
 	});
-	await page.goto(`${adminURL}/settings/privacy`);
+	await page.goto(`${adminURL}/settings/consent-management`);
 	await page.getByRole('button', { name: 'Edit...' }).click();
-	const dialog = page.locator('.privacy__dialog[open]');
-	const save = dialog.locator('.privacy__dialog-save');
+	const dialog = page.locator('.consent-management__dialog[open]');
+	const save = dialog.locator('.consent-management__dialog-save');
 	await save.click();
-	await expect(dialog.locator('.privacy__dialog-error')).toHaveText(
+	await expect(dialog.locator('.consent-management__dialog-error')).toHaveText(
 		'Consent keys must not contain invisible characters',
 	);
 	expect(puts).toBe(0);
-	await dialog.locator('.privacy__dialog-purpose-code input').fill('marketing');
+	await dialog.locator('.consent-management__dialog-purpose-code input').fill('marketing');
 	await save.click();
-	await expect(dialog.locator('.privacy__dialog-error')).toHaveText(
+	await expect(dialog.locator('.consent-management__dialog-error')).toHaveText(
 		'Consent keys must not contain invisible characters',
 	);
 	expect(puts).toBe(0);
@@ -392,40 +400,40 @@ test(`Validate authored consent keys and save literal JSON keys separately`, asy
 	await page.route('**/v1/profiles/schema', async (route) => {
 		await route.fulfill({ json: { kind: 'object', properties: [{ name: 'consents', type: { kind: 'json' } }] } });
 	});
-	await page.goto(`${adminURL}/settings/privacy`);
+	await page.goto(`${adminURL}/settings/consent-management`);
 	await page.getByRole('button', { name: 'Add consent purpose' }).click();
-	const dialog = page.locator('.privacy__dialog[open]');
-	await dialog.locator('.privacy__dialog-name input').fill('Marketing');
-	const purposeCodeInput = dialog.locator('.privacy__dialog-purpose-code input');
-	const save = dialog.locator('.privacy__dialog-save');
+	const dialog = page.locator('.consent-management__dialog[open]');
+	await dialog.locator('.consent-management__dialog-name input').fill('Marketing');
+	const purposeCodeInput = dialog.locator('.consent-management__dialog-purpose-code input');
+	const save = dialog.locator('.consent-management__dialog-save');
 	for (const key of [' ', 'a\t', 'a\u200b', '😀'.repeat(1025)]) {
 		await purposeCodeInput.fill(key);
 		await save.click();
-		await expect(dialog.locator('.privacy__dialog-error:visible')).toBeVisible();
+		await expect(dialog.locator('.consent-management__dialog-error:visible')).toBeVisible();
 		expect(posts).toBe(0);
 	}
 	await purposeCodeInput.fill(' purpose.a.b ');
-	const profilePath = dialog.locator('.privacy__dialog-profile-path');
+	const profilePath = dialog.locator('.consent-management__dialog-profile-path');
 	await profilePath.click();
-	await dialog.locator('.privacy__dialog-profile-path-option').click();
+	await dialog.locator('.consent-management__dialog-profile-path-option').click();
 	await save.click();
-	await expect(dialog.locator('.privacy__dialog-error:visible')).toBeVisible();
+	await expect(dialog.locator('.consent-management__dialog-error:visible')).toBeVisible();
 	expect(posts).toBe(0);
 	const profileKey = profilePath.locator('input');
 	await profileKey.fill('a\t');
 	await profileKey.blur();
-	await expect(dialog.locator('.privacy__dialog-error:visible')).toBeVisible();
+	await expect(dialog.locator('.consent-management__dialog-error:visible')).toBeVisible();
 	expect(posts).toBe(0);
 	for (const key of [' ', 'a\t', '😀'.repeat(1025)]) {
 		await profileKey.fill(key);
 		await save.click();
-		await expect(dialog.locator('.privacy__dialog-error:visible')).toBeVisible();
+		await expect(dialog.locator('.consent-management__dialog-error:visible')).toBeVisible();
 		expect(posts).toBe(0);
 	}
 	const prefix = ' purpose.a["b"]\\say "yes" ';
 	const key = prefix + '😀'.repeat(1024 - Array.from(prefix).length);
 	await profileKey.fill(key);
-	await expect(dialog.locator('.privacy__dialog-error:visible')).toHaveCount(0);
+	await expect(dialog.locator('.consent-management__dialog-error:visible')).toHaveCount(0);
 	const savedPurpose = page.waitForRequest(
 		(request) => request.url().endsWith('/v1/consent-purposes') && request.method() === 'POST',
 	);
@@ -467,33 +475,36 @@ test(`Validate changed API JSON keys and clear the profile property`, async ({ p
 			},
 		});
 	});
-	await page.goto(`${adminURL}/settings/privacy`);
+	await page.goto(`${adminURL}/settings/consent-management`);
 	await page.getByRole('button', { name: 'Edit...' }).click();
-	const dialog = page.locator('.privacy__dialog[open]');
-	const profilePath = dialog.locator('.privacy__dialog-profile-path');
+	const dialog = page.locator('.consent-management__dialog[open]');
+	const profilePath = dialog.locator('.consent-management__dialog-profile-path');
 	await profilePath.locator('sl-icon[name="chevron-down"]').click();
 	const otherProfilePathOption = dialog
-		.locator('.privacy__dialog-profile-path-option')
+		.locator('.consent-management__dialog-profile-path-option')
 		.getByText('other', { exact: true });
 	await otherProfilePathOption.click();
 	await expect(otherProfilePathOption).not.toBeVisible();
 	await profilePath.locator('input').fill('a\t');
-	await dialog.locator('.privacy__dialog-save').click();
-	await expect(dialog.locator('.privacy__dialog-error:visible')).toBeVisible();
+	await dialog.locator('.consent-management__dialog-save').click();
+	await expect(dialog.locator('.consent-management__dialog-error:visible')).toBeVisible();
 	expect(puts).toBe(0);
 	await profilePath.getByRole('button', { name: 'Clear profile property' }).click();
-	await expect(dialog.locator('.privacy__dialog-error:visible')).toHaveCount(0);
+	await expect(dialog.locator('.consent-management__dialog-error:visible')).toHaveCount(0);
 	await profilePath.locator('sl-icon[name="chevron-down"]').click();
-	await dialog.locator('.privacy__dialog-profile-path-option').getByText('consents', { exact: true }).click();
+	await dialog
+		.locator('.consent-management__dialog-profile-path-option')
+		.getByText('consents', { exact: true })
+		.click();
 	await profilePath.locator('input').fill('a\t');
-	await dialog.locator('.privacy__dialog-save').click();
-	await expect(dialog.locator('.privacy__dialog-error:visible')).toBeVisible();
+	await dialog.locator('.consent-management__dialog-save').click();
+	await expect(dialog.locator('.consent-management__dialog-error:visible')).toBeVisible();
 	expect(puts).toBe(0);
 	await profilePath.getByRole('button', { name: 'Clear profile property' }).click();
 	const savedPurpose = page.waitForRequest(
 		(request) => request.url().endsWith('/v1/consent-purposes/purpose') && request.method() === 'PUT',
 	);
-	await dialog.locator('.privacy__dialog-save').click();
+	await dialog.locator('.consent-management__dialog-save').click();
 	expect((await savedPurpose).postDataJSON()).toEqual({
 		name: 'Marketing',
 		eventConsentLocations: [],

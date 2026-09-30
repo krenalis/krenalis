@@ -76,7 +76,7 @@ const SchemaPropertyConsent = ({ purposes }: SchemaPropertyConsentProps) => {
 		clearHoverTimeout();
 		setIsHovered(false);
 		setIsFocused(false);
-		redirect(`settings/privacy?purpose=${encodeURIComponent(selectedPurpose.id)}`);
+		redirect(`settings/consent-management?purpose=${encodeURIComponent(selectedPurpose.id)}`);
 	};
 
 	return (
