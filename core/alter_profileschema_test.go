@@ -14,6 +14,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/postgres"
+
 	_ "github.com/krenalis/krenalis/connectors/postgresql"
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/datastore/diffschemas"
@@ -24,10 +27,6 @@ import (
 	"github.com/krenalis/krenalis/tools/kms"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
-
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // TestAlterProfileSchemaFinalization verifies that repeated finalization
@@ -40,8 +39,7 @@ func TestAlterProfileSchemaFinalization(t *testing.T) {
 	}
 	container, err := postgres.Run(t.Context(), testimages.PostgreSQL,
 		postgres.WithDatabase("krenalis"), postgres.WithUsername("krenalis"), postgres.WithPassword("krenalis"),
-		testcontainers.WithWaitStrategy(wait.ForLog("database system is ready to accept connections").
-			WithOccurrence(2).WithStartupTimeout(time.Minute)))
+		postgres.BasicWaitStrategies())
 	if err != nil {
 		t.Fatalf("expected PostgreSQL container, got %v", err)
 	}
