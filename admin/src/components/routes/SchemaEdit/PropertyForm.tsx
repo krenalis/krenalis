@@ -16,7 +16,6 @@ import type SlInputElement from '@shoelace-style/shoelace/dist/components/input/
 import type SlTextareaElement from '@shoelace-style/shoelace/dist/components/textarea/textarea.component.js';
 import AppContext from '../../../context/AppContext';
 import Type, {
-	CountryFormat,
 	DecimalType,
 	FloatBitSize,
 	FloatType,
@@ -472,16 +471,6 @@ const PropertyForm = ({
 		});
 	};
 
-	const onChangeCountryFormat = (event) => {
-		const format = event.target.value as CountryFormat;
-		updateValueType((type: StringType) => {
-			if (type.semantic !== 'country') {
-				return;
-			}
-			type.format = format;
-		});
-	};
-
 	const onChangeMeasurementUnit = (event) => {
 		updateValueType((type: DecimalType) => {
 			if (type.semantic === 'measurement') {
@@ -708,30 +697,17 @@ const PropertyForm = ({
 			</div>
 			{valueType?.kind === 'string' && valueType.semantic === 'country' && (
 				<div className='property-form__constraints property-form__constraints--country'>
-					{canEditType ? (
-						<SlSelect
-							className='property-form__country-format'
-							size='small'
-							value={valueType.format}
-							onSlChange={onChangeCountryFormat}
-						>
-							<PropertyFormLabel slot='label'>Format</PropertyFormLabel>
-							<SlOption value='alpha-2'>2-letter ISO code</SlOption>
-							<SlOption value='alpha-3'>3-letter ISO code</SlOption>
-						</SlSelect>
-					) : (
-						<SlInput
-							className='property-form__country-format'
-							ref={removeReadOnlyTypeControlFromTabOrder}
-							size='small'
-							value={valueType.format === 'alpha-2' ? '2-letter ISO code' : '3-letter ISO code'}
-							readonly
-							tabIndex={-1}
-							onPointerDown={preventReadOnlyTypeControlFocus}
-						>
-							<PropertyFormLabel slot='label'>Format</PropertyFormLabel>
-						</SlInput>
-					)}
+					<SlInput
+						className='property-form__country-format'
+						ref={removeReadOnlyTypeControlFromTabOrder}
+						size='small'
+						value={valueType.format === 'alpha-2' ? '2-letter ISO code' : '3-letter ISO code'}
+						readonly
+						tabIndex={-1}
+						onPointerDown={preventReadOnlyTypeControlFocus}
+					>
+						<PropertyFormLabel slot='label'>Format</PropertyFormLabel>
+					</SlInput>
 				</div>
 			)}
 			{showStringConstraints && (

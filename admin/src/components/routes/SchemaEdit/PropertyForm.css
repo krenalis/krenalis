@@ -249,7 +249,6 @@
 	grid-column: 1 / -1;
 }
 
-.property-form__country-format sl-option::part(base),
 .property-form__currency sl-option::part(base),
 .property-form__duration-unit sl-option::part(base),
 .property-form__measurement-unit sl-option::part(base) {

@@ -1253,10 +1253,6 @@ test(`Preview schema changes only when applying them`, async ({ page }) => {
 });
 
 test(`Create profile schema properties with semantic defaults and options`, async ({ page }) => {
-	await page.route('**/v1/profiles/schema/preview', async (route) => {
-		await route.fulfill({ json: { queries: [] } });
-	});
-
 	await page.goto(`${adminURL}/profile-unification/schema`);
 	await editSchema(page);
 	const propertyPanel = page.locator('.property-panel');
@@ -1326,21 +1322,13 @@ test(`Create profile schema properties with semantic defaults and options`, asyn
 	);
 	await expect(propertyPanel.locator('.property-form__constraints--length')).toHaveCount(0);
 	const countryFormat = propertyPanel.locator('.property-form__country-format');
-	await expect(countryFormat).toHaveJSProperty('value', 'alpha-2');
-	expect(
-		await countryFormat
-			.locator('sl-option')
-			.evaluateAll((options) => options.map((option) => option.getAttribute('value'))),
-	).toEqual(['alpha-2', 'alpha-3']);
-	await countryFormat.click();
-	await countryFormat.locator('sl-option[value="alpha-3"]').click();
-	await expect(countryFormat).toHaveJSProperty('value', 'alpha-3');
-	await expect(propertyPanel.locator('.property-type-selector__trigger .schema-property-type')).toHaveText(
-		'country · string',
-	);
+	await expect(countryFormat).toHaveAttribute('readonly');
+	await expect(countryFormat).toHaveAttribute('tabindex', '-1');
+	await expect(countryFormat.locator('input')).toHaveValue('2-letter ISO code');
+	await expect(propertyPanel.locator('sl-option[value="alpha-3"]')).toHaveCount(0);
 	await propertyPanel.locator('.property-panel__save').click();
 	await expect(page.locator('.schema-edit .grid__row[data-id="semantic_country"] .schema-property-type')).toHaveText(
-		'country — 3-letter ISO code · string',
+		'country — 2-letter ISO code · string',
 	);
 
 	await page.locator('.schema-edit__add-property').click();
@@ -1429,10 +1417,13 @@ test(`Create profile schema properties with semantic defaults and options`, asyn
 	const previewRequestPromise = page.waitForRequest(
 		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
 	);
+	const previewResponsePromise = page.waitForResponse(
+		(response) => response.url().endsWith('/profiles/schema/preview') && response.request().method() === 'PUT',
+	);
 	await page.locator('.schema-edit__header-apply-button').click();
 	const schema = (await previewRequestPromise).postDataJSON().schema as ObjectType;
 	const country = schema.properties.find((property) => property.name === 'semantic_country');
-	expect(country?.type).toEqual({ kind: 'string', semantic: 'country', format: 'alpha-3' });
+	expect(country?.type).toEqual({ kind: 'string', semantic: 'country', format: 'alpha-2' });
 	const percentage = schema.properties.find((property) => property.name === 'semantic_percentage');
 	expect(percentage?.type).toEqual({
 		kind: 'decimal',
@@ -1470,6 +1461,9 @@ test(`Create profile schema properties with semantic defaults and options`, asyn
 		bitSize: 64,
 		unsigned: false,
 	});
+	const previewResponse = await previewResponsePromise;
+	expect(previewResponse.status()).toBe(200);
+	await expect(page.locator('.schema-edit__queries')).toHaveAttribute('label', 'Review changes');
 });
 
 test(`Show materialized type catalogs, restrict transitions, and preserve physical configuration`, async ({ page }) => {
@@ -1634,7 +1628,7 @@ test(`Show materialized type catalogs, restrict transitions, and preserve physic
 		'money · decimal(18,4) · min -0.5, max 1.25',
 	);
 	await expect(propertyPanel.locator('[data-type-option="decimal"] .schema-property-type')).toHaveText(
-		'decimal(10,0) · Decimal number with fixed precision',
+		'decimal · Decimal number with fixed precision',
 	);
 	await typeTrigger.click();
 	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Materialized money');
