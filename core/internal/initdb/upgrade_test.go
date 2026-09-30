@@ -199,6 +199,32 @@ func TestUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	err = Upgrade(ctx, database)
+	if err != nil {
+		expected := "cannot upgrade consent purposes: user pipeline 444444444444 requires purposes" +
+			" without profile consent locations"
+		if err.Error() != expected {
+			t.Fatalf("expected %q, got %q", expected, err)
+		}
+	}
+	if err == nil {
+		t.Fatal("expected upgrade to reject user consent requirements, got nil")
+	}
+	assertColumnExists(t, database, "metadata", "kms_encrypted_cookie_key")
+	assertColumnDoesNotExist(t, database, "metadata", "kms_encrypted_http_secret_key")
+	assertColumnExists(t, database, "consent_purposes", "code")
+	assertColumnDoesNotExist(t, database, "consent_purposes", "id")
+	assertColumnExists(t, database, "pipelines", "required_consents")
+	assertColumnDoesNotExist(t, database, "pipelines", "required_consents_purposes")
+
+	_, err = database.Exec(ctx, `UPDATE pipelines SET required_consents = '{}', required_consents_operator = 'and'
+		WHERE id = '444444444444';
+		UPDATE pipelines SET required_consents = '{marketing_newsletters,analytics}', required_consents_operator = 'or'
+		WHERE id = '888888888888'`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatal(err)
 	}
@@ -1334,7 +1360,7 @@ func assertConsentPurposeSchema(t *testing.T, database *db.DB) {
 	var requiredConsents []string
 	var requiredConsentsOperator string
 	err = database.QueryRow(t.Context(), `SELECT required_consents_purposes, required_consents_operator
-		FROM pipelines WHERE id = '444444444444'`).Scan(&requiredConsents, &requiredConsentsOperator)
+		FROM pipelines WHERE id = '888888888888'`).Scan(&requiredConsents, &requiredConsentsOperator)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -6,6 +6,7 @@ package initdb
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log/slog"
 
@@ -437,7 +438,30 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 	}
 
 	err = database.Transaction(ctx, func(tx *db.Tx) error {
-		err := renameColumnIfExists(ctx, tx, "metadata", "kms_encrypted_cookie_key", "kms_encrypted_http_secret_key")
+
+		// Legacy purposes have no profile location, so user requirements cannot
+		// be migrated safely. Reject them before changing the database.
+		hasRequirements, err := upgradeColumnExists(ctx, tx, "pipelines", "required_consents")
+		if err != nil {
+			return err
+		}
+		if hasRequirements {
+			var pipeline string
+			err = tx.QueryRow(ctx, `SELECT id FROM pipelines
+				WHERE target = 'User' AND cardinality(required_consents) > 0
+				ORDER BY id LIMIT 1`).Scan(&pipeline)
+			if err != nil {
+				if err != sql.ErrNoRows {
+					return err
+				}
+			}
+			if pipeline != "" {
+				return fmt.Errorf("cannot upgrade consent purposes: user pipeline %s requires purposes"+
+					" without profile consent locations", pipeline)
+			}
+		}
+
+		err = renameColumnIfExists(ctx, tx, "metadata", "kms_encrypted_cookie_key", "kms_encrypted_http_secret_key")
 		if err != nil {
 			return err
 		}
@@ -727,6 +751,7 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 		if _, err := tx.Exec(ctx, createRateLimiterLeasesFunction); err != nil {
 			return fmt.Errorf("cannot create rate-limit lease function: %s", err)
 		}
+
 		return nil
 	})
 	if err != nil {
