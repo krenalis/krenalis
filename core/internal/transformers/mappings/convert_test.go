@@ -344,6 +344,20 @@ func TestConvertArrayUniqueness(t *testing.T) {
 			wantError:   true,
 		},
 		{
+			name:        "phone duplicates allowed after normalization",
+			value:       []any{"+39 02-36618 300", "+390236618300"},
+			source:      types.Array(types.String()).WithUnique(),
+			destination: types.Array(types.String().AsPhone()),
+			expected:    []any{"+390236618300", "+390236618300"},
+		},
+		{
+			name:        "phone duplicates rejected after normalization",
+			value:       []any{"+39 02-36618 300", "+390236618300"},
+			source:      types.Array(types.String()).WithUnique(),
+			destination: types.Array(types.String().AsPhone()).WithUnique(),
+			wantError:   true,
+		},
+		{
 			name:        "equivalent decimals",
 			value:       []any{decimal.New(15, 1), decimal.MustParse("1.50")},
 			source:      types.Array(types.Decimal(6, 2)),

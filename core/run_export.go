@@ -401,6 +401,10 @@ func errMatchingPropertyConversion(in, ex string) error {
 //   - string to int, uuid, and string
 //   - uuid to uuid and string
 //
+// If both properties have a semantic, they must have the same semantic and
+// options. If the external property has a country or phone semantic, the
+// internal property must have the same semantic and options.
+//
 // It panics if v is nil or the types in and ex are not conforming to these
 // supported conversions. It returns an error if the converted value does not
 // satisfy the constraints of the ex type.
@@ -421,6 +425,11 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 		default:
 			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
+		// If the external property has a semantic country or phone, the internal property has the same semantic.
+		if ex.Semantic() == types.CountrySemantic || ex.Semantic() == types.PhoneSemantic {
+			return s, nil
+		}
+		// Validate that v match the external property's constraints.
 		if n, ok := ex.MaxBytes(); ok && len(s) > n {
 			return nil, errMatchingPropertyConversion(inPath, outPath)
 		}

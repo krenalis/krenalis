@@ -15,13 +15,16 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 	"uuid"
 
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/validation"
 
+	"github.com/nyaruka/phonenumbers/v2"
 	"github.com/relvacode/iso8601"
 )
 
@@ -130,6 +133,43 @@ func NormalizeUUID(s string) (string, bool) {
 		return "", false
 	}
 	return id.String(), true
+}
+
+// IsPhone reports whether s is a canonical E.164 phone value for use
+// wherever a value with the phone semantic is required.
+func IsPhone(s string) bool {
+	normalized, ok := normalizePhone(s, "")
+	return ok && normalized == s
+}
+
+// NormalizePhone normalizes s and returns its canonical E.164 form for use
+// wherever a value with the phone semantic is required.
+//
+// s must represent a single complete international phone number beginning
+// with '+'.
+//
+// The boolean return value reports whether s can be normalized to E.164.
+func NormalizePhone(s string) (string, bool) {
+	return normalizePhone(s, "")
+}
+
+// NormalizePhoneInRegion normalizes s using region as the parsing context and
+// returns its canonical E.164 form for use wherever a value with the phone
+// semantic is required.
+//
+// s must represent a single complete national or international phone number.
+// region must be an uppercase two-letter CLDR region code recognized by the
+// phone number parser, even when s is already an international number.
+// region is used only as parsing context and does not restrict the number's
+// country. See https://unicode.org/reports/tr35/#unicode_region_subtag.
+//
+// The boolean return value reports whether region is recognized and s can be
+// normalized to E.164.
+func NormalizePhoneInRegion(s, region string) (string, bool) {
+	if len(region) != 2 || !phonenumbers.GetSupportedRegions()[region] {
+		return "", false
+	}
+	return normalizePhone(s, region)
 }
 
 var (
@@ -364,6 +404,25 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 	case StringKind:
 		if v.Kind() == '"' {
 			s := string(d.unquoteString(v))
+			switch t.Semantic() {
+			case CountrySemantic:
+				switch t.CountryFormat() {
+				case ISO3166Alpha2:
+					if !validation.IsValidCountryCodeAlpha2(s) {
+						return nil, newErrInvalidValue("contains an invalid country code", "")
+					}
+				case ISO3166Alpha3:
+					if !validation.IsValidCountryCodeAlpha3(s) {
+						return nil, newErrInvalidValue("contains an invalid country code", "")
+					}
+				}
+				return s, nil
+			case PhoneSemantic:
+				if !IsPhone(s) {
+					return nil, newErrInvalidValue("is not a valid canonical phone number", "")
+				}
+				return s, nil
+			}
 			if values := t.Values(); values != nil {
 				if !slices.Contains(values, s) {
 					return nil, newErrInvalidValue(fmt.Sprintf("has an invalid value: %s; valid values are %s",
@@ -770,4 +829,82 @@ func newErrMissingProperty(path string) error {
 // propertyNotExist.
 func newErrPropertyNotExist(path string) error {
 	return &SchemaValidationError{kind: propertyNotExist, path: path}
+}
+
+// normalizePhone normalizes s to E.164, using region when provided to parse
+// national numbers and international dialing prefixes.
+func normalizePhone(s, region string) (string, bool) {
+
+	if region == "" && (s == "" || s[0] != '+') {
+		return "", false
+	}
+	if !validPhoneInput(s) {
+		return "", false
+	}
+
+	// Only the first candidate can span the entire input, so one invalid candidate
+	// is enough to reject the input.
+	for match := range phonenumbers.FindNumbersWithLeniency(s, region, phonenumbers.POSSIBLE, 1) {
+		if match.Start() != 0 || match.End() != len(s) {
+			return "", false
+		}
+		number := match.Number()
+		// Extensions are not part of E.164.
+		if number.GetExtension() != "" {
+			return "", false
+		}
+		// Require a complete, structurally possible number. A number possible only
+		// locally cannot provide an unambiguous E.164 value.
+		if phonenumbers.IsPossibleNumberWithReason(number) != phonenumbers.IS_POSSIBLE {
+			return "", false
+		}
+		canonical := phonenumbers.Format(number, phonenumbers.E164)
+		if len(canonical) > 16 {
+			return "", false
+		}
+		// Reparse the canonical form to ensure normalization is stable. Some
+		// possible-but-unallocated numbers lose another national prefix on each parse.
+		reparsed, err := phonenumbers.Parse(canonical, "")
+		if err != nil {
+			return "", false
+		}
+		if phonenumbers.IsPossibleNumberWithReason(reparsed) != phonenumbers.IS_POSSIBLE ||
+			phonenumbers.Format(reparsed, phonenumbers.E164) != canonical {
+			return "", false
+		}
+		return canonical, true
+	}
+
+	return "", false
+}
+
+// phonePunctuation contains the punctuation accepted by the phonenumbers
+// package, excluding alphabetic 'x' because carrier placeholders and extensions
+// are not supported.
+const phonePunctuation = "-\u2010\u2011\u2012\u2013\u2014\u2015\u2212\u30FC\uFF0D\uFF0E\uFF0F " +
+	"\u00A0\u00AD\u200B\u2060\u3000()\uFF08\uFF09\uFF3B\uFF3D.[]/~\u2053\u223C\uFF5E"
+
+// validPhoneInput reports whether s satisfies the phone input grammar checked
+// before parsing.
+func validPhoneInput(s string) bool {
+	if s == "" || len(s) > 250 || !utf8.ValidString(s) {
+		return false
+	}
+	first, _ := utf8.DecodeRuneInString(s)
+	last, _ := utf8.DecodeLastRuneInString(s)
+	if unicode.IsSpace(first) || unicode.IsSpace(last) {
+		return false
+	}
+	for i, r := range s {
+		if r == '+' {
+			if i != 0 {
+				return false
+			}
+			continue
+		}
+		if !unicode.IsDigit(r) && !strings.ContainsRune(phonePunctuation, r) {
+			return false
+		}
+	}
+	return true
 }
