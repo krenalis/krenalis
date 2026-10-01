@@ -157,8 +157,6 @@ func (file *File) Records(ctx context.Context, startTime time.Time) (Records, er
 //
 // If pathReplacer is not nil, placeholders in path are replaced using it; in
 // this case a *PlaceholderError may be returned when placeholders are invalid.
-// The length of the path after the replacement is not checked, since the
-// pipeline validation ensures that it is within [1, 1024] runes.
 //
 // It returns an *UnavailableError if the connector returns an error.
 func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer) (Writer, error) {
