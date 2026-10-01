@@ -67,7 +67,7 @@ const checkProfileConsentLocation = (location: ProfileConsentLocation | null, sc
 	if (Array.from(propertyPath).length > 1024) {
 		return 'Profile property must be no longer than 1024 characters';
 	}
-	const key = location.jsonKey || null;
+	const key = location.jsonKey != null && location.jsonKey !== '' ? location.jsonKey : null;
 	const path = formatProfileConsentLocation(location);
 	const kind = schema?.[propertyPath]?.type;
 	if (kind == null) {
@@ -431,7 +431,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 			(purpose) =>
 				purpose.id !== purposeToEdit?.id &&
 				purpose.profileConsentLocation?.property === profilePropertyPath &&
-				(purpose.profileConsentLocation.jsonKey || null) === profileJSONKey,
+				(purpose.profileConsentLocation.jsonKey ?? null) === profileJSONKey,
 		) === true;
 
 	const profilePathWarning = !isProfileLocationUsedByOtherPurposes
@@ -509,7 +509,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 				: [''],
 		);
 		setProfilePropertyPath(originalProfile?.property ?? '');
-		setProfileJSONKey(originalProfile?.jsonKey || null);
+		setProfileJSONKey(originalProfile?.jsonKey ?? null);
 		setNameError('');
 		setPurposeCodesError('');
 		setDuplicatePurposeCodeError('');
