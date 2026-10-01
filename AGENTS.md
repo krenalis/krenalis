@@ -16,7 +16,7 @@ Apply review rules to code introduced or modified by the change under review. Do
 
 ## Line length
 
-Allow Go code lines to be up to 120 characters long without wrapping. A line may exceed 120 characters when a more specific convention requires it, notably the rule that keeps exported signatures on one line.
+Allow Go code lines to be up to 120 characters long without wrapping. A line may exceed 120 characters when a more specific convention requires it, notably the rule that keeps exported signatures on one line. The 120-character limit does not apply to `_test.go` files, whose lines may be as long as needed.
 
 ## File organization
 
@@ -92,7 +92,7 @@ if err := f(); err != nil {
 }
 ```
 
-Calls to `(*sql.Row).Scan` and `(*sql.Rows).Scan` are an exception. Place them in the initializer of the error check to follow the Go convention for scanning SQL results.
+Calls to `(*sql.Rows).Scan` are an exception. Place them in the initializer of the error check to follow the Go convention for scanning SQL results. Calls to `(*sql.Row).Scan` follow the general rule.
 
 Perform any classification of the returned error, including `errors.Is` checks for sentinel errors and `errors.AsType` checks for typed errors, inside that non-nil branch rather than using classification as a substitute for the `err != nil` check. In tests that expect a particular error, enter the `err != nil` branch, verify the error there, and fail after the branch when the call returned nil.
 
@@ -150,6 +150,8 @@ In tests, use `t.Context()` for operations whose lifetime follows the test. Pass
 Use the standard-library `testing/synctest` package when testing concurrent or asynchronous Go code whose behavior depends on timers, deadlines, or goroutine quiescence and can run entirely inside a synctest bubble. Prefer its virtual time and `synctest.Wait` to real sleeps or polling. Do not use it around real network I/O, system calls, or external processes unless those dependencies are replaced with fakes that operate entirely within the bubble.
 
 When running the complete Admin test suite, you may use `go run ./test/commit -just-test-admin` to receive each individual test result without waiting for the complete suite to finish. This command is optional.
+
+When a test starts a container with testcontainers and reads one of its mapped ports, its wait strategy must include `wait.ForListeningPort` for that port; otherwise, notably on Docker Desktop, `MappedPort` can fail. For PostgreSQL, use `postgres.BasicWaitStrategies()`, which includes it.
 
 ## Behavioral contracts
 
