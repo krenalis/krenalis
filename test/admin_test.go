@@ -18,7 +18,6 @@ import (
 
 	"github.com/testcontainers/testcontainers-go"
 	_postgres "github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // passUIFlagToPlaywright, when set to true, passes the '--ui' flag to the
@@ -62,10 +61,7 @@ func TestAdmin(t *testing.T) {
 			_postgres.WithDatabase(dbDatabase),
 			_postgres.WithUsername(dbUsername),
 			_postgres.WithPassword(dbPassword),
-			testcontainers.WithWaitStrategy(
-				wait.ForLog("database system is ready to accept connections").
-					WithOccurrence(2).
-					WithStartupTimeout(60*time.Second)),
+			_postgres.BasicWaitStrategies(),
 		)
 		defer func() {
 			err := testcontainers.TerminateContainer(container)
