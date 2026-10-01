@@ -193,25 +193,29 @@ func (p *Pipelines) EventConsentPassed(pipeline string, count int) {
 }
 
 // ExportProfileConsentFailed increases the failed count for the
-// ExportProfileConsent step and pipeline by the given count.
+// ExportProfileConsent step and pipeline by the given count. It is safe to call
+// concurrently from multiple goroutines.
 func (p *Pipelines) ExportProfileConsentFailed(pipeline string, count int) {
 	p.Failed(ExportProfileConsentStep, pipeline, count, "")
 }
 
 // ExportProfileConsentPassed increases the passed count for the
-// ExportProfileConsent step and pipeline by the given count.
+// ExportProfileConsent step and pipeline by the given count. It is safe to call
+// concurrently from multiple goroutines.
 func (p *Pipelines) ExportProfileConsentPassed(pipeline string, count int) {
 	p.Passed(ExportProfileConsentStep, pipeline, count)
 }
 
 // ImportProfileConsentFailed increases the failed count for the
-// ImportProfileConsent step and pipeline by the given count.
+// ImportProfileConsent step and pipeline by the given count. It is safe to call
+// concurrently from multiple goroutines.
 func (p *Pipelines) ImportProfileConsentFailed(pipeline string, count int) {
 	p.Failed(ImportProfileConsentStep, pipeline, count, "")
 }
 
 // ImportProfileConsentPassed increases the passed count for the
-// ImportProfileConsent step and pipeline by the given count.
+// ImportProfileConsent step and pipeline by the given count. It is safe to call
+// concurrently from multiple goroutines.
 func (p *Pipelines) ImportProfileConsentPassed(pipeline string, count int) {
 	p.Passed(ImportProfileConsentStep, pipeline, count)
 }
