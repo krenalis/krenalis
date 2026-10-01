@@ -10,7 +10,7 @@ replace github.com/snowflakedb/gosnowflake/v2 => github.com/krenalis/gosnowflake
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.48.0
-	github.com/LumenResearch/uasurfer v0.3.0
+	github.com/LumenResearch/uasurfer v0.3.1
 	github.com/andybalholm/brotli v1.2.6
 	github.com/aws/aws-sdk-go-v2 v1.47.1
 	github.com/aws/aws-sdk-go-v2/config v1.33.6
