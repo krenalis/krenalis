@@ -130,6 +130,10 @@ func (file *File) Records(ctx context.Context, startTime time.Time) (Records, er
 	if err != nil {
 		return nil, err
 	}
+	_, err = storage.(fileStorageAbsolutePathConnection).AbsolutePath(ctx, file.pipeline.Path)
+	if err != nil {
+		return nil, connectorError(err)
+	}
 	s := newCompressedStorage(storage, file.pipeline.Compression)
 	rc, storageUpdatedAt, err := s.Reader(ctx, file.pipeline.Path)
 	if err != nil {
@@ -178,6 +182,10 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer) 
 		if err != nil {
 			return nil, err
 		}
+	}
+	_, err = storage.(fileStorageAbsolutePathConnection).AbsolutePath(ctx, path)
+	if err != nil {
+		return nil, connectorError(err)
 	}
 	sw, err := s.Writer(ctx, path, file.inner.(fileContentTypeConnection).ContentType(ctx), extension)
 	if err != nil {
@@ -252,14 +260,9 @@ func newCompressedStorage(s any, c state.Compression) *compressorStorage {
 //
 // The storage must support read operations, otherwise this method panics.
 //
-// It returns a *connectors.InvalidPathError if name is not valid for the
-// storage, and an *UnavailableError if the connector returns an error.
+// It returns an *UnavailableError if the connector returns an error.
 // It is the caller's responsibility to close the returned reader.
 func (cs compressorStorage) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
-	_, err := cs.storage.(fileStorageAbsolutePathConnection).AbsolutePath(ctx, name)
-	if err != nil {
-		return nil, time.Time{}, connectorError(err)
-	}
 	r, t, err := cs.storage.(fileStorageReaderConnection).Reader(ctx, name)
 	if err != nil {
 		return nil, time.Time{}, connectorError(err)
@@ -366,15 +369,8 @@ func (cs compressorStorage) Reader(ctx context.Context, name string) (io.ReadClo
 // If the data should be compressed, it passes path to the underlying storage
 // with an appended extension, and an appropriate content type.
 //
-// It returns a *connectors.InvalidPathError if path is not valid for the
-// storage, and an *UnavailableError if the connector returns an error.
-//
 // It is the caller's responsibility to call Close on the returned Writer.
 func (cs compressorStorage) Writer(ctx context.Context, path, contentType, extension string) (*storageWriteCloser, error) {
-	_, err := cs.storage.(fileStorageAbsolutePathConnection).AbsolutePath(ctx, path)
-	if err != nil {
-		return nil, connectorError(err)
-	}
 	pr, pw := io.Pipe()
 	var w io.WriteCloser
 	switch cs.compression {

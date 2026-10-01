@@ -137,6 +137,10 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 	if limit < 0 {
 		limit = math.MaxInt
 	}
+	_, err = storage.inner.(fileStorageAbsolutePathConnection).AbsolutePath(ctx, name)
+	if err != nil {
+		return nil, nil, nil, connectorError(err)
+	}
 	s := newCompressedStorage(storage.inner, compression)
 	r, storageTimestamp, err := s.Reader(ctx, name)
 	if err != nil {
@@ -224,6 +228,10 @@ func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, n
 	}
 
 	sheetsFile := _file.(fileSheetConnection)
+	_, err = storage.inner.(fileStorageAbsolutePathConnection).AbsolutePath(ctx, name)
+	if err != nil {
+		return nil, connectorError(err)
+	}
 	s := newCompressedStorage(storage.inner, compression)
 	r, _, err := s.Reader(ctx, name)
 	if err != nil {
