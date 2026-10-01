@@ -551,10 +551,6 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 			if err != nil {
 				return nil, err
 			}
-			err = lockWorkspace(ctx, tx, ws.ID)
-			if err != nil {
-				return nil, err
-			}
 			err = checkRequiredConsentPurposesTx(ctx, tx, ws.ID, "", n.Target, n.RequiredConsents.Purposes)
 			if err != nil {
 				return nil, err
