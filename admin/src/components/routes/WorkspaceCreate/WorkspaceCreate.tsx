@@ -24,7 +24,7 @@ const snowflakeIcon = <ExternalLogo slot='prefix' code='snowflake' path={WAREHOU
 
 // The consent purposes added to a workspace when it is created. Their purpose
 // codes match the names of the properties under "consents" in InitialSchema.
-const initialConsentPurposes = [
+const INITIAL_CONSENT_PURPOSES = [
 	{ purposeCode: 'marketing', name: 'Marketing communications' },
 	{ purposeCode: 'profiling', name: 'Profiling' },
 	{ purposeCode: 'analytics', name: 'Analytics' },
@@ -154,7 +154,7 @@ const WorkspaceCreate = () => {
 			try {
 				const newApi = new API(window.location.origin, id);
 				await newApi.workspaces.updateWarehouse(name, 'Normal', settings, mcpSettings, false);
-				for (const purpose of initialConsentPurposes) {
+				for (const purpose of INITIAL_CONSENT_PURPOSES) {
 					await newApi.workspaces.addConsentPurpose(purpose.name, [{ purposeCode: purpose.purposeCode }], {
 						property: `consents.${purpose.purposeCode}`,
 					});
