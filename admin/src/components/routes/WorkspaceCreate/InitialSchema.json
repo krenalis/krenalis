@@ -158,7 +158,7 @@
 						"type": {
 							"kind": "boolean"
 						},
-						"description": "Marketing communications"
+						"displayName": "Marketing communications"
 					},
 					{
 						"name": "profiling",
@@ -166,7 +166,7 @@
 						"type": {
 							"kind": "boolean"
 						},
-						"description": "Profiling"
+						"displayName": "Profiling"
 					},
 					{
 						"name": "analytics",
@@ -174,11 +174,11 @@
 						"type": {
 							"kind": "boolean"
 						},
-						"description": "Analytics"
+						"displayName": "Analytics"
 					}
 				]
 			},
-			"description": "Consents"
+			"displayName": "Consents"
 		}
 	]
 }
