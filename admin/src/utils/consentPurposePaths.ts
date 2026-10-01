@@ -6,7 +6,10 @@ const UNPAIRED_SURROGATE = new RegExp('\\p{Cs}', 'u');
 
 // formatProfileConsentLocation displays the schema path and literal JSON key.
 const formatProfileConsentLocation = (location: ProfileConsentLocation | null): string =>
-	location == null ? '' : location.property + (location.jsonKey ? `[${JSON.stringify(location.jsonKey)}]` : '');
+	location == null
+		? ''
+		: location.property +
+			(location.jsonKey != null && location.jsonKey !== '' ? `[${JSON.stringify(location.jsonKey)}]` : '');
 
 // validateConsentKey applies the Admin authoring policy without trimming the key.
 const validateConsentKey = (key: string): void => {
