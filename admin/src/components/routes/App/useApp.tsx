@@ -511,7 +511,7 @@ const useApp = (
 		// transformation when they are exported, and after it when they are
 		// imported.
 		let missingConsentItem: ReactNode;
-		let consentStep: number;
+		let consentStep: number | undefined;
 		if (hasExportProfileConsentStep(connection, pipeline.target)) {
 			consentStep = EXPORT_PROFILE_CONSENT_STEP;
 		} else if (hasImportProfileConsentStep(connection, pipeline.target)) {
