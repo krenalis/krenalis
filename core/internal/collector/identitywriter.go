@@ -90,10 +90,8 @@ func (iw *identityWriter) Write(event streams.Event) error {
 	if iw.transformer == nil {
 		requiredConsents := iw.requiredConsents
 		iw.mu.Unlock()
-		// Without a transformation the identity has no attributes, so there is
-		// no profile to read the consents from. The output of the pipeline is
-		// the event itself, so the consents are read from it.
-		if !consents.SatisfiesEvent(requiredConsents.Operator, requiredConsents.Purposes, event.Attributes) {
+		// Since no transformation takes place, no consent is given for any purpose.
+		if len(requiredConsents.Purposes) > 0 {
 			iw.metrics.ImportProfileConsentFailed(iw.pipeline, 1)
 			event.Destinations[0].Ack.Acknowledge()
 			return nil
