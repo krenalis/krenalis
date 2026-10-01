@@ -66,18 +66,18 @@ func (iw *identityWriter) Close(ctx context.Context) error {
 	return iw.writer.Close(ctx)
 }
 
+// SetRequiredConsents sets the required consent purposes.
+func (iw *identityWriter) SetRequiredConsents(requiredConsents state.RequiredConsents) {
+	iw.mu.Lock()
+	iw.requiredConsents = requiredConsents
+	iw.mu.Unlock()
+}
+
 // SetTransformer sets the transformer.
 // If the transformer is nil, no transformation will be performed.
 func (iw *identityWriter) SetTransformer(transformer *transformers.Transformer) {
 	iw.mu.Lock()
 	iw.transformer = transformer
-	iw.mu.Unlock()
-}
-
-// SetRequiredConsents sets the required consent purposes.
-func (iw *identityWriter) SetRequiredConsents(requiredConsents state.RequiredConsents) {
-	iw.mu.Lock()
-	iw.requiredConsents = requiredConsents
 	iw.mu.Unlock()
 }
 
