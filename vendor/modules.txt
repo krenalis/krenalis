@@ -174,7 +174,7 @@ github.com/aws/aws-sdk-go-v2/feature/ec2/imds/internal/config
 # github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.22.17
 ## explicit; go 1.24
 github.com/aws/aws-sdk-go-v2/feature/s3/manager
-# github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager v0.4.11
+# github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager v0.4.12
 ## explicit; go 1.24
 github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager
 github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager/types
@@ -215,7 +215,7 @@ github.com/aws/aws-sdk-go-v2/service/lambda
 github.com/aws/aws-sdk-go-v2/service/lambda/internal/endpoints
 github.com/aws/aws-sdk-go-v2/service/lambda/schemas
 github.com/aws/aws-sdk-go-v2/service/lambda/types
-# github.com/aws/aws-sdk-go-v2/service/s3 v1.113.4
+# github.com/aws/aws-sdk-go-v2/service/s3 v1.114.0
 ## explicit; go 1.24
 github.com/aws/aws-sdk-go-v2/service/s3
 github.com/aws/aws-sdk-go-v2/service/s3/internal/arn
