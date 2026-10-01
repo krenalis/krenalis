@@ -125,7 +125,6 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, c
 				return nil, fmt.Errorf("property path %s does not exist", query.OrderBy)
 			}
 			orderBy = []warehouses.Column{c}
-			orderDesc = query.OrderDesc
 		}
 
 	} else {
