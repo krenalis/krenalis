@@ -23,7 +23,6 @@ import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { formatProfileConsentLocation, validateConsentKey } from '../../../lib/core/consentPurpose';
 import { ObjectType } from '../../../lib/api/types/types';
 import { FlatSchema, flattenSchema } from '../../../lib/core/pipeline';
-import { SchemaPropertyInfoTooltip } from '../Schema/SchemaPropertyGrid';
 
 const GRID_COLUMNS: GridColumn[] = [
 	{ name: 'Name' },
@@ -839,18 +838,8 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 									onSlBlur={onBlurPurposeCode}
 								>
 									{i === 0 && (
-										<span
-											className='schema-property-grid__label-content consent-management__dialog-path-label'
-											slot='label'
-										>
+										<span className='consent-management__dialog-path-label' slot='label'>
 											Consent in events
-											<SchemaPropertyInfoTooltip
-												content={
-													'In incoming events, consent for this purpose is read from a property in context.consents. Enter the code used for this purpose in the platform you use to manage consent.\n\n' +
-													'If you add multiple locations, they are checked from top to bottom. The first location with a consent value is used.'
-												}
-												label='About consent in events'
-											/>
 										</span>
 									)}
 									<span className='consent-management__dialog-purpose-code-prefix' slot='prefix'>
@@ -903,15 +892,8 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 								placeholder={isProfilePropertyJSON ? 'key' : 'Select a profile property'}
 								readonly={!isProfilePropertyJSON}
 							>
-								<span
-									className='schema-property-grid__label-content consent-management__dialog-path-label'
-									slot='label'
-								>
+								<span className='consent-management__dialog-path-label' slot='label'>
 									Consent in profiles
-									<SchemaPropertyInfoTooltip
-										content='Consent for this purpose is represented in profiles using a profile property. Select a boolean property, or select a json property and specify the key.'
-										label='About profile property'
-									/>
 								</span>
 								{isProfilePropertyJSON && (
 									<span className='consent-management__dialog-profile-path-prefix' slot='prefix'>

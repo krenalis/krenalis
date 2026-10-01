@@ -85,15 +85,6 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 	await expect(profilePath.locator('input')).toHaveCSS('cursor', 'default');
 	await expect(dialog.locator('.consent-management__dialog-path-label').nth(0)).toHaveCSS('font-size', '14px');
 	await expect(dialog.locator('.consent-management__dialog-path-label').nth(1)).toHaveCSS('font-size', '14px');
-	await expect(dialog.getByRole('img', { name: 'About profile property' })).toBeVisible();
-	const pathDescriptions = dialog.locator('.schema-property-grid__tooltip-content');
-	await expect(pathDescriptions.nth(0).locator('p')).toHaveText([
-		'In incoming events, consent for this purpose is read from a property in context.consents. Enter the code used for this purpose in the platform you use to manage consent.',
-		'If you add multiple locations, they are checked from top to bottom. The first location with a consent value is used.',
-	]);
-	await expect(pathDescriptions.nth(1).locator('p')).toHaveText([
-		'Consent for this purpose is represented in profiles using a profile property. Select a boolean property, or select a json property and specify the key.',
-	]);
 	await profilePath.click();
 	const options = dialog.locator('.consent-management__dialog-profile-path-menu sl-menu-item');
 	await expect(options).toHaveCount(4);
