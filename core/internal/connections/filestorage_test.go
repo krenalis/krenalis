@@ -20,8 +20,8 @@ func (echoAbsolutePathStorage) AbsolutePath(_ context.Context, name string) (str
 	return name, nil
 }
 
-// TestFileStorageAbsolutePath verifies that AbsolutePath rejects a name longer
-// than 1024 runes after placeholder replacement.
+// TestFileStorageAbsolutePath verifies that FileStorage.AbsolutePath rejects a
+// name longer than 1024 runes after placeholder replacement.
 func TestFileStorageAbsolutePath(t *testing.T) {
 
 	storage := &FileStorage{connector: "test", inner: echoAbsolutePathStorage{}}
