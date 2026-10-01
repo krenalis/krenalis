@@ -479,14 +479,13 @@ func (store *Store) ProfileRecords(ctx context.Context, query Query, consentCond
 	}
 
 	query.table = "profiles"
-	wh := store.warehouse()
 
 	query.Properties = []string{}
 	for path := range schema.Properties().WalkObjects() {
 		query.Properties = append(query.Properties, path)
 	}
 
-	return records(ctx, wh, query, consentCondition, "_kpid", store.profileColumnByProperty(), true, matching)
+	return records(ctx, store.warehouse(), query, consentCondition, "_kpid", store.profileColumnByProperty(), true, matching)
 }
 
 // Profiles returns the profiles according to the provided query.
