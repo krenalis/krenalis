@@ -6,7 +6,7 @@ import SlPopup from '@shoelace-style/shoelace/dist/react/popup/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import AppContext from '../../../context/AppContext';
 import { ConsentPurpose } from '../../../lib/api/types/workspace';
-import { formatProfileConsentLocation } from '../../../utils/consentPurposePaths';
+import { formatProfileConsentLocation } from '../../../lib/core/consentPurpose';
 
 const HOVER_DELAY = 300;
 

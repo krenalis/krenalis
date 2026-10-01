@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import Type, { ObjectType, Property } from '../src/lib/api/types/types';
 import { ConsentPurpose } from '../src/lib/api/types/workspace';
 import { getConsentPurposesByPropertyPath } from '../src/components/routes/Schema/SchemaPropertyConsent.helpers';
-import { formatProfileConsentLocation, validateConsentKey } from '../src/utils/consentPurposePaths';
+import { formatProfileConsentLocation, validateConsentKey } from '../src/lib/core/consentPurpose';
 
 const property = (name: string, type: Type): Property => ({
 	name,

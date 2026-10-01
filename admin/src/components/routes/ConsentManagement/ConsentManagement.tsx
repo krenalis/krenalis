@@ -20,7 +20,7 @@ import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
-import { formatProfileConsentLocation, validateConsentKey } from '../../../utils/consentPurposePaths';
+import { formatProfileConsentLocation, validateConsentKey } from '../../../lib/core/consentPurpose';
 import { ObjectType } from '../../../lib/api/types/types';
 import { FlatSchema, flattenSchema } from '../../../lib/core/pipeline';
 import { SchemaPropertyInfoTooltip } from '../Schema/SchemaPropertyGrid';

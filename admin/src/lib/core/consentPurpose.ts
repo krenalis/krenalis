@@ -1,4 +1,4 @@
-import { ProfileConsentLocation } from '../lib/api/types/workspace';
+import { ProfileConsentLocation } from '../api/types/workspace';
 
 const INVISIBLE_KEY_CHARACTERS = new RegExp('[\\p{Cc}\\p{Cf}\\p{Zl}\\p{Zp}]', 'u');
 const NON_WHITESPACE_CHARACTER = new RegExp('\\P{White_Space}', 'u');
