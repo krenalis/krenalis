@@ -1765,14 +1765,17 @@ inherit the disabled style */
 	margin: 15px auto;
 }
 
+.fullscreen-transformation__output-panel {
+	position: relative;
+}
+
 .fullscreen-transformation__output-code {
 	padding: 40px 30px 20px 30px;
-	position: relative;
 	height: 100%;
 }
 
 .fullscreen-transformation__output-clear {
-	position: fixed;
+	position: absolute;
 	right: 25px;
 	top: 65px;
 }
