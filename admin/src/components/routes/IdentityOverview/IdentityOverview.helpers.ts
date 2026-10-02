@@ -56,6 +56,7 @@ interface IdentityConnectionOption {
 type ChartDomain = [number, number];
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const MIN_METRICS_DATE = '1970-01-01';
 
 const dateKeyToUTCDate = (dateKey: string): Date => {
 	const [year, month, day] = dateKey.split('-').map(Number);
@@ -98,8 +99,9 @@ const computeFetchRange = (displayRange: DisplayDateRange, fixedTrendEnd = displ
 	const trendStart = addUTCDays(fixedTrendEnd, -59);
 	const comparisonLength = daysBetween(displayRange.start, displayRange.end) + 1;
 	const comparisonStart = addUTCDays(displayRange.start, -comparisonLength);
+	const start = comparisonStart < trendStart ? comparisonStart : trendStart;
 	return {
-		start: comparisonStart < trendStart ? comparisonStart : trendStart,
+		start: start < MIN_METRICS_DATE ? MIN_METRICS_DATE : start,
 		end: addUTCDays(displayRange.end > fixedTrendEnd ? displayRange.end : fixedTrendEnd, 1),
 	};
 };
@@ -116,7 +118,7 @@ const valueAsOf = (days: TrendPoint[], targetDay: string): number | null => {
 	for (const point of days) {
 		if (point.day <= targetDay && point.day >= selectedDay && point.total != null) {
 			selectedDay = point.day;
-			selectedValue = point.total;
+			selectedValue = Number(point.total);
 		}
 	}
 	return selectedValue;
@@ -159,13 +161,21 @@ const buildIdentityMetricChartDays = (days: IdentityMetricDay[], range: DisplayD
 	const metricsByDay = new Map(days.map((day) => [day.day, day]));
 	const result: IdentityMetricChartDay[] = [];
 	for (let day = range.start; day <= range.end; day = addUTCDays(day, 1)) {
+		const metric = metricsByDay.get(day);
 		result.push(
-			metricsByDay.get(day) ?? {
-				day,
-				total: null,
-				anonymous: null,
-				recognized: null,
-			},
+			metric != null
+				? {
+						day,
+						total: Number(metric.total),
+						anonymous: Number(metric.anonymous),
+						recognized: Number(metric.recognized),
+					}
+				: {
+						day,
+						total: null,
+						anonymous: null,
+						recognized: null,
+					},
 		);
 	}
 	return result;
@@ -231,8 +241,8 @@ const aggregateConnections = (
 	for (const connection of connections ?? []) {
 		const current = totals.get(connection.connection) ?? { recognized: 0, anonymous: 0 };
 		totals.set(connection.connection, {
-			recognized: current.recognized + connection.recognized,
-			anonymous: current.anonymous + connection.anonymous,
+			recognized: current.recognized + Number(connection.recognized),
+			anonymous: current.anonymous + Number(connection.anonymous),
 		});
 	}
 
@@ -274,18 +284,14 @@ const buildIdentityConnectionOptions = (
 			options.set(connection.id, connection.name !== '' ? connection.name : connection.id);
 		}
 	}
-	let deletedTotal = 0;
+	options.set(DELETED_CONNECTION_SCOPE, DELETED_CONNECTION_LABEL);
 	for (const metric of metrics ?? []) {
 		if (metric.connection === DELETED_CONNECTION_SCOPE) {
-			deletedTotal += Number(metric.anonymous) + Number(metric.recognized);
 			continue;
 		}
 		if (!options.has(metric.connection)) {
 			options.set(metric.connection, metric.connection);
 		}
-	}
-	if (deletedTotal > 0) {
-		options.set(DELETED_CONNECTION_SCOPE, DELETED_CONNECTION_LABEL);
 	}
 	return Array.from(options, ([id, name]) => ({ id, name })).sort((left, right) => {
 		const leftIsDeleted = left.id === DELETED_CONNECTION_SCOPE;

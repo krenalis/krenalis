@@ -34,37 +34,6 @@ type Identities struct {
 	now     func() time.Time
 }
 
-// IdentityMetric contains the latest persisted workspace identity state.
-type IdentityMetric struct {
-	ObservedAt time.Time // observation time in UTC
-
-	Total          int // total identities
-	Anonymous      int // anonymous identities
-	Recognized     int // recognized identities
-	WithoutProfile int // identities without a profile
-
-	// Connections is a non-nil slice containing the live Source connections for
-	// the workspace, ordered by connection identifier. Connections without a
-	// metric for the latest workspace observation are represented with zero counts.
-	Connections []IdentityConnectionMetric
-}
-
-// IdentityConnectionMetric contains identity counts for one connection.
-type IdentityConnectionMetric struct {
-	Connection     string // connection identifier
-	Anonymous      int    // anonymous identities
-	Recognized     int    // recognized identities
-	WithoutProfile int    // identities without a profile
-}
-
-// IdentityMetricDay contains a known identity state for one UTC day.
-type IdentityMetricDay struct {
-	Day        time.Time // UTC day
-	Total      int       // total identities
-	Anonymous  int       // anonymous identities
-	Recognized int       // recognized identities
-}
-
 // Latest returns the latest persisted identity state for a workspace.
 // If the workspace does not exist, it returns [ErrWorkspaceNotFound].
 func (identities *Identities) Latest(ctx context.Context, workspace string) (IdentityMetric, error) {
@@ -351,8 +320,23 @@ func (identities *Identities) storeSnapshot(ctx context.Context, snapshot identi
 	day := snapshot.observedAt.Truncate(24 * time.Hour)
 	err := identities.metrics.db.Transaction(ctx, func(tx *db.Tx) error {
 
+		// Lock parents before metrics, matching the order of cascading deletes.
+		found, err := tx.QueryExists(ctx, `SELECT FROM workspaces
+			WHERE id = $1 FOR KEY SHARE`, snapshot.workspace)
+		if err != nil {
+			return err
+		}
+		if !found {
+			return ErrWorkspaceNotFound
+		}
+		_, err = tx.Exec(ctx, `SELECT id FROM connections
+			WHERE workspace = $1 ORDER BY id FOR KEY SHARE`, snapshot.workspace)
+		if err != nil {
+			return err
+		}
+
 		var accepted bool
-		err := tx.QueryRow(ctx, `INSERT INTO identity_metrics AS m
+		err = tx.QueryRow(ctx, `INSERT INTO identity_metrics AS m
 			(workspace, day, observed_at, identities_anonymous, identities_recognized, identities_without_profile)
 			VALUES ($1, $2, $3, $4, $5, $6)
 			ON CONFLICT (workspace, day) DO UPDATE SET
@@ -413,6 +397,37 @@ func (identities *Identities) storeSnapshot(ctx context.Context, snapshot identi
 	})
 
 	return err
+}
+
+// IdentityMetric contains the latest persisted workspace identity state.
+type IdentityMetric struct {
+	ObservedAt time.Time // observation time in UTC
+
+	Total          int // total identities
+	Anonymous      int // anonymous identities
+	Recognized     int // recognized identities
+	WithoutProfile int // identities without a profile
+
+	// Connections is a non-nil slice containing the live Source connections for
+	// the workspace, ordered by connection identifier. Connections without a
+	// metric for the latest workspace observation are represented with zero counts.
+	Connections []IdentityConnectionMetric
+}
+
+// IdentityConnectionMetric contains identity counts for one connection.
+type IdentityConnectionMetric struct {
+	Connection     string // connection identifier
+	Anonymous      int    // anonymous identities
+	Recognized     int    // recognized identities
+	WithoutProfile int    // identities without a profile
+}
+
+// IdentityMetricDay contains a known identity state for one UTC day.
+type IdentityMetricDay struct {
+	Day        time.Time // UTC day
+	Total      int       // total identities
+	Anonymous  int       // anonymous identities
+	Recognized int       // recognized identities
 }
 
 // identityConnection contains normalized identity counts for one connection.

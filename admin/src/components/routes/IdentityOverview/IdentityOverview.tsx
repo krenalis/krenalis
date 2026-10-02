@@ -88,6 +88,7 @@ const IdentityOverview = () => {
 	const [connectionError, setConnectionError] = useState<string>();
 	const [isConnectionLoading, setIsConnectionLoading] = useState<boolean>(false);
 	const [error, setError] = useState<string>();
+	const [historyError, setHistoryError] = useState<string>();
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 	const requestVersion = useRef<number>(0);
@@ -164,9 +165,10 @@ const IdentityOverview = () => {
 			const version = ++requestVersion.current;
 			const requestedRange = displayRange;
 			setError(undefined);
+			setHistoryError(undefined);
 			if (!preserveData) {
 				setIsLoading(true);
-				setLatestMetric(undefined);
+				setLatestMetric(latestMetricRef.current);
 				setMetricDays(undefined);
 			}
 			try {
@@ -176,6 +178,7 @@ const IdentityOverview = () => {
 					if (version !== requestVersion.current) return;
 					latestMetricRef.current = latest;
 				}
+				setLatestMetric(latest);
 				const connection = selectedConnectionRef.current;
 				const [days] = await Promise.all([
 					fetchMetricDays(latest, requestedRange),
@@ -188,9 +191,12 @@ const IdentityOverview = () => {
 			} catch (err) {
 				if (version !== requestVersion.current) return;
 				setLoadedDisplayRange(requestedRange);
-				setLatestMetric(undefined);
 				setMetricDays(undefined);
-				setError(getErrorMessage(err));
+				if (latestMetricRef.current == null) {
+					setError(getErrorMessage(err));
+				} else {
+					setHistoryError(getErrorMessage(err));
+				}
 			} finally {
 				if (version === requestVersion.current) setIsLoading(false);
 			}
@@ -238,7 +244,7 @@ const IdentityOverview = () => {
 	const chartLoading = showAllConnections
 		? isLoading
 		: (isLoading || isRefreshing || isConnectionLoading) && connectionMetricDays == null;
-	const chartError = showAllConnections ? error : connectionError;
+	const chartError = showAllConnections ? (error ?? historyError) : connectionError;
 	const latestDay = latestMetric == null ? loadedDisplayRange.end : instantToDateKey(latestMetric.observedAt);
 	const sevenDayTrend = useMemo(
 		() => calculateIdentityTrend(metricDays ?? [], latestDay, 7),
@@ -371,6 +377,14 @@ const IdentityOverview = () => {
 						variant='error'
 						title='Current identity state is unavailable'
 						description={error}
+						compact={true}
+					/>
+				)}
+				{historyError && (
+					<StateMessage
+						variant='error'
+						title='Identity history could not be loaded'
+						description={historyError}
 						compact={true}
 					/>
 				)}

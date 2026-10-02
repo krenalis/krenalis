@@ -6,12 +6,14 @@
  *     --bundle --platform=node --format=cjs --outfile=/tmp/identity-overview-helpers-test.cjs
  *   node /tmp/identity-overview-helpers-test.cjs
  */
+import call from '../../../lib/api/call';
 import { IdentityMetric } from '../../../lib/api/types/metrics';
 import {
 	IDENTITY_OVERVIEW_DEFAULT_DATE_PRESET,
 	addUTCDays,
 	aggregateConnections,
 	buildDeletedConnectionMetric,
+	buildIdentityConnectionOptions,
 	buildIdentityMetricChartDays,
 	calculateIdentityTrend,
 	completeIdentityMetricDays,
@@ -25,7 +27,128 @@ const equal = (actual: unknown, expected: unknown, message: string) => {
 	}
 };
 
-const tests: { name: string; run: () => void }[] = [
+const tests: { name: string; run: () => void | Promise<void> }[] = [
+	{
+		name: 'connection aggregation normalizes counts from the API decoder',
+		run: async () => {
+			const fetch = globalThis.fetch;
+			try {
+				globalThis.fetch = async () =>
+					new Response(
+						'{"connections":[{"connection":"a","recognized":2000000000000000,"anonymous":0,"withoutProfile":0},' +
+							'{"connection":"b","recognized":1000000000000000,"anonymous":5,"withoutProfile":0},' +
+							'{"connection":"c","recognized":999999999999999,"anonymous":0,"withoutProfile":0}]}',
+						{ headers: { 'Content-Type': 'application/json' } },
+					);
+				const latest = await call('https://example.test/v1/metrics/identities/latest', 'GET');
+				const recognized = latest.connections[1].recognized;
+				equal(
+					buildIdentityMetricChartDays([{ day: '2026-08-01', total: recognized, anonymous: 0, recognized }], {
+						start: '2026-08-01',
+						end: '2026-08-01',
+					}),
+					[{ day: '2026-08-01', total: 1000000000000000, anonymous: 0, recognized: 1000000000000000 }],
+					'numeric historical chart',
+				);
+				equal(
+					calculateIdentityTrend([{ day: '2026-08-01', total: recognized }], '2026-08-01', 7).currentValue,
+					1000000000000000,
+					'numeric trend',
+				);
+				equal(
+					aggregateConnections([latest.connections[1]], new Map()),
+					[
+						{
+							connection: 'b',
+							name: 'b',
+							recognized: 1000000000000000,
+							anonymous: 5,
+							total: 1000000000000005,
+						},
+					],
+					'16 digit count',
+				);
+				equal(
+					aggregateConnections(latest.connections, new Map(), 1),
+					[
+						{
+							connection: 'a',
+							name: 'a',
+							recognized: 2000000000000000,
+							anonymous: 0,
+							total: 2000000000000000,
+						},
+						{
+							connection: '__other__',
+							name: 'Other',
+							recognized: 1999999999999999,
+							anonymous: 5,
+							total: 2000000000000004,
+						},
+					],
+					'Other with 15 and 16 digit counts',
+				);
+			} finally {
+				globalThis.fetch = fetch;
+			}
+		},
+	},
+	{
+		name: 'removed connection history remains selectable after a zero refresh',
+		run: () => {
+			const latest: IdentityMetric = {
+				observedAt: '2026-08-03T12:00:00Z',
+				total: 0,
+				anonymous: 0,
+				recognized: 0,
+				withoutProfile: 0,
+				connections: [],
+			};
+			const deleted = buildDeletedConnectionMetric(latest)!;
+			equal(
+				buildIdentityConnectionOptions([], []),
+				[{ id: 'deleted', name: 'Removed connections' }],
+				'history option',
+			);
+			equal(
+				buildIdentityConnectionOptions([], [deleted]),
+				[{ id: 'deleted', name: 'Removed connections' }],
+				'zero option',
+			);
+			equal(aggregateConnections([deleted], new Map()), [], 'zero breakdown');
+			equal(
+				completeIdentityMetricDays(
+					[{ day: '2026-08-02', total: 5, anonymous: 2, recognized: 3 }],
+					latest,
+					{ start: '2026-08-02', end: '2026-08-04' },
+					'deleted',
+				),
+				[
+					{ day: '2026-08-02', total: 5, anonymous: 2, recognized: 3 },
+					{ day: '2026-08-03', total: 0, anonymous: 0, recognized: 0 },
+				],
+				'removed history',
+			);
+		},
+	},
+	{
+		name: 'comparison prefetch respects the minimum API date',
+		run: () => {
+			for (const range of [
+				{ start: '1970-01-01', end: '1970-01-07' },
+				{ start: '1990-01-01', end: '2026-08-03' },
+			]) {
+				equal(
+					computeFetchRange(range, '2026-08-03'),
+					{ start: '1970-01-01', end: '2026-08-04' },
+					'bounded range',
+				);
+			}
+			const trend = calculateIdentityTrend([{ day: '1970-01-01', total: 5 }], '1970-01-07', 7);
+			equal(trend.referenceValue, null, 'unavailable earlier state');
+			equal(trend.changePercent, null, 'unavailable comparison');
+		},
+	},
 	{
 		name: 'date ranges include the trend and comparison windows',
 		run: () => {
@@ -137,12 +260,18 @@ const tests: { name: string; run: () => void }[] = [
 	},
 ];
 
-for (const test of tests) {
-	try {
-		test.run();
-		console.log(`ok - ${test.name}`);
-	} catch (error) {
-		console.error(`not ok - ${test.name}`);
-		throw error;
+const run = async () => {
+	for (const test of tests) {
+		try {
+			await test.run();
+			console.log(`ok - ${test.name}`);
+		} catch (error) {
+			console.error(`not ok - ${test.name}`);
+			throw error;
+		}
 	}
-}
+};
+run().catch((error) => {
+	console.error(error);
+	process.exitCode = 1;
+});

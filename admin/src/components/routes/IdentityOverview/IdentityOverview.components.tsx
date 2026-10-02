@@ -349,7 +349,7 @@ const RecognizedAnonymousHistoryChart = ({
 		<DashboardCard title={title} info={info} headerAction={headerAction} className='identity-overview__chart-card'>
 			{loading ? (
 				<CardLoading chart={true} />
-			) : error ? (
+			) : error != null ? (
 				<StateMessage variant='error' title={errorTitle} description={error} compact={true} />
 			) : days.every((day) => day.recognized == null && day.anonymous == null) ? (
 				<StateMessage
@@ -565,7 +565,7 @@ const ConnectionsChart = ({ data, totalIdentities, observedLabel, loading, error
 		>
 			{loading ? (
 				<CardLoading chart={true} />
-			) : error ? (
+			) : error != null ? (
 				<StateMessage
 					variant='error'
 					title='Connection metrics could not be loaded'
