@@ -31,16 +31,16 @@ func (workspace workspace) AddConsentPurpose(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		return nil, err
 	}
-	var body struct {
-		Code string `json:"code"`
-		Name string `json:"name"`
-	}
-	err = json.Decode(r.Body, &body)
+	var purpose core.ConsentPurposeToSet
+	err = json.Decode(r.Body, &purpose)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.AddConsentPurpose(r.Context(), body.Code, body.Name)
-	return nil, err
+	id, err := ws.AddConsentPurpose(r.Context(), purpose)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]string{"id": id}, nil
 }
 
 // AlterProfileSchema alters the profile schema of a workspace.
@@ -153,10 +153,10 @@ func (workspace workspace) CreateEventListener(_ http.ResponseWriter, r *http.Re
 		return nil, err
 	}
 	var body struct {
-		Connection       *string                `json:"connection"`
-		Size             *int                   `json:"size"`
-		Filter           *core.Filter           `json:"filter"`
-		RequiredConsents *core.RequiredConsents `json:"requiredConsents"`
+		Connection       *string                     `json:"connection"`
+		Size             *int                        `json:"size"`
+		Filter           *core.Filter                `json:"filter"`
+		RequiredConsents *core.EventListenerConsents `json:"requiredConsents"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
@@ -193,7 +193,7 @@ func (workspace workspace) DeleteConsentPurpose(_ http.ResponseWriter, r *http.R
 	if err != nil {
 		return nil, err
 	}
-	err = ws.DeleteConsentPurpose(r.Context(), r.PathValue("code"))
+	err = ws.DeleteConsentPurpose(r.Context(), r.PathValue("id"))
 	return nil, err
 }
 
@@ -678,12 +678,12 @@ func (workspace workspace) UpdateConsentPurpose(w http.ResponseWriter, r *http.R
 	if err != nil {
 		return nil, err
 	}
-	var purpose core.ConsentPurpose
+	var purpose core.ConsentPurposeToSet
 	err = json.Decode(r.Body, &purpose)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.UpdateConsentPurpose(r.Context(), r.PathValue("code"), purpose)
+	err = ws.UpdateConsentPurpose(r.Context(), r.PathValue("id"), purpose)
 	return nil, err
 }
 

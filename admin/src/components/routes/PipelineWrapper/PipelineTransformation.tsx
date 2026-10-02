@@ -72,10 +72,10 @@ import { EventListenerEvent } from '../../../hooks/useEventListener';
 import { Sample } from './Pipeline.types';
 import { UnprocessableError } from '../../../lib/api/errors';
 import ConnectionContext from '../../../context/ConnectionContext';
-import Workspace from '../../../lib/api/types/workspace';
+import Workspace, { EventConsentLocation } from '../../../lib/api/types/workspace';
 import {
 	PipelineToSet,
-	RequiredConsents,
+	EventListenerConsents,
 	TransformationFunction,
 	TransformationPurpose,
 } from '../../../lib/api/types/pipeline';
@@ -765,8 +765,14 @@ const TransformationBox = ({
 
 	const { handleError } = useContext(appContext);
 	const { connection } = useContext(ConnectionContext);
-	const { setSelectedInPaths, setSelectedOutPaths, isEditing, isImport, computeAutoSelectedPaths } =
-		useContext(pipelineContext);
+	const {
+		setSelectedInPaths,
+		setSelectedOutPaths,
+		isEditing,
+		isImport,
+		computeAutoSelectedPaths,
+		consentPropertyPaths,
+	} = useContext(pipelineContext);
 
 	useEffect(() => {
 		if (transformationType === 'mappings') {
@@ -960,6 +966,12 @@ const TransformationBox = ({
 
 			let { isRequired, isSelected } = checkMapping(path, pipeline, pipelineType);
 
+			// The properties holding a required consent must be mapped.
+			const consentPurposes = consentPropertyPaths.get(path);
+			if (consentPurposes != null) {
+				isRequired = true;
+			}
+
 			const typ = property.full.type;
 			const isEnum = typ.kind === 'string' && (typ as StringType).values != null;
 			const isBool = typ.kind === 'boolean';
@@ -1076,11 +1088,17 @@ const TransformationBox = ({
 								</span>
 								<span className='pipeline__transformation-output-property-type'>{typeName}</span>
 								{isRequired && (
-									<span
-										className={`pipeline__transformation-output-property-required${isSelected ? ' pipeline__transformation-output-property-required--selected' : ''}`}
+									<SlTooltip
+										content={`Holds the consent for ${consentPurposes?.map((p) => `"${p.name}"`).join(', ')}`}
+										disabled={consentPurposes == null}
+										hoist={true}
 									>
-										required
-									</span>
+										<span
+											className={`pipeline__transformation-output-property-required${isSelected ? ' pipeline__transformation-output-property-required--selected' : ''}`}
+										>
+											required
+										</span>
+									</SlTooltip>
 								)}
 							</div>
 							<PropertyAnnotation
@@ -1341,6 +1359,7 @@ const FullscreenTransformation = ({
 		setSelectedInPaths,
 		selectedOutPaths,
 		setSelectedOutPaths,
+		consentPurposes,
 	} = useContext(PipelineContext);
 
 	const firstNameIdentifier = useRef<string>('');
@@ -1366,14 +1385,30 @@ const FullscreenTransformation = ({
 	}, [pipeline.filter]);
 
 	const normalizedConsents = useMemo(() => {
-		// Discard the required consents (and their operator) when no purpose
-		// has been selected.
-		let consents: RequiredConsents | null = null;
-		if (pipeline.requiredConsents != null && pipeline.requiredConsents.purposes.length > 0) {
-			consents = pipeline.requiredConsents;
+		// Pipelines that import users from events check the required consents on
+		// the profile they produce, and not on the event they receive, so their
+		// samples must not be filtered by the consents.
+		if (isEventBasedUserImport) {
+			return null;
+		}
+		// Skip the purposes that no longer exist or have no event consent
+		// location, as they never apply to the events, and discard the required
+		// consents (and their operator) when no purpose remains.
+		let consents: EventListenerConsents | null = null;
+		if (pipeline.requiredConsents != null) {
+			const purposes: EventConsentLocation[][] = [];
+			for (const id of pipeline.requiredConsents.purposes) {
+				const purpose = consentPurposes.find((p) => p.id === id);
+				if (purpose != null && purpose.eventConsentLocations.length > 0) {
+					purposes.push(purpose.eventConsentLocations);
+				}
+			}
+			if (purposes.length > 0) {
+				consents = { operator: pipeline.requiredConsents.operator, purposes: purposes };
+			}
 		}
 		return consents;
-	}, [pipeline.requiredConsents]);
+	}, [isEventBasedUserImport, pipeline.requiredConsents, consentPurposes]);
 
 	const { startListening, stopListening } = useEventListener(
 		(newly: EventListenerEvent[]) => {
@@ -1405,7 +1440,7 @@ const FullscreenTransformation = ({
 
 	useEffect(() => {
 		setEvents([]);
-	}, [pipeline.filter, pipeline.requiredConsents]);
+	}, [pipeline.filter, JSON.stringify(normalizedConsents)]);
 
 	useEffect(() => {
 		setShowOnlyInSelected(false);
@@ -3297,7 +3332,7 @@ const TransformationProperty = ({
 	isOutMatchingProperty,
 }: TransformationPropertyProps) => {
 	const { workspaces, selectedWorkspace } = useContext(AppContext);
-	const { isImport, pipelineType, pipeline } = useContext(PipelineContext);
+	const { isImport, pipelineType, pipeline, consentPropertyPaths } = useContext(PipelineContext);
 
 	let path = property.name;
 	if (parentName) {
@@ -3372,10 +3407,16 @@ const TransformationProperty = ({
 		return null;
 	}
 
-	const { isRequired, isSelected } =
+	let { isRequired, isSelected } =
 		transformationType === 'function'
 			? checkFunctionPath(path, pipeline, pipelineType, side, selectedPaths)
 			: checkMapping(path, pipeline, pipelineType);
+
+	// The output properties holding a required consent must be transformed.
+	const consentPurposes = side === 'output' ? consentPropertyPaths.get(path) : undefined;
+	if (consentPurposes != null) {
+		isRequired = true;
+	}
 
 	const krenalisTypeName = toKrenalisStringType(property.type, property.nullable);
 	let languageTypeName: string | null = null;
@@ -3463,11 +3504,17 @@ const TransformationProperty = ({
 										</span>
 										{side === 'input' && property.readOptional && <span>- optional</span>}
 										{isRequired && (
-											<span
-												className={`fullscreen-transformation__property-required${isSelected ? ' fullscreen-transformation__property-required--selected' : ''}`}
+											<SlTooltip
+												content={`Holds the consent for ${consentPurposes?.map((p) => `"${p.name}"`).join(', ')}`}
+												disabled={consentPurposes == null}
+												hoist={true}
 											>
-												required
-											</span>
+												<span
+													className={`fullscreen-transformation__property-required${isSelected ? ' fullscreen-transformation__property-required--selected' : ''}`}
+												>
+													required
+												</span>
+											</SlTooltip>
 										)}
 									</span>
 									{transformationType === 'function' && isOutMatchingProperty && !isFlagged && (

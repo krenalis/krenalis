@@ -42,11 +42,11 @@ const Settings = () => {
 						action={<SlIcon name='chevron-right' />}
 					/>
 				</Link>
-				<Link path='settings/privacy'>
+				<Link path='settings/consent-management'>
 					<ListTile
 						className='settings__setting'
 						icon={<SlIcon name='shield-check' />}
-						name={'Privacy'}
+						name={'Consent management'}
 						description='Manage purposes to comply with user consent'
 						showHover={true}
 						action={<SlIcon name='chevron-right' />}

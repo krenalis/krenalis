@@ -166,20 +166,16 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		}
 	}
 	// Validate the required consents.
-	requiredConsentsAllowed := dispatchEventsToAplications || importEventsIntoWarehouse || importUserIdentitiesFromEvents
 	if len(pipeline.RequiredConsents.Purposes) > 0 {
-		if !requiredConsentsAllowed {
-			return errors.BadRequest("required consents are not allowed")
-		}
 		if len(pipeline.RequiredConsents.Purposes) > MaxRequiredConsentPurposes {
 			return errors.BadRequest("required consent purposes must be at most %d", MaxRequiredConsentPurposes)
 		}
-		for i, code := range pipeline.RequiredConsents.Purposes {
-			if err := validateConsentPurposeCode(code); err != nil {
-				return errors.BadRequest("%s", err)
+		for i, id := range pipeline.RequiredConsents.Purposes {
+			if !IsValidID(id) {
+				return errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
 			}
-			if slices.Contains(pipeline.RequiredConsents.Purposes[i+1:], code) {
-				return errors.BadRequest("required consent purpose %q is duplicated", code)
+			if slices.Contains(pipeline.RequiredConsents.Purposes[i+1:], id) {
+				return errors.BadRequest("required consent purpose %s is duplicated", id)
 			}
 		}
 		if op := pipeline.RequiredConsents.Operator; op != PurposesAnd && op != PurposesOr {

@@ -4,14 +4,23 @@
 
 package consents
 
-// Satisfies reports whether the given attributes satisfy the consent purposes
-// with the given codes. If matchAll is true, the attributes must satisfy every
-// purpose; otherwise, satisfying at least one is enough.
-func Satisfies(codes []string, matchAll bool, attributes map[string]any) bool {
-	if len(codes) == 0 {
+import (
+	"strings"
+
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/json"
+)
+
+// SatisfiesEvent reports whether the given event satisfies the required
+// consent purposes. Each purpose should have at least one event consent
+// location, and each location's purpose code should be non-empty.
+func SatisfiesEvent(op state.ConsentPurposesOperator, purposes []*state.ConsentPurpose, event map[string]any) bool {
+
+	if len(purposes) == 0 {
 		return true
 	}
-	context, ok := attributes["context"].(map[string]any)
+
+	context, ok := event["context"].(map[string]any)
 	if !ok {
 		return false
 	}
@@ -19,15 +28,81 @@ func Satisfies(codes []string, matchAll bool, attributes map[string]any) bool {
 	if !ok {
 		return false
 	}
-	for _, code := range codes {
-		granted, _ := consents[code].(bool)
-		if granted {
-			if !matchAll {
-				return true
+
+	for _, purpose := range purposes {
+		var granted bool
+		// Only missing locations are skipped; the first location found determines the consent.
+		for _, loc := range purpose.EventConsentLocations {
+			value, exists := consents[loc.PurposeCode]
+			if !exists {
+				continue
 			}
-		} else if matchAll {
-			return false
+			switch value := value.(type) {
+			case bool:
+				granted = value
+			case json.Value:
+				granted = value.Bool()
+			}
+			break
+		}
+		if op == state.PurposesAnd {
+			if !granted {
+				return false
+			}
+		} else if op == state.PurposesOr && granted {
+			return true
 		}
 	}
-	return matchAll
+
+	return op == state.PurposesAnd
+}
+
+// SatisfiesProfile reports whether the given profile attributes satisfy the
+// required consent purposes. Each purpose must have a profile consent location.
+func SatisfiesProfile(op state.ConsentPurposesOperator, purposes []*state.ConsentPurpose, attributes map[string]any) bool {
+
+	if len(purposes) == 0 {
+		return true
+	}
+
+	for _, purpose := range purposes {
+		var granted bool
+		loc := purpose.ProfileConsentLocation
+		var value any
+		var found bool
+		path := loc.Property
+		current := attributes
+		// Traverse nested maps only; JSON values require an explicit key.
+		for {
+			name, rest, hasMore := strings.Cut(path, ".")
+			value, found = current[name]
+			if !found || !hasMore {
+				break
+			}
+			next, ok := value.(map[string]any)
+			if !ok {
+				found = false
+				break
+			}
+			current = next
+			path = rest
+		}
+		if found {
+			if loc.JSONKey == "" {
+				granted, _ = value.(bool)
+			} else if object, ok := value.(json.Value); ok && object.IsObject() {
+				v, exists := object.Get([]string{loc.JSONKey})
+				granted = exists && v.Bool()
+			}
+		}
+		if op == state.PurposesAnd {
+			if !granted {
+				return false
+			}
+		} else if op == state.PurposesOr && granted {
+			return true
+		}
+	}
+
+	return op == state.PurposesAnd
 }

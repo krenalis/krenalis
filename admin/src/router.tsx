@@ -24,7 +24,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import DataWarehouse from './components/routes/DataWarehouse/DataWarehouse';
 import GeneralSettings from './components/routes/GeneralSettings/GeneralSettings';
 import Settings from './components/routes/Settings/Settings';
-import Privacy from './components/routes/Privacy/Privacy';
+import ConsentManagement from './components/routes/ConsentManagement/ConsentManagement';
 import Members from './components/routes/Members/Members';
 import Member from './components/routes/Member/Member';
 import Organization from './components/routes/Organization/Organization';
@@ -110,8 +110,8 @@ const router = createBrowserRouter([
 								element: <DataWarehouse />,
 							},
 							{
-								path: 'privacy',
-								element: <Privacy />,
+								path: 'consent-management',
+								element: <ConsentManagement />,
 							},
 						],
 					},

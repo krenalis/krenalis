@@ -133,6 +133,23 @@ func (k *Krenalis) ConnectionUI(connection string) map[string]any {
 	return ui
 }
 
+// ConsentPurpose returns the consent purpose with the given ID, failing the
+// test if it cannot be read or does not exist.
+func (k *Krenalis) ConsentPurpose(id string) core.ConsentPurpose {
+	k.t.Helper()
+	var response struct {
+		Purposes []core.ConsentPurpose `json:"purposes"`
+	}
+	must(k.t, k.tryCall("GET", "/v1/consent-purposes", nil, nil, &response, true))
+	for _, purpose := range response.Purposes {
+		if purpose.ID == id {
+			return purpose
+		}
+	}
+	k.t.Fatalf("expected a purpose with ID %q, got no matching purpose", id)
+	return core.ConsentPurpose{}
+}
+
 // CreateConnection creates a connection and returns its ID.
 func (k *Krenalis) CreateConnection(connection ConnectionToCreate) string {
 	id, err := k.TryCreateConnection(connection)
@@ -991,7 +1008,7 @@ func (k *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...string) {
 				if run.Error != "" {
 					k.t.Fatalf("error running pipeline %s for run %s: %s", run.Pipeline, run.ID, run.Error)
 				}
-				if !allowFailed && run.Failed != [7]int{} {
+				if !allowFailed && run.Failed != [9]int{} {
 					k.t.Fatalf("error running pipeline %s for run %s: %d failed", run.Pipeline, run.ID, run.Failed)
 				}
 				return
@@ -1012,7 +1029,7 @@ func (k *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...string) {
 			if run.Error != "" {
 				k.t.Fatalf("error running pipeline %s for run %s: %s", run.Pipeline, run.ID, run.Error)
 			}
-			if !allowFailed && run.Failed != [7]int{} {
+			if !allowFailed && run.Failed != [9]int{} {
 				k.t.Fatalf("error running pipeline %s for run %s: %d failed", run.Pipeline, run.ID, run.Failed)
 			}
 		}
