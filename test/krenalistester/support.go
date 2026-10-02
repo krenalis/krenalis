@@ -781,6 +781,12 @@ func (k *Krenalis) TrySetOrganizationStatus(id string, enabled bool, headers htt
 	return k.TryCall("PUT", fmt.Sprintf("/v1/organizations/%s/status", id), headers, body, nil)
 }
 
+// TrySetOrganizationStatusWithBody is like TrySetOrganizationStatus but sends
+// the given request body with the Platform Management API key.
+func (k *Krenalis) TrySetOrganizationStatusWithBody(id string, body any) error {
+	return k.TryCall("PUT", fmt.Sprintf("/v1/organizations/%s/status", id), organizationsHeaders(), body, nil)
+}
+
 // SettingsProperties encodes the given "JSON" format properties as connection
 // settings.
 func SettingsProperties(properties map[string]bool) json.Value {

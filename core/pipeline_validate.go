@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/core/internal/connections"
@@ -263,12 +264,12 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 				return errors.BadRequest("placeholders syntax is not supported by source pipelines")
 			}
 		case state.Destination:
-			_, err := connections.ReplacePlaceholders(pipeline.Path, func(name string) (string, bool) {
-				name = strings.ToLower(name)
-				return "", name == "today" || name == "now" || name == "unix"
-			})
+			path, err := connections.ReplacePlaceholders(pipeline.Path, newPathPlaceholderReplacer(time.Now().UTC()))
 			if err != nil {
 				return errors.BadRequest("path is not valid: %s", err)
+			}
+			if utf8.RuneCountInString(path) > MaxFilePathSize {
+				return errors.BadRequest("path is longer than %d runes after placeholder replacement", MaxFilePathSize)
 			}
 		}
 	}

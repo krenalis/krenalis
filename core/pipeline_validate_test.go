@@ -951,6 +951,28 @@ func Test_validatePipeline(t *testing.T) {
 			formatHasSheets:         false,
 		},
 		{
+			name: "GOOD: Destination/FileStorage/User - path at maximum length after placeholder replacement",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
+					{Name: "last_name", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Type{},
+				Format:    "csv",
+				Path:      strings.Repeat("a", MaxFilePathSize-len("2006-01-02-15-04-05")) + "${now}",
+				OrderBy:   "email",
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.FileStorage,
+			formatType:              state.File,
+			formatTargets:           state.UsersFlag,
+			formatHasSettings:       false,
+			formatHasSheets:         false,
+		},
+		{
 			name: "GOOD: Destination/FileStorage/User - with filter",
 			pipeline: PipelineToSet{
 				Name: "Export users",
@@ -1583,6 +1605,29 @@ func Test_validatePipeline(t *testing.T) {
 			formatHasSettings:       false,
 			formatHasSheets:         false,
 			err:                     "path is longer than 1024 runes",
+		},
+		{
+			name: "BAD: Destination/FileStorage/User - path too long after placeholder replacement",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
+					{Name: "last_name", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Type{},
+				Format:    "csv",
+				Path:      strings.Repeat("a", MaxFilePathSize+1-len("2006-01-02-15-04-05")) + "${now}",
+				OrderBy:   "email",
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.FileStorage,
+			formatType:              state.File,
+			formatTargets:           state.UsersFlag,
+			formatHasSettings:       false,
+			formatHasSheets:         false,
+			err:                     fmt.Sprintf("path is longer than %d runes after placeholder replacement", MaxFilePathSize),
 		},
 
 		{

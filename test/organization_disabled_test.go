@@ -58,6 +58,25 @@ func TestOrganizationDisabled(t *testing.T) {
 		}
 	})
 
+	// Test that the call to the method that sets the state of an organization
+	// fails if the "enabled" field is missing or null.
+	t.Run("set status without enabled is rejected", func(t *testing.T) {
+		for _, body := range []map[string]any{{}, {"enabled": nil}} {
+			err := k.TrySetOrganizationStatusWithBody(orgID, body)
+			if err != nil {
+				statusErr, ok := err.(*krenalistester.StatusCodeError)
+				if !ok {
+					t.Fatalf("expected *StatusCodeError, got %T: %v", err, err)
+				}
+				if statusErr.Response.Code != http.StatusBadRequest {
+					t.Fatalf("expected HTTP status %d, got %d: %s", http.StatusBadRequest, statusErr.Response.Code, statusErr.Response.Text)
+				}
+				continue
+			}
+			t.Fatalf("expected an error for body %v, got nil", body)
+		}
+	})
+
 	// Configure identity resolution, set up (and then run) a simple pipeline
 	// that imports users from a Dummy source, while the organization is
 	// enabled.

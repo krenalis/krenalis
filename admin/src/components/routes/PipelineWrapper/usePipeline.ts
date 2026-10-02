@@ -300,7 +300,8 @@ const usePipeline = (
 						if (
 							err instanceof UnavailableError ||
 							(err instanceof UnprocessableError &&
-								(err.code === 'NoColumnsFound' ||
+								(err.code === 'InvalidPath' ||
+									err.code === 'NoColumnsFound' ||
 									err.code === 'SheetNotExist' ||
 									err.code === 'UnsupportedColumnType'))
 						) {
