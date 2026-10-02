@@ -288,7 +288,7 @@ func validateEventConsentLocations(locations []EventConsentLocation) error {
 	}
 	seenPurposeCodes := map[string]bool{}
 	for _, loc := range locations {
-		if err := util.ValidateStringField("purposeCode", loc.PurposeCode, maxConsentLocationStringLen); err != nil {
+		if err := util.ValidateStringField("purpose code", loc.PurposeCode, maxConsentLocationStringLen); err != nil {
 			return err
 		}
 		if seenPurposeCodes[loc.PurposeCode] {
