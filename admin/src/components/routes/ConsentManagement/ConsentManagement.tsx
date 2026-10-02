@@ -9,7 +9,7 @@ import { UnprocessableError } from '../../../lib/api/errors';
 import Grid from '../../base/Grid/Grid';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
+import SlDialog, { SlAfterHideEvent } from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
@@ -537,7 +537,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 
 	// The tooltips of the path actions bubble their own sl-after-hide up to the
 	// dialog, which would close it. Only the event of the dialog itself closes it.
-	const onSlAfterHide = (e) => {
+	const onSlAfterHide = (e: SlAfterHideEvent) => {
 		if (e.target !== e.currentTarget) {
 			e.stopPropagation();
 			return;
