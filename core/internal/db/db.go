@@ -148,15 +148,11 @@ func Open(opts *Options) (*DB, error) {
 	return &DB{db: conn}, nil
 }
 
-// Begin begins a new transaction with the READ COMMITTED isolation level.
+// Begin calls [DB.BeginTx] with TxOptions{Isolation: LevelReadCommitted}.
 // The provided context only affects the Begin method and does not propagate
 // to the entire transaction, unlike the behavior in the standard sql package.
 func (db *DB) Begin(ctx context.Context) (*Tx, error) {
-	tx, err := db.db.BeginTx(ctx, pgx.TxOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return &Tx{tx, false, nil}, nil
+	return db.BeginTx(ctx, TxOptions{Isolation: LevelReadCommitted})
 }
 
 // BeginTx begins a new transaction with the specified options.
@@ -336,7 +332,7 @@ func (db *DB) QueryScan(ctx context.Context, query string, args ...any) error {
 // returned.
 // If f panics, the transaction is rolled back and the panic is propagated.
 func (db *DB) Transaction(ctx context.Context, f func(tx *Tx) error) error {
-	pqTx, err := db.db.Begin(ctx)
+	pqTx, err := db.db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
 		return err
 	}
