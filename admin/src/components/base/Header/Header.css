@@ -218,6 +218,12 @@
 	background-color: var(--sl-color-primary-50);
 }
 
+.header__version {
+	padding: 5px 12px;
+	font-size: 12px;
+	color: var(--sl-color-neutral-500);
+}
+
 .status-dot {
 	display: none;
 }

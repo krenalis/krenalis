@@ -145,6 +145,8 @@ interface AccountDropdownProps extends DropdownProps {
 
 const AccountDropdown = forwardRef<any, AccountDropdownProps>(
 	({ account, closeMenu, onLogout, isPasswordless }: AccountDropdownProps, ref) => {
+		const { publicMetadata } = useContext(appContext);
+
 		const imageSrc = account.isWorkOS
 			? account.avatarImage
 			: account.avatarImage
@@ -229,6 +231,8 @@ const AccountDropdown = forwardRef<any, AccountDropdownProps>(
 								</div>
 							</>
 						)}
+						<SlDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
+						<div className='header__version'>Krenalis {publicMetadata.version}</div>
 					</div>
 				</SlMenu>
 			</SlDropdown>
