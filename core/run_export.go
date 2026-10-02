@@ -182,7 +182,7 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	profiles := make([]Profile, 0, 100)
 	transformationRecords := make([]transformers.Record, 0, 100)
 
-	var readCount int // Number of records read from the warehouse and queued for the export so far.
+	var readCount int // Total number of records successfully read from the warehouse so far.
 
 	if connector.Type == state.FileStorage {
 		defer func() {
@@ -195,8 +195,6 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 Records:
 	for record := range records.All(ctx) {
 
-		var profile Profile
-
 		if record.Err != nil {
 			this.core.metrics.Pipelines.ReceiveFailed(pipeline.ID, 1, record.Err.Error())
 			if connector.Type == state.FileStorage {
@@ -205,11 +203,14 @@ Records:
 			goto Next
 		}
 
+		readCount++
 		this.core.metrics.Pipelines.ReceivePassed(pipeline.ID, 1)
 
-		profile = Profile{Record: record}
-
-		if connector.Type == state.Application {
+		switch connector.Type {
+		default:
+			profiles = append(profiles, Profile{Record: record})
+		case state.Application:
+			profile := Profile{Record: record}
 			// Update: use ExternalID as the profile ID.
 			if isUpdate := record.ExternalID != ""; isUpdate {
 				profile.ID = record.ExternalID
@@ -223,12 +224,10 @@ Records:
 					goto Next
 				}
 			}
+			profiles = append(profiles, profile)
 		}
 
 		this.core.metrics.Pipelines.InputValidationPassed(pipeline.ID, 1)
-
-		readCount++
-		profiles = append(profiles, profile)
 
 	Next:
 
