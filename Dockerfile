@@ -34,7 +34,7 @@ RUN --mount=type=cache,target="/root/.cache/go-build" go generate
 # read from the build information, which is "(devel)" without the ".git" files.
 ARG KRENALIS_VERSION
 RUN --mount=type=cache,target="/root/.cache/go-build" GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -tags osusergo,netgo -trimpath \
-    -ldflags "-X github.com/krenalis/krenalis/cmd.version=${KRENALIS_VERSION}"
+    -ldflags "-X github.com/krenalis/krenalis/cmd.buildVersion=${KRENALIS_VERSION}"
 
 # Stage 1: Krenalis Execution Stage.
 

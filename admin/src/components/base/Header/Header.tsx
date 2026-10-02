@@ -232,7 +232,7 @@ const AccountDropdown = forwardRef<any, AccountDropdownProps>(
 							</>
 						)}
 						<SlDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
-						<div className='header__version'>Krenalis {publicMetadata.version}</div>
+						<div className='header__account-menu-version'>Krenalis {publicMetadata.version}</div>
 					</div>
 				</SlMenu>
 			</SlDropdown>

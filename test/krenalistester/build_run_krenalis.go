@@ -70,7 +70,7 @@ func buildKrenalis(t *testing.T, repo, krenalisDir string) {
 
 	// Build Krenalis, putting the output into the krenalisDir, where it will be
 	// executed by the tests.
-	execCmd(t, tmpdir, "go", "build", "-ldflags", "-X github.com/krenalis/krenalis/cmd.version="+KrenalisVersion,
+	execCmd(t, tmpdir, "go", "build", "-ldflags", "-X github.com/krenalis/krenalis/cmd.buildVersion="+KrenalisVersion,
 		"-o", filepath.Join(krenalisDir, krenalisExecFilename()))
 
 }
