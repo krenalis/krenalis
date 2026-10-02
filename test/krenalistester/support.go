@@ -919,6 +919,13 @@ func (k *Krenalis) UpdateWarehouse(mode string, settings json.Value) {
 	k.Call("PUT", "/v1/warehouse", nil, body, nil)
 }
 
+// Version returns the Krenalis version from the public metadata.
+func (k *Krenalis) Version() string {
+	var metadata map[string]any
+	k.Call("GET", "/v1/public/metadata", nil, nil, &metadata)
+	return metadata["version"].(string)
+}
+
 // WaitConnectionIdentitiesStoredIntoWarehouse waits until the expected number
 // of the connection's identities are stored into the warehouse.
 func (k *Krenalis) WaitConnectionIdentitiesStoredIntoWarehouse(ctx context.Context, connection string, expected int) {
