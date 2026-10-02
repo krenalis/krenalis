@@ -26,7 +26,7 @@ Additional information,,,,,,,,,,
 ,Identity and Update Time Properties (and Format),No,Required,Required,No,No,No,No,No,No
 ,Additional Required Information,-,Query,-,-,-,"Export mode, matching properties, settings about duplicated users",-,Table name and table key,Order by property path
 ,File Connector,No,No,"Yes, with Path, Sheet and settings",No,No,No,No,No,"Yes, with Path, Sheet and settings"
-,Required Consents,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes
+,Required Consents,Yes (profile location),Yes (profile location),Yes (profile location),Yes (profile location),Yes (event location),Yes (profile location),Yes (event location),Yes (profile location),Yes (profile location)
 Pipeline,,,,,,,,,,
 ,Pipelines steps,"No EventConsent, ExportProfileConsent","No Filter, EventConsent, ExportProfileConsent","No EventConsent, ExportProfileConsent","No Input validation, EventConsent, ExportProfileConsent","No Input validation, Transformation, Output validation, ExportProfileConsent, ImportProfileConsent","No Filter, EventConsent, ExportProfileConsent, ImportProfileConsent","No Input validation, ExportProfileConsent, ImportProfileConsent","No Filter, EventConsent, ExportProfileConsent, ImportProfileConsent","No Filter, Transformation, Output validation, EventConsent, ExportProfileConsent, ImportProfileConsent"
 Scheduler,,,,,,,,,,
@@ -39,6 +39,7 @@ Additional information,,,,,,,,,,
 ,Identity and Update Time Properties (and Format),No,Required,Required,No,No,No,No,No,No
 ,Additional Required Information,-,Query,-,-,-,"Export mode, matching properties, settings about duplicated users",-,Table name and table key,Order by property path
 ,File Connector,No,No,"Yes, with Path, Sheet and settings",No,No,No,No,No,"Yes, with Path, Sheet and settings"
+,Required Consents,Yes (profile location),Yes (profile location),Yes (profile location),Yes (profile location),Yes (event location),Yes (profile location),Yes (event location),Yes (profile location),Yes (profile location)
 Pipeline,,,,,,,,,,
 ,Pipelines steps,"No EventConsent, ExportProfileConsent","No Filter, EventConsent, ExportProfileConsent","No EventConsent, ExportProfileConsent","No Input validation, EventConsent, ExportProfileConsent","No Input validation, Transformation, Output validation, ExportProfileConsent, ImportProfileConsent","No Filter, EventConsent, ExportProfileConsent, ImportProfileConsent","No Input validation, ExportProfileConsent, ImportProfileConsent","No Filter, EventConsent, ExportProfileConsent, ImportProfileConsent","No Filter, Transformation, Output validation, EventConsent, ExportProfileConsent, ImportProfileConsent"
 Scheduler,,,,,,,,,,
