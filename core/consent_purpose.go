@@ -51,12 +51,13 @@ type ProfileConsentLocation struct {
 	JSONKey  string `json:"jsonKey,omitempty"`
 }
 
-// AddConsentPurpose adds a consent purpose with the values of purpose.
-func (this *Workspace) AddConsentPurpose(ctx context.Context, purpose ConsentPurposeToSet) error {
+// AddConsentPurpose adds a consent purpose with the values of purpose returning
+// the identifier of the added consent purpose.
+func (this *Workspace) AddConsentPurpose(ctx context.Context, purpose ConsentPurposeToSet) (string, error) {
 	this.core.mustBeOpen()
 	err := validateConsentPurposeToSet(purpose)
 	if err != nil {
-		return errors.BadRequest("%s", err)
+		return "", errors.BadRequest("%s", err)
 	}
 	n := state.AddConsentPurpose{
 		Workspace: this.workspace.ID,
@@ -90,7 +91,10 @@ func (this *Workspace) AddConsentPurpose(ctx context.Context, purpose ConsentPur
 		}
 		return n, nil
 	})
-	return err
+	if err != nil {
+		return "", err
+	}
+	return n.ID, nil
 }
 
 // ConsentPurposes returns the consent purposes of the workspace, ordered by

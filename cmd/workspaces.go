@@ -36,8 +36,11 @@ func (workspace workspace) AddConsentPurpose(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.AddConsentPurpose(r.Context(), purpose)
-	return nil, err
+	id, err := ws.AddConsentPurpose(r.Context(), purpose)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]string{"id": id}, nil
 }
 
 // AlterProfileSchema alters the profile schema of a workspace.

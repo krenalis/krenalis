@@ -100,12 +100,15 @@ func TestConsentPurposeLocationsCanonicalization(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 
 			body := json.Value(`{"name":"Marketing"` + test.locations + `}`)
-			k.Call("POST", "v1/consent-purposes", nil, body, nil)
-			got := getOnlyConsentPurpose(t, k)
-			if got.ID == "" {
-				t.Fatalf("expected a purpose ID, got %q", got.ID)
+			var response struct {
+				ID string `json:"id"`
 			}
-			id := got.ID
+			k.Call("POST", "v1/consent-purposes", nil, body, &response)
+			id := response.ID
+			if id == "" {
+				t.Fatalf("expected a purpose ID, got %q", id)
+			}
+			got := k.ConsentPurpose(id)
 
 			want := core.ConsentPurpose{
 				ID:                     id,
@@ -118,7 +121,7 @@ func TestConsentPurposeLocationsCanonicalization(t *testing.T) {
 			}
 
 			k.Call("PUT", "v1/consent-purposes/"+id, nil, body, nil)
-			got = getOnlyConsentPurpose(t, k)
+			got = k.ConsentPurpose(id)
 			if !reflect.DeepEqual(got, want) {
 				t.Fatalf("expected purpose after unchanged update %v, got %v", want, got)
 			}
@@ -150,13 +153,17 @@ func TestConsentPurposeLocationsReplacement(t *testing.T) {
 			JSONKey:  "initial.key",
 		},
 	}
-	k.Call("POST", "v1/consent-purposes", nil, initial, nil)
-	initialGot := getOnlyConsentPurpose(t, k)
-	if initialGot.ID == "" {
-		t.Fatalf("expected a purpose ID, got %q", initialGot.ID)
+	var response struct {
+		ID string `json:"id"`
 	}
+	k.Call("POST", "v1/consent-purposes", nil, initial, &response)
+	id := response.ID
+	if id == "" {
+		t.Fatalf("expected a purpose ID, got %q", id)
+	}
+	initialGot := k.ConsentPurpose(id)
 	initialWant := core.ConsentPurpose{
-		ID:                     initialGot.ID,
+		ID:                     id,
 		Name:                   initial.Name,
 		EventConsentLocations:  initial.EventConsentLocations,
 		ProfileConsentLocation: initial.ProfileConsentLocation,
@@ -164,7 +171,6 @@ func TestConsentPurposeLocationsReplacement(t *testing.T) {
 	if !reflect.DeepEqual(initialGot, initialWant) {
 		t.Fatalf("expected initial purpose %v, got %v", initialWant, initialGot)
 	}
-	id := initialGot.ID
 
 	update := core.ConsentPurposeToSet{
 		Name: "Marketing",
@@ -184,7 +190,7 @@ func TestConsentPurposeLocationsReplacement(t *testing.T) {
 		EventConsentLocations:  update.EventConsentLocations,
 		ProfileConsentLocation: update.ProfileConsentLocation,
 	}
-	got := getOnlyConsentPurpose(t, k)
+	got := k.ConsentPurpose(id)
 	if !reflect.DeepEqual(got, updated) {
 		t.Fatalf("expected purpose after replacement %v, got %v", updated, got)
 	}
@@ -195,7 +201,7 @@ func TestConsentPurposeLocationsReplacement(t *testing.T) {
 		Name:                  "Marketing",
 		EventConsentLocations: []core.EventConsentLocation{},
 	}
-	got = getOnlyConsentPurpose(t, k)
+	got = k.ConsentPurpose(id)
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("expected purpose after clearing locations %v, got %v", want, got)
 	}
@@ -220,11 +226,14 @@ func TestPipelineRequiredConsentPurposeLocations(t *testing.T) {
 	eventLocations := []any{map[string]any{"purposeCode": "marketing"}}
 	profileLocation := map[string]any{"property": "marketing"}
 
+	var response struct {
+		ID string `json:"id"`
+	}
 	k.Call("POST", "v1/consent-purposes", nil, map[string]any{
 		"name":                  "Marketing",
 		"eventConsentLocations": eventLocations,
-	}, nil)
-	purposeID := getOnlyConsentPurpose(t, k).ID
+	}, &response)
+	purposeID := response.ID
 	requiredConsents := &krenalistester.RequiredConsents{Operator: "and", Purposes: []string{purposeID}}
 
 	// An event pipeline can require a purpose with an event consent location.
@@ -290,17 +299,4 @@ func TestPipelineRequiredConsentPurposeLocations(t *testing.T) {
 	err = k.TryUpdatePipeline(userPipelineID, userPipeline)
 	expectAPIError(t, err, http.StatusUnprocessableEntity, string(core.ConsentPurposeLocationNotSet))
 
-}
-
-func getOnlyConsentPurpose(t *testing.T, k *krenalistester.Krenalis) core.ConsentPurpose {
-	t.Helper()
-
-	var response struct {
-		Purposes []core.ConsentPurpose `json:"purposes"`
-	}
-	k.Call("GET", "v1/consent-purposes", nil, nil, &response)
-	if len(response.Purposes) != 1 {
-		t.Fatalf("expected one purpose, got %v", response.Purposes)
-	}
-	return response.Purposes[0]
 }
