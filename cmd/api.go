@@ -350,7 +350,7 @@ type publicMetadata struct {
 //   - telemetryLevel: telemetry level - none, errors, stats, or all
 //   - workosClientID: WorkOS client ID, it's an empty string when WorkOS authentication is not configured
 //   - workosDevMode: when true, WorkOS AuthKit stores the refresh token in LocalStorage instead of using a cookie
-//   - version: Krenalis version - v0.43.0
+//   - version: Krenalis version - v1.2.3
 //
 // Authentication is not required to call PublicMetadata.
 func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, error) {
