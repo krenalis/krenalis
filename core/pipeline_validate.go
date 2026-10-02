@@ -78,9 +78,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(v.connection.connector.typ, v.connection.role, v.target)
 	dispatchEventsToAplications := isDispatchingEventsToApplications(v.connection.connector.typ, v.connection.role, v.target)
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(v.connection.connector.typ, v.connection.role, v.target)
-	importUsersIntoWarehouse := isImportingUsersIntoWarehouse(v.connection.connector.typ, v.connection.role, v.target)
 	exportUsersToFile := isExportUsersToFile(v.connection.connector.typ, v.connection.role, v.target)
-	exportProfiles := isExportingProfiles(v.connection.connector.typ, v.connection.role, v.target)
 
 	allowConstantTransformation := importUserIdentitiesFromEvents || dispatchEventsToAplications
 
@@ -167,12 +165,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		}
 	}
 	// Validate the required consents.
-	requiredConsentsAllowed := dispatchEventsToAplications || importEventsIntoWarehouse ||
-		importUserIdentitiesFromEvents || importUsersIntoWarehouse || exportProfiles
 	if len(pipeline.RequiredConsents.Purposes) > 0 {
-		if !requiredConsentsAllowed {
-			return errors.BadRequest("required consents are not allowed")
-		}
 		if len(pipeline.RequiredConsents.Purposes) > MaxRequiredConsentPurposes {
 			return errors.BadRequest("required consent purposes must be at most %d", MaxRequiredConsentPurposes)
 		}
