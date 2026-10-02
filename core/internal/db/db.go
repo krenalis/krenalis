@@ -45,8 +45,7 @@ func (err TxCommitRollbackError) Error() string {
 type IsolationLevel int
 
 const (
-	LevelDefault IsolationLevel = iota
-	LevelReadUncommitted
+	LevelReadUncommitted IsolationLevel = iota + 1
 	LevelReadCommitted
 	LevelRepeatableRead
 	LevelSerializable
@@ -166,7 +165,6 @@ func (db *DB) Begin(ctx context.Context) (*Tx, error) {
 func (db *DB) BeginTx(ctx context.Context, opts TxOptions) (*Tx, error) {
 	var pgxOpts pgx.TxOptions
 	switch opts.Isolation {
-	case LevelDefault:
 	case LevelReadUncommitted:
 		pgxOpts.IsoLevel = pgx.ReadUncommitted
 	case LevelReadCommitted:
