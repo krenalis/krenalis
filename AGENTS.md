@@ -92,7 +92,7 @@ if err := f(); err != nil {
 }
 ```
 
-Calls to `(*sql.Row).Scan` and `(*sql.Rows).Scan` are an exception. Place them in the initializer of the error check to follow the Go convention for scanning SQL results.
+Calls to `(*sql.Rows).Scan` are an exception. Place them in the initializer of the error check to follow the Go convention for scanning SQL results. Calls to `(*sql.Row).Scan` follow the general rule.
 
 Perform any classification of the returned error, including `errors.Is` checks for sentinel errors and `errors.AsType` checks for typed errors, inside that non-nil branch rather than using classification as a substitute for the `err != nil` check. In tests that expect a particular error, enter the `err != nil` branch, verify the error there, and fail after the branch when the call returned nil.
 
