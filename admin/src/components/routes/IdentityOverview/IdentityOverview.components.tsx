@@ -79,7 +79,7 @@ interface DashboardCardProps {
 
 const DashboardCard = ({ title, temporalLabel, info, headerAction, className, children }: DashboardCardProps) => {
 	return (
-		<div className={`identity-overview__card${className ? ` ${className}` : ''}`}>
+		<div className={`identity-overview__card${className != null && className !== '' ? ` ${className}` : ''}`}>
 			{title && (
 				<div className='identity-overview__card-heading'>
 					<h3>{title}</h3>

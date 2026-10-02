@@ -6,6 +6,7 @@ package warehouses
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -16,7 +17,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/tools/decimal"
-	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )

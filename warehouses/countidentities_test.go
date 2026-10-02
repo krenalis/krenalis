@@ -22,7 +22,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 const (
@@ -350,7 +349,7 @@ func TestCountIdentities(t *testing.T) {
 						t.Fatal(err)
 					}
 					if diff := cmp.Diff(test.want, counts); diff != "" {
-						t.Errorf("unexpected identity counts (-want +got):\n%s", diff)
+						t.Errorf("expected identity counts %v, got %v (-want +got):\n%s", test.want, counts, diff)
 					}
 				})
 			}
@@ -371,10 +370,7 @@ func newCountIdentitiesWarehouse(t *testing.T, platform string) warehouses.Wareh
 			postgres.WithDatabase("krenalis"),
 			postgres.WithUsername("krenalis"),
 			postgres.WithPassword("krenalis"),
-			testcontainers.WithWaitStrategy(
-				wait.ForLog("database system is ready to accept connections").
-					WithOccurrence(2).
-					WithStartupTimeout(60*time.Second)),
+			postgres.BasicWaitStrategies(),
 		)
 		if err != nil {
 			t.Fatal(err)

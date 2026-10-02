@@ -271,7 +271,7 @@ const buildIdentityConnectionOptions = (
 	const options = new Map<string, string>();
 	for (const connection of connections) {
 		if (connection.role === 'Source') {
-			options.set(connection.id, connection.name || connection.id);
+			options.set(connection.id, connection.name !== '' ? connection.name : connection.id);
 		}
 	}
 	let deletedTotal = 0;

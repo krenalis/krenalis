@@ -10,6 +10,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -21,7 +22,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"

@@ -24,7 +24,6 @@ import (
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // identityDatastoreFake records Store and CountIdentities calls and returns
@@ -251,10 +250,7 @@ func newIdentityMetricsTestDatabase(t *testing.T) *db.DB {
 		postgres.WithDatabase("krenalis"),
 		postgres.WithUsername("krenalis"),
 		postgres.WithPassword("krenalis"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(60*time.Second)),
+		postgres.BasicWaitStrategies(),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -386,7 +382,7 @@ func TestDeletedConnectionMetricsRead(t *testing.T) {
 		t.Fatal(err)
 	}
 	if hasDeletedMetrics {
-		t.Fatal("expected deleted connection metrics to cascade")
+		t.Fatalf("expected deleted connection metrics to cascade, got rows present=%t", hasDeletedMetrics)
 	}
 	if _, err := identities.MetricsPerDate(ctx, workspace,
 		time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC),
@@ -520,7 +516,7 @@ func TestIdentitiesRefresh(t *testing.T) {
 		t.Fatal(err)
 	}
 	if hasMetric {
-		t.Fatal("expected no metric after a warehouse error")
+		t.Fatalf("expected no metric after a warehouse error, got row present=%t", hasMetric)
 	}
 
 	storeCalls, calls, acquisitions := fake.storeCalls, fake.calls, nowCalls
@@ -534,7 +530,8 @@ func TestIdentitiesRefresh(t *testing.T) {
 		t.Fatal("expected ErrWorkspaceNotFound for absent state, got nil")
 	}
 	if fake.storeCalls != storeCalls || fake.calls != calls || nowCalls != acquisitions {
-		t.Fatal("expected absent state to return before accessing the datastore or acquiring a timestamp")
+		t.Fatalf("expected unchanged datastore calls/counts/timestamps, got %d/%d/%d",
+			fake.storeCalls, fake.calls, nowCalls)
 	}
 
 	fake.available = false
@@ -548,7 +545,8 @@ func TestIdentitiesRefresh(t *testing.T) {
 		t.Fatal("expected ErrWorkspaceNotFound for absent datastore, got nil")
 	}
 	if fake.storeCalls != storeCalls+1 || fake.calls != calls || nowCalls != acquisitions {
-		t.Fatal("expected absent datastore to return before counting identities or acquiring a timestamp")
+		t.Fatalf("expected datastore/count/timestamp calls %d/%d/%d, got %d/%d/%d",
+			storeCalls+1, calls, acquisitions, fake.storeCalls, fake.calls, nowCalls)
 	}
 
 }
@@ -655,7 +653,7 @@ func TestIdentityConnectionMetricsPerDate(t *testing.T) {
 		t.Fatal(err)
 	}
 	if neverObserved == nil {
-		t.Fatal("expected an empty identity metric slice")
+		t.Fatal("expected an empty identity metric slice, got nil")
 	}
 	assertIdentityMetricDays(t, neverObserved, start, nil)
 	selection = historicalConnection
@@ -901,7 +899,7 @@ func TestLatestIdentityMetricUsesOneStatementSnapshot(t *testing.T) {
 	select {
 	case read = <-reads:
 	case <-time.After(5 * time.Second):
-		t.Fatal("Latest did not return after releasing the workspace read")
+		t.Fatal("expected Latest to return after releasing the workspace read, got no result")
 	}
 	if read.err != nil {
 		t.Fatal(read.err)
@@ -997,7 +995,7 @@ func TestIdentityMetricsStoreSnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 	if stored {
-		t.Fatal("expected a connection from another workspace to be omitted")
+		t.Fatalf("expected a connection from another workspace to be omitted, got stored=%t", stored)
 	}
 
 	nextDay := newIdentitySnapshot("workspace111", observedAt.Add(24*time.Hour), newerCounts)
