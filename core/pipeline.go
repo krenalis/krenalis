@@ -1562,14 +1562,6 @@ func isDispatchingEventsToApplications(connectorType state.ConnectorType, role s
 	return role == state.Destination && target == state.TargetEvent && connectorType == state.Application
 }
 
-// isExportingProfiles reports whether a connector of the given type, on a
-// connection with the given role, and a pipeline with the given target, is
-// exporting profiles from the warehouse.
-func isExportingProfiles(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
-	return role == state.Destination && target == state.TargetUser && (connectorType == state.Application ||
-		connectorType == state.Database || connectorType == state.FileStorage)
-}
-
 // isExportUsersToFile reports whether a connector of the given type, on a
 // connection with the given role is exporting users into a file.
 func isExportUsersToFile(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
@@ -1588,14 +1580,6 @@ func isImportingEventsIntoWarehouse(connectorType state.ConnectorType, role stat
 // given target, is importing identities from events.
 func isImportingUserIdentitiesFromEvents(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
 	return role == state.Source && target == state.TargetUser && (connectorType == state.SDK || connectorType == state.Webhook)
-}
-
-// isImportingUsersIntoWarehouse reports whether a connector of the given type,
-// on a connection with the given role, and a pipeline with the given target, is
-// importing users into the warehouse, reading them in batch from the source.
-func isImportingUsersIntoWarehouse(connectorType state.ConnectorType, role state.Role, target state.Target) bool {
-	return role == state.Source && target == state.TargetUser && (connectorType == state.Application ||
-		connectorType == state.Database || connectorType == state.FileStorage)
 }
 
 // onlyForMatching returns a schema which contains only the properties of schema
