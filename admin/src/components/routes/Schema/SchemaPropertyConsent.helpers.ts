@@ -17,7 +17,7 @@ const getConsentPurposesByPropertyPath = (
 			continue;
 		}
 		const propertyPath = location.property;
-		const key = location.jsonKey || null;
+		const key = location.jsonKey ?? null;
 		if (flatSchema[propertyPath] == null) {
 			continue;
 		}
