@@ -84,34 +84,6 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, c
 		}
 	}
 
-	var filterRejectedCount, consentRejectedCount int
-	if where != nil {
-		conditions := []warehouses.Expr{nil}
-		if filterWhere != nil {
-			conditions = append(conditions, filterWhere)
-		}
-		if consentWhere != nil {
-			conditions = append(conditions, where)
-		}
-		counts, err := warehouse.Counts(ctx, query.table, conditions)
-		if err != nil {
-			return nil, unavailableError(err)
-		}
-		filtered := counts[0]
-		if filterWhere != nil {
-			filtered = counts[1]
-		}
-		consented := filtered
-		if consentWhere != nil {
-			consented = counts[len(counts)-1]
-		}
-		if filtered > counts[0] || consented > filtered {
-			return nil, unavailableError(errors.New("warehouse returned inconsistent profile counts"))
-		}
-		filterRejectedCount = counts[0] - filtered
-		consentRejectedCount = filtered - consented
-	}
-
 	var joins []warehouses.Join
 	var orderBy []warehouses.Column
 	var orderDesc bool
@@ -196,13 +168,11 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, c
 	}
 
 	records := &Records{
-		FilterRejectedCount:  filterRejectedCount,
-		ConsentRejectedCount: consentRejectedCount,
-		columns:              columns,
-		unflat:               unflat,
-		rows:                 rows,
-		matching:             matching,
-		matchingIndex:        matchingIndex,
+		columns:       columns,
+		unflat:        unflat,
+		rows:          rows,
+		matching:      matching,
+		matchingIndex: matchingIndex,
 	}
 
 	return records, nil
@@ -221,19 +191,16 @@ func andExpressions(expr warehouses.Expr, base *warehouses.BaseExpr) warehouses.
 	return warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{expr, base})
 }
 
-// Records represents records read from the data warehouse. Rejection counts
-// apply before application matching, First, and Limit.
+// Records represents records read from the data warehouse.
 type Records struct {
-	FilterRejectedCount  int // Profiles rejected by the pipeline filter.
-	ConsentRejectedCount int // Filtered profiles rejected by the required consents.
-	columns              []warehouses.Column
-	unflat               unflatRowFunc
-	rows                 warehouses.Rows
-	matching             *Matching
-	matchingIndex        int
-	last                 bool
-	err                  error
-	closed               bool
+	columns       []warehouses.Column
+	unflat        unflatRowFunc
+	rows          warehouses.Rows
+	matching      *Matching
+	matchingIndex int
+	last          bool
+	err           error
+	closed        bool
 }
 
 // All returns an iterator to iterate over the records. After All completes, it

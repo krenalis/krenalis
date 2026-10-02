@@ -19,7 +19,12 @@ import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { FeedbackButtonRef } from '../../base/FeedbackButton/FeedbackButton';
 import { sleep } from '../../../utils/sleep';
 import { Link } from '../../base/Link/Link';
-import { hasExportProfileConsentStep, hasFilters, hasImportProfileConsentStep } from '../../../lib/core/pipeline';
+import {
+	SHOW_EXPORT_PROFILE_CONSENT_METRICS,
+	hasExportProfileConsentStep,
+	hasFilters,
+	hasImportProfileConsentStep,
+} from '../../../lib/core/pipeline';
 import { formatNumber } from '../../../utils/formatNumber';
 import * as Sentry from '@sentry/react';
 import { scrubURL } from '../../../lib/telemetry/scrubURL';
@@ -512,7 +517,7 @@ const useApp = (
 		// imported.
 		let missingConsentItem: ReactNode;
 		let consentStep: number | undefined;
-		if (hasExportProfileConsentStep(connection, pipeline.target)) {
+		if (SHOW_EXPORT_PROFILE_CONSENT_METRICS && hasExportProfileConsentStep(connection, pipeline.target)) {
 			consentStep = EXPORT_PROFILE_CONSENT_STEP;
 		} else if (hasImportProfileConsentStep(connection, pipeline.target)) {
 			consentStep = IMPORT_PROFILE_CONSENT_STEP;

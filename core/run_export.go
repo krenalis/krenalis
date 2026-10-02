@@ -112,8 +112,6 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 		return err
 	}
 	defer records.Close()
-	this.core.metrics.Pipelines.FilterFailed(pipeline.ID, records.FilterRejectedCount)
-	this.core.metrics.Pipelines.ExportProfileConsentFailed(pipeline.ID, records.ConsentRejectedCount)
 
 	var writer connections.Writer
 
@@ -228,8 +226,6 @@ Records:
 		}
 
 		this.core.metrics.Pipelines.InputValidationPassed(pipeline.ID, 1)
-
-		this.core.metrics.Pipelines.ExportProfileConsentPassed(pipeline.ID, 1)
 
 		readCount++
 		profiles = append(profiles, profile)

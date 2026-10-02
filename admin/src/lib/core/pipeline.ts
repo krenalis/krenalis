@@ -49,6 +49,9 @@ import { RAW_TRANSFORMATION_FUNCTIONS } from '../../components/routes/PipelineWr
 
 const SCHEDULE_PERIODS: SchedulePeriod[] = ['Off', '5m', '15m', '30m', '1h', '2h', '3h', '6h', '8h', '12h', '24h'];
 
+// Profile export consent metrics are deferred until matching is accounted for.
+const SHOW_EXPORT_PROFILE_CONSENT_METRICS = false;
+
 const FILTER_OPERATORS: FilterOperator[] = [
 	'is',
 	'is not',
@@ -2278,6 +2281,7 @@ const propertyTypesAreEqual = (aType: Type, bType: Type): boolean => {
 
 export {
 	SCHEDULE_PERIODS,
+	SHOW_EXPORT_PROFILE_CONSENT_METRICS,
 	FILTER_OPERATORS,
 	MAX_FILTER_DEPTH,
 	MAX_FILTER_RULE_COUNT,

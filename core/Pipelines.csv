@@ -28,7 +28,7 @@ Additional information,,,,,,,,,,
 ,File Connector,No,No,"Yes, with Path, Sheet and settings",No,No,No,No,No,"Yes, with Path, Sheet and settings"
 ,Required Consents,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes,Yes
 Pipeline,,,,,,,,,,
-,Pipelines steps,"No EventConsent, ExportProfileConsent","No Filter, EventConsent, ExportProfileConsent","No EventConsent, ExportProfileConsent","No Input validation, EventConsent, ExportProfileConsent","No Input validation, Transformation, Output validation, ExportProfileConsent, ImportProfileConsent","No Filter, EventConsent, ImportProfileConsent","No Input validation, ExportProfileConsent, ImportProfileConsent","No Filter, EventConsent, ImportProfileConsent","No Filter, Transformation, Output validation, EventConsent, ImportProfileConsent"
+,Pipelines steps,"No EventConsent, ExportProfileConsent","No Filter, EventConsent, ExportProfileConsent","No EventConsent, ExportProfileConsent","No Input validation, EventConsent, ExportProfileConsent","No Input validation, Transformation, Output validation, ExportProfileConsent, ImportProfileConsent","No Filter, EventConsent, ExportProfileConsent, ImportProfileConsent","No Input validation, ExportProfileConsent, ImportProfileConsent","No Filter, EventConsent, ExportProfileConsent, ImportProfileConsent","No Filter, Transformation, Output validation, EventConsent, ExportProfileConsent, ImportProfileConsent"
 Scheduler,,,,,,,,,,
 ,Scheduler,Yes (it’s batch),Yes (it’s batch),Yes (it’s batch),No (it’s event based),No (it’s event based),Yes (it’s batch),No (it’s event based),Yes (it’s batch),Yes (it’s batch)
 Transformation,,,,,,,,,,
@@ -40,7 +40,7 @@ Additional information,,,,,,,,,,
 ,Additional Required Information,-,Query,-,-,-,"Export mode, matching properties, settings about duplicated users",-,Table name and table key,Order by property path
 ,File Connector,No,No,"Yes, with Path, Sheet and settings",No,No,No,No,No,"Yes, with Path, Sheet and settings"
 Pipeline,,,,,,,,,,
-,Pipelines steps,"No EventConsent, ExportProfileConsent","No Filter, EventConsent, ExportProfileConsent","No EventConsent, ExportProfileConsent","No Input validation, EventConsent, ExportProfileConsent","No Input validation, Transformation, Output validation, ExportProfileConsent, ImportProfileConsent","No Filter, EventConsent, ImportProfileConsent","No Input validation, ExportProfileConsent, ImportProfileConsent","No Filter, EventConsent, ImportProfileConsent","No Filter, Transformation, Output validation, EventConsent, ImportProfileConsent"
+,Pipelines steps,"No EventConsent, ExportProfileConsent","No Filter, EventConsent, ExportProfileConsent","No EventConsent, ExportProfileConsent","No Input validation, EventConsent, ExportProfileConsent","No Input validation, Transformation, Output validation, ExportProfileConsent, ImportProfileConsent","No Filter, EventConsent, ExportProfileConsent, ImportProfileConsent","No Input validation, ExportProfileConsent, ImportProfileConsent","No Filter, EventConsent, ExportProfileConsent, ImportProfileConsent","No Filter, Transformation, Output validation, EventConsent, ExportProfileConsent, ImportProfileConsent"
 Scheduler,,,,,,,,,,
 ,Scheduler,Yes (it’s batch),Yes (it’s batch),Yes (it’s batch),No (it’s event based),No (it’s event based),Yes (it’s batch),No (it’s event based),Yes (it’s batch),Yes (it’s batch)
 Transformation,,,,,,,,,,

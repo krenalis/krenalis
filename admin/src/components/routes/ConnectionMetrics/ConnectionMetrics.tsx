@@ -20,6 +20,7 @@ import { PipelineMetrics, PipelineTarget } from '../../../lib/api/types/pipeline
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import TransformedConnection from '../../../lib/core/connection';
 import {
+	SHOW_EXPORT_PROFILE_CONSENT_METRICS,
 	hasEventConsentStep,
 	hasExportProfileConsentStep,
 	hasFilterStep,
@@ -190,7 +191,7 @@ const ConnectionMetrics = () => {
 				case 'EVENT_CONSENT':
 					return hasEventConsentStep(c, selectedTarget);
 				case 'EXPORT_PROFILE_CONSENT':
-					return hasExportProfileConsentStep(c, selectedTarget);
+					return SHOW_EXPORT_PROFILE_CONSENT_METRICS && hasExportProfileConsentStep(c, selectedTarget);
 				case 'TRANSFORMATION':
 				case 'OUTPUT_VALIDATION':
 					return hasTransformations(c, selectedTarget);
@@ -813,7 +814,7 @@ const computePipelineMetricsData = (pipelineMetrics: PipelineMetrics, range: met
 		let filteredTotal =
 			(totals.failed[timeUnit]?.[FILTER_INDEX] ?? 0) +
 			(totals.failed[timeUnit]?.[EVENT_CONSENT_INDEX] ?? 0) +
-			(totals.failed[timeUnit]?.[EXPORT_PROFILE_CONSENT_INDEX] ?? 0) +
+			(SHOW_EXPORT_PROFILE_CONSENT_METRICS ? (totals.failed[timeUnit]?.[EXPORT_PROFILE_CONSENT_INDEX] ?? 0) : 0) +
 			(totals.failed[timeUnit]?.[IMPORT_PROFILE_CONSENT_INDEX] ?? 0);
 		let passedTotal = totals.passed[timeUnit]?.[FINALIZE_INDEX] ?? 0;
 		let total = failedTotal + filteredTotal + passedTotal;

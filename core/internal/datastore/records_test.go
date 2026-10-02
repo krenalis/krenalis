@@ -306,24 +306,22 @@ func Test_Records(t *testing.T) {
 		allConsents := ConsentCondition{Operator: state.OpAnd, Locations: []state.ProfileConsentLocation{marketing, ads}}
 		anyConsent := ConsentCondition{Operator: state.OpOr, Locations: []state.ProfileConsentLocation{marketing, ads}}
 		tests := []struct {
-			name                    string
-			where                   *state.Where
-			condition               ConsentCondition
-			matching                *Matching
-			limit                   int
-			expectedFilterRejected  int
-			expectedConsentRejected int
-			expectedRecords         int
+			name            string
+			where           *state.Where
+			condition       ConsentCondition
+			matching        *Matching
+			limit           int
+			expectedRecords int
 		}{
-			{"JSON consent", filter, jsonConsent, nil, 0, 3, 2, 2},
-			{"all consents", filter, allConsents, nil, 0, 3, 3, 1},
-			{"any consent", filter, anyConsent, nil, 0, 3, 1, 3},
+			{"JSON consent", filter, jsonConsent, nil, 0, 2},
+			{"all consents", filter, allConsents, nil, 0, 1},
+			{"any consent", filter, anyConsent, nil, 0, 3},
 			{"matching returns none", filter, jsonConsent,
-				&Matching{Pipeline: pipelineID, InProperty: "id", ExportMode: state.CreateOnly}, 0, 3, 2, 0},
-			{"limited results", filter, jsonConsent, nil, 1, 3, 2, 1},
-			{"empty OR consent accepts all", filter, ConsentCondition{Operator: state.OpOr}, nil, 0, 3, 0, 4},
-			{"no conditions", nil, ConsentCondition{Operator: state.OpOr}, nil, 0, 0, 0, 7},
-			{"JSON consent without filter", nil, jsonConsent, nil, 0, 0, 4, 3},
+				&Matching{Pipeline: pipelineID, InProperty: "id", ExportMode: state.CreateOnly}, 0, 0},
+			{"limited results", filter, jsonConsent, nil, 1, 1},
+			{"empty OR consent accepts all", filter, ConsentCondition{Operator: state.OpOr}, nil, 0, 4},
+			{"no conditions", nil, ConsentCondition{Operator: state.OpOr}, nil, 0, 7},
+			{"JSON consent without filter", nil, jsonConsent, nil, 0, 3},
 		}
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
@@ -334,12 +332,6 @@ func Test_Records(t *testing.T) {
 					t.Fatalf("expected records, got %v", err)
 				}
 				defer r.Close()
-				if r.FilterRejectedCount != test.expectedFilterRejected {
-					t.Errorf("expected %d filter rejections, got %d", test.expectedFilterRejected, r.FilterRejectedCount)
-				}
-				if r.ConsentRejectedCount != test.expectedConsentRejected {
-					t.Errorf("expected %d consent rejections, got %d", test.expectedConsentRejected, r.ConsentRejectedCount)
-				}
 
 				var count int
 				for record := range r.All(t.Context()) {
