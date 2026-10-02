@@ -102,8 +102,9 @@ func newPipelineCleaner(core *Core, provider transformers.FunctionProvider) *pip
 }
 
 // Close closes the pipeline cleaner, ensuring the completion of all ongoing
-// operations. If the context is canceled, it interrupts ongoing operations and
-// returns. If p is already closed, it does nothing and returns immediately.
+// operations, and then stops its background goroutines. If the context is
+// canceled, it interrupts ongoing operations and returns. If p is already
+// closed, it does nothing and returns immediately.
 func (c *pipelineCleaner) Close(ctx context.Context) {
 	if c.close.Swap(true) {
 		return
@@ -113,6 +114,8 @@ func (c *pipelineCleaner) Close(ctx context.Context) {
 	defer stop()
 	// Waits for the ongoing operations to finish.
 	c.close.Wait()
+	// Stop the background goroutines.
+	c.close.cancel()
 }
 
 // complete calls f, ensuring it completes even if c is closed.
