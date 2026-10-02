@@ -24,7 +24,7 @@ func TestValidateWorkspaceMetricsRange(t *testing.T) {
 		time.Date(2026, time.August, 1, 23, 0, 0, 0, location),
 		time.Date(2026, time.August, 4, 23, 0, 0, 0, location), now)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	wantStart := time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC)
 	wantEnd := time.Date(2026, time.August, 4, 0, 0, 0, 0, time.UTC)
@@ -226,7 +226,7 @@ func TestIdentityResolutionCompositionJSON(t *testing.T) {
 func TestIdentityMetricConnectionsJSON(t *testing.T) {
 	empty, err := json.Marshal(IdentityMetric{Connections: []IdentityConnectionMetric{}})
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if !strings.Contains(string(empty), `"connections":[]`) {
 		t.Fatalf("expected an empty connections array, got %s", empty)

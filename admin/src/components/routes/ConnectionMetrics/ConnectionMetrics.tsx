@@ -46,7 +46,7 @@ interface FunnelPoint {
 type FunnelData = FunnelPoint[];
 
 type metricsRange = 'last15Minutes' | 'last24Hours' | 'last7Days' | 'Custom';
-type metricsPreset = Exclude<metricsRange, 'Custom'>;
+type MetricsPreset = Exclude<metricsRange, 'Custom'>;
 
 type StepIdentifier =
 	| 'RECEIVE'
@@ -61,7 +61,7 @@ const MINUTES_COUNT = 15;
 const HOURS_COUNT = 24;
 const DAYS_COUNT = 7;
 
-const METRICS_RANGE_PRESETS: SegmentedDateRangePreset<metricsPreset>[] = [
+const METRICS_RANGE_PRESETS: SegmentedDateRangePreset<MetricsPreset>[] = [
 	{ value: 'last15Minutes', label: 'Last 15 minutes' },
 	{ value: 'last24Hours', label: 'Last 24 hours' },
 	{ value: 'last7Days', label: 'Last 7 days' },
@@ -502,7 +502,7 @@ const ConnectionMetrics = () => {
 			{supportedTargets.current.length > 0 ? (
 				<>
 					<div className='connection-metrics__tabs'>
-						<SegmentedDateRangeControl<metricsPreset>
+						<SegmentedDateRangeControl<MetricsPreset>
 							presets={METRICS_RANGE_PRESETS}
 							value={selectedMetricsRange}
 							customRange={customMetricsRange}

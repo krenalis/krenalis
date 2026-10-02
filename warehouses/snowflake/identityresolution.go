@@ -8,8 +8,10 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
+	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -37,30 +39,40 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 		return nil, err
 	}
 	if status.alreadyCompleted {
+
 		if status.executionError != nil {
 			return nil, status.executionError
 		}
 		if status.identityResolutionCounts == nil {
 			return nil, fmt.Errorf("identity resolution result is unavailable for operation %s", opID)
 		}
-		return status.identityResolutionCounts, nil
+		err = warehouse.finalizePublishedProfiles(ctx, db, opID, profileColumns)
+
+		return status.identityResolutionCounts, err
 	}
 
+	deferFinalization := true
 	defer func() {
-		counts, err = warehouse.finalizeIdentityResolution(ctx, db, opID, counts, err)
+		if deferFinalization {
+			counts, err = warehouse.finalizeIdentityResolution(ctx, db, opID, counts, err)
+		}
 	}()
 
-	// Determine the current version of the "krenalis_profiles" table and create
-	// a copy of it with the incremented version.
-	profilesVersion, err := warehouse.profilesVersion(ctx)
+	// Determine the greatest recorded version of the "KRENALIS_PROFILES" table
+	// and allocate the next version.
+	maxProfilesVersion, err := warehouse.maxProfilesVersion(ctx)
 	if err != nil {
 		return nil, err
+	}
+	// Ensure the next version stays within the supported range before creating the table.
+	if maxProfilesVersion >= math.MaxInt32 {
+		return nil, fmt.Errorf("profile table version limit reached")
 	}
 	publishedProfilesVersion, err := warehouse.publishedProfilesVersion(ctx)
 	if err != nil {
 		return nil, err
 	}
-	newProfilesVersion := profilesVersion + 1
+	newProfilesVersion := maxProfilesVersion + 1
 	newProfilesName := fmt.Sprintf("KRENALIS_PROFILES_%d", newProfilesVersion)
 	currentProfilesName := fmt.Sprintf("KRENALIS_PROFILES_%d", publishedProfilesVersion)
 
@@ -68,7 +80,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	// Resolution results.
 	removePreviousProfilesTable := false
 	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
-		if profilesVersion != publishedProfilesVersion {
+		if maxProfilesVersion != publishedProfilesVersion {
 			// The latest unpublished profiles version may belong to an operation
 			// that is still running. Replace it only if that operation failed.
 			err = tx.QueryRowContext(ctx, `SELECT EXISTS (
@@ -78,18 +90,19 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 				WHERE "V"."VERSION" = ?
 					AND "O"."COMPLETED_AT" IS NOT NULL
 					AND "O"."ERROR" <> ''
-			)`, profilesVersion).Scan(&removePreviousProfilesTable)
+			)`, maxProfilesVersion).Scan(&removePreviousProfilesTable)
 			if err != nil {
 				return snowflake(err)
 			}
 			if !removePreviousProfilesTable {
 				return fmt.Errorf(
-					"profiles version %d is unpublished but does not belong to a failed operation", profilesVersion)
+					"profiles version %d is unpublished but does not belong to a failed operation", maxProfilesVersion)
 			}
 		}
-		// Create the candidate table by copying the schema from the current profiles table.
+		// Create the candidate table by copying the schema from the published profiles table.
 		_, err = tx.ExecContext(ctx,
-			fmt.Sprintf(`CREATE TABLE %s LIKE "KRENALIS_PROFILES_%d"`, quoteIdent(newProfilesName), profilesVersion))
+			fmt.Sprintf(`CREATE TABLE %s LIKE "KRENALIS_PROFILES_%d"`,
+				quoteIdent(newProfilesName), publishedProfilesVersion))
 		if err != nil {
 			return fmt.Errorf("cannot create profiles table (with name %s): %s", quoteIdent(newProfilesName), err)
 		}
@@ -120,8 +133,8 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 		return nil, snowflake(err)
 	}
 	if removePreviousProfilesTable {
-		// Drop the failed candidate table after preserving its schema changes.
-		_, err = db.ExecContext(ctx, `DROP TABLE IF EXISTS "KRENALIS_PROFILES_`+strconv.Itoa(profilesVersion)+`"`)
+		// Drop the failed candidate table.
+		_, err = db.ExecContext(ctx, `DROP TABLE IF EXISTS "KRENALIS_PROFILES_`+strconv.Itoa(maxProfilesVersion)+`"`)
 		if err != nil {
 			return nil, snowflake(err)
 		}
@@ -190,8 +203,9 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 		mergeProfiles.WriteString(quoteIdent(c.Name))
 		mergeProfiles.WriteByte(',')
 	}
-	// Write the "_identities" column.
+	// Write the "_IDENTITIES" column containing the raw identities.
 	mergeProfiles.WriteString(`ARRAY_AGG(DISTINCT "_PK"), `)
+	// Write the "_ANONYMOUS_COUNT" and "_RECOGNIZED_COUNT" columns containing the logical identity counts.
 	mergeProfiles.WriteString(`COUNT(DISTINCT
 		CASE WHEN "_IS_ANONYMOUS" THEN "_CONNECTION" END,
 		CASE WHEN "_IS_ANONYMOUS" THEN "_IDENTITY_ID" END
@@ -303,24 +317,19 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
 		return warehouse.setOperationAsCompleted(ctx, tx, opID, result, nil)
 	})
+
+	// Reconcile an ambiguous commit result with the persisted operation state.
+	// If the operation was persisted as successful, finalize the published
+	// profiles below.
+	deferFinalization = false
+	counts, err = warehouse.finalizeIdentityResolution(ctx, db, opID, counts, err)
 	if err != nil {
 		return nil, err
 	}
 
-	// Replace the staged view with its final definition, then remove the old
-	// profiles table. These are best-effort cleanups: the operation is already
-	// successful and the staged view already exposes the new profiles.
-	_, err2 := db.ExecContext(ctx, createViewQuery(newProfilesName, profileColumns, true))
-	if err2 != nil {
-		slog.Warn("cannot finalize identity resolution view", "err", warehouses.NewOperationError(snowflake(err2)))
-		return counts, nil
-	}
-	_, err2 = db.ExecContext(ctx, `DROP TABLE IF EXISTS `+quoteIdent(currentProfilesName))
-	if err2 != nil {
-		slog.Warn("cannot drop previous identity resolution table", "err", warehouses.NewOperationError(snowflake(err2)))
-	}
+	err = warehouse.finalizePublishedProfiles(ctx, db, opID, profileColumns)
 
-	return counts, nil
+	return counts, err
 }
 
 // finalizeIdentityResolution returns the local result on success. On failure,
@@ -361,6 +370,50 @@ func (warehouse *Snowflake) finalizeIdentityResolution(ctx context.Context, conn
 	}
 
 	return nil, ctx.Err()
+}
+
+// finalizePublishedProfiles replaces the staged profiles view with its final
+// definition and removes a bounded batch of obsolete profile tables, but only
+// if this operation published the latest recorded profiles version.
+func (warehouse *Snowflake) finalizePublishedProfiles(ctx context.Context, db *sql.DB, opID string, profileColumns []warehouses.Column) error {
+
+	maxProfilesVersion, err := warehouse.maxProfilesVersion(ctx)
+	if err != nil {
+		return err
+	}
+	publishedProfilesVersion, err := warehouse.publishedProfilesVersion(ctx)
+	if err != nil {
+		return err
+	}
+	if maxProfilesVersion != publishedProfilesVersion {
+		return nil
+	}
+
+	var publishedByOperation bool
+	err = db.QueryRowContext(ctx, `SELECT EXISTS (
+		SELECT 1 FROM "KRENALIS_PROFILE_SCHEMA_VERSIONS"
+		WHERE "VERSION" = ? AND "OPERATION" = ?
+	)`, publishedProfilesVersion, opID).Scan(&publishedByOperation)
+	if err != nil {
+		return snowflake(err)
+	}
+	if !publishedByOperation {
+		return nil
+	}
+
+	publishedProfilesName := fmt.Sprintf("KRENALIS_PROFILES_%d", publishedProfilesVersion)
+	_, err = db.ExecContext(ctx, createViewQuery(publishedProfilesName, profileColumns, true))
+	if err != nil {
+		return snowflake(err)
+	}
+
+	const maxObsoleteProfileTablesToDrop = 10
+	err = dropObsoleteProfileTables(ctx, db, publishedProfilesVersion, maxObsoleteProfileTablesToDrop)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // createPendingViewQuery returns a Snowflake view definition that exposes the
@@ -407,4 +460,70 @@ func createPendingViewQuery(currentProfilesName, newProfilesName, opID string, p
 	b.WriteString(completed.String())
 
 	return b.String()
+}
+
+// dropObsoleteProfileTables drops obsolete profile tables, i.e. tables whose
+// version is less than publishedVersion. It drops at most maxTables tables.
+//
+// publishedVersion must be in the range [0, math.MaxInt32]. If publishedVersion
+// is 0, it does nothing.
+func dropObsoleteProfileTables(ctx context.Context, db *sql.DB, publishedVersion, maxTables int) error {
+
+	if publishedVersion < 0 || publishedVersion > math.MaxInt32 {
+		return errors.New("published profile version is out of range")
+	}
+	if publishedVersion == 0 {
+		return nil
+	}
+
+	rows, err := db.QueryContext(ctx,
+		`SELECT "V"."VERSION"
+		FROM "KRENALIS_PROFILE_SCHEMA_VERSIONS" "V"
+		JOIN "KRENALIS_SYSTEM_OPERATIONS" "O" ON "O"."ID" = "V"."OPERATION"
+		JOIN INFORMATION_SCHEMA.TABLES "T"
+			ON "T"."TABLE_SCHEMA" = CURRENT_SCHEMA()
+			AND "T"."TABLE_NAME" = CONCAT('KRENALIS_PROFILES_', TO_VARCHAR("V"."VERSION"))
+		WHERE "V"."VERSION" < ?
+			AND "O"."COMPLETED_AT" IS NOT NULL
+		UNION
+		SELECT 0
+		FROM INFORMATION_SCHEMA.TABLES "T"
+		WHERE "T"."TABLE_SCHEMA" = CURRENT_SCHEMA()
+			AND "T"."TABLE_NAME" = 'KRENALIS_PROFILES_0'
+			AND ? > 0
+		ORDER BY "VERSION" ASC
+		LIMIT `+strconv.Itoa(maxTables), publishedVersion, publishedVersion)
+	if err != nil {
+		return snowflake(err)
+	}
+	defer rows.Close()
+
+	var versions []int
+	for rows.Next() {
+		if len(versions) == maxTables {
+			return fmt.Errorf("warehouse returned an unexpected number of profile table versions")
+		}
+		var version int
+		err = rows.Scan(&version)
+		if err != nil {
+			return snowflake(err)
+		}
+		if version < 0 || version >= publishedVersion {
+			return fmt.Errorf("warehouse returned an invalid obsolete profile table version %d", version)
+		}
+		versions = append(versions, version)
+	}
+	err = rows.Err()
+	if err != nil {
+		return snowflake(err)
+	}
+
+	for _, v := range versions {
+		_, err = db.ExecContext(ctx, `DROP TABLE IF EXISTS "KRENALIS_PROFILES_`+strconv.Itoa(v)+`"`)
+		if err != nil {
+			return snowflake(err)
+		}
+	}
+
+	return nil
 }

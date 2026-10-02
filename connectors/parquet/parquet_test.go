@@ -566,41 +566,103 @@ func Test_int64ToTimeTime(t *testing.T) {
 	}
 }
 
+// Test_timeTimeToInt64 checks the int64 Unix nanosecond boundaries regardless of time zone.
 func Test_timeTimeToInt64(t *testing.T) {
 
 	tests := []struct {
+		name      string
 		ts        time.Time
 		expected  int64
 		expectErr bool
 	}{
 		{
-			ts:        time.Date(1677, 9, 21, 0, 12, 43, 145224192, time.UTC),
+			name:      "below minimum",
+			ts:        time.Date(1677, 9, 21, 0, 12, 43, 145224191, time.UTC),
 			expectErr: true,
 		},
 		{
+			name:     "minimum",
+			ts:       time.Unix(0, math.MinInt64).UTC(),
+			expected: math.MinInt64,
+		},
+		{
+			name:     "minimum plus one",
+			ts:       time.Unix(0, math.MinInt64+1).UTC(),
+			expected: math.MinInt64 + 1,
+		},
+		{
+			name:     "maximum minus one",
+			ts:       time.Unix(0, math.MaxInt64-1).UTC(),
+			expected: math.MaxInt64 - 1,
+		},
+		{
+			name:     "maximum",
+			ts:       time.Unix(0, math.MaxInt64).UTC(),
+			expected: math.MaxInt64,
+		},
+		{
+			name:      "above maximum",
+			ts:        time.Date(2262, 4, 11, 23, 47, 16, 854775808, time.UTC),
+			expectErr: true,
+		},
+		{
+			name:      "well above maximum",
+			ts:        time.Date(2262, 12, 31, 0, 0, 0, 0, time.UTC),
+			expectErr: true,
+		},
+		{
+			name:      "zero time",
+			ts:        time.Time{},
+			expectErr: true,
+		},
+		{
+			name:      "maximum time.Time value",
+			ts:        time.Date(9999, 12, 31, 23, 59, 59, 999999999, time.UTC),
+			expectErr: true,
+		},
+		{
+			name:     "maximum in positive offset",
+			ts:       time.Date(2262, 4, 12, 1, 47, 16, 854775807, time.FixedZone("east", 7200)),
+			expected: math.MaxInt64,
+		},
+		{
+			name:      "above maximum in negative offset",
+			ts:        time.Date(2262, 4, 11, 23, 47, 16, 854775807, time.FixedZone("west", -3600)),
+			expectErr: true,
+		},
+		{
+			name:     "minimum in negative offset",
+			ts:       time.Date(1677, 9, 20, 23, 12, 43, 145224192, time.FixedZone("west", -3600)),
+			expected: math.MinInt64,
+		},
+		{
+			name:     "1900",
 			ts:       time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC),
 			expected: int64(-2208988800 * 1_000_000_000),
 		},
 		{
+			name:     "2000",
 			ts:       time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
 			expected: int64(946684800 * 1_000_000_000),
 		},
 	}
 	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
-			got, gotErr := timeTimeToInt64(test.ts)
-			if gotErr != nil && !test.expectErr {
-				t.Fatalf("not expected error: %v", gotErr)
-			}
-			if gotErr == nil && test.expectErr {
-				t.Fatal("expected error")
-			}
-			if gotErr != nil {
+		t.Run(test.name, func(t *testing.T) {
+
+			got, err := timeTimeToInt64(test.ts)
+			if err != nil {
+				if !test.expectErr {
+					t.Fatalf("timeTimeToInt64(%v): %v", test.ts, err)
+				}
 				return
 			}
-			if got != test.expected {
-				t.Fatalf("expected %v, got %v", test.expected, got)
+			if test.expectErr {
+				t.Fatalf("timeTimeToInt64(%v) expected error, got %d", test.ts, got)
 			}
+			if got != test.expected {
+				t.Fatalf("timeTimeToInt64(%v) = %d, want %d", test.ts, got, test.expected)
+			}
+
 		})
 	}
 

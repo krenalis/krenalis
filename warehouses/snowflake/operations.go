@@ -107,12 +107,17 @@ const maxOperationResultBytes = 4 << 10
 // Resolution result.
 func (warehouse *Snowflake) readOperationStatus(ctx context.Context, conn connection, opID string, opType warehouseOp) (*opStatus, error) {
 
+	// LEFT counts characters, not bytes. It bounds the error returned by the query
+	// before the driver receives it; NewPersistedOperationError enforces the exact
+	// byte limit.
+	const operationErrorReadLimitCharacters = warehouses.MaxOperationErrorBytes + 1
+
 	var completedAt *time.Time
 	var opError string
 	var result []byte
 	err := conn.QueryRowContext(ctx, `SELECT "COMPLETED_AT", LEFT(TO_JSON("RESULT"), ?), LEFT("ERROR", ?)`+
 		` FROM "KRENALIS_SYSTEM_OPERATIONS" WHERE "ID" = ? LIMIT 1`,
-		maxOperationResultBytes+1, warehouses.MaxOperationErrorBytes+1, opID).
+		maxOperationResultBytes+1, operationErrorReadLimitCharacters, opID).
 		Scan(&completedAt, &result, &opError)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

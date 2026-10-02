@@ -129,6 +129,7 @@ const IdentityOverview = () => {
 	const [resolutionMetricDays, setResolutionMetricDays] = useState<IdentityResolutionMetricDay[]>();
 	const [resolutionRuns, setResolutionRuns] = useState<IdentityResolutionRun[]>([]);
 	const [identityError, setIdentityError] = useState<string>();
+	const [identityHistoryError, setIdentityHistoryError] = useState<string>();
 	const [resolutionError, setResolutionError] = useState<string>();
 	const [resolutionRunsError, setResolutionRunsError] = useState<string>();
 	const [isIdentityLoading, setIsIdentityLoading] = useState<boolean>(true);
@@ -245,12 +246,15 @@ const IdentityOverview = () => {
 		async ({ loadIdentity = true, preserveData = false }: LoadMetricsOptions = {}) => {
 			const version = ++requestVersion.current;
 			const requestedRange = displayRange;
-			if (loadIdentity) setIdentityError(undefined);
+			if (loadIdentity) {
+				setIdentityError(undefined);
+				setIdentityHistoryError(undefined);
+			}
 			setResolutionError(undefined);
 			if (!preserveData) {
 				if (loadIdentity) {
 					setIsIdentityLoading(true);
-					setLatestIdentityMetric(undefined);
+					setLatestIdentityMetric(latestIdentityMetricRef.current);
 					setIdentityMetricDays(undefined);
 				}
 				setIsResolutionLoading(true);
@@ -267,6 +271,7 @@ const IdentityOverview = () => {
 						latestIdentityMetricRef.current = latest;
 					}
 
+					setLatestIdentityMetric(latest);
 					const connection = selectedIdentityConnectionRef.current;
 					const [days] = await Promise.all([
 						fetchIdentityMetricDays(latest, requestedRange),
@@ -282,9 +287,13 @@ const IdentityOverview = () => {
 				} catch (err) {
 					if (version !== requestVersion.current) return;
 					setLoadedIdentityDisplayRange(requestedRange);
-					setLatestIdentityMetric(undefined);
+					setLatestIdentityMetric(latestIdentityMetricRef.current);
 					setIdentityMetricDays(undefined);
-					setIdentityError(getErrorMessage(err));
+					if (latestIdentityMetricRef.current == null) {
+						setIdentityError(getErrorMessage(err));
+					} else {
+						setIdentityHistoryError(getErrorMessage(err));
+					}
 					setIsIdentityLoading(false);
 				}
 			};
@@ -385,7 +394,9 @@ const IdentityOverview = () => {
 	const identityChartLoading = showAllIdentityConnections
 		? isIdentityLoading
 		: (isIdentityLoading || isRefreshing || isConnectionIdentityLoading) && connectionIdentityMetricDays == null;
-	const identityChartError = showAllIdentityConnections ? identityError : connectionIdentityError;
+	const identityChartError = showAllIdentityConnections
+		? (identityError ?? identityHistoryError)
+		: connectionIdentityError;
 	const temporalSemantics = useMemo(
 		() =>
 			buildTemporalSemantics(
@@ -740,6 +751,14 @@ const IdentityOverview = () => {
 						variant='error'
 						title='Current identity state is unavailable'
 						description={identityError}
+						compact={true}
+					/>
+				)}
+				{identityHistoryError && (
+					<StateMessage
+						variant='error'
+						title='Identity history could not be loaded'
+						description={identityHistoryError}
 						compact={true}
 					/>
 				)}

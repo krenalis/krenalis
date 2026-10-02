@@ -7,10 +7,11 @@ interface DraggableRowProps {
 	id: string | number;
 	className?: string;
 	children: ReactNode;
+	disabled?: boolean;
 }
 
-const DraggableWrapper = ({ id, className, children }: DraggableRowProps) => {
-	const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: id });
+const DraggableWrapper = ({ id, className, children, disabled }: DraggableRowProps) => {
+	const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id, disabled });
 
 	const style = {
 		transform: CSS.Transform.toString(transform),
@@ -19,7 +20,7 @@ const DraggableWrapper = ({ id, className, children }: DraggableRowProps) => {
 
 	return (
 		<div className={`draggable-wrapper${className ? ` ${className}` : ''}`} ref={setNodeRef} style={style}>
-			<button className='draggable-wrapper__handle' {...listeners} {...attributes}>
+			<button className='draggable-wrapper__handle' {...listeners} {...attributes} disabled={disabled}>
 				<SlIcon name='grip-vertical' />
 			</button>
 			{children}

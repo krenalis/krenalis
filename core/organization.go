@@ -341,11 +341,8 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 	this.core.mustBeOpen()
 
 	// Validate email.
-	if err := util.ValidateStringField("email", email, 255); err != nil {
+	if err := validateMemberEmail(email); err != nil {
 		return "", errors.BadRequest("%s", err)
-	}
-	if !emailRegExp.MatchString(email) {
-		return "", errors.BadRequest("email is not a valid email address")
 	}
 	// Validate password.
 	if password == "" {
@@ -540,7 +537,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 	}
 
 	// Initialize the data warehouse.
-	err = this.core.datastore.Initialize(ctx, warehouse.Platform, settings, profileSchema)
+	err = this.core.datastore.Initialize(ctx, this.organization.ID, warehouse.Platform, settings, profileSchema)
 	if err != nil {
 		if err, ok := err.(*datastore.UnavailableError); ok {
 			return "", errors.Unavailable("%s", err)
@@ -662,8 +659,8 @@ func (this *Organization) Delete(ctx context.Context) error {
 	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		// Mark the organization's pipeline functions as discontinued.
 		now := time.Now().UTC()
-		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
-			"SELECT p.transformation_id, $1\n"+
+		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, organization, discontinued_at)\n"+
+			"SELECT p.transformation_id, w.organization, $1\n"+
 			"FROM pipelines AS p\n"+
 			"INNER JOIN connections AS c ON p.connection = c.id\n"+
 			"INNER JOIN workspaces AS w ON c.workspace = w.id\n"+
@@ -1538,7 +1535,7 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	}
 
 	// Validate the warehouse settings.
-	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, warehouse.Platform, warehouse.Settings)
+	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, this.organization.ID, warehouse.Platform, warehouse.Settings)
 	if err != nil {
 		if err == datastore.ErrWarehousePlatformNotExist {
 			return nil, errors.Unprocessable(WarehousePlatformNotExist, "warehouse platform %s does not exist", warehouse.Platform)
@@ -1553,7 +1550,7 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	}
 
 	// Check if the warehouse is initializable.
-	err = this.core.datastore.CanInitialize(ctx, warehouse.Platform, settings)
+	err = this.core.datastore.CanInitialize(ctx, this.organization.ID, warehouse.Platform, settings)
 	if err != nil {
 		if err, ok := err.(*warehouses.NonInitializableError); ok {
 			return nil, errors.Unprocessable(WarehouseNotInitializable, "cannot initialize the data warehouse: %w", err.Err)
@@ -1655,6 +1652,12 @@ func sendMail(mail *emailToSend, config *SMTPConfig) error {
 		}
 	}
 	return err
+}
+
+// ValidateMemberEmail validates a member's email address and returns an error
+// if it is not valid.
+func ValidateMemberEmail(email string) error {
+	return validateMemberEmail(email)
 }
 
 // validateMemberEmail validates a member's email and returns an error if it is

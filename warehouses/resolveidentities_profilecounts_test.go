@@ -93,7 +93,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 			// first two operations produce versions 1 and 2. Later operations drop
 			// both physical tables, but their complete persisted results remain
 			// retryable.
-			if _, err := dw.Count(ctx, "krenalis_profiles_1"); err == nil {
+			if _, err := dw.Counts(ctx, "krenalis_profiles_1", nil); err == nil {
 				t.Fatal("expected physical profiles table for the empty operation to be unavailable, got no error")
 			}
 			retryCounts, err := dw.ResolveIdentities(ctx, emptyOp, profileColumns, profileColumns, nil)
@@ -106,7 +106,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 			if diff := cmp.Diff(emptyCounts, retryCounts); diff != "" {
 				t.Fatalf("unexpected retry counts after dropping the physical table (-want +got):\n%s", diff)
 			}
-			if _, err := dw.Count(ctx, "krenalis_profiles_2"); err == nil {
+			if _, err := dw.Counts(ctx, "krenalis_profiles_2", nil); err == nil {
 				t.Fatal("expected physical profiles table for the anonymous-only operation to be unavailable, got no error")
 			}
 			retryCounts, err = dw.ResolveIdentities(ctx, anonymousOp, profileColumns, profileColumns, nil)
@@ -196,7 +196,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 
 			t.Run("failed operation has no result and remains failed", func(t *testing.T) {
 				opFailed := uuid.NewString()
-				profilesBefore, countErr := dw.Count(ctx, "profiles")
+				profilesBefore, countErr := dw.Counts(ctx, "profiles", nil)
 				if countErr != nil {
 					t.Fatal(countErr)
 				}
@@ -216,12 +216,12 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 				if err == nil {
 					t.Fatalf("expected ResolveIdentities to return *warehouses.OperationError, got %v", err)
 				}
-				profilesAfter, countErr := dw.Count(ctx, "profiles")
+				profilesAfter, countErr := dw.Counts(ctx, "profiles", nil)
 				if countErr != nil {
 					t.Fatal(countErr)
 				}
-				if profilesAfter != profilesBefore {
-					t.Fatalf("failed Identity Resolution changed visible profiles from %d to %d", profilesBefore, profilesAfter)
+				if profilesAfter[0] != profilesBefore[0] {
+					t.Fatalf("failed Identity Resolution changed visible profiles from %d to %d", profilesBefore[0], profilesAfter[0])
 				}
 
 				// Retry with valid arguments to verify that the persisted failure is

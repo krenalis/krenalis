@@ -4,7 +4,7 @@
 
 CREATE TABLE IF NOT EXISTS krenalis_profile_schema_versions (
     version integer NOT NULL,
-    operation uuid NOT NULL,          -- useful for logging purposes.
-    timestamp timestamp(3) NOT NULL,  -- useful for logging purposes.
+    operation uuid NOT NULL,          -- operation that created this version of the profile schema.
+    timestamp timestamp(3) NOT NULL,  -- timestamp when this version was created.
     PRIMARY KEY ("version")
 );

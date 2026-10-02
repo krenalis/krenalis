@@ -22,7 +22,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 const (
@@ -85,16 +84,18 @@ type countIdentity struct {
 func TestCountIdentitiesNoPipelines(t *testing.T) {
 	for _, platform := range []string{"PostgreSQL", "Snowflake"} {
 		t.Run(platform, func(t *testing.T) {
-			dw := warehouses.Registered(platform).New(countIdentitiesSettingsLoader{})
+
+			dw := warehouses.Registered(platform).New(countIdentitiesSettingsLoader{}, nil)
 			t.Cleanup(func() {
-				if err := dw.Close(); err != nil {
-					t.Error(err)
+				err := dw.Close()
+				if err != nil {
+					t.Errorf("expected no error, got %v", err)
 				}
 			})
 
 			counts, err := dw.CountIdentities(t.Context(), []string{})
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("expected no error, got %v", err)
 			}
 			want := &warehouses.IdentityCounts{
 				Anonymous:      map[string]int{},
@@ -104,6 +105,7 @@ func TestCountIdentitiesNoPipelines(t *testing.T) {
 			if diff := cmp.Diff(want, counts); diff != "" {
 				t.Errorf("expected identity counts %v, got %v (-want +got):\n%s", want, counts, diff)
 			}
+
 		})
 	}
 }
@@ -114,10 +116,12 @@ func TestCountIdentitiesNoPipelines(t *testing.T) {
 func TestCountIdentities(t *testing.T) {
 	for _, platform := range []string{"PostgreSQL", "Snowflake"} {
 		t.Run(platform, func(t *testing.T) {
+
 			dw := newCountIdentitiesWarehouse(t, platform)
 			ctx := t.Context()
-			if err := dw.Initialize(ctx, nil); err != nil {
-				t.Fatal(err)
+			err := dw.Initialize(ctx, nil)
+			if err != nil {
+				t.Fatalf("expected no error, got %v", err)
 			}
 
 			identities := []countIdentity{
@@ -166,8 +170,9 @@ func TestCountIdentities(t *testing.T) {
 					"_run":          "test-run",
 				}
 			}
-			if err := dw.MergeIdentities(ctx, columns, rows); err != nil {
-				t.Fatal(err)
+			err = dw.MergeIdentities(ctx, columns, rows)
+			if err != nil {
+				t.Fatalf("expected no error, got %v", err)
 			}
 
 			tests := []struct {
@@ -340,26 +345,28 @@ func TestCountIdentities(t *testing.T) {
 			for _, test := range tests {
 				t.Run(test.name, func(t *testing.T) {
 					counts, err := dw.CountIdentities(ctx, test.pipelines)
-					if test.wantErr {
-						if err == nil {
-							t.Fatal("expected CountIdentities to return an error, got nil")
+					if err != nil {
+						if !test.wantErr {
+							t.Fatalf("expected no error, got %v", err)
 						}
 						return
 					}
-					if err != nil {
-						t.Fatal(err)
+					if test.wantErr {
+						t.Fatal("expected CountIdentities to return an error, got nil")
 					}
 					if diff := cmp.Diff(test.want, counts); diff != "" {
-						t.Errorf("unexpected identity counts (-want +got):\n%s", diff)
+						t.Errorf("expected identity counts %v, got %v (-want +got):\n%s", test.want, counts, diff)
 					}
 				})
 			}
+
 		})
 	}
 }
 
 // newCountIdentitiesWarehouse creates a warehouse for CountIdentities tests.
 func newCountIdentitiesWarehouse(t *testing.T, platform string) warehouses.Warehouse {
+
 	t.Helper()
 
 	var settings json.Value
@@ -371,26 +378,24 @@ func newCountIdentitiesWarehouse(t *testing.T, platform string) warehouses.Wareh
 			postgres.WithDatabase("krenalis"),
 			postgres.WithUsername("krenalis"),
 			postgres.WithPassword("krenalis"),
-			testcontainers.WithWaitStrategy(
-				wait.ForLog("database system is ready to accept connections").
-					WithOccurrence(2).
-					WithStartupTimeout(60*time.Second)),
+			postgres.BasicWaitStrategies(),
 		)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("expected no error, got %v", err)
 		}
 		t.Cleanup(func() {
-			if err := testcontainers.TerminateContainer(container); err != nil {
-				t.Error(err)
+			err := testcontainers.TerminateContainer(container)
+			if err != nil {
+				t.Errorf("expected no error, got %v", err)
 			}
 		})
 		host, err := container.Host(ctx)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("expected no error, got %v", err)
 		}
 		port, err := container.MappedPort(ctx, "5432/tcp")
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("expected no error, got %v", err)
 		}
 		settings, err = json.Marshal(map[string]any{
 			"host":     host,
@@ -401,7 +406,7 @@ func newCountIdentitiesWarehouse(t *testing.T, platform string) warehouses.Wareh
 			"schema":   "public",
 		})
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("expected no error, got %v", err)
 		}
 	case "Snowflake":
 		if os.Getenv("KRENALIS_SKIP_SNOWFLAKE_TESTS") == "true" {
@@ -409,10 +414,11 @@ func newCountIdentitiesWarehouse(t *testing.T, platform string) warehouses.Wareh
 		}
 		testEnv, err := snowflaketester.CreateTestEnvironment()
 		if err != nil {
-			t.Fatalf("cannot create Snowflake test environment: %s", err)
+			t.Fatalf("expected Snowflake test environment, got %v", err)
 		}
 		t.Cleanup(func() {
-			if err := testEnv.Teardown(); err != nil {
+			err := testEnv.Teardown()
+			if err != nil {
 				t.Logf("cannot teardown Snowflake test environment: %s", err)
 			}
 		})
@@ -421,11 +427,13 @@ func newCountIdentitiesWarehouse(t *testing.T, platform string) warehouses.Wareh
 		panic("unsupported warehouse platform " + platform)
 	}
 
-	dw := warehouses.Registered(platform).New(countIdentitiesSettingsLoader{settings: settings})
+	dw := warehouses.Registered(platform).New(countIdentitiesSettingsLoader{settings: settings}, nil)
 	t.Cleanup(func() {
-		if err := dw.Close(); err != nil {
-			t.Error(err)
+		err := dw.Close()
+		if err != nil {
+			t.Errorf("expected no error, got %v", err)
 		}
 	})
+
 	return dw
 }

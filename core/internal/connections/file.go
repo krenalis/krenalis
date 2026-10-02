@@ -22,6 +22,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/dialer"
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/types"
@@ -205,8 +206,11 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer) 
 func (file *File) storage() (any, error) {
 	storage := file.pipeline.Connection()
 	connector := storage.Connector()
+	organization := storage.Organization()
 	return connectors.RegisteredFileStorage(connector.Code).New(&connectors.FileStorageEnv{
 		Settings: newConnectionSettingStore(file.state, storage),
+		Dial:     dialer.Dial(organization.ID),
+		DialWith: dialer.DialWith(organization.ID),
 	})
 }
 

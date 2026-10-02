@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -23,7 +24,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 const (
@@ -42,6 +42,49 @@ func newTestSettingsLoader(settings json.Value) *testSettingsLoader {
 
 func (loader *testSettingsLoader) Load(ctx context.Context, dst any) error {
 	return json.Unmarshal(loader.settings, dst)
+}
+
+// TestCounts checks unconditional and conditional row counts.
+func TestCounts(t *testing.T) {
+
+	warehouse, pool := newTestPostgreSQLWarehouse(t)
+	mustExecSQL(t, pool, `CREATE TABLE "count_conditions" ("flag" BOOLEAN, "other_flag" BOOLEAN)`)
+	mustExecSQL(t, pool, `INSERT INTO "count_conditions" VALUES
+		(TRUE, TRUE), (TRUE, FALSE), (FALSE, TRUE), (NULL, TRUE)`)
+
+	flag := warehouses.NewBaseExpr(warehouses.Column{Name: "flag", Type: types.Boolean()}, warehouses.OpIsTrue)
+	falseFlag := warehouses.NewBaseExpr(warehouses.Column{Name: "flag", Type: types.Boolean()}, warehouses.OpIsFalse)
+	otherFlag := warehouses.NewBaseExpr(warehouses.Column{Name: "other_flag", Type: types.Boolean()}, warehouses.OpIsTrue)
+	conditions := []warehouses.Expr{
+		nil,
+		flag,
+		falseFlag,
+		otherFlag,
+		warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{flag, otherFlag}),
+	}
+
+	totalCounts, err := warehouse.Counts(t.Context(), "count_conditions", nil)
+	if err != nil {
+		t.Fatalf("expected counts, got %v", err)
+	}
+	if !slices.Equal(totalCounts, []int{4}) {
+		t.Fatalf("expected counts [4], got %v", totalCounts)
+	}
+
+	_, err = warehouse.Counts(t.Context(), "count_conditions", []warehouses.Expr{})
+	if err == nil {
+		t.Fatalf("expected an error, got %v", err)
+	}
+
+	counts, err := warehouse.Counts(t.Context(), "count_conditions", conditions)
+	if err != nil {
+		t.Fatalf("expected counts, got %v", err)
+	}
+	want := []int{4, 2, 1, 3, 1}
+	if !slices.Equal(counts, want) {
+		t.Fatalf("expected counts %v, got %v", want, counts)
+	}
+
 }
 
 func Test_Merge(t *testing.T) {
@@ -118,10 +161,7 @@ func Test_Merge(t *testing.T) {
 		postgres.WithDatabase(testDatabase),
 		postgres.WithUsername(testUser),
 		postgres.WithPassword(testPassword),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(60*time.Second)),
+		postgres.BasicWaitStrategies(),
 	)
 	defer func() {
 		if err := testcontainers.TerminateContainer(postgresContainer); err != nil {
@@ -153,7 +193,7 @@ func Test_Merge(t *testing.T) {
 	}
 
 	// Open the data warehouse.
-	dw := warehouses.Registered("PostgreSQL").New(newTestSettingsLoader(settings))
+	dw := warehouses.Registered("PostgreSQL").New(newTestSettingsLoader(settings), nil)
 	defer dw.Close()
 
 	pool, _, err := dw.(*PostgreSQL).connectionPool(context.Background(), false)
@@ -550,10 +590,7 @@ func newTestPostgreSQLWarehouse(t *testing.T) (*PostgreSQL, *pgxpool.Pool) {
 		postgres.WithDatabase(testDatabase),
 		postgres.WithUsername(testUser),
 		postgres.WithPassword(testPassword),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(60*time.Second)),
+		postgres.BasicWaitStrategies(),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -585,7 +622,7 @@ func newTestPostgreSQLWarehouse(t *testing.T) (*PostgreSQL, *pgxpool.Pool) {
 		t.Fatal(err)
 	}
 
-	dw := warehouses.Registered("PostgreSQL").New(newTestSettingsLoader(settings))
+	dw := warehouses.Registered("PostgreSQL").New(newTestSettingsLoader(settings), nil)
 	t.Cleanup(func() {
 		if err := dw.Close(); err != nil {
 			t.Error(err)

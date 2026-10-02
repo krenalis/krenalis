@@ -42,10 +42,10 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		Filter: &krenalistester.Filter{
-			Logical: "or",
-			Conditions: []krenalistester.FilterCondition{
-				{Property: "messageId", Operator: "is", Values: []string{"message1"}}, // message of the anonymous identity
-				{Property: "messageId", Operator: "is", Values: []string{"message3"}}, // message of the not-anonymous identity
+			Operator: krenalistester.OpOr,
+			Rules: []krenalistester.FilterRule{
+				&krenalistester.FilterCondition{Property: "messageId", Operator: "is", Values: []string{"message1"}}, // message of the anonymous identity
+				&krenalistester.FilterCondition{Property: "messageId", Operator: "is", Values: []string{"message3"}}, // message of the not-anonymous identity
 			},
 		},
 		Transformation: &krenalistester.Transformation{
@@ -65,9 +65,9 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		Filter: &krenalistester.Filter{
-			Logical: "or",
-			Conditions: []krenalistester.FilterCondition{
-				{Property: "messageId", Operator: "is", Values: []string{"message2"}}, // message of the anonymous identity
+			Operator: krenalistester.OpOr,
+			Rules: []krenalistester.FilterRule{
+				&krenalistester.FilterCondition{Property: "messageId", Operator: "is", Values: []string{"message2"}}, // message of the anonymous identity
 			},
 		},
 		Transformation: &krenalistester.Transformation{

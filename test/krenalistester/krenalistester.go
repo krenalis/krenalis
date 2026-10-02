@@ -35,7 +35,6 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/nats"
 	_postgres "github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // launchKrenalisExternally determines if Krenalis should be launched externally
@@ -232,10 +231,7 @@ func (k *Krenalis) Start() {
 			_postgres.WithDatabase("test_postgres"),
 			_postgres.WithUsername("test_postgres"),
 			_postgres.WithPassword("test_postgres"),
-			testcontainers.WithWaitStrategy(
-				wait.ForLog("database system is ready to accept connections").
-					WithOccurrence(2).
-					WithStartupTimeout(60*time.Second)),
+			_postgres.BasicWaitStrategies(),
 		)
 		k.stopPostgresContainer = func() error {
 			return testcontainers.TerminateContainer(postgresContainer)
@@ -265,10 +261,7 @@ func (k *Krenalis) Start() {
 			_postgres.WithDatabase("test_warehouse"),
 			_postgres.WithUsername("test_warehouse"),
 			_postgres.WithPassword("test_warehouse"),
-			testcontainers.WithWaitStrategy(
-				wait.ForLog("database system is ready to accept connections").
-					WithOccurrence(2).
-					WithStartupTimeout(60*time.Second)),
+			_postgres.BasicWaitStrategies(),
 		)
 		k.stopWarehouseContainer = func() error {
 			return testcontainers.TerminateContainer(warehouseContainer)
@@ -329,23 +322,24 @@ func (k *Krenalis) Start() {
 			k.t.Fatal(err)
 		}
 		// Build the environment for the Krenalis process by starting from the
-		// current process's environment (os.Environ()) and adding the
-		// Krenalis-specific variables.
+		// current process's environment, without the Krenalis variables, and
+		// adding the Krenalis-specific variables needed by the tests.
 		//
-		// We must preserve the existing environment variables because:
+		// The Krenalis variables already present in the environment are
+		// removed to keep behavior consistent with the "embedded" test mode,
+		// where Krenalis is configured programmatically and does not read the
+		// environment.
 		//
-		// (1) it keeps behavior consistent with the "embedded" test mode,
-		//     which also inherits the full environment, and
+		// The other environment variables must be preserved because Krenalis
+		// may fail if certain system environment variables are missing (e.g.,
+		// this causes errors on Windows).
 		//
-		// (2) Krenalis may fail if certain system environment variables are
-		//     missing (e.g., this causes errors on Windows).
-		//
-		env := append(os.Environ(), []string{
+		env := append(environWithoutKrenalisVars(), []string{
 			"KRENALIS_EXTERNAL_ASSETS_URLS=https://assets.krenalis.com/",
 			"KRENALIS_POTENTIAL_CONNECTORS_URL=https://assets.krenalis.com/admin/connectors/potentials.json",
 			"KRENALIS_TELEMETRY_LEVEL=none",
 			"KRENALIS_KMS=" + testKMS(),
-			"KRENALIS_ORGANIZATIONS_API_KEY=" + testsSettings.OrganizationsAPIKey,
+			"KRENALIS_PLATFORM_MANAGEMENT_API_KEY=" + testsSettings.PlatformManagementAPIKey,
 			"KRENALIS_PROMETHEUS_METRICS_ENABLED=true",
 			"KRENALIS_HTTP_HOST=" + testsSettings.HTTP.Host,
 			"KRENALIS_HTTP_PORT=" + strconv.Itoa(testsSettings.HTTP.Port),
@@ -383,7 +377,7 @@ func (k *Krenalis) Start() {
 		// Keep these in sync with the environment variables set above.
 		setts := cmd.Config{}
 		setts.KMS = testKMS()
-		setts.OrganizationsAPIKey = testsSettings.OrganizationsAPIKey
+		setts.PlatformManagementAPIKey = testsSettings.PlatformManagementAPIKey
 		setts.JavaScriptSDKURL = "https://cdn.krenalis.com/krenalis.min.js"
 		setts.SentryTelemetryLevel = core.TelemetryLevelNone
 		setts.ExternalAssetsURLs = []string{"https://assets.krenalis.com/"}

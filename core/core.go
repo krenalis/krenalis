@@ -19,6 +19,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/collector"
@@ -27,6 +28,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/db"
 	dbpkg "github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/core/internal/dialer"
 	"github.com/krenalis/krenalis/core/internal/initdb"
 	"github.com/krenalis/krenalis/core/internal/metrics"
 	"github.com/krenalis/krenalis/core/internal/requestid"
@@ -49,7 +51,6 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/getsentry/sentry-go"
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -98,14 +99,14 @@ type Config struct {
 	DB                            DBConfig
 	NATS                          NATSConfig
 	KMS                           string
-	OrganizationsAPIKey           string // can be empty (which means that the platform management API cannot be used)
-	FunctionProvider              any    // must be a LambdaConfig or LocalConfig value
+	FunctionProvider              any // must be a LambdaConfig or LocalConfig value
 	MaxMindDBPath                 string
 	MemberEmailFrom               string
 	SMTP                          SMTPConfig
 	OAuthCredentials              map[string]*OAuthCredentials
 	SentryTelemetryLevel          TelemetryLevel
 	MaxQueuedEventsPerDestination int
+	PrometheusMetricsEnabled      bool
 	DatabaseInitialization        struct {
 		// InitIfEmpty controls whether the PostgreSQL database should be
 		// initialized in case it is empty.
@@ -299,8 +300,17 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	defer func() {
 		if err != nil {
 			core.state.Close(ctx)
+			// Disable the per-organization egress counting, if it has been
+			// enabled below, once the state has stopped dispatching
+			// notifications.
+			dialer.DisableCounting()
 		}
 	}()
+
+	// Make the dialer package count the network usage of organizations.
+	if conf.PrometheusMetricsEnabled {
+		dialer.EnableCounting(core.state)
+	}
 
 	// Add the Krenalis installation ID tag to Sentry.
 	if conf.SentryTelemetryLevel != TelemetryLevelNone {
@@ -377,7 +387,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	for _, ws := range core.state.Workspaces() {
 		var dw warehouses.Warehouse
 		if ws.HasWarehouseMCPSettings() {
-			dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
+			dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
 		}
 		core.mcp[ws.ID] = dw
 	}
@@ -592,6 +602,9 @@ func (core *Core) Close(ctx context.Context) {
 	core.state.Close(ctx)
 	// Unregister the database connection pool metrics.
 	core.dbPoolMetrics.Unregister()
+	// Disable the per-organization egress counting, so that a new Core can
+	// enable it again in the same process.
+	dialer.DisableCounting()
 	// Close NATS connection.
 	_ = core.stream.Close()
 	// Close PostgreSQL connections.
@@ -733,7 +746,7 @@ func (core *Core) Connectors() []*Connector {
 }
 
 // ConsumeRateLimitCapacity consumes the specified number of units from the
-// request rate-limit capacity for the platform management API. Units must be at
+// request rate-limit capacity for the Platform Management API. Units must be at
 // least 1.
 //
 // ConsumeRateLimitCapacity returns errors.TooManyRequests when the requested
@@ -1073,7 +1086,7 @@ func (core *Core) WaitStateVersion(ctx context.Context, version int) error {
 // DataTransformation represents transformation passed to (*Core).TransformData
 // and (*Connection).PreviewSendEvent methods.
 type DataTransformation struct {
-	Mapping  map[string]string           `json:"mapping,format:emitnull"`
+	Mapping  map[string]string           `json:"mapping"`
 	Function *DataTransformationFunction `json:"function"`
 }
 
@@ -1096,20 +1109,30 @@ const (
 )
 
 // TransformData transforms data using a mapping or a function transformation
-// and returns the transformed data. inSchema is the schema of data, and
-// outSchema is the schema of the transformed data. Only one of mapping and
-// transformation must be non-nil. purpose indicates the intent of the
-// transformation and can be "Import", "Create", or "Update".
+// and returns the transformed data. organization is the ID of the organization
+// performing the transformation. inSchema is the schema of data, and outSchema
+// is the schema of the transformed data. Only one of mapping and transformation
+// must be non-nil. purpose indicates the intent of the transformation and can
+// be "Import", "Create", or "Update".
+//
+// It returns an errors.NotFound error if the organization does not exist.
 //
 // It returns an errors.UnprocessableError error with code:
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
 //   - UnsupportedLanguage, if the transformation language is not supported.
-func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outSchema types.Type, transformation DataTransformation, purpose Purpose) (json.Value, error) {
+func (core *Core) TransformData(ctx context.Context, organization string, data []byte,
+	inSchema, outSchema types.Type, transformation DataTransformation, purpose Purpose) (json.Value, error) {
 
 	core.mustBeOpen()
 
 	// Validate the parameters.
+	if !IsValidID(organization) {
+		return nil, errors.BadRequest("identifier %q is not a valid organization identifier", organization)
+	}
+	if _, ok := core.state.Organization(organization); !ok {
+		return nil, errors.NotFound("organization %s does not exist", organization)
+	}
 	if !inSchema.Valid() {
 		return nil, errors.BadRequest("input schema is not valid")
 	}
@@ -1139,7 +1162,7 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 	// Validate the mapping and the transformation.
 	switch {
 	case transformation.Mapping != nil:
-		mapping, err := mappings.New(transformation.Mapping, inSchema, outSchema, false, nil)
+		mapping, err := mappings.New(transformation.Mapping, inSchema, outSchema, false)
 		if err != nil {
 			return nil, errors.BadRequest("mapping is not valid: %s", err)
 		}
@@ -1179,7 +1202,8 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 		// no need to list sub-property paths (as the behavior is the same).
 		pipeline.Transformation.InPaths = pipeline.InSchema.Properties().SortedNames()
 		pipeline.Transformation.OutPaths = pipeline.OutSchema.Properties().SortedNames()
-		provider = newTempTransformerProvider(name, pipeline.Transformation.Function.Language, pipeline.Transformation.Function.Source, core.functionProvider)
+		provider = newTempTransformerProvider(organization, name, pipeline.Transformation.Function.Language,
+			pipeline.Transformation.Function.Source, core.functionProvider)
 	default:
 		return nil, errors.BadRequest("mapping (or function) is required")
 	}
@@ -1190,7 +1214,7 @@ func (core *Core) TransformData(ctx context.Context, data []byte, inSchema, outS
 	}
 
 	// Transform the attributes.
-	transformer, err := transformers.New(pipeline, provider, nil)
+	transformer, err := transformers.New(organization, pipeline, provider)
 	if err != nil {
 		return nil, err
 	}
@@ -1511,7 +1535,7 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 		defer stopPing()
 
 		// Prepare the run metrics.
-		bo = backoff.New(200)
+		bo.Reset()
 		for bo.Next(executionCtx) {
 			res, err := core.db.Exec(executionCtx,
 				// If statistics from previous runs of the same pipeline are available,
@@ -1680,19 +1704,28 @@ func (core *Core) executeAlterProfileSchema(workspace, opID string, schema types
 		}
 		insertPrimarySources = "INSERT INTO primary_sources (source, path) VALUES " + b.String()
 	}
+	// Map the column names of the new schema to their property paths.
+	pathByColumn := map[string]string{}
+	for path, property := range schema.Properties().WalkObjects() {
+		if suitableAsIdentifier(property.Type) {
+			column := strings.ReplaceAll(path, ".", "_")
+			pathByColumn[column] = path
+		}
+	}
 	// Update the identifiers.
 	nEnd.Identifiers = make([]string, 0, len(ws.Identifiers))
 Identifiers:
 	for _, identifier := range ws.Identifiers {
+		column := strings.ReplaceAll(identifier, ".", "_")
 		for _, operation := range operations {
 			if operation.Operation == warehouses.OperationAddColumn {
 				continue
 			}
-			if path := strings.ReplaceAll(operation.Column, "_", "."); path != identifier {
+			if operation.Column != column {
 				continue
 			}
 			if operation.Operation == warehouses.OperationRenameColumn {
-				nEnd.Identifiers = append(nEnd.Identifiers, strings.ReplaceAll(operation.NewColumn, "_", "."))
+				nEnd.Identifiers = append(nEnd.Identifiers, pathByColumn[operation.NewColumn])
 			}
 			continue Identifiers
 		}
@@ -1700,6 +1733,16 @@ Identifiers:
 	}
 	for {
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+			// Lock and check the operation before modifying schema or sources.
+			pending, err := tx.QueryExists(ctx,
+				"SELECT FROM workspaces WHERE id = $1 AND alter_profile_schema_id = $2 FOR UPDATE",
+				nEnd.Workspace, nEnd.ID)
+			if err != nil {
+				return nil, err
+			}
+			if !pending {
+				return nil, nil
+			}
 			if nEnd.Err == "" {
 				// These columns should be updated only in case of success,
 				// otherwise, in case of error, the current ones should be left.
@@ -1729,16 +1772,9 @@ Identifiers:
 				" alter_profile_schema_schema = 'null', alter_profile_schema_primary_sources = 'null'," +
 				" alter_profile_schema_operations = 'null', alter_profile_schema_end_time = $1," +
 				" alter_profile_schema_error = $2 WHERE id = $3 AND alter_profile_schema_id = $4"
-			res, err := tx.Exec(ctx, query, nEnd.EndTime, nEnd.Err, nEnd.Workspace, nEnd.ID)
+			_, err = tx.Exec(ctx, query, nEnd.EndTime, nEnd.Err, nEnd.Workspace, nEnd.ID)
 			if err != nil {
 				return nil, err
-			}
-			if res.RowsAffected() == 0 {
-				// This happens in cases where the query has been executed
-				// more than once (because an error occurred), but in fact
-				// the database has already been modified, so we don't want
-				// to send the notification more than once.
-				return nil, nil
 			}
 			return nEnd, nil
 		})
@@ -1823,7 +1859,7 @@ func (core *Core) executeIdentityResolution(workspaceID, opID string) {
 		ID:        opID,
 		EndTime:   time.Now().UTC().Truncate(time.Millisecond),
 	}
-	bo = backoff.New(200)
+	bo.Reset()
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
 		err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
@@ -1893,7 +1929,7 @@ func (core *Core) onCreateWorkspace(n state.CreateWorkspace) {
 	ws, _ := core.state.Workspace(n.ID)
 	var dw warehouses.Warehouse
 	if ws.HasWarehouseMCPSettings() {
-		dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
+		dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
 	}
 	core.mcpMu.Lock()
 	core.mcp[ws.ID] = dw
@@ -1987,7 +2023,7 @@ func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
 	ws, _ := core.state.Workspace(n.Workspace)
 	if ws.HasWarehouseMCPSettings() {
 		// Open the new warehouse.
-		newWarehouse = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws))
+		newWarehouse = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
 	}
 	core.mcpMu.Lock()
 	oldWarehouse = core.mcp[n.Workspace]
@@ -2036,10 +2072,7 @@ func (core *Core) removeMCPWarehouse(ws string) {
 //     not exist.
 func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema types.Type, primarySources map[string]string, operations []warehouses.AlterOperation) error {
 	core.mustBeOpen()
-	opID, err := uuid.NewUUID()
-	if err != nil {
-		return err
-	}
+	opID := uuid.New()
 	n := state.StartAlterProfileSchema{
 		Workspace:      ws,
 		ID:             opID.String(),
@@ -2068,7 +2101,7 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema
 		}
 		connQuery.WriteByte(')')
 	}
-	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+	err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		// Check if primary sources connections exist.
 		if len(primarySources) > 0 {
 			var count int
@@ -2118,16 +2151,13 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema
 // code OperationAlreadyExecuting.
 func (core *Core) startIdentityResolution(ctx context.Context, ws string) error {
 	core.mustBeOpen()
-	opID, err := uuid.NewUUID()
-	if err != nil {
-		return err
-	}
+	opID := uuid.New()
 	n := state.StartIdentityResolution{
 		Workspace: ws,
 		ID:        opID.String(),
 		StartTime: time.Now().UTC().Truncate(time.Millisecond),
 	}
-	err = core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
+	err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		var ongoingOp bool
 		query := `SELECT alter_profile_schema_id IS NOT NULL OR ir_id IS NOT NULL FROM workspaces WHERE id = $1 FOR UPDATE`
 		err := tx.QueryRow(ctx, query, n.Workspace).Scan(&ongoingOp)

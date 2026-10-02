@@ -14,6 +14,7 @@ import (
 	"slices"
 	"testing"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/test/snowflaketester"
 	"github.com/krenalis/krenalis/test/testimages"
@@ -25,10 +26,8 @@ import (
 	_ "github.com/krenalis/krenalis/warehouses/postgresql"
 	_ "github.com/krenalis/krenalis/warehouses/snowflake"
 
-	"github.com/google/uuid"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 var columns = []warehouses.Column{
@@ -47,7 +46,7 @@ func init() {
 	}
 }
 
-type identity struct {
+type rawIdentity struct {
 	connection   string
 	pipeline     string
 	id           string
@@ -56,9 +55,9 @@ type identity struct {
 	attributes   map[string]any
 }
 
-// identityCounts contains the anonymous and recognized identity counts for a
+// logicalCounts contains the anonymous and recognized identity counts for a
 // materialized profile.
-type identityCounts struct {
+type logicalCounts struct {
 	anonymous  int
 	recognized int
 }
@@ -94,20 +93,20 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 		name             string
 		identifiers      []string
 		primarySources   map[string]string
-		identities       []identity
+		rawIdentities    []rawIdentity
 		expectedProfiles []map[string]any
-		expectedCounts   []identityCounts
+		expectedCounts   []logicalCounts
 	}{
 		{
 			name:           "No identities",
 			identifiers:    []string{},
-			identities:     []identity{},
-			expectedCounts: []identityCounts{},
+			rawIdentities:  []rawIdentity{},
+			expectedCounts: []logicalCounts{},
 		},
 		{
 			name:        "One identity, no identifiers",
 			identifiers: []string{},
-			identities: []identity{
+			rawIdentities: []rawIdentity{
 				{
 					connection: identityResolutionConnection1,
 					pipeline:   identityResolutionPipeline1,
@@ -118,12 +117,12 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			expectedProfiles: []map[string]any{
 				{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 			},
-			expectedCounts: []identityCounts{{recognized: 1}},
+			expectedCounts: []logicalCounts{{recognized: 1}},
 		},
 		{
 			name:        "One anonymous identity, no identifiers",
 			identifiers: []string{},
-			identities: []identity{
+			rawIdentities: []rawIdentity{
 				{
 					connection:  identityResolutionConnection1,
 					pipeline:    identityResolutionPipeline1,
@@ -135,12 +134,12 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			expectedProfiles: []map[string]any{
 				{"email": nil, "first_name": nil, "last_name": nil, "notes": nil},
 			},
-			expectedCounts: []identityCounts{{anonymous: 1}},
+			expectedCounts: []logicalCounts{{anonymous: 1}},
 		},
 		{
 			name:        "Two identities from the same connection (different ID), no identifiers",
 			identifiers: []string{},
-			identities: []identity{
+			rawIdentities: []rawIdentity{
 				{
 					connection: identityResolutionConnection1,
 					pipeline:   identityResolutionPipeline1,
@@ -162,7 +161,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 		{
 			name:        "Two identities from the same connection (same ID), no identifiers",
 			identifiers: []string{},
-			identities: []identity{
+			rawIdentities: []rawIdentity{
 				{
 					connection: identityResolutionConnection1,
 					pipeline:   identityResolutionPipeline1,
@@ -179,12 +178,12 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			expectedProfiles: []map[string]any{
 				{"email": "c@d", "first_name": nil, "last_name": nil, "notes": nil},
 			},
-			expectedCounts: []identityCounts{{recognized: 1}},
+			expectedCounts: []logicalCounts{{recognized: 1}},
 		},
 		{
 			name:        "Two identities from two different connections, no identifiers",
 			identifiers: []string{},
-			identities: []identity{
+			rawIdentities: []rawIdentity{
 				{
 					connection: identityResolutionConnection1,
 					pipeline:   identityResolutionPipeline1,
@@ -206,7 +205,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 		{
 			name:        "Two identities from two different connections, one identifier that merges them (first-level priority)",
 			identifiers: []string{"email"},
-			identities: []identity{
+			rawIdentities: []rawIdentity{
 				{
 					connection: identityResolutionConnection1,
 					pipeline:   identityResolutionPipeline1,
@@ -223,12 +222,12 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			expectedProfiles: []map[string]any{
 				{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 			},
-			expectedCounts: []identityCounts{{recognized: 2}},
+			expectedCounts: []logicalCounts{{recognized: 2}},
 		},
 		{
 			name:        "Two identities from two different connections, matching for an identifier with second-level priority, previous identifiers are both nil",
 			identifiers: []string{"email", "last_name"},
-			identities: []identity{
+			rawIdentities: []rawIdentity{
 				{
 					connection: identityResolutionConnection1,
 					pipeline:   identityResolutionPipeline1,
@@ -249,7 +248,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 		{
 			name:        "Two identities from two different connections, matching for an identifier with second-level priority, previous identifiers are nil and not nil",
 			identifiers: []string{"email", "last_name"},
-			identities: []identity{
+			rawIdentities: []rawIdentity{
 				{
 					connection: identityResolutionConnection1,
 					pipeline:   identityResolutionPipeline1,
@@ -270,7 +269,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 		{
 			name:        "Two identities from two different connections, two identifiers that merge them",
 			identifiers: []string{"email", "first_name"},
-			identities: []identity{
+			rawIdentities: []rawIdentity{
 				{
 					connection: identityResolutionConnection1,
 					pipeline:   identityResolutionPipeline1,
@@ -291,7 +290,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 		{
 			name:        "Merging two anonymous identities from the same connection",
 			identifiers: []string{},
-			identities: []identity{
+			rawIdentities: []rawIdentity{
 				{
 					connection:  identityResolutionConnection1,
 					pipeline:    identityResolutionPipeline1,
@@ -310,12 +309,12 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			expectedProfiles: []map[string]any{
 				{"email": nil, "first_name": "Luke", "last_name": nil, "notes": nil},
 			},
-			expectedCounts: []identityCounts{{anonymous: 1}},
+			expectedCounts: []logicalCounts{{anonymous: 1}},
 		},
 		{
 			name:        "Anonymous and recognized identities with the same text are different identities",
 			identifiers: []string{"email"},
-			identities: []identity{
+			rawIdentities: []rawIdentity{
 				{
 					connection:  identityResolutionConnection1,
 					pipeline:    identityResolutionPipeline1,
@@ -333,12 +332,12 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			expectedProfiles: []map[string]any{
 				{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
 			},
-			expectedCounts: []identityCounts{{anonymous: 1, recognized: 1}},
+			expectedCounts: []logicalCounts{{anonymous: 1, recognized: 1}},
 		},
 		{
 			name:        "Two identities not merged as one is anonymous and one is not",
 			identifiers: []string{},
-			identities: []identity{
+			rawIdentities: []rawIdentity{
 				{
 					connection:  identityResolutionConnection1,
 					pipeline:    identityResolutionPipeline1,
@@ -364,7 +363,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			primarySources: map[string]string{
 				"email": identityResolutionConnection1,
 			},
-			identities: []identity{
+			rawIdentities: []rawIdentity{
 				{
 					connection: identityResolutionConnection1,
 					pipeline:   identityResolutionPipeline1,
@@ -385,7 +384,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 				"first_name": identityResolutionConnection2,
 				"last_name":  identityResolutionConnection2,
 			},
-			identities: []identity{
+			rawIdentities: []rawIdentity{
 				{
 					connection: identityResolutionConnection1,
 					pipeline:   identityResolutionPipeline1,
@@ -412,7 +411,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 		{
 			name:        "Array - just one identity",
 			identifiers: []string{},
-			identities: []identity{
+			rawIdentities: []rawIdentity{
 				{
 					connection: identityResolutionConnection1,
 					pipeline:   identityResolutionPipeline1,
@@ -427,7 +426,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 		{
 			name:        "Array - merging three identities",
 			identifiers: []string{"email"},
-			identities: []identity{
+			rawIdentities: []rawIdentity{
 				{
 					connection: identityResolutionConnection1,
 					pipeline:   identityResolutionPipeline1,
@@ -454,7 +453,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 		{
 			name:        "Array - merging four identities, two by two (with duplicated values)",
 			identifiers: []string{"email"},
-			identities: []identity{
+			rawIdentities: []rawIdentity{
 				{
 					connection: identityResolutionConnection1,
 					pipeline:   identityResolutionPipeline1,
@@ -488,7 +487,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 		{
 			name:        "Array - handling of null values (1)",
 			identifiers: []string{"email"},
-			identities: []identity{
+			rawIdentities: []rawIdentity{
 				{
 					connection: identityResolutionConnection1,
 					pipeline:   identityResolutionPipeline1,
@@ -515,7 +514,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 		{
 			name:        "Array - handling of null values (2)",
 			identifiers: []string{"email"},
-			identities: []identity{
+			rawIdentities: []rawIdentity{
 				{
 					connection: identityResolutionConnection1,
 					pipeline:   identityResolutionPipeline1,
@@ -562,10 +561,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					postgres.WithDatabase(database),
 					postgres.WithUsername(username),
 					postgres.WithPassword(password),
-					testcontainers.WithWaitStrategy(
-						wait.ForLog("database system is ready to accept connections").
-							WithOccurrence(2).
-							WithStartupTimeout(60*time.Second)),
+					postgres.BasicWaitStrategies(),
 				)
 				defer func() {
 					if err := testcontainers.TerminateContainer(postgresContainer); err != nil {
@@ -617,7 +613,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			}
 
 			// Open the warehouse.
-			dw := platform.New(newTestSettingsLoader(settings))
+			dw := platform.New(newTestSettingsLoader(settings), nil)
 
 			ctx := context.Background()
 
@@ -638,7 +634,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			for _, test := range tests {
 				t.Run(test.name, func(t *testing.T) {
 
-					// Truncate the existing identities.
+					// Truncate the existing raw identities.
 					//
 					// TODO(Gianluca): how should the platforms expose the table names? We
 					// have an issue where we discuss this (https://github.com/krenalis/krenalis/issues/928).
@@ -650,8 +646,8 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					// Merge the test's identities on the warehouse.
 					var rows []map[string]any
 					validatePrimarySources(t, test.primarySources)
-					for _, profile := range test.identities {
-						validateIdentity(t, profile)
+					for _, rawIdentity := range test.rawIdentities {
+						validateRawIdentity(t, rawIdentity)
 						// Sleep for 1 millisecond to ensure that
 						// timestamps are generated incrementally. This
 						// is not necessary on Linux, where timestamps
@@ -662,15 +658,15 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 						// making the test fail.
 						time.Sleep(1 * time.Millisecond)
 						row := map[string]any{
-							"_pipeline":      profile.pipeline,
-							"_is_anonymous":  profile.isAnonymous,
-							"_identity_id":   profile.id,
-							"_connection":    profile.connection,
-							"_anonymous_ids": toSliceAny(profile.anonymousIDs),
+							"_pipeline":      rawIdentity.pipeline,
+							"_is_anonymous":  rawIdentity.isAnonymous,
+							"_identity_id":   rawIdentity.id,
+							"_connection":    rawIdentity.connection,
+							"_anonymous_ids": toSliceAny(rawIdentity.anonymousIDs),
 							"_updated_at":    time.Now().UTC(),
 							"_run":           identityResolutionTestRunID,
 						}
-						maps.Copy(row, profile.attributes)
+						maps.Copy(row, rawIdentity.attributes)
 						rows = append(rows, row)
 					}
 					err = dw.MergeIdentities(ctx, mergeColumns, rows)
@@ -683,10 +679,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					for _, id := range test.identifiers {
 						identifiers = append(identifiers, columnByName[id])
 					}
-					opID, err := uuid.NewUUID()
-					if err != nil {
-						t.Fatal(err)
-					}
+					opID := uuid.New()
 					// Call ResolveIdentities several times to verify that retries return the
 					// original counts.
 					var returnedCounts warehouses.IdentityResolutionCounts
@@ -740,12 +733,12 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 							t.Fatal(err)
 						}
 					}
-					profileCount, err := dw.Count(ctx, "profiles")
+					profileCounts, err := dw.Counts(ctx, "profiles", nil)
 					if err != nil {
 						t.Fatal(err)
 					}
-					if profileCount != len(gotProfiles) {
-						t.Fatalf("expected exact profile count %d, got %d", len(gotProfiles), profileCount)
+					if profileCounts[0] != len(gotProfiles) {
+						t.Fatalf("expected exact profile count %d, got %d", len(gotProfiles), profileCounts[0])
 					}
 					// The returned profiles are sorted solely by email, as it is
 					// only possible to sort profiles by one property. Therefore,
@@ -770,16 +763,16 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 						t.Fatalf("\nexpected profiles:\n\t%v\ngot:\n\t%v", test.expectedProfiles, gotProfiles)
 					}
 
-					gotCounts := readIdentityCounts(t, dw, profilesVersion)
+					gotCounts := readLogicalCounts(t, dw, profilesVersion)
 					if wantCounts := aggregateIdentityResolutionCounts(t, gotCounts); returnedCounts != *wantCounts {
 						t.Fatalf("expected ResolveIdentities counts %v, got %v", wantCounts, returnedCounts)
 					}
 					if test.expectedCounts != nil {
 						expectedCounts := slices.Clone(test.expectedCounts)
-						sortIdentityCounts(expectedCounts)
-						sortIdentityCounts(gotCounts)
+						sortLogicalCounts(expectedCounts)
+						sortLogicalCounts(gotCounts)
 						if !slices.Equal(expectedCounts, gotCounts) {
-							t.Fatalf("expected identity counts %v, got %v", expectedCounts, gotCounts)
+							t.Fatalf("expected logical identity counts %v, got %v", expectedCounts, gotCounts)
 						}
 					}
 				})
@@ -791,7 +784,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 
 // aggregateIdentityResolutionCounts derives Identity Resolution counts from
 // per-profile identity counts.
-func aggregateIdentityResolutionCounts(t *testing.T, profiles []identityCounts) *warehouses.IdentityResolutionCounts {
+func aggregateIdentityResolutionCounts(t *testing.T, profiles []logicalCounts) *warehouses.IdentityResolutionCounts {
 	t.Helper()
 	var counts warehouses.IdentityResolutionCounts
 	for _, profile := range profiles {
@@ -824,9 +817,9 @@ func aggregateIdentityResolutionCounts(t *testing.T, profiles []identityCounts) 
 	return &counts
 }
 
-// readIdentityCounts reads the anonymous and recognized identity counts from
+// readLogicalCounts reads the anonymous and recognized identity counts from
 // one materialized profile-table version.
-func readIdentityCounts(t *testing.T, dw warehouses.Warehouse, profilesVersion int) []identityCounts {
+func readLogicalCounts(t *testing.T, dw warehouses.Warehouse, profilesVersion int) []logicalCounts {
 	t.Helper()
 	countColumns := []warehouses.Column{
 		{Name: "_anonymous_count", Type: types.Int(32)},
@@ -839,13 +832,13 @@ func readIdentityCounts(t *testing.T, dw warehouses.Warehouse, profilesVersion i
 	if err != nil {
 		t.Fatal(err)
 	}
-	var counts []identityCounts
+	var counts []logicalCounts
 	row := make([]any, len(countColumns))
 	for r.Next() {
 		if err := r.Scan(row...); err != nil {
 			t.Fatal(err)
 		}
-		counts = append(counts, identityCounts{
+		counts = append(counts, logicalCounts{
 			anonymous:  row[0].(int),
 			recognized: row[1].(int),
 		})
@@ -859,10 +852,10 @@ func readIdentityCounts(t *testing.T, dw warehouses.Warehouse, profilesVersion i
 	return counts
 }
 
-// sortIdentityCounts orders profile identity counts by anonymous count and then
+// sortLogicalCounts orders profile identity counts by anonymous count and then
 // by recognized count.
-func sortIdentityCounts(counts []identityCounts) {
-	slices.SortFunc(counts, func(a, b identityCounts) int {
+func sortLogicalCounts(counts []logicalCounts) {
+	slices.SortFunc(counts, func(a, b logicalCounts) int {
 		if n := cmp.Compare(a.anonymous, b.anonymous); n != 0 {
 			return n
 		}
@@ -900,9 +893,9 @@ func toSliceAny[T any](s []T) []any {
 	return sa
 }
 
-func validateIdentity(t *testing.T, id identity) {
+func validateRawIdentity(t *testing.T, id rawIdentity) {
 	fatal := func(format string, a ...any) {
-		t.Fatalf("the test is invalid because an identity is not defined correctly: %s", fmt.Sprintf(format, a...))
+		t.Fatalf("the test is invalid because a raw identity is not defined correctly: %s", fmt.Sprintf(format, a...))
 	}
 	// connection.
 	switch id.connection {
@@ -924,7 +917,7 @@ func validateIdentity(t *testing.T, id identity) {
 	}
 	// id.
 	if id.id == "" {
-		fatal("identity ID cannot be empty")
+		fatal("raw identity ID cannot be empty")
 	}
 	// properties.
 	columns := slices.Collect(maps.Keys(columnByName))

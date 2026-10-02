@@ -84,12 +84,14 @@ type FilterOperator =
 interface FilterCondition {
 	property: string;
 	operator: FilterOperator | '';
-	values: string[] | null;
+	values?: string[];
 }
 
+type FilterRule = FilterCondition | Filter;
+
 interface Filter {
-	logical: FilterLogical;
-	conditions: FilterCondition[];
+	operator: FilterLogical;
+	rules: FilterRule[];
 }
 
 interface Pipeline {
@@ -99,6 +101,8 @@ interface Pipeline {
 	name: string;
 	enabled: boolean;
 	eventType: string | null;
+	orderingGroup: string | null;
+	deliveryEndpoint: string | null;
 	running: boolean;
 	scheduleStart: number | null;
 	schedulePeriod: SchedulePeriod | null;
@@ -129,6 +133,8 @@ interface PipelineType {
 	description: string;
 	target: PipelineTarget;
 	eventType: string;
+	orderingGroup: string | null;
+	deliveryEndpoint: string | null;
 }
 
 interface PipelineToSet {
@@ -189,6 +195,7 @@ export type {
 	Filter,
 	FilterOperator,
 	FilterLogical,
+	FilterRule,
 	ConsentPurposesOperator,
 	RequiredConsents,
 	FilterCondition,

@@ -13,13 +13,13 @@ import (
 	"slices"
 	"strconv"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/tools/backoff"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 
-	"github.com/google/uuid"
 	"github.com/krenalis/analytics-go"
 )
 
@@ -392,17 +392,16 @@ func (k *Krenalis) CreateWorkspaceRestrictedAPIKey(name string) string {
 // DefaultFilterUserFromEvents is the filter that the admin adds by default to
 // the pipelines that import users from events.
 var DefaultFilterUserFromEvents = &Filter{
-	Logical: "or",
-	Conditions: []FilterCondition{
-		{
+	Operator: OpOr,
+	Rules: []FilterRule{
+		&FilterCondition{
 			Property: "type",
 			Operator: "is",
 			Values:   []string{"identify"},
 		},
-		{
+		&FilterCondition{
 			Property: "traits",
 			Operator: "is not empty",
-			Values:   nil,
 		},
 	},
 }
@@ -575,12 +574,12 @@ func (k *Krenalis) TryOrganizations(first, limit int) ([]Organization, error) {
 	return response.Organizations, err
 }
 
-// organizationsHeaders returns the headers needed to call the platform
-// management API.
+// organizationsHeaders returns the headers needed to call the Platform
+// Management API.
 func organizationsHeaders() http.Header {
 	return http.Header{
 		"Krenalis-Workspace": nil, // so that Call does not add automatically the header.
-		"Authorization":      []string{"Bearer " + testsSettings.OrganizationsAPIKey},
+		"Authorization":      []string{"Bearer " + testsSettings.PlatformManagementAPIKey},
 	}
 }
 
@@ -646,9 +645,9 @@ func (k *Krenalis) ProfileEvents(kpid uuid.UUID, properties []string) []map[stri
 		"limit":      []string{"10"},
 	}
 	filter := Filter{
-		Logical: OpAnd,
-		Conditions: []FilterCondition{
-			{Property: "kpid",
+		Operator: OpAnd,
+		Rules: []FilterRule{
+			&FilterCondition{Property: "kpid",
 				Operator: OpIs,
 				Values:   []string{kpid.String()}},
 		},
@@ -766,7 +765,7 @@ func (s sendEventCallback) Failure(msg analytics.Message, err error) {
 }
 
 // SetOrganizationStatus enables or disables an organization through the
-// platform management API.
+// Platform Management API.
 func (k *Krenalis) SetOrganizationStatus(id string, enabled bool) {
 	must(k.t, k.TrySetOrganizationStatus(id, enabled, organizationsHeaders()))
 }

@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"net/netip"
 	"regexp"
 	"slices"
 	"strconv"
@@ -22,8 +21,6 @@ import (
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
-
-	"github.com/google/uuid"
 )
 
 var (
@@ -56,7 +53,20 @@ func (err RecordValidationError) Error() string {
 }
 
 func (err RecordValidationError) addIndexToPath(i int) RecordValidationError {
-	err.path = "[" + strconv.Itoa(i) + "]." + err.path
+	index := "[" + strconv.Itoa(i) + "]"
+	if err.path != "" && err.path[0] != '[' {
+		index += "."
+	}
+	err.path = index + err.path
+	return err
+}
+
+func (err RecordValidationError) addMapKeyToPath(key string) RecordValidationError {
+	name := "[" + strconv.Quote(key) + "]"
+	if err.path != "" && err.path[0] != '[' {
+		name += "."
+	}
+	err.path = name + err.path
 	return err
 }
 
@@ -367,12 +377,13 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 		}
 		min := t.MinElements()
 		max := t.MaxElements()
+		et := t.Elem()
 		arr := []any{}
 		for i := 0; d.peekKind() != ']'; i++ {
 			if i == max {
 				return nil, newRecordValidationError("", fmt.Sprintf("contains more than %d %s", max, d.opts.terms.Elements))
 			}
-			elem, err := d.unmarshal(t.Elem(), preserveJSON, purpose)
+			elem, err := d.unmarshal(et, preserveJSON, purpose)
 			if err != nil {
 				if e, ok := err.(RecordValidationError); ok {
 					err = e.addIndexToPath(i)
@@ -380,20 +391,21 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 				return nil, err
 			}
 			arr = append(arr, elem)
-			i++
-		}
-		if _, err := d.readToken(); err != nil {
-			return nil, err
 		}
 		if len(arr) < min {
 			return nil, newRecordValidationError("", fmt.Sprintf("contains less than %d %s", min, d.opts.terms.Elements))
 		}
 		if t.Unique() {
-			for i, elem := range arr {
-				if slices.Contains(arr[i+1:], elem) {
-					return nil, newRecordValidationError("", "contains a duplicated value")
-				}
+			duplicate, err := types.FirstDuplicate(arr, et)
+			if err != nil {
+				return nil, err
 			}
+			if duplicate != -1 {
+				return nil, newRecordValidationError("", "contains a duplicated value")
+			}
+		}
+		if _, err := d.readToken(); err != nil {
+			return nil, err
 		}
 		return arr, nil
 	case '{':
@@ -508,6 +520,9 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 				// Read the property's value.
 				value, err := d.unmarshal(t.Elem(), preserveJSON, purpose)
 				if err != nil {
+					if e, ok := err.(RecordValidationError); ok {
+						err = e.addMapKeyToPath(name)
+					}
 					return nil, err
 				}
 				m[name] = value
@@ -554,7 +569,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 				if n, ok := t.MaxLength(); ok && utf8.RuneCountInString(s) > n {
 					return nil, newRecordValidationError("", fmt.Sprintf("exceeds the %d-char limit", n))
 				}
-				if n, ok := t.MaxBytes(); ok && utf8.RuneCountInString(s) > n {
+				if n, ok := t.MaxBytes(); ok && len(s) > n {
 					return nil, newRecordValidationError("", fmt.Sprintf("exceeds the %d-byte limit", n))
 				}
 				return s, nil
@@ -701,8 +716,8 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		}
 	case types.UUIDKind:
 		if v.Kind() == '"' {
-			if u, err := uuid.ParseBytes(v.AppendUnquote(nil)); err == nil {
-				return u.String(), nil
+			if u, ok := types.NormalizeUUID(string(v.AppendUnquote(nil))); ok {
+				return u, nil
 			}
 		}
 	case types.JSONKind:
@@ -715,8 +730,8 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		}
 	case types.IPKind:
 		if v.Kind() == '"' {
-			if ip, err := netip.ParseAddr(d.unquoteString(v)); err == nil {
-				return ip.String(), nil
+			if ip, ok := types.NormalizeIP(d.unquoteString(v)); ok {
+				return ip, nil
 			}
 		}
 	}

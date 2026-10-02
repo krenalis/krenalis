@@ -57,6 +57,8 @@ func TestUpgrade(t *testing.T) {
 			id varchar(12) PRIMARY KEY,
 			connection varchar(12) NOT NULL REFERENCES connections (id),
 			target pipeline_target NOT NULL,
+			filter jsonb,
+			event_type varchar(100) NOT NULL,
 			format varchar
 		);
 		CREATE TABLE pipelines_metrics (
@@ -86,6 +88,10 @@ func TestUpgrade(t *testing.T) {
 			leader uuid NOT NULL,
 			date timestamp NOT NULL
 		);
+		CREATE TABLE discontinued_functions (
+			id varchar(200) PRIMARY KEY,
+			discontinued_at timestamp(0) NOT NULL
+		);
 		CREATE INDEX pipelines_metrics_pipeline_idx ON pipelines_metrics (pipeline);
 		INSERT INTO organizations (id, name, enabled) VALUES ('111111111111', 'ACME inc', true);
 		INSERT INTO workspaces (id, organization) VALUES ('222222222222', '111111111111');
@@ -93,8 +99,48 @@ func TestUpgrade(t *testing.T) {
 		SET ir_id = 'aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb',
 			ir_start_time = '2026-08-10 01:30:00'
 		WHERE id = '222222222222';
-		INSERT INTO connections (id, workspace, connector, role) VALUES ('333333333333', '222222222222', 'dummy', 'Source');
-		INSERT INTO pipelines (id, connection, target, format) VALUES ('444444444444', '333333333333', 'User', 'csv');
+		INSERT INTO connections (id, workspace, connector, role) VALUES
+			('333333333333', '222222222222', 'dummy', 'Source'),
+			('999999999999', '222222222222', 'dummy', 'Destination');
+		INSERT INTO pipelines (id, connection, target, event_type, filter, format) VALUES
+			(
+				'444444444444',
+				'333333333333',
+				'User',
+				'',
+				'{
+					"logical": "And",
+					"conditions": [
+						{"property": ["a"], "operator": "OpIsNotBetween", "values": [5, 10]},
+						{"property": ["b"], "operator": "IsNull"}
+					]
+				}',
+				'csv'
+			),
+			(
+				'666666666666',
+				'333333333333',
+				'User',
+				'',
+				'{"operator":"Or","rules":[{"property":["b"],"operator":"IsNotBetween","values":[15,20]}]}',
+				NULL
+			),
+			(
+				'777777777777',
+				'333333333333',
+				'User',
+				'',
+				'{"operator":"And","rules":[{"rules":[{"property":["b"],"operator":"OpIsNotBetween","values":[25,30]},{"property":["literal"],"operator":"Contains","values":["OpIsNotBetween"]}],"operator":"Or"}]}',
+				NULL
+			),
+			(
+				'888888888888',
+				'999999999999',
+				'Event',
+				'send_event_with_no_schema',
+				NULL,
+				NULL
+			);
 		INSERT INTO pipelines_metrics (
 			pipeline, timeslot,
 			passed_0, passed_1, passed_2, passed_3, passed_4, passed_5,
@@ -106,6 +152,7 @@ func TestUpgrade(t *testing.T) {
 		);
 		INSERT INTO pipelines_runs (id, pipeline, node) VALUES ('555555555555', '444444444444', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
 		INSERT INTO election (number, leader, date) VALUES (1, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', NOW());
+		INSERT INTO discontinued_functions (id, discontinued_at) VALUES ('arn:aws:lambda:eu-west-1:1:function:transform.js', NOW());
 		INSERT INTO metadata (installation_id, kms_encrypted_cookie_key, kms_encrypted_oauth_key, kms_encrypted_notification_key, kms_encrypted_api_key_pepper)
 			VALUES ('test-installation', '\x01'::bytea, '\x02'::bytea, '\x03'::bytea, '\x04'::bytea);
 		INSERT INTO notifications (id, name, payload) VALUES (1, 'EndPipelineRun', '{}'::jsonb)`)
@@ -130,20 +177,25 @@ func TestUpgrade(t *testing.T) {
 	assertIndexExists(t, database, pipelinesMetricsTimeslotIndex)
 	assertOrganizationConnectorReferences(t, database)
 	assertNodeIDsUpgraded(t, database)
+	assertPipelineFiltersUpgraded(t, database)
+	assertPipelineEventTypesUpgraded(t, database)
 	assertPipelineMetricsUpgrade(t, database)
 	assertPipelineMetricsColumnOrder(t, database)
-	assertPipelineMetricsSurvivePipelineDelete(t, database)
 	assertUsageMetricsUpgrade(t, database)
 	assertIdentityMetricsUpgrade(t, database)
 	assertIdentityResolutionMetricsUpgrade(t, database)
 	assertIdentityResolutionRunsUpgrade(t, database)
 	assertStateRequestSyncSchemaUpgraded(t, database)
+	assertDiscontinuedFunctionsUpgrade(t, database)
 	assertRateLimitLeaseFunction(t, database)
 	assertConsentStepColumns(t, database)
 
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatalf("expected second upgrade to succeed, got %s", err)
 	}
+	assertPipelineFiltersUpgraded(t, database)
+	assertPipelineEventTypesUpgraded(t, database)
+	assertPipelineMetricsSurvivePipelineDelete(t, database)
 	assertUsageMetricsUpgrade(t, database)
 	assertIdentityMetricsUpgrade(t, database)
 	assertIdentityResolutionMetricsUpgrade(t, database)
@@ -153,6 +205,7 @@ func TestUpgrade(t *testing.T) {
 // assertIdentityMetricsUpgrade verifies that the upgrade creates the identity
 // metric tables and seeds an initial observation for every existing workspace.
 func assertIdentityMetricsUpgrade(t *testing.T, database *db.DB) {
+
 	t.Helper()
 	for table, want := range map[string]string{
 		"identity_metrics":            "workspace,day",
@@ -172,11 +225,190 @@ func assertIdentityMetricsUpgrade(t *testing.T, database *db.DB) {
 			AND identities_recognized = 0
 			AND identities_without_profile = 0`).Scan(&count)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if count != 1 {
 		t.Fatalf("expected one initial zero identity observation, got %d", count)
 	}
+
+}
+
+// TestUpgradePipelineOrderingGroup verifies column order, schema and data
+// preservation, and idempotence on a complete pipelines table.
+func TestUpgradePipelineOrderingGroup(t *testing.T) {
+
+	const snapshotQuery = `
+		SELECT jsonb_build_object(
+			'table', 'pipelines'::regclass::oid,
+			'columns', (
+				SELECT jsonb_agg(jsonb_build_array(a.attname, format_type(a.atttypid, a.atttypmod),
+					a.attnotnull, pg_get_expr(d.adbin, d.adrelid)) ORDER BY a.attnum)
+				FROM pg_attribute a
+				LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
+				WHERE a.attrelid = 'pipelines'::regclass AND a.attnum > 0 AND NOT a.attisdropped),
+			'constraints', (
+				SELECT jsonb_agg(jsonb_build_array(conname,
+					CASE WHEN contype = 'c' THEN contype::text ELSE pg_get_constraintdef(oid) END,
+					convalidated) ORDER BY conname)
+				FROM pg_constraint WHERE conrelid = 'pipelines'::regclass OR confrelid = 'pipelines'::regclass),
+			'indexes', (
+				SELECT jsonb_agg(pg_get_indexdef(indexrelid) ORDER BY indexrelid::regclass::text)
+				FROM pg_index WHERE indrelid = 'pipelines'::regclass),
+			'data', (SELECT jsonb_agg(to_jsonb(p) ORDER BY id) FROM pipelines p),
+			'runs', (SELECT jsonb_agg(to_jsonb(r) ORDER BY id) FROM pipelines_runs r),
+			'errors', (SELECT jsonb_agg(to_jsonb(e) ORDER BY pipeline) FROM pipelines_errors e),
+			'view', (SELECT jsonb_agg(to_jsonb(v) ORDER BY resource) FROM organization_connector_references v)
+		)::text`
+
+	for _, name := range []string{"missing", "appended", "delivery-appended", "installed", "empty", "brevo", "klaviyo"} {
+
+		t.Run(name, func(t *testing.T) {
+
+			database := newInitializedTestDatabase(t)
+			if name != "empty" {
+
+				_, err := database.Exec(t.Context(), `
+					INSERT INTO workspaces (id, organization, name, warehouse_name, warehouse_mode,
+						warehouse_settings, kms_encrypted_warehouse_settings_key, kms_encrypted_warehouse_mcp_settings_key)
+					SELECT '222222222222', id, 'Workspace', 'postgresql', 'Normal', '\x', '\x', '\x'
+					FROM organizations LIMIT 1;
+					INSERT INTO connections (id, workspace, connector, role, kms_encrypted_settings_key)
+					VALUES ('333333333333', '222222222222', 'dummy', 'Source', '\x');
+					INSERT INTO pipelines (id, connection, target, event_type, ordering_group, delivery_endpoint,
+						name, enabled,
+						schedule_start, schedule_period, in_schema, out_schema, filter, required_consents,
+						required_consents_operator, transformation_mapping, transformation_id, transformation_version,
+						transformation_language, transformation_source, transformation_preserve_json,
+						transformation_in_paths, transformation_out_paths, query, format, path, sheet, compression,
+						order_by, format_settings, export_mode, matching_in, matching_out, update_on_duplicates,
+						table_name, table_key, user_id_column, updated_at_column, updated_at_format, incremental,
+						cursor, health, properties_to_unset)
+					VALUES ('444444444444', '333333333333', 'Event', repeat('界', 99) || '-', 'events', '', 'Pipeline', true,
+						17, 5, '{"in":1}', '{"out":2}', '{"operator":"And","rules":[]}', '{purpose}',
+						'or', '{"mapping":3}', 'function', 'v1', 'Python', 'source', true,
+						'{in}', '{out}', 'SELECT 1', 'json', '/path', 'Sheet', 'Gzip',
+						'name', '{"setting":4}', 'CreateOnly', 'in', 'out', true,
+						'profiles', 'id', 'uid', 'updated', 'format', true,
+						'2026-01-02 03:04:05', 'RecentError', '{property}');
+					INSERT INTO pipelines (id, connection, target, event_type, ordering_group, delivery_endpoint,
+						transformation_language, matching_in, matching_out, table_key, update_on_duplicates)
+					VALUES ('666666666666', '333333333333', 'User', '', '', '', 'JavaScript', '', '', '', false);
+					INSERT INTO pipelines_runs (id, pipeline, start_time, ping_time)
+					VALUES ('555555555555', '444444444444', '2026-01-02 03:04:05', '2026-01-02 03:04:06');
+					INSERT INTO pipelines_errors (pipeline, timeslot, step, count, message)
+					VALUES ('444444444444', 1, 0, 1, 'error')`)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if name == "brevo" || name == "klaviyo" {
+					_, err = database.Exec(t.Context(), "UPDATE connections SET connector = $1", name)
+					if err != nil {
+						t.Fatal(err)
+					}
+					_, err = database.Exec(t.Context(), `
+						UPDATE pipelines SET event_type = 'create_event', ordering_group = 'create_event'
+						WHERE target = 'Event'`)
+					if err != nil {
+						t.Fatal(err)
+					}
+				}
+
+			}
+
+			var expected string
+			err := database.QueryRow(t.Context(), snapshotQuery).Scan(&expected)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if name != "delivery-appended" && name != "installed" {
+				_, err = database.Exec(t.Context(), `
+					ALTER TABLE pipelines DROP COLUMN ordering_group;
+					ALTER TABLE pipelines ALTER COLUMN event_type TYPE varchar(100)`)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			if name == "delivery-appended" {
+				_, err = database.Exec(t.Context(), `
+					ALTER TABLE pipelines DROP COLUMN delivery_endpoint;
+					ALTER TABLE pipelines ADD COLUMN delivery_endpoint varchar(16);
+					UPDATE pipelines SET delivery_endpoint = '';
+					ALTER TABLE pipelines ALTER COLUMN delivery_endpoint SET NOT NULL`)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			if name == "appended" {
+				_, err = database.Exec(t.Context(), pipelineEventTypeUpgrade)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			var previousPosition int
+			err = database.QueryRow(t.Context(), `
+				SELECT MAX(attnum) FROM pg_attribute
+				WHERE attrelid = 'pipelines'::regclass AND NOT attisdropped`).Scan(&previousPosition)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for attempt := range 2 {
+
+				err = Upgrade(t.Context(), database)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var got string
+				err = database.QueryRow(t.Context(), snapshotQuery).Scan(&got)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got != expected {
+					t.Fatalf("expected preserved schema and data %s, got %s", expected, got)
+				}
+
+				var position int
+				err = database.QueryRow(t.Context(), `
+					SELECT MAX(attnum) FROM pg_attribute
+					WHERE attrelid = 'pipelines'::regclass AND NOT attisdropped`).Scan(&position)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if (attempt > 0 || name == "installed") && position != previousPosition {
+					t.Fatalf("expected unchanged final column position %d, got %d", previousPosition, position)
+				}
+				previousPosition = position
+
+			}
+
+			if name != "empty" {
+
+				for _, test := range []struct {
+					assignment string
+					constraint string
+				}{
+					{"schedule_start = -1", "pipelines_schedule_start_check"},
+					{"schedule_start = 1440", "pipelines_schedule_start_check"},
+					{"schedule_period = 1", "pipelines_schedule_period_check"},
+					{"required_consents_operator = 'xor'", "pipelines_required_consents_operator_check"},
+				} {
+					_, err = database.Exec(t.Context(), "UPDATE pipelines SET "+test.assignment)
+					if err != nil {
+						if db.ErrConstraintName(err) != test.constraint {
+							t.Fatalf("expected violation of %s, got %s", test.constraint, err)
+						}
+						continue
+					}
+					t.Fatalf("expected violation of %s, got nil", test.constraint)
+				}
+
+			}
+
+		})
+
+	}
+
 }
 
 // assertIdentityResolutionMetricsUpgrade verifies that the upgrade creates the
@@ -473,6 +705,91 @@ func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
 	}
 }
 
+// assertPipelineEventTypesUpgraded verifies event type identifier limits and
+// persisted ordering and delivery metadata.
+func assertPipelineEventTypesUpgraded(t *testing.T, database *db.DB) {
+
+	t.Helper()
+
+	var adjacent bool
+	err := database.QueryRow(t.Context(), `
+		SELECT g.attnum > e.attnum AND d.attnum > g.attnum AND NOT EXISTS (
+			SELECT FROM pg_attribute a
+			WHERE a.attrelid = e.attrelid AND NOT a.attisdropped
+				AND ((a.attnum > e.attnum AND a.attnum < g.attnum)
+					OR (a.attnum > g.attnum AND a.attnum < d.attnum))
+		)
+		FROM pg_attribute e
+		JOIN pg_attribute g ON g.attrelid = e.attrelid AND g.attname = 'ordering_group' AND NOT g.attisdropped
+		JOIN pg_attribute d ON d.attrelid = e.attrelid AND d.attname = 'delivery_endpoint' AND NOT d.attisdropped
+		WHERE e.attrelid = 'pipelines'::regclass AND e.attname = 'event_type' AND NOT e.attisdropped`).Scan(&adjacent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !adjacent {
+		t.Fatal("expected ordering_group and delivery_endpoint immediately after event_type, got intervening columns")
+	}
+
+	for _, column := range []struct {
+		name   string
+		length int
+	}{
+		{"event_type", 100},
+		{"ordering_group", 16},
+		{"delivery_endpoint", 16},
+	} {
+		var length int
+		err := database.QueryRow(t.Context(), `
+			SELECT character_maximum_length
+			FROM information_schema.columns
+			WHERE table_schema = current_schema()
+				AND table_name = 'pipelines'
+				AND column_name = $1`, column.name).Scan(&length)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if length != column.length {
+			t.Fatalf("expected pipelines.%s to have length %d, got %d", column.name, column.length, length)
+		}
+
+	}
+
+	var eventType, orderingGroup, deliveryEndpoint string
+	err = database.QueryRow(t.Context(), `
+		SELECT event_type, ordering_group, delivery_endpoint
+		FROM pipelines
+		WHERE id = '888888888888'`).Scan(&eventType, &orderingGroup, &deliveryEndpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if eventType != "send_event_with_no_schema" || orderingGroup != "events" {
+		t.Fatalf(
+			"expected event type %q and ordering group %q, got %q and %q",
+			"send_event_with_no_schema", "events", eventType, orderingGroup)
+	}
+	if deliveryEndpoint != "" {
+		t.Fatalf("expected empty delivery endpoint, got %q", deliveryEndpoint)
+	}
+
+	err = database.QueryRow(t.Context(), `
+		SELECT event_type, ordering_group, delivery_endpoint
+		FROM pipelines
+		WHERE id = '444444444444'`).Scan(&eventType, &orderingGroup, &deliveryEndpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if eventType != "" || orderingGroup != "" {
+		t.Fatalf("expected empty event type and ordering group, got %q and %q", eventType, orderingGroup)
+	}
+	if deliveryEndpoint != "" {
+		t.Fatalf("expected empty delivery endpoint, got %q", deliveryEndpoint)
+	}
+
+	assertConstraintDoesNotExist(t, database, "pipelines", "pipelines_event_type_check")
+	assertConstraintDoesNotExist(t, database, "pipelines", "pipelines_ordering_group_check")
+	assertConstraintDoesNotExist(t, database, "pipelines", "pipelines_delivery_endpoint_check")
+}
+
 func assertStateRequestSyncSchemaUpgraded(t *testing.T, database *db.DB) {
 	t.Helper()
 
@@ -501,6 +818,70 @@ func assertStateRequestSyncSchemaUpgraded(t *testing.T, database *db.DB) {
 	}
 	if version != 1 {
 		t.Fatalf("expected notification version %d, got %d", 1, version)
+	}
+}
+
+// assertDiscontinuedFunctionsUpgrade verifies that discontinued functions gain
+// their organization column, which references the organizations table and is
+// left NULL for the rows already in the table, whose organization cannot be
+// recovered, and that the upgraded table keeps the canonical column order.
+func assertDiscontinuedFunctionsUpgrade(t *testing.T, database *db.DB) {
+	t.Helper()
+
+	var organizationPosition, discontinuedAtPosition int
+	err := database.QueryRow(t.Context(), `
+		SELECT
+			MAX(CASE WHEN attname = 'organization' THEN attnum END),
+			MAX(CASE WHEN attname = 'discontinued_at' THEN attnum END)
+		FROM pg_attribute
+		WHERE attrelid = 'discontinued_functions'::regclass
+			AND attname IN ('organization', 'discontinued_at')
+			AND NOT attisdropped`).Scan(&organizationPosition, &discontinuedAtPosition)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if organizationPosition >= discontinuedAtPosition {
+		t.Fatalf("expected organization column before discontinued_at column, got organization=%d discontinued_at=%d", organizationPosition, discontinuedAtPosition)
+	}
+
+	var organization *string
+	err = database.QueryRow(t.Context(), `
+		SELECT organization
+		FROM discontinued_functions
+		WHERE id = 'arn:aws:lambda:eu-west-1:1:function:transform.js'`).Scan(&organization)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if organization != nil {
+		t.Fatalf("expected discontinued function organization NULL, got %q", *organization)
+	}
+
+	hasOrganizationFK, err := database.QueryExists(t.Context(), `
+		SELECT FROM pg_constraint con
+		JOIN pg_attribute attr ON attr.attrelid = con.conrelid AND attr.attnum = ANY(con.conkey)
+		WHERE con.conrelid = 'discontinued_functions'::regclass
+			AND con.contype = 'f'
+			AND con.confrelid = 'organizations'::regclass
+			AND con.confdeltype = 'n'
+			AND attr.attname = 'organization'`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasOrganizationFK {
+		t.Fatal("expected discontinued_functions.organization to reference organizations on delete set null, got no such foreign key")
+	}
+
+	isNotNull, err := database.QueryExists(t.Context(), `
+		SELECT FROM pg_attribute
+		WHERE attrelid = 'discontinued_functions'::regclass
+			AND attname = 'organization'
+			AND NOT attisdropped
+			AND attnotnull`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isNotNull {
+		t.Fatal("expected column discontinued_functions.organization to be nullable, got a not-null column")
 	}
 }
 
@@ -551,6 +932,47 @@ func assertNodeIDsUpgraded(t *testing.T, database *db.DB) {
 	if leader != "" {
 		t.Fatalf("expected upgraded election leader to be empty, got %q", leader)
 	}
+}
+
+// assertPipelineFiltersUpgraded verifies that pipeline filters are converted
+// and legacy operator names are corrected.
+func assertPipelineFiltersUpgraded(t *testing.T, database *db.DB) {
+
+	t.Helper()
+
+	tests := []struct {
+		id     string
+		filter string
+	}{
+		{
+			id: "444444444444",
+			filter: `{"operator":"And","rules":[` +
+				`{"property":["a"],"operator":"IsNotBetween","values":[5,10]},` +
+				`{"property":["b"],"operator":"IsNull"}` +
+				`]}`,
+		},
+		{
+			id:     "666666666666",
+			filter: `{"operator":"Or","rules":[{"property":["b"],"operator":"IsNotBetween","values":[15,20]}]}`,
+		},
+		{
+			id:     "777777777777",
+			filter: `{"operator":"And","rules":[{"rules":[{"property":["b"],"operator":"IsNotBetween","values":[25,30]},{"property":["literal"],"operator":"Contains","values":["OpIsNotBetween"]}],"operator":"Or"}]}`,
+		},
+	}
+	for _, test := range tests {
+		exists, err := database.QueryExists(t.Context(), `
+			SELECT FROM pipelines
+			WHERE id = $1
+				AND filter = $2::jsonb`, test.id, test.filter)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !exists {
+			t.Fatalf("expected pipeline %s to have filter %s", test.id, test.filter)
+		}
+	}
+
 }
 
 // assertPipelineMetricsUpgrade verifies that old pipeline metrics rows gain

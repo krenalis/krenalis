@@ -108,12 +108,17 @@ const maxOperationResultBytes = 4 << 10
 // Resolution result.
 func (warehouse *PostgreSQL) readOperationStatus(ctx context.Context, conn connection, opID string, opType warehouseOp) (*opStatus, error) {
 
+	// LEFT counts characters, not bytes. It bounds the error returned by the query
+	// before the driver receives it; NewPersistedOperationError enforces the exact
+	// byte limit.
+	const operationErrorReadLimitCharacters = warehouses.MaxOperationErrorBytes + 1
+
 	var completedAt *time.Time
 	var opError string
 	var result []byte
 	err := conn.QueryRow(ctx, `SELECT "completed_at", LEFT("result"::text, $2), LEFT("error", $3)`+
 		` FROM "krenalis_system_operations" WHERE "id" = $1 LIMIT 1`,
-		opID, maxOperationResultBytes+1, warehouses.MaxOperationErrorBytes+1).
+		opID, maxOperationResultBytes+1, operationErrorReadLimitCharacters).
 		Scan(&completedAt, &result, &opError)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

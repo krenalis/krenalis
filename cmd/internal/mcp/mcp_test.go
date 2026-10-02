@@ -11,8 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/google/uuid"
+	"uuid"
 )
 
 // This file provides a MCP client that can be used for testing the MCP server.

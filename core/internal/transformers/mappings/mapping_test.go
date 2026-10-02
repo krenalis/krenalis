@@ -10,7 +10,6 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 
@@ -79,7 +78,7 @@ func Test_InOutPaths(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			mapping, err := New(test.expressions, inSchema, outSchema, false, nil)
+			mapping, err := New(test.expressions, inSchema, outSchema, false)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
@@ -127,7 +126,6 @@ func Test_Transform(t *testing.T) {
 	tests := []struct {
 		name        string
 		expressions map[string]string
-		layouts     *state.TimeLayouts
 		attributes  map[string]any
 		purpose     Purpose
 		expected    map[string]any
@@ -335,7 +333,7 @@ func Test_Transform(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			mapping, err := New(test.expressions, inSchema, outSchema, false, test.layouts)
+			mapping, err := New(test.expressions, inSchema, outSchema, false)
 			if err != nil {
 				t.Fatalf("unexpected error calling New: %q (%T)", err, err)
 			}
@@ -411,7 +409,7 @@ func Test_inPlace(t *testing.T) {
 			z := clone(v, inSchema)
 			inPlace := false
 			for {
-				mapping, err := New(expressions, inSchema, outSchema, inPlace, nil)
+				mapping, err := New(expressions, inSchema, outSchema, inPlace)
 				if err != nil {
 					t.Fatalf("unexpected error calling New: %q (%T)", err, err)
 				}

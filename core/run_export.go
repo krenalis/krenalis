@@ -19,7 +19,6 @@ import (
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/transformers"
-	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -33,7 +32,6 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	pipeline := this.pipeline
 	store := this.connection.store
 	connector := pipeline.Connection().Connector()
-	prometheus.Increment("Pipeline.exportUsers.calls", 1)
 
 	// Synchronize destinations users with the application's users.
 	if connector.Type == state.Application {
@@ -57,7 +55,7 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	var transformer *transformers.Transformer
 	if t := this.pipeline.Transformation; t.Mapping != nil || t.Function != nil {
 		var err error
-		transformer, err = transformers.New(pipeline, this.core.functionProvider, &connector.TimeLayouts)
+		transformer, err = transformers.New(pipeline.Organization().ID, pipeline, this.core.functionProvider)
 		if err != nil {
 			return err
 		}
@@ -98,7 +96,6 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	var ack func([]string, error)
 	if connector.Type != state.FileStorage {
 		ack = func(ids []string, err error) {
-			prometheus.Increment("Pipeline.exportProfiles.ack.calls", 1)
 			if err != nil {
 				this.core.metrics.Pipelines.FinalizeFailed(pipeline.ID, len(ids), err.Error())
 				return
@@ -175,8 +172,6 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 
 Records:
 	for record := range records.All(ctx) {
-
-		prometheus.Increment("Pipeline.exportProfiles.iterations_over_records_All", 1)
 
 		if record.Err != nil {
 			this.core.metrics.Pipelines.ReceiveFailed(pipeline.ID, 1, record.Err.Error())
@@ -491,7 +486,7 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 	case types.UUIDKind:
 		switch in.Kind() {
 		case types.StringKind:
-			u, ok := types.ParseUUID(v.(string))
+			u, ok := types.NormalizeUUID(v.(string))
 			if !ok {
 				return nil, errMatchingPropertyConversion(inPath, outPath)
 			}

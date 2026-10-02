@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/tools/errors"
 )
 
@@ -225,6 +226,73 @@ func TestUsageMetricsPerDateRejectsUnrepresentableOrganizationTotals(t *testing.
 			}
 			t.Fatal("expected ErrMetricResultTooLarge, got nil")
 		})
+	}
+
+}
+
+// TestUsageMetricsPerDateWithDatabaseClockBehind verifies that current-day
+// metrics remain available when the database clock is in the previous UTC day.
+func TestUsageMetricsPerDateWithDatabaseClockBehind(t *testing.T) {
+
+	database, organization := newAggregateMetricsTestDatabase(t)
+	usage := Usage{metrics: &Metrics{db: database}}
+	start := time.Now().UTC().Truncate(24 * time.Hour)
+	end := start.AddDate(0, 0, 1)
+	databaseTime := start.Add(-time.Hour)
+
+	// Replace the clock function only in this test's disposable database.
+	_, err := database.Exec(t.Context(), `CREATE OR REPLACE FUNCTION pg_catalog.statement_timestamp()
+		RETURNS timestamptz LANGUAGE sql STABLE AS $$ SELECT `+
+		db.Quote(databaseTime.Format(time.RFC3339))+`::timestamptz $$`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var gotDatabaseTime time.Time
+	err = database.QueryRow(t.Context(), "SELECT statement_timestamp()").Scan(&gotDatabaseTime)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !gotDatabaseTime.Equal(databaseTime) {
+		t.Fatalf("expected database clock %v, got %v", databaseTime, gotDatabaseTime)
+	}
+
+	// Exercise both parts of the query: carried profile state and today's events.
+	_, err = database.Exec(t.Context(), `INSERT INTO usage_metrics
+		(organization, workspace, day, profiles, observed_at, events)
+		VALUES ($1, 'workspace111', $2, 42, '12:00:00', 0),
+			($1, 'workspace111', $3, 0, NULL, 7)`, organization, start.AddDate(0, 0, -1), start)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name         string
+		workspaces   []string
+		wantProfiles int
+		wantEvents   int
+	}{
+		{name: "organization", wantProfiles: 42, wantEvents: 7},
+		{name: "workspace", workspaces: []string{"workspace111"}, wantProfiles: 42, wantEvents: 7},
+		{name: "workspace without rows", workspaces: []string{"workspace222"}},
+	} {
+
+		t.Run(test.name, func(t *testing.T) {
+
+			series, err := usage.MetricsPerDate(t.Context(), organization, start, end, test.workspaces)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(series) != 1 || len(series[0].Days) != 1 {
+				t.Fatalf("expected one series with one day, got %#v", series)
+			}
+			day := series[0].Days[0]
+			if day.Profiles != test.wantProfiles || day.ProfilesAvg != test.wantProfiles ||
+				day.Events != test.wantEvents {
+				t.Fatalf("expected profiles=%d profilesAvg=%d events=%d, got %#v",
+					test.wantProfiles, test.wantProfiles, test.wantEvents, day)
+			}
+
+		})
+
 	}
 
 }

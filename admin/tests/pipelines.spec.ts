@@ -68,19 +68,19 @@ test(`Add "Import customers" pipeline on Dummy`, async ({ page }) => {
 		"inSchema": {
 			"kind": "object",
 			"properties": [
-				{ "name": "email", "type": { "kind": "string" }, "description": "Email", "nullable": true },
-				{ "name": "dummyId", "type": { "kind": "string" }, "description": "Dummy ID" },
-				{ "name": "firstName", "type": { "kind": "string" }, "description": "First name", "nullable": true },
-				{ "name": "lastName", "type": { "kind": "string" }, "description": "Last name", "nullable": true }
+				{ "name": "email", "type": { "kind": "string" }, "displayName": "Email", "nullable": true },
+				{ "name": "dummyId", "type": { "kind": "string" }, "displayName": "Dummy ID" },
+				{ "name": "firstName", "type": { "kind": "string" }, "displayName": "First name", "nullable": true },
+				{ "name": "lastName", "type": { "kind": "string" }, "displayName": "Last name", "nullable": true }
 			]
 		},
 		"outSchema": {
 			"kind": "object",
 			"properties": [
-				{ "name": "email", "type": { "kind": "string", "maxLength": 300 }, "readOptional": true, "description": "" },
-				{ "name": "dummy_id", "type": { "kind": "string" }, "readOptional": true, "description": "" },
-				{ "name": "first_name", "type": { "kind": "string", "maxLength": 300 }, "readOptional": true, "description": "" },
-				{ "name": "last_name", "type": { "kind": "string", "maxLength": 300 }, "readOptional": true, "description": "" }
+				{ "name": "email", "type": { "kind": "string", "maxLength": 300 }, "readOptional": true },
+				{ "name": "dummy_id", "type": { "kind": "string" }, "readOptional": true },
+				{ "name": "first_name", "type": { "kind": "string", "maxLength": 300 }, "readOptional": true },
+				{ "name": "last_name", "type": { "kind": "string", "maxLength": 300 }, "readOptional": true }
 			]
 		},
 		"incremental": false,
@@ -177,8 +177,8 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 		"name": "Export customers",
 		"enabled": true,
 		"filter": {
-			"logical": "or",
-			"conditions": [
+			"operator": "or",
+			"rules": [
 				{
 					"property": "email",
 					"operator": "is one of",
@@ -207,8 +207,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				},
 				{
 					"name": "last_name",
@@ -216,8 +215,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				},
 				{
 					"name": "email",
@@ -225,16 +223,14 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				},
 				{
 					"name": "dummy_id",
 					"type": {
 						"kind": "string"
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				}
 			]
 		},
@@ -247,7 +243,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string"
 					},
 					"nullable": true,
-					"description": "First name"
+					"displayName": "First name"
 				},
 				{
 					"name": "lastName",
@@ -255,7 +251,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string"
 					},
 					"nullable": true,
-					"description": "Last name"
+					"displayName": "Last name"
 				},
 				{
 					"name": "email",
@@ -263,7 +259,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string"
 					},
 					"nullable": true,
-					"description": "Email"
+					"displayName": "Email"
 				}
 			]
 		},
@@ -345,7 +341,7 @@ test(`Add "Send Add to Cart" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string"
 					},
 					"createRequired": true,
-					"description": "Email"
+					"displayName": "Email"
 				}
 			]
 		},
@@ -437,8 +433,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"nullable": true,
-					"description": ""
+					"nullable": true
 				},
 				{
 					"name": "last_name",
@@ -446,8 +441,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"nullable": true,
-					"description": ""
+					"nullable": true
 				},
 				{
 					"name": "email",
@@ -455,8 +449,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"nullable": true,
-					"description": ""
+					"nullable": true
 				}
 			]
 		},
@@ -469,8 +462,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				},
 				{
 					"name": "last_name",
@@ -478,8 +470,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				}
 			]
 		},
@@ -574,8 +565,8 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 		"name": "Export users",
 		"enabled": true,
 		"filter": {
-			"logical": "or",
-			"conditions": [
+			"operator": "or",
+			"rules": [
 				{
 					"property": "email",
 					"operator": "is one of",
@@ -604,8 +595,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				},
 				{
 					"name": "first_name",
@@ -613,8 +603,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				},
 				{
 					"name": "last_name",
@@ -622,16 +611,14 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				},
 				{
 					"name": "dummy_id",
 					"type": {
 						"kind": "string"
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				}
 			]
 		},
@@ -646,8 +633,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 					},
 					"createRequired": true,
 					"updateRequired": false,
-					"nullable": false,
-					"description": ""
+					"nullable": false
 				},
 				{
 					"name": "first_name",
@@ -655,8 +641,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"nullable": true,
-					"description": ""
+					"nullable": true
 				},
 				{
 					"name": "last_name",
@@ -664,8 +649,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"nullable": true,
-					"description": ""
+					"nullable": true
 				}
 			]
 		},
@@ -782,21 +766,21 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 						"type": {
 							"kind": "string"
 						},
-						"description": ""
+						"displayName": " email"
 					},
 					{
 						"name": "first_name",
 						"type": {
 							"kind": "string"
 						},
-						"description": ""
+						"displayName": "first_name"
 					},
 					{
 						"name": "last_name",
 						"type": {
 							"kind": "string"
 						},
-						"description": ""
+						"displayName": " last_name"
 					}
 				]
 			},
@@ -809,8 +793,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 							"kind": "string",
 							"maxLength": 300
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "first_name",
@@ -818,8 +801,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 							"kind": "string",
 							"maxLength": 300
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "last_name",
@@ -827,8 +809,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 							"kind": "string",
 							"maxLength": 300
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					}
 				]
 			},
@@ -931,8 +912,8 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 			"name": "Export users",
 			"enabled": true,
 			"filter": {
-				"logical": "or",
-				"conditions": [
+				"operator": "or",
+				"rules": [
 					{
 						"property": "email",
 						"operator": "is one of",
@@ -961,16 +942,14 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 							"kind": "string",
 							"maxLength": 300
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "dummy_id",
 						"type": {
 							"kind": "string"
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "android",
@@ -982,29 +961,25 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								},
 								{
 									"name": "idfa",
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								},
 								{
 									"name": "push_token",
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								}
 							]
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "ios",
@@ -1016,29 +991,25 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								},
 								{
 									"name": "idfa",
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								},
 								{
 									"name": "push_token",
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								}
 							]
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "first_name",
@@ -1046,8 +1017,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 							"kind": "string",
 							"maxLength": 300
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "last_name",
@@ -1055,16 +1025,14 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 							"kind": "string",
 							"maxLength": 300
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "gender",
 						"type": {
 							"kind": "string"
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "food_preferences",
@@ -1076,21 +1044,18 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								},
 								{
 									"name": "fruit",
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								}
 							]
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "phone_numbers",
@@ -1101,8 +1066,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 								"maxLength": 300
 							}
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "favorite_movie",
@@ -1114,8 +1078,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								},
 								{
 									"name": "length",
@@ -1123,8 +1086,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 										"kind": "float",
 										"bitSize": 64
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								},
 								{
 									"name": "soundtrack",
@@ -1136,16 +1098,14 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 												"type": {
 													"kind": "string"
 												},
-												"readOptional": true,
-												"description": ""
+												"readOptional": true
 											},
 											{
 												"name": "author",
 												"type": {
 													"kind": "string"
 												},
-												"readOptional": true,
-												"description": ""
+												"readOptional": true
 											},
 											{
 												"name": "length",
@@ -1153,26 +1113,22 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 													"kind": "float",
 													"bitSize": 64
 												},
-												"readOptional": true,
-												"description": ""
+												"readOptional": true
 											},
 											{
 												"name": "genre",
 												"type": {
 													"kind": "string"
 												},
-												"readOptional": true,
-												"description": ""
+												"readOptional": true
 											}
 										]
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								}
 							]
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					}
 				]
 			},
@@ -1238,7 +1194,7 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 	await page.locator('.pipeline__filters-add-condition').click();
 	await page.locator('.pipeline__filters-add-condition').click();
 
-	let filters = page.locator('.pipeline__filters-filter');
+	const filters = page.locator('.pipeline__filters-filter');
 
 	await filters.nth(0).locator('.pipeline__filters-property sl-input').click();
 	await filters
@@ -1249,6 +1205,47 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 
 	await filters.nth(0).locator('.pipeline__filters-value-input sl-option[value="track"]').click(); // value select should open automatically after selecting the operator
 
+	const jsonCondition = filters.nth(1);
+	const jsonPropertyInput = jsonCondition.locator('.pipeline__filters-property sl-input');
+	await jsonPropertyInput.click();
+	await jsonCondition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^traits$/ }).click();
+	const jsonPathInput = jsonCondition.locator('.pipeline__filters-path >> input');
+	await jsonPathInput.fill('email');
+	const jsonOperatorSelect = jsonCondition.locator('.pipeline__filters-operator');
+	await expect(jsonOperatorSelect).toHaveJSProperty('value', '0');
+	const jsonValueInput = jsonCondition.locator('.pipeline__filters-value-input');
+	await jsonValueInput.locator('input').fill('a@example.com');
+
+	await jsonPropertyInput.click();
+	await jsonCondition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^properties$/ }).click();
+	await expect(jsonPropertyInput).toHaveJSProperty('value', 'properties');
+	await expect(jsonPathInput).toHaveValue('email');
+	await expect(jsonOperatorSelect).toHaveJSProperty('value', '0');
+	await expect(jsonValueInput).toHaveJSProperty('value', 'a@example.com');
+
+	await jsonPropertyInput.click();
+	await jsonCondition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^traits$/ }).click();
+
+	for (const operator of [
+		{ name: 'exists', index: 24 },
+		{ name: 'does not exist', index: 25 },
+	]) {
+		const condition = filters.nth(1);
+		await condition.locator('.pipeline__filters-property sl-input').click();
+		await condition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^traits$/ }).click();
+		const pathInput = condition.locator('.pipeline__filters-path >> input');
+		await pathInput.fill('email');
+		const operatorSelect = condition.locator('.pipeline__filters-operator');
+		const operatorOption = operatorSelect.locator(`sl-option[value="${operator.index}"]`);
+		await expect(operatorOption).toHaveText(operator.name);
+		await operatorSelect.click();
+		await operatorOption.click();
+		await expect(operatorSelect).toHaveJSProperty('value', String(operator.index));
+		await pathInput.fill('');
+		await expect(operatorSelect).toHaveJSProperty('value', '');
+		await condition.locator('.pipeline__filters-remove-condition').click();
+	}
+
 	const expectedBody = `
 	{
 		"target": "Event",
@@ -1256,8 +1253,8 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 		"name": "Import events into warehouse",
 		"enabled": false,
 		"filter": {
-			"logical": "and",
-			"conditions": [
+			"operator": "and",
+			"rules": [
 				{
 					"property": "type",
 					"operator": "is",
@@ -1319,8 +1316,8 @@ test(`Add "Import users" pipeline on JavaScript`, async ({ page }) => {
 		"name": "Import users into warehouse",
 		"enabled": false,
 		"filter": {
-			"logical": "or",
-			"conditions": [
+			"operator": "or",
+			"rules": [
 				{
 					"property": "type",
 					"operator": "is",
@@ -1330,9 +1327,8 @@ test(`Add "Import users" pipeline on JavaScript`, async ({ page }) => {
 				},
 				{
 					"property": "traits",
-         			"operator": "is not empty",
-         			"values": null
-       			}
+					"operator": "is not empty"
+				}
 			]
 		},
 		"requiredConsents": null,

@@ -78,9 +78,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
@@ -239,14 +239,14 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
 						},
-						{
+						&FilterCondition{
 							Property: "id",
 							Operator: OpIsNot,
 							Values:   []string{"1234567890"},
@@ -411,9 +411,9 @@ func Test_validatePipeline(t *testing.T) {
 			name: "GOOD: Source/SDK/Event - with filters",
 			pipeline: PipelineToSet{
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "anonymousId",
 							Operator: OpIsNot,
 							Values:   []string{"abc"},
@@ -598,9 +598,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
@@ -928,9 +928,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{Property: "first_name", Operator: OpIs, Values: []string{"Bob"}},
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{Property: "first_name", Operator: OpIs, Values: []string{"Bob"}},
 					},
 				},
 				InSchema: types.Object([]types.Property{
@@ -2665,9 +2665,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "_id",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
@@ -2703,9 +2703,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "_id",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
@@ -2999,6 +2999,64 @@ func Test_validatePipeline(t *testing.T) {
 			err:                     "output matching property \"email_out\" not found within the output schema",
 		},
 		{
+			name: "BAD: Destination/Application/User - input matching property is not a valid property path",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+					{Name: "first_name", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"first_name": "first_name",
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in.",
+					Out: "email_out",
+				},
+				UpdateOnDuplicates: false,
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+			err:                     "input matching property \"email_in.\" is not a valid property path",
+		},
+		{
+			name: "BAD: Destination/Application/User - output matching property is not a valid property path",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+					{Name: "first_name", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"first_name": "first_name",
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "email_out.",
+				},
+				UpdateOnDuplicates: false,
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+			err:                     "output matching property \"email_out.\" is not a valid property path",
+		},
+		{
 			name: "BAD: Destination/Application/User - non-matching output property cannot have ReadOptional set to true",
 			pipeline: PipelineToSet{
 				Name: "Export users",
@@ -3093,14 +3151,14 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
 						},
-						{
+						&FilterCondition{
 							Property: "id",
 							Operator: OpIsNot,
 							Values:   []string{"1234567890"},
@@ -3133,9 +3191,9 @@ func Test_validatePipeline(t *testing.T) {
 			name: "BAD: Source/SDK/Event - cannot provide input schema",
 			pipeline: PipelineToSet{
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "anonymousId",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
@@ -3273,9 +3331,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
@@ -3382,9 +3440,9 @@ func Test_validatePipeline(t *testing.T) {
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				Filter: &Filter{
-					Logical: OpAnd,
-					Conditions: []FilterCondition{
-						{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
@@ -3666,20 +3724,20 @@ type testProvider struct{}
 
 var _ transformers.FunctionProvider = testProvider{}
 
-func (testProvider) Call(ctx context.Context, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
+func (testProvider) Call(ctx context.Context, organization, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []transformers.Record) error {
 	panic("not implemented")
 }
 func (testProvider) Close(ctx context.Context) error { panic("not implemented") }
-func (testProvider) Create(ctx context.Context, name string, language state.Language, source string) (string, string, error) {
+func (testProvider) Create(ctx context.Context, organization, name string, language state.Language, source string) (string, string, error) {
 	panic("not implemented")
 }
-func (testProvider) Delete(ctx context.Context, id string) error {
+func (testProvider) Delete(ctx context.Context, organization, id string) error {
 	panic("not implemented")
 }
 func (testProvider) SupportLanguage(language state.Language) bool {
 	return language == state.JavaScript || language == state.Python
 }
-func (testProvider) Update(ctx context.Context, id, source string) (string, error) {
+func (testProvider) Update(ctx context.Context, organization, id, source string) (string, error) {
 	panic("not implemented")
 }
 

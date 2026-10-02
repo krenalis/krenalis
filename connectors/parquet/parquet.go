@@ -17,9 +17,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"reflect"
 	"strings"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/tools/decimal"
@@ -29,7 +31,6 @@ import (
 	goparquet "github.com/fraugster/parquet-go"
 	"github.com/fraugster/parquet-go/parquet"
 	"github.com/fraugster/parquet-go/parquetschema"
-	"github.com/google/uuid"
 )
 
 //go:embed documentation/source/overview.md
@@ -904,13 +905,10 @@ func propertyType(elem *parquet.SchemaElement) (types.Type, error) {
 	return types.Type{}, nil
 }
 
-// timeTimeToInt64 returns the int64 representation of the given time.Time
-// value, that can be written to Parquet. The int64 has unit nanoseconds. If the
-// year of ts is less than 1678, or it is greater than 2262, this function
-// returns error.
+// timeTimeToInt64 converts ts to Unix nanoseconds, checking that it fits in int64.
 func timeTimeToInt64(ts time.Time) (int64, error) {
-	if y := ts.Year(); y < 1678 || y > 2262 {
-		return 0, fmt.Errorf("timestamp year is out of range")
+	if ts.Before(time.Unix(0, math.MinInt64)) || ts.After(time.Unix(0, math.MaxInt64)) {
+		return 0, fmt.Errorf("timestamp is out of range for nanosecond precision")
 	}
 	return ts.UnixNano(), nil
 }

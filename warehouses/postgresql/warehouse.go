@@ -7,7 +7,9 @@ package postgresql
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
+	"math"
 	"net"
 	"net/url"
 	"slices"
@@ -17,9 +19,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
-	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
@@ -46,15 +46,17 @@ func init() {
 	}, New)
 }
 
-// New returns a new PostgreSQL data warehouse instance.
-func New(settings warehouses.SettingsLoader) *PostgreSQL {
-	return &PostgreSQL{settings: settings}
+// New returns a new PostgreSQL data warehouse instance, whose network
+// connections are established dialing with dialWith, which must not be nil.
+func New(settings warehouses.SettingsLoader, dialWith warehouses.DialWith) *PostgreSQL {
+	return &PostgreSQL{settings: settings, dialWith: dialWith}
 }
 
 type PostgreSQL struct {
 	mu       sync.Mutex // for the pool field
 	pool     *pgxpool.Pool
 	settings warehouses.SettingsLoader
+	dialWith warehouses.DialWith
 }
 
 type pgSettings struct {
@@ -80,8 +82,8 @@ func (warehouse *PostgreSQL) CheckReadOnlyAccess(ctx context.Context) error {
 	// the 'has_table_privilege' function).
 	const disallowedPrivileges = `INSERT,UPDATE,DELETE,TRUNCATE`
 
-	// Retrieve the profiles table version.
-	profileSchemaVersion, err := warehouse.profilesVersion(ctx)
+	// Retrieve the greatest recorded profiles table version.
+	profileSchemaVersion, err := warehouse.maxProfilesVersion(ctx)
 	if err != nil {
 		return err
 	}
@@ -146,17 +148,6 @@ func (warehouse *PostgreSQL) Close() error {
 // corresponding to the given types.Type.
 func (warehouse *PostgreSQL) ColumnTypeDescription(t types.Type) (string, error) {
 	return typeToPostgresType(t), nil
-}
-
-// Count returns the number of rows in table.
-func (warehouse *PostgreSQL) Count(ctx context.Context, table string) (int, error) {
-	pool, _, err := warehouse.connectionPool(ctx, false)
-	if err != nil {
-		return 0, err
-	}
-	var count int
-	err = pool.QueryRow(ctx, `SELECT COUNT(*) FROM `+quoteIdent(table)).Scan(&count)
-	return count, err
 }
 
 // CountIdentities counts anonymous and recognized identities, including those
@@ -254,6 +245,59 @@ LIMIT $3`
 	return counts, nil
 }
 
+// Counts returns one row count for each condition on the table.
+func (warehouse *PostgreSQL) Counts(ctx context.Context, table string, conditions []warehouses.Expr) ([]int, error) {
+
+	if conditions == nil {
+		conditions = []warehouses.Expr{nil}
+	}
+	if len(conditions) == 0 {
+		return nil, errors.New("conditions are empty")
+	}
+
+	pool, _, err := warehouse.connectionPool(ctx, false)
+	if err != nil {
+		return nil, err
+	}
+
+	var b strings.Builder
+	b.WriteString("SELECT ")
+	for i, condition := range conditions {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		if condition == nil {
+			b.WriteString("COUNT(*)")
+			continue
+		}
+		b.WriteString("COUNT(CASE WHEN ")
+		err = renderExpr(&b, condition)
+		if err != nil {
+			return nil, fmt.Errorf("cannot build count condition: %s", err)
+		}
+		b.WriteString(" THEN 1 END)")
+	}
+	b.WriteString(" FROM ")
+	b.WriteString(quoteIdent(table))
+
+	counts := make([]int, len(conditions))
+	values := make([]any, len(counts))
+	for i := range counts {
+		values[i] = &counts[i]
+	}
+	err = pool.QueryRow(ctx, b.String()).Scan(values...)
+	if err != nil {
+		return nil, err
+	}
+	for _, count := range counts {
+		if count < 0 || count > math.MaxInt32 {
+			return nil, fmt.Errorf("warehouse returned count outside the supported range: %d", count)
+		}
+	}
+
+	return counts, nil
+}
+
 // Delete deletes rows from the specified table that match the provided where
 // expression.
 func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where warehouses.Expr) error {
@@ -279,8 +323,6 @@ func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where war
 
 // Merge performs a table merge operation.
 func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.Table, rows [][]any, deleted []any) error {
-	prometheus.Increment("warehouses.PostgreSQL.Merge.calls", 1)
-	prometheus.Increment("warehouses.PostgreSQL.Merge.passed_rows", len(rows))
 	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return err
@@ -307,9 +349,6 @@ var immutableMergeIdentitiesColumns = []string{
 // MergeIdentities merges existing identities, deletes them, and inserts new
 // ones.
 func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []warehouses.Column, rows []map[string]any) error {
-
-	prometheus.Increment("warehouses.PostgreSQL.MergeIdentities.calls", 1)
-	prometheus.Increment("warehouses.PostgreSQL.MergeIdentities.passed_rows", len(rows))
 
 	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
@@ -499,6 +538,7 @@ func (warehouse *PostgreSQL) connectionPool(ctx context.Context, returnSchema bo
 	if err != nil {
 		return nil, "", err
 	}
+	config.ConnConfig.DialFunc = warehouse.dialWith(config.ConnConfig.DialFunc)
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, "", err
@@ -531,8 +571,12 @@ func (warehouse *PostgreSQL) execTransaction(ctx context.Context, f func(pgx.Tx)
 	return nil
 }
 
-// profilesVersion returns the version of the "krenalis_profiles" table.
-func (warehouse *PostgreSQL) profilesVersion(ctx context.Context) (int, error) {
+// maxProfilesVersion returns the highest recorded version of the profiles
+// table.
+//
+// The returned version is in the range [0, math.MaxInt32]. Zero represents the
+// initial version and is returned when no version has been recorded.
+func (warehouse *PostgreSQL) maxProfilesVersion(ctx context.Context) (int, error) {
 	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return 0, err
@@ -542,11 +586,17 @@ func (warehouse *PostgreSQL) profilesVersion(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	if v < 0 || v > math.MaxInt32 {
+		return 0, fmt.Errorf("warehouse returned an invalid profile table version")
+	}
 	return v, nil
 }
 
-// publishedProfilesVersion returns the version of the currently published
-// profiles table.
+// publishedProfilesVersion returns the highest successfully published version
+// of the profiles table.
+//
+// The returned version is in the range [0, math.MaxInt32]. Zero represents the
+// initial version and is returned when no version has been published.
 func (warehouse *PostgreSQL) publishedProfilesVersion(ctx context.Context) (int, error) {
 	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
@@ -560,8 +610,8 @@ func (warehouse *PostgreSQL) publishedProfilesVersion(ctx context.Context) (int,
 	if err != nil {
 		return 0, err
 	}
-	if version < 0 {
-		return 0, fmt.Errorf("warehouse returned a negative published profile schema version")
+	if version < 0 || version > math.MaxInt32 {
+		return 0, fmt.Errorf("warehouse returned an invalid published profile table version")
 	}
 	return version, nil
 }

@@ -126,7 +126,9 @@ func (w *EventIdentityWriter) Close(ctx context.Context) error {
 // attributes must comply with it. It returns immediately, deferring the
 // validation of the attributes and the actual write operation to a later time.
 //
-// If the pipeline of w does not exist anymore, returns an error.
+// If w's pipeline no longer exists, it returns ErrPipelineNotExist.
+// If the pipeline output schema is not aligned with the profile schema,
+// it returns a *schemas.Error.
 func (w *EventIdentityWriter) Write(ctx context.Context, identity Identity, ack streams.Ack) error {
 
 	key := identityKey{pipeline: w.pipeline}
@@ -147,7 +149,7 @@ func (w *EventIdentityWriter) Write(ctx context.Context, identity Identity, ack 
 		return ErrPipelineNotExist
 	}
 	if !aligned {
-		return &schemas.Error{Msg: "pipeline output schema is no aligned with the profile schema"}
+		return &schemas.Error{Msg: "pipeline output schema is not aligned with the profile schema"}
 	}
 
 	if !key.isAnonymous {

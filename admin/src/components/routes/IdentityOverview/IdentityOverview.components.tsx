@@ -109,7 +109,7 @@ interface DashboardCardProps {
 
 const DashboardCard = ({ title, temporalLabel, info, headerAction, className, children }: DashboardCardProps) => {
 	return (
-		<div className={`identity-dashboard__card${className ? ` ${className}` : ''}`}>
+		<div className={`identity-dashboard__card${className != null && className !== '' ? ` ${className}` : ''}`}>
 			{title && (
 				<div className='identity-dashboard__card-heading'>
 					<h3>{title}</h3>
@@ -436,7 +436,7 @@ const RecognizedAnonymousHistoryChart = ({
 		<DashboardCard title={title} info={info} headerAction={headerAction} className='identity-dashboard__chart-card'>
 			{loading ? (
 				<CardLoading chart={true} />
-			) : error ? (
+			) : error != null ? (
 				<StateMessage variant='error' title={errorTitle} description={error} compact={true} />
 			) : days.every((day) => day.recognized == null && day.anonymous == null) ? (
 				<StateMessage
@@ -674,7 +674,7 @@ const ConnectionsChart = ({ data, totalIdentities, observedLabel, loading, error
 		>
 			{loading ? (
 				<CardLoading chart={true} />
-			) : error ? (
+			) : error != null ? (
 				<StateMessage
 					variant='error'
 					title='Connection metrics could not be loaded'

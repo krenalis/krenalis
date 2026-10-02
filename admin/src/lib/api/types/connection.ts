@@ -11,6 +11,8 @@ interface EventType {
 	id: string;
 	name: string;
 	description: string;
+	orderingGroup: string;
+	deliveryEndpoint: string;
 	defaultFilter: string;
 }
 

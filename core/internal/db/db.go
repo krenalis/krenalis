@@ -650,9 +650,11 @@ type Rows struct {
 	pgx.Rows
 }
 
+// Close closes the result set and returns any query or iteration error.
+// It is safe to call Close more than once.
 func (rs *Rows) Close() error {
 	rs.Rows.Close()
-	return nil
+	return convertErr(rs.Rows.Err())
 }
 
 func (rs *Rows) Scan(dest ...any) error {

@@ -59,11 +59,14 @@ func TestValidateIdentityCounts(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			err := warehouses.ValidateIdentityCounts(test.counts)
-			if test.wantErr && err == nil {
-				t.Fatal("expected ValidateIdentityCounts to return an error, got nil")
+			if err != nil {
+				if !test.wantErr {
+					t.Fatalf("expected ValidateIdentityCounts to return no error, got %v", err)
+				}
+				return
 			}
-			if !test.wantErr && err != nil {
-				t.Fatalf("expected ValidateIdentityCounts to return no error, got %v", err)
+			if test.wantErr {
+				t.Fatal("expected ValidateIdentityCounts to return an error, got nil")
 			}
 		})
 	}

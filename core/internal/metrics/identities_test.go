@@ -24,7 +24,6 @@ import (
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // identityDatastoreFake records Store and CountIdentities calls and returns
@@ -43,7 +42,6 @@ type identityDatastoreFake struct {
 // CountIdentities records the requested pipelines and returns the configured
 // result.
 func (f *identityDatastoreFake) CountIdentities(_ context.Context, pipelines []string) (*warehouses.IdentityCounts, error) {
-
 	f.calls++
 	f.pipelines = slices.Clone(pipelines)
 	if f.beforeCount != nil {
@@ -71,7 +69,6 @@ type identityMetricDayExpectation struct {
 
 // assertIdentityMetricDays verifies a dense known identity history.
 func assertIdentityMetricDays(t *testing.T, got []IdentityMetricDay, start time.Time, want []identityMetricDayExpectation) {
-
 	t.Helper()
 	if len(got) != len(want) {
 		t.Fatalf("expected %d identity days, got %d", len(want), len(got))
@@ -88,7 +85,6 @@ func assertIdentityMetricDays(t *testing.T, got []IdentityMetricDay, start time.
 				got[index].Total, got[index].Anonymous, got[index].Recognized)
 		}
 	}
-
 }
 
 // assertIdentitySnapshot verifies the persisted workspace and connection rows
@@ -105,7 +101,7 @@ func assertIdentitySnapshot(t *testing.T, database *db.DB, expected identitySnap
 		WHERE workspace = $1 AND day = $2`, expected.workspace, day).Scan(
 		&observedAt, &anonymous, &recognized, &withoutProfile)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if !observedAt.Equal(expected.observedAt) {
 		t.Fatalf("expected observed_at %s, got %s", expected.observedAt, observedAt)
@@ -122,7 +118,7 @@ func assertIdentitySnapshot(t *testing.T, database *db.DB, expected identitySnap
 		WHERE c.workspace = $1 AND m.day = $2
 		ORDER BY m.connection`, expected.workspace, day)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	defer rows.Close()
 	var got []identityConnection
@@ -130,12 +126,12 @@ func assertIdentitySnapshot(t *testing.T, database *db.DB, expected identitySnap
 		var connection identityConnection
 		if err := rows.Scan(&connection.id,
 			&connection.anonymous, &connection.recognized, &connection.withoutProfile); err != nil {
-			t.Fatal(err)
+			t.Fatalf("expected no error, got %v", err)
 		}
 		got = append(got, connection)
 	}
 	if err := rows.Err(); err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if len(got) != len(expected.connections) {
 		t.Fatalf("expected %d connection rows, got %d: %#v", len(expected.connections), len(got), got)
@@ -145,7 +141,6 @@ func assertIdentitySnapshot(t *testing.T, database *db.DB, expected identitySnap
 			t.Fatalf("expected connection row %#v, got %#v", expected.connections[index], got[index])
 		}
 	}
-
 }
 
 // assertIntPointer verifies both pointer presence and integer value.
@@ -168,7 +163,6 @@ func assertIntPointer(t *testing.T, got, want *int) {
 // awaitDatabaseLock waits until a query containing queryFragment is blocked on
 // a PostgreSQL lock matching the specified wait event.
 func awaitDatabaseLock(t *testing.T, database *db.DB, waitEvent, queryFragment string) {
-
 	t.Helper()
 	ctx := t.Context()
 	timer := time.NewTimer(5 * time.Second)
@@ -182,20 +176,19 @@ func awaitDatabaseLock(t *testing.T, database *db.DB, waitEvent, queryFragment s
 				AND wait_event = $1
 				AND query LIKE '%' || $2 || '%'`, waitEvent, queryFragment)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("expected no error, got %v", err)
 		}
 		if waiting {
 			return
 		}
 		select {
 		case <-ctx.Done():
-			t.Fatal(ctx.Err())
+			t.Fatalf("expected no error, got %v", ctx.Err())
 		case <-timer.C:
-			t.Fatalf("query containing %q did not wait for a %s lock", queryFragment, waitEvent)
+			t.Fatalf("expected query containing %q to wait for a %s lock, got no waiting query", queryFragment, waitEvent)
 		case <-ticker.C:
 		}
 	}
-
 }
 
 // blockAdvisoryLock holds a PostgreSQL advisory lock until the returned
@@ -206,22 +199,26 @@ func blockAdvisoryLock(t *testing.T, database *db.DB, key int64) func() {
 	ctx := t.Context()
 	connection, err := database.Conn(ctx)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
-	if _, err := connection.Exec(ctx, "SELECT pg_advisory_lock($1)", key); err != nil {
+	_, err = connection.Exec(ctx, "SELECT pg_advisory_lock($1)", key)
+	if err != nil {
 		connection.Close()
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
+
 	var once sync.Once
 	release := func() {
 		once.Do(func() {
 			cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 			defer cancel()
-			if _, err := connection.Exec(cleanupCtx, "SELECT pg_advisory_unlock($1)", key); err != nil {
-				t.Error(err)
+			_, err := connection.Exec(cleanupCtx, "SELECT pg_advisory_unlock($1)", key)
+			if err != nil {
+				t.Errorf("expected no error, got %v", err)
 			}
-			if err := connection.Close(); err != nil {
-				t.Error(err)
+			err = connection.Close()
+			if err != nil {
+				t.Errorf("expected no error, got %v", err)
 			}
 		})
 	}
@@ -235,8 +232,9 @@ func blockAdvisoryLock(t *testing.T, database *db.DB, key int64) func() {
 func identityMetricsTestOrganization(t *testing.T, database *db.DB) string {
 	t.Helper()
 	var organization string
-	if err := database.QueryRow(t.Context(), "SELECT id FROM organizations ORDER BY id LIMIT 1").Scan(&organization); err != nil {
-		t.Fatal(err)
+	err := database.QueryRow(t.Context(), "SELECT id FROM organizations ORDER BY id LIMIT 1").Scan(&organization)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 	return organization
 }
@@ -251,40 +249,39 @@ func newIdentityMetricsTestDatabase(t *testing.T) *db.DB {
 		postgres.WithDatabase("krenalis"),
 		postgres.WithUsername("krenalis"),
 		postgres.WithPassword("krenalis"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(60*time.Second)),
+		postgres.BasicWaitStrategies(),
 	)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	t.Cleanup(func() {
-		if err := testcontainers.TerminateContainer(container); err != nil {
-			t.Error(err)
+		err := testcontainers.TerminateContainer(container)
+		if err != nil {
+			t.Errorf("expected no error, got %v", err)
 		}
 	})
 	host, err := container.Host(ctx)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	port, err := container.MappedPort(ctx, "5432/tcp")
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	database, err := db.Open(&db.Options{
 		Host: host, Port: int(port.Num()), Username: "krenalis", Password: "krenalis", Database: "krenalis",
 	})
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	t.Cleanup(database.Close)
 	key, err := kms.New(ctx, "key:"+base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
-	if err := initdb.InitIfEmpty(ctx, database, key, false); err != nil {
-		t.Fatal(err)
+	err = initdb.InitIfEmpty(ctx, database, key, false)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 	organization := identityMetricsTestOrganization(t, database)
 	for _, workspace := range []string{
@@ -297,7 +294,7 @@ func newIdentityMetricsTestDatabase(t *testing.T) *db.DB {
 			VALUES ($1, $2, 'metrics test', 'metrics test', 'Normal', $3, $3, $3)`,
 			workspace, organization, []byte{1})
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("expected no error, got %v", err)
 		}
 	}
 	for _, connection := range []struct {
@@ -320,7 +317,7 @@ func newIdentityMetricsTestDatabase(t *testing.T) *db.DB {
 			(id, workspace, role, kms_encrypted_settings_key)
 			VALUES ($1, $2, 'Source', $3)`, connection.id, connection.workspace, []byte{1})
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("expected no error, got %v", err)
 		}
 	}
 	return database
@@ -344,14 +341,14 @@ func TestDeletedConnectionMetricsRead(t *testing.T) {
 		VALUES ($1, $2, 'metrics test', 'metrics test', 'Normal', $3, $3, $3)`,
 		workspace, organization, []byte{1})
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	_, err = database.Exec(ctx, `INSERT INTO connections (id, workspace, role, kms_encrypted_settings_key)
 		VALUES
 		($1, $3, 'Source', $4),
 		($2, $3, 'Source', $4)`, activeConnection, deletedConnection, workspace, []byte{1})
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	_, err = database.Exec(ctx, `INSERT INTO identity_metrics
 		(workspace, day, observed_at,
@@ -361,7 +358,7 @@ func TestDeletedConnectionMetricsRead(t *testing.T) {
 		($1, '2026-08-03', '10:00:00', 70, 130, 21),
 		($1, '2026-08-05', '11:00:00', 60, 120, 18)`, workspace)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	_, err = database.Exec(ctx, `INSERT INTO identity_connection_metrics
 		(connection, day,
@@ -375,31 +372,38 @@ func TestDeletedConnectionMetricsRead(t *testing.T) {
 		('333333333334', '2026-08-01', 1000, 1000, 1000)`,
 		activeConnection, deletedConnection)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
-	if _, err := database.Exec(ctx, "DELETE FROM connections WHERE id = $1", deletedConnection); err != nil {
-		t.Fatal(err)
+	_, err = database.Exec(ctx, "DELETE FROM connections WHERE id = $1", deletedConnection)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 	hasDeletedMetrics, err := database.QueryExists(ctx,
 		"SELECT FROM identity_connection_metrics WHERE connection = $1", deletedConnection)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if hasDeletedMetrics {
-		t.Fatal("expected deleted connection metrics to cascade")
+		t.Fatalf("expected deleted connection metrics to cascade, got rows present=%t", hasDeletedMetrics)
 	}
-	if _, err := identities.MetricsPerDate(ctx, workspace,
+	_, err = identities.MetricsPerDate(ctx, workspace,
 		time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC),
 		time.Date(2026, time.August, 7, 0, 0, 0, 0, time.UTC),
-		new(deletedConnection)); !errors.Is(err, ErrConnectionNotFound) {
-		t.Fatalf("expected an individually deleted connection to be unavailable, got %v", err)
+		new(deletedConnection))
+	if err != nil {
+		if !errors.Is(err, ErrConnectionNotFound) {
+			t.Fatalf("expected an individually deleted connection to be unavailable, got %v", err)
+		}
+	}
+	if err == nil {
+		t.Fatal("expected an individually deleted connection to be unavailable, got nil")
 	}
 
 	start := time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2026, time.August, 7, 0, 0, 0, 0, time.UTC)
 	days, err := identities.MetricsPerDate(ctx, workspace, start, end, new("deleted"))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	assertIdentityMetricDays(t, days, start, []identityMetricDayExpectation{
 		{total: 30, anonymous: 10, recognized: 20},
@@ -422,24 +426,24 @@ func TestIdentitiesRefresh(t *testing.T) {
 		UPDATE connections SET connector = 'dummy';
 		UPDATE connections SET role = 'Destination' WHERE id = '111111111114';
 		INSERT INTO pipelines
-			(id, connection, target, event_type, transformation_language,
+			(id, connection, target, event_type, ordering_group, delivery_endpoint, transformation_language,
 			matching_in, matching_out, update_on_duplicates, table_key)
 		VALUES
-			('722222222222', '111111111113', 'User', '', 'JavaScript', '', '', false, ''),
-			('733333333333', '111111111112', 'Group', '', 'JavaScript', '', '', false, ''),
-			('744444444444', '111111111114', 'User', '', 'JavaScript', '', '', false, ''),
-			('711111111111', '111111111112', 'User', '', 'JavaScript', '', '', false, ''),
-			('755555555555', '333333333334', 'User', '', 'JavaScript', '', '', false, '')`)
+			('722222222222', '111111111113', 'User', '', '', '', 'JavaScript', '', '', false, ''),
+			('733333333333', '111111111112', 'Group', '', '', '', 'JavaScript', '', '', false, ''),
+			('744444444444', '111111111114', 'User', '', '', '', 'JavaScript', '', '', false, ''),
+			('711111111111', '111111111112', 'User', '', '', '', 'JavaScript', '', '', false, ''),
+			('755555555555', '333333333334', 'User', '', '', '', 'JavaScript', '', '', false, '')`)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	key, err := kms.New(t.Context(), "key:"+base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	applicationState, err := state.New(t.Context(), database, key, nil, false)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	defer applicationState.Close(t.Context())
 
@@ -468,8 +472,9 @@ func TestIdentitiesRefresh(t *testing.T) {
 		}
 	}
 	pipelines := []string{"711111111111", "722222222222"}
-	if err := identities.Refresh(t.Context(), "workspace111"); err != nil {
-		t.Fatal(err)
+	err = identities.Refresh(t.Context(), "workspace111")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if fake.calls != 1 {
 		t.Fatalf("expected CountIdentities to be called once, got %d calls", fake.calls)
@@ -487,8 +492,9 @@ func TestIdentitiesRefresh(t *testing.T) {
 	fake.counts = &warehouses.IdentityCounts{
 		Anonymous: map[string]int{}, Recognized: map[string]int{}, WithoutProfile: map[string]int{},
 	}
-	if err := identities.Refresh(t.Context(), "workspace222"); err != nil {
-		t.Fatal(err)
+	err = identities.Refresh(t.Context(), "workspace222")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if fake.calls != 2 || nowCalls != 2 {
 		t.Fatalf("expected two timestamped CountIdentities calls, got %d calls and %d timestamp acquisitions",
@@ -517,10 +523,10 @@ func TestIdentitiesRefresh(t *testing.T) {
 	hasMetric, err := database.QueryExists(t.Context(),
 		"SELECT FROM identity_metrics WHERE workspace = 'workspace333'")
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if hasMetric {
-		t.Fatal("expected no metric after a warehouse error")
+		t.Fatalf("expected no metric after a warehouse error, got row present=%t", hasMetric)
 	}
 
 	storeCalls, calls, acquisitions := fake.storeCalls, fake.calls, nowCalls
@@ -534,7 +540,8 @@ func TestIdentitiesRefresh(t *testing.T) {
 		t.Fatal("expected ErrWorkspaceNotFound for absent state, got nil")
 	}
 	if fake.storeCalls != storeCalls || fake.calls != calls || nowCalls != acquisitions {
-		t.Fatal("expected absent state to return before accessing the datastore or acquiring a timestamp")
+		t.Fatalf("expected unchanged datastore calls/counts/timestamps, got %d/%d/%d",
+			fake.storeCalls, fake.calls, nowCalls)
 	}
 
 	fake.available = false
@@ -548,7 +555,8 @@ func TestIdentitiesRefresh(t *testing.T) {
 		t.Fatal("expected ErrWorkspaceNotFound for absent datastore, got nil")
 	}
 	if fake.storeCalls != storeCalls+1 || fake.calls != calls || nowCalls != acquisitions {
-		t.Fatal("expected absent datastore to return before counting identities or acquiring a timestamp")
+		t.Fatalf("expected datastore/count/timestamp calls %d/%d/%d, got %d/%d/%d",
+			storeCalls+1, calls, acquisitions, fake.storeCalls, fake.calls, nowCalls)
 	}
 
 }
@@ -569,7 +577,7 @@ func TestIdentityConnectionMetricsPerDate(t *testing.T) {
 		VALUES ($1, $2, 'metrics test', 'metrics test', 'Normal', $3, $3, $3)`,
 		workspace, organization, []byte{1})
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	const historicalConnection = "7QaT3mN7KxP5"
 	const disappearingConnection = "8RbU4nP8LyQ6"
@@ -583,7 +591,7 @@ func TestIdentityConnectionMetricsPerDate(t *testing.T) {
 		($3, $4, 'Source', $5)`, historicalConnection, disappearingConnection,
 		neverObservedConnection, workspace, []byte{1})
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	start := time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2026, time.August, 7, 0, 0, 0, 0, time.UTC)
@@ -595,7 +603,7 @@ func TestIdentityConnectionMetricsPerDate(t *testing.T) {
 		($1, '2026-08-03', '10:00:00', 110, 210, 0),
 		($1, '2026-08-05', '11:00:00', 120, 220, 0)`, workspace)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	_, err = database.Exec(ctx, `INSERT INTO identity_connection_metrics
 		(connection, day,
@@ -607,12 +615,12 @@ func TestIdentityConnectionMetricsPerDate(t *testing.T) {
 		('333333333334', '2026-08-01', 1000, 1000, 1000)`,
 		historicalConnection, disappearingConnection)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	selection := historicalConnection
 	days, err := identities.MetricsPerDate(ctx, workspace, start, end, &selection)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	assertIdentityMetricDays(t, days, start, []identityMetricDayExpectation{
 		{total: 30, anonymous: 10, recognized: 20},
@@ -627,7 +635,7 @@ func TestIdentityConnectionMetricsPerDate(t *testing.T) {
 	seeded, err := identities.MetricsPerDate(ctx, workspace, seededStart,
 		seededStart.AddDate(0, 0, 3), &selection)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	assertIdentityMetricDays(t, seeded, seededStart, []identityMetricDayExpectation{
 		{total: 30, anonymous: 10, recognized: 20},
@@ -638,7 +646,7 @@ func TestIdentityConnectionMetricsPerDate(t *testing.T) {
 	selection = disappearingConnection
 	disappeared, err := identities.MetricsPerDate(ctx, workspace, start, end, &selection)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	assertIdentityMetricDays(t, disappeared, start, []identityMetricDayExpectation{
 		{total: 20, anonymous: 7, recognized: 13},
@@ -652,29 +660,41 @@ func TestIdentityConnectionMetricsPerDate(t *testing.T) {
 	selection = neverObservedConnection
 	neverObserved, err := identities.MetricsPerDate(ctx, workspace, start, end, &selection)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if neverObserved == nil {
-		t.Fatal("expected an empty identity metric slice")
+		t.Fatal("expected an empty identity metric slice, got nil")
 	}
 	assertIdentityMetricDays(t, neverObserved, start, nil)
 	selection = historicalConnection
 	beforeStart := start.AddDate(0, 0, -1)
 	before, err := identities.MetricsPerDate(ctx, workspace, beforeStart, start, &selection)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	assertIdentityMetricDays(t, before, beforeStart, nil)
 
 	selection = unknownConnection
-	if _, err := identities.MetricsPerDate(ctx, workspace, start, end,
-		&selection); !errors.Is(err, ErrConnectionNotFound) {
-		t.Fatalf("expected ErrConnectionNotFound, got %v", err)
+	_, err = identities.MetricsPerDate(ctx, workspace, start, end,
+		&selection)
+	if err != nil {
+		if !errors.Is(err, ErrConnectionNotFound) {
+			t.Fatalf("expected ErrConnectionNotFound, got %v", err)
+		}
+	}
+	if err == nil {
+		t.Fatal("expected ErrConnectionNotFound, got nil")
 	}
 	selection = "333333333334"
-	if _, err := identities.MetricsPerDate(ctx, workspace, start, end,
-		&selection); !errors.Is(err, ErrConnectionNotFound) {
-		t.Fatalf("expected another workspace's connection to be unavailable, got %v", err)
+	_, err = identities.MetricsPerDate(ctx, workspace, start, end,
+		&selection)
+	if err != nil {
+		if !errors.Is(err, ErrConnectionNotFound) {
+			t.Fatalf("expected another workspace's connection to be unavailable, got %v", err)
+		}
+	}
+	if err == nil {
+		t.Fatal("expected another workspace's connection to be unavailable, got nil")
 	}
 
 }
@@ -699,7 +719,7 @@ func TestIdentityMetricsPerDateAndLatest(t *testing.T) {
 		($1, '2026-08-04', '18:00:00', 0, 0, 0),
 		($1, $2, '09:30:00', 120, 80, 50)`, workspace, latestDay)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	_, err = database.Exec(ctx, `INSERT INTO identity_connection_metrics
 		(connection, day,
@@ -709,18 +729,18 @@ func TestIdentityMetricsPerDateAndLatest(t *testing.T) {
 		('511111111111', $1, 100, 50, 40),
 		('333333333334', $1, 1000, 1000, 1000)`, latestDay)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	_, err = database.Exec(ctx, `INSERT INTO connections
 		(id, workspace, role, kms_encrypted_settings_key)
 		VALUES ('533333333333', $1, 'Source', $2)`, workspace, []byte{1})
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 
 	latest, err := identities.Latest(ctx, workspace)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if latest.Total != 200 || latest.Anonymous != 120 ||
 		latest.Recognized != 80 || latest.WithoutProfile != 50 {
@@ -749,7 +769,7 @@ func TestIdentityMetricsPerDateAndLatest(t *testing.T) {
 
 	days, err := identities.MetricsPerDate(ctx, workspace, start, end, nil)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	assertIdentityMetricDays(t, days, start.AddDate(0, 0, 1), []identityMetricDayExpectation{
 		{total: 100, anonymous: 40, recognized: 60},
@@ -761,7 +781,7 @@ func TestIdentityMetricsPerDateAndLatest(t *testing.T) {
 	seeded, err := identities.MetricsPerDate(ctx, workspace, seedStart,
 		seedStart.AddDate(0, 0, 2), nil)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	assertIdentityMetricDays(t, seeded, seedStart, []identityMetricDayExpectation{
 		{total: 100, anonymous: 40, recognized: 60},
@@ -774,18 +794,19 @@ func TestIdentityMetricsPerDateAndLatest(t *testing.T) {
 		identities_anonymous, identities_recognized, identities_without_profile)
 		VALUES ($1, $2, '10:00:00', 0, 0, 0)`, emptyWorkspace, latestDay)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	emptyLatest, err := identities.Latest(ctx, emptyWorkspace)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if emptyLatest.Connections == nil || len(emptyLatest.Connections) != 0 {
 		t.Fatalf("expected a non-nil empty connection list, got %#v", emptyLatest.Connections)
 	}
 
-	if _, err := database.Exec(ctx, "DELETE FROM workspaces WHERE id = $1", emptyWorkspace); err != nil {
-		t.Fatal(err)
+	_, err = database.Exec(ctx, "DELETE FROM workspaces WHERE id = $1", emptyWorkspace)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 	_, err = identities.Latest(ctx, emptyWorkspace)
 	if err != nil {
@@ -797,10 +818,12 @@ func TestIdentityMetricsPerDateAndLatest(t *testing.T) {
 		t.Fatal("expected ErrWorkspaceNotFound after deleting the workspace, got nil")
 	}
 
-	if _, err := database.Exec(ctx, "DROP TABLE identity_connection_metrics"); err != nil {
-		t.Fatal(err)
+	_, err = database.Exec(ctx, "DROP TABLE identity_connection_metrics")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
-	if _, err := identities.MetricsPerDate(ctx, workspace, start, end, nil); err != nil {
+	_, err = identities.MetricsPerDate(ctx, workspace, start, end, nil)
+	if err != nil {
 		t.Fatalf("expected days not to query the dropped connection table, got %v", err)
 	}
 
@@ -823,32 +846,36 @@ func TestLatestIdentityMetricUsesOneStatementSnapshot(t *testing.T) {
 		Recognized: map[string]int{"622222222222": 2},
 	})
 	newSnapshotDay := newSnapshot.observedAt.Truncate(24 * time.Hour)
-	if err := identities.storeSnapshot(ctx, oldSnapshot); err != nil {
-		t.Fatal(err)
+	err := identities.storeSnapshot(ctx, oldSnapshot)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 
 	// Block the workspace read after its statement snapshot has been established,
 	// so the concurrent commit occurs before the connection read starts.
 	const advisoryLock int64 = 8_132_041
-	if _, err := database.Exec(ctx,
-		"ALTER TABLE identity_metrics RENAME TO identity_metrics_data"); err != nil {
-		t.Fatal(err)
+	_, err = database.Exec(ctx,
+		"ALTER TABLE identity_metrics RENAME TO identity_metrics_data")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
-	if _, err := database.Exec(ctx, `CREATE FUNCTION wait_for_identity_metrics_test(bigint)
+	_, err = database.Exec(ctx, `CREATE FUNCTION wait_for_identity_metrics_test(bigint)
 		RETURNS bigint
 		LANGUAGE SQL VOLATILE
-		AS 'SELECT $1 FROM pg_advisory_xact_lock_shared(8132041)'`); err != nil {
-		t.Fatal(err)
+		AS 'SELECT $1 FROM pg_advisory_xact_lock_shared(8132041)'`)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
-	if _, err := database.Exec(ctx, `CREATE VIEW identity_metrics AS
+	_, err = database.Exec(ctx, `CREATE VIEW identity_metrics AS
 		SELECT workspace, day, observed_at,
 			CASE WHEN workspace = 'consistent11'
 				THEN wait_for_identity_metrics_test(identities_anonymous)
 				ELSE identities_anonymous
 			END AS identities_anonymous,
 			identities_recognized, identities_without_profile
-		FROM identity_metrics_data`); err != nil {
-		t.Fatal(err)
+		FROM identity_metrics_data`)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 	release := blockAdvisoryLock(t, database, advisoryLock)
 
@@ -865,7 +892,7 @@ func TestLatestIdentityMetricUsesOneStatementSnapshot(t *testing.T) {
 	}()
 	awaitDatabaseLock(t, database, "advisory", "identity_metrics")
 
-	err := database.Transaction(ctx, func(tx *db.Tx) error {
+	err = database.Transaction(ctx, func(tx *db.Tx) error {
 		_, err := tx.Exec(ctx, `UPDATE identity_metrics_data
 			SET observed_at = $3, identities_anonymous = $4,
 				identities_recognized = $5, identities_without_profile = $6
@@ -875,9 +902,10 @@ func TestLatestIdentityMetricUsesOneStatementSnapshot(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `DELETE FROM identity_connection_metrics
+		_, err = tx.Exec(ctx, `DELETE FROM identity_connection_metrics
 			WHERE connection = $1 AND day = $2`,
-			oldSnapshot.connections[0].id, newSnapshotDay); err != nil {
+			oldSnapshot.connections[0].id, newSnapshotDay)
+		if err != nil {
 			return err
 		}
 		_, err = tx.Exec(ctx, `INSERT INTO identity_connection_metrics
@@ -890,7 +918,7 @@ func TestLatestIdentityMetricUsesOneStatementSnapshot(t *testing.T) {
 		return err
 	})
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	release()
 
@@ -901,10 +929,10 @@ func TestLatestIdentityMetricUsesOneStatementSnapshot(t *testing.T) {
 	select {
 	case read = <-reads:
 	case <-time.After(5 * time.Second):
-		t.Fatal("Latest did not return after releasing the workspace read")
+		t.Fatal("expected Latest to return after releasing the workspace read, got no result")
 	}
 	if read.err != nil {
-		t.Fatal(read.err)
+		t.Fatalf("expected no error, got %v", read.err)
 	}
 	older := read.metric
 	if older.Total != 1 || len(older.Connections) != 2 ||
@@ -915,7 +943,7 @@ func TestLatestIdentityMetricUsesOneStatementSnapshot(t *testing.T) {
 
 	newer, err := identities.Latest(ctx, workspace)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if newer.Total != 2 || len(newer.Connections) != 2 ||
 		newer.Connections[0] != (IdentityConnectionMetric{Connection: "611111111111"}) ||
@@ -952,8 +980,9 @@ func TestIdentityMetricsStoreSnapshot(t *testing.T) {
 	}) {
 		t.Fatalf("expected normalized sparse connection counts, got %#v", snapshot.connections)
 	}
-	if err := identities.storeSnapshot(t.Context(), snapshot); err != nil {
-		t.Fatal(err)
+	err := identities.storeSnapshot(t.Context(), snapshot)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 	assertIdentitySnapshot(t, database, snapshot)
 
@@ -963,11 +992,13 @@ func TestIdentityMetricsStoreSnapshot(t *testing.T) {
 		WithoutProfile: map[string]int{"111111111114": 3},
 	}
 	newer := newIdentitySnapshot("workspace111", observedAt.Add(time.Hour), newerCounts)
-	if err := identities.storeSnapshot(t.Context(), newer); err != nil {
-		t.Fatal(err)
+	err = identities.storeSnapshot(t.Context(), newer)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
-	if err := identities.storeSnapshot(t.Context(), snapshot); err != nil {
-		t.Fatal(err)
+	err = identities.storeSnapshot(t.Context(), snapshot)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 	assertIdentitySnapshot(t, database, newer)
 
@@ -975,8 +1006,9 @@ func TestIdentityMetricsStoreSnapshot(t *testing.T) {
 	unavailable.observedAt = newer.observedAt.Add(time.Hour)
 	unavailable.anonymous = 9
 	unavailable.connections = []identityConnection{{id: "555555555555", anonymous: 9}}
-	if err := identities.storeSnapshot(t.Context(), unavailable); err != nil {
-		t.Fatal(err)
+	err = identities.storeSnapshot(t.Context(), unavailable)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 	unavailable.connections = nil
 	assertIdentitySnapshot(t, database, unavailable)
@@ -985,31 +1017,35 @@ func TestIdentityMetricsStoreSnapshot(t *testing.T) {
 	otherWorkspace.observedAt = unavailable.observedAt.Add(time.Hour)
 	otherWorkspace.anonymous = 8
 	otherWorkspace.connections = []identityConnection{{id: "333333333334", anonymous: 8}}
-	if err := identities.storeSnapshot(t.Context(), otherWorkspace); err != nil {
-		t.Fatal(err)
+	err = identities.storeSnapshot(t.Context(), otherWorkspace)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 	otherWorkspace.connections = nil
 	assertIdentitySnapshot(t, database, otherWorkspace)
 	var stored bool
-	if err := database.QueryRow(t.Context(), `SELECT EXISTS (
+	err = database.QueryRow(t.Context(), `SELECT EXISTS (
 		SELECT FROM identity_connection_metrics WHERE connection = $1 AND day = $2
-	)`, "333333333334", otherWorkspace.observedAt.Truncate(24*time.Hour)).Scan(&stored); err != nil {
-		t.Fatal(err)
+	)`, "333333333334", otherWorkspace.observedAt.Truncate(24*time.Hour)).Scan(&stored)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if stored {
-		t.Fatal("expected a connection from another workspace to be omitted")
+		t.Fatalf("expected a connection from another workspace to be omitted, got stored=%t", stored)
 	}
 
 	nextDay := newIdentitySnapshot("workspace111", observedAt.Add(24*time.Hour), newerCounts)
-	if err := identities.storeSnapshot(t.Context(), nextDay); err != nil {
-		t.Fatal(err)
+	err = identities.storeSnapshot(t.Context(), nextDay)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 	assertIdentitySnapshot(t, database, nextDay)
 
 	var days int
-	if err := database.QueryRow(t.Context(), `SELECT COUNT(*) FROM identity_metrics
-		WHERE workspace = 'workspace111'`).Scan(&days); err != nil {
-		t.Fatal(err)
+	err = database.QueryRow(t.Context(), `SELECT COUNT(*) FROM identity_metrics
+		WHERE workspace = 'workspace111'`).Scan(&days)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if days != 2 {
 		t.Fatalf("expected 2 daily identity snapshots, got %d", days)
@@ -1018,8 +1054,9 @@ func TestIdentityMetricsStoreSnapshot(t *testing.T) {
 	zero := newIdentitySnapshot("workspace222", observedAt, &warehouses.IdentityCounts{
 		Anonymous: map[string]int{}, Recognized: map[string]int{}, WithoutProfile: map[string]int{},
 	})
-	if err := identities.storeSnapshot(t.Context(), zero); err != nil {
-		t.Fatal(err)
+	err = identities.storeSnapshot(t.Context(), zero)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 	assertIdentitySnapshot(t, database, zero)
 
@@ -1029,8 +1066,9 @@ func TestIdentityMetricsStoreSnapshot(t *testing.T) {
 	if len(explicitZero.connections) != 1 || explicitZero.connections[0] != (identityConnection{id: "333333333334"}) {
 		t.Fatalf("expected one explicit zero connection, got %#v", explicitZero.connections)
 	}
-	if err := identities.storeSnapshot(t.Context(), explicitZero); err != nil {
-		t.Fatal(err)
+	err = identities.storeSnapshot(t.Context(), explicitZero)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 	assertIdentitySnapshot(t, database, explicitZero)
 
@@ -1063,19 +1101,19 @@ func TestIdentityMetricsStoreSnapshot(t *testing.T) {
 
 	}()
 	if err := <-deleteReady; err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	storeErrors := make(chan error, 1)
 	go func() {
 		storeErrors <- identities.storeSnapshot(t.Context(), deleting)
 	}()
-	awaitDatabaseLock(t, database, "transactionid", "INSERT INTO identity_connection_metrics")
+	awaitDatabaseLock(t, database, "transactionid", "SELECT id FROM connections")
 	release()
 	if err := <-deleteErrors; err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if err := <-storeErrors; err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	deleting.connections = nil
 	assertIdentitySnapshot(t, database, deleting)
@@ -1106,9 +1144,91 @@ func TestIdentityMetricsStoreSnapshot(t *testing.T) {
 	close(errors)
 	for err := range errors {
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("expected no error, got %v", err)
 		}
 	}
 	assertIdentitySnapshot(t, database, concurrentNewer)
 
+}
+
+// TestIdentityMetricsStoreSnapshotConcurrentDelete verifies that replacing
+// existing children cannot deadlock with a connection or workspace cascade.
+func TestIdentityMetricsStoreSnapshotConcurrentDelete(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		deleteSQL string
+		isZero    bool
+	}{
+		{name: "connection", deleteSQL: "DELETE FROM connections WHERE id = '333333333334'"},
+		{name: "connection with zero snapshot", deleteSQL: "DELETE FROM connections WHERE id = '333333333334'", isZero: true},
+		{name: "workspace", deleteSQL: "DELETE FROM workspaces WHERE id = 'workspace333'"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+
+			database := newIdentityMetricsTestDatabase(t)
+			identities := Identities{metrics: &Metrics{db: database}}
+			ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+			defer cancel()
+			observedAt := time.Date(2026, time.August, 9, 10, 0, 0, 0, time.UTC)
+			counts := &warehouses.IdentityCounts{Anonymous: map[string]int{"333333333334": 5}}
+			older := newIdentitySnapshot("workspace333", observedAt, counts)
+			err := identities.storeSnapshot(ctx, older)
+			if err != nil {
+				t.Fatalf("expected initial snapshot, got %v", err)
+			}
+			if test.isZero {
+				counts = &warehouses.IdentityCounts{}
+			}
+			newer := newIdentitySnapshot("workspace333", observedAt.Add(time.Hour), counts)
+
+			// Pause after locking and deleting the existing child, then start
+			// the cascade in the other transaction before resuming the insert.
+			_, err = database.Exec(ctx, `CREATE FUNCTION wait_for_identity_child_delete()
+				RETURNS trigger LANGUAGE plpgsql AS $$
+				BEGIN
+					PERFORM pg_advisory_xact_lock_shared(8132042);
+					RETURN OLD;
+				END $$;
+				CREATE TRIGGER wait_for_identity_child_delete
+				AFTER DELETE ON identity_connection_metrics
+				FOR EACH ROW EXECUTE FUNCTION wait_for_identity_child_delete()`)
+			if err != nil {
+				t.Fatalf("expected delete trigger, got %v", err)
+			}
+			release := blockAdvisoryLock(t, database, 8_132_042)
+			storeErrors := make(chan error, 1)
+			go func() {
+				storeErrors <- identities.storeSnapshot(ctx, newer)
+			}()
+			awaitDatabaseLock(t, database, "advisory", "DELETE FROM identity_connection_metrics")
+			deleteErrors := make(chan error, 1)
+			go func() {
+				_, err := database.Exec(ctx, test.deleteSQL)
+				deleteErrors <- err
+			}()
+			awaitDatabaseLock(t, database, "transactionid", test.deleteSQL)
+			release()
+			err = <-storeErrors
+			if err != nil {
+				t.Fatalf("expected replacement snapshot without deadlock, got %v", err)
+			}
+			err = <-deleteErrors
+			if err != nil {
+				t.Fatalf("expected cascade without deadlock, got %v", err)
+			}
+			if test.name != "workspace" {
+				newer.connections = nil
+				assertIdentitySnapshot(t, database, newer)
+			}
+			hasChildren, err := database.QueryExists(ctx,
+				"SELECT FROM identity_connection_metrics WHERE connection = '333333333334'")
+			if err != nil {
+				t.Fatalf("expected child lookup, got %v", err)
+			}
+			if hasChildren {
+				t.Fatal("expected cascaded child metrics, got remaining children")
+			}
+
+		})
+	}
 }

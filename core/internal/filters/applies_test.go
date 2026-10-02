@@ -435,6 +435,7 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsTrue, v: false, expected: false},
 		{op: state.OpIsTrue, v: json.Value(`true`), expected: true},
 		{op: state.OpIsTrue, v: json.Value(`false`), expected: false},
+		{op: state.OpIsTrue, v: json.Value(`5`), expected: false},
 		{op: state.OpIsTrue, v: 5, expected: false},
 		{op: state.OpIsTrue, v: nil, expected: false},
 
@@ -444,6 +445,7 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsFalse, v: false, expected: true},
 		{op: state.OpIsFalse, v: json.Value(`true`), expected: false},
 		{op: state.OpIsFalse, v: json.Value(`false`), expected: true},
+		{op: state.OpIsFalse, v: json.Value(`5`), expected: false},
 		{op: state.OpIsFalse, v: 5, expected: false},
 		{op: state.OpIsFalse, v: nil, expected: false},
 
@@ -542,16 +544,16 @@ func Test_Applies(t *testing.T) {
 				property = strings.Split(test.property, ".")
 			}
 			filter := &state.Where{
-				Logical: state.OpAnd,
-				Conditions: []state.WhereCondition{
-					{Property: property, Operator: test.op},
+				Operator: state.OpAnd,
+				Rules: []state.WhereRule{
+					&state.WhereCondition{Property: property, Operator: test.op},
 				},
 			}
 			if test.v0 != nil {
 				if test.v1 != nil {
-					filter.Conditions[0].Values = []any{test.v0, test.v1}
+					filter.Rules[0].(*state.WhereCondition).Values = []any{test.v0, test.v1}
 				} else {
-					filter.Conditions[0].Values = []any{test.v0}
+					filter.Rules[0].(*state.WhereCondition).Values = []any{test.v0}
 				}
 			}
 			attributes := map[string]any{"v": test.v}
@@ -573,10 +575,10 @@ func Test_Applies(t *testing.T) {
 
 	t.Run("logical and", func(t *testing.T) {
 		filter := &state.Where{
-			Logical: state.OpAnd,
-			Conditions: []state.WhereCondition{
-				{Property: []string{"a"}, Operator: state.OpIs, Values: []any{5}},
-				{Property: []string{"b"}, Operator: state.OpContains, Values: []any{"boo"}},
+			Operator: state.OpAnd,
+			Rules: []state.WhereRule{
+				&state.WhereCondition{Property: []string{"a"}, Operator: state.OpIs, Values: []any{5}},
+				&state.WhereCondition{Property: []string{"b"}, Operator: state.OpContains, Values: []any{"boo"}},
 			},
 		}
 		if !Applies(filter, map[string]any{"a": 5, "b": "foo boo"}) {
@@ -589,10 +591,10 @@ func Test_Applies(t *testing.T) {
 
 	t.Run("logical or", func(t *testing.T) {
 		filter := &state.Where{
-			Logical: state.OpOr,
-			Conditions: []state.WhereCondition{
-				{Property: []string{"a"}, Operator: state.OpIs, Values: []any{5}},
-				{Property: []string{"b"}, Operator: state.OpContains, Values: []any{"boo"}},
+			Operator: state.OpOr,
+			Rules: []state.WhereRule{
+				&state.WhereCondition{Property: []string{"a"}, Operator: state.OpIs, Values: []any{5}},
+				&state.WhereCondition{Property: []string{"b"}, Operator: state.OpContains, Values: []any{"boo"}},
 			},
 		}
 		if !Applies(filter, map[string]any{"a": 5, "b": "foo boo"}) {
@@ -606,16 +608,41 @@ func Test_Applies(t *testing.T) {
 		}
 	})
 
+	t.Run("nested groups", func(t *testing.T) {
+		filter := &state.Where{
+			Operator: state.OpAnd,
+			Rules: []state.WhereRule{
+				&state.WhereCondition{Property: []string{"a"}, Operator: state.OpIs, Values: []any{5}},
+				&state.Where{
+					Operator: state.OpOr,
+					Rules: []state.WhereRule{
+						&state.WhereCondition{Property: []string{"b"}, Operator: state.OpContains, Values: []any{"boo"}},
+						&state.WhereCondition{Property: []string{"c"}, Operator: state.OpIsTrue},
+					},
+				},
+			},
+		}
+		if !Applies(filter, map[string]any{"a": 5, "b": "foo boo", "c": false}) {
+			t.Fatal("expected true, got false")
+		}
+		if !Applies(filter, map[string]any{"a": 5, "b": "foo", "c": true}) {
+			t.Fatal("expected true, got false")
+		}
+		if Applies(filter, map[string]any{"a": 5, "b": "foo", "c": false}) {
+			t.Fatal("expected false, got true")
+		}
+	})
+
 }
 
 // Test_AppliesWithNestedPath ensures Applies handles filters with property
 // paths.
 func Test_AppliesWithNestedPath(t *testing.T) {
 	filter := &state.Where{
-		Logical: state.OpAnd,
-		Conditions: []state.WhereCondition{
-			{Property: []string{"n1", "b"}, Operator: state.OpIs, Values: []any{5}},
-			{Property: []string{"n2", "b"}, Operator: state.OpIs, Values: []any{func() state.JSONConditionValue {
+		Operator: state.OpAnd,
+		Rules: []state.WhereRule{
+			&state.WhereCondition{Property: []string{"n1", "b"}, Operator: state.OpIs, Values: []any{5}},
+			&state.WhereCondition{Property: []string{"n2", "b"}, Operator: state.OpIs, Values: []any{func() state.JSONConditionValue {
 				d := decimal.MustInt(5)
 				return state.JSONConditionValue{Number: &d, String: "5"}
 			}()}},

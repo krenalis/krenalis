@@ -10,8 +10,10 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
+	"math"
 	"regexp"
 	"slices"
 	"strconv"
@@ -20,7 +22,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
@@ -47,15 +48,17 @@ func init() {
 	}, New)
 }
 
-// New returns a new Snowflake data warehouse instance.
-func New(settings warehouses.SettingsLoader) *Snowflake {
-	return &Snowflake{settings: settings}
+// New returns a new Snowflake data warehouse instance, whose network
+// connections are established dialing with dialWith, which must not be nil.
+func New(settings warehouses.SettingsLoader, dialWith warehouses.DialWith) *Snowflake {
+	return &Snowflake{settings: settings, dialWith: dialWith}
 }
 
 type Snowflake struct {
 	mu       sync.Mutex // for the db field
 	db       *sql.DB
 	settings warehouses.SettingsLoader
+	dialWith warehouses.DialWith
 }
 
 type sfSettings struct {
@@ -78,8 +81,8 @@ func (warehouse *Snowflake) CheckReadOnlyAccess(ctx context.Context) error {
 		return snowflake(err)
 	}
 
-	// Retrieve the profiles table version.
-	profileSchemaVersion, err := warehouse.profilesVersion(ctx)
+	// Retrieve the greatest recorded profiles table version.
+	profileSchemaVersion, err := warehouse.maxProfilesVersion(ctx)
 	if err != nil {
 		return err
 	}
@@ -188,20 +191,6 @@ func (warehouse *Snowflake) ColumnTypeDescription(t types.Type) (string, error) 
 	return typeToSnowflakeType(t), nil
 }
 
-// Count returns the number of rows in table.
-func (warehouse *Snowflake) Count(ctx context.Context, table string) (int, error) {
-	db, err := warehouse.openDB(ctx)
-	if err != nil {
-		return 0, snowflake(err)
-	}
-	var count int
-	err = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM `+quoteIdent(table)).Scan(&count)
-	if err != nil {
-		return 0, snowflake(err)
-	}
-	return count, nil
-}
-
 // CountIdentities counts anonymous and recognized identities, including those
 // without a profile, from the provided pipelines, grouped by connection.
 func (warehouse *Snowflake) CountIdentities(ctx context.Context, pipelines []string) (*warehouses.IdentityCounts, error) {
@@ -305,6 +294,58 @@ LIMIT `)
 	}
 	if err := warehouses.ValidateIdentityCounts(counts); err != nil {
 		return nil, err
+	}
+
+	return counts, nil
+}
+
+// Counts returns one row count for each condition on the table.
+func (warehouse *Snowflake) Counts(ctx context.Context, table string, conditions []warehouses.Expr) ([]int, error) {
+
+	if conditions == nil {
+		conditions = []warehouses.Expr{nil}
+	}
+	if len(conditions) == 0 {
+		return nil, errors.New("conditions are empty")
+	}
+
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return nil, snowflake(err)
+	}
+	var b strings.Builder
+	b.WriteString("SELECT ")
+	for i, condition := range conditions {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		if condition == nil {
+			b.WriteString("COUNT(*)")
+			continue
+		}
+		b.WriteString("COUNT(CASE WHEN ")
+		err = renderExpr(&b, condition)
+		if err != nil {
+			return nil, fmt.Errorf("cannot build count condition: %s", err)
+		}
+		b.WriteString(" THEN 1 END)")
+	}
+	b.WriteString(" FROM ")
+	b.WriteString(quoteIdent(table))
+
+	counts := make([]int, len(conditions))
+	values := make([]any, len(counts))
+	for i := range counts {
+		values[i] = &counts[i]
+	}
+	err = db.QueryRowContext(ctx, b.String()).Scan(values...)
+	if err != nil {
+		return nil, snowflake(err)
+	}
+	for _, count := range counts {
+		if count < 0 || count > math.MaxInt32 {
+			return nil, fmt.Errorf("warehouse returned count outside the supported range: %d", count)
+		}
 	}
 
 	return counts, nil
@@ -581,13 +622,17 @@ func (warehouse *Snowflake) openDB(ctx context.Context) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	db := sql.OpenDB(connector(&s))
+	db := sql.OpenDB(connector(&s, warehouse.dialWith))
 	warehouse.db = db
 	return db, nil
 }
 
-// profilesVersion returns the version of the "KRENALIS_PROFILES" table.
-func (warehouse *Snowflake) profilesVersion(ctx context.Context) (int, error) {
+// maxProfilesVersion returns the highest recorded version of the profiles
+// table.
+//
+// The returned version is in the range [0, math.MaxInt32]. Zero represents the
+// initial version and is returned when no version has been recorded.
+func (warehouse *Snowflake) maxProfilesVersion(ctx context.Context) (int, error) {
 	db, err := warehouse.openDB(ctx)
 	if err != nil {
 		return 0, snowflake(err)
@@ -597,11 +642,17 @@ func (warehouse *Snowflake) profilesVersion(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, snowflake(err)
 	}
+	if v < 0 || v > math.MaxInt32 {
+		return 0, fmt.Errorf("warehouse returned an invalid profile table version")
+	}
 	return v, nil
 }
 
-// publishedProfilesVersion returns the version of the currently published
-// profiles table.
+// publishedProfilesVersion returns the highest successfully published version
+// of the profiles table.
+//
+// The returned version is in the range [0, math.MaxInt32]. Zero represents the
+// initial version and is returned when no version has been published.
 func (warehouse *Snowflake) publishedProfilesVersion(ctx context.Context) (int, error) {
 	db, err := warehouse.openDB(ctx)
 	if err != nil {
@@ -615,8 +666,8 @@ func (warehouse *Snowflake) publishedProfilesVersion(ctx context.Context) (int, 
 	if err != nil {
 		return 0, snowflake(err)
 	}
-	if version < 0 {
-		return 0, fmt.Errorf("warehouse returned a negative published profile schema version")
+	if version < 0 || version > math.MaxInt32 {
+		return 0, fmt.Errorf("warehouse returned an invalid published profile table version")
 	}
 	return version, nil
 }
@@ -678,8 +729,9 @@ func validateSettings(s *sfSettings) error {
 
 var falseStrPtr = new("false")
 
-// connector returns a driver.Connector from the settings.
-func connector(s *sfSettings) driver.Connector {
+// connector returns a driver.Connector from the settings, whose connections are
+// established dialing with dialWith.
+func connector(s *sfSettings, dialWith warehouses.DialWith) driver.Connector {
 	account := s.Account
 	if i := strings.IndexByte(account, '.'); i > 0 {
 		account = account[:i] + "-" + account[i+1:]
@@ -694,6 +746,7 @@ func connector(s *sfSettings) driver.Connector {
 		Params: map[string]*string{
 			"CLIENT_TELEMETRY_ENABLED": falseStrPtr,
 		},
+		WrapDialContext: dialWith,
 	}
 	if s.OIDCToken != "" {
 		cfg.Authenticator = gosnowflake.AuthTypeWorkloadIdentityFederation
