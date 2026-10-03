@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, ReactNode } from 'react';
+import React, { useState, useEffect, useMemo, useRef, ReactNode } from 'react';
 import API from '../../../lib/api/api';
 import TransformedConnector from '../../../lib/core/connector';
 import { Connector } from '../../../lib/api/types/connector';
@@ -50,7 +50,7 @@ const useApp = (
 	const [selectedWorkspace, setSelectedWorkspace] = useState<string>(localStorage.getItem(WORKSPACE_ID_KEY) ?? '');
 	const [publicMetadata, setPublicMetadata] = useState<PublicMetadata>();
 
-	let api = new API(window.location.origin, selectedWorkspace);
+	let api = useMemo(() => new API(window.location.origin, selectedWorkspace), [selectedWorkspace]);
 
 	const runPipelineButtonRefs = useRef<{
 		[key: string]: React.RefObject<FeedbackButtonRef>;

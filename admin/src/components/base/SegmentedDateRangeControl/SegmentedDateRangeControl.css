@@ -1,0 +1,49 @@
+.segmented-date-range-control {
+	display: inline-flex;
+	align-items: center;
+}
+
+.segmented-date-range-control sl-button::part(base),
+.segmented-date-range-button::part(base) {
+	padding-right: 15px;
+	padding-left: 15px;
+}
+
+.segmented-date-range-control sl-button[variant='default']::part(base),
+.segmented-date-range-button[variant='default']::part(base) {
+	background: var(--bg-primary);
+}
+
+.segmented-date-range-control__custom {
+	position: relative;
+}
+
+.segmented-date-range-control__picker {
+	position: absolute;
+	top: 40px;
+	z-index: 999;
+	visibility: hidden;
+	opacity: 0;
+	box-shadow: 0 0 18px 1px var(--sl-color-neutral-300);
+	transition: opacity 0.3s;
+}
+
+.segmented-date-range-control__picker--start {
+	left: 0;
+}
+
+.segmented-date-range-control__picker--end {
+	right: 0;
+}
+
+.segmented-date-range-control__picker--open {
+	visibility: visible;
+	opacity: 1;
+}
+
+@media (max-width: 760px) {
+	.segmented-date-range-control__picker {
+		max-width: calc(100vw - 32px);
+		overflow: auto;
+	}
+}

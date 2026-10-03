@@ -2,8 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-// Package metrics collects and stores pipeline and usage metrics in the
-// database.
+// Package metrics collects and stores application metrics in the database.
 package metrics
 
 import (
@@ -11,9 +10,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 const flushInterval = time.Second
@@ -27,13 +28,15 @@ var (
 // represented by the result type.
 var ErrMetricResultTooLarge = errors.New("calculated metric result is too large")
 
-// Metrics collects, stores, and queries pipeline and usage metrics.
+// Metrics collects, stores, and queries application metrics.
 type Metrics struct {
-	db    *db.DB
-	state *state.State
+	db        *db.DB
+	state     *state.State
+	datastore storeProvider
 
-	Pipelines Pipelines
-	Usage     Usage
+	Identities Identities
+	Pipelines  Pipelines
+	Usage      Usage
 
 	close struct {
 		ctx    context.Context
@@ -44,11 +47,14 @@ type Metrics struct {
 }
 
 // New returns a new Metrics and starts its storage workers.
-func New(db *db.DB, state *state.State) *Metrics {
+func New(db *db.DB, state *state.State, datastore *datastore.Datastore) *Metrics {
 	m := &Metrics{
-		db:    db,
-		state: state,
+		db:        db,
+		state:     state,
+		datastore: realDatastore{ds: datastore},
 	}
+	m.Identities.metrics = m
+	m.Identities.now = time.Now
 	m.Pipelines.metrics = m
 	m.Pipelines.pending = map[string]*pipelineMetrics{}
 	m.Pipelines.tick = 1
@@ -72,6 +78,26 @@ func (m *Metrics) Close(ctx context.Context) {
 	m.close.Wait()
 	stopCancel()
 	m.close.cancel()
+}
+
+// identityCounter counts identities for the selected pipelines.
+type identityCounter interface {
+	CountIdentities(ctx context.Context, pipelines []string) (*warehouses.IdentityCounts, error)
+}
+
+// realDatastore adapts datastore.Datastore to the storeProvider interface.
+type realDatastore struct {
+	ds *datastore.Datastore
+}
+
+// Store returns the identity counter for a workspace.
+func (ds realDatastore) Store(workspace string) (identityCounter, bool) {
+	return ds.ds.Store(workspace)
+}
+
+// storeProvider provides the identity counter for a workspace.
+type storeProvider interface {
+	Store(workspace string) (identityCounter, bool)
 }
 
 // TimeSlotFromTime returns the time slot for t that must be in UTC.
