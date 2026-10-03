@@ -334,6 +334,7 @@ type publicMetadata struct {
 	TelemetryLevel             string   `json:"telemetryLevel"`
 	WorkOSClientID             string   `json:"workosClientID"`
 	WorkOSDevMode              bool     `json:"workosDevMode"`
+	Version                    string   `json:"version"`
 }
 
 // PublicMetadata returns public information about the server installation:
@@ -349,6 +350,7 @@ type publicMetadata struct {
 //   - telemetryLevel: telemetry level - none, errors, stats, or all
 //   - workosClientID: WorkOS client ID, it's an empty string when WorkOS authentication is not configured
 //   - workosDevMode: when true, WorkOS AuthKit stores the refresh token in LocalStorage instead of using a cookie
+//   - version: Krenalis version, or "(devel)" when unknown - v1.2.3, dev-4e3f1b8
 //
 // Authentication is not required to call PublicMetadata.
 func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, error) {
@@ -361,6 +363,7 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 		InviteMembersViaEmail:      api.inviteMembersViaEmail,
 		CanSendMemberPasswordReset: api.core.CanSendMemberPasswordReset(),
 		TelemetryLevel:             string(api.sentryTelemetry.level),
+		Version:                    krenalisVersion(),
 	}
 	if api.workOS != nil {
 		metadata.WorkOSClientID = api.workOS.ClientID()

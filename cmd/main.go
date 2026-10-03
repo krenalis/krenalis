@@ -39,6 +39,7 @@ func Main(assets fs.FS) {
 	var initDBIfEmpty bool
 	var initDockerMember bool
 	var upgradeDB bool
+	var printVersion bool
 	flag.BoolVar(&help, "help", false, "print the help for krenalis and exit")
 	flag.StringVar(&configStore, "config-store", "env:",
 		"configuration source: 'env:' to read KRENALIS_* from the environment, or 'aws:<region>:<prefix>' to read from AWS Parameter Store (default: 'env:')")
@@ -47,9 +48,14 @@ func Main(assets fs.FS) {
 		"when initializing the PostgreSQL database, also initialize the Docker member;"+
 			" this flag is primarily intended for automated scenarios involving Docker and testing purposes")
 	flag.BoolVar(&upgradeDB, "upgrade-db", false, "upgrade Krenalis's PostgreSQL database")
+	flag.BoolVar(&printVersion, "version", false, "print the Krenalis version and exit")
 	flag.Parse()
 	if help {
 		flag.Usage()
+		os.Exit(0)
+	}
+	if printVersion {
+		fmt.Println("krenalis " + krenalisVersion())
 		os.Exit(0)
 	}
 	if configStore != "env:" {
@@ -132,6 +138,7 @@ func Main(assets fs.FS) {
 		err = sentry.Init(sentry.ClientOptions{
 			Dsn:              "https://83b8a272533bd2db6b535547c6517d0e@o4509282180136960.ingest.de.sentry.io/4509282208514128",
 			Debug:            false, // set to "true" to get information about telemetry sent to Sentry.
+			Release:          krenalisVersion(),
 			AttachStacktrace: true,
 			SendDefaultPII:   false, // TODO: is it okay to set it to false? See https://github.com/krenalis/krenalis/issues/1517.
 			Integrations: func(integrations []sentry.Integration) []sentry.Integration {
