@@ -3764,15 +3764,15 @@ func TestMatchingPropertySemantics(t *testing.T) {
 		},
 		{
 			"country with different formats", types.String().AsCountry(types.ISO3166Alpha2),
-			types.String().AsCountry(types.ISO3166Alpha3), CreateOrUpdate, countrySemanticMismatchErr,
+			types.String().AsCountry(types.ISO3166Alpha3), CreateOrUpdate, "external matching property has semantic country with format alpha-3, so internal matching property must have the same semantic and format",
 		},
 		{
 			"country input semantic only", types.String().AsCountry(types.ISO3166Alpha2), types.String(),
-			CreateOrUpdate, semanticMismatchErr,
+			CreateOrUpdate, "internal matching property has semantic country with format alpha-2, so external matching property must have the same semantic and format",
 		},
 		{
 			"country output semantic only", types.String(), types.String().AsCountry(types.ISO3166Alpha2),
-			CreateOrUpdate, countrySemanticMismatchErr,
+			CreateOrUpdate, "external matching property has semantic country with format alpha-2, so internal matching property must have the same semantic and format",
 		},
 		{
 			"duration with different constraints", types.Int(64).AsDuration(types.Second),
@@ -3780,27 +3780,31 @@ func TestMatchingPropertySemantics(t *testing.T) {
 		},
 		{
 			"input phone only", types.String().AsPhone(), types.String(), CreateOnly,
-			semanticMismatchErr,
+			"internal matching property has semantic phone, so external matching property must have the same semantic",
 		},
 		{
 			"output phone only", types.String(), types.String().AsPhone(), UpdateOnly,
-			phoneSemanticMismatchErr,
+			"external matching property has semantic phone, so internal matching property must have the same semantic",
 		},
 		{
 			"input email only", types.String().AsEmail(), types.String(), CreateOnly,
-			semanticMismatchErr,
+			"internal matching property has semantic email, so external matching property must have the same semantic",
 		},
 		{
 			"output email only", types.String(), types.String().AsEmail(), UpdateOnly,
-			semanticMismatchErr,
+			"external matching property has semantic email, so internal matching property must have the same semantic",
 		},
 		{
 			"different semantics", types.String().AsEmail(), types.String().AsPhone(), CreateOrUpdate,
-			phoneSemanticMismatchErr,
+			"external matching property has semantic phone, so internal matching property must have the same semantic",
+		},
+		{
+			"different measurement units", types.Int(64).AsMeasurement(types.Meter), types.Int(64).AsMeasurement(types.Kilometer),
+			CreateOrUpdate, "external matching property has semantic measurement with unit of measure km, so internal matching property must have the same semantic and unit of measure",
 		},
 		{
 			"different duration units", types.Int(64).AsDuration(types.Second), types.Int(64).AsDuration(types.Minute),
-			CreateOrUpdate, semanticMismatchErr,
+			CreateOrUpdate, "external matching property has semantic duration with unit minute, so internal matching property must have the same semantic and unit",
 		},
 	}
 
@@ -3840,12 +3844,13 @@ func TestMatchingPropertySemantics(t *testing.T) {
 		})
 		p.Matching = Matching{In: "container.matching", Out: "container.matching"}
 
+		wantErr := "external matching property has semantic email, so internal matching property must have the same semantic"
 		err := validatePipelineToSet(p, v)
 		if err == nil {
-			t.Fatalf("expected error %q, got nil", semanticMismatchErr)
+			t.Fatalf("expected error %q, got nil", wantErr)
 		}
-		if err.Error() != semanticMismatchErr {
-			t.Fatalf("expected error %q, got %q", semanticMismatchErr, err)
+		if err.Error() != wantErr {
+			t.Fatalf("expected error %q, got %q", wantErr, err)
 		}
 
 	})
