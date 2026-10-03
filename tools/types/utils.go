@@ -257,6 +257,15 @@ func PruneAtPath(t Type, path string) (Type, error) {
 	return pruneAtPath(t, path), nil
 }
 
+// SemanticOptionString returns the string representation of t's semantic
+// option. It returns "none" if t has no semantic option.
+func SemanticOptionString(t Type) string {
+	if t.semanticOption == nil {
+		return "none"
+	}
+	return fmt.Sprint(t.semanticOption)
+}
+
 // asRole is a recursive function called by the AsRole method. t must be an
 // object type, and role must be either Source or Destination. It returns the
 // resulting type and a boolean indicating whether the returned type is
