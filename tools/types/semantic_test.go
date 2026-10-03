@@ -29,7 +29,7 @@ func Test_CountryFormat(t *testing.T) {
 		}
 	}
 	if CountryFormat(0).String() != "Invalid" {
-		t.Fatal("invalid country format has an unexpected name")
+		t.Fatalf("expected invalid country format name %q, got %q", "Invalid", CountryFormat(0).String())
 	}
 	if got, ok := CountryFormatByName("ISO3166Alpha2"); ok || got != CountryFormat(0) {
 		t.Fatalf("expected invalid format and false, got %d and %t", got, ok)
@@ -51,7 +51,7 @@ func Test_DurationUnit(t *testing.T) {
 	}
 	for _, test := range tests {
 		if test.unit < 1 || int(test.unit) > len(durationUnitName) {
-			t.Errorf("%d is not valid", test.unit)
+			t.Errorf("expected valid duration unit, got %d", test.unit)
 		}
 		if got := test.unit.String(); got != test.name {
 			t.Errorf("expected name %q, got %q", test.name, got)
@@ -65,7 +65,7 @@ func Test_DurationUnit(t *testing.T) {
 		(1 <= DurationUnit(-1) && int(DurationUnit(-1)) <= len(durationUnitName)) ||
 		(1 <= DurationUnit(127) && int(DurationUnit(127)) <= len(durationUnitName)) ||
 		InvalidDurationUnit.String() != "Invalid" {
-		t.Fatal("invalid duration unit is valid or has an unexpected name")
+		t.Fatalf("expected invalid duration unit name %q, got %q", "Invalid", InvalidDurationUnit.String())
 	}
 	if got, ok := DurationUnitByName("seconds"); ok || got != InvalidDurationUnit {
 		t.Fatalf("expected invalid unit and false, got %d and %t", got, ok)
@@ -215,7 +215,7 @@ func Test_TypeSemanticConfigurationPanics(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			defer func() {
 				if recover() == nil {
-					t.Fatal("expected a panic")
+					t.Fatal("expected panic, got nil")
 				}
 			}()
 			test.f()
@@ -230,10 +230,10 @@ func Test_TypeSemanticCopyOnWrite(t *testing.T) {
 	money := decimalType.AsMoney()
 	euros := money.WithCurrency("EUR")
 	if decimalType.Semantic() != NoSemantic {
-		t.Fatal("AsMoney mutated its receiver")
+		t.Fatalf("expected receiver semantic %s, got %s", NoSemantic, decimalType.Semantic())
 	}
 	if currency, ok := money.Currency(); ok || currency != "" {
-		t.Fatalf("WithCurrency mutated its receiver: got %q and %t", currency, ok)
+		t.Fatalf("expected no currency and false, got %q and %t", currency, ok)
 	}
 	if currency, ok := euros.Currency(); !ok || currency != "EUR" {
 		t.Fatalf("expected EUR and true, got %q and %t", currency, ok)
@@ -492,7 +492,7 @@ func Test_TypeSemanticJSONErrors(t *testing.T) {
 				}
 				return
 			}
-			t.Fatal("expected an error")
+			t.Fatal("expected error, got nil")
 		})
 	}
 }
@@ -542,7 +542,7 @@ func Test_TypeSemanticJSONRoundTrip(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			got, err := json.Marshal(test.type_)
 			if err != nil {
-				t.Fatalf("cannot marshal type: %v", err)
+				t.Fatalf("expected marshal success, got error %v", err)
 			}
 			if string(got) != test.data {
 				t.Fatalf("expected %q, got %q", test.data, got)
@@ -550,10 +550,10 @@ func Test_TypeSemanticJSONRoundTrip(t *testing.T) {
 			var type_ Type
 			err = json.Unmarshal(got, &type_)
 			if err != nil {
-				t.Fatalf("cannot unmarshal type: %v", err)
+				t.Fatalf("expected unmarshal success, got error %v", err)
 			}
 			if !Equal(test.type_, type_) {
-				t.Fatal("round trip changed type")
+				t.Fatalf("expected round trip type %v, got %v", test.type_, type_)
 			}
 		})
 	}
@@ -588,7 +588,7 @@ func Test_UnitOfMeasure(t *testing.T) {
 	}
 	for _, test := range tests {
 		if test.unit < 1 || int(test.unit) > len(unitOfMeasureName) {
-			t.Errorf("%d is not valid", test.unit)
+			t.Errorf("expected valid unit of measure, got %d", test.unit)
 		}
 		if got := test.unit.String(); got != test.name {
 			t.Errorf("expected name %q, got %q", test.name, got)
@@ -602,7 +602,7 @@ func Test_UnitOfMeasure(t *testing.T) {
 		(1 <= UnitOfMeasure(-1) && int(UnitOfMeasure(-1)) <= len(unitOfMeasureName)) ||
 		(1 <= UnitOfMeasure(127) && int(UnitOfMeasure(127)) <= len(unitOfMeasureName)) ||
 		InvalidUnitOfMeasure.String() != "Invalid" {
-		t.Fatal("invalid unit of measure is valid or has an unexpected name")
+		t.Fatalf("expected invalid unit of measure name %q, got %q", "Invalid", InvalidUnitOfMeasure.String())
 	}
 	if got, ok := UnitOfMeasureByName("kilogram"); ok || got != InvalidUnitOfMeasure {
 		t.Fatalf("expected invalid unit and false, got %d and %t", got, ok)
