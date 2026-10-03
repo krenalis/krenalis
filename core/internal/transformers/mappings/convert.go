@@ -148,6 +148,9 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 		}
 		switch dt.Semantic() {
 		case types.CountrySemantic:
+			if s == "" && nullable {
+				return nil, nil
+			}
 			switch dt.CountryFormat() {
 			case types.ISO3166Alpha2:
 				if !validation.IsValidCountryCodeAlpha2(s) {
@@ -162,6 +165,9 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 		case types.PhoneSemantic:
 			s, ok := types.NormalizePhone(s)
 			if !ok {
+				if s == "" && nullable {
+					return nil, nil
+				}
 				return v, errPhoneConversion
 			}
 			return s, nil
