@@ -104,18 +104,18 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			switch typ.CountryFormat() {
 			case types.ISO3166Alpha2:
 				if !validation.IsValidCountryCodeAlpha2(v) {
-					return v, inputValidationErrorf(name, "is not a 2-letters country code")
+					return nil, inputValidationErrorf(name, "is not a 2-letters country code")
 				}
 			case types.ISO3166Alpha3:
 				if !validation.IsValidCountryCodeAlpha3(v) {
-					return v, inputValidationErrorf(name, "is not a 3-letters country code")
+					return nil, inputValidationErrorf(name, "is not a 3-letters country code")
 				}
 			}
 		case types.PhoneSemantic:
 			var ok bool
 			v, ok = types.NormalizePhone(v)
 			if !ok {
-				return v, inputValidationErrorf(name, "is not a valid phone number")
+				return nil, inputValidationErrorf(name, "is not a valid phone number")
 			}
 		default:
 			if values := typ.Values(); values != nil {

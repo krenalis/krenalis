@@ -319,6 +319,9 @@ func TestNormalizeSemantics(t *testing.T) {
 						if _, ok := errors.AsType[InputValidationError](err); !ok {
 							t.Fatalf("expected InputValidationError, got %T", err)
 						}
+						if got != nil {
+							t.Fatalf("expected nil, got %#v", got)
+						}
 						return
 					}
 					if !test.valid {
