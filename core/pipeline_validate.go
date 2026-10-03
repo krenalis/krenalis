@@ -767,14 +767,14 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 // canBeUsedAsMatchingProp reports whether a type with kind k can be used as a
 // matching property when exporting users to an application.
 func canBeUsedAsMatchingProp(k types.Kind) bool {
-	// Only int, uuid, and string types are allowed.
+	// Only int, uint, uuid, and string types are allowed.
 	return k == types.StringKind || k == types.IntKind || k == types.UUIDKind
 }
 
 // canBeUsedAsTableKey reports whether a type with kind k can be used as a
 // table key when exporting users to databases.
 func canBeUsedAsTableKey(k types.Kind) bool {
-	// Only int, uuid, and string types are allowed.
+	// Only int, uint, uuid, and string types are allowed.
 	return k == types.StringKind || k == types.IntKind || k == types.UUIDKind
 }
 
