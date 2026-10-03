@@ -447,12 +447,14 @@ func TestFlusherStartOperationCanceled(t *testing.T) {
 // TestFlusherMetricsAggregation verifies per-pipeline aggregation and
 // finalization.
 func TestFlusherMetricsAggregation(t *testing.T) {
+
 	finalizeCh := make(chan struct{}, 2)
 	var mu sync.Mutex
 	finalized := make(map[string]int)
 	opts := baseOptions()
 	opts.BatchSize = 4
 	opts.MaxBatchSize = 4
+	opts.MinFlushInterval = time.Hour
 	opts.MetricsFinalizer = func(pipeline string, count int) {
 		mu.Lock()
 		finalized[pipeline] += count
@@ -460,15 +462,22 @@ func TestFlusherMetricsAggregation(t *testing.T) {
 		finalizeCh <- struct{}{}
 	}
 	flushCh := make(chan struct{}, 1)
-	flushFn := func(ctx context.Context, rows []testRow) error {
+	flushFn := func(ctx context.Context, rows []map[string]any) error {
 		flushCh <- struct{}{}
 		return nil
 	}
-	f := newTestFlusher(opts, flushFn)
-	f.Ch() <- flusherRow[testRow]{row: testRow{id: 1}, pipeline: testPipeline1}
-	f.Ch() <- flusherRow[testRow]{row: testRow{id: 2}, pipeline: testPipeline1}
-	f.Ch() <- flusherRow[testRow]{row: testRow{id: 3}, pipeline: testPipeline2}
-	f.Ch() <- flusherRow[testRow]{row: testRow{id: 4}, pipeline: ""}
+	f := newFlusher(opts, startOperationStub, flushFn)
+	f.Ch() <- flusherRow[map[string]any]{pipeline: testPipeline1}
+	f.Ch() <- flusherRow[map[string]any]{pipeline: testPipeline1}
+	f.Ch() <- flusherRow[map[string]any]{pipeline: testPipeline2}
+
+	// Preserving an identity must not count as a successful import.
+	w := BatchIdentityWriter{pipeline: testPipeline1, identities: f.Ch(), purge: true}
+	err := w.Keep(t.Context(), "4")
+	if err != nil {
+		_ = f.Stop(t.Context())
+		t.Fatalf("expected nil, got %v", err)
+	}
 
 	receiveWithin(t, flushCh, 1*time.Second, "flush")
 
@@ -496,6 +505,7 @@ func TestFlusherMetricsAggregation(t *testing.T) {
 		t.Fatalf("expected nil, got %v", err)
 	}
 	waitChannelClosed(t, f.rows)
+
 }
 
 // TestFlusherRetryLogErrorDedup verifies logError de-duplication across
