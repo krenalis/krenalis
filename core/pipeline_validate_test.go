@@ -3714,6 +3714,148 @@ func Test_validatePipeline(t *testing.T) {
 
 }
 
+// TestMatchingPropertySemantics checks semantic compatibility between matching
+// properties without affecting existing kind conversions.
+func TestMatchingPropertySemantics(t *testing.T) {
+
+	pipeline := func(in, out types.Type, mode ExportMode) PipelineToSet {
+		return PipelineToSet{
+			Name: "Export users",
+			InSchema: types.Object([]types.Property{
+				{Name: "matching_in", Type: in, ReadOptional: true},
+				{Name: "value_in", Type: types.String(), ReadOptional: true},
+			}),
+			OutSchema: types.Object([]types.Property{
+				{Name: "matching_out", Type: out},
+				{Name: "value_out", Type: types.String()},
+			}),
+			Transformation: &Transformation{Mapping: map[string]string{"value_out": "value_in"}},
+			ExportMode:     mode,
+			Matching: Matching{
+				In:  "matching_in",
+				Out: "matching_out",
+			},
+		}
+	}
+
+	v := validationState{target: state.TargetUser, provider: testProvider{}}
+	v.connection.role = state.Destination
+	v.connection.connector.typ = state.Application
+
+	tests := []struct {
+		name    string
+		in      types.Type
+		out     types.Type
+		mode    ExportMode
+		wantErr string
+	}{
+		{"int to int without semantics", types.Int(32), types.Int(64), CreateOrUpdate, ""},
+		{"int to string without semantics", types.Int(32), types.String(), CreateOrUpdate, ""},
+		{"string to int without semantics", types.String(), types.Int(32), CreateOrUpdate, ""},
+		{"string to string without semantics", types.String(), types.String(), CreateOrUpdate, ""},
+		{"string to UUID without semantics", types.String(), types.UUID(), CreateOrUpdate, ""},
+		{"UUID to UUID without semantics", types.UUID(), types.UUID(), CreateOrUpdate, ""},
+		{"UUID to string without semantics", types.UUID(), types.String(), CreateOrUpdate, ""},
+		{"phone", types.String().AsPhone(), types.String().AsPhone(), CreateOrUpdate, ""},
+		{"email", types.String().AsEmail(), types.String().AsEmail(), CreateOrUpdate, ""},
+		{
+			"country", types.String().AsCountry(types.ISO3166Alpha2), types.String().AsCountry(types.ISO3166Alpha2),
+			CreateOrUpdate, "",
+		},
+		{
+			"country with different formats", types.String().AsCountry(types.ISO3166Alpha2),
+			types.String().AsCountry(types.ISO3166Alpha3), CreateOrUpdate, "external matching property has semantic country with format alpha-3, so internal matching property must have the same semantic and format",
+		},
+		{
+			"country input semantic only", types.String().AsCountry(types.ISO3166Alpha2), types.String(),
+			CreateOrUpdate, "internal matching property has semantic country with format alpha-2, so external matching property must have the same semantic and format",
+		},
+		{
+			"country output semantic only", types.String(), types.String().AsCountry(types.ISO3166Alpha2),
+			CreateOrUpdate, "external matching property has semantic country with format alpha-2, so internal matching property must have the same semantic and format",
+		},
+		{
+			"duration with different constraints", types.Int(64).AsDuration(types.Second),
+			types.Int(32).AsDuration(types.Second), CreateOrUpdate, "",
+		},
+		{
+			"input phone only", types.String().AsPhone(), types.String(), CreateOnly,
+			"internal matching property has semantic phone, so external matching property must have the same semantic",
+		},
+		{
+			"output phone only", types.String(), types.String().AsPhone(), UpdateOnly,
+			"external matching property has semantic phone, so internal matching property must have the same semantic",
+		},
+		{
+			"input email only", types.String().AsEmail(), types.String(), CreateOnly,
+			"internal matching property has semantic email, so external matching property must have the same semantic",
+		},
+		{
+			"output email only", types.String(), types.String().AsEmail(), UpdateOnly,
+			"external matching property has semantic email, so internal matching property must have the same semantic",
+		},
+		{
+			"different semantics", types.String().AsEmail(), types.String().AsPhone(), CreateOrUpdate,
+			"external matching property has semantic phone, so internal matching property must have the same semantic",
+		},
+		{
+			"different measurement units", types.Int(64).AsMeasurement(types.Meter), types.Int(64).AsMeasurement(types.Kilometer),
+			CreateOrUpdate, "external matching property has semantic measurement with unit of measure km, so internal matching property must have the same semantic and unit of measure",
+		},
+		{
+			"different duration units", types.Int(64).AsDuration(types.Second), types.Int(64).AsDuration(types.Minute),
+			CreateOrUpdate, "external matching property has semantic duration with unit minute, so internal matching property must have the same semantic and unit",
+		},
+	}
+
+	for _, test := range tests {
+
+		t.Run(test.name, func(t *testing.T) {
+
+			err := validatePipelineToSet(pipeline(test.in, test.out, test.mode), v)
+			if test.wantErr == "" {
+				if err != nil {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("expected error %q, got nil", test.wantErr)
+			}
+			if err.Error() != test.wantErr {
+				t.Fatalf("expected error %q, got %q", test.wantErr, err)
+			}
+
+		})
+
+	}
+
+	t.Run("nested semantic mismatch", func(t *testing.T) {
+		p := pipeline(types.String().AsPhone(), types.String().AsEmail(), CreateOrUpdate)
+		p.InSchema = types.Object([]types.Property{
+			{Name: "container", Type: types.Object([]types.Property{
+				{Name: "matching", Type: types.String().AsPhone(), ReadOptional: true},
+			}), ReadOptional: true},
+			{Name: "value_in", Type: types.String(), ReadOptional: true},
+		})
+		p.OutSchema = types.Object([]types.Property{
+			{Name: "container", Type: types.Object([]types.Property{{Name: "matching", Type: types.String().AsEmail()}})},
+			{Name: "value_out", Type: types.String()},
+		})
+		p.Matching = Matching{In: "container.matching", Out: "container.matching"}
+
+		wantErr := "external matching property has semantic email, so internal matching property must have the same semantic"
+		err := validatePipelineToSet(p, v)
+		if err == nil {
+			t.Fatalf("expected error %q, got nil", wantErr)
+		}
+		if err.Error() != wantErr {
+			t.Fatalf("expected error %q, got %q", wantErr, err)
+		}
+
+	})
+}
+
 var testNames = map[string]struct{}{}
 
 // validateTestOnPipeline is used internally by tests to validate the coherence of

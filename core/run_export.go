@@ -401,12 +401,19 @@ func errMatchingPropertyConversion(in, ex string) error {
 //   - string to int, uuid, and string
 //   - uuid to uuid and string
 //
-// It panics if v is nil or the types in and ex are not conforming to these
-// supported conversions. It returns an error if the converted value does not
-// satisfy the constraints of the ex type.
+// It panics if v is nil, the types in and ex does not have the same semantic
+// and options, or they are not conforming to these supported conversions.
+//
+// It returns an error if the converted value does not satisfy the constraints
+// of the ex type.
 func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, error) {
 	if v == nil {
 		panic(fmt.Sprintf("core: unexpected value nil for internal kind %s", in.Kind()))
+	}
+	if !types.EqualSemantics(in, ex) {
+		panic(fmt.Sprintf("core: internal and external semantics differ: "+
+			"internal semantic %s (options %s), external semantic %s (options %s)",
+			in.Semantic(), types.SemanticOptionString(in), ex.Semantic(), types.SemanticOptionString(ex)))
 	}
 	switch ex.Kind() {
 	case types.StringKind:
@@ -421,17 +428,21 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 		default:
 			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
-		if n, ok := ex.MaxBytes(); ok && len(s) > n {
-			return nil, errMatchingPropertyConversion(inPath, outPath)
-		}
-		if n, ok := ex.MaxLength(); ok && utf8.RuneCountInString(s) > n {
-			return nil, errMatchingPropertyConversion(inPath, outPath)
-		}
-		if values := ex.Values(); values != nil && !slices.Contains(values, s) {
-			return nil, errMatchingPropertyConversion(inPath, outPath)
-		}
-		if re := ex.Pattern(); re != nil && !re.MatchString(s) {
-			return nil, errMatchingPropertyConversion(inPath, outPath)
+		// Validate v only if semantics are not country and phone.
+		if in.Semantic() != types.CountrySemantic && in.Semantic() != types.PhoneSemantic {
+			// Validate that v match the external property's constraints.
+			if n, ok := ex.MaxBytes(); ok && len(s) > n {
+				return nil, errMatchingPropertyConversion(inPath, outPath)
+			}
+			if n, ok := ex.MaxLength(); ok && utf8.RuneCountInString(s) > n {
+				return nil, errMatchingPropertyConversion(inPath, outPath)
+			}
+			if values := ex.Values(); values != nil && !slices.Contains(values, s) {
+				return nil, errMatchingPropertyConversion(inPath, outPath)
+			}
+			if re := ex.Pattern(); re != nil && !re.MatchString(s) {
+				return nil, errMatchingPropertyConversion(inPath, outPath)
+			}
 		}
 		return s, nil
 	case types.IntKind:

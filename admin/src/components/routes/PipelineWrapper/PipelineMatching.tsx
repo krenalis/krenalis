@@ -2,7 +2,13 @@ import React, { forwardRef, useContext, useMemo } from 'react';
 import { getMatchingComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import PipelineContext from '../../../context/PipelineContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import { flattenSchema, propertyTypesAreEqual, FlatSchema, validateMatching } from '../../../lib/core/pipeline';
+import {
+	flattenSchema,
+	matchingSemanticsAreCompatibleWithDestination,
+	propertyTypesAreEqual,
+	FlatSchema,
+	validateMatching,
+} from '../../../lib/core/pipeline';
 import { checkIfPropertyExists } from './Pipeline.helpers';
 import { Combobox } from '../../base/Combobox/Combobox';
 
@@ -32,7 +38,12 @@ const PipelineMatching = forwardRef<any>((_, ref) => {
 				}
 			}
 		} else {
-			filteredSchema = flatSourceSchema;
+			for (const [k, v] of Object.entries(flatSourceSchema)) {
+				const destination = flatDestinationSchema[k]?.full;
+				if (matchingSemanticsAreCompatibleWithDestination(v.full.type, destination, pipeline.exportMode)) {
+					filteredSchema[k] = v;
+				}
+			}
 		}
 
 		return {

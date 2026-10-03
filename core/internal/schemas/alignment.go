@@ -138,6 +138,27 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 	if k1 != k2 {
 		return &Error{Msg: fmt.Sprintf("«%s» property's type has changed from «%s» to «%s»", name, t1, t2)}
 	}
+	if !types.EqualSemantics(t1, t2) {
+		if t1.Semantic() != t2.Semantic() {
+			return &Error{Msg: fmt.Sprintf("semantic of the «%s» property's type has changed from «%s» to «%s»", name,
+				t1.Semantic(), t2.Semantic())}
+		}
+		var label string
+		switch t1.Semantic() {
+		case types.CountrySemantic:
+			label = "country format"
+		case types.DurationSemantic:
+			label = "duration unit"
+		case types.MeasurementSemantic:
+			label = "unit of measure"
+		case types.MoneySemantic:
+			label = "currency"
+		default:
+			return fmt.Errorf("unexpected semantic %q", t1.Semantic())
+		}
+		return &Error{Msg: fmt.Sprintf("%s of the «%s» property's type has changed from «%s» to «%s»",
+			label, name, types.SemanticOptionString(t1), types.SemanticOptionString(t2))}
+	}
 	switch k1 {
 	case types.StringKind:
 		c1, ok1 := t1.MaxLength()
