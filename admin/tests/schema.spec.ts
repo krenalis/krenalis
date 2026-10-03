@@ -364,14 +364,12 @@ test(`Keep profile schema search selection and expansion consistent`, async ({ p
 		schema.properties.push({
 			name: 'search_object',
 			prefilled: '',
-			role: 'Both',
 			type: {
 				kind: 'object',
 				properties: [
 					{
 						name: 'nested_match',
 						prefilled: '',
-						role: 'Both',
 						type: { kind: 'string' },
 						createRequired: false,
 						updateRequired: false,
@@ -554,14 +552,12 @@ test(`Keep an object expanded when reordering it`, async ({ page }) => {
 			{
 				name: 'expanded_object',
 				prefilled: '',
-				role: 'Both',
 				type: {
 					kind: 'object',
 					properties: [
 						{
 							name: 'child',
 							prefilled: '',
-							role: 'Both',
 							type: { kind: 'string' },
 							createRequired: false,
 							updateRequired: false,
@@ -582,7 +578,6 @@ test(`Keep an object expanded when reordering it`, async ({ page }) => {
 			{
 				name: 'following_property',
 				prefilled: '',
-				role: 'Both',
 				type: { kind: 'string' },
 				createRequired: false,
 				updateRequired: false,
@@ -786,7 +781,6 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 		schema.properties.push({
 			name: 'address',
 			prefilled: '',
-			role: 'Both',
 			type: {
 				kind: 'object',
 				properties: [
@@ -794,7 +788,6 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 						name: 'country',
 						displayName: 'Country',
 						prefilled: '',
-						role: 'Both',
 						type: { kind: 'string', maxLength: 2 },
 						createRequired: false,
 						updateRequired: false,
@@ -1002,14 +995,12 @@ test(`Keep object types unchanged after canceling the schema review`, async ({ p
 		schema.properties.push({
 			name: 'review_object',
 			prefilled: '',
-			role: 'Both',
 			type: {
 				kind: 'object',
 				properties: [
 					{
 						name: 'child',
 						prefilled: '',
-						role: 'Both',
 						type: { kind: 'string' },
 						createRequired: false,
 						updateRequired: false,
@@ -1151,7 +1142,6 @@ test(`Preserve create-required on top-level properties in the schema preview`, a
 		schema.properties.push({
 			name: 'create_required_property',
 			prefilled: '',
-			role: 'Both',
 			type: { kind: 'string' },
 			createRequired: true,
 			updateRequired: false,
@@ -1675,7 +1665,6 @@ test(`Restore the original property name without leaving pending changes`, async
 		schema.properties.push({
 			name: 'original_property_name',
 			prefilled: '',
-			role: 'Both',
 			type: { kind: 'string' },
 			createRequired: false,
 			updateRequired: false,
@@ -1734,7 +1723,6 @@ test(`Remove a renamed property without sending its stale RePath`, async ({ page
 		schema.properties.push({
 			name: 'property_to_rename_and_remove',
 			prefilled: '',
-			role: 'Both',
 			type: { kind: 'string' },
 			createRequired: false,
 			updateRequired: false,
@@ -1776,7 +1764,6 @@ test(`Remove a replacement property without sending its stale RePath`, async ({ 
 		schema.properties.push({
 			name: 'property_to_replace_and_remove',
 			prefilled: '',
-			role: 'Both',
 			type: { kind: 'string' },
 			createRequired: false,
 			updateRequired: false,
@@ -1823,7 +1810,6 @@ test(`Do not show modified field indicators on a replacement property`, async ({
 		schema.properties.push({
 			name: 'property_to_replace',
 			prefilled: '',
-			role: 'Both',
 			type: { kind: 'string' },
 			createRequired: false,
 			updateRequired: false,
@@ -1858,7 +1844,6 @@ test(`Rename an existing property to a deleted property's name`, async ({ page }
 			{
 				name: 'property_to_rename',
 				prefilled: '',
-				role: 'Both',
 				type: { kind: 'string' },
 				createRequired: false,
 				updateRequired: false,
@@ -1870,7 +1855,6 @@ test(`Rename an existing property to a deleted property's name`, async ({ page }
 			{
 				name: 'deleted_property_name',
 				prefilled: '',
-				role: 'Both',
 				type: { kind: 'string' },
 				createRequired: false,
 				updateRequired: false,
@@ -1977,7 +1961,6 @@ test(`Reuse a property name more than once before applying schema changes`, asyn
 		schema.properties.push({
 			name: 'reused_property_name',
 			prefilled: '',
-			role: 'Both',
 			type: { kind: 'string' },
 			createRequired: false,
 			updateRequired: false,
@@ -2024,7 +2007,6 @@ test(`Remove a replacement property's RePath when renaming it`, async ({ page })
 		schema.properties.push({
 			name: 'replacement_name',
 			prefilled: '',
-			role: 'Both',
 			type: { kind: 'string' },
 			createRequired: false,
 			updateRequired: false,
@@ -2070,7 +2052,6 @@ test(`Allow matching property names under different object parents`, async ({ pa
 		const createProperty = (name: string, type: Property['type']): Property => ({
 			name,
 			prefilled: '',
-			role: 'Both',
 			type,
 			createRequired: false,
 			updateRequired: false,
@@ -2141,7 +2122,6 @@ test(`Support hasOwnProperty as a profile schema property name`, async ({ page }
 		const createProperty = (name: string, type: Property['type']): Property => ({
 			name,
 			prefilled: '',
-			role: 'Both',
 			type,
 			createRequired: false,
 			updateRequired: false,
@@ -2192,7 +2172,6 @@ test(`Ignore inherited primary sources for prototype property names`, async ({ p
 		schema.properties.push({
 			name: 'toString',
 			prefilled: '',
-			role: 'Both',
 			type: { kind: 'string' },
 			createRequired: false,
 			updateRequired: false,
@@ -2388,14 +2367,12 @@ test(`Reject descendant changes while renaming an object property`, async ({ pag
 		schema.properties.push({
 			name: 'object_to_rename',
 			prefilled: '',
-			role: 'Both',
 			type: {
 				kind: 'object',
 				properties: [
 					{
 						name: 'child',
 						prefilled: '',
-						role: 'Both',
 						type: { kind: 'string' },
 						createRequired: false,
 						updateRequired: false,
@@ -2478,14 +2455,12 @@ test(`Reject an existing object property after removing all its sub-properties`,
 			{
 				name: 'object_to_empty',
 				prefilled: '',
-				role: 'Both',
 				type: {
 					kind: 'object',
 					properties: [
 						{
 							name: 'child',
 							prefilled: '',
-							role: 'Both',
 							type: { kind: 'string' },
 							createRequired: false,
 							updateRequired: false,
@@ -2506,7 +2481,6 @@ test(`Reject an existing object property after removing all its sub-properties`,
 			{
 				name: 'object_to_empty_sibling',
 				prefilled: '',
-				role: 'Both',
 				type: { kind: 'string' },
 				createRequired: false,
 				updateRequired: false,
@@ -2544,14 +2518,12 @@ test(`Count an object removal once after changing its children`, async ({ page }
 		schema.properties.push({
 			name: 'object_with_replaced_child',
 			prefilled: '',
-			role: 'Both',
 			type: {
 				kind: 'object',
 				properties: [
 					{
 						name: 'child',
 						prefilled: '',
-						role: 'Both',
 						type: { kind: 'string' },
 						createRequired: false,
 						updateRequired: false,
@@ -2563,7 +2535,6 @@ test(`Count an object removal once after changing its children`, async ({ page }
 					{
 						name: 'removed_child',
 						prefilled: '',
-						role: 'Both',
 						type: { kind: 'string' },
 						createRequired: false,
 						updateRequired: false,
