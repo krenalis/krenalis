@@ -112,7 +112,7 @@ func TestUnmarshalSemanticValidation(t *testing.T) {
 								t.Fatalf("expected invalid value to be rejected, got attributes %#v", records[0].Attributes)
 							}
 							if !reflect.DeepEqual(records[0].Attributes["value"], value) {
-								t.Fatalf("value changed: got %#v, want %#v", records[0].Attributes["value"], value)
+								t.Fatalf("expected value %#v, got %#v", value, records[0].Attributes["value"])
 							}
 
 						})

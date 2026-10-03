@@ -144,7 +144,7 @@ func TestMappingSemanticValidation(t *testing.T) {
 								t.Fatalf("expected invalid value to be rejected, got %#v", got["target"])
 							}
 							if !reflect.DeepEqual(got["target"], value) {
-								t.Fatalf("value changed: got %#v, want %#v", got["target"], value)
+								t.Fatalf("expected value %#v, got %#v", value, got["target"])
 							}
 
 						})

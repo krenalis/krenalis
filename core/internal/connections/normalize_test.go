@@ -322,13 +322,13 @@ func TestNormalizeSemantics(t *testing.T) {
 						return
 					}
 					if !test.valid {
-						t.Fatal("invalid value was accepted")
+						t.Fatalf("expected invalid value to be rejected, got %#v", got)
 					}
 					if shape == "bytes" {
 						value = test.value
 					}
 					if !reflect.DeepEqual(got, value) {
-						t.Fatalf("value changed: got %#v, want %#v", got, value)
+						t.Fatalf("expected value %#v, got %#v", value, got)
 					}
 
 				})
@@ -346,7 +346,7 @@ func TestNormalizeSemantics(t *testing.T) {
 				return
 			}
 			if !test.valid {
-				t.Fatal("invalid object property was accepted")
+				t.Fatalf("expected invalid object property to be rejected, got %#v", map[string]any{"value": test.value})
 			}
 
 		})
