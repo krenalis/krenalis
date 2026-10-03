@@ -82,7 +82,7 @@ func TestMappingSemanticValidation(t *testing.T) {
 						value = map[string]any{"inner": test.value}
 						data = "{\"inner\":" + data + "}"
 					}
-					outSchema := types.Object([]types.Property{{Name: "target", Type: typ}})
+					outSchema := types.Object([]types.Property{{Name: "target", Type: typ, CreateRequired: true}})
 					for _, mode := range []string{"convert", "equal types", "json", "constant"} {
 
 						if mode == "constant" && shape != "string" {
