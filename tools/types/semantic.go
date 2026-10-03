@@ -84,7 +84,7 @@ func CountryFormatByName(name string) (CountryFormat, bool) {
 			return CountryFormat(i + 2), true
 		}
 	}
-	return CountryFormat(0), false
+	return 0, false
 }
 
 // String returns the name of f.
@@ -194,7 +194,7 @@ func UnitOfMeasureByName(name string) (UnitOfMeasure, bool) {
 			return UnitOfMeasure(i + 1), true
 		}
 	}
-	return UnitOfMeasure(0), false
+	return 0, false
 }
 
 // String returns the name of u.
