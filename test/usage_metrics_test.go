@@ -61,6 +61,9 @@ func TestUsageMetricsHTTPContract(t *testing.T) {
 	if storedRows != 0 {
 		t.Fatalf("expected organization creation not to create usage metrics, got %d rows", storedRows)
 	}
+	var organization string
+	k.QueryRowTestDatabase(t.Context(), &organization,
+		"SELECT organization FROM workspaces WHERE id = $1", k.WorkspaceID())
 
 	var initial usageMetricsResponse
 	k.Call("GET", path, nil, nil, &initial)
@@ -115,6 +118,27 @@ func TestUsageMetricsHTTPContract(t *testing.T) {
 	createPipelineMetricsFixture(t, k)
 	k.RunIdentityResolutionAndWait()
 	_, _, total := k.Profiles(nil, "", false, 0, 100)
+	var resolutionObservedAt time.Time
+	var resolutionProfiles int
+	k.QueryRowTestDatabase(t.Context(), &resolutionObservedAt, `
+		SELECT (day + observed_at) AT TIME ZONE 'UTC'
+		FROM identity_resolution_metrics
+		WHERE workspace = $1`, k.WorkspaceID())
+	k.QueryRowTestDatabase(t.Context(), &resolutionProfiles, `
+		SELECT profiles_anonymous + profiles_recognized
+		FROM identity_resolution_metrics
+		WHERE workspace = $1`, k.WorkspaceID())
+	var lifecycleCompletedAt time.Time
+	k.QueryRowTestDatabase(t.Context(), &lifecycleCompletedAt, `
+		SELECT ir_end_time AT TIME ZONE 'UTC'
+		FROM workspaces
+		WHERE organization = $1 AND id = $2`, organization, k.WorkspaceID())
+	if !resolutionObservedAt.Equal(lifecycleCompletedAt) {
+		t.Fatalf("expected Resolution observed_at %s, got %s", lifecycleCompletedAt, resolutionObservedAt)
+	}
+	if resolutionProfiles != total {
+		t.Fatalf("expected Resolution profile count %d, got %d", total, resolutionProfiles)
+	}
 	k.Call("GET", path, nil, nil, &workspaceMetrics)
 	today := usageDay(t, workspaceMetrics, now.Format(time.DateOnly))
 	if today.Profiles != total {

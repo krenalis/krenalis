@@ -20,6 +20,7 @@ func TestIdentityMetricsSchema(t *testing.T) {
 	ctx := t.Context()
 
 	for table, want := range map[string]string{
+		"identity_resolution_metrics": "workspace,day",
 		"identity_metrics":            "workspace,day",
 		"identity_connection_metrics": "connection,day",
 	} {
@@ -28,6 +29,9 @@ func TestIdentityMetricsSchema(t *testing.T) {
 		}
 	}
 	for table, constraints := range map[string][]string{
+		"identity_resolution_metrics": {
+			"identity_resolution_metrics_workspace_fkey",
+		},
 		"identity_metrics": {
 			"identity_metrics_workspace_fkey",
 		},
@@ -45,8 +49,10 @@ func TestIdentityMetricsSchema(t *testing.T) {
 	err := database.QueryRow(ctx, `SELECT COUNT(*)
 		FROM information_schema.columns
 		WHERE table_schema = current_schema()
-			AND table_name IN ('identity_metrics', 'identity_connection_metrics')
-			AND column_name LIKE 'identities\_%' ESCAPE '\'
+			AND table_name IN ('identity_resolution_metrics', 'identity_metrics', 'identity_connection_metrics')
+			AND (column_name LIKE 'identities\_%' ESCAPE '\'
+				OR column_name LIKE 'profiles\_%' ESCAPE '\'
+				OR column_name LIKE 'composition\_%' ESCAPE '\')
 			AND column_default IS NOT NULL`).Scan(&defaults)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -90,11 +96,22 @@ func TestIdentityMetricsSchema(t *testing.T) {
 		t.Fatalf("expected an explicit zero connection row to be accepted, got %v", err)
 	}
 
+	_, err = database.Exec(ctx, `INSERT INTO identity_resolution_metrics
+		(workspace, day, observed_at,
+		profiles_anonymous, profiles_recognized, identities_anonymous, identities_recognized,
+		composition_one, composition_two, composition_three,
+		composition_four_to_ten,
+		composition_eleven_to_twenty, composition_more_than_twenty)
+		VALUES ('workspace111', $1, $2, 1, 1, 2, 1, 1, 1, 0, 0, 0, 0)`,
+		day, observedAt.Format("15:04:05.999999"))
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
 	var organizationColumns int
 	err = database.QueryRow(ctx, `SELECT COUNT(*)
 		FROM information_schema.columns
 		WHERE table_schema = current_schema()
-			AND table_name IN ('identity_metrics', 'identity_connection_metrics')
+			AND table_name IN ('identity_resolution_metrics', 'identity_metrics', 'identity_connection_metrics')
 			AND column_name = 'organization'`).Scan(&organizationColumns)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -102,18 +119,23 @@ func TestIdentityMetricsSchema(t *testing.T) {
 	if organizationColumns != 0 {
 		t.Fatalf("expected identity metric tables without organization columns, got %d", organizationColumns)
 	}
+	assertColumnDoesNotExist(t, database, "identity_resolution_metrics", "operation_id")
+	assertColumnDoesNotExist(t, database, "identity_resolution_metrics", "started_at")
+	assertColumnDoesNotExist(t, database, "identity_resolution_metrics", "completed_at")
 	assertColumnDoesNotExist(t, database, "identity_connection_metrics", "observed_at")
 	assertColumnDoesNotExist(t, database, "identity_connection_metrics", "workspace")
-	var dataType string
-	err = database.QueryRow(ctx, `SELECT data_type
-		FROM information_schema.columns
-		WHERE table_schema = current_schema() AND table_name = 'identity_metrics'
-			AND column_name = 'observed_at'`).Scan(&dataType)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	if dataType != "time without time zone" {
-		t.Fatalf("expected identity_metrics.observed_at to be time without time zone, got %q", dataType)
+	for _, table := range []string{"identity_resolution_metrics", "identity_metrics"} {
+		var dataType string
+		err = database.QueryRow(ctx, `SELECT data_type
+			FROM information_schema.columns
+			WHERE table_schema = current_schema() AND table_name = $1
+				AND column_name = 'observed_at'`, table).Scan(&dataType)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if dataType != "time without time zone" {
+			t.Fatalf("expected %s.observed_at to be time without time zone, got %q", table, dataType)
+		}
 	}
 
 	_, err = database.Exec(ctx, "DELETE FROM connections WHERE id = 'connection11'")
@@ -156,14 +178,15 @@ func TestIdentityMetricsSchema(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	var rows int
-	err = database.QueryRow(ctx,
-		"SELECT COUNT(*) FROM identity_metrics WHERE workspace = 'workspace111'").Scan(&rows)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	if rows != 0 {
-		t.Fatalf("expected deleting workspace to cascade to identity_metrics, got %d rows", rows)
+	for _, table := range []string{"identity_resolution_metrics", "identity_metrics"} {
+		var rows int
+		err = database.QueryRow(ctx, "SELECT COUNT(*) FROM "+table+" WHERE workspace = 'workspace111'").Scan(&rows)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if rows != 0 {
+			t.Fatalf("expected deleting workspace to cascade to %s, got %d rows", table, rows)
+		}
 	}
 	err = database.QueryRow(ctx, `SELECT COUNT(*) FROM identity_connection_metrics
 		WHERE connection = 'connection22'`).Scan(&connectionRows)
@@ -188,6 +211,5 @@ func identityMetricPrimaryKey(t *testing.T, database *db.DB, table string) strin
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-
 	return columns
 }

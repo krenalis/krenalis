@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/tools/backoff"
+	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
@@ -25,28 +26,31 @@ import (
 var identityResolutionQueries string
 
 // ResolveIdentities resolves the identities.
-func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, primarySources map[string]string) (err error) {
+func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, primarySources map[string]string) (counts *warehouses.IdentityResolutionCounts, err error) {
 
 	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	status, err := warehouse.executeOperation(ctx, opID, identityResolution)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if status.alreadyCompleted {
 		if status.executionError != nil {
-			return status.executionError
+			return nil, status.executionError
 		}
-		return nil
+		if status.identityResolutionCounts == nil {
+			return nil, fmt.Errorf("identity resolution result is unavailable for operation %s", opID)
+		}
+		return status.identityResolutionCounts, nil
 	}
 
 	deferFinalization := true
 	defer func() {
 		if deferFinalization {
-			err = warehouse.finalizeIdentityResolution(ctx, pool, opID, err)
+			counts, err = warehouse.finalizeIdentityResolution(ctx, pool, opID, counts, err)
 		}
 	}()
 
@@ -54,15 +58,15 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 	// and allocate the next version.
 	maxProfilesVersion, err := warehouse.maxProfilesVersion(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// Ensure the next version fits in the integer column before creating the table.
 	if maxProfilesVersion >= math.MaxInt32 {
-		return fmt.Errorf("profile table version limit reached")
+		return nil, fmt.Errorf("profile table version limit reached")
 	}
 	publishedProfilesVersion, err := warehouse.publishedProfilesVersion(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	newProfilesVersion := maxProfilesVersion + 1
 	newProfilesName := fmt.Sprintf("krenalis_profiles_%d", newProfilesVersion)
@@ -121,7 +125,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 		return nil
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Generate the SQL function that determines if two identities are the same
@@ -157,7 +161,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 		);`
 	_, err = pool.Exec(ctx, aggregateFunction)
 	if err != nil {
-		return fmt.Errorf("cannot create aggregate function 'array_cat_agg': %s", err)
+		return nil, fmt.Errorf("cannot create aggregate function 'array_cat_agg': %s", err)
 	}
 
 	// Generate the SQL queries that merge the identities to obtain the profiles.
@@ -242,14 +246,56 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 	query = strings.ReplaceAll(query, "{{ new_profiles_version }}", strconv.Itoa(newProfilesVersion))
 	_, err = pool.Exec(ctx, query)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Call the 'resolve_identities' stored procedure (which is declared in the
 	// "identity_resolution.sql" file).
 	_, err = pool.Exec(ctx, "CALL resolve_identities()")
 	if err != nil {
-		return err
+		return nil, err
+	}
+
+	// Count the profiles and identities produced by this Identity Resolution
+	// before publishing the new profiles table.
+	query = `SELECT
+			COUNT(*) FILTER (WHERE "_recognized_count" = 0),
+			COUNT(*) FILTER (WHERE "_recognized_count" > 0),
+			COALESCE(SUM("_anonymous_count"), 0),
+			COALESCE(SUM("_recognized_count"), 0),
+			COUNT(*) FILTER (WHERE "_anonymous_count" + "_recognized_count" = 1),
+			COUNT(*) FILTER (WHERE "_anonymous_count" + "_recognized_count" = 2),
+			COUNT(*) FILTER (WHERE "_anonymous_count" + "_recognized_count" = 3),
+			COUNT(*) FILTER (WHERE "_anonymous_count" + "_recognized_count" BETWEEN 4 AND 10),
+			COUNT(*) FILTER (WHERE "_anonymous_count" + "_recognized_count" BETWEEN 11 AND 20),
+			COUNT(*) FILTER (WHERE "_anonymous_count" + "_recognized_count" >= 21)
+		FROM ` + quoteIdent(newProfilesName)
+	counts = &warehouses.IdentityResolutionCounts{}
+	err = pool.QueryRow(ctx, query).Scan(
+		&counts.Profiles.Anonymous,
+		&counts.Profiles.Recognized,
+		&counts.Identities.Anonymous,
+		&counts.Identities.Recognized,
+		&counts.Composition.One,
+		&counts.Composition.Two,
+		&counts.Composition.Three,
+		&counts.Composition.FourToTen,
+		&counts.Composition.ElevenToTwenty,
+		&counts.Composition.MoreThanTwenty,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if err := warehouses.ValidateIdentityResolutionCounts(counts); err != nil {
+		return nil, err
+	}
+
+	// Serialize the counts as the structured operation result.
+	result, err := json.Marshal(struct {
+		Counts *warehouses.IdentityResolutionCounts `json:"counts"`
+	}{Counts: counts})
+	if err != nil {
+		return nil, err
 	}
 
 	// Publish the new profiles version, remove the previous profiles table, and
@@ -269,53 +315,57 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 			return err
 		}
 
-		return warehouse.setOperationAsCompleted(ctx, tx, opID, nil)
+		return warehouse.setOperationAsCompleted(ctx, tx, opID, result, nil)
 	})
 
 	// Reconcile an ambiguous commit result with the persisted operation state.
 	// Publication and cleanup were part of the same transaction, so no further
 	// finalization is needed after a persisted success.
 	deferFinalization = false
-	err = warehouse.finalizeIdentityResolution(ctx, pool, opID, err)
+	counts, err = warehouse.finalizeIdentityResolution(ctx, pool, opID, counts, err)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return counts, nil
 }
 
-// finalizeIdentityResolution returns nil on local success. On failure, it
-// attempts to mark the operation as failed and returns its persisted outcome.
-func (warehouse *PostgreSQL) finalizeIdentityResolution(ctx context.Context, conn connection, opID string, operationErr error) error {
+// finalizeIdentityResolution returns the local result on success. On failure,
+// it attempts to mark the operation as failed and returns its persisted result
+// or execution error.
+func (warehouse *PostgreSQL) finalizeIdentityResolution(ctx context.Context, conn connection, opID string, counts *warehouses.IdentityResolutionCounts, operationErr error) (*warehouses.IdentityResolutionCounts, error) {
 
 	if operationErr == nil {
-		return nil
+		return counts, nil
 	}
 	operationError := warehouses.NewOperationError(operationErr)
 
 	bo := backoff.New(200)
 	bo.SetCap(30 * time.Second)
 	for bo.Next(ctx) {
-		if err := warehouse.setOperationAsCompleted(ctx, conn, opID, operationError); err != nil {
+		if err := warehouse.setOperationAsCompleted(ctx, conn, opID, nil, operationError); err != nil {
 			slog.Error("cannot mark identity resolution operation as failed, retrying",
 				"err", warehouses.NewOperationError(err), "operationError", operationError)
 			continue
 		}
-		status, err := warehouse.readOperationStatus(ctx, conn, opID)
+		status, err := warehouse.readOperationStatus(ctx, conn, opID, identityResolution)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if status == nil {
-			return fmt.Errorf("identity resolution operation %s not found", opID)
+			return nil, fmt.Errorf("identity resolution operation %s not found", opID)
 		}
 		if !status.alreadyCompleted {
-			return fmt.Errorf("identity resolution operation %s is not completed", opID)
+			return nil, fmt.Errorf("identity resolution operation %s is not completed", opID)
 		}
 		if status.executionError != nil {
-			return status.executionError
+			return nil, status.executionError
 		}
-		return nil
+		if status.identityResolutionCounts == nil {
+			return nil, fmt.Errorf("identity resolution result is unavailable for operation %s", opID)
+		}
+		return status.identityResolutionCounts, nil
 	}
 
-	return ctx.Err()
+	return nil, ctx.Err()
 }

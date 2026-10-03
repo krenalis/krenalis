@@ -18,6 +18,12 @@ window.identityOverviewRequests = [];
 window.fetch = async (input) => {
 	const url = String(input);
 	window.identityOverviewRequests.push(url);
+	if (url.includes('/metrics/identity-resolution/latest')) {
+		return new Response('null', { headers: { 'Content-Type': 'application/json' } });
+	}
+	if (url.includes('/identity-resolution/runs')) {
+		return new Response('{"runs":[]}', { headers: { 'Content-Type': 'application/json' } });
+	}
 	if (url.endsWith('/refresh')) {
 		hasRefreshed = true;
 		return new Response(null);

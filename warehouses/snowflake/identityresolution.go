@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/tools/backoff"
+	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
@@ -27,27 +28,33 @@ import (
 var identityResolutionQueries string
 
 // ResolveIdentities resolves the identities.
-func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, primarySources map[string]string) (err error) {
+func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, primarySources map[string]string) (counts *warehouses.IdentityResolutionCounts, err error) {
 
 	db, err := warehouse.openDB(ctx)
 	if err != nil {
-		return snowflake(err)
+		return nil, snowflake(err)
 	}
 	status, err := warehouse.executeOperation(ctx, opID, identityResolution)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if status.alreadyCompleted {
+
 		if status.executionError != nil {
-			return status.executionError
+			return nil, status.executionError
 		}
-		return warehouse.finalizePublishedProfiles(ctx, db, opID, profileColumns)
+		if status.identityResolutionCounts == nil {
+			return nil, fmt.Errorf("identity resolution result is unavailable for operation %s", opID)
+		}
+		err = warehouse.finalizePublishedProfiles(ctx, db, opID, profileColumns)
+
+		return status.identityResolutionCounts, err
 	}
 
 	deferFinalization := true
 	defer func() {
 		if deferFinalization {
-			err = warehouse.finalizeIdentityResolution(ctx, db, opID, err)
+			counts, err = warehouse.finalizeIdentityResolution(ctx, db, opID, counts, err)
 		}
 	}()
 
@@ -55,15 +62,15 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	// and allocate the next version.
 	maxProfilesVersion, err := warehouse.maxProfilesVersion(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// Ensure the next version stays within the supported range before creating the table.
 	if maxProfilesVersion >= math.MaxInt32 {
-		return fmt.Errorf("profile table version limit reached")
+		return nil, fmt.Errorf("profile table version limit reached")
 	}
 	publishedProfilesVersion, err := warehouse.publishedProfilesVersion(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	newProfilesVersion := maxProfilesVersion + 1
 	newProfilesName := fmt.Sprintf("KRENALIS_PROFILES_%d", newProfilesVersion)
@@ -115,7 +122,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 		return nil
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Snowflake commits each DDL statement independently. Stage the view before
@@ -123,13 +130,13 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	// and no longer depends on a table left by a previous failed operation.
 	_, err = db.ExecContext(ctx, createPendingViewQuery(currentProfilesName, newProfilesName, opID, profileColumns))
 	if err != nil {
-		return snowflake(err)
+		return nil, snowflake(err)
 	}
 	if removePreviousProfilesTable {
 		// Drop the failed candidate table.
 		_, err = db.ExecContext(ctx, `DROP TABLE IF EXISTS "KRENALIS_PROFILES_`+strconv.Itoa(maxProfilesVersion)+`"`)
 		if err != nil {
-			return snowflake(err)
+			return nil, snowflake(err)
 		}
 	}
 
@@ -253,38 +260,123 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	ctxMulti := gosnowflake.WithMultiStatement(ctx, 5) // TODO(Gianluca): is there a better way?
 	_, err = db.ExecContext(ctxMulti, query)
 	if err != nil {
-		return snowflake(err)
+		return nil, snowflake(err)
 	}
 
 	// Call the 'RESOLVE_IDENTITIES' stored procedure (which is declared in the
 	// "identity_resolution.sql" file).
 	_, err = db.ExecContext(ctx, "CALL RESOLVE_IDENTITIES()")
 	if err != nil {
-		return snowflake(err)
+		return nil, snowflake(err)
+	}
+
+	// Count the profiles and identities produced by this Identity Resolution
+	// before publishing the new profiles table.
+	query = `SELECT
+		COALESCE(COUNT_IF("_RECOGNIZED_COUNT" = 0), 0),
+		COALESCE(COUNT_IF("_RECOGNIZED_COUNT" > 0), 0),
+		COALESCE(SUM("_ANONYMOUS_COUNT"), 0),
+		COALESCE(SUM("_RECOGNIZED_COUNT"), 0),
+		COALESCE(COUNT_IF("_ANONYMOUS_COUNT" + "_RECOGNIZED_COUNT" = 1), 0),
+		COALESCE(COUNT_IF("_ANONYMOUS_COUNT" + "_RECOGNIZED_COUNT" = 2), 0),
+		COALESCE(COUNT_IF("_ANONYMOUS_COUNT" + "_RECOGNIZED_COUNT" = 3), 0),
+		COALESCE(COUNT_IF("_ANONYMOUS_COUNT" + "_RECOGNIZED_COUNT" BETWEEN 4 AND 10), 0),
+		COALESCE(COUNT_IF("_ANONYMOUS_COUNT" + "_RECOGNIZED_COUNT" BETWEEN 11 AND 20), 0),
+		COALESCE(COUNT_IF("_ANONYMOUS_COUNT" + "_RECOGNIZED_COUNT" >= 21), 0)
+	FROM ` + quoteIdent(newProfilesName)
+	counts = &warehouses.IdentityResolutionCounts{}
+	err = db.QueryRowContext(ctx, query).Scan(
+		&counts.Profiles.Anonymous,
+		&counts.Profiles.Recognized,
+		&counts.Identities.Anonymous,
+		&counts.Identities.Recognized,
+		&counts.Composition.One,
+		&counts.Composition.Two,
+		&counts.Composition.Three,
+		&counts.Composition.FourToTen,
+		&counts.Composition.ElevenToTwenty,
+		&counts.Composition.MoreThanTwenty,
+	)
+	if err != nil {
+		return nil, snowflake(err)
+	}
+	if err := warehouses.ValidateIdentityResolutionCounts(counts); err != nil {
+		return nil, err
+	}
+
+	// Serialize the counts as the structured operation result.
+	result, err := json.Marshal(struct {
+		Counts *warehouses.IdentityResolutionCounts `json:"counts"`
+	}{Counts: counts})
+	if err != nil {
+		return nil, err
 	}
 
 	// Committing the successful operation switches the staged view to the new
 	// profiles without requiring another DDL statement.
 	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
-		return warehouse.setOperationAsCompleted(ctx, tx, opID, nil)
+		return warehouse.setOperationAsCompleted(ctx, tx, opID, result, nil)
 	})
 
 	// Reconcile an ambiguous commit result with the persisted operation state.
 	// If the operation was persisted as successful, finalize the published
 	// profiles below.
 	deferFinalization = false
-	err = warehouse.finalizeIdentityResolution(ctx, db, opID, err)
+	counts, err = warehouse.finalizeIdentityResolution(ctx, db, opID, counts, err)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return warehouse.finalizePublishedProfiles(ctx, db, opID, profileColumns)
+	err = warehouse.finalizePublishedProfiles(ctx, db, opID, profileColumns)
+
+	return counts, err
+}
+
+// finalizeIdentityResolution returns the local result on success. On failure,
+// it attempts to mark the operation as failed and returns its persisted result
+// or execution error.
+func (warehouse *Snowflake) finalizeIdentityResolution(ctx context.Context, conn connection, opID string, counts *warehouses.IdentityResolutionCounts, operationErr error) (*warehouses.IdentityResolutionCounts, error) {
+
+	if operationErr == nil {
+		return counts, nil
+	}
+	operationError := warehouses.NewOperationError(operationErr)
+
+	bo := backoff.New(200)
+	bo.SetCap(30 * time.Second)
+	for bo.Next(ctx) {
+		if err := warehouse.setOperationAsCompleted(ctx, conn, opID, nil, operationError); err != nil {
+			slog.Error("cannot mark identity resolution operation as failed, retrying",
+				"err", warehouses.NewOperationError(err), "operationError", operationError)
+			continue
+		}
+		status, err := warehouse.readOperationStatus(ctx, conn, opID, identityResolution)
+		if err != nil {
+			return nil, err
+		}
+		if status == nil {
+			return nil, fmt.Errorf("identity resolution operation %s not found", opID)
+		}
+		if !status.alreadyCompleted {
+			return nil, fmt.Errorf("identity resolution operation %s is not completed", opID)
+		}
+		if status.executionError != nil {
+			return nil, status.executionError
+		}
+		if status.identityResolutionCounts == nil {
+			return nil, fmt.Errorf("identity resolution result is unavailable for operation %s", opID)
+		}
+		return status.identityResolutionCounts, nil
+	}
+
+	return nil, ctx.Err()
 }
 
 // finalizePublishedProfiles replaces the staged profiles view with its final
 // definition and removes a bounded batch of obsolete profile tables, but only
 // if this operation published the latest recorded profiles version.
 func (warehouse *Snowflake) finalizePublishedProfiles(ctx context.Context, db *sql.DB, opID string, profileColumns []warehouses.Column) error {
+
 	maxProfilesVersion, err := warehouse.maxProfilesVersion(ctx)
 	if err != nil {
 		return err
@@ -322,6 +414,52 @@ func (warehouse *Snowflake) finalizePublishedProfiles(ctx context.Context, db *s
 	}
 
 	return nil
+}
+
+// createPendingViewQuery returns a Snowflake view definition that exposes the
+// new profiles only after opID has been completed successfully.
+func createPendingViewQuery(currentProfilesName, newProfilesName, opID string, profileColumns []warehouses.Column) string {
+
+	var completed strings.Builder
+	completed.WriteString(`EXISTS (
+		SELECT 1 FROM "KRENALIS_SYSTEM_OPERATIONS"
+		WHERE "ID" = `)
+	quoteString(&completed, opID)
+	completed.WriteString(`
+			AND "COMPLETED_AT" IS NOT NULL
+			AND "RESULT" IS NOT NULL
+			AND "ERROR" = ''
+	)`)
+
+	var columns strings.Builder
+	metaProps := []string{"_KPID", "_UPDATED_AT"}
+	for i, property := range metaProps {
+		if i > 0 {
+			columns.WriteString(",\n")
+		}
+		columns.WriteString("\t")
+		columns.WriteString(quoteIdent(property))
+	}
+	for _, column := range profileColumns {
+		columns.WriteString(",\n\t")
+		columns.WriteString(quoteIdent(column.Name))
+	}
+
+	var b strings.Builder
+	b.WriteString(`CREATE OR REPLACE VIEW "PROFILES" AS SELECT` + "\n")
+	b.WriteString(columns.String())
+	b.WriteString("\nFROM ")
+	b.WriteString(quoteIdent(newProfilesName))
+	b.WriteString(" WHERE ")
+	b.WriteString(completed.String())
+	b.WriteString("\nUNION ALL\nSELECT\n")
+	b.WriteString(columns.String())
+	b.WriteString("\nFROM ")
+	b.WriteString(quoteIdent(currentProfilesName))
+	b.WriteString(" WHERE NOT ")
+	b.WriteString(completed.String())
+
+	return b.String()
 }
 
 // dropObsoleteProfileTables drops obsolete profile tables, i.e. tables whose
@@ -388,85 +526,4 @@ func dropObsoleteProfileTables(ctx context.Context, db *sql.DB, publishedVersion
 	}
 
 	return nil
-}
-
-// finalizeIdentityResolution returns nil on local success. On failure, it
-// attempts to mark the operation as failed and returns its persisted outcome.
-func (warehouse *Snowflake) finalizeIdentityResolution(ctx context.Context, conn connection, opID string, operationErr error) error {
-
-	if operationErr == nil {
-		return nil
-	}
-	operationError := warehouses.NewOperationError(operationErr)
-
-	bo := backoff.New(200)
-	bo.SetCap(30 * time.Second)
-	for bo.Next(ctx) {
-		if err := warehouse.setOperationAsCompleted(ctx, conn, opID, operationError); err != nil {
-			slog.Error("cannot mark identity resolution operation as failed, retrying",
-				"err", warehouses.NewOperationError(err), "operationError", operationError)
-			continue
-		}
-		status, err := warehouse.readOperationStatus(ctx, conn, opID)
-		if err != nil {
-			return err
-		}
-		if status == nil {
-			return fmt.Errorf("identity resolution operation %s not found", opID)
-		}
-		if !status.alreadyCompleted {
-			return fmt.Errorf("identity resolution operation %s is not completed", opID)
-		}
-		if status.executionError != nil {
-			return status.executionError
-		}
-		return nil
-	}
-
-	return ctx.Err()
-}
-
-// createPendingViewQuery returns a Snowflake view definition that exposes the
-// new profiles only after opID has been completed successfully.
-func createPendingViewQuery(currentProfilesName, newProfilesName, opID string, profileColumns []warehouses.Column) string {
-
-	var completed strings.Builder
-	completed.WriteString(`EXISTS (
-		SELECT 1 FROM "KRENALIS_SYSTEM_OPERATIONS"
-		WHERE "ID" = `)
-	quoteString(&completed, opID)
-	completed.WriteString(`
-			AND "COMPLETED_AT" IS NOT NULL
-			AND "ERROR" = ''
-	)`)
-
-	var columns strings.Builder
-	metaProps := []string{"_KPID", "_UPDATED_AT"}
-	for i, property := range metaProps {
-		if i > 0 {
-			columns.WriteString(",\n")
-		}
-		columns.WriteString("\t")
-		columns.WriteString(quoteIdent(property))
-	}
-	for _, column := range profileColumns {
-		columns.WriteString(",\n\t")
-		columns.WriteString(quoteIdent(column.Name))
-	}
-
-	var b strings.Builder
-	b.WriteString(`CREATE OR REPLACE VIEW "PROFILES" AS SELECT` + "\n")
-	b.WriteString(columns.String())
-	b.WriteString("\nFROM ")
-	b.WriteString(quoteIdent(newProfilesName))
-	b.WriteString(" WHERE ")
-	b.WriteString(completed.String())
-	b.WriteString("\nUNION ALL\nSELECT\n")
-	b.WriteString(columns.String())
-	b.WriteString("\nFROM ")
-	b.WriteString(quoteIdent(currentProfilesName))
-	b.WriteString(" WHERE NOT ")
-	b.WriteString(completed.String())
-
-	return b.String()
 }

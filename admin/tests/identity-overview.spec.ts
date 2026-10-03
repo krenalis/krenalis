@@ -29,11 +29,13 @@ test('keeps current KPIs and the breakdown when history fails', async ({ page })
 		window.identityOverviewScenario = 'historyError';
 	});
 	await page.addScriptTag({ content: componentScript });
-	await expect(page.locator('.identity-overview__kpi-value').first()).toHaveText('8');
+	await expect(
+		page.locator('.identity-dashboard__section--current-state .identity-dashboard__kpi-value').first(),
+	).toHaveText('8');
 	await expect(page.getByText('Identity history could not be loaded', { exact: true })).toBeVisible();
 	await expect(page.getByText('Identity metrics could not be loaded', { exact: true })).toBeVisible();
 	await expect(page.getByText('Connection metrics could not be loaded', { exact: true })).toHaveCount(0);
-	await expect(page.locator('.identity-overview__connections-chart')).toBeVisible();
+	await expect(page.locator('.identity-dashboard__connections-chart')).toBeVisible();
 });
 
 test('shows unavailable current state when latest fails', async ({ page }) => {
@@ -42,7 +44,9 @@ test('shows unavailable current state when latest fails', async ({ page }) => {
 	});
 	await page.addScriptTag({ content: componentScript });
 	await expect(page.getByText('Current identity state is unavailable', { exact: true })).toBeVisible();
-	await expect(page.locator('.identity-overview__kpi-value').first()).toHaveText('—');
+	await expect(
+		page.locator('.identity-dashboard__section--current-state .identity-dashboard__kpi-value').first(),
+	).toHaveText('—');
 });
 
 for (const scenario of ['singleDay', 'singleDayZero'] as const) {
@@ -70,9 +74,13 @@ test('loads removed connection history after refreshing the current state to zer
 		window.identityOverviewScenario = 'removed';
 	});
 	await page.addScriptTag({ content: componentScript });
-	await expect(page.locator('.identity-overview__kpi-value').first()).toHaveText('5');
+	await expect(
+		page.locator('.identity-dashboard__section--current-state .identity-dashboard__kpi-value').first(),
+	).toHaveText('5');
 	await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-	await expect(page.locator('.identity-overview__kpi-value').first()).toHaveText('0');
+	await expect(
+		page.locator('.identity-dashboard__section--current-state .identity-dashboard__kpi-value').first(),
+	).toHaveText('0');
 	await page.locator('sl-select[aria-label="Connection"]').click();
 	await page.getByRole('option', { name: 'Removed connections' }).click();
 	await expect

@@ -150,7 +150,7 @@ func TestResolveIdentitiesProfileVersionBounds(t *testing.T) {
 	}
 
 	const lastOpID = "996d4292-9967-414d-b5c3-511c6ee71ca1"
-	err = warehouse.ResolveIdentities(t.Context(), lastOpID, columns, columns, nil)
+	_, err = warehouse.ResolveIdentities(t.Context(), lastOpID, columns, columns, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +164,7 @@ func TestResolveIdentitiesProfileVersionBounds(t *testing.T) {
 
 	t.Run("exhausted", func(t *testing.T) {
 		const overflowOpID = "279ec998-f0c9-463e-8a2b-e8c3f9c874e8"
-		err := warehouse.ResolveIdentities(t.Context(), overflowOpID, columns, columns, nil)
+		_, err := warehouse.ResolveIdentities(t.Context(), overflowOpID, columns, columns, nil)
 		if err != nil {
 			opError, ok := errors.AsType[*warehouses.OperationError](err)
 			if !ok || opError.Error() != "profile table version limit reached" {
@@ -191,7 +191,7 @@ func TestResolveIdentitiesProfileVersionBounds(t *testing.T) {
 			}
 		})
 	}
-	err = warehouse.ResolveIdentities(t.Context(), lastOpID, columns, columns, nil)
+	_, err = warehouse.ResolveIdentities(t.Context(), lastOpID, columns, columns, nil)
 	if err != nil {
 		t.Fatalf("retrying the last successful operation must still succeed: %v", err)
 	}

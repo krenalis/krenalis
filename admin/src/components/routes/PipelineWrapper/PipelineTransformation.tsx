@@ -1037,7 +1037,7 @@ const TransformationBox = ({
 						>
 							{isIdentifier && (
 								<div className='pipeline__transformation-property-icon' slot='prefix'>
-									<SlTooltip content='Used as identifier in Identity Resolution' hoist={true}>
+									<SlTooltip content='Used as identifier in identity resolution' hoist={true}>
 										<SlIcon
 											name='person-check'
 											className='pipeline__transformation-property-identifier'
@@ -3435,7 +3435,7 @@ const TransformationProperty = ({
 							<div className='fullscreen-transformation__property-head'>
 								<div className='fullscreen-transformation__property-head-main'>
 									{isIdentifier && (
-										<SlTooltip content='Used as identifier in Identity Resolution' hoist={true}>
+										<SlTooltip content='Used as identifier in identity resolution' hoist={true}>
 											<SlIcon
 												className='fullscreen-transformation__property-identifier-icon'
 												name='person-check'

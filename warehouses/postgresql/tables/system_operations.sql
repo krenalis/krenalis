@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS krenalis_system_operations (
     id uuid NOT NULL,
     operation_type system_operation_type,
     completed_at timestamp(3),
+    result jsonb,
     error text NOT NULL DEFAULT '',
     PRIMARY KEY ("id")
 );
