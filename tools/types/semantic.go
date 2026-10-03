@@ -55,6 +55,9 @@ func (s Semantic) String() string {
 	if s == NoSemantic {
 		return "none"
 	}
+	if s < 1 || int(s) > len(semanticName) {
+		return fmt.Sprintf("%%!Semantic(%d)", int(s))
+	}
 	return semanticName[s-1]
 }
 
@@ -87,7 +90,7 @@ func CountryFormatByName(name string) (CountryFormat, bool) {
 // String returns the name of f.
 func (f CountryFormat) String() string {
 	if f != ISO3166Alpha2 && f != ISO3166Alpha3 {
-		return "Invalid"
+		return fmt.Sprintf("%%!CountryFormat(%d)", int(f))
 	}
 	return countryFormatName[f-2]
 }
@@ -96,13 +99,12 @@ func (f CountryFormat) String() string {
 type DurationUnit int8
 
 const (
-	InvalidDurationUnit DurationUnit = iota // does not identify a duration unit
-	Millisecond                             // millisecond
-	Second                                  // second
-	Minute                                  // minute
-	Hour                                    // hour
-	Day                                     // day
-	Week                                    // week
+	Millisecond DurationUnit = iota + 1 // millisecond
+	Second                              // second
+	Minute                              // minute
+	Hour                                // hour
+	Day                                 // day
+	Week                                // week
 )
 
 // durationUnitName contains the JSON names of all valid duration units.
@@ -123,13 +125,13 @@ func DurationUnitByName(name string) (DurationUnit, bool) {
 			return DurationUnit(i + 1), true
 		}
 	}
-	return InvalidDurationUnit, false
+	return DurationUnit(0), false
 }
 
 // String returns the name of u.
 func (u DurationUnit) String() string {
 	if u < 1 || int(u) > len(durationUnitName) {
-		return "Invalid"
+		return fmt.Sprintf("%%!DurationUnit(%d)", int(u))
 	}
 	return durationUnitName[u-1]
 }
@@ -138,27 +140,26 @@ func (u DurationUnit) String() string {
 type UnitOfMeasure int8
 
 const (
-	InvalidUnitOfMeasure UnitOfMeasure = iota // does not identify a unit of measure
-	Gram                                      // gram
-	Kilogram                                  // kilogram
-	Millimeter                                // millimeter
-	Centimeter                                // centimeter
-	Meter                                     // meter
-	Kilometer                                 // kilometer
-	Milliliter                                // milliliter
-	Liter                                     // liter
-	Byte                                      // byte
-	Kilobyte                                  // kilobyte
-	Megabyte                                  // megabyte
-	Gigabyte                                  // gigabyte
-	Celsius                                   // degree Celsius
-	Fahrenheit                                // degree Fahrenheit
-	Ounce                                     // ounce
-	Pound                                     // pound
-	Inch                                      // inch
-	Foot                                      // foot
-	Yard                                      // yard
-	Mile                                      // mile
+	Gram       UnitOfMeasure = iota + 1 // gram
+	Kilogram                            // kilogram
+	Millimeter                          // millimeter
+	Centimeter                          // centimeter
+	Meter                               // meter
+	Kilometer                           // kilometer
+	Milliliter                          // milliliter
+	Liter                               // liter
+	Byte                                // byte
+	Kilobyte                            // kilobyte
+	Megabyte                            // megabyte
+	Gigabyte                            // gigabyte
+	Celsius                             // degree Celsius
+	Fahrenheit                          // degree Fahrenheit
+	Ounce                               // ounce
+	Pound                               // pound
+	Inch                                // inch
+	Foot                                // foot
+	Yard                                // yard
+	Mile                                // mile
 )
 
 // unitOfMeasureName contains the JSON names of all valid units of measure.
@@ -193,13 +194,13 @@ func UnitOfMeasureByName(name string) (UnitOfMeasure, bool) {
 			return UnitOfMeasure(i + 1), true
 		}
 	}
-	return InvalidUnitOfMeasure, false
+	return UnitOfMeasure(0), false
 }
 
 // String returns the name of u.
 func (u UnitOfMeasure) String() string {
 	if u < 1 || int(u) > len(unitOfMeasureName) {
-		return "Invalid"
+		return fmt.Sprintf("%%!UnitOfMeasure(%d)", int(u))
 	}
 	return unitOfMeasureName[u-1]
 }
