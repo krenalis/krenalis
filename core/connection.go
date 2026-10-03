@@ -118,7 +118,8 @@ type PipelineType struct {
 // cannot be longer than MaxFilePathSize runes, and must be UTF-8 encoded.
 //
 // It returns an errors.UnprocessableError error with code:
-//   - InvalidPath, if path is not valid for the file storage connector.
+//   - InvalidPath, if path is not valid for the file storage connector or, for
+//     destination connections, is too long after placeholder replacement.
 //   - InvalidPlaceholder, if path for source connections contains a placeholder
 //     or path for destination connections contains an invalid placeholder.
 func (this *Connection) AbsolutePath(ctx context.Context, path string) (string, error) {
@@ -941,6 +942,7 @@ type PipelineRun struct {
 // It returns an errors.UnprocessableError error with code
 //
 //   - FormatNotExist, if the format does not exist.
+//   - InvalidPath, if path is not valid for the file storage connector.
 //   - InvalidSettings, if the settings are not valid.
 //   - NoColumnsFound, if the file has no columns.
 //   - SheetNotExist, if the file does not contain the provided sheet.
@@ -1018,6 +1020,8 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 			err = errors.Unprocessable(SheetNotExist, "file does not contain any sheet named %q", sheet)
 		default:
 			switch err.(type) {
+			case *connectors.InvalidPathError:
+				err = errors.Unprocessable(InvalidPath, "%s", err)
 			case *connectors.InvalidSettingsError:
 				err = errors.Unprocessable(InvalidSettings, "%s", err)
 			case *connections.UnavailableError:
@@ -1741,6 +1745,7 @@ func (this *Connection) ServeUI(ctx context.Context, event string, settings json
 //
 // It returns an errors.UnprocessableError error with code
 //   - FormatNotExist, if the format does not exist.
+//   - InvalidPath, if path is not valid for the file storage connector.
 //   - InvalidSettings, if the settings are not valid.
 func (this *Connection) Sheets(ctx context.Context, path string, format string, compression Compression, settings json.Value) ([]string, error) {
 
@@ -1786,6 +1791,8 @@ func (this *Connection) Sheets(ctx context.Context, path string, format string, 
 	sheets, err := this.storage().Sheets(ctx, formatConnector, path, settings, state.Compression(compression))
 	if err != nil {
 		switch err.(type) {
+		case *connectors.InvalidPathError:
+			err = errors.Unprocessable(InvalidPath, "%s", err)
 		case *connectors.InvalidSettingsError:
 			err = errors.Unprocessable(InvalidSettings, "%s", err)
 		case *connections.UnavailableError:

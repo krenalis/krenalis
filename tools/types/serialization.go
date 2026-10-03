@@ -313,8 +313,10 @@ func marshalProperty(b *bytes.Buffer, p Property) error {
 		b.WriteString(`,"displayName":`)
 		_ = marshalString(b, p.DisplayName)
 	}
-	b.WriteString(`,"description":`)
-	_ = marshalString(b, p.Description)
+	if p.Description != "" {
+		b.WriteString(`,"description":`)
+		_ = marshalString(b, p.Description)
+	}
 	b.WriteByte('}')
 	return nil
 }
