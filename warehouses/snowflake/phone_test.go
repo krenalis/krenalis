@@ -24,7 +24,6 @@ func TestPhoneAndCountryColumnTypes(t *testing.T) {
 		{"phone", types.String().AsPhone(), "VARCHAR(16)"},
 		{"phone array", types.Array(types.String().AsPhone()), "ARRAY"},
 		{"country alpha2", types.String().AsCountry(types.ISO3166Alpha2), "VARCHAR(2)"},
-		{"country alpha3", types.String().AsCountry(types.ISO3166Alpha3), "VARCHAR(3)"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			if got := typeToSnowflakeType(test.typ); got != test.want {

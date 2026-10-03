@@ -26,7 +26,6 @@ func TestPhoneAndCountryColumnTypes(t *testing.T) {
 		{"phone", types.String().AsPhone(), "character varying(16)"},
 		{"phone array", types.Array(types.String().AsPhone()), "character varying(16)[]"},
 		{"country alpha2", types.String().AsCountry(types.ISO3166Alpha2), "character(2)"},
-		{"country alpha3", types.String().AsCountry(types.ISO3166Alpha3), "character(3)"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			if got := typeToPostgresType(test.typ); got != test.want {

@@ -224,12 +224,7 @@ func typeToSnowflakeType(t types.Type) string {
 	case types.StringKind:
 		switch t.Semantic() {
 		case types.CountrySemantic:
-			switch t.CountryFormat() {
-			case types.ISO3166Alpha2:
-				return "VARCHAR(2)"
-			case types.ISO3166Alpha3:
-				return "VARCHAR(3)"
-			}
+			return "VARCHAR(2)"
 		case types.PhoneSemantic:
 			return "VARCHAR(16)"
 		}

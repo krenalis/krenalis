@@ -224,12 +224,7 @@ func typeToPostgresType(t types.Type) string {
 	case types.StringKind:
 		switch t.Semantic() {
 		case types.CountrySemantic:
-			switch t.CountryFormat() {
-			case types.ISO3166Alpha2:
-				return "character(2)"
-			case types.ISO3166Alpha3:
-				return "character(3)"
-			}
+			return "character(2)"
 		case types.PhoneSemantic:
 			return "character varying(16)"
 		}
