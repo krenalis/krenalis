@@ -145,8 +145,9 @@ func IsPhone(s string) bool {
 // NormalizePhone normalizes s and returns its canonical E.164 form for use
 // wherever a value with the phone semantic is required.
 //
-// s must represent a single complete international phone number beginning
-// with '+'.
+// s must represent a single complete international phone number beginning with
+// '+' after trimming leading and trailing Unicode whitespace, and must not
+// exceed maxPhoneInputBytes bytes before trimming.
 //
 // The boolean return value reports whether s can be normalized to E.164.
 func NormalizePhone(s string) (string, bool) {
@@ -157,11 +158,13 @@ func NormalizePhone(s string) (string, bool) {
 // returns its canonical E.164 form for use wherever a value with the phone
 // semantic is required.
 //
-// s must represent a single complete national or international phone number.
-// region must be an uppercase two-letter CLDR region code recognized by the
-// phone number parser, even when s is already an international number.
-// region is used only as parsing context and does not restrict the number's
-// country. See https://unicode.org/reports/tr35/#unicode_region_subtag.
+// s must represent a single complete national or international phone number and
+// cannot exceed maxPhoneInputBytes bytes.
+// Leading and trailing Unicode whitespace is ignored. region must be an
+// uppercase two-letter CLDR region code recognized by the phone number parser,
+// even when s is already an international number. region is used only as
+// parsing context and does not restrict the number's country.
+// See https://unicode.org/reports/tr35/#unicode_region_subtag.
 //
 // The boolean return value reports whether region is recognized and s can be
 // normalized to E.164.
@@ -831,9 +834,16 @@ func newErrPropertyNotExist(path string) error {
 	return &SchemaValidationError{kind: propertyNotExist, path: path}
 }
 
+const maxPhoneInputBytes = 250 // maximum input size before trimming whitespace
+
 // normalizePhone normalizes s to E.164, using region when provided to parse
 // national numbers and international dialing prefixes.
 func normalizePhone(s, region string) (string, bool) {
+
+	if len(s) > maxPhoneInputBytes {
+		return "", false
+	}
+	s = strings.TrimSpace(s)
 
 	if region == "" && (s == "" || s[0] != '+') {
 		return "", false
@@ -887,7 +897,7 @@ const phonePunctuation = "-\u2010\u2011\u2012\u2013\u2014\u2015\u2212\u30FC\uFF0
 // validPhoneInput reports whether s satisfies the phone input grammar checked
 // before parsing.
 func validPhoneInput(s string) bool {
-	if s == "" || len(s) > 250 || !utf8.ValidString(s) {
+	if s == "" || len(s) > maxPhoneInputBytes || !utf8.ValidString(s) {
 		return false
 	}
 	first, _ := utf8.DecodeRuneInString(s)

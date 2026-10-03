@@ -1197,6 +1197,7 @@ func TestIsPhone(t *testing.T) {
 		want  bool
 	}{
 		{"canonical", "+390236618300", true},
+		{"surrounding whitespace", "\t +390236618300 \u00a0", false},
 		{"structurally possible", "+12001230101", true},
 		{"formatted", "+39 02-36618 300", false},
 		{"national", "0236618300", false},
@@ -1242,9 +1243,9 @@ func TestNormalizePhone(t *testing.T) {
 		{"011390236618300", ""},
 		{"0236618300", ""},
 		{"390236618300", ""},
-		{" +390236618300", ""},
-		{"+390236618300 ", ""},
-		{"\u00a0+390236618300", ""},
+		{" +390236618300", "+390236618300"},
+		{"+390236618300 ", "+390236618300"},
+		{"\u00a0+390236618300", "+390236618300"},
 		{"+390236618300\u200b", ""},
 		{"Call +390236618300", ""},
 		{"+390236618300 please", ""},
@@ -1260,7 +1261,7 @@ func TestNormalizePhone(t *testing.T) {
 		{"+390236618300/+16502530000", ""},
 		{"+390236618300 6502530000", ""},
 		{"+39\t0236618300", ""},
-		{"+390236618300\n", ""},
+		{"+390236618300\n", "+390236618300"},
 		{"+390236618300\xff", ""},
 		{"+12001230101", "+12001230101"}, // structurally possible even if not classified as valid
 		{"+12530000", ""},                // possible only locally: missing an area code
@@ -1268,7 +1269,8 @@ func TestNormalizePhone(t *testing.T) {
 		{"+3902", ""},
 		{"+9990236618300", ""},
 		{"+49301234567890123", ""}, // numbering-plan lengths must still fit E.164
-		{"+" + strings.Repeat("1", 250), ""},
+		{"+" + strings.Repeat("1", maxPhoneInputBytes), ""},
+		{strings.Repeat(" ", maxPhoneInputBytes+1-len("+390236618300")) + "+390236618300", ""},
 	}
 
 	for _, test := range tests {
@@ -1291,8 +1293,8 @@ func TestValidPhoneInput(t *testing.T) {
 		input string
 		valid bool
 	}{
-		{"at byte limit", "+" + strings.Repeat("1", 249), true},
-		{"over byte limit", "+" + strings.Repeat("1", 250), false},
+		{"at byte limit", "+" + strings.Repeat("1", maxPhoneInputBytes-1), true},
+		{"over byte limit", "+" + strings.Repeat("1", maxPhoneInputBytes), false},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -1312,7 +1314,7 @@ func TestNormalizePhoneInRegion(t *testing.T) {
 		region string
 		want   string
 	}{
-		{"02-36618 300", "IT", "+390236618300"},
+		{"\t 02-36618 300 \u00a0", "IT", "+390236618300"},
 		{"340 1234567", "IT", "+393401234567"},
 		{"0039 02-36618 300", "IT", "+390236618300"},
 		{"0039 02-36618 300", "US", ""},
