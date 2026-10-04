@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"iter"
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"strconv"
 	"sync"
 	"testing"
@@ -25,7 +25,7 @@ func Test_Writer(t *testing.T) {
 
 	tests := []struct {
 		num    int     // number of records to process
-		seed   int64   // seed value to pseudo-randomize the Upsert method
+		seed   uint64  // seed value to pseudo-randomize the Upsert method
 		create float32 // percentage of records to create, in the range [0,1]
 	}{
 		{num: 0, seed: 0, create: 1},
@@ -107,14 +107,14 @@ type ack struct {
 
 type application struct {
 	t    *testing.T
-	rng  *rand.Rand
+	rng  *rand.Rand // protected by mu
 	mu   sync.Mutex
 	n    int
 	acks []ack
 }
 
-func newApplication(t *testing.T, seed int64) *application {
-	return &application{t: t, rng: rand.New(rand.NewSource(seed))}
+func newApplication(t *testing.T, seed uint64) *application {
+	return &application{t: t, rng: rand.New(rand.NewPCG(seed, ^seed))}
 }
 func (app *application) validateRecord(r connectors.Record) {
 	if r.Attributes == nil {
@@ -127,11 +127,15 @@ func (app *application) validateRecord(r connectors.Record) {
 
 func (app *application) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records, schema types.Type) error {
 
+	app.mu.Lock()
+	rng := rand.New(rand.NewPCG(app.rng.Uint64(), app.rng.Uint64()))
+	app.mu.Unlock()
+
 	// Test Peek.
-	if app.rng.Int()%8 == 0 {
+	if rng.Int()%8 == 0 {
 		record, _ := records.Peek()
 		app.validateRecord(record)
-		if app.rng.Int()%4 == 0 {
+		if rng.Int()%4 == 0 {
 			record, ok := records.Peek()
 			if !ok {
 				return nil
@@ -141,14 +145,14 @@ func (app *application) Upsert(ctx context.Context, target connectors.Targets, r
 	}
 
 	// Test First.
-	if app.rng.Int()%5 == 0 {
+	if rng.Int()%5 == 0 {
 		app.validateRecord(records.First())
-		time.Sleep(time.Duration(app.rng.Int()%10) * time.Nanosecond)
+		time.Sleep(time.Duration(rng.Int()%10) * time.Nanosecond)
 		return nil
 	}
 
 	var seq iter.Seq[connectors.Record]
-	if app.rng.Int()%3 == 0 {
+	if rng.Int()%3 == 0 {
 		seq = records.Same()
 	} else {
 		seq = records.All()
@@ -162,18 +166,18 @@ func (app *application) Upsert(ctx context.Context, target connectors.Targets, r
 				app.validateRecord(p)
 			}
 		}
-		if n > 0 && app.rng.Int()%3 == 0 {
+		if n > 0 && rng.Int()%3 == 0 {
 			records.Postpone()
-		} else if app.rng.Int()%16 == 0 {
+		} else if rng.Int()%16 == 0 {
 			records.Discard(errors.New("event is invalid"))
 		}
-		if n == app.rng.Int()/2 {
+		if n == rng.IntN(minBatchSize) {
 			break
 		}
 		n++
 	}
 
-	time.Sleep(time.Duration(app.rng.Int()%10) * time.Microsecond)
+	time.Sleep(time.Duration(rng.Int()%10) * time.Microsecond)
 
 	return nil
 }
