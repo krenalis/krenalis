@@ -111,6 +111,7 @@ func Test_Transform(t *testing.T) {
 		})},
 		{Name: "d", Type: types.JSON()},
 		{Name: "e", Type: types.JSON(), Nullable: true},
+		{Name: "emptyObject", Type: types.Object([]types.Property{{Name: "foo", Type: types.String(), ReadOptional: true}})},
 	})
 
 	outSchema := types.Object([]types.Property{
@@ -201,6 +202,18 @@ func Test_Transform(t *testing.T) {
 			name:        `A property without a value assigned to a map(json) key -> no properties`,
 			expressions: map[string]string{"C": "map('k', a, 'h', 5)"},
 			expected:    map[string]any{"C": json.Value(`{"h":5}`)},
+		},
+		{
+			name:        `An empty object in array() -> an empty JSON object`,
+			expressions: map[string]string{"C": "array(emptyObject)"},
+			attributes:  map[string]any{"emptyObject": map[string]any{}},
+			expected:    map[string]any{"C": json.Value(`[{}]`)},
+		},
+		{
+			name:        `An empty object in map() -> an empty JSON object`,
+			expressions: map[string]string{"C": "map('k', emptyObject)"},
+			attributes:  map[string]any{"emptyObject": map[string]any{}},
+			expected:    map[string]any{"C": json.Value(`{"k":{}}`)},
 		},
 		{
 			name:        `A property with a nil value assigned to a map(json) key -> no properties`,
