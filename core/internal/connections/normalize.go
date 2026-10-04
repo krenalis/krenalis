@@ -775,6 +775,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				delete(obj, name)
 			}
 		}
+		if obj == nil {
+			obj = map[string]any{}
+		}
 		return obj, nil
 	case types.MapKind:
 		if s, ok := src.(string); ok {
