@@ -105,38 +105,41 @@ func (env Environment) Value() (driver.Value, error) {
 	return nil, fmt.Errorf("not a valid Environment: %d", env)
 }
 
-// SimulatedAccountStatus identifies the state of a simulated account.
-type SimulatedAccountStatus int8
+// SimulatedSystemStatus identifies the state of a simulated system.
+type SimulatedSystemStatus int8
 
 const (
-	SimulatedAccountPreparing SimulatedAccountStatus = iota
-	SimulatedAccountReady
-	SimulatedAccountFailed
+	SimulatedSystemPreparing SimulatedSystemStatus = iota
+	SimulatedSystemAvailable
+	SimulatedSystemFailed
+	SimulatedSystemDeleting
 )
 
 // Scan implements the sql.Scanner interface.
-func (status *SimulatedAccountStatus) Scan(src any) error {
+func (status *SimulatedSystemStatus) Scan(src any) error {
 	s, ok := src.(string)
 	if !ok {
-		return fmt.Errorf("cannot scan a %T value into a SimulatedAccountStatus value", src)
+		return fmt.Errorf("cannot scan a %T value into a SimulatedSystemStatus value", src)
 	}
-	var value SimulatedAccountStatus
+	var value SimulatedSystemStatus
 	switch s {
 	case "Preparing":
-		value = SimulatedAccountPreparing
-	case "Ready":
-		value = SimulatedAccountReady
+		value = SimulatedSystemPreparing
+	case "Available":
+		value = SimulatedSystemAvailable
 	case "Failed":
-		value = SimulatedAccountFailed
+		value = SimulatedSystemFailed
+	case "Deleting":
+		value = SimulatedSystemDeleting
 	default:
-		return fmt.Errorf("invalid SimulatedAccountStatus: %s", s)
+		return fmt.Errorf("invalid SimulatedSystemStatus: %s", s)
 	}
 	*status = value
 	return nil
 }
 
 // String returns the string representation of status.
-func (status SimulatedAccountStatus) String() string {
+func (status SimulatedSystemStatus) String() string {
 	value, err := status.Value()
 	if err != nil {
 		panic(err)
@@ -145,16 +148,18 @@ func (status SimulatedAccountStatus) String() string {
 }
 
 // Value implements driver.Valuer.
-func (status SimulatedAccountStatus) Value() (driver.Value, error) {
+func (status SimulatedSystemStatus) Value() (driver.Value, error) {
 	switch status {
-	case SimulatedAccountPreparing:
+	case SimulatedSystemPreparing:
 		return "Preparing", nil
-	case SimulatedAccountReady:
-		return "Ready", nil
-	case SimulatedAccountFailed:
+	case SimulatedSystemAvailable:
+		return "Available", nil
+	case SimulatedSystemFailed:
 		return "Failed", nil
+	case SimulatedSystemDeleting:
+		return "Deleting", nil
 	}
-	return nil, fmt.Errorf("not a valid SimulatedAccountStatus: %d", status)
+	return nil, fmt.Errorf("not a valid SimulatedSystemStatus: %d", status)
 }
 
 // election represents a leader election.
@@ -358,13 +363,13 @@ func (state *State) Connections() []*Connection {
 	return connections
 }
 
-// ConnectionsBySimulatedAccount returns the connections that reference a
-// simulated account in the workspace, ordered by identifier.
-func (state *State) ConnectionsBySimulatedAccount(ctx context.Context, workspace, simulatedAccount string) ([]string, error) {
+// ConnectionsBySimulatedSystem returns the connections that reference a
+// simulated system in the workspace, ordered by identifier.
+func (state *State) ConnectionsBySimulatedSystem(ctx context.Context, workspace, simulatedSystem string) ([]string, error) {
 	connections := []string{}
-	err := state.db.QueryScan(ctx, "SELECT id FROM connections WHERE workspace = $1 AND simulated_account = $2 "+
+	err := state.db.QueryScan(ctx, "SELECT id FROM connections WHERE workspace = $1 AND simulated_system = $2 "+
 		"ORDER BY id",
-		workspace, simulatedAccount, func(rows *db.Rows) error {
+		workspace, simulatedSystem, func(rows *db.Rows) error {
 			for rows.Next() {
 				var id string
 				if err := rows.Scan(&id); err != nil {
@@ -545,9 +550,9 @@ func (state *State) Pipelines() []*Pipeline {
 	return pipelines
 }
 
-// SimulatedAccount returns the simulated account with identifier id.
+// SimulatedSystem returns the simulated system with identifier id.
 // The boolean return value reports whether the account exists.
-func (state *State) SimulatedAccount(id string) (*SimulatedAccount, bool) {
+func (state *State) SimulatedSystem(id string) (*SimulatedSystem, bool) {
 	state.mu.Lock()
 	workspaces := make([]*Workspace, 0, len(state.workspaces))
 	for _, ws := range state.workspaces {
@@ -555,7 +560,7 @@ func (state *State) SimulatedAccount(id string) (*SimulatedAccount, bool) {
 	}
 	state.mu.Unlock()
 	for _, ws := range workspaces {
-		if account, ok := ws.SimulatedAccount(id); ok {
+		if account, ok := ws.SimulatedSystem(id); ok {
 			return account, true
 		}
 	}
@@ -1002,7 +1007,7 @@ type Workspace struct {
 	PrimarySources                 map[string]string
 	accounts                       map[int]*Account
 	consentPurposes                map[string]*ConsentPurpose
-	simulatedAccounts              map[string]*SimulatedAccount
+	simulatedSystems               map[string]*SimulatedSystem
 	ResolveIdentitiesOnBatchImport bool
 	Identifiers                    []string
 	IR                             struct {
@@ -1211,24 +1216,24 @@ func (workspace *Workspace) RestoreEventRateLimitCapacity(eventCount int) error 
 	return workspace.eventBucket.Restore(eventCount)
 }
 
-// SimulatedAccount returns the simulated account with the given identifier.
+// SimulatedSystem returns the simulated system with the given identifier.
 // The boolean return value reports whether the account exists.
-func (workspace *Workspace) SimulatedAccount(id string) (*SimulatedAccount, bool) {
+func (workspace *Workspace) SimulatedSystem(id string) (*SimulatedSystem, bool) {
 	workspace.mu.Lock()
-	account, ok := workspace.simulatedAccounts[id]
+	account, ok := workspace.simulatedSystems[id]
 	workspace.mu.Unlock()
 	return account, ok
 }
 
-// SimulatedAccounts returns all the simulated accounts of the workspace.
-func (workspace *Workspace) SimulatedAccounts() []*SimulatedAccount {
+// SimulatedSystems returns all the simulated systems of the workspace.
+func (workspace *Workspace) SimulatedSystems() []*SimulatedSystem {
 	workspace.mu.Lock()
-	accounts := make([]*SimulatedAccount, 0, len(workspace.simulatedAccounts))
-	for _, account := range workspace.simulatedAccounts {
+	accounts := make([]*SimulatedSystem, 0, len(workspace.simulatedSystems))
+	for _, account := range workspace.simulatedSystems {
 		accounts = append(accounts, account)
 	}
 	workspace.mu.Unlock()
-	slices.SortFunc(accounts, func(a, b *SimulatedAccount) int {
+	slices.SortFunc(accounts, func(a, b *SimulatedSystem) int {
 		if a.Name != b.Name {
 			return cmp.Compare(a.Name, b.Name)
 		}
@@ -1504,13 +1509,13 @@ func (account *Account) Connector() *Connector {
 	return c
 }
 
-// SimulatedAccount represents a simulated account.
-type SimulatedAccount struct {
+// SimulatedSystem represents a simulated system.
+type SimulatedSystem struct {
 	mu                      *sync.Mutex
 	workspace               *Workspace
 	ID                      string
 	Name                    string
-	Status                  SimulatedAccountStatus
+	Status                  SimulatedSystemStatus
 	UserCount               int
 	DuplicateRecordPercent  decimal.Decimal
 	Countries               json.Value
@@ -1522,8 +1527,8 @@ type SimulatedAccount struct {
 	UpdatedAt               time.Time
 }
 
-// Workspace returns the workspace of the simulated account.
-func (account *SimulatedAccount) Workspace() *Workspace {
+// Workspace returns the workspace of the simulated system.
+func (account *SimulatedSystem) Workspace() *Workspace {
 	account.mu.Lock()
 	workspace := account.workspace
 	account.mu.Unlock()
@@ -1550,7 +1555,7 @@ type Connection struct {
 	connector         *Connector
 	Role              Role
 	account           *Account
-	simulatedAccount  *SimulatedAccount
+	simulatedSystem   *SimulatedSystem
 	Strategy          *Strategy
 	SendingMode       *SendingMode
 	LinkedConnections []string // Non-nil if events are supported; otherwise nil.
@@ -1653,11 +1658,11 @@ func (connection *Connection) Settings(ctx context.Context) (json.Value, error) 
 	return data, nil
 }
 
-// SimulatedAccount returns the simulated account of the connection. The
+// SimulatedSystem returns the simulated system of the connection. The
 // boolean return value reports whether the connection has an account.
-func (connection *Connection) SimulatedAccount() (*SimulatedAccount, bool) {
+func (connection *Connection) SimulatedSystem() (*SimulatedSystem, bool) {
 	connection.mu.Lock()
-	account := connection.simulatedAccount
+	account := connection.simulatedSystem
 	connection.mu.Unlock()
 	return account, account != nil
 }

@@ -52,7 +52,7 @@ CREATE UNIQUE INDEX members_workos_user_id_idx ON members (organization, workos_
 
 CREATE TYPE warehouse_mode AS ENUM ('Normal', 'Inspection', 'Maintenance');
 CREATE TYPE workspace_environment AS ENUM ('production', 'development');
-CREATE TYPE simulated_account_status AS ENUM ('Preparing', 'Ready', 'Failed');
+CREATE TYPE simulated_system_status AS ENUM ('Preparing', 'Available', 'Failed', 'Deleting');
 
 CREATE TABLE workspaces (
     id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
@@ -162,11 +162,11 @@ CREATE TABLE consent_purposes (
     PRIMARY KEY (workspace, code)
 );
 
-CREATE TABLE simulated_accounts (
+CREATE TABLE simulated_systems (
     id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
     workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
     name varchar(100) NOT NULL,
-    status simulated_account_status NOT NULL,
+    status simulated_system_status NOT NULL,
     user_count integer NOT NULL,
     duplicate_record_percent numeric(5,2) NOT NULL,
     countries jsonb NOT NULL,
@@ -174,13 +174,16 @@ CREATE TABLE simulated_accounts (
     generated_record_count integer NOT NULL,
     generation_checkpoint jsonb,
     generation_error text NOT NULL,
+    writer_generation bigint NOT NULL DEFAULT 0,
+    claimed_run varchar(12) CONSTRAINT simulated_systems_claimed_run_key UNIQUE,
+    claim_ping_time timestamp,
     created_at timestamp NOT NULL,
     updated_at timestamp NOT NULL,
-    CONSTRAINT simulated_accounts_workspace_id_key UNIQUE (workspace, id),
+    CONSTRAINT simulated_systems_workspace_id_key UNIQUE (workspace, id),
     PRIMARY KEY (id)
 );
 
-CREATE INDEX simulated_accounts_workspace_idx ON simulated_accounts (workspace);
+CREATE INDEX simulated_systems_workspace_idx ON simulated_systems (workspace);
 
 CREATE TYPE role AS ENUM ('Source', 'Destination');
 
@@ -195,7 +198,7 @@ CREATE TYPE sending_mode as ENUM ('Client', 'Server', 'ClientAndServer');
 CREATE TABLE connections (
     id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
     workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
-    simulated_account varchar(12),
+    simulated_system varchar(12),
     name varchar(100) NOT NULL DEFAULT '',
     connector varchar,
     role role NOT NULL,
@@ -206,15 +209,17 @@ CREATE TABLE connections (
     settings bytea,
     kms_encrypted_settings_key bytea NOT NULL,
     health health NOT NULL DEFAULT 'Healthy',
-    CONSTRAINT connections_workspace_simulated_account_fkey
-        FOREIGN KEY (workspace, simulated_account)
-        REFERENCES simulated_accounts (workspace, id)
+    CONSTRAINT connections_workspace_simulated_system_fkey
+        FOREIGN KEY (workspace, simulated_system)
+        REFERENCES simulated_systems (workspace, id)
         ON DELETE RESTRICT,
     PRIMARY KEY (id)
 );
 
 CREATE INDEX connections_workspace_idx ON connections (workspace);
-CREATE INDEX connections_workspace_simulated_account_idx ON connections (workspace, simulated_account);
+CREATE INDEX connections_workspace_simulated_system_idx ON connections (workspace, simulated_system);
+CREATE UNIQUE INDEX connections_simulated_system_role_key ON connections (simulated_system, role)
+    WHERE simulated_system IS NOT NULL;
 
 CREATE TYPE export_mode AS ENUM ('', 'CreateOnly', 'UpdateOnly', 'CreateOrUpdate');
 CREATE TYPE transformation_language AS ENUM ('JavaScript', 'Python');
@@ -295,6 +300,7 @@ CREATE TABLE pipelines_runs (
     pipeline varchar(12) NOT NULL REFERENCES pipelines ON DELETE CASCADE,
     function varchar(200) NOT NULL DEFAULT '',
     node varchar(22) CHECK (node IS NULL OR node ~ '^[1-9A-HJ-NP-Za-km-z]{22}$'),
+    simulated_system varchar(12),
     incremental boolean NOT NULL DEFAULT FALSE,
     cursor timestamp NOT NULL DEFAULT '0001-01-01 00:00:00+00',
     start_time timestamp NOT NULL,
@@ -325,6 +331,10 @@ CREATE INDEX pipelines_runs_function_idx
 CREATE UNIQUE INDEX pipelines_one_live_run_idx
     ON pipelines_runs (pipeline)
     WHERE end_time IS NULL;
+
+CREATE UNIQUE INDEX pipelines_one_live_simulated_system_run_idx
+    ON pipelines_runs (simulated_system)
+    WHERE simulated_system IS NOT NULL AND node IS NOT NULL AND end_time IS NULL;
 
 CREATE TABLE pipelines_errors (
     pipeline varchar(12) NOT NULL REFERENCES pipelines ON DELETE CASCADE,
@@ -431,7 +441,7 @@ CREATE TYPE notification_name AS ENUM (
     'CreateEventWriteKey',
     'CreateOrganization',
     'CreatePipeline',
-    'CreateSimulatedAccount',
+    'CreateSimulatedSystem',
     'CreateWorkspace',
     'DeleteAccessKey',
     'DeleteConnection',
@@ -441,13 +451,14 @@ CREATE TYPE notification_name AS ENUM (
     'DeleteMembers',
     'DeleteOrganization',
     'DeletePipeline',
-    'DeleteSimulatedAccount',
+    'DeleteSimulatedSystem',
     'DeleteWorkspace',
     'EndAlterProfileSchema',
     'EndIdentityResolution',
     'EndPipelineRun',
     'InviteMember',
     'LinkConnection',
+    'MarkSimulatedSystemDeleting',
     'PurgePipelines',
     'RenameConnection',
     'RenameWorkspace',
@@ -467,8 +478,8 @@ CREATE TYPE notification_name AS ENUM (
     'UpdateIdentityResolutionSettings',
     'UpdateOrganization',
     'UpdatePipeline',
-    'UpdateSimulatedAccount',
-    'UpdateSimulatedAccountGeneration',
+    'UpdateSimulatedSystem',
+    'UpdateSimulatedSystemGeneration',
     'UpdateWarehouse',
     'UpdateWarehouseMode',
     'UpdateWorkspace'

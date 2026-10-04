@@ -53,7 +53,8 @@ const getProfileSchema = (countryFormat: CountryFormat): ObjectType => ({
 	),
 });
 
-const profilePhoto = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+const profilePhoto = `${new URL(adminURL).origin}/photos/catalog/256/face-000001.webp`;
+const displayedProfilePhoto = '/photos/catalog/256/face-000001.webp';
 
 const assignedRoles: ProfileRoleAssignments = {
 	firstName: 'first_name',
@@ -2021,6 +2022,35 @@ test(`Use one sequence navigator for manual pages and profile panel controls`, a
 	await expect(page.locator('.profile-drawer__kpid-value')).toHaveText('shared-navigation-profile-50');
 });
 
+test('Profile thumbnail preserves external, relative and same-origin non-photo URLs', async ({ page }) => {
+	const origin = new URL(adminURL).origin;
+	const cases = [
+		{
+			photo: `${origin}/photos/catalog/256/face.webp?size=256#preview`,
+			rendered: '/photos/catalog/256/face.webp?size=256#preview',
+		},
+		{
+			photo: 'https://external.example.test/photos/face.webp',
+			rendered: 'https://external.example.test/photos/face.webp',
+		},
+		{ photo: '/photos/catalog/256/relative.webp', rendered: '/photos/catalog/256/relative.webp' },
+		{ photo: `${origin}/avatars/face.webp`, rendered: `${origin}/avatars/face.webp` },
+	];
+	await mockProfiles(page, {
+		responseProfiles: cases.map(({ photo }, index) => ({
+			...profiles[0],
+			kpid: `photo-url-${index}`,
+			attributes: { ...profiles[0].attributes, photo_url: photo },
+		})),
+	});
+	await page.goto(`${adminURL}/profile-unification/profiles`);
+	const thumbnails = page.locator('.profiles-list__profile-thumbnail');
+	await expect(thumbnails).toHaveCount(cases.length);
+	for (const [index, { rendered }] of cases.entries()) {
+		await expect(thumbnails.nth(index)).toHaveJSProperty('image', rendered);
+	}
+});
+
 test(`Build the fixed profile column from the assigned profile roles`, async ({ page }) => {
 	await mockProfiles(page);
 	await page.goto(`${adminURL}/profile-unification/profiles`);
@@ -2029,7 +2059,7 @@ test(`Build the fixed profile column from the assigned profile roles`, async ({ 
 	await expect(profileCells).toHaveCount(4);
 	await expect(profileCells.nth(0).locator('.profiles-list__profile-thumbnail')).toHaveJSProperty(
 		'image',
-		profilePhoto,
+		displayedProfilePhoto,
 	);
 	await expect(profileCells.nth(0).locator('.profiles-list__profile-thumbnail')).toHaveCSS('width', '44px');
 	await expect(profileCells.nth(0).locator('.profiles-list__profile-name')).toHaveText('Ada Lovelace');
@@ -2147,7 +2177,10 @@ test(`Use profile property display names in the attributes drawer`, async ({ pag
 	const drawer = page.locator('.profile-drawer');
 	await expect(drawer).toBeVisible();
 	await expect(page.getByRole('complementary', { name: 'Profile details' })).toBeVisible();
-	await expect(drawer.locator('.profile-drawer__profile-thumbnail')).toHaveJSProperty('image', profilePhoto);
+	await expect(drawer.locator('.profile-drawer__profile-thumbnail')).toHaveJSProperty(
+		'image',
+		displayedProfilePhoto,
+	);
 	await expect(drawer.locator('.profile-drawer__profile-thumbnail')).toHaveCSS('width', '64px');
 	const attributeKeys = drawer.locator('.profile-drawer__attribute-key');
 	await expect(attributeKeys).toHaveText([

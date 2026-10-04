@@ -54,7 +54,7 @@ func TestResolveIdentitiesAddsMissingIdentityCountColumns(t *testing.T) {
 
 	warehouse, pool := newTestPostgreSQLWarehouse(t)
 	profileColumns := []warehouses.Column{{Name: "email", Type: types.String(), Nullable: true}}
-	err := warehouse.Initialize(t.Context(), profileColumns)
+	err := warehouse.Initialize(t.Context(), warehouses.Production, profileColumns)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +95,7 @@ func TestAlterProfileSchemaUsesPublishedProfilesAfterIdentityResolutionFailure(t
 	warehouse, pool := newTestPostgreSQLWarehouse(t)
 	profileColumns := []warehouses.Column{{Name: "email", Type: types.String(), Nullable: true}}
 	identifiers := profileColumns
-	err := warehouse.Initialize(t.Context(), profileColumns)
+	err := warehouse.Initialize(t.Context(), warehouses.Production, profileColumns)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -247,7 +247,7 @@ func TestResolveIdentitiesRemovesObsoleteProfileTables(t *testing.T) {
 
 	warehouse, pool := newTestPostgreSQLWarehouse(t)
 	profileColumns := []warehouses.Column{{Name: "email", Type: types.String(), Nullable: true}}
-	if err := warehouse.Initialize(t.Context(), profileColumns); err != nil {
+	if err := warehouse.Initialize(t.Context(), warehouses.Production, profileColumns); err != nil {
 		t.Fatal(err)
 	}
 
@@ -300,7 +300,7 @@ func TestResolveIdentitiesRetainsProfileTableFromRunningOperation(t *testing.T) 
 
 	warehouse, pool := newTestPostgreSQLWarehouse(t)
 	profileColumns := []warehouses.Column{{Name: "email", Type: types.String(), Nullable: true}}
-	if err := warehouse.Initialize(t.Context(), profileColumns); err != nil {
+	if err := warehouse.Initialize(t.Context(), warehouses.Production, profileColumns); err != nil {
 		t.Fatal(err)
 	}
 

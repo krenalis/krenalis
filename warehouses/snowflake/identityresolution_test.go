@@ -76,7 +76,7 @@ func TestResolveIdentitiesAddsMissingIdentityCountColumns(t *testing.T) {
 
 	warehouse, db := newTestSnowflakeWarehouse(t)
 	profileColumns := []warehouses.Column{{Name: "email", Type: types.String(), Nullable: true}}
-	err := warehouse.Initialize(t.Context(), profileColumns)
+	err := warehouse.Initialize(t.Context(), warehouses.Production, profileColumns)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +116,7 @@ func TestResolveIdentitiesFinalizesCurrentProfilesVersionOnRetry(t *testing.T) {
 
 	warehouse, db := newTestSnowflakeWarehouse(t)
 	olderProfileColumns := []warehouses.Column{{Name: "email", Type: types.String(), Nullable: true}}
-	err := warehouse.Initialize(t.Context(), olderProfileColumns)
+	err := warehouse.Initialize(t.Context(), warehouses.Production, olderProfileColumns)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -230,7 +230,7 @@ func TestAlterProfileSchemaUsesPublishedProfilesAfterIdentityResolutionFailure(t
 	warehouse, db := newTestSnowflakeWarehouse(t)
 	profileColumns := []warehouses.Column{{Name: "email", Type: types.String(), Nullable: true}}
 	identifiers := profileColumns
-	err := warehouse.Initialize(t.Context(), profileColumns)
+	err := warehouse.Initialize(t.Context(), warehouses.Production, profileColumns)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -378,7 +378,7 @@ func TestResolveIdentitiesPreservesProfilesViewAfterPendingFailure(t *testing.T)
 
 	warehouse, db := newTestSnowflakeWarehouse(t)
 	profileColumns := []warehouses.Column{{Name: "email", Type: types.String(), Nullable: true}}
-	if err := warehouse.Initialize(t.Context(), profileColumns); err != nil {
+	if err := warehouse.Initialize(t.Context(), warehouses.Production, profileColumns); err != nil {
 		t.Fatal(err)
 	}
 
@@ -442,7 +442,7 @@ func TestResolveIdentitiesRemovesObsoleteProfileTables(t *testing.T) {
 
 	warehouse, db := newTestSnowflakeWarehouse(t)
 	profileColumns := []warehouses.Column{{Name: "email", Type: types.String(), Nullable: true}}
-	if err := warehouse.Initialize(t.Context(), profileColumns); err != nil {
+	if err := warehouse.Initialize(t.Context(), warehouses.Production, profileColumns); err != nil {
 		t.Fatal(err)
 	}
 
@@ -498,7 +498,7 @@ func TestResolveIdentitiesRetainsProfileTableFromRunningOperation(t *testing.T) 
 
 	warehouse, db := newTestSnowflakeWarehouse(t)
 	profileColumns := []warehouses.Column{{Name: "email", Type: types.String(), Nullable: true}}
-	if err := warehouse.Initialize(t.Context(), profileColumns); err != nil {
+	if err := warehouse.Initialize(t.Context(), warehouses.Production, profileColumns); err != nil {
 		t.Fatal(err)
 	}
 

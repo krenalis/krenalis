@@ -62,9 +62,9 @@ export default defineConfig({
 			testMatch: ['tests/settings.spec.ts'],
 		},
 		{
-			name: 'simulated-accounts.spec.ts',
+			name: 'simulated-systems.spec.ts',
 			use: { ...devices['Desktop Chrome'] },
-			testMatch: ['tests/simulatedAccounts.spec.ts'],
+			testMatch: ['tests/simulatedSystems.spec.ts', 'tests/simulatedApplicationSelector.spec.ts'],
 		},
 
 		// {

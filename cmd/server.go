@@ -70,6 +70,7 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 		MaxQueuedEventsPerDestination: config.MaxQueuedEventsPerDestination,
 		PrometheusMetricsEnabled:      config.PrometheusMetricsEnabled,
 		SimulatedFaceCatalog:          catalog,
+		SimulatedPhotoBaseURL:         config.HTTP.ExternalURL,
 	}
 	conf.DatabaseInitialization.InitIfEmpty = initDBIfEmpty
 	conf.DatabaseInitialization.InitDockerMember = initDockerMember

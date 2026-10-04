@@ -46,8 +46,9 @@ type Component interface {
 }
 
 type Option struct {
-	Text  string
-	Value any
+	Text     string
+	Value    any
+	Disabled bool
 }
 
 type Input struct {

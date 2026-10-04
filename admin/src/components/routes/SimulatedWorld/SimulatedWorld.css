@@ -1,0 +1,487 @@
+.simulated-systems__header {
+	align-items: center;
+	display: flex;
+	gap: 20px;
+	justify-content: space-between;
+	margin-bottom: 36px;
+}
+
+.simulated-systems h1 {
+	font-size: 23px;
+	font-weight: 600;
+	margin: 0;
+}
+
+.simulated-systems--detail > .simulated-systems__back,
+.simulated-systems--detail > .simulated-systems__header,
+.simulated-systems--detail > .section,
+.simulated-systems--detail > .simulated-systems__error {
+	max-width: 1200px;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.simulated-systems--detail > .section {
+	margin-top: 44px;
+}
+
+.simulated-systems__back {
+	display: block;
+	font-size: 13px;
+	margin-bottom: 22px;
+}
+
+.simulated-systems__create-link {
+	display: block;
+	margin-bottom: 18px;
+	margin-left: auto;
+	width: fit-content;
+}
+
+.simulated-systems__list-description p {
+	margin: 0;
+}
+
+.simulated-systems__list-description p + p {
+	margin-top: 10px;
+}
+
+.simulated-systems__account-link {
+	color: inherit;
+	text-decoration: none;
+}
+
+.simulated-systems__name-cell {
+	align-items: center;
+	display: inline-flex;
+	gap: 8px;
+}
+
+.simulated-systems__status-badge::part(base) {
+	border: 0;
+	font-size: 11px;
+}
+
+.simulated-systems__status-badge--preparing::part(base) {
+	background-color: var(--sl-color-primary-100);
+	color: var(--sl-color-primary-800);
+}
+
+.simulated-systems__status-badge--failed::part(base) {
+	background-color: var(--sl-color-danger-100);
+	color: var(--sl-color-danger-800);
+}
+
+.simulated-systems__status-badge--deleting::part(base) {
+	background-color: var(--sl-color-warning-100);
+	color: var(--sl-color-warning-800);
+}
+
+.simulated-systems__connection-links {
+	align-items: center;
+	display: inline-flex;
+	gap: 15px;
+	white-space: nowrap;
+}
+
+.simulated-systems__connection-link {
+	--simulated-systems-shimmer-color: var(--sl-color-primary-600);
+	align-items: center;
+	color: var(--sl-color-primary-600);
+	display: inline-flex;
+	gap: 5px;
+	text-decoration: none;
+}
+
+.simulated-systems__connection-link sl-icon {
+	font-size: calc(1em - 2px);
+}
+
+.simulated-systems__connection-link:is(:hover, :focus-visible) {
+	--simulated-systems-shimmer-color: var(--sl-color-primary-700);
+	color: var(--sl-color-primary-700);
+}
+
+.simulated-systems__connection-link:focus-visible {
+	outline: 2px solid var(--sl-color-primary-600);
+	outline-offset: 2px;
+}
+
+.simulated-systems__account-link:focus-visible,
+.simulated-systems__back:focus-visible,
+:is(.simulated-systems, .simulated-systems__dialog) input:focus-visible {
+	outline: 2px solid var(--sl-color-primary-600);
+	outline-offset: 2px;
+}
+
+.simulated-systems__status span {
+	display: block;
+}
+
+.simulated-systems__status span {
+	color: var(--text-light);
+	font-size: 13px;
+	margin-top: 3px;
+}
+
+.simulated-systems__progress {
+	align-items: center;
+	display: inline-flex;
+	gap: 8px;
+	white-space: nowrap;
+}
+
+.simulated-systems__status .simulated-systems__progress {
+	display: inline-flex;
+}
+
+.simulated-systems__progress progress {
+	appearance: none;
+	background: var(--sl-color-neutral-200);
+	border: 0;
+	border-radius: 4px;
+	height: 8px;
+	overflow: hidden;
+	width: 120px;
+}
+
+.simulated-systems__progress progress::-webkit-progress-bar {
+	background: var(--sl-color-neutral-200);
+}
+
+.simulated-systems__progress progress::-webkit-progress-value {
+	background: #59eaa1;
+}
+
+.simulated-systems__progress progress::-moz-progress-bar {
+	background: #59eaa1;
+}
+
+.simulated-systems__status strong {
+	font-size: 13px;
+}
+
+.simulated-systems__loading,
+.simulated-systems__error {
+	align-items: center;
+	display: flex;
+	font-size: 14px;
+	gap: 10px;
+	margin-bottom: 16px;
+}
+
+.simulated-systems__error {
+	color: var(--sl-color-danger-700);
+}
+
+.simulated-systems__dialog {
+	--width: min(680px, calc(100vw - 32px));
+}
+
+.simulated-systems__dialog--create {
+	--width: min(455px, calc(100vw - 32px));
+	--sl-font-size-medium: var(--sl-font-size-small);
+	--sl-input-font-size-medium: var(--sl-font-size-small);
+}
+
+.simulated-systems__dialog--create::part(panel) {
+	background-color: var(--bg-gray);
+}
+
+.simulated-systems__dialog::part(body) {
+	padding: 30px;
+}
+
+.simulated-systems__dialog-title,
+.simulated-systems__dialog-progress h2 {
+	font-size: 21px;
+	font-weight: 600;
+	margin: 0 0 22px;
+}
+
+.simulated-systems__dialog--create .simulated-systems__dialog-title {
+	color: var(--text-light);
+	font-size: 16px;
+}
+
+.simulated-systems__dialog-description {
+	color: var(--text-light);
+	font-size: 14px;
+	margin: -10px 0 24px;
+}
+
+.simulated-systems__form {
+	display: grid;
+	gap: 18px;
+}
+
+.simulated-systems__form label,
+.simulated-systems__field {
+	color: var(--text-light);
+	display: grid;
+	font-size: 14px;
+	font-weight: 400;
+	gap: 5px;
+}
+
+.simulated-systems__field > span,
+.simulated-systems__form small {
+	color: var(--text-light);
+}
+
+.simulated-systems__form small {
+	font-size: 12px;
+	font-weight: 400;
+}
+
+.simulated-systems__form .simulated-systems__name-note {
+	color: var(--sl-color-neutral-500);
+	margin-inline: 4px;
+}
+
+.simulated-systems__form .simulated-systems__field-error {
+	color: var(--sl-color-danger-700);
+}
+
+.simulated-systems__connections {
+	border: 0;
+	margin: 0;
+	padding: 0;
+}
+
+.simulated-systems__connections legend {
+	color: var(--text-light);
+	font-size: 14px;
+	font-weight: 400;
+	margin-bottom: 9px;
+}
+
+.simulated-systems__connections label {
+	align-items: center;
+	display: flex;
+	font-weight: 400;
+	gap: 9px;
+}
+
+.simulated-systems__connections label + label {
+	margin-top: 9px;
+}
+
+.simulated-systems__connections input[type='checkbox'] {
+	accent-color: var(--sl-color-primary-600);
+	height: var(--sl-toggle-size-medium);
+	min-height: 0;
+	padding: 0;
+	width: var(--sl-toggle-size-medium);
+}
+
+.simulated-systems__dialog-progress .simulated-systems__steps {
+	margin-bottom: 24px;
+}
+
+.simulated-systems__creation-success {
+	align-items: center;
+	display: flex;
+	font-size: 16px;
+	gap: 9px;
+	margin: 0 0 24px;
+}
+
+.simulated-systems__creation-success span {
+	font-size: 20px;
+}
+
+.simulated-systems__not-requested {
+	margin-bottom: 24px;
+}
+
+.simulated-systems__not-requested h3 {
+	font-size: 16px;
+	font-weight: 600;
+	margin: 0 0 16px;
+}
+
+.simulated-systems__not-requested ul {
+	font-size: 16px;
+	margin: 0;
+	padding-left: 29px;
+}
+
+.simulated-systems__not-requested li {
+	padding-left: 4px;
+}
+
+.simulated-systems__not-requested li + li {
+	margin-top: 6px;
+}
+
+.simulated-systems__steps {
+	display: grid;
+	gap: 17px;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.simulated-systems__step {
+	align-items: start;
+	display: flex;
+	font-size: 14px;
+	gap: 12px;
+}
+
+.simulated-systems__step-marker {
+	border: 2px solid var(--sl-color-neutral-400);
+	border-radius: 50%;
+	box-sizing: border-box;
+	flex: 0 0 12px;
+	height: 12px;
+	margin-top: 4px;
+}
+
+.simulated-systems__step--done .simulated-systems__step-marker {
+	background: #59eaa1;
+	border-color: #59eaa1;
+}
+
+.simulated-systems__step--active .simulated-systems__step-marker {
+	border-color: #59eaa1;
+}
+
+.simulated-systems__steps--delete .simulated-systems__step--done .simulated-systems__step-marker {
+	background: var(--sl-color-danger-600);
+	border-color: var(--sl-color-danger-600);
+}
+
+.simulated-systems__steps--delete .simulated-systems__step--active .simulated-systems__step-marker {
+	border-color: var(--sl-color-danger-600);
+}
+
+.simulated-systems__step--failed .simulated-systems__step-marker {
+	background: var(--sl-color-danger-600);
+	border-color: var(--sl-color-danger-600);
+}
+
+.simulated-systems__step--skipped,
+.simulated-systems__step--blocked {
+	color: var(--sl-color-neutral-500);
+}
+
+.simulated-systems__step--skipped .simulated-systems__step-marker,
+.simulated-systems__step--blocked .simulated-systems__step-marker {
+	border-color: var(--sl-color-neutral-300);
+}
+
+.simulated-systems__step-line {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+
+.simulated-systems__shimmer {
+	animation: simulated-systems-shimmer 1.8s linear infinite;
+	background: linear-gradient(
+		90deg,
+		var(--simulated-systems-shimmer-color, var(--text-primary)) 42%,
+		var(--sl-color-neutral-400) 50%,
+		var(--simulated-systems-shimmer-color, var(--text-primary)) 58%
+	);
+	background-position: 100% 0;
+	background-repeat: no-repeat;
+	background-size: 250% 100%;
+	-webkit-background-clip: text;
+	background-clip: text;
+	-webkit-text-fill-color: transparent;
+	color: transparent;
+}
+
+.simulated-systems__step-content small {
+	display: block;
+	font-size: 12px;
+	margin-top: 4px;
+}
+
+.simulated-systems__step--failed small {
+	color: var(--sl-color-danger-700);
+}
+
+@keyframes simulated-systems-shimmer {
+	to {
+		background-position: 0 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.simulated-systems__shimmer {
+		animation: none;
+		background: none;
+		-webkit-text-fill-color: var(--simulated-systems-shimmer-color, var(--text-primary));
+		color: var(--simulated-systems-shimmer-color, var(--text-primary));
+	}
+}
+
+:is(.simulated-systems, .simulated-systems__dialog) input {
+	background: white;
+	border: 1px solid var(--sl-color-neutral-300);
+	border-radius: var(--radius);
+	box-sizing: border-box;
+	color: inherit;
+	font: inherit;
+	font-weight: 400;
+	min-height: 38px;
+	padding: 7px 10px;
+	text-align: left;
+	width: 100%;
+}
+
+.simulated-systems__dialog--create input:not([type='checkbox']) {
+	color: var(--sl-input-color);
+	font-size: var(--sl-input-font-size-medium);
+	min-height: var(--sl-input-height-medium);
+	padding-inline: var(--sl-input-spacing-medium);
+}
+
+.simulated-systems__actions,
+.simulated-systems__rename {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.simulated-systems__actions {
+	justify-content: flex-end;
+}
+
+.simulated-systems__form > .simulated-systems__actions {
+	margin-top: 16px;
+}
+
+.simulated-systems__create-button {
+	width: 120px;
+}
+
+.simulated-systems__ok-button {
+	width: 120px;
+}
+
+.simulated-systems__rename input {
+	flex: 1 1 240px;
+}
+
+.simulated-systems--detail .section__content > p {
+	color: var(--text-light);
+	font-size: 14px;
+	margin: 0 0 14px;
+}
+
+@media (max-width: 760px) {
+	.simulated-systems__header {
+		align-items: stretch;
+		flex-direction: column;
+	}
+	.simulated-systems__dialog::part(body) {
+		padding: 22px;
+	}
+}

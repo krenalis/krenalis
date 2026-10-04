@@ -627,7 +627,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = dw.Initialize(ctx, columns)
+			err = dw.Initialize(ctx, warehouses.Production, columns)
 			if err != nil {
 				t.Fatal(err)
 			}

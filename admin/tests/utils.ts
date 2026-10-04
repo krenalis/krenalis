@@ -8,6 +8,7 @@ import { IS_PASSWORDLESS_KEY, WORKSPACE_ID_KEY } from '../src/constants/storage'
 interface Config {
 	baseURL: string;
 	workspaceID: string;
+	simulatedWorkspaceID: string;
 	dbHost: string;
 	dbPort: string;
 	dbUsername: string;
@@ -21,6 +22,10 @@ const adminPath = 'admin';
 const adminURL = `${config.baseURL}/${adminPath}`;
 
 const login = async (page: Page) => {
+	await page.addInitScript(({ workspace, key }) => localStorage.setItem(key, workspace), {
+		workspace: config.workspaceID,
+		key: WORKSPACE_ID_KEY,
+	});
 	await page.goto(`${adminURL}/`);
 	await page.evaluate(
 		async ({ url, workspace, workspaceIDKey }) => {

@@ -1,6 +1,6 @@
 import React from 'react';
 import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
-import { getProfileAvatarColors, getProfileInitials } from './Profiles.helpers';
+import { getProfileAvatarColors, getProfileInitials, getProfilePhotoSource } from './Profiles.helpers';
 
 interface ProfileThumbnailProps {
 	className?: string;
@@ -27,7 +27,7 @@ const ProfileThumbnail = ({ className, firstName, lastName, photo, profileID }: 
 	return (
 		<SlAvatar
 			className={`profile-thumbnail profile-thumbnail--${kind}${className == null ? '' : ` ${className}`}`}
-			image={photo ?? ''}
+			image={getProfilePhotoSource(photo)}
 			initials={initials}
 			label={name === '' ? 'Profile photo' : name}
 			style={style}

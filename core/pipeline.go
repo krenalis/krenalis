@@ -49,6 +49,8 @@ type Pipeline struct {
 	core               *Core
 	pipeline           *state.Pipeline
 	connection         *Connection
+	simulatedSystem    *string
+	writerGeneration   int64
 	ID                 string           `json:"id"`
 	Connector          string           `json:"connector"`
 	ConnectorType      ConnectorType    `json:"connectorType"`
@@ -1016,6 +1018,10 @@ func checkUpdatePipelineConnectorLimit(ctx context.Context, tx *db.Tx, pipeline,
 
 // application returns the application of the pipeline.
 func (this *Pipeline) application() *connections.Application {
+	if this.simulatedSystem != nil {
+		return this.core.connections.ApplicationWithSimulatedSystemWriter(
+			this.pipeline.Connection(), *this.simulatedSystem, this.writerGeneration)
+	}
 	return this.core.connections.Application(this.pipeline.Connection())
 }
 

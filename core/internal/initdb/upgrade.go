@@ -15,9 +15,10 @@ import (
 const (
 	workspacesOrganizationIndex                                        = "workspaces_organization_idx"
 	connectionsWorkspaceIndex                                          = "connections_workspace_idx"
-	connectionsWorkspaceSimulatedAccountIndex                          = "connections_workspace_simulated_account_idx"
-	connectionsWorkspaceSimulatedAccountForeignKey                     = "connections_workspace_simulated_account_fkey"
-	simulatedAccountsWorkspaceIDKey                                    = "simulated_accounts_workspace_id_key"
+	connectionsWorkspaceSimulatedSystemIndex                           = "connections_workspace_simulated_system_idx"
+	connectionsSimulatedSystemRoleKey                                  = "connections_simulated_system_role_key"
+	connectionsWorkspaceSimulatedSystemForeignKey                      = "connections_workspace_simulated_system_fkey"
+	simulatedSystemsWorkspaceIDKey                                     = "simulated_systems_workspace_id_key"
 	pipelinesMetricsPipelineIndex                                      = "pipelines_metrics_pipeline_idx"
 	pipelinesMetricsOrganizationWorkspaceTimeslotIndex                 = "pipelines_metrics_organization_workspace_timeslot_idx"
 	pipelinesMetricsOrganizationWorkspaceConnectionTargetTimeslotIndex = "pipelines_metrics_org_ws_conn_target_timeslot_idx"
@@ -36,18 +37,23 @@ const consentPurposesTable = `
 		PRIMARY KEY (workspace, code)
 	)`
 
-const simulatedAccountsTable = `
+const simulatedSystemsTable = `
 	DO $$
 	BEGIN
-		IF NOT EXISTS (SELECT FROM pg_type WHERE typname = 'simulated_account_status') THEN
-			CREATE TYPE simulated_account_status AS ENUM ('Preparing', 'Ready', 'Failed');
+		IF NOT EXISTS (SELECT FROM pg_type WHERE typname = 'simulated_system_status') THEN
+			CREATE TYPE simulated_system_status AS ENUM ('Preparing', 'Available', 'Failed', 'Deleting');
+		ELSIF EXISTS (
+			SELECT FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid
+			WHERE t.typname = 'simulated_system_status' AND e.enumlabel = 'Ready'
+		) THEN
+			ALTER TYPE simulated_system_status RENAME VALUE 'Ready' TO 'Available';
 		END IF;
 	END $$;
-	CREATE TABLE IF NOT EXISTS simulated_accounts (
+	CREATE TABLE IF NOT EXISTS simulated_systems (
 		id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
 		workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
 		name varchar(100) NOT NULL,
-		status simulated_account_status NOT NULL,
+		status simulated_system_status NOT NULL,
 		user_count integer NOT NULL,
 		duplicate_record_percent numeric(5,2) NOT NULL,
 		countries jsonb NOT NULL,
@@ -55,11 +61,14 @@ const simulatedAccountsTable = `
 		generated_record_count integer NOT NULL,
 		generation_checkpoint jsonb,
 		generation_error text NOT NULL,
+		writer_generation bigint NOT NULL DEFAULT 0,
+		claimed_run varchar(12) CONSTRAINT simulated_systems_claimed_run_key UNIQUE,
+		claim_ping_time timestamp,
 		created_at timestamp NOT NULL,
 		updated_at timestamp NOT NULL,
 		PRIMARY KEY (id)
 	);
-	CREATE INDEX IF NOT EXISTS simulated_accounts_workspace_idx ON simulated_accounts (workspace)`
+	CREATE INDEX IF NOT EXISTS simulated_systems_workspace_idx ON simulated_systems (workspace)`
 
 const organizationConnectorReferencesView = `
 	CREATE OR REPLACE VIEW organization_connector_references AS
@@ -380,18 +389,21 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'AddConsentPurpose'`,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'DeleteConsentPurpose'`,
 			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateConsentPurpose'`,
-			simulatedAccountsTable,
-			`ALTER TABLE simulated_accounts DROP COLUMN IF EXISTS connector`,
-			`ALTER TABLE connections ADD COLUMN IF NOT EXISTS simulated_account varchar(12)`,
+			simulatedSystemsTable,
+			`ALTER TABLE connections ADD COLUMN IF NOT EXISTS simulated_system varchar(12)`,
+			`ALTER TABLE pipelines_runs ADD COLUMN IF NOT EXISTS simulated_system varchar(12)`,
+			`CREATE UNIQUE INDEX IF NOT EXISTS pipelines_one_live_simulated_system_run_idx
+				ON pipelines_runs (simulated_system)
+				WHERE simulated_system IS NOT NULL AND node IS NOT NULL AND end_time IS NULL`,
 			`DO $$
 				BEGIN
 					IF NOT EXISTS (
 						SELECT FROM pg_constraint
-						WHERE conrelid = 'simulated_accounts'::regclass
-							AND conname = '` + simulatedAccountsWorkspaceIDKey + `'
+						WHERE conrelid = 'simulated_systems'::regclass
+							AND conname = '` + simulatedSystemsWorkspaceIDKey + `'
 					) THEN
-						ALTER TABLE simulated_accounts
-							ADD CONSTRAINT ` + simulatedAccountsWorkspaceIDKey + ` UNIQUE (workspace, id);
+						ALTER TABLE simulated_systems
+							ADD CONSTRAINT ` + simulatedSystemsWorkspaceIDKey + ` UNIQUE (workspace, id);
 					END IF;
 				END $$`,
 			`DO $$
@@ -399,20 +411,23 @@ func Upgrade(ctx context.Context, database *db.DB) error {
 					IF NOT EXISTS (
 						SELECT FROM pg_constraint
 						WHERE conrelid = 'connections'::regclass
-							AND conname = '` + connectionsWorkspaceSimulatedAccountForeignKey + `'
+							AND conname = '` + connectionsWorkspaceSimulatedSystemForeignKey + `'
 					) THEN
 						ALTER TABLE connections
-							ADD CONSTRAINT ` + connectionsWorkspaceSimulatedAccountForeignKey + `
-							FOREIGN KEY (workspace, simulated_account)
-							REFERENCES simulated_accounts (workspace, id)
+							ADD CONSTRAINT ` + connectionsWorkspaceSimulatedSystemForeignKey + `
+							FOREIGN KEY (workspace, simulated_system)
+							REFERENCES simulated_systems (workspace, id)
 							ON DELETE RESTRICT;
 					END IF;
 				END $$`,
-			`CREATE INDEX IF NOT EXISTS ` + connectionsWorkspaceSimulatedAccountIndex + ` ON connections (workspace, simulated_account)`,
-			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'CreateSimulatedAccount'`,
-			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'DeleteSimulatedAccount'`,
-			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateSimulatedAccount'`,
-			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateSimulatedAccountGeneration'`,
+			`CREATE INDEX IF NOT EXISTS ` + connectionsWorkspaceSimulatedSystemIndex + ` ON connections (workspace, simulated_system)`,
+			`CREATE UNIQUE INDEX IF NOT EXISTS ` + connectionsSimulatedSystemRoleKey + `
+				ON connections (simulated_system, role) WHERE simulated_system IS NOT NULL`,
+			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'CreateSimulatedSystem'`,
+			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'DeleteSimulatedSystem'`,
+			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'MarkSimulatedSystemDeleting'`,
+			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateSimulatedSystem'`,
+			`ALTER TYPE notification_name ADD VALUE IF NOT EXISTS 'UpdateSimulatedSystemGeneration'`,
 			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents varchar(100)[] NOT NULL DEFAULT '{}'`,
 			`ALTER TABLE pipelines ADD COLUMN IF NOT EXISTS required_consents_operator varchar(3) NOT NULL DEFAULT 'and' CHECK (required_consents_operator IN ('and', 'or'))`,
 			`UPDATE pipelines

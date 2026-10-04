@@ -137,6 +137,9 @@ type ApplicationEnv struct {
 
 	// HTTPClient is the HTTP client to use for all requests.
 	HTTPClient HTTPClient
+
+	// Extra holds optional connector-specific environment data.
+	Extra any
 }
 
 // ApplicationNewFunc represents functions that create new application connector

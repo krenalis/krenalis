@@ -87,10 +87,10 @@ const sidebarItems: sidebarItem[] = [
 		icon: 'terminal',
 		subItems: [
 			{
-				name: 'development/simulated-accounts',
-				label: 'Simulated accounts',
-				link: 'simulated-accounts',
-				icon: 'database',
+				name: 'development/simulated-world',
+				label: 'Simulated world',
+				link: 'simulated-world',
+				icon: 'globe',
 			},
 		],
 	},
@@ -108,7 +108,8 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 
 	const location = useLocation();
 	const currentRoute = getCurrentRoute(location, connections);
-	const isDevelopment = workspaces.find((workspace) => workspace.id === selectedWorkspace)?.environment === 'development';
+	const isDevelopment =
+		workspaces.find((workspace) => workspace.id === selectedWorkspace)?.environment === 'development';
 
 	const items: ReactNode[] = [];
 	for (const item of sidebarItems) {

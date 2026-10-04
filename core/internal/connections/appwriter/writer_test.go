@@ -100,6 +100,220 @@ func Test_Writer(t *testing.T) {
 
 }
 
+func TestWriterReceivesCreateAndUpdateIDs(t *testing.T) {
+
+	tests := []struct {
+		name  string
+		id    string
+		value string
+	}{
+		{name: "new without transformation", value: "new without transformation"},
+		{name: "existing without transformation", id: "destination-1", value: "existing without transformation"},
+		{name: "new with transformation", value: "new with transformation"},
+		{name: "existing with transformation", id: "destination-2", value: "existing with transformation"},
+	}
+
+	var got []connectors.Record
+	w := New("test", state.TargetUser, func(_ context.Context, _ connectors.Targets, records connectors.Records, _ types.Type) error {
+		for record := range records.All() {
+			got = append(got, record)
+		}
+		return nil
+	}, types.Type{}, func(_ []string, _ error) {})
+	for i, test := range tests {
+		attributes := map[string]any{"value": test.value}
+		if !w.Write(context.Background(), test.id, attributes) {
+			t.Fatalf("case %d: expected Write to succeed, got false", i)
+		}
+	}
+	if err := w.Close(context.Background()); err != nil {
+		t.Fatalf("expected Close to succeed, got %v", err)
+	}
+	if len(got) != len(tests) {
+		t.Fatalf("expected %d records, got %d", len(tests), len(got))
+	}
+	for i, test := range tests {
+		if got[i].ID != test.id {
+			t.Errorf("case %d (%s): expected ID %q, got %q", i, test.name, test.id, got[i].ID)
+		}
+		if got[i].Attributes["value"] != test.value {
+			t.Errorf("case %d (%s): expected value %q, got %q", i, test.name, test.value, got[i].Attributes["value"])
+		}
+	}
+
+}
+
+func TestWriterUpsertSuccess(t *testing.T) {
+
+	var gotIDs []string
+	var gotAcks []ack
+	w := New("test", state.TargetUser, func(_ context.Context, _ connectors.Targets, records connectors.Records, _ types.Type) error {
+		for record := range records.All() {
+			gotIDs = append(gotIDs, record.ID)
+		}
+		return nil
+	}, types.Type{}, func(ids []string, err error) {
+		gotAcks = append(gotAcks, ack{ids: ids, err: err})
+	})
+	if !w.Write(t.Context(), "first", map[string]any{"value": 1}) {
+		t.Fatal("expected Write to succeed, got false")
+	}
+	if !w.Write(t.Context(), "second", map[string]any{"value": 2}) {
+		t.Fatal("expected Write to succeed, got false")
+	}
+	if err := w.Close(t.Context()); err != nil {
+		t.Fatalf("expected Close to succeed, got %v", err)
+	}
+	if len(gotIDs) != 2 {
+		t.Fatalf("expected 2 consumed records, got %d", len(gotIDs))
+	}
+	if gotIDs[0] != "first" || gotIDs[1] != "second" {
+		t.Fatalf("expected consumed IDs [first second], got %v", gotIDs)
+	}
+	if len(gotAcks) != 1 {
+		t.Fatalf("expected 1 acknowledgement, got %d", len(gotAcks))
+	}
+	if gotAcks[0].err != nil {
+		t.Fatalf("expected successful acknowledgement, got %v", gotAcks[0].err)
+	}
+
+}
+
+func TestWriterUpsertRecordsError(t *testing.T) {
+	firstErr := errors.New("first record failed")
+	thirdErr := errors.New("third record failed")
+	var gotAcks []ack
+	w := New("test", state.TargetUser, func(_ context.Context, _ connectors.Targets, records connectors.Records, _ types.Type) error {
+		for range records.All() {
+		}
+		return connectors.RecordsError{0: firstErr, 2: thirdErr}
+	}, types.Type{}, func(ids []string, err error) {
+		gotAcks = append(gotAcks, ack{ids: ids, err: err})
+	})
+	for i := range 3 {
+		if !w.Write(t.Context(), fmt.Sprintf("record-%d", i), map[string]any{"value": i}) {
+			t.Fatalf("record %d: expected Write to succeed, got false", i)
+		}
+	}
+	if err := w.Close(t.Context()); err != nil {
+		t.Fatalf("expected Close to succeed, got %v", err)
+	}
+	if len(gotAcks) != 3 {
+		t.Fatalf("expected 3 acknowledgements, got %d", len(gotAcks))
+	}
+	got := map[string][]string{}
+	for _, gotAck := range gotAcks {
+		key := "success"
+		if gotAck.err != nil {
+			key = gotAck.err.Error()
+		}
+		got[key] = append(got[key], gotAck.ids...)
+	}
+	if len(got[firstErr.Error()]) != 1 || got[firstErr.Error()][0] != "record-0" {
+		t.Fatalf("expected first error for [record-0], got %v", got[firstErr.Error()])
+	}
+	if len(got[thirdErr.Error()]) != 1 || got[thirdErr.Error()][0] != "record-2" {
+		t.Fatalf("expected third error for [record-2], got %v", got[thirdErr.Error()])
+	}
+	if len(got["success"]) != 1 || got["success"][0] != "record-1" {
+		t.Fatalf("expected successful record [record-1], got %v", got["success"])
+	}
+}
+
+func TestWriterUpsertGeneralErrorAfterFullConsumption(t *testing.T) {
+	upsertErr := errors.New("upsert failed after full consumption")
+	var gotAcks []ack
+	w := New("test", state.TargetUser, func(_ context.Context, _ connectors.Targets, records connectors.Records, _ types.Type) error {
+		for range records.All() {
+		}
+		return upsertErr
+	}, types.Type{}, func(ids []string, err error) {
+		gotAcks = append(gotAcks, ack{ids: ids, err: err})
+	})
+	for i := range 2 {
+		if !w.Write(t.Context(), fmt.Sprintf("record-%d", i), map[string]any{"value": i}) {
+			t.Fatalf("record %d: expected Write to succeed, got false", i)
+		}
+	}
+	err := w.Close(t.Context())
+	if !errors.Is(err, upsertErr) {
+		t.Fatalf("expected Close error %v, got %v", upsertErr, err)
+	}
+	if len(gotAcks) != 1 || !errors.Is(gotAcks[0].err, upsertErr) {
+		t.Fatalf("expected one failed acknowledgement, got %v", gotAcks)
+	}
+}
+
+func TestWriterUpsertGeneralErrorAfterPartialConsumption(t *testing.T) {
+	upsertErr := errors.New("upsert failed after partial consumption")
+	var calls int
+	var consumed []string
+	var gotAcks []ack
+	w := New("test", state.TargetUser, func(_ context.Context, _ connectors.Targets, records connectors.Records, _ types.Type) error {
+		calls++
+		count := 0
+		for record := range records.All() {
+			consumed = append(consumed, record.ID)
+			count++
+			if count == 2 {
+				break
+			}
+		}
+		return upsertErr
+	}, types.Type{}, func(ids []string, err error) {
+		gotAcks = append(gotAcks, ack{ids: ids, err: err})
+	})
+	for i := range 4 {
+		if !w.Write(t.Context(), fmt.Sprintf("record-%d", i), map[string]any{"value": i}) {
+			t.Fatalf("record %d: expected Write to succeed, got false", i)
+		}
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+	defer cancel()
+	err := w.Close(ctx)
+	if !errors.Is(err, upsertErr) {
+		t.Fatalf("expected Close error %v, got %v", upsertErr, err)
+	}
+	if calls != 1 {
+		t.Fatalf("expected 1 Upsert call, got %d", calls)
+	}
+	if len(consumed) != 2 || consumed[0] != "record-0" || consumed[1] != "record-1" {
+		t.Fatalf("expected consumed IDs [record-0 record-1], got %v", consumed)
+	}
+	if len(gotAcks) != 1 || !errors.Is(gotAcks[0].err, upsertErr) || len(gotAcks[0].ids) != 4 {
+		t.Fatalf("expected all 4 records to be acknowledged with the Upsert error, got %v", gotAcks)
+	}
+}
+
+func TestWriterUpsertGeneralErrorBeforeConsumption(t *testing.T) {
+	upsertErr := errors.New("upsert failed before consumption")
+	var calls int
+	var gotAcks []ack
+	w := New("test", state.TargetUser, func(_ context.Context, _ connectors.Targets, _ connectors.Records, _ types.Type) error {
+		calls++
+		return upsertErr
+	}, types.Type{}, func(ids []string, err error) {
+		gotAcks = append(gotAcks, ack{ids: ids, err: err})
+	})
+	for i := range 2 {
+		if !w.Write(t.Context(), fmt.Sprintf("record-%d", i), map[string]any{"value": i}) {
+			t.Fatalf("record %d: expected Write to succeed, got false", i)
+		}
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+	defer cancel()
+	err := w.Close(ctx)
+	if !errors.Is(err, upsertErr) {
+		t.Fatalf("expected Close error %v, got %v", upsertErr, err)
+	}
+	if calls != 1 {
+		t.Fatalf("expected 1 Upsert call, got %d", calls)
+	}
+	if len(gotAcks) != 1 || !errors.Is(gotAcks[0].err, upsertErr) || len(gotAcks[0].ids) != 2 {
+		t.Fatalf("expected both records to be acknowledged with the Upsert error, got %v", gotAcks)
+	}
+}
+
 type ack struct {
 	ids []string
 	err error

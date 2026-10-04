@@ -15,17 +15,25 @@ import (
 	"testing"
 	"time"
 
+	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func TestSimulatedAccountGeneration(t *testing.T) {
+type simulatedSystemRecordState struct {
+	UpdatedAt time.Time
+	Data      string
+}
+
+func TestSimulatedSystemGeneration(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
 	k := krenalistester.NewKrenalisInstance(t)
-	k.SetSyntheticPhotosDir(simulatedAccountCatalogFixture(t))
+	k.SetSyntheticPhotosDir(simulatedSystemCatalogFixture(t))
 	k.Start()
 	defer k.Stop()
 
@@ -82,7 +90,7 @@ func TestSimulatedAccountGeneration(t *testing.T) {
 		change func(map[string]any)
 		want   string
 	}{
-		{"count above limit", func(body map[string]any) { body["userCount"] = 1_000_001 }, "userCount must be between"},
+		{"count above limit", func(body map[string]any) { body["userCount"] = 10_000_001 }, "userCount must be between"},
 		{"unsupported country", func(body map[string]any) { body["countries"] = map[string]int{"FR": 40} }, "not supported"},
 		{"empty countries", func(body map[string]any) { body["countries"] = map[string]int{} }, "countries must contain IT"},
 		{"percent above limit", func(body map[string]any) { body["duplicateRecordPercent"] = 50.01 }, "duplicateRecordPercent must be between"},
@@ -94,11 +102,11 @@ func TestSimulatedAccountGeneration(t *testing.T) {
 				body[key] = value
 			}
 			test.change(body)
-			assertEnvironmentBadRequest(t, k.TryCall("POST", "/v1/simulated-accounts", nil, body, nil), test.want)
+			assertEnvironmentBadRequest(t, k.TryCall("POST", "/v1/simulated/systems", nil, body, nil), test.want)
 		})
 	}
 	var before int
-	k.QueryRowTestDatabase(t.Context(), &before, "SELECT COUNT(*) FROM simulated_accounts WHERE workspace = $1", workspace.ID)
+	k.QueryRowTestDatabase(t.Context(), &before, "SELECT COUNT(*) FROM simulated_systems WHERE workspace = $1", workspace.ID)
 	if before != 0 {
 		t.Fatalf("expected no metadata after invalid requests, got %d", before)
 	}
@@ -106,38 +114,36 @@ func TestSimulatedAccountGeneration(t *testing.T) {
 	var created struct {
 		ID string `json:"id"`
 	}
-	k.Call("POST", "/v1/simulated-accounts", nil, valid, &created)
+	k.Call("POST", "/v1/simulated/systems", nil, valid, &created)
 	deadline := time.Now().Add(45 * time.Second)
 	var detail struct {
 		Status               string         `json:"status"`
 		UserCount            int            `json:"userCount"`
 		GeneratedRecordCount int            `json:"generatedRecordCount"`
-		GenerationError      string         `json:"generationError"`
 		Countries            map[string]int `json:"countries"`
 	}
 	for {
-		k.Call("GET", "/v1/simulated-accounts/"+created.ID, nil, nil, &detail)
-		if detail.Status == "Ready" || detail.Status == "Failed" || time.Now().After(deadline) {
+		k.Call("GET", "/v1/simulated/systems/"+created.ID, nil, nil, &detail)
+		if detail.Status == "Available" || detail.Status == "Failed" || time.Now().After(deadline) {
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	if detail.Status != "Ready" || detail.UserCount != 513 || detail.GeneratedRecordCount != 513 ||
-		detail.GenerationError != "" || detail.Countries["IT"] != 40 {
+	if detail.Status != "Available" || detail.UserCount != 513 || detail.GeneratedRecordCount != 513 || detail.Countries["IT"] != 40 {
 		t.Fatalf("expected completed account with 513 records, got %+v", detail)
 	}
 	var ordinary map[string]json.Value
-	k.Call("GET", "/v1/simulated-accounts/"+created.ID, nil, nil, &ordinary)
-	for _, field := range []string{"oracle", "personID", "generationCheckpoint"} {
+	k.Call("GET", "/v1/simulated/systems/"+created.ID, nil, nil, &ordinary)
+	for _, field := range []string{"oracle", "personID", "generationCheckpoint", "generationPolicyVersion", "generationError"} {
 		if _, ok := ordinary[field]; ok {
 			t.Fatalf("expected no %s in ordinary API payload, got %s", field, ordinary[field])
 		}
 	}
 	var progressEvents int
 	k.QueryRowTestDatabase(t.Context(), &progressEvents,
-		"SELECT COUNT(*) FROM notifications WHERE name = 'UpdateSimulatedAccountGeneration'")
+		"SELECT COUNT(*) FROM notifications WHERE name = 'UpdateSimulatedSystemGeneration'")
 	if progressEvents < 4 {
-		t.Fatalf("expected three batch checkpoints and Ready notification, got %d events", progressEvents)
+		t.Fatalf("expected three batch checkpoints and Available notification, got %d events", progressEvents)
 	}
 
 	warehousePool, err := krenalistester.ConnectionPool(t.Context(), settings)
@@ -147,23 +153,72 @@ func TestSimulatedAccountGeneration(t *testing.T) {
 	defer warehousePool.Close()
 	var total, unique int
 	err = warehousePool.QueryRow(t.Context(), "SELECT COUNT(*), COUNT(DISTINCT external_id)"+
-		" FROM krenalis_simulated_account_records WHERE simulated_account_id = $1", created.ID).Scan(&total, &unique)
+		" FROM krenalis_simulated_system_records WHERE simulated_system = $1", created.ID).Scan(&total, &unique)
 	if err != nil {
 		t.Fatalf("expected warehouse record counts, got %v", err)
 	}
 	if total != 513 || unique != 513 {
 		t.Fatalf("expected 513 distinct warehouse records, got total=%d unique=%d", total, unique)
 	}
-	var data string
-	err = warehousePool.QueryRow(t.Context(), "SELECT data::text FROM krenalis_simulated_account_records"+
-		" WHERE simulated_account_id = $1 LIMIT 1", created.ID).Scan(&data)
+	var timestamped int
+	var earliestUpdatedAt time.Time
+	err = warehousePool.QueryRow(t.Context(), "SELECT COUNT(updated_at), MIN(updated_at)"+
+		" FROM krenalis_simulated_system_records WHERE simulated_system = $1", created.ID).Scan(&timestamped, &earliestUpdatedAt)
+	if err != nil {
+		t.Fatalf("expected generated record timestamps, got %v", err)
+	}
+	if timestamped != total || earliestUpdatedAt.Location() != time.UTC || earliestUpdatedAt.Nanosecond()%1000 != 0 {
+		t.Fatalf("expected UTC microsecond generated timestamps, got count=%d timestamp=%v", timestamped, earliestUpdatedAt)
+	}
+	var externalID, data string
+	err = warehousePool.QueryRow(t.Context(), "SELECT external_id, data::text FROM krenalis_simulated_system_records"+
+		" WHERE simulated_system = $1 LIMIT 1", created.ID).Scan(&externalID, &data)
 	if err != nil {
 		t.Fatalf("expected ordinary warehouse record, got %v", err)
 	}
-	if !strings.Contains(data, "source_record_id") || !strings.Contains(data, "photo_url") ||
-		strings.Contains(data, "person_id") || strings.Contains(data, "oracle") || strings.Contains(data, "role") {
-		t.Fatalf("expected ordinary customer document without Oracle or role, got %s", data)
+	var document map[string]json.Value
+	err = json.Unmarshal([]byte(data), &document)
+	if err != nil {
+		t.Fatalf("expected generated customer document JSON, got %v", err)
 	}
+	for _, field := range []string{"customer_id", "gender", "birth_date", "current_age", "site_url", "address", "photo"} {
+		if _, ok := document[field]; !ok {
+			t.Fatalf("expected generated customer document field %q, got %s", field, data)
+		}
+	}
+	var customerID string
+	err = json.Unmarshal(document["customer_id"], &customerID)
+	if err != nil || customerID != externalID {
+		t.Fatalf("expected customer_id to equal external_id %q, got %q", externalID, customerID)
+	}
+	var photo string
+	err = json.Unmarshal(document["photo"], &photo)
+	if err != nil || !strings.HasPrefix(photo, "http://"+k.Addr()+"/photos/") {
+		t.Fatalf("expected absolute Krenalis photo URL, got %q", photo)
+	}
+	for _, field := range []string{"source_record_id", "photo_id", "photo_url", "country", "person_id", "oracle", "role"} {
+		if _, ok := document[field]; ok {
+			t.Fatalf("expected generated customer document field %q to be absent, got %s", field, data)
+		}
+	}
+	simulatedConnection := k.CreateConnection(krenalistester.ConnectionToCreate{
+		Name: "Simulated Application source", Role: krenalistester.Source, Connector: "simulated-application",
+		Settings: krenalistester.JSONEncodeSettings(map[string]any{"account": created.ID}),
+	})
+	if schemas := k.PipelineSchemas(simulatedConnection, core.TargetUser, ""); schemas["in"] == nil {
+		t.Fatalf("expected Simulated Application source schema, got %v", schemas)
+	}
+	simulatedSourceSchema := types.Object([]types.Property{{Name: "email", Type: types.String().AsEmail(), ReadOptional: true}})
+	simulatedOutputSchema := types.Object([]types.Property{
+		{Name: "email", Type: types.String().AsEmail().WithMaxLength(254), ReadOptional: true},
+	})
+	pipeline := k.CreatePipeline(simulatedConnection, "User", krenalistester.PipelineToSet{
+		Name: "Read Simulated Application users", Enabled: true, InSchema: simulatedSourceSchema,
+		OutSchema:      simulatedOutputSchema,
+		Transformation: &krenalistester.Transformation{Mapping: map[string]string{"email": "email"}},
+	})
+	runID := k.StartPipelineRun(pipeline)
+	k.WaitForRunsCompletion(runID)
 
 	_, err = warehousePool.Exec(t.Context(), "CREATE SEQUENCE simulated_generation_attempts")
 	if err != nil {
@@ -178,7 +233,7 @@ func TestSimulatedAccountGeneration(t *testing.T) {
 		t.Fatalf("expected warehouse write gate function, got %v", err)
 	}
 	_, err = warehousePool.Exec(t.Context(), `CREATE TRIGGER simulated_generation_reject_insert
-		BEFORE INSERT ON krenalis_simulated_account_records FOR EACH ROW
+		BEFORE INSERT ON krenalis_simulated_system_records FOR EACH ROW
 		EXECUTE FUNCTION simulated_generation_reject_insert()`)
 	if err != nil {
 		t.Fatalf("expected warehouse write gate, got %v", err)
@@ -186,7 +241,7 @@ func TestSimulatedAccountGeneration(t *testing.T) {
 	var beforeWrite struct {
 		ID string `json:"id"`
 	}
-	k.Call("POST", "/v1/simulated-accounts", nil, map[string]any{
+	k.Call("POST", "/v1/simulated/systems", nil, map[string]any{
 		"name": "before write", "userCount": 1,
 		"countries": map[string]int{"IT": 1},
 	}, &beforeWrite)
@@ -207,16 +262,16 @@ func TestSimulatedAccountGeneration(t *testing.T) {
 	}
 	var beforeWriteCount int
 	k.QueryRowTestDatabase(t.Context(), &beforeWriteCount,
-		"SELECT generated_record_count FROM simulated_accounts WHERE id = $1", beforeWrite.ID)
-	err = warehousePool.QueryRow(t.Context(), "SELECT COUNT(*) FROM krenalis_simulated_account_records"+
-		" WHERE simulated_account_id = $1", beforeWrite.ID).Scan(&total)
+		"SELECT generated_record_count FROM simulated_systems WHERE id = $1", beforeWrite.ID)
+	err = warehousePool.QueryRow(t.Context(), "SELECT COUNT(*) FROM krenalis_simulated_system_records"+
+		" WHERE simulated_system = $1", beforeWrite.ID).Scan(&total)
 	if err != nil {
 		t.Fatalf("expected blocked warehouse count, got %v", err)
 	}
 	if beforeWriteCount != 0 || total != 0 {
 		t.Fatalf("expected no progress before a successful write, got count=%d rows=%d", beforeWriteCount, total)
 	}
-	_, err = warehousePool.Exec(t.Context(), "DROP TRIGGER simulated_generation_reject_insert ON krenalis_simulated_account_records")
+	_, err = warehousePool.Exec(t.Context(), "DROP TRIGGER simulated_generation_reject_insert ON krenalis_simulated_system_records")
 	if err != nil {
 		t.Fatalf("expected warehouse write gate removal, got %v", err)
 	}
@@ -232,20 +287,20 @@ func TestSimulatedAccountGeneration(t *testing.T) {
 	var beforeWriteStatus string
 	for {
 		k.QueryRowTestDatabase(t.Context(), &beforeWriteStatus,
-			"SELECT status::text FROM simulated_accounts WHERE id = $1", beforeWrite.ID)
-		if beforeWriteStatus == "Ready" || time.Now().After(deadline) {
+			"SELECT status::text FROM simulated_systems WHERE id = $1", beforeWrite.ID)
+		if beforeWriteStatus == "Available" || time.Now().After(deadline) {
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	if beforeWriteStatus != "Ready" {
-		t.Fatalf("expected account Ready after warehouse write recovery, got %s", beforeWriteStatus)
+	if beforeWriteStatus != "Available" {
+		t.Fatalf("expected account Available after warehouse write recovery, got %s", beforeWriteStatus)
 	}
 
 	k.ExecQueryTestDatabase(t.Context(), "CREATE TABLE simulated_generation_test_phase (phase text NOT NULL)")
 	k.ExecQueryTestDatabase(t.Context(), "INSERT INTO simulated_generation_test_phase VALUES ('checkpoint')")
 	k.ExecQueryTestDatabase(t.Context(), "CREATE SEQUENCE simulated_generation_checkpoint_attempts")
-	k.ExecQueryTestDatabase(t.Context(), "CREATE SEQUENCE simulated_generation_ready_attempts")
+	k.ExecQueryTestDatabase(t.Context(), "CREATE SEQUENCE simulated_generation_available_attempts")
 	k.ExecQueryTestDatabase(t.Context(), `CREATE FUNCTION simulated_generation_gate() RETURNS trigger AS $$
 		DECLARE current_phase text;
 		BEGIN
@@ -254,31 +309,31 @@ func TestSimulatedAccountGeneration(t *testing.T) {
 				PERFORM nextval('simulated_generation_checkpoint_attempts');
 				RAISE EXCEPTION 'checkpoint blocked by test';
 			END IF;
-			IF current_phase = 'ready' AND NEW.status = 'Ready' THEN
-				PERFORM nextval('simulated_generation_ready_attempts');
-				RAISE EXCEPTION 'Ready blocked by test';
+			IF current_phase = 'available' AND NEW.status = 'Available' THEN
+				PERFORM nextval('simulated_generation_available_attempts');
+				RAISE EXCEPTION 'Available blocked by test';
 			END IF;
 			RETURN NEW;
 		END; $$ LANGUAGE plpgsql`)
 	k.ExecQueryTestDatabase(t.Context(), `CREATE TRIGGER simulated_generation_gate
-		BEFORE UPDATE ON simulated_accounts FOR EACH ROW EXECUTE FUNCTION simulated_generation_gate()`)
+		BEFORE UPDATE ON simulated_systems FOR EACH ROW EXECUTE FUNCTION simulated_generation_gate()`)
 	var replay struct {
 		ID string `json:"id"`
 	}
-	k.Call("POST", "/v1/simulated-accounts", nil, map[string]any{
+	k.Call("POST", "/v1/simulated/systems", nil, map[string]any{
 		"name": "replay", "userCount": 3,
 		"duplicateRecordPercent": 50, "countries": map[string]int{"IT": 1},
 	}, &replay)
 	deadline = time.Now().Add(25 * time.Second)
 	var replayRows, savedCount int
 	for {
-		err = warehousePool.QueryRow(t.Context(), "SELECT COUNT(*) FROM krenalis_simulated_account_records"+
-			" WHERE simulated_account_id = $1", replay.ID).Scan(&replayRows)
+		err = warehousePool.QueryRow(t.Context(), "SELECT COUNT(*) FROM krenalis_simulated_system_records"+
+			" WHERE simulated_system = $1", replay.ID).Scan(&replayRows)
 		if err != nil {
 			t.Fatalf("expected replay warehouse count, got %v", err)
 		}
 		k.QueryRowTestDatabase(t.Context(), &savedCount,
-			"SELECT generated_record_count FROM simulated_accounts WHERE id = $1", replay.ID)
+			"SELECT generated_record_count FROM simulated_systems WHERE id = $1", replay.ID)
 		if replayRows == 3 || time.Now().After(deadline) {
 			break
 		}
@@ -287,6 +342,7 @@ func TestSimulatedAccountGeneration(t *testing.T) {
 	if replayRows != 3 || savedCount != 0 {
 		t.Fatalf("expected warehouse write before blocked checkpoint, got rows=%d saved=%d", replayRows, savedCount)
 	}
+	beforeReplayRecords := querySimulatedSystemRecords(t, warehousePool, replay.ID)
 	deadline = time.Now().Add(20 * time.Second)
 	attempted = false
 	for {
@@ -300,81 +356,92 @@ func TestSimulatedAccountGeneration(t *testing.T) {
 		t.Fatal("expected a blocked checkpoint attempt, got none")
 	}
 	k.QueryRowTestDatabase(t.Context(), &savedCount,
-		"SELECT generated_record_count FROM simulated_accounts WHERE id = $1", replay.ID)
+		"SELECT generated_record_count FROM simulated_systems WHERE id = $1", replay.ID)
 	if savedCount != 0 {
 		t.Fatalf("expected blocked checkpoint to remain zero, got %d", savedCount)
 	}
 	k.RestartServer(t.Context())
 	var restarted struct {
-		Status               string `json:"status"`
-		GeneratedRecordCount int    `json:"generatedRecordCount"`
+		Status string `json:"status"`
 	}
-	k.Call("GET", "/v1/simulated-accounts/"+replay.ID, nil, nil, &restarted)
-	if restarted.Status != "Preparing" || restarted.GeneratedRecordCount != 0 {
+	k.Call("GET", "/v1/simulated/systems/"+replay.ID, nil, nil, &restarted)
+	k.QueryRowTestDatabase(t.Context(), &savedCount,
+		"SELECT generated_record_count FROM simulated_systems WHERE id = $1", replay.ID)
+	if restarted.Status != "Preparing" || savedCount != 0 {
 		t.Fatalf("expected persisted Preparing checkpoint after restart, got %+v", restarted)
 	}
-	k.ExecQueryTestDatabase(t.Context(), "UPDATE simulated_generation_test_phase SET phase = 'ready'")
+	k.ExecQueryTestDatabase(t.Context(), "UPDATE simulated_generation_test_phase SET phase = 'available'")
 	deadline = time.Now().Add(20 * time.Second)
 	var replayStatus string
 	for {
 		k.QueryRowTestDatabase(t.Context(), &savedCount,
-			"SELECT generated_record_count FROM simulated_accounts WHERE id = $1", replay.ID)
+			"SELECT generated_record_count FROM simulated_systems WHERE id = $1", replay.ID)
 		k.QueryRowTestDatabase(t.Context(), &replayStatus,
-			"SELECT status::text FROM simulated_accounts WHERE id = $1", replay.ID)
+			"SELECT status::text FROM simulated_systems WHERE id = $1", replay.ID)
 		if savedCount == 3 || time.Now().After(deadline) {
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
 	if savedCount != 3 || replayStatus != "Preparing" {
-		t.Fatalf("expected final checkpoint before Ready, got count=%d status=%s", savedCount, replayStatus)
+		t.Fatalf("expected final checkpoint before Available, got count=%d status=%s", savedCount, replayStatus)
 	}
 	deadline = time.Now().Add(20 * time.Second)
 	attempted = false
 	for {
-		k.QueryRowTestDatabase(t.Context(), &attempted, "SELECT is_called FROM simulated_generation_ready_attempts")
+		k.QueryRowTestDatabase(t.Context(), &attempted, "SELECT is_called FROM simulated_generation_available_attempts")
 		if attempted || time.Now().After(deadline) {
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
 	if !attempted {
-		t.Fatal("expected a blocked Ready transition, got none")
+		t.Fatal("expected a blocked Available transition, got none")
 	}
 	k.ExecQueryTestDatabase(t.Context(), "UPDATE simulated_generation_test_phase SET phase = 'none'")
 	deadline = time.Now().Add(20 * time.Second)
 	for {
 		k.QueryRowTestDatabase(t.Context(), &replayStatus,
-			"SELECT status::text FROM simulated_accounts WHERE id = $1", replay.ID)
-		if replayStatus == "Ready" || time.Now().After(deadline) {
+			"SELECT status::text FROM simulated_systems WHERE id = $1", replay.ID)
+		if replayStatus == "Available" || time.Now().After(deadline) {
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	if replayStatus != "Ready" {
-		t.Fatalf("expected replayed account Ready, got %s", replayStatus)
+	if replayStatus != "Available" {
+		t.Fatalf("expected replayed account Available, got %s", replayStatus)
 	}
-	err = warehousePool.QueryRow(t.Context(), "SELECT COUNT(*) FROM krenalis_simulated_account_records"+
-		" WHERE simulated_account_id = $1", replay.ID).Scan(&replayRows)
+	err = warehousePool.QueryRow(t.Context(), "SELECT COUNT(*) FROM krenalis_simulated_system_records"+
+		" WHERE simulated_system = $1", replay.ID).Scan(&replayRows)
 	if err != nil {
 		t.Fatalf("expected replayed warehouse count, got %v", err)
 	}
 	if replayRows != 3 {
 		t.Fatalf("expected exactly three rows after replay, got %d", replayRows)
 	}
+	afterReplayRecords := querySimulatedSystemRecords(t, warehousePool, replay.ID)
+	if len(beforeReplayRecords) != 3 || len(afterReplayRecords) != 3 {
+		t.Fatalf("expected three replay records, got before=%d after=%d", len(beforeReplayRecords), len(afterReplayRecords))
+	}
+	for id, before := range beforeReplayRecords {
+		after, ok := afterReplayRecords[id]
+		if !ok || after.Data != before.Data {
+			t.Fatalf("expected replay record %s payload to remain unchanged, got before=%+v after=%+v", id, before, after)
+		}
+	}
 	k.ExecQueryTestDatabase(t.Context(), "UPDATE simulated_generation_test_phase SET phase = 'checkpoint'")
 	var failed struct {
 		ID string `json:"id"`
 	}
-	k.Call("POST", "/v1/simulated-accounts", nil, map[string]any{
+	k.Call("POST", "/v1/simulated/systems", nil, map[string]any{
 		"name": "unavailable configuration", "userCount": 1,
 		"countries": map[string]int{"IT": 1},
 	}, &failed)
 	deadline = time.Now().Add(20 * time.Second)
 	var failedRows int
 	for {
-		err = warehousePool.QueryRow(t.Context(), "SELECT COUNT(*) FROM krenalis_simulated_account_records"+
-			" WHERE simulated_account_id = $1", failed.ID).Scan(&failedRows)
+		err = warehousePool.QueryRow(t.Context(), "SELECT COUNT(*) FROM krenalis_simulated_system_records"+
+			" WHERE simulated_system = $1", failed.ID).Scan(&failedRows)
 		if err != nil {
 			t.Fatalf("expected failed account warehouse count, got %v", err)
 		}
@@ -386,14 +453,57 @@ func TestSimulatedAccountGeneration(t *testing.T) {
 	if failedRows != 1 {
 		t.Fatalf("expected one written record before configuration failure, got %d", failedRows)
 	}
-	k.ExecQueryTestDatabase(t.Context(), `UPDATE simulated_accounts
+	var originalCheckpoint string
+	k.QueryRowTestDatabase(t.Context(), &originalCheckpoint,
+		"SELECT generation_checkpoint::text FROM simulated_systems WHERE id = $1", failed.ID)
+	k.ExecQueryTestDatabase(t.Context(), `CREATE SEQUENCE simulated_failure_terminal_attempts;
+		CREATE FUNCTION reject_simulated_failure_terminal() RETURNS trigger LANGUAGE plpgsql AS $body$
+		BEGIN IF NEW.status = 'Failed' THEN PERFORM nextval('simulated_failure_terminal_attempts');
+		RAISE EXCEPTION 'terminal metadata transition blocked'; END IF; RETURN NEW; END $body$;
+		CREATE TRIGGER reject_simulated_failure_terminal BEFORE UPDATE ON simulated_systems
+		FOR EACH ROW EXECUTE FUNCTION reject_simulated_failure_terminal()`)
+	k.ExecQueryTestDatabase(t.Context(), `UPDATE simulated_systems
 		SET generation_checkpoint = jsonb_set(generation_checkpoint, '{catalogSHA256}', '"missing"'::jsonb)
 		WHERE id = $1`, failed.ID)
 	k.ExecQueryTestDatabase(t.Context(), "UPDATE simulated_generation_test_phase SET phase = 'none'")
 	deadline = time.Now().Add(20 * time.Second)
 	for {
+		var attempted bool
+		k.QueryRowTestDatabase(t.Context(), &attempted, "SELECT is_called FROM simulated_failure_terminal_attempts")
+		if attempted {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("expected a sealed generation with blocked terminal metadata, got no attempt")
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	var pendingFailure bool
+	k.QueryRowTestDatabase(t.Context(), &pendingFailure,
+		"SELECT status = 'Preparing' AND generation_error <> '' FROM simulated_systems WHERE id = $1", failed.ID)
+	if !pendingFailure {
+		t.Fatal("expected durable failure intent before revocation, got none")
+	}
+	var sealedGeneration int64
+	if err := warehousePool.QueryRow(t.Context(),
+		"SELECT generation FROM krenalis_simulated_system_writers WHERE simulated_system = $1", failed.ID).Scan(&sealedGeneration); err != nil {
+		t.Fatalf("expected sealed Preparing authority, got %v", err)
+	}
+	if sealedGeneration != 1 {
+		t.Fatalf("expected generation zero revoked, got fence %d", sealedGeneration)
+	}
+
+	// Restore the configuration: a restarted worker must finish the persisted
+	// failure rather than attempt generation under the irrevocably sealed token.
+	k.ExecQueryTestDatabase(t.Context(), "UPDATE simulated_systems SET generation_checkpoint = $1::jsonb WHERE id = $2",
+		originalCheckpoint, failed.ID)
+	k.RestartServer(t.Context())
+	k.ExecQueryTestDatabase(t.Context(), `DROP TRIGGER reject_simulated_failure_terminal ON simulated_systems;
+		DROP FUNCTION reject_simulated_failure_terminal(); DROP SEQUENCE simulated_failure_terminal_attempts`)
+	deadline = time.Now().Add(20 * time.Second)
+	for {
 		k.QueryRowTestDatabase(t.Context(), &replayStatus,
-			"SELECT status::text FROM simulated_accounts WHERE id = $1", failed.ID)
+			"SELECT status::text FROM simulated_systems WHERE id = $1", failed.ID)
 		if replayStatus == "Failed" || time.Now().After(deadline) {
 			break
 		}
@@ -403,66 +513,92 @@ func TestSimulatedAccountGeneration(t *testing.T) {
 		t.Fatalf("expected unavailable account Failed, got %s", replayStatus)
 	}
 	var failedDetail struct {
-		Status          string `json:"status"`
-		GenerationError string `json:"generationError"`
+		Status string `json:"status"`
 	}
-	k.Call("GET", "/v1/simulated-accounts/"+failed.ID, nil, nil, &failedDetail)
-	if failedDetail.Status != "Failed" || failedDetail.GenerationError == "" || len(failedDetail.GenerationError) > 256 {
+	k.Call("GET", "/v1/simulated/systems/"+failed.ID, nil, nil, &failedDetail)
+	var generationError string
+	k.QueryRowTestDatabase(t.Context(), &generationError,
+		"SELECT generation_error FROM simulated_systems WHERE id = $1", failed.ID)
+	if failedDetail.Status != "Failed" || generationError == "" || len(generationError) > 256 {
 		t.Fatalf("expected bounded failed status, got %+v", failedDetail)
 	}
 	var afterFailed struct {
 		ID string `json:"id"`
 	}
-	k.Call("POST", "/v1/simulated-accounts", nil, map[string]any{
+	k.Call("POST", "/v1/simulated/systems", nil, map[string]any{
 		"name": "after failure", "userCount": 1,
 		"countries": map[string]int{"IT": 1},
 	}, &afterFailed)
 	deadline = time.Now().Add(20 * time.Second)
 	for {
 		k.QueryRowTestDatabase(t.Context(), &replayStatus,
-			"SELECT status::text FROM simulated_accounts WHERE id = $1", afterFailed.ID)
-		if replayStatus == "Ready" || time.Now().After(deadline) {
+			"SELECT status::text FROM simulated_systems WHERE id = $1", afterFailed.ID)
+		if replayStatus == "Available" || time.Now().After(deadline) {
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	if replayStatus != "Ready" {
-		t.Fatalf("expected next account Ready after failure, got %s", replayStatus)
+	if replayStatus != "Available" {
+		t.Fatalf("expected next account Available after failure, got %s", replayStatus)
 	}
-	k.ExecQueryTestDatabase(t.Context(), "DROP TRIGGER simulated_generation_gate ON simulated_accounts")
+	k.ExecQueryTestDatabase(t.Context(), "DROP TRIGGER simulated_generation_gate ON simulated_systems")
 	k.ExecQueryTestDatabase(t.Context(), "DROP FUNCTION simulated_generation_gate()")
 	k.ExecQueryTestDatabase(t.Context(), "DROP TABLE simulated_generation_test_phase")
 	k.ExecQueryTestDatabase(t.Context(), "DROP SEQUENCE simulated_generation_checkpoint_attempts")
-	k.ExecQueryTestDatabase(t.Context(), "DROP SEQUENCE simulated_generation_ready_attempts")
+	k.ExecQueryTestDatabase(t.Context(), "DROP SEQUENCE simulated_generation_available_attempts")
 
-	_, err = warehousePool.Exec(t.Context(), `UPDATE krenalis_simulated_account_records
-		SET data = '{"terminal_marker":true}'::jsonb WHERE simulated_account_id = $1
-		AND external_id = (SELECT MIN(external_id) FROM krenalis_simulated_account_records
-			WHERE simulated_account_id = $1)`, created.ID)
+	_, err = warehousePool.Exec(t.Context(), `UPDATE krenalis_simulated_system_records
+		SET data = '{"terminal_marker":true}'::jsonb WHERE simulated_system = $1
+		AND external_id = (SELECT MIN(external_id) FROM krenalis_simulated_system_records
+			WHERE simulated_system = $1)`, created.ID)
 	if err != nil {
 		t.Fatalf("expected terminal record marker, got %v", err)
 	}
 	time.Sleep(6 * time.Second)
 	var markerCount int
-	err = warehousePool.QueryRow(t.Context(), `SELECT COUNT(*) FROM krenalis_simulated_account_records
-		WHERE simulated_account_id = $1 AND data = '{"terminal_marker":true}'::jsonb`, created.ID).Scan(&markerCount)
+	err = warehousePool.QueryRow(t.Context(), `SELECT COUNT(*) FROM krenalis_simulated_system_records
+		WHERE simulated_system = $1 AND data = '{"terminal_marker":true}'::jsonb`, created.ID).Scan(&markerCount)
 	if err != nil {
 		t.Fatalf("expected terminal marker query, got %v", err)
 	}
 	if markerCount != 1 {
 		t.Fatalf("expected terminal record not to be regenerated, got %d markers", markerCount)
 	}
-	_, err = warehousePool.Exec(t.Context(), "DROP TABLE krenalis_simulated_account_records")
+	_, err = warehousePool.Exec(t.Context(), "DROP TABLE krenalis_simulated_system_records")
 	if err != nil {
 		t.Fatalf("expected isolated warehouse table removal, got %v", err)
 	}
-	k.Call("GET", "/v1/simulated-accounts/"+created.ID, nil, nil, &detail)
-	if detail.Status != "Ready" || detail.GeneratedRecordCount != 513 {
+	k.Call("GET", "/v1/simulated/systems/"+created.ID, nil, nil, &detail)
+	if detail.Status != "Available" {
 		t.Fatalf("expected operational progress without warehouse count, got %+v", detail)
 	}
 }
 
-func simulatedAccountCatalogFixture(t *testing.T) string {
+func querySimulatedSystemRecords(t *testing.T, pool *pgxpool.Pool, account string) map[string]simulatedSystemRecordState {
+	t.Helper()
+	rows, err := pool.Query(t.Context(), "SELECT external_id, updated_at, data::text FROM krenalis_simulated_system_records"+
+		" WHERE simulated_system = $1 ORDER BY external_id", account)
+	if err != nil {
+		t.Fatalf("expected simulated system timestamps query, got %v", err)
+	}
+	defer rows.Close()
+	result := map[string]simulatedSystemRecordState{}
+	for rows.Next() {
+		var id string
+		var updatedAt time.Time
+		var data string
+		if err := rows.Scan(&id, &updatedAt, &data); err != nil {
+			t.Fatalf("expected simulated system record scan, got %v", err)
+		}
+		result[id] = simulatedSystemRecordState{UpdatedAt: updatedAt, Data: data}
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("expected simulated system record rows, got %v", err)
+	}
+	return result
+}
+
+func simulatedSystemCatalogFixture(t *testing.T) string {
 	t.Helper()
 	root := filepath.Join("..", "tools", "fakedata", "testdata", "fakefacegen-v1-selected")
 	directory := t.TempDir()

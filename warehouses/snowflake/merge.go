@@ -29,6 +29,11 @@ import (
 
 // merge performs a table merge operation.
 func merge(ctx context.Context, conn *sql.Conn, table warehouses.Table, rows [][]any, deleted []any) error {
+	return mergeWithSimulatedSystemWriter(ctx, conn, table, rows, deleted, nil)
+}
+
+// mergeWithSimulatedSystemWriter stages rows before acquiring warehouse authority.
+func mergeWithSimulatedSystemWriter(ctx context.Context, conn *sql.Conn, table warehouses.Table, rows [][]any, deleted []any, writer *simulatedSystemWriter) error {
 
 	quotedColumn := make(map[string]string, len(table.Columns))
 	for _, column := range table.Columns {
@@ -196,6 +201,9 @@ func merge(ctx context.Context, conn *sql.Conn, table warehouses.Table, rows [][
 	}
 
 	// Merge the temporary table's rows with the destination table's rows.
+	if writer != nil {
+		return mergeSimulatedSystemWriter(ctx, conn, *writer, merge)
+	}
 	_, err = conn.ExecContext(ctx, merge)
 	if err != nil {
 		return err

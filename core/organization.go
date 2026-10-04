@@ -542,7 +542,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 	}
 
 	// Initialize the data warehouse.
-	err = this.core.datastore.Initialize(ctx, this.organization.ID, warehouse.Platform, settings, profileSchema)
+	err = this.core.datastore.Initialize(ctx, this.organization.ID, warehouse.Platform, settings, profileSchema, warehouses.Environment(env))
 	if err != nil {
 		if err, ok := err.(*datastore.UnavailableError); ok {
 			return "", errors.Unavailable("%s", err)
@@ -647,13 +647,63 @@ func (this *Organization) DeleteAccessKey(ctx context.Context, id string) error 
 }
 
 // Delete deletes the organization.
+//
+// It returns an errors.NotFoundError if the organization does not exist. It
+// returns an errors.UnprocessableError with code SimulatedSystemPreparing if a
+// simulated system is still being prepared or SimulatedSystemInUse if
+// simulated systems remain in its workspaces.
 func (this *Organization) Delete(ctx context.Context) error {
 	this.core.mustBeOpen()
 	n := state.DeleteOrganization{ID: this.organization.ID}
 	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		exists, err := tx.QueryExists(ctx, "SELECT FROM organizations WHERE id = $1 FOR UPDATE", n.ID)
+		if err != nil {
+			return nil, err
+		}
+		if !exists {
+			return nil, errors.NotFound("organization %q does not exist", n.ID)
+		}
+		err = tx.QueryScan(ctx, "SELECT id FROM workspaces WHERE organization = $1 FOR UPDATE", n.ID,
+			func(rows *db.Rows) error {
+				for rows.Next() {
+					var id string
+					err := rows.Scan(&id)
+					if err != nil {
+						return err
+					}
+				}
+				return rows.Err()
+			})
+		if err != nil {
+			return nil, err
+		}
+		var accountID string
+		var status state.SimulatedSystemStatus
+		err = tx.QueryRow(ctx, "SELECT a.id, a.status FROM simulated_systems AS a "+
+			"INNER JOIN workspaces AS w ON w.id = a.workspace WHERE w.organization = $1 "+
+			"ORDER BY CASE a.status WHEN 'Deleting' THEN 0 WHEN 'Preparing' THEN 1 ELSE 2 END, a.id LIMIT 1", n.ID).
+			Scan(&accountID, &status)
+		if err != nil {
+			if err != sql.ErrNoRows {
+				return nil, err
+			}
+		}
+		if err == nil {
+			switch status {
+			case state.SimulatedSystemDeleting:
+				return nil, errors.Unprocessable(SimulatedSystemInUse,
+					"simulated system %s is still being cleaned up", accountID)
+			case state.SimulatedSystemPreparing:
+				return nil, errors.Unprocessable(SimulatedSystemPreparing,
+					"simulated system %s is still being prepared", accountID)
+			default:
+				return nil, errors.Unprocessable(SimulatedSystemInUse,
+					"simulated system %s and its connections must be deleted before the organization", accountID)
+			}
+		}
 		// Mark the organization's pipeline functions as discontinued.
 		now := time.Now().UTC()
-		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, organization, discontinued_at)\n"+
+		_, err = tx.Exec(ctx, "INSERT INTO discontinued_functions (id, organization, discontinued_at)\n"+
 			"SELECT p.transformation_id, w.organization, $1\n"+
 			"FROM pipelines AS p\n"+
 			"INNER JOIN connections AS c ON p.connection = c.id\n"+

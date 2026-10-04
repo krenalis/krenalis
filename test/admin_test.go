@@ -7,6 +7,7 @@ package test
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -117,7 +118,8 @@ func TestAdmin(t *testing.T) {
 			email VARCHAR(300),
 			first_name VARCHAR(300),
 			last_name VARCHAR(300)
-		);`
+		);
+		CREATE SCHEMA simulated_selector;`
 		_, err = pool.Exec(context.Background(), query)
 		if err != nil {
 			t.Fatalf("error while executing query on PostgreSQL database: %s", err)
@@ -125,16 +127,35 @@ func TestAdmin(t *testing.T) {
 		t.Logf("table 'users' created on PostgreSQL database %q", dbDatabase)
 	}
 
+	// Give the real simulated connector browser tests an isolated Development warehouse.
+	var simulatedWorkspace struct{ ID string }
+	k.Call("POST", "/v1/workspaces", http.Header{"Krenalis-Workspace": nil}, map[string]any{
+		"name": "Simulated selector", "environment": "development",
+		"profileSchema": map[string]any{"kind": "object", "properties": []map[string]any{{
+			"name": "email", "type": map[string]any{"kind": "string", "semantic": "email"}, "readOptional": true,
+		}}},
+		"warehouse": map[string]any{"platform": "PostgreSQL", "mode": "Normal", "settings": map[string]any{
+			"host": dbHost, "port": dbPort, "username": dbUsername, "password": dbPassword,
+			"database": dbDatabase, "schema": "simulated_selector",
+		}},
+	}, &simulatedWorkspace)
+	var unavailableSystem struct{ ID string }
+	k.Call("POST", "/v1/simulated/systems", http.Header{"Krenalis-Workspace": {simulatedWorkspace.ID}},
+		map[string]any{"name": "Unavailable selector fixture", "userCount": 0}, &unavailableSystem)
+	k.ExecQueryTestDatabase(t.Context(), "UPDATE simulated_systems SET status = 'Failed' WHERE id = $1", unavailableSystem.ID)
+	k.RestartServer(t.Context())
+
 	// Write the "test-config.json" file.
 	testConfig := map[string]any{
-		"baseURL":     "http://" + k.Addr(),
-		"workspaceID": k.WorkspaceID(),
-		"dbHost":      dbHost,
-		"dbPort":      dbPort,
-		"dbUsername":  dbUsername,
-		"dbPassword":  dbPassword,
-		"dbName":      dbDatabase,
-		"dbSchema":    dbSchema,
+		"baseURL":              "http://" + k.Addr(),
+		"workspaceID":          k.WorkspaceID(),
+		"simulatedWorkspaceID": simulatedWorkspace.ID,
+		"dbHost":               dbHost,
+		"dbPort":               dbPort,
+		"dbUsername":           dbUsername,
+		"dbPassword":           dbPassword,
+		"dbName":               dbDatabase,
+		"dbSchema":             dbSchema,
 	}
 	testConfigJSONPath := filepath.Join("..", "admin", "tests", "test-config.json")
 	f, err := os.OpenFile(testConfigJSONPath, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0666)
@@ -153,6 +174,12 @@ func TestAdmin(t *testing.T) {
 
 	// Prepare and run the Admin tests.
 	adminDir := filepath.Join("..", "admin")
+	if os.Getenv("KRENALIS_TEST_ADMIN_GREP") != "" {
+		// Filtered runs do not execute the authentication suite's email setup.
+		k.Call("PUT", "/v1/members/current", nil, map[string]any{
+			"memberToSet": map[string]any{"name": "ACME inc", "email": "test@krenalis.com"},
+		}, nil)
+	}
 
 	// TODO(Gianluca): commented as workaround for https://github.com/krenalis/krenalis/issues/2164.
 	// run(t, "npm", []string{"install"}, adminDir, fsTempDir.Root())
@@ -164,7 +191,11 @@ func TestAdmin(t *testing.T) {
 			" so the test is considered to have failed as a precaution." +
 			" For more details, see the documentation for the constant 'passUIFlagToPlaywright'.")
 	} else {
-		run(t, "npx", []string{"playwright", "test"}, adminDir, fsTempDir.Root())
+		args := []string{"playwright", "test"}
+		if grep := os.Getenv("KRENALIS_TEST_ADMIN_GREP"); grep != "" {
+			args = append(args, "--grep", grep)
+		}
+		run(t, "npx", args, adminDir, fsTempDir.Root())
 	}
 
 	// The tests have been run, so the temporary directory used by File System

@@ -53,7 +53,6 @@ type Connection struct {
 	Connector         string        `json:"connector"`
 	ConnectorType     ConnectorType `json:"connectorType"`
 	Role              Role          `json:"role"`
-	SimulatedAccount  string        `json:"simulatedAccount,omitempty"`
 	Strategy          *Strategy     `json:"strategy"`
 	SendingMode       *SendingMode  `json:"sendingMode"`
 	LinkedConnections []string      `json:"linkedConnections,omitempty"`
@@ -1870,9 +1869,6 @@ func (this *Connection) UnlinkConnection(ctx context.Context, dst string) error 
 }
 
 // Update updates the connection.
-//
-// It returns an errors.UnprocessableError with code SimulatedAccountNotExist
-// if the simulated account does not exist in the connection workspace.
 func (this *Connection) Update(ctx context.Context, connection ConnectionToSet) error {
 
 	this.core.mustBeOpen()
@@ -1888,14 +1884,10 @@ func (this *Connection) Update(ctx context.Context, connection ConnectionToSet) 
 	}
 
 	n := state.UpdateConnection{
-		Connection:       this.connection.ID,
-		Name:             connection.Name,
-		Strategy:         (*state.Strategy)(connection.Strategy),
-		SendingMode:      (*state.SendingMode)(connection.SendingMode),
-		SimulatedAccount: connection.SimulatedAccount,
-	}
-	if connection.SimulatedAccount != nil && *connection.SimulatedAccount != "" && !IsValidID(*connection.SimulatedAccount) {
-		return errors.BadRequest("simulated account identifier %q is not valid", *connection.SimulatedAccount)
+		Connection:  this.connection.ID,
+		Name:        connection.Name,
+		Strategy:    (*state.Strategy)(connection.Strategy),
+		SendingMode: (*state.SendingMode)(connection.SendingMode),
 	}
 
 	c := this.connection.Connector()
@@ -1932,25 +1924,9 @@ func (this *Connection) Update(ctx context.Context, connection ConnectionToSet) 
 	}
 
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		query := "UPDATE connections SET name = $1, strategy = $2, sending_mode = $3"
-		args := []any{n.Name, n.Strategy, n.SendingMode}
-		if n.SimulatedAccount != nil {
-			var simulatedAccount any
-			if *n.SimulatedAccount != "" {
-				simulatedAccount = *n.SimulatedAccount
-			}
-			query += ", simulated_account = $4 WHERE id = $5"
-			args = append(args, simulatedAccount, n.Connection)
-		} else {
-			query += " WHERE id = $4"
-			args = append(args, n.Connection)
-		}
-		result, err := tx.Exec(ctx, query, args...)
+		result, err := tx.Exec(ctx, "UPDATE connections SET name = $1, strategy = $2, sending_mode = $3 WHERE id = $4",
+			n.Name, n.Strategy, n.SendingMode, n.Connection)
 		if err != nil {
-			if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "connections_workspace_simulated_account_fkey" {
-				return nil, errors.Unprocessable(SimulatedAccountNotExist,
-					"simulated account %s does not exist in the connection workspace", *n.SimulatedAccount)
-			}
 			return nil, err
 		}
 		if result.RowsAffected() == 0 {
@@ -2427,9 +2403,7 @@ func (role *Role) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// ConnectionToSet represents a connection to set in a workspace, by creating a
-// new connection (using the method Workspace.CreateConnection) or updating an
-// existing one (using the method Connection.Update).
+// ConnectionToSet contains the values to update on an existing connection.
 type ConnectionToSet struct {
 
 	// Name is the name of the connection. It cannot be longer than 100 runes.
@@ -2445,10 +2419,6 @@ type ConnectionToSet struct {
 	// destination application connections that support it. In this case, it must be
 	// one of the sending modes supported by the application.
 	SendingMode *SendingMode `json:"sendingMode"`
-
-	// SimulatedAccount is the identifier of the simulated account. A nil value
-	// leaves the current account unchanged; a pointer to an empty string clears it.
-	SimulatedAccount *string `json:"simulatedAccount,omitempty"`
 }
 
 // tempFunctionProvider is a function provider that creates a function at each

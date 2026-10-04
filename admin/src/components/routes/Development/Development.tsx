@@ -20,12 +20,12 @@ const Development = () => {
 		<div className='development'>
 			<div className='route-content'>
 				<div className='development__content'>
-					<Link path='simulated-accounts'>
+					<Link path='simulated-world'>
 						<ListTile
 							className='development__item'
 							icon={<SlIcon name='database' />}
-							name='Simulated accounts'
-							description='Create and manage simulated connector accounts'
+							name='Simulated world'
+							description='Create simulated applications for development, testing and demos.'
 							showHover={true}
 							action={<SlIcon name='chevron-right' />}
 						/>

@@ -63,7 +63,6 @@ type ConnectionToCreate struct {
 	Name              string       `json:"name"`
 	Role              Role         `json:"role"`
 	Connector         string       `json:"connector"`
-	SimulatedAccount  string       `json:"simulatedAccount,omitempty"`
 	Strategy          *Strategy    `json:"strategy"`
 	LinkedConnections []string     `json:"linkedConnections"`
 	SendingMode       *SendingMode `json:"sendingMode"`

@@ -131,15 +131,17 @@ func (ds *Datastore) Close() {
 // corresponding columns.
 //
 // organization is the ID of the organization performing the operation.
+// environment determines whether development-only warehouse tables are
+// initialized.
 //
 // It returns a SettingsError error if the settings are not valid, and a
 // *datastore.UnavailableError error if an error occurs with the data warehouse.
-func (ds *Datastore) Initialize(ctx context.Context, organization, platform string, settings json.Value, profileSchema types.Type) error {
+func (ds *Datastore) Initialize(ctx context.Context, organization, platform string, settings json.Value, profileSchema types.Type, environment warehouses.Environment) error {
 	ds.mustBeOpen()
 	dw := warehouses.Registered(platform).New(newSettingsLoader(settings), dialer.DialWith(organization))
 	defer dw.Close()
 	profileColumns := util.PropertiesToColumns(profileSchema.Properties())
-	err := dw.Initialize(ctx, profileColumns)
+	err := dw.Initialize(ctx, environment, profileColumns)
 	if err != nil {
 		return unavailableError(err)
 	}

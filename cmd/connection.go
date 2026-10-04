@@ -440,10 +440,14 @@ func (connection connection) Update(_ http.ResponseWriter, r *http.Request) (any
 	}
 	var body struct {
 		core.ConnectionToSet
+		SimulatedSystem json.Value `json:"simulatedSystem"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
+	}
+	if body.SimulatedSystem != nil {
+		return nil, errors.BadRequest("simulatedSystem cannot be updated")
 	}
 	err = c.Update(r.Context(), body.ConnectionToSet)
 	return nil, err

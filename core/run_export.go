@@ -220,7 +220,7 @@ Records:
 
 			if transformer == nil {
 				for _, profile := range profiles {
-					if !writer.Write(ctx, "", profile.Record.Attributes) {
+					if !writer.Write(ctx, profile.ID, profile.Record.Attributes) {
 						break Records
 					}
 				}

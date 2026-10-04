@@ -31,7 +31,7 @@ const ConnectorRadios = ({ name, label, options, error, val, onChange }: Connect
 			<SlRadioGroup value={value} label={label} name={name} onSlChange={onRadioGroupChange}>
 				{options.map((opt, _) => {
 					return (
-						<SlRadio key={opt.value} value={opt.value}>
+						<SlRadio key={opt.value} value={opt.value} disabled={opt.disabled}>
 							{opt.text}
 						</SlRadio>
 					);

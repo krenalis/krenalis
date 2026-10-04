@@ -63,23 +63,24 @@ import (
 // produced while handling the request. Use [WithRequestID] to add a request ID
 // to a context and [RequestID] to retrieve it.
 type Core struct {
-	db                *dbpkg.DB
-	stream            streams.Stream
-	dbPoolMetrics     *dbPoolMetrics
-	state             *state.State
-	datastore         *datastore.Datastore
-	connections       *connections.Connections
-	metrics           *metrics.Metrics
-	collector         *collector.Collector
-	functionProvider  transformers.FunctionProvider
-	pipelineCleaner   *pipelineCleaner
-	pipelineScheduler *pipelineScheduler
-	simulatedCatalog  *fakedata.FaceCatalog
-	simulatedWorker   *simulatedAccountWorker
-	localLiveRuns     cancelContexts
-	memberEmailFrom   string
-	smtp              *SMTPConfig
-	close             struct {
+	db                    *dbpkg.DB
+	stream                streams.Stream
+	dbPoolMetrics         *dbPoolMetrics
+	state                 *state.State
+	datastore             *datastore.Datastore
+	connections           *connections.Connections
+	metrics               *metrics.Metrics
+	collector             *collector.Collector
+	functionProvider      transformers.FunctionProvider
+	pipelineCleaner       *pipelineCleaner
+	pipelineScheduler     *pipelineScheduler
+	simulatedCatalog      *fakedata.FaceCatalog
+	simulatedPhotoBaseURL string
+	simulatedWorker       *simulatedSystemWorker
+	localLiveRuns         cancelContexts
+	memberEmailFrom       string
+	smtp                  *SMTPConfig
+	close                 struct {
 		ctx       context.Context
 		cancelCtx context.CancelFunc
 		sync.WaitGroup
@@ -112,6 +113,7 @@ type Config struct {
 	MaxQueuedEventsPerDestination int
 	PrometheusMetricsEnabled      bool
 	SimulatedFaceCatalog          *fakedata.FaceCatalog
+	SimulatedPhotoBaseURL         string
 	DatabaseInitialization        struct {
 		// InitIfEmpty controls whether the PostgreSQL database should be
 		// initialized in case it is empty.
@@ -343,7 +345,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}()
 
 	// Init the connections.
-	core.connections = connections.New(core.state)
+	core.connections = connections.New(core.state, core.datastore)
 
 	// Connect to the NATS server.
 	core.stream, err = nats.Connect(conf.NATS.Options)
@@ -386,7 +388,8 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 
 	core.close.ctx, core.close.cancelCtx = context.WithCancel(context.Background())
 	core.simulatedCatalog = conf.SimulatedFaceCatalog
-	core.simulatedWorker = newSimulatedAccountWorker(core)
+	core.simulatedPhotoBaseURL = conf.SimulatedPhotoBaseURL
+	core.simulatedWorker = newSimulatedSystemWorker(core)
 
 	// Instantiate a warehouses.Warehouse, used by the MCP server, for every workspace.
 	core.mcp = map[string]warehouses.Warehouse{}
@@ -1492,23 +1495,86 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 
 		// Attempt to acquire the run. If already acquired by another node, return early.
 		bo := backoff.New(200)
+		var claimedSimulatedSystem *string
+		var writerGeneration int64
 		for bo.Next(core.close.ctx) {
 			pingTime := time.Now().UTC()
-			result, err := core.db.Exec(core.close.ctx,
-				"UPDATE pipelines_runs SET node = $1, ping_time = $2 WHERE id = $3 AND node IS NULL",
-				core.state.ID(), pingTime, run.ID)
+			var claimed, occupied bool
+			err := core.state.Transaction(core.close.ctx, func(tx *dbpkg.Tx) (any, error) {
+				var connector, role string
+				var simulatedSystem sql.NullString
+				err := tx.QueryRow(core.close.ctx,
+					"SELECT c.connector, c.role, c.simulated_system FROM pipelines_runs AS r "+
+						"INNER JOIN pipelines AS p ON p.id = r.pipeline "+
+						"INNER JOIN connections AS c ON c.id = p.connection "+
+						"WHERE r.id = $1 AND r.node IS NULL FOR UPDATE OF c", run.ID).
+					Scan(&connector, &role, &simulatedSystem)
+				if err != nil {
+					if err == sql.ErrNoRows {
+						return nil, nil
+					}
+					return nil, err
+				}
+				var account any
+				if connector == "simulated-application" && role == "Destination" && simulatedSystem.Valid {
+					account = simulatedSystem.String
+					err := tx.QueryRow(core.close.ctx,
+						"UPDATE simulated_systems SET claimed_run = $2, claim_ping_time = $3, "+
+							"writer_generation = writer_generation + 2 WHERE id = $1 AND claimed_run IS NULL "+
+							"AND status = 'Available' AND writer_generation <= 9223372036854775805 "+
+							"RETURNING writer_generation", simulatedSystem.String, run.ID, pingTime).Scan(&writerGeneration)
+					if err != nil {
+						if err == sql.ErrNoRows {
+							occupied = true
+							return nil, nil
+						}
+						return nil, err
+					}
+				}
+				result, err := tx.Exec(core.close.ctx,
+					"UPDATE pipelines_runs SET node = $1, ping_time = $2, simulated_system = $4 "+
+						"WHERE id = $3 AND node IS NULL", core.state.ID(), pingTime, run.ID, account)
+				if err != nil {
+					return nil, err
+				}
+				claimed = result.RowsAffected() > 0
+				if !claimed && account != nil {
+					return nil, fmt.Errorf("simulated system reservation lost its pipeline run")
+				}
+				if claimed && connector == "simulated-application" && role == "Destination" {
+					value := ""
+					if simulatedSystem.Valid {
+						value = simulatedSystem.String
+					}
+					claimedSimulatedSystem = &value
+				}
+				return nil, nil
+			})
 			if err != nil {
 				if core.close.ctx.Err() == nil {
 					slog.Error("core: cannot start pipeline run; retrying", "retry_after", bo.WaitTime(), "error", err)
 				}
 				continue
 			}
-			// If the run no longer exists, or it is assigned to another node,
-			// do nothing.
-			if result.RowsAffected() == 0 {
+			if occupied {
+				bo.SetCap(5 * time.Second)
+				continue
+			}
+			if !claimed {
 				return
 			}
 			break
+		}
+		if claimedSimulatedSystem != nil && *claimedSimulatedSystem != "" {
+			defer func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				err := core.releaseSimulatedSystemWriter(ctx, pipeline.Connection().Workspace().ID,
+					*claimedSimulatedSystem, run.ID, writerGeneration, nil)
+				if err != nil {
+					slog.Error("core: cannot release simulated system reservation", "run", run.ID, "error", err)
+				}
+			}()
 		}
 		if core.close.ctx.Err() != nil {
 			// The context has been canceled.
@@ -1522,6 +1588,13 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 			panic("core: duplicate local live run")
 		}
 		defer core.localLiveRuns.Cancel(run.ID)
+		var stillExists bool
+		claimErr := core.db.QueryRow(executionCtx,
+			"SELECT EXISTS (SELECT FROM pipelines_runs WHERE id = $1 AND pipeline = $2)", run.ID, pipeline.ID).
+			Scan(&stillExists)
+		if claimErr != nil || !stillExists {
+			return
+		}
 
 		// Ping the run.
 		pingCtx, stopPing := context.WithCancel(executionCtx)
@@ -1531,9 +1604,33 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 				select {
 				case <-ticker.C:
 					pingTime := time.Now().UTC()
-					_, err := core.db.Exec(pingCtx, "UPDATE pipelines_runs SET ping_time = $1 WHERE id = $2", pingTime, id)
-					if err != nil && pingCtx.Err() == nil {
-						slog.Error("core: cannot update pipeline run ping time", "error", err)
+					result, err := core.db.Exec(pingCtx, "UPDATE pipelines_runs SET ping_time = $1 WHERE id = $2", pingTime, id)
+					if err != nil {
+						if pingCtx.Err() == nil {
+							slog.Error("core: cannot update pipeline run ping time", "error", err)
+						}
+						if claimedSimulatedSystem != nil && *claimedSimulatedSystem != "" {
+							core.localLiveRuns.Cancel(id)
+							return
+						}
+						continue
+					}
+					if claimedSimulatedSystem != nil && *claimedSimulatedSystem != "" {
+						if result.RowsAffected() == 0 {
+							core.localLiveRuns.Cancel(id)
+							return
+						}
+						result, err = core.db.Exec(pingCtx,
+							"UPDATE simulated_systems SET claim_ping_time = $1 WHERE id = $2 AND claimed_run = $3",
+							pingTime, *claimedSimulatedSystem, id)
+						if err != nil {
+							core.localLiveRuns.Cancel(id)
+							return
+						}
+						if result.RowsAffected() == 0 {
+							core.localLiveRuns.Cancel(id)
+							return
+						}
 					}
 				case <-pingCtx.Done():
 					return
@@ -1594,7 +1691,15 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 			return
 		}
 		connection := &Connection{core: core, store: store, connection: c}
-		p := &Pipeline{core: core, pipeline: pipeline, connection: connection}
+		if claimedSimulatedSystem != nil && *claimedSimulatedSystem != "" {
+			err := store.FenceSimulatedSystem(executionCtx, *claimedSimulatedSystem, writerGeneration)
+			if err != nil {
+				_ = core.endLiveRun(core.close.ctx, run, err)
+				return
+			}
+		}
+		p := &Pipeline{core: core, pipeline: pipeline, connection: connection,
+			simulatedSystem: claimedSimulatedSystem, writerGeneration: writerGeneration}
 
 		var err error
 		if c.Role == state.Source {

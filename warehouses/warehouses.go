@@ -148,6 +148,17 @@ func (e *RejectedReadOnlyQueryError) Error() string {
 	return e.Msg
 }
 
+// Environment identifies the workspace environment used to initialize or
+// repair a warehouse.
+type Environment int8
+
+const (
+	// Production is the production workspace environment.
+	Production Environment = iota
+	// Development is the development workspace environment.
+	Development
+)
+
 // Warehouse is the interface implemented by warehouses.
 type Warehouse interface {
 
@@ -210,7 +221,8 @@ type Warehouse interface {
 	// Initialize initializes the data warehouse.
 	// The given profile schema will be used by the initialization to build the
 	// profile tables on the warehouse with the corresponding columns.
-	Initialize(ctx context.Context, profileColumns []Column) error
+	// env determines which environment-specific tables are initialized.
+	Initialize(ctx context.Context, env Environment, profileColumns []Column) error
 
 	// Merge performs a table merge operation.
 	// If handles row updates, inserts, and deletions. table specifies the target
@@ -315,7 +327,8 @@ type Warehouse interface {
 	// This method should only be called on warehouses that have already been
 	// initialized, with the aim of correcting any extraordinary issues (such as
 	// accidental table deletions) in an attempt to make Krenalis functional again.
-	Repair(ctx context.Context, profileColumns []Column) error
+	// env determines which environment-specific tables are repaired.
+	Repair(ctx context.Context, env Environment, profileColumns []Column) error
 
 	// Truncate truncates the specified table.
 	Truncate(ctx context.Context, table string) error

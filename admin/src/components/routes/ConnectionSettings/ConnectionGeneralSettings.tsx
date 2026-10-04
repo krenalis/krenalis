@@ -34,6 +34,11 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 
 	const onNameInput = (e) => {
 		const value = e.target.value;
+		// HTML maxlength counts UTF-16 units; the backend counts Unicode characters.
+		if (Array.from(value).length > 100) {
+			e.target.value = connectionToSet.name;
+			return;
+		}
 		const c = { ...connectionToSet };
 		c.name = value;
 		setConnectionToSet(c);
@@ -101,7 +106,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 				className='connection-settings__name-field'
 				value={connectionToSet.name}
 				onSlInput={onNameInput}
-				maxlength={100}
+				maxlength={200}
 			/>
 
 			{showStrategy && (

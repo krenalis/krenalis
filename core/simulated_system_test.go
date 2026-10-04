@@ -11,7 +11,7 @@ import (
 	"github.com/krenalis/krenalis/tools/json"
 )
 
-func TestValidateSimulatedAccountConfiguration(t *testing.T) {
+func TestValidateSimulatedSystemConfiguration(t *testing.T) {
 	tests := []struct {
 		name        string
 		userCount   json.Value
@@ -24,12 +24,12 @@ func TestValidateSimulatedAccountConfiguration(t *testing.T) {
 		{name: "IT", userCount: json.Value("0"), countries: json.Value(`{"IT": 40}`)},
 		{name: "one", userCount: json.Value("1"), countries: json.Value(`{"IT": 40}`)},
 		{name: "fractional percent", userCount: json.Value("101"), duplicate: json.Value("10.01"), countries: json.Value(`{"IT": 40}`)},
-		{name: "one million", userCount: json.Value("1000000"), duplicate: json.Value("50"), countries: json.Value(`{"IT": 100}`)},
+		{name: "ten million", userCount: json.Value("10000000"), duplicate: json.Value("50"), countries: json.Value(`{"IT": 100}`)},
 		{name: "missing user count", countries: json.Value(`{"IT": 100}`), wantErrText: "userCount is required"},
 		{name: "missing countries", userCount: json.Value("1"), countries: json.Value("{}"), wantErrText: "countries must contain IT"},
 		{name: "negative user count", userCount: json.Value("-1"), countries: json.Value(`{"IT": 100}`), wantErrText: "userCount must be between"},
 		{name: "fractional user count", userCount: json.Value("0.5"), countries: json.Value(`{"IT": 100}`), wantErrText: "userCount must be an integer"},
-		{name: "too many users", userCount: json.Value("1000001"), countries: json.Value(`{"IT": 100}`), wantErrText: "userCount must be between"},
+		{name: "too many users", userCount: json.Value("10000001"), countries: json.Value(`{"IT": 100}`), wantErrText: "userCount must be between"},
 		{name: "duplicate percent for empty", userCount: json.Value("0"), duplicate: json.Value("1"), countries: json.Value("{}"), wantErrText: "duplicateRecordPercent must be 0"},
 		{name: "duplicate percent above limit", userCount: json.Value("1"), duplicate: json.Value("50.01"), countries: json.Value(`{"IT": 100}`), wantErrText: "duplicateRecordPercent must be between"},
 		{name: "duplicate percent negative", userCount: json.Value("1"), duplicate: json.Value("-0.01"), countries: json.Value(`{"IT": 100}`), wantErrText: "duplicateRecordPercent must be between"},
@@ -42,7 +42,7 @@ func TestValidateSimulatedAccountConfiguration(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, _, _, err := validateSimulatedAccountConfiguration(test.userCount, test.duplicate, test.countries)
+			_, _, _, err := validateSimulatedSystemConfiguration(test.userCount, test.duplicate, test.countries)
 			if test.wantErrText == "" {
 				if err != nil {
 					t.Fatalf("expected valid configuration, got %v", err)
@@ -57,4 +57,26 @@ func TestValidateSimulatedAccountConfiguration(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSimulatedSystemJSONOmitsGenerationBookkeeping(t *testing.T) {
+
+	account := SimulatedSystem{
+		GenerationPolicyVersion: "generation-v2",
+		GeneratedRecordCount:    10,
+		GenerationError:         "preparation failed",
+	}
+	data, err := json.Marshal(account)
+	if err != nil {
+		t.Fatalf("expected simulated system JSON, got %v", err)
+	}
+	if !strings.Contains(string(data), `"generatedRecordCount":10`) {
+		t.Fatalf("expected public generation progress, got %s", data)
+	}
+	for _, field := range []string{"generationPolicyVersion", "generationError", "generationCheckpoint", "claimedRun", "claimPingTime", "writerGeneration"} {
+		if strings.Contains(string(data), `"`+field+`"`) {
+			t.Fatalf("expected simulated system JSON without %s, got %s", field, data)
+		}
+	}
+
 }

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/krenalis/krenalis/core/internal/dialer"
 	"github.com/krenalis/krenalis/core/internal/schemas"
@@ -81,18 +82,19 @@ var destinationsProfilesTable = warehouses.Table{
 	Keys: []string{"_pipeline", "_external_id"},
 }
 
-var simulatedAccountRecordsTable = warehouses.Table{
-	Name: "krenalis_simulated_account_records",
+var simulatedSystemRecordsTable = warehouses.Table{
+	Name: "krenalis_simulated_system_records",
 	Columns: []warehouses.Column{
-		{Name: "simulated_account_id", Type: types.String()},
+		{Name: "simulated_system", Type: types.String()},
 		{Name: "external_id", Type: types.String()},
+		{Name: "updated_at", Type: types.DateTime()},
 		{Name: "data", Type: types.JSON()},
 	},
-	Keys: []string{"simulated_account_id", "external_id"},
+	Keys: []string{"simulated_system", "external_id"},
 }
 
-// SimulatedAccountRecord is one ordinary record to materialize.
-type SimulatedAccountRecord struct {
+// SimulatedSystemRecord is one ordinary record to materialize.
+type SimulatedSystemRecord struct {
 	ID   string
 	Data json.Value
 }
@@ -234,28 +236,34 @@ func (store *Store) DeleteDestinationProfiles(ctx context.Context, pipeline stri
 	return store.warehouse().Delete(ctx, "krenalis_destination_profiles", where)
 }
 
-// DeleteSimulatedAccountRecords deletes the records of the provided simulated
+// DeleteSimulatedSystemRecords deletes the records of the provided simulated
 // account.
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
 // If an error occurs with the data warehouse, it returns an *UnavailableError
 // error.
-func (store *Store) DeleteSimulatedAccountRecords(ctx context.Context, account string) error {
+func (store *Store) DeleteSimulatedSystemRecords(ctx context.Context, account string) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
 	if err != nil {
 		return err
 	}
 	defer done()
-	where := warehouses.NewBaseExpr(
-		warehouses.Column{Name: "simulated_account_id", Type: types.String()}, warehouses.OpIs, account)
-	err = store.warehouse().Delete(ctx, "krenalis_simulated_account_records", where)
+	writer, ok := ctx.Value(simulatedSystemWriterKey{}).(simulatedSystemWriter)
+	if !ok || writer.system != account || writer.generation%2 != 1 {
+		return errors.New("simulated system cleanup authority is missing")
+	}
+	warehouse, ok := store.warehouse().(simulatedSystemWarehouse)
+	if !ok {
+		return unavailableError(errors.New("warehouse does not support simulated system writer fencing"))
+	}
+	err = warehouse.DeleteSimulatedSystemRecords(ctx, account, writer.generation)
 	return unavailableError(err)
 }
 
-// CountSimulatedAccountRecords counts records belonging to one account.
-func (store *Store) CountSimulatedAccountRecords(ctx context.Context, account string) (int, error) {
+// CountSimulatedSystemRecords counts records belonging to one account.
+func (store *Store) CountSimulatedSystemRecords(ctx context.Context, account string) (int, error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
 	if err != nil {
@@ -263,30 +271,39 @@ func (store *Store) CountSimulatedAccountRecords(ctx context.Context, account st
 	}
 	defer done()
 	where := warehouses.NewBaseExpr(
-		warehouses.Column{Name: "simulated_account_id", Type: types.String()}, warehouses.OpIs, account)
-	count, err := store.warehouse().Count(ctx, simulatedAccountRecordsTable.Name, nil, where)
+		warehouses.Column{Name: "simulated_system", Type: types.String()}, warehouses.OpIs, account)
+	count, err := store.warehouse().Count(ctx, simulatedSystemRecordsTable.Name, nil, where)
 	if err != nil {
 		return 0, unavailableError(err)
 	}
 	if count < 0 || count > math.MaxInt32 {
-		return 0, unavailableError(fmt.Errorf("warehouse returned simulated account count outside the supported range"))
+		return 0, unavailableError(fmt.Errorf("warehouse returned simulated system count outside the supported range"))
 	}
 	return count, nil
 }
 
-// MergeSimulatedAccountRecords writes an idempotent batch for one account.
-func (store *Store) MergeSimulatedAccountRecords(ctx context.Context, account string, records []SimulatedAccountRecord) error {
+// MergeSimulatedSystemRecords writes an idempotent batch for one account.
+func (store *Store) MergeSimulatedSystemRecords(ctx context.Context, account string, records []SimulatedSystemRecord) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
 	if err != nil {
 		return err
 	}
 	defer done()
+	updatedAt := time.Now().UTC().Truncate(time.Microsecond)
 	rows := make([][]any, len(records))
 	for i, record := range records {
-		rows[i] = []any{account, record.ID, record.Data}
+		rows[i] = []any{account, record.ID, updatedAt, record.Data}
 	}
-	err = store.warehouse().Merge(ctx, simulatedAccountRecordsTable, rows, nil)
+	warehouse, ok := store.warehouse().(simulatedSystemWarehouse)
+	if !ok {
+		return unavailableError(errors.New("warehouse does not support simulated system writer fencing"))
+	}
+	err = warehouse.FenceSimulatedSystem(ctx, account, 0)
+	if err != nil {
+		return unavailableError(err)
+	}
+	err = warehouse.MergeSimulatedSystemRecords(ctx, account, 0, simulatedSystemRecordsTable, rows)
 	return unavailableError(err)
 }
 
@@ -656,7 +673,12 @@ func (store *Store) Repair(ctx context.Context, userSchema types.Type) error {
 	}
 	defer done()
 	profileColumns := util.PropertiesToColumns(userSchema.Properties())
-	return store.warehouse().Repair(ctx, profileColumns)
+	env := warehouses.Production
+	workspace, ok := store.ds.state.Workspace(store.workspace)
+	if ok && workspace.Environment == state.Development {
+		env = warehouses.Development
+	}
+	return store.warehouse().Repair(ctx, env, profileColumns)
 }
 
 // ResolveIdentities resolves the identities on the store's workspace.

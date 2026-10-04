@@ -20,6 +20,8 @@ import (
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/connections/httpclient"
+	"github.com/krenalis/krenalis/core/internal/datastore"
+	"github.com/krenalis/krenalis/core/internal/simulated"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
@@ -142,14 +144,68 @@ type Writer interface {
 // Connections provides access to application, database, file, file storage,
 // SDK, and message broker connections.
 type Connections struct {
-	state *state.State
-	http  *httpclient.HTTP
+	state     *state.State
+	datastore *datastore.Datastore
+	http      *httpclient.HTTP
 }
 
 // New returns a new *Connections value.
-func New(state *state.State) *Connections {
+func New(state *state.State, datastore *datastore.Datastore) *Connections {
 	h := httpclient.New(state, http.DefaultTransport.(*http.Transport))
-	return &Connections{state: state, http: h}
+	return &Connections{state: state, datastore: datastore, http: h}
+}
+
+func (c *Connections) simulatedApplicationStore(workspace, account string) (*simulated.Store, error) {
+	if workspace == "" {
+		return nil, errors.New("simulated application workspace is missing")
+	}
+	ws, ok := c.state.Workspace(workspace)
+	if !ok {
+		return nil, errors.New("simulated application workspace does not exist")
+	}
+	if ws.Environment != state.Development {
+		return nil, errors.New("simulated application is only available in development workspaces")
+	}
+	store, ok := c.datastore.Store(workspace)
+	if !ok {
+		return nil, errors.New("simulated application workspace datastore does not exist")
+	}
+	return simulated.NewStore(workspace, account, c.state, store)
+}
+
+func (c *Connections) applicationExtra(connection *state.Connection, simulatedSystem *string) (any, error) {
+	return c.applicationExtraWithWriter(connection, simulatedSystem, nil)
+}
+
+func (c *Connections) applicationExtraWithWriter(connection *state.Connection, simulatedSystem *string, generation *int64) (any, error) {
+	if connection.Connector().Code != simulated.ApplicationCode {
+		return nil, nil
+	}
+	if simulatedSystem != nil {
+		store, err := c.simulatedApplicationStore(connection.Workspace().ID, *simulatedSystem)
+		if err != nil {
+			return nil, err
+		}
+		if generation != nil {
+			err = store.AuthorizeWriter(*generation)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return store, nil
+	}
+	account, ok := connection.SimulatedSystem()
+	if !ok {
+		return nil, connectors.NewInvalidSettingsError("simulated application connection has no simulated system binding")
+	}
+	return c.simulatedApplicationStore(connection.Workspace().ID, account.ID)
+}
+
+func (c *Connections) applicationExtraForConfig(code string, conf *ConnectorConfig) (any, error) {
+	if code != simulated.ApplicationCode {
+		return nil, nil
+	}
+	return c.simulatedApplicationStore(conf.Workspace, "")
 }
 
 // AuthorizationEndpoint returns the OAuth authorization endpoint URI for the

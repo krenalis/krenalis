@@ -63,15 +63,21 @@ func (warehouse *Snowflake) CanInitialize(ctx context.Context) error {
 }
 
 // Initialize initializes the database objects on the data warehouse in order to
-// make it work with Krenalis.
-func (warehouse *Snowflake) Initialize(ctx context.Context, profileColumns []warehouses.Column) error {
-	return warehouse.initRepairDatabaseObjects(ctx, profileColumns, false)
+// make it work with Krenalis. env selects environment-specific tables.
+func (warehouse *Snowflake) Initialize(ctx context.Context, env warehouses.Environment, profileColumns []warehouses.Column) error {
+	if env != warehouses.Production && env != warehouses.Development {
+		return fmt.Errorf("warehouse environment %d is invalid", env)
+	}
+	return warehouse.initRepairDatabaseObjects(ctx, env, profileColumns, false)
 }
 
 // Repair repairs the database objects on the data warehouse needed by
-// warehouses.
-func (warehouse *Snowflake) Repair(ctx context.Context, profileColumns []warehouses.Column) error {
-	return warehouse.initRepairDatabaseObjects(ctx, profileColumns, true)
+// Krenalis and the environment-specific tables selected by env.
+func (warehouse *Snowflake) Repair(ctx context.Context, env warehouses.Environment, profileColumns []warehouses.Column) error {
+	if env != warehouses.Production && env != warehouses.Development {
+		return fmt.Errorf("warehouse environment %d is invalid", env)
+	}
+	return warehouse.initRepairDatabaseObjects(ctx, env, profileColumns, true)
 }
 
 // identitiesSQLSchema returns the SQL schema (in the form "CREATE TABLE ...")
@@ -102,19 +108,21 @@ func identitiesSQLSchema(profileColumns []warehouses.Column) string {
 
 // initRepairDatabaseObjects initializes (or repairs) the database objects (as
 // tables, types, etc...) on the data warehouse.
-func (warehouse *Snowflake) initRepairDatabaseObjects(ctx context.Context, profileColumns []warehouses.Column, repair bool) error {
+func (warehouse *Snowflake) initRepairDatabaseObjects(ctx context.Context, env warehouses.Environment, profileColumns []warehouses.Column, repair bool) error {
 	queries := []string{
 		createDestinationProfilesTable,
 		createEventsTable,
 		`CREATE OR REPLACE VIEW "EVENTS" AS SELECT * FROM "KRENALIS_EVENTS"`,
 		createOperationsTable,
 		createProfileSchemaVersionTable,
-		createSimulatedAccountRecordsTable,
 		identitiesSQLSchema(profileColumns),
 		profilesSQLSchema("krenalis_profiles_0", profileColumns),
 	}
 	if !repair { // TODO(Gianluca): is this necessary in Snowflake?
 		queries = append(queries, profilesViewSQLSchema(profileColumns, "krenalis_profiles_0"))
+	}
+	if env == warehouses.Development {
+		queries = append(queries, createSimulatedSystemRecordsTable, createSimulatedSystemWritersTable)
 	}
 	db, err := warehouse.openDB(ctx)
 	if err != nil {

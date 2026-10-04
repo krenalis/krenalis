@@ -49,6 +49,18 @@ const getProfileInitials = (firstName?: string, lastName?: string): string => {
 	return `${firstNameInitial}${lastNameInitial}`;
 };
 
+const getProfilePhotoSource = (photo?: string): string => {
+	if (photo == null) return '';
+	try {
+		const url = new URL(photo);
+		if (url.origin === window.location.origin && url.pathname.startsWith('/photos/'))
+			return `${url.pathname}${url.search}${url.hash}`;
+	} catch {
+		// Preserve values that are not absolute URLs.
+	}
+	return photo;
+};
+
 const getProfilePropertyLabel = (path: string, properties: ProfileSchemaProperties): string => {
 	const property = properties[path];
 	if (property == null) {
@@ -74,6 +86,7 @@ export {
 	getProfileAttributeString,
 	getProfileAvatarColors,
 	getProfileInitials,
+	getProfilePhotoSource,
 	getProfilePropertyLabel,
 	getProfilePropertyPathLabel,
 };

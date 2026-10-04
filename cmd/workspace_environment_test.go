@@ -77,10 +77,22 @@ func TestWorkspaceEnvironment(t *testing.T) {
 		t.Fatalf("expected PostgreSQL connection pool, got %v", err)
 	}
 	_, err = pool.Exec(t.Context(), "CREATE DATABASE "+database)
-	pool.Close()
 	if err != nil {
+		pool.Close()
 		t.Fatalf("expected isolated warehouse database, got %v", err)
 	}
+	var productionRecordsTable, productionWritersTable bool
+	err = pool.QueryRow(t.Context(), "SELECT to_regclass('krenalis_simulated_system_records') IS NOT NULL, "+
+		"to_regclass('krenalis_simulated_system_writers') IS NOT NULL").Scan(&productionRecordsTable, &productionWritersTable)
+	if err != nil {
+		pool.Close()
+		t.Fatalf("expected production simulated system records table query, got %v", err)
+	}
+	if productionRecordsTable || productionWritersTable {
+		pool.Close()
+		t.Fatal("expected production workspace not to create simulated system records table, got present")
+	}
+	pool.Close()
 	cleanupSettings := *settings
 	defer func() {
 
@@ -132,6 +144,20 @@ func TestWorkspaceEnvironment(t *testing.T) {
 	k.Call("GET", "/v1/workspaces/current", nil, nil, &development)
 	if development.Name != "development-renamed" || development.Environment != "development" {
 		t.Fatalf("expected preserved development environment, got %+v", development)
+	}
+	pool, err = krenalistester.ConnectionPool(t.Context(), settings)
+	if err != nil {
+		t.Fatalf("expected development warehouse connection pool, got %v", err)
+	}
+	var developmentRecordsTable, developmentWritersTable bool
+	err = pool.QueryRow(t.Context(), "SELECT to_regclass('krenalis_simulated_system_records') IS NOT NULL, "+
+		"to_regclass('krenalis_simulated_system_writers') IS NOT NULL").Scan(&developmentRecordsTable, &developmentWritersTable)
+	pool.Close()
+	if err != nil {
+		t.Fatalf("expected development simulated system records table query, got %v", err)
+	}
+	if !developmentRecordsTable || !developmentWritersTable {
+		t.Fatal("expected development workspace to create simulated system records table, got absent")
 	}
 
 	var list struct {
@@ -196,141 +222,370 @@ func TestWorkspaceEnvironment(t *testing.T) {
 		"duplicateRecordPercent": 0, "countries": map[string]int{"IT": 40},
 	}
 	k.SetWorkspaceID(production.ID)
-	assertHTTPError(t, k.TryCall("POST", "/v1/simulated-accounts", nil, accountRequest, nil), http.StatusUnprocessableEntity,
-		"SimulatedAccountsRequireDevelopment")
+	assertHTTPError(t, k.TryCall("POST", "/v1/simulated/systems", nil, accountRequest, nil), http.StatusUnprocessableEntity,
+		"SimulatedSystemsRequireDevelopment")
 	var productionAccountCount int
-	k.QueryRowTestDatabase(t.Context(), &productionAccountCount, "SELECT COUNT(*) FROM simulated_accounts WHERE workspace = $1", production.ID)
+	k.QueryRowTestDatabase(t.Context(), &productionAccountCount, "SELECT COUNT(*) FROM simulated_systems WHERE workspace = $1", production.ID)
 	if productionAccountCount != 0 {
-		t.Fatalf("expected no simulated accounts in production, got %d", productionAccountCount)
+		t.Fatalf("expected no simulated systems in production, got %d", productionAccountCount)
 	}
 
+	var productionCatalog struct {
+		Connectors []struct {
+			Code string `json:"code"`
+		} `json:"connectors"`
+	}
+	k.SetWorkspaceID(production.ID)
+	k.Call("GET", "/v1/connectors", nil, nil, &productionCatalog)
+	for _, connector := range productionCatalog.Connectors {
+		if connector.Code == "simulated-application" {
+			t.Fatal("expected Simulated Application to be absent from the production catalog, got present")
+		}
+	}
+	assertHTTPError(t, k.TryCall("POST", "/v1/ui", nil, map[string]any{
+		"connector": "simulated-application", "event": "load", "role": "Source",
+	}, nil), http.StatusUnprocessableEntity, "SimulatedSystemsRequireDevelopment")
+	assertHTTPError(t, k.TryCall("POST", "/v1/ui-event", nil, map[string]any{
+		"connector": "simulated-application", "event": "refresh-accounts", "role": "Source",
+		"settings": map[string]any{"account": ""},
+	}, nil), http.StatusUnprocessableEntity, "SimulatedSystemsRequireDevelopment")
+	_, err = k.TryCreateConnection(krenalistester.ConnectionToCreate{
+		Name: "Production simulated application", Role: krenalistester.Source,
+		Connector: "simulated-application", Settings: krenalistester.JSONEncodeSettings(map[string]any{"account": ""}),
+	})
+	assertHTTPError(t, err, http.StatusUnprocessableEntity, "SimulatedSystemsRequireDevelopment")
+
 	k.SetWorkspaceID(created.ID)
-	apiKey := k.CreateWorkspaceRestrictedAPIKey("simulated account test")
-	assertHTTPError(t, k.TryCall("GET", "/v1/simulated-accounts", http.Header{
+	apiKey := k.CreateWorkspaceRestrictedAPIKey("simulated system test")
+	assertHTTPError(t, k.TryCall("GET", "/v1/simulated/systems", http.Header{
 		"Authorization": {"Bearer " + apiKey},
 	}, nil, nil), http.StatusUnauthorized, "")
-	assertHTTPError(t, k.TryCall("GET", "/v1/simulated-accounts", http.Header{
+	assertHTTPError(t, k.TryCall("GET", "/v1/simulated/systems", http.Header{
 		"Krenalis-Workspace": nil,
 	}, nil, nil), http.StatusForbidden, "Krenalis-Workspace header is missing")
 
 	var account struct {
 		ID string `json:"id"`
 	}
-	k.Call("POST", "/v1/simulated-accounts", nil, accountRequest, &account)
+	k.Call("POST", "/v1/simulated/systems", nil, accountRequest, &account)
 	var detail struct {
-		ID                      string         `json:"id"`
-		Name                    string         `json:"name"`
-		Status                  string         `json:"status"`
-		UserCount               int            `json:"userCount"`
-		DuplicateRecordPercent  float64        `json:"duplicateRecordPercent"`
-		Countries               map[string]int `json:"countries"`
-		GenerationPolicyVersion string         `json:"generationPolicyVersion"`
-		GeneratedRecordCount    int            `json:"generatedRecordCount"`
-		GenerationError         string         `json:"generationError"`
+		ID                     string         `json:"id"`
+		Name                   string         `json:"name"`
+		Status                 string         `json:"status"`
+		UserCount              int            `json:"userCount"`
+		DuplicateRecordPercent float64        `json:"duplicateRecordPercent"`
+		Countries              map[string]int `json:"countries"`
+		SourceConnection       *string        `json:"sourceConnection"`
+		DestinationConnection  *string        `json:"destinationConnection"`
 	}
-	k.Call("GET", "/v1/simulated-accounts/"+account.ID, nil, nil, &detail)
-	if detail.ID != account.ID || detail.Name != "Empty account" || detail.Status != "Ready" ||
+	k.Call("GET", "/v1/simulated/systems/"+account.ID, nil, nil, &detail)
+	if detail.ID != account.ID || detail.Name != "Empty account" || detail.Status != "Available" ||
 		detail.UserCount != 0 || detail.DuplicateRecordPercent != 0 || detail.Countries["IT"] != 40 ||
-		detail.GenerationPolicyVersion != "empty-v1" || detail.GeneratedRecordCount != 0 || detail.GenerationError != "" {
-		t.Fatalf("expected empty ready simulated account metadata, got %+v", detail)
+		detail.SourceConnection != nil || detail.DestinationConnection != nil {
+		t.Fatalf("expected empty available simulated system metadata, got %+v", detail)
 	}
 	var detailFields map[string]json.Value
-	k.Call("GET", "/v1/simulated-accounts/"+account.ID, nil, nil, &detailFields)
-	if _, ok := detailFields["connector"]; ok {
-		t.Fatalf("expected simulated account response without connector, got %s", detailFields["connector"])
+	k.Call("GET", "/v1/simulated/systems/"+account.ID, nil, nil, &detailFields)
+	for _, field := range []string{"connector", "generationPolicyVersion", "generationError", "generationCheckpoint", "claimedRun", "claimPingTime", "writerGeneration"} {
+		if _, ok := detailFields[field]; ok {
+			t.Fatalf("expected simulated system response without %s, got %s", field, detailFields[field])
+		}
+	}
+	for _, field := range []string{"sourceConnection", "destinationConnection"} {
+		if value, ok := detailFields[field]; !ok || value.String() != "null" {
+			t.Fatalf("expected %s to be null, got %s", field, value)
+		}
 	}
 	var accounts struct {
 		Accounts []struct {
-			ID string `json:"id"`
-		} `json:"simulatedAccounts"`
+			ID                    string  `json:"id"`
+			Status                string  `json:"status"`
+			SourceConnection      *string `json:"sourceConnection"`
+			DestinationConnection *string `json:"destinationConnection"`
+		} `json:"simulatedSystems"`
 	}
-	k.Call("GET", "/v1/simulated-accounts", nil, nil, &accounts)
-	if len(accounts.Accounts) != 1 || accounts.Accounts[0].ID != account.ID {
-		t.Fatalf("expected one listed simulated account, got %+v", accounts.Accounts)
+	k.Call("GET", "/v1/simulated/systems", nil, nil, &accounts)
+	if len(accounts.Accounts) != 1 || accounts.Accounts[0].ID != account.ID ||
+		accounts.Accounts[0].SourceConnection != nil || accounts.Accounts[0].DestinationConnection != nil {
+		t.Fatalf("expected one listed simulated system, got %+v", accounts.Accounts)
 	}
-	k.Call("PUT", "/v1/simulated-accounts/"+account.ID, nil, map[string]string{"name": "Renamed account"}, nil)
-	k.Call("GET", "/v1/simulated-accounts/"+account.ID, nil, nil, &detail)
+
+	var developmentCatalog struct {
+		Connectors []struct {
+			Code     string `json:"code"`
+			AsSource *struct {
+				Targets     []string `json:"targets"`
+				HasSettings bool     `json:"hasSettings"`
+			} `json:"asSource"`
+			AsDestination *struct {
+				Targets     []string `json:"targets"`
+				HasSettings bool     `json:"hasSettings"`
+				SendingMode string   `json:"sendingMode"`
+			} `json:"asDestination"`
+		} `json:"connectors"`
+	}
+	k.Call("GET", "/v1/connectors", nil, nil, &developmentCatalog)
+	var simulatedApplicationFound bool
+	for _, connector := range developmentCatalog.Connectors {
+		if connector.Code != "simulated-application" {
+			continue
+		}
+		simulatedApplicationFound = true
+		if connector.AsSource == nil || len(connector.AsSource.Targets) != 1 || connector.AsSource.Targets[0] != "User" ||
+			!connector.AsSource.HasSettings || connector.AsDestination == nil || len(connector.AsDestination.Targets) != 1 ||
+			connector.AsDestination.Targets[0] != "User" || !connector.AsDestination.HasSettings || connector.AsDestination.SendingMode != "Server" {
+			t.Fatalf("expected Simulated Application capabilities, got %+v", connector)
+		}
+	}
+	if !simulatedApplicationFound {
+		t.Fatal("expected Simulated Application in the development catalog, got absent")
+	}
+
+	var simulatedApplicationUI struct {
+		Fields []struct {
+			Name    string `json:"name"`
+			Options []struct {
+				Value string `json:"value"`
+			} `json:"options"`
+		} `json:"fields"`
+	}
+	k.Call("POST", "/v1/ui", nil, map[string]any{
+		"connector": "simulated-application", "event": "load", "role": "Source",
+	}, &simulatedApplicationUI)
+	if len(simulatedApplicationUI.Fields) != 1 || simulatedApplicationUI.Fields[0].Name != "account" ||
+		len(simulatedApplicationUI.Fields[0].Options) != 1 || simulatedApplicationUI.Fields[0].Options[0].Value != account.ID {
+		t.Fatalf("expected one available simulated system option, got %+v", simulatedApplicationUI)
+	}
+	k.Call("POST", "/v1/ui", nil, map[string]any{
+		"connector": "simulated-application", "event": "save", "role": "Source",
+		"settings": map[string]any{"account": account.ID},
+	}, nil)
+
+	simulatedConnection := k.CreateConnection(krenalistester.ConnectionToCreate{
+		Name: "Simulated Application", Role: krenalistester.Source, Connector: "simulated-application",
+		Settings: krenalistester.JSONEncodeSettings(map[string]any{"account": account.ID}),
+	})
+	k.Call("GET", "/v1/simulated/systems/"+account.ID, nil, nil, &detail)
+	if detail.SourceConnection == nil || *detail.SourceConnection != simulatedConnection || detail.DestinationConnection != nil {
+		t.Fatalf("expected account with source connection %s and no destination, got %+v", simulatedConnection, detail)
+	}
+	var accountOptions struct {
+		Fields []struct {
+			Options []struct {
+				Value    string `json:"value"`
+				Disabled bool   `json:"disabled"`
+			} `json:"options"`
+		} `json:"fields"`
+	}
+	for _, role := range []struct {
+		name     string
+		disabled bool
+	}{{"Source", true}, {"Destination", false}} {
+		k.Call("POST", "/v1/ui", nil, map[string]any{
+			"connector": "simulated-application", "event": "load", "role": role.name,
+		}, &accountOptions)
+		if len(accountOptions.Fields) != 1 || len(accountOptions.Fields[0].Options) != 1 ||
+			accountOptions.Fields[0].Options[0].Value != account.ID ||
+			accountOptions.Fields[0].Options[0].Disabled != role.disabled {
+			t.Fatalf("expected %s account option disabled=%t, got %+v", role.name, role.disabled, accountOptions)
+		}
+	}
+	_, err = k.TryCreateConnection(krenalistester.ConnectionToCreate{
+		Name: "Duplicate source", Role: krenalistester.Source, Connector: "simulated-application",
+		Settings: krenalistester.JSONEncodeSettings(map[string]any{"account": account.ID}),
+	})
+	assertHTTPError(t, err, http.StatusUnprocessableEntity, "InvalidSettings")
+	var simulatedConnectionDetail map[string]any
+	k.Call("GET", "/v1/connections/"+simulatedConnection, nil, nil, &simulatedConnectionDetail)
+	if value, ok := simulatedConnectionDetail["simulatedSystem"]; ok {
+		t.Fatalf("expected simulated system binding to be absent from connection response, got %v", value)
+	}
+	var boundAccount string
+	k.QueryRowTestDatabase(t.Context(), &boundAccount,
+		"SELECT simulated_system FROM connections WHERE id = $1", simulatedConnection)
+	if boundAccount != account.ID {
+		t.Fatalf("expected structured Simulated Application binding %q, got %q", account.ID, boundAccount)
+	}
+
+	var newAccount struct {
+		ID string `json:"id"`
+	}
+	k.Call("POST", "/v1/simulated/systems", nil, map[string]any{
+		"name": "Additional account", "userCount": 0,
+	}, &newAccount)
+	_, err = k.TryCreateConnection(krenalistester.ConnectionToCreate{
+		Name: strings.Repeat("x", 101), Role: krenalistester.Source, Connector: "simulated-application",
+		Settings: krenalistester.JSONEncodeSettings(map[string]any{"account": newAccount.ID}),
+	})
+	assertHTTPError(t, err, http.StatusBadRequest, "name")
+	newConnection := k.CreateConnection(krenalistester.ConnectionToCreate{
+		Name: "Simulated Application new account", Role: krenalistester.Source, Connector: "simulated-application",
+		Settings: krenalistester.JSONEncodeSettings(map[string]any{"account": newAccount.ID}),
+	})
+	k.QueryRowTestDatabase(t.Context(), &boundAccount,
+		"SELECT simulated_system FROM connections WHERE id = $1", newConnection)
+	if boundAccount != newAccount.ID {
+		t.Fatalf("expected new connection to bind account %q, got %q", newAccount.ID, boundAccount)
+	}
+
+	var secondSelectableAccount struct {
+		ID string `json:"id"`
+	}
+	k.Call("POST", "/v1/simulated/systems", nil, map[string]any{"name": "Second account", "userCount": 0}, &secondSelectableAccount)
+	assertHTTPError(t, k.TryCall("PUT", "/v1/connections/"+simulatedConnection, nil, map[string]any{
+		"name": "Simulated Application", "simulatedSystem": secondSelectableAccount.ID,
+	}, nil), http.StatusBadRequest, "simulatedSystem cannot be updated")
+	assertHTTPError(t, k.TryCall("PUT", "/v1/connections/"+simulatedConnection, nil, map[string]any{
+		"name": "Simulated Application", "simulatedSystem": account.ID,
+	}, nil), http.StatusBadRequest, "simulatedSystem cannot be updated")
+	var authoritativeUI struct {
+		Fields []struct {
+			ComponentType string `json:"componentType"`
+			Text          string `json:"text"`
+		} `json:"fields"`
+		Buttons []any `json:"buttons"`
+	}
+	k.Call("GET", "/v1/connections/"+simulatedConnection+"/ui", nil, nil, &authoritativeUI)
+	if len(authoritativeUI.Fields) != 1 || authoritativeUI.Fields[0].ComponentType != "Text" ||
+		authoritativeUI.Fields[0].Text != "Empty account" || len(authoritativeUI.Buttons) != 0 {
+		t.Fatalf("expected existing connection UI to display the account name without a selector, got %+v", authoritativeUI)
+	}
+	assertHTTPError(t, k.TryCall("POST", "/v1/connections/"+simulatedConnection+"/ui-event", nil, map[string]any{
+		"event": "save", "settings": map[string]any{"account": ""},
+	}, nil), http.StatusUnprocessableEntity, "InvalidSettings")
+	assertHTTPError(t, k.TryCall("POST", "/v1/connections/"+simulatedConnection+"/ui-event", nil, map[string]any{
+		"event": "save", "settings": map[string]any{"account": secondSelectableAccount.ID},
+	}, nil), http.StatusUnprocessableEntity, "InvalidSettings")
+	assertHTTPError(t, k.TryCall("POST", "/v1/connections/"+simulatedConnection+"/ui-event", nil, map[string]any{
+		"event": "save", "settings": map[string]any{"account": account.ID},
+	}, nil), http.StatusUnprocessableEntity, "InvalidSettings")
+	k.QueryRowTestDatabase(t.Context(), &boundAccount,
+		"SELECT simulated_system FROM connections WHERE id = $1", simulatedConnection)
+	if boundAccount != account.ID {
+		t.Fatalf("expected rejected settings saves to preserve structured binding %q, got %q", account.ID, boundAccount)
+	}
+
+	k.ExecQueryTestDatabase(t.Context(), "UPDATE simulated_systems SET status = 'Preparing' WHERE id = $1", secondSelectableAccount.ID)
+	k.RestartServer(t.Context())
+	_, err = k.TryCreateConnection(krenalistester.ConnectionToCreate{
+		Name: "Preparing account source", Role: krenalistester.Source, Connector: "simulated-application",
+		Settings: krenalistester.JSONEncodeSettings(map[string]any{"account": secondSelectableAccount.ID}),
+	})
+	assertHTTPError(t, err, http.StatusUnprocessableEntity, "InvalidSettings")
+	k.ExecQueryTestDatabase(t.Context(), "UPDATE simulated_systems SET status = 'Available' WHERE id = $1", secondSelectableAccount.ID)
+	k.RestartServer(t.Context())
+	k.ExecQueryTestDatabase(t.Context(), `INSERT INTO connections
+		(id, workspace, simulated_system, connector, role, kms_encrypted_settings_key)
+		VALUES ('AAAAAAAAAAAA', $1, $2, 'simulated-application', 'Source', '\x00'::bytea)`,
+		created.ID, secondSelectableAccount.ID)
+	_, err = k.TryCreateConnection(krenalistester.ConnectionToCreate{
+		Name: "Concurrent source", Role: krenalistester.Source, Connector: "simulated-application",
+		Settings: krenalistester.JSONEncodeSettings(map[string]any{"account": secondSelectableAccount.ID}),
+	})
+	assertHTTPError(t, err, http.StatusUnprocessableEntity, "InvalidSettings")
+	k.ExecQueryTestDatabase(t.Context(), "DELETE FROM connections WHERE id = 'AAAAAAAAAAAA'")
+	assertHTTPError(t, k.TryCall("PUT", "/v1/connections/"+simulatedConnection, nil, map[string]any{
+		"name": "Simulated Application", "simulatedSystem": "",
+	}, nil), http.StatusBadRequest, "simulatedSystem cannot be updated")
+	k.Call("PUT", "/v1/connections/"+simulatedConnection, nil, map[string]any{"name": "Simulated Application"}, nil)
+	k.Call("PUT", "/v1/simulated/systems/"+account.ID, nil, map[string]string{"name": "Renamed account"}, nil)
+	k.Call("GET", "/v1/simulated/systems/"+account.ID, nil, nil, &detail)
 	if detail.Name != "Renamed account" {
-		t.Fatalf("expected renamed simulated account, got %q", detail.Name)
+		t.Fatalf("expected renamed simulated system, got %q", detail.Name)
 	}
 
 	k.SetWorkspaceID(production.ID)
-	assertHTTPError(t, k.TryCall("GET", "/v1/simulated-accounts/"+account.ID, nil, nil, nil), http.StatusNotFound, "")
+	assertHTTPError(t, k.TryCall("GET", "/v1/simulated/systems/"+account.ID, nil, nil, nil), http.StatusNotFound, "")
 	k.SetWorkspaceID(created.ID)
-	firstConnection := k.CreateConnection(krenalistester.ConnectionToCreate{
-		Name:             "Simulated source 1",
-		Role:             krenalistester.Source,
-		Connector:        "dummy",
-		Settings:         json.Value("{}"),
-		SimulatedAccount: account.ID,
+	unboundConnection := k.CreateConnection(krenalistester.ConnectionToCreate{
+		Name: "Unbound source", Role: krenalistester.Source, Connector: "dummy", Settings: json.Value("{}"),
 	})
-	secondConnection := k.CreateConnection(krenalistester.ConnectionToCreate{
-		Name:             "Simulated source 2",
-		Role:             krenalistester.Source,
-		Connector:        "dummy",
-		Settings:         json.Value("{}"),
-		SimulatedAccount: account.ID,
+	assertHTTPError(t, k.TryCall("PUT", "/v1/connections/"+unboundConnection, nil, map[string]any{
+		"name": "Unbound source", "simulatedSystem": account.ID,
+	}, nil), http.StatusBadRequest, "simulatedSystem cannot be updated")
+	k.DeleteConnection(unboundConnection)
+	mode := krenalistester.Server
+	firstConnection := k.CreateConnection(krenalistester.ConnectionToCreate{
+		Name: "Simulated destination", Role: krenalistester.Destination, Connector: "simulated-application",
+		SendingMode: &mode,
+		Settings:    krenalistester.JSONEncodeSettings(map[string]any{"account": account.ID}),
 	})
 	k.SetWorkspaceID(production.ID)
-	_, err = k.TryCreateConnection(krenalistester.ConnectionToCreate{
-		Name:             "Cross-workspace source",
-		Role:             krenalistester.Source,
-		Connector:        "dummy",
-		Settings:         json.Value("{}"),
-		SimulatedAccount: account.ID,
-	})
-	assertHTTPError(t, err, http.StatusUnprocessableEntity, "SimulatedAccountNotExist")
+	assertHTTPError(t, k.TryCall("POST", "/v1/connections", nil, map[string]any{
+		"name": "Legacy account binding", "role": "Source", "connector": "dummy",
+		"settings": map[string]any{}, "simulatedSystem": account.ID,
+	}, nil), http.StatusBadRequest, "simulatedSystem must be provided in settings")
 	k.SetWorkspaceID(created.ID)
 	k.RestartServer(t.Context())
-	var connections struct {
-		Connections []struct {
-			ID               string `json:"id"`
-			SimulatedAccount string `json:"simulatedAccount"`
-		} `json:"connections"`
+	k.Call("GET", "/v1/simulated/systems/"+account.ID, nil, nil, &detail)
+	if detail.SourceConnection == nil || *detail.SourceConnection != simulatedConnection ||
+		detail.DestinationConnection == nil || *detail.DestinationConnection != firstConnection {
+		t.Fatalf("expected account with source %s and destination %s after restart, got %+v",
+			simulatedConnection, firstConnection, detail)
 	}
-	k.Call("GET", "/v1/connections", nil, nil, &connections)
-	refs := 0
-	for _, connection := range connections.Connections {
-		if connection.SimulatedAccount == account.ID {
-			refs++
+	k.Call("GET", "/v1/simulated/systems", nil, nil, &accounts)
+	var foundAccount bool
+	for _, listed := range accounts.Accounts {
+		if listed.ID != account.ID {
+			continue
+		}
+		foundAccount = true
+		if listed.SourceConnection == nil || *listed.SourceConnection != simulatedConnection ||
+			listed.DestinationConnection == nil || *listed.DestinationConnection != firstConnection {
+			t.Fatalf("expected listed account with both connections, got %+v", listed)
 		}
 	}
-	if refs != 2 {
-		t.Fatalf("expected 2 simulated account references after restart, got %d", refs)
+	if !foundAccount {
+		t.Fatalf("expected account %s in list, got %+v", account.ID, accounts.Accounts)
 	}
-	k.Call("PUT", "/v1/connections/"+firstConnection, nil, map[string]any{
-		"name": "Simulated source 1", "simulatedAccount": "",
-	}, nil)
+	var connections struct {
+		Connections []map[string]any `json:"connections"`
+	}
+	k.Call("GET", "/v1/connections", nil, nil, &connections)
+	for _, connection := range connections.Connections {
+		if value, ok := connection["simulatedSystem"]; ok {
+			t.Fatalf("expected simulated system binding to be absent from connection list, got %v", value)
+		}
+	}
+	var refs int
+	k.QueryRowTestDatabase(t.Context(), &refs,
+		"SELECT COUNT(*) FROM connections WHERE workspace = $1 AND simulated_system = $2", created.ID, account.ID)
+	if refs != 2 {
+		t.Fatalf("expected 2 simulated system references after restart, got %d", refs)
+	}
+	assertHTTPError(t, k.TryCall("PUT", "/v1/connections/"+firstConnection, nil, map[string]any{
+		"name": "Simulated destination", "sendingMode": "Server", "simulatedSystem": "",
+	}, nil), http.StatusBadRequest, "simulatedSystem cannot be updated")
 	var referenceCount int
 	k.QueryRowTestDatabase(t.Context(), &referenceCount,
-		"SELECT COUNT(*) FROM connections WHERE workspace = $1 AND simulated_account = $2", created.ID, account.ID)
-	if referenceCount != 1 {
-		t.Fatalf("expected 1 simulated account reference after clearing, got %d", referenceCount)
+		"SELECT COUNT(*) FROM connections WHERE workspace = $1 AND simulated_system = $2", created.ID, account.ID)
+	if referenceCount != 2 {
+		t.Fatalf("expected 2 simulated system references after rejected clearing, got %d", referenceCount)
 	}
 	k.Call("PUT", "/v1/connections/"+firstConnection, nil, map[string]any{
-		"name": "Simulated source 1", "simulatedAccount": account.ID,
+		"name": "Simulated destination", "sendingMode": "Server",
 	}, nil)
 
 	warehousePool, err := krenalistester.ConnectionPool(t.Context(), settings)
 	if err != nil {
-		t.Fatalf("expected simulated account warehouse pool, got %v", err)
+		t.Fatalf("expected simulated system warehouse pool, got %v", err)
 	}
-	_, err = warehousePool.Exec(t.Context(), `INSERT INTO krenalis_simulated_account_records
-		(simulated_account_id, external_id, data) VALUES ($1, 'account-record', '{}'::jsonb),
-		('other-account', 'other-record', '{}'::jsonb)`, account.ID)
+	_, err = warehousePool.Exec(t.Context(), `INSERT INTO krenalis_simulated_system_records
+		(simulated_system, external_id, updated_at, data) VALUES ($1, 'account-record', TIMESTAMP '2024-10-03 15:38:36.920638', '{}'::jsonb),
+		('other-account', 'other-record', TIMESTAMP '2024-10-03 15:38:36.920638', '{}'::jsonb)`, account.ID)
 	if err != nil {
 		warehousePool.Close()
-		t.Fatalf("expected simulated account warehouse fixture, got %v", err)
+		t.Fatalf("expected simulated system warehouse fixture, got %v", err)
 	}
-	assertHTTPError(t, k.TryCall("DELETE", "/v1/simulated-accounts/"+account.ID, nil, nil, nil),
-		http.StatusUnprocessableEntity, "SimulatedAccountInUse")
+	assertHTTPError(t, k.TryCall("DELETE", "/v1/simulated/systems/"+account.ID, nil, nil, nil),
+		http.StatusUnprocessableEntity, "SimulatedSystemInUse")
 	var accountRecords, otherRecords int
-	err = warehousePool.QueryRow(t.Context(), "SELECT COUNT(*) FROM krenalis_simulated_account_records WHERE simulated_account_id = $1", account.ID).Scan(&accountRecords)
+	err = warehousePool.QueryRow(t.Context(), "SELECT COUNT(*) FROM krenalis_simulated_system_records WHERE simulated_system = $1", account.ID).Scan(&accountRecords)
 	if err != nil {
 		warehousePool.Close()
 		t.Fatalf("expected deleted account record count, got %v", err)
 	}
-	err = warehousePool.QueryRow(t.Context(), "SELECT COUNT(*) FROM krenalis_simulated_account_records WHERE simulated_account_id = 'other-account'").Scan(&otherRecords)
+	err = warehousePool.QueryRow(t.Context(), "SELECT COUNT(*) FROM krenalis_simulated_system_records WHERE simulated_system = 'other-account'").Scan(&otherRecords)
 	warehousePool.Close()
 	if err != nil {
 		t.Fatalf("expected preserved account record count, got %v", err)
@@ -339,50 +594,103 @@ func TestWorkspaceEnvironment(t *testing.T) {
 		t.Fatalf("expected referenced account cleanup isolation, got account=%d other=%d", accountRecords, otherRecords)
 	}
 	k.DeleteConnection(firstConnection)
+	k.Call("GET", "/v1/simulated/systems/"+account.ID, nil, nil, &detail)
+	if detail.SourceConnection == nil || *detail.SourceConnection != simulatedConnection || detail.DestinationConnection != nil {
+		t.Fatalf("expected only source connection after destination deletion, got %+v", detail)
+	}
 	k.QueryRowTestDatabase(t.Context(), &referenceCount,
-		"SELECT COUNT(*) FROM connections WHERE workspace = $1 AND simulated_account = $2", created.ID, account.ID)
+		"SELECT COUNT(*) FROM connections WHERE workspace = $1 AND simulated_system = $2", created.ID, account.ID)
 	if referenceCount != 1 {
-		t.Fatalf("expected last connection reference to remain, got %d", referenceCount)
+		t.Fatalf("expected one simulated system reference after deleting one connection, got %d", referenceCount)
 	}
 	var metadataCount int
-	k.QueryRowTestDatabase(t.Context(), &metadataCount, "SELECT COUNT(*) FROM simulated_accounts WHERE id = $1", account.ID)
+	k.QueryRowTestDatabase(t.Context(), &metadataCount, "SELECT COUNT(*) FROM simulated_systems WHERE id = $1", account.ID)
 	if metadataCount != 1 {
-		t.Fatalf("expected simulated account metadata to remain, got %d", metadataCount)
+		t.Fatalf("expected simulated system metadata to remain, got %d", metadataCount)
 	}
-	k.DeleteConnection(secondConnection)
+	k.DeleteConnection(simulatedConnection)
+	k.Call("GET", "/v1/simulated/systems/"+account.ID, nil, nil, &detail)
+	if detail.SourceConnection != nil || detail.DestinationConnection != nil {
+		t.Fatalf("expected no connections after source deletion, got %+v", detail)
+	}
 	k.QueryRowTestDatabase(t.Context(), &referenceCount,
-		"SELECT COUNT(*) FROM connections WHERE workspace = $1 AND simulated_account = $2", created.ID, account.ID)
+		"SELECT COUNT(*) FROM connections WHERE workspace = $1 AND simulated_system = $2", created.ID, account.ID)
 	if referenceCount != 0 {
-		t.Fatalf("expected no simulated account references after connection deletion, got %d", referenceCount)
+		t.Fatalf("expected no simulated system references after connection deletion, got %d", referenceCount)
 	}
-	k.Call("DELETE", "/v1/simulated-accounts/"+account.ID, nil, nil, nil)
+	k.Call("DELETE", "/v1/simulated/systems/"+account.ID, nil, nil, nil)
 
 	var secondAccount struct {
 		ID string `json:"id"`
 	}
-	k.Call("POST", "/v1/simulated-accounts", nil, map[string]any{
+	k.Call("POST", "/v1/simulated/systems", nil, map[string]any{
 		"name": "Failed cleanup", "userCount": 0,
 	}, &secondAccount)
-	k.ExecQueryTestDatabase(t.Context(), "UPDATE simulated_accounts SET status = 'Preparing' WHERE id = $1", secondAccount.ID)
-	assertHTTPError(t, k.TryCall("DELETE", "/v1/simulated-accounts/"+secondAccount.ID, nil, nil, nil), http.StatusUnprocessableEntity,
-		"SimulatedAccountPreparing")
-	k.ExecQueryTestDatabase(t.Context(), "UPDATE simulated_accounts SET status = 'Ready' WHERE id = $1", secondAccount.ID)
+	k.ExecQueryTestDatabase(t.Context(), "UPDATE simulated_systems SET status = 'Preparing' WHERE id = $1", secondAccount.ID)
+	assertHTTPError(t, k.TryCall("DELETE", "/v1/simulated/systems/"+secondAccount.ID, nil, nil, nil), http.StatusUnprocessableEntity,
+		"SimulatedSystemPreparing")
+	k.ExecQueryTestDatabase(t.Context(), "UPDATE simulated_systems SET status = 'Available' WHERE id = $1", secondAccount.ID)
 	warehousePool, err = krenalistester.ConnectionPool(t.Context(), settings)
 	if err != nil {
-		t.Fatalf("expected simulated account warehouse pool, got %v", err)
+		t.Fatalf("expected simulated system warehouse pool, got %v", err)
 	}
-	_, err = warehousePool.Exec(t.Context(), "DROP TABLE krenalis_simulated_account_records")
+	_, err = warehousePool.Exec(t.Context(), "DROP TABLE krenalis_simulated_system_records")
 	warehousePool.Close()
 	if err != nil {
-		t.Fatalf("expected simulated account warehouse fixture removal, got %v", err)
+		t.Fatalf("expected simulated system warehouse fixture removal, got %v", err)
 	}
-	assertHTTPError(t, k.TryCall("DELETE", "/v1/simulated-accounts/"+secondAccount.ID, nil, nil, nil), http.StatusServiceUnavailable, "")
-	k.QueryRowTestDatabase(t.Context(), &metadataCount, "SELECT COUNT(*) FROM simulated_accounts WHERE id = $1", secondAccount.ID)
-	if metadataCount != 1 {
-		t.Fatalf("expected metadata to survive failed cleanup, got %d rows", metadataCount)
+	k.Call("DELETE", "/v1/simulated/systems/"+secondAccount.ID, nil, nil, nil)
+	var status string
+	k.QueryRowTestDatabase(t.Context(), &status, "SELECT status::text FROM simulated_systems WHERE id = $1", secondAccount.ID)
+	if status != "Deleting" {
+		t.Fatalf("expected metadata to remain Deleting during failed cleanup, got %q", status)
+	}
+	var deleting struct {
+		Status string `json:"status"`
+	}
+	k.Call("GET", "/v1/simulated/systems/"+secondAccount.ID, nil, nil, &deleting)
+	if deleting.Status != "Deleting" {
+		t.Fatalf("expected deleting account to remain readable, got %q", deleting.Status)
+	}
+	k.Call("GET", "/v1/simulated/systems", nil, nil, &accounts)
+	var foundDeleting bool
+	for _, listed := range accounts.Accounts {
+		if listed.ID == secondAccount.ID {
+			if listed.Status != "Deleting" {
+				t.Fatalf("expected listed account to be Deleting, got %q", listed.Status)
+			}
+			foundDeleting = true
+			break
+		}
+	}
+	if !foundDeleting {
+		t.Fatalf("expected deleting account %s in list, got %+v", secondAccount.ID, accounts.Accounts)
+	}
+	k.RestartServer(t.Context())
+	k.Call("GET", "/v1/simulated/systems/"+secondAccount.ID, nil, nil, &deleting)
+	if deleting.Status != "Deleting" {
+		t.Fatalf("expected failed cleanup to remain Deleting after restart, got %q", deleting.Status)
 	}
 	k.Call("POST", "/v1/warehouse/repair", nil, nil, nil)
-	k.Call("DELETE", "/v1/simulated-accounts/"+secondAccount.ID, nil, nil, nil)
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		k.QueryRowTestDatabase(t.Context(), &metadataCount, "SELECT COUNT(*) FROM simulated_systems WHERE id = $1", secondAccount.ID)
+		if metadataCount == 0 || time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	if metadataCount != 0 {
+		t.Fatalf("expected account cleanup after warehouse repair, got %d metadata rows", metadataCount)
+	}
+	assertHTTPError(t, k.TryCall("GET", "/v1/simulated/systems/"+secondAccount.ID, nil, nil, nil),
+		http.StatusNotFound, "")
+	k.Call("GET", "/v1/simulated/systems", nil, nil, &accounts)
+	for _, listed := range accounts.Accounts {
+		if listed.ID == secondAccount.ID {
+			t.Fatalf("expected deleted account to be absent from list, got %+v", listed)
+		}
+	}
 }
 
 func assertEnvironmentBadRequest(t *testing.T, err error, message string) {

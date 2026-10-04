@@ -82,7 +82,8 @@ func TestUpgrade(t *testing.T) {
 		CREATE TABLE pipelines_runs (
 			id varchar(12) PRIMARY KEY,
 			pipeline varchar(12) NOT NULL REFERENCES pipelines (id),
-			node uuid
+			node uuid,
+			end_time timestamp
 		);
 		CREATE TABLE election (
 			number integer PRIMARY KEY,
@@ -143,28 +144,6 @@ func TestUpgrade(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = database.Exec(ctx, `
-		CREATE TYPE simulated_account_status AS ENUM ('Preparing', 'Ready', 'Failed');
-		CREATE TABLE simulated_accounts (
-			id varchar(12) PRIMARY KEY,
-			workspace varchar(12) NOT NULL REFERENCES workspaces (id),
-			connector varchar NOT NULL,
-			name varchar(100) NOT NULL,
-			status simulated_account_status NOT NULL,
-			user_count integer NOT NULL,
-			duplicate_record_percent numeric(5,2) NOT NULL,
-			countries jsonb NOT NULL,
-			generation_policy_version varchar NOT NULL,
-			generated_record_count integer NOT NULL,
-			generation_checkpoint jsonb,
-			generation_error text NOT NULL,
-			created_at timestamp NOT NULL,
-			updated_at timestamp NOT NULL
-		)`)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatal(err)
 	}
@@ -192,82 +171,122 @@ func TestUpgrade(t *testing.T) {
 	assertDiscontinuedFunctionsUpgrade(t, database)
 	assertRateLimitLeaseFunction(t, database)
 	assertConsentStepColumns(t, database)
-	assertSimulatedAccountsTable(t, database)
-	assertSimulatedAccountConnectionSchema(t, database)
+	assertSimulatedSystemsTable(t, database)
+	assertSimulatedSystemConnectionSchema(t, database)
+	assertSimulatedSystemLiveRunSchema(t, database)
 
+	_, err = database.Exec(ctx, "ALTER TYPE simulated_system_status RENAME VALUE 'Available' TO 'Ready'")
+	if err != nil {
+		t.Fatalf("expected old simulated system status fixture, got %v", err)
+	}
+	_, err = database.Exec(ctx, `INSERT INTO simulated_systems (id, workspace, name, status, user_count,
+		duplicate_record_percent, countries, generation_policy_version, generated_record_count, generation_error,
+		created_at, updated_at) VALUES ('888888888888', '222222222222', 'test', 'Ready', 0, 0, '{}'::jsonb,
+		'empty-v1', 0, '', NOW(), NOW())`)
+	if err != nil {
+		t.Fatalf("expected old simulated system row fixture, got %v", err)
+	}
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatalf("expected second upgrade to succeed, got %s", err)
+	}
+	var status string
+	err = database.QueryRow(ctx, "SELECT status::text FROM simulated_systems WHERE id = '888888888888'").Scan(&status)
+	if err != nil || status != "Available" {
+		t.Fatalf("expected existing simulated system status Available, got %q (error: %v)", status, err)
 	}
 	assertPipelineFiltersUpgraded(t, database)
 	assertPipelineMetricsSurvivePipelineDelete(t, database)
 	assertUsageMetricsUpgrade(t, database)
 }
 
-func assertSimulatedAccountsTable(t *testing.T, database *db.DB) {
+func assertSimulatedSystemsTable(t *testing.T, database *db.DB) {
 	t.Helper()
 	var exists bool
-	err := database.QueryRow(t.Context(), "SELECT to_regclass('simulated_accounts') IS NOT NULL").Scan(&exists)
+	err := database.QueryRow(t.Context(), "SELECT to_regclass('simulated_systems') IS NOT NULL").Scan(&exists)
 	if err != nil {
-		t.Fatalf("expected simulated accounts table query, got %v", err)
+		t.Fatalf("expected simulated systems table query, got %v", err)
 	}
 	if !exists {
-		t.Fatal("expected simulated accounts table to exist")
+		t.Fatal("expected simulated systems table to exist")
 	}
 	var statusType string
-	err = database.QueryRow(t.Context(), "SELECT typname FROM pg_type WHERE typname = 'simulated_account_status'").Scan(&statusType)
+	err = database.QueryRow(t.Context(), "SELECT typname FROM pg_type WHERE typname = 'simulated_system_status'").Scan(&statusType)
 	if err != nil {
-		t.Fatalf("expected simulated account status type query, got %v", err)
+		t.Fatalf("expected simulated system status type query, got %v", err)
 	}
-	if statusType != "simulated_account_status" {
-		t.Fatalf("expected simulated account status type, got %q", statusType)
+	if statusType != "simulated_system_status" {
+		t.Fatalf("expected simulated system status type, got %q", statusType)
 	}
-	assertColumnDoesNotExist(t, database, "simulated_accounts", "connector")
+	var available string
+	err = database.QueryRow(t.Context(), "SELECT 'Available'::simulated_system_status::text").Scan(&available)
+	if err != nil {
+		t.Fatalf("expected Available simulated system status, got %v", err)
+	}
+	var deleting string
+	err = database.QueryRow(t.Context(), "SELECT 'Deleting'::simulated_system_status::text").Scan(&deleting)
+	if err != nil {
+		t.Fatalf("expected Deleting simulated system status, got %v", err)
+	}
+	assertColumnDoesNotExist(t, database, "simulated_systems", "connector")
 }
 
-func assertSimulatedAccountConnectionSchema(t *testing.T, database *db.DB) {
+func assertSimulatedSystemConnectionSchema(t *testing.T, database *db.DB) {
 	t.Helper()
 	var nullable string
 	err := database.QueryRow(t.Context(), `SELECT is_nullable FROM information_schema.columns
 		WHERE table_schema = current_schema() AND table_name = 'connections' AND
-			column_name = 'simulated_account'`).Scan(&nullable)
+			column_name = 'simulated_system'`).Scan(&nullable)
 	if err != nil {
-		t.Fatalf("expected simulated account nullability query, got %v", err)
+		t.Fatalf("expected simulated system nullability query, got %v", err)
 	}
 	if nullable != "YES" {
-		t.Fatalf("expected connections.simulated_account to be nullable, got %q", nullable)
+		t.Fatalf("expected connections.simulated_system to be nullable, got %q", nullable)
 	}
-	var simulatedAccount sql.NullString
-	err = database.QueryRow(t.Context(), "SELECT simulated_account FROM connections WHERE id = $1",
-		"333333333333").Scan(&simulatedAccount)
+	var simulatedSystem sql.NullString
+	err = database.QueryRow(t.Context(), "SELECT simulated_system FROM connections WHERE id = $1",
+		"333333333333").Scan(&simulatedSystem)
 	if err != nil {
-		t.Fatalf("expected simulated account binding query, got %v", err)
+		t.Fatalf("expected simulated system binding query, got %v", err)
 	}
-	if simulatedAccount.Valid {
-		t.Fatalf("expected existing connection simulated account to be NULL, got %q", simulatedAccount.String)
+	if simulatedSystem.Valid {
+		t.Fatalf("expected existing connection simulated system to be NULL, got %q", simulatedSystem.String)
 	}
-	assertColumnExists(t, database, "connections", "simulated_account")
-	assertConstraintExists(t, database, "simulated_accounts", simulatedAccountsWorkspaceIDKey)
-	assertConstraintExists(t, database, "connections", connectionsWorkspaceSimulatedAccountForeignKey)
-	assertIndexExists(t, database, connectionsWorkspaceSimulatedAccountIndex)
+	assertColumnExists(t, database, "connections", "simulated_system")
+	assertConstraintExists(t, database, "simulated_systems", simulatedSystemsWorkspaceIDKey)
+	assertConstraintExists(t, database, "connections", connectionsWorkspaceSimulatedSystemForeignKey)
+	assertIndexExists(t, database, connectionsWorkspaceSimulatedSystemIndex)
+	assertIndexExists(t, database, connectionsSimulatedSystemRoleKey)
 }
 
-func TestInitializeSimulatedAccountsSchema(t *testing.T) {
+func assertSimulatedSystemLiveRunSchema(t *testing.T, database *db.DB) {
+	t.Helper()
+	assertColumnExists(t, database, "pipelines_runs", "simulated_system")
+	assertIndexExists(t, database, "pipelines_one_live_simulated_system_run_idx")
+	assertColumnExists(t, database, "simulated_systems", "writer_generation")
+	assertColumnExists(t, database, "simulated_systems", "claimed_run")
+	assertColumnExists(t, database, "simulated_systems", "claim_ping_time")
+	assertConstraintExists(t, database, "simulated_systems", "simulated_systems_claimed_run_key")
+}
+
+func TestInitializeSimulatedSystemsSchema(t *testing.T) {
 	database := newInitializedTestDatabase(t)
-	assertColumnDoesNotExist(t, database, "simulated_accounts", "connector")
-	assertColumnExists(t, database, "connections", "simulated_account")
+	assertSimulatedSystemsTable(t, database)
+	assertColumnExists(t, database, "connections", "simulated_system")
 	var nullable string
 	err := database.QueryRow(t.Context(), `SELECT is_nullable FROM information_schema.columns
 		WHERE table_schema = current_schema() AND table_name = 'connections' AND
-			column_name = 'simulated_account'`).Scan(&nullable)
+			column_name = 'simulated_system'`).Scan(&nullable)
 	if err != nil {
-		t.Fatalf("expected simulated account nullability query, got %v", err)
+		t.Fatalf("expected simulated system nullability query, got %v", err)
 	}
 	if nullable != "YES" {
-		t.Fatalf("expected connections.simulated_account to be nullable, got %q", nullable)
+		t.Fatalf("expected connections.simulated_system to be nullable, got %q", nullable)
 	}
-	assertConstraintExists(t, database, "simulated_accounts", simulatedAccountsWorkspaceIDKey)
-	assertConstraintExists(t, database, "connections", connectionsWorkspaceSimulatedAccountForeignKey)
-	assertIndexExists(t, database, connectionsWorkspaceSimulatedAccountIndex)
+	assertConstraintExists(t, database, "simulated_systems", simulatedSystemsWorkspaceIDKey)
+	assertConstraintExists(t, database, "connections", connectionsWorkspaceSimulatedSystemForeignKey)
+	assertIndexExists(t, database, connectionsWorkspaceSimulatedSystemIndex)
+	assertIndexExists(t, database, connectionsSimulatedSystemRoleKey)
+	assertSimulatedSystemLiveRunSchema(t, database)
 }
 
 // assertUsageMetricsUpgrade verifies the schema and defaults of the upgraded

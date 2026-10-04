@@ -102,26 +102,47 @@ func (api api) ChangeMemberPasswordByToken(_ http.ResponseWriter, r *http.Reques
 
 // Connector returns a connector.
 func (api api) Connector(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := api.admitWorkspaceOptionalRequest(r, x1); err != nil {
+	_, workspace, err := api.admitWorkspaceOptionalRequest(r, x1)
+	if err != nil {
 		return nil, err
 	}
-	return api.core.Connector(api.code(r))
+	code := api.code(r)
+	if workspace != nil && workspace.Environment == core.Production && code == "simulated-application" {
+		return nil, errors.NotFound("connector %q does not exist", code)
+	}
+	return api.core.Connector(code)
 }
 
 // ConnectorDocumentation returns the documentation of a connector.
 func (api api) ConnectorDocumentation(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := api.admitWorkspaceOptionalRequest(r, x1); err != nil {
+	_, workspace, err := api.admitWorkspaceOptionalRequest(r, x1)
+	if err != nil {
 		return nil, err
 	}
-	return api.core.ConnectorDocumentation(api.code(r))
+	code := api.code(r)
+	if workspace != nil && workspace.Environment == core.Production && code == "simulated-application" {
+		return nil, errors.NotFound("connector %q does not exist", code)
+	}
+	return api.core.ConnectorDocumentation(code)
 }
 
 // Connectors returns the connectors.
 func (api api) Connectors(_ http.ResponseWriter, r *http.Request) (any, error) {
-	if _, _, err := api.admitWorkspaceOptionalRequest(r, x1); err != nil {
+	_, workspace, err := api.admitWorkspaceOptionalRequest(r, x1)
+	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"connectors": api.core.Connectors()}, nil
+	connectors := api.core.Connectors()
+	if workspace != nil && workspace.Environment == core.Production {
+		filtered := make([]*core.Connector, 0, len(connectors))
+		for _, connector := range connectors {
+			if connector.Code != "simulated-application" {
+				filtered = append(filtered, connector)
+			}
+		}
+		connectors = filtered
+	}
+	return map[string]any{"connectors": connectors}, nil
 }
 
 // organizationLimits contains the limits used when creating or updating an

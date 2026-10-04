@@ -7,7 +7,6 @@ package connections
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"iter"
@@ -23,6 +22,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
@@ -68,6 +68,24 @@ type applicationOAuthConnector interface {
 // Errors are deferred until a method of the application is called.
 // It panics if the connection is not an application connection.
 func (c *Connections) Application(connection *state.Connection) *Application {
+	return c.application(connection, nil, nil)
+}
+
+// ApplicationWithSimulatedSystem returns an application with the supplied
+// system binding for reading records; writes require writer admission.
+func (c *Connections) ApplicationWithSimulatedSystem(connection *state.Connection, simulatedSystem string) *Application {
+	return c.application(connection, &simulatedSystem, nil)
+}
+
+// ApplicationWithSimulatedSystemWriter binds an application to its writer epoch.
+func (c *Connections) ApplicationWithSimulatedSystemWriter(connection *state.Connection, simulatedSystem string, generation int64) *Application {
+	if connection == nil || simulatedSystem == "" || generation <= 0 || generation%2 != 0 {
+		return &Application{err: errors.New("invalid simulated application writer authority")}
+	}
+	return c.application(connection, &simulatedSystem, &generation)
+}
+
+func (c *Connections) application(connection *state.Connection, simulatedSystem *string, generation *int64) *Application {
 	connector := connection.Connector()
 	var targets state.ConnectorTargets
 	if connection.Role == state.Source {
@@ -84,6 +102,11 @@ func (c *Connections) Application(connection *state.Connection) *Application {
 		users:       schema{lock: make(chan struct{}, 1)},
 		targets:     targets,
 	}
+	extra, err := c.applicationExtraWithWriter(connection, simulatedSystem, generation)
+	if err != nil {
+		app.err = err
+		return app
+	}
 	// var accountID int // TODO(marco): implement webhooks
 	var accountCode string
 	if a, ok := connection.Account(); ok {
@@ -94,6 +117,7 @@ func (c *Connections) Application(connection *state.Connection) *Application {
 		Settings:     newConnectionSettingStore(c.state, connection),
 		OAuthAccount: accountCode,
 		HTTPClient:   app.httpClient,
+		Extra:        extra,
 		// WebhookURL:   webhookURL(connection, accountID), // TODO(marco): implement webhooks
 	})
 	app.err = connectorError(app.err)

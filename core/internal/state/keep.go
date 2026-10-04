@@ -78,8 +78,8 @@ func (state *State) keep() {
 			org = state.createOrganization(n)
 		case "CreatePipeline":
 			org = state.createPipeline(n)
-		case "CreateSimulatedAccount":
-			org = state.createSimulatedAccount(n)
+		case "CreateSimulatedSystem":
+			org = state.createSimulatedSystem(n)
 		case "CreateWorkspace":
 			org = state.createWorkspace(n)
 		case "CreateEventWriteKey":
@@ -100,8 +100,8 @@ func (state *State) keep() {
 			org = state.deleteOrganization(n)
 		case "DeletePipeline":
 			org = state.deletePipeline(n)
-		case "DeleteSimulatedAccount":
-			org = state.deleteSimulatedAccount(n)
+		case "DeleteSimulatedSystem":
+			org = state.deleteSimulatedSystem(n)
 		case "DeleteWorkspace":
 			org = state.deleteWorkspace(n)
 		case "ElectLeader":
@@ -116,6 +116,8 @@ func (state *State) keep() {
 			org = state.inviteMember(n)
 		case "LinkConnection":
 			org = state.linkConnection(n)
+		case "MarkSimulatedSystemDeleting":
+			org = state.markSimulatedSystemDeleting(n)
 		case "PurgePipelines":
 			org = state.purgePipelines(n)
 		case "RenameConnection":
@@ -156,10 +158,10 @@ func (state *State) keep() {
 			org = state.updateOrganization(n)
 		case "UpdatePipeline":
 			org = state.updatePipeline(n)
-		case "UpdateSimulatedAccount":
-			org = state.updateSimulatedAccount(n)
-		case "UpdateSimulatedAccountGeneration":
-			org = state.updateSimulatedAccountGeneration(n)
+		case "UpdateSimulatedSystem":
+			org = state.updateSimulatedSystem(n)
+		case "UpdateSimulatedSystemGeneration":
+			org = state.updateSimulatedSystemGeneration(n)
 		case "UpdateWarehouse":
 			org = state.updateWarehouse(n)
 		case "UpdateWarehouseMode":
@@ -446,7 +448,7 @@ type CreateConnection struct {
 	Strategy          *Strategy    // strategy
 	SendingMode       *SendingMode // sending mode
 	LinkedConnections []string     // linked connections
-	SimulatedAccount  string       // simulated account identifier, can be empty
+	SimulatedSystem   string       // simulated system identifier, can be empty
 	EventWriteKey     string       // event write key to add
 	Settings          []byte
 	SettingsKey       []byte
@@ -488,9 +490,9 @@ func (state *State) createConnection(n notification) string {
 			ws.mu.Unlock()
 		}
 	}
-	var simulatedAccount *SimulatedAccount
-	if e.SimulatedAccount != "" {
-		simulatedAccount = ws.simulatedAccounts[e.SimulatedAccount]
+	var simulatedSystem *SimulatedSystem
+	if e.SimulatedSystem != "" {
+		simulatedSystem = ws.simulatedSystems[e.SimulatedSystem]
 	}
 	c := &Connection{
 		mu:                new(sync.Mutex),
@@ -501,7 +503,7 @@ func (state *State) createConnection(n notification) string {
 		connector:         connector,
 		Role:              e.Role,
 		account:           a,
-		simulatedAccount:  simulatedAccount,
+		simulatedSystem:   simulatedSystem,
 		Strategy:          e.Strategy,
 		SendingMode:       e.SendingMode,
 		LinkedConnections: e.LinkedConnections,
@@ -672,15 +674,15 @@ func (state *State) createPipeline(n notification) string {
 	return c.organization.ID
 }
 
-// CreateSimulatedAccount is the event sent when a simulated account is created.
-type CreateSimulatedAccount struct {
+// CreateSimulatedSystem is the event sent when a simulated system is created.
+type CreateSimulatedSystem struct {
 	ID                      string
 	Workspace               string
 	Name                    string
 	UserCount               int
 	DuplicateRecordPercent  string
 	Countries               json.Value
-	Status                  SimulatedAccountStatus
+	Status                  SimulatedSystemStatus
 	GenerationPolicyVersion string
 	GeneratedRecordCount    int
 	GenerationCheckpoint    json.Value
@@ -689,9 +691,9 @@ type CreateSimulatedAccount struct {
 	UpdatedAt               time.Time
 }
 
-// createSimulatedAccount adds a simulated account.
-func (state *State) createSimulatedAccount(n notification) string {
-	e := CreateSimulatedAccount{}
+// createSimulatedSystem adds a simulated system.
+func (state *State) createSimulatedSystem(n notification) string {
+	e := CreateSimulatedSystem{}
 	if !decodeNotification(n, &e) {
 		return ""
 	}
@@ -700,7 +702,7 @@ func (state *State) createSimulatedAccount(n notification) string {
 	if err != nil {
 		return ""
 	}
-	account := &SimulatedAccount{
+	account := &SimulatedSystem{
 		mu:                      &sync.Mutex{},
 		workspace:               ws,
 		ID:                      e.ID,
@@ -717,7 +719,7 @@ func (state *State) createSimulatedAccount(n notification) string {
 		UpdatedAt:               e.UpdatedAt,
 	}
 	ws.mu.Lock()
-	ws.simulatedAccounts[account.ID] = account
+	ws.simulatedSystems[account.ID] = account
 	ws.mu.Unlock()
 	dispatchNotification(state, e)
 	return ws.organization.ID
@@ -760,7 +762,7 @@ func (state *State) createWorkspace(n notification) string {
 		PrimarySources:                 map[string]string{},
 		accounts:                       map[int]*Account{},
 		consentPurposes:                map[string]*ConsentPurpose{},
-		simulatedAccounts:              map[string]*SimulatedAccount{},
+		simulatedSystems:               map[string]*SimulatedSystem{},
 		ResolveIdentitiesOnBatchImport: e.ResolveIdentitiesOnBatchImport,
 		Identifiers:                    []string{},
 		pipelinesToPurge:               []string{},
@@ -1125,21 +1127,50 @@ func (state *State) deletePipeline(n notification) string {
 	return org.ID
 }
 
-// DeleteSimulatedAccount is the event sent when a simulated account is deleted.
-type DeleteSimulatedAccount struct {
+// DeleteSimulatedSystem is the event sent when a simulated system is deleted.
+type DeleteSimulatedSystem struct {
 	Workspace string
 	ID        string
 }
 
-// deleteSimulatedAccount removes a simulated account.
-func (state *State) deleteSimulatedAccount(n notification) string {
-	e := DeleteSimulatedAccount{}
+// MarkSimulatedSystemDeleting marks an account for warehouse cleanup.
+type MarkSimulatedSystemDeleting struct {
+	Workspace string
+	ID        string
+	UpdatedAt time.Time
+}
+
+func (state *State) markSimulatedSystemDeleting(n notification) string {
+	e := MarkSimulatedSystemDeleting{}
 	if !decodeNotification(n, &e) {
 		return ""
 	}
 	ws := state.workspaces[e.Workspace]
 	ws.mu.Lock()
-	delete(ws.simulatedAccounts, e.ID)
+	account := ws.simulatedSystems[e.ID]
+	if account != nil {
+		updated := *account
+		updated.Status = SimulatedSystemDeleting
+		updated.UpdatedAt = e.UpdatedAt
+		ws.simulatedSystems[e.ID] = &updated
+	}
+	ws.mu.Unlock()
+	if account == nil {
+		return ""
+	}
+	dispatchNotification(state, e)
+	return ws.organization.ID
+}
+
+// deleteSimulatedSystem removes a simulated system.
+func (state *State) deleteSimulatedSystem(n notification) string {
+	e := DeleteSimulatedSystem{}
+	if !decodeNotification(n, &e) {
+		return ""
+	}
+	ws := state.workspaces[e.Workspace]
+	ws.mu.Lock()
+	delete(ws.simulatedSystems, e.ID)
 	ws.mu.Unlock()
 	dispatchNotification(state, e)
 	return ws.organization.ID
@@ -1488,9 +1519,8 @@ func (state *State) setAccount(n notification) string {
 // SetConnectionSettings is the event sent when the settings of a connection is
 // changed.
 type SetConnectionSettings struct {
-	Connection       string
-	Settings         []byte
-	SimulatedAccount *string
+	Connection string
+	Settings   []byte
 }
 
 // setConnectionSettings sets the settings of a connection.
@@ -1502,13 +1532,6 @@ func (state *State) setConnectionSettings(n notification) string {
 	c := state.connections[e.Connection]
 	c.mu.Lock()
 	c.settings = e.Settings
-	if e.SimulatedAccount != nil {
-		if *e.SimulatedAccount == "" {
-			c.simulatedAccount = nil
-		} else {
-			c.simulatedAccount = c.workspace.simulatedAccounts[*e.SimulatedAccount]
-		}
-	}
 	c.mu.Unlock()
 	dispatchNotification(state, e)
 	return c.organization.ID
@@ -1706,11 +1729,10 @@ func (state *State) unlinkConnection(n notification) string {
 
 // UpdateConnection is the event sent when a connection is updated.
 type UpdateConnection struct {
-	Connection       string
-	Name             string
-	Strategy         *Strategy
-	SendingMode      *SendingMode
-	SimulatedAccount *string
+	Connection  string
+	Name        string
+	Strategy    *Strategy
+	SendingMode *SendingMode
 }
 
 // updateConnection updates a connection.
@@ -1723,13 +1745,6 @@ func (state *State) updateConnection(n notification) string {
 		c.Name = e.Name
 		c.Strategy = e.Strategy
 		c.SendingMode = e.SendingMode
-		if e.SimulatedAccount != nil {
-			if *e.SimulatedAccount == "" {
-				c.simulatedAccount = nil
-			} else {
-				c.simulatedAccount = c.workspace.simulatedAccounts[*e.SimulatedAccount]
-			}
-		}
 	})
 	dispatchNotification(state, e)
 	return c.organization.ID
@@ -1914,28 +1929,28 @@ func (state *State) updatePipeline(n notification) string {
 	return org.ID
 }
 
-// UpdateSimulatedAccount is the event sent when a simulated account is renamed.
-type UpdateSimulatedAccount struct {
+// UpdateSimulatedSystem is the event sent when a simulated system is renamed.
+type UpdateSimulatedSystem struct {
 	Workspace string
 	ID        string
 	Name      string
 	UpdatedAt time.Time
 }
 
-// updateSimulatedAccount updates a simulated account.
-func (state *State) updateSimulatedAccount(n notification) string {
-	e := UpdateSimulatedAccount{}
+// updateSimulatedSystem updates a simulated system.
+func (state *State) updateSimulatedSystem(n notification) string {
+	e := UpdateSimulatedSystem{}
 	if !decodeNotification(n, &e) {
 		return ""
 	}
 	ws := state.workspaces[e.Workspace]
 	ws.mu.Lock()
-	account := ws.simulatedAccounts[e.ID]
+	account := ws.simulatedSystems[e.ID]
 	if account != nil {
 		updated := *account
 		updated.Name = e.Name
 		updated.UpdatedAt = e.UpdatedAt
-		ws.simulatedAccounts[e.ID] = &updated
+		ws.simulatedSystems[e.ID] = &updated
 	}
 	ws.mu.Unlock()
 	if account == nil {
@@ -1945,25 +1960,25 @@ func (state *State) updateSimulatedAccount(n notification) string {
 	return ws.organization.ID
 }
 
-// UpdateSimulatedAccountGeneration reports persisted generation progress.
-type UpdateSimulatedAccountGeneration struct {
+// UpdateSimulatedSystemGeneration reports persisted generation progress.
+type UpdateSimulatedSystemGeneration struct {
 	Workspace            string
 	ID                   string
-	Status               SimulatedAccountStatus
+	Status               SimulatedSystemStatus
 	GeneratedRecordCount int
 	GenerationCheckpoint json.Value
 	GenerationError      string
 	UpdatedAt            time.Time
 }
 
-func (state *State) updateSimulatedAccountGeneration(n notification) string {
-	e := UpdateSimulatedAccountGeneration{}
+func (state *State) updateSimulatedSystemGeneration(n notification) string {
+	e := UpdateSimulatedSystemGeneration{}
 	if !decodeNotification(n, &e) {
 		return ""
 	}
 	ws := state.workspaces[e.Workspace]
 	ws.mu.Lock()
-	account := ws.simulatedAccounts[e.ID]
+	account := ws.simulatedSystems[e.ID]
 	if account != nil {
 		updated := *account
 		updated.Status = e.Status
@@ -1971,7 +1986,7 @@ func (state *State) updateSimulatedAccountGeneration(n notification) string {
 		updated.GenerationCheckpoint = e.GenerationCheckpoint
 		updated.GenerationError = e.GenerationError
 		updated.UpdatedAt = e.UpdatedAt
-		ws.simulatedAccounts[e.ID] = &updated
+		ws.simulatedSystems[e.ID] = &updated
 	}
 	ws.mu.Unlock()
 	if account == nil {

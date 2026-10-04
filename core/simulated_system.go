@@ -21,12 +21,12 @@ import (
 )
 
 const (
-	simulatedAccountMaxUserCount  = 1_000_000
-	simulatedAccountPolicyVersion = "generation-v1"
+	simulatedSystemMaxUserCount  = 10_000_000
+	simulatedSystemPolicyVersion = "generation-v3"
 )
 
-// SimulatedAccount represents the metadata of a simulated account.
-type SimulatedAccount struct {
+// SimulatedSystem represents the metadata of a simulated system.
+type SimulatedSystem struct {
 	ID                      string          `json:"id"`
 	Workspace               string          `json:"workspace"`
 	Name                    string          `json:"name"`
@@ -34,56 +34,58 @@ type SimulatedAccount struct {
 	UserCount               int             `json:"userCount"`
 	DuplicateRecordPercent  decimal.Decimal `json:"duplicateRecordPercent"`
 	Countries               json.Value      `json:"countries"`
-	GenerationPolicyVersion string          `json:"generationPolicyVersion"`
+	GenerationPolicyVersion string          `json:"-"`
 	GeneratedRecordCount    int             `json:"generatedRecordCount"`
-	GenerationError         string          `json:"generationError"`
+	GenerationError         string          `json:"-"`
+	SourceConnection        *string         `json:"sourceConnection"`
+	DestinationConnection   *string         `json:"destinationConnection"`
 	CreatedAt               time.Time       `json:"createdAt"`
 	UpdatedAt               time.Time       `json:"updatedAt"`
 }
 
-// CreateSimulatedAccount creates a simulated account in the workspace.
+// CreateSimulatedSystem creates a simulated system in the workspace.
 //
 // It returns an errors.BadRequestError for invalid configuration and an
 // errors.UnavailableError when preparation storage is unavailable.
 //
 // It returns an errors.UnprocessableError error with code:
 //
-//   - SimulatedAccountsRequireDevelopment, if the workspace is not in
+//   - SimulatedSystemsRequireDevelopment, if the workspace is not in
 //     development.
 //   - MaintenanceMode, if the warehouse is in maintenance mode.
-func (this *Workspace) CreateSimulatedAccount(ctx context.Context, name string, userCount, duplicateRecordPercent, countries json.Value) (string, error) {
+func (this *Workspace) CreateSimulatedSystem(ctx context.Context, name string, userCount, duplicateRecordPercent, countries json.Value) (string, error) {
 	this.core.mustBeOpen()
 	if this.workspace.Environment != state.Development {
-		return "", errors.Unprocessable(SimulatedAccountsRequireDevelopment, "simulated accounts are only available in development workspaces")
+		return "", errors.Unprocessable(SimulatedSystemsRequireDevelopment, "simulated systems are only available in development workspaces")
 	}
 	if err := util.ValidateStringField("name", name, 100); err != nil {
 		return "", errors.BadRequest("%s", err)
 	}
-	userCountValue, duplicateValue, countriesValue, err := validateSimulatedAccountConfiguration(userCount, duplicateRecordPercent, countries)
+	userCountValue, duplicateValue, countriesValue, err := validateSimulatedSystemConfiguration(userCount, duplicateRecordPercent, countries)
 	if err != nil {
 		return "", errors.BadRequest("%s", err)
 	}
-	status := state.SimulatedAccountReady
+	status := state.SimulatedSystemAvailable
 	policy := "empty-v1"
 	var checkpoint json.Value
 	var checkpointParameter any
 	if userCountValue > 0 {
 		if this.core.simulatedCatalog == nil {
-			return "", errors.Unavailable("simulated account photo catalog is unavailable")
+			return "", errors.Unavailable("simulated system photo catalog is unavailable")
 		}
-		status = state.SimulatedAccountPreparing
-		policy = simulatedAccountPolicyVersion
-		checkpoint, err = initialSimulatedAccountCheckpoint(this.core.simulatedCatalog)
+		status = state.SimulatedSystemPreparing
+		policy = simulatedSystemPolicyVersion
+		checkpoint, err = initialSimulatedSystemCheckpoint(this.core.simulatedCatalog, this.core.simulatedPhotoBaseURL)
 		if err != nil {
-			return "", fmt.Errorf("cannot prepare simulated account checkpoint")
+			return "", fmt.Errorf("cannot prepare simulated system checkpoint")
 		}
 		checkpointParameter = string(checkpoint)
 	}
-	_, err = this.store.CountSimulatedAccountRecords(ctx, "")
+	_, err = this.store.CountSimulatedSystemRecords(ctx, "")
 	if err != nil {
-		return "", simulatedAccountWarehouseError(err)
+		return "", simulatedSystemWarehouseError(err)
 	}
-	n := state.CreateSimulatedAccount{
+	n := state.CreateSimulatedSystem{
 		Workspace:               this.workspace.ID,
 		Name:                    name,
 		UserCount:               userCountValue,
@@ -97,9 +99,9 @@ func (this *Workspace) CreateSimulatedAccount(ctx context.Context, name string, 
 	}
 	n.UpdatedAt = n.CreatedAt
 	for {
-		n.ID = generateID(this.core.state.SimulatedAccount)
+		n.ID = generateID(this.core.state.SimulatedSystem)
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-			_, err := tx.Exec(ctx, "INSERT INTO simulated_accounts (id, workspace, name, status, user_count,"+
+			_, err := tx.Exec(ctx, "INSERT INTO simulated_systems (id, workspace, name, status, user_count,"+
 				" duplicate_record_percent, countries, generation_policy_version, generated_record_count,"+
 				" generation_checkpoint, generation_error, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8,"+
 				" $9, $10, $11, $12, $13)", n.ID, n.Workspace, n.Name, n.Status, n.UserCount,
@@ -111,148 +113,189 @@ func (this *Workspace) CreateSimulatedAccount(ctx context.Context, name string, 
 			return n, nil
 		})
 		if err != nil {
-			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "simulated_accounts_pkey" {
+			if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "simulated_systems_pkey" {
 				continue
 			}
 			return "", err
 		}
-		if status == state.SimulatedAccountPreparing {
-			this.core.wakeSimulatedAccountWorker()
+		if status == state.SimulatedSystemPreparing {
+			this.core.wakeSimulatedSystemWorker()
 		}
 		return n.ID, nil
 	}
 }
 
-// DeleteSimulatedAccount deletes a simulated account and its warehouse records.
+// DeleteSimulatedSystem marks a simulated system as Deleting.
 //
 // It returns an errors.BadRequestError for an invalid identifier and an
-// errors.UnavailableError when warehouse cleanup fails.
-//
-// It returns an errors.NotFoundError error if the account does not exist. It
-// returns an errors.UnprocessableError with code SimulatedAccountPreparing if
-// the account is still being prepared, SimulatedAccountInUse if the account is
-// referenced by a connection, or InspectionMode or MaintenanceMode if warehouse
-// cleanup is unavailable in the current mode.
-func (this *Workspace) DeleteSimulatedAccount(ctx context.Context, id string) error {
+// errors.NotFoundError error if the account does not exist. It returns an
+// errors.UnprocessableError with code SimulatedSystemPreparing if the account
+// is still being prepared or SimulatedSystemInUse if it is referenced by a
+// connection. The status change is committed before this method returns;
+// warehouse cleanup continues asynchronously.
+func (this *Workspace) DeleteSimulatedSystem(ctx context.Context, id string) error {
 	this.core.mustBeOpen()
 	if !IsValidID(id) {
-		return errors.BadRequest("simulated account identifier %q is not valid", id)
+		return errors.BadRequest("simulated system identifier %q is not valid", id)
 	}
-	n := state.DeleteSimulatedAccount{Workspace: this.workspace.ID, ID: id}
+	n := state.DeleteSimulatedSystem{Workspace: this.workspace.ID, ID: id}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		var status state.SimulatedAccountStatus
-		err := tx.QueryRow(ctx, "SELECT status FROM simulated_accounts WHERE id = $1 AND workspace = $2 FOR UPDATE",
+		var status state.SimulatedSystemStatus
+		err := tx.QueryRow(ctx, "SELECT status FROM simulated_systems WHERE id = $1 AND workspace = $2 FOR UPDATE",
 			n.ID, n.Workspace).Scan(&status)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return nil, errors.NotFound("simulated account %s does not exist", n.ID)
+				return nil, errors.NotFound("simulated system %s does not exist", n.ID)
 			}
 			return nil, err
 		}
 		switch status {
-		case state.SimulatedAccountPreparing:
-			return nil, errors.Unprocessable(SimulatedAccountPreparing, "simulated account %s is still being prepared", n.ID)
-		case state.SimulatedAccountReady, state.SimulatedAccountFailed:
+		case state.SimulatedSystemPreparing:
+			return nil, errors.Unprocessable(SimulatedSystemPreparing, "simulated system %s is still being prepared", n.ID)
+		case state.SimulatedSystemAvailable, state.SimulatedSystemFailed:
+		case state.SimulatedSystemDeleting:
+			return nil, nil
 		default:
-			return nil, fmt.Errorf("simulated account %s has an invalid status", n.ID)
+			return nil, fmt.Errorf("simulated system %s has an invalid status", n.ID)
 		}
 		var connectionID string
-		err = tx.QueryRow(ctx, "SELECT id FROM connections WHERE workspace = $1 AND simulated_account = $2 "+
+		err = tx.QueryRow(ctx, "SELECT id FROM connections WHERE workspace = $1 AND simulated_system = $2 "+
 			"ORDER BY id LIMIT 1",
 			n.Workspace, n.ID).Scan(&connectionID)
 		if err != nil && err != sql.ErrNoRows {
 			return nil, err
 		}
 		if err == nil {
-			return nil, errors.Unprocessable(SimulatedAccountInUse,
-				"simulated account %s is referenced by connection %s", n.ID, connectionID)
+			return nil, errors.Unprocessable(SimulatedSystemInUse,
+				"simulated system %s is referenced by connection %s", n.ID, connectionID)
 		}
-		err = this.store.DeleteSimulatedAccountRecords(ctx, n.ID)
+		now := time.Now().UTC()
+		_, err = tx.Exec(ctx, "UPDATE simulated_systems SET status = $1, updated_at = $2 WHERE id = $3 AND workspace = $4",
+			state.SimulatedSystemDeleting, now, n.ID, n.Workspace)
 		if err != nil {
-			return nil, simulatedAccountWarehouseError(err)
-		}
-		result, err := tx.Exec(ctx, "DELETE FROM simulated_accounts WHERE id = $1 AND workspace = $2", n.ID, n.Workspace)
-		if err != nil {
-			if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "connections_workspace_simulated_account_fkey" {
-				return nil, errors.Unprocessable(SimulatedAccountInUse,
-					"simulated account %s is referenced by one or more connections", n.ID)
-			}
 			return nil, err
 		}
-		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("simulated account %s does not exist", n.ID)
-		}
-		return n, nil
+		return state.MarkSimulatedSystemDeleting{
+			Workspace: n.Workspace,
+			ID:        n.ID,
+			UpdatedAt: now,
+		}, nil
 	})
+	if err == nil {
+		this.core.wakeSimulatedSystemWorker()
+	}
 	return err
 }
 
-// SimulatedAccount returns a simulated account of the workspace.
+// SimulatedSystem returns a simulated system of the workspace.
 // It returns an errors.BadRequestError for an invalid identifier and an
 // errors.NotFoundError if the account does not exist.
-func (this *Workspace) SimulatedAccount(id string) (*SimulatedAccount, error) {
+func (this *Workspace) SimulatedSystem(id string) (*SimulatedSystem, error) {
+
 	this.core.mustBeOpen()
+
 	if !IsValidID(id) {
-		return nil, errors.BadRequest("simulated account identifier %q is not valid", id)
+		return nil, errors.BadRequest("simulated system identifier %q is not valid", id)
 	}
-	account, ok := this.workspace.SimulatedAccount(id)
+	account, ok := this.workspace.SimulatedSystem(id)
 	if !ok {
-		return nil, errors.NotFound("simulated account %s does not exist", id)
+		return nil, errors.NotFound("simulated system %s does not exist", id)
 	}
-	return simulatedAccountFromState(account), nil
+
+	result := simulatedSystemFromState(account)
+	for _, connection := range this.workspace.Connections() {
+		boundAccount, ok := connection.SimulatedSystem()
+		if !ok || boundAccount.ID != id {
+			continue
+		}
+		connectionID := connection.ID
+		switch connection.Role {
+		case state.Source:
+			result.SourceConnection = &connectionID
+		case state.Destination:
+			result.DestinationConnection = &connectionID
+		}
+	}
+
+	return result, nil
 }
 
-// SimulatedAccounts returns the simulated accounts of the workspace, ordered
+// SimulatedSystems returns the simulated systems of the workspace, ordered
 // by name and then identifier.
-func (this *Workspace) SimulatedAccounts() []*SimulatedAccount {
+func (this *Workspace) SimulatedSystems() []*SimulatedSystem {
+
 	this.core.mustBeOpen()
-	accounts := this.workspace.SimulatedAccounts()
-	result := make([]*SimulatedAccount, len(accounts))
-	for i, account := range accounts {
-		result[i] = simulatedAccountFromState(account)
+
+	accounts := this.workspace.SimulatedSystems()
+	result := make([]*SimulatedSystem, 0, len(accounts))
+	byID := make(map[string]*SimulatedSystem, len(accounts))
+	for _, account := range accounts {
+		item := simulatedSystemFromState(account)
+		result = append(result, item)
+		byID[account.ID] = item
 	}
+
+	for _, connection := range this.workspace.Connections() {
+		boundAccount, ok := connection.SimulatedSystem()
+		if !ok {
+			continue
+		}
+		item := byID[boundAccount.ID]
+		if item == nil {
+			continue
+		}
+		connectionID := connection.ID
+		switch connection.Role {
+		case state.Source:
+			item.SourceConnection = &connectionID
+		case state.Destination:
+			item.DestinationConnection = &connectionID
+		}
+	}
+
 	return result
 }
 
-// RenameSimulatedAccount changes the name of a simulated account.
+// RenameSimulatedSystem changes the name of a simulated system.
 // It returns an errors.BadRequestError for invalid input and an
 // errors.NotFoundError if the account does not exist.
-func (this *Workspace) RenameSimulatedAccount(ctx context.Context, id, name string) error {
+func (this *Workspace) RenameSimulatedSystem(ctx context.Context, id, name string) error {
 	this.core.mustBeOpen()
 	if !IsValidID(id) {
-		return errors.BadRequest("simulated account identifier %q is not valid", id)
+		return errors.BadRequest("simulated system identifier %q is not valid", id)
 	}
 	if err := util.ValidateStringField("name", name, 100); err != nil {
 		return errors.BadRequest("%s", err)
 	}
-	account, ok := this.workspace.SimulatedAccount(id)
-	if !ok {
-		return errors.NotFound("simulated account %s does not exist", id)
+	account, ok := this.workspace.SimulatedSystem(id)
+	if !ok || account.Status == state.SimulatedSystemDeleting {
+		return errors.NotFound("simulated system %s does not exist", id)
 	}
 	if account.Name == name {
 		return nil
 	}
-	n := state.UpdateSimulatedAccount{Workspace: this.workspace.ID, ID: id, Name: name, UpdatedAt: time.Now().UTC()}
+	n := state.UpdateSimulatedSystem{Workspace: this.workspace.ID, ID: id, Name: name, UpdatedAt: time.Now().UTC()}
 	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		result, err := tx.Exec(ctx, "UPDATE simulated_accounts SET name = $1, updated_at = $2 WHERE id = $3 AND workspace = $4",
+		result, err := tx.Exec(ctx, "UPDATE simulated_systems SET name = $1, updated_at = $2 WHERE id = $3 AND workspace = $4"+
+			" AND status <> 'Deleting'",
 			n.Name, n.UpdatedAt, n.ID, n.Workspace)
 		if err != nil {
 			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("simulated account %s does not exist", n.ID)
+			return nil, errors.NotFound("simulated system %s does not exist", n.ID)
 		}
 		return n, nil
 	})
 }
 
-func simulatedAccountFromState(account *state.SimulatedAccount) *SimulatedAccount {
+func simulatedSystemFromState(account *state.SimulatedSystem) *SimulatedSystem {
 	workspace := account.Workspace()
 	workspaceID := ""
 	if workspace != nil {
 		workspaceID = workspace.ID
 	}
-	return &SimulatedAccount{
+	return &SimulatedSystem{
 		ID:                      account.ID,
 		Workspace:               workspaceID,
 		Name:                    account.Name,
@@ -268,7 +311,7 @@ func simulatedAccountFromState(account *state.SimulatedAccount) *SimulatedAccoun
 	}
 }
 
-func simulatedAccountWarehouseError(err error) error {
+func simulatedSystemWarehouseError(err error) error {
 	if err == nil {
 		return nil
 	}
@@ -278,10 +321,10 @@ func simulatedAccountWarehouseError(err error) error {
 	if err == datastore.ErrMaintenanceMode {
 		return errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 	}
-	return errors.Unavailable("simulated account warehouse operation failed")
+	return errors.Unavailable("simulated system warehouse operation failed")
 }
 
-func validateSimulatedAccountConfiguration(userCount, duplicateRecordPercent, countries json.Value) (int, decimal.Decimal, json.Value, error) {
+func validateSimulatedSystemConfiguration(userCount, duplicateRecordPercent, countries json.Value) (int, decimal.Decimal, json.Value, error) {
 	if userCount == nil {
 		return 0, decimal.Decimal{}, nil, fmt.Errorf("userCount is required")
 	}
@@ -289,8 +332,8 @@ func validateSimulatedAccountConfiguration(userCount, duplicateRecordPercent, co
 	if err != nil {
 		return 0, decimal.Decimal{}, nil, fmt.Errorf("userCount must be an integer")
 	}
-	if count < 0 || count > simulatedAccountMaxUserCount {
-		return 0, decimal.Decimal{}, nil, fmt.Errorf("userCount must be between 0 and %d", simulatedAccountMaxUserCount)
+	if count < 0 || count > simulatedSystemMaxUserCount {
+		return 0, decimal.Decimal{}, nil, fmt.Errorf("userCount must be between 0 and %d", simulatedSystemMaxUserCount)
 	}
 
 	duplicate := decimal.Decimal{}

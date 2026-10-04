@@ -104,7 +104,7 @@ func Test_Records(t *testing.T) {
 		Keys: []string{"_pipeline", "_external_id"},
 	}
 
-	err = dw.Initialize(ctx, profilesTable.Columns[4:])
+	err = dw.Initialize(ctx, warehouses.Production, profilesTable.Columns[4:])
 	if err != nil {
 		t.Fatalf("cannot initialize the warehouse: %s", err)
 	}

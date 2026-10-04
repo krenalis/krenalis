@@ -127,11 +127,15 @@ func (workspace workspace) CreateConnection(_ http.ResponseWriter, r *http.Reque
 	}
 	var body struct {
 		core.ConnectionToAdd
-		AuthToken string `json:"authToken"`
+		AuthToken       string     `json:"authToken"`
+		SimulatedSystem json.Value `json:"simulatedSystem"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
+	}
+	if body.SimulatedSystem != nil {
+		return nil, errors.BadRequest("simulatedSystem must be provided in settings")
 	}
 	if body.Settings != nil && body.Settings.IsNull() {
 		body.Settings = nil

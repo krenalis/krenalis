@@ -96,14 +96,21 @@ func (warehouse *PostgreSQL) CanInitialize(ctx context.Context) error {
 }
 
 // Initialize initializes the database objects on the data warehouse in order to
-// make it work with Krenalis.
-func (warehouse *PostgreSQL) Initialize(ctx context.Context, profileColumns []warehouses.Column) error {
-	return warehouse.initRepairDatabaseObjects(ctx, profileColumns, false)
+// make it work with Krenalis. env selects environment-specific tables.
+func (warehouse *PostgreSQL) Initialize(ctx context.Context, env warehouses.Environment, profileColumns []warehouses.Column) error {
+	if env != warehouses.Production && env != warehouses.Development {
+		return fmt.Errorf("warehouse environment %d is invalid", env)
+	}
+	return warehouse.initRepairDatabaseObjects(ctx, env, profileColumns, false)
 }
 
 // Repair repairs the database objects on the data warehouse needed by Krenalis.
-func (warehouse *PostgreSQL) Repair(ctx context.Context, profileColumns []warehouses.Column) error {
-	return warehouse.initRepairDatabaseObjects(ctx, profileColumns, true)
+// env selects environment-specific tables.
+func (warehouse *PostgreSQL) Repair(ctx context.Context, env warehouses.Environment, profileColumns []warehouses.Column) error {
+	if env != warehouses.Production && env != warehouses.Development {
+		return fmt.Errorf("warehouse environment %d is invalid", env)
+	}
+	return warehouse.initRepairDatabaseObjects(ctx, env, profileColumns, true)
 }
 
 // sortedErrObjects contains the names of the database objects sorted as they should
@@ -112,7 +119,7 @@ var sortedErrObjects = []string{"table", "index", "type", "view", "materialized 
 
 // initRepairDatabaseObjects initializes (or repairs) the database objects (as
 // tables, types, etc...) on the data warehouse.
-func (warehouse *PostgreSQL) initRepairDatabaseObjects(ctx context.Context, profileColumns []warehouses.Column, repair bool) error {
+func (warehouse *PostgreSQL) initRepairDatabaseObjects(ctx context.Context, env warehouses.Environment, profileColumns []warehouses.Column, repair bool) error {
 	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return err
@@ -122,7 +129,6 @@ func (warehouse *PostgreSQL) initRepairDatabaseObjects(ctx context.Context, prof
 		createEventsTable,
 		createSystemOperationsTable,
 		createProfileSchemaVersionsTable,
-		createSimulatedAccountRecordsTable,
 		identitiesSQLSchema(profileColumns),
 		identitiesIndex(),
 		profilesSQLSchema("krenalis_profiles_0", profileColumns),
@@ -136,6 +142,9 @@ func (warehouse *PostgreSQL) initRepairDatabaseObjects(ctx context.Context, prof
 		//
 		// TODO(Gianluca): clarify this.
 		queries = append(queries, profilesViewSQLSchema(profileColumns, "krenalis_profiles_0"))
+	}
+	if env == warehouses.Development {
+		queries = append(queries, createSimulatedSystemRecordsTable, createSimulatedSystemWritersTable)
 	}
 	for _, query := range queries {
 		_, err := pool.Exec(ctx, query)

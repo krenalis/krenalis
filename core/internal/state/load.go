@@ -344,11 +344,11 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				var profileSchema []byte
 				var alterProfileSchemaSchema []byte
 				ws := &Workspace{
-					mu:                new(sync.Mutex),
-					connections:       map[string]*Connection{},
-					accounts:          map[int]*Account{},
-					consentPurposes:   map[string]*ConsentPurpose{},
-					simulatedAccounts: map[string]*SimulatedAccount{},
+					mu:               new(sync.Mutex),
+					connections:      map[string]*Connection{},
+					accounts:         map[int]*Account{},
+					consentPurposes:  map[string]*ConsentPurpose{},
+					simulatedSystems: map[string]*SimulatedSystem{},
 				}
 				var settingsKey, mcpSettingsKey []byte
 				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &ws.Environment, &warehousePlatform,
@@ -440,37 +440,37 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		return fmt.Errorf("cannot load accounts: %s", err)
 	}
 
-	// Read all simulated accounts.
+	// Read all simulated systems.
 	err = tx.QueryScan(ctx, "SELECT id, workspace, name, status, user_count,"+
 		" duplicate_record_percent::text, countries, generation_policy_version, generated_record_count,"+
-		" generation_checkpoint, generation_error, created_at, updated_at FROM simulated_accounts",
+		" generation_checkpoint, generation_error, created_at, updated_at FROM simulated_systems",
 		func(rows *db.Rows) error {
 			for rows.Next() {
-				account := SimulatedAccount{mu: new(sync.Mutex)}
+				account := SimulatedSystem{mu: new(sync.Mutex)}
 				var workspaceID, duplicateRecordPercent string
 				var countries, checkpoint []byte
 				if err := rows.Scan(&account.ID, &workspaceID, &account.Name, &account.Status,
 					&account.UserCount, &duplicateRecordPercent, &countries, &account.GenerationPolicyVersion,
 					&account.GeneratedRecordCount, &checkpoint, &account.GenerationError, &account.CreatedAt,
 					&account.UpdatedAt); err != nil {
-					return fmt.Errorf("loading simulated account %s: %s", account.ID, err)
+					return fmt.Errorf("loading simulated system %s: %s", account.ID, err)
 				}
 				account.DuplicateRecordPercent, err = decimal.Parse(duplicateRecordPercent, 5, 2)
 				if err != nil {
-					return fmt.Errorf("loading simulated account %s: invalid duplicate record percent: %s", account.ID, err)
+					return fmt.Errorf("loading simulated system %s: invalid duplicate record percent: %s", account.ID, err)
 				}
 				account.Countries = json.Value(bytes.Clone(countries))
 				account.GenerationCheckpoint = json.Value(bytes.Clone(checkpoint))
 				account.workspace = state.workspaces[workspaceID]
 				if account.workspace == nil {
-					return fmt.Errorf("loading simulated account %s: workspace %s does not exist", account.ID, workspaceID)
+					return fmt.Errorf("loading simulated system %s: workspace %s does not exist", account.ID, workspaceID)
 				}
-				account.workspace.simulatedAccounts[account.ID] = &account
+				account.workspace.simulatedSystems[account.ID] = &account
 			}
 			return nil
 		})
 	if err != nil {
-		return fmt.Errorf("cannot load simulated accounts: %s", err)
+		return fmt.Errorf("cannot load simulated systems: %s", err)
 	}
 
 	// Read all consent purposes.
@@ -493,16 +493,16 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	// Read all connections.
 	state.connections = map[string]*Connection{}
 	err = tx.QueryScan(ctx, "SELECT id, workspace, name, connector, role,"+
-		" simulated_account, account, strategy, sending_mode, linked_connections, settings,"+
+		" simulated_system, account, strategy, sending_mode, linked_connections, settings,"+
 		" kms_encrypted_settings_key, health FROM connections", func(rows *db.Rows) error {
 		for rows.Next() {
 			var workspaceID string
-			var simulatedAccount *string
+			var simulatedSystem *string
 			var account int
 			var connector string
 			var settingsKey []byte
 			c := Connection{}
-			if err := rows.Scan(&c.ID, &workspaceID, &c.Name, &connector, &c.Role, &simulatedAccount,
+			if err := rows.Scan(&c.ID, &workspaceID, &c.Name, &connector, &c.Role, &simulatedSystem,
 				&account, &c.Strategy, &c.SendingMode, &c.LinkedConnections, &c.settings,
 				&settingsKey, &c.Health,
 			); err != nil {
@@ -521,11 +521,11 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 			if account > 0 {
 				c.account = ws.accounts[account]
 			}
-			if simulatedAccount != nil {
-				c.simulatedAccount = ws.simulatedAccounts[*simulatedAccount]
-				if c.simulatedAccount == nil {
-					return fmt.Errorf("loading connection %s: simulated account %s does not exist in workspace %s",
-						c.ID, *simulatedAccount, workspaceID)
+			if simulatedSystem != nil {
+				c.simulatedSystem = ws.simulatedSystems[*simulatedSystem]
+				if c.simulatedSystem == nil {
+					return fmt.Errorf("loading connection %s: simulated system %s does not exist in workspace %s",
+						c.ID, *simulatedSystem, workspaceID)
 				}
 			}
 			if c.SendingMode == nil && c.Role == Destination && c.connector.SendingMode != nil {

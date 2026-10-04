@@ -660,6 +660,11 @@ func (k *Krenalis) ExecQueryTestDatabase(ctx context.Context, query string, args
 	}
 }
 
+// TestDatabaseSettings returns the operational database settings used by tests.
+func (k *Krenalis) TestDatabaseSettings() DBSettings {
+	return *testsSettings.Database
+}
+
 // QueryRowTestDatabase queries a row on the test database, scanning it into
 // dest, which must be a pointer.
 func (k *Krenalis) QueryRowTestDatabase(ctx context.Context, dest any, query string, args ...any) {

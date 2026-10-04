@@ -388,6 +388,12 @@ func (c *pipelineCleaner) terminateOrphanedRuns() {
 		case <-tick.C:
 		}
 		pingTime := time.Now().UTC().Add(-15 * time.Second)
+		claimErr := c.core.recoverSimulatedSystemWriters(ctx, pingTime)
+		if claimErr != nil {
+			if ctx.Err() == nil {
+				slog.Error("core: cannot recover simulated system writer authority", "error", claimErr)
+			}
+		}
 		err := c.core.db.QueryScan(ctx, "SELECT id, pipeline FROM pipelines_runs WHERE node IS NOT NULL AND end_time IS NULL AND ping_time < $1",
 			pingTime, func(rows *db.Rows) error {
 				ending.Lock()

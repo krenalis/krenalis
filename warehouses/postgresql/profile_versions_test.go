@@ -129,7 +129,7 @@ func TestResolveIdentitiesProfileVersionBounds(t *testing.T) {
 
 	warehouse, pool := newTestPostgreSQLWarehouse(t)
 	columns := []warehouses.Column{{Name: "email", Type: types.String(), Nullable: true}}
-	err := warehouse.Initialize(t.Context(), columns)
+	err := warehouse.Initialize(t.Context(), warehouses.Production, columns)
 	if err != nil {
 		t.Fatal(err)
 	}

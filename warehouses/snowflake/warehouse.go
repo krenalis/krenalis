@@ -38,8 +38,11 @@ var (
 	createOperationsTable string
 	//go:embed tables/profile_schema_versions.sql
 	createProfileSchemaVersionTable string
-	//go:embed tables/simulated_account_records.sql
-	createSimulatedAccountRecordsTable string
+	//go:embed tables/simulated_system_records.sql
+	createSimulatedSystemRecordsTable string
+
+	//go:embed tables/simulated_system_writers.sql
+	createSimulatedSystemWritersTable string
 )
 
 var _ warehouses.Warehouse = &Snowflake{}

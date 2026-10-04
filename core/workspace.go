@@ -22,6 +22,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/core/internal/metrics"
 	"github.com/krenalis/krenalis/core/internal/schemas"
+	"github.com/krenalis/krenalis/core/internal/simulated"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/errors"
@@ -405,10 +406,6 @@ func (this *Workspace) Connection(ctx context.Context, id string) (*Connection, 
 		return nil, errors.NotFound("connection %s does not exist", id)
 	}
 	conn := c.Connector()
-	simulatedAccount := ""
-	if account, ok := c.SimulatedAccount(); ok {
-		simulatedAccount = account.ID
-	}
 
 	connection := Connection{
 		core:              this.core,
@@ -419,7 +416,6 @@ func (this *Workspace) Connection(ctx context.Context, id string) (*Connection, 
 		Connector:         conn.Code,
 		ConnectorType:     ConnectorType(conn.Type),
 		Role:              Role(c.Role),
-		SimulatedAccount:  simulatedAccount,
 		Strategy:          (*Strategy)(c.Strategy),
 		SendingMode:       (*SendingMode)(c.SendingMode),
 		LinkedConnections: slices.Clone(c.LinkedConnections),
@@ -462,10 +458,6 @@ func (this *Workspace) Connections() []*Connection {
 	infos := make([]*Connection, len(connections))
 	for i, c := range connections {
 		conn := c.Connector()
-		simulatedAccount := ""
-		if account, ok := c.SimulatedAccount(); ok {
-			simulatedAccount = account.ID
-		}
 		connection := Connection{
 			core:              this.core,
 			store:             this.store,
@@ -475,7 +467,6 @@ func (this *Workspace) Connections() []*Connection {
 			Connector:         conn.Code,
 			ConnectorType:     ConnectorType(conn.Type),
 			Role:              Role(c.Role),
-			SimulatedAccount:  simulatedAccount,
 			Strategy:          (*Strategy)(c.Strategy),
 			SendingMode:       (*SendingMode)(c.SendingMode),
 			LinkedConnections: slices.Clone(c.LinkedConnections),
@@ -523,7 +514,7 @@ func (this *Workspace) ConsumeRateLimitCapacity(ctx context.Context, units int) 
 //   - ConnectorsLimitReached, if the organization cannot have more connectors.
 //   - LinkedConnectionNotExist, if a linked connection does not exist.
 //   - InvalidSettings, if the settings are not valid.
-//   - SimulatedAccountNotExist, if the simulated account does not exist in the
+//   - SimulatedSystemNotExist, if the simulated system does not exist in the
 //     workspace.
 func (this *Workspace) CreateConnection(ctx context.Context, connection ConnectionToAdd, authToken string) (string, error) {
 
@@ -537,9 +528,6 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	}
 	if err := util.ValidateStringField("name", connection.Name, 100); err != nil {
 		return "", errors.BadRequest("%s", err)
-	}
-	if connection.SimulatedAccount != "" && !IsValidID(connection.SimulatedAccount) {
-		return "", errors.BadRequest("simulated account identifier %q is not valid", connection.SimulatedAccount)
 	}
 	if s := connection.Strategy; s != nil {
 		if !isValidStrategy(*s) {
@@ -556,6 +544,10 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	c, ok := this.core.state.Connector(connection.Connector)
 	if !ok {
 		return "", errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", connection.Connector)
+	}
+	if c.Code == simulated.ApplicationCode && this.workspace.Environment != state.Development {
+		return "", errors.Unprocessable(SimulatedSystemsRequireDevelopment,
+			"simulated application is only available in development workspaces")
 	}
 	switch c.Type {
 	case state.File:
@@ -584,7 +576,6 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		Name:              connection.Name,
 		Connector:         connection.Connector,
 		Role:              state.Role(connection.Role),
-		SimulatedAccount:  connection.SimulatedAccount,
 		Strategy:          (*state.Strategy)(connection.Strategy),
 		SendingMode:       (*state.SendingMode)(connection.SendingMode),
 		LinkedConnections: connection.LinkedConnections,
@@ -671,6 +662,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 		}
 		conf := &connections.ConnectorConfig{
 			Role:         n.Role,
+			Workspace:    this.workspace.ID,
 			Organization: this.workspace.Organization().ID,
 		}
 		conf.OAuth.Account = n.Account.Code
@@ -686,6 +678,7 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 			}
 			return "", err
 		}
+		n.SimulatedSystem = conf.SimulatedSystem
 		n.Settings, n.SettingsKey, err = this.core.state.EncryptSettings(ctx, settings)
 		if err != nil {
 			return "", err
@@ -724,14 +717,30 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	// Create the connection.
 	for {
 		n.ID = generateID(this.workspace.Connection)
-		var simulatedAccount any
-		if n.SimulatedAccount != "" {
-			simulatedAccount = n.SimulatedAccount
+		var simulatedSystem any
+		if n.SimulatedSystem != "" {
+			simulatedSystem = n.SimulatedSystem
 		}
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 			// Check the connector and connection limits.
 			if err := checkCreateConnectionLimits(ctx, tx, org.ID, n.Connector); err != nil {
 				return nil, err
+			}
+			if n.SimulatedSystem != "" {
+				var status state.SimulatedSystemStatus
+				err := tx.QueryRow(ctx, "SELECT status FROM simulated_systems WHERE workspace = $1 AND id = $2 FOR UPDATE",
+					n.Workspace, n.SimulatedSystem).Scan(&status)
+				if err != nil {
+					if err == sql.ErrNoRows {
+						return nil, errors.Unprocessable(SimulatedSystemNotExist,
+							"simulated system %s does not exist in workspace %s", n.SimulatedSystem, n.Workspace)
+					}
+					return nil, err
+				}
+				if status == state.SimulatedSystemDeleting {
+					return nil, errors.Unprocessable(SimulatedSystemNotExist,
+						"simulated system %s does not exist in workspace %s", n.SimulatedSystem, n.Workspace)
+				}
 			}
 			// Insert or update the account.
 			if n.Account.Code != "" {
@@ -756,20 +765,24 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 			}
 			// Insert the connection.
 			_, err = tx.Exec(ctx, "INSERT INTO connections "+
-				"(id, workspace, simulated_account, name, connector, role, account,"+
+				"(id, workspace, simulated_system, name, connector, role, account,"+
 				" strategy, sending_mode, linked_connections, settings, kms_encrypted_settings_key)"+
 				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
-				n.ID, n.Workspace, simulatedAccount, n.Name, n.Connector, n.Role, n.Account.ID, n.Strategy,
+				n.ID, n.Workspace, simulatedSystem, n.Name, n.Connector, n.Role, n.Account.ID, n.Strategy,
 				n.SendingMode, n.LinkedConnections, n.Settings, n.SettingsKey)
 			if err != nil {
 				if db.IsForeignKeyViolation(err) {
 					switch db.ErrConstraintName(err) {
 					case "connections_workspace_fkey":
 						err = errors.Unprocessable(WorkspaceNotExist, "workspace %s does not exist", n.Workspace)
-					case "connections_workspace_simulated_account_fkey":
-						err = errors.Unprocessable(SimulatedAccountNotExist,
-							"simulated account %s does not exist in workspace %s", n.SimulatedAccount, n.Workspace)
+					case "connections_workspace_simulated_system_fkey":
+						err = errors.Unprocessable(SimulatedSystemNotExist,
+							"simulated system %s does not exist in workspace %s", n.SimulatedSystem, n.Workspace)
 					}
+				}
+				if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "connections_simulated_system_role_key" {
+					err = errors.Unprocessable(InvalidSettings,
+						"simulated system %s already has a %s connection", n.SimulatedSystem, strings.ToLower(n.Role.String()))
 				}
 				return nil, err
 			}
@@ -898,13 +911,19 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 // Delete deletes the workspace with all its connections.
 //
 // If the workspace does not exist anymore, it returns an errors.NotFound error.
+// It returns an errors.UnprocessableError with code SimulatedSystemPreparing
+// if a simulated system is still being prepared or SimulatedSystemInUse if
+// simulated systems remain.
 func (this *Workspace) Delete(ctx context.Context) error {
+
 	this.core.mustBeOpen()
+
 	organization := this.workspace.Organization().ID
 	n := state.DeleteWorkspace{
 		ID: this.workspace.ID,
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+
 		// Lock the workspace to serialize deletion with every other operation.
 		exists, err := tx.QueryExists(ctx,
 			"SELECT FROM workspaces WHERE id = $1 AND organization = $2 FOR UPDATE",
@@ -914,6 +933,29 @@ func (this *Workspace) Delete(ctx context.Context) error {
 		}
 		if !exists {
 			return nil, errors.NotFound("workspace %s does not exist", n.ID)
+		}
+		var accountID string
+		var status state.SimulatedSystemStatus
+		err = tx.QueryRow(ctx, "SELECT id, status FROM simulated_systems WHERE workspace = $1 "+
+			"ORDER BY CASE status WHEN 'Deleting' THEN 0 WHEN 'Preparing' THEN 1 ELSE 2 END, id LIMIT 1", n.ID).
+			Scan(&accountID, &status)
+		if err != nil {
+			if err != sql.ErrNoRows {
+				return nil, err
+			}
+		}
+		if err == nil {
+			switch status {
+			case state.SimulatedSystemDeleting:
+				return nil, errors.Unprocessable(SimulatedSystemInUse,
+					"simulated system %s is still being cleaned up", accountID)
+			case state.SimulatedSystemPreparing:
+				return nil, errors.Unprocessable(SimulatedSystemPreparing,
+					"simulated system %s is still being prepared", accountID)
+			default:
+				return nil, errors.Unprocessable(SimulatedSystemInUse,
+					"simulated system %s and its connections must be deleted before the workspace", accountID)
+			}
 		}
 		now := time.Now().UTC()
 		// Mark the pipeline functions as discontinued.
@@ -942,6 +984,7 @@ func (this *Workspace) Delete(ctx context.Context) error {
 		if result.RowsAffected() == 0 {
 			return nil, errors.NotFound("workspace %s does not exist", n.ID)
 		}
+
 		return n, nil
 	})
 	return err
@@ -1644,6 +1687,10 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 	if !ok {
 		return nil, errors.Unprocessable(ConnectorNotExist, "connector %q does not exist", connector)
 	}
+	if c.Code == simulated.ApplicationCode && this.workspace.Environment != state.Development {
+		return nil, errors.Unprocessable(SimulatedSystemsRequireDevelopment,
+			"simulated application is only available in development workspaces")
+	}
 	if role == Source && !c.HasSourceSettings || role == Destination && !c.HasDestinationSettings {
 		return nil, errors.BadRequest("connector %s does not have %s settings", connector, strings.ToLower(role.String()))
 	}
@@ -1671,6 +1718,7 @@ func (this *Workspace) ServeUI(ctx context.Context, event string, settings json.
 	}
 	conf := &connections.ConnectorConfig{
 		Role:         state.Role(role),
+		Workspace:    this.workspace.ID,
 		Organization: this.workspace.Organization().ID,
 	}
 	conf.OAuth.Account = account.Code
@@ -2238,9 +2286,6 @@ type ConnectionToAdd struct {
 
 	// Connector is the name of the connector.
 	Connector string `json:"connector"`
-
-	// SimulatedAccount is the identifier of the simulated account.
-	SimulatedAccount string `json:"simulatedAccount,omitempty"`
 
 	// Strategy is the strategy that determines how to merge anonymous and
 	// non-anonymous users. It can only be provided for source SDK connections

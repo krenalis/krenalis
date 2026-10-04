@@ -12,6 +12,7 @@ import (
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/dialer"
+	"github.com/krenalis/krenalis/core/internal/simulated"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/json"
 )
@@ -78,10 +79,15 @@ func (c *Connections) ServeConnectionUI(ctx context.Context, connection *state.C
 	organization := connection.Organization()
 	switch connector := connection.Connector(); connector.Type {
 	case state.Application:
+		extra, extraErr := c.applicationExtra(connection, nil)
+		if extraErr != nil {
+			return nil, extraErr
+		}
 		inner, err = connectors.RegisteredApplication(connector.Code).New(&connectors.ApplicationEnv{
 			Settings:     settingsStore,
 			OAuthAccount: accountCode,
 			HTTPClient:   c.http.ConnectionClient(connection),
+			Extra:        extra,
 			// WebhookURL:   webhookURL(connection, accountID) // TODO(marco): implement webhooks
 		})
 	case state.Database:
@@ -127,6 +133,9 @@ func (c *Connections) ServeConnectionUI(ctx context.Context, connection *state.C
 type ConnectorConfig struct {
 	Role state.Role
 
+	// Workspace is the workspace in which the connector is used.
+	Workspace string
+
 	// Organization is the ID of the organization on behalf of which the
 	// connector is used.
 	Organization string
@@ -136,6 +145,10 @@ type ConnectorConfig struct {
 		ClientSecret string
 		AccessToken  string
 	}
+
+	// SimulatedSystem is populated when Simulated Application settings resolve
+	// to a simulated-system binding.
+	SimulatedSystem string
 }
 
 // ServeConnectorUI serves the user interface of the provided connector and
@@ -154,10 +167,15 @@ func (c *Connections) ServeConnectorUI(ctx context.Context, connector *state.Con
 	code := connector.Code
 	switch connector.Type {
 	case state.Application:
+		extra, extraErr := c.applicationExtraForConfig(code, conf)
+		if extraErr != nil {
+			return nil, extraErr
+		}
 		inner, err = connectors.RegisteredApplication(code).New(&connectors.ApplicationEnv{
 			Settings:     settingStore,
 			OAuthAccount: conf.OAuth.Account,
 			HTTPClient:   c.http.ConnectorClient(connector, conf.Organization, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
+			Extra:        extra,
 		})
 	case state.Database:
 		var database any
@@ -214,10 +232,15 @@ func (c *Connections) UpdatedSettings(ctx context.Context, connector *state.Conn
 	code := connector.Code
 	switch connector.Type {
 	case state.Application:
+		extra, extraErr := c.applicationExtraForConfig(code, conf)
+		if extraErr != nil {
+			return nil, extraErr
+		}
 		inner, err = connectors.RegisteredApplication(code).New(&connectors.ApplicationEnv{
 			OAuthAccount: conf.OAuth.Account,
 			HTTPClient:   c.http.ConnectorClient(connector, conf.Organization, conf.OAuth.ClientSecret, conf.OAuth.AccessToken),
 			Settings:     settingStore,
+			Extra:        extra,
 		})
 	case state.Database:
 		var database any
@@ -256,6 +279,9 @@ func (c *Connections) UpdatedSettings(ctx context.Context, connector *state.Conn
 	}
 	if len(settingStore.settings) > maxSettingsLen && utf8.RuneCount(settingStore.settings) > maxSettingsLen {
 		return nil, fmt.Errorf("inner settings is longer than %d runes", maxSettingsLen)
+	}
+	if connector.Code == simulated.ApplicationCode {
+		conf.SimulatedSystem = inner.(*simulated.Application).SimulatedSystem()
 	}
 	return settingStore.settings, nil
 }
@@ -385,6 +411,7 @@ func marshalUIComponent(b *json.Buffer, component connectors.Component, role con
 				b.WriteByte('{')
 				_ = b.EncodeKeyValue("text", option.Text)
 				_ = b.EncodeKeyValue("value", option.Value)
+				_ = b.EncodeKeyValue("disabled", option.Disabled)
 				b.WriteString(`}`)
 			}
 			b.WriteByte(']')

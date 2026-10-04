@@ -3,7 +3,7 @@ import test from 'node:test';
 import {
 	parseInitialUserRecords,
 	parseDuplicateRecordPercent,
-} from '../src/components/routes/SimulatedAccounts/simulatedAccountValues.ts';
+} from '../src/components/routes/SimulatedWorld/simulatedSystemValues.ts';
 
 test('initial user records parse exact preset and grouped custom numbers within the allowed range', () => {
 	for (const [text, expected] of [
@@ -11,10 +11,11 @@ test('initial user records parse exact preset and grouped custom numbers within 
 		['10', 10],
 		['1,000', 1000],
 		['1000000', 1000000],
+		['10,000,000', 10000000],
 	]) {
 		assert.equal(parseInitialUserRecords(text), expected);
 	}
-	for (const text of ['', '-1', '1.5', '1,00', '1000001', '10000000000000000000']) {
+	for (const text of ['', '-1', '1.5', '1,00', '10000001', '10000000000000000000']) {
 		assert.throws(() => parseInitialUserRecords(text));
 	}
 });

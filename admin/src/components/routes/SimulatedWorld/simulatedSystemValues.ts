@@ -1,10 +1,10 @@
 const parseInitialUserRecords = (value: string): number => {
 	if (!/^(?:\d+|\d{1,3}(?:,\d{3})+)$/.test(value)) {
-		throw new Error('Initial user records must be an integer from 0 to 1,000,000.');
+		throw new Error('Enter a whole number between 0 and 10,000,000.');
 	}
 	const count = Number(value.replaceAll(',', ''));
-	if (!Number.isInteger(count) || count < 0 || count > 1000000) {
-		throw new Error('Initial user records must be an integer from 0 to 1,000,000.');
+	if (!Number.isInteger(count) || count < 0 || count > 10000000) {
+		throw new Error('Enter a whole number between 0 and 10,000,000.');
 	}
 	return count;
 };

@@ -18,6 +18,7 @@ type InputType =
 interface FieldOption {
 	text: string;
 	value: any;
+	disabled: boolean;
 }
 
 interface InputField {

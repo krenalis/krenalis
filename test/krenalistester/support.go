@@ -450,7 +450,13 @@ func (k *Krenalis) TryDeleteConnection(conn string) error {
 
 // DeleteOrganization deletes the organization with the given ID.
 func (k *Krenalis) DeleteOrganization(id string) {
-	k.Call("DELETE", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, nil)
+	must(k.t, k.TryDeleteOrganization(id))
+}
+
+// TryDeleteOrganization is like DeleteOrganization but returns an error
+// instead of failing the test.
+func (k *Krenalis) TryDeleteOrganization(id string) error {
+	return k.TryCall("DELETE", fmt.Sprintf("/v1/organizations/%s", id), organizationsHeaders(), nil, nil)
 }
 
 // DeletePipeline deletes a pipeline.

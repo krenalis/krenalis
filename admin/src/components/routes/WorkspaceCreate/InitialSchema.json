@@ -5,7 +5,6 @@
 			"name": "customer_id",
 			"readOptional": true,
 			"type": {
-				"maxLength": 36,
 				"kind": "string"
 			},
 			"displayName": "Customer ID"
@@ -14,8 +13,8 @@
 			"name": "first_name",
 			"readOptional": true,
 			"type": {
-				"maxLength": 100,
-				"kind": "string"
+				"kind": "string",
+				"maxLength": 100
 			},
 			"displayName": "First name"
 		},
@@ -23,8 +22,8 @@
 			"name": "last_name",
 			"readOptional": true,
 			"type": {
-				"maxLength": 100,
-				"kind": "string"
+				"kind": "string",
+				"maxLength": 100
 			},
 			"displayName": "Last name"
 		},
@@ -32,8 +31,8 @@
 			"name": "email",
 			"readOptional": true,
 			"type": {
-				"maxLength": 254,
-				"kind": "string"
+				"kind": "string",
+				"semantic": "email"
 			},
 			"displayName": "Email"
 		},
@@ -41,8 +40,8 @@
 			"name": "phone_number",
 			"readOptional": true,
 			"type": {
-				"maxLength": 20,
-				"kind": "string"
+				"kind": "string",
+				"semantic": "phone"
 			},
 			"displayName": "Phone number"
 		},
@@ -72,8 +71,8 @@
 						"name": "street",
 						"readOptional": true,
 						"type": {
-							"maxLength": 255,
-							"kind": "string"
+							"kind": "string",
+							"maxLength": 255
 						},
 						"displayName": "Street"
 					},
@@ -81,8 +80,8 @@
 						"name": "city",
 						"readOptional": true,
 						"type": {
-							"maxLength": 100,
-							"kind": "string"
+							"kind": "string",
+							"maxLength": 100
 						},
 						"displayName": "City"
 					},
@@ -90,8 +89,8 @@
 						"name": "postal_code",
 						"readOptional": true,
 						"type": {
-							"maxLength": 20,
-							"kind": "string"
+							"kind": "string",
+							"maxLength": 20
 						},
 						"displayName": "Postal code"
 					},
@@ -99,8 +98,9 @@
 						"name": "country",
 						"readOptional": true,
 						"type": {
-							"maxLength": 2,
-							"kind": "string"
+							"kind": "string",
+							"format": "alpha-2",
+							"semantic": "country"
 						},
 						"displayName": "Country"
 					}
@@ -145,6 +145,15 @@
 				]
 			},
 			"displayName": "Preferences"
+		},
+		{
+			"name": "photo_url",
+			"readOptional": true,
+			"type": {
+				"kind": "string",
+				"semantic": "url"
+			},
+			"displayName": "Photo"
 		}
 	]
 }

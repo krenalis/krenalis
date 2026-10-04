@@ -46,6 +46,7 @@ type Writer struct {
 	iterator  *iterator   // current iterator, if any; protected by mu
 	records   []record    // records in the queue; protected by mu
 	available int         // number of available (non-read) records; protected by mu
+	upsertErr error       // general Upsert error; protected by mu
 	timer     *time.Timer // timer to trigger an iterator every maxTimeBetweenIterations; protected by mu
 
 	close struct {
@@ -129,6 +130,9 @@ func (w *Writer) Close(ctx context.Context) error {
 			}
 			w.close.completed.Wait()
 		}
+		if w.upsertErr != nil {
+			break
+		}
 		if ctx.Err() != nil {
 			if trace {
 				fmt.Print("Writer.Close: context has been canceled\n")
@@ -158,7 +162,10 @@ func (w *Writer) Close(ctx context.Context) error {
 		w._assertAvailable(0)
 	}
 	w.close.cancel()
-	return nil
+	w.mu.Lock()
+	err := w.upsertErr
+	w.mu.Unlock()
+	return err
 }
 
 // Write writes a record with the provided identifier and attributes.
@@ -169,6 +176,10 @@ func (w *Writer) Write(_ context.Context, id string, attributes map[string]any) 
 	}
 	var iter *iterator
 	w.mu.Lock()
+	if w.upsertErr != nil {
+		w.mu.Unlock()
+		return false
+	}
 	w.records = append(w.records, record{id: id, attributes: attributes})
 	w.available++
 	if w.available == minBatchSize {
@@ -332,7 +343,7 @@ func (w *Writer) consume(iter *iterator) {
 		fmt.Printf("Writer.consume: iterator %p started\n", iter)
 	}
 	err := w.upsert(w.close.ctx, w.target, iter, w.schema)
-	errors, _ := err.(connectors.RecordsError)
+	recordErrors, isRecordsError := err.(connectors.RecordsError)
 	var errorOf map[error][]string
 	w.mu.Lock()
 	if w.iterator == iter {
@@ -343,11 +354,23 @@ func (w *Writer) consume(iter *iterator) {
 		w.iterator.index = 0
 		w.iterator = nil
 		w.close.completed.Signal()
-	} else {
+	} else if trace {
 		// Upsert has completed the iteration.
-		if trace {
-			fmt.Printf("Writer.consume: Upsert of iterator %p has returned, with error %#v\n", iter, err)
+		fmt.Printf("Writer.consume: Upsert of iterator %p has returned, with error %#v\n", iter, err)
+	}
+	if err != nil && !isRecordsError {
+		w.upsertErr = err
+		errorOf = make(map[error][]string)
+		for i := 0; i < len(w.records); i++ {
+			if w.records[i].attributes == nil {
+				continue
+			}
+			id := w.records[i].id
+			errorOf[err] = append(errorOf[err], id)
+			w.records[i] = record{}
 		}
+		w.available = 0
+	} else if w.iterator != iter {
 		errorOf = make(map[error][]string)
 		var index int
 		for i := 0; i < len(w.records); i++ {
@@ -355,10 +378,11 @@ func (w *Writer) consume(iter *iterator) {
 				continue
 			}
 			id := w.records[i].id
-			if errors != nil {
-				err = errors[index]
+			ackErr := error(nil)
+			if isRecordsError {
+				ackErr = recordErrors[index]
 			}
-			errorOf[err] = append(errorOf[err], id)
+			errorOf[ackErr] = append(errorOf[ackErr], id)
 			w.records[i] = record{}
 			index++
 		}
