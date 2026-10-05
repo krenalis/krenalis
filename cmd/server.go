@@ -48,6 +48,8 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 
 	var photoHandler http.Handler
 	var catalog *fakedata.FaceCatalog
+	var catalogSource *fakedata.FaceCatalogSource
+	photoBaseURL := config.HTTP.ExternalURL
 	if config.SyntheticPhotosDir != "" {
 		var err error
 		catalog, err = fakedata.LoadFaceCatalog(ctx, config.SyntheticPhotosDir)
@@ -55,6 +57,13 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 			return fmt.Errorf("load KRENALIS_SYNTHETIC_PHOTOS_DIR: %w", err)
 		}
 		photoHandler = catalog.Handler()
+	} else {
+		var err error
+		catalogSource, err = fakedata.NewFaceCatalogSource(config.ExternalAssetsURLs)
+		if err != nil {
+			return fmt.Errorf("configure external photo catalog: %w", err)
+		}
+		photoBaseURL = config.ExternalAssetsURLs[0]
 	}
 
 	conf := corePkg.Config{
@@ -70,7 +79,8 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 		MaxQueuedEventsPerDestination: config.MaxQueuedEventsPerDestination,
 		PrometheusMetricsEnabled:      config.PrometheusMetricsEnabled,
 		SimulatedFaceCatalog:          catalog,
-		SimulatedPhotoBaseURL:         config.HTTP.ExternalURL,
+		SimulatedFaceCatalogSource:    catalogSource,
+		SimulatedPhotoBaseURL:         photoBaseURL,
 	}
 	conf.DatabaseInitialization.InitIfEmpty = initDBIfEmpty
 	conf.DatabaseInitialization.InitDockerMember = initDockerMember

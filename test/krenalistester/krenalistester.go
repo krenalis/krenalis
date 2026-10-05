@@ -22,6 +22,7 @@ import (
 	"reflect"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -72,6 +73,7 @@ type Krenalis struct {
 	assetsGenerated      chan struct{}
 
 	// Options.
+	externalAssetsURLs    []string
 	fileSystemRoot        string
 	syntheticPhotosDir    string
 	natsAckWait           string
@@ -110,6 +112,7 @@ func NewKrenalisInstance(t *testing.T) *Krenalis {
 	k := Krenalis{
 		t:                     t,
 		populateProfileSchema: true,
+		externalAssetsURLs:    []string{"https://assets.krenalis.com/"},
 	}
 
 	// Determine the root of the repository.
@@ -167,6 +170,11 @@ func NewKrenalisInstance(t *testing.T) *Krenalis {
 // is considered true.
 func (k *Krenalis) PopulateProfileSchema(populate bool) {
 	k.populateProfileSchema = populate
+}
+
+// SetExternalAssetsURLs sets the ordered asset origins before Start.
+func (k *Krenalis) SetExternalAssetsURLs(origins []string) {
+	k.externalAssetsURLs = append([]string(nil), origins...)
 }
 
 // SetFileSystemRoot sets the root of the File System connections; the value set
@@ -350,7 +358,7 @@ func (k *Krenalis) Start() {
 		// this causes errors on Windows).
 		//
 		env := append(environWithoutKrenalisVars(), []string{
-			"KRENALIS_EXTERNAL_ASSETS_URLS=https://assets.krenalis.com/",
+			"KRENALIS_EXTERNAL_ASSETS_URLS=" + strings.Join(k.externalAssetsURLs, ","),
 			"KRENALIS_POTENTIAL_CONNECTORS_URL=https://assets.krenalis.com/admin/connectors/potentials.json",
 			"KRENALIS_TELEMETRY_LEVEL=none",
 			"KRENALIS_KMS=" + testKMS(),
@@ -397,7 +405,7 @@ func (k *Krenalis) Start() {
 		setts.OrganizationsAPIKey = testsSettings.OrganizationsAPIKey
 		setts.JavaScriptSDKURL = "https://cdn.krenalis.com/krenalis.min.js"
 		setts.SentryTelemetryLevel = core.TelemetryLevelNone
-		setts.ExternalAssetsURLs = []string{"https://assets.krenalis.com/"}
+		setts.ExternalAssetsURLs = k.externalAssetsURLs
 		setts.PotentialConnectorsURL = "https://assets.krenalis.com/admin/connectors/potentials.json"
 		setts.HTTP.Host = testsSettings.HTTP.Host
 		setts.HTTP.Port = testsSettings.HTTP.Port

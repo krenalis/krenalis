@@ -34,6 +34,12 @@ func TestSimulatedSystemGeneration(t *testing.T) {
 	}
 	k := krenalistester.NewKrenalisInstance(t)
 	k.SetSyntheticPhotosDir(simulatedSystemCatalogFixture(t))
+	testSimulatedSystemGeneration(t, k, "http://"+k.Addr()+"/photos/")
+}
+
+func testSimulatedSystemGeneration(t *testing.T, k *krenalistester.Krenalis, photoPrefix string) {
+
+	t.Helper()
 	k.Start()
 	defer k.Stop()
 
@@ -69,9 +75,10 @@ func TestSimulatedSystemGeneration(t *testing.T) {
 	}()
 	settings.Database = database
 
-	profileSchema := types.Object([]types.Property{{
-		Name: "email", Type: types.String().AsEmail().WithMaxLength(254), ReadOptional: true,
-	}})
+	profileSchema := types.Object([]types.Property{
+		{Name: "email", Type: types.String().AsEmail().WithMaxLength(254), ReadOptional: true},
+		{Name: "photo_url", Type: types.String().AsURL(), ReadOptional: true},
+	})
 	var workspace struct {
 		ID string `json:"id"`
 	}
@@ -193,8 +200,8 @@ func TestSimulatedSystemGeneration(t *testing.T) {
 	}
 	var photo string
 	err = json.Unmarshal(document["photo"], &photo)
-	if err != nil || !strings.HasPrefix(photo, "http://"+k.Addr()+"/photos/") {
-		t.Fatalf("expected absolute Krenalis photo URL, got %q", photo)
+	if err != nil || !strings.HasPrefix(photo, photoPrefix) {
+		t.Fatalf("expected absolute configured photo URL, got %q", photo)
 	}
 	for _, field := range []string{"source_record_id", "photo_id", "photo_url", "country", "person_id", "oracle", "role"} {
 		if _, ok := document[field]; ok {
@@ -208,17 +215,37 @@ func TestSimulatedSystemGeneration(t *testing.T) {
 	if schemas := k.PipelineSchemas(simulatedConnection, core.TargetUser, ""); schemas["in"] == nil {
 		t.Fatalf("expected Simulated Application source schema, got %v", schemas)
 	}
-	simulatedSourceSchema := types.Object([]types.Property{{Name: "email", Type: types.String().AsEmail(), ReadOptional: true}})
-	simulatedOutputSchema := types.Object([]types.Property{
-		{Name: "email", Type: types.String().AsEmail().WithMaxLength(254), ReadOptional: true},
+	simulatedSourceSchema := types.Object([]types.Property{
+		{Name: "email", Type: types.String().AsEmail(), ReadOptional: true},
+		{Name: "photo", Type: types.String().AsURL()},
 	})
+	simulatedOutputSchema := profileSchema
 	pipeline := k.CreatePipeline(simulatedConnection, "User", krenalistester.PipelineToSet{
 		Name: "Read Simulated Application users", Enabled: true, InSchema: simulatedSourceSchema,
 		OutSchema:      simulatedOutputSchema,
-		Transformation: &krenalistester.Transformation{Mapping: map[string]string{"email": "email"}},
+		Transformation: &krenalistester.Transformation{Mapping: map[string]string{"email": "email", "photo_url": "photo"}},
 	})
 	runID := k.StartPipelineRun(pipeline)
 	k.WaitForRunsCompletion(runID)
+
+	run := k.PipelineRun(runID)
+	if run.Error != "" || run.Failed != [7]int{} {
+		t.Fatalf("expected successful Source readback and mapping, got %+v", run)
+	}
+	k.RunIdentityResolutionAndWait()
+	profiles, profileCount := k.Profiles([]string{"photo_url"}, "", false, 0, 10)
+	if profileCount == 0 || len(profiles) == 0 {
+		t.Fatalf("expected generated profiles, got %d", profileCount)
+	}
+	for _, profile := range profiles {
+		mappedPhoto, ok := profile.Attributes["photo_url"].(string)
+		if !ok {
+			t.Fatalf("expected mapped photo URL, got %v", profile.Attributes["photo_url"])
+		}
+		if !strings.HasPrefix(mappedPhoto, photoPrefix) {
+			t.Fatalf("expected photo mapped to photo_url under %q, got %q", photoPrefix, mappedPhoto)
+		}
+	}
 
 	_, err = warehousePool.Exec(t.Context(), "CREATE SEQUENCE simulated_generation_attempts")
 	if err != nil {

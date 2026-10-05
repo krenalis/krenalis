@@ -10,6 +10,33 @@ import (
 	"testing"
 )
 
+func TestExternalPhotoOriginsConfiguration(t *testing.T) {
+
+	t.Setenv("KRENALIS_KMS", "key:"+base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
+	t.Setenv("KRENALIS_DB_USERNAME", "u")
+	t.Setenv("KRENALIS_DB_PASSWORD", "p")
+	t.Setenv("KRENALIS_DB_DATABASE", "db")
+	t.Setenv("KRENALIS_SYNTHETIC_PHOTOS_DIR", "")
+	for _, setting := range []string{"", " , ", "https://example.test/assets, http://internal-assets:8080/"} {
+		t.Setenv("KRENALIS_EXTERNAL_ASSETS_URLS", setting)
+		config, err := loadConfig(t.Context(), "env:")
+		if err != nil {
+			t.Fatalf("expected asset configuration, got %v", err)
+		}
+		want := "https://assets.krenalis.com/"
+		if strings.HasPrefix(setting, "https://example.test") {
+			want = "https://example.test/assets,http://internal-assets:8080/"
+		}
+		if got := strings.Join(config.ExternalAssetsURLs, ","); got != want {
+			t.Fatalf("expected origins %q, got %q", want, got)
+		}
+		if config.SyntheticPhotosDir != "" {
+			t.Fatalf("expected external metadata configuration without local override, got %q", config.SyntheticPhotosDir)
+		}
+	}
+
+}
+
 func TestSyntheticPhotosConfiguration(t *testing.T) {
 
 	t.Setenv("KRENALIS_KMS", "key:"+base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
@@ -19,10 +46,10 @@ func TestSyntheticPhotosConfiguration(t *testing.T) {
 	t.Setenv("KRENALIS_SYNTHETIC_PHOTOS_DIR", "")
 	disabled, err := loadConfig(t.Context(), "env:")
 	if err != nil {
-		t.Fatalf("expected disabled photo configuration, got %v", err)
+		t.Fatalf("expected configuration without local photo override, got %v", err)
 	}
 	if disabled.SyntheticPhotosDir != "" {
-		t.Fatalf("expected disabled photo directory, got %q", disabled.SyntheticPhotosDir)
+		t.Fatalf("expected unset local photo directory, got %q", disabled.SyntheticPhotosDir)
 	}
 
 	directory := t.TempDir()

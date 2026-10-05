@@ -44,7 +44,7 @@ const (
 	PhotoSize1024 PhotoSize = 1024
 )
 
-// PhotoAsset describes one verified public photo asset.
+// PhotoAsset describes a local verified asset or an external photo rendition.
 type PhotoAsset struct {
 	PhotoID        string
 	Size           PhotoSize
@@ -57,9 +57,10 @@ type PhotoAsset struct {
 	Path           string
 }
 
-// FaceCatalog is an immutable verified fakefacegen v1 catalog snapshot.
+// FaceCatalog is an immutable catalog of photo selection metadata.
 type FaceCatalog struct {
 	version        string
+	release        string
 	sourceChecksum [sha256.Size]byte
 	checksum       [sha256.Size]byte
 	mode           string
@@ -213,14 +214,15 @@ func loadFaceCatalog(ctx context.Context, directory string, selectedIDs []string
 	return catalog, nil
 }
 
-// Asset returns normalized public metadata for a verified photo asset.
+// Asset returns rendition metadata without fetching external image bytes.
 // It returns ErrInvalidFaceCatalog for a nil catalog or ErrInvalidPhotoAsset
 // when photoID or size is unavailable.
 func (c *FaceCatalog) Asset(photoID string, size PhotoSize) (PhotoAsset, error) {
 	return c.asset(photoID, size)
 }
 
-// Checksum returns the raw semantic SHA-256 identity of the verified snapshot.
+// Checksum returns the catalog identity used by the deterministic photo stream.
+// External catalogs supply this seed as metadata, not as content verification.
 func (c *FaceCatalog) Checksum() [sha256.Size]byte {
 	if c == nil {
 		return [sha256.Size]byte{}
@@ -233,7 +235,16 @@ func (c *FaceCatalog) Handler() http.Handler {
 	return c.handler()
 }
 
-// SourceCatalogChecksum returns the raw SHA-256 of the source catalog.json.
+// Release returns the external catalog release, or empty for local snapshots.
+func (c *FaceCatalog) Release() string {
+	if c == nil {
+		return ""
+	}
+	return c.release
+}
+
+// SourceCatalogChecksum returns the source catalog.json hash for local catalogs.
+// It returns zero for external catalogs, whose content is not hash-pinned.
 func (c *FaceCatalog) SourceCatalogChecksum() [sha256.Size]byte {
 	if c == nil {
 		return [sha256.Size]byte{}
@@ -327,11 +338,15 @@ func (c *FaceCatalog) selectPhoto(factory streamFactory, index PersonIndex, gend
 }
 
 func (c *FaceCatalog) validate() error {
-	if c == nil || c.version == "" || c.sourceChecksum == ([sha256.Size]byte{}) ||
+	if c == nil || c.version == "" ||
 		c.checksum == ([sha256.Size]byte{}) || len(c.faces) == 0 {
 		return ErrInvalidFaceCatalog
 	}
-	if c.mode != faceCatalogSnapshotModeComplete && c.mode != faceCatalogSnapshotModeSelectedFixture {
+	if c.mode != externalPhotoCatalogMode && c.sourceChecksum == ([sha256.Size]byte{}) {
+		return ErrInvalidFaceCatalog
+	}
+	if c.mode != faceCatalogSnapshotModeComplete && c.mode != faceCatalogSnapshotModeSelectedFixture &&
+		c.mode != externalPhotoCatalogMode {
 		return ErrInvalidFaceCatalog
 	}
 	if c.dependencies[0].name != faceCatalogVersionComponentName ||
@@ -356,7 +371,11 @@ func (c *FaceCatalog) validate() error {
 			return fmt.Errorf("%w: photo %s has unknown status", ErrInvalidFaceCatalog, face.id)
 		}
 		if face.status == fakefacegenStatusGenerated {
-			for _, size := range supportedPhotoSizes {
+			sizes := supportedPhotoSizes[:]
+			if c.mode == externalPhotoCatalogMode {
+				sizes = []PhotoSize{PhotoSize256}
+			}
+			for _, size := range sizes {
 				if _, exists := c.assets[photoAssetKey{photoID: face.id, size: size}]; !exists {
 					return fmt.Errorf("%w: photo %s has no verified size %d", ErrInvalidFaceCatalog, face.id, size)
 				}

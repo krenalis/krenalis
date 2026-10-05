@@ -1,0 +1,27 @@
+{
+  "format": 1,
+  "release": "v1",
+  "selectionSeed": "1111111111111111111111111111111111111111111111111111111111111111",
+  "faces": [
+    {
+      "id": "face-000013",
+      "gender": "female",
+      "requestedAge": 35
+    },
+    {
+      "id": "face-000014",
+      "gender": "female",
+      "requestedAge": 35
+    },
+    {
+      "id": "face-000037",
+      "gender": "male",
+      "requestedAge": 45
+    },
+    {
+      "id": "face-000038",
+      "gender": "male",
+      "requestedAge": 45
+    }
+  ]
+}

@@ -13,8 +13,8 @@ import (
 	"fmt"
 	"log/slog"
 	"math/big"
+	"net/url"
 	"slices"
-	"strings"
 	"sync"
 	"time"
 
@@ -38,6 +38,7 @@ type simulatedSystemCheckpoint struct {
 	Person            int    `json:"person"`
 	Representation    int    `json:"representation"`
 	CatalogSHA256     string `json:"catalogSHA256"`
+	CatalogRelease    string `json:"catalogRelease,omitempty"`
 	WorldModelVersion string `json:"worldModelVersion"`
 	MarketDataVersion string `json:"marketDataVersion"`
 	PersonSpecVersion string `json:"personSpecVersion"`
@@ -52,7 +53,7 @@ type simulatedSystemPlan struct {
 	world        *fakedata.SourceWorld
 	source       *fakedata.SourceInstance
 	catalog      *fakedata.FaceCatalog
-	photoBaseURL string
+	photoBaseURL *url.URL
 	people       int
 	duplicate    int
 	offset       uint64
@@ -176,10 +177,14 @@ func (worker *simulatedSystemWorker) prepare(ctx context.Context, account *state
 	if account.GenerationError != "" {
 		return worker.fail(ctx, account, account.GenerationError)
 	}
-	if worker.core.simulatedCatalog == nil {
-		return worker.fail(ctx, account, "photo catalog is unavailable")
+	catalog, err := worker.core.loadSimulatedCatalog(ctx)
+	if err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		return worker.fail(ctx, account, "photo catalog is unavailable: "+err.Error())
 	}
-	plan, checkpoint, err := newSimulatedSystemPlan(account.Workspace().ID, account, worker.core.simulatedCatalog)
+	plan, checkpoint, err := newSimulatedSystemPlan(account.Workspace().ID, account, catalog)
 	if err != nil {
 		return worker.fail(ctx, account, "generation configuration is unavailable or changed")
 	}
@@ -398,6 +403,13 @@ func (worker *simulatedSystemWorker) wakeUp() {
 	}
 }
 
+func (core *Core) loadSimulatedCatalog(ctx context.Context) (*fakedata.FaceCatalog, error) {
+	if core.simulatedCatalog != nil {
+		return core.simulatedCatalog, nil
+	}
+	return core.simulatedPhotoSource.Load(ctx)
+}
+
 func (core *Core) wakeSimulatedSystemWorker() {
 	if core.simulatedWorker != nil {
 		core.simulatedWorker.wakeUp()
@@ -405,13 +417,18 @@ func (core *Core) wakeSimulatedSystemWorker() {
 }
 
 func initialSimulatedSystemCheckpoint(catalog *fakedata.FaceCatalog, photoBaseURL string) (json.Value, error) {
-	photoBaseURL, err := validation.ParseURL(photoBaseURL, validation.NoPath|validation.NoQuery)
+	flags := validation.NoQuery
+	if catalog.Release() == "" {
+		flags |= validation.NoPath
+	}
+	photoBaseURL, err := validation.ParseURL(photoBaseURL, flags)
 	if err != nil || photoBaseURL == "" {
 		return nil, fmt.Errorf("invalid simulated photo URL")
 	}
 	checksum := catalog.Checksum()
 	return json.Marshal(simulatedSystemCheckpoint{
-		CatalogSHA256: hex.EncodeToString(checksum[:]), WorldModelVersion: fakedata.WorldModelVersion,
+		CatalogSHA256: hex.EncodeToString(checksum[:]), CatalogRelease: catalog.Release(),
+		WorldModelVersion: fakedata.WorldModelVersion,
 		MarketDataVersion: fakedata.MarketDataVersion, PersonSpecVersion: fakedata.PersonSpecVersion,
 		SourceVersion: fakedata.SourceSimulationVersion, NamespaceVersion: simulatedSystemNamespaceVersion,
 		ReferenceDate: simulatedSystemReferenceDate, PhotoBaseURL: photoBaseURL,
@@ -424,12 +441,21 @@ func newSimulatedSystemPlan(workspaceID string, account *state.SimulatedSystem, 
 	if err != nil {
 		return nil, checkpoint, err
 	}
-	photoBaseURL, err := validation.ParseURL(checkpoint.PhotoBaseURL, validation.NoPath|validation.NoQuery)
+	flags := validation.NoQuery
+	if checkpoint.CatalogRelease == "" {
+		flags |= validation.NoPath
+	}
+	photoBaseURL, err := validation.ParseURL(checkpoint.PhotoBaseURL, flags)
 	if err != nil || photoBaseURL == "" || photoBaseURL != checkpoint.PhotoBaseURL {
 		return nil, checkpoint, fmt.Errorf("invalid simulated photo URL")
 	}
+	photoURL, err := url.Parse(photoBaseURL)
+	if err != nil {
+		return nil, checkpoint, err
+	}
 	checksum := catalog.Checksum()
 	if account.GenerationPolicyVersion != simulatedSystemPolicyVersion ||
+		checkpoint.CatalogRelease != catalog.Release() ||
 		checkpoint.CatalogSHA256 != hex.EncodeToString(checksum[:]) ||
 		checkpoint.WorldModelVersion != fakedata.WorldModelVersion ||
 		checkpoint.MarketDataVersion != fakedata.MarketDataVersion ||
@@ -495,7 +521,7 @@ func newSimulatedSystemPlan(workspaceID string, account *state.SimulatedSystem, 
 	for gcdSimulatedSystem(step, modulus) != 1 {
 		step++
 	}
-	return &simulatedSystemPlan{account: account, world: sourceWorld, source: source, catalog: catalog, photoBaseURL: photoBaseURL,
+	return &simulatedSystemPlan{account: account, world: sourceWorld, source: source, catalog: catalog, photoBaseURL: photoURL,
 		people: people, duplicate: duplicate, offset: binary.BigEndian.Uint64(accountKey[:8]) % modulus,
 		step: step}, checkpoint, nil
 }
@@ -542,7 +568,7 @@ func (plan *simulatedSystemPlan) record(person, representation int) (datastore.S
 		if err != nil {
 			return datastore.SimulatedSystemRecord{}, err
 		}
-		value := strings.TrimSuffix(plan.photoBaseURL, "/") + asset.Path
+		value := plan.photoBaseURL.JoinPath(asset.Path).String()
 		photo = &value
 	}
 	document := newSimulatedSystemDocument(canonical, record, photo)

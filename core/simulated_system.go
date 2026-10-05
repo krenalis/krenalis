@@ -70,12 +70,13 @@ func (this *Workspace) CreateSimulatedSystem(ctx context.Context, name string, u
 	var checkpoint json.Value
 	var checkpointParameter any
 	if userCountValue > 0 {
-		if this.core.simulatedCatalog == nil {
-			return "", errors.Unavailable("simulated system photo catalog is unavailable")
+		catalog, err := this.core.loadSimulatedCatalog(ctx)
+		if err != nil {
+			return "", errors.Unavailable("simulated system photo catalog is unavailable: %s", err)
 		}
 		status = state.SimulatedSystemPreparing
 		policy = simulatedSystemPolicyVersion
-		checkpoint, err = initialSimulatedSystemCheckpoint(this.core.simulatedCatalog, this.core.simulatedPhotoBaseURL)
+		checkpoint, err = initialSimulatedSystemCheckpoint(catalog, this.core.simulatedPhotoBaseURL)
 		if err != nil {
 			return "", fmt.Errorf("cannot prepare simulated system checkpoint")
 		}

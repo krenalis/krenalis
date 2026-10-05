@@ -75,6 +75,7 @@ type Core struct {
 	pipelineCleaner       *pipelineCleaner
 	pipelineScheduler     *pipelineScheduler
 	simulatedCatalog      *fakedata.FaceCatalog
+	simulatedPhotoSource  *fakedata.FaceCatalogSource
 	simulatedPhotoBaseURL string
 	simulatedWorker       *simulatedSystemWorker
 	localLiveRuns         cancelContexts
@@ -113,6 +114,7 @@ type Config struct {
 	MaxQueuedEventsPerDestination int
 	PrometheusMetricsEnabled      bool
 	SimulatedFaceCatalog          *fakedata.FaceCatalog
+	SimulatedFaceCatalogSource    *fakedata.FaceCatalogSource
 	SimulatedPhotoBaseURL         string
 	DatabaseInitialization        struct {
 		// InitIfEmpty controls whether the PostgreSQL database should be
@@ -388,6 +390,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 
 	core.close.ctx, core.close.cancelCtx = context.WithCancel(context.Background())
 	core.simulatedCatalog = conf.SimulatedFaceCatalog
+	core.simulatedPhotoSource = conf.SimulatedFaceCatalogSource
 	core.simulatedPhotoBaseURL = conf.SimulatedPhotoBaseURL
 	core.simulatedWorker = newSimulatedSystemWorker(core)
 
