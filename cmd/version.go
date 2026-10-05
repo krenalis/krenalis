@@ -25,14 +25,16 @@ var krenalisVersion = sync.OnceValue(func() string {
 		return buildVersion
 	}
 	const modulePath = "github.com/krenalis/krenalis"
-	if info, ok := debug.ReadBuildInfo(); ok {
-		if info.Main.Path == modulePath && info.Main.Version != "" {
-			return info.Main.Version
-		}
-		for _, dep := range info.Deps {
-			if dep.Path == modulePath && dep.Replace == nil && dep.Version != "" {
-				return dep.Version
-			}
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "(devel)"
+	}
+	if info.Main.Path == modulePath && info.Main.Version != "" {
+		return info.Main.Version
+	}
+	for _, dep := range info.Deps {
+		if dep.Path == modulePath && dep.Replace == nil && dep.Version != "" {
+			return dep.Version
 		}
 	}
 	return "(devel)"
