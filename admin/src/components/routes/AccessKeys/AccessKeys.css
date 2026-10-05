@@ -117,14 +117,14 @@
 	gap: 5px;
 }
 
-.access-keys__key-copy > sl-input {
+.access-keys__key-copy > wa-input {
 	width: 100%;
 }
 
-.access-keys__key-copy > sl-input::part(input) {
+.access-keys__key-copy > wa-input::part(input) {
 	font-family: var(--monospace-fonts);
 }
 
-.access-keys__key-copy > sl-input::part(base) {
+.access-keys__key-copy > wa-input::part(input-wrapper) {
 	font-size: 14px;
 }

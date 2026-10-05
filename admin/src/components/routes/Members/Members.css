@@ -1,4 +1,4 @@
-.members sl-spinner {
+.members wa-spinner {
 	display: block;
 	margin: 20px auto;
 }
@@ -43,9 +43,8 @@
 	grid-template-columns: 55px 1fr;
 }
 
-.members__member .list-tile__icon sl-avatar::part(base) {
-	width: 40px;
-	height: 40px;
+.members__member .list-tile__icon wa-avatar {
+	--size: 40px;
 }
 
 .members__member:last-child {
@@ -66,11 +65,11 @@
 	margin-bottom: 10px;
 }
 
-.members__invite-dialog sl-input {
+.members__invite-dialog wa-input {
 	margin-bottom: 15px;
 }
 
-.members__invite-dialog sl-input::part(form-control-label)::after {
+.members__invite-dialog wa-input::part(form-control-label)::after {
 	color: var(--sl-color-danger-500);
 }
 
@@ -85,7 +84,7 @@
 	color: var(--sl-color-danger-600);
 }
 
-.members__invite-dialog sl-button {
+.members__invite-dialog wa-button {
 	display: block;
 	margin: auto;
 	margin-top: 30px;

@@ -7,13 +7,14 @@ import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
 import { ComposedChart, Line, Bar, Legend, XAxis, Tooltip, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import Arrow from '../../base/Arrow/Arrow';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlButtonGroup from '@shoelace-style/shoelace/dist/react/button-group/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButtonGroup from '@awesome.me/webawesome/dist/react/button-group/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import { buttonVariant } from '../../../utils/buttonVariant';
 import { DateRange } from 'react-date-range';
 import { PipelineError, PipelineErrorsResponse } from '../../../lib/api/types/responses';
 import { PipelineMetrics, PipelineTarget } from '../../../lib/api/types/pipeline';
@@ -525,31 +526,31 @@ const ConnectionMetrics = () => {
 					<div className='connection-metrics__tabs'>
 						<SlButtonGroup>
 							<SlButton
-								variant={selectedMetricsRange === 'last15Minutes' ? 'primary' : 'default'}
+								{...buttonVariant(selectedMetricsRange === 'last15Minutes' ? 'primary' : 'default')}
 								onClick={onSelectLast15Minutes}
-								size='small'
+								size='s'
 							>
 								Last 15 minutes
 							</SlButton>
 							<SlButton
-								variant={selectedMetricsRange === 'last24Hours' ? 'primary' : 'default'}
+								{...buttonVariant(selectedMetricsRange === 'last24Hours' ? 'primary' : 'default')}
 								onClick={onSelectLast24Hours}
-								size='small'
+								size='s'
 							>
 								Last 24 hours
 							</SlButton>
 							<SlButton
-								variant={selectedMetricsRange === 'last7Days' ? 'primary' : 'default'}
+								{...buttonVariant(selectedMetricsRange === 'last7Days' ? 'primary' : 'default')}
 								onClick={onSelectLast7Days}
-								size='small'
+								size='s'
 							>
 								Last 7 days
 							</SlButton>
 							<div className='connection-metrics__tabs-date-range'>
 								<SlButton
-									variant={selectedMetricsRange === 'Custom' ? 'primary' : 'default'}
+									{...buttonVariant(selectedMetricsRange === 'Custom' ? 'primary' : 'default')}
 									onClick={onSelectCustom}
-									size='small'
+									size='s'
 								>
 									{selectedMetricsRange === 'Custom'
 										? `${customMetricsRange[0].startDate.toLocaleDateString()} - ${customMetricsRange[0].endDate.toLocaleDateString()}`
@@ -572,25 +573,25 @@ const ConnectionMetrics = () => {
 						</SlButtonGroup>
 						<SlButtonGroup>
 							<SlButton
-								variant={isUsersSelected ? 'default' : 'primary'}
+								{...buttonVariant(isUsersSelected ? 'default' : 'primary')}
 								onClick={
 									supportedTargets.current.includes('Event')
 										? () => onChangeSelectedTarget('Event')
 										: null
 								}
-								size='small'
+								size='s'
 								disabled={!supportedTargets.current.includes('Event')}
 							>
 								Events
 							</SlButton>
 							<SlButton
-								variant={isUsersSelected ? 'primary' : 'default'}
+								{...buttonVariant(isUsersSelected ? 'primary' : 'default')}
 								onClick={
 									supportedTargets.current.includes('User')
 										? () => onChangeSelectedTarget('User')
 										: null
 								}
-								size='small'
+								size='s'
 								disabled={!supportedTargets.current.includes('User')}
 							>
 								Profiles

@@ -52,11 +52,11 @@ test(`Add PostgreSQL source`, async ({ page }) => {
 	await page.click(`[data-code="postgresql"]`);
 	await page.click('.connectors-list__documentation-add');
 
-	await page.locator('sl-input >> input[name="host"]').fill(config.dbHost);
-	await page.locator('sl-input >> input[name="port"]').fill(String(config.dbPort));
-	await page.locator('sl-input >> input[name="username"]').fill(config.dbUsername);
-	await page.locator('sl-input >> input[name="password"]').fill(config.dbPassword);
-	await page.locator('sl-input >> input[name="database"]').fill(config.dbName);
+	await page.locator('wa-input >> input[name="host"]').fill(config.dbHost);
+	await page.locator('wa-input >> input[name="port"]').fill(String(config.dbPort));
+	await page.locator('wa-input >> input[name="username"]').fill(config.dbUsername);
+	await page.locator('wa-input >> input[name="password"]').fill(config.dbPassword);
+	await page.locator('wa-input >> input[name="database"]').fill(config.dbName);
 
 	await page.click('.connector-ui__buttons .feedback-button >> button[name="test"]');
 	await expect(page.locator('.feedback-button.feedback-button--confirm')).toBeAttached();
@@ -85,11 +85,11 @@ test(`Add PostgreSQL destination`, async ({ page }) => {
 	await page.click(`[data-code="postgresql"]`);
 	await page.click('.connectors-list__documentation-add');
 
-	await page.locator('sl-input >> input[name="host"]').fill(config.dbHost);
-	await page.locator('sl-input >> input[name="port"]').fill(String(config.dbPort));
-	await page.locator('sl-input >> input[name="username"]').fill(config.dbUsername);
-	await page.locator('sl-input >> input[name="password"]').fill(config.dbPassword);
-	await page.locator('sl-input >> input[name="database"]').fill(config.dbName);
+	await page.locator('wa-input >> input[name="host"]').fill(config.dbHost);
+	await page.locator('wa-input >> input[name="port"]').fill(String(config.dbPort));
+	await page.locator('wa-input >> input[name="username"]').fill(config.dbUsername);
+	await page.locator('wa-input >> input[name="password"]').fill(config.dbPassword);
+	await page.locator('wa-input >> input[name="database"]').fill(config.dbName);
 
 	await page.click('.connector-ui__buttons .feedback-button >> button[name="test"]');
 	await expect(page.locator('.feedback-button.feedback-button--confirm')).toBeAttached();

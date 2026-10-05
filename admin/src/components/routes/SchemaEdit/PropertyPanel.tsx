@@ -1,8 +1,8 @@
 import React from 'react';
 import './PropertyPanel.css';
-import SlAnimation from '@shoelace-style/shoelace/dist/react/animation/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlAnimation from '@awesome.me/webawesome/dist/react/animation/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import { PrimarySources } from '../../../lib/api/types/workspace';
 import { PropertyPanelLayout } from '../Schema/PropertyPanelLayout';
@@ -59,19 +59,21 @@ const PropertyPanel = ({
 				playbackRate={1.2}
 				iterations={1}
 				play={animateActions}
-				onSlFinish={onActionsAnimationFinish}
+				onWaFinish={onActionsAnimationFinish}
 			>
 				<div className='property-panel__form-actions'>
-					<SlButton className='property-panel__cancel' size='small' onClick={onClose}>
+					<SlButton appearance='outlined' className='property-panel__cancel' size='s' onClick={onClose}>
 						Cancel
 					</SlButton>
 					<SlButton
 						className='property-panel__save'
 						disabled={!valid}
-						form={formID}
-						size='small'
+						// Web Awesome types form as the owner element, but its
+						// setter takes the form id.
+						form={formID as unknown as HTMLFormElement}
+						size='s'
 						type='submit'
-						variant='primary'
+						variant='brand'
 					>
 						Confirm
 					</SlButton>
@@ -82,8 +84,9 @@ const PropertyPanel = ({
 		actions = (
 			<SlTooltip className='schema-edit__toolbar-tooltip' content='Delete this property from the schema' hoist>
 				<SlButton
+					appearance='outlined'
 					className='property-panel__remove property-panel__delete-button schema-edit__toolbar-icon-button'
-					size='small'
+					size='s'
 					aria-label='Delete this property from the schema'
 					onClick={() => onRemove(property)}
 				>

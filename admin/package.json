@@ -4,6 +4,7 @@
   "license": "Elastic-2.0",
   "private": true,
   "dependencies": {
+    "@awesome.me/webawesome": "3.12.0",
     "@dnd-kit/core": "6.3.1",
     "@dnd-kit/modifiers": "9.0.0",
     "@dnd-kit/sortable": "10.0.0",
@@ -13,6 +14,7 @@
     "@tanstack/react-query": "5.99.2",
     "@workos-inc/authkit-react": "0.16.1",
     "@workos-inc/widgets": "1.10.1",
+    "bootstrap-icons": "1.13.1",
     "esbuild": "0.25.8",
     "json-bigint": "1.0.0",
     "marked": "16.1.2",

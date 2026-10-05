@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import './ConfirmByTyping.css';
 
 interface ConfirmByTypingProps {
@@ -34,7 +34,7 @@ const ConfirmByTyping = ({ confirmText, value, onInput }: ConfirmByTypingProps) 
 				ref={inputRef}
 				className='confirm-by-typing__input'
 				value={value}
-				onSlInput={(e) => onInput((e.target as HTMLInputElement).value)}
+				onInput={(e) => onInput((e.target as HTMLInputElement).value)}
 			/>
 		</div>
 	);

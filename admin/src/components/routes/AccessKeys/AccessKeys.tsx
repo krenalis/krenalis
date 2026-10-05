@@ -4,14 +4,14 @@ import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import AppContext from '../../../context/AppContext';
 import { AccessKey, AccessKeyResponse, CreateAccessKeyResponse } from '../../../lib/api/types/responses';
 import Grid from '../../base/Grid/Grid';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
-import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
+import SlDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import { NotFoundError } from '../../../lib/api/errors';
 import { RelativeTime } from '../../base/RelativeTime/RelativeTime';
@@ -159,13 +159,13 @@ const AccessKeys = () => {
 
 			const pipelinesCell = (
 				<div className='access-keys__grid-buttons'>
-					<SlButton variant='default' size='small' onClick={() => onEditKey(k)}>
+					<SlButton appearance='outlined' size='s' onClick={() => onEditKey(k)}>
 						Edit...
 					</SlButton>
 					<SlButton
 						className='connection-pipelines__delete-pipeline'
 						variant='danger'
-						size='small'
+						size='s'
 						onClick={() => onDeleteKey(k)}
 					>
 						Delete
@@ -196,7 +196,7 @@ const AccessKeys = () => {
 			<div className='access-keys__content'>
 				<div className='access-keys__title'>
 					<p className='access-keys__title-text'>API keys</p>
-					<SlButton size='small' variant='primary' onClick={() => setIsCreatingAPIKey(true)}>
+					<SlButton size='s' variant='brand' onClick={() => setIsCreatingAPIKey(true)}>
 						Add a new API key
 					</SlButton>
 				</div>
@@ -217,7 +217,7 @@ const AccessKeys = () => {
 				<div className='access-keys__title access-keys__title--mcp'>
 					<p className='access-keys__title-text'>MCP keys</p>
 					{hasWorkspaceWithWarehouse && (
-						<SlButton size='small' variant='primary' onClick={() => setIsCreatingMCPKey(true)}>
+						<SlButton size='s' variant='brand' onClick={() => setIsCreatingMCPKey(true)}>
 							Add a new MCP key
 						</SlButton>
 					)}
@@ -244,7 +244,9 @@ const AccessKeys = () => {
 					title={`Delete the ${accessKeyToDeleteType} key?`}
 					actions={
 						<>
-							<SlButton onClick={onCloseDeleteAccessKeyDialog}>Cancel</SlButton>
+							<SlButton appearance='outlined' onClick={onCloseDeleteAccessKeyDialog}>
+								Cancel
+							</SlButton>
 							<SlButton variant='danger' onClick={onConfirmDeleteKey} loading={isDeletingAccessKey}>
 								Delete
 							</SlButton>
@@ -360,7 +362,7 @@ const EditAccessKeyDialog = ({
 					ref={inputRef}
 					label='Name'
 					value={name}
-					onSlInput={onInputName}
+					onInput={onInputName}
 				/>
 				{error && (
 					<div className='access-keys__dialog-error'>
@@ -368,7 +370,7 @@ const EditAccessKeyDialog = ({
 						{error}
 					</div>
 				)}
-				<SlButton loading={isSaving} className='access-keys__dialog-save' variant='primary' onClick={onSave}>
+				<SlButton loading={isSaving} className='access-keys__dialog-save' variant='brand' onClick={onSave}>
 					Save
 				</SlButton>
 			</div>
@@ -529,10 +531,10 @@ const CreateAccessKeyDialog = ({
 						be the last time it will be visible to you
 					</div>
 					<div className='access-keys__key-copy'>
-						<SlInput readonly value={token} filled />
+						<SlInput readonly value={token} appearance='filled' />
 						<SlCopyButton value={token} />
 					</div>
-					<SlButton size='small' className='access-keys__dialog-done' variant='primary' onClick={onDone}>
+					<SlButton size='s' className='access-keys__dialog-done' variant='brand' onClick={onDone}>
 						Done
 					</SlButton>
 				</div>
@@ -543,7 +545,7 @@ const CreateAccessKeyDialog = ({
 						ref={inputRef}
 						label='Name'
 						value={name}
-						onSlInput={onInputName}
+						onInput={onInputName}
 					/>
 					{nameError && (
 						<div className='access-keys__dialog-error'>
@@ -579,12 +581,7 @@ const CreateAccessKeyDialog = ({
 							{workspaceError}
 						</div>
 					)}
-					<SlButton
-						loading={isSaving}
-						className='access-keys__dialog-save'
-						variant='primary'
-						onClick={onSave}
-					>
+					<SlButton loading={isSaving} className='access-keys__dialog-save' variant='brand' onClick={onSave}>
 						Add
 					</SlButton>
 				</div>

@@ -4,7 +4,7 @@ import PipelineContext from '../../../context/PipelineContext';
 import AppContext from '../../../context/AppContext';
 import { ConsentPurpose } from '../../../lib/api/types/workspace';
 import { ConsentPurposesOperator } from '../../../lib/api/types/pipeline';
-import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
+import SlCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
@@ -92,7 +92,7 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 			annotated={true}
 		>
 			<div className='pipeline__consents-toggle'>
-				<SlCheckbox checked={isEnabled} onSlChange={onToggle} disabled={purposes.length === 0} />
+				<SlCheckbox checked={isEnabled} onChange={onToggle} disabled={purposes.length === 0} />
 				<div
 					className={`pipeline__consents-logical-sentence${
 						purposes.length === 0 ? ' pipeline__consents-logical-sentence--disabled' : ''

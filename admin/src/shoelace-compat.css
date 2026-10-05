@@ -1,0 +1,180 @@
+/*
+ * Compatibility layer for the migration from Shoelace to Web Awesome.
+ *
+ * The first half declares the Admin palette and metrics as Web Awesome tokens, so Web Awesome
+ * components adopt the look the Admin already has. The second half maps the Shoelace token names
+ * onto them, so the CSS that has not been migrated yet keeps working unchanged.
+ *
+ * Every value here is the value the Admin renders today: this file is a rename, not a restyle.
+ * Where Web Awesome already computes the same value, the bridge points at its token; where it
+ * computes a different one, the Web Awesome token is retuned here so both libraries agree; where
+ * Web Awesome has no equivalent, the literal is kept and marked. See MIGRATE-SHOELACE.md.
+ *
+ * Delete this file once no `--sl-*` name is left in the Admin.
+ */
+
+:root {
+	/* Brand — the Admin indigo */
+	--wa-color-brand-95: #e3e4f7;
+	--wa-color-brand-90: #d0d0f1;
+	--wa-color-brand-80: #b8b9ea;
+	--wa-color-brand-70: #999ae1;
+	--wa-color-brand-60: #8183da;
+	--wa-color-brand-50: #696bd3;
+	--wa-color-brand-40: #6062d0;
+	--wa-color-brand-30: #4244c7;
+	--wa-color-brand-20: #3437b1;
+	--wa-color-brand-10: #2a2c8e;
+	--wa-color-brand-05: #21226e;
+	--wa-color-brand: var(--wa-color-brand-50);
+
+	/* Gray — Shoelace's light-theme ramp. Web Awesome aliases its neutral variant onto gray. */
+	--wa-color-gray-95: hsl(0 0% 97.5%);
+	--wa-color-gray-90: hsl(240 4.8% 95.9%);
+	--wa-color-gray-80: hsl(240 5.9% 90%);
+	--wa-color-gray-70: hsl(240 4.9% 83.9%);
+	--wa-color-gray-60: hsl(240 5% 64.9%);
+	--wa-color-gray-50: hsl(240 3.8% 46.1%);
+	--wa-color-gray-40: hsl(240 5.2% 33.9%);
+	--wa-color-gray-30: hsl(240 5.3% 26.1%);
+	--wa-color-gray-20: hsl(240 3.7% 15.9%);
+	--wa-color-gray-10: hsl(240 5.9% 10%);
+	--wa-color-gray-05: hsl(240 7.3% 8%);
+	--wa-color-gray: var(--wa-color-gray-50);
+
+	/* Danger — Shoelace's light-theme ramp. */
+	--wa-color-danger-95: var(--sl-color-red-50);
+	--wa-color-danger-90: var(--sl-color-red-100);
+	--wa-color-danger-80: var(--sl-color-red-200);
+	--wa-color-danger-70: var(--sl-color-red-300);
+	--wa-color-danger-60: var(--sl-color-red-400);
+	--wa-color-danger-50: var(--sl-color-red-500);
+	--wa-color-danger-40: var(--sl-color-red-600);
+	--wa-color-danger-30: var(--sl-color-red-700);
+	--wa-color-danger-20: var(--sl-color-red-800);
+	--wa-color-danger-10: var(--sl-color-red-900);
+	--wa-color-danger-05: var(--sl-color-red-950);
+	--wa-color-danger: var(--wa-color-danger-50);
+
+	/* Success — Shoelace's light-theme ramp. */
+	--wa-color-success-95: var(--sl-color-green-50);
+	--wa-color-success-90: var(--sl-color-green-100);
+	--wa-color-success-80: var(--sl-color-green-200);
+	--wa-color-success-70: var(--sl-color-green-300);
+	--wa-color-success-60: var(--sl-color-green-400);
+	--wa-color-success-50: var(--sl-color-green-500);
+	--wa-color-success-40: var(--sl-color-green-600);
+	--wa-color-success-30: var(--sl-color-green-700);
+	--wa-color-success-20: var(--sl-color-green-800);
+	--wa-color-success-10: var(--sl-color-green-900);
+	--wa-color-success-05: var(--sl-color-green-950);
+	--wa-color-success: var(--wa-color-success-50);
+
+	/* Warning — Shoelace's light-theme ramp. */
+	--wa-color-warning-95: var(--sl-color-amber-50);
+	--wa-color-warning-90: var(--sl-color-amber-100);
+	--wa-color-warning-80: var(--sl-color-amber-200);
+	--wa-color-warning-70: var(--sl-color-amber-300);
+	--wa-color-warning-60: var(--sl-color-amber-400);
+	--wa-color-warning-50: var(--sl-color-amber-500);
+	--wa-color-warning-40: var(--sl-color-amber-600);
+	--wa-color-warning-30: var(--sl-color-amber-700);
+	--wa-color-warning-20: var(--sl-color-amber-800);
+	--wa-color-warning-10: var(--sl-color-amber-900);
+	--wa-color-warning-05: var(--sl-color-amber-950);
+	--wa-color-warning: var(--wa-color-warning-50);
+
+	/* Metrics where Web Awesome computes a different value than the Admin renders today. */
+	--wa-border-radius-m: 0.25rem;
+	--wa-shadow-s: 0 1px 2px hsl(240 3.8% 46.1% / 12%);
+	--wa-shadow-m: 0 2px 4px hsl(240 3.8% 46.1% / 12%);
+	--wa-shadow-l: 0 2px 8px hsl(240 3.8% 46.1% / 12%);
+	--wa-shadow-xl: 0 4px 16px hsl(240 3.8% 46.1% / 12%);
+	--wa-form-control-background-color: var(--wa-color-surface-default);
+	--wa-form-control-border-color: var(--wa-color-neutral-70);
+	--wa-form-control-placeholder-color: var(--wa-color-neutral-50);
+
+	/* ---------------------------------------------------------------------------------------- */
+	/* Bridge: Shoelace token names, for the CSS that has not been migrated yet.                 */
+	/* ---------------------------------------------------------------------------------------- */
+
+	/* Colours. */
+	--sl-color-primary-50: var(--wa-color-brand-95);
+	--sl-color-primary-100: var(--wa-color-brand-90);
+	--sl-color-primary-200: var(--wa-color-brand-80);
+	--sl-color-primary-300: var(--wa-color-brand-70);
+	--sl-color-primary-400: var(--wa-color-brand-60);
+	--sl-color-primary-500: var(--wa-color-brand-50);
+	--sl-color-primary-600: var(--wa-color-brand-40);
+	--sl-color-primary-700: var(--wa-color-brand-30);
+	--sl-color-primary-800: var(--wa-color-brand-20);
+	--sl-color-primary-900: var(--wa-color-brand-10);
+	--sl-color-primary-950: var(--wa-color-brand-05);
+	--sl-color-neutral-0: var(--wa-color-surface-default);
+	--sl-color-neutral-50: var(--wa-color-neutral-95);
+	--sl-color-neutral-100: var(--wa-color-neutral-90);
+	--sl-color-neutral-200: var(--wa-color-neutral-80);
+	--sl-color-neutral-300: var(--wa-color-neutral-70);
+	--sl-color-neutral-400: var(--wa-color-neutral-60);
+	--sl-color-neutral-500: var(--wa-color-neutral-50);
+	--sl-color-neutral-600: var(--wa-color-neutral-40);
+	--sl-color-neutral-700: var(--wa-color-neutral-30);
+	--sl-color-neutral-800: var(--wa-color-neutral-20);
+	--sl-color-neutral-900: var(--wa-color-neutral-10);
+	--sl-color-neutral-950: var(--wa-color-neutral-05);
+	--sl-color-gray-700: var(--wa-color-gray-30);
+	--sl-color-danger-50: var(--wa-color-danger-95);
+	--sl-color-danger-100: var(--wa-color-danger-90);
+	--sl-color-danger-500: var(--wa-color-danger-50);
+	--sl-color-danger-600: var(--wa-color-danger-40);
+	--sl-color-success-100: var(--wa-color-success-90);
+	--sl-color-success-600: var(--wa-color-success-40);
+	--sl-color-success-900: var(--wa-color-success-10);
+	--sl-color-warning-600: var(--wa-color-warning-40);
+	--sl-color-warning-700: var(--wa-color-warning-30);
+
+	/* Spacing, typography and metrics that Web Awesome already computes identically. */
+	--sl-spacing-2x-small: var(--wa-space-2xs);
+	--sl-spacing-x-small: var(--wa-space-xs);
+	--sl-spacing-medium: var(--wa-space-m);
+	--sl-font-size-small: var(--wa-font-size-s);
+	--sl-font-size-medium: var(--wa-font-size-m);
+	--sl-border-radius-medium: var(--wa-border-radius-m);
+	--sl-focus-ring-width: var(--wa-focus-ring-width);
+	--sl-shadow-small: var(--wa-shadow-s);
+	--sl-shadow-medium: var(--wa-shadow-m);
+	--sl-shadow-large: var(--wa-shadow-l);
+	--sl-shadow-x-large: var(--wa-shadow-xl);
+	--sl-transition-fast: var(--wa-transition-normal);
+
+	/* Form controls. */
+	--sl-input-background-color: var(--wa-form-control-background-color);
+	--sl-input-background-color-hover: var(--wa-form-control-background-color);
+	--sl-input-border-color: var(--wa-form-control-border-color);
+	--sl-input-border-color-hover: var(--wa-color-neutral-60);
+	--sl-input-border-color-focus: var(--wa-color-brand-50);
+	--sl-input-border-radius-small: var(--wa-border-radius-m);
+	--sl-input-border-radius-medium: var(--wa-border-radius-m);
+	--sl-input-border-width: var(--wa-border-width-s);
+	--sl-input-placeholder-color: var(--wa-form-control-placeholder-color);
+	--sl-input-font-size-medium: var(--wa-font-size-m);
+	--sl-input-label-font-size-medium: var(--wa-font-size-m);
+	--sl-input-spacing-medium: var(--wa-space-m);
+	--sl-panel-background-color: var(--wa-color-surface-default);
+	--sl-panel-border-color: var(--wa-color-neutral-80);
+	--sl-panel-border-width: var(--wa-border-width-s);
+
+	/* No Web Awesome equivalent: kept as literals, to be resolved when their component moves. */
+	--sl-font-weight-light: 300;
+	--sl-font-weight-normal: 400;
+	--sl-input-font-family: var(--sl-font-sans);
+	--sl-input-font-weight: var(--sl-font-weight-normal);
+	--sl-input-height-small: 1.875rem;
+	--sl-input-height-medium: 2.5rem;
+	--sl-toggle-size-medium: 1.125rem;
+
+	/* Shoelace hard-codes its own blue here rather than deriving it from the primary palette,
+	   so the Admin's input focus ring is blue while its brand is indigo. Kept as it renders today;
+	   revisit when the input moves. */
+	--sl-input-focus-ring-color: hsl(198.6 88.7% 48.4% / 40%);
+}

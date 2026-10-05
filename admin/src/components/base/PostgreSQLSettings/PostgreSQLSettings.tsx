@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import './PostgreSQLSettings.css';
 import { WarehouseSettings } from '../../../lib/api/types/warehouse';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 
 interface settingsProps {
 	setSettings: React.Dispatch<React.SetStateAction<any>>;
@@ -43,7 +44,7 @@ const PostgreSQLSettings = ({ setSettings, settings, precompileDefault, inputRef
 				placeholder='example.com'
 				minlength={1}
 				maxlength={253}
-				onSlInput={onSettingInput}
+				onInput={onSettingInput}
 				value={settings?.host || ''}
 			/>
 			<SlInput
@@ -53,9 +54,9 @@ const PostgreSQLSettings = ({ setSettings, settings, precompileDefault, inputRef
 				type='number'
 				minlength={1}
 				maxlength={5}
-				onSlInput={onSettingInput}
+				onInput={onSettingInput}
 				value={settings?.port || ''}
-				noSpinButtons
+				withoutSpinButtons
 			/>
 			<SlInput
 				name='username'
@@ -64,7 +65,7 @@ const PostgreSQLSettings = ({ setSettings, settings, precompileDefault, inputRef
 				type='text'
 				minlength={1}
 				maxlength={63}
-				onSlInput={onSettingInput}
+				onInput={onSettingInput}
 				value={settings?.username || ''}
 				ref={inputRef}
 			/>
@@ -75,10 +76,13 @@ const PostgreSQLSettings = ({ setSettings, settings, precompileDefault, inputRef
 				type='password'
 				minlength={1}
 				maxlength={100}
-				onSlInput={onSettingInput}
+				onInput={onSettingInput}
 				value={settings?.password || ''}
-				password-toggle
-			/>
+				passwordToggle
+			>
+				<WaIcon name='eye' slot='show-password-icon' />
+				<WaIcon name='eye-slash' slot='hide-password-icon' />
+			</SlInput>
 			<SlInput
 				name='database'
 				label='Database name'
@@ -86,7 +90,7 @@ const PostgreSQLSettings = ({ setSettings, settings, precompileDefault, inputRef
 				type='text'
 				minlength={1}
 				maxlength={63}
-				onSlInput={onSettingInput}
+				onInput={onSettingInput}
 				value={settings?.database || ''}
 			/>
 			<SlInput
@@ -96,7 +100,7 @@ const PostgreSQLSettings = ({ setSettings, settings, precompileDefault, inputRef
 				type='text'
 				minlength={1}
 				maxlength={63}
-				onSlInput={onSettingInput}
+				onInput={onSettingInput}
 				value={settings?.schema || ''}
 			/>
 		</>

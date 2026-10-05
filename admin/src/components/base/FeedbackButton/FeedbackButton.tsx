@@ -1,7 +1,8 @@
 import React, { forwardRef, useImperativeHandle, useRef, useState, ReactNode } from 'react';
 import './FeedbackButton.css';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlButtonType from '@shoelace-style/shoelace/dist/components/button/button.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import { buttonVariant } from '../../../utils/buttonVariant';
+import SlButtonType from '@awesome.me/webawesome/dist/components/button/button.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { Size, Variant } from '../../routes/App/App.types';
@@ -40,6 +41,9 @@ interface FeedbackButtonRef {
 	stop: (cb?: (...args: any) => any) => void;
 	hideTooltip: () => void;
 }
+
+// buttonSizes maps the Shoelace sizes of the size prop onto Web Awesome's.
+const buttonSizes = { small: 's', medium: 'm', large: 'l' } as const;
 
 const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 	(
@@ -83,7 +87,7 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 			let iconHTML: string;
 			if (feedback === 'confirmation') {
 				className = 'feedback-button--confirm';
-				iconHTML = `<sl-icon name='check' />`;
+				iconHTML = `<wa-icon name='check' />`;
 				button.classList.add(className);
 				button.style.width = `${initialWidth}px`;
 				button.innerHTML = iconHTML;
@@ -156,9 +160,9 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 			<SlButton
 				className={`feedback-button${className != null ? ` ${className}` : ''}`}
 				ref={buttonRef}
-				size={size}
+				size={buttonSizes[size]}
 				onClick={onClick}
-				variant={variant ? variant : 'default'}
+				{...buttonVariant(variant)}
 				style={{ '--scale-animation-duration': `${halfAnimation / 1.5}ms` } as React.CSSProperties}
 				disabled={disabled || loading || isLoading}
 				loading={loading || isLoading}

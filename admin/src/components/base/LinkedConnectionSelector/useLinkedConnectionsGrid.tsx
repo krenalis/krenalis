@@ -2,7 +2,7 @@ import React, { useContext, useMemo } from 'react';
 import { GridColumn, GridRow } from '../Grid/Grid.types';
 import TransformedConnection from '../../../lib/core/connection';
 import AppContext from '../../../context/AppContext';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import LittleLogo from '../LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { ConnectionRole } from '../../../lib/api/types/connection';
@@ -86,7 +86,7 @@ const useLinkedConnectionsGrid = (
 				</div>
 			);
 			const unlinkButtonCell = (
-				<SlButton variant='danger' size='small' onClick={(e) => unlinkConnection(e, fc.id)}>
+				<SlButton variant='danger' size='s' onClick={(e) => unlinkConnection(e, fc.id)}>
 					Unlink
 				</SlButton>
 			);

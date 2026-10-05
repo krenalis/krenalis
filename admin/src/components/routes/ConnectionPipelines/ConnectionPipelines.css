@@ -36,7 +36,7 @@
 	margin-top: 10px;
 }
 
-.connection-pipelines__add::part(base) {
+.connection-pipelines__add::part(button) {
 	min-height: unset;
 }
 
@@ -94,12 +94,12 @@
 	padding-top: 27px;
 }
 
-.connection-pipelines__scheduler-button::part(base) {
+.connection-pipelines__scheduler-button::part(button) {
 	min-width: 132px;
 	justify-content: left;
 }
 
-.connection-pipelines__scheduler-button::part(suffix) {
+.connection-pipelines__scheduler-button::part(end) {
 	margin-left: auto;
 }
 
@@ -126,7 +126,7 @@
 	padding-left: 6px !important;
 }
 
-.connection-pipelines__run-button > sl-icon[name='play'] {
+.connection-pipelines__run-button > wa-icon[name='play'] {
 	font-size: 16px;
 }
 
@@ -187,7 +187,7 @@
 	border-top-right-radius: var(--radius) !important;
 }
 
-.connection-pipelines__menu .connection-pipelines__run-button::part(base) {
+.connection-pipelines__menu .connection-pipelines__run-button::part(button) {
 	border: 0;
 	background-color: transparent;
 }
@@ -200,14 +200,14 @@
 	color: var(--text-onaccent);
 }
 
-.connection-pipelines__buttons-dropdown .connection-pipelines__run-button::part(base) {
+.connection-pipelines__buttons-dropdown .connection-pipelines__run-button::part(button) {
 	padding: 0;
 	border-radius: 0;
 	font-size: 16px;
 	font-weight: 400;
 }
 
-.connection-pipelines__buttons-dropdown .connection-pipelines__run-button::part(base):hover {
+.connection-pipelines__buttons-dropdown .connection-pipelines__run-button::part(button):hover {
 	transition:
 		background-color 0.3s,
 		color 0.3s;

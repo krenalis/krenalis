@@ -36,7 +36,7 @@
 	width: 100%;
 }
 
-.property-type-selector__structure-dropdown[disabled] .property-type-selector__structure-trigger::part(base) {
+.property-type-selector__structure-dropdown[disabled] .property-type-selector__structure-trigger::part(button) {
 	cursor: default;
 }
 
@@ -45,8 +45,8 @@
 	transform: translateY(1px);
 }
 
-.property-type-selector__controls .property-type-selector__structure-trigger::part(base),
-.property-type-selector__controls .property-type-selector__trigger::part(base) {
+.property-type-selector__controls .property-type-selector__structure-trigger::part(button),
+.property-type-selector__controls .property-type-selector__trigger::part(button) {
 	border: 0;
 	border-radius: 0;
 	box-shadow: none;
@@ -55,31 +55,31 @@
 	outline: 0;
 }
 
-.property-type-selector__controls .property-type-selector__structure-trigger::part(base) {
+.property-type-selector__controls .property-type-selector__structure-trigger::part(button) {
 	background-color: var(--sl-color-neutral-50);
 	border-inline-end: solid 1px var(--sl-input-border-color);
 	border-radius: calc(var(--sl-input-border-radius-medium) - 1px) 0 0 calc(var(--sl-input-border-radius-medium) - 1px);
 	justify-content: flex-start;
 }
 
-.property-type-selector__controls--structure-only .property-type-selector__structure-trigger::part(base) {
+.property-type-selector__controls--structure-only .property-type-selector__structure-trigger::part(button) {
 	border-inline-end: 0;
 	border-radius: calc(var(--sl-input-border-radius-medium) - 1px);
 }
 
-.property-type-selector__controls .property-type-selector__trigger::part(base) {
+.property-type-selector__controls .property-type-selector__trigger::part(button) {
 	background-color: var(--sl-input-background-color);
 	border-radius: 0 calc(var(--sl-input-border-radius-medium) - 1px) calc(var(--sl-input-border-radius-medium) - 1px) 0;
 }
 
-.property-type-selector__structure-dropdown:focus-within .property-type-selector__structure-trigger::part(base),
-.property-type-selector__structure-dropdown[open] .property-type-selector__structure-trigger::part(base),
-.property-type-selector__dropdown:focus-within .property-type-selector__trigger::part(base),
-.property-type-selector__dropdown[open] .property-type-selector__trigger::part(base) {
+.property-type-selector__structure-dropdown:focus-within .property-type-selector__structure-trigger::part(button),
+.property-type-selector__structure-dropdown[open] .property-type-selector__structure-trigger::part(button),
+.property-type-selector__dropdown:focus-within .property-type-selector__trigger::part(button),
+.property-type-selector__dropdown[open] .property-type-selector__trigger::part(button) {
 	background-color: var(--sl-color-neutral-100);
 }
 
-.property-type-selector__trigger::part(base) {
+.property-type-selector__trigger::part(button) {
 	justify-content: space-between;
 }
 

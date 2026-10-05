@@ -6,7 +6,7 @@ import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
 import useEventListener from '../../../hooks/useEventListener';
 import { EventListenerEvent } from '../../../hooks/useEventListener';
 import JSONbig from 'json-bigint';
-import SlRelativeTime from '@shoelace-style/shoelace/dist/react/relative-time/index.js';
+import SlRelativeTime from '@awesome.me/webawesome/dist/react/relative-time/index.js';
 
 const ConnectionEvents = () => {
 	const [events, setEvents] = useState<EventListenerEvent[]>([]);

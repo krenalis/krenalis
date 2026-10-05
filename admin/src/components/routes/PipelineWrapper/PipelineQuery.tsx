@@ -7,8 +7,8 @@ import { CONFIRM_ANIMATION_DURATION, ERROR_ANIMATION_DURATION } from './Pipeline
 import { NotFoundError } from '../../../lib/api/errors';
 import PipelineContext from '../../../context/PipelineContext';
 import AppContext from '../../../context/AppContext';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import { ExecQueryResponse } from '../../../lib/api/types/responses';
@@ -163,12 +163,7 @@ const PipelineQuery = () => {
 					onChange={onUpdateQuery}
 				/>
 				<div className='pipeline__query-buttons'>
-					<SlButton
-						className='pipeline__query-preview'
-						variant='neutral'
-						size='small'
-						onClick={onQueryPreview}
-					>
+					<SlButton className='pipeline__query-preview' variant='neutral' size='s' onClick={onQueryPreview}>
 						Preview
 					</SlButton>
 					<FeedbackButton

@@ -1,8 +1,8 @@
 import React, { useState, useContext, useEffect } from 'react';
 import PipelineContext from '../../../context/PipelineContext';
 import AppContext from '../../../context/AppContext';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
 import { PipelineIssues } from './PipelineIssues';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
@@ -108,7 +108,7 @@ const PipelineHeader = () => {
 							<SlInput
 								className='pipeline__header-name-input'
 								value={pipeline != null ? pipeline.name : pipelineType.name}
-								onSlInput={onUpdateName}
+								onInput={onUpdateName}
 								maxlength={60}
 							></SlInput>
 							<SlIconButton name='check-lg' label='Confirm' onClick={() => setIsNameEditable(false)} />
@@ -136,12 +136,12 @@ const PipelineHeader = () => {
 				<div
 					className={`pipeline__header-buttons-save${isFullscreenTransformationOpen ? ' pipeline__header-buttons-save--hidden' : ''}`}
 				>
-					<SlButton className='pipeline__header-cancel' variant='default' onClick={onCancel}>
+					<SlButton className='pipeline__header-cancel' appearance='outlined' onClick={onCancel}>
 						Cancel
 					</SlButton>
 					<SlButton
 						className={`pipeline__header-save${isFullscreenClosing ? ' pipeline__header-save--fullscreen-closing-disabled' : ''}`}
-						variant='primary'
+						variant='brand'
 						disabled={isTransformationHidden || isTransformationDisabled || isSaving || isFullscreenClosing}
 						onClick={onSave}
 						loading={isSaving}

@@ -14,7 +14,7 @@
 	margin-top: 12px;
 }
 
-.schema-grid__alter-button::part(base) {
+.schema-grid__alter-button::part(button) {
 	min-width: 130px;
 }
 
@@ -75,11 +75,11 @@
 	width: min(360px, 45%);
 }
 
-.schema-grid__toolbar-icon-button sl-icon {
+.schema-grid__toolbar-icon-button wa-icon {
 	font-size: 20px;
 }
 
-.schema-grid__search-button sl-icon {
+.schema-grid__search-button wa-icon {
 	font-size: 16px;
 }
 

@@ -15,14 +15,16 @@
 	align-items: center;
 	row-gap: 15px;
 	flex-flow: row wrap;
+	position: relative;
+	z-index: 1;
 }
 
-.connection-metrics__tabs sl-button::part(base) {
+.connection-metrics__tabs wa-button::part(button) {
 	padding-left: 15px;
 	padding-right: 15px;
 }
 
-.connection-metrics__tabs sl-button[variant='default']::part(base) {
+.connection-metrics__tabs wa-button[appearance='outlined']::part(button) {
 	background: var(--bg-primary);
 }
 

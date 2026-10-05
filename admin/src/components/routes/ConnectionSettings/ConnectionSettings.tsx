@@ -6,7 +6,7 @@ import ConnectionKeys from './ConnectionKeys';
 import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
 import SlTab from '@shoelace-style/shoelace/dist/react/tab/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlTabGroup from '@shoelace-style/shoelace/dist/react/tab-group/index.js';
 import SlTabPanel from '@shoelace-style/shoelace/dist/react/tab-panel/index.js';
 import { ConnectorUIResponse } from '../../../lib/api/types/responses';
