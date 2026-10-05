@@ -2,6 +2,7 @@ import { createContext } from 'react';
 import TransformedConnection from '../lib/core/connection';
 import { TransformedPipeline, TransformedPipelineType } from '../lib/core/pipeline';
 import { ConnectorSettings } from '../lib/api/types/responses';
+import { ConsentPurpose } from '../lib/api/types/workspace';
 
 interface PipelineContext {
 	transformationType: 'mappings' | 'function' | '';
@@ -20,6 +21,7 @@ interface PipelineContext {
 	transformationSectionRef: React.MutableRefObject<any>;
 	handleEmptyMatchingError: () => void;
 	showEmptyMatchingError: boolean;
+	handleRequiredConsentsError: () => void;
 	isTransformationHidden: boolean;
 	isTransformationDisabled: boolean;
 	isFullscreenTransformationOpen: boolean;
@@ -40,6 +42,9 @@ interface PipelineContext {
 	setIssues: React.Dispatch<React.SetStateAction<string[]>>;
 	showIssues: boolean;
 	setShowIssues: React.Dispatch<React.SetStateAction<boolean>>;
+	consentPurposes: ConsentPurpose[];
+	deletedConsentPurposes: ConsentPurpose[];
+	consentPropertyPaths: Map<string, ConsentPurpose[]>;
 }
 
 const pipelineContext = createContext<PipelineContext>({} as PipelineContext);

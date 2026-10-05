@@ -65,6 +65,50 @@ func TestAddAndRemoveLinkedConnection(t *testing.T) {
 
 }
 
+// TestReplaceConsentPurpose checks that replacing a consent purpose does not
+// modify the original.
+func TestReplaceConsentPurpose(t *testing.T) {
+
+	const purposeID = "111111111111"
+	purpose := &ConsentPurpose{
+		ID:                     purposeID,
+		EventConsentLocations:  []EventConsentLocation{{PurposeCode: "marketing"}},
+		ProfileConsentLocation: &ProfileConsentLocation{Property: "consents", JSONKey: "a.b"},
+	}
+	workspace := &Workspace{
+		mu:              &sync.Mutex{},
+		consentPurposes: map[string]*ConsentPurpose{purposeID: purpose},
+	}
+
+	updated := workspace.replaceConsentPurpose(purposeID, func(purpose *ConsentPurpose) {
+		purpose.EventConsentLocations = []EventConsentLocation{}
+		purpose.ProfileConsentLocation = nil
+	})
+
+	if updated.EventConsentLocations == nil {
+		t.Fatal("expected non-nil event consent locations, got nil")
+	}
+	if len(updated.EventConsentLocations) != 0 {
+		t.Fatalf("expected 0 event consent locations, got %d", len(updated.EventConsentLocations))
+	}
+	if updated.ProfileConsentLocation != nil {
+		t.Fatalf("expected no profile consent location, got %#v", updated.ProfileConsentLocation)
+	}
+	if len(purpose.EventConsentLocations) != 1 {
+		t.Fatalf("expected 1 original event consent location, got %d", len(purpose.EventConsentLocations))
+	}
+	if purpose.EventConsentLocations[0].PurposeCode != "marketing" {
+		t.Fatalf("expected original purpose code %q, got %q", "marketing", purpose.EventConsentLocations[0].PurposeCode)
+	}
+	if purpose.ProfileConsentLocation == nil {
+		t.Fatal("expected original profile consent location, got nil")
+	}
+	if purpose.ProfileConsentLocation.JSONKey != "a.b" {
+		t.Fatalf("expected original JSON key %q, got %q", "a.b", purpose.ProfileConsentLocation.JSONKey)
+	}
+
+}
+
 // TestReplaceOrganizationPreservesRateLimitBucket verifies that replacing an
 // organization retains its local rate-limit bucket.
 func TestReplaceOrganizationPreservesRateLimitBucket(t *testing.T) {

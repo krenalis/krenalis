@@ -18,8 +18,10 @@ const (
 	ConnectionsLimitReached       errors.Code = "ConnectionsLimitReached"
 	ConnectorNotExist             errors.Code = "ConnectorNotExist"
 	ConnectorsLimitReached        errors.Code = "ConnectorsLimitReached"
-	ConsentPurposeCodeExists      errors.Code = "ConsentPurposeCodeExists"
 	ConsentPurposeInUse           errors.Code = "ConsentPurposeInUse"
+	ConsentPurposeLocationInUse   errors.Code = "ConsentPurposeLocationInUse"
+	ConsentPurposeLocationNotSet  errors.Code = "ConsentPurposeLocationNotSet"
+	ConsentPurposeNotExist        errors.Code = "ConsentPurposeNotExist"
 	DifferentWarehouse            errors.Code = "DifferentWarehouse"
 	EmailInvitationRequired       errors.Code = "EmailInvitationRequired" // Returned by apisServer.
 	EmailSendFailed               errors.Code = "EmailSendFailed"

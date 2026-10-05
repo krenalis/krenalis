@@ -5,6 +5,8 @@
 package initdb
 
 import (
+	"fmt"
+	"slices"
 	"testing"
 	"time"
 
@@ -42,6 +44,12 @@ func TestUpgrade(t *testing.T) {
 			id varchar(12) PRIMARY KEY,
 			organization varchar(12) NOT NULL REFERENCES organizations (id)
 		);
+		CREATE TABLE consent_purposes (
+			workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+			code varchar(100) NOT NULL CHECK (code ~ '^[A-Za-z_][0-9A-Za-z_]{0,99}$'),
+			name varchar(100) NOT NULL,
+			PRIMARY KEY (workspace, code)
+		);
 		CREATE TYPE role AS ENUM ('Source', 'Destination');
 		CREATE TYPE pipeline_target AS ENUM ('Event', 'User', 'Group');
 		CREATE TABLE connections (
@@ -55,6 +63,8 @@ func TestUpgrade(t *testing.T) {
 			connection varchar(12) NOT NULL REFERENCES connections (id),
 			target pipeline_target NOT NULL,
 			filter jsonb,
+			required_consents varchar(100)[] NOT NULL DEFAULT '{}',
+			required_consents_operator varchar(3) NOT NULL DEFAULT 'and' CHECK (required_consents_operator IN ('and', 'or')),
 			event_type varchar(100) NOT NULL,
 			format varchar
 		);
@@ -78,7 +88,26 @@ func TestUpgrade(t *testing.T) {
 		CREATE TABLE pipelines_runs (
 			id varchar(12) PRIMARY KEY,
 			pipeline varchar(12) NOT NULL REFERENCES pipelines (id),
-			node uuid
+			node uuid,
+			passed_0 integer NOT NULL DEFAULT 0,
+			passed_1 integer NOT NULL DEFAULT 0,
+			passed_2 integer NOT NULL DEFAULT 0,
+			passed_3 integer NOT NULL DEFAULT 0,
+			passed_4 integer NOT NULL DEFAULT 0,
+			passed_5 integer NOT NULL DEFAULT 0,
+			failed_0 integer NOT NULL DEFAULT 0,
+			failed_1 integer NOT NULL DEFAULT 0,
+			failed_2 integer NOT NULL DEFAULT 0,
+			failed_3 integer NOT NULL DEFAULT 0,
+			failed_4 integer NOT NULL DEFAULT 0,
+			failed_5 integer NOT NULL DEFAULT 0
+		);
+		CREATE TABLE pipelines_errors (
+			pipeline varchar(12) NOT NULL REFERENCES pipelines ON DELETE CASCADE,
+			timeslot integer NOT NULL,
+			step smallint NOT NULL,
+			count integer NOT NULL,
+			message varchar NOT NULL
 		);
 		CREATE TABLE election (
 			number integer PRIMARY KEY,
@@ -92,6 +121,9 @@ func TestUpgrade(t *testing.T) {
 		CREATE INDEX pipelines_metrics_pipeline_idx ON pipelines_metrics (pipeline);
 		INSERT INTO organizations (id, name, enabled) VALUES ('111111111111', 'ACME inc', true);
 		INSERT INTO workspaces (id, organization) VALUES ('222222222222', '111111111111');
+		INSERT INTO consent_purposes (workspace, code, name) VALUES
+			('222222222222', 'marketing_newsletters', 'Marketing newsletters'),
+			('222222222222', 'analytics', 'Analytics');
 		INSERT INTO connections (id, workspace, connector, role) VALUES
 			('333333333333', '222222222222', 'dummy', 'Source'),
 			('999999999999', '222222222222', 'dummy', 'Destination');
@@ -134,6 +166,8 @@ func TestUpgrade(t *testing.T) {
 				NULL,
 				NULL
 			);
+		UPDATE pipelines SET required_consents = '{marketing_newsletters,analytics}', required_consents_operator = 'or'
+		WHERE id = '444444444444';
 		INSERT INTO pipelines_metrics (
 			pipeline, timeslot,
 			passed_0, passed_1, passed_2, passed_3, passed_4, passed_5,
@@ -143,12 +177,50 @@ func TestUpgrade(t *testing.T) {
 			1, 2, 3, 4, 5, 6,
 			7, 8, 9, 10, 11, 12
 		);
-		INSERT INTO pipelines_runs (id, pipeline, node) VALUES ('555555555555', '444444444444', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
+		INSERT INTO pipelines_runs (
+			id, pipeline, node,
+			passed_0, passed_1, passed_2, passed_3, passed_4, passed_5,
+			failed_0, failed_1, failed_2, failed_3, failed_4, failed_5
+		) VALUES (
+			'555555555555', '444444444444', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+			13, 14, 15, 16, 17, 18,
+			19, 20, 21, 22, 23, 24
+		);
+		INSERT INTO pipelines_errors (pipeline, timeslot, step, count, message) VALUES
+			('444444444444', 1, 3, 1, 'transformation'),
+			('444444444444', 1, 4, 1, 'output validation'),
+			('444444444444', 1, 5, 1, 'finalize');
 		INSERT INTO election (number, leader, date) VALUES (1, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', NOW());
 		INSERT INTO discontinued_functions (id, discontinued_at) VALUES ('arn:aws:lambda:eu-west-1:1:function:transform.js', NOW());
 		INSERT INTO metadata (installation_id, kms_encrypted_cookie_key, kms_encrypted_oauth_key, kms_encrypted_notification_key, kms_encrypted_api_key_pepper)
 			VALUES ('test-installation', '\x01'::bytea, '\x02'::bytea, '\x03'::bytea, '\x04'::bytea);
 		INSERT INTO notifications (id, name, payload) VALUES (1, 'EndPipelineRun', '{}'::jsonb)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = Upgrade(ctx, database)
+	if err != nil {
+		expected := "cannot upgrade consent purposes: user pipeline 444444444444 requires purposes" +
+			" without profile consent locations"
+		if err.Error() != expected {
+			t.Fatalf("expected %q, got %q", expected, err)
+		}
+	}
+	if err == nil {
+		t.Fatal("expected upgrade to reject user consent requirements, got nil")
+	}
+	assertColumnExists(t, database, "metadata", "kms_encrypted_cookie_key")
+	assertColumnDoesNotExist(t, database, "metadata", "kms_encrypted_http_secret_key")
+	assertColumnExists(t, database, "consent_purposes", "code")
+	assertColumnDoesNotExist(t, database, "consent_purposes", "id")
+	assertColumnExists(t, database, "pipelines", "required_consents")
+	assertColumnDoesNotExist(t, database, "pipelines", "required_consents_purposes")
+
+	_, err = database.Exec(ctx, `UPDATE pipelines SET required_consents = '{}', required_consents_operator = 'and'
+		WHERE id = '444444444444';
+		UPDATE pipelines SET required_consents = '{marketing_newsletters,analytics}', required_consents_operator = 'or'
+		WHERE id = '888888888888'`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,14 +251,71 @@ func TestUpgrade(t *testing.T) {
 	assertDiscontinuedFunctionsUpgrade(t, database)
 	assertRateLimitLeaseFunction(t, database)
 	assertConsentStepColumns(t, database)
+	assertPipelineMetricStepsUpgraded(t, database)
+	assertConsentPurposeSchema(t, database)
 
 	if err := Upgrade(ctx, database); err != nil {
 		t.Fatalf("expected second upgrade to succeed, got %s", err)
 	}
+	assertConsentPurposeSchema(t, database)
+	assertPipelineMetricStepsUpgraded(t, database)
 	assertPipelineFiltersUpgraded(t, database)
 	assertPipelineEventTypesUpgraded(t, database)
 	assertPipelineMetricsSurvivePipelineDelete(t, database)
 	assertUsageMetricsUpgrade(t, database)
+}
+
+// TestUpgradePipelineMetricSteps verifies the seven-step upgrade and its
+// idempotence, including counter order and preservation of run errors.
+func TestUpgradePipelineMetricSteps(t *testing.T) {
+
+	database := newTestDatabase(t)
+	query := `CREATE TABLE pipelines_metrics (pipeline varchar PRIMARY KEY, timeslot integer NOT NULL`
+	runQuery := `CREATE TABLE pipelines_runs (id varchar PRIMARY KEY`
+	for i := range 7 {
+		query += fmt.Sprintf(", passed_%d integer NOT NULL", i)
+		runQuery += fmt.Sprintf(", passed_%d integer NOT NULL DEFAULT 0", i)
+	}
+	for i := range 7 {
+		query += fmt.Sprintf(", failed_%d integer NOT NULL", i)
+		runQuery += fmt.Sprintf(", failed_%d integer NOT NULL DEFAULT 0", i)
+	}
+	query += `);` + runQuery + `, error varchar NOT NULL DEFAULT '');
+		CREATE TABLE pipelines_errors (message varchar, step smallint);
+		INSERT INTO pipelines_metrics VALUES ('444444444444', 1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14);
+		INSERT INTO pipelines_runs VALUES ('555555555555', 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 'saved error');
+		INSERT INTO pipelines_errors VALUES ('transformation', 4), ('output validation', 5), ('finalize', 6)`
+	_, err := database.Exec(t.Context(), query)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for range 2 {
+		_, err = database.Exec(t.Context(), pipelineMetricStepsUpgrade)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertPipelineMetricStepValues(t, database, "pipelines_metrics", "pipeline", "444444444444",
+			[]int32{1, 2, 3, 4, 0, 5, 6, 0, 7}, []int32{8, 9, 10, 11, 0, 12, 13, 0, 14})
+		assertPipelineMetricStepValues(t, database, "pipelines_runs", "id", "555555555555",
+			[]int32{1, 2, 3, 4, 0, 5, 6, 0, 7}, []int32{8, 9, 10, 11, 0, 12, 13, 0, 14})
+		assertPipelineErrorSteps(t, database, map[string]int16{
+			"transformation":    5,
+			"output validation": 6,
+			"finalize":          8,
+		})
+		assertConsentStepColumns(t, database)
+
+		var runError string
+		err = database.QueryRow(t.Context(), "SELECT error FROM pipelines_runs WHERE id = '555555555555'").Scan(&runError)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if runError != "saved error" {
+			t.Fatalf("expected saved run error, got %q", runError)
+		}
+	}
+
 }
 
 // TestUpgradePipelineOrderingGroup verifies column order, schema and data
@@ -232,16 +361,16 @@ func TestUpgradePipelineOrderingGroup(t *testing.T) {
 					VALUES ('333333333333', '222222222222', 'dummy', 'Source', '\x');
 					INSERT INTO pipelines (id, connection, target, event_type, ordering_group, delivery_endpoint,
 						name, enabled,
-						schedule_start, schedule_period, in_schema, out_schema, filter, required_consents,
-						required_consents_operator, transformation_mapping, transformation_id, transformation_version,
+						schedule_start, schedule_period, in_schema, out_schema, filter, required_consents_operator,
+						required_consents_purposes, transformation_mapping, transformation_id, transformation_version,
 						transformation_language, transformation_source, transformation_preserve_json,
 						transformation_in_paths, transformation_out_paths, query, format, path, sheet, compression,
 						order_by, format_settings, export_mode, matching_in, matching_out, update_on_duplicates,
 						table_name, table_key, user_id_column, updated_at_column, updated_at_format, incremental,
 						cursor, health, properties_to_unset)
 					VALUES ('444444444444', '333333333333', 'Event', repeat('界', 99) || '-', 'events', '', 'Pipeline', true,
-						17, 5, '{"in":1}', '{"out":2}', '{"operator":"And","rules":[]}', '{purpose}',
-						'or', '{"mapping":3}', 'function', 'v1', 'Python', 'source', true,
+						17, 5, '{"in":1}', '{"out":2}', '{"operator":"And","rules":[]}', 'or',
+						'{purpose}', '{"mapping":3}', 'function', 'v1', 'Python', 'source', true,
 						'{in}', '{out}', 'SELECT 1', 'json', '/path', 'Sheet', 'Gzip',
 						'name', '{"setting":4}', 'CreateOnly', 'in', 'out', true,
 						'profiles', 'id', 'uid', 'updated', 'format', true,
@@ -440,6 +569,88 @@ func assertUsageMetricsUpgrade(t *testing.T, database *db.DB) {
 		t.Fatalf("expected event-only usage defaults, got profiles=%d profile-seconds=%d observed-at=%v",
 			profileCount, profileSeconds, observedAt)
 	}
+}
+
+// assertPipelineMetricStepsUpgraded verifies that indices from the released
+// six-step metrics layout retain their original meanings.
+func assertPipelineMetricStepsUpgraded(t *testing.T, database *db.DB) {
+	t.Helper()
+	assertPipelineMetricStepValues(t, database, "pipelines_metrics", "pipeline", "444444444444",
+		[]int32{1, 2, 3, 0, 0, 4, 5, 0, 6}, []int32{7, 8, 9, 0, 0, 10, 11, 0, 12})
+	assertPipelineMetricStepValues(t, database, "pipelines_runs", "id", "555555555555",
+		[]int32{13, 14, 15, 0, 0, 16, 17, 0, 18}, []int32{19, 20, 21, 0, 0, 22, 23, 0, 24})
+	assertPipelineErrorSteps(t, database, map[string]int16{
+		"transformation":    5,
+		"output validation": 6,
+		"finalize":          8,
+	})
+}
+
+// assertPipelineErrorSteps verifies the persisted step for each error message.
+func assertPipelineErrorSteps(t *testing.T, database *db.DB, expected map[string]int16) {
+	t.Helper()
+	for message, expectedStep := range expected {
+		var step int16
+		err := database.QueryRow(t.Context(), "SELECT step FROM pipelines_errors WHERE message = $1", message).Scan(&step)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if step != expectedStep {
+			t.Fatalf("expected pipeline error %q to have step %d, got %d", message, expectedStep, step)
+		}
+	}
+}
+
+// assertPipelineMetricStepValues verifies the order and values of counters in a
+// pipeline metrics or run row.
+func assertPipelineMetricStepValues(t *testing.T, database *db.DB, table, key, id string, expectedPassed, expectedFailed []int32) {
+
+	t.Helper()
+
+	expectedColumns := []string{}
+	for _, prefix := range []string{"passed", "failed"} {
+		for i := range 9 {
+			expectedColumns = append(expectedColumns, fmt.Sprintf("%s_%d", prefix, i))
+		}
+	}
+	if table == "pipelines_runs" {
+		hasError, err := database.QueryExists(t.Context(), `SELECT FROM information_schema.columns
+			WHERE table_schema = current_schema() AND table_name = $1 AND column_name = 'error'`, table)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if hasError {
+			expectedColumns = append(expectedColumns, "error")
+		}
+	}
+	var columns []string
+	err := database.QueryRow(t.Context(), `SELECT array_agg(column_name::text ORDER BY ordinal_position)
+		FROM information_schema.columns
+		WHERE table_schema = current_schema() AND table_name = $1
+			AND (column_name ~ '^(passed|failed)_[0-8]$' OR column_name = 'error')`, table).Scan(&columns)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(columns, expectedColumns) {
+		t.Fatalf("expected %s step columns %v, got %v", table, expectedColumns, columns)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT
+			ARRAY[passed_0, passed_1, passed_2, passed_3, passed_4, passed_5, passed_6, passed_7, passed_8],
+			ARRAY[failed_0, failed_1, failed_2, failed_3, failed_4, failed_5, failed_6, failed_7, failed_8]
+		FROM %s
+		WHERE %s = $1`, table, key)
+	var passed, failed []int32
+	err = database.QueryRow(t.Context(), query, id).Scan(&passed, &failed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(passed, expectedPassed) || !slices.Equal(failed, expectedFailed) {
+		t.Fatalf("expected %s %s=%q counters passed=%v failed=%v, got passed=%v failed=%v",
+			table, key, id, expectedPassed, expectedFailed, passed, failed)
+	}
+
 }
 
 func assertRateLimitLeaseFunction(t *testing.T, database *db.DB) {
@@ -930,6 +1141,8 @@ func assertPipelineMetricsUpgrade(t *testing.T, database *db.DB) {
 		"passed_4",
 		"passed_5",
 		"passed_6",
+		"passed_7",
+		"passed_8",
 		"failed_0",
 		"failed_1",
 		"failed_2",
@@ -937,6 +1150,8 @@ func assertPipelineMetricsUpgrade(t *testing.T, database *db.DB) {
 		"failed_4",
 		"failed_5",
 		"failed_6",
+		"failed_7",
+		"failed_8",
 	} {
 		expectedConstraints = append(expectedConstraints, "pipelines_metrics_"+column+"_not_null")
 	}
@@ -1080,19 +1295,113 @@ func assertOrganizationLimitsHaveNoDefaults(t *testing.T, database *db.DB) {
 	}
 }
 
-// assertConsentStepColumns verifies that the consent step columns were added,
-// keeping their default on pipelines_runs and dropping it on
-// pipelines_metrics.
+// assertConsentStepColumns verifies that the step columns added by the consent
+// management upgrades were added, keeping their default on pipelines_runs and
+// dropping it on pipelines_metrics.
 func assertConsentStepColumns(t *testing.T, database *db.DB) {
 	t.Helper()
 
-	for _, column := range []string{"passed_6", "failed_6"} {
+	for _, column := range []string{"passed_6", "failed_6", "passed_7", "failed_7", "passed_8", "failed_8"} {
+		assertColumnExists(t, database, "pipelines_runs", column)
+		assertColumnExists(t, database, "pipelines_metrics", column)
 		if !hasDefault(t, database, "pipelines_runs", column) {
 			t.Fatalf("expected column pipelines_runs.%s to have a default, got no default", column)
 		}
 		if hasDefault(t, database, "pipelines_metrics", column) {
 			t.Fatalf("expected column pipelines_metrics.%s to have no default, got a default", column)
 		}
+	}
+}
+
+// assertConsentPurposeSchema verifies the schema introduced for consent
+// purposes and pipeline requirements.
+func assertConsentPurposeSchema(t *testing.T, database *db.DB) {
+	t.Helper()
+
+	var columns []string
+	err := database.QueryRow(t.Context(), `SELECT array_agg(column_name::text ORDER BY ordinal_position)
+		FROM information_schema.columns
+		WHERE table_schema = current_schema() AND table_name = 'consent_purposes'`).Scan(&columns)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedColumns := []string{"id", "workspace", "name", "event_purpose_codes", "profile_property", "profile_json_key"}
+	if !slices.Equal(columns, expectedColumns) {
+		t.Fatalf("expected consent purpose columns %v, got %v", expectedColumns, columns)
+	}
+
+	for _, column := range []string{
+		"id", "workspace", "name", "event_purpose_codes", "profile_property", "profile_json_key",
+	} {
+		assertColumnExists(t, database, "consent_purposes", column)
+	}
+	for _, column := range []string{"code", "aliases", "event_path", "event_paths", "profile_path"} {
+		assertColumnDoesNotExist(t, database, "consent_purposes", column)
+	}
+	assertConstraintExists(t, database, "consent_purposes", "consent_purposes_id_check")
+	assertConstraintExists(t, database, "consent_purposes", "consent_purposes_pkey")
+	var primaryKey string
+	err = database.QueryRow(t.Context(), `SELECT pg_get_constraintdef(oid)
+		FROM pg_constraint
+		WHERE conrelid = 'consent_purposes'::regclass
+			AND conname = 'consent_purposes_pkey'`).Scan(&primaryKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if primaryKey != "PRIMARY KEY (id)" {
+		t.Fatalf("expected consent purposes primary key on id, got %s", primaryKey)
+	}
+	for _, column := range []string{"event_purpose_codes", "profile_property", "profile_json_key"} {
+		if !hasDefault(t, database, "consent_purposes", column) {
+			t.Fatalf("expected column consent_purposes.%s to have a default, got no default", column)
+		}
+	}
+
+	var requiredConsents []string
+	var requiredConsentsOperator string
+	err = database.QueryRow(t.Context(), `SELECT required_consents_purposes, required_consents_operator
+		FROM pipelines WHERE id = '888888888888'`).Scan(&requiredConsents, &requiredConsentsOperator)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if requiredConsentsOperator != "or" {
+		t.Fatalf("expected required consents operator or, got %q", requiredConsentsOperator)
+	}
+	if len(requiredConsents) != 2 || requiredConsents[0] == requiredConsents[1] {
+		t.Fatalf("expected two distinct required consent purpose IDs, got %v", requiredConsents)
+	}
+	for i, purpose := range []struct {
+		code string
+		name string
+	}{
+		{"marketing_newsletters", "Marketing newsletters"},
+		{"analytics", "Analytics"},
+	} {
+		var codes []string
+		var name, property, jsonKey string
+		err = database.QueryRow(t.Context(), `SELECT event_purpose_codes, name, profile_property, profile_json_key
+			FROM consent_purposes WHERE workspace = '222222222222' AND id = $1`, requiredConsents[i]).
+			Scan(&codes, &name, &property, &jsonKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !slices.Equal(codes, []string{purpose.code}) || name != purpose.name || property != "" || jsonKey != "" {
+			t.Fatalf("expected migrated purpose %q with name %q and no profile location, got codes=%v name=%q property=%q JSON key=%q",
+				purpose.code, purpose.name, codes, name, property, jsonKey)
+		}
+	}
+
+	var requiredConsentsType string
+	err = database.QueryRow(t.Context(), `SELECT format_type(a.atttypid, a.atttypmod)
+		FROM pg_attribute a
+		WHERE a.attrelid = 'pipelines'::regclass
+			AND a.attname = 'required_consents_purposes'
+			AND NOT a.attisdropped`).Scan(&requiredConsentsType)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if requiredConsentsType != "character varying(12)[]" {
+		t.Fatalf("expected pipelines.required_consents_purposes type character varying(12)[], got %s", requiredConsentsType)
 	}
 }
 

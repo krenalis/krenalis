@@ -924,11 +924,11 @@ func (workspace *Workspace) Connections() []*Connection {
 	return connections
 }
 
-// ConsentPurpose returns the consent purpose of the workspace with the given
-// code. The boolean return value reports whether the consent purpose exists.
-func (workspace *Workspace) ConsentPurpose(code string) (*ConsentPurpose, bool) {
+// ConsentPurpose returns the consent purpose of the workspace with identifier
+// id. The boolean return value reports whether the consent purpose exists.
+func (workspace *Workspace) ConsentPurpose(id string) (*ConsentPurpose, bool) {
 	workspace.mu.Lock()
-	cp, ok := workspace.consentPurposes[code]
+	cp, ok := workspace.consentPurposes[id]
 	workspace.mu.Unlock()
 	return cp, ok
 }
@@ -944,7 +944,7 @@ func (workspace *Workspace) ConsentPurposes() []*ConsentPurpose {
 	}
 	workspace.mu.Unlock()
 	sort.Slice(purposes, func(i, j int) bool {
-		return purposes[i].Code < purposes[j].Code
+		return purposes[i].ID < purposes[j].ID
 	})
 	return purposes
 }
@@ -1335,8 +1335,23 @@ func (account *Account) Connector() *Connector {
 
 // ConsentPurpose represents a consent purpose.
 type ConsentPurpose struct {
-	Code string
-	Name string
+	ID                     string
+	Name                   string
+	EventConsentLocations  []EventConsentLocation // never nil
+	ProfileConsentLocation *ProfileConsentLocation
+}
+
+// EventConsentLocation identifies a property under context.consents that is checked
+// for the consent value in incoming events.
+type EventConsentLocation struct {
+	PurposeCode string
+}
+
+// ProfileConsentLocation identifies the profile schema property and optional JSON key
+// used to represent the consent value for a purpose.
+type ProfileConsentLocation struct {
+	Property string
+	JSONKey  string
 }
 
 // Strategy represents a strategy.
@@ -1884,7 +1899,14 @@ const (
 // RequiredConsents represents the consent purposes required by a pipeline.
 type RequiredConsents struct {
 	Operator ConsentPurposesOperator
-	Purposes []string // consent purpose codes.
+	Purposes []*ConsentPurpose // no nil
+}
+
+// RequiredConsentsByIDs represents the consent purposes required by a pipeline,
+// identified by their IDs.
+type RequiredConsentsByIDs struct {
+	Operator ConsentPurposesOperator
+	Purposes []string // consent purpose identifiers.
 }
 
 // ConsentPurposesOperator represents the logical operator applied to the
