@@ -16,10 +16,14 @@ import (
 // When empty, the version is read from the build information.
 var buildVersion string
 
-// krenalisVersion returns the Krenalis version: the one set at build time, if
-// any, otherwise the version of the Krenalis module recorded by the Go
-// toolchain, whether it is the main module or a dependency, or "(devel)" when
-// it is not available or the module is replaced.
+// krenalisVersion returns the Krenalis version, determined as follows:
+//
+//  1. the version set at build time, if any;
+//  2. otherwise, the version recorded by the Go toolchain for the main module,
+//     if it is the Krenalis module;
+//  3. otherwise, the version recorded by the Go toolchain for the Krenalis
+//     module as a dependency, if it is not replaced;
+//  4. otherwise, "(devel)".
 var krenalisVersion = sync.OnceValue(func() string {
 	if buildVersion != "" {
 		return buildVersion
