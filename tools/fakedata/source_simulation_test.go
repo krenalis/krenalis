@@ -440,8 +440,7 @@ func TestSourceSimulationOrderAndConcurrency(t *testing.T) {
 			start = 0
 		}
 		for index := end; index > start; index-- {
-			for i := len(sources) - 1; i >= 0; i-- {
-				source := sources[i]
+			for _, source := range slices.Backward(sources) {
 				rows, err := source.Records(index)
 				if err != nil {
 					t.Fatalf("expected reordered records, got %v", err)

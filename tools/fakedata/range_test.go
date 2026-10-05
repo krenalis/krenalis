@@ -16,7 +16,7 @@ func TestPersonRangeExtendedArithmetic(t *testing.T) {
 
 	start := uint64(0x243f6a8885a308d3)
 	count := uint64(0x13198a2e03707344)
-	for i := 0; i < 100_000; i++ {
+	for range 100_000 {
 
 		start = start*6364136223846793005 + 1442695040888963407
 		count = count*2862933555777941757 + 3037000493

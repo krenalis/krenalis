@@ -167,7 +167,7 @@ func TestMix64Golden(t *testing.T) {
 	}
 
 	x := uint64(0x4d595df4d0f33173)
-	for i := 0; i < 100_000; i++ {
+	for range 100_000 {
 		x = x*6364136223846793005 + 1442695040888963407
 		if got := unmix64(mix64(x)); got != x {
 			t.Fatalf("expected mixer round-trip for %016x, got %016x", x, got)
@@ -361,7 +361,7 @@ func TestSyntheticIDRoundTrip(t *testing.T) {
 	namespace := IdentityNamespace{Name: "krenalis-demo", Generation: 1}
 	indices := []PersonIndex{1, 2, 42, 1537291, math.MaxUint64}
 	x := uint64(0x243f6a8885a308d3)
-	for i := 0; i < 20_000; i++ {
+	for range 20_000 {
 		x = x*2862933555777941757 + 3037000493
 		if x != 0 {
 			indices = append(indices, PersonIndex(x))

@@ -7,6 +7,7 @@ package cmd_test
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -104,10 +105,7 @@ func testSimulatedSystemGeneration(t *testing.T, k *krenalistester.Krenalis, pho
 		{"fractional precision", func(body map[string]any) { body["duplicateRecordPercent"] = 1.001 }, "duplicateRecordPercent is not valid"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			body := map[string]any{}
-			for key, value := range valid {
-				body[key] = value
-			}
+			body := maps.Clone(valid)
 			test.change(body)
 			assertEnvironmentBadRequest(t, k.TryCall("POST", "/v1/simulated/systems", nil, body, nil), test.want)
 		})

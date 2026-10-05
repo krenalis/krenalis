@@ -132,8 +132,7 @@ func TestLayer1Determinism(t *testing.T) {
 		}
 		want[index] = person
 	}
-	for position := len(indices) - 1; position >= 0; position-- {
-		index := indices[position]
+	for _, index := range slices.Backward(indices) {
 		person, err := world.Person(index)
 		if err != nil {
 			t.Fatalf("expected repeated Person %d, got %v", index, err)

@@ -177,7 +177,7 @@ func TestLayer1EmailUniqueness(t *testing.T) {
 	const count = 100_000
 	for _, shuffled := range []bool{false, true} {
 		seen := make(map[string]struct{}, count)
-		for position := 0; position < count; position++ {
+		for position := range count {
 			index := PersonIndex(position + 1)
 			if shuffled {
 				index = PersonIndex((position*7919)%count + 1)

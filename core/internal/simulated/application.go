@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"strings"
 	"time"
 
@@ -405,10 +406,7 @@ func (app *Application) Upsert(ctx context.Context, target connectors.Targets, r
 	if err != nil {
 		return err
 	}
-	working := make(map[string]json.Value, len(stored))
-	for id, data := range stored {
-		working[id] = data
-	}
+	working := maps.Clone(stored)
 	updates := make([]datastore.SimulatedSystemRecordWrite, 0, len(pendingUpdates))
 	updatePositions := make(map[string]int, len(pendingUpdates))
 	for _, pending := range pendingUpdates {

@@ -108,9 +108,7 @@ func updateDestinationRecordDocument(id string, stored json.Value, patch map[str
 		if !ok {
 			return nil, fmt.Errorf("stored address is invalid")
 		}
-		for leaf, value := range value.(map[string]any) {
-			current[leaf] = value
-		}
+		maps.Copy(current, value.(map[string]any))
 	}
 	return types.MarshalValidate(document, sourceSchema)
 }

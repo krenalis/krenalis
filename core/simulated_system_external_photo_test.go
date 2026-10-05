@@ -136,7 +136,7 @@ func TestSimulatedSystemExternalPhotos(t *testing.T) {
 			t.Fatalf("expected absolute first-origin photo URL, got %v", document.Photo)
 		}
 	}
-	for i := 0; i < 7; i++ {
+	for range 7 {
 		checkpoint = plan.advance(checkpoint)
 	}
 	account.GeneratedRecordCount = 7

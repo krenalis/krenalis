@@ -111,7 +111,7 @@ func TestSimulatedSystemPlanResumeAndSelection(t *testing.T) {
 		t.Fatalf("expected generation plan, got %v", err)
 	}
 	baseline, oracle := simulatedSystemPlanRecords(t, plan, checkpoint, 256)
-	for i := 0; i < 257; i++ {
+	for range 257 {
 		checkpoint = plan.advance(checkpoint)
 	}
 	account.GeneratedRecordCount = 257
@@ -139,12 +139,12 @@ func TestSimulatedSystemPlanResumeAndSelection(t *testing.T) {
 		t.Fatalf("expected second selection plan, got %v", err)
 	}
 	selected := map[fakedata.PersonIndex]struct{}{}
-	for i := 0; i < 30_000; i++ {
+	for i := range 30_000 {
 		selected[a.personIndex(i)] = struct{}{}
 	}
 	overlap := 0
 	var shared fakedata.PersonIndex
-	for i := 0; i < 30_000; i++ {
+	for i := range 30_000 {
 		if _, ok := selected[b.personIndex(i)]; ok {
 			overlap++
 			shared = b.personIndex(i)

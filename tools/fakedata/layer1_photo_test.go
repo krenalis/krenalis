@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -1080,14 +1081,8 @@ func addTestPhotoFace(t *testing.T, source *FaceCatalog, id string, gender Gende
 	t.Helper()
 	clone := *source
 	clone.faces = append([]photoFace(nil), source.faces...)
-	clone.assets = make(map[photoAssetKey]photoAssetRecord, len(source.assets)+len(supportedPhotoSizes))
-	for key, record := range source.assets {
-		clone.assets[key] = record
-	}
-	clone.paths = make(map[string]photoAssetRecord, len(source.paths)+len(supportedPhotoSizes))
-	for path, record := range source.paths {
-		clone.paths[path] = record
-	}
+	clone.assets = maps.Clone(source.assets)
+	clone.paths = maps.Clone(source.paths)
 	clone.faces = append(clone.faces, photoFace{
 		id: id, gender: gender, requestedAge: age, status: fakefacegenStatusGenerated,
 	})
