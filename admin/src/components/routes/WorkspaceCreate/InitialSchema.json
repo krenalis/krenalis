@@ -33,7 +33,8 @@
 			"readOptional": true,
 			"type": {
 				"maxLength": 254,
-				"kind": "string"
+				"kind": "string",
+				"semantic": "email"
 			},
 			"displayName": "Email"
 		},
@@ -41,8 +42,8 @@
 			"name": "phone_number",
 			"readOptional": true,
 			"type": {
-				"maxLength": 20,
-				"kind": "string"
+				"kind": "string",
+				"semantic": "phone"
 			},
 			"displayName": "Phone number"
 		},
@@ -99,8 +100,9 @@
 						"name": "country",
 						"readOptional": true,
 						"type": {
-							"maxLength": 2,
-							"kind": "string"
+							"kind": "string",
+							"semantic": "country",
+							"format": "alpha-2"
 						},
 						"displayName": "Country"
 					}

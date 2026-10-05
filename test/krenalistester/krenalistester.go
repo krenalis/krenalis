@@ -72,6 +72,7 @@ type Krenalis struct {
 	// Options.
 	fileSystemRoot        string
 	natsAckWait           string
+	overrideProfileSchema *types.Type
 	populateProfileSchema bool
 }
 
@@ -88,8 +89,8 @@ func (k *Krenalis) Addr() string {
 // NewKrenalisInstance initializes a new instance of Krenalis for testing.
 //
 // After initializing an instance, its options can be set (via
-// [PopulateProfileSchema], [SetFileSystemRoot], and [SetNATSAckWait]) and
-// finally the instance can be started with the [Start] method.
+// [PopulateProfileSchema], [SetFileSystemRoot], [SetNATSAckWait], and
+// [SetProfileSchema]) before calling [Start].
 func NewKrenalisInstance(t *testing.T) *Krenalis {
 
 	if !launchKrenalisExternally {
@@ -175,6 +176,16 @@ func (k *Krenalis) SetFileSystemRoot(root string) {
 // SetNATSAckWait sets the NATS ack wait duration.
 func (k *Krenalis) SetNATSAckWait(duration string) {
 	k.natsAckWait = duration
+}
+
+// SetProfileSchema sets the schema used to create the initial workspace.
+// Call it before [Start]. It overrides [PopulateProfileSchema] and panics if
+// schema is not a valid object type.
+func (k *Krenalis) SetProfileSchema(schema types.Type) {
+	if !schema.Valid() || schema.Kind() != types.ObjectKind {
+		panic("profile schema must be a valid object type")
+	}
+	k.overrideProfileSchema = &schema
 }
 
 // Start starts the Krenalis instance.
@@ -473,7 +484,9 @@ func (k *Krenalis) Start() {
 	// Create the workspace and connect the warehouse.
 	var profileSchema types.Type
 	var uiPreferences UIPreferences
-	if k.populateProfileSchema {
+	if k.overrideProfileSchema != nil {
+		profileSchema = *k.overrideProfileSchema
+	} else if k.populateProfileSchema {
 		profileSchema = testsProfileSchema
 		uiPreferences.Profile.FirstName = "first_name"
 		uiPreferences.Profile.LastName = "last_name"
