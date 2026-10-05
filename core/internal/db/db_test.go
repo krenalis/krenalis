@@ -98,6 +98,129 @@ func Test_Quote(t *testing.T) {
 
 }
 
+// Test_TxCommitFailureReleasesConnection checks that a failed commit returns
+// the connection to the pool in a usable state and that repeated finalization
+// of the transaction does not affect the connection after it has been reused.
+func Test_TxCommitFailureReleasesConnection(t *testing.T) {
+
+	const (
+		testDatabase = "krenalis"
+		testUser     = "krenalis"
+		testPassword = "krenalis"
+	)
+
+	ctx := t.Context()
+	postgresContainer, err := postgres.Run(ctx,
+		testimages.PostgreSQL,
+		postgres.WithDatabase(testDatabase),
+		postgres.WithUsername(testUser),
+		postgres.WithPassword(testPassword),
+		postgres.BasicWaitStrategies(),
+	)
+	if err != nil {
+		t.Fatalf("expected PostgreSQL container to start, got %v", err)
+	}
+	t.Cleanup(func() {
+		err := testcontainers.TerminateContainer(postgresContainer)
+		if err != nil {
+			t.Errorf("expected PostgreSQL container to terminate, got %v", err)
+		}
+	})
+	host, err := postgresContainer.Host(ctx)
+	if err != nil {
+		t.Fatalf("expected PostgreSQL host, got %v", err)
+	}
+	port, err := postgresContainer.MappedPort(ctx, "5432/tcp")
+	if err != nil {
+		t.Fatalf("expected PostgreSQL port, got %v", err)
+	}
+
+	db, err := Open(&Options{
+		Host:           host,
+		Port:           int(port.Num()),
+		Username:       testUser,
+		Password:       testPassword,
+		Database:       testDatabase,
+		MaxConnections: 1,
+	})
+	if err != nil {
+		t.Fatalf("expected database pool to open, got %v", err)
+	}
+	t.Cleanup(db.Close)
+
+	_, err = db.Exec(ctx, "CREATE TABLE commit_failure (value integer UNIQUE DEFERRABLE INITIALLY DEFERRED)")
+	if err != nil {
+		t.Fatalf("expected deferred unique constraint to be created, got %v", err)
+	}
+
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		t.Fatalf("expected transaction to begin, got %v", err)
+	}
+	defer tx.Rollback(ctx)
+	underlying := tx.tx.Conn()
+	_, err = tx.Exec(ctx, "INSERT INTO commit_failure (value) VALUES (1), (1)")
+	if err != nil {
+		t.Fatalf("expected duplicate values to be accepted before commit, got %v", err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		if !IsUniqueViolation(err) {
+			t.Fatalf("expected unique violation at commit, got %T: %v", err, err)
+		}
+	}
+	if err == nil {
+		t.Fatal("expected unique violation at commit, got nil")
+	}
+	if underlying.IsClosed() {
+		t.Fatal("expected released connection to remain open, got closed connection")
+	}
+	stats := db.PoolStats()
+	if stats.AcquiredConns() != 0 || stats.IdleConns() != 1 || stats.TotalConns() != 1 {
+		t.Fatalf("expected pool with 0 acquired, 1 idle and 1 total connection, got %d acquired, %d idle and %d total",
+			stats.AcquiredConns(), stats.IdleConns(), stats.TotalConns())
+	}
+
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		t.Fatalf("expected released connection to be acquired, got %v", err)
+	}
+	defer conn.Close()
+	if conn.Underlying() != underlying {
+		t.Fatal("expected the same connection to be reused, got a different connection")
+	}
+
+	// Repeated finalization must not close a connection owned by another caller.
+	for _, tc := range []struct {
+		name string
+		end  func() error
+	}{
+		{"commit", func() error { return tx.Commit(ctx) }},
+		{"rollback", func() error { return tx.Rollback(ctx) }},
+	} {
+		err := tc.end()
+		if err != nil {
+			if err != ErrTxClosed {
+				t.Fatalf("expected %s to return %v, got %v", tc.name, ErrTxClosed, err)
+			}
+		}
+		if err == nil {
+			t.Fatalf("expected %s to return %v, got nil", tc.name, ErrTxClosed)
+		}
+	}
+
+	var count int
+	err = conn.QueryRow(ctx, "SELECT count(*) FROM commit_failure").Scan(&count)
+	if err != nil {
+		t.Fatalf("expected reused connection to remain usable, got %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("expected failed commit to leave 0 rows, got %d", count)
+	}
+
+}
+
 // Test_TxQueryRowForeignKeyViolationIsDirectPgError checks that pgx returns a
 // direct PgError for a foreign key violation from Tx.QueryRow.
 func Test_TxQueryRowForeignKeyViolationIsDirectPgError(t *testing.T) {
