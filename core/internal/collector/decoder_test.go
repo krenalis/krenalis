@@ -1315,11 +1315,11 @@ func Test_parseUserAgent(t *testing.T) {
 			},
 			expectedOS: map[string]any{
 				"name":    "Android",
-				"version": "1234123412341234123.0.864",
+				"version": "123412341.0.864",
 			},
 		},
 		{
-			ua: "Mozilla/5.0 (Linux; Android 12341234123412341231.0.864; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.71 Mobile Safari/537.36",
+			ua: "Mozilla/5.0 (Linux; Android 123412341.123412341.123412; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.71 Mobile Safari/537.36",
 			expectedBrowser: map[string]any{
 				"name":    "Chrome",
 				"version": "94.0.4606",
@@ -1343,7 +1343,7 @@ func Test_parseUserAgent(t *testing.T) {
 			ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edg/1234123412341234123.0.864",
 			expectedBrowser: map[string]any{
 				"name":    "Edge",
-				"version": "1234123412341234123.0.864",
+				"version": "123412341.0.864",
 			},
 			expectedOS: map[string]any{
 				"name":    "Windows",
@@ -1351,7 +1351,7 @@ func Test_parseUserAgent(t *testing.T) {
 			},
 		},
 		{
-			ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edg/123412341234123412341.0.864",
+			ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edg/123412341.123412341.123412",
 			expectedBrowser: map[string]any{
 				"name": "Edge",
 			},

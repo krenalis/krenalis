@@ -110,13 +110,16 @@ func (pipeline pipeline) SetStatus(_ http.ResponseWriter, r *http.Request) (any,
 		return nil, err
 	}
 	var body struct {
-		Enabled bool `json:"enabled"`
+		Enabled *bool `json:"enabled"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = p.SetStatus(r.Context(), body.Enabled)
+	if body.Enabled == nil {
+		return nil, errors.BadRequest("enabled is required and cannot be null")
+	}
+	err = p.SetStatus(r.Context(), *body.Enabled)
 	return nil, err
 }
 

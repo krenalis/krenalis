@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/core/internal/connections"
@@ -76,11 +77,11 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	outSchema := pipeline.OutSchema
 
 	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(v.connection.connector.typ, v.connection.role, v.target)
-	dispatchEventsToAplications := isDispatchingEventsToApplications(v.connection.connector.typ, v.connection.role, v.target)
+	dispatchEventsToApplications := isDispatchingEventsToApplications(v.connection.connector.typ, v.connection.role, v.target)
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(v.connection.connector.typ, v.connection.role, v.target)
 	exportUsersToFile := isExportUsersToFile(v.connection.connector.typ, v.connection.role, v.target)
 
-	allowConstantTransformation := importUserIdentitiesFromEvents || dispatchEventsToAplications
+	allowConstantTransformation := importUserIdentitiesFromEvents || dispatchEventsToApplications
 
 	// In cases where the input schema refers to events, that is when:
 	//
@@ -89,7 +90,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	//  - events are dispatched to apps
 	//
 	// the input schema must be nil, which means the schema of the events.
-	inSchemaIsEventSchema := importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToAplications
+	inSchemaIsEventSchema := importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApplications
 	if inSchemaIsEventSchema {
 		if inSchema.Valid() {
 			switch {
@@ -97,7 +98,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 				return errors.BadRequest("input schema must be invalid for pipelines that import identities from events")
 			case importEventsIntoWarehouse:
 				return errors.BadRequest("input schema must be invalid for pipelines that import events into data warehouse")
-			case dispatchEventsToAplications:
+			case dispatchEventsToApplications:
 				return errors.BadRequest("input schema must be invalid for pipelines that send events to applications")
 			}
 		}
@@ -165,7 +166,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		}
 	}
 	// Validate the required consents.
-	requiredConsentsAllowed := dispatchEventsToAplications || importEventsIntoWarehouse || importUserIdentitiesFromEvents
+	requiredConsentsAllowed := dispatchEventsToApplications || importEventsIntoWarehouse || importUserIdentitiesFromEvents
 	if len(pipeline.RequiredConsents.Purposes) > 0 {
 		if !requiredConsentsAllowed {
 			return errors.BadRequest("required consents are not allowed")
@@ -267,12 +268,12 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 				return errors.BadRequest("placeholders syntax is not supported by source pipelines")
 			}
 		case state.Destination:
-			_, err := connections.ReplacePlaceholders(pipeline.Path, func(name string) (string, bool) {
-				name = strings.ToLower(name)
-				return "", name == "today" || name == "now" || name == "unix"
-			})
+			path, err := connections.ReplacePlaceholders(pipeline.Path, newPathPlaceholderReplacer(time.Now().UTC()))
 			if err != nil {
 				return errors.BadRequest("path is not valid: %s", err)
+			}
+			if utf8.RuneCountInString(path) > MaxFilePathSize {
+				return errors.BadRequest("path is longer than %d runes after placeholder replacement", MaxFilePathSize)
 			}
 		}
 	}
@@ -324,7 +325,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			return errors.BadRequest("output schema must be valid")
 		}
 		if !types.IsValidPropertyPath(pipeline.Matching.Out) {
-			return errors.BadRequest("output matching property %q is not a valid property name", pipeline.Matching.Out)
+			return errors.BadRequest("output matching property %q is not a valid property path", pipeline.Matching.Out)
 		}
 		out, err := outProperties.ByPath(pipeline.Matching.Out)
 		if err != nil {
