@@ -11,8 +11,6 @@ import SlRadioButton from '@shoelace-style/shoelace/dist/react/radio-button/inde
 import SlRadioGroup from '@shoelace-style/shoelace/dist/react/radio-group/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlTextarea from '@shoelace-style/shoelace/dist/react/textarea/index.js';
-import type SlCheckboxElement from '@shoelace-style/shoelace/dist/components/checkbox/checkbox.component.js';
-import type SlInputElement from '@shoelace-style/shoelace/dist/components/input/input.component.js';
 import type SlTextareaElement from '@shoelace-style/shoelace/dist/components/textarea/textarea.component.js';
 import AppContext from '../../../context/AppContext';
 import Type, {
@@ -88,20 +86,6 @@ const disableShoelaceTextareaHeightReset = (textarea: SlTextareaElement | null) 
 	// which prevents the browser's vertical resize handle from working.
 	// See https://github.com/shoelace-style/shoelace/pull/2465.
 	Reflect.set(textarea, 'setTextareaHeight', () => undefined);
-};
-
-const preventReadOnlyTypeControlFocus = (event: React.PointerEvent) => {
-	event.preventDefault();
-};
-
-const removeReadOnlyTypeControlFromTabOrder = (control: SlCheckboxElement | SlInputElement | null) => {
-	if (control == null) {
-		return;
-	}
-	// Setting tabindex on the Shoelace host does not remove its internal input from the tab order.
-	void control.updateComplete.then(() => {
-		control.input.tabIndex = -1;
-	});
 };
 
 interface PropertyFormProps {
@@ -521,9 +505,13 @@ const PropertyForm = ({
 	};
 
 	const valueType = getPropertyValueType(property.type);
-	const showPercentageControls = valueType?.kind === 'decimal' && valueType.semantic === 'percentage';
-	const showStringConstraints =
-		valueType?.kind === 'string' && valueType.semantic !== 'country' && valueType.semantic !== 'phone';
+	const shouldShowPercentageControls =
+		canEditType && valueType?.kind === 'decimal' && valueType.semantic === 'percentage';
+	const shouldShowStringConstraints =
+		canEditType &&
+		valueType?.kind === 'string' &&
+		valueType.semantic !== 'country' &&
+		valueType.semantic !== 'phone';
 	let decimalDescription: string | null = null;
 	if (valueType?.kind === 'decimal' && checkDecimalType(valueType) == null) {
 		const scale = valueType.scale ?? 0;
@@ -573,52 +561,43 @@ const PropertyForm = ({
 	} else if (valueType?.kind === 'decimal') {
 		numericRangeStep = 10 ** -(valueType.scale ?? 0);
 	}
-	const numericRangeControls = isNumericType(valueType) ? (
-		<div className='property-form__numeric-range'>
-			<SlInput
-				className='property-form__minimum'
-				ref={canEditType ? undefined : removeReadOnlyTypeControlFromTabOrder}
-				size='small'
-				value={numericRangeInputs.minimum.value}
-				type='number'
-				readonly={!canEditType}
-				tabIndex={canEditType ? undefined : -1}
-				noSpinButtons={!canEditType}
-				step={numericRangeStep}
-				placeholder={minimumPlaceholder}
-				onPointerDown={canEditType ? undefined : preventReadOnlyTypeControlFocus}
-				onSlInput={(event) => onInputNumericRange('minimum', event)}
-			>
-				<PropertyFormLabel slot='label' tooltip={minimumTooltip}>
-					Min
-				</PropertyFormLabel>
-			</SlInput>
-			<span className='property-form__numeric-range-separator' aria-hidden='true'>
-				–
-			</span>
-			<SlInput
-				className='property-form__maximum'
-				ref={canEditType ? undefined : removeReadOnlyTypeControlFromTabOrder}
-				size='small'
-				value={numericRangeInputs.maximum.value}
-				type='number'
-				readonly={!canEditType}
-				tabIndex={canEditType ? undefined : -1}
-				noSpinButtons={!canEditType}
-				step={numericRangeStep}
-				placeholder={maximumPlaceholder}
-				onPointerDown={canEditType ? undefined : preventReadOnlyTypeControlFocus}
-				onSlInput={(event) => onInputNumericRange('maximum', event)}
-			>
-				<PropertyFormLabel slot='label' tooltip={maximumTooltip}>
-					Max
-				</PropertyFormLabel>
-			</SlInput>
-			{typeError?.location === 'numeric-range' && (
-				<PropertyFormError name='numeric-range'>{typeError.message}</PropertyFormError>
-			)}
-		</div>
-	) : null;
+	const numericRangeControls =
+		canEditType && isNumericType(valueType) ? (
+			<div className='property-form__numeric-range'>
+				<SlInput
+					className='property-form__minimum'
+					size='small'
+					value={numericRangeInputs.minimum.value}
+					type='number'
+					step={numericRangeStep}
+					placeholder={minimumPlaceholder}
+					onSlInput={(event) => onInputNumericRange('minimum', event)}
+				>
+					<PropertyFormLabel slot='label' tooltip={minimumTooltip}>
+						Min
+					</PropertyFormLabel>
+				</SlInput>
+				<span className='property-form__numeric-range-separator' aria-hidden='true'>
+					–
+				</span>
+				<SlInput
+					className='property-form__maximum'
+					size='small'
+					value={numericRangeInputs.maximum.value}
+					type='number'
+					step={numericRangeStep}
+					placeholder={maximumPlaceholder}
+					onSlInput={(event) => onInputNumericRange('maximum', event)}
+				>
+					<PropertyFormLabel slot='label' tooltip={maximumTooltip}>
+						Max
+					</PropertyFormLabel>
+				</SlInput>
+				{typeError?.location === 'numeric-range' && (
+					<PropertyFormError name='numeric-range'>{typeError.message}</PropertyFormError>
+				)}
+			</div>
+		) : null;
 
 	return (
 		<form className='property-form' id={formID} onSubmit={onSubmit}>
@@ -672,7 +651,7 @@ const PropertyForm = ({
 			)}
 			<div
 				className={`property-form__control${
-					showPercentageControls ? ' property-form__control--percentage-type' : ''
+					shouldShowPercentageControls ? ' property-form__control--percentage-type' : ''
 				}`}
 			>
 				<div className='property-form__label'>
@@ -684,7 +663,7 @@ const PropertyForm = ({
 					canEditType={canEditType}
 					onChange={onChangeType}
 				/>
-				{showPercentageControls && (
+				{shouldShowPercentageControls && (
 					<div className='property-form__percentage-description'>
 						<SlBadge className='property-form__percentage-badge' pill variant='neutral'>
 							<span className='property-form__percentage-badge-text'>0.9 represents 90%</span>
@@ -697,49 +676,34 @@ const PropertyForm = ({
 			</div>
 			{valueType?.kind === 'string' && valueType.semantic === 'country' && (
 				<div className='property-form__constraints property-form__constraints--country'>
-					<SlInput
-						className='property-form__country-format'
-						ref={removeReadOnlyTypeControlFromTabOrder}
-						size='small'
-						value={valueType.format === 'alpha-2' ? '2-letter ISO code' : '3-letter ISO code'}
-						readonly
-						tabIndex={-1}
-						onPointerDown={preventReadOnlyTypeControlFocus}
-					>
-						<PropertyFormLabel slot='label'>Format</PropertyFormLabel>
-					</SlInput>
+					<div className='property-form__country-format'>
+						<div className='property-form__label'>Format</div>
+						<div className='property-form__value'>
+							{valueType.format === 'alpha-2' ? '2-letter ISO code' : '3-letter ISO code'}
+						</div>
+					</div>
 				</div>
 			)}
-			{showStringConstraints && (
+			{shouldShowStringConstraints && (
 				<div className='property-form__constraints property-form__constraints--length'>
 					<SlInput
-						ref={canEditType ? undefined : removeReadOnlyTypeControlFromTabOrder}
 						label='Max characters'
 						size='small'
 						value={valueType.maxLength == null ? '' : String(valueType.maxLength)}
 						type='number'
-						readonly={!canEditType}
-						tabIndex={canEditType ? undefined : -1}
-						noSpinButtons={!canEditType}
 						min={1}
 						max={MAX_STRING_LENGTH}
 						step={1}
-						onPointerDown={canEditType ? undefined : preventReadOnlyTypeControlFocus}
 						onSlInput={onInputMaxLength}
 					/>
 					<SlInput
-						ref={canEditType ? undefined : removeReadOnlyTypeControlFromTabOrder}
 						label='Max bytes'
 						size='small'
 						value={valueType.maxBytes == null ? '' : String(valueType.maxBytes)}
 						type='number'
-						readonly={!canEditType}
-						tabIndex={canEditType ? undefined : -1}
-						noSpinButtons={!canEditType}
 						min={1}
 						max={MAX_STRING_LENGTH}
 						step={1}
-						onPointerDown={canEditType ? undefined : preventReadOnlyTypeControlFocus}
 						onSlInput={onInputMaxBytes}
 					/>
 					{typeError?.location === 'string-constraints' && (
@@ -747,14 +711,15 @@ const PropertyForm = ({
 					)}
 				</div>
 			)}
-			{(valueType?.kind === 'int' || valueType?.kind === 'float') && valueType.semantic == null && (
-				<div
-					className={`property-form__constraints property-form__constraints--${
-						valueType.kind === 'int' ? 'integer' : 'float'
-					}`}
-				>
-					{valueType.kind === 'int' &&
-						(canEditType ? (
+			{canEditType &&
+				(valueType?.kind === 'int' || valueType?.kind === 'float') &&
+				valueType.semantic == null && (
+					<div
+						className={`property-form__constraints property-form__constraints--${
+							valueType.kind === 'int' ? 'integer' : 'float'
+						}`}
+					>
+						{valueType.kind === 'int' && (
 							<SlRadioGroup
 								className='property-form__integer-sign'
 								label='Sign'
@@ -765,19 +730,7 @@ const PropertyForm = ({
 								<SlRadioButton value='signed'>signed</SlRadioButton>
 								<SlRadioButton value='unsigned'>unsigned</SlRadioButton>
 							</SlRadioGroup>
-						) : (
-							<SlInput
-								className='property-form__integer-sign'
-								ref={removeReadOnlyTypeControlFromTabOrder}
-								label='Sign'
-								size='small'
-								value={valueType.unsigned ? 'unsigned' : 'signed'}
-								readonly
-								tabIndex={-1}
-								onPointerDown={preventReadOnlyTypeControlFocus}
-							/>
-						))}
-					{canEditType ? (
+						)}
 						<SlSelect
 							className='property-form__bit-size'
 							label={valueType.kind === 'int' ? 'Integer size' : 'Bit size'}
@@ -791,78 +744,38 @@ const PropertyForm = ({
 								</SlOption>
 							))}
 						</SlSelect>
-					) : (
-						<SlInput
-							className='property-form__bit-size'
-							ref={removeReadOnlyTypeControlFromTabOrder}
-							label={valueType.kind === 'int' ? 'Integer size' : 'Bit size'}
-							size='small'
-							value={`${valueType.bitSize}-bit`}
-							readonly
-							tabIndex={-1}
-							onPointerDown={preventReadOnlyTypeControlFocus}
-						/>
-					)}
-					{valueType.kind === 'float' && (
-						<div
-							className={`property-form__float-special-values${
-								canEditType ? '' : ' property-form__float-special-values--read-only'
-							}`}
-							onClickCapture={
-								canEditType
-									? undefined
-									: (event) => {
-											event.preventDefault();
-											event.stopPropagation();
-										}
-							}
-							onPointerDownCapture={canEditType ? undefined : preventReadOnlyTypeControlFocus}
-						>
-							<SlCheckbox
-								ref={canEditType ? undefined : removeReadOnlyTypeControlFromTabOrder}
-								size='small'
-								checked={!valueType.real}
-								aria-readonly={!canEditType ? 'true' : undefined}
-								tabIndex={canEditType ? undefined : -1}
-								onSlChange={canEditType ? onRealChange : undefined}
-							>
-								<span className='property-form__float-special-values-label'>Allow ±Inf and NaN</span>
-							</SlCheckbox>
-						</div>
-					)}
-					{numericRangeControls}
-				</div>
-			)}
-			{valueType?.kind === 'decimal' && valueType.semantic == null && (
+						{valueType.kind === 'float' && (
+							<div className='property-form__float-special-values'>
+								<SlCheckbox size='small' checked={!valueType.real} onSlChange={onRealChange}>
+									<span className='property-form__float-special-values-label'>
+										Allow ±Inf and NaN
+									</span>
+								</SlCheckbox>
+							</div>
+						)}
+						{numericRangeControls}
+					</div>
+				)}
+			{canEditType && valueType?.kind === 'decimal' && valueType.semantic == null && (
 				<div className='property-form__constraints property-form__constraints--decimal'>
 					<SlInput
 						className='property-form__precision'
-						ref={canEditType ? undefined : removeReadOnlyTypeControlFromTabOrder}
 						label='Precision'
 						size='small'
 						value={decimalTypeInputs.precision}
 						type='number'
-						readonly={!canEditType}
-						tabIndex={canEditType ? undefined : -1}
-						noSpinButtons={!canEditType}
 						max={MAX_DECIMAL_PRECISION}
 						maxlength={2}
-						onPointerDown={canEditType ? undefined : preventReadOnlyTypeControlFocus}
 						onSlInput={onInputPrecision}
 					/>
 					<SlInput
 						className='property-form__scale'
-						ref={canEditType ? undefined : removeReadOnlyTypeControlFromTabOrder}
 						label='Scale'
 						size='small'
 						value={decimalTypeInputs.scale}
 						type='number'
-						readonly={!canEditType}
-						tabIndex={canEditType ? undefined : -1}
-						noSpinButtons={!canEditType}
 						max={MAX_DECIMAL_SCALE}
 						maxlength={2}
-						onPointerDown={canEditType ? undefined : preventReadOnlyTypeControlFocus}
 						onSlInput={onInputScale}
 					/>
 					{typeError?.location === 'decimal-constraints' ? (
@@ -902,31 +815,19 @@ const PropertyForm = ({
 							))}
 						</SlSelect>
 					) : (
-						<SlInput
-							className='property-form__currency'
-							ref={removeReadOnlyTypeControlFromTabOrder}
-							size='small'
-							value={
-								selectedCurrencyOption == null
+						<div className='property-form__currency'>
+							<div className='property-form__label'>Currency</div>
+							<div className='property-form__value'>
+								{selectedCurrencyOption == null
 									? 'No currency specified'
-									: `${selectedCurrencyOption.code} · ${selectedCurrencyOption.name}`
-							}
-							readonly
-							tabIndex={-1}
-							onPointerDown={preventReadOnlyTypeControlFocus}
-						>
-							<PropertyFormLabel slot='label'>Currency</PropertyFormLabel>
-							{selectedCurrencyOption?.symbol != null && (
-								<span className='property-form__currency-option-symbol' slot='suffix'>
-									{selectedCurrencyOption.symbol}
-								</span>
-							)}
-						</SlInput>
+									: `${selectedCurrencyOption.code} · ${selectedCurrencyOption.name}`}
+							</div>
+						</div>
 					)}
 					{numericRangeControls}
 				</div>
 			)}
-			{showPercentageControls && (
+			{shouldShowPercentageControls && (
 				<div className='property-form__constraints property-form__constraints--percentage'>
 					{numericRangeControls}
 				</div>
@@ -962,21 +863,14 @@ const PropertyForm = ({
 							))}
 						</SlSelect>
 					) : (
-						<SlInput
-							className='property-form__measurement-unit'
-							ref={removeReadOnlyTypeControlFromTabOrder}
-							size='small'
-							value={
-								selectedMeasurementUnitOption == null
+						<div className='property-form__measurement-unit'>
+							<div className='property-form__label'>Unit</div>
+							<div className='property-form__value'>
+								{selectedMeasurementUnitOption == null
 									? ''
-									: `${selectedMeasurementUnitOption.label} · ${selectedMeasurementUnitOption.value}`
-							}
-							readonly
-							tabIndex={-1}
-							onPointerDown={preventReadOnlyTypeControlFocus}
-						>
-							<PropertyFormLabel slot='label'>Unit</PropertyFormLabel>
-						</SlInput>
+									: `${selectedMeasurementUnitOption.label} · ${selectedMeasurementUnitOption.value}`}
+							</div>
+						</div>
 					)}
 					{typeError?.location === 'measurement-unit' && (
 						<PropertyFormError name='measurement-unit'>{typeError.message}</PropertyFormError>
@@ -1007,21 +901,14 @@ const PropertyForm = ({
 							))}
 						</SlSelect>
 					) : (
-						<SlInput
-							className='property-form__duration-unit'
-							ref={removeReadOnlyTypeControlFromTabOrder}
-							size='small'
-							value={
-								selectedDurationUnitOption == null
+						<div className='property-form__duration-unit'>
+							<div className='property-form__label'>Unit</div>
+							<div className='property-form__value'>
+								{selectedDurationUnitOption == null
 									? ''
-									: `${selectedDurationUnitOption.label} · ${selectedDurationUnitOption.symbol}`
-							}
-							readonly
-							tabIndex={-1}
-							onPointerDown={preventReadOnlyTypeControlFocus}
-						>
-							<PropertyFormLabel slot='label'>Unit</PropertyFormLabel>
-						</SlInput>
+									: `${selectedDurationUnitOption.label} · ${selectedDurationUnitOption.symbol}`}
+							</div>
+						</div>
 					)}
 					{typeError?.location === 'duration-unit' && (
 						<PropertyFormError name='duration-unit'>{typeError.message}</PropertyFormError>

@@ -6,8 +6,13 @@ import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
 import Type, { DurationUnit, TypeKind, UnitOfMeasure } from '../../../lib/api/types/types';
-import { getPropertyValueType, getTypeSemantic } from '../../helpers/types';
-import { SchemaPropertyType } from '../Schema/SchemaPropertyType';
+import {
+	getPropertyValueType,
+	getTypeSemantic,
+	toCompactPhysicalType,
+	toProfileSchemaPhysicalType,
+	toSemanticLabel,
+} from '../../helpers/types';
 
 type PropertyStructure = 'one' | 'array' | 'object' | 'map';
 
@@ -219,23 +224,26 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 		useImperativeHandle(
 			ref,
 			() => ({
-				focusStructureTrigger: () => structureDropdownRef.current?.focusOnTrigger(),
+				focusStructureTrigger: () => {
+					if (canEditType) {
+						structureDropdownRef.current?.focusOnTrigger();
+					}
+				},
 			}),
-			[],
+			[canEditType],
 		);
 
 		const valueType = getPropertyValueType(type);
+		const semantic = getTypeSemantic(valueType);
+		let typeLabel: string | null = null;
+		if (valueType != null) {
+			typeLabel = semantic == null ? valueType.kind : toSemanticLabel(semantic);
+		}
+		const physicalType = semantic == null ? null : toCompactPhysicalType(valueType);
 		const selectedOption = getPropertyTypeOption(type);
 		const selectedStructureOption =
 			PROPERTY_STRUCTURE_OPTIONS.find((option) => option.id === structure) || PROPERTY_STRUCTURE_OPTIONS[0];
 		const showValueTypeSelector = structure !== 'object';
-		const isTypeOptionSelectable = (option: PropertyTypeOption) => canEditType || option.id === selectedOption?.id;
-		let typeChangeNote: React.ReactNode = null;
-		if (type != null) {
-			typeChangeNote = canEditType
-				? "Can't be changed once the property has been applied."
-				: "This type can't be changed.";
-		}
 
 		useEffect(() => {
 			if (type != null) {
@@ -273,15 +281,18 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 		};
 
 		const onSelectOption = (event) => {
+			if (!canEditType) {
+				return;
+			}
 			const option = PROPERTY_TYPE_OPTIONS.find((candidate) => candidate.id === event.detail.item.value);
-			if (option == null || option.id === selectedOption?.id || !isTypeOptionSelectable(option)) {
+			if (option == null || option.id === selectedOption?.id) {
 				return;
 			}
 			const selection = option.create();
 			let nextValueType = valueType;
-			if (canEditType && (getTypeSemantic(selection) != null || valueType?.kind !== option.kind)) {
+			if (getTypeSemantic(selection) != null || valueType?.kind !== option.kind) {
 				nextValueType = selection;
-			} else if (canEditType && valueType != null && 'semantic' in valueType) {
+			} else if (valueType != null && 'semantic' in valueType) {
 				nextValueType = { ...valueType };
 				delete nextValueType.semantic;
 				if (nextValueType.kind === 'string') {
@@ -302,13 +313,21 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 
 		return (
 			<div className='property-type-selector'>
-				{typeChangeNote != null && (
-					<div className='property-type-selector__type-change-note'>{typeChangeNote}</div>
+				{type != null && (
+					<div
+						className={`property-type-selector__type-change-note${
+							canEditType ? '' : ' property-type-selector__type-change-note--read-only'
+						}`}
+					>
+						{canEditType
+							? "Can't be changed once the property has been applied."
+							: 'The type of an existing property cannot be changed.'}
+					</div>
 				)}
 				<div
 					className={`property-type-selector__controls${
-						showValueTypeSelector ? '' : ' property-type-selector__controls--structure-only'
-					}`}
+						canEditType ? '' : ' property-type-selector__controls--read-only'
+					}${showValueTypeSelector ? '' : ' property-type-selector__controls--structure-only'}`}
 				>
 					<SlDropdown
 						className='property-type-selector__structure-dropdown'
@@ -316,45 +335,43 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 						hoist
 						placement='bottom-start'
 						distance={6}
+						disabled={!canEditType}
 						onSlAfterHide={onStructureMenuAfterHide}
 					>
 						<SlButton
 							className='property-type-selector__structure-trigger'
 							slot='trigger'
-							caret
+							caret={canEditType}
+							disabled={!canEditType}
 							aria-label={`Structure: ${selectedStructureOption.label}`}
 						>
 							<SlIcon slot='prefix' name={selectedStructureOption.icon} />
 							{selectedStructureOption.triggerLabel}
 						</SlButton>
 						<SlMenu className='property-type-selector__structure-menu' onSlSelect={onSelectStructure}>
-							{PROPERTY_STRUCTURE_OPTIONS.map((option) => {
-								const selectable = canEditType || structure === option.id;
-								return (
-									<SlMenuItem
-										className={`property-type-selector__structure-option${
-											structure === option.id
-												? ' property-type-selector__structure-option--selected'
-												: ''
-										}`}
-										key={option.id}
-										data-structure-option={option.id}
-										disabled={!selectable}
-										value={option.id}
-									>
-										<SlIcon slot='prefix' name={option.icon} />
-										<span className='property-type-selector__structure-option-content'>
-											<span className='property-type-selector__structure-option-label'>
-												{option.label}
-											</span>
-											<span className='property-type-selector__structure-option-description'>
-												{option.description}
-											</span>
+							{PROPERTY_STRUCTURE_OPTIONS.map((option) => (
+								<SlMenuItem
+									className={`property-type-selector__structure-option${
+										structure === option.id
+											? ' property-type-selector__structure-option--selected'
+											: ''
+									}`}
+									key={option.id}
+									data-structure-option={option.id}
+									value={option.id}
+								>
+									<SlIcon slot='prefix' name={option.icon} />
+									<span className='property-type-selector__structure-option-content'>
+										<span className='property-type-selector__structure-option-label'>
+											{option.label}
 										</span>
-										{structure === option.id && <SlIcon slot='suffix' name='check-lg' />}
-									</SlMenuItem>
-								);
-							})}
+										<span className='property-type-selector__structure-option-description'>
+											{option.description}
+										</span>
+									</span>
+									{structure === option.id && <SlIcon slot='suffix' name='check-lg' />}
+								</SlMenuItem>
+							))}
 						</SlMenu>
 					</SlDropdown>
 					{showValueTypeSelector && (
@@ -364,25 +381,52 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 							hoist
 							placement='bottom-end'
 							distance={6}
+							disabled={!canEditType}
 						>
 							<SlButton
 								className='property-type-selector__trigger'
 								slot='trigger'
-								caret
+								caret={canEditType}
+								disabled={!canEditType}
 								aria-label={valueType == null ? 'Select type' : undefined}
 							>
 								{valueType == null ? (
 									<span className='property-type-selector__placeholder'>Select type...</span>
 								) : (
-									<SchemaPropertyType context='trigger' type={valueType} />
+									<span
+										className='property-type-selector__type'
+										title={physicalType == null ? typeLabel : `${typeLabel} · ${physicalType}`}
+									>
+										<span className='property-type-selector__type-label'>{typeLabel}</span>
+										{physicalType != null && (
+											<span className='property-type-selector__type-metadata'>
+												<span
+													className='property-type-selector__type-separator'
+													aria-hidden='true'
+												>
+													{' · '}
+												</span>
+												<span className='property-type-selector__type-physical'>
+													{physicalType}
+												</span>
+											</span>
+										)}
+									</span>
 								)}
 							</SlButton>
 							<SlMenu className='property-type-selector__browser' onSlSelect={onSelectOption}>
 								{PROPERTY_TYPE_OPTIONS.map((option) => {
-									const selectable = isTypeOptionSelectable(option);
-									const selection = option.create();
-									const optionType =
-										!canEditType && selectable && valueType != null ? valueType : selection;
+									const optionType = option.create();
+									const optionSemantic = getTypeSemantic(optionType);
+									const label =
+										optionSemantic == null ? optionType.kind : toSemanticLabel(optionSemantic);
+									let metadata = option.description;
+									if (optionSemantic != null) {
+										metadata =
+											optionSemantic === 'country' || optionSemantic === 'duration'
+												? toCompactPhysicalType(optionType)
+												: toProfileSchemaPhysicalType(optionType);
+									}
 									return (
 										<SlMenuItem
 											className={`property-type-selector__option${
@@ -394,15 +438,36 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 											}`}
 											key={option.id}
 											data-type-option={option.id}
-											disabled={!selectable}
 											value={option.id}
 										>
-											<SchemaPropertyType
-												context='menu'
-												type={optionType}
-												description={option.description}
-												catalogOption={canEditType || !selectable}
-											/>
+											<span className='property-type-selector__type'>
+												<span className='property-type-selector__type-label'>{label}</span>
+												{metadata != null && (
+													<span
+														className={`property-type-selector__type-metadata${
+															optionSemantic == null
+																? ''
+																: ' property-type-selector__type-metadata--physical'
+														}`}
+													>
+														<span
+															className='property-type-selector__type-separator'
+															aria-hidden='true'
+														>
+															{' · '}
+														</span>
+														<span
+															className={
+																optionSemantic == null
+																	? ''
+																	: 'property-type-selector__type-physical'
+															}
+														>
+															{metadata}
+														</span>
+													</span>
+												)}
+											</span>
 											{selectedOption?.id === option.id && (
 												<SlIcon slot='suffix' name='check-lg' />
 											)}

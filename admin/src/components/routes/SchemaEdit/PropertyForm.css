@@ -100,6 +100,11 @@
 	font-size: 13px;
 }
 
+.property-form__value {
+	font-size: 13px;
+	line-height: 1.45;
+}
+
 .property-form__read-only-value {
 	align-items: center;
 	background-color: transparent;
@@ -131,16 +136,6 @@
 
 .property-form__float-special-values sl-checkbox::part(control) {
 	transform: translateY(4px);
-}
-
-.property-form__float-special-values--read-only sl-checkbox::part(base) {
-	cursor: not-allowed;
-}
-
-.property-form__constraints sl-input[readonly]::part(base),
-.property-form__constraints sl-input[readonly]::part(input),
-.property-form__constraints sl-input[readonly]::part(suffix) {
-	cursor: not-allowed;
 }
 
 .property-form__constraints > .property-form__control-error {

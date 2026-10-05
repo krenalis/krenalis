@@ -18,11 +18,11 @@
 	grid-template-columns: minmax(0, 1fr);
 }
 
-.property-type-selector__controls:hover {
+.property-type-selector__controls:not(.property-type-selector__controls--read-only):hover {
 	border-color: var(--sl-input-border-color-hover);
 }
 
-.property-type-selector__controls:focus-within {
+.property-type-selector__controls:not(.property-type-selector__controls--read-only):focus-within {
 	border-color: var(--sl-input-border-color-focus);
 	box-shadow: 0 0 0 var(--sl-focus-ring-width) var(--sl-input-focus-ring-color);
 }
@@ -101,7 +101,48 @@
 	line-height: var(--sl-line-height-normal);
 }
 
-.property-type-selector__trigger .schema-property-type {
+.property-type-selector__type {
+	display: block;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.property-type-selector__type-label,
+.property-type-selector__type-physical {
+	font-family: var(--monospace-fonts);
+}
+
+.property-type-selector__type-label {
+	font-size: 14px;
+	font-weight: 400;
+}
+
+.property-type-selector__type-metadata {
+	color: var(--text-light);
+	font-size: 12px;
+	font-weight: 400;
+}
+
+.property-type-selector__option .property-type-selector__type-metadata--physical {
+	color: var(--sl-color-neutral-400);
+}
+
+.property-type-selector__option
+	.property-type-selector__type-metadata:not(.property-type-selector__type-metadata--physical) {
+	font-size: 13px;
+}
+
+.property-type-selector__type-separator {
+	margin-inline: 0.25em;
+}
+
+.property-type-selector__option .property-type-selector__type-separator {
+	color: color-mix(in srgb, var(--text-primary), currentcolor 60%);
+}
+
+.property-type-selector__trigger .property-type-selector__type {
 	line-height: var(--sl-line-height-normal);
 	width: 100%;
 }
@@ -131,12 +172,10 @@
 	margin-inline-start: 2px;
 }
 
-.property-type-selector__structure-option:not(.property-type-selector__structure-option--selected):not(
-		[disabled]
-	):hover::part(base),
-.property-type-selector__structure-option:not(.property-type-selector__structure-option--selected):not(
-		[disabled]
-	):focus-visible::part(base) {
+.property-type-selector__structure-option:not(.property-type-selector__structure-option--selected):hover::part(base),
+.property-type-selector__structure-option:not(.property-type-selector__structure-option--selected):focus-visible::part(
+		base
+	) {
 	background-color: var(--property-form-option-hover-background-color);
 	color: var(--text-primary) !important;
 }
@@ -144,13 +183,6 @@
 .property-type-selector__structure-option--selected::part(base) {
 	background-color: var(--property-form-option-selected-background-color);
 	color: var(--text-primary) !important;
-}
-
-.property-type-selector__structure-option[disabled]::part(base),
-.property-type-selector__option[disabled]::part(base) {
-	background-color: transparent;
-	cursor: default;
-	opacity: 0.75;
 }
 
 .property-type-selector__structure-option:focus-visible .property-type-selector__structure-option-content,
@@ -222,6 +254,15 @@
 	margin: 0 1px 6px;
 }
 
+.property-type-selector__type-change-note--read-only {
+	background-color: var(--sl-color-neutral-100);
+	border-radius: var(--sl-input-border-radius-medium);
+	color: var(--text-primary);
+	font-size: 13px;
+	margin: 0 0 8px;
+	padding: 6px 8px;
+}
+
 .property-type-selector__option::part(base) {
 	align-items: center;
 	border-radius: var(--radius);
@@ -242,11 +283,9 @@
 	white-space: nowrap;
 }
 
-.property-type-selector__option:not(.property-type-selector__option--selected):not([disabled]):hover::part(base),
-.property-type-selector__option:not(.property-type-selector__option--selected):not([disabled]):focus::part(base),
-.property-type-selector__option:not(.property-type-selector__option--selected):not([disabled]):focus-visible::part(
-		base
-	) {
+.property-type-selector__option:not(.property-type-selector__option--selected):hover::part(base),
+.property-type-selector__option:not(.property-type-selector__option--selected):focus::part(base),
+.property-type-selector__option:not(.property-type-selector__option--selected):focus-visible::part(base) {
 	background-color: var(--property-form-option-hover-background-color);
 	color: var(--text-primary) !important;
 }

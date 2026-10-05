@@ -1,9 +1,13 @@
 import React, { ReactNode } from 'react';
+import './PropertyDetailsPanel.css';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import {
 	DURATION_UNIT_OPTIONS,
 	getPropertyValueType,
+	getTypeSemantic,
 	isSuitableAsIdentifier,
+	toCompactPhysicalType,
+	toSemanticLabel,
 	UNIT_OF_MEASURE_OPTIONS,
 } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
@@ -15,7 +19,6 @@ import {
 	SchemaPropertyIdentifierValue,
 	SchemaPropertyPrimarySourceLabel,
 } from '../Schema/SchemaPropertyGrid';
-import { SchemaPropertyType } from '../Schema/SchemaPropertyType';
 
 interface PropertyDetailsPanelProps {
 	identifierPosition?: number;
@@ -32,6 +35,14 @@ interface PropertyDetailProps {
 
 const PropertyDetailsPanel = ({ identifierPosition, onClose, primarySource, property }: PropertyDetailsPanelProps) => {
 	const semanticDetail = getSemanticDetail(property);
+	const physicalType = toCompactPhysicalType(property.type);
+	const valueType = getPropertyValueType(property.type);
+	const semantic = getTypeSemantic(valueType);
+	let semanticLabel = semantic == null ? null : toSemanticLabel(semantic);
+	if (semantic === 'country') {
+		const letters = valueType.kind === 'string' && valueType.format === 'alpha-2' ? 2 : 3;
+		semanticLabel += ` (${letters}-letter)`;
+	}
 
 	return (
 		<PropertyPanelLayout className='property-details-panel' closeLabel='Close property details' onClose={onClose}>
@@ -39,7 +50,15 @@ const PropertyDetailsPanel = ({ identifierPosition, onClose, primarySource, prop
 				<div className='property-details-panel__section'>
 					<PropertyDetail label='Name'>{property.name}</PropertyDetail>
 					<PropertyDetail label='Type'>
-						<SchemaPropertyType context='details' type={property.type} />
+						<span
+							className='property-details-panel__type'
+							title={semanticLabel == null ? physicalType : `${physicalType}\n${semanticLabel}`}
+						>
+							<span className='property-details-panel__physical-type'>{physicalType}</span>
+							{semanticLabel != null && (
+								<span className='property-details-panel__semantic'>{semanticLabel}</span>
+							)}
+						</span>
 					</PropertyDetail>
 					{semanticDetail != null && (
 						<PropertyDetail label={semanticDetail.label}>

@@ -1,0 +1,18 @@
+.property-details-panel__type {
+	display: flex;
+	flex-direction: column;
+	line-height: 1.35;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.property-details-panel__physical-type {
+	font-family: var(--monospace-fonts);
+}
+
+.property-details-panel__semantic {
+	color: var(--text-light);
+	font-size: 12px;
+}
