@@ -170,7 +170,7 @@ func (db *DB) BeginTx(ctx context.Context, opts TxOptions) (*Tx, error) {
 	case LevelSerializable:
 		pgxOpts.IsoLevel = pgx.Serializable
 	default:
-		return nil, fmt.Errorf("unsupported isolation level: %d", opts.Isolation)
+		return nil, fmt.Errorf("invalid isolation level: %d", opts.Isolation)
 	}
 	if opts.ReadOnly {
 		pgxOpts.AccessMode = pgx.ReadOnly
