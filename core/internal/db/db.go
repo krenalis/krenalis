@@ -326,7 +326,8 @@ func (db *DB) QueryScan(ctx context.Context, query string, args ...any) error {
 	return nil
 }
 
-// Transaction begins a new transaction and executes the provided function, f.
+// Transaction begins a new transaction with TxOptions{Isolation:
+// LevelReadCommitted} and executes the provided function, f.
 // If f completes without errors, the transaction is committed.
 // If f returns an error, the transaction is rolled back and the error is
 // returned.
