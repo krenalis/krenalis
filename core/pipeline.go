@@ -729,7 +729,7 @@ func (this *Pipeline) SetStatus(ctx context.Context, enabled bool) error {
 
 // Update updates the pipeline.
 //
-// Refer to the specifications in the file "core/Pipelines.csv" for more
+// Refer to the specifications in the file "core/Pipelines.md" for more
 // details.
 //
 // It returns an errors.NotFoundError if the pipeline no longer exists when
@@ -1249,7 +1249,7 @@ func (this *Pipeline) setRunCursor(ctx context.Context, cursor time.Time) error 
 // pipeline (using the method Connection.CreatePipeline) or updating an
 // existing one (using the method Pipeline.Update).
 //
-// Refer to the specifications in the file "core/Pipelines.csv" for more
+// Refer to the specifications in the file "core/Pipelines.md" for more
 // details.
 type PipelineToSet struct {
 
@@ -1269,13 +1269,13 @@ type PipelineToSet struct {
 
 	// InSchema is the input schema of the pipeline.
 	//
-	// Please refer to the 'Pipelines.csv' file for a complete list of properties
+	// Please refer to the 'Pipelines.md' file for a complete list of properties
 	// that must be inside this schema, based on the connection and pipeline type.
 	InSchema types.Type `json:"inSchema"`
 
 	// OutSchema is the output schema of the pipeline.
 	//
-	// Please refer to the 'Pipelines.csv' file for a complete list of properties
+	// Please refer to the 'Pipelines.md' file for a complete list of properties
 	// that must be inside this schema, based on the connection and pipeline type.
 	OutSchema types.Type `json:"outSchema"`
 
@@ -1284,7 +1284,7 @@ type PipelineToSet struct {
 	// Every pipeline that supports transformations may have an associated mapping
 	// or function, which are mutually exclusive.
 	//
-	// Please refer to the 'Pipelines.csv' file for details about this
+	// Please refer to the 'Pipelines.md' file for details about this
 	// transformation and the properties it eventually operates on, based on the
 	// connection and the pipeline type.
 	Transformation *Transformation `json:"transformation"`
