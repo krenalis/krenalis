@@ -17,6 +17,7 @@ import {
 } from '../api/types/pipeline';
 import { ConnectorSettings } from '../api/types/responses';
 import { Compression, ConnectionRole } from '../api/types/connection';
+import { ConsentPurpose } from '../api/types/workspace';
 import Type, { ArrayType, FloatType, IntType, MapType, ObjectType, Property, StringType } from '../api/types/types';
 import API from '../api/api';
 import TransformedConnection from './connection';
@@ -38,6 +39,9 @@ import {
 import { RAW_TRANSFORMATION_FUNCTIONS } from '../../components/routes/PipelineWrapper/Pipeline.constants';
 
 const SCHEDULE_PERIODS: SchedulePeriod[] = ['Off', '5m', '15m', '30m', '1h', '2h', '3h', '6h', '8h', '12h', '24h'];
+
+// Profile export consent metrics are deferred until matching is accounted for.
+const SHOW_EXPORT_PROFILE_CONSENT_METRICS = false;
 
 const FILTER_OPERATORS: FilterOperator[] = [
 	'is',
@@ -1265,9 +1269,166 @@ const hasFilterStep = (connection: TransformedConnection, target: PipelineTarget
 	);
 };
 
+// isBatchProfileImport reports whether the pipelines of a given connection, and
+// with the given target, import profiles into the warehouse reading them in
+// batch from the source.
+const isBatchProfileImport = (connection: TransformedConnection, target: PipelineTarget) => {
+	return connection.role === 'Source' && !connection.isEventBased && target === 'User';
+};
+
+// isProfileExport reports whether the pipelines of a given connection, and with
+// the given target, export profiles read from the warehouse.
+const isProfileExport = (connection: TransformedConnection, target: PipelineTarget) => {
+	return connection.role === 'Destination' && target === 'User';
+};
+
+// hasEventConsentStep reports whether the pipelines of a given connection, and
+// with the given target, count the events their required consents discard.
+const hasEventConsentStep = (connection: TransformedConnection, target: PipelineTarget) => {
+	return isEventDriven(connection, target) && target === 'Event';
+};
+
+// hasImportProfileConsentStep reports whether the pipelines of a given
+// connection, and with the given target, count the profiles their required
+// consents discard after transforming them.
+const hasImportProfileConsentStep = (connection: TransformedConnection, target: PipelineTarget) => {
+	return (isEventDriven(connection, target) && target === 'User') || isBatchProfileImport(connection, target);
+};
+
+// hasExportProfileConsentStep reports whether the pipelines of a given
+// connection, and with the given target, count the profiles their required
+// consents discard before transforming them.
+const hasExportProfileConsentStep = (connection: TransformedConnection, target: PipelineTarget) => {
+	return isProfileExport(connection, target);
+};
+
+// hasRequiredConsents reports whether the pipelines of a given connection, and
+// with the given target, can require the consent for a purpose.
 const hasRequiredConsents = (connection: TransformedConnection, target: PipelineTarget) => {
-	// Required consents are allowed on any pipeline that handles events.
-	return isEventDriven(connection, target);
+	return (
+		hasEventConsentStep(connection, target) ||
+		hasImportProfileConsentStep(connection, target) ||
+		hasExportProfileConsentStep(connection, target)
+	);
+};
+
+type ConsentLocation = 'event' | 'profile';
+
+// getMissingConsentLocation returns the consent location that the pipelines
+// of connection and pipelineType need but purpose does not have, or null if
+// purpose has it. The needed location is 'event' for pipelines that check the
+// consents on events, and 'profile' for all the others.
+const getMissingConsentLocation = (
+	purpose: ConsentPurpose,
+	pipelineType: TransformedPipelineType,
+	connection: TransformedConnection,
+): ConsentLocation | null => {
+	if (hasEventConsentStep(connection, pipelineType.target)) {
+		return purpose.eventConsentLocations.length === 0 ? 'event' : null;
+	}
+	return purpose.profileConsentLocation == null ? 'profile' : null;
+};
+
+// getConsentPropertyPaths returns the profile properties that hold the
+// consents required by pipeline, mapping each property path to the purposes
+// whose consent it holds. Only profile imports read the consents from the
+// transformed profiles, so for other pipelines the map is empty. Purposes that
+// no longer exist or have no profile consent location are skipped.
+const getConsentPropertyPaths = (
+	pipeline: TransformedPipeline,
+	pipelineType: TransformedPipelineType,
+	connection: TransformedConnection,
+	purposes: ConsentPurpose[],
+): Map<string, ConsentPurpose[]> => {
+	const paths = new Map<string, ConsentPurpose[]>();
+	if (pipeline.requiredConsents == null || !hasImportProfileConsentStep(connection, pipelineType.target)) {
+		return paths;
+	}
+	for (const id of pipeline.requiredConsents.purposes) {
+		const purpose = purposes.find((p) => p.id === id);
+		if (purpose == null || getMissingConsentLocation(purpose, pipelineType, connection) != null) {
+			continue;
+		}
+		const path = purpose.profileConsentLocation.property;
+		paths.set(path, [...(paths.get(path) ?? []), purpose]);
+	}
+	return paths;
+};
+
+// isOutputPathTransformed reports whether the transformation of pipeline
+// returns a value for the output property at path. With a mapping, the
+// property must be mapped; with a function, it must be among the selected
+// output properties. It returns false if pipeline has no transformation.
+const isOutputPathTransformed = (
+	path: string,
+	pipeline: TransformedPipeline,
+	pipelineType: TransformedPipelineType,
+	selectedOutPaths: string[],
+): boolean => {
+	if (pipeline.transformation?.mapping != null) {
+		return checkMapping(path, pipeline, pipelineType).isSelected;
+	}
+	if (pipeline.transformation?.function != null) {
+		return checkFunctionPath(path, pipeline, pipelineType, 'output', selectedOutPaths).isSelected;
+	}
+	return false;
+};
+
+// RequiredConsentsError is thrown when a pipeline cannot be saved because of
+// its required consents. Its message is not shown to the user, as the consents
+// section of the pipeline already shows what is wrong.
+class RequiredConsentsError extends Error {
+	constructor(message: string) {
+		super();
+		this.name = 'RequiredConsentsError';
+		this.message = message;
+	}
+}
+
+// validateRequiredConsents checks that pipeline can be saved with its required
+// consents, where purposes are all the consent purposes of the workspace. Each
+// required purpose must exist and have the consent location the pipeline
+// needs. For profile imports, the transformation must also return every
+// profile property that holds a required consent.
+//
+// It throws a RequiredConsentsError if a check fails.
+const validateRequiredConsents = (
+	pipeline: TransformedPipeline,
+	pipelineType: TransformedPipelineType,
+	connection: TransformedConnection,
+	purposes: ConsentPurpose[],
+	selectedOutPaths: string[],
+) => {
+	if (pipeline.requiredConsents == null) {
+		return;
+	}
+
+	for (const id of pipeline.requiredConsents.purposes) {
+		const purpose = purposes.find((p) => p.id === id);
+		if (purpose == null) {
+			throw new RequiredConsentsError(`Consent purpose ${id} no longer exists`);
+		}
+		const location = getMissingConsentLocation(purpose, pipelineType, connection);
+		if (location != null) {
+			throw new RequiredConsentsError(`Consent purpose "${purpose.name}" has no ${location} consent location`);
+		}
+	}
+
+	const consentPropertyPaths = getConsentPropertyPaths(pipeline, pipelineType, connection, purposes);
+	for (const [path, pathPurposes] of consentPropertyPaths) {
+		if (isOutputPathTransformed(path, pipeline, pipelineType, selectedOutPaths)) {
+			continue;
+		}
+		const names = pathPurposes.map((p) => `"${p.name}"`).join(', ');
+		if (pipeline.transformation?.function != null) {
+			throw new RequiredConsentsError(
+				`Property "${path}" holds the consent for ${names} and must be selected as an output property of the transformation function`,
+			);
+		}
+		throw new RequiredConsentsError(
+			`Property "${path}" holds the consent for ${names} and must be mapped in the transformation`,
+		);
+	}
 };
 
 const hasTransformations = (connection: TransformedConnection, target: PipelineTarget) => {
@@ -2111,6 +2272,7 @@ const propertyTypesAreEqual = (aType: Type, bType: Type): boolean => {
 
 export {
 	SCHEDULE_PERIODS,
+	SHOW_EXPORT_PROFILE_CONSENT_METRICS,
 	FILTER_OPERATORS,
 	MAX_FILTER_DEPTH,
 	MAX_FILTER_RULE_COUNT,
@@ -2121,7 +2283,14 @@ export {
 	hasFilters,
 	hasInputValidationStep,
 	hasFilterStep,
-	hasRequiredConsents,
+	hasEventConsentStep,
+	hasExportProfileConsentStep,
+	hasImportProfileConsentStep,
+	getMissingConsentLocation,
+	getConsentPropertyPaths,
+	isOutputPathTransformed,
+	RequiredConsentsError,
+	validateRequiredConsents,
 	hasTransformations,
 	computePipelineTypeFields,
 	transformPipelineType,
@@ -2147,6 +2316,7 @@ export {
 };
 
 export type {
+	ConsentLocation,
 	FlatSchema,
 	TransformedProperty,
 	TransformedPipelineType,

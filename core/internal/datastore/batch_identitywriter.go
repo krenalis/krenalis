@@ -177,7 +177,7 @@ func (w *BatchIdentityWriter) Keep(ctx context.Context, id string) error {
 		"_run":          w.run,
 	}
 	select {
-	case w.identities <- flusherRow[map[string]any]{key: key, pipeline: w.pipeline, row: row}:
+	case w.identities <- flusherRow[map[string]any]{key: key, row: row}:
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()

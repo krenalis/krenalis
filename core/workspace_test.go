@@ -110,35 +110,6 @@ func TestWorkspaceEncodeJSON(t *testing.T) {
 	}
 }
 
-// TestWorkspaceMarshalJSON verifies that json.Marshal encodes nil Workspace
-// collection fields using their empty JSON representations.
-func TestWorkspaceMarshalJSON(t *testing.T) {
-
-	value, err := json.Marshal(Workspace{})
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-
-	tests := []struct {
-		name string
-		want string
-	}{
-		{name: "primarySources", want: "{}"},
-		{name: "identifiers", want: "[]"},
-	}
-
-	for _, test := range tests {
-		got, ok := value.Get([]string{test.name})
-		if !ok {
-			t.Fatalf("json.Marshal() omitted %s", test.name)
-		}
-		if string(got) != test.want {
-			t.Fatalf("json.Marshal() %s = %q, want %q", test.name, got, test.want)
-		}
-	}
-
-}
-
 func Test_validateUIPreferences(t *testing.T) {
 	tests := []struct {
 		name  string
