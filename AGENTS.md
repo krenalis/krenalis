@@ -33,7 +33,7 @@ Place package-level constants and variables at the beginning of the file when th
 
 ## Layout and naming
 
-An exported function or method never calls another exported function or method of the same package. Extract a shared unexported one and call that from both.
+An exported function or method may call another exported function or method of the same package when it is solely a wrapper offering a simpler API for a common case. Otherwise, extract a shared unexported function or method and call that from both.
 
 Declare a variable as close as possible to where it is used, as long as the code stays readable.
 
