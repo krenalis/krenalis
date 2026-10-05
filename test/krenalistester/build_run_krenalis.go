@@ -17,6 +17,9 @@ import (
 	"testing"
 )
 
+// KrenalisVersion is the version with which Krenalis is built for the tests.
+const KrenalisVersion = "v0.0.0-krenalistester"
+
 // buildKrenalis builds Krenalis.
 func buildKrenalis(t *testing.T, repo, krenalisDir string) {
 
@@ -67,7 +70,8 @@ func buildKrenalis(t *testing.T, repo, krenalisDir string) {
 
 	// Build Krenalis, putting the output into the krenalisDir, where it will be
 	// executed by the tests.
-	execCmd(t, tmpdir, "go", "build", "-o", filepath.Join(krenalisDir, krenalisExecFilename()))
+	execCmd(t, tmpdir, "go", "build", "-ldflags", "-X github.com/krenalis/krenalis/cmd.buildVersion="+KrenalisVersion,
+		"-o", filepath.Join(krenalisDir, krenalisExecFilename()))
 
 }
 
