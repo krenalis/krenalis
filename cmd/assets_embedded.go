@@ -1,4 +1,4 @@
-//go:build !dev
+//go:build !freshadminassets
 
 // Copyright 2026 Open2b. All rights reserved.
 // Use of this source code is governed by an Elastic License 2.0
@@ -17,7 +17,7 @@ import (
 	"github.com/andybalholm/brotli"
 )
 
-const devMode = false
+const embeddedAssets = true
 
 // assetsHandler implements an http.Handler to serve the Admin assets. It serves
 // bundle files that are embedded in the executable, compressed with Brotli if

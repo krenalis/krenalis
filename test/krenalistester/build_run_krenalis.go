@@ -99,7 +99,7 @@ func copyFile(src, dst string) error {
 }
 
 // generateAssets generates the assets necessary for the compilation and
-// execution of Krenalis in production mode, which is the mode used by the tests.
+// execution of Krenalis with embedded assets, which is how the tests run it.
 func generateAssets(ctx context.Context, repo string) error {
 	cmd := exec.CommandContext(ctx, "go", "generate")
 	cmd.Stdout = os.Stdout
