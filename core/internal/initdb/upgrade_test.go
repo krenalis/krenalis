@@ -153,16 +153,22 @@ func TestUpgrade(t *testing.T) {
 					"failed": [7, 8, 9, 0, 0, 10, 11, 0, 12]
 				},
 				{
+					"pipeline": "234567891234",
+					"timeslot": 1,
+					"passed": [10, 0, 10, 0, 0, 4, 4, 10, 0],
+					"failed": [0, 0, 0, 0, 0, 0, 0, 0, 0]
+				},
+				{
+					"pipeline": "234567891234",
+					"timeslot": 2,
+					"passed": [10, 0, 8, 0, 0, 5, 3, 5, 0],
+					"failed": [0, 0, 2, 0, 0, 1, 2, 0, 0]
+				},
+				{
 					"pipeline": "444444444444",
 					"timeslot": 1,
 					"passed": [1, 2, 3, 0, 0, 4, 5, 5, 6],
 					"failed": [7, 8, 9, 0, 0, 10, 11, 0, 12]
-				},
-				{
-					"pipeline": "444444444444",
-					"timeslot": 2,
-					"passed": [1, 2, 3, 0, 0, 0, 0, 3, 6],
-					"failed": [7, 8, 9, 0, 0, 0, 0, 0, 12]
 				},
 				{
 					"pipeline": "666666666666",
@@ -215,6 +221,7 @@ func TestUpgrade(t *testing.T) {
 			SELECT jsonb_agg(to_jsonb(v) ORDER BY resource)
 			FROM organization_connector_references v`, `[
 				{"organization": "111111111111", "connector": "dummy", "resource_type": "connection", "resource": "333333333333"},
+				{"organization": "111111111111", "connector": "javascript", "resource_type": "connection", "resource": "345678912345"},
 				{"organization": "111111111111", "connector": "csv", "resource_type": "pipeline", "resource": "444444444444"},
 				{"organization": "111111111111", "connector": "klaviyo", "resource_type": "connection", "resource": "888888888888"},
 				{"organization": "111111111111", "connector": "dummy", "resource_type": "connection", "resource": "999999999999"}
@@ -270,6 +277,7 @@ func newV0_43_0TestDatabase(t *testing.T) *db.DB {
 		VALUES ('222222222222', '111111111111', 'Workspace', 'postgresql', 'Normal', '\x', '\x', '\x');
 		INSERT INTO connections (id, workspace, connector, role, kms_encrypted_settings_key) VALUES
 			('333333333333', '222222222222', 'dummy', 'Source', '\x'),
+			('345678912345', '222222222222', 'javascript', 'Source', '\x'),
 			('999999999999', '222222222222', 'dummy', 'Destination', '\x'),
 			('888888888888', '222222222222', 'klaviyo', 'Destination', '\x');
 		INSERT INTO pipelines (id, connection, target, event_type, name, enabled, schedule_start, schedule_period,
@@ -301,8 +309,10 @@ func newV0_43_0TestDatabase(t *testing.T) *db.DB {
 		VALUES
 			('111111111111', '222222222222', '333333333333', '444444444444', 'User', 1,
 				1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12),
-			('111111111111', '222222222222', '333333333333', '444444444444', 'User', 2,
-				1, 2, 3, 0, 0, 6, 7, 8, 9, 0, 0, 12),
+			('111111111111', '222222222222', '345678912345', '234567891234', 'User', 1,
+				10, 0, 10, 4, 4, 0, 0, 0, 0, 0, 0, 0),
+			('111111111111', '222222222222', '345678912345', '234567891234', 'User', 2,
+				10, 0, 8, 5, 3, 0, 0, 0, 2, 1, 2, 0),
 			('111111111111', '222222222222', '999999999999', '666666666666', 'Event', 1,
 				1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12),
 			('111111111111', '222222222222', 'ABC123456789', '123456789ABC', 'User', 1,

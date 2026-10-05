@@ -164,9 +164,11 @@ const pipelinesUpgrade = `
 // pipeline metrics, runs, and errors. Released step indices 3, 4, and 5 become
 // 5, 6, and 8. As no consent was required before, the EventConsent and
 // ImportProfileConsent steps pass whatever reached them in the pipelines that
-// count them, and no step fails. As PostgreSQL can only append columns, it
-// recreates the columns following passed_5, as declared in schema.sql, and
-// then restores their values.
+// count them, and no step fails. For event-based imports, whose transformation
+// is optional, what reached ImportProfileConsent is what passed the filter and
+// was not discarded by the transformation or the output validation. As
+// PostgreSQL can only append columns, it recreates the columns following
+// passed_5, as declared in schema.sql, and then restores their values.
 const pipelineMetricStepsUpgrade = `
 	DO $$
 	BEGIN
@@ -200,8 +202,9 @@ const pipelineMetricStepsUpgrade = `
 			passed_4 = 0, passed_5 = b.passed_3, passed_6 = b.passed_4,
 			passed_7 = CASE
 				WHEN b.target <> 'User' OR c.role IS DISTINCT FROM 'Source' THEN 0
-				WHEN b.passed_3 > 0 OR b.failed_3 > 0 THEN b.passed_4
-				ELSE b.passed_2
+				WHEN c.connector IN ('android', 'dotnet', 'go', 'ios', 'java', 'javascript', 'nodejs', 'python',
+					'rudderstack', 'segment', 'webhook') THEN GREATEST(b.passed_2::bigint - b.failed_3 - b.failed_4, 0)
+				ELSE b.passed_4
 			END,
 			passed_8 = b.passed_5,
 			failed_0 = b.failed_0, failed_1 = b.failed_1, failed_2 = b.failed_2,
@@ -246,11 +249,7 @@ const pipelineMetricStepsUpgrade = `
 		UPDATE pipelines_runs r SET
 			passed_3 = CASE WHEN p.target = 'Event' THEN b.passed_2 ELSE 0 END,
 			passed_4 = 0, passed_5 = b.passed_3, passed_6 = b.passed_4,
-			passed_7 = CASE
-				WHEN p.target <> 'User' OR c.role IS DISTINCT FROM 'Source' THEN 0
-				WHEN b.passed_3 > 0 OR b.failed_3 > 0 THEN b.passed_4
-				ELSE b.passed_2
-			END,
+			passed_7 = CASE WHEN p.target = 'User' AND c.role = 'Source' THEN b.passed_4 ELSE 0 END,
 			passed_8 = b.passed_5,
 			failed_0 = b.failed_0, failed_1 = b.failed_1, failed_2 = b.failed_2,
 			failed_5 = b.failed_3, failed_6 = b.failed_4, failed_8 = b.failed_5,
