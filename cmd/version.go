@@ -9,11 +9,11 @@ import (
 	"sync"
 )
 
-// buildVersion is the Krenalis version set at build time with:
+// buildVersion is the Krenalis version optionally set at build time with:
 //
 //	-ldflags "-X github.com/krenalis/krenalis/cmd.buildVersion=v1.2.3"
 //
-// When empty, the version is read from the build information.
+// When empty, krenalisVersion reads the version from the build information.
 var buildVersion string
 
 // krenalisVersion returns the Krenalis version, determined as follows:
