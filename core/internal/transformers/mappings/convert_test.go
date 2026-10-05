@@ -31,6 +31,7 @@ func TestConvert(t *testing.T) {
 		{types.Int(32), types.String(), nil, nil, true, nil},
 		{types.String(), types.String(), "foo", "foo", true, nil},
 		{types.String(), types.String().WithValues("foo", "boo"), "", nil, true, nil},
+		{types.String(), types.String().WithValues("", "foo", "boo"), "", "", true, nil},
 		{types.String(), types.String().WithValues("foo", "boo"), "boo", "boo", true, nil},
 		{types.String(), types.String().WithPattern(regexp.MustCompile(`^bo+$`)), "", nil, true, nil},
 		{types.String(), types.String().WithPattern(regexp.MustCompile(`^bo+$`)), "boo", "boo", true, nil},
