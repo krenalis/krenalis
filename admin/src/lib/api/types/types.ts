@@ -1,5 +1,3 @@
-type Role = 'Both' | 'Source' | 'Destination';
-
 type TypeKind =
 	| 'boolean'
 	| 'int'
@@ -141,7 +139,6 @@ export type {
 	IntType,
 	DecimalType,
 	FloatType,
-	Role,
 	TypeKind,
 	IntBitSize,
 	FloatBitSize,
