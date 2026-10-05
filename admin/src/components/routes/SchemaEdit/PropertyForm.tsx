@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import './PropertyForm.css';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
+import SlCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
@@ -626,7 +626,7 @@ const PropertyForm = ({
 						))}
 					</SlSelect>
 					{valueType.kind === 'float' && (
-						<SlCheckbox size='small' checked={!valueType.real} onSlChange={onRealChange}>
+						<SlCheckbox size='s' checked={!valueType.real} onChange={onRealChange}>
 							<span className='property-form__float-special-values-label'>Allow ±Inf and NaN</span>
 						</SlCheckbox>
 					)}

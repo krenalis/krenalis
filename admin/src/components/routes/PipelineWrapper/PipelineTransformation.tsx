@@ -51,11 +51,11 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
-import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
+import SlSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
 import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
 import SlSplitPanel from '@shoelace-style/shoelace/dist/react/split-panel/index.js';
 import SlCallout from '@awesome.me/webawesome/dist/react/callout/index.js';
-import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
+import SlCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
@@ -572,9 +572,9 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 							<div className='pipeline__transformation-incremental'>
 								<SlCheckbox
 									checked={pipeline.incremental}
-									onSlChange={onChangeIncremental}
+									onChange={onChangeIncremental}
 									disabled={pipeline.updatedAtColumn === ''}
-									helpText={`Only imports ${transformationTargetsTerm} whose update time is subsequent to the last import`}
+									hint={`Only imports ${transformationTargetsTerm} whose update time is subsequent to the last import`}
 								>
 									Run incremental import
 								</SlCheckbox>
@@ -590,7 +590,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 						padded={true}
 						annotated={true}
 					>
-						<SlCheckbox checked={pipeline.incremental} onSlChange={onChangeIncremental}>
+						<SlCheckbox checked={pipeline.incremental} onChange={onChangeIncremental}>
 							Run incremental import
 						</SlCheckbox>
 					</Section>
@@ -1225,7 +1225,7 @@ const TransformationBox = ({
 							</SlButton>
 							<SlMenu className='transformation-box__function-settings-menu'>
 								<SlSwitch
-									size='small'
+									size='s'
 									checked={pipeline.transformation.function.preserveJSON}
 									onClick={onFunctionPreserveJSONSwitch}
 								>
@@ -2067,8 +2067,8 @@ const FullscreenTransformation = ({
 				{transformationType === 'function' && (
 					<SlSwitch
 						className='fullscreen-transformation__panel-schema-show-only-selected'
-						size='small'
-						onSlChange={() => onChangeShowOnlySelected('in')}
+						size='s'
+						onChange={() => onChangeShowOnlySelected('in')}
 					>
 						Show only selected properties
 					</SlSwitch>
@@ -2477,8 +2477,8 @@ const FullscreenTransformation = ({
 									{transformationType === 'function' && (
 										<SlSwitch
 											className='fullscreen-transformation__panel-schema-show-only-selected'
-											size='small'
-											onSlChange={() => onChangeShowOnlySelected('out')}
+											size='s'
+											onChange={() => onChangeShowOnlySelected('out')}
 										>
 											Show only selected properties
 										</SlSwitch>
@@ -3432,7 +3432,7 @@ const TransformationProperty = ({
 						checked={isFlagged || areAllChildrenLeafsSelected}
 						indeterminate={hasSelectedChildren && !areAllChildrenLeafsSelected}
 						disabled={isSelectDisabled}
-						size='small'
+						size='s'
 					/>
 				))}
 			<div className='fullscreen-transformation__property'>

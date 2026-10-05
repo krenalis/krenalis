@@ -223,12 +223,12 @@ sl-menu-item:hover::part(base) {
 	background-color: var(--sl-color-neutral-200);
 }
 
-sl-switch[checked]::part(control) {
+wa-switch:state(checked)::part(control) {
 	background-color: var(--sl-color-success-600) !important;
 	border-color: var(--sl-color-success-600) !important;
 }
 
-sl-switch[checked]::part(thumb) {
+wa-switch:state(checked)::part(thumb) {
 	border-color: var(--sl-color-success-600) !important;
 }
 
@@ -259,11 +259,11 @@ sl-select::part(control) {
 	margin-left: 1px;
 }
 
-sl-switch::part(label) {
+wa-switch::part(label) {
 	color: var(--text-light);
 }
 
-sl-checkbox::part(form-control-help-text) {
+wa-checkbox::part(hint) {
 	font-size: 12px;
 }
 
@@ -910,6 +910,272 @@ wa-icon::part(svg) {
 	display: block;
 	width: 100%;
 	height: 100%;
+}
+
+/* Web Awesome checkboxes, drawn as Shoelace drew them. Like the buttons, this
+   is Shoelace's stylesheet ported onto the wa-checkbox parts, at zero
+   specificity. */
+
+/* The host is not :focus-visible when its input is, so the focus ring is
+   Web Awesome's, drawn with Shoelace's tokens. */
+:where(wa-checkbox) {
+	--wa-form-control-toggle-size: var(--sl-toggle-size-medium);
+	--wa-focus-ring: var(--sl-focus-ring);
+	--wa-focus-ring-offset: var(--sl-focus-ring-offset);
+	display: inline-block;
+	flex-direction: row;
+	color: inherit;
+	font-size: inherit;
+	font-weight: inherit;
+	line-height: inherit;
+	user-select: auto;
+	-webkit-user-select: auto;
+}
+
+:where(wa-checkbox[size='s']) {
+	--wa-form-control-toggle-size: var(--sl-toggle-size-small);
+}
+
+:where(wa-checkbox)::part(checkbox) {
+	display: inline-flex;
+	font-size: var(--sl-input-font-size-medium);
+	font-weight: var(--sl-input-font-weight);
+	color: var(--sl-input-label-color);
+}
+
+:where(wa-checkbox[size='s'])::part(checkbox) {
+	font-size: var(--sl-input-font-size-small);
+}
+
+:where(wa-checkbox)::part(control) {
+	margin-inline-end: 0;
+	border: solid var(--sl-input-border-width) var(--sl-input-border-color);
+	border-radius: 2px;
+	background-color: var(--sl-input-background-color);
+	color: var(--sl-color-neutral-0);
+	transition:
+		var(--sl-transition-fast) border-color,
+		var(--sl-transition-fast) background-color,
+		var(--sl-transition-fast) color,
+		var(--sl-transition-fast) box-shadow;
+}
+
+:where(wa-checkbox:not(:state(checked), :state(disabled)))::part(control):hover {
+	border-color: var(--sl-input-border-color-hover);
+	background-color: var(--sl-input-background-color-hover);
+}
+
+:where(wa-checkbox:state(checked), wa-checkbox:state(indeterminate))::part(control) {
+	border-color: var(--sl-color-primary-600);
+	background-color: var(--sl-color-primary-600);
+}
+
+:where(wa-checkbox:is(:state(checked), :state(indeterminate)):not(:state(disabled)))::part(control):hover {
+	border-color: var(--sl-color-primary-500);
+	background-color: var(--sl-color-primary-500);
+}
+
+/* Web Awesome draws Font Awesome's glyphs; the masks cut the icon down to
+   Shoelace's. */
+:where(wa-checkbox)::part(icon) {
+	width: var(--wa-form-control-toggle-size);
+	min-width: 0;
+	height: var(--wa-form-control-toggle-size);
+	scale: none;
+	background-color: currentColor;
+}
+
+:where(wa-checkbox)::part(checked-icon) {
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-linecap='round'%3E%3Cpath d='M3.43 9.14 6.86 12.57M12.57 3.43 6.86 12.57'/%3E%3C/svg%3E")
+		center / contain no-repeat;
+}
+
+:where(wa-checkbox)::part(indeterminate-icon) {
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M12.57 8H3.43'/%3E%3C/svg%3E")
+		center / contain no-repeat;
+}
+
+:where(wa-checkbox)::part(label) {
+	display: inline-block;
+	color: var(--sl-input-label-color);
+	line-height: var(--wa-form-control-toggle-size);
+	margin-inline-start: 0.5em;
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+/* Web Awesome switches, drawn as Shoelace drew them, as the checkboxes above.
+   Local rules still override --thumb-size, which has the same name in both.
+   The focus ring is drawn around the control, where Shoelace drew it around
+   the thumb. */
+
+:where(wa-switch) {
+	--wa-focus-ring: var(--sl-focus-ring);
+	--wa-focus-ring-offset: var(--sl-focus-ring-offset);
+	--height: var(--sl-toggle-size-medium);
+	--thumb-size: calc(var(--sl-toggle-size-medium) + 4px);
+	--width: calc(var(--height) * 2);
+	display: inline-block;
+	flex-direction: row;
+	font-size: var(--sl-input-font-size-medium);
+	line-height: inherit;
+}
+
+:where(wa-switch[size='s']) {
+	--height: var(--sl-toggle-size-small);
+	--thumb-size: calc(var(--sl-toggle-size-small) + 4px);
+	font-size: var(--sl-input-font-size-small);
+}
+
+:where(wa-switch)::part(switch) {
+	display: inline-flex;
+	font-weight: var(--sl-input-font-weight);
+	color: var(--sl-input-label-color);
+}
+
+:where(wa-switch)::part(control) {
+	background-color: var(--sl-color-neutral-400);
+	border: solid var(--sl-input-border-width) var(--sl-color-neutral-400);
+	transition:
+		var(--sl-transition-fast) border-color,
+		var(--sl-transition-fast) background-color;
+}
+
+:where(wa-switch)::part(thumb) {
+	background-color: var(--sl-color-neutral-0);
+	border: solid var(--sl-input-border-width) var(--sl-color-neutral-400);
+	transition:
+		var(--sl-transition-fast) translate ease,
+		var(--sl-transition-fast) background-color,
+		var(--sl-transition-fast) border-color,
+		var(--sl-transition-fast) box-shadow;
+}
+
+:where(wa-switch:state(checked))::part(control) {
+	background-color: var(--sl-color-primary-600);
+	border-color: var(--sl-color-primary-600);
+}
+
+:where(wa-switch:state(checked))::part(thumb) {
+	border-color: var(--sl-color-primary-600);
+}
+
+/* Help text of checkboxes and switches. */
+
+:where(wa-checkbox, wa-switch)::part(hint) {
+	margin-block-start: var(--sl-spacing-3x-small);
+	color: var(--sl-input-help-text-color);
+	font-size: var(--sl-input-help-text-font-size-medium);
+	font-weight: inherit;
+	line-height: inherit;
+}
+
+:where(wa-checkbox[size='s'], wa-switch[size='s'])::part(hint) {
+	font-size: var(--sl-input-help-text-font-size-small);
+}
+
+/* Web Awesome radios, drawn as Shoelace drew them. Shoelace wrapped the
+   control and the label in a base aligned to the middle of a line; Web Awesome
+   has no such wrapper, so the radio is a flex row one line tall. */
+
+:where(wa-radio) {
+	--wa-form-control-toggle-size: var(--sl-toggle-size-medium);
+	display: flex;
+	align-items: center;
+	min-height: 1lh;
+	margin-block: 0;
+	color: var(--sl-input-label-color);
+	font-size: inherit;
+	font-weight: var(--sl-input-font-weight);
+	line-height: inherit;
+	cursor: auto;
+	user-select: auto;
+	-webkit-user-select: auto;
+}
+
+:where(wa-radio[size='s']) {
+	--wa-form-control-toggle-size: var(--sl-toggle-size-small);
+}
+
+:where(wa-radio)::part(control) {
+	margin-inline-end: 0;
+	border: solid var(--sl-input-border-width) var(--sl-input-border-color);
+	background-color: var(--sl-input-background-color);
+	color: transparent;
+	cursor: pointer;
+	transition:
+		var(--sl-transition-fast) border-color,
+		var(--sl-transition-fast) background-color,
+		var(--sl-transition-fast) color,
+		var(--sl-transition-fast) box-shadow;
+}
+
+:where(wa-radio:not(:state(checked), :state(disabled)))::part(control):hover {
+	border-color: var(--sl-input-border-color-hover);
+	background-color: var(--sl-input-background-color-hover);
+}
+
+:where(wa-radio:state(checked))::part(control) {
+	color: var(--sl-color-neutral-0);
+	border-color: var(--sl-color-primary-600);
+	background-color: var(--sl-color-primary-600);
+}
+
+:where(wa-radio:state(checked):not(:state(disabled)))::part(control):hover {
+	border-color: var(--sl-color-primary-500);
+	background-color: var(--sl-color-primary-500);
+}
+
+:where(wa-radio:focus-visible)::part(control) {
+	outline: var(--sl-focus-ring);
+	outline-offset: var(--sl-focus-ring-offset);
+}
+
+/* Web Awesome's dot has radius 8 in 16; Shoelace's has radius 3.43. */
+:where(wa-radio)::part(checked-icon) {
+	min-width: 0;
+	scale: calc(3 / 7);
+}
+
+:where(wa-radio)::part(label) {
+	display: inline-block;
+	font-size: var(--sl-input-font-size-medium);
+	line-height: var(--wa-form-control-toggle-size);
+	margin-inline-start: 0.5em;
+	cursor: pointer;
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+:where(wa-radio[size='s'])::part(label) {
+	font-size: var(--sl-input-font-size-small);
+}
+
+/* Web Awesome sizes the group from its size too; Shoelace's inherited it. */
+:where(wa-radio-group) {
+	font-size: inherit;
+}
+
+/* As for the inputs, the gap Shoelace left below the label is in the line
+   height of an empty ::before, so that a group without a label has no gap. */
+:where(wa-radio-group)::part(form-control-label) {
+	display: inline-block;
+	align-self: flex-start;
+	margin-block-end: 0;
+	padding-bottom: 0;
+	font-size: var(--sl-input-label-font-size-medium);
+	font-weight: inherit;
+	line-height: inherit;
+}
+
+:where(wa-radio-group[size='s'])::part(form-control-label) {
+	font-size: var(--sl-input-label-font-size-small);
+}
+
+:where(wa-radio-group)::part(form-control-label)::before {
+	content: '';
+	line-height: calc(1lh + 4px + var(--sl-spacing-3x-small));
+	vertical-align: top;
 }
 
 /* || Radix */

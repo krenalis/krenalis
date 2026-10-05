@@ -2,7 +2,7 @@ import React, { useContext, useState, useLayoutEffect, useRef } from 'react';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
+import SlCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { Warehouse } from './DataWarehouse.helpers';
 import appContext from '../../../context/AppContext';
@@ -181,7 +181,7 @@ const DataWarehouseSettings = ({
 				>
 					<SlCheckbox
 						checked={isMCPEnabled}
-						onSlChange={onEnableMCPSettings}
+						onChange={onEnableMCPSettings}
 						className='warehouse-settings__mcp-checkbox'
 					>
 						Grant read-only access to the data warehouse for AI queries

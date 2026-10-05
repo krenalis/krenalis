@@ -9,7 +9,7 @@ import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
+import SlSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
 import { ProfileDrawer } from './ProfileDrawer';
 import { useProfilesGrid } from './useProfilesGrid';
 import { ProfileProperty } from './Profiles.types';
@@ -140,8 +140,8 @@ const ProfilesList = () => {
 							return (
 								<SlOption key={p.name}>
 									<SlSwitch
-										size='small'
-										onSlChange={() => onToggleColumn(p.name)}
+										size='s'
+										onChange={() => onToggleColumn(p.name)}
 										checked={p.isUsed}
 										disabled={isLastUsed}
 									>

@@ -162,7 +162,7 @@
 	width: 12px;
 }
 
-.schema-edit__filter-menu sl-switch::part(base) {
+.schema-edit__filter-menu wa-switch::part(switch) {
 	align-items: center;
 	color: var(--text-primary);
 }

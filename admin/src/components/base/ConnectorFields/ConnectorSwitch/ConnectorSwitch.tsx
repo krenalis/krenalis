@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './ConnectorSwitch.css';
-import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
+import SlSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
 
 interface ConnectorSwitchProps {
 	name: string;
@@ -25,7 +25,7 @@ const ConnectorSwitch = ({ name, label, error, val, onChange }: ConnectorSwitchP
 
 	return (
 		<div className='connector-switch'>
-			<SlSwitch name={name} onSlChange={onSwitchChange} checked={value}>
+			<SlSwitch name={name} onChange={onSwitchChange} checked={value}>
 				{label}
 			</SlSwitch>
 			{error !== '' && <div className='connector-ui__fields-error'>{error}</div>}

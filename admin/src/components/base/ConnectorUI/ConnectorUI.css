@@ -14,11 +14,11 @@
 	opacity: 0.7;
 }
 
-.connector-ui__fields sl-radio-group sl-radio {
+.connector-ui__fields wa-radio-group wa-radio {
 	margin-bottom: 7px;
 }
 
-.connector-ui__fields sl-radio-group sl-radio:last-of-type {
+.connector-ui__fields wa-radio-group wa-radio:last-of-type {
 	margin-bottom: 0;
 }
 

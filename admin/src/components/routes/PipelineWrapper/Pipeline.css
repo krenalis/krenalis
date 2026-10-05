@@ -580,11 +580,11 @@ wa-button.pipeline__filters-remove-rule[appearance='plain']::part(label) {
 	margin-top: 30px;
 }
 
-.pipeline__transformation-incremental sl-checkbox::part(label) {
+.pipeline__transformation-incremental wa-checkbox::part(label) {
 	margin-inline-start: 8px;
 }
 
-.pipeline__transformation-incremental sl-checkbox::part(form-control-help-text) {
+.pipeline__transformation-incremental wa-checkbox::part(hint) {
 	padding-left: calc(var(--sl-toggle-size-medium) + 8px);
 }
 
@@ -1019,7 +1019,7 @@ inherit the disabled style */
 	border: 2px solid var(--sl-panel-border-color);
 }
 
-.transformation-box__function-settings-menu sl-switch::part(base) {
+.transformation-box__function-settings-menu wa-switch::part(switch) {
 	color: var(--sl-color-neutral-900);
 	align-items: start;
 	column-gap: 5px;
@@ -1196,7 +1196,7 @@ inherit the disabled style */
 	background-color: var(--bg-gray);
 }
 
-.fullscreen-transformation__panel-schema-show-only-selected::part(base) {
+.fullscreen-transformation__panel-schema-show-only-selected::part(switch) {
 	gap: 5px;
 }
 
@@ -1224,7 +1224,7 @@ inherit the disabled style */
 	min-width: 0;
 }
 
-.fullscreen-transformation__property-check::part(base) {
+.fullscreen-transformation__property-check::part(checkbox) {
 	display: flex;
 }
 
@@ -1391,7 +1391,7 @@ inherit the disabled style */
 	box-shadow: inset 3px 0 var(--sl-color-primary-600);
 }
 
-.fullscreen-transformation__property-wrapper--is-out-matching > sl-checkbox {
+.fullscreen-transformation__property-wrapper--is-out-matching > wa-checkbox {
 	opacity: 0.8;
 }
 
@@ -1405,7 +1405,7 @@ inherit the disabled style */
 }
 
 .fullscreen-transformation__property-wrapper--is-out-matching.fullscreen-transformation__property-wrapper--selected
-	> sl-checkbox,
+	> wa-checkbox,
 .fullscreen-transformation__property-wrapper--is-out-matching.fullscreen-transformation__property-wrapper--selected
 	.fullscreen-transformation__property-name
 	* {
@@ -1417,7 +1417,7 @@ inherit the disabled style */
 }
 
 .fullscreen-transformation__property-wrapper--is-out-matching.fullscreen-transformation__property-wrapper--selected
-	> sl-checkbox {
+	> wa-checkbox {
 	position: relative;
 	top: 5px;
 }

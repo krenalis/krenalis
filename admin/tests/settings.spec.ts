@@ -57,31 +57,30 @@ test(`Change the automatic execution of the identity resolution`, async ({ page 
 	await page.goto(`${adminURL}/profile-unification/rules`);
 
 	const automaticExecution = page.locator('.identifiers__automatic-execution');
-	const automaticExecutionLabel = page.locator('.identifiers__automatic-execution >> label');
 
-	await expect(automaticExecutionLabel).toHaveClass(/checkbox--checked/);
-
-	await automaticExecution.click();
-
-	await expect(automaticExecutionLabel).not.toHaveClass(/checkbox--checked/);
-
-	await page.click('.identifiers__save-button');
-	await expect(automaticExecutionLabel).not.toHaveClass(/checkbox--checked/);
-
-	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
-	await page.reload();
-	await expect(automaticExecutionLabel).not.toHaveClass(/checkbox--checked/);
+	await expect(automaticExecution).toHaveJSProperty('checked', true);
 
 	await automaticExecution.click();
 
-	await expect(automaticExecutionLabel).toHaveClass(/checkbox--checked/);
+	await expect(automaticExecution).toHaveJSProperty('checked', false);
 
 	await page.click('.identifiers__save-button');
-	await expect(automaticExecutionLabel).toHaveClass(/checkbox--checked/);
+	await expect(automaticExecution).toHaveJSProperty('checked', false);
 
 	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await page.reload();
-	await expect(automaticExecutionLabel).toHaveClass(/checkbox--checked/);
+	await expect(automaticExecution).toHaveJSProperty('checked', false);
+
+	await automaticExecution.click();
+
+	await expect(automaticExecution).toHaveJSProperty('checked', true);
+
+	await page.click('.identifiers__save-button');
+	await expect(automaticExecution).toHaveJSProperty('checked', true);
+
+	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
+	await page.reload();
+	await expect(automaticExecution).toHaveJSProperty('checked', true);
 });
 
 test(`Change the identifiers`, async ({ page }) => {

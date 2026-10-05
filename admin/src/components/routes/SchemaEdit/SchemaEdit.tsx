@@ -13,7 +13,7 @@ import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
-import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
+import SlSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import Grid from '../../base/Grid/Grid';
@@ -396,9 +396,9 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 									<SlMenu className='schema-edit__filter-menu'>
 										<SlSwitch
 											className='schema-edit__show-changed'
-											size='small'
+											size='s'
 											checked={showOnlyChanged}
-											onSlChange={(event: any) => setShowOnlyChanged(event.target.checked)}
+											onChange={(event: any) => setShowOnlyChanged(event.target.checked)}
 										>
 											Show only changed properties
 										</SlSwitch>

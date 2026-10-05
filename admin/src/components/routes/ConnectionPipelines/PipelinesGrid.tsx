@@ -5,12 +5,12 @@ import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
+import SlSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
-import SlRadio from '@shoelace-style/shoelace/dist/react/radio/index.js';
-import SlRadioGroup from '@shoelace-style/shoelace/dist/react/radio-group/index.js';
+import SlRadio from '@awesome.me/webawesome/dist/react/radio/index.js';
+import SlRadioGroup from '@awesome.me/webawesome/dist/react/radio-group/index.js';
 import { Pipeline } from '../../../lib/api/types/pipeline';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import FeedbackButton from '../../base/FeedbackButton/FeedbackButton';
@@ -250,7 +250,7 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 		}
 
 		const enabledCell = (
-			<SlSwitch onSlChange={() => onPipelineStatusSwitch(pipeline.id)} checked={pipeline.enabled}></SlSwitch>
+			<SlSwitch onChange={() => onPipelineStatusSwitch(pipeline.id)} checked={pipeline.enabled}></SlSwitch>
 		);
 
 		let scheduleDotVariant: Variant = 'neutral';
@@ -289,8 +289,8 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 							</SlButton>
 							<SlMenu className='connection-pipelines__scheduler-options'>
 								<SlRadioGroup
-									size='small'
-									onSlChange={(e) => onSchedulerPeriodChange(e, pipeline.id)}
+									size='s'
+									onChange={(e) => onSchedulerPeriodChange(e, pipeline.id)}
 									value={pipeline.schedulePeriod || 'Off'}
 								>
 									{SCHEDULE_PERIODS.map((period) => (

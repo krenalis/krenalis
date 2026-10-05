@@ -90,13 +90,18 @@
 	border-radius: 0;
 }
 
-.profiles-list__toggle-columns sl-option sl-switch {
+.profiles-list__toggle-columns sl-option wa-switch {
 	--thumb-size: 14px;
 }
 
-.profiles-list__toggle-columns sl-option sl-switch::part(base) {
+.profiles-list__toggle-columns sl-option wa-switch::part(switch) {
 	font-size: 14px;
 	gap: 5px;
+}
+
+.profiles-list__toggle-columns sl-option wa-switch::part(label) {
+	position: relative;
+	top: -2px;
 }
 
 .profiles-list__toggle-columns::part(panel) {

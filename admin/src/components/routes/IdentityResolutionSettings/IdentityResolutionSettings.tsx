@@ -16,7 +16,7 @@ import { Identifiers } from '../../../lib/api/types/identifiers';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import IconWrapper from '../../base/IconWrapper/IconWrapper';
 import { Link } from '../../base/Link/Link';
-import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
+import SlCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
 import { Combobox } from '../../base/Combobox/Combobox';
 
 const IdentityResolutionSettings = () => {
@@ -232,7 +232,7 @@ const IdentityResolutionSettings = () => {
 						<SlCheckbox
 							className='identifiers__automatic-execution'
 							checked={runOnBatchImport}
-							onSlChange={onRunOnBatchImportChange}
+							onChange={onRunOnBatchImportChange}
 						>
 							Automatically run Profile Unification when ingesting identities from apps, files and
 							databases

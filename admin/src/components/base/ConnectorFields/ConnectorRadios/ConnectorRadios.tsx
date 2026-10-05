@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './ConnectorRadios.css';
-import SlRadio from '@shoelace-style/shoelace/dist/react/radio/index.js';
-import SlRadioGroup from '@shoelace-style/shoelace/dist/react/radio-group/index.js';
+import SlRadio from '@awesome.me/webawesome/dist/react/radio/index.js';
+import SlRadioGroup from '@awesome.me/webawesome/dist/react/radio-group/index.js';
 import { FieldOption } from '../../../../lib/api/types/ui';
 
 interface ConnectorRadiosProps {
@@ -28,7 +28,7 @@ const ConnectorRadios = ({ name, label, options, error, val, onChange }: Connect
 
 	return (
 		<div className='connector-radios'>
-			<SlRadioGroup value={value} label={label} name={name} onSlChange={onRadioGroupChange}>
+			<SlRadioGroup value={value} label={label} name={name} onChange={onRadioGroupChange}>
 				{options.map((opt, _) => {
 					return (
 						<SlRadio key={opt.value} value={opt.value}>

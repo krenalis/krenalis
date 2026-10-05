@@ -156,7 +156,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 	).not.toBeAttached();
 
 	// Update on duplicates.
-	await page.locator('.pipeline__update-on-duplicates sl-checkbox').click();
+	await page.locator('.pipeline__update-on-duplicates wa-checkbox').click();
 
 	// Mappings.
 	let mappings = page.locator('.pipeline__transformation');
@@ -724,7 +724,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 
 	// File
 	await page.locator('.pipeline__file-path >> input').fill(fileName);
-	await page.click('.connector-ui .connector-checkbox:last-child sl-checkbox');
+	await page.click('.connector-ui .connector-checkbox:last-child wa-checkbox');
 
 	await page.click('.pipeline__file-confirm');
 
