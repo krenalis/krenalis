@@ -81,11 +81,6 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		var v string
 		switch s := src.(type) {
 		case string:
-			if s == "" {
-				if values := typ.Values(); values != nil && !slices.Contains(values, "") {
-					return nil, nil
-				}
-			}
 			v = s
 		case []byte:
 			if s == nil && nullable {
@@ -100,10 +95,16 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		}
 		if values := typ.Values(); values != nil {
 			if !slices.Contains(values, v) {
+				if src == "" && nullable {
+					return nil, nil
+				}
 				return nil, inputValidationErrorf(name, "contains an unsupported value")
 			}
 		} else if rx := typ.Pattern(); rx != nil {
 			if !rx.MatchString(v) {
+				if src == "" && nullable {
+					return nil, nil
+				}
 				return nil, inputValidationErrorf(name, "contains an unsupported value")
 			}
 		} else {
