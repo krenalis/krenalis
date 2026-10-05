@@ -409,3 +409,7 @@ A method of `core` that can return an `errors.UnprocessableError` documents it a
 ## Core entry guards
 
 Every exported method in `core` that is called by `cmd` must execute `<receiver>.core.mustBeOpen()` as its first statement. If the method body contains any blank line, leave a blank line immediately after the opening brace and another immediately after the guard statement.
+
+## Pipeline specifications
+
+`core/Pipelines.md` documents, as part of the code, the rules that pipelines follow for each combination of connection role, connector type, and target. Whenever a change in `core` or in the Admin alters these rules, update the file in the same change.
