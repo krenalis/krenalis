@@ -7,7 +7,6 @@ import { formatProfileConsentLocation, validateConsentKey } from '../src/lib/cor
 const property = (name: string, type: Type): Property => ({
 	name,
 	prefilled: '',
-	role: 'Both',
 	type,
 	createRequired: false,
 	updateRequired: false,

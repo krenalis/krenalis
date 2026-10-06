@@ -16,18 +16,9 @@ import {
 	TransformationFunction,
 } from '../api/types/pipeline';
 import { ConnectorSettings } from '../api/types/responses';
-import { Compression } from '../api/types/connection';
+import { Compression, ConnectionRole } from '../api/types/connection';
 import { ConsentPurpose } from '../api/types/workspace';
-import Type, {
-	ArrayType,
-	FloatType,
-	IntType,
-	MapType,
-	ObjectType,
-	Property,
-	Role,
-	StringType,
-} from '../api/types/types';
+import Type, { ArrayType, FloatType, IntType, MapType, ObjectType, Property, StringType } from '../api/types/types';
 import API from '../api/api';
 import TransformedConnection from './connection';
 import { filterOrderingPropertySchema } from '../../components/helpers/getSchemaComboboxItems';
@@ -323,7 +314,7 @@ interface TransformedPipeline {
 const getCompatibleFilterOperators = (
 	property: TransformedProperty,
 	hasPath: boolean,
-	role: Role,
+	role: ConnectionRole,
 	target: PipelineTarget,
 ): number[] => {
 	if (property == null) {
