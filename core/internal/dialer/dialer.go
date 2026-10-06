@@ -108,6 +108,10 @@ func DialWith(organization string) func(dial DialFunc) DialFunc {
 // unless the context is marked with [WithoutOrganization]; a context carrying an
 // organization that does not exist, instead, is legitimate, and the dial is done
 // without counting.
+//
+// A connection is counted for the organization that dialed it, even when it
+// later serves the requests of others, so the client must not reuse it across
+// organizations. See https://github.com/krenalis/krenalis/issues/2610.
 func DialWithContext(dial DialFunc) DialFunc {
 	if dial == nil {
 		var d net.Dialer
