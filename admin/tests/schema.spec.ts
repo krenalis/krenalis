@@ -828,7 +828,7 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 	expect(emailPropertyCellBottom).toBeLessThanOrEqual(emailRowBottom);
 	await expect(panel.locator('.property-details-panel__value')).toHaveText([
 		'email',
-		'string',
+		'string, max 300 chars',
 		'Email address',
 		'—',
 		'Not an identifier',

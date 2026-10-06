@@ -6,7 +6,7 @@ import {
 	getPropertyValueType,
 	getTypeSemantic,
 	isSuitableAsIdentifier,
-	toCompactPhysicalType,
+	toKrenalisStringType,
 	toSemanticLabel,
 	UNIT_OF_MEASURE_OPTIONS,
 } from '../../helpers/types';
@@ -35,7 +35,7 @@ interface PropertyDetailProps {
 
 const PropertyDetailsPanel = ({ identifierPosition, onClose, primarySource, property }: PropertyDetailsPanelProps) => {
 	const semanticDetail = getSemanticDetail(property);
-	const physicalType = toCompactPhysicalType(property.type);
+	const physicalType = toKrenalisStringType(property.type);
 	const valueType = getPropertyValueType(property.type);
 	const semantic = getTypeSemantic(valueType);
 	let semanticLabel = semantic == null ? null : toSemanticLabel(semantic);

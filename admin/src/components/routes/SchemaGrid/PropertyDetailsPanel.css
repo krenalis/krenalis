@@ -3,9 +3,7 @@
 	flex-direction: column;
 	line-height: 1.35;
 	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	word-break: break-word;
 }
 
 .property-details-panel__physical-type {
