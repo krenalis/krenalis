@@ -25,7 +25,7 @@ import (
 	"github.com/evanw/esbuild/pkg/api"
 )
 
-//go:embed package.json public/index.html all:src tsconfig.json all:node_modules_vendor node_modules_vendor/resolve.json
+//go:embed package.json public/index.html public/favicon.png all:src tsconfig.json all:node_modules_vendor node_modules_vendor/resolve.json
 var assetsFS embed.FS
 
 // Path to the Shoelace icons within the "node_modules" directory.
@@ -44,6 +44,7 @@ func main() {
 }
 
 var generatedFiles = []string{
+	"favicon.png",
 	"index.css",
 	"index.css.map",
 	"index.html",
@@ -216,6 +217,13 @@ func buildAssets() error {
 	// Copy the "index.html" file.
 	data, _ := assetsFS.ReadFile("public/index.html")
 	err = os.WriteFile(outDir+"index.html", data, 0666)
+	if err != nil {
+		return err
+	}
+
+	// Copy the "favicon.png" file.
+	data, _ = assetsFS.ReadFile("public/favicon.png")
+	err = os.WriteFile(outDir+"favicon.png", data, 0666)
 	if err != nil {
 		return err
 	}
