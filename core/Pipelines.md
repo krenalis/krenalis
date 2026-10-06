@@ -76,17 +76,19 @@ Source / SDK / Event and Destination / FileStorage / User have no output schema.
 
 ### Additional settings
 
-| Pipeline                          | User ID column | Update time column                | Update time format                                     | Other required settings                                           | File                     | Required consents        |
+| Pipeline                          | User ID column | Update time column                | Update time format                                     | Other required settings                                           | File settings            | Required consents        |
 |-----------------------------------|----------------|-----------------------------------|--------------------------------------------------------|-------------------------------------------------------------------|--------------------------|--------------------------|
 | Source / Application / User       | No             | No                                | No                                                     | —                                                                 | No                       | Profile consent location |
 | Source / Database / User          | Required       | Optional, required if incremental | Required for a `string` or `json` column, no otherwise | Query                                                             | No                       | Profile consent location |
-| Source / FileStorage / User       | Required       | Optional, required if incremental | Required for a `string` or `json` column, no otherwise | —                                                                 | Path, sheet and settings | Profile consent location |
+| Source / FileStorage / User       | Required       | Optional, required if incremental | Required for a `string` or `json` column, no otherwise | —                                                                 | see below                | Profile consent location |
 | Source / SDK / User               | No             | No                                | No                                                     | —                                                                 | No                       | Profile consent location |
 | Source / SDK / Event              | No             | No                                | No                                                     | —                                                                 | No                       | Event consent location   |
 | Destination / Application / User  | No             | No                                | No                                                     | Export mode, matching properties, settings about duplicated users | No                       | Profile consent location |
 | Destination / Application / Event | No             | No                                | No                                                     | —                                                                 | No                       | Event consent location   |
 | Destination / Database / User     | No             | No                                | No                                                     | Table name and table key                                          | No                       | Profile consent location |
-| Destination / FileStorage / User  | No             | No                                | No                                                     | Order by property path                                            | Path, sheet and settings | Profile consent location |
+| Destination / FileStorage / User  | No             | No                                | No                                                     | Order by property path                                            | see below                | Profile consent location |
+
+Source / FileStorage / User and Destination / FileStorage / User require a file format and a path, and can have a compression. They require a sheet if the file format has sheets, and format settings if the file format has settings for the role of the connection; otherwise, they cannot have them.
 
 ### Pipeline steps
 
