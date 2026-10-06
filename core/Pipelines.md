@@ -76,17 +76,17 @@ Source / SDK / Event and Destination / FileStorage / User have no output schema.
 
 ### Additional settings
 
-| Pipeline                          | User ID and update time columns (and format) | Other required settings                                            | File                         | Required consents         |
-|-----------------------------------|----------------------------------------------|--------------------------------------------------------------------|------------------------------|---------------------------|
-| Source / Application / User       | No                                           | —                                                                  | No                           | Profile consent location  |
-| Source / Database / User          | Required                                     | Query                                                              | No                           | Profile consent location  |
-| Source / FileStorage / User       | Required                                     | —                                                                  | Path, sheet and settings     | Profile consent location  |
-| Source / SDK / User               | No                                           | —                                                                  | No                           | Profile consent location  |
-| Source / SDK / Event              | No                                           | —                                                                  | No                           | Event consent location    |
-| Destination / Application / User  | No                                           | Export mode, matching properties, settings about duplicated users | No                           | Profile consent location  |
-| Destination / Application / Event | No                                           | —                                                                  | No                           | Event consent location    |
-| Destination / Database / User     | No                                           | Table name and table key                                           | No                           | Profile consent location  |
-| Destination / FileStorage / User  | No                                           | Order by property path                                             | Path, sheet and settings     | Profile consent location  |
+| Pipeline                          | User ID column | Update time column                | Update time format                                     | Other required settings                                           | File                     | Required consents        |
+|-----------------------------------|----------------|-----------------------------------|--------------------------------------------------------|-------------------------------------------------------------------|--------------------------|--------------------------|
+| Source / Application / User       | No             | No                                | No                                                     | —                                                                 | No                       | Profile consent location |
+| Source / Database / User          | Required       | Optional, required if incremental | Required for a `string` or `json` column, no otherwise | Query                                                             | No                       | Profile consent location |
+| Source / FileStorage / User       | Required       | Optional, required if incremental | Required for a `string` or `json` column, no otherwise | —                                                                 | Path, sheet and settings | Profile consent location |
+| Source / SDK / User               | No             | No                                | No                                                     | —                                                                 | No                       | Profile consent location |
+| Source / SDK / Event              | No             | No                                | No                                                     | —                                                                 | No                       | Event consent location   |
+| Destination / Application / User  | No             | No                                | No                                                     | Export mode, matching properties, settings about duplicated users | No                       | Profile consent location |
+| Destination / Application / Event | No             | No                                | No                                                     | —                                                                 | No                       | Event consent location   |
+| Destination / Database / User     | No             | No                                | No                                                     | Table name and table key                                          | No                       | Profile consent location |
+| Destination / FileStorage / User  | No             | No                                | No                                                     | Order by property path                                            | Path, sheet and settings | Profile consent location |
 
 ### Pipeline steps
 
