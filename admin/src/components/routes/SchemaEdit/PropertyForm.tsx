@@ -41,7 +41,7 @@ import {
 } from '../Schema/SchemaPropertyGrid';
 import { getParentPropertyKey } from './SchemaEdit.helpers';
 import { PropertyFieldChanges, PropertyParent, PropertyToEdit } from './useSchemaEdit';
-import { PropertyTypeSelector, type PropertyTypeSelectorRef } from './PropertyTypeSelector';
+import { PropertyTypeSelector } from './PropertyTypeSelector';
 
 const INT_BITSIZES: string[] = ['8', '16', '24', '32', '64'];
 const FLOAT_BITSIZES: string[] = ['32', '64'];
@@ -126,7 +126,6 @@ const PropertyForm = ({
 	const [typeError, setTypeError] = useState<PropertyTypeError | null>(null);
 	const initialState = useRef('');
 	const nameInputRef = useRef<any>();
-	const typeSelectorRef = useRef<PropertyTypeSelectorRef>();
 
 	const { connections } = useContext(AppContext);
 	const isEditing = propertyToEdit.key != null;
@@ -264,22 +263,6 @@ const PropertyForm = ({
 		updateProperty((nextProperty) => {
 			nextProperty.name = name;
 		});
-	};
-
-	const onKeyDownName = (event: React.KeyboardEvent<any>) => {
-		if (
-			isEditing ||
-			showParent ||
-			event.currentTarget.value === '' ||
-			event.key !== 'Tab' ||
-			event.shiftKey ||
-			event.altKey ||
-			event.ctrlKey ||
-			event.metaKey
-		) {
-			return;
-		}
-		requestAnimationFrame(() => typeSelectorRef.current?.focusStructureTrigger());
 	};
 
 	const onKeyDownPrimarySource = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -613,7 +596,6 @@ const PropertyForm = ({
 					onSlBlur={onBlurName}
 					onSlFocus={onFocusName}
 					onSlInput={onInputName}
-					onKeyDown={onKeyDownName}
 				>
 					<PropertyFormLabel slot='label' modified={fieldChanges?.name}>
 						Name
@@ -657,12 +639,7 @@ const PropertyForm = ({
 				<div className='property-form__label'>
 					<PropertyFormLabel modified={fieldChanges?.type}>Type</PropertyFormLabel>
 				</div>
-				<PropertyTypeSelector
-					ref={typeSelectorRef}
-					type={property.type}
-					canEditType={canEditType}
-					onChange={onChangeType}
-				/>
+				<PropertyTypeSelector type={property.type} canEditType={canEditType} onChange={onChangeType} />
 				{shouldShowPercentageControls && (
 					<div className='property-form__percentage-description'>
 						<SlBadge className='property-form__percentage-badge' pill variant='neutral'>
