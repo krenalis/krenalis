@@ -87,13 +87,30 @@ type innerSettings struct {
 
 // AbsolutePath returns the absolute representation of the given path name.
 func (fs *FileSystem) AbsolutePath(ctx context.Context, name string) (string, error) {
-	return fs.absolutePath(ctx, name, true)
+	name, err := parsePathName(name)
+	if err != nil {
+		return "", err
+	}
+	confMu.Lock()
+	defer confMu.Unlock()
+	if displayedRoot != "" {
+		return filepath.Join(displayedRoot, name), nil
+	}
+	return filepath.Join(root, name), nil
 }
 
 // Reader opens a file and returns a ReadCloser from which to read its content.
 func (fs *FileSystem) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
-	path, _ := fs.absolutePath(ctx, name, false)
-	f, err := os.Open(path)
+	name, err := parsePathName(name)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	dir, err := openRoot()
+	if err != nil {
+		return nil, time.Time{}, rewritePathError(err)
+	}
+	defer dir.Close()
+	f, err := dir.Open(name)
 	if err != nil {
 		return nil, time.Time{}, rewritePathError(err)
 	}
@@ -161,14 +178,22 @@ func (fs *FileSystem) ServeUI(ctx context.Context, event string, settings json.V
 
 // Write writes the data read from r into the file with the given path name.
 func (fs *FileSystem) Write(ctx context.Context, r io.Reader, name, contentType string) error {
-	path, _ := fs.absolutePath(ctx, name, false)
-	tmpPath := path + ".tmp"
-	f, err := os.OpenFile(tmpPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	name, err := parsePathName(name)
+	if err != nil {
+		return err
+	}
+	dir, err := openRoot()
+	if err != nil {
+		return rewritePathError(err)
+	}
+	defer dir.Close()
+	tmpName := name + ".tmp"
+	f, err := dir.OpenFile(tmpName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return rewritePathError(err)
 	}
 	defer func() {
-		err := os.Remove(tmpPath)
+		err := dir.Remove(tmpName)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			err = rewritePathError(err)
 			slog.Warn("connectors/filesystem: cannot remove temporary file created by File System", "error", err)
@@ -197,37 +222,8 @@ func (fs *FileSystem) Write(ctx context.Context, r io.Reader, name, contentType 
 	if s.SimulateHighIOLatency {
 		simulateHighIOLatency()
 	}
-	err = os.Rename(tmpPath, path)
+	err = dir.Rename(tmpName, name)
 	return rewritePathError(err)
-}
-
-// absolutePath returns the absolute representation of the given path name.
-//
-// forDisplaying indicates whether the returned path will be used in a purely
-// visual context, where it is necessary to use the displayed path, if
-// available, or otherwise whether the returned path must be a real path on the
-// filesystem (e.g. in cases where the connector needs to access files).
-func (fs *FileSystem) absolutePath(ctx context.Context, name string, forDisplaying bool) (string, error) {
-	originalName := name
-	name = filepath.ToSlash(name)
-	if name[0] == '/' {
-		if name == "/" {
-			return "", connectors.InvalidPathErrorf("path name cannot be “%s“", originalName)
-		}
-		name = name[1:]
-	}
-	if name[len(name)-1] == '/' {
-		return "", connectors.InvalidPathErrorf("path name cannot end with a slash")
-	}
-	if name == "." || !fsPkg.ValidPath(name) {
-		return "", connectors.InvalidPathErrorf("path name cannot contains “.” or “..” or empty elements")
-	}
-	confMu.Lock()
-	defer confMu.Unlock()
-	if forDisplaying && displayedRoot != "" {
-		return filepath.Join(displayedRoot, name), nil
-	}
-	return filepath.Join(root, name), nil
 }
 
 // saveSettings saves the settings.
@@ -240,30 +236,61 @@ func (fs *FileSystem) saveSettings(ctx context.Context, settings json.Value) err
 	return fs.env.Settings.Store(ctx, s)
 }
 
-// rewritePathError, if err is a *fs.PathError error, returns a new
-// *fs.PathError such that its path is consistent with the displayed root of the
-// connection.
+// openRoot opens the root directory.
+func openRoot() (*os.Root, error) {
+	confMu.Lock()
+	dir := root
+	confMu.Unlock()
+	return os.OpenRoot(dir)
+}
+
+// parsePathName parses the given path name and returns it in the form used by
+// io/fs and os.Root. It returns an *InvalidPathError if name is not valid or
+// does not refer to a file.
+func parsePathName(name string) (string, error) {
+	rel := strings.TrimPrefix(filepath.ToSlash(name), "/")
+	if rel == "" {
+		return "", connectors.InvalidPathErrorf("path name cannot be “%s”", name)
+	}
+	if strings.HasSuffix(rel, "/") {
+		return "", connectors.InvalidPathErrorf("path name cannot end with a slash")
+	}
+	if rel == "." || !fsPkg.ValidPath(rel) {
+		return "", connectors.InvalidPathErrorf("path name cannot contain “.” or “..” or empty elements")
+	}
+	return rel, nil
+}
+
+// rewritePathError, if err is a *fs.PathError or an *os.LinkError error,
+// returns a new error of the same type such that its paths are absolute and
+// consistent with the displayed root of the connection, if set.
 //
-// For all other error types, if the error is nil, or if the displayed root is
-// not set, the error is returned as it is.
+// For all other error types, or if the error is nil, the error is returned as
+// it is.
 func rewritePathError(err error) error {
+
 	confMu.Lock()
 	defer confMu.Unlock()
-	if displayedRoot == "" {
-		return err
+
+	rootToShow := root
+	if displayedRoot != "" {
+		rootToShow = displayedRoot
 	}
-	if pErr, ok := err.(*fsPkg.PathError); ok {
-		// From the path of the fs.PathError, remove the prefix that refers to
-		// the root.
-		path := strings.TrimPrefix(pErr.Path, root)
-		// Prepend the displayed root as prefix.
-		path = filepath.Join(displayedRoot, path)
-		return &fsPkg.PathError{
-			Op:   pErr.Op,
-			Path: path,
-			Err:  pErr.Err,
-		}
+
+	// rewrite removes from path the prefix that refers to the root, if
+	// present, as errors returned by the os.Root methods have a path relative
+	// to the root, and prepends the root to show.
+	rewrite := func(path string) string {
+		return filepath.Join(rootToShow, strings.TrimPrefix(path, root))
 	}
+
+	switch e := err.(type) {
+	case *fsPkg.PathError:
+		return &fsPkg.PathError{Op: e.Op, Path: rewrite(e.Path), Err: e.Err}
+	case *os.LinkError:
+		return &os.LinkError{Op: e.Op, Old: rewrite(e.Old), New: rewrite(e.New), Err: e.Err}
+	}
+
 	return err
 }
 
