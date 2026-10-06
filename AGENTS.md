@@ -177,7 +177,7 @@ Exported methods in `core/internal/metrics` are an exception: they must assume t
 
 Apply the following procedure to every brace-delimited block, be it a function or method body or a block nested inside one. Decide each block on its own, from the inside out.
 
-1. Choose the internal spacing. Looking only at the statements of the block, and ignoring any blank line adjacent to its braces, insert a blank line wherever it genuinely helps readability, typically by separating logically distinct groups of statements. A single-statement block never needs one, and neither does a short cohesive block; a guard or a `return` does not earn a blank line on its own.
+1. Choose the internal spacing. Looking only at the statements of the block, and ignoring any blank line adjacent to its braces, insert a blank line wherever it genuinely helps readability, typically by separating logically distinct groups of statements. A single-statement block never needs one, and neither does a short cohesive block; a guard or a `return` does not earn a blank line on its own. A small block, roughly up to 20 non-blank lines between its braces with nested blocks included, normally needs none either, even when its statements form distinct groups: at that size, separation is rarely worth the space. Treat 20 as a guide, not a cutoff: a block just below it may still be separated when its groups are clearly distinct, and one just above it may still stay compact when it reads well as a whole.
 2. Pad the boundaries. If step 1 left at least one internal blank line, leave a blank line immediately after the opening brace and another immediately before the closing brace. If it left none, the block contains no blank line at all: never pad an otherwise compact block.
 3. Place the closing pad before a final `return`. When a padded block ends with a `return`, its trailing blank line goes immediately before that `return`, with no blank line between the `return` and the closing brace. A `return` inside a nested block is not the enclosing block's final statement.
 
@@ -190,7 +190,7 @@ Separate the complete construct that owns the block from surrounding code with b
 
 When reviewing existing code within the scope of a change, run step 1 independently of blank lines that are only boundary padding, including padding before a final `return`. Remove that padding if no useful internal separation remains.
 
-Short, cohesive bodies stay compact, with or without a final `return`:
+Short bodies stay compact, with or without a final `return`, even when they perform distinct steps:
 
 ```go
 func nonNegative(n int) int {
@@ -204,19 +204,33 @@ func (c *cache) resetStats() {
     c.hits = 0
     c.misses = 0
 }
+
+func sortedKeys(entries map[string]int) []string {
+    keys := make([]string, 0, len(entries))
+    for key := range entries {
+        keys = append(keys, key)
+    }
+    slices.Sort(keys)
+    return keys
+}
 ```
 
-The following examples illustrate boundary placement once internal blank lines have been chosen to separate logical steps. They do not prescribe where to separate statements in other functions or methods:
+The following examples illustrate boundary placement once internal blank lines have been chosen to separate logical steps. They do not prescribe where to separate statements in other functions or methods, and for brevity they are shorter than blocks that would normally be separated:
 
 ```go
-func sortedKeys(entries map[string]int) []string {
+func topKeys(entries map[string]int, n int) []string {
 
     keys := make([]string, 0, len(entries))
     for key := range entries {
         keys = append(keys, key)
     }
 
-    slices.Sort(keys)
+    slices.SortFunc(keys, func(a, b string) int {
+        return cmp.Compare(entries[b], entries[a])
+    })
+    if len(keys) > n {
+        keys = keys[:n]
+    }
 
     return keys
 }
