@@ -60,15 +60,15 @@ In every other input schema, `Prefilled` must be empty and `CreateRequired` and 
 
 "Schema of" tells what the output schema describes. In every output schema, `Prefilled` must be empty. The other fields must have these values, where "any" means that both `true` and `false` are allowed:
 
-| Pipeline                          | Schema of         | CreateRequired                                   | UpdateRequired | ReadOptional | Nullable                  |
-|-----------------------------------|-------------------|--------------------------------------------------|----------------|--------------|---------------------------|
-| Source / Application / User       | Profiles          | `false`                                          | `false`        | `true`       | `false`                   |
-| Source / Database / User          | Profiles          | `false`                                          | `false`        | `true`       | `false`                   |
-| Source / FileStorage / User       | Profiles          | `false`                                          | `false`        | `true`       | `false`                   |
-| Source / SDK / User               | Profiles          | `false`                                          | `false`        | `true`       | `false`                   |
-| Destination / Application / User  | Application users | any                                              | any            | see below    | any                       |
-| Destination / Application / Event | Event type        | any                                              | `false`        | `false`      | any                       |
-| Destination / Database / User     | Table             | `true` for the table key, `false` for the others | `false`        | `false`      | `false` for the table key |
+| Pipeline                          | Schema of         | CreateRequired                                   | UpdateRequired | ReadOptional | Nullable                                      |
+|-----------------------------------|-------------------|--------------------------------------------------|----------------|--------------|-----------------------------------------------|
+| Source / Application / User       | Profiles          | `false`                                          | `false`        | `true`       | `false`                                       |
+| Source / Database / User          | Profiles          | `false`                                          | `false`        | `true`       | `false`                                       |
+| Source / FileStorage / User       | Profiles          | `false`                                          | `false`        | `true`       | `false`                                       |
+| Source / SDK / User               | Profiles          | `false`                                          | `false`        | `true`       | `false`                                       |
+| Destination / Application / User  | Application users | any                                              | any            | see below    | any                                           |
+| Destination / Application / Event | Event type        | any                                              | `false`        | `false`      | any                                           |
+| Destination / Database / User     | Table             | `true` for the table key, `false` for the others | `false`        | `false`      | `false` for the table key, any for the others |
 
 For Destination / Application / User, `ReadOptional` must be `false`, except for the output matching property and the properties that contain it, where both `true` and `false` are allowed.
 
