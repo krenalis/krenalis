@@ -310,7 +310,7 @@ func (this *Connection) ApplicationUsers(ctx context.Context, schema types.Type,
 // of the created pipeline. target is the target of the pipeline and must be
 // supported by the connector of the connection.
 //
-// Refer to the specifications in the file "core/Pipelines.csv" for more
+// Refer to the specifications in the file "core/Pipelines.md" for more
 // details.
 //
 // It returns an errors.NotFoundError error if the connection does not exist
@@ -1326,7 +1326,7 @@ func (this *Connection) PipelineSchemas(ctx context.Context, target Target, even
 // TODO(Gianluca): this method is deprecated. See the issue
 // https://github.com/krenalis/krenalis/issues/1265.
 //
-// Refer to the specifications in the file "core/Pipelines.csv" for more
+// Refer to the specifications in the file "core/Pipelines.md" for more
 // details.
 func (this *Connection) PipelineTypes(ctx context.Context) ([]PipelineType, error) {
 	this.core.mustBeOpen()
@@ -2068,7 +2068,7 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 		return types.Type{}, errors.BadRequest("event type cannot be used with %s target", target)
 	}
 	// Perform a validation based on the connection's type and role (refer to
-	// the specifications in the file "core/Pipelines.csv" for more details).
+	// the specifications in the file "core/Pipelines.md" for more details).
 	c := this.connection
 	connector := c.Connector()
 	if target == TargetEvent {
