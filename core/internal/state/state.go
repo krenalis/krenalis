@@ -121,12 +121,12 @@ type OAuthCredentials struct {
 	ClientSecret string
 }
 
-// New returns a state given the database, the key manager, the 64-byte master
-// key, and the OAuth client credentials for connectors. sendStats indicates
-// whether the state should send statistics or not.
+// New loads and starts a State using the database, key manager, and OAuth
+// client credentials for connectors. sendStats controls whether runtime
+// statistics are sent.
 //
-// If a condition occurs where the Krenalis database appears not to have been
-// initialized, returns an error of type *DBNotInitializedError.
+// If the Krenalis database appears not to have been initialized, New returns
+// an error wrapping a *DBNotInitializedError.
 func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OAuthCredentials, sendStats bool) (*State, error) {
 
 	state := &State{
@@ -142,7 +142,6 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 		connectionsByKey: map[string]*Connection{},
 		pipelines:        map[string]*Pipeline{},
 		liveRuns:         map[string]*PipelineRun{},
-		sendStats:        sendStats,
 	}
 	state.version.next = sync.Cond{L: &state.version.RWMutex}
 	state.close.ctx, state.close.cancel = context.WithCancel(context.Background())
@@ -159,16 +158,77 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 	state.notifications.notifier = newNotifier(db, ch)
 	state.notifications.ch = ch
 
-	// Load the state.
-	err := state.load(ctx, credentials)
-	if err != nil {
+	// Bootstrap owns the resources until they are transferred to the runtime.
+	started := false
+	defer func() {
+
+		if started {
+			return
+		}
 		state.close.cancel()
 		state.rateLimiter.Close(ctx)
-		state.notifications.Close()
+		runtime.KeepAlive(state)
+		state.cipher.Close()
+
+	}()
+
+	// LISTEN is effective before load begins its snapshot transaction.
+	conn, err := state.notifications.connect(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("cannot listen for state notifications: %w", err)
+	}
+	defer func() {
+		if conn != nil {
+			closeNotificationConnection(conn)
+		}
+	}()
+	err = state.load(ctx, credentials)
+	if err != nil {
 		return nil, fmt.Errorf("cannot load Krenalis state: %w", err)
 	}
 
-	// Keep the state updated.
+	// Apply replayed notifications on this stack so application panics propagate.
+	replayCtx, cancelReplay := context.WithCancel(ctx)
+	replayed := make(chan struct{})
+	var replayErr error
+	go func() {
+		defer close(replayed)
+		defer close(ch)
+		replayErr = state.notifications.replay(replayCtx, conn)
+	}()
+	defer func() {
+		cancelReplay()
+		<-replayed
+	}()
+	state.close.Add(1)
+	state.keep()
+	<-replayed
+	err = replayErr
+	cancelReplay()
+	if err != nil {
+		return nil, fmt.Errorf("cannot replay state notifications: %w", err)
+	}
+
+	err = ctx.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	// Hand the dedicated connection to the runtime notifier and replace the replay channel.
+	ch = make(chan notification, 10)
+	state.notifications.ch = ch
+	state.notifications.notifier.ch = ch
+	runtimeConn := conn
+	conn = nil
+	state.close.Add(1)
+	go func() {
+		defer state.close.Done()
+		state.notifications.init(state.close.ctx, runtimeConn)
+	}()
+	started = true
+
+	// Start the runtime state loop, enabling statistics only after bootstrap.
+	state.sendStats = sendStats
 	state.close.Add(1)
 	go state.keep()
 
@@ -221,7 +281,7 @@ func (state *State) Close(ctx context.Context) {
 	// Keep state-owned buckets reachable until Limiter.Close returns so their
 	// unused capacity can be restored.
 	runtime.KeepAlive(state)
-	state.notifications.Close()
+	state.cipher.Close()
 }
 
 // Connection returns the connection with identifier id.

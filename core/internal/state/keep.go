@@ -24,7 +24,8 @@ import (
 const logNotifications = false // Set to true to enable logging of received notifications.
 
 // keep keeps the state updated and in sync with the database.
-// It is called in its own goroutine.
+// Bootstrap calls it synchronously until the replay channel closes; runtime
+// calls it in its own goroutine.
 func (state *State) keep() {
 
 	// If sending statistics is enabled, initialize the Krenalis analytics client.
@@ -53,7 +54,11 @@ func (state *State) keep() {
 		select {
 		case <-done:
 			return
-		case n = <-notifications:
+		case event, ok := <-notifications:
+			if !ok {
+				return
+			}
+			n = event
 		}
 		if logNotifications {
 			slog.Info("core/state: received notification", "version", n.Version, "name", n.Name, "payload", n.Payload)

@@ -16,7 +16,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/cipher"
@@ -39,40 +38,18 @@ type notifier struct {
 	ch          chan<- notification
 	key         *cipher.Key
 	nextVersion int
-	loaded      chan struct{}
-	closed      struct {
-		cancel context.CancelFunc
-		atomic.Bool
-	}
 }
 
-// newNotifier returns a new notifier that will send received notifications to
-// the notification channel ch. To begin receiving notifications, call Commit.
+// newNotifier constructs a notifier without starting notification reception.
 func newNotifier(db *db.DB, ch chan<- notification) *notifier {
-	notifier := &notifier{
-		db:     db,
-		ch:     ch,
-		loaded: make(chan struct{}, 1),
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	notifier.closed.cancel = cancel
-	go notifier.init(ctx)
-	return notifier
-}
-
-// Close closes the notifier.
-func (notifier *notifier) Close() {
-	if notifier.closed.Swap(true) {
-		return
-	}
-	notifier.closed.cancel()
+	return &notifier{db: db, ch: ch}
 }
 
 // Notify sends the notification n within the transaction tx and returns its
 // version. For ElectLeader and SeeLeader notifications, the version is always
 // 0.
 //
-// It can only be called after a successful call to Commit.
+// It can only be called after bootstrap has completed.
 func (notifier *notifier) Notify(ctx context.Context, tx *db.Tx, n any) (int, error) {
 	t := reflect.TypeOf(n)
 	if t.Kind() == reflect.Pointer {
@@ -128,86 +105,77 @@ func (notifier *notifier) Notify(ctx context.Context, tx *db.Tx, n any) (int, er
 	return version, nil
 }
 
-// init initializes the notifier to listen for notifications.
-func (notifier *notifier) init(ctx context.Context) {
+// connect acquires a dedicated connection and completes LISTEN in autocommit.
+// On success, the caller owns the connection and must close and release it
+// with closeNotificationConnection.
+func (notifier *notifier) connect(ctx context.Context) (*db.Conn, error) {
+
+	conn, err := notifier.db.Conn(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = conn.Exec(ctx, "LISTEN krenalis")
+	if err != nil {
+		closeNotificationConnection(conn)
+		return nil, err
+	}
+
+	return conn, nil
+}
+
+// init takes ownership of conn and runs the notification listener,
+// reconnecting and replaying missed notifications as needed.
+func (notifier *notifier) init(ctx context.Context, conn *db.Conn) {
+
+	defer func() {
+		if conn != nil {
+			closeNotificationConnection(conn)
+		}
+	}()
+
 	bo := backoff.New(10)
 	bo.SetCap(5 * time.Second)
 	var acquireFailed bool
 	for bo.Next(ctx) {
-		// Acquire a connection.
-		conn, err := notifier.db.Conn(ctx)
-		if err != nil {
-			if ctx.Err() == nil {
-				if !acquireFailed {
-					slog.Warn("failed to acquire notification connection; retrying", "error", err)
+
+		if conn == nil {
+
+			var err error
+			conn, err = notifier.connect(ctx)
+			if err != nil {
+				if ctx.Err() == nil && !acquireFailed {
+					slog.Warn("failed to establish notification listener; retrying", "error", err)
 					acquireFailed = true
 				}
+				continue
 			}
-			continue
-		}
-		if acquireFailed {
-			slog.Info("connection for notifications successfully re-established")
-			acquireFailed = false
-		}
-		_, err = conn.Exec(ctx, "LISTEN krenalis")
-		if err != nil {
-			// Close and release the connection.
-			_ = conn.Underlying().Close(ctx)
-			_ = conn.Close()
-			if ctx.Err() == nil {
-				slog.Error("core/state: cannot execute LISTEN; retrying", "waiting_time", bo.WaitTime(), "error", err)
+			if acquireFailed {
+				slog.Info("notification listener successfully re-established")
+				acquireFailed = false
 			}
-			continue
-		}
-		if notifier.loaded != nil {
-			// Waits for the Commit method to be called.
-			select {
-			case <-notifier.loaded:
-				notifier.loaded = nil
-			case <-ctx.Done():
-				// Close and release the connection.
-				_ = conn.Underlying().Close(ctx)
-				_ = conn.Close()
-				return
-			}
-		} else {
-			// Reads any missed notifications.
-			const query = "SELECT version, name, payload FROM notifications WHERE version >= $1 ORDER BY version"
-			err = conn.QueryScan(ctx, query, notifier.nextVersion, func(rows *db.Rows) error {
-				for rows.Next() {
-					var version int
-					var name string
-					var payload string
-					err = rows.Scan(&version, &name, &payload)
-					if err != nil {
-						return err
-					}
-					if version != notifier.nextVersion {
-						panic(fmt.Sprintf("core/state: expected notification version %d, got %d", notifier.nextVersion, version))
-					}
-					notifier.nextVersion++
-					notifier.ch <- notification{version, name, payload}
-				}
-				return nil
-			})
+
+			err = notifier.replay(ctx, conn)
 			if err != nil {
-				// Close and release the connection.
-				_ = conn.Underlying().Close(ctx)
-				_ = conn.Close()
+				closeNotificationConnection(conn)
+				conn = nil
 				if ctx.Err() == nil {
 					slog.Error("core/state: cannot query notifications; retrying", "retry_after", bo.WaitTime(), "error", err)
 				}
 				continue
 			}
+
 		}
-		err = notifier.listen(ctx, conn)
+
+		err := notifier.listen(ctx, conn)
 		if err != nil && ctx.Err() == nil {
 			slog.Error("core/state: cannot listen to notifications; retrying", "retry_after", bo.WaitTime(), "error", err)
 		}
-		// Close and release the connection.
-		_ = conn.Underlying().Close(ctx)
-		_ = conn.Close()
+		closeNotificationConnection(conn)
+		conn = nil
+
 	}
+
 }
 
 // listen listens to the notifications received from the connection conn and
@@ -271,8 +239,37 @@ func (notifier *notifier) listen(ctx context.Context, conn *db.Conn) error {
 			}
 			notifier.nextVersion++
 		}
-		notifier.ch <- notification{version, name, payload}
+		select {
+		case notifier.ch <- notification{version, name, payload}:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
+}
+
+// replay reads missed notifications and enforces contiguous versions.
+func (notifier *notifier) replay(ctx context.Context, conn *db.Conn) error {
+	const query = "SELECT version, name, payload FROM notifications WHERE version >= $1 ORDER BY version"
+	return conn.QueryScan(ctx, query, notifier.nextVersion, func(rows *db.Rows) error {
+		for rows.Next() {
+
+			var n notification
+			if err := rows.Scan(&n.Version, &n.Name, &n.Payload); err != nil {
+				return err
+			}
+			if n.Version != notifier.nextVersion {
+				panic(fmt.Sprintf("core/state: expected notification version %d, got %d", notifier.nextVersion, n.Version))
+			}
+			notifier.nextVersion++
+			select {
+			case notifier.ch <- n:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+
+		}
+		return nil
+	})
 }
 
 // appendEncodeNotification compresses, encrypts, and Base64-encodes a
@@ -306,6 +303,14 @@ func appendEncodeNotification(ctx context.Context, b []byte, encryptor payloadEn
 		return nil, fmt.Errorf("cannot encrypt notification payload: %s", err)
 	}
 	return base64.RawStdEncoding.AppendEncode(b, encryptedData), nil
+}
+
+// closeNotificationConnection closes the listening session before releasing it.
+func closeNotificationConnection(conn *db.Conn) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_ = conn.Underlying().Close(ctx)
+	_ = conn.Close()
 }
 
 // parsePayload parses a notification payload and returns the version, name,
