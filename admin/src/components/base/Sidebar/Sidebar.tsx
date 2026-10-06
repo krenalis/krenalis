@@ -72,16 +72,16 @@ const sidebarItems: sidebarItem[] = [
 		subItems: [
 			{ name: 'settings/general', label: 'General', link: 'settings/general', icon: 'list' },
 			{
-				name: 'settings/dataWarehouse',
-				label: 'Data Warehouse',
-				link: 'settings/data-warehouse',
-				icon: 'database',
-			},
-			{
 				name: 'settings/consent-management',
 				label: 'Consent management',
 				link: 'settings/consent-management',
 				icon: 'shield-check',
+			},
+			{
+				name: 'settings/dataWarehouse',
+				label: 'Data Warehouse',
+				link: 'settings/data-warehouse',
+				icon: 'database',
 			},
 		],
 	},

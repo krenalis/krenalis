@@ -297,8 +297,8 @@ const ConsentManagement = () => {
 					</SlButton>
 				</div>
 				<div className='consent-management__description'>
-					Pipelines can require consent for a purpose, so they only process events or profiles when the user
-					has consented to it.
+					Define the consent purposes that pipelines use to determine whether an event or profile can be
+					processed.
 				</div>
 				<Grid
 					className='consent-management__grid'
