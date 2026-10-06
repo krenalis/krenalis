@@ -66,9 +66,11 @@ In every other input schema, `Prefilled` must be empty and `CreateRequired` and 
 | Source / Database / User          | Profiles          | `false`                                          | `false`        | `true`       | `false`                   |
 | Source / FileStorage / User       | Profiles          | `false`                                          | `false`        | `true`       | `false`                   |
 | Source / SDK / User               | Profiles          | `false`                                          | `false`        | `true`       | `false`                   |
-| Destination / Application / User  | Application users | any                                              | any            | `false`      | any                       |
+| Destination / Application / User  | Application users | any                                              | any            | see below    | any                       |
 | Destination / Application / Event | Event type        | any                                              | `false`        | `false`      | any                       |
 | Destination / Database / User     | Table             | `true` for the table key, `false` for the others | `false`        | `false`      | `false` for the table key |
+
+For Destination / Application / User, `ReadOptional` must be `false`, except for the output matching property and the properties that contain it, where both `true` and `false` are allowed.
 
 Source / SDK / Event and Destination / FileStorage / User have no output schema.
 
