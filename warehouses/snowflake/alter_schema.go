@@ -222,6 +222,12 @@ func createViewQuery(profilesTableName string, profileColumns []warehouses.Colum
 func typeToSnowflakeType(t types.Type) string {
 	switch t.Kind() {
 	case types.StringKind:
+		switch t.Semantic() {
+		case types.CountrySemantic:
+			return "VARCHAR(2)"
+		case types.PhoneSemantic:
+			return "VARCHAR(16)"
+		}
 		var maxLength int
 		if l, ok := t.MaxBytes(); ok {
 			maxLength = l

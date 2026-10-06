@@ -37,6 +37,7 @@ require (
 	github.com/mark3labs/mcp-go v0.58.0
 	github.com/nats-io/nats.go v1.54.0
 	github.com/nats-io/nkeys v0.4.16
+	github.com/nyaruka/phonenumbers/v2 v2.0.14
 	github.com/oschwald/maxminddb-golang/v2 v2.7.0
 	github.com/pkg/sftp v1.13.11
 	github.com/prometheus/client_golang v1.24.1
