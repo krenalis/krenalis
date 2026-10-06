@@ -72,6 +72,129 @@ func TestAddAndRemoveLinkedConnection(t *testing.T) {
 
 }
 
+// TestApplyPanicsDuringDispatch verifies that a dispatch panic propagates
+// unchanged after the mutation has been applied, without advancing the version
+// or acknowledging the notification.
+func TestApplyPanicsDuringDispatch(t *testing.T) {
+	ws := &Workspace{mu: &sync.Mutex{}, ID: stateTestWorkspaceID, organization: &Organization{ID: stateTestOrganizationID}, consentPurposes: map[string]*ConsentPurpose{}}
+	state := &State{changing: &sync.RWMutex{}, workspaces: map[string]*Workspace{stateTestWorkspaceID: ws}}
+	state.version.next = sync.Cond{L: &state.version.RWMutex}
+	state.version.current = 7
+	ack := make(chan struct{}, 1)
+	state.notifications.acks.Store(8, ack)
+	panicValue := &struct{ reason string }{"listener failure"}
+	state.listeners = []any{func(AddConsentPurpose) { panic(panicValue) }}
+	defer func() {
+		if got := recover(); got != panicValue {
+			t.Fatalf("expected original dispatch panic %v, got %v", panicValue, got)
+		}
+
+		purpose := ws.consentPurposes[stateTestConsentPurposeID]
+		if purpose == nil {
+			t.Fatal("expected consent purpose mutation to be applied, got nil")
+		}
+
+		if purpose.Name != "Marketing" {
+			t.Fatalf("expected purpose name %q, got %q", "Marketing", purpose.Name)
+		}
+
+		if got := state.Version(); got != 7 {
+			t.Fatalf("expected version to remain 7 after failed dispatch, got %d", got)
+		}
+
+		select {
+		case <-ack:
+			t.Fatal("expected no acknowledgement after failed dispatch, got acknowledgement")
+		default:
+		}
+	}()
+	_ = state.applyNotification(notification{8, "AddConsentPurpose", `{"Workspace":"6NpT4zB8QaR2","ID":"D7hV4xK9mP2a","Name":"Marketing"}`}, nil)
+}
+
+// TestApplyProcessesNotificationInOrder verifies that a notification is applied
+// and dispatched before its version is published, the changing lock is released,
+// and the notification is acknowledged.
+func TestApplyProcessesNotificationInOrder(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+
+		org := &Organization{ID: stateTestOrganizationID}
+		ws := &Workspace{mu: &sync.Mutex{}, ID: stateTestWorkspaceID, organization: org, consentPurposes: map[string]*ConsentPurpose{}}
+		state := &State{changing: &sync.RWMutex{}, workspaces: map[string]*Workspace{stateTestWorkspaceID: ws}}
+		state.version.next = sync.Cond{L: &state.version.RWMutex}
+		state.version.current = 7
+		state.close.ctx, state.close.cancel = context.WithCancel(t.Context())
+		defer state.close.cancel()
+		calls := 0
+		ack := make(chan struct{})
+		state.listeners = []any{func(e AddConsentPurpose) {
+			calls++
+			if got := state.Version(); got != 7 {
+				t.Errorf("expected version 7 during dispatch, got %d", got)
+			}
+			if e.Name != "Marketing" {
+				t.Errorf("expected Marketing during dispatch, got %q", e.Name)
+			}
+			if state.changing.TryLock() {
+				state.changing.Unlock()
+				t.Error("expected changing held during dispatch, got unlocked state")
+			}
+			purpose := ws.consentPurposes[e.ID]
+			if purpose == nil || purpose.Name != e.Name {
+				t.Errorf("expected applied consent purpose during dispatch, got %#v", purpose)
+			}
+		}}
+		state.notifications.acks.Store(8, ack)
+		broadcast := make(chan struct{})
+		go func() {
+			state.version.Lock()
+			state.version.next.Wait()
+			state.version.Unlock()
+			close(broadcast)
+		}()
+		synctest.Wait()
+
+		state.close.Add(1)
+		go func() {
+			defer state.close.Done()
+			err := state.applyNotification(notification{8, "AddConsentPurpose", `{"Workspace":"6NpT4zB8QaR2","ID":"D7hV4xK9mP2a","Name":"Marketing"}`}, nil)
+			if err != nil {
+				t.Errorf("expected applied notification, got %v", err)
+			}
+		}()
+		// The unbuffered acknowledgement blocks application until we receive it.
+		synctest.Wait()
+		if calls != 1 {
+			t.Errorf("expected notification to be dispatched before acknowledgement, got %d dispatches", calls)
+		}
+		if state.Version() != 8 {
+			t.Errorf("expected version 8 before acknowledgement, got %d", state.Version())
+		}
+		select {
+		case <-broadcast:
+		default:
+			t.Error("expected version Broadcast before acknowledgement, got no wakeup")
+		}
+		if !state.changing.TryLock() {
+			t.Error("expected changing released before acknowledgement, got locked state")
+		} else {
+			state.changing.Unlock()
+		}
+		select {
+		case <-ack:
+		default:
+			t.Fatal("expected notification acknowledgement, got none")
+		}
+		state.close.Wait()
+		if calls != 1 || state.Version() != 8 {
+			t.Fatalf("expected one dispatch and version 8, got %d and %d", calls, state.Version())
+		}
+		purpose := ws.consentPurposes[stateTestConsentPurposeID]
+		if purpose == nil || purpose.Name != "Marketing" {
+			t.Fatalf("expected Marketing consent purpose, got %#v", purpose)
+		}
+	})
+}
+
 // TestReplaceConsentPurpose checks that replacing a consent purpose does not
 // modify the original.
 func TestReplaceConsentPurpose(t *testing.T) {
@@ -195,72 +318,9 @@ func TestDecodeNotificationOmitsPayloadDetails(t *testing.T) {
 	decodeNotification(notification{8, "UpdatePipeline", `{"InSchema":{"kind":"PrivateCredentialValue"}}`}, &event)
 }
 
-// TestKeepDispatchesNotificationBeforeAcknowledgingIt verifies that keep
-// applies and dispatches a notification before advancing the version, then
-// acknowledges it.
-func TestKeepDispatchesNotificationBeforeAcknowledgingIt(t *testing.T) {
-	synctest.Test(t, func(t *testing.T) {
-
-		org := &Organization{ID: "K8mR3vP2xQ6a"}
-		ws := &Workspace{mu: &sync.Mutex{}, organization: org, consentPurposes: map[string]*ConsentPurpose{}}
-		state := &State{changing: &sync.RWMutex{}, workspaces: map[string]*Workspace{"6NpT4zB8QaR2": ws}}
-		state.version.next = sync.Cond{L: &state.version.RWMutex}
-		state.version.current = 7
-		state.close.ctx, state.close.cancel = context.WithCancel(t.Context())
-		defer state.close.cancel()
-		calls := 0
-		ack := make(chan struct{})
-		state.listeners = []any{func(e AddConsentPurpose) {
-			calls++
-			if got := state.Version(); got != 7 {
-				t.Errorf("expected version 7 during dispatch, got %d", got)
-			}
-			if e.Name != "Marketing" {
-				t.Errorf("expected Marketing during dispatch, got %q", e.Name)
-			}
-			purpose := ws.consentPurposes[e.ID]
-			if purpose == nil || purpose.Name != e.Name {
-				t.Errorf("expected applied consent purpose during dispatch, got %#v", purpose)
-			}
-		}}
-		ch := make(chan notification, 1)
-		state.notifications.ch = ch
-		ch <- notification{8, "AddConsentPurpose", `{"Workspace":"6NpT4zB8QaR2","ID":"D7hV4xK9mP2a","Name":"Marketing"}`}
-		state.notifications.acks.Store(8, ack)
-
-		state.close.Add(1)
-		go state.keep()
-		// The unbuffered ACK send blocks the keeper until we receive it, so
-		// dispatch and version advancement must already be complete.
-		synctest.Wait()
-		if calls != 1 {
-			t.Errorf("expected notification to be dispatched before acknowledgement, got %d dispatches", calls)
-		}
-		if state.Version() != 8 {
-			t.Errorf("expected version 8 before acknowledgement, got %d", state.Version())
-		}
-		select {
-		case <-ack:
-		default:
-			t.Fatal("expected notification acknowledgement, got none")
-		}
-		state.close.cancel()
-		state.close.Wait()
-		if calls != 1 || state.Version() != 8 {
-			t.Fatalf("expected one dispatch and version 8, got %d and %d", calls, state.Version())
-		}
-		purpose := ws.consentPurposes["D7hV4xK9mP2a"]
-		if purpose == nil || purpose.Name != "Marketing" {
-			t.Fatalf("expected Marketing consent purpose, got %#v", purpose)
-		}
-
-	})
-}
-
-// TestKeepPanicsOnInvalidNotificationPayload verifies that keep panics on
-// invalid payloads without applying the notification, dispatching it to
-// listeners, advancing the version, or acknowledging it.
-func TestKeepPanicsOnInvalidNotificationPayload(t *testing.T) {
+// TestApplyPanicsOnInvalidNotificationPayload verifies that invalid payloads
+// panic without application, dispatch, version advancement or acknowledgement.
+func TestApplyPanicsOnInvalidNotificationPayload(t *testing.T) {
 	for _, test := range []struct {
 		name    string
 		payload string
@@ -272,29 +332,16 @@ func TestKeepPanicsOnInvalidNotificationPayload(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
-
-				ws := &Workspace{mu: &sync.Mutex{}, organization: &Organization{ID: "K8mR3vP2xQ6a"}, consentPurposes: map[string]*ConsentPurpose{}}
-				state := &State{changing: &sync.RWMutex{}, workspaces: map[string]*Workspace{"6NpT4zB8QaR2": ws}}
+				ws := &Workspace{mu: &sync.Mutex{}, ID: stateTestWorkspaceID, organization: &Organization{ID: stateTestOrganizationID}, consentPurposes: map[string]*ConsentPurpose{}}
+				state := &State{changing: &sync.RWMutex{}, workspaces: map[string]*Workspace{stateTestWorkspaceID: ws}}
 				state.version.next = sync.Cond{L: &state.version.RWMutex}
 				state.version.current = 7
-				state.close.ctx, state.close.cancel = context.WithCancel(t.Context())
-				defer state.close.cancel()
 				listenerCalls := 0
 				state.listeners = []any{func(AddConsentPurpose) { listenerCalls++ }}
-				ch := make(chan notification, 1)
-				state.notifications.ch = ch
-				ch <- notification{Version: 8, Name: "AddConsentPurpose", Payload: test.payload}
-				// Use a buffered ACK channel so the test can detect an unexpected acknowledgement without blocking the keeper.
+				// Use a buffered ACK channel so the test can detect an unexpected acknowledgement without blocking application.
 				ack := make(chan struct{}, 1)
 				state.notifications.acks.Store(8, ack)
-
-				// Let an incorrectly continued keeper exit instead of hanging the test.
-				go func() {
-					synctest.Wait()
-					state.close.cancel()
-				}()
 				defer func() {
-
 					got := recover()
 					message, ok := got.(string)
 					const expected = "invalid notification payload AddConsentPurpose (version 8)"
@@ -314,12 +361,8 @@ func TestKeepPanicsOnInvalidNotificationPayload(t *testing.T) {
 					if len(ack) != 0 {
 						t.Fatalf("expected no acknowledgment, got %d", len(ack))
 					}
-
 				}()
-
-				state.close.Add(1)
-				state.keep()
-
+				_ = state.applyNotification(notification{Version: 8, Name: "AddConsentPurpose", Payload: test.payload}, nil)
 			})
 		})
 	}
@@ -352,8 +395,8 @@ func TestPipelineNotificationFilterDecoding(t *testing.T) {
 
 				format := &Connector{Code: "format"}
 				updatedFormat := &Connector{Code: "updated-format"}
-				org := &Organization{mu: &sync.Mutex{}, ID: "K8mR3vP2xQ6a", usage: newOrganizationUsage(OrganizationLimits{})}
-				connection := &Connection{mu: &sync.Mutex{}, ID: "V2qH7mA4rN9x", organization: org, pipelines: map[string]*Pipeline{}}
+				org := &Organization{mu: &sync.Mutex{}, ID: stateTestOrganizationID, usage: newOrganizationUsage(OrganizationLimits{})}
+				connection := &Connection{mu: &sync.Mutex{}, ID: stateTestConnectionID, organization: org, pipelines: map[string]*Pipeline{}}
 				state := &State{
 					mu: &sync.Mutex{}, connections: map[string]*Connection{connection.ID: connection},
 					pipelines: map[string]*Pipeline{}, connectors: map[string]*Connector{format.Code: format, updatedFormat.Code: updatedFormat},
@@ -365,13 +408,13 @@ func TestPipelineNotificationFilterDecoding(t *testing.T) {
 				}
 				schema := types.Object([]types.Property{{Name: "name", Type: types.String()}})
 				var event any = CreatePipeline{
-					ID: "B9xK3mQ7vA2r", Connection: connection.ID, Name: "changed", InSchema: schema, Filter: []byte(filter.payload), Format: updatedFormat.Code,
+					ID: stateTestPipelineID, Connection: connection.ID, Name: "changed", InSchema: schema, Filter: []byte(filter.payload), Format: updatedFormat.Code,
 				}
 				name := "CreatePipeline"
 				apply := state.createPipeline
 				if operation == "update" {
 					pipeline := &Pipeline{
-						mu: &sync.Mutex{}, ID: "B9xK3mQ7vA2r", Name: "original", connection: connection, organization: org,
+						mu: &sync.Mutex{}, ID: stateTestPipelineID, Name: "original", connection: connection, organization: org,
 						format: format, propertiesToUnset: []string{"original"}, Query: "original", FormatSettings: json.Value(`{"original":true}`),
 						InSchema: types.Object([]types.Property{
 							{Name: "name", Type: types.String()},
@@ -401,7 +444,7 @@ func TestPipelineNotificationFilterDecoding(t *testing.T) {
 					connectorUsage := maps.Clone(org.usage.connectorUsage)
 					var originalPipeline []byte
 					var originalFormat *Connector
-					if pipeline := state.pipelines["B9xK3mQ7vA2r"]; pipeline != nil {
+					if pipeline := state.pipelines[stateTestPipelineID]; pipeline != nil {
 						originalFormat = pipeline.format
 						originalPipeline = pipelineUpdateSnapshot(t, pipeline)
 					}
@@ -415,7 +458,7 @@ func TestPipelineNotificationFilterDecoding(t *testing.T) {
 						if !maps.Equal(pipelines, state.pipelines) || !maps.Equal(connectionPipelines, connection.pipelines) || counts != org.usage.counts || !maps.Equal(connectorUsage, org.usage.connectorUsage) || createCalls != 0 || updateCalls != 0 {
 							t.Fatal("expected unchanged indexes, usage and listeners, got mutation or dispatch")
 						}
-						if pipeline := state.pipelines["B9xK3mQ7vA2r"]; pipeline != nil {
+						if pipeline := state.pipelines[stateTestPipelineID]; pipeline != nil {
 							encodedPipeline := pipelineUpdateSnapshot(t, pipeline)
 							if pipeline.format != originalFormat || !bytes.Equal(encodedPipeline, originalPipeline) {
 								t.Fatal("expected unchanged pipeline fields, got mutation")
@@ -429,7 +472,7 @@ func TestPipelineNotificationFilterDecoding(t *testing.T) {
 				}
 
 				organization := apply(notification{8, name, string(payload)})
-				pipeline := state.pipelines["B9xK3mQ7vA2r"]
+				pipeline := state.pipelines[stateTestPipelineID]
 				if pipeline == nil {
 					t.Fatal("expected pipeline to exist, got nil")
 				}

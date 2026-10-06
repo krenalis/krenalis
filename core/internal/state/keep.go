@@ -23,168 +23,143 @@ import (
 
 const logNotifications = false // Set to true to enable logging of received notifications.
 
-// keep keeps the state updated and in sync with the database.
-// Bootstrap calls it synchronously until the replay channel closes; runtime
-// calls it in its own goroutine.
-func (state *State) keep() {
+// applyNotification applies and dispatches a reconstructed trusted event,
+// then publishes the event's version and acknowledges its transaction.
+// The caller is responsible for ordering and deduplication. This method takes
+// no context because applying an event must run to completion once started.
+// A panic leaves the State unusable.
+func (state *State) applyNotification(n notification, client analytics.Client) error {
 
-	// If sending statistics is enabled, initialize the Krenalis analytics client.
-	var client analytics.Client
-	if state.sendStats {
-		client, _ = analytics.NewWithConfig("eEC2uyWaJ1XmFNEq0dkH0a872GzZChUV", analytics.Config{
-			Endpoint: "https://telemetry.krenalis.com/v1/events",
-			Logger:   discardLogger{}, // comment this line to debug sending of analytics data.
-		})
-		defer func() {
-			err := client.Close()
-			if err != nil {
-				slog.Error("error while closing analytics.Client", "error", err)
-			}
-		}()
+	if logNotifications {
+		slog.Info("core/state: received notification", "version", n.Version, "name", n.Name, "payload", n.Payload)
 	}
 
-	defer state.close.Done()
-
-	done := state.close.ctx.Done()
-	notifications := state.notifications.ch
-
-	var n notification
-
-	for {
-		select {
-		case <-done:
-			return
-		case event, ok := <-notifications:
-			if !ok {
-				return
-			}
-			n = event
-		}
-		if logNotifications {
-			slog.Info("core/state: received notification", "version", n.Version, "name", n.Name, "payload", n.Payload)
-		}
-		var org string
-		state.changing.Lock()
-		// Multiple goroutines may read different parts of the state concurrently, but
-		// only this goroutine can write to it. Therefore, this goroutine can read the
-		// state without acquiring the corresponding locks.
-		switch n.Name {
-		case "AcceptInvitation":
-			org = state.acceptInvitation(n)
-		case "AddConsentPurpose":
-			org = state.addConsentPurpose(n)
-		case "AddMember":
-			org = state.addMember(n)
-		case "CreateAccessKey":
-			org = state.createAccessKey(n)
-		case "CreateConnection":
-			org = state.createConnection(n)
-		case "CreateOrganization":
-			org = state.createOrganization(n)
-		case "CreatePipeline":
-			org = state.createPipeline(n)
-		case "CreateWorkspace":
-			org = state.createWorkspace(n)
-		case "CreateEventWriteKey":
-			org = state.createEventWriteKey(n)
-		case "DeleteAccessKey":
-			org = state.deleteAccessKey(n)
-		case "DeleteConnection":
-			org = state.deleteConnection(n)
-		case "DeleteConsentPurpose":
-			org = state.deleteConsentPurpose(n)
-		case "DeleteEventWriteKey":
-			org = state.deleteEventWriteKey(n)
-		case "DeleteMember":
-			org = state.deleteMember(n)
-		case "DeleteMembers":
-			org = state.deleteMembers(n)
-		case "DeleteOrganization":
-			org = state.deleteOrganization(n)
-		case "DeletePipeline":
-			org = state.deletePipeline(n)
-		case "DeleteWorkspace":
-			org = state.deleteWorkspace(n)
-		case "ElectLeader":
-			state.electLeader(n)
-		case "EndAlterProfileSchema":
-			org = state.endAlterProfileSchema(n)
-		case "EndIdentityResolution":
-			org = state.endIdentityResolution(n)
-		case "EndPipelineRun":
-			org = state.endPipelineRun(n)
-		case "InviteMember":
-			org = state.inviteMember(n)
-		case "LinkConnection":
-			org = state.linkConnection(n)
-		case "PurgePipelines":
-			org = state.purgePipelines(n)
-		case "RenameConnection":
-			org = state.renameConnection(n)
-		case "RenameWorkspace":
-			org = state.renameWorkspace(n)
-		case "RunPipeline":
-			org = state.runPipeline(n)
-		case "SeeLeader":
-			state.seeLeader(n)
-		case "SetAccount":
-			org = state.setAccount(n)
-		case "SetConnectionSettings":
-			org = state.setConnectionSettings(n)
-		case "SetOrganizationStatus":
-			org = state.setOrganizationStatus(n)
-		case "SetPipelineFormatSettings":
-			org = state.setPipelineFormatSettings(n)
-		case "SetPipelineSchedulePeriod":
-			org = state.setPipelineSchedulePeriod(n)
-		case "SetPipelineStatus":
-			org = state.setPipelineStatus(n)
-		case "StartAlterProfileSchema":
-			org = state.startAlterProfileSchema(n)
-		case "StartIdentityResolution":
-			org = state.startIdentityResolution(n)
-		case "UnlinkConnection":
-			org = state.unlinkConnection(n)
-		case "UpdateConnection":
-			org = state.updateConnection(n)
-		case "UpdateConsentPurpose":
-			org = state.updateConsentPurpose(n)
-		case "UpdateIdentityPropertiesToUnset":
-			org = state.updateIdentityPropertiesToUnset(n)
-		case "UpdateIdentityResolutionSettings":
-			org = state.updateIdentityResolutionSettings(n)
-		case "UpdateOrganization":
-			org = state.updateOrganization(n)
-		case "UpdatePipeline":
-			org = state.updatePipeline(n)
-		case "UpdateWarehouse":
-			org = state.updateWarehouse(n)
-		case "UpdateWarehouseMode":
-			org = state.updateWarehouseMode(n)
-		case "UpdateWorkspace":
-			org = state.updateWorkspace(n)
-		default:
-			slog.Warn("core/internal/state: unknown notification", "version", n.Version, "name", n.Name, "payload", n.Payload)
-		}
-		// Notify any goroutines waiting for a new version.
-		if n.Version > 0 {
-			state.version.Lock()
-			state.version.current = n.Version
-			state.version.next.Broadcast()
-			state.version.Unlock()
-		}
+	var org string
+	state.changing.Lock()
+	// Multiple goroutines may read different parts of the state concurrently, but
+	// only this goroutine can write to it. Therefore, this goroutine can read the
+	// state without acquiring the corresponding locks.
+	switch n.Name {
+	case "AcceptInvitation":
+		org = state.acceptInvitation(n)
+	case "AddConsentPurpose":
+		org = state.addConsentPurpose(n)
+	case "AddMember":
+		org = state.addMember(n)
+	case "CreateAccessKey":
+		org = state.createAccessKey(n)
+	case "CreateConnection":
+		org = state.createConnection(n)
+	case "CreateOrganization":
+		org = state.createOrganization(n)
+	case "CreatePipeline":
+		org = state.createPipeline(n)
+	case "CreateWorkspace":
+		org = state.createWorkspace(n)
+	case "CreateEventWriteKey":
+		org = state.createEventWriteKey(n)
+	case "DeleteAccessKey":
+		org = state.deleteAccessKey(n)
+	case "DeleteConnection":
+		org = state.deleteConnection(n)
+	case "DeleteConsentPurpose":
+		org = state.deleteConsentPurpose(n)
+	case "DeleteEventWriteKey":
+		org = state.deleteEventWriteKey(n)
+	case "DeleteMember":
+		org = state.deleteMember(n)
+	case "DeleteMembers":
+		org = state.deleteMembers(n)
+	case "DeleteOrganization":
+		org = state.deleteOrganization(n)
+	case "DeletePipeline":
+		org = state.deletePipeline(n)
+	case "DeleteWorkspace":
+		org = state.deleteWorkspace(n)
+	case "ElectLeader":
+		state.electLeader(n)
+	case "EndAlterProfileSchema":
+		org = state.endAlterProfileSchema(n)
+	case "EndIdentityResolution":
+		org = state.endIdentityResolution(n)
+	case "EndPipelineRun":
+		org = state.endPipelineRun(n)
+	case "InviteMember":
+		org = state.inviteMember(n)
+	case "LinkConnection":
+		org = state.linkConnection(n)
+	case "PurgePipelines":
+		org = state.purgePipelines(n)
+	case "RenameConnection":
+		org = state.renameConnection(n)
+	case "RenameWorkspace":
+		org = state.renameWorkspace(n)
+	case "RunPipeline":
+		org = state.runPipeline(n)
+	case "SeeLeader":
+		state.seeLeader(n)
+	case "SetAccount":
+		org = state.setAccount(n)
+	case "SetConnectionSettings":
+		org = state.setConnectionSettings(n)
+	case "SetOrganizationStatus":
+		org = state.setOrganizationStatus(n)
+	case "SetPipelineFormatSettings":
+		org = state.setPipelineFormatSettings(n)
+	case "SetPipelineSchedulePeriod":
+		org = state.setPipelineSchedulePeriod(n)
+	case "SetPipelineStatus":
+		org = state.setPipelineStatus(n)
+	case "StartAlterProfileSchema":
+		org = state.startAlterProfileSchema(n)
+	case "StartIdentityResolution":
+		org = state.startIdentityResolution(n)
+	case "UnlinkConnection":
+		org = state.unlinkConnection(n)
+	case "UpdateConnection":
+		org = state.updateConnection(n)
+	case "UpdateConsentPurpose":
+		org = state.updateConsentPurpose(n)
+	case "UpdateIdentityPropertiesToUnset":
+		org = state.updateIdentityPropertiesToUnset(n)
+	case "UpdateIdentityResolutionSettings":
+		org = state.updateIdentityResolutionSettings(n)
+	case "UpdateOrganization":
+		org = state.updateOrganization(n)
+	case "UpdatePipeline":
+		org = state.updatePipeline(n)
+	case "UpdateWarehouse":
+		org = state.updateWarehouse(n)
+	case "UpdateWarehouseMode":
+		org = state.updateWarehouseMode(n)
+	case "UpdateWorkspace":
+		org = state.updateWorkspace(n)
+	default:
 		state.changing.Unlock()
-		if n.Version > 0 {
-			// Acknowledge that the notification has been received.
-			if ack, ok := state.notifications.acks.LoadAndDelete(n.Version); ok {
-				ack.(chan struct{}) <- struct{}{}
-			}
-		}
-		if state.sendStats && org != "" {
-			state.sendNotificationStats(client, org, n)
+		return &replicationError{message: fmt.Sprintf("unknown notification (version %d)", n.Version)}
+	}
+
+	// Notify any goroutines waiting for a new version.
+	if n.Version > 0 {
+		state.version.Lock()
+		state.version.current = n.Version
+		state.version.next.Broadcast()
+		state.version.Unlock()
+	}
+
+	state.changing.Unlock()
+	if n.Version > 0 {
+		// Acknowledge that the notification has been received.
+		if ack, ok := state.notifications.acks.LoadAndDelete(n.Version); ok {
+			ack.(chan struct{}) <- struct{}{}
 		}
 	}
 
+	if client != nil && org != "" {
+		state.sendNotificationStats(client, org, n)
+	}
+
+	return nil
 }
 
 // decodeNotification decodes a trusted notification and panics if its payload

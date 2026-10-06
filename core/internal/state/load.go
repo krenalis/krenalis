@@ -722,7 +722,6 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 
 	state.notifications.key = notificationKey
-	state.notifications.nextVersion = version + 1
 
 	return nil
 }

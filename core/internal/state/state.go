@@ -104,7 +104,6 @@ type State struct {
 
 	notifications struct {
 		*notifier
-		ch   <-chan notification
 		acks sync.Map
 	}
 	listeners []any
@@ -154,9 +153,7 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 	state.platformBucket = state.rateLimiter.NewBucket("platform", "platform", requestLeaseSize, requestMaxUnits)
 
 	// Init the notifier.
-	ch := make(chan notification, 10)
-	state.notifications.notifier = newNotifier(db, ch)
-	state.notifications.ch = ch
+	state.notifications.notifier = newNotifier(db)
 
 	// Bootstrap owns the resources until they are transferred to the runtime.
 	started := false
@@ -177,9 +174,10 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 	if err != nil {
 		return nil, fmt.Errorf("cannot listen for state notifications: %w", err)
 	}
+	session := &notificationSession{conn: conn}
 	defer func() {
-		if conn != nil {
-			closeNotificationConnection(conn)
+		if session != nil {
+			session.close()
 		}
 	}()
 	err = state.load(ctx, credentials)
@@ -188,23 +186,7 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 	}
 
 	// Apply replayed notifications on this stack so application panics propagate.
-	replayCtx, cancelReplay := context.WithCancel(ctx)
-	replayed := make(chan struct{})
-	var replayErr error
-	go func() {
-		defer close(replayed)
-		defer close(ch)
-		replayErr = state.notifications.replay(replayCtx, conn)
-	}()
-	defer func() {
-		cancelReplay()
-		<-replayed
-	}()
-	state.close.Add(1)
-	state.keep()
-	<-replayed
-	err = replayErr
-	cancelReplay()
+	err = state.replay(ctx, session, 0, nil)
 	if err != nil {
 		return nil, fmt.Errorf("cannot replay state notifications: %w", err)
 	}
@@ -214,23 +196,13 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 		return nil, err
 	}
 
-	// Hand the dedicated connection to the runtime notifier and replace the replay channel.
-	ch = make(chan notification, 10)
-	state.notifications.ch = ch
-	state.notifications.notifier.ch = ch
-	runtimeConn := conn
-	conn = nil
-	state.close.Add(1)
-	go func() {
-		defer state.close.Done()
-		state.notifications.init(state.close.ctx, runtimeConn)
-	}()
-	started = true
-
-	// Start the runtime state loop, enabling statistics only after bootstrap.
+	// Hand the dedicated session to the single runtime worker.
+	runtimeSession := session
+	session = nil
 	state.sendStats = sendStats
 	state.close.Add(1)
-	go state.keep()
+	go state.keepNotifications(runtimeSession)
+	started = true
 
 	// Keep elections.
 	state.close.Add(1)
@@ -516,10 +488,10 @@ func (state *State) Transaction(ctx context.Context, f func(tx *db.Tx) (any, err
 		if ack == nil {
 			return
 		}
-		// Attempt to delete the ack channel.
+		// Remove the ack entry if it is still present.
 		if _, ok := state.notifications.acks.LoadAndDelete(version); !ok {
-			// If the keeper has already removed it, the notification was received.
-			// To prevent blocking the keeper, receive from the channel.
+			// applyNotification has already removed the entry. Receive the
+			// acknowledgment so its sender does not remain blocked.
 			<-ack
 		}
 	}()

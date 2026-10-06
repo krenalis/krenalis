@@ -471,7 +471,7 @@ func TestStateBootstrap(t *testing.T) {
 	t.Run("listen-effective", func(t *testing.T) {
 
 		database, _ := bootstrapDatabase(t, admin, opts, "listen_effective")
-		n := newNotifier(database, make(chan notification))
+		n := newNotifier(database)
 		conn, err := n.connect(t.Context())
 		if err != nil {
 			t.Fatalf("expected listening connection, got %v", err)
@@ -661,6 +661,20 @@ func TestStateBootstrap(t *testing.T) {
 					t.Fatalf("expected missing metadata fixture, got %v", err)
 				}
 			}
+			var pendingRowsBlocker *db.Conn
+			if scenario == "panic" {
+				var err error
+				pendingRowsBlocker, err = database.Conn(ctx)
+				if err != nil {
+					t.Fatalf("expected pending rows lock owner, got %v", err)
+				}
+				defer closeNotificationConnection(pendingRowsBlocker)
+				_, err = pendingRowsBlocker.Exec(ctx, "SELECT pg_advisory_lock(45)")
+				if err != nil {
+					t.Fatalf("expected pending rows barrier, got %v", err)
+				}
+			}
+
 			var validationDone atomic.Bool
 			validation := &bootstrapKMS{Kms: keyManager, decrypt: func(ctx context.Context, key []byte) ([]byte, error) {
 
@@ -683,9 +697,16 @@ func TestStateBootstrap(t *testing.T) {
 						}
 						query := "DROP TABLE notifications"
 						if scenario == "panic" {
-							// More events than the channel capacity force cleanup to
-							// cancel a reader that cannot finish after the first panic.
-							query = `INSERT INTO notifications (version, name, payload) SELECT version, 'AddMember', '[]'::jsonb FROM generate_series(1, 32) AS version`
+							// The first row flushes to the client; the following row
+							// cannot drain until the test releases its advisory lock.
+							query = `
+								INSERT INTO notifications (version, name, payload)
+								SELECT version, 'AddMember', jsonb_build_array(repeat('x', 32768)) FROM generate_series(1, 32) AS version;
+								ALTER TABLE notifications RENAME TO panic_log;
+								CREATE FUNCTION panic_payload(v bigint, p jsonb) RETURNS jsonb LANGUAGE plpgsql STABLE COST 1000000 AS $$
+								BEGIN IF v > 1 THEN PERFORM pg_advisory_xact_lock(45); END IF; RETURN p; END $$;
+								CREATE VIEW notifications AS SELECT version, name, panic_payload(version, payload) AS payload FROM panic_log;
+							`
 						}
 						_, err = tx.Exec(ctx, query)
 						return err
@@ -751,7 +772,11 @@ func TestStateBootstrap(t *testing.T) {
 			if scenario != "acquire" && scenario != "snapshot" && !validationDone.Load() {
 				t.Error("expected completed key validation, got pending validation")
 			}
-			checkBootstrapConnectionsReleased(t, database, opts.MaxConnections)
+			capacity := opts.MaxConnections
+			if pendingRowsBlocker != nil {
+				capacity--
+			}
+			checkBootstrapConnectionsReleased(t, database, capacity)
 			if got := bootstrapWorkers(); !reflect.DeepEqual(got, before) {
 				t.Errorf("expected bootstrap workers %v, got %v", before, got)
 			}
@@ -817,8 +842,8 @@ func bootstrapWorkers() map[string]int {
 	counts := map[string]int{}
 	for _, worker := range []string{
 		"/cipher.newCache.func1", "/ratelimiter.(*Limiter).runRefiller", "/ratelimiter.(*Limiter).runRestorer",
-		"/ratelimiter.(*Limiter).runCompactor", "/state.(*State).keep(", "/state.(*State).keepElections(",
-		"/state.(*notifier).init(", "/state.(*notifier).replay(", "/analytics-go.(*client).loop(",
+		"/ratelimiter.(*Limiter).runCompactor", "/state.(*State).keepNotifications(", "/state.(*State).keepElections(",
+		"/state.(*State).runNotifications(", "/state.(*State).replay(", "/analytics-go.(*client).loop(",
 	} {
 		counts[worker] = strings.Count(string(stack), worker)
 	}
