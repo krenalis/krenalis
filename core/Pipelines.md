@@ -22,7 +22,7 @@ A constant transformation reads no input property, so its output depends only on
 | Destination / Database / User     | Batch       | Yes                          | Required                              | Not allowed             |
 | Destination / FileStorage / User  | Batch       | Yes                          | Not supported                         | —                       |
 
-For Destination / Application / Event, the transformation is not supported if the event type has no schema, because there is no output schema. If the event type has a schema, the transformation is optional, unless the schema has properties required for creation: the output schema must include them, so the transformation is required.
+For Destination / Application / Event, the transformation is not supported if the event type has no schema, because there is no output schema. If the event type has a schema, the transformation is optional, unless the schema has properties required for creation: the output schema must include them, so the transformation is required. The core does not enforce this yet; see issue [#2600](https://github.com/krenalis/krenalis/issues/2600).
 
 ### Schemas
 
@@ -86,7 +86,7 @@ Source / SDK or Webhook / Event and Destination / FileStorage / User have no out
 | Source / SDK or Webhook / User    | No             | No                                | No                                                     | —                                   | No            | Profile consent location |
 | Source / SDK or Webhook / Event   | No             | No                                | No                                                     | —                                   | No            | Event consent location   |
 | Destination / Application / User  | No             | No                                | No                                                     | Export mode and matching properties | No            | Profile consent location |
-| Destination / Application / Event | No             | No                                | No                                                     | —                                   | No            | Event consent location   |
+| Destination / Application / Event | No             | No                                | No                                                     | Event type                          | No            | Event consent location   |
 | Destination / Database / User     | No             | No                                | No                                                     | Table name and table key            | No            | Profile consent location |
 | Destination / FileStorage / User  | No             | No                                | No                                                     | Order by property path              | see below     | Profile consent location |
 
