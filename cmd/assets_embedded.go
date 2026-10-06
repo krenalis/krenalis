@@ -36,6 +36,7 @@ var contentType = map[string]string{
 	".css": "text/css",
 	".js":  "application/x-javascript",
 	".map": "application/json",
+	".png": "image/png",
 	".ttf": "font/ttf",
 }
 
@@ -44,6 +45,7 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if after, ok := strings.CutPrefix(r.URL.Path, "/admin/src/"); ok {
 		switch after {
 		case
+			"favicon.png",
 			"index.css",
 			"index.css.map",
 			"index.js",

@@ -149,6 +149,12 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w = brotliResponseWriter{bw, w}
 	}
 	if strings.HasPrefix(r.URL.Path, "/admin/src/") {
+		// Serve the favicon.
+		if r.URL.Path == "/admin/src/favicon.png" {
+			w.Header().Set("Content-Type", "image/png")
+			http.ServeFile(w, r, filepath.Join(moduleRoot, "admin", "public", "favicon.png"))
+			return
+		}
 		// Serve Shoelace icons.
 		if icon, ok := strings.CutPrefix(r.URL.Path, "/admin/src/shoelace/dist/assets/icons/"); ok {
 			w.Header().Set("Content-Type", "image/svg+xml")
