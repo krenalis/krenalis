@@ -164,11 +164,9 @@ const pipelinesUpgrade = `
 // pipeline metrics, runs, and errors. Released step indices 3, 4, and 5 become
 // 5, 6, and 8. As no consent was required before, the EventConsent and
 // ImportProfileConsent steps pass whatever reached them in the pipelines that
-// count them, and no step fails. For event-based imports, whose transformation
-// is optional, what reached ImportProfileConsent is what passed the filter and
-// was not discarded by the transformation or the output validation. As
-// PostgreSQL can only append columns, it recreates the columns following
-// passed_5, as declared in schema.sql, and then restores their values.
+// count them, and no step fails. As PostgreSQL can only append columns, it
+// recreates the columns following passed_5, as declared in schema.sql, and
+// then restores their values.
 const pipelineMetricStepsUpgrade = `
 	DO $$
 	BEGIN
@@ -197,20 +195,41 @@ const pipelineMetricStepsUpgrade = `
 			ADD COLUMN failed_6 integer NOT NULL DEFAULT 0,
 			ADD COLUMN failed_7 integer NOT NULL DEFAULT 0,
 			ADD COLUMN failed_8 integer NOT NULL DEFAULT 0;
+		-- Event-based imports write the records without a transformation as soon
+		-- as they pass the filter, without counting them, and transform the
+		-- others asynchronously, possibly in a later timeslot. Up to a timeslot,
+		-- the untransformed records cannot exceed the records that passed the
+		-- filter minus those that entered the transformation, up to that or any
+		-- later timeslot, and the smallest of these differences is used.
+		CREATE TEMP TABLE pipelines_metrics_untransformed ON COMMIT DROP AS
+		SELECT pipeline, timeslot,
+			total - COALESCE(LAG(total) OVER (PARTITION BY pipeline ORDER BY timeslot), 0) AS untransformed
+		FROM (
+			SELECT pipeline, timeslot,
+				GREATEST(MIN(difference) OVER (PARTITION BY pipeline ORDER BY timeslot DESC), 0) AS total
+			FROM (
+				SELECT b.pipeline, b.timeslot,
+					SUM(b.passed_2::bigint - b.passed_3 - b.failed_3) OVER (PARTITION BY b.pipeline ORDER BY b.timeslot)
+						AS difference
+				FROM pg_temp.pipelines_metrics_upgrade b
+				JOIN connections c ON c.id = b.connection
+				WHERE b.target = 'User' AND c.role = 'Source' AND c.connector IN ('android', 'dotnet', 'go', 'ios',
+					'java', 'javascript', 'nodejs', 'python', 'rudderstack', 'segment', 'webhook')
+			) AS d
+		) AS t;
 		UPDATE pipelines_metrics m SET
 			passed_3 = CASE WHEN b.target = 'Event' THEN b.passed_2 ELSE 0 END,
 			passed_4 = 0, passed_5 = b.passed_3, passed_6 = b.passed_4,
 			passed_7 = CASE
 				WHEN b.target <> 'User' OR c.role IS DISTINCT FROM 'Source' THEN 0
-				WHEN c.connector IN ('android', 'dotnet', 'go', 'ios', 'java', 'javascript', 'nodejs', 'python',
-					'rudderstack', 'segment', 'webhook') THEN GREATEST(b.passed_2::bigint - b.failed_3 - b.failed_4, 0)
-				ELSE b.passed_4
+				ELSE b.passed_4 + COALESCE(u.untransformed, 0)
 			END,
 			passed_8 = b.passed_5,
 			failed_0 = b.failed_0, failed_1 = b.failed_1, failed_2 = b.failed_2,
 			failed_5 = b.failed_3, failed_6 = b.failed_4, failed_8 = b.failed_5
 		FROM pg_temp.pipelines_metrics_upgrade b
 		LEFT JOIN connections c ON c.id = b.connection
+		LEFT JOIN pg_temp.pipelines_metrics_untransformed u ON u.pipeline = b.pipeline AND u.timeslot = b.timeslot
 		WHERE m.pipeline = b.pipeline AND m.timeslot = b.timeslot;
 		ALTER TABLE pipelines_metrics
 			ALTER COLUMN passed_6 DROP DEFAULT,
