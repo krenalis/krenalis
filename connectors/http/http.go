@@ -82,7 +82,7 @@ func (h *HTTP) AbsolutePath(ctx context.Context, name string) (string, error) {
 		if c == '#' || (!parsingQuery && (c < ' ' || c == 0x7f)) {
 			return "", connectors.InvalidPathErrorf("path cannot contains “#“, and control characters")
 		}
-		if c == '%' && (i+2 < len(name) || !ishex(name[i+1]) || !ishex(name[i+2])) {
+		if c == '%' && (i+2 >= len(name) || !ishex(name[i+1]) || !ishex(name[i+2])) {
 			return "", connectors.InvalidPathErrorf("path contains an invalid escape sequence")
 		}
 		if c == '?' && !parsingQuery {
@@ -99,10 +99,15 @@ func (h *HTTP) AbsolutePath(ctx context.Context, name string) (string, error) {
 	if s.Port != 443 {
 		host = net.JoinHostPort(host, strconv.Itoa(s.Port))
 	}
+	unescapedPath, err := url.PathUnescape(path)
+	if err != nil {
+		return "", connectors.InvalidPathErrorf("path contains an invalid escape sequence")
+	}
 	u := url.URL{
 		Scheme:   "https",
 		Host:     host,
-		Path:     path,
+		Path:     unescapedPath,
+		RawPath:  path,
 		RawQuery: query,
 	}
 	return u.String(), nil
