@@ -8,16 +8,18 @@ Batch pipelines can be scheduled; event-based pipelines run when events are rece
 
 When a pipeline supports a transformation, it can be either a mapping or a function.
 
+A constant transformation reads no input property, so its output depends only on constant values.
+
 | Pipeline                            | Execution   | Filter                       | Transformation                                         | Constant transformation |
 |-------------------------------------|-------------|------------------------------|--------------------------------------------------------|-------------------------|
-| Source / Application / User         | Batch       | Yes                          | Required                                               | No                      |
-| Source / Database / User            | Batch       | No (the query filters users) | Required                                               | No                      |
-| Source / FileStorage / User         | Batch       | Yes                          | Required                                               | No                      |
-| Source / SDK / User                 | Event-based | Yes                          | Optional                                               | Yes                     |
+| Source / Application / User         | Batch       | Yes                          | Required                                               | Not allowed             |
+| Source / Database / User            | Batch       | No (the query filters users) | Required                                               | Not allowed             |
+| Source / FileStorage / User         | Batch       | Yes                          | Required                                               | Not allowed             |
+| Source / SDK / User                 | Event-based | Yes                          | Optional                                               | Allowed                 |
 | Source / SDK / Event                | Event-based | Yes                          | Not supported                                          | —                       |
-| Destination / Application / User    | Batch       | Yes                          | Required                                               | No                      |
-| Destination / Application / Event   | Event-based | Yes                          | Optional, only if the event type has a schema          | Yes                     |
-| Destination / Database / User       | Batch       | Yes                          | Required                                               | No                      |
+| Destination / Application / User    | Batch       | Yes                          | Required                                               | Not allowed             |
+| Destination / Application / Event   | Event-based | Yes                          | Optional, only if the event type has a schema          | Allowed                 |
+| Destination / Database / User       | Batch       | Yes                          | Required                                               | Not allowed             |
 | Destination / FileStorage / User    | Batch       | Yes                          | Not supported                                          | —                       |
 
 ### Schemas
