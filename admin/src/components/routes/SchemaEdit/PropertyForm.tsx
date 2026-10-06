@@ -5,8 +5,8 @@ import SlCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlRadioButton from '@shoelace-style/shoelace/dist/react/radio-button/index.js';
-import SlRadioGroup from '@shoelace-style/shoelace/dist/react/radio-group/index.js';
+import SlRadio from '@awesome.me/webawesome/dist/react/radio/index.js';
+import SlRadioGroup from '@awesome.me/webawesome/dist/react/radio-group/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlTextarea from '@awesome.me/webawesome/dist/react/textarea/index.js';
 import AppContext from '../../../context/AppContext';
@@ -604,12 +604,17 @@ const PropertyForm = ({
 						<SlRadioGroup
 							className='property-form__integer-sign'
 							label='Sign'
-							size='small'
+							orientation='horizontal'
+							size='s'
 							value={valueType.unsigned ? 'unsigned' : 'signed'}
-							onSlChange={onUnsignedChange}
+							onChange={onUnsignedChange}
 						>
-							<SlRadioButton value='signed'>signed</SlRadioButton>
-							<SlRadioButton value='unsigned'>unsigned</SlRadioButton>
+							<SlRadio appearance='button' value='signed'>
+								signed
+							</SlRadio>
+							<SlRadio appearance='button' value='unsigned'>
+								unsigned
+							</SlRadio>
 						</SlRadioGroup>
 					)}
 					<SlSelect

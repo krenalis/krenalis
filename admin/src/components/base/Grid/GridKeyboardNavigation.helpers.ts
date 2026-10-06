@@ -12,8 +12,6 @@ const gridKeyboardControlSelector = [
 	'sl-menu-item',
 	'sl-option',
 	'wa-radio',
-	'sl-radio-button',
-	'sl-radio-group',
 	'wa-radio-group',
 	'sl-range',
 	'sl-select',
