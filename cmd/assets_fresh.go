@@ -92,7 +92,7 @@ func newAssetsHandler(_ fs.FS) (h *assetsHandler, err error) {
 	external := []string{"monaco-editor"}
 	h.watchers.index, err = watchAndBuild(entryPoint, outDir, external)
 	if err != nil {
-		return nil, fmt.Errorf("cannot bundle Admin cosnole: %w", err)
+		return nil, fmt.Errorf("cannot bundle Admin console: %w", err)
 	}
 
 	// Build Monaco editor and its workers.
@@ -274,7 +274,7 @@ func watchAndBuild(entryPoint, outDir string, external []string) (esbuild.BuildC
 		for _, msg := range ctxErr.Errors {
 			b.WriteString(fmt.Sprint(msg))
 		}
-		return nil, fmt.Errorf("cannot make esbuild contex: %s", b.String())
+		return nil, fmt.Errorf("cannot make esbuild context: %s", b.String())
 	}
 	err := buildContext.Watch(esbuild.WatchOptions{})
 	if err != nil {
