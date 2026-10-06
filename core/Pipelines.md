@@ -26,7 +26,7 @@ For Destination / Application / Event, the transformation is not supported if th
 
 ### Schemas
 
-| Pipeline                          | Input schema in UI        | Output schema in UI                                | Input schema properties in state                                                 | Output schema properties in state                   |
+| Pipeline                          | Input schema in Admin     | Output schema in Admin                             | Input schema properties in state                                                 | Output schema properties in state                   |
 |-----------------------------------|---------------------------|----------------------------------------------------|----------------------------------------------------------------------------------|-----------------------------------------------------|
 | Source / Application / User       | Application user (source) | User                                               | Filter properties + transformed properties                                       | Transformed properties                              |
 | Source / Database / User          | Query                     | User                                               | Transformed properties + user ID column + update time column                     | Transformed properties                              |
