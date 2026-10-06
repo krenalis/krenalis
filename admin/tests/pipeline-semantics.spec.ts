@@ -10,7 +10,6 @@ import {
 const matchingProperty = (type: Type, updateRequired = false): Property => ({
 	name: 'matching',
 	prefilled: '',
-	role: 'Both',
 	type,
 	createRequired: false,
 	updateRequired,

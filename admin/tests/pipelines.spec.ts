@@ -312,7 +312,6 @@ test.describe('Matching semantics', () => {
 			name,
 			type,
 			prefilled: '',
-			role: undefined,
 			createRequired: false,
 			updateRequired,
 			readOptional: false,
