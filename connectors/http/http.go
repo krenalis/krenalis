@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -99,15 +100,16 @@ func (h *HTTP) AbsolutePath(ctx context.Context, name string) (string, error) {
 	if s.Port != 443 {
 		host = net.JoinHostPort(host, strconv.Itoa(s.Port))
 	}
-	unescapedPath, err := url.PathUnescape(path)
-	if err != nil {
-		return "", connectors.InvalidPathErrorf("path contains an invalid escape sequence")
-	}
+	// Escape the path while preserving its escape sequences. Every "%" in path
+	// starts a valid escape sequence, so "%25" in the escaped path can only
+	// come from escaping a "%" and PathUnescape cannot fail.
+	rawPath := strings.ReplaceAll((&url.URL{Path: path}).EscapedPath(), "%25", "%")
+	unescapedPath, _ := url.PathUnescape(path)
 	u := url.URL{
 		Scheme:   "https",
 		Host:     host,
 		Path:     unescapedPath,
-		RawPath:  path,
+		RawPath:  rawPath,
 		RawQuery: query,
 	}
 	return u.String(), nil
