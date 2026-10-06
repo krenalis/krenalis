@@ -42,7 +42,7 @@ For Destination / Application / Event, the transformation is not supported if th
 
 "Schema of" tells what the input schema describes. When it describes events, the pipeline receives no input schema and uses the event schema, so these rules do not apply.
 
-In every other input schema, `Placeholder` must be empty and `CreateRequired` and `UpdateRequired` must be `false`. `ReadOptional` and `Nullable` must have these values, where "any" means that both `true` and `false` are allowed:
+In every other input schema, `Prefilled` must be empty and `CreateRequired` and `UpdateRequired` must be `false`. `ReadOptional` and `Nullable` must have these values, where "any" means that both `true` and `false` are allowed:
 
 | Pipeline                          | Schema of         | ReadOptional | Nullable |
 |-----------------------------------|-------------------|--------------|----------|
@@ -58,7 +58,7 @@ In every other input schema, `Placeholder` must be empty and `CreateRequired` an
 
 ### Output schema property fields
 
-"Schema of" tells what the output schema describes. In every output schema, `Placeholder` must be empty. The other fields must have these values, where "any" means that both `true` and `false` are allowed:
+"Schema of" tells what the output schema describes. In every output schema, `Prefilled` must be empty. The other fields must have these values, where "any" means that both `true` and `false` are allowed:
 
 | Pipeline                          | Schema of         | CreateRequired                                   | UpdateRequired | ReadOptional | Nullable                  |
 |-----------------------------------|-------------------|--------------------------------------------------|----------------|--------------|---------------------------|
