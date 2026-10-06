@@ -83,7 +83,7 @@ func Main(assets fs.FS) {
 		fatal(1, "the -upgrade-db flag cannot be combined with -init-db-if-empty or -init-docker-member")
 	}
 
-	if !upgradeDB && !devMode && assets != nil {
+	if !upgradeDB && embeddedAssets && assets != nil {
 		assets, _ = fs.Sub(assets, "admin/assets")
 		_, err := fs.Stat(assets, "index.html.br")
 		if err != nil {

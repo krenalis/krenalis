@@ -1,4 +1,4 @@
-//go:build dev
+//go:build freshadminassets
 
 // Copyright 2026 Open2b. All rights reserved.
 // Use of this source code is governed by an Elastic License 2.0
@@ -21,7 +21,7 @@ import (
 	esbuild "github.com/evanw/esbuild/pkg/api"
 )
 
-const devMode = true
+const embeddedAssets = false
 
 // moduleRoot is the root directory of the Go module.
 var moduleRoot string
