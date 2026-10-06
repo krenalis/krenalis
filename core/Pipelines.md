@@ -15,8 +15,8 @@ A constant transformation reads no input property, so its output depends only on
 | Source / Application / User       | Batch       | Yes                          | Required                              | Not allowed             |
 | Source / Database / User          | Batch       | No (the query filters users) | Required                              | Not allowed             |
 | Source / FileStorage / User       | Batch       | Yes                          | Required                              | Not allowed             |
-| Source / SDK / User               | Event-based | Yes                          | Optional                              | Allowed                 |
-| Source / SDK / Event              | Event-based | Yes                          | Not supported                         | —                       |
+| Source / SDK or Webhook / User    | Event-based | Yes                          | Optional                              | Allowed                 |
+| Source / SDK or Webhook / Event   | Event-based | Yes                          | Not supported                         | —                       |
 | Destination / Application / User  | Batch       | Yes                          | Required                              | Not allowed             |
 | Destination / Application / Event | Event-based | Yes                          | Depends on the event type (see below) | Allowed                 |
 | Destination / Database / User     | Batch       | Yes                          | Required                              | Not allowed             |
@@ -31,8 +31,8 @@ For Destination / Application / Event, the transformation is not supported if th
 | Source / Application / User       | Application user (source) | User                                               | Filter properties + transformed properties                                       | Transformed properties                              |
 | Source / Database / User          | Query                     | User                                               | Transformed properties + user ID column + update time column                     | Transformed properties                              |
 | Source / FileStorage / User       | File                      | User                                               | Filter properties + transformed properties + user ID column + update time column | Transformed properties                              |
-| Source / SDK / User               | Event                     | User                                               | Event schema properties                                                          | Transformed properties                              |
-| Source / SDK / Event              | (none)                    | (none)                                             | Event schema properties                                                          | (none)                                              |
+| Source / SDK or Webhook / User    | Event                     | User                                               | Event schema properties                                                          | Transformed properties                              |
+| Source / SDK or Webhook / Event   | (none)                    | (none)                                             | Event schema properties                                                          | (none)                                              |
 | Destination / Application / User  | User                      | Application user (destination)                     | Filter properties + transformed properties + internal matching property          | Transformed properties + external matching property |
 | Destination / Application / Event | Event                     | Event type (none, if the event type has no schema) | Event schema properties                                                          | Transformed properties                              |
 | Destination / Database / User     | User                      | Table                                              | Filter properties + transformed properties                                       | Transformed properties + table key                  |
@@ -48,13 +48,15 @@ In every other input schema, `Prefilled` must be empty and `CreateRequired` and 
 |-----------------------------------|-------------------|--------------|----------|
 | Source / Application / User       | Application users | any          | any      |
 | Source / Database / User          | Query results     | `false`      | any      |
-| Source / FileStorage / User       | File              | any          | any      |
-| Source / SDK / User               | Events            | —            | —        |
-| Source / SDK / Event              | Events            | —            | —        |
+| Source / FileStorage / User       | File              | see below    | any      |
+| Source / SDK or Webhook / User    | Events            | —            | —        |
+| Source / SDK or Webhook / Event   | Events            | —            | —        |
 | Destination / Application / User  | Profiles          | `true`       | `false`  |
 | Destination / Application / Event | Events            | —            | —        |
 | Destination / Database / User     | Profiles          | `true`       | `false`  |
 | Destination / FileStorage / User  | Profiles          | `true`       | `false`  |
+
+For Source / FileStorage / User, `ReadOptional` must be `false` for the user ID column, while both `true` and `false` are allowed for the other properties.
 
 ### Output schema property fields
 
@@ -65,14 +67,14 @@ In every other input schema, `Prefilled` must be empty and `CreateRequired` and 
 | Source / Application / User       | Profiles          | `false`                                          | `false`        | `true`       | `false`                                       |
 | Source / Database / User          | Profiles          | `false`                                          | `false`        | `true`       | `false`                                       |
 | Source / FileStorage / User       | Profiles          | `false`                                          | `false`        | `true`       | `false`                                       |
-| Source / SDK / User               | Profiles          | `false`                                          | `false`        | `true`       | `false`                                       |
+| Source / SDK or Webhook / User    | Profiles          | `false`                                          | `false`        | `true`       | `false`                                       |
 | Destination / Application / User  | Application users | any                                              | any            | see below    | any                                           |
 | Destination / Application / Event | Event type        | any                                              | `false`        | `false`      | any                                           |
 | Destination / Database / User     | Table             | `true` for the table key, `false` for the others | `false`        | `false`      | `false` for the table key, any for the others |
 
 For Destination / Application / User, `ReadOptional` must be `false`, except for the output matching property and the properties that contain it, where both `true` and `false` are allowed.
 
-Source / SDK / Event and Destination / FileStorage / User have no output schema.
+Source / SDK or Webhook / Event and Destination / FileStorage / User have no output schema.
 
 ### Additional settings
 
@@ -81,8 +83,8 @@ Source / SDK / Event and Destination / FileStorage / User have no output schema.
 | Source / Application / User       | No             | No                                | No                                                     | —                                   | No            | Profile consent location |
 | Source / Database / User          | Required       | Optional, required if incremental | Required for a `string` or `json` column, no otherwise | Query                               | No            | Profile consent location |
 | Source / FileStorage / User       | Required       | Optional, required if incremental | Required for a `string` or `json` column, no otherwise | —                                   | see below     | Profile consent location |
-| Source / SDK / User               | No             | No                                | No                                                     | —                                   | No            | Profile consent location |
-| Source / SDK / Event              | No             | No                                | No                                                     | —                                   | No            | Event consent location   |
+| Source / SDK or Webhook / User    | No             | No                                | No                                                     | —                                   | No            | Profile consent location |
+| Source / SDK or Webhook / Event   | No             | No                                | No                                                     | —                                   | No            | Event consent location   |
 | Destination / Application / User  | No             | No                                | No                                                     | Export mode and matching properties | No            | Profile consent location |
 | Destination / Application / Event | No             | No                                | No                                                     | —                                   | No            | Event consent location   |
 | Destination / Database / User     | No             | No                                | No                                                     | Table name and table key            | No            | Profile consent location |
@@ -99,8 +101,8 @@ Every pipeline has the `Receive` and `Finalize` steps. The other steps depend on
 | Source / Application / User       | ✓               | ✓      |              |                      | ✓              | ✓                | ✓                    |
 | Source / Database / User          | ✓               |        |              |                      | ✓              | ✓                | ✓                    |
 | Source / FileStorage / User       | ✓               | ✓      |              |                      | ✓              | ✓                | ✓                    |
-| Source / SDK / User               |                 | ✓      |              |                      | ✓              | ✓                | ✓                    |
-| Source / SDK / Event              |                 | ✓      | ✓            |                      |                |                  |                      |
+| Source / SDK or Webhook / User    |                 | ✓      |              |                      | ✓              | ✓                | ✓                    |
+| Source / SDK or Webhook / Event   |                 | ✓      | ✓            |                      |                |                  |                      |
 | Destination / Application / User  | ✓               |        |              | ✓                    | ✓              | ✓                |                      |
 | Destination / Application / Event |                 | ✓      | ✓            |                      | ✓              | ✓                |                      |
 | Destination / Database / User     | ✓               |        |              | ✓                    | ✓              | ✓                |                      |
