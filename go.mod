@@ -10,15 +10,15 @@ replace github.com/snowflakedb/gosnowflake/v2 => github.com/krenalis/gosnowflake
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.48.0
-	github.com/LumenResearch/uasurfer v0.3.0
-	github.com/andybalholm/brotli v1.2.2
+	github.com/LumenResearch/uasurfer v0.3.1
+	github.com/andybalholm/brotli v1.2.6
 	github.com/aws/aws-sdk-go-v2 v1.47.1
 	github.com/aws/aws-sdk-go-v2/config v1.33.6
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.6
-	github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager v0.4.11
+	github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager v0.4.12
 	github.com/aws/aws-sdk-go-v2/service/kms v1.61.1
 	github.com/aws/aws-sdk-go-v2/service/lambda v1.110.0
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.113.4
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.114.0
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.79.0
 	github.com/aws/smithy-go v1.28.2
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731
@@ -29,16 +29,16 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/go-cmp v0.7.0
 	github.com/gorilla/securecookie v1.1.2
-	github.com/itchyny/timefmt-go v0.1.8
+	github.com/itchyny/timefmt-go v0.1.9
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
-	github.com/klauspost/compress v1.20.0
+	github.com/klauspost/compress v1.20.1
 	github.com/krenalis/analytics-go v0.0.8
 	github.com/mark3labs/mcp-go v0.58.0
 	github.com/nats-io/nats.go v1.54.0
 	github.com/nats-io/nkeys v0.4.16
-	github.com/nyaruka/phonenumbers/v2 v2.0.12
-	github.com/oschwald/maxminddb-golang/v2 v2.6.0
+	github.com/nyaruka/phonenumbers/v2 v2.0.14
+	github.com/oschwald/maxminddb-golang/v2 v2.7.0
 	github.com/pkg/sftp v1.13.11
 	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/client_model v0.6.3

@@ -28,7 +28,7 @@ var (
 	_ Connection = (*Tx)(nil)
 )
 
-// ErrTxClosed is the error returned by the Tx.Rollback method if the
+// ErrTxClosed is the error returned by Tx.Commit and Tx.Rollback if the
 // transaction has already been closed.
 var ErrTxClosed = errors.New("transaction has already been closed")
 
@@ -39,6 +39,22 @@ type TxCommitRollbackError struct {
 
 func (err TxCommitRollbackError) Error() string {
 	return fmt.Sprintf("transaction rolled back during commit: %s", err.Err)
+}
+
+// IsolationLevel specifies a transaction's isolation level.
+type IsolationLevel int
+
+const (
+	LevelReadUncommitted IsolationLevel = iota + 1
+	LevelReadCommitted
+	LevelRepeatableRead
+	LevelSerializable
+)
+
+// TxOptions specifies the isolation level and access mode of a transaction.
+type TxOptions struct {
+	Isolation IsolationLevel
+	ReadOnly  bool
 }
 
 // Result is the result returned by a call to the Exec method.
@@ -132,11 +148,34 @@ func Open(opts *Options) (*DB, error) {
 	return &DB{db: conn}, nil
 }
 
-// Begin begins a new transaction with the READ COMMITTED isolation level.
+// Begin calls [DB.BeginTx] with TxOptions{Isolation: LevelReadCommitted}.
 // The provided context only affects the Begin method and does not propagate
 // to the entire transaction, unlike the behavior in the standard sql package.
 func (db *DB) Begin(ctx context.Context) (*Tx, error) {
-	tx, err := db.db.BeginTx(ctx, pgx.TxOptions{})
+	return db.BeginTx(ctx, TxOptions{Isolation: LevelReadCommitted})
+}
+
+// BeginTx begins a new transaction with the specified options.
+// The provided context only affects the BeginTx method and does not propagate
+// to the entire transaction, unlike the behavior in the standard sql package.
+func (db *DB) BeginTx(ctx context.Context, opts TxOptions) (*Tx, error) {
+	var pgxOpts pgx.TxOptions
+	switch opts.Isolation {
+	case LevelReadUncommitted:
+		pgxOpts.IsoLevel = pgx.ReadUncommitted
+	case LevelReadCommitted:
+		pgxOpts.IsoLevel = pgx.ReadCommitted
+	case LevelRepeatableRead:
+		pgxOpts.IsoLevel = pgx.RepeatableRead
+	case LevelSerializable:
+		pgxOpts.IsoLevel = pgx.Serializable
+	default:
+		return nil, fmt.Errorf("invalid isolation level: %d", opts.Isolation)
+	}
+	if opts.ReadOnly {
+		pgxOpts.AccessMode = pgx.ReadOnly
+	}
+	tx, err := db.db.BeginTx(ctx, pgxOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -287,13 +326,14 @@ func (db *DB) QueryScan(ctx context.Context, query string, args ...any) error {
 	return nil
 }
 
-// Transaction begins a new transaction and executes the provided function, f.
+// Transaction begins a new transaction with TxOptions{Isolation:
+// LevelReadCommitted} and executes the provided function, f.
 // If f completes without errors, the transaction is committed.
 // If f returns an error, the transaction is rolled back and the error is
 // returned.
 // If f panics, the transaction is rolled back and the panic is propagated.
 func (db *DB) Transaction(ctx context.Context, f func(tx *Tx) error) error {
-	pqTx, err := db.db.Begin(ctx)
+	pqTx, err := db.db.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
 	if err != nil {
 		return err
 	}
@@ -409,9 +449,8 @@ type Tx struct {
 // function provided to the Transaction method.
 //
 // If no error is returned, the transaction has been committed successfully.
-// If a TxRollbackError is returned, the commit resulted in a rollback.
-// If any other error occurs, the connection is closed and the error is
-// returned.
+// If a TxCommitRollbackError is returned, the commit resulted in a rollback.
+// If the transaction is already closed, it returns ErrTxClosed.
 func (tx *Tx) Commit(ctx context.Context) error {
 	if tx.wrapped {
 		return errors.New("commit called in a wrapped transaction")
@@ -421,7 +460,9 @@ func (tx *Tx) Commit(ctx context.Context) error {
 		if errors.Is(err, pgx.ErrTxCommitRollback) {
 			return TxCommitRollbackError{Err: err}
 		}
-		_ = tx.tx.Conn().Close(ctx)
+		if errors.Is(err, pgx.ErrTxClosed) {
+			return ErrTxClosed
+		}
 		return err
 	}
 	return nil
@@ -507,7 +548,6 @@ func (tx *Tx) Rollback(ctx context.Context) error {
 		if errors.Is(err, pgx.ErrTxClosed) {
 			return ErrTxClosed
 		}
-		_ = tx.tx.Conn().Close(ctx)
 		return err
 	}
 	return nil

@@ -268,7 +268,7 @@ var tools = []server.ServerTool{
 			if err != nil {
 				return nil, err
 			}
-			var info []any
+			info := []any{}
 			for _, c := range ws.Connections() {
 				info = append(info, map[string]any{
 					"id":             c.ID,

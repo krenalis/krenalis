@@ -31,6 +31,7 @@ func TestConvert(t *testing.T) {
 		{types.Int(32), types.String(), nil, nil, true, nil},
 		{types.String(), types.String(), "foo", "foo", true, nil},
 		{types.String(), types.String().WithValues("foo", "boo"), "", nil, true, nil},
+		{types.String(), types.String().WithValues("", "foo", "boo"), "", "", true, nil},
 		{types.String(), types.String().WithValues("foo", "boo"), "boo", "boo", true, nil},
 		{types.String(), types.String().WithPattern(regexp.MustCompile(`^bo+$`)), "", nil, true, nil},
 		{types.String(), types.String().WithPattern(regexp.MustCompile(`^bo+$`)), "boo", "boo", true, nil},
@@ -193,6 +194,8 @@ func TestConvert(t *testing.T) {
 		// json.
 		{types.Int(32), types.JSON(), nil, nil, true, nil},
 		{types.Int(32), types.JSON(), nil, json.Value(`null`), false, nil},
+		{types.Object([]types.Property{{Name: "foo", Type: types.String(), ReadOptional: true}}), types.JSON(), map[string]any{}, json.Value(`{}`), false, nil},
+		{types.Object([]types.Property{{Name: "foo", Type: types.String(), ReadOptional: true}}), types.JSON(), map[string]any{}, json.Value(`{}`), true, nil},
 		{types.JSON(), types.JSON(), json.Value(`{"foo":5}`), json.Value(`{"foo":5}`), true, nil},
 		{types.JSON(), types.JSON(), json.Value("null"), json.Value(`null`), true, nil},
 		{types.String(), types.JSON(), "", json.Value(`""`), false, nil},

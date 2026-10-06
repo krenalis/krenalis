@@ -3,7 +3,7 @@
 
 services:
   krenalis:
-    image: krenalis/krenalis:v0.43.0
+    image: krenalis/krenalis:v0.44.0
     command: -init-db-if-empty -init-docker-member
     restart: on-failure
     ports:
@@ -46,7 +46,7 @@ services:
         condition: service_healthy
 
   db:
-    image: postgres:18.4-alpine3.24
+    image: postgres:18.6-alpine3.24
     environment:
       POSTGRES_USER: krenalis
       POSTGRES_PASSWORD: krenalis
@@ -60,7 +60,7 @@ services:
       retries: 5
 
   warehouse:
-    image: postgres:18.4-alpine3.24
+    image: postgres:18.6-alpine3.24
     environment:
       POSTGRES_USER: warehouse
       POSTGRES_PASSWORD: warehouse

@@ -310,7 +310,7 @@ func (this *Connection) ApplicationUsers(ctx context.Context, schema types.Type,
 // of the created pipeline. target is the target of the pipeline and must be
 // supported by the connector of the connection.
 //
-// Refer to the specifications in the file "core/Pipelines.csv" for more
+// Refer to the specifications in the file "core/Pipelines.md" for more
 // details.
 //
 // It returns an errors.NotFoundError error if the connection does not exist
@@ -318,6 +318,9 @@ func (this *Connection) ApplicationUsers(ctx context.Context, schema types.Type,
 //
 //   - ConnectionNotExist, if the connection does not exist.
 //   - ConnectorsLimitReached, if the organization cannot have more connectors.
+//   - ConsentPurposeLocationNotSet, if a required consent purpose has no
+//     consent location for the target of the pipeline.
+//   - ConsentPurposeNotExist, if a required consent purpose does not exist.
 //   - EventTypeNotExist, if the event type does not exist for the connection.
 //   - FormatNotExist, if the format of the pipeline does not exist.
 //   - InvalidSettings, if the settings are not valid.
@@ -343,6 +346,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	}
 
 	c := this.connection
+	ws := c.Workspace()
 	connector := c.Connector()
 
 	// Validate the target.
@@ -544,7 +548,12 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		n.ID = generateID(this.connection.Pipeline)
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 			// Check the connector and pipeline limits.
-			if err := checkCreatePipelineLimits(ctx, tx, org.ID, n.Format); err != nil {
+			err := checkCreatePipelineLimits(ctx, tx, org.ID, n.Format)
+			if err != nil {
+				return nil, err
+			}
+			err = checkRequiredConsentPurposesTx(ctx, tx, ws.ID, "", n.Target, n.RequiredConsents.Purposes)
+			if err != nil {
 				return nil, err
 			}
 			switch n.Target {
@@ -569,18 +578,18 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 				}
 			}
 			query := "INSERT INTO pipelines (id, connection, target, event_type, ordering_group, delivery_endpoint,\n" +
-				"name, enabled, schedule_start, schedule_period, in_schema, out_schema, filter, required_consents,\n" +
-				"required_consents_operator, transformation_mapping, transformation_id, transformation_version,\n" +
+				"name, enabled, schedule_start, schedule_period, in_schema, out_schema, filter, required_consents_operator,\n" +
+				"required_consents_purposes, transformation_mapping, transformation_id, transformation_version,\n" +
 				"transformation_language, transformation_source, transformation_preserve_json, transformation_in_paths,\n" +
 				"transformation_out_paths, query, format, path, sheet, compression, order_by, format_settings,\n" +
 				"export_mode, matching_in, matching_out, update_on_duplicates, table_name, table_key,\n" +
 				"user_id_column, updated_at_column, updated_at_format, incremental)\n" +
 				"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,\n" +
 				"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40)"
-			_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
+			_, err = tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
 				n.OrderingGroup, n.DeliveryEndpoint, n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod,
 				rawInSchema, rawOutSchema,
-				n.Filter, n.RequiredConsents.Purposes, n.RequiredConsents.Operator, mapping, function.ID, function.Version,
+				n.Filter, n.RequiredConsents.Operator, n.RequiredConsents.Purposes, mapping, function.ID, function.Version,
 				function.Language, function.Source, function.PreserveJSON, n.Transformation.InPaths, n.Transformation.OutPaths,
 				n.Query, formatCode, n.Path, n.Sheet, n.Compression, n.OrderBy, n.FormatSettings, n.ExportMode, n.Matching.In,
 				n.Matching.Out, n.UpdateOnDuplicates, n.TableName, n.TableKey, n.UserIDColumn, n.UpdatedAtColumn,
@@ -914,8 +923,8 @@ type PipelineRun struct {
 	Pipeline  string     `json:"pipeline"`
 	StartTime time.Time  `json:"startTime"`
 	EndTime   *time.Time `json:"endTime"`
-	Passed    [7]int     `json:"passed"`
-	Failed    [7]int     `json:"failed"`
+	Passed    [9]int     `json:"passed"`
+	Failed    [9]int     `json:"failed"`
 	Error     string     `json:"error"`
 }
 
@@ -1317,7 +1326,7 @@ func (this *Connection) PipelineSchemas(ctx context.Context, target Target, even
 // TODO(Gianluca): this method is deprecated. See the issue
 // https://github.com/krenalis/krenalis/issues/1265.
 //
-// Refer to the specifications in the file "core/Pipelines.csv" for more
+// Refer to the specifications in the file "core/Pipelines.md" for more
 // details.
 func (this *Connection) PipelineTypes(ctx context.Context) ([]PipelineType, error) {
 	this.core.mustBeOpen()
@@ -2059,7 +2068,7 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 		return types.Type{}, errors.BadRequest("event type cannot be used with %s target", target)
 	}
 	// Perform a validation based on the connection's type and role (refer to
-	// the specifications in the file "core/Pipelines.csv" for more details).
+	// the specifications in the file "core/Pipelines.md" for more details).
 	c := this.connection
 	connector := c.Connector()
 	if target == TargetEvent {

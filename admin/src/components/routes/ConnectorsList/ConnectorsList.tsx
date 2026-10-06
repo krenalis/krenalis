@@ -1,6 +1,6 @@
 import React, { useState, useContext, useLayoutEffect, useMemo, useEffect } from 'react';
 import './ConnectorsList.css';
-import { Role } from '../../../lib/api/types/types';
+import { ConnectionRole } from '../../../lib/api/types/connection';
 import AppContext from '../../../context/AppContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
@@ -147,7 +147,7 @@ const ConnectorsList = () => {
 				redirectURI.hostname = '127.0.0.1';
 			}
 			try {
-				res = await api.connectors.authURL(c.code, connectionRole as Role, redirectURI.toString());
+				res = await api.connectors.authURL(c.code, connectionRole as ConnectionRole, redirectURI.toString());
 			} catch (err) {
 				handleError(err);
 				return;

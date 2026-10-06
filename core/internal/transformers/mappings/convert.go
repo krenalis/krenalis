@@ -173,13 +173,12 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 			return s, nil
 		}
 		if values := dt.Values(); values != nil {
-			if s == "" && nullable {
-				return nil, nil
+			if !slices.Contains(values, s) {
+				if s == "" && nullable {
+					return nil, nil
+				}
+				return v, errEnumConversion
 			}
-			if slices.Contains(values, s) {
-				return s, nil
-			}
-			return v, errEnumConversion
 		} else if re := dt.Pattern(); re != nil {
 			if !re.MatchString(s) {
 				if s == "" && nullable {
