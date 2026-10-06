@@ -76,6 +76,7 @@ func Main(assets fs.FS) {
 		flag.Usage()
 		fatal(1, "the -init-docker-member flag can be provided only when the -init-db-if-empty flag is provided")
 	}
+
 	if embeddedAssets && assets != nil {
 		assets, _ = fs.Sub(assets, "admin/assets")
 		_, err := fs.Stat(assets, "index.html.br")
@@ -97,6 +98,7 @@ func Main(assets fs.FS) {
 	if err != nil {
 		fatal(1, err.Error())
 	}
+
 	// Unset the Krenalis environment variables, except for those intended for
 	// connectors, which can be read by them at any time.
 	//
