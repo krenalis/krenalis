@@ -42,33 +42,33 @@ For Destination / Application / Event, the transformation is not supported if th
 
 "Schema of" tells what the input schema describes. When it describes events, the pipeline receives no input schema and uses the event schema, so these rules do not apply.
 
-In every other input schema, `Placeholder` must be empty and `CreateRequired` and `UpdateRequired` must be false. `ReadOptional` and `Nullable` must have these values, where "any" means that both true and false are allowed:
+In every other input schema, `Placeholder` must be empty and `CreateRequired` and `UpdateRequired` must be `false`. `ReadOptional` and `Nullable` must have these values, where "any" means that both `true` and `false` are allowed:
 
 | Pipeline                          | Schema of         | ReadOptional | Nullable |
 |-----------------------------------|-------------------|--------------|----------|
 | Source / Application / User       | Application users | any          | any      |
-| Source / Database / User          | Query results     | false        | any      |
+| Source / Database / User          | Query results     | `false`      | any      |
 | Source / FileStorage / User       | File              | any          | any      |
 | Source / SDK / User               | Events            | —            | —        |
 | Source / SDK / Event              | Events            | —            | —        |
-| Destination / Application / User  | Profiles          | true         | false    |
+| Destination / Application / User  | Profiles          | `true`       | `false`  |
 | Destination / Application / Event | Events            | —            | —        |
-| Destination / Database / User     | Profiles          | true         | false    |
-| Destination / FileStorage / User  | Profiles          | true         | false    |
+| Destination / Database / User     | Profiles          | `true`       | `false`  |
+| Destination / FileStorage / User  | Profiles          | `true`       | `false`  |
 
 ### Output schema property fields
 
-"Schema of" tells what the output schema describes. In every output schema, `Placeholder` must be empty. The other fields must have these values, where "any" means that both true and false are allowed:
+"Schema of" tells what the output schema describes. In every output schema, `Placeholder` must be empty. The other fields must have these values, where "any" means that both `true` and `false` are allowed:
 
-| Pipeline                          | Schema of         | CreateRequired                                 | UpdateRequired | ReadOptional | Nullable                  |
-|-----------------------------------|-------------------|------------------------------------------------|----------------|--------------|---------------------------|
-| Source / Application / User       | Profiles          | false                                          | false          | true         | false                     |
-| Source / Database / User          | Profiles          | false                                          | false          | true         | false                     |
-| Source / FileStorage / User       | Profiles          | false                                          | false          | true         | false                     |
-| Source / SDK / User               | Profiles          | false                                          | false          | true         | false                     |
-| Destination / Application / User  | Application users | any                                            | any            | false        | any                       |
-| Destination / Application / Event | Event type        | any                                            | false          | false        | any                       |
-| Destination / Database / User     | Table             | true for the table key, false for the others   | false          | false        | false for the table key   |
+| Pipeline                          | Schema of         | CreateRequired                                   | UpdateRequired | ReadOptional | Nullable                  |
+|-----------------------------------|-------------------|--------------------------------------------------|----------------|--------------|---------------------------|
+| Source / Application / User       | Profiles          | `false`                                          | `false`        | `true`       | `false`                   |
+| Source / Database / User          | Profiles          | `false`                                          | `false`        | `true`       | `false`                   |
+| Source / FileStorage / User       | Profiles          | `false`                                          | `false`        | `true`       | `false`                   |
+| Source / SDK / User               | Profiles          | `false`                                          | `false`        | `true`       | `false`                   |
+| Destination / Application / User  | Application users | any                                              | any            | `false`      | any                       |
+| Destination / Application / Event | Event type        | any                                              | `false`        | `false`      | any                       |
+| Destination / Database / User     | Table             | `true` for the table key, `false` for the others | `false`        | `false`      | `false` for the table key |
 
 Source / SDK / Event and Destination / FileStorage / User have no output schema.
 
