@@ -10,33 +10,33 @@ When a pipeline supports a transformation, it can be either a mapping or a funct
 
 A constant transformation reads no input property, so its output depends only on constant values.
 
-| Pipeline                            | Execution   | Filter                       | Transformation                                         | Constant transformation |
-|-------------------------------------|-------------|------------------------------|--------------------------------------------------------|-------------------------|
-| Source / Application / User         | Batch       | Yes                          | Required                                               | Not allowed             |
-| Source / Database / User            | Batch       | No (the query filters users) | Required                                               | Not allowed             |
-| Source / FileStorage / User         | Batch       | Yes                          | Required                                               | Not allowed             |
-| Source / SDK / User                 | Event-based | Yes                          | Optional                                               | Allowed                 |
-| Source / SDK / Event                | Event-based | Yes                          | Not supported                                          | —                       |
-| Destination / Application / User    | Batch       | Yes                          | Required                                               | Not allowed             |
-| Destination / Application / Event   | Event-based | Yes                          | Depends on the event type (see below)                  | Allowed                 |
-| Destination / Database / User       | Batch       | Yes                          | Required                                               | Not allowed             |
-| Destination / FileStorage / User    | Batch       | Yes                          | Not supported                                          | —                       |
+| Pipeline                          | Execution   | Filter                       | Transformation                        | Constant transformation |
+|-----------------------------------|-------------|------------------------------|---------------------------------------|-------------------------|
+| Source / Application / User       | Batch       | Yes                          | Required                              | Not allowed             |
+| Source / Database / User          | Batch       | No (the query filters users) | Required                              | Not allowed             |
+| Source / FileStorage / User       | Batch       | Yes                          | Required                              | Not allowed             |
+| Source / SDK / User               | Event-based | Yes                          | Optional                              | Allowed                 |
+| Source / SDK / Event              | Event-based | Yes                          | Not supported                         | —                       |
+| Destination / Application / User  | Batch       | Yes                          | Required                              | Not allowed             |
+| Destination / Application / Event | Event-based | Yes                          | Depends on the event type (see below) | Allowed                 |
+| Destination / Database / User     | Batch       | Yes                          | Required                              | Not allowed             |
+| Destination / FileStorage / User  | Batch       | Yes                          | Not supported                         | —                       |
 
 For Destination / Application / Event, the transformation is not supported if the event type has no schema, because there is no output schema. If the event type has a schema, the transformation is optional, unless the schema has properties required for creation: the output schema must include them, so the transformation is required.
 
 ### Schemas
 
-| Pipeline                          | Input schema in UI        | Output schema in UI                                  | Input schema properties in state                                                   | Output schema properties in state                     |
-|-----------------------------------|---------------------------|------------------------------------------------------|------------------------------------------------------------------------------------|-------------------------------------------------------|
-| Source / Application / User       | Application user (source) | User                                                 | Filter properties + transformed properties                                         | Transformed properties                                |
-| Source / Database / User          | Query                     | User                                                 | Transformed properties + user ID column + update time column                       | Transformed properties                                |
-| Source / FileStorage / User       | File                      | User                                                 | Filter properties + transformed properties + user ID column + update time column  | Transformed properties                                |
-| Source / SDK / User               | Event                     | User                                                 | Event schema properties                                                            | Transformed properties                                |
-| Source / SDK / Event              | (none)                    | (none)                                               | Event schema properties                                                            | (none)                                                |
-| Destination / Application / User  | User                      | Application user (destination)                       | Filter properties + transformed properties + internal matching property            | Transformed properties + external matching property   |
-| Destination / Application / Event | Event                     | Event type (none, if the event type has no schema)   | Event schema properties                                                            | Transformed properties                                |
-| Destination / Database / User     | User                      | Table                                                | Filter properties + transformed properties                                         | Transformed properties + table key                    |
-| Destination / FileStorage / User  | User                      | (none)                                               | Profile schema properties                                                          | (none)                                                |
+| Pipeline                          | Input schema in UI        | Output schema in UI                                | Input schema properties in state                                                 | Output schema properties in state                   |
+|-----------------------------------|---------------------------|----------------------------------------------------|----------------------------------------------------------------------------------|-----------------------------------------------------|
+| Source / Application / User       | Application user (source) | User                                               | Filter properties + transformed properties                                       | Transformed properties                              |
+| Source / Database / User          | Query                     | User                                               | Transformed properties + user ID column + update time column                     | Transformed properties                              |
+| Source / FileStorage / User       | File                      | User                                               | Filter properties + transformed properties + user ID column + update time column | Transformed properties                              |
+| Source / SDK / User               | Event                     | User                                               | Event schema properties                                                          | Transformed properties                              |
+| Source / SDK / Event              | (none)                    | (none)                                             | Event schema properties                                                          | (none)                                              |
+| Destination / Application / User  | User                      | Application user (destination)                     | Filter properties + transformed properties + internal matching property          | Transformed properties + external matching property |
+| Destination / Application / Event | Event                     | Event type (none, if the event type has no schema) | Event schema properties                                                          | Transformed properties                              |
+| Destination / Database / User     | User                      | Table                                              | Filter properties + transformed properties                                       | Transformed properties + table key                  |
+| Destination / FileStorage / User  | User                      | (none)                                             | Profile schema properties                                                        | (none)                                              |
 
 ### Input schema property fields
 
@@ -76,17 +76,17 @@ Source / SDK / Event and Destination / FileStorage / User have no output schema.
 
 ### Additional settings
 
-| Pipeline                          | User ID column | Update time column                | Update time format                                     | Other required settings                                           | File settings            | Required consents        |
-|-----------------------------------|----------------|-----------------------------------|--------------------------------------------------------|-------------------------------------------------------------------|--------------------------|--------------------------|
-| Source / Application / User       | No             | No                                | No                                                     | —                                                                 | No                       | Profile consent location |
-| Source / Database / User          | Required       | Optional, required if incremental | Required for a `string` or `json` column, no otherwise | Query                                                             | No                       | Profile consent location |
-| Source / FileStorage / User       | Required       | Optional, required if incremental | Required for a `string` or `json` column, no otherwise | —                                                                 | see below                | Profile consent location |
-| Source / SDK / User               | No             | No                                | No                                                     | —                                                                 | No                       | Profile consent location |
-| Source / SDK / Event              | No             | No                                | No                                                     | —                                                                 | No                       | Event consent location   |
-| Destination / Application / User  | No             | No                                | No                                                     | Export mode, matching properties, settings about duplicated users | No                       | Profile consent location |
-| Destination / Application / Event | No             | No                                | No                                                     | —                                                                 | No                       | Event consent location   |
-| Destination / Database / User     | No             | No                                | No                                                     | Table name and table key                                          | No                       | Profile consent location |
-| Destination / FileStorage / User  | No             | No                                | No                                                     | Order by property path                                            | see below                | Profile consent location |
+| Pipeline                          | User ID column | Update time column                | Update time format                                     | Other required settings                                           | File settings | Required consents        |
+|-----------------------------------|----------------|-----------------------------------|--------------------------------------------------------|-------------------------------------------------------------------|---------------|--------------------------|
+| Source / Application / User       | No             | No                                | No                                                     | —                                                                 | No            | Profile consent location |
+| Source / Database / User          | Required       | Optional, required if incremental | Required for a `string` or `json` column, no otherwise | Query                                                             | No            | Profile consent location |
+| Source / FileStorage / User       | Required       | Optional, required if incremental | Required for a `string` or `json` column, no otherwise | —                                                                 | see below     | Profile consent location |
+| Source / SDK / User               | No             | No                                | No                                                     | —                                                                 | No            | Profile consent location |
+| Source / SDK / Event              | No             | No                                | No                                                     | —                                                                 | No            | Event consent location   |
+| Destination / Application / User  | No             | No                                | No                                                     | Export mode, matching properties, settings about duplicated users | No            | Profile consent location |
+| Destination / Application / Event | No             | No                                | No                                                     | —                                                                 | No            | Event consent location   |
+| Destination / Database / User     | No             | No                                | No                                                     | Table name and table key                                          | No            | Profile consent location |
+| Destination / FileStorage / User  | No             | No                                | No                                                     | Order by property path                                            | see below     | Profile consent location |
 
 Source / FileStorage / User and Destination / FileStorage / User require a file format and a path, and can have a compression. They require a sheet if the file format has sheets, and format settings if the file format has settings for the role of the connection; otherwise, they cannot have them.
 
