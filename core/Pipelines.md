@@ -18,9 +18,11 @@ A constant transformation reads no input property, so its output depends only on
 | Source / SDK / User                 | Event-based | Yes                          | Optional                                               | Allowed                 |
 | Source / SDK / Event                | Event-based | Yes                          | Not supported                                          | —                       |
 | Destination / Application / User    | Batch       | Yes                          | Required                                               | Not allowed             |
-| Destination / Application / Event   | Event-based | Yes                          | Optional, only if the event type has a schema          | Allowed                 |
+| Destination / Application / Event   | Event-based | Yes                          | Depends on the event type (see below)                  | Allowed                 |
 | Destination / Database / User       | Batch       | Yes                          | Required                                               | Not allowed             |
 | Destination / FileStorage / User    | Batch       | Yes                          | Not supported                                          | —                       |
+
+For Destination / Application / Event, the transformation is not supported if the event type has no schema, because there is no output schema. If the event type has a schema, the transformation is optional, unless the schema has properties required for creation: the output schema must include them, so the transformation is required.
 
 ### Schemas
 
