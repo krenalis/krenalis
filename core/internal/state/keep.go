@@ -24,7 +24,7 @@ import (
 const logNotifications = false // Set to true to enable logging of received notifications.
 
 // applyNotification applies and dispatches a reconstructed trusted event,
-// then publishes the event's version and acknowledges its transaction.
+// then publishes the event's version and wakes version waiters.
 // The caller is responsible for ordering and deduplication. This method takes
 // no context because applying an event must run to completion once started.
 // A panic leaves the State unusable.
@@ -148,12 +148,6 @@ func (state *State) applyNotification(n notification, client analytics.Client) e
 	}
 
 	state.changing.Unlock()
-	if n.Version > 0 {
-		// Acknowledge that the notification has been received.
-		if ack, ok := state.notifications.acks.LoadAndDelete(n.Version); ok {
-			ack.(chan struct{}) <- struct{}{}
-		}
-	}
 
 	if client != nil && org != "" {
 		state.sendNotificationStats(client, org, n)

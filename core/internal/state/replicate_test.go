@@ -67,13 +67,11 @@ func (plan cancelingScanPlan) Scan(src []byte, target any) error {
 }
 
 // TestApplyElections preserves election dispatch and heartbeat semantics while
-// keeping both event types outside version publication and acknowledgements.
+// keeping both event types outside version publication.
 func TestApplyElections(t *testing.T) {
 
 	state := &State{mu: &sync.Mutex{}, changing: &sync.RWMutex{}}
 	state.version.current = 123
-	ack := make(chan struct{}, 1)
-	state.notifications.acks.Store(0, ack)
 	calls := 0
 	state.listeners = []any{func(ElectLeader) { calls++ }}
 	for range 2 {
@@ -99,8 +97,8 @@ func TestApplyElections(t *testing.T) {
 		t.Fatalf("expected current heartbeat handling, got %v", err)
 	}
 
-	if state.election.lastSeen == previous || calls != 1 || state.Version() != 123 || len(ack) != 0 {
-		t.Fatalf("expected current heartbeat and one election dispatch without version/ack, got election=%+v calls=%d version=%d acks=%d", state.election, calls, state.Version(), len(ack))
+	if state.election.lastSeen == previous || calls != 1 || state.Version() != 123 {
+		t.Fatalf("expected current heartbeat and one election dispatch without version publication, got election=%+v calls=%d version=%d", state.election, calls, state.Version())
 	}
 
 }
@@ -113,8 +111,6 @@ func TestApplyUnknownEvent(t *testing.T) {
 		state := &State{changing: &sync.RWMutex{}}
 		state.version.current = 123
 		state.version.next = sync.Cond{L: &state.version.RWMutex}
-		ack := make(chan struct{}, 1)
-		state.notifications.acks.Store(124, ack)
 		woke := false
 		go func() { state.version.Lock(); state.version.next.Wait(); woke = true; state.version.Unlock() }()
 		synctest.Wait()
@@ -129,8 +125,8 @@ func TestApplyUnknownEvent(t *testing.T) {
 			t.Fatal("expected terminal unknown event, got success")
 		}()
 		synctest.Wait()
-		if woke || state.Version() != 123 || len(ack) != 0 {
-			t.Fatalf("expected no Broadcast/version/ack, got woke=%t version=%d acks=%d", woke, state.Version(), len(ack))
+		if woke || state.Version() != 123 {
+			t.Fatalf("expected no Broadcast/version, got woke=%t version=%d", woke, state.Version())
 		}
 
 		state.version.Lock()
@@ -220,8 +216,6 @@ func TestReplicationCancellationDuringApply(t *testing.T) {
 	releaseDispatch := sync.OnceFunc(func() { close(release) })
 	defer releaseDispatch()
 	state.listeners = []any{func(AddConsentPurpose) { close(entered); <-release }}
-	ack := make(chan struct{}, 1)
-	state.notifications.acks.Store(124, ack)
 	logReplicationEvent(t, database, 124, "replayed")
 	startReplication(t, state, session)
 	// The future notification forces replay of version 124. Its listener blocks
@@ -295,9 +289,6 @@ func TestReplicationCancellationDuringApply(t *testing.T) {
 	if got := state.Version(); got != 124 {
 		t.Fatalf("expected version 124 after dispatch, got %d", got)
 	}
-	if got := len(ack); got != 1 {
-		t.Fatalf("expected 1 ack after dispatch, got %d", got)
-	}
 	if state.workspaces[stateTestWorkspaceID].consentPurposes[replicationConsentPurposeID(124)] == nil {
 		t.Fatal("expected applied replayed consent purpose, got missing purpose")
 	}
@@ -318,19 +309,9 @@ func TestReplicationFastPath(t *testing.T) {
 
 	calls := 0
 	state.listeners = []any{func(AddConsentPurpose) { calls++ }}
-	ack := make(chan struct{}, 1)
-	state.notifications.acks.Store(124, ack)
 	startReplication(t, state, session)
 	sendReplicationEvent(t, database, key, 124, AddConsentPurpose{Workspace: stateTestWorkspaceID, ID: stateTestConsentPurposeID, Name: "original"})
 	waitReplicationVersion(t, state, 124)
-	select {
-	case <-ack:
-	case <-state.close.ctx.Done():
-		t.Fatalf("expected first acknowledgement, got %v", state.close.ctx.Err())
-	}
-
-	duplicateAck := make(chan struct{}, 1)
-	state.notifications.acks.Store(124, duplicateAck)
 	sendReplicationEvent(t, database, key, 124, AddConsentPurpose{Workspace: stateTestWorkspaceID, ID: stateTestConsentPurposeID, Name: "duplicate"})
 	sendReplicationEvent(t, database, key, 125, AddConsentPurpose{Workspace: stateTestWorkspaceID, ID: stateTestBarrierPurposeID})
 	waitReplicationVersion(t, state, 125)
@@ -346,8 +327,8 @@ func TestReplicationFastPath(t *testing.T) {
 
 	state.close.cancel()
 	state.close.Wait()
-	if calls != 2 || len(duplicateAck) != 0 || state.workspaces[stateTestWorkspaceID].consentPurposes[stateTestConsentPurposeID].Name != "original" {
-		t.Fatalf("expected two direct applications and no duplicate mutation/dispatch/ack or replay, got calls=%d acks=%d", calls, len(duplicateAck))
+	if calls != 2 || state.workspaces[stateTestWorkspaceID].consentPurposes[stateTestConsentPurposeID].Name != "original" {
+		t.Fatalf("expected two direct applications and no duplicate mutation/dispatch or replay, got calls=%d", calls)
 	}
 
 }
@@ -371,8 +352,6 @@ func TestReplicationGapAndElections(t *testing.T) {
 			<-release
 		}
 	}}
-	electionAck := make(chan struct{}, 1)
-	state.notifications.acks.Store(0, electionAck)
 	startReplication(t, state, session)
 	sendReplicationEvent(t, database, key, 125, AddConsentPurpose{Workspace: stateTestWorkspaceID, ID: stateTestUnappliedPurposeID, Name: "must-not-apply"})
 	select {
@@ -388,8 +367,8 @@ func TestReplicationGapAndElections(t *testing.T) {
 	waitReplicationVersion(t, state, 126)
 	state.close.cancel()
 	state.close.Wait()
-	if strings.Join(seen, ",") != "first,from-log,barrier" || state.election.number != 3 || state.election.leader != "leader" || len(electionAck) != 0 {
-		t.Fatalf("expected replay once and queued version-zero elections, got %v election=%+v acks=%d", seen, state.election, len(electionAck))
+	if strings.Join(seen, ",") != "first,from-log,barrier" || state.election.number != 3 || state.election.leader != "leader" {
+		t.Fatalf("expected replay once and queued version-zero elections, got %v election=%+v", seen, state.election)
 	}
 
 }
@@ -514,7 +493,7 @@ func TestReplicationPeriodic(t *testing.T) {
 				go func() {
 
 					producer := &State{db: database}
-					producer.notifications.notifier = &notifier{db: database, key: key}
+					producer.notifications = &notifier{db: database, key: key}
 					for heartbeatCtx.Err() == nil {
 						err := producer.Transaction(t.Context(), func(tx *db.Tx) (any, error) { return SeeLeader{Election: 1}, nil })
 						if err != nil {
@@ -712,8 +691,17 @@ func TestReplicationReplay(t *testing.T) {
 
 		calls := 0
 		state.listeners = []any{func(AddConsentPurpose) { calls++ }}
-		firstAck := make(chan struct{}, 1)
-		state.notifications.acks.Store(124, firstAck)
+		waiting := make(chan struct{}, 8)
+		state.version.next.L = versionWaitLocker{Locker: &state.version.RWMutex, waiting: waiting}
+		waitCtx, cancelWait := context.WithCancel(t.Context())
+		defer cancelWait()
+		result := make(chan error, 1)
+		go func() { result <- state.waitVersion(waitCtx, 125) }()
+		select {
+		case <-waiting:
+		case <-state.close.ctx.Done():
+			t.Fatalf("expected pending target 125, got %v", state.close.ctx.Err())
+		}
 		err = state.replay(t.Context(), session, 130, nil)
 		func() {
 			if err != nil {
@@ -724,8 +712,19 @@ func TestReplicationReplay(t *testing.T) {
 			}
 			t.Fatal("expected interrupted query, got success")
 		}()
-		if state.Version() != 124 || calls != 1 || len(firstAck) != 1 {
-			t.Fatalf("expected applied prefix 124 acknowledged once, got version=%d calls=%d acks=%d", state.Version(), calls, len(firstAck))
+		if state.Version() != 124 || calls != 1 {
+			t.Fatalf("expected applied prefix 124 dispatched once, got version=%d calls=%d", state.Version(), calls)
+		}
+
+		select {
+		case <-waiting:
+		case <-state.close.ctx.Done():
+			t.Fatalf("expected waiter to resume waiting after prefix 124, got %v", state.close.ctx.Err())
+		}
+		select {
+		case err := <-result:
+			t.Fatalf("expected target 125 pending after prefix 124, got %v", err)
+		default:
 		}
 
 		_, err = database.Exec(t.Context(), `CREATE OR REPLACE FUNCTION replay_payload(v bigint, p jsonb) RETURNS jsonb LANGUAGE plpgsql STABLE AS $$ BEGIN RETURN p; END $$`)
@@ -733,16 +732,22 @@ func TestReplicationReplay(t *testing.T) {
 			t.Fatalf("expected repaired test query, got %v", err)
 		}
 
-		duplicateAck, secondAck := make(chan struct{}, 1), make(chan struct{}, 1)
-		state.notifications.acks.Store(124, duplicateAck)
-		state.notifications.acks.Store(125, secondAck)
 		err = state.replay(t.Context(), session, 125, nil)
 		if err != nil {
 			t.Fatalf("expected retry from applied 124, got %v", err)
 		}
 
-		if state.Version() != 125 || calls != 2 || len(duplicateAck) != 0 || len(secondAck) != 1 {
-			t.Fatalf("expected version 125 without duplicate application or acknowledgement, got version=%d calls=%d duplicate=%d second=%d", state.Version(), calls, len(duplicateAck), len(secondAck))
+		select {
+		case err = <-result:
+		case <-state.close.ctx.Done():
+			t.Fatalf("expected target 125 satisfied by retry, got %v", state.close.ctx.Err())
+		}
+		if err != nil {
+			t.Fatalf("expected target 125 satisfied by retry, got %v", err)
+		}
+
+		if state.Version() != 125 || calls != 2 {
+			t.Fatalf("expected version 125 without duplicate application, got version=%d calls=%d", state.Version(), calls)
 		}
 
 		err = state.replay(t.Context(), session, 130, nil)
@@ -800,8 +805,6 @@ func TestReplicationReplay(t *testing.T) {
 		session.conn.Underlying().TypeMap().RegisterType(&pgtype.Type{
 			Name: "int8", OID: pgtype.Int8OID, Codec: cancelingInt8Codec{cancel: cancel},
 		})
-		ack := make(chan struct{}, 1)
-		state.notifications.acks.Store(124, ack)
 		err := state.replay(ctx, session, 124, nil)
 		func() {
 			if err != nil {
@@ -812,8 +815,8 @@ func TestReplicationReplay(t *testing.T) {
 			}
 			t.Fatal("expected cancellation before application, got success")
 		}()
-		if state.Version() != 123 || len(ack) != 0 || len(state.workspaces[stateTestWorkspaceID].consentPurposes) != 0 {
-			t.Fatalf("expected no application or acknowledgement after cancellation, got version=%d acks=%d", state.Version(), len(ack))
+		if state.Version() != 123 || len(state.workspaces[stateTestWorkspaceID].consentPurposes) != 0 {
+			t.Fatalf("expected no application after cancellation, got version=%d", state.Version())
 		}
 
 		_, err = database.Exec(t.Context(), "TRUNCATE notifications")
@@ -1128,7 +1131,7 @@ func replicationState(t *testing.T, database *db.DB, key *cipher.Key) (*State, *
 	state.version.next = sync.Cond{L: &state.version.RWMutex}
 	state.close.ctx, state.close.cancel = context.WithTimeout(t.Context(), 15*time.Second)
 	t.Cleanup(state.close.cancel)
-	state.notifications.notifier = &notifier{db: database, key: key}
+	state.notifications = &notifier{db: database, key: key}
 	conn, err := state.notifications.connect(t.Context())
 	if err != nil {
 		t.Fatalf("expected listening session, got %v", err)

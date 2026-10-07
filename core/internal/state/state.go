@@ -102,12 +102,9 @@ type State struct {
 		next    sync.Cond // for version.current; use version.RWMutex
 	}
 
-	notifications struct {
-		*notifier
-		acks sync.Map
-	}
-	listeners []any
-	close     struct {
+	notifications *notifier
+	listeners     []any
+	close         struct {
 		ctx    context.Context
 		cancel context.CancelFunc
 		sync.WaitGroup
@@ -153,7 +150,7 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 	state.platformBucket = state.rateLimiter.NewBucket("platform", "platform", requestLeaseSize, requestMaxUnits)
 
 	// Init the notifier.
-	state.notifications.notifier = newNotifier(db)
+	state.notifications = newNotifier(db)
 
 	// Bootstrap owns the resources until they are transferred to the runtime.
 	started := false
@@ -242,16 +239,31 @@ func (state *State) Account(id int) (*Account, bool) {
 	return nil, false
 }
 
-// Close closes the state. When it is called, no calls to the State methods
-// should be in progress, and no further calls should be made.
+// Close stops the State's workers and releases its resources.
+//
+// Before calling Close, callers must finish all external calls to State methods
+// and all external uses of its cipher and rate limiter, including through
+// returned objects. Only WaitVersion calls and Transaction calls awaiting local
+// application after a successful commit may remain pending.
+// The State must be unfrozen, and no new external calls may be made.
+//
+// Close waits for its workers and their synchronous listeners to finish;
+// it must not be called from such a listener. It wakes pending version waits
+// but does not wait for those calls or their cancellation callbacks to return.
 func (state *State) Close(ctx context.Context) {
+
 	state.close.cancel()
+	state.version.Lock()
+	state.version.next.Broadcast()
+	state.version.Unlock()
+
 	state.close.Wait()
 	state.rateLimiter.Close(ctx)
 	// Keep state-owned buckets reachable until Limiter.Close returns so their
 	// unused capacity can be restored.
 	runtime.KeepAlive(state)
 	state.cipher.Close()
+
 }
 
 // Connection returns the connection with identifier id.
@@ -450,14 +462,17 @@ func (state *State) Pipelines() []*Pipeline {
 	return pipelines
 }
 
-// Transaction executes f in a transaction.
+// Transaction executes f in a transaction. For a versioned event returned by
+// f, it confirms local application by waiting for the applied version to reach
+// the committed version. Cancellation or Close can interrupt this wait and
+// return a context error after a successful commit; such an error does not
+// imply rollback: the change and notification log remain persisted.
 func (state *State) Transaction(ctx context.Context, f func(tx *db.Tx) (any, error)) error {
+
 	tx, err := state.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	var version int
-	var ack chan struct{}
 	defer func() {
 		if err := recover(); err != nil {
 			_ = tx.Rollback(ctx)
@@ -472,7 +487,7 @@ func (state *State) Transaction(ctx context.Context, f func(tx *db.Tx) (any, err
 	if n == nil {
 		return tx.Commit(ctx)
 	}
-	version, err = state.notifications.Notify(ctx, tx, n)
+	version, err := state.notifications.Notify(ctx, tx, n)
 	if err != nil {
 		_ = tx.Rollback(ctx)
 		return err
@@ -480,26 +495,13 @@ func (state *State) Transaction(ctx context.Context, f func(tx *db.Tx) (any, err
 	if version == 0 {
 		return tx.Commit(ctx)
 	}
-	ack = make(chan struct{})
-	state.notifications.acks.Store(version, ack)
-	defer func() {
-		if ack == nil {
-			return
-		}
-		// Remove the ack entry if it is still present.
-		if _, ok := state.notifications.acks.LoadAndDelete(version); !ok {
-			// applyNotification has already removed the entry. Receive the
-			// acknowledgment so its sender does not remain blocked.
-			<-ack
-		}
-	}()
+
 	err = tx.Commit(ctx)
 	if err != nil {
 		return err
 	}
-	<-ack
-	ack = nil
-	return nil
+
+	return state.waitVersion(ctx, version)
 }
 
 // Unfreeze unfreezes the state if there are no more pending Unfreeze calls.
@@ -515,26 +517,42 @@ func (state *State) Version() int {
 	return version
 }
 
-// WaitVersion waits until the given version has been reached.
+// WaitVersion waits until the given version has been applied, ctx is canceled,
+// or the State is closed. It returns nil if the version has been reached;
+// otherwise, it returns ctx.Err() if non-nil, or context.Canceled on Close.
 func (state *State) WaitVersion(ctx context.Context, version int) error {
+	return state.waitVersion(ctx, version)
+}
+
+// waitVersion observes application and interruption under the version mutex.
+func (state *State) waitVersion(ctx context.Context, targetVersion int) error {
+
 	state.version.Lock()
 	defer state.version.Unlock()
-	if version <= state.version.current {
+	if state.version.current >= targetVersion {
 		return nil
 	}
 	stop := context.AfterFunc(ctx, func() {
-		state.version.Lock()
+		// next.L is the version mutex; lock it to prevent a lost wake-up on cancellation.
+		state.version.next.L.Lock()
 		state.version.next.Broadcast()
-		state.version.Unlock()
+		state.version.next.L.Unlock()
 	})
 	defer stop()
-	for ctx.Err() == nil {
+
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if err := state.close.ctx.Err(); err != nil {
+			return err
+		}
 		state.version.next.Wait()
-		if version <= state.version.current {
+		if state.version.current >= targetVersion {
 			return nil
 		}
 	}
-	return ctx.Err()
+
 }
 
 // WarehousePlatform returns the warehouse platform with the provided name.

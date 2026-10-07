@@ -15,11 +15,13 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/cipher"
 	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/core/internal/initdb"
+	"github.com/krenalis/krenalis/core/internal/state/ratelimiter"
 	"github.com/krenalis/krenalis/test/testimages"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
@@ -866,4 +868,758 @@ func checkBootstrapConnectionsReleased(t *testing.T, database *db.DB, capacity i
 		defer conn.Close()
 	}
 
+}
+
+// queryCompletionContext observes pgx unwatching a completed query. The hook
+// uses a separate connection to recognize a persisted commit and can hold its
+// return until application completes, before Transaction can enter waitVersion.
+type queryCompletionContext struct {
+	context.Context
+	afterQuery func()
+}
+
+// AfterFunc preserves cancellation and adds a barrier when pgx stops watching.
+func (ctx queryCompletionContext) AfterFunc(f func()) func() bool {
+	stop := context.AfterFunc(ctx.Context, f)
+	return func() bool {
+		stopped := stop()
+		if stopped {
+			ctx.afterQuery()
+		}
+		return stopped
+	}
+}
+
+// Value makes context.AfterFunc use the fixture's scheduling adapter.
+func (ctx queryCompletionContext) Value(any) any {
+	return nil
+}
+
+// TestStateTransactionApplied checks real commits, local dispatch, fast path,
+// replay and application completed before the commit call returns.
+func TestStateTransactionApplied(t *testing.T) {
+	for _, mode := range []string{"fast-path", "replay", "already-applied", "cancel-after-commit"} {
+		t.Run(mode, func(t *testing.T) {
+
+			database, key := replicationDatabase(t)
+			state, session := replicationState(t, database, key)
+			// Align MAX(version)+1 with the fixture's applied cursor.
+			logReplicationEvent(t, database, 123, "snapshot")
+			_, err := database.Exec(t.Context(), "CREATE TABLE changes (code text PRIMARY KEY)")
+			if err != nil {
+				t.Fatalf("expected application table, got %v", err)
+			}
+
+			ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+			defer cancel()
+			entered, release := make(chan struct{}), make(chan struct{})
+			releaseDispatch := sync.OnceFunc(func() { close(release) })
+			defer releaseDispatch()
+			state.listeners = []any{func(AddConsentPurpose) { close(entered); <-release }}
+			pid := session.conn.Underlying().PgConn().PID()
+			if mode == "replay" {
+				_, err = session.conn.Exec(ctx, "UNLISTEN krenalis")
+				if err != nil {
+					t.Fatalf("expected replay-only session, got %v", err)
+				}
+			}
+
+			var transactionCtx context.Context = ctx
+			appliedBeforeWait := false
+			if mode == "already-applied" {
+				transactionCtx = queryCompletionContext{Context: ctx, afterQuery: func() {
+
+					var committed bool
+					err := database.QueryRow(ctx, "SELECT EXISTS (SELECT 1 FROM notifications WHERE version = 124)").Scan(&committed)
+					if err != nil {
+						t.Errorf("expected commit observation, got %v", err)
+						return
+					}
+					if !committed {
+						return
+					}
+
+					err = state.waitVersion(ctx, 124)
+					if err != nil {
+						t.Errorf("expected application before returning from COMMIT, got %v", err)
+						return
+					}
+					appliedBeforeWait = true
+
+				}}
+			}
+
+			observer, err := state.notifications.connect(ctx)
+			if err != nil {
+				t.Fatalf("expected commit observer, got %v", err)
+			}
+			defer closeNotificationConnection(observer)
+			waiting := make(chan struct{}, 8)
+			state.version.next.L = versionWaitLocker{Locker: &state.version.RWMutex, waiting: waiting}
+			result := make(chan error, 1)
+			finished := make(chan struct{})
+			go func() {
+				defer close(finished)
+				result <- state.Transaction(transactionCtx, func(tx *db.Tx) (any, error) {
+					_, err := tx.Exec(ctx, "INSERT INTO changes VALUES ('committed')")
+					if err != nil {
+						return nil, err
+					}
+					return AddConsentPurpose{Workspace: stateTestWorkspaceID, ID: stateTestConsentPurposeID, Name: "Committed"}, nil
+				})
+			}()
+			defer func() { releaseDispatch(); cancel(); <-finished }()
+
+			_, err = observer.Underlying().WaitForNotification(ctx)
+			if err != nil {
+				t.Fatalf("expected committed notification, got %v", err)
+			}
+			select {
+			case <-waiting:
+			case <-ctx.Done():
+				t.Fatalf("expected post-commit version wait, got %v", ctx.Err())
+			}
+
+			if mode == "replay" {
+				state.close.Add(1)
+				go func() {
+					defer state.close.Done()
+					err := state.replay(state.close.ctx, session, 124, nil)
+					if err != nil {
+						t.Errorf("expected committed event replay, got %v", err)
+					}
+				}()
+				t.Cleanup(func() { state.close.cancel(); state.close.Wait() })
+			} else {
+				startReplication(t, state, session)
+			}
+			select {
+			case <-entered:
+			case <-ctx.Done():
+				t.Fatalf("expected started dispatch, got %v", ctx.Err())
+			}
+			if state.Version() != 123 {
+				t.Fatalf("expected old version during dispatch, got %d", state.Version())
+			}
+			select {
+			case err := <-result:
+				t.Fatalf("expected pending transaction during dispatch, got %v", err)
+			default:
+			}
+
+			if mode == "cancel-after-commit" {
+				cancel()
+				err = <-result
+				func() {
+					if err != nil {
+						if !errors.Is(err, context.Canceled) {
+							t.Fatalf("expected canceled local wait, got %v", err)
+						}
+						return
+					}
+					t.Fatal("expected canceled local wait, got success")
+				}()
+			}
+
+			var changes, notifications int
+			err = database.QueryRow(t.Context(), "SELECT (SELECT count(*) FROM changes), (SELECT count(*) FROM notifications WHERE version = 124)").Scan(&changes, &notifications)
+			if err != nil {
+				t.Fatalf("expected persistence query, got %v", err)
+			}
+			if changes != 1 || notifications != 1 {
+				t.Fatalf("expected persisted change and log, got changes=%d notifications=%d", changes, notifications)
+			}
+
+			releaseDispatch()
+			if mode != "cancel-after-commit" {
+				err = <-result
+				if err != nil {
+					t.Fatalf("expected successful transaction after application, got %v", err)
+				}
+			}
+			if mode == "already-applied" && !appliedBeforeWait {
+				t.Fatal("expected application before COMMIT returned, got missing query barrier")
+			}
+			waitReplicationVersion(t, state, 124)
+			if mode == "replay" {
+				state.close.Wait()
+			}
+			if mode == "fast-path" {
+				var query string
+				err = database.QueryRow(t.Context(), "SELECT query FROM pg_stat_activity WHERE pid = $1", pid).Scan(&query)
+				if err != nil {
+					t.Fatalf("expected listener query history, got %v", err)
+				}
+				if query != "LISTEN krenalis" {
+					t.Fatalf("expected fast path without replay, got %q", query)
+				}
+			}
+
+		})
+	}
+}
+
+// TestStateTransactionCloseAfterCommit verifies that Close interrupts a
+// transaction waiting after commit without rolling back the committed change
+// or notification.
+func TestStateTransactionCloseAfterCommit(t *testing.T) {
+
+	database, key := replicationDatabase(t)
+	logReplicationEvent(t, database, 123, "snapshot")
+	_, err := database.Exec(t.Context(), "CREATE TABLE changes (code text PRIMARY KEY)")
+	if err != nil {
+		t.Fatalf("expected application table, got %v", err)
+	}
+	observer, err := database.Conn(t.Context())
+	if err != nil {
+		t.Fatalf("expected separate commit observer, got %v", err)
+	}
+	defer observer.Close()
+
+	state := versionWaitState(t)
+	state.db = database
+	state.notifications = &notifier{db: database, key: key}
+	state.rateLimiter = ratelimiter.New(nil, ratelimiter.Metrics{})
+	state.cipher = cipher.New(nil)
+	waiting := make(chan struct{}, 8)
+	state.version.next.L = versionWaitLocker{Locker: &state.version.RWMutex, waiting: waiting}
+	ctx, cancel := context.WithCancel(t.Context())
+	timeout, stopTimeout := context.WithTimeout(t.Context(), 10*time.Second)
+	defer stopTimeout()
+	result := make(chan error, 1)
+	finished, closed := make(chan struct{}), make(chan struct{})
+	closeState := sync.OnceFunc(func() {
+		go func() { state.Close(t.Context()); close(closed) }()
+	})
+	defer func() {
+
+		cancel()
+		closeState()
+		select {
+		case <-finished:
+		case <-time.After(5 * time.Second):
+			t.Error("expected transaction worker to terminate, got blocked worker")
+		}
+		select {
+		case <-closed:
+		case <-time.After(5 * time.Second):
+			t.Error("expected Close worker to terminate, got blocked worker")
+		}
+
+	}()
+	go func() {
+		defer close(finished)
+		result <- state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+			_, err := tx.Exec(ctx, "INSERT INTO changes VALUES ('committed')")
+			if err != nil {
+				return nil, err
+			}
+			return AddConsentPurpose{Workspace: stateTestWorkspaceID, ID: stateTestConsentPurposeID, Name: "Committed"}, nil
+		})
+	}()
+
+	// Only Cond.Wait releases this locker, after a successful Commit.
+	select {
+	case <-waiting:
+	case err := <-result:
+		t.Fatalf("expected pending post-commit transaction, got %v", err)
+	case <-timeout.Done():
+		t.Fatalf("expected post-commit version wait, got %v", timeout.Err())
+	}
+	checkPersisted := func() {
+		t.Helper()
+		var changes, notifications int
+		err := observer.QueryRow(timeout, "SELECT (SELECT count(*) FROM changes WHERE code = 'committed'), (SELECT count(*) FROM notifications WHERE version = 124 AND name = 'AddConsentPurpose')").Scan(&changes, &notifications)
+		if err != nil {
+			t.Fatalf("expected persistence query, got %v", err)
+		}
+		if changes != 1 || notifications != 1 {
+			t.Fatalf("expected persisted change and notification, got changes=%d notifications=%d", changes, notifications)
+		}
+	}
+	checkPersisted()
+	// Acquiring the underlying mutex synchronizes with Cond.Wait's observed
+	// release. No replication worker can publish version 124 in this fixture.
+	if version := state.Version(); version != 123 {
+		t.Fatalf("expected unapplied version 124 with cursor 123, got %d", version)
+	}
+	select {
+	case err := <-result:
+		t.Fatalf("expected pending transaction before Close, got %v", err)
+	default:
+	}
+
+	closeState()
+	var txErr error
+	select {
+	case txErr = <-result:
+	case <-timeout.Done():
+		t.Fatalf("expected transaction interrupted by Close, got %v", timeout.Err())
+	}
+	if txErr != nil {
+		if !errors.Is(txErr, context.Canceled) {
+			t.Fatalf("expected State cancellation after commit, got %v", txErr)
+		}
+	}
+	if txErr == nil {
+		t.Fatal("expected State cancellation after commit, got success")
+	}
+	if err := ctx.Err(); err != nil {
+		t.Fatalf("expected caller context still active, got %v", err)
+	}
+	select {
+	case <-closed:
+	case <-timeout.Done():
+		t.Fatalf("expected Close to complete, got %v", timeout.Err())
+	}
+	checkPersisted()
+
+}
+
+// TestStateTransactionWithoutWait verifies nil events, elections and failed
+// commits while the version mutex is unavailable, so even a fast wait would
+// block. The failed commit occurs after Notify under a deferred constraint.
+func TestStateTransactionWithoutWait(t *testing.T) {
+
+	database, key := replicationDatabase(t)
+	_, err := database.Exec(t.Context(), "CREATE TABLE changes (code text CONSTRAINT changes_unique UNIQUE DEFERRABLE INITIALLY DEFERRED)")
+	if err != nil {
+		t.Fatalf("expected deferred constraint fixture, got %v", err)
+	}
+
+	expectedChanges := 0
+	for _, tc := range []struct {
+		name  string
+		event any
+	}{
+		{"nil", nil},
+		{"elect", ElectLeader{Number: 1, Leader: "leader"}},
+		{"see", SeeLeader{Election: 1}},
+		{"commit-failure", AddConsentPurpose{Workspace: stateTestWorkspaceID, ID: stateTestConsentPurposeID}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+
+			state := versionWaitState(t)
+			state.db = database
+			state.notifications = &notifier{db: database, key: key}
+			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+			defer cancel()
+			state.version.Lock()
+			unlock := sync.OnceFunc(state.version.Unlock)
+			defer unlock()
+			result := make(chan error, 1)
+			finished := make(chan struct{})
+			go func() {
+				defer close(finished)
+				result <- state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+					_, err := tx.Exec(ctx, "INSERT INTO changes VALUES ($1)", tc.name)
+					if err != nil {
+						return nil, err
+					}
+					if tc.name == "commit-failure" {
+						_, err = tx.Exec(ctx, "INSERT INTO changes VALUES ($1)", tc.name)
+						if err != nil {
+							return nil, err
+						}
+					}
+					return tc.event, nil
+				})
+			}()
+			defer func() { unlock(); cancel(); <-finished }()
+
+			select {
+			case err = <-result:
+			case <-ctx.Done():
+				t.Fatalf("expected transaction without version wait, got %v", ctx.Err())
+			}
+			if err != nil {
+				if tc.name != "commit-failure" || !db.IsUniqueViolation(err) || db.ErrConstraintName(err) != "changes_unique" {
+					t.Fatalf("expected deferred commit constraint, got %v", err)
+				}
+				return
+			}
+			if tc.name == "commit-failure" {
+				t.Fatal("expected failed commit, got success")
+			}
+			expectedChanges++
+
+		})
+	}
+
+	var changes, notifications int
+	err = database.QueryRow(t.Context(), "SELECT (SELECT count(*) FROM changes), (SELECT count(*) FROM notifications)").Scan(&changes, &notifications)
+	if err != nil {
+		t.Fatalf("expected persisted unversioned writes and rollback query, got %v", err)
+	}
+	if changes != expectedChanges || notifications != 0 {
+		t.Fatalf("expected %d committed writes and no versioned log, got changes=%d notifications=%d", expectedChanges, changes, notifications)
+	}
+
+}
+
+// callbackLockObserver reports entry into the condition's Lock method.
+// The callback enters it before the waiter can reach Cond.Wait.
+type callbackLockObserver struct {
+	sync.Locker
+	onLock func()
+}
+
+// Lock reports the attempt before acquiring the underlying mutex.
+func (locker callbackLockObserver) Lock() {
+	locker.onLock()
+	locker.Locker.Lock()
+}
+
+// cancelOnErrContext cancels after reading Err while waitVersion holds its
+// mutex, then waits for the production callback to enter the condition's Lock.
+type cancelOnErrContext struct {
+	context.Context
+	t              *testing.T
+	cancel         context.CancelFunc
+	locking        chan struct{}
+	returnCanceled bool
+	registrations  int
+}
+
+// AfterFunc counts registrations without changing cancellation scheduling.
+func (ctx *cancelOnErrContext) AfterFunc(f func()) func() bool {
+	ctx.registrations++
+	return context.AfterFunc(ctx.Context, f)
+}
+
+// Err cancels between the predicate check and Cond.Wait, then waits for the
+// callback's lock attempt before returning nil or context.Canceled.
+func (ctx *cancelOnErrContext) Err() error {
+
+	err := ctx.Context.Err()
+	if err != nil {
+		return err
+	}
+
+	// The lock attempt drives the interleaving; this is only a virtual watchdog.
+	guard := time.NewTimer(time.Second)
+	defer guard.Stop()
+	ctx.cancel()
+	select {
+	case <-ctx.locking:
+	case <-guard.C:
+		ctx.t.Fatal("expected cancellation callback to enter condition lock, got no lock attempt")
+	}
+	if ctx.returnCanceled {
+		return ctx.Context.Err()
+	}
+
+	return nil
+}
+
+// Value hides the underlying cancel context so context uses AfterFunc above.
+func (ctx *cancelOnErrContext) Value(any) any {
+	return nil
+}
+
+// versionWaitLocker observes condition-lock releases using the real mutex.
+// Before cancellation, these releases mark Cond.Wait registering a waiter.
+type versionWaitLocker struct {
+	sync.Locker
+	waiting chan struct{}
+}
+
+// Unlock reports the condition-lock release before unlocking the mutex.
+func (locker versionWaitLocker) Unlock() {
+	locker.waiting <- struct{}{}
+	locker.Locker.Unlock()
+}
+
+// TestStateCloseWaiters verifies that Close wakes independent caller contexts
+// before waiting for a worker that still needs to publish an in-flight event.
+func TestStateCloseWaiters(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+
+		state := versionWaitState(t)
+		state.rateLimiter = ratelimiter.New(nil, ratelimiter.Metrics{})
+		state.cipher = cipher.New(nil)
+		state.changing = &sync.RWMutex{}
+		ws := &Workspace{mu: &sync.Mutex{}, ID: stateTestWorkspaceID, organization: &Organization{ID: stateTestOrganizationID}, consentPurposes: map[string]*ConsentPurpose{}}
+		state.workspaces = map[string]*Workspace{stateTestWorkspaceID: ws}
+		release := make(chan struct{})
+		releaseDispatch := sync.OnceFunc(func() { close(release) })
+		defer releaseDispatch()
+		state.listeners = []any{func(AddConsentPurpose) { <-release }}
+		state.close.Add(1)
+		go func() {
+			defer state.close.Done()
+			err := state.applyNotification(notification{124, "AddConsentPurpose", `{"Workspace":"6NpT4zB8QaR2","ID":"D7hV4xK9mP2a"}`}, nil)
+			if err != nil {
+				t.Errorf("expected completed in-flight event, got %v", err)
+			}
+		}()
+
+		const count = 32
+		results := make(chan error, count)
+		for range count {
+			go func() { results <- state.WaitVersion(t.Context(), 124) }()
+		}
+		synctest.Wait()
+		if len(results) != 0 || state.Version() != 123 || ws.consentPurposes[stateTestConsentPurposeID] == nil {
+			t.Fatalf("expected pending waits during dispatch, got results=%d version=%d", len(results), state.Version())
+		}
+
+		closed := make(chan struct{})
+		go func() { state.Close(t.Context()); close(closed) }()
+		synctest.Wait()
+		if len(results) != count {
+			t.Fatalf("expected %d waiters woken by Close, got %d", count, len(results))
+		}
+		for range count {
+			err := <-results
+			if err != nil {
+				if !errors.Is(err, context.Canceled) {
+					t.Fatalf("expected State cancellation, got %v", err)
+				}
+				continue
+			}
+			t.Fatal("expected State cancellation before publication, got success")
+		}
+		select {
+		case <-closed:
+			t.Fatal("expected Close to wait for in-flight event, got early completion")
+		default:
+		}
+
+		releaseDispatch()
+		<-closed
+		if state.Version() != 124 {
+			t.Fatalf("expected publication before Close completes, got %d", state.Version())
+		}
+
+	})
+}
+
+// TestWaitVersionCancellationWindow observes the callback's lock attempt before
+// Cond.Wait, and checks that a started callback is not joined under the mutex.
+func TestWaitVersionCancellationWindow(t *testing.T) {
+	for _, returnCanceled := range []bool{false, true} {
+		name := "before-wait"
+		if returnCanceled {
+			name = "callback-started-before-return"
+		}
+		t.Run(name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+
+				state := versionWaitState(t)
+				parent, cancel := context.WithCancel(t.Context())
+				defer cancel()
+				locking := make(chan struct{})
+				state.version.next.L = callbackLockObserver{
+					Locker: &state.version.RWMutex,
+					onLock: sync.OnceFunc(func() { close(locking) }),
+				}
+				ctx := &cancelOnErrContext{Context: parent, t: t, cancel: cancel, locking: locking, returnCanceled: returnCanceled}
+				err := state.waitVersion(ctx, 124)
+				if err != nil {
+					if !errors.Is(err, context.Canceled) {
+						t.Fatalf("expected caller cancellation, got %v", err)
+					}
+					synctest.Wait() // Any late Broadcast must finish safely.
+					return
+				}
+
+				t.Fatal("expected caller cancellation, got success")
+
+			})
+		})
+	}
+}
+
+// TestWaitVersionDeadline checks deadline expiry using virtual time.
+func TestWaitVersionDeadline(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+
+		state := versionWaitState(t)
+		ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+		defer cancel()
+		start := time.Now()
+		err := state.waitVersion(ctx, 124)
+		if err != nil {
+			if !errors.Is(err, context.DeadlineExceeded) || time.Since(start) != time.Second {
+				t.Fatalf("expected deadline after one virtual second, got %v after %v", err, time.Since(start))
+			}
+			return
+		}
+
+		t.Fatal("expected deadline, got success")
+
+	})
+}
+
+// TestWaitVersionMultipleTargets checks normal publication, insufficient
+// broadcasts, and cancellation of one waiter while the others keep waiting.
+func TestWaitVersionMultipleTargets(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+
+		state := versionWaitState(t)
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+		targets := []int{124, 125, 130, 125}
+		results := make([]chan error, len(targets))
+		for i, target := range targets {
+			results[i] = make(chan error, 1)
+			waitCtx := t.Context()
+			if i == 3 {
+				waitCtx = ctx
+			}
+			go func() { results[i] <- state.waitVersion(waitCtx, target) }()
+		}
+		synctest.Wait()
+
+		state.version.Lock()
+		state.version.next.Broadcast()
+		state.version.Unlock()
+		synctest.Wait()
+		for i, result := range results {
+			if len(result) != 0 {
+				t.Fatalf("expected target %d still pending after Broadcast, got a result", targets[i])
+			}
+		}
+
+		cancel()
+		synctest.Wait()
+		err := <-results[3]
+		func() {
+			if err != nil {
+				if !errors.Is(err, context.Canceled) {
+					t.Fatalf("expected caller cancellation, got %v", err)
+				}
+				return
+			}
+			t.Fatal("expected canceled waiter, got success")
+		}()
+		for i := range 3 {
+			if len(results[i]) != 0 {
+				t.Fatalf("expected target %d pending after another waiter's cancellation, got a result", targets[i])
+			}
+		}
+
+		state.version.Lock()
+		state.version.current = 125
+		state.version.next.Broadcast()
+		state.version.Unlock()
+		synctest.Wait()
+		for i := range 2 {
+			err := <-results[i]
+			if err != nil {
+				t.Fatalf("expected reached target %d, got %v", targets[i], err)
+			}
+		}
+		if len(results[2]) != 0 {
+			t.Fatal("expected target 130 pending at version 125, got a result")
+		}
+
+		state.version.Lock()
+		state.version.current = 130
+		state.version.next.Broadcast()
+		state.version.Unlock()
+		err = <-results[2]
+		if err != nil {
+			t.Fatalf("expected reached target 130, got %v", err)
+		}
+
+	})
+}
+
+// TestWaitVersionPrecedence checks both entry and wakeup observations: success
+// wins over both cancellations, then the caller's error wins over the State's.
+func TestWaitVersionPrecedence(t *testing.T) {
+	for _, pending := range []bool{false, true} {
+		for _, reached := range []bool{false, true} {
+			for _, source := range []string{"caller", "state", "both"} {
+				name := source
+				if pending {
+					name += "/pending"
+				}
+				if reached {
+					name += "/reached"
+				}
+				t.Run(name, func(t *testing.T) {
+					synctest.Test(t, func(t *testing.T) {
+
+						state := versionWaitState(t)
+						state.rateLimiter = ratelimiter.New(nil, ratelimiter.Metrics{})
+						state.cipher = cipher.New(nil)
+						ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+						defer cancel()
+						result := make(chan error, 1)
+						if pending {
+							go func() { result <- state.waitVersion(ctx, 124) }()
+							synctest.Wait()
+						}
+
+						state.version.Lock()
+						if reached {
+							state.version.current = 124
+						}
+						if source != "state" {
+							// Wait on the timer under test, without yielding the version
+							// mutex to a waiter before the deadline is observable.
+							<-ctx.Done()
+						}
+						if source != "caller" {
+							go state.Close(t.Context())
+							<-state.close.ctx.Done()
+						}
+						state.version.next.Broadcast()
+						state.version.Unlock()
+						if source == "caller" {
+							defer state.Close(t.Context())
+						}
+						if !pending {
+							result <- state.waitVersion(ctx, 124)
+						}
+
+						err := <-result
+						if err != nil {
+							expected := error(context.DeadlineExceeded)
+							if source == "state" {
+								expected = context.Canceled
+							}
+							if reached || !errors.Is(err, expected) {
+								t.Fatalf("expected reached=%t or error %v, got %v", reached, expected, err)
+							}
+							return
+						}
+						if !reached {
+							t.Fatal("expected interruption before target, got success")
+						}
+
+					})
+				})
+			}
+		}
+	}
+}
+
+// TestWaitVersionReached also checks that the fast path needs no AfterFunc.
+func TestWaitVersionReached(t *testing.T) {
+	state := versionWaitState(t)
+	// A reached version must not inspect the caller's context.
+	ctx := &cancelOnErrContext{Context: t.Context(), t: t, cancel: func() { t.Fatal("expected fast path without context checks, got Err") }}
+	for _, target := range []int{0, 122, 123} {
+		err := state.waitVersion(ctx, target)
+		if err != nil {
+			t.Fatalf("expected reached version %d, got %v", target, err)
+		}
+		if ctx.registrations != 0 {
+			t.Fatalf("expected fast path without AfterFunc, got %d registrations", ctx.registrations)
+		}
+	}
+}
+
+func versionWaitState(t *testing.T) *State {
+	t.Helper()
+	state := &State{}
+	state.version.current = 123
+	state.version.next = sync.Cond{L: &state.version.RWMutex}
+	state.close.ctx, state.close.cancel = context.WithCancel(t.Context())
+	t.Cleanup(state.close.cancel)
+	return state
 }
