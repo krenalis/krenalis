@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"math"
 	"sync"
+	"time"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/db"
@@ -207,13 +208,28 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		}
 	}
 
-	tx, err := state.db.Begin(ctx)
+	tx, err := state.db.BeginTx(ctx, db.TxOptions{Isolation: db.LevelRepeatableRead, ReadOnly: true})
 	if err != nil {
 		return err
 	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	var keyValidation chan error
 	defer func() {
-		// Calling Rollback is always safe.
+
+		// Cancel any ongoing key validation.
+		cancel()
+
+		// Roll back with an independent timeout.
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 		_ = tx.Rollback(ctx)
+
+		// Wait for any pending validation result.
+		if keyValidation != nil {
+			<-keyValidation
+		}
+
 	}()
 
 	// Read the installation ID, the KMS-encrypted HTTP secret, OAuth, and
@@ -256,10 +272,13 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 	notificationKey := state.cipher.Key(kmsEncryptedNotificationKey)
 	clear(kmsEncryptedNotificationKey)
-	validNotificationKeyCh := make(chan error, 1)
+
+	// Validate the notification key while loading the remaining snapshot.
+	keyValidation = make(chan error)
 	go func() {
-		validNotificationKeyCh <- notificationKey.IsValid(ctx)
+		keyValidation <- notificationKey.IsValid(ctx)
 	}()
+
 	// API key pepper.
 	if len(kmsEncryptedAPIKeyPepper) == 0 {
 		return errors.New("cannot load state: missing API key pepper in metadata table")
@@ -692,8 +711,10 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		return err
 	}
 
-	// Verify that the KMS key validation completed successfully.
-	if err = <-validNotificationKeyCh; err != nil {
+	// Wait for key validation after closing the snapshot transaction.
+	err = <-keyValidation
+	keyValidation = nil
+	if err != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -701,8 +722,6 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 
 	state.notifications.key = notificationKey
-	state.notifications.nextVersion = version + 1
-	state.notifications.loaded <- struct{}{}
 
 	return nil
 }

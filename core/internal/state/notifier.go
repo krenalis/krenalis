@@ -9,19 +9,16 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"reflect"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/cipher"
 	"github.com/krenalis/krenalis/core/internal/db"
-	"github.com/krenalis/krenalis/tools/backoff"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 )
 
@@ -33,46 +30,107 @@ type notification struct {
 	Payload string
 }
 
-// notifier sends and receives state notifications.
-type notifier struct {
-	db          *db.DB
-	ch          chan<- notification
-	key         *cipher.Key
-	nextVersion int
-	loaded      chan struct{}
-	closed      struct {
-		cancel context.CancelFunc
-		atomic.Bool
-	}
+// notificationSession owns the dedicated connection, buffered fragments, and
+// active rows. On terminal errors and panics, rows remain owned by the session
+// so the caller can inspect the outcome before cleanup and abort the socket
+// before closing the rows.
+type notificationSession struct {
+	conn      *db.Conn
+	fragments bytes.Buffer
+	rows      *db.Rows
 }
 
-// newNotifier returns a new notifier that will send received notifications to
-// the notification channel ch. To begin receiving notifications, call Commit.
-func newNotifier(db *db.DB, ch chan<- notification) *notifier {
-	notifier := &notifier{
-		db:     db,
-		ch:     ch,
-		loaded: make(chan struct{}, 1),
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	notifier.closed.cancel = cancel
-	go notifier.init(ctx)
-	return notifier
-}
+// close releases the session's resources. It is safe to call more than once,
+// but not concurrently with any other use of the session.
+func (session *notificationSession) close() {
 
-// Close closes the notifier.
-func (notifier *notifier) Close() {
-	if notifier.closed.Swap(true) {
+	if session.conn == nil {
 		return
 	}
-	notifier.closed.cancel()
+
+	if session.rows != nil {
+		// pgx Rows.Close drains unread results. Closing the socket first makes
+		// abandonment bounded even if the server is blocked producing a row.
+		_ = session.conn.Underlying().PgConn().Conn().Close()
+		_ = session.rows.Close()
+		session.rows = nil
+	}
+
+	closeNotificationConnection(session.conn)
+	session.conn = nil
+	session.fragments.Reset()
+
+}
+
+// reconstruct consumes one transport fragment; (nil, nil) means the message is
+// still incomplete. Every final fragment resets the buffer, including on failure.
+func (session *notificationSession) reconstruct(ctx context.Context, key *cipher.Key, fragment string) (*notification, error) {
+
+	if strings.HasSuffix(fragment, "*") {
+		session.fragments.WriteString(fragment[:len(fragment)-1])
+		return nil, nil
+	}
+
+	defer session.fragments.Reset()
+	p, identifier, _ := strings.Cut(fragment, "@")
+	session.fragments.WriteString(p)
+	br := base64.NewDecoder(base64.RawStdEncoding, &session.fragments)
+	encrypted, err := io.ReadAll(br)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := key.Decrypt(ctx, encrypted)
+	if err != nil {
+		return nil, err
+	}
+
+	zr, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+
+	var s strings.Builder
+	_, err = io.Copy(&s, zr)
+	if err != nil {
+		_ = zr.Close()
+		return nil, err
+	}
+
+	err = zr.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	payload := s.String()
+	if identifier != "" {
+		payload += "@" + identifier
+	}
+
+	version, name, payload, err := parsePayload(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return &notification{version, name, payload}, nil
+}
+
+// notifier produces notifications and establishes listening connections.
+type notifier struct {
+	db  *db.DB
+	key *cipher.Key
+}
+
+// newNotifier constructs a notifier without starting notification reception.
+func newNotifier(db *db.DB) *notifier {
+	return &notifier{db: db}
 }
 
 // Notify sends the notification n within the transaction tx and returns its
 // version. For ElectLeader and SeeLeader notifications, the version is always
 // 0.
 //
-// It can only be called after a successful call to Commit.
+// It can only be called after bootstrap has completed.
 func (notifier *notifier) Notify(ctx context.Context, tx *db.Tx, n any) (int, error) {
 	t := reflect.TypeOf(n)
 	if t.Kind() == reflect.Pointer {
@@ -106,7 +164,7 @@ func (notifier *notifier) Notify(ctx context.Context, tx *db.Tx, n any) (int, er
 		return 0, err
 	}
 	for len(b) > 8000-maxIDLen-2 {
-		const n = 8000 - 2
+		n := min(len(b), 8000-2)
 		s := append([]byte(nil), b[:n]...)
 		s = append(s, '*', '\'')
 		_, err = tx.Exec(ctx, string(s))
@@ -128,151 +186,23 @@ func (notifier *notifier) Notify(ctx context.Context, tx *db.Tx, n any) (int, er
 	return version, nil
 }
 
-// init initializes the notifier to listen for notifications.
-func (notifier *notifier) init(ctx context.Context) {
-	bo := backoff.New(10)
-	bo.SetCap(5 * time.Second)
-	var acquireFailed bool
-	for bo.Next(ctx) {
-		// Acquire a connection.
-		conn, err := notifier.db.Conn(ctx)
-		if err != nil {
-			if ctx.Err() == nil {
-				if !acquireFailed {
-					slog.Warn("failed to acquire notification connection; retrying", "error", err)
-					acquireFailed = true
-				}
-			}
-			continue
-		}
-		if acquireFailed {
-			slog.Info("connection for notifications successfully re-established")
-			acquireFailed = false
-		}
-		_, err = conn.Exec(ctx, "LISTEN krenalis")
-		if err != nil {
-			// Close and release the connection.
-			_ = conn.Underlying().Close(ctx)
-			_ = conn.Close()
-			if ctx.Err() == nil {
-				slog.Error("core/state: cannot execute LISTEN; retrying", "waiting_time", bo.WaitTime(), "error", err)
-			}
-			continue
-		}
-		if notifier.loaded != nil {
-			// Waits for the Commit method to be called.
-			select {
-			case <-notifier.loaded:
-				notifier.loaded = nil
-			case <-ctx.Done():
-				// Close and release the connection.
-				_ = conn.Underlying().Close(ctx)
-				_ = conn.Close()
-				return
-			}
-		} else {
-			// Reads any missed notifications.
-			const query = "SELECT version, name, payload FROM notifications WHERE version >= $1 ORDER BY version"
-			err = conn.QueryScan(ctx, query, notifier.nextVersion, func(rows *db.Rows) error {
-				for rows.Next() {
-					var version int
-					var name string
-					var payload string
-					err = rows.Scan(&version, &name, &payload)
-					if err != nil {
-						return err
-					}
-					if version != notifier.nextVersion {
-						panic(fmt.Sprintf("core/state: expected notification version %d, got %d", notifier.nextVersion, version))
-					}
-					notifier.nextVersion++
-					notifier.ch <- notification{version, name, payload}
-				}
-				return nil
-			})
-			if err != nil {
-				// Close and release the connection.
-				_ = conn.Underlying().Close(ctx)
-				_ = conn.Close()
-				if ctx.Err() == nil {
-					slog.Error("core/state: cannot query notifications; retrying", "retry_after", bo.WaitTime(), "error", err)
-				}
-				continue
-			}
-		}
-		err = notifier.listen(ctx, conn)
-		if err != nil && ctx.Err() == nil {
-			slog.Error("core/state: cannot listen to notifications; retrying", "retry_after", bo.WaitTime(), "error", err)
-		}
-		// Close and release the connection.
-		_ = conn.Underlying().Close(ctx)
-		_ = conn.Close()
-	}
-}
+// connect acquires a dedicated connection and completes LISTEN in autocommit.
+// On success, the caller owns the connection and must close and release it
+// with closeNotificationConnection.
+func (notifier *notifier) connect(ctx context.Context) (*db.Conn, error) {
 
-// listen listens to the notifications received from the connection conn and
-// sends them to notification channel.
-func (notifier *notifier) listen(ctx context.Context, conn *db.Conn) error {
-	var b bytes.Buffer
-	for {
-		n, err := conn.Underlying().WaitForNotification(ctx)
-		if err != nil {
-			return err
-		}
-		if n.Channel != "krenalis" {
-			continue
-		}
-		if strings.HasSuffix(n.Payload, "*") {
-			b.WriteString(n.Payload[:len(n.Payload)-1])
-			continue
-		}
-		p, identifier, _ := strings.Cut(n.Payload, "@")
-		b.WriteString(p)
-		var payload string
-		if b.Len() > 0 {
-			br := base64.NewDecoder(base64.RawStdEncoding, &b)
-			encrypted, err := io.ReadAll(br)
-			if err != nil {
-				continue
-			}
-			data, err := notifier.key.Decrypt(ctx, encrypted)
-			if err != nil {
-				continue
-			}
-			zr, err := gzip.NewReader(bytes.NewReader(data))
-			if err != nil {
-				continue
-			}
-			var s strings.Builder
-			_, err = io.Copy(&s, zr)
-			if err != nil {
-				_ = zr.Close()
-				continue
-			}
-			if err = zr.Close(); err != nil {
-				continue
-			}
-			payload = s.String()
-			b.Reset()
-		}
-		if identifier != "" {
-			payload += "@" + identifier
-		}
-		version, name, payload, err := parsePayload(payload)
-		if err != nil {
-			continue
-		}
-		if version > 0 {
-			if version < notifier.nextVersion {
-				continue
-			}
-			if version > notifier.nextVersion {
-				return nil
-			}
-			notifier.nextVersion++
-		}
-		notifier.ch <- notification{version, name, payload}
+	conn, err := notifier.db.Conn(ctx)
+	if err != nil {
+		return nil, err
 	}
+
+	_, err = conn.Exec(ctx, "LISTEN krenalis")
+	if err != nil {
+		closeNotificationConnection(conn)
+		return nil, err
+	}
+
+	return conn, nil
 }
 
 // appendEncodeNotification compresses, encrypts, and Base64-encodes a
@@ -306,6 +236,19 @@ func appendEncodeNotification(ctx context.Context, b []byte, encryptor payloadEn
 		return nil, fmt.Errorf("cannot encrypt notification payload: %s", err)
 	}
 	return base64.RawStdEncoding.AppendEncode(b, encryptedData), nil
+}
+
+// closeNotificationConnection closes the listening session before releasing it.
+func closeNotificationConnection(conn *db.Conn) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cleanupDone := conn.Underlying().PgConn().CleanupDone()
+	_ = conn.Underlying().Close(ctx)
+	_ = conn.Close()
+	// Release ends ownership of the pool connection. After that, only the
+	// previously captured cleanup barrier may be used. Close may return while
+	// pgconn.asyncClose is still in progress.
+	<-cleanupDone
 }
 
 // parsePayload parses a notification payload and returns the version, name,

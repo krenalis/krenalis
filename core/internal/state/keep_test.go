@@ -5,11 +5,18 @@
 package state
 
 import (
+	"bytes"
+	"context"
+	"maps"
+	"reflect"
 	"slices"
 	"sync"
 	"testing"
+	"testing/synctest"
 
 	"github.com/krenalis/krenalis/core/internal/state/ratelimiter"
+	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 func TestAddAndRemoveLinkedConnection(t *testing.T) {
@@ -63,6 +70,113 @@ func TestAddAndRemoveLinkedConnection(t *testing.T) {
 		}
 	}
 
+}
+
+// TestApplyPanicsDuringDispatch verifies that a dispatch panic propagates
+// unchanged after the mutation has been applied, without advancing the version.
+func TestApplyPanicsDuringDispatch(t *testing.T) {
+	ws := &Workspace{mu: &sync.Mutex{}, ID: stateTestWorkspaceID, organization: &Organization{ID: stateTestOrganizationID}, consentPurposes: map[string]*ConsentPurpose{}}
+	state := &State{changing: &sync.RWMutex{}, workspaces: map[string]*Workspace{stateTestWorkspaceID: ws}}
+	state.version.next = sync.Cond{L: &state.version.RWMutex}
+	state.version.current = 7
+	panicValue := &struct{ reason string }{"listener failure"}
+	state.listeners = []any{func(AddConsentPurpose) { panic(panicValue) }}
+	defer func() {
+		if got := recover(); got != panicValue {
+			t.Fatalf("expected original dispatch panic %v, got %v", panicValue, got)
+		}
+
+		purpose := ws.consentPurposes[stateTestConsentPurposeID]
+		if purpose == nil {
+			t.Fatal("expected consent purpose mutation to be applied, got nil")
+		}
+
+		if purpose.Name != "Marketing" {
+			t.Fatalf("expected purpose name %q, got %q", "Marketing", purpose.Name)
+		}
+
+		if got := state.Version(); got != 7 {
+			t.Fatalf("expected version to remain 7 after failed dispatch, got %d", got)
+		}
+	}()
+	_ = state.applyNotification(notification{8, "AddConsentPurpose", `{"Workspace":"6NpT4zB8QaR2","ID":"D7hV4xK9mP2a","Name":"Marketing"}`}, nil)
+}
+
+// TestApplyProcessesNotificationInOrder verifies that a notification is applied
+// and dispatched before its version is published and version waiters succeed.
+func TestApplyProcessesNotificationInOrder(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+
+		org := &Organization{ID: stateTestOrganizationID}
+		ws := &Workspace{mu: &sync.Mutex{}, ID: stateTestWorkspaceID, organization: org, consentPurposes: map[string]*ConsentPurpose{}}
+		state := &State{changing: &sync.RWMutex{}, workspaces: map[string]*Workspace{stateTestWorkspaceID: ws}}
+		state.version.next = sync.Cond{L: &state.version.RWMutex}
+		state.version.current = 7
+		state.close.ctx, state.close.cancel = context.WithCancel(t.Context())
+		defer state.close.cancel()
+		calls := 0
+		release := make(chan struct{})
+		releaseDispatch := sync.OnceFunc(func() { close(release) })
+		defer releaseDispatch()
+		state.listeners = []any{func(e AddConsentPurpose) {
+			calls++
+			if got := state.Version(); got != 7 {
+				t.Errorf("expected version 7 during dispatch, got %d", got)
+			}
+			if e.Name != "Marketing" {
+				t.Errorf("expected Marketing during dispatch, got %q", e.Name)
+			}
+			if state.changing.TryLock() {
+				state.changing.Unlock()
+				t.Error("expected changing held during dispatch, got unlocked state")
+			}
+			purpose := ws.consentPurposes[e.ID]
+			if purpose == nil || purpose.Name != e.Name {
+				t.Errorf("expected applied consent purpose during dispatch, got %#v", purpose)
+			}
+			<-release
+		}}
+		completed := make(chan error, 1)
+		go func() { completed <- state.waitVersion(t.Context(), 8) }()
+		synctest.Wait()
+
+		state.close.Add(1)
+		go func() {
+			defer state.close.Done()
+			err := state.applyNotification(notification{8, "AddConsentPurpose", `{"Workspace":"6NpT4zB8QaR2","ID":"D7hV4xK9mP2a","Name":"Marketing"}`}, nil)
+			if err != nil {
+				t.Errorf("expected applied notification, got %v", err)
+			}
+		}()
+		synctest.Wait()
+		if calls != 1 || state.Version() != 7 {
+			t.Fatalf("expected pending dispatch and version 7, got calls=%d version=%d", calls, state.Version())
+		}
+		select {
+		case err := <-completed:
+			t.Fatalf("expected pending version wait during dispatch, got %v", err)
+		default:
+		}
+
+		releaseDispatch()
+		state.close.Wait()
+		err := <-completed
+		if err != nil {
+			t.Fatalf("expected version wait after dispatch, got %v", err)
+		}
+		if !state.changing.TryLock() {
+			t.Error("expected changing released after application, got locked state")
+		} else {
+			state.changing.Unlock()
+		}
+		if calls != 1 || state.Version() != 8 {
+			t.Fatalf("expected one dispatch and version 8, got %d and %d", calls, state.Version())
+		}
+		purpose := ws.consentPurposes[stateTestConsentPurposeID]
+		if purpose == nil || purpose.Name != "Marketing" {
+			t.Fatalf("expected Marketing consent purpose, got %#v", purpose)
+		}
+	})
 }
 
 // TestReplaceConsentPurpose checks that replacing a consent purpose does not
@@ -172,4 +286,265 @@ func TestReplaceWorkspacePreservesRateLimitBuckets(t *testing.T) {
 	if updated.eventBucket != eventBucket {
 		t.Fatal("workspace update replaced its event rate-limit bucket")
 	}
+}
+
+// TestDecodeNotificationOmitsPayloadDetails verifies that schema decoding
+// errors do not expose payload details in the panic message.
+func TestDecodeNotificationOmitsPayloadDetails(t *testing.T) {
+	defer func() {
+		got := recover()
+		const expected = "invalid notification payload UpdatePipeline (version 8)"
+		if got != expected {
+			t.Fatalf("expected panic %q, got %v", expected, got)
+		}
+	}()
+	var event UpdatePipeline
+	decodeNotification(notification{8, "UpdatePipeline", `{"InSchema":{"kind":"PrivateCredentialValue"}}`}, &event)
+}
+
+// TestApplyPanicsOnInvalidNotificationPayload verifies that invalid payloads
+// panic without application, dispatch or version advancement.
+func TestApplyPanicsOnInvalidNotificationPayload(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		payload string
+	}{
+		{"malformed", `{"Workspace":"6NpT4zB8QaR2","ID":"D7hV4xK9mP2a","Name":`},
+		{"incompatible shape", `[]`},
+		{"incompatible field", `{"Workspace":"6NpT4zB8QaR2","ID":"D7hV4xK9mP2a","Name":42}`},
+		{"trailing JSON", `{"Workspace":"6NpT4zB8QaR2","ID":"D7hV4xK9mP2a"} {}`},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+				ws := &Workspace{mu: &sync.Mutex{}, ID: stateTestWorkspaceID, organization: &Organization{ID: stateTestOrganizationID}, consentPurposes: map[string]*ConsentPurpose{}}
+				state := &State{changing: &sync.RWMutex{}, workspaces: map[string]*Workspace{stateTestWorkspaceID: ws}}
+				state.version.next = sync.Cond{L: &state.version.RWMutex}
+				state.version.current = 7
+				listenerCalls := 0
+				state.listeners = []any{func(AddConsentPurpose) { listenerCalls++ }}
+				defer func() {
+					got := recover()
+					message, ok := got.(string)
+					const expected = "invalid notification payload AddConsentPurpose (version 8)"
+					if !ok || message != expected {
+						t.Fatalf("expected panic %q, got %v", expected, got)
+					}
+
+					if len(ws.consentPurposes) != 0 {
+						t.Fatalf("expected no state mutation, got %d consent purposes", len(ws.consentPurposes))
+					}
+					if listenerCalls != 0 {
+						t.Fatalf("expected no listener dispatch, got %d calls", listenerCalls)
+					}
+					if got := state.Version(); got != 7 {
+						t.Fatalf("expected version 7, got %d", got)
+					}
+				}()
+				_ = state.applyNotification(notification{Version: 8, Name: "AddConsentPurpose", Payload: test.payload}, nil)
+			})
+		})
+	}
+}
+
+// TestPipelineNotificationFilterDecoding verifies that create and update
+// notifications decode valid filters and reject invalid ones without leaving
+// state changes behind or dispatching the event.
+func TestPipelineNotificationFilterDecoding(t *testing.T) {
+	for _, operation := range []string{"create", "update"} {
+		for _, filter := range []struct {
+			name      string
+			payload   string
+			expected  *Where
+			wantPanic bool
+		}{
+			{"null", `null`, nil, false},
+			{"empty-and", `{"operator":"And","rules":[]}`, &Where{Operator: OpAnd, Rules: []WhereRule{}}, false},
+			{
+				"condition", `{"operator":"And","rules":[{"property":["name"],"operator":"Is","values":["Ada"]}]}`,
+				&Where{Operator: OpAnd, Rules: []WhereRule{
+					&WhereCondition{Property: []string{"name"}, Operator: OpIs, Values: []any{"Ada"}},
+				}},
+				false,
+			},
+			{"unknown-property", `{"operator":"And","rules":[{"property":["PrivateCredentialValue"],"operator":"Is","values":["Ada"]}]}`, nil, true},
+			{"legacy-shape", `{"logical":"And","conditions":[]}`, nil, true},
+		} {
+			t.Run(operation+"/"+filter.name, func(t *testing.T) {
+
+				format := &Connector{Code: "format"}
+				updatedFormat := &Connector{Code: "updated-format"}
+				org := &Organization{mu: &sync.Mutex{}, ID: stateTestOrganizationID, usage: newOrganizationUsage(OrganizationLimits{})}
+				connection := &Connection{mu: &sync.Mutex{}, ID: stateTestConnectionID, organization: org, pipelines: map[string]*Pipeline{}}
+				state := &State{
+					mu: &sync.Mutex{}, connections: map[string]*Connection{connection.ID: connection},
+					pipelines: map[string]*Pipeline{}, connectors: map[string]*Connector{format.Code: format, updatedFormat.Code: updatedFormat},
+				}
+				createCalls, updateCalls := 0, 0
+				state.listeners = []any{
+					func(CreatePipeline) { createCalls++ },
+					func(UpdatePipeline) { updateCalls++ },
+				}
+				schema := types.Object([]types.Property{{Name: "name", Type: types.String()}})
+				var event any = CreatePipeline{
+					ID: stateTestPipelineID, Connection: connection.ID, Name: "changed", InSchema: schema, Filter: []byte(filter.payload), Format: updatedFormat.Code,
+				}
+				name := "CreatePipeline"
+				apply := state.createPipeline
+				if operation == "update" {
+					pipeline := &Pipeline{
+						mu: &sync.Mutex{}, ID: stateTestPipelineID, Name: "original", connection: connection, organization: org,
+						format: format, propertiesToUnset: []string{"original"}, Query: "original", FormatSettings: json.Value(`{"original":true}`),
+						InSchema: types.Object([]types.Property{
+							{Name: "name", Type: types.String()},
+							{Name: "original", Type: types.String()},
+						}),
+						Filter: &Where{Operator: OpOr, Rules: []WhereRule{
+							&WhereCondition{Property: []string{"name"}, Operator: OpIs, Values: []any{"original"}},
+						}},
+					}
+					state.pipelines[pipeline.ID] = pipeline
+					connection.pipelines[pipeline.ID] = pipeline
+					org.usage.addPipeline(format)
+					event = UpdatePipeline{ID: pipeline.ID, Name: "changed", InSchema: schema, Filter: []byte(filter.payload), Format: updatedFormat.Code}
+					name = "UpdatePipeline"
+					apply = state.updatePipeline
+				}
+				payload, err := json.Marshal(event)
+				if err != nil {
+					t.Fatalf("expected encoded event, got %v", err)
+				}
+
+				if filter.wantPanic {
+
+					pipelines := maps.Clone(state.pipelines)
+					connectionPipelines := maps.Clone(connection.pipelines)
+					counts := org.usage.counts
+					connectorUsage := maps.Clone(org.usage.connectorUsage)
+					var originalPipeline []byte
+					var originalFormat *Connector
+					if pipeline := state.pipelines[stateTestPipelineID]; pipeline != nil {
+						originalFormat = pipeline.format
+						originalPipeline = pipelineUpdateSnapshot(t, pipeline)
+					}
+					defer func() {
+
+						got := recover()
+						expected := "invalid notification payload " + name + " (version 8)"
+						if got != expected {
+							t.Fatalf("expected panic %q, got %v", expected, got)
+						}
+						if !maps.Equal(pipelines, state.pipelines) || !maps.Equal(connectionPipelines, connection.pipelines) || counts != org.usage.counts || !maps.Equal(connectorUsage, org.usage.connectorUsage) || createCalls != 0 || updateCalls != 0 {
+							t.Fatal("expected unchanged indexes, usage and listeners, got mutation or dispatch")
+						}
+						if pipeline := state.pipelines[stateTestPipelineID]; pipeline != nil {
+							encodedPipeline := pipelineUpdateSnapshot(t, pipeline)
+							if pipeline.format != originalFormat || !bytes.Equal(encodedPipeline, originalPipeline) {
+								t.Fatal("expected unchanged pipeline fields, got mutation")
+							}
+						}
+
+					}()
+					apply(notification{8, name, string(payload)})
+					t.Fatal("expected invalid filter panic, got normal return")
+
+				}
+
+				organization := apply(notification{8, name, string(payload)})
+				pipeline := state.pipelines[stateTestPipelineID]
+				if pipeline == nil {
+					t.Fatal("expected pipeline to exist, got nil")
+				}
+				if organization != org.ID || pipeline.Name != "changed" || org.usage.counts.Pipelines != 1 {
+					t.Fatalf("expected applied pipeline and count 1, got %q, %#v and %d", organization, pipeline, org.usage.counts.Pipelines)
+				}
+				if !types.Equal(pipeline.InSchema, schema) {
+					t.Fatalf("expected input schema %v, got %v", schema, pipeline.InSchema)
+				}
+				if operation == "create" {
+					if createCalls != 1 || updateCalls != 0 {
+						t.Fatalf("expected one CreatePipeline dispatch, got %d create and %d update", createCalls, updateCalls)
+					}
+				} else {
+					if createCalls != 0 || updateCalls != 1 {
+						t.Fatalf("expected one UpdatePipeline dispatch, got %d create and %d update", createCalls, updateCalls)
+					}
+				}
+				if !reflect.DeepEqual(filter.expected, pipeline.Filter) {
+					t.Fatalf("expected filter %#v, got %#v", filter.expected, pipeline.Filter)
+				}
+				if pipeline.FormatSettings != nil {
+					t.Fatalf("expected absent format settings, got %#v", pipeline.FormatSettings)
+				}
+				if connection.pipelines[pipeline.ID] != pipeline || pipeline.format != updatedFormat {
+					t.Fatal("expected pipeline indexed by connection with updated format, got inconsistent references")
+				}
+				if !maps.Equal(org.usage.connectorUsage, map[*Connector]int{updatedFormat: 1}) {
+					t.Fatalf("expected one use of updated format, got %#v", org.usage.connectorUsage)
+				}
+
+			})
+		}
+	}
+}
+
+// pipelineUpdateSnapshot returns a JSON snapshot of the pipeline fields that
+// updatePipeline may modify. The format reference is compared separately.
+func pipelineUpdateSnapshot(t *testing.T, pipeline *Pipeline) []byte {
+
+	t.Helper()
+
+	snapshot, err := json.Marshal(struct {
+		Name               string
+		Enabled            bool
+		InSchema           types.Type
+		OutSchema          types.Type
+		Filter             *Where
+		RequiredConsents   RequiredConsents
+		Transformation     Transformation
+		Query              string
+		Path               string
+		Sheet              string
+		Compression        Compression
+		OrderBy            string
+		FormatSettings     json.Value
+		ExportMode         ExportMode
+		Matching           Matching
+		UpdateOnDuplicates bool
+		TableName          string
+		TableKey           string
+		UserIDColumn       string
+		UpdatedAtColumn    string
+		UpdatedAtFormat    string
+		Incremental        bool
+		PropertiesToUnset  []string
+	}{
+		Name:               pipeline.Name,
+		Enabled:            pipeline.Enabled,
+		InSchema:           pipeline.InSchema,
+		OutSchema:          pipeline.OutSchema,
+		Filter:             pipeline.Filter,
+		RequiredConsents:   pipeline.RequiredConsents,
+		Transformation:     pipeline.Transformation,
+		Query:              pipeline.Query,
+		Path:               pipeline.Path,
+		Sheet:              pipeline.Sheet,
+		Compression:        pipeline.Compression,
+		OrderBy:            pipeline.OrderBy,
+		FormatSettings:     pipeline.FormatSettings,
+		ExportMode:         pipeline.ExportMode,
+		Matching:           pipeline.Matching,
+		UpdateOnDuplicates: pipeline.UpdateOnDuplicates,
+		TableName:          pipeline.TableName,
+		TableKey:           pipeline.TableKey,
+		UserIDColumn:       pipeline.UserIDColumn,
+		UpdatedAtColumn:    pipeline.UpdatedAtColumn,
+		UpdatedAtFormat:    pipeline.UpdatedAtFormat,
+		Incremental:        pipeline.Incremental,
+		PropertiesToUnset:  pipeline.propertiesToUnset,
+	})
+	if err != nil {
+		t.Fatalf("expected encoded pipeline snapshot, got %v", err)
+	}
+
+	return snapshot
 }
