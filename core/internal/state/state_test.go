@@ -647,7 +647,7 @@ func TestStateBootstrap(t *testing.T) {
 		})
 	}
 
-	for _, scenario := range []string{"acquire", "snapshot", "key", "cancel-key", "replay", "panic"} {
+	for _, scenario := range []string{"acquire", "snapshot", "key", "cancel-key", "replay", "gap", "panic"} {
 		t.Run(scenario, func(t *testing.T) {
 
 			database, keyManager := bootstrapDatabase(t, admin, opts, "failure_"+strings.ReplaceAll(scenario, "-", "_"))
@@ -688,7 +688,7 @@ func TestStateBootstrap(t *testing.T) {
 					cancel()
 					<-ctx.Done()
 					return nil, ctx.Err()
-				case "replay", "panic":
+				case "replay", "gap", "panic":
 
 					// Acquiring the exclusive metadata lock waits for the snapshot transaction
 					// to commit, while load still waits for KMS.
@@ -698,6 +698,9 @@ func TestStateBootstrap(t *testing.T) {
 							return err
 						}
 						query := "DROP TABLE notifications"
+						if scenario == "gap" {
+							query = "INSERT INTO notifications (version, name, payload) VALUES (2, 'AddMember', '{}'::jsonb)"
+						}
 						if scenario == "panic" {
 							// The first row flushes to the client; the following row
 							// cannot drain until the test releases its advisory lock.
@@ -763,6 +766,10 @@ func TestStateBootstrap(t *testing.T) {
 					case "replay":
 						if !strings.Contains(err.Error(), "cannot replay state notifications") {
 							t.Errorf("expected replay DB error, got %v", err)
+						}
+					case "gap":
+						if _, ok := errors.AsType[*replicationError](err); !ok {
+							t.Errorf("expected bootstrap terminal replication error returned by New, got %v", err)
 						}
 					}
 
