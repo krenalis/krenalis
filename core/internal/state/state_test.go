@@ -18,6 +18,7 @@ import (
 	"testing/synctest"
 	"time"
 
+	_ "github.com/krenalis/krenalis/connectors/dummy"
 	"github.com/krenalis/krenalis/core/internal/cipher"
 	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/core/internal/initdb"
@@ -26,6 +27,7 @@ import (
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/kms"
+	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/testcontainers/testcontainers-go"
@@ -440,7 +442,7 @@ func TestValuerStringerInvalidValues(t *testing.T) {
 }
 
 // TestStateBootstrap verifies PostgreSQL bootstrap ordering and resource
-// cleanup after operational failures and application panics.
+// cleanup after operational failures and panics during notification replay.
 func TestStateBootstrap(t *testing.T) {
 
 	container, err := postgres.Run(t.Context(), testimages.PostgreSQL,
@@ -647,7 +649,7 @@ func TestStateBootstrap(t *testing.T) {
 		})
 	}
 
-	for _, scenario := range []string{"acquire", "snapshot", "key", "cancel-key", "replay", "gap", "panic"} {
+	for _, scenario := range []string{"acquire", "snapshot", "key", "cancel-key", "replay", "gap", "panic", "filter-panic"} {
 		t.Run(scenario, func(t *testing.T) {
 
 			database, keyManager := bootstrapDatabase(t, admin, opts, "failure_"+strings.ReplaceAll(scenario, "-", "_"))
@@ -688,7 +690,7 @@ func TestStateBootstrap(t *testing.T) {
 					cancel()
 					<-ctx.Done()
 					return nil, ctx.Err()
-				case "replay", "gap", "panic":
+				case "replay", "gap", "panic", "filter-panic":
 
 					// Acquiring the exclusive metadata lock waits for the snapshot transaction
 					// to commit, while load still waits for KMS.
@@ -713,6 +715,45 @@ func TestStateBootstrap(t *testing.T) {
 								CREATE VIEW notifications AS SELECT version, name, panic_payload(version, payload) AS payload FROM panic_log;
 							`
 						}
+						if scenario == "filter-panic" {
+							var organization string
+							err := tx.QueryRow(ctx, "SELECT id FROM organizations").Scan(&organization)
+							if err != nil {
+								return err
+							}
+							events := []struct {
+								name  string
+								value any
+							}{
+								{"CreateWorkspace", CreateWorkspace{ID: stateTestWorkspaceID, Organization: organization}},
+								{"CreateConnection", CreateConnection{Workspace: stateTestWorkspaceID, ID: stateTestConnectionID, Connector: "dummy", Role: Source}},
+								{"CreatePipeline", CreatePipeline{ID: stateTestPipelineID, Connection: stateTestConnectionID,
+									Target: TargetUser, InSchema: types.Object([]types.Property{{Name: "name", Type: types.String()}}),
+									Filter: []byte(`{"logical":"And","conditions":[]}`), Format: "dummy"}},
+							}
+							for i, event := range events {
+								payload, err := json.Marshal(event.value)
+								if err != nil {
+									return err
+								}
+								if i == 2 {
+									var decoded CreatePipeline
+									err = json.Unmarshal(payload, &decoded)
+									if err != nil {
+										return err
+									}
+									_, err = unmarshalWhere(decoded.Filter, decoded.InSchema)
+									if err == nil {
+										return fmt.Errorf("expected invalid filter, got nil")
+									}
+								}
+								_, err = tx.Exec(ctx, "INSERT INTO notifications (version, name, payload) VALUES ($1, $2, $3)", i+1, event.name, payload)
+								if err != nil {
+									return err
+								}
+							}
+							return nil
+						}
 						_, err = tx.Exec(ctx, query)
 						return err
 					})
@@ -726,9 +767,12 @@ func TestStateBootstrap(t *testing.T) {
 			}}
 			func() {
 
-				if scenario == "panic" {
+				if scenario == "panic" || scenario == "filter-panic" {
 					defer func() {
-						const expected = "invalid notification payload AddMember (version 1)"
+						expected := "invalid notification payload AddMember (version 1)"
+						if scenario == "filter-panic" {
+							expected = "invalid notification payload CreatePipeline (version 3)"
+						}
 						if got := recover(); got != expected {
 							t.Errorf("expected panic %q, got %v", expected, got)
 						}

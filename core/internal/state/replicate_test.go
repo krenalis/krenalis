@@ -24,12 +24,15 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/cipher"
 	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/test/testimages"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/kms"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
 const (
@@ -881,6 +884,117 @@ func TestReplicationReplaySnapshot(t *testing.T) {
 		t.Fatalf("expected each event applied once across snapshots, got %v", seen)
 	}
 
+}
+
+// TestReplicationRuntimeDispatchListenerPanicTerminatesProcess verifies that
+// an unhandled listener panic during runtime dispatch terminates the process
+// after New succeeds.
+func TestReplicationRuntimeDispatchListenerPanicTerminatesProcess(t *testing.T) {
+	const (
+		childDatabaseEnv            = "KRENALIS_RUNTIME_DISPATCH_PANIC_DATABASE"
+		childHarnessFailureExitCode = 3
+		panicSentinel               = "runtime dispatch listener panic sentinel"
+	)
+	if encoded, isChild := os.LookupEnv(childDatabaseEnv); isChild {
+		// Registered first so resource cleanups run before a harness failure exits.
+		t.Cleanup(func() {
+			if t.Failed() {
+				os.Exit(childHarnessFailureExitCode)
+			}
+		})
+		var opts db.Options
+		err := json.Unmarshal([]byte(encoded), &opts)
+		if err != nil {
+			t.Fatalf("expected child database options, got %v", err)
+		}
+		database, err := db.Open(&opts)
+		if err != nil {
+			t.Fatalf("expected child database pool, got %v", err)
+		}
+		t.Cleanup(database.Close)
+		keyManager, err := kms.New(t.Context(), "key:DJ0UMRTROH4pjY/Esh3fAErsPbdYmvsnfDCZtc9K4iU")
+		if err != nil {
+			t.Fatalf("expected local KMS, got %v", err)
+		}
+		state, err := New(t.Context(), database, keyManager, nil, false)
+		if err != nil {
+			t.Fatalf("expected completed New, got %v", err)
+		}
+		t.Cleanup(func() { state.Close(context.Background()) })
+		if got := state.Version(); got != 0 {
+			t.Fatalf("expected empty bootstrap at version 0, got %d", got)
+		}
+		var organization string
+		err = database.QueryRow(t.Context(), "SELECT id FROM organizations").Scan(&organization)
+		if err != nil {
+			t.Fatalf("expected existing organization, got %v", err)
+		}
+		state.Freeze()
+		state.AddListener(func(SetOrganizationStatus) { panic(panicSentinel) })
+		state.Unfreeze()
+		err = state.Transaction(t.Context(), func(tx *db.Tx) (any, error) {
+			_, err := tx.Exec(t.Context(), "UPDATE organizations SET enabled = false WHERE id = $1", organization)
+			if err != nil {
+				return nil, err
+			}
+			return SetOrganizationStatus{ID: organization, Enabled: false}, nil
+		})
+		if err != nil {
+			t.Fatalf("expected committed runtime event, got %v", err)
+		}
+		// If dispatch does not terminate the process, only the parent's watchdog ends this child.
+		<-t.Context().Done()
+		return
+	}
+
+	container, err := postgres.Run(t.Context(), testimages.PostgreSQL,
+		postgres.WithDatabase("runtime_panic"), postgres.WithUsername("runtime_panic"), postgres.WithPassword("runtime_panic"),
+		postgres.BasicWaitStrategies())
+	t.Cleanup(func() {
+		err := testcontainers.TerminateContainer(container)
+		if err != nil {
+			t.Errorf("expected container cleanup, got %v", err)
+		}
+	})
+	if err != nil {
+		t.Fatalf("expected PostgreSQL container, got %v", err)
+	}
+	host, err := container.Host(t.Context())
+	if err != nil {
+		t.Fatalf("expected PostgreSQL host, got %v", err)
+	}
+	port, err := container.MappedPort(t.Context(), "5432/tcp")
+	if err != nil {
+		t.Fatalf("expected PostgreSQL port, got %v", err)
+	}
+	opts := db.Options{Host: host, Port: int(port.Num()), Username: "runtime_panic", Password: "runtime_panic", Database: "runtime_panic", MaxConnections: 4}
+	admin, err := db.Open(&opts)
+	if err != nil {
+		t.Fatalf("expected database pool, got %v", err)
+	}
+	t.Cleanup(admin.Close)
+	bootstrapDatabase(t, admin, opts, "runtime_dispatch_panic")
+	opts.Database = "runtime_dispatch_panic"
+	encoded, err := json.Marshal(opts)
+	if err != nil {
+		t.Fatalf("expected encoded child database options, got %v", err)
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestReplicationRuntimeDispatchListenerPanicTerminatesProcess$", "-test.timeout=60s", "-test.v")
+	command.Env = append(os.Environ(), childDatabaseEnv+"="+string(encoded))
+	output, err := command.CombinedOutput()
+	if ctx.Err() != nil {
+		t.Fatalf("expected runtime panic before watchdog, got %v: %s", ctx.Err(), output)
+	}
+	if err == nil {
+		t.Fatalf("expected unhandled runtime panic, got successful child: %s", output)
+	}
+	exitError, ok := errors.AsType[*exec.ExitError](err)
+	if !ok || exitError.ExitCode() == 1 || exitError.ExitCode() == childHarnessFailureExitCode ||
+		!strings.Contains(string(output), "panic: "+panicSentinel) || !strings.Contains(string(output), "(*State).keepNotifications") {
+		t.Fatalf("expected unhandled worker panic distinct from terminal or harness failure, got %v: %s", err, output)
+	}
 }
 
 // TestReplicationUnknownRuntime checks that the loop returns the terminal
