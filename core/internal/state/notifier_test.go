@@ -24,22 +24,21 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
-// TestNotificationProducer verifies that State.Transaction persists events to
+// TestNotificationProducer verifies that notifier.Notify persists events to
 // the log and delivers their encrypted payloads through PostgreSQL NOTIFY,
 // including fragmented payloads, while preserving nil versus empty values.
 func TestNotificationProducer(t *testing.T) {
 
 	database, key := replicationDatabase(t)
 	ch := make(chan notification)
-	producer := &State{db: database}
-	producer.notifications.notifier = &notifier{db: database, key: key}
-	conn, err := producer.notifications.connect(t.Context())
+	producer := &notifier{db: database, key: key}
+	conn, err := producer.connect(t.Context())
 	if err != nil {
 		t.Fatalf("expected listening session, got %v", err)
 	}
 
 	defer closeNotificationConnection(conn)
-	observer, err := producer.notifications.connect(t.Context())
+	observer, err := producer.connect(t.Context())
 	if err != nil {
 		t.Fatalf("expected fragment observer, got %v", err)
 	}
@@ -132,62 +131,33 @@ func TestNotificationProducer(t *testing.T) {
 		passed := t.Run(tc.name, func(t *testing.T) {
 
 			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
-			completed := make(chan error, 1)
-			transactionStopped := make(chan struct{})
-			go func() {
-				defer close(transactionStopped)
-				completed <- producer.Transaction(ctx, func(tx *db.Tx) (any, error) { return tc.event, nil })
-			}()
-			defer func() {
-				cancel()
-				stopCtx, stopCancel := context.WithTimeout(t.Context(), 5*time.Second)
-				defer stopCancel()
-				select {
-				case <-transactionStopped:
-				case <-stopCtx.Done():
-					t.Errorf("expected stopped transaction, got %v", stopCtx.Err())
-				}
-			}()
+			defer cancel()
+			var notifiedVersion int
+			err := database.Transaction(ctx, func(tx *db.Tx) error {
+				var err error
+				notifiedVersion, err = producer.Notify(ctx, tx, tc.event)
+				return err
+			})
+			if err != nil {
+				t.Fatalf("expected committed notification, got %v", err)
+			}
 			var received notification
 			select {
 			case received = <-ch:
 			case err := <-listenerErr:
 				t.Fatalf("expected delivered event, got listener error: %v", err)
-			case err := <-completed:
-				t.Fatalf("expected delivered event before acknowledgement, got %v", err)
 			case <-ctx.Done():
 				t.Fatalf("expected delivered event, got %v", ctx.Err())
 			}
 
-			ack, ok := producer.notifications.acks.LoadAndDelete(received.Version)
-			if !ok {
-				t.Fatalf("expected transaction acknowledgement, got none for %d", received.Version)
-			}
-
-			ackCh, ok := ack.(chan struct{})
-			if !ok {
-				t.Fatalf("expected acknowledgement channel, got %T", ack)
-			}
-
-			select {
-			case ackCh <- struct{}{}:
-			case <-ctx.Done():
-				t.Fatalf("expected acknowledgement receiver, got %v", ctx.Err())
-			}
-
-			select {
-			case err := <-completed:
-				if err != nil {
-					t.Fatalf("expected completed transaction, got %v", err)
-				}
-			case <-ctx.Done():
-				t.Fatalf("expected completed transaction, got %v", ctx.Err())
-			}
-
 			var logged notification
-			err := database.QueryRow(ctx, "SELECT version, name, payload FROM notifications WHERE version = $1", received.Version).Scan(&logged.Version, &logged.Name, &logged.Payload)
+			err = database.QueryRow(ctx, "SELECT version, name, payload FROM notifications WHERE version = $1", received.Version).Scan(&logged.Version, &logged.Name, &logged.Payload)
 			if err != nil {
 				t.Fatalf("expected persisted event, got %v", err)
+			}
+
+			if notifiedVersion != expectedVersion {
+				t.Fatalf("expected Notify to return version %d, got %d", expectedVersion, notifiedVersion)
 			}
 
 			name := reflect.TypeOf(tc.event).Name()
@@ -290,7 +260,7 @@ func TestNotificationRollback(t *testing.T) {
 
 	database, key := replicationDatabase(t)
 	state := &State{db: database}
-	state.notifications.notifier = &notifier{db: database, key: key}
+	state.notifications = &notifier{db: database, key: key}
 	conn, err := state.notifications.connect(t.Context())
 	if err != nil {
 		t.Fatalf("expected effective LISTEN, got %v", err)

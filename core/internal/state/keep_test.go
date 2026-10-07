@@ -73,15 +73,12 @@ func TestAddAndRemoveLinkedConnection(t *testing.T) {
 }
 
 // TestApplyPanicsDuringDispatch verifies that a dispatch panic propagates
-// unchanged after the mutation has been applied, without advancing the version
-// or acknowledging the notification.
+// unchanged after the mutation has been applied, without advancing the version.
 func TestApplyPanicsDuringDispatch(t *testing.T) {
 	ws := &Workspace{mu: &sync.Mutex{}, ID: stateTestWorkspaceID, organization: &Organization{ID: stateTestOrganizationID}, consentPurposes: map[string]*ConsentPurpose{}}
 	state := &State{changing: &sync.RWMutex{}, workspaces: map[string]*Workspace{stateTestWorkspaceID: ws}}
 	state.version.next = sync.Cond{L: &state.version.RWMutex}
 	state.version.current = 7
-	ack := make(chan struct{}, 1)
-	state.notifications.acks.Store(8, ack)
 	panicValue := &struct{ reason string }{"listener failure"}
 	state.listeners = []any{func(AddConsentPurpose) { panic(panicValue) }}
 	defer func() {
@@ -101,19 +98,12 @@ func TestApplyPanicsDuringDispatch(t *testing.T) {
 		if got := state.Version(); got != 7 {
 			t.Fatalf("expected version to remain 7 after failed dispatch, got %d", got)
 		}
-
-		select {
-		case <-ack:
-			t.Fatal("expected no acknowledgement after failed dispatch, got acknowledgement")
-		default:
-		}
 	}()
 	_ = state.applyNotification(notification{8, "AddConsentPurpose", `{"Workspace":"6NpT4zB8QaR2","ID":"D7hV4xK9mP2a","Name":"Marketing"}`}, nil)
 }
 
 // TestApplyProcessesNotificationInOrder verifies that a notification is applied
-// and dispatched before its version is published, the changing lock is released,
-// and the notification is acknowledged.
+// and dispatched before its version is published and version waiters succeed.
 func TestApplyProcessesNotificationInOrder(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 
@@ -125,7 +115,9 @@ func TestApplyProcessesNotificationInOrder(t *testing.T) {
 		state.close.ctx, state.close.cancel = context.WithCancel(t.Context())
 		defer state.close.cancel()
 		calls := 0
-		ack := make(chan struct{})
+		release := make(chan struct{})
+		releaseDispatch := sync.OnceFunc(func() { close(release) })
+		defer releaseDispatch()
 		state.listeners = []any{func(e AddConsentPurpose) {
 			calls++
 			if got := state.Version(); got != 7 {
@@ -142,15 +134,10 @@ func TestApplyProcessesNotificationInOrder(t *testing.T) {
 			if purpose == nil || purpose.Name != e.Name {
 				t.Errorf("expected applied consent purpose during dispatch, got %#v", purpose)
 			}
+			<-release
 		}}
-		state.notifications.acks.Store(8, ack)
-		broadcast := make(chan struct{})
-		go func() {
-			state.version.Lock()
-			state.version.next.Wait()
-			state.version.Unlock()
-			close(broadcast)
-		}()
+		completed := make(chan error, 1)
+		go func() { completed <- state.waitVersion(t.Context(), 8) }()
 		synctest.Wait()
 
 		state.close.Add(1)
@@ -161,30 +148,27 @@ func TestApplyProcessesNotificationInOrder(t *testing.T) {
 				t.Errorf("expected applied notification, got %v", err)
 			}
 		}()
-		// The unbuffered acknowledgement blocks application until we receive it.
 		synctest.Wait()
-		if calls != 1 {
-			t.Errorf("expected notification to be dispatched before acknowledgement, got %d dispatches", calls)
-		}
-		if state.Version() != 8 {
-			t.Errorf("expected version 8 before acknowledgement, got %d", state.Version())
+		if calls != 1 || state.Version() != 7 {
+			t.Fatalf("expected pending dispatch and version 7, got calls=%d version=%d", calls, state.Version())
 		}
 		select {
-		case <-broadcast:
+		case err := <-completed:
+			t.Fatalf("expected pending version wait during dispatch, got %v", err)
 		default:
-			t.Error("expected version Broadcast before acknowledgement, got no wakeup")
+		}
+
+		releaseDispatch()
+		state.close.Wait()
+		err := <-completed
+		if err != nil {
+			t.Fatalf("expected version wait after dispatch, got %v", err)
 		}
 		if !state.changing.TryLock() {
-			t.Error("expected changing released before acknowledgement, got locked state")
+			t.Error("expected changing released after application, got locked state")
 		} else {
 			state.changing.Unlock()
 		}
-		select {
-		case <-ack:
-		default:
-			t.Fatal("expected notification acknowledgement, got none")
-		}
-		state.close.Wait()
 		if calls != 1 || state.Version() != 8 {
 			t.Fatalf("expected one dispatch and version 8, got %d and %d", calls, state.Version())
 		}
@@ -319,7 +303,7 @@ func TestDecodeNotificationOmitsPayloadDetails(t *testing.T) {
 }
 
 // TestApplyPanicsOnInvalidNotificationPayload verifies that invalid payloads
-// panic without application, dispatch, version advancement or acknowledgement.
+// panic without application, dispatch or version advancement.
 func TestApplyPanicsOnInvalidNotificationPayload(t *testing.T) {
 	for _, test := range []struct {
 		name    string
@@ -338,9 +322,6 @@ func TestApplyPanicsOnInvalidNotificationPayload(t *testing.T) {
 				state.version.current = 7
 				listenerCalls := 0
 				state.listeners = []any{func(AddConsentPurpose) { listenerCalls++ }}
-				// Use a buffered ACK channel so the test can detect an unexpected acknowledgement without blocking application.
-				ack := make(chan struct{}, 1)
-				state.notifications.acks.Store(8, ack)
 				defer func() {
 					got := recover()
 					message, ok := got.(string)
@@ -357,9 +338,6 @@ func TestApplyPanicsOnInvalidNotificationPayload(t *testing.T) {
 					}
 					if got := state.Version(); got != 7 {
 						t.Fatalf("expected version 7, got %d", got)
-					}
-					if len(ack) != 0 {
-						t.Fatalf("expected no acknowledgment, got %d", len(ack))
 					}
 				}()
 				_ = state.applyNotification(notification{Version: 8, Name: "AddConsentPurpose", Payload: test.payload}, nil)
