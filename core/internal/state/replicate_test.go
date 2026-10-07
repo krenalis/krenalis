@@ -10,7 +10,10 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
+	"os"
+	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
@@ -23,6 +26,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/kms"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -1113,6 +1117,195 @@ func replicationCleanupProxy(t *testing.T, config *pgx.ConnConfig) (*db.DB, <-ch
 	t.Cleanup(proxy.Close)
 
 	return proxy, entered, releaseCancel
+}
+
+// TestReplicationTerminalFailuresExitProcess verifies that terminal replication
+// failures exit the process while receiving PostgreSQL notifications or replaying
+// stored events, even with pending rows or a logger whose pipe has no reader.
+// The parent keeps the database and row barrier alive when the child
+// calls os.Exit.
+func TestReplicationTerminalFailuresExitProcess(t *testing.T) {
+
+	const childHarnessFailureExitCode = 3
+	if mode, isChild := os.LookupEnv("KRENALIS_REPLICATION_PROCESS_MODE"); isChild {
+
+		// Registered first so failures in later cleanups also use status 3.
+		t.Cleanup(func() {
+			if t.Failed() {
+				os.Exit(childHarnessFailureExitCode)
+			}
+		})
+
+		// Fatalf unwinds through this guard before testing runs resource cleanup.
+		defer func() {
+			if t.Failed() {
+				os.Exit(childHarnessFailureExitCode)
+			}
+		}()
+
+		if mode != "unknown-notify" && mode != "replay" && mode != "replay-without-target" {
+			t.Fatalf("expected supported child mode, got %q", mode)
+		}
+
+		var opts db.Options
+		err := json.Unmarshal([]byte(os.Getenv("KRENALIS_REPLICATION_PROCESS_DATABASE")), &opts)
+		if err != nil {
+			t.Fatalf("expected child database options, got %v", err)
+		}
+
+		database, err := db.Open(&opts)
+		if err != nil {
+			t.Fatalf("expected child database pool, got %v", err)
+		}
+		t.Cleanup(database.Close)
+		keyManager, err := kms.New(t.Context(), "key:DJ0UMRTROH4pjY/Esh3fAErsPbdYmvsnfDCZtc9K4iU")
+		if err != nil {
+			t.Fatalf("expected local KMS, got %v", err)
+		}
+
+		encrypted, err := keyManager.GenerateDataKeyWithoutPlaintext(t.Context(), 32)
+		if err != nil {
+			t.Fatalf("expected notification key, got %v", err)
+		}
+
+		c := cipher.New(keyManager)
+		t.Cleanup(c.Close)
+		key := c.Key(encrypted)
+		state, session := replicationState(t, database, key)
+
+		// The parent watchdog must fire before cancellation can unblock rows.
+		state.close.cancel()
+		state.close.ctx, state.close.cancel = context.WithCancel(t.Context())
+		t.Cleanup(state.close.cancel)
+		_, err = session.conn.Exec(t.Context(), "SET enable_seqscan = off; SET enable_sort = off")
+		if err != nil {
+			t.Fatalf("expected planner settings, got %v", err)
+		}
+
+		switch mode {
+
+		case "unknown-notify":
+
+			payload, err := appendEncodeNotification(t.Context(), nil, key, "Unknown", struct{}{})
+			if err != nil {
+				t.Fatalf("expected encoded unknown event, got %v", err)
+			}
+
+			sendReplicationFragment(t, database, string(payload)+"@124")
+
+		case "replay":
+			sendReplicationEvent(t, database, key, 130, AddConsentPurpose{Workspace: stateTestWorkspaceID, ID: stateTestConsentPurposeID})
+
+		case "replay-without-target":
+			// Start replay on connection acquisition, without announcing a target.
+			session.close()
+
+		}
+
+		// A synchronous diagnostic would block forever because nobody reads.
+		reader, writer := io.Pipe()
+		defer reader.Close()
+		defer writer.Close()
+		previousLogger := slog.Default()
+		slog.SetDefault(slog.New(slog.NewTextHandler(writer, nil)))
+		defer slog.SetDefault(previousLogger)
+		startReplication(t, state, session)
+		state.close.Wait()
+
+		return
+	}
+
+	for _, test := range []struct {
+		name           string
+		childMode      string
+		firstVersion   int
+		eventName      string
+		hasPendingRows bool
+	}{
+		{name: "gap", childMode: "replay-without-target", firstVersion: 125, eventName: "AddConsentPurpose"},
+		{name: "missing-target", childMode: "replay"},
+		{name: "unknown", childMode: "replay-without-target", firstVersion: 124, eventName: "Unknown"},
+		{name: "unknown-notify", childMode: "unknown-notify"},
+		{name: "gap-pending-rows", childMode: "replay", firstVersion: 125, eventName: "AddConsentPurpose", hasPendingRows: true},
+		{name: "unknown-pending-rows", childMode: "replay", firstVersion: 124, eventName: "Unknown", hasPendingRows: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+
+			database, _ := replicationDatabase(t)
+			conn, err := database.Conn(t.Context())
+			if err != nil {
+				t.Fatalf("expected parent connection, got %v", err)
+			}
+			defer closeNotificationConnection(conn)
+			config := conn.Underlying().Config()
+			opts := db.Options{
+				Host: config.Host, Port: int(config.Port), Username: config.User, Password: config.Password,
+				Database: config.Database, MaxConnections: 4,
+			}
+			encoded, err := json.Marshal(opts)
+			if err != nil {
+				t.Fatalf("expected encoded child database options, got %v", err)
+			}
+
+			if test.firstVersion > 0 {
+				_, err = database.Exec(t.Context(), "INSERT INTO notifications VALUES ($1, $2, jsonb_build_array(repeat('x', 32768)))", test.firstVersion, test.eventName)
+				if err != nil {
+					t.Fatalf("expected terminal log fixture, got %v", err)
+				}
+			}
+
+			if test.hasPendingRows {
+
+				// The 32 KiB first row is intentionally large enough to force
+				// delivery before the following row blocks on this lock.
+				const rowBarrierKey = 42
+				_, err = conn.Exec(t.Context(), "SELECT pg_advisory_lock($1)", rowBarrierKey)
+				if err != nil {
+					t.Fatalf("expected parent-owned row barrier, got %v", err)
+				}
+
+				_, err = database.Exec(t.Context(), fmt.Sprintf(`
+					INSERT INTO notifications VALUES (%d, 'AddConsentPurpose', '{}'::jsonb);
+					ALTER TABLE notifications RENAME TO pending_log;
+					CREATE FUNCTION pending_payload(v bigint, p jsonb) RETURNS jsonb LANGUAGE plpgsql STABLE AS $$
+					BEGIN IF v > %d THEN PERFORM pg_advisory_xact_lock(%d); END IF; RETURN p; END $$;
+					CREATE VIEW notifications AS SELECT version, name, pending_payload(version, payload) AS payload FROM pending_log;
+				`, test.firstVersion+1, test.firstVersion, rowBarrierKey))
+				if err != nil {
+					t.Fatalf("expected blocked result view, got %v", err)
+				}
+
+			}
+
+			ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+			defer cancel()
+			command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestReplicationTerminalFailuresExitProcess$", "-test.timeout=60s", "-test.v")
+			command.Env = append(os.Environ(),
+				"KRENALIS_REPLICATION_PROCESS_MODE="+test.childMode,
+				"KRENALIS_REPLICATION_PROCESS_DATABASE="+string(encoded))
+			output, err := command.CombinedOutput()
+			if ctx.Err() != nil {
+				t.Fatalf("expected child exit before watchdog without releasing row barrier, got %v: %s", ctx.Err(), output)
+			}
+
+			if err != nil {
+
+				exitError, ok := errors.AsType[*exec.ExitError](err)
+				if ok && exitError.ExitCode() == childHarnessFailureExitCode {
+					t.Fatalf("expected successful child harness, got exit status %d: %s", childHarnessFailureExitCode, output)
+				}
+
+				if !ok || exitError.ExitCode() != 1 {
+					t.Fatalf("expected terminal process exit with status 1, got %v: %s", err, output)
+				}
+
+				return
+			}
+			t.Fatalf("expected terminal process exit with status 1, got successful child: %s", output)
+
+		})
+	}
+
 }
 
 func replicationConsentPurposeID(version int) string {

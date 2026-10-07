@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/krenalis/krenalis/tools/backoff"
@@ -38,8 +39,8 @@ func (state *State) keepNotifications(session *notificationSession) {
 
 	err := state.runNotifications(state.close.ctx, session, client)
 	if err != nil {
-		// Step 6 will decide process termination here, before cleanup or logging.
-		slog.Error("core/state: notification replication stopped", "error", err)
+		// Exit before potentially blocking diagnostics or session cleanup.
+		os.Exit(1)
 	}
 
 }
