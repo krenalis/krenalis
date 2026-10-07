@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/krenalis/krenalis/tools/backoff"
@@ -38,8 +39,9 @@ func (state *State) keepNotifications(session *notificationSession) {
 
 	err := state.runNotifications(state.close.ctx, session, client)
 	if err != nil {
-		// Step 6 will decide process termination here, before cleanup or logging.
-		slog.Error("core/state: notification replication stopped", "error", err)
+		exit1(func() {
+			slog.Error("core/state: terminal replication error", "error", err)
+		})
 	}
 
 }
@@ -234,4 +236,24 @@ type replicationError struct {
 // Error returns a diagnostic containing only protocol metadata.
 func (err *replicationError) Error() string {
 	return "core/state: " + err.message
+}
+
+// exit1 runs diagnostic and waits up to one second for it to finish.
+// It recovers panics in the diagnostic goroutine, then exits with status 1
+// without waiting for any other cleanup.
+func exit1(diagnostic func()) {
+	timer := time.NewTimer(time.Second)
+	done := make(chan struct{})
+	go func() {
+		defer func() {
+			_ = recover()
+			close(done)
+		}()
+		diagnostic()
+	}()
+	select {
+	case <-done:
+	case <-timer.C:
+	}
+	os.Exit(1)
 }
