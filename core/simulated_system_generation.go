@@ -49,15 +49,16 @@ type simulatedSystemCheckpoint struct {
 }
 
 type simulatedSystemPlan struct {
-	account      *state.SimulatedSystem
-	world        *fakedata.SourceWorld
-	source       *fakedata.SourceInstance
-	catalog      *fakedata.FaceCatalog
-	photoBaseURL *url.URL
-	people       int
-	duplicate    int
-	offset       uint64
-	step         uint64
+	account       *state.SimulatedSystem
+	world         *fakedata.SourceWorld
+	socioeconomic *fakedata.SocioeconomicWorld
+	source        *fakedata.SourceInstance
+	catalog       *fakedata.FaceCatalog
+	photoBaseURL  *url.URL
+	people        int
+	duplicate     int
+	offset        uint64
+	step          uint64
 }
 
 type simulatedSystemWorker struct {
@@ -174,6 +175,7 @@ func (worker *simulatedSystemWorker) leaderChanged() {
 }
 
 func (worker *simulatedSystemWorker) prepare(ctx context.Context, account *state.SimulatedSystem) error {
+
 	if account.GenerationError != "" {
 		return worker.fail(ctx, account, account.GenerationError)
 	}
@@ -184,7 +186,19 @@ func (worker *simulatedSystemWorker) prepare(ctx context.Context, account *state
 		}
 		return worker.fail(ctx, account, "photo catalog is unavailable: "+err.Error())
 	}
-	plan, checkpoint, err := newSimulatedSystemPlan(account.Workspace().ID, account, catalog)
+
+	var model *fakedata.SocioeconomicModel
+	if account.GenerationPolicyVersion == simulatedSystemPolicyVersion {
+		model, err = worker.core.simulatedModelSource.Load(ctx)
+		if err != nil {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			return worker.fail(ctx, account, "socioeconomic model is unavailable")
+		}
+	}
+
+	plan, checkpoint, err := newSimulatedSystemPlan(account.Workspace().ID, account, catalog, model)
 	if err != nil {
 		return worker.fail(ctx, account, "generation configuration is unavailable or changed")
 	}
@@ -234,6 +248,7 @@ func (worker *simulatedSystemWorker) prepare(ctx context.Context, account *state
 	if actual != account.UserCount {
 		return worker.fail(ctx, account, "warehouse record count differs from requested count")
 	}
+
 	return worker.save(ctx, account, checkpoint, count, state.SimulatedSystemAvailable, "")
 }
 
@@ -435,7 +450,7 @@ func initialSimulatedSystemCheckpoint(catalog *fakedata.FaceCatalog, photoBaseUR
 	})
 }
 
-func newSimulatedSystemPlan(workspaceID string, account *state.SimulatedSystem, catalog *fakedata.FaceCatalog) (*simulatedSystemPlan, simulatedSystemCheckpoint, error) {
+func newSimulatedSystemPlan(workspaceID string, account *state.SimulatedSystem, catalog *fakedata.FaceCatalog, model *fakedata.SocioeconomicModel) (*simulatedSystemPlan, simulatedSystemCheckpoint, error) {
 	var checkpoint simulatedSystemCheckpoint
 	err := json.Unmarshal(account.GenerationCheckpoint, &checkpoint)
 	if err != nil {
@@ -454,7 +469,8 @@ func newSimulatedSystemPlan(workspaceID string, account *state.SimulatedSystem, 
 		return nil, checkpoint, err
 	}
 	checksum := catalog.Checksum()
-	if account.GenerationPolicyVersion != simulatedSystemPolicyVersion ||
+	if (account.GenerationPolicyVersion != simulatedSystemLegacyPolicyVersion &&
+		account.GenerationPolicyVersion != simulatedSystemPolicyVersion) ||
 		checkpoint.CatalogRelease != catalog.Release() ||
 		checkpoint.CatalogSHA256 != hex.EncodeToString(checksum[:]) ||
 		checkpoint.WorldModelVersion != fakedata.WorldModelVersion ||
@@ -502,6 +518,13 @@ func newSimulatedSystemPlan(workspaceID string, account *state.SimulatedSystem, 
 	if err != nil {
 		return nil, checkpoint, err
 	}
+	var socioeconomic *fakedata.SocioeconomicWorld
+	if account.GenerationPolicyVersion == simulatedSystemPolicyVersion {
+		socioeconomic, err = fakedata.NewSocioeconomicWorld(world, model)
+		if err != nil {
+			return nil, checkpoint, err
+		}
+	}
 	sourceWorld, err := fakedata.NewSourceWorld(world, []fakedata.CountryShare{{
 		Code: "IT", Version: fakedata.MarketDataVersion, Weight: 1,
 	}})
@@ -521,7 +544,8 @@ func newSimulatedSystemPlan(workspaceID string, account *state.SimulatedSystem, 
 	for gcdSimulatedSystem(step, modulus) != 1 {
 		step++
 	}
-	return &simulatedSystemPlan{account: account, world: sourceWorld, source: source, catalog: catalog, photoBaseURL: photoURL,
+	return &simulatedSystemPlan{account: account, world: sourceWorld, socioeconomic: socioeconomic,
+		source: source, catalog: catalog, photoBaseURL: photoURL,
 		people: people, duplicate: duplicate, offset: binary.BigEndian.Uint64(accountKey[:8]) % modulus,
 		step: step}, checkpoint, nil
 }
@@ -549,16 +573,18 @@ func (plan *simulatedSystemPlan) personIndex(person int) fakedata.PersonIndex {
 }
 
 func (plan *simulatedSystemPlan) record(person, representation int) (datastore.SimulatedSystemRecord, error) {
+
 	if person < 0 || person >= plan.people || representation < 0 || representation > 1 ||
 		(representation == 1 && person >= plan.duplicate) {
 		return datastore.SimulatedSystemRecord{}, fmt.Errorf("invalid record coordinate")
 	}
-	records, err := plan.source.Records(plan.personIndex(person))
+	index := plan.personIndex(person)
+	records, err := plan.source.Records(index)
 	if err != nil {
 		return datastore.SimulatedSystemRecord{}, err
 	}
 	record := records[representation]
-	canonical, err := plan.world.Person(plan.personIndex(person))
+	canonical, err := plan.world.Person(index)
 	if err != nil {
 		return datastore.SimulatedSystemRecord{}, err
 	}
@@ -572,10 +598,26 @@ func (plan *simulatedSystemPlan) record(person, representation int) (datastore.S
 		photo = &value
 	}
 	document := newSimulatedSystemDocument(canonical, record, photo)
+
+	if plan.socioeconomic != nil {
+
+		facts, err := plan.socioeconomic.Facts(index)
+		if err != nil {
+			return datastore.SimulatedSystemRecord{}, err
+		}
+
+		err = setSimulatedSystemSocioeconomicFacts(&document, plan.socioeconomic, facts)
+		if err != nil {
+			return datastore.SimulatedSystemRecord{}, err
+		}
+
+	}
+
 	data, err := json.Marshal(document)
 	if err != nil {
 		return datastore.SimulatedSystemRecord{}, err
 	}
+
 	return datastore.SimulatedSystemRecord{ID: record.ID, Data: data}, nil
 }
 

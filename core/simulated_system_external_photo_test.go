@@ -51,7 +51,7 @@ func TestSimulatedSystemExternalPhotoOrigins(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected configured checkpoint, got %v", err)
 		}
-		plan, _, err := newSimulatedSystemPlan("workspace", account, catalog)
+		plan, _, err := newSimulatedSystemPlan("workspace", account, catalog, nil)
 		if err != nil {
 			t.Fatalf("expected configured plan, got %v", err)
 		}
@@ -117,7 +117,7 @@ func TestSimulatedSystemExternalPhotos(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected external checkpoint, got %v", err)
 	}
-	plan, checkpoint, err := newSimulatedSystemPlan("workspace-a", account, catalog)
+	plan, checkpoint, err := newSimulatedSystemPlan("workspace-a", account, catalog, nil)
 	if err != nil {
 		t.Fatalf("expected external generation plan, got %v", err)
 	}
@@ -154,7 +154,7 @@ func TestSimulatedSystemExternalPhotos(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected same release after restart, got %v", err)
 	}
-	resumed, next, err := newSimulatedSystemPlan("workspace-a", account, reloaded)
+	resumed, next, err := newSimulatedSystemPlan("workspace-a", account, reloaded, nil)
 	if err != nil {
 		t.Fatalf("expected resumed plan, got %v", err)
 	}
@@ -168,7 +168,7 @@ func TestSimulatedSystemExternalPhotos(t *testing.T) {
 	}
 
 	account.GenerationCheckpoint = json.Value(legacyPhotoCheckpoint)
-	_, _, err = newSimulatedSystemPlan("workspace-a", account, catalog)
+	_, _, err = newSimulatedSystemPlan("workspace-a", account, catalog, nil)
 	if err == nil {
 		t.Fatal("expected old serialized checkpoint to reject an external catalog, got success")
 	}
@@ -180,7 +180,7 @@ func TestSimulatedSystemExternalPhotos(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected changed checkpoint, got %v", err)
 		}
-		_, _, err = newSimulatedSystemPlan("workspace-a", account, catalog)
+		_, _, err = newSimulatedSystemPlan("workspace-a", account, catalog, nil)
 		if err != nil {
 			continue
 		}
@@ -195,7 +195,7 @@ func TestSimulatedSystemLegacyPhotoCheckpoint(t *testing.T) {
 	catalog := simulatedSystemTestCatalog(t)
 	account := simulatedSystemPlanFixture(t, catalog, "legacy-account", 20, "50")
 	account.GenerationCheckpoint = json.Value(legacyPhotoCheckpoint)
-	plan, checkpoint, err := newSimulatedSystemPlan("workspace-a", account, catalog)
+	plan, checkpoint, err := newSimulatedSystemPlan("workspace-a", account, catalog, nil)
 	if err != nil {
 		t.Fatalf("expected committed legacy checkpoint to load, got %v", err)
 	}
@@ -218,7 +218,7 @@ func TestSimulatedSystemLegacyPhotoCheckpoint(t *testing.T) {
 	// Resume an old-format persisted coordinate with a freshly loaded catalog.
 	account.GenerationCheckpoint = json.Value(strings.Replace(legacyPhotoCheckpoint, `"person":0`, `"person":2`, 1))
 	account.GeneratedRecordCount = 4
-	resumed, next, err := newSimulatedSystemPlan("workspace-a", account, simulatedSystemTestCatalog(t))
+	resumed, next, err := newSimulatedSystemPlan("workspace-a", account, simulatedSystemTestCatalog(t), nil)
 	if err != nil {
 		t.Fatalf("expected legacy restart, got %v", err)
 	}

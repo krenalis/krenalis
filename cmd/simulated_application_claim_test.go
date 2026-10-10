@@ -235,6 +235,12 @@ func TestSimulatedApplicationUsesAdmittedAccount(t *testing.T) {
 	if firstDocument["customer_id"] != firstRecordID {
 		t.Fatalf("expected customer_id and external_id to agree, got %v and %q", firstDocument["customer_id"], firstRecordID)
 	}
+	for _, name := range []string{"education_level", "primary_activity", "annual_income_eur",
+		"job_family", "industry", "job_level"} {
+		if _, ok := firstDocument[name]; ok {
+			t.Fatalf("expected Destination-created %s absent, got %v", name, firstDocument[name])
+		}
+	}
 	var staleAccountCount int
 	err = warehousePool.QueryRow(t.Context(), "SELECT COUNT(*) FROM krenalis_simulated_system_records WHERE simulated_system = $1",
 		staleAccount).Scan(&staleAccountCount)
@@ -249,6 +255,17 @@ func TestSimulatedApplicationUsesAdmittedAccount(t *testing.T) {
 		t.Fatalf("expected unchanged create address before update, got %v", firstDocument["address"])
 	}
 	assertUTCmicrosecond(t, firstUpdatedAt)
+
+	// Seed canonical facts as they appear on a generated document, then verify
+	// the admitted Destination's ordinary partial update preserves them.
+	_, err = warehousePool.Exec(t.Context(), `UPDATE krenalis_simulated_system_records
+		SET data = data || '{"education_level":"tertiary","primary_activity":"employee","annual_income_eur":0,
+		"job_family":"technical-and-scientific","industry":"information-and-communication",
+		"job_level":"manager"}'::jsonb
+		WHERE simulated_system = $1 AND external_id = $2`, claimedAccount, firstRecordID)
+	if err != nil {
+		t.Fatalf("expected generated canonical facts fixture, got %v", err)
+	}
 
 	updateSchema := types.Prune(destinationSchemas.Out, func(path string) bool {
 		return path == "first_name" || path == "address.street"
@@ -272,6 +289,14 @@ func TestSimulatedApplicationUsesAdmittedAccount(t *testing.T) {
 	}
 	if !secondUpdatedAt.After(firstUpdatedAt) {
 		t.Fatalf("expected destination update timestamp after %v, got %v", firstUpdatedAt, secondUpdatedAt)
+	}
+	for name, value := range map[string]any{
+		"education_level": "tertiary", "primary_activity": "employee", "annual_income_eur": float64(0),
+		"job_family": "technical-and-scientific", "industry": "information-and-communication", "job_level": "manager",
+	} {
+		if secondDocument[name] != value {
+			t.Fatalf("expected admitted Destination to preserve %s=%v, got %v", name, value, secondDocument[name])
+		}
 	}
 	address, ok := secondDocument["address"].(map[string]any)
 	if !ok || address["street"] != "Via Roma 1, Suite 2" || address["municipality"] != "Roma" ||
@@ -357,6 +382,14 @@ func simulatedApplicationPipelineSchemas(t *testing.T, k *krenalistester.Krenali
 	if !schemas.In.Valid() || !schemas.Out.Valid() {
 		t.Fatalf("expected valid Simulated Application pipeline schemas, got in=%v out=%v", schemas.In, schemas.Out)
 	}
+	schemas.In = types.Prune(schemas.In, func(path string) bool {
+		switch path {
+		case "education_level", "primary_activity", "annual_income_eur", "job_family", "industry", "job_level":
+			return false
+		default:
+			return true
+		}
+	})
 	return schemas
 }
 

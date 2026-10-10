@@ -66,6 +66,11 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 		photoBaseURL = config.ExternalAssetsURLs[0]
 	}
 
+	socioeconomicSource, err := fakedata.NewSocioeconomicModelSource(config.ExternalAssetsURLs)
+	if err != nil {
+		return fmt.Errorf("configure socioeconomic model source: %w", err)
+	}
+
 	conf := corePkg.Config{
 		KMS:                           config.KMS,
 		OrganizationsAPIKey:           config.OrganizationsAPIKey,
@@ -81,6 +86,7 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 		SimulatedFaceCatalog:          catalog,
 		SimulatedFaceCatalogSource:    catalogSource,
 		SimulatedPhotoBaseURL:         photoBaseURL,
+		SimulatedSocioeconomicSource:  socioeconomicSource,
 	}
 	conf.DatabaseInitialization.InitIfEmpty = initDBIfEmpty
 	conf.DatabaseInitialization.InitDockerMember = initDockerMember

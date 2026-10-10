@@ -62,7 +62,8 @@ func TestSourceRecordSchema(t *testing.T) {
 	}
 	properties := schema.Properties().Slice()
 	wantNames := []string{"customer_id", "first_name", "last_name", "email", "gender", "birth_date",
-		"current_age", "phone", "site_url", "address", "photo"}
+		"current_age", "phone", "site_url", "address", "photo", "education_level", "primary_activity",
+		"annual_income_eur", "job_family", "industry", "job_level"}
 	gotNames := make([]string, len(properties))
 	for i, property := range properties {
 		gotNames[i] = property.Name
@@ -71,17 +72,23 @@ func TestSourceRecordSchema(t *testing.T) {
 		t.Fatalf("expected source schema properties %v, got %v", wantNames, gotNames)
 	}
 	wantKinds := map[string]types.Kind{
-		"customer_id": types.StringKind,
-		"first_name":  types.StringKind,
-		"last_name":   types.StringKind,
-		"email":       types.StringKind,
-		"gender":      types.StringKind,
-		"birth_date":  types.DateKind,
-		"current_age": types.IntKind,
-		"phone":       types.StringKind,
-		"site_url":    types.StringKind,
-		"address":     types.ObjectKind,
-		"photo":       types.StringKind,
+		"customer_id":       types.StringKind,
+		"first_name":        types.StringKind,
+		"last_name":         types.StringKind,
+		"email":             types.StringKind,
+		"gender":            types.StringKind,
+		"birth_date":        types.DateKind,
+		"current_age":       types.IntKind,
+		"phone":             types.StringKind,
+		"site_url":          types.StringKind,
+		"address":           types.ObjectKind,
+		"photo":             types.StringKind,
+		"education_level":   types.StringKind,
+		"primary_activity":  types.StringKind,
+		"annual_income_eur": types.IntKind,
+		"job_family":        types.StringKind,
+		"industry":          types.StringKind,
+		"job_level":         types.StringKind,
 	}
 	for _, property := range properties {
 		if property.Type.Kind() != wantKinds[property.Name] {
@@ -90,8 +97,9 @@ func TestSourceRecordSchema(t *testing.T) {
 		if property.Nullable {
 			t.Fatalf("expected %s to reject JSON null, got nullable", property.Name)
 		}
-		if property.ReadOptional != (property.Name == "email") {
-			t.Fatalf("expected %s ReadOptional=%t, got %t", property.Name, property.Name == "email", property.ReadOptional)
+		optional := property.Name == "email" || slices.Contains(wantNames[11:], property.Name)
+		if property.ReadOptional != optional {
+			t.Fatalf("expected %s ReadOptional=%t, got %t", property.Name, optional, property.ReadOptional)
 		}
 	}
 	property, ok := schema.Properties().ByName("current_age")
@@ -101,6 +109,28 @@ func TestSourceRecordSchema(t *testing.T) {
 	property, ok = schema.Properties().ByName("gender")
 	if !ok || !slices.Equal(property.Type.Values(), []string{"female", "male"}) {
 		t.Fatalf("expected gender values [female male], got %v", property.Type.Values())
+	}
+	property, ok = schema.Properties().ByName("annual_income_eur")
+	if !ok || property.Type.BitSize() != 32 || !property.Type.IsUnsigned() {
+		t.Fatalf("expected annual_income_eur to use unsigned int(32), got %+v", property)
+	}
+	for name, values := range map[string][]string{
+		"education_level": {"below-primary", "primary", "lower-secondary", "upper-secondary",
+			"post-secondary-non-tertiary", "tertiary", "doctoral"},
+		"primary_activity": {"employee", "self-employed", "unemployed", "student", "retired", "inactive"},
+		"job_family": {"production-and-fieldwork", "skilled-trades", "transport-and-logistics",
+			"customer-and-personal-service", "administration", "sales-and-commercial", "technical-and-scientific",
+			"professional-and-creative", "care-and-education", "protective-services"},
+		"industry": {"agriculture", "production-and-utilities", "construction", "commerce", "transport-and-logistics",
+			"hospitality", "information-and-communication", "finance-and-real-estate",
+			"professional-and-business-services", "public-administration-and-safety", "education", "health-and-social-care",
+			"arts-and-recreation", "other-services"},
+		"job_level": {"individual-contributor", "supervisor", "manager", "executive"},
+	} {
+		property, ok := schema.Properties().ByName(name)
+		if !ok || !slices.Equal(property.Type.Values(), values) {
+			t.Fatalf("expected %s values %v, got %v", name, values, property.Type.Values())
+		}
 	}
 	for name, semantic := range map[string]types.Semantic{
 		"email": types.EmailSemantic, "phone": types.PhoneSemantic, "site_url": types.URLSemantic,
@@ -137,12 +167,12 @@ func TestSourceRecordSchema(t *testing.T) {
 		t.Fatalf("expected destination record schema, got %v", err)
 	}
 	destinationProperties := destination.Properties().Slice()
-	if len(destinationProperties) != len(wantNames)-1 {
-		t.Fatalf("expected %d destination properties, got %d", len(wantNames)-1, len(destinationProperties))
+	if len(destinationProperties) != len(wantNames)-7 {
+		t.Fatalf("expected %d destination properties, got %d", len(wantNames)-7, len(destinationProperties))
 	}
 	for _, property := range destinationProperties {
-		if property.Name == "customer_id" {
-			t.Fatal("expected customer_id to be excluded from destination schema")
+		if property.Name == "customer_id" || slices.Contains(wantNames[11:], property.Name) {
+			t.Fatalf("expected %s to be excluded from destination schema, got writable property", property.Name)
 		}
 		if property.Nullable || property.UpdateRequired {
 			t.Fatalf("expected %s to be nullable=false and updateRequired=false, got nullable=%t updateRequired=%t",

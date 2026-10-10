@@ -4,7 +4,10 @@
 
 package simulated
 
-import "github.com/krenalis/krenalis/tools/types"
+import (
+	"github.com/krenalis/krenalis/tools/fakedata"
+	"github.com/krenalis/krenalis/tools/types"
+)
 
 var sourceSchema = types.Object([]types.Property{
 	{Name: "customer_id", Type: types.String()},
@@ -24,4 +27,37 @@ var sourceSchema = types.Object([]types.Property{
 		{Name: "country", Type: types.String().AsCountry(types.ISO3166Alpha2)},
 	})},
 	{Name: "photo", Type: types.String().AsURL()},
+	{Name: "education_level", ReadOptional: true, Type: types.String().WithValues(
+		string(fakedata.EducationLevelBelowPrimary), string(fakedata.EducationLevelPrimary),
+		string(fakedata.EducationLevelLowerSecondary), string(fakedata.EducationLevelUpperSecondary),
+		string(fakedata.EducationLevelPostSecondaryNonTertiary), string(fakedata.EducationLevelTertiary),
+		string(fakedata.EducationLevelDoctoral),
+	)},
+	{Name: "primary_activity", ReadOptional: true, Type: types.String().WithValues(
+		string(fakedata.PrimaryActivityEmployee), string(fakedata.PrimaryActivitySelfEmployed),
+		string(fakedata.PrimaryActivityUnemployed), string(fakedata.PrimaryActivityStudent),
+		string(fakedata.PrimaryActivityRetired), string(fakedata.PrimaryActivityInactive),
+	)},
+	{Name: "annual_income_eur", ReadOptional: true, Type: types.Int(32).Unsigned()},
+	{Name: "job_family", ReadOptional: true, Type: types.String().WithValues(
+		string(fakedata.JobFamilyProductionAndFieldwork), string(fakedata.JobFamilySkilledTrades),
+		string(fakedata.JobFamilyTransportAndLogistics), string(fakedata.JobFamilyCustomerAndPersonalService),
+		string(fakedata.JobFamilyAdministration), string(fakedata.JobFamilySalesAndCommercial),
+		string(fakedata.JobFamilyTechnicalAndScientific), string(fakedata.JobFamilyProfessionalAndCreative),
+		string(fakedata.JobFamilyCareAndEducation), string(fakedata.JobFamilyProtectiveServices),
+	)},
+	{Name: "industry", ReadOptional: true, Type: types.String().WithValues(
+		string(fakedata.IndustryAgriculture), string(fakedata.IndustryProductionAndUtilities),
+		string(fakedata.IndustryConstruction), string(fakedata.IndustryCommerce),
+		string(fakedata.IndustryTransportAndLogistics), string(fakedata.IndustryHospitality),
+		string(fakedata.IndustryInformationAndCommunication), string(fakedata.IndustryFinanceAndRealEstate),
+		string(fakedata.IndustryProfessionalAndBusinessServices),
+		string(fakedata.IndustryPublicAdministrationAndSafety),
+		string(fakedata.IndustryEducation), string(fakedata.IndustryHealthAndSocialCare),
+		string(fakedata.IndustryArtsAndRecreation), string(fakedata.IndustryOtherServices),
+	)},
+	{Name: "job_level", ReadOptional: true, Type: types.String().WithValues(
+		string(fakedata.JobLevelIndividualContributor), string(fakedata.JobLevelSupervisor),
+		string(fakedata.JobLevelManager), string(fakedata.JobLevelExecutive),
+	)},
 })

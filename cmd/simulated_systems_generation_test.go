@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -16,7 +17,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -35,6 +35,17 @@ func TestSimulatedSystemGeneration(t *testing.T) {
 	}
 	k := krenalistester.NewKrenalisInstance(t)
 	k.SetSyntheticPhotosDir(simulatedSystemCatalogFixture(t))
+	model := simulatedSystemModelFixture(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/synthetic-world/it-2026a/model.json" {
+			t.Errorf("expected fixed model request, got %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		_, _ = w.Write(model)
+	}))
+	defer server.Close()
+	k.SetExternalAssetsURLs([]string{server.URL})
 	testSimulatedSystemGeneration(t, k, "http://"+k.Addr()+"/photos/")
 }
 
@@ -79,6 +90,12 @@ func testSimulatedSystemGeneration(t *testing.T, k *krenalistester.Krenalis, pho
 	profileSchema := types.Object([]types.Property{
 		{Name: "email", Type: types.String().AsEmail().WithMaxLength(254), ReadOptional: true},
 		{Name: "photo_url", Type: types.String().AsURL(), ReadOptional: true},
+		{Name: "education_level", Type: types.String(), ReadOptional: true},
+		{Name: "primary_activity", Type: types.String(), ReadOptional: true},
+		{Name: "annual_income_eur", Type: types.Int(32).Unsigned(), ReadOptional: true},
+		{Name: "job_family", Type: types.String(), ReadOptional: true},
+		{Name: "industry", Type: types.String(), ReadOptional: true},
+		{Name: "job_level", Type: types.String(), ReadOptional: true},
 	})
 	var workspace struct {
 		ID string `json:"id"`
@@ -137,6 +154,12 @@ func testSimulatedSystemGeneration(t *testing.T, k *krenalistester.Krenalis, pho
 	if detail.Status != "Available" || detail.UserCount != 513 || detail.GeneratedRecordCount != 513 || detail.Countries["IT"] != 40 {
 		t.Fatalf("expected completed account with 513 records, got %+v", detail)
 	}
+	var policy string
+	k.QueryRowTestDatabase(t.Context(), &policy,
+		"SELECT generation_policy_version FROM simulated_systems WHERE id = $1", created.ID)
+	if policy != "generation-v4" {
+		t.Fatalf("expected successor generation-v4 policy, got %s", policy)
+	}
 	var ordinary map[string]json.Value
 	k.Call("GET", "/v1/simulated/systems/"+created.ID, nil, nil, &ordinary)
 	for _, field := range []string{"oracle", "personID", "generationCheckpoint", "generationPolicyVersion", "generationError"} {
@@ -186,7 +209,8 @@ func testSimulatedSystemGeneration(t *testing.T, k *krenalistester.Krenalis, pho
 	if err != nil {
 		t.Fatalf("expected generated customer document JSON, got %v", err)
 	}
-	for _, field := range []string{"customer_id", "gender", "birth_date", "current_age", "site_url", "address", "photo"} {
+	for _, field := range []string{"customer_id", "gender", "birth_date", "current_age", "site_url", "address", "photo",
+		"education_level", "primary_activity", "annual_income_eur"} {
 		if _, ok := document[field]; !ok {
 			t.Fatalf("expected generated customer document field %q, got %s", field, data)
 		}
@@ -201,7 +225,8 @@ func testSimulatedSystemGeneration(t *testing.T, k *krenalistester.Krenalis, pho
 	if err != nil || !strings.HasPrefix(photo, photoPrefix) {
 		t.Fatalf("expected absolute configured photo URL, got %q", photo)
 	}
-	for _, field := range []string{"source_record_id", "photo_id", "photo_url", "country", "person_id", "oracle", "role"} {
+	for _, field := range []string{"source_record_id", "photo_id", "photo_url", "country", "person_id", "oracle",
+		"role", "employer", "employer_id", "company_id", "company_index", "employee_count", "size_band"} {
 		if _, ok := document[field]; ok {
 			t.Fatalf("expected generated customer document field %q to be absent, got %s", field, data)
 		}
@@ -210,18 +235,31 @@ func testSimulatedSystemGeneration(t *testing.T, k *krenalistester.Krenalis, pho
 		Name: "Simulated Application source", Role: krenalistester.Source, Connector: "simulated-application",
 		Settings: krenalistester.JSONEncodeSettings(map[string]any{"account": created.ID}),
 	})
-	if schemas := k.PipelineSchemas(simulatedConnection, core.TargetUser, ""); schemas["in"] == nil {
-		t.Fatalf("expected Simulated Application source schema, got %v", schemas)
+	var sourceSchemas struct {
+		In types.Type `json:"in"`
 	}
-	simulatedSourceSchema := types.Object([]types.Property{
-		{Name: "email", Type: types.String().AsEmail(), ReadOptional: true},
-		{Name: "photo", Type: types.String().AsURL()},
+	k.Call("GET", "/v1/connections/"+simulatedConnection+"/pipelines/schemas/User", nil, nil, &sourceSchemas)
+	if !sourceSchemas.In.Valid() {
+		t.Fatalf("expected Simulated Application source schema, got %v", sourceSchemas.In)
+	}
+	simulatedSourceSchema := types.Prune(sourceSchemas.In, func(path string) bool {
+		switch path {
+		case "email", "photo", "education_level", "primary_activity", "annual_income_eur",
+			"job_family", "industry", "job_level":
+			return true
+		default:
+			return false
+		}
 	})
 	simulatedOutputSchema := profileSchema
 	pipeline := k.CreatePipeline(simulatedConnection, "User", krenalistester.PipelineToSet{
 		Name: "Read Simulated Application users", Enabled: true, InSchema: simulatedSourceSchema,
-		OutSchema:      simulatedOutputSchema,
-		Transformation: &krenalistester.Transformation{Mapping: map[string]string{"email": "email", "photo_url": "photo"}},
+		OutSchema: simulatedOutputSchema,
+		Transformation: &krenalistester.Transformation{Mapping: map[string]string{
+			"email": "email", "photo_url": "photo", "education_level": "education_level",
+			"primary_activity": "primary_activity", "annual_income_eur": "annual_income_eur",
+			"job_family": "job_family", "industry": "industry", "job_level": "job_level",
+		}},
 	})
 	runID := k.StartPipelineRun(pipeline)
 	k.WaitForRunsCompletion(runID)
@@ -231,7 +269,8 @@ func testSimulatedSystemGeneration(t *testing.T, k *krenalistester.Krenalis, pho
 		t.Fatalf("expected successful Source readback and mapping, got %+v", run)
 	}
 	k.RunIdentityResolutionAndWait()
-	profiles, profileCount := k.Profiles([]string{"photo_url"}, "", false, 0, 10)
+	properties := []string{"photo_url", "education_level", "primary_activity", "annual_income_eur"}
+	profiles, profileCount := k.Profiles(properties, "", false, 0, 10)
 	if profileCount == 0 || len(profiles) == 0 {
 		t.Fatalf("expected generated profiles, got %d", profileCount)
 	}
@@ -242,6 +281,11 @@ func testSimulatedSystemGeneration(t *testing.T, k *krenalistester.Krenalis, pho
 		}
 		if !strings.HasPrefix(mappedPhoto, photoPrefix) {
 			t.Fatalf("expected photo mapped to photo_url under %q, got %q", photoPrefix, mappedPhoto)
+		}
+		for _, name := range []string{"education_level", "primary_activity", "annual_income_eur"} {
+			if _, ok := profile.Attributes[name]; !ok {
+				t.Fatalf("expected generated %s imported through pipeline, got %v", name, profile.Attributes)
+			}
 		}
 	}
 

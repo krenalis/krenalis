@@ -24,10 +24,16 @@ func TestSimulatedSystemExternalPhotoGeneration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected photo fixture, got %v", err)
 	}
-	var catalogCalls atomic.Int32
+	model := simulatedSystemModelFixture(t)
+	var catalogCalls, modelCalls atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/assets/synthetic-world/it-2026a/model.json" {
+			modelCalls.Add(1)
+			_, _ = w.Write(model)
+			return
+		}
 		if r.URL.Path != "/assets/synthetic-world/photos/v1/catalog.json" {
-			t.Errorf("expected catalog request only, got %s", r.URL.Path)
+			t.Errorf("expected catalog or model request only, got %s", r.URL.Path)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -41,6 +47,9 @@ func TestSimulatedSystemExternalPhotoGeneration(t *testing.T) {
 	// The shared scenario restarts twice and creates several systems per process.
 	if catalogCalls.Load() != 3 {
 		t.Fatalf("expected one catalog fetch per process across two restarts, got %d", catalogCalls.Load())
+	}
+	if modelCalls.Load() != 3 {
+		t.Fatalf("expected one shared model fetch per process across two restarts, got %d", modelCalls.Load())
 	}
 
 }

@@ -21,8 +21,9 @@ import (
 )
 
 const (
-	simulatedSystemMaxUserCount  = 10_000_000
-	simulatedSystemPolicyVersion = "generation-v3"
+	simulatedSystemMaxUserCount        = 10_000_000
+	simulatedSystemLegacyPolicyVersion = "generation-v3"
+	simulatedSystemPolicyVersion       = "generation-v4"
 )
 
 // SimulatedSystem represents the metadata of a simulated system.

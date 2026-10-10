@@ -7,6 +7,7 @@ package cmd_test
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
 	"strconv"
 	"testing"
 	"time"
@@ -21,8 +22,18 @@ func TestDeleteWorkspaceWithBoundSimulatedSystemFreshSchema(t *testing.T) {
 		t.Skip()
 	}
 
+	model := simulatedSystemModelFixture(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/synthetic-world/it-2026a/model.json" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		_, _ = w.Write(model)
+	}))
+	defer server.Close()
 	k := krenalistester.NewKrenalisInstance(t)
 	k.SetSyntheticPhotosDir(simulatedSystemCatalogFixture(t))
+	k.SetExternalAssetsURLs([]string{server.URL})
 	k.Start()
 	defer k.Stop()
 

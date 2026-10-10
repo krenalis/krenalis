@@ -36,7 +36,7 @@ func TestSimulatedSystemPlan(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			account := simulatedSystemPlanFixture(t, catalog, "account-a", test.count, test.percent)
-			plan, checkpoint, err := newSimulatedSystemPlan("workspace-a", account, catalog)
+			plan, checkpoint, err := newSimulatedSystemPlan("workspace-a", account, catalog, nil)
 			if err != nil {
 				t.Fatalf("expected generation plan, got %v", err)
 			}
@@ -87,7 +87,7 @@ func TestSimulatedSystemPlanMaximum(t *testing.T) {
 
 	catalog := simulatedSystemTestCatalog(t)
 	account := simulatedSystemPlanFixture(t, catalog, "account-a", 10_000_000, "50")
-	plan, _, err := newSimulatedSystemPlan("workspace-a", account, catalog)
+	plan, _, err := newSimulatedSystemPlan("workspace-a", account, catalog, nil)
 	if err != nil {
 		t.Fatalf("expected generation plan, got %v", err)
 	}
@@ -96,7 +96,7 @@ func TestSimulatedSystemPlanMaximum(t *testing.T) {
 	}
 
 	account.UserCount++
-	_, _, err = newSimulatedSystemPlan("workspace-a", account, catalog)
+	_, _, err = newSimulatedSystemPlan("workspace-a", account, catalog, nil)
 	if err == nil {
 		t.Fatal("expected invalid generation configuration, got no error")
 	}
@@ -106,7 +106,7 @@ func TestSimulatedSystemPlanMaximum(t *testing.T) {
 func TestSimulatedSystemPlanResumeAndSelection(t *testing.T) {
 	catalog := simulatedSystemTestCatalog(t)
 	account := simulatedSystemPlanFixture(t, catalog, "account-a", 513, "50")
-	plan, checkpoint, err := newSimulatedSystemPlan("workspace-a", account, catalog)
+	plan, checkpoint, err := newSimulatedSystemPlan("workspace-a", account, catalog, nil)
 	if err != nil {
 		t.Fatalf("expected generation plan, got %v", err)
 	}
@@ -119,7 +119,7 @@ func TestSimulatedSystemPlanResumeAndSelection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected checkpoint JSON, got %v", err)
 	}
-	resumed, resumedCheckpoint, err := newSimulatedSystemPlan("workspace-a", account, catalog)
+	resumed, resumedCheckpoint, err := newSimulatedSystemPlan("workspace-a", account, catalog, nil)
 	if err != nil {
 		t.Fatalf("expected resumed generation plan, got %v", err)
 	}
@@ -130,11 +130,11 @@ func TestSimulatedSystemPlanResumeAndSelection(t *testing.T) {
 
 	first := simulatedSystemPlanFixture(t, catalog, "account-a", 30_000, "0")
 	second := simulatedSystemPlanFixture(t, catalog, "account-b", 30_000, "0")
-	a, _, err := newSimulatedSystemPlan("workspace-a", first, catalog)
+	a, _, err := newSimulatedSystemPlan("workspace-a", first, catalog, nil)
 	if err != nil {
 		t.Fatalf("expected first selection plan, got %v", err)
 	}
-	b, _, err := newSimulatedSystemPlan("workspace-a", second, catalog)
+	b, _, err := newSimulatedSystemPlan("workspace-a", second, catalog, nil)
 	if err != nil {
 		t.Fatalf("expected second selection plan, got %v", err)
 	}
@@ -175,7 +175,7 @@ func TestSimulatedSystemPlanResumeAndSelection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected changed checkpoint JSON, got %v", err)
 	}
-	_, _, err = newSimulatedSystemPlan("workspace-a", first, catalog)
+	_, _, err = newSimulatedSystemPlan("workspace-a", first, catalog, nil)
 	if err == nil {
 		t.Fatal("expected changed catalog fingerprint to fail, got success")
 	}
@@ -185,7 +185,7 @@ func TestSimulatedSystemPlanResumeAndSelection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected changed world version JSON, got %v", err)
 	}
-	_, _, err = newSimulatedSystemPlan("workspace-a", first, catalog)
+	_, _, err = newSimulatedSystemPlan("workspace-a", first, catalog, nil)
 	if err == nil {
 		t.Fatal("expected changed world version to fail, got success")
 	}
@@ -195,7 +195,7 @@ func TestSimulatedSystemPlanResumeAndSelection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected changed person specification JSON, got %v", err)
 	}
-	_, _, err = newSimulatedSystemPlan("workspace-a", first, catalog)
+	_, _, err = newSimulatedSystemPlan("workspace-a", first, catalog, nil)
 	if err == nil {
 		t.Fatal("expected changed person specification to fail, got success")
 	}
@@ -205,7 +205,7 @@ func TestSimulatedSystemPlanResumeAndSelection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected changed source version JSON, got %v", err)
 	}
-	_, _, err = newSimulatedSystemPlan("workspace-a", first, catalog)
+	_, _, err = newSimulatedSystemPlan("workspace-a", first, catalog, nil)
 	if err == nil {
 		t.Fatal("expected changed source version to fail, got success")
 	}
@@ -214,7 +214,7 @@ func TestSimulatedSystemPlanResumeAndSelection(t *testing.T) {
 func TestSimulatedSystemDocument(t *testing.T) {
 	catalog := simulatedSystemTestCatalog(t)
 	account := simulatedSystemPlanFixture(t, catalog, "account-a", 40, "50")
-	plan, checkpoint, err := newSimulatedSystemPlan("workspace-a", account, catalog)
+	plan, checkpoint, err := newSimulatedSystemPlan("workspace-a", account, catalog, nil)
 	if err != nil {
 		t.Fatalf("expected generation plan, got %v", err)
 	}
@@ -384,7 +384,7 @@ func simulatedSystemPlanFixture(t *testing.T, catalog *fakedata.FaceCatalog, id 
 		t.Fatalf("expected duplicate percentage, got %v", err)
 	}
 	return &state.SimulatedSystem{ID: id, UserCount: count, DuplicateRecordPercent: value,
-		GenerationPolicyVersion: simulatedSystemPolicyVersion, GenerationCheckpoint: checkpoint}
+		GenerationPolicyVersion: simulatedSystemLegacyPolicyVersion, GenerationCheckpoint: checkpoint}
 }
 
 func simulatedSystemTestCatalog(t *testing.T) *fakedata.FaceCatalog {
