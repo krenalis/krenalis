@@ -37,7 +37,7 @@ func compileSocioeconomicLaw(input socioeconomicLawJSON) (socioeconomicLaw, erro
 // compileSocioeconomicModel validates the complete canonical numerical model.
 // Work is bounded by the decoder's D2-A cardinalities; no network, random
 // streams, Company universe, or Person generation participates in compilation.
-func compileSocioeconomicModel(document *socioeconomicModelJSON) (*socioeconomicModel, error) {
+func compileSocioeconomicModel(document *socioeconomicModelJSON) (*SocioeconomicModel, error) {
 
 	// Reserve retained storage before compilation. D2-A's numerical charges
 	// include exact weights recoverable from cumulative differences. The extra
@@ -70,7 +70,7 @@ func compileSocioeconomicModel(document *socioeconomicModelJSON) (*socioeconomic
 		return nil, fmt.Errorf("retained model charge %d exceeds %d bytes", retained, maxSocioeconomicRetainedBytes)
 	}
 
-	model := &socioeconomicModel{companyCount: document.companyCount, employer: document.employer}
+	model := &SocioeconomicModel{companyCount: document.companyCount, employer: document.employer}
 	if model.companyCount == 0 {
 		return nil, fmt.Errorf("companyCount must be positive")
 	}
@@ -222,6 +222,12 @@ func compileSocioeconomicModel(document *socioeconomicModelJSON) (*socioeconomic
 		}
 
 	}
+
+	err := model.prepareIdentity()
+	if err != nil {
+		return nil, err
+	}
+	model.initialized = true
 
 	return model, nil
 }

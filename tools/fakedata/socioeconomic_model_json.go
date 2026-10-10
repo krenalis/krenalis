@@ -274,7 +274,7 @@ func (r *socioeconomicJSONReader) Read(p []byte) (int, error) {
 
 // decodeSocioeconomicModel accepts only the canonical logical-v0 representation,
 // not publication evidence or an authored pre-canonicalization model.
-func decodeSocioeconomicModel(reader io.Reader) (*socioeconomicModel, error) {
+func decodeSocioeconomicModel(reader io.Reader) (*SocioeconomicModel, error) {
 
 	bounded := &io.LimitedReader{R: reader, N: maxSocioeconomicModelBytes + 1}
 	d := socioeconomicDecoder{decoder: json.NewDecoder(&socioeconomicJSONReader{reader: bounded})}

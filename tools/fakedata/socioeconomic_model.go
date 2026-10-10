@@ -6,6 +6,8 @@ package fakedata
 
 import (
 	"context"
+	"crypto/sha256"
+	"fmt"
 	"io"
 	"sync"
 
@@ -20,10 +22,10 @@ const (
 	maxSocioeconomicRetainedBytes = 8 << 20
 )
 
-// socioeconomicModel contains the immutable Italian numerical model at
-// PopulationAnchorDate (2026-01-01), ready for subsequent runtime construction.
-// It contains no generated people, companies, or random state.
-type socioeconomicModel struct {
+// SocioeconomicModel is an opaque immutable Italian socioeconomic model.
+// Acquire it through SocioeconomicModelSource.Load and share it across worlds.
+// Its zero value is invalid; callers must not overwrite an acquired model.
+type SocioeconomicModel struct {
 	companyCount          uint64
 	ages                  [8][55]uint8
 	companyIndustry       socioeconomicWeights
@@ -36,30 +38,38 @@ type socioeconomicModel struct {
 	selfEmployedIndustry  socioeconomicWeights
 	employer              socioeconomicEmployerParameters
 	income                [6]socioeconomicIncome
+	digest                [sha256.Size]byte
+	fingerprints          [15][sha256.Size]byte
+	initialized           bool
 }
 
-// socioeconomicModelSource loads and retains a successful it-2026a model.
-// Keep one source for the process lifetime, as with FaceCatalogSource.
-type socioeconomicModelSource struct {
+// SocioeconomicModelSource loads and retains a successful it-2026a model.
+// It is safe for concurrent use. Models remain valid after the source is gone.
+type SocioeconomicModelSource struct {
 	resolver *externalassets.Resolver
 	mu       sync.Mutex
-	model    *socioeconomicModel // protected by mu
+	model    *SocioeconomicModel // protected by mu
 	loading  chan struct{}       // protected by mu
 }
 
-// newSocioeconomicModelSource creates a lazy source using ordered asset origins
-// from the application's KRENALIS_EXTERNAL_ASSETS_URLS configuration.
-func newSocioeconomicModelSource(origins []string) (*socioeconomicModelSource, error) {
+// NewSocioeconomicModelSource creates a reusable source for the fixed it-2026a
+// model using ordered External Assets origins.
+func NewSocioeconomicModelSource(origins []string) (*SocioeconomicModelSource, error) {
 	resolver, err := externalassets.NewResolver(origins)
 	if err != nil {
 		return nil, err
 	}
-	return &socioeconomicModelSource{resolver: resolver}, nil
+	return &SocioeconomicModelSource{resolver: resolver}, nil
 }
 
-// load returns the retained immutable model; failed attempts remain retryable.
-// It returns ctx.Err() if waiting for another load is canceled.
-func (s *socioeconomicModelSource) load(ctx context.Context) (*socioeconomicModel, error) {
+// Load acquires and retains an immutable model; failed loads remain retryable.
+// It returns ctx.Err() when cancellation interrupts waiting for another load.
+func (s *SocioeconomicModelSource) Load(ctx context.Context) (*SocioeconomicModel, error) {
+
+	if s == nil || s.resolver == nil {
+		return nil, fmt.Errorf("invalid socioeconomic model source")
+	}
+
 	for {
 
 		s.mu.Lock()
@@ -81,7 +91,7 @@ func (s *socioeconomicModelSource) load(ctx context.Context) (*socioeconomicMode
 		s.loading = make(chan struct{})
 		s.mu.Unlock()
 
-		var model *socioeconomicModel
+		var model *SocioeconomicModel
 		consume := func(reader io.Reader) error {
 			model = nil
 			var err error
@@ -102,6 +112,7 @@ func (s *socioeconomicModelSource) load(ctx context.Context) (*socioeconomicMode
 
 		return model, nil
 	}
+
 }
 
 type socioeconomicEmployerParameters struct {

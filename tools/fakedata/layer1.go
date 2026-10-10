@@ -264,15 +264,7 @@ func (w *World) WorldID() WorldID {
 
 func (w *World) address(index PersonIndex) (Address, error) {
 
-	mixture, err := w.personStream(index, streamGeographyPlaceMixture)
-	if err != nil {
-		return Address{}, err
-	}
-	populationWeighted, err := mixture.BernoulliRatio(95, 100)
-	if err != nil {
-		return Address{}, err
-	}
-	place, err := w.municipality(index, populationWeighted)
+	place, err := w.addressMunicipality(index)
 	if err != nil {
 		return Address{}, err
 	}
@@ -350,6 +342,18 @@ func (w *World) address(index PersonIndex) (Address, error) {
 		Street: street, Municipality: place.municipality, StateProv: place.stateProv,
 		PostalCode: postalCodes[postalPosition], Country: "IT",
 	}, nil
+}
+
+func (w *World) addressMunicipality(index PersonIndex) (placeRow, error) {
+	mixture, err := w.personStream(index, streamGeographyPlaceMixture)
+	if err != nil {
+		return placeRow{}, err
+	}
+	populationWeighted, err := mixture.BernoulliRatio(95, 100)
+	if err != nil {
+		return placeRow{}, err
+	}
+	return w.municipality(index, populationWeighted)
 }
 
 func (w *World) birth(index PersonIndex) (int, string, time.Time, error) {

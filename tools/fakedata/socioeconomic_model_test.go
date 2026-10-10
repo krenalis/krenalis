@@ -13,11 +13,13 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/andybalholm/brotli"
 	"github.com/krenalis/krenalis/tools/json"
@@ -403,11 +405,11 @@ func TestSocioeconomicModelSourceCompression(t *testing.T) {
 				_, _ = w.Write(data.Bytes())
 			}))
 			defer server.Close()
-			source, err := newSocioeconomicModelSource([]string{server.URL})
+			source, err := NewSocioeconomicModelSource([]string{server.URL})
 			if err != nil {
 				t.Fatalf("expected source, got %v", err)
 			}
-			_, err = source.load(t.Context())
+			_, err = source.Load(t.Context())
 			if err != nil {
 				t.Fatalf("expected compressed model, got %v", err)
 			}
@@ -470,15 +472,15 @@ func TestSocioeconomicModelSourceFallback(t *testing.T) {
 				_, _ = io.WriteString(w, fixture)
 			}))
 			defer second.Close()
-			source, err := newSocioeconomicModelSource([]string{first.URL, second.URL + "/assets"})
+			source, err := NewSocioeconomicModelSource([]string{first.URL, second.URL + "/assets"})
 			if err != nil {
 				t.Fatalf("expected source, got %v", err)
 			}
-			model, err := source.load(t.Context())
+			model, err := source.Load(t.Context())
 			if err != nil {
 				t.Fatalf("expected fallback model, got %v", err)
 			}
-			again, err := source.load(t.Context())
+			again, err := source.Load(t.Context())
 			if err != nil {
 				t.Fatalf("expected retained model, got %v", err)
 			}
@@ -493,6 +495,99 @@ func TestSocioeconomicModelSourceFallback(t *testing.T) {
 
 		})
 
+	}
+
+}
+
+// TestSocioeconomicModelSourceOwnerCancellationRetry checks cancellation of
+// the active HTTP acquisition owner, successful retry and cached reuse.
+func TestSocioeconomicModelSourceOwnerCancellationRetry(t *testing.T) {
+
+	fixture := socioeconomicFixture(t)
+	expected, err := decodeSocioeconomicModel(strings.NewReader(fixture))
+	if err != nil {
+		t.Fatalf("expected complete canonical fixture, got %v", err)
+	}
+	ctx, stop := context.WithTimeout(t.Context(), 10*time.Second)
+	defer stop()
+	started, canceled, release := make(chan struct{}), make(chan struct{}), make(chan struct{})
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if calls.Add(1) == 1 {
+			close(started)
+			select {
+			case <-r.Context().Done():
+				close(canceled)
+			case <-release:
+			}
+			return
+		}
+		_, _ = io.WriteString(w, fixture)
+	}))
+	defer server.Close()
+	defer close(release)
+	source, err := NewSocioeconomicModelSource([]string{server.URL})
+	if err != nil {
+		t.Fatalf("expected source, got %v", err)
+	}
+
+	ownerCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	var firstModel *SocioeconomicModel
+	var firstErr error
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		firstModel, firstErr = source.Load(ownerCtx)
+	}()
+	t.Cleanup(func() {
+		select {
+		case <-done:
+		case <-time.After(10 * time.Second):
+			t.Error("expected acquisition goroutine to finish, got timeout")
+		}
+	})
+	select {
+	case <-started:
+	case <-ctx.Done():
+		t.Fatalf("expected owner request to start, got %v", ctx.Err())
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-ctx.Done():
+		t.Fatalf("expected canceled owner to finish, got %v", ctx.Err())
+	}
+	if firstErr != nil {
+		if firstModel != nil {
+			t.Fatalf("expected nil model after owner cancellation, got %p", firstModel)
+		}
+	}
+	if firstErr == nil {
+		t.Fatal("expected canceled owner error, got success")
+	}
+	select {
+	case <-canceled:
+	case <-ctx.Done():
+		t.Fatalf("expected canceled HTTP handler to finish, got %v", ctx.Err())
+	}
+
+	model, err := source.Load(ctx)
+	if err != nil {
+		t.Fatalf("expected successful retry after owner cancellation, got %v", err)
+	}
+	if !reflect.DeepEqual(model, expected) {
+		t.Fatalf("expected complete immutable fixture after retry, got model %p", model)
+	}
+	if calls.Load() != 2 {
+		t.Fatalf("expected canceled request and successful retry, got %d requests", calls.Load())
+	}
+	again, err := source.Load(ctx)
+	if err != nil {
+		t.Fatalf("expected cached model after retry, got %v", err)
+	}
+	if again != model || calls.Load() != 2 {
+		t.Fatalf("expected cached model %p and two requests, got %p and %d requests", model, again, calls.Load())
 	}
 
 }
@@ -513,11 +608,11 @@ func TestSocioeconomicModelSourceRetryConcurrent(t *testing.T) {
 		_, _ = io.WriteString(w, fixture)
 	}))
 	defer server.Close()
-	source, err := newSocioeconomicModelSource([]string{server.URL, server.URL + "/backup"})
+	source, err := NewSocioeconomicModelSource([]string{server.URL, server.URL + "/backup"})
 	if err != nil {
 		t.Fatalf("expected source, got %v", err)
 	}
-	model, err := source.load(t.Context())
+	model, err := source.Load(t.Context())
 	if err != nil {
 		if model != nil || !strings.Contains(err.Error(), "/backup") || calls.Load() != 2 {
 			t.Fatalf("expected aggregated failures and nil model, got %p, %v and %d calls", model, err, calls.Load())
@@ -529,11 +624,11 @@ func TestSocioeconomicModelSourceRetryConcurrent(t *testing.T) {
 	available.Store(true)
 
 	var group sync.WaitGroup
-	models := make([]*socioeconomicModel, 12)
+	models := make([]*SocioeconomicModel, 12)
 	for i := range models {
 		group.Go(func() {
 			var err error
-			models[i], err = source.load(t.Context())
+			models[i], err = source.Load(t.Context())
 			if err != nil {
 				t.Errorf("expected concurrent model load, got %v", err)
 				return
@@ -567,20 +662,20 @@ func TestSocioeconomicModelSourceWaitCancellation(t *testing.T) {
 		_, _ = io.WriteString(w, fixture)
 	}))
 	defer server.Close()
-	source, err := newSocioeconomicModelSource([]string{server.URL})
+	source, err := NewSocioeconomicModelSource([]string{server.URL})
 	if err != nil {
 		t.Fatalf("expected source, got %v", err)
 	}
 	done := make(chan error, 1)
 	go func() {
-		_, err := source.load(t.Context())
+		_, err := source.Load(t.Context())
 		done <- err
 	}()
 	<-started
 
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	_, err = source.load(ctx)
+	_, err = source.Load(ctx)
 	close(release)
 	loadErr := <-done
 	if loadErr != nil {
