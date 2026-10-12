@@ -524,10 +524,68 @@ func Test_Where_Equal(t *testing.T) {
 
 }
 
-// Test_Where_MarshalJSON verifies the persisted JSON representation of Where
-// values.
-func Test_Where_MarshalJSON(t *testing.T) {
+// Test_MarshalWhere verifies that MarshalWhere produces the expected persisted
+// JSON for a given schema and that unmarshalWhere restores the original value.
+func Test_MarshalWhere(t *testing.T) {
 
+	schema := types.Object([]types.Property{
+		{Name: "count", Type: types.Int(64)},
+		{Name: "date", Type: types.Date()},
+		{Name: "items", Type: types.Array(types.String())},
+		{Name: "metadata", Type: types.JSON()},
+	})
+	where := &Where{Operator: OpAnd, Rules: []WhereRule{
+		&WhereCondition{Property: []string{"count"}, Operator: OpIs, Values: []any{int(9007199254740993)}},
+		&WhereCondition{Property: []string{"date"}, Operator: OpIsBefore, Values: []any{time.Date(2024, 9, 12, 0, 0, 0, 0, time.UTC)}},
+		&Where{Operator: OpOr, Rules: []WhereRule{
+			&WhereCondition{Property: []string{"items"}, Operator: OpContains, Values: []any{"foo"}},
+			&WhereCondition{Property: []string{"metadata", "name"}, Operator: OpIsOneOf, Values: []any{
+				JSONConditionValue{String: "first"}, JSONConditionValue{String: "second"},
+			}},
+			&WhereCondition{Property: []string{"metadata"}, Operator: OpIsNull},
+		}},
+	}}
+	want := []byte(`{"operator":"And","rules":[` +
+		`{"property":["count"],"operator":"Is","values":[9007199254740993]},` +
+		`{"property":["date"],"operator":"IsBefore","values":["2024-09-12"]},` +
+		`{"operator":"Or","rules":[` +
+		`{"property":["items"],"operator":"Contains","values":["foo"]},` +
+		`{"property":["metadata","name"],"operator":"IsOneOf","values":["first","second"]},` +
+		`{"property":["metadata"],"operator":"IsNull"}` +
+		`]}]}`)
+
+	got := MarshalWhere(where, schema)
+	if !bytes.Equal(got, want) {
+		t.Fatalf("expected %s, got %s", want, got)
+	}
+	decoded, err := unmarshalWhere(got, schema)
+	if err != nil {
+		t.Fatalf("expected decoded where, got error %q", err)
+	}
+	if !where.Equal(decoded) {
+		t.Fatalf("expected %#v, got %#v", where, decoded)
+	}
+
+}
+
+// Test_MarshalWhereValues verifies the persisted representation and round trip
+// of condition values.
+func Test_MarshalWhereValues(t *testing.T) {
+
+	schema := types.Object([]types.Property{
+		{Name: "a", Type: types.Int(32)},
+		{Name: "b", Type: types.String(), Nullable: true},
+		{Name: "c", Type: types.Int(32)},
+		{Name: "d", Type: types.Float(64)},
+		{Name: "e", Type: types.Decimal(5, 0)},
+		{Name: "f", Type: types.Boolean()},
+		{Name: "g", Type: types.Int(32).Unsigned()},
+		{Name: "h", Type: types.JSON()},
+		{Name: "i", Type: types.JSON()},
+		{Name: "j", Type: types.DateTime()},
+		{Name: "k", Type: types.Decimal(5, 3)},
+		{Name: "l", Type: types.Time()},
+	})
 	tests := []struct {
 		name     string
 		where    Where
@@ -544,9 +602,9 @@ func Test_Where_MarshalJSON(t *testing.T) {
 					&WhereCondition{Property: []string{"d"}, Operator: OpIsLessThan, Values: []any{34.98}},
 					&WhereCondition{Property: []string{"e"}, Operator: OpIsGreaterThan, Values: []any{decimal.MustParse("34")}},
 					&WhereCondition{Property: []string{"f"}, Operator: OpIsTrue},
-					&WhereCondition{Property: []string{"g"}, Operator: OpIsNotOneOf, Values: []any{1, 2, 3}},
+					&WhereCondition{Property: []string{"g"}, Operator: OpIsNotOneOf, Values: []any{uint(1), uint(2), uint(3)}},
 					&WhereCondition{Property: []string{"h"}, Operator: OpIs, Values: []any{JSONConditionValue{String: "foo"}}},
-					&WhereCondition{Property: []string{"i"}, Operator: OpIsBetween, Values: []any{JSONConditionValue{String: "34", Number: new(decimal.MustParse("34"))}}},
+					&WhereCondition{Property: []string{"i"}, Operator: OpIs, Values: []any{JSONConditionValue{String: "34", Number: new(decimal.MustParse("34"))}}},
 				},
 			},
 			expected: []byte(`{"operator":"And","rules":[` +
@@ -558,17 +616,37 @@ func Test_Where_MarshalJSON(t *testing.T) {
 				`{"property":["f"],"operator":"IsTrue"},` +
 				`{"property":["g"],"operator":"IsNotOneOf","values":[1,2,3]},` +
 				`{"property":["h"],"operator":"Is","values":["foo"]},` +
-				`{"property":["i"],"operator":"IsBetween","values":["34"]}` + `]}`),
+				`{"property":["i"],"operator":"Is","values":["34"]}` + `]}`),
 		},
 		{
-			name: "time pointer",
+			name: "decimal without leading zero",
+			where: Where{
+				Operator: OpAnd,
+				Rules: []WhereRule{
+					&WhereCondition{Property: []string{"k"}, Operator: OpIs, Values: []any{decimal.MustParse(".123")}},
+				},
+			},
+			expected: []byte(`{"operator":"And","rules":[{"property":["k"],"operator":"Is","values":[0.123]}]}`),
+		},
+		{
+			name: "datetime",
 			where: Where{
 				Operator: OpOr,
 				Rules: []WhereRule{
-					&WhereCondition{Property: []string{"a"}, Operator: OpIsAfter, Values: []any{new(time.Date(2024, 9, 12, 11, 3, 6, 820793551, time.UTC))}},
+					&WhereCondition{Property: []string{"j"}, Operator: OpIsAfter, Values: []any{time.Date(2024, 9, 12, 11, 3, 6, 820793551, time.UTC)}},
 				},
 			},
-			expected: []byte(`{"operator":"Or","rules":[{"property":["a"],"operator":"IsAfter","values":["2024-09-12T11:03:06.820793551Z"]}` + `]}`),
+			expected: []byte(`{"operator":"Or","rules":[{"property":["j"],"operator":"IsAfter","values":["2024-09-12T11:03:06.820793551Z"]}` + `]}`),
+		},
+		{
+			name: "time",
+			where: Where{
+				Operator: OpAnd,
+				Rules: []WhereRule{
+					&WhereCondition{Property: []string{"l"}, Operator: OpIsBefore, Values: []any{time.Date(1970, 1, 1, 11, 3, 6, 820793551, time.UTC)}},
+				},
+			},
+			expected: []byte(`{"operator":"And","rules":[{"property":["l"],"operator":"IsBefore","values":["11:03:06.820793551"]}]}`),
 		},
 		{
 			name: "nested group",
@@ -578,7 +656,7 @@ func Test_Where_MarshalJSON(t *testing.T) {
 					&WhereCondition{Property: []string{"a"}, Operator: OpIs, Values: []any{5}},
 					&Where{Operator: OpOr, Rules: []WhereRule{
 						&WhereCondition{Property: []string{"b"}, Operator: OpIsNull},
-						&WhereCondition{Property: []string{"c"}, Operator: OpIsTrue},
+						&WhereCondition{Property: []string{"f"}, Operator: OpIsTrue},
 					}},
 				},
 			},
@@ -586,7 +664,7 @@ func Test_Where_MarshalJSON(t *testing.T) {
 				`{"property":["a"],"operator":"Is","values":[5]},` +
 				`{"operator":"Or","rules":[` +
 				`{"property":["b"],"operator":"IsNull"},` +
-				`{"property":["c"],"operator":"IsTrue"}` +
+				`{"property":["f"],"operator":"IsTrue"}` +
 				`]}` +
 				`]}`),
 		},
@@ -594,15 +672,16 @@ func Test_Where_MarshalJSON(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := json.Marshal(&test.where)
-			if err != nil {
-				t.Fatalf("unexpected error %q", err)
-			}
-			if got == nil {
-				t.Fatalf("unexpected nil")
-			}
+			got := MarshalWhere(&test.where, schema)
 			if !bytes.Equal(test.expected, got) {
-				t.Fatalf("\nexpected %s\ngot      %s", string(test.expected), string(got))
+				t.Fatalf("expected %s, got %s", test.expected, got)
+			}
+			decoded, err := unmarshalWhere(got, schema)
+			if err != nil {
+				t.Fatalf("expected decoded where, got error %q", err)
+			}
+			if !test.where.Equal(decoded) {
+				t.Fatalf("expected %#v, got %#v", test.where, decoded)
 			}
 		})
 	}
@@ -699,9 +778,8 @@ func Test_WhereCondition_Equal(t *testing.T) {
 
 }
 
-// Test_WhereLogical_JSON verifies the external representation of every
-// logical operator and the handling of invalid values.
-func Test_WhereLogical_JSON(t *testing.T) {
+// Test_WhereLogical_UnmarshalJSON verifies the persisted logical operators.
+func Test_WhereLogical_UnmarshalJSON(t *testing.T) {
 
 	tests := []struct {
 		op   WhereLogical
@@ -712,20 +790,10 @@ func Test_WhereLogical_JSON(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			expected := []byte(`"` + test.name + `"`)
-			got, err := test.op.MarshalJSON()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !bytes.Equal(got, expected) {
-				t.Fatalf("expected %s, got %s", expected, got)
-			}
-			if got := test.op.String(); got != test.name {
-				t.Fatalf("expected %s, got %s", test.name, got)
-			}
 			var decoded WhereLogical
-			if err := json.Unmarshal(got, &decoded); err != nil {
-				t.Fatal(err)
+			err := json.Unmarshal([]byte(`"`+test.name+`"`), &decoded)
+			if err != nil {
+				t.Fatalf("expected decoded logical operator, got error %q", err)
 			}
 			if decoded != test.op {
 				t.Fatalf("expected %d, got %d", test.op, decoded)
@@ -733,36 +801,21 @@ func Test_WhereLogical_JSON(t *testing.T) {
 		})
 	}
 
-	invalid := []struct {
-		name string
-		op   WhereLogical
-	}{
-		{name: "negative", op: WhereLogical(-1)},
-		{name: "above maximum", op: OpOr + 1},
-	}
-	for _, test := range invalid {
-		t.Run(test.name, func(t *testing.T) {
-			_, err := test.op.MarshalJSON()
-			if err == nil {
-				t.Fatal("expected MarshalJSON to return an error")
+	for _, name := range []string{"Invalid", "OpAnd"} {
+		t.Run(name, func(t *testing.T) {
+			var decoded WhereLogical
+			err := json.Unmarshal([]byte(`"`+name+`"`), &decoded)
+			if err != nil {
+				return
 			}
-			defer func() {
-				recovered := recover()
-				if recovered == nil {
-					t.Fatal("expected String to panic")
-				}
-				if fmt.Sprint(recovered) != err.Error() {
-					t.Fatalf("expected panic %q, got %q", err, recovered)
-				}
-			}()
-			_ = test.op.String()
+			t.Fatal("expected invalid logical operator error, got nil")
 		})
 	}
 
 }
 
-// Test_WhereOperator_JSON verifies the external representation of every
-// condition operator and the handling of invalid values.
+// Test_WhereOperator_JSON verifies the persisted condition operators and
+// String.
 func Test_WhereOperator_JSON(t *testing.T) {
 
 	tests := []struct {
@@ -798,20 +851,13 @@ func Test_WhereOperator_JSON(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			expected := []byte(`"` + test.name + `"`)
-			got, err := test.op.MarshalJSON()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !bytes.Equal(got, expected) {
-				t.Fatalf("expected %s, got %s", expected, got)
-			}
 			if got := test.op.String(); got != test.name {
 				t.Fatalf("expected %s, got %s", test.name, got)
 			}
 			var decoded WhereOperator
-			if err := json.Unmarshal(got, &decoded); err != nil {
-				t.Fatal(err)
+			err := json.Unmarshal([]byte(`"`+test.name+`"`), &decoded)
+			if err != nil {
+				t.Fatalf("expected decoded condition operator, got error %q", err)
 			}
 			if decoded != test.op {
 				t.Fatalf("expected %d, got %d", test.op, decoded)
@@ -821,9 +867,11 @@ func Test_WhereOperator_JSON(t *testing.T) {
 
 	t.Run("legacy name", func(t *testing.T) {
 		var op WhereOperator
-		if err := json.Unmarshal([]byte(`"OpIsNotBetween"`), &op); err == nil {
-			t.Fatal("expected legacy operator name to be rejected")
+		err := json.Unmarshal([]byte(`"OpIsNotBetween"`), &op)
+		if err != nil {
+			return
 		}
+		t.Fatal("expected legacy operator error, got nil")
 	})
 
 	invalid := []struct {
@@ -835,56 +883,17 @@ func Test_WhereOperator_JSON(t *testing.T) {
 	}
 	for _, test := range invalid {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := test.op.MarshalJSON()
-			if err == nil {
-				t.Fatal("expected MarshalJSON to return an error")
-			}
 			defer func() {
 				recovered := recover()
 				if recovered == nil {
 					t.Fatal("expected String to panic")
 				}
-				if fmt.Sprint(recovered) != err.Error() {
-					t.Fatalf("expected panic %q, got %q", err, recovered)
+				expected := fmt.Sprintf("invalid operator %d", test.op)
+				if fmt.Sprint(recovered) != expected {
+					t.Fatalf("expected panic %q, got %q", expected, recovered)
 				}
 			}()
 			_ = test.op.String()
-		})
-	}
-
-}
-
-// Test_JSONConditionValue_MarshalJSON verifies that JSON condition values are
-// persisted using their raw strings.
-func Test_JSONConditionValue_MarshalJSON(t *testing.T) {
-
-	tests := []struct {
-		name     string
-		v        JSONConditionValue
-		expected []byte
-	}{
-		{name: "empty", v: JSONConditionValue{String: ""}, expected: []byte(`""`)},
-		{name: "string", v: JSONConditionValue{String: "foo"}, expected: []byte(`"foo"`)},
-		{name: "integer", v: JSONConditionValue{String: "34", Number: new(decimal.MustInt(34))}, expected: []byte(`"34"`)},
-		{
-			name:     "decimal",
-			v:        JSONConditionValue{String: "893.051", Number: new(decimal.MustParse("893.051"))},
-			expected: []byte(`"893.051"`),
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got, err := test.v.MarshalJSON()
-			if err != nil {
-				t.Fatalf("unexpected error %q", err)
-			}
-			if got == nil {
-				t.Fatalf("unexpected nil")
-			}
-			if !bytes.Equal(test.expected, got) {
-				t.Fatalf("expected %s\ngot      %s", string(test.expected), string(got))
-			}
 		})
 	}
 
