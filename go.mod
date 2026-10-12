@@ -42,7 +42,7 @@ require (
 	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/client_model v0.6.3
 	github.com/rabbitmq/amqp091-go v1.15.0
-	github.com/relvacode/iso8601 v1.8.0
+	github.com/relvacode/iso8601 v1.8.2
 	github.com/snowflakedb/gosnowflake/v2 v2.1.0
 	github.com/testcontainers/testcontainers-go v0.44.0
 	github.com/testcontainers/testcontainers-go/modules/clickhouse v0.44.0
