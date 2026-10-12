@@ -227,7 +227,7 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 					v, _ = parseInt(value)
 				}
 			case types.FloatKind:
-				v, _ = parseFloat(value, p.Type.BitSize())
+				v, _ = parseFloat(value, t.BitSize())
 			case types.DecimalKind:
 				v, _ = parseDecimal(value)
 			case types.DateTimeKind:

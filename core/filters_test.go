@@ -488,6 +488,7 @@ func Test_convertFilterToWhere(t *testing.T) {
 		{Name: "o", Type: types.Array(types.String()), Nullable: true},
 		{Name: "p", Type: types.Object([]types.Property{{Name: "x", Type: types.String()}}), Nullable: true},
 		{Name: "q", Type: types.Map(types.String()), Nullable: true},
+		{Name: "r", Type: types.Array(types.Float(32))},
 	})
 
 	d := decimal.MustParse("56.19")
@@ -557,6 +558,21 @@ func Test_convertFilterToWhere(t *testing.T) {
 					&state.WhereCondition{Property: []string{"p", "x"}, Operator: state.OpIs, Values: []any{"foo"}},
 					&state.WhereCondition{Property: []string{"l", "x", "y"}, Operator: state.OpExists},
 					&state.WhereCondition{Property: []string{"q"}, Operator: state.OpIsNull},
+				},
+			},
+		},
+		{
+			name: "float array",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "r", Operator: OpContains, Values: []string{"3.802"}},
+				},
+			},
+			expected: state.Where{
+				Operator: state.OpAnd,
+				Rules: []state.WhereRule{
+					&state.WhereCondition{Property: []string{"r"}, Operator: state.OpContains, Values: []any{float64(float32(3.802))}},
 				},
 			},
 		},
