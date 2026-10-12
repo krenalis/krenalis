@@ -1179,6 +1179,86 @@ func Test_validateFilter(t *testing.T) {
 			err: errors.New(`operator "is before" cannot be used with boolean properties`),
 		},
 		{
+			name: "is before on JSON",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d", Operator: OpIsBefore, Values: []string{"2024-09-10"}},
+				},
+			},
+			err: errors.New(`operator "is before" cannot be used with json properties`),
+		},
+		{
+			name: "is before on JSON path",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d.s", Operator: OpIsBefore, Values: []string{"2024-09-10"}},
+				},
+			},
+			err: errors.New(`operator "is before" cannot be used with json properties`),
+		},
+		{
+			name: "is on or before on JSON",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d", Operator: OpIsOnOrBefore, Values: []string{"2024-09-10"}},
+				},
+			},
+			err: errors.New(`operator "is on or before" cannot be used with json properties`),
+		},
+		{
+			name: "is on or before on JSON path",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d.s", Operator: OpIsOnOrBefore, Values: []string{"2024-09-10"}},
+				},
+			},
+			err: errors.New(`operator "is on or before" cannot be used with json properties`),
+		},
+		{
+			name: "is after on JSON",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d", Operator: OpIsAfter, Values: []string{"2024-09-10"}},
+				},
+			},
+			err: errors.New(`operator "is after" cannot be used with json properties`),
+		},
+		{
+			name: "is after on JSON path",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d.s", Operator: OpIsAfter, Values: []string{"2024-09-10"}},
+				},
+			},
+			err: errors.New(`operator "is after" cannot be used with json properties`),
+		},
+		{
+			name: "is on or after on JSON",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d", Operator: OpIsOnOrAfter, Values: []string{"2024-09-10"}},
+				},
+			},
+			err: errors.New(`operator "is on or after" cannot be used with json properties`),
+		},
+		{
+			name: "is on or after on JSON path",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d.s", Operator: OpIsOnOrAfter, Values: []string{"2024-09-10"}},
+				},
+			},
+			err: errors.New(`operator "is on or after" cannot be used with json properties`),
+		},
+		{
 			name: "is true on string",
 			filter: Filter{
 				Operator: OpOr,
