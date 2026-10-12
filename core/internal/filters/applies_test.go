@@ -401,6 +401,7 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsBefore, v: time.Date(2024, 9, 8, 0, 0, 0, 0, time.UTC), v0: time.Date(2024, 9, 10, 0, 0, 0, 0, time.UTC), expected: true},
 		{op: state.OpIsBefore, v: time.Date(1970, 1, 1, 16, 51, 6, 471190035, time.UTC), v0: time.Date(1970, 1, 1, 14, 13, 45, 632886017, time.UTC), expected: false},
 		{op: state.OpIsBefore, v: nil, v0: time.Date(2024, 9, 10, 9, 58, 15, 704152446, time.UTC), expected: false},
+		{op: state.OpIsBefore, v: 2023, v0: 2024, expected: true},
 
 		// OpIsOnOrBefore.
 		{op: state.OpIsOnOrBefore, v0: time.Date(2024, 9, 10, 9, 58, 15, 704152446, time.UTC), expected: false, notExists: true},
@@ -410,6 +411,7 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsOnOrBefore, v: time.Date(2024, 9, 8, 0, 0, 0, 0, time.UTC), v0: time.Date(2024, 9, 10, 0, 0, 0, 0, time.UTC), expected: true},
 		{op: state.OpIsOnOrBefore, v: time.Date(1970, 1, 1, 16, 51, 6, 471190035, time.UTC), v0: time.Date(1970, 1, 1, 14, 13, 45, 632886017, time.UTC), expected: false},
 		{op: state.OpIsOnOrBefore, v: nil, v0: time.Date(2024, 9, 10, 9, 58, 15, 704152446, time.UTC), expected: false},
+		{op: state.OpIsOnOrBefore, v: 2024, v0: 2024, expected: true},
 
 		// OpIsAfter.
 		{op: state.OpIsAfter, v0: time.Date(2024, 9, 10, 9, 58, 15, 704152446, time.UTC), expected: false, notExists: true},
@@ -419,6 +421,7 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsAfter, v: time.Date(2024, 9, 8, 0, 0, 0, 0, time.UTC), v0: time.Date(2024, 9, 10, 0, 0, 0, 0, time.UTC), expected: false},
 		{op: state.OpIsAfter, v: time.Date(1970, 1, 1, 16, 51, 6, 471190035, time.UTC), v0: time.Date(1970, 1, 1, 14, 13, 45, 632886017, time.UTC), expected: true},
 		{op: state.OpIsAfter, v: nil, v0: time.Date(2024, 9, 10, 9, 58, 15, 704152446, time.UTC), expected: false},
+		{op: state.OpIsAfter, v: 2025, v0: 2024, expected: true},
 
 		// OpIsOnOrAfter.
 		{op: state.OpIsOnOrAfter, v0: time.Date(2024, 9, 10, 9, 58, 15, 704152446, time.UTC), expected: false, notExists: true},
@@ -428,6 +431,7 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsOnOrAfter, v: time.Date(2024, 9, 8, 0, 0, 0, 0, time.UTC), v0: time.Date(2024, 9, 10, 0, 0, 0, 0, time.UTC), expected: false},
 		{op: state.OpIsOnOrAfter, v: time.Date(1970, 1, 1, 16, 51, 6, 471190035, time.UTC), v0: time.Date(1970, 1, 1, 14, 13, 45, 632886017, time.UTC), expected: true},
 		{op: state.OpIsOnOrAfter, v: nil, v0: time.Date(2024, 9, 10, 9, 58, 15, 704152446, time.UTC), expected: false},
+		{op: state.OpIsOnOrAfter, v: 2024, v0: 2024, expected: true},
 
 		// OpIsTrue.
 		{op: state.OpIsTrue, expected: false, notExists: true},
