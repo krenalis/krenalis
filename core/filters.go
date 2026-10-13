@@ -227,7 +227,7 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 					v, _ = parseInt(value)
 				}
 			case types.FloatKind:
-				v, _ = parseFloat(value, p.Type.BitSize())
+				v, _ = parseFloat(value, t.BitSize())
 			case types.DecimalKind:
 				v, _ = parseDecimal(value)
 			case types.DateTimeKind:
@@ -292,7 +292,11 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 				v = strconv.FormatBool(value)
 			case float64:
 				p, _ := properties.ByPathSlice(cond.Property)
-				v = strconv.FormatFloat(value, 'g', -1, p.Type.BitSize())
+				t := p.Type
+				if t.Kind() == types.ArrayKind {
+					t = t.Elem()
+				}
+				v = strconv.FormatFloat(value, 'g', -1, t.BitSize())
 			case int:
 				v = strconv.FormatInt(int64(value), 10)
 			case uint:
@@ -301,7 +305,11 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 				v = value.String()
 			case time.Time:
 				p, _ := properties.ByPathSlice(cond.Property)
-				switch p.Type.Kind() {
+				t := p.Type
+				if t.Kind() == types.ArrayKind {
+					t = t.Elem()
+				}
+				switch t.Kind() {
 				case types.DateTimeKind:
 					v = value.Format("2006-01-02T15:04:05.999999999")
 				case types.DateKind:
