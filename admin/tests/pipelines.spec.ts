@@ -323,25 +323,25 @@ test.describe('Matching semantics', () => {
 			kind: 'object',
 			properties: [
 				createProperty('firstName', { kind: 'string' }),
-				createProperty('phone', { kind: 'string', semantic: 'phone' }),
-				createProperty('country', { kind: 'string', semantic: 'country', format: 'alpha-3' }),
+				createProperty('phone', { kind: 'string', semantics: 'phone' }),
+				createProperty('country', { kind: 'string', semantics: 'country', format: 'alpha-3' }),
 			],
 		};
 		const externalMatchingSchema: ObjectType = {
 			kind: 'object',
 			properties: [
-				createProperty('phone', { kind: 'string', semantic: 'phone' }),
-				createProperty('requiredPhone', { kind: 'string', semantic: 'phone' }),
-				createProperty('country', { kind: 'string', semantic: 'country', format: 'alpha-3' }),
+				createProperty('phone', { kind: 'string', semantics: 'phone' }),
+				createProperty('requiredPhone', { kind: 'string', semantics: 'phone' }),
+				createProperty('country', { kind: 'string', semantics: 'country', format: 'alpha-3' }),
 			],
 		};
 		const outputSchema: ObjectType = {
 			kind: 'object',
 			properties: [
 				createProperty('firstName', { kind: 'string' }),
-				createProperty('phone', { kind: 'string', semantic: 'email' }),
-				createProperty('requiredPhone', { kind: 'string', semantic: 'email' }, hasRequiredPhone),
-				createProperty('country', { kind: 'string', semantic: 'country', format: 'alpha-3' }),
+				createProperty('phone', { kind: 'string', semantics: 'email' }),
+				createProperty('requiredPhone', { kind: 'string', semantics: 'email' }, hasRequiredPhone),
+				createProperty('country', { kind: 'string', semantics: 'country', format: 'alpha-3' }),
 			],
 		};
 		await page.route(`**/connections/${id}/pipelines/schemas/User`, async (route) => {
@@ -400,9 +400,9 @@ test.describe('Matching semantics', () => {
 		{
 			property: 'country',
 			mode: 'CreateOrUpdate',
-			type: { kind: 'string', semantic: 'country', format: 'alpha-3' },
+			type: { kind: 'string', semantics: 'country', format: 'alpha-3' },
 		},
-		{ property: 'phone', mode: 'UpdateOnly', type: { kind: 'string', semantic: 'phone' } },
+		{ property: 'phone', mode: 'UpdateOnly', type: { kind: 'string', semantics: 'phone' } },
 	]) {
 		test(`Preserve ${scenario.property} semantics when saving in ${scenario.mode} mode`, async ({ page }) => {
 			await openPipeline(page);
@@ -418,7 +418,7 @@ test.describe('Matching semantics', () => {
 			await page.locator('.pipeline__transformation .combobox[data-id="firstName"] input').fill('firstName');
 			await page.keyboard.press('Escape');
 			await page.route('**/v1/pipelines', async (route) => {
-				await route.fulfill({ json: { id: 'semantic-pipeline' } });
+				await route.fulfill({ json: { id: 'semantics-pipeline' } });
 			});
 			const requestPromise = page.waitForRequest(
 				(request) => request.url().endsWith('/v1/pipelines') && request.method() === 'POST',
@@ -441,13 +441,13 @@ test.describe('Matching semantics', () => {
 			in: 'firstName',
 			out: 'phone',
 			hasRequiredPhone: false,
-			error: 'Input and output matching properties do not have the same semantic and options',
+			error: 'Input and output matching properties do not have the same semantics and options',
 		},
 		{
 			in: 'phone',
 			out: 'requiredPhone',
 			hasRequiredPhone: true,
-			error: 'Matching property "requiredPhone" must have the same semantic and options in the source and destination schemas',
+			error: 'Matching property "requiredPhone" must have the same semantics and options in the source and destination schemas',
 		},
 	]) {
 		test(`Reject incompatible ${scenario.in}/${scenario.out} semantics before submitting a pipeline`, async ({

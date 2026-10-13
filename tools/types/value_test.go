@@ -964,15 +964,16 @@ func TestDecodePhone(t *testing.T) {
 
 }
 
-// TestDecodeSemantics checks semantic constraints and nested containers.
+// TestDecodeSemantics checks constraints imposed by semantics and nested
+// containers.
 func TestDecodeSemantics(t *testing.T) {
 
 	country := String().AsCountry(ISO3166Alpha2)
 	tests := []struct {
-		name     string
-		semantic Type
-		value    string
-		valid    bool
+		name      string
+		semantics Type
+		value     string
+		valid     bool
 	}{
 		{"current country", country, "IT", true},
 		{"alpha-3 country", String().AsCountry(ISO3166Alpha3), "ITA", true},
@@ -1012,7 +1013,7 @@ func TestDecodeSemantics(t *testing.T) {
 
 				t.Run(shape, func(t *testing.T) {
 
-					typ := test.semantic
+					typ := test.semantics
 					data := strconv.Quote(test.value)
 					switch shape {
 					case "array":
@@ -1054,9 +1055,9 @@ func TestDecodeSemantics(t *testing.T) {
 
 }
 
-// TestSemanticConstraintsRoundTrip checks that semantics do not introduce
+// TestSemanticsConstraintsRoundTrip checks that semantics do not introduce
 // string constraints.
-func TestSemanticConstraintsRoundTrip(t *testing.T) {
+func TestSemanticsConstraintsRoundTrip(t *testing.T) {
 
 	typesToTest := []Type{
 		String().AsCountry(ISO3166Alpha2),

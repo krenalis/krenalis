@@ -226,12 +226,12 @@ func TestPropertySerializationDeserialization(t *testing.T) {
 			`{"name":"first_name","type":{"kind":"string"},"displayName":"First name","description":"Given name"}`,
 		},
 		{
-			`{"name":"amount","type":{"kind":"decimal","currency":"EUR","semantic":"money",` +
+			`{"name":"amount","type":{"kind":"decimal","currency":"EUR","semantics":"money",` +
 				`"precision":10,"scale":2},"description":"Amount"}`,
 			Property{
 				Name: "amount", Type: Decimal(10, 2).AsMoney().WithCurrency("EUR"), Description: "Amount",
 			},
-			`{"name":"amount","type":{"kind":"decimal","semantic":"money","currency":"EUR",` +
+			`{"name":"amount","type":{"kind":"decimal","semantics":"money","currency":"EUR",` +
 				`"precision":10,"scale":2},"description":"Amount"}`,
 		},
 	}

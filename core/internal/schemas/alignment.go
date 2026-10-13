@@ -139,25 +139,25 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 		return &Error{Msg: fmt.Sprintf("«%s» property's type has changed from «%s» to «%s»", name, t1, t2)}
 	}
 	if !types.EqualSemantics(t1, t2) {
-		if t1.Semantic() != t2.Semantic() {
-			return &Error{Msg: fmt.Sprintf("semantic of the «%s» property's type has changed from «%s» to «%s»", name,
-				t1.Semantic(), t2.Semantic())}
+		if t1.Semantics() != t2.Semantics() {
+			return &Error{Msg: fmt.Sprintf("semantics of the «%s» property's type have changed from «%s» to «%s»", name,
+				t1.Semantics(), t2.Semantics())}
 		}
 		var label string
-		switch t1.Semantic() {
-		case types.CountrySemantic:
+		switch t1.Semantics() {
+		case types.CountrySemantics:
 			label = "country format"
-		case types.DurationSemantic:
+		case types.DurationSemantics:
 			label = "duration unit"
-		case types.MeasurementSemantic:
+		case types.MeasurementSemantics:
 			label = "unit of measure"
-		case types.MoneySemantic:
+		case types.MoneySemantics:
 			label = "currency"
 		default:
-			return fmt.Errorf("unexpected semantic %q", t1.Semantic())
+			return fmt.Errorf("unexpected semantics %q", t1.Semantics())
 		}
 		return &Error{Msg: fmt.Sprintf("%s of the «%s» property's type has changed from «%s» to «%s»",
-			label, name, types.SemanticOptionString(t1), types.SemanticOptionString(t2))}
+			label, name, types.SemanticsOptionString(t1), types.SemanticsOptionString(t2))}
 	}
 	switch k1 {
 	case types.StringKind:

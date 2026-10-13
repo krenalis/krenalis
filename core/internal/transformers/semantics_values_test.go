@@ -15,10 +15,10 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-// TestUnmarshalSemanticValidation checks semantic validation and decoding
-// of country and phone values across scalar and composite types in
-// JavaScript and Python.
-func TestUnmarshalSemanticValidation(t *testing.T) {
+// TestUnmarshalSemanticsValidation checks validation and decoding of country
+// and phone values according to their semantics across scalar and composite
+// types in JavaScript and Python.
+func TestUnmarshalSemanticsValidation(t *testing.T) {
 
 	alpha2Country := types.String().AsCountry(types.ISO3166Alpha2)
 	alpha3Country := types.String().AsCountry(types.ISO3166Alpha3)

@@ -146,8 +146,8 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 		default:
 			return v, errInvalidConversion
 		}
-		switch dt.Semantic() {
-		case types.CountrySemantic:
+		switch dt.Semantics() {
+		case types.CountrySemantics:
 			if s == "" && nullable {
 				return nil, nil
 			}
@@ -162,7 +162,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 				}
 			}
 			return s, nil
-		case types.PhoneSemantic:
+		case types.PhoneSemantics:
 			s, ok := types.NormalizePhone(s)
 			if !ok {
 				if s == "" && nullable {

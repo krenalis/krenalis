@@ -11,23 +11,23 @@ import (
 	"github.com/krenalis/krenalis/tools/validation"
 )
 
-// Semantic identifies what a type's values represent.
-type Semantic int8
+// Semantics identifies what a type's values represent.
+type Semantics int8
 
 const (
-	NoSemantic          Semantic = iota // no semantic
-	CountrySemantic                     // country
-	DurationSemantic                    // duration
-	EmailSemantic                       // email address
-	MeasurementSemantic                 // numeric measurement
-	MoneySemantic                       // monetary amount
-	PercentageSemantic                  // percentage
-	PhoneSemantic                       // phone number
-	URLSemantic                         // web URL
+	NoSemantics          Semantics = iota // no semantics
+	CountrySemantics                      // country
+	DurationSemantics                     // duration
+	EmailSemantics                        // email address
+	MeasurementSemantics                  // numeric measurement
+	MoneySemantics                        // monetary amount
+	PercentageSemantics                   // percentage
+	PhoneSemantics                        // phone number
+	URLSemantics                          // web URL
 )
 
-// semanticName contains the JSON names of all semantics except NoSemantic.
-var semanticName = []string{
+// semanticsName contains the JSON names of all semantics except NoSemantics.
+var semanticsName = []string{
 	"country",
 	"duration",
 	"email",
@@ -38,27 +38,27 @@ var semanticName = []string{
 	"url",
 }
 
-// SemanticByName returns the semantic identified by name. It returns
-// NoSemantic, false if name does not identify a semantic. NoSemantic represents
-// the absence of a semantic and cannot be looked up by name.
-func SemanticByName(name string) (Semantic, bool) {
-	for i, n := range semanticName {
+// SemanticsByName returns the semantics identified by name. It returns
+// NoSemantics, false if name does not identify any semantics. NoSemantics
+// represents the absence of semantics and cannot be looked up by name.
+func SemanticsByName(name string) (Semantics, bool) {
+	for i, n := range semanticsName {
 		if n == name {
-			return Semantic(i + 1), true
+			return Semantics(i + 1), true
 		}
 	}
-	return NoSemantic, false
+	return NoSemantics, false
 }
 
 // String returns the name of s.
-func (s Semantic) String() string {
-	if s == NoSemantic {
+func (s Semantics) String() string {
+	if s == NoSemantics {
 		return "none"
 	}
-	if s < 1 || int(s) > len(semanticName) {
-		return fmt.Sprintf("%%!Semantic(%d)", int(s))
+	if s < 1 || int(s) > len(semanticsName) {
+		return fmt.Sprintf("%%!Semantics(%d)", int(s))
 	}
-	return semanticName[s-1]
+	return semanticsName[s-1]
 }
 
 // CountryFormat identifies how a country value is represented.
@@ -205,83 +205,83 @@ func (u UnitOfMeasure) String() string {
 	return unitOfMeasureName[u-1]
 }
 
-// AsCountry returns t with the country semantic using format. It panics if t is
-// not a string type, if t already has a semantic or other string constraints,
+// AsCountry returns t with the country semantics using format. It panics if t is
+// not a string type, if t already has semantics or any string constraints,
 // or if format is invalid.
 func (t Type) AsCountry(format CountryFormat) Type {
-	t, err := t.withSemantic(CountrySemantic, format)
+	t, err := t.withSemantics(CountrySemantics, format)
 	if err != nil {
 		panic(err.Error())
 	}
 	return t
 }
 
-// AsDuration returns t with the duration semantic using unit. It panics unless
-// t is an int, decimal, or real float type without a semantic and unit is
+// AsDuration returns t with the duration semantics using unit. It panics unless
+// t is an int, decimal, or real float type without semantics and unit is
 // valid.
 func (t Type) AsDuration(unit DurationUnit) Type {
-	t, err := t.withSemantic(DurationSemantic, unit)
+	t, err := t.withSemantics(DurationSemantics, unit)
 	if err != nil {
 		panic(err.Error())
 	}
 	return t
 }
 
-// AsEmail returns t with the email semantic. It panics unless t is a string
-// type without a semantic.
+// AsEmail returns t with the email semantics. It panics unless t is a string
+// type without semantics.
 func (t Type) AsEmail() Type {
-	t, err := t.withSemantic(EmailSemantic, nil)
+	t, err := t.withSemantics(EmailSemantics, nil)
 	if err != nil {
 		panic(err.Error())
 	}
 	return t
 }
 
-// AsMeasurement returns t with the measurement semantic using unit. It panics
-// unless t is an int, decimal, or real float type without a semantic and unit
+// AsMeasurement returns t with the measurement semantics using unit. It panics
+// unless t is an int, decimal, or real float type without semantics and unit
 // is valid.
 func (t Type) AsMeasurement(unit UnitOfMeasure) Type {
-	t, err := t.withSemantic(MeasurementSemantic, unit)
+	t, err := t.withSemantics(MeasurementSemantics, unit)
 	if err != nil {
 		panic(err.Error())
 	}
 	return t
 }
 
-// AsMoney returns t with the money semantic. It panics unless t is a decimal
-// type without a semantic.
+// AsMoney returns t with the money semantics. It panics unless t is a decimal
+// type without semantics.
 func (t Type) AsMoney() Type {
-	t, err := t.withSemantic(MoneySemantic, nil)
+	t, err := t.withSemantics(MoneySemantics, nil)
 	if err != nil {
 		panic(err.Error())
 	}
 	return t
 }
 
-// AsPercentage returns t with the percentage semantic. It panics unless t is a
-// decimal type without a semantic.
+// AsPercentage returns t with the percentage semantics. It panics unless t is a
+// decimal type without semantics.
 func (t Type) AsPercentage() Type {
-	t, err := t.withSemantic(PercentageSemantic, nil)
+	t, err := t.withSemantics(PercentageSemantics, nil)
 	if err != nil {
 		panic(err.Error())
 	}
 	return t
 }
 
-// AsPhone returns t with the phone semantic. It panics if t is not a string
-// type or if t already has a semantic or other string constraints.
+// AsPhone returns t with the phone semantics. It panics if t is not a string
+// type or if t already has semantics or any string constraints.
 func (t Type) AsPhone() Type {
-	t, err := t.withSemantic(PhoneSemantic, nil)
+	t, err := t.withSemantics(PhoneSemantics, nil)
 	if err != nil {
 		panic(err.Error())
 	}
 	return t
 }
 
-// AsURL returns t with the URL semantic. It panics unless t is a string type
-// without a semantic.
+// AsURL returns t with the URL semantics. It panics unless t is a string type
+// without semantics.
 func (t Type) AsURL() Type {
-	t, err := t.withSemantic(URLSemantic, nil)
+	t, err := t.withSemantics(URLSemantics, nil)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -289,144 +289,144 @@ func (t Type) AsURL() Type {
 }
 
 // CountryFormat returns the country format of t. It panics unless t has the
-// country semantic.
+// country semantics.
 func (t Type) CountryFormat() CountryFormat {
-	if t.semantic != CountrySemantic {
-		panic("type does not have country semantic")
+	if t.semantics != CountrySemantics {
+		panic("type does not have country semantics")
 	}
-	return t.semanticOption.(CountryFormat)
+	return t.semanticsOption.(CountryFormat)
 }
 
 // Currency returns the currency code of t and whether one is set. It panics
-// unless t has the money semantic.
+// unless t has the money semantics.
 func (t Type) Currency() (string, bool) {
-	if t.semantic != MoneySemantic {
-		panic("type does not have money semantic")
+	if t.semantics != MoneySemantics {
+		panic("type does not have money semantics")
 	}
-	currency, _ := t.semanticOption.(string)
+	currency, _ := t.semanticsOption.(string)
 	return currency, currency != ""
 }
 
 // DurationUnit returns the duration unit of t. It panics unless t has the
-// duration semantic.
+// duration semantics.
 func (t Type) DurationUnit() DurationUnit {
-	if t.semantic != DurationSemantic {
-		panic("type does not have duration semantic")
+	if t.semantics != DurationSemantics {
+		panic("type does not have duration semantics")
 	}
-	return t.semanticOption.(DurationUnit)
+	return t.semanticsOption.(DurationUnit)
 }
 
-// Semantic returns the semantic of t, or NoSemantic if t has no semantic.
-func (t Type) Semantic() Semantic {
-	return t.semantic
+// Semantics returns the semantics of t, or NoSemantics if t has no semantics.
+func (t Type) Semantics() Semantics {
+	return t.semantics
 }
 
 // UnitOfMeasure returns the unit of measure of t. It panics unless t has the
-// measurement semantic.
+// measurement semantics.
 func (t Type) UnitOfMeasure() UnitOfMeasure {
-	if t.semantic != MeasurementSemantic {
-		panic("type does not have measurement semantic")
+	if t.semantics != MeasurementSemantics {
+		panic("type does not have measurement semantics")
 	}
-	return t.semanticOption.(UnitOfMeasure)
+	return t.semanticsOption.(UnitOfMeasure)
 }
 
 // WithCurrency returns t with the given ISO 4217 currency code. It panics
-// unless t has the money semantic and currency is valid.
+// unless t has the money semantics and currency is valid.
 func (t Type) WithCurrency(currency string) Type {
-	if t.semantic != MoneySemantic {
-		panic("type does not have money semantic")
+	if t.semantics != MoneySemantics {
+		panic("type does not have money semantics")
 	}
 	if !validation.IsValidCurrencyCode(currency) {
 		panic("invalid currency code")
 	}
-	t.semanticOption = currency
+	t.semanticsOption = currency
 	return t
 }
 
-// withSemantic returns t with the given semantic and option, or an error if
+// withSemantics returns t with the given semantics and option, or an error if
 // they are invalid or incompatible with t.
-func (t Type) withSemantic(semantic Semantic, option any) (Type, error) {
+func (t Type) withSemantics(semantics Semantics, option any) (Type, error) {
 
-	if semantic == NoSemantic {
-		return Type{}, errors.New("semantic does not specialize type")
+	if semantics == NoSemantics {
+		return Type{}, errors.New("semantics do not specialize type")
 	}
-	if t.semantic != NoSemantic {
-		return Type{}, errors.New("type already has a semantic")
+	if t.semantics != NoSemantics {
+		return Type{}, errors.New("type already has semantics")
 	}
 
-	switch semantic {
-	case EmailSemantic:
+	switch semantics {
+	case EmailSemantics:
 		if t.kind != StringKind {
-			return Type{}, errors.New("email semantic requires string type")
+			return Type{}, errors.New("email semantics require string type")
 		}
 		if option != nil {
-			return Type{}, errors.New("email semantic does not accept an option")
+			return Type{}, errors.New("email semantics do not accept an option")
 		}
-	case PhoneSemantic:
+	case PhoneSemantics:
 		if t.kind != StringKind {
-			return Type{}, errors.New("phone semantic requires string type")
+			return Type{}, errors.New("phone semantics require string type")
 		}
 		if option != nil {
-			return Type{}, errors.New("phone semantic does not accept an option")
+			return Type{}, errors.New("phone semantics do not accept an option")
 		}
-	case URLSemantic:
+	case URLSemantics:
 		if t.kind != StringKind {
-			return Type{}, errors.New("URL semantic requires string type")
+			return Type{}, errors.New("URL semantics require string type")
 		}
 		if option != nil {
-			return Type{}, errors.New("URL semantic does not accept an option")
+			return Type{}, errors.New("URL semantics do not accept an option")
 		}
-	case CountrySemantic:
+	case CountrySemantics:
 		if t.kind != StringKind {
-			return Type{}, errors.New("country semantic requires string type")
+			return Type{}, errors.New("country semantics require string type")
 		}
 		format, ok := option.(CountryFormat)
 		if !ok || format != ISO3166Alpha2 && format != ISO3166Alpha3 {
 			return Type{}, errors.New("invalid country format")
 		}
-	case MoneySemantic:
+	case MoneySemantics:
 		if t.kind != DecimalKind {
-			return Type{}, errors.New("money semantic requires decimal type")
+			return Type{}, errors.New("money semantics require decimal type")
 		}
 		if option != nil {
-			return Type{}, errors.New("money semantic does not accept an option")
+			return Type{}, errors.New("money semantics do not accept an option")
 		}
-	case PercentageSemantic:
+	case PercentageSemantics:
 		if t.kind != DecimalKind {
-			return Type{}, errors.New("percentage semantic requires decimal type")
+			return Type{}, errors.New("percentage semantics require decimal type")
 		}
 		if option != nil {
-			return Type{}, errors.New("percentage semantic does not accept an option")
+			return Type{}, errors.New("percentage semantics do not accept an option")
 		}
-	case MeasurementSemantic:
-		if !semanticNumericType(t) {
-			return Type{}, errors.New("measurement semantic requires an int, decimal, or real float type")
+	case MeasurementSemantics:
+		if !semanticsNumericType(t) {
+			return Type{}, errors.New("measurement semantics require an int, decimal, or real float type")
 		}
 		unit, ok := option.(UnitOfMeasure)
 		if !ok || unit < 1 || int(unit) > len(unitOfMeasureName) {
 			return Type{}, errors.New("invalid unit of measure")
 		}
-	case DurationSemantic:
-		if !semanticNumericType(t) {
-			return Type{}, errors.New("duration semantic requires an int, decimal, or real float type")
+	case DurationSemantics:
+		if !semanticsNumericType(t) {
+			return Type{}, errors.New("duration semantics require an int, decimal, or real float type")
 		}
 		unit, ok := option.(DurationUnit)
 		if !ok || unit < 1 || int(unit) > len(durationUnitName) {
 			return Type{}, errors.New("invalid duration unit")
 		}
 	}
-	if (semantic == CountrySemantic || semantic == PhoneSemantic) && (t.p != 0 || t.s != 0 || t.vl != nil) {
-		return Type{}, fmt.Errorf("%s semantic cannot be combined with other string constraints", semantic)
+	if (semantics == CountrySemantics || semantics == PhoneSemantics) && (t.p != 0 || t.s != 0 || t.vl != nil) {
+		return Type{}, fmt.Errorf("%s semantics cannot be combined with other string constraints", semantics)
 	}
 
-	t.semantic = semantic
-	t.semanticOption = option
+	t.semantics = semantics
+	t.semanticsOption = option
 
 	return t, nil
 }
 
-// semanticNumericType reports whether t is an int, decimal, or real float type.
-func semanticNumericType(t Type) bool {
+// semanticsNumericType reports whether t is an int, decimal, or real float type.
+func semanticsNumericType(t Type) bool {
 	switch t.kind {
 	case IntKind, DecimalKind:
 		return true

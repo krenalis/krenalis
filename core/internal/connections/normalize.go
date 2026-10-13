@@ -94,8 +94,8 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		if !utf8.ValidString(v) {
 			return nil, inputValidationErrorf(name, "does not contain valid UTF-8 characters")
 		}
-		switch typ.Semantic() {
-		case types.CountrySemantic:
+		switch typ.Semantics() {
+		case types.CountrySemantics:
 			switch typ.CountryFormat() {
 			case types.ISO3166Alpha2:
 				if !validation.IsValidCountryCodeAlpha2(v) {
@@ -106,7 +106,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 					return nil, inputValidationErrorf(name, "is not a 3-letters country code")
 				}
 			}
-		case types.PhoneSemantic:
+		case types.PhoneSemantics:
 			var ok bool
 			v, ok = types.NormalizePhone(v)
 			if !ok {

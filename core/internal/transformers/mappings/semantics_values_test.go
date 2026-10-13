@@ -15,9 +15,10 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-// TestMappingSemanticValidation checks country and phone semantic validation
-// across mapping paths and ensures valid values are preserved.
-func TestMappingSemanticValidation(t *testing.T) {
+// TestMappingSemanticsValidation checks validation of country and phone values
+// according to their semantics across mapping paths and ensures valid values
+// are preserved.
+func TestMappingSemanticsValidation(t *testing.T) {
 
 	country := types.String().AsCountry(types.ISO3166Alpha2)
 

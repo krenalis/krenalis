@@ -457,8 +457,8 @@ const PropertyForm = ({
 	const valueType = getPropertyValueType(property.type);
 	const showStringConstraints =
 		valueType?.kind === 'string' &&
-		valueType.semantic !== 'country' &&
-		valueType.semantic !== 'phone' &&
+		valueType.semantics !== 'country' &&
+		valueType.semantics !== 'phone' &&
 		canEditType;
 	let decimalDescription: string | null = null;
 	if (valueType?.kind === 'decimal' && checkDecimalType(valueType) == null) {

@@ -271,16 +271,16 @@ func Test_normalize(t *testing.T) {
 
 }
 
-// TestNormalizeSemantics checks semantic validation during normalization,
-// including nested containers.
+// TestNormalizeSemantics checks validation according to semantics during
+// normalization, including nested containers.
 func TestNormalizeSemantics(t *testing.T) {
 
 	country := types.String().AsCountry(types.ISO3166Alpha2)
 	tests := []struct {
-		name     string
-		semantic types.Type
-		value    string
-		valid    bool
+		name      string
+		semantics types.Type
+		value     string
+		valid     bool
 	}{
 		{"current country", country, "IT", true},
 		{"alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "ITA", true},
@@ -313,7 +313,7 @@ func TestNormalizeSemantics(t *testing.T) {
 
 				t.Run(shape, func(t *testing.T) {
 
-					typ := test.semantic
+					typ := test.semantics
 					var value any = test.value
 					switch shape {
 					case "bytes":
@@ -358,7 +358,7 @@ func TestNormalizeSemantics(t *testing.T) {
 			}
 
 			// An object's properties must supply their own semantics.
-			schema := types.Object([]types.Property{{Name: "value", Type: test.semantic}})
+			schema := types.Object([]types.Property{{Name: "value", Type: test.semantics}})
 			p := types.Property{Name: "object", Type: schema}
 			_, err := normalize(p.Name, p.Type, map[string]any{"value": test.value}, p.Nullable, nil)
 			if err != nil {

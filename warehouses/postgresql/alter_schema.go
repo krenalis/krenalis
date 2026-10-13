@@ -222,10 +222,10 @@ func createViewQuery(profilesTableName string, profileColumns []warehouses.Colum
 func typeToPostgresType(t types.Type) string {
 	switch t.Kind() {
 	case types.StringKind:
-		switch t.Semantic() {
-		case types.CountrySemantic:
+		switch t.Semantics() {
+		case types.CountrySemantics:
 			return "character(2)"
-		case types.PhoneSemantic:
+		case types.PhoneSemantics:
 			return "character varying(16)"
 		}
 		var maxLength int

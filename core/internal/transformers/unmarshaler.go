@@ -556,8 +556,8 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 	case types.StringKind:
 		if v.Kind() == '"' {
 			s := d.unquoteString(v)
-			switch t.Semantic() {
-			case types.CountrySemantic:
+			switch t.Semantics() {
+			case types.CountrySemantics:
 				switch t.CountryFormat() {
 				case types.ISO3166Alpha2:
 					if !validation.IsValidCountryCodeAlpha2(s) {
@@ -569,7 +569,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 					}
 				}
 				return s, nil
-			case types.PhoneSemantic:
+			case types.PhoneSemantics:
 				normalized, ok := types.NormalizePhone(s)
 				if !ok {
 					return nil, newRecordValidationError("", "is not a valid phone number")

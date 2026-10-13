@@ -919,7 +919,7 @@ const transformInPipelineToSet = async (
 					);
 				} else if (!semanticsAreCompatible) {
 					throw new Error(
-						`Matching property "${pipeline.matching.out}" must have the same semantic and options in the source and destination schemas`,
+						`Matching property "${pipeline.matching.out}" must have the same semantics and options in the source and destination schemas`,
 					);
 				} else {
 					p = a;
@@ -2258,18 +2258,18 @@ const validateMatching = (inMatching: Property, outMatching: Property) => {
 	}
 
 	if (!typeSemanticsAreEqual(inMatching.type, outMatching.type)) {
-		throw new Error('Input and output matching properties do not have the same semantic and options');
+		throw new Error('Input and output matching properties do not have the same semantics and options');
 	}
 };
 
 const typeSemanticsAreEqual = (aType: Type, bType: Type): boolean => {
-	const aSemantic = 'semantic' in aType ? aType.semantic : undefined;
-	const bSemantic = 'semantic' in bType ? bType.semantic : undefined;
-	if (aSemantic !== bSemantic) {
+	const aSemantics = 'semantics' in aType ? aType.semantics : undefined;
+	const bSemantics = 'semantics' in bType ? bType.semantics : undefined;
+	if (aSemantics !== bSemantics) {
 		return false;
 	}
 
-	switch (aSemantic) {
+	switch (aSemantics) {
 		case 'country':
 			return ('format' in aType ? aType.format : undefined) === ('format' in bType ? bType.format : undefined);
 		case 'duration':

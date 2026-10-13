@@ -73,52 +73,52 @@ func Test_DurationUnit(t *testing.T) {
 	}
 }
 
-// Test_Semantic tests semantic names and lookup.
-func Test_Semantic(t *testing.T) {
+// Test_Semantics tests names and lookup for semantics.
+func Test_Semantics(t *testing.T) {
 	tests := []struct {
-		semantic Semantic
-		name     string
+		semantics Semantics
+		name      string
 	}{
-		{NoSemantic, "none"},
-		{EmailSemantic, "email"},
-		{PhoneSemantic, "phone"},
-		{URLSemantic, "url"},
-		{CountrySemantic, "country"},
-		{MoneySemantic, "money"},
-		{PercentageSemantic, "percentage"},
-		{MeasurementSemantic, "measurement"},
-		{DurationSemantic, "duration"},
+		{NoSemantics, "none"},
+		{EmailSemantics, "email"},
+		{PhoneSemantics, "phone"},
+		{URLSemantics, "url"},
+		{CountrySemantics, "country"},
+		{MoneySemantics, "money"},
+		{PercentageSemantics, "percentage"},
+		{MeasurementSemantics, "measurement"},
+		{DurationSemantics, "duration"},
 	}
 	for _, test := range tests {
-		if got := test.semantic.String(); got != test.name {
+		if got := test.semantics.String(); got != test.name {
 			t.Errorf("expected name %q, got %q", test.name, got)
 		}
-		if test.semantic != NoSemantic {
-			got, ok := SemanticByName(test.name)
-			if !ok || got != test.semantic {
-				t.Errorf("expected semantic %d and true, got %d and %t", test.semantic, got, ok)
+		if test.semantics != NoSemantics {
+			got, ok := SemanticsByName(test.name)
+			if !ok || got != test.semantics {
+				t.Errorf("expected semantics %d and true, got %d and %t", test.semantics, got, ok)
 			}
 		}
 	}
 	for _, name := range []string{"none", "Email"} {
-		if got, ok := SemanticByName(name); ok || got != NoSemantic {
-			t.Fatalf("expected no semantic and false for %q, got %d and %t", name, got, ok)
+		if got, ok := SemanticsByName(name); ok || got != NoSemantics {
+			t.Fatalf("expected no semantics and false for %q, got %d and %t", name, got, ok)
 		}
 	}
 }
 
-// Test_SemanticInvalidStrings tests string representations of invalid enum
+// Test_SemanticsInvalidStrings tests string representations of invalid enum
 // values.
-func Test_SemanticInvalidStrings(t *testing.T) {
+func Test_SemanticsInvalidStrings(t *testing.T) {
 	tests := []struct {
 		value fmt.Stringer
 		name  string
 	}{
-		{Semantic(-128), "%!Semantic(-128)"},
-		{Semantic(-1), "%!Semantic(-1)"},
-		{Semantic(9), "%!Semantic(9)"},
-		{Semantic(20), "%!Semantic(20)"},
-		{Semantic(127), "%!Semantic(127)"},
+		{Semantics(-128), "%!Semantics(-128)"},
+		{Semantics(-1), "%!Semantics(-1)"},
+		{Semantics(9), "%!Semantics(9)"},
+		{Semantics(20), "%!Semantics(20)"},
+		{Semantics(127), "%!Semantics(127)"},
 		{CountryFormat(-128), "%!CountryFormat(-128)"},
 		{CountryFormat(-1), "%!CountryFormat(-1)"},
 		{CountryFormat(0), "%!CountryFormat(0)"},
@@ -143,30 +143,30 @@ func Test_SemanticInvalidStrings(t *testing.T) {
 	}
 }
 
-// Test_TypeSemanticConfiguration tests semantic configuration and options.
-func Test_TypeSemanticConfiguration(t *testing.T) {
+// Test_TypeSemanticsConfiguration tests semantics configuration and options.
+func Test_TypeSemanticsConfiguration(t *testing.T) {
 	tests := []struct {
-		name     string
-		type_    Type
-		semantic Semantic
+		name      string
+		type_     Type
+		semantics Semantics
 	}{
-		{"email", String().AsEmail(), EmailSemantic},
-		{"phone", String().AsPhone(), PhoneSemantic},
-		{"URL", String().AsURL(), URLSemantic},
-		{"country", String().AsCountry(ISO3166Alpha2), CountrySemantic},
-		{"money decimal", Decimal(10, 2).AsMoney(), MoneySemantic},
-		{"percentage", Decimal(10, 2).AsPercentage(), PercentageSemantic},
-		{"measurement int", Int(64).AsMeasurement(Kilogram), MeasurementSemantic},
-		{"measurement decimal", Decimal(10, 2).AsMeasurement(Kilogram), MeasurementSemantic},
-		{"measurement real float", Float(64).Real().AsMeasurement(Kilogram), MeasurementSemantic},
-		{"duration int", Int(32).AsDuration(Second), DurationSemantic},
-		{"duration decimal", Decimal(10, 3).AsDuration(Millisecond), DurationSemantic},
-		{"duration real float", Float(32).Real().AsDuration(Hour), DurationSemantic},
+		{"email", String().AsEmail(), EmailSemantics},
+		{"phone", String().AsPhone(), PhoneSemantics},
+		{"URL", String().AsURL(), URLSemantics},
+		{"country", String().AsCountry(ISO3166Alpha2), CountrySemantics},
+		{"money decimal", Decimal(10, 2).AsMoney(), MoneySemantics},
+		{"percentage", Decimal(10, 2).AsPercentage(), PercentageSemantics},
+		{"measurement int", Int(64).AsMeasurement(Kilogram), MeasurementSemantics},
+		{"measurement decimal", Decimal(10, 2).AsMeasurement(Kilogram), MeasurementSemantics},
+		{"measurement real float", Float(64).Real().AsMeasurement(Kilogram), MeasurementSemantics},
+		{"duration int", Int(32).AsDuration(Second), DurationSemantics},
+		{"duration decimal", Decimal(10, 3).AsDuration(Millisecond), DurationSemantics},
+		{"duration real float", Float(32).Real().AsDuration(Hour), DurationSemantics},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if got := test.type_.Semantic(); got != test.semantic {
-				t.Fatalf("expected semantic %s, got %s", test.semantic, got)
+			if got := test.type_.Semantics(); got != test.semantics {
+				t.Fatalf("expected semantics %s, got %s", test.semantics, got)
 			}
 		})
 	}
@@ -204,8 +204,8 @@ func Test_TypeSemanticConfiguration(t *testing.T) {
 	}
 }
 
-// Test_TypeSemanticConfigurationPanics tests invalid semantic configuration.
-func Test_TypeSemanticConfigurationPanics(t *testing.T) {
+// Test_TypeSemanticsConfigurationPanics tests invalid semantics configuration.
+func Test_TypeSemanticsConfigurationPanics(t *testing.T) {
 	tests := []struct {
 		name string
 		f    func()
@@ -233,7 +233,7 @@ func Test_TypeSemanticConfigurationPanics(t *testing.T) {
 		{"measurement invalid unit", func() { Int(64).AsMeasurement(UnitOfMeasure(0)) }},
 		{"duration on ordinary float", func() { Float(32).AsDuration(Second) }},
 		{"duration invalid unit", func() { Int(64).AsDuration(DurationUnit(0)) }},
-		{"second semantic", func() { String().AsEmail().AsPhone() }},
+		{"duplicate semantics", func() { String().AsEmail().AsPhone() }},
 		{"invalid currency", func() { Decimal(10, 2).AsMoney().WithCurrency("usd") }},
 		{"currency without money", func() { Decimal(10, 2).WithCurrency("EUR") }},
 		{"country format without country", func() { String().CountryFormat() }},
@@ -260,14 +260,14 @@ func Test_TypeSemanticConfigurationPanics(t *testing.T) {
 	}
 }
 
-// Test_TypeSemanticCopyOnWrite tests that semantic methods do not mutate their
-// receivers.
-func Test_TypeSemanticCopyOnWrite(t *testing.T) {
+// Test_TypeSemanticsCopyOnWrite tests that methods configuring semantics do not
+// mutate their receivers.
+func Test_TypeSemanticsCopyOnWrite(t *testing.T) {
 	decimalType := Decimal(10, 2)
 	money := decimalType.AsMoney()
 	euros := money.WithCurrency("EUR")
-	if decimalType.Semantic() != NoSemantic {
-		t.Fatalf("expected receiver semantic %s, got %s", NoSemantic, decimalType.Semantic())
+	if decimalType.Semantics() != NoSemantics {
+		t.Fatalf("expected receiver semantics %s, got %s", NoSemantics, decimalType.Semantics())
 	}
 	if currency, ok := money.Currency(); ok || currency != "" {
 		t.Fatalf("expected no currency and false, got %q and %t", currency, ok)
@@ -277,8 +277,8 @@ func Test_TypeSemanticCopyOnWrite(t *testing.T) {
 	}
 }
 
-// TestEqualSemantics tests semantic equality while ignoring kind and other
-// non-semantic type properties.
+// TestEqualSemantics tests semantics equality while ignoring kind and unrelated
+// type properties.
 func TestEqualSemantics(t *testing.T) {
 
 	tests := []struct {
@@ -322,8 +322,8 @@ func TestEqualSemantics(t *testing.T) {
 
 }
 
-// Test_TypeSemanticEquality tests equality with semantic kinds and options.
-func Test_TypeSemanticEquality(t *testing.T) {
+// Test_TypeSemanticsEquality tests equality with semantics values and options.
+func Test_TypeSemanticsEquality(t *testing.T) {
 	tests := []struct {
 		name  string
 		t1    Type
@@ -346,8 +346,8 @@ func Test_TypeSemanticEquality(t *testing.T) {
 		},
 		{"equal unit", Decimal(10, 2).AsMeasurement(Kilogram), Decimal(10, 2).AsMeasurement(Kilogram), true},
 		{"different unit", Decimal(10, 2).AsMeasurement(Kilogram), Decimal(10, 2).AsMeasurement(Gram), false},
-		{"nested semantic", Array(Map(String().AsEmail())), Array(Map(String().AsEmail())), true},
-		{"different nested semantic", Array(Map(String().AsEmail())), Array(Map(String().AsPhone())), false},
+		{"nested semantics", Array(Map(String().AsEmail())), Array(Map(String().AsEmail())), true},
+		{"different nested semantics", Array(Map(String().AsEmail())), Array(Map(String().AsPhone())), false},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -361,162 +361,163 @@ func Test_TypeSemanticEquality(t *testing.T) {
 	}
 }
 
-// Test_TypeSemanticJSONErrors tests rejection of invalid semantic type JSON.
-func Test_TypeSemanticJSONErrors(t *testing.T) {
+// Test_TypeSemanticsJSONErrors tests rejection of invalid type semantics in
+// JSON.
+func Test_TypeSemanticsJSONErrors(t *testing.T) {
 	tests := []struct {
 		name string
 		data string
 		err  string
 	}{
-		{"semantic wrong type", `{"kind":"string","semantic":1}`, "invalid semantic"},
-		{"repeated semantic", `{"kind":"string","semantic":"email","semantic":"phone"}`, "repeated 'semantic' key"},
-		{"no semantic specified", `{"kind":"string","semantic":"none"}`, `invalid semantic "none"`},
-		{"unknown semantic", `{"kind":"string","semantic":"unknown"}`, `invalid semantic "unknown"`},
+		{"semantics with wrong type", `{"kind":"string","semantics":1}`, "invalid semantics"},
+		{"repeated semantics", `{"kind":"string","semantics":"email","semantics":"phone"}`, "repeated 'semantics' key"},
+		{"no semantics specified", `{"kind":"string","semantics":"none"}`, `invalid semantics "none"`},
+		{"unknown semantics", `{"kind":"string","semantics":"unknown"}`, `invalid semantics "unknown"`},
 		{
-			"format without semantic", `{"kind":"string","format":"alpha-2"}`,
-			"unexpected 'format' key without semantic",
+			"format without semantics", `{"kind":"string","format":"alpha-2"}`,
+			"unexpected 'format' key without semantics",
 		},
 		{
-			"currency without semantic", `{"kind":"string","currency":"EUR"}`,
-			"unexpected 'currency' key without semantic",
+			"currency without semantics", `{"kind":"string","currency":"EUR"}`,
+			"unexpected 'currency' key without semantics",
 		},
 		{
-			"unit without semantic", `{"kind":"string","unit":"kg"}`,
-			"unexpected 'unit' key without semantic",
+			"unit without semantics", `{"kind":"string","unit":"kg"}`,
+			"unexpected 'unit' key without semantics",
 		},
-		{"missing country format", `{"kind":"string","semantic":"country"}`, "missing country format"},
+		{"missing country format", `{"kind":"string","semantics":"country"}`, "missing country format"},
 		{
-			"invalid country format", `{"kind":"string","semantic":"country","format":"alpha-4"}`,
+			"invalid country format", `{"kind":"string","semantics":"country","format":"alpha-4"}`,
 			`invalid country format "alpha-4"`,
 		},
 		{
-			"country on boolean", `{"kind":"boolean","semantic":"country","format":"alpha-2"}`,
-			"country semantic requires string type",
+			"country on boolean", `{"kind":"boolean","semantics":"country","format":"alpha-2"}`,
+			"country semantics require string type",
 		},
 		{
 			"country with max bytes",
-			`{"kind":"string","semantic":"country","format":"alpha-2","maxBytes":2}`,
-			"country semantic cannot be combined with other string constraints",
+			`{"kind":"string","semantics":"country","format":"alpha-2","maxBytes":2}`,
+			"country semantics cannot be combined with other string constraints",
 		},
 		{
 			"country with max length",
-			`{"kind":"string","semantic":"country","format":"alpha-2","maxLength":2}`,
-			"country semantic cannot be combined with other string constraints",
+			`{"kind":"string","semantics":"country","format":"alpha-2","maxLength":2}`,
+			"country semantics cannot be combined with other string constraints",
 		},
 		{
 			"country with pattern",
-			`{"kind":"string","semantic":"country","format":"alpha-2","pattern":".."}`,
-			"country semantic cannot be combined with other string constraints",
+			`{"kind":"string","semantics":"country","format":"alpha-2","pattern":".."}`,
+			"country semantics cannot be combined with other string constraints",
 		},
 		{
 			"country with values",
-			`{"kind":"string","semantic":"country","format":"alpha-2","values":["IT"]}`,
-			"country semantic cannot be combined with other string constraints",
+			`{"kind":"string","semantics":"country","format":"alpha-2","values":["IT"]}`,
+			"country semantics cannot be combined with other string constraints",
 		},
 		{
-			"phone with max bytes", `{"kind":"string","semantic":"phone","maxBytes":16}`,
-			"phone semantic cannot be combined with other string constraints",
+			"phone with max bytes", `{"kind":"string","semantics":"phone","maxBytes":16}`,
+			"phone semantics cannot be combined with other string constraints",
 		},
 		{
-			"phone with max length", `{"kind":"string","semantic":"phone","maxLength":16}`,
-			"phone semantic cannot be combined with other string constraints",
+			"phone with max length", `{"kind":"string","semantics":"phone","maxLength":16}`,
+			"phone semantics cannot be combined with other string constraints",
 		},
 		{
-			"phone with pattern", `{"kind":"string","semantic":"phone","pattern":".+"}`,
-			"phone semantic cannot be combined with other string constraints",
+			"phone with pattern", `{"kind":"string","semantics":"phone","pattern":".+"}`,
+			"phone semantics cannot be combined with other string constraints",
 		},
 		{
-			"phone with values", `{"kind":"string","semantic":"phone","values":["+390000000000"]}`,
-			"phone semantic cannot be combined with other string constraints",
+			"phone with values", `{"kind":"string","semantics":"phone","values":["+390000000000"]}`,
+			"phone semantics cannot be combined with other string constraints",
 		},
 		{
-			"invalid currency", `{"kind":"decimal","precision":10,"scale":2,"semantic":"money","currency":"usd"}`,
+			"invalid currency", `{"kind":"decimal","precision":10,"scale":2,"semantics":"money","currency":"usd"}`,
 			`invalid currency code "usd"`,
 		},
 		{
-			"money on int", `{"kind":"int","bitSize":64,"semantic":"money"}`,
-			"money semantic requires decimal type",
+			"money on int", `{"kind":"int","bitSize":64,"semantics":"money"}`,
+			"money semantics require decimal type",
 		},
 		{
-			"money on real float", `{"kind":"float","bitSize":64,"real":true,"semantic":"money"}`,
-			"money semantic requires decimal type",
+			"money on real float", `{"kind":"float","bitSize":64,"real":true,"semantics":"money"}`,
+			"money semantics require decimal type",
 		},
 		{
-			"missing measurement unit", `{"kind":"decimal","precision":10,"scale":2,"semantic":"measurement"}`,
+			"missing measurement unit", `{"kind":"decimal","precision":10,"scale":2,"semantics":"measurement"}`,
 			"missing measurement unit",
 		},
 		{
 			"invalid measurement unit",
-			`{"kind":"decimal","precision":10,"scale":2,"semantic":"measurement","unit":"stone"}`,
+			`{"kind":"decimal","precision":10,"scale":2,"semantics":"measurement","unit":"stone"}`,
 			`invalid unit of measure "stone"`,
 		},
-		{"missing duration unit", `{"kind":"int","bitSize":64,"semantic":"duration"}`, "missing duration unit"},
+		{"missing duration unit", `{"kind":"int","bitSize":64,"semantics":"duration"}`, "missing duration unit"},
 		{
-			"invalid duration unit", `{"kind":"int","bitSize":64,"semantic":"duration","unit":"month"}`,
+			"invalid duration unit", `{"kind":"int","bitSize":64,"semantics":"duration","unit":"month"}`,
 			`invalid duration unit "month"`,
 		},
 		{
-			"unexpected email currency", `{"kind":"string","semantic":"email","currency":"EUR"}`,
-			"unexpected 'currency' key for email semantic",
+			"unexpected email currency", `{"kind":"string","semantics":"email","currency":"EUR"}`,
+			"unexpected 'currency' key for email semantics",
 		},
 		{
-			"unexpected phone format", `{"kind":"string","semantic":"phone","format":"alpha-2"}`,
-			"unexpected 'format' key for phone semantic",
+			"unexpected phone format", `{"kind":"string","semantics":"phone","format":"alpha-2"}`,
+			"unexpected 'format' key for phone semantics",
 		},
 		{
-			"unexpected URL format", `{"kind":"string","semantic":"url","format":"absolute"}`,
-			"unexpected 'format' key for URL semantic",
+			"unexpected URL format", `{"kind":"string","semantics":"url","format":"absolute"}`,
+			"unexpected 'format' key for URL semantics",
 		},
 		{
-			"unexpected URL currency", `{"kind":"string","semantic":"url","currency":"EUR"}`,
-			"unexpected 'currency' key for URL semantic",
+			"unexpected URL currency", `{"kind":"string","semantics":"url","currency":"EUR"}`,
+			"unexpected 'currency' key for URL semantics",
 		},
 		{
-			"unexpected URL unit", `{"kind":"string","semantic":"url","unit":"m"}`,
-			"unexpected 'unit' key for URL semantic",
+			"unexpected URL unit", `{"kind":"string","semantics":"url","unit":"m"}`,
+			"unexpected 'unit' key for URL semantics",
 		},
 		{
 			"unexpected country currency without format",
-			`{"kind":"string","semantic":"country","currency":"EUR"}`,
-			"unexpected 'currency' key for country semantic",
+			`{"kind":"string","semantics":"country","currency":"EUR"}`,
+			"unexpected 'currency' key for country semantics",
 		},
 		{
 			"unexpected country unit",
-			`{"kind":"string","semantic":"country","format":"alpha-2","unit":"m"}`,
-			"unexpected 'unit' key for country semantic",
+			`{"kind":"string","semantics":"country","format":"alpha-2","unit":"m"}`,
+			"unexpected 'unit' key for country semantics",
 		},
 		{
 			"unexpected money format",
-			`{"kind":"decimal","precision":10,"scale":2,"semantic":"money","format":"integer"}`,
-			"unexpected 'format' key for money semantic",
+			`{"kind":"decimal","precision":10,"scale":2,"semantics":"money","format":"integer"}`,
+			"unexpected 'format' key for money semantics",
 		},
 		{
 			"unexpected money unit",
-			`{"kind":"decimal","precision":10,"scale":2,"semantic":"money","unit":"cent"}`,
-			"unexpected 'unit' key for money semantic",
+			`{"kind":"decimal","precision":10,"scale":2,"semantics":"money","unit":"cent"}`,
+			"unexpected 'unit' key for money semantics",
 		},
 		{
 			"unexpected percentage unit",
-			`{"kind":"decimal","precision":10,"scale":2,"semantic":"percentage","unit":"percent"}`,
-			"unexpected 'unit' key for percentage semantic",
+			`{"kind":"decimal","precision":10,"scale":2,"semantics":"percentage","unit":"percent"}`,
+			"unexpected 'unit' key for percentage semantics",
 		},
 		{
 			"unexpected measurement format without unit",
-			`{"kind":"decimal","precision":10,"scale":2,"semantic":"measurement","format":"metric"}`,
-			"unexpected 'format' key for measurement semantic",
+			`{"kind":"decimal","precision":10,"scale":2,"semantics":"measurement","format":"metric"}`,
+			"unexpected 'format' key for measurement semantics",
 		},
 		{
 			"unexpected measurement currency",
-			`{"kind":"decimal","precision":10,"scale":2,"semantic":"measurement","unit":"kg","currency":"EUR"}`,
-			"unexpected 'currency' key for measurement semantic",
+			`{"kind":"decimal","precision":10,"scale":2,"semantics":"measurement","unit":"kg","currency":"EUR"}`,
+			"unexpected 'currency' key for measurement semantics",
 		},
 		{
-			"unexpected duration format without unit", `{"kind":"int","bitSize":64,"semantic":"duration","format":"integer"}`,
-			"unexpected 'format' key for duration semantic",
+			"unexpected duration format without unit", `{"kind":"int","bitSize":64,"semantics":"duration","format":"integer"}`,
+			"unexpected 'format' key for duration semantics",
 		},
 		{
-			"unexpected duration currency", `{"kind":"int","bitSize":64,"semantic":"duration","unit":"second","currency":"EUR"}`,
-			"unexpected 'currency' key for duration semantic",
+			"unexpected duration currency", `{"kind":"int","bitSize":64,"semantics":"duration","unit":"second","currency":"EUR"}`,
+			"unexpected 'currency' key for duration semantics",
 		},
 	}
 	for _, test := range tests {
@@ -534,45 +535,45 @@ func Test_TypeSemanticJSONErrors(t *testing.T) {
 	}
 }
 
-// Test_TypeSemanticJSONRoundTrip tests canonical JSON encoding and round-trip
+// Test_TypeSemanticsJSONRoundTrip tests canonical JSON encoding and round-trip
 // decoding of type semantics.
-func Test_TypeSemanticJSONRoundTrip(t *testing.T) {
+func Test_TypeSemanticsJSONRoundTrip(t *testing.T) {
 	tests := []struct {
 		name  string
 		type_ Type
 		data  string
 	}{
-		{"no semantic", String(), `{"kind":"string"}`},
-		{"email", String().AsEmail(), `{"kind":"string","semantic":"email"}`},
-		{"phone", String().AsPhone(), `{"kind":"string","semantic":"phone"}`},
-		{"URL", String().AsURL(), `{"kind":"string","semantic":"url"}`},
+		{"no semantics", String(), `{"kind":"string"}`},
+		{"email", String().AsEmail(), `{"kind":"string","semantics":"email"}`},
+		{"phone", String().AsPhone(), `{"kind":"string","semantics":"phone"}`},
+		{"URL", String().AsURL(), `{"kind":"string","semantics":"url"}`},
 		{
 			"country alpha-2", String().AsCountry(ISO3166Alpha2),
-			`{"kind":"string","semantic":"country","format":"alpha-2"}`,
+			`{"kind":"string","semantics":"country","format":"alpha-2"}`,
 		},
 		{
 			"country alpha-3", String().AsCountry(ISO3166Alpha3),
-			`{"kind":"string","semantic":"country","format":"alpha-3"}`,
+			`{"kind":"string","semantics":"country","format":"alpha-3"}`,
 		},
-		{"money", Decimal(10, 2).AsMoney(), `{"kind":"decimal","semantic":"money","precision":10,"scale":2}`},
+		{"money", Decimal(10, 2).AsMoney(), `{"kind":"decimal","semantics":"money","precision":10,"scale":2}`},
 		{
 			"money EUR", Decimal(10, 2).AsMoney().WithCurrency("EUR"),
-			`{"kind":"decimal","semantic":"money","currency":"EUR","precision":10,"scale":2}`,
+			`{"kind":"decimal","semantics":"money","currency":"EUR","precision":10,"scale":2}`,
 		},
-		{"percentage", Decimal(18, 4).AsPercentage(), `{"kind":"decimal","semantic":"percentage","precision":18,"scale":4}`},
+		{"percentage", Decimal(18, 4).AsPercentage(), `{"kind":"decimal","semantics":"percentage","precision":18,"scale":4}`},
 		{
 			"measurement", Decimal(10, 2).AsMeasurement(Kilogram),
-			`{"kind":"decimal","semantic":"measurement","unit":"kg","precision":10,"scale":2}`,
+			`{"kind":"decimal","semantics":"measurement","unit":"kg","precision":10,"scale":2}`,
 		},
 		{
 			"duration", Int(64).AsDuration(Millisecond),
-			`{"kind":"int","semantic":"duration","unit":"millisecond","bitSize":64}`,
+			`{"kind":"int","semantics":"duration","unit":"millisecond","bitSize":64}`,
 		},
-		{"array email", Array(String().AsEmail()), `{"kind":"array","elementType":{"kind":"string","semantic":"email"}}`},
+		{"array email", Array(String().AsEmail()), `{"kind":"array","elementType":{"kind":"string","semantics":"email"}}`},
 		{
 			"nested money", Array(Map(Decimal(10, 2).AsMoney().WithCurrency("EUR"))),
 			`{"kind":"array","elementType":{"kind":"map","elementType":` +
-				`{"kind":"decimal","semantic":"money","currency":"EUR","precision":10,"scale":2}}}`,
+				`{"kind":"decimal","semantics":"money","currency":"EUR","precision":10,"scale":2}}}`,
 		},
 	}
 	for _, test := range tests {

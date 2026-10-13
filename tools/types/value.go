@@ -135,15 +135,14 @@ func NormalizeUUID(s string) (string, bool) {
 	return id.String(), true
 }
 
-// IsPhone reports whether s is a canonical E.164 phone value for use
-// wherever a value with the phone semantic is required.
+// IsPhone reports whether s is a canonical E.164 phone value.
 func IsPhone(s string) bool {
 	normalized, ok := normalizePhone(s, "")
 	return ok && normalized == s
 }
 
 // NormalizePhone normalizes s and returns its canonical E.164 form for use
-// wherever a value with the phone semantic is required.
+// wherever phone semantics are required.
 //
 // s must represent a single complete international phone number beginning with
 // '+' after trimming leading and trailing Unicode whitespace, and must not
@@ -155,8 +154,8 @@ func NormalizePhone(s string) (string, bool) {
 }
 
 // NormalizePhoneInRegion normalizes s using region as the parsing context and
-// returns its canonical E.164 form for use wherever a value with the phone
-// semantic is required.
+// returns its canonical E.164 form for use wherever phone semantics are
+// required.
 //
 // s must represent a single complete national or international phone number and
 // cannot exceed maxPhoneInputBytes bytes.
@@ -407,8 +406,8 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 	case StringKind:
 		if v.Kind() == '"' {
 			s := string(d.unquoteString(v))
-			switch t.Semantic() {
-			case CountrySemantic:
+			switch t.Semantics() {
+			case CountrySemantics:
 				switch t.CountryFormat() {
 				case ISO3166Alpha2:
 					if !validation.IsValidCountryCodeAlpha2(s) {
@@ -420,7 +419,7 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 					}
 				}
 				return s, nil
-			case PhoneSemantic:
+			case PhoneSemantics:
 				if !IsPhone(s) {
 					return nil, newErrInvalidValue("is not a valid canonical phone number", "")
 				}

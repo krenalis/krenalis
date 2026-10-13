@@ -423,7 +423,7 @@ func errMatchingPropertyConversion(in, ex string) error {
 //   - string to int, uuid, and string
 //   - uuid to uuid and string
 //
-// It panics if v is nil, the types in and ex does not have the same semantic
+// It panics if v is nil, the types in and ex do not have the same semantics
 // and options, or they are not conforming to these supported conversions.
 //
 // It returns an error if the converted value does not satisfy the constraints
@@ -434,8 +434,8 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 	}
 	if !types.EqualSemantics(in, ex) {
 		panic(fmt.Sprintf("core: internal and external semantics differ: "+
-			"internal semantic %s (options %s), external semantic %s (options %s)",
-			in.Semantic(), types.SemanticOptionString(in), ex.Semantic(), types.SemanticOptionString(ex)))
+			"internal %s semantics (options %s), external %s semantics (options %s)",
+			in.Semantics(), types.SemanticsOptionString(in), ex.Semantics(), types.SemanticsOptionString(ex)))
 	}
 	switch ex.Kind() {
 	case types.StringKind:
@@ -451,7 +451,7 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
 		// Validate v only if semantics are not country and phone.
-		if in.Semantic() != types.CountrySemantic && in.Semantic() != types.PhoneSemantic {
+		if in.Semantics() != types.CountrySemantics && in.Semantics() != types.PhoneSemantics {
 			// Validate that v match the external property's constraints.
 			if n, ok := ex.MaxBytes(); ok && len(s) > n {
 				return nil, errMatchingPropertyConversion(inPath, outPath)

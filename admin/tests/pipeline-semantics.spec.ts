@@ -19,28 +19,28 @@ const matchingProperty = (type: Type, updateRequired = false): Property => ({
 	description: '',
 });
 
-test('Validate matching semantic compatibility', () => {
+test('Validate matching semantics compatibility', () => {
 	const plain = matchingProperty({ kind: 'string' });
-	const phone = matchingProperty({ kind: 'string', semantic: 'phone' });
-	const otherPhone = matchingProperty({ kind: 'string', semantic: 'phone' });
-	const email = matchingProperty({ kind: 'string', semantic: 'email' });
+	const phone = matchingProperty({ kind: 'string', semantics: 'phone' });
+	const otherPhone = matchingProperty({ kind: 'string', semantics: 'phone' });
+	const email = matchingProperty({ kind: 'string', semantics: 'email' });
 	const durationSeconds = matchingProperty({
 		kind: 'int',
-		semantic: 'duration',
+		semantics: 'duration',
 		unit: 'second',
 		bitSize: 64,
 		unsigned: false,
 	});
 	const durationSeconds32 = matchingProperty({
 		kind: 'int',
-		semantic: 'duration',
+		semantics: 'duration',
 		unit: 'second',
 		bitSize: 32,
 		unsigned: false,
 	});
 	const durationMinutes = matchingProperty({
 		kind: 'int',
-		semantic: 'duration',
+		semantics: 'duration',
 		unit: 'minute',
 		bitSize: 64,
 		unsigned: false,
@@ -50,20 +50,20 @@ test('Validate matching semantic compatibility', () => {
 	expect(propertyTypesAreEqual(plain.type, phone.type)).toBe(false);
 	expect(
 		propertyTypesAreEqual(
-			{ kind: 'string', semantic: 'country', format: 'alpha-2' },
-			{ kind: 'string', semantic: 'country', format: 'alpha-3' },
+			{ kind: 'string', semantics: 'country', format: 'alpha-2' },
+			{ kind: 'string', semantics: 'country', format: 'alpha-3' },
 		),
 	).toBe(false);
 	expect(
 		typeSemanticsAreEqual(
-			{ kind: 'decimal', semantic: 'money' },
-			{ kind: 'decimal', semantic: 'money', currency: 'EUR' },
+			{ kind: 'decimal', semantics: 'money' },
+			{ kind: 'decimal', semantics: 'money', currency: 'EUR' },
 		),
 	).toBe(false);
 	expect(
 		typeSemanticsAreEqual(
-			{ kind: 'decimal', semantic: 'measurement', unit: 'kg' },
-			{ kind: 'decimal', semantic: 'measurement', unit: 'g' },
+			{ kind: 'decimal', semantics: 'measurement', unit: 'kg' },
+			{ kind: 'decimal', semantics: 'measurement', unit: 'g' },
 		),
 	).toBe(false);
 
@@ -71,13 +71,13 @@ test('Validate matching semantic compatibility', () => {
 	expect(() => validateMatching(durationSeconds, durationSeconds32)).not.toThrow();
 	expect(() => validateMatching(plain, matchingProperty({ kind: 'uuid' }))).not.toThrow();
 	expect(() => validateMatching(plain, phone)).toThrow(
-		'Input and output matching properties do not have the same semantic and options',
+		'Input and output matching properties do not have the same semantics and options',
 	);
 	expect(() => validateMatching(email, phone)).toThrow(
-		'Input and output matching properties do not have the same semantic and options',
+		'Input and output matching properties do not have the same semantics and options',
 	);
 	expect(() => validateMatching(durationSeconds, durationMinutes)).toThrow(
-		'Input and output matching properties do not have the same semantic and options',
+		'Input and output matching properties do not have the same semantics and options',
 	);
 
 	expect(matchingSemanticsAreCompatibleWithDestination(phone.type, undefined, 'UpdateOnly')).toBe(true);

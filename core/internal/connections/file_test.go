@@ -167,16 +167,16 @@ func TestRecordWriterYieldsRecordAtLimit(t *testing.T) {
 
 }
 
-// TestFileRecordSemantics checks semantic validation and normalization through
-// each file record entry point.
+// TestFileRecordSemantics checks validation and normalization according to
+// semantics through each file record entry point.
 func TestFileRecordSemantics(t *testing.T) {
 
 	country := types.String().AsCountry(types.ISO3166Alpha2)
 	tests := []struct {
-		name     string
-		semantic types.Type
-		value    string
-		want     string
+		name      string
+		semantics types.Type
+		value     string
+		want      string
 	}{
 		{"current country", country, "IT", "IT"},
 		{"former country", country, "AN", "AN"},
@@ -203,7 +203,7 @@ func TestFileRecordSemantics(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 
-			schema := types.Object([]types.Property{{Name: "value", Type: test.semantic}})
+			schema := types.Object([]types.Property{{Name: "value", Type: test.semantics}})
 			for _, method := range []string{"Record", "RecordSlice", "RecordStrings"} {
 
 				t.Run(method, func(t *testing.T) {
