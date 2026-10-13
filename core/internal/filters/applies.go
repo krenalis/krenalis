@@ -262,7 +262,7 @@ func opIsBetween(v any, values []any) bool {
 		v1 := v1.(state.JSONConditionValue)
 		switch v.Kind() {
 		case json.Number:
-			if v0.Number != nil {
+			if v0.Number != nil && v1.Number != nil {
 				v, err := v.Decimal(0, 0)
 				return err == nil && v.GreaterEqual(*v0.Number) && v.LessEqual(*v1.Number)
 			}
