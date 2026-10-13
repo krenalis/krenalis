@@ -7,7 +7,11 @@ package test
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"net/http"
+	"net/url"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 	"uuid"
@@ -27,6 +31,42 @@ func TestEvents(t *testing.T) {
 	k := krenalistester.NewKrenalisInstance(t)
 	k.Start()
 	defer k.Stop()
+
+	t.Run("reject filtering on JSON properties", func(t *testing.T) {
+
+		filter := krenalistester.Filter{
+			Operator: krenalistester.OpAnd,
+			Rules: []krenalistester.FilterRule{
+				&krenalistester.FilterCondition{Property: "properties.plan", Operator: krenalistester.OpIs, Values: []string{"Enterprise"}},
+			},
+		}
+		jsonFilter, err := json.Marshal(filter)
+		if err != nil {
+			t.Fatalf("expected filter encoding to succeed, got %v", err)
+		}
+
+		query := url.Values{
+			"filter":     []string{string(jsonFilter)},
+			"properties": []string{"event"},
+		}
+		err = k.TryCall("GET", "/v1/events?"+query.Encode(), nil, nil, nil)
+		if err != nil {
+			statusErr, ok := errors.AsType[*krenalistester.StatusCodeError](err)
+			if !ok {
+				t.Fatalf("expected *StatusCodeError, got %T: %v", err, err)
+			}
+			if statusErr.Response.Code != http.StatusBadRequest {
+				t.Fatalf("expected HTTP status %d, got %d: %s", http.StatusBadRequest, statusErr.Response.Code, statusErr.Response.Text)
+			}
+			if !strings.Contains(statusErr.Response.Text, "has type json") {
+				t.Fatalf("expected JSON property filter rejection, got %s", statusErr.Response.Text)
+			}
+			return
+		}
+
+		t.Fatal("expected JSON property filter rejection, got no error")
+
+	})
 
 	// Disable automatic execution of Identity Resolution.
 	k.UpdateIdentityResolutionSettings(false, nil)

@@ -157,7 +157,8 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		if !inSchema.Valid() {
 			return errors.BadRequest("input schema is required by the filter")
 		}
-		properties, err := validateFilter(pipeline.Filter, inSchema, v.connection.role, v.target)
+		disallowJSON := v.connection.role == state.Destination && v.target == state.TargetUser
+		properties, err := validateFilter(pipeline.Filter, inSchema, v.connection.role, v.target, disallowJSON)
 		if err != nil {
 			return errors.BadRequest("filter is not valid: %w", err)
 		}

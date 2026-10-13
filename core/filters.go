@@ -169,11 +169,12 @@ var operators = [...]FilterOperator{
 
 // filterValidation contains the state shared while validating a filter tree.
 type filterValidation struct {
-	paths      []string
-	properties types.Properties
-	role       state.Role
-	ruleCount  int
-	target     state.Target
+	paths        []string
+	properties   types.Properties
+	role         state.Role
+	ruleCount    int
+	target       state.Target
+	disallowJSON bool
 }
 
 // convertOperatorFromWhere converts a where operator into a filter operator.
@@ -709,13 +710,13 @@ func unmarshalFilterRules(dec *json.Decoder, depth int) ([]FilterRule, int, erro
 	return rules, ruleCount, nil
 }
 
-// validateFilter checks the validity of a filter and returns the referenced
-// property paths.
+// validateFilter validates a filter and returns the referenced property paths.
+// disallowJSON indicates whether json properties are disallowed.
 // Returns an error if the filter is not valid. Specifically, it returns a
 // types.PathNotExistError if a path does not exist.
 // Panics if the filter is nil or the schema is not valid.
-func validateFilter(filter *Filter, schema types.Type, role state.Role, target state.Target) ([]string, error) {
-	validation := filterValidation{properties: schema.Properties(), role: role, target: target}
+func validateFilter(filter *Filter, schema types.Type, role state.Role, target state.Target, disallowJSON bool) ([]string, error) {
+	validation := filterValidation{properties: schema.Properties(), role: role, target: target, disallowJSON: disallowJSON}
 	if err := validateFilterGroup(filter, &validation, 1); err != nil {
 		return nil, err
 	}
@@ -725,9 +726,6 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 // validateFilterCondition checks the validity of a filter condition and
 // returns its property path.
 func validateFilterCondition(cond *FilterCondition, validation *filterValidation) (string, error) {
-
-	// disallowJSON indicates whether JSON properties are disallowed.
-	disallowJSON := validation.role == state.Destination && validation.target == state.TargetUser
 
 	// disallowEmptyOnObject indicates whether the "is empty" and "is not empty"
 	// operators are disallowed on object properties.
@@ -745,7 +743,7 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 	op := cond.Operator
 	kind := p.Type.Kind()
 
-	if disallowJSON && kind == types.JSONKind {
+	if validation.disallowJSON && kind == types.JSONKind {
 		return "", fmt.Errorf("property %q has type json, which is not supported in data warehouse exports", path)
 	}
 

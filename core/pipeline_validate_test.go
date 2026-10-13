@@ -85,10 +85,12 @@ func Test_validatePipeline(t *testing.T) {
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
 						},
+						&FilterCondition{Property: "metadata.enabled", Operator: OpIsTrue},
 					},
 				},
 				InSchema: types.Object([]types.Property{
 					{Name: "email_in", Type: types.String()},
+					{Name: "metadata", Type: types.JSON()},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.String(), ReadOptional: true},
@@ -418,6 +420,7 @@ func Test_validatePipeline(t *testing.T) {
 							Operator: OpIsNot,
 							Values:   []string{"abc"},
 						},
+						&FilterCondition{Property: "properties.enabled", Operator: OpIsTrue},
 					},
 				},
 				Name: "Import events into the data warehouse",
@@ -634,7 +637,13 @@ func Test_validatePipeline(t *testing.T) {
 		{
 			name: "GOOD: Destination/Application/Event - with a mapping",
 			pipeline: PipelineToSet{
-				Name:     "Dispatch events to application",
+				Name: "Dispatch events to application",
+				Filter: &Filter{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{Property: "traits.email", Operator: OpIs, Values: []string{"a@b"}},
+					},
+				},
 				InSchema: types.Type{},
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.String()},
@@ -2731,6 +2740,40 @@ func Test_validatePipeline(t *testing.T) {
 			connectionRole:          state.Source,
 			connectionConnectorType: state.Application,
 			err:                     `output pipeline schema property "many_values_out" cannot have type array(object)`,
+		},
+		{
+			name: "BAD: Destination/Application/User - JSON filter",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				Filter: &Filter{
+					Operator: OpAnd,
+					Rules: []FilterRule{
+						&FilterCondition{Property: "metadata.enabled", Operator: OpIsTrue},
+					},
+				},
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "metadata", Type: types.JSON(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+					{Name: "id", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "id",
+				},
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+			err:                     `filter is not valid: property "metadata" has type json, which is not supported in data warehouse exports`,
 		},
 		{
 			name: "BAD: Destination/Application/User - filter refers to a property not in input schema",

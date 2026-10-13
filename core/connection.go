@@ -239,7 +239,7 @@ func (this *Connection) ApplicationUsers(ctx context.Context, schema types.Type,
 	// Validate the filter.
 	var where *state.Where
 	if filter != nil {
-		_, err := validateFilter(filter, schema, state.Source, state.TargetUser)
+		_, err := validateFilter(filter, schema, state.Source, state.TargetUser, false)
 		if err != nil {
 			if err, ok := err.(types.PathNotExistError); ok {
 				return nil, "", errors.BadRequest("filter's property %q does not exist", err.Path)

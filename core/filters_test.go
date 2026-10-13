@@ -1057,12 +1057,13 @@ func Test_validateFilter(t *testing.T) {
 	eventTarget := state.TargetEvent
 
 	tests := []struct {
-		name     string
-		filter   Filter
-		role     *state.Role
-		target   *state.Target
-		expected []string
-		err      error
+		name         string
+		filter       Filter
+		role         *state.Role
+		target       *state.Target
+		disallowJSON bool
+		expected     []string
+		err          error
 	}{
 		{
 			name: "invalid logical operator",
@@ -1395,11 +1396,78 @@ func Test_validateFilter(t *testing.T) {
 			filter: Filter{
 				Operator: OpAnd,
 				Rules: []FilterRule{
-					&FilterCondition{Property: "d.p", Operator: OpIsNotEmpty},
+					&FilterCondition{Property: "d", Operator: OpIsEmpty},
 				},
 			},
-			role: &destinationRole,
-			err:  errors.New(`property "d" has type json, which is not supported in data warehouse exports`),
+			role:         &destinationRole,
+			disallowJSON: true,
+			err:          errors.New(`property "d" has type json, which is not supported in data warehouse exports`),
+		},
+		{
+			name: "JSON in warehouse event filter",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d.p", Operator: OpIs, Values: []string{"foo"}},
+				},
+			},
+			role:         &destinationRole,
+			target:       &eventTarget,
+			disallowJSON: true,
+			err:          errors.New(`property "d" has type json, which is not supported in data warehouse exports`),
+		},
+		{
+			name: "JSON allowed in destination user filter",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d", Operator: OpIsEmpty},
+				},
+			},
+			role:     &destinationRole,
+			expected: []string{"d"},
+		},
+		{
+			name: "JSON allowed in destination event filter",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d.p", Operator: OpIs, Values: []string{"foo"}},
+				},
+			},
+			role:     &destinationRole,
+			target:   &eventTarget,
+			expected: []string{"d"},
+		},
+		{
+			name: "JSON disallowed in nested source filter",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "b", Operator: OpIs, Values: []string{"foo"}},
+					&Filter{
+						Operator: OpOr,
+						Rules: []FilterRule{
+							&FilterCondition{Property: "d.p", Operator: OpIsNotEmpty},
+						},
+					},
+				},
+			},
+			disallowJSON: true,
+			err:          errors.New(`property "d" has type json, which is not supported in data warehouse exports`),
+		},
+		{
+			name: "non-JSON allowed when JSON is disallowed",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "b", Operator: OpIs, Values: []string{"foo"}},
+				},
+			},
+			role:         &destinationRole,
+			target:       &eventTarget,
+			disallowJSON: true,
+			expected:     []string{"b"},
 		},
 		{
 			name: "all valid operators",
@@ -1469,7 +1537,7 @@ func Test_validateFilter(t *testing.T) {
 			if test.target != nil {
 				target = *test.target
 			}
-			got, err := validateFilter(&test.filter, schema, role, target)
+			got, err := validateFilter(&test.filter, schema, role, target, test.disallowJSON)
 			if err != nil {
 				if test.err == nil {
 					t.Fatalf("expected no error, got error %q (type %T)", err, err)
@@ -1522,7 +1590,7 @@ func Test_validateFilterLimits(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := validateFilter(test.filter, schema, state.Source, state.TargetUser)
+			_, err := validateFilter(test.filter, schema, state.Source, state.TargetUser, false)
 			if !reflect.DeepEqual(test.expected, err) {
 				t.Fatalf("expected error %q (type %T), got error %q (type %T)", test.expected, test.expected, err, err)
 			}
@@ -1548,7 +1616,7 @@ func Test_validateFilterRejectsNilRules(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			filter := &Filter{Operator: OpAnd, Rules: []FilterRule{test.rule}}
-			_, err := validateFilter(filter, schema, state.Source, state.TargetUser)
+			_, err := validateFilter(filter, schema, state.Source, state.TargetUser, false)
 			if !reflect.DeepEqual(test.err, err) {
 				t.Fatalf("expected error %q (type %T), got error %q (type %T)", test.err, test.err, err, err)
 			}
