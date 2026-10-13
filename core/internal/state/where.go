@@ -324,7 +324,7 @@ func marshalWhereValue(b *bytes.Buffer, value any, t types.Type) {
 		b.WriteByte('"')
 		switch t.Kind() {
 		case types.DateTimeKind:
-			b.WriteString(v.Format(time.RFC3339Nano))
+			b.WriteString(v.UTC().Format(time.RFC3339Nano))
 		case types.DateKind:
 			b.WriteString(v.Format(time.DateOnly))
 		case types.TimeKind:

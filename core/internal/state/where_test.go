@@ -686,6 +686,27 @@ func Test_MarshalWhereValues(t *testing.T) {
 		})
 	}
 
+	t.Run("datetime with offset", func(t *testing.T) {
+		where := &Where{Operator: OpOr, Rules: []WhereRule{
+			&WhereCondition{Property: []string{"j"}, Operator: OpIsAfter, Values: []any{
+				time.Date(2024, 9, 12, 11, 3, 6, 820793551, time.FixedZone("", 2*60*60)),
+			}},
+		}}
+		expected := []byte(`{"operator":"Or","rules":[{"property":["j"],"operator":"IsAfter","values":["2024-09-12T09:03:06.820793551Z"]}]}`)
+		got := MarshalWhere(where, schema)
+		if !bytes.Equal(expected, got) {
+			t.Fatalf("expected %s, got %s", expected, got)
+		}
+		decoded, err := unmarshalWhere(got, schema)
+		if err != nil {
+			t.Fatalf("expected decoded where, got error %q", err)
+		}
+		got = MarshalWhere(decoded, schema)
+		if !bytes.Equal(expected, got) {
+			t.Fatalf("expected %s, got %s", expected, got)
+		}
+	})
+
 }
 
 // Test_WhereCondition_Equal verifies equality of WhereCondition values,
