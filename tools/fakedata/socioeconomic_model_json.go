@@ -275,6 +275,15 @@ func (r *socioeconomicJSONReader) Read(p []byte) (int, error) {
 // decodeSocioeconomicModel accepts only the canonical logical-v0 representation,
 // not publication evidence or an authored pre-canonicalization model.
 func decodeSocioeconomicModel(reader io.Reader) (*SocioeconomicModel, error) {
+	document, err := decodeSocioeconomicModelJSON(reader)
+	if err != nil {
+		return nil, err
+	}
+	return compileSocioeconomicModel(document)
+}
+
+// decodeSocioeconomicModelJSON retains the typed input for offline conversion.
+func decodeSocioeconomicModelJSON(reader io.Reader) (*socioeconomicModelJSON, error) {
 
 	bounded := &io.LimitedReader{R: reader, N: maxSocioeconomicModelBytes + 1}
 	d := socioeconomicDecoder{decoder: json.NewDecoder(&socioeconomicJSONReader{reader: bounded})}
@@ -391,5 +400,5 @@ func decodeSocioeconomicModel(reader io.Reader) (*SocioeconomicModel, error) {
 		return nil, fmt.Errorf("model exceeds %d decoded bytes", maxSocioeconomicModelBytes)
 	}
 
-	return compileSocioeconomicModel(&document)
+	return &document, nil
 }

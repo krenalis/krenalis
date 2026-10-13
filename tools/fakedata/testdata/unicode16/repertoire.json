@@ -1,0 +1,7470 @@
+{
+  "version": "16.0.0",
+  "sources": {
+    "UnicodeData.txt": "ff58e5823bd095166564a006e47d111130813dcf8bf234ef79fa51a870edb48f",
+    "CaseFolding.txt": "6f1f9c588eb4a5c718d9e8f93b782685e5c7fec872cf05e8e6878053599e09bb",
+    "DerivedNormalizationProps.txt": "4d4c03892dea9146d674b686e495df2d55a28d071ac474041d73518f887abddc"
+  },
+  "characters": [
+    {
+      "code": 32,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": " ",
+      "nfc": " ",
+      "fold": " "
+    },
+    {
+      "code": 39,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "'",
+      "nfc": "'",
+      "fold": "'"
+    },
+    {
+      "code": 45,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "-",
+      "nfc": "-",
+      "fold": "-"
+    },
+    {
+      "code": 65,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "A",
+      "nfc": "A",
+      "fold": "a"
+    },
+    {
+      "code": 66,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "B",
+      "nfc": "B",
+      "fold": "b"
+    },
+    {
+      "code": 67,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "C",
+      "nfc": "C",
+      "fold": "c"
+    },
+    {
+      "code": 68,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "D",
+      "nfc": "D",
+      "fold": "d"
+    },
+    {
+      "code": 69,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "E",
+      "nfc": "E",
+      "fold": "e"
+    },
+    {
+      "code": 70,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "F",
+      "nfc": "F",
+      "fold": "f"
+    },
+    {
+      "code": 71,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "G",
+      "nfc": "G",
+      "fold": "g"
+    },
+    {
+      "code": 72,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "H",
+      "nfc": "H",
+      "fold": "h"
+    },
+    {
+      "code": 73,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "I",
+      "nfc": "I",
+      "fold": "i"
+    },
+    {
+      "code": 74,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "J",
+      "nfc": "J",
+      "fold": "j"
+    },
+    {
+      "code": 75,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "K",
+      "nfc": "K",
+      "fold": "k"
+    },
+    {
+      "code": 76,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "L",
+      "nfc": "L",
+      "fold": "l"
+    },
+    {
+      "code": 77,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "M",
+      "nfc": "M",
+      "fold": "m"
+    },
+    {
+      "code": 78,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "N",
+      "nfc": "N",
+      "fold": "n"
+    },
+    {
+      "code": 79,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "O",
+      "nfc": "O",
+      "fold": "o"
+    },
+    {
+      "code": 80,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "P",
+      "nfc": "P",
+      "fold": "p"
+    },
+    {
+      "code": 81,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Q",
+      "nfc": "Q",
+      "fold": "q"
+    },
+    {
+      "code": 82,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "R",
+      "nfc": "R",
+      "fold": "r"
+    },
+    {
+      "code": 83,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "S",
+      "nfc": "S",
+      "fold": "s"
+    },
+    {
+      "code": 84,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "T",
+      "nfc": "T",
+      "fold": "t"
+    },
+    {
+      "code": 85,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "U",
+      "nfc": "U",
+      "fold": "u"
+    },
+    {
+      "code": 86,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "V",
+      "nfc": "V",
+      "fold": "v"
+    },
+    {
+      "code": 87,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "W",
+      "nfc": "W",
+      "fold": "w"
+    },
+    {
+      "code": 88,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "X",
+      "nfc": "X",
+      "fold": "x"
+    },
+    {
+      "code": 89,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Y",
+      "nfc": "Y",
+      "fold": "y"
+    },
+    {
+      "code": 90,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Z",
+      "nfc": "Z",
+      "fold": "z"
+    },
+    {
+      "code": 97,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "a",
+      "nfc": "a",
+      "fold": "a"
+    },
+    {
+      "code": 98,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "b",
+      "nfc": "b",
+      "fold": "b"
+    },
+    {
+      "code": 99,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "c",
+      "nfc": "c",
+      "fold": "c"
+    },
+    {
+      "code": 100,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "d",
+      "nfc": "d",
+      "fold": "d"
+    },
+    {
+      "code": 101,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "e",
+      "nfc": "e",
+      "fold": "e"
+    },
+    {
+      "code": 102,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "f",
+      "nfc": "f",
+      "fold": "f"
+    },
+    {
+      "code": 103,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "g",
+      "nfc": "g",
+      "fold": "g"
+    },
+    {
+      "code": 104,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "h",
+      "nfc": "h",
+      "fold": "h"
+    },
+    {
+      "code": 105,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "i",
+      "nfc": "i",
+      "fold": "i"
+    },
+    {
+      "code": 106,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "j",
+      "nfc": "j",
+      "fold": "j"
+    },
+    {
+      "code": 107,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "k",
+      "nfc": "k",
+      "fold": "k"
+    },
+    {
+      "code": 108,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "l",
+      "nfc": "l",
+      "fold": "l"
+    },
+    {
+      "code": 109,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "m",
+      "nfc": "m",
+      "fold": "m"
+    },
+    {
+      "code": 110,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "n",
+      "nfc": "n",
+      "fold": "n"
+    },
+    {
+      "code": 111,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "o",
+      "nfc": "o",
+      "fold": "o"
+    },
+    {
+      "code": 112,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "p",
+      "nfc": "p",
+      "fold": "p"
+    },
+    {
+      "code": 113,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "q",
+      "nfc": "q",
+      "fold": "q"
+    },
+    {
+      "code": 114,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "r",
+      "nfc": "r",
+      "fold": "r"
+    },
+    {
+      "code": 115,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "s",
+      "nfc": "s",
+      "fold": "s"
+    },
+    {
+      "code": 116,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "t",
+      "nfc": "t",
+      "fold": "t"
+    },
+    {
+      "code": 117,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "u",
+      "nfc": "u",
+      "fold": "u"
+    },
+    {
+      "code": 118,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "v",
+      "nfc": "v",
+      "fold": "v"
+    },
+    {
+      "code": 119,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "w",
+      "nfc": "w",
+      "fold": "w"
+    },
+    {
+      "code": 120,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "x",
+      "nfc": "x",
+      "fold": "x"
+    },
+    {
+      "code": 121,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "y",
+      "nfc": "y",
+      "fold": "y"
+    },
+    {
+      "code": 122,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "z",
+      "nfc": "z",
+      "fold": "z"
+    },
+    {
+      "code": 192,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "À",
+      "nfc": "À",
+      "fold": "à"
+    },
+    {
+      "code": 193,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Á",
+      "nfc": "Á",
+      "fold": "á"
+    },
+    {
+      "code": 194,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Â",
+      "nfc": "Â",
+      "fold": "â"
+    },
+    {
+      "code": 195,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ã",
+      "nfc": "Ã",
+      "fold": "ã"
+    },
+    {
+      "code": 196,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ä",
+      "nfc": "Ä",
+      "fold": "ä"
+    },
+    {
+      "code": 197,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Å",
+      "nfc": "Å",
+      "fold": "å"
+    },
+    {
+      "code": 199,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ç",
+      "nfc": "Ç",
+      "fold": "ç"
+    },
+    {
+      "code": 200,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "È",
+      "nfc": "È",
+      "fold": "è"
+    },
+    {
+      "code": 201,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "É",
+      "nfc": "É",
+      "fold": "é"
+    },
+    {
+      "code": 202,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ê",
+      "nfc": "Ê",
+      "fold": "ê"
+    },
+    {
+      "code": 203,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ë",
+      "nfc": "Ë",
+      "fold": "ë"
+    },
+    {
+      "code": 204,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ì",
+      "nfc": "Ì",
+      "fold": "ì"
+    },
+    {
+      "code": 205,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Í",
+      "nfc": "Í",
+      "fold": "í"
+    },
+    {
+      "code": 206,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Î",
+      "nfc": "Î",
+      "fold": "î"
+    },
+    {
+      "code": 207,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ï",
+      "nfc": "Ï",
+      "fold": "ï"
+    },
+    {
+      "code": 209,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ñ",
+      "nfc": "Ñ",
+      "fold": "ñ"
+    },
+    {
+      "code": 210,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ò",
+      "nfc": "Ò",
+      "fold": "ò"
+    },
+    {
+      "code": 211,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ó",
+      "nfc": "Ó",
+      "fold": "ó"
+    },
+    {
+      "code": 212,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ô",
+      "nfc": "Ô",
+      "fold": "ô"
+    },
+    {
+      "code": 213,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Õ",
+      "nfc": "Õ",
+      "fold": "õ"
+    },
+    {
+      "code": 214,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ö",
+      "nfc": "Ö",
+      "fold": "ö"
+    },
+    {
+      "code": 217,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ù",
+      "nfc": "Ù",
+      "fold": "ù"
+    },
+    {
+      "code": 218,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ú",
+      "nfc": "Ú",
+      "fold": "ú"
+    },
+    {
+      "code": 219,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Û",
+      "nfc": "Û",
+      "fold": "û"
+    },
+    {
+      "code": 220,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ü",
+      "nfc": "Ü",
+      "fold": "ü"
+    },
+    {
+      "code": 221,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ý",
+      "nfc": "Ý",
+      "fold": "ý"
+    },
+    {
+      "code": 224,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "à",
+      "nfc": "à",
+      "fold": "à"
+    },
+    {
+      "code": 225,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "á",
+      "nfc": "á",
+      "fold": "á"
+    },
+    {
+      "code": 226,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "â",
+      "nfc": "â",
+      "fold": "â"
+    },
+    {
+      "code": 227,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ã",
+      "nfc": "ã",
+      "fold": "ã"
+    },
+    {
+      "code": 228,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ä",
+      "nfc": "ä",
+      "fold": "ä"
+    },
+    {
+      "code": 229,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "å",
+      "nfc": "å",
+      "fold": "å"
+    },
+    {
+      "code": 231,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ç",
+      "nfc": "ç",
+      "fold": "ç"
+    },
+    {
+      "code": 232,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "è",
+      "nfc": "è",
+      "fold": "è"
+    },
+    {
+      "code": 233,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "é",
+      "nfc": "é",
+      "fold": "é"
+    },
+    {
+      "code": 234,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ê",
+      "nfc": "ê",
+      "fold": "ê"
+    },
+    {
+      "code": 235,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ë",
+      "nfc": "ë",
+      "fold": "ë"
+    },
+    {
+      "code": 236,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ì",
+      "nfc": "ì",
+      "fold": "ì"
+    },
+    {
+      "code": 237,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "í",
+      "nfc": "í",
+      "fold": "í"
+    },
+    {
+      "code": 238,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "î",
+      "nfc": "î",
+      "fold": "î"
+    },
+    {
+      "code": 239,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ï",
+      "nfc": "ï",
+      "fold": "ï"
+    },
+    {
+      "code": 241,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ñ",
+      "nfc": "ñ",
+      "fold": "ñ"
+    },
+    {
+      "code": 242,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ò",
+      "nfc": "ò",
+      "fold": "ò"
+    },
+    {
+      "code": 243,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ó",
+      "nfc": "ó",
+      "fold": "ó"
+    },
+    {
+      "code": 244,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ô",
+      "nfc": "ô",
+      "fold": "ô"
+    },
+    {
+      "code": 245,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "õ",
+      "nfc": "õ",
+      "fold": "õ"
+    },
+    {
+      "code": 246,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ö",
+      "nfc": "ö",
+      "fold": "ö"
+    },
+    {
+      "code": 249,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ù",
+      "nfc": "ù",
+      "fold": "ù"
+    },
+    {
+      "code": 250,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ú",
+      "nfc": "ú",
+      "fold": "ú"
+    },
+    {
+      "code": 251,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "û",
+      "nfc": "û",
+      "fold": "û"
+    },
+    {
+      "code": 252,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ü",
+      "nfc": "ü",
+      "fold": "ü"
+    },
+    {
+      "code": 253,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ý",
+      "nfc": "ý",
+      "fold": "ý"
+    },
+    {
+      "code": 255,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ÿ",
+      "nfc": "ÿ",
+      "fold": "ÿ"
+    },
+    {
+      "code": 256,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ā",
+      "nfc": "Ā",
+      "fold": "ā"
+    },
+    {
+      "code": 257,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ā",
+      "nfc": "ā",
+      "fold": "ā"
+    },
+    {
+      "code": 258,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ă",
+      "nfc": "Ă",
+      "fold": "ă"
+    },
+    {
+      "code": 259,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ă",
+      "nfc": "ă",
+      "fold": "ă"
+    },
+    {
+      "code": 260,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ą",
+      "nfc": "Ą",
+      "fold": "ą"
+    },
+    {
+      "code": 261,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ą",
+      "nfc": "ą",
+      "fold": "ą"
+    },
+    {
+      "code": 262,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ć",
+      "nfc": "Ć",
+      "fold": "ć"
+    },
+    {
+      "code": 263,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ć",
+      "nfc": "ć",
+      "fold": "ć"
+    },
+    {
+      "code": 264,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ĉ",
+      "nfc": "Ĉ",
+      "fold": "ĉ"
+    },
+    {
+      "code": 265,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ĉ",
+      "nfc": "ĉ",
+      "fold": "ĉ"
+    },
+    {
+      "code": 266,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ċ",
+      "nfc": "Ċ",
+      "fold": "ċ"
+    },
+    {
+      "code": 267,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ċ",
+      "nfc": "ċ",
+      "fold": "ċ"
+    },
+    {
+      "code": 268,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Č",
+      "nfc": "Č",
+      "fold": "č"
+    },
+    {
+      "code": 269,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "č",
+      "nfc": "č",
+      "fold": "č"
+    },
+    {
+      "code": 270,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ď",
+      "nfc": "Ď",
+      "fold": "ď"
+    },
+    {
+      "code": 271,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ď",
+      "nfc": "ď",
+      "fold": "ď"
+    },
+    {
+      "code": 274,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ē",
+      "nfc": "Ē",
+      "fold": "ē"
+    },
+    {
+      "code": 275,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ē",
+      "nfc": "ē",
+      "fold": "ē"
+    },
+    {
+      "code": 276,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ĕ",
+      "nfc": "Ĕ",
+      "fold": "ĕ"
+    },
+    {
+      "code": 277,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ĕ",
+      "nfc": "ĕ",
+      "fold": "ĕ"
+    },
+    {
+      "code": 278,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ė",
+      "nfc": "Ė",
+      "fold": "ė"
+    },
+    {
+      "code": 279,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ė",
+      "nfc": "ė",
+      "fold": "ė"
+    },
+    {
+      "code": 280,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ę",
+      "nfc": "Ę",
+      "fold": "ę"
+    },
+    {
+      "code": 281,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ę",
+      "nfc": "ę",
+      "fold": "ę"
+    },
+    {
+      "code": 282,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ě",
+      "nfc": "Ě",
+      "fold": "ě"
+    },
+    {
+      "code": 283,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ě",
+      "nfc": "ě",
+      "fold": "ě"
+    },
+    {
+      "code": 284,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ĝ",
+      "nfc": "Ĝ",
+      "fold": "ĝ"
+    },
+    {
+      "code": 285,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ĝ",
+      "nfc": "ĝ",
+      "fold": "ĝ"
+    },
+    {
+      "code": 286,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ğ",
+      "nfc": "Ğ",
+      "fold": "ğ"
+    },
+    {
+      "code": 287,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ğ",
+      "nfc": "ğ",
+      "fold": "ğ"
+    },
+    {
+      "code": 288,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ġ",
+      "nfc": "Ġ",
+      "fold": "ġ"
+    },
+    {
+      "code": 289,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ġ",
+      "nfc": "ġ",
+      "fold": "ġ"
+    },
+    {
+      "code": 290,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ģ",
+      "nfc": "Ģ",
+      "fold": "ģ"
+    },
+    {
+      "code": 291,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ģ",
+      "nfc": "ģ",
+      "fold": "ģ"
+    },
+    {
+      "code": 292,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ĥ",
+      "nfc": "Ĥ",
+      "fold": "ĥ"
+    },
+    {
+      "code": 293,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ĥ",
+      "nfc": "ĥ",
+      "fold": "ĥ"
+    },
+    {
+      "code": 296,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ĩ",
+      "nfc": "Ĩ",
+      "fold": "ĩ"
+    },
+    {
+      "code": 297,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ĩ",
+      "nfc": "ĩ",
+      "fold": "ĩ"
+    },
+    {
+      "code": 298,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ī",
+      "nfc": "Ī",
+      "fold": "ī"
+    },
+    {
+      "code": 299,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ī",
+      "nfc": "ī",
+      "fold": "ī"
+    },
+    {
+      "code": 300,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ĭ",
+      "nfc": "Ĭ",
+      "fold": "ĭ"
+    },
+    {
+      "code": 301,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ĭ",
+      "nfc": "ĭ",
+      "fold": "ĭ"
+    },
+    {
+      "code": 302,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Į",
+      "nfc": "Į",
+      "fold": "į"
+    },
+    {
+      "code": 303,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "į",
+      "nfc": "į",
+      "fold": "į"
+    },
+    {
+      "code": 304,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "İ",
+      "nfc": "İ",
+      "fold": "i̇"
+    },
+    {
+      "code": 308,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ĵ",
+      "nfc": "Ĵ",
+      "fold": "ĵ"
+    },
+    {
+      "code": 309,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ĵ",
+      "nfc": "ĵ",
+      "fold": "ĵ"
+    },
+    {
+      "code": 310,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ķ",
+      "nfc": "Ķ",
+      "fold": "ķ"
+    },
+    {
+      "code": 311,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ķ",
+      "nfc": "ķ",
+      "fold": "ķ"
+    },
+    {
+      "code": 313,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ĺ",
+      "nfc": "Ĺ",
+      "fold": "ĺ"
+    },
+    {
+      "code": 314,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ĺ",
+      "nfc": "ĺ",
+      "fold": "ĺ"
+    },
+    {
+      "code": 315,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ļ",
+      "nfc": "Ļ",
+      "fold": "ļ"
+    },
+    {
+      "code": 316,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ļ",
+      "nfc": "ļ",
+      "fold": "ļ"
+    },
+    {
+      "code": 317,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ľ",
+      "nfc": "Ľ",
+      "fold": "ľ"
+    },
+    {
+      "code": 318,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ľ",
+      "nfc": "ľ",
+      "fold": "ľ"
+    },
+    {
+      "code": 323,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ń",
+      "nfc": "Ń",
+      "fold": "ń"
+    },
+    {
+      "code": 324,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ń",
+      "nfc": "ń",
+      "fold": "ń"
+    },
+    {
+      "code": 325,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ņ",
+      "nfc": "Ņ",
+      "fold": "ņ"
+    },
+    {
+      "code": 326,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ņ",
+      "nfc": "ņ",
+      "fold": "ņ"
+    },
+    {
+      "code": 327,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ň",
+      "nfc": "Ň",
+      "fold": "ň"
+    },
+    {
+      "code": 328,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ň",
+      "nfc": "ň",
+      "fold": "ň"
+    },
+    {
+      "code": 332,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ō",
+      "nfc": "Ō",
+      "fold": "ō"
+    },
+    {
+      "code": 333,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ō",
+      "nfc": "ō",
+      "fold": "ō"
+    },
+    {
+      "code": 334,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ŏ",
+      "nfc": "Ŏ",
+      "fold": "ŏ"
+    },
+    {
+      "code": 335,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ŏ",
+      "nfc": "ŏ",
+      "fold": "ŏ"
+    },
+    {
+      "code": 336,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ő",
+      "nfc": "Ő",
+      "fold": "ő"
+    },
+    {
+      "code": 337,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ő",
+      "nfc": "ő",
+      "fold": "ő"
+    },
+    {
+      "code": 340,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ŕ",
+      "nfc": "Ŕ",
+      "fold": "ŕ"
+    },
+    {
+      "code": 341,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ŕ",
+      "nfc": "ŕ",
+      "fold": "ŕ"
+    },
+    {
+      "code": 342,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ŗ",
+      "nfc": "Ŗ",
+      "fold": "ŗ"
+    },
+    {
+      "code": 343,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ŗ",
+      "nfc": "ŗ",
+      "fold": "ŗ"
+    },
+    {
+      "code": 344,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ř",
+      "nfc": "Ř",
+      "fold": "ř"
+    },
+    {
+      "code": 345,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ř",
+      "nfc": "ř",
+      "fold": "ř"
+    },
+    {
+      "code": 346,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ś",
+      "nfc": "Ś",
+      "fold": "ś"
+    },
+    {
+      "code": 347,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ś",
+      "nfc": "ś",
+      "fold": "ś"
+    },
+    {
+      "code": 348,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ŝ",
+      "nfc": "Ŝ",
+      "fold": "ŝ"
+    },
+    {
+      "code": 349,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ŝ",
+      "nfc": "ŝ",
+      "fold": "ŝ"
+    },
+    {
+      "code": 350,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ş",
+      "nfc": "Ş",
+      "fold": "ş"
+    },
+    {
+      "code": 351,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ş",
+      "nfc": "ş",
+      "fold": "ş"
+    },
+    {
+      "code": 352,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Š",
+      "nfc": "Š",
+      "fold": "š"
+    },
+    {
+      "code": 353,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "š",
+      "nfc": "š",
+      "fold": "š"
+    },
+    {
+      "code": 354,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ţ",
+      "nfc": "Ţ",
+      "fold": "ţ"
+    },
+    {
+      "code": 355,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ţ",
+      "nfc": "ţ",
+      "fold": "ţ"
+    },
+    {
+      "code": 356,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ť",
+      "nfc": "Ť",
+      "fold": "ť"
+    },
+    {
+      "code": 357,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ť",
+      "nfc": "ť",
+      "fold": "ť"
+    },
+    {
+      "code": 360,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ũ",
+      "nfc": "Ũ",
+      "fold": "ũ"
+    },
+    {
+      "code": 361,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ũ",
+      "nfc": "ũ",
+      "fold": "ũ"
+    },
+    {
+      "code": 362,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ū",
+      "nfc": "Ū",
+      "fold": "ū"
+    },
+    {
+      "code": 363,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ū",
+      "nfc": "ū",
+      "fold": "ū"
+    },
+    {
+      "code": 364,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ŭ",
+      "nfc": "Ŭ",
+      "fold": "ŭ"
+    },
+    {
+      "code": 365,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ŭ",
+      "nfc": "ŭ",
+      "fold": "ŭ"
+    },
+    {
+      "code": 366,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ů",
+      "nfc": "Ů",
+      "fold": "ů"
+    },
+    {
+      "code": 367,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ů",
+      "nfc": "ů",
+      "fold": "ů"
+    },
+    {
+      "code": 368,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ű",
+      "nfc": "Ű",
+      "fold": "ű"
+    },
+    {
+      "code": 369,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ű",
+      "nfc": "ű",
+      "fold": "ű"
+    },
+    {
+      "code": 370,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ų",
+      "nfc": "Ų",
+      "fold": "ų"
+    },
+    {
+      "code": 371,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ų",
+      "nfc": "ų",
+      "fold": "ų"
+    },
+    {
+      "code": 372,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ŵ",
+      "nfc": "Ŵ",
+      "fold": "ŵ"
+    },
+    {
+      "code": 373,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ŵ",
+      "nfc": "ŵ",
+      "fold": "ŵ"
+    },
+    {
+      "code": 374,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ŷ",
+      "nfc": "Ŷ",
+      "fold": "ŷ"
+    },
+    {
+      "code": 375,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ŷ",
+      "nfc": "ŷ",
+      "fold": "ŷ"
+    },
+    {
+      "code": 376,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ÿ",
+      "nfc": "Ÿ",
+      "fold": "ÿ"
+    },
+    {
+      "code": 377,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ź",
+      "nfc": "Ź",
+      "fold": "ź"
+    },
+    {
+      "code": 378,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ź",
+      "nfc": "ź",
+      "fold": "ź"
+    },
+    {
+      "code": 379,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ż",
+      "nfc": "Ż",
+      "fold": "ż"
+    },
+    {
+      "code": 380,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ż",
+      "nfc": "ż",
+      "fold": "ż"
+    },
+    {
+      "code": 381,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ž",
+      "nfc": "Ž",
+      "fold": "ž"
+    },
+    {
+      "code": 382,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ž",
+      "nfc": "ž",
+      "fold": "ž"
+    },
+    {
+      "code": 416,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ơ",
+      "nfc": "Ơ",
+      "fold": "ơ"
+    },
+    {
+      "code": 417,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ơ",
+      "nfc": "ơ",
+      "fold": "ơ"
+    },
+    {
+      "code": 431,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ư",
+      "nfc": "Ư",
+      "fold": "ư"
+    },
+    {
+      "code": 432,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ư",
+      "nfc": "ư",
+      "fold": "ư"
+    },
+    {
+      "code": 461,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ǎ",
+      "nfc": "Ǎ",
+      "fold": "ǎ"
+    },
+    {
+      "code": 462,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ǎ",
+      "nfc": "ǎ",
+      "fold": "ǎ"
+    },
+    {
+      "code": 463,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ǐ",
+      "nfc": "Ǐ",
+      "fold": "ǐ"
+    },
+    {
+      "code": 464,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ǐ",
+      "nfc": "ǐ",
+      "fold": "ǐ"
+    },
+    {
+      "code": 465,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ǒ",
+      "nfc": "Ǒ",
+      "fold": "ǒ"
+    },
+    {
+      "code": 466,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ǒ",
+      "nfc": "ǒ",
+      "fold": "ǒ"
+    },
+    {
+      "code": 467,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ǔ",
+      "nfc": "Ǔ",
+      "fold": "ǔ"
+    },
+    {
+      "code": 468,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ǔ",
+      "nfc": "ǔ",
+      "fold": "ǔ"
+    },
+    {
+      "code": 469,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ǖ",
+      "nfc": "Ǖ",
+      "fold": "ǖ"
+    },
+    {
+      "code": 470,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ǖ",
+      "nfc": "ǖ",
+      "fold": "ǖ"
+    },
+    {
+      "code": 471,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ǘ",
+      "nfc": "Ǘ",
+      "fold": "ǘ"
+    },
+    {
+      "code": 472,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ǘ",
+      "nfc": "ǘ",
+      "fold": "ǘ"
+    },
+    {
+      "code": 473,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ǚ",
+      "nfc": "Ǚ",
+      "fold": "ǚ"
+    },
+    {
+      "code": 474,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ǚ",
+      "nfc": "ǚ",
+      "fold": "ǚ"
+    },
+    {
+      "code": 475,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ǜ",
+      "nfc": "Ǜ",
+      "fold": "ǜ"
+    },
+    {
+      "code": 476,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ǜ",
+      "nfc": "ǜ",
+      "fold": "ǜ"
+    },
+    {
+      "code": 478,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ǟ",
+      "nfc": "Ǟ",
+      "fold": "ǟ"
+    },
+    {
+      "code": 479,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ǟ",
+      "nfc": "ǟ",
+      "fold": "ǟ"
+    },
+    {
+      "code": 480,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ǡ",
+      "nfc": "Ǡ",
+      "fold": "ǡ"
+    },
+    {
+      "code": 481,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ǡ",
+      "nfc": "ǡ",
+      "fold": "ǡ"
+    },
+    {
+      "code": 486,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ǧ",
+      "nfc": "Ǧ",
+      "fold": "ǧ"
+    },
+    {
+      "code": 487,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ǧ",
+      "nfc": "ǧ",
+      "fold": "ǧ"
+    },
+    {
+      "code": 488,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ǩ",
+      "nfc": "Ǩ",
+      "fold": "ǩ"
+    },
+    {
+      "code": 489,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ǩ",
+      "nfc": "ǩ",
+      "fold": "ǩ"
+    },
+    {
+      "code": 490,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ǫ",
+      "nfc": "Ǫ",
+      "fold": "ǫ"
+    },
+    {
+      "code": 491,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ǫ",
+      "nfc": "ǫ",
+      "fold": "ǫ"
+    },
+    {
+      "code": 492,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ǭ",
+      "nfc": "Ǭ",
+      "fold": "ǭ"
+    },
+    {
+      "code": 493,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ǭ",
+      "nfc": "ǭ",
+      "fold": "ǭ"
+    },
+    {
+      "code": 496,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ǰ",
+      "nfc": "ǰ",
+      "fold": "ǰ"
+    },
+    {
+      "code": 500,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ǵ",
+      "nfc": "Ǵ",
+      "fold": "ǵ"
+    },
+    {
+      "code": 501,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ǵ",
+      "nfc": "ǵ",
+      "fold": "ǵ"
+    },
+    {
+      "code": 504,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ǹ",
+      "nfc": "Ǹ",
+      "fold": "ǹ"
+    },
+    {
+      "code": 505,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ǹ",
+      "nfc": "ǹ",
+      "fold": "ǹ"
+    },
+    {
+      "code": 506,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ǻ",
+      "nfc": "Ǻ",
+      "fold": "ǻ"
+    },
+    {
+      "code": 507,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ǻ",
+      "nfc": "ǻ",
+      "fold": "ǻ"
+    },
+    {
+      "code": 512,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ȁ",
+      "nfc": "Ȁ",
+      "fold": "ȁ"
+    },
+    {
+      "code": 513,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ȁ",
+      "nfc": "ȁ",
+      "fold": "ȁ"
+    },
+    {
+      "code": 514,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ȃ",
+      "nfc": "Ȃ",
+      "fold": "ȃ"
+    },
+    {
+      "code": 515,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ȃ",
+      "nfc": "ȃ",
+      "fold": "ȃ"
+    },
+    {
+      "code": 516,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ȅ",
+      "nfc": "Ȅ",
+      "fold": "ȅ"
+    },
+    {
+      "code": 517,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ȅ",
+      "nfc": "ȅ",
+      "fold": "ȅ"
+    },
+    {
+      "code": 518,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ȇ",
+      "nfc": "Ȇ",
+      "fold": "ȇ"
+    },
+    {
+      "code": 519,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ȇ",
+      "nfc": "ȇ",
+      "fold": "ȇ"
+    },
+    {
+      "code": 520,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ȉ",
+      "nfc": "Ȉ",
+      "fold": "ȉ"
+    },
+    {
+      "code": 521,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ȉ",
+      "nfc": "ȉ",
+      "fold": "ȉ"
+    },
+    {
+      "code": 522,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ȋ",
+      "nfc": "Ȋ",
+      "fold": "ȋ"
+    },
+    {
+      "code": 523,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ȋ",
+      "nfc": "ȋ",
+      "fold": "ȋ"
+    },
+    {
+      "code": 524,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ȍ",
+      "nfc": "Ȍ",
+      "fold": "ȍ"
+    },
+    {
+      "code": 525,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ȍ",
+      "nfc": "ȍ",
+      "fold": "ȍ"
+    },
+    {
+      "code": 526,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ȏ",
+      "nfc": "Ȏ",
+      "fold": "ȏ"
+    },
+    {
+      "code": 527,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ȏ",
+      "nfc": "ȏ",
+      "fold": "ȏ"
+    },
+    {
+      "code": 528,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ȑ",
+      "nfc": "Ȑ",
+      "fold": "ȑ"
+    },
+    {
+      "code": 529,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ȑ",
+      "nfc": "ȑ",
+      "fold": "ȑ"
+    },
+    {
+      "code": 530,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ȓ",
+      "nfc": "Ȓ",
+      "fold": "ȓ"
+    },
+    {
+      "code": 531,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ȓ",
+      "nfc": "ȓ",
+      "fold": "ȓ"
+    },
+    {
+      "code": 532,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ȕ",
+      "nfc": "Ȕ",
+      "fold": "ȕ"
+    },
+    {
+      "code": 533,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ȕ",
+      "nfc": "ȕ",
+      "fold": "ȕ"
+    },
+    {
+      "code": 534,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ȗ",
+      "nfc": "Ȗ",
+      "fold": "ȗ"
+    },
+    {
+      "code": 535,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ȗ",
+      "nfc": "ȗ",
+      "fold": "ȗ"
+    },
+    {
+      "code": 536,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ș",
+      "nfc": "Ș",
+      "fold": "ș"
+    },
+    {
+      "code": 537,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ș",
+      "nfc": "ș",
+      "fold": "ș"
+    },
+    {
+      "code": 538,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ț",
+      "nfc": "Ț",
+      "fold": "ț"
+    },
+    {
+      "code": 539,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ț",
+      "nfc": "ț",
+      "fold": "ț"
+    },
+    {
+      "code": 542,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ȟ",
+      "nfc": "Ȟ",
+      "fold": "ȟ"
+    },
+    {
+      "code": 543,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ȟ",
+      "nfc": "ȟ",
+      "fold": "ȟ"
+    },
+    {
+      "code": 550,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ȧ",
+      "nfc": "Ȧ",
+      "fold": "ȧ"
+    },
+    {
+      "code": 551,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ȧ",
+      "nfc": "ȧ",
+      "fold": "ȧ"
+    },
+    {
+      "code": 552,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ȩ",
+      "nfc": "Ȩ",
+      "fold": "ȩ"
+    },
+    {
+      "code": 553,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ȩ",
+      "nfc": "ȩ",
+      "fold": "ȩ"
+    },
+    {
+      "code": 554,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ȫ",
+      "nfc": "Ȫ",
+      "fold": "ȫ"
+    },
+    {
+      "code": 555,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ȫ",
+      "nfc": "ȫ",
+      "fold": "ȫ"
+    },
+    {
+      "code": 556,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ȭ",
+      "nfc": "Ȭ",
+      "fold": "ȭ"
+    },
+    {
+      "code": 557,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ȭ",
+      "nfc": "ȭ",
+      "fold": "ȭ"
+    },
+    {
+      "code": 558,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ȯ",
+      "nfc": "Ȯ",
+      "fold": "ȯ"
+    },
+    {
+      "code": 559,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ȯ",
+      "nfc": "ȯ",
+      "fold": "ȯ"
+    },
+    {
+      "code": 560,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ȱ",
+      "nfc": "Ȱ",
+      "fold": "ȱ"
+    },
+    {
+      "code": 561,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ȱ",
+      "nfc": "ȱ",
+      "fold": "ȱ"
+    },
+    {
+      "code": 562,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ȳ",
+      "nfc": "Ȳ",
+      "fold": "ȳ"
+    },
+    {
+      "code": 563,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ȳ",
+      "nfc": "ȳ",
+      "fold": "ȳ"
+    },
+    {
+      "code": 768,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̀",
+      "nfc": "̀",
+      "fold": "̀"
+    },
+    {
+      "code": 769,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "́",
+      "nfc": "́",
+      "fold": "́"
+    },
+    {
+      "code": 770,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̂",
+      "nfc": "̂",
+      "fold": "̂"
+    },
+    {
+      "code": 771,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̃",
+      "nfc": "̃",
+      "fold": "̃"
+    },
+    {
+      "code": 772,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̄",
+      "nfc": "̄",
+      "fold": "̄"
+    },
+    {
+      "code": 773,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̅",
+      "nfc": "̅",
+      "fold": "̅"
+    },
+    {
+      "code": 774,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̆",
+      "nfc": "̆",
+      "fold": "̆"
+    },
+    {
+      "code": 775,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̇",
+      "nfc": "̇",
+      "fold": "̇"
+    },
+    {
+      "code": 776,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̈",
+      "nfc": "̈",
+      "fold": "̈"
+    },
+    {
+      "code": 777,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̉",
+      "nfc": "̉",
+      "fold": "̉"
+    },
+    {
+      "code": 778,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̊",
+      "nfc": "̊",
+      "fold": "̊"
+    },
+    {
+      "code": 779,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̋",
+      "nfc": "̋",
+      "fold": "̋"
+    },
+    {
+      "code": 780,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̌",
+      "nfc": "̌",
+      "fold": "̌"
+    },
+    {
+      "code": 781,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̍",
+      "nfc": "̍",
+      "fold": "̍"
+    },
+    {
+      "code": 782,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̎",
+      "nfc": "̎",
+      "fold": "̎"
+    },
+    {
+      "code": 783,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̏",
+      "nfc": "̏",
+      "fold": "̏"
+    },
+    {
+      "code": 784,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̐",
+      "nfc": "̐",
+      "fold": "̐"
+    },
+    {
+      "code": 785,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̑",
+      "nfc": "̑",
+      "fold": "̑"
+    },
+    {
+      "code": 786,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̒",
+      "nfc": "̒",
+      "fold": "̒"
+    },
+    {
+      "code": 787,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̓",
+      "nfc": "̓",
+      "fold": "̓"
+    },
+    {
+      "code": 788,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̔",
+      "nfc": "̔",
+      "fold": "̔"
+    },
+    {
+      "code": 789,
+      "allowed": true,
+      "ccc": 232,
+      "nfd": "̕",
+      "nfc": "̕",
+      "fold": "̕"
+    },
+    {
+      "code": 790,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̖",
+      "nfc": "̖",
+      "fold": "̖"
+    },
+    {
+      "code": 791,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̗",
+      "nfc": "̗",
+      "fold": "̗"
+    },
+    {
+      "code": 792,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̘",
+      "nfc": "̘",
+      "fold": "̘"
+    },
+    {
+      "code": 793,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̙",
+      "nfc": "̙",
+      "fold": "̙"
+    },
+    {
+      "code": 794,
+      "allowed": true,
+      "ccc": 232,
+      "nfd": "̚",
+      "nfc": "̚",
+      "fold": "̚"
+    },
+    {
+      "code": 795,
+      "allowed": true,
+      "ccc": 216,
+      "nfd": "̛",
+      "nfc": "̛",
+      "fold": "̛"
+    },
+    {
+      "code": 796,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̜",
+      "nfc": "̜",
+      "fold": "̜"
+    },
+    {
+      "code": 797,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̝",
+      "nfc": "̝",
+      "fold": "̝"
+    },
+    {
+      "code": 798,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̞",
+      "nfc": "̞",
+      "fold": "̞"
+    },
+    {
+      "code": 799,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̟",
+      "nfc": "̟",
+      "fold": "̟"
+    },
+    {
+      "code": 800,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̠",
+      "nfc": "̠",
+      "fold": "̠"
+    },
+    {
+      "code": 801,
+      "allowed": true,
+      "ccc": 202,
+      "nfd": "̡",
+      "nfc": "̡",
+      "fold": "̡"
+    },
+    {
+      "code": 802,
+      "allowed": true,
+      "ccc": 202,
+      "nfd": "̢",
+      "nfc": "̢",
+      "fold": "̢"
+    },
+    {
+      "code": 803,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̣",
+      "nfc": "̣",
+      "fold": "̣"
+    },
+    {
+      "code": 804,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̤",
+      "nfc": "̤",
+      "fold": "̤"
+    },
+    {
+      "code": 805,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̥",
+      "nfc": "̥",
+      "fold": "̥"
+    },
+    {
+      "code": 806,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̦",
+      "nfc": "̦",
+      "fold": "̦"
+    },
+    {
+      "code": 807,
+      "allowed": true,
+      "ccc": 202,
+      "nfd": "̧",
+      "nfc": "̧",
+      "fold": "̧"
+    },
+    {
+      "code": 808,
+      "allowed": true,
+      "ccc": 202,
+      "nfd": "̨",
+      "nfc": "̨",
+      "fold": "̨"
+    },
+    {
+      "code": 809,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̩",
+      "nfc": "̩",
+      "fold": "̩"
+    },
+    {
+      "code": 810,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̪",
+      "nfc": "̪",
+      "fold": "̪"
+    },
+    {
+      "code": 811,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̫",
+      "nfc": "̫",
+      "fold": "̫"
+    },
+    {
+      "code": 812,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̬",
+      "nfc": "̬",
+      "fold": "̬"
+    },
+    {
+      "code": 813,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̭",
+      "nfc": "̭",
+      "fold": "̭"
+    },
+    {
+      "code": 814,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̮",
+      "nfc": "̮",
+      "fold": "̮"
+    },
+    {
+      "code": 815,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̯",
+      "nfc": "̯",
+      "fold": "̯"
+    },
+    {
+      "code": 816,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̰",
+      "nfc": "̰",
+      "fold": "̰"
+    },
+    {
+      "code": 817,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̱",
+      "nfc": "̱",
+      "fold": "̱"
+    },
+    {
+      "code": 818,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̲",
+      "nfc": "̲",
+      "fold": "̲"
+    },
+    {
+      "code": 819,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̳",
+      "nfc": "̳",
+      "fold": "̳"
+    },
+    {
+      "code": 820,
+      "allowed": true,
+      "ccc": 1,
+      "nfd": "̴",
+      "nfc": "̴",
+      "fold": "̴"
+    },
+    {
+      "code": 821,
+      "allowed": true,
+      "ccc": 1,
+      "nfd": "̵",
+      "nfc": "̵",
+      "fold": "̵"
+    },
+    {
+      "code": 822,
+      "allowed": true,
+      "ccc": 1,
+      "nfd": "̶",
+      "nfc": "̶",
+      "fold": "̶"
+    },
+    {
+      "code": 823,
+      "allowed": true,
+      "ccc": 1,
+      "nfd": "̷",
+      "nfc": "̷",
+      "fold": "̷"
+    },
+    {
+      "code": 824,
+      "allowed": true,
+      "ccc": 1,
+      "nfd": "̸",
+      "nfc": "̸",
+      "fold": "̸"
+    },
+    {
+      "code": 825,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̹",
+      "nfc": "̹",
+      "fold": "̹"
+    },
+    {
+      "code": 826,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̺",
+      "nfc": "̺",
+      "fold": "̺"
+    },
+    {
+      "code": 827,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̻",
+      "nfc": "̻",
+      "fold": "̻"
+    },
+    {
+      "code": 828,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "̼",
+      "nfc": "̼",
+      "fold": "̼"
+    },
+    {
+      "code": 829,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̽",
+      "nfc": "̽",
+      "fold": "̽"
+    },
+    {
+      "code": 830,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̾",
+      "nfc": "̾",
+      "fold": "̾"
+    },
+    {
+      "code": 831,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̿",
+      "nfc": "̿",
+      "fold": "̿"
+    },
+    {
+      "code": 832,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̀",
+      "nfc": "̀",
+      "fold": "̀"
+    },
+    {
+      "code": 833,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "́",
+      "nfc": "́",
+      "fold": "́"
+    },
+    {
+      "code": 834,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "͂",
+      "nfc": "͂",
+      "fold": "͂"
+    },
+    {
+      "code": 835,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̓",
+      "nfc": "̓",
+      "fold": "̓"
+    },
+    {
+      "code": 836,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "̈́",
+      "nfc": "̈́",
+      "fold": "̈́"
+    },
+    {
+      "code": 837,
+      "allowed": true,
+      "ccc": 240,
+      "nfd": "ͅ",
+      "nfc": "ͅ",
+      "fold": "ι"
+    },
+    {
+      "code": 838,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "͆",
+      "nfc": "͆",
+      "fold": "͆"
+    },
+    {
+      "code": 839,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "͇",
+      "nfc": "͇",
+      "fold": "͇"
+    },
+    {
+      "code": 840,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "͈",
+      "nfc": "͈",
+      "fold": "͈"
+    },
+    {
+      "code": 841,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "͉",
+      "nfc": "͉",
+      "fold": "͉"
+    },
+    {
+      "code": 842,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "͊",
+      "nfc": "͊",
+      "fold": "͊"
+    },
+    {
+      "code": 843,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "͋",
+      "nfc": "͋",
+      "fold": "͋"
+    },
+    {
+      "code": 844,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "͌",
+      "nfc": "͌",
+      "fold": "͌"
+    },
+    {
+      "code": 845,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "͍",
+      "nfc": "͍",
+      "fold": "͍"
+    },
+    {
+      "code": 846,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "͎",
+      "nfc": "͎",
+      "fold": "͎"
+    },
+    {
+      "code": 848,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "͐",
+      "nfc": "͐",
+      "fold": "͐"
+    },
+    {
+      "code": 849,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "͑",
+      "nfc": "͑",
+      "fold": "͑"
+    },
+    {
+      "code": 850,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "͒",
+      "nfc": "͒",
+      "fold": "͒"
+    },
+    {
+      "code": 851,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "͓",
+      "nfc": "͓",
+      "fold": "͓"
+    },
+    {
+      "code": 852,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "͔",
+      "nfc": "͔",
+      "fold": "͔"
+    },
+    {
+      "code": 853,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "͕",
+      "nfc": "͕",
+      "fold": "͕"
+    },
+    {
+      "code": 854,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "͖",
+      "nfc": "͖",
+      "fold": "͖"
+    },
+    {
+      "code": 855,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "͗",
+      "nfc": "͗",
+      "fold": "͗"
+    },
+    {
+      "code": 856,
+      "allowed": true,
+      "ccc": 232,
+      "nfd": "͘",
+      "nfc": "͘",
+      "fold": "͘"
+    },
+    {
+      "code": 857,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "͙",
+      "nfc": "͙",
+      "fold": "͙"
+    },
+    {
+      "code": 858,
+      "allowed": true,
+      "ccc": 220,
+      "nfd": "͚",
+      "nfc": "͚",
+      "fold": "͚"
+    },
+    {
+      "code": 859,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "͛",
+      "nfc": "͛",
+      "fold": "͛"
+    },
+    {
+      "code": 860,
+      "allowed": true,
+      "ccc": 233,
+      "nfd": "͜",
+      "nfc": "͜",
+      "fold": "͜"
+    },
+    {
+      "code": 861,
+      "allowed": true,
+      "ccc": 234,
+      "nfd": "͝",
+      "nfc": "͝",
+      "fold": "͝"
+    },
+    {
+      "code": 862,
+      "allowed": true,
+      "ccc": 234,
+      "nfd": "͞",
+      "nfc": "͞",
+      "fold": "͞"
+    },
+    {
+      "code": 863,
+      "allowed": true,
+      "ccc": 233,
+      "nfd": "͟",
+      "nfc": "͟",
+      "fold": "͟"
+    },
+    {
+      "code": 864,
+      "allowed": true,
+      "ccc": 234,
+      "nfd": "͠",
+      "nfc": "͠",
+      "fold": "͠"
+    },
+    {
+      "code": 865,
+      "allowed": true,
+      "ccc": 234,
+      "nfd": "͡",
+      "nfc": "͡",
+      "fold": "͡"
+    },
+    {
+      "code": 866,
+      "allowed": true,
+      "ccc": 233,
+      "nfd": "͢",
+      "nfc": "͢",
+      "fold": "͢"
+    },
+    {
+      "code": 867,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "ͣ",
+      "nfc": "ͣ",
+      "fold": "ͣ"
+    },
+    {
+      "code": 868,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "ͤ",
+      "nfc": "ͤ",
+      "fold": "ͤ"
+    },
+    {
+      "code": 869,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "ͥ",
+      "nfc": "ͥ",
+      "fold": "ͥ"
+    },
+    {
+      "code": 870,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "ͦ",
+      "nfc": "ͦ",
+      "fold": "ͦ"
+    },
+    {
+      "code": 871,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "ͧ",
+      "nfc": "ͧ",
+      "fold": "ͧ"
+    },
+    {
+      "code": 872,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "ͨ",
+      "nfc": "ͨ",
+      "fold": "ͨ"
+    },
+    {
+      "code": 873,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "ͩ",
+      "nfc": "ͩ",
+      "fold": "ͩ"
+    },
+    {
+      "code": 874,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "ͪ",
+      "nfc": "ͪ",
+      "fold": "ͪ"
+    },
+    {
+      "code": 875,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "ͫ",
+      "nfc": "ͫ",
+      "fold": "ͫ"
+    },
+    {
+      "code": 876,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "ͬ",
+      "nfc": "ͬ",
+      "fold": "ͬ"
+    },
+    {
+      "code": 877,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "ͭ",
+      "nfc": "ͭ",
+      "fold": "ͭ"
+    },
+    {
+      "code": 878,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "ͮ",
+      "nfc": "ͮ",
+      "fold": "ͮ"
+    },
+    {
+      "code": 879,
+      "allowed": true,
+      "ccc": 230,
+      "nfd": "ͯ",
+      "nfc": "ͯ",
+      "fold": "ͯ"
+    },
+    {
+      "code": 912,
+      "allowed": false,
+      "ccc": 0,
+      "nfd": "ΐ",
+      "nfc": "ΐ",
+      "fold": "ΐ"
+    },
+    {
+      "code": 943,
+      "allowed": false,
+      "ccc": 0,
+      "nfd": "ί",
+      "nfc": "ί",
+      "fold": "ί"
+    },
+    {
+      "code": 953,
+      "allowed": false,
+      "ccc": 0,
+      "nfd": "ι",
+      "nfc": "ι",
+      "fold": "ι"
+    },
+    {
+      "code": 970,
+      "allowed": false,
+      "ccc": 0,
+      "nfd": "ϊ",
+      "nfc": "ϊ",
+      "fold": "ϊ"
+    },
+    {
+      "code": 7680,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḁ",
+      "nfc": "Ḁ",
+      "fold": "ḁ"
+    },
+    {
+      "code": 7681,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḁ",
+      "nfc": "ḁ",
+      "fold": "ḁ"
+    },
+    {
+      "code": 7682,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḃ",
+      "nfc": "Ḃ",
+      "fold": "ḃ"
+    },
+    {
+      "code": 7683,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḃ",
+      "nfc": "ḃ",
+      "fold": "ḃ"
+    },
+    {
+      "code": 7684,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḅ",
+      "nfc": "Ḅ",
+      "fold": "ḅ"
+    },
+    {
+      "code": 7685,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḅ",
+      "nfc": "ḅ",
+      "fold": "ḅ"
+    },
+    {
+      "code": 7686,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḇ",
+      "nfc": "Ḇ",
+      "fold": "ḇ"
+    },
+    {
+      "code": 7687,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḇ",
+      "nfc": "ḇ",
+      "fold": "ḇ"
+    },
+    {
+      "code": 7688,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḉ",
+      "nfc": "Ḉ",
+      "fold": "ḉ"
+    },
+    {
+      "code": 7689,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḉ",
+      "nfc": "ḉ",
+      "fold": "ḉ"
+    },
+    {
+      "code": 7690,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḋ",
+      "nfc": "Ḋ",
+      "fold": "ḋ"
+    },
+    {
+      "code": 7691,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḋ",
+      "nfc": "ḋ",
+      "fold": "ḋ"
+    },
+    {
+      "code": 7692,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḍ",
+      "nfc": "Ḍ",
+      "fold": "ḍ"
+    },
+    {
+      "code": 7693,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḍ",
+      "nfc": "ḍ",
+      "fold": "ḍ"
+    },
+    {
+      "code": 7694,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḏ",
+      "nfc": "Ḏ",
+      "fold": "ḏ"
+    },
+    {
+      "code": 7695,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḏ",
+      "nfc": "ḏ",
+      "fold": "ḏ"
+    },
+    {
+      "code": 7696,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḑ",
+      "nfc": "Ḑ",
+      "fold": "ḑ"
+    },
+    {
+      "code": 7697,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḑ",
+      "nfc": "ḑ",
+      "fold": "ḑ"
+    },
+    {
+      "code": 7698,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḓ",
+      "nfc": "Ḓ",
+      "fold": "ḓ"
+    },
+    {
+      "code": 7699,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḓ",
+      "nfc": "ḓ",
+      "fold": "ḓ"
+    },
+    {
+      "code": 7700,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḕ",
+      "nfc": "Ḕ",
+      "fold": "ḕ"
+    },
+    {
+      "code": 7701,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḕ",
+      "nfc": "ḕ",
+      "fold": "ḕ"
+    },
+    {
+      "code": 7702,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḗ",
+      "nfc": "Ḗ",
+      "fold": "ḗ"
+    },
+    {
+      "code": 7703,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḗ",
+      "nfc": "ḗ",
+      "fold": "ḗ"
+    },
+    {
+      "code": 7704,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḙ",
+      "nfc": "Ḙ",
+      "fold": "ḙ"
+    },
+    {
+      "code": 7705,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḙ",
+      "nfc": "ḙ",
+      "fold": "ḙ"
+    },
+    {
+      "code": 7706,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḛ",
+      "nfc": "Ḛ",
+      "fold": "ḛ"
+    },
+    {
+      "code": 7707,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḛ",
+      "nfc": "ḛ",
+      "fold": "ḛ"
+    },
+    {
+      "code": 7708,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḝ",
+      "nfc": "Ḝ",
+      "fold": "ḝ"
+    },
+    {
+      "code": 7709,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḝ",
+      "nfc": "ḝ",
+      "fold": "ḝ"
+    },
+    {
+      "code": 7710,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḟ",
+      "nfc": "Ḟ",
+      "fold": "ḟ"
+    },
+    {
+      "code": 7711,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḟ",
+      "nfc": "ḟ",
+      "fold": "ḟ"
+    },
+    {
+      "code": 7712,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḡ",
+      "nfc": "Ḡ",
+      "fold": "ḡ"
+    },
+    {
+      "code": 7713,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḡ",
+      "nfc": "ḡ",
+      "fold": "ḡ"
+    },
+    {
+      "code": 7714,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḣ",
+      "nfc": "Ḣ",
+      "fold": "ḣ"
+    },
+    {
+      "code": 7715,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḣ",
+      "nfc": "ḣ",
+      "fold": "ḣ"
+    },
+    {
+      "code": 7716,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḥ",
+      "nfc": "Ḥ",
+      "fold": "ḥ"
+    },
+    {
+      "code": 7717,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḥ",
+      "nfc": "ḥ",
+      "fold": "ḥ"
+    },
+    {
+      "code": 7718,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḧ",
+      "nfc": "Ḧ",
+      "fold": "ḧ"
+    },
+    {
+      "code": 7719,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḧ",
+      "nfc": "ḧ",
+      "fold": "ḧ"
+    },
+    {
+      "code": 7720,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḩ",
+      "nfc": "Ḩ",
+      "fold": "ḩ"
+    },
+    {
+      "code": 7721,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḩ",
+      "nfc": "ḩ",
+      "fold": "ḩ"
+    },
+    {
+      "code": 7722,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḫ",
+      "nfc": "Ḫ",
+      "fold": "ḫ"
+    },
+    {
+      "code": 7723,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḫ",
+      "nfc": "ḫ",
+      "fold": "ḫ"
+    },
+    {
+      "code": 7724,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḭ",
+      "nfc": "Ḭ",
+      "fold": "ḭ"
+    },
+    {
+      "code": 7725,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḭ",
+      "nfc": "ḭ",
+      "fold": "ḭ"
+    },
+    {
+      "code": 7726,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḯ",
+      "nfc": "Ḯ",
+      "fold": "ḯ"
+    },
+    {
+      "code": 7727,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḯ",
+      "nfc": "ḯ",
+      "fold": "ḯ"
+    },
+    {
+      "code": 7728,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḱ",
+      "nfc": "Ḱ",
+      "fold": "ḱ"
+    },
+    {
+      "code": 7729,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḱ",
+      "nfc": "ḱ",
+      "fold": "ḱ"
+    },
+    {
+      "code": 7730,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḳ",
+      "nfc": "Ḳ",
+      "fold": "ḳ"
+    },
+    {
+      "code": 7731,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḳ",
+      "nfc": "ḳ",
+      "fold": "ḳ"
+    },
+    {
+      "code": 7732,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḵ",
+      "nfc": "Ḵ",
+      "fold": "ḵ"
+    },
+    {
+      "code": 7733,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḵ",
+      "nfc": "ḵ",
+      "fold": "ḵ"
+    },
+    {
+      "code": 7734,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḷ",
+      "nfc": "Ḷ",
+      "fold": "ḷ"
+    },
+    {
+      "code": 7735,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḷ",
+      "nfc": "ḷ",
+      "fold": "ḷ"
+    },
+    {
+      "code": 7736,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḹ",
+      "nfc": "Ḹ",
+      "fold": "ḹ"
+    },
+    {
+      "code": 7737,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḹ",
+      "nfc": "ḹ",
+      "fold": "ḹ"
+    },
+    {
+      "code": 7738,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḻ",
+      "nfc": "Ḻ",
+      "fold": "ḻ"
+    },
+    {
+      "code": 7739,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḻ",
+      "nfc": "ḻ",
+      "fold": "ḻ"
+    },
+    {
+      "code": 7740,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḽ",
+      "nfc": "Ḽ",
+      "fold": "ḽ"
+    },
+    {
+      "code": 7741,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḽ",
+      "nfc": "ḽ",
+      "fold": "ḽ"
+    },
+    {
+      "code": 7742,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ḿ",
+      "nfc": "Ḿ",
+      "fold": "ḿ"
+    },
+    {
+      "code": 7743,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ḿ",
+      "nfc": "ḿ",
+      "fold": "ḿ"
+    },
+    {
+      "code": 7744,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṁ",
+      "nfc": "Ṁ",
+      "fold": "ṁ"
+    },
+    {
+      "code": 7745,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṁ",
+      "nfc": "ṁ",
+      "fold": "ṁ"
+    },
+    {
+      "code": 7746,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṃ",
+      "nfc": "Ṃ",
+      "fold": "ṃ"
+    },
+    {
+      "code": 7747,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṃ",
+      "nfc": "ṃ",
+      "fold": "ṃ"
+    },
+    {
+      "code": 7748,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṅ",
+      "nfc": "Ṅ",
+      "fold": "ṅ"
+    },
+    {
+      "code": 7749,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṅ",
+      "nfc": "ṅ",
+      "fold": "ṅ"
+    },
+    {
+      "code": 7750,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṇ",
+      "nfc": "Ṇ",
+      "fold": "ṇ"
+    },
+    {
+      "code": 7751,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṇ",
+      "nfc": "ṇ",
+      "fold": "ṇ"
+    },
+    {
+      "code": 7752,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṉ",
+      "nfc": "Ṉ",
+      "fold": "ṉ"
+    },
+    {
+      "code": 7753,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṉ",
+      "nfc": "ṉ",
+      "fold": "ṉ"
+    },
+    {
+      "code": 7754,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṋ",
+      "nfc": "Ṋ",
+      "fold": "ṋ"
+    },
+    {
+      "code": 7755,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṋ",
+      "nfc": "ṋ",
+      "fold": "ṋ"
+    },
+    {
+      "code": 7756,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṍ",
+      "nfc": "Ṍ",
+      "fold": "ṍ"
+    },
+    {
+      "code": 7757,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṍ",
+      "nfc": "ṍ",
+      "fold": "ṍ"
+    },
+    {
+      "code": 7758,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṏ",
+      "nfc": "Ṏ",
+      "fold": "ṏ"
+    },
+    {
+      "code": 7759,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṏ",
+      "nfc": "ṏ",
+      "fold": "ṏ"
+    },
+    {
+      "code": 7760,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṑ",
+      "nfc": "Ṑ",
+      "fold": "ṑ"
+    },
+    {
+      "code": 7761,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṑ",
+      "nfc": "ṑ",
+      "fold": "ṑ"
+    },
+    {
+      "code": 7762,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṓ",
+      "nfc": "Ṓ",
+      "fold": "ṓ"
+    },
+    {
+      "code": 7763,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṓ",
+      "nfc": "ṓ",
+      "fold": "ṓ"
+    },
+    {
+      "code": 7764,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṕ",
+      "nfc": "Ṕ",
+      "fold": "ṕ"
+    },
+    {
+      "code": 7765,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṕ",
+      "nfc": "ṕ",
+      "fold": "ṕ"
+    },
+    {
+      "code": 7766,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṗ",
+      "nfc": "Ṗ",
+      "fold": "ṗ"
+    },
+    {
+      "code": 7767,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṗ",
+      "nfc": "ṗ",
+      "fold": "ṗ"
+    },
+    {
+      "code": 7768,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṙ",
+      "nfc": "Ṙ",
+      "fold": "ṙ"
+    },
+    {
+      "code": 7769,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṙ",
+      "nfc": "ṙ",
+      "fold": "ṙ"
+    },
+    {
+      "code": 7770,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṛ",
+      "nfc": "Ṛ",
+      "fold": "ṛ"
+    },
+    {
+      "code": 7771,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṛ",
+      "nfc": "ṛ",
+      "fold": "ṛ"
+    },
+    {
+      "code": 7772,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṝ",
+      "nfc": "Ṝ",
+      "fold": "ṝ"
+    },
+    {
+      "code": 7773,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṝ",
+      "nfc": "ṝ",
+      "fold": "ṝ"
+    },
+    {
+      "code": 7774,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṟ",
+      "nfc": "Ṟ",
+      "fold": "ṟ"
+    },
+    {
+      "code": 7775,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṟ",
+      "nfc": "ṟ",
+      "fold": "ṟ"
+    },
+    {
+      "code": 7776,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṡ",
+      "nfc": "Ṡ",
+      "fold": "ṡ"
+    },
+    {
+      "code": 7777,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṡ",
+      "nfc": "ṡ",
+      "fold": "ṡ"
+    },
+    {
+      "code": 7778,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṣ",
+      "nfc": "Ṣ",
+      "fold": "ṣ"
+    },
+    {
+      "code": 7779,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṣ",
+      "nfc": "ṣ",
+      "fold": "ṣ"
+    },
+    {
+      "code": 7780,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṥ",
+      "nfc": "Ṥ",
+      "fold": "ṥ"
+    },
+    {
+      "code": 7781,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṥ",
+      "nfc": "ṥ",
+      "fold": "ṥ"
+    },
+    {
+      "code": 7782,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṧ",
+      "nfc": "Ṧ",
+      "fold": "ṧ"
+    },
+    {
+      "code": 7783,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṧ",
+      "nfc": "ṧ",
+      "fold": "ṧ"
+    },
+    {
+      "code": 7784,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṩ",
+      "nfc": "Ṩ",
+      "fold": "ṩ"
+    },
+    {
+      "code": 7785,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṩ",
+      "nfc": "ṩ",
+      "fold": "ṩ"
+    },
+    {
+      "code": 7786,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṫ",
+      "nfc": "Ṫ",
+      "fold": "ṫ"
+    },
+    {
+      "code": 7787,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṫ",
+      "nfc": "ṫ",
+      "fold": "ṫ"
+    },
+    {
+      "code": 7788,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṭ",
+      "nfc": "Ṭ",
+      "fold": "ṭ"
+    },
+    {
+      "code": 7789,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṭ",
+      "nfc": "ṭ",
+      "fold": "ṭ"
+    },
+    {
+      "code": 7790,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṯ",
+      "nfc": "Ṯ",
+      "fold": "ṯ"
+    },
+    {
+      "code": 7791,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṯ",
+      "nfc": "ṯ",
+      "fold": "ṯ"
+    },
+    {
+      "code": 7792,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṱ",
+      "nfc": "Ṱ",
+      "fold": "ṱ"
+    },
+    {
+      "code": 7793,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṱ",
+      "nfc": "ṱ",
+      "fold": "ṱ"
+    },
+    {
+      "code": 7794,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṳ",
+      "nfc": "Ṳ",
+      "fold": "ṳ"
+    },
+    {
+      "code": 7795,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṳ",
+      "nfc": "ṳ",
+      "fold": "ṳ"
+    },
+    {
+      "code": 7796,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṵ",
+      "nfc": "Ṵ",
+      "fold": "ṵ"
+    },
+    {
+      "code": 7797,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṵ",
+      "nfc": "ṵ",
+      "fold": "ṵ"
+    },
+    {
+      "code": 7798,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṷ",
+      "nfc": "Ṷ",
+      "fold": "ṷ"
+    },
+    {
+      "code": 7799,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṷ",
+      "nfc": "ṷ",
+      "fold": "ṷ"
+    },
+    {
+      "code": 7800,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṹ",
+      "nfc": "Ṹ",
+      "fold": "ṹ"
+    },
+    {
+      "code": 7801,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṹ",
+      "nfc": "ṹ",
+      "fold": "ṹ"
+    },
+    {
+      "code": 7802,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṻ",
+      "nfc": "Ṻ",
+      "fold": "ṻ"
+    },
+    {
+      "code": 7803,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṻ",
+      "nfc": "ṻ",
+      "fold": "ṻ"
+    },
+    {
+      "code": 7804,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṽ",
+      "nfc": "Ṽ",
+      "fold": "ṽ"
+    },
+    {
+      "code": 7805,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṽ",
+      "nfc": "ṽ",
+      "fold": "ṽ"
+    },
+    {
+      "code": 7806,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ṿ",
+      "nfc": "Ṿ",
+      "fold": "ṿ"
+    },
+    {
+      "code": 7807,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ṿ",
+      "nfc": "ṿ",
+      "fold": "ṿ"
+    },
+    {
+      "code": 7808,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ẁ",
+      "nfc": "Ẁ",
+      "fold": "ẁ"
+    },
+    {
+      "code": 7809,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẁ",
+      "nfc": "ẁ",
+      "fold": "ẁ"
+    },
+    {
+      "code": 7810,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ẃ",
+      "nfc": "Ẃ",
+      "fold": "ẃ"
+    },
+    {
+      "code": 7811,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẃ",
+      "nfc": "ẃ",
+      "fold": "ẃ"
+    },
+    {
+      "code": 7812,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ẅ",
+      "nfc": "Ẅ",
+      "fold": "ẅ"
+    },
+    {
+      "code": 7813,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẅ",
+      "nfc": "ẅ",
+      "fold": "ẅ"
+    },
+    {
+      "code": 7814,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ẇ",
+      "nfc": "Ẇ",
+      "fold": "ẇ"
+    },
+    {
+      "code": 7815,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẇ",
+      "nfc": "ẇ",
+      "fold": "ẇ"
+    },
+    {
+      "code": 7816,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ẉ",
+      "nfc": "Ẉ",
+      "fold": "ẉ"
+    },
+    {
+      "code": 7817,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẉ",
+      "nfc": "ẉ",
+      "fold": "ẉ"
+    },
+    {
+      "code": 7818,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ẋ",
+      "nfc": "Ẋ",
+      "fold": "ẋ"
+    },
+    {
+      "code": 7819,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẋ",
+      "nfc": "ẋ",
+      "fold": "ẋ"
+    },
+    {
+      "code": 7820,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ẍ",
+      "nfc": "Ẍ",
+      "fold": "ẍ"
+    },
+    {
+      "code": 7821,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẍ",
+      "nfc": "ẍ",
+      "fold": "ẍ"
+    },
+    {
+      "code": 7822,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ẏ",
+      "nfc": "Ẏ",
+      "fold": "ẏ"
+    },
+    {
+      "code": 7823,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẏ",
+      "nfc": "ẏ",
+      "fold": "ẏ"
+    },
+    {
+      "code": 7824,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ẑ",
+      "nfc": "Ẑ",
+      "fold": "ẑ"
+    },
+    {
+      "code": 7825,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẑ",
+      "nfc": "ẑ",
+      "fold": "ẑ"
+    },
+    {
+      "code": 7826,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ẓ",
+      "nfc": "Ẓ",
+      "fold": "ẓ"
+    },
+    {
+      "code": 7827,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẓ",
+      "nfc": "ẓ",
+      "fold": "ẓ"
+    },
+    {
+      "code": 7828,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ẕ",
+      "nfc": "Ẕ",
+      "fold": "ẕ"
+    },
+    {
+      "code": 7829,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẕ",
+      "nfc": "ẕ",
+      "fold": "ẕ"
+    },
+    {
+      "code": 7830,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẖ",
+      "nfc": "ẖ",
+      "fold": "ẖ"
+    },
+    {
+      "code": 7831,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẗ",
+      "nfc": "ẗ",
+      "fold": "ẗ"
+    },
+    {
+      "code": 7832,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẘ",
+      "nfc": "ẘ",
+      "fold": "ẘ"
+    },
+    {
+      "code": 7833,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẙ",
+      "nfc": "ẙ",
+      "fold": "ẙ"
+    },
+    {
+      "code": 7840,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ạ",
+      "nfc": "Ạ",
+      "fold": "ạ"
+    },
+    {
+      "code": 7841,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ạ",
+      "nfc": "ạ",
+      "fold": "ạ"
+    },
+    {
+      "code": 7842,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ả",
+      "nfc": "Ả",
+      "fold": "ả"
+    },
+    {
+      "code": 7843,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ả",
+      "nfc": "ả",
+      "fold": "ả"
+    },
+    {
+      "code": 7844,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ấ",
+      "nfc": "Ấ",
+      "fold": "ấ"
+    },
+    {
+      "code": 7845,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ấ",
+      "nfc": "ấ",
+      "fold": "ấ"
+    },
+    {
+      "code": 7846,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ầ",
+      "nfc": "Ầ",
+      "fold": "ầ"
+    },
+    {
+      "code": 7847,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ầ",
+      "nfc": "ầ",
+      "fold": "ầ"
+    },
+    {
+      "code": 7848,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ẩ",
+      "nfc": "Ẩ",
+      "fold": "ẩ"
+    },
+    {
+      "code": 7849,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẩ",
+      "nfc": "ẩ",
+      "fold": "ẩ"
+    },
+    {
+      "code": 7850,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ẫ",
+      "nfc": "Ẫ",
+      "fold": "ẫ"
+    },
+    {
+      "code": 7851,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẫ",
+      "nfc": "ẫ",
+      "fold": "ẫ"
+    },
+    {
+      "code": 7852,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ậ",
+      "nfc": "Ậ",
+      "fold": "ậ"
+    },
+    {
+      "code": 7853,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ậ",
+      "nfc": "ậ",
+      "fold": "ậ"
+    },
+    {
+      "code": 7854,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ắ",
+      "nfc": "Ắ",
+      "fold": "ắ"
+    },
+    {
+      "code": 7855,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ắ",
+      "nfc": "ắ",
+      "fold": "ắ"
+    },
+    {
+      "code": 7856,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ằ",
+      "nfc": "Ằ",
+      "fold": "ằ"
+    },
+    {
+      "code": 7857,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ằ",
+      "nfc": "ằ",
+      "fold": "ằ"
+    },
+    {
+      "code": 7858,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ẳ",
+      "nfc": "Ẳ",
+      "fold": "ẳ"
+    },
+    {
+      "code": 7859,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẳ",
+      "nfc": "ẳ",
+      "fold": "ẳ"
+    },
+    {
+      "code": 7860,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ẵ",
+      "nfc": "Ẵ",
+      "fold": "ẵ"
+    },
+    {
+      "code": 7861,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẵ",
+      "nfc": "ẵ",
+      "fold": "ẵ"
+    },
+    {
+      "code": 7862,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ặ",
+      "nfc": "Ặ",
+      "fold": "ặ"
+    },
+    {
+      "code": 7863,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ặ",
+      "nfc": "ặ",
+      "fold": "ặ"
+    },
+    {
+      "code": 7864,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ẹ",
+      "nfc": "Ẹ",
+      "fold": "ẹ"
+    },
+    {
+      "code": 7865,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẹ",
+      "nfc": "ẹ",
+      "fold": "ẹ"
+    },
+    {
+      "code": 7866,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ẻ",
+      "nfc": "Ẻ",
+      "fold": "ẻ"
+    },
+    {
+      "code": 7867,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẻ",
+      "nfc": "ẻ",
+      "fold": "ẻ"
+    },
+    {
+      "code": 7868,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ẽ",
+      "nfc": "Ẽ",
+      "fold": "ẽ"
+    },
+    {
+      "code": 7869,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ẽ",
+      "nfc": "ẽ",
+      "fold": "ẽ"
+    },
+    {
+      "code": 7870,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ế",
+      "nfc": "Ế",
+      "fold": "ế"
+    },
+    {
+      "code": 7871,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ế",
+      "nfc": "ế",
+      "fold": "ế"
+    },
+    {
+      "code": 7872,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ề",
+      "nfc": "Ề",
+      "fold": "ề"
+    },
+    {
+      "code": 7873,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ề",
+      "nfc": "ề",
+      "fold": "ề"
+    },
+    {
+      "code": 7874,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ể",
+      "nfc": "Ể",
+      "fold": "ể"
+    },
+    {
+      "code": 7875,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ể",
+      "nfc": "ể",
+      "fold": "ể"
+    },
+    {
+      "code": 7876,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ễ",
+      "nfc": "Ễ",
+      "fold": "ễ"
+    },
+    {
+      "code": 7877,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ễ",
+      "nfc": "ễ",
+      "fold": "ễ"
+    },
+    {
+      "code": 7878,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ệ",
+      "nfc": "Ệ",
+      "fold": "ệ"
+    },
+    {
+      "code": 7879,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ệ",
+      "nfc": "ệ",
+      "fold": "ệ"
+    },
+    {
+      "code": 7880,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ỉ",
+      "nfc": "Ỉ",
+      "fold": "ỉ"
+    },
+    {
+      "code": 7881,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ỉ",
+      "nfc": "ỉ",
+      "fold": "ỉ"
+    },
+    {
+      "code": 7882,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ị",
+      "nfc": "Ị",
+      "fold": "ị"
+    },
+    {
+      "code": 7883,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ị",
+      "nfc": "ị",
+      "fold": "ị"
+    },
+    {
+      "code": 7884,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ọ",
+      "nfc": "Ọ",
+      "fold": "ọ"
+    },
+    {
+      "code": 7885,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ọ",
+      "nfc": "ọ",
+      "fold": "ọ"
+    },
+    {
+      "code": 7886,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ỏ",
+      "nfc": "Ỏ",
+      "fold": "ỏ"
+    },
+    {
+      "code": 7887,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ỏ",
+      "nfc": "ỏ",
+      "fold": "ỏ"
+    },
+    {
+      "code": 7888,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ố",
+      "nfc": "Ố",
+      "fold": "ố"
+    },
+    {
+      "code": 7889,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ố",
+      "nfc": "ố",
+      "fold": "ố"
+    },
+    {
+      "code": 7890,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ồ",
+      "nfc": "Ồ",
+      "fold": "ồ"
+    },
+    {
+      "code": 7891,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ồ",
+      "nfc": "ồ",
+      "fold": "ồ"
+    },
+    {
+      "code": 7892,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ổ",
+      "nfc": "Ổ",
+      "fold": "ổ"
+    },
+    {
+      "code": 7893,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ổ",
+      "nfc": "ổ",
+      "fold": "ổ"
+    },
+    {
+      "code": 7894,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ỗ",
+      "nfc": "Ỗ",
+      "fold": "ỗ"
+    },
+    {
+      "code": 7895,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ỗ",
+      "nfc": "ỗ",
+      "fold": "ỗ"
+    },
+    {
+      "code": 7896,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ộ",
+      "nfc": "Ộ",
+      "fold": "ộ"
+    },
+    {
+      "code": 7897,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ộ",
+      "nfc": "ộ",
+      "fold": "ộ"
+    },
+    {
+      "code": 7898,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ớ",
+      "nfc": "Ớ",
+      "fold": "ớ"
+    },
+    {
+      "code": 7899,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ớ",
+      "nfc": "ớ",
+      "fold": "ớ"
+    },
+    {
+      "code": 7900,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ờ",
+      "nfc": "Ờ",
+      "fold": "ờ"
+    },
+    {
+      "code": 7901,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ờ",
+      "nfc": "ờ",
+      "fold": "ờ"
+    },
+    {
+      "code": 7902,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ở",
+      "nfc": "Ở",
+      "fold": "ở"
+    },
+    {
+      "code": 7903,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ở",
+      "nfc": "ở",
+      "fold": "ở"
+    },
+    {
+      "code": 7904,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ỡ",
+      "nfc": "Ỡ",
+      "fold": "ỡ"
+    },
+    {
+      "code": 7905,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ỡ",
+      "nfc": "ỡ",
+      "fold": "ỡ"
+    },
+    {
+      "code": 7906,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ợ",
+      "nfc": "Ợ",
+      "fold": "ợ"
+    },
+    {
+      "code": 7907,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ợ",
+      "nfc": "ợ",
+      "fold": "ợ"
+    },
+    {
+      "code": 7908,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ụ",
+      "nfc": "Ụ",
+      "fold": "ụ"
+    },
+    {
+      "code": 7909,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ụ",
+      "nfc": "ụ",
+      "fold": "ụ"
+    },
+    {
+      "code": 7910,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ủ",
+      "nfc": "Ủ",
+      "fold": "ủ"
+    },
+    {
+      "code": 7911,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ủ",
+      "nfc": "ủ",
+      "fold": "ủ"
+    },
+    {
+      "code": 7912,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ứ",
+      "nfc": "Ứ",
+      "fold": "ứ"
+    },
+    {
+      "code": 7913,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ứ",
+      "nfc": "ứ",
+      "fold": "ứ"
+    },
+    {
+      "code": 7914,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ừ",
+      "nfc": "Ừ",
+      "fold": "ừ"
+    },
+    {
+      "code": 7915,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ừ",
+      "nfc": "ừ",
+      "fold": "ừ"
+    },
+    {
+      "code": 7916,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ử",
+      "nfc": "Ử",
+      "fold": "ử"
+    },
+    {
+      "code": 7917,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ử",
+      "nfc": "ử",
+      "fold": "ử"
+    },
+    {
+      "code": 7918,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ữ",
+      "nfc": "Ữ",
+      "fold": "ữ"
+    },
+    {
+      "code": 7919,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ữ",
+      "nfc": "ữ",
+      "fold": "ữ"
+    },
+    {
+      "code": 7920,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ự",
+      "nfc": "Ự",
+      "fold": "ự"
+    },
+    {
+      "code": 7921,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ự",
+      "nfc": "ự",
+      "fold": "ự"
+    },
+    {
+      "code": 7922,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ỳ",
+      "nfc": "Ỳ",
+      "fold": "ỳ"
+    },
+    {
+      "code": 7923,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ỳ",
+      "nfc": "ỳ",
+      "fold": "ỳ"
+    },
+    {
+      "code": 7924,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ỵ",
+      "nfc": "Ỵ",
+      "fold": "ỵ"
+    },
+    {
+      "code": 7925,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ỵ",
+      "nfc": "ỵ",
+      "fold": "ỵ"
+    },
+    {
+      "code": 7926,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ỷ",
+      "nfc": "Ỷ",
+      "fold": "ỷ"
+    },
+    {
+      "code": 7927,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ỷ",
+      "nfc": "ỷ",
+      "fold": "ỷ"
+    },
+    {
+      "code": 7928,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Ỹ",
+      "nfc": "Ỹ",
+      "fold": "ỹ"
+    },
+    {
+      "code": 7929,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "ỹ",
+      "nfc": "ỹ",
+      "fold": "ỹ"
+    },
+    {
+      "code": 7984,
+      "allowed": false,
+      "ccc": 0,
+      "nfd": "ἰ",
+      "nfc": "ἰ",
+      "fold": "ἰ"
+    },
+    {
+      "code": 7985,
+      "allowed": false,
+      "ccc": 0,
+      "nfd": "ἱ",
+      "nfc": "ἱ",
+      "fold": "ἱ"
+    },
+    {
+      "code": 7986,
+      "allowed": false,
+      "ccc": 0,
+      "nfd": "ἲ",
+      "nfc": "ἲ",
+      "fold": "ἲ"
+    },
+    {
+      "code": 7987,
+      "allowed": false,
+      "ccc": 0,
+      "nfd": "ἳ",
+      "nfc": "ἳ",
+      "fold": "ἳ"
+    },
+    {
+      "code": 7988,
+      "allowed": false,
+      "ccc": 0,
+      "nfd": "ἴ",
+      "nfc": "ἴ",
+      "fold": "ἴ"
+    },
+    {
+      "code": 7989,
+      "allowed": false,
+      "ccc": 0,
+      "nfd": "ἵ",
+      "nfc": "ἵ",
+      "fold": "ἵ"
+    },
+    {
+      "code": 7990,
+      "allowed": false,
+      "ccc": 0,
+      "nfd": "ἶ",
+      "nfc": "ἶ",
+      "fold": "ἶ"
+    },
+    {
+      "code": 7991,
+      "allowed": false,
+      "ccc": 0,
+      "nfd": "ἷ",
+      "nfc": "ἷ",
+      "fold": "ἷ"
+    },
+    {
+      "code": 8054,
+      "allowed": false,
+      "ccc": 0,
+      "nfd": "ὶ",
+      "nfc": "ὶ",
+      "fold": "ὶ"
+    },
+    {
+      "code": 8055,
+      "allowed": false,
+      "ccc": 0,
+      "nfd": "ί",
+      "nfc": "ί",
+      "fold": "ί"
+    },
+    {
+      "code": 8126,
+      "allowed": false,
+      "ccc": 0,
+      "nfd": "ι",
+      "nfc": "ι",
+      "fold": "ι"
+    },
+    {
+      "code": 8144,
+      "allowed": false,
+      "ccc": 0,
+      "nfd": "ῐ",
+      "nfc": "ῐ",
+      "fold": "ῐ"
+    },
+    {
+      "code": 8145,
+      "allowed": false,
+      "ccc": 0,
+      "nfd": "ῑ",
+      "nfc": "ῑ",
+      "fold": "ῑ"
+    },
+    {
+      "code": 8146,
+      "allowed": false,
+      "ccc": 0,
+      "nfd": "ῒ",
+      "nfc": "ῒ",
+      "fold": "ῒ"
+    },
+    {
+      "code": 8147,
+      "allowed": false,
+      "ccc": 0,
+      "nfd": "ΐ",
+      "nfc": "ΐ",
+      "fold": "ΐ"
+    },
+    {
+      "code": 8150,
+      "allowed": false,
+      "ccc": 0,
+      "nfd": "ῖ",
+      "nfc": "ῖ",
+      "fold": "ῖ"
+    },
+    {
+      "code": 8151,
+      "allowed": false,
+      "ccc": 0,
+      "nfd": "ῗ",
+      "nfc": "ῗ",
+      "fold": "ῗ"
+    },
+    {
+      "code": 8490,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "K",
+      "nfc": "K",
+      "fold": "k"
+    },
+    {
+      "code": 8491,
+      "allowed": true,
+      "ccc": 0,
+      "nfd": "Å",
+      "nfc": "Å",
+      "fold": "å"
+    }
+  ],
+  "sequences": [
+    {
+      "input": "Á̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴",
+      "output": "Á̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴"
+    },
+    {
+      "input": "Á̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́",
+      "output": "Á̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴̴́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́́"
+    },
+    {
+      "input": "A̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅",
+      "output": "A̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅"
+    },
+    {
+      "input": "ί̈",
+      "output": "ί̈"
+    },
+    {
+      "input": "Áͅ",
+      "output": "Áͅ"
+    }
+  ],
+  "compositions": [
+    {
+      "input": "À",
+      "output": "À"
+    },
+    {
+      "input": "Á",
+      "output": "Á"
+    },
+    {
+      "input": "Â",
+      "output": "Â"
+    },
+    {
+      "input": "Ã",
+      "output": "Ã"
+    },
+    {
+      "input": "Ā",
+      "output": "Ā"
+    },
+    {
+      "input": "Ă",
+      "output": "Ă"
+    },
+    {
+      "input": "Ȧ",
+      "output": "Ȧ"
+    },
+    {
+      "input": "Ä",
+      "output": "Ä"
+    },
+    {
+      "input": "Ả",
+      "output": "Ả"
+    },
+    {
+      "input": "Å",
+      "output": "Å"
+    },
+    {
+      "input": "Ǎ",
+      "output": "Ǎ"
+    },
+    {
+      "input": "Ȁ",
+      "output": "Ȁ"
+    },
+    {
+      "input": "Ȃ",
+      "output": "Ȃ"
+    },
+    {
+      "input": "Ạ",
+      "output": "Ạ"
+    },
+    {
+      "input": "Ḁ",
+      "output": "Ḁ"
+    },
+    {
+      "input": "Ą",
+      "output": "Ą"
+    },
+    {
+      "input": "Ḃ",
+      "output": "Ḃ"
+    },
+    {
+      "input": "Ḅ",
+      "output": "Ḅ"
+    },
+    {
+      "input": "Ḇ",
+      "output": "Ḇ"
+    },
+    {
+      "input": "Ć",
+      "output": "Ć"
+    },
+    {
+      "input": "Ĉ",
+      "output": "Ĉ"
+    },
+    {
+      "input": "Ċ",
+      "output": "Ċ"
+    },
+    {
+      "input": "Č",
+      "output": "Č"
+    },
+    {
+      "input": "Ç",
+      "output": "Ç"
+    },
+    {
+      "input": "Ḋ",
+      "output": "Ḋ"
+    },
+    {
+      "input": "Ď",
+      "output": "Ď"
+    },
+    {
+      "input": "Ḍ",
+      "output": "Ḍ"
+    },
+    {
+      "input": "Ḑ",
+      "output": "Ḑ"
+    },
+    {
+      "input": "Ḓ",
+      "output": "Ḓ"
+    },
+    {
+      "input": "Ḏ",
+      "output": "Ḏ"
+    },
+    {
+      "input": "È",
+      "output": "È"
+    },
+    {
+      "input": "É",
+      "output": "É"
+    },
+    {
+      "input": "Ê",
+      "output": "Ê"
+    },
+    {
+      "input": "Ẽ",
+      "output": "Ẽ"
+    },
+    {
+      "input": "Ē",
+      "output": "Ē"
+    },
+    {
+      "input": "Ĕ",
+      "output": "Ĕ"
+    },
+    {
+      "input": "Ė",
+      "output": "Ė"
+    },
+    {
+      "input": "Ë",
+      "output": "Ë"
+    },
+    {
+      "input": "Ẻ",
+      "output": "Ẻ"
+    },
+    {
+      "input": "Ě",
+      "output": "Ě"
+    },
+    {
+      "input": "Ȅ",
+      "output": "Ȅ"
+    },
+    {
+      "input": "Ȇ",
+      "output": "Ȇ"
+    },
+    {
+      "input": "Ẹ",
+      "output": "Ẹ"
+    },
+    {
+      "input": "Ȩ",
+      "output": "Ȩ"
+    },
+    {
+      "input": "Ę",
+      "output": "Ę"
+    },
+    {
+      "input": "Ḙ",
+      "output": "Ḙ"
+    },
+    {
+      "input": "Ḛ",
+      "output": "Ḛ"
+    },
+    {
+      "input": "Ḟ",
+      "output": "Ḟ"
+    },
+    {
+      "input": "Ǵ",
+      "output": "Ǵ"
+    },
+    {
+      "input": "Ĝ",
+      "output": "Ĝ"
+    },
+    {
+      "input": "Ḡ",
+      "output": "Ḡ"
+    },
+    {
+      "input": "Ğ",
+      "output": "Ğ"
+    },
+    {
+      "input": "Ġ",
+      "output": "Ġ"
+    },
+    {
+      "input": "Ǧ",
+      "output": "Ǧ"
+    },
+    {
+      "input": "Ģ",
+      "output": "Ģ"
+    },
+    {
+      "input": "Ĥ",
+      "output": "Ĥ"
+    },
+    {
+      "input": "Ḣ",
+      "output": "Ḣ"
+    },
+    {
+      "input": "Ḧ",
+      "output": "Ḧ"
+    },
+    {
+      "input": "Ȟ",
+      "output": "Ȟ"
+    },
+    {
+      "input": "Ḥ",
+      "output": "Ḥ"
+    },
+    {
+      "input": "Ḩ",
+      "output": "Ḩ"
+    },
+    {
+      "input": "Ḫ",
+      "output": "Ḫ"
+    },
+    {
+      "input": "Ì",
+      "output": "Ì"
+    },
+    {
+      "input": "Í",
+      "output": "Í"
+    },
+    {
+      "input": "Î",
+      "output": "Î"
+    },
+    {
+      "input": "Ĩ",
+      "output": "Ĩ"
+    },
+    {
+      "input": "Ī",
+      "output": "Ī"
+    },
+    {
+      "input": "Ĭ",
+      "output": "Ĭ"
+    },
+    {
+      "input": "İ",
+      "output": "İ"
+    },
+    {
+      "input": "Ï",
+      "output": "Ï"
+    },
+    {
+      "input": "Ỉ",
+      "output": "Ỉ"
+    },
+    {
+      "input": "Ǐ",
+      "output": "Ǐ"
+    },
+    {
+      "input": "Ȉ",
+      "output": "Ȉ"
+    },
+    {
+      "input": "Ȋ",
+      "output": "Ȋ"
+    },
+    {
+      "input": "Ị",
+      "output": "Ị"
+    },
+    {
+      "input": "Į",
+      "output": "Į"
+    },
+    {
+      "input": "Ḭ",
+      "output": "Ḭ"
+    },
+    {
+      "input": "Ĵ",
+      "output": "Ĵ"
+    },
+    {
+      "input": "Ḱ",
+      "output": "Ḱ"
+    },
+    {
+      "input": "Ǩ",
+      "output": "Ǩ"
+    },
+    {
+      "input": "Ḳ",
+      "output": "Ḳ"
+    },
+    {
+      "input": "Ķ",
+      "output": "Ķ"
+    },
+    {
+      "input": "Ḵ",
+      "output": "Ḵ"
+    },
+    {
+      "input": "Ĺ",
+      "output": "Ĺ"
+    },
+    {
+      "input": "Ľ",
+      "output": "Ľ"
+    },
+    {
+      "input": "Ḷ",
+      "output": "Ḷ"
+    },
+    {
+      "input": "Ļ",
+      "output": "Ļ"
+    },
+    {
+      "input": "Ḽ",
+      "output": "Ḽ"
+    },
+    {
+      "input": "Ḻ",
+      "output": "Ḻ"
+    },
+    {
+      "input": "Ḿ",
+      "output": "Ḿ"
+    },
+    {
+      "input": "Ṁ",
+      "output": "Ṁ"
+    },
+    {
+      "input": "Ṃ",
+      "output": "Ṃ"
+    },
+    {
+      "input": "Ǹ",
+      "output": "Ǹ"
+    },
+    {
+      "input": "Ń",
+      "output": "Ń"
+    },
+    {
+      "input": "Ñ",
+      "output": "Ñ"
+    },
+    {
+      "input": "Ṅ",
+      "output": "Ṅ"
+    },
+    {
+      "input": "Ň",
+      "output": "Ň"
+    },
+    {
+      "input": "Ṇ",
+      "output": "Ṇ"
+    },
+    {
+      "input": "Ņ",
+      "output": "Ņ"
+    },
+    {
+      "input": "Ṋ",
+      "output": "Ṋ"
+    },
+    {
+      "input": "Ṉ",
+      "output": "Ṉ"
+    },
+    {
+      "input": "Ò",
+      "output": "Ò"
+    },
+    {
+      "input": "Ó",
+      "output": "Ó"
+    },
+    {
+      "input": "Ô",
+      "output": "Ô"
+    },
+    {
+      "input": "Õ",
+      "output": "Õ"
+    },
+    {
+      "input": "Ō",
+      "output": "Ō"
+    },
+    {
+      "input": "Ŏ",
+      "output": "Ŏ"
+    },
+    {
+      "input": "Ȯ",
+      "output": "Ȯ"
+    },
+    {
+      "input": "Ö",
+      "output": "Ö"
+    },
+    {
+      "input": "Ỏ",
+      "output": "Ỏ"
+    },
+    {
+      "input": "Ő",
+      "output": "Ő"
+    },
+    {
+      "input": "Ǒ",
+      "output": "Ǒ"
+    },
+    {
+      "input": "Ȍ",
+      "output": "Ȍ"
+    },
+    {
+      "input": "Ȏ",
+      "output": "Ȏ"
+    },
+    {
+      "input": "Ơ",
+      "output": "Ơ"
+    },
+    {
+      "input": "Ọ",
+      "output": "Ọ"
+    },
+    {
+      "input": "Ǫ",
+      "output": "Ǫ"
+    },
+    {
+      "input": "Ṕ",
+      "output": "Ṕ"
+    },
+    {
+      "input": "Ṗ",
+      "output": "Ṗ"
+    },
+    {
+      "input": "Ŕ",
+      "output": "Ŕ"
+    },
+    {
+      "input": "Ṙ",
+      "output": "Ṙ"
+    },
+    {
+      "input": "Ř",
+      "output": "Ř"
+    },
+    {
+      "input": "Ȑ",
+      "output": "Ȑ"
+    },
+    {
+      "input": "Ȓ",
+      "output": "Ȓ"
+    },
+    {
+      "input": "Ṛ",
+      "output": "Ṛ"
+    },
+    {
+      "input": "Ŗ",
+      "output": "Ŗ"
+    },
+    {
+      "input": "Ṟ",
+      "output": "Ṟ"
+    },
+    {
+      "input": "Ś",
+      "output": "Ś"
+    },
+    {
+      "input": "Ŝ",
+      "output": "Ŝ"
+    },
+    {
+      "input": "Ṡ",
+      "output": "Ṡ"
+    },
+    {
+      "input": "Š",
+      "output": "Š"
+    },
+    {
+      "input": "Ṣ",
+      "output": "Ṣ"
+    },
+    {
+      "input": "Ș",
+      "output": "Ș"
+    },
+    {
+      "input": "Ş",
+      "output": "Ş"
+    },
+    {
+      "input": "Ṫ",
+      "output": "Ṫ"
+    },
+    {
+      "input": "Ť",
+      "output": "Ť"
+    },
+    {
+      "input": "Ṭ",
+      "output": "Ṭ"
+    },
+    {
+      "input": "Ț",
+      "output": "Ț"
+    },
+    {
+      "input": "Ţ",
+      "output": "Ţ"
+    },
+    {
+      "input": "Ṱ",
+      "output": "Ṱ"
+    },
+    {
+      "input": "Ṯ",
+      "output": "Ṯ"
+    },
+    {
+      "input": "Ù",
+      "output": "Ù"
+    },
+    {
+      "input": "Ú",
+      "output": "Ú"
+    },
+    {
+      "input": "Û",
+      "output": "Û"
+    },
+    {
+      "input": "Ũ",
+      "output": "Ũ"
+    },
+    {
+      "input": "Ū",
+      "output": "Ū"
+    },
+    {
+      "input": "Ŭ",
+      "output": "Ŭ"
+    },
+    {
+      "input": "Ü",
+      "output": "Ü"
+    },
+    {
+      "input": "Ủ",
+      "output": "Ủ"
+    },
+    {
+      "input": "Ů",
+      "output": "Ů"
+    },
+    {
+      "input": "Ű",
+      "output": "Ű"
+    },
+    {
+      "input": "Ǔ",
+      "output": "Ǔ"
+    },
+    {
+      "input": "Ȕ",
+      "output": "Ȕ"
+    },
+    {
+      "input": "Ȗ",
+      "output": "Ȗ"
+    },
+    {
+      "input": "Ư",
+      "output": "Ư"
+    },
+    {
+      "input": "Ụ",
+      "output": "Ụ"
+    },
+    {
+      "input": "Ṳ",
+      "output": "Ṳ"
+    },
+    {
+      "input": "Ų",
+      "output": "Ų"
+    },
+    {
+      "input": "Ṷ",
+      "output": "Ṷ"
+    },
+    {
+      "input": "Ṵ",
+      "output": "Ṵ"
+    },
+    {
+      "input": "Ṽ",
+      "output": "Ṽ"
+    },
+    {
+      "input": "Ṿ",
+      "output": "Ṿ"
+    },
+    {
+      "input": "Ẁ",
+      "output": "Ẁ"
+    },
+    {
+      "input": "Ẃ",
+      "output": "Ẃ"
+    },
+    {
+      "input": "Ŵ",
+      "output": "Ŵ"
+    },
+    {
+      "input": "Ẇ",
+      "output": "Ẇ"
+    },
+    {
+      "input": "Ẅ",
+      "output": "Ẅ"
+    },
+    {
+      "input": "Ẉ",
+      "output": "Ẉ"
+    },
+    {
+      "input": "Ẋ",
+      "output": "Ẋ"
+    },
+    {
+      "input": "Ẍ",
+      "output": "Ẍ"
+    },
+    {
+      "input": "Ỳ",
+      "output": "Ỳ"
+    },
+    {
+      "input": "Ý",
+      "output": "Ý"
+    },
+    {
+      "input": "Ŷ",
+      "output": "Ŷ"
+    },
+    {
+      "input": "Ỹ",
+      "output": "Ỹ"
+    },
+    {
+      "input": "Ȳ",
+      "output": "Ȳ"
+    },
+    {
+      "input": "Ẏ",
+      "output": "Ẏ"
+    },
+    {
+      "input": "Ÿ",
+      "output": "Ÿ"
+    },
+    {
+      "input": "Ỷ",
+      "output": "Ỷ"
+    },
+    {
+      "input": "Ỵ",
+      "output": "Ỵ"
+    },
+    {
+      "input": "Ź",
+      "output": "Ź"
+    },
+    {
+      "input": "Ẑ",
+      "output": "Ẑ"
+    },
+    {
+      "input": "Ż",
+      "output": "Ż"
+    },
+    {
+      "input": "Ž",
+      "output": "Ž"
+    },
+    {
+      "input": "Ẓ",
+      "output": "Ẓ"
+    },
+    {
+      "input": "Ẕ",
+      "output": "Ẕ"
+    },
+    {
+      "input": "à",
+      "output": "à"
+    },
+    {
+      "input": "á",
+      "output": "á"
+    },
+    {
+      "input": "â",
+      "output": "â"
+    },
+    {
+      "input": "ã",
+      "output": "ã"
+    },
+    {
+      "input": "ā",
+      "output": "ā"
+    },
+    {
+      "input": "ă",
+      "output": "ă"
+    },
+    {
+      "input": "ȧ",
+      "output": "ȧ"
+    },
+    {
+      "input": "ä",
+      "output": "ä"
+    },
+    {
+      "input": "ả",
+      "output": "ả"
+    },
+    {
+      "input": "å",
+      "output": "å"
+    },
+    {
+      "input": "ǎ",
+      "output": "ǎ"
+    },
+    {
+      "input": "ȁ",
+      "output": "ȁ"
+    },
+    {
+      "input": "ȃ",
+      "output": "ȃ"
+    },
+    {
+      "input": "ạ",
+      "output": "ạ"
+    },
+    {
+      "input": "ḁ",
+      "output": "ḁ"
+    },
+    {
+      "input": "ą",
+      "output": "ą"
+    },
+    {
+      "input": "ḃ",
+      "output": "ḃ"
+    },
+    {
+      "input": "ḅ",
+      "output": "ḅ"
+    },
+    {
+      "input": "ḇ",
+      "output": "ḇ"
+    },
+    {
+      "input": "ć",
+      "output": "ć"
+    },
+    {
+      "input": "ĉ",
+      "output": "ĉ"
+    },
+    {
+      "input": "ċ",
+      "output": "ċ"
+    },
+    {
+      "input": "č",
+      "output": "č"
+    },
+    {
+      "input": "ç",
+      "output": "ç"
+    },
+    {
+      "input": "ḋ",
+      "output": "ḋ"
+    },
+    {
+      "input": "ď",
+      "output": "ď"
+    },
+    {
+      "input": "ḍ",
+      "output": "ḍ"
+    },
+    {
+      "input": "ḑ",
+      "output": "ḑ"
+    },
+    {
+      "input": "ḓ",
+      "output": "ḓ"
+    },
+    {
+      "input": "ḏ",
+      "output": "ḏ"
+    },
+    {
+      "input": "è",
+      "output": "è"
+    },
+    {
+      "input": "é",
+      "output": "é"
+    },
+    {
+      "input": "ê",
+      "output": "ê"
+    },
+    {
+      "input": "ẽ",
+      "output": "ẽ"
+    },
+    {
+      "input": "ē",
+      "output": "ē"
+    },
+    {
+      "input": "ĕ",
+      "output": "ĕ"
+    },
+    {
+      "input": "ė",
+      "output": "ė"
+    },
+    {
+      "input": "ë",
+      "output": "ë"
+    },
+    {
+      "input": "ẻ",
+      "output": "ẻ"
+    },
+    {
+      "input": "ě",
+      "output": "ě"
+    },
+    {
+      "input": "ȅ",
+      "output": "ȅ"
+    },
+    {
+      "input": "ȇ",
+      "output": "ȇ"
+    },
+    {
+      "input": "ẹ",
+      "output": "ẹ"
+    },
+    {
+      "input": "ȩ",
+      "output": "ȩ"
+    },
+    {
+      "input": "ę",
+      "output": "ę"
+    },
+    {
+      "input": "ḙ",
+      "output": "ḙ"
+    },
+    {
+      "input": "ḛ",
+      "output": "ḛ"
+    },
+    {
+      "input": "ḟ",
+      "output": "ḟ"
+    },
+    {
+      "input": "ǵ",
+      "output": "ǵ"
+    },
+    {
+      "input": "ĝ",
+      "output": "ĝ"
+    },
+    {
+      "input": "ḡ",
+      "output": "ḡ"
+    },
+    {
+      "input": "ğ",
+      "output": "ğ"
+    },
+    {
+      "input": "ġ",
+      "output": "ġ"
+    },
+    {
+      "input": "ǧ",
+      "output": "ǧ"
+    },
+    {
+      "input": "ģ",
+      "output": "ģ"
+    },
+    {
+      "input": "ĥ",
+      "output": "ĥ"
+    },
+    {
+      "input": "ḣ",
+      "output": "ḣ"
+    },
+    {
+      "input": "ḧ",
+      "output": "ḧ"
+    },
+    {
+      "input": "ȟ",
+      "output": "ȟ"
+    },
+    {
+      "input": "ḥ",
+      "output": "ḥ"
+    },
+    {
+      "input": "ḩ",
+      "output": "ḩ"
+    },
+    {
+      "input": "ḫ",
+      "output": "ḫ"
+    },
+    {
+      "input": "ẖ",
+      "output": "ẖ"
+    },
+    {
+      "input": "ì",
+      "output": "ì"
+    },
+    {
+      "input": "í",
+      "output": "í"
+    },
+    {
+      "input": "î",
+      "output": "î"
+    },
+    {
+      "input": "ĩ",
+      "output": "ĩ"
+    },
+    {
+      "input": "ī",
+      "output": "ī"
+    },
+    {
+      "input": "ĭ",
+      "output": "ĭ"
+    },
+    {
+      "input": "ï",
+      "output": "ï"
+    },
+    {
+      "input": "ỉ",
+      "output": "ỉ"
+    },
+    {
+      "input": "ǐ",
+      "output": "ǐ"
+    },
+    {
+      "input": "ȉ",
+      "output": "ȉ"
+    },
+    {
+      "input": "ȋ",
+      "output": "ȋ"
+    },
+    {
+      "input": "ị",
+      "output": "ị"
+    },
+    {
+      "input": "į",
+      "output": "į"
+    },
+    {
+      "input": "ḭ",
+      "output": "ḭ"
+    },
+    {
+      "input": "ĵ",
+      "output": "ĵ"
+    },
+    {
+      "input": "ǰ",
+      "output": "ǰ"
+    },
+    {
+      "input": "ḱ",
+      "output": "ḱ"
+    },
+    {
+      "input": "ǩ",
+      "output": "ǩ"
+    },
+    {
+      "input": "ḳ",
+      "output": "ḳ"
+    },
+    {
+      "input": "ķ",
+      "output": "ķ"
+    },
+    {
+      "input": "ḵ",
+      "output": "ḵ"
+    },
+    {
+      "input": "ĺ",
+      "output": "ĺ"
+    },
+    {
+      "input": "ľ",
+      "output": "ľ"
+    },
+    {
+      "input": "ḷ",
+      "output": "ḷ"
+    },
+    {
+      "input": "ļ",
+      "output": "ļ"
+    },
+    {
+      "input": "ḽ",
+      "output": "ḽ"
+    },
+    {
+      "input": "ḻ",
+      "output": "ḻ"
+    },
+    {
+      "input": "ḿ",
+      "output": "ḿ"
+    },
+    {
+      "input": "ṁ",
+      "output": "ṁ"
+    },
+    {
+      "input": "ṃ",
+      "output": "ṃ"
+    },
+    {
+      "input": "ǹ",
+      "output": "ǹ"
+    },
+    {
+      "input": "ń",
+      "output": "ń"
+    },
+    {
+      "input": "ñ",
+      "output": "ñ"
+    },
+    {
+      "input": "ṅ",
+      "output": "ṅ"
+    },
+    {
+      "input": "ň",
+      "output": "ň"
+    },
+    {
+      "input": "ṇ",
+      "output": "ṇ"
+    },
+    {
+      "input": "ņ",
+      "output": "ņ"
+    },
+    {
+      "input": "ṋ",
+      "output": "ṋ"
+    },
+    {
+      "input": "ṉ",
+      "output": "ṉ"
+    },
+    {
+      "input": "ò",
+      "output": "ò"
+    },
+    {
+      "input": "ó",
+      "output": "ó"
+    },
+    {
+      "input": "ô",
+      "output": "ô"
+    },
+    {
+      "input": "õ",
+      "output": "õ"
+    },
+    {
+      "input": "ō",
+      "output": "ō"
+    },
+    {
+      "input": "ŏ",
+      "output": "ŏ"
+    },
+    {
+      "input": "ȯ",
+      "output": "ȯ"
+    },
+    {
+      "input": "ö",
+      "output": "ö"
+    },
+    {
+      "input": "ỏ",
+      "output": "ỏ"
+    },
+    {
+      "input": "ő",
+      "output": "ő"
+    },
+    {
+      "input": "ǒ",
+      "output": "ǒ"
+    },
+    {
+      "input": "ȍ",
+      "output": "ȍ"
+    },
+    {
+      "input": "ȏ",
+      "output": "ȏ"
+    },
+    {
+      "input": "ơ",
+      "output": "ơ"
+    },
+    {
+      "input": "ọ",
+      "output": "ọ"
+    },
+    {
+      "input": "ǫ",
+      "output": "ǫ"
+    },
+    {
+      "input": "ṕ",
+      "output": "ṕ"
+    },
+    {
+      "input": "ṗ",
+      "output": "ṗ"
+    },
+    {
+      "input": "ŕ",
+      "output": "ŕ"
+    },
+    {
+      "input": "ṙ",
+      "output": "ṙ"
+    },
+    {
+      "input": "ř",
+      "output": "ř"
+    },
+    {
+      "input": "ȑ",
+      "output": "ȑ"
+    },
+    {
+      "input": "ȓ",
+      "output": "ȓ"
+    },
+    {
+      "input": "ṛ",
+      "output": "ṛ"
+    },
+    {
+      "input": "ŗ",
+      "output": "ŗ"
+    },
+    {
+      "input": "ṟ",
+      "output": "ṟ"
+    },
+    {
+      "input": "ś",
+      "output": "ś"
+    },
+    {
+      "input": "ŝ",
+      "output": "ŝ"
+    },
+    {
+      "input": "ṡ",
+      "output": "ṡ"
+    },
+    {
+      "input": "š",
+      "output": "š"
+    },
+    {
+      "input": "ṣ",
+      "output": "ṣ"
+    },
+    {
+      "input": "ș",
+      "output": "ș"
+    },
+    {
+      "input": "ş",
+      "output": "ş"
+    },
+    {
+      "input": "ṫ",
+      "output": "ṫ"
+    },
+    {
+      "input": "ẗ",
+      "output": "ẗ"
+    },
+    {
+      "input": "ť",
+      "output": "ť"
+    },
+    {
+      "input": "ṭ",
+      "output": "ṭ"
+    },
+    {
+      "input": "ț",
+      "output": "ț"
+    },
+    {
+      "input": "ţ",
+      "output": "ţ"
+    },
+    {
+      "input": "ṱ",
+      "output": "ṱ"
+    },
+    {
+      "input": "ṯ",
+      "output": "ṯ"
+    },
+    {
+      "input": "ù",
+      "output": "ù"
+    },
+    {
+      "input": "ú",
+      "output": "ú"
+    },
+    {
+      "input": "û",
+      "output": "û"
+    },
+    {
+      "input": "ũ",
+      "output": "ũ"
+    },
+    {
+      "input": "ū",
+      "output": "ū"
+    },
+    {
+      "input": "ŭ",
+      "output": "ŭ"
+    },
+    {
+      "input": "ü",
+      "output": "ü"
+    },
+    {
+      "input": "ủ",
+      "output": "ủ"
+    },
+    {
+      "input": "ů",
+      "output": "ů"
+    },
+    {
+      "input": "ű",
+      "output": "ű"
+    },
+    {
+      "input": "ǔ",
+      "output": "ǔ"
+    },
+    {
+      "input": "ȕ",
+      "output": "ȕ"
+    },
+    {
+      "input": "ȗ",
+      "output": "ȗ"
+    },
+    {
+      "input": "ư",
+      "output": "ư"
+    },
+    {
+      "input": "ụ",
+      "output": "ụ"
+    },
+    {
+      "input": "ṳ",
+      "output": "ṳ"
+    },
+    {
+      "input": "ų",
+      "output": "ų"
+    },
+    {
+      "input": "ṷ",
+      "output": "ṷ"
+    },
+    {
+      "input": "ṵ",
+      "output": "ṵ"
+    },
+    {
+      "input": "ṽ",
+      "output": "ṽ"
+    },
+    {
+      "input": "ṿ",
+      "output": "ṿ"
+    },
+    {
+      "input": "ẁ",
+      "output": "ẁ"
+    },
+    {
+      "input": "ẃ",
+      "output": "ẃ"
+    },
+    {
+      "input": "ŵ",
+      "output": "ŵ"
+    },
+    {
+      "input": "ẇ",
+      "output": "ẇ"
+    },
+    {
+      "input": "ẅ",
+      "output": "ẅ"
+    },
+    {
+      "input": "ẘ",
+      "output": "ẘ"
+    },
+    {
+      "input": "ẉ",
+      "output": "ẉ"
+    },
+    {
+      "input": "ẋ",
+      "output": "ẋ"
+    },
+    {
+      "input": "ẍ",
+      "output": "ẍ"
+    },
+    {
+      "input": "ỳ",
+      "output": "ỳ"
+    },
+    {
+      "input": "ý",
+      "output": "ý"
+    },
+    {
+      "input": "ŷ",
+      "output": "ŷ"
+    },
+    {
+      "input": "ỹ",
+      "output": "ỹ"
+    },
+    {
+      "input": "ȳ",
+      "output": "ȳ"
+    },
+    {
+      "input": "ẏ",
+      "output": "ẏ"
+    },
+    {
+      "input": "ÿ",
+      "output": "ÿ"
+    },
+    {
+      "input": "ỷ",
+      "output": "ỷ"
+    },
+    {
+      "input": "ẙ",
+      "output": "ẙ"
+    },
+    {
+      "input": "ỵ",
+      "output": "ỵ"
+    },
+    {
+      "input": "ź",
+      "output": "ź"
+    },
+    {
+      "input": "ẑ",
+      "output": "ẑ"
+    },
+    {
+      "input": "ż",
+      "output": "ż"
+    },
+    {
+      "input": "ž",
+      "output": "ž"
+    },
+    {
+      "input": "ẓ",
+      "output": "ẓ"
+    },
+    {
+      "input": "ẕ",
+      "output": "ẕ"
+    },
+    {
+      "input": "Ầ",
+      "output": "Ầ"
+    },
+    {
+      "input": "Ấ",
+      "output": "Ấ"
+    },
+    {
+      "input": "Ẫ",
+      "output": "Ẫ"
+    },
+    {
+      "input": "Ẩ",
+      "output": "Ẩ"
+    },
+    {
+      "input": "Ǟ",
+      "output": "Ǟ"
+    },
+    {
+      "input": "Ǻ",
+      "output": "Ǻ"
+    },
+    {
+      "input": "Ḉ",
+      "output": "Ḉ"
+    },
+    {
+      "input": "Ề",
+      "output": "Ề"
+    },
+    {
+      "input": "Ế",
+      "output": "Ế"
+    },
+    {
+      "input": "Ễ",
+      "output": "Ễ"
+    },
+    {
+      "input": "Ể",
+      "output": "Ể"
+    },
+    {
+      "input": "Ḯ",
+      "output": "Ḯ"
+    },
+    {
+      "input": "Ồ",
+      "output": "Ồ"
+    },
+    {
+      "input": "Ố",
+      "output": "Ố"
+    },
+    {
+      "input": "Ỗ",
+      "output": "Ỗ"
+    },
+    {
+      "input": "Ổ",
+      "output": "Ổ"
+    },
+    {
+      "input": "Ṍ",
+      "output": "Ṍ"
+    },
+    {
+      "input": "Ȭ",
+      "output": "Ȭ"
+    },
+    {
+      "input": "Ṏ",
+      "output": "Ṏ"
+    },
+    {
+      "input": "Ȫ",
+      "output": "Ȫ"
+    },
+    {
+      "input": "Ǜ",
+      "output": "Ǜ"
+    },
+    {
+      "input": "Ǘ",
+      "output": "Ǘ"
+    },
+    {
+      "input": "Ǖ",
+      "output": "Ǖ"
+    },
+    {
+      "input": "Ǚ",
+      "output": "Ǚ"
+    },
+    {
+      "input": "ầ",
+      "output": "ầ"
+    },
+    {
+      "input": "ấ",
+      "output": "ấ"
+    },
+    {
+      "input": "ẫ",
+      "output": "ẫ"
+    },
+    {
+      "input": "ẩ",
+      "output": "ẩ"
+    },
+    {
+      "input": "ǟ",
+      "output": "ǟ"
+    },
+    {
+      "input": "ǻ",
+      "output": "ǻ"
+    },
+    {
+      "input": "ḉ",
+      "output": "ḉ"
+    },
+    {
+      "input": "ề",
+      "output": "ề"
+    },
+    {
+      "input": "ế",
+      "output": "ế"
+    },
+    {
+      "input": "ễ",
+      "output": "ễ"
+    },
+    {
+      "input": "ể",
+      "output": "ể"
+    },
+    {
+      "input": "ḯ",
+      "output": "ḯ"
+    },
+    {
+      "input": "ồ",
+      "output": "ồ"
+    },
+    {
+      "input": "ố",
+      "output": "ố"
+    },
+    {
+      "input": "ỗ",
+      "output": "ỗ"
+    },
+    {
+      "input": "ổ",
+      "output": "ổ"
+    },
+    {
+      "input": "ṍ",
+      "output": "ṍ"
+    },
+    {
+      "input": "ȭ",
+      "output": "ȭ"
+    },
+    {
+      "input": "ṏ",
+      "output": "ṏ"
+    },
+    {
+      "input": "ȫ",
+      "output": "ȫ"
+    },
+    {
+      "input": "ǜ",
+      "output": "ǜ"
+    },
+    {
+      "input": "ǘ",
+      "output": "ǘ"
+    },
+    {
+      "input": "ǖ",
+      "output": "ǖ"
+    },
+    {
+      "input": "ǚ",
+      "output": "ǚ"
+    },
+    {
+      "input": "Ằ",
+      "output": "Ằ"
+    },
+    {
+      "input": "Ắ",
+      "output": "Ắ"
+    },
+    {
+      "input": "Ẵ",
+      "output": "Ẵ"
+    },
+    {
+      "input": "Ẳ",
+      "output": "Ẳ"
+    },
+    {
+      "input": "ằ",
+      "output": "ằ"
+    },
+    {
+      "input": "ắ",
+      "output": "ắ"
+    },
+    {
+      "input": "ẵ",
+      "output": "ẵ"
+    },
+    {
+      "input": "ẳ",
+      "output": "ẳ"
+    },
+    {
+      "input": "Ḕ",
+      "output": "Ḕ"
+    },
+    {
+      "input": "Ḗ",
+      "output": "Ḗ"
+    },
+    {
+      "input": "ḕ",
+      "output": "ḕ"
+    },
+    {
+      "input": "ḗ",
+      "output": "ḗ"
+    },
+    {
+      "input": "Ṑ",
+      "output": "Ṑ"
+    },
+    {
+      "input": "Ṓ",
+      "output": "Ṓ"
+    },
+    {
+      "input": "ṑ",
+      "output": "ṑ"
+    },
+    {
+      "input": "ṓ",
+      "output": "ṓ"
+    },
+    {
+      "input": "Ṥ",
+      "output": "Ṥ"
+    },
+    {
+      "input": "ṥ",
+      "output": "ṥ"
+    },
+    {
+      "input": "Ṧ",
+      "output": "Ṧ"
+    },
+    {
+      "input": "ṧ",
+      "output": "ṧ"
+    },
+    {
+      "input": "Ṹ",
+      "output": "Ṹ"
+    },
+    {
+      "input": "ṹ",
+      "output": "ṹ"
+    },
+    {
+      "input": "Ṻ",
+      "output": "Ṻ"
+    },
+    {
+      "input": "ṻ",
+      "output": "ṻ"
+    },
+    {
+      "input": "Ờ",
+      "output": "Ờ"
+    },
+    {
+      "input": "Ớ",
+      "output": "Ớ"
+    },
+    {
+      "input": "Ỡ",
+      "output": "Ỡ"
+    },
+    {
+      "input": "Ở",
+      "output": "Ở"
+    },
+    {
+      "input": "Ợ",
+      "output": "Ợ"
+    },
+    {
+      "input": "ờ",
+      "output": "ờ"
+    },
+    {
+      "input": "ớ",
+      "output": "ớ"
+    },
+    {
+      "input": "ỡ",
+      "output": "ỡ"
+    },
+    {
+      "input": "ở",
+      "output": "ở"
+    },
+    {
+      "input": "ợ",
+      "output": "ợ"
+    },
+    {
+      "input": "Ừ",
+      "output": "Ừ"
+    },
+    {
+      "input": "Ứ",
+      "output": "Ứ"
+    },
+    {
+      "input": "Ữ",
+      "output": "Ữ"
+    },
+    {
+      "input": "Ử",
+      "output": "Ử"
+    },
+    {
+      "input": "Ự",
+      "output": "Ự"
+    },
+    {
+      "input": "ừ",
+      "output": "ừ"
+    },
+    {
+      "input": "ứ",
+      "output": "ứ"
+    },
+    {
+      "input": "ữ",
+      "output": "ữ"
+    },
+    {
+      "input": "ử",
+      "output": "ử"
+    },
+    {
+      "input": "ự",
+      "output": "ự"
+    },
+    {
+      "input": "Ǭ",
+      "output": "Ǭ"
+    },
+    {
+      "input": "ǭ",
+      "output": "ǭ"
+    },
+    {
+      "input": "Ǡ",
+      "output": "Ǡ"
+    },
+    {
+      "input": "ǡ",
+      "output": "ǡ"
+    },
+    {
+      "input": "Ḝ",
+      "output": "Ḝ"
+    },
+    {
+      "input": "ḝ",
+      "output": "ḝ"
+    },
+    {
+      "input": "Ȱ",
+      "output": "Ȱ"
+    },
+    {
+      "input": "ȱ",
+      "output": "ȱ"
+    },
+    {
+      "input": "ὶ",
+      "output": "ὶ"
+    },
+    {
+      "input": "ί",
+      "output": "ί"
+    },
+    {
+      "input": "ῑ",
+      "output": "ῑ"
+    },
+    {
+      "input": "ῐ",
+      "output": "ῐ"
+    },
+    {
+      "input": "ϊ",
+      "output": "ϊ"
+    },
+    {
+      "input": "ἰ",
+      "output": "ἰ"
+    },
+    {
+      "input": "ἱ",
+      "output": "ἱ"
+    },
+    {
+      "input": "ῖ",
+      "output": "ῖ"
+    },
+    {
+      "input": "ῒ",
+      "output": "ῒ"
+    },
+    {
+      "input": "ΐ",
+      "output": "ΐ"
+    },
+    {
+      "input": "ῗ",
+      "output": "ῗ"
+    },
+    {
+      "input": "Ḹ",
+      "output": "Ḹ"
+    },
+    {
+      "input": "ḹ",
+      "output": "ḹ"
+    },
+    {
+      "input": "Ṝ",
+      "output": "Ṝ"
+    },
+    {
+      "input": "ṝ",
+      "output": "ṝ"
+    },
+    {
+      "input": "Ṩ",
+      "output": "Ṩ"
+    },
+    {
+      "input": "ṩ",
+      "output": "ṩ"
+    },
+    {
+      "input": "Ậ",
+      "output": "Ậ"
+    },
+    {
+      "input": "Ặ",
+      "output": "Ặ"
+    },
+    {
+      "input": "ậ",
+      "output": "ậ"
+    },
+    {
+      "input": "ặ",
+      "output": "ặ"
+    },
+    {
+      "input": "Ệ",
+      "output": "Ệ"
+    },
+    {
+      "input": "ệ",
+      "output": "ệ"
+    },
+    {
+      "input": "Ộ",
+      "output": "Ộ"
+    },
+    {
+      "input": "ộ",
+      "output": "ộ"
+    },
+    {
+      "input": "ἲ",
+      "output": "ἲ"
+    },
+    {
+      "input": "ἴ",
+      "output": "ἴ"
+    },
+    {
+      "input": "ἶ",
+      "output": "ἶ"
+    },
+    {
+      "input": "ἳ",
+      "output": "ἳ"
+    },
+    {
+      "input": "ἵ",
+      "output": "ἵ"
+    },
+    {
+      "input": "ἷ",
+      "output": "ἷ"
+    }
+  ]
+}

@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+"""Generate the D1-B Unicode-16 repertoire and conformance fixture.
+
+Usage: python3 tools/fakedata/testdata/unicode16/generate.py UCD_DIRECTORY
+Inputs: UnicodeData.txt, CaseFolding.txt, DerivedNormalizationProps.txt from
+https://www.unicode.org/Public/16.0.0/ucd/ . No host Unicode database is used.
+"""
+import hashlib
+import json
+import pathlib
+import sys
+
+source = pathlib.Path(sys.argv[1])
+names = ['UnicodeData.txt', 'CaseFolding.txt', 'DerivedNormalizationProps.txt']
+expected = {'UnicodeData.txt': 'ff58e5823bd095166564a006e47d111130813dcf8bf234ef79fa51a870edb48f', 'CaseFolding.txt': '6f1f9c588eb4a5c718d9e8f93b782685e5c7fec872cf05e8e6878053599e09bb', 'DerivedNormalizationProps.txt': '4d4c03892dea9146d674b686e495df2d55a28d071ac474041d73518f887abddc'}
+raw = {name: (source / name).read_bytes() for name in names}
+hashes = {name: hashlib.sha256(value).hexdigest() for name, value in raw.items()}
+if expected != hashes:
+    raise ValueError(f'Unexpected Unicode-16 input hashes: {hashes}')
+rows = {}
+for line in raw['UnicodeData.txt'].decode().splitlines():
+    fields = line.split(';')
+    rows[int(fields[0], 16)] = fields
+fold = {}
+for line in raw['CaseFolding.txt'].decode().splitlines():
+    line = line.split('#')[0].strip()
+    if line:
+        code, status, mapping, _ = [x.strip() for x in line.split(';')]
+        if status in ('C', 'F'):
+            fold[int(code, 16)] = [int(x, 16) for x in mapping.split()]
+excluded = set()
+for line in raw['DerivedNormalizationProps.txt'].decode().splitlines():
+    line = line.split('#')[0].strip()
+    if line:
+        fields = [x.strip() for x in line.split(';')]
+        if fields[1] == 'Full_Composition_Exclusion':
+            bounds = fields[0].split('..')
+            excluded.update(range(int(bounds[0], 16), int(bounds[-1], 16) + 1))
+
+def ccc(c):
+    return int(rows[c][3]) if c in rows else 0
+
+def decompose(c):
+    field = rows[c][5] if c in rows else ''
+    if not field or field.startswith('<'):
+        return [c]
+    return [v for p in field.split() for v in decompose(int(p, 16))]
+
+def nfd(seq):
+    out = []
+    for c in seq:
+        for v in decompose(c):
+            out.append(v)
+            pos = len(out) - 1
+            while pos > 0 and ccc(v) and ccc(out[pos - 1]) > ccc(v):
+                out[pos - 1], out[pos] = out[pos], out[pos - 1]
+                pos -= 1
+    return out
+
+compose = {}
+for c, row in rows.items():
+    field = row[5]
+    if field and not field.startswith('<') and c not in excluded:
+        parts = [int(x, 16) for x in field.split()]
+        if len(parts) == 2:
+            compose[tuple(parts)] = c
+
+def nfc(seq):
+    out = []
+    starter = None
+    last_cc = 0
+    for c in nfd(seq):
+        cc = ccc(c)
+        combined = compose.get((out[starter], c)) if starter is not None else None
+        if combined is not None and (last_cc == 0 or last_cc < cc):
+            out[starter] = combined
+        else:
+            out.append(c)
+            if cc == 0:
+                starter = len(out) - 1
+            last_cc = cc
+    return out
+
+letters = set(range(65, 91)) | set(range(97, 123))
+marks = {c for c in range(0x300, 0x370) if c != 0x34f and rows[c][2].startswith('M')}
+allowed = {32, 39, 45} | marks
+for c, row in rows.items():
+    seq = nfd([c])
+    if row[2].startswith('L') and seq[0] in letters and all(v in marks for v in seq[1:]):
+        allowed.add(c)
+# Close the normalizer's alphabet under folding, decomposition and composition.
+alphabet = {v for c in allowed for v in nfd([c])}
+alphabet |= {v for c in allowed for v in nfd(fold.get(c, [c]))}
+closure = {c for c in rows if all(v in alphabet for v in nfd([c]))}
+text = lambda seq: ''.join(chr(c) for c in seq)
+fixture = {
+    'version': '16.0.0', 'sources': hashes,
+    'characters': [
+        {'code': c, 'allowed': c in allowed, 'ccc': ccc(c), 'nfd': text(nfd([c])),
+         'nfc': text(nfc([c])), 'fold': text(fold.get(c, [c]))}
+        for c in sorted(closure)
+    ],
+    'sequences': [
+        {'input': text(seq), 'output': text(nfc(seq))}
+        for seq in ([65] + [0x334] * 64 + [0x301],
+                    [65] + [0x301, 0x334] * 64,
+                    [65] + [0x305] * 128,
+                    [0x3b9, 0x301, 0x308],
+                    [65, 0x345, 0x301])
+    ],
+    'compositions': [
+        {'input': text(pair), 'output': chr(c)}
+        for pair, c in sorted(compose.items()) if c in closure
+    ],
+}
+directory = pathlib.Path(__file__).resolve().parent
+(directory / 'repertoire.json').write_text(json.dumps(fixture, ensure_ascii=False, indent=2) + '\n')
+repertoire = ''.join(chr(c) for c in sorted(allowed))
+chunks = [json.dumps(repertoire[i:i+24], ensure_ascii=False) for i in range(0, len(repertoire), 24)]
+go = '''// Copyright 2026 Open2b. All rights reserved.
+// Use of this source code is governed by an Elastic License 2.0
+// that can be found in the LICENSE file.
+
+package fakedata
+
+// Unicode 16.0.0 D1-B display repertoire. Generated by
+// testdata/unicode16/generate.py; source hashes are pinned there.
+const italianUnicode16Repertoire = ''' + ' +\n\t'.join(chunks) + '\n'
+(directory.parent.parent / 'international_unicode.go').write_text(go)
+print(f'{len(allowed)} admitted scalars, {len(closure)} normalization closure scalars, {len(fixture["compositions"])} compositions')
