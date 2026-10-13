@@ -34,31 +34,56 @@ func TestInvalidName(t *testing.T) {
 
 	fs := &FileSystem{env: &connectors.FileStorageEnv{Settings: newTestSettingsStore(t, innerSettings{})}}
 
-	names := []string{"/", ".", "./b", "a/", "a/./b", "a/../b", "a//b"}
+	const dotsMessage = "path name cannot contain “.” or “..” as a directory or file name"
+	const slashesMessage = "path name cannot contain consecutive slashes"
+
+	tests := []struct {
+		name    string
+		message string
+	}{
+		{"/", "path name must refer to a file, not to the root directory"},
+		{".", dotsMessage},
+		{"..", dotsMessage},
+		{"./b", dotsMessage},
+		{"a/", "path name cannot end with a slash"},
+		{"a/./b", dotsMessage},
+		{"a/../b", dotsMessage},
+		{"a//b", slashesMessage},
+		{"//b", slashesMessage},
+		{"a/\xff", "path name is not valid UTF-8"},
+	}
 
 	t.Run("Reader", func(t *testing.T) {
-		for _, name := range names {
-			_, _, err := fs.Reader(t.Context(), name)
+		for _, test := range tests {
+			_, _, err := fs.Reader(t.Context(), test.name)
 			if err != nil {
 				if _, ok := errors.AsType[*connectors.InvalidPathError](err); !ok {
-					t.Errorf("%q: expected *connectors.InvalidPathError, got %T (%s)", name, err, err)
+					t.Errorf("%q: expected *connectors.InvalidPathError, got %T (%s)", test.name, err, err)
+					continue
+				}
+				if err.Error() != test.message {
+					t.Errorf("%q: expected message %q, got %q", test.name, test.message, err.Error())
 				}
 				continue
 			}
-			t.Errorf("%q: expected *connectors.InvalidPathError, got nil", name)
+			t.Errorf("%q: expected *connectors.InvalidPathError, got nil", test.name)
 		}
 	})
 
 	t.Run("Write", func(t *testing.T) {
-		for _, name := range names {
-			err := fs.Write(t.Context(), strings.NewReader("data"), name, "text/plain")
+		for _, test := range tests {
+			err := fs.Write(t.Context(), strings.NewReader("data"), test.name, "text/plain")
 			if err != nil {
 				if _, ok := errors.AsType[*connectors.InvalidPathError](err); !ok {
-					t.Errorf("%q: expected *connectors.InvalidPathError, got %T (%s)", name, err, err)
+					t.Errorf("%q: expected *connectors.InvalidPathError, got %T (%s)", test.name, err, err)
+					continue
+				}
+				if err.Error() != test.message {
+					t.Errorf("%q: expected message %q, got %q", test.name, test.message, err.Error())
 				}
 				continue
 			}
-			t.Errorf("%q: expected *connectors.InvalidPathError, got nil", name)
+			t.Errorf("%q: expected *connectors.InvalidPathError, got nil", test.name)
 		}
 	})
 

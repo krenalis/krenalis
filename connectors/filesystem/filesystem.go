@@ -15,6 +15,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -249,14 +250,19 @@ func openRoot() (*os.Root, error) {
 // does not refer to a file.
 func parsePathName(name string) (string, error) {
 	rel := strings.TrimPrefix(filepath.ToSlash(name), "/")
-	if rel == "" {
-		return "", connectors.InvalidPathErrorf("path name cannot be “%s”", name)
-	}
-	if strings.HasSuffix(rel, "/") {
-		return "", connectors.InvalidPathErrorf("path name cannot end with a slash")
-	}
 	if rel == "." || !fsPkg.ValidPath(rel) {
-		return "", connectors.InvalidPathErrorf("path name cannot contain “.” or “..” or empty elements")
+		elems := strings.Split(rel, "/")
+		switch {
+		case rel == "":
+			return "", connectors.InvalidPathErrorf("path name must refer to a file, not to the root directory")
+		case strings.HasSuffix(rel, "/"):
+			return "", connectors.InvalidPathErrorf("path name cannot end with a slash")
+		case slices.Contains(elems, "."), slices.Contains(elems, ".."):
+			return "", connectors.InvalidPathErrorf("path name cannot contain “.” or “..” as a directory or file name")
+		case slices.Contains(elems, ""):
+			return "", connectors.InvalidPathErrorf("path name cannot contain consecutive slashes")
+		}
+		return "", connectors.InvalidPathErrorf("path name is not valid UTF-8")
 	}
 	return rel, nil
 }
