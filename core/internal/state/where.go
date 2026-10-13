@@ -26,8 +26,8 @@ type WhereRule interface {
 
 // Where combines rules using a logical operator.
 type Where struct {
-	Operator WhereLogical `json:"operator"`
-	Rules    []WhereRule  `json:"rules"`
+	Operator WhereLogical
+	Rules    []WhereRule
 }
 
 // Equal reports whether the receiver is equal to other.
@@ -97,9 +97,9 @@ func (op *WhereLogical) UnmarshalJSON(data []byte) error {
 
 // WhereCondition applies an operator to a property and zero or more values.
 type WhereCondition struct {
-	Property []string      `json:"property"`
-	Operator WhereOperator `json:"operator"`
-	Values   []any         `json:"values,omitzero"`
+	Property []string
+	Operator WhereOperator
+	Values   []any
 }
 
 // Equal reports whether the receiver is equal to other.
