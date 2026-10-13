@@ -137,7 +137,6 @@ github.com/aws/aws-sdk-go-v2/aws/signer/v4
 github.com/aws/aws-sdk-go-v2/aws/transport/http
 github.com/aws/aws-sdk-go-v2/internal/auth
 github.com/aws/aws-sdk-go-v2/internal/auth/smithy
-github.com/aws/aws-sdk-go-v2/internal/awsutil
 github.com/aws/aws-sdk-go-v2/internal/context
 github.com/aws/aws-sdk-go-v2/internal/endpoints
 github.com/aws/aws-sdk-go-v2/internal/endpoints/awsrulesfn
@@ -171,9 +170,6 @@ github.com/aws/aws-sdk-go-v2/credentials/stscreds
 ## explicit; go 1.24
 github.com/aws/aws-sdk-go-v2/feature/ec2/imds
 github.com/aws/aws-sdk-go-v2/feature/ec2/imds/internal/config
-# github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.22.17
-## explicit; go 1.24
-github.com/aws/aws-sdk-go-v2/feature/s3/manager
 # github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager v0.4.16
 ## explicit; go 1.24
 github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager
@@ -708,8 +704,8 @@ github.com/shopspring/decimal
 # github.com/sirupsen/logrus v1.9.4
 ## explicit; go 1.17
 github.com/sirupsen/logrus
-# github.com/snowflakedb/gosnowflake/v2 v2.1.0 => github.com/krenalis/gosnowflake/v2 v2.1.0-patched
-## explicit; go 1.24.0
+# github.com/snowflakedb/gosnowflake/v2 v2.3.0 => github.com/krenalis/gosnowflake/v2 v2.3.0-patched
+## explicit; go 1.25.0
 github.com/snowflakedb/gosnowflake/v2
 github.com/snowflakedb/gosnowflake/v2/internal/arrow
 github.com/snowflakedb/gosnowflake/v2/internal/compilation
@@ -949,4 +945,4 @@ google.golang.org/protobuf/reflect/protoregistry
 google.golang.org/protobuf/runtime/protoiface
 google.golang.org/protobuf/runtime/protoimpl
 google.golang.org/protobuf/types/known/timestamppb
-# github.com/snowflakedb/gosnowflake/v2 => github.com/krenalis/gosnowflake/v2 v2.1.0-patched
+# github.com/snowflakedb/gosnowflake/v2 => github.com/krenalis/gosnowflake/v2 v2.3.0-patched
