@@ -175,7 +175,10 @@ const buildRow = (
 	const { primary, metadata } = getProfileSchemaTypePresentation(property.type);
 	const typeCell: ReactNode = (
 		<>
-			<span className='schema-property-grid__type' title={metadata == null ? primary : `${primary} · ${metadata}`}>
+			<span
+				className='schema-property-grid__type'
+				title={metadata == null ? primary : `${primary} · ${metadata}`}
+			>
 				<span className='schema-property-grid__type-label'>{primary}</span>
 				{metadata != null && (
 					<span className='schema-property-grid__type-metadata'>

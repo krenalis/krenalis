@@ -434,7 +434,7 @@ const PropertyTypeSelector = ({ type, canEditType, onChange }: PropertyTypeSelec
 													</span>
 													<span
 														className={
-														optionSemantics == null
+															optionSemantics == null
 																? ''
 																: 'property-type-selector__type-physical'
 														}
