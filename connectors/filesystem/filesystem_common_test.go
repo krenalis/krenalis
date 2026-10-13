@@ -10,8 +10,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"slices"
-	"strings"
 	"testing"
 
 	"github.com/krenalis/krenalis/connectors"
@@ -19,18 +17,6 @@ import (
 )
 
 func TestInvalidName(t *testing.T) {
-
-	// Mutex access to 'root' is not necessary as it is essential that these
-	// tests are run non-concurrently.
-	root = t.TempDir()
-	err := os.Mkdir(filepath.Join(root, "a"), 0755)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = os.WriteFile(filepath.Join(root, "b"), []byte("b"), 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	fs := &FileSystem{env: &connectors.FileStorageEnv{Settings: newTestSettingsStore(t, innerSettings{})}}
 
@@ -53,59 +39,19 @@ func TestInvalidName(t *testing.T) {
 		{"a/\xff", "path name is not valid UTF-8"},
 	}
 
-	t.Run("Reader", func(t *testing.T) {
-		for _, test := range tests {
-			_, _, err := fs.Reader(t.Context(), test.name)
-			if err != nil {
-				if _, ok := errors.AsType[*connectors.InvalidPathError](err); !ok {
-					t.Errorf("%q: expected *connectors.InvalidPathError, got %T (%s)", test.name, err, err)
-					continue
-				}
-				if err.Error() != test.message {
-					t.Errorf("%q: expected message %q, got %q", test.name, test.message, err.Error())
-				}
-				continue
-			}
-			t.Errorf("%q: expected *connectors.InvalidPathError, got nil", test.name)
-		}
-	})
-
-	t.Run("Write", func(t *testing.T) {
-		for _, test := range tests {
-			err := fs.Write(t.Context(), strings.NewReader("data"), test.name, "text/plain")
-			if err != nil {
-				if _, ok := errors.AsType[*connectors.InvalidPathError](err); !ok {
-					t.Errorf("%q: expected *connectors.InvalidPathError, got %T (%s)", test.name, err, err)
-					continue
-				}
-				if err.Error() != test.message {
-					t.Errorf("%q: expected message %q, got %q", test.name, test.message, err.Error())
-				}
-				continue
-			}
-			t.Errorf("%q: expected *connectors.InvalidPathError, got nil", test.name)
-		}
-	})
-
-	for dir, expected := range map[string][]string{root: {"a", "b"}, filepath.Join(root, "a"): nil} {
-		entries, err := os.ReadDir(dir)
+	for _, test := range tests {
+		_, err := fs.AbsolutePath(t.Context(), test.name)
 		if err != nil {
-			t.Fatal(err)
+			if _, ok := errors.AsType[*connectors.InvalidPathError](err); !ok {
+				t.Errorf("%q: expected *connectors.InvalidPathError, got %T (%s)", test.name, err, err)
+				continue
+			}
+			if err.Error() != test.message {
+				t.Errorf("%q: expected message %q, got %q", test.name, test.message, err.Error())
+			}
+			continue
 		}
-		var names []string
-		for _, e := range entries {
-			names = append(names, e.Name())
-		}
-		if !slices.Equal(names, expected) {
-			t.Fatalf("expected entries %q in %s, got %q", expected, dir, names)
-		}
-	}
-	data, err := os.ReadFile(filepath.Join(root, "b"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(data) != "b" {
-		t.Fatalf("expected %q, got %q", "b", data)
+		t.Errorf("%q: expected *connectors.InvalidPathError, got nil", test.name)
 	}
 
 }

@@ -88,24 +88,32 @@ type innerSettings struct {
 
 // AbsolutePath returns the absolute representation of the given path name.
 func (fs *FileSystem) AbsolutePath(ctx context.Context, name string) (string, error) {
-	name, err := parsePathName(name)
-	if err != nil {
-		return "", err
+	rel := strings.TrimPrefix(filepath.ToSlash(name), "/")
+	if rel == "." || !fsPkg.ValidPath(rel) {
+		elems := strings.Split(rel, "/")
+		switch {
+		case rel == "":
+			return "", connectors.InvalidPathErrorf("path name must refer to a file, not to the root directory")
+		case strings.HasSuffix(rel, "/"):
+			return "", connectors.InvalidPathErrorf("path name cannot end with a slash")
+		case slices.Contains(elems, "."), slices.Contains(elems, ".."):
+			return "", connectors.InvalidPathErrorf("path name cannot contain “.” or “..” as a directory or file name")
+		case slices.Contains(elems, ""):
+			return "", connectors.InvalidPathErrorf("path name cannot contain consecutive slashes")
+		}
+		return "", connectors.InvalidPathErrorf("path name is not valid UTF-8")
 	}
 	confMu.Lock()
 	defer confMu.Unlock()
 	if displayedRoot != "" {
-		return filepath.Join(displayedRoot, name), nil
+		return filepath.Join(displayedRoot, rel), nil
 	}
-	return filepath.Join(root, name), nil
+	return filepath.Join(root, rel), nil
 }
 
 // Reader opens a file and returns a ReadCloser from which to read its content.
 func (fs *FileSystem) Reader(ctx context.Context, name string) (io.ReadCloser, time.Time, error) {
-	name, err := parsePathName(name)
-	if err != nil {
-		return nil, time.Time{}, err
-	}
+	name = strings.TrimPrefix(filepath.ToSlash(name), "/")
 	confMu.Lock()
 	rootPath := root
 	confMu.Unlock()
@@ -182,10 +190,7 @@ func (fs *FileSystem) ServeUI(ctx context.Context, event string, settings json.V
 
 // Write writes the data read from r into the file with the given path name.
 func (fs *FileSystem) Write(ctx context.Context, r io.Reader, name, contentType string) error {
-	name, err := parsePathName(name)
-	if err != nil {
-		return err
-	}
+	name = strings.TrimPrefix(filepath.ToSlash(name), "/")
 	confMu.Lock()
 	rootPath := root
 	confMu.Unlock()
@@ -241,28 +246,6 @@ func (fs *FileSystem) saveSettings(ctx context.Context, settings json.Value) err
 		return err
 	}
 	return fs.env.Settings.Store(ctx, s)
-}
-
-// parsePathName parses the given path name and returns it in the form used by
-// io/fs and os.Root. It returns an *InvalidPathError if name is not valid or
-// does not refer to a file.
-func parsePathName(name string) (string, error) {
-	rel := strings.TrimPrefix(filepath.ToSlash(name), "/")
-	if rel == "." || !fsPkg.ValidPath(rel) {
-		elems := strings.Split(rel, "/")
-		switch {
-		case rel == "":
-			return "", connectors.InvalidPathErrorf("path name must refer to a file, not to the root directory")
-		case strings.HasSuffix(rel, "/"):
-			return "", connectors.InvalidPathErrorf("path name cannot end with a slash")
-		case slices.Contains(elems, "."), slices.Contains(elems, ".."):
-			return "", connectors.InvalidPathErrorf("path name cannot contain “.” or “..” as a directory or file name")
-		case slices.Contains(elems, ""):
-			return "", connectors.InvalidPathErrorf("path name cannot contain consecutive slashes")
-		}
-		return "", connectors.InvalidPathErrorf("path name is not valid UTF-8")
-	}
-	return rel, nil
 }
 
 // errUnsupportedSymlink replaces the error returned by os.Root when a path
