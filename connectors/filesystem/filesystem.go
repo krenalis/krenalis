@@ -106,7 +106,10 @@ func (fs *FileSystem) Reader(ctx context.Context, name string) (io.ReadCloser, t
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-	dir, err := openRoot()
+	confMu.Lock()
+	rootPath := root
+	confMu.Unlock()
+	dir, err := os.OpenRoot(rootPath)
 	if err != nil {
 		return nil, time.Time{}, rewritePathError(err)
 	}
@@ -183,7 +186,10 @@ func (fs *FileSystem) Write(ctx context.Context, r io.Reader, name, contentType 
 	if err != nil {
 		return err
 	}
-	dir, err := openRoot()
+	confMu.Lock()
+	rootPath := root
+	confMu.Unlock()
+	dir, err := os.OpenRoot(rootPath)
 	if err != nil {
 		return rewritePathError(err)
 	}
@@ -235,14 +241,6 @@ func (fs *FileSystem) saveSettings(ctx context.Context, settings json.Value) err
 		return err
 	}
 	return fs.env.Settings.Store(ctx, s)
-}
-
-// openRoot opens the root directory.
-func openRoot() (*os.Root, error) {
-	confMu.Lock()
-	dir := root
-	confMu.Unlock()
-	return os.OpenRoot(dir)
 }
 
 // parsePathName parses the given path name and returns it in the form used by
