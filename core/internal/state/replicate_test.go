@@ -554,12 +554,12 @@ func TestReplicationPeriodic(t *testing.T) {
 			logReplicationEvent(t, database, 124, "lost-tail")
 			var finalFragment string
 			if mode == "partial-fragment" {
-				b, err := appendEncodeNotification(t.Context(), nil, key, "AddConsentPurpose", AddConsentPurpose{Workspace: stateTestWorkspaceID, ID: stateTestConsentPurposeID, Name: "complete"})
+				b, err := appendEncodeNotification(t.Context(), nil, key, 125, "AddConsentPurpose", AddConsentPurpose{Workspace: stateTestWorkspaceID, ID: stateTestConsentPurposeID, Name: "complete"})
 				if err != nil {
 					t.Fatalf("expected encoded notification, got %v", err)
 				}
 				sendReplicationFragment(t, database, string(b[:len(b)/2])+"*")
-				finalFragment = string(b[len(b)/2:]) + "@125"
+				finalFragment = string(b[len(b)/2:])
 			}
 
 			var heartbeatDone chan error
@@ -717,13 +717,13 @@ func TestReplicationReconstructionFailure(t *testing.T) {
 				sendReplicationFragment(t, database, "invalid!*")
 				sendReplicationFragment(t, database, "final@124")
 			case "decrypt":
-				sendReplicationFragment(t, database, base64.RawStdEncoding.EncodeToString(make([]byte, 64))+"@124")
+				sendReplicationFragment(t, database, base64.RawStdEncoding.EncodeToString(make([]byte, 64)))
 			case "gzip":
 				encrypted, err := key.Encrypt(t.Context(), []byte("not gzip data"))
 				if err != nil {
 					t.Fatalf("expected encrypted invalid gzip, got %v", err)
 				}
-				sendReplicationFragment(t, database, base64.RawStdEncoding.EncodeToString(encrypted)+"@124")
+				sendReplicationFragment(t, database, base64.RawStdEncoding.EncodeToString(encrypted))
 			}
 
 			sendReplicationEvent(t, database, key, 0, ElectLeader{Number: 7, Leader: "after-corruption"})
@@ -736,6 +736,117 @@ func TestReplicationReconstructionFailure(t *testing.T) {
 			state.close.Wait()
 			if calls != 2 || state.election.number != 7 || state.election.leader != "after-corruption" {
 				t.Fatalf("expected persisted reconciliation and intact election, got calls=%d election=%+v", calls, state.election)
+			}
+
+		})
+	}
+}
+
+// TestReplicationRejectsUnauthenticatedNotificationVersion verifies that adding
+// an unauthenticated version to a notification cannot reapply an event or stop
+// replication, and that the next committed event is still applied.
+func TestReplicationRejectsUnauthenticatedNotificationVersion(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		version int
+	}{
+		{"next-version", 2},
+		{"missing-target", 999999999},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+
+			database, key := replicationDatabase(t)
+			state, session := replicationState(t, database, key)
+			state.version.current = 0
+			originalConn := session.conn
+			observer, err := state.notifications.connect(t.Context())
+			if err != nil {
+				t.Fatalf("expected notification observer, got %v", err)
+			}
+			defer closeNotificationConnection(observer)
+			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+			defer cancel()
+
+			var seen []string
+			barrier := make(chan struct{})
+			resume := make(chan struct{})
+			releaseBarrier := sync.OnceFunc(func() { close(resume) })
+			defer releaseBarrier()
+			state.listeners = []any{
+				func(e AddConsentPurpose) { seen = append(seen, e.Name) },
+				func(ElectLeader) {
+					close(barrier)
+					<-resume
+				},
+			}
+			completed := make(chan error, 1)
+			state.close.Go(func() {
+				completed <- state.runNotifications(state.close.ctx, session, nil)
+			})
+			t.Cleanup(func() { state.close.cancel(); state.close.Wait() })
+
+			err = state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+				return AddConsentPurpose{Workspace: stateTestWorkspaceID, ID: stateTestConsentPurposeID, Name: "original"}, nil
+			})
+			if err != nil {
+				t.Fatalf("expected first committed event applied, got %v", err)
+			}
+			raw, err := observer.Underlying().WaitForNotification(ctx)
+			if err != nil {
+				t.Fatalf("expected captured producer notification, got %v", err)
+			}
+
+			// Alter only the captured transport; the attacker has no key.
+			sendReplicationFragment(t, database, raw.Payload+"@"+strconv.Itoa(test.version))
+			err = state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+				return ElectLeader{Number: 1, Leader: "barrier"}, nil
+			})
+			if err != nil {
+				t.Fatalf("expected committed election barrier, got %v", err)
+			}
+
+			// Elections cannot be replayed. Their dispatch proves the worker
+			// consumed the preceding forged NOTIFY before event 2 exists.
+			select {
+			case <-barrier:
+			case terminal := <-completed:
+				t.Fatalf("expected election barrier after the forged notification, got completed worker with %v", terminal)
+			case <-ctx.Done():
+				t.Fatalf("expected election barrier after the forged notification, got %v", ctx.Err())
+			}
+			if session.conn != originalConn {
+				t.Fatal("expected the same notification session through the barrier, got a replacement connection")
+			}
+			if got := state.Version(); got != 1 {
+				t.Fatalf("expected applied version 1 after the forged notification, got %d", got)
+			}
+			if got := strings.Join(seen, ","); got != "original" {
+				t.Fatalf("expected only original dispatch before event 2, got %s", got)
+			}
+			releaseBarrier()
+
+			err = state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+				return AddConsentPurpose{Workspace: stateTestWorkspaceID, ID: stateTestBarrierPurposeID, Name: "legitimate"}, nil
+			})
+			if err != nil {
+				t.Fatalf("expected next committed event applied after the forged notification, got %v", err)
+			}
+
+			// Join the loop before inspecting listener observations.
+			state.close.cancel()
+			state.close.Wait()
+			terminal := <-completed
+			if terminal != nil {
+				t.Fatalf("expected replication without a false terminal target, got %v", terminal)
+			}
+			if got := strings.Join(seen, ","); got != "original,legitimate" {
+				t.Fatalf("expected original,legitimate dispatches, got %s", got)
+			}
+			if got := state.Version(); got != 2 {
+				t.Fatalf("expected applied version 2, got %d", got)
+			}
+			if purpose := state.workspaces[stateTestWorkspaceID].consentPurposes[stateTestBarrierPurposeID]; purpose == nil || purpose.Name != "legitimate" {
+				t.Fatalf("expected legitimate next consent purpose, got %#v", purpose)
 			}
 
 		})
@@ -1074,12 +1185,12 @@ func TestReplicationUnknownRuntime(t *testing.T) {
 
 	database, key := replicationDatabase(t)
 	state, session := replicationState(t, database, key)
-	payload, err := appendEncodeNotification(t.Context(), nil, key, "Unknown", struct{}{})
+	payload, err := appendEncodeNotification(t.Context(), nil, key, 124, "Unknown", struct{}{})
 	if err != nil {
 		t.Fatalf("expected encoded unknown event, got %v", err)
 	}
 
-	sendReplicationFragment(t, database, string(payload)+"@124")
+	sendReplicationFragment(t, database, string(payload))
 	acquired := database.PoolStats().AcquireCount()
 	terminal := state.runNotifications(state.close.ctx, session, nil)
 	if terminal == nil || state.close.ctx.Err() != nil || state.Version() != 123 || database.PoolStats().AcquireCount() != acquired {
@@ -1371,12 +1482,12 @@ func TestReplicationTerminalFailuresExitProcess(t *testing.T) {
 
 		case "unknown-notify", "unknown-notify-logged":
 
-			payload, err := appendEncodeNotification(t.Context(), nil, key, "Unknown", struct{}{})
+			payload, err := appendEncodeNotification(t.Context(), nil, key, 124, "Unknown", struct{}{})
 			if err != nil {
 				t.Fatalf("expected encoded unknown event, got %v", err)
 			}
 
-			sendReplicationFragment(t, database, string(payload)+"@124")
+			sendReplicationFragment(t, database, string(payload))
 
 		case "replay":
 			sendReplicationEvent(t, database, key, 130, AddConsentPurpose{Workspace: stateTestWorkspaceID, ID: stateTestConsentPurposeID})
@@ -1539,17 +1650,12 @@ func sendReplicationEvent(t *testing.T, database *db.DB, key *cipher.Key, versio
 	// Here individual frames intentionally control ordering and fault injection.
 	name := fmt.Sprintf("%T", event)
 	name = strings.TrimPrefix(name, "state.")
-	b, err := appendEncodeNotification(t.Context(), nil, key, name, event)
+	b, err := appendEncodeNotification(t.Context(), nil, key, version, name, event)
 	if err != nil {
 		t.Fatalf("expected encoded event, got %v", err)
 	}
 
-	payload := string(b)
-	if version > 0 {
-		payload += fmt.Sprintf("@%d", version)
-	}
-
-	sendReplicationFragment(t, database, payload)
+	sendReplicationFragment(t, database, string(b))
 
 }
 
@@ -1578,7 +1684,7 @@ func waitReplicationBlocked(t *testing.T, function string, completed <-chan stru
 	stack := make([]byte, 1<<20)
 	for {
 
-		for _, goroutine := range strings.Split(string(stack[:runtime.Stack(stack, true)]), "\n\n") {
+		for goroutine := range strings.SplitSeq(string(stack[:runtime.Stack(stack, true)]), "\n\n") {
 			if strings.Contains(goroutine, "[chan receive]") && strings.Contains(goroutine, function) && strings.Contains(goroutine, "(*State).keepNotifications(") {
 				return
 			}

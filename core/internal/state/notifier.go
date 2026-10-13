@@ -22,8 +22,6 @@ import (
 	"github.com/krenalis/krenalis/tools/json"
 )
 
-const maxIDLen = len("@9223372036854775807")
-
 type notification struct {
 	Version int
 	Name    string
@@ -68,8 +66,7 @@ func (session *notificationSession) reconstruct(ctx context.Context, key *cipher
 	}
 
 	defer session.fragments.Reset()
-	p, identifier, _ := strings.Cut(fragment, "@")
-	session.fragments.WriteString(p)
+	session.fragments.WriteString(fragment)
 	br := base64.NewDecoder(base64.RawStdEncoding, &session.fragments)
 	encrypted, err := io.ReadAll(br)
 	if err != nil {
@@ -98,12 +95,7 @@ func (session *notificationSession) reconstruct(ctx context.Context, key *cipher
 		return nil, err
 	}
 
-	payload := s.String()
-	if identifier != "" {
-		payload += "@" + identifier
-	}
-
-	version, name, payload, err := parsePayload(payload)
+	version, name, payload, err := parsePayload(s.String())
 	if err != nil {
 		return nil, err
 	}
@@ -155,12 +147,12 @@ func (notifier *notifier) Notify(ctx context.Context, tx *db.Tx, n any) (int, er
 	}
 	const start = "NOTIFY krenalis, '"
 	b := []byte(start)
-	b, err := appendEncodeNotification(ctx, b, notifier.key, name, n)
+	b, err := appendEncodeNotification(ctx, b, notifier.key, version, name, n)
 	if err != nil {
 		return 0, err
 	}
-	for len(b) > 8000-maxIDLen-2 {
-		n := min(len(b), 8000-2)
+	for len(b) > 8000-2 {
+		const n = 8000 - 2
 		s := append([]byte(nil), b[:n]...)
 		s = append(s, '*', '\'')
 		_, err = tx.Exec(ctx, string(s))
@@ -169,10 +161,6 @@ func (notifier *notifier) Notify(ctx context.Context, tx *db.Tx, n any) (int, er
 		}
 		copy(b[len(start):], b[n:])
 		b = b[:len(b)-(n-len(start))]
-	}
-	if version > 0 {
-		b = append(b, '@')
-		b = strconv.AppendInt(b, int64(version), 10)
 	}
 	b = append(b, '\'')
 	_, err = tx.Exec(ctx, string(b))
@@ -201,18 +189,19 @@ func (notifier *notifier) connect(ctx context.Context) (*db.Conn, error) {
 	return conn, nil
 }
 
-// appendEncodeNotification compresses, encrypts, and Base64-encodes a
-// notification.
-//
-// It first GZIP-compresses the notification name and JSON-encoded data, then
-// encrypts the compressed data using AES-GCM. Finally, it Base64-encodes the
-// encrypted data, appends it to the provided byte slice, and returns the
-// extended slice.
+// payloadEncryptor encrypts notification payloads.
 type payloadEncryptor interface {
 	Encrypt(ctx context.Context, plaintext []byte) ([]byte, error)
 }
 
-func appendEncodeNotification(ctx context.Context, b []byte, encryptor payloadEncryptor, name string, n any) ([]byte, error) {
+// appendEncodeNotification compresses, encrypts, and Base64-encodes a
+// notification.
+//
+// It first GZIP-compresses the notification name, JSON-encoded data, and
+// version, then encrypts the compressed data using AES-GCM. Finally, it
+// Base64-encodes the encrypted data, appends it to the provided byte slice,
+// and returns the extended slice.
+func appendEncodeNotification(ctx context.Context, b []byte, encryptor payloadEncryptor, version int, name string, n any) ([]byte, error) {
 	var z bytes.Buffer
 	zw := gzip.NewWriter(&z)
 	defer zw.Close()
@@ -224,7 +213,12 @@ func appendEncodeNotification(ctx context.Context, b []byte, encryptor payloadEn
 	if err != nil {
 		return nil, err
 	}
-	if err = zw.Close(); err != nil {
+	_, err = io.WriteString(zw, "@"+strconv.Itoa(version))
+	if err != nil {
+		return nil, err
+	}
+	err = zw.Close()
+	if err != nil {
 		return nil, err
 	}
 	encryptedData, err := encryptor.Encrypt(ctx, z.Bytes())
@@ -248,8 +242,8 @@ func closeNotificationConnection(conn *db.Conn) {
 }
 
 // parsePayload parses a notification payload and returns the version, name,
-// and effective payload of the notification. If there is no identifier, it
-// returns 0 as version.
+// and effective payload of the notification. The version is required,
+// including an explicit zero for unversioned elections.
 func parsePayload(s string) (version int, name, payload string, err error) {
 	i := strings.IndexByte(s, '{')
 	if i == -1 {
@@ -264,15 +258,15 @@ func parsePayload(s string) (version int, name, payload string, err error) {
 		return 0, "", "", errors.New("invalid payload")
 	}
 	payload, s = s[:i+1], s[i+1:]
-	if s == "" {
-		return
-	}
-	if s[0] != '@' {
+	if s == "" || s[0] != '@' {
 		return 0, "", "", errors.New("invalid version")
 	}
-	v, err := strconv.ParseInt(s[1:], 10, 64)
-	if err != nil || v < 1 {
+	v, err := strconv.Atoi(s[1:])
+	if err != nil {
 		return 0, "", "", errors.New("invalid version")
 	}
-	return int(v), name, payload, nil
+	if v < 0 {
+		return 0, "", "", errors.New("invalid version")
+	}
+	return v, name, payload, nil
 }
