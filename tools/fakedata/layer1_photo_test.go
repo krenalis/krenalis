@@ -740,7 +740,7 @@ func TestLayer1FaceCatalogConfiguration(t *testing.T) {
 		t.Fatalf("expected identity namespace, got %v", err)
 	}
 	baseline := mustLayer1World(t, layer1TestReferenceDate, layer1TestSeed)
-	changed, err := NewWorld(WorldConfig{
+	changed, err := newFrozenWorld(t, worldConfig{
 		IdentityNamespace: namespace,
 		WorldSeed:         layer1TestSeed,
 		ReferenceDate:     layer1TestReferenceDate,
@@ -827,7 +827,7 @@ func TestLayer1FaceCatalogErrors(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected identity namespace, got %v", err)
 		}
-		_, err = NewWorld(WorldConfig{
+		_, err = newFrozenWorld(t, worldConfig{
 			IdentityNamespace: namespace,
 			WorldSeed:         layer1TestSeed,
 			ReferenceDate:     layer1TestReferenceDate,
@@ -1270,7 +1270,7 @@ func newLayer1WorldWithCatalog(t *testing.T, catalog *FaceCatalog) *World {
 	if err != nil {
 		t.Fatalf("expected identity namespace, got %v", err)
 	}
-	world, err := NewWorld(WorldConfig{
+	world, err := newFrozenWorld(t, worldConfig{
 		IdentityNamespace: namespace,
 		WorldSeed:         layer1TestSeed,
 		ReferenceDate:     layer1TestReferenceDate,

@@ -23,6 +23,7 @@ type SocioeconomicWorld struct {
 // NewSocioeconomicWorld constructs a complete world using bounded local work.
 // It performs no model acquisition. Invalid base, model, or realized Employer
 // state returns ErrInvalidSocioeconomicWorld and no world.
+// A NewItalianWorldV1 base requires the model from its prepared combination.
 func NewSocioeconomicWorld(base *World, model *SocioeconomicModel) (*SocioeconomicWorld, error) {
 
 	if base == nil || base.data == nil || base.faceCatalog == nil || base.referenceDate.IsZero() ||
@@ -40,6 +41,17 @@ func NewSocioeconomicWorld(base *World, model *SocioeconomicModel) (*Socioeconom
 	}
 	if model == nil || !model.initialized {
 		return nil, fmt.Errorf("%w: model has not been acquired", ErrInvalidSocioeconomicWorld)
+	}
+
+	switch base.personVersion {
+	case PersonSpecVersion:
+	case ItalianJSONPersonSpecVersion:
+		if base.italian == nil || base.data != base.italian.data || base.faceCatalog != base.italian.catalog ||
+			model != base.italian.socioeconomic.model {
+			return nil, fmt.Errorf("%w: incomplete Italian JSON provenance", ErrInvalidSocioeconomicWorld)
+		}
+	default:
+		return nil, fmt.Errorf("%w: unsupported base provenance", ErrInvalidSocioeconomicWorld)
 	}
 
 	w := &SocioeconomicWorld{

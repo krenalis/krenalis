@@ -101,7 +101,7 @@ func TestLayer1DatasetDependencyIsolation(t *testing.T) {
 // TestLayer1DependencyComponents verifies the exact centralized component
 // names and raw frozen SHA-256 bytes.
 func TestLayer1DependencyComponents(t *testing.T) {
-	data, err := loadLayer1ItalyData()
+	data, err := frozenLayer1Data(t)
 	if err != nil {
 		t.Fatalf("expected frozen Italy data, got %v", err)
 	}
@@ -131,7 +131,7 @@ func TestLayer1DependencyComponents(t *testing.T) {
 // structures built by the one-time runtime loader.
 func TestLayer1ItalyDataRuntimeValidation(t *testing.T) {
 
-	data, err := loadLayer1ItalyData()
+	data, err := frozenLayer1Data(t)
 	if err != nil {
 		t.Fatalf("expected frozen Italy data, got %v", err)
 	}

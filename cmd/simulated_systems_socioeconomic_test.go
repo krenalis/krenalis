@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -24,6 +23,7 @@ import (
 
 	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/test/syntheticworldtest"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/fakedata"
 	"github.com/krenalis/krenalis/tools/json"
@@ -33,26 +33,28 @@ import (
 // TestSimulatedSystemSocioeconomicDestinationRoundTrip preserves generated facts
 // through an admitted Destination partial update and a subsequent Source read.
 func TestSimulatedSystemSocioeconomicDestinationRoundTrip(t *testing.T) {
+	testSimulatedSystemDestinationRoundTrip(t, "generation-v5")
+}
+
+// TestSimulatedSystemHistoricalAvailable exercises persisted legacy records
+// through Source, Destination, rename and deletion with the origin unavailable.
+func TestSimulatedSystemHistoricalAvailable(t *testing.T) {
+	for _, policy := range []string{"generation-v3", "generation-v4"} {
+		t.Run(policy, func(t *testing.T) {
+			testSimulatedSystemDestinationRoundTrip(t, policy)
+		})
+	}
+}
+
+func testSimulatedSystemDestinationRoundTrip(t *testing.T, storedPolicy string) {
+
+	t.Helper()
 
 	if testing.Short() {
 		t.Skip()
 	}
-	fixture := simulatedSystemModelFixture(t)
-	photos, err := os.ReadFile("../tools/fakedata/testdata/external-photos-v1.json")
-	if err != nil {
-		t.Fatalf("expected photo fixture, got %v", err)
-	}
-	origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/synthetic-world/it-2026a/model.json":
-			_, _ = w.Write(fixture)
-		case "/synthetic-world/photos/v1/catalog.json":
-			_, _ = w.Write(photos)
-		default:
-			t.Errorf("expected model or photo catalog request, got %s", r.URL.Path)
-			w.WriteHeader(http.StatusNotFound)
-		}
-	}))
+	assets := syntheticworldtest.Assets(t)
+	origin := httptest.NewServer(syntheticworldtest.Handler(t, assets, ""))
 	defer origin.Close()
 	k := krenalistester.NewKrenalisInstance(t)
 	k.SetExternalAssetsURLs([]string{origin.URL})
@@ -60,7 +62,7 @@ func TestSimulatedSystemSocioeconomicDestinationRoundTrip(t *testing.T) {
 	defer k.Stop()
 
 	settings := &krenalistester.DBSettings{}
-	err = json.Unmarshal(krenalistester.PostgresWarehouseSettings(), settings)
+	err := json.Unmarshal(krenalistester.PostgresWarehouseSettings(), settings)
 	if err != nil {
 		t.Fatalf("expected PostgreSQL settings, got %v", err)
 	}
@@ -108,8 +110,8 @@ func TestSimulatedSystemSocioeconomicDestinationRoundTrip(t *testing.T) {
 	var policy string
 	k.QueryRowTestDatabase(t.Context(), &policy,
 		"SELECT generation_policy_version FROM simulated_systems WHERE id = $1", system.ID)
-	if policy != "generation-v4" {
-		t.Fatalf("expected generation-v4, got %s", policy)
+	if policy != "generation-v5" {
+		t.Fatalf("expected generation-v5, got %s", policy)
 	}
 	rows := querySimulatedSystemRecords(t, pool, system.ID)
 	if len(rows) != 1 {
@@ -117,31 +119,20 @@ func TestSimulatedSystemSocioeconomicDestinationRoundTrip(t *testing.T) {
 	}
 
 	// Independently reconstruct the workspace World and the first generated Person.
-	photoSource, err := fakedata.NewFaceCatalogSource([]string{origin.URL})
+	sourceData := syntheticworldtest.Load(t, assets)
+	model, err := sourceData.Model()
 	if err != nil {
-		t.Fatalf("expected photo source, got %v", err)
-	}
-	catalog, err := photoSource.Load(t.Context())
-	if err != nil {
-		t.Fatalf("expected photo catalog, got %v", err)
-	}
-	modelSource, err := fakedata.NewSocioeconomicModelSource([]string{origin.URL})
-	if err != nil {
-		t.Fatalf("expected model source, got %v", err)
-	}
-	model, err := modelSource.Load(t.Context())
-	if err != nil {
-		t.Fatalf("expected model, got %v", err)
+		t.Fatalf("expected prepared socioeconomic model, got %v", err)
 	}
 	worldKey := sha256.Sum256([]byte("krenalis/simulated-world/v1/" + workspace.ID))
 	namespace, err := fakedata.NewIdentityNamespace("w"+hex.EncodeToString(worldKey[:10]), 1)
 	if err != nil {
 		t.Fatalf("expected workspace namespace, got %v", err)
 	}
-	base, err := fakedata.NewWorld(fakedata.WorldConfig{
+	base, err := fakedata.NewItalianWorldV1(fakedata.ItalianWorldConfig{
 		IdentityNamespace: namespace, WorldSeed: binary.BigEndian.Uint64(worldKey[10:18]),
-		ReferenceDate: "2026-01-01", FaceCatalog: catalog,
-	})
+		ReferenceDate: "2026-01-01",
+	}, sourceData)
 	if err != nil {
 		t.Fatalf("expected workspace World, got %v", err)
 	}
@@ -176,6 +167,30 @@ func TestSimulatedSystemSocioeconomicDestinationRoundTrip(t *testing.T) {
 		// Non-working activities omit all three occupational properties.
 	default:
 		t.Fatalf("expected a supported activity, got %s", facts.PrimaryActivity)
+	}
+
+	if storedPolicy != "generation-v5" {
+
+		if storedPolicy == "generation-v3" {
+			_, err = pool.Exec(t.Context(), `UPDATE krenalis_simulated_system_records SET data = data -
+				ARRAY['education_level','primary_activity','annual_income_eur','job_family','industry','job_level']
+				WHERE simulated_system = $1`, system.ID)
+			if err != nil {
+				t.Fatalf("expected historical record without L2 properties, got %v", err)
+			}
+			want = map[string]any{}
+		}
+		k.ExecQueryTestDatabase(t.Context(), `UPDATE simulated_systems SET generation_policy_version = $1,
+			generation_checkpoint = '{"person":1,"representation":0,"personSpecVersion":"person-v1"}'::jsonb
+			WHERE id = $2`, storedPolicy, system.ID)
+		rows = querySimulatedSystemRecords(t, pool, system.ID)
+		origin.Close()
+		k.RestartServer(t.Context())
+		waitForSimulatedSystemStatus(t, k, system.ID, "Available")
+		if !reflect.DeepEqual(rows, querySimulatedSystemRecords(t, pool, system.ID)) {
+			t.Fatal("expected historical Available records unchanged after restart, got rewritten rows")
+		}
+
 	}
 
 	source := k.CreateConnection(krenalistester.ConnectionToCreate{
@@ -227,9 +242,17 @@ func TestSimulatedSystemSocioeconomicDestinationRoundTrip(t *testing.T) {
 		Transformation: &krenalistester.Transformation{Mapping: map[string]string{"site_url": "site_url"}},
 	})
 	k.WaitForRunsCompletion(k.StartPipelineRun(importPipeline))
-	profiles, total := k.Profiles([]string{"site_url"}, "", false, 0, 10)
-	if total != 1 || len(profiles) != 1 || profiles[0].Attributes["site_url"] != before["site_url"] {
-		t.Fatalf("expected one imported generated identity, got total=%d profiles=%v", total, profiles)
+	// Import completion can precede the automatic identity resolution.
+	profileDeadline := time.Now().Add(20 * time.Second)
+	for {
+		profiles, total := k.Profiles([]string{"site_url"}, "", false, 0, 10)
+		if total == 1 && len(profiles) == 1 && profiles[0].Attributes["site_url"] == before["site_url"] {
+			break
+		}
+		if time.Now().After(profileDeadline) {
+			t.Fatalf("expected one imported generated identity, got total=%d profiles=%v", total, profiles)
+		}
+		time.Sleep(50 * time.Millisecond)
 	}
 
 	mode := krenalistester.Server
@@ -266,8 +289,50 @@ func TestSimulatedSystemSocioeconomicDestinationRoundTrip(t *testing.T) {
 	if _, ok := afterRows[id]; !ok || len(afterRows) != 1 {
 		t.Fatalf("expected unchanged persisted observed identity %s, got %v", id, afterRows)
 	}
-	t.Logf("verified generated v4 round trip: PersonIndex=%d activity=%s income=%d",
-		index, facts.PrimaryActivity, facts.Income)
+	t.Logf("verified %s round trip: PersonIndex=%d activity=%s income=%d",
+		storedPolicy, index, facts.PrimaryActivity, facts.Income)
+
+	if storedPolicy != "generation-v5" {
+
+		k.Call("PUT", "/v1/simulated/systems/"+system.ID, nil, map[string]any{"name": "Historical renamed"}, nil)
+		var name string
+		k.QueryRowTestDatabase(t.Context(), &name, "SELECT name FROM simulated_systems WHERE id = $1", system.ID)
+		if name != "Historical renamed" {
+			t.Fatalf("expected renamed historical system, got %q", name)
+		}
+		k.DeleteConnection(source)
+		k.DeleteConnection(destination)
+		k.ExecQueryTestDatabase(t.Context(), `CREATE FUNCTION reject_legacy_delete() RETURNS trigger
+			LANGUAGE plpgsql AS $body$ BEGIN RAISE EXCEPTION 'deletion blocked by test'; END $body$;
+			CREATE TRIGGER reject_legacy_delete BEFORE DELETE ON simulated_systems
+			FOR EACH ROW EXECUTE FUNCTION reject_legacy_delete()`)
+		k.Call("DELETE", "/v1/simulated/systems/"+system.ID, nil, nil, nil)
+		waitForSimulatedSystemStatus(t, k, system.ID, "Deleting")
+		deadline := time.Now().Add(20 * time.Second)
+		for len(querySimulatedSystemRecords(t, pool, system.ID)) != 0 {
+			if time.Now().After(deadline) {
+				t.Fatal("expected warehouse cleanup before blocked metadata deletion, got timeout")
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+		k.RestartServer(t.Context())
+		k.ExecQueryTestDatabase(t.Context(), `DROP TRIGGER reject_legacy_delete ON simulated_systems;
+			DROP FUNCTION reject_legacy_delete()`)
+		deadline = time.Now().Add(20 * time.Second)
+		for {
+			var exists bool
+			k.QueryRowTestDatabase(t.Context(), &exists,
+				"SELECT EXISTS (SELECT FROM simulated_systems WHERE id = $1)", system.ID)
+			if !exists {
+				break
+			}
+			if time.Now().After(deadline) {
+				t.Fatal("expected resumed legacy deletion without assets, got timeout")
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+
+	}
 
 }
 
@@ -278,37 +343,34 @@ func TestSimulatedSystemSocioeconomicLifecycle(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	model := simulatedSystemModelFixture(t)
-	photos, err := os.ReadFile("../tools/fakedata/testdata/external-photos-v1.json")
-	if err != nil {
-		t.Fatalf("expected photo fixture, got %v", err)
-	}
-	var zeroModel []byte
-	var mode, calls atomic.Int32
+	assets := syntheticworldtest.Assets(t)
+	var zeroAssets map[string][]byte
+	var mode, calls, requests atomic.Int32
 	started, canceled := make(chan struct{}, 1), make(chan struct{}, 1)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		if r.URL.Path == "/synthetic-world/photos/v1/catalog.json" {
-			_, _ = w.Write(photos)
-			return
-		}
-		if r.URL.Path != "/synthetic-world/it-2026a/model.json" {
-			t.Errorf("expected photo catalog or fixed model path, got %s", r.URL.Path)
-			w.WriteHeader(http.StatusNotFound)
+		requests.Add(1)
+		current := mode.Load()
+		if r.URL.Path != "/socioeconomic.json" {
+			documents := assets
+			if current == 3 {
+				documents = zeroAssets
+			}
+			syntheticworldtest.Handler(t, documents, "").ServeHTTP(w, r)
 			return
 		}
 		calls.Add(1)
-		switch mode.Load() {
+		switch current {
 		case 0:
 			started <- struct{}{}
 			<-r.Context().Done()
 			canceled <- struct{}{}
 		case 1:
-			_, _ = w.Write(model)
+			_, _ = w.Write(assets["socioeconomic.json"])
 		case 2:
 			_, _ = w.Write([]byte(`{"schema":"invalid"}`))
 		case 3:
-			_, _ = w.Write(zeroModel)
+			_, _ = w.Write(zeroAssets["socioeconomic.json"])
 		}
 
 	}))
@@ -317,12 +379,12 @@ func TestSimulatedSystemSocioeconomicLifecycle(t *testing.T) {
 	k.SetExternalAssetsURLs([]string{server.URL})
 	k.Start()
 	defer k.Stop()
-	if calls.Load() != 0 {
-		t.Fatalf("expected no model acquisition at startup, got %d requests", calls.Load())
+	if requests.Load() != 0 {
+		t.Fatalf("expected no acquisition at startup, got %d requests", requests.Load())
 	}
 
 	settings := &krenalistester.DBSettings{}
-	err = json.Unmarshal(krenalistester.PostgresWarehouseSettings(), settings)
+	err := json.Unmarshal(krenalistester.PostgresWarehouseSettings(), settings)
 	if err != nil {
 		t.Fatalf("expected PostgreSQL settings, got %v", err)
 	}
@@ -376,9 +438,13 @@ func TestSimulatedSystemSocioeconomicLifecycle(t *testing.T) {
 		var count int
 		k.QueryRowTestDatabase(t.Context(), &count,
 			"SELECT generated_record_count FROM simulated_systems WHERE id = $1", id)
+		var hasCheckpoint bool
+		k.QueryRowTestDatabase(t.Context(), &hasCheckpoint,
+			"SELECT generation_checkpoint IS NOT NULL FROM simulated_systems WHERE id = $1", id)
 		rows := querySimulatedSystemRecords(t, pool, id)
-		if count != 0 || len(rows) != 0 {
-			t.Fatalf("expected no model-dependent records or progress, got count=%d rows=%d", count, len(rows))
+		if count != 0 || len(rows) != 0 || hasCheckpoint {
+			t.Fatalf("expected no records, progress or checkpoint, got count=%d rows=%d checkpoint=%t",
+				count, len(rows), hasCheckpoint)
 		}
 
 	}
@@ -388,8 +454,8 @@ func TestSimulatedSystemSocioeconomicLifecycle(t *testing.T) {
 	var policy string
 	k.QueryRowTestDatabase(t.Context(), &policy,
 		"SELECT generation_policy_version FROM simulated_systems WHERE id = $1", empty)
-	if policy != "empty-v1" || calls.Load() != 0 {
-		t.Fatalf("expected empty-v1 without model acquisition, got %s and %d requests", policy, calls.Load())
+	if policy != "empty-v1" || requests.Load() != 0 {
+		t.Fatalf("expected empty-v1 without acquisition, got %s and %d requests", policy, requests.Load())
 	}
 	interrupted := create("interrupted acquisition", 3)
 	select {
@@ -398,9 +464,6 @@ func TestSimulatedSystemSocioeconomicLifecycle(t *testing.T) {
 		t.Fatal("expected worker model request, got timeout")
 	}
 	assertNoProgress(interrupted)
-	var checkpoint string
-	k.QueryRowTestDatabase(t.Context(), &checkpoint,
-		"SELECT generation_checkpoint::text FROM simulated_systems WHERE id = $1", interrupted)
 	mode.Store(1)
 	k.RestartServer(t.Context())
 	select {
@@ -454,39 +517,92 @@ func TestSimulatedSystemSocioeconomicLifecycle(t *testing.T) {
 	waitForSimulatedSystemStatus(t, k, failed, "Failed")
 	assertNoProgress(failed)
 
-	// Recreate persisted historical Preparing metadata using the unchanged
-	// initial checkpoint format, then restart with no usable model origin.
-	legacy := create("historical preparing", 0)
-	k.ExecQueryTestDatabase(t.Context(), `UPDATE simulated_systems SET status = 'Preparing', user_count = 3,
-		generation_policy_version = 'generation-v3', generation_checkpoint = $1::jsonb WHERE id = $2`,
-		checkpoint, legacy)
-	mode.Store(2)
-	k.RestartServer(t.Context())
-	waitForSimulatedSystemStatus(t, k, legacy, "Available")
-	if calls.Load() != 4 {
-		t.Fatalf("expected historical preparation without model acquisition, got %d requests", calls.Load())
-	}
-	rows := querySimulatedSystemRecords(t, pool, legacy)
-	if len(rows) != 3 {
-		t.Fatalf("expected three historical records, got %d", len(rows))
-	}
-	for _, row := range rows {
+	// Retired preparations fail without acquiring anything, including on a
+	// restart after persisting failure intent and sealing the warehouse.
+	for _, retired := range []string{"generation-v3", "generation-v4"} {
 
-		fields := map[string]json.Value{}
-		err := json.Unmarshal([]byte(row.Data), &fields)
+		legacy := create("historical preparing", 0)
+		const historical = `{"person":1,"representation":0,"catalogSHA256":"historical","worldModelVersion":"world-v1","marketDataVersion":"it-2026a","personSpecVersion":"person-v1","sourceVersion":"source-v1","namespaceVersion":1,"referenceDate":"2026-01-01","photoBaseURL":"https://unavailable.test/"}`
+		_, err = pool.Exec(t.Context(), `INSERT INTO krenalis_simulated_system_records
+			(simulated_system, external_id, updated_at, data)
+			SELECT $1, external_id, updated_at, data FROM krenalis_simulated_system_records
+			WHERE simulated_system = $2 LIMIT 1`, legacy, interrupted)
 		if err != nil {
-			t.Fatalf("expected historical document JSON, got %v", err)
+			t.Fatalf("expected historical partial record, got %v", err)
 		}
-		for _, name := range []string{"education_level", "primary_activity", "annual_income_eur",
-			"job_family", "industry", "job_level"} {
-			if _, ok := fields[name]; ok {
-				t.Fatalf("expected historical %s absent, got %s", name, row.Data)
+		before := querySimulatedSystemRecords(t, pool, legacy)
+		k.ExecQueryTestDatabase(t.Context(), `CREATE SEQUENCE legacy_failure_attempts;
+			CREATE FUNCTION reject_legacy_failure() RETURNS trigger LANGUAGE plpgsql AS $body$
+			BEGIN IF NEW.status = 'Failed' THEN PERFORM nextval('legacy_failure_attempts');
+			RAISE EXCEPTION 'failure transition blocked by test'; END IF; RETURN NEW; END $body$;
+			CREATE TRIGGER reject_legacy_failure BEFORE UPDATE ON simulated_systems
+			FOR EACH ROW EXECUTE FUNCTION reject_legacy_failure()`)
+		k.ExecQueryTestDatabase(t.Context(), `UPDATE simulated_systems SET status = 'Preparing', user_count = 3,
+			generated_record_count = 1, generation_policy_version = $1, generation_checkpoint = $2::jsonb WHERE id = $3`,
+			retired, historical, legacy)
+		mode.Store(2)
+		beforeRequests := requests.Load()
+		k.RestartServer(t.Context())
+		deadline := time.Now().Add(20 * time.Second)
+		for {
+			var attempted bool
+			k.QueryRowTestDatabase(t.Context(), &attempted, "SELECT is_called FROM legacy_failure_attempts")
+			if attempted {
+				break
 			}
+			if time.Now().After(deadline) {
+				t.Fatal("expected attempted legacy failure transition, got timeout")
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+		var intent string
+		k.QueryRowTestDatabase(t.Context(), &intent,
+			"SELECT generation_error FROM simulated_systems WHERE id = $1", legacy)
+		wantError := "legacy generation policy " + retired + " is no longer supported"
+		if intent != wantError {
+			t.Fatalf("expected durable failure intent %q, got %q", wantError, intent)
+		}
+		var sealed int64
+		err = pool.QueryRow(t.Context(), "SELECT generation FROM krenalis_simulated_system_writers WHERE simulated_system = $1", legacy).Scan(&sealed)
+		if err != nil {
+			t.Fatalf("expected legacy writer fence, got %v", err)
+		}
+		if sealed != 1 {
+			t.Fatalf("expected sealed generation 1, got %d", sealed)
+		}
+		k.RestartServer(t.Context())
+		k.ExecQueryTestDatabase(t.Context(), `DROP TRIGGER reject_legacy_failure ON simulated_systems;
+			DROP FUNCTION reject_legacy_failure(); DROP SEQUENCE legacy_failure_attempts`)
+		waitForSimulatedSystemStatus(t, k, legacy, "Failed")
+		var preserved bool
+		k.QueryRowTestDatabase(t.Context(), &preserved, `SELECT generation_policy_version = $1
+			AND generation_checkpoint = $2::jsonb AND generated_record_count = 1 AND generation_error = $3
+			FROM simulated_systems WHERE id = $4`, retired, historical, wantError, legacy)
+		if !preserved || requests.Load() != beforeRequests || !reflect.DeepEqual(before, querySimulatedSystemRecords(t, pool, legacy)) {
+			t.Fatal("expected untouched historical policy, checkpoint and records without acquisition, got changed state")
+		}
+		k.Call("DELETE", "/v1/simulated/systems/"+legacy, nil, nil, nil)
+		deadline = time.Now().Add(20 * time.Second)
+		for {
+			var exists bool
+			k.QueryRowTestDatabase(t.Context(), &exists, "SELECT EXISTS (SELECT FROM simulated_systems WHERE id = $1)", legacy)
+			if !exists {
+				break
+			}
+			if time.Now().After(deadline) {
+				t.Fatal("expected deleted Failed legacy system, got timeout")
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+		if len(querySimulatedSystemRecords(t, pool, legacy)) != 0 || requests.Load() != beforeRequests {
+			t.Fatal("expected cleanup without acquisition, got records or new requests")
 		}
 
 	}
 
-	zeroModel = simulatedSystemConstructionFailureModel(t, workspace.ID, server.URL, model)
+	zeroAssets = maps.Clone(assets)
+	zeroModel := simulatedSystemConstructionFailureModel(t, workspace.ID, assets)
+	syntheticworldtest.SetModel(t, zeroAssets, zeroModel)
 	mode.Store(3)
 	construction := create("invalid realized employer universe", 1)
 	waitForSimulatedSystemStatus(t, k, construction, "Failed")
@@ -496,6 +612,15 @@ func TestSimulatedSystemSocioeconomicLifecycle(t *testing.T) {
 		"SELECT generation_error FROM simulated_systems WHERE id = $1", construction)
 	if message != "generation configuration is unavailable or changed" {
 		t.Fatalf("expected construction failure after successful acquisition, got %s", message)
+	}
+	var sealed int64
+	if err := pool.QueryRow(t.Context(),
+		"SELECT generation FROM krenalis_simulated_system_writers WHERE simulated_system = $1",
+		construction).Scan(&sealed); err != nil {
+		t.Fatalf("expected construction failure writer fence, got %v", err)
+	}
+	if sealed != 1 {
+		t.Fatalf("expected failed generation sealed at 1, got %d", sealed)
 	}
 	mode.Store(1)
 	retained := create("retained acquired model", 1)
@@ -512,64 +637,54 @@ func TestSimulatedSystemSocioeconomicLifecycle(t *testing.T) {
 
 }
 
-// simulatedSystemConstructionFailureModel selects and verifies a valid model
-// whose one-Company universe has no realized employer for this workspace.
-func simulatedSystemConstructionFailureModel(t *testing.T, workspaceID, origin string, fixture []byte) []byte {
+// simulatedSystemConstructionFailureModel verifies an acquisition-valid model
+// whose complete Company universe has no realized employer for this workspace.
+func simulatedSystemConstructionFailureModel(t *testing.T, workspaceID string, assets map[string][]byte) []byte {
 
 	t.Helper()
-	photos, err := fakedata.NewFaceCatalogSource([]string{origin})
-	if err != nil {
-		t.Fatalf("expected photo source, got %v", err)
-	}
-	catalog, err := photos.Load(t.Context())
-	if err != nil {
-		t.Fatalf("expected acquired photo catalog, got %v", err)
-	}
 	key := sha256.Sum256([]byte("krenalis/simulated-world/v1/" + workspaceID))
 	namespace, err := fakedata.NewIdentityNamespace("w"+hex.EncodeToString(key[:10]), 1)
 	if err != nil {
 		t.Fatalf("expected workspace namespace, got %v", err)
 	}
-	base, err := fakedata.NewWorld(fakedata.WorldConfig{
-		IdentityNamespace: namespace, WorldSeed: binary.BigEndian.Uint64(key[10:18]),
-		ReferenceDate: "2026-01-01", FaceCatalog: catalog,
-	})
+	var document map[string]json.Value
+	err = json.Unmarshal(assets["socioeconomic.json"], &document)
 	if err != nil {
-		t.Fatalf("expected workspace base World, got %v", err)
+		t.Fatalf("expected artificial international model, got %v", err)
 	}
-	fields := map[string]json.Value{}
-	err = json.Unmarshal(fixture, &fields)
+	var models map[string]json.Value
+	err = json.Unmarshal(document["models"], &models)
 	if err != nil {
-		t.Fatalf("expected artificial model JSON, got %v", err)
+		t.Fatalf("expected artificial laws, got %v", err)
 	}
-	fields["companyCount"] = json.Value(`1`)
 	for positive := 1; positive <= 8; positive++ {
 
-		// Positive support keeps acquisition valid; construction must still
-		// reject an all-zero realization. Verify against the actual seed so
-		// this test does not depend on a probabilistic fixture assumption.
 		law, err := json.Marshal(map[string][]uint32{"values": {0, uint32(positive)}, "weights": {1<<32 - 1, 1}})
 		if err != nil {
 			t.Fatalf("expected count law JSON, got %v", err)
 		}
 		laws := strings.TrimSuffix(strings.Repeat(string(law)+",", 14), ",")
-		fields["employeeCount"] = json.Value(`{"laws":[` + laws + `]}`)
-		candidate, err := json.Marshal(fields)
+		models["employeeCount"] = json.Value(`{"axes":["industry"],"laws":[` + laws + `]}`)
+		document["models"], err = json.Marshal(models)
 		if err != nil {
-			t.Fatalf("expected candidate model JSON, got %v", err)
+			t.Fatalf("expected candidate laws, got %v", err)
 		}
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			_, _ = w.Write(candidate)
-		}))
-		source, err := fakedata.NewSocioeconomicModelSource([]string{server.URL})
+		candidate, err := json.Marshal(document)
 		if err != nil {
-			server.Close()
-			t.Fatalf("expected model source, got %v", err)
+			t.Fatalf("expected candidate model, got %v", err)
 		}
-		model, err := source.Load(t.Context())
-		server.Close()
+		combination := maps.Clone(assets)
+		syntheticworldtest.SetModel(t, combination, candidate)
+		data := syntheticworldtest.Load(t, combination)
+		base, err := fakedata.NewItalianWorldV1(fakedata.ItalianWorldConfig{
+			IdentityNamespace: namespace, WorldSeed: binary.BigEndian.Uint64(key[10:18]), ReferenceDate: "2026-01-01",
+		}, data)
 		if err != nil {
-			t.Fatalf("expected acquisition-valid construction fixture, got %v", err)
+			t.Fatalf("expected prepared Italian World, got %v", err)
+		}
+		model, err := data.Model()
+		if err != nil {
+			t.Fatalf("expected prepared model, got %v", err)
 		}
 		world, err := fakedata.NewSocioeconomicWorld(base, model)
 		if err != nil {
@@ -583,15 +698,6 @@ func simulatedSystemConstructionFailureModel(t *testing.T, workspaceID, origin s
 	t.Fatal("expected a verified construction-failure fixture, got only successful Worlds")
 
 	return nil
-}
-
-func simulatedSystemModelFixture(t *testing.T) []byte {
-	t.Helper()
-	model, err := os.ReadFile("../core/testdata/socioeconomic-model.json")
-	if err != nil {
-		t.Fatalf("expected artificial socioeconomic model fixture, got %v", err)
-	}
-	return model
 }
 
 func waitForSimulatedSystemStatus(t *testing.T, k *krenalistester.Krenalis, id, expected string) {

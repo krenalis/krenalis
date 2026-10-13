@@ -5,96 +5,15 @@
 package fakedata
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"sort"
-	"sync"
-
-	"github.com/krenalis/krenalis/tools/externalassets"
 )
 
-const (
-	externalPhotoCatalogPath = "synthetic-world/photos/v1/catalog.json"
-	externalPhotoCatalogMode = "external"
-)
-
-// At most 100,000 records of roughly 200 bytes (including a 128-byte ID),
-// with headroom for JSON whitespace. Image bytes are never included.
-const maxExternalPhotoCatalogBytes = 32 << 20
-
-// FaceCatalogSource loads and retains a successful external photo catalog.
-type FaceCatalogSource struct {
-	resolver *externalassets.Resolver
-	mu       sync.Mutex
-	catalog  *FaceCatalog  // protected by mu
-	loading  chan struct{} // protected by mu
-}
-
-// NewFaceCatalogSource creates a lazy source using the ordered asset origins.
-func NewFaceCatalogSource(origins []string) (*FaceCatalogSource, error) {
-	resolver, err := externalassets.NewResolver(origins)
-	if err != nil {
-		return nil, err
-	}
-	return &FaceCatalogSource{resolver: resolver}, nil
-}
-
-// Load returns the immutable process-lifetime catalog, retrying failed loads.
-// It returns ErrInvalidFaceCatalog for a nil or uninitialized source.
-// It returns ctx.Err() if waiting for another load is canceled.
-func (s *FaceCatalogSource) Load(ctx context.Context) (*FaceCatalog, error) {
-
-	if s == nil || s.resolver == nil {
-		return nil, ErrInvalidFaceCatalog
-	}
-
-	for {
-
-		s.mu.Lock()
-		if s.catalog != nil {
-			catalog := s.catalog
-			s.mu.Unlock()
-			return catalog, nil
-		}
-		if s.loading != nil {
-			loading := s.loading
-			s.mu.Unlock()
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			case <-loading:
-				continue
-			}
-		}
-		s.loading = make(chan struct{})
-		s.mu.Unlock()
-
-		var catalog *FaceCatalog
-		consume := func(reader io.Reader) error {
-			var err error
-			catalog, err = decodeExternalPhotoCatalog(reader)
-			return err
-		}
-		err := s.resolver.Resolve(ctx, externalPhotoCatalogPath, maxExternalPhotoCatalogBytes, consume)
-		s.mu.Lock()
-		if err == nil {
-			s.catalog = catalog
-		}
-		close(s.loading)
-		s.loading = nil
-		s.mu.Unlock()
-		if err != nil {
-			return nil, err
-		}
-
-		return catalog, nil
-	}
-
-}
+const externalPhotoCatalogMode = "external"
 
 type externalPhotoCatalog struct {
 	Format        int                 `json:"format"`

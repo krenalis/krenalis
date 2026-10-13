@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"reflect"
 	"strconv"
 	"sync/atomic"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/simulated"
+	"github.com/krenalis/krenalis/test/syntheticworldtest"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/fakedata"
 	"github.com/krenalis/krenalis/tools/json"
@@ -23,19 +23,12 @@ import (
 )
 
 // TestSimulatedSystemSocioeconomicDocuments checks all six activity branches
-// against canonical facts, while preserving the complete legacy observations.
+// against canonical facts and the observations of the shared SourceWorld.
 func TestSimulatedSystemSocioeconomicDocuments(t *testing.T) {
 
-	model := simulatedSystemTestModel(t)
-	catalog := simulatedSystemTestCatalog(t)
-	account := simulatedSystemPlanFixture(t, catalog, "account-a", 512, "50")
-	legacy, _, err := newSimulatedSystemPlan("workspace-a", account, catalog, nil)
-	if err != nil {
-		t.Fatalf("expected legacy plan, got %v", err)
-	}
-	upgraded := *account
-	upgraded.GenerationPolicyVersion = simulatedSystemPolicyVersion
-	plan, _, err := newSimulatedSystemPlan("workspace-a", &upgraded, catalog, model)
+	data := simulatedSystemTestData(t)
+	account := simulatedSystemPlanFixture(t, data, "account-a", 512, "50")
+	plan, _, err := newSimulatedSystemPlan("workspace-a", account, data)
 	if err != nil {
 		t.Fatalf("expected socioeconomic plan, got %v", err)
 	}
@@ -108,23 +101,37 @@ func TestSimulatedSystemSocioeconomicDocuments(t *testing.T) {
 			for name := range want {
 				delete(fields, name)
 			}
-			old, err := legacy.record(slot, representation)
+			observations, err := plan.source.Records(index)
 			if err != nil {
-				t.Fatalf("expected legacy observation, got %v", err)
+				t.Fatalf("expected Source observations, got %v", err)
 			}
-			if record.ID != old.ID || !reflect.DeepEqual(fields, simulatedSystemDocumentFields(t, old.Data)) {
+			canonical, err := plan.world.Person(index)
+			if err != nil {
+				t.Fatalf("expected canonical Person, got %v", err)
+			}
+			var photo *string
+			if observations[representation].PhotoID != nil {
+				asset, err := plan.catalog.Asset(*observations[representation].PhotoID, fakedata.PhotoSize256)
+				if err != nil {
+					t.Fatalf("expected declared rendition, got %v", err)
+				}
+				value := plan.photoBaseURL.JoinPath(asset.Path).String()
+				photo = &value
+			}
+			baseJSON, err := json.Marshal(newSimulatedSystemDocument(canonical, observations[representation], photo))
+			if err != nil {
+				t.Fatalf("expected base document, got %v", err)
+			}
+			if record.ID != observations[representation].ID ||
+				!reflect.DeepEqual(fields, simulatedSystemDocumentFields(t, baseJSON)) {
 				t.Fatal("expected applicable socioeconomic additions, got changed observations or extra properties")
 			}
 			truth, err := plan.oracle(slot, representation)
 			if err != nil {
-				t.Fatalf("expected unchanged Oracle, got %v", err)
+				t.Fatalf("expected separate Oracle, got %v", err)
 			}
-			oldTruth, err := legacy.oracle(slot, representation)
-			if err != nil {
-				t.Fatalf("expected legacy Oracle, got %v", err)
-			}
-			if truth != oldTruth || bytes.Contains(record.Data, []byte(truth.PersonID)) {
-				t.Fatal("expected unchanged, separate Oracle, got changed or serialized canonical identity")
+			if truth.PersonID != canonical.Person.ID || bytes.Contains(record.Data, []byte(truth.PersonID)) {
+				t.Fatal("expected separate canonical identity, got wrong or serialized Oracle")
 			}
 			if representation == 0 {
 				firstID = record.ID
@@ -152,25 +159,16 @@ func TestSimulatedSystemSocioeconomicDocuments(t *testing.T) {
 }
 
 // TestSimulatedSystemSocioeconomicFailures checks that required facts cannot
-// silently disappear and legacy generation does not require a model.
+// silently disappear and incomplete prepared data cannot be admitted.
 func TestSimulatedSystemSocioeconomicFailures(t *testing.T) {
 
-	catalog := simulatedSystemTestCatalog(t)
-	account := simulatedSystemPlanFixture(t, catalog, "account-a", 1, "0")
-	legacy, _, err := newSimulatedSystemPlan("workspace-a", account, catalog, nil)
-	if err != nil {
-		t.Fatalf("expected legacy plan without socioeconomic model, got %v", err)
-	}
-	if legacy.socioeconomic != nil {
-		t.Fatalf("expected legacy plan without socioeconomic world, got %v", legacy.socioeconomic)
-	}
-	account.GenerationPolicyVersion = simulatedSystemPolicyVersion
-	_, _, err = newSimulatedSystemPlan("workspace-a", account, catalog, nil)
+	data := simulatedSystemTestData(t)
+	account := simulatedSystemPlanFixture(t, data, "account-a", 1, "0")
+	_, _, err := newSimulatedSystemPlan("workspace-a", account, nil)
 	if err == nil {
-		t.Fatal("expected missing new-policy model to fail, got success")
+		t.Fatal("expected missing prepared data to fail, got success")
 	}
-	model := simulatedSystemTestModel(t)
-	plan, _, err := newSimulatedSystemPlan("workspace-a", account, catalog, model)
+	plan, _, err := newSimulatedSystemPlan("workspace-a", account, data)
 	if err != nil {
 		t.Fatalf("expected socioeconomic plan, got %v", err)
 	}
@@ -217,11 +215,10 @@ func TestSimulatedSystemSocioeconomicFailures(t *testing.T) {
 // and overlapping canonical truth across systems in the same workspace.
 func TestSimulatedSystemSocioeconomicResume(t *testing.T) {
 
-	model := simulatedSystemTestModel(t)
-	catalog := simulatedSystemTestCatalog(t)
-	account := simulatedSystemPlanFixture(t, catalog, "account-a", 513, "50")
+	data := simulatedSystemTestData(t)
+	account := simulatedSystemPlanFixture(t, data, "account-a", 513, "50")
 	account.GenerationPolicyVersion = simulatedSystemPolicyVersion
-	plan, checkpoint, err := newSimulatedSystemPlan("workspace-a", account, catalog, model)
+	plan, checkpoint, err := newSimulatedSystemPlan("workspace-a", account, data)
 	if err != nil {
 		t.Fatalf("expected socioeconomic plan, got %v", err)
 	}
@@ -234,7 +231,7 @@ func TestSimulatedSystemSocioeconomicResume(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected persisted checkpoint, got %v", err)
 	}
-	resumed, next, err := newSimulatedSystemPlan("workspace-a", account, catalog, model)
+	resumed, next, err := newSimulatedSystemPlan("workspace-a", account, data)
 	if err != nil {
 		t.Fatalf("expected new-policy resume at duplicate boundary, got %v", err)
 	}
@@ -243,15 +240,15 @@ func TestSimulatedSystemSocioeconomicResume(t *testing.T) {
 		t.Fatal("expected exact resumed IDs, documents and Oracle, got changed suffix")
 	}
 
-	first := simulatedSystemPlanFixture(t, catalog, "account-a", 30_000, "0")
-	second := simulatedSystemPlanFixture(t, catalog, "account-b", 30_000, "0")
+	first := simulatedSystemPlanFixture(t, data, "account-a", 30_000, "0")
+	second := simulatedSystemPlanFixture(t, data, "account-b", 30_000, "0")
 	first.GenerationPolicyVersion = simulatedSystemPolicyVersion
 	second.GenerationPolicyVersion = simulatedSystemPolicyVersion
-	a, _, err := newSimulatedSystemPlan("workspace-a", first, catalog, model)
+	a, _, err := newSimulatedSystemPlan("workspace-a", first, data)
 	if err != nil {
 		t.Fatalf("expected first system plan, got %v", err)
 	}
-	b, _, err := newSimulatedSystemPlan("workspace-a", second, catalog, model)
+	b, _, err := newSimulatedSystemPlan("workspace-a", second, data)
 	if err != nil {
 		t.Fatalf("expected second system plan, got %v", err)
 	}
@@ -317,46 +314,38 @@ func simulatedSystemDocumentFields(t *testing.T, data json.Value) map[string]jso
 	return fields
 }
 
-// simulatedSystemTestModel acquires a small artificial canonical model with
-// varied laws, then proves that the Core owner reuses it after origins close.
-func simulatedSystemTestModel(t *testing.T) *fakedata.SocioeconomicModel {
+// simulatedSystemTestData verifies lazy, shared acquisition of all four JSONs.
+func simulatedSystemTestData(t *testing.T) *fakedata.ItalianWorldData {
 
 	t.Helper()
-	fixture, err := os.ReadFile("testdata/socioeconomic-model.json")
-	if err != nil {
-		t.Fatalf("expected artificial socioeconomic fixture, got %v", err)
-	}
+	assets := syntheticworldtest.Assets(t)
 	var calls atomic.Int32
+	handler := syntheticworldtest.Handler(t, assets, "")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls.Add(1)
-		if r.URL.Path != "/synthetic-world/it-2026a/model.json" {
-			t.Errorf("expected fixed model path, got %s", r.URL.Path)
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		_, _ = w.Write(fixture)
+		handler.ServeHTTP(w, r)
 	}))
 	t.Cleanup(server.Close)
-	source, err := fakedata.NewSocioeconomicModelSource([]string{server.URL})
+	source, err := fakedata.NewItalianWorldSource([]string{server.URL})
 	if err != nil {
 		t.Fatalf("expected acquisition owner, got %v", err)
 	}
-	core := &Core{simulatedModelSource: source}
+	core := &Core{simulatedWorldSource: source}
 	if calls.Load() != 0 {
 		t.Fatalf("expected no request during source construction, got %d", calls.Load())
 	}
-	model, err := core.simulatedModelSource.Load(t.Context())
+	data, err := core.simulatedWorldSource.Load(t.Context())
 	if err != nil {
-		t.Fatalf("expected acquired socioeconomic model, got %v", err)
+		t.Fatalf("expected prepared Italian data, got %v", err)
 	}
 	server.Close()
-	reused, err := core.simulatedModelSource.Load(t.Context())
+	reused, err := core.simulatedWorldSource.Load(t.Context())
 	if err != nil {
-		t.Fatalf("expected retained model after origin closure, got %v", err)
+		t.Fatalf("expected retained data after origin closure, got %v", err)
 	}
-	if model != reused || calls.Load() != 1 {
-		t.Fatalf("expected same acquired model and one request, got same=%t requests=%d", model == reused, calls.Load())
+	if data != reused || calls.Load() != 4 {
+		t.Fatalf("expected shared prepared data and four JSON requests, got same=%t requests=%d", data == reused, calls.Load())
 	}
 
-	return model
+	return data
 }

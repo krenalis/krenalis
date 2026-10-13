@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/test/syntheticworldtest"
 	"github.com/krenalis/krenalis/tools/json"
 )
 
@@ -22,14 +23,8 @@ func TestDeleteWorkspaceWithBoundSimulatedSystemFreshSchema(t *testing.T) {
 		t.Skip()
 	}
 
-	model := simulatedSystemModelFixture(t)
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/synthetic-world/it-2026a/model.json" {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		_, _ = w.Write(model)
-	}))
+	assets := syntheticworldtest.Assets(t)
+	server := httptest.NewServer(syntheticworldtest.Handler(t, assets, ""))
 	defer server.Close()
 	k := krenalistester.NewKrenalisInstance(t)
 	k.SetSyntheticPhotosDir(simulatedSystemCatalogFixture(t))

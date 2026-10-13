@@ -115,14 +115,6 @@ type Person struct {
 	PhotoID    string
 }
 
-// WorldConfig configures one immutable Synthetic World v1 snapshot.
-type WorldConfig struct {
-	IdentityNamespace IdentityNamespace
-	WorldSeed         uint64
-	ReferenceDate     string
-	FaceCatalog       *FaceCatalog
-}
-
 // World provides deterministic random access to Layer 1 Persons.
 type World struct {
 	namespace     IdentityNamespace
@@ -135,45 +127,24 @@ type World struct {
 	faceCatalog   *FaceCatalog
 	emailToken    affinePermutation
 	siteToken     affinePermutation
+	personVersion string
+	dataVersion   string
+	italian       *ItalianWorldData
 }
 
-// NewWorld validates config and returns an immutable Layer 1 World.
-// It returns ErrInvalidIdentityNamespace, ErrInvalidReferenceDate,
-// ErrCorruptFrozenDataset, ErrInvalidFaceCatalog, or ErrNoCompatiblePhoto as
-// appropriate.
-func NewWorld(config WorldConfig) (*World, error) {
-	return newWorld(config)
-}
-
-func newWorld(config WorldConfig) (*World, error) {
-
-	referenceDate, err := parseReferenceDate(config.ReferenceDate)
-	if err != nil {
-		return nil, err
-	}
-	data, err := loadLayer1ItalyData()
-	if err != nil {
-		return nil, err
-	}
-	err = config.FaceCatalog.validate()
-	if err != nil {
-		return nil, err
-	}
-	for _, gender := range [...]Gender{GenderFemale, GenderMale} {
-		if !config.FaceCatalog.hasUsableGender(gender) {
-			return nil, fmt.Errorf("%w: gender %s", ErrNoCompatiblePhoto, gender)
-		}
-	}
+// newWorldWithData composes identities and the shared deterministic factory
+// from prepared inputs, without loading or validating datasets again.
+func newWorldWithData(config worldConfig, referenceDate time.Time, data *italyData, personVersion, dataVersion string) (*World, error) {
 
 	market, err := StringComponent(marketComponentName, Market)
 	if err != nil {
 		return nil, err
 	}
-	marketDataVersion, err := StringComponent(marketDataVersionComponentName, MarketDataVersion)
+	marketDataVersion, err := StringComponent(marketDataVersionComponentName, dataVersion)
 	if err != nil {
 		return nil, err
 	}
-	personSpecVersion, err := StringComponent(personSpecVersionComponentName, PersonSpecVersion)
+	personSpecVersion, err := StringComponent(personSpecVersionComponentName, personVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -224,8 +195,22 @@ func newWorld(config WorldConfig) (*World, error) {
 	return &World{
 		namespace: config.IdentityNamespace, referenceDate: referenceDate, referenceText: config.ReferenceDate,
 		worldID: worldID, snapshotID: snapshotID, streams: streams, data: data, faceCatalog: config.FaceCatalog,
-		emailToken: emailToken, siteToken: siteToken,
+		emailToken: emailToken, siteToken: siteToken, personVersion: personVersion, dataVersion: dataVersion,
 	}, nil
+}
+
+// Layer1Protocol returns layer1-json-v1 for the Italian JSON entry point, or an
+// empty string for the historical CSV entry point.
+func (w *World) Layer1Protocol() string {
+	if w.italian != nil {
+		return ItalianJSONLayer1Protocol
+	}
+	return ""
+}
+
+// MarketDataVersion returns the base release used in this World's identity.
+func (w *World) MarketDataVersion() string {
+	return w.dataVersion
 }
 
 // Person returns the deterministic Layer 1 Person at index.
@@ -235,8 +220,12 @@ func (w *World) Person(index PersonIndex) (Person, error) {
 	return w.person(index)
 }
 
-// PhotoAsset returns public metadata for a verified photo in this World's
-// catalog.
+// PersonSpecVersion returns the person specification used by this World.
+func (w *World) PersonSpecVersion() string {
+	return w.personVersion
+}
+
+// PhotoAsset returns verified local or declared external rendition metadata.
 // It returns ErrInvalidPhotoAsset when photoID or size is unavailable.
 func (w *World) PhotoAsset(photoID string, size PhotoSize) (PhotoAsset, error) {
 	return w.photoAsset(photoID, size)
@@ -581,4 +570,12 @@ func (w *World) weightedString(index PersonIndex, path string, table weightedStr
 		return "", err
 	}
 	return table.values[position], nil
+}
+
+// worldConfig supplies coordinates and a prepared catalog to the shared engine.
+type worldConfig struct {
+	IdentityNamespace IdentityNamespace
+	WorldSeed         uint64
+	ReferenceDate     string
+	FaceCatalog       *FaceCatalog
 }

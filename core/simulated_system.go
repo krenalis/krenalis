@@ -21,9 +21,8 @@ import (
 )
 
 const (
-	simulatedSystemMaxUserCount        = 10_000_000
-	simulatedSystemLegacyPolicyVersion = "generation-v3"
-	simulatedSystemPolicyVersion       = "generation-v4"
+	simulatedSystemMaxUserCount  = 10_000_000
+	simulatedSystemPolicyVersion = "generation-v5"
 )
 
 // SimulatedSystem represents the metadata of a simulated system.
@@ -68,20 +67,9 @@ func (this *Workspace) CreateSimulatedSystem(ctx context.Context, name string, u
 	}
 	status := state.SimulatedSystemAvailable
 	policy := "empty-v1"
-	var checkpoint json.Value
-	var checkpointParameter any
 	if userCountValue > 0 {
-		catalog, err := this.core.loadSimulatedCatalog(ctx)
-		if err != nil {
-			return "", errors.Unavailable("simulated system photo catalog is unavailable: %s", err)
-		}
 		status = state.SimulatedSystemPreparing
 		policy = simulatedSystemPolicyVersion
-		checkpoint, err = initialSimulatedSystemCheckpoint(catalog, this.core.simulatedPhotoBaseURL)
-		if err != nil {
-			return "", fmt.Errorf("cannot prepare simulated system checkpoint")
-		}
-		checkpointParameter = string(checkpoint)
 	}
 	_, err = this.store.CountSimulatedSystemRecords(ctx, "")
 	if err != nil {
@@ -95,7 +83,6 @@ func (this *Workspace) CreateSimulatedSystem(ctx context.Context, name string, u
 		Countries:               countriesValue,
 		Status:                  status,
 		GenerationPolicyVersion: policy,
-		GenerationCheckpoint:    checkpoint,
 		GenerationError:         "",
 		CreatedAt:               time.Now().UTC(),
 	}
@@ -107,7 +94,7 @@ func (this *Workspace) CreateSimulatedSystem(ctx context.Context, name string, u
 				" duplicate_record_percent, countries, generation_policy_version, generated_record_count,"+
 				" generation_checkpoint, generation_error, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8,"+
 				" $9, $10, $11, $12, $13)", n.ID, n.Workspace, n.Name, n.Status, n.UserCount,
-				duplicateValue, string(n.Countries), n.GenerationPolicyVersion, n.GeneratedRecordCount, checkpointParameter,
+				duplicateValue, string(n.Countries), n.GenerationPolicyVersion, n.GeneratedRecordCount, nil,
 				n.GenerationError, n.CreatedAt, n.UpdatedAt)
 			if err != nil {
 				return nil, err

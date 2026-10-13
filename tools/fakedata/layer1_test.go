@@ -184,7 +184,7 @@ func TestLayer1Determinism(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected identity namespace, got %v", err)
 	}
-	differentNamespace, err := NewWorld(WorldConfig{
+	differentNamespace, err := newFrozenWorld(t, worldConfig{
 		IdentityNamespace: namespace,
 		WorldSeed:         layer1TestSeed,
 		ReferenceDate:     layer1TestReferenceDate,
@@ -215,7 +215,7 @@ func TestLayer1InvalidInputs(t *testing.T) {
 		t.Fatalf("expected identity namespace, got %v", err)
 	}
 	for _, referenceDate := range []string{"", "2025-12-31", "2031-01-01", "2026-02-29", "2026-1-01", "2026-01-01T00:00:00Z"} {
-		_, err := NewWorld(WorldConfig{
+		_, err := newFrozenWorld(t, worldConfig{
 			IdentityNamespace: namespace,
 			WorldSeed:         layer1TestSeed,
 			ReferenceDate:     referenceDate,
@@ -229,7 +229,7 @@ func TestLayer1InvalidInputs(t *testing.T) {
 		}
 		t.Fatalf("expected invalid reference date for %q, got nil", referenceDate)
 	}
-	_, err = NewWorld(WorldConfig{
+	_, err = newFrozenWorld(t, worldConfig{
 		IdentityNamespace: IdentityNamespace{},
 		WorldSeed:         layer1TestSeed,
 		ReferenceDate:     layer1TestReferenceDate,
@@ -244,7 +244,7 @@ func TestLayer1InvalidInputs(t *testing.T) {
 		t.Fatal("expected invalid identity namespace, got nil")
 	}
 
-	_, err = NewWorld(WorldConfig{
+	_, err = newFrozenWorld(t, worldConfig{
 		IdentityNamespace: namespace,
 		WorldSeed:         layer1TestSeed,
 		ReferenceDate:     layer1TestReferenceDate,
@@ -561,7 +561,7 @@ func mustLayer1World(t *testing.T, referenceDate string, seed uint64) *World {
 	if err != nil {
 		t.Fatalf("expected identity namespace, got %v", err)
 	}
-	world, err := NewWorld(WorldConfig{
+	world, err := newFrozenWorld(t, worldConfig{
 		IdentityNamespace: namespace,
 		WorldSeed:         seed,
 		ReferenceDate:     referenceDate,

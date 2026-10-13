@@ -5,11 +5,7 @@
 package core
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
 	"reflect"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -21,7 +17,7 @@ import (
 )
 
 func TestSimulatedSystemPlan(t *testing.T) {
-	catalog := simulatedSystemTestCatalog(t)
+	data := simulatedSystemTestData(t)
 	for _, test := range []struct {
 		name    string
 		count   int
@@ -35,8 +31,8 @@ func TestSimulatedSystemPlan(t *testing.T) {
 		{"fifty percent", 10, "50", 5},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			account := simulatedSystemPlanFixture(t, catalog, "account-a", test.count, test.percent)
-			plan, checkpoint, err := newSimulatedSystemPlan("workspace-a", account, catalog, nil)
+			account := simulatedSystemPlanFixture(t, data, "account-a", test.count, test.percent)
+			plan, checkpoint, err := newSimulatedSystemPlan("workspace-a", account, data)
 			if err != nil {
 				t.Fatalf("expected generation plan, got %v", err)
 			}
@@ -85,9 +81,9 @@ func TestSimulatedSystemPlan(t *testing.T) {
 
 func TestSimulatedSystemPlanMaximum(t *testing.T) {
 
-	catalog := simulatedSystemTestCatalog(t)
-	account := simulatedSystemPlanFixture(t, catalog, "account-a", 10_000_000, "50")
-	plan, _, err := newSimulatedSystemPlan("workspace-a", account, catalog, nil)
+	data := simulatedSystemTestData(t)
+	account := simulatedSystemPlanFixture(t, data, "account-a", 10_000_000, "50")
+	plan, _, err := newSimulatedSystemPlan("workspace-a", account, data)
 	if err != nil {
 		t.Fatalf("expected generation plan, got %v", err)
 	}
@@ -96,7 +92,7 @@ func TestSimulatedSystemPlanMaximum(t *testing.T) {
 	}
 
 	account.UserCount++
-	_, _, err = newSimulatedSystemPlan("workspace-a", account, catalog, nil)
+	_, _, err = newSimulatedSystemPlan("workspace-a", account, data)
 	if err == nil {
 		t.Fatal("expected invalid generation configuration, got no error")
 	}
@@ -104,9 +100,9 @@ func TestSimulatedSystemPlanMaximum(t *testing.T) {
 }
 
 func TestSimulatedSystemPlanResumeAndSelection(t *testing.T) {
-	catalog := simulatedSystemTestCatalog(t)
-	account := simulatedSystemPlanFixture(t, catalog, "account-a", 513, "50")
-	plan, checkpoint, err := newSimulatedSystemPlan("workspace-a", account, catalog, nil)
+	data := simulatedSystemTestData(t)
+	account := simulatedSystemPlanFixture(t, data, "account-a", 513, "50")
+	plan, checkpoint, err := newSimulatedSystemPlan("workspace-a", account, data)
 	if err != nil {
 		t.Fatalf("expected generation plan, got %v", err)
 	}
@@ -119,7 +115,7 @@ func TestSimulatedSystemPlanResumeAndSelection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected checkpoint JSON, got %v", err)
 	}
-	resumed, resumedCheckpoint, err := newSimulatedSystemPlan("workspace-a", account, catalog, nil)
+	resumed, resumedCheckpoint, err := newSimulatedSystemPlan("workspace-a", account, data)
 	if err != nil {
 		t.Fatalf("expected resumed generation plan, got %v", err)
 	}
@@ -128,13 +124,13 @@ func TestSimulatedSystemPlanResumeAndSelection(t *testing.T) {
 		t.Fatal("expected exact resumed suffix, got different records or Oracle")
 	}
 
-	first := simulatedSystemPlanFixture(t, catalog, "account-a", 30_000, "0")
-	second := simulatedSystemPlanFixture(t, catalog, "account-b", 30_000, "0")
-	a, _, err := newSimulatedSystemPlan("workspace-a", first, catalog, nil)
+	first := simulatedSystemPlanFixture(t, data, "account-a", 30_000, "0")
+	second := simulatedSystemPlanFixture(t, data, "account-b", 30_000, "0")
+	a, _, err := newSimulatedSystemPlan("workspace-a", first, data)
 	if err != nil {
 		t.Fatalf("expected first selection plan, got %v", err)
 	}
-	b, _, err := newSimulatedSystemPlan("workspace-a", second, catalog, nil)
+	b, _, err := newSimulatedSystemPlan("workspace-a", second, data)
 	if err != nil {
 		t.Fatalf("expected second selection plan, got %v", err)
 	}
@@ -175,7 +171,7 @@ func TestSimulatedSystemPlanResumeAndSelection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected changed checkpoint JSON, got %v", err)
 	}
-	_, _, err = newSimulatedSystemPlan("workspace-a", first, catalog, nil)
+	_, _, err = newSimulatedSystemPlan("workspace-a", first, data)
 	if err == nil {
 		t.Fatal("expected changed catalog fingerprint to fail, got success")
 	}
@@ -185,7 +181,7 @@ func TestSimulatedSystemPlanResumeAndSelection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected changed world version JSON, got %v", err)
 	}
-	_, _, err = newSimulatedSystemPlan("workspace-a", first, catalog, nil)
+	_, _, err = newSimulatedSystemPlan("workspace-a", first, data)
 	if err == nil {
 		t.Fatal("expected changed world version to fail, got success")
 	}
@@ -195,7 +191,7 @@ func TestSimulatedSystemPlanResumeAndSelection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected changed person specification JSON, got %v", err)
 	}
-	_, _, err = newSimulatedSystemPlan("workspace-a", first, catalog, nil)
+	_, _, err = newSimulatedSystemPlan("workspace-a", first, data)
 	if err == nil {
 		t.Fatal("expected changed person specification to fail, got success")
 	}
@@ -205,16 +201,16 @@ func TestSimulatedSystemPlanResumeAndSelection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected changed source version JSON, got %v", err)
 	}
-	_, _, err = newSimulatedSystemPlan("workspace-a", first, catalog, nil)
+	_, _, err = newSimulatedSystemPlan("workspace-a", first, data)
 	if err == nil {
 		t.Fatal("expected changed source version to fail, got success")
 	}
 }
 
 func TestSimulatedSystemDocument(t *testing.T) {
-	catalog := simulatedSystemTestCatalog(t)
-	account := simulatedSystemPlanFixture(t, catalog, "account-a", 40, "50")
-	plan, checkpoint, err := newSimulatedSystemPlan("workspace-a", account, catalog, nil)
+	data := simulatedSystemTestData(t)
+	account := simulatedSystemPlanFixture(t, data, "account-a", 40, "50")
+	plan, checkpoint, err := newSimulatedSystemPlan("workspace-a", account, data)
 	if err != nil {
 		t.Fatalf("expected generation plan, got %v", err)
 	}
@@ -283,7 +279,7 @@ func TestSimulatedSystemDocument(t *testing.T) {
 		document.LastName == nil || *document.LastName != *completeSource.LastName ||
 		document.Email == nil || *document.Email != *completeSource.Email ||
 		document.Phone == nil || *document.Phone != *completeSource.Phone ||
-		document.Photo == nil || !strings.HasPrefix(*document.Photo, "https://krenalis.test/photos/") ||
+		document.Photo == nil || !strings.HasPrefix(*document.Photo, "https://krenalis.test/fixture/") ||
 		!strings.HasSuffix(*document.Photo, "/256/"+*completeSource.PhotoID+".webp") {
 		t.Fatalf("expected observation-specific fields, got %+v", document)
 	}
@@ -303,8 +299,8 @@ func TestSimulatedSystemDocument(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected document fields, got %v", err)
 	}
-	if len(fields) != 11 {
-		t.Fatalf("expected exactly 11 document fields, got %v", fields)
+	if len(fields) < 14 || len(fields) > 17 {
+		t.Fatalf("expected 11 base fields plus applicable socioeconomic facts, got %v", fields)
 	}
 	for _, field := range []string{"customer_id", "first_name", "last_name", "email", "gender", "birth_date",
 		"current_age", "phone", "site_url", "address", "photo"} {
@@ -373,9 +369,9 @@ func simulatedSystemPlanRecords(t *testing.T, plan *simulatedSystemPlan, checkpo
 	return records, oracle
 }
 
-func simulatedSystemPlanFixture(t *testing.T, catalog *fakedata.FaceCatalog, id string, count int, percent string) *state.SimulatedSystem {
+func simulatedSystemPlanFixture(t *testing.T, data *fakedata.ItalianWorldData, id string, count int, percent string) *state.SimulatedSystem {
 	t.Helper()
-	checkpoint, err := initialSimulatedSystemCheckpoint(catalog, "https://krenalis.test/")
+	checkpoint, err := initialSimulatedSystemCheckpoint(data, "https://krenalis.test/")
 	if err != nil {
 		t.Fatalf("expected initial checkpoint, got %v", err)
 	}
@@ -384,91 +380,5 @@ func simulatedSystemPlanFixture(t *testing.T, catalog *fakedata.FaceCatalog, id 
 		t.Fatalf("expected duplicate percentage, got %v", err)
 	}
 	return &state.SimulatedSystem{ID: id, UserCount: count, DuplicateRecordPercent: value,
-		GenerationPolicyVersion: simulatedSystemLegacyPolicyVersion, GenerationCheckpoint: checkpoint}
-}
-
-func simulatedSystemTestCatalog(t *testing.T) *fakedata.FaceCatalog {
-	t.Helper()
-	root := filepath.Join("..", "tools", "fakedata", "testdata", "fakefacegen-v1-selected")
-	directory := t.TempDir()
-	var catalog, manifest map[string]any
-	var specs []map[string]any
-	for _, item := range []struct {
-		name string
-		out  any
-	}{{"catalog.json", &catalog}, {"specs.json", &specs}, {"manifest.json", &manifest}} {
-		data, err := os.ReadFile(filepath.Join(root, item.name))
-		if err != nil {
-			t.Fatalf("expected face catalog fixture %s, got %v", item.name, err)
-		}
-		err = json.Unmarshal(data, item.out)
-		if err != nil {
-			t.Fatalf("expected valid face catalog fixture %s, got %v", item.name, err)
-		}
-	}
-	catalog["count"] = 2
-	newSpecs := make([]map[string]any, 0, 2)
-	newAssets := make([]map[string]any, 0, 2)
-	for index, sourceID := range []string{"face-000013", "face-000037"} {
-		id := fmt.Sprintf("face-%06d", index+1)
-		for _, spec := range specs {
-			if spec["id"] == sourceID {
-				spec["id"] = id
-				newSpecs = append(newSpecs, spec)
-				break
-			}
-		}
-		for _, item := range manifest["assets"].([]any) {
-			asset := item.(map[string]any)
-			if asset["id"] == sourceID {
-				asset["id"] = id
-				asset["spec_id"] = id
-				asset["file"] = "masters/" + id + ".webp"
-				newAssets = append(newAssets, asset)
-				break
-			}
-		}
-		for _, size := range []int{64, 128, 256, 512, 1024} {
-			folder := filepath.Join("derived", strconv.Itoa(size))
-			if size == 1024 {
-				folder = "masters"
-			}
-			data, err := os.ReadFile(filepath.Join(root, folder, sourceID+".webp"))
-			if err != nil {
-				t.Fatalf("expected face fixture %s/%s, got %v", folder, sourceID, err)
-			}
-			path := filepath.Join(directory, folder)
-			err = os.MkdirAll(path, 0o755)
-			if err != nil {
-				t.Fatalf("expected face fixture directory %s, got %v", path, err)
-			}
-			err = os.WriteFile(filepath.Join(path, id+".webp"), data, 0o644)
-			if err != nil {
-				t.Fatalf("expected face fixture asset %s, got %v", id, err)
-			}
-		}
-	}
-	manifest["assets"] = newAssets
-	for _, item := range []struct {
-		name  string
-		value any
-	}{{"catalog.json", catalog}, {"specs.json", newSpecs}, {"manifest.json", manifest}} {
-		data, err := json.Marshal(item.value)
-		if err != nil {
-			t.Fatalf("expected face fixture JSON %s, got %v", item.name, err)
-		}
-		data, err = json.Canonicalize(data)
-		if err != nil {
-			t.Fatalf("expected canonical face fixture JSON %s, got %v", item.name, err)
-		}
-		err = os.WriteFile(filepath.Join(directory, item.name), data, 0o644)
-		if err != nil {
-			t.Fatalf("expected face fixture metadata %s, got %v", item.name, err)
-		}
-	}
-	result, err := fakedata.LoadFaceCatalog(t.Context(), directory)
-	if err != nil {
-		t.Fatalf("expected complete face catalog, got %v", err)
-	}
-	return result
+		GenerationPolicyVersion: simulatedSystemPolicyVersion, GenerationCheckpoint: checkpoint}
 }

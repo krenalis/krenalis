@@ -47,28 +47,17 @@ const telemetryLevelAll = corePkg.TelemetryLevelAll
 func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, initDockerMember bool) error {
 
 	var photoHandler http.Handler
-	var catalog *fakedata.FaceCatalog
-	var catalogSource *fakedata.FaceCatalogSource
-	photoBaseURL := config.HTTP.ExternalURL
 	if config.SyntheticPhotosDir != "" {
-		var err error
-		catalog, err = fakedata.LoadFaceCatalog(ctx, config.SyntheticPhotosDir)
+		catalog, err := fakedata.LoadFaceCatalog(ctx, config.SyntheticPhotosDir)
 		if err != nil {
 			return fmt.Errorf("load KRENALIS_SYNTHETIC_PHOTOS_DIR: %w", err)
 		}
 		photoHandler = catalog.Handler()
-	} else {
-		var err error
-		catalogSource, err = fakedata.NewFaceCatalogSource(config.ExternalAssetsURLs)
-		if err != nil {
-			return fmt.Errorf("configure external photo catalog: %w", err)
-		}
-		photoBaseURL = config.ExternalAssetsURLs[0]
 	}
 
-	socioeconomicSource, err := fakedata.NewSocioeconomicModelSource(config.ExternalAssetsURLs)
+	worldSource, err := fakedata.NewItalianWorldSource(config.ExternalAssetsURLs)
 	if err != nil {
-		return fmt.Errorf("configure socioeconomic model source: %w", err)
+		return fmt.Errorf("configure Italian World source: %w", err)
 	}
 
 	conf := corePkg.Config{
@@ -83,10 +72,8 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 		SentryTelemetryLevel:          config.SentryTelemetryLevel,
 		MaxQueuedEventsPerDestination: config.MaxQueuedEventsPerDestination,
 		PrometheusMetricsEnabled:      config.PrometheusMetricsEnabled,
-		SimulatedFaceCatalog:          catalog,
-		SimulatedFaceCatalogSource:    catalogSource,
-		SimulatedPhotoBaseURL:         photoBaseURL,
-		SimulatedSocioeconomicSource:  socioeconomicSource,
+		SimulatedWorldSource:          worldSource,
+		SimulatedPhotoBaseURL:         config.ExternalAssetsURLs[0],
 	}
 	conf.DatabaseInitialization.InitIfEmpty = initDBIfEmpty
 	conf.DatabaseInitialization.InitDockerMember = initDockerMember

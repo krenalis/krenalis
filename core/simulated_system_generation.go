@@ -179,29 +179,48 @@ func (worker *simulatedSystemWorker) prepare(ctx context.Context, account *state
 	if account.GenerationError != "" {
 		return worker.fail(ctx, account, account.GenerationError)
 	}
-	catalog, err := worker.core.loadSimulatedCatalog(ctx)
+	switch account.GenerationPolicyVersion {
+	case "generation-v3", "generation-v4":
+		return worker.fail(ctx, account, "legacy generation policy "+account.GenerationPolicyVersion+" is no longer supported")
+	case simulatedSystemPolicyVersion:
+	default:
+		return worker.fail(ctx, account, "unsupported generation policy")
+	}
+
+	data, err := worker.core.simulatedWorldSource.Load(ctx)
 	if err != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		return worker.fail(ctx, account, "photo catalog is unavailable: "+err.Error())
+		return worker.fail(ctx, account, "Italian World data is unavailable")
 	}
 
-	var model *fakedata.SocioeconomicModel
-	if account.GenerationPolicyVersion == simulatedSystemPolicyVersion {
-		model, err = worker.core.simulatedModelSource.Load(ctx)
-		if err != nil {
-			if ctx.Err() != nil {
-				return ctx.Err()
-			}
-			return worker.fail(ctx, account, "socioeconomic model is unavailable")
+	// Keep the persisted checkpoint intact for saveCheckpoint's comparison.
+	candidate := *account
+	if candidate.GenerationCheckpoint == nil {
+		if account.GeneratedRecordCount != 0 {
+			return worker.fail(ctx, account, "generation checkpoint and counter differ")
 		}
+		checkpoint, err := initialSimulatedSystemCheckpoint(data, worker.core.simulatedPhotoBaseURL)
+		if err != nil {
+			return worker.fail(ctx, account, "generation configuration is unavailable or changed")
+		}
+		candidate.GenerationCheckpoint = checkpoint
 	}
 
-	plan, checkpoint, err := newSimulatedSystemPlan(account.Workspace().ID, account, catalog, model)
+	plan, checkpoint, err := newSimulatedSystemPlan(account.Workspace().ID, &candidate, data)
 	if err != nil {
 		return worker.fail(ctx, account, "generation configuration is unavailable or changed")
 	}
+	plan.account = account
+
+	if account.GenerationCheckpoint == nil {
+		err = worker.saveCheckpoint(ctx, account, candidate.GenerationCheckpoint, 0, state.SimulatedSystemPreparing, "")
+		if err != nil {
+			return err
+		}
+	}
+
 	store, ok := worker.core.datastore.Store(account.Workspace().ID)
 	if !ok {
 		return fmt.Errorf("workspace datastore is unavailable")
@@ -418,50 +437,68 @@ func (worker *simulatedSystemWorker) wakeUp() {
 	}
 }
 
-func (core *Core) loadSimulatedCatalog(ctx context.Context) (*fakedata.FaceCatalog, error) {
-	if core.simulatedCatalog != nil {
-		return core.simulatedCatalog, nil
-	}
-	return core.simulatedPhotoSource.Load(ctx)
-}
-
 func (core *Core) wakeSimulatedSystemWorker() {
 	if core.simulatedWorker != nil {
 		core.simulatedWorker.wakeUp()
 	}
 }
 
-func initialSimulatedSystemCheckpoint(catalog *fakedata.FaceCatalog, photoBaseURL string) (json.Value, error) {
-	flags := validation.NoQuery
-	if catalog.Release() == "" {
-		flags |= validation.NoPath
+func initialSimulatedSystemCheckpoint(data *fakedata.ItalianWorldData, photoBaseURL string) (json.Value, error) {
+
+	catalog, err := data.PhotoCatalog()
+	if err != nil {
+		return nil, err
 	}
-	photoBaseURL, err := validation.ParseURL(photoBaseURL, flags)
-	if err != nil || photoBaseURL == "" {
+	release, err := data.BaseRelease()
+	if err != nil {
+		return nil, err
+	}
+	photoBaseURL, err = validation.ParseURL(photoBaseURL, validation.NoQuery)
+	if err != nil {
+		return nil, err
+	}
+	if photoBaseURL == "" {
 		return nil, fmt.Errorf("invalid simulated photo URL")
 	}
 	checksum := catalog.Checksum()
+
 	return json.Marshal(simulatedSystemCheckpoint{
 		CatalogSHA256: hex.EncodeToString(checksum[:]), CatalogRelease: catalog.Release(),
 		WorldModelVersion: fakedata.WorldModelVersion,
-		MarketDataVersion: fakedata.MarketDataVersion, PersonSpecVersion: fakedata.PersonSpecVersion,
+		MarketDataVersion: release, PersonSpecVersion: fakedata.ItalianJSONPersonSpecVersion,
 		SourceVersion: fakedata.SourceSimulationVersion, NamespaceVersion: simulatedSystemNamespaceVersion,
 		ReferenceDate: simulatedSystemReferenceDate, PhotoBaseURL: photoBaseURL,
 	})
 }
 
-func newSimulatedSystemPlan(workspaceID string, account *state.SimulatedSystem, catalog *fakedata.FaceCatalog, model *fakedata.SocioeconomicModel) (*simulatedSystemPlan, simulatedSystemCheckpoint, error) {
+func newSimulatedSystemPlan(workspaceID string, account *state.SimulatedSystem, data *fakedata.ItalianWorldData) (*simulatedSystemPlan, simulatedSystemCheckpoint, error) {
+
 	var checkpoint simulatedSystemCheckpoint
+	if account.GenerationPolicyVersion != simulatedSystemPolicyVersion {
+		return nil, checkpoint, fmt.Errorf("unsupported generation policy")
+	}
 	err := json.Unmarshal(account.GenerationCheckpoint, &checkpoint)
 	if err != nil {
 		return nil, checkpoint, err
 	}
-	flags := validation.NoQuery
-	if checkpoint.CatalogRelease == "" {
-		flags |= validation.NoPath
+	catalog, err := data.PhotoCatalog()
+	if err != nil {
+		return nil, checkpoint, err
 	}
-	photoBaseURL, err := validation.ParseURL(checkpoint.PhotoBaseURL, flags)
-	if err != nil || photoBaseURL == "" || photoBaseURL != checkpoint.PhotoBaseURL {
+	release, err := data.BaseRelease()
+	if err != nil {
+		return nil, checkpoint, err
+	}
+	model, err := data.Model()
+	if err != nil {
+		return nil, checkpoint, err
+	}
+
+	photoBaseURL, err := validation.ParseURL(checkpoint.PhotoBaseURL, validation.NoQuery)
+	if err != nil {
+		return nil, checkpoint, err
+	}
+	if photoBaseURL == "" || photoBaseURL != checkpoint.PhotoBaseURL {
 		return nil, checkpoint, fmt.Errorf("invalid simulated photo URL")
 	}
 	photoURL, err := url.Parse(photoBaseURL)
@@ -469,13 +506,11 @@ func newSimulatedSystemPlan(workspaceID string, account *state.SimulatedSystem, 
 		return nil, checkpoint, err
 	}
 	checksum := catalog.Checksum()
-	if (account.GenerationPolicyVersion != simulatedSystemLegacyPolicyVersion &&
-		account.GenerationPolicyVersion != simulatedSystemPolicyVersion) ||
-		checkpoint.CatalogRelease != catalog.Release() ||
+	if checkpoint.CatalogRelease != catalog.Release() ||
 		checkpoint.CatalogSHA256 != hex.EncodeToString(checksum[:]) ||
 		checkpoint.WorldModelVersion != fakedata.WorldModelVersion ||
-		checkpoint.MarketDataVersion != fakedata.MarketDataVersion ||
-		checkpoint.PersonSpecVersion != fakedata.PersonSpecVersion ||
+		checkpoint.MarketDataVersion != release ||
+		checkpoint.PersonSpecVersion != fakedata.ItalianJSONPersonSpecVersion ||
 		checkpoint.SourceVersion != fakedata.SourceSimulationVersion ||
 		checkpoint.NamespaceVersion != simulatedSystemNamespaceVersion ||
 		checkpoint.ReferenceDate != simulatedSystemReferenceDate {
@@ -511,19 +546,16 @@ func newSimulatedSystemPlan(workspaceID string, account *state.SimulatedSystem, 
 	if err != nil {
 		return nil, checkpoint, err
 	}
-	world, err := fakedata.NewWorld(fakedata.WorldConfig{
+	world, err := fakedata.NewItalianWorldV1(fakedata.ItalianWorldConfig{
 		IdentityNamespace: namespace, WorldSeed: binary.BigEndian.Uint64(worldKey[10:18]),
-		ReferenceDate: simulatedSystemReferenceDate, FaceCatalog: catalog,
-	})
+		ReferenceDate: simulatedSystemReferenceDate,
+	}, data)
 	if err != nil {
 		return nil, checkpoint, err
 	}
-	var socioeconomic *fakedata.SocioeconomicWorld
-	if account.GenerationPolicyVersion == simulatedSystemPolicyVersion {
-		socioeconomic, err = fakedata.NewSocioeconomicWorld(world, model)
-		if err != nil {
-			return nil, checkpoint, err
-		}
+	socioeconomic, err := fakedata.NewSocioeconomicWorld(world, model)
+	if err != nil {
+		return nil, checkpoint, err
 	}
 	sourceWorld, err := fakedata.NewSourceWorld(world, []fakedata.CountryShare{{
 		Code: "IT", Version: fakedata.MarketDataVersion, Weight: 1,
@@ -544,6 +576,7 @@ func newSimulatedSystemPlan(workspaceID string, account *state.SimulatedSystem, 
 	for gcdSimulatedSystem(step, modulus) != 1 {
 		step++
 	}
+
 	return &simulatedSystemPlan{account: account, world: sourceWorld, socioeconomic: socioeconomic,
 		source: source, catalog: catalog, photoBaseURL: photoURL,
 		people: people, duplicate: duplicate, offset: binary.BigEndian.Uint64(accountKey[:8]) % modulus,
@@ -599,18 +632,13 @@ func (plan *simulatedSystemPlan) record(person, representation int) (datastore.S
 	}
 	document := newSimulatedSystemDocument(canonical, record, photo)
 
-	if plan.socioeconomic != nil {
-
-		facts, err := plan.socioeconomic.Facts(index)
-		if err != nil {
-			return datastore.SimulatedSystemRecord{}, err
-		}
-
-		err = setSimulatedSystemSocioeconomicFacts(&document, plan.socioeconomic, facts)
-		if err != nil {
-			return datastore.SimulatedSystemRecord{}, err
-		}
-
+	facts, err := plan.socioeconomic.Facts(index)
+	if err != nil {
+		return datastore.SimulatedSystemRecord{}, err
+	}
+	err = setSimulatedSystemSocioeconomicFacts(&document, plan.socioeconomic, facts)
+	if err != nil {
+		return datastore.SimulatedSystemRecord{}, err
 	}
 
 	data, err := json.Marshal(document)

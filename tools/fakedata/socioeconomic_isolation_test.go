@@ -250,7 +250,7 @@ func TestSocioeconomicSnapshotIsolation(t *testing.T) {
 	model := socioeconomicTestModel(t, nil)
 	anchor := mustLayer1World(t, PopulationAnchorDate, layer1TestSeed)
 	future := mustLayer1World(t, "2030-12-31", layer1TestSeed)
-	other, err := NewWorld(WorldConfig{
+	other, err := newFrozenWorld(t, worldConfig{
 		IdentityNamespace: IdentityNamespace{Name: "other", Generation: 2}, WorldSeed: layer1TestSeed,
 		ReferenceDate: PopulationAnchorDate, FaceCatalog: anchor.faceCatalog,
 	})

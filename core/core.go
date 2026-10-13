@@ -74,9 +74,7 @@ type Core struct {
 	functionProvider      transformers.FunctionProvider
 	pipelineCleaner       *pipelineCleaner
 	pipelineScheduler     *pipelineScheduler
-	simulatedCatalog      *fakedata.FaceCatalog
-	simulatedPhotoSource  *fakedata.FaceCatalogSource
-	simulatedModelSource  *fakedata.SocioeconomicModelSource
+	simulatedWorldSource  *fakedata.ItalianWorldSource
 	simulatedPhotoBaseURL string
 	simulatedWorker       *simulatedSystemWorker
 	localLiveRuns         cancelContexts
@@ -114,10 +112,8 @@ type Config struct {
 	SentryTelemetryLevel          TelemetryLevel
 	MaxQueuedEventsPerDestination int
 	PrometheusMetricsEnabled      bool
-	SimulatedFaceCatalog          *fakedata.FaceCatalog
-	SimulatedFaceCatalogSource    *fakedata.FaceCatalogSource
+	SimulatedWorldSource          *fakedata.ItalianWorldSource
 	SimulatedPhotoBaseURL         string
-	SimulatedSocioeconomicSource  *fakedata.SocioeconomicModelSource
 	DatabaseInitialization        struct {
 		// InitIfEmpty controls whether the PostgreSQL database should be
 		// initialized in case it is empty.
@@ -391,9 +387,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}()
 
 	core.close.ctx, core.close.cancelCtx = context.WithCancel(context.Background())
-	core.simulatedCatalog = conf.SimulatedFaceCatalog
-	core.simulatedPhotoSource = conf.SimulatedFaceCatalogSource
-	core.simulatedModelSource = conf.SimulatedSocioeconomicSource
+	core.simulatedWorldSource = conf.SimulatedWorldSource
 	core.simulatedPhotoBaseURL = conf.SimulatedPhotoBaseURL
 	core.simulatedWorker = newSimulatedSystemWorker(core)
 

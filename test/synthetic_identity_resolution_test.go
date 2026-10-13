@@ -13,9 +13,11 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/test/syntheticworldtest"
 	"github.com/krenalis/krenalis/tools/fakedata"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -31,21 +33,32 @@ func TestSyntheticABIdentityResolution(t *testing.T) {
 
 	photoDirectory := syntheticCatalogFixture(t)
 	canonicalizeSyntheticCatalogFixture(t, photoDirectory)
+	photos, err := fakedata.ConvertLocalPhotoCatalogData(t.Context(), photoDirectory, strings.Repeat("1", 64))
+	if err != nil {
+		t.Fatalf("expected offline photo conversion, got %v", err)
+	}
+	assets := syntheticworldtest.Assets(t)
+	assets["photos.json"], err = photos.CanonicalJSON()
+	if err != nil {
+		t.Fatalf("expected international photo fixture, got %v", err)
+	}
+	syntheticworldtest.SetModel(t, assets, assets["socioeconomic.json"])
+	data := syntheticworldtest.Load(t, assets)
+	// Keep exercising the local photo service used by historical records.
 	catalog, err := fakedata.LoadFaceCatalog(t.Context(), photoDirectory)
 	if err != nil {
-		t.Fatalf("expected complete face catalog, got %v", err)
+		t.Fatalf("expected local photo catalog, got %v", err)
 	}
 
 	namespace, err := fakedata.NewIdentityNamespace("workspace-test", 1)
 	if err != nil {
 		t.Fatalf("expected identity namespace, got %v", err)
 	}
-	world, err := fakedata.NewWorld(fakedata.WorldConfig{
+	world, err := fakedata.NewItalianWorldV1(fakedata.ItalianWorldConfig{
 		IdentityNamespace: namespace,
 		WorldSeed:         726381,
 		ReferenceDate:     "2026-01-01",
-		FaceCatalog:       catalog,
-	})
+	}, data)
 	if err != nil {
 		t.Fatalf("expected source world base, got %v", err)
 	}

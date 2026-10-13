@@ -221,8 +221,8 @@ func (c *FaceCatalog) Asset(photoID string, size PhotoSize) (PhotoAsset, error) 
 	return c.asset(photoID, size)
 }
 
-// Checksum returns the catalog identity used by the deterministic photo stream.
-// External catalogs supply this seed as metadata, not as content verification.
+// Checksum returns D_photos for international JSON catalogs, or the historical
+// selection checksum for older catalogs. It does not verify image bytes.
 func (c *FaceCatalog) Checksum() [sha256.Size]byte {
 	if c == nil {
 		return [sha256.Size]byte{}
@@ -244,7 +244,7 @@ func (c *FaceCatalog) Release() string {
 }
 
 // SourceCatalogChecksum returns the source catalog.json hash for local catalogs.
-// It returns zero for external catalogs, whose content is not hash-pinned.
+// It returns zero for external catalogs.
 func (c *FaceCatalog) SourceCatalogChecksum() [sha256.Size]byte {
 	if c == nil {
 		return [sha256.Size]byte{}

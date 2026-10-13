@@ -6,19 +6,13 @@ package fakedata
 
 import (
 	"bytes"
-	"context"
 	"encoding/hex"
 	"encoding/json"
-	"io"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
-	"sync"
-	"sync/atomic"
 	"testing"
 )
 
@@ -153,50 +147,6 @@ func TestExternalPhotoCatalogCompatibility(t *testing.T) {
 
 }
 
-// TestExternalPhotoCatalogFallback checks fallback through the production
-// loader.
-func TestExternalPhotoCatalogFallback(t *testing.T) {
-
-	fixture := externalPhotoFixture(t)
-	for _, failure := range []string{"HTTP", "JSON", "semantic"} {
-		t.Run(failure, func(t *testing.T) {
-
-			var firstCalls, secondCalls atomic.Int32
-			first := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				firstCalls.Add(1)
-				switch failure {
-				case "HTTP":
-					w.WriteHeader(http.StatusServiceUnavailable)
-				case "JSON":
-					_, _ = io.WriteString(w, "{")
-				case "semantic":
-					_, _ = io.WriteString(w, strings.Replace(string(fixture), `"requestedAge": 35`, `"requestedAge": 76`, 1))
-				}
-			}))
-			defer first.Close()
-			second := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				secondCalls.Add(1)
-				_, _ = w.Write(fixture)
-			}))
-			defer second.Close()
-			source, err := NewFaceCatalogSource([]string{first.URL, second.URL})
-			if err != nil {
-				t.Fatalf("expected source, got %v", err)
-			}
-			catalog, err := source.Load(t.Context())
-			if err != nil {
-				t.Fatalf("expected valid fallback catalog, got %v", err)
-			}
-			if catalog.Release() != "v1" || firstCalls.Load() != 1 || secondCalls.Load() != 1 {
-				t.Fatalf("expected second origin to win once, got release %q and calls %d/%d",
-					catalog.Release(), firstCalls.Load(), secondCalls.Load())
-			}
-
-		})
-	}
-
-}
-
 // TestExternalPhotoCatalogInvalid checks representation and selection
 // constraints.
 func TestExternalPhotoCatalogInvalid(t *testing.T) {
@@ -228,36 +178,6 @@ func TestExternalPhotoCatalogInvalid(t *testing.T) {
 
 }
 
-// TestExternalPhotoCatalogLimit checks the catalog decoded-byte boundary.
-func TestExternalPhotoCatalogLimit(t *testing.T) {
-
-	fixture := externalPhotoFixture(t)
-	for _, extra := range []int{0, 1} {
-
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			_, _ = w.Write(fixture)
-			_, _ = io.WriteString(w, strings.Repeat(" ", maxExternalPhotoCatalogBytes-len(fixture)+extra))
-		}))
-		source, err := NewFaceCatalogSource([]string{server.URL})
-		if err != nil {
-			t.Fatalf("expected source, got %v", err)
-		}
-		_, err = source.Load(t.Context())
-		server.Close()
-		if err != nil {
-			if extra == 0 || !strings.Contains(err.Error(), "exceeds") {
-				t.Fatalf("expected oversize error only, got %v", err)
-			}
-			continue
-		}
-		if extra != 0 {
-			t.Fatal("expected decoded catalog limit, got success")
-		}
-
-	}
-
-}
-
 // TestExternalPhotoCatalogRecordLimit bounds cardinality before compilation.
 func TestExternalPhotoCatalogRecordLimit(t *testing.T) {
 
@@ -271,110 +191,6 @@ func TestExternalPhotoCatalogRecordLimit(t *testing.T) {
 		return
 	}
 	t.Fatal("expected oversized record count to fail, got success")
-
-}
-
-// TestExternalPhotoCatalogSourceLifetime checks retry and concurrent cache
-// reuse.
-func TestExternalPhotoCatalogSourceLifetime(t *testing.T) {
-
-	fixture := externalPhotoFixture(t)
-	var calls atomic.Int32
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/prefix/synthetic-world/photos/v1/catalog.json" {
-			t.Errorf("expected prefixed catalog request only, got %s", r.URL.Path)
-			w.WriteHeader(404)
-			return
-		}
-		if calls.Add(1) == 1 {
-			_, _ = io.WriteString(w, "invalid")
-			return
-		}
-		_, _ = w.Write(fixture)
-	}))
-	defer server.Close()
-	source, err := NewFaceCatalogSource([]string{server.URL + "/prefix"})
-	if err != nil {
-		t.Fatalf("expected source, got %v", err)
-	}
-	catalog, err := source.Load(t.Context())
-	if err != nil {
-		if catalog != nil {
-			t.Fatalf("expected failed load without cached catalog, got %#v", catalog)
-		}
-	}
-	if err == nil {
-		t.Fatal("expected first invalid load to fail, got success")
-	}
-	var wg sync.WaitGroup
-	results := make(chan *FaceCatalog, 20)
-	for i := 0; i < cap(results); i++ {
-		wg.Go(func() {
-			catalog, err := source.Load(t.Context())
-			if err != nil {
-				t.Errorf("expected retried successful load, got %v", err)
-			}
-			results <- catalog
-		})
-	}
-	wg.Wait()
-	close(results)
-	for current := range results {
-		if catalog == nil {
-			catalog = current
-		}
-		if current == nil || current != catalog {
-			t.Fatalf("expected shared immutable catalog, got %p and %p", catalog, current)
-		}
-	}
-	_, err = source.Load(t.Context())
-	if err != nil {
-		t.Fatalf("expected cached catalog, got %v", err)
-	}
-	if calls.Load() != 2 {
-		t.Fatalf("expected one failed and one successful fetch, got %d", calls.Load())
-	}
-
-}
-
-// TestExternalPhotoCatalogWaitingCancellation checks cancellable load waiters.
-func TestExternalPhotoCatalogWaitingCancellation(t *testing.T) {
-
-	fixture := externalPhotoFixture(t)
-	entered := make(chan struct{})
-	release := make(chan struct{})
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		close(entered)
-		<-release
-		_, _ = w.Write(fixture)
-	}))
-	defer server.Close()
-	source, err := NewFaceCatalogSource([]string{server.URL})
-	if err != nil {
-		t.Fatalf("expected source, got %v", err)
-	}
-	finished := make(chan error, 1)
-	go func() {
-		_, err := source.Load(t.Context())
-		finished <- err
-	}()
-	<-entered
-	ctx, cancel := context.WithCancel(t.Context())
-	cancel()
-	_, err = source.Load(ctx)
-	close(release)
-	if err != nil {
-		if err != context.Canceled {
-			t.Errorf("expected waiting cancellation, got %v", err)
-		}
-	}
-	if err == nil {
-		t.Error("expected waiting cancellation, got success")
-	}
-	err = <-finished
-	if err != nil {
-		t.Fatalf("expected original load to succeed, got %v", err)
-	}
 
 }
 

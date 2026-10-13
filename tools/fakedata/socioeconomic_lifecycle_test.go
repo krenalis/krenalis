@@ -8,11 +8,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"io"
 	"math/rand/v2"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -22,7 +22,7 @@ import (
 // reuse, origin/format independence and network-free construction and access.
 func TestSocioeconomicAcquisitionLifetime(t *testing.T) {
 
-	for _, source := range []*SocioeconomicModelSource{nil, {}} {
+	for _, source := range []*ItalianWorldSource{nil, {}} {
 		model, err := source.Load(t.Context())
 		if err != nil {
 			if model != nil || errors.Is(err, ErrInvalidSocioeconomicWorld) {
@@ -33,29 +33,37 @@ func TestSocioeconomicAcquisitionLifetime(t *testing.T) {
 		}
 		t.Fatalf("expected invalid acquisition owner failure, got success")
 	}
-	input := socioeconomicTestInput(t, nil)
+	assets := internationalAssetFixture(t)
+	input := assets["socioeconomic.json"]
 	var formatted bytes.Buffer
-	err := json.Indent(&formatted, []byte(input), "", "  ")
+	err := json.Indent(&formatted, input, "", "  ")
 	if err != nil {
 		t.Fatalf("expected formatting-only JSON variant, got %v", err)
 	}
 	var models [2]*SocioeconomicModel
-	for origin, payload := range []string{input, formatted.String()} {
+	var prepared [2]*ItalianWorldData
+	for origin, payload := range [][]byte{input, formatted.Bytes()} {
 		var requests atomic.Int32
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			requests.Add(1)
-			if r.URL.Path != "/synthetic-world/it-2026a/model.json" {
-				t.Errorf("expected fixed acquisition path, got %q", r.URL.Path)
+			body, ok := assets[strings.TrimPrefix(r.URL.Path, "/")]
+			if !ok {
+				t.Errorf("expected declared JSON path, got %q", r.URL.Path)
+				w.WriteHeader(http.StatusNotFound)
+				return
 			}
-			_, _ = io.WriteString(w, payload)
+			if r.URL.Path == "/socioeconomic.json" {
+				body = payload
+			}
+			_, _ = w.Write(body)
 		}))
 		origins := []string{server.URL}
-		source, err := NewSocioeconomicModelSource(origins)
+		source, err := NewItalianWorldSource(origins)
 		if err != nil {
 			t.Fatalf("expected public source, got %v", err)
 		}
 		origins[0] = "http://invalid.test"
-		model, err := source.Load(t.Context())
+		data, err := source.Load(t.Context())
 		server.Close()
 		if err != nil {
 			t.Fatalf("expected acquired immutable model, got %v", err)
@@ -64,21 +72,26 @@ func TestSocioeconomicAcquisitionLifetime(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected retained model after origin closure, got %v", err)
 		}
-		if model != again || requests.Load() != 1 {
-			t.Fatalf("expected one acquisition and identical model handle, got %d requests and %p/%p",
-				requests.Load(), model, again)
+		if data != again || requests.Load() != 4 {
+			t.Fatalf("expected four acquisitions and identical data handle, got %d requests and %p/%p",
+				requests.Load(), data, again)
 		}
+		model, err := data.Model()
+		if err != nil {
+			t.Fatalf("expected prepared model, got %v", err)
+		}
+		prepared[origin] = data
 		models[origin] = model
-		// Only the model escapes this acquisition owner's scope.
+		// Only prepared data and models escape this acquisition owner's scope.
 	}
 	if models[0] == models[1] || models[0].digest != models[1].digest ||
 		models[0].fingerprints != models[1].fingerprints {
 		t.Fatalf("expected distinct handles with identical logical identities, got %p/%p", models[0], models[1])
 	}
 
-	base := mustLayer1World(t, PopulationAnchorDate, layer1TestSeed)
-	first := mustSocioeconomicWorld(t, base, models[0])
-	second := mustSocioeconomicWorld(t, base, models[1])
+	bases := [2]*World{mustItalianJSONWorld(t, prepared[0]), mustItalianJSONWorld(t, prepared[1])}
+	first := mustSocioeconomicWorld(t, bases[0], models[0])
+	second := mustSocioeconomicWorld(t, bases[1], models[1])
 	if first.ID() != second.ID() {
 		t.Fatalf("expected origin-independent world identity, got %s/%s", first.ID(), second.ID())
 	}
@@ -97,7 +110,7 @@ func TestSocioeconomicAcquisitionLifetime(t *testing.T) {
 	var group sync.WaitGroup
 	for worker := range 8 {
 		group.Go(func() {
-			world, err := NewSocioeconomicWorld(base, models[worker%2])
+			world, err := NewSocioeconomicWorld(bases[worker%2], models[worker%2])
 			if err != nil {
 				t.Errorf("expected concurrent construction from shared model, got %v", err)
 				return

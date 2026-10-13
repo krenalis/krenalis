@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/test/syntheticworldtest"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 
@@ -35,18 +36,11 @@ func TestSimulatedSystemGeneration(t *testing.T) {
 	}
 	k := krenalistester.NewKrenalisInstance(t)
 	k.SetSyntheticPhotosDir(simulatedSystemCatalogFixture(t))
-	model := simulatedSystemModelFixture(t)
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/synthetic-world/it-2026a/model.json" {
-			t.Errorf("expected fixed model request, got %s", r.URL.Path)
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		_, _ = w.Write(model)
-	}))
+	assets := syntheticworldtest.Assets(t)
+	server := httptest.NewServer(syntheticworldtest.Handler(t, assets, ""))
 	defer server.Close()
 	k.SetExternalAssetsURLs([]string{server.URL})
-	testSimulatedSystemGeneration(t, k, "http://"+k.Addr()+"/photos/")
+	testSimulatedSystemGeneration(t, k, server.URL+"/fixture/256/")
 }
 
 func testSimulatedSystemGeneration(t *testing.T, k *krenalistester.Krenalis, photoPrefix string) {
@@ -157,8 +151,8 @@ func testSimulatedSystemGeneration(t *testing.T, k *krenalistester.Krenalis, pho
 	var policy string
 	k.QueryRowTestDatabase(t.Context(), &policy,
 		"SELECT generation_policy_version FROM simulated_systems WHERE id = $1", created.ID)
-	if policy != "generation-v4" {
-		t.Fatalf("expected successor generation-v4 policy, got %s", policy)
+	if policy != "generation-v5" {
+		t.Fatalf("expected successor generation-v5 policy, got %s", policy)
 	}
 	var ordinary map[string]json.Value
 	k.Call("GET", "/v1/simulated/systems/"+created.ID, nil, nil, &ordinary)
@@ -367,13 +361,18 @@ func testSimulatedSystemGeneration(t *testing.T, k *krenalistester.Krenalis, pho
 	}
 
 	k.ExecQueryTestDatabase(t.Context(), "CREATE TABLE simulated_generation_test_phase (phase text NOT NULL)")
-	k.ExecQueryTestDatabase(t.Context(), "INSERT INTO simulated_generation_test_phase VALUES ('checkpoint')")
+	k.ExecQueryTestDatabase(t.Context(), "INSERT INTO simulated_generation_test_phase VALUES ('initial')")
+	k.ExecQueryTestDatabase(t.Context(), "CREATE SEQUENCE simulated_generation_initial_attempts")
 	k.ExecQueryTestDatabase(t.Context(), "CREATE SEQUENCE simulated_generation_checkpoint_attempts")
 	k.ExecQueryTestDatabase(t.Context(), "CREATE SEQUENCE simulated_generation_available_attempts")
 	k.ExecQueryTestDatabase(t.Context(), `CREATE FUNCTION simulated_generation_gate() RETURNS trigger AS $$
 		DECLARE current_phase text;
 		BEGIN
 			SELECT phase INTO current_phase FROM simulated_generation_test_phase;
+			IF current_phase = 'initial' AND OLD.generation_checkpoint IS NULL AND NEW.generation_checkpoint IS NOT NULL THEN
+				PERFORM nextval('simulated_generation_initial_attempts');
+				RAISE EXCEPTION 'initial checkpoint blocked by test';
+			END IF;
 			IF current_phase = 'checkpoint' AND NEW.generated_record_count > OLD.generated_record_count THEN
 				PERFORM nextval('simulated_generation_checkpoint_attempts');
 				RAISE EXCEPTION 'checkpoint blocked by test';
@@ -393,6 +392,27 @@ func testSimulatedSystemGeneration(t *testing.T, k *krenalistester.Krenalis, pho
 		"name": "replay", "userCount": 3,
 		"duplicateRecordPercent": 50, "countries": map[string]int{"IT": 1},
 	}, &replay)
+	deadline = time.Now().Add(20 * time.Second)
+	for {
+		var attempted bool
+		k.QueryRowTestDatabase(t.Context(), &attempted, "SELECT is_called FROM simulated_generation_initial_attempts")
+		if attempted {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("expected a blocked initial checkpoint, got timeout")
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	var uninitialized bool
+	k.QueryRowTestDatabase(t.Context(), &uninitialized, `SELECT generation_checkpoint IS NULL
+		AND generated_record_count = 0 AND status = 'Preparing' AND generation_error = ''
+		FROM simulated_systems WHERE id = $1`, replay.ID)
+	if !uninitialized || len(querySimulatedSystemRecords(t, warehousePool, replay.ID)) != 0 {
+		t.Fatal("expected no generation before the initial checkpoint is durable, got persisted progress")
+	}
+	k.RestartServer(t.Context())
+	k.ExecQueryTestDatabase(t.Context(), "UPDATE simulated_generation_test_phase SET phase = 'checkpoint'")
 	deadline = time.Now().Add(25 * time.Second)
 	var replayRows, savedCount int
 	for {
@@ -410,6 +430,14 @@ func testSimulatedSystemGeneration(t *testing.T, k *krenalistester.Krenalis, pho
 	}
 	if replayRows != 3 || savedCount != 0 {
 		t.Fatalf("expected warehouse write before blocked checkpoint, got rows=%d saved=%d", replayRows, savedCount)
+	}
+	var initialCheckpoint bool
+	k.QueryRowTestDatabase(t.Context(), &initialCheckpoint, `SELECT generation_policy_version = 'generation-v5'
+		AND generation_checkpoint->>'person' = '0' AND generation_checkpoint->>'representation' = '0'
+		AND generated_record_count = 0 AND status = 'Preparing' AND generation_error = ''
+		FROM simulated_systems WHERE id = $1`, replay.ID)
+	if !initialCheckpoint {
+		t.Fatal("expected durable initial V5 checkpoint before batch progress, got different state")
 	}
 	beforeReplayRecords := querySimulatedSystemRecords(t, warehousePool, replay.ID)
 	deadline = time.Now().Add(20 * time.Second)
@@ -454,6 +482,12 @@ func testSimulatedSystemGeneration(t *testing.T, k *krenalistester.Krenalis, pho
 	}
 	if savedCount != 3 || replayStatus != "Preparing" {
 		t.Fatalf("expected final checkpoint before Available, got count=%d status=%s", savedCount, replayStatus)
+	}
+	var completedCheckpoint bool
+	k.QueryRowTestDatabase(t.Context(), &completedCheckpoint, `SELECT generation_checkpoint->>'person' = '2'
+		AND generation_checkpoint->>'representation' = '0' FROM simulated_systems WHERE id = $1`, replay.ID)
+	if !completedCheckpoint {
+		t.Fatal("expected completed cursor after replaying three records with one duplicate, got different checkpoint")
 	}
 	deadline = time.Now().Add(20 * time.Second)
 	attempted = false
