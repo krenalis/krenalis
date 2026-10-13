@@ -405,6 +405,9 @@ func opIsBefore(v any, values []any) bool {
 	if v == nil {
 		return false
 	}
+	if v, ok := v.(int); ok {
+		return v < values[0].(int)
+	}
 	v0 := values[0]
 	return v.(time.Time).Before(v0.(time.Time))
 }
@@ -412,6 +415,9 @@ func opIsBefore(v any, values []any) bool {
 func opIsOnOrBefore(v any, values []any) bool {
 	if v == nil {
 		return false
+	}
+	if v, ok := v.(int); ok {
+		return v <= values[0].(int)
 	}
 	v0 := values[0].(time.Time)
 	vv := v.(time.Time)
@@ -422,6 +428,9 @@ func opIsAfter(v any, values []any) bool {
 	if v == nil {
 		return false
 	}
+	if v, ok := v.(int); ok {
+		return v > values[0].(int)
+	}
 	v0 := values[0]
 	return v.(time.Time).After(v0.(time.Time))
 }
@@ -429,6 +438,9 @@ func opIsAfter(v any, values []any) bool {
 func opIsOnOrAfter(v any, values []any) bool {
 	if v == nil {
 		return false
+	}
+	if v, ok := v.(int); ok {
+		return v >= values[0].(int)
 	}
 	v0 := values[0].(time.Time)
 	vv := v.(time.Time)
