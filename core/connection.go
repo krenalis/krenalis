@@ -475,7 +475,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 
 	// Add the filter to the notification.
 	if pipeline.Filter != nil {
-		n.Filter, _ = convertFilterToWhere(pipeline.Filter, inSchema).MarshalJSON()
+		n.Filter = []byte(state.MarshalWhere(convertFilterToWhere(pipeline.Filter, inSchema), inSchema))
 	}
 
 	// Determine the connector code, for file pipelines.

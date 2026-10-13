@@ -295,6 +295,7 @@ Apply these conventions to the TypeScript and React code under `admin/`.
 - Write function components and custom hooks as arrow functions assigned to `const`.
 - Type the component's props with an interface named `<ComponentName>Props` immediately before the component, unless the type is shared from another module. Destructure and type the props in the component's parameter list; do not use `React.FC`.
 - Keep component-specific styles in a separate `.css` file in the same directory as the component, and import that stylesheet from the component file. Follow the existing BEM-style class names: a block such as `schema-grid`, elements such as `schema-grid__search`, and modifiers such as `schema-grid--loading`.
+- When using a Shoelace icon, make sure its file name is listed in `admin/src/shoelace-icons.txt`, in alphabetical order, and run `npm run makevendor` from `admin/`. Unlisted icons are not embedded, and the Admin fails to load them.
 
 # Reuse
 

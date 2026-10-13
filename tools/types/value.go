@@ -656,7 +656,11 @@ func marshal(b []byte, data any, t Type) (json.Value, error) {
 			b = strconv.AppendFloat(b, v, 'g', -1, t.BitSize())
 		}
 	case decimal.Decimal:
-		b = append(b, v.String()...)
+		encoded, err := v.MarshalJSON()
+		if err != nil {
+			return nil, fmt.Errorf("json: unexpected decimal value: %s", err)
+		}
+		b = append(b, encoded...)
 	case time.Time:
 		b = append(b, '"')
 		switch t.Kind() {
