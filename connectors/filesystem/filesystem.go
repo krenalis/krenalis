@@ -103,12 +103,7 @@ func (fs *FileSystem) AbsolutePath(ctx context.Context, name string) (string, er
 		}
 		return "", connectors.InvalidPathErrorf("path name is not valid UTF-8")
 	}
-	confMu.Lock()
-	defer confMu.Unlock()
-	if displayedRoot != "" {
-		return filepath.Join(displayedRoot, rel), nil
-	}
-	return filepath.Join(root, rel), nil
+	return filepath.Join(rootToShow(), rel), nil
 }
 
 // Reader opens a file and returns a ReadCloser from which to read its content.
@@ -166,18 +161,10 @@ func (fs *FileSystem) ServeUI(ctx context.Context, event string, settings json.V
 		intro = "This connector for file system allows Krenalis to write files into this directory of your system:"
 	}
 
-	confMu.Lock()
-	defer confMu.Unlock()
-
-	rootToShow := root
-	if displayedRoot != "" {
-		rootToShow = displayedRoot
-	}
-
 	ui := &connectors.UI{
 		Fields: []connectors.Component{
 			&connectors.Text{Text: intro},
-			&connectors.Text{Text: rootToShow},
+			&connectors.Text{Text: rootToShow()},
 			&connectors.Text{Label: "Testing options"},
 			&connectors.Checkbox{Name: "simulateHighIOLatency", Label: "Simulate high latency during I/O operations"},
 		},
@@ -263,18 +250,14 @@ var errUnsupportedSymlink = errors.New("path passes through an unsupported symbo
 func rewritePathError(err error) error {
 
 	confMu.Lock()
-	defer confMu.Unlock()
-
-	rootToShow := root
-	if displayedRoot != "" {
-		rootToShow = displayedRoot
-	}
+	rootPath := root
+	confMu.Unlock()
 
 	// rewrite removes from path the prefix that refers to the root, if
 	// present, as errors returned by the os.Root methods have a path relative
 	// to the root, and prepends the root to show.
 	rewrite := func(path string) string {
-		return filepath.Join(rootToShow, strings.TrimPrefix(path, root))
+		return filepath.Join(rootToShow(), strings.TrimPrefix(path, rootPath))
 	}
 
 	// clarify returns errUnsupportedSymlink if err is the error returned by
@@ -296,6 +279,17 @@ func rewritePathError(err error) error {
 	}
 
 	return err
+}
+
+// rootToShow returns the root to show to the user: the displayed root, if set,
+// otherwise the root.
+func rootToShow() string {
+	confMu.Lock()
+	defer confMu.Unlock()
+	if displayedRoot != "" {
+		return displayedRoot
+	}
+	return root
 }
 
 func validateRoot(root string) error {
