@@ -292,7 +292,11 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 				v = strconv.FormatBool(value)
 			case float64:
 				p, _ := properties.ByPathSlice(cond.Property)
-				v = strconv.FormatFloat(value, 'g', -1, p.Type.BitSize())
+				t := p.Type
+				if t.Kind() == types.ArrayKind {
+					t = t.Elem()
+				}
+				v = strconv.FormatFloat(value, 'g', -1, t.BitSize())
 			case int:
 				v = strconv.FormatInt(int64(value), 10)
 			case uint:
