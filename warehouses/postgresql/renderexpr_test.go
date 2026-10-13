@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
@@ -113,6 +114,18 @@ func Test_renderExpr(t *testing.T) {
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "active", Type: types.Boolean()}, warehouses.OpIsFalse),
 			query: `NOT "active"`,
+		},
+		{
+			expr:    warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs, json.Value(`{"foo":2,"boo":true}`)),
+			invalid: true,
+		},
+		{
+			expr:    warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())}, warehouses.OpContains, json.Value(`true`)),
+			invalid: true,
+		},
+		{
+			expr:    warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Map(types.Array(types.JSON()))}, warehouses.OpIs),
+			invalid: true,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.JSON()}, warehouses.OpIsTrue),

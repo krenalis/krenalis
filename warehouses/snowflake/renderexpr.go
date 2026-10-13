@@ -53,6 +53,18 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 	// Handle BaseExpr expressions.
 	baseExpr := exp.(*warehouses.BaseExpr)
 	c := baseExpr.Column
+	op := baseExpr.Operator
+
+	// Allow json, including nested arrays and maps, only with the "is true" and "is false" operators.
+	if op != warehouses.OpIsTrue && op != warehouses.OpIsFalse {
+		t := c.Type
+		for t.Kind() == types.ArrayKind || t.Kind() == types.MapKind {
+			t = t.Elem()
+		}
+		if t.Kind() == types.JSONKind {
+			return fmt.Errorf("operator %d is not supported for type %q", op, c.Type.String())
+		}
+	}
 
 	// Validate the column name.
 	if !warehouses.IsValidIdentifier(c.Name) {

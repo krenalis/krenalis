@@ -34,10 +34,6 @@ func Test_renderExpr(t *testing.T) {
 			query: `"A" = "B"`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs, json.Value(`{"foo":2,"boo":true}`)),
-			query: `"VALUES" = PARSE_JSON('{"foo":2,"boo":true}')`,
-		},
-		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "weight", Type: types.Float(32)}, warehouses.OpIsLessThan, 6.5),
 			query: `"WEIGHT" < 6.5`,
 		},
@@ -104,6 +100,18 @@ func Test_renderExpr(t *testing.T) {
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "active", Type: types.Boolean()}, warehouses.OpIsFalse),
 			query: `NOT "ACTIVE"`,
+		},
+		{
+			expr:    warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs, json.Value(`{"foo":2,"boo":true}`)),
+			invalid: true,
+		},
+		{
+			expr:    warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())}, warehouses.OpContains, json.Value(`true`)),
+			invalid: true,
+		},
+		{
+			expr:    warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Map(types.Array(types.JSON()))}, warehouses.OpIs),
+			invalid: true,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.JSON()}, warehouses.OpIsTrue),
