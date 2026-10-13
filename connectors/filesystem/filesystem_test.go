@@ -111,6 +111,9 @@ func TestSymlinks(t *testing.T) {
 				if pErr.Path != filepath.Join(root, name) {
 					t.Errorf("%q: expected path %q, got %q", name, filepath.Join(root, name), pErr.Path)
 				}
+				if pErr.Err != errUnsupportedSymlink {
+					t.Errorf("%q: expected errUnsupportedSymlink, got %q", name, pErr.Err)
+				}
 				continue
 			}
 			_ = r.Close()
@@ -121,7 +124,10 @@ func TestSymlinks(t *testing.T) {
 	t.Run("Write", func(t *testing.T) {
 		err := fs.Write(t.Context(), strings.NewReader("data"), "dir/file", "text/plain")
 		if err == nil {
-			t.Fatal("expected an error, got nil")
+			t.Fatal("expected errUnsupportedSymlink, got nil")
+		}
+		if !errors.Is(err, errUnsupportedSymlink) {
+			t.Fatalf("expected errUnsupportedSymlink, got %q", err)
 		}
 		for _, name := range []string{"file", "file.tmp"} {
 			_, err := os.Lstat(filepath.Join(outside, name))

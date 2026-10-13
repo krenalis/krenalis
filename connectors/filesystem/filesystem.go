@@ -261,9 +261,15 @@ func parsePathName(name string) (string, error) {
 	return rel, nil
 }
 
+// errUnsupportedSymlink replaces the error returned by os.Root when a path
+// escapes from the root.
+var errUnsupportedSymlink = errors.New("path passes through an unsupported symbolic link: " +
+	"only relative links that stay within the root directory are supported")
+
 // rewritePathError, if err is a *fs.PathError or an *os.LinkError error,
 // returns a new error of the same type such that its paths are absolute and
-// consistent with the displayed root of the connection, if set.
+// consistent with the displayed root of the connection, if set, and such that
+// a path escaping from the root is reported as errUnsupportedSymlink.
 //
 // For all other error types, or if the error is nil, the error is returned as
 // it is.
@@ -284,11 +290,22 @@ func rewritePathError(err error) error {
 		return filepath.Join(rootToShow, strings.TrimPrefix(path, root))
 	}
 
+	// clarify returns errUnsupportedSymlink if err is the error returned by
+	// os.Root when a path escapes from the root, otherwise it returns err. As
+	// the os package does not export this error, it is identified by its
+	// message.
+	clarify := func(err error) error {
+		if err.Error() == "path escapes from parent" {
+			return errUnsupportedSymlink
+		}
+		return err
+	}
+
 	switch e := err.(type) {
 	case *fsPkg.PathError:
-		return &fsPkg.PathError{Op: e.Op, Path: rewrite(e.Path), Err: e.Err}
+		return &fsPkg.PathError{Op: e.Op, Path: rewrite(e.Path), Err: clarify(e.Err)}
 	case *os.LinkError:
-		return &os.LinkError{Op: e.Op, Old: rewrite(e.Old), New: rewrite(e.New), Err: e.Err}
+		return &os.LinkError{Op: e.Op, Old: rewrite(e.Old), New: rewrite(e.New), Err: clarify(e.Err)}
 	}
 
 	return err
