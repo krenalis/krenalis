@@ -73,8 +73,8 @@ const getCurrentRoute = (location: Location, connections: TransformedConnection[
 			currentRoute = 'settings/general';
 		} else if (lastFragment === 'data-warehouse') {
 			currentRoute = 'settings/dataWarehouse';
-		} else if (lastFragment === 'privacy') {
-			currentRoute = 'settings/privacy';
+		} else if (lastFragment === 'consent-management') {
+			currentRoute = 'settings/consent-management';
 		}
 	}
 

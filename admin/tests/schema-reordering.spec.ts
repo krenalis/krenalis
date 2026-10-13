@@ -17,7 +17,6 @@ const createSchema = (keys: string[], addedKeys: string[] = []): EditableSchema 
 			root: fragments[0],
 			name: fragments[fragments.length - 1],
 			prefilled: '',
-			role: 'Both',
 			type: objectKeys.has(key) ? { kind: 'object', properties: [] } : { kind: 'string' },
 			readOptional: true,
 			createRequired: false,

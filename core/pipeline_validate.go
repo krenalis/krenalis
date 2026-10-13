@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/core/internal/connections"
@@ -30,15 +31,6 @@ const (
 	MaxUpdatedAtFormatSize = 64     // maximum allowed size for an update time format.
 	MaxQuerySize           = 1_000  // maximum allowed size for a database query.
 	MaxTableNameSize       = 1024   // maximum allowed length for a database table name.
-)
-
-const (
-	countrySemanticMismatchErr = "external matching property has country semantic, so " +
-		"internal matching property must have the same semantic and format"
-	phoneSemanticMismatchErr = "external matching property has phone semantic, so " +
-		"internal matching property must have the same semantic"
-	semanticMismatchErr = "both the internal and external matching properties have semantics, " +
-		"but their semantics do not match"
 )
 
 // validationState is a state for the validation of a pipeline.
@@ -85,11 +77,11 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	outSchema := pipeline.OutSchema
 
 	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(v.connection.connector.typ, v.connection.role, v.target)
-	dispatchEventsToAplications := isDispatchingEventsToApplications(v.connection.connector.typ, v.connection.role, v.target)
+	dispatchEventsToApplications := isDispatchingEventsToApplications(v.connection.connector.typ, v.connection.role, v.target)
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(v.connection.connector.typ, v.connection.role, v.target)
 	exportUsersToFile := isExportUsersToFile(v.connection.connector.typ, v.connection.role, v.target)
 
-	allowConstantTransformation := importUserIdentitiesFromEvents || dispatchEventsToAplications
+	allowConstantTransformation := importUserIdentitiesFromEvents || dispatchEventsToApplications
 
 	// In cases where the input schema refers to events, that is when:
 	//
@@ -98,7 +90,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	//  - events are dispatched to apps
 	//
 	// the input schema must be nil, which means the schema of the events.
-	inSchemaIsEventSchema := importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToAplications
+	inSchemaIsEventSchema := importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApplications
 	if inSchemaIsEventSchema {
 		if inSchema.Valid() {
 			switch {
@@ -106,7 +98,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 				return errors.BadRequest("input schema must be invalid for pipelines that import identities from events")
 			case importEventsIntoWarehouse:
 				return errors.BadRequest("input schema must be invalid for pipelines that import events into data warehouse")
-			case dispatchEventsToAplications:
+			case dispatchEventsToApplications:
 				return errors.BadRequest("input schema must be invalid for pipelines that send events to applications")
 			}
 		}
@@ -174,20 +166,16 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		}
 	}
 	// Validate the required consents.
-	requiredConsentsAllowed := dispatchEventsToAplications || importEventsIntoWarehouse || importUserIdentitiesFromEvents
 	if len(pipeline.RequiredConsents.Purposes) > 0 {
-		if !requiredConsentsAllowed {
-			return errors.BadRequest("required consents are not allowed")
-		}
 		if len(pipeline.RequiredConsents.Purposes) > MaxRequiredConsentPurposes {
 			return errors.BadRequest("required consent purposes must be at most %d", MaxRequiredConsentPurposes)
 		}
-		for i, code := range pipeline.RequiredConsents.Purposes {
-			if err := validateConsentPurposeCode(code); err != nil {
-				return errors.BadRequest("%s", err)
+		for i, id := range pipeline.RequiredConsents.Purposes {
+			if !IsValidID(id) {
+				return errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
 			}
-			if slices.Contains(pipeline.RequiredConsents.Purposes[i+1:], code) {
-				return errors.BadRequest("required consent purpose %q is duplicated", code)
+			if slices.Contains(pipeline.RequiredConsents.Purposes[i+1:], id) {
+				return errors.BadRequest("required consent purpose %s is duplicated", id)
 			}
 		}
 		if op := pipeline.RequiredConsents.Operator; op != PurposesAnd && op != PurposesOr {
@@ -276,12 +264,12 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 				return errors.BadRequest("placeholders syntax is not supported by source pipelines")
 			}
 		case state.Destination:
-			_, err := connections.ReplacePlaceholders(pipeline.Path, func(name string) (string, bool) {
-				name = strings.ToLower(name)
-				return "", name == "today" || name == "now" || name == "unix"
-			})
+			path, err := connections.ReplacePlaceholders(pipeline.Path, newPathPlaceholderReplacer(time.Now().UTC()))
 			if err != nil {
 				return errors.BadRequest("path is not valid: %s", err)
+			}
+			if utf8.RuneCountInString(path) > MaxFilePathSize {
+				return errors.BadRequest("path is longer than %d runes after placeholder replacement", MaxFilePathSize)
 			}
 		}
 	}
@@ -354,19 +342,26 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			}
 		}
 		// Check the semantics.
-		switch out.Type.Semantic() {
-		case types.CountrySemantic:
-			if in.Type.Semantic() != types.CountrySemantic || in.Type.CountryFormat() != out.Type.CountryFormat() {
-				return errors.BadRequest(countrySemanticMismatchErr)
+		if !types.EqualSemantics(in.Type, out.Type) {
+			t, a, b := out.Type, "external", "internal"
+			if t.Semantics() == types.NoSemantics {
+				t, a, b = in.Type, "internal", "external"
 			}
-		case types.PhoneSemantic:
-			if in.Type.Semantic() != types.PhoneSemantic {
-				return errors.BadRequest(phoneSemanticMismatchErr)
+			var opts, requiredOpts string
+			switch t.Semantics() {
+			case types.CountrySemantics:
+				opts = fmt.Sprintf(" with format %s", t.CountryFormat())
+				requiredOpts = " and format"
+			case types.DurationSemantics:
+				opts = fmt.Sprintf(" with unit %s", t.DurationUnit())
+				requiredOpts = " and unit"
+			case types.MeasurementSemantics:
+				opts = fmt.Sprintf(" with unit of measure %s", t.UnitOfMeasure())
+				requiredOpts = " and unit of measure"
 			}
-		default:
-			if !types.EqualSemantics(in.Type, out.Type) {
-				return errors.BadRequest(semanticMismatchErr)
-			}
+			return errors.BadRequest(
+				"%s matching property has %s semantics%s, so %s matching property must have the same semantics%s",
+				a, t.Semantics(), opts, b, requiredOpts)
 		}
 		// Check that the output property has not been transformed.
 		// This includes checks on the property itself and all its parent paths.

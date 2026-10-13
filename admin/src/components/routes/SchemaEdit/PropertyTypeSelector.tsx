@@ -8,10 +8,10 @@ import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
 import Type, { DurationUnit, TypeKind, UnitOfMeasure } from '../../../lib/api/types/types';
 import {
 	getPropertyValueType,
-	getTypeSemantic,
+	getTypeSemantics,
 	toCompactPhysicalType,
 	toProfileSchemaPhysicalType,
-	toSemanticLabel,
+	toSemanticsLabel,
 } from '../../helpers/types';
 
 type PropertyStructure = 'one' | 'array' | 'object' | 'map';
@@ -52,7 +52,7 @@ interface PropertyTypeSelectorProps {
 // The empty value exists only while editing and cannot pass form validation.
 const EMPTY_DURATION_UNIT = '' as DurationUnit;
 const EMPTY_UNIT_OF_MEASURE = '' as UnitOfMeasure;
-const PROFILE_SEMANTIC_DECIMAL_TYPE = { kind: 'decimal', precision: 18, scale: 4 } as const;
+const PROFILE_SEMANTICS_DECIMAL_TYPE = { kind: 'decimal', precision: 18, scale: 4 } as const;
 
 const PROPERTY_STRUCTURE_OPTIONS: PropertyStructureOption[] = [
 	{
@@ -89,22 +89,22 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 	{
 		id: 'email',
 		kind: 'string',
-		create: () => ({ kind: 'string', semantic: 'email' }),
+		create: () => ({ kind: 'string', semantics: 'email' }),
 	},
 	{
 		id: 'phone',
 		kind: 'string',
-		create: () => ({ kind: 'string', semantic: 'phone' }),
+		create: () => ({ kind: 'string', semantics: 'phone' }),
 	},
 	{
 		id: 'country',
 		kind: 'string',
-		create: () => ({ kind: 'string', semantic: 'country', format: 'alpha-2' }),
+		create: () => ({ kind: 'string', semantics: 'country', format: 'alpha-2' }),
 	},
 	{
 		id: 'url',
 		kind: 'string',
-		create: () => ({ kind: 'string', semantic: 'url' }),
+		create: () => ({ kind: 'string', semantics: 'url' }),
 	},
 	{
 		id: 'string',
@@ -123,7 +123,7 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 		id: 'duration',
 		kind: 'int',
 		separated: true,
-		create: () => ({ kind: 'int', bitSize: 64, unsigned: false, semantic: 'duration', unit: EMPTY_DURATION_UNIT }),
+		create: () => ({ kind: 'int', bitSize: 64, unsigned: false, semantics: 'duration', unit: EMPTY_DURATION_UNIT }),
 	},
 	{
 		id: 'int',
@@ -142,19 +142,19 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 		id: 'money',
 		kind: 'decimal',
 		separated: true,
-		create: () => ({ ...PROFILE_SEMANTIC_DECIMAL_TYPE, semantic: 'money' }),
+		create: () => ({ ...PROFILE_SEMANTICS_DECIMAL_TYPE, semantics: 'money' }),
 	},
 	{
 		id: 'percentage',
 		kind: 'decimal',
-		create: () => ({ ...PROFILE_SEMANTIC_DECIMAL_TYPE, semantic: 'percentage' }),
+		create: () => ({ ...PROFILE_SEMANTICS_DECIMAL_TYPE, semantics: 'percentage' }),
 	},
 	{
 		id: 'measurement',
 		kind: 'decimal',
 		create: () => ({
-			...PROFILE_SEMANTIC_DECIMAL_TYPE,
-			semantic: 'measurement',
+			...PROFILE_SEMANTICS_DECIMAL_TYPE,
+			semantics: 'measurement',
 			unit: EMPTY_UNIT_OF_MEASURE,
 		}),
 	},
@@ -216,12 +216,12 @@ const PropertyTypeSelector = ({ type, canEditType, onChange }: PropertyTypeSelec
 	const focusTypeAfterStructureSelectionRef = useRef(false);
 
 	const valueType = getPropertyValueType(type);
-	const semantic = getTypeSemantic(valueType);
+	const semantics = getTypeSemantics(valueType);
 	let typeLabel: string | null = null;
 	if (valueType != null) {
-		typeLabel = semantic == null ? valueType.kind : toSemanticLabel(semantic);
+		typeLabel = semantics == null ? valueType.kind : toSemanticsLabel(semantics);
 	}
-	const physicalType = semantic == null ? null : toCompactPhysicalType(valueType);
+	const physicalType = semantics == null ? null : toCompactPhysicalType(valueType);
 	const selectedOption = getPropertyTypeOption(type);
 	const selectedStructureOption =
 		PROPERTY_STRUCTURE_OPTIONS.find((option) => option.id === structure) || PROPERTY_STRUCTURE_OPTIONS[0];
@@ -272,11 +272,11 @@ const PropertyTypeSelector = ({ type, canEditType, onChange }: PropertyTypeSelec
 		}
 		const selection = option.create();
 		let nextValueType = valueType;
-		if (getTypeSemantic(selection) != null || valueType?.kind !== option.kind) {
+		if (getTypeSemantics(selection) != null || valueType?.kind !== option.kind) {
 			nextValueType = selection;
-		} else if (valueType != null && 'semantic' in valueType) {
+		} else if (valueType != null && 'semantics' in valueType) {
 			nextValueType = { ...valueType };
-			delete nextValueType.semantic;
+			delete nextValueType.semantics;
 			if (nextValueType.kind === 'string') {
 				delete nextValueType.format;
 			}
@@ -393,13 +393,13 @@ const PropertyTypeSelector = ({ type, canEditType, onChange }: PropertyTypeSelec
 						<SlMenu className='property-type-selector__browser' onSlSelect={onSelectOption}>
 							{PROPERTY_TYPE_OPTIONS.map((option) => {
 								const optionType = option.create();
-								const optionSemantic = getTypeSemantic(optionType);
+								const optionSemantics = getTypeSemantics(optionType);
 								const label =
-									optionSemantic == null ? optionType.kind : toSemanticLabel(optionSemantic);
+									optionSemantics == null ? optionType.kind : toSemanticsLabel(optionSemantics);
 								let metadata = option.description;
-								if (optionSemantic != null) {
+								if (optionSemantics != null) {
 									metadata =
-										optionSemantic === 'country' || optionSemantic === 'duration'
+										optionSemantics === 'country' || optionSemantics === 'duration'
 											? toCompactPhysicalType(optionType)
 											: toProfileSchemaPhysicalType(optionType);
 								}
@@ -421,7 +421,7 @@ const PropertyTypeSelector = ({ type, canEditType, onChange }: PropertyTypeSelec
 											{metadata != null && (
 												<span
 													className={`property-type-selector__type-metadata${
-														optionSemantic == null
+														optionSemantics == null
 															? ''
 															: ' property-type-selector__type-metadata--physical'
 													}`}
@@ -434,7 +434,7 @@ const PropertyTypeSelector = ({ type, canEditType, onChange }: PropertyTypeSelec
 													</span>
 													<span
 														className={
-															optionSemantic == null
+														optionSemantics == null
 																? ''
 																: 'property-type-selector__type-physical'
 														}
@@ -472,7 +472,7 @@ const getPropertyStructure = (type: Type | null): PropertyStructure => {
 
 const getPropertyTypeOption = (type: Type | null): PropertyTypeOption | undefined => {
 	const valueType = getPropertyValueType(type);
-	const id: PropertyTypeOptionID | undefined = getTypeSemantic(valueType) ?? valueType?.kind;
+	const id: PropertyTypeOptionID | undefined = getTypeSemantics(valueType) ?? valueType?.kind;
 	return PROPERTY_TYPE_OPTIONS.find((option) => option.id === id);
 };
 

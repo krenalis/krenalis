@@ -10,7 +10,7 @@
 	font-family: var(--monospace-fonts);
 }
 
-.property-details-panel__semantic {
+.property-details-panel__semantics {
 	color: var(--text-light);
 	font-size: 12px;
 }

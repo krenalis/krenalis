@@ -1,35 +1,33 @@
 package uasurfer
 
-import (
-	"strings"
-)
-
-// Browser struct contains the lowercase name of the browser, along
-// with its browser version number. Browser are grouped together without
-// consideration for device. For example, Chrome (Chrome/43.0) and Chrome for iOS
-// (CriOS/43.0) would both return as "chrome" (name) and 43.0 (version). Similarly
-// Internet Explorer 11 and Edge 12 would return as "ie" and "11" or "12", respectively.
-// type Browser struct {
-// 		Name    BrowserName
-// 		Version struct {
-// 				Major int
-// 			Minor int
-// 			Patch int
-// 		}
-// }
+import "strings"
 
 // Retrieve browser name from UA strings
-func (u *UserAgent) evalBrowserName(ua string) bool {
-	// Blackberry goes first because it reads as MSIE & Safari
+func (u *UserAgent) parseBrowserName(ua string) bool {
+	// Bots go first: a crawler copies a whole browser agent and appends itself,
+	// so every check below would match one before we got to it. Only agents
+	// carrying a hint of one pay for the full pass.
+	if botSuspect(ua) && !isGStreamer(ua) {
+		if name, ok := botName(ua); ok {
+			u.Browser.Name = name
+			return u.applyBotDefaults()
+		}
+	}
+
+	// Blackberry goes next because it reads as MSIE & Safari
 	if strings.Contains(ua, "blackberry") || strings.Contains(ua, "playbook") || strings.Contains(ua, "bb10") || strings.Contains(ua, "rim ") {
 		u.Browser.Name = BrowserBlackberry
-		return u.maybeBot()
+		return u.applyBotDefaults()
 	}
 
 	if strings.Contains(ua, "applewebkit") {
+		inApp := webkitApp(ua)
 		switch {
-		case strings.Contains(ua, "googlebot"):
-			u.Browser.Name = BrowserGoogleBot
+		// An app rendering the page in a frame it controls. First, because every
+		// check below would claim one: on Android these carry Chrome's token and
+		// on iOS Safari's, and the app is the more specific answer.
+		case inApp != BrowserUnknown:
+			u.Browser.Name = inApp
 
 		case strings.Contains(ua, "qq/") || strings.Contains(ua, "qqbrowser/"):
 			u.Browser.Name = BrowserQQ
@@ -40,7 +38,7 @@ func (u *UserAgent) evalBrowserName(ua string) bool {
 		case strings.Contains(ua, "silk/"):
 			u.Browser.Name = BrowserSilk
 
-		case strings.Contains(ua, "edg/") || strings.Contains(ua, "edgios/") || strings.Contains(ua, "edga/")|| strings.Contains(ua, "edge/") || strings.Contains(ua, "iemobile/") || strings.Contains(ua, "msie "):
+		case strings.Contains(ua, "edg/") || strings.Contains(ua, "edgios/") || strings.Contains(ua, "edga/") || strings.Contains(ua, "edge/") || strings.Contains(ua, "iemobile/") || strings.Contains(ua, "msie "):
 			u.Browser.Name = BrowserIE
 
 		case strings.Contains(ua, "ucbrowser/") || strings.Contains(ua, "ucweb/"):
@@ -60,7 +58,9 @@ func (u *UserAgent) evalBrowserName(ua string) bool {
 
 		// Edge, Silk and other chrome-identifying browsers must evaluate before chrome, unless we want to add more overhead
 		case strings.Contains(ua, "chrome/") || strings.Contains(ua, "crios/") || strings.Contains(ua, "chromium/") || strings.Contains(ua, "crmo/"):
-			u.Browser.Name = BrowserChrome
+			// Chrome, or one of the browsers and webviews built on it, which
+			// name themselves in the tail of the agent.
+			u.Browser.Name = chromiumBrowser(ua)
 
 		case strings.Contains(ua, "android") && !strings.Contains(ua, "chrome/") && strings.Contains(ua, "version/") && !strings.Contains(ua, "like android"):
 			// Android WebView on Android >= 4.4 is purposefully being identified as Chrome above -- https://developer.chrome.com/multidevice/webview/overview
@@ -71,10 +71,6 @@ func (u *UserAgent) evalBrowserName(ua string) bool {
 
 		case strings.Contains(ua, " spotify/"):
 			u.Browser.Name = BrowserSpotify
-
-		// AppleBot uses webkit signature as well
-		case strings.Contains(ua, "applebot"):
-			u.Browser.Name = BrowserAppleBot
 
 		// presume it's safari unless an esoteric browser is being specified (webOSBrowser, SamsungBrowser, etc.)
 		case strings.Contains(ua, "like gecko") && strings.Contains(ua, "mozilla/") && strings.Contains(ua, "safari/") && !strings.Contains(ua, "linux") && !strings.Contains(ua, "android") && !strings.Contains(ua, "browser/") && !strings.Contains(ua, "os/") && !strings.Contains(ua, "yabrowser/"):
@@ -92,7 +88,7 @@ func (u *UserAgent) evalBrowserName(ua string) bool {
 			goto notwebkit
 
 		}
-		return u.maybeBot()
+		return u.applyBotDefaults()
 	}
 
 notwebkit:
@@ -112,54 +108,35 @@ notwebkit:
 	case strings.Contains(ua, "ucbrowser"):
 		u.Browser.Name = BrowserUCBrowser
 
-	case strings.Contains(ua, "applebot"):
-		u.Browser.Name = BrowserAppleBot
-
-	case strings.Contains(ua, "baiduspider"):
-		u.Browser.Name = BrowserBaiduBot
-
-	case strings.Contains(ua, "adidxbot") || strings.Contains(ua, "bingbot") || strings.Contains(ua, "bingpreview"):
-		u.Browser.Name = BrowserBingBot
-
-	case strings.Contains(ua, "duckduckbot"):
-		u.Browser.Name = BrowserDuckDuckGoBot
-
-	case strings.Contains(ua, "facebot") || strings.Contains(ua, "facebookexternalhit"):
-		u.Browser.Name = BrowserFacebookBot
-
-	case strings.Contains(ua, "googlebot"):
-		u.Browser.Name = BrowserGoogleBot
-
-	case strings.Contains(ua, "linkedinbot"):
-		u.Browser.Name = BrowserLinkedInBot
-
-	case strings.Contains(ua, "msnbot"):
-		u.Browser.Name = BrowserMsnBot
-
-	case strings.Contains(ua, "pingdom.com_bot"):
-		u.Browser.Name = BrowserPingdomBot
-
-	case strings.Contains(ua, "twitterbot"):
-		u.Browser.Name = BrowserTwitterBot
-
-	case strings.Contains(ua, "yandex") || strings.Contains(ua, "yadirectfetcher"):
+	// Yandex names every one of its crawlers "Yandex<something>" and its own
+	// browser is matched above, so the bare vendor name is safe here. Yahoo's is
+	// not, and is handled by token in botMarkers instead.
+	case strings.Contains(ua, "yandex"):
 		u.Browser.Name = BrowserYandexBot
 
-	case strings.Contains(ua, "yahoo"):
-		u.Browser.Name = BrowserYahooBot
-
-	case strings.Contains(ua, "coccocbot"):
-		u.Browser.Name = BrowserCocCocBot
-
-	case strings.Contains(ua, "phantomjs"):
-		u.Browser.Name = BrowserBot
-
-	default:
+	// A TV's video player, not a script: GStreamer names the HTTP library it
+	// fetches with - "curlhttpsrc libcurl/7.78.0" - and curl/ is a bot marker.
+	case isGStreamer(ua):
 		u.Browser.Name = BrowserUnknown
 
+	default:
+		// No browser token at all: the shape of a script, an HTTP library or a
+		// crawler that never pretended to be a browser. None of those trip
+		// botSuspect, so they get the full pass here, where it costs nothing -
+		// the alternative for these agents is reporting Unknown. It is also the
+		// one place a bare contact URL can be trusted, nothing here being a
+		// browser.
+		switch name, ok := botName(ua); {
+		case ok:
+			u.Browser.Name = name
+		case hasContactURL(ua):
+			u.Browser.Name = BrowserBot
+		default:
+			u.Browser.Name = BrowserUnknown
+		}
 	}
 
-	return u.maybeBot()
+	return u.applyBotDefaults()
 }
 
 // Retrieve browser version
@@ -167,30 +144,37 @@ notwebkit:
 // 1st: look for generic version/#
 // 2nd: look for browser-specific instructions (e.g. chrome/34)
 // 3rd: infer from OS (iOS only)
-func (u *UserAgent) evalBrowserVersion(ua string) {
-	// if there is a 'version/#' attribute with numeric version, use it -- except for Chrome since Android vendors sometimes hijack version/#
-	if u.Browser.Name != BrowserChrome && u.Browser.Version.findVersionNumber(ua, "version/") {
-		return
+func (u *UserAgent) parseBrowserVersion(ua string) {
+	switch u.Browser.Name {
+	// These state their own version, and the "version/" token in their agents
+	// belongs to something else: to the engine an app embeds, or to whatever an
+	// Android vendor decided to put there.
+	case BrowserChrome, BrowserFacebook, BrowserInstagram, BrowserWeChat, BrowserTikTok,
+		BrowserSnapchat, BrowserLine, BrowserVivaldi, BrowserWhale, BrowserMIUI,
+		BrowserHuawei, BrowserDuckDuckGo:
+
+	default:
+		// if there is a 'version/#' attribute with numeric version, use it
+		if u.Browser.Version.parseAfter(ua, "version/") {
+			return
+		}
 	}
 
 	switch u.Browser.Name {
 	case BrowserChrome:
 		// match both chrome and crios
-		_ = u.Browser.Version.findVersionNumber(ua, "chrome/") || u.Browser.Version.findVersionNumber(ua, "crios/") || u.Browser.Version.findVersionNumber(ua, "crmo/")
+		_ = u.Browser.Version.parseAfter(ua, "chrome/", "crios/", "crmo/")
 	case BrowserYandex:
-		_ = u.Browser.Version.findVersionNumber(ua, "yabrowser/")
+		_ = u.Browser.Version.parseAfter(ua, "yabrowser/")
 	case BrowserQQ:
-		if u.Browser.Version.findVersionNumber(ua, "qq/") {
-			return
-		}
-		_ = u.Browser.Version.findVersionNumber(ua, "qqbrowser/")
+		_ = u.Browser.Version.parseAfter(ua, "qq/", "qqbrowser/")
 	case BrowserIE:
-		if u.Browser.Version.findVersionNumber(ua, "msie ") || u.Browser.Version.findVersionNumber(ua, "edge/") || u.Browser.Version.findVersionNumber(ua, "edgios/") || u.Browser.Version.findVersionNumber(ua, "edga/") || u.Browser.Version.findVersionNumber(ua, "edg/") {
+		if u.Browser.Version.parseAfter(ua, "msie ", "edge/", "edgios/", "edga/", "edg/") {
 			return
 		}
 
 		// get MSIE version from trident version https://en.wikipedia.org/wiki/Trident_(layout_engine)
-		if u.Browser.Version.findVersionNumber(ua, "trident/") {
+		if u.Browser.Version.parseAfter(ua, "trident/") {
 			// convert trident versions 3-7 to MSIE version
 			if (u.Browser.Version.Major >= 3) && (u.Browser.Version.Major <= 7) {
 				u.Browser.Version.Major += 4
@@ -198,7 +182,7 @@ func (u *UserAgent) evalBrowserVersion(ua string) {
 		}
 
 	case BrowserFirefox:
-		_ = u.Browser.Version.findVersionNumber(ua, "firefox/") || u.Browser.Version.findVersionNumber(ua, "fxios/")
+		_ = u.Browser.Version.parseAfter(ua, "firefox/", "fxios/")
 
 	case BrowserSafari: // executes typically if we're on iOS and not using a familiar browser
 		u.Browser.Version = u.OS.Version
@@ -208,18 +192,53 @@ func (u *UserAgent) evalBrowserVersion(ua string) {
 		}
 
 	case BrowserUCBrowser:
-		_ = u.Browser.Version.findVersionNumber(ua, "ucbrowser/")
+		_ = u.Browser.Version.parseAfter(ua, "ucbrowser/")
 
 	case BrowserOpera:
-		_ = u.Browser.Version.findVersionNumber(ua, "opr/") || u.Browser.Version.findVersionNumber(ua, "opios/") || u.Browser.Version.findVersionNumber(ua, "opera/")
+		_ = u.Browser.Version.parseAfter(ua, "opr/", "opios/", "opera/")
 
 	case BrowserSilk:
-		_ = u.Browser.Version.findVersionNumber(ua, "silk/")
+		_ = u.Browser.Version.parseAfter(ua, "silk/")
 
 	case BrowserSpotify:
-		_ = u.Browser.Version.findVersionNumber(ua, "spotify/")
+		_ = u.Browser.Version.parseAfter(ua, "spotify/")
 
 	case BrowserCocCoc:
-		_ = u.Browser.Version.findVersionNumber(ua, "coc_coc_browser/")
+		_ = u.Browser.Version.parseAfter(ua, "coc_coc_browser/")
+
+	// The in-app webviews. Facebook states the app version as FBAV and Instagram
+	// states it after its name with a space, both of which are the app's own
+	// numbering rather than a browser release.
+	case BrowserFacebook:
+		_ = u.Browser.Version.parseAfter(ua, "fbav/")
+	case BrowserInstagram:
+		_ = u.Browser.Version.parseAfter(ua, "instagram ")
+	case BrowserWeChat:
+		_ = u.Browser.Version.parseAfter(ua, "micromessenger/")
+	case BrowserTikTok:
+		_ = u.Browser.Version.parseAfter(ua, "musical_ly_", "trill_")
+	case BrowserSnapchat:
+		_ = u.Browser.Version.parseAfter(ua, "snapchat/")
+	case BrowserLine:
+		_ = u.Browser.Version.parseAfter(ua, "line/")
+
+	case BrowserVivaldi:
+		_ = u.Browser.Version.parseAfter(ua, "vivaldi/")
+	case BrowserWhale:
+		_ = u.Browser.Version.parseAfter(ua, "whale/")
+	case BrowserMIUI:
+		_ = u.Browser.Version.parseAfter(ua, "miuibrowser/")
+	case BrowserHuawei:
+		_ = u.Browser.Version.parseAfter(ua, "huaweibrowser/")
+	case BrowserDuckDuckGo:
+		_ = u.Browser.Version.parseAfter(ua, "duckduckgo/")
 	}
+}
+
+// isGStreamer reports whether ua is GStreamer, the media framework the video
+// players of TVs and set top boxes are built on. It fetches the ad's video and
+// tracking pixels itself and names its HTTP source and library, never the TV:
+// "GStreamer souphttpsrc 1.20.6 libsoup/2.72.0".
+func isGStreamer(ua string) bool {
+	return strings.HasPrefix(ua, "gstreamer ")
 }

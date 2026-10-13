@@ -395,17 +395,20 @@ func (organization organization) SetStatus(_ http.ResponseWriter, r *http.Reques
 		return nil, err
 	}
 	var body struct {
-		Enabled bool `json:"enabled"`
+		Enabled *bool `json:"enabled"`
 	}
 	err := json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
+	if body.Enabled == nil {
+		return nil, errors.BadRequest("enabled is required and cannot be null")
+	}
 	org, err := organization.core.Organization(r.PathValue("id"))
 	if err != nil {
 		return nil, err
 	}
-	err = org.SetStatus(r.Context(), body.Enabled)
+	err = org.SetStatus(r.Context(), *body.Enabled)
 	return nil, err
 }
 

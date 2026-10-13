@@ -171,7 +171,7 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 		if p.Nullable {
 			return fmt.Errorf("profile schema properties cannot be nullable")
 		}
-		semanticType := p.Type
+		semanticsType := p.Type
 		switch p.Type.Kind() {
 		case types.StringKind:
 			if p.Type.Values() != nil {
@@ -202,7 +202,7 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 			if p.Type.MaxElements() != types.MaxElements {
 				return fmt.Errorf("profile schema properties with type array cannot specify maximum elements count")
 			}
-			semanticType = et
+			semanticsType = et
 		case types.MapKind:
 			et := p.Type.Elem()
 			switch et.Kind() {
@@ -216,31 +216,31 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 			case types.ArrayKind, types.ObjectKind, types.MapKind:
 				return fmt.Errorf("profile schema properties cannot have type %s(%s)", p.Type.Kind(), et.Kind())
 			}
-			semanticType = et
+			semanticsType = et
 		}
-		if err := checkAllowedSemanticProfileSchema(semanticType); err != nil {
+		if err := checkAllowedSemanticsProfileSchema(semanticsType); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// checkAllowedSemanticProfileSchema returns an error if t does not meet the
-// semantic restrictions for profile schema properties.
-func checkAllowedSemanticProfileSchema(t types.Type) error {
-	switch t.Semantic() {
-	case types.CountrySemantic:
+// checkAllowedSemanticsProfileSchema returns an error if t does not meet the
+// semantics restrictions for profile schema properties.
+func checkAllowedSemanticsProfileSchema(t types.Type) error {
+	switch t.Semantics() {
+	case types.CountrySemantics:
 		if t.CountryFormat() != types.ISO3166Alpha2 {
-			return errors.New("profile schema properties with country semantic must use ISO 3166 alpha-2 format")
+			return errors.New("profile schema properties with country semantics must use ISO 3166 alpha-2 format")
 		}
-	case types.MoneySemantic, types.PercentageSemantic, types.MeasurementSemantic:
+	case types.MoneySemantics, types.PercentageSemantics, types.MeasurementSemantics:
 		if t.Kind() != types.DecimalKind || t.Precision() != 18 || t.Scale() != 4 {
-			return fmt.Errorf("profile schema properties with %s semantic must have decimal(18,4) values",
-				t.Semantic())
+			return fmt.Errorf("profile schema properties with %s semantics must have decimal(18,4) values",
+				t.Semantics())
 		}
-	case types.DurationSemantic:
+	case types.DurationSemantics:
 		if t.Kind() != types.IntKind || t.BitSize() != 64 || t.IsUnsigned() {
-			return errors.New("profile schema properties with duration semantic must have signed int(64) values")
+			return errors.New("profile schema properties with duration semantics must have signed int(64) values")
 		}
 	}
 	return nil

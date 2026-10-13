@@ -632,8 +632,8 @@ func ValidateString(name string, t types.Type, s string) (any, error) {
 	if !utf8.ValidString(s) {
 		return nil, fmt.Errorf("data warehouse returned a value for column %s, which contains invalid UTF-8 characters", name)
 	}
-	switch t.Semantic() {
-	case types.CountrySemantic:
+	switch t.Semantics() {
+	case types.CountrySemantics:
 		switch t.CountryFormat() {
 		case types.ISO3166Alpha2:
 			if !validation.IsValidCountryCodeAlpha2(s) {
@@ -645,7 +645,7 @@ func ValidateString(name string, t types.Type, s string) (any, error) {
 			}
 		}
 		return s, nil
-	case types.PhoneSemantic:
+	case types.PhoneSemantics:
 		if !types.IsPhone(s) {
 			return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a valid canonical phone number", name)
 		}

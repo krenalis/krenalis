@@ -27,16 +27,16 @@ var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 var (
 	errCountryAlpha2Conversion = errors.New("not a valid 2-letters country code")
 	errCountryAlpha3Conversion = errors.New("not a valid 3-letters country code")
+	errMaxBytesConversion      = errors.New("invalid max bytes")
+	errMaxLengthConversion     = errors.New("invalid max length")
 	errEnumConversion          = errors.New("not a valid enum value")
 	errInvalidConversion       = errors.New("cannot convert")
-	errMaxBytesConversion      = errors.New("invalid max bytes")
 	errMaxConversion           = errors.New("too large")
-	errMaxLengthConversion     = errors.New("invalid max length")
 	errMinConversion           = errors.New("too small")
 	errParseConversion         = errors.New("cannot parse")
+	errRangeConversion         = errors.New("out of range")
 	errPatternConversion       = errors.New("pattern mismatch")
 	errPhoneConversion         = errors.New("not a valid phone number")
-	errRangeConversion         = errors.New("out of range")
 	errYearRangeConversion     = errors.New("year not in range [1,9999]")
 )
 
@@ -146,8 +146,11 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 		default:
 			return v, errInvalidConversion
 		}
-		switch dt.Semantic() {
-		case types.CountrySemantic:
+		switch dt.Semantics() {
+		case types.CountrySemantics:
+			if s == "" && nullable {
+				return nil, nil
+			}
 			switch dt.CountryFormat() {
 			case types.ISO3166Alpha2:
 				if !validation.IsValidCountryCodeAlpha2(s) {
@@ -159,21 +162,23 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 				}
 			}
 			return s, nil
-		case types.PhoneSemantic:
+		case types.PhoneSemantics:
 			s, ok := types.NormalizePhone(s)
 			if !ok {
+				if s == "" && nullable {
+					return nil, nil
+				}
 				return v, errPhoneConversion
 			}
 			return s, nil
 		}
 		if values := dt.Values(); values != nil {
-			if s == "" && nullable {
-				return nil, nil
+			if !slices.Contains(values, s) {
+				if s == "" && nullable {
+					return nil, nil
+				}
+				return v, errEnumConversion
 			}
-			if slices.Contains(values, s) {
-				return s, nil
-			}
-			return v, errEnumConversion
 		} else if re := dt.Pattern(); re != nil {
 			if !re.MatchString(s) {
 				if s == "" && nullable {

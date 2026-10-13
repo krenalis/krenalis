@@ -1,5 +1,3 @@
-type Role = 'Both' | 'Source' | 'Destination';
-
 type TypeKind =
 	| 'boolean'
 	| 'int'
@@ -47,12 +45,11 @@ type UnitOfMeasure =
 
 type DurationUnit = 'millisecond' | 'second' | 'minute' | 'hour' | 'day' | 'week';
 
-type Semantic = 'email' | 'phone' | 'url' | 'country' | 'money' | 'percentage' | 'measurement' | 'duration';
+type Semantics = 'email' | 'phone' | 'url' | 'country' | 'money' | 'percentage' | 'measurement' | 'duration';
 
 interface Property {
 	name: string;
 	prefilled: string;
-	role: Role;
 	type: Type;
 	createRequired: boolean;
 	updateRequired: boolean;
@@ -81,7 +78,7 @@ type Type =
 
 interface StringType {
 	kind: 'string';
-	semantic?: 'email' | 'phone' | 'url' | 'country';
+	semantics?: 'email' | 'phone' | 'url' | 'country';
 	format?: CountryFormat;
 	maxBytes?: number;
 	maxLength?: number;
@@ -95,7 +92,7 @@ interface BooleanType {
 
 interface IntType {
 	kind: 'int';
-	semantic?: 'measurement' | 'duration';
+	semantics?: 'measurement' | 'duration';
 	unit?: UnitOfMeasure | DurationUnit;
 	bitSize: IntBitSize;
 	unsigned: boolean;
@@ -105,7 +102,7 @@ interface IntType {
 
 interface FloatType {
 	kind: 'float';
-	semantic?: 'measurement' | 'duration';
+	semantics?: 'measurement' | 'duration';
 	unit?: UnitOfMeasure | DurationUnit;
 	bitSize: FloatBitSize;
 	real?: boolean;
@@ -115,7 +112,7 @@ interface FloatType {
 
 interface DecimalType {
 	kind: 'decimal';
-	semantic?: 'money' | 'percentage' | 'measurement' | 'duration';
+	semantics?: 'money' | 'percentage' | 'measurement' | 'duration';
 	currency?: string;
 	unit?: UnitOfMeasure | DurationUnit;
 	minimum?: number;
@@ -179,12 +176,11 @@ export type {
 	IntType,
 	DecimalType,
 	FloatType,
-	Role,
 	TypeKind,
 	IntBitSize,
 	FloatBitSize,
 	MapType,
-	Semantic,
+	Semantics,
 	CountryFormat,
 	UnitOfMeasure,
 	DurationUnit,

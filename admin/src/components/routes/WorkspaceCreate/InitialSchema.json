@@ -34,7 +34,7 @@
 			"type": {
 				"maxLength": 254,
 				"kind": "string",
-				"semantic": "email"
+				"semantics": "email"
 			},
 			"displayName": "Email"
 		},
@@ -43,7 +43,7 @@
 			"readOptional": true,
 			"type": {
 				"kind": "string",
-				"semantic": "phone"
+				"semantics": "phone"
 			},
 			"displayName": "Phone number"
 		},
@@ -101,7 +101,7 @@
 						"readOptional": true,
 						"type": {
 							"kind": "string",
-							"semantic": "country",
+							"semantics": "country",
 							"format": "alpha-2"
 						},
 						"displayName": "Country"
@@ -147,6 +147,40 @@
 				]
 			},
 			"displayName": "Preferences"
+		},
+		{
+			"name": "consents",
+			"readOptional": true,
+			"type": {
+				"kind": "object",
+				"properties": [
+					{
+						"name": "marketing",
+						"readOptional": true,
+						"type": {
+							"kind": "boolean"
+						},
+						"displayName": "Marketing communications"
+					},
+					{
+						"name": "profiling",
+						"readOptional": true,
+						"type": {
+							"kind": "boolean"
+						},
+						"displayName": "Profiling"
+					},
+					{
+						"name": "analytics",
+						"readOptional": true,
+						"type": {
+							"kind": "boolean"
+						},
+						"displayName": "Analytics"
+					}
+				]
+			},
+			"displayName": "Consents"
 		}
 	]
 }

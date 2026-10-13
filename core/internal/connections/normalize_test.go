@@ -67,7 +67,21 @@ func Test_normalize(t *testing.T) {
 		{types.String().WithMaxBytes(3), "boo", "boo", false, nil},
 		{types.String().WithMaxLength(3), "bòò", "bòò", false, nil},
 		{types.String().WithValues("foo", "boo"), "", nil, true, nil},
+		{types.String().WithValues("", "foo", "boo"), "", "", false, nil},
+		{types.String().WithValues("", "foo", "boo"), "", "", true, nil},
+		{types.String(), []byte{}, "", false, nil},
+		{types.String(), []byte{}, "", true, nil},
+		{types.String().WithValues("", "foo", "boo"), []byte{}, "", false, nil},
+		{types.String().WithValues("", "foo", "boo"), []byte{}, "", true, nil},
+		{types.String().WithPattern(regexp.MustCompile(`^foo$`)), "", nil, true, nil},
+		{types.String().WithPattern(regexp.MustCompile(`^(foo)?$`)), "", "", false, nil},
+		{types.String().WithPattern(regexp.MustCompile(`^(foo)?$`)), "", "", true, nil},
+		{types.String().WithPattern(regexp.MustCompile(`^(foo)?$`)), []byte{}, "", false, nil},
+		{types.String().WithPattern(regexp.MustCompile(`^(foo)?$`)), []byte{}, "", true, nil},
 		{types.String(), []byte(nil), nil, true, nil},
+		{types.String(), []byte(nil), "", false, nil},
+		{types.String().WithValues("foo", "boo"), []byte(nil), nil, true, nil},
+		{types.String().WithPattern(regexp.MustCompile(`^foo$`)), []byte(nil), nil, true, nil},
 		// boolean.
 		{types.Boolean(), true, true, false, nil},
 		// int(16).
@@ -202,6 +216,11 @@ func Test_normalize(t *testing.T) {
 		{types.Object([]types.Property{{Name: "foo", Type: types.String()}, {Name: "boo", Type: types.Int(32)}}), map[string]any{"foo": "alt", "boo": 3}, map[string]any{"foo": "alt", "boo": 3}, false, nil},
 		{types.Object([]types.Property{{Name: "foo", Type: types.IP(), Nullable: true}}), map[string]any{"foo": ""}, map[string]any{"foo": nil}, true, nil},
 		{types.Object([]types.Property{{Name: "foo", Type: types.String()}, {Name: "boo", Type: types.Int(32)}}), map[string]any(nil), nil, true, nil},
+		{types.Object([]types.Property{{Name: "foo", Type: types.String(), ReadOptional: true}}), map[string]any(nil), map[string]any{}, false, nil},
+		{types.Object([]types.Property{{Name: "foo", Type: types.String(), ReadOptional: true}}), map[string]any{}, map[string]any{}, false, nil},
+		{types.Object([]types.Property{{Name: "foo", Type: types.String(), ReadOptional: true}}), map[string]any(nil), nil, true, nil},
+		{types.Object([]types.Property{{Name: "foo", Type: types.String(), ReadOptional: true}}), map[string]any{}, map[string]any{}, true, nil},
+		{types.Object([]types.Property{{Name: "nested", Type: types.Object([]types.Property{{Name: "foo", Type: types.String(), ReadOptional: true}})}}), map[string]any{"nested": map[string]any(nil)}, map[string]any{"nested": map[string]any{}}, false, nil},
 		{types.Object([]types.Property{{Name: "foo", Type: types.String()}, {Name: "boo", Type: types.Int(32), ReadOptional: true}}), map[string]any{"foo": "alt", "spurious": 5}, map[string]any{"foo": "alt"}, false, nil},
 		// map.
 		{types.Map(types.String()), map[string]any{"foo": "boo"}, map[string]any{"foo": "boo"}, false, nil},
@@ -252,16 +271,16 @@ func Test_normalize(t *testing.T) {
 
 }
 
-// TestNormalizeSemantics checks semantic validation during normalization,
-// including nested containers.
+// TestNormalizeSemantics checks validation according to semantics during
+// normalization, including nested containers.
 func TestNormalizeSemantics(t *testing.T) {
 
 	country := types.String().AsCountry(types.ISO3166Alpha2)
 	tests := []struct {
-		name     string
-		semantic types.Type
-		value    string
-		valid    bool
+		name      string
+		semantics types.Type
+		value     string
+		valid     bool
 	}{
 		{"current country", country, "IT", true},
 		{"alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "ITA", true},
@@ -294,7 +313,7 @@ func TestNormalizeSemantics(t *testing.T) {
 
 				t.Run(shape, func(t *testing.T) {
 
-					typ := test.semantic
+					typ := test.semantics
 					var value any = test.value
 					switch shape {
 					case "bytes":
@@ -319,16 +338,19 @@ func TestNormalizeSemantics(t *testing.T) {
 						if _, ok := errors.AsType[InputValidationError](err); !ok {
 							t.Fatalf("expected InputValidationError, got %T", err)
 						}
+						if got != nil {
+							t.Fatalf("expected nil, got %#v", got)
+						}
 						return
 					}
 					if !test.valid {
-						t.Fatal("invalid value was accepted")
+						t.Fatalf("expected invalid value to be rejected, got %#v", got)
 					}
 					if shape == "bytes" {
 						value = test.value
 					}
 					if !reflect.DeepEqual(got, value) {
-						t.Fatalf("value changed: got %#v, want %#v", got, value)
+						t.Fatalf("expected value %#v, got %#v", value, got)
 					}
 
 				})
@@ -336,7 +358,7 @@ func TestNormalizeSemantics(t *testing.T) {
 			}
 
 			// An object's properties must supply their own semantics.
-			schema := types.Object([]types.Property{{Name: "value", Type: test.semantic}})
+			schema := types.Object([]types.Property{{Name: "value", Type: test.semantics}})
 			p := types.Property{Name: "object", Type: schema}
 			_, err := normalize(p.Name, p.Type, map[string]any{"value": test.value}, p.Nullable, nil)
 			if err != nil {
@@ -346,7 +368,7 @@ func TestNormalizeSemantics(t *testing.T) {
 				return
 			}
 			if !test.valid {
-				t.Fatal("invalid object property was accepted")
+				t.Fatalf("expected invalid object property to be rejected, got %#v", map[string]any{"value": test.value})
 			}
 
 		})
@@ -375,7 +397,13 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "textInvalidType", typ: types.String(), value: 5, wantContains: "has type int"},
 		{name: "textInvalidUTF8", typ: types.String(), value: string([]byte{0xff}), wantContains: "does not contain valid UTF-8 characters"},
 		{name: "textRegexpMismatch", typ: types.String().WithPattern(regexp.MustCompile(`^foo$`)), value: "bar", wantContains: "contains an unsupported value"},
+		{name: "textEmptyRegexpMismatch", typ: types.String().WithPattern(regexp.MustCompile(`^foo$`)), value: "", wantContains: "contains an unsupported value", wantInputError: true},
+		{name: "textEmptyBytesRegexpMismatch", typ: types.String().WithPattern(regexp.MustCompile(`^foo$`)), value: []byte{}, wantContains: "contains an unsupported value", wantInputError: true},
+		{name: "textNullableEmptyBytesRegexpMismatch", typ: types.String().WithPattern(regexp.MustCompile(`^foo$`)), value: []byte{}, nullable: true, wantContains: "contains an unsupported value", wantInputError: true},
 		{name: "textUnsupportedValue", typ: types.String().WithValues("foo", "bar"), value: "baz", wantContains: "contains an unsupported value"},
+		{name: "textEmptyUnsupportedValue", typ: types.String().WithValues("foo", "bar"), value: "", wantContains: "contains an unsupported value", wantInputError: true},
+		{name: "textEmptyBytesUnsupportedValue", typ: types.String().WithValues("foo", "bar"), value: []byte{}, wantContains: "contains an unsupported value", wantInputError: true},
+		{name: "textNullableEmptyBytesUnsupportedValue", typ: types.String().WithValues("foo", "bar"), value: []byte{}, nullable: true, wantContains: "contains an unsupported value", wantInputError: true},
 		{name: "textTooLong", typ: types.String().WithMaxBytes(1), value: "toolong", wantContains: "has a value longer than 1 bytes"},
 		{name: "textTooManyChars", typ: types.String().WithMaxLength(2), value: "bòò", wantContains: "has a value longer than 2 characters"},
 		{name: "booleanWrongString", typ: types.Boolean(), value: "maybe", wantContains: "string value but it is not 'true' or 'false'"},
@@ -460,6 +488,7 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "inetInvalidType", typ: types.IP(), value: 5, wantContains: "has type int that is not allowed for type ip"},
 		{name: "arrayInvalidType", typ: types.Array(types.Int(32)), value: 5, wantContains: "has type int that is not allowed"},
 		{name: "arrayElementError", typ: types.Array(types.Int(16)), value: []any{1, "bad"}, wantContains: "has a string value that does not represent an int value"},
+		{name: "arrayEmptyUnsupportedValue", typ: types.Array(types.String().WithValues("foo", "bar")), value: []any{""}, want: "property 'k' contains an unsupported value", wantInputError: true},
 		{name: "arrayTooFewElements", typ: types.Array(types.String()).WithMinElements(2), value: []any{"ok"}, wantContains: "is an array with 1 elements"},
 		{name: "arrayStringNotJSON", typ: types.Array(types.JSON()), value: "notjson", wantContains: "has a string value but does not contain a JSON array"},
 		{name: "arrayStringInvalidJSON", typ: types.Array(types.JSON()), value: "[bad", wantContains: "has a string value but is not valid JSON"},
@@ -475,11 +504,14 @@ func Test_normalize_errors(t *testing.T) {
 			want:  "property 'k' contains a duplicated value",
 		},
 		{name: "objectMissingRequired", typ: types.Object([]types.Property{{Name: "foo", Type: types.String()}}), value: map[string]any{}, wantContains: "property 'k.foo' does not have a value, but the property is not optional for reading"},
+		{name: "nilObjectMissingRequired", typ: types.Object([]types.Property{{Name: "foo", Type: types.String()}}), value: map[string]any(nil), wantContains: "property 'k.foo' does not have a value, but the property is not optional for reading"},
 		{name: "objectPropertyError", typ: types.Object([]types.Property{{Name: "foo", Type: types.Int(32)}}), value: map[string]any{"foo": "bad"}, wantContains: "property 'k.foo' has a string value that does not represent an int value"},
+		{name: "objectEmptyUnsupportedValue", typ: types.Object([]types.Property{{Name: "foo", Type: types.String().WithValues("foo", "bar")}}), value: map[string]any{"foo": ""}, want: "property 'k.foo' contains an unsupported value", wantInputError: true},
 		{name: "objectInvalidType", typ: types.Object([]types.Property{{Name: "foo", Type: types.String()}}), value: 5, wantContains: "has type int that is not allowed for type object"},
 		{name: "mapStringNotJSONObject", typ: types.Map(types.String()), value: "not json", wantContains: "has a string value but does not contain a JSON object"},
 		{name: "mapStringInvalidJSON", typ: types.Map(types.JSON()), value: "{bad", wantContains: "has a string value but is not valid JSON"},
 		{name: "mapValueTypeError", typ: types.Map(types.Int(32)), value: map[string]any{"ok": 1, "bad": "nope"}, wantContains: "property 'k[\"bad\"]' has a string value that does not represent an int value"},
+		{name: "mapEmptyUnsupportedValue", typ: types.Map(types.String().WithValues("foo", "bar")), value: map[string]any{"foo": ""}, want: "property 'k[\"foo\"]' contains an unsupported value", wantInputError: true},
 		{name: "mapInvalidType", typ: types.Map(types.String()), value: 5, wantContains: "has type int that is not allowed for type map"},
 	}
 

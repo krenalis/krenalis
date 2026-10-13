@@ -1,4 +1,4 @@
-import Type, { DurationUnit, Semantic, UnitOfMeasure } from '../../lib/api/types/types';
+import Type, { DurationUnit, Semantics, UnitOfMeasure } from '../../lib/api/types/types';
 
 interface UnitOfMeasureOption {
 	groupLabel?: string;
@@ -58,13 +58,13 @@ function getPropertyValueType(type: Type | null): Type | null {
 
 function getProfileSchemaTypePresentation(type: Type): ProfileSchemaTypePresentation {
 	const valueType = getPropertyValueType(type);
-	const semantic = getTypeSemantic(valueType);
-	if (semantic == null) {
+	const semantics = getTypeSemantics(valueType);
+	if (semantics == null) {
 		return { primary: toProfileSchemaPhysicalType(type) };
 	}
 
-	let primary = toSemanticLabel(semantic);
-	switch (semantic) {
+	let primary = toSemanticsLabel(semantics);
+	switch (semantics) {
 		case 'country': {
 			const letters = valueType.kind === 'string' && valueType.format === 'alpha-2' ? 2 : 3;
 			primary += ` — ${letters}-letter ISO code`;
@@ -94,8 +94,8 @@ function getProfileSchemaTypePresentation(type: Type): ProfileSchemaTypePresenta
 	return { primary, metadata: toProfileSchemaPhysicalType(valueType) };
 }
 
-function getTypeSemantic(type: Type | null): Semantic | undefined {
-	return type != null && 'semantic' in type ? type.semantic : undefined;
+function getTypeSemantics(type: Type | null): Semantics | undefined {
+	return type != null && 'semantics' in type ? type.semantics : undefined;
 }
 
 function isSuitableAsIdentifier(type: Type): boolean {
@@ -140,8 +140,8 @@ function toProfileSchemaPhysicalType(type: Type): string {
 	return toKrenalisStringType(normalizedType, undefined, ' · ');
 }
 
-function toSemanticLabel(semantic: Semantic): string {
-	switch (semantic) {
+function toSemanticsLabel(semantics: Semantics): string {
+	switch (semantics) {
 		case 'phone':
 			return 'phone number';
 		case 'url':
@@ -152,9 +152,9 @@ function toSemanticLabel(semantic: Semantic): string {
 		case 'percentage':
 		case 'measurement':
 		case 'duration':
-			return semantic;
+			return semantics;
 		default:
-			throw new Error(`unknown semantic ${semantic satisfies never}`);
+			throw new Error(`unknown property semantics ${semantics satisfies never}`);
 	}
 }
 
@@ -371,12 +371,12 @@ export {
 	UNIT_OF_MEASURE_OPTIONS,
 	getPropertyValueType,
 	getProfileSchemaTypePresentation,
-	getTypeSemantic,
+	getTypeSemantics,
 	isSuitableAsIdentifier,
 	replacePropertyValueType,
 	toCompactPhysicalType,
 	toProfileSchemaPhysicalType,
-	toSemanticLabel,
+	toSemanticsLabel,
 	toKrenalisStringType,
 	toJavascriptType,
 	toPythonType,

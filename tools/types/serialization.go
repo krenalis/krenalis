@@ -82,23 +82,23 @@ func marshalType(b *bytes.Buffer, t Type) {
 	b.WriteString(`{"kind":"`)
 	b.WriteString(t.KindName())
 	b.WriteString(`"`)
-	if t.semantic != NoSemantic {
-		b.WriteString(`,"semantic":"`)
-		b.WriteString(t.semantic.String())
+	if t.semantics != NoSemantics {
+		b.WriteString(`,"semantics":"`)
+		b.WriteString(t.semantics.String())
 		b.WriteByte('"')
-		switch t.semantic {
-		case CountrySemantic:
+		switch t.semantics {
+		case CountrySemantics:
 			b.WriteString(`,"format":`)
 			_ = marshalString(b, t.CountryFormat().String())
-		case MoneySemantic:
+		case MoneySemantics:
 			if currency, ok := t.Currency(); ok {
 				b.WriteString(`,"currency":`)
 				_ = marshalString(b, currency)
 			}
-		case MeasurementSemantic:
+		case MeasurementSemantics:
 			b.WriteString(`,"unit":`)
 			_ = marshalString(b, t.UnitOfMeasure().String())
-		case DurationSemantic:
+		case DurationSemantics:
 			b.WriteString(`,"unit":`)
 			_ = marshalString(b, t.DurationUnit().String())
 		}
@@ -313,8 +313,10 @@ func marshalProperty(b *bytes.Buffer, p Property) error {
 		b.WriteString(`,"displayName":`)
 		_ = marshalString(b, p.DisplayName)
 	}
-	b.WriteString(`,"description":`)
-	_ = marshalString(b, p.Description)
+	if p.Description != "" {
+		b.WriteString(`,"description":`)
+		_ = marshalString(b, p.Description)
+	}
 	b.WriteByte('}')
 	return nil
 }
@@ -336,10 +338,10 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	}
 
 	var hasUnsigned, hasReal, hasScale, hasMinElements, hasMaxElements, hasUniqueElements bool
-	var hasSemantic, hasFormat, hasCurrency, hasUnit bool
+	var hasSemantics, hasFormat, hasCurrency, hasUnit bool
 
 	var kind, format, currency, unit string
-	var semantic Semantic
+	var semantics Semantics
 	var bitSize int
 	var unsigned bool
 	var minimum, maximum json.Number
@@ -390,26 +392,26 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			if !IsValidPropertyName(kind) {
 				return Type{}, errors.New("invalid type kind")
 			}
-		case "semantic":
-			if hasSemantic {
-				return Type{}, errors.New("repeated 'semantic' key")
+		case "semantics":
+			if hasSemantics {
+				return Type{}, errors.New("repeated 'semantics' key")
 			}
 			name, ok := tok.(string)
 			if !ok {
-				return Type{}, errors.New("invalid semantic")
+				return Type{}, errors.New("invalid semantics")
 			}
-			semantic, ok = SemanticByName(name)
+			semantics, ok = SemanticsByName(name)
 			if !ok {
-				return Type{}, fmt.Errorf("invalid semantic %q", name)
+				return Type{}, fmt.Errorf("invalid semantics %q", name)
 			}
-			hasSemantic = true
+			hasSemantics = true
 		case "format":
 			if hasFormat {
 				return Type{}, errors.New("repeated 'format' key")
 			}
 			format, ok = tok.(string)
 			if !ok {
-				return Type{}, errors.New("invalid semantic format")
+				return Type{}, errors.New("invalid semantics format")
 			}
 			hasFormat = true
 		case "currency":
@@ -418,7 +420,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			}
 			currency, ok = tok.(string)
 			if !ok {
-				return Type{}, errors.New("invalid semantic currency")
+				return Type{}, errors.New("invalid semantics currency")
 			}
 			hasCurrency = true
 		case "unit":
@@ -427,7 +429,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			}
 			unit, ok = tok.(string)
 			if !ok {
-				return Type{}, errors.New("invalid semantic unit")
+				return Type{}, errors.New("invalid semantics unit")
 			}
 			hasUnit = true
 		case "bitSize":
@@ -1029,47 +1031,47 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 		t.vl = Properties{properties: properties, names: names}
 	}
-	if !hasSemantic {
+	if !hasSemantics {
 		if hasFormat {
-			return Type{}, errors.New("unexpected 'format' key without semantic")
+			return Type{}, errors.New("unexpected 'format' key without semantics")
 		}
 		if hasCurrency {
-			return Type{}, errors.New("unexpected 'currency' key without semantic")
+			return Type{}, errors.New("unexpected 'currency' key without semantics")
 		}
 		if hasUnit {
-			return Type{}, errors.New("unexpected 'unit' key without semantic")
+			return Type{}, errors.New("unexpected 'unit' key without semantics")
 		}
 		return t, nil
 	}
 
-	var semanticOption any
-	switch semantic {
-	case EmailSemantic, PhoneSemantic, PercentageSemantic:
+	var semanticsOption any
+	switch semantics {
+	case EmailSemantics, PhoneSemantics, PercentageSemantics:
 		if hasFormat {
-			return Type{}, fmt.Errorf("unexpected 'format' key for %s semantic", semantic)
+			return Type{}, fmt.Errorf("unexpected 'format' key for %s semantics", semantics)
 		}
 		if hasCurrency {
-			return Type{}, fmt.Errorf("unexpected 'currency' key for %s semantic", semantic)
+			return Type{}, fmt.Errorf("unexpected 'currency' key for %s semantics", semantics)
 		}
 		if hasUnit {
-			return Type{}, fmt.Errorf("unexpected 'unit' key for %s semantic", semantic)
+			return Type{}, fmt.Errorf("unexpected 'unit' key for %s semantics", semantics)
 		}
-	case URLSemantic:
+	case URLSemantics:
 		if hasFormat {
-			return Type{}, errors.New("unexpected 'format' key for URL semantic")
+			return Type{}, errors.New("unexpected 'format' key for URL semantics")
 		}
 		if hasCurrency {
-			return Type{}, errors.New("unexpected 'currency' key for URL semantic")
+			return Type{}, errors.New("unexpected 'currency' key for URL semantics")
 		}
 		if hasUnit {
-			return Type{}, errors.New("unexpected 'unit' key for URL semantic")
+			return Type{}, errors.New("unexpected 'unit' key for URL semantics")
 		}
-	case CountrySemantic:
+	case CountrySemantics:
 		if hasCurrency {
-			return Type{}, errors.New("unexpected 'currency' key for country semantic")
+			return Type{}, errors.New("unexpected 'currency' key for country semantics")
 		}
 		if hasUnit {
-			return Type{}, errors.New("unexpected 'unit' key for country semantic")
+			return Type{}, errors.New("unexpected 'unit' key for country semantics")
 		}
 		if !hasFormat {
 			return Type{}, errors.New("missing country format")
@@ -1078,20 +1080,20 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		if !ok {
 			return Type{}, fmt.Errorf("invalid country format %q", format)
 		}
-		semanticOption = countryFormat
-	case MoneySemantic:
+		semanticsOption = countryFormat
+	case MoneySemantics:
 		if hasFormat {
-			return Type{}, errors.New("unexpected 'format' key for money semantic")
+			return Type{}, errors.New("unexpected 'format' key for money semantics")
 		}
 		if hasUnit {
-			return Type{}, errors.New("unexpected 'unit' key for money semantic")
+			return Type{}, errors.New("unexpected 'unit' key for money semantics")
 		}
-	case MeasurementSemantic:
+	case MeasurementSemantics:
 		if hasFormat {
-			return Type{}, errors.New("unexpected 'format' key for measurement semantic")
+			return Type{}, errors.New("unexpected 'format' key for measurement semantics")
 		}
 		if hasCurrency {
-			return Type{}, errors.New("unexpected 'currency' key for measurement semantic")
+			return Type{}, errors.New("unexpected 'currency' key for measurement semantics")
 		}
 		if !hasUnit {
 			return Type{}, errors.New("missing measurement unit")
@@ -1100,13 +1102,13 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		if !ok {
 			return Type{}, fmt.Errorf("invalid unit of measure %q", unit)
 		}
-		semanticOption = measurementUnit
-	case DurationSemantic:
+		semanticsOption = measurementUnit
+	case DurationSemantics:
 		if hasFormat {
-			return Type{}, errors.New("unexpected 'format' key for duration semantic")
+			return Type{}, errors.New("unexpected 'format' key for duration semantics")
 		}
 		if hasCurrency {
-			return Type{}, errors.New("unexpected 'currency' key for duration semantic")
+			return Type{}, errors.New("unexpected 'currency' key for duration semantics")
 		}
 		if !hasUnit {
 			return Type{}, errors.New("missing duration unit")
@@ -1115,10 +1117,10 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		if !ok {
 			return Type{}, fmt.Errorf("invalid duration unit %q", unit)
 		}
-		semanticOption = durationUnit
+		semanticsOption = durationUnit
 	}
 
-	t, err = t.withSemantic(semantic, semanticOption)
+	t, err = t.withSemantics(semantics, semanticsOption)
 	if err != nil {
 		return Type{}, err
 	}

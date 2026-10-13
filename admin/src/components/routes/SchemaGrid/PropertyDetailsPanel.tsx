@@ -4,10 +4,10 @@ import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import {
 	DURATION_UNIT_OPTIONS,
 	getPropertyValueType,
-	getTypeSemantic,
+	getTypeSemantics,
 	isSuitableAsIdentifier,
 	toKrenalisStringType,
-	toSemanticLabel,
+	toSemanticsLabel,
 	UNIT_OF_MEASURE_OPTIONS,
 } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
@@ -34,14 +34,14 @@ interface PropertyDetailProps {
 }
 
 const PropertyDetailsPanel = ({ identifierPosition, onClose, primarySource, property }: PropertyDetailsPanelProps) => {
-	const semanticDetail = getSemanticDetail(property);
+	const semanticsDetail = getSemanticsDetail(property);
 	const physicalType = toKrenalisStringType(property.type);
 	const valueType = getPropertyValueType(property.type);
-	const semantic = getTypeSemantic(valueType);
-	let semanticLabel = semantic == null ? null : toSemanticLabel(semantic);
-	if (semantic === 'country') {
+	const semantics = getTypeSemantics(valueType);
+	let semanticsLabel = semantics == null ? null : toSemanticsLabel(semantics);
+	if (semantics === 'country') {
 		const letters = valueType.kind === 'string' && valueType.format === 'alpha-2' ? 2 : 3;
-		semanticLabel += ` (${letters}-letter)`;
+		semanticsLabel += ` (${letters}-letter)`;
 	}
 
 	return (
@@ -52,18 +52,18 @@ const PropertyDetailsPanel = ({ identifierPosition, onClose, primarySource, prop
 					<PropertyDetail label='Type'>
 						<span
 							className='property-details-panel__type'
-							title={semanticLabel == null ? physicalType : `${physicalType}\n${semanticLabel}`}
+							title={semanticsLabel == null ? physicalType : `${physicalType}\n${semanticsLabel}`}
 						>
 							<span className='property-details-panel__physical-type'>{physicalType}</span>
-							{semanticLabel != null && (
-								<span className='property-details-panel__semantic'>{semanticLabel}</span>
+							{semanticsLabel != null && (
+								<span className='property-details-panel__semantics'>{semanticsLabel}</span>
 							)}
 						</span>
 					</PropertyDetail>
-					{semanticDetail != null && (
-						<PropertyDetail label={semanticDetail.label}>
-							{semanticDetail.value != null && semanticDetail.value !== '' ? (
-								semanticDetail.value
+					{semanticsDetail != null && (
+						<PropertyDetail label={semanticsDetail.label}>
+							{semanticsDetail.value != null && semanticsDetail.value !== '' ? (
+								semanticsDetail.value
 							) : (
 								<span className='property-details-panel__empty-value'>—</span>
 							)}
@@ -100,16 +100,16 @@ const PropertyDetailsPanel = ({ identifierPosition, onClose, primarySource, prop
 	);
 };
 
-const getSemanticDetail = (property: Property): { label: string; value?: string } | null => {
+const getSemanticsDetail = (property: Property): { label: string; value?: string } | null => {
 	const type = getPropertyValueType(property.type);
-	if (type?.kind === 'decimal' && type.semantic === 'money') {
+	if (type?.kind === 'decimal' && type.semantics === 'money') {
 		return { label: 'Currency', value: type.currency };
 	}
-	if (type != null && 'semantic' in type && type.semantic === 'measurement') {
+	if (type != null && 'semantics' in type && type.semantics === 'measurement') {
 		const option = UNIT_OF_MEASURE_OPTIONS.find((candidate) => candidate.value === type.unit);
 		return { label: 'Unit', value: option == null ? undefined : `${option.label} · ${option.value}` };
 	}
-	if (type != null && 'semantic' in type && type.semantic === 'duration') {
+	if (type != null && 'semantics' in type && type.semantics === 'duration') {
 		const option = DURATION_UNIT_OPTIONS.find((candidate) => candidate.value === type.unit);
 		return { label: 'Unit', value: option == null ? undefined : `${option.label} · ${option.symbol}` };
 	}

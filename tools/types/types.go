@@ -166,8 +166,8 @@ type Type struct {
 	unique   bool // unique reports whether the elements of an array must be unique.
 	real     bool // real reports whether NaN, +Inf and -Inf are not allowed for float.
 
-	semantic       Semantic
-	semanticOption any // country format, currency, unit of measure, or duration unit
+	semantics       Semantics
+	semanticsOption any // country format, currency, unit of measure, or duration unit
 
 	// p represents
 	//   - minimum value for int with 8, 16, 24, and 32 bits; for unsigned, p is converted to uint32
@@ -757,7 +757,7 @@ func (t Type) MaxBytes() (int, bool) {
 //
 // It panics if:
 //   - t is not a string type
-//   - t's semantic is either country or phone
+//   - t has country or phone semantics
 //   - n is not in range [1, MaxStringLen]
 //   - t already has values or a pattern
 //   - t is already restricted by max bytes
@@ -765,8 +765,8 @@ func (t Type) WithMaxBytes(n int) Type {
 	if t.kind != StringKind {
 		panic("cannot set max byte length of a non-string type")
 	}
-	if t.semantic == CountrySemantic || t.semantic == PhoneSemantic {
-		panic(fmt.Sprintf("%s semantic cannot be combined with other string constraints", t.semantic))
+	if t.semantics == CountrySemantics || t.semantics == PhoneSemantics {
+		panic(fmt.Sprintf("%s semantics cannot be combined with other string constraints", t.semantics))
 	}
 	if n < 1 || n > MaxStringLen {
 		panic("invalid max bytes")
@@ -798,7 +798,7 @@ func (t Type) MaxLength() (int, bool) {
 //
 // It panics if:
 //   - t is not a string type
-//   - t's semantic is either country or phone
+//   - t has country or phone semantics
 //   - l is not in range [1, MaxStringLen]
 //   - t already has values or a pattern
 //   - t is already restricted by max length
@@ -806,8 +806,8 @@ func (t Type) WithMaxLength(l int) Type {
 	if t.kind != StringKind {
 		panic("cannot set max length of non-string types")
 	}
-	if t.semantic == CountrySemantic || t.semantic == PhoneSemantic {
-		panic(fmt.Sprintf("%s semantic cannot be combined with other string constraints", t.semantic))
+	if t.semantics == CountrySemantics || t.semantics == PhoneSemantics {
+		panic(fmt.Sprintf("%s semantics cannot be combined with other string constraints", t.semantics))
 	}
 	if l < 1 || l > MaxStringLen {
 		panic("invalid string length")
@@ -839,7 +839,7 @@ func (t Type) Pattern() *regexp.Regexp {
 //
 // It panics if:
 //   - t is not a string type
-//   - t's semantic is either country or phone
+//   - t has country or phone semantics
 //   - p is nil
 //   - t already has values or a pattern
 //   - t is already restricted by max bytes or max length
@@ -847,8 +847,8 @@ func (t Type) WithPattern(p *regexp.Regexp) Type {
 	if t.kind != StringKind {
 		panic("cannot set pattern for a non-string type")
 	}
-	if t.semantic == CountrySemantic || t.semantic == PhoneSemantic {
-		panic(fmt.Sprintf("%s semantic cannot be combined with other string constraints", t.semantic))
+	if t.semantics == CountrySemantics || t.semantics == PhoneSemantics {
+		panic(fmt.Sprintf("%s semantics cannot be combined with other string constraints", t.semantics))
 	}
 	if p == nil {
 		panic("pattern is nil")
@@ -888,7 +888,7 @@ func (t Type) Values() []string {
 //
 // It panics if:
 //   - t is not a string type
-//   - t's semantic is either country or phone
+//   - t has country or phone semantics
 //   - no values are provided
 //   - any value is not valid UTF-8
 //   - t already has values or a pattern
@@ -899,8 +899,8 @@ func (t Type) WithValues(values ...string) Type {
 	if t.kind != StringKind {
 		panic("cannot set values for a non-string type")
 	}
-	if t.semantic == CountrySemantic || t.semantic == PhoneSemantic {
-		panic(fmt.Sprintf("%s semantic cannot be combined with other string constraints", t.semantic))
+	if t.semantics == CountrySemantics || t.semantics == PhoneSemantics {
+		panic(fmt.Sprintf("%s semantics cannot be combined with other string constraints", t.semantics))
 	}
 	if len(values) == 0 {
 		panic("values is empty")

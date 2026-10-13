@@ -77,7 +77,7 @@ func Equal(t1, t2 Type) bool {
 		t1.unique == t2.unique &&
 		t1.real == t2.real &&
 		t1.p == t2.p && t1.s == t2.s &&
-		t1.semantic == t2.semantic && t1.semanticOption == t2.semanticOption
+		t1.semantics == t2.semantics && t1.semanticsOption == t2.semanticsOption
 	if !almostEqual {
 		return false
 	}
@@ -126,10 +126,10 @@ func Equal(t1, t2 Type) bool {
 	panic("unreachable code")
 }
 
-// EqualSemantics reports whether two types have the same semantics and semantic
-// options. Types with no semantics are considered equivalent.
+// EqualSemantics reports whether two types have the same semantics and
+// associated options. Types with no semantics are considered equivalent.
 func EqualSemantics(t1, t2 Type) bool {
-	return t1.semantic == t2.semantic && t1.semanticOption == t2.semanticOption
+	return t1.semantics == t2.semantics && t1.semanticsOption == t2.semanticsOption
 }
 
 // Filter returns a subset of object t containing only the properties for which
@@ -255,6 +255,15 @@ func PruneAtPath(t Type, path string) (Type, error) {
 		return Type{}, err
 	}
 	return pruneAtPath(t, path), nil
+}
+
+// SemanticsOptionString returns the string representation of the option
+// associated with t's semantics. It returns "none" if no option is set.
+func SemanticsOptionString(t Type) string {
+	if t.semanticsOption == nil {
+		return "none"
+	}
+	return fmt.Sprint(t.semanticsOption)
 }
 
 // asRole is a recursive function called by the AsRole method. t must be an

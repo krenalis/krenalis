@@ -82,11 +82,6 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		var v string
 		switch s := src.(type) {
 		case string:
-			if s == "" {
-				if values := typ.Values(); values != nil && !slices.Contains(values, "") {
-					return nil, nil
-				}
-			}
 			v = s
 		case []byte:
 			if s == nil && nullable {
@@ -99,31 +94,37 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		if !utf8.ValidString(v) {
 			return nil, inputValidationErrorf(name, "does not contain valid UTF-8 characters")
 		}
-		switch typ.Semantic() {
-		case types.CountrySemantic:
+		switch typ.Semantics() {
+		case types.CountrySemantics:
 			switch typ.CountryFormat() {
 			case types.ISO3166Alpha2:
 				if !validation.IsValidCountryCodeAlpha2(v) {
-					return v, inputValidationErrorf(name, "is not a 2-letters country code")
+					return nil, inputValidationErrorf(name, "is not a 2-letters country code")
 				}
 			case types.ISO3166Alpha3:
 				if !validation.IsValidCountryCodeAlpha3(v) {
-					return v, inputValidationErrorf(name, "is not a 3-letters country code")
+					return nil, inputValidationErrorf(name, "is not a 3-letters country code")
 				}
 			}
-		case types.PhoneSemantic:
+		case types.PhoneSemantics:
 			var ok bool
 			v, ok = types.NormalizePhone(v)
 			if !ok {
-				return v, inputValidationErrorf(name, "is not a valid phone number")
+				return nil, inputValidationErrorf(name, "is not a valid phone number")
 			}
 		default:
 			if values := typ.Values(); values != nil {
 				if !slices.Contains(values, v) {
+					if src == "" && nullable {
+						return nil, nil
+					}
 					return nil, inputValidationErrorf(name, "contains an unsupported value")
 				}
 			} else if rx := typ.Pattern(); rx != nil {
 				if !rx.MatchString(v) {
+					if src == "" && nullable {
+						return nil, nil
+					}
 					return nil, inputValidationErrorf(name, "contains an unsupported value")
 				}
 			} else {
@@ -795,6 +796,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				}
 				delete(obj, name)
 			}
+		}
+		if obj == nil {
+			obj = map[string]any{}
 		}
 		return obj, nil
 	case types.MapKind:

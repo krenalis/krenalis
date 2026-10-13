@@ -263,6 +263,24 @@
 	padding-right: 14px;
 }
 
+/* Description is the fourth column in both schema grids. */
+:is(.schema-grid__card, .schema-edit__schema-panel) .grid__row > .grid__cell:nth-child(4) {
+	min-width: 0;
+}
+
+:is(.schema-grid__card, .schema-edit__schema-panel) .grid__row > .grid__cell:nth-child(4) > .grid__cell-content {
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	width: auto;
+}
+
+.schema-grid__technical-type,
+.schema-edit__property-technical-type {
+	font-family: var(--monospace-fonts);
+}
+
 .schema-property-grid__property-name {
 	line-height: 1.35;
 	min-width: 0;
@@ -346,7 +364,13 @@
 }
 
 .schema-property-grid__tooltip-content {
-	white-space: pre-line;
+	display: grid;
+	gap: var(--sl-spacing-x-small);
+
+	p {
+		margin: 0;
+		white-space: pre-line;
+	}
 }
 
 .schema-property-grid__tooltip::part(base__popup) {

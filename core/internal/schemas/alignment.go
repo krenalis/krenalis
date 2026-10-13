@@ -139,41 +139,25 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 		return &Error{Msg: fmt.Sprintf("«%s» property's type has changed from «%s» to «%s»", name, t1, t2)}
 	}
 	if !types.EqualSemantics(t1, t2) {
-		if t1.Semantic() != t2.Semantic() {
-			return &Error{Msg: fmt.Sprintf("semantic of the «%s» property's type has changed from «%s» to «%s»", name,
-				t1.Semantic(), t2.Semantic())}
+		if t1.Semantics() != t2.Semantics() {
+			return &Error{Msg: fmt.Sprintf("semantics of the «%s» property's type have changed from «%s» to «%s»", name,
+				t1.Semantics(), t2.Semantics())}
 		}
-		switch t1.Semantic() {
-		case types.CountrySemantic:
-			if t1.CountryFormat() != t2.CountryFormat() {
-				return &Error{Msg: fmt.Sprintf("country format of the «%s» property's type has changed from «%s» to «%s»",
-					name, t1.CountryFormat(), t2.CountryFormat())}
-			}
-		case types.DurationSemantic:
-			if t1.DurationUnit() != t2.DurationUnit() {
-				return &Error{Msg: fmt.Sprintf("duration unit of the «%s» property's type has changed from «%s» to «%s»",
-					name, t1.DurationUnit(), t2.DurationUnit())}
-			}
-		case types.MeasurementSemantic:
-			if t1.UnitOfMeasure() != t2.UnitOfMeasure() {
-				return &Error{Msg: fmt.Sprintf("unit of measure of the «%s» property's type has changed from «%s» to «%s»",
-					name, t1.UnitOfMeasure(), t2.UnitOfMeasure())}
-			}
-		case types.MoneySemantic:
-			currency1, _ := t1.Currency()
-			currency2, _ := t2.Currency()
-			if currency1 != currency2 {
-				if currency1 == "" {
-					currency1 = "none"
-				}
-				if currency2 == "" {
-					currency2 = "none"
-				}
-				return &Error{Msg: fmt.Sprintf("currency of the «%s» property's type has changed from «%s» to «%s»",
-					name, currency1, currency2)}
-			}
+		var label string
+		switch t1.Semantics() {
+		case types.CountrySemantics:
+			label = "country format"
+		case types.DurationSemantics:
+			label = "duration unit"
+		case types.MeasurementSemantics:
+			label = "unit of measure"
+		case types.MoneySemantics:
+			label = "currency"
+		default:
+			return fmt.Errorf("unexpected semantics %q", t1.Semantics())
 		}
-		return fmt.Errorf("unexpected semantic %q", t1.Semantic())
+		return &Error{Msg: fmt.Sprintf("%s of the «%s» property's type has changed from «%s» to «%s»",
+			label, name, types.SemanticsOptionString(t1), types.SemanticsOptionString(t2))}
 	}
 	switch k1 {
 	case types.StringKind:
