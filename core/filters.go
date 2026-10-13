@@ -840,7 +840,6 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 		switch kind {
 		case types.DateTimeKind, types.DateKind, types.TimeKind:
 		case types.YearKind:
-		case types.JSONKind:
 		default:
 			return "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 		}
