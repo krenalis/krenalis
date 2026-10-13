@@ -5,8 +5,12 @@
 package state
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
+	"encoding/base64"
 	"fmt"
+	"io"
 	"math/rand/v2"
 	"reflect"
 	"strings"
@@ -112,17 +116,15 @@ func TestNotificationProducer(t *testing.T) {
 		{"remove-mcp-settings", UpdateWarehouse{Workspace: stateTestWorkspaceID, MCPSettings: nil}, 1},
 	}
 	// These are encoded SQL-buffer lengths. Raw Base64 cannot have length
-	// 1 modulo 4, so 7980 and 8000 are the nearest attainable sizes above
-	// 7978 and 7998. Also exercise both boundaries after a full continuation.
+	// 1 modulo 4, so 8000 is the nearest attainable size above 7998.
+	// Also exercise the boundary after a full continuation.
 	for _, boundary := range []struct{ length, fragments int }{
-		{7977, 1}, {7978, 1}, {7980, 2},
-		{7997, 2}, {7998, 2}, {8000, 2},
-		{15957, 2}, {15958, 2}, {15960, 3},
-		{15977, 3}, {15978, 3}, {15980, 3},
+		{7997, 1}, {7998, 1}, {8000, 2},
+		{15977, 2}, {15978, 2}, {15980, 3},
 	} {
 		cases = append(cases, producerCase{
 			fmt.Sprintf("encoded-boundary-%d", boundary.length),
-			notificationBoundaryEvent(t, key, noise, boundary.length),
+			notificationBoundaryEvent(t, key, noise, len(cases)+1, boundary.length),
 			boundary.fragments,
 		})
 	}
@@ -234,8 +236,8 @@ func TestNotificationProducer(t *testing.T) {
 				}
 
 				if !strings.HasSuffix(raw.Payload, "*") {
-					if !strings.HasSuffix(raw.Payload, fmt.Sprintf("@%d", received.Version)) {
-						t.Fatalf("expected final marker for version %d, got %q", received.Version, raw.Payload)
+					if strings.Contains(raw.Payload, "@") {
+						t.Fatal("expected version inside encrypted payload, got an external version marker")
 					}
 					break
 				}
@@ -250,6 +252,79 @@ func TestNotificationProducer(t *testing.T) {
 		if !passed {
 			return
 		}
+	}
+
+}
+
+// TestNotificationRequiresAuthenticatedVersion verifies that notifications
+// require a version inside the encrypted payload, regardless of any version
+// supplied externally.
+func TestNotificationRequiresAuthenticatedVersion(t *testing.T) {
+
+	keyManager, err := kms.New(t.Context(), "key:DJ0UMRTROH4pjY/Esh3fAErsPbdYmvsnfDCZtc9K4iU")
+	if err != nil {
+		t.Fatalf("expected local KMS, got %v", err)
+	}
+	encryptedKey, err := keyManager.GenerateDataKeyWithoutPlaintext(t.Context(), 32)
+	if err != nil {
+		t.Fatalf("expected notification key, got %v", err)
+	}
+	c := cipher.New(keyManager)
+	t.Cleanup(c.Close)
+	key := c.Key(encryptedKey)
+
+	for _, test := range []struct {
+		name      string
+		plaintext string
+		suffix    string
+		valid     bool
+	}{
+		{"authenticated-version", "AddConsentPurpose{}@124", "", true},
+		{"suffix=", "AddConsentPurpose{}", "", false},
+		{"suffix=@0", "AddConsentPurpose{}", "@0", false},
+		{"suffix=@124", "AddConsentPurpose{}", "@124", false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+
+			var compressed bytes.Buffer
+			writer := gzip.NewWriter(&compressed)
+			_, err := io.WriteString(writer, test.plaintext)
+			if err != nil {
+				t.Fatalf("expected compressed event, got %v", err)
+			}
+			err = writer.Close()
+			if err != nil {
+				t.Fatalf("expected completed compression, got %v", err)
+			}
+			encrypted, err := key.Encrypt(t.Context(), compressed.Bytes())
+			if err != nil {
+				t.Fatalf("expected encrypted event, got %v", err)
+			}
+			payload := base64.RawStdEncoding.EncodeToString(encrypted)
+
+			session := &notificationSession{}
+			n, err := session.reconstruct(t.Context(), key, payload+test.suffix)
+			if test.valid {
+				if err != nil {
+					t.Fatalf("expected reconstructed authenticated notification, got %v", err)
+				}
+				if n == nil {
+					t.Fatal("expected reconstructed authenticated notification, got nil")
+				}
+				if n.Version != 124 || n.Name != "AddConsentPurpose" || n.Payload != "{}" {
+					t.Fatalf("expected version 124, AddConsentPurpose, and {}, got %#v", n)
+				}
+				return
+			}
+			if err != nil {
+				if n != nil {
+					t.Fatalf("expected no reconstructed notification, got %#v", n)
+				}
+				return
+			}
+			t.Fatalf("expected rejection without an authenticated version, got %#v", n)
+
+		})
 	}
 
 }
@@ -352,11 +427,11 @@ func TestNotificationRollback(t *testing.T) {
 
 // notificationBoundaryEvent finds a reproducible event at an exact encoded
 // transport boundary, using real compression and encryption throughout.
-func notificationBoundaryEvent(t *testing.T, key *cipher.Key, noise []byte, length int) CreateConnection {
+func notificationBoundaryEvent(t *testing.T, key *cipher.Key, noise []byte, version, length int) CreateConnection {
 
 	t.Helper()
 	encodedLength := func(event CreateConnection) int {
-		b, err := appendEncodeNotification(t.Context(), []byte("NOTIFY krenalis, '"), key, "CreateConnection", event)
+		b, err := appendEncodeNotification(t.Context(), []byte("NOTIFY krenalis, '"), key, version, "CreateConnection", event)
 		if err != nil {
 			t.Fatalf("expected encoded boundary fixture, got %v", err)
 		}
@@ -399,9 +474,12 @@ func TestParsePayload(t *testing.T) {
 		payload      string
 		err          bool
 	}{
-		{`foo{}`, 0, `foo`, `{}`, false},
+		{`foo{}@0`, 0, `foo`, `{}`, false},
 		{`foo{}@5`, 5, `foo`, `{}`, false},
 		{`boo{"a":{"b":5}}@6301`, 6301, `boo`, `{"a":{"b":5}}`, false},
+		{`foo{}`, 0, ``, ``, true},
+		{`foo{}@`, 0, ``, ``, true},
+		{`foo{}@-1`, 0, ``, ``, true},
 		{``, 0, ``, ``, true},
 		{`{}`, 0, ``, ``, true},
 		{`boo`, 0, ``, ``, true},
