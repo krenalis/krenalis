@@ -139,12 +139,31 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		serializeValue(b, baseExpr.Values[0], c.Type)
 		b.WriteString(")")
 
-	case warehouses.OpIsTrue:
-		b.WriteString(qname)
-
-	case warehouses.OpIsFalse:
-		b.WriteString("NOT ")
-		b.WriteString(qname)
+	case warehouses.OpIsTrue, warehouses.OpIsFalse:
+		switch c.Type.Kind() {
+		case types.BooleanKind:
+			if op == warehouses.OpIsFalse {
+				b.WriteString("NOT ")
+			}
+			b.WriteString(qname)
+		case types.JSONKind:
+			b.WriteString("AS_BOOLEAN(")
+			for range baseExpr.Keys {
+				b.WriteString("GET(")
+			}
+			b.WriteString(qname)
+			for _, key := range baseExpr.Keys {
+				b.WriteString(", ")
+				quoteString(b, key)
+				b.WriteByte(')')
+			}
+			b.WriteString(") IS NOT DISTINCT FROM ")
+			if op == warehouses.OpIsTrue {
+				b.WriteString("TRUE")
+			} else {
+				b.WriteString("FALSE")
+			}
+		}
 
 	case warehouses.OpIsEmpty:
 		if c.Nullable {

@@ -28,7 +28,6 @@ import (
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 var columns = []warehouses.Column{
@@ -562,10 +561,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					postgres.WithDatabase(database),
 					postgres.WithUsername(username),
 					postgres.WithPassword(password),
-					testcontainers.WithWaitStrategy(
-						wait.ForLog("database system is ready to accept connections").
-							WithOccurrence(2).
-							WithStartupTimeout(60*time.Second)),
+					postgres.BasicWaitStrategies(),
 				)
 				defer func() {
 					if err := testcontainers.TerminateContainer(postgresContainer); err != nil {
@@ -728,12 +724,12 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 							t.Fatal(err)
 						}
 					}
-					profileCount, err := dw.Count(ctx, "profiles")
+					profileCounts, err := dw.Counts(ctx, "profiles", nil)
 					if err != nil {
 						t.Fatal(err)
 					}
-					if profileCount != len(gotProfiles) {
-						t.Fatalf("expected exact profile count %d, got %d", len(gotProfiles), profileCount)
+					if profileCounts[0] != len(gotProfiles) {
+						t.Fatalf("expected exact profile count %d, got %d", len(gotProfiles), profileCounts[0])
 					}
 					// The returned profiles are sorted solely by email, as it is
 					// only possible to sort profiles by one property. Therefore,

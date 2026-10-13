@@ -6,6 +6,7 @@ package types
 
 import (
 	"errors"
+	"iter"
 	"slices"
 	"strings"
 	"testing"
@@ -523,4 +524,46 @@ func Test_WalkObjects(t *testing.T) {
 	if i != len(iterations) {
 		t.Fatalf("expected a total of %d iterations, got %d", len(iterations), i)
 	}
+}
+
+// Test_WalkReusableAfterEarlyStop verifies that WalkAll and WalkObjects can
+// be iterated again from the beginning after an early stop.
+func Test_WalkReusableAfterEarlyStop(t *testing.T) {
+
+	properties := Object([]Property{
+		{Name: "a", Type: Object([]Property{{Name: "x", Type: String()}})},
+		{Name: "b", Type: Array(Object([]Property{{Name: "y", Type: String()}}))},
+	}).Properties()
+
+	for _, tc := range []struct {
+		name     string
+		walk     iter.Seq2[string, Property]
+		expected []string
+	}{
+		{"all", properties.WalkAll(), []string{"a", "a.x", "b", "b.y"}},
+		{"objects", properties.WalkObjects(), []string{"a", "a.x", "b"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+
+			var paths []string
+			for path := range tc.walk {
+				paths = append(paths, path)
+				break
+			}
+			expected := tc.expected[:1]
+			if !slices.Equal(paths, expected) {
+				t.Fatalf("expected paths %v, got %v", expected, paths)
+			}
+
+			paths = nil
+			for path := range tc.walk {
+				paths = append(paths, path)
+			}
+			if !slices.Equal(paths, tc.expected) {
+				t.Fatalf("expected paths %v, got %v", tc.expected, paths)
+			}
+
+		})
+	}
+
 }

@@ -16,7 +16,7 @@ Apply review rules to code introduced or modified by the change under review. Do
 
 ## Line length
 
-Allow Go code lines to be up to 120 characters long without wrapping. A line may exceed 120 characters when a more specific convention requires it, notably the rule that keeps exported signatures on one line.
+Allow Go code lines to be up to 120 characters long without wrapping. A line may exceed 120 characters when a more specific convention requires it, notably the rule that keeps exported signatures on one line. The 120-character limit does not apply to `_test.go` files, whose lines may be as long as needed.
 
 ## File organization
 
@@ -33,7 +33,7 @@ Place package-level constants and variables at the beginning of the file when th
 
 ## Layout and naming
 
-An exported function or method never calls another exported function or method of the same package. Extract a shared unexported one and call that from both.
+An exported function or method may call another exported function or method of the same package when it is solely a wrapper offering a simpler API for a common case. Otherwise, extract a shared unexported function or method and call that from both.
 
 Declare a variable as close as possible to where it is used, as long as the code stays readable.
 
@@ -92,7 +92,7 @@ if err := f(); err != nil {
 }
 ```
 
-Calls to `(*sql.Row).Scan` and `(*sql.Rows).Scan` are an exception. Place them in the initializer of the error check to follow the Go convention for scanning SQL results.
+Calls to `(*sql.Rows).Scan` are an exception. Place them in the initializer of the error check to follow the Go convention for scanning SQL results. Calls to `(*sql.Row).Scan` follow the general rule.
 
 Perform any classification of the returned error, including `errors.Is` checks for sentinel errors and `errors.AsType` checks for typed errors, inside that non-nil branch rather than using classification as a substitute for the `err != nil` check. In tests that expect a particular error, enter the `err != nil` branch, verify the error there, and fail after the branch when the call returned nil.
 
@@ -151,6 +151,8 @@ Use the standard-library `testing/synctest` package when testing concurrent or a
 
 When running the complete Admin test suite, you may use `go run ./test/commit -just-test-admin` to receive each individual test result without waiting for the complete suite to finish. This command is optional.
 
+When a test starts a container with testcontainers and reads one of its mapped ports, its wait strategy must include `wait.ForListeningPort` for that port; otherwise, notably on Docker Desktop, `MappedPort` can fail. For PostgreSQL, use `postgres.BasicWaitStrategies()`, which includes it.
+
 ## Behavioral contracts
 
 A function or method must return a non-nil error whenever it does not perform the behavior promised primarily by its name and secondarily by its declaration comment. Do not report success after silently skipping, failing, or only partially completing a promised operation.
@@ -175,7 +177,7 @@ Exported methods in `core/internal/metrics` are an exception: they must assume t
 
 Apply the following procedure to every brace-delimited block, be it a function or method body or a block nested inside one. Decide each block on its own, from the inside out.
 
-1. Choose the internal spacing. Looking only at the statements of the block, and ignoring any blank line adjacent to its braces, insert a blank line wherever it genuinely helps readability, typically by separating logically distinct groups of statements. A single-statement block never needs one, and neither does a short cohesive block; a guard or a `return` does not earn a blank line on its own.
+1. Choose the internal spacing. Looking only at the statements of the block, and ignoring any blank line adjacent to its braces, insert a blank line wherever it genuinely helps readability, typically by separating logically distinct groups of statements. A single-statement block never needs one, and neither does a short cohesive block; a guard or a `return` does not earn a blank line on its own. A small block, roughly up to 20 non-blank lines between its braces with nested blocks included, normally needs none either, even when its statements form distinct groups: at that size, separation is rarely worth the space. Treat 20 as a guide, not a cutoff: a block just below it may still be separated when its groups are clearly distinct, and one just above it may still stay compact when it reads well as a whole.
 2. Pad the boundaries. If step 1 left at least one internal blank line, leave a blank line immediately after the opening brace and another immediately before the closing brace. If it left none, the block contains no blank line at all: never pad an otherwise compact block.
 3. Place the closing pad before a final `return`. When a padded block ends with a `return`, its trailing blank line goes immediately before that `return`, with no blank line between the `return` and the closing brace. A `return` inside a nested block is not the enclosing block's final statement.
 
@@ -188,7 +190,7 @@ Separate the complete construct that owns the block from surrounding code with b
 
 When reviewing existing code within the scope of a change, run step 1 independently of blank lines that are only boundary padding, including padding before a final `return`. Remove that padding if no useful internal separation remains.
 
-Short, cohesive bodies stay compact, with or without a final `return`:
+Short bodies stay compact, with or without a final `return`, even when they perform distinct steps:
 
 ```go
 func nonNegative(n int) int {
@@ -202,19 +204,33 @@ func (c *cache) resetStats() {
     c.hits = 0
     c.misses = 0
 }
+
+func sortedKeys(entries map[string]int) []string {
+    keys := make([]string, 0, len(entries))
+    for key := range entries {
+        keys = append(keys, key)
+    }
+    slices.Sort(keys)
+    return keys
+}
 ```
 
-The following examples illustrate boundary placement once internal blank lines have been chosen to separate logical steps. They do not prescribe where to separate statements in other functions or methods:
+The following examples illustrate boundary placement once internal blank lines have been chosen to separate logical steps. They do not prescribe where to separate statements in other functions or methods, and for brevity they are shorter than blocks that would normally be separated:
 
 ```go
-func sortedKeys(entries map[string]int) []string {
+func topKeys(entries map[string]int, n int) []string {
 
     keys := make([]string, 0, len(entries))
     for key := range entries {
         keys = append(keys, key)
     }
 
-    slices.Sort(keys)
+    slices.SortFunc(keys, func(a, b string) int {
+        return cmp.Compare(entries[b], entries[a])
+    })
+    if len(keys) > n {
+        keys = keys[:n]
+    }
 
     return keys
 }
@@ -239,6 +255,8 @@ var x int
     x = compute()
 }
 ```
+
+A function whose body is only a `synctest.Test` call is a single-statement block: keep it compact even when the function passed to `synctest.Test` is padded.
 
 ## Declaration comments
 
@@ -277,6 +295,7 @@ Apply these conventions to the TypeScript and React code under `admin/`.
 - Write function components and custom hooks as arrow functions assigned to `const`.
 - Type the component's props with an interface named `<ComponentName>Props` immediately before the component, unless the type is shared from another module. Destructure and type the props in the component's parameter list; do not use `React.FC`.
 - Keep component-specific styles in a separate `.css` file in the same directory as the component, and import that stylesheet from the component file. Follow the existing BEM-style class names: a block such as `schema-grid`, elements such as `schema-grid__search`, and modifiers such as `schema-grid--loading`.
+- When using a Shoelace icon, make sure its file name is listed in `admin/src/shoelace-icons.txt`, in alphabetical order, and run `npm run makevendor` from `admin/`. Unlisted icons are not embedded, and the Admin fails to load them.
 
 # Reuse
 
@@ -405,3 +424,7 @@ A method of `core` that can return an `errors.UnprocessableError` documents it a
 ## Core entry guards
 
 Every exported method in `core` that is called by `cmd` must execute `<receiver>.core.mustBeOpen()` as its first statement. If the method body contains any blank line, leave a blank line immediately after the opening brace and another immediately after the guard statement.
+
+## Pipeline specifications
+
+`core/Pipelines.md` documents, as part of the code, the rules that pipelines follow for each combination of connection role, connector type, and target. Whenever a change in `core` or in the Admin alters these rules, update the file in the same change.

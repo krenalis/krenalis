@@ -1,0 +1,314 @@
+.consent-management .grid__loading {
+	padding: 90px 30px 120px 30px;
+}
+
+.consent-management {
+	max-width: 1200px;
+	margin: auto;
+	padding: 30px;
+}
+
+.consent-management__title {
+	display: flex;
+	margin-bottom: 15px;
+	justify-content: space-between;
+	align-items: end;
+	gap: 30px;
+}
+
+.consent-management__title-text {
+	font-size: 23px;
+	font-weight: 600;
+	line-height: 1;
+}
+
+.consent-management__description {
+	color: var(--sl-color-neutral-600);
+	font-size: 14px;
+	margin-bottom: 20px;
+}
+
+.consent-management__grid-buttons {
+	display: flex;
+	gap: 10px;
+}
+
+.consent-management__grid-path {
+	font-family: var(--monospace-fonts);
+	background-color: var(--sl-color-neutral-100);
+	font-size: 13px;
+	padding: 2px 8px;
+	border-radius: 5px;
+}
+
+.consent-management__grid-paths {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+}
+
+.consent-management__grid-paths-empty {
+	color: var(--sl-color-neutral-500);
+}
+
+.consent-management__grid-paths-more {
+	color: var(--sl-color-neutral-500);
+	font-size: 13px;
+}
+
+.consent-management__grid-pipelines {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.consent-management__grid-pipelines-empty {
+	color: var(--sl-color-neutral-500);
+}
+
+.consent-management__grid-pipeline-logo {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	border: none;
+	background: none;
+	cursor: pointer;
+	border-radius: var(--sl-border-radius-medium);
+}
+
+.consent-management__dialog::part(panel) {
+	max-height: calc(100% - var(--sl-spacing-2x-large) - (var(--header-height) + 50px));
+	background-color: var(--bg-gray);
+}
+
+.consent-management__dialog {
+	--body-spacing: calc(var(--sl-spacing-large) + 12px);
+	--header-spacing: calc(var(--sl-spacing-large) + 12px);
+	--width: calc(31rem + 24px);
+}
+
+.consent-management__dialog-error,
+.consent-management__dialog-warning,
+.consent-management__dialog-profile-path-message {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	margin-top: 3px;
+	font-size: 13px;
+	position: relative;
+	top: 2px;
+	left: 3px;
+}
+
+.consent-management__dialog-error {
+	color: var(--sl-color-danger-600);
+}
+
+.consent-management__dialog-error sl-icon,
+.consent-management__dialog-warning sl-icon,
+.consent-management__dialog-profile-path-message sl-icon {
+	font-size: 13px;
+	flex-shrink: 0;
+}
+
+.consent-management__dialog-error sl-icon {
+	color: var(--sl-color-danger-600);
+}
+
+.consent-management__dialog-warning {
+	color: var(--sl-color-warning-600);
+}
+
+.consent-management__dialog-warning sl-icon {
+	color: var(--sl-color-warning-600);
+}
+
+.consent-management__dialog-message--hidden {
+	visibility: hidden;
+}
+
+.consent-management__dialog-profile-path {
+	width: 100%;
+}
+
+.consent-management__dialog-name,
+.consent-management__dialog-purpose-code,
+.consent-management__dialog-profile-path {
+	--sl-input-font-size-medium: var(--sl-font-size-small);
+	--sl-input-label-font-size-medium: var(--sl-input-label-font-size-small);
+}
+
+.consent-management__dialog-path-label {
+	font-size: var(--sl-input-label-font-size-small);
+}
+
+.consent-management__dialog-purpose-code::part(base),
+.consent-management__dialog-profile-path::part(base) {
+	font-family: var(--monospace-fonts);
+}
+
+.consent-management__dialog-purpose-code::part(input),
+.consent-management__dialog-profile-path::part(input) {
+	transform: translateY(1px);
+}
+
+.consent-management__dialog-profile-path:not(.consent-management__dialog-profile-path--json)::part(base) {
+	cursor: default;
+}
+
+.consent-management__dialog-profile-path:not(.consent-management__dialog-profile-path--json)::part(input) {
+	caret-color: transparent;
+}
+
+.consent-management__dialog-profile-path-dropdown {
+	display: block;
+	width: calc(100% - 62px);
+	margin-top: 17px;
+}
+
+.consent-management__dialog-profile-path-clear::part(base) {
+	color: var(--sl-input-icon-color);
+	padding: 0;
+}
+
+.consent-management__dialog-profile-path-clear:hover::part(base) {
+	color: var(--sl-input-icon-color-hover);
+}
+
+.consent-management__dialog-purpose-code::part(input),
+.consent-management__dialog-profile-path--json::part(input) {
+	padding-inline-start: 5px;
+}
+
+.consent-management__dialog-purpose-code::part(prefix),
+.consent-management__dialog-profile-path--json::part(prefix) {
+	background-color: var(--sl-input-background-color-disabled);
+}
+
+.consent-management__dialog-purpose-code-prefix,
+.consent-management__dialog-profile-path-prefix {
+	color: var(--sl-input-color);
+	font-family: var(--monospace-fonts);
+	margin-inline-end: 5px;
+	transform: translateY(1px);
+}
+
+.consent-management__dialog-profile-path:not(.consent-management__dialog-profile-path--json)::part(input)::placeholder {
+	font-family: var(--system-fonts);
+}
+
+.consent-management__dialog-purpose-code-row {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.consent-management__dialog-purpose-code-row--with-label {
+	margin-top: 0;
+}
+
+.consent-management__dialog-purpose-code {
+	flex: 1;
+	min-width: 0;
+}
+
+.consent-management__dialog-purpose-code-actions {
+	display: grid;
+	grid-template-columns: 25px 25px;
+	gap: 4px;
+	flex: 0 0 54px;
+	margin-top: 7px;
+}
+
+.consent-management__dialog-purpose-code-row--with-label .consent-management__dialog-purpose-code-actions {
+	margin-top: 34px;
+}
+
+.consent-management__dialog-paths {
+	margin-top: 15px;
+}
+
+.consent-management__dialog-profile-path-menu {
+	max-height: 300px;
+	overflow-y: auto;
+}
+
+.consent-management__dialog-profile-path-menu sl-menu-item::part(base) {
+	font-family: var(--monospace-fonts);
+	font-size: var(--sl-input-font-size-small);
+	padding-block: var(--sl-spacing-3x-small);
+}
+
+.consent-management__dialog-profile-path-option-type {
+	color: var(--sl-color-neutral-500);
+	font-family: var(--monospace-fonts);
+}
+
+.consent-management__dialog-purpose-code-action::part(base) {
+	border: 0;
+	padding: 0;
+	cursor: pointer;
+}
+
+.consent-management__dialog-purpose-code-action[disabled]::part(base) {
+	cursor: not-allowed;
+}
+
+.consent-management__dialog-purpose-code-action::part(label) {
+	display: none;
+}
+
+.consent-management__dialog-purpose-code-action sl-icon {
+	font-size: 20px;
+	width: 25px;
+	transition: color 0.3s;
+}
+
+.consent-management__dialog-purpose-code-add {
+	grid-column: 1;
+}
+
+.consent-management__dialog-purpose-code-add sl-icon {
+	color: var(--sl-color-primary-600);
+}
+
+.consent-management__dialog-purpose-code-remove {
+	grid-column: 2;
+}
+
+.consent-management__dialog-purpose-code-remove:hover sl-icon {
+	color: var(--sl-color-danger-600);
+}
+
+.consent-management__dialog-actions {
+	margin-top: 42px;
+	display: flex;
+	justify-content: flex-end;
+	gap: 10px;
+}
+
+.consent-management__dialog-save-error {
+	margin-top: 8px;
+	align-items: flex-start;
+}
+
+.consent-management__dialog-save-error sl-icon {
+	position: relative;
+	top: 3px;
+}
+
+.consent-management__dialog-paths:has(+ .consent-management__dialog-save-error)
+	> .consent-management__dialog-message--hidden {
+	display: none;
+}
+
+.consent-management__dialog-save-error + .consent-management__dialog-actions {
+	margin-top: 20px;
+}
+
+.consent-management__dialog-save {
+	min-width: 150px;
+}

@@ -29,7 +29,6 @@ import (
 	"github.com/krenalis/krenalis/tools/base58"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
-	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/validation"
 
 	"github.com/oschwald/maxminddb-golang/v2"
@@ -112,6 +111,7 @@ func New(db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datast
 	st.AddListener(c.onSetOrganizationStatus)
 	st.AddListener(c.onSetPipelineStatus)
 	st.AddListener(c.onUnlinkConnection)
+	st.AddListener(c.onUpdateConsentPurpose)
 	st.AddListener(c.onUpdatePipeline)
 	for _, org := range st.Organizations() {
 		if org.Enabled {
@@ -141,7 +141,7 @@ func New(db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datast
 // It panics if it has already been called.
 func (c *Collector) Close(ctx context.Context) {
 	if c.closed.Swap(true) {
-		panic("core/events/collector already closed")
+		panic("core/internal/collector already closed")
 	}
 	for _, cancel := range c.workers.cancelPipeline {
 		cancel()
@@ -222,9 +222,9 @@ func (c *Collector) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			requestID := requestid.RequestID(r.Context())
 			if serveSettings {
-				slog.Error("core/events/collector: an error occurred serving the settings", "error", err, "request_id", requestID)
+				slog.Error("core/internal/collector: an error occurred serving the settings", "error", err, "request_id", requestID)
 			} else {
-				slog.Error("core/events/collector: an error occurred collecting an event", "error", err, "request_id", requestID)
+				slog.Error("core/internal/collector: an error occurred collecting an event", "error", err, "request_id", requestID)
 			}
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
@@ -479,6 +479,18 @@ func (c *Collector) onUnlinkConnection(n state.UnlinkConnection) {
 	}
 }
 
+// onUpdateConsentPurpose is called when a consent purpose is updated.
+func (c *Collector) onUpdateConsentPurpose(n state.UpdateConsentPurpose) {
+	ws, _ := c.state.Workspace(n.Workspace)
+	for _, connection := range ws.Connections() {
+		for _, p := range connection.Pipelines() {
+			if w, ok := c.identityWriters.Load(p.ID); ok {
+				w.(*identityWriter).SetRequiredConsents(p.RequiredConsents)
+			}
+		}
+	}
+}
+
 // onUpdatePipeline is called when a pipeline is updated.
 func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
 	p, _ := c.state.Pipeline(n.ID)
@@ -486,13 +498,15 @@ func (c *Collector) onUpdatePipeline(n state.UpdatePipeline) {
 		return
 	}
 	if p.Enabled {
-		// The transformation might have changed.
+		// The transformation and the required consents might have changed.
 		if w, ok := c.identityWriters.Load(p.ID); ok {
+			iw := w.(*identityWriter)
 			var transformer *transformers.Transformer
 			if p.Transformation.Mapping != nil || p.Transformation.Function != nil {
 				transformer, _ = transformers.New(p.Organization().ID, p, c.functionProvider)
 			}
-			w.(*identityWriter).SetTransformer(transformer)
+			iw.SetTransformer(transformer)
+			iw.SetRequiredConsents(p.RequiredConsents)
 		}
 	}
 	connection := p.Connection()
@@ -807,7 +821,6 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	// Decode the events.
 	for event, err := range dec.Events(connection.ID, connector.FallbackToRequestIP) {
 
-		prometheus.Increment("Collector.serveEvents.decoded_events", 1)
 		if err != nil {
 			continue
 		}
@@ -837,7 +850,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				continue
 			}
 			pendingFilterPassed = append(pendingFilterPassed, p.ID)
-			if !consents.Satisfies(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
+			if !consents.SatisfiesEvent(p.RequiredConsents.Operator, p.RequiredConsents.Purposes, event) {
 				pendingConsentFailed = append(pendingConsentFailed, p.ID)
 				continue
 			}
@@ -858,11 +871,6 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 				continue
 			}
 			pendingFilterPassed = append(pendingFilterPassed, p.ID)
-			if !consents.Satisfies(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
-				pendingConsentFailed = append(pendingConsentFailed, p.ID)
-				continue
-			}
-			pendingConsentPassed = append(pendingConsentPassed, p.ID)
 			if _, ok := c.identityWriters.Load(p.ID); ok {
 				topics = append(topics, "pipeline-"+p.ID)
 			}
@@ -884,7 +892,7 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 					continue
 				}
 				pendingFilterPassed = append(pendingFilterPassed, p.ID)
-				if !consents.Satisfies(p.RequiredConsents.Purposes, p.RequiredConsents.Operator != state.PurposesOr, event) {
+				if !consents.SatisfiesEvent(p.RequiredConsents.Operator, p.RequiredConsents.Purposes, event) {
 					pendingConsentFailed = append(pendingConsentFailed, p.ID)
 					continue
 				}
@@ -920,10 +928,10 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 		c.metrics.Pipelines.ReceivePassed(pipeline, 1)
 	}
 	for _, pipeline := range pendingConsentPassed {
-		c.metrics.Pipelines.ConsentPassed(pipeline, 1)
+		c.metrics.Pipelines.EventConsentPassed(pipeline, 1)
 	}
 	for _, pipeline := range pendingConsentFailed {
-		c.metrics.Pipelines.ConsentFailed(pipeline, 1)
+		c.metrics.Pipelines.EventConsentFailed(pipeline, 1)
 	}
 	for _, pipeline := range pendingFilterPassed {
 		c.metrics.Pipelines.FilterPassed(pipeline, 1)
@@ -936,7 +944,6 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	// Send a successful response to the client.
-	prometheus.Increment("Collector.writeOK.calls", 1)
 	w.Header().Set("Content-Type", "text/plain")
 
 	return nil

@@ -19,7 +19,6 @@ import (
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/transformers"
-	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -33,7 +32,6 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	pipeline := this.pipeline
 	store := this.connection.store
 	connector := pipeline.Connection().Connector()
-	prometheus.Increment("Pipeline.exportUsers.calls", 1)
 
 	// Synchronize destinations users with the application's users.
 	if connector.Type == state.Application {
@@ -63,7 +61,7 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 		}
 	}
 
-	// Read the users.
+	// Build the query to read the profiles.
 	query := datastore.Query{Where: pipeline.Filter}
 	if connector.Type == state.FileStorage {
 		query.OrderBy = pipeline.OrderBy
@@ -77,7 +75,27 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 			UpdateOnDuplicates: pipeline.UpdateOnDuplicates,
 		}
 	}
-	records, err := store.ProfileRecords(ctx, query, pipeline.InSchema, matching)
+
+	var consentCondition datastore.ConsentCondition
+	if len(pipeline.RequiredConsents.Purposes) > 0 {
+		switch pipeline.RequiredConsents.Operator {
+		case state.PurposesAnd:
+			consentCondition.Operator = state.OpAnd
+		case state.PurposesOr:
+			consentCondition.Operator = state.OpOr
+		default:
+			return fmt.Errorf("invalid required consents operator %d", pipeline.RequiredConsents.Operator)
+		}
+		for _, purpose := range pipeline.RequiredConsents.Purposes {
+			if purpose.ProfileConsentLocation == nil {
+				return fmt.Errorf("consent purpose %s has no profile consent location", purpose.ID)
+			}
+			consentCondition.Locations = append(consentCondition.Locations, *purpose.ProfileConsentLocation)
+		}
+	}
+
+	// Read the profiles.
+	records, err := store.ProfileRecords(ctx, query, consentCondition, pipeline.InSchema, matching)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
 			return newPipelineError(metrics.ReceiveStep, err)
@@ -85,6 +103,8 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 		switch err := err.(type) {
 		case *datastore.UnavailableError:
 			return err
+		case *datastore.ConsentConditionError:
+			return newPipelineError(metrics.ExportProfileConsentStep, err)
 		case *schemas.Error:
 			err.Msg = fmt.Sprintf("in the input schema, %s. Please review and update the pipeline before attempting to export the profiles.", err.Msg)
 			return newPipelineError(metrics.InputValidationStep, err)
@@ -98,7 +118,6 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	var ack func([]string, error)
 	if connector.Type != state.FileStorage {
 		ack = func(ids []string, err error) {
-			prometheus.Increment("Pipeline.exportProfiles.ack.calls", 1)
 			if err != nil {
 				this.core.metrics.Pipelines.FinalizeFailed(pipeline.ID, len(ids), err.Error())
 				return
@@ -175,8 +194,6 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 
 Records:
 	for record := range records.All(ctx) {
-
-		prometheus.Increment("Pipeline.exportProfiles.iterations_over_records_All", 1)
 
 		if record.Err != nil {
 			this.core.metrics.Pipelines.ReceiveFailed(pipeline.ID, 1, record.Err.Error())

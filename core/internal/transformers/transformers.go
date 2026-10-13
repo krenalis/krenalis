@@ -13,7 +13,6 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/transformers/mappings"
-	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -119,9 +118,6 @@ func New(organization string, pipeline *state.Pipeline, provider FunctionProvide
 // ErrFunctionNotExist, and if an error occurs during function execution, it
 // returns a FunctionExecError.
 func (t *Transformer) Transform(ctx context.Context, records []Record) error {
-
-	prometheus.Increment("Transformer.Transform.calls", 1)
-	prometheus.Increment("Transformer.Transform.passed_records", len(records))
 
 	// Transform using the mapping.
 	if t.mapping != nil {

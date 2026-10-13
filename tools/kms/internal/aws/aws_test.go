@@ -186,7 +186,7 @@ func TestGenerateDataKeyInvalidBase64Plaintext(t *testing.T) {
 		})
 	})
 	_, _, err := kms.GenerateDataKey(context.Background(), 32)
-	assertWrappedErrorContains(t, err, "failed to base64 decode PlaintextType")
+	assertWrappedErrorContains(t, err, "decode base64 blob")
 }
 
 // TestGenerateDataKeyWithoutPlaintextInvalidLength rejects unsupported data key
@@ -272,7 +272,7 @@ func TestGenerateDataKeyWithoutPlaintextInvalidBase64Ciphertext(t *testing.T) {
 		})
 	})
 	_, err := kms.GenerateDataKeyWithoutPlaintext(context.Background(), 32)
-	assertWrappedErrorContains(t, err, "failed to base64 decode CiphertextType")
+	assertWrappedErrorContains(t, err, "decode base64 blob")
 }
 
 // TestDecryptEmptyEncryptedDataKey rejects empty ciphertext locally.
@@ -356,7 +356,7 @@ func TestDecryptInvalidBase64Plaintext(t *testing.T) {
 		})
 	})
 	_, err := kms.DecryptDataKey(context.Background(), ciphertext)
-	assertWrappedErrorContains(t, err, "failed to base64 decode PlaintextType")
+	assertWrappedErrorContains(t, err, "decode base64 blob")
 }
 
 // newTestKms builds a Kms backed by an in-process fake HTTP transport.

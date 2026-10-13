@@ -160,7 +160,7 @@ func IndentSorted(data []byte, prefix, indent string) ([]byte, error) {
 
 // Marshal encodes the given data.
 func Marshal(data any) (Value, error) {
-	val, err := json.Marshal(data)
+	val, err := json.Marshal(data, json.FormatNilMapAsNull(true), json.FormatNilSliceAsNull(true))
 	if err != nil {
 		if _, ok := err.(*jsontext.SyntacticError); ok {
 			return Value{}, &SyntaxError{err: err}

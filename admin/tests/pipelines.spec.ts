@@ -68,19 +68,19 @@ test(`Add "Import customers" pipeline on Dummy`, async ({ page }) => {
 		"inSchema": {
 			"kind": "object",
 			"properties": [
-				{ "name": "email", "type": { "kind": "string" }, "displayName": "Email", "description": "", "nullable": true },
-				{ "name": "dummyId", "type": { "kind": "string" }, "displayName": "Dummy ID", "description": "" },
-				{ "name": "firstName", "type": { "kind": "string" }, "displayName": "First name", "description": "", "nullable": true },
-				{ "name": "lastName", "type": { "kind": "string" }, "displayName": "Last name", "description": "", "nullable": true }
+				{ "name": "email", "type": { "kind": "string" }, "displayName": "Email", "nullable": true },
+				{ "name": "dummyId", "type": { "kind": "string" }, "displayName": "Dummy ID" },
+				{ "name": "firstName", "type": { "kind": "string" }, "displayName": "First name", "nullable": true },
+				{ "name": "lastName", "type": { "kind": "string" }, "displayName": "Last name", "nullable": true }
 			]
 		},
 		"outSchema": {
 			"kind": "object",
 			"properties": [
-				{ "name": "email", "type": { "kind": "string", "maxLength": 300 }, "readOptional": true, "description": "" },
-				{ "name": "dummy_id", "type": { "kind": "string" }, "readOptional": true, "description": "" },
-				{ "name": "first_name", "type": { "kind": "string", "maxLength": 300 }, "readOptional": true, "description": "" },
-				{ "name": "last_name", "type": { "kind": "string", "maxLength": 300 }, "readOptional": true, "description": "" }
+				{ "name": "email", "type": { "kind": "string", "maxLength": 300 }, "readOptional": true },
+				{ "name": "dummy_id", "type": { "kind": "string" }, "readOptional": true },
+				{ "name": "first_name", "type": { "kind": "string", "maxLength": 300 }, "readOptional": true },
+				{ "name": "last_name", "type": { "kind": "string", "maxLength": 300 }, "readOptional": true }
 			]
 		},
 		"incremental": false,
@@ -207,8 +207,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				},
 				{
 					"name": "last_name",
@@ -216,8 +215,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				},
 				{
 					"name": "email",
@@ -225,16 +223,14 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				},
 				{
 					"name": "dummy_id",
 					"type": {
 						"kind": "string"
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				}
 			]
 		},
@@ -247,8 +243,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string"
 					},
 					"nullable": true,
-					"displayName": "First name",
-					"description": ""
+					"displayName": "First name"
 				},
 				{
 					"name": "lastName",
@@ -256,8 +251,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string"
 					},
 					"nullable": true,
-					"displayName": "Last name",
-					"description": ""
+					"displayName": "Last name"
 				},
 				{
 					"name": "email",
@@ -265,8 +259,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string"
 					},
 					"nullable": true,
-					"displayName": "Email",
-					"description": ""
+					"displayName": "Email"
 				}
 			]
 		},
@@ -348,8 +341,7 @@ test(`Add "Send Add to Cart" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string"
 					},
 					"createRequired": true,
-					"displayName": "Email",
-					"description": ""
+					"displayName": "Email"
 				}
 			]
 		},
@@ -441,8 +433,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"nullable": true,
-					"description": ""
+					"nullable": true
 				},
 				{
 					"name": "last_name",
@@ -450,8 +441,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"nullable": true,
-					"description": ""
+					"nullable": true
 				},
 				{
 					"name": "email",
@@ -459,8 +449,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"nullable": true,
-					"description": ""
+					"nullable": true
 				}
 			]
 		},
@@ -473,8 +462,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				},
 				{
 					"name": "last_name",
@@ -482,8 +470,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				}
 			]
 		},
@@ -608,8 +595,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				},
 				{
 					"name": "first_name",
@@ -617,8 +603,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				},
 				{
 					"name": "last_name",
@@ -626,16 +611,14 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				},
 				{
 					"name": "dummy_id",
 					"type": {
 						"kind": "string"
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				}
 			]
 		},
@@ -650,8 +633,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 					},
 					"createRequired": true,
 					"updateRequired": false,
-					"nullable": false,
-					"description": ""
+					"nullable": false
 				},
 				{
 					"name": "first_name",
@@ -659,8 +641,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"nullable": true,
-					"description": ""
+					"nullable": true
 				},
 				{
 					"name": "last_name",
@@ -668,8 +649,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"nullable": true,
-					"description": ""
+					"nullable": true
 				}
 			]
 		},
@@ -786,24 +766,21 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 						"type": {
 							"kind": "string"
 						},
-						"displayName": " email",
-						"description": ""
+						"displayName": " email"
 					},
 					{
 						"name": "first_name",
 						"type": {
 							"kind": "string"
 						},
-						"displayName": "first_name",
-						"description": ""
+						"displayName": "first_name"
 					},
 					{
 						"name": "last_name",
 						"type": {
 							"kind": "string"
 						},
-						"displayName": " last_name",
-						"description": ""
+						"displayName": " last_name"
 					}
 				]
 			},
@@ -816,8 +793,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 							"kind": "string",
 							"maxLength": 300
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "first_name",
@@ -825,8 +801,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 							"kind": "string",
 							"maxLength": 300
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "last_name",
@@ -834,8 +809,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 							"kind": "string",
 							"maxLength": 300
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					}
 				]
 			},
@@ -968,16 +942,14 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 							"kind": "string",
 							"maxLength": 300
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "dummy_id",
 						"type": {
 							"kind": "string"
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "android",
@@ -989,29 +961,25 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								},
 								{
 									"name": "idfa",
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								},
 								{
 									"name": "push_token",
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								}
 							]
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "ios",
@@ -1023,29 +991,25 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								},
 								{
 									"name": "idfa",
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								},
 								{
 									"name": "push_token",
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								}
 							]
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "first_name",
@@ -1053,8 +1017,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 							"kind": "string",
 							"maxLength": 300
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "last_name",
@@ -1062,16 +1025,14 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 							"kind": "string",
 							"maxLength": 300
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "gender",
 						"type": {
 							"kind": "string"
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "food_preferences",
@@ -1083,21 +1044,18 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								},
 								{
 									"name": "fruit",
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								}
 							]
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "phone_numbers",
@@ -1108,8 +1066,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 								"maxLength": 300
 							}
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "favorite_movie",
@@ -1121,8 +1078,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								},
 								{
 									"name": "length",
@@ -1130,8 +1086,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 										"kind": "float",
 										"bitSize": 64
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								},
 								{
 									"name": "soundtrack",
@@ -1143,16 +1098,14 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 												"type": {
 													"kind": "string"
 												},
-												"readOptional": true,
-												"description": ""
+												"readOptional": true
 											},
 											{
 												"name": "author",
 												"type": {
 													"kind": "string"
 												},
-												"readOptional": true,
-												"description": ""
+												"readOptional": true
 											},
 											{
 												"name": "length",
@@ -1160,26 +1113,22 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 													"kind": "float",
 													"bitSize": 64
 												},
-												"readOptional": true,
-												"description": ""
+												"readOptional": true
 											},
 											{
 												"name": "genre",
 												"type": {
 													"kind": "string"
 												},
-												"readOptional": true,
-												"description": ""
+												"readOptional": true
 											}
 										]
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								}
 							]
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					}
 				]
 			},

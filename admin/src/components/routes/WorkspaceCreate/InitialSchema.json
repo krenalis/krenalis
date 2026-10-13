@@ -145,6 +145,40 @@
 				]
 			},
 			"displayName": "Preferences"
+		},
+		{
+			"name": "consents",
+			"readOptional": true,
+			"type": {
+				"kind": "object",
+				"properties": [
+					{
+						"name": "marketing",
+						"readOptional": true,
+						"type": {
+							"kind": "boolean"
+						},
+						"displayName": "Marketing communications"
+					},
+					{
+						"name": "profiling",
+						"readOptional": true,
+						"type": {
+							"kind": "boolean"
+						},
+						"displayName": "Profiling"
+					},
+					{
+						"name": "analytics",
+						"readOptional": true,
+						"type": {
+							"kind": "boolean"
+						},
+						"displayName": "Analytics"
+					}
+				]
+			},
+			"displayName": "Consents"
 		}
 	]
 }

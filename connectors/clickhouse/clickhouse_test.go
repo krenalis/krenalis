@@ -23,6 +23,7 @@ import (
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/clickhouse"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // Test_Merge_Query tests the Merge and Query methods on supported types. It
@@ -91,6 +92,7 @@ func Test_Merge_Query(t *testing.T) {
 		clickhouse.WithUsername(username),
 		clickhouse.WithPassword(password),
 		clickhouse.WithDatabase(database),
+		testcontainers.WithAdditionalWaitStrategy(wait.ForListeningPort("9000/tcp")),
 	)
 	defer func() {
 		if err := testcontainers.TerminateContainer(clickHouseContainer); err != nil {

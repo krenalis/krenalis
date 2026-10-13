@@ -432,7 +432,7 @@ func Test_validatePipeline(t *testing.T) {
 				Name: "Import events into the data warehouse",
 				RequiredConsents: RequiredConsents{
 					Operator: PurposesAnd,
-					Purposes: []string{"marketing", "analytics"},
+					Purposes: []string{"111111111111", "222222222222"},
 				},
 			},
 			target:                  state.TargetEvent,
@@ -454,7 +454,7 @@ func Test_validatePipeline(t *testing.T) {
 				},
 				RequiredConsents: RequiredConsents{
 					Operator: PurposesAnd,
-					Purposes: []string{"marketing"},
+					Purposes: []string{"111111111111"},
 				},
 			},
 			target:                  state.TargetUser,
@@ -467,7 +467,7 @@ func Test_validatePipeline(t *testing.T) {
 				Name: "Import events into the data warehouse",
 				RequiredConsents: RequiredConsents{
 					Operator: PurposesOr,
-					Purposes: []string{"marketing"},
+					Purposes: []string{"111111111111"},
 				},
 			},
 			target:                  state.TargetEvent,
@@ -664,7 +664,7 @@ func Test_validatePipeline(t *testing.T) {
 				},
 				RequiredConsents: RequiredConsents{
 					Operator: PurposesAnd,
-					Purposes: []string{"marketing", "analytics"},
+					Purposes: []string{"111111111111", "222222222222"},
 				},
 			},
 			target:                  state.TargetEvent,
@@ -684,15 +684,15 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "traits.email",
 					},
 				},
-				RequiredConsents: RequiredConsents{Purposes: []string{"marketing", "marketing"}},
+				RequiredConsents: RequiredConsents{Purposes: []string{"111111111111", "111111111111"}},
 			},
 			target:                  state.TargetEvent,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Application,
-			err:                     `required consent purpose "marketing" is duplicated`,
+			err:                     `required consent purpose 111111111111 is duplicated`,
 		},
 		{
-			name: "BAD: Source/Application/User - required consents are not allowed",
+			name: "GOOD: Source/Application/User - with required consents",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -706,12 +706,39 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				RequiredConsents: RequiredConsents{Purposes: []string{"marketing"}},
+				RequiredConsents: RequiredConsents{Purposes: []string{"111111111111"}},
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.Application,
-			err:                     "required consents are not allowed",
+		},
+		{
+			name: "GOOD: Destination/Application/User - with required consents",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+					{Name: "first_name", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"first_name": "first_name",
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "email_out",
+				},
+				RequiredConsents: RequiredConsents{Purposes: []string{"111111111111"}},
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
 		},
 		{
 			name: "GOOD: Destination/Application/Event - missing required consents operator defaults to and",
@@ -726,7 +753,7 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "traits.email",
 					},
 				},
-				RequiredConsents: RequiredConsents{Purposes: []string{"marketing"}},
+				RequiredConsents: RequiredConsents{Purposes: []string{"111111111111"}},
 			},
 			target:                  state.TargetEvent,
 			connectionRole:          state.Destination,
@@ -913,6 +940,28 @@ func Test_validatePipeline(t *testing.T) {
 				OutSchema: types.Type{},
 				Format:    "csv",
 				Path:      "my_output_users - ${now}.csv",
+				OrderBy:   "email",
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.FileStorage,
+			formatType:              state.File,
+			formatTargets:           state.UsersFlag,
+			formatHasSettings:       false,
+			formatHasSheets:         false,
+		},
+		{
+			name: "GOOD: Destination/FileStorage/User - path at maximum length after placeholder replacement",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
+					{Name: "last_name", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Type{},
+				Format:    "csv",
+				Path:      strings.Repeat("a", MaxFilePathSize-len("2006-01-02-15-04-05")) + "${now}",
 				OrderBy:   "email",
 			},
 			target:                  state.TargetUser,
@@ -1556,6 +1605,29 @@ func Test_validatePipeline(t *testing.T) {
 			formatHasSettings:       false,
 			formatHasSheets:         false,
 			err:                     "path is longer than 1024 runes",
+		},
+		{
+			name: "BAD: Destination/FileStorage/User - path too long after placeholder replacement",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
+					{Name: "last_name", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Type{},
+				Format:    "csv",
+				Path:      strings.Repeat("a", MaxFilePathSize+1-len("2006-01-02-15-04-05")) + "${now}",
+				OrderBy:   "email",
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.FileStorage,
+			formatType:              state.File,
+			formatTargets:           state.UsersFlag,
+			formatHasSettings:       false,
+			formatHasSheets:         false,
+			err:                     fmt.Sprintf("path is longer than %d runes after placeholder replacement", MaxFilePathSize),
 		},
 
 		{
@@ -2997,6 +3069,64 @@ func Test_validatePipeline(t *testing.T) {
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Application,
 			err:                     "output matching property \"email_out\" not found within the output schema",
+		},
+		{
+			name: "BAD: Destination/Application/User - input matching property is not a valid property path",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+					{Name: "first_name", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"first_name": "first_name",
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in.",
+					Out: "email_out",
+				},
+				UpdateOnDuplicates: false,
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+			err:                     "input matching property \"email_in.\" is not a valid property path",
+		},
+		{
+			name: "BAD: Destination/Application/User - output matching property is not a valid property path",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+					{Name: "first_name", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"first_name": "first_name",
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "email_out.",
+				},
+				UpdateOnDuplicates: false,
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+			err:                     "output matching property \"email_out.\" is not a valid property path",
 		},
 		{
 			name: "BAD: Destination/Application/User - non-matching output property cannot have ReadOptional set to true",
