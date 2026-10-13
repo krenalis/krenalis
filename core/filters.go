@@ -822,6 +822,10 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 			switch k := p.Type.Elem().Kind(); k {
 			case types.BooleanKind, types.ArrayKind, types.ObjectKind, types.MapKind:
 				return "", fmt.Errorf("operator %q cannot be used with array(%s) properties", op, k)
+			case types.JSONKind:
+				if disallowJSON {
+					return "", fmt.Errorf("operator %q cannot be used with array(%s) properties", op, k)
+				}
 			}
 		default:
 			return "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)

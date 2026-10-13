@@ -982,6 +982,7 @@ func Test_resolveFilterProperty(t *testing.T) {
 		{Name: "b", Type: types.String(), Nullable: true},
 		{Name: "c", Type: types.JSON()},
 		{Name: "d", Type: types.Object([]types.Property{{Name: "x", Type: types.JSON()}})},
+		{Name: "f", Type: types.Map(types.JSON())},
 	})
 
 	tests := []struct {
@@ -997,6 +998,8 @@ func Test_resolveFilterProperty(t *testing.T) {
 		{"c.x.y", types.Property{Name: "c", Type: types.JSON()}, "c", nil},
 		{"d.x", types.Property{Name: "x", Type: types.JSON()}, "d.x", nil},
 		{"d.x.y", types.Property{Name: "x", Type: types.JSON()}, "d.x", nil},
+		{"f", types.Property{Name: "f", Type: types.Map(types.JSON())}, "f", nil},
+		{"f.x", types.Property{}, "", types.PathNotExistError{Path: "f.x"}},
 		{"e", types.Property{}, "", types.PathNotExistError{Path: "e"}},
 		{"e.x", types.Property{}, "", types.PathNotExistError{Path: "e"}},
 		{"d.z", types.Property{}, "", types.PathNotExistError{Path: "d.z"}},
@@ -1565,6 +1568,74 @@ func Test_validateFilter(t *testing.T) {
 			if !slices.Equal(test.expected, got) {
 				t.Fatalf("expected %q, got %q", test.expected, got)
 			}
+		})
+	}
+
+}
+
+// Test_validateFilterJSONContainerOperators checks which operators are allowed
+// for arrays and maps of JSON values in source and destination user filters.
+func Test_validateFilterJSONContainerOperators(t *testing.T) {
+
+	jsonArray := types.Array(types.JSON())
+	jsonMap := types.Map(types.JSON())
+	stringArray := types.Array(types.String())
+
+	tests := []struct {
+		role     state.Role
+		typ      types.Type
+		operator FilterOperator
+		values   []string
+		wantErr  string
+	}{
+		{state.Source, jsonArray, OpContains, []string{"foo"}, ""},
+		{state.Source, jsonArray, OpDoesNotContain, []string{"foo"}, ""},
+		{state.Destination, jsonArray, OpContains, []string{"foo"}, `operator "contains" cannot be used with array(json) properties`},
+		{state.Destination, jsonArray, OpDoesNotContain, []string{"foo"}, `operator "does not contain" cannot be used with array(json) properties`},
+		{state.Destination, stringArray, OpContains, []string{"foo"}, ""},
+		{state.Destination, stringArray, OpDoesNotContain, []string{"foo"}, ""},
+		{state.Source, jsonMap, OpContains, []string{"foo"}, `operator "contains" cannot be used with map properties`},
+		{state.Source, jsonMap, OpDoesNotContain, []string{"foo"}, `operator "does not contain" cannot be used with map properties`},
+		{state.Destination, jsonMap, OpContains, []string{"foo"}, `operator "contains" cannot be used with map properties`},
+		{state.Destination, jsonMap, OpDoesNotContain, []string{"foo"}, `operator "does not contain" cannot be used with map properties`},
+		{state.Destination, jsonArray, OpIsEmpty, nil, ""},
+		{state.Destination, jsonArray, OpIsNotEmpty, nil, ""},
+		{state.Destination, jsonArray, OpExists, nil, ""},
+		{state.Destination, jsonArray, OpDoesNotExist, nil, ""},
+		{state.Destination, jsonMap, OpIsEmpty, nil, ""},
+		{state.Destination, jsonMap, OpIsNotEmpty, nil, ""},
+		{state.Destination, jsonMap, OpExists, nil, ""},
+		{state.Destination, jsonMap, OpDoesNotExist, nil, ""},
+	}
+
+	for _, test := range tests {
+		t.Run(test.role.String()+"/"+test.typ.String()+"/"+string(test.operator), func(t *testing.T) {
+
+			schema := types.Object([]types.Property{{Name: "value", Type: test.typ, ReadOptional: true}})
+			filter := &Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "value", Operator: test.operator, Values: test.values},
+				},
+			}
+
+			got, err := validateFilter(filter, schema, test.role, state.TargetUser)
+			if err != nil {
+				if test.wantErr == "" {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				if err.Error() != test.wantErr {
+					t.Fatalf("expected error %q, got %q", test.wantErr, err.Error())
+				}
+				return
+			}
+			if test.wantErr != "" {
+				t.Fatalf("expected error %q, got no error", test.wantErr)
+			}
+			if !slices.Equal(got, []string{"value"}) {
+				t.Fatalf("expected property paths [value], got %q", got)
+			}
+
 		})
 	}
 
