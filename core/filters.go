@@ -305,7 +305,11 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 				v = value.String()
 			case time.Time:
 				p, _ := properties.ByPathSlice(cond.Property)
-				switch p.Type.Kind() {
+				t := p.Type
+				if t.Kind() == types.ArrayKind {
+					t = t.Elem()
+				}
+				switch t.Kind() {
 				case types.DateTimeKind:
 					v = value.Format("2006-01-02T15:04:05.999999999")
 				case types.DateKind:

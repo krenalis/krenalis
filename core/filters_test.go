@@ -784,6 +784,54 @@ func Test_convertFilterWhereNested(t *testing.T) {
 	}
 }
 
+// Test_convertFilterWhereTemporalArrays verifies that temporal values for array
+// properties have the expected where representation and are preserved when
+// converted back to filters.
+func Test_convertFilterWhereTemporalArrays(t *testing.T) {
+
+	tests := []struct {
+		name     string
+		elem     types.Type
+		value    string
+		expected time.Time
+	}{
+		{"datetime", types.DateTime(), "2024-09-19T14:36:57.264699103", time.Date(2024, 9, 19, 14, 36, 57, 264699103, time.UTC)},
+		{"date", types.Date(), "2024-09-19", time.Date(2024, 9, 19, 0, 0, 0, 0, time.UTC)},
+		{"time", types.Time(), "14:36:57.264699103", time.Date(1970, 1, 1, 14, 36, 57, 264699103, time.UTC)},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+
+			schema := types.Object([]types.Property{{Name: "a", Type: types.Array(test.elem)}})
+			filter := &Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "a", Operator: OpContains, Values: []string{test.value}},
+				},
+			}
+
+			where := convertFilterToWhere(filter, schema)
+			expected := &state.Where{
+				Operator: state.OpAnd,
+				Rules: []state.WhereRule{
+					&state.WhereCondition{Property: []string{"a"}, Operator: state.OpContains, Values: []any{test.expected}},
+				},
+			}
+			if diff := cmp.Diff(expected, where); diff != "" {
+				t.Fatalf("expected where expression, got difference (-want +got):\n%s", diff)
+			}
+
+			got := convertWhereToFilter(where, schema)
+			if diff := cmp.Diff(filter, got); diff != "" {
+				t.Fatalf("expected original filter, got difference (-want +got):\n%s", diff)
+			}
+
+		})
+	}
+
+}
+
 func Test_parseDecimal(t *testing.T) {
 	tests := []struct {
 		n        string
