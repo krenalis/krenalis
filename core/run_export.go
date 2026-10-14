@@ -61,7 +61,7 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 		}
 	}
 
-	// Read the users.
+	// Build the query to read the profiles.
 	query := datastore.Query{Where: pipeline.Filter}
 	if connector.Type == state.FileStorage {
 		query.OrderBy = pipeline.OrderBy
@@ -75,7 +75,27 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 			UpdateOnDuplicates: pipeline.UpdateOnDuplicates,
 		}
 	}
-	records, err := store.ProfileRecords(ctx, query, pipeline.InSchema, matching)
+
+	var consentCondition datastore.ConsentCondition
+	if len(pipeline.RequiredConsents.Purposes) > 0 {
+		switch pipeline.RequiredConsents.Operator {
+		case state.PurposesAnd:
+			consentCondition.Operator = state.OpAnd
+		case state.PurposesOr:
+			consentCondition.Operator = state.OpOr
+		default:
+			return fmt.Errorf("invalid required consents operator %d", pipeline.RequiredConsents.Operator)
+		}
+		for _, purpose := range pipeline.RequiredConsents.Purposes {
+			if purpose.ProfileConsentLocation == nil {
+				return fmt.Errorf("consent purpose %s has no profile consent location", purpose.ID)
+			}
+			consentCondition.Locations = append(consentCondition.Locations, *purpose.ProfileConsentLocation)
+		}
+	}
+
+	// Read the profiles.
+	records, err := store.ProfileRecords(ctx, query, consentCondition, pipeline.InSchema, matching)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
 			return newPipelineError(metrics.ReceiveStep, err)
@@ -83,6 +103,8 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 		switch err := err.(type) {
 		case *datastore.UnavailableError:
 			return err
+		case *datastore.ConsentConditionError:
+			return newPipelineError(metrics.ExportProfileConsentStep, err)
 		case *schemas.Error:
 			err.Msg = fmt.Sprintf("in the input schema, %s. Please review and update the pipeline before attempting to export the profiles.", err.Msg)
 			return newPipelineError(metrics.InputValidationStep, err)

@@ -38,6 +38,12 @@ jobs:
           flavor: |
             latest=false
 
+      # Use the same short SHA as the "type=sha" tag above, which is 7
+      # characters long by default, so the version matches the image tag.
+      - name: Compute the Krenalis version
+        id: version
+        run: echo "version=dev-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
       - name: Build and push Docker image
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
@@ -47,3 +53,4 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: KRENALIS_VERSION=${{ steps.version.outputs.version }}

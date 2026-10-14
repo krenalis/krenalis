@@ -1,3 +1,4 @@
+1-circle.svg
 123.svg
 activity.svg
 arrow-clockwise.svg
@@ -13,6 +14,7 @@ arrows-expand.svg
 backspace.svg
 bar-chart.svg
 bookmark-check.svg
+box-arrow-in-up-right.svg
 box-arrow-right.svg
 braces-asterisk.svg
 braces.svg
@@ -55,6 +57,7 @@ info-circle.svg
 input-cursor.svg
 key.svg
 layout-three-columns.svg
+list-ul.svg
 list.svg
 pencil.svg
 people.svg

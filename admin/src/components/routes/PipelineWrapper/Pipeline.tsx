@@ -26,15 +26,24 @@ const Pipeline = ({ pipelineType: providedPipelineType, pipeline: providedPipeli
 
 	const transformationSectionRef = useRef<any>();
 	const matchingSectionRef = useRef<any>();
+	const consentsSectionRef = useRef<any>();
 
-	const handleEmptyMatchingError = () => {
-		setShowEmptyMatchingError(true);
-		const top = matchingSectionRef.current.getBoundingClientRect().top;
-		matchingSectionRef.current.closest('.fullscreen').scrollBy({
+	const scrollToSection = (section: HTMLElement) => {
+		const top = section.getBoundingClientRect().top;
+		section.closest('.fullscreen').scrollBy({
 			top: top - 130,
 			left: 0,
 			behavior: 'smooth',
 		});
+	};
+
+	const handleEmptyMatchingError = () => {
+		setShowEmptyMatchingError(true);
+		scrollToSection(matchingSectionRef.current);
+	};
+
+	const handleRequiredConsentsError = () => {
+		scrollToSection(consentsSectionRef.current);
 	};
 
 	const onClose = (cb?: (...args: any) => void) => {
@@ -72,6 +81,9 @@ const Pipeline = ({ pipelineType: providedPipelineType, pipeline: providedPipeli
 		setIssues,
 		showIssues,
 		setShowIssues,
+		consentPurposes,
+		deletedConsentPurposes,
+		consentPropertyPaths,
 	} = usePipeline(connection, providedPipelineType, providedPipeline);
 
 	if (isLoading) {
@@ -112,6 +124,7 @@ const Pipeline = ({ pipelineType: providedPipelineType, pipeline: providedPipeli
 				transformationSectionRef,
 				handleEmptyMatchingError,
 				showEmptyMatchingError,
+				handleRequiredConsentsError,
 				isTransformationHidden,
 				isTransformationDisabled,
 				isFullscreenTransformationOpen,
@@ -132,13 +145,16 @@ const Pipeline = ({ pipelineType: providedPipelineType, pipeline: providedPipeli
 				setIssues,
 				showIssues,
 				setShowIssues,
+				consentPurposes,
+				deletedConsentPurposes,
+				consentPropertyPaths,
 			}}
 		>
 			<div className='pipeline'>
 				<PipelineHeader />
 				<div className='pipeline__body'>
 					{pipelineType!.fields.includes('Filter') && !isFileStorageImport && <PipelineFilters />}
-					{pipelineType!.fields.includes('Consents') && <PipelineConsents />}
+					{pipelineType!.fields.includes('Consents') && <PipelineConsents ref={consentsSectionRef} />}
 					{pipelineType!.fields.includes('Query') && <PipelineQuery />}
 					{pipelineType!.fields.includes('File') && <PipelineFile />}
 					{pipelineType!.fields.includes('TableName') && <PipelineTable />}

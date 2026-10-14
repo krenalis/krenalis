@@ -28,7 +28,7 @@ var (
 	_ Connection = (*Tx)(nil)
 )
 
-// ErrTxClosed is the error returned by the Tx.Rollback method if the
+// ErrTxClosed is the error returned by Tx.Commit and Tx.Rollback if the
 // transaction has already been closed.
 var ErrTxClosed = errors.New("transaction has already been closed")
 
@@ -449,9 +449,8 @@ type Tx struct {
 // function provided to the Transaction method.
 //
 // If no error is returned, the transaction has been committed successfully.
-// If a TxRollbackError is returned, the commit resulted in a rollback.
-// If any other error occurs, the connection is closed and the error is
-// returned.
+// If a TxCommitRollbackError is returned, the commit resulted in a rollback.
+// If the transaction is already closed, it returns ErrTxClosed.
 func (tx *Tx) Commit(ctx context.Context) error {
 	if tx.wrapped {
 		return errors.New("commit called in a wrapped transaction")
@@ -461,7 +460,9 @@ func (tx *Tx) Commit(ctx context.Context) error {
 		if errors.Is(err, pgx.ErrTxCommitRollback) {
 			return TxCommitRollbackError{Err: err}
 		}
-		_ = tx.tx.Conn().Close(ctx)
+		if errors.Is(err, pgx.ErrTxClosed) {
+			return ErrTxClosed
+		}
 		return err
 	}
 	return nil
@@ -547,7 +548,6 @@ func (tx *Tx) Rollback(ctx context.Context) error {
 		if errors.Is(err, pgx.ErrTxClosed) {
 			return ErrTxClosed
 		}
-		_ = tx.tx.Conn().Close(ctx)
 		return err
 	}
 	return nil

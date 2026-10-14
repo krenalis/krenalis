@@ -59,14 +59,19 @@ func ParseISOZone(inp []byte) (*time.Location, error) {
 	}
 
 	var offset int
+	var hour int
+	var minute int
+	var sawMinute bool
 
 	var z uint
 	var multiplier = uint(3600) // start with initial multiplier of hours
 	for i := 1; i < len(inp); i++ {
 		if i == 3 { // next multiplier
+			hour = int(z)
 			offset = int(z * multiplier)
 			multiplier = 60 // multiplier for minutes
 			z = 0
+			sawMinute = true
 		} else { // next digit
 			z = z * 10
 		}
@@ -84,7 +89,18 @@ func ParseISOZone(inp []byte) (*time.Location, error) {
 
 	}
 
+	if sawMinute {
+		minute = int(z)
+	} else {
+		hour = int(z)
+	}
 	offset += int(z * multiplier)
+
+	// ISO 8601 offset hours are 00-23 and minutes are 00-59.
+	// A minute of 60 must not roll into the next hour.
+	if hour > 23 || minute > 59 {
+		return nil, ErrInvalidZone
+	}
 
 	if neg {
 		offset = -offset
@@ -265,8 +281,12 @@ parse:
 		}
 	}
 
-	// Get the seconds fraction as nanoseconds
-	if fraction < 0 || 1e9 <= fraction {
+	// Get the seconds fraction as nanoseconds.
+	// More than nine digits cannot be represented in nanoseconds. Checking the
+	// digit count (not just the value) also catches leading zeros such as
+	// `.0000000001`, which would otherwise be read as 1ns, and long fractions
+	// that overflow the accumulator.
+	if nfraction-1 > 9 || fraction < 0 || 1e9 <= fraction {
 		return time.Time{}, ErrPrecision
 	}
 	scale := 10 - nfraction

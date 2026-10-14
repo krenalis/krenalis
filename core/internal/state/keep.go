@@ -213,6 +213,19 @@ func (workspace *Workspace) replaceAccount(id int, f func(*Account)) *Account {
 	return aa
 }
 
+// replaceConsentPurpose calls f with a copy of the consent purpose, replaces
+// the purpose in the workspace, and returns the copy.
+func (workspace *Workspace) replaceConsentPurpose(id string, f func(*ConsentPurpose)) *ConsentPurpose {
+	c := workspace.consentPurposes[id]
+	cc := new(ConsentPurpose)
+	*cc = *c
+	f(cc)
+	workspace.mu.Lock()
+	workspace.consentPurposes[id] = cc
+	workspace.mu.Unlock()
+	return cc
+}
+
 // replacePipeline calls the function f passing a copy of the pipeline with
 // identifier id. After f is returned, it replaces the pipeline with its copy in
 // the state and returns the latter.
@@ -346,9 +359,11 @@ func (state *State) acceptInvitation(n notification) string {
 
 // AddConsentPurpose is the event sent when a new consent purpose is added.
 type AddConsentPurpose struct {
-	Workspace string
-	Code      string
-	Name      string
+	Workspace              string
+	ID                     string
+	Name                   string
+	EventConsentLocations  []EventConsentLocation
+	ProfileConsentLocation *ProfileConsentLocation
 }
 
 // addConsentPurpose adds a new consent purpose.
@@ -357,13 +372,15 @@ func (state *State) addConsentPurpose(n notification) string {
 	if !decodeNotification(n, &e) {
 		return ""
 	}
-	ws := state.workspaces[e.Workspace]
 	cp := &ConsentPurpose{
-		Code: e.Code,
-		Name: e.Name,
+		ID:                     e.ID,
+		Name:                   e.Name,
+		EventConsentLocations:  e.EventConsentLocations,
+		ProfileConsentLocation: e.ProfileConsentLocation,
 	}
+	ws := state.workspaces[e.Workspace]
 	ws.mu.Lock()
-	ws.consentPurposes[cp.Code] = cp
+	ws.consentPurposes[cp.ID] = cp
 	ws.mu.Unlock()
 	dispatchNotification(state, e)
 	return ws.organization.ID
@@ -568,7 +585,7 @@ type CreatePipeline struct {
 	InSchema           types.Type
 	OutSchema          types.Type
 	Filter             stdjson.RawMessage
-	RequiredConsents   RequiredConsents
+	RequiredConsents   RequiredConsentsByIDs
 	Transformation     Transformation
 	Query              string
 	Format             string
@@ -605,6 +622,13 @@ func (state *State) createPipeline(n notification) string {
 	}
 	c := state.connections[e.Connection]
 	format := state.connectors[e.Format]
+	requiredConsents := RequiredConsents{
+		Operator: e.RequiredConsents.Operator,
+		Purposes: make([]*ConsentPurpose, len(e.RequiredConsents.Purposes)),
+	}
+	for i, id := range e.RequiredConsents.Purposes {
+		requiredConsents.Purposes[i] = c.workspace.consentPurposes[id]
+	}
 	pipeline := &Pipeline{
 		mu:                 new(sync.Mutex),
 		ID:                 e.ID,
@@ -621,7 +645,7 @@ func (state *State) createPipeline(n notification) string {
 		SchedulePeriod:     e.SchedulePeriod,
 		InSchema:           e.InSchema,
 		OutSchema:          e.OutSchema,
-		RequiredConsents:   e.RequiredConsents,
+		RequiredConsents:   requiredConsents,
 		Transformation:     e.Transformation,
 		Query:              e.Query,
 		Path:               e.Path,
@@ -883,7 +907,7 @@ func (state *State) deleteConnection(n notification) string {
 // DeleteConsentPurpose is the event sent when a consent purpose is deleted.
 type DeleteConsentPurpose struct {
 	Workspace string
-	Code      string
+	ID        string
 }
 
 // deleteConsentPurpose deletes a consent purpose.
@@ -894,7 +918,7 @@ func (state *State) deleteConsentPurpose(n notification) string {
 	}
 	ws := state.workspaces[e.Workspace]
 	ws.mu.Lock()
-	delete(ws.consentPurposes, e.Code)
+	delete(ws.consentPurposes, e.ID)
 	ws.mu.Unlock()
 	dispatchNotification(state, e)
 	return ws.organization.ID
@@ -1634,10 +1658,11 @@ func (state *State) updateConnection(n notification) string {
 
 // UpdateConsentPurpose is the event sent when a consent purpose is updated.
 type UpdateConsentPurpose struct {
-	Workspace string
-	Purpose   string
-	Code      string
-	Name      string
+	Workspace              string
+	ID                     string
+	Name                   string
+	EventConsentLocations  []EventConsentLocation
+	ProfileConsentLocation *ProfileConsentLocation
 }
 
 // updateConsentPurpose updates a consent purpose.
@@ -1647,14 +1672,26 @@ func (state *State) updateConsentPurpose(n notification) string {
 		return ""
 	}
 	ws := state.workspaces[e.Workspace]
-	cp := &ConsentPurpose{
-		Code: e.Code,
-		Name: e.Name,
+	previous := ws.consentPurposes[e.ID]
+	cp := ws.replaceConsentPurpose(e.ID, func(cp *ConsentPurpose) {
+		cp.Name = e.Name
+		cp.EventConsentLocations = e.EventConsentLocations
+		cp.ProfileConsentLocation = e.ProfileConsentLocation
+	})
+	// Replace the consent purpose in the pipelines that require it.
+	for _, c := range ws.connections {
+		for _, p := range c.pipelines {
+			i := slices.Index(p.RequiredConsents.Purposes, previous)
+			if i == -1 {
+				continue
+			}
+			purposes := slices.Clone(p.RequiredConsents.Purposes)
+			purposes[i] = cp
+			state.replacePipeline(p.ID, func(p *Pipeline) {
+				p.RequiredConsents.Purposes = purposes
+			})
+		}
 	}
-	ws.mu.Lock()
-	delete(ws.consentPurposes, e.Purpose)
-	ws.consentPurposes[cp.Code] = cp
-	ws.mu.Unlock()
 	dispatchNotification(state, e)
 	return ws.organization.ID
 }
@@ -1732,7 +1769,7 @@ type UpdatePipeline struct {
 	InSchema           types.Type
 	OutSchema          types.Type
 	Filter             stdjson.RawMessage
-	RequiredConsents   RequiredConsents
+	RequiredConsents   RequiredConsentsByIDs
 	Transformation     Transformation
 	Query              string
 	Format             string
@@ -1773,7 +1810,15 @@ func (state *State) updatePipeline(n notification) string {
 	if e.Filter != nil {
 		filter, _ = unmarshalWhere(e.Filter, e.InSchema)
 	}
-	oldFormat := state.pipelines[e.ID].format
+	previous := state.pipelines[e.ID]
+	ws := previous.connection.workspace
+	requiredConsents := RequiredConsents{
+		Operator: e.RequiredConsents.Operator,
+		Purposes: make([]*ConsentPurpose, len(e.RequiredConsents.Purposes)),
+	}
+	for i, id := range e.RequiredConsents.Purposes {
+		requiredConsents.Purposes[i] = ws.consentPurposes[id]
+	}
 	p := state.replacePipeline(e.ID, func(p *Pipeline) {
 		p.format = format
 		p.propertiesToUnset = e.PropertiesToUnset
@@ -1782,7 +1827,7 @@ func (state *State) updatePipeline(n notification) string {
 		p.InSchema = e.InSchema
 		p.OutSchema = e.OutSchema
 		p.Filter = filter
-		p.RequiredConsents = e.RequiredConsents
+		p.RequiredConsents = requiredConsents
 		p.Transformation = e.Transformation
 		p.Query = e.Query
 		p.Path = e.Path
@@ -1802,9 +1847,9 @@ func (state *State) updatePipeline(n notification) string {
 	})
 	org := p.organization
 	// When the format changes, both oldFormat and format are non-nil.
-	if oldFormat != format {
+	if previous.format != format {
 		org.mu.Lock()
-		org.usage.updatePipelineFormat(oldFormat, format)
+		org.usage.updatePipelineFormat(previous.format, format)
 		org.mu.Unlock()
 	}
 	dispatchNotification(state, e)

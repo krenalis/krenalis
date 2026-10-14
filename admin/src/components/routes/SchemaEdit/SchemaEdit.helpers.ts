@@ -1,4 +1,4 @@
-import Type, { ObjectType, Property, Role } from '../../../lib/api/types/types';
+import Type, { ObjectType, Property } from '../../../lib/api/types/types';
 import { PropertyToEdit } from './useSchemaEdit';
 
 interface EditableProperty {
@@ -6,7 +6,6 @@ interface EditableProperty {
 	root: string;
 	name: string;
 	prefilled: string;
-	role: Role;
 	type: Type;
 	readOptional: boolean;
 	createRequired: boolean;
@@ -85,7 +84,6 @@ const normalizeSchema = (schema: EditableSchema): ObjectType => {
 			}
 			if (!property.isEditable) {
 				p.prefilled = property.prefilled;
-				p.role = property.role;
 				p.createRequired = property.createRequired;
 				p.updateRequired = property.updateRequired;
 			}
@@ -114,7 +112,6 @@ const normalizeSchema = (schema: EditableSchema): ObjectType => {
 			}
 			if (!property.isEditable) {
 				subP.prefilled = property.prefilled;
-				subP.role = property.role;
 				subP.createRequired = property.createRequired;
 				subP.updateRequired = property.updateRequired;
 			}
