@@ -18,15 +18,15 @@ type healthChecker interface {
 	Health(ctx context.Context) []corePkg.HealthCheck
 }
 
-// serveLivez serves the /livez endpoint, which reports that the process is
-// serving requests. It does not check any dependency.
-func serveLivez(w http.ResponseWriter, r *http.Request) {
-	if !allowGetOrHead(w, r) {
-		return
+// allowGetOrHead reports whether the method of r is GET or HEAD. If it is not,
+// it responds with 405 Method Not Allowed and returns false.
+func allowGetOrHead(w http.ResponseWriter, r *http.Request) bool {
+	if r.Method == "GET" || r.Method == "HEAD" {
+		return true
 	}
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-store")
-	_, _ = w.Write([]byte("ok"))
+	w.Header().Set("Allow", "GET, HEAD")
+	http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+	return false
 }
 
 // newReadyzHandler returns the handler of the /readyz endpoint, which reports
@@ -63,13 +63,13 @@ func newReadyzHandler(checker healthChecker, isShuttingDown *atomic.Bool) http.H
 	}
 }
 
-// allowGetOrHead reports whether the method of r is GET or HEAD. If it is not,
-// it responds with 405 Method Not Allowed and returns false.
-func allowGetOrHead(w http.ResponseWriter, r *http.Request) bool {
-	if r.Method == "GET" || r.Method == "HEAD" {
-		return true
+// serveLivez serves the /livez endpoint, which reports that the process is
+// serving requests. It does not check any dependency.
+func serveLivez(w http.ResponseWriter, r *http.Request) {
+	if !allowGetOrHead(w, r) {
+		return
 	}
-	w.Header().Set("Allow", "GET, HEAD")
-	http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-	return false
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = w.Write([]byte("ok"))
 }
