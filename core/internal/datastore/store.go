@@ -80,6 +80,12 @@ var destinationsProfilesTable = warehouses.Table{
 	Keys: []string{"_pipeline", "_external_id"},
 }
 
+// PipelineMetrics contains the pipeline metric operations used by datastore
+// writers.
+type PipelineMetrics interface {
+	FinalizePassed(pipeline string, count int)
+}
+
 type Store struct {
 	ds               *Datastore
 	wh               atomic.Value // warehouse
@@ -93,12 +99,6 @@ type Store struct {
 	mu                   sync.Mutex                      // for the 'eventIdentityWriters' field
 	eventIdentityWriters map[string]*EventIdentityWriter // pipeline -> *EventIdentityWriter
 	mc                   *modeCoordinator
-}
-
-// PipelineMetrics contains the pipeline metric operations used by datastore
-// writers.
-type PipelineMetrics interface {
-	FinalizePassed(pipeline string, count int)
 }
 
 // newStore returns a new Store for the workspace ws.
