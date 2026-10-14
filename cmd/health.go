@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync/atomic"
@@ -45,9 +46,9 @@ func newReadyzHandler(checker healthChecker, isShuttingDown *atomic.Bool) http.H
 		var b strings.Builder
 		for _, check := range checks {
 			if check.OK {
-				b.WriteString("[+]" + check.Name + " ok\n")
+				fmt.Fprintf(&b, "[+]%s ok\n", check.Name)
 			} else {
-				b.WriteString("[-]" + check.Name + " failed\n")
+				fmt.Fprintf(&b, "[-]%s failed\n", check.Name)
 				isReady = false
 			}
 		}
