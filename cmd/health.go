@@ -34,9 +34,11 @@ func allowGetOrHead(w http.ResponseWriter, r *http.Request) bool {
 // available or if isShuttingDown is true.
 func newReadyzHandler(checker healthChecker, isShuttingDown *atomic.Bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
 		if !allowGetOrHead(w, r) {
 			return
 		}
+
 		checks := checker.Health(r.Context())
 		checks = append(checks, corePkg.HealthCheck{Name: "shutdown", OK: !isShuttingDown.Load()})
 		isReady := true
@@ -49,6 +51,7 @@ func newReadyzHandler(checker healthChecker, isShuttingDown *atomic.Bool) http.H
 				isReady = false
 			}
 		}
+
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-store")
 		switch {
@@ -60,6 +63,7 @@ func newReadyzHandler(checker healthChecker, isShuttingDown *atomic.Bool) http.H
 		default:
 			_, _ = w.Write([]byte("ok"))
 		}
+
 	}
 }
 
