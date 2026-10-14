@@ -142,7 +142,7 @@ func (this *Workspace) RefreshIdentityMetrics(ctx context.Context) error {
 			return errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
 		if _, ok := errors.AsType[*datastore.UnavailableError](err); ok {
-			return errors.Unavailable("data warehouse is unavailable")
+			return errors.Unavailable("%s", err)
 		}
 		return err
 	}
