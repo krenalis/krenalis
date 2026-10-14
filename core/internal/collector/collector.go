@@ -132,10 +132,12 @@ func New(ctx context.Context, db *db.DB, stream streams.Stream, st *state.State,
 	st.Unfreeze()
 
 	if location, ok := strings.CutPrefix(maxMindDBPath, "s3://"); ok {
+
 		bucket, key, _ := strings.Cut(location, "/")
 		if bucket == "" || key == "" {
 			return nil, fmt.Errorf("invalid maxmind DB S3 URI %q", maxMindDBPath)
 		}
+
 		cfg, err := awsconfig.LoadDefaultConfig(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("cannot load AWS config: %s", err)
@@ -155,10 +157,12 @@ func New(ctx context.Context, db *db.DB, stream streams.Stream, st *state.State,
 		if len(data) > maxMaxMindDBSize {
 			return nil, fmt.Errorf("maxmind DB at %q is larger than %d bytes", maxMindDBPath, maxMaxMindDBSize)
 		}
+
 		c.maxmindDB, err = maxminddb.OpenBytes(data)
 		if err != nil {
 			return nil, fmt.Errorf("cannot open maxmind DB from %q: %s", maxMindDBPath, err)
 		}
+
 	} else if maxMindDBPath != "" {
 		var err error
 		c.maxmindDB, err = maxminddb.Open(maxMindDBPath)
