@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/krenalis/krenalis/tools/decimal"
@@ -25,8 +26,8 @@ type WhereRule interface {
 
 // Where combines rules using a logical operator.
 type Where struct {
-	Operator WhereLogical `json:"operator"`
-	Rules    []WhereRule  `json:"rules"`
+	Operator WhereLogical
+	Rules    []WhereRule
 }
 
 // Equal reports whether the receiver is equal to other.
@@ -62,12 +63,6 @@ func (where *Where) Equal(other *Where) bool {
 	return true
 }
 
-// MarshalJSON returns the JSON representation of where.
-func (where *Where) MarshalJSON() ([]byte, error) {
-	type plainWhere Where
-	return json.Marshal((*plainWhere)(where))
-}
-
 // whereRule marks Where as a where rule.
 func (*Where) whereRule() {}
 
@@ -86,16 +81,6 @@ var jsonLogicals = []byte(`"And"Or"`)
 // followed by a terminal offset.
 var jsonLogicalOffsets = [...]uint{0, 4, 7}
 
-// MarshalJSON returns the JSON representation of op.
-func (op WhereLogical) MarshalJSON() ([]byte, error) {
-	if op < OpAnd || op > OpOr {
-		return nil, fmt.Errorf("invalid logical operator %d", op)
-	}
-	i := jsonLogicalOffsets[op]
-	j := jsonLogicalOffsets[op+1] + 1
-	return jsonLogicals[i:j], nil
-}
-
 // UnmarshalJSON implements the json.Unmarshaler interface.
 func (op *WhereLogical) UnmarshalJSON(data []byte) error {
 	k := bytes.Index(jsonLogicals, data)
@@ -110,21 +95,11 @@ func (op *WhereLogical) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// String returns the string representation of op.
-// It panics if op is not a valid WhereLogical value.
-func (op WhereLogical) String() string {
-	s, err := op.MarshalJSON()
-	if err != nil {
-		panic(err)
-	}
-	return string(s[1 : len(s)-1])
-}
-
 // WhereCondition applies an operator to a property and zero or more values.
 type WhereCondition struct {
-	Property []string      `json:"property"`
-	Operator WhereOperator `json:"operator"`
-	Values   []any         `json:"values,omitzero"`
+	Property []string
+	Operator WhereOperator
+	Values   []any
 }
 
 // Equal reports whether the receiver is equal to other.
@@ -218,24 +193,15 @@ var jsonOperatorOffsets = [...]uint16{
 	163, 172, 185, 193, 205, 212, 220, 228, 239, 246, 256, 263, 276,
 }
 
-// MarshalJSON returns the JSON representation of op.
-func (op WhereOperator) MarshalJSON() ([]byte, error) {
-	if op < OpIs || op > OpDoesNotExist {
-		return nil, fmt.Errorf("invalid operator %d", op)
-	}
-	i := jsonOperatorOffsets[op]
-	j := jsonOperatorOffsets[op+1] + 1
-	return jsonOperators[i:j], nil
-}
-
 // String returns the string representation of op.
 // It panics if op is not a valid WhereOperator value.
 func (op WhereOperator) String() string {
-	s, err := op.MarshalJSON()
-	if err != nil {
-		panic(err)
+	if op < OpIs || op > OpDoesNotExist {
+		panic(fmt.Errorf("invalid operator %d", op))
 	}
-	return string(s[1 : len(s)-1])
+	i := jsonOperatorOffsets[op] + 1
+	j := jsonOperatorOffsets[op+1]
+	return string(jsonOperators[i:j])
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
@@ -262,16 +228,112 @@ type JSONConditionValue struct {
 	Number *decimal.Decimal
 }
 
-// MarshalJSON returns the JSON representation of v.
-func (v JSONConditionValue) MarshalJSON() ([]byte, error) {
-	return json.Marshal(v.String)
-}
-
 // whereConditionJSON is the persisted representation of a WhereCondition.
 type whereConditionJSON struct {
 	Property []string      `json:"property"`
 	Operator WhereOperator `json:"operator"`
 	Values   []json.Value  `json:"values,omitzero"`
+}
+
+// MarshalWhere marshals where into JSON using the provided schema.
+// where must be valid and conform to schema.
+func MarshalWhere(where *Where, schema types.Type) json.Value {
+	var b bytes.Buffer
+	marshalWhereGroup(&b, where, schema.Properties())
+	return b.Bytes()
+}
+
+// marshalWhereCondition writes the JSON representation of condition to b.
+func marshalWhereCondition(b *bytes.Buffer, condition *WhereCondition, properties types.Properties) {
+
+	b.WriteString(`{"property":[`)
+	for i, name := range condition.Property {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteByte('"')
+		b.WriteString(name)
+		b.WriteByte('"')
+	}
+	b.WriteString(`],"operator":`)
+	i := jsonOperatorOffsets[condition.Operator]
+	j := jsonOperatorOffsets[condition.Operator+1] + 1
+	b.Write(jsonOperators[i:j])
+
+	if condition.Values != nil {
+		p, _ := properties.ByPathSlice(condition.Property)
+		t := p.Type
+		if t.Kind() == types.ArrayKind {
+			t = t.Elem()
+		}
+		b.WriteString(`,"values":[`)
+		for i, value := range condition.Values {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			marshalWhereValue(b, value, t)
+		}
+		b.WriteByte(']')
+	}
+
+	b.WriteByte('}')
+
+}
+
+// marshalWhereGroup writes the JSON representation of where to b.
+func marshalWhereGroup(b *bytes.Buffer, where *Where, properties types.Properties) {
+	b.WriteString(`{"operator":`)
+	b.Write(jsonLogicals[jsonLogicalOffsets[where.Operator] : jsonLogicalOffsets[where.Operator+1]+1])
+	b.WriteString(`,"rules":[`)
+	for i, rule := range where.Rules {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		switch rule := rule.(type) {
+		case *Where:
+			marshalWhereGroup(b, rule, properties)
+		case *WhereCondition:
+			marshalWhereCondition(b, rule, properties)
+		}
+	}
+	b.WriteString("]}")
+}
+
+// marshalWhereValue writes a condition value according to its property type.
+func marshalWhereValue(b *bytes.Buffer, value any, t types.Type) {
+	switch v := value.(type) {
+	case string:
+		quoted, _ := json.Quote([]byte(v))
+		b.Write(quoted)
+	case JSONConditionValue:
+		quoted, _ := json.Quote([]byte(v.String))
+		b.Write(quoted)
+	case int:
+		b.WriteString(strconv.FormatInt(int64(v), 10))
+	case uint:
+		b.WriteString(strconv.FormatUint(uint64(v), 10))
+	case float64:
+		b.WriteString(strconv.FormatFloat(v, 'g', -1, t.BitSize()))
+	case decimal.Decimal:
+		encoded, err := v.MarshalJSON()
+		if err != nil {
+			panic(err)
+		}
+		b.Write(encoded)
+	case time.Time:
+		b.WriteByte('"')
+		switch t.Kind() {
+		case types.DateTimeKind:
+			b.WriteString(v.UTC().Format(time.RFC3339Nano))
+		case types.DateKind:
+			b.WriteString(v.Format(time.DateOnly))
+		case types.TimeKind:
+			b.WriteString(v.Format("15:04:05.999999999"))
+		}
+		b.WriteByte('"')
+	default:
+		panic(fmt.Errorf("unexpected where condition value %T", value))
+	}
 }
 
 // unmarshalConditionValue unmarshals a Where condition value and returns it.

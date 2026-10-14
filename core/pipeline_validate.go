@@ -77,11 +77,11 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	outSchema := pipeline.OutSchema
 
 	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(v.connection.connector.typ, v.connection.role, v.target)
-	dispatchEventsToAplications := isDispatchingEventsToApplications(v.connection.connector.typ, v.connection.role, v.target)
+	dispatchEventsToApplications := isDispatchingEventsToApplications(v.connection.connector.typ, v.connection.role, v.target)
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(v.connection.connector.typ, v.connection.role, v.target)
 	exportUsersToFile := isExportUsersToFile(v.connection.connector.typ, v.connection.role, v.target)
 
-	allowConstantTransformation := importUserIdentitiesFromEvents || dispatchEventsToAplications
+	allowConstantTransformation := importUserIdentitiesFromEvents || dispatchEventsToApplications
 
 	// In cases where the input schema refers to events, that is when:
 	//
@@ -90,7 +90,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	//  - events are dispatched to apps
 	//
 	// the input schema must be nil, which means the schema of the events.
-	inSchemaIsEventSchema := importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToAplications
+	inSchemaIsEventSchema := importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApplications
 	if inSchemaIsEventSchema {
 		if inSchema.Valid() {
 			switch {
@@ -98,7 +98,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 				return errors.BadRequest("input schema must be invalid for pipelines that import identities from events")
 			case importEventsIntoWarehouse:
 				return errors.BadRequest("input schema must be invalid for pipelines that import events into data warehouse")
-			case dispatchEventsToAplications:
+			case dispatchEventsToApplications:
 				return errors.BadRequest("input schema must be invalid for pipelines that send events to applications")
 			}
 		}
@@ -166,20 +166,16 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		}
 	}
 	// Validate the required consents.
-	requiredConsentsAllowed := dispatchEventsToAplications || importEventsIntoWarehouse || importUserIdentitiesFromEvents
 	if len(pipeline.RequiredConsents.Purposes) > 0 {
-		if !requiredConsentsAllowed {
-			return errors.BadRequest("required consents are not allowed")
-		}
 		if len(pipeline.RequiredConsents.Purposes) > MaxRequiredConsentPurposes {
 			return errors.BadRequest("required consent purposes must be at most %d", MaxRequiredConsentPurposes)
 		}
-		for i, code := range pipeline.RequiredConsents.Purposes {
-			if err := validateConsentPurposeCode(code); err != nil {
-				return errors.BadRequest("%s", err)
+		for i, id := range pipeline.RequiredConsents.Purposes {
+			if !IsValidID(id) {
+				return errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
 			}
-			if slices.Contains(pipeline.RequiredConsents.Purposes[i+1:], code) {
-				return errors.BadRequest("required consent purpose %q is duplicated", code)
+			if slices.Contains(pipeline.RequiredConsents.Purposes[i+1:], id) {
+				return errors.BadRequest("required consent purpose %s is duplicated", id)
 			}
 		}
 		if op := pipeline.RequiredConsents.Operator; op != PurposesAnd && op != PurposesOr {
@@ -745,14 +741,14 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 // canBeUsedAsMatchingProp reports whether a type with kind k can be used as a
 // matching property when exporting users to an application.
 func canBeUsedAsMatchingProp(k types.Kind) bool {
-	// Only int, uint, uuid, and string types are allowed.
+	// Only int, uuid, and string types are allowed.
 	return k == types.StringKind || k == types.IntKind || k == types.UUIDKind
 }
 
 // canBeUsedAsTableKey reports whether a type with kind k can be used as a
 // table key when exporting users to databases.
 func canBeUsedAsTableKey(k types.Kind) bool {
-	// Only int, uint, uuid, and string types are allowed.
+	// Only int, uuid, and string types are allowed.
 	return k == types.StringKind || k == types.IntKind || k == types.UUIDKind
 }
 

@@ -6,12 +6,12 @@ package datastore
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"iter"
 	"slices"
 
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
@@ -42,24 +42,45 @@ type Matching struct {
 // property to the relative column, and omitNil indicates whether attributes
 // with a nil value should be omitted from each record.
 //
-// pipeline and appExport parameters (if specified) represent the pipeline
-// identifier and the export options for an application pipeline, respectively.
-// When provided, the resulting records are compared against the destination
-// users table.
-//
 // If matching is not nil and a matching application user exists for a record,
 // the record's ExternalID will be set to the external ID of the matched
 // application user.
-func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, idProperty string, columnByProperty map[string]warehouses.Column, omitNil bool, matching *Matching) (*Records, error) {
+func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, consentCondition ConsentCondition, idProperty string, columnByProperty map[string]warehouses.Column, omitNil bool, matching *Matching) (*Records, error) {
 
 	columns, unflat := columnsFromProperties(query.Properties, columnByProperty, omitNil)
 
-	var where warehouses.Expr
+	var filterWhere warehouses.Expr
 	if query.Where != nil {
 		var err error
-		where, err = convertWhere(query.Where, columnByProperty)
+		filterWhere, err = convertWhere(query.Where, columnByProperty)
 		if err != nil {
 			return nil, err
+		}
+	}
+
+	var consentWhere warehouses.Expr
+	if len(consentCondition.Locations) > 0 {
+		operands := make([]warehouses.Expr, len(consentCondition.Locations))
+		for i, loc := range consentCondition.Locations {
+			column, ok := columnByProperty[loc.Property]
+			if !ok {
+				return nil, &ConsentConditionError{Msg: fmt.Sprintf("consent property «%s» does not exist", loc.Property)}
+			}
+			expr := warehouses.NewBaseExpr(column, warehouses.OpIsTrue)
+			if loc.JSONKey != "" {
+				expr.Keys = []string{loc.JSONKey}
+			}
+			operands[i] = expr
+		}
+		consentWhere = warehouses.NewMultiExpr(warehouses.LogicalOperator(consentCondition.Operator), operands)
+	}
+
+	where := filterWhere
+	if consentWhere != nil {
+		if where == nil {
+			where = consentWhere
+		} else {
+			where = warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{where, consentWhere})
 		}
 	}
 
@@ -143,7 +164,7 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 		Limit:     query.Limit,
 	}, false)
 	if err != nil {
-		return nil, err
+		return nil, unavailableError(err)
 	}
 
 	records := &Records{
@@ -154,7 +175,7 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 		matchingIndex: matchingIndex,
 	}
 
-	return records, err
+	return records, nil
 }
 
 // andExpressions returns an expression resulting from the AND of expr with

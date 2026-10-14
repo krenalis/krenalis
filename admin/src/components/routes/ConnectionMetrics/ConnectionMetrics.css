@@ -81,7 +81,7 @@
 }
 
 .connection-metrics__funnel-heading {
-	margin-bottom: 50px;
+	margin-bottom: 20px;
 }
 
 .connection-metrics__chart .recharts-wrapper {
@@ -144,12 +144,20 @@
 
 .connection-metrics__funnel-content {
 	animation: fade-in-entrance 1s;
+	min-width: max-content;
+	position: relative;
+}
+
+.connection-metrics__funnel-scroll {
+	overflow-x: auto;
+	overflow-y: hidden;
+	padding: 60px 0 20px;
 }
 
 .connection-metrics__funnel-passed,
 .connection-metrics__funnel-failed {
 	display: grid;
-	grid-template-columns: repeat(9, 100px);
+	grid-template-columns: repeat(var(--funnel-column-count), 100px);
 	column-gap: 50px;
 }
 
@@ -157,7 +165,7 @@
 	.connection-metrics__funnel-passed,
 	.connection-metrics__funnel-failed {
 		display: grid;
-		grid-template-columns: repeat(9, 70px);
+		grid-template-columns: repeat(var(--funnel-column-count), 70px);
 	}
 
 	.connection-metrics__tabs .segmented-date-range-control__picker {
@@ -170,7 +178,7 @@
 	.connection-metrics__funnel-passed,
 	.connection-metrics__funnel-failed {
 		display: grid;
-		grid-template-columns: repeat(9, 50px);
+		grid-template-columns: repeat(var(--funnel-column-count), 50px);
 	}
 
 	.connection-metrics__funnel-title {

@@ -2,7 +2,7 @@ import { useEffect, useContext, useState, useRef } from 'react';
 import { NotFoundError, UnprocessableError } from '../lib/api/errors';
 import AppContext from '../context/AppContext';
 import { Event, CreateEventListenerResponse, EventListenerEventsResponse } from '../lib/api/types/responses';
-import { Filter, RequiredConsents } from '../lib/api/types/pipeline';
+import { Filter, EventListenerConsents } from '../lib/api/types/pipeline';
 
 interface EventListenerEvent {
 	id: number;
@@ -16,7 +16,7 @@ const useEventListener = (
 	setOmitted?: React.Dispatch<React.SetStateAction<number>>,
 	connection?: string | null,
 	filter?: Filter,
-	requiredConsents?: RequiredConsents | null,
+	requiredConsents?: EventListenerConsents | null,
 ) => {
 	const [isStarted, setIsStarted] = useState<boolean>(false);
 	const [isListenerNotFound, setIsListenerNotFound] = useState<boolean>(false);
@@ -27,6 +27,10 @@ const useEventListener = (
 	const eventIntervalID = useRef<number | null>(null);
 	const lastEventID = useRef<number | null>(0);
 
+	// requiredConsentsKey changes only when the content of requiredConsents
+	// changes, so the listener is created again only in that case.
+	const requiredConsentsKey = JSON.stringify(requiredConsents ?? null);
+
 	useEffect(() => {
 		if (!isStarted) {
 			return;
@@ -35,6 +39,7 @@ const useEventListener = (
 			setIsListenerNotFound(false);
 			return;
 		}
+		let isCancelled = false;
 		const startListener = async () => {
 			let listener: CreateEventListenerResponse;
 			try {
@@ -53,6 +58,16 @@ const useEventListener = (
 					}
 				}
 				handleError(err);
+				return;
+			}
+			if (isCancelled) {
+				// The listener has been stopped, or must be created again, while
+				// it was being created.
+				try {
+					await api.workspaces.eventListeners.delete(listener.id);
+				} catch (err) {
+					handleError(err);
+				}
 				return;
 			}
 			const listenerID = listener.id;
@@ -87,6 +102,7 @@ const useEventListener = (
 		};
 		startListener();
 		return () => {
+			isCancelled = true;
 			const removeListener = async () => {
 				try {
 					await api.workspaces.eventListeners.delete(eventListenerID.current);
@@ -100,9 +116,8 @@ const useEventListener = (
 			}
 			removeListener();
 			clearInterval(eventIntervalID.current);
-			setIsStarted(false);
 		};
-	}, [isStarted, isListenerNotFound]);
+	}, [isStarted, isListenerNotFound, requiredConsentsKey]);
 
 	const startListening = () => {
 		setIsStarted(true);

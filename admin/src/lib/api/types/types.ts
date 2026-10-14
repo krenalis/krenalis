@@ -1,5 +1,3 @@
-type Role = 'Both' | 'Source' | 'Destination';
-
 type TypeKind =
 	| 'boolean'
 	| 'int'
@@ -24,7 +22,6 @@ type FloatBitSize = 32 | 64;
 interface Property {
 	name: string;
 	prefilled: string;
-	role: Role;
 	type: Type;
 	createRequired: boolean;
 	updateRequired: boolean;
@@ -142,7 +139,6 @@ export type {
 	IntType,
 	DecimalType,
 	FloatType,
-	Role,
 	TypeKind,
 	IntBitSize,
 	FloatBitSize,

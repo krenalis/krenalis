@@ -176,6 +176,57 @@ func TestIdentityMetricsSchema(t *testing.T) {
 
 }
 
+// assertColumnDoesNotExist verifies that table has no column with the given name.
+func assertColumnDoesNotExist(t *testing.T, database *db.DB, table, column string) {
+	t.Helper()
+	exists, err := database.QueryExists(t.Context(), `
+		SELECT FROM information_schema.columns
+		WHERE table_schema = current_schema()
+			AND table_name = $1
+			AND column_name = $2`, table, column)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if exists {
+		t.Fatalf("expected column %s.%s to be missing, got existing column", table, column)
+	}
+}
+
+// assertConstraintExists verifies that table has a constraint with the given name.
+func assertConstraintExists(t *testing.T, database *db.DB, table, constraint string) {
+	t.Helper()
+	exists, err := database.QueryExists(t.Context(), `
+		SELECT FROM pg_constraint c
+		JOIN pg_class t ON t.oid = c.conrelid
+		JOIN pg_namespace n ON n.oid = t.relnamespace
+		WHERE n.nspname = current_schema()
+			AND t.relname = $1
+			AND c.conname = $2`, table, constraint)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if !exists {
+		t.Fatalf("expected constraint %s.%s to exist, got missing constraint", table, constraint)
+	}
+}
+
+// assertIndexNotExists verifies that an index with name does not exist.
+func assertIndexNotExists(t *testing.T, database *db.DB, name string) {
+	t.Helper()
+	exists, err := database.QueryExists(t.Context(), `
+		SELECT FROM pg_class c
+		JOIN pg_namespace n ON n.oid = c.relnamespace
+		WHERE n.nspname = current_schema()
+			AND c.relname = $1
+			AND c.relkind = 'i'`, name)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if exists {
+		t.Fatalf("expected index %s to not exist, got existing index", name)
+	}
+}
+
 // identityMetricPrimaryKey returns the ordered primary-key columns for table.
 func identityMetricPrimaryKey(t *testing.T, database *db.DB, table string) string {
 	t.Helper()
