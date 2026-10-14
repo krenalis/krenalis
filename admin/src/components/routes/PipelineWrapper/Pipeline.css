@@ -2157,7 +2157,7 @@ inherit the disabled style */
 	gap: 10px;
 }
 
-.pipeline__consents-toggle sl-switch::part(base) {
+.pipeline__consents-toggle wa-switch::part(switch) {
 	margin-top: 1px;
 }
 

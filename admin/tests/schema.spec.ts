@@ -264,7 +264,7 @@ test(`Show, paginate, and refresh consent purposes on profile schema properties`
 	await expect(editBooleanPopup.locator('.schema-property-consent__purpose-name')).toHaveText(['New newsletter']);
 	const openPurposeTooltip = editBooleanRow.locator('.schema-property-consent__open-purpose-tooltip');
 	await expect(openPurposeTooltip).toHaveJSProperty('content', 'Open consent purpose');
-	await expect(openPurposeTooltip.locator('sl-icon')).toHaveAttribute('name', 'box-arrow-in-up-right');
+	await expect(openPurposeTooltip.locator('wa-icon')).toHaveAttribute('name', 'box-arrow-in-up-right');
 	await editBooleanRow.locator('.schema-property-consent__open-purpose').click();
 	await expect(page).toHaveURL(`${adminURL}/settings/consent-management`);
 	await expect(page.locator('.alert-dialog', { hasText: 'Discard unsaved changes?' })).toHaveCount(0);

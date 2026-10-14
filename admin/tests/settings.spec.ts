@@ -71,16 +71,16 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 	const dialog = page.locator('.consent-management__dialog[open]');
 	await dialog.locator('[part="overlay"]').dispatchEvent('click');
 	await expect(dialog).toHaveJSProperty('open', true);
-	await expect(dialog.locator('.consent-management__dialog-name')).toHaveJSProperty('size', 'medium');
-	await expect(dialog.locator('.consent-management__dialog-purpose-code')).toHaveJSProperty('size', 'medium');
-	await expect(dialog.locator('.consent-management__dialog-name [part="form-control-label"]')).toHaveCSS(
+	await expect(dialog.locator('.consent-management__dialog-name')).toHaveJSProperty('size', 'm');
+	await expect(dialog.locator('.consent-management__dialog-purpose-code')).toHaveJSProperty('size', 'm');
+	await expect(dialog.locator('.consent-management__dialog-name [part~="form-control-label"]')).toHaveCSS(
 		'font-size',
 		'14px',
 	);
 	await expect(dialog.locator('.consent-management__dialog-profile-path-dropdown')).toHaveCSS('margin-top', '17px');
 
 	const profilePath = dialog.locator('.consent-management__dialog-profile-path');
-	await expect(profilePath).toHaveJSProperty('size', 'medium');
+	await expect(profilePath).toHaveJSProperty('size', 'm');
 	await expect(profilePath.locator('input')).toHaveCSS('caret-color', 'rgba(0, 0, 0, 0)');
 	await expect(profilePath.locator('input')).toHaveCSS('cursor', 'default');
 	await expect(dialog.locator('.consent-management__dialog-path-label').nth(0)).toHaveCSS('font-size', '14px');
@@ -136,13 +136,13 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 	await profilePath.click();
 	await options.nth(1).click();
 	await expect(profilePath).toHaveJSProperty('readonly', false);
-	await expect(profilePath.locator('[slot="prefix"]')).toHaveText('nested.metadata.');
+	await expect(profilePath.locator('[slot="start"]')).toHaveText('nested.metadata.');
 	await expect(profilePath.locator('input')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 1)');
-	const purposeCodePrefix = dialog.locator('.consent-management__dialog-purpose-code [part="prefix"]');
+	const purposeCodePrefix = dialog.locator('.consent-management__dialog-purpose-code [part="start"]');
 	const purposeCodePrefixBackground = await purposeCodePrefix.evaluate(
 		(prefix) => getComputedStyle(prefix).backgroundColor,
 	);
-	await expect(profilePath.locator('[part="prefix"]')).toHaveCSS('background-color', purposeCodePrefixBackground);
+	await expect(profilePath.locator('[part="start"]')).toHaveCSS('background-color', purposeCodePrefixBackground);
 	await expect(profilePath.locator('input')).toHaveAttribute('placeholder', 'key');
 	await expect(profilePath.locator('input')).toBeFocused();
 	await expect(profilePath.getByRole('button', { name: 'Clear profile property' })).toBeVisible();
@@ -153,7 +153,7 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 	await expect(options.nth(0)).not.toBeVisible();
 	await profilePath.getByRole('button', { name: 'Clear profile property' }).click();
 	await expect(profilePath.locator('input')).toHaveValue('');
-	await expect(profilePath.locator('[slot="prefix"]')).toHaveCount(0);
+	await expect(profilePath.locator('[slot="start"]')).toHaveCount(0);
 	await expect(options.nth(0)).not.toBeVisible();
 	await expect(profilePathMessage).not.toBeVisible();
 	await expect(profilePathDropdown).toHaveAttribute('data-show-count', '1');
@@ -202,34 +202,34 @@ test(`Add and remove purpose codes of a consent purpose`, async ({ page }) => {
 	await inputs.nth(0).fill('marketing');
 
 	// A blank row is removable, but the only non-empty row is not.
-	await rows.nth(0).locator('.consent-management__dialog-purpose-code-add sl-button').click();
+	await rows.nth(0).locator('.consent-management__dialog-purpose-code-add wa-button').click();
 	await expect(inputs).toHaveCount(2);
 	await expect(inputs.nth(1)).toBeFocused();
 	await expect.poll(() => rows.nth(1).evaluate((row) => row.getAnimations().length)).toBe(0);
 	await expect(inputs.nth(1)).toBeFocused();
 	await expect(rows.nth(0).locator('.consent-management__dialog-purpose-code-remove')).toHaveCount(0);
-	await rows.nth(1).locator('.consent-management__dialog-purpose-code-remove sl-button').click();
+	await rows.nth(1).locator('.consent-management__dialog-purpose-code-remove wa-button').click();
 	await expect(inputs).toHaveCount(1);
 	await expect(inputs.nth(0)).toHaveValue('marketing');
 
 	// The first row can be removed when another row has a value.
-	await rows.nth(0).locator('.consent-management__dialog-purpose-code-add sl-button').click();
+	await rows.nth(0).locator('.consent-management__dialog-purpose-code-add wa-button').click();
 	await expect(inputs.nth(1)).toBeFocused();
 	await inputs.nth(1).fill('oldmarketing');
 	await expect(rows.locator('.consent-management__dialog-purpose-code-remove')).toHaveCount(2);
-	await rows.nth(0).locator('.consent-management__dialog-purpose-code-add sl-button').click();
+	await rows.nth(0).locator('.consent-management__dialog-purpose-code-add wa-button').click();
 	await expect(inputs).toHaveCount(3);
 	await expect(inputs.nth(1)).toHaveValue('');
 	await expect(inputs.nth(1)).toBeFocused();
 	await expect(inputs.nth(2)).toHaveValue('oldmarketing');
-	await rows.nth(1).locator('.consent-management__dialog-purpose-code-remove sl-button').click();
+	await rows.nth(1).locator('.consent-management__dialog-purpose-code-remove wa-button').click();
 	await expect(inputs).toHaveCount(2);
 	await expect(inputs.nth(0)).toHaveValue('marketing');
 	await expect(inputs.nth(1)).toHaveValue('oldmarketing');
 	const firstPurposeCodeRemove = rows.nth(0).locator('.consent-management__dialog-purpose-code-remove');
 	await firstPurposeCodeRemove.hover();
 	await expect(firstPurposeCodeRemove).toHaveJSProperty('open', true);
-	await firstPurposeCodeRemove.locator('sl-button').dblclick();
+	await firstPurposeCodeRemove.locator('wa-button').dblclick();
 	await expect(inputs).toHaveCount(1);
 	await expect(inputs.nth(0)).toHaveValue('oldmarketing');
 	await expect(dialog.locator('.consent-management__dialog-path-label').nth(0)).toContainText('Consent in events');
@@ -239,13 +239,13 @@ test(`Add and remove purpose codes of a consent purpose`, async ({ page }) => {
 	for (let i = 1; i < purposeCodes.length; i++) {
 		await rows
 			.nth(i - 1)
-			.locator('.consent-management__dialog-purpose-code-add sl-button')
+			.locator('.consent-management__dialog-purpose-code-add wa-button')
 			.click();
 		await expect(inputs).toHaveCount(i + 1);
 		await expect(inputs.nth(i)).toBeFocused();
 		await inputs.nth(i).fill(purposeCodes[i]);
 	}
-	const addButtons = rows.locator('.consent-management__dialog-purpose-code-add sl-button button');
+	const addButtons = rows.locator('.consent-management__dialog-purpose-code-add wa-button button');
 	await expect(addButtons).toHaveCount(5);
 	for (const button of await addButtons.all()) {
 		await expect(button).toBeDisabled();
@@ -470,7 +470,7 @@ test(`Validate changed API JSON keys and clear the profile property`, async ({ p
 	await page.getByRole('button', { name: 'Edit...' }).click();
 	const dialog = page.locator('.consent-management__dialog[open]');
 	const profilePath = dialog.locator('.consent-management__dialog-profile-path');
-	await profilePath.locator('sl-icon[name="chevron-down"]').click();
+	await profilePath.locator('wa-icon[name="chevron-down"]').click();
 	const otherProfilePathOption = dialog
 		.locator('.consent-management__dialog-profile-path-option')
 		.getByText('other', { exact: true });
@@ -482,7 +482,7 @@ test(`Validate changed API JSON keys and clear the profile property`, async ({ p
 	expect(puts).toBe(0);
 	await profilePath.getByRole('button', { name: 'Clear profile property' }).click();
 	await expect(dialog.locator('.consent-management__dialog-error:visible')).toHaveCount(0);
-	await profilePath.locator('sl-icon[name="chevron-down"]').click();
+	await profilePath.locator('wa-icon[name="chevron-down"]').click();
 	await dialog
 		.locator('.consent-management__dialog-profile-path-option')
 		.getByText('consents', { exact: true })
