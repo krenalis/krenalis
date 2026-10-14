@@ -205,7 +205,7 @@ func (u UnitOfMeasure) String() string {
 	return unitOfMeasureName[u-1]
 }
 
-// AsCountry returns t with the country semantics using format. It panics if t is
+// AsCountry returns t with country semantics using format. It panics if t is
 // not a string type, if t already has semantics or any string constraints,
 // or if format is invalid.
 func (t Type) AsCountry(format CountryFormat) Type {
@@ -216,7 +216,7 @@ func (t Type) AsCountry(format CountryFormat) Type {
 	return t
 }
 
-// AsDuration returns t with the duration semantics using unit. It panics unless
+// AsDuration returns t with duration semantics using unit. It panics unless
 // t is an int, decimal, or real float type without semantics and unit is
 // valid.
 func (t Type) AsDuration(unit DurationUnit) Type {
@@ -227,7 +227,7 @@ func (t Type) AsDuration(unit DurationUnit) Type {
 	return t
 }
 
-// AsEmail returns t with the email semantics. It panics unless t is a string
+// AsEmail returns t with email semantics. It panics unless t is a string
 // type without semantics.
 func (t Type) AsEmail() Type {
 	t, err := t.withSemantics(EmailSemantics, nil)
@@ -237,7 +237,7 @@ func (t Type) AsEmail() Type {
 	return t
 }
 
-// AsMeasurement returns t with the measurement semantics using unit. It panics
+// AsMeasurement returns t with measurement semantics using unit. It panics
 // unless t is an int, decimal, or real float type without semantics and unit
 // is valid.
 func (t Type) AsMeasurement(unit UnitOfMeasure) Type {
@@ -248,7 +248,7 @@ func (t Type) AsMeasurement(unit UnitOfMeasure) Type {
 	return t
 }
 
-// AsMoney returns t with the money semantics. It panics unless t is a decimal
+// AsMoney returns t with money semantics. It panics unless t is a decimal
 // type without semantics.
 func (t Type) AsMoney() Type {
 	t, err := t.withSemantics(MoneySemantics, nil)
@@ -258,7 +258,7 @@ func (t Type) AsMoney() Type {
 	return t
 }
 
-// AsPercentage returns t with the percentage semantics. It panics unless t is a
+// AsPercentage returns t with percentage semantics. It panics unless t is a
 // decimal type without semantics.
 func (t Type) AsPercentage() Type {
 	t, err := t.withSemantics(PercentageSemantics, nil)
@@ -268,7 +268,7 @@ func (t Type) AsPercentage() Type {
 	return t
 }
 
-// AsPhone returns t with the phone semantics. It panics if t is not a string
+// AsPhone returns t with phone semantics. It panics if t is not a string
 // type or if t already has semantics or any string constraints.
 func (t Type) AsPhone() Type {
 	t, err := t.withSemantics(PhoneSemantics, nil)
@@ -278,7 +278,7 @@ func (t Type) AsPhone() Type {
 	return t
 }
 
-// AsURL returns t with the URL semantics. It panics unless t is a string type
+// AsURL returns t with URL semantics. It panics unless t is a string type
 // without semantics.
 func (t Type) AsURL() Type {
 	t, err := t.withSemantics(URLSemantics, nil)
@@ -288,7 +288,7 @@ func (t Type) AsURL() Type {
 	return t
 }
 
-// CountryFormat returns the country format of t. It panics unless t has the
+// CountryFormat returns the country format of t. It panics unless t has
 // country semantics.
 func (t Type) CountryFormat() CountryFormat {
 	if t.semantics != CountrySemantics {
@@ -298,7 +298,7 @@ func (t Type) CountryFormat() CountryFormat {
 }
 
 // Currency returns the currency code of t and whether one is set. It panics
-// unless t has the money semantics.
+// unless t has money semantics.
 func (t Type) Currency() (string, bool) {
 	if t.semantics != MoneySemantics {
 		panic("type does not have money semantics")
@@ -307,7 +307,7 @@ func (t Type) Currency() (string, bool) {
 	return currency, currency != ""
 }
 
-// DurationUnit returns the duration unit of t. It panics unless t has the
+// DurationUnit returns the duration unit of t. It panics unless t has
 // duration semantics.
 func (t Type) DurationUnit() DurationUnit {
 	if t.semantics != DurationSemantics {
@@ -321,7 +321,7 @@ func (t Type) Semantics() Semantics {
 	return t.semantics
 }
 
-// UnitOfMeasure returns the unit of measure of t. It panics unless t has the
+// UnitOfMeasure returns the unit of measure of t. It panics unless t has
 // measurement semantics.
 func (t Type) UnitOfMeasure() UnitOfMeasure {
 	if t.semantics != MeasurementSemantics {
@@ -331,7 +331,7 @@ func (t Type) UnitOfMeasure() UnitOfMeasure {
 }
 
 // WithCurrency returns t with the given ISO 4217 currency code. It panics
-// unless t has the money semantics and currency is valid.
+// unless t has money semantics and currency is valid.
 func (t Type) WithCurrency(currency string) Type {
 	if t.semantics != MoneySemantics {
 		panic("type does not have money semantics")
