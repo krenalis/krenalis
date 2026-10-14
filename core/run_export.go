@@ -450,7 +450,7 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 		default:
 			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
-		// Validate v only if semantics are not country and phone.
+		// Validate v unless its type has country or phone semantics.
 		if in.Semantics() != types.CountrySemantics && in.Semantics() != types.PhoneSemantics {
 			// Validate that v match the external property's constraints.
 			if n, ok := ex.MaxBytes(); ok && len(s) > n {
