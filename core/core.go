@@ -1584,8 +1584,9 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 		if c.Role == state.Source && ws.ResolveIdentitiesOnBatchImport {
 			err := core.startIdentityResolution(core.close.ctx, ws.ID)
 			if err != nil {
-				err2, ok := errors.AsType[*errors.UnprocessableError](err)
-				if !ok || err2.Code != OperationAlreadyExecuting {
+				if err2, ok := err.(*errors.UnprocessableError); ok && err2.Code == OperationAlreadyExecuting {
+					// Do nothing.
+				} else {
 					slog.Error("core: cannot start Identity Resolution at the end of import", "pipeline", pipeline.ID, "run", run.ID, "error", err)
 				}
 			}
