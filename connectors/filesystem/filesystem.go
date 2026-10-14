@@ -103,6 +103,9 @@ func (fs *FileSystem) AbsolutePath(ctx context.Context, name string) (string, er
 		}
 		return "", connectors.InvalidPathErrorf("path name is not valid UTF-8")
 	}
+	if !filepath.IsLocal(rel) {
+		return "", connectors.InvalidPathErrorf("path name cannot contain a name reserved by Windows or a colon")
+	}
 	return filepath.Join(rootToShow(), rel), nil
 }
 

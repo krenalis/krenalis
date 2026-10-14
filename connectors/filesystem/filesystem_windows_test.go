@@ -29,6 +29,9 @@ func TestPathConvert(t *testing.T) {
 			{Name: "a/.."},
 			{Name: "../a"},
 			{Name: "a/"},
+			{Name: "NUL"},
+			{Name: "a/COM1.csv"},
+			{Name: "a:b"},
 		}
 		err := testconnector.TestAbsolutePath(fs, tests)
 		if err != nil {
