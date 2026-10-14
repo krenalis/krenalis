@@ -348,7 +348,7 @@ func (t Type) WithCurrency(currency string) Type {
 func (t Type) withSemantics(semantics Semantics, option any) (Type, error) {
 
 	if semantics == NoSemantics {
-		return Type{}, errors.New("semantics do not specialize type")
+		return Type{}, errors.New("cannot apply NoSemantics to a type")
 	}
 	if t.semantics != NoSemantics {
 		return Type{}, errors.New("type already has semantics")
