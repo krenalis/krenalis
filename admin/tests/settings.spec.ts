@@ -197,6 +197,7 @@ test(`Add and remove purpose codes of a consent purpose`, async ({ page }) => {
 	const dialog = page.locator('.consent-management__dialog[open]');
 	const rows = dialog.locator('.consent-management__dialog-purpose-code-row');
 	const inputs = rows.locator('input');
+	await expect(dialog.locator('.consent-management__dialog-name input')).toBeFocused();
 	await dialog.locator('.consent-management__dialog-name input').fill('Marketing');
 	await expect(rows.locator('.consent-management__dialog-purpose-code-remove')).toHaveCount(0);
 	await inputs.nth(0).fill('marketing');
@@ -394,6 +395,7 @@ test(`Validate authored consent keys and save literal JSON keys separately`, asy
 	await page.goto(`${adminURL}/settings/consent-management`);
 	await page.getByRole('button', { name: 'Add consent purpose' }).click();
 	const dialog = page.locator('.consent-management__dialog[open]');
+	await expect(dialog.locator('.consent-management__dialog-name input')).toBeFocused();
 	await dialog.locator('.consent-management__dialog-name input').fill('Marketing');
 	const purposeCodeInput = dialog.locator('.consent-management__dialog-purpose-code input');
 	const save = dialog.locator('.consent-management__dialog-save');

@@ -426,12 +426,12 @@ wa-button.pipeline__filters-remove-rule[appearance='plain']::part(label) {
 	--sl-input-font-family: var(--monospace-fonts);
 }
 
-.pipeline__filters-value-input sl-option::part(base) {
+.pipeline__filters-value-input wa-option {
 	font-family: var(--monospace-fonts);
 }
 
-.pipeline__filters-operator sl-option::part(base),
-.pipeline__filters-value-input sl-option::part(base) {
+.pipeline__filters-operator wa-option,
+.pipeline__filters-value-input wa-option {
 	font-size: 13px;
 }
 
@@ -467,7 +467,7 @@ wa-button.pipeline__filters-remove-rule[appearance='plain']::part(label) {
 	height: 30px !important;
 }
 
-.pipeline__filters-value-control--removable sl-select.pipeline__filters-value-input::part(suffix),
+.pipeline__filters-value-control--removable wa-select.pipeline__filters-value-input::part(end),
 .pipeline__filters-value-control--removable wa-input.pipeline__filters-value-input::part(end) {
 	margin-left: 0;
 	position: relative;
@@ -568,7 +568,7 @@ wa-button.pipeline__filters-remove-rule[appearance='plain']::part(label) {
 	top: 29px;
 }
 
-.pipeline__transformation-updated-at-format sl-select {
+.pipeline__transformation-updated-at-format wa-select {
 	width: 100%;
 }
 
@@ -1975,14 +1975,14 @@ inherit the disabled style */
 	margin-right: 8px;
 }
 
-.pipeline__file-format sl-option::part(label) {
+.pipeline__file-format wa-option::part(label) {
 	display: flex;
 	align-items: center;
 	gap: 8px;
 }
 
 .pipeline__file-format-logo .little-logo svg,
-.pipeline__file-format sl-option .little-logo svg {
+.pipeline__file-format wa-option .little-logo svg {
 	height: 18px;
 }
 
@@ -2168,14 +2168,14 @@ inherit the disabled style */
 	gap: 20px;
 }
 
-.pipeline__consents-select::part(tag__base) {
+.pipeline__consents-select::part(tag) {
 	background-color: var(--sl-color-success-100);
 	border: 0;
 	color: var(--sl-color-success-900);
 	font-weight: 500;
 }
 
-.pipeline__consents-select::part(invalid-tag__base) {
+.pipeline__consents-select::part(invalid-tag) {
 	background-color: var(--sl-color-danger-100);
 	border: 0;
 	color: var(--sl-color-danger-900);
@@ -2186,6 +2186,21 @@ inherit the disabled style */
 	color: var(--sl-color-danger-600);
 	font-size: 13px;
 	font-weight: 600;
+}
+
+/* Unavailable purposes are not disabled options, but look like them. */
+.pipeline__consents-option--unavailable {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.pipeline__consents-option--unavailable:not(:state(current)):is(:hover, :state(hover)) {
+	background-color: transparent;
+	color: var(--sl-color-neutral-700);
+}
+
+.pipeline__consents-option--unavailable:state(current) {
+	opacity: 1;
 }
 
 .pipeline__consents-errors {

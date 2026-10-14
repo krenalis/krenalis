@@ -73,7 +73,7 @@
 	color: var(--sl-color-primary-600);
 }
 
-.connection-metrics__pipelines sl-option::part(base) {
+.connection-metrics__pipelines wa-option {
 	font-size: 0.75rem;
 }
 

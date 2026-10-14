@@ -83,7 +83,7 @@
 	top: -8px;
 }
 
-.warehouse-info__mode sl-option::part(checked-icon) {
+.warehouse-info__mode wa-option::part(checked-icon) {
 	padding-left: 5px;
 	padding-right: 12px;
 }
@@ -146,7 +146,7 @@
 	max-width: 500px;
 }
 
-.warehouse-settings__mode sl-option::part(checked-icon) {
+.warehouse-settings__mode wa-option::part(checked-icon) {
 	padding-left: 5px;
 	padding-right: 12px;
 }

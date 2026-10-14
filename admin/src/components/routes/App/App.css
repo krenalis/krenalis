@@ -364,7 +364,7 @@ wa-divider {
 	letter-spacing: normal;
 }
 
-:where(wa-input, wa-textarea)::part(form-control-label) {
+:where(wa-input, wa-textarea, wa-select)::part(form-control-label) {
 	align-self: flex-start;
 	color: var(--sl-input-color);
 	font-family: var(--system-fonts);
@@ -375,13 +375,13 @@ wa-divider {
 	display: inline-block;
 }
 
-:where(wa-input, wa-textarea)::part(form-control-label)::before {
+:where(wa-input, wa-textarea, wa-select)::part(form-control-label)::before {
 	content: '';
 	line-height: calc(1.5em + 4px + 0.125rem);
 	vertical-align: top;
 }
 
-:where(wa-input, wa-textarea)::part(hint) {
+:where(wa-input, wa-textarea, wa-select)::part(hint) {
 	color: var(--sl-color-neutral-500);
 	font-family: var(--system-fonts);
 	font-weight: inherit;
@@ -389,27 +389,27 @@ wa-divider {
 	margin-block-start: 0.125rem;
 }
 
-:where(wa-input[size='s'], wa-textarea[size='s'])::part(form-control-label) {
+:where(wa-input[size='s'], wa-textarea[size='s'], wa-select[size='s'])::part(form-control-label) {
 	font-size: var(--sl-font-size-small);
 }
 
-:where(wa-input[size='s'], wa-textarea[size='s'])::part(hint) {
+:where(wa-input[size='s'], wa-textarea[size='s'], wa-select[size='s'])::part(hint) {
 	font-size: 0.75rem;
 }
 
-:where(wa-input[size='m'], wa-textarea[size='m'])::part(form-control-label) {
+:where(wa-input[size='m'], wa-textarea[size='m'], wa-select[size='m'])::part(form-control-label) {
 	font-size: var(--sl-font-size-medium);
 }
 
-:where(wa-input[size='m'], wa-textarea[size='m'])::part(hint) {
+:where(wa-input[size='m'], wa-textarea[size='m'], wa-select[size='m'])::part(hint) {
 	font-size: var(--sl-font-size-small);
 }
 
-:where(wa-input[size='l'], wa-textarea[size='l'])::part(form-control-label) {
+:where(wa-input[size='l'], wa-textarea[size='l'], wa-select[size='l'])::part(form-control-label) {
 	font-size: 1.25rem;
 }
 
-:where(wa-input[size='l'], wa-textarea[size='l'])::part(hint) {
+:where(wa-input[size='l'], wa-textarea[size='l'], wa-select[size='l'])::part(hint) {
 	font-size: var(--sl-font-size-medium);
 }
 
@@ -617,6 +617,287 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 
 :where(wa-textarea[size='l'])::part(textarea) {
 	padding: 0.5em 1.25rem;
+}
+
+/* Web Awesome selects, drawn as Shoelace drew them. The labels and hints are
+   the ones of the inputs above. */
+:where(wa-select) {
+	--wa-form-control-padding-inline: 0;
+	font-size: inherit;
+	line-height: inherit;
+}
+
+:where(wa-select)::part(combobox) {
+	min-height: 0;
+	background-color: var(--sl-input-background-color);
+	border: solid var(--sl-input-border-width) var(--sl-input-border-color);
+	color: inherit;
+	font-family: var(--sl-input-font-family);
+	font-weight: var(--sl-input-font-weight);
+	line-height: inherit;
+	letter-spacing: var(--sl-input-letter-spacing);
+	outline: none;
+	transition:
+		var(--sl-transition-fast) color,
+		var(--sl-transition-fast) border,
+		var(--sl-transition-fast) box-shadow,
+		var(--sl-transition-fast) background-color;
+}
+
+:where(wa-select:not([disabled]):is([open], :focus-within))::part(combobox) {
+	background-color: var(--sl-input-background-color-focus);
+	border-color: var(--sl-input-border-color-focus);
+	box-shadow: 0 0 0 var(--sl-focus-ring-width) var(--sl-input-focus-ring-color);
+}
+
+:where(wa-select[disabled])::part(combobox) {
+	background-color: var(--sl-input-background-color-disabled);
+	border-color: var(--sl-input-border-color-disabled);
+	color: var(--sl-input-color-disabled);
+}
+
+:where(wa-select)::part(display-input) {
+	color: var(--sl-input-color);
+	line-height: inherit;
+}
+
+:where(wa-select:not([disabled]):hover)::part(display-input) {
+	color: var(--sl-input-color-hover);
+}
+
+:where(wa-select)::part(display-input)::placeholder {
+	color: var(--sl-input-placeholder-color);
+}
+
+:where(wa-select)::part(start),
+:where(wa-select)::part(end) {
+	color: var(--sl-input-placeholder-color);
+}
+
+:where(wa-select) > [slot='end'] {
+	margin-inline-start: var(--sl-spacing-small);
+}
+
+:where(wa-select)::part(clear-button) {
+	align-self: center;
+	inline-size: auto;
+	margin-inline-end: 0;
+	color: var(--sl-input-icon-color);
+	transition: var(--sl-transition-fast) color;
+}
+
+:where(wa-select)::part(clear-button):hover {
+	color: var(--sl-input-icon-color-hover);
+}
+
+/* Web Awesome draws Font Awesome's chevron; the mask cuts it down to
+   Shoelace's, which is Bootstrap's. */
+:where(wa-select)::part(expand-icon) {
+	width: 1em;
+	height: 1em;
+	overflow: hidden;
+	color: inherit;
+	background-color: currentColor;
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708'/%3E%3C/svg%3E")
+		center / 1em 1em no-repeat;
+	margin-inline-start: var(--sl-spacing-small);
+	transition: var(--sl-transition-medium) rotate ease;
+}
+
+:where(wa-select[size='s'])::part(combobox) {
+	min-height: var(--sl-input-height-small);
+	padding-inline: var(--sl-input-spacing-small);
+	border-radius: var(--sl-input-border-radius-small);
+	font-size: var(--sl-input-font-size-small);
+}
+
+:where(wa-select[size='s']) > [slot='start'] {
+	margin-inline-end: var(--sl-input-spacing-small);
+}
+
+:where(wa-select[size='s'])::part(clear-button) {
+	margin-inline-start: var(--sl-input-spacing-small);
+}
+
+:where(wa-select[size='m'])::part(combobox) {
+	min-height: var(--sl-input-height-medium);
+	padding-inline: var(--sl-input-spacing-medium);
+	border-radius: var(--sl-input-border-radius-medium);
+	font-size: var(--sl-input-font-size-medium);
+}
+
+:where(wa-select[size='m']) > [slot='start'] {
+	margin-inline-end: var(--sl-input-spacing-medium);
+}
+
+:where(wa-select[size='m'])::part(clear-button) {
+	margin-inline-start: var(--sl-input-spacing-medium);
+}
+
+:where(wa-select[size='l'])::part(combobox) {
+	min-height: var(--sl-input-height-large);
+	padding-inline: var(--sl-input-spacing-large);
+	border-radius: var(--sl-input-border-radius-large);
+	font-size: var(--sl-input-font-size-large);
+}
+
+:where(wa-select[size='l']) > [slot='start'] {
+	margin-inline-end: var(--sl-input-spacing-large);
+}
+
+:where(wa-select[size='l'])::part(clear-button) {
+	margin-inline-start: var(--sl-input-spacing-large);
+}
+
+/* Multiple selection: Shoelace drew the tags with less padding around them. */
+
+:where(wa-select[multiple]:has(> wa-option:state(selected)))::part(combobox) {
+	padding-inline-start: 0;
+}
+
+:where(wa-select[multiple][size='s']:has(> wa-option:state(selected)))::part(combobox) {
+	padding-block: 2px;
+}
+
+:where(wa-select[multiple][size='m']:has(> wa-option:state(selected)))::part(combobox) {
+	padding-block: 3px;
+}
+
+:where(wa-select[multiple][size='l']:has(> wa-option:state(selected)))::part(combobox) {
+	padding-block: 4px;
+}
+
+:where(wa-select)::part(tags) {
+	margin-inline-start: var(--sl-spacing-2x-small);
+}
+
+:where(wa-select[size='s'])::part(tags) {
+	gap: 2px;
+}
+
+:where(wa-select[size='m'])::part(tags) {
+	gap: 3px;
+}
+
+:where(wa-select[size='l'])::part(tags) {
+	gap: 4px;
+}
+
+:where(wa-select)::part(tag) {
+	gap: 0;
+	background-color: var(--sl-color-neutral-50);
+	border: solid 1px var(--sl-color-neutral-200);
+	color: var(--sl-color-neutral-800);
+}
+
+:where(wa-select)::part(tag__content) {
+	font-size: inherit;
+}
+
+/* Web Awesome draws Font Awesome's cross; the mask cuts it down to Shoelace's. */
+:where(wa-select)::part(tag__remove-button) {
+	width: 1em;
+	height: 1em;
+	margin-inline-start: var(--sl-spacing-x-small);
+	color: var(--sl-color-neutral-600);
+	font-size: inherit;
+	background-color: currentColor;
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z'/%3E%3C/svg%3E")
+		center / 1em 1em no-repeat;
+}
+
+:where(wa-select)::part(tag__remove-button):hover {
+	color: var(--sl-color-primary-600);
+}
+
+:where(wa-select[size='s'])::part(tag) {
+	height: calc(var(--sl-input-height-small) * 0.8);
+	padding: 0 var(--sl-spacing-x-small);
+	border-radius: var(--sl-input-border-radius-small);
+	font-size: var(--sl-button-font-size-small);
+	line-height: calc(var(--sl-input-height-small) - var(--sl-input-border-width) * 2);
+}
+
+:where(wa-select[size='m'])::part(tag) {
+	height: calc(var(--sl-input-height-medium) * 0.8);
+	padding: 0 var(--sl-spacing-small);
+	border-radius: var(--sl-input-border-radius-medium);
+	font-size: var(--sl-button-font-size-medium);
+	line-height: calc(var(--sl-input-height-medium) - var(--sl-input-border-width) * 2);
+}
+
+:where(wa-select[size='l'])::part(tag) {
+	height: calc(var(--sl-input-height-large) * 0.8);
+	padding: 0 var(--sl-spacing-medium);
+	border-radius: var(--sl-input-border-radius-large);
+	font-size: var(--sl-button-font-size-large);
+	line-height: calc(var(--sl-input-height-large) - var(--sl-input-border-width) * 2);
+}
+
+/* Listbox */
+
+:where(wa-select)::part(listbox) {
+	padding-block: var(--sl-spacing-x-small);
+	padding-inline: 0;
+	background: var(--sl-panel-background-color);
+	border: solid var(--sl-panel-border-width) var(--sl-panel-border-color);
+	border-radius: var(--sl-border-radius-medium);
+	box-shadow: var(--sl-shadow-large);
+	font-family: var(--sl-font-sans);
+	font-size: var(--sl-font-size-medium);
+	font-weight: var(--sl-font-weight-normal);
+}
+
+/* Cancel the gap Web Awesome leaves between the options. */
+:where(wa-select > wa-option ~ wa-option) {
+	margin-block-start: -0.125rem;
+}
+
+/* Web Awesome options, drawn as Shoelace drew them. */
+:where(wa-option) {
+	padding: var(--sl-spacing-x-small) var(--sl-spacing-medium) var(--sl-spacing-x-small) var(--sl-spacing-x-small);
+	border-radius: 0;
+	color: var(--sl-color-neutral-700);
+	font-family: var(--system-fonts);
+	font-size: var(--sl-font-size-medium);
+	font-weight: var(--sl-font-weight-normal);
+	line-height: var(--sl-line-height-normal);
+	letter-spacing: var(--sl-letter-spacing-normal);
+	transition: var(--sl-transition-fast) fill;
+}
+
+:where(wa-option:not(:state(current), :state(disabled)):is(:hover, :state(hover))) {
+	background-color: var(--sl-color-neutral-100);
+	color: var(--sl-color-neutral-1000);
+}
+
+:where(wa-option:state(current)) {
+	background-color: var(--sl-color-primary-600);
+	color: var(--sl-color-neutral-0);
+}
+
+:where(wa-option)::part(label) {
+	line-height: var(--sl-line-height-dense);
+}
+
+:where(wa-option) > [slot='start'] {
+	margin-inline-end: var(--sl-spacing-x-small);
+}
+
+:where(wa-option) > [slot='end'] {
+	margin-inline-start: var(--sl-spacing-x-small);
+}
+
+/* Web Awesome draws Font Awesome's check; the mask cuts it down to Shoelace's. */
+:where(wa-option)::part(checked-icon) {
+	width: 1em;
+	min-width: 0;
+	height: 1em;
+	margin-inline-end: var(--sl-spacing-2x-small);
+	font-size: inherit;
+	background-color: currentColor;
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-linecap='round'%3E%3Cpath d='M3.43 9.14 6.86 12.57M12.57 3.43 6.86 12.57'/%3E%3C/svg%3E")
+		center / contain no-repeat;
 }
 
 /* Web Awesome buttons, drawn as Shoelace drew them. This is Shoelace's button

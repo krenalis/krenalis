@@ -2,8 +2,8 @@ import React, { useContext, ReactNode, useMemo, forwardRef } from 'react';
 import Section from '../../base/Section/Section';
 import { getFilterPropertyComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import PipelineContext from '../../../context/PipelineContext';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
+import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
@@ -255,7 +255,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 			if (valueInput == null) {
 				return;
 			}
-			if (valueInput.tagName === 'SL-SELECT') {
+			if (valueInput.tagName === 'WA-SELECT') {
 				valueInput.show();
 			} else {
 				valueInput.focus();
@@ -285,7 +285,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 			if (input == null) {
 				return;
 			}
-			if (input.tagName === 'SL-SELECT') {
+			if (input.tagName === 'WA-SELECT') {
 				input.show();
 			} else {
 				input.focus();
@@ -355,12 +355,12 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		) : null;
 		const operatorSelect = (
 			<SlSelect
-				size='small'
+				size='s'
 				name={`operator-${id}`}
 				className='pipeline__filters-operator'
 				value={String(FILTER_OPERATORS.findIndex((operator) => operator === condition.operator))}
-				onSlChange={(event: any) => changeOperator(path, FILTER_OPERATORS[event.target.value])}
-				onSlHide={onOperatorSelectClose}
+				onChange={(event: any) => changeOperator(path, FILTER_OPERATORS[event.target.value])}
+				onWaHide={onOperatorSelectClose}
 				placeholder='Operator'
 				disabled={isInvalidProperty || isDisabled}
 			>
@@ -496,9 +496,9 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 					</span>
 					<SlSelect
 						className='pipeline__filters-logical'
-						size='small'
+						size='s'
 						value={group.operator}
-						onSlChange={(event: any) => onLogicalChange(groupPath, event.target.value as FilterLogical)}
+						onChange={(event: any) => onLogicalChange(groupPath, event.target.value as FilterLogical)}
 						disabled={isDisabled}
 						aria-label='Match rules'
 					>
@@ -659,11 +659,11 @@ const PipelineFilterValueControl = ({
 		return (
 			<div className={removable ? 'pipeline__filters-value-control--removable' : undefined}>
 				<SlSelect
-					size='small'
+					size='s'
 					className='pipeline__filters-value-input'
 					name={name}
 					value={value ?? ''}
-					onSlChange={handleSelect}
+					onChange={handleSelect}
 					disabled={disabled}
 				>
 					{options.map((option, index) => (

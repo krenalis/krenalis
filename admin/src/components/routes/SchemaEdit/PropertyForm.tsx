@@ -4,10 +4,10 @@ import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
 import SlRadio from '@awesome.me/webawesome/dist/react/radio/index.js';
 import SlRadioGroup from '@awesome.me/webawesome/dist/react/radio-group/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
+import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
 import SlTextarea from '@awesome.me/webawesome/dist/react/textarea/index.js';
 import AppContext from '../../../context/AppContext';
 import Type, {
@@ -620,9 +620,9 @@ const PropertyForm = ({
 					<SlSelect
 						className='property-form__bit-size'
 						label={valueType.kind === 'int' ? 'Integer size' : 'Bit size'}
-						size='small'
+						size='s'
 						value={String(valueType.bitSize)}
-						onSlChange={onChangeBitSize}
+						onChange={onChangeBitSize}
 					>
 						{(valueType.kind === 'int' ? INT_BITSIZES : FLOAT_BITSIZES).map((bitSize) => (
 							<SlOption key={bitSize} value={bitSize}>
@@ -674,7 +674,7 @@ const PropertyForm = ({
 						className='property-form__parent'
 						label='Add to'
 						value={property.parentKey || '__root__'}
-						onSlChange={onChangeParent}
+						onChange={onChangeParent}
 					>
 						{parents.map((parent) => (
 							<SlOption key={parent.key || '__root__'} value={parent.key || '__root__'}>
@@ -732,12 +732,12 @@ const PropertyForm = ({
 							className='property-form__primary-source'
 							value={primarySource == null ? 'none' : primarySource}
 							name='primary-source'
-							onSlChange={onChangePrimarySource}
+							onChange={onChangePrimarySource}
 						>
 							<PropertyFormLabel slot='label' modified={fieldChanges?.primarySource}>
 								<SchemaPropertyPrimarySourceLabel />
 							</PropertyFormLabel>
-							<div slot='prefix'>
+							<div slot='start'>
 								{selectedConnection != null && (
 									<LittleLogo
 										code={selectedConnection.connector.code}
@@ -748,7 +748,7 @@ const PropertyForm = ({
 							<SlOption value='none'>No primary source</SlOption>
 							{sourceConnections.map((connection) => (
 								<SlOption key={connection.id} value={connection.id}>
-									<div slot='prefix'>
+									<div slot='start'>
 										<LittleLogo code={connection.connector.code} path={CONNECTORS_ASSETS_PATH} />
 									</div>
 									{connection.name}

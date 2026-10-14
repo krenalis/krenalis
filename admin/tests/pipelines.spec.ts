@@ -13,6 +13,7 @@ import {
 	logout,
 	adminURL,
 } from './utils';
+import { ConsentPurpose } from '../src/lib/api/types/workspace';
 import { join } from 'path';
 import { writeFile } from 'fs';
 
@@ -138,8 +139,8 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 
 	// Export mode.
 	let exportMode = page.locator('.pipeline__export-mode');
-	await exportMode.locator('sl-select').click();
-	await exportMode.locator('sl-option[value="UpdateOnly"]').click();
+	await exportMode.locator('wa-select').click();
+	await exportMode.locator('wa-option[value="UpdateOnly"]').click();
 
 	// Matching.
 	let matching = page.locator('.pipeline__matching-properties');
@@ -709,8 +710,8 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 	await page.click(`[data-code="csv"]`);
 	await page.click('.connectors-list__documentation-add');
 
-	await page.click('.file-connector__storage sl-select');
-	await page.locator(`.file-connector__storage sl-select sl-option[value="${connectionID}"]`).click();
+	await page.click('.file-connector__storage wa-select');
+	await page.locator(`.file-connector__storage wa-select wa-option[value="${connectionID}"]`).click();
 
 	let name = page.locator('.file-connector__pipeline-types .list-tile__name', {
 		hasText: 'Import users',
@@ -883,8 +884,8 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 	await page.click(`[data-code="csv"]`);
 	await page.click('.connectors-list__documentation-add');
 
-	await page.click('.file-connector__storage sl-select');
-	await page.locator(`.file-connector__storage sl-select sl-option[value="${connectionID}"]`).click();
+	await page.click('.file-connector__storage wa-select');
+	await page.locator(`.file-connector__storage wa-select wa-option[value="${connectionID}"]`).click();
 
 	let name = page.locator('.file-connector__pipeline-types .list-tile__name', {
 		hasText: 'Export users',
@@ -901,7 +902,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 
 	// File
 	await page.locator('.pipeline__file-format').click();
-	await page.locator('.pipeline__file-format sl-option[value="csv"]').click();
+	await page.locator('.pipeline__file-format wa-option[value="csv"]').click();
 
 	await page.locator('.pipeline__file-path >> input').fill(fileName);
 
@@ -1201,9 +1202,9 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 		.nth(0)
 		.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^type$/ })
 		.click();
-	await filters.nth(0).locator('.pipeline__filters-operator sl-option[value="0"]').click(); // option is "is".
+	await filters.nth(0).locator('.pipeline__filters-operator wa-option[value="0"]').click(); // option is "is".
 
-	await filters.nth(0).locator('.pipeline__filters-value-input sl-option[value="track"]').click(); // value select should open automatically after selecting the operator
+	await filters.nth(0).locator('.pipeline__filters-value-input wa-option[value="track"]').click(); // value select should open automatically after selecting the operator
 
 	const jsonCondition = filters.nth(1);
 	const jsonPropertyInput = jsonCondition.locator('.pipeline__filters-property wa-input');
@@ -1236,13 +1237,13 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 		const pathInput = condition.locator('.pipeline__filters-path >> input');
 		await pathInput.fill('email');
 		const operatorSelect = condition.locator('.pipeline__filters-operator');
-		const operatorOption = operatorSelect.locator(`sl-option[value="${operator.index}"]`);
+		const operatorOption = operatorSelect.locator(`wa-option[value="${operator.index}"]`);
 		await expect(operatorOption).toHaveText(operator.name);
 		await operatorSelect.click();
 		await operatorOption.click();
 		await expect(operatorSelect).toHaveJSProperty('value', String(operator.index));
 		await pathInput.fill('');
-		await expect(operatorSelect).toHaveJSProperty('value', '');
+		await expect(operatorSelect).toHaveJSProperty('value', null);
 		await condition.locator('.pipeline__filters-remove-condition').click();
 	}
 
@@ -1361,4 +1362,66 @@ test(`Add "Import users" pipeline on JavaScript`, async ({ page }) => {
 	await page.reload();
 
 	await expect(page.locator('.connection-pipelines__grid')).toBeAttached();
+});
+
+test(`Keep unavailable consent purposes removable but not selectable`, async ({ page }) => {
+	// Ads has no event consent location, which the event pipelines need.
+	const allPurposes: ConsentPurpose[] = [
+		{
+			id: 'marketing',
+			name: 'Marketing',
+			eventConsentLocations: [{ purposeCode: 'marketing' }],
+			profileConsentLocation: null,
+		},
+		{ id: 'ads', name: 'Ads', eventConsentLocations: [], profileConsentLocation: { property: 'consent_ads' } },
+		{
+			id: 'analytics',
+			name: 'Analytics',
+			eventConsentLocations: [{ purposeCode: 'analytics' }],
+			profileConsentLocation: null,
+		},
+	];
+	let purposes = allPurposes;
+	await page.route('**/v1/consent-purposes', async (route) => {
+		await route.fulfill({ json: { purposes } });
+	});
+
+	const id = await addJavascriptSource(page);
+	await page.goto(`${adminURL}/connections/${id}/pipelines`);
+	const name = page.locator('.connection-pipelines__no-pipeline-pipeline-types .list-tile__name', {
+		hasText: 'Import events',
+	});
+	await name.locator('..').locator('..').locator('wa-button').click();
+	await expect(page.locator('.pipeline__header')).toBeAttached();
+
+	const consents = page.locator('.pipeline__consents');
+	await consents.locator('.pipeline__consents-toggle wa-switch').click();
+	const select = consents.locator('.pipeline__consents-select');
+	await select.click();
+	await select.locator('wa-option[value="marketing"]').click();
+	await select.locator('wa-option[value="analytics"]').click();
+	await expect(select).toHaveJSProperty('value', ['marketing', 'analytics']);
+
+	// An unavailable purpose cannot be selected, with the mouse or the keyboard.
+	const ads = select.locator('wa-option[value="ads"]');
+	await expect(ads).toHaveClass(/pipeline__consents-option--unavailable/);
+	await ads.click();
+	await expect(select).toHaveJSProperty('value', ['marketing', 'analytics']);
+	await page.keyboard.press('ArrowDown'); // from Marketing, current since the listbox opened, to Ads
+	await page.keyboard.press('Enter');
+	await expect(select).toHaveJSProperty('value', ['marketing', 'analytics']);
+
+	// A selected purpose that is deleted keeps a red tag, and can be removed.
+	purposes = allPurposes.filter((p) => p.id !== 'analytics');
+	const response = page.waitForResponse((response) => response.url().endsWith('/consent-purposes'));
+	await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+	await response;
+	const invalidTag = select.locator('[part~="invalid-tag"]');
+	await expect(invalidTag).toHaveText('Analytics');
+	await expect(select).toHaveJSProperty('value', ['marketing', 'analytics']);
+	await expect(consents.locator('.pipeline__consents-error')).toContainText('"Analytics" no longer exists');
+	await invalidTag.locator('[part~="remove-button"]').click();
+	await expect(select).toHaveJSProperty('value', ['marketing']);
+	await expect(select.locator('[part~="invalid-tag"]')).toHaveCount(0);
+	await expect(select.locator('wa-option[value="analytics"]')).toHaveCount(0);
 });

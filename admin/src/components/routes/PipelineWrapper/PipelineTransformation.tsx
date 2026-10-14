@@ -47,8 +47,8 @@ import { buttonVariant } from '../../../utils/buttonVariant';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
 import SlButtonGroup from '@awesome.me/webawesome/dist/react/button-group/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
@@ -370,6 +370,10 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 	const onChangeUpdatedAtFormat = (e) => {
 		const p = { ...pipeline };
 		const v = e.target.value;
+		// The select also reports the option that is already selected.
+		if (v === 'custom' && isCustomUpdatedAtFormatSelected) {
+			return;
+		}
 		if (v === 'custom') {
 			setIsCustomUpdatedAtFormatSelected(true);
 			p.updatedAtFormat = '';
@@ -531,7 +535,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 								<div className='pipeline__transformation-updated-at-format-property'>
 									<div className='pipeline__transformation-updated-at-format'>
 										<SlSelect
-											onSlChange={onChangeUpdatedAtFormat}
+											onChange={onChangeUpdatedAtFormat}
 											value={
 												isCustomUpdatedAtFormatSelected
 													? 'custom'
@@ -544,7 +548,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 											}
 											name='updatedAtFormat'
 											label='Format'
-											size='small'
+											size='s'
 											ref={updatedAtFormatRef}
 										>
 											<SlOption value='iso8601'>ISO 8601</SlOption>

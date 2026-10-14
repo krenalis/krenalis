@@ -10,8 +10,8 @@ import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
 import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
 import {
 	AbsolutePathResponse,
@@ -166,6 +166,10 @@ const PipelineFile = () => {
 
 	const onFormatChange = (e) => {
 		const code = e.target.value;
+		// The select also reports the option that is already selected.
+		if (code === pipeline.format) {
+			return;
+		}
 		formatRef.current = code;
 		const format = connectors.find((c) => c.code === code);
 		const p = { ...pipeline };
@@ -219,10 +223,10 @@ const PipelineFile = () => {
 				label='Format'
 				className='pipeline__file-format'
 				value={String(pipeline.format)}
-				onSlChange={onFormatChange}
+				onChange={onFormatChange}
 			>
 				{pipeline.format !== '' && (
-					<div className='pipeline__file-format-logo' slot='prefix'>
+					<div className='pipeline__file-format-logo' slot='start'>
 						<LittleLogo code={formatCode} path={CONNECTORS_ASSETS_PATH} />
 					</div>
 				)}
@@ -236,7 +240,7 @@ const PipelineFile = () => {
 					}
 					return (
 						<SlOption key={f.code} value={f.code}>
-							<div slot='prefix'>
+							<div slot='start'>
 								<LittleLogo code={f.code} path={CONNECTORS_ASSETS_PATH} />
 							</div>
 							{f.label}
@@ -503,7 +507,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 	const onUpdateSheet = (e) => {
 		const p = { ...pipeline };
 		let sheet: string;
-		if (e.type === 'sl-change') {
+		if (e.type === 'change') {
 			sheet = sheets[e.currentTarget.value];
 		} else {
 			sheet = e.currentTarget.value;
@@ -776,7 +780,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 				(connection.role === 'Source' ? (
 					<div className='pipeline__file-sheets-wrapper'>
 						<SlSelect
-							onSlFocus={onSheetsLoad}
+							onFocus={onSheetsLoad}
 							className='pipeline__file-sheets'
 							ref={sheetsSelectRef}
 							name='sheet'
@@ -786,7 +790,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 									: Object.keys(sheets).find((k) => sheets[k] === pipeline.sheet)
 							}
 							label='Sheet'
-							onSlChange={onUpdateSheet}
+							onChange={onUpdateSheet}
 							disabled={
 								pipeline.path == null ||
 								pipeline.path === '' ||
@@ -795,7 +799,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 								(pathRef.current.lastSheetFetch === pathRef.current.lastUpdate && hasSheetsError)
 							}
 						>
-							{areSheetsLoading && <SlSpinner slot='prefix' />}
+							{areSheetsLoading && <SlSpinner slot='start' />}
 							{Object.entries(sheets).map(([i, sheet]) => {
 								return (
 									<SlOption key={i} value={i}>
@@ -828,7 +832,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 				name='compression'
 				value={pipeline.compression}
 				label='Compression'
-				onSlChange={onCompressionChange}
+				onChange={onCompressionChange}
 			>
 				<SlOption value=''>None</SlOption>
 				<SlOption value='Zip'>Zip</SlOption>

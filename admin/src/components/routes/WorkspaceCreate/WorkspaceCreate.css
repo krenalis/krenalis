@@ -18,7 +18,7 @@
 	font-size: 17px;
 }
 
-.workspace-create__warehouse-list::part(prefix) {
+.workspace-create__warehouse-list::part(start) {
 	min-width: 25px;
 	min-height: 25px;
 }
@@ -27,7 +27,7 @@
 	padding-left: 7px;
 }
 
-.workspace-create__warehouse-list sl-option::part(label) {
+.workspace-create__warehouse-list wa-option::part(label) {
 	display: flex;
 	gap: 7px;
 	align-items: center;

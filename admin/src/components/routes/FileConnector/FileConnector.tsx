@@ -1,8 +1,8 @@
 import './FileConnector.css';
 import React, { useState, useLayoutEffect, useContext, useMemo } from 'react';
 import appContext from '../../../context/AppContext';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { useParams, useLocation } from 'react-router-dom';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
@@ -73,10 +73,10 @@ const FileConnector = () => {
 								label='Storage'
 								name='storages'
 								value={selectedStorage}
-								onSlChange={onStorageChange}
+								onChange={onStorageChange}
 							>
 								{selectedStorage != null && (
-									<div className='file-connector__storage-logo' slot='prefix'>
+									<div className='file-connector__storage-logo' slot='start'>
 										<LittleLogo
 											code={storages.find((s) => s.id === selectedStorage).connector.code}
 											path={CONNECTORS_ASSETS_PATH}
@@ -85,7 +85,7 @@ const FileConnector = () => {
 								)}
 								{storages.map((s) => (
 									<SlOption key={s.id} value={s.id}>
-										<div slot='prefix'>
+										<div slot='start'>
 											<LittleLogo code={s.connector.code} path={CONNECTORS_ASSETS_PATH} />
 										</div>
 										{s.name}

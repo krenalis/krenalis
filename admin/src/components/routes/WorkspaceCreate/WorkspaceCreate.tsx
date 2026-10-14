@@ -6,8 +6,8 @@ import API from '../../../lib/api/api';
 import appContext from '../../../context/AppContext';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
 import { PostgreSQLSettings } from '../../base/PostgreSQLSettings/PostgreSQLSettings';
 import { SnowflakeSettings } from '../../base/SnowflakeSettings/SnowflakeSettings';
 import { WarehouseSettings } from '../../../lib/api/types/warehouse';
@@ -18,9 +18,9 @@ import { ExternalLogo } from '../ExternalLogo/ExternalLogo';
 import { WAREHOUSES_ASSETS_PATH } from '../../../constants/paths';
 import Section from '../../base/Section/Section';
 
-const postgresqlIcon = <ExternalLogo slot='prefix' code='postgresql' path={WAREHOUSES_ASSETS_PATH} />;
+const postgresqlIcon = <ExternalLogo slot='start' code='postgresql' path={WAREHOUSES_ASSETS_PATH} />;
 
-const snowflakeIcon = <ExternalLogo slot='prefix' code='snowflake' path={WAREHOUSES_ASSETS_PATH} />;
+const snowflakeIcon = <ExternalLogo slot='start' code='snowflake' path={WAREHOUSES_ASSETS_PATH} />;
 
 // The consent purposes added to a workspace when it is created. Their purpose
 // codes match the names of the properties under "consents" in InitialSchema.
@@ -54,6 +54,10 @@ const WorkspaceCreate = () => {
 	const onNameInput = (e) => setName(e.target.value);
 
 	const onChangeWarehouse = (e) => {
+		// The select also reports the option that is already selected.
+		if (e.target.value === selectedWarehouse) {
+			return;
+		}
 		setSelectedWarehouse(e.target.value);
 		// reset the settings.
 		setWarehouseSettings(undefined);
@@ -213,7 +217,7 @@ const WorkspaceCreate = () => {
 				<SlSelect
 					className='workspace-create__warehouse-list'
 					value={selectedWarehouse}
-					onSlChange={onChangeWarehouse}
+					onChange={onChangeWarehouse}
 				>
 					{selectedWarehouse === 'PostgreSQL' || selectedWarehouse === 'PostgreSQL-Docker'
 						? postgresqlIcon

@@ -1,7 +1,7 @@
 import React, { useContext, useState, useLayoutEffect, useRef } from 'react';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
 import SlCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { Warehouse } from './DataWarehouse.helpers';
@@ -129,7 +129,7 @@ const DataWarehouseSettings = ({
 					padded={true}
 					annotated={true}
 				>
-					<SlSelect className='warehouse-settings__mode' value={mode} onSlChange={onChangeMode}>
+					<SlSelect className='warehouse-settings__mode' value={mode} onChange={onChangeMode}>
 						<SlOption value='Normal'>
 							<div className='warehouse-settings__mode-title'>Normal</div>
 							<div className='warehouse-settings__mode-description'>

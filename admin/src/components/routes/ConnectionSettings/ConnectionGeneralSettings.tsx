@@ -8,9 +8,9 @@ import ConfirmByTyping from '../../base/ConfirmByTyping/ConfirmByTyping';
 import Flex from '../../base/Flex/Flex';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
 import SlDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
 import { ConnectionToSet } from '../../../lib/api/types/connection';
 
@@ -109,7 +109,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 					value={connectionToSet.strategy}
 					label='Strategy'
 					className='connection-settings__strategy-field'
-					onSlChange={onStrategyChange}
+					onChange={onStrategyChange}
 				>
 					<SlOption value='Conversion'>Conversion strategy</SlOption>
 					<SlOption value='Fusion'>Fusion strategy</SlOption>
@@ -123,9 +123,9 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 					value={connectionToSet.sendingMode}
 					label='Sending mode'
 					className='connection-settings__mode-field'
-					onSlChange={onModeChange}
+					onChange={onModeChange}
 				>
-					<div className='connection-settings__mode-value-icon' slot='prefix'>
+					<div className='connection-settings__mode-value-icon' slot='start'>
 						<SlIcon
 							name={
 								connectionToSet.sendingMode === 'Server'
@@ -138,7 +138,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 					</div>
 					{connection.connector.supportedSendingModes.map((m) => (
 						<SlOption key={m} value={m}>
-							<div slot='prefix'>
+							<div slot='start'>
 								<SlIcon
 									className='connection-settings__mode-icon'
 									name={m === 'Server' ? 'cloud' : m === 'Client' ? 'phone' : 'send'}

@@ -7,8 +7,8 @@ import Grid from '../../base/Grid/Grid';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
 import SlDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
@@ -556,10 +556,9 @@ const CreateAccessKeyDialog = ({
 					<SlSelect
 						label='Workspace'
 						className='access-keys__dialog-workspaces'
-						onSlChange={onChangeWorkspace}
+						onChange={onChangeWorkspace}
 						value={workspace != null ? workspace : isMCP ? '' : '0'}
-						hoist={true}
-						helpText='Note that you will no longer be able to edit the workspace after the creation of the key'
+						hint='Note that you will no longer be able to edit the workspace after the creation of the key'
 					>
 						{!isMCP && <SlOption value='0'>Any workspace</SlOption>}
 						{warehouseByWorkspace != null &&

@@ -249,11 +249,11 @@
 }
 
 .property-form__primary-source .little-logo svg,
-.property-form__primary-source sl-option .little-logo svg {
+.property-form__primary-source wa-option .little-logo svg {
 	height: 17px;
 }
 
-.property-form__primary-source [slot='prefix'] {
+.property-form__primary-source [slot='start'] {
 	margin-right: 7px;
 }
 
@@ -261,7 +261,7 @@
 	padding-left: 7px;
 }
 
-.property-form__primary-source sl-option::part(checked-icon) {
+.property-form__primary-source wa-option::part(checked-icon) {
 	display: none;
 }
 

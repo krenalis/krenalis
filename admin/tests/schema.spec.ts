@@ -1625,7 +1625,7 @@ test(`Clear the primary source when changing a new property to an array`, async 
 	await selectPropertyType(page, 'string');
 	const primarySource = propertyPanel.locator('.property-form__primary-source');
 	await primarySource.click();
-	await primarySource.locator(`sl-option[value="${sourceID}"]`).click();
+	await primarySource.locator(`wa-option[value="${sourceID}"]`).click();
 	await expect(primarySource).toHaveJSProperty('open', false);
 	await primarySource.focus();
 	await page.keyboard.press('Tab');
@@ -1705,8 +1705,8 @@ test(`Only offer user-capable source connections as primary sources`, async ({ p
 	await selectPropertyType(page, 'string');
 	const primarySource = propertyPanel.locator('.property-form__primary-source');
 	await primarySource.click();
-	await expect(primarySource.locator(`sl-option[value="${userSourceID}"]`)).toHaveCount(1);
-	await expect(primarySource.locator(`sl-option[value="${eventSourceID}"]`)).toHaveCount(0);
+	await expect(primarySource.locator(`wa-option[value="${userSourceID}"]`)).toHaveCount(1);
+	await expect(primarySource.locator(`wa-option[value="${eventSourceID}"]`)).toHaveCount(0);
 });
 
 test(`Validate string length constraints before adding a property`, async ({ page }) => {
@@ -2042,7 +2042,7 @@ test(`Remove a replacement property without sending its stale RePath`, async ({ 
 	const propertyPanel = page.locator('.property-panel');
 	await propertyPanel.locator('.property-form__parent').evaluate((select: any) => {
 		select.value = '__root__';
-		select.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
+		select.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
 	});
 	await propertyPanel.locator('.property-form__name-input input').fill('property_to_replace_and_remove');
 	await selectPropertyType(page, 'string');
@@ -2348,7 +2348,7 @@ test(`Allow matching property names under different object parents`, async ({ pa
 	const propertyPanel = page.locator('.property-panel');
 	await propertyPanel.locator('.property-form__parent').evaluate((select: any) => {
 		select.value = 'duplicate_scope.billing';
-		select.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
+		select.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
 	});
 	await propertyPanel.locator('.property-form__name-input input').fill('matching_add_name');
 	const nameError = propertyPanel.locator('.property-form__control--name .property-form__control-error');
@@ -2358,7 +2358,7 @@ test(`Allow matching property names under different object parents`, async ({ pa
 	await expect(propertyPanel.locator('.property-panel__save')).toHaveAttribute('disabled');
 	await propertyPanel.locator('.property-form__parent').evaluate((select: any) => {
 		select.value = 'duplicate_scope.shipping';
-		select.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
+		select.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
 	});
 	await expect(nameError).not.toBeAttached();
 	await selectPropertyType(page, 'string');
@@ -2488,7 +2488,7 @@ test(`Persist and clear display names on an object and its sub-property`, async 
 	await expect(propertyPanel.locator('.property-type-selector__dropdown')).toHaveCount(1);
 	await page.locator('.property-panel .property-form__parent').evaluate((select: any) => {
 		select.value = 'test_obj';
-		select.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
+		select.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
 	});
 
 	await page.locator('.property-panel .property-form__name-input').evaluate((el: any, value) => {

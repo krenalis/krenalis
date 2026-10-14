@@ -59,11 +59,11 @@
 	margin-right: 10px;
 }
 
-.connection-settings__mode-field sl-option[aria-selected='true'] .connection-settings__mode-icon {
+.connection-settings__mode-field wa-option[aria-selected='true'] .connection-settings__mode-icon {
 	color: var(--text-onaccent);
 }
 
-.connection-settings__mode-field sl-option .connection-settings__mode-icon {
+.connection-settings__mode-field wa-option .connection-settings__mode-icon {
 	display: flex;
 	align-items: center;
 }

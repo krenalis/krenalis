@@ -9,9 +9,10 @@ import { ComposedChart, Line, Bar, Legend, XAxis, Tooltip, YAxis, CartesianGrid,
 import Arrow from '../../base/Arrow/Arrow';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
 import SlButtonGroup from '@awesome.me/webawesome/dist/react/button-group/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { buttonVariant } from '../../../utils/buttonVariant';
@@ -619,13 +620,14 @@ const ConnectionMetrics = () => {
 						{c.pipelines?.some((p) => p.target === selectedTarget) &&
 							!((c.isSDK || c.isWebhook) && c.isSource && selectedTarget === 'Event') && (
 								<SlSelect
-									size='small'
+									size='s'
 									placeholder='All pipelines'
-									onSlChange={onChangesetSelectedPipeline}
+									onChange={onChangesetSelectedPipeline}
 									value={selectedPipeline == null ? '' : selectedPipeline}
 									className='connection-metrics__pipelines'
-									clearable
+									withClear
 								>
+									<WaIcon name='x-circle-fill' slot='clear-icon' />
 									{c.pipelines?.map((p) => {
 										if (p.target == selectedTarget) {
 											return <SlOption value={p.id}>{p.name}</SlOption>;

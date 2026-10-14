@@ -10,11 +10,11 @@ const gridKeyboardControlSelector = [
 	'wa-input',
 	'sl-menu',
 	'sl-menu-item',
-	'sl-option',
+	'wa-option',
 	'wa-radio',
 	'wa-radio-group',
 	'sl-range',
-	'sl-select',
+	'wa-select',
 	'sl-tab',
 	'sl-tab-group',
 	'wa-textarea',
@@ -40,7 +40,7 @@ const gridKeyboardControlSelector = [
 	'[role="treegrid"]',
 	'[role="treeitem"]',
 ].join(',');
-const openKeyboardOverlaySelector = 'dialog[open], sl-dialog[open], sl-dropdown[open], sl-select[open]';
+const openKeyboardOverlaySelector = 'dialog[open], sl-dialog[open], sl-dropdown[open], wa-select[open]';
 
 type GridNavigationKey = (typeof gridNavigationKeys)[number];
 
