@@ -253,11 +253,20 @@ func rewritePathError(err error) error {
 	rootPath := root
 	confMu.Unlock()
 
-	// rewrite removes from path the prefix that refers to the root, if
-	// present, as errors returned by the os.Root methods have a path relative
-	// to the root, and prepends the root to show.
+	// rewrite makes path relative to the root, if it is absolute, as errors
+	// returned by the os.Root methods have a path relative to the root, and
+	// prepends the root to show. An absolute path outside the root, such as
+	// one in an error returned by the reader passed to Write, is returned as
+	// it is.
 	rewrite := func(path string) string {
-		return filepath.Join(rootToShow(), strings.TrimPrefix(path, rootPath))
+		if filepath.IsAbs(path) {
+			rel, err := filepath.Rel(rootPath, path)
+			if err != nil || !filepath.IsLocal(rel) {
+				return path
+			}
+			path = rel
+		}
+		return filepath.Join(rootToShow(), path)
 	}
 
 	// clarify returns errUnsupportedSymlink if err is the error returned by

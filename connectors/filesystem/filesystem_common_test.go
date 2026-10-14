@@ -83,6 +83,18 @@ func TestRewritePathError(t *testing.T) {
 					}
 				}
 			})
+			t.Run("Path outside the root", func(t *testing.T) {
+				for _, path := range []string{filepath.Join(filepath.Dir(root), "input/source"), root + "x/a"} {
+					err := rewritePathError(&fs.PathError{Op: "read", Path: path, Err: fs.ErrClosed})
+					pErr, ok := err.(*fs.PathError)
+					if !ok {
+						t.Fatalf("expected *fs.PathError, got %T", err)
+					}
+					if pErr.Path != path {
+						t.Fatalf("expected path %q, got %q", path, pErr.Path)
+					}
+				}
+			})
 			t.Run("LinkError", func(t *testing.T) {
 				err := rewritePathError(&os.LinkError{Op: "renameat", Old: "a.tmp", New: "a", Err: fs.ErrExist})
 				lErr, ok := err.(*os.LinkError)
