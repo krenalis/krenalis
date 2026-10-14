@@ -845,8 +845,13 @@ func (core *Core) Health(ctx context.Context) []HealthCheck {
 	core.mustBeOpen()
 	pingCtx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
+	isPostgresUp := true
+	err := core.db.Ping(pingCtx)
+	if err != nil {
+		isPostgresUp = false
+	}
 	return []HealthCheck{
-		{Name: "postgres", OK: core.db.Ping(pingCtx) == nil},
+		{Name: "postgres", OK: isPostgresUp},
 		{Name: "nats", OK: core.stream.Up()},
 	}
 }
