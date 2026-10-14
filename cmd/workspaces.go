@@ -325,9 +325,6 @@ func (workspace workspace) IdentityMetricsPerDate(_ http.ResponseWriter, r *http
 		if len(values) != 1 {
 			return nil, errors.BadRequest("only one 'connection' parameter is allowed")
 		}
-		if values[0] != "deleted" && !core.IsValidID(values[0]) {
-			return nil, errors.BadRequest("value %q is neither a valid connection identifier nor %q", values[0], "deleted")
-		}
 		connectionSelection = &values[0]
 	}
 
