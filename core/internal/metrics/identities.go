@@ -6,7 +6,6 @@ package metrics
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"slices"
 	"strconv"
@@ -335,8 +334,7 @@ func (identities *Identities) storeSnapshot(ctx context.Context, snapshot identi
 			return err
 		}
 
-		var accepted bool
-		err = tx.QueryRow(ctx, `INSERT INTO identity_metrics AS m
+		res, err := tx.Exec(ctx, `INSERT INTO identity_metrics AS m
 			(workspace, day, observed_at, identities_anonymous, identities_recognized, identities_without_profile)
 			VALUES ($1, $2, $3, $4, $5, $6)
 			ON CONFLICT (workspace, day) DO UPDATE SET
@@ -344,19 +342,16 @@ func (identities *Identities) storeSnapshot(ctx context.Context, snapshot identi
 			identities_anonymous = EXCLUDED.identities_anonymous,
 			identities_recognized = EXCLUDED.identities_recognized,
 			identities_without_profile = EXCLUDED.identities_without_profile
-			WHERE EXCLUDED.observed_at > m.observed_at
-			RETURNING true`, snapshot.workspace, day, snapshot.observedAt.Format("15:04:05.999999"),
-			snapshot.anonymous, snapshot.recognized, snapshot.withoutProfile).Scan(&accepted)
+			WHERE EXCLUDED.observed_at > m.observed_at`,
+			snapshot.workspace, day, snapshot.observedAt.Format("15:04:05.999999"),
+			snapshot.anonymous, snapshot.recognized, snapshot.withoutProfile)
 		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return nil
-			}
 			if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "identity_metrics_workspace_fkey" {
 				return ErrWorkspaceNotFound
 			}
 			return err
 		}
-		if !accepted {
+		if res.RowsAffected() == 0 {
 			return nil
 		}
 
