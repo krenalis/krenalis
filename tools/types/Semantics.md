@@ -1,6 +1,6 @@
 # Semantics
 
-| Semantics      | Type restrictions                                                                     |
+| Semantics     | Type restrictions                                                                     |
 |---------------|---------------------------------------------------------------------------------------|
 | `country`     | `string` without `maxBytes`, `maxLength`, `pattern` or `values`; `format` is required |
 | `duration`    | `int`, `decimal` or `float` with `real`; `unit` is required                           |
