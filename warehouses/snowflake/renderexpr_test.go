@@ -35,7 +35,7 @@ func Test_renderExpr(t *testing.T) {
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs, json.Value(`{"foo":2,"boo":true}`)),
-			query: `"VALUES" = PARSE_JSON('{"foo":2,"boo":true}')`,
+			query: `COALESCE("VALUES" = PARSE_JSON('{"foo":2,"boo":true}'), FALSE)`,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "weight", Type: types.Float(32)}, warehouses.OpIsLessThan, 6.5),
@@ -217,11 +217,11 @@ func Test_renderExpr(t *testing.T) {
 				warehouses.OpOr,
 				[]warehouses.Expr{
 					warehouses.NewBaseExpr(warehouses.Column{Name: "type", Type: types.String(), Nullable: true}, warehouses.OpIsNotEmpty),
-					// warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.JSON()}, warehouses.OpIsEmpty), // See issue https://github.com/krenalis/krenalis/issues/1804.
+					warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.JSON()}, warehouses.OpIsEmpty),
 					warehouses.NewBaseExpr(warehouses.Column{Name: "scores", Type: types.Array(types.Int(32)), Nullable: true}, warehouses.OpIsEmpty),
 					warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.Map(types.String())}, warehouses.OpIsNotEmpty),
 				}),
-			query: `("TYPE" IS NOT NULL AND "TYPE" <> '') OR ("SCORES" IS NULL OR "SCORES" = ARRAY_CONSTRUCT()) OR "PROPERTIES" <> OBJECT_CONSTRUCT()`,
+			query: `("TYPE" IS NOT NULL AND "TYPE" <> '') OR COALESCE(("PROPERTIES" IS NULL OR IS_NULL_VALUE("PROPERTIES") OR AS_VARCHAR("PROPERTIES") = '' OR ARRAY_SIZE(AS_ARRAY("PROPERTIES")) = 0 OR ARRAY_SIZE(OBJECT_KEYS(AS_OBJECT("PROPERTIES"))) = 0), FALSE) OR ("SCORES" IS NULL OR "SCORES" = ARRAY_CONSTRUCT()) OR "PROPERTIES" <> OBJECT_CONSTRUCT()`,
 		},
 	}
 	for _, test := range tests {

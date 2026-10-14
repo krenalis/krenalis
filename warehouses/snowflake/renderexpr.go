@@ -60,6 +60,38 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 	}
 
 	qname := quoteIdent(c.Name)
+	if len(baseExpr.Keys) > 0 && c.Type.Kind() != types.JSONKind {
+		return fmt.Errorf("JSON keys cannot be used with type %q", c.Type)
+	}
+	if c.Type.Kind() == types.JSONKind {
+		if len(baseExpr.Keys) > 0 {
+			var value strings.Builder
+			for range baseExpr.Keys {
+				value.WriteString("GET(")
+			}
+			value.WriteString(qname)
+			for _, key := range baseExpr.Keys {
+				value.WriteString(", ")
+				quoteString(&value, key)
+				value.WriteByte(')')
+			}
+			qname = value.String()
+		}
+		return renderJSONExpr(b, baseExpr, qname)
+	}
+	if (c.Type.Kind() == types.ArrayKind || c.Type.Kind() == types.MapKind) && c.Type.Elem().Kind() == types.JSONKind {
+		switch baseExpr.Operator {
+		case warehouses.OpIsEmpty, warehouses.OpIsNotEmpty, warehouses.OpIsNull, warehouses.OpIsNotNull,
+			warehouses.OpExists, warehouses.OpDoesNotExist:
+		case warehouses.OpContains, warehouses.OpDoesNotContain:
+			if c.Type.Kind() == types.ArrayKind {
+				return renderJSONExpr(b, baseExpr, qname)
+			}
+			return fmt.Errorf("operator %d is not supported for type %q", baseExpr.Operator, c.Type)
+		default:
+			return fmt.Errorf("operator %d is not supported for type %q", baseExpr.Operator, c.Type)
+		}
+	}
 
 	// Render the column identifier, the operator, and, if necessary, the values.
 	switch op := baseExpr.Operator; op {
@@ -140,30 +172,13 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		b.WriteString(")")
 
 	case warehouses.OpIsTrue, warehouses.OpIsFalse:
-		switch c.Type.Kind() {
-		case types.BooleanKind:
-			if op == warehouses.OpIsFalse {
-				b.WriteString("NOT ")
-			}
-			b.WriteString(qname)
-		case types.JSONKind:
-			b.WriteString("AS_BOOLEAN(")
-			for range baseExpr.Keys {
-				b.WriteString("GET(")
-			}
-			b.WriteString(qname)
-			for _, key := range baseExpr.Keys {
-				b.WriteString(", ")
-				quoteString(b, key)
-				b.WriteByte(')')
-			}
-			b.WriteString(") IS NOT DISTINCT FROM ")
-			if op == warehouses.OpIsTrue {
-				b.WriteString("TRUE")
-			} else {
-				b.WriteString("FALSE")
-			}
+		if c.Type.Kind() != types.BooleanKind {
+			return fmt.Errorf("operator %d is not supported for type %q", op, c.Type)
 		}
+		if op == warehouses.OpIsFalse {
+			b.WriteString("NOT ")
+		}
+		b.WriteString(qname)
 
 	case warehouses.OpIsEmpty:
 		if c.Nullable {
@@ -176,9 +191,6 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		switch c.Type.Kind() {
 		case types.StringKind:
 			s = " = ''"
-		// See issue https://github.com/krenalis/krenalis/issues/1804.
-		// case types.JSONKind:
-		//	s = " IN (OBJECT_CONSTRUCT(),ARRAY_CONSTRUCT(),'',PARSE_JSON('null'))"
 		case types.ArrayKind:
 			s = " = ARRAY_CONSTRUCT()"
 		case types.MapKind:
@@ -200,9 +212,6 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		switch c.Type.Kind() {
 		case types.StringKind:
 			s = " <> ''"
-		// See issue https://github.com/krenalis/krenalis/issues/1804.
-		// case types.JSONKind:
-		//	s = " NOT IN (OBJECT_CONSTRUCT(),ARRAY_CONSTRUCT(),'',PARSE_JSON('null'))"
 		case types.ArrayKind:
 			s = " <> ARRAY_CONSTRUCT()"
 		case types.MapKind:
@@ -213,11 +222,11 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 			b.WriteByte(')')
 		}
 
-	case warehouses.OpIsNull:
+	case warehouses.OpIsNull, warehouses.OpDoesNotExist:
 		b.WriteString(qname)
 		b.WriteString(" IS NULL")
 
-	case warehouses.OpIsNotNull:
+	case warehouses.OpIsNotNull, warehouses.OpExists:
 		b.WriteString(qname)
 		b.WriteString(" IS NOT NULL")
 
