@@ -20,8 +20,6 @@ func (f fakeHealthChecker) Health(context.Context) []corePkg.HealthCheck {
 	return f
 }
 
-// The recorder does not discard the body of HEAD responses as the HTTP server
-// does, so for HEAD the expected body is the one written by the handlers.
 func Test_serveLivez(t *testing.T) {
 	tests := []struct {
 		method string
@@ -29,7 +27,6 @@ func Test_serveLivez(t *testing.T) {
 		body   string
 	}{
 		{"GET", 200, "ok"},
-		{"HEAD", 200, "ok"},
 		{"POST", 405, "Method Not Allowed\n"},
 	}
 	for _, test := range tests {
@@ -60,7 +57,6 @@ func Test_readyzHandler(t *testing.T) {
 		{"ok", ok, false, "GET", "/readyz", 200, "ok"},
 		{"verbose", ok, false, "GET", "/readyz?verbose", 200,
 			"[+]postgres ok\n[+]nats ok\n[+]shutdown ok\nreadyz check passed"},
-		{"head", ok, false, "HEAD", "/readyz", 200, "ok"},
 		{"postgres down", fakeHealthChecker{{Name: "postgres"}, {Name: "nats", OK: true}}, false, "GET", "/readyz", 503,
 			"[-]postgres failed\n[+]nats ok\n[+]shutdown ok\nreadyz check failed"},
 		{"nats down", fakeHealthChecker{{Name: "postgres", OK: true}, {Name: "nats"}}, false, "GET", "/readyz", 503,
