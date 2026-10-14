@@ -1141,13 +1141,16 @@ func (this *Organization) SetStatus(ctx context.Context, enabled bool) error {
 	}
 
 	// Waits for the metrics to be saved.
-	this.core.metrics.Pipelines.WaitStore()
+	err := this.core.metrics.Pipelines.WaitStore(ctx)
+	if err != nil {
+		return fmt.Errorf("cannot wait for pipeline metrics: %s", err)
+	}
 
 	n := state.SetOrganizationStatus{
 		ID:      this.organization.ID,
 		Enabled: enabled,
 	}
-	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		result, err := tx.Exec(ctx, "UPDATE organizations SET enabled = $1 WHERE id = $2 AND enabled <> $1", n.Enabled, n.ID)
 		if err != nil {
 			return nil, err
