@@ -741,8 +741,9 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 // returns its property path.
 func validateFilterCondition(cond *FilterCondition, validation *filterValidation) (string, error) {
 
-	// disallowJSON indicates whether JSON properties are disallowed.
-	disallowJSON := validation.role == state.Destination && validation.target == state.TargetUser
+	// disallowEmptyOnObject indicates whether the "is empty" and "is not empty"
+	// operators are disallowed on object properties.
+	disallowEmptyOnObject := validation.role == state.Destination && validation.target == state.TargetUser || validation.target == state.TargetEvent
 
 	if !types.IsValidPropertyPath(cond.Property) {
 		return "", errors.New("property path is not valid")
@@ -755,10 +756,6 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 
 	op := cond.Operator
 	kind := p.Type.Kind()
-
-	if disallowJSON && kind == types.JSONKind {
-		return "", fmt.Errorf("property %q has type json, which is not supported in data warehouse exports", path)
-	}
 
 	// Validate the operator for the property kind.
 	//

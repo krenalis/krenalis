@@ -15,10 +15,12 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/test/warehouseexpr"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -1644,8 +1646,8 @@ func Test_validateFilter(t *testing.T) {
 					&FilterCondition{Property: "d.p", Operator: OpIsNotEmpty},
 				},
 			},
-			role: &destinationRole,
-			err:  errors.New(`property "d" has type json, which is not supported in data warehouse exports`),
+			role:     &destinationRole,
+			expected: []string{"d"},
 		},
 		{
 			name: "all valid operators",
@@ -1731,6 +1733,89 @@ func Test_validateFilter(t *testing.T) {
 				t.Fatalf("expected %q, got %q", test.expected, got)
 			}
 		})
+	}
+
+}
+
+// Test_validateJSONFilters verifies JSON filter validation across roles and
+// targets and checks that a conversion round trip preserves the input and
+// original value text.
+func Test_validateJSONFilters(t *testing.T) {
+
+	_, cases := warehouseexpr.JSONCases()
+	if len(cases) == 0 {
+		t.Fatal("expected at least one JSON test case, got 0")
+	}
+	schema := types.Object([]types.Property{
+		{Name: "value", Type: types.JSON(), ReadOptional: true},
+		{Name: "array", Type: types.Array(types.JSON()), ReadOptional: true},
+		{Name: "map", Type: types.Map(types.JSON()), ReadOptional: true},
+	})
+	for _, role := range []state.Role{state.Source, state.Destination} {
+		for _, target := range []state.Target{state.TargetUser, state.TargetEvent} {
+			for _, path := range []string{"value", "value.a.b", "array", "map"} {
+				for _, c := range cases {
+					if c.Operator < 0 || int(c.Operator) >= len(operators) {
+						t.Fatalf("expected known JSON operator for %s, got %d", c.Name, c.Operator)
+					}
+					op := operators[c.Operator]
+					if path == "array" || path == "map" {
+						allowed := op == OpExists || op == OpDoesNotExist || op == OpIsEmpty || op == OpIsNotEmpty
+						if path == "array" {
+							allowed = allowed || op == OpContains || op == OpDoesNotContain
+						}
+						if !allowed {
+							continue
+						}
+					}
+					t.Run(fmt.Sprintf("%s/%s/%s/%s", role, target, path, c.Name), func(t *testing.T) {
+
+						var values []string
+						for i, raw := range c.Values {
+							value, ok := raw.(warehouses.JSONConditionValue)
+							if !ok {
+								t.Fatalf("expected warehouses.JSONConditionValue at index %d, got %T", i, raw)
+							}
+							values = append(values, value.String)
+						}
+						filter := &Filter{Operator: OpAnd, Rules: []FilterRule{
+							&FilterCondition{Property: path, Operator: op, Values: values},
+						}}
+						expected := &Filter{Operator: OpAnd, Rules: []FilterRule{
+							&FilterCondition{Property: path, Operator: op, Values: slices.Clone(values)},
+						}}
+						hasEmptyValue := slices.Contains(values, "")
+
+						_, err := validateFilter(filter, schema, role, target)
+						if diff := cmp.Diff(expected, filter); diff != "" {
+							t.Fatalf("expected unchanged input after validation, got difference (-want +got):\n%s", diff)
+						}
+						if err != nil {
+							if !hasEmptyValue {
+								t.Fatalf("expected valid JSON filter, got %v", err)
+							}
+							if err.Error() != "condition value is empty" {
+								t.Fatalf("expected empty condition value error, got %v", err)
+							}
+							return
+						}
+						if hasEmptyValue {
+							t.Fatal("expected empty condition value rejection, got nil")
+						}
+						where := convertFilterToWhere(filter, schema)
+						// convertWhereToFilter must preserve the user's numeric spelling.
+						got := convertWhereToFilter(where, schema)
+						if diff := cmp.Diff(expected, filter); diff != "" {
+							t.Errorf("expected unchanged input, got difference (-want +got):\n%s", diff)
+						}
+						if diff := cmp.Diff(expected, got); diff != "" {
+							t.Fatalf("expected original filter, got difference (-want +got):\n%s", diff)
+						}
+
+					})
+				}
+			}
+		}
 	}
 
 }
