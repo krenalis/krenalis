@@ -392,7 +392,7 @@ func Test_TypeSemanticsJSONErrors(t *testing.T) {
 		},
 		{
 			"country on boolean", `{"kind":"boolean","semantics":"country","format":"alpha-2"}`,
-			"country semantics require string type",
+			"country semantics require a string type",
 		},
 		{
 			"country with max bytes",
@@ -436,11 +436,11 @@ func Test_TypeSemanticsJSONErrors(t *testing.T) {
 		},
 		{
 			"money on int", `{"kind":"int","bitSize":64,"semantics":"money"}`,
-			"money semantics require decimal type",
+			"money semantics require a decimal type",
 		},
 		{
 			"money on real float", `{"kind":"float","bitSize":64,"real":true,"semantics":"money"}`,
-			"money semantics require decimal type",
+			"money semantics require a decimal type",
 		},
 		{
 			"missing measurement unit", `{"kind":"decimal","precision":10,"scale":2,"semantics":"measurement"}`,

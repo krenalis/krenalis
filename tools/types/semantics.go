@@ -357,28 +357,28 @@ func (t Type) withSemantics(semantics Semantics, option any) (Type, error) {
 	switch semantics {
 	case EmailSemantics:
 		if t.kind != StringKind {
-			return Type{}, errors.New("email semantics require string type")
+			return Type{}, errors.New("email semantics require a string type")
 		}
 		if option != nil {
 			return Type{}, errors.New("email semantics do not accept an option")
 		}
 	case PhoneSemantics:
 		if t.kind != StringKind {
-			return Type{}, errors.New("phone semantics require string type")
+			return Type{}, errors.New("phone semantics require a string type")
 		}
 		if option != nil {
 			return Type{}, errors.New("phone semantics do not accept an option")
 		}
 	case URLSemantics:
 		if t.kind != StringKind {
-			return Type{}, errors.New("URL semantics require string type")
+			return Type{}, errors.New("URL semantics require a string type")
 		}
 		if option != nil {
 			return Type{}, errors.New("URL semantics do not accept an option")
 		}
 	case CountrySemantics:
 		if t.kind != StringKind {
-			return Type{}, errors.New("country semantics require string type")
+			return Type{}, errors.New("country semantics require a string type")
 		}
 		format, ok := option.(CountryFormat)
 		if !ok || format != ISO3166Alpha2 && format != ISO3166Alpha3 {
@@ -386,14 +386,14 @@ func (t Type) withSemantics(semantics Semantics, option any) (Type, error) {
 		}
 	case MoneySemantics:
 		if t.kind != DecimalKind {
-			return Type{}, errors.New("money semantics require decimal type")
+			return Type{}, errors.New("money semantics require a decimal type")
 		}
 		if option != nil {
 			return Type{}, errors.New("money semantics do not accept an option")
 		}
 	case PercentageSemantics:
 		if t.kind != DecimalKind {
-			return Type{}, errors.New("percentage semantics require decimal type")
+			return Type{}, errors.New("percentage semantics require a decimal type")
 		}
 		if option != nil {
 			return Type{}, errors.New("percentage semantics do not accept an option")
