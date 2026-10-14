@@ -1770,6 +1770,33 @@ func TestParseSettings(t *testing.T) {
 		}
 	})
 
+	t.Run("MaxMind DB S3 URI", func(t *testing.T) {
+		setBaseline(t)
+		t.Setenv("KRENALIS_MAXMIND_DB_PATH", "s3://bucket/dir/GeoIP2.mmdb")
+		s, err := loadConfigFn()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if want := "s3://bucket/dir/GeoIP2.mmdb"; s.MaxMindDBPath != want {
+			t.Fatalf("expected %q, got %q", want, s.MaxMindDBPath)
+		}
+	})
+
+	t.Run("MaxMind DB S3 URI invalid", func(t *testing.T) {
+		for _, uri := range []string{"s3://", "s3://bucket", "s3://bucket/", "s3:///key"} {
+			setBaseline(t)
+			t.Setenv("KRENALIS_MAXMIND_DB_PATH", uri)
+			_, err := loadConfigFn()
+			if err == nil {
+				t.Fatalf("%q: expected error, got nil", uri)
+			}
+			want := "KRENALIS_MAXMIND_DB_PATH must be an S3 URI in the form s3://bucket/key"
+			if err.Error() != want {
+				t.Fatalf("%q: expected %q, got %q", uri, want, err)
+			}
+		}
+	})
+
 	t.Run("maxmind path missing", func(t *testing.T) {
 		nonexistentFile := "/no/such.mmdb"
 		if runtime.GOOS == "windows" {

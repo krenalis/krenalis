@@ -31,6 +31,9 @@ import (
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/validation"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/oschwald/maxminddb-golang/v2"
 )
 
@@ -38,6 +41,10 @@ var errStreamUnavailable = errors.New("stream unavailable")
 
 // maxRequestSize is the maximum size inBatchRequests bytes of an event request body.
 const maxRequestSize = 500 * 1024
+
+// maxMaxMindDBSize is the maximum size in bytes of a MaxMind db downloaded
+// from S3.
+const maxMaxMindDBSize = 512 * 1024 * 1024
 
 // pipelineWorker represents a long-running pipeline event processor.
 type pipelineWorker func()
@@ -80,11 +87,11 @@ type Collector struct {
 
 // New returns a new collector.
 //
-// maxMindDBPath is the path to the MaxMind db file, used for enriching the
-// events with geolocation information; if not provided, the database file is
-// not opened and the geolocation information are not automatically added by
-// Krenalis.
-func New(db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datastore, connections *connections.Connections,
+// maxMindDBPath is the path to the MaxMind db file, or an S3 URI in the form
+// s3://bucket/key, used for enriching the events with geolocation information;
+// if not provided, the database file is not opened and the geolocation
+// information are not automatically added by Krenalis.
+func New(ctx context.Context, db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datastore, connections *connections.Connections,
 	provider transformers.FunctionProvider, metrics *metrics.Metrics, maxMindDBPath string) (*Collector, error) {
 
 	var c = &Collector{
@@ -125,7 +132,35 @@ func New(db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datast
 	}
 	st.Unfreeze()
 
-	if maxMindDBPath != "" {
+	if location, ok := strings.CutPrefix(maxMindDBPath, "s3://"); ok {
+		bucket, key, _ := strings.Cut(location, "/")
+		if bucket == "" || key == "" {
+			return nil, fmt.Errorf("invalid maxmind DB S3 URI %q", maxMindDBPath)
+		}
+		cfg, err := awsconfig.LoadDefaultConfig(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("cannot load AWS config: %s", err)
+		}
+		res, err := awss3.NewFromConfig(cfg).GetObject(ctx, &awss3.GetObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(key),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("cannot download maxmind DB from %q: %s", maxMindDBPath, err)
+		}
+		defer res.Body.Close()
+		data, err := io.ReadAll(io.LimitReader(res.Body, maxMaxMindDBSize+1))
+		if err != nil {
+			return nil, fmt.Errorf("cannot download maxmind DB from %q: %s", maxMindDBPath, err)
+		}
+		if len(data) > maxMaxMindDBSize {
+			return nil, fmt.Errorf("maxmind DB at %q is larger than %d bytes", maxMindDBPath, maxMaxMindDBSize)
+		}
+		c.maxmindDB, err = maxminddb.OpenBytes(data)
+		if err != nil {
+			return nil, fmt.Errorf("cannot open maxmind DB from %q: %s", maxMindDBPath, err)
+		}
+	} else if maxMindDBPath != "" {
 		var err error
 		c.maxmindDB, err = maxminddb.Open(maxMindDBPath)
 		if err != nil {
