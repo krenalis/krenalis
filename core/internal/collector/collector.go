@@ -124,6 +124,9 @@ func New(ctx context.Context, db *db.DB, stream streams.Stream, st *state.State,
 			return nil, fmt.Errorf("cannot download maxmind DB from %q: %s", maxMindDBPath, err)
 		}
 		defer res.Body.Close()
+		if res.ContentLength != nil && *res.ContentLength > maxMaxMindDBSize {
+			return nil, fmt.Errorf("maxmind DB at %q is larger than %d bytes", maxMindDBPath, maxMaxMindDBSize)
+		}
 		data, err := io.ReadAll(io.LimitReader(res.Body, maxMaxMindDBSize+1))
 		if err != nil {
 			return nil, fmt.Errorf("cannot download maxmind DB from %q: %s", maxMindDBPath, err)
