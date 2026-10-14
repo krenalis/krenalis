@@ -833,6 +833,24 @@ func (core *Core) HTTPSecretKey(ctx context.Context) ([]byte, error) {
 	return core.state.HTTPSecretKey(ctx)
 }
 
+// HealthCheck is the result of a readiness check performed by [Core.Health].
+type HealthCheck struct {
+	Name string // "postgres" or "nats"
+	OK   bool
+}
+
+// Health checks the dependencies of the core and returns one result for each
+// of them. It does not return the causes of the failures.
+func (core *Core) Health(ctx context.Context) []HealthCheck {
+	core.mustBeOpen()
+	pingCtx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+	return []HealthCheck{
+		{Name: "postgres", OK: core.db.Ping(pingCtx) == nil},
+		{Name: "nats", OK: core.stream.Up()},
+	}
+}
+
 // InstallationID returns the installation ID.
 func (core *Core) InstallationID() string {
 	return core.state.InstallationID()

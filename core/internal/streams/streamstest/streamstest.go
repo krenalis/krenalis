@@ -18,6 +18,7 @@ type Stream struct {
 	BatchFunc   func(context.Context) (streams.BatchPublisher, error)
 	CloseFunc   func() error
 
+	UpValue      bool
 	WaitUpValue  bool
 	BatchValue   streams.BatchPublisher
 	BatchError   error
@@ -53,6 +54,10 @@ func (s *Stream) Consume(topic string, size int) streams.Consumer {
 		return s.ConsumeValue
 	}
 	return &consumer{EventsCh: closedEvents, EventsError: s.EventsError}
+}
+
+func (s *Stream) Up() bool {
+	return s.UpValue
 }
 
 func (s *Stream) WaitUp(ctx context.Context) bool {

@@ -260,6 +260,11 @@ func (s *stream) Close() error {
 	return err
 }
 
+// Up reports whether the stream is up and available.
+func (s *stream) Up() bool {
+	return s.up.Load()
+}
+
 // WaitUp blocks until the stream is up and available.
 // It returns false if the context is canceled, the stream is closed, or the
 // stream remains down for too long.
