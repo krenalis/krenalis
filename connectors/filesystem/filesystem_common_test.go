@@ -27,7 +27,7 @@ func TestInvalidName(t *testing.T) {
 		name    string
 		message string
 	}{
-		{"/", "path name must refer to a file, not to the root directory"},
+		{"/", "path name cannot refer to the root directory"},
 		{".", dotsMessage},
 		{"..", dotsMessage},
 		{"./b", dotsMessage},

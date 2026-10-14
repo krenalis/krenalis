@@ -93,7 +93,7 @@ func (fs *FileSystem) AbsolutePath(ctx context.Context, name string) (string, er
 		elems := strings.Split(rel, "/")
 		switch {
 		case rel == "":
-			return "", connectors.InvalidPathErrorf("path name must refer to a file, not to the root directory")
+			return "", connectors.InvalidPathErrorf("path name cannot refer to the root directory")
 		case strings.HasSuffix(rel, "/"):
 			return "", connectors.InvalidPathErrorf("path name cannot end with a slash")
 		case slices.Contains(elems, "."), slices.Contains(elems, ".."):
