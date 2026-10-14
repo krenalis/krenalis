@@ -91,8 +91,7 @@ type Collector struct {
 // s3://bucket/key, used for enriching the events with geolocation information;
 // if not provided, the database file is not opened and the geolocation
 // information are not automatically added by Krenalis.
-func New(ctx context.Context, db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datastore, connections *connections.Connections,
-	provider transformers.FunctionProvider, metrics *metrics.Metrics, maxMindDBPath string) (*Collector, error) {
+func New(ctx context.Context, db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datastore, connections *connections.Connections, provider transformers.FunctionProvider, metrics *metrics.Metrics, maxMindDBPath string) (*Collector, error) {
 
 	var c = &Collector{
 		db:               db,
