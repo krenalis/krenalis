@@ -425,7 +425,8 @@ func (t Type) withSemantics(semantics Semantics, option any) (Type, error) {
 	return t, nil
 }
 
-// semanticsNumericType reports whether t is an int, decimal, or real float type.
+// semanticsNumericType reports whether t is an int, decimal, or real float
+// type.
 func semanticsNumericType(t Type) bool {
 	switch t.kind {
 	case IntKind, DecimalKind:
