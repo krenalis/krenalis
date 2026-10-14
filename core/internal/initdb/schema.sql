@@ -366,7 +366,7 @@ CREATE TABLE discontinued_functions (
 );
 
 CREATE TABLE election (
-    number integer NOT NULL,
+    number bigint NOT NULL,
     leader varchar(22) NOT NULL CHECK (leader = '' OR leader ~ '^[1-9A-HJ-NP-Za-km-z]{22}$'),
     date timestamp NOT NULL,
     PRIMARY KEY (number)

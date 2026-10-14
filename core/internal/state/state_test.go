@@ -1032,14 +1032,12 @@ func TestStateTransactionApplied(t *testing.T) {
 			}
 
 			if mode == "replay" {
-				state.close.Add(1)
-				go func() {
-					defer state.close.Done()
+				state.close.Go(func() {
 					err := state.replay(state.close.ctx, session, 124, nil)
 					if err != nil {
 						t.Errorf("expected committed event replay, got %v", err)
 					}
-				}()
+				})
 				t.Cleanup(func() { state.close.cancel(); state.close.Wait() })
 			} else {
 				startReplication(t, state, session)
@@ -1396,14 +1394,12 @@ func TestStateCloseWaiters(t *testing.T) {
 		releaseDispatch := sync.OnceFunc(func() { close(release) })
 		defer releaseDispatch()
 		state.listeners = []any{func(AddConsentPurpose) { <-release }}
-		state.close.Add(1)
-		go func() {
-			defer state.close.Done()
+		state.close.Go(func() {
 			err := state.applyNotification(notification{124, "AddConsentPurpose", `{"Workspace":"6NpT4zB8QaR2","ID":"D7hV4xK9mP2a"}`}, nil)
 			if err != nil {
 				t.Errorf("expected completed in-flight event, got %v", err)
 			}
-		}()
+		})
 
 		const count = 32
 		results := make(chan error, count)

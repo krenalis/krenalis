@@ -1101,6 +1101,10 @@ func (state *State) electLeader(n notification) {
 		lastSeen: time.Now(),
 	}
 	state.mu.Lock()
+	if e.Number <= state.election.number {
+		state.mu.Unlock()
+		return
+	}
 	previous := state.election.leader
 	state.election = election
 	state.mu.Unlock()
