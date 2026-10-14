@@ -7,7 +7,6 @@ package state
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -17,6 +16,7 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/tools/backoff"
+	"github.com/krenalis/krenalis/tools/errors"
 )
 
 var debugElection = false
@@ -100,20 +100,17 @@ func (state *State) keepElections() {
 		if err := state.sleep(d); err != nil {
 			return err
 		}
-		election.number++
-		if int32(election.number) < 0 {
-			election.number = 1
-		}
 		state.mu.Lock()
 		number := state.election.number
 		state.mu.Unlock()
-		if election.number == number {
+		if election.number < number {
 			debugf("\telection already ended\n")
 			return nil
 		}
-		debugf("\ttry election %d: ", election.number)
+		debugf("\ttry election after %d: ", election.number)
 		err := state.electAsLeader(election.number)
 		if err == nil {
+			election.number++
 			debugf("elected!\n")
 			if err := state.sleep(leaderInterval); err != nil {
 				return err
@@ -163,21 +160,20 @@ func (state *State) keepElections() {
 // errEndedElection indicates that an election is ended.
 var errEndedElection = errors.New("ended election")
 
-// electAsLeader attempts to elect the current node as leader in the given
-// election. It returns an errEndedElection error if the given election is
-// ended.
-func (state *State) electAsLeader(election int) error {
-	n := ElectLeader{Leader: state.id, Number: election}
-	var prevElection = election - 1
-	if prevElection == 0 {
-		prevElection = math.MaxInt32
+// electAsLeader attempts to elect this node in the election following
+// previousElection, using the State's lifecycle context. It returns
+// errEndedElection if no election row has number previousElection.
+func (state *State) electAsLeader(previousElection int) error {
+	if previousElection == math.MaxInt64 {
+		return errors.New("election number limit reached")
 	}
+	n := ElectLeader{Leader: state.id, Number: previousElection + 1}
 	ctx := state.close.ctx
 	err := state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var t bool
 		err := tx.QueryRow(ctx, "UPDATE election\n"+
 			"SET number = $1, leader = $2, date = NOW()::timestamp\n"+
-			"WHERE number = $3 RETURNING true", n.Number, n.Leader, prevElection).Scan(&t)
+			"WHERE number = $3 RETURNING true", n.Number, n.Leader, previousElection).Scan(&t)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				err = errEndedElection

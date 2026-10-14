@@ -11,10 +11,12 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"net"
 	"os"
 	"os/exec"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -447,6 +449,107 @@ func TestReplicationGapAndElections(t *testing.T) {
 	state.close.Wait()
 	if strings.Join(seen, ",") != "first,from-log,barrier" || state.election.number != 3 || state.election.leader != "leader" {
 		t.Fatalf("expected replay once and queued version-zero elections, got %v election=%+v", seen, state.election)
+	}
+
+}
+
+// TestReplicationIgnoresReplayedElections verifies that replaying an old
+// election neither overwrites a newer election nor dispatches it again.
+func TestReplicationIgnoresReplayedElections(t *testing.T) {
+
+	database, key := replicationDatabase(t)
+	state, session := replicationState(t, database, key)
+	observer, err := state.notifications.connect(t.Context())
+	if err != nil {
+		t.Fatalf("expected notification observer, got %v", err)
+	}
+	defer closeNotificationConnection(observer)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+
+	first := ElectLeader{Number: math.MaxInt32 + 1, Leader: "first"}
+	second := ElectLeader{Number: first.Number + 1, Leader: "second"}
+	barrier := AddConsentPurpose{Workspace: stateTestWorkspaceID, ID: stateTestBarrierPurposeID, Name: "barrier"}
+	initialVersion := state.Version()
+	secondProcessed := make(chan struct{})
+	processed := make(chan struct{})
+	originalConn := session.conn
+	var seen []ElectLeader
+	state.listeners = []any{
+		func(e ElectLeader) {
+			seen = append(seen, e)
+			if e == second {
+				close(secondProcessed)
+			}
+		},
+		func(e AddConsentPurpose) {
+			if e.ID == barrier.ID {
+				if session.conn != originalConn {
+					t.Error("expected the original notification connection through the replay, got a replacement")
+				}
+				close(processed)
+			}
+		},
+	}
+	startReplication(t, state, session)
+
+	// Capture a real producer notification before electing another leader.
+	err = state.Transaction(ctx, func(tx *db.Tx) (any, error) { return first, nil })
+	if err != nil {
+		t.Fatalf("expected first election committed, got %v", err)
+	}
+	raw, err := observer.Underlying().WaitForNotification(ctx)
+	if err != nil {
+		t.Fatalf("expected captured election, got %v", err)
+	}
+	err = state.Transaction(ctx, func(tx *db.Tx) (any, error) { return second, nil })
+	if err != nil {
+		t.Fatalf("expected second election committed, got %v", err)
+	}
+	select {
+	case <-secondProcessed:
+	case <-ctx.Done():
+		t.Fatalf("expected second election applied before replay, got %v", ctx.Err())
+	}
+	state.mu.Lock()
+	expectedElection := state.election
+	state.mu.Unlock()
+	if expectedElection.number != second.Number || expectedElection.leader != second.Leader {
+		t.Fatalf("expected second election %+v before replay, got %+v", second, expectedElection)
+	}
+	if got := state.Version(); got != initialVersion {
+		t.Fatalf("expected state version %d before replay, got %d", initialVersion, got)
+	}
+
+	// Replay the ciphertext unchanged, without using the notification key.
+	sendReplicationFragment(t, database, raw.Payload)
+	// Send the barrier only through NOTIFY so log replay cannot deliver it.
+	// AddConsentPurpose leaves the election unchanged.
+	sendReplicationEvent(t, database, key, initialVersion+1, barrier)
+	select {
+	case <-processed:
+	case <-ctx.Done():
+		t.Fatalf("expected notification barrier after replay, got %v", ctx.Err())
+	}
+	state.close.cancel()
+	state.close.Wait()
+
+	if got := state.election; got != expectedElection {
+		t.Fatalf("expected unchanged election %+v after replay, got %+v", expectedElection, got)
+	}
+	if expected := []ElectLeader{first, second}; !slices.Equal(seen, expected) {
+		t.Fatalf("expected election dispatches %v, got %v", expected, seen)
+	}
+	if got := state.Version(); got != initialVersion+1 {
+		t.Fatalf("expected state version %d after the barrier, got %d", initialVersion+1, got)
+	}
+	var count int
+	err = database.QueryRow(t.Context(), "SELECT count(*) FROM notifications").Scan(&count)
+	if err != nil {
+		t.Fatalf("expected notification log query, got %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("expected elections outside the notification log, got %d rows", count)
 	}
 
 }

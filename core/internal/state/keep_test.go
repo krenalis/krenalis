@@ -8,11 +8,13 @@ import (
 	"bytes"
 	"context"
 	"maps"
+	"math"
 	"reflect"
 	"slices"
 	"sync"
 	"testing"
 	"testing/synctest"
+	"time"
 
 	"github.com/krenalis/krenalis/core/internal/state/ratelimiter"
 	"github.com/krenalis/krenalis/tools/json"
@@ -140,14 +142,12 @@ func TestApplyProcessesNotificationInOrder(t *testing.T) {
 		go func() { completed <- state.waitVersion(t.Context(), 8) }()
 		synctest.Wait()
 
-		state.close.Add(1)
-		go func() {
-			defer state.close.Done()
+		state.close.Go(func() {
 			err := state.applyNotification(notification{8, "AddConsentPurpose", `{"Workspace":"6NpT4zB8QaR2","ID":"D7hV4xK9mP2a","Name":"Marketing"}`}, nil)
 			if err != nil {
 				t.Errorf("expected applied notification, got %v", err)
 			}
-		}()
+		})
 		synctest.Wait()
 		if calls != 1 || state.Version() != 7 {
 			t.Fatalf("expected pending dispatch and version 7, got calls=%d version=%d", calls, state.Version())
@@ -177,6 +177,75 @@ func TestApplyProcessesNotificationInOrder(t *testing.T) {
 			t.Fatalf("expected Marketing consent purpose, got %#v", purpose)
 		}
 	})
+}
+
+// TestElectLeaderIgnoresStaleElections verifies that stale and duplicate
+// elections are ignored, while newer elections update the state and notify
+// listeners only when the leader changes.
+func TestElectLeaderIgnoresStaleElections(t *testing.T) {
+
+	const currentNumber = math.MaxInt32 + 2
+	for _, test := range []struct {
+		name       string
+		number     int
+		leader     string
+		apply      bool
+		dispatches int
+	}{
+		{"old", currentNumber - 1, "previous", false, 0},
+		{"duplicate", currentNumber, "current", false, 0},
+		{"duplicate-different-leader", currentNumber, "other", false, 0},
+		{"next", currentNumber + 1, "next", true, 1},
+		{"missed-elections", currentNumber + 3, "next", true, 1},
+		{"same-leader", currentNumber + 1, "current", true, 0},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+
+				previous := election{number: currentNumber, leader: "current", lastSeen: time.Unix(1, 0)}
+				state := &State{mu: &sync.Mutex{}, changing: &sync.RWMutex{}, election: previous}
+				state.version.current = 123
+				calls := 0
+				var received ElectLeader
+				state.listeners = []any{func(e ElectLeader) {
+					calls++
+					received = e
+				}}
+				event := ElectLeader{Number: test.number, Leader: test.leader}
+				payload, err := json.Marshal(event)
+				if err != nil {
+					t.Fatalf("expected encoded election, got %v", err)
+				}
+
+				now := time.Now()
+				err = state.applyNotification(notification{Version: 0, Name: "ElectLeader", Payload: string(payload)}, nil)
+				if err != nil {
+					t.Fatalf("expected election handling, got %v", err)
+				}
+				if test.apply {
+					if state.election.number != test.number || state.election.leader != test.leader {
+						t.Fatalf("expected election %d with leader %q, got %+v", test.number, test.leader, state.election)
+					}
+					if !state.election.lastSeen.Equal(now) {
+						t.Fatalf("expected last-seen time %v, got %v", now, state.election.lastSeen)
+					}
+				} else if state.election != previous {
+					t.Fatalf("expected unchanged election %+v, got %+v", previous, state.election)
+				}
+				if calls != test.dispatches {
+					t.Fatalf("expected %d listener calls, got %d", test.dispatches, calls)
+				}
+				if test.dispatches == 1 && received != event {
+					t.Fatalf("expected listener event %+v, got %+v", event, received)
+				}
+				if got := state.Version(); got != 123 {
+					t.Fatalf("expected state version 123, got %d", got)
+				}
+
+			})
+		})
+	}
+
 }
 
 // TestReplaceConsentPurpose checks that replacing a consent purpose does not
