@@ -105,32 +105,6 @@ func New(ctx context.Context, db *db.DB, stream streams.Stream, st *state.State,
 	c.workers.cancelPipeline = map[string]context.CancelFunc{}
 	c.workers.cancelConnection = map[string]context.CancelFunc{}
 
-	st.Freeze()
-	st.AddListener(c.onCreateConnection)
-	st.AddListener(c.onCreatePipeline)
-	st.AddListener(c.onCreateWorkspace)
-	st.AddListener(c.onDeleteConnection)
-	st.AddListener(c.onDeletePipeline)
-	st.AddListener(c.onDeleteOrganization)
-	st.AddListener(c.onDeleteWorkspace)
-	st.AddListener(c.onLinkConnection)
-	st.AddListener(c.onSetOrganizationStatus)
-	st.AddListener(c.onSetPipelineStatus)
-	st.AddListener(c.onUnlinkConnection)
-	st.AddListener(c.onUpdateConsentPurpose)
-	st.AddListener(c.onUpdatePipeline)
-	for _, org := range st.Organizations() {
-		if org.Enabled {
-			for _, ws := range org.Workspaces() {
-				c.addWorkspace(ws.ID)
-				for _, connection := range ws.Connections() {
-					c.addConnection(connection)
-				}
-			}
-		}
-	}
-	st.Unfreeze()
-
 	if location, ok := strings.CutPrefix(maxMindDBPath, "s3://"); ok {
 
 		bucket, key, _ := strings.Cut(location, "/")
@@ -170,6 +144,32 @@ func New(ctx context.Context, db *db.DB, stream streams.Stream, st *state.State,
 			return nil, fmt.Errorf("cannot open maxmind DB at path %q: %s", maxMindDBPath, err)
 		}
 	}
+
+	st.Freeze()
+	st.AddListener(c.onCreateConnection)
+	st.AddListener(c.onCreatePipeline)
+	st.AddListener(c.onCreateWorkspace)
+	st.AddListener(c.onDeleteConnection)
+	st.AddListener(c.onDeletePipeline)
+	st.AddListener(c.onDeleteOrganization)
+	st.AddListener(c.onDeleteWorkspace)
+	st.AddListener(c.onLinkConnection)
+	st.AddListener(c.onSetOrganizationStatus)
+	st.AddListener(c.onSetPipelineStatus)
+	st.AddListener(c.onUnlinkConnection)
+	st.AddListener(c.onUpdateConsentPurpose)
+	st.AddListener(c.onUpdatePipeline)
+	for _, org := range st.Organizations() {
+		if org.Enabled {
+			for _, ws := range org.Workspaces() {
+				c.addWorkspace(ws.ID)
+				for _, connection := range ws.Connections() {
+					c.addConnection(connection)
+				}
+			}
+		}
+	}
+	st.Unfreeze()
 
 	return c, nil
 }
