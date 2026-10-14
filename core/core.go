@@ -1580,15 +1580,6 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 		// Stop pinging as it is no longer required.
 		stopPing()
 
-		// Refresh identity metrics after a successful import.
-		if c.Role == state.Source && runErr == nil {
-			err := core.metrics.Identities.Refresh(core.close.ctx, ws.ID)
-			if err != nil {
-				slog.Error("core: cannot refresh identity metrics at the end of import",
-					"workspace", ws.ID, "run", run.ID, "error", warehouses.NewOperationError(err))
-			}
-		}
-
 		// Start the Identity Resolution, if necessary.
 		if c.Role == state.Source && ws.ResolveIdentitiesOnBatchImport {
 			err := core.startIdentityResolution(core.close.ctx, ws.ID)
@@ -1597,6 +1588,15 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 				if !ok || err2.Code != OperationAlreadyExecuting {
 					slog.Error("core: cannot start Identity Resolution at the end of import", "pipeline", pipeline.ID, "run", run.ID, "error", err)
 				}
+			}
+		}
+
+		// Refresh identity metrics after a successful import.
+		if c.Role == state.Source && runErr == nil {
+			err := core.metrics.Identities.Refresh(core.close.ctx, ws.ID)
+			if err != nil {
+				slog.Error("core: cannot refresh identity metrics at the end of import",
+					"workspace", ws.ID, "run", run.ID, "error", warehouses.NewOperationError(err))
 			}
 		}
 
