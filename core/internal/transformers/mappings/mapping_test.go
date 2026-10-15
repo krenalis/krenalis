@@ -130,8 +130,16 @@ func TestMappingSemanticsValidation(t *testing.T) {
 								if mode != "constant" {
 									t.Fatalf("expected mapping creation to succeed for %s mode, got %v", mode, err)
 								}
-								if !strings.Contains(err.Error(), " is not convertible to the ") {
-									t.Fatalf("expected constant conversion error, got %v", err)
+								want := " is not a valid phone number"
+								if test.typ.Semantics() == types.CountrySemantics {
+									want = " is not a 2-letter country code"
+									if test.typ.CountryFormat() == types.ISO3166Alpha3 {
+										want = " is not a 3-letter country code"
+									}
+								}
+								want = strconv.Quote(test.value) + want
+								if !strings.Contains(err.Error(), want) {
+									t.Fatalf("expected error containing %q, got %v", want, err)
 								}
 								return
 							}
