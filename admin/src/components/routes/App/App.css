@@ -288,10 +288,6 @@ sl-dialog::part(body) {
 	padding-top: 0px;
 }
 
-sl-tab-group::part(body) {
-	overflow: visible;
-}
-
 sl-split-panel {
 	--divider-width: 2px;
 }
@@ -1457,6 +1453,31 @@ wa-icon::part(svg) {
 	content: '';
 	line-height: calc(1lh + 4px + var(--sl-spacing-3x-small));
 	vertical-align: top;
+}
+
+/* Web Awesome tabs, drawn as Shoelace drew them, at zero specificity. */
+:where(wa-tab-group) {
+	--indicator-color: var(--sl-color-primary-600);
+	--track-color: var(--sl-color-neutral-200);
+}
+
+/* Shoelace drew the focus ring on the host, where the global outline-color
+   reaches it; Web Awesome draws it on the part. */
+:where(wa-tab)::part(tab) {
+	font-size: var(--sl-font-size-small);
+	padding: var(--sl-spacing-medium) var(--sl-spacing-large);
+	border-radius: var(--sl-border-radius-medium);
+	outline-color: var(--color-primary-500);
+}
+
+:where(wa-tab:not([disabled]):hover) {
+	color: var(--sl-color-primary-600);
+}
+
+/* The padding of a top or bottom group. The placement is not reflected, so a
+   group placed at the start or the end sets its own. */
+:where(wa-tab-panel) {
+	--padding: var(--sl-spacing-medium) 0;
 }
 
 /* || Radix */

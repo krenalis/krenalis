@@ -189,7 +189,7 @@
 	padding-bottom: 0;
 }
 
-.profile-drawer sl-tab-group sl-tab-panel::part(base) {
+.profile-drawer wa-tab-group wa-tab-panel::part(base) {
 	max-height: calc(100% - 200px);
 	overflow: auto;
 	margin-top: 10px;
@@ -197,7 +197,7 @@
 	padding-bottom: 5px;
 }
 
-.profile-drawer--loading sl-tab-group sl-tab-panel::part(base) {
+.profile-drawer--loading wa-tab-group wa-tab-panel::part(base) {
 	overflow: hidden;
 }
 

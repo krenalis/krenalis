@@ -5,9 +5,9 @@ import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlTabGroup from '@shoelace-style/shoelace/dist/react/tab-group/index.js';
-import SlTabPanel from '@shoelace-style/shoelace/dist/react/tab-panel/index.js';
-import SlTab from '@shoelace-style/shoelace/dist/react/tab/index.js';
+import SlTabGroup from '@awesome.me/webawesome/dist/react/tab-group/index.js';
+import SlTabPanel from '@awesome.me/webawesome/dist/react/tab-panel/index.js';
+import SlTab from '@awesome.me/webawesome/dist/react/tab/index.js';
 import { ComboboxItem } from './Combobox.types';
 import { ExpressionFragment, parseMapExpression } from '../../../utils/mapExpression';
 import { autocompleteExpression } from './Combobox.helpers';
@@ -222,7 +222,7 @@ const Combobox = ({
 			if (selectedTab == null) {
 				menuItems = menu.querySelectorAll('sl-menu-item');
 			} else {
-				const panel = menu.querySelector(`sl-tab-panel[name="${selectedTab}"]`);
+				const panel = menu.querySelector(`wa-tab-panel[name="${selectedTab}"]`);
 				menuItems = panel.querySelectorAll('sl-menu-item');
 			}
 
@@ -244,7 +244,7 @@ const Combobox = ({
 			}
 
 			// Get the width of the tabs.
-			const tabs = menu.querySelectorAll('sl-tab');
+			const tabs = menu.querySelectorAll('wa-tab');
 			let tabsWidth = 0;
 			for (const t of tabs) {
 				tabsWidth += t.offsetWidth;
@@ -285,8 +285,8 @@ const Combobox = ({
 		}
 		setTimeout(() => {
 			const isConstant = CONSTANT_REGEX.test(val);
-			if (val === '' || isConstant) {
-				tabGroupRef.current?.show('enum');
+			if ((val === '' || isConstant) && tabGroupRef.current != null) {
+				tabGroupRef.current.active = 'enum';
 			}
 		});
 	}, [isOpen]);
@@ -540,7 +540,7 @@ const Combobox = ({
 		} else if (type === 'function') {
 			// probably now the user wants to select a property to pass as
 			// argument to the function.
-			tabGroupRef.current.show('properties');
+			tabGroupRef.current.active = 'properties';
 		}
 
 		updateComboboxValue(v);
@@ -651,7 +651,7 @@ const Combobox = ({
 							</div>
 						)}
 						{hasTabs ? (
-							<SlTabGroup className='combobox-list__tabs' onSlTabShow={onTabClick} ref={tabGroupRef}>
+							<SlTabGroup className='combobox-list__tabs' onWaTabShow={onTabClick} ref={tabGroupRef}>
 								{enumValues != null && (
 									<SlTab slot='nav' panel='enum'>
 										Enum ({enumValues.length})

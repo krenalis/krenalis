@@ -4,12 +4,12 @@ import { ProfileTab } from './Profiles.types';
 import AppContext from '../../../context/AppContext';
 import ProfilesContext from '../../../context/ProfilesContext';
 import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
-import SlTab from '@shoelace-style/shoelace/dist/react/tab/index.js';
+import SlTab from '@awesome.me/webawesome/dist/react/tab/index.js';
 import SlAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlTabGroup from '@shoelace-style/shoelace/dist/react/tab-group/index.js';
+import SlTabGroup from '@awesome.me/webawesome/dist/react/tab-group/index.js';
 import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
-import SlTabPanel from '@shoelace-style/shoelace/dist/react/tab-panel/index.js';
+import SlTabPanel from '@awesome.me/webawesome/dist/react/tab-panel/index.js';
 import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
@@ -187,14 +187,14 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 					</span>
 				</div>
 			</div>
-			<SlTabGroup onSlTabShow={onSelectTab}>
-				<SlTab slot='nav' panel='attributes' active={selectedTab === 'attributes'}>
+			<SlTabGroup active={selectedTab} onWaTabShow={onSelectTab}>
+				<SlTab slot='nav' panel='attributes'>
 					Attributes
 				</SlTab>
-				<SlTab slot='nav' panel='events' active={selectedTab === 'events'}>
+				<SlTab slot='nav' panel='events'>
 					Events
 				</SlTab>
-				<SlTab slot='nav' panel='identities' active={selectedTab === 'identities'}>
+				<SlTab slot='nav' panel='identities'>
 					Identities
 				</SlTab>
 				<SlTabPanel name='attributes'>
