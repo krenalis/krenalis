@@ -146,7 +146,7 @@ func IsPhone(s string) bool {
 //
 // s must represent a single complete international phone number beginning with
 // '+' after trimming leading and trailing Unicode whitespace, and must not
-// exceed maxPhoneInputBytes bytes before trimming.
+// exceed 250 bytes before trimming.
 //
 // The boolean return value reports whether s can be normalized to E.164.
 func NormalizePhone(s string) (string, bool) {
@@ -158,7 +158,7 @@ func NormalizePhone(s string) (string, bool) {
 // required.
 //
 // s must represent a single complete national or international phone number and
-// cannot exceed maxPhoneInputBytes bytes.
+// cannot exceed 250 bytes before trimming.
 // Leading and trailing Unicode whitespace is ignored. region must be an
 // uppercase two-letter CLDR region code recognized by the phone number parser,
 // even when s is already an international number. region is used only as
