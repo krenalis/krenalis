@@ -313,7 +313,6 @@ func (workspace workspace) IdentityMetricsPerDate(_ http.ResponseWriter, r *http
 	if err != nil {
 		return nil, errors.NotFound("start is not valid")
 	}
-
 	end, err := time.Parse(time.DateOnly, r.PathValue("end"))
 	if err != nil {
 		return nil, errors.NotFound("end is not valid")
@@ -335,47 +334,19 @@ func (workspace workspace) IdentityMetricsPerDate(_ http.ResponseWriter, r *http
 // IdentityResolutionMetricsPerDate returns daily successful Identity Resolution
 // metrics for the current workspace over a date interval.
 func (workspace workspace) IdentityResolutionMetricsPerDate(_ http.ResponseWriter, r *http.Request) (any, error) {
-
 	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
-
 	start, err := time.Parse(time.DateOnly, r.PathValue("start"))
 	if err != nil {
 		return nil, errors.NotFound("start is not valid")
 	}
-
 	end, err := time.Parse(time.DateOnly, r.PathValue("end"))
 	if err != nil {
 		return nil, errors.NotFound("end is not valid")
 	}
-
 	return ws.IdentityResolutionMetricsPerDate(r.Context(), start, end)
-}
-
-// LatestIdentityMetric returns the latest identity metric for the current
-// workspace.
-func (workspace workspace) LatestIdentityMetric(_ http.ResponseWriter, r *http.Request) (any, error) {
-
-	ws, err := workspace.admitWorkspaceRequest(r, x1)
-	if err != nil {
-		return nil, err
-	}
-
-	return ws.LatestIdentityMetric(r.Context())
-}
-
-// LatestIdentityResolutionMetric returns the latest successful Identity
-// Resolution metric for the current workspace.
-func (workspace workspace) LatestIdentityResolutionMetric(_ http.ResponseWriter, r *http.Request) (any, error) {
-
-	ws, err := workspace.admitWorkspaceRequest(r, x1)
-	if err != nil {
-		return nil, err
-	}
-
-	return ws.LatestIdentityResolutionMetric(r.Context())
 }
 
 // IdentityResolutionRuns returns Identity Resolution runs for the current
@@ -427,6 +398,19 @@ func (workspace workspace) IdentityResolutionRuns(_ http.ResponseWriter, r *http
 	return map[string]any{"runs": runs}, nil
 }
 
+// ProfilePropertiesSuitableAsIdentifiers returns the properties of the profile
+// schema that can be used as identifiers in the Identity Resolution.
+func (workspace workspace) ProfilePropertiesSuitableAsIdentifiers(_ http.ResponseWriter, r *http.Request) (any, error) {
+	_, ws, _, err := workspace.authenticateAdminRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	if ws == nil {
+		return nil, errMissingWorkspace
+	}
+	return ws.ProfilePropertiesSuitableAsIdentifiers(), nil
+}
+
 // IngestEvents ingests a batch of events.
 func (workspace workspace) IngestEvents(w http.ResponseWriter, r *http.Request) (any, error) {
 	// Unlike other endpoints, it allows "text/plain" as a content type.
@@ -439,6 +423,18 @@ func (workspace workspace) IngestEvents(w http.ResponseWriter, r *http.Request) 
 	w.Header().Del("Expires")
 	workspace.core.ServeEvents(w, r)
 	return nil, nil
+}
+
+// LatestIdentityMetric returns the latest identity metric for the current
+// workspace.
+func (workspace workspace) LatestIdentityMetric(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
+	if err != nil {
+		return nil, err
+	}
+
+	return ws.LatestIdentityMetric(r.Context())
 }
 
 // LatestIdentityResolution returns information about the latest Identity
@@ -458,17 +454,14 @@ func (workspace workspace) LatestIdentityResolution(_ http.ResponseWriter, r *ht
 	}, nil
 }
 
-// ProfilePropertiesSuitableAsIdentifiers returns the properties of the profile
-// schema that can be used as identifiers in the Identity Resolution.
-func (workspace workspace) ProfilePropertiesSuitableAsIdentifiers(_ http.ResponseWriter, r *http.Request) (any, error) {
-	_, ws, _, err := workspace.authenticateAdminRequest(r)
+// LatestIdentityResolutionMetric returns the latest successful Identity
+// Resolution metric for the current workspace.
+func (workspace workspace) LatestIdentityResolutionMetric(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
-	if ws == nil {
-		return nil, errMissingWorkspace
-	}
-	return ws.ProfilePropertiesSuitableAsIdentifiers(), nil
+	return ws.LatestIdentityResolutionMetric(r.Context())
 }
 
 // LatestAlterProfileSchema returns information about the latest altering of the

@@ -78,40 +78,6 @@ func TestValidateWorkspaceMetricsRange(t *testing.T) {
 
 }
 
-// TestWorkspaceMetricMethodsValidateBeforeMetrics verifies that invalid public
-// arguments return before refresh or database access for both methods.
-func TestWorkspaceMetricMethodsValidateBeforeMetrics(t *testing.T) {
-
-	workspace := Workspace{core: &Core{}}
-	start := time.Now().UTC().Truncate(24 * time.Hour)
-	calls := []struct {
-		name string
-		call func(start, end time.Time) error
-	}{
-		{name: "identity days", call: func(start, end time.Time) error {
-			_, err := workspace.IdentityMetricsPerDate(t.Context(), start, end, nil)
-			return err
-		}},
-		{name: "resolutions", call: func(start, end time.Time) error {
-			_, err := workspace.IdentityResolutionMetricsPerDate(t.Context(), start, end)
-			return err
-		}},
-	}
-	for _, test := range calls {
-		t.Run(test.name, func(t *testing.T) {
-			err := test.call(start, start)
-			if err != nil {
-				if _, ok := errors.AsType[*errors.NotFoundError](err); !ok {
-					t.Fatalf("expected an empty interval to return NotFoundError, got %T: %v", err, err)
-				}
-				return
-			}
-			t.Fatal("expected an empty interval error, got nil")
-		})
-	}
-
-}
-
 // TestIdentityMetricsPerDateConnectionSelectionValidation verifies that
 // connection selection is validated before reading workspace state or metrics.
 func TestIdentityMetricsPerDateConnectionSelectionValidation(t *testing.T) {
@@ -126,6 +92,73 @@ func TestIdentityMetricsPerDateConnectionSelectionValidation(t *testing.T) {
 		return
 	}
 	t.Fatal("expected an invalid connection error, got nil")
+}
+
+// TestIdentityMetricConnectionsJSON verifies that an empty latest breakdown is
+// encoded as an empty array.
+func TestIdentityMetricConnectionsJSON(t *testing.T) {
+	empty, err := json.Marshal(IdentityMetric{Connections: []IdentityConnectionMetric{}})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if !strings.Contains(string(empty), `"connections":[]`) {
+		t.Fatalf("expected an empty connections array, got %s", empty)
+	}
+}
+
+// TestIdentityResolutionCompositionJSON verifies the public composition field
+// names and values.
+func TestIdentityResolutionCompositionJSON(t *testing.T) {
+	composition := IdentityResolutionComposition{
+		One: 1, Two: 2, Three: 3, FourToTen: 4,
+		ElevenToTwenty: 5, MoreThanTwenty: 6,
+	}
+	encoded, err := json.Marshal(composition)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	want := `{"one":1,"two":2,"three":3,"fourToTen":4,"elevenToTwenty":5,"moreThanTwenty":6}`
+	if got := string(encoded); got != want {
+		t.Fatalf("expected composition JSON %s, got %s", want, got)
+	}
+}
+
+// TestIdentityResolutionDailyProfileCategoriesJSON verifies the additive
+// daily profile category field names and values.
+func TestIdentityResolutionDailyProfileCategoriesJSON(t *testing.T) {
+	encoded, err := json.Marshal(IdentityResolutionMetricDay{
+		ProfilesAnonymous:  4,
+		ProfilesRecognized: 8,
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	for _, field := range []string{`"profilesAnonymous":4`, `"profilesRecognized":8`} {
+		if !strings.Contains(string(encoded), field) {
+			t.Fatalf("expected JSON to contain %s, got %s", field, encoded)
+		}
+	}
+}
+
+// TestIdentityResolutionLinkedIdentitiesRateJSON verifies the public latest
+// and daily JSON field name for the linked-identities metric.
+func TestIdentityResolutionLinkedIdentitiesRateJSON(t *testing.T) {
+	latest, err := json.Marshal(IdentityResolutionMetric{LinkedIdentitiesRate: 0.75})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	day, err := json.Marshal(IdentityResolutionMetricDay{LinkedIdentitiesRate: 0.75})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	for _, encoded := range [][]byte{latest, day} {
+		if !strings.Contains(string(encoded), `"linkedIdentitiesRate":0.75`) {
+			t.Fatalf("expected JSON to contain linkedIdentitiesRate, got %s", encoded)
+		}
+		if strings.Contains(string(encoded), `"resolutionRate"`) {
+			t.Fatalf("expected JSON without legacy resolutionRate, got %s", encoded)
+		}
+	}
 }
 
 // TestWorkspaceMetricMethodsCheckCoreOpen verifies that the public methods
@@ -166,69 +199,34 @@ func TestWorkspaceMetricMethodsCheckCoreOpen(t *testing.T) {
 	}
 }
 
-// TestIdentityResolutionDailyProfileCategoriesJSON verifies the additive
-// daily profile category field names and values.
-func TestIdentityResolutionDailyProfileCategoriesJSON(t *testing.T) {
-	encoded, err := json.Marshal(IdentityResolutionMetricDay{
-		ProfilesAnonymous:  4,
-		ProfilesRecognized: 8,
-	})
-	if err != nil {
-		t.Fatal(err)
+// TestWorkspaceMetricMethodsValidateBeforeMetrics verifies that invalid public
+// arguments return before refresh or database access for both methods.
+func TestWorkspaceMetricMethodsValidateBeforeMetrics(t *testing.T) {
+	workspace := Workspace{core: &Core{}}
+	start := time.Now().UTC().Truncate(24 * time.Hour)
+	calls := []struct {
+		name string
+		call func(start, end time.Time) error
+	}{
+		{name: "identity days", call: func(start, end time.Time) error {
+			_, err := workspace.IdentityMetricsPerDate(t.Context(), start, end, nil)
+			return err
+		}},
+		{name: "resolutions", call: func(start, end time.Time) error {
+			_, err := workspace.IdentityResolutionMetricsPerDate(t.Context(), start, end)
+			return err
+		}},
 	}
-	for _, field := range []string{`"profilesAnonymous":4`, `"profilesRecognized":8`} {
-		if !strings.Contains(string(encoded), field) {
-			t.Fatalf("expected %s in %s", field, encoded)
-		}
-	}
-}
-
-// TestIdentityResolutionLinkedIdentitiesRateJSON verifies the public latest
-// and daily JSON field name for the linked-identities metric.
-func TestIdentityResolutionLinkedIdentitiesRateJSON(t *testing.T) {
-	latest, err := json.Marshal(IdentityResolutionMetric{LinkedIdentitiesRate: 0.75})
-	if err != nil {
-		t.Fatal(err)
-	}
-	day, err := json.Marshal(IdentityResolutionMetricDay{LinkedIdentitiesRate: 0.75})
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, encoded := range [][]byte{latest, day} {
-		if !strings.Contains(string(encoded), `"linkedIdentitiesRate":0.75`) {
-			t.Fatalf("expected linkedIdentitiesRate in %s", encoded)
-		}
-		if strings.Contains(string(encoded), `"resolutionRate"`) {
-			t.Fatalf("unexpected legacy resolutionRate in %s", encoded)
-		}
-	}
-}
-
-// TestIdentityResolutionCompositionJSON verifies the public composition field
-// names and values.
-func TestIdentityResolutionCompositionJSON(t *testing.T) {
-	composition := IdentityResolutionComposition{
-		One: 1, Two: 2, Three: 3, FourToTen: 4,
-		ElevenToTwenty: 5, MoreThanTwenty: 6,
-	}
-	encoded, err := json.Marshal(composition)
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := `{"one":1,"two":2,"three":3,"fourToTen":4,"elevenToTwenty":5,"moreThanTwenty":6}`
-	if got := string(encoded); got != want {
-		t.Fatalf("expected composition JSON %s, got %s", want, got)
-	}
-}
-
-// TestIdentityMetricConnectionsJSON verifies that an empty latest breakdown is
-// encoded as an empty array.
-func TestIdentityMetricConnectionsJSON(t *testing.T) {
-	empty, err := json.Marshal(IdentityMetric{Connections: []IdentityConnectionMetric{}})
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	if !strings.Contains(string(empty), `"connections":[]`) {
-		t.Fatalf("expected an empty connections array, got %s", empty)
+	for _, test := range calls {
+		t.Run(test.name, func(t *testing.T) {
+			err := test.call(start, start)
+			if err != nil {
+				if _, ok := errors.AsType[*errors.NotFoundError](err); !ok {
+					t.Fatalf("expected an empty interval to return NotFoundError, got %T: %v", err, err)
+				}
+				return
+			}
+			t.Fatal("expected an empty interval error, got nil")
+		})
 	}
 }

@@ -344,7 +344,8 @@ type Warehouse interface {
 	//
 	// This method, once called, can then return in four distinct cases:
 	//
-	// (1) the operation was successful and its counts were returned;
+	// (1) the operation was successful and its counts were returned; completed
+	// operations from versions that did not store counts return zeros;
 	//
 	// (2) the context was canceled;
 	//

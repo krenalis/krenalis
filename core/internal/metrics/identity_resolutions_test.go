@@ -34,77 +34,6 @@ type persistedIdentityResolutionMetric struct {
 	composition warehouses.IdentityResolutionComposition
 }
 
-// assertIdentityResolutionFloat verifies a floating-point metric.
-func assertIdentityResolutionFloat(t *testing.T, got, want float64) {
-	t.Helper()
-	if math.IsNaN(got) || math.Abs(got-want) > 1e-12 {
-		t.Fatalf("expected %v, got %v", want, got)
-	}
-}
-
-// assertIdentityResolutionMetricDays verifies dense Identity Resolution history
-// and its derived values.
-func assertIdentityResolutionMetricDays(t *testing.T, got []IdentityResolutionMetricDay, start time.Time, want []identityResolutionDayExpectation) {
-
-	t.Helper()
-	if len(got) != len(want) {
-		t.Fatalf("expected %d Identity Resolution days, got %d", len(want), len(got))
-	}
-	for index := range want {
-		expectedDay := start.AddDate(0, 0, index)
-		if got[index].Day != expectedDay {
-			t.Fatalf("expected day %s, got %s", expectedDay, got[index].Day)
-		}
-		if got[index].Identities != want[index].identities ||
-			got[index].Profiles != want[index].profiles ||
-			got[index].ProfilesAnonymous != want[index].profilesAnonymous ||
-			got[index].ProfilesRecognized != want[index].profilesRecognized {
-			t.Fatalf("expected counts %#v, got %#v", want[index], got[index])
-		}
-		assertIdentityResolutionFloat(t, got[index].IdentitiesPerProfile, want[index].identitiesPerProfile)
-		assertIdentityResolutionFloat(t, got[index].LinkedIdentitiesRate, want[index].linkedIdentitiesRate)
-	}
-
-}
-
-// readIdentityResolutionMetric reads a persisted Identity Resolution snapshot
-// for a workspace and UTC day.
-func readIdentityResolutionMetric(t *testing.T, database *db.DB, workspace string, day time.Time) persistedIdentityResolutionMetric {
-	t.Helper()
-	var metric persistedIdentityResolutionMetric
-	err := database.QueryRow(t.Context(), `SELECT day,
-		(day + observed_at) AT TIME ZONE 'UTC',
-		profiles_anonymous, profiles_recognized, identities_anonymous, identities_recognized,
-		composition_one, composition_two, composition_three, composition_four_to_ten,
-		composition_eleven_to_twenty, composition_more_than_twenty
-		FROM identity_resolution_metrics
-		WHERE workspace = $1 AND day = $2`, workspace, day).Scan(
-		&metric.day, &metric.observedAt,
-		&metric.profiles.Anonymous, &metric.profiles.Recognized,
-		&metric.identities.Anonymous, &metric.identities.Recognized,
-		&metric.composition.One, &metric.composition.Two, &metric.composition.Three,
-		&metric.composition.FourToTen, &metric.composition.ElevenToTwenty,
-		&metric.composition.MoreThanTwenty)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return metric
-}
-
-// recordIdentityResolutionResult records one Identity Resolution result in a
-// database transaction.
-func recordIdentityResolutionResult(t *testing.T, database *db.DB, recorder *IdentityResolutions, workspace string, observedAt time.Time, counts *warehouses.IdentityResolutionCounts) {
-
-	t.Helper()
-	err := database.Transaction(t.Context(), func(tx *db.Tx) error {
-		return recorder.RecordResult(t.Context(), tx, workspace, observedAt, counts)
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-}
-
 // TestIdentityResolutionMetricsPerDateAndLatest verifies latest mapping,
 // derived values, dense carry-forward history, leading-gap omission, zero
 // semantics, and behavior when no successful Identity Resolution exists.
@@ -134,12 +63,12 @@ func TestIdentityResolutionMetricsPerDateAndLatest(t *testing.T) {
 		($2, '2026-08-10', '10:15:00',
 		 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)`, workspace, zeroWorkspace)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 
 	latest, err := resolutions.Latest(ctx, workspace)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if latest == nil {
 		t.Fatal("expected a latest Identity Resolution metric, got nil")
@@ -163,7 +92,7 @@ func TestIdentityResolutionMetricsPerDateAndLatest(t *testing.T) {
 
 	days, err := resolutions.MetricsPerDate(ctx, workspace, start, end)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	assertIdentityResolutionMetricDays(t, days, start.AddDate(0, 0, 1), []identityResolutionDayExpectation{
 		{identities: 10, profiles: 5, profilesAnonymous: 2, profilesRecognized: 3,
@@ -176,7 +105,7 @@ func TestIdentityResolutionMetricsPerDateAndLatest(t *testing.T) {
 	seedStart := time.Date(2026, time.August, 3, 0, 0, 0, 0, time.UTC)
 	seeded, err := resolutions.MetricsPerDate(ctx, workspace, seedStart, seedStart.AddDate(0, 0, 2))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	assertIdentityResolutionMetricDays(t, seeded, seedStart, []identityResolutionDayExpectation{
 		{identities: 10, profiles: 5, profilesAnonymous: 2, profilesRecognized: 3,
@@ -186,7 +115,7 @@ func TestIdentityResolutionMetricsPerDateAndLatest(t *testing.T) {
 
 	zeroLatest, err := resolutions.Latest(ctx, zeroWorkspace)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if zeroLatest == nil {
 		t.Fatal("expected a zero Identity Resolution metric, got nil")
@@ -201,14 +130,14 @@ func TestIdentityResolutionMetricsPerDateAndLatest(t *testing.T) {
 
 	empty, err := resolutions.MetricsPerDate(ctx, emptyWorkspace, start, end)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if len(empty) != 0 {
 		t.Fatalf("expected no Identity Resolution days, got %#v", empty)
 	}
 	emptyLatest, err := resolutions.Latest(ctx, emptyWorkspace)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if emptyLatest != nil {
 		t.Fatalf("expected no latest Identity Resolution metric, got %#v", emptyLatest)
@@ -267,4 +196,71 @@ func TestIdentityResolutionMetricsRecord(t *testing.T) {
 		t.Fatalf("expected complete newer counts %#v, got %#v", newerCounts, row)
 	}
 
+}
+
+// assertIdentityResolutionFloat verifies a floating-point metric.
+func assertIdentityResolutionFloat(t *testing.T, got, want float64) {
+	t.Helper()
+	if math.IsNaN(got) || math.Abs(got-want) > 1e-12 {
+		t.Fatalf("expected %v, got %v", want, got)
+	}
+}
+
+// assertIdentityResolutionMetricDays verifies dense Identity Resolution history
+// and its derived values.
+func assertIdentityResolutionMetricDays(t *testing.T, got []IdentityResolutionMetricDay, start time.Time, want []identityResolutionDayExpectation) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Fatalf("expected %d Identity Resolution days, got %d", len(want), len(got))
+	}
+	for index := range want {
+		expectedDay := start.AddDate(0, 0, index)
+		if got[index].Day != expectedDay {
+			t.Fatalf("expected day %s, got %s", expectedDay, got[index].Day)
+		}
+		if got[index].Identities != want[index].identities ||
+			got[index].Profiles != want[index].profiles ||
+			got[index].ProfilesAnonymous != want[index].profilesAnonymous ||
+			got[index].ProfilesRecognized != want[index].profilesRecognized {
+			t.Fatalf("expected counts %#v, got %#v", want[index], got[index])
+		}
+		assertIdentityResolutionFloat(t, got[index].IdentitiesPerProfile, want[index].identitiesPerProfile)
+		assertIdentityResolutionFloat(t, got[index].LinkedIdentitiesRate, want[index].linkedIdentitiesRate)
+	}
+}
+
+// readIdentityResolutionMetric reads a persisted Identity Resolution snapshot
+// for a workspace and UTC day.
+func readIdentityResolutionMetric(t *testing.T, database *db.DB, workspace string, day time.Time) persistedIdentityResolutionMetric {
+	t.Helper()
+	var metric persistedIdentityResolutionMetric
+	err := database.QueryRow(t.Context(), `SELECT day,
+		(day + observed_at) AT TIME ZONE 'UTC',
+		profiles_anonymous, profiles_recognized, identities_anonymous, identities_recognized,
+		composition_one, composition_two, composition_three, composition_four_to_ten,
+		composition_eleven_to_twenty, composition_more_than_twenty
+		FROM identity_resolution_metrics
+		WHERE workspace = $1 AND day = $2`, workspace, day).Scan(
+		&metric.day, &metric.observedAt,
+		&metric.profiles.Anonymous, &metric.profiles.Recognized,
+		&metric.identities.Anonymous, &metric.identities.Recognized,
+		&metric.composition.One, &metric.composition.Two, &metric.composition.Three,
+		&metric.composition.FourToTen, &metric.composition.ElevenToTwenty,
+		&metric.composition.MoreThanTwenty)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	return metric
+}
+
+// recordIdentityResolutionResult records one Identity Resolution result in a
+// database transaction.
+func recordIdentityResolutionResult(t *testing.T, database *db.DB, recorder *IdentityResolutions, workspace string, observedAt time.Time, counts *warehouses.IdentityResolutionCounts) {
+	t.Helper()
+	err := database.Transaction(t.Context(), func(tx *db.Tx) error {
+		return recorder.RecordResult(t.Context(), tx, workspace, observedAt, counts)
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
 }

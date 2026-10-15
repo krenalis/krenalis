@@ -47,6 +47,7 @@ func (warehouse *PostgreSQL) executeOperation(ctx context.Context, opID string, 
 	resultColumnMigrationDone := false
 	bo := backoff.New(200)
 	bo.SetCap(500 * time.Millisecond)
+
 	for bo.Next(ctx) {
 		for {
 			err = warehouse.execTransaction(ctx, func(tx pgx.Tx) error {
@@ -149,13 +150,13 @@ func (warehouse *PostgreSQL) readOperationStatus(ctx context.Context, conn conne
 	var irResult struct {
 		Counts *warehouses.IdentityResolutionCounts `json:"counts"`
 	}
-	if err := json.Unmarshal(result, &irResult); err != nil {
+	err = json.Unmarshal(result, &irResult)
+	if err != nil {
 		return nil, fmt.Errorf("invalid Identity Resolution result for operation %s: %w", opID, err)
 	}
-	if irResult.Counts != nil {
-		if err := warehouses.ValidateIdentityResolutionCounts(irResult.Counts); err != nil {
-			return nil, fmt.Errorf("invalid Identity Resolution result for operation %s: %w", opID, err)
-		}
+	err = warehouses.ValidateIdentityResolutionCounts(irResult.Counts)
+	if err != nil {
+		return nil, fmt.Errorf("invalid Identity Resolution result for operation %s: %w", opID, err)
 	}
 	status.identityResolutionCounts = irResult.Counts
 
@@ -168,7 +169,6 @@ func (warehouse *PostgreSQL) readOperationStatus(ctx context.Context, conn conne
 // completed successfully. If the operation has already been set as completed,
 // this method does nothing.
 func (warehouse *PostgreSQL) setOperationAsCompleted(ctx context.Context, conn connection, opID string, result json.Value, opError *warehouses.OperationError) error {
-
 	var opErrorStr string
 	if opError != nil {
 		opErrorStr = opError.Error()
@@ -179,6 +179,5 @@ func (warehouse *PostgreSQL) setOperationAsCompleted(ctx context.Context, conn c
 		` "result" = CASE WHEN "operation_type" = 'IdentityResolution' THEN $2::jsonb ELSE "result" END,`+
 		` "error" = $3`+
 		` WHERE "id" = $4 AND "completed_at" IS NULL`, time.Now().UTC(), []byte(result), opErrorStr, opID)
-
 	return err
 }

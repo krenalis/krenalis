@@ -241,11 +241,14 @@ func TestValidateIdentityResolutionCounts(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			err := warehouses.ValidateIdentityResolutionCounts(test.counts)
-			if test.wantErr && err == nil {
-				t.Fatal("expected ValidateIdentityResolutionCounts to return an error, got nil")
+			if err != nil {
+				if !test.wantErr {
+					t.Fatalf("expected ValidateIdentityResolutionCounts to return no error, got %v", err)
+				}
+				return
 			}
-			if !test.wantErr && err != nil {
-				t.Fatalf("expected ValidateIdentityResolutionCounts to return no error, got %v", err)
+			if test.wantErr {
+				t.Fatal("expected ValidateIdentityResolutionCounts to return an error, got nil")
 			}
 		})
 	}

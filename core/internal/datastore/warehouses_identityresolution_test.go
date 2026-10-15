@@ -790,7 +790,7 @@ func aggregateIdentityResolutionCounts(t *testing.T, profiles []logicalCounts) *
 	for _, profile := range profiles {
 		identities := profile.anonymous + profile.recognized
 		if profile.anonymous < 0 || profile.recognized < 0 || identities == 0 {
-			t.Fatalf("invalid per-profile identity counts: %+v", profile)
+			t.Fatalf("expected non-negative counts for a non-empty profile, got %+v", profile)
 		}
 		if profile.recognized == 0 {
 			counts.Profiles.Anonymous++

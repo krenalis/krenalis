@@ -5,6 +5,7 @@
 package warehouses_test
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"strings"
@@ -12,7 +13,6 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
@@ -34,13 +34,15 @@ type profileIdentityGroup struct {
 func TestResolveIdentitiesCounts(t *testing.T) {
 	for _, platform := range []string{"PostgreSQL", "Snowflake"} {
 		t.Run(platform, func(t *testing.T) {
+
 			dw := newCountIdentitiesWarehouse(t, platform)
 			ctx := t.Context()
 			profileColumns := []warehouses.Column{
 				{Name: "email", Type: types.String(), Nullable: true},
 			}
-			if err := dw.Initialize(ctx, profileColumns); err != nil {
-				t.Fatal(err)
+			err := dw.Initialize(ctx, profileColumns)
+			if err != nil {
+				t.Fatalf("expected no error, got %v", err)
 			}
 
 			emptyOp := uuid.New().String()
@@ -93,38 +95,46 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 			// first two operations produce versions 1 and 2. Later operations drop
 			// both physical tables, but their complete persisted results remain
 			// retryable.
-			if _, err := dw.Counts(ctx, "krenalis_profiles_1", nil); err == nil {
+			t.Run("empty operation profiles table dropped", func(t *testing.T) {
+				_, err := dw.Counts(t.Context(), "krenalis_profiles_1", nil)
+				if err != nil {
+					return
+				}
 				t.Fatal("expected physical profiles table for the empty operation to be unavailable, got no error")
-			}
+			})
 			retryCounts, err := dw.ResolveIdentities(ctx, emptyOp, profileColumns, profileColumns, nil)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("expected no error, got %v", err)
 			}
 			if retryCounts == nil {
 				t.Fatal("expected non-nil retry counts after dropping the physical table, got nil")
 			}
 			if diff := cmp.Diff(emptyCounts, retryCounts); diff != "" {
-				t.Fatalf("unexpected retry counts after dropping the physical table (-want +got):\n%s", diff)
+				t.Fatalf("expected original retry counts after dropping the physical table, got diff (-want +got):\n%s", diff)
 			}
-			if _, err := dw.Counts(ctx, "krenalis_profiles_2", nil); err == nil {
+			t.Run("anonymous operation profiles table dropped", func(t *testing.T) {
+				_, err := dw.Counts(t.Context(), "krenalis_profiles_2", nil)
+				if err != nil {
+					return
+				}
 				t.Fatal("expected physical profiles table for the anonymous-only operation to be unavailable, got no error")
-			}
+			})
 			retryCounts, err = dw.ResolveIdentities(ctx, anonymousOp, profileColumns, profileColumns, nil)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("expected no error, got %v", err)
 			}
 			if retryCounts == nil {
 				t.Fatal("expected non-nil retry counts after dropping the physical table, got nil")
 			}
 			if diff := cmp.Diff(anonymousCounts, retryCounts); diff != "" {
-				t.Fatalf("unexpected retry counts after dropping the physical table (-want +got):\n%s", diff)
+				t.Fatalf("expected original retry counts after dropping the physical table, got diff (-want +got):\n%s", diff)
 			}
 
 			t.Run("legacy completed operation without result", func(t *testing.T) {
 				setOperationResult(t, dw, recognizedOp, nil)
 				counts, err := dw.ResolveIdentities(ctx, recognizedOp, profileColumns, profileColumns, nil)
 				if err != nil {
-					t.Fatal(err)
+					t.Fatalf("expected no error, got %v", err)
 				}
 				if counts == nil {
 					t.Fatal("expected zero legacy counts, got nil")
@@ -140,7 +150,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 					Profiles: warehouses.Counts{Anonymous: -1},
 				}})
 				if err != nil {
-					t.Fatal(err)
+					t.Fatalf("expected no error, got %v", err)
 				}
 				setOperationResult(t, dw, recognizedOp, result)
 				counts, err := dw.ResolveIdentities(ctx, recognizedOp, profileColumns, profileColumns, nil)
@@ -158,7 +168,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 					Padding string                              `json:"padding"`
 				}{Counts: *recognizedCounts, Padding: strings.Repeat("x", 8<<10)})
 				if err != nil {
-					t.Fatal(err)
+					t.Fatalf("expected no error, got %v", err)
 				}
 				setOperationResult(t, dw, recognizedOp, result)
 				counts, err := dw.ResolveIdentities(ctx, recognizedOp, profileColumns, profileColumns, nil)
@@ -187,7 +197,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 					Type:      types.String(),
 				}})
 				if err != nil {
-					t.Fatal(err)
+					t.Fatalf("expected no error, got %v", err)
 				}
 				if result := operationResult(t, dw, opAlter); result != nil {
 					t.Fatalf("expected AlterProfileSchema to store a NULL result, got %v", result)
@@ -195,10 +205,11 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 			})
 
 			t.Run("failed operation has no result and remains failed", func(t *testing.T) {
+
 				opFailed := uuid.New().String()
 				profilesBefore, countErr := dw.Counts(ctx, "profiles", nil)
 				if countErr != nil {
-					t.Fatal(countErr)
+					t.Fatalf("expected no error, got %v", countErr)
 				}
 				badProfileColumns := append([]warehouses.Column{}, profileColumns...)
 				badProfileColumns = append(badProfileColumns, warehouses.Column{
@@ -218,10 +229,10 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 				}
 				profilesAfter, countErr := dw.Counts(ctx, "profiles", nil)
 				if countErr != nil {
-					t.Fatal(countErr)
+					t.Fatalf("expected no error, got %v", countErr)
 				}
 				if profilesAfter[0] != profilesBefore[0] {
-					t.Fatalf("failed Identity Resolution changed visible profiles from %d to %d", profilesBefore[0], profilesAfter[0])
+					t.Fatalf("expected %d visible profiles after failed Identity Resolution, got %d", profilesBefore[0], profilesAfter[0])
 				}
 
 				// Retry with valid arguments to verify that the persisted failure is
@@ -241,6 +252,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 				if result := operationResult(t, dw, opFailed); result != nil {
 					t.Fatalf("expected failed operation to store a NULL result, got %v", result)
 				}
+
 			})
 
 			t.Run("oversized persisted error message", func(t *testing.T) {
@@ -266,6 +278,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 					t.Fatalf("expected %q, got %q", want, operationError)
 				}
 			})
+
 		})
 	}
 }
@@ -273,6 +286,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 // assertIdentityResolutionCountInvariants verifies the internal consistency of
 // Identity Resolution counts returned by a warehouse.
 func assertIdentityResolutionCountInvariants(t *testing.T, counts warehouses.IdentityResolutionCounts) {
+
 	t.Helper()
 
 	if counts.Profiles.Anonymous < 0 || counts.Profiles.Recognized < 0 {
@@ -306,11 +320,13 @@ func assertIdentityResolutionCountInvariants(t *testing.T, counts warehouses.Ide
 	if identitiesTotal < profilesTotal {
 		t.Fatalf("expected at least %d identities, got %d", profilesTotal, identitiesTotal)
 	}
+
 }
 
 // assertPersistedIdentityResolutionResult verifies the persisted Identity
 // Resolution result payload.
 func assertPersistedIdentityResolutionResult(t *testing.T, dw warehouses.Warehouse, opID string, want warehouses.IdentityResolutionCounts) {
+
 	t.Helper()
 	result := operationResult(t, dw, opID)
 	if result == nil {
@@ -322,8 +338,9 @@ func assertPersistedIdentityResolutionResult(t *testing.T, dw warehouses.Warehou
 	}
 
 	var root map[string]any
-	if err := json.Unmarshal(encoded, &root); err != nil {
-		t.Fatal(err)
+	err := json.Unmarshal(encoded, &root)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if len(root) != 1 {
 		t.Fatalf("expected operation result root to contain only counts, got %v", root)
@@ -364,17 +381,20 @@ func assertPersistedIdentityResolutionResult(t *testing.T, dw warehouses.Warehou
 	var persisted struct {
 		Counts warehouses.IdentityResolutionCounts `json:"counts"`
 	}
-	if err := json.Unmarshal(encoded, &persisted); err != nil {
-		t.Fatal(err)
+	err = json.Unmarshal(encoded, &persisted)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if diff := cmp.Diff(want, persisted.Counts); diff != "" {
-		t.Fatalf("unexpected persisted Identity Resolution counts (-want +got):\n%s", diff)
+		t.Fatalf("expected persisted Identity Resolution counts, got diff (-want +got):\n%s", diff)
 	}
+
 }
 
 // mergeIdentityResolutionCountIdentities inserts identity fixtures grouped
 // into profiles by email.
 func mergeIdentityResolutionCountIdentities(t *testing.T, dw warehouses.Warehouse, profileColumns []warehouses.Column, groups []profileIdentityGroup) {
+
 	t.Helper()
 	for _, group := range groups {
 		if group.anonymous < 0 || group.recognized < 0 || group.anonymous+group.recognized == 0 {
@@ -422,9 +442,11 @@ func mergeIdentityResolutionCountIdentities(t *testing.T, dw warehouses.Warehous
 			}
 		}
 	}
-	if err := dw.MergeIdentities(t.Context(), columns, rows); err != nil {
-		t.Fatal(err)
+	err := dw.MergeIdentities(t.Context(), columns, rows)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
+
 }
 
 // operationResult returns the structured result stored for an operation.
@@ -438,7 +460,7 @@ func operationResult(t *testing.T, dw warehouses.Warehouse, opID string) any {
 		Where:   warehouses.NewBaseExpr(idColumn, warehouses.OpIs, opID),
 	}, false)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	defer rows.Close()
 	if !rows.Next() {
@@ -446,13 +468,13 @@ func operationResult(t *testing.T, dw warehouses.Warehouse, opID string) any {
 	}
 	row := make([]any, 2)
 	if err := rows.Scan(row...); err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if rows.Next() {
 		t.Fatal("expected one system operation, got multiple")
 	}
 	if err := rows.Err(); err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	return row[1]
 }
@@ -460,29 +482,32 @@ func operationResult(t *testing.T, dw warehouses.Warehouse, opID string) any {
 // resolveAndAssertCounts resolves identities and verifies the returned and
 // persisted counts, including the result returned by an immediate retry.
 func resolveAndAssertCounts(t *testing.T, dw warehouses.Warehouse, opID string, profileColumns []warehouses.Column, want warehouses.IdentityResolutionCounts) *warehouses.IdentityResolutionCounts {
+
 	t.Helper()
 	counts, err := dw.ResolveIdentities(t.Context(), opID, profileColumns, profileColumns, nil)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if counts == nil {
 		t.Fatal("expected ResolveIdentities to return non-nil counts, got nil")
 	}
 	if diff := cmp.Diff(want, *counts); diff != "" {
-		t.Fatalf("unexpected ResolveIdentities counts (-want +got):\n%s", diff)
+		t.Fatalf("expected ResolveIdentities counts, got diff (-want +got):\n%s", diff)
 	}
 	assertIdentityResolutionCountInvariants(t, *counts)
 	assertPersistedIdentityResolutionResult(t, dw, opID, *counts)
+
 	retryCounts, err := dw.ResolveIdentities(t.Context(), opID, profileColumns, profileColumns, nil)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 	if retryCounts == nil {
 		t.Fatal("expected non-nil immediate retry counts, got nil")
 	}
 	if diff := cmp.Diff(counts, retryCounts); diff != "" {
-		t.Fatalf("unexpected immediate retry counts (-want +got):\n%s", diff)
+		t.Fatalf("expected original immediate retry counts, got diff (-want +got):\n%s", diff)
 	}
+
 	return counts
 }
 
@@ -497,13 +522,15 @@ func setOperationError(t *testing.T, dw warehouses.Warehouse, opID, message stri
 		},
 		Keys: []string{"id"},
 	}
-	if err := dw.Merge(t.Context(), table, [][]any{{opID, message}}, nil); err != nil {
-		t.Fatal(err)
+	err := dw.Merge(t.Context(), table, [][]any{{opID, message}}, nil)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 }
 
 // setOperationResult replaces the structured result of a completed operation.
 func setOperationResult(t *testing.T, dw warehouses.Warehouse, opID string, result json.Value) {
+
 	t.Helper()
 	table := warehouses.Table{
 		Name: "krenalis_system_operations",
@@ -519,7 +546,9 @@ func setOperationResult(t *testing.T, dw warehouses.Warehouse, opID string, resu
 	if result == nil {
 		storedResult = nil
 	}
-	if err := dw.Merge(t.Context(), table, [][]any{{opID, storedResult}}, nil); err != nil {
-		t.Fatal(err)
+	err := dw.Merge(t.Context(), table, [][]any{{opID, storedResult}}, nil)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
+
 }

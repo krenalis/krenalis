@@ -1787,37 +1787,36 @@ func (core *Core) executeIdentityResolution(workspaceID, opID string) {
 	for bo.Next(ctx) {
 		var err error
 		resolutionCounts, err = store.ResolveIdentities(ctx, opID)
-		// In case of success, go on and send an EndIdentityResolution
-		// notification.
-		if err == nil {
-			break
-		}
-		// If the context has expired, just return.
-		if ctx.Err() != nil {
-			unknownErrorMsg = ""
-			return
-		}
-		// If the workspace no longer exists, stop the operation.
-		if errors.Is(err, datastore.ErrWorkspaceNotExist) {
-			return
-		}
-		// In case of OperationError log it, then go on and send an
-		// EndIdentityResolution notification.
-		if operationError, ok := errors.AsType[*warehouses.OperationError](err); ok {
-			slog.Error("identity resolution ended with an error", "error", operationError)
-			operationErrorMessage = operationError.Error()
-			if operationErrorMessage == "" {
-				operationErrorMessage = "Identity Resolution failed"
+		if err != nil {
+			// If the context has expired, just return.
+			if ctx.Err() != nil {
+				unknownErrorMsg = ""
+				return
 			}
-			unknownErrorMsg = ""
-			break
+			// If the workspace no longer exists, stop the operation.
+			if errors.Is(err, datastore.ErrWorkspaceNotExist) {
+				return
+			}
+			// In case of OperationError log it, then go on and send an
+			// EndIdentityResolution notification.
+			if operationError, ok := errors.AsType[*warehouses.OperationError](err); ok {
+				slog.Error("identity resolution ended with an error", "error", operationError)
+				operationErrorMessage = operationError.Error()
+				if operationErrorMessage == "" {
+					operationErrorMessage = "Identity Resolution failed"
+				}
+				unknownErrorMsg = ""
+				break
+			}
+			// In case of unknown error, try again.
+			loggedError := warehouses.NewOperationError(err)
+			if msg := loggedError.Error(); unknownErrorMsg != msg {
+				slog.Warn("failed to check the identity resolution status; retrying", "error", loggedError)
+				unknownErrorMsg = msg
+			}
+			continue
 		}
-		// In case of unknown error, try again.
-		loggedError := warehouses.NewOperationError(err)
-		if msg := loggedError.Error(); unknownErrorMsg != msg {
-			slog.Warn("failed to check the identity resolution status; retrying", "error", loggedError)
-			unknownErrorMsg = msg
-		}
+		break
 	}
 	if ctx.Err() != nil {
 		return
@@ -1858,7 +1857,8 @@ func (core *Core) executeIdentityResolution(workspaceID, opID string) {
 				return nil, err
 			}
 			if res.RowsAffected() == 0 {
-				return nil, fmt.Errorf("cannot finalize open Identity Resolution run %s for workspace %s", n.ID, n.Workspace)
+				return nil, fmt.Errorf(
+					"cannot finalize open Identity Resolution run %s for workspace %s", n.ID, n.Workspace)
 			}
 			if successful {
 				// Record the dashboard result and reuse its profile total for the billing
@@ -1881,7 +1881,8 @@ func (core *Core) executeIdentityResolution(workspaceID, opID string) {
 				return nil, err
 			}
 			if res.RowsAffected() == 0 {
-				return nil, fmt.Errorf("cannot close Identity Resolution lifecycle %s for workspace %s", n.ID, n.Workspace)
+				return nil, fmt.Errorf(
+					"cannot close Identity Resolution lifecycle %s for workspace %s", n.ID, n.Workspace)
 			}
 			return n, nil
 		})

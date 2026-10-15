@@ -8,7 +8,13 @@ import IdentityOverview from '../src/components/routes/IdentityOverview/Identity
 
 declare global {
 	interface Window {
-		identityOverviewScenario: 'historyError' | 'latestError' | 'removed' | 'singleDay' | 'singleDayZero';
+		identityOverviewScenario:
+			| 'historyError'
+			| 'latestError'
+			| 'removed'
+			| 'singleDay'
+			| 'singleDayZero'
+			| 'resolutionUnauthorized';
 		identityOverviewRequests: string[];
 	}
 }
@@ -20,6 +26,9 @@ window.fetch = async (input) => {
 	const url = String(input);
 	window.identityOverviewRequests.push(url);
 	if (url.includes('/metrics/identity-resolution/latest')) {
+		if (window.identityOverviewScenario === 'resolutionUnauthorized') {
+			return new Response('{"error":{}}', { status: 401, headers: { 'Content-Type': 'application/json' } });
+		}
 		return new Response('null', { headers: { 'Content-Type': 'application/json' } });
 	}
 	if (url.includes('/identity-resolution/runs')) {

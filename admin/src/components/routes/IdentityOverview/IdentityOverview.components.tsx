@@ -791,7 +791,7 @@ const ResolutionEffectivenessChart = ({ data, loading, error }: ResolutionEffect
 		>
 			{loading ? (
 				<CardLoading chart={true} />
-			) : error ? (
+			) : error != null && error !== '' ? (
 				<StateMessage
 					variant='error'
 					title='Resolution metrics could not be loaded'
@@ -1096,7 +1096,7 @@ const ProfileComposition = ({ profiles, composition, loading, error }: ProfileCo
 		>
 			{loading ? (
 				<CardLoading chart={true} />
-			) : error ? (
+			) : error != null && error !== '' ? (
 				<StateMessage
 					variant='error'
 					title='Composition could not be loaded'

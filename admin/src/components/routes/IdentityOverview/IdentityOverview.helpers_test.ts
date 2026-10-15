@@ -258,9 +258,9 @@ const tests: { name: string; run: () => void | Promise<void> }[] = [
 
 			equal(rolling.latestIdentityDay, '2026-08-10', 'rolling latest identity day');
 			equal(customHistorical.latestIdentityDay, '2026-08-10', 'historical range keeps latest identity day');
-			equal(rolling.showLatestResolutionComparison, true, 'rolling comparison visible');
-			equal(customCurrent.showLatestResolutionComparison, true, 'current custom comparison visible');
-			equal(customHistorical.showLatestResolutionComparison, false, 'historical custom comparison hidden');
+			equal(rolling.shouldShowLatestResolutionComparison, true, 'rolling comparison visible');
+			equal(customCurrent.shouldShowLatestResolutionComparison, true, 'current custom comparison visible');
+			equal(customHistorical.shouldShowLatestResolutionComparison, false, 'historical custom comparison hidden');
 			equal(formatDate(customHistorical.latestIdentityDay!), 'Aug 10, 2026', 'Current identity state label');
 			equal(formatDate(customHistoricalRange.end), 'Jul 10, 2026', 'historical chart end remains distinct');
 
@@ -697,7 +697,7 @@ const tests: { name: string; run: () => void | Promise<void> }[] = [
 		},
 	},
 	{
-		name: 'deleted connection option is omitted when its latest residual is zero',
+		name: 'deleted connection history remains selectable when its latest residual is zero',
 		run: () => {
 			equal(
 				buildIdentityConnectionOptions(
@@ -707,8 +707,11 @@ const tests: { name: string; run: () => void | Promise<void> }[] = [
 						{ connection: 'deleted', anonymous: 0, recognized: 0, withoutProfile: 0 },
 					],
 				),
-				[{ id: 'source-a', name: 'Alpha' }],
-				'zero latest deleted aggregate is hidden',
+				[
+					{ id: 'source-a', name: 'Alpha' },
+					{ id: 'deleted', name: 'Removed connections' },
+				],
+				'zero latest residual preserves access to removed connection history',
 			);
 		},
 	},

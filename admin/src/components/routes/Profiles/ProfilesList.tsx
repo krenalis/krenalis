@@ -166,7 +166,9 @@ const ProfilesList = () => {
 						) : (
 							<SlIcon slot='prefix' name='play' />
 						)}
-						{secondsSinceIRStart ? 'Identity resolution' : 'Run identity resolution'}
+						{secondsSinceIRStart != null && secondsSinceIRStart !== 0
+							? 'Identity resolution'
+							: 'Run identity resolution'}
 					</SlButton>
 					<span className='profiles-list__identity-resolution-progress'>
 						{secondsSinceIRStart ? (

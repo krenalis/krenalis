@@ -15,11 +15,6 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// IdentityResolutions stores metrics for successful Identity Resolution runs.
-type IdentityResolutions struct {
-	metrics *Metrics
-}
-
 // IdentityResolutionMetric contains metrics for one successful Identity
 // Resolution.
 type IdentityResolutionMetric struct {
@@ -72,14 +67,9 @@ type IdentityResolutionMetricDay struct {
 	LinkedIdentitiesRate float64
 }
 
-// identityResolutionHistoryState contains the values needed to construct one
-// historical Identity Resolution state.
-type identityResolutionHistoryState struct {
-	identitiesAnonymous  int
-	identitiesRecognized int
-	profilesAnonymous    int
-	profilesRecognized   int
-	profilesWithOne      int
+// IdentityResolutions stores metrics for successful Identity Resolution runs.
+type IdentityResolutions struct {
+	metrics *Metrics
 }
 
 // Latest returns the latest successful Identity Resolution metric for a
@@ -89,7 +79,6 @@ type identityResolutionHistoryState struct {
 func (resolutions *IdentityResolutions) Latest(ctx context.Context, workspace string) (*IdentityResolutionMetric, error) {
 
 	var latest IdentityResolutionMetric
-
 	err := resolutions.metrics.db.QueryRow(ctx, `SELECT (day + observed_at) AT TIME ZONE 'UTC',
 		profiles_anonymous, profiles_recognized,
 		identities_anonymous, identities_recognized, composition_one, composition_two, composition_three,
@@ -184,7 +173,6 @@ func (resolutions *IdentityResolutions) MetricsPerDate(ctx context.Context, work
 	days := make([]IdentityResolutionMetricDay, 0, dayCount)
 	current := seed
 	hasCurrent := hasSeed
-
 	for i := range dayCount {
 		if s, ok := updates[i]; ok {
 			current = s
@@ -248,4 +236,14 @@ func (resolutions *IdentityResolutions) RecordResult(ctx context.Context, tx *db
 		counts.Composition.MoreThanTwenty)
 
 	return err
+}
+
+// identityResolutionHistoryState contains the values needed to construct one
+// historical Identity Resolution state.
+type identityResolutionHistoryState struct {
+	identitiesAnonymous  int
+	identitiesRecognized int
+	profilesAnonymous    int
+	profilesRecognized   int
+	profilesWithOne      int
 }

@@ -18,7 +18,7 @@ interface DisplayDateRange {
 
 interface IdentityDashboardTemporalSemantics {
 	latestIdentityDay: string | null;
-	showLatestResolutionComparison: boolean;
+	shouldShowLatestResolutionComparison: boolean;
 }
 
 interface IdentityMetricChartDay {
@@ -171,7 +171,7 @@ const buildTemporalSemantics = (
 		latestIdentityDay ?? (resolutionObservedAt == null ? null : instantToDateKey(resolutionObservedAt));
 	return {
 		latestIdentityDay,
-		showLatestResolutionComparison: latestAvailableDay != null && displayRange.end === latestAvailableDay,
+		shouldShowLatestResolutionComparison: latestAvailableDay != null && displayRange.end === latestAvailableDay,
 	};
 };
 

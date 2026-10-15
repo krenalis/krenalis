@@ -80,6 +80,7 @@ type DummySettings struct {
 	OperationDelay          string `json:"operationDelay,omitempty"`
 }
 
+// IdentityResolutionRun represents an Identity Resolution execution.
 type IdentityResolutionRun struct {
 	ID        string     `json:"id"`
 	Status    string     `json:"status"`

@@ -323,11 +323,8 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 	// finalization is needed after a persisted success.
 	deferFinalization = false
 	counts, err = warehouse.finalizeIdentityResolution(ctx, pool, opID, counts, err)
-	if err != nil {
-		return nil, err
-	}
 
-	return counts, nil
+	return counts, err
 }
 
 // finalizeIdentityResolution returns the local result on success. On failure,
@@ -343,7 +340,8 @@ func (warehouse *PostgreSQL) finalizeIdentityResolution(ctx context.Context, con
 	bo := backoff.New(200)
 	bo.SetCap(30 * time.Second)
 	for bo.Next(ctx) {
-		if err := warehouse.setOperationAsCompleted(ctx, conn, opID, nil, operationError); err != nil {
+		err := warehouse.setOperationAsCompleted(ctx, conn, opID, nil, operationError)
+		if err != nil {
 			slog.Error("cannot mark identity resolution operation as failed, retrying",
 				"err", warehouses.NewOperationError(err), "operationError", operationError)
 			continue

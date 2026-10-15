@@ -50,6 +50,7 @@ func (warehouse *Snowflake) executeOperation(ctx context.Context, opID string, o
 	resultColumnMigrationDone := false
 	bo := backoff.New(200)
 	bo.SetCap(500 * time.Millisecond)
+
 	for bo.Next(ctx) {
 		for {
 			err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
@@ -148,13 +149,13 @@ func (warehouse *Snowflake) readOperationStatus(ctx context.Context, conn connec
 	var irResult struct {
 		Counts *warehouses.IdentityResolutionCounts `json:"counts"`
 	}
-	if err := json.Unmarshal(result, &irResult); err != nil {
+	err = json.Unmarshal(result, &irResult)
+	if err != nil {
 		return nil, fmt.Errorf("invalid Identity Resolution result for operation %s: %w", opID, err)
 	}
-	if irResult.Counts != nil {
-		if err := warehouses.ValidateIdentityResolutionCounts(irResult.Counts); err != nil {
-			return nil, fmt.Errorf("invalid Identity Resolution result for operation %s: %w", opID, err)
-		}
+	err = warehouses.ValidateIdentityResolutionCounts(irResult.Counts)
+	if err != nil {
+		return nil, fmt.Errorf("invalid Identity Resolution result for operation %s: %w", opID, err)
 	}
 	status.identityResolutionCounts = irResult.Counts
 
@@ -167,7 +168,6 @@ func (warehouse *Snowflake) readOperationStatus(ctx context.Context, conn connec
 // completed successfully. If the operation has already been set as completed,
 // this method does nothing.
 func (warehouse *Snowflake) setOperationAsCompleted(ctx context.Context, conn connection, opID string, result json.Value, opError *warehouses.OperationError) error {
-
 	var opErrorStr string
 	if opError != nil {
 		opErrorStr = opError.Error()
@@ -179,6 +179,5 @@ func (warehouse *Snowflake) setOperationAsCompleted(ctx context.Context, conn co
 		` THEN PARSE_JSON(NULLIF(?, '')) ELSE "RESULT" END,`+
 		` "ERROR" = ?`+
 		` WHERE "ID" = ? AND "COMPLETED_AT" IS NULL`, time.Now().UTC(), string(result), opErrorStr, opID)
-
 	return snowflake(err)
 }

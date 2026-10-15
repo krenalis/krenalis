@@ -37,6 +37,25 @@ const (
 	MaxEventListeners = collector.MaxEventListeners
 )
 
+// IdentityResolutionRunStatus is the derived lifecycle status of an Identity
+// Resolution run.
+type IdentityResolutionRunStatus string
+
+const (
+	IdentityResolutionRunRunning    IdentityResolutionRunStatus = "running"
+	IdentityResolutionRunSuccessful IdentityResolutionRunStatus = "successful"
+	IdentityResolutionRunFailed     IdentityResolutionRunStatus = "failed"
+)
+
+// IdentityResolutionRun describes one accepted Identity Resolution execution.
+type IdentityResolutionRun struct {
+	ID        string                      `json:"id"`
+	Status    IdentityResolutionRunStatus `json:"status"`
+	StartTime time.Time                   `json:"startTime"`
+	EndTime   *time.Time                  `json:"endTime"`
+	Error     *string                     `json:"error"`
+}
+
 // Workspace represents a workspace.
 type Workspace struct {
 	core                           *Core
@@ -1045,25 +1064,6 @@ func (this *Workspace) Identities(ctx context.Context, kpid string, first, limit
 		identities = []Identity{}
 	}
 	return identities, total, nil
-}
-
-// IdentityResolutionRunStatus is the derived lifecycle status of an Identity
-// Resolution run.
-type IdentityResolutionRunStatus string
-
-const (
-	IdentityResolutionRunRunning    IdentityResolutionRunStatus = "running"
-	IdentityResolutionRunSuccessful IdentityResolutionRunStatus = "successful"
-	IdentityResolutionRunFailed     IdentityResolutionRunStatus = "failed"
-)
-
-// IdentityResolutionRun describes one accepted Identity Resolution execution.
-type IdentityResolutionRun struct {
-	ID        string                      `json:"id"`
-	Status    IdentityResolutionRunStatus `json:"status"`
-	StartTime time.Time                   `json:"startTime"`
-	EndTime   *time.Time                  `json:"endTime"`
-	Error     *string                     `json:"error"`
 }
 
 // IdentityResolutionRuns returns Identity Resolution runs for the workspace,

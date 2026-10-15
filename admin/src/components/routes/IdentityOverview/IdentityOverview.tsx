@@ -102,8 +102,8 @@ const getErrorMessage = (error: unknown): string => {
 };
 
 interface LoadMetricsOptions {
-	loadIdentity?: boolean;
-	preserveData?: boolean;
+	shouldLoadIdentity?: boolean;
+	shouldPreserveData?: boolean;
 }
 
 const IdentityOverview = () => {
@@ -243,16 +243,16 @@ const IdentityOverview = () => {
 	);
 
 	const loadMetrics = useCallback(
-		async ({ loadIdentity = true, preserveData = false }: LoadMetricsOptions = {}) => {
+		async ({ shouldLoadIdentity = true, shouldPreserveData = false }: LoadMetricsOptions = {}) => {
 			const version = ++requestVersion.current;
 			const requestedRange = displayRange;
-			if (loadIdentity) {
+			if (shouldLoadIdentity) {
 				setIdentityError(undefined);
 				setIdentityHistoryError(undefined);
 			}
 			setResolutionError(undefined);
-			if (!preserveData) {
-				if (loadIdentity) {
+			if (!shouldPreserveData) {
+				if (shouldLoadIdentity) {
 					setIsIdentityLoading(true);
 					setLatestIdentityMetric(latestIdentityMetricRef.current);
 					setIdentityMetricDays(undefined);
@@ -322,17 +322,20 @@ const IdentityOverview = () => {
 				}
 			};
 
-			await Promise.all([loadIdentity ? loadIdentityMetrics() : Promise.resolve(), loadResolutionMetrics()]);
+			await Promise.all([
+				shouldLoadIdentity ? loadIdentityMetrics() : Promise.resolve(),
+				loadResolutionMetrics(),
+			]);
 		},
 		[api, displayRange, fetchIdentityMetricDays, fetchResolutionMetricDays, loadConnectionIdentityMetrics],
 	);
 
 	const loadResolutionRuns = useCallback(
-		async (preserveData = false) => {
+		async (shouldPreserveData = false) => {
 			const version = ++runsRequestVersion.current;
 			setResolutionRunsError(undefined);
 			setIsResolutionRunsLoading(true);
-			if (!preserveData) setResolutionRuns([]);
+			if (!shouldPreserveData) setResolutionRuns([]);
 			try {
 				const response = await api.workspaces.identityResolutionRuns();
 				if (version !== runsRequestVersion.current) return;
@@ -340,7 +343,7 @@ const IdentityOverview = () => {
 			} catch (err) {
 				if (version !== runsRequestVersion.current) return;
 				setResolutionRunsError(getErrorMessage(err));
-				if (!preserveData) setResolutionRuns([]);
+				if (!shouldPreserveData) setResolutionRuns([]);
 			} finally {
 				if (version === runsRequestVersion.current) setIsResolutionRunsLoading(false);
 			}
@@ -355,7 +358,7 @@ const IdentityOverview = () => {
 		previousSourceConnectionCatalogKey.current = sourceConnectionCatalogKey;
 		if (workspaceChanged || connectionCatalogChanged) latestIdentityMetricRef.current = undefined;
 		if (workspaceChanged) latestResolutionMetricRef.current = undefined;
-		loadMetrics({ preserveData: !workspaceChanged });
+		loadMetrics({ shouldPreserveData: !workspaceChanged });
 	}, [loadMetrics, selectedWorkspace, sourceConnectionCatalogKey]);
 
 	useEffect(() => {
@@ -391,7 +394,7 @@ const IdentityOverview = () => {
 	const selectedIdentityChartDays =
 		connectionIdentityMetricDays == null ? identityDays : selectedConnectionIdentityDays;
 	const identityChartDays = showAllIdentityConnections ? identityDays : selectedIdentityChartDays;
-	const identityChartLoading = showAllIdentityConnections
+	const isIdentityChartLoading = showAllIdentityConnections
 		? isIdentityLoading
 		: (isIdentityLoading || isRefreshing || isConnectionIdentityLoading) && connectionIdentityMetricDays == null;
 	const identityChartError = showAllIdentityConnections
@@ -502,26 +505,26 @@ const IdentityOverview = () => {
 		latestResolution == null ? resolutionKpiComparison.previousEnd : instantToDateKey(latestResolution.observedAt),
 	);
 	const browserTimeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
-	const showResolutionKpiComparison = temporalSemantics.showLatestResolutionComparison;
-	const unifiedProfilesComparison = showResolutionKpiComparison
+	const shouldShowResolutionKpiComparison = temporalSemantics.shouldShowLatestResolutionComparison;
+	const unifiedProfilesComparison = shouldShowResolutionKpiComparison
 		? {
 				delta: formatTrendPercent(resolutionKpiComparison.profilesChangePercent),
 				referenceDate: resolutionComparisonDate,
 			}
 		: undefined;
-	const identitiesPerProfileComparison = showResolutionKpiComparison
+	const identitiesPerProfileComparison = shouldShowResolutionKpiComparison
 		? {
 				delta: formatRatioDelta(resolutionKpiComparison.identitiesPerProfileChange),
 				referenceDate: resolutionComparisonDate,
 			}
 		: undefined;
-	const identityLinkRateComparison = showResolutionKpiComparison
+	const identityLinkRateComparison = shouldShowResolutionKpiComparison
 		? {
 				delta: formatPercentagePointDelta(resolutionKpiComparison.linkedIdentitiesRatePercentagePoints),
 				referenceDate: resolutionComparisonDate,
 			}
 		: undefined;
-	const showResolutionStructure = isResolutionLoading || resolutionError != null || latestResolution != null;
+	const shouldShowResolutionStructure = isResolutionLoading || resolutionError != null || latestResolution != null;
 	const resolutionDistributionTemporalLabel =
 		latestResolution == null ? '' : `Completed ${formatUTCTimestamp(latestResolution.observedAt)} UTC`;
 	const processedTypeDistribution =
@@ -573,17 +576,20 @@ const IdentityOverview = () => {
 		setIsRefreshing(true);
 		setIdentityError(undefined);
 		try {
-			let loadIdentity = true;
+			let shouldLoadIdentity = true;
 			try {
 				await api.workspaces.refreshIdentityMetrics();
 				latestIdentityMetricRef.current = undefined;
 			} catch (err) {
-				loadIdentity = false;
+				shouldLoadIdentity = false;
 				setIdentityError(getErrorMessage(err));
 			}
 
 			latestResolutionMetricRef.current = undefined;
-			await Promise.all([loadMetrics({ loadIdentity, preserveData: true }), loadResolutionRuns(true)]);
+			await Promise.all([
+				loadMetrics({ shouldLoadIdentity, shouldPreserveData: true }),
+				loadResolutionRuns(true),
+			]);
 		} finally {
 			setIsRefreshing(false);
 		}
@@ -648,7 +654,7 @@ const IdentityOverview = () => {
 						compact={true}
 					/>
 				)}
-				{showResolutionStructure && (
+				{shouldShowResolutionStructure && (
 					<div className='identity-dashboard__kpi-grid'>
 						<KpiCard
 							title='Last successful identity resolution'
@@ -711,7 +717,7 @@ const IdentityOverview = () => {
 						loading={isResolutionLoading}
 						error={resolutionError}
 					/>
-					{showResolutionStructure ? (
+					{shouldShowResolutionStructure ? (
 						<>
 							{!isResolutionLoading && resolutionError == null && !hasResolutionInPeriod ? (
 								<ResolutionPeriodEmptyState />
@@ -819,7 +825,7 @@ const IdentityOverview = () => {
 				<div className='identity-dashboard__current-charts'>
 					<IdentitiesChart
 						days={identityChartDays}
-						loading={identityChartLoading}
+						loading={isIdentityChartLoading}
 						error={identityChartError}
 						connectionOptions={identityConnectionOptions}
 						selectedConnection={selectedIdentityConnection}

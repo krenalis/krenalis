@@ -49,6 +49,25 @@ test('shows unavailable current state when latest fails', async ({ page }) => {
 	).toHaveText('—');
 });
 
+test('preserves resolution empty states when an unauthorized response has no error message', async ({ page }) => {
+	await page.evaluate(() => {
+		window.identityOverviewScenario = 'resolutionUnauthorized';
+	});
+	await page.addScriptTag({ content: componentScript });
+	await expect(
+		page
+			.locator('.identity-dashboard__resolution-chart-card')
+			.getByText('No identity resolution data in this period', { exact: true }),
+	).toBeVisible();
+	await expect(
+		page
+			.locator('.identity-dashboard__composition-card')
+			.getByText('Profile composition is unavailable', { exact: true }),
+	).toBeVisible();
+	await expect(page.getByText('Resolution metrics could not be loaded', { exact: true })).toHaveCount(0);
+	await expect(page.getByText('Composition could not be loaded', { exact: true })).toHaveCount(0);
+});
+
 for (const scenario of ['singleDay', 'singleDayZero'] as const) {
 	test(`shows daily identity points with only one observation (${scenario})`, async ({ page }) => {
 		await page.evaluate((scenario) => {
