@@ -41,6 +41,7 @@ func TestConvert(t *testing.T) {
 		{types.String(), types.String().AsCountry(types.ISO3166Alpha3), "", "", false, errCountryAlpha3Conversion},
 		{types.String(), types.String().AsPhone(), "", nil, true, nil},
 		{types.String(), types.String().AsPhone(), "", "", false, errPhoneConversion},
+		{types.String(), types.String().AsPhone(), "abc", "abc", true, errPhoneConversion},
 		{types.Boolean(), types.String(), true, "true", true, nil},
 		{types.Int(32), types.String(), -603, "-603", true, nil},
 		{types.Float(64), types.String(), 7928301735.704827, "7.928301735704827e+09", true, nil},

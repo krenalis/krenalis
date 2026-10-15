@@ -163,11 +163,11 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 			}
 			return s, nil
 		case types.PhoneSemantics:
+			if s == "" && nullable {
+				return nil, nil
+			}
 			s, ok := types.NormalizePhone(s)
 			if !ok {
-				if s == "" && nullable {
-					return nil, nil
-				}
 				return v, errPhoneConversion
 			}
 			return s, nil
