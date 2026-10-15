@@ -82,6 +82,9 @@ func Test_normalize(t *testing.T) {
 		{types.String(), []byte(nil), "", false, nil},
 		{types.String().WithValues("foo", "boo"), []byte(nil), nil, true, nil},
 		{types.String().WithPattern(regexp.MustCompile(`^foo$`)), []byte(nil), nil, true, nil},
+		{types.String().AsCountry(types.ISO3166Alpha2), "", nil, true, nil},
+		{types.String().AsCountry(types.ISO3166Alpha3), "", nil, true, nil},
+		{types.String().AsPhone(), "", nil, true, nil},
 		// boolean.
 		{types.Boolean(), true, true, false, nil},
 		// int(16).
@@ -406,6 +409,9 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "textNullableEmptyBytesUnsupportedValue", typ: types.String().WithValues("foo", "bar"), value: []byte{}, nullable: true, wantContains: "contains an unsupported value", wantInputError: true},
 		{name: "textTooLong", typ: types.String().WithMaxBytes(1), value: "toolong", wantContains: "has a value longer than 1 bytes"},
 		{name: "textTooManyChars", typ: types.String().WithMaxLength(2), value: "bòò", wantContains: "has a value longer than 2 characters"},
+		{name: "countryAlpha2NullableInvalidValue", typ: types.String().AsCountry(types.ISO3166Alpha2), value: "ZZ", nullable: true, wantInputError: true},
+		{name: "countryAlpha3NullableInvalidValue", typ: types.String().AsCountry(types.ISO3166Alpha3), value: "ZZZ", nullable: true, wantInputError: true},
+		{name: "phoneNullableInvalidValue", typ: types.String().AsPhone(), value: "abc", nullable: true, wantInputError: true},
 		{name: "booleanWrongString", typ: types.Boolean(), value: "maybe", wantContains: "string value but it is not 'true' or 'false'"},
 		{name: "booleanInvalidType", typ: types.Boolean(), value: 1, wantContains: "has type int that is not allowed for type boolean"},
 		{name: "intFractionalFloat", typ: types.Int(32), value: 1.5, wantContains: "float64 value that cannot represent an int(32) value"},

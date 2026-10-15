@@ -96,6 +96,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		}
 		switch typ.Semantics() {
 		case types.CountrySemantics:
+			if src == "" && nullable {
+				return nil, nil
+			}
 			switch typ.CountryFormat() {
 			case types.ISO3166Alpha2:
 				if !validation.IsValidCountryCodeAlpha2(v) {
@@ -107,6 +110,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				}
 			}
 		case types.PhoneSemantics:
+			if src == "" && nullable {
+				return nil, nil
+			}
 			var ok bool
 			v, ok = types.NormalizePhone(v)
 			if !ok {
