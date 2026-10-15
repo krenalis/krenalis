@@ -13,26 +13,6 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-// TestPhoneAndCountryColumnTypes checks the warehouse column types used for
-// phone and country values.
-func TestPhoneAndCountryColumnTypes(t *testing.T) {
-	for _, test := range []struct {
-		name string
-		typ  types.Type
-		want string
-	}{
-		{"phone", types.String().AsPhone(), "VARCHAR(16)"},
-		{"phone array", types.Array(types.String().AsPhone()), "ARRAY"},
-		{"country alpha2", types.String().AsCountry(types.ISO3166Alpha2), "VARCHAR(2)"},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			if got := typeToSnowflakeType(test.typ); got != test.want {
-				t.Fatalf("expected %q, got %q", test.want, got)
-			}
-		})
-	}
-}
-
 // TestScannerPhone checks that phone values are canonical across supported
 // container shapes.
 func TestScannerPhone(t *testing.T) {

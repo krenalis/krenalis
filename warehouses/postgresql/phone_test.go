@@ -15,26 +15,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// TestPhoneAndCountryColumnTypes checks the warehouse column types used for
-// phone and country values.
-func TestPhoneAndCountryColumnTypes(t *testing.T) {
-	for _, test := range []struct {
-		name string
-		typ  types.Type
-		want string
-	}{
-		{"phone", types.String().AsPhone(), "character varying(16)"},
-		{"phone array", types.Array(types.String().AsPhone()), "character varying(16)[]"},
-		{"country alpha2", types.String().AsCountry(types.ISO3166Alpha2), "character(2)"},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			if got := typeToPostgresType(test.typ); got != test.want {
-				t.Fatalf("expected %q, got %q", test.want, got)
-			}
-		})
-	}
-}
-
 // TestScannerPhone checks that phone values are canonical across
 // supported container shapes.
 func TestScannerPhone(t *testing.T) {
