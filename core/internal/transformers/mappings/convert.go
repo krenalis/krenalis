@@ -25,8 +25,8 @@ import (
 var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 
 var (
-	errCountryAlpha2Conversion = errors.New("not a valid 2-letters country code")
-	errCountryAlpha3Conversion = errors.New("not a valid 3-letters country code")
+	errCountryAlpha2Conversion = errors.New("not a valid 2-letter country code")
+	errCountryAlpha3Conversion = errors.New("not a valid 3-letter country code")
 	errMaxBytesConversion      = errors.New("invalid max bytes")
 	errMaxLengthConversion     = errors.New("invalid max length")
 	errEnumConversion          = errors.New("not a valid enum value")

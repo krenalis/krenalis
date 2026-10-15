@@ -231,9 +231,9 @@ func (mapping *Mapping) Transform(attributes map[string]any, purpose Purpose) (m
 				case errEnumConversion:
 					msg = fmt.Sprintf("«%s» is not one of the allowed values while mapping to «%s»", code(e.expr.source), code(e.path))
 				case errCountryAlpha2Conversion:
-					msg = fmt.Sprintf("«%s» is not a 2-letters country code while mapping to «%s»", code(e.expr.source), code(e.path))
+					msg = fmt.Sprintf("«%s» is not a 2-letter country code while mapping to «%s»", code(e.expr.source), code(e.path))
 				case errCountryAlpha3Conversion:
-					msg = fmt.Sprintf("«%s» is not a 3-letters country code while mapping to «%s»", code(e.expr.source), code(e.path))
+					msg = fmt.Sprintf("«%s» is not a 3-letter country code while mapping to «%s»", code(e.expr.source), code(e.path))
 				case errPhoneConversion:
 					msg = fmt.Sprintf("«%s» is not a valid phone number while mapping to «%s»", code(e.expr.source), code(e.path))
 				case errPatternConversion:

@@ -561,11 +561,11 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 				switch t.CountryFormat() {
 				case types.ISO3166Alpha2:
 					if !validation.IsValidCountryCodeAlpha2(s) {
-						return nil, newRecordValidationError("", "is not a 2-letters country code")
+						return nil, newRecordValidationError("", "is not a 2-letter country code")
 					}
 				case types.ISO3166Alpha3:
 					if !validation.IsValidCountryCodeAlpha3(s) {
-						return nil, newRecordValidationError("", "is not a 3-letters country code")
+						return nil, newRecordValidationError("", "is not a 3-letter country code")
 					}
 				}
 				return s, nil

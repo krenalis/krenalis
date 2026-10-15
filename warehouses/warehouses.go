@@ -637,11 +637,11 @@ func ValidateString(name string, t types.Type, s string) (any, error) {
 		switch t.CountryFormat() {
 		case types.ISO3166Alpha2:
 			if !validation.IsValidCountryCodeAlpha2(s) {
-				return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a 2-letters country code", name)
+				return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a 2-letter country code", name)
 			}
 		case types.ISO3166Alpha3:
 			if !validation.IsValidCountryCodeAlpha3(s) {
-				return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a 3-letters country code", name)
+				return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a 3-letter country code", name)
 			}
 		}
 		return s, nil
