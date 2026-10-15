@@ -171,7 +171,7 @@ func TestIdentityMetricsRefreshReturnsOperationalErrors(t *testing.T) {
 				t.Fatalf("expected HTTP status %d, got %d: %s",
 					http.StatusServiceUnavailable, statusErr.Response.Code, statusErr.Response.Text)
 			}
-			const expected = `{"error":{"code":"ServiceUnavailable","message":"data warehouse is unavailable"}}`
+			const expected = `{"error":{"code":"ServiceUnavailable","message":"data warehouse: ERROR: relation \"krenalis_identities\" does not exist (SQLSTATE 42P01)"}}`
 			if statusErr.Response.Text != expected {
 				t.Fatalf("expected response %s, got %s", expected, statusErr.Response.Text)
 			}

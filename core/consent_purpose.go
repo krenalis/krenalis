@@ -17,52 +17,84 @@ import (
 )
 
 const (
-	MaxRequiredConsentPurposes = 100 // maximum allowed number of required consent purposes.
-	maxConsentPurposeCodeLen   = 100 // maximum length of a consent purpose code.
+	MaxRequiredConsentPurposes      = 100  // maximum allowed number of required consent purposes.
+	maxConsentPurposeEventLocations = 5    // maximum number of event locations of a consent purpose
+	maxConsentLocationStringLen     = 1024 // maximum length of a consent location string
 )
 
-// ConsentPurpose represents a purpose.
+// ConsentPurpose describes a consent purpose and where its consent value is
+// represented in events and profiles.
 type ConsentPurpose struct {
-	Code string `json:"code"`
-	Name string `json:"name"`
+	ID                     string                  `json:"id"`
+	Name                   string                  `json:"name"`
+	EventConsentLocations  []EventConsentLocation  `json:"eventConsentLocations"`
+	ProfileConsentLocation *ProfileConsentLocation `json:"profileConsentLocation"`
 }
 
-// AddConsentPurpose adds a consent purpose with the given code and name.
-//
-// code must be a valid consent purpose code and name must be between 1 and 100
-// runes long.
-//
-// It returns an errors.UnprocessableError error with code
-// ConsentPurposeCodeExists if a consent purpose with the same code already
-// exists in the workspace.
-func (this *Workspace) AddConsentPurpose(ctx context.Context, code, name string) error {
+// ConsentPurposeToSet contains the fields used to create or update a consent purpose.
+type ConsentPurposeToSet struct {
+	Name                   string                  `json:"name"`
+	EventConsentLocations  []EventConsentLocation  `json:"eventConsentLocations"`
+	ProfileConsentLocation *ProfileConsentLocation `json:"profileConsentLocation"`
+}
+
+// EventConsentLocation identifies a property under context.consents that is checked
+// for the consent value in incoming events.
+type EventConsentLocation struct {
+	PurposeCode string `json:"purposeCode"`
+}
+
+// ProfileConsentLocation identifies the profile schema property and optional JSON key
+// used to represent the consent value for a purpose.
+type ProfileConsentLocation struct {
+	Property string `json:"property"`
+	JSONKey  string `json:"jsonKey,omitempty"`
+}
+
+// AddConsentPurpose adds a consent purpose with the values of purpose returning
+// the identifier of the added consent purpose.
+func (this *Workspace) AddConsentPurpose(ctx context.Context, purpose ConsentPurposeToSet) (string, error) {
 	this.core.mustBeOpen()
-	if err := validateConsentPurposeCode(code); err != nil {
-		return errors.BadRequest("%s", err)
-	}
-	if err := util.ValidateStringField("name", name, 100); err != nil {
-		return errors.BadRequest("%s", err)
+	err := validateConsentPurposeToSet(purpose)
+	if err != nil {
+		return "", errors.BadRequest("%s", err)
 	}
 	n := state.AddConsentPurpose{
 		Workspace: this.workspace.ID,
-		Code:      code,
-		Name:      name,
+		Name:      purpose.Name,
 	}
-	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		_, err := tx.Exec(ctx, "INSERT INTO consent_purposes (workspace, code, name) VALUES ($1, $2, $3)",
-			n.Workspace, n.Code, n.Name)
+	n.EventConsentLocations = make([]state.EventConsentLocation, len(purpose.EventConsentLocations))
+	purposeCodes := make([]string, len(n.EventConsentLocations))
+	for i, loc := range purpose.EventConsentLocations {
+		n.EventConsentLocations[i] = state.EventConsentLocation{PurposeCode: loc.PurposeCode}
+		purposeCodes[i] = loc.PurposeCode
+	}
+	var property, jsonKey string
+	if loc := purpose.ProfileConsentLocation; loc != nil {
+		n.ProfileConsentLocation = &state.ProfileConsentLocation{
+			Property: loc.Property,
+			JSONKey:  loc.JSONKey,
+		}
+		property, jsonKey = loc.Property, loc.JSONKey
+	}
+	n.ID = generateID(this.workspace.ConsentPurpose)
+	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		err := lockWorkspace(ctx, tx, n.Workspace)
+		if err != nil {
+			return nil, err
+		}
+		_, err = tx.Exec(ctx, "INSERT INTO consent_purposes"+
+			" (workspace, id, name, event_purpose_codes, profile_property, profile_json_key)"+
+			" VALUES ($1, $2, $3, $4, $5, $6)", n.Workspace, n.ID, n.Name, purposeCodes, property, jsonKey)
 		if err != nil {
 			return nil, err
 		}
 		return n, nil
 	})
 	if err != nil {
-		if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "consent_purposes_pkey" {
-			return errors.Unprocessable(ConsentPurposeCodeExists, "a consent purpose with code %q already exists", n.Code)
-		}
-		return err
+		return "", err
 	}
-	return nil
+	return n.ID, nil
 }
 
 // ConsentPurposes returns the consent purposes of the workspace, ordered by
@@ -71,17 +103,28 @@ func (this *Workspace) ConsentPurposes() []*ConsentPurpose {
 	this.core.mustBeOpen()
 	consentPurposes := this.workspace.ConsentPurposes()
 	purposes := make([]*ConsentPurpose, len(consentPurposes))
-	for i, cp := range consentPurposes {
-		purposes[i] = &ConsentPurpose{Code: cp.Code, Name: cp.Name}
+	for i, p := range consentPurposes {
+		purpose := &ConsentPurpose{
+			ID:                    p.ID,
+			Name:                  p.Name,
+			EventConsentLocations: make([]EventConsentLocation, len(p.EventConsentLocations)),
+		}
+		for j, loc := range p.EventConsentLocations {
+			purpose.EventConsentLocations[j] = EventConsentLocation(loc)
+		}
+		if loc := p.ProfileConsentLocation; loc != nil {
+			purpose.ProfileConsentLocation = new(ProfileConsentLocation(*loc))
+		}
+		purposes[i] = purpose
 	}
 	sort.Slice(purposes, func(i, j int) bool {
 		a, b := purposes[i], purposes[j]
-		return a.Name < b.Name || a.Name == b.Name && a.Code < b.Code
+		return a.Name < b.Name || a.Name == b.Name && a.ID < b.ID
 	})
 	return purposes
 }
 
-// DeleteConsentPurpose deletes the consent purpose with the given code.
+// DeleteConsentPurpose deletes the consent purpose with the given ID.
 //
 // It returns an errors.NotFoundError error if the consent purpose does not
 // exist.
@@ -89,107 +132,169 @@ func (this *Workspace) ConsentPurposes() []*ConsentPurpose {
 // It returns an errors.UnprocessableError error with code ConsentPurposeInUse
 // if the consent purpose is currently required by one or more pipelines of the
 // workspace.
-func (this *Workspace) DeleteConsentPurpose(ctx context.Context, code string) error {
+func (this *Workspace) DeleteConsentPurpose(ctx context.Context, id string) error {
 	this.core.mustBeOpen()
-	if err := validateConsentPurposeCode(code); err != nil {
-		return errors.BadRequest("%s", err)
+	if !IsValidID(id) {
+		return errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
 	}
-	if _, ok := this.workspace.ConsentPurpose(code); !ok {
-		return errors.NotFound("consent purpose %q does not exist", code)
+	if _, ok := this.workspace.ConsentPurpose(id); !ok {
+		return errors.NotFound("consent purpose %s does not exist", id)
 	}
 	n := state.DeleteConsentPurpose{
 		Workspace: this.workspace.ID,
-		Code:      code,
+		ID:        id,
 	}
 	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		err := lockWorkspace(ctx, tx, n.Workspace)
+		if err != nil {
+			return nil, err
+		}
 		var inUse bool
-		err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM pipelines p JOIN connections c ON p.connection = c.id "+
-			"WHERE c.workspace = $1 AND $2 = ANY(p.required_consents))", n.Workspace, n.Code).Scan(&inUse)
+		err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM pipelines p JOIN connections c ON p.connection = c.id "+
+			"WHERE c.workspace = $1 AND $2 = ANY(p.required_consents_purposes))", n.Workspace, n.ID).Scan(&inUse)
 		if err != nil {
 			return nil, err
 		}
 		if inUse {
-			return nil, errors.Unprocessable(ConsentPurposeInUse, "consent purpose %q is required by one or more pipelines", n.Code)
+			return nil, errors.Unprocessable(ConsentPurposeInUse,
+				"consent purpose %s is required by one or more pipelines", n.ID)
 		}
-		result, err := tx.Exec(ctx, "DELETE FROM consent_purposes WHERE workspace = $1 AND code = $2", n.Workspace, n.Code)
+		result, err := tx.Exec(ctx, "DELETE FROM consent_purposes WHERE workspace = $1 AND id = $2", n.Workspace, n.ID)
 		if err != nil {
 			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("consent purpose %q does not exist", n.Code)
+			return nil, errors.NotFound("consent purpose %s does not exist", n.ID)
 		}
 		return n, nil
 	})
 }
 
-// UpdateConsentPurpose updates the consent purpose with the given code, setting
-// its code and name to those of purpose.
+// UpdateConsentPurpose updates the consent purpose with the given ID, setting
+// its name and consent locations to those of purpose.
 //
 // It returns an errors.NotFoundError error if the consent purpose does not
 // exist.
 //
 // It returns an errors.UnprocessableError error with code
-// ConsentPurposeCodeExists if another consent purpose with the new code already
-// exists in the workspace.
-func (this *Workspace) UpdateConsentPurpose(ctx context.Context, code string, purpose ConsentPurpose) error {
+// ConsentPurposeLocationInUse if the consent purpose has no event or profile
+// consent location, and it is required by one or more pipelines that read that
+// location.
+func (this *Workspace) UpdateConsentPurpose(ctx context.Context, id string, purpose ConsentPurposeToSet) error {
+
 	this.core.mustBeOpen()
-	if err := validateConsentPurposeCode(code); err != nil {
+
+	if !IsValidID(id) {
+		return errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
+	}
+	err := validateConsentPurposeToSet(purpose)
+	if err != nil {
 		return errors.BadRequest("%s", err)
 	}
-	if err := validateConsentPurposeCode(purpose.Code); err != nil {
-		return errors.BadRequest("%s", err)
-	}
-	if err := util.ValidateStringField("name", purpose.Name, 100); err != nil {
-		return errors.BadRequest("%s", err)
-	}
-	current, ok := this.workspace.ConsentPurpose(code)
-	if !ok {
-		return errors.NotFound("consent purpose %q does not exist", code)
-	}
-	if purpose.Code == current.Code && purpose.Name == current.Name {
-		return nil
-	}
+
 	n := state.UpdateConsentPurpose{
 		Workspace: this.workspace.ID,
-		Purpose:   code,
-		Code:      purpose.Code,
+		ID:        id,
 		Name:      purpose.Name,
 	}
-	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		result, err := tx.Exec(ctx, "UPDATE consent_purposes SET code = $1, name = $2 WHERE workspace = $3 AND code = $4",
-			n.Code, n.Name, n.Workspace, n.Purpose)
+	n.EventConsentLocations = make([]state.EventConsentLocation, len(purpose.EventConsentLocations))
+	purposeCodes := make([]string, len(n.EventConsentLocations))
+	for i, loc := range purpose.EventConsentLocations {
+		n.EventConsentLocations[i] = state.EventConsentLocation(loc)
+		purposeCodes[i] = loc.PurposeCode
+	}
+	var property, jsonKey string
+	if loc := purpose.ProfileConsentLocation; loc != nil {
+		n.ProfileConsentLocation = new(state.ProfileConsentLocation(*loc))
+		property, jsonKey = loc.Property, loc.JSONKey
+	}
+
+	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+		err := lockWorkspace(ctx, tx, n.Workspace)
+		if err != nil {
+			return nil, err
+		}
+		for _, location := range []struct {
+			target  state.Target
+			name    string
+			isEmpty bool
+		}{
+			{state.TargetEvent, "event", len(purposeCodes) == 0},
+			{state.TargetUser, "profile", property == ""},
+		} {
+			if !location.isEmpty {
+				continue
+			}
+			inUse, err := tx.QueryExists(ctx, "SELECT FROM pipelines AS p\n"+
+				"JOIN connections AS c ON p.connection = c.id\n"+
+				"WHERE c.workspace = $1 AND p.target = $2 AND $3 = ANY(p.required_consents_purposes)",
+				n.Workspace, location.target, n.ID)
+			if err != nil {
+				return nil, err
+			}
+			if inUse {
+				return nil, errors.Unprocessable(ConsentPurposeLocationInUse,
+					"consent purpose %s is required by pipelines that read its %s consent location", n.ID, location.name)
+			}
+		}
+		result, err := tx.Exec(ctx, "UPDATE consent_purposes"+
+			" SET name = $1, event_purpose_codes = $2, profile_property = $3, profile_json_key = $4"+
+			" WHERE workspace = $5 AND id = $6", n.Name, purposeCodes, property, jsonKey, n.Workspace, n.ID)
 		if err != nil {
 			return nil, err
 		}
 		if result.RowsAffected() == 0 {
-			return nil, errors.NotFound("consent purpose %q does not exist", n.Purpose)
+			return nil, errors.NotFound("consent purpose %s does not exist", n.ID)
 		}
 		return n, nil
 	})
-	if err != nil {
-		if db.IsUniqueViolation(err) && db.ErrConstraintName(err) == "consent_purposes_pkey" {
-			return errors.Unprocessable(ConsentPurposeCodeExists, "a consent purpose with code %q already exists", n.Code)
-		}
+
+	return err
+}
+
+// validateConsentPurposeToSet validates the name and consent locations of the
+// given consent purpose.
+func validateConsentPurposeToSet(purpose ConsentPurposeToSet) error {
+	if err := util.ValidateStringField("name", purpose.Name, 100); err != nil {
 		return err
+	}
+	// Validate event consent locations.
+	if err := validateEventConsentLocations(purpose.EventConsentLocations); err != nil {
+		return err
+	}
+	// Validate the profile consent location.
+	if loc := purpose.ProfileConsentLocation; loc != nil {
+		if err := util.ValidateStringField("property", loc.Property, maxConsentLocationStringLen); err != nil {
+			return err
+		}
+		if !types.IsValidPropertyPath(loc.Property) {
+			return fmt.Errorf("%q is not a valid property path", loc.Property)
+		}
+		if loc.JSONKey != "" {
+			if err := util.ValidateStringField("JSON key", loc.JSONKey, maxConsentLocationStringLen); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
 
-// IsValidConsentPurposeCode returns whether the given consent purpose code is
-// valid.
-//
-// A valid consent purpose code has the same format as a property name and is at
-// most maxConsentPurposeCodeLen characters long.
-func IsValidConsentPurposeCode(code string) bool {
-	return validateConsentPurposeCode(code) == nil
-}
-
-// validateConsentPurposeCode validates the given consent purpose code.
-func validateConsentPurposeCode(code string) error {
-	if len(code) > maxConsentPurposeCodeLen || !types.IsValidPropertyName(code) {
-		return fmt.Errorf("code %q is not a valid consent purpose code. Consent purpose codes must be from 1 to %d"+
-			" characters long, must start with a letter or underscore [A-Za-z_] and subsequently contain only letters,"+
-			" numbers, or underscores [A-Za-z0-9_]", code, maxConsentPurposeCodeLen)
+// validateEventConsentLocations validates the event consent locations of a
+// consent purpose.
+func validateEventConsentLocations(locations []EventConsentLocation) error {
+	if len(locations) > maxConsentPurposeEventLocations {
+		return fmt.Errorf("consent purpose can have at most %d event consent locations",
+			maxConsentPurposeEventLocations)
+	}
+	seenPurposeCodes := map[string]bool{}
+	for _, loc := range locations {
+		if err := util.ValidateStringField("purpose code", loc.PurposeCode, maxConsentLocationStringLen); err != nil {
+			return err
+		}
+		if seenPurposeCodes[loc.PurposeCode] {
+			return fmt.Errorf("purpose code %q is duplicated", loc.PurposeCode)
+		}
+		seenPurposeCodes[loc.PurposeCode] = true
 	}
 	return nil
 }

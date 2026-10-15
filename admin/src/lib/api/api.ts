@@ -1,6 +1,6 @@
 import call from './call';
 import * as http from './http';
-import Type, { Property, ObjectType, Role } from './types/types';
+import Type, { Property, ObjectType } from './types/types';
 import { Connection, ConnectionRole, ConnectionToAdd, ConnectionToSet } from './types/connection';
 import { Identifiers } from './types/identifiers';
 import {
@@ -13,7 +13,7 @@ import {
 	PipelineStep,
 	PipelineMetrics,
 	Filter,
-	RequiredConsents,
+	EventListenerConsents,
 } from './types/pipeline';
 import { Connector, ConnectorDocumentation } from './types/connector';
 import { WarehouseMode, WarehouseResponse, WarehouseSettings } from './types/warehouse';
@@ -25,6 +25,8 @@ import Workspace, {
 	IdentityResolutionRunStatus,
 	LatestAlterProfileSchema,
 	PrimarySources,
+	EventConsentLocation,
+	ProfileConsentLocation,
 } from './types/workspace';
 import {
 	AccessKeyResponse,
@@ -543,7 +545,7 @@ class EventListeners {
 		connection: string | null,
 		size: number | null,
 		filter: Filter | null,
-		requiredConsents?: RequiredConsents | null,
+		requiredConsents?: EventListenerConsents | null,
 	): Promise<CreateEventListenerResponse> => {
 		return await call(`${this.apiURL}/events/listeners`, http.POST, this.workspaceID, {
 			connection,
@@ -980,19 +982,33 @@ class Workspaces {
 		return await call(`${this.apiURL}/consent-purposes`, http.GET, this.workspaceID);
 	};
 
-	addConsentPurpose = async (code: string, name: string): Promise<void> => {
-		return await call(`${this.apiURL}/consent-purposes`, http.POST, this.workspaceID, { code, name });
-	};
-
-	updateConsentPurpose = async (code: string, newCode: string, name: string): Promise<void> => {
-		return await call(`${this.apiURL}/consent-purposes/${code}`, http.PUT, this.workspaceID, {
-			code: newCode,
+	addConsentPurpose = async (
+		name: string,
+		eventConsentLocations: EventConsentLocation[],
+		profileConsentLocation: ProfileConsentLocation | null,
+	): Promise<void> => {
+		return await call(`${this.apiURL}/consent-purposes`, http.POST, this.workspaceID, {
 			name,
+			eventConsentLocations,
+			profileConsentLocation,
 		});
 	};
 
-	deleteConsentPurpose = async (code: string): Promise<void> => {
-		return await call(`${this.apiURL}/consent-purposes/${code}`, http.DELETE, this.workspaceID);
+	updateConsentPurpose = async (
+		id: string,
+		name: string,
+		eventConsentLocations: EventConsentLocation[],
+		profileConsentLocation: ProfileConsentLocation | null,
+	): Promise<void> => {
+		return await call(`${this.apiURL}/consent-purposes/${id}`, http.PUT, this.workspaceID, {
+			name,
+			eventConsentLocations,
+			profileConsentLocation,
+		});
+	};
+
+	deleteConsentPurpose = async (id: string): Promise<void> => {
+		return await call(`${this.apiURL}/consent-purposes/${id}`, http.DELETE, this.workspaceID);
 	};
 }
 
@@ -1005,7 +1021,7 @@ class Connectors {
 		this.apiURL = apiURL;
 	}
 
-	authURL = async (connector: string, role: Role, redirectURI: string): Promise<authURLResponse> => {
+	authURL = async (connector: string, role: ConnectionRole, redirectURI: string): Promise<authURLResponse> => {
 		return await call(
 			`${this.apiURL}/connections/auth-url?connector=${connector}&role=${role}&redirectURI=${encodeURIComponent(redirectURI)}`,
 			http.GET,

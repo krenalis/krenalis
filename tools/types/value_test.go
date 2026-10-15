@@ -407,6 +407,14 @@ func Test_Marshal(t *testing.T) {
 			result: []byte(`{}`),
 		},
 		{
+			name: "Decimal without leading zero",
+			schema: Object([]Property{
+				{Name: "a", Type: Decimal(5, 3)},
+			}),
+			value:  map[string]any{"a": decimal.MustParse(".123")},
+			result: []byte(`{"a":0.123}`),
+		},
+		{
 			name: "JSON nil",
 			schema: Object([]Property{
 				{

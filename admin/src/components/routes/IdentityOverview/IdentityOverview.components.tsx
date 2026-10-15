@@ -451,7 +451,21 @@ const RecognizedAnonymousHistoryChart = ({
 						<AreaChart data={days} margin={{ top: 8, right: 18, bottom: 2, left: 4 }}>
 							<CartesianGrid stroke={GRID_COLOR} vertical={false} />
 							<XAxis dataKey='day' tickFormatter={formatChartDate} minTickGap={28} tickLine={false} />
-							<YAxis tickFormatter={compactNumber} allowDecimals={false} tickLine={false} width={54} />
+							<YAxis
+								tickFormatter={compactNumber}
+								allowDecimals={false}
+								tickLine={false}
+								width={54}
+								allowDataOverflow={true}
+								domain={[
+									0,
+									days.reduce(
+										(maximum, day) =>
+											Math.max(maximum, (day.recognized ?? 0) + (day.anonymous ?? 0)),
+										1,
+									),
+								]}
+							/>
 							<Tooltip
 								content={({ active, label, payload }) => (
 									<RecognizedAnonymousHistoryTooltip
@@ -477,7 +491,7 @@ const RecognizedAnonymousHistoryChart = ({
 								stroke='none'
 								fill={recognizedColor}
 								fillOpacity={1}
-								dot={false}
+								dot={{ r: 3, fill: recognizedColor, stroke: 'none' }}
 								activeDot={{ r: 4, fill: recognizedColor, stroke: 'none' }}
 								connectNulls={false}
 								isAnimationActive={true}
@@ -492,7 +506,7 @@ const RecognizedAnonymousHistoryChart = ({
 								stroke='none'
 								fill={anonymousColor}
 								fillOpacity={1}
-								dot={false}
+								dot={{ r: 3, fill: anonymousColor, stroke: 'none' }}
 								activeDot={{ r: 4, fill: anonymousColor, stroke: 'none' }}
 								connectNulls={false}
 								isAnimationActive={true}

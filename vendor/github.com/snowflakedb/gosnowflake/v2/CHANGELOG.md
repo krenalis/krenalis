@@ -3,10 +3,74 @@
 ## Upcoming release
 
 New features:
+- Added `WrapDialContext` config option that wraps the dial function of the transports the driver creates, so that the connections can be customized or instrumented while keeping the certificate revocation checks, the proxy handling and the TLS configuration that setting `Transporter` would replace (snowflakedb/gosnowflake#1850).
+
+## 2.3.0
+
+Breaking changes:
+- OCSP certificate revocation checking is now off by default; opt in with `ocspFailOpen`/`OCSPFailOpen` or `SF_DISABLE_OCSP_CHECKS=false`.
+  - `FillMissingConfigParameters` no longer defaults `OCSPFailOpen` nor snapshots the env onto `DisableOCSPChecks`.
+  - `DSN()` omits unset `ocspFailOpen`, so newly generated DSNs no longer carry the opt-in, while DSNs stored from v2.2 still enable OCSP.
+  - `SF_DISABLE_OCSP_CHECKS` is now read live at connection time rather than at fill time.
+  - `SF_DISABLE_OCSP_CHECKS=true` still disables, except under fail-closed.
+
+New features:
+- Added `WorkloadIdentityHost` config option (DSN field `workloadIdentityHost`) that overrides the STS host used by the AWS WIF flows, for endpoints the driver cannot derive from the region (such as an interface VPC endpoint). Must be an STS endpoint for the region the workload runs in (snowflakedb/gosnowflake@b1ea3911a7e2).
+- Added `DownloadStream` / `DownloadStreamWithConfig` on `SnowflakeConnection`: sequential GET of one stage object as `io.ReadCloser`, with optional gzip decompression. Prefer this over `WithFileGetStream`, which still buffers the whole file (snowflakedb/gosnowflake@bf1dad211856).
 
 Bug fixes:
+- Hardened external-browser callback handling by checking `Origin` headers against the connected Snowflake account endpoint, accepting matching-Origin POST callbacks, and continuing to wait after unrelated or incomplete requests (snowflakedb/gosnowflake@386bbc9d8caa).
+- Fixed `GetQueryStatus` treating `RESTARTED` as success by counting that status as still running (snowflakedb/gosnowflake#1842).
+- Fixed stage array bind of TIMESTAMP_LTZ/NTZ/TZ writing local wallclock with no offset, so bulk inserts disagreed with scalar bind on non-UTC hosts.
+
+## 2.2.0
+
+New features:
+- Added `WorkloadIdentityAwsUseOutboundToken` config option (DSN field `workloadIdentityAwsUseOutboundToken`) that produces the AWS WIF attestation as an STS `GetWebIdentityToken` JWT instead of the default signed `GetCallerIdentity` request envelope (snowflakedb/gosnowflake#1824).
+- Added `CleanupTimeout` config option (DSN field `cleanupTimeout`, in seconds) that bounds post-cancellation cleanup (snowflakedb/gosnowflake#1816).
+- Increased CRL disk cache removal delay to 7 days (snowflakedb/gosnowflake#1820).
+- Added option to load private key from `connections.toml` file (snowflakedb/gosnowflake#1822).
+- Added support for Go 1.27, dropped support for Go 1.24 (snowflakedb/gosnowflake#1837).
+- Added `SNOWFLAKE_MIN_TLS_VERSION` environment variable to enforce a minimum TLS version for all connections (snowflakedb/gosnowflake#1840).
+
+Security fixes:
+- Restricted the WORKLOAD_IDENTITY authenticator to recognized Snowflake hosts (*.snowflakecomputing.com/.cn/.mil), normalizing the host before a suffix-anchored match. The `SNOWFLAKE_WIF_ALLOWED_HOST_SUFFIXES` environment variable additively extends the recognized-host list (SNOW-3649730).
+- Azure workload-identity IMDS requests now URL-encode the `workloadIdentityEntraResource` and client-id query parameters, so their values are confined to their own parameter and cannot alter the rest of the query string (SNOW-3649876).
+- The Azure `IDENTITY_ENDPOINT` is now required to be a loopback or link-local address before the `IDENTITY_HEADER` value is attached to the request (SNOW-3649837).
+- Account-identifier and region values in DSN parameters are now validated as well-formed URL-authority components before they are incorporated into driver-constructed URLs, and OCSP cache-server and retry URLs are built via `net/url` rather than direct string formatting, so neither can embed URL-significant characters that would alter the resulting URL authority (SNOW-3711332).
+- Improved OCSP response validation to correctly distinguish between transient network failures and definitive certificate status results; definitive results are now always reflected accurately regardless of the `ocspFailOpen` setting (SNOW-3649697).
+- Extended secret masking in debug logs to cover the S3 SSE-C customer-key header and the `X-Amz-Credential` / `X-Amz-Security-Token` URL query parameters (SNOW-3649835).
+- HTTP response headers are now logged as header names only, without their values, at every site that previously logged the whole header collection (`restful.go`, `auth.go`, `authokta.go`, `heartbeat.go`). Header values carry session tokens, storage credentials and the SSE-C customer key, and formatting an `http.Header` with `%v` produced a shape the header-specific masking patterns did not match, so the values are omitted rather than masked (SNOW-3649835).
+- The chunk-header debug line now logs the header name only, not its value (SNOW-3649835).
+- The TOML connection-config loader now logs setting names only, not their values, when reporting a parsing error (SNOW-3649818).
+- Corrected the SAS-token masking pattern so signed-URL query parameters are fully masked in logs (SNOW-3649773).
+- Corrected the connection-token masking pattern to admit `:` in the token value, so a Snowflake session token (`ver:1-hint:...`) is masked; previously the match ended at the first colon and fell below the pattern's minimum length, so the pattern never matched the format it targets (SNOW-3649773).
+
+Bug fixes:
+- Fixed token cache key collisions for multi-account (shared IdP) and multi-role scenarios by switching to a versioned, SHA256-hashed canonical-JSON key with the token type in the key prefix, applied uniformly across keyring (macOS/Windows) and file (Linux) backends; also replaced the bag-of-fields spec struct with typed token-spec types (`hostUserTokenSpec` for MFA/ID flows, `oauthTokenSpec` for OAuth flows) so each spec validates and serializes only its own fields (snowflakedb/gosnowflake#1817, snowflakedb/gosnowflake#1821).
+- Fixed nil pointer dereference panic when a corrupt or malformed OCSP cache key is encountered, either from the remote OCSP cache server or the local cache file (snowflakedb/gosnowflake#1819).
+- Fixed `WithFileGetStream` returning corrupt or wrong-file bytes when a `GET` prefix-matched more than one file; a get-stream can return only one file, so a multi-file match now returns the new `ErrGetStreamMultipleFiles` (pointing to the GET `PATTERN` argument) instead of a nondeterministic mix (snowflakedb/gosnowflake#1809).
+- Do not attempt to get S3 bucket accelerate config for Snowflake-internal stages (matched by bucket name `sfc-*`) since s3:GetAccelerateConfiguration not granted anyways (snowflakedb/gosnowflake#1805).
+- Fixed gosnowflake writing a `gosnowflake-cgo` directory under the system temp dir at package import time even when the driver was never used (e.g. when imported only as a transitive dependency). Minicore now loads lazily when the driver is first referenced (`NewConnector`/`OpenWithConfig`) instead of in `init()` (snowflakedb/gosnowflake#1807).
+- Fixed `GET` from a LOCAL_FS stage downloading 0 files and returning `264011: not implemented`. Cloud downloads were unaffected (snowflakedb/gosnowflake#1810).
+- Fixed `NUMBER` columns with a non-zero scale losing precision: values needing more significant digits than a binary float's mantissa were silently rounded, so `NUMBER(20,10)` holding `1234567890.1234567890` returned `1234567890.1234567889`. The `WithHigherPrecision` path is unchanged and still returns a 64-bit `*big.Float` (snowflakedb/gosnowflake#1835).
+- Fixed proxy configuration for a literal IPv6 `ProxyHost`, which was concatenated into an unbracketed `host:port` and left the proxy URL unparseable (snowflakedb/gosnowflake#TBD).
+- Fixed the `region` parameter rewriting an explicitly provided `host` (e.g. `host=myacct.snowflakecomputing.com` with `region=us-east-1` became `myacct.us-east-1.snowflakecomputing.com`); an explicit host now takes precedence (snowflakedb/gosnowflake#1841).
 
 Internal changes:
+- Migrated from deprecated `github.com/aws/aws-sdk-go-v2/feature/s3/manager` (v1.16.15) to `github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager` (v0.3.5).
+- Introduced `ConversionOptions` for Arrow batches configuration (snowflakedb/gosnowflake#1832).
+- Updated AWS SDK dependencies:
+  - `github.com/aws/aws-sdk-go-v2`: v1.38.1 → v1.43.0
+  - `github.com/aws/aws-sdk-go-v2/config`: v1.27.11 → v1.32.31
+  - `github.com/aws/aws-sdk-go-v2/credentials`: v1.17.11 → v1.19.30
+  - `github.com/aws/aws-sdk-go-v2/feature/ec2/imds`: v1.16.1 → v1.18.31
+  - `github.com/aws/aws-sdk-go-v2/service/s3`: v1.53.1 → v1.106.0
+  - `github.com/aws/aws-sdk-go-v2/service/sts`: v1.28.6 → v1.45.0
+  - `github.com/aws/smithy-go`: v1.22.5 → v1.27.4
+- Adopted Go 1.25 idioms now that the minimum supported version is 1.25: `sync.WaitGroup.Go` for driver-managed goroutines, and the `min`/`max` builtins in place of the hand-rolled `intMin`/`intMax`/`int64Max`/`durationMin`/`durationMax` helpers.
+- Enabled the `modernize`, `nosprintfhostport`, `perfsprint` and `usetesting` linters and the Go 1.25 `hostport`/`waitgroup` `go vet` analyzers; bumped golangci-lint to v2.13.
+- Fixed the `fakeResponseBody` test double reporting more bytes read than fit in the caller's buffer, which panicked the Go 1.27 `encoding/json` decoder.
 
 ## 2.1.0
 

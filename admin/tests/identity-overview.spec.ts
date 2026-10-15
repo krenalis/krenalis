@@ -49,6 +49,28 @@ test('shows unavailable current state when latest fails', async ({ page }) => {
 	).toHaveText('—');
 });
 
+for (const scenario of ['singleDay', 'singleDayZero'] as const) {
+	test(`shows daily identity points with only one observation (${scenario})`, async ({ page }) => {
+		await page.evaluate((scenario) => {
+			window.identityOverviewScenario = scenario;
+		}, scenario);
+		await page.addScriptTag({ content: componentScript });
+		await expect(
+			page.locator('.identity-dashboard__section--current-state .identity-dashboard__kpi-value').first(),
+		).toHaveText(scenario === 'singleDay' ? '10' : '0');
+		const areas = page.locator(
+			'.identity-dashboard__section--current-state .identity-dashboard__chart .recharts-area',
+		);
+		await expect(areas).toHaveCount(2);
+		for (const area of await areas.all()) {
+			const dots = area.locator('.recharts-area-dot');
+			await expect(dots).toHaveCount(1);
+			await expect(dots).toBeVisible();
+			await expect(dots).toHaveAttribute('r', '3');
+		}
+	});
+}
+
 test('loads removed connection history after refreshing the current state to zero', async ({ page }) => {
 	await page.evaluate(() => {
 		window.identityOverviewScenario = 'removed';
