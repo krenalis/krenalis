@@ -30,7 +30,10 @@ func (warehouse *PostgreSQL) AlterProfileSchema(ctx context.Context, opID string
 		return err
 	}
 	if status.alreadyCompleted {
-		return status.executionError
+		if status.executionError != nil {
+			return status.executionError
+		}
+		return nil
 	}
 	var operationErr *warehouses.OperationError
 	err = warehouse.alterProfileSchema(ctx, columns, operations)
