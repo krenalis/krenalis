@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
@@ -17,7 +18,6 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/uuid"
 )
 
 // profileIdentityGroup describes the identity fixtures that form one profile.
@@ -43,14 +43,14 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			emptyOp := uuid.NewString()
+			emptyOp := uuid.New().String()
 			emptyCounts := resolveAndAssertCounts(t, dw, emptyOp, profileColumns, warehouses.IdentityResolutionCounts{})
 
 			mergeIdentityResolutionCountIdentities(t, dw, profileColumns, []profileIdentityGroup{
 				{name: "anonymous-one", anonymous: 1, duplicateFirstAcrossPipelines: true},
 				{name: "anonymous-two", anonymous: 2},
 			})
-			anonymousOp := uuid.NewString()
+			anonymousOp := uuid.New().String()
 			anonymousCounts := resolveAndAssertCounts(t, dw, anonymousOp, profileColumns, warehouses.IdentityResolutionCounts{
 				Profiles:    warehouses.Counts{Anonymous: 2},
 				Identities:  warehouses.Counts{Anonymous: 3},
@@ -63,7 +63,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 				{name: "anonymous-one", recognized: 1},
 				{name: "anonymous-two", recognized: 1},
 			})
-			recognizedOp := uuid.NewString()
+			recognizedOp := uuid.New().String()
 			recognizedCounts := resolveAndAssertCounts(t, dw, recognizedOp, profileColumns, warehouses.IdentityResolutionCounts{
 				Profiles:    warehouses.Counts{Recognized: 2},
 				Identities:  warehouses.Counts{Anonymous: 3, Recognized: 2},
@@ -80,7 +80,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 				{name: "recognized-twenty-one", recognized: 21},
 				{name: "anonymous-twenty-five", anonymous: 25},
 			})
-			variedOp := uuid.NewString()
+			variedOp := uuid.New().String()
 			resolveAndAssertCounts(t, dw, variedOp, profileColumns, warehouses.IdentityResolutionCounts{
 				Profiles:   warehouses.Counts{Anonymous: 2, Recognized: 6},
 				Identities: warehouses.Counts{Anonymous: 40, Recognized: 56},
@@ -174,7 +174,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 				t.Fatalf("expected ResolveIdentities to reject an oversized persisted result, got counts %v", counts)
 			})
 			t.Run("non-identity-resolution operation has no result", func(t *testing.T) {
-				opAlter := uuid.NewString()
+				opAlter := uuid.New().String()
 				alteredProfileColumns := append([]warehouses.Column{}, profileColumns...)
 				alteredProfileColumns = append(alteredProfileColumns, warehouses.Column{
 					Name:     "operation_result_test",
@@ -195,7 +195,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 			})
 
 			t.Run("failed operation has no result and remains failed", func(t *testing.T) {
-				opFailed := uuid.NewString()
+				opFailed := uuid.New().String()
 				profilesBefore, countErr := dw.Counts(ctx, "profiles", nil)
 				if countErr != nil {
 					t.Fatal(countErr)
