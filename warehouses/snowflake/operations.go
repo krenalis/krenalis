@@ -62,7 +62,7 @@ func (warehouse *Snowflake) executeOperation(ctx context.Context, opID string, o
 					return nil
 				}
 				// No existing operation was found, so this one can be started.
-				_, err = tx.Exec(
+				_, err = tx.ExecContext(ctx,
 					`INSERT INTO "KRENALIS_SYSTEM_OPERATIONS" ("ID", "OPERATION_TYPE") VALUES (?, ?)`,
 					opID, opType)
 				if err != nil {
