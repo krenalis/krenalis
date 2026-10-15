@@ -27,7 +27,7 @@ const (
 )
 
 // semanticsName contains the JSON names of all semantics except NoSemantics.
-var semanticsName = []string{
+var semanticsName = [...]string{
 	"country",
 	"duration",
 	"email",
@@ -38,8 +38,8 @@ var semanticsName = []string{
 	"url",
 }
 
-// SemanticsByName returns the semantics identified by name. It returns
-// NoSemantics, false if name does not identify any semantics. NoSemantics
+// SemanticsByName returns the semantics identified by name.
+// If the name is not found, it returns NoSemantics and false. NoSemantics
 // represents the absence of semantics and cannot be looked up by name.
 func SemanticsByName(name string) (Semantics, bool) {
 	for i, n := range semanticsName {
@@ -75,9 +75,8 @@ var countryFormatName = [...]string{
 	"alpha-3",
 }
 
-// CountryFormatByName returns the country format with the given name.
-// The second return parameter reports whether a country format with the given
-// name exists.
+// CountryFormatByName returns the country format identified by name.
+// The second return value reports whether the name was found.
 func CountryFormatByName(name string) (CountryFormat, bool) {
 	for i, n := range countryFormatName {
 		if n == name {
@@ -117,15 +116,15 @@ var durationUnitName = [...]string{
 	"week",
 }
 
-// DurationUnitByName returns the duration unit with the given name. The second
-// return parameter reports whether a duration unit with the given name exists.
+// DurationUnitByName returns the duration unit identified by name.
+// The second return value reports whether the name was found.
 func DurationUnitByName(name string) (DurationUnit, bool) {
 	for i, n := range durationUnitName {
 		if n == name {
 			return DurationUnit(i + 1), true
 		}
 	}
-	return DurationUnit(0), false
+	return 0, false
 }
 
 // String returns the name of u.
@@ -163,7 +162,7 @@ const (
 )
 
 // unitOfMeasureName contains the JSON names of all valid units of measure.
-var unitOfMeasureName = []string{
+var unitOfMeasureName = [...]string{
 	"g",
 	"kg",
 	"mm",
@@ -186,8 +185,8 @@ var unitOfMeasureName = []string{
 	"mi",
 }
 
-// UnitOfMeasureByName returns the unit of measure with the given name. The
-// second return parameter reports whether a unit with the given name exists.
+// UnitOfMeasureByName returns the unit of measure identified by name.
+// The second return value reports whether the name was found.
 func UnitOfMeasureByName(name string) (UnitOfMeasure, bool) {
 	for i, n := range unitOfMeasureName {
 		if n == name {
