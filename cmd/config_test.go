@@ -1787,13 +1787,14 @@ func TestParseSettings(t *testing.T) {
 			setBaseline(t)
 			t.Setenv("KRENALIS_MAXMIND_DB_PATH", uri)
 			_, err := loadConfigFn()
-			if err == nil {
-				t.Fatalf("%q: expected error, got nil", uri)
+			if err != nil {
+				want := "KRENALIS_MAXMIND_DB_PATH must be an S3 URI in the form s3://bucket/key"
+				if err.Error() != want {
+					t.Fatalf("%q: expected %q, got %q", uri, want, err)
+				}
+				continue
 			}
-			want := "KRENALIS_MAXMIND_DB_PATH must be an S3 URI in the form s3://bucket/key"
-			if err.Error() != want {
-				t.Fatalf("%q: expected %q, got %q", uri, want, err)
-			}
+			t.Fatalf("%q: expected error, got nil", uri)
 		}
 	})
 
