@@ -343,25 +343,30 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		}
 		// Check the semantics.
 		if !types.EqualSemantics(in.Type, out.Type) {
-			t, a, b := out.Type, "external", "internal"
-			if t.Semantics() == types.NoSemantics {
-				t, a, b = in.Type, "internal", "external"
+			if in.Type.Semantics() != out.Type.Semantics() {
+				inSemantics, outSemantics := in.Type.Semantics().String(), out.Type.Semantics().String()
+				if in.Type.Semantics() == types.NoSemantics {
+					inSemantics = "no"
+				}
+				if out.Type.Semantics() == types.NoSemantics {
+					outSemantics = "no"
+				}
+				return errors.BadRequest(
+					"input matching property has %s semantics, but output matching property requires %s semantics",
+					inSemantics, outSemantics)
 			}
-			var opts, requiredOpts string
-			switch t.Semantics() {
+			option := "semantics option"
+			switch in.Type.Semantics() {
 			case types.CountrySemantics:
-				opts = fmt.Sprintf(" with format %s", t.CountryFormat())
-				requiredOpts = " and format"
+				option = "country format"
 			case types.DurationSemantics:
-				opts = fmt.Sprintf(" with unit %s", t.DurationUnit())
-				requiredOpts = " and unit"
+				option = "duration unit"
 			case types.MeasurementSemantics:
-				opts = fmt.Sprintf(" with unit of measure %s", t.UnitOfMeasure())
-				requiredOpts = " and unit of measure"
+				option = "unit of measure"
 			}
 			return errors.BadRequest(
-				"%s matching property has %s semantics%s, so %s matching property must have the same semantics%s",
-				a, t.Semantics(), opts, b, requiredOpts)
+				"input matching property has %s %s, but output matching property requires %s", option,
+				types.SemanticsOptionString(in.Type), types.SemanticsOptionString(out.Type))
 		}
 		// Check that the output property has not been transformed.
 		// This includes checks on the property itself and all its parent paths.

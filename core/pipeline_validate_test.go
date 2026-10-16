@@ -3791,15 +3791,15 @@ func TestMatchingPropertySemantics(t *testing.T) {
 		},
 		{
 			"country with different formats", types.String().AsCountry(types.ISO3166Alpha2),
-			types.String().AsCountry(types.ISO3166Alpha3), CreateOrUpdate, "external matching property has country semantics with format alpha-3, so internal matching property must have the same semantics and format",
+			types.String().AsCountry(types.ISO3166Alpha3), CreateOrUpdate, "input matching property has country format alpha-2, but output matching property requires alpha-3",
 		},
 		{
 			"country semantics on input only", types.String().AsCountry(types.ISO3166Alpha2), types.String(),
-			CreateOrUpdate, "internal matching property has country semantics with format alpha-2, so external matching property must have the same semantics and format",
+			CreateOrUpdate, "input matching property has country semantics, but output matching property requires no semantics",
 		},
 		{
 			"country semantics on output only", types.String(), types.String().AsCountry(types.ISO3166Alpha2),
-			CreateOrUpdate, "external matching property has country semantics with format alpha-2, so internal matching property must have the same semantics and format",
+			CreateOrUpdate, "input matching property has no semantics, but output matching property requires country semantics",
 		},
 		{
 			"duration with different constraints", types.Int(64).AsDuration(types.Second),
@@ -3807,31 +3807,36 @@ func TestMatchingPropertySemantics(t *testing.T) {
 		},
 		{
 			"input phone only", types.String().AsPhone(), types.String(), CreateOnly,
-			"internal matching property has phone semantics, so external matching property must have the same semantics",
+			"input matching property has phone semantics, but output matching property requires no semantics",
 		},
 		{
 			"output phone only", types.String(), types.String().AsPhone(), UpdateOnly,
-			"external matching property has phone semantics, so internal matching property must have the same semantics",
+			"input matching property has no semantics, but output matching property requires phone semantics",
 		},
 		{
 			"input email only", types.String().AsEmail(), types.String(), CreateOnly,
-			"internal matching property has email semantics, so external matching property must have the same semantics",
+			"input matching property has email semantics, but output matching property requires no semantics",
 		},
 		{
 			"output email only", types.String(), types.String().AsEmail(), UpdateOnly,
-			"external matching property has email semantics, so internal matching property must have the same semantics",
+			"input matching property has no semantics, but output matching property requires email semantics",
 		},
 		{
 			"different semantics", types.String().AsEmail(), types.String().AsPhone(), CreateOrUpdate,
-			"external matching property has phone semantics, so internal matching property must have the same semantics",
+			"input matching property has email semantics, but output matching property requires phone semantics",
 		},
 		{
 			"different measurement units", types.Int(64).AsMeasurement(types.Meter), types.Int(64).AsMeasurement(types.Kilometer),
-			CreateOrUpdate, "external matching property has measurement semantics with unit of measure km, so internal matching property must have the same semantics and unit of measure",
+			CreateOrUpdate, "input matching property has unit of measure m, but output matching property requires km",
 		},
 		{
 			"different duration units", types.Int(64).AsDuration(types.Second), types.Int(64).AsDuration(types.Minute),
-			CreateOrUpdate, "external matching property has duration semantics with unit minute, so internal matching property must have the same semantics and unit",
+			CreateOrUpdate, "input matching property has duration unit second, but output matching property requires minute",
+		},
+		{
+			"money cannot be used for matching", types.Decimal(18, 4).AsMoney().WithCurrency("EUR"),
+			types.Decimal(18, 4).AsMoney().WithCurrency("USD"), CreateOrUpdate,
+			"type decimal(18,4) cannot be used as matching property",
 		},
 	}
 
@@ -3871,7 +3876,7 @@ func TestMatchingPropertySemantics(t *testing.T) {
 		})
 		p.Matching = Matching{In: "container.matching", Out: "container.matching"}
 
-		wantErr := "external matching property has email semantics, so internal matching property must have the same semantics"
+		wantErr := "input matching property has phone semantics, but output matching property requires email semantics"
 		err := validatePipelineToSet(p, v)
 		if err == nil {
 			t.Fatalf("expected error %q, got nil", wantErr)
