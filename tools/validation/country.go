@@ -33,8 +33,8 @@ func IsValidCountryCodeAlpha2(code string) bool {
 	return false
 }
 
-// IsValidCountryCodeAlpha3 returns true when code is a valid current or formerly
-// assigned ISO 3166 alpha-3 country code.
+// IsValidCountryCodeAlpha3 returns true when code is a valid current or
+// formerly assigned ISO 3166 alpha-3 country code.
 func IsValidCountryCodeAlpha3(code string) bool {
 	// Fast path.
 	switch code {
