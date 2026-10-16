@@ -12,8 +12,8 @@ import (
 	"github.com/krenalis/krenalis/test/krenalistester"
 )
 
-// TestHealth tests the /livez endpoint.
-func TestHealth(t *testing.T) {
+// TestLivez tests the /livez endpoint.
+func TestLivez(t *testing.T) {
 
 	// Test's header (copy-paste me in other tests).
 	if testing.Short() {

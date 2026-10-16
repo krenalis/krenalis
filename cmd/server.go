@@ -353,6 +353,19 @@ func verifyCertificate(cert tls.Certificate, dnsName string, roots *x509.CertPoo
 	return nil
 }
 
+// serveLivez serves the /livez endpoint, which reports that the process is
+// serving requests. It does not check any dependency.
+func serveLivez(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		w.Header().Set("Allow", "GET")
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = w.Write([]byte("ok"))
+}
+
 // serveMCPServerHTMLIndex returns the MCP server HTML index page.
 func serveMCPServerHTMLIndex(w http.ResponseWriter) error {
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet, notranslate, noimageindex")
