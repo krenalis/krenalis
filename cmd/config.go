@@ -525,7 +525,7 @@ func loadConfig(ctx context.Context, source string) (*Config, error) {
 	if location, ok := strings.CutPrefix(conf.Get("KRENALIS_MAXMIND_DB_PATH"), "s3://"); ok {
 		bucket, key, _ := strings.Cut(location, "/")
 		if bucket == "" || key == "" {
-			return nil, fmt.Errorf("KRENALIS_MAXMIND_DB_PATH must be an S3 URI in the form s3://bucket/key")
+			return nil, fmt.Errorf("KRENALIS_MAXMIND_DB_PATH must be an S3 URI in the form 's3://bucket/key'")
 		}
 		settings.MaxMindDBPath = "s3://" + location
 	} else if path, err := resolveFilePath(conf, "KRENALIS_MAXMIND_DB_PATH"); err != nil {
