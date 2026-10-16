@@ -42,10 +42,6 @@ var errStreamUnavailable = errors.New("stream unavailable")
 // maxRequestSize is the maximum size inBatchRequests bytes of an event request body.
 const maxRequestSize = 500 * 1024
 
-// maxMaxMindDBSize is the maximum size in bytes of a MaxMind db downloaded
-// from S3.
-const maxMaxMindDBSize = 512 * 1024 * 1024
-
 // pipelineWorker represents a long-running pipeline event processor.
 type pipelineWorker func()
 
@@ -105,46 +101,11 @@ func New(ctx context.Context, db *db.DB, stream streams.Stream, st *state.State,
 	c.workers.cancelPipeline = map[string]context.CancelFunc{}
 	c.workers.cancelConnection = map[string]context.CancelFunc{}
 
-	if location, ok := strings.CutPrefix(maxMindDBPath, "s3://"); ok {
-
-		bucket, key, _ := strings.Cut(location, "/")
-		if bucket == "" || key == "" {
-			return nil, fmt.Errorf("invalid maxmind DB S3 URI %q", maxMindDBPath)
-		}
-
-		cfg, err := awsconfig.LoadDefaultConfig(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("cannot load AWS config: %s", err)
-		}
-		res, err := awss3.NewFromConfig(cfg).GetObject(ctx, &awss3.GetObjectInput{
-			Bucket: aws.String(bucket),
-			Key:    aws.String(key),
-		})
-		if err != nil {
-			return nil, fmt.Errorf("cannot download maxmind DB from %q: %s", maxMindDBPath, err)
-		}
-		defer res.Body.Close()
-		if res.ContentLength != nil && *res.ContentLength > maxMaxMindDBSize {
-			return nil, fmt.Errorf("maxmind DB at %q is larger than %d bytes", maxMindDBPath, maxMaxMindDBSize)
-		}
-		data, err := io.ReadAll(io.LimitReader(res.Body, maxMaxMindDBSize+1))
-		if err != nil {
-			return nil, fmt.Errorf("cannot download maxmind DB from %q: %s", maxMindDBPath, err)
-		}
-		if len(data) > maxMaxMindDBSize {
-			return nil, fmt.Errorf("maxmind DB at %q is larger than %d bytes", maxMindDBPath, maxMaxMindDBSize)
-		}
-
-		c.maxmindDB, err = maxminddb.OpenBytes(data)
-		if err != nil {
-			return nil, fmt.Errorf("cannot open maxmind DB from %q: %s", maxMindDBPath, err)
-		}
-
-	} else if maxMindDBPath != "" {
+	if maxMindDBPath != "" {
 		var err error
-		c.maxmindDB, err = maxminddb.Open(maxMindDBPath)
+		c.maxmindDB, err = loadMaxMindDB(ctx, maxMindDBPath)
 		if err != nil {
-			return nil, fmt.Errorf("cannot open maxmind DB at path %q: %s", maxMindDBPath, err)
+			return nil, err
 		}
 	}
 
@@ -1106,4 +1067,57 @@ func (c *Collector) stopPipelineWorker(pipeline *state.Pipeline) {
 // isValidWorkspaceID reports whether s is a valid workspace identifier.
 func isValidWorkspaceID(s string) bool {
 	return len(s) == 12 && base58.IsValid(s)
+}
+
+// maxMaxMindDBSize is the maximum size in bytes of a MaxMind db downloaded
+// from S3.
+const maxMaxMindDBSize = 512 * 1024 * 1024
+
+// loadMaxMindDB loads the MaxMind db from path, which is either a file path or
+// an S3 URI in the form s3://bucket/key.
+func loadMaxMindDB(ctx context.Context, path string) (*maxminddb.Reader, error) {
+
+	location, ok := strings.CutPrefix(path, "s3://")
+	if !ok {
+		reader, err := maxminddb.Open(path)
+		if err != nil {
+			return nil, fmt.Errorf("cannot open maxmind DB at path %q: %s", path, err)
+		}
+		return reader, nil
+	}
+
+	bucket, key, _ := strings.Cut(location, "/")
+	if bucket == "" || key == "" {
+		return nil, fmt.Errorf("invalid maxmind DB S3 URI %q", path)
+	}
+
+	cfg, err := awsconfig.LoadDefaultConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("cannot load AWS config: %s", err)
+	}
+	res, err := awss3.NewFromConfig(cfg).GetObject(ctx, &awss3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("cannot download maxmind DB from %q: %s", path, err)
+	}
+	defer res.Body.Close()
+	if res.ContentLength != nil && *res.ContentLength > maxMaxMindDBSize {
+		return nil, fmt.Errorf("maxmind DB at %q is larger than %d bytes", path, maxMaxMindDBSize)
+	}
+	data, err := io.ReadAll(io.LimitReader(res.Body, maxMaxMindDBSize+1))
+	if err != nil {
+		return nil, fmt.Errorf("cannot download maxmind DB from %q: %s", path, err)
+	}
+	if len(data) > maxMaxMindDBSize {
+		return nil, fmt.Errorf("maxmind DB at %q is larger than %d bytes", path, maxMaxMindDBSize)
+	}
+
+	reader, err := maxminddb.OpenBytes(data)
+	if err != nil {
+		return nil, fmt.Errorf("cannot open maxmind DB from %q: %s", path, err)
+	}
+
+	return reader, nil
 }
