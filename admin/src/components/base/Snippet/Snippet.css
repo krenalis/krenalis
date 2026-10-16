@@ -3,14 +3,14 @@
 	margin-top: 0;
 }
 
-.syntax-highlight--install-command + sl-copy-button {
+.syntax-highlight--install-command + wa-copy-button {
 	position: absolute;
 	width: max-content !important;
 	top: 10px;
 	right: 20px;
 }
 
-.syntax-highlight--snippet + sl-copy-button {
+.syntax-highlight--snippet + wa-copy-button {
 	margin-top: 20px;
 	position: absolute;
 	width: max-content !important;
@@ -18,7 +18,7 @@
 	right: 20px;
 }
 
-.snippet sl-copy-button::part(button) {
+.snippet wa-copy-button::part(button) {
 	gap: 8px;
 	background-color: transparent;
 	padding: 9px 13px;

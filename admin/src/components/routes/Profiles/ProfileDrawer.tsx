@@ -7,7 +7,7 @@ import SlTab from '@awesome.me/webawesome/dist/react/tab/index.js';
 import SlAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlTabGroup from '@awesome.me/webawesome/dist/react/tab-group/index.js';
-import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
+import SlCopyButton from '@awesome.me/webawesome/dist/react/copy-button/index.js';
 import SlTabPanel from '@awesome.me/webawesome/dist/react/tab-panel/index.js';
 import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
@@ -440,7 +440,6 @@ const DrawerAttribute = ({ name, value, isParent, isIndented, isExpanded, setIsE
 						copyLabel='Click to copy'
 						successLabel='✓ Copied'
 						errorLabel='Copying to clipboard is not supported by your browser'
-						hoist={true}
 					/>
 				</span>
 			)}

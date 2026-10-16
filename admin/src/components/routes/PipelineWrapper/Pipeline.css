@@ -781,7 +781,7 @@ wa-button.pipeline__filters-remove-rule[appearance='plain']::part(label) {
 	inset: 0;
 	/* Keep the copy tooltip above fullscreen section headers. */
 	z-index: 11;
-	display: block;
+	display: grid;
 }
 
 .pipeline__transformation-output-property-copy::part(button) {
@@ -1129,7 +1129,7 @@ inherit the disabled style */
 	display: none !important; /* Hide the default read-only message */
 }
 
-.fullscreen-transformation sl-split-panel {
+.fullscreen-transformation wa-split-panel {
 	height: 100%;
 }
 
@@ -1460,7 +1460,7 @@ inherit the disabled style */
 	position: absolute;
 	inset: 0;
 	z-index: 11;
-	display: block;
+	display: grid;
 }
 
 .fullscreen-transformation__property-copy::part(button) {

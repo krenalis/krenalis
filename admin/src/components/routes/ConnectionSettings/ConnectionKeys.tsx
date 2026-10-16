@@ -4,7 +4,7 @@ import AppContext from '../../../context/AppContext';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
-import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
+import SlCopyButton from '@awesome.me/webawesome/dist/react/copy-button/index.js';
 import TransformedConnection from '../../../lib/core/connection';
 
 interface KeysProps {

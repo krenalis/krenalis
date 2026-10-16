@@ -5,6 +5,12 @@
 	margin: 50px auto !important;
 }
 
+/* The label is drawn next to the picker; the picker's own still names its
+   trigger. */
+.connector-color-picker wa-color-picker::part(form-control-label) {
+	display: none;
+}
+
 .connector-color-picker__label {
 	font-size: var(--sl-input-font-size-medium);
 	font-weight: var(--sl-input-font-weight);

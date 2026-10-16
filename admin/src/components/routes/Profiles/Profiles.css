@@ -366,7 +366,7 @@
 	font-size: 0;
 }
 
-.drawer-attribute__value-copy::part(tooltip__body) {
+.drawer-attribute__value-copy::part(feedback) {
 	font-size: 13px;
 }
 

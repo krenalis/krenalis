@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useMemo, useState } from 'react';
 import './Snippet.css';
 import AppContext from '../../../context/AppContext';
 import { NotFoundError } from '../../../lib/api/errors';
-import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
+import SlCopyButton from '@awesome.me/webawesome/dist/react/copy-button/index.js';
 
 import SyntaxHighlight from '../SyntaxHighlight/SyntaxHighlight';
 import Section from '../../base/Section/Section';

@@ -251,22 +251,13 @@ wa-dialog::part(body) {
 	padding-top: 0px;
 }
 
-sl-split-panel {
+wa-split-panel {
 	--divider-width: 2px;
 }
 
-sl-split-panel::part(divider) {
+wa-split-panel::part(divider) {
 	background-color: var(--border-primary);
 	z-index: 20;
-}
-
-sl-split-panel sl-icon[slot='divider'] {
-	position: absolute;
-	border-radius: 5px;
-	background: var(--bg-primary);
-	color: var(--sl-color-neutral-500);
-	padding: 0.5rem 0.125rem;
-	border: 1px solid var(--border-primary);
 }
 
 sl-icon::part(svg) {
@@ -1536,6 +1527,99 @@ wa-icon::part(svg) {
 :where(wa-dialog, wa-drawer)::part(close-button__base):focus-visible {
 	color: var(--sl-color-primary-600);
 	outline: none;
+}
+
+/* Web Awesome copy buttons, drawn as Shoelace drew them, at zero specificity:
+   no background on hover, and the color of the text around them. The button
+   shares a line of a div with two empty slots and the spaces between them:
+   with no font size, they take no room, so the button has its own. The grid
+   display stretches the div to the host, which the copy buttons laid over a
+   text rely on. */
+:where(wa-copy-button) {
+	display: inline-grid;
+	color: inherit;
+	font-size: 0;
+}
+
+:where(wa-copy-button)::part(button) {
+	height: auto;
+	aspect-ratio: auto;
+	padding: var(--sl-spacing-x-small);
+	border-radius: var(--sl-border-radius-medium);
+	background-color: transparent;
+	color: inherit;
+	font-size: var(--sl-font-size-medium);
+	transition: var(--sl-transition-x-fast) color;
+}
+
+:where(wa-copy-button)::part(button):focus-visible {
+	outline: var(--sl-focus-ring);
+	outline-offset: var(--sl-focus-ring-offset);
+}
+
+:where(wa-copy-button:state(success))::part(button) {
+	color: var(--sl-color-success-600);
+}
+
+:where(wa-copy-button:state(error))::part(button) {
+	color: var(--sl-color-danger-600);
+}
+
+/* Web Awesome draws Font Awesome's glyphs; the masks cut the icons down to
+   Shoelace's. */
+:where(wa-copy-button)::part(copy-icon),
+:where(wa-copy-button)::part(success-icon),
+:where(wa-copy-button)::part(error-icon) {
+	width: 1em;
+	height: 1em;
+	background-color: currentColor;
+}
+
+:where(wa-copy-button)::part(copy-icon) {
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1z'/%3E%3C/svg%3E")
+		center / contain no-repeat;
+}
+
+:where(wa-copy-button)::part(success-icon) {
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-linecap='round'%3E%3Cpath d='M3.43 9.14 6.86 12.57M12.57 3.43 6.86 12.57'/%3E%3C/svg%3E")
+		center / contain no-repeat;
+}
+
+:where(wa-copy-button)::part(error-icon) {
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z'/%3E%3C/svg%3E")
+		center / contain no-repeat;
+}
+
+/* The trigger of Web Awesome color pickers, drawn as Shoelace drew it, at
+   zero specificity: a circle as high as a medium input, inline as it was, so
+   with the room for descenders below it. The panel keeps the look of Web
+   Awesome. */
+:where(wa-color-picker) {
+	display: block;
+}
+
+:where(wa-color-picker)::part(trigger) {
+	display: inline-block;
+	width: var(--sl-input-height-medium);
+	height: var(--sl-input-height-medium);
+	border-radius: var(--sl-border-radius-circle);
+	background-image:
+		linear-gradient(45deg, var(--sl-color-neutral-300) 25%, transparent 25%),
+		linear-gradient(45deg, transparent 75%, var(--sl-color-neutral-300) 75%),
+		linear-gradient(45deg, transparent 75%, var(--sl-color-neutral-300) 75%),
+		linear-gradient(45deg, var(--sl-color-neutral-300) 25%, transparent 25%);
+	background-size: 10px 10px;
+	background-position:
+		0 0,
+		0 0,
+		-5px -5px,
+		5px 5px;
+}
+
+:where(wa-color-picker)::part(trigger)::before {
+	box-shadow:
+		inset 0 0 0 2px var(--sl-input-border-color),
+		inset 0 0 0 4px var(--sl-color-neutral-0);
 }
 
 /* || Radix */

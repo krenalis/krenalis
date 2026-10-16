@@ -52,8 +52,8 @@ import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
-import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
-import SlSplitPanel from '@shoelace-style/shoelace/dist/react/split-panel/index.js';
+import SlCopyButton from '@awesome.me/webawesome/dist/react/copy-button/index.js';
+import SlSplitPanel from '@awesome.me/webawesome/dist/react/split-panel/index.js';
 import SlCallout from '@awesome.me/webawesome/dist/react/callout/index.js';
 import SlCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
@@ -1085,7 +1085,6 @@ const TransformationBox = ({
 										copyLabel='Click to copy'
 										successLabel='✓ Copied'
 										errorLabel='Copying to clipboard is not supported by your browser'
-										hoist={true}
 										tabIndex={-1}
 									/>
 									<span className='pipeline__transformation-output-property-key'>
@@ -3009,7 +3008,6 @@ const MapMapping = ({
 							copyLabel='Click to copy'
 							successLabel='✓ Copied'
 							errorLabel='Copying to clipboard is not supported by your browser'
-							hoist={true}
 						/>
 						<span className='pipeline__transformation-output-property-key'>{property.full.name}</span>
 					</span>
@@ -3503,7 +3501,6 @@ const TransformationProperty = ({
 												copyLabel='Click to copy'
 												successLabel='✓ Copied'
 												errorLabel='Copying to clipboard is not supported by your browser'
-												hoist={true}
 											/>
 										)}
 										<span className='fullscreen-transformation__property-name-text'>

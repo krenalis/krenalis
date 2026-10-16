@@ -3,7 +3,7 @@ import './SchemaPropertyConsent.css';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlPopup from '@shoelace-style/shoelace/dist/react/popup/index.js';
+import SlPopup from '@awesome.me/webawesome/dist/react/popup/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import AppContext from '../../../context/AppContext';
 import { ConsentPurpose } from '../../../lib/api/types/workspace';
@@ -85,7 +85,6 @@ const SchemaPropertyConsent = ({ purposes }: SchemaPropertyConsentProps) => {
 			className='schema-property-consent'
 			active={isOpen}
 			placement='top'
-			strategy='fixed'
 			distance={8}
 			onClick={(event) => event.stopPropagation()}
 			arrow

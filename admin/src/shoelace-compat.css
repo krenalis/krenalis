@@ -93,6 +93,10 @@
 	--wa-form-control-background-color: var(--wa-color-surface-default);
 	--wa-form-control-border-color: var(--wa-color-neutral-70);
 	--wa-form-control-placeholder-color: var(--wa-color-neutral-50);
+	--wa-tooltip-background-color: var(--wa-color-neutral-20);
+	--wa-tooltip-border-width: 0px;
+	--wa-tooltip-border-radius: var(--wa-border-radius-m);
+	--wa-tooltip-line-height: 1.4;
 
 	/* ---------------------------------------------------------------------------------------- */
 	/* Bridge: Shoelace token names, for the CSS that has not been migrated yet.                 */

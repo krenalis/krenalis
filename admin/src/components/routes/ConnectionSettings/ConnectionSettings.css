@@ -116,7 +116,7 @@
 	font-size: 14px;
 }
 
-.connection-settings__keys-endpoint-copy > sl-copy-button {
+.connection-settings__keys-endpoint-copy > wa-copy-button {
 	position: relative;
 	top: 14px;
 }

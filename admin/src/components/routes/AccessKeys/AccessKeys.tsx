@@ -10,7 +10,7 @@ import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
 import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
+import SlCopyButton from '@awesome.me/webawesome/dist/react/copy-button/index.js';
 import SlDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import { NotFoundError } from '../../../lib/api/errors';
