@@ -354,7 +354,7 @@ func verifyCertificate(cert tls.Certificate, dnsName string, roots *x509.CertPoo
 }
 
 // serveLivez serves the /livez endpoint, which reports that the process is
-// serving requests. It does not check any dependency.
+// serving requests.
 func serveLivez(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		w.Header().Set("Allow", "GET")
