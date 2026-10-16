@@ -86,7 +86,7 @@ type Collector struct {
 // maxMindDBPath is the path to the MaxMind db file, or an S3 URI in the form
 // s3://bucket/key, used for enriching the events with geolocation information;
 // if not provided, the database file is not opened and the geolocation
-// information are not automatically added by Krenalis.
+// information is not automatically added by Krenalis.
 func New(ctx context.Context, db *db.DB, stream streams.Stream, st *state.State, ds *datastore.Datastore, connections *connections.Connections, provider transformers.FunctionProvider, metrics *metrics.Metrics, maxMindDBPath string) (*Collector, error) {
 
 	var c = &Collector{
