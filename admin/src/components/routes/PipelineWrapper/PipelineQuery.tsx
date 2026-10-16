@@ -9,7 +9,7 @@ import PipelineContext from '../../../context/PipelineContext';
 import AppContext from '../../../context/AppContext';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
-import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
+import SlDrawer from '@awesome.me/webawesome/dist/react/drawer/index.js';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import { ExecQueryResponse } from '../../../lib/api/types/responses';
 import { Popover } from '../../base/Popover/Popover';
@@ -185,9 +185,10 @@ const PipelineQuery = () => {
 			<SlDrawer
 				className='pipeline__query-preview-drawer'
 				open={queryPreviewColumns != null && queryPreviewRows != null}
-				onSlAfterShow={() => setShowPreview(true)}
-				onSlAfterHide={(e: any) => {
-					if (e.target.classList.contains('pipeline__issues')) {
+				lightDismiss
+				onWaAfterShow={() => setShowPreview(true)}
+				onWaAfterHide={(e: any) => {
+					if (e.target !== e.currentTarget) {
 						e.stopPropagation();
 						return;
 					}

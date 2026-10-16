@@ -245,11 +245,11 @@
 	left: calc(var(--parent-indentation) + 15px);
 }
 
-.schema-edit sl-dialog::part(base) {
-	padding-left: var(--sidebar-width);
+.schema-edit wa-dialog::part(dialog) {
+	left: var(--sidebar-width);
 }
 
-.schema-edit__queries::part(panel) {
+.schema-edit__queries::part(dialog) {
 	max-height: calc(100vh - 80px);
 	width: min(720px, calc(100vw - 80px));
 }

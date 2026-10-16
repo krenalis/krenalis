@@ -15,11 +15,11 @@ const ConfirmByTyping = ({ confirmText, value, onInput }: ConfirmByTypingProps) 
 		const input = inputRef.current;
 		if (!input) return;
 
-		const dialog = input.closest('sl-dialog');
+		const dialog = input.closest('wa-dialog');
 		if (dialog) {
 			const onAfterShow = () => input.focus();
-			dialog.addEventListener('sl-after-show', onAfterShow);
-			return () => dialog.removeEventListener('sl-after-show', onAfterShow);
+			dialog.addEventListener('wa-after-show', onAfterShow);
+			return () => dialog.removeEventListener('wa-after-show', onAfterShow);
 		} else {
 			setTimeout(() => input.focus(), 50);
 		}

@@ -69,7 +69,7 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 	await page.getByRole('button', { name: 'Add consent purpose' }).click();
 
 	const dialog = page.locator('.consent-management__dialog[open]');
-	await dialog.locator('[part="overlay"]').dispatchEvent('click');
+	await page.mouse.click(10, 10);
 	await expect(dialog).toHaveJSProperty('open', true);
 	await expect(dialog.locator('.consent-management__dialog-name')).toHaveJSProperty('size', 'm');
 	await expect(dialog.locator('.consent-management__dialog-purpose-code')).toHaveJSProperty('size', 'm');
@@ -301,13 +301,17 @@ test(`Edit a consent purpose without setting the initial focus`, async ({ page }
 	const dialog = page.locator('.consent-management__dialog').nth(1);
 	await dialog.evaluate((dialog) => {
 		dialog.setAttribute('data-focus-count', '0');
-		dialog.addEventListener('focusin', () => {
+		dialog.addEventListener('focusin', (event) => {
+			// Web Awesome focuses its own <dialog>, in the shadow root, when it opens.
+			if (event.target === dialog) {
+				return;
+			}
 			const count = Number(dialog.getAttribute('data-focus-count'));
 			dialog.setAttribute('data-focus-count', String(count + 1));
 		});
-		dialog.addEventListener('sl-after-show', (event) => {
+		dialog.addEventListener('wa-after-show', (event) => {
 			if (event.target === dialog) {
-				dialog.setAttribute('data-initial-focus', String(dialog.matches(':focus-within')));
+				dialog.setAttribute('data-initial-focus', String(dialog.querySelector(':focus-within') != null));
 			}
 		});
 	});

@@ -161,39 +161,6 @@ wa-button > a {
 	border-color: #4049c6 !important;
 }
 
-sl-alert[variant='primary'] > *,
-sl-alert[variant='neutral'] > *,
-sl-alert[variant='danger'] > *,
-sl-alert[variant='success'] > *,
-sl-alert[variant='warning'] > * {
-	color: var(--text-onaccent);
-}
-
-sl-alert::part(base) {
-	color: var(--text-onaccent);
-	font-weight: 600;
-}
-
-sl-alert[variant='neutral']::part(base) {
-	background-color: var(--sl-color-neutral-600);
-}
-
-sl-alert[variant='primary']::part(base) {
-	background-color: var(--sl-color-primary-600);
-}
-
-sl-alert[variant='success']::part(base) {
-	background-color: var(--sl-color-success-600);
-}
-
-sl-alert[variant='danger']::part(base) {
-	background-color: var(--sl-color-danger-600);
-}
-
-sl-alert[variant='warning']::part(base) {
-	background-color: var(--sl-color-warning-600);
-}
-
 sl-breadcrumb-item {
 	position: relative;
 }
@@ -232,12 +199,8 @@ wa-switch:state(checked)::part(thumb) {
 	border-color: var(--sl-color-success-600) !important;
 }
 
-sl-drawer[placement='bottom']::part(panel) {
+wa-drawer[placement='bottom']::part(dialog) {
 	padding: 20px 30px 10px 30px;
-}
-
-sl-drawer::part(base) {
-	z-index: 1000;
 }
 
 /* TODO: why this doesn't work? */
@@ -267,24 +230,24 @@ wa-checkbox::part(hint) {
 	font-size: 12px;
 }
 
-sl-dialog::part(panel) {
+wa-dialog::part(dialog) {
 	border-radius: 5px;
 }
 
-sl-dialog::part(base) {
-	padding-left: var(--sidebar-width);
+wa-dialog::part(dialog) {
+	left: var(--sidebar-width);
 }
 
-sl-dialog.fullscreen::part(base),
-.root-error sl-dialog::part(base) {
-	padding-left: 0;
+wa-dialog.fullscreen::part(dialog),
+.root-error wa-dialog::part(dialog) {
+	left: 0;
 }
 
-sl-dialog::part(title) {
+wa-dialog::part(title) {
 	font-weight: 500;
 }
 
-sl-dialog::part(body) {
+wa-dialog::part(body) {
 	padding-top: 0px;
 }
 
@@ -1478,6 +1441,101 @@ wa-icon::part(svg) {
    group placed at the start or the end sets its own. */
 :where(wa-tab-panel) {
 	--padding: var(--sl-spacing-medium) 0;
+}
+
+/* Web Awesome dialogs and drawers, drawn as Shoelace drew them, at zero
+   specificity. Shoelace padded the title rather than the header, and the
+   Admin's rules on the title rely on it; its spacing properties are kept. */
+:where(wa-dialog, wa-drawer) {
+	--header-spacing: var(--sl-spacing-large);
+	--body-spacing: var(--sl-spacing-large);
+	--footer-spacing: var(--sl-spacing-large);
+	--show-duration: 250ms;
+	--hide-duration: 250ms;
+	--wa-color-overlay-modal: var(--sl-overlay-background-color);
+}
+
+:where(wa-dialog)::part(dialog) {
+	max-width: calc(100% - var(--sl-spacing-2x-large));
+	max-height: calc(100% - var(--sl-spacing-2x-large));
+	border-radius: var(--sl-border-radius-medium);
+}
+
+:where(wa-dialog, wa-drawer)::part(dialog) {
+	background-color: var(--sl-panel-background-color);
+	box-shadow: var(--sl-shadow-x-large);
+}
+
+:where(wa-dialog, wa-drawer)::part(header) {
+	padding: 0;
+}
+
+:where(wa-dialog, wa-drawer)::part(title) {
+	align-self: auto;
+	font-size: var(--sl-font-size-large);
+	font-weight: inherit;
+	line-height: var(--sl-line-height-dense);
+	padding: var(--header-spacing);
+}
+
+:where(wa-dialog, wa-drawer)::part(header-actions) {
+	align-self: auto;
+	gap: var(--sl-spacing-2x-small);
+	padding: 0 var(--header-spacing);
+}
+
+:where(wa-dialog, wa-drawer)::part(body) {
+	padding: var(--body-spacing);
+}
+
+/* A scrollable body takes the focus when the drawer opens; Shoelace drew no
+   ring around it. */
+:where(wa-dialog, wa-drawer)::part(body):focus-visible {
+	outline: none;
+}
+
+:where(wa-dialog, wa-drawer)::part(footer) {
+	padding: var(--footer-spacing);
+}
+
+/* The close button, drawn as Shoelace's icon button. Web Awesome draws Font
+   Awesome's cross; the mask cuts it down to Shoelace's, which is Bootstrap's.
+   The mask would hide the focus ring too, so the ring is on the host. */
+:where(wa-dialog, wa-drawer)::part(close-button) {
+	display: flex;
+	align-items: center;
+	align-self: center;
+	font-size: var(--sl-font-size-medium);
+	border-radius: var(--sl-border-radius-medium);
+}
+
+:where(wa-dialog, wa-drawer)::part(close-button):focus-within {
+	outline: var(--sl-focus-ring);
+	outline-offset: var(--sl-focus-ring-offset);
+}
+
+:where(wa-dialog, wa-drawer)::part(close-button__base) {
+	width: calc(1em + 2 * var(--sl-spacing-x-small));
+	height: calc(1em + 2 * var(--sl-spacing-x-small));
+	padding: var(--sl-spacing-x-small);
+	font-size: inherit;
+	font-weight: inherit;
+	color: var(--sl-color-neutral-600);
+	background: none;
+	border: none;
+	border-radius: var(--sl-border-radius-medium);
+	background-color: currentColor;
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z'/%3E%3C/svg%3E")
+		center / 1em 1em no-repeat;
+}
+
+:where(wa-dialog, wa-drawer)::part(close-button__base):hover {
+	color: var(--sl-color-primary-600);
+}
+
+:where(wa-dialog, wa-drawer)::part(close-button__base):focus-visible {
+	color: var(--sl-color-primary-600);
+	outline: none;
 }
 
 /* || Radix */

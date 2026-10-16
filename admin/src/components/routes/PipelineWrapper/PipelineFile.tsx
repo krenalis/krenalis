@@ -12,7 +12,7 @@ import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
 import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
-import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
+import SlDrawer from '@awesome.me/webawesome/dist/react/drawer/index.js';
 import {
 	AbsolutePathResponse,
 	RecordsResponse,
@@ -888,9 +888,10 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			<SlDrawer
 				className='pipeline__file-preview-drawer'
 				open={filePreviewColumns != null && filePreviewRows != null}
-				onSlAfterShow={() => setShowFilePreviewContent(true)}
-				onSlAfterHide={(e: any) => {
-					if (e.target.classList.contains('pipeline__issues')) {
+				lightDismiss
+				onWaAfterShow={() => setShowFilePreviewContent(true)}
+				onWaAfterHide={(e: any) => {
+					if (e.target !== e.currentTarget) {
 						e.stopPropagation();
 						return;
 					}

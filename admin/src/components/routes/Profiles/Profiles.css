@@ -167,26 +167,62 @@
 	position: relative;
 }
 
-.profile-drawer::part(title) {
-	display: none;
-}
-
-.profile-drawer::part(header) {
+/* The drawer is drawn as Shoelace's contained drawer. */
+.profile-drawer {
 	position: absolute;
-	min-height: 50px;
+	top: 0;
+	left: 0;
+	z-index: 1000;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	pointer-events: none;
+}
+
+.profile-drawer__panel {
+	position: absolute;
+	top: 0;
 	right: 0;
-}
-
-.profile-drawer::part(panel) {
+	z-index: 2;
+	display: flex;
+	flex-direction: column;
+	width: 600px;
+	max-width: 100%;
+	height: 100%;
 	max-height: calc(100% - 80px);
+	overflow: auto;
+	background-color: var(--sl-panel-background-color);
+	box-shadow: var(--sl-shadow-x-large);
+	pointer-events: all;
 }
 
-.profile-drawer--loading::part(panel) {
+.profile-drawer__panel:focus {
+	outline: none;
+}
+
+.profile-drawer--loading .profile-drawer__panel {
 	overflow: hidden;
 }
 
-.profile-drawer::part(body) {
+.profile-drawer__header {
+	position: absolute;
+	right: 0;
+	display: flex;
+	min-height: 50px;
+	padding: 0 var(--sl-spacing-large);
+}
+
+.profile-drawer__close {
+	display: flex;
+	align-items: center;
+	font-size: var(--sl-font-size-medium);
+}
+
+.profile-drawer__body {
+	flex: 1 1 auto;
+	padding: var(--sl-spacing-large);
 	padding-bottom: 0;
+	overflow: auto;
 }
 
 .profile-drawer wa-tab-group wa-tab-panel::part(base) {

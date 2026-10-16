@@ -337,14 +337,14 @@ test(`Update consent associations while editing profile schema properties`, asyn
 
 	await replacementRow.locator('.schema-property-consent__open-purpose').click();
 	const discardDialog = page.locator('.alert-dialog', { hasText: 'Discard unsaved changes?' });
-	await expect(discardDialog).toBeVisible();
+	await expect(discardDialog.locator('[part~="dialog"]')).toBeVisible();
 	await expect(page).toHaveURL(`${adminURL}/profile-unification/schema/edit`);
 	await discardDialog.getByText('Keep editing', { exact: true }).click();
-	await expect(discardDialog).not.toBeVisible();
+	await expect(discardDialog.locator('[part~="dialog"]')).not.toBeVisible();
 
 	await replacementRow.locator('.schema-property-consent__trigger').hover();
 	await replacementRow.locator('.schema-property-consent__open-purpose').click();
-	await expect(discardDialog).toBeVisible();
+	await expect(discardDialog.locator('[part~="dialog"]')).toBeVisible();
 	await discardDialog.getByText('Discard and leave', { exact: true }).click();
 	await expect(page).toHaveURL(`${adminURL}/settings/consent-management`);
 	await expect(page.locator('.consent-management__dialog[open] .consent-management__dialog-name input')).toHaveValue(
@@ -875,7 +875,7 @@ test(`Keep an object expanded when reordering it`, async ({ page }) => {
 	);
 	await applyButton.click();
 	await previewResponse;
-	await expect(page.locator('.schema-edit__queries')).toBeVisible();
+	await expect(page.locator('.schema-edit__queries').locator('[part~="dialog"]')).toBeVisible();
 });
 
 test(`Warn before leaving pending profile schema changes`, async ({ page }) => {
@@ -889,14 +889,14 @@ test(`Warn before leaving pending profile schema changes`, async ({ page }) => {
 
 	await page.evaluate(() => window.history.back());
 	const dialog = page.locator('.alert-dialog', { hasText: 'Discard unsaved changes?' });
-	await expect(dialog).toBeVisible();
+	await expect(dialog.locator('[part~="dialog"]')).toBeVisible();
 	await expect(dialog).toContainText('The pending schema changes will be discarded.');
 	await dialog.getByText('Keep editing', { exact: true }).click();
 	await expect(page.locator('.schema-edit')).toBeVisible();
-	await expect(dialog).not.toBeVisible();
+	await expect(dialog.locator('[part~="dialog"]')).not.toBeVisible();
 
 	await page.evaluate(() => window.history.back());
-	await expect(dialog).toBeVisible();
+	await expect(dialog.locator('[part~="dialog"]')).toBeVisible();
 	await dialog.getByText('Discard and leave', { exact: true }).click();
 	await expect(page.locator('.schema-grid')).toBeVisible();
 });
@@ -912,7 +912,7 @@ test(`Restore pointer interaction after discarding schema changes with Cancel`, 
 
 	await cancelButton.click();
 	const dialog = page.locator('.alert-dialog', { hasText: 'Discard unsaved changes?' });
-	await expect(dialog).toBeVisible();
+	await expect(dialog.locator('[part~="dialog"]')).toBeVisible();
 	await dialog.getByText('Discard and leave', { exact: true }).click();
 	await expect(page.locator('.schema-grid')).toBeVisible();
 
@@ -1294,9 +1294,9 @@ test(`Keep object types unchanged after canceling the schema review`, async ({ p
 	await page.locator('.schema-edit__header-apply-button').click();
 
 	const reviewDialog = page.locator('.schema-edit__queries');
-	await expect(reviewDialog).toBeVisible();
+	await expect(reviewDialog.locator('[part~="dialog"]')).toBeVisible();
 	await reviewDialog.getByText('Cancel', { exact: true }).click();
-	await expect(reviewDialog).not.toBeVisible();
+	await expect(reviewDialog.locator('[part~="dialog"]')).not.toBeVisible();
 
 	await openProperty(page, 'review_object');
 	await expect(propertyPanel.locator('.property-form__modified-dot')).toHaveCount(0);
@@ -1379,7 +1379,7 @@ test(`Keep the schema review open while applying changes`, async ({ page }) => {
 	await page.locator('.schema-edit__header-apply-button').click();
 
 	const reviewDialog = page.locator('.schema-edit__queries');
-	await expect(reviewDialog).toBeVisible();
+	await expect(reviewDialog.locator('[part~="dialog"]')).toBeVisible();
 	const alterRequestPromise = page.waitForRequest(
 		(request) => request.url().endsWith('/profiles/schema') && request.method() === 'PUT',
 	);
@@ -1650,7 +1650,7 @@ test(`Clear the primary source when changing a new property to an array`, async 
 	);
 	await applyButton.click();
 	await previewResponsePromise;
-	await expect(page.locator('.schema-edit__queries')).toBeVisible();
+	await expect(page.locator('.schema-edit__queries').locator('[part~="dialog"]')).toBeVisible();
 	await page.locator('.schema-edit__apply-alter-button').click();
 	const alterRequest = await alterRequestPromise;
 	expect(alterRequest.postDataJSON().primarySources).not.toHaveProperty('array_without_primary_source');
@@ -2053,7 +2053,7 @@ test(`Remove a replacement property without sending its stale RePath`, async ({ 
 	const applyButton = page.locator('.schema-edit__header-apply-button');
 	await expect(applyButton).not.toHaveAttribute('disabled');
 	await applyButton.click();
-	await expect(page.locator('.schema-edit__queries')).toBeVisible();
+	await expect(page.locator('.schema-edit__queries').locator('[part~="dialog"]')).toBeVisible();
 	const alterRequestPromise = page.waitForRequest(
 		(request) => request.url().endsWith('/profiles/schema') && request.method() === 'PUT',
 	);
@@ -2421,7 +2421,7 @@ test(`Support hasOwnProperty as a profile schema property name`, async ({ page }
 	);
 	await applyButton.click();
 	await previewResponsePromise;
-	await expect(page.locator('.schema-edit__queries')).toBeVisible();
+	await expect(page.locator('.schema-edit__queries').locator('[part~="dialog"]')).toBeVisible();
 });
 
 test(`Ignore inherited primary sources for prototype property names`, async ({ page }) => {
@@ -2616,7 +2616,7 @@ test(`Remove nested properties when changing a new object to another type`, asyn
 	const previewSchema = previewRequest.postDataJSON().schema as ObjectType;
 	const property = previewSchema.properties.find((candidate) => candidate.name === 'new_object');
 	expect(property?.type).toEqual({ kind: 'string' });
-	await expect(page.locator('.schema-edit__queries')).toBeVisible();
+	await expect(page.locator('.schema-edit__queries').locator('[part~="dialog"]')).toBeVisible();
 });
 
 test(`Reject descendant changes while renaming an object property`, async ({ page }) => {
@@ -2867,7 +2867,7 @@ test(`Do not restore focus to the delete action after closing its dialog`, async
 		.filter({ has: page.locator('.schema-edit__confirm-remove-property') });
 	await expect(deleteTooltip).toHaveCount(1);
 	await removeButton.click();
-	await expect(removeDialog).toBeVisible();
+	await expect(removeDialog.locator('[part~="dialog"]')).toBeVisible();
 	await deleteTooltip.evaluate((tooltip) => {
 		tooltip.dataset.focusReturnCount = '0';
 		tooltip.addEventListener('focusin', () => {
@@ -2877,9 +2877,9 @@ test(`Do not restore focus to the delete action after closing its dialog`, async
 	await removeDialog.evaluate((dialog) => {
 		dialog.dataset.afterHideSettled = 'false';
 		dialog.addEventListener(
-			'sl-after-hide',
+			'wa-after-hide',
 			() => {
-				// Shoelace queues focus restoration immediately before emitting sl-after-hide.
+				// Web Awesome queues focus restoration immediately before emitting wa-after-hide.
 				setTimeout(() => {
 					dialog.dataset.afterHideSettled = 'true';
 				});
@@ -2894,14 +2894,14 @@ test(`Do not restore focus to the delete action after closing its dialog`, async
 	await expect(deleteTooltip).not.toHaveAttribute('open');
 
 	await removeButton.click();
-	await expect(removeDialog).toBeVisible();
+	await expect(removeDialog.locator('[part~="dialog"]')).toBeVisible();
 	await deleteTooltip.evaluate((tooltip) => {
 		tooltip.dataset.focusReturnCount = '0';
 	});
 	await removeDialog.evaluate((dialog) => {
 		dialog.dataset.afterHideSettled = 'false';
 		dialog.addEventListener(
-			'sl-after-hide',
+			'wa-after-hide',
 			() => {
 				setTimeout(() => {
 					dialog.dataset.afterHideSettled = 'true';

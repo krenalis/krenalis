@@ -6,7 +6,7 @@ import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
-import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
+import SlDrawer from '@awesome.me/webawesome/dist/react/drawer/index.js';
 import SlBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { authURLResponse } from '../../../lib/api/types/responses';
@@ -257,8 +257,11 @@ const ConnectorsList = () => {
 				style={{ '--size': '600px' } as React.CSSProperties}
 				open={selectedConnector != null}
 				className='connectors-list__documentation-drawer'
-				onSlAfterHide={() => {
-					setSelectedConnector(null);
+				lightDismiss
+				onWaAfterHide={(e) => {
+					if (e.target === e.currentTarget) {
+						setSelectedConnector(null);
+					}
 				}}
 			>
 				<div className='connectors-list__documentation-drawer-label' slot='label'>

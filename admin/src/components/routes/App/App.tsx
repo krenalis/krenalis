@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, ReactNode } from 'react';
 import './App.css';
-import Toast from '../../base/Toast/Toast';
+import Toast, { ToastRef } from '../../base/Toast/Toast';
 import * as icons from '../../../constants/icons';
 import { Status } from './App.types';
 import { FULLSCREEN_PATHS, RESET_PASSWORD_PATH } from '../../../constants/paths';
@@ -10,7 +10,6 @@ import { Outlet } from 'react-router-dom';
 import { useNavigate, useLocation, matchPath } from 'react-router-dom';
 import { registerIconLibrary as registerShoelaceIconLibrary } from '@shoelace-style/shoelace/dist/utilities/icon-library.js';
 import { registerIconLibrary } from '@awesome.me/webawesome/dist/components/icon/library.js';
-import type SlAlert from '@shoelace-style/shoelace/dist/components/alert/alert.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import '@shoelace-style/shoelace/dist/themes/light.css';
 import '@awesome.me/webawesome/dist/styles/layers.css';
@@ -41,7 +40,7 @@ const App = ({ onWorkOSLogout }: { onWorkOSLogout?: () => void } = {}) => {
 	const [title, setTitle] = useState<ReactNode>('');
 	const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
-	const toastRef = useRef<SlAlert | null>(null);
+	const toastRef = useRef<ToastRef | null>(null);
 	const navigate = useNavigate();
 	const location = useLocation();
 

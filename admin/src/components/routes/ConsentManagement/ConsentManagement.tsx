@@ -9,7 +9,7 @@ import { UnprocessableError } from '../../../lib/api/errors';
 import Grid from '../../base/Grid/Grid';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlDialog, { SlAfterHideEvent } from '@shoelace-style/shoelace/dist/react/dialog/index.js';
+import SlDialog, { WaAfterHideEvent } from '@awesome.me/webawesome/dist/react/dialog/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
@@ -540,9 +540,9 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 		}
 	}, [duplicatePurposeCodeError, purposeCodes]);
 
-	// The tooltips of the path actions bubble their own sl-after-hide up to the
+	// The components in the dialog bubble their own after-hide events up to the
 	// dialog, which would close it. Only the event of the dialog itself closes it.
-	const onSlAfterHide = (e: SlAfterHideEvent) => {
+	const onSlAfterHide = (e: WaAfterHideEvent) => {
 		if (e.target !== e.currentTarget) {
 			e.stopPropagation();
 			return;
@@ -795,17 +795,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 				className='consent-management__dialog'
 				label={isEditing ? 'Edit consent purpose' : 'Add consent purpose'}
 				open={isOpen}
-				onSlRequestClose={(event) => {
-					if (event.detail.source === 'overlay') {
-						event.preventDefault();
-					}
-				}}
-				onSlInitialFocus={(event) => {
-					if (isEditing) {
-						event.preventDefault();
-					}
-				}}
-				onSlAfterHide={onSlAfterHide}
+				onWaAfterHide={onSlAfterHide}
 			>
 				<div className='consent-management__dialog-form' ref={formRef}>
 					<SlInput

@@ -78,7 +78,7 @@
 	border-radius: var(--sl-border-radius-medium);
 }
 
-.consent-management__dialog::part(panel) {
+.consent-management__dialog::part(dialog) {
 	max-height: calc(100% - var(--sl-spacing-2x-large) - (var(--header-height) + 50px));
 	background-color: var(--bg-gray);
 }

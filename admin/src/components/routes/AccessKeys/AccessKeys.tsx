@@ -5,7 +5,7 @@ import AppContext from '../../../context/AppContext';
 import { AccessKey, AccessKeyResponse, CreateAccessKeyResponse } from '../../../lib/api/types/responses';
 import Grid from '../../base/Grid/Grid';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
+import SlDialog from '@awesome.me/webawesome/dist/react/dialog/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
 import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
@@ -307,7 +307,10 @@ const EditAccessKeyDialog = ({
 		setName(v);
 	};
 
-	const onHide = () => {
+	const onHide = (e) => {
+		if (e.target !== e.currentTarget) {
+			return;
+		}
 		setAccessKeyToEdit(null);
 		setError('');
 		setName('');
@@ -354,7 +357,8 @@ const EditAccessKeyDialog = ({
 			className='access-keys__edit-dialog'
 			label={`Edit the ${accessKeyToEdit?.type} key`}
 			open={accessKeyToEdit != null}
-			onSlAfterHide={onHide}
+			lightDismiss
+			onWaAfterHide={onHide}
 		>
 			<div className='access-keys__dialog-form'>
 				<SlInput
@@ -436,7 +440,7 @@ const CreateAccessKeyDialog = ({
 	};
 
 	const onHide = (e) => {
-		if (e.target.tagName === 'SL-DIALOG') {
+		if (e.target === e.currentTarget) {
 			setIsOpen(false);
 			setNameError('');
 			setName('');
@@ -521,7 +525,8 @@ const CreateAccessKeyDialog = ({
 				token != null ? `Your new ${isMCP ? 'MCP' : 'API'} key` : `Create a new ${isMCP ? 'MCP' : 'API'} key`
 			}
 			open={isOpen}
-			onSlAfterHide={onHide}
+			lightDismiss
+			onWaAfterHide={onHide}
 		>
 			{token != null ? (
 				<div className='access-keys__dialog-created'>

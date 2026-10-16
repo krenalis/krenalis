@@ -2054,19 +2054,14 @@ inherit the disabled style */
 	margin-bottom: 30px;
 }
 
-.pipeline__query-preview-drawer::part(base),
-.pipeline__file-preview-drawer::part(base) {
-	z-index: 9999;
-}
-
 .pipeline__query-preview-drawer .grid,
 .pipeline__file-preview-drawer .grid {
 	height: 100%;
 	display: block;
 }
 
-.pipeline__query-preview-drawer::part(panel),
-.pipeline__file-preview-drawer::part(panel) {
+.pipeline__query-preview-drawer::part(dialog),
+.pipeline__file-preview-drawer::part(dialog) {
 	padding-top: 40px !important;
 }
 
@@ -2092,7 +2087,7 @@ inherit the disabled style */
 	left: -52px;
 }
 
-.pipeline sl-drawer wa-spinner {
+.pipeline wa-drawer wa-spinner {
 	display: block;
 	margin: auto;
 	margin-top: 50px !important;

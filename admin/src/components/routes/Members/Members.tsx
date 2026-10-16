@@ -7,7 +7,7 @@ import { Member } from '../../../lib/api/types/responses';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
+import SlDialog from '@awesome.me/webawesome/dist/react/dialog/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
@@ -355,7 +355,12 @@ const InviteMemberDialog = ({ isOpen, setIsOpen, setIsLoadingMembers }: InviteMe
 			className='members__invite-dialog'
 			label='Invite new team member'
 			open={isOpen}
-			onSlAfterHide={() => setIsOpen(false)}
+			lightDismiss
+			onWaAfterHide={(e) => {
+				if (e.target === e.currentTarget) {
+					setIsOpen(false);
+				}
+			}}
 		>
 			<div className='members__invite-dialog-description'>
 				An invitation to create a new team member account will be sent to the email address provided.

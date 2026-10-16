@@ -8,7 +8,7 @@ import './SchemaEdit.css';
 import { useBeforeUnload, useBlocker } from 'react-router-dom';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { buttonVariant } from '../../../utils/buttonVariant';
-import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
+import SlDialog from '@awesome.me/webawesome/dist/react/dialog/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
 import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
@@ -305,7 +305,15 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		onApplyChanges();
 	};
 
+	const isReviewDialogOpen = isQueriesLoading || queries != null;
+
+	// The dialog emits wa-hide also when it is closed by isReviewDialogOpen
+	// turning false. While it is still true, the hide has been requested by the
+	// user.
 	const onReviewDialogRequestClose = (event: Event) => {
+		if (event.target !== event.currentTarget || !isReviewDialogOpen) {
+			return;
+		}
 		if (isConfirmChangesLoading) {
 			event.preventDefault();
 			return;
@@ -448,10 +456,15 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 				)}
 			</div>
 			<SlDialog
-				open={isQueriesLoading || queries != null}
+				open={isReviewDialogOpen}
 				label={hasNoWarehouseQueries ? 'Apply schema changes?' : 'Review changes'}
-				onSlRequestClose={onReviewDialogRequestClose}
-				onSlAfterHide={onCancelChanges}
+				lightDismiss
+				onWaHide={onReviewDialogRequestClose}
+				onWaAfterHide={(e) => {
+					if (e.target === e.currentTarget) {
+						onCancelChanges();
+					}
+				}}
 				className={`schema-edit__queries${isQueriesLoading ? ' schema-edit__queries--loading' : ''}`}
 			>
 				{isQueriesLoading ? (
