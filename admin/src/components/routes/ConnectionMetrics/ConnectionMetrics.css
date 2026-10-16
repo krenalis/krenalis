@@ -15,14 +15,16 @@
 	align-items: center;
 	row-gap: 15px;
 	flex-flow: row wrap;
+	position: relative;
+	z-index: 1;
 }
 
-.connection-metrics__tabs sl-button::part(base) {
+.connection-metrics__tabs wa-button::part(button) {
 	padding-left: 15px;
 	padding-right: 15px;
 }
 
-.connection-metrics__tabs sl-button[variant='default']::part(base) {
+.connection-metrics__tabs wa-button[appearance='outlined']::part(button) {
 	background: var(--bg-primary);
 }
 
@@ -71,7 +73,7 @@
 	color: var(--sl-color-primary-600);
 }
 
-.connection-metrics__pipelines sl-option::part(base) {
+.connection-metrics__pipelines wa-option {
 	font-size: 0.75rem;
 }
 

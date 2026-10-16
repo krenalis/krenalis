@@ -1,7 +1,7 @@
 import React from 'react';
 import './ConnectionIdentities.css';
 import { useConnectionIdentities } from './useConnectionIdentities';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import Grid from '../../base/Grid/Grid';
 import IconWrapper from '../../base/IconWrapper/IconWrapper';
 

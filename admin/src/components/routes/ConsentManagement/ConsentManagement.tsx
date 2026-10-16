@@ -8,14 +8,14 @@ import { ConsentPurposesResponse } from '../../../lib/api/types/responses';
 import { UnprocessableError } from '../../../lib/api/errors';
 import Grid from '../../base/Grid/Grid';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlDialog, { SlAfterHideEvent } from '@shoelace-style/shoelace/dist/react/dialog/index.js';
-import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import SlDialog, { WaAfterHideEvent } from '@awesome.me/webawesome/dist/react/dialog/index.js';
+import SlDropdown, { WaShowEvent } from '@awesome.me/webawesome/dist/react/dropdown/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
-import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
-import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
+import SlMenuItem from '@awesome.me/webawesome/dist/react/dropdown-item/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
@@ -272,10 +272,10 @@ const ConsentManagement = () => {
 				);
 			const actionsCell = (
 				<div className='consent-management__grid-buttons'>
-					<SlButton variant='default' size='small' onClick={() => setPurposeToEdit(p)}>
+					<SlButton appearance='outlined' size='s' onClick={() => setPurposeToEdit(p)}>
 						Edit...
 					</SlButton>
-					<SlButton variant='danger' size='small' onClick={() => onDeletePurpose(p)}>
+					<SlButton variant='danger' size='s' onClick={() => onDeletePurpose(p)}>
 						Delete
 					</SlButton>
 				</div>
@@ -292,7 +292,7 @@ const ConsentManagement = () => {
 			<div className='consent-management__content'>
 				<div className='consent-management__title'>
 					<p className='consent-management__title-text'>Consent purposes</p>
-					<SlButton size='small' variant='primary' onClick={() => setIsCreating(true)}>
+					<SlButton size='s' variant='brand' onClick={() => setIsCreating(true)}>
 						Add consent purpose
 					</SlButton>
 				</div>
@@ -320,10 +320,14 @@ const ConsentManagement = () => {
 					}
 					actions={
 						purposeToDeletePipelines.length > 0 ? (
-							<SlButton onClick={onCloseDeleteDialog}>Close</SlButton>
+							<SlButton appearance='outlined' onClick={onCloseDeleteDialog}>
+								Close
+							</SlButton>
 						) : (
 							<>
-								<SlButton onClick={onCloseDeleteDialog}>Cancel</SlButton>
+								<SlButton appearance='outlined' onClick={onCloseDeleteDialog}>
+									Cancel
+								</SlButton>
 								<SlButton variant='danger' onClick={onConfirmDelete} loading={isDeleting}>
 									Delete
 								</SlButton>
@@ -448,7 +452,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 			?.scrollIntoView({ block: 'center', behavior: 'smooth' });
 	}, [validationErrorVersion]);
 
-	// Wait for Shoelace to render the new input before measuring the row or focusing it.
+	// Wait for Web Awesome to render the new input before measuring the row or focusing it.
 	useLayoutEffect(() => {
 		if (newPurposeCodeIndex === null) {
 			return;
@@ -535,9 +539,9 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 		}
 	}, [duplicatePurposeCodeError, purposeCodes]);
 
-	// The tooltips of the path actions bubble their own sl-after-hide up to the
+	// The components in the dialog bubble their own after-hide events up to the
 	// dialog, which would close it. Only the event of the dialog itself closes it.
-	const onSlAfterHide = (e: SlAfterHideEvent) => {
+	const onSlAfterHide = (e: WaAfterHideEvent) => {
 		if (e.target !== e.currentTarget) {
 			e.stopPropagation();
 			return;
@@ -573,11 +577,36 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 		setHasProfileJSONKeyLostFocus(false);
 	};
 
+	// Web Awesome's dropdown has no sync: the menu takes the width of the input,
+	// measured when it opens.
+	const onShowProfilePath = (event: WaShowEvent) => {
+		if (event.target !== event.currentTarget) {
+			return;
+		}
+		const dropdown = event.currentTarget as HTMLElement;
+		const width = dropdown.querySelector('[slot="trigger"]').getBoundingClientRect().width;
+		dropdown.style.setProperty('--profile-path-width', `${width}px`);
+	};
+
+	// The input is not a button, so the dropdown does not open it from the
+	// keyboard: open it as Shoelace's dropdown did.
+	const onKeyDownProfilePath = (event: React.KeyboardEvent) => {
+		if ([' ', 'Enter'].includes(event.key)) {
+			event.preventDefault();
+			profilePathDropdownRef.current.open = !profilePathDropdownRef.current.open;
+			return;
+		}
+		if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+			event.preventDefault();
+			profilePathDropdownRef.current.open = true;
+		}
+	};
+
 	// Capture interactions within the input before the dropdown handles its trigger events.
 	const onClearProfilePath = (event: React.MouseEvent) => {
 		event.preventDefault();
 		event.stopPropagation();
-		profilePathDropdownRef.current?.hide();
+		profilePathDropdownRef.current.open = false;
 		setProfilePropertyPath('');
 		setProfileJSONKey(null);
 		setProfilePathError('');
@@ -615,7 +644,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 		if (!(event.nativeEvent.composedPath()[0] instanceof HTMLInputElement)) {
 			return;
 		}
-		profilePathDropdownRef.current?.hide();
+		profilePathDropdownRef.current.open = false;
 		event.stopPropagation();
 	};
 
@@ -790,17 +819,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 				className='consent-management__dialog'
 				label={isEditing ? 'Edit consent purpose' : 'Add consent purpose'}
 				open={isOpen}
-				onSlRequestClose={(event) => {
-					if (event.detail.source === 'overlay') {
-						event.preventDefault();
-					}
-				}}
-				onSlInitialFocus={(event) => {
-					if (isEditing) {
-						event.preventDefault();
-					}
-				}}
-				onSlAfterHide={onSlAfterHide}
+				onWaAfterHide={onSlAfterHide}
 			>
 				<div className='consent-management__dialog-form' ref={formRef}>
 					<SlInput
@@ -808,7 +827,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 						ref={inputRef}
 						label='Name'
 						value={name}
-						onSlInput={onInputName}
+						onInput={onInputName}
 					/>
 					{nameError && (
 						<div className='consent-management__dialog-error'>
@@ -834,15 +853,15 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 									}}
 									value={purposeCode}
 									placeholder='purpose code'
-									onSlInput={(e) => onInputPurposeCode(e, i)}
-									onSlBlur={onBlurPurposeCode}
+									onInput={(e) => onInputPurposeCode(e, i)}
+									onBlur={onBlurPurposeCode}
 								>
 									{i === 0 && (
 										<span className='consent-management__dialog-path-label' slot='label'>
 											Consent in events
 										</span>
 									)}
-									<span className='consent-management__dialog-purpose-code-prefix' slot='prefix'>
+									<span className='consent-management__dialog-purpose-code-prefix' slot='start'>
 										context.consents.
 									</span>
 								</SlInput>
@@ -877,16 +896,17 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 							className='consent-management__dialog-profile-path-dropdown'
 							ref={profilePathDropdownRef}
 							placement='bottom-start'
-							sync='width'
-							hoist
+							onWaShow={onShowProfilePath}
+							onWaSelect={onSelectProfilePath}
 						>
 							<SlInput
 								slot='trigger'
 								className={`consent-management__dialog-profile-path${isProfilePropertyJSON ? ' consent-management__dialog-profile-path--json' : ''}`}
 								value={isProfilePropertyJSON ? profileJSONKey : profilePropertyPath}
-								onSlInput={isProfilePropertyJSON ? onInputProfileJSONPath : undefined}
-								onSlBlur={isProfilePropertyJSON ? onBlurProfileJSONPath : undefined}
+								onInput={isProfilePropertyJSON ? onInputProfileJSONPath : undefined}
+								onBlur={isProfilePropertyJSON ? onBlurProfileJSONPath : undefined}
 								onClickCapture={isProfilePropertyJSON ? onClickProfileJSONPath : undefined}
+								onKeyDown={isProfilePropertyJSON ? undefined : onKeyDownProfilePath}
 								onKeyDownCapture={isProfilePropertyJSON ? onKeyDownProfileJSONPath : undefined}
 								onKeyUpCapture={isProfilePropertyJSON ? onKeyUpProfileJSONPath : undefined}
 								placeholder={isProfilePropertyJSON ? 'key' : 'Select a profile property'}
@@ -896,14 +916,14 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 									Consent in profiles
 								</span>
 								{isProfilePropertyJSON && (
-									<span className='consent-management__dialog-profile-path-prefix' slot='prefix'>
+									<span className='consent-management__dialog-profile-path-prefix' slot='start'>
 										{profilePropertyPath}.
 									</span>
 								)}
 								{profilePropertyPath !== '' && (
 									<SlIconButton
 										className='consent-management__dialog-profile-path-clear'
-										slot='suffix'
+										slot='end'
 										name='x-circle-fill'
 										library='system'
 										label='Clear profile property'
@@ -911,24 +931,19 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 										onClickCapture={onClearProfilePath}
 									/>
 								)}
-								<SlIcon slot='suffix' name='chevron-down' />
+								<WaIcon slot='end' name='chevron-down' />
 							</SlInput>
-							<SlMenu
-								className='consent-management__dialog-profile-path-menu'
-								onSlSelect={onSelectProfilePath}
-							>
-								{profilePathOptions.map(([path, property]) => (
-									<SlMenuItem key={path} value={path}>
-										<span className='consent-management__dialog-profile-path-option'>{path}</span>
-										<span
-											className='consent-management__dialog-profile-path-option-type'
-											slot='suffix'
-										>
-											{property.type}
-										</span>
-									</SlMenuItem>
-								))}
-							</SlMenu>
+							{profilePathOptions.map(([path, property]) => (
+								<SlMenuItem key={path} value={path}>
+									<span className='consent-management__dialog-profile-path-option'>{path}</span>
+									<span
+										className='consent-management__dialog-profile-path-option-type'
+										slot='details'
+									>
+										{property.type}
+									</span>
+								</SlMenuItem>
+							))}
 						</SlDropdown>
 						<div
 							className={`consent-management__dialog-profile-path-message${profilePathError !== '' ? ' consent-management__dialog-error' : profilePathWarning !== '' ? ' consent-management__dialog-warning' : ' consent-management__dialog-message--hidden'}`}
@@ -955,11 +970,13 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 						</div>
 					)}
 					<div className='consent-management__dialog-actions'>
-						<SlButton onClick={onClose}>Cancel</SlButton>
+						<SlButton appearance='outlined' onClick={onClose}>
+							Cancel
+						</SlButton>
 						<SlButton
 							loading={isSaving}
 							className='consent-management__dialog-save'
-							variant='primary'
+							variant='brand'
 							onClick={onSave}
 						>
 							{isEditing ? 'Save' : 'Add'}
@@ -1001,12 +1018,13 @@ const PurposeCodeAction = ({
 		<SlTooltip ref={tooltipRef} className={className} content={label} hoist>
 			<SlButton
 				className='consent-management__dialog-purpose-code-action'
-				size='small'
+				appearance='outlined'
+				size='s'
 				disabled={isDisabled}
 				aria-label={label}
 				onClick={onActionClick}
 			>
-				<SlIcon name={icon} slot='prefix' />
+				<WaIcon name={icon} slot='start' />
 			</SlButton>
 		</SlTooltip>
 	);

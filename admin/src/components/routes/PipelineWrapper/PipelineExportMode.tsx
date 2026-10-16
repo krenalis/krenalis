@@ -1,8 +1,8 @@
 import React, { useContext, useMemo } from 'react';
 import { EXPORT_MODE_OPTIONS, flattenSchema } from '../../../lib/core/pipeline';
 import PipelineContext from '../../../context/PipelineContext';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
+import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
 
 const PipelineExportMode = () => {
 	const { pipeline, setPipeline, pipelineType, connection } = useContext(PipelineContext);
@@ -31,10 +31,10 @@ const PipelineExportMode = () => {
 		<div className='pipeline__export-mode'>
 			<SlSelect
 				className='pipeline__export-mode-select'
-				size='medium'
+				size='m'
 				label='What can be done with users?'
 				value={pipeline.exportMode!}
-				onSlChange={onChangeExportMode}
+				onChange={onChangeExportMode}
 			>
 				{Object.keys(EXPORT_MODE_OPTIONS).map((k) => (
 					<SlOption key={k} value={k}>

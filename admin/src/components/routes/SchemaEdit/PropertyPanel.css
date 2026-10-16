@@ -17,7 +17,7 @@
 	gap: 8px;
 }
 
-.property-panel__save::part(base) {
+.property-panel__save::part(button) {
 	min-width: 90px;
 }
 
@@ -26,21 +26,21 @@
 	top: 1px;
 }
 
-.property-panel__delete-button::part(base) {
+.property-panel__delete-button::part(button) {
 	color: var(--sl-color-danger-600);
 }
 
-.property-panel__delete-button::part(base):hover {
+.property-panel__delete-button::part(button):hover {
 	background-color: var(--sl-color-danger-50);
 	color: var(--sl-color-danger-600);
 }
 
-.property-panel__delete-button::part(base):active {
+.property-panel__delete-button::part(button):active {
 	background-color: var(--sl-color-danger-100);
 	color: var(--sl-color-danger-600);
 }
 
-.property-panel__delete-button sl-icon {
+.property-panel__delete-button wa-icon {
 	font-size: 18px;
 }
 

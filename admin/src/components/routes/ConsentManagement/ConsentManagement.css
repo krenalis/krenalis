@@ -78,7 +78,7 @@
 	border-radius: var(--sl-border-radius-medium);
 }
 
-.consent-management__dialog::part(panel) {
+.consent-management__dialog::part(dialog) {
 	max-height: calc(100% - var(--sl-spacing-2x-large) - (var(--header-height) + 50px));
 	background-color: var(--bg-gray);
 }
@@ -133,19 +133,24 @@
 	width: 100%;
 }
 
-.consent-management__dialog-name,
-.consent-management__dialog-purpose-code,
-.consent-management__dialog-profile-path {
-	--sl-input-font-size-medium: var(--sl-font-size-small);
-	--sl-input-label-font-size-medium: var(--sl-input-label-font-size-small);
+.consent-management__dialog-name::part(input-wrapper),
+.consent-management__dialog-purpose-code::part(input-wrapper),
+.consent-management__dialog-profile-path::part(input-wrapper) {
+	font-size: var(--sl-font-size-small);
+}
+
+.consent-management__dialog-name::part(form-control-label),
+.consent-management__dialog-purpose-code::part(form-control-label),
+.consent-management__dialog-profile-path::part(form-control-label) {
+	font-size: var(--sl-input-label-font-size-small);
 }
 
 .consent-management__dialog-path-label {
 	font-size: var(--sl-input-label-font-size-small);
 }
 
-.consent-management__dialog-purpose-code::part(base),
-.consent-management__dialog-profile-path::part(base) {
+.consent-management__dialog-purpose-code::part(input-wrapper),
+.consent-management__dialog-profile-path::part(input-wrapper) {
 	font-family: var(--monospace-fonts);
 }
 
@@ -154,7 +159,7 @@
 	transform: translateY(1px);
 }
 
-.consent-management__dialog-profile-path:not(.consent-management__dialog-profile-path--json)::part(base) {
+.consent-management__dialog-profile-path:not(.consent-management__dialog-profile-path--json)::part(input-wrapper) {
 	cursor: default;
 }
 
@@ -182,8 +187,8 @@
 	padding-inline-start: 5px;
 }
 
-.consent-management__dialog-purpose-code::part(prefix),
-.consent-management__dialog-profile-path--json::part(prefix) {
+.consent-management__dialog-purpose-code::part(start),
+.consent-management__dialog-profile-path--json::part(start) {
 	background-color: var(--sl-input-background-color-disabled);
 }
 
@@ -231,12 +236,13 @@
 	margin-top: 15px;
 }
 
-.consent-management__dialog-profile-path-menu {
+.consent-management__dialog-profile-path-dropdown::part(menu) {
+	width: var(--profile-path-width);
 	max-height: 300px;
 	overflow-y: auto;
 }
 
-.consent-management__dialog-profile-path-menu sl-menu-item::part(base) {
+.consent-management__dialog-profile-path-dropdown wa-dropdown-item {
 	font-family: var(--monospace-fonts);
 	font-size: var(--sl-input-font-size-small);
 	padding-block: var(--sl-spacing-3x-small);
@@ -247,13 +253,13 @@
 	font-family: var(--monospace-fonts);
 }
 
-.consent-management__dialog-purpose-code-action::part(base) {
+.consent-management__dialog-purpose-code-action::part(button) {
 	border: 0;
 	padding: 0;
 	cursor: pointer;
 }
 
-.consent-management__dialog-purpose-code-action[disabled]::part(base) {
+.consent-management__dialog-purpose-code-action[disabled]::part(button) {
 	cursor: not-allowed;
 }
 
@@ -261,7 +267,7 @@
 	display: none;
 }
 
-.consent-management__dialog-purpose-code-action sl-icon {
+.consent-management__dialog-purpose-code-action wa-icon {
 	font-size: 20px;
 	width: 25px;
 	transition: color 0.3s;
@@ -271,7 +277,7 @@
 	grid-column: 1;
 }
 
-.consent-management__dialog-purpose-code-add sl-icon {
+.consent-management__dialog-purpose-code-add wa-icon {
 	color: var(--sl-color-primary-600);
 }
 
@@ -279,7 +285,7 @@
 	grid-column: 2;
 }
 
-.consent-management__dialog-purpose-code-remove:hover sl-icon {
+.consent-management__dialog-purpose-code-remove:hover wa-icon {
 	color: var(--sl-color-danger-600);
 }
 

@@ -41,7 +41,7 @@
 	margin-bottom: 6px;
 }
 
-.profiles-list__identity-resolution-button::part(base) {
+.profiles-list__identity-resolution-button::part(button) {
 	min-width: 220px;
 }
 
@@ -90,22 +90,44 @@
 	border-radius: 0;
 }
 
-.profiles-list__toggle-columns sl-option sl-switch {
+.profiles-list__toggle-columns-list {
+	max-height: calc(100vh - 220px);
+	overflow: auto;
+}
+
+/* Each column is drawn as the Shoelace option it was, with the room of its
+   hidden check before it. */
+.profiles-list__toggle-column {
+	display: flex;
+	align-items: center;
+	padding: var(--sl-spacing-x-small) var(--sl-spacing-medium) var(--sl-spacing-x-small)
+		calc(var(--sl-spacing-x-small) + 1em + var(--sl-spacing-2x-small));
+	color: var(--sl-color-neutral-700);
+	font-family: var(--sl-font-sans);
+	font-size: var(--sl-font-size-medium);
+	font-weight: var(--sl-font-weight-normal);
+	line-height: var(--sl-line-height-dense);
+	cursor: pointer;
+	user-select: none;
+}
+
+.profiles-list__toggle-column:hover {
+	background-color: var(--sl-color-neutral-100);
+	color: var(--sl-color-neutral-1000);
+}
+
+.profiles-list__toggle-column wa-switch {
 	--thumb-size: 14px;
 }
 
-.profiles-list__toggle-columns sl-option sl-switch::part(base) {
+.profiles-list__toggle-column wa-switch::part(switch) {
 	font-size: 14px;
 	gap: 5px;
 }
 
-.profiles-list__toggle-columns::part(panel) {
-	max-height: calc(100vh - 220px) !important;
-	overflow: auto;
-}
-
-.profiles-list__toggle-columns sl-menu {
-	overflow: hidden;
+.profiles-list__toggle-column wa-switch::part(label) {
+	position: relative;
+	top: -2px;
 }
 
 .profiles-list__grid-container {
@@ -162,29 +184,65 @@
 	position: relative;
 }
 
-.profile-drawer::part(title) {
-	display: none;
-}
-
-.profile-drawer::part(header) {
+/* The drawer is drawn as Shoelace's contained drawer. */
+.profile-drawer {
 	position: absolute;
-	min-height: 50px;
+	top: 0;
+	left: 0;
+	z-index: 1000;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	pointer-events: none;
+}
+
+.profile-drawer__panel {
+	position: absolute;
+	top: 0;
 	right: 0;
-}
-
-.profile-drawer::part(panel) {
+	z-index: 2;
+	display: flex;
+	flex-direction: column;
+	width: 600px;
+	max-width: 100%;
+	height: 100%;
 	max-height: calc(100% - 80px);
+	overflow: auto;
+	background-color: var(--sl-panel-background-color);
+	box-shadow: var(--sl-shadow-x-large);
+	pointer-events: all;
 }
 
-.profile-drawer--loading::part(panel) {
+.profile-drawer__panel:focus {
+	outline: none;
+}
+
+.profile-drawer--loading .profile-drawer__panel {
 	overflow: hidden;
 }
 
-.profile-drawer::part(body) {
-	padding-bottom: 0;
+.profile-drawer__header {
+	position: absolute;
+	right: 0;
+	display: flex;
+	min-height: 50px;
+	padding: 0 var(--sl-spacing-large);
 }
 
-.profile-drawer sl-tab-group sl-tab-panel::part(base) {
+.profile-drawer__close {
+	display: flex;
+	align-items: center;
+	font-size: var(--sl-font-size-medium);
+}
+
+.profile-drawer__body {
+	flex: 1 1 auto;
+	padding: var(--sl-spacing-large);
+	padding-bottom: 0;
+	overflow: auto;
+}
+
+.profile-drawer wa-tab-group wa-tab-panel::part(base) {
 	max-height: calc(100% - 200px);
 	overflow: auto;
 	margin-top: 10px;
@@ -192,7 +250,7 @@
 	padding-bottom: 5px;
 }
 
-.profile-drawer--loading sl-tab-group sl-tab-panel::part(base) {
+.profile-drawer--loading wa-tab-group wa-tab-panel::part(base) {
 	overflow: hidden;
 }
 
@@ -245,7 +303,7 @@
 	font-family: var(--monospace-fonts);
 }
 
-.profile-drawer sl-spinner {
+.profile-drawer wa-spinner {
 	margin: 15px auto;
 	display: block;
 }
@@ -255,8 +313,8 @@
 	visibility: hidden;
 }
 
-.profile-drawer__events > sl-spinner,
-.profile-drawer__identities > sl-spinner {
+.profile-drawer__events > wa-spinner,
+.profile-drawer__identities > wa-spinner {
 	visibility: visible;
 }
 
@@ -325,7 +383,7 @@
 	font-size: 0;
 }
 
-.drawer-attribute__value-copy::part(tooltip__body) {
+.drawer-attribute__value-copy::part(feedback) {
 	font-size: 13px;
 }
 

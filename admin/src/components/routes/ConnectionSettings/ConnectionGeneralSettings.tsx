@@ -6,12 +6,12 @@ import DangerZone from '../../base/DangerZone/DangerZone';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import ConfirmByTyping from '../../base/ConfirmByTyping/ConfirmByTyping';
 import Flex from '../../base/Flex/Flex';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import SlDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
 import { ConnectionToSet } from '../../../lib/api/types/connection';
 
 interface GeneralProps {
@@ -100,7 +100,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 				label='Name'
 				className='connection-settings__name-field'
 				value={connectionToSet.name}
-				onSlInput={onNameInput}
+				onInput={onNameInput}
 				maxlength={100}
 			/>
 
@@ -109,7 +109,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 					value={connectionToSet.strategy}
 					label='Strategy'
 					className='connection-settings__strategy-field'
-					onSlChange={onStrategyChange}
+					onChange={onStrategyChange}
 				>
 					<SlOption value='Conversion'>Conversion strategy</SlOption>
 					<SlOption value='Fusion'>Fusion strategy</SlOption>
@@ -123,9 +123,9 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 					value={connectionToSet.sendingMode}
 					label='Sending mode'
 					className='connection-settings__mode-field'
-					onSlChange={onModeChange}
+					onChange={onModeChange}
 				>
-					<div className='connection-settings__mode-value-icon' slot='prefix'>
+					<div className='connection-settings__mode-value-icon' slot='start'>
 						<SlIcon
 							name={
 								connectionToSet.sendingMode === 'Server'
@@ -138,7 +138,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 					</div>
 					{connection.connector.supportedSendingModes.map((m) => (
 						<SlOption key={m} value={m}>
-							<div slot='prefix'>
+							<div slot='start'>
 								<SlIcon
 									className='connection-settings__mode-icon'
 									name={m === 'Server' ? 'cloud' : m === 'Client' ? 'phone' : 'send'}
@@ -152,7 +152,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 
 			<SlButton
 				className='connection-settings__update-button'
-				variant='primary'
+				variant='brand'
 				loading={isSaving}
 				onClick={onSave}
 			>
@@ -192,6 +192,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 				actions={
 					<>
 						<SlButton
+							appearance='outlined'
 							onClick={() => {
 								setAskDeletionConfirmation(false);
 								setDeleteConfirmationInput('');

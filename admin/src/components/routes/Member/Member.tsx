@@ -1,10 +1,11 @@
 import React, { useContext, useState, useEffect, useRef, useMemo, useLayoutEffect, useCallback } from 'react';
 import './Member.css';
 import appContext from '../../../context/AppContext';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import SlAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import * as icons from '../../../constants/icons';
 import { MemberAvatar, MemberToSet } from '../../../lib/api/types/responses';
@@ -236,7 +237,7 @@ const Member = () => {
 									label='Name'
 									name='name'
 									value={name}
-									onSlInput={onUpdateName}
+									onInput={onUpdateName}
 									required
 								/>
 							</div>
@@ -246,7 +247,7 @@ const Member = () => {
 									type='email'
 									name='email'
 									value={email}
-									onSlInput={onUpdateEmail}
+									onInput={onUpdateEmail}
 									required
 								/>
 							</div>
@@ -258,12 +259,17 @@ const Member = () => {
 									name='password'
 									disabled={isUpdate && password === null}
 									required={!isUpdate || password !== null}
-									onSlInput={onUpdatePassword}
+									onInput={onUpdatePassword}
 									value={isUpdate && password === null ? '••••••••••••••••' : password}
-									password-toggle
-								/>
+									passwordToggle
+								>
+									<WaIcon name='eye' slot='show-password-icon' />
+									<WaIcon name='eye-slash' slot='hide-password-icon' />
+								</SlInput>
 								{isUpdate && password === null && (
-									<SlButton onClick={onPasswordEnable}>Change</SlButton>
+									<SlButton appearance='outlined' onClick={onPasswordEnable}>
+										Change
+									</SlButton>
 								)}
 							</div>
 							{!isUpdate && (
@@ -273,10 +279,13 @@ const Member = () => {
 										label='Confirm password'
 										name='confirm-password'
 										required={true}
-										onSlInput={onUpdatePassword2}
+										onInput={onUpdatePassword2}
 										value={password2}
-										password-toggle
-									/>
+										passwordToggle
+									>
+										<WaIcon name='eye' slot='show-password-icon' />
+										<WaIcon name='eye-slash' slot='hide-password-icon' />
+									</SlInput>
 								</div>
 							)}
 							<div className='member__avatar'>
@@ -295,7 +304,9 @@ const Member = () => {
 											</div>
 										)}
 									</div>
-									<SlAvatar image={avatar ? `data:${avatar.mimeType};base64, ${avatar.image}` : ''} />
+									<SlAvatar image={avatar ? `data:${avatar.mimeType};base64, ${avatar.image}` : ''}>
+										<WaIcon slot='icon' name='person-fill' />
+									</SlAvatar>
 									<input
 										ref={fileInputRef}
 										type='file'
@@ -312,11 +323,13 @@ const Member = () => {
 							)}
 							<div className='member__buttons'>
 								<Link path='organization/members'>
-									<SlButton className='member__cancel-button'>Cancel</SlButton>
+									<SlButton appearance='outlined' className='member__cancel-button'>
+										Cancel
+									</SlButton>
 								</Link>
 								<SlButton
 									className='member__save-button'
-									variant='primary'
+									variant='brand'
 									loading={isSaving}
 									type='submit'
 								>

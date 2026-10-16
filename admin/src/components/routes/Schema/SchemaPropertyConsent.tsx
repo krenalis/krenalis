@@ -1,8 +1,9 @@
 import React, { useContext, useEffect, useId, useRef, useState } from 'react';
 import './SchemaPropertyConsent.css';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlPopup from '@shoelace-style/shoelace/dist/react/popup/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import SlPopup from '@awesome.me/webawesome/dist/react/popup/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import AppContext from '../../../context/AppContext';
 import { ConsentPurpose } from '../../../lib/api/types/workspace';
@@ -84,7 +85,6 @@ const SchemaPropertyConsent = ({ purposes }: SchemaPropertyConsentProps) => {
 			className='schema-property-consent'
 			active={isOpen}
 			placement='top'
-			strategy='fixed'
 			distance={8}
 			onClick={(event) => event.stopPropagation()}
 			arrow
@@ -136,12 +136,12 @@ const SchemaPropertyConsent = ({ purposes }: SchemaPropertyConsentProps) => {
 					>
 						<SlButton
 							className='schema-property-consent__open-purpose'
-							variant='text'
-							size='small'
-							circle
+							appearance='plain'
+							size='s'
+							pill
 							onClick={openPurpose}
 						>
-							<SlIcon name='box-arrow-in-up-right' label='Open consent purpose' />
+							<WaIcon name='box-arrow-in-up-right' label='Open consent purpose' />
 						</SlButton>
 					</SlTooltip>
 				</div>
@@ -189,25 +189,25 @@ const SchemaPropertyConsent = ({ purposes }: SchemaPropertyConsentProps) => {
 						<div className='schema-property-consent__pagination-actions'>
 							<SlButton
 								className='schema-property-consent__pagination-button'
-								variant='text'
-								size='small'
-								circle
+								appearance='plain'
+								size='s'
+								pill
 								title='Previous consent purpose'
 								disabled={selectedPurposeIndex === 0}
 								onClick={() => selectPurpose(selectedPurposeIndex - 1)}
 							>
-								<SlIcon name='chevron-left' aria-hidden='true' />
+								<WaIcon name='chevron-left' aria-hidden='true' />
 							</SlButton>
 							<SlButton
 								className='schema-property-consent__pagination-button'
-								variant='text'
-								size='small'
-								circle
+								appearance='plain'
+								size='s'
+								pill
 								title='Next consent purpose'
 								disabled={selectedPurposeIndex === purposes.length - 1}
 								onClick={() => selectPurpose(selectedPurposeIndex + 1)}
 							>
-								<SlIcon name='chevron-right' aria-hidden='true' />
+								<WaIcon name='chevron-right' aria-hidden='true' />
 							</SlButton>
 						</div>
 					</div>

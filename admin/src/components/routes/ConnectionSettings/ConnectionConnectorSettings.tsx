@@ -5,7 +5,7 @@ import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import AppContext from '../../../context/AppContext';
 import * as icons from '../../../constants/icons';
 import ConnectorUI from '../../base/ConnectorUI/ConnectorUI';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import TransformedConnection from '../../../lib/core/connection';
 import { ConnectorUIResponse, ConnectorSettings } from '../../../lib/api/types/responses';
 import ConnectorFieldInterface, { ConnectorButton } from '../../../lib/api/types/ui';

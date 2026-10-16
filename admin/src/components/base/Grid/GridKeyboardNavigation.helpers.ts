@@ -7,18 +7,17 @@ const gridKeyboardControlSelector = [
 	'textarea',
 	'[contenteditable]:not([contenteditable="false"])',
 	'.draggable-wrapper__handle',
-	'sl-input',
+	'wa-input',
 	'sl-menu',
 	'sl-menu-item',
-	'sl-option',
-	'sl-radio',
-	'sl-radio-button',
-	'sl-radio-group',
+	'wa-option',
+	'wa-radio',
+	'wa-radio-group',
 	'sl-range',
-	'sl-select',
-	'sl-tab',
-	'sl-tab-group',
-	'sl-textarea',
+	'wa-select',
+	'wa-tab',
+	'wa-tab-group',
+	'wa-textarea',
 	'sl-tree',
 	'sl-tree-item',
 	'[role="combobox"]',
@@ -41,7 +40,7 @@ const gridKeyboardControlSelector = [
 	'[role="treegrid"]',
 	'[role="treeitem"]',
 ].join(',');
-const openKeyboardOverlaySelector = 'dialog[open], sl-dialog[open], sl-dropdown[open], sl-select[open]';
+const openKeyboardOverlaySelector = 'dialog[open], wa-dialog[open], wa-dropdown[open], wa-select[open]';
 
 type GridNavigationKey = (typeof gridNavigationKeys)[number];
 

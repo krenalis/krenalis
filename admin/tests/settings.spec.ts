@@ -69,24 +69,24 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 	await page.getByRole('button', { name: 'Add consent purpose' }).click();
 
 	const dialog = page.locator('.consent-management__dialog[open]');
-	await dialog.locator('[part="overlay"]').dispatchEvent('click');
+	await page.mouse.click(10, 10);
 	await expect(dialog).toHaveJSProperty('open', true);
-	await expect(dialog.locator('.consent-management__dialog-name')).toHaveJSProperty('size', 'medium');
-	await expect(dialog.locator('.consent-management__dialog-purpose-code')).toHaveJSProperty('size', 'medium');
-	await expect(dialog.locator('.consent-management__dialog-name [part="form-control-label"]')).toHaveCSS(
+	await expect(dialog.locator('.consent-management__dialog-name')).toHaveJSProperty('size', 'm');
+	await expect(dialog.locator('.consent-management__dialog-purpose-code')).toHaveJSProperty('size', 'm');
+	await expect(dialog.locator('.consent-management__dialog-name [part~="form-control-label"]')).toHaveCSS(
 		'font-size',
 		'14px',
 	);
 	await expect(dialog.locator('.consent-management__dialog-profile-path-dropdown')).toHaveCSS('margin-top', '17px');
 
 	const profilePath = dialog.locator('.consent-management__dialog-profile-path');
-	await expect(profilePath).toHaveJSProperty('size', 'medium');
+	await expect(profilePath).toHaveJSProperty('size', 'm');
 	await expect(profilePath.locator('input')).toHaveCSS('caret-color', 'rgba(0, 0, 0, 0)');
 	await expect(profilePath.locator('input')).toHaveCSS('cursor', 'default');
 	await expect(dialog.locator('.consent-management__dialog-path-label').nth(0)).toHaveCSS('font-size', '14px');
 	await expect(dialog.locator('.consent-management__dialog-path-label').nth(1)).toHaveCSS('font-size', '14px');
 	await profilePath.click();
-	const options = dialog.locator('.consent-management__dialog-profile-path-menu sl-menu-item');
+	const options = dialog.locator('.consent-management__dialog-profile-path-dropdown wa-dropdown-item');
 	await expect(options).toHaveCount(4);
 	await expect(options.locator('.consent-management__dialog-profile-path-option')).toHaveText([
 		'accepted',
@@ -120,7 +120,7 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 	const profilePathDropdown = dialog.locator('.consent-management__dialog-profile-path-dropdown');
 	await profilePathDropdown.evaluate((dropdown) => {
 		dropdown.setAttribute('data-show-count', '0');
-		dropdown.addEventListener('sl-show', () => {
+		dropdown.addEventListener('wa-show', () => {
 			const count = Number(dropdown.getAttribute('data-show-count'));
 			dropdown.setAttribute('data-show-count', String(count + 1));
 		});
@@ -136,13 +136,13 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 	await profilePath.click();
 	await options.nth(1).click();
 	await expect(profilePath).toHaveJSProperty('readonly', false);
-	await expect(profilePath.locator('[slot="prefix"]')).toHaveText('nested.metadata.');
+	await expect(profilePath.locator('[slot="start"]')).toHaveText('nested.metadata.');
 	await expect(profilePath.locator('input')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 1)');
-	const purposeCodePrefix = dialog.locator('.consent-management__dialog-purpose-code [part="prefix"]');
+	const purposeCodePrefix = dialog.locator('.consent-management__dialog-purpose-code [part="start"]');
 	const purposeCodePrefixBackground = await purposeCodePrefix.evaluate(
 		(prefix) => getComputedStyle(prefix).backgroundColor,
 	);
-	await expect(profilePath.locator('[part="prefix"]')).toHaveCSS('background-color', purposeCodePrefixBackground);
+	await expect(profilePath.locator('[part="start"]')).toHaveCSS('background-color', purposeCodePrefixBackground);
 	await expect(profilePath.locator('input')).toHaveAttribute('placeholder', 'key');
 	await expect(profilePath.locator('input')).toBeFocused();
 	await expect(profilePath.getByRole('button', { name: 'Clear profile property' })).toBeVisible();
@@ -153,7 +153,7 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 	await expect(options.nth(0)).not.toBeVisible();
 	await profilePath.getByRole('button', { name: 'Clear profile property' }).click();
 	await expect(profilePath.locator('input')).toHaveValue('');
-	await expect(profilePath.locator('[slot="prefix"]')).toHaveCount(0);
+	await expect(profilePath.locator('[slot="start"]')).toHaveCount(0);
 	await expect(options.nth(0)).not.toBeVisible();
 	await expect(profilePathMessage).not.toBeVisible();
 	await expect(profilePathDropdown).toHaveAttribute('data-show-count', '1');
@@ -197,39 +197,40 @@ test(`Add and remove purpose codes of a consent purpose`, async ({ page }) => {
 	const dialog = page.locator('.consent-management__dialog[open]');
 	const rows = dialog.locator('.consent-management__dialog-purpose-code-row');
 	const inputs = rows.locator('input');
+	await expect(dialog.locator('.consent-management__dialog-name input')).toBeFocused();
 	await dialog.locator('.consent-management__dialog-name input').fill('Marketing');
 	await expect(rows.locator('.consent-management__dialog-purpose-code-remove')).toHaveCount(0);
 	await inputs.nth(0).fill('marketing');
 
 	// A blank row is removable, but the only non-empty row is not.
-	await rows.nth(0).locator('.consent-management__dialog-purpose-code-add sl-button').click();
+	await rows.nth(0).locator('.consent-management__dialog-purpose-code-add wa-button').click();
 	await expect(inputs).toHaveCount(2);
 	await expect(inputs.nth(1)).toBeFocused();
 	await expect.poll(() => rows.nth(1).evaluate((row) => row.getAnimations().length)).toBe(0);
 	await expect(inputs.nth(1)).toBeFocused();
 	await expect(rows.nth(0).locator('.consent-management__dialog-purpose-code-remove')).toHaveCount(0);
-	await rows.nth(1).locator('.consent-management__dialog-purpose-code-remove sl-button').click();
+	await rows.nth(1).locator('.consent-management__dialog-purpose-code-remove wa-button').click();
 	await expect(inputs).toHaveCount(1);
 	await expect(inputs.nth(0)).toHaveValue('marketing');
 
 	// The first row can be removed when another row has a value.
-	await rows.nth(0).locator('.consent-management__dialog-purpose-code-add sl-button').click();
+	await rows.nth(0).locator('.consent-management__dialog-purpose-code-add wa-button').click();
 	await expect(inputs.nth(1)).toBeFocused();
 	await inputs.nth(1).fill('oldmarketing');
 	await expect(rows.locator('.consent-management__dialog-purpose-code-remove')).toHaveCount(2);
-	await rows.nth(0).locator('.consent-management__dialog-purpose-code-add sl-button').click();
+	await rows.nth(0).locator('.consent-management__dialog-purpose-code-add wa-button').click();
 	await expect(inputs).toHaveCount(3);
 	await expect(inputs.nth(1)).toHaveValue('');
 	await expect(inputs.nth(1)).toBeFocused();
 	await expect(inputs.nth(2)).toHaveValue('oldmarketing');
-	await rows.nth(1).locator('.consent-management__dialog-purpose-code-remove sl-button').click();
+	await rows.nth(1).locator('.consent-management__dialog-purpose-code-remove wa-button').click();
 	await expect(inputs).toHaveCount(2);
 	await expect(inputs.nth(0)).toHaveValue('marketing');
 	await expect(inputs.nth(1)).toHaveValue('oldmarketing');
 	const firstPurposeCodeRemove = rows.nth(0).locator('.consent-management__dialog-purpose-code-remove');
 	await firstPurposeCodeRemove.hover();
 	await expect(firstPurposeCodeRemove).toHaveJSProperty('open', true);
-	await firstPurposeCodeRemove.locator('sl-button').dblclick();
+	await firstPurposeCodeRemove.locator('wa-button').dblclick();
 	await expect(inputs).toHaveCount(1);
 	await expect(inputs.nth(0)).toHaveValue('oldmarketing');
 	await expect(dialog.locator('.consent-management__dialog-path-label').nth(0)).toContainText('Consent in events');
@@ -239,13 +240,13 @@ test(`Add and remove purpose codes of a consent purpose`, async ({ page }) => {
 	for (let i = 1; i < purposeCodes.length; i++) {
 		await rows
 			.nth(i - 1)
-			.locator('.consent-management__dialog-purpose-code-add sl-button')
+			.locator('.consent-management__dialog-purpose-code-add wa-button')
 			.click();
 		await expect(inputs).toHaveCount(i + 1);
 		await expect(inputs.nth(i)).toBeFocused();
 		await inputs.nth(i).fill(purposeCodes[i]);
 	}
-	const addButtons = rows.locator('.consent-management__dialog-purpose-code-add sl-button button');
+	const addButtons = rows.locator('.consent-management__dialog-purpose-code-add wa-button button');
 	await expect(addButtons).toHaveCount(5);
 	for (const button of await addButtons.all()) {
 		await expect(button).toBeDisabled();
@@ -300,13 +301,17 @@ test(`Edit a consent purpose without setting the initial focus`, async ({ page }
 	const dialog = page.locator('.consent-management__dialog').nth(1);
 	await dialog.evaluate((dialog) => {
 		dialog.setAttribute('data-focus-count', '0');
-		dialog.addEventListener('focusin', () => {
+		dialog.addEventListener('focusin', (event) => {
+			// Web Awesome focuses its own <dialog>, in the shadow root, when it opens.
+			if (event.target === dialog) {
+				return;
+			}
 			const count = Number(dialog.getAttribute('data-focus-count'));
 			dialog.setAttribute('data-focus-count', String(count + 1));
 		});
-		dialog.addEventListener('sl-after-show', (event) => {
+		dialog.addEventListener('wa-after-show', (event) => {
 			if (event.target === dialog) {
-				dialog.setAttribute('data-initial-focus', String(dialog.matches(':focus-within')));
+				dialog.setAttribute('data-initial-focus', String(dialog.querySelector(':focus-within') != null));
 			}
 		});
 	});
@@ -394,6 +399,7 @@ test(`Validate authored consent keys and save literal JSON keys separately`, asy
 	await page.goto(`${adminURL}/settings/consent-management`);
 	await page.getByRole('button', { name: 'Add consent purpose' }).click();
 	const dialog = page.locator('.consent-management__dialog[open]');
+	await expect(dialog.locator('.consent-management__dialog-name input')).toBeFocused();
 	await dialog.locator('.consent-management__dialog-name input').fill('Marketing');
 	const purposeCodeInput = dialog.locator('.consent-management__dialog-purpose-code input');
 	const save = dialog.locator('.consent-management__dialog-save');
@@ -470,7 +476,7 @@ test(`Validate changed API JSON keys and clear the profile property`, async ({ p
 	await page.getByRole('button', { name: 'Edit...' }).click();
 	const dialog = page.locator('.consent-management__dialog[open]');
 	const profilePath = dialog.locator('.consent-management__dialog-profile-path');
-	await profilePath.locator('sl-icon[name="chevron-down"]').click();
+	await profilePath.locator('wa-icon[name="chevron-down"]').click();
 	const otherProfilePathOption = dialog
 		.locator('.consent-management__dialog-profile-path-option')
 		.getByText('other', { exact: true });
@@ -482,7 +488,7 @@ test(`Validate changed API JSON keys and clear the profile property`, async ({ p
 	expect(puts).toBe(0);
 	await profilePath.getByRole('button', { name: 'Clear profile property' }).click();
 	await expect(dialog.locator('.consent-management__dialog-error:visible')).toHaveCount(0);
-	await profilePath.locator('sl-icon[name="chevron-down"]').click();
+	await profilePath.locator('wa-icon[name="chevron-down"]').click();
 	await dialog
 		.locator('.consent-management__dialog-profile-path-option')
 		.getByText('consents', { exact: true })
@@ -522,10 +528,10 @@ test(`Change the workspace name`, async ({ page }) => {
 test(`Change the UI user profile properties`, async ({ page }) => {
 	await page.goto(`${adminURL}/settings/general`);
 
-	const userProfileFirstName = page.locator('.general-settings__user-profile-first-name sl-input >> input');
-	const userProfileLastName = page.locator('.general-settings__user-profile-last-name sl-input >> input');
-	const userProfileAdditionalLine = page.locator('.general-settings__user-profile-extra sl-input >> input');
-	const userProfileImage = page.locator('.general-settings__profile-image sl-input >> input');
+	const userProfileFirstName = page.locator('.general-settings__user-profile-first-name wa-input >> input');
+	const userProfileLastName = page.locator('.general-settings__user-profile-last-name wa-input >> input');
+	const userProfileAdditionalLine = page.locator('.general-settings__user-profile-extra wa-input >> input');
+	const userProfileImage = page.locator('.general-settings__profile-image wa-input >> input');
 
 	await userProfileFirstName.fill('first_name');
 	await userProfileLastName.fill('last_name');
@@ -552,31 +558,30 @@ test(`Change the automatic execution of the identity resolution`, async ({ page 
 	await page.goto(`${adminURL}/profile-unification/rules`);
 
 	const automaticExecution = page.locator('.identifiers__automatic-execution');
-	const automaticExecutionLabel = page.locator('.identifiers__automatic-execution >> label');
 
-	await expect(automaticExecutionLabel).toHaveClass(/checkbox--checked/);
-
-	await automaticExecution.click();
-
-	await expect(automaticExecutionLabel).not.toHaveClass(/checkbox--checked/);
-
-	await page.click('.identifiers__save-button');
-	await expect(automaticExecutionLabel).not.toHaveClass(/checkbox--checked/);
-
-	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
-	await page.reload();
-	await expect(automaticExecutionLabel).not.toHaveClass(/checkbox--checked/);
+	await expect(automaticExecution).toHaveJSProperty('checked', true);
 
 	await automaticExecution.click();
 
-	await expect(automaticExecutionLabel).toHaveClass(/checkbox--checked/);
+	await expect(automaticExecution).toHaveJSProperty('checked', false);
 
 	await page.click('.identifiers__save-button');
-	await expect(automaticExecutionLabel).toHaveClass(/checkbox--checked/);
+	await expect(automaticExecution).toHaveJSProperty('checked', false);
 
 	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await page.reload();
-	await expect(automaticExecutionLabel).toHaveClass(/checkbox--checked/);
+	await expect(automaticExecution).toHaveJSProperty('checked', false);
+
+	await automaticExecution.click();
+
+	await expect(automaticExecution).toHaveJSProperty('checked', true);
+
+	await page.click('.identifiers__save-button');
+	await expect(automaticExecution).toHaveJSProperty('checked', true);
+
+	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
+	await page.reload();
+	await expect(automaticExecution).toHaveJSProperty('checked', true);
 });
 
 test(`Change the identifiers`, async ({ page }) => {
@@ -594,18 +599,18 @@ test(`Change the identifiers`, async ({ page }) => {
 	expect(await page.locator('.identifiers__identifier').count()).toBe(3);
 
 	// Fill the identifiers.
-	const identifiers = page.locator('.identifiers__identifier sl-input');
+	const identifiers = page.locator('.identifiers__identifier wa-input');
 	await identifiers.nth(0).evaluate((el: any, value) => {
 		el.value = value;
-		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+		el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
 	}, 'email');
 	await identifiers.nth(1).evaluate((el: any, value) => {
 		el.value = value;
-		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+		el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
 	}, 'first_name');
 	await identifiers.nth(2).evaluate((el: any, value) => {
 		el.value = value;
-		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+		el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
 	}, 'last_name');
 
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
@@ -614,7 +619,7 @@ test(`Change the identifiers`, async ({ page }) => {
 	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await page.reload();
 
-	const identInputs = page.locator('.identifiers__identifier sl-input >> input');
+	const identInputs = page.locator('.identifiers__identifier wa-input >> input');
 	await expect(identInputs.nth(0)).toHaveValue('email');
 	await expect(identInputs.nth(1)).toHaveValue('first_name');
 	await expect(identInputs.nth(2)).toHaveValue('last_name');
@@ -631,7 +636,7 @@ test(`Sort the identifiers`, async ({ page }) => {
 	await page.click('.identifiers__save-button');
 	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await page.reload();
-	const identInputs = page.locator('.identifiers__identifier sl-input >> input');
+	const identInputs = page.locator('.identifiers__identifier wa-input >> input');
 	await expect(identInputs.nth(0)).toHaveValue('first_name');
 	await expect(identInputs.nth(1)).toHaveValue('last_name');
 	await expect(identInputs.nth(2)).toHaveValue('email');

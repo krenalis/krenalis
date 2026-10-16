@@ -1,7 +1,7 @@
 import React, { ReactNode, useContext } from 'react';
 import AppContext from '../../../context/AppContext';
 import './AlertDialog.css';
-import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
+import SlDialog from '@awesome.me/webawesome/dist/react/dialog/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 
 interface AlertDialogProps {
@@ -38,12 +38,29 @@ const AlertDialog = ({
 			break;
 	}
 
+	// The dialog emits wa-hide also when its owner closes it. While isOpen is
+	// still true, the hide has been requested by the user.
+	const onHide = (event: Event) => {
+		if (event.target !== event.currentTarget || !isOpen) {
+			return;
+		}
+		onRequestClose?.(event);
+	};
+
+	const onAfterHide = (event: Event) => {
+		if (event.target !== event.currentTarget) {
+			return;
+		}
+		onClose();
+	};
+
 	return (
 		<SlDialog
 			className={`alert-dialog${className ? ' ' + className : ''}${isFullscreen ? ' alert-dialog--fullscreen' : ''}`}
 			open={isOpen}
-			onSlRequestClose={onRequestClose}
-			onSlAfterHide={onClose}
+			lightDismiss
+			onWaHide={onHide}
+			onWaAfterHide={onAfterHide}
 			style={{ '--alert-color': color, '--width': '600px' } as React.CSSProperties}
 		>
 			<div className='alert-dialog__icon'>{icon}</div>

@@ -13,6 +13,7 @@ import {
 	logout,
 	adminURL,
 } from './utils';
+import { ConsentPurpose } from '../src/lib/api/types/workspace';
 import { join } from 'path';
 import { writeFile } from 'fs';
 
@@ -33,27 +34,27 @@ test(`Add "Import customers" pipeline on Dummy`, async ({ page }) => {
 
 	await expect(name).toBeAttached();
 
-	let button = name.locator('..').locator('..').locator('sl-button');
+	let button = name.locator('..').locator('..').locator('wa-button');
 	await button.click();
 	await expect(page.locator('.pipeline__header')).toBeAttached();
 
 	let email = page.locator('.combobox[data-id="email"]');
-	await email.locator('sl-input').click();
+	await email.locator('wa-input').click();
 	await email.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'email' }).click();
 	await page.keyboard.press('Escape');
 
 	let dummyId = page.locator('.combobox[data-id="dummy_id"]');
-	await dummyId.locator('sl-input').click();
+	await dummyId.locator('wa-input').click();
 	await dummyId.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'dummyId' }).click();
 	await page.keyboard.press('Escape');
 
 	let firstName = page.locator('.combobox[data-id="first_name"]');
-	await firstName.locator('sl-input').click();
+	await firstName.locator('wa-input').click();
 	await firstName.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'firstName' }).click();
 	await page.keyboard.press('Escape');
 
 	let lastName = page.locator('.combobox[data-id="last_name"]');
-	await lastName.locator('sl-input').click();
+	await lastName.locator('wa-input').click();
 	await lastName.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'lastName' }).click();
 	await page.keyboard.press('Escape');
 
@@ -129,7 +130,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 
 	await expect(name).toBeAttached();
 
-	let button = name.locator('..').locator('..').locator('sl-button');
+	let button = name.locator('..').locator('..').locator('wa-button');
 	await button.click();
 	await expect(page.locator('.pipeline__header')).toBeAttached();
 
@@ -138,14 +139,14 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 
 	// Export mode.
 	let exportMode = page.locator('.pipeline__export-mode');
-	await exportMode.locator('sl-select').click();
-	await exportMode.locator('sl-option[value="UpdateOnly"]').click();
+	await exportMode.locator('wa-select').click();
+	await exportMode.locator('wa-option[value="UpdateOnly"]').click();
 
 	// Matching.
 	let matching = page.locator('.pipeline__matching-properties');
-	await matching.locator('[data-id="in"] sl-input >> input').click();
+	await matching.locator('[data-id="in"] wa-input >> input').click();
 	await matching.locator('[data-id="in"] sl-menu-item .schema-combobox-item__name', { hasText: 'email' }).click();
-	await matching.locator('[data-id="out"] sl-input >> input').click();
+	await matching.locator('[data-id="out"] wa-input >> input').click();
 	await matching.locator('[data-id="out"] sl-menu-item .schema-combobox-item__text', { hasText: 'email' }).click();
 	// Selected out matching property should not be visible in the
 	// mapping.
@@ -156,17 +157,17 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 	).not.toBeAttached();
 
 	// Update on duplicates.
-	await page.locator('.pipeline__update-on-duplicates sl-checkbox').click();
+	await page.locator('.pipeline__update-on-duplicates wa-checkbox').click();
 
 	// Mappings.
 	let mappings = page.locator('.pipeline__transformation');
 	let firstName = mappings.locator('.combobox[data-id="firstName"]');
-	await firstName.locator('sl-input').click();
+	await firstName.locator('wa-input').click();
 	await firstName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'first_name' }).click();
 	await page.keyboard.press('Escape');
 
 	let lastName = mappings.locator('.combobox[data-id="lastName"]');
-	await lastName.locator('sl-input').click();
+	await lastName.locator('wa-input').click();
 	await lastName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'last_name' }).click();
 	await page.keyboard.press('Escape');
 
@@ -312,14 +313,14 @@ test(`Add "Send Add to Cart" pipeline on Dummy`, async ({ page }) => {
 
 	await expect(name).toBeAttached();
 
-	let button = name.locator('..').locator('..').locator('sl-button');
+	let button = name.locator('..').locator('..').locator('wa-button');
 	await button.click();
 	await expect(page.locator('.pipeline__header')).toBeAttached();
 
 	// Mappings.
 	let mappings = page.locator('.pipeline__transformation');
 	let email = mappings.locator('.combobox[data-id="email"]');
-	await email.locator('sl-input').click();
+	await email.locator('wa-input').click();
 	await email.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'traits' }).click();
 	await page.keyboard.press('Escape');
 
@@ -387,7 +388,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 
 	await expect(name).toBeAttached();
 
-	let button = name.locator('..').locator('..').locator('sl-button');
+	let button = name.locator('..').locator('..').locator('wa-button');
 	await button.click();
 	await expect(page.locator('.pipeline__header')).toBeAttached();
 
@@ -401,18 +402,18 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 
 	// Identity column.
 	const identity = page.locator('.pipeline__transformation-identity-column');
-	await identity.locator('sl-input').click();
+	await identity.locator('wa-input').click();
 	await identity.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'email' }).click();
 
 	// Mappings.
 	let mappings = page.locator('.pipeline__transformation');
 	let firstName = mappings.locator('.combobox[data-id="first_name"]');
-	await firstName.locator('sl-input').click();
+	await firstName.locator('wa-input').click();
 	await firstName.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'first_name' }).click();
 	await page.keyboard.press('Escape');
 
 	let lastName = mappings.locator('.combobox[data-id="last_name"]');
-	await lastName.locator('sl-input').click();
+	await lastName.locator('wa-input').click();
 	await lastName.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'last_name' }).click();
 	await page.keyboard.press('Escape');
 
@@ -522,7 +523,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 
 	await expect(name).toBeAttached();
 
-	let button = name.locator('..').locator('..').locator('sl-button');
+	let button = name.locator('..').locator('..').locator('wa-button');
 	await button.click();
 	await expect(page.locator('.pipeline__header')).toBeAttached();
 
@@ -530,31 +531,31 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 	await fillUserPipelineFilters(page);
 
 	// Table.
-	await page.locator('.pipeline__destination_table sl-input >> input').fill('users');
-	await page.locator('.pipeline__destination_table sl-button').click();
+	await page.locator('.pipeline__destination_table wa-input >> input').fill('users');
+	await page.locator('.pipeline__destination_table wa-button').click();
 
 	await expect(page.locator('.pipeline__destination_table-key-section')).toBeAttached();
 	await expect(page.locator('.pipeline__transformation')).toBeAttached();
 
 	// Table key.
 	let tableKey = page.locator('.pipeline__destination_table-key-property');
-	await tableKey.locator('sl-input >> input').click();
+	await tableKey.locator('wa-input >> input').click();
 	await tableKey.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'email' }).click();
 
 	// Mappings.
 	let mappings = page.locator('.pipeline__transformation');
 	let email = mappings.locator('.combobox[data-id="email"]');
-	await email.locator('sl-input').click();
+	await email.locator('wa-input').click();
 	await email.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'email' }).click();
 	await page.keyboard.press('Escape');
 
 	let firstName = mappings.locator('.combobox[data-id="first_name"]');
-	await firstName.locator('sl-input').click();
+	await firstName.locator('wa-input').click();
 	await firstName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'first_name' }).click();
 	await page.keyboard.press('Escape');
 
 	let lastName = mappings.locator('.combobox[data-id="last_name"]');
-	await lastName.locator('sl-input').click();
+	await lastName.locator('wa-input').click();
 	await lastName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'last_name' }).click();
 	await page.keyboard.press('Escape');
 
@@ -709,8 +710,8 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 	await page.click(`[data-code="csv"]`);
 	await page.click('.connectors-list__documentation-add');
 
-	await page.click('.file-connector__storage sl-select');
-	await page.locator(`.file-connector__storage sl-select sl-option[value="${connectionID}"]`).click();
+	await page.click('.file-connector__storage wa-select');
+	await page.locator(`.file-connector__storage wa-select wa-option[value="${connectionID}"]`).click();
 
 	let name = page.locator('.file-connector__pipeline-types .list-tile__name', {
 		hasText: 'Import users',
@@ -718,35 +719,35 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 
 	await expect(name).toBeAttached();
 
-	let button = name.locator('..').locator('..').locator('sl-button');
+	let button = name.locator('..').locator('..').locator('wa-button');
 	await button.click();
 	await expect(page.locator('.pipeline__header')).toBeAttached();
 
 	// File
 	await page.locator('.pipeline__file-path >> input').fill(fileName);
-	await page.click('.connector-ui .connector-checkbox:last-child sl-checkbox');
+	await page.click('.connector-ui .connector-checkbox:last-child wa-checkbox');
 
 	await page.click('.pipeline__file-confirm');
 
 	// Identity column.
 	const identity = page.locator('.pipeline__transformation-identity-column');
-	await identity.locator('sl-input').click();
+	await identity.locator('wa-input').click();
 	await identity.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'email' }).click();
 
 	// Mappings.
 	let mappings = page.locator('.pipeline__transformation');
 	let email = mappings.locator('.combobox[data-id="email"]');
-	await email.locator('sl-input').click();
+	await email.locator('wa-input').click();
 	await email.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'email' }).click();
 	await page.keyboard.press('Escape');
 
 	let firstName = mappings.locator('.combobox[data-id="first_name"]');
-	await firstName.locator('sl-input').click();
+	await firstName.locator('wa-input').click();
 	await firstName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'first_name' }).click();
 	await page.keyboard.press('Escape');
 
 	let lastName = mappings.locator('.combobox[data-id="last_name"]');
-	await lastName.locator('sl-input').click();
+	await lastName.locator('wa-input').click();
 	await lastName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'last_name' }).click();
 	await page.keyboard.press('Escape');
 
@@ -883,8 +884,8 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 	await page.click(`[data-code="csv"]`);
 	await page.click('.connectors-list__documentation-add');
 
-	await page.click('.file-connector__storage sl-select');
-	await page.locator(`.file-connector__storage sl-select sl-option[value="${connectionID}"]`).click();
+	await page.click('.file-connector__storage wa-select');
+	await page.locator(`.file-connector__storage wa-select wa-option[value="${connectionID}"]`).click();
 
 	let name = page.locator('.file-connector__pipeline-types .list-tile__name', {
 		hasText: 'Export users',
@@ -892,7 +893,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 
 	await expect(name).toBeAttached();
 
-	let button = name.locator('..').locator('..').locator('sl-button');
+	let button = name.locator('..').locator('..').locator('wa-button');
 	await button.click();
 	await expect(page.locator('.pipeline__header')).toBeAttached();
 
@@ -901,7 +902,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 
 	// File
 	await page.locator('.pipeline__file-format').click();
-	await page.locator('.pipeline__file-format sl-option[value="csv"]').click();
+	await page.locator('.pipeline__file-format wa-option[value="csv"]').click();
 
 	await page.locator('.pipeline__file-path >> input').fill(fileName);
 
@@ -1185,7 +1186,7 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 
 	await expect(name).toBeAttached();
 
-	let button = name.locator('..').locator('..').locator('sl-button');
+	let button = name.locator('..').locator('..').locator('wa-button');
 	await button.click();
 	await expect(page.locator('.pipeline__header')).toBeAttached();
 
@@ -1196,17 +1197,17 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 
 	const filters = page.locator('.pipeline__filters-filter');
 
-	await filters.nth(0).locator('.pipeline__filters-property sl-input').click();
+	await filters.nth(0).locator('.pipeline__filters-property wa-input').click();
 	await filters
 		.nth(0)
 		.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^type$/ })
 		.click();
-	await filters.nth(0).locator('.pipeline__filters-operator sl-option[value="0"]').click(); // option is "is".
+	await filters.nth(0).locator('.pipeline__filters-operator wa-option[value="0"]').click(); // option is "is".
 
-	await filters.nth(0).locator('.pipeline__filters-value-input sl-option[value="track"]').click(); // value select should open automatically after selecting the operator
+	await filters.nth(0).locator('.pipeline__filters-value-input wa-option[value="track"]').click(); // value select should open automatically after selecting the operator
 
 	const jsonCondition = filters.nth(1);
-	const jsonPropertyInput = jsonCondition.locator('.pipeline__filters-property sl-input');
+	const jsonPropertyInput = jsonCondition.locator('.pipeline__filters-property wa-input');
 	await jsonPropertyInput.click();
 	await jsonCondition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^traits$/ }).click();
 	const jsonPathInput = jsonCondition.locator('.pipeline__filters-path >> input');
@@ -1231,18 +1232,18 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 		{ name: 'does not exist', index: 25 },
 	]) {
 		const condition = filters.nth(1);
-		await condition.locator('.pipeline__filters-property sl-input').click();
+		await condition.locator('.pipeline__filters-property wa-input').click();
 		await condition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^traits$/ }).click();
 		const pathInput = condition.locator('.pipeline__filters-path >> input');
 		await pathInput.fill('email');
 		const operatorSelect = condition.locator('.pipeline__filters-operator');
-		const operatorOption = operatorSelect.locator(`sl-option[value="${operator.index}"]`);
+		const operatorOption = operatorSelect.locator(`wa-option[value="${operator.index}"]`);
 		await expect(operatorOption).toHaveText(operator.name);
 		await operatorSelect.click();
 		await operatorOption.click();
 		await expect(operatorSelect).toHaveJSProperty('value', String(operator.index));
 		await pathInput.fill('');
-		await expect(operatorSelect).toHaveJSProperty('value', '');
+		await expect(operatorSelect).toHaveJSProperty('value', null);
 		await condition.locator('.pipeline__filters-remove-condition').click();
 	}
 
@@ -1305,7 +1306,7 @@ test(`Add "Import users" pipeline on JavaScript`, async ({ page }) => {
 
 	await expect(name).toBeAttached();
 
-	let button = name.locator('..').locator('..').locator('sl-button');
+	let button = name.locator('..').locator('..').locator('wa-button');
 	await button.click();
 	await expect(page.locator('.pipeline__header')).toBeAttached();
 
@@ -1361,4 +1362,66 @@ test(`Add "Import users" pipeline on JavaScript`, async ({ page }) => {
 	await page.reload();
 
 	await expect(page.locator('.connection-pipelines__grid')).toBeAttached();
+});
+
+test(`Keep unavailable consent purposes removable but not selectable`, async ({ page }) => {
+	// Ads has no event consent location, which the event pipelines need.
+	const allPurposes: ConsentPurpose[] = [
+		{
+			id: 'marketing',
+			name: 'Marketing',
+			eventConsentLocations: [{ purposeCode: 'marketing' }],
+			profileConsentLocation: null,
+		},
+		{ id: 'ads', name: 'Ads', eventConsentLocations: [], profileConsentLocation: { property: 'consent_ads' } },
+		{
+			id: 'analytics',
+			name: 'Analytics',
+			eventConsentLocations: [{ purposeCode: 'analytics' }],
+			profileConsentLocation: null,
+		},
+	];
+	let purposes = allPurposes;
+	await page.route('**/v1/consent-purposes', async (route) => {
+		await route.fulfill({ json: { purposes } });
+	});
+
+	const id = await addJavascriptSource(page);
+	await page.goto(`${adminURL}/connections/${id}/pipelines`);
+	const name = page.locator('.connection-pipelines__no-pipeline-pipeline-types .list-tile__name', {
+		hasText: 'Import events',
+	});
+	await name.locator('..').locator('..').locator('wa-button').click();
+	await expect(page.locator('.pipeline__header')).toBeAttached();
+
+	const consents = page.locator('.pipeline__consents');
+	await consents.locator('.pipeline__consents-toggle wa-switch').click();
+	const select = consents.locator('.pipeline__consents-select');
+	await select.click();
+	await select.locator('wa-option[value="marketing"]').click();
+	await select.locator('wa-option[value="analytics"]').click();
+	await expect(select).toHaveJSProperty('value', ['marketing', 'analytics']);
+
+	// An unavailable purpose cannot be selected, with the mouse or the keyboard.
+	const ads = select.locator('wa-option[value="ads"]');
+	await expect(ads).toHaveClass(/pipeline__consents-option--unavailable/);
+	await ads.click();
+	await expect(select).toHaveJSProperty('value', ['marketing', 'analytics']);
+	await page.keyboard.press('ArrowDown'); // from Marketing, current since the listbox opened, to Ads
+	await page.keyboard.press('Enter');
+	await expect(select).toHaveJSProperty('value', ['marketing', 'analytics']);
+
+	// A selected purpose that is deleted keeps a red tag, and can be removed.
+	purposes = allPurposes.filter((p) => p.id !== 'analytics');
+	const response = page.waitForResponse((response) => response.url().endsWith('/consent-purposes'));
+	await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+	await response;
+	const invalidTag = select.locator('[part~="invalid-tag"]');
+	await expect(invalidTag).toHaveText('Analytics');
+	await expect(select).toHaveJSProperty('value', ['marketing', 'analytics']);
+	await expect(consents.locator('.pipeline__consents-error')).toContainText('"Analytics" no longer exists');
+	await invalidTag.locator('[part~="remove-button"]').click();
+	await expect(select).toHaveJSProperty('value', ['marketing']);
+	await expect(select.locator('[part~="invalid-tag"]')).toHaveCount(0);
+	await expect(select.locator('wa-option[value="analytics"]')).toHaveCount(0);
 });

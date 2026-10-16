@@ -264,7 +264,7 @@ test(`Show, paginate, and refresh consent purposes on profile schema properties`
 	await expect(editBooleanPopup.locator('.schema-property-consent__purpose-name')).toHaveText(['New newsletter']);
 	const openPurposeTooltip = editBooleanRow.locator('.schema-property-consent__open-purpose-tooltip');
 	await expect(openPurposeTooltip).toHaveJSProperty('content', 'Open consent purpose');
-	await expect(openPurposeTooltip.locator('sl-icon')).toHaveAttribute('name', 'box-arrow-in-up-right');
+	await expect(openPurposeTooltip.locator('wa-icon')).toHaveAttribute('name', 'box-arrow-in-up-right');
 	await editBooleanRow.locator('.schema-property-consent__open-purpose').click();
 	await expect(page).toHaveURL(`${adminURL}/settings/consent-management`);
 	await expect(page.locator('.alert-dialog', { hasText: 'Discard unsaved changes?' })).toHaveCount(0);
@@ -337,14 +337,14 @@ test(`Update consent associations while editing profile schema properties`, asyn
 
 	await replacementRow.locator('.schema-property-consent__open-purpose').click();
 	const discardDialog = page.locator('.alert-dialog', { hasText: 'Discard unsaved changes?' });
-	await expect(discardDialog).toBeVisible();
+	await expect(discardDialog.locator('[part~="dialog"]')).toBeVisible();
 	await expect(page).toHaveURL(`${adminURL}/profile-unification/schema/edit`);
 	await discardDialog.getByText('Keep editing', { exact: true }).click();
-	await expect(discardDialog).not.toBeVisible();
+	await expect(discardDialog.locator('[part~="dialog"]')).not.toBeVisible();
 
 	await replacementRow.locator('.schema-property-consent__trigger').hover();
 	await replacementRow.locator('.schema-property-consent__open-purpose').click();
-	await expect(discardDialog).toBeVisible();
+	await expect(discardDialog.locator('[part~="dialog"]')).toBeVisible();
 	await discardDialog.getByText('Discard and leave', { exact: true }).click();
 	await expect(page).toHaveURL(`${adminURL}/settings/consent-management`);
 	await expect(page.locator('.consent-management__dialog[open] .consent-management__dialog-name input')).toHaveValue(
@@ -755,7 +755,7 @@ test(`Navigate profile schema properties when focus is outside an arrow-key cont
 		/grid__row--selected/,
 	);
 
-	const description = page.locator('.property-panel sl-textarea >> textarea[name="description"]');
+	const description = page.locator('.property-panel wa-textarea >> textarea[name="description"]');
 	const modifiedDots = page.locator('.property-panel .property-form__modified-dot');
 	const initialDescription = await description.inputValue();
 	await description.focus();
@@ -781,7 +781,7 @@ test(`Navigate profile schema properties when focus is outside an arrow-key cont
 	await description.fill(`${initialDescription} updated`);
 	await page.locator('.property-panel__save').click();
 	await expect(movedRow.locator('.schema-edit__property-actions')).toHaveText('Modified');
-	await expect(page.locator('.property-panel sl-textarea .property-form__modified-dot')).toBeVisible();
+	await expect(page.locator('.property-panel wa-textarea .property-form__modified-dot')).toBeVisible();
 	await expect(modifiedDots).toHaveCount(1);
 
 	await description.fill(initialDescription);
@@ -875,7 +875,7 @@ test(`Keep an object expanded when reordering it`, async ({ page }) => {
 	);
 	await applyButton.click();
 	await previewResponse;
-	await expect(page.locator('.schema-edit__queries')).toBeVisible();
+	await expect(page.locator('.schema-edit__queries').locator('[part~="dialog"]')).toBeVisible();
 });
 
 test(`Warn before leaving pending profile schema changes`, async ({ page }) => {
@@ -889,14 +889,14 @@ test(`Warn before leaving pending profile schema changes`, async ({ page }) => {
 
 	await page.evaluate(() => window.history.back());
 	const dialog = page.locator('.alert-dialog', { hasText: 'Discard unsaved changes?' });
-	await expect(dialog).toBeVisible();
+	await expect(dialog.locator('[part~="dialog"]')).toBeVisible();
 	await expect(dialog).toContainText('The pending schema changes will be discarded.');
 	await dialog.getByText('Keep editing', { exact: true }).click();
 	await expect(page.locator('.schema-edit')).toBeVisible();
-	await expect(dialog).not.toBeVisible();
+	await expect(dialog.locator('[part~="dialog"]')).not.toBeVisible();
 
 	await page.evaluate(() => window.history.back());
-	await expect(dialog).toBeVisible();
+	await expect(dialog.locator('[part~="dialog"]')).toBeVisible();
 	await dialog.getByText('Discard and leave', { exact: true }).click();
 	await expect(page.locator('.schema-grid')).toBeVisible();
 });
@@ -912,7 +912,7 @@ test(`Restore pointer interaction after discarding schema changes with Cancel`, 
 
 	await cancelButton.click();
 	const dialog = page.locator('.alert-dialog', { hasText: 'Discard unsaved changes?' });
-	await expect(dialog).toBeVisible();
+	await expect(dialog.locator('[part~="dialog"]')).toBeVisible();
 	await dialog.getByText('Discard and leave', { exact: true }).click();
 	await expect(page.locator('.schema-grid')).toBeVisible();
 
@@ -933,7 +933,7 @@ test(`Keep an unsaved property selected when selecting another property`, async 
 	await expect(propertyPanel.locator('.property-panel__cancel')).toHaveCount(0);
 	await expect(propertyPanel.locator('.property-panel__save')).toHaveCount(0);
 	await expect(propertyPanel.locator('.property-panel__remove')).toBeVisible();
-	const description = page.locator('.property-panel sl-textarea >> textarea[name="description"]');
+	const description = page.locator('.property-panel wa-textarea >> textarea[name="description"]');
 	await description.fill('Unsaved description');
 	await expect(propertyPanel.locator('.property-panel__cancel')).toHaveText('Cancel');
 	await expect(propertyPanel.locator('.property-panel__save')).toHaveText('Confirm');
@@ -944,7 +944,7 @@ test(`Keep an unsaved property selected when selecting another property`, async 
 	await expect(page.locator('.schema-edit .grid__row[data-id="phone_numbers"]')).not.toHaveClass(
 		/grid__row--selected/,
 	);
-	await expect(propertyPanel.locator('sl-animation')).toHaveJSProperty('play', true);
+	await expect(propertyPanel.locator('wa-animation')).toHaveJSProperty('play', true);
 	await propertyPanel.locator('.property-panel__cancel').click();
 	await expect(applyButton).toHaveAttribute('disabled');
 });
@@ -983,7 +983,7 @@ test(`Keep contextual and form actions in their expected tab order`, async ({ pa
 	await expectPassiveInformationTooltip(identifierInfo);
 	await expectPassiveInformationTooltip(primarySourceInfo);
 
-	const description = propertyPanel.locator('sl-textarea textarea[name="description"]');
+	const description = propertyPanel.locator('wa-textarea textarea[name="description"]');
 	await description.focus();
 	await primarySourceInfo.hover();
 	const primarySourceTooltip = primarySourceInfo.locator('xpath=..');
@@ -1020,7 +1020,7 @@ test(`Keep an unsaved property visible while filtering`, async ({ page }) => {
 	await openProperty(page, 'email');
 
 	const propertyPanel = page.locator('.property-panel');
-	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Unsaved description');
+	await propertyPanel.locator('wa-textarea textarea[name="description"]').fill('Unsaved description');
 	await page.locator('.schema-edit__search-button').click();
 	await page.locator('.schema-edit__search >> input').fill('dummy_id');
 
@@ -1222,18 +1222,14 @@ test(`Show identifier order and renumber identifiers after removing a property`,
 	await expect(identifierDetail).toHaveText('Identifier #1');
 	await expect(identifierDetail.locator('.schema-property-grid__identifier')).toHaveText('#1');
 	await openProperty(page, 'phone_numbers');
-	await expect(
-		page.locator('.property-details-panel__label').filter({ hasText: 'Identifier' }),
-	).toHaveCount(0);
+	await expect(page.locator('.property-details-panel__label').filter({ hasText: 'Identifier' })).toHaveCount(0);
 	await openProperty(page, 'email');
 
 	await editSchema(page);
 	const editGrid = page.locator('.schema-edit');
 	await expect(identifierCell(editGrid, 'email')).toHaveText('#1');
 	await expect(identifierCell(editGrid, 'phone_numbers')).toBeEmpty();
-	await expect(
-		page.locator('.property-form__read-only-value .schema-property-grid__identifier'),
-	).toHaveText('#1');
+	await expect(page.locator('.property-form__read-only-value .schema-property-grid__identifier')).toHaveText('#1');
 	await openProperty(page, 'phone_numbers');
 	await expect(page.locator('.property-form__label').filter({ hasText: 'Identifier' })).toHaveCount(0);
 
@@ -1293,14 +1289,14 @@ test(`Keep object types unchanged after canceling the schema review`, async ({ p
 	await openProperty(page, 'review_object.child');
 
 	const propertyPanel = page.locator('.property-panel');
-	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Updated child');
+	await propertyPanel.locator('wa-textarea textarea[name="description"]').fill('Updated child');
 	await propertyPanel.locator('.property-panel__save').click();
 	await page.locator('.schema-edit__header-apply-button').click();
 
 	const reviewDialog = page.locator('.schema-edit__queries');
-	await expect(reviewDialog).toBeVisible();
+	await expect(reviewDialog.locator('[part~="dialog"]')).toBeVisible();
 	await reviewDialog.getByText('Cancel', { exact: true }).click();
-	await expect(reviewDialog).not.toBeVisible();
+	await expect(reviewDialog.locator('[part~="dialog"]')).not.toBeVisible();
 
 	await openProperty(page, 'review_object');
 	await expect(propertyPanel.locator('.property-form__modified-dot')).toHaveCount(0);
@@ -1378,12 +1374,12 @@ test(`Keep the schema review open while applying changes`, async ({ page }) => {
 	await openProperty(page, 'email');
 
 	const propertyPanel = page.locator('.property-panel');
-	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Updated description');
+	await propertyPanel.locator('wa-textarea textarea[name="description"]').fill('Updated description');
 	await propertyPanel.locator('.property-panel__save').click();
 	await page.locator('.schema-edit__header-apply-button').click();
 
 	const reviewDialog = page.locator('.schema-edit__queries');
-	await expect(reviewDialog).toBeVisible();
+	await expect(reviewDialog.locator('[part~="dialog"]')).toBeVisible();
 	const alterRequestPromise = page.waitForRequest(
 		(request) => request.url().endsWith('/profiles/schema') && request.method() === 'PUT',
 	);
@@ -1452,8 +1448,8 @@ test(`Preview schema changes only when applying them`, async ({ page }) => {
 	});
 	await openProperty(page, 'email');
 	const propertyPanel = page.locator('.property-panel');
-	const displayName = propertyPanel.locator('sl-input input[name="displayName"]');
-	const description = propertyPanel.locator('sl-textarea textarea[name="description"]');
+	const displayName = propertyPanel.locator('wa-input input[name="displayName"]');
+	const description = propertyPanel.locator('wa-textarea textarea[name="description"]');
 	const originalDisplayName = await displayName.inputValue();
 	const originalDescription = await description.inputValue();
 	await displayName.fill('Email address');
@@ -1480,8 +1476,8 @@ test(`Preview schema changes only when applying them`, async ({ page }) => {
 	await expect(dialog.locator('.schema-edit__no-query')).toHaveText(
 		'These changes affect only the schema definition. The data warehouse will not be modified.',
 	);
-	await expect(dialog.locator('.schema-edit__apply-alter-button')).toHaveAttribute('variant', 'primary');
-	await dialog.locator('.schema-edit__queries-buttons sl-button').first().click();
+	await expect(dialog.locator('.schema-edit__apply-alter-button')).toHaveAttribute('variant', 'brand');
+	await dialog.locator('.schema-edit__queries-buttons wa-button').first().click();
 
 	await openProperty(page, 'email');
 	await displayName.fill(originalDisplayName);
@@ -1497,7 +1493,7 @@ test(`Preview schema changes only when applying them`, async ({ page }) => {
 	await page.click('.schema-edit__add-property');
 	await page.locator('.property-form__name-input').evaluate((el: any, value) => {
 		el.value = value;
-		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+		el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
 	}, 'temporary_preview_property');
 	await selectPropertyType(page, 'string');
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
@@ -1536,7 +1532,7 @@ test(`Add schema property`, async ({ page }) => {
 
 	await nameInput.evaluate((el: any, value) => {
 		el.value = value;
-		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+		el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
 	}, 'foo');
 
 	await page.keyboard.press('Tab');
@@ -1629,7 +1625,7 @@ test(`Clear the primary source when changing a new property to an array`, async 
 	await selectPropertyType(page, 'string');
 	const primarySource = propertyPanel.locator('.property-form__primary-source');
 	await primarySource.click();
-	await primarySource.locator(`sl-option[value="${sourceID}"]`).click();
+	await primarySource.locator(`wa-option[value="${sourceID}"]`).click();
 	await expect(primarySource).toHaveJSProperty('open', false);
 	await primarySource.focus();
 	await page.keyboard.press('Tab');
@@ -1654,7 +1650,7 @@ test(`Clear the primary source when changing a new property to an array`, async 
 	);
 	await applyButton.click();
 	await previewResponsePromise;
-	await expect(page.locator('.schema-edit__queries')).toBeVisible();
+	await expect(page.locator('.schema-edit__queries').locator('[part~="dialog"]')).toBeVisible();
 	await page.locator('.schema-edit__apply-alter-button').click();
 	const alterRequest = await alterRequestPromise;
 	expect(alterRequest.postDataJSON().primarySources).not.toHaveProperty('array_without_primary_source');
@@ -1709,8 +1705,8 @@ test(`Only offer user-capable source connections as primary sources`, async ({ p
 	await selectPropertyType(page, 'string');
 	const primarySource = propertyPanel.locator('.property-form__primary-source');
 	await primarySource.click();
-	await expect(primarySource.locator(`sl-option[value="${userSourceID}"]`)).toHaveCount(1);
-	await expect(primarySource.locator(`sl-option[value="${eventSourceID}"]`)).toHaveCount(0);
+	await expect(primarySource.locator(`wa-option[value="${userSourceID}"]`)).toHaveCount(1);
+	await expect(primarySource.locator(`wa-option[value="${eventSourceID}"]`)).toHaveCount(0);
 });
 
 test(`Validate string length constraints before adding a property`, async ({ page }) => {
@@ -1722,7 +1718,7 @@ test(`Validate string length constraints before adding a property`, async ({ pag
 	await propertyPanel.locator('.property-form__name-input input').fill('string_with_length_constraints');
 	await selectPropertyType(page, 'string');
 
-	const lengthConstraints = propertyPanel.locator('.property-form__constraints--length sl-input');
+	const lengthConstraints = propertyPanel.locator('.property-form__constraints--length wa-input');
 	const maxCharacters = lengthConstraints.nth(0).locator('input');
 	const maxBytes = lengthConstraints.nth(1).locator('input');
 	const addedProperty = page.locator('.schema-edit .grid__row[data-id="string_with_length_constraints"]');
@@ -1853,8 +1849,8 @@ test(`Edit schema property`, async ({ page }) => {
 	await editSchema(page);
 
 	await openProperty(page, 'foo');
-	await expect(page.locator('.property-type-selector__structure-trigger')).toHaveJSProperty('caret', false);
-	await expect(page.locator('.property-type-selector__trigger')).toHaveJSProperty('caret', false);
+	await expect(page.locator('.property-type-selector__structure-trigger')).toHaveJSProperty('withCaret', false);
+	await expect(page.locator('.property-type-selector__trigger')).toHaveJSProperty('withCaret', false);
 	const changeNameButton = page.locator('.property-panel .property-form__change-name');
 	const nameInput = page.locator('.property-panel .property-form__name-input');
 	await expect(nameInput).toHaveAttribute('readonly', '');
@@ -1889,7 +1885,7 @@ test(`Edit schema property`, async ({ page }) => {
 
 	await nameInput.evaluate((el: any, value) => {
 		el.value = value;
-		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+		el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
 	}, 'bar');
 
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
@@ -2046,7 +2042,7 @@ test(`Remove a replacement property without sending its stale RePath`, async ({ 
 	const propertyPanel = page.locator('.property-panel');
 	await propertyPanel.locator('.property-form__parent').evaluate((select: any) => {
 		select.value = '__root__';
-		select.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
+		select.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
 	});
 	await propertyPanel.locator('.property-form__name-input input').fill('property_to_replace_and_remove');
 	await selectPropertyType(page, 'string');
@@ -2057,7 +2053,7 @@ test(`Remove a replacement property without sending its stale RePath`, async ({ 
 	const applyButton = page.locator('.schema-edit__header-apply-button');
 	await expect(applyButton).not.toHaveAttribute('disabled');
 	await applyButton.click();
-	await expect(page.locator('.schema-edit__queries')).toBeVisible();
+	await expect(page.locator('.schema-edit__queries').locator('[part~="dialog"]')).toBeVisible();
 	const alterRequestPromise = page.waitForRequest(
 		(request) => request.url().endsWith('/profiles/schema') && request.method() === 'PUT',
 	);
@@ -2092,7 +2088,7 @@ test(`Do not show modified field indicators on a replacement property`, async ({
 	const propertyPanel = page.locator('.property-panel');
 	await propertyPanel.locator('.property-form__name-input input').fill('property_to_replace');
 	await selectPropertyType(page, 'boolean');
-	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Replacement description');
+	await propertyPanel.locator('wa-textarea textarea[name="description"]').fill('Replacement description');
 	await propertyPanel.locator('.property-panel__save').click();
 
 	await expect(propertyPanel.locator('.schema-edit__property-status')).toHaveText('Added');
@@ -2158,7 +2154,7 @@ test(`Check that RePaths are sent correctly`, async ({ page }) => {
 
 	await page.locator('.property-panel .property-form__name-input').evaluate((el: any, value) => {
 		el.value = value;
-		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+		el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
 	}, 'foo');
 
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
@@ -2170,7 +2166,7 @@ test(`Check that RePaths are sent correctly`, async ({ page }) => {
 
 	await page.locator('.property-panel .property-form__name-input').evaluate((el: any, value) => {
 		el.value = value;
-		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+		el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
 	}, 'bar');
 
 	await selectPropertyType(page, 'string');
@@ -2352,7 +2348,7 @@ test(`Allow matching property names under different object parents`, async ({ pa
 	const propertyPanel = page.locator('.property-panel');
 	await propertyPanel.locator('.property-form__parent').evaluate((select: any) => {
 		select.value = 'duplicate_scope.billing';
-		select.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
+		select.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
 	});
 	await propertyPanel.locator('.property-form__name-input input').fill('matching_add_name');
 	const nameError = propertyPanel.locator('.property-form__control--name .property-form__control-error');
@@ -2362,7 +2358,7 @@ test(`Allow matching property names under different object parents`, async ({ pa
 	await expect(propertyPanel.locator('.property-panel__save')).toHaveAttribute('disabled');
 	await propertyPanel.locator('.property-form__parent').evaluate((select: any) => {
 		select.value = 'duplicate_scope.shipping';
-		select.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
+		select.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
 	});
 	await expect(nameError).not.toBeAttached();
 	await selectPropertyType(page, 'string');
@@ -2425,7 +2421,7 @@ test(`Support hasOwnProperty as a profile schema property name`, async ({ page }
 	);
 	await applyButton.click();
 	await previewResponsePromise;
-	await expect(page.locator('.schema-edit__queries')).toBeVisible();
+	await expect(page.locator('.schema-edit__queries').locator('[part~="dialog"]')).toBeVisible();
 });
 
 test(`Ignore inherited primary sources for prototype property names`, async ({ page }) => {
@@ -2451,7 +2447,7 @@ test(`Ignore inherited primary sources for prototype property names`, async ({ p
 	await openProperty(page, 'toString');
 
 	const propertyPanel = page.locator('.property-panel');
-	const description = propertyPanel.locator('sl-textarea textarea[name="description"]');
+	const description = propertyPanel.locator('wa-textarea textarea[name="description"]');
 	await description.fill('Updated description');
 	await propertyPanel.locator('.property-panel__save').click();
 	await expect(page.locator('.schema-edit__change-count')).toContainText('1 pending change');
@@ -2469,11 +2465,11 @@ test(`Persist and clear display names on an object and its sub-property`, async 
 
 	await page.locator('.property-panel .property-form__name-input').evaluate((el: any, value) => {
 		el.value = value;
-		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+		el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
 	}, 'test_obj');
 
 	const propertyPanel = page.locator('.property-panel');
-	const displayNameInput = propertyPanel.locator('sl-input input[name="displayName"]');
+	const displayNameInput = propertyPanel.locator('wa-input input[name="displayName"]');
 	await displayNameInput.fill('Test object');
 	await propertyPanel.locator('.property-type-selector__structure-trigger').click();
 	await propertyPanel.locator('[data-structure-option="object"]').click();
@@ -2492,12 +2488,12 @@ test(`Persist and clear display names on an object and its sub-property`, async 
 	await expect(propertyPanel.locator('.property-type-selector__dropdown')).toHaveCount(1);
 	await page.locator('.property-panel .property-form__parent').evaluate((select: any) => {
 		select.value = 'test_obj';
-		select.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
+		select.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
 	});
 
 	await page.locator('.property-panel .property-form__name-input').evaluate((el: any, value) => {
 		el.value = value;
-		el.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+		el.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
 	}, 'test_sub_prop_1');
 	await displayNameInput.fill('Test sub-property');
 
@@ -2620,7 +2616,7 @@ test(`Remove nested properties when changing a new object to another type`, asyn
 	const previewSchema = previewRequest.postDataJSON().schema as ObjectType;
 	const property = previewSchema.properties.find((candidate) => candidate.name === 'new_object');
 	expect(property?.type).toEqual({ kind: 'string' });
-	await expect(page.locator('.schema-edit__queries')).toBeVisible();
+	await expect(page.locator('.schema-edit__queries').locator('[part~="dialog"]')).toBeVisible();
 });
 
 test(`Reject descendant changes while renaming an object property`, async ({ page }) => {
@@ -2696,7 +2692,7 @@ test(`Reject a new object property without sub-properties`, async ({ page }) => 
 	const propertyPanel = page.locator('.property-panel');
 	await propertyPanel.locator('.property-form__name-input').evaluate((input: any) => {
 		input.value = 'empty_object';
-		input.dispatchEvent(new CustomEvent('sl-input', { bubbles: true, composed: true }));
+		input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
 	});
 	await propertyPanel.locator('.property-type-selector__structure-trigger').click();
 	await propertyPanel.locator('[data-structure-option="object"]').click();
@@ -2871,7 +2867,7 @@ test(`Do not restore focus to the delete action after closing its dialog`, async
 		.filter({ has: page.locator('.schema-edit__confirm-remove-property') });
 	await expect(deleteTooltip).toHaveCount(1);
 	await removeButton.click();
-	await expect(removeDialog).toBeVisible();
+	await expect(removeDialog.locator('[part~="dialog"]')).toBeVisible();
 	await deleteTooltip.evaluate((tooltip) => {
 		tooltip.dataset.focusReturnCount = '0';
 		tooltip.addEventListener('focusin', () => {
@@ -2881,9 +2877,9 @@ test(`Do not restore focus to the delete action after closing its dialog`, async
 	await removeDialog.evaluate((dialog) => {
 		dialog.dataset.afterHideSettled = 'false';
 		dialog.addEventListener(
-			'sl-after-hide',
+			'wa-after-hide',
 			() => {
-				// Shoelace queues focus restoration immediately before emitting sl-after-hide.
+				// Web Awesome queues focus restoration immediately before emitting wa-after-hide.
 				setTimeout(() => {
 					dialog.dataset.afterHideSettled = 'true';
 				});
@@ -2891,21 +2887,21 @@ test(`Do not restore focus to the delete action after closing its dialog`, async
 			{ once: true },
 		);
 	});
-	await removeDialog.locator('sl-button').filter({ hasText: 'Cancel' }).click();
+	await removeDialog.locator('wa-button').filter({ hasText: 'Cancel' }).click();
 	await expect(removeDialog).toHaveAttribute('data-after-hide-settled', 'true');
 	await expect(grid).toBeFocused();
 	await expect(deleteTooltip).toHaveAttribute('data-focus-return-count', '0');
 	await expect(deleteTooltip).not.toHaveAttribute('open');
 
 	await removeButton.click();
-	await expect(removeDialog).toBeVisible();
+	await expect(removeDialog.locator('[part~="dialog"]')).toBeVisible();
 	await deleteTooltip.evaluate((tooltip) => {
 		tooltip.dataset.focusReturnCount = '0';
 	});
 	await removeDialog.evaluate((dialog) => {
 		dialog.dataset.afterHideSettled = 'false';
 		dialog.addEventListener(
-			'sl-after-hide',
+			'wa-after-hide',
 			() => {
 				setTimeout(() => {
 					dialog.dataset.afterHideSettled = 'true';
@@ -2970,43 +2966,43 @@ test(`Check that the property name is correctly validated`, async ({ page }) => 
 	let saveButton = page.locator('.property-panel__save');
 
 	// Name cannot be empty.
-	await page.locator('sl-input >> input[name="name"]').fill('test');
-	await page.locator('sl-input >> input[name="name"]').fill('');
+	await page.locator('wa-input >> input[name="name"]').fill('test');
+	await page.locator('wa-input >> input[name="name"]').fill('');
 	await expect(error).toBeAttached();
 	await expect(error).toContainText('Name cannot be empty');
 	await expect(saveButton).toHaveAttribute('disabled');
 
 	// Name cannot contain spaces.
-	await page.locator('sl-input >> input[name="name"]').fill('my property');
+	await page.locator('wa-input >> input[name="name"]').fill('my property');
 	await expect(error).toBeAttached();
 	await expect(error).toContainText('Name cannot contain spaces');
 	await expect(saveButton).toHaveAttribute('disabled');
 
 	// Name cannot start with a number.
-	await page.locator('sl-input >> input[name="name"]').fill('3foo');
+	await page.locator('wa-input >> input[name="name"]').fill('3foo');
 	await expect(error).toBeAttached();
 	await expect(error).toContainText('Name cannot start with a number');
 	await expect(saveButton).toHaveAttribute('disabled');
 
 	// Name must start with an ASCII alphabet character or an
 	// underscore.
-	await page.locator('sl-input >> input[name="name"]').fill('$foo');
+	await page.locator('wa-input >> input[name="name"]').fill('$foo');
 	await expect(error).toBeAttached();
 	await expect(error).toContainText('Name must start with an ASCII alphabet character or an underscore');
 	await expect(saveButton).toHaveAttribute('disabled');
 
 	// Name must contain only ASCII alphabet characters, digits and
 	// underscores.
-	await page.locator('sl-input >> input[name="name"]').fill('foo_3bar');
+	await page.locator('wa-input >> input[name="name"]').fill('foo_3bar');
 	await expect(error).not.toBeAttached();
 	await expect(saveButton).not.toHaveAttribute('disabled');
-	await page.locator('sl-input >> input[name="name"]').fill('foo$bar');
+	await page.locator('wa-input >> input[name="name"]').fill('foo$bar');
 	await expect(error).toBeAttached();
 	await expect(error).toContainText('Name must contain only ASCII alphabet characters, digits and underscores');
 	await expect(saveButton).toHaveAttribute('disabled');
 
 	// Name must be unique within the selected parent.
-	await page.locator('sl-input >> input[name="name"]').fill('email');
+	await page.locator('wa-input >> input[name="name"]').fill('email');
 	await expect(error).toContainText('A property named “email” already exists in Profile (top level).');
 	await expect(saveButton).toHaveAttribute('disabled');
 });

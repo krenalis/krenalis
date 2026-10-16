@@ -17,12 +17,12 @@
 	animation: fade-in-entrance 0.5s;
 }
 
-.member__content sl-spinner {
+.member__content wa-spinner {
 	display: block;
 	margin: 20px auto;
 }
 
-.member sl-input::part(form-control-label):after {
+.member wa-input::part(form-control-label):after {
 	color: var(--sl-color-danger-500);
 }
 
@@ -34,9 +34,9 @@
 	margin-bottom: 30px;
 }
 
-.member__name > sl-input,
-.member__email > sl-input,
-.member__confirm-password > sl-input {
+.member__name > wa-input,
+.member__email > wa-input,
+.member__confirm-password > wa-input {
 	max-width: 400px;
 }
 
@@ -48,9 +48,8 @@
 	margin-bottom: 15px;
 }
 
-.member__avatar-box sl-avatar::part(base) {
-	width: 60px;
-	height: 60px;
+.member__avatar-box wa-avatar {
+	--size: 60px;
 }
 
 .member__avatar-label {
@@ -94,7 +93,7 @@
 	max-width: 400px;
 }
 
-.member__password > sl-input {
+.member__password > wa-input {
 	width: 100%;
 }
 

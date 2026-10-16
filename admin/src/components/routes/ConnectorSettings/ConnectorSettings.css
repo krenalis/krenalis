@@ -21,11 +21,11 @@
 	margin-right: 10px;
 }
 
-.connector-settings__mode-field sl-option[aria-selected='true'] .connector-settings__mode-icon {
+.connector-settings__mode-field wa-option[aria-selected='true'] .connector-settings__mode-icon {
 	color: var(--text-onaccent);
 }
 
-.connector-settings__mode-field sl-option .connector-settings__mode-icon {
+.connector-settings__mode-field wa-option .connector-settings__mode-icon {
 	display: flex;
 	align-items: center;
 }

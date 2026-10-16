@@ -39,25 +39,26 @@ import useEventListener from '../../../hooks/useEventListener';
 import AppContext from '../../../context/AppContext';
 import PipelineContext from '../../../context/PipelineContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlAnimation from '@shoelace-style/shoelace/dist/react/animation/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlAnimation from '@awesome.me/webawesome/dist/react/animation/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import { buttonVariant } from '../../../utils/buttonVariant';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
-import SlButtonGroup from '@shoelace-style/shoelace/dist/react/button-group/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
-import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
-import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
-import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
-import SlSplitPanel from '@shoelace-style/shoelace/dist/react/split-panel/index.js';
-import SlAlert from '@shoelace-style/shoelace/dist/react/alert/index.js';
-import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
+import SlButtonGroup from '@awesome.me/webawesome/dist/react/button-group/index.js';
+import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import SlDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
+import SlSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
+import SlCopyButton from '@awesome.me/webawesome/dist/react/copy-button/index.js';
+import SlSplitPanel from '@awesome.me/webawesome/dist/react/split-panel/index.js';
+import SlCallout from '@awesome.me/webawesome/dist/react/callout/index.js';
+import SlCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import SlBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
-import SlRelativeTime from '@shoelace-style/shoelace/dist/react/relative-time/index.js';
+import SlRelativeTime from '@awesome.me/webawesome/dist/react/relative-time/index.js';
 import {
 	ApplicationUsersResponse,
 	ExecQueryResponse,
@@ -368,6 +369,10 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 	const onChangeUpdatedAtFormat = (e) => {
 		const p = { ...pipeline };
 		const v = e.target.value;
+		// The select also reports the option that is already selected.
+		if (v === 'custom' && isCustomUpdatedAtFormatSelected) {
+			return;
+		}
 		if (v === 'custom') {
 			setIsCustomUpdatedAtFormatSelected(true);
 			p.updatedAtFormat = '';
@@ -529,7 +534,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 								<div className='pipeline__transformation-updated-at-format-property'>
 									<div className='pipeline__transformation-updated-at-format'>
 										<SlSelect
-											onSlChange={onChangeUpdatedAtFormat}
+											onChange={onChangeUpdatedAtFormat}
 											value={
 												isCustomUpdatedAtFormatSelected
 													? 'custom'
@@ -542,7 +547,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 											}
 											name='updatedAtFormat'
 											label='Format'
-											size='small'
+											size='s'
 											ref={updatedAtFormatRef}
 										>
 											<SlOption value='iso8601'>ISO 8601</SlOption>
@@ -553,12 +558,12 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 									{isCustomUpdatedAtFormatSelected && (
 										<div className='pipeline__transformation-updated-at-custom-format'>
 											<SlInput
-												onSlInput={onInputUpdatedAtCustomFormat}
+												onInput={onInputUpdatedAtCustomFormat}
 												value={pipeline.updatedAtFormat}
 												name='updatedAtCustomFormat'
 												placeholder='%Y-%m-%d'
-												helpText='C89 "strftime" format string'
-												size='small'
+												hint='C89 "strftime" format string'
+												size='s'
 												ref={updatedAtCustomFormatInputRef}
 											></SlInput>
 										</div>
@@ -570,9 +575,9 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 							<div className='pipeline__transformation-incremental'>
 								<SlCheckbox
 									checked={pipeline.incremental}
-									onSlChange={onChangeIncremental}
+									onChange={onChangeIncremental}
 									disabled={pipeline.updatedAtColumn === ''}
-									helpText={`Only imports ${transformationTargetsTerm} whose update time is subsequent to the last import`}
+									hint={`Only imports ${transformationTargetsTerm} whose update time is subsequent to the last import`}
 								>
 									Run incremental import
 								</SlCheckbox>
@@ -588,7 +593,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 						padded={true}
 						annotated={true}
 					>
-						<SlCheckbox checked={pipeline.incremental} onSlChange={onChangeIncremental}>
+						<SlCheckbox checked={pipeline.incremental} onChange={onChangeIncremental}>
 							Run incremental import
 						</SlCheckbox>
 					</Section>
@@ -1048,7 +1053,7 @@ const TransformationBox = ({
 							propertiesToHide={propertiesToHide}
 						>
 							{isIdentifier && (
-								<div className='pipeline__transformation-property-icon' slot='prefix'>
+								<div className='pipeline__transformation-property-icon' slot='start'>
 									<SlTooltip content='Used as identifier in Identity Resolution' hoist={true}>
 										<SlIcon
 											name='person-check'
@@ -1079,7 +1084,6 @@ const TransformationBox = ({
 										copyLabel='Click to copy'
 										successLabel='✓ Copied'
 										errorLabel='Copying to clipboard is not supported by your browser'
-										hoist={true}
 										tabIndex={-1}
 									/>
 									<span className='pipeline__transformation-output-property-key'>
@@ -1139,10 +1143,10 @@ const TransformationBox = ({
 					sync={isFullscreenTransformationOpen}
 				/>
 				{isTransformationLanguageDeprecated && (
-					<SlAlert variant='danger' className='pipeline__transformation-language-deprecated' open>
+					<SlCallout variant='danger' className='pipeline__transformation-language-deprecated'>
 						<SlIcon slot='icon' name='exclamation-circle' />
 						{selectedLanguage} is not supported anymore
-					</SlAlert>
+					</SlCallout>
 				)}
 			</div>
 		);
@@ -1187,7 +1191,7 @@ const TransformationBox = ({
 							<SlButtonGroup className='transformation-box__header-buttons'>
 								<SlButton
 									className='transformation-box__mappings-button'
-									variant={transformationType === 'mappings' ? 'primary' : 'default'}
+									{...buttonVariant(transformationType === 'mappings' ? 'primary' : 'default')}
 									onClick={() => onTransformationTypeClick('mappings')}
 									disabled={isTransformationDisabled}
 								>
@@ -1199,11 +1203,11 @@ const TransformationBox = ({
 									const tab = (
 										<SlButton
 											key={language}
-											variant={
+											{...buttonVariant(
 												transformationType === 'function' && selectedLanguage === language
 													? 'primary'
-													: 'default'
-											}
+													: 'default',
+											)}
 											onClick={isDisabled ? null : () => onTransformationTypeClick(language)}
 											disabled={isDisabled}
 										>
@@ -1232,26 +1236,24 @@ const TransformationBox = ({
 						<SlDropdown
 							className={`transformation-box__function-settings${isFullscreenTransformationOpen ? ' transformation-box__function-settings--visible' : ''}`}
 						>
-							<SlButton slot='trigger' circle>
-								<SlIcon className='transformation-box__function-settings-icon' name='gear' />
-								<SlIcon
+							<SlButton appearance='outlined' slot='trigger' pill>
+								<WaIcon className='transformation-box__function-settings-icon' name='gear' />
+								<WaIcon
 									className={`transformation-box__function-settings-icon-dot${pipeline.transformation.function.preserveJSON ? ' transformation-box__function-settings-icon-dot--active' : ''}`}
 									name='circle-fill'
-								></SlIcon>
+								></WaIcon>
 							</SlButton>
-							<SlMenu className='transformation-box__function-settings-menu'>
-								<SlSwitch
-									size='small'
-									checked={pipeline.transformation.function.preserveJSON}
-									onClick={onFunctionPreserveJSONSwitch}
-								>
-									Preserve JSON
-									<span className='transformation-box__preserve-json-description'>
-										Pass and receive JSON values as strings in their original format, without
-										decoding or encoding them.
-									</span>
-								</SlSwitch>
-							</SlMenu>
+							<SlSwitch
+								size='s'
+								checked={pipeline.transformation.function.preserveJSON}
+								onClick={onFunctionPreserveJSONSwitch}
+							>
+								Preserve JSON
+								<span className='transformation-box__preserve-json-description'>
+									Pass and receive JSON values as strings in their original format, without decoding
+									or encoding them.
+								</span>
+							</SlSwitch>
 						</SlDropdown>
 					)}
 					{!isFullscreenTransformationOpen && (
@@ -1261,11 +1263,11 @@ const TransformationBox = ({
 							playbackRate={1.2}
 							iterations={1}
 							play={isEditButtonAnimated}
-							onSlFinish={() => setIsEditButtonAnimated(false)}
+							onWaFinish={() => setIsEditButtonAnimated(false)}
 						>
 							<SlButton
 								className='transformation-box__fullscreen-button'
-								variant='primary'
+								variant='brand'
 								onClick={onOpenTransformation}
 								disabled={isTransformationDisabled}
 							>
@@ -1291,7 +1293,9 @@ const TransformationBox = ({
 				title={'You will lose your work'}
 				actions={
 					<>
-						<SlButton onClick={() => setIsAlertOpen(false)}>Cancel</SlButton>
+						<SlButton appearance='outlined' onClick={() => setIsAlertOpen(false)}>
+							Cancel
+						</SlButton>
 						<SlButton variant='danger' onClick={() => onChangeTransformationType(200)}>
 							Continue
 						</SlButton>
@@ -2067,13 +2071,13 @@ const FullscreenTransformation = ({
 			)}
 			<div className='fullscreen-transformation__samples-reload'>
 				<SlButton
-					variant='default'
-					size='small'
+					appearance='outlined'
+					size='s'
 					loading={isReloadingSamples}
 					onClick={() => setIsReloadingSamples(true)}
 				>
 					Reload
-					<SlIcon name='arrow-clockwise' slot='suffix' />
+					<WaIcon name='arrow-clockwise' slot='end' />
 				</SlButton>
 				<SlRelativeTime date={lastSamplesFetchTime} sync lang='en-US' />
 			</div>
@@ -2086,19 +2090,20 @@ const FullscreenTransformation = ({
 			<div className='fullscreen-transformation__panel-schema'>
 				<SlInput
 					className='fullscreen-transformation__panel-schema-search'
-					onSlInput={onInputInSearchTerm}
+					onInput={onInputInSearchTerm}
 					value={inSearchTerm}
 					placeholder='Search a property...'
-					size='small'
-					clearable
+					size='s'
+					withClear
 				>
-					<SlIcon name='search' slot='prefix' />
+					<WaIcon name='search' slot='start' />
+					<WaIcon name='x-circle-fill' slot='clear-icon' />
 				</SlInput>
 				{transformationType === 'function' && (
 					<SlSwitch
 						className='fullscreen-transformation__panel-schema-show-only-selected'
-						size='small'
-						onSlChange={() => onChangeShowOnlySelected('in')}
+						size='s'
+						onChange={() => onChangeShowOnlySelected('in')}
 					>
 						Show only selected properties
 					</SlSwitch>
@@ -2420,15 +2425,15 @@ const FullscreenTransformation = ({
 								</div>
 								<SlButtonGroup>
 									<SlButton
-										size='small'
-										variant={isInputSchemaSelected ? 'primary' : 'default'}
+										size='s'
+										{...buttonVariant(isInputSchemaSelected ? 'primary' : 'default')}
 										onClick={onSelectInputSchema}
 									>
 										Schema
 									</SlButton>
 									<SlButton
-										size='small'
-										variant={isInputSchemaSelected ? 'default' : 'primary'}
+										size='s'
+										{...buttonVariant(isInputSchemaSelected ? 'default' : 'primary')}
 										onClick={onSelectInputSamples}
 									>
 										Samples
@@ -2468,16 +2473,16 @@ const FullscreenTransformation = ({
 						</div>
 						<SlButtonGroup>
 							<SlButton
-								size='small'
-								variant={isOutputSchemaSelected ? 'primary' : 'default'}
+								size='s'
+								{...buttonVariant(isOutputSchemaSelected ? 'primary' : 'default')}
 								onClick={onSelectOutputSchema}
 								disabled={isExecuting}
 							>
 								{outputSchemaTabLabel}
 							</SlButton>
 							<SlButton
-								size='small'
-								variant={isOutputSchemaSelected ? 'default' : 'primary'}
+								size='s'
+								{...buttonVariant(isOutputSchemaSelected ? 'default' : 'primary')}
 								onClick={onSelectOutputResult}
 								disabled={isExecuting}
 							>
@@ -2495,19 +2500,20 @@ const FullscreenTransformation = ({
 								<div className='fullscreen-transformation__panel-schema'>
 									<SlInput
 										className='fullscreen-transformation__panel-schema-search'
-										onSlInput={onInputOutSearchTerm}
+										onInput={onInputOutSearchTerm}
 										value={outSearchTerm}
 										placeholder='Search a property...'
-										size='small'
-										clearable
+										size='s'
+										withClear
 									>
-										<SlIcon name='search' slot='prefix' />
+										<WaIcon name='search' slot='start' />
+										<WaIcon name='x-circle-fill' slot='clear-icon' />
 									</SlInput>
 									{transformationType === 'function' && (
 										<SlSwitch
 											className='fullscreen-transformation__panel-schema-show-only-selected'
-											size='small'
-											onSlChange={() => onChangeShowOnlySelected('out')}
+											size='s'
+											onChange={() => onChangeShowOnlySelected('out')}
 										>
 											Show only selected properties
 										</SlSwitch>
@@ -2763,8 +2769,8 @@ const MapMapping = ({
 					`.pipeline__body .pipeline__transformation-section > .section__content .pipeline__transformation-mappings .pipeline__transformation-input-property[data-id="${propertyPath}"] ~ .pipeline__transformation-input-property[data-id="${index}"]`,
 				);
 			}
-			const comboboxInput = combobox.querySelector('sl-input');
-			const keyInput = combobox.nextElementSibling.nextElementSibling.querySelector('sl-input') as HTMLElement;
+			const comboboxInput = combobox.querySelector('wa-input');
+			const keyInput = combobox.nextElementSibling.nextElementSibling.querySelector('wa-input') as HTMLElement;
 			const hasAlreadyError = logicalErrors[index] != null;
 			const hasFocus = comboboxInput.shadowRoot.activeElement !== null || document.activeElement === keyInput;
 			if (hasFocus && !hasAlreadyError) {
@@ -2883,7 +2889,7 @@ const MapMapping = ({
 			}
 			const focusKey = () => {
 				const keyContainer = newPairCombobox.nextElementSibling.nextElementSibling;
-				const keyInput = keyContainer.querySelector('sl-input') as HTMLElement;
+				const keyInput = keyContainer.querySelector('wa-input') as HTMLElement;
 				keyInput.focus();
 			};
 			const panelBottom = panel.scrollTop + panel.clientHeight;
@@ -2999,7 +3005,6 @@ const MapMapping = ({
 							copyLabel='Click to copy'
 							successLabel='✓ Copied'
 							errorLabel='Copying to clipboard is not supported by your browser'
-							hoist={true}
 						/>
 						<span className='pipeline__transformation-output-property-key'>{property.full.name}</span>
 					</span>
@@ -3062,28 +3067,30 @@ const MapMapping = ({
 						>
 							"{' '}
 							<SlInput
-								size='small'
+								size='s'
 								value={key}
 								disabled={areChildrenMappingDisabled}
-								onSlInput={(e: any) => {
+								onInput={(e: any) => {
 									onUpdatePair(i, 'key', e.target.value);
 								}}
 							/>{' '}
 							"<span className='pipeline__transformation-output-property-type'>{elementType.kind}</span>
 							<SlTooltip content='Add key' hoist={true}>
 								<SlButton
+									appearance='outlined'
 									className='pipeline__transformation-output-property-add'
-									size='small'
+									size='s'
 									onClick={areChildrenMappingDisabled ? null : () => onAddPair(i)}
 									disabled={areChildrenMappingDisabled}
 								>
-									<SlIcon name='plus-circle' slot='prefix' />
+									<WaIcon name='plus-circle' />
 								</SlButton>
 							</SlTooltip>
 							<SlTooltip content={pairs.length === 1 ? 'Clear key' : 'Remove key'} hoist={true}>
 								<SlButton
+									appearance='outlined'
 									className='pipeline__transformation-output-property-remove'
-									size='small'
+									size='s'
 									onClick={
 										areChildrenMappingDisabled
 											? null
@@ -3095,7 +3102,7 @@ const MapMapping = ({
 									}
 									disabled={areChildrenMappingDisabled || (pairs.length === 1 && !hasFilledPairs)}
 								>
-									<SlIcon name='x-circle' slot='prefix' />
+									<WaIcon name='x-circle' />
 								</SlButton>
 							</SlTooltip>
 							{hasDuplicatedKey && (
@@ -3465,7 +3472,7 @@ const TransformationProperty = ({
 						checked={isFlagged || areAllChildrenLeafsSelected}
 						indeterminate={hasSelectedChildren && !areAllChildrenLeafsSelected}
 						disabled={isSelectDisabled}
-						size='small'
+						size='s'
 					/>
 				))}
 			<div className='fullscreen-transformation__property'>
@@ -3491,7 +3498,6 @@ const TransformationProperty = ({
 												copyLabel='Click to copy'
 												successLabel='✓ Copied'
 												errorLabel='Copying to clipboard is not supported by your browser'
-												hoist={true}
 											/>
 										)}
 										<span className='fullscreen-transformation__property-name-text'>

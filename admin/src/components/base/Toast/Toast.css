@@ -1,33 +1,91 @@
-.sl-toast-stack {
-	left: 50%;
+/* The toast is drawn as Shoelace drew its alerts in the toast stack. */
+
+.toast-stack {
+	position: fixed;
+	inset: 0 auto auto 50%;
 	transform: translateX(-50%);
-	overflow: visible !important;
-	z-index: 999999 !important;
+	width: 28rem;
+	max-width: 100%;
+	max-height: 100%;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	overflow: visible;
 }
 
-.toast::part(base) {
+.toast {
 	position: relative;
 	left: calc(var(--sidebar-width) / 2);
-	color: var(--text-onaccent);
+	margin: var(--sl-spacing-medium);
+	padding: 0;
 	border: 0;
-	box-shadow: 2px 1px 19px 0px #00000060;
+	border-radius: var(--sl-border-radius-medium);
+	font-size: var(--sl-font-size-small);
+	font-weight: 600;
+	line-height: 1.6;
+	color: var(--text-onaccent);
+	box-shadow: var(--sl-shadow-large);
+	overflow: hidden;
 }
 
-.toast--fullscreen::part(base) {
+.toast--fullscreen {
 	left: 0;
 }
 
+.toast[variant='neutral'] {
+	background-color: var(--sl-color-neutral-600);
+}
+
+.toast[variant='brand'] {
+	background-color: var(--sl-color-primary-600);
+}
+
+.toast[variant='success'] {
+	background-color: var(--sl-color-success-600);
+}
+
+.toast[variant='danger'] {
+	background-color: var(--sl-color-danger-600);
+}
+
+.toast[variant='warning'] {
+	background-color: var(--sl-color-warning-600);
+}
+
 .toast::part(icon) {
-	color: var(--text-onaccent);
 	align-items: start;
+	padding-inline-start: var(--sl-spacing-large);
 	padding-top: 1.25rem;
+	font-size: var(--sl-font-size-large);
 }
 
-.toast::part(close-button__base) {
-	color: var(--text-onaccent);
+.toast wa-icon[slot='icon'] {
+	margin-inline-end: 0;
 }
 
-.toast::part(close-button) {
+.toast::part(message) {
+	display: flex;
+}
+
+.toast__text {
+	flex: 1 1 auto;
+	padding: var(--sl-spacing-large);
+	overflow: hidden;
+}
+
+.toast__close {
+	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
 	align-self: start;
-	padding-top: 1rem;
+	margin-top: 1rem;
+	margin-inline-end: var(--sl-spacing-medium);
+	padding: var(--sl-spacing-x-small);
+	font-size: var(--sl-font-size-medium);
+	color: inherit;
+	background: none;
+	border: none;
+	border-radius: var(--sl-border-radius-medium);
+	cursor: pointer;
 }

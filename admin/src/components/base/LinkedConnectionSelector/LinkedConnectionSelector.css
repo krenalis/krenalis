@@ -15,16 +15,16 @@
 	font-size: 14px;
 }
 
-.linked-connection-selector__dropdown sl-menu-item:hover::part(base) {
+.linked-connection-selector__dropdown wa-dropdown-item:hover {
 	background-color: var(--sl-color-primary-500);
 	color: var(--text-onaccent);
 }
 
-.linked-connection-selector__dropdown sl-menu-item::part(base) {
+.linked-connection-selector__dropdown wa-dropdown-item {
 	padding-right: 15px;
 }
 
-.linked-connection-selector__dropdown sl-menu-item::part(label) {
+.linked-connection-selector__dropdown wa-dropdown-item::part(label) {
 	display: flex;
 	align-items: center;
 	gap: 10px;

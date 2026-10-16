@@ -5,7 +5,7 @@ import {
 	schemaPropertyGridNestedRowsIndentation,
 } from '../Schema/SchemaPropertyGrid';
 import './SchemaGrid.css';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { Outlet, useLocation } from 'react-router-dom';
 import Grid from '../../base/Grid/Grid';
@@ -122,7 +122,7 @@ const SchemaGrid = () => {
 				</div>
 				<SlButton
 					className='schema-grid__alter-button'
-					variant='primary'
+					variant='brand'
 					onClick={gridInteractionsDisabled ? null : onEditClick}
 					disabled={gridInteractionsDisabled}
 					loading={isAltering}

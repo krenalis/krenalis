@@ -2,7 +2,7 @@
 	margin: 18px auto !important;
 }
 
-.connector-checkbox sl-checkbox::part(label) {
+.connector-checkbox wa-checkbox::part(label) {
 	font-size: var(--sl-input-label-font-size-medium);
 	color: var(--text-light);
 }

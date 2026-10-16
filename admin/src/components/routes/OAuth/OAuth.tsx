@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import './OAuth.css';
 import AppContext from '../../../context/AppContext';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { Link } from '../../base/Link/Link';
 import { ADD_CONNECTION_ID_KEY, ADD_CONNECTION_ROLE_KEY, ADD_CONNECTOR_CODE_KEY } from '../../../constants/storage';
@@ -101,7 +101,7 @@ const OAuth = () => {
 					<SlIcon name='exclamation-circle-fill'></SlIcon>
 					<div className='oauth__error-text'>{errorMessage}</div>
 					<Link path='connections'>
-						<SlButton variant='default'>Go to connections map</SlButton>
+						<SlButton appearance='outlined'>Go to connections map</SlButton>
 					</Link>
 				</div>
 			) : (

@@ -22,11 +22,11 @@ import (
 	"github.com/evanw/esbuild/pkg/api"
 )
 
-// Path to the Shoelace icons within the "node_modules" directory.
-const shoelaceIconsPath = "@shoelace-style/shoelace/dist/assets/icons"
+// Path to the Bootstrap Icons within the "node_modules" directory.
+const iconsPath = "bootstrap-icons/icons"
 
-// Path to the file containing the list of Shoelace icons used in the Admin.
-const shoelaceIconsListPath = "admin/src/shoelace-icons.txt"
+// Path to the file containing the list of icons used in the Admin.
+const iconsListPath = "admin/src/icons.txt"
 
 func main() {
 	err := makeVendor()
@@ -183,21 +183,21 @@ func makeVendor() error {
 		return err
 	}
 
-	// Copy the Shoelace icons.
-	shoelaceIcons, err := usedShoelaceIconFiles(shoelaceIconsListPath)
+	// Copy the icons.
+	icons, err := usedIconFiles(iconsListPath)
 	if err != nil {
-		return fmt.Errorf("cannot find Shoelace icons: %s", err)
+		return fmt.Errorf("cannot find icons: %s", err)
 	}
-	shoelaceIconsSrc := filepath.Join("admin/node_modules", shoelaceIconsPath)
-	shoelaceIconsDst := filepath.Join("admin/node_modules_vendor", shoelaceIconsPath)
-	err = os.MkdirAll(shoelaceIconsDst, 0755)
+	iconsSrc := filepath.Join("admin/node_modules", iconsPath)
+	iconsDst := filepath.Join("admin/node_modules_vendor", iconsPath)
+	err = os.MkdirAll(iconsDst, 0755)
 	if err != nil {
-		return fmt.Errorf("cannot create directory %q: %s", shoelaceIconsDst, err)
+		return fmt.Errorf("cannot create directory %q: %s", iconsDst, err)
 	}
-	for _, icon := range shoelaceIcons {
-		err = copyFile(filepath.Join(shoelaceIconsDst, icon), filepath.Join(shoelaceIconsSrc, icon))
+	for _, icon := range icons {
+		err = copyFile(filepath.Join(iconsDst, icon), filepath.Join(iconsSrc, icon))
 		if err != nil {
-			return fmt.Errorf("cannot copy Shoelace icon file %q: %s", icon, err)
+			return fmt.Errorf("cannot copy icon file %q: %s", icon, err)
 		}
 	}
 
@@ -209,9 +209,10 @@ func makeVendor() error {
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
-		for _, license := range []string{"LICENSE", "license", "License"} {
+		for _, license := range []string{"LICENSE", "license", "License", "LICENSE.md", "license.md", "License.md"} {
 			src = filepath.Join("admin/node_modules", dir, license)
-			dst = filepath.Join("admin/node_modules_vendor", dir, strings.ToUpper(license))
+			ext := filepath.Ext(license)
+			dst = filepath.Join("admin/node_modules_vendor", dir, strings.ToUpper(strings.TrimSuffix(license, ext))+ext)
 			err = copyFile(dst, src)
 			if err != nil && !errors.Is(err, os.ErrNotExist) {
 				return err
@@ -423,9 +424,9 @@ func moveToModuleRoot() (string, error) {
 	}
 }
 
-// usedShoelaceIconFiles returns the Shoelace icon files listed in the
-// file at the specified path.
-func usedShoelaceIconFiles(path string) ([]string, error) {
+// usedIconFiles returns the icon files listed in the file at the specified
+// path.
+func usedIconFiles(path string) ([]string, error) {
 	icons := []string{}
 	file, err := os.Open(path)
 	if err != nil {

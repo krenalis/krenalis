@@ -5,12 +5,12 @@ import FeedbackButton, { FeedbackButtonRef } from '../../base/FeedbackButton/Fee
 import NotFound from '../NotFound/NotFound';
 import ConnectorUI from '../../base/ConnectorUI/ConnectorUI';
 import AppContext from '../../../context/AppContext';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import TransformedConnector from '../../../lib/core/connector';
 import { ConnectionRole, ConnectionToAdd, SendingMode as SendingModeType } from '../../../lib/api/types/connection';
@@ -263,7 +263,7 @@ const ConnectorSettings = () => {
 			<div className='connector-settings__save-wrapper'>
 				<SlButton
 					className='connector-settings__save-button'
-					variant='primary'
+					variant='brand'
 					onClick={() => onButtonClick('save')}
 				>
 					Add
@@ -318,7 +318,7 @@ const ConnectorSettings = () => {
 								value={name}
 								label='Name'
 								type='text'
-								onSlInput={(e) => {
+								onInput={(e) => {
 									const target = e.currentTarget as any;
 									setName(target!.value);
 								}}
@@ -331,13 +331,13 @@ const ConnectorSettings = () => {
 									name='mode'
 									value={sendingMode}
 									label='Sending mode'
-									onSlChange={(e) => {
+									onChange={(e) => {
 										const target = e.currentTarget as any;
 										const value = target.value as SendingModeType;
 										setSendingMode(value);
 									}}
 								>
-									<div className='connector-settings__mode-value-icon' slot='prefix'>
+									<div className='connector-settings__mode-value-icon' slot='start'>
 										<SlIcon
 											name={
 												sendingMode === 'Server'
@@ -350,7 +350,7 @@ const ConnectorSettings = () => {
 									</div>
 									{connector.supportedSendingModes.map((m) => (
 										<SlOption key={m} value={m}>
-											<div slot='prefix'>
+											<div slot='start'>
 												<SlIcon
 													className='connector-settings__mode-icon'
 													name={m === 'Server' ? 'cloud' : m === 'Client' ? 'phone' : 'send'}

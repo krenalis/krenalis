@@ -1,7 +1,7 @@
 import React, { useState, ReactNode, useEffect } from 'react';
 import './Fullscreen.css';
 import { FullscreenContext } from '../../../context/FullscreenContext';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 
 interface FullscreenProps {
 	onClose: () => void;

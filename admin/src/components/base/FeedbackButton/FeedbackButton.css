@@ -48,19 +48,19 @@
 	overflow: auto;
 }
 
-.feedback-button__tooltip-content sl-button {
+.feedback-button__tooltip-content wa-button {
 	display: block;
 	margin-top: 8px;
 }
 
-.feedback-button__tooltip-content sl-button::part(base) {
+.feedback-button__tooltip-content wa-button::part(button) {
 	height: unset;
 	min-height: unset;
 	line-height: unset;
 	padding: 2px 0;
 }
 
-.feedback-button__tooltip-content sl-button::part(label) {
+.feedback-button__tooltip-content wa-button::part(label) {
 	font-size: 11px;
 }
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './ConnectorSelect.css';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
 import { FieldOption } from '../../../../lib/api/types/ui';
 
 interface ConnectorSelectProps {
@@ -43,9 +43,9 @@ const ConnectorSelect = ({
 				label={label}
 				value={value}
 				placeholder={placeholder}
-				help-text={helpText}
+				hint={helpText}
 				name={name}
-				onSlChange={onSelectChange}
+				onChange={onSelectChange}
 			>
 				{options.map((opt) => {
 					return (

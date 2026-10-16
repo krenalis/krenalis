@@ -3,14 +3,13 @@ import Grid from '../../base/Grid/Grid';
 import { SCHEDULE_PERIODS } from '../../../lib/core/pipeline';
 import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
-import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
-import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
-import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
-import SlRadio from '@shoelace-style/shoelace/dist/react/radio/index.js';
-import SlRadioGroup from '@shoelace-style/shoelace/dist/react/radio-group/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import SlSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
+import SlDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
+import SlMenuItem from '@awesome.me/webawesome/dist/react/dropdown-item/index.js';
+import SlRadio from '@awesome.me/webawesome/dist/react/radio/index.js';
+import SlRadioGroup from '@awesome.me/webawesome/dist/react/radio-group/index.js';
 import { Pipeline } from '../../../lib/api/types/pipeline';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import FeedbackButton from '../../base/FeedbackButton/FeedbackButton';
@@ -250,7 +249,7 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 		}
 
 		const enabledCell = (
-			<SlSwitch onSlChange={() => onPipelineStatusSwitch(pipeline.id)} checked={pipeline.enabled}></SlSwitch>
+			<SlSwitch onChange={() => onPipelineStatusSwitch(pipeline.id)} checked={pipeline.enabled}></SlSwitch>
 		);
 
 		let scheduleDotVariant: Variant = 'neutral';
@@ -269,89 +268,83 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 							disabled={!pipeline.enabled}
 							hoist={true}
 						>
-							<SlIcon slot='prefix' name='play' />
+							<WaIcon slot='start' name='play' />
 							Run now
 						</FeedbackButton>
-						<SlDropdown hoist={true}>
+						<SlDropdown className='connection-pipelines__scheduler-options'>
 							<SlButton
 								slot='trigger'
-								variant='default'
-								size='small'
+								appearance='outlined'
+								size='s'
 								className='connection-pipelines__scheduler-button'
 							>
-								<SlIcon slot='prefix' name='clock' />
+								<WaIcon slot='start' name='clock' />
 								Schedule: {pipeline.schedulePeriod || 'Off'}
-								<SlIcon
-									slot='suffix'
+								<WaIcon
+									slot='end'
 									className={`connection-pipelines__scheduler-dot connection-pipelines__scheduler-dot--${scheduleDotVariant}`}
 									name='circle-fill'
 								/>
 							</SlButton>
-							<SlMenu className='connection-pipelines__scheduler-options'>
-								<SlRadioGroup
-									size='small'
-									onSlChange={(e) => onSchedulerPeriodChange(e, pipeline.id)}
-									value={pipeline.schedulePeriod || 'Off'}
-								>
-									{SCHEDULE_PERIODS.map((period) => (
-										<SlRadio key={period} value={period}>
-											{period}
-										</SlRadio>
-									))}
-								</SlRadioGroup>
-							</SlMenu>
+							<SlRadioGroup
+								size='s'
+								onChange={(e) => onSchedulerPeriodChange(e, pipeline.id)}
+								value={pipeline.schedulePeriod || 'Off'}
+							>
+								{SCHEDULE_PERIODS.map((period) => (
+									<SlRadio key={period} value={period}>
+										{period}
+									</SlRadio>
+								))}
+							</SlRadioGroup>
 						</SlDropdown>
 					</>
 				)}
 				<SlButton
 					className='connection-pipelines__manage-button'
-					variant='default'
-					size='small'
+					appearance='outlined'
+					size='s'
 					onClick={() => onManageClick(pipeline)}
 				>
 					Manage...
 				</SlButton>
 				<SlDropdown
 					className='connection-pipelines__buttons-dropdown'
-					hoist={true}
 					placement='bottom-end'
-					onSlHide={() => onDropdownHide(pipeline.id)}
+					onWaHide={(e: any) => {
+						if (e.target !== e.currentTarget) {
+							return;
+						}
+						onDropdownHide(pipeline.id);
+					}}
 				>
 					<SlButton
 						slot='trigger'
-						variant='default'
-						size='small'
+						appearance='outlined'
+						size='s'
 						className='connection-pipelines__menu-button'
 					>
-						<SlIcon slot='prefix' name='three-dots-vertical' />
+						<WaIcon name='three-dots-vertical' />
 					</SlButton>
-					<SlMenu className='connection-pipelines__menu'>
-						{isPipelineRunSupported && (
-							<FeedbackButton
-								ref={runPipelineDropdownButtonRefs.current[pipeline.id]}
-								className='connection-pipelines__run-button'
-								size='small'
-								onClick={() => runPipeline(connection, pipeline.id, pipeline.target)}
-								disabled={!pipeline.enabled}
-								hoist={true}
-								placement='left'
-							>
-								Run now
-							</FeedbackButton>
-						)}
-						<SlMenuItem
-							className='connection-pipelines__manage-button'
-							onClick={() => onManageClick(pipeline)}
+					{isPipelineRunSupported && (
+						<FeedbackButton
+							ref={runPipelineDropdownButtonRefs.current[pipeline.id]}
+							className='connection-pipelines__run-button'
+							size='small'
+							onClick={() => runPipeline(connection, pipeline.id, pipeline.target)}
+							disabled={!pipeline.enabled}
+							hoist={true}
+							placement='left'
 						>
-							Manage...
-						</SlMenuItem>
-						<SlMenuItem
-							className='connection-pipelines__delete'
-							onClick={() => onDeletePipeline(pipeline.id)}
-						>
-							Delete
-						</SlMenuItem>
-					</SlMenu>
+							Run now
+						</FeedbackButton>
+					)}
+					<SlMenuItem className='connection-pipelines__manage-button' onClick={() => onManageClick(pipeline)}>
+						Manage...
+					</SlMenuItem>
+					<SlMenuItem className='connection-pipelines__delete' onClick={() => onDeletePipeline(pipeline.id)}>
+						Delete
+					</SlMenuItem>
 				</SlDropdown>
 			</div>
 		);
@@ -391,7 +384,9 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 				className='connection-pipelines__grid-alert'
 				actions={
 					<>
-						<SlButton onClick={closeAlertDialog}>Cancel</SlButton>
+						<SlButton appearance='outlined' onClick={closeAlertDialog}>
+							Cancel
+						</SlButton>
 						<SlButton
 							variant='danger'
 							onClick={onConfirmDeletePipeline}

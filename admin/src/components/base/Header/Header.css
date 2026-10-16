@@ -81,12 +81,8 @@
 }
 
 .header__account-avatar {
+	--size: 40px;
 	cursor: pointer;
-}
-
-.header__account-avatar::part(base) {
-	width: 40px;
-	height: 40px;
 	font-size: 18px;
 }
 
@@ -118,14 +114,14 @@
 	width: 179px;
 }
 
-.header__passwordless-create-account::part(base) {
+.header__passwordless-create-account::part(button) {
 	background-color: #eee;
 	color: #08044d;
 	line-height: 2.1rem;
 	padding-bottom: 1px;
 }
 
-.header__passwordless-create-account::part(base):hover {
+.header__passwordless-create-account::part(button):hover {
 	color: #39357b;
 }
 
@@ -133,14 +129,14 @@
 	font-size: 13px;
 }
 
-.header__account-menu-wrapper {
+.header__account-menu-wrapper::part(menu) {
 	display: flex;
 	padding: 0;
 	border: 0;
 	overflow: visible;
 }
 
-.header__account-menu-wrapper::before {
+.header__account-menu-wrapper::part(menu)::before {
 	content: '';
 	position: absolute;
 	width: 0;
@@ -153,7 +149,7 @@
 	top: 1px;
 }
 
-.header__account-menu-wrapper::after {
+.header__account-menu-wrapper::part(menu)::after {
 	content: '';
 	position: absolute;
 	width: 0;
@@ -183,9 +179,8 @@
 	align-items: start;
 }
 
-.header__account-menu-heading sl-avatar::part(base) {
-	width: 35px;
-	height: 35px;
+.header__account-menu-heading wa-avatar {
+	--size: 35px;
 	font-size: 15px;
 }
 

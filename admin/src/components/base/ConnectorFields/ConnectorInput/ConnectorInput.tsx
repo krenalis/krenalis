@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './ConnectorInput.css';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { InputType } from '../../../../lib/api/types/ui';
 
 interface ConnectorInputProps {
@@ -61,13 +62,16 @@ const ConnectorInput = ({
 				value={value}
 				label={label}
 				placeholder={placeholder}
-				help-text={helpText}
-				type={type === '' || type === 'number' ? 'text' : type} // Use the text input in case of numbers to handle the value without interferences from Shoelace or the browser.
+				hint={helpText}
+				type={type === '' || type === 'number' ? 'text' : type} // Use the text input in case of numbers to handle the value without interference from the component or browser.
 				minlength={minlength !== 0 ? minlength : undefined}
 				maxlength={maxlength !== 0 ? maxlength : undefined}
 				passwordToggle={type === 'password'}
 				onInput={onInput}
-			/>
+			>
+				<WaIcon name='eye' slot='show-password-icon' />
+				<WaIcon name='eye-slash' slot='hide-password-icon' />
+			</SlInput>
 			{error !== '' && <div className='connector-ui__fields-error'>{error}</div>}
 		</div>
 	);

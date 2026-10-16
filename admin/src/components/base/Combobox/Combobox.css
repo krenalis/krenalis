@@ -94,11 +94,11 @@
 	padding-bottom: 0;
 }
 
-.combobox-input sl-input::part(base) {
+.combobox-input wa-input::part(input-wrapper) {
 	position: relative;
 }
 
-.combobox-input sl-input::part(suffix) {
+.combobox-input wa-input::part(end) {
 	position: absolute;
 	right: 0;
 	top: 50%;
@@ -118,16 +118,16 @@
 	transform: rotate(-180deg);
 }
 
-.combobox-input sl-input::part(input) {
+.combobox-input wa-input::part(input) {
 	font-family: var(--monospace-fonts);
 	font-size: 14px;
 }
 
-.combobox--caret .combobox-input sl-input::part(input) {
+.combobox--caret .combobox-input wa-input::part(input) {
 	padding-right: 35px;
 }
 
-.combobox-input sl-input::part(input)::placeholder {
+.combobox-input wa-input::part(input)::placeholder {
 	font-family: var(--system-fonts);
 }
 

@@ -11,14 +11,14 @@
 	margin-right: 8px;
 }
 
-.file-connector__storage sl-option::part(label) {
+.file-connector__storage wa-option::part(label) {
 	display: flex;
 	align-items: center;
 	gap: 8px;
 }
 
 .file-connector__storage-logo .little-logo svg,
-.file-connector__storage sl-option .little-logo svg {
+.file-connector__storage wa-option .little-logo svg {
 	height: 18px;
 }
 
