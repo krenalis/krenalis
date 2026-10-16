@@ -39,9 +39,11 @@ services:
     volumes:
       - ./storage:/var/krenalis/storage
       - transformation-functions:/var/krenalis/transformation-functions
-    # TODO: once the image includes /livez, add a healthcheck:
-    # healthcheck:
-    #   test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:2022/livez"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://krenalis:2022/livez"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     depends_on:
       db:
         condition: service_healthy

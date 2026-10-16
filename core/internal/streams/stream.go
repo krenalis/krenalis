@@ -9,19 +9,13 @@ import (
 )
 
 // Stream represents an event stream.
-// Only Batch, Up and WaitUp are safe for concurrent use by multiple goroutines.
+// Only Batch and WaitUp are safe for concurrent use by multiple goroutines.
 type Stream interface {
 
 	// Consume returns a buffered channel of the given size that streams events for
 	// the specified topic. Events belonging to the same shard are sent on the
 	// channel in order, ensuring per-user ordering is preserved.
 	Consume(topic string, size int) Consumer
-
-	// Up reports whether the connection is up and the stream is available.
-	// It does not block.
-	//
-	// It is safe for concurrent use by multiple goroutines.
-	Up() bool
 
 	// WaitUp blocks until the connection is up and the stream is available.
 	// It returns false if the context is canceled, the connection is closed,

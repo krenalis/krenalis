@@ -12,7 +12,7 @@ import (
 	"github.com/krenalis/krenalis/test/krenalistester"
 )
 
-// TestHealth tests the /livez and /readyz endpoints.
+// TestHealth tests the /livez endpoint.
 func TestHealth(t *testing.T) {
 
 	// Test's header (copy-paste me in other tests).
@@ -23,36 +23,24 @@ func TestHealth(t *testing.T) {
 	k.Start()
 	defer k.Stop()
 
-	tests := []struct {
-		path string
-		body string
-	}{
-		{"/livez", "ok"},
-		{"/readyz", "ok"},
-		{"/readyz?verbose", "[+]postgres ok\n[+]nats ok\n[+]shutdown ok\nreadyz check passed"},
+	req, err := http.NewRequestWithContext(t.Context(), "GET", "http://"+k.Addr()+"/livez", nil)
+	if err != nil {
+		t.Fatal(err)
 	}
-	for _, test := range tests {
-		t.Run(test.path, func(t *testing.T) {
-			req, err := http.NewRequestWithContext(t.Context(), "GET", "http://"+k.Addr()+test.path, nil)
-			if err != nil {
-				t.Fatal(err)
-			}
-			res, err := http.DefaultClient.Do(req)
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer res.Body.Close()
-			body, err := io.ReadAll(res.Body)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if res.StatusCode != http.StatusOK {
-				t.Fatalf("expected status %d, got %d", http.StatusOK, res.StatusCode)
-			}
-			if string(body) != test.body {
-				t.Fatalf("expected body %q, got %q", test.body, body)
-			}
-		})
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, res.StatusCode)
+	}
+	if string(body) != "ok" {
+		t.Fatalf("expected body %q, got %q", "ok", body)
 	}
 
 }

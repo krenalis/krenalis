@@ -179,12 +179,6 @@ type ExpressionToBeExtracted struct {
 	Type  types.Type `json:"type"`
 }
 
-// HealthCheck is the result of a readiness check performed by [Core.Health].
-type HealthCheck struct {
-	Name string // "postgres" or "nats"
-	OK   bool
-}
-
 // DBNotInitializedError is returned by New in those circumstances where the
 // Krenalis database appears not to have been initialized.
 type DBNotInitializedError struct {
@@ -837,23 +831,6 @@ func (core *Core) DeleteMembersByWorkOSID(ctx context.Context, workosUserID stri
 // HTTPSecretKey decrypts and returns the HTTP secret key material.
 func (core *Core) HTTPSecretKey(ctx context.Context) ([]byte, error) {
 	return core.state.HTTPSecretKey(ctx)
-}
-
-// Health checks the dependencies of the core and returns one result for each
-// of them. It does not return the causes of the failures.
-func (core *Core) Health(ctx context.Context) []HealthCheck {
-	core.mustBeOpen()
-	pingCtx, cancel := context.WithTimeout(ctx, time.Second)
-	defer cancel()
-	isPostgresUp := true
-	err := core.db.Ping(pingCtx)
-	if err != nil {
-		isPostgresUp = false
-	}
-	return []HealthCheck{
-		{Name: "postgres", OK: isPostgresUp},
-		{Name: "nats", OK: core.stream.Up()},
-	}
 }
 
 // InstallationID returns the installation ID.

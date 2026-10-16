@@ -22,7 +22,6 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/krenalis/krenalis/cmd/internal/mcp"
@@ -117,11 +116,6 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 		prometheusMetricsHandler = promhttp.Handler()
 	}
 
-	// Instantiate the handler of /readyz. isShuttingDown is set when the
-	// termination signal is received.
-	var isShuttingDown atomic.Bool
-	readyzHandler := newReadyzHandler(core, &isShuttingDown)
-
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		// Handle panics.
@@ -188,9 +182,6 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 			}
 		case r.URL.Path == "/livez":
 			serveLivez(w, r)
-			return
-		case r.URL.Path == "/readyz":
-			readyzHandler.ServeHTTP(w, r)
 			return
 		case r.URL.Path == "/metrics":
 			if config.PrometheusMetricsEnabled {
@@ -282,7 +273,6 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 
 	select {
 	case <-ctx.Done():
-		isShuttingDown.Store(true)
 		if delay := config.TerminationDelay; delay == 0 {
 			slog.Info("cmd: received termination signal, shutting down")
 		} else {

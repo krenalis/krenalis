@@ -5,73 +5,15 @@
 package cmd
 
 import (
-	"context"
-	"fmt"
 	"net/http"
-	"strings"
-	"sync/atomic"
-
-	corePkg "github.com/krenalis/krenalis/core"
 )
-
-// healthChecker checks the dependencies of Krenalis.
-type healthChecker interface {
-	Health(ctx context.Context) []corePkg.HealthCheck
-}
-
-// allowGet reports whether the method of r is GET. If it is not, it responds
-// with 405 Method Not Allowed and returns false.
-func allowGet(w http.ResponseWriter, r *http.Request) bool {
-	if r.Method == "GET" {
-		return true
-	}
-	w.Header().Set("Allow", "GET")
-	http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-	return false
-}
-
-// newReadyzHandler returns the handler of the /readyz endpoint, which reports
-// whether Krenalis can serve traffic. It responds 503 if a dependency is not
-// available or if isShuttingDown is true.
-func newReadyzHandler(checker healthChecker, isShuttingDown *atomic.Bool) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		if !allowGet(w, r) {
-			return
-		}
-
-		checks := checker.Health(r.Context())
-		checks = append(checks, corePkg.HealthCheck{Name: "shutdown", OK: !isShuttingDown.Load()})
-		isReady := true
-		var b strings.Builder
-		for _, check := range checks {
-			if check.OK {
-				fmt.Fprintf(&b, "[+]%s ok\n", check.Name)
-			} else {
-				fmt.Fprintf(&b, "[-]%s failed\n", check.Name)
-				isReady = false
-			}
-		}
-
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.Header().Set("Cache-Control", "no-store")
-		switch {
-		case !isReady:
-			w.WriteHeader(http.StatusServiceUnavailable)
-			_, _ = w.Write([]byte(b.String() + "readyz check failed"))
-		case r.URL.Query().Has("verbose"):
-			_, _ = w.Write([]byte(b.String() + "readyz check passed"))
-		default:
-			_, _ = w.Write([]byte("ok"))
-		}
-
-	}
-}
 
 // serveLivez serves the /livez endpoint, which reports that the process is
 // serving requests. It does not check any dependency.
 func serveLivez(w http.ResponseWriter, r *http.Request) {
-	if !allowGet(w, r) {
+	if r.Method != "GET" {
+		w.Header().Set("Allow", "GET")
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
