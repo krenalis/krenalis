@@ -1096,9 +1096,9 @@ func (state *State) electLeader(n notification) {
 	decodeNotification(n, &e)
 	// Update election.
 	election := election{
-		number:   e.Number,
-		leader:   e.Leader,
-		lastSeen: time.Now(),
+		number:     e.Number,
+		leader:     e.Leader,
+		validUntil: time.Now().Add(grantedLeaderInterval),
 	}
 	state.mu.Lock()
 	if e.Number <= state.election.number {
@@ -1307,21 +1307,40 @@ func (state *State) runPipeline(n notification) string {
 	return p.organization.ID
 }
 
-// SeeLeader is the event sent when the leader is seen.
+// SeeLeader is the heartbeat sent by the leader. Sequence increases within an
+// election; Timestamp is the send time in Unix milliseconds. Node clocks must
+// stay synchronized within leaderClockSkew, even across restarts.
+// Heartbeats without a sequence or timestamp are ignored.
 type SeeLeader struct {
-	Election int
+	Election  int
+	Sequence  uint64
+	Timestamp int64
 }
 
-// seeLeader sees the leader.
+// seeLeader extends the leader's validity only for fresh heartbeats in the
+// current election with a sequence greater than the last accepted sequence.
 func (state *State) seeLeader(n notification) {
+
 	e := SeeLeader{}
 	decodeNotification(n, &e)
-	now := time.Now()
 	state.mu.Lock()
-	if state.election.number == e.Election {
-		state.election.lastSeen = now
+	defer state.mu.Unlock()
+	if e.Election != state.election.number || e.Sequence <= state.election.sequence {
+		return
 	}
-	state.mu.Unlock()
+	now := time.Now()
+	age := now.Sub(time.UnixMilli(e.Timestamp))
+	if age < -leaderClockSkew || age >= grantedLeaderInterval+leaderClockSkew {
+		return
+	}
+
+	// Base expiry on the send time while preserving now's monotonic component.
+	validUntil := now.Add(grantedLeaderInterval + leaderClockSkew - age)
+	state.election.sequence = e.Sequence
+	if validUntil.After(state.election.validUntil) {
+		state.election.validUntil = validUntil
+	}
+
 }
 
 // SetAccount is the event sent when an account is changed.

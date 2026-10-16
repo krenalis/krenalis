@@ -25,6 +25,7 @@ const (
 	leaderInterval         = 2 * time.Second
 	grantedLeaderInterval  = leaderInterval + leaderInterval/2
 	electionRandomInterval = leaderInterval / 5
+	leaderClockSkew        = 500 * time.Millisecond
 )
 
 // keepElections keeps leader elections.
@@ -32,7 +33,6 @@ const (
 func (state *State) keepElections() {
 
 	defer state.close.Done()
-	state.election.lastSeen = time.Now()
 
 	// Check if the KRENALIS_DEBUG_ELECTION variable is set.
 	if v := os.Getenv("KRENALIS_DEBUG_ELECTION"); v == "true" {
@@ -48,6 +48,8 @@ func (state *State) keepElections() {
 	// |--------------|          leaderInterval
 	// |--------------|·······|  grantedLeaderInterval
 	// |~~~~~~~|                 electionRandomInterval
+	//
+	// Heartbeat expiry also allows leaderClockSkew for clock differences.
 
 	debugf := func(format string, a ...any) {
 		if !debugElection {
@@ -55,6 +57,11 @@ func (state *State) keepElections() {
 		}
 		_, _ = fmt.Fprintf(os.Stderr, format, a...)
 	}
+
+	// Preserve the sequence across retries and while waiting for our election
+	// notification. A restarted node gets a new ID and must win a new election
+	// before sending heartbeats.
+	var sequence uint64
 
 	// leader is called when the node is the leader.
 	// If state.ctx is canceled, leader returns its error.
@@ -64,9 +71,18 @@ func (state *State) keepElections() {
 		bo.SetCap(leaderInterval)
 		var failed bool
 		for bo.Next(state.close.ctx) {
+			if sequence == math.MaxUint64 {
+				slog.Error("core/state: see leader sequence limit reached")
+				return errors.New("see leader sequence limit reached")
+			}
 			// Send the see leader notification.
 			err := state.Transaction(state.close.ctx, func(tx *db.Tx) (any, error) {
-				return SeeLeader{Election: election.number}, nil
+				sequence++
+				return SeeLeader{
+					Election:  election.number,
+					Sequence:  sequence,
+					Timestamp: time.Now().UnixMilli(),
+				}, nil
 			})
 			if err == nil {
 				break
@@ -91,9 +107,8 @@ func (state *State) keepElections() {
 	follower := func(election election) error {
 		debugf("-- %d Follower\n", election.number)
 		now := time.Now()
-		deadline := election.lastSeen.Add(grantedLeaderInterval)
-		if deadline.After(now) {
-			return state.sleep(deadline.Sub(now))
+		if election.validUntil.After(now) {
+			return state.sleep(election.validUntil.Sub(now))
 		}
 		d := time.Duration(rand.IntN(int(electionRandomInterval)))
 		debugf("\t%s until election\n", d)
@@ -101,10 +116,13 @@ func (state *State) keepElections() {
 			return err
 		}
 		state.mu.Lock()
-		number := state.election.number
+		current := state.election
 		state.mu.Unlock()
-		if election.number < number {
+		if election.number < current.number {
 			debugf("\telection already ended\n")
+			return nil
+		}
+		if current.validUntil.After(time.Now()) {
 			return nil
 		}
 		debugf("\ttry election after %d: ", election.number)

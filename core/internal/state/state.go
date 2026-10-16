@@ -56,9 +56,10 @@ const (
 
 // election represents a leader election.
 type election struct {
-	number   int
-	leader   string
-	lastSeen time.Time
+	number     int
+	leader     string
+	sequence   uint64
+	validUntil time.Time
 }
 
 // metadata represents the metadata associated with a Krenalis instance.
@@ -195,6 +196,7 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 	runtimeSession := session
 	session = nil
 	state.sendStats = sendStats
+	state.election.validUntil = time.Now().Add(grantedLeaderInterval)
 	state.close.Add(1)
 	go state.keepNotifications(runtimeSession)
 	started = true
