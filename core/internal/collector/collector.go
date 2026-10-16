@@ -32,8 +32,8 @@ import (
 	"github.com/krenalis/krenalis/tools/validation"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awsconfig "github.com/aws/aws-sdk-go-v2/config"
-	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/oschwald/maxminddb-golang/v2"
 )
 
@@ -1091,11 +1091,11 @@ func loadMaxMindDB(ctx context.Context, path string) (*maxminddb.Reader, error) 
 		return nil, fmt.Errorf("invalid maxmind DB S3 URI %q", path)
 	}
 
-	cfg, err := awsconfig.LoadDefaultConfig(ctx)
+	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("cannot load AWS config: %s", err)
 	}
-	res, err := awss3.NewFromConfig(cfg).GetObject(ctx, &awss3.GetObjectInput{
+	res, err := s3.NewFromConfig(cfg).GetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 	})
