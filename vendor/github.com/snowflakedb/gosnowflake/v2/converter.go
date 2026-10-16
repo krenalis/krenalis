@@ -27,6 +27,7 @@ import (
 )
 
 const format = "2006-01-02 15:04:05.999999999"
+const streamTimestampFormat = "2006-01-02 15:04:05.000000000 Z07:00"
 const numberDefaultPrecision = 38
 const jsonFormatStr = "json"
 
@@ -440,7 +441,7 @@ func arrayToString(v driver.Value, tsmode types.SnowflakeType, params *syncParam
 		}
 		res := "["
 		for _, b := range barr {
-			res += fmt.Sprint(b) + ","
+			res += strconv.FormatUint(uint64(b), 10) + ","
 		}
 		res = res[0:len(res)-1] + "]"
 		return bindingValue{&res, jsonFormatStr, &schemaForBytes}, nil
@@ -912,8 +913,7 @@ func timeTypeValueToString(tm time.Time, tsmode types.SnowflakeType) (bindingVal
 		s := strconv.FormatInt(tm.Unix()*1000, 10)
 		return bindingValue{&s, "", nil}, nil
 	case types.TimeType:
-		s := fmt.Sprintf("%d",
-			(tm.Hour()*3600+tm.Minute()*60+tm.Second())*1e9+tm.Nanosecond())
+		s := strconv.Itoa((tm.Hour()*3600+tm.Minute()*60+tm.Second())*1e9 + tm.Nanosecond())
 		return bindingValue{&s, "", nil}, nil
 	case types.TimestampNtzType, types.TimestampLtzType, types.TimestampTzType:
 		s, err := convertTimeToTimeStamp(tm, tsmode)
@@ -2406,11 +2406,10 @@ func arrowDecimal128ToValue(srcValue *array.Decimal128, rowIdx int, higherPrecis
 			}
 			return num.ToString(0)
 		}
-		f := decimalToBigFloat(num, int64(srcColumnMeta.Scale))
 		if higherPrecision {
-			return f
+			return decimalToBigFloat(num, int64(srcColumnMeta.Scale))
 		}
-		return fmt.Sprintf("%.*f", srcColumnMeta.Scale, f)
+		return num.ToString(int32(srcColumnMeta.Scale))
 	}
 	return nil
 }
@@ -2455,13 +2454,13 @@ func arrowIntToValue(srcColumnMeta query.FieldMetadata, higherPrecision bool, va
 			}
 			return val
 		}
-		return fmt.Sprintf("%d", val)
+		return strconv.FormatInt(val, 10)
 	}
 	if higherPrecision {
 		f := intToBigFloat(val, int64(srcColumnMeta.Scale))
 		return f
 	}
-	return fmt.Sprintf("%.*f", srcColumnMeta.Scale, float64(val)/math.Pow10(srcColumnMeta.Scale))
+	return decimal128.FromI64(val).ToString(int32(srcColumnMeta.Scale))
 }
 
 func arrowRealToValue(srcValue *array.Float64, rowIdx int) snowflakeValue {
@@ -2800,7 +2799,7 @@ func snowflakeArrayToString(nv *driver.NamedValue, stream bool) (types.Snowflake
 			} else {
 				_, offset := x.Zone()
 				x = x.Add(time.Second * time.Duration(offset))
-				v = fmt.Sprintf("%d", x.Unix()*1000)
+				v = strconv.FormatInt(x.Unix()*1000, 10)
 			}
 			arr = append(arr, &v)
 		}
@@ -2911,7 +2910,7 @@ func interfaceSliceToString(interfaceSlice reflect.Value, stream bool, tzType ..
 					t = types.DateType
 					_, offset := x.Zone()
 					x = x.Add(time.Second * time.Duration(offset))
-					v := fmt.Sprintf("%d", x.Unix()*1000)
+					v := strconv.FormatInt(x.Unix()*1000, 10)
 					arr = append(arr, &v)
 				case TimeType:
 					t = types.TimeType
@@ -2995,20 +2994,36 @@ func convertTzTypeToSnowflakeType(tzType timezoneType) types.SnowflakeType {
 
 func getTimestampBindValue(x time.Time, stream bool, t types.SnowflakeType) (string, error) {
 	if stream {
-		return x.Format(format), nil
+		return formatTimestampForStream(x, t), nil
 	}
 	return convertTimeToTimeStamp(x, t)
 }
 
+// formatTimestampForStream writes a CSV timestamp that preserves the same instant
+// as convertTimeToTimeStamp, independent of session TIMEZONE. NTZ is rendered in UTC
+// to match the UTC wallclock that Unix nanos imply. LTZ and TZ Format in x's own
+// Location, not time.Local: that keeps the same instant as convertTimeToTimeStamp
+// and does not depend on host or session timezone. JDBC re-expresses LTZ in the JVM
+// default zone (equivalent for the instant); aligning this with time.Local would
+// break callers who pass a non-local time.Time. TZ also stores that offset as data.
+// The fixed nine-digit fraction keeps the output shape identical to the one JDBC's
+// bind uploader has been sending.
+func formatTimestampForStream(x time.Time, t types.SnowflakeType) string {
+	if t == types.TimestampNtzType {
+		x = x.UTC()
+	}
+	return x.Format(streamTimestampFormat)
+}
+
 func convertTimeToTimeStamp(x time.Time, t types.SnowflakeType) (string, error) {
-	unixTime, _ := new(big.Int).SetString(fmt.Sprintf("%d", x.Unix()), 10)
+	unixTime, _ := new(big.Int).SetString(strconv.FormatInt(x.Unix(), 10), 10)
 	m, ok := new(big.Int).SetString(strconv.FormatInt(1e9, 10), 10)
 	if !ok {
 		return "", errors.New("failed to parse big int from string: invalid format or unsupported characters")
 	}
 
 	unixTime.Mul(unixTime, m)
-	tmNanos, _ := new(big.Int).SetString(fmt.Sprintf("%d", x.Nanosecond()), 10)
+	tmNanos, _ := new(big.Int).SetString(strconv.Itoa(x.Nanosecond()), 10)
 	if t == types.TimestampTzType {
 		_, offset := x.Zone()
 		return fmt.Sprintf("%v %v", unixTime.Add(unixTime, tmNanos), offset/60+1440), nil

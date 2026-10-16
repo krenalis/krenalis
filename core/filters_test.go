@@ -1516,7 +1516,7 @@ func Test_validateFilter(t *testing.T) {
 					&FilterCondition{Property: "g", Operator: OpIsEmpty},
 				},
 			},
-			err: errors.New(`operator "is empty" can only be used with json, string, object, array, and map properties`),
+			err: errors.New(`operator "is empty" can only be used with json, string, array, and map properties`),
 		},
 		{
 			name: "is not empty on time",
@@ -1526,7 +1526,27 @@ func Test_validateFilter(t *testing.T) {
 					&FilterCondition{Property: "g", Operator: OpIsNotEmpty},
 				},
 			},
-			err: errors.New(`operator "is not empty" can only be used with json, string, object, array, and map properties`),
+			err: errors.New(`operator "is not empty" can only be used with json, string, array, and map properties`),
+		},
+		{
+			name: "is empty on source user object",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "m", Operator: OpIsEmpty},
+				},
+			},
+			err: errors.New(`operator "is empty" can only be used with json, string, array, and map properties`),
+		},
+		{
+			name: "is not empty on source user object",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "m", Operator: OpIsNotEmpty},
+				},
+			},
+			err: errors.New(`operator "is not empty" can only be used with json, string, array, and map properties`),
 		},
 		{
 			name: "is empty on destination user object",
@@ -1537,7 +1557,7 @@ func Test_validateFilter(t *testing.T) {
 				},
 			},
 			role: &destinationRole,
-			err:  errors.New(`operator "is empty" cannot be used on object properties for destination pipelines on users`),
+			err:  errors.New(`operator "is empty" can only be used with json, string, array, and map properties`),
 		},
 		{
 			name: "is not empty on event object",
@@ -1548,7 +1568,7 @@ func Test_validateFilter(t *testing.T) {
 				},
 			},
 			target: &eventTarget,
-			err:    errors.New(`operator "is not empty" cannot be used on object properties for pipelines on events`),
+			err:    errors.New(`operator "is not empty" can only be used with json, string, array, and map properties`),
 		},
 		{
 			name: "JSON in destination user filter",
@@ -1602,7 +1622,6 @@ func Test_validateFilter(t *testing.T) {
 					&FilterCondition{Property: "k", Operator: OpIsNull},
 					&FilterCondition{Property: "k", Operator: OpContains, Values: []string{"boo"}},
 					&FilterCondition{Property: "m", Operator: OpIsNull},
-					&FilterCondition{Property: "m", Operator: OpIsEmpty},
 					&FilterCondition{Property: "m.x", Operator: OpContains, Values: []string{"abc"}},
 					&FilterCondition{Property: "n", Operator: OpIsNotNull},
 					&FilterCondition{Property: "n", Operator: OpIsNotEmpty},

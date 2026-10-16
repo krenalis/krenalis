@@ -183,6 +183,13 @@ func HandleSingleParam(cfg *Config, key string, value any) error {
 			}
 		}
 		cfg.PrivateKey, err = ParsePKCS8PrivateKey(block)
+	case "privatekeypath", "privatekeyfile":
+		var keyPath string
+		keyPath, err = parseString(value)
+		if err = checkParsingError(err, key, value); err != nil {
+			return err
+		}
+		cfg.PrivateKey, err = parsePrivateKeyFromFile(keyPath)
 	case "validatedefaultparameters":
 		cfg.ValidateDefaultParameters, err = parseConfigBool(value)
 	case "clientrequestmfatoken":
@@ -225,6 +232,10 @@ func HandleSingleParam(cfg *Config, key string, value any) error {
 		cfg.WorkloadIdentityEntraResource, err = parseString(value)
 	case "workloadidentityimpersonatinpath":
 		cfg.WorkloadIdentityImpersonationPath, err = parseStrings(value)
+	case "workloadidentityawsuseoutboundtoken":
+		cfg.WorkloadIdentityAwsUseOutboundToken, err = parseConfigBool(value)
+	case "workloadidentityhost":
+		cfg.WorkloadIdentityHost, err = parseString(value)
 	case "tokenfilepath":
 		cfg.TokenFilePath, err = parseString(value)
 		if err = checkParsingError(err, key, value); err != nil {
@@ -263,10 +274,12 @@ func checkParsingError(err error, key string, value any) error {
 			Message:     sferrors.ErrMsgFailedToParseTomlFile,
 			MessageArgs: []any{key, value},
 		}
-		logger.Errorf("Parsed key: %s, value: %v is not an option for the connection config", key, value)
+		// Log the setting name only: TOML values may hold credentials, and the
+		// "Parsed key: <k>, value: <v>" layout is not covered by MaskSecrets (SNOW-3649818).
+		logger.Errorf("Parsed key: %s is not an option for the connection config", key)
 		return err
 	}
-	logger.Warnf("Parsed key: %s, value: %v — cannot be parsed as string", key, value)
+	logger.Warnf("Parsed key: %s — cannot be parsed as string", key)
 	return nil
 }
 

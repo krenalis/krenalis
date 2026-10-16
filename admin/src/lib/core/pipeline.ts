@@ -16,7 +16,7 @@ import {
 	TransformationFunction,
 } from '../api/types/pipeline';
 import { ConnectorSettings } from '../api/types/responses';
-import { Compression, ConnectionRole } from '../api/types/connection';
+import { Compression } from '../api/types/connection';
 import { ConsentPurpose } from '../api/types/workspace';
 import Type, { ArrayType, FloatType, IntType, MapType, ObjectType, Property, StringType } from '../api/types/types';
 import API from '../api/api';
@@ -146,8 +146,8 @@ const typesByFilterOperator: string[][] = [
 	['datetime', 'date', 'time', 'year'], // is on or after
 	['boolean', 'json'], // is true
 	['boolean', 'json'], // is false
-	['json', 'string', 'object', 'array', 'map'], // is empty
-	['json', 'string', 'object', 'array', 'map'], // is not empty
+	['json', 'string', 'array', 'map'], // is empty
+	['json', 'string', 'array', 'map'], // is not empty
 	[
 		'boolean',
 		'int',
@@ -311,12 +311,7 @@ interface TransformedPipeline {
 	format?: string;
 }
 
-const getCompatibleFilterOperators = (
-	property: TransformedProperty,
-	hasPath: boolean,
-	role: ConnectionRole,
-	target: PipelineTarget,
-): number[] => {
+const getCompatibleFilterOperators = (property: TransformedProperty, hasPath: boolean): number[] => {
 	if (property == null) {
 		return [];
 	}
@@ -355,14 +350,6 @@ const getCompatibleFilterOperators = (
 					break;
 				default:
 					continue;
-			}
-		}
-
-		// 'is empty' and 'is not empty' cannot be used on object properties for users with role 'Destination' or for events.
-		if ((op === 'is empty' || op === 'is not empty') && property.type === 'object') {
-			const disallowEmptyOnObject = (role === 'Destination' && target == 'User') || target == 'Event';
-			if (disallowEmptyOnObject) {
-				continue;
 			}
 		}
 
