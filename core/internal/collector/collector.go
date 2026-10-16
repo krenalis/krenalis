@@ -101,14 +101,6 @@ func New(ctx context.Context, db *db.DB, stream streams.Stream, st *state.State,
 	c.workers.cancelPipeline = map[string]context.CancelFunc{}
 	c.workers.cancelConnection = map[string]context.CancelFunc{}
 
-	if maxMindDBPath != "" {
-		var err error
-		c.maxmindDB, err = loadMaxMindDB(ctx, maxMindDBPath)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	st.Freeze()
 	st.AddListener(c.onCreateConnection)
 	st.AddListener(c.onCreatePipeline)
@@ -134,6 +126,14 @@ func New(ctx context.Context, db *db.DB, stream streams.Stream, st *state.State,
 		}
 	}
 	st.Unfreeze()
+
+	if maxMindDBPath != "" {
+		var err error
+		c.maxmindDB, err = loadMaxMindDB(ctx, maxMindDBPath)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return c, nil
 }
