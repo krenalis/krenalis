@@ -199,3 +199,170 @@ func TestKeepElectionsAdvancesPastMaxInt32(t *testing.T) {
 	}
 
 }
+
+// TestKeepElectionsHeartbeats verifies that heartbeat sequences advance across
+// election acknowledgement, replays with older sequences are ignored, and
+// recreating the sender starts a new sequence in a new election.
+func TestKeepElectionsHeartbeats(t *testing.T) {
+
+	database, key := replicationDatabase(t)
+	_, err := database.Exec(t.Context(), `
+		CREATE TABLE election (number bigint PRIMARY KEY, leader text NOT NULL, date timestamp NOT NULL);
+		INSERT INTO election VALUES (7, 'previous', '2023-01-01');
+	`)
+	if err != nil {
+		t.Fatalf("expected election fixture, got %v", err)
+	}
+
+	// New assigns a new node ID on every restart.
+	for _, id := range []string{"first", "restarted"} {
+		t.Run(id, func(t *testing.T) {
+
+			state, session := replicationState(t, database, key)
+			state.id = id
+			err := database.QueryRow(t.Context(), "SELECT number, leader FROM election").Scan(&state.election.number, &state.election.leader)
+			if err != nil {
+				t.Fatalf("expected loaded election, got %v", err)
+			}
+			expectedElection := state.election.number + 1
+			startedAt := time.Now().UnixMilli()
+			state.close.Add(1)
+			go state.keepElections()
+			defer func() { state.close.cancel(); state.close.Wait() }()
+
+			// Delay applying the election until the candidate has sent heartbeats.
+			raw, err := session.conn.Underlying().WaitForNotification(state.close.ctx)
+			if err != nil {
+				t.Fatalf("expected election notification, got %v", err)
+			}
+			elected, err := session.reconstruct(t.Context(), key, raw.Payload)
+			if err != nil {
+				t.Fatalf("expected reconstructed election, got %v", err)
+			}
+			if elected == nil || elected.Name != "ElectLeader" || elected.Version != 0 {
+				t.Fatalf("expected unversioned ElectLeader notification, got %+v", elected)
+			}
+			var number int
+			var leader, electionVersion string
+			err = database.QueryRow(t.Context(), "SELECT number, leader, xmin::text FROM election").Scan(&number, &leader, &electionVersion)
+			if err != nil {
+				t.Fatalf("expected persisted election, got %v", err)
+			}
+			if number != expectedElection || leader != id {
+				t.Fatalf("expected persisted election %d with leader %q, got %d with leader %q", expectedElection, id, number, leader)
+			}
+
+			var replayPayload string
+			var replayTimestamp, acknowledgedAt int64
+			var heartbeatsAfterAck int
+			for sequence := uint64(1); ; sequence++ {
+
+				raw, err := session.conn.Underlying().WaitForNotification(state.close.ctx)
+				if err != nil {
+					t.Fatalf("expected heartbeat %d, got %v", sequence, err)
+				}
+				n, err := session.reconstruct(t.Context(), key, raw.Payload)
+				if err != nil {
+					t.Fatalf("expected reconstructed heartbeat, got %v", err)
+				}
+				if n == nil || n.Name != "SeeLeader" || n.Version != 0 {
+					t.Fatalf("expected unversioned SeeLeader, got %+v", n)
+				}
+				var event SeeLeader
+				err = json.Unmarshal([]byte(n.Payload), &event)
+				if err != nil {
+					t.Fatalf("expected decoded heartbeat, got %v", err)
+				}
+				if event.Election != expectedElection || event.Sequence != sequence {
+					t.Fatalf("expected election %d and sequence %d, got %+v", expectedElection, sequence, event)
+				}
+				receivedAt := time.Now().UnixMilli()
+				if event.Timestamp < startedAt || event.Timestamp > receivedAt {
+					t.Fatalf("expected send timestamp between %d and %d, got %d", startedAt, receivedAt, event.Timestamp)
+				}
+				if sequence == 1 {
+					continue
+				}
+				if sequence == 2 {
+					state.electLeader(*elected)
+					acknowledgedAt = time.Now().UnixMilli()
+				}
+
+				state.seeLeader(*n)
+				state.mu.Lock()
+				expected := state.election
+				state.mu.Unlock()
+				if expected.number != expectedElection || expected.leader != id || expected.sequence != sequence {
+					t.Fatalf("expected acknowledged election and heartbeat, got %+v", expected)
+				}
+
+				// One send may have been in progress at acknowledgement. Wait for
+				// two later sends to exercise the confirmed leader's loop as well.
+				if sequence > 2 && event.Timestamp > acknowledgedAt {
+					heartbeatsAfterAck++
+					if heartbeatsAfterAck == 2 {
+						break
+					}
+				}
+				replayPayload = raw.Payload
+				replayTimestamp = event.Timestamp
+
+			}
+
+			state.mu.Lock()
+			expected := state.election
+			state.mu.Unlock()
+			// Replay the preceding heartbeat's ciphertext without using the key.
+			sendReplicationFragment(t, database, replayPayload)
+			for {
+				replayed, err := session.conn.Underlying().WaitForNotification(state.close.ctx)
+				if err != nil {
+					t.Fatalf("expected replayed heartbeat, got %v", err)
+				}
+				// The sender may have queued more heartbeats before the replay.
+				if replayed.Payload != replayPayload {
+					continue
+				}
+				n, err := session.reconstruct(t.Context(), key, replayed.Payload)
+				if err != nil {
+					t.Fatalf("expected authenticated replay, got %v", err)
+				}
+				if n == nil || n.Name != "SeeLeader" || n.Version != 0 {
+					t.Fatalf("expected complete unversioned heartbeat, got %+v", n)
+				}
+				state.seeLeader(*n)
+				// The sequence check must reject the replay while it is still fresh.
+				age := time.Since(time.UnixMilli(replayTimestamp))
+				if age < -leaderClockSkew || age >= grantedLeaderInterval+leaderClockSkew {
+					t.Fatalf("expected replay within heartbeat validity window, got age %v", age)
+				}
+				state.mu.Lock()
+				got := state.election
+				state.mu.Unlock()
+				if got != expected {
+					t.Fatalf("expected replay to leave election %+v unchanged, got %+v", expected, got)
+				}
+				break
+			}
+
+			var gotVersion string
+			err = database.QueryRow(t.Context(), "SELECT xmin::text FROM election").Scan(&gotVersion)
+			if err != nil {
+				t.Fatalf("expected election row version, got %v", err)
+			}
+			if gotVersion != electionVersion {
+				t.Fatalf("expected heartbeats to leave election row version %s unchanged, got %s", electionVersion, gotVersion)
+			}
+			var count int
+			err = database.QueryRow(t.Context(), "SELECT count(*) FROM notifications").Scan(&count)
+			if err != nil {
+				t.Fatalf("expected notification log query, got %v", err)
+			}
+			if count != 0 {
+				t.Fatalf("expected heartbeats outside the notification log, got %d rows", count)
+			}
+
+		})
+	}
+
+}

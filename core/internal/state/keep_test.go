@@ -202,7 +202,7 @@ func TestElectLeaderIgnoresStaleElections(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 
-				previous := election{number: currentNumber, leader: "current", lastSeen: time.Unix(1, 0)}
+				previous := election{number: currentNumber, leader: "current", sequence: 10, validUntil: time.Unix(1, 0)}
 				state := &State{mu: &sync.Mutex{}, changing: &sync.RWMutex{}, election: previous}
 				state.version.current = 123
 				calls := 0
@@ -226,8 +226,11 @@ func TestElectLeaderIgnoresStaleElections(t *testing.T) {
 					if state.election.number != test.number || state.election.leader != test.leader {
 						t.Fatalf("expected election %d with leader %q, got %+v", test.number, test.leader, state.election)
 					}
-					if !state.election.lastSeen.Equal(now) {
-						t.Fatalf("expected last-seen time %v, got %v", now, state.election.lastSeen)
+					if expected := now.Add(grantedLeaderInterval); state.election.validUntil != expected {
+						t.Fatalf("expected leader validity until %v, got %v", expected, state.election.validUntil)
+					}
+					if state.election.sequence != 0 {
+						t.Fatalf("expected reset heartbeat sequence, got %d", state.election.sequence)
 					}
 				} else if state.election != previous {
 					t.Fatalf("expected unchanged election %+v, got %+v", previous, state.election)
@@ -554,6 +557,205 @@ func TestPipelineNotificationFilterDecoding(t *testing.T) {
 			})
 		}
 	}
+}
+
+// TestSeeLeader verifies heartbeat ordering, timestamp freshness, clock skew
+// tolerance, and expiry handling, including monotonic clock preservation.
+func TestSeeLeader(t *testing.T) {
+
+	const (
+		validity        = 3500 * time.Millisecond
+		initialValidity = time.Second
+		maxClockSkew    = 500 * time.Millisecond
+	)
+	zeroTimestamp := int64(0)
+	minTimestamp := int64(math.MinInt64)
+	maxTimestamp := int64(math.MaxInt64)
+	for _, test := range []struct {
+		name              string
+		election          int
+		sequence          uint64
+		timestampOffset   time.Duration
+		timestampOverride *int64
+		expectedSequence  uint64
+		remaining         time.Duration
+	}{
+		{"fresh", 7, 11, 0, nil, 11, validity},
+		{"lost-message", 7, 13, 0, nil, 13, validity},
+		{"maximum-sequence", 7, math.MaxUint64, 0, nil, math.MaxUint64, validity},
+		{"previous-election", 6, 11, 0, nil, 10, initialValidity},
+		{"future-election", 8, 11, 0, nil, 10, initialValidity},
+		{"duplicate", 7, 10, 0, nil, 10, initialValidity},
+		{"out-of-order", 7, 9, 0, nil, 10, initialValidity},
+		{"zero-sequence", 7, 0, 0, nil, 10, initialValidity},
+		{"legacy", 7, 0, 0, &zeroTimestamp, 10, initialValidity},
+		{"missing-timestamp", 7, 11, 0, &zeroTimestamp, 10, initialValidity},
+		{"oldest-timestamp", 7, 11, 0, &minTimestamp, 10, initialValidity},
+		{"latest-timestamp", 7, 11, 0, &maxTimestamp, 10, initialValidity},
+		{"delayed", 7, 11, -time.Second, nil, 11, validity - time.Second},
+		{"preserve-later-expiry", 7, 11, -3 * time.Second, nil, 11, initialValidity},
+		{"almost-expired", 7, 11, -validity + time.Millisecond, nil, 11, initialValidity},
+		{"expired", 7, 11, -validity, nil, 10, initialValidity},
+		{"too-old", 7, 11, -4 * time.Second, nil, 10, initialValidity},
+		{"clock-skew-limit", 7, 11, maxClockSkew, nil, 11, validity + maxClockSkew},
+		{"too-far-in-future", 7, 11, maxClockSkew + time.Millisecond, nil, 10, initialValidity},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+
+				now := time.Now()
+				timestamp := now.Add(test.timestampOffset).UnixMilli()
+				if test.timestampOverride != nil {
+					timestamp = *test.timestampOverride
+				}
+				event := SeeLeader{Election: test.election, Sequence: test.sequence, Timestamp: timestamp}
+				previous := election{number: 7, leader: "leader", sequence: 10, validUntil: now.Add(initialValidity)}
+				state := &State{mu: &sync.Mutex{}, election: previous}
+				payload, err := json.Marshal(event)
+				if err != nil {
+					t.Fatalf("expected encoded heartbeat, got %v", err)
+				}
+
+				state.seeLeader(notification{0, "SeeLeader", string(payload)})
+				expected := previous
+				expected.sequence = test.expectedSequence
+				expected.validUntil = now.Add(test.remaining)
+				if state.election != expected {
+					t.Errorf("expected election %+v, got %+v", expected, state.election)
+				}
+
+			})
+		})
+	}
+
+	// synctest omits monotonic readings, so check them outside the bubble.
+	t.Run("monotonic-expiry", func(t *testing.T) {
+		state := &State{mu: &sync.Mutex{}, election: election{number: 7, leader: "leader"}}
+		payload, err := json.Marshal(SeeLeader{Election: 7, Sequence: 1, Timestamp: time.Now().UnixMilli()})
+		if err != nil {
+			t.Fatalf("expected encoded heartbeat, got %v", err)
+		}
+		state.seeLeader(notification{0, "SeeLeader", string(payload)})
+		if state.election.sequence != 1 {
+			t.Fatalf("expected accepted heartbeat with sequence 1, got %+v", state.election)
+		}
+		validUntil := state.election.validUntil
+		if validUntil == validUntil.Round(0) {
+			t.Fatalf("expected expiry with a monotonic clock reading, got %v", validUntil)
+		}
+	})
+
+}
+
+// TestSeeLeaderAfterFollowerRestart verifies that replays after a follower
+// restart use the original heartbeat expiry and preserve the startup grace.
+func TestSeeLeaderAfterFollowerRestart(t *testing.T) {
+
+	const (
+		startupGrace      = 3 * time.Second
+		heartbeatValidity = startupGrace + 500*time.Millisecond
+	)
+	for _, test := range []struct {
+		name             string
+		delay            time.Duration
+		expectedSequence uint64
+		remaining        time.Duration
+	}{
+		{"fresh-replay", 100 * time.Millisecond, 10, heartbeatValidity - 100*time.Millisecond},
+		{"preserve-startup-grace", time.Second, 10, startupGrace},
+		{"expired-replay", 4 * time.Second, 0, startupGrace},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+
+				sent := time.Now()
+				payload, err := json.Marshal(SeeLeader{Election: 7, Sequence: 10, Timestamp: sent.UnixMilli()})
+				if err != nil {
+					t.Fatalf("expected encoded heartbeat, got %v", err)
+				}
+				n := notification{0, "SeeLeader", string(payload)}
+				state := &State{mu: &sync.Mutex{}, election: election{number: 7, leader: "leader"}}
+				state.seeLeader(n)
+				if state.election.sequence != 10 {
+					t.Fatalf("expected original heartbeat accepted, got %+v", state.election)
+				}
+
+				time.Sleep(test.delay)
+				// Simulate a restart that preserves the election but loses the received sequence.
+				restartedAt := time.Now()
+				initial := election{number: 7, leader: "leader", validUntil: restartedAt.Add(grantedLeaderInterval)}
+				state = &State{mu: &sync.Mutex{}, election: initial}
+				state.seeLeader(n)
+				expected := initial
+				expected.sequence = test.expectedSequence
+				expected.validUntil = restartedAt.Add(test.remaining)
+				if state.election != expected {
+					t.Fatalf("expected restarted election %+v, got %+v", expected, state.election)
+				}
+
+				// Replay again without restarting the follower.
+				time.Sleep(time.Second)
+				state.seeLeader(n)
+				if state.election != expected {
+					t.Fatalf("expected replay to leave election %+v unchanged, got %+v", expected, state.election)
+				}
+
+			})
+		})
+	}
+
+}
+
+// TestSeeLeaderAfterLeaderRestart verifies that a follower rejects heartbeats
+// from a new election until it is applied, then accepts the reset sequence
+// and continues to reject heartbeats from the previous election.
+func TestSeeLeaderAfterLeaderRestart(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+
+		now := time.Now()
+		previous := election{number: 7, leader: "previous", sequence: 10, validUntil: now.Add(time.Second)}
+		state := &State{mu: &sync.Mutex{}, election: previous}
+
+		// Both heartbeats must be rejected, even though 11 exceeds the last received sequence.
+		for _, sequence := range []uint64{1, 11} {
+			payload, err := json.Marshal(SeeLeader{Election: 8, Sequence: sequence, Timestamp: now.UnixMilli()})
+			if err != nil {
+				t.Fatalf("expected encoded heartbeat, got %v", err)
+			}
+			state.seeLeader(notification{0, "SeeLeader", string(payload)})
+			if state.election != previous {
+				t.Fatalf("expected future election heartbeat with sequence %d ignored, got %+v", sequence, state.election)
+			}
+		}
+
+		// Apply the new election with the node ID assigned after the leader's restart.
+		state.electLeader(notification{0, "ElectLeader", `{"Number":8,"Leader":"restarted"}`})
+		expected := election{number: 8, leader: "restarted", sequence: 0, validUntil: now.Add(grantedLeaderInterval)}
+		if state.election != expected {
+			t.Fatalf("expected new election with reset sequence %+v, got %+v", expected, state.election)
+		}
+
+		payload, err := json.Marshal(SeeLeader{Election: 8, Sequence: 1, Timestamp: now.UnixMilli()})
+		if err != nil {
+			t.Fatalf("expected encoded heartbeat, got %v", err)
+		}
+		state.seeLeader(notification{0, "SeeLeader", string(payload)})
+		expected.sequence = 1
+		expected.validUntil = now.Add(grantedLeaderInterval + leaderClockSkew)
+		if state.election != expected {
+			t.Fatalf("expected new leader heartbeat accepted as %+v, got %+v", expected, state.election)
+		}
+
+		payload, err = json.Marshal(SeeLeader{Election: 7, Sequence: 11, Timestamp: now.UnixMilli()})
+		if err != nil {
+			t.Fatalf("expected encoded previous leader heartbeat, got %v", err)
+		}
+		state.seeLeader(notification{0, "SeeLeader", string(payload)})
+		if state.election != expected {
+			t.Fatalf("expected previous leader heartbeat ignored, got %+v", state.election)
+		}
+
+	})
 }
 
 // pipelineUpdateSnapshot returns a JSON snapshot of the pipeline fields that

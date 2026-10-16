@@ -75,41 +75,87 @@ func (plan cancelingScanPlan) Scan(src []byte, target any) error {
 	return err
 }
 
-// TestApplyElections preserves election dispatch and heartbeat semantics while
-// keeping both event types outside version publication.
+// TestApplyElections verifies election dispatch and heartbeat handling without
+// changing the state version or waking version waiters.
 func TestApplyElections(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
 
-	state := &State{mu: &sync.Mutex{}, changing: &sync.RWMutex{}}
-	state.version.current = 123
-	calls := 0
-	state.listeners = []any{func(ElectLeader) { calls++ }}
-	for range 2 {
-		err := state.applyNotification(notification{0, "ElectLeader", `{"Number":7,"Leader":"leader"}`}, nil)
-		if err != nil {
-			t.Fatalf("expected election application, got %v", err)
+		now := time.Now()
+		state := &State{mu: &sync.Mutex{}, changing: &sync.RWMutex{}}
+		state.version.current = 123
+		state.version.next = sync.Cond{L: &state.version.RWMutex}
+		woke := false
+		go func() {
+			state.version.Lock()
+			state.version.next.Wait()
+			woke = true
+			state.version.Unlock()
+		}()
+		synctest.Wait()
+		// Release the waiter even if an assertion fails.
+		defer func() {
+			state.version.Lock()
+			state.version.next.Broadcast()
+			state.version.Unlock()
+			synctest.Wait()
+		}()
+
+		calls, heartbeatCalls := 0, 0
+		var received ElectLeader
+		state.listeners = []any{
+			func(event ElectLeader) {
+				calls++
+				received = event
+			},
+			func(SeeLeader) { heartbeatCalls++ },
 		}
-	}
+		expected := election{number: 7, leader: "leader", validUntil: now.Add(3 * time.Second)}
+		for i := range 2 {
+			if i > 0 {
+				// Reapplying the duplicate would now change the expiry.
+				time.Sleep(time.Second)
+			}
+			err := state.applyNotification(notification{0, "ElectLeader", `{"Number":7,"Leader":"leader"}`}, nil)
+			if err != nil {
+				t.Fatalf("expected election application, got %v", err)
+			}
+			if state.election != expected {
+				t.Fatalf("expected election %+v, got %+v", expected, state.election)
+			}
+			if calls != 1 || received.Number != 7 || received.Leader != "leader" {
+				t.Fatalf("expected one dispatch for election 7 and leader %q, got calls=%d event=%+v", "leader", calls, received)
+			}
+		}
 
-	previous := time.Unix(1, 0)
-	state.election.lastSeen = previous
-	err := state.applyNotification(notification{0, "SeeLeader", `{"Election":6}`}, nil)
-	if err != nil {
-		t.Fatalf("expected outdated heartbeat handling, got %v", err)
-	}
+		previous := state.election
+		payload := fmt.Sprintf(`{"Election":6,"Sequence":1,"Timestamp":%d}`, now.UnixMilli())
+		err := state.applyNotification(notification{0, "SeeLeader", payload}, nil)
+		if err != nil {
+			t.Fatalf("expected outdated heartbeat handling, got %v", err)
+		}
+		if state.election != previous {
+			t.Fatalf("expected outdated heartbeat to leave election %+v unchanged, got %+v", previous, state.election)
+		}
 
-	if state.election.lastSeen != previous {
-		t.Fatalf("expected outdated heartbeat ignored, got %v", state.election.lastSeen)
-	}
+		payload = fmt.Sprintf(`{"Election":7,"Sequence":1,"Timestamp":%d}`, now.UnixMilli())
+		err = state.applyNotification(notification{0, "SeeLeader", payload}, nil)
+		if err != nil {
+			t.Fatalf("expected current heartbeat handling, got %v", err)
+		}
+		expected.sequence = 1
+		expected.validUntil = now.Add(3500 * time.Millisecond)
+		if state.election != expected {
+			t.Fatalf("expected election %+v after current heartbeat, got %+v", expected, state.election)
+		}
+		if calls != 1 || heartbeatCalls != 0 {
+			t.Fatalf("expected one election dispatch and no heartbeat dispatches, got %d and %d", calls, heartbeatCalls)
+		}
+		synctest.Wait()
+		if woke || state.Version() != 123 {
+			t.Fatalf("expected no version publication or wakeup, got version=%d woke=%t", state.Version(), woke)
+		}
 
-	err = state.applyNotification(notification{0, "SeeLeader", `{"Election":7}`}, nil)
-	if err != nil {
-		t.Fatalf("expected current heartbeat handling, got %v", err)
-	}
-
-	if state.election.lastSeen == previous || calls != 1 || state.Version() != 123 {
-		t.Fatalf("expected current heartbeat and one election dispatch without version publication, got election=%+v calls=%d version=%d", state.election, calls, state.Version())
-	}
-
+	})
 }
 
 // TestApplyUnknownEvent checks terminal classification before publication,
