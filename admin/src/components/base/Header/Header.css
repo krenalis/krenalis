@@ -129,14 +129,14 @@
 	font-size: 13px;
 }
 
-.header__account-menu-wrapper {
+.header__account-menu-wrapper::part(menu) {
 	display: flex;
 	padding: 0;
 	border: 0;
 	overflow: visible;
 }
 
-.header__account-menu-wrapper::before {
+.header__account-menu-wrapper::part(menu)::before {
 	content: '';
 	position: absolute;
 	width: 0;
@@ -149,7 +149,7 @@
 	top: 1px;
 }
 
-.header__account-menu-wrapper::after {
+.header__account-menu-wrapper::part(menu)::after {
 	content: '';
 	position: absolute;
 	width: 0;

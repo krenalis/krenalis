@@ -10,13 +10,12 @@ import Grid from '../../base/Grid/Grid';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlDialog, { WaAfterHideEvent } from '@awesome.me/webawesome/dist/react/dialog/index.js';
-import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
+import SlDropdown, { WaShowEvent } from '@awesome.me/webawesome/dist/react/dropdown/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
-import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
-import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
+import SlMenuItem from '@awesome.me/webawesome/dist/react/dropdown-item/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
@@ -578,11 +577,36 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 		setHasProfileJSONKeyLostFocus(false);
 	};
 
+	// Web Awesome's dropdown has no sync: the menu takes the width of the input,
+	// measured when it opens.
+	const onShowProfilePath = (event: WaShowEvent) => {
+		if (event.target !== event.currentTarget) {
+			return;
+		}
+		const dropdown = event.currentTarget as HTMLElement;
+		const width = dropdown.querySelector('[slot="trigger"]').getBoundingClientRect().width;
+		dropdown.style.setProperty('--profile-path-width', `${width}px`);
+	};
+
+	// The input is not a button, so the dropdown does not open it from the
+	// keyboard: open it as Shoelace's dropdown did.
+	const onKeyDownProfilePath = (event: React.KeyboardEvent) => {
+		if ([' ', 'Enter'].includes(event.key)) {
+			event.preventDefault();
+			profilePathDropdownRef.current.open = !profilePathDropdownRef.current.open;
+			return;
+		}
+		if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+			event.preventDefault();
+			profilePathDropdownRef.current.open = true;
+		}
+	};
+
 	// Capture interactions within the input before the dropdown handles its trigger events.
 	const onClearProfilePath = (event: React.MouseEvent) => {
 		event.preventDefault();
 		event.stopPropagation();
-		profilePathDropdownRef.current?.hide();
+		profilePathDropdownRef.current.open = false;
 		setProfilePropertyPath('');
 		setProfileJSONKey(null);
 		setProfilePathError('');
@@ -620,7 +644,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 		if (!(event.nativeEvent.composedPath()[0] instanceof HTMLInputElement)) {
 			return;
 		}
-		profilePathDropdownRef.current?.hide();
+		profilePathDropdownRef.current.open = false;
 		event.stopPropagation();
 	};
 
@@ -872,8 +896,8 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 							className='consent-management__dialog-profile-path-dropdown'
 							ref={profilePathDropdownRef}
 							placement='bottom-start'
-							sync='width'
-							hoist
+							onWaShow={onShowProfilePath}
+							onWaSelect={onSelectProfilePath}
 						>
 							<SlInput
 								slot='trigger'
@@ -882,6 +906,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 								onInput={isProfilePropertyJSON ? onInputProfileJSONPath : undefined}
 								onBlur={isProfilePropertyJSON ? onBlurProfileJSONPath : undefined}
 								onClickCapture={isProfilePropertyJSON ? onClickProfileJSONPath : undefined}
+								onKeyDown={isProfilePropertyJSON ? undefined : onKeyDownProfilePath}
 								onKeyDownCapture={isProfilePropertyJSON ? onKeyDownProfileJSONPath : undefined}
 								onKeyUpCapture={isProfilePropertyJSON ? onKeyUpProfileJSONPath : undefined}
 								placeholder={isProfilePropertyJSON ? 'key' : 'Select a profile property'}
@@ -908,22 +933,17 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 								)}
 								<WaIcon slot='end' name='chevron-down' />
 							</SlInput>
-							<SlMenu
-								className='consent-management__dialog-profile-path-menu'
-								onSlSelect={onSelectProfilePath}
-							>
-								{profilePathOptions.map(([path, property]) => (
-									<SlMenuItem key={path} value={path}>
-										<span className='consent-management__dialog-profile-path-option'>{path}</span>
-										<span
-											className='consent-management__dialog-profile-path-option-type'
-											slot='suffix'
-										>
-											{property.type}
-										</span>
-									</SlMenuItem>
-								))}
-							</SlMenu>
+							{profilePathOptions.map(([path, property]) => (
+								<SlMenuItem key={path} value={path}>
+									<span className='consent-management__dialog-profile-path-option'>{path}</span>
+									<span
+										className='consent-management__dialog-profile-path-option-type'
+										slot='details'
+									>
+										{property.type}
+									</span>
+								</SlMenuItem>
+							))}
 						</SlDropdown>
 						<div
 							className={`consent-management__dialog-profile-path-message${profilePathError !== '' ? ' consent-management__dialog-error' : profilePathWarning !== '' ? ' consent-management__dialog-warning' : ' consent-management__dialog-message--hidden'}`}

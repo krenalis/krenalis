@@ -40,7 +40,7 @@ const gridKeyboardControlSelector = [
 	'[role="treegrid"]',
 	'[role="treeitem"]',
 ].join(',');
-const openKeyboardOverlaySelector = 'dialog[open], wa-dialog[open], sl-dropdown[open], wa-select[open]';
+const openKeyboardOverlaySelector = 'dialog[open], wa-dialog[open], wa-dropdown[open], wa-select[open]';
 
 type GridNavigationKey = (typeof gridNavigationKeys)[number];
 

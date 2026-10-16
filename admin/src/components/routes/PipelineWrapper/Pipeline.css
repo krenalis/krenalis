@@ -80,7 +80,7 @@
 	padding-bottom: 0;
 }
 
-.pipeline__header .pipeline__issues::part(trigger) {
+.pipeline__header .pipeline__issues {
 	text-align: center;
 }
 
@@ -832,14 +832,11 @@ inherit the disabled style */
 	border-bottom-left-radius: 3px;
 }
 
-.pipeline .section__pipelines,
-.pipeline .section__pipelines sl-menu {
+.pipeline .section__pipelines {
 	width: 300px;
 }
 
-.pipeline .section__pipelines sl-dropdown,
-.pipeline .section__pipelines wa-button,
-.pipeline .section__pipelines sl-dropdown::part(popup) {
+.pipeline .section__pipelines wa-button {
 	width: 100%;
 }
 
@@ -859,10 +856,6 @@ inherit the disabled style */
 .pipeline__transformation-language-deprecated sl-icon {
 	margin-inline-end: 10px;
 	color: var(--sl-color-danger-600);
-}
-
-.pipeline__transformation-function-minimized .editor-wrapper__switch-language-dropdown > sl-menu {
-	display: none;
 }
 
 .transformation-box {
@@ -972,7 +965,7 @@ inherit the disabled style */
 	transition: opacity 0s 0.5s;
 }
 
-.transformation-box__function-settings::part(panel) {
+.transformation-box__function-settings::part(menu) {
 	box-shadow: none;
 }
 
@@ -1008,7 +1001,7 @@ inherit the disabled style */
 	color: var(--sl-color-neutral-500);
 }
 
-.transformation-box__function-settings-menu {
+.transformation-box__function-settings::part(menu) {
 	position: absolute;
 	padding: 22px;
 	top: 17px;
@@ -1019,13 +1012,13 @@ inherit the disabled style */
 	border: 2px solid var(--sl-panel-border-color);
 }
 
-.transformation-box__function-settings-menu wa-switch::part(switch) {
+.transformation-box__function-settings wa-switch::part(switch) {
 	color: var(--sl-color-neutral-900);
 	align-items: start;
 	column-gap: 5px;
 }
 
-.transformation-box__function-settings-menu::before {
+.transformation-box__function-settings::part(menu)::before {
 	content: '';
 	width: 18px;
 	height: 18px;
@@ -2079,8 +2072,8 @@ inherit the disabled style */
 	align-items: center;
 }
 
-.pipeline__query-preview-drawer-label sl-dropdown,
-.pipeline__file-preview-drawer-label sl-dropdown {
+.pipeline__query-preview-drawer-label wa-dropdown,
+.pipeline__file-preview-drawer-label wa-dropdown {
 	margin-left: auto;
 	margin-right: auto;
 	position: relative;
@@ -2104,6 +2097,13 @@ inherit the disabled style */
 	visibility: visible;
 	opacity: 1;
 	width: unset;
+}
+
+.pipeline__issues::part(menu) {
+	padding: 0;
+	border: 0;
+	background-color: transparent;
+	overflow: visible;
 }
 
 .pipeline__issues > wa-button::part(button) {

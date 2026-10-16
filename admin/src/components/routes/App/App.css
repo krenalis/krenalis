@@ -1622,6 +1622,102 @@ wa-icon::part(svg) {
 		inset 0 0 0 4px var(--sl-color-neutral-0);
 }
 
+/* Web Awesome dropdowns, drawn as Shoelace drew a dropdown with a menu in it,
+   at zero specificity. The host is inline-block, as Shoelace's was, rather
+   than display: contents, and does not set the size of the trigger's text.
+   The menu part is the panel and the menu of Shoelace together. */
+:where(wa-dropdown) {
+	--show-duration: 100ms;
+	--hide-duration: 100ms;
+	display: inline-block;
+	font-size: inherit;
+}
+
+:where(wa-dropdown)::part(menu) {
+	display: block;
+	flex-direction: row;
+	position: relative;
+	padding: var(--sl-spacing-x-small) 0;
+	border: solid var(--sl-panel-border-width) var(--sl-panel-border-color);
+	border-radius: var(--sl-border-radius-medium);
+	background-color: var(--sl-panel-background-color);
+	box-shadow: var(--sl-shadow-large);
+	color: inherit;
+	font-family: var(--sl-font-sans);
+	font-size: var(--sl-font-size-medium);
+	font-weight: var(--sl-font-weight-normal);
+	user-select: auto;
+	overscroll-behavior: none;
+}
+
+/* Web Awesome dropdown items, drawn as Shoelace's menu items, at zero
+   specificity: the host is what Shoelace's base part was. Shoelace kept a 1.5em
+   column for the check before the item and one for the submenu chevron after
+   it; the pseudo-elements keep their room. Web Awesome's margins around the
+   icon and the details are !important in its shadow root, so the label makes
+   up the difference, leaving the icon and details parts to the items. */
+:where(wa-dropdown-item) {
+	--wa-font-size-smaller: 1em;
+	align-items: stretch;
+	padding: 5px var(--sl-spacing-2x-small);
+	border-radius: 0;
+	color: var(--sl-color-neutral-700);
+	font-family: var(--sl-font-sans);
+	font-size: var(--sl-font-size-medium);
+	font-weight: var(--sl-font-weight-normal);
+	line-height: var(--sl-line-height-normal);
+	letter-spacing: var(--sl-letter-spacing-normal);
+	white-space: nowrap;
+	user-select: none;
+	transition: none;
+}
+
+:where(wa-dropdown-item)::before,
+:where(wa-dropdown-item)::after {
+	content: '';
+	flex: 0 0 1.5em;
+}
+
+:where(wa-dropdown-item:focus-visible) {
+	outline: none;
+	background-color: var(--sl-color-primary-600);
+	color: var(--text-onaccent);
+}
+
+:where(wa-dropdown-item:focus-visible) * {
+	color: var(--text-onaccent) !important;
+}
+
+:where(wa-dropdown-item:not([disabled]):hover) {
+	background-color: var(--sl-color-neutral-200);
+}
+
+:where(wa-dropdown-item:not([disabled], :focus-visible):hover) {
+	color: var(--sl-color-neutral-1000);
+}
+
+:where(wa-dropdown-item)::part(label) {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+:where(wa-dropdown-item)::part(icon) {
+	display: flex;
+	align-items: center;
+}
+
+:where(wa-dropdown-item)::part(details) {
+	color: inherit;
+}
+
+:where(wa-dropdown-item:has(> [slot='icon']))::part(label) {
+	margin-inline-start: calc(var(--sl-spacing-x-small) - 0.75em);
+}
+
+:where(wa-dropdown-item:has(> [slot='details']))::part(label) {
+	margin-inline-end: calc(var(--sl-spacing-x-small) - 2em);
+}
+
 /* || Radix */
 
 .radix-themes:where([data-gray-color='slate']) {

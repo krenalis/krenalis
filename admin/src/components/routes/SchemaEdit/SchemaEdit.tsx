@@ -9,9 +9,8 @@ import { useBeforeUnload, useBlocker } from 'react-router-dom';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { buttonVariant } from '../../../utils/buttonVariant';
 import SlDialog from '@awesome.me/webawesome/dist/react/dialog/index.js';
-import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
+import SlDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
 import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
@@ -382,13 +381,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 							search={search}
 						>
 							<SlTooltip className='schema-edit__toolbar-tooltip' content='Filter properties' hoist>
-								<SlDropdown
-									className='schema-edit__filter'
-									placement='bottom-end'
-									distance={8}
-									stayOpenOnSelect
-									hoist
-								>
+								<SlDropdown className='schema-edit__filter' placement='bottom-end' distance={8}>
 									<SlButton
 										appearance='outlined'
 										className='schema-edit__filter-button schema-edit__toolbar-icon-button'
@@ -401,16 +394,14 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 											className={`schema-edit__filter-dot${showOnlyChanged ? ' schema-edit__filter-dot--active' : ''}`}
 										/>
 									</SlButton>
-									<SlMenu className='schema-edit__filter-menu'>
-										<SlSwitch
-											className='schema-edit__show-changed'
-											size='s'
-											checked={showOnlyChanged}
-											onChange={(event: any) => setShowOnlyChanged(event.target.checked)}
-										>
-											Show only changed properties
-										</SlSwitch>
-									</SlMenu>
+									<SlSwitch
+										className='schema-edit__show-changed'
+										size='s'
+										checked={showOnlyChanged}
+										onChange={(event: any) => setShowOnlyChanged(event.target.checked)}
+									>
+										Show only changed properties
+									</SlSwitch>
 								</SlDropdown>
 							</SlTooltip>
 						</SchemaPropertyGridToolbar>

@@ -1,6 +1,6 @@
 import React from 'react';
 import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
+import SlDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { ConnectionRole, ConnectorType } from '../../../lib/api/types/connection';
 
@@ -32,7 +32,6 @@ const PipelineIssues = ({ issues, type, role, show = true, slot }: PipelineIssue
 			distance={10}
 			slot={slot}
 			placement='bottom'
-			hoist
 		>
 			<SlButton variant='warning' slot='trigger' withCaret>
 				<SlIcon slot='start' name='exclamation-triangle' />

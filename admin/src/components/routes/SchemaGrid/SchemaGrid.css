@@ -154,7 +154,7 @@
 
 .schema-grid .grid__nested-rows .grid__row--children::before,
 .schema-grid .grid__nested-rows--children > .grid__row--parent::before {
-	transform: translateX(-20px) translateY(-50%);
+	transform: translateX(-22px) translateY(-50%);
 }
 
 .schema-grid .grid__nested-rows .grid__row--children::before {

@@ -6,11 +6,9 @@ import { useContext } from 'react';
 import AppContext from '../../../context/AppContext';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
-import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
-import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
-import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
+import SlDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
+import SlMenuItem from '@awesome.me/webawesome/dist/react/dropdown-item/index.js';
 import { ObjectType } from '../../../lib/api/types/types';
 import { Identifiers } from '../../../lib/api/types/identifiers';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboboxItems';
@@ -184,31 +182,29 @@ const IdentityResolutionSettings = () => {
 										>
 											<WaIcon name='three-dots'></WaIcon>
 										</SlButton>
-										<SlMenu>
-											<SlMenuItem
-												className='identifiers__mapping-up'
-												onClick={() => moveIdentifierUp(position)}
-												disabled={position === 1}
-											>
-												<SlIcon slot='prefix' name='arrow-up-circle' />
-												Move up
-											</SlMenuItem>
-											<SlMenuItem
-												className='identifiers__mapping-down'
-												onClick={() => moveIdentifierDown(position)}
-												disabled={position === identifiers.length}
-											>
-												<SlIcon slot='prefix' name='arrow-down-circle' />
-												Move down
-											</SlMenuItem>
-											<SlMenuItem
-												className='identifiers__mapping-remove'
-												onClick={() => removeIdentifier(position)}
-											>
-												<SlIcon slot='prefix' name='trash3' />
-												Remove
-											</SlMenuItem>
-										</SlMenu>
+										<SlMenuItem
+											className='identifiers__mapping-up'
+											onClick={() => moveIdentifierUp(position)}
+											disabled={position === 1}
+										>
+											<WaIcon slot='icon' name='arrow-up-circle' />
+											Move up
+										</SlMenuItem>
+										<SlMenuItem
+											className='identifiers__mapping-down'
+											onClick={() => moveIdentifierDown(position)}
+											disabled={position === identifiers.length}
+										>
+											<WaIcon slot='icon' name='arrow-down-circle' />
+											Move down
+										</SlMenuItem>
+										<SlMenuItem
+											className='identifiers__mapping-remove'
+											onClick={() => removeIdentifier(position)}
+										>
+											<WaIcon slot='icon' name='trash3' />
+											Remove
+										</SlMenuItem>
 									</SlDropdown>
 								</div>
 							);

@@ -49,8 +49,7 @@ import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.
 import SlButtonGroup from '@awesome.me/webawesome/dist/react/button-group/index.js';
 import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
 import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
-import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
-import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
+import SlDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
 import SlSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
 import SlCopyButton from '@awesome.me/webawesome/dist/react/copy-button/index.js';
 import SlSplitPanel from '@awesome.me/webawesome/dist/react/split-panel/index.js';
@@ -1244,19 +1243,17 @@ const TransformationBox = ({
 									name='circle-fill'
 								></WaIcon>
 							</SlButton>
-							<SlMenu className='transformation-box__function-settings-menu'>
-								<SlSwitch
-									size='s'
-									checked={pipeline.transformation.function.preserveJSON}
-									onClick={onFunctionPreserveJSONSwitch}
-								>
-									Preserve JSON
-									<span className='transformation-box__preserve-json-description'>
-										Pass and receive JSON values as strings in their original format, without
-										decoding or encoding them.
-									</span>
-								</SlSwitch>
-							</SlMenu>
+							<SlSwitch
+								size='s'
+								checked={pipeline.transformation.function.preserveJSON}
+								onClick={onFunctionPreserveJSONSwitch}
+							>
+								Preserve JSON
+								<span className='transformation-box__preserve-json-description'>
+									Pass and receive JSON values as strings in their original format, without decoding
+									or encoding them.
+								</span>
+							</SlSwitch>
 						</SlDropdown>
 					)}
 					{!isFullscreenTransformationOpen && (

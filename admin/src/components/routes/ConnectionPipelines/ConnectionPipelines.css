@@ -117,7 +117,7 @@
 	color: var(--sl-color-success-600);
 }
 
-.connection-pipelines__scheduler-options {
+.connection-pipelines__scheduler-options::part(menu) {
 	padding-left: 20px;
 	padding-right: 20px;
 }
@@ -187,12 +187,12 @@
 	border-top-right-radius: var(--radius) !important;
 }
 
-.connection-pipelines__menu .connection-pipelines__run-button::part(button) {
+.connection-pipelines__buttons-dropdown .connection-pipelines__run-button::part(button) {
 	border: 0;
 	background-color: transparent;
 }
 
-.connection-pipelines__delete::part(base):hover {
+.connection-pipelines__delete:hover {
 	transition:
 		background-color 0.3s,
 		color 0.3s;
@@ -250,7 +250,7 @@
 	}
 
 	.connection-pipelines__buttons-dropdown .connection-pipelines__manage-button {
-		display: block;
+		display: flex;
 	}
 }
 

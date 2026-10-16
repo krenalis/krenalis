@@ -86,7 +86,7 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 	await expect(dialog.locator('.consent-management__dialog-path-label').nth(0)).toHaveCSS('font-size', '14px');
 	await expect(dialog.locator('.consent-management__dialog-path-label').nth(1)).toHaveCSS('font-size', '14px');
 	await profilePath.click();
-	const options = dialog.locator('.consent-management__dialog-profile-path-menu sl-menu-item');
+	const options = dialog.locator('.consent-management__dialog-profile-path-dropdown wa-dropdown-item');
 	await expect(options).toHaveCount(4);
 	await expect(options.locator('.consent-management__dialog-profile-path-option')).toHaveText([
 		'accepted',
@@ -120,7 +120,7 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 	const profilePathDropdown = dialog.locator('.consent-management__dialog-profile-path-dropdown');
 	await profilePathDropdown.evaluate((dropdown) => {
 		dropdown.setAttribute('data-show-count', '0');
-		dropdown.addEventListener('sl-show', () => {
+		dropdown.addEventListener('wa-show', () => {
 			const count = Number(dropdown.getAttribute('data-show-count'));
 			dropdown.setAttribute('data-show-count', String(count + 1));
 		});

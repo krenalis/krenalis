@@ -236,12 +236,13 @@
 	margin-top: 15px;
 }
 
-.consent-management__dialog-profile-path-menu {
+.consent-management__dialog-profile-path-dropdown::part(menu) {
+	width: var(--profile-path-width);
 	max-height: 300px;
 	overflow-y: auto;
 }
 
-.consent-management__dialog-profile-path-menu sl-menu-item::part(base) {
+.consent-management__dialog-profile-path-dropdown wa-dropdown-item {
 	font-family: var(--monospace-fonts);
 	font-size: var(--sl-input-font-size-small);
 	padding-block: var(--sl-spacing-3x-small);

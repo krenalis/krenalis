@@ -138,18 +138,18 @@
 	opacity: 1;
 }
 
-.schema-edit__filter-menu {
+.schema-edit__filter::part(menu) {
 	background-color: var(--bg-primary);
 	border: 1px solid var(--border-primary);
 	border-radius: var(--radius);
-	box-shadow: var(--sl-shadow-medium);
+	box-shadow: var(--sl-shadow-medium), var(--sl-shadow-large);
 	min-width: 270px;
 	overflow: visible;
 	padding: 20px;
 	position: relative;
 }
 
-.schema-edit__filter-menu::before {
+.schema-edit__filter::part(menu)::before {
 	background-color: var(--bg-primary);
 	border-left: 1px solid var(--border-primary);
 	border-top: 1px solid var(--border-primary);
@@ -162,7 +162,7 @@
 	width: 12px;
 }
 
-.schema-edit__filter-menu wa-switch::part(switch) {
+.schema-edit__filter wa-switch::part(switch) {
 	align-items: center;
 	color: var(--text-primary);
 }
@@ -234,7 +234,7 @@
 
 .schema-edit .grid__nested-rows .grid__row--children::before,
 .schema-edit .grid__nested-rows--children > .grid__row--parent::before {
-	transform: translateX(-15px) translateY(-50%);
+	transform: translateX(-22px) translateY(-50%);
 }
 
 .schema-edit .grid__nested-rows .grid__row--children::before {

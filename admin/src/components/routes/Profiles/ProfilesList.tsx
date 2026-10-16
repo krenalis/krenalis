@@ -4,11 +4,9 @@ import Toolbar from '../../base/Toolbar/Toolbar';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import Grid from '../../base/Grid/Grid';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
+import SlDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
 import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
-import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
 import { ProfileDrawer } from './ProfileDrawer';
 import { useProfilesGrid } from './useProfilesGrid';
@@ -129,16 +127,16 @@ const ProfilesList = () => {
 	return (
 		<div className='profiles-list'>
 			<Toolbar>
-				<SlDropdown stayOpenOnSelect={true} className='profiles-list__toggle-columns'>
+				<SlDropdown className='profiles-list__toggle-columns'>
 					<SlButton slot='trigger' appearance='outlined'>
 						<SlIcon slot='start' name='layout-three-columns' />
 						Toggle columns
 					</SlButton>
-					<SlMenu>
+					<div className='profiles-list__toggle-columns-list'>
 						{profilesProperties.map((p) => {
 							const isLastUsed = usedProperties.length === 1 && usedProperties[0].name === p.name;
 							return (
-								<SlOption key={p.name}>
+								<div className='profiles-list__toggle-column' key={p.name}>
 									<SlSwitch
 										size='s'
 										onChange={() => onToggleColumn(p.name)}
@@ -147,10 +145,10 @@ const ProfilesList = () => {
 									>
 										{p.name}
 									</SlSwitch>
-								</SlOption>
+								</div>
 							);
 						})}
-					</SlMenu>
+					</div>
 				</SlDropdown>
 				<div
 					className={`profiles-list__identity-resolution${!secondsSinceIRStart && !latestIRExecutionEnd && !isLoadingIdentityResolution ? ' profiles-list__identity-resolution--is-first-execution' : ''}`}

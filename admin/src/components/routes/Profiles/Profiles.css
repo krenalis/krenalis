@@ -90,27 +90,44 @@
 	border-radius: 0;
 }
 
-.profiles-list__toggle-columns sl-option wa-switch {
+.profiles-list__toggle-columns-list {
+	max-height: calc(100vh - 220px);
+	overflow: auto;
+}
+
+/* Each column is drawn as the Shoelace option it was, with the room of its
+   hidden check before it. */
+.profiles-list__toggle-column {
+	display: flex;
+	align-items: center;
+	padding: var(--sl-spacing-x-small) var(--sl-spacing-medium) var(--sl-spacing-x-small)
+		calc(var(--sl-spacing-x-small) + 1em + var(--sl-spacing-2x-small));
+	color: var(--sl-color-neutral-700);
+	font-family: var(--sl-font-sans);
+	font-size: var(--sl-font-size-medium);
+	font-weight: var(--sl-font-weight-normal);
+	line-height: var(--sl-line-height-dense);
+	cursor: pointer;
+	user-select: none;
+}
+
+.profiles-list__toggle-column:hover {
+	background-color: var(--sl-color-neutral-100);
+	color: var(--sl-color-neutral-1000);
+}
+
+.profiles-list__toggle-column wa-switch {
 	--thumb-size: 14px;
 }
 
-.profiles-list__toggle-columns sl-option wa-switch::part(switch) {
+.profiles-list__toggle-column wa-switch::part(switch) {
 	font-size: 14px;
 	gap: 5px;
 }
 
-.profiles-list__toggle-columns sl-option wa-switch::part(label) {
+.profiles-list__toggle-column wa-switch::part(label) {
 	position: relative;
 	top: -2px;
-}
-
-.profiles-list__toggle-columns::part(panel) {
-	max-height: calc(100vh - 220px) !important;
-	overflow: auto;
-}
-
-.profiles-list__toggle-columns sl-menu {
-	overflow: hidden;
 }
 
 .profiles-list__grid-container {
