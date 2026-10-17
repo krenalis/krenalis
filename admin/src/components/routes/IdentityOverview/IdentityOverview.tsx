@@ -101,50 +101,46 @@ const getErrorMessage = (error: unknown): string => {
 	return String(error);
 };
 
-interface LoadMetricsOptions {
-	shouldLoadIdentity?: boolean;
-	shouldPreserveData?: boolean;
+interface DashboardData {
+	displayRange: DisplayDateRange;
+	latestIdentityMetric: IdentityMetric;
+	identityMetricDays: IdentityMetricDay[];
+	latestResolutionMetric: IdentityResolutionMetric | null;
+	resolutionMetricDays: IdentityResolutionMetricDay[];
+	resolutionRuns: IdentityResolutionRun[];
+	selectedIdentityConnection: string;
+	connectionIdentityMetricDays?: IdentityMetricDay[];
 }
 
 const IdentityOverview = () => {
 	const { api, connections, selectedWorkspace, setTitle } = useContext(AppContext);
 	const [displayRange, setDisplayRange] = useState<DisplayDateRange>(initialDisplayRange);
-	const [loadedIdentityDisplayRange, setLoadedIdentityDisplayRange] = useState<DisplayDateRange>(initialDisplayRange);
-	const [loadedResolutionDisplayRange, setLoadedResolutionDisplayRange] =
-		useState<DisplayDateRange>(initialDisplayRange);
 	const [selectedDateRange, setSelectedDateRange] = useState<IdentityDashboardDatePreset | 'Custom'>(
 		IDENTITY_DASHBOARD_DEFAULT_DATE_PRESET,
 	);
 	const [customDateRange, setCustomDateRange] = useState<SegmentedDateRangeSelection[]>(initialCustomRange);
 	const [today, setToday] = useState<string>(todayUTCDateKey);
-	const [latestIdentityMetric, setLatestIdentityMetric] = useState<IdentityMetric>();
-	const [identityMetricDays, setIdentityMetricDays] = useState<IdentityMetricDay[]>();
+	const [dashboardData, setDashboardData] = useState<DashboardData>();
+	const [dashboardError, setDashboardError] = useState<string>();
 	const [selectedIdentityConnection, setSelectedIdentityConnection] = useState<string>('');
-	const [connectionIdentityMetricDays, setConnectionIdentityMetricDays] = useState<IdentityMetricDay[]>();
-	const [loadedConnectionDisplayRange, setLoadedConnectionDisplayRange] =
-		useState<DisplayDateRange>(initialDisplayRange);
-	const [connectionIdentityError, setConnectionIdentityError] = useState<string>();
-	const [isConnectionIdentityLoading, setIsConnectionIdentityLoading] = useState<boolean>(false);
-	const [latestResolutionMetric, setLatestResolutionMetric] = useState<IdentityResolutionMetric | null>();
-	const [resolutionMetricDays, setResolutionMetricDays] = useState<IdentityResolutionMetricDay[]>();
-	const [resolutionRuns, setResolutionRuns] = useState<IdentityResolutionRun[]>([]);
-	const [identityError, setIdentityError] = useState<string>();
-	const [identityHistoryError, setIdentityHistoryError] = useState<string>();
-	const [resolutionError, setResolutionError] = useState<string>();
-	const [resolutionRunsError, setResolutionRunsError] = useState<string>();
-	const [isIdentityLoading, setIsIdentityLoading] = useState<boolean>(true);
-	const [isResolutionLoading, setIsResolutionLoading] = useState<boolean>(true);
-	const [isResolutionRunsLoading, setIsResolutionRunsLoading] = useState<boolean>(true);
+	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 	const requestVersion = useRef<number>(0);
-	const connectionRequestVersion = useRef<number>(0);
-	const runsRequestVersion = useRef<number>(0);
-	// Keep range changes anchored to one latest snapshot until the next refresh.
-	const latestIdentityMetricRef = useRef<IdentityMetric>();
-	const latestResolutionMetricRef = useRef<IdentityResolutionMetric | null>();
-	const selectedIdentityConnectionRef = useRef<string>('');
+	// Only completed loads can supply cached snapshots for range and connection changes.
+	const dashboardDataRef = useRef<DashboardData>();
 	const previousWorkspace = useRef<string>(selectedWorkspace);
-	const previousConnectionWorkspace = useRef<string>(selectedWorkspace);
+	const {
+		latestIdentityMetric,
+		identityMetricDays,
+		latestResolutionMetric,
+		resolutionMetricDays,
+		resolutionRuns = [],
+		connectionIdentityMetricDays,
+		selectedIdentityConnection: loadedIdentityConnection = '',
+		displayRange: loadedDisplayRange = displayRange,
+	} = dashboardData ?? {};
+	const isInitialLoading = isLoading && dashboardData == null;
+	const chartError = dashboardData == null ? dashboardError : undefined;
 	const sourceConnectionCatalogKey = useMemo(
 		() =>
 			connections
@@ -171,17 +167,6 @@ const IdentityOverview = () => {
 		updateToday();
 		return () => window.clearTimeout(timeout);
 	}, []);
-
-	useLayoutEffect(() => {
-		if (previousConnectionWorkspace.current === selectedWorkspace) return;
-		previousConnectionWorkspace.current = selectedWorkspace;
-		connectionRequestVersion.current += 1;
-		selectedIdentityConnectionRef.current = '';
-		setSelectedIdentityConnection('');
-		setConnectionIdentityMetricDays(undefined);
-		setConnectionIdentityError(undefined);
-		setIsConnectionIdentityLoading(false);
-	}, [selectedWorkspace]);
 
 	const fetchIdentityMetricDays = useCallback(
 		async (latest: IdentityMetric, requestedRange: DisplayDateRange, connectionSelection?: string) => {
@@ -212,167 +197,93 @@ const IdentityOverview = () => {
 		[api],
 	);
 
-	const loadConnectionIdentityMetrics = useCallback(
-		async (latest: IdentityMetric, connection: string, requestedRange: DisplayDateRange) => {
-			const version = ++connectionRequestVersion.current;
-			setConnectionIdentityError(undefined);
-			setIsConnectionIdentityLoading(true);
-			try {
-				const days = await fetchIdentityMetricDays(latest, requestedRange, connection);
-				if (
-					version !== connectionRequestVersion.current ||
-					connection !== selectedIdentityConnectionRef.current
-				)
-					return;
-				setLoadedConnectionDisplayRange(requestedRange);
-				setConnectionIdentityMetricDays(days);
-			} catch (err) {
-				if (
-					version !== connectionRequestVersion.current ||
-					connection !== selectedIdentityConnectionRef.current
-				)
-					return;
-				setLoadedConnectionDisplayRange(requestedRange);
-				setConnectionIdentityMetricDays(undefined);
-				setConnectionIdentityError(getErrorMessage(err));
-			} finally {
-				if (version === connectionRequestVersion.current) setIsConnectionIdentityLoading(false);
-			}
-		},
-		[fetchIdentityMetricDays],
-	);
-
 	const loadMetrics = useCallback(
-		async ({ shouldLoadIdentity = true, shouldPreserveData = false }: LoadMetricsOptions = {}) => {
+		async (shouldRefresh = false) => {
 			const version = ++requestVersion.current;
-			const requestedRange = displayRange;
-			if (shouldLoadIdentity) {
-				setIdentityError(undefined);
-				setIdentityHistoryError(undefined);
-			}
-			setResolutionError(undefined);
-			if (!shouldPreserveData) {
-				if (shouldLoadIdentity) {
-					setIsIdentityLoading(true);
-					setLatestIdentityMetric(latestIdentityMetricRef.current);
-					setIdentityMetricDays(undefined);
-				}
-				setIsResolutionLoading(true);
-				setLatestResolutionMetric(undefined);
-				setResolutionMetricDays(undefined);
-			}
-
-			const loadIdentityMetrics = async () => {
-				try {
-					let latest = latestIdentityMetricRef.current;
-					if (latest == null) {
-						latest = await api.workspaces.latestIdentityMetric();
-						if (version !== requestVersion.current) return;
-						latestIdentityMetricRef.current = latest;
-					}
-
-					setLatestIdentityMetric(latest);
-					const connection = selectedIdentityConnectionRef.current;
-					const [days] = await Promise.all([
-						fetchIdentityMetricDays(latest, requestedRange),
-						connection === ''
-							? Promise.resolve()
-							: loadConnectionIdentityMetrics(latest, connection, requestedRange),
-					]);
-					if (version !== requestVersion.current) return;
-					setLoadedIdentityDisplayRange(requestedRange);
-					setLatestIdentityMetric(latest);
-					setIdentityMetricDays(days);
-					setIsIdentityLoading(false);
-				} catch (err) {
-					if (version !== requestVersion.current) return;
-					setLoadedIdentityDisplayRange(requestedRange);
-					setLatestIdentityMetric(latestIdentityMetricRef.current);
-					setIdentityMetricDays(undefined);
-					if (latestIdentityMetricRef.current == null) {
-						setIdentityError(getErrorMessage(err));
-					} else {
-						setIdentityHistoryError(getErrorMessage(err));
-					}
-					setIsIdentityLoading(false);
-				}
-			};
-			const loadResolutionMetrics = async () => {
-				try {
-					let latest = latestResolutionMetricRef.current;
-					if (latest === undefined) {
-						latest = await api.workspaces.latestIdentityResolutionMetric();
-						if (version !== requestVersion.current) return;
-						latestResolutionMetricRef.current = latest;
-					}
-
-					const days = latest == null ? [] : await fetchResolutionMetricDays(latest, requestedRange);
-					if (version !== requestVersion.current) return;
-					setLoadedResolutionDisplayRange(requestedRange);
-					setLatestResolutionMetric(latest);
-					setResolutionMetricDays(days);
-					setIsResolutionLoading(false);
-				} catch (err) {
-					if (version !== requestVersion.current) return;
-					setLoadedResolutionDisplayRange(requestedRange);
-					setLatestResolutionMetric(undefined);
-					setResolutionMetricDays(undefined);
-					setResolutionError(getErrorMessage(err));
-					setIsResolutionLoading(false);
-				}
-			};
-
-			await Promise.all([
-				shouldLoadIdentity ? loadIdentityMetrics() : Promise.resolve(),
-				loadResolutionMetrics(),
-			]);
-		},
-		[api, displayRange, fetchIdentityMetricDays, fetchResolutionMetricDays, loadConnectionIdentityMetrics],
-	);
-
-	const loadResolutionRuns = useCallback(
-		async (shouldPreserveData = false) => {
-			const version = ++runsRequestVersion.current;
-			setResolutionRunsError(undefined);
-			setIsResolutionRunsLoading(true);
-			if (!shouldPreserveData) setResolutionRuns([]);
+			setDashboardError(undefined);
+			setIsLoading(true);
+			setIsRefreshing(shouldRefresh);
 			try {
-				const response = await api.workspaces.identityResolutionRuns();
-				if (version !== runsRequestVersion.current) return;
-				setResolutionRuns(response.runs);
+				if (shouldRefresh) {
+					await api.workspaces.refreshIdentityMetrics();
+					if (version !== requestVersion.current) return;
+				}
+				const cached = shouldRefresh ? undefined : dashboardDataRef.current;
+				const [identity, resolution, runs] = await Promise.all([
+					cached == null ? api.workspaces.latestIdentityMetric() : cached.latestIdentityMetric,
+					cached == null ? api.workspaces.latestIdentityResolutionMetric() : cached.latestResolutionMetric,
+					cached == null ? api.workspaces.identityResolutionRuns() : { runs: cached.resolutionRuns },
+				]);
+				if (version !== requestVersion.current) return;
+
+				const requestedRange =
+					selectedDateRange === 'Custom'
+						? displayRange
+						: displayRangeForPreset(selectedDateRange, instantToDateKey(identity.observedAt));
+				const hasCachedRange =
+					cached != null &&
+					cached.displayRange.start === requestedRange.start &&
+					cached.displayRange.end === requestedRange.end;
+				const [identityDays, resolutionDays, connectionDays] = await Promise.all([
+					hasCachedRange ? cached.identityMetricDays : fetchIdentityMetricDays(identity, requestedRange),
+					hasCachedRange
+						? cached.resolutionMetricDays
+						: resolution == null
+							? []
+							: fetchResolutionMetricDays(resolution, requestedRange),
+					selectedIdentityConnection === ''
+						? undefined
+						: fetchIdentityMetricDays(identity, requestedRange, selectedIdentityConnection),
+				]);
+				if (version !== requestVersion.current) return;
+
+				const data: DashboardData = {
+					displayRange: requestedRange,
+					latestIdentityMetric: identity,
+					identityMetricDays: identityDays,
+					latestResolutionMetric: resolution,
+					resolutionMetricDays: resolutionDays,
+					resolutionRuns: runs.runs,
+					selectedIdentityConnection,
+					connectionIdentityMetricDays: connectionDays,
+				};
+				dashboardDataRef.current = data;
+				setDashboardData(data);
 			} catch (err) {
-				if (version !== runsRequestVersion.current) return;
-				setResolutionRunsError(getErrorMessage(err));
-				if (!shouldPreserveData) setResolutionRuns([]);
+				if (version !== requestVersion.current) return;
+				setDashboardError(getErrorMessage(err));
 			} finally {
-				if (version === runsRequestVersion.current) setIsResolutionRunsLoading(false);
+				if (version === requestVersion.current) {
+					setIsLoading(false);
+					setIsRefreshing(false);
+				}
 			}
 		},
-		[api],
+		[
+			api,
+			displayRange,
+			selectedDateRange,
+			selectedIdentityConnection,
+			fetchIdentityMetricDays,
+			fetchResolutionMetricDays,
+		],
 	);
 
-	useEffect(() => {
+	useLayoutEffect(() => {
 		const workspaceChanged = previousWorkspace.current !== selectedWorkspace;
 		const connectionCatalogChanged = previousSourceConnectionCatalogKey.current !== sourceConnectionCatalogKey;
 		previousWorkspace.current = selectedWorkspace;
 		previousSourceConnectionCatalogKey.current = sourceConnectionCatalogKey;
-		if (workspaceChanged || connectionCatalogChanged) latestIdentityMetricRef.current = undefined;
-		if (workspaceChanged) latestResolutionMetricRef.current = undefined;
-		loadMetrics({ shouldPreserveData: !workspaceChanged });
+		if (workspaceChanged || connectionCatalogChanged) dashboardDataRef.current = undefined;
+		if (workspaceChanged) {
+			setDashboardData(undefined);
+			setSelectedIdentityConnection('');
+		}
+		loadMetrics();
+		return () => {
+			requestVersion.current += 1;
+		};
 	}, [loadMetrics, selectedWorkspace, sourceConnectionCatalogKey]);
-
-	useEffect(() => {
-		loadResolutionRuns();
-	}, [loadResolutionRuns, selectedWorkspace]);
-
-	useEffect(() => {
-		if (latestIdentityMetric == null || selectedDateRange === 'Custom') return;
-		const latestDay = instantToDateKey(latestIdentityMetric.observedAt);
-		const nextRange = displayRangeForPreset(selectedDateRange, latestDay);
-		setDisplayRange((current) =>
-			current.start === nextRange.start && current.end === nextRange.end ? current : nextRange,
-		);
-	}, [latestIdentityMetric, selectedDateRange]);
 
 	const connectionNames = useMemo(
 		() =>
@@ -383,33 +294,24 @@ const IdentityOverview = () => {
 		[connections],
 	);
 	const identityDays = useMemo(
-		() => buildIdentityMetricChartDays(identityMetricDays ?? [], loadedIdentityDisplayRange),
-		[identityMetricDays, loadedIdentityDisplayRange],
+		() => buildIdentityMetricChartDays(identityMetricDays ?? [], loadedDisplayRange),
+		[identityMetricDays, loadedDisplayRange],
 	);
 	const selectedConnectionIdentityDays = useMemo(
-		() => buildIdentityMetricChartDays(connectionIdentityMetricDays ?? [], loadedConnectionDisplayRange),
-		[connectionIdentityMetricDays, loadedConnectionDisplayRange],
+		() => buildIdentityMetricChartDays(connectionIdentityMetricDays ?? [], loadedDisplayRange),
+		[connectionIdentityMetricDays, loadedDisplayRange],
 	);
-	const showAllIdentityConnections = selectedIdentityConnection === '';
-	const selectedIdentityChartDays =
-		connectionIdentityMetricDays == null ? identityDays : selectedConnectionIdentityDays;
-	const identityChartDays = showAllIdentityConnections ? identityDays : selectedIdentityChartDays;
-	const isIdentityChartLoading = showAllIdentityConnections
-		? isIdentityLoading
-		: (isIdentityLoading || isRefreshing || isConnectionIdentityLoading) && connectionIdentityMetricDays == null;
-	const identityChartError = showAllIdentityConnections
-		? (identityError ?? identityHistoryError)
-		: connectionIdentityError;
+	const identityChartDays = loadedIdentityConnection === '' ? identityDays : selectedConnectionIdentityDays;
 	const temporalSemantics = useMemo(
 		() =>
 			buildTemporalSemantics(
-				loadedResolutionDisplayRange,
+				loadedDisplayRange,
 				latestIdentityMetric?.observedAt,
 				latestResolutionMetric?.observedAt,
 			),
-		[latestIdentityMetric, latestResolutionMetric, loadedResolutionDisplayRange],
+		[latestIdentityMetric, latestResolutionMetric, loadedDisplayRange],
 	);
-	const fixedIdentityTrendEnd = temporalSemantics.latestIdentityDay ?? loadedIdentityDisplayRange.end;
+	const fixedIdentityTrendEnd = temporalSemantics.latestIdentityDay ?? loadedDisplayRange.end;
 	const sevenDayTrend = useMemo(
 		() => calculateIdentityTrend(identityMetricDays ?? [], fixedIdentityTrendEnd, 7),
 		[fixedIdentityTrendEnd, identityMetricDays],
@@ -444,16 +346,11 @@ const IdentityOverview = () => {
 		) {
 			return;
 		}
-		connectionRequestVersion.current += 1;
-		selectedIdentityConnectionRef.current = '';
 		setSelectedIdentityConnection('');
-		setConnectionIdentityMetricDays(undefined);
-		setConnectionIdentityError(undefined);
-		setIsConnectionIdentityLoading(false);
 	}, [identityConnectionOptions, selectedIdentityConnection]);
 	const resolutionChartDays = useMemo(
-		() => buildIdentityResolutionMetricChartDays(resolutionMetricDays ?? [], loadedResolutionDisplayRange),
-		[resolutionMetricDays, loadedResolutionDisplayRange],
+		() => buildIdentityResolutionMetricChartDays(resolutionMetricDays ?? [], loadedDisplayRange),
+		[resolutionMetricDays, loadedDisplayRange],
 	);
 	const resolutionEffectivenessData = useMemo(
 		() => buildResolutionEffectivenessData(resolutionChartDays),
@@ -464,17 +361,17 @@ const IdentityOverview = () => {
 		[resolutionChartDays],
 	);
 	const hasResolutionInPeriod = useMemo(
-		() => hasResolutionDataInRange(resolutionMetricDays ?? [], loadedResolutionDisplayRange),
-		[resolutionMetricDays, loadedResolutionDisplayRange],
+		() => hasResolutionDataInRange(resolutionMetricDays ?? [], loadedDisplayRange),
+		[resolutionMetricDays, loadedDisplayRange],
 	);
 	const resolutionKpiComparison = useMemo(
 		() =>
 			calculateResolutionKpiComparison(
 				latestResolutionMetric ?? null,
 				resolutionMetricDays ?? [],
-				loadedResolutionDisplayRange,
+				loadedDisplayRange,
 			),
-		[latestResolutionMetric, resolutionMetricDays, loadedResolutionDisplayRange],
+		[latestResolutionMetric, resolutionMetricDays, loadedDisplayRange],
 	);
 
 	const observedLabel =
@@ -532,7 +429,7 @@ const IdentityOverview = () => {
 				referenceDate: resolutionComparisonDate,
 			}
 		: undefined;
-	const shouldShowResolutionStructure = isResolutionLoading || resolutionError != null || latestResolution != null;
+	const shouldShowResolutionStructure = isInitialLoading || chartError != null || latestResolution != null;
 	const resolutionDistributionTemporalLabel =
 		latestResolution == null ? '' : `Completed ${formatUTCTimestamp(latestResolution.observedAt)} UTC`;
 	const processedTypeDistribution =
@@ -562,46 +459,14 @@ const IdentityOverview = () => {
 	};
 
 	const onIdentityConnectionChange = (connection: string) => {
-		connectionRequestVersion.current += 1;
-		selectedIdentityConnectionRef.current = connection;
+		if (connection === selectedIdentityConnection) {
+			loadMetrics();
+			return;
+		}
 		setSelectedIdentityConnection(connection);
-		setConnectionIdentityError(undefined);
-		setConnectionIdentityMetricDays(undefined);
-		if (connection === '') {
-			setIsConnectionIdentityLoading(false);
-			return;
-		}
-
-		const latest = latestIdentityMetricRef.current;
-		if (latest == null) {
-			setIsConnectionIdentityLoading(false);
-			return;
-		}
-		loadConnectionIdentityMetrics(latest, connection, displayRange);
 	};
 
-	const refreshDashboard = async () => {
-		setIsRefreshing(true);
-		setIdentityError(undefined);
-		try {
-			let shouldLoadIdentity = true;
-			try {
-				await api.workspaces.refreshIdentityMetrics();
-				latestIdentityMetricRef.current = undefined;
-			} catch (err) {
-				shouldLoadIdentity = false;
-				setIdentityError(getErrorMessage(err));
-			}
-
-			latestResolutionMetricRef.current = undefined;
-			await Promise.all([
-				loadMetrics({ shouldLoadIdentity, shouldPreserveData: true }),
-				loadResolutionRuns(true),
-			]);
-		} finally {
-			setIsRefreshing(false);
-		}
-	};
+	const refreshDashboard = () => loadMetrics(true);
 
 	const onCustomRangeChange = (selection: SegmentedDateRangeSelection[]) => {
 		const range = selection[0];
@@ -628,13 +493,7 @@ const IdentityOverview = () => {
 						size='small'
 						onClick={refreshDashboard}
 						loading={isRefreshing}
-						disabled={
-							isRefreshing ||
-							isIdentityLoading ||
-							isConnectionIdentityLoading ||
-							isResolutionLoading ||
-							isResolutionRunsLoading
-						}
+						disabled={isLoading}
 					>
 						<SlIcon slot='prefix' name='arrow-clockwise' />
 						Refresh
@@ -654,11 +513,11 @@ const IdentityOverview = () => {
 			</div>
 
 			<section className='identity-dashboard__section'>
-				{resolutionError && (
+				{dashboardError != null && (
 					<StateMessage
 						variant='error'
-						title='Identity resolution metrics are unavailable'
-						description={resolutionError}
+						title='Dashboard data could not be loaded'
+						description={dashboardError}
 						compact={true}
 					/>
 				)}
@@ -692,13 +551,13 @@ const IdentityOverview = () => {
 								)
 							}
 							subtleBackground={true}
-							loading={isResolutionLoading}
+							loading={isInitialLoading}
 						/>
 						<KpiCard
 							title='Unified profiles'
 							value={latestResolution == null ? '—' : formatNumber(latestResolution.profiles.total)}
 							comparison={unifiedProfilesComparison}
-							loading={isResolutionLoading}
+							loading={isInitialLoading}
 						/>
 						<KpiCard
 							title='Identities per profile'
@@ -706,7 +565,7 @@ const IdentityOverview = () => {
 							info='Average number of identities linked to each unified profile, based on the latest successful identity resolution run.'
 							value={formatNullableRatio(latestResolution?.identitiesPerProfile ?? null)}
 							comparison={identitiesPerProfileComparison}
-							loading={isResolutionLoading}
+							loading={isInitialLoading}
 						/>
 						<KpiCard
 							title='Identity link rate'
@@ -714,7 +573,7 @@ const IdentityOverview = () => {
 							info='Share of identities that are part of a unified profile with multiple identities, based on the latest successful identity resolution run.'
 							value={latestResolution == null ? '—' : formatRate(latestResolution.linkedIdentitiesRate)}
 							comparison={identityLinkRateComparison}
-							loading={isResolutionLoading}
+							loading={isInitialLoading}
 						/>
 					</div>
 				)}
@@ -722,30 +581,30 @@ const IdentityOverview = () => {
 					<TypeDistributionCard
 						processed={processedTypeDistribution}
 						unified={unifiedTypeDistribution}
-						loading={isResolutionLoading}
-						error={resolutionError}
+						loading={isInitialLoading}
+						error={chartError}
 					/>
 					{shouldShowResolutionStructure ? (
 						<>
-							{!isResolutionLoading && resolutionError == null && !hasResolutionInPeriod ? (
+							{!isInitialLoading && chartError == null && !hasResolutionInPeriod ? (
 								<ResolutionPeriodEmptyState />
 							) : (
 								<ResolutionEffectivenessChart
 									data={resolutionEffectivenessData}
-									loading={isResolutionLoading}
-									error={resolutionError}
+									loading={isInitialLoading}
+									error={chartError}
 								/>
 							)}
 							<ProfilesChart
 								days={unifiedProfileHistoryData}
-								loading={isResolutionLoading}
-								error={resolutionError}
+								loading={isInitialLoading}
+								error={chartError}
 							/>
 							<ProfileComposition
 								profiles={latestResolution?.profiles.total ?? 0}
 								composition={latestResolution?.composition}
-								loading={isResolutionLoading}
-								error={resolutionError}
+								loading={isInitialLoading}
+								error={chartError}
 							/>
 						</>
 					) : (
@@ -760,29 +619,13 @@ const IdentityOverview = () => {
 					secondary={observedLabel == null ? undefined : <>(as of {observedLabel})</>}
 					info='The latest available identity state for your workspace. Values are point-in-time, not cumulative.'
 				/>
-				{identityError && (
-					<StateMessage
-						variant='error'
-						title='Current identity state is unavailable'
-						description={identityError}
-						compact={true}
-					/>
-				)}
-				{identityHistoryError && (
-					<StateMessage
-						variant='error'
-						title='Identity history could not be loaded'
-						description={identityHistoryError}
-						compact={true}
-					/>
-				)}
 				<div className='identity-dashboard__kpi-grid'>
 					<KpiCard
 						title='Total identities'
 						value={latestIdentityMetric == null ? '—' : formatNumber(latestIdentityMetric.total)}
 						secondary={observedLabel == null ? undefined : <>As of {observedLabel}</>}
 						subtleBackground={true}
-						loading={isIdentityLoading}
+						loading={isInitialLoading}
 					/>
 					<KpiCard
 						title='Since last resolution'
@@ -803,7 +646,7 @@ const IdentityOverview = () => {
 							)
 						}
 						sparklinePoints={identitiesChangeSinceResolutionPoints}
-						loading={isIdentityLoading || isResolutionLoading}
+						loading={isInitialLoading}
 					/>
 					<KpiCard
 						title='Over the last 7 days'
@@ -815,7 +658,7 @@ const IdentityOverview = () => {
 								: `from ${formatComparisonDate(sevenDayTrend.referenceDay, sevenDayTrend.currentDay)}`
 						}
 						sparklinePoints={latestIdentityMetric == null ? undefined : sevenDayTrend.points}
-						loading={isIdentityLoading}
+						loading={isInitialLoading}
 					/>
 					<KpiCard
 						title='Over the last 30 days'
@@ -827,29 +670,30 @@ const IdentityOverview = () => {
 								: `from ${formatComparisonDate(thirtyDayTrend.referenceDay, thirtyDayTrend.currentDay)}`
 						}
 						sparklinePoints={latestIdentityMetric == null ? undefined : thirtyDayTrend.points}
-						loading={isIdentityLoading}
+						loading={isInitialLoading}
 					/>
 				</div>
 				<div className='identity-dashboard__current-charts'>
 					<IdentitiesChart
 						days={identityChartDays}
-						loading={isIdentityChartLoading}
-						error={identityChartError}
+						loading={isInitialLoading}
+						error={chartError}
 						connectionOptions={identityConnectionOptions}
-						selectedConnection={selectedIdentityConnection}
+						selectedConnection={loadedIdentityConnection}
 						onConnectionChange={onIdentityConnectionChange}
+						disabled={isRefreshing}
 					/>
 					<ConnectionsChart
 						data={connectionBars}
 						totalIdentities={latestIdentityMetric?.total ?? null}
 						observedLabel={connectionObservedLabel}
-						loading={isIdentityLoading}
-						error={identityError}
+						loading={isInitialLoading}
+						error={chartError}
 					/>
 				</div>
 			</section>
 
-			<HistorySection runs={resolutionRuns} loading={isResolutionRunsLoading} error={resolutionRunsError} />
+			<HistorySection runs={resolutionRuns} loading={isInitialLoading} error={chartError} />
 		</main>
 	);
 };
