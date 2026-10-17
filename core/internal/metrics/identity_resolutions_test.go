@@ -13,27 +13,6 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// identityResolutionDayExpectation holds the expected counts and ratios
-// for one day of Identity Resolution history.
-type identityResolutionDayExpectation struct {
-	identities           int
-	profiles             int
-	profilesAnonymous    int
-	profilesRecognized   int
-	identitiesPerProfile float64
-	linkedIdentitiesRate float64
-}
-
-// persistedIdentityResolutionMetric holds an Identity Resolution snapshot
-// read from the database for test assertions.
-type persistedIdentityResolutionMetric struct {
-	day         time.Time
-	observedAt  time.Time
-	profiles    warehouses.Counts
-	identities  warehouses.Counts
-	composition warehouses.IdentityResolutionComposition
-}
-
 // TestIdentityResolutionMetricsPerDateAndLatest verifies the latest snapshot,
 // derived metrics, daily history with carry-forward, date boundaries, zero
 // counts, and behavior when no resolution results exist.
@@ -278,6 +257,27 @@ func TestIdentityResolutionMetricsRecord(t *testing.T) {
 		t.Fatalf("expected complete newer counts %#v, got %#v", newerCounts, row)
 	}
 
+}
+
+// identityResolutionDayExpectation holds the expected counts and ratios
+// for one day of Identity Resolution history.
+type identityResolutionDayExpectation struct {
+	identities           int
+	profiles             int
+	profilesAnonymous    int
+	profilesRecognized   int
+	identitiesPerProfile float64
+	linkedIdentitiesRate float64
+}
+
+// persistedIdentityResolutionMetric holds an Identity Resolution snapshot
+// read from the database for test assertions.
+type persistedIdentityResolutionMetric struct {
+	day         time.Time
+	observedAt  time.Time
+	profiles    warehouses.Counts
+	identities  warehouses.Counts
+	composition warehouses.IdentityResolutionComposition
 }
 
 // assertIdentityResolutionFloat checks a floating-point metric against its
