@@ -488,7 +488,7 @@ const IdentityOverview = () => {
 				</div>
 				<div className='identity-dashboard__page-actions'>
 					<SlButton
-						className='segmented-date-range-button'
+						className='identity-dashboard__refresh'
 						variant='default'
 						size='small'
 						onClick={refreshDashboard}

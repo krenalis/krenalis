@@ -44,6 +44,15 @@
 	flex-shrink: 0;
 }
 
+.identity-dashboard__refresh::part(base) {
+	padding-right: 15px;
+	padding-left: 15px;
+}
+
+.identity-dashboard__refresh[variant='default']::part(base) {
+	background: var(--bg-primary);
+}
+
 .identity-dashboard__section {
 	margin-top: 14px;
 }
