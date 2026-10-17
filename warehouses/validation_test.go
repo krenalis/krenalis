@@ -74,7 +74,7 @@ func TestValidateIdentityCounts(t *testing.T) {
 }
 
 // TestValidateIdentityResolutionCounts verifies that valid counts are accepted
-// and invalid, inconsistent, or unrepresentable counts are rejected.
+// and negative, inconsistent, overflowing, or unsupported counts are rejected.
 func TestValidateIdentityResolutionCounts(t *testing.T) {
 
 	quarterMax := math.MaxInt / 4
@@ -110,8 +110,12 @@ func TestValidateIdentityResolutionCounts(t *testing.T) {
 			},
 		},
 		{
-			name:    "negative profile count",
-			counts:  &warehouses.IdentityResolutionCounts{Profiles: warehouses.Counts{Anonymous: -1}},
+			name: "negative profile count offset by positive count",
+			counts: &warehouses.IdentityResolutionCounts{
+				Profiles:    warehouses.Counts{Anonymous: -1, Recognized: 2},
+				Identities:  warehouses.Counts{Recognized: 2},
+				Composition: warehouses.IdentityResolutionComposition{Two: 1},
+			},
 			wantErr: true,
 		},
 		{
@@ -128,9 +132,11 @@ func TestValidateIdentityResolutionCounts(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "negative composition count",
+			name: "negative composition count offset by positive count",
 			counts: &warehouses.IdentityResolutionCounts{
-				Composition: warehouses.IdentityResolutionComposition{One: -1},
+				Profiles:    warehouses.Counts{Recognized: 21},
+				Identities:  warehouses.Counts{Recognized: 21},
+				Composition: warehouses.IdentityResolutionComposition{One: 22, MoreThanTwenty: -1},
 			},
 			wantErr: true,
 		},
@@ -190,7 +196,7 @@ func TestValidateIdentityResolutionCounts(t *testing.T) {
 			name: "profile total exceeds supported maximum",
 			counts: &warehouses.IdentityResolutionCounts{
 				Profiles:    warehouses.Counts{Anonymous: math.MaxInt32, Recognized: 1},
-				Identities:  warehouses.Counts{Anonymous: math.MaxInt32, Recognized: 1},
+				Identities:  warehouses.Counts{Anonymous: math.MaxInt32, Recognized: 2},
 				Composition: warehouses.IdentityResolutionComposition{One: math.MaxInt32, Two: 1},
 			},
 			wantErr: true,
@@ -229,7 +235,7 @@ func TestValidateIdentityResolutionCounts(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "valid unrepresentable upper bound",
+			name: "valid maximum identity count with unbounded composition",
 			counts: &warehouses.IdentityResolutionCounts{
 				Profiles:    warehouses.Counts{Anonymous: 1},
 				Identities:  warehouses.Counts{Anonymous: math.MaxInt},
