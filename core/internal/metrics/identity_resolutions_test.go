@@ -13,8 +13,8 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// identityResolutionDayExpectation contains the expected fields for a
-// historical Identity Resolution day.
+// identityResolutionDayExpectation holds the expected counts and ratios
+// for one day of Identity Resolution history.
 type identityResolutionDayExpectation struct {
 	identities           int
 	profiles             int
@@ -24,8 +24,8 @@ type identityResolutionDayExpectation struct {
 	linkedIdentitiesRate float64
 }
 
-// persistedIdentityResolutionMetric contains the persisted fields used to
-// verify an Identity Resolution result.
+// persistedIdentityResolutionMetric holds an Identity Resolution snapshot
+// read from the database for test assertions.
 type persistedIdentityResolutionMetric struct {
 	day         time.Time
 	observedAt  time.Time
@@ -34,9 +34,9 @@ type persistedIdentityResolutionMetric struct {
 	composition warehouses.IdentityResolutionComposition
 }
 
-// TestIdentityResolutionMetricsPerDateAndLatest verifies latest mapping,
-// derived values, dense carry-forward history, leading-gap omission, zero
-// semantics, and behavior when no successful Identity Resolution exists.
+// TestIdentityResolutionMetricsPerDateAndLatest verifies the latest snapshot,
+// derived metrics, daily history with carry-forward, date boundaries, zero
+// counts, and behavior when no resolution results exist.
 func TestIdentityResolutionMetricsPerDateAndLatest(t *testing.T) {
 
 	database := newIdentityMetricsTestDatabase(t)
@@ -45,8 +45,11 @@ func TestIdentityResolutionMetricsPerDateAndLatest(t *testing.T) {
 	workspace := "resoiution11"
 	zeroWorkspace := "workspace111"
 	emptyWorkspace := "workspace222"
+	singletonWorkspace := "workspace333"
 	start := time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2026, time.August, 6, 0, 0, 0, 0, time.UTC)
+	// August 2 starts the history; August 4 replaces it with a valid zero state.
+	// August 10 supplies the latest result outside the requested history range.
 	_, err := database.Exec(ctx, `INSERT INTO identity_resolution_metrics
 		(workspace, day, observed_at,
 		profiles_anonymous, profiles_recognized, identities_anonymous, identities_recognized,
@@ -55,13 +58,15 @@ func TestIdentityResolutionMetricsPerDateAndLatest(t *testing.T) {
 		composition_more_than_twenty)
 		VALUES
 		($1, '2026-08-02', '10:05:00',
-		 2, 3, 6, 4, 2, 2, 0, 1, 0, 0),
+		 2, 3, 9, 4, 2, 2, 0, 1, 0, 0),
 		($1, '2026-08-04', '10:05:00',
 		 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
 		($1, '2026-08-10', '09:15:00',
 		 9, 12, 100, 150, 1, 2, 3, 4, 5, 6),
 		($2, '2026-08-10', '10:15:00',
-		 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)`, workspace, zeroWorkspace)
+		 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+		($3, '2026-08-02', '10:05:00',
+		 2, 3, 2, 3, 5, 0, 0, 0, 0, 0)`, workspace, zeroWorkspace, singletonWorkspace)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -87,18 +92,18 @@ func TestIdentityResolutionMetricsPerDateAndLatest(t *testing.T) {
 	}) {
 		t.Fatalf("expected composition 1/2/3/4/5/6, got %#v", latest.Composition)
 	}
-	assertIdentityResolutionFloat(t, latest.IdentitiesPerProfile, 250.0/21.0)
-	assertIdentityResolutionFloat(t, latest.LinkedIdentitiesRate, 249.0/250.0)
+	assertIdentityResolutionFloat(t, "latest identities per profile", latest.IdentitiesPerProfile, 250.0/21.0)
+	assertIdentityResolutionFloat(t, "latest linked identities rate", latest.LinkedIdentitiesRate, 249.0/250.0)
 
 	days, err := resolutions.MetricsPerDate(ctx, workspace, start, end)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	assertIdentityResolutionMetricDays(t, days, start.AddDate(0, 0, 1), []identityResolutionDayExpectation{
-		{identities: 10, profiles: 5, profilesAnonymous: 2, profilesRecognized: 3,
-			identitiesPerProfile: 2.0, linkedIdentitiesRate: 0.8},
-		{identities: 10, profiles: 5, profilesAnonymous: 2, profilesRecognized: 3,
-			identitiesPerProfile: 2.0, linkedIdentitiesRate: 0.8},
+		{identities: 13, profiles: 5, profilesAnonymous: 2, profilesRecognized: 3,
+			identitiesPerProfile: 2.6, linkedIdentitiesRate: 11.0 / 13.0},
+		{identities: 13, profiles: 5, profilesAnonymous: 2, profilesRecognized: 3,
+			identitiesPerProfile: 2.6, linkedIdentitiesRate: 11.0 / 13.0},
 		{},
 		{},
 	})
@@ -108,9 +113,76 @@ func TestIdentityResolutionMetricsPerDateAndLatest(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	assertIdentityResolutionMetricDays(t, seeded, seedStart, []identityResolutionDayExpectation{
-		{identities: 10, profiles: 5, profilesAnonymous: 2, profilesRecognized: 3,
-			identitiesPerProfile: 2.0, linkedIdentitiesRate: 0.8},
+		{identities: 13, profiles: 5, profilesAnonymous: 2, profilesRecognized: 3,
+			identitiesPerProfile: 2.6, linkedIdentitiesRate: 11.0 / 13.0},
 		{},
+	})
+
+	for _, test := range []struct {
+		name       string
+		start, end time.Time
+		want       []identityResolutionDayExpectation
+	}{
+		{
+			name:  "latest prior observation without updates",
+			start: time.Date(2026, time.August, 5, 0, 0, 0, 0, time.UTC),
+			end:   time.Date(2026, time.August, 7, 0, 0, 0, 0, time.UTC),
+			want:  []identityResolutionDayExpectation{{}, {}},
+		},
+		{
+			name:  "observation at start replaces prior state",
+			start: time.Date(2026, time.August, 4, 0, 0, 0, 0, time.UTC),
+			end:   time.Date(2026, time.August, 6, 0, 0, 0, 0, time.UTC),
+			want:  []identityResolutionDayExpectation{{}, {}},
+		},
+		{
+			name:  "observation at end is excluded",
+			start: time.Date(2026, time.August, 2, 0, 0, 0, 0, time.UTC),
+			end:   time.Date(2026, time.August, 4, 0, 0, 0, 0, time.UTC),
+			want: []identityResolutionDayExpectation{
+				{identities: 13, profiles: 5, profilesAnonymous: 2, profilesRecognized: 3,
+					identitiesPerProfile: 2.6, linkedIdentitiesRate: 11.0 / 13.0},
+				{identities: 13, profiles: 5, profilesAnonymous: 2, profilesRecognized: 3,
+					identitiesPerProfile: 2.6, linkedIdentitiesRate: 11.0 / 13.0},
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			days, err := resolutions.MetricsPerDate(t.Context(), workspace, test.start, test.end)
+			if err != nil {
+				t.Fatalf("expected daily metrics, got %v", err)
+			}
+			assertIdentityResolutionMetricDays(t, days, test.start, test.want)
+		})
+	}
+
+	t.Run("single-identity profiles", func(t *testing.T) {
+
+		latest, err := resolutions.Latest(t.Context(), singletonWorkspace)
+		if err != nil {
+			t.Fatalf("expected latest metric for single-identity profiles, got %v", err)
+		}
+		if latest == nil {
+			t.Fatal("expected latest metric for single-identity profiles, got nil")
+		}
+		if latest.Identities.Total != 5 || latest.Profiles.Total != 5 || latest.Composition.One != 5 {
+			t.Fatalf("expected 5 identities in 5 single-identity profiles, got %#v", latest)
+		}
+		assertIdentityResolutionFloat(t, "latest identities per profile", latest.IdentitiesPerProfile, 1)
+		assertIdentityResolutionFloat(t, "latest linked identities rate", latest.LinkedIdentitiesRate, 0)
+
+		start := time.Date(2026, time.August, 2, 0, 0, 0, 0, time.UTC)
+		days, err := resolutions.MetricsPerDate(t.Context(), singletonWorkspace, start, start.AddDate(0, 0, 2))
+		if err != nil {
+			t.Fatalf("expected daily metrics for single-identity profiles, got %v", err)
+		}
+		assertIdentityResolutionMetricDays(t, days, start, []identityResolutionDayExpectation{
+			{identities: 5, profiles: 5, profilesAnonymous: 2, profilesRecognized: 3,
+				identitiesPerProfile: 1, linkedIdentitiesRate: 0},
+			{identities: 5, profiles: 5, profilesAnonymous: 2, profilesRecognized: 3,
+				identitiesPerProfile: 1, linkedIdentitiesRate: 0},
+		})
+
 	})
 
 	zeroLatest, err := resolutions.Latest(ctx, zeroWorkspace)
@@ -125,8 +197,8 @@ func TestIdentityResolutionMetricsPerDateAndLatest(t *testing.T) {
 		zeroLatest.Composition != (IdentityResolutionComposition{}) {
 		t.Fatalf("expected zero Identity Resolution counts, got %#v", zeroLatest)
 	}
-	assertIdentityResolutionFloat(t, zeroLatest.IdentitiesPerProfile, 0)
-	assertIdentityResolutionFloat(t, zeroLatest.LinkedIdentitiesRate, 0)
+	assertIdentityResolutionFloat(t, "zero latest identities per profile", zeroLatest.IdentitiesPerProfile, 0)
+	assertIdentityResolutionFloat(t, "zero latest linked identities rate", zeroLatest.LinkedIdentitiesRate, 0)
 
 	empty, err := resolutions.MetricsPerDate(ctx, emptyWorkspace, start, end)
 	if err != nil {
@@ -145,8 +217,9 @@ func TestIdentityResolutionMetricsPerDateAndLatest(t *testing.T) {
 
 }
 
-// TestIdentityResolutionMetricsRecord verifies exact recording, equal-timestamp
-// preservation, same-day replacement, and out-of-order protection.
+// TestIdentityResolutionMetricsRecord verifies persisted timestamps and counts,
+// same-day updates, and that observations with equal or older timestamps
+// do not overwrite existing results.
 func TestIdentityResolutionMetricsRecord(t *testing.T) {
 
 	database := newIdentityMetricsTestDatabase(t)
@@ -184,8 +257,17 @@ func TestIdentityResolutionMetricsRecord(t *testing.T) {
 			One: 2, Two: 3, Three: 4, FourToTen: 5, ElevenToTwenty: 6, MoreThanTwenty: 7,
 		},
 	}
-	newerObservedAt := observedAt.Add(time.Hour)
+	newerObservedAt := observedAt.Add(time.Microsecond)
 	recordIdentityResolutionResult(t, database, &recorder, "workspace111", newerObservedAt, newerCounts)
+	row = readIdentityResolutionMetric(t, database, "workspace111", day)
+	if !row.observedAt.Equal(newerObservedAt) {
+		t.Fatalf("expected updated observation timestamp %s, got %s", newerObservedAt, row.observedAt)
+	}
+	if row.profiles != newerCounts.Profiles || row.identities != newerCounts.Identities ||
+		row.composition != newerCounts.Composition {
+		t.Fatalf("expected updated counts %#v, got %#v", newerCounts, row)
+	}
+
 	recordIdentityResolutionResult(t, database, &recorder, "workspace111", observedAt, counts)
 	row = readIdentityResolutionMetric(t, database, "workspace111", day)
 	if !row.observedAt.Equal(newerObservedAt) {
@@ -198,35 +280,46 @@ func TestIdentityResolutionMetricsRecord(t *testing.T) {
 
 }
 
-// assertIdentityResolutionFloat verifies a floating-point metric.
-func assertIdentityResolutionFloat(t *testing.T, got, want float64) {
+// assertIdentityResolutionFloat checks a floating-point metric against its
+// expected value.
+func assertIdentityResolutionFloat(t *testing.T, metric string, got, want float64) {
 	t.Helper()
 	if math.IsNaN(got) || math.Abs(got-want) > 1e-12 {
-		t.Fatalf("expected %v, got %v", want, got)
+		t.Errorf("expected %s %v, got %v", metric, want, got)
 	}
 }
 
-// assertIdentityResolutionMetricDays verifies dense Identity Resolution history
-// and its derived values.
+// assertIdentityResolutionMetricDays verifies consecutive daily metrics and
+// their derived values.
 func assertIdentityResolutionMetricDays(t *testing.T, got []IdentityResolutionMetricDay, start time.Time, want []identityResolutionDayExpectation) {
+
 	t.Helper()
 	if len(got) != len(want) {
 		t.Fatalf("expected %d Identity Resolution days, got %d", len(want), len(got))
 	}
+
 	for index := range want {
 		expectedDay := start.AddDate(0, 0, index)
 		if got[index].Day != expectedDay {
-			t.Fatalf("expected day %s, got %s", expectedDay, got[index].Day)
+			t.Errorf("expected day %s, got %s", expectedDay, got[index].Day)
 		}
-		if got[index].Identities != want[index].identities ||
-			got[index].Profiles != want[index].profiles ||
-			got[index].ProfilesAnonymous != want[index].profilesAnonymous ||
-			got[index].ProfilesRecognized != want[index].profilesRecognized {
-			t.Fatalf("expected counts %#v, got %#v", want[index], got[index])
+		day := expectedDay.Format(time.DateOnly)
+		if got[index].Identities != want[index].identities {
+			t.Errorf("expected identities on %s to be %d, got %d", day, want[index].identities, got[index].Identities)
 		}
-		assertIdentityResolutionFloat(t, got[index].IdentitiesPerProfile, want[index].identitiesPerProfile)
-		assertIdentityResolutionFloat(t, got[index].LinkedIdentitiesRate, want[index].linkedIdentitiesRate)
+		if got[index].Profiles != want[index].profiles {
+			t.Errorf("expected profiles on %s to be %d, got %d", day, want[index].profiles, got[index].Profiles)
+		}
+		if got[index].ProfilesAnonymous != want[index].profilesAnonymous {
+			t.Errorf("expected anonymous profiles on %s to be %d, got %d", day, want[index].profilesAnonymous, got[index].ProfilesAnonymous)
+		}
+		if got[index].ProfilesRecognized != want[index].profilesRecognized {
+			t.Errorf("expected recognized profiles on %s to be %d, got %d", day, want[index].profilesRecognized, got[index].ProfilesRecognized)
+		}
+		assertIdentityResolutionFloat(t, "identities per profile on "+day, got[index].IdentitiesPerProfile, want[index].identitiesPerProfile)
+		assertIdentityResolutionFloat(t, "linked identities rate on "+day, got[index].LinkedIdentitiesRate, want[index].linkedIdentitiesRate)
 	}
+
 }
 
 // readIdentityResolutionMetric reads a persisted Identity Resolution snapshot
