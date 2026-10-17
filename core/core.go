@@ -1893,7 +1893,15 @@ func (core *Core) executeIdentityResolution(workspaceID, opID string) {
 			// Try again to do the query and send the notification.
 			continue
 		}
-		// No errors: break the loop.
+		// Refresh identity metrics after a successful resolution has been committed.
+		if successful {
+			err = core.metrics.Identities.Refresh(ctx, n.Workspace)
+			if err != nil {
+				slog.Error("core: cannot refresh identity metrics at the end of identity resolution",
+					"workspace", n.Workspace, "operation", n.ID, "error", err)
+			}
+		}
+		// Finalization is complete even if the metrics refresh failed.
 		break
 	}
 }

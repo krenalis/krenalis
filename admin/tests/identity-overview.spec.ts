@@ -49,6 +49,29 @@ test('shows unavailable current state when latest fails', async ({ page }) => {
 	).toHaveText('—');
 });
 
+test('hides the since-resolution comparison until identities have been observed after resolution', async ({ page }) => {
+	await page.evaluate(() => {
+		window.identityOverviewScenario = 'resolution';
+	});
+	await page.addScriptTag({ content: componentScript });
+	const card = page.locator('.identity-dashboard__kpi').filter({ hasText: 'Since last resolution' });
+	await expect(card.locator('.identity-dashboard__kpi-value')).toHaveText('—');
+	await expect(card.locator('.identity-dashboard__sparkline')).toHaveCount(0);
+	await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+	await expect(card.locator('.identity-dashboard__kpi-value')).toHaveText('-2 identities');
+	await expect(card.locator('.identity-dashboard__sparkline')).toBeVisible();
+});
+
+test('shows the since-resolution comparison for observations with equal timestamps', async ({ page }) => {
+	await page.evaluate(() => {
+		window.identityOverviewScenario = 'resolutionAtIdentity';
+	});
+	await page.addScriptTag({ content: componentScript });
+	const card = page.locator('.identity-dashboard__kpi').filter({ hasText: 'Since last resolution' });
+	await expect(card.locator('.identity-dashboard__kpi-value')).toHaveText('-2 identities');
+	await expect(card.locator('.identity-dashboard__sparkline')).toBeVisible();
+});
+
 test('preserves resolution empty states when an unauthorized response has no error message', async ({ page }) => {
 	await page.evaluate(() => {
 		window.identityOverviewScenario = 'resolutionUnauthorized';

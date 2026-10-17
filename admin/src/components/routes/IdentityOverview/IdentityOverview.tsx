@@ -490,16 +490,24 @@ const IdentityOverview = () => {
 		latestResolution == null || temporalSemantics.latestIdentityDay == null
 			? latestResolutionUTCTimestamp
 			: formatResolutionComparisonUTCTimestamp(latestResolution.observedAt, temporalSemantics.latestIdentityDay);
-	const identitiesChangeSinceResolution = calculateIdentityChangeSinceResolution(
-		latestIdentityMetric == null ? null : Number(latestIdentityMetric.total),
-		latestResolution == null ? null : Number(latestResolution.identities.total),
-	);
-	const identitiesChangeSinceResolutionPoints = buildIdentityChangeSinceResolutionPoints(
-		latestIdentityMetric?.observedAt ?? null,
-		latestIdentityMetric == null ? null : Number(latestIdentityMetric.total),
-		latestResolution?.observedAt ?? null,
-		latestResolution == null ? null : Number(latestResolution.identities.total),
-	);
+	const canCompareIdentitiesSinceResolution =
+		latestIdentityMetric != null &&
+		latestResolution != null &&
+		Date.parse(latestIdentityMetric.observedAt) >= Date.parse(latestResolution.observedAt);
+	const identitiesChangeSinceResolution = canCompareIdentitiesSinceResolution
+		? calculateIdentityChangeSinceResolution(
+				Number(latestIdentityMetric.total),
+				Number(latestResolution.identities.total),
+			)
+		: null;
+	const identitiesChangeSinceResolutionPoints = canCompareIdentitiesSinceResolution
+		? buildIdentityChangeSinceResolutionPoints(
+				latestIdentityMetric.observedAt,
+				Number(latestIdentityMetric.total),
+				latestResolution.observedAt,
+				Number(latestResolution.identities.total),
+			)
+		: [];
 	const resolutionComparisonDate = formatComparisonDate(
 		resolutionKpiComparison.previousEnd,
 		latestResolution == null ? resolutionKpiComparison.previousEnd : instantToDateKey(latestResolution.observedAt),

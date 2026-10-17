@@ -14,6 +14,8 @@ declare global {
 			| 'removed'
 			| 'singleDay'
 			| 'singleDayZero'
+			| 'resolution'
+			| 'resolutionAtIdentity'
 			| 'resolutionUnauthorized';
 		identityOverviewRequests: string[];
 	}
@@ -29,7 +31,29 @@ window.fetch = async (input) => {
 		if (window.identityOverviewScenario === 'resolutionUnauthorized') {
 			return new Response('{"error":{}}', { status: 401, headers: { 'Content-Type': 'application/json' } });
 		}
+		if (
+			window.identityOverviewScenario === 'resolution' ||
+			window.identityOverviewScenario === 'resolutionAtIdentity'
+		) {
+			return new Response(
+				JSON.stringify({
+					observedAt:
+						window.identityOverviewScenario === 'resolutionAtIdentity'
+							? '2026-08-02T12:00:00Z'
+							: '2026-08-02T13:00:00Z',
+					identities: { total: 10, anonymous: 0, recognized: 10 },
+					profiles: { total: 5, anonymous: 0, recognized: 5 },
+					composition: { one: 0, two: 5, three: 0, fourToTen: 0, elevenToTwenty: 0, moreThanTwenty: 0 },
+					identitiesPerProfile: 2,
+					linkedIdentitiesRate: 1,
+				}),
+				{ headers: { 'Content-Type': 'application/json' } },
+			);
+		}
 		return new Response('null', { headers: { 'Content-Type': 'application/json' } });
+	}
+	if (url.includes('/metrics/identity-resolution/dates/')) {
+		return new Response('[]', { headers: { 'Content-Type': 'application/json' } });
 	}
 	if (url.includes('/identity-resolution/runs')) {
 		return new Response('{"runs":[]}', { headers: { 'Content-Type': 'application/json' } });
