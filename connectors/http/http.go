@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -82,7 +83,7 @@ func (h *HTTP) AbsolutePath(ctx context.Context, name string) (string, error) {
 		if c == '#' || (!parsingQuery && (c < ' ' || c == 0x7f)) {
 			return "", connectors.InvalidPathErrorf("path cannot contains “#“, and control characters")
 		}
-		if c == '%' && (i+2 < len(name) || !ishex(name[i+1]) || !ishex(name[i+2])) {
+		if c == '%' && (i+2 >= len(name) || !ishex(name[i+1]) || !ishex(name[i+2])) {
 			return "", connectors.InvalidPathErrorf("path contains an invalid escape sequence")
 		}
 		if c == '?' && !parsingQuery {
@@ -99,10 +100,16 @@ func (h *HTTP) AbsolutePath(ctx context.Context, name string) (string, error) {
 	if s.Port != 443 {
 		host = net.JoinHostPort(host, strconv.Itoa(s.Port))
 	}
+	// Escape the path while preserving its escape sequences. Every "%" in path
+	// starts a valid escape sequence, so "%25" in the escaped path can only
+	// come from escaping a "%" and PathUnescape cannot fail.
+	rawPath := strings.ReplaceAll((&url.URL{Path: path}).EscapedPath(), "%25", "%")
+	unescapedPath, _ := url.PathUnescape(path)
 	u := url.URL{
 		Scheme:   "https",
 		Host:     host,
-		Path:     path,
+		Path:     unescapedPath,
+		RawPath:  rawPath,
 		RawQuery: query,
 	}
 	return u.String(), nil
