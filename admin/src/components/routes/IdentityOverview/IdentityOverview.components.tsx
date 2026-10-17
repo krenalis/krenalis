@@ -605,14 +605,6 @@ const ProfilesChart = ({ days, loading, error }: ProfilesChartProps) => {
 	);
 };
 
-interface ConnectionsChartProps {
-	data: ConnectionBar[];
-	totalIdentities: number | null;
-	observedLabel?: string;
-	loading: boolean;
-	error?: string;
-}
-
 interface ConnectionTooltipProps {
 	active?: boolean;
 	connection?: ConnectionBar;
@@ -680,6 +672,14 @@ const ConnectionAxisTick = ({ x = 0, y = 0, index = 0, data, totalIdentities }: 
 		</g>
 	);
 };
+
+interface ConnectionsChartProps {
+	data: ConnectionBar[];
+	totalIdentities: number | null;
+	observedLabel?: string;
+	loading: boolean;
+	error?: string;
+}
 
 const ConnectionsChart = ({ data, totalIdentities, observedLabel, loading, error }: ConnectionsChartProps) => {
 	return (
