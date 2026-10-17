@@ -153,7 +153,7 @@ const IdentityOverview = () => {
 	const previousSourceConnectionCatalogKey = useRef<string>(sourceConnectionCatalogKey);
 
 	useLayoutEffect(() => {
-		setTitle('Profile Unification / Overview');
+		setTitle('Profile Unification / Identity dashboard');
 	}, [setTitle]);
 
 	useEffect(() => {
