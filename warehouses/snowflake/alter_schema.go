@@ -42,7 +42,7 @@ func (warehouse *Snowflake) AlterProfileSchema(ctx context.Context, opID string,
 	bo := backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
-		err2 := warehouse.setOperationAsCompleted(ctx, db, opID, operationErr)
+		err2 := warehouse.setOperationAsCompleted(ctx, db, opID, nil, operationErr)
 		if err2 != nil {
 			slog.Error("cannot set alter profile columns operation as completed, retrying",
 				"err", warehouses.NewOperationError(err2), "operationError", operationErr)
