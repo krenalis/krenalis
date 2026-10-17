@@ -55,8 +55,8 @@ type rawIdentity struct {
 	attributes   map[string]any
 }
 
-// logicalCounts contains the anonymous and recognized identity counts for a
-// materialized profile.
+// logicalCounts tracks the number of anonymous and recognized logical
+// identities.
 type logicalCounts struct {
 	anonymous  int
 	recognized int
@@ -89,14 +89,16 @@ func (loader *testSettingsLoader) Load(ctx context.Context, dst any) error {
 // TestWarehousesIdentityResolution tests the Identity Resolution.
 func TestWarehousesIdentityResolution(t *testing.T) {
 
-	tests := []struct {
+	type testCase struct {
 		name             string
 		identifiers      []string
 		primarySources   map[string]string
 		rawIdentities    []rawIdentity
 		expectedProfiles []map[string]any
 		expectedCounts   []logicalCounts
-	}{
+	}
+
+	tests := []testCase{
 		{
 			name:           "No identities",
 			identifiers:    []string{},
@@ -540,6 +542,28 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 		},
 	}
 
+	// Exercise the boundaries of the larger profile composition buckets.
+	for _, size := range []int{4, 10, 11, 20, 21} {
+		var identities []rawIdentity
+		for i := range size {
+			identities = append(identities, rawIdentity{
+				connection: identityResolutionConnection1,
+				pipeline:   identityResolutionPipeline1,
+				id:         fmt.Sprintf("identity-%d", i),
+				attributes: map[string]any{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
+			})
+		}
+		tests = append(tests, testCase{
+			name:          fmt.Sprintf("Profile with %d identities", size),
+			identifiers:   []string{"email"},
+			rawIdentities: identities,
+			expectedProfiles: []map[string]any{
+				{"email": "a@b", "first_name": nil, "last_name": nil, "notes": nil},
+			},
+			expectedCounts: []logicalCounts{{recognized: size}},
+		})
+	}
+
 	// Run the tests on PostgreSQL and Snowflake warehouse platforms.
 	platforms := warehouses.Platforms()
 	if len(platforms) == 0 {
@@ -630,6 +654,12 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 
 			mergeColumns := identitiesMergeColumns(columnByName)
 			profilesVersion := 0
+			var previousResolution struct {
+				opID           string
+				identifiers    []warehouses.Column
+				primarySources map[string]string
+				counts         warehouses.IdentityResolutionCounts
+			}
 
 			for _, test := range tests {
 				t.Run(test.name, func(t *testing.T) {
@@ -698,6 +728,20 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 						}
 					}
 					profilesVersion++
+
+					// Retry the previous operation after publishing different counts.
+					if previousResolution.opID != "" && previousResolution.counts != returnedCounts {
+						counts, err := dw.ResolveIdentities(t.Context(), previousResolution.opID, previousResolution.identifiers, columns, previousResolution.primarySources)
+						if err != nil {
+							t.Fatalf("expected previous resolution retry to succeed, got %v", err)
+						}
+						if counts == nil {
+							t.Fatal("expected previous resolution counts, got nil")
+						}
+						if *counts != previousResolution.counts {
+							t.Fatalf("expected previous resolution counts %v, got %v", previousResolution.counts, *counts)
+						}
+					}
 
 					// Read the profiles from the warehouse and check that they match with
 					// the expected ones.
@@ -775,6 +819,12 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 							t.Fatalf("expected logical identity counts %v, got %v", expectedCounts, gotCounts)
 						}
 					}
+
+					previousResolution.opID = opID.String()
+					previousResolution.identifiers = identifiers
+					previousResolution.primarySources = test.primarySources
+					previousResolution.counts = returnedCounts
+
 				})
 			}
 		})
@@ -782,8 +832,8 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 
 }
 
-// aggregateIdentityResolutionCounts derives Identity Resolution counts from
-// per-profile identity counts.
+// aggregateIdentityResolutionCounts aggregates per-profile identity counts
+// into Identity Resolution counts.
 func aggregateIdentityResolutionCounts(t *testing.T, profiles []logicalCounts) *warehouses.IdentityResolutionCounts {
 	t.Helper()
 	var counts warehouses.IdentityResolutionCounts
@@ -817,8 +867,8 @@ func aggregateIdentityResolutionCounts(t *testing.T, profiles []logicalCounts) *
 	return &counts
 }
 
-// readLogicalCounts reads the anonymous and recognized identity counts from
-// one materialized profile-table version.
+// readLogicalCounts reads the number of anonymous and recognized logical
+// identities for each profile from a data warehouse.
 func readLogicalCounts(t *testing.T, dw warehouses.Warehouse, profilesVersion int) []logicalCounts {
 	t.Helper()
 	countColumns := []warehouses.Column{
@@ -852,8 +902,6 @@ func readLogicalCounts(t *testing.T, dw warehouses.Warehouse, profilesVersion in
 	return counts
 }
 
-// sortLogicalCounts orders profile identity counts by anonymous count and then
-// by recognized count.
 func sortLogicalCounts(counts []logicalCounts) {
 	slices.SortFunc(counts, func(a, b logicalCounts) int {
 		if n := cmp.Compare(a.anonymous, b.anonymous); n != 0 {
