@@ -215,7 +215,7 @@ func assertColumnDoesNotExist(t *testing.T, database *db.DB, table, column strin
 	}
 }
 
-// assertConstraintExists verifies that table has a constraint with the given name.
+// assertConstraintExists verifies that table has the named constraint.
 func assertConstraintExists(t *testing.T, database *db.DB, table, constraint string) {
 	t.Helper()
 	exists, err := database.QueryExists(t.Context(), `
