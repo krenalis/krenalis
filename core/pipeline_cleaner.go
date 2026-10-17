@@ -138,7 +138,7 @@ func (c *pipelineCleaner) complete(f func() error) (bool, error) {
 
 // deleteDiscontinuedFunctions starts the deletion task for function that have
 // been discontinued and are no longer in use by any running pipelines.
-// It must be called in its own goroutine.
+// It must be started with c.start so that Close waits for its exit.
 //
 // A function is considered discontinued if:
 //
@@ -393,7 +393,7 @@ func (c *pipelineCleaner) start(f func()) {
 
 // terminateOrphanedRuns starts a termination task for pipeline runs whose node
 // is no longer running or has become unresponsive.
-// It must be called in its own goroutine.
+// It must be started with c.start so that Close waits for its exit.
 //
 // A pipeline run is considered orphaned if it has not yet been terminated and
 // its last ping time is older than 15 seconds.
