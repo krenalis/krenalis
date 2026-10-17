@@ -29,9 +29,6 @@ func TestIdentityMetricsSchema(t *testing.T) {
 		}
 	}
 	for table, constraints := range map[string][]string{
-		"identity_resolution_metrics": {
-			"identity_resolution_metrics_workspace_fkey",
-		},
 		"identity_metrics": {
 			"identity_metrics_workspace_fkey",
 		},
@@ -45,8 +42,38 @@ func TestIdentityMetricsSchema(t *testing.T) {
 	}
 	assertIndexNotExists(t, database, "identity_connection_metrics_connection_idx")
 
+	var workspaceConstraint string
+	err := database.QueryRow(ctx, `SELECT pg_get_constraintdef(oid)
+		FROM pg_constraint
+		WHERE conrelid = 'identity_resolution_metrics'::regclass
+			AND conname = 'identity_resolution_metrics_workspace_fkey'`).Scan(&workspaceConstraint)
+	if err != nil {
+		t.Fatalf("expected identity_resolution_metrics workspace constraint definition, got %v", err)
+	}
+	if want := "FOREIGN KEY (workspace) REFERENCES workspaces(id) ON DELETE CASCADE"; workspaceConstraint != want {
+		t.Fatalf("expected identity_resolution_metrics workspace constraint %q, got %q", want, workspaceConstraint)
+	}
+
+	for _, column := range []string{
+		"profiles_anonymous", "profiles_recognized", "identities_anonymous", "identities_recognized",
+		"composition_one", "composition_two", "composition_three", "composition_four_to_ten",
+		"composition_eleven_to_twenty", "composition_more_than_twenty",
+	} {
+		var dataType, nullable string
+		err := database.QueryRow(ctx, `SELECT data_type, is_nullable
+			FROM information_schema.columns
+			WHERE table_schema = current_schema() AND table_name = 'identity_resolution_metrics'
+				AND column_name = $1`, column).Scan(&dataType, &nullable)
+		if err != nil {
+			t.Fatalf("expected identity_resolution_metrics.%s column definition, got %v", column, err)
+		}
+		if dataType != "bigint" || nullable != "NO" {
+			t.Errorf("expected identity_resolution_metrics.%s to be bigint NOT NULL, got data_type=%q, is_nullable=%q", column, dataType, nullable)
+		}
+	}
+
 	var defaults int
-	err := database.QueryRow(ctx, `SELECT COUNT(*)
+	err = database.QueryRow(ctx, `SELECT COUNT(*)
 		FROM information_schema.columns
 		WHERE table_schema = current_schema()
 			AND table_name IN ('identity_resolution_metrics', 'identity_metrics', 'identity_connection_metrics')
@@ -151,14 +178,15 @@ func TestIdentityMetricsSchema(t *testing.T) {
 	if connectionRows != 0 {
 		t.Fatalf("expected deleting a connection to cascade its metric rows, got %d", connectionRows)
 	}
-	var parentRows int
-	err = database.QueryRow(ctx, `SELECT COUNT(*) FROM identity_metrics
-		WHERE workspace = 'workspace111'`).Scan(&parentRows)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	if parentRows != 1 {
-		t.Fatalf("expected the parent workspace metric to survive a connection delete, got %d", parentRows)
+	for _, table := range []string{"identity_resolution_metrics", "identity_metrics"} {
+		var parentRows int
+		err = database.QueryRow(ctx, "SELECT COUNT(*) FROM "+table+" WHERE workspace = 'workspace111'").Scan(&parentRows)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if parentRows != 1 {
+			t.Fatalf("expected the %s workspace metric to survive a connection delete, got %d rows", table, parentRows)
+		}
 	}
 	_, err = database.Exec(ctx, `INSERT INTO connections
 		(id, workspace, role, kms_encrypted_settings_key)
@@ -199,7 +227,7 @@ func TestIdentityMetricsSchema(t *testing.T) {
 
 }
 
-// assertColumnDoesNotExist verifies that table has no column named column.
+// assertColumnDoesNotExist verifies that table has no column with the given name.
 func assertColumnDoesNotExist(t *testing.T, database *db.DB, table, column string) {
 	t.Helper()
 	exists, err := database.QueryExists(t.Context(), `
@@ -215,7 +243,7 @@ func assertColumnDoesNotExist(t *testing.T, database *db.DB, table, column strin
 	}
 }
 
-// assertConstraintExists verifies that table has the named constraint.
+// assertConstraintExists verifies that table has a constraint with the given name.
 func assertConstraintExists(t *testing.T, database *db.DB, table, constraint string) {
 	t.Helper()
 	exists, err := database.QueryExists(t.Context(), `
@@ -230,23 +258,6 @@ func assertConstraintExists(t *testing.T, database *db.DB, table, constraint str
 	}
 	if !exists {
 		t.Fatalf("expected constraint %s.%s to exist, got missing constraint", table, constraint)
-	}
-}
-
-// assertIndexExists verifies that an index with name exists.
-func assertIndexExists(t *testing.T, database *db.DB, name string) {
-	t.Helper()
-	exists, err := database.QueryExists(t.Context(), `
-		SELECT FROM pg_class c
-		JOIN pg_namespace n ON n.oid = c.relnamespace
-		WHERE n.nspname = current_schema()
-			AND c.relname = $1
-			AND c.relkind = 'i'`, name)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	if !exists {
-		t.Fatalf("expected index %s to exist, got no index", name)
 	}
 }
 
