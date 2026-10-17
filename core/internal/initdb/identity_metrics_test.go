@@ -199,7 +199,7 @@ func TestIdentityMetricsSchema(t *testing.T) {
 
 }
 
-// assertColumnDoesNotExist verifies that table has no column with the given name.
+// assertColumnDoesNotExist verifies that table has no column named column.
 func assertColumnDoesNotExist(t *testing.T, database *db.DB, table, column string) {
 	t.Helper()
 	exists, err := database.QueryExists(t.Context(), `

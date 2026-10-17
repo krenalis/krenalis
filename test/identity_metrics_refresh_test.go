@@ -16,8 +16,9 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-// TestIdentityMetricsRefreshAfterImport verifies automatic refresh after imports
-// and Identity Resolution, explicit refresh, and current and daily API metrics.
+// TestIdentityMetricsRefreshAfterImport verifies automatic refresh after
+// imports and Identity Resolution, explicit refresh, and current and daily
+// API metrics.
 func TestIdentityMetricsRefreshAfterImport(t *testing.T) {
 
 	if testing.Short() {
