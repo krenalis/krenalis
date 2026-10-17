@@ -5,6 +5,7 @@
 package warehouses_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"maps"
@@ -29,10 +30,12 @@ type profileIdentityGroup struct {
 }
 
 // TestResolveIdentitiesCounts verifies that all warehouse implementations
-// return profile and identity counts for an Identity Resolution and persist
-// them for retries of the same operation ID.
+// return the expected profile and identity counts when resolving identities
+// and preserve those counts when the same operation is retried.
 func TestResolveIdentitiesCounts(t *testing.T) {
+
 	for _, platform := range []string{"PostgreSQL", "Snowflake"} {
+
 		t.Run(platform, func(t *testing.T) {
 
 			dw := newCountIdentitiesWarehouse(t, platform)
@@ -48,7 +51,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 			emptyOp := uuid.New().String()
 			emptyCounts := resolveAndAssertCounts(t, dw, emptyOp, profileColumns, warehouses.IdentityResolutionCounts{})
 
-			mergeIdentityResolutionCountIdentities(t, dw, profileColumns, []profileIdentityGroup{
+			mergeIdentityResolutionCountFixtures(t, dw, profileColumns, []profileIdentityGroup{
 				{name: "anonymous-one", anonymous: 1, duplicateFirstAcrossPipelines: true},
 				{name: "anonymous-two", anonymous: 2},
 			})
@@ -61,7 +64,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 
 			// Turn both existing profiles into recognized profiles. They retain their
 			// anonymous identities and gain one recognized identity each.
-			mergeIdentityResolutionCountIdentities(t, dw, profileColumns, []profileIdentityGroup{
+			mergeIdentityResolutionCountFixtures(t, dw, profileColumns, []profileIdentityGroup{
 				{name: "anonymous-one", recognized: 1},
 				{name: "anonymous-two", recognized: 1},
 			})
@@ -74,34 +77,56 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 
 			// Exercise the 4-10 and 11-20 bucket boundaries and the open-ended
 			// 21+ bucket.
-			mergeIdentityResolutionCountIdentities(t, dw, profileColumns, []profileIdentityGroup{
+			mergeIdentityResolutionCountFixtures(t, dw, profileColumns, []profileIdentityGroup{
 				{name: "recognized-four", recognized: 4},
+				{name: "recognized-five", recognized: 5},
+				{name: "recognized-six", recognized: 6},
 				{name: "anonymous-ten", anonymous: 10},
 				{name: "mixed-eleven", anonymous: 2, recognized: 9},
+				{name: "recognized-twelve", recognized: 12},
 				{name: "recognized-twenty", recognized: 20},
 				{name: "recognized-twenty-one", recognized: 21},
 				{name: "anonymous-twenty-five", anonymous: 25},
 			})
 			variedOp := uuid.New().String()
 			resolveAndAssertCounts(t, dw, variedOp, profileColumns, warehouses.IdentityResolutionCounts{
-				Profiles:   warehouses.Counts{Anonymous: 2, Recognized: 6},
-				Identities: warehouses.Counts{Anonymous: 40, Recognized: 56},
+				Profiles:   warehouses.Counts{Anonymous: 2, Recognized: 9},
+				Identities: warehouses.Counts{Anonymous: 40, Recognized: 79},
 				Composition: warehouses.IdentityResolutionComposition{
-					Two: 1, Three: 1, FourToTen: 2, ElevenToTwenty: 2, MoreThanTwenty: 2,
+					Two: 1, Three: 1, FourToTen: 4, ElevenToTwenty: 3, MoreThanTwenty: 2,
 				},
 			})
 
 			// A newly initialized warehouse starts at profile version 0, so the
 			// first two operations produce versions 1 and 2. Later operations drop
-			// both physical tables, but their complete persisted results remain
-			// retryable.
-			t.Run("empty operation profiles table dropped", func(t *testing.T) {
-				_, err := dw.Counts(t.Context(), "krenalis_profiles_1", nil)
+			// both physical tables, but the persisted results remain available
+			// when those operations are retried.
+			t.Run("previous profile tables have been dropped", func(t *testing.T) {
+				querier := dw.(interface {
+					RawQuery(context.Context, string) (warehouses.Rows, int, error)
+				})
+				rows, _, err := querier.RawQuery(t.Context(), `SELECT table_name
+					FROM information_schema.tables
+					WHERE table_schema = CURRENT_SCHEMA()
+						AND LOWER(table_name) IN ('krenalis_profiles_1', 'krenalis_profiles_2')`)
 				if err != nil {
-					return
+					t.Fatalf("expected profile table metadata query to succeed, got %v", err)
 				}
-				t.Fatal("expected physical profiles table for the empty operation to be unavailable, got no error")
+				defer rows.Close()
+				for rows.Next() {
+					var table string
+					err := rows.Scan(&table)
+					if err != nil {
+						t.Fatalf("expected profile table name, got %v", err)
+					}
+					t.Errorf("expected previous operations' physical profiles tables to be absent, got %q", table)
+				}
+				err = rows.Err()
+				if err != nil {
+					t.Fatalf("expected profile table metadata iteration to succeed, got %v", err)
+				}
 			})
+
 			retryCounts, err := dw.ResolveIdentities(ctx, emptyOp, profileColumns, profileColumns, nil)
 			if err != nil {
 				t.Fatalf("expected no error, got %v", err)
@@ -112,13 +137,6 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 			if diff := cmp.Diff(emptyCounts, retryCounts); diff != "" {
 				t.Fatalf("expected original retry counts after dropping the physical table, got diff (-want +got):\n%s", diff)
 			}
-			t.Run("anonymous operation profiles table dropped", func(t *testing.T) {
-				_, err := dw.Counts(t.Context(), "krenalis_profiles_2", nil)
-				if err != nil {
-					return
-				}
-				t.Fatal("expected physical profiles table for the anonymous-only operation to be unavailable, got no error")
-			})
 			retryCounts, err = dw.ResolveIdentities(ctx, anonymousOp, profileColumns, profileColumns, nil)
 			if err != nil {
 				t.Fatalf("expected no error, got %v", err)
@@ -130,7 +148,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 				t.Fatalf("expected original retry counts after dropping the physical table, got diff (-want +got):\n%s", diff)
 			}
 
-			t.Run("legacy completed operation without result", func(t *testing.T) {
+			t.Run("completed legacy operation without a result", func(t *testing.T) {
 				setOperationResult(t, dw, recognizedOp, nil)
 				counts, err := dw.ResolveIdentities(ctx, recognizedOp, profileColumns, profileColumns, nil)
 				if err != nil {
@@ -143,7 +161,8 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 					t.Fatalf("expected zero legacy counts, got %v", *counts)
 				}
 			})
-			t.Run("completed operation with invalid result", func(t *testing.T) {
+
+			t.Run("completed operation with an invalid result", func(t *testing.T) {
 				result, err := json.Marshal(struct {
 					Counts warehouses.IdentityResolutionCounts `json:"counts"`
 				}{Counts: warehouses.IdentityResolutionCounts{
@@ -162,7 +181,8 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 				}
 				t.Fatalf("expected ResolveIdentities to reject an invalid persisted result, got counts %v", counts)
 			})
-			t.Run("completed operation with oversized result", func(t *testing.T) {
+
+			t.Run("completed operation with an oversized result", func(t *testing.T) {
 				result, err := json.Marshal(struct {
 					Counts  warehouses.IdentityResolutionCounts `json:"counts"`
 					Padding string                              `json:"padding"`
@@ -183,6 +203,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 				}
 				t.Fatalf("expected ResolveIdentities to reject an oversized persisted result, got counts %v", counts)
 			})
+
 			t.Run("non-identity-resolution operation has no result", func(t *testing.T) {
 				opAlter := uuid.New().String()
 				alteredProfileColumns := append([]warehouses.Column{}, profileColumns...)
@@ -218,7 +239,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 					Nullable: true,
 				})
 
-				_, err := dw.ResolveIdentities(ctx, opFailed, profileColumns, badProfileColumns, nil)
+				counts, err := dw.ResolveIdentities(ctx, opFailed, profileColumns, badProfileColumns, nil)
 				if err != nil {
 					if _, ok := errors.AsType[*warehouses.OperationError](err); !ok {
 						t.Fatalf("expected ResolveIdentities to return *warehouses.OperationError, got %v", err)
@@ -226,6 +247,9 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 				}
 				if err == nil {
 					t.Fatalf("expected ResolveIdentities to return *warehouses.OperationError, got %v", err)
+				}
+				if counts != nil {
+					t.Fatalf("expected nil counts for a failed operation, got %v", counts)
 				}
 				profilesAfter, countErr := dw.Counts(ctx, "profiles", nil)
 				if countErr != nil {
@@ -237,7 +261,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 
 				// Retry with valid arguments to verify that the persisted failure is
 				// returned without executing the operation again.
-				_, retryErr := dw.ResolveIdentities(ctx, opFailed, profileColumns, profileColumns, nil)
+				retryCounts, retryErr := dw.ResolveIdentities(ctx, opFailed, profileColumns, profileColumns, nil)
 				if retryErr != nil {
 					if _, ok := errors.AsType[*warehouses.OperationError](retryErr); !ok {
 						t.Fatalf("expected ResolveIdentities retry to return *warehouses.OperationError, got %v", retryErr)
@@ -245,6 +269,9 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 				}
 				if retryErr == nil {
 					t.Fatalf("expected ResolveIdentities retry to return *warehouses.OperationError, got %v", retryErr)
+				}
+				if retryCounts != nil {
+					t.Fatalf("expected nil counts when retrying a failed operation, got %v", retryCounts)
 				}
 				if retryErr.Error() != err.Error() {
 					t.Fatalf("expected ResolveIdentities retry error %q, got %q", err, retryErr)
@@ -280,7 +307,9 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 			})
 
 		})
+
 	}
+
 }
 
 // assertIdentityResolutionCountInvariants verifies the internal consistency of
@@ -323,8 +352,8 @@ func assertIdentityResolutionCountInvariants(t *testing.T, counts warehouses.Ide
 
 }
 
-// assertPersistedIdentityResolutionResult verifies the persisted Identity
-// Resolution result payload.
+// assertPersistedIdentityResolutionResult verifies the structure and contents
+// of a persisted Identity Resolution result.
 func assertPersistedIdentityResolutionResult(t *testing.T, dw warehouses.Warehouse, opID string, want warehouses.IdentityResolutionCounts) {
 
 	t.Helper()
@@ -348,11 +377,6 @@ func assertPersistedIdentityResolutionResult(t *testing.T, dw warehouses.Warehou
 	if _, ok := root["counts"]; !ok {
 		t.Fatalf("expected operation result root to contain counts, got %v", root)
 	}
-	for _, field := range []string{"profiles", "identities", "composition", "anonymous", "recognized"} {
-		if _, ok := root[field]; ok {
-			t.Fatalf("expected operation result root not to contain %q, got %v", field, root)
-		}
-	}
 	countsObject, ok := root["counts"].(map[string]any)
 	if !ok {
 		t.Fatalf("expected operation result counts to be an object, got %T", root["counts"])
@@ -365,13 +389,27 @@ func assertPersistedIdentityResolutionResult(t *testing.T, dw warehouses.Warehou
 	if len(countsObject) != 3 {
 		t.Fatalf("expected operation result counts to contain only profiles, identities, and composition, got %v", countsObject)
 	}
+	for _, field := range []string{"profiles", "identities"} {
+		countObject, ok := countsObject[field].(map[string]any)
+		if !ok {
+			t.Fatalf("expected operation result %s to be an object, got %T", field, countsObject[field])
+		}
+		for _, category := range []string{"anonymous", "recognized"} {
+			if countObject[category] == nil {
+				t.Fatalf("expected operation result %s to contain a non-null %q, got %v", field, category, countObject)
+			}
+		}
+		if len(countObject) != 2 {
+			t.Fatalf("expected operation result %s to contain only anonymous and recognized, got %v", field, countObject)
+		}
+	}
 	compositionObject, ok := countsObject["composition"].(map[string]any)
 	if !ok {
 		t.Fatalf("expected operation result composition to be an object, got %T", countsObject["composition"])
 	}
 	for _, field := range []string{"one", "two", "three", "fourToTen", "elevenToTwenty", "moreThanTwenty"} {
-		if _, ok := compositionObject[field]; !ok {
-			t.Fatalf("expected operation result composition to contain %q, got %v", field, compositionObject)
+		if compositionObject[field] == nil {
+			t.Fatalf("expected operation result composition to contain a non-null %q, got %v", field, compositionObject)
 		}
 	}
 	if len(compositionObject) != 6 {
@@ -391,9 +429,9 @@ func assertPersistedIdentityResolutionResult(t *testing.T, dw warehouses.Warehou
 
 }
 
-// mergeIdentityResolutionCountIdentities inserts identity fixtures grouped
+// mergeIdentityResolutionCountFixtures inserts identities that are grouped
 // into profiles by email.
-func mergeIdentityResolutionCountIdentities(t *testing.T, dw warehouses.Warehouse, profileColumns []warehouses.Column, groups []profileIdentityGroup) {
+func mergeIdentityResolutionCountFixtures(t *testing.T, dw warehouses.Warehouse, profileColumns []warehouses.Column, groups []profileIdentityGroup) {
 
 	t.Helper()
 	for _, group := range groups {
@@ -480,7 +518,8 @@ func operationResult(t *testing.T, dw warehouses.Warehouse, opID string) any {
 }
 
 // resolveAndAssertCounts resolves identities and verifies the returned and
-// persisted counts, including the result returned by an immediate retry.
+// persisted counts, then checks that an immediate retry returns the same
+// counts.
 func resolveAndAssertCounts(t *testing.T, dw warehouses.Warehouse, opID string, profileColumns []warehouses.Column, want warehouses.IdentityResolutionCounts) *warehouses.IdentityResolutionCounts {
 
 	t.Helper()
