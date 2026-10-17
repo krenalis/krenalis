@@ -223,6 +223,9 @@ func TestUsageMetricsHTTPContract(t *testing.T) {
 		WHERE workspace = $1
 		ORDER BY day DESC
 		LIMIT 1`, k.WorkspaceID())
+	if !profileObservedAt.Equal(lifecycleCompletedAt) {
+		t.Fatalf("expected usage observation time %s, got %s", lifecycleCompletedAt, profileObservedAt)
+	}
 	profileObservationUnix := int(profileObservedAt.Unix())
 	for time.Now().UTC().Unix() <= int64(profileObservationUnix) {
 		time.Sleep(10 * time.Millisecond)

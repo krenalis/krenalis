@@ -27,6 +27,7 @@ func TestIdentityMetricsRefreshAfterImport(t *testing.T) {
 	k := krenalistester.NewKrenalisInstance(t)
 	k.Start()
 	defer k.Stop()
+	k.UpdateIdentityResolutionSettings(false, nil)
 	connection := k.CreateDummy("Identity metrics source", krenalistester.Source)
 	pipeline := k.CreatePipeline(connection, "User", krenalistester.PipelineToSet{
 		Name:    "Identity metrics pipeline",
@@ -85,22 +86,24 @@ func TestIdentityMetricsRefreshAfterImport(t *testing.T) {
 		}
 	}
 
-	k.RunIdentityResolutionAndWait()
-	_, completedAt := k.LatestIdentityResolution()
-	if completedAt == nil {
-		t.Fatal("expected completed Identity Resolution, got no completion time")
+	if latest.WithoutProfile != 10 {
+		t.Fatalf("expected 10 identities without profiles before resolution, got %#v", latest)
 	}
+	if len(latest.Connections) != 1 || latest.Connections[0].WithoutProfile != 10 {
+		t.Fatalf("expected one connection with 10 identities without profiles before resolution, got %#v", latest.Connections)
+	}
+	k.RunIdentityResolutionAndWait()
 	timer.Reset(10 * time.Second)
 	for {
 		k.Call("GET", "/v1/metrics/identities/latest", nil, nil, &latest)
-		if !latest.ObservedAt.Before(*completedAt) {
+		if latest.WithoutProfile == 0 {
 			break
 		}
 		select {
 		case <-t.Context().Done():
 			t.Fatalf("expected automatic refresh after resolution, got %v", t.Context().Err())
 		case <-timer.C:
-			t.Fatalf("expected identity observation at or after %s, got %s", *completedAt, latest.ObservedAt)
+			t.Fatalf("expected identities with profiles after resolution, got %#v", latest)
 		case <-ticker.C:
 		}
 	}
