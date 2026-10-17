@@ -40,7 +40,7 @@ func Test_createPendingViewQuery(t *testing.T) {
 
 // Test_finalizeIdentityResolutionPreservesPersistedSuccess verifies that a
 // persisted successful operation takes precedence over a conflicting local
-// error.
+// error, including legacy operations without a stored result.
 func Test_finalizeIdentityResolutionPreservesPersistedSuccess(t *testing.T) {
 
 	warehouse, db := newTestSnowflakeWarehouse(t)
@@ -49,9 +49,12 @@ func Test_finalizeIdentityResolutionPreservesPersistedSuccess(t *testing.T) {
 	}
 
 	want := warehouses.IdentityResolutionCounts{
-		Profiles:    warehouses.Counts{Anonymous: 1},
-		Identities:  warehouses.Counts{Anonymous: 1},
-		Composition: warehouses.IdentityResolutionComposition{One: 1},
+		Profiles:   warehouses.Counts{Anonymous: 9, Recognized: 12},
+		Identities: warehouses.Counts{Anonymous: 100, Recognized: 150},
+		Composition: warehouses.IdentityResolutionComposition{
+			One: 1, Two: 2, Three: 3, FourToTen: 4,
+			ElevenToTwenty: 5, MoreThanTwenty: 6,
+		},
 	}
 	persistedResult, err := json.Marshal(struct {
 		Counts warehouses.IdentityResolutionCounts `json:"counts"`
@@ -60,33 +63,52 @@ func Test_finalizeIdentityResolutionPreservesPersistedSuccess(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	const opID = "a44731d8-d89d-44b9-ac87-a8ce1a8770d0"
-	_, err = db.ExecContext(t.Context(), `INSERT INTO "KRENALIS_SYSTEM_OPERATIONS"
-		("ID", "OPERATION_TYPE", "COMPLETED_AT", "RESULT")
-		SELECT ?, ?, ?, PARSE_JSON(?)`, opID, identityResolution, time.Now().UTC(), string(persistedResult))
-	if err != nil {
-		t.Fatal(err)
-	}
+	for _, test := range []struct {
+		name   string
+		opID   string
+		result json.Value
+		want   warehouses.IdentityResolutionCounts
+	}{
+		{
+			name: "persisted result", opID: "a44731d8-d89d-44b9-ac87-a8ce1a8770d0",
+			result: persistedResult, want: want,
+		},
+		{
+			name: "legacy without result", opID: "a44731d8-d89d-44b9-ac87-a8ce1a8770d1",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
 
-	localErr := errors.New("commit response unavailable")
-	counts, err := warehouse.finalizeIdentityResolution(t.Context(), db, opID, nil, localErr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if counts == nil {
-		t.Fatal("expected persisted counts, got nil")
-	}
-	if *counts != want {
-		t.Fatalf("expected persisted counts %v, got %v", want, *counts)
-	}
+			_, err := db.ExecContext(t.Context(), `INSERT INTO "KRENALIS_SYSTEM_OPERATIONS"
+				("ID", "OPERATION_TYPE", "COMPLETED_AT", "RESULT")
+				SELECT ?, ?, ?, PARSE_JSON(NULLIF(?, ''))`, test.opID, identityResolution, time.Now().UTC(), string(test.result))
+			if err != nil {
+				t.Fatalf("expected successful operation insertion to succeed, got %v", err)
+			}
 
-	var operationError string
-	if err := db.QueryRowContext(t.Context(),
-		`SELECT "ERROR" FROM "KRENALIS_SYSTEM_OPERATIONS" WHERE "ID" = ?`, opID).Scan(&operationError); err != nil {
-		t.Fatal(err)
-	}
-	if operationError != "" {
-		t.Fatalf("expected successful operation to remain successful, got error %q", operationError)
+			localErr := errors.New("commit response unavailable")
+			counts, err := warehouse.finalizeIdentityResolution(t.Context(), db, test.opID, nil, localErr)
+			if err != nil {
+				t.Fatalf("expected finalization to preserve success, got %v", err)
+			}
+			if counts == nil {
+				t.Fatal("expected non-nil counts, got nil")
+			}
+			if *counts != test.want {
+				t.Fatalf("expected counts %v, got %v", test.want, *counts)
+			}
+
+			var operationError string
+			err = db.QueryRowContext(t.Context(),
+				`SELECT "ERROR" FROM "KRENALIS_SYSTEM_OPERATIONS" WHERE "ID" = ?`, test.opID).Scan(&operationError)
+			if err != nil {
+				t.Fatalf("expected persisted operation error to be readable, got %v", err)
+			}
+			if operationError != "" {
+				t.Fatalf("expected successful operation to remain successful, got error %q", operationError)
+			}
+
+		})
 	}
 
 }
@@ -570,10 +592,10 @@ func TestResolveIdentitiesRetainsProfileTableFromRunningOperation(t *testing.T) 
 
 }
 
-// TestResolveIdentitiesUpgradesPreviousWarehouseSchema verifies that operations
-// add missing result storage and Identity Resolution adds count columns only to
-// the new profiles table.
-func TestResolveIdentitiesUpgradesPreviousWarehouseSchema(t *testing.T) {
+// TestResolveIdentitiesWithLegacyWarehouseSchema verifies that operations
+// restore the missing result column and Identity Resolution adds count columns
+// to new profiles tables without adding them to the legacy table.
+func TestResolveIdentitiesWithLegacyWarehouseSchema(t *testing.T) {
 
 	warehouse, db := newTestSnowflakeWarehouse(t)
 	profileColumns := []warehouses.Column{{Name: "email", Type: types.String(), Nullable: true}}
@@ -662,6 +684,59 @@ func TestResolveIdentitiesUpgradesPreviousWarehouseSchema(t *testing.T) {
 		t.Fatalf("expected zero legacy counts, got %v", *counts)
 	}
 
+	version, err := warehouse.maxProfilesVersion(t.Context())
+	if err != nil {
+		t.Fatalf("expected profiles version to be readable, got %v", err)
+	}
+	if version != 0 {
+		t.Fatalf("expected legacy retry to preserve profiles version 0, got %d", version)
+	}
+
+	// Fail after preparing the new table so the legacy schema remains observable.
+	badProfileColumns := append([]warehouses.Column{}, alteredProfileColumns...)
+	badProfileColumns = append(badProfileColumns, warehouses.Column{
+		Name:     "column_not_in_profiles_table",
+		Type:     types.String(),
+		Nullable: true,
+	})
+	const failedResolutionID = "a44731d8-d89d-44b9-ac87-a8ce1a8770da"
+	_, err = warehouse.ResolveIdentities(t.Context(), failedResolutionID, profileColumns, badProfileColumns, nil)
+	if err != nil {
+		if _, ok := errors.AsType[*warehouses.OperationError](err); !ok {
+			t.Fatalf("expected failed resolution to return *warehouses.OperationError, got %T: %v", err, err)
+		}
+	}
+	if err == nil {
+		t.Fatal("expected resolution with a missing profile column to fail, got nil")
+	}
+
+	err = db.QueryRowContext(t.Context(), `SELECT COUNT(*)
+		FROM INFORMATION_SCHEMA.COLUMNS
+		WHERE TABLE_SCHEMA = CURRENT_SCHEMA()
+			AND TABLE_NAME = 'KRENALIS_PROFILES_1'
+			AND COLUMN_NAME IN ('_ANONYMOUS_COUNT', '_RECOGNIZED_COUNT')`).Scan(&countColumns)
+	if err != nil {
+		t.Fatalf("expected prepared profile columns to be readable, got %v", err)
+	}
+	if countColumns != 2 {
+		t.Fatalf("expected two count columns in the failed resolution's profiles table, got %d", countColumns)
+	}
+
+	var legacyColumns int
+	err = db.QueryRowContext(t.Context(), `SELECT COUNT(*),
+		COUNT(CASE WHEN COLUMN_NAME IN ('_ANONYMOUS_COUNT', '_RECOGNIZED_COUNT') THEN 1 END)
+		FROM INFORMATION_SCHEMA.COLUMNS
+		WHERE TABLE_SCHEMA = CURRENT_SCHEMA() AND TABLE_NAME = 'KRENALIS_PROFILES_0'`).Scan(&legacyColumns, &countColumns)
+	if err != nil {
+		t.Fatalf("expected legacy profile columns to be readable, got %v", err)
+	}
+	if legacyColumns == 0 {
+		t.Fatal("expected the legacy profiles table to survive failed resolution, got no columns")
+	}
+	if countColumns != 0 {
+		t.Fatalf("expected failed resolution to leave legacy count columns absent, got %d", countColumns)
+	}
+
 	const resolutionID = "a44731d8-d89d-44b9-ac87-a8ce1a8770d9"
 	counts, err = warehouse.ResolveIdentities(
 		t.Context(), resolutionID, profileColumns, alteredProfileColumns, nil)
@@ -678,7 +753,7 @@ func TestResolveIdentitiesUpgradesPreviousWarehouseSchema(t *testing.T) {
 	err = db.QueryRowContext(t.Context(), `SELECT COUNT(*)
 		FROM INFORMATION_SCHEMA.COLUMNS
 		WHERE TABLE_SCHEMA = CURRENT_SCHEMA()
-			AND TABLE_NAME = 'KRENALIS_PROFILES_1'
+			AND TABLE_NAME = 'KRENALIS_PROFILES_2'
 			AND COLUMN_NAME IN ('_ANONYMOUS_COUNT', '_RECOGNIZED_COUNT')`).Scan(&countColumns)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -687,15 +762,25 @@ func TestResolveIdentitiesUpgradesPreviousWarehouseSchema(t *testing.T) {
 		t.Fatalf("expected two count columns in the new profiles table, got %d", countColumns)
 	}
 
-	var resultPersisted bool
+	var persistedResult []byte
 	err = db.QueryRowContext(t.Context(),
-		`SELECT "RESULT" IS NOT NULL FROM "KRENALIS_SYSTEM_OPERATIONS" WHERE "ID" = ?`,
-		resolutionID).Scan(&resultPersisted)
+		`SELECT TO_JSON("RESULT") FROM "KRENALIS_SYSTEM_OPERATIONS" WHERE "ID" = ?`,
+		resolutionID).Scan(&persistedResult)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if !resultPersisted {
-		t.Fatal("expected Identity Resolution to persist its result, got NULL")
+	var result struct {
+		Counts *warehouses.IdentityResolutionCounts `json:"counts"`
+	}
+	err = json.Unmarshal(persistedResult, &result)
+	if err != nil {
+		t.Fatalf("expected persisted Identity Resolution result to decode, got %v", err)
+	}
+	if result.Counts == nil {
+		t.Fatal("expected persisted Identity Resolution counts, got nil")
+	}
+	if *result.Counts != *counts {
+		t.Fatalf("expected persisted counts %v, got %v", *counts, *result.Counts)
 	}
 
 }
