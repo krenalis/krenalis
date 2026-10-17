@@ -1585,7 +1585,7 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 			err := core.metrics.Identities.Refresh(core.close.ctx, ws.ID)
 			if err != nil {
 				slog.Error("core: cannot refresh identity metrics at the end of import",
-					"workspace", ws.ID, "run", run.ID, "error", warehouses.NewOperationError(err))
+					"workspace", ws.ID, "run", run.ID, "error", err)
 			}
 		}
 
