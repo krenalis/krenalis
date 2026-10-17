@@ -104,6 +104,108 @@ for (const scenario of ['singleDay', 'singleDayZero'] as const) {
 	});
 }
 
+for (const scenario of ['resolutionAtIdentity', 'resolutionSingleDayZero'] as const) {
+	test(`shows effectiveness points without hover with only one observation (${scenario})`, async ({ page }) => {
+		await page.evaluate((scenario) => {
+			window.identityOverviewScenario = scenario;
+		}, scenario);
+		await page.addScriptTag({ content: componentScript });
+		await expect(page.getByRole('button', { name: 'Refresh', exact: true })).toBeEnabled();
+		const hasZeroLinkRate = scenario === 'resolutionSingleDayZero';
+		for (const [name, value] of [
+			['Identities per profile', hasZeroLinkRate ? '1' : '2'],
+			['Identity link rate', hasZeroLinkRate ? '0.0%' : '100.0%'],
+		]) {
+			await expect(
+				page
+					.locator('.identity-dashboard__kpi')
+					.filter({ hasText: name })
+					.locator('.identity-dashboard__kpi-value'),
+			).toHaveText(value);
+		}
+		await expect(page.locator('sl-button').filter({ hasText: 'Last 30 days' })).toHaveAttribute(
+			'variant',
+			'primary',
+		);
+		const charts = page.locator('.identity-dashboard__effectiveness-chart');
+		await expect(charts).toHaveCount(2);
+		await page.mouse.move(0, 0);
+		await page.clock.runFor(2000);
+		for (const chart of await charts.all()) {
+			const dots = chart.locator('.recharts-line-dot');
+			await expect(dots).toHaveCount(1);
+			await expect(dots).toBeVisible();
+			await expect(dots).toHaveAttribute('r', '3');
+			await expect(chart.locator('.recharts-active-dot')).toHaveCount(0);
+			await expect(dots).toHaveAttribute(
+				'fill',
+				await chart.locator('.recharts-line-curve').getAttribute('stroke'),
+			);
+			await expect(dots).toHaveCSS('opacity', '1');
+			expect(
+				await chart.locator('.recharts-line-curve').evaluate((path: SVGPathElement) => path.getTotalLength()),
+			).toBe(0);
+		}
+	});
+}
+
+for (const [ratioCount, linkRateCount] of [
+	[1, 2],
+	[2, 1],
+	[2, 2],
+	[1, 0],
+	[0, 1],
+	[0, 0],
+]) {
+	test(`handles effectiveness series independently (${ratioCount} ratio, ${linkRateCount} link rate values)`, async ({
+		page,
+	}) => {
+		await page.evaluate(
+			({ ratioCount, linkRateCount }) => {
+				window.identityOverviewEffectivenessData = Array.from({ length: 30 }, (_, index) => ({
+					day: new Date(Date.UTC(2026, 6, 12 + index)).toISOString().slice(0, 10),
+					identitiesPerProfile: index >= 30 - ratioCount ? 1 : null,
+					linkedIdentitiesRatePercent: index >= 30 - linkRateCount ? 0 : null,
+				}));
+			},
+			{ ratioCount, linkRateCount },
+		);
+		await page.addScriptTag({ content: componentScript });
+		await expect(page.getByText('Resolution effectiveness over time (daily)', { exact: true })).toBeVisible();
+		await page.mouse.move(0, 0);
+		await page.clock.runFor(2000);
+		if (ratioCount === 0 && linkRateCount === 0) {
+			await expect(page.getByText('No identity resolution data in this period', { exact: true })).toBeVisible();
+			await expect(page.locator('.identity-dashboard__effectiveness-chart')).toHaveCount(0);
+			return;
+		}
+		for (const [index, count] of [ratioCount, linkRateCount].entries()) {
+			const metric = page.locator('.identity-dashboard__effectiveness-metric').nth(index);
+			const dots = metric.locator('.recharts-line-dot');
+			await expect(dots).toHaveCount(count === 1 ? 1 : 0);
+			if (count === 0) {
+				await expect(metric.getByText('No data available', { exact: true })).toBeVisible();
+				await expect(metric.locator('.recharts-surface')).toHaveCount(0);
+			} else if (count === 1) {
+				await expect(dots).toBeVisible();
+				await expect(dots).toHaveAttribute('r', '3');
+				await expect(dots).toHaveAttribute(
+					'fill',
+					await metric.locator('.recharts-line-curve').getAttribute('stroke'),
+				);
+				await expect(dots).toHaveCSS('opacity', '1');
+			} else {
+				expect(
+					await metric
+						.locator('.recharts-line-curve')
+						.evaluate((path: SVGPathElement) => path.getTotalLength()),
+				).toBeGreaterThan(0);
+			}
+			await expect(metric.locator('.recharts-active-dot')).toHaveCount(0);
+		}
+	});
+}
+
 test('loads removed connection history after refreshing the current state to zero', async ({ page }) => {
 	await page.evaluate(() => {
 		window.identityOverviewScenario = 'removed';

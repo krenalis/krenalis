@@ -5,6 +5,8 @@ import '@shoelace-style/shoelace/dist/themes/light.css';
 import API from '../src/lib/api/api';
 import AppContext from '../src/context/AppContext';
 import IdentityOverview from '../src/components/routes/IdentityOverview/IdentityOverview';
+import { ResolutionEffectivenessChart } from '../src/components/routes/IdentityOverview/IdentityOverview.components';
+import { ResolutionEffectivenessPoint } from '../src/components/routes/IdentityOverview/IdentityOverview.helpers';
 
 declare global {
 	interface Window {
@@ -17,7 +19,9 @@ declare global {
 			| 'singleDayZero'
 			| 'resolution'
 			| 'resolutionAtIdentity'
+			| 'resolutionSingleDayZero'
 			| 'resolutionUnauthorized';
+		identityOverviewEffectivenessData?: ResolutionEffectivenessPoint[];
 		identityOverviewRequests: string[];
 		identityOverviewRevision?: number;
 		identityOverviewFailure?: string;
@@ -99,19 +103,28 @@ window.fetch = async (input) => {
 		}
 		if (
 			window.identityOverviewScenario === 'resolution' ||
-			window.identityOverviewScenario === 'resolutionAtIdentity'
+			window.identityOverviewScenario === 'resolutionAtIdentity' ||
+			window.identityOverviewScenario === 'resolutionSingleDayZero'
 		) {
+			const hasZeroLinkRate = window.identityOverviewScenario === 'resolutionSingleDayZero';
 			return new Response(
 				JSON.stringify({
 					observedAt:
-						window.identityOverviewScenario === 'resolutionAtIdentity'
+						window.identityOverviewScenario === 'resolutionAtIdentity' || hasZeroLinkRate
 							? '2026-08-02T12:00:00Z'
 							: '2026-08-02T13:00:00Z',
 					identities: { total: 10, anonymous: 0, recognized: 10 },
-					profiles: { total: 5, anonymous: 0, recognized: 5 },
-					composition: { one: 0, two: 5, three: 0, fourToTen: 0, elevenToTwenty: 0, moreThanTwenty: 0 },
-					identitiesPerProfile: 2,
-					linkedIdentitiesRate: 1,
+					profiles: { total: hasZeroLinkRate ? 10 : 5, anonymous: 0, recognized: hasZeroLinkRate ? 10 : 5 },
+					composition: {
+						one: hasZeroLinkRate ? 10 : 0,
+						two: hasZeroLinkRate ? 0 : 5,
+						three: 0,
+						fourToTen: 0,
+						elevenToTwenty: 0,
+						moreThanTwenty: 0,
+					},
+					identitiesPerProfile: hasZeroLinkRate ? 1 : 2,
+					linkedIdentitiesRate: hasZeroLinkRate ? 0 : 1,
 				}),
 				{ headers: { 'Content-Type': 'application/json' } },
 			);
@@ -178,4 +191,8 @@ window.identityOverviewChangeWorkspace = (workspace) => {
 		</AppContext.Provider>,
 	);
 };
-window.identityOverviewChangeWorkspace('workspace111');
+if (window.identityOverviewEffectivenessData != null) {
+	root.render(<ResolutionEffectivenessChart data={window.identityOverviewEffectivenessData} loading={false} />);
+} else {
+	window.identityOverviewChangeWorkspace('workspace111');
+}

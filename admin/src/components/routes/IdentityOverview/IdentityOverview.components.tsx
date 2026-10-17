@@ -779,8 +779,10 @@ interface ResolutionEffectivenessChartProps {
 }
 
 const ResolutionEffectivenessChart = ({ data, loading, error }: ResolutionEffectivenessChartProps) => {
-	const hasIdentityLinkRate = data.some((day) => day.linkedIdentitiesRatePercent != null);
-	const hasIdentitiesPerProfile = data.some((day) => day.identitiesPerProfile != null);
+	const identityLinkRateCount = data.filter((day) => day.linkedIdentitiesRatePercent != null).length;
+	const identitiesPerProfileCount = data.filter((day) => day.identitiesPerProfile != null).length;
+	const hasIdentityLinkRate = identityLinkRateCount > 0;
+	const hasIdentitiesPerProfile = identitiesPerProfileCount > 0;
 	const hasData = hasIdentityLinkRate || hasIdentitiesPerProfile;
 	const identityLinkRateDomain = identityLinkRateChartDomain(data);
 	const ratioDomain = ratioChartDomain(data);
@@ -854,7 +856,11 @@ const ResolutionEffectivenessChart = ({ data, loading, error }: ResolutionEffect
 											name='Identities per profile (ratio)'
 											stroke={IDENTITIES_PER_PROFILE_COLOR}
 											strokeWidth={2}
-											dot={false}
+											dot={
+												identitiesPerProfileCount === 1
+													? { r: 3, fill: IDENTITIES_PER_PROFILE_COLOR, stroke: 'none' }
+													: false
+											}
 											activeDot={{ r: 3 }}
 											connectNulls={false}
 											isAnimationActive={true}
@@ -918,7 +924,11 @@ const ResolutionEffectivenessChart = ({ data, loading, error }: ResolutionEffect
 											name='Identity link rate (%)'
 											stroke={IDENTITY_LINK_RATE_COLOR}
 											strokeWidth={2}
-											dot={false}
+											dot={
+												identityLinkRateCount === 1
+													? { r: 3, fill: IDENTITY_LINK_RATE_COLOR, stroke: 'none' }
+													: false
+											}
 											activeDot={{
 												r: 3,
 												fill: IDENTITY_LINK_RATE_COLOR,
