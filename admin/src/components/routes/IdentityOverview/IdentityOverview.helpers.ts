@@ -6,7 +6,7 @@ import {
 	IdentityResolutionMetric,
 	IdentityResolutionMetricDay,
 } from '../../../lib/api/types/metrics';
-import { ConnectionRole } from '../../../lib/api/types/connection';
+import type TransformedConnection from '../../../lib/core/connection';
 
 const DELETED_CONNECTION_SCOPE = 'deleted';
 const DELETED_CONNECTION_LABEL = 'Removed connections';
@@ -21,11 +21,8 @@ interface IdentityDashboardTemporalSemantics {
 	shouldShowLatestResolutionComparison: boolean;
 }
 
-interface IdentityMetricChartDay {
-	day: string;
+interface IdentityMetricChartDay extends RecognizedAnonymousHistoryPoint {
 	total: number | null;
-	anonymous: number | null;
-	recognized: number | null;
 }
 
 interface IdentityResolutionMetricChartDay {
@@ -64,12 +61,6 @@ interface ConnectionBar {
 	total: number;
 }
 
-interface IdentityConnectionCatalogEntry {
-	id: string;
-	name: string;
-	role: ConnectionRole;
-}
-
 interface IdentityConnectionOption {
 	id: string;
 	name: string;
@@ -81,7 +72,7 @@ interface ResolutionEffectivenessPoint {
 	identitiesPerProfile: number | null;
 }
 
-interface UnifiedProfileHistoryPoint {
+interface RecognizedAnonymousHistoryPoint {
 	day: string;
 	recognized: number | null;
 	anonymous: number | null;
@@ -389,7 +380,7 @@ const aggregateConnections = (
 };
 
 const buildIdentityConnectionOptions = (
-	connections: readonly IdentityConnectionCatalogEntry[],
+	connections: readonly Pick<TransformedConnection, 'id' | 'name' | 'role'>[],
 	metrics: readonly IdentityConnectionMetric[] | undefined,
 ): IdentityConnectionOption[] => {
 	const options = new Map<string, string>();
@@ -446,7 +437,7 @@ const buildResolutionEffectivenessData = (days: IdentityResolutionMetricChartDay
 		identitiesPerProfile: day.identitiesPerProfile == null ? null : Number(day.identitiesPerProfile),
 	}));
 
-const buildUnifiedProfileHistoryData = (days: IdentityResolutionMetricChartDay[]): UnifiedProfileHistoryPoint[] =>
+const buildUnifiedProfileHistoryData = (days: IdentityResolutionMetricChartDay[]): RecognizedAnonymousHistoryPoint[] =>
 	days.map((day) => ({
 		day: day.day,
 		recognized: day.profilesRecognized == null ? null : Number(day.profilesRecognized),
@@ -782,8 +773,10 @@ export {
 export type {
 	ConnectionBar,
 	DisplayDateRange,
+	IdentityConnectionOption,
 	IdentityDashboardDatePreset,
+	IdentityMetricChartDay,
 	IdentityTrend,
+	RecognizedAnonymousHistoryPoint,
 	ResolutionEffectivenessPoint,
-	UnifiedProfileHistoryPoint,
 };

@@ -32,9 +32,11 @@ import { formatNumber } from '../../../utils/formatNumber';
 import {
 	ConnectionBar,
 	DELETED_CONNECTION_SCOPE,
+	IdentityConnectionOption,
+	IdentityMetricChartDay,
 	IdentityTrend,
+	RecognizedAnonymousHistoryPoint,
 	ResolutionEffectivenessPoint,
-	UnifiedProfileHistoryPoint,
 	buildProfileComposition,
 	buildTypeDistribution,
 	chartDomainTicks,
@@ -381,12 +383,6 @@ const compactNumber = (value: number): string =>
 
 const formatPercentage = (value: number | null): string => (value == null ? '—' : `${value.toFixed(1)}%`);
 
-interface RecognizedAnonymousHistoryPoint {
-	day: string;
-	recognized: number | null;
-	anonymous: number | null;
-}
-
 interface RecognizedAnonymousLegendProps {
 	recognizedColor: string;
 	anonymousColor: string;
@@ -522,10 +518,10 @@ const RecognizedAnonymousHistoryChart = ({
 };
 
 interface IdentitiesChartProps {
-	days: RecognizedAnonymousHistoryPoint[];
+	days: IdentityMetricChartDay[];
 	loading: boolean;
 	error?: string;
-	connectionOptions: { id: string; name: string }[];
+	connectionOptions: IdentityConnectionOption[];
 	selectedConnection: string;
 	onConnectionChange: (connection: string) => void;
 	disabled?: boolean;
@@ -584,7 +580,7 @@ const IdentitiesChart = ({
 };
 
 interface ProfilesChartProps {
-	days: UnifiedProfileHistoryPoint[];
+	days: RecognizedAnonymousHistoryPoint[];
 	loading: boolean;
 	error?: string;
 }
