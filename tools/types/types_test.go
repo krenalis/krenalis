@@ -392,6 +392,8 @@ func sameType(t1, t2 Type) error {
 		t1.unsigned == t2.unsigned &&
 		t1.unique == t2.unique &&
 		t1.real == t2.real &&
+		t1.semantics == t2.semantics &&
+		t1.semanticsOption == t2.semanticsOption &&
 		t1.p == t2.p &&
 		t1.s == t2.s &&
 		t1.vl == nil && t2.vl == nil {
@@ -441,6 +443,14 @@ func sameType(t1, t2 Type) error {
 	// Real.
 	if t1.real != t2.real {
 		return fmt.Errorf("expected real %t, got %t", t1.real, t2.real)
+	}
+	// Semantics.
+	if t1.semantics != t2.semantics {
+		return fmt.Errorf("expected semantics %s, got %s", t1.semantics, t2.semantics)
+	}
+	// Option associated with the semantics.
+	if t1.semanticsOption != t2.semanticsOption {
+		return fmt.Errorf("expected semantics option %v, got %v", t1.semanticsOption, t2.semanticsOption)
 	}
 	// Precision, byte length or elements minimum length.
 	if t1.p != t2.p {

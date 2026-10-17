@@ -423,12 +423,19 @@ func errMatchingPropertyConversion(in, ex string) error {
 //   - string to int, uuid, and string
 //   - uuid to uuid and string
 //
-// It panics if v is nil or the types in and ex are not conforming to these
-// supported conversions. It returns an error if the converted value does not
-// satisfy the constraints of the ex type.
+// It panics if v is nil, the types in and ex do not have the same semantics
+// and options, or they are not conforming to these supported conversions.
+//
+// It returns an error if the converted value does not satisfy the constraints
+// of the ex type.
 func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, error) {
 	if v == nil {
 		panic(fmt.Sprintf("core: unexpected value nil for internal kind %s", in.Kind()))
+	}
+	if !types.EqualSemantics(in, ex) {
+		panic(fmt.Sprintf("core: internal and external semantics differ: "+
+			"internal %s semantics (options %s), external %s semantics (options %s)",
+			in.Semantics(), types.SemanticsOptionString(in), ex.Semantics(), types.SemanticsOptionString(ex)))
 	}
 	switch ex.Kind() {
 	case types.StringKind:
@@ -443,6 +450,10 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 		default:
 			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
+		if in.Semantics() == types.CountrySemantics || in.Semantics() == types.PhoneSemantics {
+			return s, nil
+		}
+		// Validate that v matches the external property's constraints.
 		if n, ok := ex.MaxBytes(); ok && len(s) > n {
 			return nil, errMatchingPropertyConversion(inPath, outPath)
 		}

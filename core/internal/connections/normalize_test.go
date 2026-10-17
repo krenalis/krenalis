@@ -9,6 +9,7 @@ import (
 	"math"
 	"net"
 	"net/netip"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -81,6 +82,9 @@ func Test_normalize(t *testing.T) {
 		{types.String(), []byte(nil), "", false, nil},
 		{types.String().WithValues("foo", "boo"), []byte(nil), nil, true, nil},
 		{types.String().WithPattern(regexp.MustCompile(`^foo$`)), []byte(nil), nil, true, nil},
+		{types.String().AsCountry(types.ISO3166Alpha2), "", nil, true, nil},
+		{types.String().AsCountry(types.ISO3166Alpha3), "", nil, true, nil},
+		{types.String().AsPhone(), "", nil, true, nil},
 		// boolean.
 		{types.Boolean(), true, true, false, nil},
 		// int(16).
@@ -204,6 +208,8 @@ func Test_normalize(t *testing.T) {
 		{types.Array(types.Int(32)), []any{1.0, 2.0}, []any{1, 2}, false, nil},
 		{types.Array(types.String()).WithUnique(), []any{"foo", "boo"}, []any{"foo", "boo"}, false, nil},
 		{types.Array(types.Array(types.String())), []any{[]any{"foo"}, []any{"foo"}}, []any{[]any{"foo"}, []any{"foo"}}, false, nil},
+		{types.Array(types.String().AsPhone()), []any{"+390236618300", []byte("+39 02-36618 300")}, []any{"+390236618300", "+390236618300"}, false, nil},
+		{types.Array(types.Map(types.String().AsPhone())), []any{map[string]any{"home": "+39 02-36618 300"}}, []any{map[string]any{"home": "+390236618300"}}, false, nil},
 		{types.Array(types.Int(32)), []any(nil), nil, true, nil},
 		{types.Array(types.Int(32)), []int(nil), nil, true, nil},
 		{types.Array(types.Int(32)), []string(nil), nil, true, nil},
@@ -268,6 +274,112 @@ func Test_normalize(t *testing.T) {
 
 }
 
+// TestNormalizeSemantics checks validation according to semantics during
+// normalization, including nested containers.
+func TestNormalizeSemantics(t *testing.T) {
+
+	country := types.String().AsCountry(types.ISO3166Alpha2)
+	tests := []struct {
+		name      string
+		semantics types.Type
+		value     string
+		valid     bool
+	}{
+		{"current country", country, "IT", true},
+		{"alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "ITA", true},
+		{"long alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "ITAL", false},
+		{"former country", country, "AN", true},
+		{"unknown country", country, "ZZ", false},
+		{"reserved country", country, "UK", false},
+		{"lowercase country", country, "it", false},
+		{"empty country", country, "", false},
+		{"short country", country, "I", false},
+		{"long country", country, "ITA", false},
+		{"non-ASCII country", country, "é", false},
+		{"canonical phone", types.String().AsPhone(), "+390236618300", true},
+		{"structurally possible phone", types.String().AsPhone(), "+12001230101", true},
+		{"local-only phone", types.String().AsPhone(), "+12530000", false},
+		{"double plus phone", types.String().AsPhone(), "++390236618300", false},
+		{"long phone", types.String().AsPhone(), "+1234567890123456", false},
+		{"multibyte phone at limit", types.String().AsPhone(), "éééééééé", false},
+		{"multibyte phone over limit", types.String().AsPhone(), "ééééééééé", false},
+		{"empty phone", types.String().AsPhone(), "", false},
+		{"invalid UTF-8 phone", types.String().AsPhone(), "\xff", false},
+		{"phone without format restriction", types.String().AsPhone(), "a (b)", false},
+	}
+
+	for _, test := range tests {
+
+		t.Run(test.name, func(t *testing.T) {
+
+			for _, shape := range []string{"string", "bytes", "array", "map", "nested"} {
+
+				t.Run(shape, func(t *testing.T) {
+
+					typ := test.semantics
+					var value any = test.value
+					switch shape {
+					case "bytes":
+						value = []byte(test.value)
+					case "array":
+						typ = types.Array(typ)
+						value = []any{test.value}
+					case "map":
+						typ = types.Map(typ)
+						value = map[string]any{"home": test.value}
+					case "nested":
+						typ = types.Array(types.Map(types.Array(typ)))
+						value = []any{map[string]any{"home": []any{test.value}}}
+					}
+					schema := types.Object([]types.Property{{Name: "value", Type: typ}})
+					p, _ := schema.Properties().ByName("value")
+					got, err := normalize(p.Name, p.Type, value, p.Nullable, nil)
+					if err != nil {
+						if test.valid {
+							t.Fatal(err)
+						}
+						if _, ok := errors.AsType[InputValidationError](err); !ok {
+							t.Fatalf("expected InputValidationError, got %T", err)
+						}
+						if got != nil {
+							t.Fatalf("expected nil, got %#v", got)
+						}
+						return
+					}
+					if !test.valid {
+						t.Fatalf("expected invalid value to be rejected, got %#v", got)
+					}
+					if shape == "bytes" {
+						value = test.value
+					}
+					if !reflect.DeepEqual(got, value) {
+						t.Fatalf("expected value %#v, got %#v", value, got)
+					}
+
+				})
+
+			}
+
+			// An object's properties must supply their own semantics.
+			schema := types.Object([]types.Property{{Name: "value", Type: test.semantics}})
+			p := types.Property{Name: "object", Type: schema}
+			_, err := normalize(p.Name, p.Type, map[string]any{"value": test.value}, p.Nullable, nil)
+			if err != nil {
+				if test.valid {
+					t.Fatal(err)
+				}
+				return
+			}
+			if !test.valid {
+				t.Fatalf("expected invalid object property to be rejected, got %#v", map[string]any{"value": test.value})
+			}
+
+		})
+
+	}
+
+}
+
 func Test_normalize_errors(t *testing.T) {
 
 	timeLayout := &state.TimeLayouts{Time: "15:04"}
@@ -297,6 +409,9 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "textNullableEmptyBytesUnsupportedValue", typ: types.String().WithValues("foo", "bar"), value: []byte{}, nullable: true, wantContains: "contains an unsupported value", wantInputError: true},
 		{name: "textTooLong", typ: types.String().WithMaxBytes(1), value: "toolong", wantContains: "has a value longer than 1 bytes"},
 		{name: "textTooManyChars", typ: types.String().WithMaxLength(2), value: "bòò", wantContains: "has a value longer than 2 characters"},
+		{name: "countryAlpha2NullableInvalidValue", typ: types.String().AsCountry(types.ISO3166Alpha2), value: "ZZ", nullable: true, wantInputError: true},
+		{name: "countryAlpha3NullableInvalidValue", typ: types.String().AsCountry(types.ISO3166Alpha3), value: "ZZZ", nullable: true, wantInputError: true},
+		{name: "phoneNullableInvalidValue", typ: types.String().AsPhone(), value: "abc", nullable: true, wantInputError: true},
 		{name: "booleanWrongString", typ: types.Boolean(), value: "maybe", wantContains: "string value but it is not 'true' or 'false'"},
 		{name: "booleanInvalidType", typ: types.Boolean(), value: 1, wantContains: "has type int that is not allowed for type boolean"},
 		{name: "intFractionalFloat", typ: types.Int(32), value: 1.5, wantContains: "float64 value that cannot represent an int(32) value"},
@@ -388,6 +503,12 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "arrayUniqueDuplicated", typ: types.Array(types.Int(32)).WithUnique(), value: []any{1, 1}, want: "property 'k' contains a duplicated value"},
 		{name: "arrayUniqueDuplicatedNaNs", typ: types.Array(types.Float(64)).WithUnique(), value: []any{math.NaN(), math.NaN()}, want: "property 'k' contains a duplicated value"},
 		{name: "arrayUniqueEquivalentDecimals", typ: types.Array(types.Decimal(6, 2)).WithUnique(), value: []any{decimal.New(15, 1), decimal.MustParse("1.50")}, want: "property 'k' contains a duplicated value"},
+		{
+			name:  "arrayUniquePhoneNormalizationCollision",
+			typ:   types.Array(types.String().AsPhone()).WithUnique(),
+			value: []any{"+390236618300", []byte("+39 02-36618 300")},
+			want:  "property 'k' contains a duplicated value",
+		},
 		{name: "objectMissingRequired", typ: types.Object([]types.Property{{Name: "foo", Type: types.String()}}), value: map[string]any{}, wantContains: "property 'k.foo' does not have a value, but the property is not optional for reading"},
 		{name: "nilObjectMissingRequired", typ: types.Object([]types.Property{{Name: "foo", Type: types.String()}}), value: map[string]any(nil), wantContains: "property 'k.foo' does not have a value, but the property is not optional for reading"},
 		{name: "objectPropertyError", typ: types.Object([]types.Property{{Name: "foo", Type: types.Int(32)}}), value: map[string]any{"foo": "bad"}, wantContains: "property 'k.foo' has a string value that does not represent an int value"},
