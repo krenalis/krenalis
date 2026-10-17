@@ -354,7 +354,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 
 	// Init the event collector.
 	sender.MaxQueuedEvents = conf.MaxQueuedEventsPerDestination
-	core.collector, err = collector.New(db, core.stream, core.state, core.datastore, core.connections, core.functionProvider, core.metrics, conf.MaxMindDBPath)
+	core.collector, err = collector.New(ctx, db, core.stream, core.state, core.datastore, core.connections, core.functionProvider, core.metrics, conf.MaxMindDBPath)
 	if err != nil {
 		return nil, err
 	}

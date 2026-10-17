@@ -149,12 +149,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		const newProperty = findPropertyInSchema(newPropertyName);
 		const [, newPath] = splitPropertyAndPath(newPropertyName, flatInputSchema);
 
-		const compatibleOperators = getCompatibleFilterOperators(
-			newProperty,
-			newPath !== '',
-			connection.role,
-			pipeline.target,
-		);
+		const compatibleOperators = getCompatibleFilterOperators(newProperty, newPath !== '');
 		if (condition.operator !== '' && !compatibleOperators.includes(FILTER_OPERATORS.indexOf(condition.operator))) {
 			condition.operator = '';
 			condition.values = [''];
@@ -173,12 +168,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		const p = updateProperty(path, value);
 		const condition = filterConditionAt(p.filter!, path);
 		const [, propertyPath] = splitPropertyAndPath(condition.property, flatInputSchema);
-		const compatibleOperators = getCompatibleFilterOperators(
-			flatInputSchema[value],
-			propertyPath !== '',
-			connection.role,
-			pipeline.target,
-		);
+		const compatibleOperators = getCompatibleFilterOperators(flatInputSchema[value], propertyPath !== '');
 		const currentOperatorIndex = FILTER_OPERATORS.findIndex((operator) => operator === condition.operator);
 		const isJSON = flatInputSchema[value]?.type === 'json';
 
@@ -207,12 +197,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		const p = structuredClone(pipeline);
 		const condition = filterConditionAt(p.filter!, path);
 		const [base] = splitPropertyAndPath(condition.property, flatInputSchema);
-		const compatibleOperators = getCompatibleFilterOperators(
-			flatInputSchema[base],
-			value !== '',
-			connection.role,
-			pipeline.target,
-		);
+		const compatibleOperators = getCompatibleFilterOperators(flatInputSchema[base], value !== '');
 		if (condition.operator !== '' && !compatibleOperators.includes(FILTER_OPERATORS.indexOf(condition.operator))) {
 			condition.operator = '';
 			condition.values = [''];
@@ -365,13 +350,11 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 				disabled={isInvalidProperty || isDisabled}
 			>
 				{property != null
-					? getCompatibleFilterOperators(property, propertyPath !== '', connection.role, pipeline.target).map(
-							(index) => (
-								<SlOption key={index} value={String(index)}>
-									{FILTER_OPERATORS[index]}
-								</SlOption>
-							),
-						)
+					? getCompatibleFilterOperators(property, propertyPath !== '').map((index) => (
+							<SlOption key={index} value={String(index)}>
+								{FILTER_OPERATORS[index]}
+							</SlOption>
+						))
 					: FILTER_OPERATORS.map((operator, index) => (
 							<SlOption key={operator} value={String(index)}>
 								{operator}

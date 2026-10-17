@@ -737,10 +737,6 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 	// disallowJSON indicates whether JSON properties are disallowed.
 	disallowJSON := validation.role == state.Destination && validation.target == state.TargetUser
 
-	// disallowEmptyOnObject indicates whether the "is empty" and "is not empty"
-	// operators are disallowed on object properties.
-	disallowEmptyOnObject := validation.role == state.Destination && validation.target == state.TargetUser || validation.target == state.TargetEvent
-
 	if !types.IsValidPropertyPath(cond.Property) {
 		return "", errors.New("property path is not valid")
 	}
@@ -779,18 +775,17 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 	// is on or after              : datetime, date, time, year
 	// is true                     : boolean, json
 	// is false                    : boolean, json
-	// is empty                    : json, string, object, array, map [^3]
-	// is not empty                : json, string, object, array, map [^3]
-	// is null                     : All types [^4]
-	// is not null                 : All types [^4]
-	// exists                      : All types [^5]
-	// does not exist              : All types [^5]
+	// is empty                    : json, string, array, map
+	// is not empty                : json, string, array, map
+	// is null                     : All types [^3]
+	// is not null                 : All types [^3]
+	// exists                      : All types [^4]
+	// does not exist              : All types [^4]
 	//
 	// [1]: Strings with allowed values are not supported.
 	// [2]: array(T) is supported if T is supported by the "is" operator.
-	// [3]: Object properties are not supported for destination pipelines on users or for pipelines on events.
-	// [4]: Only if the property is nullable or has type JSON.
-	// [5]: Only if the property is read-optional or the path continues inside a JSON property.
+	// [3]: Only if the property is nullable or has type JSON.
+	// [4]: Only if the property is read-optional or the path continues inside a JSON property.
 	//
 	switch op {
 	case OpIs, OpIsNot:
@@ -864,15 +859,8 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 				}
 			}
 		case types.JSONKind, types.ArrayKind, types.MapKind:
-		case types.ObjectKind:
-			if disallowEmptyOnObject {
-				if validation.target == state.TargetEvent {
-					return "", fmt.Errorf("operator %q cannot be used on object properties for pipelines on events", op)
-				}
-				return "", fmt.Errorf("operator %q cannot be used on object properties for destination pipelines on users", op)
-			}
 		default:
-			return "", fmt.Errorf("operator %q can only be used with json, string, object, array, and map properties", op)
+			return "", fmt.Errorf("operator %q can only be used with json, string, array, and map properties", op)
 		}
 	case OpIsNull, OpIsNotNull:
 		if !p.Nullable && kind != types.JSONKind {
