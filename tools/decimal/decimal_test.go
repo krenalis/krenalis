@@ -598,6 +598,11 @@ func Test_Parse(t *testing.T) {
 		{"-9223372036854775808", 0, 0, "-9223372036854775808", "-9223372036854775808", nil},
 		{"1e" + strconv.Itoa(decimal.MaxScale), 0, 0, "1e+999999999999999999", "1e999999999999999999", nil},
 		{"1e" + strconv.Itoa(decimal.MinScale), 0, 0, "1e-999999999999999999", "1e-999999999999999999", nil},
+		{"0.1e" + strconv.Itoa(MaxScale+1), 0, 0, "1e+999999999999999999", "0.1e1000000000000000000", nil},
+		{"10e" + strconv.Itoa(MinScale-1), 0, 0, "1e-999999999999999999", "10e-1000000000000000000", nil},
+		{"1e" + strings.Repeat("0", 64), 0, 0, "1", "1", nil},
+		{"1e+" + strings.Repeat("0", 64) + "1", 0, 0, "1e+1", "1e+" + strings.Repeat("0", 64) + "1", nil},
+		{"1e-" + strings.Repeat("0", 64) + "1", 0, 0, "0.1", "1e-" + strings.Repeat("0", 64) + "1", nil},
 		{
 			"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999",
 			100,
@@ -655,6 +660,13 @@ func Test_Parse(t *testing.T) {
 		{"0.0000001", 7, 6, "", "", ErrRange},
 		{"1e" + strconv.Itoa(decimal.MaxScale+1), 0, 0, "", "", ErrRange},
 		{"1e" + strconv.Itoa(decimal.MinScale-1), 0, 0, "", "", ErrRange},
+		{"1e1" + strings.Repeat("0", 64), 0, 0, "", "", ErrRange},
+		{"1e-1" + strings.Repeat("0", 64), 0, 0, "", "", ErrRange},
+		{"1e18446744073709551616", 0, 0, "", "", ErrRange},
+		{"1e" + strconv.Itoa(math.MaxInt), 0, 0, "", "", ErrRange},
+		{"1e" + strconv.Itoa(math.MinInt), 0, 0, "", "", ErrRange},
+		{"100e" + strconv.Itoa(math.MaxInt), 0, 0, "", "", ErrRange},
+		{"0.01e" + strconv.Itoa(math.MinInt), 0, 0, "", "", ErrRange},
 	}
 
 	for _, test := range tests {
