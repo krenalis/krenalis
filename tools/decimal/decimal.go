@@ -225,9 +225,10 @@ func (x Decimal) Neg() Decimal {
 	return y
 }
 
-// PrecisionScale returns the smallest precision and nonnegative scale that
-// represent x exactly. Precision includes the scale, even for values below 1.
-// Insignificant trailing fractional zeros are excluded; zero returns 1, 0.
+// PrecisionScale returns the minimum precision and nonnegative scale needed to
+// represent x exactly, ignoring trailing fractional zeros.
+// Leading fractional zeros count toward precision: 0.005 has precision 3 and
+// scale 3. Zero has precision 1 and scale 0.
 func (x Decimal) PrecisionScale() (precision, scale int) {
 	if x.b.Sign() == 0 {
 		return 1, 0
