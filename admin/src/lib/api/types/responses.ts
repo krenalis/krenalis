@@ -194,6 +194,7 @@ interface PipelineErrorsResponse {
 }
 
 interface PublicMetadata {
+	usaDemoEnabled?: boolean;
 	installationID: string;
 	externalURL: string;
 	externalEventURL: string;

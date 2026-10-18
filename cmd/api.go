@@ -355,6 +355,7 @@ type publicMetadata struct {
 	TelemetryLevel             string   `json:"telemetryLevel"`
 	WorkOSClientID             string   `json:"workosClientID"`
 	WorkOSDevMode              bool     `json:"workosDevMode"`
+	USADemoEnabled             bool     `json:"usaDemoEnabled"`
 }
 
 // PublicMetadata returns public information about the server installation:
@@ -363,6 +364,7 @@ type publicMetadata struct {
 //   - externalURL: canonical external URL - https://example.com/
 //   - externalEventURL: external event URL - https://example.com/v1/events
 //   - externalAssetsURLs: external assets URLs.
+//   - usaDemoEnabled: verified local USA data is configured for internal demos.
 //   - potentialConnectorsURL: URL of JSON with potential connectors, or empty string.
 //   - javaScriptSDKURL: URL of the JavaScript SDK - https://example.com/krenalis.min.js
 //   - inviteMembersViaEmail: should new members be added by sending invitation emails??
@@ -382,6 +384,7 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 		InviteMembersViaEmail:      api.inviteMembersViaEmail,
 		CanSendMemberPasswordReset: api.core.CanSendMemberPasswordReset(),
 		TelemetryLevel:             string(api.sentryTelemetry.level),
+		USADemoEnabled:             api.core.USADemoEnabled(),
 	}
 	if api.workOS != nil {
 		metadata.WorkOSClientID = api.workOS.ClientID()

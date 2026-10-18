@@ -56,8 +56,10 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /connectors/{code}":                           api.Connector,
 		"GET    /connectors/{code}/documentation":             api.ConnectorDocumentation,
 		"GET    /consent-purposes":                            workspace.ConsentPurposes,
-		"GET    /simulated/systems":                           workspace.SimulatedSystems, /* Admin console only */
-		"GET    /simulated/systems/{id}":                      workspace.SimulatedSystem,  /* Admin console only */
+		"GET    /simulated/systems":                           workspace.SimulatedSystems,          /* Admin console only */
+		"GET    /simulated/systems/{id}":                      workspace.SimulatedSystem,           /* Admin console only */
+		"GET    /simulated/systems/{id}/usa-preview":          workspace.SimulatedSystemUSAPreview, /* Admin console only */
+		"GET    /simulated/usa/photos/{workspace}/{id}":       workspace.SimulatedSystemUSAPhoto,   /* Admin console only */
 		"GET    /events":                                      workspace.Events,
 		"GET    /events/listeners/{id}":                       workspace.ListenedEvents,
 		"GET    /events/schema":                               api.EventSchema,

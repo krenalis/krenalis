@@ -44,6 +44,7 @@ type CountryPerson struct {
 // SourceWorld chooses a country by Layer 1 coordinate and owns truth.
 type SourceWorld struct {
 	base      *World
+	namespace IdentityNamespace
 	countries []CountryShare
 	total     uint64
 	streams   streamFactory
@@ -58,18 +59,28 @@ func NewSourceWorld(base *World, countries []CountryShare) (*SourceWorld, error)
 
 func newSourceWorld(base *World, countries []CountryShare) (*SourceWorld, error) {
 
-	if base == nil || len(countries) == 0 || len(countries) > 16 {
+	if base == nil {
 		return nil, fmt.Errorf("invalid source world configuration")
 	}
-
-	ordered := append([]CountryShare(nil), countries...)
-	slices.SortFunc(ordered, func(a, b CountryShare) int { return strings.Compare(a.Code, b.Code) })
-	components := make([]Component, 0, 1+3*len(ordered))
 	snapshot, err := StringComponent("snapshot-id", string(base.snapshotID))
 	if err != nil {
 		return nil, err
 	}
-	components = append(components, snapshot)
+
+	return newCountrySourceWorld(base, base.namespace, snapshot, countries)
+}
+
+// newCountrySourceWorld also admits an internal country owner without an
+// Italian base; its explicit identity component is never a public snapshot.
+func newCountrySourceWorld(base *World, namespace IdentityNamespace, identity Component, countries []CountryShare) (*SourceWorld, error) {
+
+	if len(countries) == 0 || len(countries) > 16 {
+		return nil, fmt.Errorf("invalid source world configuration")
+	}
+	ordered := append([]CountryShare(nil), countries...)
+	slices.SortFunc(ordered, func(a, b CountryShare) int { return strings.Compare(a.Code, b.Code) })
+	components := make([]Component, 0, 1+3*len(ordered))
+	components = append(components, identity)
 	var total uint64
 	for i, country := range ordered {
 
@@ -82,7 +93,7 @@ func newSourceWorld(base *World, countries []CountryShare) (*SourceWorld, error)
 			return nil, fmt.Errorf("duplicate country %s", country.Code)
 		}
 		if country.Code == "IT" {
-			if country.Generator != nil || country.Version != MarketDataVersion {
+			if base == nil || country.Generator != nil || country.Version != MarketDataVersion {
 				return nil, fmt.Errorf("invalid IT generator or version")
 			}
 		} else if country.Generator == nil {
@@ -110,7 +121,7 @@ func newSourceWorld(base *World, countries []CountryShare) (*SourceWorld, error)
 		return nil, err
 	}
 
-	return &SourceWorld{base: base, countries: ordered, total: total, streams: streams}, nil
+	return &SourceWorld{base: base, namespace: namespace, countries: ordered, total: total, streams: streams}, nil
 }
 
 // Oracle returns hidden mappings for one source and person coordinate.
@@ -180,7 +191,7 @@ func (w *SourceWorld) person(index PersonIndex) (CountryPerson, error) {
 			if err != nil {
 				return CountryPerson{}, err
 			}
-			id, err := PersonIDForIndex(w.base.namespace, index)
+			id, err := PersonIDForIndex(w.namespace, index)
 			if err != nil {
 				return CountryPerson{}, err
 			}
@@ -300,9 +311,16 @@ func (s *SourceInstance) Records(index PersonIndex) ([]SourceRecord, error) {
 		return nil, err
 	}
 
+	return s.observations(index, canonical.Person, count)
+}
+
+// observations projects generated truth, allowing a country adapter to
+// carry typed facts from the same draw without regenerating that Person.
+func (s *SourceInstance) observations(index PersonIndex, canonical Person, count int) ([]SourceRecord, error) {
+
 	records := make([]SourceRecord, count)
 	for ordinal := range records {
-		person := canonical.Person
+		person := canonical
 		record := SourceRecord{ID: s.recordID(index, ordinal)}
 		if person.PhotoID != "" {
 			record.PhotoID = &person.PhotoID

@@ -14,7 +14,7 @@ import (
 const socioeconomicWorldIDDomain = "fakedata/socioeconomic-world-id/v1"
 
 // appendAsset emits one complete node-owned logical subtree, without its LF.
-func (m *SocioeconomicModel) appendAsset(dst []byte, node int) ([]byte, error) {
+func (m *socioeconomicNumericModel) appendAsset(dst []byte, node int) ([]byte, error) {
 	switch node {
 	case socioeconomicCompanyIndustry:
 		return appendSocioeconomicWeights(dst, m.companyIndustry), nil
@@ -225,6 +225,12 @@ func appendSocioeconomicWeights(dst []byte, weights socioeconomicWeights) []byte
 }
 
 func socioeconomicWorldIdentity(base WorldID, model [sha256.Size]byte) (SocioeconomicWorldID, error) {
+	return socioeconomicWorldIdentityForProtocol(base, model, PopulationAnchorDate, "socioeconomic-v1")
+}
+
+// socioeconomicWorldIdentityForProtocol keeps one identity codec while
+// binding the national anchor and protocol independently of stream roots.
+func socioeconomicWorldIdentityForProtocol(base WorldID, model [sha256.Size]byte, anchorDate, protocolVersion string) (SocioeconomicWorldID, error) {
 
 	baseDigest, err := worldIDDigest(base)
 	if err != nil {
@@ -234,11 +240,11 @@ func socioeconomicWorldIdentity(base WorldID, model [sha256.Size]byte) (Socioeco
 	if err != nil {
 		return "", err
 	}
-	anchor, err := StringComponent("population-anchor-date", PopulationAnchorDate)
+	anchor, err := StringComponent("population-anchor-date", anchorDate)
 	if err != nil {
 		return "", err
 	}
-	protocol, err := StringComponent("protocol", "socioeconomic-v1")
+	protocol, err := StringComponent("protocol", protocolVersion)
 	if err != nil {
 		return "", err
 	}

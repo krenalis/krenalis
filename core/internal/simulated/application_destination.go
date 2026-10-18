@@ -83,8 +83,10 @@ func newDestinationRecordDocument(id string, attributes map[string]any) (json.Va
 	return types.MarshalValidate(document, sourceSchema)
 }
 
-func updateDestinationRecordDocument(id string, stored json.Value, patch map[string]any) (json.Value, error) {
-	attributes, err := types.Decode[map[string]any](bytes.NewReader(stored), sourceSchema)
+// updateDestinationRecordDocument preserves facts in the account's schema
+// while applying a patch of writable observation fields.
+func updateDestinationRecordDocument(id string, stored json.Value, patch map[string]any, schema types.Type) (json.Value, error) {
+	attributes, err := types.Decode[map[string]any](bytes.NewReader(stored), schema)
 	if err != nil {
 		return nil, fmt.Errorf("stored record is invalid: %w", err)
 	}
@@ -110,7 +112,7 @@ func updateDestinationRecordDocument(id string, stored json.Value, patch map[str
 		}
 		maps.Copy(current, value.(map[string]any))
 	}
-	return types.MarshalValidate(document, sourceSchema)
+	return types.MarshalValidate(document, schema)
 }
 
 func generatedDestinationRecordID() string {

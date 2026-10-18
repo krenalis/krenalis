@@ -22,6 +22,7 @@ import Section from '../../base/Section/Section';
 import NotFound from '../NotFound/NotFound';
 import { parseDuplicateRecordPercent, parseInitialUserRecords } from './simulatedSystemValues';
 import './SimulatedWorld.css';
+import USADemoPreview from './USADemoPreview';
 
 const POLL_INTERVAL_MS = 3000;
 const METADATA_POLL_INTERVAL_MS = 15000;
@@ -150,6 +151,7 @@ const DELETION_STEPS = [
 const ACCOUNT_COLUMNS: GridColumn[] = [
 	{ name: 'Name' },
 	{ name: 'Type' },
+	{ name: 'Country' },
 	{ name: 'Records', alignment: 'right' },
 	{ name: 'Linked connections' },
 ];
@@ -283,6 +285,7 @@ const AccountList = ({ refreshVersion }: AccountListProps) => {
 				)}
 			</span>,
 			'SaaS application',
+			account.countries.US != null ? 'United States' : account.countries.IT != null ? 'Italy' : '—',
 			account.userCount.toLocaleString('en-US'),
 			account.sourceConnection != null || account.destinationConnection != null ? (
 				<span className='simulated-systems__connection-links' onClick={(event) => event.stopPropagation()}>
@@ -347,7 +350,7 @@ const AccountList = ({ refreshVersion }: AccountListProps) => {
 						<Grid
 							columns={ACCOUNT_COLUMNS}
 							rows={rows}
-							gridColumnsWidths='minmax(150px, 1.2fr) minmax(110px, 1fr) minmax(100px, .7fr) minmax(190px, 1.3fr)'
+							gridColumnsWidths='minmax(150px, 1.2fr) minmax(110px, 1fr) minmax(130px, 1fr) minmax(100px, .7fr) minmax(190px, 1.3fr)'
 							noRowsMessage='No simulated systems yet. Create one to get started.'
 						/>
 					)}
@@ -362,7 +365,7 @@ interface CreateAccountProps {
 }
 
 const CreateAccount = ({ onDone }: CreateAccountProps) => {
-	const { api, redirect, setIsLoadingConnections } = useContext(AppContext);
+	const { api, redirect, setIsLoadingConnections, publicMetadata } = useContext(AppContext);
 	const isActive = useRef(true);
 	const dialogRef = useRef<SlDialogElement>(null);
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -376,6 +379,7 @@ const CreateAccount = ({ onDone }: CreateAccountProps) => {
 	const [customCount, setCustomCount] = useState('');
 	const [duplicateMode, setDuplicateMode] = useState('2');
 	const [customDuplicate, setCustomDuplicate] = useState('');
+	const [country, setCountry] = useState('IT');
 	const [createSource, setCreateSource] = useState(true);
 	const [createDestination, setCreateDestination] = useState(true);
 	const [nameError, setNameError] = useState('');
@@ -471,7 +475,7 @@ const CreateAccount = ({ onDone }: CreateAccountProps) => {
 				name: trimmedName,
 				userCount: validCount,
 				duplicateRecordPercent: duplicate,
-				countries: validCount === 0 ? {} : { IT: 100 },
+				countries: validCount === 0 ? {} : { [country]: 100 },
 			});
 		} catch (err) {
 			if (isActive.current) {
@@ -742,8 +746,18 @@ const CreateAccount = ({ onDone }: CreateAccountProps) => {
 								)}
 							</div>
 							<div className='simulated-systems__field'>
-								<span>Country distribution</span>
-								<div>Italy · 100%</div>
+								<label htmlFor='simulated-system-country'>Country distribution</label>
+								<SlSelect
+									id='simulated-system-country'
+									aria-label='Country distribution'
+									value={country}
+									onSlChange={(event) => setCountry(String((event.target as SlSelectElement).value))}
+								>
+									<SlOption value='IT'>Italy</SlOption>
+									{publicMetadata.usaDemoEnabled === true && (
+										<SlOption value='US'>United States · Internal demo</SlOption>
+									)}
+								</SlSelect>
 							</div>
 						</>
 					)}
@@ -1081,7 +1095,7 @@ const AccountDetail = ({ id }: AccountDetailProps) => {
 		if (account.userCount > 0) {
 			settingsRows.push(
 				{ cells: [<strong>Duplicate records</strong>, `${account.duplicateRecordPercent}%`] },
-				{ cells: [<strong>Countries</strong>, 'Italy'] },
+				{ cells: [<strong>Countries</strong>, account.countries.US != null ? 'United States' : 'Italy'] },
 			);
 		}
 		for (const role of ['source', 'destination'] as const) {
@@ -1171,6 +1185,9 @@ const AccountDetail = ({ id }: AccountDetailProps) => {
 						<div className='simulated-systems__error' role='alert'>
 							{actionError}
 						</div>
+					)}
+					{account.status === 'Available' && account.userCount > 0 && account.countries.US != null && (
+						<USADemoPreview accountID={account.id} />
 					)}
 					<Section
 						title='Status'

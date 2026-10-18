@@ -30,7 +30,7 @@ func TestSocioeconomicDestinationDocuments(t *testing.T) {
 	}
 	updated, err := updateDestinationRecordDocument("abc123", stored, map[string]any{
 		"first_name": "Bea", "address": map[string]any{"municipality": "Milan"},
-	})
+	}, sourceSchema)
 	if err != nil {
 		t.Fatalf("expected writable partial update, got %v", err)
 	}
@@ -54,10 +54,11 @@ func TestSocioeconomicDestinationDocuments(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected Destination create to reject %s, got success", name)
 		}
-		_, err = updateDestinationRecordDocument("abc123", stored, map[string]any{name: value})
-		if err == nil {
-			t.Fatalf("expected Destination update to reject %s even with unchanged value, got success", name)
+		_, err = updateDestinationRecordDocument("abc123", stored, map[string]any{name: value}, sourceSchema)
+		if err != nil {
+			continue
 		}
+		t.Fatalf("expected Destination update to reject %s even with unchanged value, got success", name)
 
 	}
 	created, err := newDestinationRecordDocument("new123", completeDestinationAttributes())
@@ -73,10 +74,12 @@ func TestSocioeconomicDestinationDocuments(t *testing.T) {
 			t.Fatalf("expected Destination-created %s absent, got %v", name, decoded[name])
 		}
 	}
-	_, err = updateDestinationRecordDocument("new123", created, map[string]any{"unknown_property": "invalid"})
-	if err == nil {
-		t.Fatal("expected unknown Destination property to be rejected, got success")
+	_, err = updateDestinationRecordDocument("new123", created, map[string]any{"unknown_property": "invalid"}, sourceSchema)
+	if err != nil {
+		return
 	}
+
+	t.Fatal("expected unknown Destination property rejection, got success")
 
 }
 

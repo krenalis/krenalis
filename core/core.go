@@ -76,6 +76,9 @@ type Core struct {
 	pipelineScheduler     *pipelineScheduler
 	simulatedWorldSource  *fakedata.ItalianWorldSource
 	simulatedPhotoBaseURL string
+	usaWorldData          *fakedata.USAWorldData
+	usaWorldSource        *fakedata.USAWorldSource
+	usaPhotoBaseURL       string
 	simulatedWorker       *simulatedSystemWorker
 	localLiveRuns         cancelContexts
 	memberEmailFrom       string
@@ -114,6 +117,9 @@ type Config struct {
 	PrometheusMetricsEnabled      bool
 	SimulatedWorldSource          *fakedata.ItalianWorldSource
 	SimulatedPhotoBaseURL         string
+	USAWorldData                  *fakedata.USAWorldData
+	USAWorldSource                *fakedata.USAWorldSource
+	USAPhotoBaseURL               string
 	DatabaseInitialization        struct {
 		// InitIfEmpty controls whether the PostgreSQL database should be
 		// initialized in case it is empty.
@@ -346,6 +352,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 
 	// Init the connections.
 	core.connections = connections.New(core.state, core.datastore)
+	core.connections.SetUSADocuments(core.usaDocuments)
 
 	// Connect to the NATS server.
 	core.stream, err = nats.Connect(conf.NATS.Options)
@@ -389,6 +396,9 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	core.close.ctx, core.close.cancelCtx = context.WithCancel(context.Background())
 	core.simulatedWorldSource = conf.SimulatedWorldSource
 	core.simulatedPhotoBaseURL = conf.SimulatedPhotoBaseURL
+	core.usaWorldData = conf.USAWorldData
+	core.usaWorldSource = conf.USAWorldSource
+	core.usaPhotoBaseURL = conf.USAPhotoBaseURL
 	core.simulatedWorker = newSimulatedSystemWorker(core)
 
 	// Instantiate a warehouses.Warehouse, used by the MCP server, for every workspace.

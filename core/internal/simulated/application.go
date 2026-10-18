@@ -56,6 +56,7 @@ type Store struct {
 	state            *state.State
 	store            *datastore.Store
 	writerGeneration *int64
+	usaDocuments     func(context.Context) (*USADocuments, error)
 }
 
 // NewStore returns a store for a workspace and optional bound account.
@@ -114,6 +115,11 @@ func (store *Store) Records(ctx context.Context, query datastore.SimulatedRecord
 	return store.store.SimulatedSystemRecords(ctx, store.account, query)
 }
 
+// SetUSADocuments configures the private document provider for a bound store.
+func (store *Store) SetUSADocuments(provider func(context.Context) (*USADocuments, error)) {
+	store.usaDocuments = provider
+}
+
 func (store *Store) recordsByID(ctx context.Context, ids []string) (map[string]json.Value, error) {
 	if store.account == "" {
 		return nil, connectors.NewInvalidSettingsError("simulated application account is not configured")
@@ -155,8 +161,9 @@ func NewApplication(env *connectors.ApplicationEnv) (*Application, error) {
 	return &Application{env: env, store: store}, nil
 }
 
-// RecordSchema returns the fixed source schema for the specified target.
-func (*Application) RecordSchema(_ context.Context, target connectors.Targets, role connectors.Role) (types.Type, error) {
+// RecordSchema returns the bound account's schema for the specified target.
+// An unbound account selector retains the historical Italian source schema.
+func (app *Application) RecordSchema(_ context.Context, target connectors.Targets, role connectors.Role) (types.Type, error) {
 	if target != connectors.TargetUser {
 		return types.Type{}, fmt.Errorf("simulated application target is not supported")
 	}
@@ -166,7 +173,7 @@ func (*Application) RecordSchema(_ context.Context, target connectors.Targets, r
 	if role != connectors.Source {
 		return types.Type{}, fmt.Errorf("simulated application role is not supported")
 	}
-	return sourceSchema, nil
+	return app.recordSchema()
 }
 
 // Records returns one page of source records for the specified target.
@@ -182,10 +189,23 @@ func (app *Application) Records(ctx context.Context, target connectors.Targets, 
 	if err != nil {
 		return nil, "", err
 	}
+	fullSchema, err := app.recordSchema()
+	if err != nil {
+		return nil, "", err
+	}
 	// appRecords projects the requested schema after receiving the complete document.
+	documents, err := app.countryDocuments(ctx)
+	if err != nil {
+		return nil, "", err
+	}
 	records := make([]connectors.Record, len(page.Records))
 	for i, simulatedRecord := range page.Records {
-		attributes, err := types.Decode[map[string]any](bytes.NewReader(simulatedRecord.Attributes), sourceSchema)
+		var attributes map[string]any
+		if documents != nil {
+			attributes, err = documents.decodeSource(ctx, simulatedRecord.ID, simulatedRecord.Attributes)
+		} else {
+			attributes, err = types.Decode[map[string]any](bytes.NewReader(simulatedRecord.Attributes), fullSchema)
+		}
 		if err != nil {
 			return nil, "", fmt.Errorf("simulated application record %q is invalid: %w", simulatedRecord.ID, err)
 		}
@@ -352,11 +372,20 @@ func (app *Application) SimulatedSystem() string {
 
 // Upsert creates or partially updates simulated-system records.
 func (app *Application) Upsert(ctx context.Context, target connectors.Targets, records connectors.Records, _ types.Type) error {
+
 	if target != connectors.TargetUser {
 		return fmt.Errorf("simulated application target is not supported")
 	}
 	if err := app.store.validateAccount(app.store.account); err != nil {
 		return connectors.NewInvalidSettingsError(err.Error())
+	}
+	fullSchema, err := app.recordSchema()
+	if err != nil {
+		return err
+	}
+	documents, err := app.countryDocuments(ctx)
+	if err != nil {
+		return err
 	}
 
 	input := make([]connectors.Record, 0, recordsPageSize)
@@ -380,7 +409,12 @@ func (app *Application) Upsert(ctx context.Context, target connectors.Targets, r
 		}
 		if create {
 			id := generatedDestinationRecordID()
-			data, err := newDestinationRecordDocument(id, record.Attributes)
+			var data json.Value
+			if documents != nil {
+				data, err = documents.create(id, record.Attributes)
+			} else {
+				data, err = newDestinationRecordDocument(id, record.Attributes)
+			}
 			if err != nil {
 				recordsError[i] = err
 				continue
@@ -415,7 +449,12 @@ func (app *Application) Upsert(ctx context.Context, target connectors.Targets, r
 			recordsError[pending.index] = fmt.Errorf("simulated system record %q does not exist", pending.id)
 			continue
 		}
-		updated, err := updateDestinationRecordDocument(pending.id, data, pending.patch)
+		var updated json.Value
+		if documents != nil {
+			updated, err = documents.update(ctx, pending.id, data, pending.patch)
+		} else {
+			updated, err = updateDestinationRecordDocument(pending.id, data, pending.patch, fullSchema)
+		}
 		if err != nil {
 			recordsError[pending.index] = err
 			continue
@@ -453,6 +492,7 @@ func (app *Application) Upsert(ctx context.Context, target connectors.Targets, r
 	if len(recordsError) > 0 {
 		return recordsError
 	}
+
 	return nil
 }
 

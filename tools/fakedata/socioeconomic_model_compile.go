@@ -35,55 +35,56 @@ func compileSocioeconomicLaw(input socioeconomicLawJSON) (socioeconomicLaw, erro
 }
 
 // compileSocioeconomicModel validates the complete canonical numerical model.
-// Work is bounded by the decoder's D2-A cardinalities; no network, random
-// streams, Company universe, or Person generation participates in compilation.
+// Only this Italian entry prepares the frozen national identity.
 func compileSocioeconomicModel(document *socioeconomicModelJSON) (*SocioeconomicModel, error) {
 
-	// Reserve retained storage before compilation. D2-A's numerical charges
-	// include exact weights recoverable from cumulative differences. The extra
-	// 64 KiB covers model headers, excess law descriptors and fixed dimensions.
-	// Decoder bounds make these int sums safe. Decoded work and retained output
-	// each fit 8 MiB; with no retained source buffer their overlap fits 24 MiB.
-	retained := 64 << 10
-	weights := [...][]uint32{
-		document.companyIndustry, document.education, document.primaryActivity, document.employeeJobFamily,
-		document.employeeJobLevel, document.selfEmployedJobFamily, document.selfEmployedIndustry,
+	numeric, err := compileSocioeconomicNumericModel(document, socioeconomicItalyRegions)
+	if err != nil {
+		return nil, err
 	}
-	widths := [...]int{14, 7, 6, 10, 4, 10, 14}
-	for i, values := range weights {
-		retained += 64 + 32*(len(values)/widths[i]) + 12*len(values)
+	model := &SocioeconomicModel{socioeconomicNumericModel: *numeric}
+	err = model.prepareIdentity()
+	if err != nil {
+		return nil, err
 	}
-	// Employer's separate 378-byte factor charge belongs to Contract 2, not
-	// D2-A's outside-model retained allowance.
-	retained += 8*127 + 72
-	for _, law := range document.employeeCount {
-		retained += 32 + 16*len(law.values)
-	}
-	retained += 64
-	for _, branch := range document.income {
-		retained += 128 + 2*len(branch.tupleMap)
-		for _, law := range branch.laws {
-			retained += 32 + 16*len(law.values)
-		}
-	}
-	if retained > maxSocioeconomicRetainedBytes {
-		return nil, fmt.Errorf("retained model charge %d exceeds %d bytes", retained, maxSocioeconomicRetainedBytes)
-	}
+	model.initialized = true
 
-	model := &SocioeconomicModel{companyCount: document.companyCount, employer: document.employer}
-	if model.companyCount == 0 {
-		return nil, fmt.Errorf("companyCount must be positive")
+	return model, nil
+}
+
+// compileSocioeconomicNumericModel bounds and compiles internal technical input
+// without a national identity, public representation, or currency semantics.
+func compileSocioeconomicNumericModel(document *socioeconomicModelJSON, territories socioeconomicTerritoryDomain) (*socioeconomicNumericModel, error) {
+
+	if document == nil {
+		return nil, fmt.Errorf("missing socioeconomic numerical input")
+	}
+	if territories != socioeconomicItalyRegions && territories != socioeconomicUSADivisions {
+		return nil, fmt.Errorf("unsupported socioeconomic territory domain %d", territories)
+	}
+	model := &socioeconomicNumericModel{
+		territories: territories, companyCount: document.companyCount, employer: document.employer,
 	}
 
 	// Validate each consumer's age partition and its redundant compiled view.
 	for i, age := range document.ages {
 
+		maximum := 6
+		if i == 1 {
+			maximum = 8
+		}
+		if len(age.lowerBounds) > maximum || len(age.compiled) > 55 {
+			return nil, fmt.Errorf("ages.%s: cardinality exceeds bounds", socioeconomicAgeNames[i])
+		}
 		if len(age.lowerBounds) == 0 || age.lowerBounds[0] != 21 || len(age.compiled) != 55 {
 			return nil, fmt.Errorf("ages.%s: missing 21–75 coverage", socioeconomicAgeNames[i])
 		}
 		for j := 1; j < len(age.lowerBounds); j++ {
 			if age.lowerBounds[j] <= age.lowerBounds[j-1] {
 				return nil, fmt.Errorf("ages.%s: lower bounds are not increasing", socioeconomicAgeNames[i])
+			}
+			if age.lowerBounds[j] > 75 {
+				return nil, fmt.Errorf("ages.%s: lower bounds exceed 75", socioeconomicAgeNames[i])
 			}
 		}
 
@@ -100,24 +101,86 @@ func compileSocioeconomicModel(document *socioeconomicModelJSON) (*Socioeconomic
 
 	}
 
-	// Validate complete categorical grids, including upstream zero-mass cells.
+	t := int(territories)
 	rows := [...]int{
-		1, 20 * len(document.ages[0].lowerBounds), 140 * len(document.ages[1].lowerBounds),
-		140, 70 * len(document.ages[2].lowerBounds), 140, 10,
+		1, t * len(document.ages[0].lowerBounds), 7 * t * len(document.ages[1].lowerBounds),
+		7 * t, 7 * 10 * len(document.ages[2].lowerBounds), 7 * t, 10,
 	}
+	slots := [6]int{t * 10 * 4 * 14 * 5, t * 10 * 14 * len(document.ages[3].lowerBounds)}
+	for branch := 2; branch < len(slots); branch++ {
+		slots[branch] = 7 * t * len(document.ages[branch+2].lowerBounds)
+	}
+
+	// Reserve retained storage before compilation. D2-A's numerical charges
+	// include exact weights recoverable from cumulative differences. The extra
+	// 64 KiB covers model headers, excess law descriptors and fixed dimensions.
+	// Collection bounds below precede arithmetic and allocation, including for
+	// internal input that has not passed through the Italian decoder.
+	retained := 64 << 10
+	weights := [...][]uint32{
+		document.companyIndustry, document.education, document.primaryActivity, document.employeeJobFamily,
+		document.employeeJobLevel, document.selfEmployedJobFamily, document.selfEmployedIndustry,
+	}
+	widths := [...]int{14, 7, 6, 10, 4, 10, 14}
 	names := [...]string{
 		"companyIndustry", "education", "primaryActivity", "employeeJobFamily",
 		"employeeJobLevel", "selfEmployedJobFamily", "selfEmployedIndustry",
 	}
+	for i, values := range weights {
+		if len(values) != rows[i]*widths[i] {
+			return nil, fmt.Errorf("%s: expected %d weights, got %d", names[i], rows[i]*widths[i], len(values))
+		}
+		retained += 64 + 32*(len(values)/widths[i]) + 12*len(values)
+	}
+	// Employer's separate 378-byte factor charge belongs to Contract 2, not
+	// D2-A's outside-model retained allowance.
+	retained += 8*127 + 72
+	if len(document.employeeCount) != 14 {
+		return nil, fmt.Errorf("employeeCount: expected 14 laws, got %d", len(document.employeeCount))
+	}
+	for _, law := range document.employeeCount {
+		if len(law.values) > 128 || len(law.weights) > 128 {
+			return nil, fmt.Errorf("employeeCount law exceeds 128 points")
+		}
+		retained += 32 + 16*len(law.values)
+	}
+	retained += 64
+	for branch, input := range document.income {
+
+		name := socioeconomicBranchNames[branch]
+		if len(input.tupleMap) != slots[branch] || len(input.laws) == 0 {
+			return nil, fmt.Errorf("income.%s: expected %d tuple slots and nonempty laws", name, slots[branch])
+		}
+		maximum := [...]int{512, 256, 64, 64, 64, 64}
+		if len(input.laws) > maximum[branch] {
+			return nil, fmt.Errorf("income.%s: law count exceeds %d", name, maximum[branch])
+		}
+		retained += 128 + 2*len(input.tupleMap)
+		for _, law := range input.laws {
+			if len(law.values) > 512 || len(law.weights) > 512 {
+				return nil, fmt.Errorf("income.%s law exceeds 512 points", name)
+			}
+			retained += 32 + 16*len(law.values)
+		}
+
+	}
+	if retained > maxSocioeconomicRetainedBytes {
+		return nil, fmt.Errorf("retained model charge %d exceeds %d bytes", retained, maxSocioeconomicRetainedBytes)
+	}
+
+	if model.companyCount == 0 {
+		return nil, fmt.Errorf("companyCount must be positive")
+	}
+	if model.companyCount > 104855 {
+		return nil, fmt.Errorf("companyCount exceeds 104855")
+	}
+
+	// Validate complete categorical grids, including upstream zero-mass cells.
 	outputs := [...]*socioeconomicWeights{
 		&model.companyIndustry, &model.education, &model.primaryActivity, &model.employeeJobFamily,
 		&model.employeeJobLevel, &model.selfEmployedJobFamily, &model.selfEmployedIndustry,
 	}
 	for i, values := range weights {
-
-		if len(values) != rows[i]*widths[i] {
-			return nil, fmt.Errorf("%s: expected %d weights, got %d", names[i], rows[i]*widths[i], len(values))
-		}
 
 		out := outputs[i]
 		out.width = widths[i]
@@ -133,9 +196,6 @@ func compileSocioeconomicModel(document *socioeconomicModelJSON) (*Socioeconomic
 	}
 
 	// Validate Industry-indexed count support and the exact employer factors.
-	if len(document.employeeCount) != 14 {
-		return nil, fmt.Errorf("employeeCount: expected 14 laws, got %d", len(document.employeeCount))
-	}
 	model.employeeCount = make([]socioeconomicLaw, 14)
 	hasEmployerSupport := false
 	for i, law := range document.employeeCount {
@@ -155,13 +215,13 @@ func compileSocioeconomicModel(document *socioeconomicModelJSON) (*Socioeconomic
 		return nil, fmt.Errorf("employer.cap must be positive")
 	}
 	for i, factor := range model.employer.industryFactors {
-		if factor == 0 {
-			return nil, fmt.Errorf("employer.industryFactors[%d] must be positive", i)
+		if factor == 0 || factor > 4095 {
+			return nil, fmt.Errorf("employer.industryFactors[%d] must be positive and at most 4095", i)
 		}
 	}
 	for i, factor := range model.employer.sizeFactors {
-		if factor == 0 {
-			return nil, fmt.Errorf("employer.sizeFactors[%d] must be positive", i)
+		if factor == 0 || factor > 4095 {
+			return nil, fmt.Errorf("employer.sizeFactors[%d] must be positive and at most 4095", i)
 		}
 	}
 
@@ -170,16 +230,6 @@ func compileSocioeconomicModel(document *socioeconomicModelJSON) (*Socioeconomic
 	for branch, input := range document.income {
 
 		name := socioeconomicBranchNames[branch]
-		slots := 56000
-		if branch == 1 {
-			slots = 2800 * len(document.ages[3].lowerBounds)
-		}
-		if branch >= 2 {
-			slots = 140 * len(document.ages[branch+2].lowerBounds)
-		}
-		if len(input.tupleMap) != slots || len(input.laws) == 0 {
-			return nil, fmt.Errorf("income.%s: expected %d tuple slots and nonempty laws", name, slots)
-		}
 		output := &model.income[branch]
 		output.laws = make([]socioeconomicLaw, len(input.laws))
 		for i, law := range input.laws {
@@ -196,7 +246,7 @@ func compileSocioeconomicModel(document *socioeconomicModelJSON) (*Socioeconomic
 			}
 			output.laws[i] = compiled
 		}
-		output.tupleMap = make([]uint16, slots)
+		output.tupleMap = make([]uint16, slots[branch])
 		nextLaw := uint32(0)
 		for slot, id := range input.tupleMap {
 
@@ -222,12 +272,6 @@ func compileSocioeconomicModel(document *socioeconomicModelJSON) (*Socioeconomic
 		}
 
 	}
-
-	err := model.prepareIdentity()
-	if err != nil {
-		return nil, err
-	}
-	model.initialized = true
 
 	return model, nil
 }

@@ -65,7 +65,7 @@ import {
 	ConsentPurposesResponse,
 } from './types/responses';
 import { AccessKeyType } from './types/organization';
-import { SimulatedSystem, SimulatedSystemToCreate } from './types/simulatedSystem';
+import { SimulatedSystem, SimulatedSystemToCreate, USADemoPreview } from './types/simulatedSystem';
 
 const API_BASE_PATH = '/v1';
 
@@ -695,6 +695,17 @@ class SimulatedSystems {
 
 	get = async (id: string, signal?: AbortSignal): Promise<SimulatedSystem> => {
 		return await call(`${this.apiURL}/simulated/systems/${id}`, http.GET, this.workspaceID, undefined, { signal });
+	};
+
+	usaPreview = async (id: string, signal?: AbortSignal): Promise<USADemoPreview[]> => {
+		const res = await call(
+			`${this.apiURL}/simulated/systems/${id}/usa-preview`,
+			http.GET,
+			this.workspaceID,
+			undefined,
+			{ signal },
+		);
+		return res.records;
 	};
 
 	create = async (account: SimulatedSystemToCreate): Promise<string> => {

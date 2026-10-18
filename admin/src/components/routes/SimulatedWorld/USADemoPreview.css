@@ -1,0 +1,36 @@
+.usa-demo-preview {
+	max-width: 1200px;
+	margin: 24px auto 36px;
+}
+
+.usa-demo-preview > p {
+	color: var(--sl-color-neutral-600);
+}
+
+.usa-demo-preview__people {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+	gap: 20px;
+}
+
+.usa-demo-preview__person {
+	border: 1px solid var(--sl-color-neutral-200);
+	border-radius: 8px;
+	padding: 20px;
+}
+
+.usa-demo-preview__person img {
+	border-radius: 8px;
+	object-fit: cover;
+}
+
+.usa-demo-preview__person h3 {
+	font-size: 15px;
+	margin-bottom: 8px;
+}
+
+.usa-demo-preview__person p {
+	font-size: 13px;
+	line-height: 1.5;
+	margin: 6px 0;
+}

@@ -126,12 +126,14 @@ test('systems grid shows initial records and live connection activity', async ({
 	await expect(page.locator('.simulated-systems__list-content .grid__header-cell')).toHaveText([
 		'Name',
 		'Type',
+		'Country',
 		'Records',
 		'Linked connections',
 	]);
 	const connected = page.locator('.simulated-systems__list-content .grid__row[data-id="TESTACCOUNT01"]');
 	await expect(connected.locator('.grid__cell').nth(1)).toHaveText('SaaS application');
-	await expect(connected.locator('.grid__cell').nth(2)).toHaveText('15,000');
+	await expect(connected.locator('.grid__cell').nth(2)).toHaveText('Italy');
+	await expect(connected.locator('.grid__cell').nth(3)).toHaveText('15,000');
 	await expect(connected.locator('.simulated-systems__status-badge')).toHaveCount(0);
 	await expect(connected.getByRole('link', { name: 'Source' })).toHaveAttribute(
 		'href',
@@ -151,7 +153,7 @@ test('systems grid shows initial records and live connection activity', async ({
 	);
 	await expect(connected.locator('.simulated-systems__connection-links')).toHaveText(/Source\s*Destination/);
 	const unconnected = page.locator('.simulated-systems__list-content .grid__row[data-id="TESTACCOUNT02"]');
-	await expect(unconnected.locator('.grid__cell').nth(3)).toHaveText('—');
+	await expect(unconnected.locator('.grid__cell').nth(4)).toHaveText('—');
 	const sourceOnly = page.locator('.simulated-systems__list-content .grid__row[data-id="TESTACCOUNT03"]');
 	await expect(sourceOnly.locator('.simulated-systems__connection-links')).toHaveText('Source');
 	await expect(sourceOnly.getByRole('link', { name: 'Source', exact: true })).toHaveAttribute(
@@ -189,6 +191,25 @@ test('systems grid shows initial records and live connection activity', async ({
 			timeout: 7000,
 		},
 	);
+});
+
+test('systems grid shows configured country independently of the system name', async ({ page }) => {
+	await page.route('**/v1/simulated/systems', (route) =>
+		route.fulfill({
+			json: {
+				simulatedSystems: [
+					{ ...account, name: 'United States', countries: { IT: 100 } },
+					{ ...account, id: 'TESTACCOUNT02', name: 'Italy', countries: { US: 100 } },
+					{ ...account, id: 'TESTACCOUNT03', name: 'Empty', userCount: 0, countries: {} },
+				],
+			},
+		}),
+	);
+	await page.route('**/v1/connections', (route) => route.fulfill({ json: { connections: [] } }));
+	await page.goto(`${adminURL}/simulated-world`);
+	const rows = page.locator('.simulated-systems__list-content .grid__row');
+	await expect(rows.locator('.grid__cell:nth-child(3)')).toHaveText(['Italy', 'United States', '—']);
+	await expect(rows.locator('.grid__cell:nth-child(3) sl-badge')).toHaveCount(0);
 });
 
 for (const view of ['list', 'detail'] as const) {

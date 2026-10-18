@@ -71,7 +71,12 @@ func (w *SocioeconomicWorld) facts(index PersonIndex) (SocioeconomicFacts, error
 	coordinate := uint64(index)
 	m := w.model
 	age := int(m.ages[0][anchorAge-21])
-	education, err := w.category(coordinate, socioeconomicEducation, m.education, age*20+region,
+	row, err := m.territoryRow(age, region)
+	if err != nil {
+		return SocioeconomicFacts{}, err
+	}
+	territories := int(m.territories)
+	education, err := w.category(coordinate, socioeconomicEducation, m.education, row,
 		socioeconomicParent{"age-bucket", age}, socioeconomicParent{"region", region})
 	if err != nil {
 		return SocioeconomicFacts{}, err
@@ -79,7 +84,7 @@ func (w *SocioeconomicWorld) facts(index PersonIndex) (SocioeconomicFacts, error
 
 	age = int(m.ages[1][anchorAge-21])
 	activity, err := w.category(coordinate, socioeconomicPrimaryActivity, m.primaryActivity,
-		(age*7+education)*20+region,
+		(age*7+education)*territories+region,
 		socioeconomicParent{"age-bucket", age}, socioeconomicParent{"education", education},
 		socioeconomicParent{"region", region})
 	if err != nil {
@@ -93,7 +98,8 @@ func (w *SocioeconomicWorld) facts(index PersonIndex) (SocioeconomicFacts, error
 
 	case PrimaryActivityEmployee:
 
-		family, err := w.category(coordinate, socioeconomicEmployeeJobFamily, m.employeeJobFamily, education*20+region,
+		family, err := w.category(coordinate, socioeconomicEmployeeJobFamily, m.employeeJobFamily,
+			education*territories+region,
 			socioeconomicParent{"education", education}, socioeconomicParent{"region", region})
 		if err != nil {
 			return SocioeconomicFacts{}, err
@@ -139,7 +145,7 @@ func (w *SocioeconomicWorld) facts(index PersonIndex) (SocioeconomicFacts, error
 	case PrimaryActivitySelfEmployed:
 
 		family, err := w.category(coordinate, socioeconomicSelfEmployedJobFamily, m.selfEmployedJobFamily,
-			education*20+region,
+			education*territories+region,
 			socioeconomicParent{"education", education}, socioeconomicParent{"region", region})
 		if err != nil {
 			return SocioeconomicFacts{}, err
@@ -154,7 +160,7 @@ func (w *SocioeconomicWorld) facts(index PersonIndex) (SocioeconomicFacts, error
 		}
 
 		age = int(m.ages[3][anchorAge-21])
-		tuple := ((age*20+region)*10+family)*14 + industry
+		tuple := ((age*territories+region)*10+family)*14 + industry
 		facts.Income, err = w.income(coordinate, 1, tuple,
 			socioeconomicParent{"age-bucket", age}, socioeconomicParent{"region", region},
 			socioeconomicParent{"job-family", family}, socioeconomicParent{"industry", industry})
@@ -164,7 +170,7 @@ func (w *SocioeconomicWorld) facts(index PersonIndex) (SocioeconomicFacts, error
 
 	case PrimaryActivityUnemployed, PrimaryActivityStudent, PrimaryActivityRetired, PrimaryActivityInactive:
 		age = int(m.ages[activity+2][anchorAge-21])
-		tuple := (age*7+education)*20 + region
+		tuple := (age*7+education)*territories + region
 		facts.Income, err = w.income(coordinate, activity, tuple,
 			socioeconomicParent{"age-bucket", age}, socioeconomicParent{"education", education},
 			socioeconomicParent{"region", region})

@@ -59,7 +59,38 @@ func (d *ItalianBaseData) fingerprints() ([6][32]byte, error) {
 		return [6][32]byte{}, fmt.Errorf("uninitialized Italian base document")
 	}
 
-	base := &d.document
+	return internationalBaseFingerprints(&d.document)
+}
+
+func decodeItalianBaseData(ctx context.Context, reader io.Reader) (*ItalianBaseData, error) {
+	var document internationalBase
+	err := decodeInternationalJSON(ctx, reader, &document)
+	if err != nil {
+		return nil, err
+	}
+	err = validateItalianBase(&document)
+	if err != nil {
+		return nil, err
+	}
+	return &ItalianBaseData{document: document, initialized: true}, nil
+}
+
+func internationalASCIIAtom(value string) bool {
+	if value == "" || value[0] == '-' || value[len(value)-1] == '-' || strings.Contains(value, "--") {
+		return false
+	}
+	for _, c := range value {
+		if !(c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '-') {
+			return false
+		}
+	}
+	return true
+}
+
+// internationalBaseFingerprints applies the common F.4 projections after
+// national admission; transport collection bounds remain country-specific.
+func internationalBaseFingerprints(base *internationalBase) ([6][32]byte, error) {
+
 	genders := internationalTaxonomyFor(base.Genders.SemanticID, []string{"female", "male"})
 	projections := []map[string]any{
 		{"anchorDate": base.AnchorDate, "ages": base.Ages},
@@ -90,31 +121,6 @@ func (d *ItalianBaseData) fingerprints() ([6][32]byte, error) {
 	}
 
 	return fingerprints, nil
-}
-
-func decodeItalianBaseData(ctx context.Context, reader io.Reader) (*ItalianBaseData, error) {
-	var document internationalBase
-	err := decodeInternationalJSON(ctx, reader, &document)
-	if err != nil {
-		return nil, err
-	}
-	err = validateItalianBase(&document)
-	if err != nil {
-		return nil, err
-	}
-	return &ItalianBaseData{document: document, initialized: true}, nil
-}
-
-func internationalASCIIAtom(value string) bool {
-	if value == "" || value[0] == '-' || value[len(value)-1] == '-' || strings.Contains(value, "--") {
-		return false
-	}
-	for _, c := range value {
-		if !(c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '-') {
-			return false
-		}
-	}
-	return true
 }
 
 // italianDisplayKey validates, but never replaces, the original display.

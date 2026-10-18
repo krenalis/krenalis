@@ -22,4 +22,14 @@ interface SimulatedSystemToCreate {
 	countries: Record<string, number>;
 }
 
-export type { SimulatedSystem, SimulatedSystemToCreate };
+interface USADemoPreview {
+	id: string;
+	name: string;
+	photo: string;
+	location: string;
+	education: string;
+	primaryActivity: string;
+	annualIncomeUSD: number;
+}
+
+export type { SimulatedSystem, SimulatedSystemToCreate, USADemoPreview };

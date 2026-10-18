@@ -144,15 +144,21 @@ type Writer interface {
 // Connections provides access to application, database, file, file storage,
 // SDK, and message broker connections.
 type Connections struct {
-	state     *state.State
-	datastore *datastore.Datastore
-	http      *httpclient.HTTP
+	state        *state.State
+	datastore    *datastore.Datastore
+	http         *httpclient.HTTP
+	usaDocuments func(context.Context, string, string) (*simulated.USADocuments, error)
 }
 
 // New returns a new *Connections value.
 func New(state *state.State, datastore *datastore.Datastore) *Connections {
 	h := httpclient.New(state, http.DefaultTransport.(*http.Transport))
 	return &Connections{state: state, datastore: datastore, http: h}
+}
+
+// SetUSADocuments configures the private USA document provider before use.
+func (c *Connections) SetUSADocuments(provider func(context.Context, string, string) (*simulated.USADocuments, error)) {
+	c.usaDocuments = provider
 }
 
 func (c *Connections) simulatedApplicationStore(workspace, account string) (*simulated.Store, error) {
@@ -170,7 +176,16 @@ func (c *Connections) simulatedApplicationStore(workspace, account string) (*sim
 	if !ok {
 		return nil, errors.New("simulated application workspace datastore does not exist")
 	}
-	return simulated.NewStore(workspace, account, c.state, store)
+	applicationStore, err := simulated.NewStore(workspace, account, c.state, store)
+	if err != nil {
+		return nil, err
+	}
+	if c.usaDocuments != nil {
+		applicationStore.SetUSADocuments(func(ctx context.Context) (*simulated.USADocuments, error) {
+			return c.usaDocuments(ctx, workspace, account)
+		})
+	}
+	return applicationStore, nil
 }
 
 func (c *Connections) applicationExtra(connection *state.Connection, simulatedSystem *string) (any, error) {

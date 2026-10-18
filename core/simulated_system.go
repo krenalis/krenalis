@@ -13,6 +13,7 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/core/internal/simulated"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/decimal"
@@ -54,7 +55,9 @@ type SimulatedSystem struct {
 //     development.
 //   - MaintenanceMode, if the warehouse is in maintenance mode.
 func (this *Workspace) CreateSimulatedSystem(ctx context.Context, name string, userCount, duplicateRecordPercent, countries json.Value) (string, error) {
+
 	this.core.mustBeOpen()
+
 	if this.workspace.Environment != state.Development {
 		return "", errors.Unprocessable(SimulatedSystemsRequireDevelopment, "simulated systems are only available in development workspaces")
 	}
@@ -70,6 +73,13 @@ func (this *Workspace) CreateSimulatedSystem(ctx context.Context, name string, u
 	if userCountValue > 0 {
 		status = state.SimulatedSystemPreparing
 		policy = simulatedSystemPolicyVersion
+	}
+	if _, hasUS := countriesValue.Get([]string{"US"}); hasUS {
+		if this.core.usaWorldData == nil && this.core.usaWorldSource == nil {
+			return "", errors.BadRequest("USA country data is not configured")
+		}
+		status = state.SimulatedSystemPreparing
+		policy = simulated.USAGenerationPolicy
 	}
 	_, err = this.store.CountSimulatedSystemRecords(ctx, "")
 	if err != nil {
@@ -112,6 +122,7 @@ func (this *Workspace) CreateSimulatedSystem(ctx context.Context, name string, u
 		}
 		return n.ID, nil
 	}
+
 }
 
 // DeleteSimulatedSystem marks a simulated system as Deleting.
@@ -314,6 +325,7 @@ func simulatedSystemWarehouseError(err error) error {
 }
 
 func validateSimulatedSystemConfiguration(userCount, duplicateRecordPercent, countries json.Value) (int, decimal.Decimal, json.Value, error) {
+
 	if userCount == nil {
 		return 0, decimal.Decimal{}, nil, fmt.Errorf("userCount is required")
 	}
@@ -351,7 +363,7 @@ func validateSimulatedSystemConfiguration(userCount, duplicateRecordPercent, cou
 	hasCountry := false
 	for country, weight := range countries.Properties() {
 		hasCountry = true
-		if country != "IT" {
+		if country != "IT" && country != "US" {
 			return 0, decimal.Decimal{}, nil, fmt.Errorf("country %q is not supported", country)
 		}
 		value, err := weight.Int()
@@ -359,8 +371,13 @@ func validateSimulatedSystemConfiguration(userCount, duplicateRecordPercent, cou
 			return 0, decimal.Decimal{}, nil, fmt.Errorf("country %q weight must be an integer between 1 and 100", country)
 		}
 	}
-	if count > 0 && !hasCountry {
-		return 0, decimal.Decimal{}, nil, fmt.Errorf("countries must contain IT for a nonempty account")
+	_, hasUS := countries.Get([]string{"US"})
+	if hasUS && countries.NumProperty() != 1 {
+		return 0, decimal.Decimal{}, nil, fmt.Errorf("USA generation requires a single country")
 	}
+	if count > 0 && !hasCountry {
+		return 0, decimal.Decimal{}, nil, fmt.Errorf("countries must contain IT or US for a nonempty account")
+	}
+
 	return count, duplicate, json.Value(bytes.Clone(countries)), nil
 }

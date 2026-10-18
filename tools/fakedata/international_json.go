@@ -27,14 +27,14 @@ type internationalDecoder struct {
 	decoder *json.Decoder
 }
 
-func (d *internationalDecoder) read(out reflect.Value, maximum int, nullable bool) error {
+func (d *internationalDecoder) read(out reflect.Value, maximum, valueMaximum int, nullable bool) error {
 
 	if out.Kind() == reflect.Pointer {
 		if d.decoder.PeekKind() == json.Null && nullable {
 			return d.token(json.Null)
 		}
 		out.Set(reflect.New(out.Type().Elem()))
-		return d.read(out.Elem(), maximum, false)
+		return d.read(out.Elem(), maximum, valueMaximum, false)
 	}
 
 	switch out.Kind() {
@@ -74,7 +74,14 @@ func (d *internationalDecoder) read(out reflect.Value, maximum int, nullable boo
 					return fmt.Errorf("invalid internal collection bound")
 				}
 			}
-			err = d.read(out.Field(field), limit, definition.Tag.Get("nullable") == "true")
+			valueLimit := 8
+			if value := definition.Tag.Get("maxvalue"); value != "" {
+				valueLimit, err = strconv.Atoi(value)
+				if err != nil {
+					return fmt.Errorf("invalid internal map value bound")
+				}
+			}
+			err = d.read(out.Field(field), limit, valueLimit, definition.Tag.Get("nullable") == "true")
 			if err != nil {
 				return fmt.Errorf("%s: %w", definition.Name, err)
 			}
@@ -102,7 +109,7 @@ func (d *internationalDecoder) read(out reflect.Value, maximum int, nullable boo
 				return fmt.Errorf("array exceeds %d entries", maximum)
 			}
 			entry := reflect.New(out.Type().Elem()).Elem()
-			err = d.read(entry, 0, nullable)
+			err = d.read(entry, 0, 0, nullable)
 			if err != nil {
 				return fmt.Errorf("entry %d: %w", out.Len(), err)
 			}
@@ -122,7 +129,7 @@ func (d *internationalDecoder) read(out reflect.Value, maximum int, nullable boo
 				return fmt.Errorf("postal map exceeds %d places", maximum)
 			}
 			key := reflect.New(out.Type().Key()).Elem()
-			err = d.read(key, 0, false)
+			err = d.read(key, 0, 0, false)
 			if err != nil {
 				return err
 			}
@@ -130,7 +137,7 @@ func (d *internationalDecoder) read(out reflect.Value, maximum int, nullable boo
 				return fmt.Errorf("duplicate postal place")
 			}
 			entry := reflect.New(out.Type().Elem()).Elem()
-			err = d.read(entry, 8, false)
+			err = d.read(entry, valueMaximum, 0, false)
 			if err != nil {
 				return err
 			}
@@ -328,7 +335,7 @@ func decodeInternationalJSON(ctx context.Context, reader io.Reader, out any) err
 	source := &internationalReader{ctx: ctx, reader: reader}
 	bounded := &io.LimitedReader{R: source, N: maxInternationalDocumentBytes + 1}
 	d := internationalDecoder{decoder: json.NewDecoder(bounded)}
-	err := d.read(reflect.ValueOf(out).Elem(), 0, false)
+	err := d.read(reflect.ValueOf(out).Elem(), 0, 0, false)
 	if err != nil {
 		return err
 	}

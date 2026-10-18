@@ -255,6 +255,7 @@ func testSimulatedSystemGeneration(t *testing.T, k *krenalistester.Krenalis, pho
 			"job_family": "job_family", "industry": "industry", "job_level": "job_level",
 		}},
 	})
+	k.UpdateIdentityResolutionSettings(false, []string{"email"})
 	runID := k.StartPipelineRun(pipeline)
 	k.WaitForRunsCompletion(runID)
 

@@ -59,6 +59,19 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 	if err != nil {
 		return fmt.Errorf("configure Italian World source: %w", err)
 	}
+	var usaDemo *fakedata.USAWorldData
+	var usaSource *fakedata.USAWorldSource
+	if config.USADemoDirectory != "" {
+		usaDemo, err = fakedata.LoadUSAWorldData(ctx, config.USADemoDirectory)
+		if err != nil {
+			return fmt.Errorf("load KRENALIS_USA_INTERNAL_DEMO_DIR: %w", err)
+		}
+	} else {
+		usaSource, err = fakedata.NewUSAWorldSource(config.ExternalAssetsURLs)
+		if err != nil {
+			return fmt.Errorf("configure USA World source: %w", err)
+		}
+	}
 
 	conf := corePkg.Config{
 		KMS:                           config.KMS,
@@ -74,6 +87,9 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 		PrometheusMetricsEnabled:      config.PrometheusMetricsEnabled,
 		SimulatedWorldSource:          worldSource,
 		SimulatedPhotoBaseURL:         config.ExternalAssetsURLs[0],
+		USAWorldData:                  usaDemo,
+		USAWorldSource:                usaSource,
+		USAPhotoBaseURL:               config.HTTP.ExternalURL + "v1/simulated/usa/photos/",
 	}
 	conf.DatabaseInitialization.InitIfEmpty = initDBIfEmpty
 	conf.DatabaseInitialization.InitDockerMember = initDockerMember

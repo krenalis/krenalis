@@ -68,7 +68,7 @@ func TestDestinationDocuments(t *testing.T) {
 	updated, err := updateDestinationRecordDocument("abc123", data, map[string]any{
 		"current_age": 37,
 		"address":     map[string]any{"municipality": "Milan"},
-	})
+	}, sourceSchema)
 	if err != nil {
 		t.Fatalf("expected partial destination update, got %v", err)
 	}
@@ -83,9 +83,13 @@ func TestDestinationDocuments(t *testing.T) {
 		decoded["address"].(map[string]any)["municipality"] != "Milan" {
 		t.Fatalf("expected address patch to preserve and replace leaves, got %v", decoded["address"])
 	}
-	if _, err := updateDestinationRecordDocument("abc123", data, map[string]any{"email": nil}); err == nil {
-		t.Fatal("expected explicit email null to be rejected")
-	}
+	t.Run("null email", func(t *testing.T) {
+		_, err := updateDestinationRecordDocument("abc123", data, map[string]any{"email": nil}, sourceSchema)
+		if err != nil {
+			return
+		}
+		t.Fatal("expected explicit email null rejection, got success")
+	})
 	if _, err := newDestinationRecordDocument("abc123", map[string]any{}); err == nil {
 		t.Fatal("expected incomplete create to be rejected")
 	}

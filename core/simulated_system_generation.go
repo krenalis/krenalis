@@ -20,6 +20,7 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/core/internal/simulated"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/fakedata"
@@ -35,17 +36,19 @@ const (
 )
 
 type simulatedSystemCheckpoint struct {
-	Person            int    `json:"person"`
-	Representation    int    `json:"representation"`
-	CatalogSHA256     string `json:"catalogSHA256"`
-	CatalogRelease    string `json:"catalogRelease,omitempty"`
-	WorldModelVersion string `json:"worldModelVersion"`
-	MarketDataVersion string `json:"marketDataVersion"`
-	PersonSpecVersion string `json:"personSpecVersion"`
-	SourceVersion     string `json:"sourceVersion"`
-	NamespaceVersion  int    `json:"namespaceVersion"`
-	ReferenceDate     string `json:"referenceDate"`
-	PhotoBaseURL      string `json:"photoBaseURL"`
+	Person            int                        `json:"person"`
+	Representation    int                        `json:"representation"`
+	CatalogSHA256     string                     `json:"catalogSHA256"`
+	CatalogRelease    string                     `json:"catalogRelease,omitempty"`
+	WorldModelVersion string                     `json:"worldModelVersion"`
+	MarketDataVersion string                     `json:"marketDataVersion"`
+	PersonSpecVersion string                     `json:"personSpecVersion"`
+	SourceVersion     string                     `json:"sourceVersion"`
+	NamespaceVersion  int                        `json:"namespaceVersion"`
+	ReferenceDate     string                     `json:"referenceDate"`
+	PhotoBaseURL      string                     `json:"photoBaseURL"`
+	USADemoSHA256     string                     `json:"usaDemoSHA256,omitempty"`
+	USA               *simulatedSystemUSABinding `json:"usa,omitempty"`
 }
 
 type simulatedSystemPlan struct {
@@ -59,6 +62,7 @@ type simulatedSystemPlan struct {
 	duplicate     int
 	offset        uint64
 	step          uint64
+	usa           *simulated.USADocuments
 }
 
 type simulatedSystemWorker struct {
@@ -180,19 +184,33 @@ func (worker *simulatedSystemWorker) prepare(ctx context.Context, account *state
 		return worker.fail(ctx, account, account.GenerationError)
 	}
 	switch account.GenerationPolicyVersion {
-	case "generation-v3", "generation-v4":
+	case "generation-v3", "generation-v4", simulatedSystemUSADemoPolicyVersion:
 		return worker.fail(ctx, account, "legacy generation policy "+account.GenerationPolicyVersion+" is no longer supported")
-	case simulatedSystemPolicyVersion:
+	case simulatedSystemPolicyVersion, simulated.USAGenerationPolicy:
 	default:
 		return worker.fail(ctx, account, "unsupported generation policy")
 	}
 
-	data, err := worker.core.simulatedWorldSource.Load(ctx)
-	if err != nil {
-		if ctx.Err() != nil {
-			return ctx.Err()
+	var data *fakedata.ItalianWorldData
+	var err error
+	if account.GenerationPolicyVersion == simulatedSystemPolicyVersion {
+		data, err = worker.core.simulatedWorldSource.Load(ctx)
+		if err != nil {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			return worker.fail(ctx, account, "Italian World data is unavailable")
 		}
-		return worker.fail(ctx, account, "Italian World data is unavailable")
+	}
+	var usaData *fakedata.USAWorldData
+	if account.GenerationPolicyVersion == simulated.USAGenerationPolicy {
+		usaData, err = worker.core.usaData(ctx)
+		if err != nil {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			return worker.fail(ctx, account, "USA country data is unavailable")
+		}
 	}
 
 	// Keep the persisted checkpoint intact for saveCheckpoint's comparison.
@@ -201,20 +219,36 @@ func (worker *simulatedSystemWorker) prepare(ctx context.Context, account *state
 		if account.GeneratedRecordCount != 0 {
 			return worker.fail(ctx, account, "generation checkpoint and counter differ")
 		}
-		checkpoint, err := initialSimulatedSystemCheckpoint(data, worker.core.simulatedPhotoBaseURL)
+		var checkpoint json.Value
+		if account.GenerationPolicyVersion == simulatedSystemPolicyVersion {
+			checkpoint, err = initialSimulatedSystemCheckpoint(data, worker.core.simulatedPhotoBaseURL)
+		}
 		if err != nil {
 			return worker.fail(ctx, account, "generation configuration is unavailable or changed")
 		}
 		candidate.GenerationCheckpoint = checkpoint
 	}
 
-	plan, checkpoint, err := newSimulatedSystemPlan(account.Workspace().ID, &candidate, data)
+	var plan *simulatedSystemPlan
+	var checkpoint simulatedSystemCheckpoint
+	if account.GenerationPolicyVersion == simulated.USAGenerationPolicy {
+		plan, checkpoint, err = newUSASimulatedSystemPlan(account.Workspace().ID, &candidate,
+			usaData, worker.core.usaPhotoBaseURL)
+	} else {
+		plan, checkpoint, err = newSimulatedSystemPlan(account.Workspace().ID, &candidate, data)
+	}
 	if err != nil {
 		return worker.fail(ctx, account, "generation configuration is unavailable or changed")
 	}
 	plan.account = account
 
 	if account.GenerationCheckpoint == nil {
+		if account.GenerationPolicyVersion == simulated.USAGenerationPolicy {
+			candidate.GenerationCheckpoint, err = json.Marshal(checkpoint)
+			if err != nil {
+				return err
+			}
+		}
 		err = worker.saveCheckpoint(ctx, account, candidate.GenerationCheckpoint, 0, state.SimulatedSystemPreparing, "")
 		if err != nil {
 			return err
@@ -512,6 +546,8 @@ func newSimulatedSystemPlan(workspaceID string, account *state.SimulatedSystem, 
 		checkpoint.MarketDataVersion != release ||
 		checkpoint.PersonSpecVersion != fakedata.ItalianJSONPersonSpecVersion ||
 		checkpoint.SourceVersion != fakedata.SourceSimulationVersion ||
+		checkpoint.USADemoSHA256 != "" ||
+		checkpoint.USA != nil ||
 		checkpoint.NamespaceVersion != simulatedSystemNamespaceVersion ||
 		checkpoint.ReferenceDate != simulatedSystemReferenceDate {
 		return nil, checkpoint, fmt.Errorf("generation inputs changed")
@@ -612,6 +648,9 @@ func (plan *simulatedSystemPlan) record(person, representation int) (datastore.S
 		return datastore.SimulatedSystemRecord{}, fmt.Errorf("invalid record coordinate")
 	}
 	index := plan.personIndex(person)
+	if plan.usa != nil {
+		return plan.usa.Record(index, representation)
+	}
 	records, err := plan.source.Records(index)
 	if err != nil {
 		return datastore.SimulatedSystemRecord{}, err

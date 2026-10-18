@@ -23,6 +23,8 @@ func TestValidateSimulatedSystemConfiguration(t *testing.T) {
 		{name: "empty", userCount: json.Value("0"), countries: json.Value("{}")},
 		{name: "IT", userCount: json.Value("0"), countries: json.Value(`{"IT": 40}`)},
 		{name: "one", userCount: json.Value("1"), countries: json.Value(`{"IT": 40}`)},
+		{name: "US demo", userCount: json.Value("1"), countries: json.Value(`{"US": 100}`)},
+		{name: "mixed demo countries", userCount: json.Value("1"), countries: json.Value(`{"IT": 40,"US": 60}`), wantErrText: "requires a single country"},
 		{name: "fractional percent", userCount: json.Value("101"), duplicate: json.Value("10.01"), countries: json.Value(`{"IT": 40}`)},
 		{name: "ten million", userCount: json.Value("10000000"), duplicate: json.Value("50"), countries: json.Value(`{"IT": 100}`)},
 		{name: "missing user count", countries: json.Value(`{"IT": 100}`), wantErrText: "userCount is required"},

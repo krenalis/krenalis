@@ -134,6 +134,8 @@ const REQUEST_PATTERNS = [
 	'/profiles/schema/suitable-as-identifiers',
 	'/simulated/systems',
 	'/simulated/systems/:id',
+	'/simulated/systems/:id/usa-preview',
+	'/simulated/usa/photos/:workspace/:id',
 	'/system/transformations/languages',
 	'/transformations',
 	'/ui',
