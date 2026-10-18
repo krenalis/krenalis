@@ -1146,7 +1146,7 @@ func Test_validateDecimalFilters(t *testing.T) {
 					&FilterCondition{Property: property, Operator: op, Values: []string{test.text}},
 				}}
 				isJSON := strings.HasPrefix(property, "json")
-				_, err := validateFilter(filter, schema, state.Source, state.TargetUser)
+				_, err := validateFilter(filter, schema)
 				if err != nil {
 					if isJSON || test.valid {
 						t.Fatalf("expected valid filter, got %v", err)
@@ -1892,7 +1892,7 @@ func Test_validateFilterValueLimits(t *testing.T) {
 				filter := &Filter{Operator: OpAnd, Rules: []FilterRule{
 					&FilterCondition{Property: "value", Operator: op, Values: []string{text}},
 				}}
-				_, err := validateFilter(filter, schema, state.Source, state.TargetUser)
+				_, err := validateFilter(filter, schema)
 				if err != nil {
 					if length <= test.maxLength || err.Error() != fmt.Sprintf("condition value is longer than %d runes", test.maxLength) {
 						t.Fatalf("expected length error only above %d runes, got %v", test.maxLength, err)

@@ -739,10 +739,6 @@ func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
 // returns its property path.
 func validateFilterCondition(cond *FilterCondition, validation *filterValidation) (string, error) {
 
-	// disallowEmptyOnObject indicates whether the "is empty" and "is not empty"
-	// operators are disallowed on object properties.
-	disallowEmptyOnObject := validation.role == state.Destination && validation.target == state.TargetUser || validation.target == state.TargetEvent
-
 	if !types.IsValidPropertyPath(cond.Property) {
 		return "", errors.New("property path is not valid")
 	}
@@ -786,8 +782,8 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 	//
 	// [1]: Strings with allowed values are not supported.
 	// [2]: array(T) is supported if T is supported by the "is" operator.
-	// [3]: Only if the property is nullable or has type JSON.
-	// [4]: Only if the property is read-optional or the path continues inside a JSON property.
+	// [3]: Only if the property is nullable or is of type json.
+	// [4]: Only if the property is read-optional, or if it is of type json and has a JSON path.
 	//
 	switch op {
 	case OpIs, OpIsNot:

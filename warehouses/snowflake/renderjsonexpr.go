@@ -30,11 +30,74 @@ func renderJSONComparison(b *strings.Builder, value, operator string, operand wa
 	b.WriteString(" ELSE FALSE END")
 }
 
-// renderJSONExpr renders JSON filters with two-valued predicates, so negative
-// operators include absent values, nulls, and non-matching JSON kinds.
-func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr, value string) error {
+// renderJSONExpr renders filters on JSON columns and containers of JSON values.
+// Predicates on JSON values are two-valued, so negative operators include
+// absent values, nulls, and non-matching JSON kinds.
+func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 
+	c := expr.Column
+	target := quoteIdent(c.Name)
+
+	k := c.Type.Kind()
 	op := expr.Operator
+
+	if k != types.JSONKind && len(expr.Keys) > 0 {
+		return fmt.Errorf("JSON keys cannot be used with type %q", c.Type)
+	}
+
+	if (k == types.ArrayKind || k == types.MapKind) && op != warehouses.OpContains && op != warehouses.OpDoesNotContain {
+		switch expr.Operator {
+		case warehouses.OpIsEmpty, warehouses.OpIsNotEmpty:
+			if c.Nullable {
+				b.WriteByte('(')
+				b.WriteString(target)
+				if expr.Operator == warehouses.OpIsEmpty {
+					b.WriteString(" IS NULL OR ")
+				} else {
+					b.WriteString(" IS NOT NULL AND ")
+				}
+			}
+			b.WriteString(target)
+			if expr.Operator == warehouses.OpIsEmpty {
+				b.WriteString(" = ")
+			} else {
+				b.WriteString(" <> ")
+			}
+			if k == types.ArrayKind {
+				b.WriteString("ARRAY_CONSTRUCT()")
+			} else {
+				b.WriteString("OBJECT_CONSTRUCT()")
+			}
+			if c.Nullable {
+				b.WriteByte(')')
+			}
+			return nil
+		case warehouses.OpIsNull, warehouses.OpDoesNotExist:
+			b.WriteString(target)
+			b.WriteString(" IS NULL")
+			return nil
+		case warehouses.OpIsNotNull, warehouses.OpExists:
+			b.WriteString(target)
+			b.WriteString(" IS NOT NULL")
+			return nil
+		}
+		return fmt.Errorf("operator %d is not supported for type %q", expr.Operator, c.Type)
+	}
+
+	if len(expr.Keys) > 0 {
+		var path strings.Builder
+		for range expr.Keys {
+			path.WriteString("GET(")
+		}
+		path.WriteString(target)
+		for _, key := range expr.Keys {
+			path.WriteString(", ")
+			quoteString(&path, key)
+			path.WriteByte(')')
+		}
+		target = path.String()
+	}
+
 	negative := false
 	switch op {
 	case warehouses.OpIsNot:
@@ -81,7 +144,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr, value string)
 				b.WriteString("NOT ")
 			}
 			b.WriteString("COALESCE(")
-			b.WriteString(value)
+			b.WriteString(target)
 			b.WriteString(" = ")
 			serializeValue(b, operand, types.JSON())
 			b.WriteString(", FALSE)")
@@ -98,7 +161,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr, value string)
 	}
 
 	if op == warehouses.OpIsTrue || op == warehouses.OpIsFalse {
-		fmt.Fprintf(b, "AS_BOOLEAN(%s) IS NOT DISTINCT FROM ", value)
+		fmt.Fprintf(b, "AS_BOOLEAN(%s) IS NOT DISTINCT FROM ", target)
 		if op == warehouses.OpIsTrue {
 			b.WriteString("TRUE")
 		} else {
@@ -119,21 +182,21 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr, value string)
 			warehouses.OpIs: "=", warehouses.OpIsLessThan: "<", warehouses.OpIsLessThanOrEqualTo: "<=",
 			warehouses.OpIsGreaterThan: ">", warehouses.OpIsGreaterThanOrEqualTo: ">=",
 		}[op]
-		renderJSONComparison(b, value, operator, values[0])
+		renderJSONComparison(b, target, operator, values[0])
 
 	case warehouses.OpIsBetween:
 		b.WriteByte('(')
-		renderJSONComparison(b, value, ">=", values[0])
+		renderJSONComparison(b, target, ">=", values[0])
 		b.WriteString(" AND ")
-		renderJSONComparison(b, value, "<=", values[1])
+		renderJSONComparison(b, target, "<=", values[1])
 		b.WriteByte(')')
 
 	case warehouses.OpIsOneOf:
 		// Group operands by kind to avoid repeating extraction and normalization
 		// for every entry of a potentially long membership list.
-		isString := "IS_VARCHAR(" + value + ")"
-		isNumber := "(IS_DECIMAL(" + value + ") OR IS_DOUBLE(" + value + "))"
-		text := "COLLATE(AS_VARCHAR(" + value + "), 'utf8')"
+		isString := "IS_VARCHAR(" + target + ")"
+		isNumber := "(IS_DECIMAL(" + target + ") OR IS_DOUBLE(" + target + "))"
+		text := "COLLATE(AS_VARCHAR(" + target + "), 'utf8')"
 		fmt.Fprintf(b, "CASE WHEN %s THEN %s IN (", isString, text)
 		for i, operand := range values {
 			if i > 0 {
@@ -165,7 +228,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr, value string)
 			numbers = append(numbers, sign+strconv.FormatInt(n+1, 10)+":"+coefficient)
 		}
 		if len(numbers) > 0 {
-			text := "TO_JSON(" + value + ")"
+			text := "TO_JSON(" + target + ")"
 			mantissa := "SPLIT_PART(LOWER(" + text + "), 'e', 1)"
 			digits := "LTRIM(REPLACE(" + mantissa + ", '.', ''), '-0')"
 			magnitude := "(LENGTH(" + digits + ") - LENGTH(SPLIT_PART(" + mantissa + ", '.', 2))" +
@@ -185,18 +248,21 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr, value string)
 		b.WriteString(" ELSE FALSE END")
 
 	case warehouses.OpContains:
+		if k == types.MapKind {
+			return fmt.Errorf("operator %d is not supported for type %q", expr.Operator, c.Type)
+		}
 		b.WriteByte('(')
 		if expr.Column.Type.Kind() == types.JSONKind {
-			fmt.Fprintf(b, "CONTAINS(AS_VARCHAR(%s), ", value)
+			fmt.Fprintf(b, "CONTAINS(AS_VARCHAR(%s), ", target)
 			quoteString(b, values[0].String)
 			b.WriteByte(')')
 			b.WriteString(" OR ")
 		}
 		b.WriteString("ARRAY_SIZE(FILTER(")
 		if expr.Column.Type.Kind() == types.ArrayKind {
-			b.WriteString(value)
+			b.WriteString(target)
 		} else {
-			fmt.Fprintf(b, "AS_ARRAY(%s)", value)
+			fmt.Fprintf(b, "AS_ARRAY(%s)", target)
 		}
 		b.WriteString(", krenalis_json_element -> ")
 		renderJSONComparison(b, "krenalis_json_element", "=", values[0])
@@ -209,20 +275,20 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr, value string)
 		} else {
 			b.WriteString("ENDSWITH(")
 		}
-		fmt.Fprintf(b, "AS_VARCHAR(%s), ", value)
+		fmt.Fprintf(b, "AS_VARCHAR(%s), ", target)
 		quoteString(b, values[0].String)
 		b.WriteByte(')')
 
 	case warehouses.OpIsEmpty:
 		fmt.Fprintf(b, "(%s IS NULL OR IS_NULL_VALUE(%s) OR AS_VARCHAR(%s) = '' OR "+
 			"ARRAY_SIZE(AS_ARRAY(%s)) = 0 OR ARRAY_SIZE(OBJECT_KEYS(AS_OBJECT(%s))) = 0)",
-			value, value, value, value, value)
+			target, target, target, target, target)
 
 	case warehouses.OpIsNull:
-		fmt.Fprintf(b, "IS_NULL_VALUE(%s)", value)
+		fmt.Fprintf(b, "IS_NULL_VALUE(%s)", target)
 
 	case warehouses.OpExists:
-		b.WriteString(value)
+		b.WriteString(target)
 		b.WriteString(" IS NOT NULL")
 
 	}

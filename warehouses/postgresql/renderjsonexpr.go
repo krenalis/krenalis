@@ -30,11 +30,78 @@ func renderJSONComparison(b *strings.Builder, value, operator string, operand wa
 	b.WriteString(" ELSE FALSE END")
 }
 
-// renderJSONExpr renders JSON filters with two-valued predicates, so negative
-// operators include absent values, nulls, and non-matching JSON kinds.
-func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr, value string) error {
+// renderJSONExpr renders filters on JSON columns and containers of JSON values.
+// Predicates on JSON values are two-valued, so negative operators include
+// absent values, nulls, and non-matching JSON kinds.
+func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 
+	c := expr.Column
+	target := quoteIdent(c.Name)
+
+	k := c.Type.Kind()
 	op := expr.Operator
+
+	if k != types.JSONKind && len(expr.Keys) > 0 {
+		return fmt.Errorf("JSON keys cannot be used with type %q", c.Type)
+	}
+
+	if (k == types.ArrayKind || k == types.MapKind) && op != warehouses.OpContains && op != warehouses.OpDoesNotContain {
+		switch expr.Operator {
+		case warehouses.OpIsEmpty, warehouses.OpIsNotEmpty:
+			switch k {
+			case types.ArrayKind:
+				b.WriteString("array_length(")
+				b.WriteString(target)
+				if expr.Operator == warehouses.OpIsEmpty {
+					b.WriteString(", 1) IS NULL")
+				} else {
+					b.WriteString(", 1) IS NOT NULL")
+				}
+			case types.MapKind:
+				if c.Nullable {
+					b.WriteByte('(')
+					b.WriteString(target)
+					if expr.Operator == warehouses.OpIsEmpty {
+						b.WriteString(" IS NULL OR ")
+					} else {
+						b.WriteString(" IS NOT NULL AND ")
+					}
+				}
+				b.WriteString(target)
+				if expr.Operator == warehouses.OpIsEmpty {
+					b.WriteString(" = '{}'::jsonb")
+				} else {
+					b.WriteString(" <> '{}'::jsonb")
+				}
+				if c.Nullable {
+					b.WriteByte(')')
+				}
+			}
+			return nil
+		case warehouses.OpIsNull, warehouses.OpDoesNotExist:
+			b.WriteString(target)
+			b.WriteString(" IS NULL")
+			return nil
+		case warehouses.OpIsNotNull, warehouses.OpExists:
+			b.WriteString(target)
+			b.WriteString(" IS NOT NULL")
+			return nil
+		}
+		return fmt.Errorf("operator %d is not supported for type %q", expr.Operator, c.Type)
+	}
+
+	if len(expr.Keys) > 0 {
+		var path strings.Builder
+		path.WriteByte('(')
+		path.WriteString(target)
+		for _, key := range expr.Keys {
+			path.WriteString(" -> ")
+			quoteString(&path, key)
+		}
+		path.WriteByte(')')
+		target = path.String()
+	}
+
 	negative := false
 	switch op {
 	case warehouses.OpIsNot:
@@ -81,7 +148,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr, value string)
 				b.WriteString("NOT ")
 			}
 			b.WriteString("COALESCE(")
-			b.WriteString(value)
+			b.WriteString(target)
 			b.WriteString(" = ")
 			serializeValue(b, operand, types.JSON())
 			b.WriteString(", FALSE)")
@@ -98,7 +165,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr, value string)
 	}
 
 	if op == warehouses.OpIsTrue || op == warehouses.OpIsFalse {
-		b.WriteString(value)
+		b.WriteString(target)
 		b.WriteString(" IS NOT DISTINCT FROM ")
 		if op == warehouses.OpIsTrue {
 			b.WriteString("'true'::jsonb")
@@ -120,21 +187,21 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr, value string)
 			warehouses.OpIs: "=", warehouses.OpIsLessThan: "<", warehouses.OpIsLessThanOrEqualTo: "<=",
 			warehouses.OpIsGreaterThan: ">", warehouses.OpIsGreaterThanOrEqualTo: ">=",
 		}[op]
-		renderJSONComparison(b, value, operator, values[0])
+		renderJSONComparison(b, target, operator, values[0])
 
 	case warehouses.OpIsBetween:
 		b.WriteByte('(')
-		renderJSONComparison(b, value, ">=", values[0])
+		renderJSONComparison(b, target, ">=", values[0])
 		b.WriteString(" AND ")
-		renderJSONComparison(b, value, "<=", values[1])
+		renderJSONComparison(b, target, "<=", values[1])
 		b.WriteByte(')')
 
 	case warehouses.OpIsOneOf:
 		// Group operands by kind to avoid repeating extraction and normalization
 		// for every entry of a potentially long membership list.
-		isString := "jsonb_typeof(" + value + ") = 'string'"
-		isNumber := "jsonb_typeof(" + value + ") = 'number'"
-		text := "(" + value + " #>> '{}') COLLATE \"C\""
+		isString := "jsonb_typeof(" + target + ") = 'string'"
+		isNumber := "jsonb_typeof(" + target + ") = 'number'"
+		text := "(" + target + " #>> '{}') COLLATE \"C\""
 		fmt.Fprintf(b, "CASE WHEN %s THEN %s IN (", isString, text)
 		for i, operand := range values {
 			if i > 0 {
@@ -166,7 +233,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr, value string)
 			numbers = append(numbers, sign+strconv.FormatInt(n+1, 10)+":"+coefficient)
 		}
 		if len(numbers) > 0 {
-			text := "(" + value + " #>> '{}')"
+			text := "(" + target + " #>> '{}')"
 			mantissa := "SPLIT_PART(LOWER(" + text + "), 'e', 1)"
 			digits := "LTRIM(REPLACE(" + mantissa + ", '.', ''), '-0')"
 			magnitude := "(LENGTH(" + digits + ") - LENGTH(SPLIT_PART(" + mantissa + ", '.', 2))" +
@@ -186,19 +253,22 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr, value string)
 		b.WriteString(" ELSE FALSE END")
 
 	case warehouses.OpContains:
+		if k == types.MapKind {
+			return fmt.Errorf("operator %d is not supported for type %q", expr.Operator, c.Type)
+		}
 		b.WriteByte('(')
 		if expr.Column.Type.Kind() == types.JSONKind {
-			fmt.Fprintf(b, "(jsonb_typeof(%s) = 'string' AND POSITION(", value)
+			fmt.Fprintf(b, "(jsonb_typeof(%s) = 'string' AND POSITION(", target)
 			quoteString(b, values[0].String)
-			fmt.Fprintf(b, " IN (%s #>> '{}')) > 0)", value)
+			fmt.Fprintf(b, " IN (%s #>> '{}')) > 0)", target)
 			b.WriteString(" OR ")
 		}
 		b.WriteString("EXISTS (SELECT 1 FROM ")
 		if expr.Column.Type.Kind() == types.ArrayKind {
-			fmt.Fprintf(b, "unnest(%s)", value)
+			fmt.Fprintf(b, "unnest(%s)", target)
 		} else {
 			fmt.Fprintf(b, "jsonb_array_elements(CASE WHEN jsonb_typeof(%s) = 'array' THEN %s ELSE '[]'::jsonb END)",
-				value, value)
+				target, target)
 		}
 		b.WriteString(" AS krenalis_json_element(value) WHERE ")
 		renderJSONComparison(b, "krenalis_json_element.value", "=", values[0])
@@ -206,13 +276,13 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr, value string)
 		b.WriteByte(')')
 
 	case warehouses.OpStartsWith, warehouses.OpEndsWith:
-		fmt.Fprintf(b, "(jsonb_typeof(%s) = 'string' AND ", value)
+		fmt.Fprintf(b, "(jsonb_typeof(%s) = 'string' AND ", target)
 		if op == warehouses.OpStartsWith {
 			b.WriteString("LEFT(")
 		} else {
 			b.WriteString("RIGHT(")
 		}
-		fmt.Fprintf(b, "(%s #>> '{}'), LENGTH(", value)
+		fmt.Fprintf(b, "(%s #>> '{}'), LENGTH(", target)
 		quoteString(b, values[0].String)
 		b.WriteString(")) COLLATE \"C\" = ")
 		quoteString(b, values[0].String)
@@ -220,13 +290,13 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr, value string)
 
 	case warehouses.OpIsEmpty:
 		fmt.Fprintf(b, "(%s IS NULL OR %s IN ('null'::jsonb, '\"\"'::jsonb, '[]'::jsonb, '{}'::jsonb))",
-			value, value)
+			target, target)
 
 	case warehouses.OpIsNull:
-		fmt.Fprintf(b, "%s = 'null'::jsonb", value)
+		fmt.Fprintf(b, "%s = 'null'::jsonb", target)
 
 	case warehouses.OpExists:
-		b.WriteString(value)
+		b.WriteString(target)
 		b.WriteString(" IS NOT NULL")
 
 	}

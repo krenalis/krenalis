@@ -66,39 +66,16 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		}
 	}
 
-	qname := quoteIdent(c.Name)
-	if len(baseExpr.Keys) > 0 && c.Type.Kind() != types.JSONKind {
+	if k := c.Type.Kind(); k == types.JSONKind ||
+		(k == types.ArrayKind || k == types.MapKind) && c.Type.Elem().Kind() == types.JSONKind {
+		return renderJSONExpr(b, baseExpr)
+	}
+
+	if len(baseExpr.Keys) > 0 {
 		return fmt.Errorf("JSON keys cannot be used with type %q", c.Type)
 	}
-	if c.Type.Kind() == types.JSONKind {
-		if len(baseExpr.Keys) > 0 {
-			var value strings.Builder
-			for range baseExpr.Keys {
-				value.WriteString("GET(")
-			}
-			value.WriteString(qname)
-			for _, key := range baseExpr.Keys {
-				value.WriteString(", ")
-				quoteString(&value, key)
-				value.WriteByte(')')
-			}
-			qname = value.String()
-		}
-		return renderJSONExpr(b, baseExpr, qname)
-	}
-	if (c.Type.Kind() == types.ArrayKind || c.Type.Kind() == types.MapKind) && c.Type.Elem().Kind() == types.JSONKind {
-		switch baseExpr.Operator {
-		case warehouses.OpIsEmpty, warehouses.OpIsNotEmpty, warehouses.OpIsNull, warehouses.OpIsNotNull,
-			warehouses.OpExists, warehouses.OpDoesNotExist:
-		case warehouses.OpContains, warehouses.OpDoesNotContain:
-			if c.Type.Kind() == types.ArrayKind {
-				return renderJSONExpr(b, baseExpr, qname)
-			}
-			return fmt.Errorf("operator %d is not supported for type %q", baseExpr.Operator, c.Type)
-		default:
-			return fmt.Errorf("operator %d is not supported for type %q", baseExpr.Operator, c.Type)
-		}
-	}
+
+	qname := quoteIdent(c.Name)
 
 	// Render the column identifier, the operator, and, if necessary, the values.
 	switch op := baseExpr.Operator; op {
