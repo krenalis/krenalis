@@ -60,7 +60,14 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 	}
 
 	for _, value := range baseExpr.Values {
-		if number, ok := value.(decimal.Decimal); ok && !types.IsDecimal(number) {
+		var number *decimal.Decimal
+		switch value := value.(type) {
+		case decimal.Decimal:
+			number = &value
+		case warehouses.JSONConditionValue:
+			number = value.Number
+		}
+		if number != nil && !types.IsDecimal(*number) {
 			return fmt.Errorf("decimal operand exceeds precision %d or scale %d",
 				types.MaxDecimalPrecision, types.MaxDecimalScale)
 		}

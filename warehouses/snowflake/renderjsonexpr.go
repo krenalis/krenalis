@@ -15,6 +15,15 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
+// jsonNumberParts returns the significant digits and decimal magnitude of a
+// nonzero number within the expression operand limits.
+func jsonNumberParts(number decimal.Decimal) (string, int) {
+	_, scale := number.PrecisionScale()
+	text := strings.TrimPrefix(fmt.Sprintf("%.*f", scale, number), "-")
+	digits := strings.TrimLeft(strings.ReplaceAll(text, ".", ""), "0")
+	return strings.TrimRight(digits, "0"), len(digits) - scale
+}
+
 // renderJSONComparison compares JSON strings and numbers without coercing other
 // kinds, using byte order for strings and exact decimal order for numbers.
 func renderJSONComparison(b *strings.Builder, value, operator string, operand warehouses.JSONConditionValue) {
@@ -215,17 +224,12 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 				numbers = append(numbers, "0")
 				continue
 			}
-			coefficient, exponent, _ := strings.Cut(fmt.Sprintf("%e", *operand.Number), "e")
-			n, err := strconv.ParseInt(exponent, 10, 64)
-			if err != nil {
-				return fmt.Errorf("cannot render JSON number: %s", err)
-			}
+			coefficient, magnitude := jsonNumberParts(*operand.Number)
 			sign := "+"
 			if operand.Number.Sign() < 0 {
 				sign = "-"
 			}
-			coefficient = strings.TrimRight(strings.ReplaceAll(strings.TrimPrefix(coefficient, "-"), ".", ""), "0")
-			numbers = append(numbers, sign+strconv.FormatInt(n+1, 10)+":"+coefficient)
+			numbers = append(numbers, sign+strconv.Itoa(magnitude)+":"+coefficient)
 		}
 		if len(numbers) > 0 {
 			text := "TO_JSON(" + target + ")"
@@ -313,18 +317,11 @@ func renderJSONNumberComparison(b *strings.Builder, value, operator string, numb
 		" + COALESCE(NULLIF(SPLIT_PART(LOWER(" + text + "), 'e', 2), '')::BIGINT, 0))"
 	significand := "COLLATE(RTRIM(" + digits + ", '0'), 'utf8')"
 
-	// Scientific formatting preserves all significant digits without expanding
-	// a potentially very large exponent.
-	coefficient, exponent, _ := strings.Cut(fmt.Sprintf("%e", number), "e")
-	n, err := strconv.ParseInt(exponent, 10, 64)
-	if err != nil {
-		panic(err)
-	}
-	coefficient = strings.TrimRight(strings.ReplaceAll(strings.TrimPrefix(coefficient, "-"), ".", ""), "0")
+	coefficient, n := jsonNumberParts(number)
 	s := number.Sign()
 
 	fmt.Fprintf(b, "(CASE WHEN %s < %d THEN -1 WHEN %s > %d THEN 1", sign, s, sign, s)
-	fmt.Fprintf(b, " WHEN %s < %d THEN %d WHEN %s > %d THEN %d", magnitude, n+1, -s, magnitude, n+1, s)
+	fmt.Fprintf(b, " WHEN %s < %d THEN %d WHEN %s > %d THEN %d", magnitude, n, -s, magnitude, n, s)
 	fmt.Fprintf(b, " WHEN %s < '%s' THEN %d WHEN %s > '%s' THEN %d ELSE 0 END) %s 0",
 		significand, coefficient, -s, significand, coefficient, s, operator)
 

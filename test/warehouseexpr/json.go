@@ -10,6 +10,7 @@ import (
 
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
 
@@ -116,6 +117,8 @@ func Operand(text string) warehouses.JSONConditionValue {
 	if err != nil {
 		return value
 	}
-	value.Number = &number
+	if types.IsDecimal(number) {
+		value.Number = &number
+	}
 	return value
 }

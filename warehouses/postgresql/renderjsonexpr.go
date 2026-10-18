@@ -6,10 +6,8 @@ package postgresql
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
-	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
@@ -24,8 +22,8 @@ func renderJSONComparison(b *strings.Builder, value, operator string, operand wa
 	fmt.Fprintf(b, "CASE WHEN %s THEN %s %s ", isString, text, operator)
 	quoteString(b, operand.String)
 	if operand.Number != nil {
-		fmt.Fprintf(b, " WHEN %s THEN ", isNumber)
-		renderJSONNumberComparison(b, value, operator, *operand.Number)
+		_, scale := operand.Number.PrecisionScale()
+		fmt.Fprintf(b, " WHEN %s THEN (%s)::numeric %s %.*f", isNumber, value, operator, scale, *operand.Number)
 	}
 	b.WriteString(" ELSE FALSE END")
 }
@@ -197,7 +195,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 		b.WriteByte(')')
 
 	case warehouses.OpIsOneOf:
-		// Group operands by kind to avoid repeating extraction and normalization
+		// Group operands by kind to avoid repeating extraction and conversion
 		// for every entry of a potentially long membership list.
 		isString := "jsonb_typeof(" + target + ") = 'string'"
 		isNumber := "jsonb_typeof(" + target + ") = 'number'"
@@ -216,39 +214,11 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 			if operand.Number == nil {
 				continue
 			}
-			if operand.Number.Sign() == 0 {
-				numbers = append(numbers, "0")
-				continue
-			}
-			coefficient, exponent, _ := strings.Cut(fmt.Sprintf("%e", *operand.Number), "e")
-			n, err := strconv.ParseInt(exponent, 10, 64)
-			if err != nil {
-				return fmt.Errorf("cannot render JSON number: %s", err)
-			}
-			sign := "+"
-			if operand.Number.Sign() < 0 {
-				sign = "-"
-			}
-			coefficient = strings.TrimRight(strings.ReplaceAll(strings.TrimPrefix(coefficient, "-"), ".", ""), "0")
-			numbers = append(numbers, sign+strconv.FormatInt(n+1, 10)+":"+coefficient)
+			_, scale := operand.Number.PrecisionScale()
+			numbers = append(numbers, fmt.Sprintf("%.*f", scale, *operand.Number))
 		}
 		if len(numbers) > 0 {
-			text := "(" + target + " #>> '{}')"
-			mantissa := "SPLIT_PART(LOWER(" + text + "), 'e', 1)"
-			digits := "LTRIM(REPLACE(" + mantissa + ", '.', ''), '-0')"
-			magnitude := "(LENGTH(" + digits + ") - LENGTH(SPLIT_PART(" + mantissa + ", '.', 2))" +
-				" + COALESCE(NULLIF(SPLIT_PART(LOWER(" + text + "), 'e', 2), '')::BIGINT, 0))"
-			fmt.Fprintf(b, " WHEN %s THEN (CASE WHEN %s = '' THEN '0' ELSE CONCAT(", isNumber, digits)
-			fmt.Fprintf(b, "CASE WHEN LEFT(%s, 1) = '-' THEN '-' ELSE '+' END, %s::VARCHAR, ':', "+
-				"RTRIM(%s, '0')) END) COLLATE \"C\" IN (",
-				text, magnitude, digits)
-			for i, number := range numbers {
-				if i > 0 {
-					b.WriteString(", ")
-				}
-				quoteString(b, number)
-			}
-			b.WriteByte(')')
+			fmt.Fprintf(b, " WHEN %s THEN (%s)::numeric IN (%s)", isNumber, target, strings.Join(numbers, ", "))
 		}
 		b.WriteString(" ELSE FALSE END")
 
@@ -303,37 +273,4 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 	b.WriteString(", FALSE)")
 
 	return nil
-}
-
-// renderJSONNumberComparison orders decimals by sign, decimal magnitude, and
-// significant digits, avoiding database casts that round or overflow operands.
-func renderJSONNumberComparison(b *strings.Builder, value, operator string, number decimal.Decimal) {
-
-	text := "(" + value + " #>> '{}')"
-	mantissa := "SPLIT_PART(LOWER(" + text + "), 'e', 1)"
-	digits := "LTRIM(REPLACE(" + mantissa + ", '.', ''), '-0')"
-	sign := "(CASE WHEN " + digits + " = '' THEN 0 WHEN LEFT(" + text + ", 1) = '-' THEN -1 ELSE 1 END)"
-	if number.Sign() == 0 {
-		fmt.Fprintf(b, "%s %s 0", sign, operator)
-		return
-	}
-	magnitude := "(LENGTH(" + digits + ") - LENGTH(SPLIT_PART(" + mantissa + ", '.', 2))" +
-		" + COALESCE(NULLIF(SPLIT_PART(LOWER(" + text + "), 'e', 2), '')::BIGINT, 0))"
-	significand := "RTRIM(" + digits + ", '0') COLLATE \"C\""
-
-	// Scientific formatting preserves all significant digits without expanding
-	// a potentially very large exponent.
-	coefficient, exponent, _ := strings.Cut(fmt.Sprintf("%e", number), "e")
-	n, err := strconv.ParseInt(exponent, 10, 64)
-	if err != nil {
-		panic(err)
-	}
-	coefficient = strings.TrimRight(strings.ReplaceAll(strings.TrimPrefix(coefficient, "-"), ".", ""), "0")
-	s := number.Sign()
-
-	fmt.Fprintf(b, "(CASE WHEN %s < %d THEN -1 WHEN %s > %d THEN 1", sign, s, sign, s)
-	fmt.Fprintf(b, " WHEN %s < %d THEN %d WHEN %s > %d THEN %d", magnitude, n+1, -s, magnitude, n+1, s)
-	fmt.Fprintf(b, " WHEN %s < '%s' THEN %d WHEN %s > '%s' THEN %d ELSE 0 END) %s 0",
-		significand, coefficient, -s, significand, coefficient, s, operator)
-
 }

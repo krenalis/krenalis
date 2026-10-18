@@ -92,6 +92,8 @@ func TestJSONFilters(t *testing.T) {
 
 	rawValues := []string{
 		"", "null", "true", "false", "0", "-0.0", "5", "5.000", "-5", "50", "499.9", "670", "670.00",
+		"1e100", "-1e100", "1e-100", "-1e-100",
+		"\"1e76\"", "\"1e-38\"", "\"1e999999\"",
 		"0.005", "-0.005", "1e3", "1e-3", "9007199254740993", "99999999999999999999999999999999999999",
 		"0.1234567890123456789012345678901234567",
 		"\"\"", "\"foo\"", "\"foobar\"", "\"barfoo\"", "\"Foo\"", "\"foo \"", "\" foo\"",
@@ -171,6 +173,7 @@ func TestJSONFilters(t *testing.T) {
 		"", "foo", "670", "670.0", "+670", "6.7e2", ".005", "0.", "-0", "-5", "0.001",
 		"9007199254740993", "99999999999999999999999999999999999999",
 		"999999999999999999999999999999999999999999999999999999999999",
+		strings.Repeat("9", 76), "1e75", "1e76", "1e-37", "1e-38", "0e999999",
 		"0.1234567890123456789012345678901234567", "1e999999", "-1e999999", "1e-999999",
 		"null", "true", "a'b\\c", "a\nb\tc", "é", "e\u0301", "😀", "ÿ", "Ā",
 	}
@@ -186,13 +189,17 @@ func TestJSONFilters(t *testing.T) {
 	for _, op := range []state.WhereOperator{state.OpIsBetween, state.OpIsNotBetween} {
 		for _, bounds := range [][2]string{
 			{"5", "670"}, {"670", "5"}, {"670", "670"}, {"-5", "0.005"}, {"foo", "foobar"},
+			{"1e-37", "1e75"}, {"1e76", "1e75"},
 			{"foo", "670"}, {"-1e999999", "1e999999"}, {"1e-999999", "0.001"}, {"ÿ", "😀"},
 		} {
 			conditions = append(conditions, condition{op, []any{jsonFilterOperand(bounds[0]), jsonFilterOperand(bounds[1])}})
 		}
 	}
 	for _, op := range []state.WhereOperator{state.OpIsOneOf, state.OpIsNotOneOf} {
-		for _, list := range [][]string{{"foo"}, {"670", "foo", "null"}, {"670", "670", "+670"}, {"", "true", "é"}} {
+		for _, list := range [][]string{
+			{"foo"}, {"670", "foo", "null"}, {"670", "670", "+670"}, {"", "true", "é"},
+			{"1e76", "1e-38", "1e75", "1e-37", strings.Repeat("9", 76)},
+		} {
 			values := make([]any, len(list))
 			for i, text := range list {
 				values[i] = jsonFilterOperand(text)
@@ -342,7 +349,8 @@ func TestJSONFilterOperand(t *testing.T) {
 	}{
 		{"670", true}, {"670.0", true}, {"+670", true}, {"6.7e2", true},
 		{".005", true}, {"0.", true}, {"-0", true},
-		{"1e999999", true}, {"-1e999999", true}, {"1e-999999", true},
+		{"1e75", true}, {"1e-37", true}, {"1e76", false}, {"1e-38", false},
+		{"1e999999", false}, {"-1e999999", false}, {"1e-999999", false},
 		{"", false}, {"foo", false}, {"null", false}, {"true", false}, {"1e", false},
 	} {
 		t.Run(c.text, func(t *testing.T) {
@@ -364,7 +372,9 @@ func jsonFilterOperand(text string) state.JSONConditionValue {
 	if err != nil {
 		return value
 	}
-	value.Number = &number
+	if types.IsDecimal(number) {
+		value.Number = &number
+	}
 	return value
 }
 

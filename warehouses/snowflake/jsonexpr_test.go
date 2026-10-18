@@ -5,16 +5,55 @@
 package snowflake
 
 import (
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/krenalis/krenalis/test/warehouseexpr"
+	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
+
+// TestJSONDecimalRendering checks exact numeric literals and normalization.
+func TestJSONDecimalRendering(t *testing.T) {
+	for _, test := range []struct {
+		number              decimal.Decimal
+		literal, comparison string
+	}{
+		{decimal.Decimal{}, "0", "ELSE 1 END) = 0"},
+		{decimal.New(0, decimal.MaxScale), "0", "ELSE 1 END) = 0"},
+		{decimal.MustParse("1000"), "+4:1", ") < 4 THEN -1 WHEN"},
+		{decimal.New(12300, 4), "+1:123", ") < 1 THEN -1 WHEN"},
+		{decimal.MustParse("-0.0012300"), "--2:123", ") < -2 THEN 1 WHEN"},
+		{decimal.New(10, 38), "+-36:1", ") < -36 THEN -1 WHEN"},
+		{decimal.MustParse("1e75"), "+76:1", ") < 76 THEN -1 WHEN"},
+		{decimal.MustParse(strings.Repeat("9", 76)), "+76:" + strings.Repeat("9", 76), ") < 76 THEN -1 WHEN"},
+		{decimal.MustParse("-" + strings.Repeat("9", 39) + "." + strings.Repeat("8", 37)), "-39:" + strings.Repeat("9", 39) + strings.Repeat("8", 37), ") < 39 THEN 1 WHEN"},
+	} {
+		for _, op := range []warehouses.Operator{warehouses.OpIs, warehouses.OpIsOneOf} {
+			t.Run(fmt.Sprintf("%d/%s", op, test.literal), func(t *testing.T) {
+				column := warehouses.Column{Name: "value", Type: types.JSON()}
+				operand := warehouses.JSONConditionValue{String: "threshold", Number: &test.number}
+				var b strings.Builder
+				err := renderExpr(&b, warehouses.NewBaseExpr(column, op, operand))
+				if err != nil {
+					t.Fatalf("expected valid numeric expression, got %v", err)
+				}
+				want := `COLLATE 'utf8' IN ('` + test.literal + `')`
+				if op == warehouses.OpIs {
+					want = test.comparison
+				}
+				if !strings.Contains(b.String(), want) {
+					t.Fatalf("expected numeric SQL containing %s, got %s", want, b.String())
+				}
+			})
+		}
+	}
+}
 
 // TestJSONExpressionErrors verifies that invalid JSON expressions are rejected.
 func TestJSONExpressionErrors(t *testing.T) {
@@ -251,11 +290,13 @@ func TestJSONExpressions(t *testing.T) {
 			if err != nil {
 				t.Fatalf("expected stored JSON number, got %v", err)
 			}
-			original := warehouseexpr.Operand(fixture.raw)
-			if original.Number == nil {
-				t.Fatal("expected numeric original operand, got nil")
+			originalNumber, err := json.Value(fixture.raw).Decimal(0, 0)
+			if err != nil {
+				t.Fatalf("expected numeric original value, got %v", err)
 			}
-			changed := !number.Equal(*original.Number)
+			original := warehouseexpr.Operand(fixture.raw)
+			storedOperand := warehouseexpr.Operand(string(stored))
+			changed := !number.Equal(originalNumber)
 			if changed != fixture.changed {
 				t.Fatalf("expected numeric storage change %t, got %t: %s became %s", fixture.changed, changed, fixture.raw, stored)
 			}
@@ -270,10 +311,10 @@ func TestJSONExpressions(t *testing.T) {
 				operand warehouses.JSONConditionValue
 				matches bool
 			}{
-				{"stored equality", warehouses.OpIs, warehouseexpr.Operand(string(stored)), true},
-				{"original equality", warehouses.OpIs, original, !changed},
-				{"original less than", warehouses.OpIsLessThan, original, number.Less(*original.Number)},
-				{"original greater than", warehouses.OpIsGreaterThan, original, number.Greater(*original.Number)},
+				{"stored equality", warehouses.OpIs, storedOperand, storedOperand.Number != nil},
+				{"original equality", warehouses.OpIs, original, original.Number != nil && !changed},
+				{"original less than", warehouses.OpIsLessThan, original, original.Number != nil && number.Less(originalNumber)},
+				{"original greater than", warehouses.OpIsGreaterThan, original, original.Number != nil && number.Greater(originalNumber)},
 				{"less than upper bound", warehouses.OpIsLessThan, warehouseexpr.Operand(fixture.upper), true},
 				{"greater than lower bound", warehouses.OpIsGreaterThan, warehouseexpr.Operand(fixture.lower), true},
 			} {
