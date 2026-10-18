@@ -8,8 +8,6 @@ Batch pipelines can be scheduled; event-based pipelines run when events are rece
 
 When a pipeline supports a transformation, it can be either a mapping or a function.
 
-Filters on JSON properties support the same operators during collection and activation, including JSON object paths and containment on `array(json)` properties. JSON paths traverse object keys, not array indices; `map(json)` supports the same container operators as other maps. See [JSON filters](internal/datastore/README.md#json-filters) for semantics, representation limits, and verification.
-
 A constant transformation reads no input property, so its output depends only on constant values.
 
 | Pipeline                          | Execution   | Filter                       | Transformation                        | Constant transformation |
