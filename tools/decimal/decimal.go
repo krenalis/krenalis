@@ -50,7 +50,6 @@ import (
 	"math"
 	"math/big"
 	"reflect"
-	"strconv"
 	"strings"
 
 	"github.com/ericlagergren/decimal"
@@ -532,16 +531,54 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 	if i < len(n) {
 		// Parse the exponent.
 		start := i + len(str) - len(n)
-		exponent, err := strconv.Atoi(string(n[i+1:]))
-		if err != nil {
-			if errors.Is(err, strconv.ErrSyntax) {
+		i += 1
+		if i == len(n) {
+			return Decimal{}, ErrSyntax
+		}
+		neg := false
+		switch n[i] {
+		case '-':
+			neg = true
+			fallthrough
+		case '+':
+			i++
+			if i == len(n) {
 				return Decimal{}, ErrSyntax
 			}
-			return Decimal{}, ErrRange
 		}
 		prev := s
-		s -= exponent
-		if exponent > 0 && s > prev || exponent < 0 && s < prev || s < MinScale || s > MaxScale {
+		factor := 1
+		for j := len(n) - 1; j >= i; j-- {
+			c := n[j]
+			if c < '0' || c > '9' {
+				return Decimal{}, ErrSyntax
+			}
+			if c != '0' {
+				if factor == 0 || factor > math.MaxInt/int(c-'0') {
+					return Decimal{}, ErrRange
+				}
+				d := int(c-'0') * factor
+				s2 := s
+				if neg {
+					s += d
+					if s < s2 {
+						return Decimal{}, ErrRange
+					}
+				} else {
+					s -= d
+					if s > s2 {
+						return Decimal{}, ErrRange
+					}
+				}
+			}
+			if factor > math.MaxInt/10 {
+				// Only leading zeros are allowed beyond this position.
+				factor = 0
+			} else {
+				factor *= 10
+			}
+		}
+		if s < MinScale || s > MaxScale {
 			return Decimal{}, ErrRange
 		}
 		if s == prev {
