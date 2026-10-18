@@ -174,11 +174,8 @@ const (
 	OpIsNotEmpty                                  // is not empty
 	OpIsNull                                      // is null
 	OpIsNotNull                                   // is not null
-
-	// OpExists and OpDoesNotExist must remain at the end because convertWhere in
-	// core/internal/datastore relies on the positions of the preceding operators.
-	OpExists       // exists
-	OpDoesNotExist // does not exist
+	OpExists                                      // exists
+	OpDoesNotExist                                // does not exist
 )
 
 // jsonOperators contains the JSON representations of the condition operators.

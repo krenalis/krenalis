@@ -285,16 +285,16 @@ func TestConvertWhereExistsOperators(t *testing.T) {
 		t.Fatalf("convertWhere returned error: %v", err)
 	}
 	want := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-		warehouses.NewBaseExpr(colA, warehouses.OpIsNotNull),
-		warehouses.NewBaseExpr(colH, warehouses.OpIsNull),
+		warehouses.NewBaseExpr(colA, warehouses.OpExists),
+		warehouses.NewBaseExpr(colH, warehouses.OpDoesNotExist),
 		warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-			warehouses.NewBaseExpr(colBC, warehouses.OpIsNull),
-			warehouses.NewBaseExpr(colBD, warehouses.OpIsNull),
-			warehouses.NewBaseExpr(colBEF, warehouses.OpIsNull),
+			warehouses.NewBaseExpr(colBC, warehouses.OpDoesNotExist),
+			warehouses.NewBaseExpr(colBD, warehouses.OpDoesNotExist),
+			warehouses.NewBaseExpr(colBEF, warehouses.OpDoesNotExist),
 		}),
 		warehouses.NewMultiExpr(warehouses.OpOr, []warehouses.Expr{
-			warehouses.NewBaseExpr(colEF, warehouses.OpIsNotNull),
-			warehouses.NewBaseExpr(colEG, warehouses.OpIsNotNull),
+			warehouses.NewBaseExpr(colEF, warehouses.OpExists),
+			warehouses.NewBaseExpr(colEG, warehouses.OpExists),
 		}),
 	})
 	if !reflect.DeepEqual(want, got) {
@@ -516,8 +516,7 @@ func TestConvertWhereUnknownProperty(t *testing.T) {
 }
 
 // TestConvertWhereOperatorValues verifies that state.WhereLogical values and
-// state.WhereOperator values through state.OpIsNotNull match their warehouse
-// counterparts.
+// state.WhereOperator values match their warehouse counterparts.
 func TestConvertWhereOperatorValues(t *testing.T) {
 
 	logicalOperators := []struct {
@@ -568,6 +567,8 @@ func TestConvertWhereOperatorValues(t *testing.T) {
 		{"is not empty", state.OpIsNotEmpty, warehouses.OpIsNotEmpty},
 		{"is null", state.OpIsNull, warehouses.OpIsNull},
 		{"is not null", state.OpIsNotNull, warehouses.OpIsNotNull},
+		{"exists", state.OpExists, warehouses.OpExists},
+		{"does not exist", state.OpDoesNotExist, warehouses.OpDoesNotExist},
 	}
 
 	for _, operator := range conditionOperators {

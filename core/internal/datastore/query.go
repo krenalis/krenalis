@@ -51,13 +51,11 @@ type Query struct {
 	Limit int
 }
 
-// convertWhere converts a state.Where expression into a warehouses.Expr.
-// "exists" and "does not exist" operators are mapped to warehouses.OpIsNotNull
-// and warehouses.OpIsNull, respectively, except on JSON, where presence is
-// distinct from JSON null. For object properties, "exists"
-// matches if any descendant column is non-null, while "does not exist" matches
-// if all descendant columns are null. JSON path segments after the column are
-// stored in warehouses.BaseExpr.Keys.
+// convertWhere converts a state.Where expression into a warehouses.Expr,
+// preserving condition operators. For object properties, "exists" is an OR of
+// descendant existence checks, while "does not exist" is an AND of descendant
+// absence checks. JSON path segments after the column are stored in
+// warehouses.BaseExpr.Keys.
 func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Column) (warehouses.Expr, error) {
 
 	if where == nil {
@@ -106,16 +104,7 @@ func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Col
 				}
 			}
 			if column, ok := columnByProperty[path]; ok {
-				op := warehouses.Operator(rule.Operator)
-				if column.Type.Kind() != types.JSONKind {
-					switch rule.Operator {
-					case state.OpExists:
-						op = warehouses.OpIsNotNull
-					case state.OpDoesNotExist:
-						op = warehouses.OpIsNull
-					}
-				}
-				expr.Operands[i] = warehouses.NewBaseExpr(column, op, values...)
+				expr.Operands[i] = warehouses.NewBaseExpr(column, warehouses.Operator(rule.Operator), values...)
 				continue
 			}
 			if len(rule.Property) > 1 {
@@ -145,14 +134,11 @@ func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Col
 			}
 			// The property is an object; apply the condition to all descendant columns.
 			var logicalOp warehouses.LogicalOperator
-			var op warehouses.Operator
 			switch rule.Operator {
 			case state.OpExists:
 				logicalOp = warehouses.OpOr
-				op = warehouses.OpIsNotNull
 			case state.OpDoesNotExist:
 				logicalOp = warehouses.OpAnd
-				op = warehouses.OpIsNull
 			default:
 				return nil, fmt.Errorf("operator %q cannot be used with object property %q in where expression",
 					rule.Operator, path)
@@ -162,11 +148,7 @@ func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Col
 			})
 			operands := make([]warehouses.Expr, len(descendantColumns))
 			for j, column := range descendantColumns {
-				columnOp := op
-				if column.Type.Kind() == types.JSONKind {
-					columnOp = warehouses.Operator(rule.Operator)
-				}
-				operands[j] = warehouses.NewBaseExpr(column, columnOp)
+				operands[j] = warehouses.NewBaseExpr(column, warehouses.Operator(rule.Operator))
 			}
 			expr.Operands[i] = warehouses.NewMultiExpr(logicalOp, operands)
 

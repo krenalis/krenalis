@@ -235,6 +235,14 @@ func Test_renderExpr(t *testing.T) {
 			query: `"id" IS NOT NULL`,
 		},
 		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpExists),
+			query: `"id" IS NOT NULL`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpDoesNotExist),
+			query: `"id" IS NULL`,
+		},
+		{
 			expr: warehouses.NewMultiExpr(
 				warehouses.OpAnd,
 				[]warehouses.Expr{
