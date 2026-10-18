@@ -107,7 +107,9 @@ type FilterCondition struct {
 
 	// Values.
 	// If the property has a string type with allowed values, each value must be one of the allowed values.
-	// In all other cases, each value must be at most 60 runes and must not contain the NUL byte.
+	// Otherwise, each value must be at most 60 runes (78 for decimal and JSON operands) and contain no NUL byte.
+	// Decimal operands must fit a decimal(p,s) with p <= 76 and 0 <= s <= min(p,37).
+	// In addition to JSON strings, only JSON operands within these decimal limits are compared with JSON numbers.
 	Values []string `json:"values,omitzero"`
 }
 
@@ -242,7 +244,8 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 				v, _ = types.NormalizeUUID(value)
 			case types.JSONKind:
 				jv := state.JSONConditionValue{String: value}
-				if d, err := decimal.Parse(jv.String, 0, 0); err == nil {
+				d, valid := parseDecimal(value)
+				if valid {
 					jv.Number = &d
 				}
 				v = jv
@@ -333,10 +336,14 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 }
 
 // parseDecimal parses a decimal from s and returns the parsed decimal value and
-// true. If s is not a valid decimal, it returns 0 and false.
+// true. If s cannot fit a decimal type with precision <= 76 and scale <= 37,
+// or is not a valid decimal, it returns 0 and false.
 func parseDecimal(s string) (decimal.Decimal, bool) {
 	d, err := decimal.Parse(s, 0, 0)
 	if err != nil {
+		return decimal.Decimal{}, false
+	}
+	if !types.IsDecimal(d) {
 		return decimal.Decimal{}, false
 	}
 	return d, true
@@ -912,8 +919,12 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 		t = t.Elem()
 	}
 	k := t.Kind()
+	maxValueLength := 60
+	if k == types.DecimalKind || k == types.JSONKind {
+		maxValueLength = types.MaxDecimalPrecision + 2 // Allow a sign and decimal point.
+	}
 	for _, value := range cond.Values {
-		if err := util.ValidateStringField("condition value", value, 60); err != nil {
+		if err := util.ValidateStringField("condition value", value, maxValueLength); err != nil {
 			return "", err
 		}
 		var valid bool

@@ -58,6 +58,13 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		return fmt.Errorf("invalid property name %q", c.Name)
 	}
 
+	for _, value := range baseExpr.Values {
+		if number, ok := value.(decimal.Decimal); ok && !types.IsDecimal(number) {
+			return fmt.Errorf("decimal operand exceeds precision %d or scale %d",
+				types.MaxDecimalPrecision, types.MaxDecimalScale)
+		}
+	}
+
 	qname := quoteIdent(c.Name)
 
 	// Render the column identifier, the operator, and, if necessary, the values.

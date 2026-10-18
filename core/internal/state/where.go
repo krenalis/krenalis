@@ -221,8 +221,9 @@ func (op *WhereOperator) UnmarshalJSON(data []byte) error {
 // JSONConditionValue represents a value in a Where condition that refers to a
 // JSON property.
 //
-// - String holds the raw value.
-// - Number is non-nil if String represents a numeric value.
+//   - String holds the raw value.
+//   - Number is non-nil if String fits a decimal(p,s) with p <= 76 and
+//     0 <= s <= min(p,37).
 type JSONConditionValue struct {
 	String string
 	Number *decimal.Decimal
@@ -380,7 +381,11 @@ func unmarshalConditionValue(v json.Value, t types.Type) (any, error) {
 			return nil, errors.New("where condition value must be a string")
 		}
 		value := JSONConditionValue{String: v.String()}
-		if d, err := decimal.Parse(value.String, 0, 0); err == nil {
+		d, err := decimal.Parse(value.String, 0, 0)
+		if err != nil {
+			return value, nil
+		}
+		if types.IsDecimal(d) {
 			value.Number = &d
 		}
 		return value, nil

@@ -802,6 +802,9 @@ const (
 // For OpIsTrue and OpIsFalse on JSON columns, Keys specifies successive object
 // keys. Each key is treated literally, including any dots. If Keys is empty,
 // these operators apply to the entire column.
+// Decimal operands must fit a decimal(p,s) with p <= 76 and 0 <= s <= min(p,37),
+// independently of the column's precision and scale. Rendering rejects operands
+// beyond these limits.
 type BaseExpr struct {
 	Column   Column
 	Keys     []string
