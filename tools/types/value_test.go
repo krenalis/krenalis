@@ -340,6 +340,30 @@ func Test_Decode(t *testing.T) {
 
 }
 
+// Test_IsDecimal checks the range of all supported decimal types.
+func Test_IsDecimal(t *testing.T) {
+	for _, test := range []struct {
+		text  string
+		valid bool
+	}{
+		{"0", true}, {"-0e999999", true}, {"1.2300", true},
+		{"1e75", true}, {"-1e75", true}, {"1e-37", true},
+		{strings.Repeat("9", 76), true},
+		{"-" + strings.Repeat("9", 39) + "." + strings.Repeat("9", 37), true},
+		{"1e76", false}, {"-1e76", false}, {"1e-38", false},
+		{strings.Repeat("9", 77), false},
+		{strings.Repeat("9", 40) + "." + strings.Repeat("9", 37), false},
+		{"1e999999", false}, {"1e-999999", false},
+	} {
+		t.Run(test.text, func(t *testing.T) {
+			got := IsDecimal(decimal.MustParse(test.text))
+			if got != test.valid {
+				t.Fatalf("expected valid %t, got %t", test.valid, got)
+			}
+		})
+	}
+}
+
 // Test_NormalizeIP checks IP address normalization and validation.
 func Test_NormalizeIP(t *testing.T) {
 

@@ -74,6 +74,13 @@ func Decode[T any](r io.Reader, t Type) (T, error) {
 	return vt, err
 }
 
+// IsDecimal reports whether n is exactly representable by a decimal type with
+// precision at most MaxDecimalPrecision and scale at most MaxDecimalScale.
+func IsDecimal(n decimal.Decimal) bool {
+	precision, scale := n.PrecisionScale()
+	return precision <= MaxDecimalPrecision && scale <= MaxDecimalScale
+}
+
 // Marshal encodes the given data, based on the provided schema, into JSON, and
 // returns it. schema must be a valid non-generic type.
 //
