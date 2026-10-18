@@ -1110,6 +1110,72 @@ func Test_resolveFilterProperty(t *testing.T) {
 
 }
 
+// Test_validateDecimalFilters checks numeric limits for filter operands.
+func Test_validateDecimalFilters(t *testing.T) {
+
+	schema := types.Object([]types.Property{
+		{Name: "number", Type: types.Decimal(3, 2)},
+		{Name: "numbers", Type: types.Array(types.Decimal(3, 2))},
+		{Name: "json", Type: types.JSON()},
+		{Name: "jsons", Type: types.Array(types.JSON())},
+	})
+	for _, test := range []struct {
+		text  string
+		valid bool
+	}{
+		{"0", true}, {"-0e999999", true}, {"1.2300", true},
+		{"1e75", true}, {"-1e75", true}, {"1e-37", true},
+		{"10e-38", true}, {"1e" + strings.Repeat("0", 64) + "1", true},
+		{strings.Repeat("9", 76), true},
+		{"-" + strings.Repeat("9", 39) + "." + strings.Repeat("9", 37), true},
+		{"1e76", false}, {"1e-38", false},
+		{strings.Repeat("9", 77), false},
+		{strings.Repeat("9", 40) + "." + strings.Repeat("9", 37), false},
+		{"1e999999", false}, {"-1e999999", false}, {"1e-999999", false},
+	} {
+		for _, property := range []string{"number", "numbers", "json", "json.a", "jsons"} {
+			t.Run(property+"/"+test.text, func(t *testing.T) {
+
+				op := OpIs
+				if property == "numbers" || property == "jsons" {
+					op = OpContains
+				}
+				filter := &Filter{Operator: OpAnd, Rules: []FilterRule{
+					&FilterCondition{Property: property, Operator: op, Values: []string{test.text}},
+				}}
+				isJSON := strings.HasPrefix(property, "json")
+				_, err := validateFilter(filter, schema, state.Source, state.TargetUser)
+				if err != nil {
+					if isJSON || test.valid {
+						t.Fatalf("expected valid filter, got %v", err)
+					}
+					return
+				}
+				if !isJSON && !test.valid {
+					t.Fatal("expected decimal validation error, got nil")
+				}
+
+				where := convertFilterToWhere(filter, schema)
+				value := where.Rules[0].(*state.WhereCondition).Values[0]
+				if isJSON {
+					operand := value.(state.JSONConditionValue)
+					if operand.String != test.text || (operand.Number != nil) != test.valid {
+						t.Fatalf("expected text %q and numeric operand %t, got %q and %t", test.text, test.valid, operand.String, operand.Number != nil)
+					}
+					got := convertWhereToFilter(where, schema).Rules[0].(*FilterCondition).Values[0]
+					if got != test.text {
+						t.Fatalf("expected original text %q, got %q", test.text, got)
+					}
+				} else if !value.(decimal.Decimal).Equal(decimal.MustParse(test.text)) {
+					t.Fatalf("expected decimal %s, got %s", test.text, value)
+				}
+
+			})
+		}
+	}
+
+}
+
 // Test_validateFilter verifies validation of filter structure, operators, and
 // values.
 func Test_validateFilter(t *testing.T) {
@@ -1734,4 +1800,45 @@ func Test_validateFilterRejectsNilRules(t *testing.T) {
 		})
 	}
 
+}
+
+// Test_validateFilterValueLimits checks operand lengths in runes.
+func Test_validateFilterValueLimits(t *testing.T) {
+	for _, test := range []struct {
+		typ       types.Type
+		maxLength int
+	}{
+		{types.Decimal(3, 2), 78}, {types.Array(types.Decimal(3, 2)), 78},
+		{types.JSON(), 78}, {types.Array(types.JSON()), 78},
+		{types.String(), 60}, {types.Array(types.String()), 60},
+	} {
+		for _, length := range []int{test.maxLength, test.maxLength + 1} {
+			t.Run(fmt.Sprintf("%s/%d", test.typ, length), func(t *testing.T) {
+				schema := types.Object([]types.Property{{Name: "value", Type: test.typ}})
+				op := OpIs
+				typ := test.typ
+				if typ.Kind() == types.ArrayKind {
+					op = OpContains
+					typ = typ.Elem()
+				}
+				text := strings.Repeat("é", length)
+				if typ.Kind() == types.DecimalKind {
+					text = "1." + strings.Repeat("0", length-2)
+				}
+				filter := &Filter{Operator: OpAnd, Rules: []FilterRule{
+					&FilterCondition{Property: "value", Operator: op, Values: []string{text}},
+				}}
+				_, err := validateFilter(filter, schema, state.Source, state.TargetUser)
+				if err != nil {
+					if length <= test.maxLength || err.Error() != fmt.Sprintf("condition value is longer than %d runes", test.maxLength) {
+						t.Fatalf("expected length error only above %d runes, got %v", test.maxLength, err)
+					}
+					return
+				}
+				if length > test.maxLength {
+					t.Fatal("expected operand length error, got nil")
+				}
+			})
+		}
+	}
 }
