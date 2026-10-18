@@ -163,6 +163,56 @@ func Test_Decimal_Neg(t *testing.T) {
 
 }
 
+// Test_Decimal_PrecisionScale checks exact precision and scale without mutation.
+func Test_Decimal_PrecisionScale(t *testing.T) {
+
+	encoded, err := MustParse("12345678901234567890123456.78").Binary(4)
+	if err != nil {
+		t.Fatalf("expected decimal binary encoding, got %v", err)
+	}
+	nonMinimal, err := Binary(encoded, 30, 4)
+	if err != nil {
+		t.Fatalf("expected decimal with trailing fractional zeros, got %v", err)
+	}
+
+	for _, test := range []struct {
+		value            Decimal
+		precision, scale int
+	}{
+		{Decimal{}, 1, 0},
+		{New(0, MaxScale), 1, 0},
+		{MustParse("-0.000e999999"), 1, 0},
+		{MustParse("123.4500"), 5, 2},
+		{MustParse("-.00500"), 3, 3},
+		{New(12300, 4), 3, 2},
+		{New(100, 1), 2, 0},
+		{nonMinimal, 28, 2},
+		{New(10, 38), 37, 37},
+		{New(10, MinScale), 2 - MinScale, 0},
+		{New(1000, MaxScale), MaxScale - 3, MaxScale - 3},
+		{MustParse("1e75"), 76, 0},
+		{MustParse("1e76"), 77, 0},
+		{MustParse("1e-37"), 37, 37},
+		{MustParse("1e-38"), 38, 38},
+		{MustParse("1e999999"), 1000000, 0},
+		{MustParse("1e-999999"), 999999, 999999},
+		{MustParse(strings.Repeat("9", 76)), 76, 0},
+		{MustParse(strings.Repeat("9", 39) + "." + strings.Repeat("8", 37)), 76, 37},
+	} {
+		t.Run(fmt.Sprintf("%e", test.value), func(t *testing.T) {
+			before := fmt.Sprintf("%e", test.value)
+			precision, scale := test.value.PrecisionScale()
+			if precision != test.precision || scale != test.scale {
+				t.Fatalf("expected precision %d and scale %d, got %d and %d", test.precision, test.scale, precision, scale)
+			}
+			if after := fmt.Sprintf("%e", test.value); before != after {
+				t.Fatalf("expected unchanged decimal %s, got %s", before, after)
+			}
+		})
+	}
+
+}
+
 func Test_Decimal_Uint64(t *testing.T) {
 
 	tests := []struct {

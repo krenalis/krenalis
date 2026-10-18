@@ -225,6 +225,24 @@ func (x Decimal) Neg() Decimal {
 	return y
 }
 
+// PrecisionScale returns the smallest precision and nonnegative scale that
+// represent x exactly. Precision includes the scale, even for values below 1.
+// Insignificant trailing fractional zeros are excluded; zero returns 1, 0.
+func (x Decimal) PrecisionScale() (precision, scale int) {
+	if x.b.Sign() == 0 {
+		return 1, 0
+	}
+	integerDigits := x.b.Precision() - x.b.Scale()
+	if x.b.Scale() <= 0 {
+		return integerDigits, 0
+	}
+	var reduced decimal.Big
+	reduced.Copy(&x.b)
+	decimal.ContextUnlimited.Reduce(&reduced)
+	scale = max(reduced.Scale(), 0)
+	return max(integerDigits, 0) + scale, scale
+}
+
 // Sign returns:
 //
 //	-1 if x <  0
