@@ -1201,14 +1201,9 @@ func Test_validateFilter(t *testing.T) {
 		{Name: "p", Type: types.String().WithValues("foo"), Nullable: true},
 		{Name: "q", Type: types.Array(types.Float(64)), Nullable: true},
 	})
-	destinationRole := state.Destination
-	eventTarget := state.TargetEvent
-
 	tests := []struct {
 		name     string
 		filter   Filter
-		role     *state.Role
-		target   *state.Target
 		expected []string
 		err      error
 	}{
@@ -1624,8 +1619,7 @@ func Test_validateFilter(t *testing.T) {
 					&FilterCondition{Property: "m", Operator: OpIsEmpty},
 				},
 			},
-			role: &destinationRole,
-			err:  errors.New(`operator "is empty" can only be used with json, string, array, and map properties`),
+			err: errors.New(`operator "is empty" can only be used with json, string, array, and map properties`),
 		},
 		{
 			name: "is not empty on event object",
@@ -1635,8 +1629,7 @@ func Test_validateFilter(t *testing.T) {
 					&FilterCondition{Property: "m", Operator: OpIsNotEmpty},
 				},
 			},
-			target: &eventTarget,
-			err:    errors.New(`operator "is not empty" can only be used with json, string, array, and map properties`),
+			err: errors.New(`operator "is not empty" can only be used with json, string, array, and map properties`),
 		},
 		{
 			name: "JSON in destination user filter",
@@ -1646,7 +1639,6 @@ func Test_validateFilter(t *testing.T) {
 					&FilterCondition{Property: "d.p", Operator: OpIsNotEmpty},
 				},
 			},
-			role:     &destinationRole,
 			expected: []string{"d"},
 		},
 		{
@@ -1708,15 +1700,7 @@ func Test_validateFilter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			role := state.Source
-			if test.role != nil {
-				role = *test.role
-			}
-			target := state.TargetUser
-			if test.target != nil {
-				target = *test.target
-			}
-			got, err := validateFilter(&test.filter, schema, role, target)
+			got, err := validateFilter(&test.filter, schema)
 			if err != nil {
 				if test.err == nil {
 					t.Fatalf("expected no error, got error %q (type %T)", err, err)
@@ -1737,9 +1721,8 @@ func Test_validateFilter(t *testing.T) {
 
 }
 
-// Test_validateJSONFilters verifies JSON filter validation across roles and
-// targets and checks that a conversion round trip preserves the input and
-// original value text.
+// Test_validateJSONFilters verifies JSON filter validation and checks that a
+// conversion round trip preserves the input and original value text.
 func Test_validateJSONFilters(t *testing.T) {
 
 	_, cases := warehouseexpr.JSONCases()
@@ -1751,70 +1734,66 @@ func Test_validateJSONFilters(t *testing.T) {
 		{Name: "array", Type: types.Array(types.JSON()), ReadOptional: true},
 		{Name: "map", Type: types.Map(types.JSON()), ReadOptional: true},
 	})
-	for _, role := range []state.Role{state.Source, state.Destination} {
-		for _, target := range []state.Target{state.TargetUser, state.TargetEvent} {
-			for _, path := range []string{"value", "value.a.b", "array", "map"} {
-				for _, c := range cases {
-					if c.Operator < 0 || int(c.Operator) >= len(operators) {
-						t.Fatalf("expected known JSON operator for %s, got %d", c.Name, c.Operator)
-					}
-					op := operators[c.Operator]
-					if path == "array" || path == "map" {
-						allowed := op == OpExists || op == OpDoesNotExist || op == OpIsEmpty || op == OpIsNotEmpty
-						if path == "array" {
-							allowed = allowed || op == OpContains || op == OpDoesNotContain
-						}
-						if !allowed {
-							continue
-						}
-					}
-					t.Run(fmt.Sprintf("%s/%s/%s/%s", role, target, path, c.Name), func(t *testing.T) {
-
-						var values []string
-						for i, raw := range c.Values {
-							value, ok := raw.(warehouses.JSONConditionValue)
-							if !ok {
-								t.Fatalf("expected warehouses.JSONConditionValue at index %d, got %T", i, raw)
-							}
-							values = append(values, value.String)
-						}
-						filter := &Filter{Operator: OpAnd, Rules: []FilterRule{
-							&FilterCondition{Property: path, Operator: op, Values: values},
-						}}
-						expected := &Filter{Operator: OpAnd, Rules: []FilterRule{
-							&FilterCondition{Property: path, Operator: op, Values: slices.Clone(values)},
-						}}
-						hasEmptyValue := slices.Contains(values, "")
-
-						_, err := validateFilter(filter, schema, role, target)
-						if diff := cmp.Diff(expected, filter); diff != "" {
-							t.Fatalf("expected unchanged input after validation, got difference (-want +got):\n%s", diff)
-						}
-						if err != nil {
-							if !hasEmptyValue {
-								t.Fatalf("expected valid JSON filter, got %v", err)
-							}
-							if err.Error() != "condition value is empty" {
-								t.Fatalf("expected empty condition value error, got %v", err)
-							}
-							return
-						}
-						if hasEmptyValue {
-							t.Fatal("expected empty condition value rejection, got nil")
-						}
-						where := convertFilterToWhere(filter, schema)
-						// convertWhereToFilter must preserve the user's numeric spelling.
-						got := convertWhereToFilter(where, schema)
-						if diff := cmp.Diff(expected, filter); diff != "" {
-							t.Errorf("expected unchanged input, got difference (-want +got):\n%s", diff)
-						}
-						if diff := cmp.Diff(expected, got); diff != "" {
-							t.Fatalf("expected original filter, got difference (-want +got):\n%s", diff)
-						}
-
-					})
+	for _, path := range []string{"value", "value.a.b", "array", "map"} {
+		for _, c := range cases {
+			if c.Operator < 0 || int(c.Operator) >= len(operators) {
+				t.Fatalf("expected known JSON operator for %s, got %d", c.Name, c.Operator)
+			}
+			op := operators[c.Operator]
+			if path == "array" || path == "map" {
+				allowed := op == OpExists || op == OpDoesNotExist || op == OpIsEmpty || op == OpIsNotEmpty
+				if path == "array" {
+					allowed = allowed || op == OpContains || op == OpDoesNotContain
+				}
+				if !allowed {
+					continue
 				}
 			}
+			t.Run(fmt.Sprintf("%s/%s", path, c.Name), func(t *testing.T) {
+
+				var values []string
+				for i, raw := range c.Values {
+					value, ok := raw.(warehouses.JSONConditionValue)
+					if !ok {
+						t.Fatalf("expected warehouses.JSONConditionValue at index %d, got %T", i, raw)
+					}
+					values = append(values, value.String)
+				}
+				filter := &Filter{Operator: OpAnd, Rules: []FilterRule{
+					&FilterCondition{Property: path, Operator: op, Values: values},
+				}}
+				expected := &Filter{Operator: OpAnd, Rules: []FilterRule{
+					&FilterCondition{Property: path, Operator: op, Values: slices.Clone(values)},
+				}}
+				hasEmptyValue := slices.Contains(values, "")
+
+				_, err := validateFilter(filter, schema)
+				if diff := cmp.Diff(expected, filter); diff != "" {
+					t.Fatalf("expected unchanged input after validation, got difference (-want +got):\n%s", diff)
+				}
+				if err != nil {
+					if !hasEmptyValue {
+						t.Fatalf("expected valid JSON filter, got %v", err)
+					}
+					if err.Error() != "condition value is empty" {
+						t.Fatalf("expected empty condition value error, got %v", err)
+					}
+					return
+				}
+				if hasEmptyValue {
+					t.Fatal("expected empty condition value rejection, got nil")
+				}
+				where := convertFilterToWhere(filter, schema)
+				// convertWhereToFilter must preserve the user's numeric spelling.
+				got := convertWhereToFilter(where, schema)
+				if diff := cmp.Diff(expected, filter); diff != "" {
+					t.Errorf("expected unchanged input, got difference (-want +got):\n%s", diff)
+				}
+				if diff := cmp.Diff(expected, got); diff != "" {
+					t.Fatalf("expected original filter, got difference (-want +got):\n%s", diff)
+				}
+
+			})
 		}
 	}
 
@@ -1852,7 +1831,7 @@ func Test_validateFilterLimits(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := validateFilter(test.filter, schema, state.Source, state.TargetUser)
+			_, err := validateFilter(test.filter, schema)
 			if !reflect.DeepEqual(test.expected, err) {
 				t.Fatalf("expected error %q (type %T), got error %q (type %T)", test.expected, test.expected, err, err)
 			}
@@ -1878,7 +1857,7 @@ func Test_validateFilterRejectsNilRules(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			filter := &Filter{Operator: OpAnd, Rules: []FilterRule{test.rule}}
-			_, err := validateFilter(filter, schema, state.Source, state.TargetUser)
+			_, err := validateFilter(filter, schema)
 			if !reflect.DeepEqual(test.err, err) {
 				t.Fatalf("expected error %q (type %T), got error %q (type %T)", test.err, test.err, err, err)
 			}

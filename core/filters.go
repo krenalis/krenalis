@@ -173,9 +173,7 @@ var operators = [...]FilterOperator{
 type filterValidation struct {
 	paths      []string
 	properties types.Properties
-	role       state.Role
 	ruleCount  int
-	target     state.Target
 }
 
 // convertOperatorFromWhere converts a where operator into a filter operator.
@@ -729,8 +727,8 @@ func unmarshalFilterRules(dec *json.Decoder, depth int) ([]FilterRule, int, erro
 // Returns an error if the filter is not valid. Specifically, it returns a
 // types.PathNotExistError if a path does not exist.
 // Panics if the filter is nil or the schema is not valid.
-func validateFilter(filter *Filter, schema types.Type, role state.Role, target state.Target) ([]string, error) {
-	validation := filterValidation{properties: schema.Properties(), role: role, target: target}
+func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
+	validation := filterValidation{properties: schema.Properties()}
 	if err := validateFilterGroup(filter, &validation, 1); err != nil {
 		return nil, err
 	}
