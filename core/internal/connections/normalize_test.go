@@ -17,6 +17,7 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 
@@ -49,13 +50,15 @@ func Test_normalize(t *testing.T) {
 	aDateTime := time.Date(2023, 5, 3, 15, 47, 22, 769802537, time.UTC)
 	aDate := time.Date(2023, 5, 3, 0, 0, 0, 0, time.UTC)
 
-	tests := []struct {
+	type testCase struct {
 		typ      types.Type
 		value    any
 		expected any
 		null     bool
 		layout   *state.TimeLayouts
-	}{
+	}
+
+	tests := []testCase{
 		// string.
 		{types.String(), "foo", "foo", false, nil},
 		{types.String().WithValues("foo", "boo"), "boo", "boo", false, nil},
@@ -63,7 +66,21 @@ func Test_normalize(t *testing.T) {
 		{types.String().WithMaxBytes(3), "boo", "boo", false, nil},
 		{types.String().WithMaxLength(3), "bòò", "bòò", false, nil},
 		{types.String().WithValues("foo", "boo"), "", nil, true, nil},
+		{types.String().WithValues("", "foo", "boo"), "", "", false, nil},
+		{types.String().WithValues("", "foo", "boo"), "", "", true, nil},
+		{types.String(), []byte{}, "", false, nil},
+		{types.String(), []byte{}, "", true, nil},
+		{types.String().WithValues("", "foo", "boo"), []byte{}, "", false, nil},
+		{types.String().WithValues("", "foo", "boo"), []byte{}, "", true, nil},
+		{types.String().WithPattern(regexp.MustCompile(`^foo$`)), "", nil, true, nil},
+		{types.String().WithPattern(regexp.MustCompile(`^(foo)?$`)), "", "", false, nil},
+		{types.String().WithPattern(regexp.MustCompile(`^(foo)?$`)), "", "", true, nil},
+		{types.String().WithPattern(regexp.MustCompile(`^(foo)?$`)), []byte{}, "", false, nil},
+		{types.String().WithPattern(regexp.MustCompile(`^(foo)?$`)), []byte{}, "", true, nil},
 		{types.String(), []byte(nil), nil, true, nil},
+		{types.String(), []byte(nil), "", false, nil},
+		{types.String().WithValues("foo", "boo"), []byte(nil), nil, true, nil},
+		{types.String().WithPattern(regexp.MustCompile(`^foo$`)), []byte(nil), nil, true, nil},
 		// boolean.
 		{types.Boolean(), true, true, false, nil},
 		// int(16).
@@ -75,6 +92,13 @@ func Test_normalize(t *testing.T) {
 		{types.Int(32), -9261.0, -9261, false, nil},
 		{types.Int(32), []byte(nil), nil, true, nil},
 		{types.Int(32), []byte("-57"), -57, true, nil},
+		// int(64).
+		{types.Int(64), float64(-0x1p63), int(math.MinInt64), false, nil},
+		{types.Int(64), math.Nextafter(0x1p63, 0), int(math.MaxInt64 - 1023), false, nil},
+		{types.Int(64), int64(math.MaxInt64), int(math.MaxInt64), false, nil},
+		{types.Int(64), "9223372036854775807", int(math.MaxInt64), false, nil},
+		{types.Int(64), float32(-0x1p63), int(math.MinInt64), false, nil},
+		{types.Int(64), math.Nextafter32(0x1p63, 0), int(math.MaxInt64 - (1<<39 - 1)), false, nil},
 		// unsigned int(8).
 		{types.Int(8).Unsigned(), uint(3), uint(3), false, nil},
 		{types.Int(8).Unsigned(), 3.0, uint(3), false, nil},
@@ -83,6 +107,11 @@ func Test_normalize(t *testing.T) {
 		{types.Int(32).Unsigned(), uint(47303), uint(47303), false, nil},
 		{types.Int(32).Unsigned(), 47303.0, uint(47303), false, nil},
 		{types.Int(32).Unsigned(), []byte(nil), nil, true, nil},
+		// unsigned int(64).
+		{types.Int(64).Unsigned(), float64(0), uint(0), false, nil},
+		{types.Int(64).Unsigned(), float32(0), uint(0), false, nil},
+		{types.Int(64).Unsigned(), math.Nextafter(0x1p64, 0), uint(math.MaxUint64 - 2047), false, nil},
+		{types.Int(64).Unsigned(), math.Nextafter32(0x1p64, 0), uint(math.MaxUint64 - (1<<40 - 1)), false, nil},
 		// float(32).
 		{types.Float(32), float64(float32(12.79)), float64(float32(12.79)), false, nil},
 		{types.Float(32), math.NaN(), math.NaN(), false, nil},
@@ -131,6 +160,10 @@ func Test_normalize(t *testing.T) {
 		// year.
 		{types.Year(), 2023, 2023, false, nil},
 		{types.Year(), 2023.0, 2023, false, nil},
+		{types.Year(), float64(1), 1, false, nil},
+		{types.Year(), float64(9999), 9999, false, nil},
+		{types.Year(), float32(1), 1, false, nil},
+		{types.Year(), float32(9999), 9999, false, nil},
 		{types.Year(), []byte(nil), nil, true, nil},
 		// uuid.
 		{types.UUID(), "123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174000", false, nil},
@@ -155,7 +188,7 @@ func Test_normalize(t *testing.T) {
 		{types.IP(), "2001:0db8:0000:0000:0000:ff00:0042:8329", "2001:db8::ff00:42:8329", false, nil},
 		{types.IP(), "2001:0db8:85a3::8a2e:0370:7334/64", "2001:db8:85a3::8a2e:370:7334", false, nil},
 		{types.IP(), "fe80::1ff:fe23:4567:890a%eth0", "fe80::1ff:fe23:4567:890a", false, nil},
-		{types.IP(), "::ffff:192.168.1.10", "::ffff:192.168.1.10", false, nil},
+		{types.IP(), "::ffff:192.168.1.10", "192.168.1.10", false, nil},
 		{types.IP(), "", nil, true, nil},
 		{types.IP(), net.ParseIP("127.0.0.1"), "127.0.0.1", false, nil},
 		{types.IP(), net.ParseIP("192.168.1.1"), "192.168.1.1", false, nil},
@@ -164,11 +197,12 @@ func Test_normalize(t *testing.T) {
 		{types.IP(), netip.MustParseAddr("127.0.0.1"), "127.0.0.1", false, nil},
 		{types.IP(), netip.MustParseAddr("2001:0db8:0000:0000:0000:ff00:0042:8329"), "2001:db8::ff00:42:8329", false, nil},
 		{types.IP(), netip.MustParseAddr("fe80::1ff:fe23:4567:890a%eth0"), "fe80::1ff:fe23:4567:890a", false, nil},
-		{types.IP(), netip.MustParseAddr("::ffff:192.168.1.10"), "::ffff:192.168.1.10", false, nil},
+		{types.IP(), netip.MustParseAddr("::ffff:192.168.1.10"), "192.168.1.10", false, nil},
 		{types.IP(), net.IP(nil), nil, true, nil},
 		// array.
 		{types.Array(types.Int(32)), []any{1, 2}, []any{1, 2}, false, nil},
 		{types.Array(types.Int(32)), []any{1.0, 2.0}, []any{1, 2}, false, nil},
+		{types.Array(types.String()).WithUnique(), []any{"foo", "boo"}, []any{"foo", "boo"}, false, nil},
 		{types.Array(types.Array(types.String())), []any{[]any{"foo"}, []any{"foo"}}, []any{[]any{"foo"}, []any{"foo"}}, false, nil},
 		{types.Array(types.Int(32)), []any(nil), nil, true, nil},
 		{types.Array(types.Int(32)), []int(nil), nil, true, nil},
@@ -179,12 +213,39 @@ func Test_normalize(t *testing.T) {
 		{types.Object([]types.Property{{Name: "foo", Type: types.String()}, {Name: "boo", Type: types.Int(32)}}), map[string]any{"foo": "alt", "boo": 3}, map[string]any{"foo": "alt", "boo": 3}, false, nil},
 		{types.Object([]types.Property{{Name: "foo", Type: types.IP(), Nullable: true}}), map[string]any{"foo": ""}, map[string]any{"foo": nil}, true, nil},
 		{types.Object([]types.Property{{Name: "foo", Type: types.String()}, {Name: "boo", Type: types.Int(32)}}), map[string]any(nil), nil, true, nil},
+		{types.Object([]types.Property{{Name: "foo", Type: types.String(), ReadOptional: true}}), map[string]any(nil), map[string]any{}, false, nil},
+		{types.Object([]types.Property{{Name: "foo", Type: types.String(), ReadOptional: true}}), map[string]any{}, map[string]any{}, false, nil},
+		{types.Object([]types.Property{{Name: "foo", Type: types.String(), ReadOptional: true}}), map[string]any(nil), nil, true, nil},
+		{types.Object([]types.Property{{Name: "foo", Type: types.String(), ReadOptional: true}}), map[string]any{}, map[string]any{}, true, nil},
+		{types.Object([]types.Property{{Name: "nested", Type: types.Object([]types.Property{{Name: "foo", Type: types.String(), ReadOptional: true}})}}), map[string]any{"nested": map[string]any(nil)}, map[string]any{"nested": map[string]any{}}, false, nil},
 		{types.Object([]types.Property{{Name: "foo", Type: types.String()}, {Name: "boo", Type: types.Int(32), ReadOptional: true}}), map[string]any{"foo": "alt", "spurious": 5}, map[string]any{"foo": "alt"}, false, nil},
 		// map.
 		{types.Map(types.String()), map[string]any{"foo": "boo"}, map[string]any{"foo": "boo"}, false, nil},
 		{types.Map(types.Array(types.Boolean())), map[string]any{"foo": []any{true, false}}, map[string]any{"foo": []any{true, false}}, false, nil},
 		{types.Map(types.String()), map[string]any(nil), nil, true, nil},
 		{types.Map(types.String()), map[string]string(nil), nil, true, nil},
+	}
+
+	// Unix nanosecond boundaries and fractional values.
+	for _, test := range []struct {
+		value any
+		want  int64
+	}{
+		{"-9223372036854775808", math.MinInt64},
+		{"9223372036854775807", math.MaxInt64},
+		{float64(math.MinInt64), math.MinInt64},
+		{math.Nextafter(float64(math.MinInt64), 0), math.MinInt64 + 1024},
+		{math.Nextafter(float64(math.MaxInt64), 0), math.MaxInt64 - 1023},
+		{0.0, 0},
+		{1.75, 1},
+		{-1.75, -1},
+	} {
+		for _, nullable := range []bool{false, true} {
+			tests = append(tests, testCase{
+				types.DateTime(), test.value, time.Unix(0, test.want), nullable,
+				&state.TimeLayouts{DateTime: "unixnano"},
+			})
+		}
 	}
 
 	for _, test := range tests {
@@ -204,29 +265,47 @@ func Test_normalize(t *testing.T) {
 			}
 		})
 	}
+
 }
 
 func Test_normalize_errors(t *testing.T) {
+
 	timeLayout := &state.TimeLayouts{Time: "15:04"}
 
-	tests := []struct {
-		name         string
-		typ          types.Type
-		value        any
-		nullable     bool
-		layout       *state.TimeLayouts
-		wantContains string
-	}{
+	type testCase struct {
+		name           string
+		typ            types.Type
+		value          any
+		nullable       bool
+		layout         *state.TimeLayouts
+		want           string
+		wantContains   string
+		wantInputError bool
+	}
+
+	tests := []testCase{
 		{name: "nilNotNullable", typ: types.String(), value: nil, wantContains: "has value null but it is not nullable"},
 		{name: "textInvalidType", typ: types.String(), value: 5, wantContains: "has type int"},
 		{name: "textInvalidUTF8", typ: types.String(), value: string([]byte{0xff}), wantContains: "does not contain valid UTF-8 characters"},
 		{name: "textRegexpMismatch", typ: types.String().WithPattern(regexp.MustCompile(`^foo$`)), value: "bar", wantContains: "contains an unsupported value"},
+		{name: "textEmptyRegexpMismatch", typ: types.String().WithPattern(regexp.MustCompile(`^foo$`)), value: "", wantContains: "contains an unsupported value", wantInputError: true},
+		{name: "textEmptyBytesRegexpMismatch", typ: types.String().WithPattern(regexp.MustCompile(`^foo$`)), value: []byte{}, wantContains: "contains an unsupported value", wantInputError: true},
+		{name: "textNullableEmptyBytesRegexpMismatch", typ: types.String().WithPattern(regexp.MustCompile(`^foo$`)), value: []byte{}, nullable: true, wantContains: "contains an unsupported value", wantInputError: true},
 		{name: "textUnsupportedValue", typ: types.String().WithValues("foo", "bar"), value: "baz", wantContains: "contains an unsupported value"},
+		{name: "textEmptyUnsupportedValue", typ: types.String().WithValues("foo", "bar"), value: "", wantContains: "contains an unsupported value", wantInputError: true},
+		{name: "textEmptyBytesUnsupportedValue", typ: types.String().WithValues("foo", "bar"), value: []byte{}, wantContains: "contains an unsupported value", wantInputError: true},
+		{name: "textNullableEmptyBytesUnsupportedValue", typ: types.String().WithValues("foo", "bar"), value: []byte{}, nullable: true, wantContains: "contains an unsupported value", wantInputError: true},
 		{name: "textTooLong", typ: types.String().WithMaxBytes(1), value: "toolong", wantContains: "has a value longer than 1 bytes"},
 		{name: "textTooManyChars", typ: types.String().WithMaxLength(2), value: "bòò", wantContains: "has a value longer than 2 characters"},
 		{name: "booleanWrongString", typ: types.Boolean(), value: "maybe", wantContains: "string value but it is not 'true' or 'false'"},
 		{name: "booleanInvalidType", typ: types.Boolean(), value: 1, wantContains: "has type int that is not allowed for type boolean"},
 		{name: "intFractionalFloat", typ: types.Int(32), value: 1.5, wantContains: "float64 value that cannot represent an int(32) value"},
+		{name: "intFloat64Upper", typ: types.Int(64), value: float64(math.MaxInt64), wantContains: "has a float64 value that cannot represent an int(64) value"},
+		{name: "intFloat64BelowLower", typ: types.Int(64), value: math.Nextafter(-0x1p63, math.Inf(-1)), wantContains: "has a float64 value that cannot represent an int(64) value"},
+		{name: "intFloat64NaN", typ: types.Int(64), value: math.NaN(), wantContains: "has a float64 value that cannot represent an int(64) value"},
+		{name: "intFloat32Upper", typ: types.Int(64), value: float32(math.MaxInt64), wantContains: "has a float32 value that cannot represent an int(64) value"},
+		{name: "intFloat32BelowLower", typ: types.Int(64), value: math.Nextafter32(-0x1p63, float32(math.Inf(-1))), wantContains: "has a float32 value that cannot represent an int(64) value"},
+		{name: "intFloat32NaN", typ: types.Int(64), value: float32(math.NaN()), wantContains: "has a float32 value that cannot represent an int(64) value"},
 		{name: "intOutOfRange", typ: types.Int(8), value: 200, wantContains: "has value which is not in the range"},
 		{name: "intStringParseError", typ: types.Int(32), value: "abc", wantContains: "string value that does not represent an int value"},
 		{name: "intBytesParseError", typ: types.Int(32), value: []byte("abc"), wantContains: "has a []byte value that cannot represent an int value"},
@@ -237,6 +316,18 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "unsignedStringParseError", typ: types.Int(16).Unsigned(), value: "bad", wantContains: "has a string value that cannot represent an unsigned int value"},
 		{name: "unsignedBytesParseError", typ: types.Int(16).Unsigned(), value: []byte("bad"), wantContains: "has a []byte value that cannot represent an unsigned int value"},
 		{name: "unsignedNegativeFloat", typ: types.Int(16).Unsigned(), value: -2.5, wantContains: "has a float64 value that cannot represent an unsigned int(16) value"},
+		{name: "unsignedFloat64Upper", typ: types.Int(64).Unsigned(), value: float64(0x1p64), wantContains: "has a float64 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat64Huge", typ: types.Int(64).Unsigned(), value: math.MaxFloat64, wantContains: "has a float64 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat64Negative", typ: types.Int(64).Unsigned(), value: float64(-1), wantContains: "has a float64 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat64Fractional", typ: types.Int(64).Unsigned(), value: float64(1.5), wantContains: "has a float64 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat64NaN", typ: types.Int(64).Unsigned(), value: float64(math.NaN()), wantContains: "has a float64 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat64Inf", typ: types.Int(64).Unsigned(), value: float64(math.Inf(1)), wantContains: "has a float64 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat32Upper", typ: types.Int(64).Unsigned(), value: float32(0x1p64), wantContains: "has a float32 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat32Huge", typ: types.Int(64).Unsigned(), value: float32(math.MaxFloat32), wantContains: "has a float32 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat32Negative", typ: types.Int(64).Unsigned(), value: float32(-1), wantContains: "has a float32 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat32Fractional", typ: types.Int(64).Unsigned(), value: float32(1.5), wantContains: "has a float32 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat32NaN", typ: types.Int(64).Unsigned(), value: float32(math.NaN()), wantContains: "has a float32 value that cannot represent an unsigned int(64) value"},
+		{name: "unsignedFloat32Inf", typ: types.Int(64).Unsigned(), value: float32(math.Inf(1)), wantContains: "has a float32 value that cannot represent an unsigned int(64) value"},
 		{name: "unsignedDecimalNegative", typ: types.Int(16).Unsigned(), value: decimal.MustInt(-1), wantContains: "has a decimal.decimal value that cannot represent an unsigned int value"},
 		{name: "unsignedInvalidType", typ: types.Int(16).Unsigned(), value: true, wantContains: "has type bool that is not allowed for type int(16)"},
 		{name: "floatIntNotRepresentable", typ: types.Float(32), value: 1 << 26, wantContains: "has an int value that cannot represent a float(32) value"},
@@ -264,6 +355,15 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "timeInvalidType", typ: types.Time(), value: 12, layout: &state.TimeLayouts{}, wantContains: "has type int that is not allowed for type time"},
 		{name: "timeInvalidBytes", typ: types.Time(), value: []byte("bad"), layout: &state.TimeLayouts{}, wantContains: "has a []byte value that cannot represent a time value"},
 		{name: "yearFractional", typ: types.Year(), value: 2024.5, wantContains: "has a float64 value that cannot represent a year value"},
+		{name: "yearFloat64BelowRange", typ: types.Year(), value: float64(0), wantContains: "has a float64 value that cannot represent a year value"},
+		{name: "yearFloat64AboveRange", typ: types.Year(), value: float64(10000), wantContains: "has a float64 value that cannot represent a year value"},
+		{name: "yearFloat64Huge", typ: types.Year(), value: math.MaxFloat64, wantContains: "has a float64 value that cannot represent a year value"},
+		{name: "yearFloat64NaN", typ: types.Year(), value: math.NaN(), wantContains: "has a float64 value that cannot represent a year value"},
+		{name: "yearFloat32BelowRange", typ: types.Year(), value: float32(0), wantContains: "has a float32 value that cannot represent a year value"},
+		{name: "yearFloat32AboveRange", typ: types.Year(), value: float32(10000), wantContains: "has a float32 value that cannot represent a year value"},
+		{name: "yearFloat32Huge", typ: types.Year(), value: float32(math.MaxFloat32), wantContains: "has a float32 value that cannot represent a year value"},
+		{name: "yearFloat32NaN", typ: types.Year(), value: float32(math.NaN()), wantContains: "has a float32 value that cannot represent a year value"},
+		{name: "yearFloat32Fractional", typ: types.Year(), value: float32(2024.5), wantContains: "has a float32 value that cannot represent a year value"},
 		{name: "yearOutOfRange", typ: types.Year(), value: 0, wantContains: "has value which is not in the range [1, 9999]"},
 		{name: "yearStringParse", typ: types.Year(), value: "bad", wantContains: "has a string value that cannot represent a year value"},
 		{name: "yearInvalidType", typ: types.Year(), value: true, wantContains: "has type bool that is not allowed for type year"},
@@ -279,30 +379,64 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "inetInvalidType", typ: types.IP(), value: 5, wantContains: "has type int that is not allowed for type ip"},
 		{name: "arrayInvalidType", typ: types.Array(types.Int(32)), value: 5, wantContains: "has type int that is not allowed"},
 		{name: "arrayElementError", typ: types.Array(types.Int(16)), value: []any{1, "bad"}, wantContains: "has a string value that does not represent an int value"},
+		{name: "arrayEmptyUnsupportedValue", typ: types.Array(types.String().WithValues("foo", "bar")), value: []any{""}, want: "property 'k' contains an unsupported value", wantInputError: true},
 		{name: "arrayTooFewElements", typ: types.Array(types.String()).WithMinElements(2), value: []any{"ok"}, wantContains: "is an array with 1 elements"},
 		{name: "arrayStringNotJSON", typ: types.Array(types.JSON()), value: "notjson", wantContains: "has a string value but does not contain a JSON array"},
 		{name: "arrayStringInvalidJSON", typ: types.Array(types.JSON()), value: "[bad", wantContains: "has a string value but is not valid JSON"},
 		{name: "arrayStringTooManyElements", typ: types.Array(types.JSON()).WithMaxElements(1), value: "[1,2]", wantContains: "is an array with more than 1 elements"},
 		{name: "arrayStringTooFewElements", typ: types.Array(types.JSON()).WithMinElements(2), value: "[1]", wantContains: "is an array with less than 2 elements"},
-		{name: "arrayUniqueDuplicated", typ: types.Array(types.Int(32)).WithUnique(), value: []any{1, 1}, wantContains: "contains the duplicated value 1"},
+		{name: "arrayUniqueDuplicated", typ: types.Array(types.Int(32)).WithUnique(), value: []any{1, 1}, want: "property 'k' contains a duplicated value"},
+		{name: "arrayUniqueDuplicatedNaNs", typ: types.Array(types.Float(64)).WithUnique(), value: []any{math.NaN(), math.NaN()}, want: "property 'k' contains a duplicated value"},
+		{name: "arrayUniqueEquivalentDecimals", typ: types.Array(types.Decimal(6, 2)).WithUnique(), value: []any{decimal.New(15, 1), decimal.MustParse("1.50")}, want: "property 'k' contains a duplicated value"},
 		{name: "objectMissingRequired", typ: types.Object([]types.Property{{Name: "foo", Type: types.String()}}), value: map[string]any{}, wantContains: "property 'k.foo' does not have a value, but the property is not optional for reading"},
+		{name: "nilObjectMissingRequired", typ: types.Object([]types.Property{{Name: "foo", Type: types.String()}}), value: map[string]any(nil), wantContains: "property 'k.foo' does not have a value, but the property is not optional for reading"},
 		{name: "objectPropertyError", typ: types.Object([]types.Property{{Name: "foo", Type: types.Int(32)}}), value: map[string]any{"foo": "bad"}, wantContains: "property 'k.foo' has a string value that does not represent an int value"},
+		{name: "objectEmptyUnsupportedValue", typ: types.Object([]types.Property{{Name: "foo", Type: types.String().WithValues("foo", "bar")}}), value: map[string]any{"foo": ""}, want: "property 'k.foo' contains an unsupported value", wantInputError: true},
 		{name: "objectInvalidType", typ: types.Object([]types.Property{{Name: "foo", Type: types.String()}}), value: 5, wantContains: "has type int that is not allowed for type object"},
 		{name: "mapStringNotJSONObject", typ: types.Map(types.String()), value: "not json", wantContains: "has a string value but does not contain a JSON object"},
 		{name: "mapStringInvalidJSON", typ: types.Map(types.JSON()), value: "{bad", wantContains: "has a string value but is not valid JSON"},
 		{name: "mapValueTypeError", typ: types.Map(types.Int(32)), value: map[string]any{"ok": 1, "bad": "nope"}, wantContains: "property 'k[\"bad\"]' has a string value that does not represent an int value"},
+		{name: "mapEmptyUnsupportedValue", typ: types.Map(types.String().WithValues("foo", "bar")), value: map[string]any{"foo": ""}, want: "property 'k[\"foo\"]' contains an unsupported value", wantInputError: true},
 		{name: "mapInvalidType", typ: types.Map(types.String()), value: 5, wantContains: "has type int that is not allowed for type map"},
+	}
+
+	// Invalid Unix timestamps must be rejected for every time unit, even when nullable.
+	for _, layout := range []string{"unix", "unixmilli", "unixmicro", "unixnano"} {
+		for _, value := range []any{
+			math.NaN(), math.Inf(1), math.Inf(-1), math.MaxFloat64, -math.MaxFloat64,
+			float64(math.MaxInt64), math.Nextafter(float64(math.MinInt64), math.Inf(-1)),
+			math.Nextafter(float64(math.MaxInt64), math.Inf(1)),
+			"-9223372036854775809", "9223372036854775808",
+		} {
+			for _, nullable := range []bool{false, true} {
+				tests = append(tests, testCase{
+					name: fmt.Sprintf("%s/%T/%v/nullable=%t", layout, value, value, nullable),
+					typ:  types.DateTime(), value: value, nullable: nullable,
+					layout: &state.TimeLayouts{DateTime: layout}, wantInputError: true,
+				})
+			}
+		}
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := normalize("k", tt.typ, tt.value, tt.nullable, tt.layout)
-			if err == nil {
-				t.Fatalf("expected error, got value %#v", got)
+			if err != nil {
+				if tt.wantInputError {
+					if _, ok := errors.AsType[InputValidationError](err); !ok {
+						t.Fatalf("got %T (%v), want InputValidationError", err, err)
+					}
+				}
+				if tt.want != "" && err.Error() != tt.want {
+					t.Fatalf("expected error %q, got %q", tt.want, err)
+				}
+				if tt.wantContains != "" && !strings.Contains(err.Error(), tt.wantContains) {
+					t.Fatalf("expected error containing %q, got %q", tt.wantContains, err)
+				}
+				return
 			}
-			if tt.wantContains != "" && !strings.Contains(err.Error(), tt.wantContains) {
-				t.Fatalf("expected error containing %q, got %q", tt.wantContains, err)
-			}
+			t.Fatalf("expected error, got value %#v", got)
 		})
 	}
+
 }

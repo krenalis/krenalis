@@ -6,11 +6,24 @@ Declare `TargetEvent`, implement `connectors.EventSender`, and choose a non-`Non
 
 `EventTypes` returns the event types available to the connection. Keep each ID stable and unique; the public API limits it to 100 runes. Use `DefaultFilter` only when it accurately selects the corresponding received event.
 
+- Set `OrderingGroup` to the same value on event types whose events must remain
+  ordered for each user. Every event type must have a non-empty ordering group
+  that follows the property name syntax and cannot be longer than 16 characters.
+- Set `DeliveryEndpoint` when event types use separate destination endpoints.
+  Event types in the same ordering group must use the same delivery endpoint.
+  An empty value identifies the connector's default endpoint. Explicit endpoint
+  identifiers follow the property name syntax and cannot be longer than 16
+  characters.
+- Do not change an ID, ordering group, or delivery endpoint after the connector
+  has been released.
+
 `EventTypeSchema` describes only the mapped values needed in addition to `Event.Received`. Return:
 
 - the exact object schema for a known type with extra values;
 - invalid `types.Type{}` for a known type needing none;
 - `connectors.ErrEventTypeNotExist` for an unknown ID.
+
+For value constraints, follow [Express constraints in the schema](schemas-and-types.md#express-constraints-in-the-schema-prefer-schema-over-runtime-checks), including the supported string constraint combinations.
 
 Use `Event.Received` for standard event fields and `Event.Type.Values` for schema-governed mapped values. Do not mutate `Type.Values` before a possible postpone; clone maps when payload normalization would otherwise mutate caller state.
 
@@ -38,4 +51,4 @@ Correlate batch results by preserved order or a documented stable key. Do not re
 
 ## Test delivery semantics
 
-Cover every event type and schema, unknown types, default mappings, identity variants, preview/send request equivalence, complete redaction, concurrency, item and byte boundaries, first-event overflow, postpone/discard, partial `EventsError`, request-level failures, and every documented success status.
+Cover every event type and schema, ordering groups and delivery endpoints, unknown types, default mappings, identity variants, preview/send request equivalence, complete redaction, concurrency, item and byte boundaries, first-event overflow, postpone/discard, partial `EventsError`, request-level failures, and every documented success status.

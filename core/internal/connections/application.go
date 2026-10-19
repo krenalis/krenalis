@@ -110,7 +110,57 @@ func (app *Application) Connector() string {
 	return app.connector
 }
 
+// EventType returns the application's event type with the specified ID.
+//
+// It returns the event type obtained directly from the connector, after
+// validation. The caller must not modify the returned value.
+//
+// If the event type does not exist, it returns connectors.ErrEventTypeNotExist.
+// If the connector returns an error, it returns an *UnavailableError.
+// It panics if the application does not support the event target.
+func (app *Application) EventType(ctx context.Context, id string) (*EventType, error) {
+	if app.err != nil {
+		return nil, app.err
+	}
+	eventTypes, err := app.inner.(connectors.EventSender).EventTypes(ctx)
+	if err != nil {
+		return nil, connectorError(err)
+	}
+	var et *EventType
+	for _, candidate := range eventTypes {
+		if candidate == nil || candidate.ID != id {
+			continue
+		}
+		if et != nil {
+			return nil, fmt.Errorf("connector %s returned multiple event types with the same ID (%s)", app.connector, id)
+		}
+		et = candidate
+	}
+	if et == nil {
+		return nil, connectors.ErrEventTypeNotExist
+	}
+	if err := validateEventType(app.connector, et); err != nil {
+		return nil, err
+	}
+	for _, candidate := range eventTypes {
+		if candidate == nil || candidate.OrderingGroup != et.OrderingGroup {
+			continue
+		}
+		if candidate.DeliveryEndpoint == et.DeliveryEndpoint {
+			continue
+		}
+		return nil, fmt.Errorf(
+			"connector %s returned a different DeliveryEndpoint for ordering group %q", app.connector, et.OrderingGroup)
+	}
+	return et, nil
+}
+
 // EventTypes returns the application's event types.
+//
+// It returns the event types obtained directly from the connector, after
+// validation. The caller must not modify the returned slice or any of the event
+// types it contains.
+//
 // If the connector returns an error, it returns an *UnavailableError error.
 // It panics if the application does not support the event target.
 func (app *Application) EventTypes(ctx context.Context) ([]*EventType, error) {
@@ -121,9 +171,26 @@ func (app *Application) EventTypes(ctx context.Context) ([]*EventType, error) {
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	for _, typ := range eventTypes {
-		if err := util.ValidateStringField("event type", typ.ID, 100); err != nil {
+	for i, eventType := range eventTypes {
+		if eventType == nil {
+			return nil, fmt.Errorf("connector %s returned a nil event type", app.connector)
+		}
+		if err := validateEventType(app.connector, eventType); err != nil {
 			return nil, err
+		}
+		for _, next := range eventTypes[i+1:] {
+			if next != nil && next.ID == eventType.ID {
+				return nil, fmt.Errorf(
+					"connector %s returned multiple event types with the same ID (%s)", app.connector, eventType.ID)
+			}
+			if next == nil || next.OrderingGroup != eventType.OrderingGroup {
+				continue
+			}
+			if next.DeliveryEndpoint == eventType.DeliveryEndpoint {
+				continue
+			}
+			return nil, fmt.Errorf(
+				"connector %s returned a different DeliveryEndpoint for ordering group %q", app.connector, eventType.OrderingGroup)
 		}
 	}
 	return eventTypes, nil
@@ -147,7 +214,7 @@ func (app *Application) PreviewSendEvent(ctx context.Context, event connectors.E
 	if app.err != nil {
 		return nil, app.err
 	}
-	eventTypeSchema, err := app.inner.(connectors.EventSender).EventTypeSchema(ctx, event.Type.ID)
+	eventTypeSchema, err := app.eventTypeSchema(ctx, event.Type.ID)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -215,7 +282,7 @@ func (app *Application) SchemaAsRole(ctx context.Context, role state.Role, targe
 		if role != state.Destination {
 			panic("invalid role")
 		}
-		schema, err := app.inner.(connectors.EventSender).EventTypeSchema(ctx, eventType)
+		schema, err := app.eventTypeSchema(ctx, eventType)
 		if err != nil {
 			return types.Type{}, connectorError(err)
 		}
@@ -345,6 +412,19 @@ func (app *Application) Writer(ctx context.Context, outSchema types.Type, export
 	return writer, nil
 }
 
+// eventTypeSchema returns the event type schema provided by the connector and
+// rejects generic schemas.
+func (app *Application) eventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
+	schema, err := app.inner.(connectors.EventSender).EventTypeSchema(ctx, eventType)
+	if err != nil {
+		return types.Type{}, err
+	}
+	if schema.Generic() {
+		return types.Type{}, fmt.Errorf("connector %s returned an invalid event schema", app.connector)
+	}
+	return schema, nil
+}
+
 // userSchema returns the user schema with the provided role.
 // If the connector returns an error, it returns an *UnavailableError error.
 // It panics if role is not Source or Destination.
@@ -367,8 +447,9 @@ func (app *Application) userSchema(ctx context.Context, role state.Role) (types.
 	if err != nil {
 		return types.Type{}, connectorError(fmt.Errorf("cannot get user schema: %s", err))
 	}
-	if !schema.Valid() {
-		return types.Type{}, connectorError(fmt.Errorf("connector %s returned an invalid %s schema", app.connector, strings.ToLower(role.String())))
+	if !schema.Valid() || schema.Generic() {
+		return types.Type{}, connectorError(fmt.Errorf(
+			"connector %s returned an invalid %s schema", app.connector, strings.ToLower(role.String())))
 	}
 	schema = types.AsRole(schema, types.Role(role))
 	app.users.schemas[role-1] = schema
@@ -401,6 +482,7 @@ func (iter *singleEventIterator) All() iter.Seq[*connectors.Event] {
 	return func(yield func(event *connectors.Event) bool) {
 		iter.iterating = true
 		yield(iter.event)
+		iter.iterating = false
 	}
 }
 
@@ -466,6 +548,7 @@ func (iter *singleEventIterator) SameUser() iter.Seq[*connectors.Event] {
 	return func(yield func(event *connectors.Event) bool) {
 		iter.iterating = true
 		yield(iter.event)
+		iter.iterating = false
 	}
 }
 
@@ -541,19 +624,20 @@ type appRecords struct {
 	updatedAt   time.Time
 	connector   string
 	inner       any
-	last        bool
 	err         error
 	closed      bool
 }
 
+// All returns an iterator over the application records.
 func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 
 	return func(yield func(Record) bool) {
 
 		if r.closed {
-			r.err = errors.New("connectors: For called on a closed Records")
+			r.err = errors.New("connectors: All called on a closed Records")
 			return
 		}
+		defer r.Close()
 
 		var cursor string
 
@@ -585,9 +669,6 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 				return
 			}
 
-			// previous is the previous read record.
-			var previous Record
-
 			for _, user := range users {
 
 				if err := ctx.Err(); err != nil {
@@ -606,18 +687,21 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 				processedIDs[user.ID] = struct{}{}
 
 				record := Record{
-					ID:        user.ID,
-					UpdatedAt: user.UpdatedAt.UTC().Truncate(time.Microsecond),
+					ID:  user.ID,
+					Err: user.Err,
 					// Associations:   user.Associations, TODO(marco): Implement groups
 				}
 
-				// Validate the update time.
-				if err = validateUpdatedAt(record.UpdatedAt); err != nil {
-					record.Err = errors.New("record's update time is before 1900 or in the future")
-				}
-				if !r.updatedAt.IsZero() && record.UpdatedAt.Before(r.updatedAt) {
-					r.err = fmt.Errorf("%s returned a record whose update time is earlier than the required minimum", r.connector)
-					return
+				if record.Err == nil {
+					record.UpdatedAt = user.UpdatedAt.UTC().Truncate(time.Microsecond)
+					// Validate the update time.
+					if err = validateUpdatedAt(record.UpdatedAt); err != nil {
+						record.Err = errors.New("record's update time is before 1900 or in the future")
+					}
+					if !r.updatedAt.IsZero() && record.UpdatedAt.Before(r.updatedAt) {
+						r.err = fmt.Errorf("%s returned a record whose update time is earlier than the required minimum", r.connector)
+						return
+					}
 				}
 
 				if record.Err == nil {
@@ -646,20 +730,10 @@ func (r *appRecords) All(ctx context.Context) iter.Seq[Record] {
 					}
 				}
 
-				if previous.ID != "" {
-					if !yield(previous) {
-						return
-					}
-				}
-				previous = record
-
-			}
-
-			if previous.ID != "" {
-				r.last = true
-				if !yield(previous) {
+				if !yield(record) {
 					return
 				}
+
 			}
 
 			if eof {
@@ -681,11 +755,24 @@ func (r *appRecords) Err() error {
 	return r.err
 }
 
-func (r *appRecords) Last() bool {
-	return r.last
-}
-
 type schema struct {
 	lock    chan struct{}
 	schemas [2]types.Type
+}
+
+// validateEventType validates an event type provided by a connector.
+func validateEventType(connector string, eventType *EventType) error {
+	if err := util.ValidateStringField("event type", eventType.ID, 100); err != nil {
+		return err
+	}
+	if !types.IsValidPropertyName(eventType.OrderingGroup) || len(eventType.OrderingGroup) > connectors.MaxOrderingGroupLen {
+		return fmt.Errorf("connector %s returned an invalid ordering group (%q)", connector, eventType.OrderingGroup)
+	}
+	if eventType.DeliveryEndpoint != "" {
+		if !types.IsValidPropertyName(eventType.DeliveryEndpoint) ||
+			len(eventType.DeliveryEndpoint) > connectors.MaxDeliveryEndpointLen {
+			return fmt.Errorf("connector %s returned an invalid delivery endpoint (%q)", connector, eventType.DeliveryEndpoint)
+		}
+	}
+	return nil
 }

@@ -13,7 +13,6 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/transformers/mappings"
-	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -45,29 +44,31 @@ func (err RecordTransformationError) Error() string {
 
 // Transformer represents a transformer.
 type Transformer struct {
-	pipeline  string
-	provider  FunctionProvider
-	inSchema  types.Type
-	outSchema types.Type
-	mapping   *mappings.Mapping
-	function  *state.TransformationFunction
+	organization string
+	pipeline     string
+	provider     FunctionProvider
+	inSchema     types.Type
+	outSchema    types.Type
+	mapping      *mappings.Mapping
+	function     *state.TransformationFunction
 }
 
 // New returns a new transformer that transforms values for the provided
-// pipeline. provider is the transformer provider used for transformation
-// functions and should be nil for mappings. layouts, if not nil, represents the
-// layouts used to format datetime, date, and time values as strings.
+// pipeline. organization is the ID of the organization on whose behalf the
+// transformation function is called and must not be empty. provider is the
+// transformer provider used for transformation functions and should be nil for
+// mappings.
 //
 // It only accesses the ID, InSchema, OutSchema, and Transformation fields of
 // pipeline.
 //
 // It returns a types.PathNotExistError error if a path in the mapping does not
 // exist in the source schema.
-func New(pipeline *state.Pipeline, provider FunctionProvider, layouts *state.TimeLayouts) (*Transformer, error) {
+func New(organization string, pipeline *state.Pipeline, provider FunctionProvider) (*Transformer, error) {
 
 	if m := pipeline.Transformation.Mapping; m != nil {
 		inPlace := pipeline.Target != state.TargetEvent
-		mapping, err := mappings.New(m, pipeline.InSchema, pipeline.OutSchema, inPlace, layouts)
+		mapping, err := mappings.New(m, pipeline.InSchema, pipeline.OutSchema, inPlace)
 		if err != nil {
 			return nil, err
 		}
@@ -86,10 +87,11 @@ func New(pipeline *state.Pipeline, provider FunctionProvider, layouts *state.Tim
 
 	if f := pipeline.Transformation.Function; f != nil {
 		t := Transformer{
-			pipeline:  pipeline.ID,
-			provider:  provider,
-			outSchema: schemaSubset(pipeline.OutSchema, pipeline.Transformation.OutPaths),
-			function:  f,
+			organization: organization,
+			pipeline:     pipeline.ID,
+			provider:     provider,
+			outSchema:    schemaSubset(pipeline.OutSchema, pipeline.Transformation.OutPaths),
+			function:     f,
 		}
 		if len(pipeline.Transformation.InPaths) > 0 {
 			t.inSchema = schemaSubset(pipeline.InSchema, pipeline.Transformation.InPaths)
@@ -116,9 +118,6 @@ func New(pipeline *state.Pipeline, provider FunctionProvider, layouts *state.Tim
 // ErrFunctionNotExist, and if an error occurs during function execution, it
 // returns a FunctionExecError.
 func (t *Transformer) Transform(ctx context.Context, records []Record) error {
-
-	prometheus.Increment("Transformer.Transform.calls", 1)
-	prometheus.Increment("Transformer.Transform.passed_records", len(records))
 
 	// Transform using the mapping.
 	if t.mapping != nil {
@@ -150,7 +149,7 @@ func (t *Transformer) Transform(ctx context.Context, records []Record) error {
 
 	// Transform using the function.
 	fn := t.function
-	err := t.provider.Call(ctx, fn.ID, fn.Version, t.inSchema, t.outSchema, fn.PreserveJSON, records)
+	err := t.provider.Call(ctx, t.organization, fn.ID, fn.Version, t.inSchema, t.outSchema, fn.PreserveJSON, records)
 	if err != nil {
 		if err, ok := err.(FunctionExecError); ok {
 			err.msg = fmt.Sprintf("%s: %s ", t.function.Language.String(), err.msg)

@@ -231,6 +231,12 @@ func (r FailureReason) String() string {
 	panic(fmt.Errorf("unexpected FailureReason %d", r))
 }
 
+// MaxOrderingGroupLen is the maximum length of an event ordering group.
+const MaxOrderingGroupLen = 16
+
+// MaxDeliveryEndpointLen is the maximum length of a delivery endpoint.
+const MaxDeliveryEndpointLen = 16
+
 // EventType represents a type of event that can be sent to an application.
 type EventType struct {
 	// ID is the identifier of the event type. It must be unique for every event
@@ -244,6 +250,19 @@ type EventType struct {
 
 	// Description is the description of the event type to be displayed.
 	Description string
+
+	// OrderingGroup defines the per-user delivery order shared by event types.
+	// Events whose types have the same ordering group are delivered in their
+	// original order for each user. It must be non-empty, follow the syntax of
+	// a property name, and cannot be longer than MaxOrderingGroupLen characters.
+	OrderingGroup string
+
+	// DeliveryEndpoint identifies the destination endpoint used for events of
+	// this type. Event types in the same ordering group must use the same endpoint.
+	// An empty value selects the connector's default endpoint. If set, the value
+	// must follow the syntax of a property name and be no longer than
+	// MaxDeliveryEndpointLen characters.
+	DeliveryEndpoint string
 
 	// DefaultFilter is the default filter to use for pipelines.
 	DefaultFilter string
@@ -391,10 +410,11 @@ type Records interface {
 	// update one record at a time.
 	First() Record
 
-	// Peek retrieves the next record without advancing the iterator. It returns the
-	// record and true if a record is available, or false if there are no further
-	// records. Can only be called during an iteration with All or Same.
-	// The returned record must not be modified.
+	// Peek returns the next record without consuming it. It returns the record and
+	// true if one is available, or a zero Record and false otherwise. It may be
+	// called before All, Same, or First, or while an iterator returned by All or
+	// Same is yielding a record. It panics otherwise. The returned record must not
+	// be modified.
 	Peek() (Record, bool)
 
 	// Postpone postpones the current record in the iteration and marks it as
@@ -430,7 +450,8 @@ type EventSender interface {
 	// ErrEventTypeNotExist error.
 	EventTypeSchema(ctx context.Context, eventType string) (types.Type, error)
 
-	// EventTypes returns the event types of the connector's instance.
+	// EventTypes returns the event types of the connector's instance. The caller
+	// must not modify the returned slice or event types.
 	EventTypes(ctx context.Context) ([]*EventType, error)
 
 	// PreviewSendEvents builds and returns the HTTP request that would be used
@@ -551,9 +572,11 @@ type Events interface {
 	// After First is called, no further method calls on Events are allowed.
 	First() *Event
 
-	// Peek retrieves the next event without advancing the iterator. It returns the
-	// event and true if an event is available, or false if there are no further
-	// events. The returned event must not be modified.
+	// Peek returns the next event without consuming it. It returns the event and
+	// true if one is available, or nil and false otherwise. It may be called before
+	// All, SameUser, or First, or while an iterator returned by All or SameUser is
+	// yielding an event. It panics otherwise. The returned event must not be
+	// modified.
 	Peek() (*Event, bool)
 
 	// Postpone postpones the current event in the iteration and marks it as unread.

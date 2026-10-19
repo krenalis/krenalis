@@ -180,8 +180,7 @@ func (f *flusher[T]) loop(opts flusherOptions, startOperation startOperationFunc
 		// Flush buffered rows. If the flush is interrupted (Close canceled the context),
 		// return and let the main loop exit without starting another flush.
 		var latestErrorMsg string
-		bo = backoff.New(1000)
-		bo.SetCap(10 * time.Second)
+		bo.Reset()
 		for bo.Next(flushCtx) {
 			err := innerFlush(flushCtx, rows)
 			if err != nil {

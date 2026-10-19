@@ -7,14 +7,13 @@ package json
 import (
 	"bytes"
 	jsonv1 "encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
 	"slices"
 	"unicode/utf8"
-
-	"github.com/krenalis/krenalis/tools/json/internal/json"
-	"github.com/krenalis/krenalis/tools/json/internal/json/jsontext"
 )
 
 // ErrInvalidJSON is returned when an argument is not valid JSON, or is not
@@ -161,9 +160,12 @@ func IndentSorted(data []byte, prefix, indent string) ([]byte, error) {
 
 // Marshal encodes the given data.
 func Marshal(data any) (Value, error) {
-	val, err := json.Marshal(data)
-	if _, ok := err.(*jsontext.SyntacticError); ok {
-		return Value{}, &SyntaxError{err: err}
+	val, err := json.Marshal(data, json.FormatNilMapAsNull(true), json.FormatNilSliceAsNull(true))
+	if err != nil {
+		if _, ok := err.(*jsontext.SyntacticError); ok {
+			return Value{}, &SyntaxError{err: err}
+		}
+		return Value{}, err
 	}
 	return val, nil
 }

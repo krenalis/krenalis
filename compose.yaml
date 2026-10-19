@@ -3,7 +3,7 @@
 
 services:
   krenalis:
-    image: krenalis/krenalis:v0.43.0
+    image: krenalis/krenalis:v0.44.0
     command: -init-db-if-empty -init-docker-member
     restart: on-failure
     ports:
@@ -39,6 +39,11 @@ services:
     volumes:
       - ./storage:/var/krenalis/storage
       - transformation-functions:/var/krenalis/transformation-functions
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://krenalis:2022/livez"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     depends_on:
       db:
         condition: service_healthy
@@ -46,7 +51,7 @@ services:
         condition: service_healthy
 
   db:
-    image: postgres:18.4-alpine3.24
+    image: postgres:18.6-alpine3.24
     environment:
       POSTGRES_USER: krenalis
       POSTGRES_PASSWORD: krenalis
@@ -60,7 +65,7 @@ services:
       retries: 5
 
   warehouse:
-    image: postgres:18.4-alpine3.24
+    image: postgres:18.6-alpine3.24
     environment:
       POSTGRES_USER: warehouse
       POSTGRES_PASSWORD: warehouse
@@ -77,7 +82,7 @@ services:
       - warehouse:/var/lib/postgresql
 
   nats:
-    image: nats:2.14-alpine3.22
+    image: nats:2.15-alpine3.22
     command: --jetstream --store_dir /var/lib/nats/jetstream_storage
     volumes:
       - jetstream_storage:/var/lib/nats/jetstream_storage

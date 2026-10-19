@@ -341,11 +341,8 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 	this.core.mustBeOpen()
 
 	// Validate email.
-	if err := util.ValidateStringField("email", email, 255); err != nil {
+	if err := validateMemberEmail(email); err != nil {
 		return "", errors.BadRequest("%s", err)
-	}
-	if !emailRegExp.MatchString(email) {
-		return "", errors.BadRequest("email is not a valid email address")
 	}
 	// Validate password.
 	if password == "" {
@@ -540,7 +537,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 	}
 
 	// Initialize the data warehouse.
-	err = this.core.datastore.Initialize(ctx, warehouse.Platform, settings, profileSchema)
+	err = this.core.datastore.Initialize(ctx, this.organization.ID, warehouse.Platform, settings, profileSchema)
 	if err != nil {
 		if err, ok := err.(*datastore.UnavailableError); ok {
 			return "", errors.Unavailable("%s", err)
@@ -575,6 +572,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 	if err != nil {
 		return "", err
 	}
+	observedAt := time.Now().UTC().Truncate(time.Microsecond)
 
 	// Create the workspace.
 	for {
@@ -606,6 +604,14 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 						return nil, errors.Unprocessable(OrganizationNotExist, "organization %s does not exist", n.Organization)
 					}
 				}
+				return nil, err
+			}
+			// Insert an identity metrics row with zero counts.
+			_, err = tx.Exec(ctx, `INSERT INTO identity_metrics
+				(workspace, day, observed_at, identities_anonymous, identities_recognized, identities_without_profile)
+				VALUES ($1, $2, $3, 0, 0, 0)`, n.ID, observedAt.Truncate(24*time.Hour),
+				observedAt.Format("15:04:05.999999"))
+			if err != nil {
 				return nil, err
 			}
 			return n, nil
@@ -653,8 +659,8 @@ func (this *Organization) Delete(ctx context.Context) error {
 	return this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		// Mark the organization's pipeline functions as discontinued.
 		now := time.Now().UTC()
-		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, discontinued_at)\n"+
-			"SELECT p.transformation_id, $1\n"+
+		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, organization, discontinued_at)\n"+
+			"SELECT p.transformation_id, w.organization, $1\n"+
 			"FROM pipelines AS p\n"+
 			"INNER JOIN connections AS c ON p.connection = c.id\n"+
 			"INNER JOIN workspaces AS w ON c.workspace = w.id\n"+
@@ -885,8 +891,8 @@ type MetricSeries struct {
 	Workspace  string   `json:"workspace,omitzero"`
 	Connection string   `json:"connection,omitzero"`
 	Pipeline   string   `json:"pipeline,omitzero"`
-	Passed     [][7]int `json:"passed"`
-	Failed     [][7]int `json:"failed"`
+	Passed     [][9]int `json:"passed"`
+	Failed     [][9]int `json:"failed"`
 }
 
 // MetricSelection defines the selected pipeline metric series.
@@ -925,8 +931,7 @@ const maxEntryDays = 60_000 // maximum product between the number of entries in 
 // If workspace is not empty, the request is restricted to that workspace.
 //
 // The dates are truncated to UTC days, must be no earlier than 1970-01-01 and
-// no later than 2262-04-10, and the day of the start date must be before the
-// day of the end date.
+// no later than 2262-04-10, and the start day must be before the end day.
 //
 // Exactly one of workspaces, connections, and pipelines in selection must be
 // non-nil, with between 1 and 1,000 entries.
@@ -936,6 +941,9 @@ const maxEntryDays = 60_000 // maximum product between the number of entries in 
 //
 // The number of entries in the selection multiplied by the number of days in
 // the date range cannot exceed 60,000.
+//
+// It returns an errors.UnprocessableError with code MetricResultTooLarge when
+// an aggregated count cannot be represented by the result type.
 func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end time.Time, workspace string, selection MetricSelection) (Metrics, error) {
 
 	this.core.mustBeOpen()
@@ -976,13 +984,17 @@ func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end
 	}
 
 	// Retrieve metrics for the filtered selection.
-	m, err := this.core.metrics.MetricsPerDate(ctx, start, end, metrics.Selection{
+	m, err := this.core.metrics.Pipelines.MetricsPerDate(ctx, start, end, metrics.PipelineSelection{
 		Workspaces:  selection.Workspaces,
 		Connections: selection.Connections,
 		Pipelines:   selection.Pipelines,
-		Target:      metrics.Target(selection.Target),
+		Target:      metrics.PipelineTarget(selection.Target),
 	})
 	if err != nil {
+		if errors.Is(err, metrics.ErrMetricResultTooLarge) {
+			return Metrics{}, errors.Unprocessable(MetricResultTooLarge,
+				"requested pipeline metric total exceeds the supported range; request metrics with a finer time unit or select fewer workspaces, connections, or pipelines")
+		}
 		return Metrics{}, err
 	}
 
@@ -1011,6 +1023,9 @@ func (this *Organization) PipelineMetricsPerDate(ctx context.Context, start, end
 //
 // Target is required when selecting workspaces or connections and optional
 // when selecting pipelines.
+//
+// It returns an errors.UnprocessableError with code MetricResultTooLarge when
+// an aggregated count cannot be represented by the result type.
 func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number int, unit MetricUnit, workspace string, selection MetricSelection) (Metrics, error) {
 
 	this.core.mustBeOpen()
@@ -1053,13 +1068,17 @@ func (this *Organization) PipelineMetricsPerTimeUnit(ctx context.Context, number
 	}
 
 	// Retrieve metrics for the filtered selection.
-	m, err := this.core.metrics.MetricsPerTimeUnit(ctx, number, resolution, metrics.Selection{
+	m, err := this.core.metrics.Pipelines.MetricsPerTimeUnit(ctx, number, resolution, metrics.PipelineSelection{
 		Workspaces:  selection.Workspaces,
 		Connections: selection.Connections,
 		Pipelines:   selection.Pipelines,
-		Target:      metrics.Target(selection.Target),
+		Target:      metrics.PipelineTarget(selection.Target),
 	})
 	if err != nil {
+		if errors.Is(err, metrics.ErrMetricResultTooLarge) {
+			return Metrics{}, errors.Unprocessable(MetricResultTooLarge,
+				"requested pipeline metric total exceeds the supported range; request metrics with a finer time unit or select fewer workspaces, connections, or pipelines")
+		}
 		return Metrics{}, err
 	}
 
@@ -1131,13 +1150,16 @@ func (this *Organization) SetStatus(ctx context.Context, enabled bool) error {
 	}
 
 	// Waits for the metrics to be saved.
-	this.core.metrics.WaitStore()
+	err := this.core.metrics.Pipelines.WaitStore(ctx)
+	if err != nil {
+		return fmt.Errorf("cannot wait for pipeline metrics: %s", err)
+	}
 
 	n := state.SetOrganizationStatus{
 		ID:      this.organization.ID,
 		Enabled: enabled,
 	}
-	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		result, err := tx.Exec(ctx, "UPDATE organizations SET enabled = $1 WHERE id = $2 AND enabled <> $1", n.Enabled, n.ID)
 		if err != nil {
 			return nil, err
@@ -1183,13 +1205,17 @@ s AS (
 		COALESCE(SUM(m.passed_4), 0) AS passed_4,
 		COALESCE(SUM(m.passed_5), 0) AS passed_5,
 		COALESCE(SUM(m.passed_6), 0) AS passed_6,
+		COALESCE(SUM(m.passed_7), 0) AS passed_7,
+		COALESCE(SUM(m.passed_8), 0) AS passed_8,
 		COALESCE(SUM(m.failed_0), 0) AS failed_0,
 		COALESCE(SUM(m.failed_1), 0) AS failed_1,
 		COALESCE(SUM(m.failed_2), 0) AS failed_2,
 		COALESCE(SUM(m.failed_3), 0) AS failed_3,
 		COALESCE(SUM(m.failed_4), 0) AS failed_4,
 		COALESCE(SUM(m.failed_5), 0) AS failed_5,
-		COALESCE(SUM(m.failed_6), 0) AS failed_6
+		COALESCE(SUM(m.failed_6), 0) AS failed_6,
+		COALESCE(SUM(m.failed_7), 0) AS failed_7,
+		COALESCE(SUM(m.failed_8), 0) AS failed_8
 	FROM live_runs AS r
 	LEFT JOIN pipelines_metrics AS m ON m.pipeline = r.pipeline
 	GROUP BY r.id
@@ -1205,6 +1231,8 @@ ended_runs AS (
 		passed_4 = r.passed_4 + s.passed_4,
 		passed_5 = r.passed_5 + s.passed_5,
 		passed_6 = r.passed_6 + s.passed_6,
+		passed_7 = r.passed_7 + s.passed_7,
+		passed_8 = r.passed_8 + s.passed_8,
 		failed_0 = r.failed_0 + s.failed_0,
 		failed_1 = r.failed_1 + s.failed_1,
 		failed_2 = r.failed_2 + s.failed_2,
@@ -1212,6 +1240,8 @@ ended_runs AS (
 		failed_4 = r.failed_4 + s.failed_4,
 		failed_5 = r.failed_5 + s.failed_5,
 		failed_6 = r.failed_6 + s.failed_6,
+		failed_7 = r.failed_7 + s.failed_7,
+		failed_8 = r.failed_8 + s.failed_8,
 		error = $3
 	FROM s
 	WHERE r.id = s.id AND r.end_time IS NULL
@@ -1516,7 +1546,7 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	}
 
 	// Validate the warehouse settings.
-	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, warehouse.Platform, warehouse.Settings)
+	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, this.organization.ID, warehouse.Platform, warehouse.Settings)
 	if err != nil {
 		if err == datastore.ErrWarehousePlatformNotExist {
 			return nil, errors.Unprocessable(WarehousePlatformNotExist, "warehouse platform %s does not exist", warehouse.Platform)
@@ -1531,7 +1561,7 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	}
 
 	// Check if the warehouse is initializable.
-	err = this.core.datastore.CanInitialize(ctx, warehouse.Platform, settings)
+	err = this.core.datastore.CanInitialize(ctx, this.organization.ID, warehouse.Platform, settings)
 	if err != nil {
 		if err, ok := err.(*warehouses.NonInitializableError); ok {
 			return nil, errors.Unprocessable(WarehouseNotInitializable, "cannot initialize the data warehouse: %w", err.Err)
@@ -1633,6 +1663,12 @@ func sendMail(mail *emailToSend, config *SMTPConfig) error {
 		}
 	}
 	return err
+}
+
+// ValidateMemberEmail validates a member's email address and returns an error
+// if it is not valid.
+func ValidateMemberEmail(email string) error {
+	return validateMemberEmail(email)
 }
 
 // validateMemberEmail validates a member's email and returns an error if it is

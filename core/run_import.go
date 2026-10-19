@@ -13,6 +13,7 @@ import (
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/connections"
+	"github.com/krenalis/krenalis/core/internal/consents"
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/filters"
 	"github.com/krenalis/krenalis/core/internal/metrics"
@@ -37,7 +38,7 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 	// data warehouse after all identities have been written.
 	purge := true
 
-	transformer, err := transformers.New(pipeline, this.core.functionProvider, nil)
+	transformer, err := transformers.New(pipeline.Organization().ID, pipeline, this.core.functionProvider)
 	if err != nil {
 		return err
 	}
@@ -87,7 +88,7 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 	defer records.Close()
 
 	// Instantiate a batch identity writer.
-	iw, err := this.connection.store.NewBatchIdentityWriter(pipeline, purge)
+	iw, err := this.connection.store.NewBatchIdentityWriter(pipeline, purge, &this.core.metrics.Pipelines)
 	if err != nil {
 		if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
 			return newPipelineError(metrics.FinalizeStep, err)
@@ -104,7 +105,58 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 	users := make([]connections.Record, 0, 100)
 	transformationRecords := make([]transformers.Record, 0, 100)
 
-	var cursor time.Time
+	cursor := run.Cursor
+
+	// processBatch transforms and queues identities, then persists the cursor reached by the batch.
+	processBatch := func(batch []connections.Record) error {
+
+		// Transform the users.
+		transformationRecords = transformationRecords[:len(batch)]
+		for i, user := range batch {
+			transformationRecords[i] = transformers.Record{Attributes: user.Attributes}
+		}
+		err := transformer.Transform(ctx, transformationRecords)
+		if err != nil {
+			if _, ok := err.(transformers.FunctionExecError); ok {
+				err = newPipelineError(metrics.TransformationStep, err)
+			}
+			return err
+		}
+
+		// Set the identities into the data warehouse.
+		for i, record := range transformationRecords {
+			user := batch[i]
+			if err := record.Err; err != nil {
+				switch err.(type) {
+				case transformers.RecordTransformationError:
+					this.core.metrics.Pipelines.TransformationFailed(pipeline.ID, 1, err.Error())
+				case transformers.RecordValidationError:
+					this.core.metrics.Pipelines.TransformationPassed(pipeline.ID, 1)
+					this.core.metrics.Pipelines.OutputValidationFailed(pipeline.ID, 1, err.Error())
+				}
+				_ = iw.Keep(ctx, user.ID)
+				continue
+			}
+			user.Attributes = record.Attributes
+			this.core.metrics.Pipelines.TransformationPassed(pipeline.ID, 1)
+			this.core.metrics.Pipelines.OutputValidationPassed(pipeline.ID, 1)
+			if rc := pipeline.RequiredConsents; !consents.SatisfiesProfile(rc.Operator, rc.Purposes, user.Attributes) {
+				this.core.metrics.Pipelines.ImportProfileConsentFailed(pipeline.ID, 1)
+				continue
+			}
+			this.core.metrics.Pipelines.ImportProfileConsentPassed(pipeline.ID, 1)
+			_ = iw.Write(ctx, datastore.Identity{
+				ID:         user.ID,
+				Attributes: user.Attributes,
+				UpdatedAt:  user.UpdatedAt,
+			})
+		}
+
+		// The cursor may move past records that failed input validation or transformation.
+		// Incremental imports do not move the cursor back to retry failed records.
+		// Processing them again requires a non-incremental import.
+		return this.setRunCursor(ctx, cursor)
+	}
 
 	// Read the users.
 	for user := range records.All(ctx) {
@@ -112,24 +164,24 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 		if user.Err != nil {
 			_ = iw.Keep(ctx, user.ID)
 			if err, ok := user.Err.(connections.InputValidationError); ok {
-				this.core.metrics.ReceivePassed(pipeline.ID, 1)
-				this.core.metrics.InputValidationFailed(pipeline.ID, 1, err.Error())
+				this.core.metrics.Pipelines.ReceivePassed(pipeline.ID, 1)
+				this.core.metrics.Pipelines.InputValidationFailed(pipeline.ID, 1, err.Error())
 			} else {
-				this.core.metrics.ReceiveFailed(pipeline.ID, 1, user.Err.Error())
+				this.core.metrics.Pipelines.ReceiveFailed(pipeline.ID, 1, user.Err.Error())
 			}
-			goto Next
+			continue
 		}
 
-		this.core.metrics.ReceivePassed(pipeline.ID, 1)
-		this.core.metrics.InputValidationPassed(pipeline.ID, 1)
+		this.core.metrics.Pipelines.ReceivePassed(pipeline.ID, 1)
+		this.core.metrics.Pipelines.InputValidationPassed(pipeline.ID, 1)
 
 		// In case the pipeline has a filter, check if it applies to the user.
 		if connector.Type != state.Database {
 			if !filters.Applies(pipeline.Filter, user.Attributes) {
-				this.core.metrics.FilterFailed(pipeline.ID, 1)
-				goto Next
+				this.core.metrics.Pipelines.FilterFailed(pipeline.ID, 1)
+				continue
 			}
-			this.core.metrics.FilterPassed(pipeline.ID, 1)
+			this.core.metrics.Pipelines.FilterPassed(pipeline.ID, 1)
 		}
 
 		if user.UpdatedAt.After(cursor) {
@@ -138,57 +190,12 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 
 		users = append(users, user)
 
-	Next:
-
-		// Does a batch processing of users.
-		if len(users) == 100 || records.Last() {
-
-			// Transform the users.
-			transformationRecords = transformationRecords[0:len(users)]
-			for i, user := range users {
-				transformationRecords[i].Attributes = user.Attributes
-			}
-			err := transformer.Transform(ctx, transformationRecords)
-			if err != nil {
-				if _, ok := err.(transformers.FunctionExecError); ok {
-					err = newPipelineError(metrics.TransformationStep, err)
-				}
+		if len(users) == 100 {
+			if err := processBatch(users); err != nil {
 				return err
 			}
-
-			// Set the identities into the data warehouse.
-			for i, record := range transformationRecords {
-				user := users[i]
-				if err := record.Err; err != nil {
-					switch err.(type) {
-					case transformers.RecordTransformationError:
-						this.core.metrics.TransformationFailed(pipeline.ID, 1, err.Error())
-					case transformers.RecordValidationError:
-						this.core.metrics.TransformationPassed(pipeline.ID, 1)
-						this.core.metrics.OutputValidationFailed(pipeline.ID, 1, err.Error())
-					}
-					_ = iw.Keep(ctx, user.ID)
-					continue
-				}
-				user.Attributes = record.Attributes
-				this.core.metrics.TransformationPassed(pipeline.ID, 1)
-				this.core.metrics.OutputValidationPassed(pipeline.ID, 1)
-				_ = iw.Write(ctx, datastore.Identity{
-					ID:         user.ID,
-					Attributes: user.Attributes,
-					UpdatedAt:  user.UpdatedAt,
-				})
-			}
-
-			// Set the cursor.
-			err = this.setRunCursor(ctx, cursor)
-			if err != nil {
-				return err
-			}
-
 			clear(users)
 			users = users[0:0]
-
 		}
 
 	}
@@ -202,6 +209,11 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 		}
 		return newPipelineError(metrics.ReceiveStep, err)
 	}
+	if len(users) > 0 {
+		if err := processBatch(users); err != nil {
+			return err
+		}
+	}
 
 	// TODO(Gianluca): calling Close may return error in case the warehouse mode
 	// does not allow the closing (that is the flushing of users). However,
@@ -212,7 +224,7 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 		if err != datastore.ErrPurgeSkipped {
 			return newPipelineError(metrics.FinalizeStep, err)
 		}
-		this.core.metrics.FinalizeFailed(pipeline.ID, 0, "unimported records not deleted because at least one with errors could not be identified")
+		this.core.metrics.Pipelines.FinalizeFailed(pipeline.ID, 0, "unimported records not deleted because at least one with errors could not be identified")
 	}
 
 	return nil

@@ -577,8 +577,8 @@ func TestAlloc(t *testing.T) {
 			for _, _ = range value.Elements() {
 			}
 		})
-		if a != 7 {
-			t.Fatalf("expected 8 allocations, got %.0f", a)
+		if a != 4 {
+			t.Fatalf("expected 4 allocations, got %.0f", a)
 		}
 	})
 
@@ -588,8 +588,8 @@ func TestAlloc(t *testing.T) {
 			for _, _ = range value.Properties() {
 			}
 		})
-		if a != 13 {
-			t.Fatalf("expected 14 allocations, got %.0f", a)
+		if a != 10 {
+			t.Fatalf("expected 10 allocations, got %.0f", a)
 		}
 	})
 

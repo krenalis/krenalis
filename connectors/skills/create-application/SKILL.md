@@ -53,12 +53,14 @@ Always read [application specification and packaging](references/application-spe
 2. Design `ApplicationSpec`, role-specific documentation, schemas, settings, endpoint groups, and outcome mapping before writing transport code.
 3. Keep provider-derived constants and non-obvious behavior traceable to the relevant official documentation in nearby comments or the evidence ledger.
 4. Register the package from `init`, implement the exact interfaces declared by the spec, and keep the constructor cheap. Load settings at the point they are needed unless constructor validation is essential.
-5. Use `ApplicationEnv.HTTPClient` for provider requests and its `BodyBuffer` for request bodies. Close every response body and every `BodyBuffer`. Handle every documented success and failure status explicitly.
+5. Use `ApplicationEnv.HTTPClient` for every outbound request and its `BodyBuffer` for request bodies. Never create a custom `http.Client`, `http.Transport`, or dialer: the provided client attributes network usage to the organization. Close every response body and every `BodyBuffer`. Handle every documented success and failure status explicitly.
 6. Keep connector-authored errors free of secrets and user or event data. Use `connectors.QuoteErrorTerm` for dynamic names intended for UI-facing errors; expose provider messages only after establishing that they cannot contain sensitive payload data.
 7. Make shared connector state safe for the concurrency promised by the public interfaces. Honor `context.Context`; do not let background work outlive the method call.
 8. Add ordinary Go comments for exported declarations and non-obvious invariants. Do not add comments mechanically to every unexported declaration.
 
 Prefer direct, readable encoding with `BodyBuffer.Encode`, `EncodeKeyValue`, or its write methods according to the provider format. Neither direct token streaming nor building an intermediate payload is universally required; choose the clearest approach that preserves iterator and rollback semantics.
+
+When building schemas, follow the rules for [property name syntax](references/schemas-and-types.md#property-name-syntax), [string constraint combinations](references/schemas-and-types.md#string-constraint-combinations), and [dynamic values in panicking constructors](references/schemas-and-types.md#static-vs-dynamic-values-in-panicking-types-calls). Invalid metadata must return a schema error; discard a property only under the documented name-syntax exception.
 
 ## Complete the integration
 

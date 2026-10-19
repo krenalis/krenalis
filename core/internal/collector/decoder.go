@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+	"uuid"
 
 	"github.com/krenalis/krenalis/core/internal/events"
 	"github.com/krenalis/krenalis/tools/base58"
@@ -28,7 +29,6 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/LumenResearch/uasurfer"
-	"github.com/google/uuid"
 	"github.com/oschwald/maxminddb-golang/v2"
 	"github.com/relvacode/iso8601"
 	"golang.org/x/text/unicode/norm"
@@ -49,19 +49,21 @@ type decoder struct {
 	dec     json.Decoder
 	maxmind *maxminddb.Reader
 
-	receivedAt time.Time
-	remoteAddr struct {
-		ip                 netip.Addr
-		identifiable       string // e.g. 192.168.1.42 or 2001:db8:face:12::1
-		partiallyAnonymous string // e.g. 192.168.1.0 (/24) or 2001:db8:face:: (/48)
-		stronglyAnonymous  string // e.g. 192.168.0.0 (/16) or 2001:db8:: (/32)
-	}
+	receivedAt   time.Time
+	remoteAddr   remoteAddr
 	sentAt       time.Time
 	writeKey     string
 	connectionId string
 	context      map[string]any
 	typ          string
 	eventCount   int
+}
+
+type remoteAddr struct {
+	ip                 netip.Addr
+	identifiable       string // e.g. 192.168.1.42 or 2001:db8:face:12::1
+	partiallyAnonymous string // e.g. 192.168.1.0 (/24) or 2001:db8:face:: (/48)
+	stronglyAnonymous  string // e.g. 192.168.0.0 (/16) or 2001:db8:: (/32)
 }
 
 // newDecoder returns a new decoder.
@@ -154,6 +156,15 @@ func (d *decoder) Events(connectionId string, fallbackToRequestIP bool) iter.Seq
 //   - a badRequestError: if the request's body is not valid.
 func (d *decoder) Reset(r *http.Request) error {
 
+	d.receivedAt = time.Now().UTC()
+	d.remoteAddr = remoteAddr{}
+	d.sentAt = time.Time{}
+	d.writeKey = ""
+	d.connectionId = ""
+	d.context = nil
+	d.typ = ""
+	d.eventCount = 1
+
 	if r.Method != "POST" {
 		return errMethodNotAllowed
 	}
@@ -174,9 +185,6 @@ func (d *decoder) Reset(r *http.Request) error {
 			return errors.BadRequest("request's content length must be in the range [1,%d]", maxRequestSize)
 		}
 	}
-
-	d.receivedAt = time.Now().UTC()
-	d.remoteAddr.ip = netip.Addr{}
 
 	// If the 'X-Forwarded-For' header is present, use it to determine
 	// the client's IP address. Also accept non-standard formats such as
@@ -210,12 +218,6 @@ func (d *decoder) Reset(r *http.Request) error {
 			return errors.New("unexpected IP address from RemoteAddr")
 		}
 	}
-
-	d.sentAt = time.Time{}
-	d.writeKey = ""
-	d.connectionId = ""
-	d.context = nil
-	d.eventCount = 1
 
 	path, _ := strings.CutPrefix(r.URL.Path, "/events")
 	switch path {
@@ -559,7 +561,7 @@ func (d *decoder) decodeEvent(connectionId string, fallbackToRequestIP bool) (ev
 			}
 			return nil, errors.BadRequest("either 'anonymousId' or 'userId' properties are required for a %s event", typ)
 		}
-		event["anonymousId"] = uuid.NewString()
+		event["anonymousId"] = uuid.New().String()
 	}
 
 	// Category.
@@ -618,7 +620,8 @@ func (d *decoder) decodeEvent(connectionId string, fallbackToRequestIP bool) (ev
 			if addr.IsMulticast() {
 				return nil, errors.BadRequest("property 'ip' cannot be a multicast IP address")
 			}
-			context["ip"] = addr.String()
+			normalizedIP, _ := types.NormalizeIP(addr)
+			context["ip"] = normalizedIP
 			locationIP = addr
 		}
 	} else if fallbackToRequestIP {
@@ -700,7 +703,7 @@ func (d *decoder) decodeEvent(connectionId string, fallbackToRequestIP bool) (ev
 
 	// Message ID.
 	if _, ok := event["messageId"]; !ok {
-		event["messageId"] = "krenalis-" + uuid.NewString()
+		event["messageId"] = "krenalis-" + uuid.New().String()
 	}
 
 	// Name.

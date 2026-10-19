@@ -22,7 +22,6 @@ import (
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/tools/json"
-	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -110,27 +109,27 @@ func (dummy *Dummy) EventTypeSchema(ctx context.Context, eventType string) (type
 	switch eventType {
 	case "send_add_to_cart":
 		return types.Object([]types.Property{
-			{Name: "email", Type: types.String(), CreateRequired: true, Description: "Email"},
-			{Name: "itemName", Type: types.String(), Description: "Item name"},
-			{Name: "itemId", Type: types.Int(32), Description: "Item ID"},
+			{Name: "email", Type: types.String(), CreateRequired: true, DisplayName: "Email"},
+			{Name: "itemName", Type: types.String(), DisplayName: "Item name"},
+			{Name: "itemId", Type: types.Int(32), DisplayName: "Item ID"},
 		}), nil
 	case "send_custom_event":
 		return types.Object([]types.Property{
-			{Name: "email", Type: types.String(), Description: "Email"},
+			{Name: "email", Type: types.String(), DisplayName: "Email"},
 		}), nil
 	case "send_identity":
 		return types.Object([]types.Property{
-			{Name: "email", CreateRequired: true, Type: types.String(), Description: "Email"},
+			{Name: "email", CreateRequired: true, Type: types.String(), DisplayName: "Email"},
 			{Name: "traits", Type: types.Object([]types.Property{
 				{Name: "address", Type: types.Object([]types.Property{
-					{Name: "street1", Type: types.String(), Description: "Street"},
-					{Name: "street2", Type: types.String(), Description: "Street (second line)"},
-				}), Description: "Address"},
-			}), Description: "Traits"},
+					{Name: "street1", Type: types.String(), DisplayName: "Street"},
+					{Name: "street2", Type: types.String(), DisplayName: "Street (second line)"},
+				}), DisplayName: "Address"},
+			}), DisplayName: "Traits"},
 		}), nil
 	case "send_generic_event":
 		return types.Object([]types.Property{
-			{Name: "properties", Type: types.JSON(), Description: "Properties"},
+			{Name: "properties", Type: types.JSON(), DisplayName: "Properties"},
 		}), nil
 	case "send_event_with_no_schema":
 		return types.Type{}, nil
@@ -151,29 +150,34 @@ func (dummy *Dummy) EventTypes(ctx context.Context) ([]*connectors.EventType, er
 	}
 	return []*connectors.EventType{
 		{
-			ID:          "send_add_to_cart",
-			Name:        "Send Add to Cart",
-			Description: "Send an Add to Cart event to Dummy",
+			ID:            "send_add_to_cart",
+			Name:          "Send Add to Cart",
+			Description:   "Send an Add to Cart event to Dummy",
+			OrderingGroup: "events",
 		},
 		{
-			ID:          "send_custom_event",
-			Name:        "Send custom event",
-			Description: "Send a custom event to Dummy",
+			ID:            "send_custom_event",
+			Name:          "Send custom event",
+			Description:   "Send a custom event to Dummy",
+			OrderingGroup: "events",
 		},
 		{
-			ID:          "send_identity",
-			Name:        "Send Identity",
-			Description: "Send an Identity to Dummy",
+			ID:            "send_identity",
+			Name:          "Send Identity",
+			Description:   "Send an Identity to Dummy",
+			OrderingGroup: "events",
 		},
 		{
-			ID:          "send_generic_event",
-			Name:        "Send generic event",
-			Description: "Send a generic event, useful for testing",
+			ID:            "send_generic_event",
+			Name:          "Send generic event",
+			Description:   "Send a generic event, useful for testing",
+			OrderingGroup: "events",
 		},
 		{
-			ID:          "send_event_with_no_schema",
-			Name:        "Send event with no schema",
-			Description: "Send an event which does not require mapping",
+			ID:            "send_event_with_no_schema",
+			Name:          "Send event with no schema",
+			Description:   "Send an event which does not require mapping",
+			OrderingGroup: "events",
 		},
 	}, nil
 }
@@ -197,32 +201,31 @@ func (dummy *Dummy) RecordSchema(ctx context.Context, target connectors.Targets,
 	}
 	var properties []types.Property
 	if role == connectors.Source {
-		properties = append(properties, types.Property{Name: "dummyId", Type: types.String(), Description: "Dummy ID"})
+		properties = append(properties, types.Property{Name: "dummyId", Type: types.String(), DisplayName: "Dummy ID"})
 	}
 	properties = append(properties, []types.Property{
-		{Name: "email", Type: types.String(), Nullable: true, Description: "Email"},
-		{Name: "firstName", Type: types.String(), Nullable: true, Description: "First name"},
-		{Name: "fullName", Type: types.String(), Nullable: true, Description: "Full name"},
-		{Name: "lastName", Type: types.String(), Nullable: true, Description: "Last name"},
-		{Name: "favouriteDrink", Type: types.String().WithValues("tea", "beer", "wine", "water"), Nullable: true, Description: "Favourite drink"},
-		{Name: "favourite_movie", Type: types.String(), ReadOptional: true, Description: "Favourite movie"},
+		{Name: "email", Type: types.String(), Nullable: true, DisplayName: "Email"},
+		{Name: "firstName", Type: types.String(), Nullable: true, DisplayName: "First name"},
+		{Name: "fullName", Type: types.String(), Nullable: true, DisplayName: "Full name"},
+		{Name: "lastName", Type: types.String(), Nullable: true, DisplayName: "Last name"},
+		{Name: "favouriteDrink", Type: types.String().WithValues("tea", "beer", "wine", "water"), Nullable: true, DisplayName: "Favourite drink"},
+		{Name: "favourite_movie", Type: types.String(), ReadOptional: true, DisplayName: "Favourite movie"},
 	}...)
 	if role == connectors.Destination {
-		properties = append(properties, types.Property{Name: "additionalProperties", Type: types.Map(types.String()), Description: "Additional properties"})
+		properties = append(properties, types.Property{Name: "additionalProperties", Type: types.Map(types.String()), DisplayName: "Additional properties"})
 	}
 	properties = append(properties, []types.Property{
 		{Name: "address", Type: types.Object([]types.Property{
-			{Name: "street", Type: types.String(), Nullable: true, Description: "Street"},
-			{Name: "postal_code", Type: types.String(), Nullable: true, Description: "Postal code"},
-			{Name: "city", Type: types.String(), Nullable: true, Description: "City"},
-		}), Nullable: true, Description: "Address"},
+			{Name: "street", Type: types.String(), Nullable: true, DisplayName: "Street"},
+			{Name: "postal_code", Type: types.String(), Nullable: true, DisplayName: "Postal code"},
+			{Name: "city", Type: types.String(), Nullable: true, DisplayName: "City"},
+		}), Nullable: true, DisplayName: "Address"},
 	}...)
 	return types.Object(properties), nil
 }
 
 // Records returns the records of the specified target.
 func (dummy *Dummy) Records(ctx context.Context, target connectors.Targets, updatedAt time.Time, cursor string, schema types.Type) ([]connectors.Record, string, error) {
-	prometheus.Increment("Dummy.Records.calls", 1)
 	var s innerSettings
 	err := dummy.env.Settings.Load(ctx, &s)
 	if err != nil {
@@ -377,10 +380,7 @@ func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, recor
 	n := 0
 	for record := range records.All() {
 
-		prometheus.Increment("Dummy.Upsert.records_read_from_iterator", 1)
-
 		if dummy.customerExportRandomlyFails(&s) {
-			prometheus.Increment("Dummy.Upsert.export_failed", 1)
 			recordsError[n] = errors.New("writing of customer record failed (due to a causal failure probability configured in Dummy)")
 			n++
 			continue
@@ -389,7 +389,6 @@ func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, recor
 		var id string
 		if record.IsCreate() {
 			// Add a new customers into the in-memory customers.
-			prometheus.Increment("Dummy.Upsert.customers_created", 1)
 			customer := maps.Clone(record.Attributes)
 			id = newDummyId()
 			customer["dummyId"] = id
@@ -414,12 +413,10 @@ func (dummy *Dummy) Upsert(ctx context.Context, target connectors.Targets, recor
 			// Update the in-memory customers.
 			customer, ok := allCustomers[record.ID]
 			if !ok {
-				prometheus.Increment("Dummy.Upsert.updated_customers_not_found", 1)
 				recordsError[n] = errors.New("the customer to update does not exist in Dummy")
 				n++
 				continue
 			}
-			prometheus.Increment("Dummy.Upsert.updated_customers", 1)
 			maps.Copy(customer, record.Attributes)
 			id = record.ID
 		}
@@ -452,7 +449,6 @@ func (dummy *Dummy) applyOperationDelay(ctx context.Context, operationDelay stri
 	defer timer.Stop()
 	select {
 	case <-timer.C:
-		prometheus.Increment("Dummy.applyOperationDelay.applied_delays", 1)
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()

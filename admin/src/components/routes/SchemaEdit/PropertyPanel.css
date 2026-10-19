@@ -1,0 +1,55 @@
+@keyframes property-panel-form-actions-appear {
+	from {
+		opacity: 0;
+		transform: translateY(2px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.property-panel__form-actions {
+	align-items: center;
+	animation: property-panel-form-actions-appear 140ms ease-out;
+	display: flex;
+	gap: 8px;
+}
+
+.property-panel__save::part(base) {
+	min-width: 90px;
+}
+
+.property-panel__title-row > .schema-edit__property-status {
+	position: relative;
+	top: 1px;
+}
+
+.property-panel__delete-button::part(base) {
+	color: var(--sl-color-danger-600);
+}
+
+.property-panel__delete-button::part(base):hover {
+	background-color: var(--sl-color-danger-50);
+	color: var(--sl-color-danger-600);
+}
+
+.property-panel__delete-button::part(base):active {
+	background-color: var(--sl-color-danger-100);
+	color: var(--sl-color-danger-600);
+}
+
+.property-panel__delete-button sl-icon {
+	font-size: 18px;
+}
+
+.property-panel__remove {
+	width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.property-panel__form-actions {
+		animation: none;
+	}
+}

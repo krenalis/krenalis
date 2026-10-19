@@ -6,6 +6,7 @@ package json
 
 import (
 	"bytes"
+	"math"
 	"reflect"
 	"testing"
 )
@@ -156,6 +157,57 @@ func Test_IndentSorted(t *testing.T) {
 		if test.expected != string(got) {
 			t.Fatalf("unexpected value.\nexpected: %q\ngot:      %q\n", test.expected, got)
 		}
+	}
+}
+
+// Test_Marshal verifies Marshal's behavior for successful and failed encodings.
+func Test_Marshal(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     any
+		expected string
+		wantErr  bool
+	}{
+		{
+			name:     "nil map",
+			data:     map[string]any(nil),
+			expected: `null`,
+		},
+		{
+			name:     "nil slice",
+			data:     []any(nil),
+			expected: `null`,
+		},
+		{
+			name: "nil collections in struct",
+			data: struct {
+				Map   map[string]any `json:"map"`
+				Slice []any          `json:"slice"`
+			}{},
+			expected: `{"map":null,"slice":null}`,
+		},
+		{
+			name:    "positive infinity",
+			data:    math.Inf(1),
+			wantErr: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := Marshal(test.data)
+			if err != nil {
+				if test.wantErr {
+					return
+				}
+				t.Fatalf("expected no error, got %v", err)
+			}
+			if test.wantErr {
+				t.Fatal("expected error, got no error")
+			}
+			if string(got) != test.expected {
+				t.Errorf("expected %q, got %q", test.expected, got)
+			}
+		})
 	}
 }
 

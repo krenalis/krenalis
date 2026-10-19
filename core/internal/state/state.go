@@ -56,9 +56,10 @@ const (
 
 // election represents a leader election.
 type election struct {
-	number   int
-	leader   string
-	lastSeen time.Time
+	number     int
+	leader     string
+	sequence   uint64
+	validUntil time.Time
 }
 
 // metadata represents the metadata associated with a Krenalis instance.
@@ -102,13 +103,9 @@ type State struct {
 		next    sync.Cond // for version.current; use version.RWMutex
 	}
 
-	notifications struct {
-		*notifier
-		ch   <-chan notification
-		acks sync.Map
-	}
-	listeners []any
-	close     struct {
+	notifications *notifier
+	listeners     []any
+	close         struct {
 		ctx    context.Context
 		cancel context.CancelFunc
 		sync.WaitGroup
@@ -121,12 +118,12 @@ type OAuthCredentials struct {
 	ClientSecret string
 }
 
-// New returns a state given the database, the key manager, the 64-byte master
-// key, and the OAuth client credentials for connectors. sendStats indicates
-// whether the state should send statistics or not.
+// New loads and starts a State using the database, key manager, and OAuth
+// client credentials for connectors. sendStats controls whether runtime
+// statistics are sent.
 //
-// If a condition occurs where the Krenalis database appears not to have been
-// initialized, returns an error of type *DBNotInitializedError.
+// If the Krenalis database appears not to have been initialized, New returns
+// an error wrapping a *DBNotInitializedError.
 func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OAuthCredentials, sendStats bool) (*State, error) {
 
 	state := &State{
@@ -142,7 +139,6 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 		connectionsByKey: map[string]*Connection{},
 		pipelines:        map[string]*Pipeline{},
 		liveRuns:         map[string]*PipelineRun{},
-		sendStats:        sendStats,
 	}
 	state.version.next = sync.Cond{L: &state.version.RWMutex}
 	state.close.ctx, state.close.cancel = context.WithCancel(context.Background())
@@ -155,22 +151,55 @@ func New(ctx context.Context, db *db.DB, kms kms.Kms, credentials map[string]*OA
 	state.platformBucket = state.rateLimiter.NewBucket("platform", "platform", requestLeaseSize, requestMaxUnits)
 
 	// Init the notifier.
-	ch := make(chan notification, 10)
-	state.notifications.notifier = newNotifier(db, ch)
-	state.notifications.ch = ch
+	state.notifications = newNotifier(db)
 
-	// Load the state.
-	err := state.load(ctx, credentials)
-	if err != nil {
+	// Bootstrap owns the resources until they are transferred to the runtime.
+	started := false
+	defer func() {
+		if started {
+			return
+		}
 		state.close.cancel()
 		state.rateLimiter.Close(ctx)
-		state.notifications.Close()
+		runtime.KeepAlive(state)
+		state.cipher.Close()
+	}()
+
+	// LISTEN is effective before load begins its snapshot transaction.
+	conn, err := state.notifications.connect(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("cannot listen for state notifications: %w", err)
+	}
+	session := &notificationSession{conn: conn}
+	defer func() {
+		if session != nil {
+			session.close()
+		}
+	}()
+	err = state.load(ctx, credentials)
+	if err != nil {
 		return nil, fmt.Errorf("cannot load Krenalis state: %w", err)
 	}
 
-	// Keep the state updated.
+	// Apply replayed notifications on this stack so application panics propagate.
+	err = state.replay(ctx, session, 0, nil)
+	if err != nil {
+		return nil, fmt.Errorf("cannot replay state notifications: %w", err)
+	}
+
+	err = ctx.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	// Hand the dedicated session to the single runtime worker.
+	runtimeSession := session
+	session = nil
+	state.sendStats = sendStats
+	state.election.validUntil = time.Now().Add(grantedLeaderInterval)
 	state.close.Add(1)
-	go state.keep()
+	go state.keepNotifications(runtimeSession)
+	started = true
 
 	// Keep elections.
 	state.close.Add(1)
@@ -212,16 +241,31 @@ func (state *State) Account(id int) (*Account, bool) {
 	return nil, false
 }
 
-// Close closes the state. When it is called, no calls to the State methods
-// should be in progress, and no further calls should be made.
+// Close stops the State's workers and releases its resources.
+//
+// Before calling Close, callers must finish all external calls to State methods
+// and all external uses of its cipher and rate limiter, including through
+// returned objects. Only WaitVersion calls and Transaction calls awaiting local
+// application after a successful commit may remain pending.
+// The State must be unfrozen, and no new external calls may be made.
+//
+// Close waits for its workers and their synchronous listeners to finish;
+// it must not be called from such a listener. It wakes pending version waits
+// but does not wait for those calls or their cancellation callbacks to return.
 func (state *State) Close(ctx context.Context) {
+
 	state.close.cancel()
+	state.version.Lock()
+	state.version.next.Broadcast()
+	state.version.Unlock()
+
 	state.close.Wait()
 	state.rateLimiter.Close(ctx)
 	// Keep state-owned buckets reachable until Limiter.Close returns so their
 	// unused capacity can be restored.
 	runtime.KeepAlive(state)
-	state.notifications.Close()
+	state.cipher.Close()
+
 }
 
 // Connection returns the connection with identifier id.
@@ -281,7 +325,7 @@ func (state *State) Connectors() []*Connector {
 }
 
 // ConsumeRateLimitCapacity consumes the specified number of units from the
-// request rate-limit capacity for the platform management API. Units must be at
+// request rate-limit capacity for the Platform Management API. Units must be at
 // least 1.
 //
 // ConsumeRateLimitCapacity returns a CapacityExceededError when the requested
@@ -420,14 +464,17 @@ func (state *State) Pipelines() []*Pipeline {
 	return pipelines
 }
 
-// Transaction executes f in a transaction.
+// Transaction executes f in a transaction. For a versioned event returned by
+// f, it confirms local application by waiting for the applied version to reach
+// the committed version. Cancellation or Close can interrupt this wait and
+// return a context error after a successful commit; such an error does not
+// imply rollback: the change and notification log remain persisted.
 func (state *State) Transaction(ctx context.Context, f func(tx *db.Tx) (any, error)) error {
+
 	tx, err := state.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	var version int
-	var ack chan struct{}
 	defer func() {
 		if err := recover(); err != nil {
 			_ = tx.Rollback(ctx)
@@ -442,7 +489,7 @@ func (state *State) Transaction(ctx context.Context, f func(tx *db.Tx) (any, err
 	if n == nil {
 		return tx.Commit(ctx)
 	}
-	version, err = state.notifications.Notify(ctx, tx, n)
+	version, err := state.notifications.Notify(ctx, tx, n)
 	if err != nil {
 		_ = tx.Rollback(ctx)
 		return err
@@ -450,26 +497,13 @@ func (state *State) Transaction(ctx context.Context, f func(tx *db.Tx) (any, err
 	if version == 0 {
 		return tx.Commit(ctx)
 	}
-	ack = make(chan struct{})
-	state.notifications.acks.Store(version, ack)
-	defer func() {
-		if ack == nil {
-			return
-		}
-		// Attempt to delete the ack channel.
-		if _, ok := state.notifications.acks.LoadAndDelete(version); !ok {
-			// If the keeper has already removed it, the notification was received.
-			// To prevent blocking the keeper, receive from the channel.
-			<-ack
-		}
-	}()
+
 	err = tx.Commit(ctx)
 	if err != nil {
 		return err
 	}
-	<-ack
-	ack = nil
-	return nil
+
+	return state.waitVersion(ctx, version)
 }
 
 // Unfreeze unfreezes the state if there are no more pending Unfreeze calls.
@@ -485,26 +519,42 @@ func (state *State) Version() int {
 	return version
 }
 
-// WaitVersion waits until the given version has been reached.
+// WaitVersion waits until the given version has been applied, ctx is canceled,
+// or the State is closed. It returns nil if the version has been reached;
+// otherwise, it returns ctx.Err() if non-nil, or context.Canceled on Close.
 func (state *State) WaitVersion(ctx context.Context, version int) error {
+	return state.waitVersion(ctx, version)
+}
+
+// waitVersion observes application and interruption under the version mutex.
+func (state *State) waitVersion(ctx context.Context, targetVersion int) error {
+
 	state.version.Lock()
 	defer state.version.Unlock()
-	if version <= state.version.current {
+	if state.version.current >= targetVersion {
 		return nil
 	}
 	stop := context.AfterFunc(ctx, func() {
-		state.version.Lock()
+		// next.L is the version mutex; lock it to prevent a lost wake-up on cancellation.
+		state.version.next.L.Lock()
 		state.version.next.Broadcast()
-		state.version.Unlock()
+		state.version.next.L.Unlock()
 	})
 	defer stop()
-	for ctx.Err() == nil {
+
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if err := state.close.ctx.Err(); err != nil {
+			return err
+		}
 		state.version.next.Wait()
-		if version <= state.version.current {
+		if state.version.current >= targetVersion {
 			return nil
 		}
 	}
-	return ctx.Err()
+
 }
 
 // WarehousePlatform returns the warehouse platform with the provided name.
@@ -924,11 +974,11 @@ func (workspace *Workspace) Connections() []*Connection {
 	return connections
 }
 
-// ConsentPurpose returns the consent purpose of the workspace with the given
-// code. The boolean return value reports whether the consent purpose exists.
-func (workspace *Workspace) ConsentPurpose(code string) (*ConsentPurpose, bool) {
+// ConsentPurpose returns the consent purpose of the workspace with identifier
+// id. The boolean return value reports whether the consent purpose exists.
+func (workspace *Workspace) ConsentPurpose(id string) (*ConsentPurpose, bool) {
 	workspace.mu.Lock()
-	cp, ok := workspace.consentPurposes[code]
+	cp, ok := workspace.consentPurposes[id]
 	workspace.mu.Unlock()
 	return cp, ok
 }
@@ -944,7 +994,7 @@ func (workspace *Workspace) ConsentPurposes() []*ConsentPurpose {
 	}
 	workspace.mu.Unlock()
 	sort.Slice(purposes, func(i, j int) bool {
-		return purposes[i].Code < purposes[j].Code
+		return purposes[i].ID < purposes[j].ID
 	})
 	return purposes
 }
@@ -1102,8 +1152,8 @@ type UIPreferences struct {
 	}
 }
 
-// TimeLayouts represents the layouts used to format datetime, date, and time
-// values.
+// TimeLayouts represents the layouts used to parse datetime, date, and time
+// values returned by a connector.
 type TimeLayouts struct {
 	DateTime string
 	Date     string
@@ -1335,8 +1385,23 @@ func (account *Account) Connector() *Connector {
 
 // ConsentPurpose represents a consent purpose.
 type ConsentPurpose struct {
-	Code string
-	Name string
+	ID                     string
+	Name                   string
+	EventConsentLocations  []EventConsentLocation // never nil
+	ProfileConsentLocation *ProfileConsentLocation
+}
+
+// EventConsentLocation identifies a property under context.consents that is checked
+// for the consent value in incoming events.
+type EventConsentLocation struct {
+	PurposeCode string
+}
+
+// ProfileConsentLocation identifies the profile schema property and optional JSON key
+// used to represent the consent value for a purpose.
+type ProfileConsentLocation struct {
+	Property string
+	JSONKey  string
 }
 
 // Strategy represents a strategy.
@@ -1688,6 +1753,8 @@ type Pipeline struct {
 	Name               string
 	Enabled            bool
 	EventType          string
+	OrderingGroup      string
+	DeliveryEndpoint   string
 	ScheduleStart      int16
 	SchedulePeriod     int16
 	InSchema           types.Type
@@ -1882,7 +1949,14 @@ const (
 // RequiredConsents represents the consent purposes required by a pipeline.
 type RequiredConsents struct {
 	Operator ConsentPurposesOperator
-	Purposes []string // consent purpose codes.
+	Purposes []*ConsentPurpose // no nil
+}
+
+// RequiredConsentsByIDs represents the consent purposes required by a pipeline,
+// identified by their IDs.
+type RequiredConsentsByIDs struct {
+	Operator ConsentPurposesOperator
+	Purposes []string // consent purpose identifiers.
 }
 
 // ConsentPurposesOperator represents the logical operator applied to the

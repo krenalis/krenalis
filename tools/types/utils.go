@@ -10,8 +10,8 @@ import (
 	"slices"
 	"strings"
 	"unicode"
+	"uuid"
 
-	"github.com/google/uuid"
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -61,10 +61,10 @@ func AsRole(t Type, role Role) Type {
 // canonical string form without uppercase letters. The boolean return value
 // reports whether s represent a UUID or not.
 func DecodeUUID(s []byte) (string, bool) {
-	id, err := uuid.FromBytes(s)
-	if err != nil {
+	if len(s) != len(uuid.UUID{}) {
 		return "", false
 	}
+	id := uuid.UUID(s)
 	return id.String(), true
 }
 
@@ -108,6 +108,7 @@ func Equal(t1, t2 Type) bool {
 				p1.UpdateRequired != p2.UpdateRequired ||
 				p1.ReadOptional != p2.ReadOptional ||
 				p1.Nullable != p2.Nullable ||
+				p1.DisplayName != p2.DisplayName ||
 				p1.Description != p2.Description ||
 				!Equal(p1.Type, p2.Type) {
 				return false
@@ -138,8 +139,10 @@ func Filter(t Type, f func(p Property) bool) Type {
 	var ps []Property
 	pp := t.vl.(Properties).properties
 	all := true
+	var generic bool
 	for i := range pp {
 		if f(pp[i]) {
+			generic = generic || pp[i].Type.generic
 			if !all {
 				ps = append(ps, pp[i])
 			}
@@ -160,21 +163,7 @@ func Filter(t Type, f func(p Property) bool) Type {
 	for i, p := range ps {
 		names[p.Name] = i
 	}
-	return Type{kind: ObjectKind, vl: Properties{properties: ps, names: names}}
-}
-
-// ParseUUID parses s as a UUID in the standard form xxxx-xxxx-xxxx-xxxxxxxxxxxx
-// and returns it in the canonical form without uppercase letters. The boolean
-// return value reports whether s is a UUID in the standard form.
-func ParseUUID(s string) (string, bool) {
-	if len(s) != 36 {
-		return "", false
-	}
-	id, err := uuid.Parse(s)
-	if err != nil {
-		return "", false
-	}
-	return id.String(), true
+	return Type{kind: ObjectKind, generic: generic, vl: Properties{properties: ps, names: names}}
 }
 
 // PropertyName returns a sanitized version of s that is safe to use as a
@@ -229,7 +218,7 @@ func Prune(t Type, f func(path string) bool) Type {
 	if t.kind != ObjectKind {
 		panic("cannot prune a non-object type")
 	}
-	pp, ok := prune(t.vl.(Properties).properties, "", f)
+	pp, generic, ok := prune(t.vl.(Properties).properties, "", f)
 	if !ok {
 		return t
 	}
@@ -240,7 +229,7 @@ func Prune(t Type, f func(path string) bool) Type {
 	for i, p := range pp {
 		names[p.Name] = i
 	}
-	return Type{kind: ObjectKind, vl: Properties{properties: pp, names: names}}
+	return Type{kind: ObjectKind, generic: generic, vl: Properties{properties: pp, names: names}}
 }
 
 // PruneAtPath returns the subset of t that contains only the properties along
@@ -302,7 +291,7 @@ func asRole(t Type, role Role) (Type, bool) {
 	for i, p := range ppc {
 		names[p.Name] = i
 	}
-	return Type{kind: ObjectKind, vl: Properties{properties: ppc, names: names}}, true
+	return Type{kind: ObjectKind, generic: t.generic, vl: Properties{properties: ppc, names: names}}, true
 }
 
 // baseChar returns the base character for a given accented character.
@@ -317,15 +306,16 @@ func baseChar(r rune) rune {
 }
 
 // prune is a recursive helper called by Prune. It returns the pruned
-// properties and a boolean indicating whether all properties were pruned.
-// If no property is pruned, it returns nil and false. If all properties are
-// pruned, it returns nil and true.
-func prune(pp []Property, path string, f func(string) bool) ([]Property, bool) {
+// properties, whether any of them has a generic type, and a boolean indicating
+// whether anything was pruned. If no property is pruned, it returns nil, false
+// and false. If all are pruned, it returns nil, false and true.
+func prune(pp []Property, path string, f func(string) bool) ([]Property, bool, bool) {
 	var ps []Property
+	var generic bool
 	unchanged := true
 	for i := range pp {
 		if t := &pp[i].Type; t.kind == ObjectKind {
-			if properties, ok := prune(t.vl.(Properties).properties, path+pp[i].Name+".", f); ok {
+			if properties, isGeneric, ok := prune(t.vl.(Properties).properties, path+pp[i].Name+".", f); ok {
 				// Almost one property of the object has been pruned.
 				if properties == nil {
 					// Prune the entire property.
@@ -349,8 +339,10 @@ func prune(pp []Property, path string, f func(string) bool) ([]Property, bool) {
 					names[p.Name] = i
 				}
 				p := pp[i]
+				p.Type.generic = isGeneric
 				p.Type.vl = Properties{properties: properties, names: names}
 				ps = append(ps, p)
+				generic = generic || isGeneric
 				continue
 			}
 		} else if !f(path + pp[i].Name) {
@@ -364,17 +356,18 @@ func prune(pp []Property, path string, f func(string) bool) ([]Property, bool) {
 			continue
 		}
 		// Don't prune.
+		generic = generic || pp[i].Type.generic
 		if !unchanged {
 			ps = append(ps, pp[i])
 		}
 	}
 	if unchanged {
-		return nil, false
+		return nil, false, false
 	}
 	if ps == nil {
-		return nil, true
+		return nil, false, true
 	}
-	return ps, true
+	return ps, generic, true
 }
 
 // pruneAtPath is a recursive function called by the PruneAtPath function. t

@@ -6,9 +6,10 @@ package warehouses
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
-	"net/netip"
+	"net"
 	"reflect"
 	"slices"
 	"strconv"
@@ -18,8 +19,6 @@ import (
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
-
-	"github.com/google/uuid"
 )
 
 // Platform represents a warehouse platform.
@@ -36,9 +35,19 @@ func (platform Platform) ReflectType() reflect.Type {
 	return platform.ct
 }
 
-// New returns a new data warehouse instance.
-func (platform Platform) New(settings SettingsLoader) Warehouse {
-	out := platform.newFunc.Call([]reflect.Value{reflect.ValueOf(settings)})
+// New returns a new data warehouse instance. If dialWith is provided, it is
+// used to establish network connections; otherwise, the warehouse uses its own
+// dialer.
+func (platform Platform) New(settings SettingsLoader, dialWith DialWith) Warehouse {
+	if dialWith == nil {
+		dialWith = func(dial DialFunc) DialFunc {
+			if dial != nil {
+				return dial
+			}
+			return new(net.Dialer).DialContext
+		}
+	}
+	out := platform.newFunc.Call([]reflect.Value{reflect.ValueOf(settings), reflect.ValueOf(dialWith)})
 	d, _ := reflect.TypeAssert[Warehouse](out[0])
 	return d
 }
@@ -49,8 +58,17 @@ type SettingsLoader interface {
 	Load(ctx context.Context, dst any) error
 }
 
+type (
+	// A DialFunc establishes an outbound network connection to the given address.
+	DialFunc = func(ctx context.Context, network, address string) (net.Conn, error)
+
+	// A DialWith wraps the dial function of a warehouse, returning the dial
+	// function to be used in its place.
+	DialWith = func(dial DialFunc) DialFunc
+)
+
 // NewFunc represents functions that create new warehouse platform instance.
-type NewFunc[T Warehouse] func(SettingsLoader) T
+type NewFunc[T Warehouse] func(SettingsLoader, DialWith) T
 
 // AlterOperation represents an operation that alters the columns of the profile
 // tables.
@@ -130,6 +148,18 @@ func (e *RejectedReadOnlyQueryError) Error() string {
 	return e.Msg
 }
 
+// IdentityCounts contains counts of anonymous and recognized identities,
+// including those without a profile, grouped by connection.
+// A missing connection is equivalent to zero.
+type IdentityCounts struct {
+	Anonymous  map[string]int
+	Recognized map[string]int
+
+	// WithoutProfile counts anonymous and recognized identities that have not
+	// been assigned to a profile.
+	WithoutProfile map[string]int
+}
+
 // Warehouse is the interface implemented by warehouses.
 type Warehouse interface {
 
@@ -180,6 +210,23 @@ type Warehouse interface {
 	// and may therefore include additional human-readable details (such as type
 	// information, maximum character count, enum values, etc...).
 	ColumnTypeDescription(t types.Type) (string, error)
+
+	// Counts returns one row count for each condition on the table.
+	// A nil slice of conditions, or a nil condition, counts all rows.
+	// A non-nil empty slice of conditions is invalid. Each result is between
+	// zero and math.MaxInt32. All counts use the same snapshot of the table.
+	Counts(ctx context.Context, table string, conditions []Expr) ([]int, error)
+
+	// CountIdentities counts anonymous and recognized identities, including those
+	// without a profile, from the provided pipelines, grouped by connection.
+	// For anonymous and recognized identities, it counts physical rows when all
+	// rows belonging to the provided pipelines for a connection come from one
+	// pipeline. When they span multiple pipelines, it counts each identity ID once
+	// within every category in which it occurs. Identities without a profile are
+	// always counted once per identity ID within each category.
+	//
+	// The returned maps are sparse; a missing connection is equivalent to zero.
+	CountIdentities(ctx context.Context, pipelines []string) (*IdentityCounts, error)
 
 	// Delete deletes rows from the specified table that match the provided where
 	// expression. Returns an error if the expression is nil.
@@ -409,17 +456,112 @@ func IsValidSchemaName(name string) bool {
 	return IsValidIdentifier(name)
 }
 
-// OperationError represents an error that occurred in the data warehouse during
-// an Identity Resolution or profile schema update operation.
-type OperationError struct{ err error }
+// MaxOperationErrorBytes is the maximum supported size of an operation error
+// message.
+const MaxOperationErrorBytes = 4 << 10 // 4 KiB
 
-// NewOperationError returns a new *OperationError.
+// OperationError represents an error that occurred in the data warehouse during
+// an Identity Resolution or profile schema update operation. Its message is
+// valid UTF-8 and at most MaxOperationErrorBytes bytes long.
+type OperationError struct{ message string }
+
+// NewOperationError returns a new *OperationError. Messages longer than
+// MaxOperationErrorBytes are abbreviated at a Unicode character boundary with
+// a trailing "[...]". If the resulting message is not valid UTF-8, it is
+// replaced with a fixed message. NewOperationError panics if err is nil.
+//
+// NewOperationError is intended to be called by warehouse implementations
+// when an Identity Resolution or profile schema update operation fails.
 func NewOperationError(err error) *OperationError {
-	return &OperationError{err: err}
+	if err == nil {
+		panic("warehouses.NewOperationError: nil error")
+	}
+	const invalidMessage = "warehouse operation failed with an invalid error message"
+	message := err.Error()
+	if len(message) > MaxOperationErrorBytes {
+		const suffix = "[...]"
+		end := MaxOperationErrorBytes - len(suffix)
+		for i := 0; i < utf8.UTFMax-1 && !utf8.RuneStart(message[end]); i++ {
+			end--
+		}
+		if !utf8.RuneStart(message[end]) {
+			return &OperationError{message: invalidMessage}
+		}
+		message = message[:end] + suffix
+	}
+	if !utf8.ValidString(message) {
+		message = invalidMessage
+	}
+	return &OperationError{message: message}
 }
 
+// NewPersistedOperationError returns an *OperationError for a message read from
+// a warehouse. Messages that are not valid UTF-8 or exceed
+// MaxOperationErrorBytes are replaced with a fixed message.
+func NewPersistedOperationError(message string) *OperationError {
+	if len(message) > MaxOperationErrorBytes || !utf8.ValidString(message) {
+		message = "warehouse operation failed with an invalid or oversized error message"
+	}
+	return &OperationError{message: message}
+}
+
+// Error returns the operation error message.
 func (err OperationError) Error() string {
-	return err.err.Error()
+	return err.message
+}
+
+// ValidateIdentityCounts validates the internal consistency of identity counts
+// returned by a warehouse.
+func ValidateIdentityCounts(counts *IdentityCounts) error {
+
+	if counts == nil {
+		return errors.New("warehouse returned nil identity counts")
+	}
+
+	var anonymousTotal, recognizedTotal, withoutProfileTotal int
+	for _, count := range counts.Anonymous {
+		if count < 0 {
+			return errors.New("warehouse returned a negative anonymous identity count")
+		}
+		if count > math.MaxInt-anonymousTotal {
+			return errors.New("warehouse returned an anonymous identity count total that is too large")
+		}
+		anonymousTotal += count
+	}
+	for _, count := range counts.Recognized {
+		if count < 0 {
+			return errors.New("warehouse returned a negative recognized identity count")
+		}
+		if count > math.MaxInt-recognizedTotal {
+			return errors.New("warehouse returned a recognized identity count total that is too large")
+		}
+		recognizedTotal += count
+	}
+	for _, count := range counts.WithoutProfile {
+		if count < 0 {
+			return errors.New("warehouse returned a negative identity count without a profile")
+		}
+		if count > math.MaxInt-withoutProfileTotal {
+			return errors.New("warehouse returned an identity count total without a profile that is too large")
+		}
+		withoutProfileTotal += count
+	}
+
+	for connection, anonymous := range counts.Anonymous {
+		if anonymous > math.MaxInt-counts.Recognized[connection] {
+			return errors.New("warehouse returned a connection identity count total that is too large")
+		}
+	}
+	for connection, withoutProfile := range counts.WithoutProfile {
+		if withoutProfile > counts.Anonymous[connection]+counts.Recognized[connection] {
+			return errors.New("warehouse returned an identity count without a profile greater than its connection total")
+		}
+	}
+	if anonymousTotal > math.MaxInt-recognizedTotal {
+		return errors.New("warehouse returned an identity count total that is too large")
+	}
+
+	return nil
 }
 
 // ValidateInt validates an int value.
@@ -523,11 +665,11 @@ func ValidateYearString(name string, year string) (any, error) {
 
 // ValidateUUID validates a uuid value.
 func ValidateUUID(name string, s string) (any, error) {
-	u, err := uuid.Parse(s)
-	if err != nil {
-		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not a time type", s, name)
+	u, ok := types.NormalizeUUID(s)
+	if !ok {
+		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not a uuid type", s, name)
 	}
-	return u.String(), nil
+	return u, nil
 }
 
 // ValidateJSON validates a json value.
@@ -558,11 +700,11 @@ func ValidateJSON(name string, v any) (any, error) {
 
 // ValidateIP validates an ip value.
 func ValidateIP(name string, s string) (any, error) {
-	ip, err := netip.ParseAddr(s)
-	if err != nil {
+	ip, ok := types.NormalizeIP(s)
+	if !ok {
 		return nil, fmt.Errorf("data warehouse returned a value for column %s which is not an ip type", name)
 	}
-	return ip.String(), nil
+	return ip, nil
 }
 
 // ValidateString validates a string value.
@@ -659,10 +801,13 @@ const (
 	OpOr
 )
 
-// BaseExpr represents an SQL expression that refers to a property, on which an
-// operator is applied, an eventually an operand, if the operator is binary.
+// BaseExpr represents an SQL expression that applies an operator to a column.
+// For OpIsTrue and OpIsFalse on JSON columns, Keys specifies successive object
+// keys. Each key is treated literally, including any dots. If Keys is empty,
+// these operators apply to the entire column.
 type BaseExpr struct {
 	Column   Column
+	Keys     []string
 	Operator Operator
 	Values   []any // may be nil for unary expressions.
 }

@@ -10,11 +10,11 @@ import (
 	"reflect"
 	"testing"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/types"
 
-	"github.com/google/uuid"
 	"github.com/krenalis/analytics-go"
 )
 

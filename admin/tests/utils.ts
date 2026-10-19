@@ -222,10 +222,87 @@ const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 	await page.waitForTimeout(1000);
 
 	await page.locator('.pipeline__filters-add-condition').click();
+
+	const rootFilter = page.locator('.pipeline__filters-group--root');
+	const rootRemoveConditionButton = rootFilter.getByRole('button', { name: 'Remove condition' });
+	const rootRemoveConditionTooltip = rootFilter.locator(
+		':scope > .pipeline__filters-group-rules > .pipeline__filters-rule:not(.pipeline__filters-rule--group) .pipeline__filters-remove-condition-wrapper > sl-tooltip',
+	);
+	await expect(rootRemoveConditionButton).toHaveJSProperty('disabled', false);
+	await expect(rootRemoveConditionTooltip).toHaveCount(1);
+	await expect(rootRemoveConditionTooltip).toHaveJSProperty('content', 'Remove condition');
+
 	await page.locator('.pipeline__filters-add-condition').click();
 	await page.locator('.pipeline__filters-add-condition').click();
 
-	let filters = page.locator('.pipeline__filters-filter');
+	await expect(
+		rootFilter.locator(':scope > .pipeline__filters-group-header .pipeline__filters-group-subject'),
+	).toHaveText('Profiles matching');
+	const connectors = rootFilter.locator(
+		':scope > .pipeline__filters-group-rules > .pipeline__filters-rule > .pipeline__filters-connector',
+	);
+	await expect(connectors).toHaveText(['and', 'and']);
+	const rootActions = rootFilter.locator(':scope > .pipeline__filters-group-actions');
+	await rootActions.locator('.pipeline__filters-add-group').click();
+
+	const nestedGroup = rootFilter.locator(
+		':scope > .pipeline__filters-group-rules > .pipeline__filters-rule--group > .pipeline__filters-rule-content > .pipeline__filters-group',
+	);
+	const nestedRemoveGroupTooltip = nestedGroup.locator(
+		':scope > .pipeline__filters-group-header .pipeline__filters-remove-group-wrapper > sl-tooltip',
+	);
+	const nestedRemoveConditionTooltips = nestedGroup.locator(
+		':scope > .pipeline__filters-group-rules > .pipeline__filters-rule:not(.pipeline__filters-rule--group) .pipeline__filters-remove-condition-wrapper > sl-tooltip',
+	);
+	await expect(nestedGroup.locator('.pipeline__filters-logical')).toHaveJSProperty('value', 'or');
+	await expect(nestedRemoveGroupTooltip).toHaveCount(1);
+	await expect(nestedRemoveGroupTooltip).toHaveJSProperty('content', 'Remove group');
+
+	const nestedRemoveConditionButtons = nestedGroup.locator(
+		':scope > .pipeline__filters-group-rules > .pipeline__filters-rule:not(.pipeline__filters-rule--group) .pipeline__filters-remove-condition',
+	);
+	await expect(nestedRemoveConditionButtons).toHaveCount(1);
+	await expect(nestedRemoveConditionButtons.first()).toHaveJSProperty('disabled', true);
+	await expect(nestedRemoveConditionTooltips).toHaveCount(0);
+
+	await nestedGroup.locator('.pipeline__filters-add-condition').click();
+	await expect(nestedRemoveConditionButtons).toHaveCount(2);
+	await expect(nestedRemoveConditionButtons.first()).toHaveJSProperty('disabled', false);
+	await expect(nestedRemoveConditionButtons.nth(1)).toHaveJSProperty('disabled', false);
+	await expect(nestedRemoveConditionTooltips).toHaveCount(2);
+	await expect(nestedRemoveConditionTooltips.first()).toHaveJSProperty('content', 'Remove condition');
+	await expect(nestedRemoveConditionTooltips.nth(1)).toHaveJSProperty('content', 'Remove condition');
+
+	await nestedRemoveConditionButtons.nth(1).click();
+	await expect(nestedRemoveConditionButtons).toHaveCount(1);
+	await expect(nestedRemoveConditionButtons.first()).toHaveJSProperty('disabled', true);
+	await nestedGroup.locator('.pipeline__filters-add-group').click();
+	await expect(nestedRemoveGroupTooltip).toHaveJSProperty('content', 'Remove groups');
+	await expect(nestedRemoveConditionButtons.first()).toHaveJSProperty('disabled', false);
+	await nestedRemoveConditionButtons.first().click();
+
+	const childGroup = nestedGroup.locator(
+		':scope > .pipeline__filters-group-rules > .pipeline__filters-rule--group > .pipeline__filters-rule-content > .pipeline__filters-group',
+	);
+	await childGroup
+		.locator(':scope > .pipeline__filters-group-header')
+		.getByRole('button', { name: 'Remove group' })
+		.click();
+	await expect(childGroup).toHaveCount(0);
+	await expect(nestedRemoveConditionButtons).toHaveCount(1);
+	await expect(nestedRemoveConditionButtons.first()).toHaveJSProperty('disabled', true);
+	await expect(nestedGroup.locator('.pipeline__filters-property sl-input')).toHaveJSProperty('value', '');
+	await expect(nestedRemoveGroupTooltip).toHaveJSProperty('content', 'Remove group');
+
+	await nestedGroup.locator('.pipeline__filters-add-group').click();
+	await expect(nestedRemoveGroupTooltip).toHaveJSProperty('content', 'Remove groups');
+	await nestedGroup
+		.first()
+		.locator(':scope > .pipeline__filters-group-header')
+		.getByRole('button', { name: 'Remove group' })
+		.click();
+
+	const filters = page.locator('.pipeline__filters-filter');
 
 	await filters.nth(0).locator('.pipeline__filters-property sl-input').click();
 	await filters.nth(0).locator('sl-menu-item .schema-combobox-item__name', { hasText: 'email' }).click();
@@ -254,7 +331,9 @@ const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 		)
 		.click(); // remove the last value.
 
-	await page.locator('.pipeline__filters-logical sl-button:nth-child(2)').click(); // set the logical to 'or'.
+	await page.locator('.pipeline__filters-logical').click();
+	await page.locator('.pipeline__filters-logical sl-option[value="or"]').click();
+	await expect(connectors).toHaveText(['or', 'or']);
 
 	await filters.nth(1).locator('.pipeline__filters-property sl-input').click();
 	await filters.nth(1).locator('sl-menu-item .schema-combobox-item__name', { hasText: 'dummy_id' }).click();
@@ -264,6 +343,16 @@ const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 	await filters.nth(1).locator('.pipeline__filters-value-input:nth-child(4) >> input').fill('1800');
 
 	await filters.nth(2).locator('.pipeline__filters-remove-condition').click(); // remove the last filter.
+
+	await expect(rootActions.locator('.pipeline__filters-add-condition')).toContainText('Add a condition');
+	await expect(rootActions.locator('.pipeline__filters-add-group')).toContainText('Add a group');
+	await rootActions.locator('.pipeline__filters-add-group').click();
+
+	await expect(nestedGroup.locator('.pipeline__filters-group-subject')).toHaveText('matching');
+	await expect(nestedGroup.locator('.pipeline__filters-logical')).toHaveJSProperty('value', 'and');
+	const removeGroupButton = nestedGroup.getByRole('button', { name: 'Remove group' });
+	await expect(removeGroupButton).toBeAttached();
+	await removeGroupButton.click();
 };
 
 const deepComparePipelineSchema = (actual: object, expected: object) => {

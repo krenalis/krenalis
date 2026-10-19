@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"regexp"
 	"slices"
 	"strconv"
@@ -47,15 +48,17 @@ func init() {
 	}, New)
 }
 
-// New returns a new Snowflake data warehouse instance.
-func New(settings warehouses.SettingsLoader) *Snowflake {
-	return &Snowflake{settings: settings}
+// New returns a new Snowflake data warehouse instance, whose network
+// connections are established dialing with dialWith, which must not be nil.
+func New(settings warehouses.SettingsLoader, dialWith warehouses.DialWith) *Snowflake {
+	return &Snowflake{settings: settings, dialWith: dialWith}
 }
 
 type Snowflake struct {
 	mu       sync.Mutex // for the db field
 	db       *sql.DB
 	settings warehouses.SettingsLoader
+	dialWith warehouses.DialWith
 }
 
 type sfSettings struct {
@@ -78,8 +81,8 @@ func (warehouse *Snowflake) CheckReadOnlyAccess(ctx context.Context) error {
 		return snowflake(err)
 	}
 
-	// Retrieve the profiles table version.
-	profileSchemaVersion, err := warehouse.profilesVersion(ctx)
+	// Retrieve the greatest recorded profiles table version.
+	profileSchemaVersion, err := warehouse.maxProfilesVersion(ctx)
 	if err != nil {
 		return err
 	}
@@ -186,6 +189,166 @@ func (warehouse *Snowflake) Close() error {
 // corresponding to the given types.Type.
 func (warehouse *Snowflake) ColumnTypeDescription(t types.Type) (string, error) {
 	return typeToSnowflakeType(t), nil
+}
+
+// CountIdentities counts anonymous and recognized identities, including those
+// without a profile, from the provided pipelines, grouped by connection.
+func (warehouse *Snowflake) CountIdentities(ctx context.Context, pipelines []string) (*warehouses.IdentityCounts, error) {
+
+	const maxConnectionLength = 12
+	counts := &warehouses.IdentityCounts{
+		Anonymous:      make(map[string]int, len(pipelines)),
+		Recognized:     make(map[string]int, len(pipelines)),
+		WithoutProfile: make(map[string]int, len(pipelines)),
+	}
+	if len(pipelines) == 0 {
+		return counts, nil
+	}
+
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return nil, snowflake(err)
+	}
+
+	var query strings.Builder
+	query.WriteString(`
+WITH selected_identities AS (
+	SELECT
+		"_PIPELINE",
+		"_IS_ANONYMOUS",
+		"_IDENTITY_ID",
+		"_CONNECTION",
+		"_KPID",
+		MIN("_PIPELINE") OVER (PARTITION BY "_CONNECTION")
+			= MAX("_PIPELINE") OVER (PARTITION BY "_CONNECTION") AS single_pipeline
+	FROM "KRENALIS_IDENTITIES"
+	WHERE "_PIPELINE" IN (`)
+	args := make([]any, len(pipelines))
+	for i, pipeline := range pipelines {
+		if i > 0 {
+			query.WriteByte(',')
+		}
+		query.WriteByte('?')
+		args[i] = pipeline
+	}
+	query.WriteString(`)
+),
+product_identities AS (
+	SELECT
+		"_CONNECTION",
+		"_IS_ANONYMOUS",
+		"_IDENTITY_ID",
+		single_pipeline,
+		COUNT(*) AS row_count,
+		BOOLOR_AGG("_KPID" IS NOT NULL) AS assigned
+	FROM selected_identities
+	GROUP BY "_CONNECTION", "_IS_ANONYMOUS", "_IDENTITY_ID", single_pipeline
+)
+SELECT
+	LEFT("_CONNECTION", `)
+	query.WriteString(strconv.Itoa(maxConnectionLength + 1))
+	query.WriteString(`) AS "_CONNECTION",
+	SUM(CASE WHEN "_IS_ANONYMOUS"
+		THEN CASE WHEN single_pipeline THEN row_count ELSE 1 END
+		ELSE 0 END) AS anonymous_count,
+	SUM(CASE WHEN NOT "_IS_ANONYMOUS"
+		THEN CASE WHEN single_pipeline THEN row_count ELSE 1 END
+		ELSE 0 END) AS recognized_count,
+	COALESCE(COUNT_IF(NOT assigned), 0) AS without_profile_count
+FROM product_identities
+GROUP BY "_CONNECTION"
+LIMIT `)
+	query.WriteString(strconv.Itoa(len(pipelines) + 1))
+
+	rows, err := db.QueryContext(ctx, query.String(), args...)
+	if err != nil {
+		return nil, snowflake(err)
+	}
+	defer rows.Close()
+	rowCount := 0
+	for rows.Next() {
+		if rowCount == len(pipelines) {
+			return nil, errors.New("identity counts contain too many connections")
+		}
+		rowCount++
+		var connection string
+		var anonymous, recognized, withoutProfile int
+		if err := rows.Scan(&connection, &anonymous, &recognized, &withoutProfile); err != nil {
+			return nil, snowflake(err)
+		}
+		if len(connection) > maxConnectionLength {
+			return nil, errors.New("identity counts contain an oversized connection identifier")
+		}
+		if anonymous > 0 {
+			counts.Anonymous[connection] = anonymous
+		}
+		if recognized > 0 {
+			counts.Recognized[connection] = recognized
+		}
+		if withoutProfile > 0 {
+			counts.WithoutProfile[connection] = withoutProfile
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, snowflake(err)
+	}
+	if err := warehouses.ValidateIdentityCounts(counts); err != nil {
+		return nil, err
+	}
+
+	return counts, nil
+}
+
+// Counts returns one row count for each condition on the table.
+func (warehouse *Snowflake) Counts(ctx context.Context, table string, conditions []warehouses.Expr) ([]int, error) {
+
+	if conditions == nil {
+		conditions = []warehouses.Expr{nil}
+	}
+	if len(conditions) == 0 {
+		return nil, errors.New("conditions are empty")
+	}
+
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return nil, snowflake(err)
+	}
+	var b strings.Builder
+	b.WriteString("SELECT ")
+	for i, condition := range conditions {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		if condition == nil {
+			b.WriteString("COUNT(*)")
+			continue
+		}
+		b.WriteString("COUNT(CASE WHEN ")
+		err = renderExpr(&b, condition)
+		if err != nil {
+			return nil, fmt.Errorf("cannot build count condition: %s", err)
+		}
+		b.WriteString(" THEN 1 END)")
+	}
+	b.WriteString(" FROM ")
+	b.WriteString(quoteIdent(table))
+
+	counts := make([]int, len(conditions))
+	values := make([]any, len(counts))
+	for i := range counts {
+		values[i] = &counts[i]
+	}
+	err = db.QueryRowContext(ctx, b.String()).Scan(values...)
+	if err != nil {
+		return nil, snowflake(err)
+	}
+	for _, count := range counts {
+		if count < 0 || count > math.MaxInt32 {
+			return nil, fmt.Errorf("warehouse returned count outside the supported range: %d", count)
+		}
+	}
+
+	return counts, nil
 }
 
 // Delete deletes rows from the specified table that match the provided where
@@ -459,13 +622,17 @@ func (warehouse *Snowflake) openDB(ctx context.Context) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	db := sql.OpenDB(connector(&s))
+	db := sql.OpenDB(connector(&s, warehouse.dialWith))
 	warehouse.db = db
 	return db, nil
 }
 
-// profilesVersion returns the version of the "KRENALIS_PROFILES" table.
-func (warehouse *Snowflake) profilesVersion(ctx context.Context) (int, error) {
+// maxProfilesVersion returns the highest recorded version of the profiles
+// table.
+//
+// The returned version is in the range [0, math.MaxInt32]. Zero represents the
+// initial version and is returned when no version has been recorded.
+func (warehouse *Snowflake) maxProfilesVersion(ctx context.Context) (int, error) {
 	db, err := warehouse.openDB(ctx)
 	if err != nil {
 		return 0, snowflake(err)
@@ -475,7 +642,34 @@ func (warehouse *Snowflake) profilesVersion(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, snowflake(err)
 	}
+	if v < 0 || v > math.MaxInt32 {
+		return 0, fmt.Errorf("warehouse returned an invalid profile table version")
+	}
 	return v, nil
+}
+
+// publishedProfilesVersion returns the highest successfully published version
+// of the profiles table.
+//
+// The returned version is in the range [0, math.MaxInt32]. Zero represents the
+// initial version and is returned when no version has been published.
+func (warehouse *Snowflake) publishedProfilesVersion(ctx context.Context) (int, error) {
+	db, err := warehouse.openDB(ctx)
+	if err != nil {
+		return 0, snowflake(err)
+	}
+	var version int
+	err = db.QueryRowContext(ctx, `SELECT COALESCE(MAX("V"."VERSION"), 0)
+		FROM "KRENALIS_PROFILE_SCHEMA_VERSIONS" "V"
+		JOIN "KRENALIS_SYSTEM_OPERATIONS" "O" ON "O"."ID" = "V"."OPERATION"
+		WHERE "O"."COMPLETED_AT" IS NOT NULL AND "O"."ERROR" = ''`).Scan(&version)
+	if err != nil {
+		return 0, snowflake(err)
+	}
+	if version < 0 || version > math.MaxInt32 {
+		return 0, fmt.Errorf("warehouse returned an invalid published profile table version")
+	}
+	return version, nil
 }
 
 // accountFormat is the format of the account identifier in the settings.
@@ -535,8 +729,9 @@ func validateSettings(s *sfSettings) error {
 
 var falseStrPtr = new("false")
 
-// connector returns a driver.Connector from the settings.
-func connector(s *sfSettings) driver.Connector {
+// connector returns a driver.Connector from the settings, whose connections are
+// established dialing with dialWith.
+func connector(s *sfSettings, dialWith warehouses.DialWith) driver.Connector {
 	account := s.Account
 	if i := strings.IndexByte(account, '.'); i > 0 {
 		account = account[:i] + "-" + account[i+1:]
@@ -551,6 +746,7 @@ func connector(s *sfSettings) driver.Connector {
 		Params: map[string]*string{
 			"CLIENT_TELEMETRY_ENABLED": falseStrPtr,
 		},
+		WrapDialContext: dialWith,
 	}
 	if s.OIDCToken != "" {
 		cfg.Authenticator = gosnowflake.AuthTypeWorkloadIdentityFederation

@@ -12,8 +12,10 @@ import (
 	"math"
 	"slices"
 	"time"
+	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/core/internal/dialer"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -39,7 +41,8 @@ type fileStorageAbsolutePathConnection interface {
 type fileStorageReaderConnection interface {
 	// Reader opens a file and returns a ReadCloser from which to read its content.
 	// name is the path name of the file to read and the returned time.Time is the
-	// last update time of the file.
+	// last update time of the file. name has already been validated by
+	// AbsolutePath.
 	//
 	// The use of the provided context is extended to the Read method calls.
 	// After the context is canceled, any subsequent Read invocations will result in
@@ -49,7 +52,8 @@ type fileStorageReaderConnection interface {
 
 type fileStorageWriteConnection interface {
 	// Write writes the data read from r into the file with the given path name.
-	// contentType is the file's content type.
+	// contentType is the file's content type. name has already been validated by
+	// AbsolutePath.
 	Write(ctx context.Context, r io.Reader, name, contentType string) error
 }
 
@@ -61,8 +65,11 @@ func (c *Connections) FileStorage(storage *state.Connection) *FileStorage {
 		state:     c.state,
 		storage:   storage,
 	}
+	organization := storage.Organization()
 	s.inner, s.err = connectors.RegisteredFileStorage(storage.Connector().Code).New(&connectors.FileStorageEnv{
 		Settings: newConnectionSettingStore(c.state, storage),
+		Dial:     dialer.Dial(organization.ID),
+		DialWith: dialer.DialWith(organization.ID),
 	})
 	s.err = connectorError(s.err)
 	return s
@@ -74,9 +81,11 @@ func (c *Connections) FileStorage(storage *state.Connection) *FileStorage {
 //
 // If nameReplacer is not nil, then the placeholders in name are replaced using
 // it; in this case, a *PlaceholderError error may be returned in case of an
-// error with placeholders.
+// error with placeholders, and an InvalidPathError if the resulting name is
+// longer than 1024 runes.
 //
-// If the connector returns an error, it returns an *UnavailableError.
+// If the connector returns an error or a path that is not valid UTF-8, it
+// returns an *UnavailableError.
 func (storage *FileStorage) AbsolutePath(ctx context.Context, name string, nameReplacer PlaceholderReplacer) (string, error) {
 	if storage.err != nil {
 		return "", storage.err
@@ -87,9 +96,18 @@ func (storage *FileStorage) AbsolutePath(ctx context.Context, name string, nameR
 		if err != nil {
 			return "", err
 		}
+		if utf8.RuneCountInString(name) > 1024 {
+			return "", connectors.InvalidPathErrorf("path is longer than 1024 runes after placeholder replacement")
+		}
 	}
 	path, err := storage.inner.(fileStorageAbsolutePathConnection).AbsolutePath(ctx, name)
-	return path, connectorError(err)
+	if err != nil {
+		return "", connectorError(err)
+	}
+	if !utf8.ValidString(path) {
+		return "", &UnavailableError{Err: fmt.Errorf("connector %s returned a non-UTF-8 absolute path", storage.connector)}
+	}
+	return path, nil
 }
 
 // Connector returns the name of the file storage connector.
@@ -118,6 +136,8 @@ func (storage *FileStorage) Connector() string {
 // did not prevent the file from being processed. These issues are reported as a
 // slice of strings. The slice will be nil if there are no issues.
 //
+// If name is not valid for the storage, it returns a
+// *connectors.InvalidPathError.
 // If the settings are invalid, it returns a *connectors.InvalidSettingsError. If
 // the file has no columns, it returns ErrNoColumnsFound. If the file does not
 // have the specified sheet, it returns connectors.ErrSheetNotExist. If the
@@ -128,6 +148,10 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 	}
 	if limit < 0 {
 		limit = math.MaxInt
+	}
+	_, err = storage.inner.(fileStorageAbsolutePathConnection).AbsolutePath(ctx, name)
+	if err != nil {
+		return nil, nil, nil, connectorError(err)
 	}
 	s := newCompressedStorage(storage.inner, compression)
 	r, storageTimestamp, err := s.Reader(ctx, name)
@@ -157,16 +181,15 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 	rw := newRecordWriter(file.Code, nil, storageTimestamp, &file.TimeLayouts, time.Time{}, limit)
 	var records []map[string]any
 	var recordErr error
-	rw.setYieldFunc(func(record Record) bool {
+	rw.yield = func(record Record) bool {
 		if record.Err != nil {
 			recordErr = record.Err
 			return false
 		}
 		records = append(records, record.Attributes)
 		return true
-	})
+	}
 	err = readFromFileConnector(ctx, _file, &r, sheet, rw)
-	rw.close()
 	if err != nil && err != errRecordStop {
 		return nil, nil, nil, connectorError(err)
 	}
@@ -195,6 +218,8 @@ func (storage *FileStorage) Read(ctx context.Context, file *state.Connector, nam
 // settings, if the file connector has settings, represents its settings.
 // compression indicates if the file is compressed and how.
 //
+// If name is not valid for the storage, it returns a
+// *connectors.InvalidPathError.
 // If the settings are invalid, it returns a *connectors.InvalidSettingsError.
 // If the connector returns an error, it returns an *UnavailableError. This
 // method panics if the file connector does not support sheets.
@@ -215,6 +240,10 @@ func (storage *FileStorage) Sheets(ctx context.Context, file *state.Connector, n
 	}
 
 	sheetsFile := _file.(fileSheetConnection)
+	_, err = storage.inner.(fileStorageAbsolutePathConnection).AbsolutePath(ctx, name)
+	if err != nil {
+		return nil, connectorError(err)
+	}
 	s := newCompressedStorage(storage.inner, compression)
 	r, _, err := s.Reader(ctx, name)
 	if err != nil {

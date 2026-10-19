@@ -42,6 +42,7 @@ type FunctionProvider interface {
 
 	// Call calls the function with the given identifier and version for each record
 	// updating its Attributes field with the result of each invocation.
+	// organization is the ID of the organization the function belongs to.
 	//
 	// Before transformation, record attributes must conform to inSchema.
 	// After transformation, they should conform to outSchema, unless an error
@@ -52,7 +53,7 @@ type FunctionProvider interface {
 	// error), it returns a FunctionExecError.
 	// Even if the call succeeds, individual records may still encounter errors,
 	// which are stored in the Err field of each record.
-	Call(ctx context.Context, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []Record) error
+	Call(ctx context.Context, organization, id, version string, inSchema, outSchema types.Type, preserveJSON bool, records []Record) error
 
 	// Close closes the function. When Close is called, no other calls to the
 	// function provider's methods are in progress and no more will be made.
@@ -60,11 +61,17 @@ type FunctionProvider interface {
 
 	// Create creates a new function with the given name, language, and source and
 	// returns its identifier and version.
-	Create(ctx context.Context, name string, language state.Language, source string) (string, string, error)
+	// organization is the ID of the organization the function belongs to.
+	Create(ctx context.Context, organization, name string, language state.Language, source string) (string, string, error)
 
 	// Delete deletes the function with the given identifier.
+	// organization is the ID of the organization the function belongs to.
 	// If a function with the given identifier does not exist, it does nothing.
-	Delete(ctx context.Context, id string) error
+	//
+	// A function outlives its organization, as it is deleted by the pipeline
+	// cleaner after the pipelines using it have been deleted, so organization is
+	// empty when the organization has been deleted in the meantime.
+	Delete(ctx context.Context, organization, id string) error
 
 	// SupportLanguage reports whether language is supported as a language.
 	// It panics if language is not valid.
@@ -72,8 +79,9 @@ type FunctionProvider interface {
 
 	// Update updates the source of the function with the given identifier and
 	// returns a new version, which has a length in the range [1, 128].
+	// organization is the ID of the organization the function belongs to.
 	// If the function does not exist, it returns the ErrFunctionNotExist error.
-	Update(ctx context.Context, id, source string) (string, error)
+	Update(ctx context.Context, organization, id, source string) (string, error)
 }
 
 // ValidFunctionName reports whether name is a valid function name.

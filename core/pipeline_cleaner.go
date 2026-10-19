@@ -7,12 +7,10 @@ package core
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/db"
@@ -20,6 +18,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/transformers"
 	"github.com/krenalis/krenalis/tools/backoff"
+	"github.com/krenalis/krenalis/tools/errors"
 )
 
 // backoffBase is the base used for the backoff.
@@ -46,10 +45,12 @@ type pipelineCleaner struct {
 	workspaces       sync.Map // map of workspaces indicating if an operation is in progress
 	pipelines        sync.Map // map of pipelines indicating if an operation is in progress
 	close            struct {
-		ctx    context.Context
-		cancel context.CancelFunc
-		atomic.Bool
-		sync.WaitGroup
+		ctx        context.Context
+		cancel     context.CancelFunc
+		mu         sync.Mutex
+		closed     bool // protected by mu
+		operations sync.WaitGroup
+		goroutines sync.WaitGroup
 	}
 }
 
@@ -84,53 +85,60 @@ func newPipelineCleaner(core *Core, provider transformers.FunctionProvider) *pip
 	}
 	core.state.Unfreeze()
 	for _, ws := range workspaces {
-		go c.purgeWorkspace(ws)
+		c.start(func() { c.purgeWorkspace(ws) })
 	}
 	for _, pipeline := range pipelines {
-		go c.unsetIdentityProperties(pipeline)
+		c.start(func() { c.unsetIdentityProperties(pipeline) })
 	}
 
 	// Start a goroutine to delete functions that have been discontinued.
 	if provider != nil {
-		go c.deleteDiscontinuedFunctions()
+		c.start(c.deleteDiscontinuedFunctions)
 	}
 
 	// Start a goroutine to terminate orphaned pipeline runs.
-	go c.terminateOrphanedRuns()
+	c.start(c.terminateOrphanedRuns)
 
 	return c
 }
 
 // Close closes the pipeline cleaner, ensuring the completion of all ongoing
-// operations. If the context is canceled, it interrupts ongoing operations and
-// returns. If p is already closed, it does nothing and returns immediately.
+// operations and the exit of its goroutines. If ctx is canceled, it interrupts
+// ongoing operations. Repeated calls return immediately.
 func (c *pipelineCleaner) Close(ctx context.Context) {
-	if c.close.Swap(true) {
+	c.close.mu.Lock()
+	if c.close.closed {
+		c.close.mu.Unlock()
 		return
 	}
+	c.close.closed = true
+	c.close.mu.Unlock()
 	// Cancel c.close.ctx if ctx is canceled.
-	stop := context.AfterFunc(ctx, func() { c.close.cancel() })
+	stop := context.AfterFunc(ctx, c.close.cancel)
 	defer stop()
-	// Waits for the ongoing operations to finish.
-	c.close.Wait()
+	// Let ongoing operations finish before stopping their goroutines.
+	c.close.operations.Wait()
+	c.close.cancel()
+	c.close.goroutines.Wait()
 }
 
-// complete calls f, ensuring it completes even if c is closed.
-// If c is already closed, it does nothing.
-func (c *pipelineCleaner) complete(f func() error) error {
-	c.close.Add(1)
-	if c.close.Load() {
-		c.close.Done()
-		return nil
+// complete calls f unless c is closing or closed, and reports whether f ran.
+// Close waits for any admitted call to finish.
+func (c *pipelineCleaner) complete(f func() error) (bool, error) {
+	c.close.mu.Lock()
+	if c.close.closed {
+		c.close.mu.Unlock()
+		return false, nil
 	}
-	err := f()
-	c.close.Done()
-	return err
+	c.close.operations.Add(1)
+	c.close.mu.Unlock()
+	defer c.close.operations.Done()
+	return true, f()
 }
 
 // deleteDiscontinuedFunctions starts the deletion task for function that have
 // been discontinued and are no longer in use by any running pipelines.
-// It must be called in its own goroutine.
+// It must be started with c.start so that Close waits for its exit.
 //
 // A function is considered discontinued if:
 //
@@ -138,9 +146,15 @@ func (c *pipelineCleaner) complete(f func() error) error {
 //   - The transformation type has changed from function-based to mapping-based.
 //   - The function has switched between JavaScript and Python.
 func (c *pipelineCleaner) deleteDiscontinuedFunctions() {
-	var ids, deleted []string
+	type function struct {
+		id           string
+		organization string
+	}
+	var functions []function
+	var deleted []string
 	var d = 2 * time.Second // initial waiting time.
 	timer := time.NewTimer(d)
+	defer timer.Stop()
 	for {
 		select {
 		case <-c.close.ctx.Done():
@@ -148,10 +162,11 @@ func (c *pipelineCleaner) deleteDiscontinuedFunctions() {
 		case <-timer.C:
 		}
 		d = functionDeletionInterval
-		err := c.complete(func() error {
+		ran, err := c.complete(func() error {
 			// Read the functions. These are the discontinued ones from over ten
-			// minutes ago, with no pipelines still using them.
-			rows, err := c.core.db.Query(c.close.ctx, "SELECT f.id\n"+
+			// minutes ago, with no pipelines still using them. The organization
+			// is read as empty when it has been deleted in the meantime.
+			rows, err := c.core.db.Query(c.close.ctx, "SELECT f.id, COALESCE(f.organization, '')\n"+
 				"FROM discontinued_functions AS f\n"+
 				"LEFT JOIN pipelines_runs AS e ON f.id = e.function AND e.end_time IS NULL\n"+
 				"WHERE f.discontinued_at < $1 AND e.id IS NULL",
@@ -159,28 +174,28 @@ func (c *pipelineCleaner) deleteDiscontinuedFunctions() {
 			if err != nil {
 				return err
 			}
-			ids = ids[:0]
+			functions = functions[:0]
 			for rows.Next() {
-				var id string
-				if err := rows.Scan(&id); err != nil {
+				var fn function
+				if err := rows.Scan(&fn.id, &fn.organization); err != nil {
 					break
 				}
-				ids = append(ids, id)
+				functions = append(functions, fn)
 			}
 			if err = rows.Err(); err != nil {
 				return err
 			}
-			if len(ids) == 0 {
+			if len(functions) == 0 {
 				return nil
 			}
 			// Delete the functions.
 			deleted = deleted[:0]
-			for _, id := range ids {
-				err = c.functionProvider.Delete(c.close.ctx, id)
+			for _, fn := range functions {
+				err = c.functionProvider.Delete(c.close.ctx, fn.organization, fn.id)
 				if err != nil {
-					return fmt.Errorf("deleting function %q: %s", id, err)
+					return fmt.Errorf("deleting function %q: %s", fn.id, err)
 				}
-				deleted = append(deleted, id)
+				deleted = append(deleted, fn.id)
 			}
 			if len(deleted) == 0 {
 				return nil
@@ -197,6 +212,9 @@ func (c *pipelineCleaner) deleteDiscontinuedFunctions() {
 			}
 			return err
 		})
+		if !ran {
+			return
+		}
 		if err != nil {
 			slog.Error("core: an error occurred deleting discontinued functions", "error", err)
 		}
@@ -216,7 +234,7 @@ func (c *pipelineCleaner) onDeleteConnection(n state.DeleteConnection) {
 	}
 	for _, pipeline := range connection.Pipelines() {
 		if pipeline.Target == state.TargetUser {
-			go c.purgeWorkspace(ws.ID)
+			c.start(func() { c.purgeWorkspace(ws.ID) })
 			return
 		}
 	}
@@ -233,7 +251,7 @@ func (c *pipelineCleaner) onDeletePipeline(n state.DeletePipeline) {
 	if ws.Warehouse.Mode != state.Normal {
 		return
 	}
-	go c.purgeWorkspace(ws.ID)
+	c.start(func() { c.purgeWorkspace(ws.ID) })
 }
 
 // onUpdatePipeline is called when a pipeline is updated.
@@ -246,7 +264,7 @@ func (c *pipelineCleaner) onUpdatePipeline(n state.UpdatePipeline) {
 	if ws.Warehouse.Mode != state.Normal {
 		return
 	}
-	go c.unsetIdentityProperties(n.ID)
+	c.start(func() { c.unsetIdentityProperties(n.ID) })
 }
 
 // onUpdateWarehouse is called when a warehouse is updated.
@@ -257,7 +275,7 @@ func (c *pipelineCleaner) onUpdateWarehouse(n state.UpdateWarehouse) {
 	if ws, _ := c.core.state.Workspace(n.Workspace); ws.NumPipelinesToPurge() == 0 {
 		return
 	}
-	go c.purgeWorkspace(n.Workspace)
+	c.start(func() { c.purgeWorkspace(n.Workspace) })
 }
 
 // onUpdateWarehouseMode is called when the mode of a warehouse is updated.
@@ -267,12 +285,12 @@ func (c *pipelineCleaner) onUpdateWarehouseMode(n state.UpdateWarehouseMode) {
 	}
 	ws, _ := c.core.state.Workspace(n.Workspace)
 	if ws.NumPipelinesToPurge() > 0 {
-		go c.purgeWorkspace(n.Workspace)
+		c.start(func() { c.purgeWorkspace(n.Workspace) })
 	}
 	for _, connection := range ws.Connections() {
 		for _, pipeline := range connection.Pipelines() {
 			if paths := pipeline.PropertiesToUnset(); paths != nil {
-				go c.unsetIdentityProperties(pipeline.ID)
+				c.start(func() { c.unsetIdentityProperties(pipeline.ID) })
 			}
 		}
 	}
@@ -302,7 +320,7 @@ func (c *pipelineCleaner) purgeWorkspace(id string) {
 		if len(pipelines) == 0 {
 			return
 		}
-		err := c.complete(func() error {
+		ran, err := c.complete(func() error {
 
 			store, ok := c.core.datastore.Store(id)
 			if !ok {
@@ -348,21 +366,34 @@ func (c *pipelineCleaner) purgeWorkspace(id string) {
 
 			return nil
 		})
+		if !ran {
+			return
+		}
 		if err != nil {
 			slog.Error(err.Error(), "workspace", ws.ID)
-		} else {
-			// Try one last time to check whether any pipelines were added in the meantime and still need purging.
-			// Note that we pass 1ns to SetNextWaitTime because it does not accept 0ns.
-			bo.SetNextWaitTime(1)
+			continue
 		}
+		// Try one last time to check whether any pipelines were added in the meantime and still need purging.
+		// Note that we pass 1ns to SetNextWaitTime because it does not accept 0ns.
+		bo.SetNextWaitTime(1)
 
 	}
 
 }
 
+// start starts f in a tracked goroutine unless c is closing or closed.
+func (c *pipelineCleaner) start(f func()) {
+	c.close.mu.Lock()
+	defer c.close.mu.Unlock()
+	if c.close.closed {
+		return
+	}
+	c.close.goroutines.Go(f)
+}
+
 // terminateOrphanedRuns starts a termination task for pipeline runs whose node
 // is no longer running or has become unresponsive.
-// It must be called in its own goroutine.
+// It must be started with c.start so that Close waits for its exit.
 //
 // A pipeline run is considered orphaned if it has not yet been terminated and
 // its last ping time is older than 15 seconds.
@@ -370,6 +401,7 @@ func (c *pipelineCleaner) terminateOrphanedRuns() {
 	reason := newPipelineError(metrics.ReceiveStep, errors.New("pipeline has been terminated because the node became unresponsive"))
 	ctx := c.close.ctx
 	tick := time.NewTicker(15 * time.Second)
+	defer tick.Stop()
 	var ending struct {
 		sync.Mutex
 		runs map[string]struct{}
@@ -386,8 +418,8 @@ func (c *pipelineCleaner) terminateOrphanedRuns() {
 			pingTime, func(rows *db.Rows) error {
 				ending.Lock()
 				defer ending.Unlock()
-				var id, pipelineID string
 				for rows.Next() {
+					var id, pipelineID string
 					if err := rows.Scan(&id, &pipelineID); err != nil {
 						return err
 					}
@@ -400,17 +432,19 @@ func (c *pipelineCleaner) terminateOrphanedRuns() {
 						continue
 					}
 					ending.runs[id] = struct{}{}
-					go func(id string) {
-						_ = c.core.endLiveRun(ctx, run, reason)
+					c.start(func() {
+						_, _ = c.complete(func() error { return c.core.endLiveRun(ctx, run, reason) })
 						ending.Lock()
 						delete(ending.runs, id)
 						ending.Unlock()
-					}(id)
+					})
 				}
 				return nil
 			})
-		if err != nil && ctx.Err() == nil {
-			slog.Error("core: cannot terminate orphaned pipeline runs", "error", err)
+		if err != nil {
+			if ctx.Err() == nil {
+				slog.Error("core: cannot terminate orphaned pipeline runs", "error", err)
+			}
 		}
 	}
 }
@@ -441,7 +475,7 @@ func (c *pipelineCleaner) unsetIdentityProperties(id string) {
 		}
 
 		// Unset the properties.
-		err := c.complete(func() error {
+		ran, err := c.complete(func() error {
 
 			store, ok := c.core.datastore.Store(pipeline.Connection().Workspace().ID)
 			if !ok {
@@ -483,9 +517,13 @@ func (c *pipelineCleaner) unsetIdentityProperties(id string) {
 
 			return err
 		})
-		if err == nil {
-			break
+		if !ran {
+			return
 		}
+		if err != nil {
+			continue
+		}
+		break
 
 	}
 

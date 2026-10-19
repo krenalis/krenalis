@@ -8,6 +8,7 @@ package natsopts
 
 import (
 	"crypto/ed25519"
+	"time"
 
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/nats-io/nkeys"
@@ -26,7 +27,18 @@ type Options struct {
 	Replicas    int // 0-5
 	Storage     StorageType
 	Compression StoreCompression
+
+	// Consumer options.
+	AckWait time.Duration
 }
+
+const (
+	// MinAckWait is the minimum supported JetStream acknowledgment timeout.
+	MinAckWait = time.Second
+	// DefaultAckWait is the JetStream acknowledgment timeout used when none is
+	// configured.
+	DefaultAckWait = 30 * time.Second
+)
 
 type StorageType = jetstream.StorageType
 

@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useContext, useMemo, useRef, ReactNode } from 'react';
 import './ConnectionMetrics.css';
-import 'react-date-range/dist/styles.css';
-import 'react-date-range/dist/theme/default.css';
 import Grid from '../../base/Grid/Grid';
 import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
@@ -14,21 +12,27 @@ import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlButtonGroup from '@shoelace-style/shoelace/dist/react/button-group/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import { DateRange } from 'react-date-range';
 import { PipelineError, PipelineErrorsResponse } from '../../../lib/api/types/responses';
 import { PipelineMetrics, PipelineTarget } from '../../../lib/api/types/pipeline';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import TransformedConnection from '../../../lib/core/connection';
 import {
+	SHOW_EXPORT_PROFILE_CONSENT_METRICS,
+	hasEventConsentStep,
+	hasExportProfileConsentStep,
 	hasFilterStep,
+	hasImportProfileConsentStep,
 	hasInputValidationStep,
-	hasRequiredConsents,
 	hasTransformations,
 } from '../../../lib/core/pipeline';
 import { Link } from '../../base/Link/Link';
 import considerAsUTC from '../../../utils/considerUTC';
 import { RelativeTime } from '../../base/RelativeTime/RelativeTime';
 import { formatNumber } from '../../../utils/formatNumber';
+import SegmentedDateRangeControl, {
+	SegmentedDateRangePreset,
+	SegmentedDateRangeSelection,
+} from '../../base/SegmentedDateRangeControl/SegmentedDateRangeControl';
 
 interface PipelineMetricsPoint {
 	time: string;
@@ -45,19 +49,28 @@ interface FunnelPoint {
 type FunnelData = FunnelPoint[];
 
 type metricsRange = 'last15Minutes' | 'last24Hours' | 'last7Days' | 'Custom';
+type MetricsPreset = Exclude<metricsRange, 'Custom'>;
 
 type StepIdentifier =
 	| 'RECEIVE'
 	| 'INPUT_VALIDATION'
 	| 'FILTER'
-	| 'CONSENT'
+	| 'EVENT_CONSENT'
+	| 'EXPORT_PROFILE_CONSENT'
 	| 'TRANSFORMATION'
 	| 'OUTPUT_VALIDATION'
+	| 'IMPORT_PROFILE_CONSENT'
 	| 'FINALIZE';
 
 const MINUTES_COUNT = 15;
 const HOURS_COUNT = 24;
 const DAYS_COUNT = 7;
+
+const METRICS_RANGE_PRESETS: SegmentedDateRangePreset<MetricsPreset>[] = [
+	{ value: 'last15Minutes', label: 'Last 15 minutes' },
+	{ value: 'last24Hours', label: 'Last 24 hours' },
+	{ value: 'last7Days', label: 'Last 7 days' },
+];
 
 const ERRORS_COLUMNS: GridColumn[] = [
 	{ name: 'Pipeline' },
@@ -71,15 +84,19 @@ const STEP_IDENTIFIERS: StepIdentifier[] = [
 	'RECEIVE',
 	'INPUT_VALIDATION',
 	'FILTER',
-	'CONSENT',
+	'EVENT_CONSENT',
+	'EXPORT_PROFILE_CONSENT',
 	'TRANSFORMATION',
 	'OUTPUT_VALIDATION',
+	'IMPORT_PROFILE_CONSENT',
 	'FINALIZE',
 ];
 
 const STEP_COUNT = STEP_IDENTIFIERS.length;
 const FILTER_INDEX = STEP_IDENTIFIERS.indexOf('FILTER');
-const CONSENT_INDEX = STEP_IDENTIFIERS.indexOf('CONSENT');
+const EVENT_CONSENT_INDEX = STEP_IDENTIFIERS.indexOf('EVENT_CONSENT');
+const EXPORT_PROFILE_CONSENT_INDEX = STEP_IDENTIFIERS.indexOf('EXPORT_PROFILE_CONSENT');
+const IMPORT_PROFILE_CONSENT_INDEX = STEP_IDENTIFIERS.indexOf('IMPORT_PROFILE_CONSENT');
 const FINALIZE_INDEX = STEP_IDENTIFIERS.indexOf('FINALIZE');
 
 const ConnectionMetrics = () => {
@@ -101,8 +118,7 @@ const ConnectionMetrics = () => {
 					: 'User',
 	);
 	const [selectedMetricsRange, setSelectedMetricsRange] = useState<metricsRange>('last15Minutes');
-	const [isCustomMetricsRangePickerOpen, setIsCustomMetricsRangePickerOpen] = useState<boolean>(false);
-	const [customMetricsRange, setCustomMetricsRange] = useState([
+	const [customMetricsRange, setCustomMetricsRange] = useState<SegmentedDateRangeSelection[]>([
 		{
 			startDate: new Date(),
 			endDate: new Date(),
@@ -142,9 +158,11 @@ const ConnectionMetrics = () => {
 		RECEIVE: receiveStepTerm,
 		INPUT_VALIDATION: 'Check user data',
 		FILTER: 'Apply filter',
-		CONSENT: 'Check consent',
+		EVENT_CONSENT: 'Check consent',
+		EXPORT_PROFILE_CONSENT: 'Check consent',
 		TRANSFORMATION: 'Transform',
 		OUTPUT_VALIDATION: 'Validate',
+		IMPORT_PROFILE_CONSENT: 'Check consent',
 		FINALIZE: finalizeStepTerm,
 	};
 
@@ -177,11 +195,15 @@ const ConnectionMetrics = () => {
 					return hasInputValidationStep(c, selectedTarget);
 				case 'FILTER':
 					return hasFilterStep(c, selectedTarget);
-				case 'CONSENT':
-					return hasRequiredConsents(c, selectedTarget);
+				case 'EVENT_CONSENT':
+					return hasEventConsentStep(c, selectedTarget);
+				case 'EXPORT_PROFILE_CONSENT':
+					return SHOW_EXPORT_PROFILE_CONSENT_METRICS && hasExportProfileConsentStep(c, selectedTarget);
 				case 'TRANSFORMATION':
 				case 'OUTPUT_VALIDATION':
 					return hasTransformations(c, selectedTarget);
+				case 'IMPORT_PROFILE_CONSENT':
+					return hasImportProfileConsentStep(c, selectedTarget);
 				default:
 					return true;
 			}
@@ -205,7 +227,11 @@ const ConnectionMetrics = () => {
 		for (let [i, s] of steps.entries()) {
 			// Filtered and consent-discarded events are dropped intentionally,
 			// so they are styled as discarded rather than failed.
-			const isDiscardedStep = s === 'FILTER' || s === 'CONSENT';
+			const isDiscardedStep =
+				s === 'FILTER' ||
+				s === 'EVENT_CONSENT' ||
+				s === 'EXPORT_PROFILE_CONSENT' ||
+				s === 'IMPORT_PROFILE_CONSENT';
 
 			const identifierIndex = STEP_IDENTIFIERS.findIndex((identifier) => identifier === s);
 			const passedData = data[identifierIndex].passed;
@@ -417,22 +443,6 @@ const ConnectionMetrics = () => {
 		};
 	}, [c, selectedTarget, selectedMetricsRange, customMetricsRange, selectedPipeline]);
 
-	useEffect(() => {
-		const handleCustomRangePickerClick = (e) => {
-			const isInRangePicker = e.target.closest('.connection-metrics__tabs-date-range-picker') != null;
-			if (!isInRangePicker) {
-				const isInRangePickerSelector = e.target.closest('.connection-metrics__tabs-date-range') != null;
-				if (!isInRangePickerSelector) {
-					setIsCustomMetricsRangePickerOpen(false);
-				}
-			}
-		};
-		window.addEventListener('click', handleCustomRangePickerClick);
-		() => {
-			window.removeEventListener('click', handleCustomRangePickerClick);
-		};
-	}, []);
-
 	const onChangeSelectedTarget = (target: PipelineTarget) => {
 		const isAlreadySelected = selectedTarget === target;
 		if (isAlreadySelected) {
@@ -447,27 +457,15 @@ const ConnectionMetrics = () => {
 		setSelectedPipeline(toRestore);
 	};
 
-	const onSelectLast15Minutes = () => {
-		setSelectedMetricsRange('last15Minutes');
-	};
-
-	const onSelectLast24Hours = () => {
-		setSelectedMetricsRange('last24Hours');
-	};
-
-	const onSelectLast7Days = () => {
-		setSelectedMetricsRange('last7Days');
-	};
-
-	const onSelectCustom = () => {
-		setIsCustomMetricsRangePickerOpen(!isCustomMetricsRangePickerOpen);
-	};
-
-	const onChangeCustomMetricsRange = (selection) => {
+	const onChangeCustomMetricsRange = (selection: SegmentedDateRangeSelection[]) => {
 		// the dates must be considered UTC.
-		selection[0].startDate = considerAsUTC(selection[0].startDate);
-		selection[0].endDate = considerAsUTC(selection[0].endDate);
-		setCustomMetricsRange(selection);
+		setCustomMetricsRange(
+			selection.map((range) => ({
+				...range,
+				startDate: considerAsUTC(range.startDate),
+				endDate: considerAsUTC(range.endDate),
+			})),
+		);
 		setSelectedMetricsRange('Custom');
 	};
 
@@ -523,53 +521,13 @@ const ConnectionMetrics = () => {
 			{supportedTargets.current.length > 0 ? (
 				<>
 					<div className='connection-metrics__tabs'>
-						<SlButtonGroup>
-							<SlButton
-								variant={selectedMetricsRange === 'last15Minutes' ? 'primary' : 'default'}
-								onClick={onSelectLast15Minutes}
-								size='small'
-							>
-								Last 15 minutes
-							</SlButton>
-							<SlButton
-								variant={selectedMetricsRange === 'last24Hours' ? 'primary' : 'default'}
-								onClick={onSelectLast24Hours}
-								size='small'
-							>
-								Last 24 hours
-							</SlButton>
-							<SlButton
-								variant={selectedMetricsRange === 'last7Days' ? 'primary' : 'default'}
-								onClick={onSelectLast7Days}
-								size='small'
-							>
-								Last 7 days
-							</SlButton>
-							<div className='connection-metrics__tabs-date-range'>
-								<SlButton
-									variant={selectedMetricsRange === 'Custom' ? 'primary' : 'default'}
-									onClick={onSelectCustom}
-									size='small'
-								>
-									{selectedMetricsRange === 'Custom'
-										? `${customMetricsRange[0].startDate.toLocaleDateString()} - ${customMetricsRange[0].endDate.toLocaleDateString()}`
-										: 'Custom range'}
-								</SlButton>
-								<div
-									className={`connection-metrics__tabs-date-range-picker${isCustomMetricsRangePickerOpen ? ' connection-metrics__tabs-date-range-picker--open' : ''}`}
-								>
-									<DateRange
-										editableDateInputs={true}
-										onChange={(item) => onChangeCustomMetricsRange([item.selection])}
-										showSelectionPreview={true}
-										moveRangeOnFirstSelection={false}
-										months={2}
-										ranges={customMetricsRange}
-										direction='horizontal'
-									/>
-								</div>
-							</div>
-						</SlButtonGroup>
+						<SegmentedDateRangeControl<MetricsPreset>
+							presets={METRICS_RANGE_PRESETS}
+							value={selectedMetricsRange}
+							customRange={customMetricsRange}
+							onPresetChange={setSelectedMetricsRange}
+							onCustomRangeChange={onChangeCustomMetricsRange}
+						/>
 						<SlButtonGroup>
 							<SlButton
 								variant={isUsersSelected ? 'default' : 'primary'}
@@ -659,45 +617,50 @@ const ConnectionMetrics = () => {
 					</div>
 					<div className='connection-metrics__funnel'>
 						<div className='connection-metrics__funnel-heading'>Pipeline</div>
-						<div className='connection-metrics__funnel-content'>
-							<div className='connection-metrics__funnel-passed'>
-								<div className='connection-metrics__funnel-initial' id={`funnel-circle-initial`}>
-									{isUsersSelected
-										? formatNumber(userFunnelData[0].passed + userFunnelData[0].failed)
-										: formatNumber(eventFunnelData[0].passed + eventFunnelData[0].failed)}
-								</div>
-								{Array.from(steps.entries()).map(([i, s]) => {
-									return (
-										<div className='connection-metrics__funnel-step' key={`funnel-passed-${i}`}>
-											<div className='connection-metrics__funnel-title'>
-												{stepTermByIdentifier[s]}
+						<div className='connection-metrics__funnel-scroll'>
+							<div
+								className='connection-metrics__funnel-content'
+								style={{ '--funnel-column-count': steps.length + 2 } as React.CSSProperties}
+							>
+								<div className='connection-metrics__funnel-passed'>
+									<div className='connection-metrics__funnel-initial' id={`funnel-circle-initial`}>
+										{isUsersSelected
+											? formatNumber(userFunnelData[0].passed + userFunnelData[0].failed)
+											: formatNumber(eventFunnelData[0].passed + eventFunnelData[0].failed)}
+									</div>
+									{Array.from(steps.entries()).map(([i, s]) => {
+										return (
+											<div className='connection-metrics__funnel-step' key={`funnel-passed-${i}`}>
+												<div className='connection-metrics__funnel-title'>
+													{stepTermByIdentifier[s]}
+												</div>
+												<div
+													className='connection-metrics__funnel-circle'
+													id={`funnel-circle-passed-${i}`}
+												/>
 											</div>
-											<div
-												className='connection-metrics__funnel-circle'
-												id={`funnel-circle-passed-${i}`}
-											/>
-										</div>
-									);
-								})}
-								<div className='connection-metrics__funnel-final' id={`funnel-circle-final`}>
-									{isUsersSelected
-										? formatNumber(userFunnelData[FINALIZE_INDEX].passed)
-										: formatNumber(eventFunnelData[FINALIZE_INDEX].passed)}
+										);
+									})}
+									<div className='connection-metrics__funnel-final' id={`funnel-circle-final`}>
+										{isUsersSelected
+											? formatNumber(userFunnelData[FINALIZE_INDEX].passed)
+											: formatNumber(eventFunnelData[FINALIZE_INDEX].passed)}
+									</div>
 								</div>
+								<div className='connection-metrics__funnel-failed'>
+									<div key='funnel-initial-empty' />
+									{Array.from(steps.entries()).map(([i, _]) => {
+										return (
+											<div
+												key={`funnel-failed-${i}`}
+												className='connection-metrics__funnel-circle'
+												id={`funnel-circle-failed-${i}`}
+											/>
+										);
+									})}
+								</div>
+								{funnelArrows}
 							</div>
-							<div className='connection-metrics__funnel-failed'>
-								<div key='funnel-initial-empty' />
-								{Array.from(steps.entries()).map(([i, _]) => {
-									return (
-										<div
-											key={`funnel-failed-${i}`}
-											className='connection-metrics__funnel-circle'
-											id={`funnel-circle-failed-${i}`}
-										/>
-									);
-								})}
-							</div>
-							{funnelArrows}
 						</div>
 					</div>
 					<div className='connection-metrics__errors'>
@@ -775,7 +738,12 @@ const computePipelineMetricsData = (pipelineMetrics: PipelineMetrics, range: met
 	for (let timeUnit = 0; timeUnit < timeUnits; timeUnit++) {
 		let failedTotal = 0;
 		for (let i = 0; i < STEP_COUNT; i++) {
-			if (i === FILTER_INDEX || i === CONSENT_INDEX) {
+			if (
+				i === FILTER_INDEX ||
+				i === EVENT_CONSENT_INDEX ||
+				i === EXPORT_PROFILE_CONSENT_INDEX ||
+				i === IMPORT_PROFILE_CONSENT_INDEX
+			) {
 				// filtered and consent-discarded events must not be considered
 				// as failed.
 				continue;
@@ -783,7 +751,10 @@ const computePipelineMetricsData = (pipelineMetrics: PipelineMetrics, range: met
 			failedTotal += totals.failed[timeUnit]?.[i] ?? 0;
 		}
 		let filteredTotal =
-			(totals.failed[timeUnit]?.[FILTER_INDEX] ?? 0) + (totals.failed[timeUnit]?.[CONSENT_INDEX] ?? 0);
+			(totals.failed[timeUnit]?.[FILTER_INDEX] ?? 0) +
+			(totals.failed[timeUnit]?.[EVENT_CONSENT_INDEX] ?? 0) +
+			(SHOW_EXPORT_PROFILE_CONSENT_METRICS ? (totals.failed[timeUnit]?.[EXPORT_PROFILE_CONSENT_INDEX] ?? 0) : 0) +
+			(totals.failed[timeUnit]?.[IMPORT_PROFILE_CONSENT_INDEX] ?? 0);
 		let passedTotal = totals.passed[timeUnit]?.[FINALIZE_INDEX] ?? 0;
 		let total = failedTotal + filteredTotal + passedTotal;
 		const d = new Date(pipelineMetrics.end.getTime());
@@ -855,8 +826,8 @@ const aggregatePipelineMetrics = (
 	if (first == null) {
 		return { passed: [], failed: [] };
 	}
-	const passed = first.passed.map<StepCounts>(() => [0, 0, 0, 0, 0, 0, 0]);
-	const failed = first.failed.map<StepCounts>(() => [0, 0, 0, 0, 0, 0, 0]);
+	const passed = first.passed.map<StepCounts>(() => [0, 0, 0, 0, 0, 0, 0, 0, 0]);
+	const failed = first.failed.map<StepCounts>(() => [0, 0, 0, 0, 0, 0, 0, 0, 0]);
 	for (const series of pipelineMetrics.metrics) {
 		for (let timeUnit = 0; timeUnit < series.passed.length; timeUnit++) {
 			for (let step = 0; step < STEP_COUNT; step++) {

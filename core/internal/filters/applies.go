@@ -18,76 +18,89 @@ func Applies(where *state.Where, attributes map[string]any) bool {
 	if where == nil {
 		return true
 	}
-	for _, cond := range where.Conditions {
-		op := cond.Operator
-		v, exists := readAttributeFrom(attributes, cond.Property)
+	for _, rule := range where.Rules {
 		var applies bool
-		switch op {
-		case state.OpIs:
-			applies = opIs(v, cond.Values)
-		case state.OpIsNot:
-			applies = !opIs(v, cond.Values)
-		case state.OpIsLessThan:
-			applies = opIsLessThan(v, cond.Values)
-		case state.OpIsLessThanOrEqualTo:
-			applies = opIsLessThanOrEqualTo(v, cond.Values)
-		case state.OpIsGreaterThan:
-			applies = opIsGreaterThan(v, cond.Values)
-		case state.OpIsGreaterThanOrEqualTo:
-			applies = opIsGreaterThanOrEqualTo(v, cond.Values)
-		case state.OpIsBetween:
-			applies = opIsBetween(v, cond.Values)
-		case state.OpIsNotBetween:
-			applies = !opIsBetween(v, cond.Values)
-		case state.OpContains:
-			applies = opContains(v, cond.Values)
-		case state.OpDoesNotContain:
-			applies = !opContains(v, cond.Values)
-		case state.OpIsOneOf:
-			applies = opIsIn(v, cond.Values)
-		case state.OpIsNotOneOf:
-			applies = !opIsIn(v, cond.Values)
-		case state.OpStartsWith:
-			applies = opStartsWith(v, cond.Values)
-		case state.OpEndsWith:
-			applies = opEndsWith(v, cond.Values)
-		case state.OpIsBefore:
-			applies = opIsBefore(v, cond.Values)
-		case state.OpIsOnOrBefore:
-			applies = opIsOnOrBefore(v, cond.Values)
-		case state.OpIsAfter:
-			applies = opIsAfter(v, cond.Values)
-		case state.OpIsOnOrAfter:
-			applies = opIsOnOrAfter(v, cond.Values)
-		case state.OpIsTrue:
-			applies = opIsTrue(v)
-		case state.OpIsFalse:
-			applies = opIsFalse(v)
-		case state.OpIsEmpty:
-			applies = opIsEmpty(v)
-		case state.OpIsNotEmpty:
-			applies = !opIsEmpty(v)
-		case state.OpIsNull:
-			applies = exists && opIsNull(v)
-		case state.OpIsNotNull:
-			applies = !(exists && opIsNull(v))
-		case state.OpExists:
-			applies = exists
-		case state.OpDoesNotExist:
-			applies = !exists
+		switch rule := rule.(type) {
+		case *state.Where:
+			applies = Applies(rule, attributes)
+		case *state.WhereCondition:
+			applies = appliesCondition(rule, attributes)
 		}
-		if applies && where.Logical == state.OpOr {
+		if applies && where.Operator == state.OpOr {
 			return true
 		}
-		if !applies && where.Logical == state.OpAnd {
+		if !applies && where.Operator == state.OpAnd {
 			return false
 		}
 	}
-	if where.Logical == state.OpOr {
+	if where.Operator == state.OpOr {
 		return false // none of the conditions applied.
 	}
 	// All the conditions applied.
 	return true
+}
+
+// appliesCondition reports whether condition matches the given attributes.
+func appliesCondition(condition *state.WhereCondition, attributes map[string]any) bool {
+
+	op := condition.Operator
+	v, exists := readAttributeFrom(attributes, condition.Property)
+	switch op {
+	case state.OpIs:
+		return opIs(v, condition.Values)
+	case state.OpIsNot:
+		return !opIs(v, condition.Values)
+	case state.OpIsLessThan:
+		return opIsLessThan(v, condition.Values)
+	case state.OpIsLessThanOrEqualTo:
+		return opIsLessThanOrEqualTo(v, condition.Values)
+	case state.OpIsGreaterThan:
+		return opIsGreaterThan(v, condition.Values)
+	case state.OpIsGreaterThanOrEqualTo:
+		return opIsGreaterThanOrEqualTo(v, condition.Values)
+	case state.OpIsBetween:
+		return opIsBetween(v, condition.Values)
+	case state.OpIsNotBetween:
+		return !opIsBetween(v, condition.Values)
+	case state.OpContains:
+		return opContains(v, condition.Values)
+	case state.OpDoesNotContain:
+		return !opContains(v, condition.Values)
+	case state.OpIsOneOf:
+		return opIsIn(v, condition.Values)
+	case state.OpIsNotOneOf:
+		return !opIsIn(v, condition.Values)
+	case state.OpStartsWith:
+		return opStartsWith(v, condition.Values)
+	case state.OpEndsWith:
+		return opEndsWith(v, condition.Values)
+	case state.OpIsBefore:
+		return opIsBefore(v, condition.Values)
+	case state.OpIsOnOrBefore:
+		return opIsOnOrBefore(v, condition.Values)
+	case state.OpIsAfter:
+		return opIsAfter(v, condition.Values)
+	case state.OpIsOnOrAfter:
+		return opIsOnOrAfter(v, condition.Values)
+	case state.OpIsTrue:
+		return opIsTrue(v)
+	case state.OpIsFalse:
+		return opIsFalse(v)
+	case state.OpIsEmpty:
+		return opIsEmpty(v)
+	case state.OpIsNotEmpty:
+		return !opIsEmpty(v)
+	case state.OpIsNull:
+		return exists && opIsNull(v)
+	case state.OpIsNotNull:
+		return !(exists && opIsNull(v))
+	case state.OpExists:
+		return exists
+	case state.OpDoesNotExist:
+		return !exists
+	}
+
+	return false
 }
 
 func opIs(v any, values []any) bool {
@@ -249,7 +262,7 @@ func opIsBetween(v any, values []any) bool {
 		v1 := v1.(state.JSONConditionValue)
 		switch v.Kind() {
 		case json.Number:
-			if v0.Number != nil {
+			if v0.Number != nil && v1.Number != nil {
 				v, err := v.Decimal(0, 0)
 				return err == nil && v.GreaterEqual(*v0.Number) && v.LessEqual(*v1.Number)
 			}
@@ -392,6 +405,9 @@ func opIsBefore(v any, values []any) bool {
 	if v == nil {
 		return false
 	}
+	if v, ok := v.(int); ok {
+		return v < values[0].(int)
+	}
 	v0 := values[0]
 	return v.(time.Time).Before(v0.(time.Time))
 }
@@ -399,6 +415,9 @@ func opIsBefore(v any, values []any) bool {
 func opIsOnOrBefore(v any, values []any) bool {
 	if v == nil {
 		return false
+	}
+	if v, ok := v.(int); ok {
+		return v <= values[0].(int)
 	}
 	v0 := values[0].(time.Time)
 	vv := v.(time.Time)
@@ -409,6 +428,9 @@ func opIsAfter(v any, values []any) bool {
 	if v == nil {
 		return false
 	}
+	if v, ok := v.(int); ok {
+		return v > values[0].(int)
+	}
 	v0 := values[0]
 	return v.(time.Time).After(v0.(time.Time))
 }
@@ -416,6 +438,9 @@ func opIsAfter(v any, values []any) bool {
 func opIsOnOrAfter(v any, values []any) bool {
 	if v == nil {
 		return false
+	}
+	if v, ok := v.(int); ok {
+		return v >= values[0].(int)
 	}
 	v0 := values[0].(time.Time)
 	vv := v.(time.Time)
@@ -427,7 +452,7 @@ func opIsTrue(v any) bool {
 	case bool:
 		return v
 	case json.Value:
-		return v.Bool()
+		return v.IsTrue()
 	}
 	return false
 }
@@ -437,7 +462,7 @@ func opIsFalse(v any) bool {
 	case bool:
 		return !v
 	case json.Value:
-		return !v.Bool()
+		return v.IsFalse()
 	}
 	return false
 }

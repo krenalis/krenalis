@@ -1,6 +1,19 @@
 # HTTP behavior, retries, and errors
 
-Use `ApplicationEnv.HTTPClient` for every provider request. It supplies endpoint-group rate limiting, OAuth injection, request capture, replay, retry behavior, and response-body draining.
+Use `ApplicationEnv.HTTPClient` for every provider request. It supplies endpoint-group rate limiting, OAuth injection, request capture, replay, and retry behavior.
+
+Do not use `http.DefaultClient` for connector calls, and do not build your own
+`http.Client`, `http.Transport`, `net.Dialer`, or any other custom dialing path.
+
+`env.HTTPClient` is not only a matter of rate limits and retries: its transport
+belongs to the organization on behalf of which the connector runs, and Krenalis
+counts the bytes it sends to attribute the network usage to that organization.
+Any request sent outside `env.HTTPClient` escapes that accounting, so its traffic
+is not attributed to anyone.
+
+Unlike database, file-storage, and message-broker connectors, an Application
+connector receives no `Dial` or `DialWith` function in its env: `env.HTTPClient`
+is its only outbound network path.
 
 ## Build and close requests
 
@@ -8,7 +21,7 @@ Use `HTTPClient.GetBodyBuffer` for a request body and `BodyBuffer.NewRequest` to
 
 Set provider-required content type, version, conditional, and idempotency headers explicitly. `BodyBuffer.NewRequest` defaults to JSON headers and supplies `GetBody`; override `Content-Type` when the encoded format is not JSON.
 
-Call `HTTPClient.Do`, check every expected success status, decode bounded responses, and `defer res.Body.Close()`. The framework's close wrapper drains up to its internal limit, so no separate manual drain is required. The client does not follow redirects.
+Call `HTTPClient.Do`, check every expected success status, decode bounded responses, and `defer res.Body.Close()`. The transport drains unread response bodies after closure, so no separate manual drain is required. The client does not follow redirects.
 
 ## Model rate-limit buckets with endpoint groups
 

@@ -7,8 +7,10 @@ package snowflake
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
+	"slices"
 	"testing"
 	"time"
 
@@ -20,6 +22,49 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 )
+
+// TestCounts checks unconditional and conditional row counts.
+func TestCounts(t *testing.T) {
+
+	warehouse, db := newTestSnowflakeWarehouse(t)
+	mustExecSQL(t, db, `CREATE TABLE "COUNT_CONDITIONS" ("FLAG" BOOLEAN, "OTHER_FLAG" BOOLEAN)`)
+	mustExecSQL(t, db, `INSERT INTO "COUNT_CONDITIONS" VALUES
+		(TRUE, TRUE), (TRUE, FALSE), (FALSE, TRUE), (NULL, TRUE)`)
+
+	flag := warehouses.NewBaseExpr(warehouses.Column{Name: "flag", Type: types.Boolean()}, warehouses.OpIsTrue)
+	falseFlag := warehouses.NewBaseExpr(warehouses.Column{Name: "flag", Type: types.Boolean()}, warehouses.OpIsFalse)
+	otherFlag := warehouses.NewBaseExpr(warehouses.Column{Name: "other_flag", Type: types.Boolean()}, warehouses.OpIsTrue)
+	conditions := []warehouses.Expr{
+		nil,
+		flag,
+		falseFlag,
+		otherFlag,
+		warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{flag, otherFlag}),
+	}
+
+	totalCounts, err := warehouse.Counts(t.Context(), "count_conditions", nil)
+	if err != nil {
+		t.Fatalf("expected counts, got %v", err)
+	}
+	if !slices.Equal(totalCounts, []int{4}) {
+		t.Fatalf("expected counts [4], got %v", totalCounts)
+	}
+
+	_, err = warehouse.Counts(t.Context(), "count_conditions", []warehouses.Expr{})
+	if err == nil {
+		t.Fatalf("expected an error, got %v", err)
+	}
+
+	counts, err := warehouse.Counts(t.Context(), "count_conditions", conditions)
+	if err != nil {
+		t.Fatalf("expected counts, got %v", err)
+	}
+	want := []int{4, 2, 1, 3, 1}
+	if !slices.Equal(counts, want) {
+		t.Fatalf("expected counts %v, got %v", want, counts)
+	}
+
+}
 
 func Test_Merge(t *testing.T) {
 	// The KRENALIS_SKIP_SNOWFLAKE_TESTS environment variable is set by 'go run
@@ -104,7 +149,7 @@ func Test_Merge(t *testing.T) {
 		}
 	}()
 
-	dw := warehouses.Registered("Snowflake").New(newTestSettingsLoader(testEnv.Settings().JSON()))
+	dw := warehouses.Registered("Snowflake").New(newTestSettingsLoader(testEnv.Settings().JSON()), nil)
 	defer dw.Close()
 
 	db, err := dw.(*Snowflake).openDB(t.Context())
@@ -258,4 +303,45 @@ func newTestSettingsLoader(settings json.Value) *testSettingsLoader {
 
 func (loader *testSettingsLoader) Load(ctx context.Context, dst any) error {
 	return json.Unmarshal(loader.settings, dst)
+}
+
+func mustExecSQL(t *testing.T, db *sql.DB, statement string) {
+	t.Helper()
+	_, err := db.ExecContext(t.Context(), statement)
+	if err != nil {
+		t.Fatalf("cannot execute SQL %q: %s", statement, err)
+	}
+}
+
+// newTestSnowflakeWarehouse creates a Snowflake test environment and opens a
+// warehouse connection to it.
+func newTestSnowflakeWarehouse(t *testing.T) (*Snowflake, *sql.DB) {
+
+	t.Helper()
+	if os.Getenv("KRENALIS_SKIP_SNOWFLAKE_TESTS") == "true" {
+		t.Skip()
+	}
+
+	testEnv, err := snowflaketester.CreateTestEnvironment()
+	if err != nil {
+		t.Fatalf("cannot create Snowflake test environment: %s", err)
+	}
+	t.Cleanup(func() {
+		if err := testEnv.Teardown(); err != nil {
+			t.Logf("cannot teardown Snowflake environment: %s", err)
+		}
+	})
+
+	warehouse := warehouses.Registered("Snowflake").New(newTestSettingsLoader(testEnv.Settings().JSON()), nil).(*Snowflake)
+	t.Cleanup(func() {
+		if err := warehouse.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	db, err := warehouse.openDB(t.Context())
+	if err != nil {
+		t.Fatalf("cannot open Snowflake warehouse: %s", err)
+	}
+
+	return warehouse, db
 }

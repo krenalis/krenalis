@@ -148,7 +148,7 @@ func (hs *HubSpot) saveSettings(ctx context.Context, settings json.Value) error 
 var propertyGroups = []struct {
 	Name        string
 	HSName      string
-	Description string
+	DisplayName string
 }{
 	{"contact", "contactinformation", "Contact Information"},
 	{"emails", "emailinformation", "Email Information"},
@@ -156,7 +156,7 @@ var propertyGroups = []struct {
 	{"activity", "contact_activity", "Contact activity"},
 	{"contact_lifecycle", "contactlcs", "Contact Lifecycle Stage Properties"},
 	{"facebook", "facebook_ads_properties", "Facebook Ads Properties"},
-	{"conversion", "conversioninformation", "Conversion Onformation"},
+	{"conversion", "conversioninformation", "Conversion Information"},
 	{"deals", "deal_information", "Deal Information"},
 	{"sales", "sales_properties", "Sales Properties"},
 	{"orders", "order_information", "Order Information"},
@@ -206,11 +206,20 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target connectors.Targets, 
 			Name:        r.Name,
 			Type:        typ,
 			Nullable:    true,
-			Description: r.Label,
+			DisplayName: r.Label,
 		}
 		if typ.Kind() == types.StringKind {
 			if len(r.Options) == 0 {
-				property.Type.WithMaxLength(65536)
+				// HubSpot limits values written through the CRM (and therefore
+				// through the API) to 65536 characters, but values submitted
+				// through forms can be longer, and such values may then be
+				// returned by the API when reading. Therefore, destination
+				// schemas are limited, while source schemas are not.
+				//
+				// See https://knowledge.hubspot.com/properties/property-field-types-in-hubspot.
+				if role == connectors.Destination {
+					property.Type = typ.WithMaxLength(65536)
+				}
 			} else {
 				var n int
 				for _, option := range r.Options {
@@ -225,6 +234,9 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target connectors.Targets, 
 				for _, option := range r.Options {
 					if option.Hidden {
 						continue
+					}
+					if strings.Contains(option.Value, "\x00") {
+						return types.Type{}, fmt.Errorf("HubSpot returned an option for property %q that contains a NUL byte", r.Name)
 					}
 					values = append(values, option.Value)
 				}
@@ -257,10 +269,14 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target connectors.Targets, 
 				return -1
 			}
 		})
+		groupType, err := types.ObjectOf(pp)
+		if err != nil {
+			return types.Type{}, fmt.Errorf("HubSpot returned invalid properties: %s", err)
+		}
 		properties = append(properties, types.Property{
 			Name:        group.Name,
-			Type:        types.Object(pp),
-			Description: group.Description,
+			Type:        groupType,
+			DisplayName: group.DisplayName,
 		})
 		delete(groups, group.HSName)
 	}
@@ -271,9 +287,13 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target connectors.Targets, 
 		}
 		slices.Sort(names)
 		for _, name := range names {
+			groupType, err := types.ObjectOf(groups[name])
+			if err != nil {
+				return types.Type{}, fmt.Errorf("HubSpot returned invalid properties: %s", err)
+			}
 			properties = append(properties, types.Property{
 				Name:         name,
-				Type:         types.Object(groups[name]),
+				Type:         groupType,
 				ReadOptional: true,
 			})
 		}

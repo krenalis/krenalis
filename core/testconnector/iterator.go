@@ -134,7 +134,7 @@ func (it *iterator) seq() iter.Seq[*connectors.Event] {
 				break
 			}
 			if it.sameUser.on && it.first {
-				u, _ := e.Received.UserID()
+				u := e.Received.AnonymousID()
 				it.sameUser.user = &u
 			}
 			if !yield(e) {
@@ -149,22 +149,20 @@ func (it *iterator) seq() iter.Seq[*connectors.Event] {
 }
 
 func (it *iterator) read(consume bool) (*connectors.Event, bool) {
-	for {
-		if it.index >= len(it.events) {
-			return nil, false
-		}
-		event := it.events[it.index]
+	for i := it.index; i < len(it.events); i++ {
+		event := it.events[i]
 		if it.sameUser.on && it.sameUser.user != nil && *it.sameUser.user != event.Received.AnonymousID() {
-			if consume {
-				it.index += 1
-			}
 			continue
 		}
 		if consume {
-			it.index += 1
+			it.index = i + 1
 		}
 		return event, true
 	}
+	if consume {
+		it.index = len(it.events)
+	}
+	return nil, false
 }
 
 const traces = false // set to true to trace execution flow

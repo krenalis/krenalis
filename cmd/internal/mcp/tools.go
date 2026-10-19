@@ -268,7 +268,7 @@ var tools = []server.ServerTool{
 			if err != nil {
 				return nil, err
 			}
-			var info []any
+			info := []any{}
 			for _, c := range ws.Connections() {
 				info = append(info, map[string]any{
 					"id":             c.ID,
@@ -338,8 +338,7 @@ func queryDataWarehouseToolResult(queryResult json.Value, err error) (*mcp.CallT
 		return mcp.NewToolResultText(string(queryResult)), nil
 	}
 
-	var rejected *warehouses.RejectedReadOnlyQueryError
-	if stderrors.As(err, &rejected) {
+	if rejected, ok := stderrors.AsType[*warehouses.RejectedReadOnlyQueryError](err); ok {
 		return mcp.NewToolResultError(rejected.Error()), nil
 	}
 	if queryResult != nil {

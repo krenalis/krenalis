@@ -424,6 +424,31 @@ func TestStoreLoadReturnsErrorOnInvalidDatabaseSecretJSON(t *testing.T) {
 	}
 }
 
+func TestStoreLoadLoadsNATSAckWait(t *testing.T) {
+	t.Parallel()
+
+	store := &Store{
+		client: &fakeSSMClient{
+			byPathOutputs: []*ssm.GetParametersByPathOutput{
+				{
+					Parameters: []types.Parameter{
+						{Name: new("/prod/nats/ack-wait"), Value: new("45s")},
+					},
+				},
+			},
+		},
+		prefix: "/prod",
+	}
+
+	conf, err := store.Load(context.Background())
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if got := conf.Get("KRENALIS_NATS_ACK_WAIT"); got != "45s" {
+		t.Fatalf("expected KRENALIS_NATS_ACK_WAIT to be %q, got %q", "45s", got)
+	}
+}
+
 func TestStoreLoadLoadsNATSSecret(t *testing.T) {
 	t.Parallel()
 

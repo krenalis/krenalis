@@ -163,6 +163,61 @@ func Test_Decimal_Neg(t *testing.T) {
 
 }
 
+// Test_Decimal_PrecisionScale checks that precision and scale are exact and
+// that the original decimal remains unchanged.
+func Test_Decimal_PrecisionScale(t *testing.T) {
+
+	// Build a large mantissa with trailing fractional zeros through binary decoding.
+	// Reducing it also exposes mutations caused by a shallow copy.
+	encoded, err := MustParse("12345678901234567890123456.78").Binary(4)
+	if err != nil {
+		t.Fatalf("expected decimal binary encoding, got %v", err)
+	}
+	nonMinimal, err := Binary(encoded, 30, 4)
+	if err != nil {
+		t.Fatalf("expected decimal with trailing fractional zeros, got %v", err)
+	}
+
+	for _, test := range []struct {
+		name             string
+		value            Decimal
+		precision, scale int
+	}{
+		{"zero_value", Decimal{}, 1, 0},
+		{"zero_max_scale", New(0, MaxScale), 1, 0},
+		{"parsed_negative_zero", MustParse("-0.000e999999"), 1, 0},
+		{"parsed_trailing_zeros", MustParse("123.4500"), 5, 2},
+		{"negative_fraction", MustParse("-.00500"), 3, 3},
+		{"negative_decimal", MustParse("-123.4500"), 5, 2},
+		{"trailing_fractional_zeros", New(12300, 4), 3, 2},
+		{"integer_with_scale", New(100, 1), 2, 0},
+		{"non_minimal_binary", nonMinimal, 28, 2},
+		{"scale_38", New(10, 38), 37, 37},
+		{"min_scale", New(10, MinScale), 2 - MinScale, 0},
+		{"max_scale", New(1000, MaxScale), MaxScale - 3, MaxScale - 3},
+		{"exponent_75", MustParse("1e75"), 76, 0},
+		{"exponent_76", MustParse("1e76"), 77, 0},
+		{"exponent_minus_37", MustParse("1e-37"), 37, 37},
+		{"exponent_minus_38", MustParse("1e-38"), 38, 38},
+		{"large_positive_exponent", MustParse("1e999999"), 1000000, 0},
+		{"large_negative_exponent", MustParse("1e-999999"), 999999, 999999},
+		{"76_integer_digits", MustParse(strings.Repeat("9", 76)), 76, 0},
+		{"76_mixed_digits", MustParse(strings.Repeat("9", 39) + "." + strings.Repeat("8", 37)), 76, 37},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			before := fmt.Sprintf("%e", test.value)
+			precision, scale := test.value.PrecisionScale()
+			if precision != test.precision || scale != test.scale {
+				t.Fatalf("expected precision %d and scale %d, got %d and %d", test.precision, test.scale, precision, scale)
+			}
+			if after := fmt.Sprintf("%e", test.value); before != after {
+				t.Fatalf("expected unchanged decimal %s, got %s", before, after)
+			}
+		})
+	}
+
+}
+
 func Test_Decimal_Uint64(t *testing.T) {
 
 	tests := []struct {
@@ -598,6 +653,11 @@ func Test_Parse(t *testing.T) {
 		{"-9223372036854775808", 0, 0, "-9223372036854775808", "-9223372036854775808", nil},
 		{"1e" + strconv.Itoa(decimal.MaxScale), 0, 0, "1e+999999999999999999", "1e999999999999999999", nil},
 		{"1e" + strconv.Itoa(decimal.MinScale), 0, 0, "1e-999999999999999999", "1e-999999999999999999", nil},
+		{"0.1e" + strconv.Itoa(decimal.MaxScale+1), 0, 0, "1e+999999999999999999", "0.1e1000000000000000000", nil},
+		{"10e" + strconv.Itoa(decimal.MinScale-1), 0, 0, "1e-999999999999999999", "10e-1000000000000000000", nil},
+		{"1e" + strings.Repeat("0", 64), 0, 0, "1", "1", nil},
+		{"1e+" + strings.Repeat("0", 64) + "1", 0, 0, "1e+1", "1e+" + strings.Repeat("0", 64) + "1", nil},
+		{"1e-" + strings.Repeat("0", 64) + "1", 0, 0, "0.1", "1e-" + strings.Repeat("0", 64) + "1", nil},
 		{
 			"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999",
 			100,
@@ -646,6 +706,28 @@ func Test_Parse(t *testing.T) {
 		{"6.5.7", 20, 5, "", "", ErrSyntax},
 		{"+", 20, 5, "", "", ErrSyntax},
 		{"-", 20, 5, "", "", ErrSyntax},
+		{"1e", 0, 0, "", "", ErrSyntax},
+		{"1e+", 0, 0, "", "", ErrSyntax},
+		{"1e-", 0, 0, "", "", ErrSyntax},
+		{"1e++1", 0, 0, "", "", ErrSyntax},
+		{"1e+-1", 0, 0, "", "", ErrSyntax},
+		{"1e1_0", 0, 0, "", "", ErrSyntax},
+		{"1e0x10", 0, 0, "", "", ErrSyntax},
+		{"1e 1", 0, 0, "", "", ErrSyntax},
+		{"1e1 ", 0, 0, "", "", ErrSyntax},
+		{"1e１", 0, 0, "", "", ErrSyntax},
+		{"1e١", 0, 0, "", "", ErrSyntax},
+		{"1e999999999999999999999x", 0, 0, "", "", ErrSyntax},
+		{"1e-999999999999999999999x", 0, 0, "", "", ErrSyntax},
+		{"1e1x9", 0, 0, "", "", ErrSyntax},
+		{"1e1x99999999999999999999", 0, 0, "", "", ErrSyntax},
+		{"1ex99999999999999999999", 0, 0, "", "", ErrSyntax},
+		{"1e-x99999999999999999999", 0, 0, "", "", ErrSyntax},
+		{"1e-+99999999999999999999", 0, 0, "", "", ErrSyntax},
+		{"1ex1" + strings.Repeat("0", 64), 0, 0, "", "", ErrSyntax},
+		{"1e-x1" + strings.Repeat("0", 64), 0, 0, "", "", ErrSyntax},
+		{"100ex" + strconv.Itoa(math.MaxInt), 0, 0, "", "", ErrSyntax},
+		{"0.01e-x" + strconv.Itoa(math.MaxInt), 0, 0, "", "", ErrSyntax},
 
 		{"1", 1, 1, "", "", ErrRange},
 		{"678", 3, 1, "", "", ErrRange},
@@ -655,6 +737,15 @@ func Test_Parse(t *testing.T) {
 		{"0.0000001", 7, 6, "", "", ErrRange},
 		{"1e" + strconv.Itoa(decimal.MaxScale+1), 0, 0, "", "", ErrRange},
 		{"1e" + strconv.Itoa(decimal.MinScale-1), 0, 0, "", "", ErrRange},
+		{"1e1" + strings.Repeat("0", 64), 0, 0, "", "", ErrRange},
+		{"1e-1" + strings.Repeat("0", 64), 0, 0, "", "", ErrRange},
+		{"1e18446744073709551616", 0, 0, "", "", ErrRange},
+		{"1e20000000000000000000", 0, 0, "", "", ErrRange},
+		{"1e-20000000000000000000", 0, 0, "", "", ErrRange},
+		{"1e" + strconv.Itoa(math.MaxInt), 0, 0, "", "", ErrRange},
+		{"1e" + strconv.Itoa(math.MinInt), 0, 0, "", "", ErrRange},
+		{"100e" + strconv.Itoa(math.MaxInt), 0, 0, "", "", ErrRange},
+		{"0.01e" + strconv.Itoa(math.MinInt), 0, 0, "", "", ErrRange},
 	}
 
 	for _, test := range tests {

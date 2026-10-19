@@ -19,7 +19,6 @@ import (
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/transformers"
-	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -33,7 +32,6 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	pipeline := this.pipeline
 	store := this.connection.store
 	connector := pipeline.Connection().Connector()
-	prometheus.Increment("Pipeline.exportUsers.calls", 1)
 
 	// Synchronize destinations users with the application's users.
 	if connector.Type == state.Application {
@@ -57,13 +55,13 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	var transformer *transformers.Transformer
 	if t := this.pipeline.Transformation; t.Mapping != nil || t.Function != nil {
 		var err error
-		transformer, err = transformers.New(pipeline, this.core.functionProvider, &connector.TimeLayouts)
+		transformer, err = transformers.New(pipeline.Organization().ID, pipeline, this.core.functionProvider)
 		if err != nil {
 			return err
 		}
 	}
 
-	// Read the users.
+	// Build the query to read the profiles.
 	query := datastore.Query{Where: pipeline.Filter}
 	if connector.Type == state.FileStorage {
 		query.OrderBy = pipeline.OrderBy
@@ -77,7 +75,27 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 			UpdateOnDuplicates: pipeline.UpdateOnDuplicates,
 		}
 	}
-	records, err := store.ProfileRecords(ctx, query, pipeline.InSchema, matching)
+
+	var consentCondition datastore.ConsentCondition
+	if len(pipeline.RequiredConsents.Purposes) > 0 {
+		switch pipeline.RequiredConsents.Operator {
+		case state.PurposesAnd:
+			consentCondition.Operator = state.OpAnd
+		case state.PurposesOr:
+			consentCondition.Operator = state.OpOr
+		default:
+			return fmt.Errorf("invalid required consents operator %d", pipeline.RequiredConsents.Operator)
+		}
+		for _, purpose := range pipeline.RequiredConsents.Purposes {
+			if purpose.ProfileConsentLocation == nil {
+				return fmt.Errorf("consent purpose %s has no profile consent location", purpose.ID)
+			}
+			consentCondition.Locations = append(consentCondition.Locations, *purpose.ProfileConsentLocation)
+		}
+	}
+
+	// Read the profiles.
+	records, err := store.ProfileRecords(ctx, query, consentCondition, pipeline.InSchema, matching)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
 			return newPipelineError(metrics.ReceiveStep, err)
@@ -85,6 +103,8 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 		switch err := err.(type) {
 		case *datastore.UnavailableError:
 			return err
+		case *datastore.ConsentConditionError:
+			return newPipelineError(metrics.ExportProfileConsentStep, err)
 		case *schemas.Error:
 			err.Msg = fmt.Sprintf("in the input schema, %s. Please review and update the pipeline before attempting to export the profiles.", err.Msg)
 			return newPipelineError(metrics.InputValidationStep, err)
@@ -98,12 +118,11 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	var ack func([]string, error)
 	if connector.Type != state.FileStorage {
 		ack = func(ids []string, err error) {
-			prometheus.Increment("Pipeline.exportProfiles.ack.calls", 1)
 			if err != nil {
-				this.core.metrics.FinalizeFailed(pipeline.ID, len(ids), err.Error())
+				this.core.metrics.Pipelines.FinalizeFailed(pipeline.ID, len(ids), err.Error())
 				return
 			}
-			this.core.metrics.FinalizePassed(pipeline.ID, len(ids))
+			this.core.metrics.Pipelines.FinalizePassed(pipeline.ID, len(ids))
 		}
 	}
 
@@ -168,7 +187,7 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	if connector.Type == state.FileStorage {
 		defer func() {
 			if readCount > 0 {
-				this.core.metrics.FinalizeFailed(pipeline.ID, readCount, err.Error())
+				this.core.metrics.Pipelines.FinalizeFailed(pipeline.ID, readCount, err.Error())
 			}
 		}()
 	}
@@ -176,10 +195,8 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 Records:
 	for record := range records.All(ctx) {
 
-		prometheus.Increment("Pipeline.exportProfiles.iterations_over_records_All", 1)
-
 		if record.Err != nil {
-			this.core.metrics.ReceiveFailed(pipeline.ID, 1, record.Err.Error())
+			this.core.metrics.Pipelines.ReceiveFailed(pipeline.ID, 1, record.Err.Error())
 			if connector.Type == state.FileStorage {
 				return newPipelineError(metrics.ReceiveStep, record.Err)
 			}
@@ -187,7 +204,7 @@ Records:
 		}
 
 		readCount++
-		this.core.metrics.ReceivePassed(pipeline.ID, 1)
+		this.core.metrics.Pipelines.ReceivePassed(pipeline.ID, 1)
 
 		switch connector.Type {
 		default:
@@ -203,14 +220,14 @@ Records:
 				value, _ := getAttribute(record.Attributes, pipeline.Matching.In)
 				profile.MatchingValue, err = convertToExternal(value, matchingIn.Type, matchingOut.Type, pipeline.Matching.In, pipeline.Matching.Out)
 				if err != nil {
-					this.core.metrics.InputValidationFailed(pipeline.ID, 1, err.Error())
+					this.core.metrics.Pipelines.InputValidationFailed(pipeline.ID, 1, err.Error())
 					goto Next
 				}
 			}
 			profiles = append(profiles, profile)
 		}
 
-		this.core.metrics.InputValidationPassed(pipeline.ID, 1)
+		this.core.metrics.Pipelines.InputValidationPassed(pipeline.ID, 1)
 
 	Next:
 
@@ -251,20 +268,20 @@ Records:
 				if err := record.Err; err != nil {
 					switch err.(type) {
 					case transformers.RecordTransformationError:
-						this.core.metrics.TransformationFailed(pipeline.ID, 1, err.Error())
+						this.core.metrics.Pipelines.TransformationFailed(pipeline.ID, 1, err.Error())
 					case transformers.RecordValidationError:
-						this.core.metrics.TransformationPassed(pipeline.ID, 1)
-						this.core.metrics.OutputValidationFailed(pipeline.ID, 1, err.Error())
+						this.core.metrics.Pipelines.TransformationPassed(pipeline.ID, 1)
+						this.core.metrics.Pipelines.OutputValidationFailed(pipeline.ID, 1, err.Error())
 					}
 					continue
 				}
-				this.core.metrics.TransformationPassed(pipeline.ID, 1)
-				this.core.metrics.OutputValidationPassed(pipeline.ID, 1)
+				this.core.metrics.Pipelines.TransformationPassed(pipeline.ID, 1)
+				this.core.metrics.Pipelines.OutputValidationPassed(pipeline.ID, 1)
 				if user.MatchingValue != nil {
 					setAttribute(record.Attributes, pipeline.Matching.Out, user.MatchingValue)
 				}
 				if connector.Type == state.Application && len(record.Attributes) == 0 {
-					this.core.metrics.FinalizePassed(pipeline.ID, 1)
+					this.core.metrics.Pipelines.FinalizePassed(pipeline.ID, 1)
 					continue
 				}
 				// In the case of exporting to the database, make sure that
@@ -273,7 +290,7 @@ Records:
 				if connector.Type == state.Database {
 					key := record.Attributes[pipeline.TableKey]
 					if _, ok := alreadyExportedKeys[key]; ok {
-						this.core.metrics.FinalizeFailed(pipeline.ID, 1,
+						this.core.metrics.Pipelines.FinalizeFailed(pipeline.ID, 1,
 							fmt.Sprintf("cannot export multiple profiles having the same value for %q, which is used as export table key", pipeline.TableKey))
 						continue
 					}
@@ -304,7 +321,7 @@ Records:
 	}
 
 	if connector.Type == state.FileStorage {
-		this.core.metrics.FinalizePassed(pipeline.ID, readCount)
+		this.core.metrics.Pipelines.FinalizePassed(pipeline.ID, readCount)
 		readCount = 0 // prevents them from being flagged as failed in the metrics
 	}
 
@@ -349,10 +366,9 @@ func (this *Pipeline) syncDestinationProfiles(ctx context.Context) error {
 			})
 		}
 
-		if len(profiles) > 0 && (len(profiles) == 10000 || records.Last()) {
+		if len(profiles) == 10000 {
 			// Merge destination profiles.
-			err = this.connection.store.MergeDestinationUsers(ctx, this.pipeline.ID, profiles, nil)
-			if err != nil {
+			if err := store.MergeDestinationUsers(ctx, this.pipeline.ID, profiles, nil); err != nil {
 				return err
 			}
 			profiles = profiles[0:0]
@@ -361,6 +377,11 @@ func (this *Pipeline) syncDestinationProfiles(ctx context.Context) error {
 	}
 	if err = records.Err(); err != nil {
 		return err
+	}
+	if len(profiles) > 0 {
+		if err := store.MergeDestinationUsers(ctx, this.pipeline.ID, profiles, nil); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -487,7 +508,7 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 	case types.UUIDKind:
 		switch in.Kind() {
 		case types.StringKind:
-			u, ok := types.ParseUUID(v.(string))
+			u, ok := types.NormalizeUUID(v.(string))
 			if !ok {
 				return nil, errMatchingPropertyConversion(inPath, outPath)
 			}

@@ -56,8 +56,11 @@ func TestChangeProfileSchema(t *testing.T) {
 
 	// Alter the profile schema.
 	queries := k.PreviewAlterProfileSchema(file.Schema, file.RePaths)
-	if len(queries) != 4 {
-		t.Fatalf("expected 4 queries, got %d", len(queries))
+	if queries == nil {
+		t.Fatal("expected an empty query list, got nil")
+	}
+	if len(queries) != 0 {
+		t.Fatalf("expected no queries, got %#v", queries)
 	}
 	k.AlterProfileSchemaAndWait(file.Schema, file.PrimarySources, file.RePaths)
 
@@ -67,6 +70,24 @@ func TestChangeProfileSchema(t *testing.T) {
 	}
 	if err := checkSchemaProperties(ws.ProfileSchema); err != nil {
 		t.Fatalf("invalid profile schema: %s", err)
+	}
+	if !slices.Equal(identifiers, ws.Identifiers) {
+		t.Fatalf("expected identifiers %v, got %v", identifiers, ws.Identifiers)
+	}
+
+	// Change only schema metadata.
+	descriptionProperties := file.Schema.Properties().Slice()
+	descriptionProperties[0].Description = "Updated description"
+	descriptionSchema := types.Object(descriptionProperties)
+	queries = k.PreviewAlterProfileSchema(descriptionSchema, nil)
+	if len(queries) != 0 {
+		t.Fatalf("expected no queries, got %#v", queries)
+	}
+	k.AlterProfileSchemaAndWait(descriptionSchema, file.PrimarySources, nil)
+
+	ws = k.Workspace()
+	if !types.Equal(descriptionSchema, ws.ProfileSchema) {
+		t.Fatal("expected the metadata-only schema change to be persisted")
 	}
 	if !slices.Equal(identifiers, ws.Identifiers) {
 		t.Fatalf("expected identifiers %v, got %v", identifiers, ws.Identifiers)
@@ -286,6 +307,70 @@ func TestChangeProfileSchema(t *testing.T) {
 	expectedErr = fmt.Sprintf(`PUT v1/profiles/schema: unexpected status code 422: {"error":{"code":"ConnectionNotExist","message":"primary source %s does not exist"}} [request has body: true, response body expected: false]`, notExistentSource)
 	if err.Error() != expectedErr {
 		t.Fatalf("expected error %q, got %q", expectedErr, err.Error())
+	}
+
+}
+
+// TestChangeProfileSchemaUpdatesIdentifiersForPropertiesWithUnderscores checks
+// that identifiers are updated when referenced properties with underscores are
+// renamed and removed when those properties are dropped.
+func TestChangeProfileSchemaUpdatesIdentifiersForPropertiesWithUnderscores(t *testing.T) {
+
+	// Test's header (copy-paste me in other tests).
+	if testing.Short() {
+		t.Skip()
+	}
+	k := krenalistester.NewKrenalisInstance(t)
+	k.Start()
+	defer k.Stop()
+
+	identifiers := []string{"dummy_id", "food_preferences.drink", "android.id"}
+	k.UpdateIdentityResolutionSettings(true, identifiers)
+
+	// Rename the property "dummy_id" to "dummy_identifier" and the object
+	// property "food_preferences" to "preferences".
+	ws := k.Workspace()
+	var properties []types.Property
+	for _, p := range ws.ProfileSchema.Properties().All() {
+		switch p.Name {
+		case "dummy_id":
+			p.Name = "dummy_identifier"
+		case "food_preferences":
+			p.Name = "preferences"
+		}
+		properties = append(properties, p)
+	}
+	schema := types.Object(properties)
+	rePaths := map[string]any{"dummy_identifier": "dummy_id", "preferences": "food_preferences"}
+	k.AlterProfileSchemaAndWait(schema, nil, rePaths)
+	identifiers = []string{"dummy_identifier", "preferences.drink", "android.id"}
+
+	ws = k.Workspace()
+	if !types.Equal(schema, ws.ProfileSchema) {
+		t.Fatal("expected equal schemas, got different schemas")
+	}
+	if !slices.Equal(identifiers, ws.Identifiers) {
+		t.Fatalf("expected identifiers %v, got %v", identifiers, ws.Identifiers)
+	}
+
+	// Drop the property "dummy_identifier".
+	properties = nil
+	for _, p := range schema.Properties().All() {
+		if p.Name == "dummy_identifier" {
+			continue
+		}
+		properties = append(properties, p)
+	}
+	schema = types.Object(properties)
+	k.AlterProfileSchemaAndWait(schema, nil, nil)
+	identifiers = []string{"preferences.drink", "android.id"}
+
+	ws = k.Workspace()
+	if !types.Equal(schema, ws.ProfileSchema) {
+		t.Fatal("expected equal schemas, got different schemas")
+	}
+	if !slices.Equal(identifiers, ws.Identifiers) {
+		t.Fatalf("expected identifiers %v, got %v", identifiers, ws.Identifiers)
 	}
 
 }

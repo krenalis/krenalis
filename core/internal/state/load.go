@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"math"
 	"sync"
+	"time"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/db"
@@ -72,13 +73,15 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 			if connector.Terms.UserID != "" {
 				c.Terms.UserID = connector.Terms.UserID
 			}
-			switch connector.AsDestination.SendingMode {
-			case connectors.Client:
-				c.SendingMode = new(Client)
-			case connectors.Server:
-				c.SendingMode = new(Server)
-			case connectors.ClientAndServer:
-				c.SendingMode = new(ClientAndServer)
+			if connector.AsDestination != nil {
+				switch connector.AsDestination.SendingMode {
+				case connectors.Client:
+					c.SendingMode = new(Client)
+				case connectors.Server:
+					c.SendingMode = new(Server)
+				case connectors.ClientAndServer:
+					c.SendingMode = new(ClientAndServer)
+				}
 			}
 			// c.WebhooksPer = WebhooksPer(connector.WebhooksPer) TODO(marco): implement webhooks
 			if connector.OAuth.AuthURL != "" {
@@ -205,13 +208,28 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		}
 	}
 
-	tx, err := state.db.Begin(ctx)
+	tx, err := state.db.BeginTx(ctx, db.TxOptions{Isolation: db.LevelRepeatableRead, ReadOnly: true})
 	if err != nil {
 		return err
 	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	var keyValidation chan error
 	defer func() {
-		// Calling Rollback is always safe.
+
+		// Cancel any ongoing key validation.
+		cancel()
+
+		// Roll back with an independent timeout.
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 		_ = tx.Rollback(ctx)
+
+		// Wait for any pending validation result.
+		if keyValidation != nil {
+			<-keyValidation
+		}
+
 	}()
 
 	// Read the installation ID, the KMS-encrypted HTTP secret, OAuth, and
@@ -254,10 +272,13 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 	notificationKey := state.cipher.Key(kmsEncryptedNotificationKey)
 	clear(kmsEncryptedNotificationKey)
-	validNotificationKeyCh := make(chan error, 1)
+
+	// Validate the notification key while loading the remaining snapshot.
+	keyValidation = make(chan error)
 	go func() {
-		validNotificationKeyCh <- notificationKey.IsValid(ctx)
+		keyValidation <- notificationKey.IsValid(ctx)
 	}()
+
 	// API key pepper.
 	if len(kmsEncryptedAPIKeyPepper) == 0 {
 		return errors.New("cannot load state: missing API key pepper in metadata table")
@@ -430,15 +451,25 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 
 	// Read all consent purposes.
-	err = tx.QueryScan(ctx, "SELECT workspace, code, name FROM consent_purposes",
+	err = tx.QueryScan(ctx, "SELECT workspace, id, name, event_purpose_codes, profile_property, profile_json_key"+
+		" FROM consent_purposes",
 		func(rows *db.Rows) error {
 			for rows.Next() {
 				cp := ConsentPurpose{}
 				var workspaceID string
-				if err := rows.Scan(&workspaceID, &cp.Code, &cp.Name); err != nil {
-					return fmt.Errorf("loading consent purpose %s: %s", cp.Code, err)
+				var purposeCodes []string
+				var property, jsonKey string
+				if err := rows.Scan(&workspaceID, &cp.ID, &cp.Name, &purposeCodes, &property, &jsonKey); err != nil {
+					return fmt.Errorf("loading consent purpose %s: %s", cp.ID, err)
 				}
-				state.workspaces[workspaceID].consentPurposes[cp.Code] = &cp
+				cp.EventConsentLocations = make([]EventConsentLocation, len(purposeCodes))
+				for i, code := range purposeCodes {
+					cp.EventConsentLocations[i] = EventConsentLocation{PurposeCode: code}
+				}
+				if property != "" {
+					cp.ProfileConsentLocation = &ProfileConsentLocation{Property: property, JSONKey: jsonKey}
+				}
+				state.workspaces[workspaceID].consentPurposes[cp.ID] = &cp
 			}
 			return nil
 		})
@@ -528,13 +559,14 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 
 	// Read all pipelines.
-	err = tx.QueryScan(ctx, "SELECT id, connection, target, event_type, name, enabled, schedule_start,\n"+
-		"schedule_period, in_schema, out_schema, filter, required_consents, required_consents_operator,\n"+
-		"transformation_mapping, transformation_id, transformation_version, transformation_language,\n"+
-		"transformation_source, transformation_preserve_json, transformation_in_paths, transformation_out_paths,\n"+
-		"query, format, path, sheet, compression::TEXT, order_by, format_settings, export_mode, matching_in,\n"+
-		"matching_out, update_on_duplicates, table_name, table_key, user_id_column, updated_at_column,\n"+
-		"updated_at_format, health, properties_to_unset FROM pipelines",
+	err = tx.QueryScan(ctx, "SELECT id, connection, target, event_type, ordering_group, delivery_endpoint,\n"+
+		"name, enabled, schedule_start, schedule_period, in_schema, out_schema, filter, required_consents_operator,\n"+
+		"required_consents_purposes, transformation_mapping, transformation_id, transformation_version,\n"+
+		"transformation_language, transformation_source, transformation_preserve_json, transformation_in_paths,\n"+
+		"transformation_out_paths, query, format, path, sheet, compression::TEXT, order_by, format_settings,\n"+
+		"export_mode, matching_in, matching_out, update_on_duplicates, table_name, table_key, user_id_column,\n"+
+		"updated_at_column, updated_at_format, incremental, health, properties_to_unset\n"+
+		"FROM pipelines",
 		func(rows *db.Rows) error {
 			for rows.Next() {
 				var connectionID string
@@ -542,15 +574,18 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				var rawInSchema, rawOutSchema, filter, mapping []byte
 				var function TransformationFunction
 				var format *string
+				var purposes []string
 				pipeline := Pipeline{}
-				err := rows.Scan(&pipeline.ID, &connectionID, &pipeline.Target, &eventType, &pipeline.Name,
-					&pipeline.Enabled, &pipeline.ScheduleStart, &pipeline.SchedulePeriod, &rawInSchema, &rawOutSchema,
-					&filter, &pipeline.RequiredConsents.Purposes, &pipeline.RequiredConsents.Operator, &mapping, &function.ID,
-					&function.Version, &function.Language, &function.Source, &function.PreserveJSON, &pipeline.Transformation.InPaths,
-					&pipeline.Transformation.OutPaths, &pipeline.Query, &format, &pipeline.Path, &pipeline.Sheet, &pipeline.Compression,
-					&pipeline.OrderBy, &pipeline.FormatSettings, &pipeline.ExportMode, &pipeline.Matching.In, &pipeline.Matching.Out,
-					&pipeline.UpdateOnDuplicates, &pipeline.TableName, &pipeline.TableKey, &pipeline.UserIDColumn, &pipeline.UpdatedAtColumn,
-					&pipeline.UpdatedAtFormat, &pipeline.Health, &pipeline.propertiesToUnset)
+				err := rows.Scan(&pipeline.ID, &connectionID, &pipeline.Target, &eventType, &pipeline.OrderingGroup,
+					&pipeline.DeliveryEndpoint, &pipeline.Name, &pipeline.Enabled, &pipeline.ScheduleStart,
+					&pipeline.SchedulePeriod, &rawInSchema, &rawOutSchema, &filter, &pipeline.RequiredConsents.Operator,
+					&purposes, &mapping, &function.ID, &function.Version, &function.Language,
+					&function.Source, &function.PreserveJSON, &pipeline.Transformation.InPaths,
+					&pipeline.Transformation.OutPaths, &pipeline.Query, &format, &pipeline.Path, &pipeline.Sheet,
+					&pipeline.Compression, &pipeline.OrderBy, &pipeline.FormatSettings, &pipeline.ExportMode,
+					&pipeline.Matching.In, &pipeline.Matching.Out, &pipeline.UpdateOnDuplicates, &pipeline.TableName,
+					&pipeline.TableKey, &pipeline.UserIDColumn, &pipeline.UpdatedAtColumn, &pipeline.UpdatedAtFormat,
+					&pipeline.Incremental, &pipeline.Health, &pipeline.propertiesToUnset)
 				if err != nil {
 					return fmt.Errorf("loading pipeline %s: %s", pipeline.ID, err)
 				}
@@ -566,6 +601,10 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				pipeline.connection = c
 				pipeline.organization = c.organization
 				pipeline.EventType = eventType
+				pipeline.RequiredConsents.Purposes = make([]*ConsentPurpose, len(purposes))
+				for i, id := range purposes {
+					pipeline.RequiredConsents.Purposes[i] = c.workspace.consentPurposes[id]
+				}
 				err = pipeline.InSchema.UnmarshalJSON(rawInSchema)
 				if err != nil {
 					return fmt.Errorf("loading input schema for pipeline %s: %s", pipeline.ID, err)
@@ -672,8 +711,10 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 		return err
 	}
 
-	// Verify that the KMS key validation completed successfully.
-	if err = <-validNotificationKeyCh; err != nil {
+	// Wait for key validation after closing the snapshot transaction.
+	err = <-keyValidation
+	keyValidation = nil
+	if err != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -681,8 +722,6 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	}
 
 	state.notifications.key = notificationKey
-	state.notifications.nextVersion = version + 1
-	state.notifications.loaded <- struct{}{}
 
 	return nil
 }

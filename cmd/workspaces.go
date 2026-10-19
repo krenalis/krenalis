@@ -31,16 +31,16 @@ func (workspace workspace) AddConsentPurpose(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		return nil, err
 	}
-	var body struct {
-		Code string `json:"code"`
-		Name string `json:"name"`
-	}
-	err = json.Decode(r.Body, &body)
+	var purpose core.ConsentPurposeToSet
+	err = json.Decode(r.Body, &purpose)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.AddConsentPurpose(r.Context(), body.Code, body.Name)
-	return nil, err
+	id, err := ws.AddConsentPurpose(r.Context(), purpose)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]string{"id": id}, nil
 }
 
 // AlterProfileSchema alters the profile schema of a workspace.
@@ -153,10 +153,10 @@ func (workspace workspace) CreateEventListener(_ http.ResponseWriter, r *http.Re
 		return nil, err
 	}
 	var body struct {
-		Connection       *string                `json:"connection"`
-		Size             *int                   `json:"size"`
-		Filter           *core.Filter           `json:"filter"`
-		RequiredConsents *core.RequiredConsents `json:"requiredConsents"`
+		Connection       *string                     `json:"connection"`
+		Size             *int                        `json:"size"`
+		Filter           *core.Filter                `json:"filter"`
+		RequiredConsents *core.EventListenerConsents `json:"requiredConsents"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
@@ -193,7 +193,7 @@ func (workspace workspace) DeleteConsentPurpose(_ http.ResponseWriter, r *http.R
 	if err != nil {
 		return nil, err
 	}
-	err = ws.DeleteConsentPurpose(r.Context(), r.PathValue("code"))
+	err = ws.DeleteConsentPurpose(r.Context(), r.PathValue("id"))
 	return nil, err
 }
 
@@ -299,6 +299,38 @@ func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (a
 	}, nil
 }
 
+// IdentityMetricsPerDate returns daily identity metrics for the current
+// workspace over a date interval.
+func (workspace workspace) IdentityMetricsPerDate(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse start and end.
+	start, err := time.Parse(time.DateOnly, r.PathValue("start"))
+	if err != nil {
+		return nil, errors.NotFound("start is not valid")
+	}
+	end, err := time.Parse(time.DateOnly, r.PathValue("end"))
+	if err != nil {
+		return nil, errors.NotFound("end is not valid")
+	}
+
+	// Parse the connection selection.
+	var connectionSelection *string
+	query := r.URL.Query()
+	if values, ok := query["connection"]; ok {
+		if len(values) != 1 {
+			return nil, errors.BadRequest("only one 'connection' parameter is allowed")
+		}
+		connectionSelection = &values[0]
+	}
+
+	return ws.IdentityMetricsPerDate(r.Context(), start, end, connectionSelection)
+}
+
 // ProfilePropertiesSuitableAsIdentifiers returns the properties of the profile
 // schema that can be used as identifiers in the Identity Resolution.
 func (workspace workspace) ProfilePropertiesSuitableAsIdentifiers(_ http.ResponseWriter, r *http.Request) (any, error) {
@@ -324,6 +356,18 @@ func (workspace workspace) IngestEvents(w http.ResponseWriter, r *http.Request) 
 	w.Header().Del("Expires")
 	workspace.core.ServeEvents(w, r)
 	return nil, nil
+}
+
+// LatestIdentityMetric returns the latest identity metric for the current
+// workspace.
+func (workspace workspace) LatestIdentityMetric(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
+	if err != nil {
+		return nil, err
+	}
+
+	return ws.LatestIdentityMetric(r.Context())
 }
 
 // LatestIdentityResolution returns information about the latest Identity
@@ -543,6 +587,21 @@ func (workspace workspace) PreviewAlterProfileSchema(_ http.ResponseWriter, r *h
 	return map[string][]string{"queries": queries}, nil
 }
 
+// RefreshIdentityMetrics observes and stores identity metrics for the current
+// workspace.
+func (workspace workspace) RefreshIdentityMetrics(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateForbiddenBody(r); err != nil {
+		return nil, err
+	}
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
+	if err != nil {
+		return nil, err
+	}
+	err = ws.RefreshIdentityMetrics(r.Context())
+
+	return nil, err
+}
+
 // RepairWarehouse repairs the database objects needed by Krenalis on a
 // workspace's data warehouse.
 func (workspace workspace) RepairWarehouse(_ http.ResponseWriter, r *http.Request) (any, error) {
@@ -678,12 +737,12 @@ func (workspace workspace) UpdateConsentPurpose(w http.ResponseWriter, r *http.R
 	if err != nil {
 		return nil, err
 	}
-	var purpose core.ConsentPurpose
+	var purpose core.ConsentPurposeToSet
 	err = json.Decode(r.Body, &purpose)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.UpdateConsentPurpose(r.Context(), r.PathValue("code"), purpose)
+	err = ws.UpdateConsentPurpose(r.Context(), r.PathValue("id"), purpose)
 	return nil, err
 }
 
@@ -766,7 +825,7 @@ func (workspace workspace) ProfileEvents(_ http.ResponseWriter, r *http.Request)
 
 	// Parse the KPID.
 	kpid := r.PathValue("kpid")
-	if _, ok := types.ParseUUID(kpid); !ok {
+	if _, ok := types.NormalizeUUID(kpid); !ok {
 		return nil, errors.BadRequest("value %q is not a valid KPID", kpid)
 	}
 
@@ -785,9 +844,9 @@ func (workspace workspace) ProfileEvents(_ http.ResponseWriter, r *http.Request)
 	properties := splitQueryParameters(q["properties"])
 
 	filter := &core.Filter{
-		Logical: core.OpAnd,
-		Conditions: []core.FilterCondition{
-			{
+		Operator: core.OpAnd,
+		Rules: []core.FilterRule{
+			&core.FilterCondition{
 				Property: "kpid",
 				Operator: core.OpIs,
 				Values:   []string{kpid},

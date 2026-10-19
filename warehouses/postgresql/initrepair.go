@@ -187,6 +187,8 @@ func profilesSQLSchema(name string, profileColumns []warehouses.Column) string {
 	b.WriteString(` (
 		"_kpid" uuid,
 		"_identities" int [],
+		"_anonymous_count" integer NOT NULL,
+		"_recognized_count" integer NOT NULL,
 		"_updated_at" timestamp without time zone NOT NULL`)
 	for _, c := range profileColumns {
 		b.WriteString(",\n")

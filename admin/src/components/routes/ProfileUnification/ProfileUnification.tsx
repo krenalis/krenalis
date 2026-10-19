@@ -10,6 +10,7 @@ const ProfileUnification = () => {
 	const { setTitle } = useContext(appContext);
 
 	const location = useLocation();
+	const isSchema = location.pathname.includes('/profile-unification/schema');
 
 	useLayoutEffect(() => {
 		if (location.pathname.endsWith('profile-unification')) {
@@ -60,7 +61,7 @@ const ProfileUnification = () => {
 
 	return (
 		<div className='profile-unification'>
-			<div className='route-content'>{content}</div>
+			<div className={`route-content${isSchema ? ' profile-unification__schema-content' : ''}`}>{content}</div>
 		</div>
 	);
 };
