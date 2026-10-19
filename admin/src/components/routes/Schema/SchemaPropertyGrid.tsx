@@ -1,10 +1,10 @@
 import React, { ReactNode, useEffect, useId, useRef, useState } from 'react';
 import './SchemaPropertyGrid.css';
-import SlBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
-import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import { Property } from '../../../lib/api/types/types';
 import { GridNestedRowsIndentation } from '../../base/Grid/Grid.types';
 
@@ -28,9 +28,9 @@ const SchemaPropertyName = ({ property }: { property: Property }) => (
 );
 
 const SchemaPropertyIdentifierBadge = ({ position }: { position: number }) => (
-	<SlBadge className='schema-property-grid__identifier' pill variant='neutral'>
+	<WaBadge className='schema-property-grid__identifier' pill variant='neutral'>
 		#{position}
-	</SlBadge>
+	</WaBadge>
 );
 
 const SchemaPropertyIdentifierValue = ({ position }: { position?: number }) =>
@@ -54,13 +54,13 @@ const SchemaPropertyInfoTooltip = ({ content, label }: { content: string; label:
 
 	return (
 		<>
-			<SlTooltip className='schema-property-grid__tooltip' for={iconID} placement='top' trigger='hover'>
+			<WaTooltip className='schema-property-grid__tooltip' for={iconID} placement='top' trigger='hover'>
 				<div id={descriptionID} className='schema-property-grid__tooltip-content'>
 					{content.split('\n\n').map((paragraph, index) => (
 						<p key={index}>{paragraph}</p>
 					))}
 				</div>
-			</SlTooltip>
+			</WaTooltip>
 			<span
 				className='schema-property-grid__info'
 				role='img'
@@ -142,10 +142,10 @@ const SchemaPropertyGridExpansionButtons = ({
 
 	return (
 		<div className={`${classNamePrefix}__expansion-buttons`}>
-			<SlTooltip className={`${classNamePrefix}__toolbar-tooltip`} for={expandID}>
+			<WaTooltip className={`${classNamePrefix}__toolbar-tooltip`} for={expandID}>
 				Expand all properties
-			</SlTooltip>
-			<SlButton
+			</WaTooltip>
+			<WaButton
 				id={expandID}
 				appearance='outlined'
 				className={`${classNamePrefix}__expand-all-button ${buttonClassName}`}
@@ -155,11 +155,11 @@ const SchemaPropertyGridExpansionButtons = ({
 				onClick={onExpand}
 			>
 				<WaIcon name='chevron-expand' />
-			</SlButton>
-			<SlTooltip className={`${classNamePrefix}__toolbar-tooltip`} for={collapseID}>
+			</WaButton>
+			<WaTooltip className={`${classNamePrefix}__toolbar-tooltip`} for={collapseID}>
 				Collapse all properties
-			</SlTooltip>
-			<SlButton
+			</WaTooltip>
+			<WaButton
 				id={collapseID}
 				appearance='outlined'
 				className={`${classNamePrefix}__collapse-all-button ${buttonClassName}`}
@@ -169,7 +169,7 @@ const SchemaPropertyGridExpansionButtons = ({
 				onClick={onCollapse}
 			>
 				<WaIcon name='chevron-contract' />
-			</SlButton>
+			</WaButton>
 		</div>
 	);
 };
@@ -221,7 +221,7 @@ const SchemaPropertySearch = ({
 			className={`${classNamePrefix}__search-control${isOpen ? ` ${classNamePrefix}__search-control--open` : ''}`}
 		>
 			{isOpen ? (
-				<SlInput
+				<WaInput
 					ref={searchRef}
 					className={`${classNamePrefix}__search`}
 					size='s'
@@ -232,13 +232,13 @@ const SchemaPropertySearch = ({
 				>
 					<WaIcon name='search' slot='start' />
 					<WaIcon name='backspace' slot='clear-icon' />
-				</SlInput>
+				</WaInput>
 			) : (
 				<>
-					<SlTooltip className={`${classNamePrefix}__toolbar-tooltip`} for={searchButtonID}>
+					<WaTooltip className={`${classNamePrefix}__toolbar-tooltip`} for={searchButtonID}>
 						Search properties
-					</SlTooltip>
-					<SlButton
+					</WaTooltip>
+					<WaButton
 						id={searchButtonID}
 						appearance='outlined'
 						className={`${classNamePrefix}__search-button ${classNamePrefix}__toolbar-icon-button`}
@@ -247,7 +247,7 @@ const SchemaPropertySearch = ({
 						onClick={onClick}
 					>
 						<WaIcon name='search' />
-					</SlButton>
+					</WaButton>
 				</>
 			)}
 		</div>

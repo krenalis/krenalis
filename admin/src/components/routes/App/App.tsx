@@ -9,7 +9,7 @@ import AppContext from '../../../context/AppContext';
 import { Outlet } from 'react-router-dom';
 import { useNavigate, useLocation, matchPath } from 'react-router-dom';
 import { registerIconLibrary } from '@awesome.me/webawesome/dist/components/icon/library.js';
-import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import '@awesome.me/webawesome/dist/styles/layers.css';
 import '@awesome.me/webawesome/dist/styles/themes/default.css';
 import { useApp } from './useApp';
@@ -158,7 +158,7 @@ const App = ({ onWorkOSLogout }: { onWorkOSLogout?: () => void } = {}) => {
 	let content: ReactNode;
 	if (isLoadingState || (!isLoggedIn && (hasWorkOS || !isAuthRelatedRoute(location.pathname)))) {
 		content = (
-			<SlSpinner
+			<WaSpinner
 				className='app-spinner'
 				style={
 					{
@@ -269,7 +269,7 @@ const WorkOSWrapper = () => {
 
 	if (!isLoggedInViaWorkOS) {
 		return (
-			<SlSpinner
+			<WaSpinner
 				className='app-spinner'
 				style={{ fontSize: '5rem', '--track-width': '6px' } as React.CSSProperties}
 			/>
@@ -308,7 +308,7 @@ const Root = () => {
 
 	if (workosClientID == null) {
 		return (
-			<SlSpinner
+			<WaSpinner
 				className='app-spinner'
 				style={{ fontSize: '5rem', '--track-width': '6px' } as React.CSSProperties}
 			/>

@@ -1,7 +1,7 @@
 import React from 'react';
 import './ConnectionIdentities.css';
 import { useConnectionIdentities } from './useConnectionIdentities';
-import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import Grid from '../../base/Grid/Grid';
 import IconWrapper from '../../base/IconWrapper/IconWrapper';
 
@@ -11,14 +11,14 @@ const ConnectionIdentities = () => {
 	return (
 		<div className={`connection-identities${isLoading ? ' connection-identities--loading' : ''}`}>
 			{isLoading ? (
-				<SlSpinner
+				<WaSpinner
 					style={
 						{
 							fontSize: '3rem',
 							'--track-width': '6px',
 						} as React.CSSProperties
 					}
-				></SlSpinner>
+				></WaSpinner>
 			) : identitiesRows.length === 0 ? (
 				<div className='connection-identities__no-identity'>
 					<IconWrapper name='person-exclamation' size={40} />

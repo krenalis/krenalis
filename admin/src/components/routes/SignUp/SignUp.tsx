@@ -4,8 +4,8 @@ import './SignUp.css';
 import AppContext from '../../../context/AppContext';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { MemberInvitationResponse } from '../../../lib/api/types/responses';
 import { validateMemberToSet } from '../../../lib/core/member';
 
@@ -136,9 +136,9 @@ const SignUp = () => {
 			</div>
 			<h1 className='signup__title'>Sign up to {organizationName}</h1>
 			<form onSubmit={onSignUp}>
-				<SlInput className='signup__email' label='Email' value={invitedEmail} disabled />
-				<SlInput className='signup__name' label='Name' value={name} onInput={onNameChange} required />
-				<SlInput
+				<WaInput className='signup__email' label='Email' value={invitedEmail} disabled />
+				<WaInput className='signup__name' label='Name' value={name} onInput={onNameChange} required />
+				<WaInput
 					type='password'
 					className='signup__password'
 					label='Password'
@@ -149,16 +149,16 @@ const SignUp = () => {
 				>
 					<WaIcon name='eye' slot='show-password-icon' />
 					<WaIcon name='eye-slash' slot='hide-password-icon' />
-				</SlInput>
+				</WaInput>
 				{error && (
 					<div className='signup__error'>
 						<WaIcon slot='icon' name='exclamation-octagon' />
 						{error}
 					</div>
 				)}
-				<SlButton className='signup__button' variant='brand' type='submit' loading={isLoading}>
+				<WaButton className='signup__button' variant='brand' type='submit' loading={isLoading}>
 					Sign up
-				</SlButton>
+				</WaButton>
 			</form>
 		</div>
 	);

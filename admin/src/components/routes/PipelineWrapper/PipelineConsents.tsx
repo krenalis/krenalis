@@ -6,10 +6,10 @@ import { ConsentPurposesOperator } from '../../../lib/api/types/pipeline';
 import { getMissingConsentLocation, isOutputPathTransformed } from '../../../lib/core/pipeline';
 import { UI_BASE_PATH } from '../../../constants/paths';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
-import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
-import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
-import type SlOptionElement from '@awesome.me/webawesome/dist/components/option/option.js';
+import WaSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import type WaOptionElement from '@awesome.me/webawesome/dist/components/option/option.js';
 
 interface PurposeError {
 	purpose: ConsentPurpose;
@@ -34,7 +34,7 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 
 	const operatorRef = useRef<any>(null);
 	const purposesRef = useRef<any>(null);
-	const purposeTagsRef = useRef(new WeakMap<SlOptionElement, HTMLElement>());
+	const purposeTagsRef = useRef(new WeakMap<WaOptionElement, HTMLElement>());
 
 	useEffect(() => {
 		setIsEnabled((pipeline.requiredConsents?.purposes.length ?? 0) > 0);
@@ -178,7 +178,7 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 	// Show the tags of these purposes in red. The other tags are the same as
 	// the default ones of the select.
 	const invalidPurposeIDs = new Set(purposeErrors.map(({ purpose }) => purpose.id));
-	const getPurposeTag = (option: SlOptionElement): HTMLElement => {
+	const getPurposeTag = (option: WaOptionElement): HTMLElement => {
 		// The select renders its tags again when it loses the focus, which
 		// happens on the mousedown on a remove button. Reuse the tag of the
 		// option and change it only when needed, as a tag replaced or changed
@@ -226,7 +226,7 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 			annotated={true}
 		>
 			<div className='pipeline__consents-toggle'>
-				<SlSwitch checked={isEnabled} onChange={onToggle} disabled={!hasPurposes} />
+				<WaSwitch checked={isEnabled} onChange={onToggle} disabled={!hasPurposes} />
 				<div
 					className={`pipeline__consents-logical-sentence${
 						hasPurposes ? '' : ' pipeline__consents-logical-sentence--disabled'
@@ -234,7 +234,7 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 					onClick={onSentenceClick}
 				>
 					{`Only ${actionVerb} ${subjects} ${subjects === 'events' ? 'that have consent for' : 'who have consented to'}`}
-					<SlSelect
+					<WaSelect
 						ref={operatorRef}
 						className={`pipeline__consents-logical-select${
 							isEnabled ? '' : ' pipeline__consents-logical-select--readonly'
@@ -243,14 +243,14 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 						value={pipeline.requiredConsents?.operator || 'and'}
 						onChange={onChangeOperator}
 					>
-						<SlOption value='and'>all</SlOption>
-						<SlOption value='or'>any</SlOption>
-					</SlSelect>
+						<WaOption value='and'>all</WaOption>
+						<WaOption value='or'>any</WaOption>
+					</WaSelect>
 					of the selected purposes.
 				</div>
 			</div>
 			<div className='pipeline__consents-details'>
-				<SlSelect
+				<WaSelect
 					ref={purposesRef}
 					className='pipeline__consents-select'
 					multiple
@@ -267,7 +267,7 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 						// cannot be selected.
 						const location = getMissingConsentLocation(p, pipelineType, connection);
 						return (
-							<SlOption
+							<WaOption
 								key={p.id}
 								value={p.id}
 								label={p.name}
@@ -279,11 +279,11 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 										{`has no ${location} consent location`}
 									</span>
 								)}
-							</SlOption>
+							</WaOption>
 						);
 					})}
 					{deletedConsentPurposes.map((p) => (
-						<SlOption
+						<WaOption
 							key={p.id}
 							value={p.id}
 							label={p.name}
@@ -293,9 +293,9 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 							<span slot='end' className='pipeline__consents-option-message'>
 								no longer exists
 							</span>
-						</SlOption>
+						</WaOption>
 					))}
-				</SlSelect>
+				</WaSelect>
 				{(purposeErrors.length > 0 || untransformedConsentPaths.length > 0) && (
 					<div className='pipeline__consents-errors'>
 						{purposeErrors.map(({ purpose, message, isDeleted }) => (

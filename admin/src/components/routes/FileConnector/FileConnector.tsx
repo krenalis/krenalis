@@ -1,9 +1,9 @@
 import './FileConnector.css';
 import React, { useState, useLayoutEffect, useContext, useMemo } from 'react';
 import appContext from '../../../context/AppContext';
-import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
-import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { useParams, useLocation } from 'react-router-dom';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import TransformedConnection from '../../../lib/core/connection';
@@ -69,7 +69,7 @@ const FileConnector = () => {
 				<div className='file-connector__content'>
 					{storages.length > 0 ? (
 						<div className='file-connector__storage'>
-							<SlSelect
+							<WaSelect
 								label='Storage'
 								name='storages'
 								value={selectedStorage}
@@ -84,14 +84,14 @@ const FileConnector = () => {
 									</div>
 								)}
 								{storages.map((s) => (
-									<SlOption key={s.id} value={s.id}>
+									<WaOption key={s.id} value={s.id}>
 										<div slot='start'>
 											<LittleLogo code={s.connector.code} path={CONNECTORS_ASSETS_PATH} />
 										</div>
 										{s.name}
-									</SlOption>
+									</WaOption>
 								))}
-							</SlSelect>
+							</WaSelect>
 						</div>
 					) : (
 						<div className='file-connector__no-storage'>
@@ -101,7 +101,7 @@ const FileConnector = () => {
 								Please add one before proceeding.
 							</div>
 							<Link path={`connectors?role=${role}&category=File%20Storage`}>
-								<SlButton variant='neutral'>Add file storage...</SlButton>
+								<WaButton variant='neutral'>Add file storage...</WaButton>
 							</Link>
 						</div>
 					)}
@@ -118,7 +118,7 @@ const FileConnector = () => {
 								}
 								className='file-connector__pipeline-type'
 								action={
-									<SlButton
+									<WaButton
 										size='s'
 										variant='brand'
 										onClick={() => {
@@ -126,7 +126,7 @@ const FileConnector = () => {
 										}}
 									>
 										Add
-									</SlButton>
+									</WaButton>
 								}
 							/>
 							{/* // TODO(Gianluca: https://github.com/krenalis/krenalis/issues/895
@@ -137,7 +137,7 @@ const FileConnector = () => {
 								description={`Import groups from ${file.label} into the data warehouse`}
 								className='file-connector__pipeline-type'
 								action={
-									<SlButton
+									<WaButton
 										size='s'
 										variant='brand'
 										onClick={() => {
@@ -145,7 +145,7 @@ const FileConnector = () => {
 										}}
 									>
 										Add
-									</SlButton>
+									</WaButton>
 								}
 							/> */}
 						</div>

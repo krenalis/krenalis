@@ -1,7 +1,7 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import './Toast.css';
-import SlCallout from '@awesome.me/webawesome/dist/react/callout/index.js';
-import SlCalloutType from '@awesome.me/webawesome/dist/components/callout/callout.js';
+import WaCallout from '@awesome.me/webawesome/dist/react/callout/index.js';
+import WaCalloutElement from '@awesome.me/webawesome/dist/components/callout/callout.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { Status } from '../../routes/App/App.types';
 
@@ -28,7 +28,7 @@ const animationOptions = { duration: 250, easing: 'ease' };
 // dialog is open the rest of the page is inert, the toast included.
 const Toast = forwardRef<ToastRef, ToastProps>(({ status, isFullscreen }, ref) => {
 	const stackRef = useRef<HTMLDivElement>(null);
-	const calloutRef = useRef<SlCalloutType>(null);
+	const calloutRef = useRef<WaCalloutElement>(null);
 
 	const animate = async (keyframes: Keyframe[]) => {
 		const callout = calloutRef.current;
@@ -69,7 +69,7 @@ const Toast = forwardRef<ToastRef, ToastProps>(({ status, isFullscreen }, ref) =
 	return (
 		// The React 18 types in use do not know the popover attribute.
 		<div className='toast-stack' {...{ popover: 'manual' }} ref={stackRef}>
-			<SlCallout
+			<WaCallout
 				className={`toast${isFullscreen ? ' toast--fullscreen' : ''}`}
 				ref={calloutRef}
 				variant={status?.variant === 'primary' ? 'brand' : (status?.variant ?? 'neutral')}
@@ -85,7 +85,7 @@ const Toast = forwardRef<ToastRef, ToastProps>(({ status, isFullscreen }, ref) =
 						</button>
 					</>
 				)}
-			</SlCallout>
+			</WaCallout>
 		</div>
 	);
 });

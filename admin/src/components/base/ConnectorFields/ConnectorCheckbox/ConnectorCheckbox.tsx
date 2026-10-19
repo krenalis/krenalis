@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './ConnectorCheckbox.css';
-import SlCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
+import WaCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
 
 interface ConnectorCheckboxProps {
 	name: string;
@@ -25,9 +25,9 @@ const ConnectorCheckbox = ({ name, label, error, val, onChange }: ConnectorCheck
 
 	return (
 		<div className='connector-checkbox'>
-			<SlCheckbox name={name} onChange={onCheckboxChange} checked={value}>
+			<WaCheckbox name={name} onChange={onCheckboxChange} checked={value}>
 				{label}
-			</SlCheckbox>
+			</WaCheckbox>
 			{error !== '' && <div className='connector-ui__fields-error'>{error}</div>}
 		</div>
 	);

@@ -3,8 +3,8 @@ import './ResetPasswordToken.css';
 import appContext from '../../../context/AppContext';
 import { useParams } from 'react-router-dom';
 import { NotFoundError } from '../../../lib/api/errors';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { validateMemberPassword } from '../../../lib/core/member';
 import { debounce } from '../../../utils/debounce';
@@ -108,7 +108,7 @@ const ResetPasswordToken = () => {
 					<h1>Reset password</h1>
 				</div>
 				<form className='reset-password-token__form' onSubmit={passwordError !== '' ? null : onChangePassword}>
-					<SlInput
+					<WaInput
 						type='password'
 						className='reset-password-token__password'
 						onInput={debounce(onPasswordInput, 500)}
@@ -120,8 +120,8 @@ const ResetPasswordToken = () => {
 					>
 						<WaIcon name='eye' slot='show-password-icon' />
 						<WaIcon name='eye-slash' slot='hide-password-icon' />
-					</SlInput>
-					<SlInput
+					</WaInput>
+					<WaInput
 						type='password'
 						className='reset-password-token__password-2'
 						onInput={debounce(onPassword2Input, 500)}
@@ -132,14 +132,14 @@ const ResetPasswordToken = () => {
 					>
 						<WaIcon name='eye' slot='show-password-icon' />
 						<WaIcon name='eye-slash' slot='hide-password-icon' />
-					</SlInput>
+					</WaInput>
 					{passwordError !== '' && (
 						<div className='reset-password__password-error'>
 							<WaIcon name='exclamation-circle' />
 							<span className='reset-password__password-error-text'>{passwordError}</span>
 						</div>
 					)}
-					<SlButton
+					<WaButton
 						className='reset-password-token__button'
 						type='submit'
 						variant='brand'
@@ -147,7 +147,7 @@ const ResetPasswordToken = () => {
 						disabled={passwordError !== ''}
 					>
 						Reset password
-					</SlButton>
+					</WaButton>
 				</form>
 			</div>
 		</div>

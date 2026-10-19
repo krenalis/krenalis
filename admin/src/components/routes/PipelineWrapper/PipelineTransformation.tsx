@@ -48,25 +48,25 @@ import Accordion from '../../base/Accordion/Accordion';
 import useEventListener from '../../../hooks/useEventListener';
 import AppContext from '../../../context/AppContext';
 import PipelineContext from '../../../context/PipelineContext';
-import SlAnimation from '@awesome.me/webawesome/dist/react/animation/index.js';
-import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
-import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaAnimation from '@awesome.me/webawesome/dist/react/animation/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { buttonVariant } from '../../../utils/buttonVariant';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlButtonGroup from '@awesome.me/webawesome/dist/react/button-group/index.js';
-import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
-import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
-import SlDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
-import SlSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
-import SlCopyButton from '@awesome.me/webawesome/dist/react/copy-button/index.js';
-import SlSplitPanel from '@awesome.me/webawesome/dist/react/split-panel/index.js';
-import SlCallout from '@awesome.me/webawesome/dist/react/callout/index.js';
-import SlCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
-import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
-import SlBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
+import WaButtonGroup from '@awesome.me/webawesome/dist/react/button-group/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
+import WaSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
+import WaCopyButton from '@awesome.me/webawesome/dist/react/copy-button/index.js';
+import WaSplitPanel from '@awesome.me/webawesome/dist/react/split-panel/index.js';
+import WaCallout from '@awesome.me/webawesome/dist/react/callout/index.js';
+import WaCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
-import SlRelativeTime from '@awesome.me/webawesome/dist/react/relative-time/index.js';
+import WaRelativeTime from '@awesome.me/webawesome/dist/react/relative-time/index.js';
 import {
 	ApplicationUsersResponse,
 	ExecQueryResponse,
@@ -541,7 +541,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 							{needFormat && (
 								<div className='pipeline__transformation-updated-at-format-property'>
 									<div className='pipeline__transformation-updated-at-format'>
-										<SlSelect
+										<WaSelect
 											onChange={onChangeUpdatedAtFormat}
 											value={
 												isCustomUpdatedAtFormatSelected
@@ -558,14 +558,14 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 											size='s'
 											ref={updatedAtFormatRef}
 										>
-											<SlOption value='iso8601'>ISO 8601</SlOption>
-											{format?.code === 'excel' && <SlOption value='excel'>Excel</SlOption>}
-											<SlOption value='custom'>Custom...</SlOption>
-										</SlSelect>
+											<WaOption value='iso8601'>ISO 8601</WaOption>
+											{format?.code === 'excel' && <WaOption value='excel'>Excel</WaOption>}
+											<WaOption value='custom'>Custom...</WaOption>
+										</WaSelect>
 									</div>
 									{isCustomUpdatedAtFormatSelected && (
 										<div className='pipeline__transformation-updated-at-custom-format'>
-											<SlInput
+											<WaInput
 												onInput={onInputUpdatedAtCustomFormat}
 												value={pipeline.updatedAtFormat}
 												name='updatedAtCustomFormat'
@@ -573,7 +573,7 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 												hint='C89 "strftime" format string'
 												size='s'
 												ref={updatedAtCustomFormatInputRef}
-											></SlInput>
+											></WaInput>
 										</div>
 									)}
 								</div>
@@ -581,14 +581,14 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 						</div>
 						{pipelineType.fields.includes('Incremental') && (
 							<div className='pipeline__transformation-incremental'>
-								<SlCheckbox
+								<WaCheckbox
 									checked={pipeline.incremental}
 									onChange={onChangeIncremental}
 									disabled={pipeline.updatedAtColumn === ''}
 									hint={`Only imports ${transformationTargetsTerm} whose update time is subsequent to the last import`}
 								>
 									Run incremental import
-								</SlCheckbox>
+								</WaCheckbox>
 							</div>
 						)}
 					</div>
@@ -601,9 +601,9 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 						padded={true}
 						annotated={true}
 					>
-						<SlCheckbox checked={pipeline.incremental} onChange={onChangeIncremental}>
+						<WaCheckbox checked={pipeline.incremental} onChange={onChangeIncremental}>
 							Run incremental import
-						</SlCheckbox>
+						</WaCheckbox>
 					</Section>
 				)
 			)}
@@ -671,9 +671,9 @@ const PropertyAnnotation = ({ className, property }: PropertyAnnotationProps) =>
 
 	return (
 		<>
-			<SlTooltip className='property-annotation__tooltip' for={annotationID} disabled={!isOverflowing}>
+			<WaTooltip className='property-annotation__tooltip' for={annotationID} disabled={!isOverflowing}>
 				{annotation}
-			</SlTooltip>
+			</WaTooltip>
 			<div id={annotationID} className={className} ref={annotationRef}>
 				{displayName !== '' && <span className='property-annotation__display-name'>{displayName}</span>}
 				{displayName !== '' && description !== '' && propertyAnnotationSeparator}
@@ -1068,9 +1068,9 @@ const TransformationBox = ({
 						>
 							{isIdentifier && (
 								<div className='pipeline__transformation-property-icon' slot='start'>
-									<SlTooltip for={`${transformationBoxID}-${path}-identifier`}>
+									<WaTooltip for={`${transformationBoxID}-${path}-identifier`}>
 										Used as identifier in Identity Resolution
-									</SlTooltip>
+									</WaTooltip>
 									<WaIcon
 										id={`${transformationBoxID}-${path}-identifier`}
 										name='person-check'
@@ -1094,7 +1094,7 @@ const TransformationBox = ({
 						>
 							<div className='pipeline__transformation-output-property-head'>
 								<span className='pipeline__transformation-output-property-name-copy'>
-									<SlCopyButton
+									<WaCopyButton
 										className='pipeline__transformation-output-property-copy'
 										value={property.full.name}
 										copyLabel='Click to copy'
@@ -1109,12 +1109,12 @@ const TransformationBox = ({
 								<span className='pipeline__transformation-output-property-type'>{typeName}</span>
 								{isRequired && (
 									<>
-										<SlTooltip
+										<WaTooltip
 											for={`${transformationBoxID}-${path}-required`}
 											disabled={consentPurposes == null}
 										>
 											{`Holds the consent for ${consentPurposes?.map((p) => `"${p.name}"`).join(', ')}`}
-										</SlTooltip>
+										</WaTooltip>
 										<span
 											id={`${transformationBoxID}-${path}-required`}
 											className={`pipeline__transformation-output-property-required${isSelected ? ' pipeline__transformation-output-property-required--selected' : ''}`}
@@ -1162,10 +1162,10 @@ const TransformationBox = ({
 					sync={isFullscreenTransformationOpen}
 				/>
 				{isTransformationLanguageDeprecated && (
-					<SlCallout variant='danger' className='pipeline__transformation-language-deprecated'>
+					<WaCallout variant='danger' className='pipeline__transformation-language-deprecated'>
 						<WaIcon slot='icon' name='exclamation-circle' />
 						{selectedLanguage} is not supported anymore
-					</SlCallout>
+					</WaCallout>
 				)}
 			</div>
 		);
@@ -1207,20 +1207,20 @@ const TransformationBox = ({
 								</div>
 							</>
 						) : (
-							<SlButtonGroup className='transformation-box__header-buttons'>
-								<SlButton
+							<WaButtonGroup className='transformation-box__header-buttons'>
+								<WaButton
 									className='transformation-box__mappings-button'
 									{...buttonVariant(transformationType === 'mappings' ? 'primary' : 'default')}
 									onClick={() => onTransformationTypeClick('mappings')}
 									disabled={isTransformationDisabled}
 								>
 									Mappings
-								</SlButton>
+								</WaButton>
 								{['JavaScript', 'Python'].map((language) => {
 									const isConfigured = transformationLanguages.includes(language);
 									const isDisabled = isTransformationDisabled || !isConfigured;
 									const tab = (
-										<SlButton
+										<WaButton
 											id={`${transformationBoxID}-${language}`}
 											key={language}
 											{...buttonVariant(
@@ -1232,41 +1232,41 @@ const TransformationBox = ({
 											disabled={isDisabled}
 										>
 											{language}
-										</SlButton>
+										</WaButton>
 									);
 									if (isConfigured) {
 										return tab;
 									} else {
 										return (
 											<React.Fragment key={language}>
-												<SlTooltip
+												<WaTooltip
 													for={`${transformationBoxID}-${language}`}
 													className='transformation-box__not-configured-tooltip'
 												>
 													{`It is not possible to use ${language} for the transformation because it needs to be configured first.`}
-												</SlTooltip>
+												</WaTooltip>
 												{tab}
 											</React.Fragment>
 										);
 									}
 								})}
-							</SlButtonGroup>
+							</WaButtonGroup>
 						)}
 					</div>
 				)}
 				<div className='transformation-box__header-right-buttons'>
 					{transformationType === 'function' && (
-						<SlDropdown
+						<WaDropdown
 							className={`transformation-box__function-settings${isFullscreenTransformationOpen ? ' transformation-box__function-settings--visible' : ''}`}
 						>
-							<SlButton appearance='outlined' slot='trigger' pill>
+							<WaButton appearance='outlined' slot='trigger' pill>
 								<WaIcon className='transformation-box__function-settings-icon' name='gear' />
 								<WaIcon
 									className={`transformation-box__function-settings-icon-dot${pipeline.transformation.function.preserveJSON ? ' transformation-box__function-settings-icon-dot--active' : ''}`}
 									name='circle-fill'
 								></WaIcon>
-							</SlButton>
-							<SlSwitch
+							</WaButton>
+							<WaSwitch
 								size='s'
 								checked={pipeline.transformation.function.preserveJSON}
 								onClick={onFunctionPreserveJSONSwitch}
@@ -1276,11 +1276,11 @@ const TransformationBox = ({
 									Pass and receive JSON values as strings in their original format, without decoding
 									or encoding them.
 								</span>
-							</SlSwitch>
-						</SlDropdown>
+							</WaSwitch>
+						</WaDropdown>
 					)}
 					{!isFullscreenTransformationOpen && (
-						<SlAnimation
+						<WaAnimation
 							name='shake'
 							duration={1000}
 							playbackRate={1.2}
@@ -1288,15 +1288,15 @@ const TransformationBox = ({
 							play={isEditButtonAnimated}
 							onWaFinish={() => setIsEditButtonAnimated(false)}
 						>
-							<SlButton
+							<WaButton
 								className='transformation-box__fullscreen-button'
 								variant='brand'
 								onClick={onOpenTransformation}
 								disabled={isTransformationDisabled}
 							>
 								Edit in full mode
-							</SlButton>
-						</SlAnimation>
+							</WaButton>
+						</WaAnimation>
 					)}
 				</div>
 			</div>
@@ -1316,12 +1316,12 @@ const TransformationBox = ({
 				title={'You will lose your work'}
 				actions={
 					<>
-						<SlButton appearance='outlined' onClick={() => setIsAlertOpen(false)}>
+						<WaButton appearance='outlined' onClick={() => setIsAlertOpen(false)}>
 							Cancel
-						</SlButton>
-						<SlButton variant='danger' onClick={() => onChangeTransformationType(200)}>
+						</WaButton>
+						<WaButton variant='danger' onClick={() => onChangeTransformationType(200)}>
 							Continue
-						</SlButton>
+						</WaButton>
 					</>
 				}
 			>
@@ -2090,14 +2090,14 @@ const FullscreenTransformation = ({
 			{connection.isFileStorage && connection.isSource && pipeline.filter != null && (
 				<div className='fullscreen-transformation__samples-file-warning'>
 					<div className='fullscreen-transformation__samples-file-notice'>Samples are not filtered</div>
-					<SlTooltip for={samplesFileWarningID}>
+					<WaTooltip for={samplesFileWarningID}>
 						No filtering is applied when fetching samples from files
-					</SlTooltip>
+					</WaTooltip>
 					<WaIcon id={samplesFileWarningID} name='info-circle' />
 				</div>
 			)}
 			<div className='fullscreen-transformation__samples-reload'>
-				<SlButton
+				<WaButton
 					appearance='outlined'
 					size='s'
 					loading={isReloadingSamples}
@@ -2105,8 +2105,8 @@ const FullscreenTransformation = ({
 				>
 					Reload
 					<WaIcon name='arrow-clockwise' slot='end' />
-				</SlButton>
-				<SlRelativeTime date={lastSamplesFetchTime} sync lang='en-US' />
+				</WaButton>
+				<WaRelativeTime date={lastSamplesFetchTime} sync lang='en-US' />
 			</div>
 		</div>
 	);
@@ -2115,7 +2115,7 @@ const FullscreenTransformation = ({
 	if (isInputSchemaSelected) {
 		inputPanelContent = (
 			<div className='fullscreen-transformation__panel-schema'>
-				<SlInput
+				<WaInput
 					className='fullscreen-transformation__panel-schema-search'
 					onInput={onInputInSearchTerm}
 					value={inSearchTerm}
@@ -2125,15 +2125,15 @@ const FullscreenTransformation = ({
 				>
 					<WaIcon name='search' slot='start' />
 					<WaIcon name='x-circle-fill' slot='clear-icon' />
-				</SlInput>
+				</WaInput>
 				{transformationType === 'function' && (
-					<SlSwitch
+					<WaSwitch
 						className='fullscreen-transformation__panel-schema-show-only-selected'
 						size='s'
 						onChange={() => onChangeShowOnlySelected('in')}
 					>
 						Show only selected properties
-					</SlSwitch>
+					</WaSwitch>
 				)}
 				{inputSchema?.properties.map((p) => {
 					if (transformationType === 'function') {
@@ -2185,7 +2185,7 @@ const FullscreenTransformation = ({
 	} else if (isFetchingSamples) {
 		inputPanelContent = (
 			<div className='fullscreen-transformation__samples-loading'>
-				<SlSpinner
+				<WaSpinner
 					style={
 						{
 							fontSize: '3rem',
@@ -2295,7 +2295,7 @@ const FullscreenTransformation = ({
 											)}
 										</div>
 										<div className='fullscreen-transformation__execute-button'>
-											<SlButton
+											<WaButton
 												className='icon-button'
 												appearance='plain'
 												disabled={isExecuting}
@@ -2305,7 +2305,7 @@ const FullscreenTransformation = ({
 												}}
 											>
 												<WaIcon name='play-circle' label='Transform sample' />
-											</SlButton>
+											</WaButton>
 										</div>
 									</div>
 								}
@@ -2386,9 +2386,9 @@ const FullscreenTransformation = ({
 													)}
 												</div>
 												<div className='fullscreen-transformation__event-time'>
-													<SlRelativeTime date={e.time} sync lang='en-US' />
+													<WaRelativeTime date={e.time} sync lang='en-US' />
 												</div>
-												<SlButton
+												<WaButton
 													className='fullscreen-transformation__event-run icon-button'
 													appearance='plain'
 													onClick={(evt) => {
@@ -2401,7 +2401,7 @@ const FullscreenTransformation = ({
 													}}
 												>
 													<WaIcon name='play-circle' label='Transform event' />
-												</SlButton>
+												</WaButton>
 											</div>
 										}
 										details={
@@ -2444,9 +2444,9 @@ const FullscreenTransformation = ({
 		<div
 			className={`fullscreen-transformation${' fullscreen-transformation--' + transformationType}${isFullscreenTransformationOpen ? ' fullscreen-transformation--open' : ''}`}
 		>
-			<SlSplitPanel style={{ '--min': '70%', '--max': 'calc(100% - 10px)' } as React.CSSProperties}>
+			<WaSplitPanel style={{ '--min': '70%', '--max': 'calc(100% - 10px)' } as React.CSSProperties}>
 				<div className='fullscreen-transformation__left-panel' slot='start'>
-					<SlSplitPanel style={{ '--min': '10px', '--max': '42%' } as React.CSSProperties}>
+					<WaSplitPanel style={{ '--min': '10px', '--max': '42%' } as React.CSSProperties}>
 						<div
 							className={`fullscreen-transformation__input-panel${isInputSchemaSelected ? ' fullscreen-transformation__input-panel--schema' : ''}`}
 							slot='start'
@@ -2455,22 +2455,22 @@ const FullscreenTransformation = ({
 								<div className='fullscreen-transformation__panel-title'>
 									<div className='fullscreen-transformation__panel-title-text'>{sourceHeader}</div>
 								</div>
-								<SlButtonGroup>
-									<SlButton
+								<WaButtonGroup>
+									<WaButton
 										size='s'
 										{...buttonVariant(isInputSchemaSelected ? 'primary' : 'default')}
 										onClick={onSelectInputSchema}
 									>
 										Schema
-									</SlButton>
-									<SlButton
+									</WaButton>
+									<WaButton
 										size='s'
 										{...buttonVariant(isInputSchemaSelected ? 'default' : 'primary')}
 										onClick={onSelectInputSamples}
 									>
 										Samples
-									</SlButton>
-								</SlButtonGroup>
+									</WaButton>
+								</WaButtonGroup>
 							</div>
 							<div className='fullscreen-transformation__panel-content'>{inputPanelContent}</div>
 						</div>
@@ -2480,7 +2480,7 @@ const FullscreenTransformation = ({
 								className={`fullscreen-transformation__editor-panel${!isBodyShown ? ' fullscreen-transformation__editor-panel--hide' : ''}`}
 							>
 								{!isBodyShown && (
-									<SlSpinner
+									<WaSpinner
 										className='fullscreen-transformation__editor-panel-spinner'
 										style={
 											{
@@ -2488,12 +2488,12 @@ const FullscreenTransformation = ({
 												'--track-width': '6px',
 											} as React.CSSProperties
 										}
-									></SlSpinner>
+									></WaSpinner>
 								)}
 								{isBodyRendered && body}
 							</div>
 						</div>
-					</SlSplitPanel>
+					</WaSplitPanel>
 				</div>
 				<div
 					className={`fullscreen-transformation__output-panel${isOutputSchemaSelected ? ' fullscreen-transformation__output-panel--schema' : ''}`}
@@ -2503,24 +2503,24 @@ const FullscreenTransformation = ({
 						<div className='fullscreen-transformation__panel-title'>
 							<div className='fullscreen-transformation__panel-title-text'>{destinationHeader}</div>
 						</div>
-						<SlButtonGroup>
-							<SlButton
+						<WaButtonGroup>
+							<WaButton
 								size='s'
 								{...buttonVariant(isOutputSchemaSelected ? 'primary' : 'default')}
 								onClick={onSelectOutputSchema}
 								disabled={isExecuting}
 							>
 								{outputSchemaTabLabel}
-							</SlButton>
-							<SlButton
+							</WaButton>
+							<WaButton
 								size='s'
 								{...buttonVariant(isOutputSchemaSelected ? 'default' : 'primary')}
 								onClick={onSelectOutputResult}
 								disabled={isExecuting}
 							>
 								{connection.isDestination && pipelineType.target === 'Event' ? 'Preview' : 'Result'}
-							</SlButton>
-						</SlButtonGroup>
+							</WaButton>
+						</WaButtonGroup>
 					</div>
 					<div className='fullscreen-transformation__panel-content'>
 						{isOutputSchemaSelected ? (
@@ -2530,7 +2530,7 @@ const FullscreenTransformation = ({
 								</h3>
 							) : (
 								<div className='fullscreen-transformation__panel-schema'>
-									<SlInput
+									<WaInput
 										className='fullscreen-transformation__panel-schema-search'
 										onInput={onInputOutSearchTerm}
 										value={outSearchTerm}
@@ -2540,15 +2540,15 @@ const FullscreenTransformation = ({
 									>
 										<WaIcon name='search' slot='start' />
 										<WaIcon name='x-circle-fill' slot='clear-icon' />
-									</SlInput>
+									</WaInput>
 									{transformationType === 'function' && (
-										<SlSwitch
+										<WaSwitch
 											className='fullscreen-transformation__panel-schema-show-only-selected'
 											size='s'
 											onChange={() => onChangeShowOnlySelected('out')}
 										>
 											Show only selected properties
-										</SlSwitch>
+										</WaSwitch>
 									)}
 									{outputSchema?.properties.map((p) => {
 										if (transformationType === 'function') {
@@ -2601,27 +2601,27 @@ const FullscreenTransformation = ({
 								</div>
 							)
 						) : isExecuting ? (
-							<SlSpinner
+							<WaSpinner
 								style={
 									{
 										fontSize: '3rem',
 										'--track-width': '6px',
 									} as React.CSSProperties
 								}
-							></SlSpinner>
+							></WaSpinner>
 						) : output !== '' || outputError !== '' ? (
 							<div className='fullscreen-transformation__output-code'>
-								<SlTooltip for={outputClearID} placement='left'>
+								<WaTooltip for={outputClearID} placement='left'>
 									Clear
-								</SlTooltip>
-								<SlButton
+								</WaTooltip>
+								<WaButton
 									id={outputClearID}
 									className='fullscreen-transformation__output-clear icon-button'
 									appearance='plain'
 									onClick={onClear}
 								>
 									<WaIcon name='x-lg' label='Clear' />
-								</SlButton>
+								</WaButton>
 								{outputError !== '' ? (
 									<div className='fullscreen-transformation__output-error'>{outputError}</div>
 								) : (
@@ -2646,7 +2646,7 @@ const FullscreenTransformation = ({
 						)}
 					</div>
 				</div>
-			</SlSplitPanel>
+			</WaSplitPanel>
 		</div>
 	);
 };
@@ -3041,7 +3041,7 @@ const MapMapping = ({
 			>
 				<div className='pipeline__transformation-output-property-head'>
 					<span className='pipeline__transformation-output-property-name-copy'>
-						<SlCopyButton
+						<WaCopyButton
 							className='pipeline__transformation-output-property-copy'
 							value={property.full.name}
 							copyLabel='Click to copy'
@@ -3108,7 +3108,7 @@ const MapMapping = ({
 							}
 						>
 							"{' '}
-							<SlInput
+							<WaInput
 								size='s'
 								value={key}
 								disabled={areChildrenMappingDisabled}
@@ -3117,8 +3117,8 @@ const MapMapping = ({
 								}}
 							/>{' '}
 							"<span className='pipeline__transformation-output-property-type'>{elementType.kind}</span>
-							<SlTooltip for={`${mapMappingID}-${i}-add`}>Add key</SlTooltip>
-							<SlButton
+							<WaTooltip for={`${mapMappingID}-${i}-add`}>Add key</WaTooltip>
+							<WaButton
 								id={`${mapMappingID}-${i}-add`}
 								appearance='outlined'
 								className='pipeline__transformation-output-property-add'
@@ -3127,11 +3127,11 @@ const MapMapping = ({
 								disabled={areChildrenMappingDisabled}
 							>
 								<WaIcon name='plus-circle' />
-							</SlButton>
-							<SlTooltip for={`${mapMappingID}-${i}-remove`}>
+							</WaButton>
+							<WaTooltip for={`${mapMappingID}-${i}-remove`}>
 								{pairs.length === 1 ? 'Clear key' : 'Remove key'}
-							</SlTooltip>
-							<SlButton
+							</WaTooltip>
+							<WaButton
 								id={`${mapMappingID}-${i}-remove`}
 								appearance='outlined'
 								className='pipeline__transformation-output-property-remove'
@@ -3148,7 +3148,7 @@ const MapMapping = ({
 								disabled={areChildrenMappingDisabled || (pairs.length === 1 && !hasFilledPairs)}
 							>
 								<WaIcon name='x-circle' />
-							</SlButton>
+							</WaButton>
 							{hasDuplicatedKey && (
 								<div className='pipeline__transformation-output-property-error'>{logicalErrors[i]}</div>
 							)}
@@ -3513,7 +3513,7 @@ const TransformationProperty = ({
 				(hideSelection ? (
 					<div className='fullscreen-transformation__property-check-empty' />
 				) : (
-					<SlCheckbox
+					<WaCheckbox
 						className='fullscreen-transformation__property-check'
 						checked={isFlagged || areAllChildrenLeafsSelected}
 						indeterminate={hasSelectedChildren && !areAllChildrenLeafsSelected}
@@ -3530,9 +3530,9 @@ const TransformationProperty = ({
 								<div className='fullscreen-transformation__property-head-main'>
 									{isIdentifier && (
 										<>
-											<SlTooltip for={`${propertyID}-identifier`}>
+											<WaTooltip for={`${propertyID}-identifier`}>
 												Used as identifier in Identity Resolution
-											</SlTooltip>
+											</WaTooltip>
 											<WaIcon
 												id={`${propertyID}-identifier`}
 												className='fullscreen-transformation__property-identifier-icon'
@@ -3542,7 +3542,7 @@ const TransformationProperty = ({
 									)}
 									<span className='fullscreen-transformation__property-name-copy'>
 										{!isOutMatchingProperty && (
-											<SlCopyButton
+											<WaCopyButton
 												className='fullscreen-transformation__property-copy'
 												value={path}
 												copyLabel='Click to copy'
@@ -3561,12 +3561,12 @@ const TransformationProperty = ({
 										{side === 'input' && property.readOptional && <span>- optional</span>}
 										{isRequired && (
 											<>
-												<SlTooltip
+												<WaTooltip
 													for={`${propertyID}-required`}
 													disabled={consentPurposes == null}
 												>
 													{`Holds the consent for ${consentPurposes?.map((p) => `"${p.name}"`).join(', ')}`}
-												</SlTooltip>
+												</WaTooltip>
 												<span
 													id={`${propertyID}-required`}
 													className={`fullscreen-transformation__property-required${isSelected ? ' fullscreen-transformation__property-required--selected' : ''}`}
@@ -3578,10 +3578,10 @@ const TransformationProperty = ({
 									</span>
 									{transformationType === 'function' && isOutMatchingProperty && !isFlagged && (
 										<>
-											<SlTooltip for={`${propertyID}-disabled-info`}>
+											<WaTooltip for={`${propertyID}-disabled-info`}>
 												You cannot select this property since it is already used as matching
 												property
-											</SlTooltip>
+											</WaTooltip>
 											<WaIcon
 												id={`${propertyID}-disabled-info`}
 												className='fullscreen-transformation__property-disabled-info'
@@ -3605,15 +3605,15 @@ const TransformationProperty = ({
 						<div className='fullscreen-transformation__property-right-column'>
 							{languageTypeName && (
 								<>
-									<SlTooltip for={`${propertyID}-language-type`}>{languageTypeLabel}</SlTooltip>
-									<SlBadge
+									<WaTooltip for={`${propertyID}-language-type`}>{languageTypeLabel}</WaTooltip>
+									<WaBadge
 										id={`${propertyID}-language-type`}
 										className='fullscreen-transformation__property-language-type'
 										variant='neutral'
 										pill
 									>
 										{languageTypeName}
-									</SlBadge>
+									</WaBadge>
 								</>
 							)}
 						</div>

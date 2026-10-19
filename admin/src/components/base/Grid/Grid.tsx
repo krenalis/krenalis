@@ -11,8 +11,8 @@ import {
 	SortableRowComponent,
 	StandardGridRow,
 } from './Grid.types';
-import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { useGrid } from './useGrid';
 import { getChildIndexClassname } from './Grid.helpers';
 import {
@@ -206,7 +206,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 			>
 				{isLoading ? (
 					<div className='grid__loading'>
-						<SlSpinner
+						<WaSpinner
 							style={
 								{
 									fontSize: '3rem',
@@ -222,7 +222,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 						{rows.length === 0 && noRowsMessage ? (
 							<div className='grid__no-rows'>
 								<div className='grid__no-rows-text'>
-									<SlIcon name={noRowsIcon ?? 'exclamation-circle'}></SlIcon>
+									<WaIcon name={noRowsIcon ?? 'exclamation-circle'}></WaIcon>
 									{noRowsMessage}
 								</div>
 							</div>
@@ -242,7 +242,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 						) : (
 							<div className='grid__no-rows'>
 								<div className='grid__no-rows-text'>
-									<SlIcon name='exclamation-circle'></SlIcon>
+									<WaIcon name='exclamation-circle'></WaIcon>
 									No rows to show
 								</div>
 							</div>

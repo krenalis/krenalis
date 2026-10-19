@@ -1,10 +1,10 @@
 import React, { forwardRef, useId, useImperativeHandle, useRef, useState, ReactNode } from 'react';
 import './FeedbackButton.css';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { buttonVariant } from '../../../utils/buttonVariant';
-import SlButtonType from '@awesome.me/webawesome/dist/components/button/button.js';
-import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaButtonElement from '@awesome.me/webawesome/dist/components/button/button.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { Size, Variant } from '../../routes/App/App.types';
 
 interface FeedbackButtonProps {
@@ -65,7 +65,7 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 		const [error, setError] = useState<ReactNode>(null);
 		const [info, setInfo] = useState<ReactNode>(null);
 
-		const buttonRef = useRef<SlButtonType>(null);
+		const buttonRef = useRef<WaButtonElement>(null);
 		const buttonID = useId();
 		const loadingDurationRef = useRef<number>(0);
 
@@ -156,7 +156,7 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 		);
 
 		const button = (
-			<SlButton
+			<WaButton
 				id={buttonID}
 				className={`feedback-button${className != null ? ` ${className}` : ''}`}
 				ref={buttonRef}
@@ -170,13 +170,13 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 				{...delegated}
 			>
 				{children}
-			</SlButton>
+			</WaButton>
 		);
 
 		return (
 			<>
 				{(error !== null || info !== null) && (
-					<SlTooltip
+					<WaTooltip
 						className={`feedback-button__tooltip${className != null ? ' ' + className + '-tooltip' : ''}`}
 						for={buttonID}
 						open={true}
@@ -187,7 +187,7 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 						<div
 							className={`feedback-button__tooltip-content ${error !== null ? 'feedback-button__tooltip-content--error' : 'feedback-button__tooltip-content--info'}`}
 						>
-							<SlIcon
+							<WaIcon
 								className='feedback-button__tooltip-icon-close'
 								name='x-lg'
 								onClick={() => {
@@ -199,9 +199,9 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 								}}
 							/>
 							{error !== null ? (
-								<SlIcon className='feedback-button__tooltip-icon-error' name='exclamation-circle' />
+								<WaIcon className='feedback-button__tooltip-icon-error' name='exclamation-circle' />
 							) : (
-								<SlIcon className='feedback-button__tooltip-icon-info' name='info-circle' />
+								<WaIcon className='feedback-button__tooltip-icon-info' name='info-circle' />
 							)}
 							{error !== null ? (
 								<div className='feedback-button__tooltip-error'>{error}</div>
@@ -209,7 +209,7 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 								<div className='feedback-button__tooltip-info'>{info}</div>
 							)}
 						</div>
-					</SlTooltip>
+					</WaTooltip>
 				)}
 				{button}
 			</>

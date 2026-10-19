@@ -3,11 +3,11 @@ import ProfilesContext from '../../../context/ProfilesContext';
 import Toolbar from '../../base/Toolbar/Toolbar';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import Grid from '../../base/Grid/Grid';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
-import SlSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
 import { ProfileDrawer } from './ProfileDrawer';
 import { useProfilesGrid } from './useProfilesGrid';
 import { ProfileProperty } from './Profiles.types';
@@ -127,45 +127,45 @@ const ProfilesList = () => {
 	return (
 		<div className='profiles-list'>
 			<Toolbar>
-				<SlDropdown className='profiles-list__toggle-columns'>
-					<SlButton slot='trigger' appearance='outlined'>
-						<SlIcon slot='start' name='layout-three-columns' />
+				<WaDropdown className='profiles-list__toggle-columns'>
+					<WaButton slot='trigger' appearance='outlined'>
+						<WaIcon slot='start' name='layout-three-columns' />
 						Toggle columns
-					</SlButton>
+					</WaButton>
 					<div className='profiles-list__toggle-columns-list'>
 						{profilesProperties.map((p) => {
 							const isLastUsed = usedProperties.length === 1 && usedProperties[0].name === p.name;
 							return (
 								<div className='profiles-list__toggle-column' key={p.name}>
-									<SlSwitch
+									<WaSwitch
 										size='s'
 										onChange={() => onToggleColumn(p.name)}
 										checked={p.isUsed}
 										disabled={isLastUsed}
 									>
 										{p.name}
-									</SlSwitch>
+									</WaSwitch>
 								</div>
 							);
 						})}
 					</div>
-				</SlDropdown>
+				</WaDropdown>
 				<div
 					className={`profiles-list__identity-resolution${!secondsSinceIRStart && !latestIRExecutionEnd && !isLoadingIdentityResolution ? ' profiles-list__identity-resolution--is-first-execution' : ''}`}
 				>
-					<SlButton
+					<WaButton
 						onClick={() => setAskResolveIdentitiesConfirmation(true)}
 						variant='brand'
 						disabled={isLoadingIdentityResolution || secondsSinceIRStart != null}
 						className='profiles-list__identity-resolution-button'
 					>
 						{isLoadingIdentityResolution || secondsSinceIRStart ? (
-							<SlSpinner className='profiles-list__identity-resolution-spinner' slot='start' />
+							<WaSpinner className='profiles-list__identity-resolution-spinner' slot='start' />
 						) : (
-							<SlIcon slot='start' name='play' />
+							<WaIcon slot='start' name='play' />
 						)}
 						{secondsSinceIRStart ? 'Identity Resolution' : 'Run Profile Unification'}
-					</SlButton>
+					</WaButton>
 					<span className='profiles-list__identity-resolution-progress'>
 						{secondsSinceIRStart ? (
 							<div className='profiles-list__identity-resolution-since-start'>{`Progress: ${String(secondsSinceIRStart)}s`}</div>
@@ -185,12 +185,12 @@ const ProfilesList = () => {
 					title='Processing time notice'
 					actions={
 						<>
-							<SlButton appearance='outlined' onClick={() => setAskResolveIdentitiesConfirmation(false)}>
+							<WaButton appearance='outlined' onClick={() => setAskResolveIdentitiesConfirmation(false)}>
 								Cancel
-							</SlButton>
-							<SlButton variant='brand' onClick={onStartIdentityResolution}>
+							</WaButton>
+							<WaButton variant='brand' onClick={onStartIdentityResolution}>
 								Run Profile Unification
-							</SlButton>
+							</WaButton>
 						</>
 					}
 				>

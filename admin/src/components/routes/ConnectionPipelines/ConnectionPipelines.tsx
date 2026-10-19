@@ -7,9 +7,9 @@ import PipelineTypesDialog from './PipelineTypesDialog';
 import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
 import { Outlet } from 'react-router-dom';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import { Pipeline, PipelineType } from '../../../lib/api/types/pipeline';
 import { LinkedConnections } from '../ConnectionSettings/LinkedConnections';
 import Section from '../../base/Section/Section';
@@ -169,7 +169,7 @@ const ConnectionPipelines = () => {
 
 	if (isLoading) {
 		return (
-			<SlSpinner
+			<WaSpinner
 				style={
 					{
 						display: 'block',
@@ -180,7 +180,7 @@ const ConnectionPipelines = () => {
 						'--track-width': '6px',
 					} as React.CSSProperties
 				}
-			></SlSpinner>
+			></WaSpinner>
 		);
 	}
 
@@ -246,7 +246,7 @@ const ConnectionPipelines = () => {
 									description={pipelineType.description}
 									className={`connection-pipelines__pipeline-type connection-pipelines__pipeline-type--${pipelineType.target.toLowerCase()}`}
 									action={
-										<SlButton
+										<WaButton
 											size='s'
 											variant='brand'
 											onClick={() => {
@@ -254,7 +254,7 @@ const ConnectionPipelines = () => {
 											}}
 										>
 											Add pipeline...
-										</SlButton>
+										</WaButton>
 									}
 								/>
 							))}
@@ -263,7 +263,7 @@ const ConnectionPipelines = () => {
 				) : (
 					<>
 						<Flex alignItems={'center'}>
-							<SlButton
+							<WaButton
 								variant='brand'
 								appearance='plain'
 								onClick={() => {
@@ -271,9 +271,9 @@ const ConnectionPipelines = () => {
 								}}
 								className='connection-pipelines__add'
 							>
-								<SlIcon slot='end' name='plus-circle' />
+								<WaIcon slot='end' name='plus-circle' />
 								Add a new pipeline
-							</SlButton>
+							</WaButton>
 						</Flex>
 						<PipelinesGrid
 							newPipelineID={newPipelineID}

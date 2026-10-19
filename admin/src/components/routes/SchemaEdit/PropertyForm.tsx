@@ -1,14 +1,14 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import './PropertyForm.css';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
-import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
-import SlRadio from '@awesome.me/webawesome/dist/react/radio/index.js';
-import SlRadioGroup from '@awesome.me/webawesome/dist/react/radio-group/index.js';
-import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
-import SlTextarea from '@awesome.me/webawesome/dist/react/textarea/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaRadio from '@awesome.me/webawesome/dist/react/radio/index.js';
+import WaRadioGroup from '@awesome.me/webawesome/dist/react/radio-group/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import WaTextarea from '@awesome.me/webawesome/dist/react/textarea/index.js';
 import AppContext from '../../../context/AppContext';
 import Type, {
 	DecimalType,
@@ -483,7 +483,7 @@ const PropertyForm = ({
 	}
 	const numericRangeControls = isNumericType(valueType) ? (
 		<div className='property-form__numeric-range'>
-			<SlInput
+			<WaInput
 				className='property-form__minimum'
 				size='s'
 				value={numericRangeInputs.minimum.value}
@@ -495,11 +495,11 @@ const PropertyForm = ({
 				<PropertyFormLabel slot='label' tooltip={minimumTooltip}>
 					Min
 				</PropertyFormLabel>
-			</SlInput>
+			</WaInput>
 			<span className='property-form__numeric-range-separator' aria-hidden='true'>
 				–
 			</span>
-			<SlInput
+			<WaInput
 				className='property-form__maximum'
 				size='s'
 				value={numericRangeInputs.maximum.value}
@@ -511,7 +511,7 @@ const PropertyForm = ({
 				<PropertyFormLabel slot='label' tooltip={maximumTooltip}>
 					Max
 				</PropertyFormLabel>
-			</SlInput>
+			</WaInput>
 			{typeError?.location === 'numeric-range' && (
 				<PropertyFormError name='numeric-range'>{typeError.message}</PropertyFormError>
 			)}
@@ -521,7 +521,7 @@ const PropertyForm = ({
 	return (
 		<form className='property-form' id={formID} onSubmit={onSubmit}>
 			<div className='property-form__control property-form__control--name'>
-				<SlInput
+				<WaInput
 					className='property-form__name-input'
 					ref={nameInputRef}
 					value={property.name}
@@ -538,7 +538,7 @@ const PropertyForm = ({
 						Name
 					</PropertyFormLabel>
 					{isEditing && !isNameEditable && (
-						<SlButton
+						<WaButton
 							className='property-form__change-name'
 							size='s'
 							slot='end'
@@ -548,9 +548,9 @@ const PropertyForm = ({
 							onClick={onChangeName}
 						>
 							Change
-						</SlButton>
+						</WaButton>
 					)}
-				</SlInput>
+				</WaInput>
 				{nameError !== '' && <PropertyFormError name='name'>{nameError}</PropertyFormError>}
 			</div>
 			<div className='property-form__control'>
@@ -569,7 +569,7 @@ const PropertyForm = ({
 			</div>
 			{valueType?.kind === 'string' && canEditType && (
 				<div className='property-form__constraints property-form__constraints--length'>
-					<SlInput
+					<WaInput
 						label='Max characters'
 						size='s'
 						value={valueType.maxLength == null ? '' : String(valueType.maxLength)}
@@ -579,7 +579,7 @@ const PropertyForm = ({
 						step={1}
 						onInput={onInputMaxLength}
 					/>
-					<SlInput
+					<WaInput
 						label='Max bytes'
 						size='s'
 						value={valueType.maxBytes == null ? '' : String(valueType.maxBytes)}
@@ -601,7 +601,7 @@ const PropertyForm = ({
 					}`}
 				>
 					{valueType.kind === 'int' && (
-						<SlRadioGroup
+						<WaRadioGroup
 							className='property-form__integer-sign'
 							label='Sign'
 							orientation='horizontal'
@@ -609,15 +609,15 @@ const PropertyForm = ({
 							value={valueType.unsigned ? 'unsigned' : 'signed'}
 							onChange={onUnsignedChange}
 						>
-							<SlRadio appearance='button' value='signed'>
+							<WaRadio appearance='button' value='signed'>
 								signed
-							</SlRadio>
-							<SlRadio appearance='button' value='unsigned'>
+							</WaRadio>
+							<WaRadio appearance='button' value='unsigned'>
 								unsigned
-							</SlRadio>
-						</SlRadioGroup>
+							</WaRadio>
+						</WaRadioGroup>
 					)}
-					<SlSelect
+					<WaSelect
 						className='property-form__bit-size'
 						label={valueType.kind === 'int' ? 'Integer size' : 'Bit size'}
 						size='s'
@@ -625,22 +625,22 @@ const PropertyForm = ({
 						onChange={onChangeBitSize}
 					>
 						{(valueType.kind === 'int' ? INT_BITSIZES : FLOAT_BITSIZES).map((bitSize) => (
-							<SlOption key={bitSize} value={bitSize}>
+							<WaOption key={bitSize} value={bitSize}>
 								{bitSize}-bit
-							</SlOption>
+							</WaOption>
 						))}
-					</SlSelect>
+					</WaSelect>
 					{valueType.kind === 'float' && (
-						<SlCheckbox size='s' checked={!valueType.real} onChange={onRealChange}>
+						<WaCheckbox size='s' checked={!valueType.real} onChange={onRealChange}>
 							<span className='property-form__float-special-values-label'>Allow ±Inf and NaN</span>
-						</SlCheckbox>
+						</WaCheckbox>
 					)}
 					{numericRangeControls}
 				</div>
 			)}
 			{valueType?.kind === 'decimal' && canEditType && (
 				<div className='property-form__constraints property-form__constraints--decimal'>
-					<SlInput
+					<WaInput
 						className='property-form__precision'
 						label='Precision'
 						size='s'
@@ -650,7 +650,7 @@ const PropertyForm = ({
 						maxlength={2}
 						onInput={onInputPrecision}
 					/>
-					<SlInput
+					<WaInput
 						className='property-form__scale'
 						label='Scale'
 						size='s'
@@ -670,21 +670,21 @@ const PropertyForm = ({
 			)}
 			{showParent && parents != null && (
 				<div className='property-form__control'>
-					<SlSelect
+					<WaSelect
 						className='property-form__parent'
 						label='Add to'
 						value={property.parentKey || '__root__'}
 						onChange={onChangeParent}
 					>
 						{parents.map((parent) => (
-							<SlOption key={parent.key || '__root__'} value={parent.key || '__root__'}>
+							<WaOption key={parent.key || '__root__'} value={parent.key || '__root__'}>
 								{parent.label}
-							</SlOption>
+							</WaOption>
 						))}
-					</SlSelect>
+					</WaSelect>
 				</div>
 			)}
-			<SlInput
+			<WaInput
 				className='property-form__control property-form__display-name'
 				value={property.displayName || ''}
 				name='displayName'
@@ -694,8 +694,8 @@ const PropertyForm = ({
 				<PropertyFormLabel slot='label' modified={fieldChanges?.displayName}>
 					Display name <span className='property-form__optional-label'>(optional)</span>
 				</PropertyFormLabel>
-			</SlInput>
-			<SlTextarea
+			</WaInput>
+			<WaTextarea
 				className='property-form__control property-form__description'
 				value={property.description || ''}
 				name='description'
@@ -705,7 +705,7 @@ const PropertyForm = ({
 				<PropertyFormLabel slot='label' modified={fieldChanges?.description}>
 					Description <span className='property-form__optional-label'>(optional)</span>
 				</PropertyFormLabel>
-			</SlTextarea>
+			</WaTextarea>
 			{showIdentityResolution && (
 				<div className='property-form__control'>
 					<div className='property-form__label'>
@@ -728,7 +728,7 @@ const PropertyForm = ({
 							<div className='property-form__empty-value'>No source connections are available.</div>
 						</>
 					) : (
-						<SlSelect
+						<WaSelect
 							className='property-form__primary-source'
 							value={primarySource == null ? 'none' : primarySource}
 							name='primary-source'
@@ -745,16 +745,16 @@ const PropertyForm = ({
 									/>
 								)}
 							</div>
-							<SlOption value='none'>No primary source</SlOption>
+							<WaOption value='none'>No primary source</WaOption>
 							{sourceConnections.map((connection) => (
-								<SlOption key={connection.id} value={connection.id}>
+								<WaOption key={connection.id} value={connection.id}>
 									<div slot='start'>
 										<LittleLogo code={connection.connector.code} path={CONNECTORS_ASSETS_PATH} />
 									</div>
 									{connection.name}
-								</SlOption>
+								</WaOption>
 							))}
-						</SlSelect>
+						</WaSelect>
 					)}
 				</div>
 			)}
@@ -788,7 +788,7 @@ const PropertyFormLabel = ({
 const PropertyFormError = ({ name, children }: { name: string; children: React.ReactNode }) => {
 	return (
 		<div className='property-form__control-error' data-error-on={name}>
-			<SlIcon name='exclamation-circle' />
+			<WaIcon name='exclamation-circle' />
 			{children}
 		</div>
 	);

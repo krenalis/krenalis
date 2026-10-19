@@ -1,8 +1,8 @@
 import React, { ReactNode, useContext } from 'react';
 import AppContext from '../../../context/AppContext';
 import './AlertDialog.css';
-import SlDialog from '@awesome.me/webawesome/dist/react/dialog/index.js';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaDialog from '@awesome.me/webawesome/dist/react/dialog/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 
 interface AlertDialogProps {
 	isOpen: boolean;
@@ -30,7 +30,7 @@ const AlertDialog = ({
 	let icon: ReactNode, color: string;
 	switch (variant) {
 		case 'danger':
-			icon = <SlIcon name='exclamation-circle-fill'></SlIcon>;
+			icon = <WaIcon name='exclamation-circle-fill'></WaIcon>;
 			color = 'var(--wa-color-danger-40)';
 			break;
 		default:
@@ -55,7 +55,7 @@ const AlertDialog = ({
 	};
 
 	return (
-		<SlDialog
+		<WaDialog
 			className={`alert-dialog${className ? ' ' + className : ''}${isFullscreen ? ' alert-dialog--fullscreen' : ''}`}
 			open={isOpen}
 			lightDismiss
@@ -67,7 +67,7 @@ const AlertDialog = ({
 			<div className='alert-dialog__title'>{title}</div>
 			<div className='alert-dialog__content'>{children}</div>
 			<div className='alert-dialog__pipelines'>{actions}</div>
-		</SlDialog>
+		</WaDialog>
 	);
 };
 

@@ -1,9 +1,9 @@
 import React, { useContext, useEffect, useId, useRef, useState } from 'react';
 import './SchemaPropertyConsent.css';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlPopup from '@awesome.me/webawesome/dist/react/popup/index.js';
-import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
+import WaPopup from '@awesome.me/webawesome/dist/react/popup/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import AppContext from '../../../context/AppContext';
 import { ConsentPurpose } from '../../../lib/api/types/workspace';
 import { formatProfileConsentLocation } from '../../../lib/core/consentPurpose';
@@ -81,7 +81,7 @@ const SchemaPropertyConsent = ({ purposes }: SchemaPropertyConsentProps) => {
 	};
 
 	return (
-		<SlPopup
+		<WaPopup
 			className='schema-property-consent'
 			active={isOpen}
 			placement='top'
@@ -128,14 +128,14 @@ const SchemaPropertyConsent = ({ purposes }: SchemaPropertyConsentProps) => {
 			>
 				<WaIcon className='schema-property-consent__popup-icon' name='shield-check' aria-hidden='true' />
 				<div className='schema-property-consent__open-purpose-action'>
-					<SlTooltip
+					<WaTooltip
 						className='schema-property-consent__open-purpose-tooltip'
 						for={openPurposeID}
 						trigger='hover'
 					>
 						Open consent purpose
-					</SlTooltip>
-					<SlButton
+					</WaTooltip>
+					<WaButton
 						id={openPurposeID}
 						className='schema-property-consent__open-purpose'
 						appearance='plain'
@@ -144,7 +144,7 @@ const SchemaPropertyConsent = ({ purposes }: SchemaPropertyConsentProps) => {
 						onClick={openPurpose}
 					>
 						<WaIcon name='box-arrow-in-up-right' label='Open consent purpose' />
-					</SlButton>
+					</WaButton>
 				</div>
 				<div
 					className='schema-property-consent__popup-content'
@@ -188,7 +188,7 @@ const SchemaPropertyConsent = ({ purposes }: SchemaPropertyConsentProps) => {
 							{selectedPurposeIndex + 1} of {purposes.length}
 						</span>
 						<div className='schema-property-consent__pagination-actions'>
-							<SlButton
+							<WaButton
 								className='schema-property-consent__pagination-button'
 								appearance='plain'
 								size='s'
@@ -198,8 +198,8 @@ const SchemaPropertyConsent = ({ purposes }: SchemaPropertyConsentProps) => {
 								onClick={() => selectPurpose(selectedPurposeIndex - 1)}
 							>
 								<WaIcon name='chevron-left' aria-hidden='true' />
-							</SlButton>
-							<SlButton
+							</WaButton>
+							<WaButton
 								className='schema-property-consent__pagination-button'
 								appearance='plain'
 								size='s'
@@ -209,12 +209,12 @@ const SchemaPropertyConsent = ({ purposes }: SchemaPropertyConsentProps) => {
 								onClick={() => selectPurpose(selectedPurposeIndex + 1)}
 							>
 								<WaIcon name='chevron-right' aria-hidden='true' />
-							</SlButton>
+							</WaButton>
 						</div>
 					</div>
 				)}
 			</div>
-		</SlPopup>
+		</WaPopup>
 	);
 };
 

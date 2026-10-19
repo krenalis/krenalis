@@ -1,7 +1,7 @@
 import React, { useId } from 'react';
 import './StatusDot.css';
-import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { ConnectionStatus } from '../../../lib/core/connection';
 
 interface StatusDotProps {
@@ -27,18 +27,18 @@ const StatusDot = ({ status, placement }: StatusDotProps) => {
 		<div className='status-dot'>
 			{status.text != null ? (
 				<>
-					<SlTooltip for={hoverAreaID} placement={placement ? placement : 'top'}>
+					<WaTooltip for={hoverAreaID} placement={placement ? placement : 'top'}>
 						{status.text}
-					</SlTooltip>
+					</WaTooltip>
 					<div id={hoverAreaID} className='status-dot__hover-area'>
-						<SlIcon
+						<WaIcon
 							className={`status-dot__icon status-dot__icon--${status.variant}`}
 							name='circle-fill'
-						></SlIcon>
+						></WaIcon>
 					</div>
 				</>
 			) : (
-				<SlIcon className={`status-dot__icon status-dot__icon--${status.variant}`} name='circle-fill'></SlIcon>
+				<WaIcon className={`status-dot__icon status-dot__icon--${status.variant}`} name='circle-fill'></WaIcon>
 			)}
 		</div>
 	);

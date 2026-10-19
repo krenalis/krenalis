@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import './SnowflakeSettings.css';
 import { WarehouseSettings } from '../../../lib/api/types/warehouse';
-import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 
 interface settingsProps {
@@ -34,7 +34,7 @@ const SnowflakeSettings = ({ setSettings, settings, precompileDefault, inputRef 
 
 	return (
 		<>
-			<SlInput
+			<WaInput
 				name='account'
 				label='Account Identifier'
 				placeholder='ABCDEFG-TUVWXYZ'
@@ -43,7 +43,7 @@ const SnowflakeSettings = ({ setSettings, settings, precompileDefault, inputRef 
 				onInput={onSettingInput}
 				value={settings?.account || ''}
 			/>
-			<SlInput
+			<WaInput
 				name='username'
 				label='User Name'
 				placeholder='USERNAME'
@@ -54,7 +54,7 @@ const SnowflakeSettings = ({ setSettings, settings, precompileDefault, inputRef 
 				value={settings?.username || ''}
 				ref={inputRef}
 			/>
-			<SlInput
+			<WaInput
 				name='password'
 				label='Password'
 				placeholder='password'
@@ -67,8 +67,8 @@ const SnowflakeSettings = ({ setSettings, settings, precompileDefault, inputRef 
 			>
 				<WaIcon name='eye' slot='show-password-icon' />
 				<WaIcon name='eye-slash' slot='hide-password-icon' />
-			</SlInput>
-			<SlInput
+			</WaInput>
+			<WaInput
 				name='role'
 				label='Role'
 				placeholder='CUSTOM_ROLE'
@@ -78,7 +78,7 @@ const SnowflakeSettings = ({ setSettings, settings, precompileDefault, inputRef 
 				onInput={onSettingInput}
 				value={settings?.role || ''}
 			/>
-			<SlInput
+			<WaInput
 				name='database'
 				label='Database'
 				placeholder='MY_DATABASE'
@@ -88,7 +88,7 @@ const SnowflakeSettings = ({ setSettings, settings, precompileDefault, inputRef 
 				onInput={onSettingInput}
 				value={settings?.database || ''}
 			/>
-			<SlInput
+			<WaInput
 				name='schema'
 				label='Schema'
 				placeholder='PUBLIC'
@@ -98,7 +98,7 @@ const SnowflakeSettings = ({ setSettings, settings, precompileDefault, inputRef 
 				onInput={onSettingInput}
 				value={settings?.schema || ''}
 			/>
-			<SlInput
+			<WaInput
 				name='warehouse'
 				label='Warehouse'
 				placeholder='COMPUTE_WH'

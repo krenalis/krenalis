@@ -1,7 +1,7 @@
 import React from 'react';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { ConnectionRole, ConnectorType } from '../../../lib/api/types/connection';
 
 interface PipelineIssuesProps {
@@ -27,22 +27,22 @@ const PipelineIssues = ({ issues, type, role, show = true, slot }: PipelineIssue
 	}
 
 	return (
-		<SlDropdown
+		<WaDropdown
 			className={`pipeline__issues${show && count > 0 ? ' pipeline__issues--visible' : ''}`}
 			distance={10}
 			slot={slot}
 			placement='bottom'
 		>
-			<SlButton variant='warning' slot='trigger' withCaret>
-				<SlIcon slot='start' name='exclamation-triangle' />
+			<WaButton variant='warning' slot='trigger' withCaret>
+				<WaIcon slot='start' name='exclamation-triangle' />
 				{`${count === 1 ? '1 issue' : count + ' issues'} with the ${labelTarget}`}
-			</SlButton>
+			</WaButton>
 			<div className='pipeline__issues-list'>
 				{issues.map((issue) => {
 					return <div className='pipeline__issue'>{issue}</div>;
 				})}
 			</div>
-		</SlDropdown>
+		</WaDropdown>
 	);
 };
 

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import './ConfirmByTyping.css';
 
 interface ConfirmByTypingProps {
@@ -30,7 +30,7 @@ const ConfirmByTyping = ({ confirmText, value, onInput }: ConfirmByTypingProps) 
 			<p className='confirm-by-typing__instruction'>
 				Type <span className='confirm-by-typing__confirm-text'>{confirmText}</span> to confirm:
 			</p>
-			<SlInput
+			<WaInput
 				ref={inputRef}
 				className='confirm-by-typing__input'
 				value={value}

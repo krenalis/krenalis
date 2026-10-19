@@ -1,8 +1,8 @@
 import React, { useContext, useState, useLayoutEffect, useRef } from 'react';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
-import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
-import SlCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { Warehouse } from './DataWarehouse.helpers';
 import appContext from '../../../context/AppContext';
@@ -129,31 +129,31 @@ const DataWarehouseSettings = ({
 					padded={true}
 					annotated={true}
 				>
-					<SlSelect className='warehouse-settings__mode' value={mode} onChange={onChangeMode}>
-						<SlOption value='Normal'>
+					<WaSelect className='warehouse-settings__mode' value={mode} onChange={onChangeMode}>
+						<WaOption value='Normal'>
 							<div className='warehouse-settings__mode-title'>Normal</div>
 							<div className='warehouse-settings__mode-description'>
 								{' '}
 								<span className='warehouse-settings__mode-separator'>-</span> Full read and write access
 							</div>
-						</SlOption>
-						<SlOption value='Inspection'>
+						</WaOption>
+						<WaOption value='Inspection'>
 							<div className='warehouse-settings__mode-title'>Inspection</div>
 							<div className='warehouse-settings__mode-description'>
 								{' '}
 								<span className='warehouse-settings__mode-separator'>-</span> Read-only for data
 								inspection
 							</div>
-						</SlOption>
-						<SlOption value='Maintenance'>
+						</WaOption>
+						<WaOption value='Maintenance'>
 							<div className='warehouse-settings__mode-title'>Maintenance</div>
 							<div className='warehouse-settings__mode-description'>
 								{' '}
 								<span className='warehouse-settings__mode-separator'>-</span> Init and alter schema
 								operations only
 							</div>
-						</SlOption>
-					</SlSelect>
+						</WaOption>
+					</WaSelect>
 				</Section>
 				<Section
 					title={warehouseSectionTexts.main.title}
@@ -179,13 +179,13 @@ const DataWarehouseSettings = ({
 					padded={true}
 					annotated={true}
 				>
-					<SlCheckbox
+					<WaCheckbox
 						checked={isMCPEnabled}
 						onChange={onEnableMCPSettings}
 						className='warehouse-settings__mcp-checkbox'
 					>
 						Grant read-only access to the data warehouse for AI queries
-					</SlCheckbox>
+					</WaCheckbox>
 					{isMCPEnabled && (
 						<div className='warehouse-settings__mcp-form'>
 							{selectedWarehouse.name === 'PostgreSQL' ? (
@@ -208,29 +208,29 @@ const DataWarehouseSettings = ({
 				</Section>
 			</div>
 			<div className='warehouse-settings__buttons'>
-				<SlButton
+				<WaButton
 					disabled={isCheckLoading || isPipelineButtonLoading}
 					appearance='outlined'
 					onClick={onCancelClick}
 				>
 					Cancel
-				</SlButton>
-				<SlButton
+				</WaButton>
+				<WaButton
 					disabled={isCheckLoading || isPipelineButtonLoading}
 					loading={isCheckLoading}
 					appearance='outlined'
 					onClick={onCheck}
 				>
 					Check
-				</SlButton>
-				<SlButton
+				</WaButton>
+				<WaButton
 					disabled={isCheckLoading || isPipelineButtonLoading}
 					loading={isPipelineButtonLoading}
 					variant='brand'
 					onClick={onSave}
 				>
 					Save
-				</SlButton>
+				</WaButton>
 			</div>
 		</div>
 	);

@@ -3,7 +3,7 @@ import './ConnectorKeyvalue.css';
 import ConnectorField from '../ConnectorField';
 import { KeyContext } from '../../../../context/KeyContext';
 import { ValueContext } from '../../../../context/ValueContext';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import ConnectorFieldInterface from '../../../../lib/api/types/ui';
 import {
 	DndContext,
@@ -154,7 +154,7 @@ const ConnectorKeyValue = ({
 						</div>
 					</ValueContext.Provider>
 					{index !== 0 && (
-						<SlIcon
+						<WaIcon
 							className='connector-keyvalue__remove-row'
 							name='trash3'
 							onClick={() => onRemoveRowClick(r.id)}
@@ -198,7 +198,7 @@ const ConnectorKeyValue = ({
 					sortableRowComponents[0].row
 				)}
 			</div>
-			<SlIcon className='connector-keyvalue__add-row' onClick={onAddRowClick} name='plus-circle' />
+			<WaIcon className='connector-keyvalue__add-row' onClick={onAddRowClick} name='plus-circle' />
 			{error !== '' && <div className='connector-ui__fields-error'>{error}</div>}
 		</div>
 	);

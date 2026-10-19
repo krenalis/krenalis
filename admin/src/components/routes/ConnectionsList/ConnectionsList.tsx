@@ -3,8 +3,8 @@ import './ConnectionsList.css';
 import IconWrapper from '../../base/IconWrapper/IconWrapper';
 import Grid from '../../base/Grid/Grid';
 import AppContext from '../../../context/AppContext';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import { ConnectionRole } from '../../../lib/api/types/connection';
 import TransformedConnection from '../../../lib/core/connection';
@@ -165,20 +165,20 @@ const ConnectionsList = () => {
 							You don't have any {role?.toLowerCase()} installed
 						</div>
 						<Link path={`connectors?role=${role}`}>
-							<SlButton variant='brand'>Add a new {role?.toLowerCase()}...</SlButton>
+							<WaButton variant='brand'>Add a new {role?.toLowerCase()}...</WaButton>
 						</Link>
 					</div>
 				) : (
 					<>
 						<Link path={`connectors?role=${role}`}>
-							<SlButton
+							<WaButton
 								variant='brand'
 								appearance='plain'
 								className='connections-list__add-new-connection'
 							>
-								<SlIcon slot='end' name='plus-circle' />
+								<WaIcon slot='end' name='plus-circle' />
 								Add a new {role?.toLowerCase()}
-							</SlButton>
+							</WaButton>
 						</Link>
 						<Grid columns={connectionsColumns} rows={connectionsRows} />
 						<div className='grid-learn-more'>

@@ -7,13 +7,13 @@ import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
 import { ComposedChart, Line, Bar, Legend, XAxis, Tooltip, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import Arrow from '../../base/Arrow/Arrow';
-import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
-import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
-import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
-import SlButtonGroup from '@awesome.me/webawesome/dist/react/button-group/index.js';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaButtonGroup from '@awesome.me/webawesome/dist/react/button-group/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { buttonVariant } from '../../../utils/buttonVariant';
 import { DateRange } from 'react-date-range';
 import { PipelineError, PipelineErrorsResponse } from '../../../lib/api/types/responses';
@@ -505,14 +505,14 @@ const ConnectionMetrics = () => {
 	if (isLoading) {
 		return (
 			<div className='connection-metrics--loading'>
-				<SlSpinner
+				<WaSpinner
 					style={
 						{
 							fontSize: '3rem',
 							'--track-width': '6px',
 						} as React.CSSProperties
 					}
-				></SlSpinner>
+				></WaSpinner>
 			</div>
 		);
 	}
@@ -545,30 +545,30 @@ const ConnectionMetrics = () => {
 			{supportedTargets.current.length > 0 ? (
 				<>
 					<div className='connection-metrics__tabs'>
-						<SlButtonGroup>
-							<SlButton
+						<WaButtonGroup>
+							<WaButton
 								{...buttonVariant(selectedMetricsRange === 'last15Minutes' ? 'primary' : 'default')}
 								onClick={onSelectLast15Minutes}
 								size='s'
 							>
 								Last 15 minutes
-							</SlButton>
-							<SlButton
+							</WaButton>
+							<WaButton
 								{...buttonVariant(selectedMetricsRange === 'last24Hours' ? 'primary' : 'default')}
 								onClick={onSelectLast24Hours}
 								size='s'
 							>
 								Last 24 hours
-							</SlButton>
-							<SlButton
+							</WaButton>
+							<WaButton
 								{...buttonVariant(selectedMetricsRange === 'last7Days' ? 'primary' : 'default')}
 								onClick={onSelectLast7Days}
 								size='s'
 							>
 								Last 7 days
-							</SlButton>
+							</WaButton>
 							<div className='connection-metrics__tabs-date-range'>
-								<SlButton
+								<WaButton
 									{...buttonVariant(selectedMetricsRange === 'Custom' ? 'primary' : 'default')}
 									onClick={onSelectCustom}
 									size='s'
@@ -576,7 +576,7 @@ const ConnectionMetrics = () => {
 									{selectedMetricsRange === 'Custom'
 										? `${customMetricsRange[0].startDate.toLocaleDateString()} - ${customMetricsRange[0].endDate.toLocaleDateString()}`
 										: 'Custom range'}
-								</SlButton>
+								</WaButton>
 								<div
 									className={`connection-metrics__tabs-date-range-picker${isCustomMetricsRangePickerOpen ? ' connection-metrics__tabs-date-range-picker--open' : ''}`}
 								>
@@ -591,9 +591,9 @@ const ConnectionMetrics = () => {
 									/>
 								</div>
 							</div>
-						</SlButtonGroup>
-						<SlButtonGroup>
-							<SlButton
+						</WaButtonGroup>
+						<WaButtonGroup>
+							<WaButton
 								{...buttonVariant(isUsersSelected ? 'default' : 'primary')}
 								onClick={
 									supportedTargets.current.includes('Event')
@@ -604,8 +604,8 @@ const ConnectionMetrics = () => {
 								disabled={!supportedTargets.current.includes('Event')}
 							>
 								Events
-							</SlButton>
-							<SlButton
+							</WaButton>
+							<WaButton
 								{...buttonVariant(isUsersSelected ? 'primary' : 'default')}
 								onClick={
 									supportedTargets.current.includes('User')
@@ -616,11 +616,11 @@ const ConnectionMetrics = () => {
 								disabled={!supportedTargets.current.includes('User')}
 							>
 								Profiles
-							</SlButton>
-						</SlButtonGroup>
+							</WaButton>
+						</WaButtonGroup>
 						{c.pipelines?.some((p) => p.target === selectedTarget) &&
 							!((c.isSDK || c.isWebhook) && c.isSource && selectedTarget === 'Event') && (
-								<SlSelect
+								<WaSelect
 									size='s'
 									placeholder='All pipelines'
 									onChange={onChangesetSelectedPipeline}
@@ -631,11 +631,11 @@ const ConnectionMetrics = () => {
 									<WaIcon name='x-circle-fill' slot='clear-icon' />
 									{c.pipelines?.map((p) => {
 										if (p.target == selectedTarget) {
-											return <SlOption value={p.id}>{p.name}</SlOption>;
+											return <WaOption value={p.id}>{p.name}</WaOption>;
 										}
 										return null;
 									})}
-								</SlSelect>
+								</WaSelect>
 							)}
 					</div>
 					<div className='connection-metrics__chart'>
@@ -732,10 +732,10 @@ const ConnectionMetrics = () => {
 						<div className='connection-metrics__errors-heading'>
 							Error log
 							<div className='connection-metrics__error-count-notice'>
-								<SlTooltip for={errorCountNoticeID}>
+								<WaTooltip for={errorCountNoticeID}>
 									These are the last 50 pipeline errors for this connection. They don't include errors
 									from any deleted pipelines.
-								</SlTooltip>
+								</WaTooltip>
 								<WaIcon id={errorCountNoticeID} name='info-circle' />
 							</div>
 							<span>{titleRange}</span>

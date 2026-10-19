@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './ConnectorInput.css';
-import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { InputType } from '../../../../lib/api/types/ui';
 
@@ -57,7 +57,7 @@ const ConnectorInput = ({
 
 	return (
 		<div className='connector-input'>
-			<SlInput
+			<WaInput
 				name={name}
 				value={value}
 				label={label}
@@ -71,7 +71,7 @@ const ConnectorInput = ({
 			>
 				<WaIcon name='eye' slot='show-password-icon' />
 				<WaIcon name='eye-slash' slot='hide-password-icon' />
-			</SlInput>
+			</WaInput>
 			{error !== '' && <div className='connector-ui__fields-error'>{error}</div>}
 		</div>
 	);

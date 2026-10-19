@@ -2,7 +2,7 @@ import React, { useContext, ReactNode, useState, useEffect } from 'react';
 import './Sidebar.css';
 import AppContext from '../../../context/AppContext';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import { useLocation } from 'react-router-dom';
 import getCurrentRoute from './getCurrentRoute';
 import Workspace from '../../../lib/api/types/workspace';
@@ -267,7 +267,7 @@ const WorkspaceSelector = ({
 			</div>
 			<WaIcon name='chevron-down' className='workspace-selector__arrow' />
 			<div className='workspace-selector__dialog'>
-				<SlInput
+				<WaInput
 					className='workspace-selector__dialog-search'
 					value={searchTerm}
 					size='s'
@@ -275,7 +275,7 @@ const WorkspaceSelector = ({
 					onInput={onSearchTermChange}
 				>
 					<WaIcon name='search' slot='start' />
-				</SlInput>
+				</WaInput>
 				{options}
 				<div className='workspace-selector__dialog-view-all' onClick={onViewAllWorkspaces}>
 					View all workspaces

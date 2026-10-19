@@ -2,7 +2,7 @@ import React, { useContext } from 'react';
 import './Workspaces.css';
 import ListTile from '../../base/ListTile/ListTile';
 import Workspace from '../../../lib/api/types/workspace';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import AppContext from '../../../context/AppContext';
 
@@ -35,7 +35,7 @@ const Workspaces = () => {
 				<div className='workspace-list__title-and-button'>
 					<p className='workspace-list__title'>Select a workspace</p>
 					{workspaces.length > 0 && (
-						<SlButton
+						<WaButton
 							variant='brand'
 							size='s'
 							className='workspace-list__create-button'
@@ -43,7 +43,7 @@ const Workspaces = () => {
 						>
 							<WaIcon name='plus' slot='start' />
 							Create a new workspace
-						</SlButton>
+						</WaButton>
 					)}
 				</div>
 				<div className='workspace-list__workspaces'>
@@ -52,14 +52,14 @@ const Workspaces = () => {
 							<div className='workspace-list__no-workspace'>
 								Currently you don't have any workspace. Create at least one workspace to continue.
 							</div>
-							<SlButton
+							<WaButton
 								className='workspace-list__no-workspace-action'
 								variant='brand'
 								onClick={onCreateNewWorkspace}
 							>
 								<WaIcon name='plus' slot='start' />
 								Create your first workspace
-							</SlButton>
+							</WaButton>
 						</>
 					) : (
 						workspaces.map((workspace) => {

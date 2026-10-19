@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './ConnectorTextarea';
-import SlTextarea from '@awesome.me/webawesome/dist/react/textarea/index.js';
+import WaTextarea from '@awesome.me/webawesome/dist/react/textarea/index.js';
 
 interface ConnectorTextAreaProps {
 	name: string;
@@ -41,7 +41,7 @@ const ConnectorTextarea = ({
 
 	return (
 		<div className='connector-textarea'>
-			<SlTextarea
+			<WaTextarea
 				name={name}
 				value={value}
 				label={label}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import SlRange from '@awesome.me/webawesome/dist/react/slider/index.js';
+import WaSlider from '@awesome.me/webawesome/dist/react/slider/index.js';
 
 interface ConnectorRangeProps {
 	name: string;
@@ -28,7 +28,7 @@ const ConnectorRange = ({ name, label, helpText, min, max, step, error, val, onC
 
 	return (
 		<div className='connector-range'>
-			<SlRange
+			<WaSlider
 				name={name}
 				value={value}
 				label={label}

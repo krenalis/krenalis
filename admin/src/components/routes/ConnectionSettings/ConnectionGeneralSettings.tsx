@@ -6,12 +6,12 @@ import DangerZone from '../../base/DangerZone/DangerZone';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import ConfirmByTyping from '../../base/ConfirmByTyping/ConfirmByTyping';
 import Flex from '../../base/Flex/Flex';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
-import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
-import SlDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
 import { ConnectionToSet } from '../../../lib/api/types/connection';
 
 interface GeneralProps {
@@ -96,7 +96,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 
 	return (
 		<div className='connection-settings__general-settings'>
-			<SlInput
+			<WaInput
 				label='Name'
 				className='connection-settings__name-field'
 				value={connectionToSet.name}
@@ -105,28 +105,28 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 			/>
 
 			{showStrategy && (
-				<SlSelect
+				<WaSelect
 					value={connectionToSet.strategy}
 					label='Strategy'
 					className='connection-settings__strategy-field'
 					onChange={onStrategyChange}
 				>
-					<SlOption value='Conversion'>Conversion strategy</SlOption>
-					<SlOption value='Fusion'>Fusion strategy</SlOption>
-					<SlOption value='Isolation'>Isolation strategy</SlOption>
-					<SlOption value='Preservation'>Preservation strategy</SlOption>
-				</SlSelect>
+					<WaOption value='Conversion'>Conversion strategy</WaOption>
+					<WaOption value='Fusion'>Fusion strategy</WaOption>
+					<WaOption value='Isolation'>Isolation strategy</WaOption>
+					<WaOption value='Preservation'>Preservation strategy</WaOption>
+				</WaSelect>
 			)}
 
 			{connection.isDestination && connection.connector.supportedSendingModes.length > 0 && (
-				<SlSelect
+				<WaSelect
 					value={connectionToSet.sendingMode}
 					label='Sending mode'
 					className='connection-settings__mode-field'
 					onChange={onModeChange}
 				>
 					<div className='connection-settings__mode-value-icon' slot='start'>
-						<SlIcon
+						<WaIcon
 							name={
 								connectionToSet.sendingMode === 'Server'
 									? 'cloud'
@@ -137,29 +137,29 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 						/>
 					</div>
 					{connection.connector.supportedSendingModes.map((m) => (
-						<SlOption key={m} value={m}>
+						<WaOption key={m} value={m}>
 							<div slot='start'>
-								<SlIcon
+								<WaIcon
 									className='connection-settings__mode-icon'
 									name={m === 'Server' ? 'cloud' : m === 'Client' ? 'phone' : 'send'}
 								/>
 							</div>
 							{m === 'ClientAndServer' ? 'Client and server' : m}
-						</SlOption>
+						</WaOption>
 					))}
-				</SlSelect>
+				</WaSelect>
 			)}
 
-			<SlButton
+			<WaButton
 				className='connection-settings__update-button'
 				variant='brand'
 				loading={isSaving}
 				onClick={onSave}
 			>
 				Save
-			</SlButton>
+			</WaButton>
 
-			<SlDivider />
+			<WaDivider />
 
 			<DangerZone className='connection-settings__danger-zone-field'>
 				<div className='connection-settings__danger-zone-label'>Delete the connection</div>
@@ -167,7 +167,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 					<div className='connection-settings__danger-zone-description'>
 						Delete permanently the connection
 					</div>
-					<SlButton
+					<WaButton
 						className='connection-settings__danger-zone-delete-button'
 						variant='danger'
 						onClick={() => {
@@ -176,7 +176,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 						}}
 					>
 						Delete
-					</SlButton>
+					</WaButton>
 				</Flex>
 			</DangerZone>
 
@@ -191,7 +191,7 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 				title='Delete the connection?'
 				actions={
 					<>
-						<SlButton
+						<WaButton
 							appearance='outlined'
 							onClick={() => {
 								setAskDeletionConfirmation(false);
@@ -199,15 +199,15 @@ const ConnectionGeneralSettings = ({ connection, onDelete }: GeneralProps) => {
 							}}
 						>
 							Cancel
-						</SlButton>
-						<SlButton
+						</WaButton>
+						<WaButton
 							variant='danger'
 							onClick={onDeletionConfirmation}
 							loading={isDeleting}
 							disabled={deleteConfirmationInput !== connection.name}
 						>
 							Delete connection
-						</SlButton>
+						</WaButton>
 					</>
 				}
 			>

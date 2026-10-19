@@ -1,6 +1,6 @@
 import React from 'react';
 import './UnknownLogo.css';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 
 interface UnknownLogoProps {
 	size: number;
@@ -9,7 +9,7 @@ interface UnknownLogoProps {
 const UnknownLogo = ({ size }: UnknownLogoProps) => {
 	return (
 		<div className='unknown-logo'>
-			<SlIcon name='plug' style={{ fontSize: `${size}px` }}></SlIcon>
+			<WaIcon name='plug' style={{ fontSize: `${size}px` }}></WaIcon>
 		</div>
 	);
 };

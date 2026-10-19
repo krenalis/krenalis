@@ -1,9 +1,9 @@
 import React from 'react';
 import './PropertyPanel.css';
-import SlAnimation from '@awesome.me/webawesome/dist/react/animation/index.js';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
+import WaAnimation from '@awesome.me/webawesome/dist/react/animation/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import { PrimarySources } from '../../../lib/api/types/workspace';
 import { PropertyPanelLayout } from '../Schema/PropertyPanelLayout';
 import { PropertyForm } from './PropertyForm';
@@ -55,7 +55,7 @@ const PropertyPanel = ({
 	let actions: React.ReactNode = null;
 	if (showActions) {
 		actions = (
-			<SlAnimation
+			<WaAnimation
 				name='shake'
 				duration={1000}
 				playbackRate={1.2}
@@ -64,10 +64,10 @@ const PropertyPanel = ({
 				onWaFinish={onActionsAnimationFinish}
 			>
 				<div className='property-panel__form-actions'>
-					<SlButton appearance='outlined' className='property-panel__cancel' size='s' onClick={onClose}>
+					<WaButton appearance='outlined' className='property-panel__cancel' size='s' onClick={onClose}>
 						Cancel
-					</SlButton>
-					<SlButton
+					</WaButton>
+					<WaButton
 						className='property-panel__save'
 						disabled={!valid}
 						// Web Awesome types form as the owner element, but its
@@ -78,17 +78,17 @@ const PropertyPanel = ({
 						variant='brand'
 					>
 						Confirm
-					</SlButton>
+					</WaButton>
 				</div>
-			</SlAnimation>
+			</WaAnimation>
 		);
 	} else if (property != null && !isNew) {
 		actions = (
 			<>
-				<SlTooltip className='schema-edit__toolbar-tooltip' for={removeButtonID}>
+				<WaTooltip className='schema-edit__toolbar-tooltip' for={removeButtonID}>
 					Delete this property from the schema
-				</SlTooltip>
-				<SlButton
+				</WaTooltip>
+				<WaButton
 					id={removeButtonID}
 					appearance='outlined'
 					className='property-panel__remove property-panel__delete-button schema-edit__toolbar-icon-button'
@@ -96,8 +96,8 @@ const PropertyPanel = ({
 					aria-label='Delete this property from the schema'
 					onClick={() => onRemove(property)}
 				>
-					<SlIcon name='trash' />
-				</SlButton>
+					<WaIcon name='trash' />
+				</WaButton>
 			</>
 		);
 	}

@@ -1,7 +1,7 @@
 import React, { FormEvent, useState, useContext, useEffect } from 'react';
 import './Login.css';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import AppContext from '../../../context/AppContext';
 import { Link } from '../../base/Link/Link';
 import { useSearchParams } from 'react-router-dom';
@@ -126,7 +126,7 @@ const Login = () => {
 
 	if (isTryingPasswordlessLogin) {
 		return (
-			<SlSpinner
+			<WaSpinner
 				style={
 					{
 						display: 'block',
@@ -137,7 +137,7 @@ const Login = () => {
 						'--track-width': '6px',
 					} as React.CSSProperties
 				}
-			></SlSpinner>
+			></WaSpinner>
 		);
 	}
 
@@ -189,9 +189,9 @@ const Login = () => {
 						enable this behavior. */}
 					<input type='submit' style={{ display: 'none' }} />
 
-					<SlButton className='login__button' type='submit' variant='brand' loading={isLoading}>
+					<WaButton className='login__button' type='submit' variant='brand' loading={isLoading}>
 						Login
-					</SlButton>
+					</WaButton>
 				</form>
 			</div>
 		</div>

@@ -3,10 +3,10 @@ import React, { ReactNode, useMemo } from 'react';
 import { useLinkedConnectionsGrid } from './useLinkedConnectionsGrid';
 import TransformedConnection from '../../../lib/core/connection';
 import { ConnectionRole } from '../../../lib/api/types/connection';
-import SlDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlMenuItem from '@awesome.me/webawesome/dist/react/dropdown-item/index.js';
+import WaDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaDropdownItem from '@awesome.me/webawesome/dist/react/dropdown-item/index.js';
 import LittleLogo from '../LittleLogo/LittleLogo';
 import Grid from '../Grid/Grid';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
@@ -100,26 +100,26 @@ const LinkedConnectionSelector = ({
 								<div className='linked-connection-selector__head-description'>{description}</div>
 							</div>
 							{hasSelectableConnections && (
-								<SlDropdown
+								<WaDropdown
 									className='linked-connection-selector__dropdown'
 									onWaSelect={onSelectLinkedConnection}
 								>
-									<SlButton appearance='outlined' slot='trigger' withCaret>
-										<SlIcon slot='start' name='plus' />
+									<WaButton appearance='outlined' slot='trigger' withCaret>
+										<WaIcon slot='start' name='plus' />
 										Link event {role === 'Source' ? 'destination' : 'source'}...
-									</SlButton>
+									</WaButton>
 									{selectableConnections.map((c) => {
 										const isAlreadySelected = linkedConnections?.find((id) => id === c.id) != null;
 										if (!isAlreadySelected) {
 											return (
-												<SlMenuItem key={c.id} value={c.id}>
+												<WaDropdownItem key={c.id} value={c.id}>
 													<LittleLogo code={c.connector.code} path={CONNECTORS_ASSETS_PATH} />
 													{c.name}
-												</SlMenuItem>
+												</WaDropdownItem>
 											);
 										}
 									})}
-								</SlDropdown>
+								</WaDropdown>
 							)}
 						</div>
 					)}

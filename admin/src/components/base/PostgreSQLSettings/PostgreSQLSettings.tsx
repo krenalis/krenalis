@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import './PostgreSQLSettings.css';
 import { WarehouseSettings } from '../../../lib/api/types/warehouse';
-import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 
 interface settingsProps {
@@ -38,7 +38,7 @@ const PostgreSQLSettings = ({ setSettings, settings, precompileDefault, inputRef
 
 	return (
 		<>
-			<SlInput
+			<WaInput
 				name='host'
 				label='Host'
 				placeholder='example.com'
@@ -47,7 +47,7 @@ const PostgreSQLSettings = ({ setSettings, settings, precompileDefault, inputRef
 				onInput={onSettingInput}
 				value={settings?.host || ''}
 			/>
-			<SlInput
+			<WaInput
 				name='port'
 				label='Port'
 				placeholder='5432'
@@ -58,7 +58,7 @@ const PostgreSQLSettings = ({ setSettings, settings, precompileDefault, inputRef
 				value={settings?.port || ''}
 				withoutSpinButtons
 			/>
-			<SlInput
+			<WaInput
 				name='username'
 				label='Username'
 				placeholder='username'
@@ -69,7 +69,7 @@ const PostgreSQLSettings = ({ setSettings, settings, precompileDefault, inputRef
 				value={settings?.username || ''}
 				ref={inputRef}
 			/>
-			<SlInput
+			<WaInput
 				name='password'
 				label='Password'
 				placeholder='password'
@@ -82,8 +82,8 @@ const PostgreSQLSettings = ({ setSettings, settings, precompileDefault, inputRef
 			>
 				<WaIcon name='eye' slot='show-password-icon' />
 				<WaIcon name='eye-slash' slot='hide-password-icon' />
-			</SlInput>
-			<SlInput
+			</WaInput>
+			<WaInput
 				name='database'
 				label='Database name'
 				placeholder='database'
@@ -93,7 +93,7 @@ const PostgreSQLSettings = ({ setSettings, settings, precompileDefault, inputRef
 				onInput={onSettingInput}
 				value={settings?.database || ''}
 			/>
-			<SlInput
+			<WaInput
 				name='schema'
 				label='Schema'
 				placeholder='public'

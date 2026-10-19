@@ -1,10 +1,10 @@
 import React, { useContext, useState, useEffect, useRef, useMemo, useLayoutEffect, useCallback } from 'react';
 import './Member.css';
 import appContext from '../../../context/AppContext';
-import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
-import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import * as icons from '../../../constants/icons';
 import { MemberAvatar, MemberToSet } from '../../../lib/api/types/responses';
@@ -218,7 +218,7 @@ const Member = () => {
 		<div className='member'>
 			<div className={`member__content${isUpdate ? ' member__content--update' : ''}`}>
 				{isLoading ? (
-					<SlSpinner
+					<WaSpinner
 						style={
 							{
 								fontSize: '3rem',
@@ -231,7 +231,7 @@ const Member = () => {
 						<div className='member__title'>{isUpdate ? 'Your profile' : 'Add a new team member'}</div>
 						<form onSubmit={onSave}>
 							<div className='member__name'>
-								<SlInput
+								<WaInput
 									ref={nameInputRef}
 									label='Name'
 									name='name'
@@ -241,7 +241,7 @@ const Member = () => {
 								/>
 							</div>
 							<div className='member__email'>
-								<SlInput
+								<WaInput
 									label='Email'
 									type='email'
 									name='email'
@@ -251,7 +251,7 @@ const Member = () => {
 								/>
 							</div>
 							<div className='member__password'>
-								<SlInput
+								<WaInput
 									ref={passwordInputRef}
 									type='password'
 									label='Password'
@@ -264,16 +264,16 @@ const Member = () => {
 								>
 									<WaIcon name='eye' slot='show-password-icon' />
 									<WaIcon name='eye-slash' slot='hide-password-icon' />
-								</SlInput>
+								</WaInput>
 								{isUpdate && password === null && (
-									<SlButton appearance='outlined' onClick={onPasswordEnable}>
+									<WaButton appearance='outlined' onClick={onPasswordEnable}>
 										Change
-									</SlButton>
+									</WaButton>
 								)}
 							</div>
 							{!isUpdate && (
 								<div className='member__confirm-password'>
-									<SlInput
+									<WaInput
 										type='password'
 										label='Confirm password'
 										name='confirm-password'
@@ -284,7 +284,7 @@ const Member = () => {
 									>
 										<WaIcon name='eye' slot='show-password-icon' />
 										<WaIcon name='eye-slash' slot='hide-password-icon' />
-									</SlInput>
+									</WaInput>
 								</div>
 							)}
 							<div className='member__avatar'>
@@ -303,9 +303,9 @@ const Member = () => {
 											</div>
 										)}
 									</div>
-									<SlAvatar image={avatar ? `data:${avatar.mimeType};base64, ${avatar.image}` : ''}>
+									<WaAvatar image={avatar ? `data:${avatar.mimeType};base64, ${avatar.image}` : ''}>
 										<WaIcon slot='icon' name='person-fill' />
-									</SlAvatar>
+									</WaAvatar>
 									<input
 										ref={fileInputRef}
 										type='file'
@@ -322,18 +322,18 @@ const Member = () => {
 							)}
 							<div className='member__buttons'>
 								<Link path='organization/members'>
-									<SlButton appearance='outlined' className='member__cancel-button'>
+									<WaButton appearance='outlined' className='member__cancel-button'>
 										Cancel
-									</SlButton>
+									</WaButton>
 								</Link>
-								<SlButton
+								<WaButton
 									className='member__save-button'
 									variant='brand'
 									loading={isSaving}
 									type='submit'
 								>
 									{isUpdate ? 'Save' : 'Add'}
-								</SlButton>
+								</WaButton>
 							</div>
 						</form>
 					</>

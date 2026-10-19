@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './ConnectorColorPicker.css';
-import SlColorPicker from '@awesome.me/webawesome/dist/react/color-picker/index.js';
+import WaColorPicker from '@awesome.me/webawesome/dist/react/color-picker/index.js';
 
 interface ConnectorColorPickerProps {
 	name: string;
@@ -25,7 +25,7 @@ const ConnectorColorPicker = ({ name, label, error, val, onChange }: ConnectorCo
 
 	return (
 		<div className='connector-color-picker'>
-			<SlColorPicker value={value} name={name} label={label} onChange={onColorPickerChange} />
+			<WaColorPicker value={value} name={name} label={label} onChange={onColorPickerChange} />
 			<div className='connector-color-picker__label'>{label}</div>
 			{error !== '' && <div className='connector-ui__fields-error'>{error}</div>}
 		</div>

@@ -1,11 +1,11 @@
 import React, { ReactNode, useState, useMemo, useRef, useEffect, useLayoutEffect, useContext } from 'react';
 import { flushSync } from 'react-dom';
 import './Combobox.css';
-import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlTabGroup from '@awesome.me/webawesome/dist/react/tab-group/index.js';
-import SlTabPanel from '@awesome.me/webawesome/dist/react/tab-panel/index.js';
-import SlTab from '@awesome.me/webawesome/dist/react/tab/index.js';
+import WaTabGroup from '@awesome.me/webawesome/dist/react/tab-group/index.js';
+import WaTabPanel from '@awesome.me/webawesome/dist/react/tab-panel/index.js';
+import WaTab from '@awesome.me/webawesome/dist/react/tab/index.js';
 import { ComboboxItem } from './Combobox.types';
 import { ExpressionFragment, parseMapExpression } from '../../../utils/mapExpression';
 import { autocompleteExpression } from './Combobox.helpers';
@@ -579,7 +579,7 @@ const Combobox = ({
 			}
 		>
 			<div className='combobox-input'>
-				<SlInput
+				<WaInput
 					data-is-combobox-input
 					onInput={disabled ? undefined : onInput}
 					onFocus={onInputFocus}
@@ -598,7 +598,7 @@ const Combobox = ({
 						<WaIcon className='combobox-input__error-icon' name='exclamation-circle' slot='end'></WaIcon>
 					)}
 					{caret && <WaIcon className='combobox-input__caret-icon' name='chevron-down' slot='end'></WaIcon>}
-				</SlInput>
+				</WaInput>
 				{error && (
 					<div
 						className={`combobox-input__error${isErrorExpanded ? ' combobox-input__error--expanded' : ''}`}
@@ -652,24 +652,24 @@ const Combobox = ({
 							</div>
 						)}
 						{hasTabs ? (
-							<SlTabGroup className='combobox-list__tabs' onWaTabShow={onTabClick} ref={tabGroupRef}>
+							<WaTabGroup className='combobox-list__tabs' onWaTabShow={onTabClick} ref={tabGroupRef}>
 								{enumValues != null && (
-									<SlTab slot='nav' panel='enum'>
+									<WaTab slot='nav' panel='enum'>
 										Enum ({enumValues.length})
-									</SlTab>
+									</WaTab>
 								)}
 								{filteredProperties && (
-									<SlTab slot='nav' panel='properties'>
+									<WaTab slot='nav' panel='properties'>
 										Properties ({filteredProperties.length})
-									</SlTab>
+									</WaTab>
 								)}
 								{filteredFunctions && (
-									<SlTab slot='nav' panel='functions'>
+									<WaTab slot='nav' panel='functions'>
 										Functions ({filteredFunctions.length})
-									</SlTab>
+									</WaTab>
 								)}
 								{enumValues != null && (
-									<SlTabPanel name='enum'>
+									<WaTabPanel name='enum'>
 										{enumValues.map((v) => {
 											return (
 												<div
@@ -682,9 +682,9 @@ const Combobox = ({
 												</div>
 											);
 										})}
-									</SlTabPanel>
+									</WaTabPanel>
 								)}
-								<SlTabPanel name='properties'>
+								<WaTabPanel name='properties'>
 									{filteredProperties?.map((item) => {
 										return (
 											<div
@@ -697,8 +697,8 @@ const Combobox = ({
 											</div>
 										);
 									})}
-								</SlTabPanel>
-								<SlTabPanel name='functions'>
+								</WaTabPanel>
+								<WaTabPanel name='functions'>
 									{filteredFunctions?.map((item) => {
 										return (
 											<div
@@ -711,8 +711,8 @@ const Combobox = ({
 											</div>
 										);
 									})}
-								</SlTabPanel>
-							</SlTabGroup>
+								</WaTabPanel>
+							</WaTabGroup>
 						) : (
 							<div>
 								{filteredProperties?.map((item) => {

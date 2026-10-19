@@ -2,7 +2,7 @@ import React, { useContext, useLayoutEffect, ReactNode } from 'react';
 import './Settings.css';
 import ListTile from '../../base/ListTile/ListTile';
 import { Outlet, useLocation } from 'react-router-dom';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import appContext from '../../../context/AppContext';
 import { Link } from '../../base/Link/Link';
 
@@ -25,31 +25,31 @@ const Settings = () => {
 				<Link path='settings/general'>
 					<ListTile
 						className='settings__setting'
-						icon={<SlIcon name='list' />}
+						icon={<WaIcon name='list' />}
 						name={'General'}
 						description='Update your workspace name or delete it'
 						showHover={true}
-						action={<SlIcon name='chevron-right' />}
+						action={<WaIcon name='chevron-right' />}
 					/>
 				</Link>
 				<Link path='settings/data-warehouse'>
 					<ListTile
 						className='settings__setting'
-						icon={<SlIcon name='database' />}
+						icon={<WaIcon name='database' />}
 						name={'Data Warehouse'}
 						description='Manage data warehouse mode and settings'
 						showHover={true}
-						action={<SlIcon name='chevron-right' />}
+						action={<WaIcon name='chevron-right' />}
 					/>
 				</Link>
 				<Link path='settings/consent-management'>
 					<ListTile
 						className='settings__setting'
-						icon={<SlIcon name='shield-check' />}
+						icon={<WaIcon name='shield-check' />}
 						name={'Consent management'}
 						description='Manage purposes to comply with user consent'
 						showHover={true}
-						action={<SlIcon name='chevron-right' />}
+						action={<WaIcon name='chevron-right' />}
 					/>
 				</Link>
 			</div>

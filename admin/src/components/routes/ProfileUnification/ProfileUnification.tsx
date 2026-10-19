@@ -2,7 +2,7 @@ import React, { ReactNode, useContext, useLayoutEffect } from 'react';
 import './ProfileUnification.css';
 import ListTile from '../../base/ListTile/ListTile';
 import { Link } from '../../base/Link/Link';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { Outlet, useLocation } from 'react-router-dom';
 import appContext from '../../../context/AppContext';
 
@@ -26,31 +26,31 @@ const ProfileUnification = () => {
 				<Link path='profile-unification/profiles'>
 					<ListTile
 						className='profile-unification__item'
-						icon={<SlIcon name='people' />}
+						icon={<WaIcon name='people' />}
 						name='Profiles'
 						description='Browse and manage unified profiles'
 						showHover={true}
-						action={<SlIcon name='chevron-right' />}
+						action={<WaIcon name='chevron-right' />}
 					/>
 				</Link>
 				<Link path='profile-unification/schema'>
 					<ListTile
 						className='profile-unification__item'
-						icon={<SlIcon name='bookmark-check' />}
+						icon={<WaIcon name='bookmark-check' />}
 						name='Schema'
 						description='Explore and alter the profile schema'
 						showHover={true}
-						action={<SlIcon name='chevron-right' />}
+						action={<WaIcon name='chevron-right' />}
 					/>
 				</Link>
 				<Link path='profile-unification/rules'>
 					<ListTile
 						className='profile-unification__item'
-						icon={<SlIcon name='sliders2' />}
+						icon={<WaIcon name='sliders2' />}
 						name='Rules'
 						description='Configure the rules used to unify identities'
 						showHover={true}
-						action={<SlIcon name='chevron-right' />}
+						action={<WaIcon name='chevron-right' />}
 					/>
 				</Link>
 			</div>

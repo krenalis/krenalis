@@ -3,15 +3,15 @@ import { useProfileDrawer } from './useProfileDrawer';
 import { ProfileTab } from './Profiles.types';
 import AppContext from '../../../context/AppContext';
 import ProfilesContext from '../../../context/ProfilesContext';
-import SlTab from '@awesome.me/webawesome/dist/react/tab/index.js';
-import SlAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
+import WaTab from '@awesome.me/webawesome/dist/react/tab/index.js';
+import WaAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlTabGroup from '@awesome.me/webawesome/dist/react/tab-group/index.js';
-import SlCopyButton from '@awesome.me/webawesome/dist/react/copy-button/index.js';
-import SlTabPanel from '@awesome.me/webawesome/dist/react/tab-panel/index.js';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
-import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
+import WaTabGroup from '@awesome.me/webawesome/dist/react/tab-group/index.js';
+import WaCopyButton from '@awesome.me/webawesome/dist/react/copy-button/index.js';
+import WaTabPanel from '@awesome.me/webawesome/dist/react/tab-panel/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import toJSDate from '../../../utils/toJSDate';
 import { Link } from '../../base/Link/Link';
 import { PROFILES_EXPANDED_ATTRIBUTES_KEY, PROFILES_TAB_KEY } from '../../../constants/storage';
@@ -172,40 +172,40 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 	}
 
 	const spinner = (
-		<SlSpinner
+		<WaSpinner
 			style={
 				{
 					fontSize: '3rem',
 					'--track-width': '6px',
 				} as React.CSSProperties
 			}
-		></SlSpinner>
+		></WaSpinner>
 	);
 
 	return (
 		<div className={`profile-drawer${isLoading ? ' profile-drawer--loading' : ''}`} ref={drawerRef}>
 			<div className='profile-drawer__panel' ref={panelRef} role='dialog' aria-label='Profile' tabIndex={0}>
 				<div className='profile-drawer__header'>
-					<SlButton className='profile-drawer__close icon-button' appearance='plain' onClick={onClose}>
+					<WaButton className='profile-drawer__close icon-button' appearance='plain' onClick={onClose}>
 						<WaIcon name='x-lg' label='Close' />
-					</SlButton>
+					</WaButton>
 				</div>
 				<div className='profile-drawer__body'>
 					<div className='profile-drawer__navigation'>
-						<SlButton className='icon-button' appearance='plain' onClick={() => onNavigate('previous')}>
+						<WaButton className='icon-button' appearance='plain' onClick={() => onNavigate('previous')}>
 							<WaIcon name='chevron-left' label='Previous profile' />
-						</SlButton>
-						<SlButton className='icon-button' appearance='plain' onClick={() => onNavigate('next')}>
+						</WaButton>
+						<WaButton className='icon-button' appearance='plain' onClick={() => onNavigate('next')}>
 							<WaIcon name='chevron-right' label='Next profile' />
-						</SlButton>
+						</WaButton>
 					</div>
 					<div className='profile-drawer__top-section'>
-						<SlAvatar
+						<WaAvatar
 							className='profile-drawer__image'
 							image={profileImage != null ? String(profileImage) : ''}
 						>
 							<WaIcon slot='icon' name='person-fill' />
-						</SlAvatar>
+						</WaAvatar>
 						<div className='profile-drawer__profile-properties'>
 							<span className='profile-drawer__first-name'>
 								{profileFirstName != null ? profileFirstName : ''}
@@ -228,23 +228,23 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 									</div>
 								)}
 							<span className='profile-drawer__kpid'>
-								<SlTooltip for={`${drawerID}-kpid`}>Krenalis Profile ID</SlTooltip>
+								<WaTooltip for={`${drawerID}-kpid`}>Krenalis Profile ID</WaTooltip>
 								<WaIcon id={`${drawerID}-kpid`} name='info-circle-fill' />
 								KPID: <span className='profile-drawer__kpid-value'>{selectedProfile}</span>
 							</span>
 						</div>
 					</div>
-					<SlTabGroup active={selectedTab} onWaTabShow={onSelectTab}>
-						<SlTab slot='nav' panel='attributes'>
+					<WaTabGroup active={selectedTab} onWaTabShow={onSelectTab}>
+						<WaTab slot='nav' panel='attributes'>
 							Attributes
-						</SlTab>
-						<SlTab slot='nav' panel='events'>
+						</WaTab>
+						<WaTab slot='nav' panel='events'>
 							Events
-						</SlTab>
-						<SlTab slot='nav' panel='identities'>
+						</WaTab>
+						<WaTab slot='nav' panel='identities'>
 							Identities
-						</SlTab>
-						<SlTabPanel name='attributes'>
+						</WaTab>
+						<WaTabPanel name='attributes'>
 							<div className='profile-drawer__attributes'>
 								{isLoading ? (
 									spinner
@@ -269,8 +269,8 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 									</div>
 								)}
 							</div>
-						</SlTabPanel>
-						<SlTabPanel name='events'>
+						</WaTabPanel>
+						<WaTabPanel name='events'>
 							<div
 								className={`profile-drawer__events${selectedTab === 'events' ? ' profile-drawer__events--selected' : ''}`}
 							>
@@ -302,8 +302,8 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 									</div>
 								)}
 							</div>
-						</SlTabPanel>
-						<SlTabPanel name='identities'>
+						</WaTabPanel>
+						<WaTabPanel name='identities'>
 							<div
 								className={`profile-drawer__identities${selectedTab === 'identities' ? ' profile-drawer__identities--selected' : ''}`}
 							>
@@ -321,7 +321,7 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 										return (
 											<div className='profile-drawer__identity' key={identity.updatedAt}>
 												<div className='profile-drawer__identity-head'>
-													<SlTooltip
+													<WaTooltip
 														className='profile-drawer__action'
 														for={`${drawerID}-${identity.updatedAt}`}
 														placement='left'
@@ -334,7 +334,7 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 																{identity.pipeline}
 															</Link>
 														</span>
-													</SlTooltip>
+													</WaTooltip>
 													<Link
 														id={`${drawerID}-${identity.updatedAt}`}
 														path={`connections/${connection.id}/pipelines`}
@@ -374,8 +374,8 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 									</div>
 								)}
 							</div>
-						</SlTabPanel>
-					</SlTabGroup>
+						</WaTabPanel>
+					</WaTabGroup>
 				</div>
 			</div>
 		</div>
@@ -438,7 +438,7 @@ const DrawerAttribute = ({ name, value, isParent, isIndented, isExpanded, setIsE
 			) : (
 				<span className='drawer-attribute__value'>
 					{value}
-					<SlCopyButton
+					<WaCopyButton
 						className='drawer-attribute__value-copy'
 						value={value}
 						copyLabel='Click to copy'

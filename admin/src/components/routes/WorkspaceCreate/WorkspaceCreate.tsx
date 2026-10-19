@@ -4,10 +4,10 @@ import { ObjectType } from '../../../lib/api/types/types';
 import { UIPreferences } from '../../../lib/api/types/workspace';
 import API from '../../../lib/api/api';
 import appContext from '../../../context/AppContext';
-import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
-import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
 import { PostgreSQLSettings } from '../../base/PostgreSQLSettings/PostgreSQLSettings';
 import { SnowflakeSettings } from '../../base/SnowflakeSettings/SnowflakeSettings';
 import { WarehouseSettings } from '../../../lib/api/types/warehouse';
@@ -191,7 +191,7 @@ const WorkspaceCreate = () => {
 				padded={true}
 				annotated={true}
 			>
-				<SlInput
+				<WaInput
 					className='workspace-create__name'
 					maxlength={100}
 					value={name}
@@ -214,7 +214,7 @@ const WorkspaceCreate = () => {
 				padded={true}
 				annotated={true}
 			>
-				<SlSelect
+				<WaSelect
 					className='workspace-create__warehouse-list'
 					value={selectedWarehouse}
 					onChange={onChangeWarehouse}
@@ -222,21 +222,21 @@ const WorkspaceCreate = () => {
 					{selectedWarehouse === 'PostgreSQL' || selectedWarehouse === 'PostgreSQL-Docker'
 						? postgresqlIcon
 						: snowflakeIcon}
-					<SlOption value='PostgreSQL'>
+					<WaOption value='PostgreSQL'>
 						{postgresqlIcon}
 						PostgreSQL
-					</SlOption>
-					<SlOption value='Snowflake'>
+					</WaOption>
+					<WaOption value='Snowflake'>
 						{snowflakeIcon}
 						Snowflake
-					</SlOption>
+					</WaOption>
 					{isDocker && (
-						<SlOption value='PostgreSQL-Docker'>
+						<WaOption value='PostgreSQL-Docker'>
 							{postgresqlIcon}
 							PostgreSQL via Docker
-						</SlOption>
+						</WaOption>
 					)}
-				</SlSelect>
+				</WaSelect>
 				{selectedWarehouse === 'PostgreSQL-Docker' ? (
 					<div className='workspace-create__docker-description'>
 						Select this data warehouse to use the PostgreSQL database provided by Krenalis's Docker Compose,
@@ -262,26 +262,26 @@ const WorkspaceCreate = () => {
 			</Section>
 			<div className='workspace-create__buttons'>
 				{hasWorkspaces && (
-					<SlButton appearance='outlined' className='workspace-create__cancel-button' onClick={onCancel}>
+					<WaButton appearance='outlined' className='workspace-create__cancel-button' onClick={onCancel}>
 						Cancel
-					</SlButton>
+					</WaButton>
 				)}
-				<SlButton
+				<WaButton
 					appearance='outlined'
 					className='workspace-create__check-button'
 					onClick={() => onWarehouseAction('test')}
 					loading={isCheckingWarehouse}
 				>
 					Check warehouse
-				</SlButton>
-				<SlButton
+				</WaButton>
+				<WaButton
 					className='workspace-create__create-button'
 					variant='brand'
 					onClick={() => onWarehouseAction('create')}
 					loading={isCreatingWorkspace}
 				>
 					Create workspace
-				</SlButton>
+				</WaButton>
 			</div>
 		</div>
 	);

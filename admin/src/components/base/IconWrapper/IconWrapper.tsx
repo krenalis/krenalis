@@ -1,6 +1,6 @@
 import React from 'react';
 import './IconWrapper.css';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 
 interface IconWrapperProps {
 	name: string;
@@ -19,7 +19,7 @@ const IconWrapper = ({ name, size, moat, onClick }: IconWrapperProps) => {
 			onClick={onClick}
 		>
 			<div className='icon-wrapper__inner-wrapper'>
-				<SlIcon name={name}></SlIcon>
+				<WaIcon name={name}></WaIcon>
 			</div>
 		</div>
 	);

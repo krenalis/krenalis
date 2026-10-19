@@ -1,5 +1,5 @@
 import React from 'react';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { useLocation } from 'react-router-dom';
 import TransformedConnection from '../../../lib/core/connection';
 import { Link } from '../../base/Link/Link';
@@ -25,7 +25,7 @@ const ConnectionTabs = ({ connection }: ConnectionTabsProps) => {
 					<div
 						className={`connection-wrapper__link${tab === 'pipelines' ? ' connection-wrapper__link--selected' : ''}`}
 					>
-						<SlIcon name='play-circle'></SlIcon>
+						<WaIcon name='play-circle'></WaIcon>
 						Pipelines
 					</div>
 				</Link>
@@ -33,7 +33,7 @@ const ConnectionTabs = ({ connection }: ConnectionTabsProps) => {
 					<div
 						className={`connection-wrapper__link${tab === 'metrics' ? ' connection-wrapper__link--selected' : ''}`}
 					>
-						<SlIcon name='bar-chart'></SlIcon>
+						<WaIcon name='bar-chart'></WaIcon>
 						Metrics
 					</div>
 				</Link>
@@ -42,7 +42,7 @@ const ConnectionTabs = ({ connection }: ConnectionTabsProps) => {
 						<div
 							className={`connection-wrapper__link${tab === 'events' ? ' connection-wrapper__link--selected' : ''}`}
 						>
-							<SlIcon name='bug'></SlIcon>
+							<WaIcon name='bug'></WaIcon>
 							Event debugger
 						</div>
 					</Link>
@@ -52,7 +52,7 @@ const ConnectionTabs = ({ connection }: ConnectionTabsProps) => {
 						<div
 							className={`connection-wrapper__link${tab === 'identities' ? ' connection-wrapper__link--selected' : ''}`}
 						>
-							<SlIcon name='people'></SlIcon>
+							<WaIcon name='people'></WaIcon>
 							Identities
 						</div>
 					</Link>
@@ -61,7 +61,7 @@ const ConnectionTabs = ({ connection }: ConnectionTabsProps) => {
 					<div
 						className={`connection-wrapper__link${tab === 'settings' ? ' connection-wrapper__link--selected' : ''}`}
 					>
-						<SlIcon name='gear'></SlIcon>
+						<WaIcon name='gear'></WaIcon>
 						Settings
 					</div>
 				</Link>

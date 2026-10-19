@@ -8,13 +8,13 @@ import { ConsentPurposesResponse } from '../../../lib/api/types/responses';
 import { UnprocessableError } from '../../../lib/api/errors';
 import Grid from '../../base/Grid/Grid';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlDialog, { WaAfterHideEvent } from '@awesome.me/webawesome/dist/react/dialog/index.js';
-import SlDropdown, { WaShowEvent } from '@awesome.me/webawesome/dist/react/dropdown/index.js';
-import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaDialog, { WaAfterHideEvent } from '@awesome.me/webawesome/dist/react/dialog/index.js';
+import WaDropdown, { WaShowEvent } from '@awesome.me/webawesome/dist/react/dropdown/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlMenuItem from '@awesome.me/webawesome/dist/react/dropdown-item/index.js';
-import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
+import WaDropdownItem from '@awesome.me/webawesome/dist/react/dropdown-item/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
@@ -234,12 +234,12 @@ const ConsentManagement = () => {
 						))}
 						{p.eventConsentLocations.length > SHOWN_EVENT_CONSENT_LOCATIONS && (
 							<>
-								<SlTooltip for={`${gridID}-${p.id}-more`}>
+								<WaTooltip for={`${gridID}-${p.id}-more`}>
 									{p.eventConsentLocations
 										.slice(SHOWN_EVENT_CONSENT_LOCATIONS)
 										.map((location) => location.purposeCode)
 										.join(', ')}
-								</SlTooltip>
+								</WaTooltip>
 								<span
 									id={`${gridID}-${p.id}-more`}
 									className='consent-management__grid-paths-more'
@@ -263,7 +263,7 @@ const ConsentManagement = () => {
 					<div className='consent-management__grid-pipelines'>
 						{pipelines.map((pl) => (
 							<Fragment key={pl.id}>
-								<SlTooltip for={`${gridID}-${p.id}-${pl.id}`}>{pl.name}</SlTooltip>
+								<WaTooltip for={`${gridID}-${p.id}-${pl.id}`}>{pl.name}</WaTooltip>
 								<button
 									id={`${gridID}-${p.id}-${pl.id}`}
 									type='button'
@@ -278,12 +278,12 @@ const ConsentManagement = () => {
 				);
 			const actionsCell = (
 				<div className='consent-management__grid-buttons'>
-					<SlButton appearance='outlined' size='s' onClick={() => setPurposeToEdit(p)}>
+					<WaButton appearance='outlined' size='s' onClick={() => setPurposeToEdit(p)}>
 						Edit...
-					</SlButton>
-					<SlButton variant='danger' size='s' onClick={() => onDeletePurpose(p)}>
+					</WaButton>
+					<WaButton variant='danger' size='s' onClick={() => onDeletePurpose(p)}>
 						Delete
-					</SlButton>
+					</WaButton>
 				</div>
 			);
 			return {
@@ -298,9 +298,9 @@ const ConsentManagement = () => {
 			<div className='consent-management__content'>
 				<div className='consent-management__title'>
 					<p className='consent-management__title-text'>Consent purposes</p>
-					<SlButton size='s' variant='brand' onClick={() => setIsCreating(true)}>
+					<WaButton size='s' variant='brand' onClick={() => setIsCreating(true)}>
 						Add consent purpose
-					</SlButton>
+					</WaButton>
 				</div>
 				<div className='consent-management__description'>
 					Define the consent purposes that pipelines use to determine whether an event or profile can be
@@ -326,17 +326,17 @@ const ConsentManagement = () => {
 					}
 					actions={
 						purposeToDeletePipelines.length > 0 ? (
-							<SlButton appearance='outlined' onClick={onCloseDeleteDialog}>
+							<WaButton appearance='outlined' onClick={onCloseDeleteDialog}>
 								Close
-							</SlButton>
+							</WaButton>
 						) : (
 							<>
-								<SlButton appearance='outlined' onClick={onCloseDeleteDialog}>
+								<WaButton appearance='outlined' onClick={onCloseDeleteDialog}>
 									Cancel
-								</SlButton>
-								<SlButton variant='danger' onClick={onConfirmDelete} loading={isDeleting}>
+								</WaButton>
+								<WaButton variant='danger' onClick={onConfirmDelete} loading={isDeleting}>
 									Delete
-								</SlButton>
+								</WaButton>
 							</>
 						)
 					}
@@ -821,14 +821,14 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 
 	return (
 		<>
-			<SlDialog
+			<WaDialog
 				className='consent-management__dialog'
 				label={isEditing ? 'Edit consent purpose' : 'Add consent purpose'}
 				open={isOpen}
 				onWaAfterHide={onSlAfterHide}
 			>
 				<div className='consent-management__dialog-form' ref={formRef}>
-					<SlInput
+					<WaInput
 						className='consent-management__dialog-name'
 						ref={inputRef}
 						label='Name'
@@ -852,7 +852,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 								}}
 								key={i}
 							>
-								<SlInput
+								<WaInput
 									className='consent-management__dialog-purpose-code'
 									ref={(input) => {
 										purposeCodeInputRefs.current[i] = input;
@@ -870,7 +870,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 									<span className='consent-management__dialog-purpose-code-prefix' slot='start'>
 										context.consents.
 									</span>
-								</SlInput>
+								</WaInput>
 								<div className='consent-management__dialog-purpose-code-actions'>
 									<PurposeCodeAction
 										className='consent-management__dialog-purpose-code-add'
@@ -898,14 +898,14 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 							</div>
 						)}
 
-						<SlDropdown
+						<WaDropdown
 							className='consent-management__dialog-profile-path-dropdown'
 							ref={profilePathDropdownRef}
 							placement='bottom-start'
 							onWaShow={onShowProfilePath}
 							onWaSelect={onSelectProfilePath}
 						>
-							<SlInput
+							<WaInput
 								slot='trigger'
 								className={`consent-management__dialog-profile-path${isProfilePropertyJSON ? ' consent-management__dialog-profile-path--json' : ''}`}
 								value={isProfilePropertyJSON ? profileJSONKey : profilePropertyPath}
@@ -927,7 +927,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 									</span>
 								)}
 								{profilePropertyPath !== '' && (
-									<SlButton
+									<WaButton
 										className='consent-management__dialog-profile-path-clear icon-button'
 										slot='end'
 										appearance='plain'
@@ -935,12 +935,12 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 										onClickCapture={onClearProfilePath}
 									>
 										<WaIcon name='x-circle-fill' label='Clear profile property' />
-									</SlButton>
+									</WaButton>
 								)}
 								<WaIcon slot='end' name='chevron-down' />
-							</SlInput>
+							</WaInput>
 							{profilePathOptions.map(([path, property]) => (
-								<SlMenuItem key={path} value={path}>
+								<WaDropdownItem key={path} value={path}>
 									<span className='consent-management__dialog-profile-path-option'>{path}</span>
 									<span
 										className='consent-management__dialog-profile-path-option-type'
@@ -948,9 +948,9 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 									>
 										{property.type}
 									</span>
-								</SlMenuItem>
+								</WaDropdownItem>
 							))}
-						</SlDropdown>
+						</WaDropdown>
 						<div
 							className={`consent-management__dialog-profile-path-message${profilePathError !== '' ? ' consent-management__dialog-error' : profilePathWarning !== '' ? ' consent-management__dialog-warning' : ' consent-management__dialog-message--hidden'}`}
 							aria-hidden={profilePathError !== '' || profilePathWarning !== '' ? undefined : 'true'}
@@ -976,20 +976,20 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 						</div>
 					)}
 					<div className='consent-management__dialog-actions'>
-						<SlButton appearance='outlined' onClick={onClose}>
+						<WaButton appearance='outlined' onClick={onClose}>
 							Cancel
-						</SlButton>
-						<SlButton
+						</WaButton>
+						<WaButton
 							loading={isSaving}
 							className='consent-management__dialog-save'
 							variant='brand'
 							onClick={onSave}
 						>
 							{isEditing ? 'Save' : 'Add'}
-						</SlButton>
+						</WaButton>
 					</div>
 				</div>
-			</SlDialog>
+			</WaDialog>
 		</>
 	);
 };
@@ -1023,10 +1023,10 @@ const PurposeCodeAction = ({
 	};
 	return (
 		<>
-			<SlTooltip ref={tooltipRef} for={buttonID}>
+			<WaTooltip ref={tooltipRef} for={buttonID}>
 				{label}
-			</SlTooltip>
-			<SlButton
+			</WaTooltip>
+			<WaButton
 				id={buttonID}
 				className={`consent-management__dialog-purpose-code-action ${className}`}
 				appearance='outlined'
@@ -1036,7 +1036,7 @@ const PurposeCodeAction = ({
 				onClick={onActionClick}
 			>
 				<WaIcon name={icon} slot='start' />
-			</SlButton>
+			</WaButton>
 		</>
 	);
 };

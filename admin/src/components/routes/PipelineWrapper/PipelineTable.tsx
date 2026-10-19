@@ -4,7 +4,7 @@ import FeedbackButton from '../../base/FeedbackButton/FeedbackButton';
 import AppContext from '../../../context/AppContext';
 import PipelineContext from '../../../context/PipelineContext';
 import { CONFIRM_ANIMATION_DURATION, ERROR_ANIMATION_DURATION } from './Pipeline.constants';
-import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import { flattenSchema, propertyTypesAreEqual } from '../../../lib/core/pipeline';
 import { Popover } from '../../base/Popover/Popover';
 import { getTableKeyComboboxItems } from '../../helpers/getSchemaComboboxItems';
@@ -153,7 +153,7 @@ const PipelineTable = () => {
 				annotated={true}
 			>
 				<div className='pipeline__destination_table'>
-					<SlInput
+					<WaInput
 						value={pipeline.tableName}
 						onInput={onUpdateTableName}
 						onKeyDown={(e) => {

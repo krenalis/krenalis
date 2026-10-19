@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import PipelineContext from '../../../context/PipelineContext';
-import SlCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
+import WaCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
 
 const PipelineUpdateOnDuplicates = () => {
 	const { pipeline, setPipeline } = useContext(PipelineContext);
@@ -14,9 +14,9 @@ const PipelineUpdateOnDuplicates = () => {
 	return (
 		pipeline.exportMode.includes('Update') && (
 			<div className='pipeline__update-on-duplicates'>
-				<SlCheckbox checked={pipeline.updateOnDuplicates!} onChange={onChangeUpdateOnDuplicates}>
+				<WaCheckbox checked={pipeline.updateOnDuplicates!} onChange={onChangeUpdateOnDuplicates}>
 					If a single profile in Krenalis matches multiple app users, update them anyway
-				</SlCheckbox>
+				</WaCheckbox>
 			</div>
 		)
 	);

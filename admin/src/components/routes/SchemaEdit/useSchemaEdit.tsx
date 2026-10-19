@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, ReactNode, useRef, useContext, useCallback } from 'react';
 import Type, { ObjectType } from '../../../lib/api/types/types';
 import { GridRef, SortableGridRow, GridColumn } from '../../base/Grid/Grid.types';
-import SlBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
+import WaBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
 import {
 	EditableProperty,
 	EditableSchema,
@@ -87,9 +87,9 @@ const propertyStatusLabels: Record<PropertyChangeStatus, string> = {
 };
 
 const PropertyStatusBadge = ({ status }: { status: PropertyChangeStatus }) => (
-	<SlBadge className='schema-edit__property-status' pill variant='neutral'>
+	<WaBadge className='schema-edit__property-status' pill variant='neutral'>
 		{propertyStatusLabels[status]}
-	</SlBadge>
+	</WaBadge>
 );
 
 interface SchemaPreviewRequest {

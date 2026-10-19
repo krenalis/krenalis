@@ -2,7 +2,7 @@ import React, { ReactNode } from 'react';
 import './SyntaxHighlight.css';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { arduinoLight } from 'react-syntax-highlighter/dist/esm/styles/hljs';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 
 interface SyntaxHighlightProps {
 	children: ReactNode;
@@ -29,7 +29,7 @@ const SyntaxHighlight = ({
 		<div
 			className={`syntax-highlight${className != null ? ' ' + className : ''}${icon != null ? ' syntax-highlight--icon' : ''}`}
 		>
-			{icon != null && <SlIcon name={icon} />}
+			{icon != null && <WaIcon name={icon} />}
 			<SyntaxHighlighter
 				language={language ? language : 'javascript'}
 				showLineNumbers={showLineNumbers}

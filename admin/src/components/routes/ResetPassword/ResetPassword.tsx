@@ -1,8 +1,8 @@
 import React, { FormEvent, useContext, useState, useEffect } from 'react';
 import './ResetPassword.css';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import appContext from '../../../context/AppContext';
 import { Link } from '../../base/Link/Link';
 
@@ -51,7 +51,7 @@ const ResetPassword = () => {
 				{isEmailSent ? (
 					<>
 						<div className='reset-password__email-sent'>
-							<SlIcon className='reset-password__email-sent-icon' name='check2-circle' />
+							<WaIcon className='reset-password__email-sent-icon' name='check2-circle' />
 							<div className='reset-password__email-sent-title'>Request received</div>
 							<div className='reset-password__email-sent-text'>
 								If the provided email exists, we will send you a link to reset your password
@@ -67,7 +67,7 @@ const ResetPassword = () => {
 							<h1>Reset password</h1>
 						</div>
 						<form className='reset-password__form' onSubmit={onReset}>
-							<SlInput
+							<WaInput
 								type='email'
 								className='reset-password__email'
 								inputMode='email'
@@ -80,14 +80,14 @@ const ResetPassword = () => {
 							<Link path='' className='reset-password__back-to-login'>
 								Back to login
 							</Link>
-							<SlButton
+							<WaButton
 								className='reset-password__button'
 								type='submit'
 								variant='brand'
 								loading={isLoading}
 							>
 								Send reset email
-							</SlButton>
+							</WaButton>
 						</form>
 					</>
 				)}

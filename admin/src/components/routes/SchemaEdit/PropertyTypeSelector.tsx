@@ -1,11 +1,11 @@
 import React, { forwardRef, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import './PropertyTypeSelector.css';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlDropdown, { WaAfterHideEvent, WaShowEvent } from '@awesome.me/webawesome/dist/react/dropdown/index.js';
-import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
-import SlMenuItem from '@awesome.me/webawesome/dist/react/dropdown-item/index.js';
-import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
+import WaDropdown, { WaAfterHideEvent, WaShowEvent } from '@awesome.me/webawesome/dist/react/dropdown/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaDropdownItem from '@awesome.me/webawesome/dist/react/dropdown-item/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import Type, { TypeKind } from '../../../lib/api/types/types';
 import { TypeIcon } from '../../base/TypeIcon/TypeIcon';
 
@@ -270,9 +270,9 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 
 		return (
 			<div className='property-type-selector'>
-				<SlTooltip className='schema-edit__toolbar-tooltip' for={controlsID} disabled={canEditType}>
+				<WaTooltip className='schema-edit__toolbar-tooltip' for={controlsID} disabled={canEditType}>
 					The type of an existing property cannot be changed.
-				</SlTooltip>
+				</WaTooltip>
 				<div
 					id={controlsID}
 					className={`property-type-selector__controls${
@@ -284,7 +284,7 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 						}
 					}}
 				>
-					<SlDropdown
+					<WaDropdown
 						className='property-type-selector__structure-dropdown'
 						ref={structureDropdownRef}
 						placement='bottom-start'
@@ -293,7 +293,7 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 						onWaSelect={onSelectStructure}
 						onWaAfterHide={onStructureMenuAfterHide}
 					>
-						<SlButton
+						<WaButton
 							appearance='outlined'
 							className='property-type-selector__structure-trigger'
 							slot='trigger'
@@ -304,9 +304,9 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 						>
 							<WaIcon slot='start' name={selectedStructureOption.icon} />
 							{selectedStructureOption.triggerLabel}
-						</SlButton>
+						</WaButton>
 						{PROPERTY_STRUCTURE_OPTIONS.map((option) => (
-							<SlMenuItem
+							<WaDropdownItem
 								className={`property-type-selector__structure-option${
 									structure === option.id ? ' property-type-selector__structure-option--selected' : ''
 								}`}
@@ -324,11 +324,11 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 									</span>
 								</span>
 								{structure === option.id && <WaIcon slot='details' name='check-lg' />}
-							</SlMenuItem>
+							</WaDropdownItem>
 						))}
-					</SlDropdown>
+					</WaDropdown>
 					{showValueTypeSelector && (
-						<SlDropdown
+						<WaDropdown
 							className='property-type-selector__dropdown'
 							ref={dropdownRef}
 							placement='bottom-end'
@@ -341,7 +341,7 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 								}
 							}}
 						>
-							<SlButton
+							<WaButton
 								appearance='outlined'
 								className='property-type-selector__trigger'
 								slot='trigger'
@@ -358,15 +358,15 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 								) : (
 									<span className='property-type-selector__placeholder'>Select type</span>
 								)}
-							</SlButton>
-							<SlInput
+							</WaButton>
+							<WaInput
 								className='property-type-selector__search'
 								placeholder='Search types...'
 								value={search}
 								onInput={(event: any) => setSearch(event.target.value)}
 							>
 								<WaIcon slot='start' name='search' />
-							</SlInput>
+							</WaInput>
 							{Object.entries(groupedOptions).map(([group, groupOptions], groupIndex) => (
 								<React.Fragment key={group}>
 									<div
@@ -377,7 +377,7 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 										{group}
 									</div>
 									{groupOptions.map((option) => (
-										<SlMenuItem
+										<WaDropdownItem
 											className={`property-type-selector__option${
 												selectedOption?.id === option.id
 													? ' property-type-selector__option--selected'
@@ -399,14 +399,14 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 											{selectedOption?.id === option.id && (
 												<WaIcon slot='details' name='check-lg' />
 											)}
-										</SlMenuItem>
+										</WaDropdownItem>
 									))}
 								</React.Fragment>
 							))}
 							{options.length === 0 && (
 								<div className='property-type-selector__no-options'>No matching types</div>
 							)}
-						</SlDropdown>
+						</WaDropdown>
 					)}
 				</div>
 			</div>

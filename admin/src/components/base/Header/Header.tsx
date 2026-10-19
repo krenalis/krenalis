@@ -1,11 +1,11 @@
 import React, { forwardRef, ReactNode, useContext, useEffect, useId, useRef } from 'react';
 import './Header.css';
-import SlAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
+import WaAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
-import SlDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
+import WaDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
+import WaDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import { Link } from '..//Link/Link';
 import appContext from '../../../context/AppContext';
 import { useLocation } from 'react-router-dom';
@@ -65,9 +65,9 @@ const Header = ({ title, member }: HeaderProps) => {
 			<div className='header__title'>
 				<span>{title}</span>
 			</div>
-			<SlTooltip for={docsID} placement='bottom'>
+			<WaTooltip for={docsID} placement='bottom'>
 				Krenalis documentation and API reference
-			</SlTooltip>
+			</WaTooltip>
 			<a
 				id={docsID}
 				className='header__docs'
@@ -161,10 +161,10 @@ const AccountDropdown = forwardRef<any, AccountDropdownProps>(
 				: '';
 
 		return (
-			<SlDropdown className='header__account-menu-wrapper' distance={17} ref={ref}>
-				<SlAvatar slot='trigger' className='header__account-avatar' image={imageSrc}>
+			<WaDropdown className='header__account-menu-wrapper' distance={17} ref={ref}>
+				<WaAvatar slot='trigger' className='header__account-avatar' image={imageSrc}>
 					<WaIcon slot='icon' name='person-fill' />
-				</SlAvatar>
+				</WaAvatar>
 				{isPasswordless && (
 					<div className='header__passwordless-tooltip'>
 						<div className='header__passwordless-tooltip-body' slot='content'>
@@ -175,23 +175,23 @@ const AccountDropdown = forwardRef<any, AccountDropdownProps>(
 							default ones.
 						</div>
 						<Link path='organization/members/add'>
-							<SlButton appearance='outlined' className='header__passwordless-create-account' size='s'>
+							<WaButton appearance='outlined' className='header__passwordless-create-account' size='s'>
 								Create my account
-							</SlButton>
+							</WaButton>
 						</Link>
 					</div>
 				)}
 				<div className='header__account-menu'>
 					<div className='header__account-menu-heading'>
-						<SlAvatar slot='trigger' className='header__account-menu-heading-avatar' image={imageSrc}>
+						<WaAvatar slot='trigger' className='header__account-menu-heading-avatar' image={imageSrc}>
 							<WaIcon slot='icon' name='person-fill' />
-						</SlAvatar>
+						</WaAvatar>
 						<div className='header__account-menu-heading-text'>
 							<div className='header__account-menu-heading-name'>{account.name}</div>
 							<div className='header__account-menu-heading-email'>{account.email}</div>
 						</div>
 					</div>
-					<SlDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
+					<WaDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
 					<Link
 						className='header__account-menu-item header__account-menu-item--profile'
 						path='organization/members/current'
@@ -213,7 +213,7 @@ const AccountDropdown = forwardRef<any, AccountDropdownProps>(
 						<WaIcon className='header__account-menu-item-icon' name='key' />
 						API and MCP keys
 					</Link>
-					<SlDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
+					<WaDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
 					<a
 						className='header__account-menu-item'
 						href='https://github.com/krenalis/krenalis/issues'
@@ -234,17 +234,17 @@ const AccountDropdown = forwardRef<any, AccountDropdownProps>(
 					</a>
 					{!isPasswordless && (
 						<>
-							<SlDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
+							<WaDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
 							<div className='header__account-menu-item' id='logout-button' onClick={onLogout}>
 								<WaIcon className='header__account-menu-item-icon' name='box-arrow-right' />
 								Logout
 							</div>
 						</>
 					)}
-					<SlDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
+					<WaDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
 					<div className='header__account-menu-version'>Krenalis {publicMetadata.version}</div>
 				</div>
-			</SlDropdown>
+			</WaDropdown>
 		);
 	},
 );

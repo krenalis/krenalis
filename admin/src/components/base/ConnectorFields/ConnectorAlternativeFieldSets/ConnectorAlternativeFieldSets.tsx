@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import './ConnectorAlternativeFieldSets.css';
 import ConnectorFieldSet from '../ConnectorFieldSet/ConnectorFieldSet';
 import ConnectorField from '../../../../lib/api/types/ui';
-import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
-import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
 
 interface FieldSet {
 	name: string;
@@ -61,13 +61,13 @@ const ConnectorAlternativeFieldSets = ({
 	return (
 		<div className='connector-alternative-fieldsets'>
 			<div className='connector-alternative-fieldsets__label'>{label}</div>
-			<SlSelect value={selected} onChange={onSelectChange}>
+			<WaSelect value={selected} onChange={onSelectChange}>
 				{sets.map((s) => (
-					<SlOption key={s.name} value={s.name}>
+					<WaOption key={s.name} value={s.name}>
 						{s.label}
-					</SlOption>
+					</WaOption>
 				))}
-			</SlSelect>
+			</WaSelect>
 			{fieldSet}
 			<div className='connector-alternative-fieldsets__help-text'>{helpText}</div>
 		</div>

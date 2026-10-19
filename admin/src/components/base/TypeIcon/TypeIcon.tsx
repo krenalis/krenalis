@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 
 interface TypeIconProps {
 	kind: string;
@@ -10,23 +10,23 @@ const TypeIcon = ({ kind, slot }: TypeIconProps) => {
 	let icon: ReactNode = null;
 	let s = slot !== undefined ? slot : null;
 	if (kind === 'boolean') {
-		icon = <SlIcon slot={s} name='type-bold' />;
+		icon = <WaIcon slot={s} name='type-bold' />;
 	} else if (kind === 'int' || kind === 'float' || kind === 'decimal' || kind === 'year') {
-		icon = <SlIcon slot={s} name='123' />;
+		icon = <WaIcon slot={s} name='123' />;
 	} else if (kind === 'datetime' || kind === 'date') {
-		icon = <SlIcon slot={s} name='calendar-date' />;
+		icon = <WaIcon slot={s} name='calendar-date' />;
 	} else if (kind === 'time') {
-		icon = <SlIcon slot={s} name='clock' />;
+		icon = <WaIcon slot={s} name='clock' />;
 	} else if (kind === 'uuid' || kind === 'ip' || kind === 'string') {
-		icon = <SlIcon slot={s} name='fonts' />;
+		icon = <WaIcon slot={s} name='fonts' />;
 	} else if (kind === 'json') {
-		icon = <SlIcon slot={s} name='filetype-json' />;
+		icon = <WaIcon slot={s} name='filetype-json' />;
 	} else if (kind === 'array') {
-		icon = <SlIcon slot={s} name='input-cursor' />;
+		icon = <WaIcon slot={s} name='input-cursor' />;
 	} else if (kind === 'object') {
-		icon = <SlIcon slot={s} name='braces' />;
+		icon = <WaIcon slot={s} name='braces' />;
 	} else if (kind === 'map') {
-		icon = <SlIcon slot={s} name='braces-asterisk' />;
+		icon = <WaIcon slot={s} name='braces-asterisk' />;
 	}
 	return icon;
 };

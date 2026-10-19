@@ -3,11 +3,11 @@ import './ConnectorsList.css';
 import { ConnectionRole } from '../../../lib/api/types/connection';
 import AppContext from '../../../context/AppContext';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
-import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
-import SlDrawer from '@awesome.me/webawesome/dist/react/drawer/index.js';
-import SlBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
-import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaDrawer from '@awesome.me/webawesome/dist/react/drawer/index.js';
+import WaBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { authURLResponse } from '../../../lib/api/types/responses';
 import { useLocation } from 'react-router-dom';
 import TransformedConnector from '../../../lib/core/connector';
@@ -216,14 +216,14 @@ const ConnectorsList = () => {
 	return (
 		<div className='connectors-list'>
 			<div className='route-content'>
-				<SlInput
+				<WaInput
 					className='connectors-list__search-bar'
 					value={searchTerm}
 					onInput={onSearchTermUpdate}
 					placeholder='Search for a connector...'
 				>
 					<WaIcon name='search' slot='start' />
-				</SlInput>
+				</WaInput>
 				<div className='connectors-list__categories'>
 					{categories.map((c) => {
 						return (
@@ -252,7 +252,7 @@ const ConnectorsList = () => {
 					</div>
 				)}
 			</div>
-			<SlDrawer
+			<WaDrawer
 				style={{ '--size': '600px' } as React.CSSProperties}
 				open={selectedConnector != null}
 				className='connectors-list__documentation-drawer'
@@ -265,17 +265,17 @@ const ConnectorsList = () => {
 			>
 				<div className='connectors-list__documentation-drawer-label' slot='label'>
 					<span>{selectedConnector?.label}</span>
-					<SlButton
+					<WaButton
 						className='connectors-list__documentation-add'
 						variant='brand'
 						onClick={onConnectorAdd}
 						disabled={selectedConnector?.oauth != null && !selectedConnector?.oauth.configured}
 					>
 						Add {connectionRole.toLowerCase()}...
-					</SlButton>
+					</WaButton>
 				</div>
 				{isLoadingDocumentation ? (
-					<SlSpinner
+					<WaSpinner
 						style={
 							{
 								fontSize: '3rem',
@@ -301,7 +301,7 @@ const ConnectorsList = () => {
 						)}
 					</>
 				)}
-			</SlDrawer>
+			</WaDrawer>
 		</div>
 	);
 };
@@ -333,9 +333,9 @@ const ConnectorCard = ({ connector, potentialConnector, onClick, role }: Connect
 					</div>
 					<div className='connectors-list__card-label'>{connector.label}</div>
 					{connector.categories.map((category, index) => (
-						<SlBadge key={index} className='connectors-list__card-type' variant='neutral'>
+						<WaBadge key={index} className='connectors-list__card-type' variant='neutral'>
 							{category}
-						</SlBadge>
+						</WaBadge>
 					))}
 					<div className='connectors-list__card-summary'>
 						{role === 'Source' ? connector.asSource.summary : connector.asDestination.summary}
@@ -373,9 +373,9 @@ const ConnectorCard = ({ connector, potentialConnector, onClick, role }: Connect
 					</div>
 					<div className='connectors-list__card-label'>{potentialConnector.label}</div>
 					{potentialConnector.categories.map((category, index) => (
-						<SlBadge key={index} className='connectors-list__card-type' variant='neutral'>
+						<WaBadge key={index} className='connectors-list__card-type' variant='neutral'>
 							{category}
-						</SlBadge>
+						</WaBadge>
 					))}
 					<div className='connectors-list__card-summary'>
 						{role === 'Source'

@@ -2,7 +2,7 @@ import React, { useEffect, useState, ReactNode, Fragment } from 'react';
 import './GridNestedRows.css';
 import GridRow from '../GridRow/GridRow';
 import { NestedGridRows, GridColumn, GridNestedRowsIndentation, SortableGridRow } from '../Grid.types';
-import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { SortableRows } from '../SortableRows';
 
 interface GridNestedRowsProps {
@@ -82,11 +82,11 @@ const GridNestedRows = ({
 			if (i === 0) {
 				parentComponent = (
 					<Fragment key={i}>
-						<SlIcon
+						<WaIcon
 							className='grid__row-expand'
 							name='caret-right-fill'
 							onClick={(event) => onToggleExpansion(event, r.onToggleExpansion ?? r.onClick)}
-						></SlIcon>
+						></WaIcon>
 						<GridRow row={r} columns={columns} className='grid__row grid__row--parent' />
 					</Fragment>
 				);
