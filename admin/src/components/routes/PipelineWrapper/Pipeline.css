@@ -744,12 +744,20 @@ wa-button.pipeline__filters-remove-rule[appearance='plain']::part(label) {
 .pipeline__transformation-output-property-add::part(button) {
 	border: 0 !important;
 	padding: 0 !important;
+	width: auto;
 	cursor: pointer;
 }
 
 .pipeline__transformation-output-property-remove[disabled]::part(button),
 .pipeline__transformation-output-property-add[disabled]::part(button) {
 	cursor: not-allowed;
+}
+
+.pipeline__transformation-output-property-remove::part(label),
+.pipeline__transformation-output-property-add::part(label) {
+	display: flex;
+	align-items: center;
+	padding: 0;
 }
 
 .pipeline__transformation-output-property-remove wa-icon,
