@@ -59,6 +59,16 @@ When initializing an empty writable map without a capacity hint, prefer a map li
 
 When allocating the zero value of a composite type, prefer `&T{}` over `new(T)` when both forms are valid.
 
+## Switch statements
+
+Give every `switch` statement, be it an expression switch, a type switch, or a switch without a tag, a `default` clause that makes explicit what happens to the values not matched by the other cases:
+
+- When they need handling, handle them in the `default` clause rather than in code following the switch.
+- When they cannot occur, treat them as an unexpected situation, as described under Errors versus panics, naming the unexpected value or type in the message.
+- When they legitimately require no action, leave the `default` clause empty, adding a short comment when the reason is not obvious.
+
+Omit the `default` clause only when the switch tag is a local variable assigned just above the switch, so that a reader sees at a glance that it can only take values covered by the cases.
+
 ## Signatures
 
 Keep the complete parameter list of every function or method on one source line, regardless of line length. A list too long to read comfortably on one line is a signal to evaluate a lower-cardinality signature or another API design, not a reason to wrap the parameters.
@@ -140,6 +150,12 @@ if err != nil {
 }
 return n, nil
 ```
+
+## Errors versus panics
+
+When a function or method meets an unexpected situation, such as an invalid argument or a value that should be impossible, return an error if its signature returns one, so that a single failing operation does not bring down the whole process. Panic only when the function or method does not return an error, or when it detects corrupted internal state, which no caller could recover from safely.
+
+A function or method that processes data originating in distant parts of the program should return an error. Leave the error out of its signature only when it operates on narrowly confined data and a review of the code makes it reasonably certain that it can never meet an unexpected situation.
 
 ## Tests
 
@@ -277,6 +293,8 @@ A short comment for a package-level variable or constant may appear on the same 
 ## Error messages
 
 Never begin an error message with the article `the`.
+
+Begin the message of an error that represents an internal failure, and of every panic, with the import path of the package that produces it, relative to the module path, followed by `: `, as in `core/internal/transformers/lambda: invalid function name`. When wrapping an error within the same package, do not repeat the prefix.
 
 ## Correctness
 
