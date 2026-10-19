@@ -160,6 +160,8 @@ When a function or method meets an unexpected situation, such as an invalid argu
 
 A function or method that processes data originating in distant parts of the program should return an error. Leave the error out of its signature only when it operates on narrowly confined data and a review of the code makes it reasonably certain that it can never meet an unexpected situation.
 
+When such a function or method also returns errors that its callers handle as an expected outcome, give those errors an identity, such as a sentinel or a dedicated type, and have the callers check it, so that an error reporting an unexpected situation is propagated rather than handled as an expected one.
+
 ## Tests
 
 Test failure messages must use the form `expected ..., got ...`.
