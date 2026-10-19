@@ -156,11 +156,11 @@ return n, nil
 
 ## Errors versus panics
 
-When a function or method meets an unexpected situation, such as an invalid argument or a value that should be impossible, return an error if its signature returns one, so that a single failing operation does not bring down the whole process. Panic only when the function or method does not return an error, or when it detects corrupted internal state, which no caller could recover from safely.
+A function or method must return an error when it is expected to fail, for example because it performs operations that can fail, or when it can return errors that callers can identify and usefully handle. Otherwise, it may omit the error from its signature.
 
-A function or method that processes data originating in distant parts of the program should return an error. Leave the error out of its signature only when it operates on narrowly confined data and a review of the code makes it reasonably certain that it can never meet an unexpected situation.
+When a function or method meets an unexpected situation, such as an invalid argument or a value that should be impossible, panic if it detects corrupted internal state, which no caller could recover from safely, or if its signature does not return an error. Otherwise, return an error, so that a single failing operation does not bring down the whole process.
 
-When such a function or method also returns errors that its callers handle as an expected outcome, give those errors an identity, such as a sentinel or a dedicated type, and have the callers check it, so that an error reporting an unexpected situation is propagated rather than handled as an expected one.
+When a function or method that returns errors for unexpected situations also returns errors that its callers handle as an expected outcome, give the latter an identity, such as a sentinel or a dedicated type, and have the callers check it, so that an error reporting an unexpected situation is propagated rather than handled as an expected one.
 
 ## Tests
 
