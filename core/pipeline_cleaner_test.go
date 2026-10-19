@@ -21,7 +21,7 @@ func TestPipelineCleanerCloseCancelsMetricsWait(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 
 		c := newTestPipelineCleaner(t)
-		m := metrics.New(nil, nil)
+		m := metrics.New(nil, nil, nil)
 		defer m.Close(t.Context())
 		result := make(chan error, 1)
 		c.start(func() {
