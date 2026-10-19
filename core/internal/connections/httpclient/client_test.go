@@ -5,12 +5,85 @@
 package httpclient
 
 import (
+	"io"
 	"net/http"
+	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
 )
+
+// recordingBody is a response body that records whether it has been closed.
+type recordingBody struct {
+	io.Reader
+	closed bool
+}
+
+// Close records that the body has been closed.
+func (b *recordingBody) Close() error {
+	b.closed = true
+	return nil
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+// RoundTrip dispatches requests to the wrapped transport function.
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
+}
+
+// TestDoClosesRetriedResponses tests that Do closes the body of a response
+// before retrying the request, and returns the last response with its body
+// still open.
+func TestDoClosesRetriedResponses(t *testing.T) {
+	tests := []struct {
+		name   string
+		status int
+		header http.Header
+	}{
+		{name: "RateLimited", status: 429, header: http.Header{"Retry-After": []string{"0.01"}}},
+		{name: "Slowdown", status: 429},
+		{name: "NetFailure", status: 500},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			// Run in a bubble, so as not to wait for the rate limiter in real time.
+			synctest.Test(t, func(t *testing.T) {
+				retried := &recordingBody{Reader: strings.NewReader("")}
+				returned := &recordingBody{Reader: strings.NewReader("")}
+				responses := []*http.Response{
+					{StatusCode: test.status, Header: test.header, Body: retried},
+					{StatusCode: 200, Body: returned},
+				}
+				c := client(t, newHTTP(t), "")
+				c.transport = roundTripFunc(func(*http.Request) (*http.Response, error) {
+					res := responses[0]
+					responses = responses[1:]
+					return res, nil
+				})
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/", nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				res, err := c.Do(req)
+				if err != nil {
+					t.Fatalf("expected no error, got %q", err)
+				}
+				if res.StatusCode != 200 {
+					t.Fatalf("expected status 200, got %d", res.StatusCode)
+				}
+				if !retried.closed {
+					t.Fatal("expected body of the retried response to be closed, got open")
+				}
+				if returned.closed {
+					t.Fatal("expected body of the returned response to be open, got closed")
+				}
+			})
+		})
+	}
+}
 
 func Test_retryStrategy(t *testing.T) {
 

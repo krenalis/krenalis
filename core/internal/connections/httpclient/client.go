@@ -329,10 +329,13 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 			if !isBodyRetriable(req) {
 				return res, nil
 			}
+			_ = res.Body.Close()
+		default:
+			// Slowdown and RateLimited: the request is retried.
+			_ = res.Body.Close()
 		}
 
 		if hasBody {
-			_ = res.Body.Close()
 			body, err := req.GetBody()
 			if err != nil {
 				return nil, err
