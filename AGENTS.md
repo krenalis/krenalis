@@ -16,7 +16,7 @@ Apply review rules to code introduced or modified by the change under review. Do
 
 ## Line length
 
-Allow Go code lines to be up to 120 characters long without wrapping. A line may exceed 120 characters when a more specific convention requires it, notably the rule that keeps exported signatures on one line. The 120-character limit does not apply to `_test.go` files, whose lines may be as long as needed.
+Allow Go code lines to be up to 120 characters long without wrapping. A line may exceed 120 characters when a more specific convention requires it, notably the rule that keeps exported signatures on one line. In `_test.go` files, the limit does not apply to the table of cases of a table-driven test, whose lines may be as long as needed; the rest of a test file follows the limit like any other code.
 
 ## File organization
 
@@ -195,14 +195,16 @@ Exported methods in `core/internal/metrics` are an exception: they must assume t
 
 Apply the following procedure to every brace-delimited block, be it a function or method body or a block nested inside one. Decide each block on its own, from the inside out.
 
-1. Choose the internal spacing. Looking only at the statements of the block, and ignoring any blank line adjacent to its braces, insert a blank line wherever it genuinely helps readability, typically by separating logically distinct groups of statements. A single-statement block never needs one, and neither does a short cohesive block; a guard or a `return` does not earn a blank line on its own. A small block, roughly up to 20 non-blank lines between its braces with nested blocks included, normally needs none either, even when its statements form distinct groups: at that size, separation is rarely worth the space. Treat 20 as a guide, not a cutoff: a block just below it may still be separated when its groups are clearly distinct, and one just above it may still stay compact when it reads well as a whole.
-2. Pad the boundaries. If step 1 left at least one internal blank line, leave a blank line immediately after the opening brace and another immediately before the closing brace. If it left none, the block contains no blank line at all: never pad an otherwise compact block.
+1. Choose the internal spacing. Looking only at the statements of the block, and ignoring any blank line adjacent to its braces, insert a blank line only between phases that do clearly different things, and only where it genuinely helps readability. Judge by the structure of the block, not by its length. Statements that are steps toward a single result, such as a run of guards, the construction of a value, or a loop followed by the operation that consumes its result, form one phase and stay together, even in a block well beyond 20 lines. Phases that do unrelated things, especially when each is introduced by its own comment, may be separated even in a short block. A single-statement block never needs a blank line, and a guard or a `return` does not earn one on its own. Use length only to settle doubtful cases: below roughly 20 non-blank lines between its braces, nested blocks included, separation is rarely worth the space; above it, separation more often helps the reader.
+2. Pad the boundaries. If step 1 left at least one internal blank line, leave a blank line immediately after the opening brace and another immediately before the closing brace. If it left none, the block has no blank line between its statements or at its boundaries: never pad an otherwise compact block.
 3. Place the closing pad before a final `return`. When a padded block ends with a `return`, its trailing blank line goes immediately before that `return`, with no blank line between the `return` and the closing brace. A `return` inside a nested block is not the enclosing block's final statement.
 
 Only two shapes are therefore valid:
 
-- A compact block, with no blank line anywhere inside it.
+- A compact block, with no blank line between its statements or at its boundaries.
 - A separated block, whose internal blank lines are matched by a blank line after the opening brace and one before the closing brace, the latter moved above a final `return`.
+
+A nested block does not inherit the shape of the block that contains it, in either direction. A function literal, such as a subtest passed to `t.Run`, a goroutine, or an HTTP handler, is a function in its own right: decide its spacing as for a function body. A control-flow block may also be separated inside a compact block when the enclosing statements are only a thin frame around it, such as declaring a result, filling it in a loop, and returning it. Conversely, a separated nested block does not by itself make its enclosing block separated.
 
 Separate the complete construct that owns the block from surrounding code with blank lines. Keep declaration comments attached to their declarations.
 
