@@ -98,6 +98,21 @@ The following connection parameters are supported:
     0 (zero) specifies that the driver should wait indefinitely. The default is 0 seconds.
     The query request gives up after the timeout length if the HTTP response is success.
 
+  - cleanupTimeout: Specifies the timeout, in seconds, that bounds post-cancellation
+    cleanup — the best-effort query abort sent after a QueryContext/PingContext/ExecContext
+    is canceled or times out, and the session logout sent by Close. 0 (zero, the default)
+    preserves the pre-existing behavior: cleanup runs synchronously on the caller's
+    goroutine using a background context and is unbounded, so a canceled query can block
+    the caller minutes-to-hours past its own deadline. When positive, the query abort is
+    detached onto its own goroutine bounded by this timeout so the caller regains control
+    at its own deadline, and Close bounds the logout to this timeout (Close stays
+    synchronous to honor the io.Closer contract). Because the abort then runs concurrently
+    with any reuse of the same connection, keep this value small (5 seconds is a reasonable
+    starting point) to bound the overlap window.
+
+    Note: this field was added to bypass a Behavior Change Release (BCR) and may be subject
+    to change in the next breaking change release.
+
   - authenticator: Specifies the authenticator to use for authenticating user credentials.
     See "Authenticator Values" section below for supported values.
 
@@ -106,10 +121,12 @@ The following connection parameters are supported:
 
   - application: Identifies your application to Snowflake Support.
 
-  - disableOCSPChecks: false by default. Set to true to bypass the Online
-    Certificate Status Protocol (OCSP) certificate revocation check.
-    OCSP module caches responses internally. If your application is long running, you can enable cache clearing by calling StartOCSPCacheClearer and disable by calling StopOCSPCacheClearer.
-    IMPORTANT: Change the default value for testing or emergency situations only.
+  - disableOCSPChecks: true always turns OCSP off, including when ocspFailOpen
+    is set. false is the zero-value bool and is not an opt-in; callers who used
+    disableOCSPChecks=false as "please check OCSP" now get no OCSP.
+    IMPORTANT: OCSP is off by default. Production that still wants revocation
+    checking must opt in via ocspFailOpen or SF_DISABLE_OCSP_CHECKS=false.
+    OCSP caches responses internally. If your application is long running, you can enable cache clearing by calling StartOCSPCacheClearer and disable by calling StopOCSPCacheClearer.
 
   - token: a token that can be used to authenticate. Should be used in conjunction with the "oauth" authenticator.
 
@@ -123,7 +140,25 @@ The following connection parameters are supported:
     > Maximum value is 3600 seconds. A larger value will be reset to 3600 seconds.
     > This parameter is only valid if client_session_keep_alive is set to true.
 
-  - ocspFailOpen: true by default. Set to false to make OCSP check fail closed mode.
+  - ocspFailOpen: unset by default (OCSP stays off). Set to true to enable
+    OCSP in fail-open mode, or false for fail-closed, but only when
+    disableOCSPChecks is not true.     DSN omit means unset and stays default-off. Old DSN() always wrote
+    ocspFailOpen=true unless fail-closed, so a DSN stored from v2.2 with
+    that key still enables OCSP. Config{} and a hand-written DSN without
+    the key stay off. That split is easy to miss. Only an explicit
+    ocspFailOpen=true/false is an opt-in when the disable flag is false.
+    SF_DISABLE_OCSP_CHECKS=true disables fail-open (explicit or default)
+    but is ignored when fail-closed is active.
+
+  - SF_DISABLE_OCSP_CHECKS (environment variable): process-wide opt-in/out
+    when disableOCSPChecks is false. The name is inverted: false/0/f
+    enables OCSP (FAIL_OPEN). Old drivers treated false as a no-op because
+    OCSP defaulted on; now false turns OCSP on. true/1/t disable fail-open
+    (including ocspFailOpen=true) but are ignored when fail-closed is
+    active; a warning is logged in that case, not for the default-off.
+    Unset, empty, or an invalid value (foo, yes) is treated as unset.
+    Read live in OCSPEnabled, not snapshotted at FillMissing.
+    disableOCSPChecks=true wins over this env. Cache-server env vars never enable OCSP.
 
   - certRevocationCheckMode (enabled, advisory, disabled): Specifies the certificate revocation check mode.
     When enabled, the driver performs a certificate revocation check using CRL.
@@ -131,7 +166,8 @@ The following connection parameters are supported:
     If the status cannot be determined, the connection is established.
     When disabled, the driver does not perform a certificate revocation check.
     Keep in mind that the certificate revocation check with CRLs is a heavy task, both for memory and CPU.
-    The default is disabled.
+    The default is disabled. OCSP and CRL cannot both be enabled; default-off
+    OCSP plus CRL is allowed.
 
   - crlAllowCertificatesWithoutCrlURL: if a certificate does not have a CRL URL, the driver will
     allow the connection to be established.
@@ -220,6 +256,8 @@ Alternatively, use OpenWithConfig() function to create a database handle with th
 
     When workloadIdentityProvider=GCP or AWS, workloadIdentityImpersonationPath can be optionally set to customize impersonation path. This is a comma separated list. For GCP the last parameter is a target service account and the rest are chained delegation. For AWS this is the list of role ARNs to assume.
 
+    When workloadIdentityProvider=AWS, workloadIdentityHost can be optionally set to override the STS host, for endpoints that cannot be derived from the region. Accepts either a bare host (e.g., sts.example.com) or a full URL (e.g., https://sts.example.com); the default is the regional STS endpoint. The value must be an STS endpoint for the region the workload runs in: the SigV4 signing region is taken from the environment (e.g. AWS_REGION) and is not overridden, so an endpoint belonging to a different region is rejected. Note which side reaches the host - by default Snowflake calls it when replaying the attestation, whereas with workloadIdentityAwsUseOutboundToken the driver calls it directly, so a privately routed endpoint (such as an interface VPC endpoint) also requires that option. When workloadIdentityHost is set, FIPS and dualstack endpoint preferences no longer apply to STS.
+
     For more details, refer to the usage guide: https://docs.snowflake.com/en/user-guide/workload-identity-federation
 
 # Connection Config
@@ -270,6 +308,20 @@ If you wish to specify a custom transporter (e.g. to provide a custom TLS config
 	db := sql.OpenDB(connector)
 
 As an alternative, you can use the `RegisterTLSConfig` / `DeregisterTLSConfig` functions as seen in the unit tests: https://github.com/snowflakedb/gosnowflake/blob/v1.16.0/transport_test.go#L127
+
+If you only need to customize how the network connections are established (e.g. to instrument them), set `WrapDialContext`
+instead of `Transporter`. It wraps the dial function of every transport the driver creates, keeping the certificate revocation
+checks, the proxy handling and the TLS configuration of the driver. It is ignored when `Transporter` is set. Example:
+
+	config := Config{
+	    WrapDialContext: func(dial gosnowflake.DialFunc) gosnowflake.DialFunc {
+	        return func(ctx context.Context, network, addr string) (net.Conn, error) {
+	            conn, err := dial(ctx, network, addr)
+	            // your custom logic here
+	            return conn, err
+	        }
+	    },
+	}
 
 # Proxy
 
@@ -830,8 +882,9 @@ The arrow-compute dependency (which significantly increases binary size) is only
 arrowbatches sub-package. If you don't need Arrow batch support, simply don't import it.
 
 An ArrowBatch can exist in a state where the underlying data has not yet been loaded. The data is downloaded and
-translated only on demand. Translation options are retrieved from a context.Context interface, which is either
-passed from query context or set by the user using WithContext(ctx) method.
+translated only on demand. Translation (conversion) options are taken from the query context and captured when the
+batches are created by GetArrowBatches; they are then fixed for the life of each batch. WithContext(ctx) sets the
+context used for cancellation and deadlines only and does not change the conversion options.
 
 In order to access them you must use `arrowbatches.WithArrowBatches` context, similar to the following:
 
@@ -856,13 +909,15 @@ Returns the number of rows in the ArrowBatch. Note that this returns 0 if the da
 irrespective of it’s actual size.
 
 WithContext(ctx context.Context):
-Sets the context of the ArrowBatch to the one provided. Note that the context will not retroactively apply to data
-that has already been downloaded. For example:
+Sets the context used for cancellation and deadlines on subsequent Fetch calls. Conversion options are NOT read from
+this context: they are captured from the query context when the batch is created, so providing a context with
+different option values will not change how the data is converted. For example:
 
 	records1, _ := batch.Fetch()
 	records2, _ := batch.WithContext(ctx).Fetch()
 
-will produce the same result in records1 and records2, irrespective of the newly provided ctx. Context worth noting are:
+will produce the same conversion in records1 and records2, irrespective of the newly provided ctx. The conversion
+options, which must be set on the query context before running the query, are:
 -arrowbatches.WithTimestampOption
 -WithHigherPrecision
 -arrowbatches.WithUtf8Validation
@@ -1455,7 +1510,29 @@ an absolute path rather than a relative path. For example:
 
 	db.Query("GET @~ file:///tmp/my_data_file auto_compress=false overwrite=false")
 
-To download a file into an in-memory stream (rather than a file) use code similar to the code below.
+To download a file as a stream, use `SnowflakeConnection.DownloadStream` via `database/sql` `Conn.Raw`. Consume the reader before returning from the callback:
+
+	conn, err := db.Conn(ctx)
+	err = conn.Raw(func(x any) error {
+		sc := x.(SnowflakeConnection)
+		r, err := sc.DownloadStream(ctx, "@~", "data1.txt.gz")
+		if err != nil {
+			return err
+		}
+		defer r.Close()
+		_, err = io.Copy(dst, r)
+		return err
+	})
+
+Use `DownloadStreamWithConfig` to configure the download.
+
+Optional download stream properties:
+
+  - Decompress: gunzip the downloaded object. The default is false.
+    Decompression errors are returned by Read (an invalid gzip header is
+    reported on the first Read, not by DownloadStreamWithConfig).
+
+`WithFileGetStream` still works but buffers the entire object in memory before writing to the `io.Writer`. Prefer `DownloadStream`.
 
 	var streamBuf bytes.Buffer
 	ctx := WithFileGetStream(context.Background(), &streamBuf)
@@ -1464,6 +1541,14 @@ To download a file into an in-memory stream (rather than a file) use code simila
 	dbt.mustExecContext(ctx, sql)
 	// streamBuf is now filled with the stream. Use bytes.NewReader(streamBuf.Bytes()) to read uncompressed stream or
 	// use gzip.NewReader(&streamBuf) for to read compressed stream.
+
+A GET resolves its stage path by prefix matching, so it can match more than one file (for
+example "foo" alongside "foobar"). Because a get-stream has a single io.Writer, it can return
+only one file: if the GET matches more than one, it returns ErrGetStreamMultipleFiles instead of
+streaming a corrupt mix of them. Use the GET command's PATTERN argument to narrow the match to a
+single file, for example:
+
+	sql := `get @~ file:///tmp/testData pattern='.*data1.txt.gz'`
 
 Note: GET statements are not supported for multi-statement queries.
 
@@ -1551,7 +1636,7 @@ The `ConnectionDiagnosticsAllowlistFile` is only taken into consideration when `
 
 4. checks if proxy is used in the connection
 
-5. sets up a connection; for which we use the same transport which is driven by the driver's config (custom transport, or when OCSP disabled then OCSP-less transport, or by default, the OCSP-enabled transport)
+ 5. sets up a connection; for which we use the same transport which is driven by the driver's config (custom transport, or the OCSP-enabled transport when OCSP is opted in, otherwise an OCSP-less transport)
 
 6. for HTTP endpoints, issues a HTTP GET request and see if it connects
 

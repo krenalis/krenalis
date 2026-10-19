@@ -156,6 +156,31 @@ func Test_verifyCertificate(t *testing.T) {
 	})
 }
 
+// Test_serveLivez checks that serveLivez responds "ok" to GET requests and
+// rejects the other methods.
+func Test_serveLivez(t *testing.T) {
+	tests := []struct {
+		method string
+		status int
+		body   string
+	}{
+		{http.MethodGet, http.StatusOK, "ok"},
+		{http.MethodPost, http.StatusMethodNotAllowed, "Method Not Allowed\n"},
+	}
+	for _, test := range tests {
+		t.Run(test.method, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			serveLivez(w, httptest.NewRequest(test.method, "/livez", nil))
+			if w.Code != test.status {
+				t.Fatalf("expected status %d, got %d", test.status, w.Code)
+			}
+			if w.Body.String() != test.body {
+				t.Fatalf("expected body %q, got %q", test.body, w.Body.String())
+			}
+		})
+	}
+}
+
 // Test_serveSignupHTMLPage checks that serveSignupHTMLPage writes the embedded
 // signup page and the headers that keep it out of search engines.
 func Test_serveSignupHTMLPage(t *testing.T) {

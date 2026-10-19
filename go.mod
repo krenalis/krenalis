@@ -6,7 +6,7 @@ go 1.27
 
 // Use our Snowflake driver fork. See https://github.com/krenalis/krenalis/issues/2368.
 // Keep in sync with the version within "test/krenalistester/build_run_krenalis.go".
-replace github.com/snowflakedb/gosnowflake/v2 => github.com/krenalis/gosnowflake/v2 v2.1.0-patched
+replace github.com/snowflakedb/gosnowflake/v2 => github.com/krenalis/gosnowflake/v2 v2.3.0-patched
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.49.0
@@ -44,7 +44,7 @@ require (
 	github.com/prometheus/client_model v0.6.3
 	github.com/rabbitmq/amqp091-go v1.15.0
 	github.com/relvacode/iso8601 v1.8.2
-	github.com/snowflakedb/gosnowflake/v2 v2.1.0
+	github.com/snowflakedb/gosnowflake/v2 v2.3.0
 	github.com/testcontainers/testcontainers-go v0.44.0
 	github.com/testcontainers/testcontainers-go/modules/clickhouse v0.44.0
 	github.com/testcontainers/testcontainers-go/modules/nats v0.44.0
@@ -72,7 +72,6 @@ require (
 	github.com/apache/thrift v0.22.0 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.22 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.20.3 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.22.17 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.6 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.6 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.6 // indirect
