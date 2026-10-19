@@ -1802,9 +1802,8 @@ func (core *Core) executeIdentityResolution(workspaceID, opID string) {
 				break
 			}
 			// In case of unknown error, try again.
-			loggedError := warehouses.NewOperationError(err)
-			if msg := loggedError.Error(); unknownErrorMsg != msg {
-				slog.Warn("failed to check the identity resolution status; retrying", "error", loggedError)
+			if msg := err.Error(); unknownErrorMsg != msg {
+				slog.Warn("failed to check the identity resolution status; retrying", "error", err)
 				unknownErrorMsg = msg
 			}
 			continue
