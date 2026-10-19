@@ -40,22 +40,22 @@ test(`Add "Import customers" pipeline on Dummy`, async ({ page }) => {
 
 	let email = page.locator('.combobox[data-id="email"]');
 	await email.locator('wa-input').click();
-	await email.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'email' }).click();
+	await email.locator('.combobox-list__item .schema-combobox-item__text', { hasText: 'email' }).click();
 	await page.keyboard.press('Escape');
 
 	let dummyId = page.locator('.combobox[data-id="dummy_id"]');
 	await dummyId.locator('wa-input').click();
-	await dummyId.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'dummyId' }).click();
+	await dummyId.locator('.combobox-list__item .schema-combobox-item__text', { hasText: 'dummyId' }).click();
 	await page.keyboard.press('Escape');
 
 	let firstName = page.locator('.combobox[data-id="first_name"]');
 	await firstName.locator('wa-input').click();
-	await firstName.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'firstName' }).click();
+	await firstName.locator('.combobox-list__item .schema-combobox-item__text', { hasText: 'firstName' }).click();
 	await page.keyboard.press('Escape');
 
 	let lastName = page.locator('.combobox[data-id="last_name"]');
 	await lastName.locator('wa-input').click();
-	await lastName.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'lastName' }).click();
+	await lastName.locator('.combobox-list__item .schema-combobox-item__text', { hasText: 'lastName' }).click();
 	await page.keyboard.press('Escape');
 
 	const expectedBody = `
@@ -145,9 +145,13 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 	// Matching.
 	let matching = page.locator('.pipeline__matching-properties');
 	await matching.locator('[data-id="in"] wa-input >> input').click();
-	await matching.locator('[data-id="in"] sl-menu-item .schema-combobox-item__name', { hasText: 'email' }).click();
+	await matching
+		.locator('[data-id="in"] .combobox-list__item .schema-combobox-item__name', { hasText: 'email' })
+		.click();
 	await matching.locator('[data-id="out"] wa-input >> input').click();
-	await matching.locator('[data-id="out"] sl-menu-item .schema-combobox-item__text', { hasText: 'email' }).click();
+	await matching
+		.locator('[data-id="out"] .combobox-list__item .schema-combobox-item__text', { hasText: 'email' })
+		.click();
 	// Selected out matching property should not be visible in the
 	// mapping.
 	await expect(
@@ -163,12 +167,12 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 	let mappings = page.locator('.pipeline__transformation');
 	let firstName = mappings.locator('.combobox[data-id="firstName"]');
 	await firstName.locator('wa-input').click();
-	await firstName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'first_name' }).click();
+	await firstName.locator('.combobox-list__item .schema-combobox-item__name', { hasText: 'first_name' }).click();
 	await page.keyboard.press('Escape');
 
 	let lastName = mappings.locator('.combobox[data-id="lastName"]');
 	await lastName.locator('wa-input').click();
-	await lastName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'last_name' }).click();
+	await lastName.locator('.combobox-list__item .schema-combobox-item__name', { hasText: 'last_name' }).click();
 	await page.keyboard.press('Escape');
 
 	const expectedBody = `
@@ -321,7 +325,7 @@ test(`Add "Send Add to Cart" pipeline on Dummy`, async ({ page }) => {
 	let mappings = page.locator('.pipeline__transformation');
 	let email = mappings.locator('.combobox[data-id="email"]');
 	await email.locator('wa-input').click();
-	await email.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'traits' }).click();
+	await email.locator('.combobox-list__item .schema-combobox-item__name', { hasText: 'traits' }).click();
 	await page.keyboard.press('Escape');
 
 	const expectedBody = `
@@ -403,18 +407,18 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 	// Identity column.
 	const identity = page.locator('.pipeline__transformation-identity-column');
 	await identity.locator('wa-input').click();
-	await identity.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'email' }).click();
+	await identity.locator('.combobox-list__item .schema-combobox-item__text', { hasText: 'email' }).click();
 
 	// Mappings.
 	let mappings = page.locator('.pipeline__transformation');
 	let firstName = mappings.locator('.combobox[data-id="first_name"]');
 	await firstName.locator('wa-input').click();
-	await firstName.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'first_name' }).click();
+	await firstName.locator('.combobox-list__item .schema-combobox-item__text', { hasText: 'first_name' }).click();
 	await page.keyboard.press('Escape');
 
 	let lastName = mappings.locator('.combobox[data-id="last_name"]');
 	await lastName.locator('wa-input').click();
-	await lastName.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'last_name' }).click();
+	await lastName.locator('.combobox-list__item .schema-combobox-item__text', { hasText: 'last_name' }).click();
 	await page.keyboard.press('Escape');
 
 	const expectedBody = `
@@ -540,23 +544,23 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 	// Table key.
 	let tableKey = page.locator('.pipeline__destination_table-key-property');
 	await tableKey.locator('wa-input >> input').click();
-	await tableKey.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'email' }).click();
+	await tableKey.locator('.combobox-list__item .schema-combobox-item__text', { hasText: 'email' }).click();
 
 	// Mappings.
 	let mappings = page.locator('.pipeline__transformation');
 	let email = mappings.locator('.combobox[data-id="email"]');
 	await email.locator('wa-input').click();
-	await email.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'email' }).click();
+	await email.locator('.combobox-list__item .schema-combobox-item__name', { hasText: 'email' }).click();
 	await page.keyboard.press('Escape');
 
 	let firstName = mappings.locator('.combobox[data-id="first_name"]');
 	await firstName.locator('wa-input').click();
-	await firstName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'first_name' }).click();
+	await firstName.locator('.combobox-list__item .schema-combobox-item__name', { hasText: 'first_name' }).click();
 	await page.keyboard.press('Escape');
 
 	let lastName = mappings.locator('.combobox[data-id="last_name"]');
 	await lastName.locator('wa-input').click();
-	await lastName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'last_name' }).click();
+	await lastName.locator('.combobox-list__item .schema-combobox-item__name', { hasText: 'last_name' }).click();
 	await page.keyboard.press('Escape');
 
 	const expectedBody = `
@@ -732,23 +736,23 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 	// Identity column.
 	const identity = page.locator('.pipeline__transformation-identity-column');
 	await identity.locator('wa-input').click();
-	await identity.locator('sl-menu-item .schema-combobox-item__text', { hasText: 'email' }).click();
+	await identity.locator('.combobox-list__item .schema-combobox-item__text', { hasText: 'email' }).click();
 
 	// Mappings.
 	let mappings = page.locator('.pipeline__transformation');
 	let email = mappings.locator('.combobox[data-id="email"]');
 	await email.locator('wa-input').click();
-	await email.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'email' }).click();
+	await email.locator('.combobox-list__item .schema-combobox-item__name', { hasText: 'email' }).click();
 	await page.keyboard.press('Escape');
 
 	let firstName = mappings.locator('.combobox[data-id="first_name"]');
 	await firstName.locator('wa-input').click();
-	await firstName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'first_name' }).click();
+	await firstName.locator('.combobox-list__item .schema-combobox-item__name', { hasText: 'first_name' }).click();
 	await page.keyboard.press('Escape');
 
 	let lastName = mappings.locator('.combobox[data-id="last_name"]');
 	await lastName.locator('wa-input').click();
-	await lastName.locator('sl-menu-item .schema-combobox-item__name', { hasText: 'last_name' }).click();
+	await lastName.locator('.combobox-list__item .schema-combobox-item__name', { hasText: 'last_name' }).click();
 	await page.keyboard.press('Escape');
 
 	const expectedBody = `
@@ -1200,7 +1204,7 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 	await filters.nth(0).locator('.pipeline__filters-property wa-input').click();
 	await filters
 		.nth(0)
-		.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^type$/ })
+		.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^type$/ })
 		.click();
 	await filters.nth(0).locator('.pipeline__filters-operator wa-option[value="0"]').click(); // option is "is".
 
@@ -1209,7 +1213,7 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 	const jsonCondition = filters.nth(1);
 	const jsonPropertyInput = jsonCondition.locator('.pipeline__filters-property wa-input');
 	await jsonPropertyInput.click();
-	await jsonCondition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^traits$/ }).click();
+	await jsonCondition.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^traits$/ }).click();
 	const jsonPathInput = jsonCondition.locator('.pipeline__filters-path >> input');
 	await jsonPathInput.fill('email');
 	const jsonOperatorSelect = jsonCondition.locator('.pipeline__filters-operator');
@@ -1218,14 +1222,16 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 	await jsonValueInput.locator('input').fill('a@example.com');
 
 	await jsonPropertyInput.click();
-	await jsonCondition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^properties$/ }).click();
+	await jsonCondition
+		.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^properties$/ })
+		.click();
 	await expect(jsonPropertyInput).toHaveJSProperty('value', 'properties');
 	await expect(jsonPathInput).toHaveValue('email');
 	await expect(jsonOperatorSelect).toHaveJSProperty('value', '0');
 	await expect(jsonValueInput).toHaveJSProperty('value', 'a@example.com');
 
 	await jsonPropertyInput.click();
-	await jsonCondition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^traits$/ }).click();
+	await jsonCondition.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^traits$/ }).click();
 
 	for (const operator of [
 		{ name: 'exists', index: 24 },
@@ -1233,7 +1239,7 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 	]) {
 		const condition = filters.nth(1);
 		await condition.locator('.pipeline__filters-property wa-input').click();
-		await condition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^traits$/ }).click();
+		await condition.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^traits$/ }).click();
 		const pathInput = condition.locator('.pipeline__filters-path >> input');
 		await pathInput.fill('email');
 		const operatorSelect = condition.locator('.pipeline__filters-operator');

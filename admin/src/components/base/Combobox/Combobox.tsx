@@ -1,8 +1,6 @@
 import React, { ReactNode, useState, useMemo, useRef, useEffect, useLayoutEffect, useContext } from 'react';
 import './Combobox.css';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
-import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
-import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlTabGroup from '@awesome.me/webawesome/dist/react/tab-group/index.js';
 import SlTabPanel from '@awesome.me/webawesome/dist/react/tab-panel/index.js';
@@ -219,10 +217,10 @@ const Combobox = ({
 
 			let menuItems: any[];
 			if (selectedTab == null) {
-				menuItems = menu.querySelectorAll('sl-menu-item');
+				menuItems = menu.querySelectorAll('.combobox-list__item');
 			} else {
 				const panel = menu.querySelector(`wa-tab-panel[name="${selectedTab}"]`);
-				menuItems = panel.querySelectorAll('sl-menu-item');
+				menuItems = panel.querySelectorAll('.combobox-list__item');
 			}
 
 			// Get the width of the wider menu item.
@@ -617,7 +615,8 @@ const Combobox = ({
 					enumValues != null ||
 					filteredProperties?.length > 0 ||
 					filteredFunctions?.length > 0) && (
-					<SlMenu
+					<div
+						role='menu'
 						tabIndex={-1}
 						data-is-combobox-list
 						className={`combobox-list${isErrorExpanded ? ' combobox-list--expanded' : ''}`}
@@ -670,9 +669,14 @@ const Combobox = ({
 									<SlTabPanel name='enum'>
 										{enumValues.map((v) => {
 											return (
-												<SlMenuItem key={v} onClick={(e) => onSelect(e, v, 'enum')}>
+												<div
+													key={v}
+													className='combobox-list__item'
+													role='menuitem'
+													onClick={(e) => onSelect(e, v, 'enum')}
+												>
 													<div className='enum-item'>{v}</div>
-												</SlMenuItem>
+												</div>
 											);
 										})}
 									</SlTabPanel>
@@ -680,24 +684,28 @@ const Combobox = ({
 								<SlTabPanel name='properties'>
 									{filteredProperties?.map((item) => {
 										return (
-											<SlMenuItem
+											<div
 												key={item.term}
+												className='combobox-list__item'
+												role='menuitem'
 												onClick={(e) => onSelect(e, item.term, 'property')}
 											>
 												{item.content}
-											</SlMenuItem>
+											</div>
 										);
 									})}
 								</SlTabPanel>
 								<SlTabPanel name='functions'>
 									{filteredFunctions?.map((item) => {
 										return (
-											<SlMenuItem
+											<div
 												key={item.term}
+												className='combobox-list__item'
+												role='menuitem'
 												onClick={(e) => onSelect(e, item.term, 'function')}
 											>
 												{item.content}
-											</SlMenuItem>
+											</div>
 										);
 									})}
 								</SlTabPanel>
@@ -706,14 +714,19 @@ const Combobox = ({
 							<div>
 								{filteredProperties?.map((item) => {
 									return (
-										<SlMenuItem key={item.term} onClick={(e) => onSelect(e, item.term, 'property')}>
+										<div
+											key={item.term}
+											className='combobox-list__item'
+											role='menuitem'
+											onClick={(e) => onSelect(e, item.term, 'property')}
+										>
 											{item.content}
-										</SlMenuItem>
+										</div>
 									);
 								})}
 							</div>
 						)}
-					</SlMenu>
+					</div>
 				)}
 		</div>
 	);

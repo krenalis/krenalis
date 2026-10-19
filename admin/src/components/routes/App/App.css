@@ -173,23 +173,6 @@ sl-breadcrumb-item > a {
 	height: 100%;
 }
 
-sl-menu-item::part(base) {
-	padding-top: 5px;
-	padding-bottom: 5px;
-}
-
-sl-menu-item:focus-visible::part(base) {
-	color: var(--text-onaccent) !important;
-}
-
-sl-menu-item:focus-visible * {
-	color: var(--text-onaccent) !important;
-}
-
-sl-menu-item:hover::part(base) {
-	background-color: var(--sl-color-neutral-200);
-}
-
 wa-switch:state(checked)::part(control) {
 	background-color: var(--sl-color-success-600) !important;
 	border-color: var(--sl-color-success-600) !important;
@@ -1868,10 +1851,6 @@ wa-icon::part(svg) {
 }
 
 /* || Schema combobox items */
-
-.combobox-list sl-menu-item::part(checked-icon) {
-	display: none;
-}
 
 .schema-combobox-item {
 	display: flex;

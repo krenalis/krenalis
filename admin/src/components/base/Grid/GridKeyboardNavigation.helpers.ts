@@ -8,8 +8,6 @@ const gridKeyboardControlSelector = [
 	'[contenteditable]:not([contenteditable="false"])',
 	'.draggable-wrapper__handle',
 	'wa-input',
-	'sl-menu',
-	'sl-menu-item',
 	'wa-option',
 	'wa-radio',
 	'wa-radio-group',
