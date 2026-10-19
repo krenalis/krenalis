@@ -12,7 +12,6 @@ import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlDialog, { WaAfterHideEvent } from '@awesome.me/webawesome/dist/react/dialog/index.js';
 import SlDropdown, { WaShowEvent } from '@awesome.me/webawesome/dist/react/dropdown/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlMenuItem from '@awesome.me/webawesome/dist/react/dropdown-item/index.js';
 import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
@@ -838,7 +837,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 					/>
 					{nameError && (
 						<div className='consent-management__dialog-error'>
-							<SlIcon slot='icon' name='exclamation-octagon' />
+							<WaIcon slot='icon' name='exclamation-octagon' />
 							{nameError}
 						</div>
 					)}
@@ -894,7 +893,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 						))}
 						{(purposeCodesError || duplicatePurposeCodeError) && (
 							<div className='consent-management__dialog-error'>
-								<SlIcon slot='icon' name='exclamation-octagon' />
+								<WaIcon slot='icon' name='exclamation-octagon' />
 								{purposeCodesError || duplicatePurposeCodeError}
 							</div>
 						)}
@@ -958,12 +957,12 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 						>
 							{profilePathError !== '' ? (
 								<>
-									<SlIcon slot='icon' name='exclamation-octagon' />
+									<WaIcon slot='icon' name='exclamation-octagon' />
 									{profilePathError}
 								</>
 							) : (
 								<>
-									<SlIcon name='exclamation-triangle' />
+									<WaIcon name='exclamation-triangle' />
 									{profilePathWarning}
 								</>
 							)}
@@ -972,7 +971,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 
 					{saveError !== '' && (
 						<div className='consent-management__dialog-error consent-management__dialog-save-error'>
-							<SlIcon slot='icon' name='exclamation-octagon' />
+							<WaIcon slot='icon' name='exclamation-octagon' />
 							{saveError}
 						</div>
 					)}

@@ -2,7 +2,7 @@ import React, { FormEvent, useContext, useState, useEffect } from 'react';
 import './ResetPassword.css';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import appContext from '../../../context/AppContext';
 import { Link } from '../../base/Link/Link';
 

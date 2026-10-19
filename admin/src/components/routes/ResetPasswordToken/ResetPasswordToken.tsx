@@ -5,7 +5,6 @@ import { useParams } from 'react-router-dom';
 import { NotFoundError } from '../../../lib/api/errors';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { validateMemberPassword } from '../../../lib/core/member';
 import { debounce } from '../../../utils/debounce';
@@ -136,7 +135,7 @@ const ResetPasswordToken = () => {
 					</SlInput>
 					{passwordError !== '' && (
 						<div className='reset-password__password-error'>
-							<SlIcon name='exclamation-circle' />
+							<WaIcon name='exclamation-circle' />
 							<span className='reset-password__password-error-text'>{passwordError}</span>
 						</div>
 					)}

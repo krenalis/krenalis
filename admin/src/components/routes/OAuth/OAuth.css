@@ -34,7 +34,7 @@
 	margin-top: 20px;
 }
 
-.oauth__error > sl-icon {
+.oauth__error > wa-icon {
 	font-size: 35px;
 	color: var(--sl-color-danger-600);
 }

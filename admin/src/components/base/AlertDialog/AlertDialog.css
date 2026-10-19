@@ -24,7 +24,7 @@
 	text-align: center;
 }
 
-.alert-dialog__icon sl-icon {
+.alert-dialog__icon wa-icon {
 	color: var(--alert-color);
 }
 

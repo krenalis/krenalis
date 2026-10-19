@@ -2,7 +2,6 @@ import React, { useContext } from 'react';
 import './Workspaces.css';
 import ListTile from '../../base/ListTile/ListTile';
 import Workspace from '../../../lib/api/types/workspace';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import AppContext from '../../../context/AppContext';
@@ -68,12 +67,12 @@ const Workspaces = () => {
 								<ListTile
 									key={workspace.id}
 									className='workspace-list__workspace'
-									icon={<SlIcon name='person-workspace' />}
+									icon={<WaIcon name='person-workspace' />}
 									name={workspace.name}
 									showHover={true}
 									id={workspace.id}
 									onClick={() => onWorkspaceClick(workspace.id)}
-									action={<SlIcon name='chevron-right' />}
+									action={<WaIcon name='chevron-right' />}
 								/>
 							);
 						})

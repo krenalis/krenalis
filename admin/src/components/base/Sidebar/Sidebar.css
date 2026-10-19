@@ -104,7 +104,7 @@
 	cursor: pointer;
 }
 
-.workspace-selector__dialog-view-all sl-icon {
+.workspace-selector__dialog-view-all wa-icon {
 	color: var(--sl-color-primary-600);
 }
 
@@ -120,7 +120,7 @@
 	cursor: pointer;
 }
 
-.workspace-selector__dialog-create sl-icon {
+.workspace-selector__dialog-create wa-icon {
 	color: var(--sl-color-primary-600);
 	display: flex;
 	position: relative;
@@ -141,7 +141,7 @@
 	opacity: 1;
 }
 
-.workspace-selector__dialog-option sl-icon {
+.workspace-selector__dialog-option wa-icon {
 	visibility: hidden;
 	opacity: 0;
 	transition:
@@ -150,7 +150,7 @@
 	color: var(--sl-color-primary-600);
 }
 
-.workspace-selector__dialog-option--selected sl-icon {
+.workspace-selector__dialog-option--selected wa-icon {
 	visibility: visible;
 	opacity: 1;
 }
@@ -196,12 +196,12 @@
 	background-color: rgba(105, 107, 211, 0.12);
 }
 
-.sidebar__item--isChildrenSelected:not(.sidebar__item--selected) sl-icon,
+.sidebar__item--isChildrenSelected:not(.sidebar__item--selected) wa-icon,
 .sidebar__item--isChildrenSelected:not(.sidebar__item--selected) .sidebar__item-text {
 	color: inherit;
 }
 
-.sidebar__item sl-icon {
+.sidebar__item wa-icon {
 	font-size: 20px;
 	color: inherit;
 }
@@ -227,7 +227,7 @@
 	background-color: rgba(82, 83, 162, 0.1);
 }
 
-.sidebar__sub-item sl-icon {
+.sidebar__sub-item wa-icon {
 	font-size: 14px;
 	color: inherit;
 }

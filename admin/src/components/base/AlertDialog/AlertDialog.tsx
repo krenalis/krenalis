@@ -2,7 +2,7 @@ import React, { ReactNode, useContext } from 'react';
 import AppContext from '../../../context/AppContext';
 import './AlertDialog.css';
 import SlDialog from '@awesome.me/webawesome/dist/react/dialog/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 
 interface AlertDialogProps {
 	isOpen: boolean;

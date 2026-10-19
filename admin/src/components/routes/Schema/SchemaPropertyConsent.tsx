@@ -1,7 +1,6 @@
 import React, { useContext, useEffect, useId, useRef, useState } from 'react';
 import './SchemaPropertyConsent.css';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlPopup from '@awesome.me/webawesome/dist/react/popup/index.js';
 import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
@@ -118,7 +117,7 @@ const SchemaPropertyConsent = ({ purposes }: SchemaPropertyConsentProps) => {
 				aria-controls={popupID}
 				aria-expanded={isOpen}
 			>
-				<SlIcon name='shield-check' aria-hidden='true' />
+				<WaIcon name='shield-check' aria-hidden='true' />
 				<span className='schema-property-consent__trigger-label'>Consent</span>
 			</button>
 			<div
@@ -127,7 +126,7 @@ const SchemaPropertyConsent = ({ purposes }: SchemaPropertyConsentProps) => {
 				role='region'
 				aria-label={popupTitle}
 			>
-				<SlIcon className='schema-property-consent__popup-icon' name='shield-check' aria-hidden='true' />
+				<WaIcon className='schema-property-consent__popup-icon' name='shield-check' aria-hidden='true' />
 				<div className='schema-property-consent__open-purpose-action'>
 					<SlTooltip
 						className='schema-property-consent__open-purpose-tooltip'

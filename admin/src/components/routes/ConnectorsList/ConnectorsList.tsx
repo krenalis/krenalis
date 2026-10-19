@@ -2,7 +2,6 @@ import React, { useState, useContext, useLayoutEffect, useMemo, useEffect } from
 import './ConnectorsList.css';
 import { ConnectionRole } from '../../../lib/api/types/connection';
 import AppContext from '../../../context/AppContext';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
@@ -241,13 +240,13 @@ const ConnectorsList = () => {
 					<div className='connectors-list__connectors'>
 						{cards}
 						<div className='connectors-list__feedback'>
-							<SlIcon name='chat-dots' />
+							<WaIcon name='chat-dots' />
 							{feedbackMessage}
 						</div>
 					</div>
 				) : (
 					<div className='connectors-list__no-connector'>
-						<SlIcon name='exclamation-circle' />
+						<WaIcon name='exclamation-circle' />
 						<div className='connectors-list__no-connector-title'>Nothing found</div>
 						<div className='connectors-list__no-connector-feedback'>{feedbackMessage}</div>
 					</div>

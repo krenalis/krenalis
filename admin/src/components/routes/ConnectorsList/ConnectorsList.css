@@ -71,7 +71,7 @@
 	color: var(--sl-color-neutral-600);
 }
 
-.connectors-list__no-connector sl-icon {
+.connectors-list__no-connector wa-icon {
 	font-size: 30px;
 }
 
@@ -124,14 +124,14 @@
 }
 
 .connectors-list__card-logo > img,
-.connectors-list__card-logo sl-icon {
+.connectors-list__card-logo wa-icon {
 	height: 70px;
 	width: auto;
 	padding: 5px;
 	margin: 0 auto 30px auto;
 }
 
-.connectors-list__card-logo sl-icon {
+.connectors-list__card-logo wa-icon {
 	height: 60px;
 }
 
@@ -202,7 +202,7 @@
 	height: 315px;
 }
 
-.connectors-list__feedback sl-icon {
+.connectors-list__feedback wa-icon {
 	font-size: 40px;
 }
 

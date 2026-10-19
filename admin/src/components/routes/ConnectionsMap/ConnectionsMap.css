@@ -259,7 +259,7 @@
 }
 
 .connections-map__warehouse-content .little-logo > img,
-.connections-map__warehouse-content .little-logo sl-icon {
+.connections-map__warehouse-content .little-logo wa-icon {
 	width: 45px;
 	height: 45px;
 	object-fit: contain;

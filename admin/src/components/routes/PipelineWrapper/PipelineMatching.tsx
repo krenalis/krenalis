@@ -1,7 +1,7 @@
 import React, { forwardRef, useContext, useMemo } from 'react';
 import { getMatchingComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import PipelineContext from '../../../context/PipelineContext';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { flattenSchema, propertyTypesAreEqual, FlatSchema, validateMatching } from '../../../lib/core/pipeline';
 import { checkIfPropertyExists } from './Pipeline.helpers';
 import { Combobox } from '../../base/Combobox/Combobox';

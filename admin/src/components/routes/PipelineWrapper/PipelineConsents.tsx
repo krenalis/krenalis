@@ -5,7 +5,6 @@ import { ConsentPurpose } from '../../../lib/api/types/workspace';
 import { ConsentPurposesOperator } from '../../../lib/api/types/pipeline';
 import { getMissingConsentLocation, isOutputPathTransformed } from '../../../lib/core/pipeline';
 import { UI_BASE_PATH } from '../../../constants/paths';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
 import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
@@ -301,7 +300,7 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 					<div className='pipeline__consents-errors'>
 						{purposeErrors.map(({ purpose, message, isDeleted }) => (
 							<div key={purpose.id} className='pipeline__consents-error'>
-								<SlIcon name='exclamation-circle' />
+								<WaIcon name='exclamation-circle' />
 								<span>
 									{message}
 									{!isDeleted && (
@@ -321,7 +320,7 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 						))}
 						{untransformedConsentPaths.map(([path, pathPurposes]) => (
 							<div key={path} className='pipeline__consents-error'>
-								<SlIcon name='exclamation-circle' />
+								<WaIcon name='exclamation-circle' />
 								<span>
 									{`Consent for ${pathPurposes.map((p) => `"${p.name}"`).join(', ')} is read from the profile property "${path}": ${
 										hasTransformationFunction

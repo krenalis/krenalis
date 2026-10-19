@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import './PropertyForm.css';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
 import SlRadio from '@awesome.me/webawesome/dist/react/radio/index.js';

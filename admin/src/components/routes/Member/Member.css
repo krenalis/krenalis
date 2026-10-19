@@ -104,7 +104,7 @@
 	gap: 7px;
 }
 
-.member__error sl-icon {
+.member__error wa-icon {
 	color: var(--sl-color-danger-600);
 }
 

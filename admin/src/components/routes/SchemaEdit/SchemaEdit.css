@@ -183,7 +183,7 @@
 	width: 20px;
 }
 
-.schema-edit__schema-panel .draggable-wrapper__handle sl-icon {
+.schema-edit__schema-panel .draggable-wrapper__handle wa-icon {
 	left: 15px;
 	transform: translate(-50%, -50%);
 }

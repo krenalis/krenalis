@@ -2,7 +2,7 @@ import React, { useEffect, useState, ReactNode, Fragment } from 'react';
 import './GridNestedRows.css';
 import GridRow from '../GridRow/GridRow';
 import { NestedGridRows, GridColumn, GridNestedRowsIndentation, SortableGridRow } from '../Grid.types';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { SortableRows } from '../SortableRows';
 
 interface GridNestedRowsProps {

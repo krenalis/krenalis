@@ -49,7 +49,7 @@
 	gap: 0;
 }
 
-.linked-connection-selector .grid .grid__no-rows > sl-icon {
+.linked-connection-selector .grid .grid__no-rows > wa-icon {
 	display: none;
 }
 

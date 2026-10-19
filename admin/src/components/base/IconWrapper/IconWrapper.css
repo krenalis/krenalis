@@ -23,6 +23,6 @@
 	box-shadow: var(--sl-shadow-small);
 }
 
-.icon-wrapper sl-icon {
+.icon-wrapper wa-icon {
 	font-size: var(--icon-size);
 }

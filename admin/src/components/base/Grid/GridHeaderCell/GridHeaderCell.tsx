@@ -1,7 +1,7 @@
 import React, { useId } from 'react';
 import './GridHeaderCell.css';
 import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 
 interface GridHeaderCellProps {
 	value: string;

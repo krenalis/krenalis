@@ -2,7 +2,7 @@ import React, { useContext, useLayoutEffect, ReactNode } from 'react';
 import './Settings.css';
 import ListTile from '../../base/ListTile/ListTile';
 import { Outlet, useLocation } from 'react-router-dom';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import appContext from '../../../context/AppContext';
 import { Link } from '../../base/Link/Link';
 

@@ -10,7 +10,7 @@
 	padding-left: 5px;
 }
 
-.access-keys__back-button sl-icon {
+.access-keys__back-button wa-icon {
 	position: relative;
 	top: 2px;
 }
@@ -87,7 +87,7 @@
 	font-size: 15px;
 }
 
-.access-keys__dialog-error sl-icon {
+.access-keys__dialog-error wa-icon {
 	color: var(--sl-color-danger-600);
 	font-size: 14px;
 }

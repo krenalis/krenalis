@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom';
 import './SignUp.css';
 import AppContext from '../../../context/AppContext';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
@@ -153,7 +152,7 @@ const SignUp = () => {
 				</SlInput>
 				{error && (
 					<div className='signup__error'>
-						<SlIcon slot='icon' name='exclamation-octagon' />
+						<WaIcon slot='icon' name='exclamation-octagon' />
 						{error}
 					</div>
 				)}

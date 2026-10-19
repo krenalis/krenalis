@@ -48,7 +48,6 @@ import Accordion from '../../base/Accordion/Accordion';
 import useEventListener from '../../../hooks/useEventListener';
 import AppContext from '../../../context/AppContext';
 import PipelineContext from '../../../context/PipelineContext';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlAnimation from '@awesome.me/webawesome/dist/react/animation/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
@@ -1072,7 +1071,7 @@ const TransformationBox = ({
 									<SlTooltip for={`${transformationBoxID}-${path}-identifier`}>
 										Used as identifier in Identity Resolution
 									</SlTooltip>
-									<SlIcon
+									<WaIcon
 										id={`${transformationBoxID}-${path}-identifier`}
 										name='person-check'
 										className='pipeline__transformation-property-identifier'
@@ -1081,7 +1080,7 @@ const TransformationBox = ({
 							)}
 						</Combobox>
 						<div className='pipeline__transformation-mapping-arrow'>
-							<SlIcon name='arrow-right' />
+							<WaIcon name='arrow-right' />
 						</div>
 						<div
 							className={`pipeline__transformation-output-property${
@@ -1164,7 +1163,7 @@ const TransformationBox = ({
 				/>
 				{isTransformationLanguageDeprecated && (
 					<SlCallout variant='danger' className='pipeline__transformation-language-deprecated'>
-						<SlIcon slot='icon' name='exclamation-circle' />
+						<WaIcon slot='icon' name='exclamation-circle' />
 						{selectedLanguage} is not supported anymore
 					</SlCallout>
 				)}
@@ -1185,7 +1184,7 @@ const TransformationBox = ({
 							<>
 								<span className='transformation-box__header-icon'>
 									{transformationType === 'mappings' ? (
-										<SlIcon name='shuffle' />
+										<WaIcon name='shuffle' />
 									) : (
 										<ExternalLogo
 											code={selectedLanguage.toLowerCase()}
@@ -2094,7 +2093,7 @@ const FullscreenTransformation = ({
 					<SlTooltip for={samplesFileWarningID}>
 						No filtering is applied when fetching samples from files
 					</SlTooltip>
-					<SlIcon id={samplesFileWarningID} name='info-circle' />
+					<WaIcon id={samplesFileWarningID} name='info-circle' />
 				</div>
 			)}
 			<div className='fullscreen-transformation__samples-reload'>
@@ -2639,7 +2638,7 @@ const FullscreenTransformation = ({
 							</div>
 						) : (
 							<div className='fullscreen-transformation__output-placeholder'>
-								<SlIcon name='play-circle' />
+								<WaIcon name='play-circle' />
 								<p className='fullscreen-transformation__output-placeholder-text'>
 									Run the transformation on a sample to see the resulting output
 								</p>
@@ -3028,7 +3027,7 @@ const MapMapping = ({
 				propertiesToHide={propertiesToHide}
 			/>
 			<div className='pipeline__transformation-mapping-arrow'>
-				<SlIcon name='arrow-right' />
+				<WaIcon name='arrow-right' />
 			</div>
 			<div
 				className={`pipeline__transformation-output-property${
@@ -3098,7 +3097,7 @@ const MapMapping = ({
 							propertiesToHide={propertiesToHide}
 						/>
 						<div className='pipeline__transformation-mapping-arrow'>
-							<SlIcon name='arrow-right' />
+							<WaIcon name='arrow-right' />
 						</div>
 						<div
 							className='pipeline__transformation-output-property pipeline__transformation-output-property--indented pipeline__transformation-output-property--map'
@@ -3501,7 +3500,7 @@ const TransformationProperty = ({
 		>
 			<div className='fullscreen-transformation__property-padding'>
 				{isParent && showCaret && (
-					<SlIcon
+					<WaIcon
 						className='fullscreen-transformation__property-caret'
 						name='caret-right-fill'
 						onClick={() => {
@@ -3534,7 +3533,7 @@ const TransformationProperty = ({
 											<SlTooltip for={`${propertyID}-identifier`}>
 												Used as identifier in Identity Resolution
 											</SlTooltip>
-											<SlIcon
+											<WaIcon
 												id={`${propertyID}-identifier`}
 												className='fullscreen-transformation__property-identifier-icon'
 												name='person-check'
@@ -3583,7 +3582,7 @@ const TransformationProperty = ({
 												You cannot select this property since it is already used as matching
 												property
 											</SlTooltip>
-											<SlIcon
+											<WaIcon
 												id={`${propertyID}-disabled-info`}
 												className='fullscreen-transformation__property-disabled-info'
 												name='info-circle'

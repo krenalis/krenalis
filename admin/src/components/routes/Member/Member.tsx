@@ -6,7 +6,6 @@ import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import * as icons from '../../../constants/icons';
 import { MemberAvatar, MemberToSet } from '../../../lib/api/types/responses';
 import { toBase64 } from '../../../utils/toBase64';
@@ -317,7 +316,7 @@ const Member = () => {
 							</div>
 							{error && (
 								<div className='member__error'>
-									<SlIcon slot='icon' name='exclamation-octagon' />
+									<WaIcon slot='icon' name='exclamation-octagon' />
 									{error}
 								</div>
 							)}

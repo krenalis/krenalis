@@ -1,7 +1,7 @@
 import React, { ReactNode, useContext } from 'react';
 import './Organization.css';
 import ListTile from '../../base/ListTile/ListTile';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { Link } from '../../base/Link/Link';
 import { Outlet, useLocation } from 'react-router-dom';
 import appContext from '../../../context/AppContext';

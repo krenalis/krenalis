@@ -11,7 +11,6 @@ import SlCopyButton from '@awesome.me/webawesome/dist/react/copy-button/index.js
 import SlTabPanel from '@awesome.me/webawesome/dist/react/tab-panel/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import toJSDate from '../../../utils/toJSDate';
 import { Link } from '../../base/Link/Link';
@@ -230,7 +229,7 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 								)}
 							<span className='profile-drawer__kpid'>
 								<SlTooltip for={`${drawerID}-kpid`}>Krenalis Profile ID</SlTooltip>
-								<SlIcon id={`${drawerID}-kpid`} name='info-circle-fill' />
+								<WaIcon id={`${drawerID}-kpid`} name='info-circle-fill' />
 								KPID: <span className='profile-drawer__kpid-value'>{selectedProfile}</span>
 							</span>
 						</div>
@@ -424,7 +423,7 @@ const DrawerAttribute = ({ name, value, isParent, isIndented, isExpanded, setIsE
 			}}
 		>
 			<span className='drawer-attribute__property-padding'>
-				{isParent && <SlIcon className='drawer-attribute__property-caret' name='caret-right-fill' />}
+				{isParent && <WaIcon className='drawer-attribute__property-caret' name='caret-right-fill' />}
 			</span>
 			<span className='profile-drawer__attribute-key'>
 				{isIndented && <span className='profile-drawer__indentation-icon' />}

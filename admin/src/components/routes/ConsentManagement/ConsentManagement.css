@@ -106,14 +106,14 @@
 	color: var(--sl-color-danger-600);
 }
 
-.consent-management__dialog-error sl-icon,
-.consent-management__dialog-warning sl-icon,
-.consent-management__dialog-profile-path-message sl-icon {
+.consent-management__dialog-error wa-icon,
+.consent-management__dialog-warning wa-icon,
+.consent-management__dialog-profile-path-message wa-icon {
 	font-size: 13px;
 	flex-shrink: 0;
 }
 
-.consent-management__dialog-error sl-icon {
+.consent-management__dialog-error wa-icon {
 	color: var(--sl-color-danger-600);
 }
 
@@ -121,7 +121,7 @@
 	color: var(--sl-color-warning-600);
 }
 
-.consent-management__dialog-warning sl-icon {
+.consent-management__dialog-warning wa-icon {
 	color: var(--sl-color-warning-600);
 }
 
@@ -301,7 +301,7 @@
 	align-items: flex-start;
 }
 
-.consent-management__dialog-save-error sl-icon {
+.consent-management__dialog-save-error wa-icon {
 	position: relative;
 	top: 3px;
 }

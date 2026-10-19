@@ -38,7 +38,7 @@
 	margin-bottom: 30px;
 }
 
-.signup__error sl-icon {
+.signup__error wa-icon {
 	color: var(--sl-color-danger-600);
 	position: relative;
 	top: 2px;

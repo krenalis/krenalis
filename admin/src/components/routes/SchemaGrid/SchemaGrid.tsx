@@ -6,7 +6,7 @@ import {
 } from '../Schema/SchemaPropertyGrid';
 import './SchemaGrid.css';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { Outlet, useLocation } from 'react-router-dom';
 import Grid from '../../base/Grid/Grid';
 import { GridRef } from '../../base/Grid/Grid.types';

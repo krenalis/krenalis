@@ -2,7 +2,7 @@ import React, { ReactNode } from 'react';
 import ListTile from '../../base/ListTile/ListTile';
 import { PipelineType } from '../../../lib/api/types/pipeline';
 import SlDialog from '@awesome.me/webawesome/dist/react/dialog/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import TransformedConnection from '../../../lib/core/connection';
 
 interface PipelineTypesDialogProps {

@@ -3,7 +3,7 @@ import './ConnectorKeyvalue.css';
 import ConnectorField from '../ConnectorField';
 import { KeyContext } from '../../../../context/KeyContext';
 import { ValueContext } from '../../../../context/ValueContext';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import ConnectorFieldInterface from '../../../../lib/api/types/ui';
 import {
 	DndContext,

@@ -4,7 +4,7 @@ import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { buttonVariant } from '../../../utils/buttonVariant';
 import SlButtonType from '@awesome.me/webawesome/dist/components/button/button.js';
 import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { Size, Variant } from '../../routes/App/App.types';
 
 interface FeedbackButtonProps {

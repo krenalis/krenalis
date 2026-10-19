@@ -42,7 +42,7 @@
 }
 
 .pipeline__header-title .little-logo img,
-.pipeline__header-title .little-logo sl-icon {
+.pipeline__header-title .little-logo wa-icon {
 	height: 35px;
 	width: auto;
 }
@@ -871,7 +871,7 @@ inherit the disabled style */
 	font-size: var(--wa-font-size-l);
 }
 
-.pipeline__transformation-language-deprecated sl-icon {
+.pipeline__transformation-language-deprecated wa-icon {
 	margin-inline-end: 10px;
 	color: var(--sl-color-danger-600);
 }
@@ -940,11 +940,11 @@ inherit the disabled style */
 	width: auto;
 }
 
-.transformation-box__header-icon > sl-icon {
+.transformation-box__header-icon > wa-icon {
 	font-size: 20px;
 }
 
-.transformation-box__header-buttons sl-icon {
+.transformation-box__header-buttons wa-icon {
 	font-size: 14px;
 }
 
@@ -1441,7 +1441,7 @@ inherit the disabled style */
 .fullscreen-transformation__nested--expand
 	> .fullscreen-transformation__property-wrapper--parent
 	> .fullscreen-transformation__property-padding
-	> sl-icon::part(svg) {
+	> wa-icon::part(svg) {
 	transform: rotate(90deg);
 }
 
@@ -1546,7 +1546,7 @@ inherit the disabled style */
 	color: var(--sl-color-neutral-500);
 }
 
-.fullscreen-transformation__samples-file-warning sl-icon {
+.fullscreen-transformation__samples-file-warning wa-icon {
 	position: relative;
 	top: 1px;
 }
@@ -1641,7 +1641,7 @@ inherit the disabled style */
 	text-align: center;
 }
 
-.fullscreen-transformation__no-sample-text sl-icon {
+.fullscreen-transformation__no-sample-text wa-icon {
 	font-size: 40px;
 	color: var(--sl-color-neutral-400);
 }
@@ -1805,7 +1805,7 @@ inherit the disabled style */
 	text-align: center;
 }
 
-.fullscreen-transformation__output-placeholder sl-icon {
+.fullscreen-transformation__output-placeholder wa-icon {
 	font-size: 40px;
 	color: var(--sl-color-neutral-400);
 }
@@ -1956,7 +1956,7 @@ inherit the disabled style */
 	justify-content: center;
 }
 
-.pipeline__matching-empty-error sl-icon {
+.pipeline__matching-empty-error wa-icon {
 	position: relative;
 	top: 1px;
 }
@@ -2231,7 +2231,7 @@ inherit the disabled style */
 	font-weight: 500;
 }
 
-.pipeline__consents-error sl-icon {
+.pipeline__consents-error wa-icon {
 	flex-shrink: 0;
 	position: relative;
 	top: 2px;

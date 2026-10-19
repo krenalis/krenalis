@@ -2,7 +2,7 @@ import React, { ReactNode } from 'react';
 import './SyntaxHighlight.css';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { arduinoLight } from 'react-syntax-highlighter/dist/esm/styles/hljs';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 
 interface SyntaxHighlightProps {
 	children: ReactNode;

@@ -8,7 +8,6 @@ import { UI_BASE_PATH, SIGN_UP_PATH } from '../../../constants/paths';
 import AppContext from '../../../context/AppContext';
 import { Outlet } from 'react-router-dom';
 import { useNavigate, useLocation, matchPath } from 'react-router-dom';
-import { registerIconLibrary as registerShoelaceIconLibrary } from '@shoelace-style/shoelace/dist/utilities/icon-library.js';
 import { registerIconLibrary } from '@awesome.me/webawesome/dist/components/icon/library.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import '@shoelace-style/shoelace/dist/themes/light.css';
@@ -26,12 +25,9 @@ import { sleep } from '../../../utils/sleep';
 import '@radix-ui/themes/styles.css';
 import '@workos-inc/widgets/styles.css';
 
-// Both libraries resolve their default icons from the same directory, so that
-// the Admin ships a single copy of Bootstrap Icons while it is migrating from
-// <sl-icon> to <wa-icon>.
+// The default icons are the Bootstrap Icons the Admin ships.
 const iconResolver = (name: string) => `/admin/src/icons/${name}.svg`;
 
-registerShoelaceIconLibrary('default', { resolver: iconResolver });
 registerIconLibrary('default', { resolver: iconResolver });
 
 const App = ({ onWorkOSLogout }: { onWorkOSLogout?: () => void } = {}) => {

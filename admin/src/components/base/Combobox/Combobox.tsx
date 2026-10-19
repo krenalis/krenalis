@@ -3,7 +3,6 @@ import './Combobox.css';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlTabGroup from '@awesome.me/webawesome/dist/react/tab-group/index.js';
 import SlTabPanel from '@awesome.me/webawesome/dist/react/tab-panel/index.js';
@@ -606,7 +605,7 @@ const Combobox = ({
 					>
 						{isErrorOverflowing && !isErrorExpanded && (
 							<div className='combobox-input__error-overlay' onClick={() => setIsErrorExpanded(true)}>
-								<SlIcon className='combobox-input__error-expand' name='three-dots' />
+								<WaIcon className='combobox-input__error-expand' name='three-dots' />
 							</div>
 						)}
 						{error}

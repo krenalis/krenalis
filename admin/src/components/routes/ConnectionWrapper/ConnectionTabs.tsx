@@ -1,5 +1,5 @@
 import React from 'react';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { useLocation } from 'react-router-dom';
 import TransformedConnection from '../../../lib/core/connection';
 import { Link } from '../../base/Link/Link';

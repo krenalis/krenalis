@@ -116,7 +116,7 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 	await expect(options.nth(0)).not.toBeVisible();
 	const profilePathMessage = dialog.locator('.consent-management__dialog-profile-path-message');
 	await expect(profilePathMessage).toHaveText('This property is also used by other purposes.');
-	await expect(profilePathMessage.locator('sl-icon')).toHaveAttribute('name', 'exclamation-triangle');
+	await expect(profilePathMessage.locator('wa-icon')).toHaveAttribute('name', 'exclamation-triangle');
 	const profilePathDropdown = dialog.locator('.consent-management__dialog-profile-path-dropdown');
 	await profilePathDropdown.evaluate((dropdown) => {
 		dropdown.setAttribute('data-show-count', '0');
@@ -168,7 +168,7 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 	await expect(profilePathMessage).not.toBeVisible();
 	await profilePath.locator('input').blur();
 	await expect(profilePathMessage).toHaveText('This property and key are also used by other purposes.');
-	await expect(profilePathMessage.locator('sl-icon')).toHaveAttribute('name', 'exclamation-triangle');
+	await expect(profilePathMessage.locator('wa-icon')).toHaveAttribute('name', 'exclamation-triangle');
 	const savedPurpose = page.waitForRequest(
 		(request) => request.url().endsWith('/v1/consent-purposes') && request.method() === 'POST',
 	);

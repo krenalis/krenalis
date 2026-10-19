@@ -1,5 +1,5 @@
 import React from 'react';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import './DocumentationLinks.css';
 
 const CONNECTOR_DISPLAY_NAMES: Record<string, string> = {

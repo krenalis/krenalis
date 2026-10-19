@@ -275,7 +275,7 @@
 	padding-top: 5px;
 }
 
-.property-form__control-error sl-icon {
+.property-form__control-error wa-icon {
 	color: var(--sl-color-danger-600);
 	margin-top: 2px;
 }

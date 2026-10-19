@@ -8,7 +8,6 @@ import ConnectionContext from '../../../context/ConnectionContext';
 import { ComposedChart, Line, Bar, Legend, XAxis, Tooltip, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import Arrow from '../../base/Arrow/Arrow';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
@@ -737,7 +736,7 @@ const ConnectionMetrics = () => {
 									These are the last 50 pipeline errors for this connection. They don't include errors
 									from any deleted pipelines.
 								</SlTooltip>
-								<SlIcon id={errorCountNoticeID} name='info-circle' />
+								<WaIcon id={errorCountNoticeID} name='info-circle' />
 							</div>
 							<span>{titleRange}</span>
 						</div>

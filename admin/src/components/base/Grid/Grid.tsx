@@ -12,7 +12,7 @@ import {
 	StandardGridRow,
 } from './Grid.types';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { useGrid } from './useGrid';
 import { getChildIndexClassname } from './Grid.helpers';
 import {

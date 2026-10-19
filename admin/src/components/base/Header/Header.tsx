@@ -3,7 +3,6 @@ import './Header.css';
 import SlAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
@@ -77,7 +76,7 @@ const Header = ({ title, member }: HeaderProps) => {
 				rel='noreferrer'
 				aria-label='Documentation (opens in a new tab)'
 			>
-				<SlIcon className='header__docs-icon' name='question-circle' aria-hidden='true' />
+				<WaIcon className='header__docs-icon' name='question-circle' aria-hidden='true' />
 				Documentation
 			</a>
 			<div className='header__account'>
@@ -198,11 +197,11 @@ const AccountDropdown = forwardRef<any, AccountDropdownProps>(
 						path='organization/members/current'
 						onClick={closeMenu}
 					>
-						<SlIcon className='header__account-menu-item-icon' name='person' />
+						<WaIcon className='header__account-menu-item-icon' name='person' />
 						Your profile
 					</Link>
 					<Link className='header__account-menu-item' path='organization' onClick={closeMenu}>
-						<SlIcon className='header__account-menu-item-icon' name='building' />
+						<WaIcon className='header__account-menu-item-icon' name='building' />
 						Your organization
 					</Link>
 					{account.isWorkOS ? (
@@ -211,7 +210,7 @@ const AccountDropdown = forwardRef<any, AccountDropdownProps>(
 						<MembersLink closeMenu={closeMenu} />
 					)}
 					<Link className='header__account-menu-item' path='organization/access-keys' onClick={closeMenu}>
-						<SlIcon className='header__account-menu-item-icon' name='key' />
+						<WaIcon className='header__account-menu-item-icon' name='key' />
 						API and MCP keys
 					</Link>
 					<SlDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
@@ -221,7 +220,7 @@ const AccountDropdown = forwardRef<any, AccountDropdownProps>(
 						target='_blank'
 						onClick={closeMenu}
 					>
-						<SlIcon className='header__account-menu-item-icon' name='bug' />
+						<WaIcon className='header__account-menu-item-icon' name='bug' />
 						Report a bug
 					</a>
 					<a
@@ -230,14 +229,14 @@ const AccountDropdown = forwardRef<any, AccountDropdownProps>(
 						target='_blank'
 						onClick={closeMenu}
 					>
-						<SlIcon className='header__account-menu-item-icon' name='chat-dots' />
+						<WaIcon className='header__account-menu-item-icon' name='chat-dots' />
 						Ask for help
 					</a>
 					{!isPasswordless && (
 						<>
 							<SlDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
 							<div className='header__account-menu-item' id='logout-button' onClick={onLogout}>
-								<SlIcon className='header__account-menu-item-icon' name='box-arrow-right' />
+								<WaIcon className='header__account-menu-item-icon' name='box-arrow-right' />
 								Logout
 							</div>
 						</>
@@ -269,7 +268,7 @@ const WorkOSMembersLink = ({ closeMenu }: MembersLinkProps) => {
 const MembersLink = ({ closeMenu }: MembersLinkProps) => {
 	return (
 		<Link className='header__account-menu-item' path='organization/members' onClick={closeMenu}>
-			<SlIcon className='header__account-menu-item-icon' name='people' />
+			<WaIcon className='header__account-menu-item-icon' name='people' />
 			Team members
 		</Link>
 	);

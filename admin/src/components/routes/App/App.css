@@ -260,10 +260,6 @@ wa-split-panel::part(divider) {
 	z-index: 20;
 }
 
-sl-icon::part(svg) {
-	overflow: visible !important;
-}
-
 /* Web Awesome lightens the indicator and makes the track opaque; keep what
 Shoelace drew. */
 wa-spinner {
@@ -1173,8 +1169,9 @@ wa-button {
 	content: none;
 }
 
-/* Shoelace icons are a 1em square block; Web Awesome's default canvas is 1.25em
-   wide and centres a flex item. */
+/* Shoelace icons are a 1em square content-box block; Web Awesome's default
+   canvas is 1.25em wide and centres a flex item, and the global border-box
+   wins over its content-box. */
 wa-icon {
 	display: inline-block;
 	width: 1em;
@@ -1182,6 +1179,7 @@ wa-icon {
 	height: 1em;
 	min-height: 1em;
 	vertical-align: baseline;
+	box-sizing: content-box;
 }
 
 wa-icon::part(svg) {

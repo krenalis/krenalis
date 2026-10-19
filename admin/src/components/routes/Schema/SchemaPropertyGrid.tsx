@@ -3,7 +3,6 @@ import './SchemaPropertyGrid.css';
 import SlBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import { Property } from '../../../lib/api/types/types';
@@ -70,7 +69,7 @@ const SchemaPropertyInfoTooltip = ({ content, label }: { content: string; label:
 				onPointerDownCapture={preventInfoInteraction}
 				onClickCapture={preventInfoInteraction}
 			>
-				<SlIcon id={iconID} name='info-circle' aria-hidden='true' />
+				<WaIcon id={iconID} name='info-circle' aria-hidden='true' />
 			</span>
 		</>
 	);
@@ -113,7 +112,7 @@ interface SchemaPropertyGridSummaryProps {
 const SchemaPropertyGridSummary = ({ children, objectCount, propertyCount, view }: SchemaPropertyGridSummaryProps) => (
 	<div className={`${schemaPropertyGridClassNamePrefixes[view]}__summary`}>
 		<span>
-			<SlIcon name='table' />
+			<WaIcon name='table' />
 			<span>
 				{propertyCount} {propertyCount === 1 ? 'property' : 'properties'} ({objectCount}{' '}
 				{objectCount === 1 ? 'object' : 'objects'})

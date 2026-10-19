@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 
 interface OverlayRowProps {
 	children: ReactNode;
