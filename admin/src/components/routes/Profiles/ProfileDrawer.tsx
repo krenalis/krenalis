@@ -9,7 +9,7 @@ import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlTabGroup from '@awesome.me/webawesome/dist/react/tab-group/index.js';
 import SlCopyButton from '@awesome.me/webawesome/dist/react/copy-button/index.js';
 import SlTabPanel from '@awesome.me/webawesome/dist/react/tab-panel/index.js';
-import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
+import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
@@ -187,12 +187,18 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 		<div className={`profile-drawer${isLoading ? ' profile-drawer--loading' : ''}`} ref={drawerRef}>
 			<div className='profile-drawer__panel' ref={panelRef} role='dialog' aria-label='Profile' tabIndex={0}>
 				<div className='profile-drawer__header'>
-					<SlIconButton className='profile-drawer__close' name='x-lg' label='Close' onClick={onClose} />
+					<SlButton className='profile-drawer__close icon-button' appearance='plain' onClick={onClose}>
+						<WaIcon name='x-lg' label='Close' />
+					</SlButton>
 				</div>
 				<div className='profile-drawer__body'>
 					<div className='profile-drawer__navigation'>
-						<SlIconButton name='chevron-left' onClick={() => onNavigate('previous')} />
-						<SlIconButton name='chevron-right' onClick={() => onNavigate('next')} />
+						<SlButton className='icon-button' appearance='plain' onClick={() => onNavigate('previous')}>
+							<WaIcon name='chevron-left' label='Previous profile' />
+						</SlButton>
+						<SlButton className='icon-button' appearance='plain' onClick={() => onNavigate('next')}>
+							<WaIcon name='chevron-right' label='Next profile' />
+						</SlButton>
 					</div>
 					<div className='profile-drawer__top-section'>
 						<SlAvatar

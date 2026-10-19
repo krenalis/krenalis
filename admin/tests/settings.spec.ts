@@ -142,7 +142,10 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 	const purposeCodePrefixBackground = await purposeCodePrefix.evaluate(
 		(prefix) => getComputedStyle(prefix).backgroundColor,
 	);
-	await expect(profilePath.locator('[part="start"]')).toHaveCSS('background-color', purposeCodePrefixBackground);
+	await expect(profilePath.locator('[part="start"]').first()).toHaveCSS(
+		'background-color',
+		purposeCodePrefixBackground,
+	);
 	await expect(profilePath.locator('input')).toHaveAttribute('placeholder', 'key');
 	await expect(profilePath.locator('input')).toBeFocused();
 	await expect(profilePath.getByRole('button', { name: 'Clear profile property' })).toBeVisible();

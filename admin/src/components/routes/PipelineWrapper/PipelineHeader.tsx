@@ -3,7 +3,7 @@ import PipelineContext from '../../../context/PipelineContext';
 import AppContext from '../../../context/AppContext';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { PipelineIssues } from './PipelineIssues';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
@@ -117,12 +117,24 @@ const PipelineHeader = () => {
 								onInput={onUpdateName}
 								maxlength={60}
 							></SlInput>
-							<SlIconButton name='check-lg' label='Confirm' onClick={() => setIsNameEditable(false)} />
+							<SlButton
+								className='icon-button'
+								appearance='plain'
+								onClick={() => setIsNameEditable(false)}
+							>
+								<WaIcon name='check-lg' label='Confirm' />
+							</SlButton>
 						</span>
 					) : (
 						<span>
 							{pipeline != null ? pipeline.name : pipelineType.name}
-							<SlIconButton name='pencil' label='Edit' onClick={() => setIsNameEditable(true)} />
+							<SlButton
+								className='icon-button'
+								appearance='plain'
+								onClick={() => setIsNameEditable(true)}
+							>
+								<WaIcon name='pencil' label='Edit' />
+							</SlButton>
 						</span>
 					)}
 				</div>

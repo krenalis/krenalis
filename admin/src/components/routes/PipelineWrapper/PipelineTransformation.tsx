@@ -55,7 +55,6 @@ import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { buttonVariant } from '../../../utils/buttonVariant';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
 import SlButtonGroup from '@awesome.me/webawesome/dist/react/button-group/index.js';
 import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
 import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
@@ -2297,14 +2296,17 @@ const FullscreenTransformation = ({
 											)}
 										</div>
 										<div className='fullscreen-transformation__execute-button'>
-											<SlIconButton
+											<SlButton
+												className='icon-button'
+												appearance='plain'
 												disabled={isExecuting}
-												name='play-circle'
 												onClick={(e) => {
 													e.stopPropagation();
 													onTransformSample(s);
 												}}
-											/>
+											>
+												<WaIcon name='play-circle' label='Transform sample' />
+											</SlButton>
 										</div>
 									</div>
 								}
@@ -2387,9 +2389,9 @@ const FullscreenTransformation = ({
 												<div className='fullscreen-transformation__event-time'>
 													<SlRelativeTime date={e.time} sync lang='en-US' />
 												</div>
-												<SlIconButton
-													className='fullscreen-transformation__event-run'
-													name='play-circle'
+												<SlButton
+													className='fullscreen-transformation__event-run icon-button'
+													appearance='plain'
 													onClick={(evt) => {
 														if (isAppEventsExport) {
 															onTransformEvent(e);
@@ -2398,7 +2400,9 @@ const FullscreenTransformation = ({
 														}
 														evt.stopPropagation();
 													}}
-												/>
+												>
+													<WaIcon name='play-circle' label='Transform event' />
+												</SlButton>
 											</div>
 										}
 										details={
@@ -2611,12 +2615,14 @@ const FullscreenTransformation = ({
 								<SlTooltip for={outputClearID} placement='left'>
 									Clear
 								</SlTooltip>
-								<SlIconButton
+								<SlButton
 									id={outputClearID}
-									className='fullscreen-transformation__output-clear'
-									name='x-lg'
+									className='fullscreen-transformation__output-clear icon-button'
+									appearance='plain'
 									onClick={onClear}
-								/>
+								>
+									<WaIcon name='x-lg' label='Clear' />
+								</SlButton>
 								{outputError !== '' ? (
 									<div className='fullscreen-transformation__output-error'>{outputError}</div>
 								) : (

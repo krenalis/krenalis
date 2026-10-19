@@ -135,11 +135,11 @@ wa-button[appearance='plain']::part(button) {
 	font-weight: 600;
 }
 
-wa-button[appearance='plain']::part(label) {
+wa-button[appearance='plain']:not(.icon-button)::part(label) {
 	padding-right: 10px;
 }
 
-wa-button[appearance='plain'] wa-icon {
+wa-button[appearance='plain']:not(.icon-button) wa-icon {
 	color: var(--sl-color-primary-600);
 }
 
@@ -1101,6 +1101,53 @@ wa-button {
 :where(wa-button[appearance='plain']:not([disabled]))::part(button):active {
 	background-color: transparent;
 	border-color: transparent;
+	color: var(--sl-color-primary-700);
+}
+
+/* Icon buttons, drawn as Shoelace drew sl-icon-button: the icon takes the font
+   size around it, inside an 8px padding. */
+
+:where(wa-button.icon-button) {
+	color: var(--sl-color-neutral-600);
+}
+
+:where(wa-button.icon-button)::part(button) {
+	display: flex;
+	align-items: center;
+	width: auto;
+	height: auto;
+	min-height: 0;
+	aspect-ratio: auto;
+	padding: var(--sl-spacing-x-small);
+	border: none;
+	border-radius: var(--sl-border-radius-medium);
+	background: none;
+	font-size: inherit;
+	color: inherit;
+	transition: var(--sl-transition-x-fast) color;
+}
+
+:where(wa-button.icon-button)::part(label) {
+	display: flex;
+	padding: 0;
+}
+
+/* The empty start and end would set the baseline at the middle of the button. */
+:where(wa-button.icon-button)::part(start),
+:where(wa-button.icon-button)::part(end) {
+	display: none;
+}
+
+:where(wa-button.icon-button) > wa-icon {
+	pointer-events: none;
+}
+
+:where(wa-button.icon-button:not([disabled]))::part(button):hover,
+:where(wa-button.icon-button:not([disabled]))::part(button):focus-visible {
+	color: var(--sl-color-primary-600);
+}
+
+:where(wa-button.icon-button:not([disabled]))::part(button):active {
 	color: var(--sl-color-primary-700);
 }
 

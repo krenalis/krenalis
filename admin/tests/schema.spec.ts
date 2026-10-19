@@ -932,7 +932,7 @@ test(`Keep an unsaved property selected when selecting another property`, async 
 
 	await openProperty(page, 'email');
 	const propertyPanel = page.locator('.property-panel');
-	await expect(propertyPanel.locator('.property-panel__header sl-icon-button')).toHaveCount(0);
+	await expect(propertyPanel.locator('.property-panel__header .icon-button')).toHaveCount(0);
 	await expect(propertyPanel.locator('.property-panel__cancel')).toHaveCount(0);
 	await expect(propertyPanel.locator('.property-panel__save')).toHaveCount(0);
 	await expect(propertyPanel.locator('.property-panel__remove')).toBeVisible();
@@ -1120,7 +1120,7 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 			.evaluate((type) => getComputedStyle(type).fontFamily),
 	).toBe(gridTypeFont);
 	await expect(emailRow).toHaveClass(/grid__row--selected/);
-	await panel.getByLabel('Close property details').click();
+	await panel.getByRole('button', { name: 'Close property details' }).click();
 	await expect(panel).toHaveCount(0);
 
 	const addressRow = page.locator('.schema-grid .grid__row[data-id="address"]');

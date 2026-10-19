@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import SlRange from '@shoelace-style/shoelace/dist/react/range/index.js';
+import SlRange from '@awesome.me/webawesome/dist/react/slider/index.js';
 
 interface ConnectorRangeProps {
 	name: string;
@@ -32,11 +32,12 @@ const ConnectorRange = ({ name, label, helpText, min, max, step, error, val, onC
 				name={name}
 				value={value}
 				label={label}
-				help-text={helpText}
+				hint={helpText}
 				min={min}
 				max={max}
 				step={step}
-				onSlChange={onRangeChange}
+				withTooltip
+				onChange={onRangeChange}
 			/>
 			{error !== '' && <div className='connector-ui__fields-error'>{error}</div>}
 		</div>

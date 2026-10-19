@@ -173,12 +173,12 @@
 	margin-top: 17px;
 }
 
-.consent-management__dialog-profile-path-clear::part(base) {
+.consent-management__dialog-profile-path-clear::part(button) {
 	color: var(--sl-input-icon-color);
 	padding: 0;
 }
 
-.consent-management__dialog-profile-path-clear:hover::part(base) {
+.consent-management__dialog-profile-path-clear:hover::part(button) {
 	color: var(--sl-input-icon-color-hover);
 }
 

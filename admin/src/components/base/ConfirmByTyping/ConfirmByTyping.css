@@ -17,6 +17,10 @@
 	margin: 0 auto;
 }
 
+.confirm-by-typing__input::part(form-control-label) {
+	display: none;
+}
+
 .confirm-by-typing__input::part(input) {
 	font-family: var(--monospace-fonts);
 }

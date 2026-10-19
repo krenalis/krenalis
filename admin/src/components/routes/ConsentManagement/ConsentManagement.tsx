@@ -14,7 +14,6 @@ import SlDropdown, { WaShowEvent } from '@awesome.me/webawesome/dist/react/dropd
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
 import SlMenuItem from '@awesome.me/webawesome/dist/react/dropdown-item/index.js';
 import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
@@ -929,15 +928,15 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 									</span>
 								)}
 								{profilePropertyPath !== '' && (
-									<SlIconButton
-										className='consent-management__dialog-profile-path-clear'
+									<SlButton
+										className='consent-management__dialog-profile-path-clear icon-button'
 										slot='end'
-										name='x-circle-fill'
-										library='system'
-										label='Clear profile property'
+										appearance='plain'
 										onMouseDown={(event) => event.preventDefault()}
 										onClickCapture={onClearProfilePath}
-									/>
+									>
+										<WaIcon name='x-circle-fill' label='Clear profile property' />
+									</SlButton>
 								)}
 								<WaIcon slot='end' name='chevron-down' />
 							</SlInput>
