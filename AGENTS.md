@@ -61,7 +61,7 @@ When allocating the zero value of a composite type, prefer `&T{}` over `new(T)` 
 
 ## Switch statements
 
-Give every `switch` statement, be it an expression switch, a type switch, or a switch without a tag, a `default` clause that makes explicit what happens to the values not matched by the other cases:
+Give every `switch` statement, including type switches and switches without a tag, a `default` clause that makes explicit what happens to the values not matched by the other cases:
 
 - When they need handling, handle them in the `default` clause rather than in code following the switch.
 - When they cannot occur, treat them as an unexpected situation, as described under Errors versus panics, naming the unexpected value or type in the message.
@@ -70,7 +70,7 @@ Give every `switch` statement, be it an expression switch, a type switch, or a s
 Omit the `default` clause only in these cases:
 
 - The switch tag is a local variable assigned just above the switch, so that a reader sees at a glance that it can only take values covered by the cases.
-- Every case ends in a terminating statement, as defined by the Go specification, and the values not matched by the cases legitimately require no action, so that they simply proceed with the code following the switch.
+- Every case ends in a terminating statement, as defined by the Go specification, and the values not matched by the cases are expected ones, which continue with the code following the switch.
 
 ## Signatures
 
@@ -158,9 +158,9 @@ return n, nil
 
 A function or method must return an error when it is expected to fail, for example because it performs operations that can fail, or when it can return errors that callers can identify and usefully handle. Otherwise, it may omit the error from its signature.
 
-When a function or method meets an unexpected situation, such as an invalid argument or a value that should be impossible, panic if it detects corrupted internal state, which no caller could recover from safely, or if its signature does not return an error. Otherwise, return an error, so that a single failing operation does not bring down the whole process.
+An unexpected situation is one that callers or the program's invariants rule out, such as an invalid argument or a value that should be impossible, and therefore reveals a bug. A function or method that meets one must return an error if its signature has one, so that a single failing operation does not bring down the whole process. It must panic instead if its signature has no error, or if the situation reveals corrupted internal state that no caller could safely recover from.
 
-When a function or method that returns errors for unexpected situations also returns errors that its callers handle as an expected outcome, give the latter an identity, such as a sentinel or a dedicated type, and have the callers check it, so that an error reporting an unexpected situation is propagated rather than handled as an expected one.
+If a function or method that returns errors for unexpected situations also returns errors that its callers handle as an expected outcome, give the latter an identity, such as a sentinel or a dedicated type, and have the callers check it, so that unexpected errors are propagated rather than mistaken for expected ones.
 
 ## Tests
 
@@ -299,7 +299,11 @@ A short comment for a package-level variable or constant may appear on the same 
 
 Never begin an error message with the article `the`.
 
-Begin the message of an error that reports a bug or another situation that should never occur, and of every panic, with the import path of the package that produces it, relative to the module path, followed by `: `, as in `core/internal/transformers/lambda: invalid function name`. When wrapping an error within the same package, do not repeat the prefix.
+Prefix the message of every panic, and of every error that reports an unexpected situation, with the import path of the package that produces it, relative to the module path, followed by `: `, as in `core/internal/transformers/lambda: invalid function name`. Then:
+
+- When wrapping an error from the same package, do not repeat the prefix.
+- When panicking again with a value obtained from `recover`, pass it unchanged.
+- When passing on an error from another package, as in `panic(err)`, add the prefix only if the error's message alone does not show where the problem occurred.
 
 ## Correctness
 
