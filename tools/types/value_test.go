@@ -340,25 +340,35 @@ func Test_Decode(t *testing.T) {
 
 }
 
-// Test_IsDecimal checks the range of all supported decimal types.
+// Test_IsDecimal checks whether decimal values are within the supported range.
 func Test_IsDecimal(t *testing.T) {
 	for _, test := range []struct {
-		text  string
-		valid bool
+		name, input string
+		want        bool
 	}{
-		{"0", true}, {"-0e999999", true}, {"1.2300", true},
-		{"1e75", true}, {"-1e75", true}, {"1e-37", true},
-		{strings.Repeat("9", 76), true},
-		{"-" + strings.Repeat("9", 39) + "." + strings.Repeat("9", 37), true},
-		{"1e76", false}, {"-1e76", false}, {"1e-38", false},
-		{strings.Repeat("9", 77), false},
-		{strings.Repeat("9", 40) + "." + strings.Repeat("9", 37), false},
-		{"1e999999", false}, {"1e-999999", false},
+		{"zero", "0", true},
+		{"zero with large positive exponent", "-0e999999", true},
+		{"zero with large negative exponent", "0e-999999", true},
+		{"trailing zeros", "1.2300", true},
+		{"maximum positive exponent", "1e75", true},
+		{"maximum negative exponent", "1e-37", true},
+		{"negative value at maximum positive exponent", "-1e75", true},
+		{"negative value at maximum negative exponent", "-1e-37", true},
+		{"maximum integer digits", strings.Repeat("9", 76), true},
+		{"maximum mixed digits", "-" + strings.Repeat("9", 39) + "." + strings.Repeat("9", 37), true},
+		{"positive exponent overflow", "1e76", false},
+		{"negative value positive exponent overflow", "-1e76", false},
+		{"negative exponent underflow", "1e-38", false},
+		{"negative value exponent underflow", "-1e-38", false},
+		{"too many integer digits", strings.Repeat("9", 77), false},
+		{"too many mixed digits", strings.Repeat("9", 40) + "." + strings.Repeat("9", 37), false},
+		{"extreme positive exponent", "1e999999", false},
+		{"extreme negative exponent", "1e-999999", false},
 	} {
-		t.Run(test.text, func(t *testing.T) {
-			got := IsDecimal(decimal.MustParse(test.text))
-			if got != test.valid {
-				t.Fatalf("expected valid %t, got %t", test.valid, got)
+		t.Run(test.name, func(t *testing.T) {
+			got := IsDecimal(decimal.MustParse(test.input))
+			if got != test.want {
+				t.Fatalf("expected IsDecimal(%q) = %t, got %t", test.input, test.want, got)
 			}
 		})
 	}
