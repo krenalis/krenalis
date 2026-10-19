@@ -340,8 +340,9 @@ func Test_Decode(t *testing.T) {
 
 }
 
-// Test_IsDecimal checks whether decimal values are within the supported range.
-func Test_IsDecimal(t *testing.T) {
+// Test_IsValidDecimal checks whether decimal values are within the supported
+//  range.
+func Test_IsValidDecimal(t *testing.T) {
 	for _, test := range []struct {
 		name, input string
 		want        bool
@@ -366,7 +367,7 @@ func Test_IsDecimal(t *testing.T) {
 		{"extreme negative exponent", "1e-999999", false},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			got := IsDecimal(decimal.MustParse(test.input))
+			got := IsValidDecimal(decimal.MustParse(test.input))
 			if got != test.want {
 				t.Fatalf("expected IsDecimal(%q) = %t, got %t", test.input, test.want, got)
 			}

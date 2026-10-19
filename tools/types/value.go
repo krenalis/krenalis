@@ -74,9 +74,9 @@ func Decode[T any](r io.Reader, t Type) (T, error) {
 	return vt, err
 }
 
-// IsDecimal reports whether n is exactly representable by a decimal type with
-// precision at most MaxDecimalPrecision and scale at most MaxDecimalScale.
-func IsDecimal(n decimal.Decimal) bool {
+// IsValidDecimal reports whether n is exactly representable by a decimal type
+// with precision at most MaxDecimalPrecision and scale at most MaxDecimalScale.
+func IsValidDecimal(n decimal.Decimal) bool {
 	precision, scale := n.PrecisionScale()
 	return precision <= MaxDecimalPrecision && scale <= MaxDecimalScale
 }
