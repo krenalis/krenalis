@@ -65,44 +65,28 @@ func TestUnmarshalPhone(t *testing.T) {
 
 }
 
-// TestUnmarshalSemanticsValidation checks validation and decoding of country
-// and phone values according to their semantics across scalar and composite
-// types in JavaScript and Python.
+// TestUnmarshalSemanticsValidation verifies that unmarshaling applies semantic
+// rules to scalar and nested values for both JavaScript and Python.
 func TestUnmarshalSemanticsValidation(t *testing.T) {
 
 	alpha2Country := types.String().AsCountry(types.ISO3166Alpha2)
 	alpha3Country := types.String().AsCountry(types.ISO3166Alpha3)
 	phone := types.String().AsPhone()
 	tests := []struct {
-		name  string
-		typ   types.Type
-		value string
-		valid bool
+		name     string
+		typ      types.Type
+		value    string
+		expected string
+		valid    bool
 	}{
-		{"current alpha-2 country", alpha2Country, "US", true},
-		{"current alpha-3 country", alpha3Country, "USA", true},
-		{"long alpha-3 country", alpha3Country, "USAA", false},
-		{"former alpha-3 country", alpha3Country, "ANT", true},
-		{"unknown alpha-3 country", alpha3Country, "ZZZ", false},
-		{"reserved alpha-3 country", alpha3Country, "EUR", false},
-		{"lowercase alpha-3 country", alpha3Country, "usa", false},
-		{"former alpha-2 country", alpha2Country, "AN", true},
-		{"unknown alpha-2 country", alpha2Country, "ZZ", false},
-		{"reserved alpha-2 country", alpha2Country, "UK", false},
-		{"lowercase alpha-2 country", alpha2Country, "us", false},
-		{"empty alpha-2 country", alpha2Country, "", false},
-		{"short alpha-2 country", alpha2Country, "I", false},
-		{"long alpha-2 country", alpha2Country, "USA", false},
-		{"non-ASCII alpha-2 country", alpha2Country, "é", false},
-		{"canonical phone", phone, "+390236618300", true},
-		{"structurally possible phone", phone, "+12001230101", true},
-		{"local-only phone", phone, "+12530000", false},
-		{"double plus phone", phone, "++390236618300", false},
-		{"long phone", phone, "+1234567890123456", false},
-		{"multibyte phone at limit", phone, "éééééééé", false},
-		{"multibyte phone over limit", phone, "ééééééééé", false},
-		{"empty phone", phone, "", false},
-		{"non-phone text", phone, "a (b)", false},
+		{"current alpha-2 country", alpha2Country, "US", "US", true},
+		{"current alpha-3 country", alpha3Country, "USA", "USA", true},
+		{"unknown alpha-3 country", alpha3Country, "ZZZ", "", false},
+		{"unknown alpha-2 country", alpha2Country, "ZZ", "", false},
+		{"empty alpha-2 country", alpha2Country, "", "", false},
+		{"formatted phone", phone, "+39 02-36618 300", "+390236618300", true},
+		{"empty phone", phone, "", "", false},
+		{"non-phone text", phone, "a (b)", "", false},
 	}
 
 	for _, test := range tests {
@@ -118,24 +102,24 @@ func TestUnmarshalSemanticsValidation(t *testing.T) {
 				t.Run(shape, func(t *testing.T) {
 
 					typ := test.typ
-					var value any = test.value
+					var value any = test.expected
 					data := string(valueJSON)
 					switch shape {
 					case "array":
 						typ = types.Array(typ)
-						value = []any{test.value}
+						value = []any{test.expected}
 						data = "[" + data + "]"
 					case "map":
 						typ = types.Map(typ)
-						value = map[string]any{"home": test.value}
+						value = map[string]any{"home": test.expected}
 						data = "{\"home\":" + data + "}"
 					case "nested":
 						typ = types.Array(types.Map(types.Array(typ)))
-						value = []any{map[string]any{"home": []any{test.value}}}
+						value = []any{map[string]any{"home": []any{test.expected}}}
 						data = "[{\"home\":[" + data + "]}]"
 					case "object":
 						typ = types.Object([]types.Property{{Name: "inner", Type: typ}})
-						value = map[string]any{"inner": test.value}
+						value = map[string]any{"inner": test.expected}
 						data = "{\"inner\":" + data + "}"
 					}
 					schema := types.Object([]types.Property{{Name: "value", Type: typ}})

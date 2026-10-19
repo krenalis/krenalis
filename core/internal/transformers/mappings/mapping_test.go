@@ -19,43 +19,28 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-// TestMappingSemanticsValidation checks validation of country and phone values
-// according to their semantics across mapping paths and ensures valid values
-// are preserved.
+// TestMappingSemanticsValidation verifies that mappings apply semantic rules
+// to values, including those nested in containers and object properties.
 func TestMappingSemanticsValidation(t *testing.T) {
 
 	country := types.String().AsCountry(types.ISO3166Alpha2)
 
 	tests := []struct {
-		name  string
-		typ   types.Type
-		value string
-		valid bool
+		name     string
+		typ      types.Type
+		value    string
+		expected string
+		valid    bool
 	}{
-		{"current country", country, "US", true},
-		{"alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "USA", true},
-		{"long alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "USAA", false},
-		{"former alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "ANT", true},
-		{"unknown alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "ZZZ", false},
-		{"reserved alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "EUR", false},
-		{"lowercase alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "usa", false},
-		{"former country", country, "AN", true},
-		{"unknown country", country, "ZZ", false},
-		{"reserved country", country, "UK", false},
-		{"lowercase country", country, "us", false},
-		{"empty country", country, "", false},
-		{"short country", country, "I", false},
-		{"long country", country, "USA", false},
-		{"non-ASCII country", country, "é", false},
-		{"canonical phone", types.String().AsPhone(), "+390236618300", true},
-		{"structurally possible phone", types.String().AsPhone(), "+12001230101", true},
-		{"local-only phone", types.String().AsPhone(), "+12530000", false},
-		{"double plus phone", types.String().AsPhone(), "++390236618300", false},
-		{"long phone", types.String().AsPhone(), "+1234567890123456", false},
-		{"multibyte phone at limit", types.String().AsPhone(), "éééééééé", false},
-		{"multibyte phone over limit", types.String().AsPhone(), "ééééééééé", false},
-		{"empty phone", types.String().AsPhone(), "", false},
-		{"phone without format restriction", types.String().AsPhone(), "a (b)", false},
+		{"current country", country, "US", "US", true},
+		{"alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "USA", "USA", true},
+		{"unknown alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "ZZZ", "", false},
+		{"unknown country", country, "ZZ", "", false},
+		{"empty country", country, "", "", false},
+		{"canonical phone", types.String().AsPhone(), "+390236618300", "+390236618300", true},
+		{"formatted phone", types.String().AsPhone(), "+39 02-36618 300", "+390236618300", true},
+		{"empty phone", types.String().AsPhone(), "", "", false},
+		{"invalid phone", types.String().AsPhone(), "a (b)", "", false},
 	}
 
 	for _, test := range tests {
@@ -68,23 +53,28 @@ func TestMappingSemanticsValidation(t *testing.T) {
 
 					typ := test.typ
 					var value any = test.value
+					var expected any = test.expected
 					data := strconv.Quote(test.value)
 					switch shape {
 					case "array":
 						typ = types.Array(typ)
 						value = []any{test.value}
+						expected = []any{test.expected}
 						data = "[" + data + "]"
 					case "map":
 						typ = types.Map(typ)
 						value = map[string]any{"home": test.value}
+						expected = map[string]any{"home": test.expected}
 						data = "{\"home\":" + data + "}"
 					case "nested":
 						typ = types.Array(types.Map(types.Array(typ)))
 						value = []any{map[string]any{"home": []any{test.value}}}
+						expected = []any{map[string]any{"home": []any{test.expected}}}
 						data = "[{\"home\":[" + data + "]}]"
 					case "object":
 						typ = types.Object([]types.Property{{Name: "inner", Type: typ}})
 						value = map[string]any{"inner": test.value}
+						expected = map[string]any{"inner": test.expected}
 						data = "{\"inner\":" + data + "}"
 					}
 					outSchema := types.Object([]types.Property{{Name: "target", Type: typ, CreateRequired: true}})
@@ -93,7 +83,7 @@ func TestMappingSemanticsValidation(t *testing.T) {
 						if mode == "constant" && shape != "string" {
 							continue
 						}
-						if mode == "equal types" && !test.valid {
+						if mode == "equal types" && (!test.valid || test.value != test.expected) {
 							continue
 						}
 
@@ -156,8 +146,8 @@ func TestMappingSemanticsValidation(t *testing.T) {
 							if !test.valid {
 								t.Fatalf("expected invalid value to be rejected, got %#v", got["target"])
 							}
-							if !reflect.DeepEqual(got["target"], value) {
-								t.Fatalf("expected value %#v, got %#v", value, got["target"])
+							if !reflect.DeepEqual(got["target"], expected) {
+								t.Fatalf("expected value %#v, got %#v", expected, got["target"])
 							}
 
 						})

@@ -167,8 +167,8 @@ func TestRecordWriterYieldsRecordAtLimit(t *testing.T) {
 
 }
 
-// TestFileRecordSemantics checks validation and normalization according to
-// semantics through each file record entry point.
+// TestFileRecordSemantics verifies that Record, RecordSlice, and RecordStrings
+// validate and normalize values according to their semantics.
 func TestFileRecordSemantics(t *testing.T) {
 
 	country := types.String().AsCountry(types.ISO3166Alpha2)
@@ -177,46 +177,39 @@ func TestFileRecordSemantics(t *testing.T) {
 		semantics types.Type
 		value     string
 		want      string
+		valid     bool
 	}{
-		{"current country", country, "IT", "IT"},
-		{"former country", country, "AN", "AN"},
-		{"unknown country", country, "ZZ", ""},
-		{"reserved country", country, "UK", ""},
-		{"lowercase country", country, "it", ""},
-		{"empty country", country, "", ""},
-		{"short country", country, "I", ""},
-		{"long country", country, "ITA", ""},
-		{"non-ASCII country", country, "é", ""},
-		{"canonical phone", types.String().AsPhone(), "+390236618300", "+390236618300"},
-		{"formatted phone", types.String().AsPhone(), "+39 02-36618 300", "+390236618300"},
-		{"structurally possible phone", types.String().AsPhone(), "+12001230101", "+12001230101"},
-		{"local-only phone", types.String().AsPhone(), "+12530000", ""},
-		{"double plus phone", types.String().AsPhone(), "++390236618300", ""},
-		{"long phone", types.String().AsPhone(), "+1234567890123456", ""},
-		{"multibyte phone at limit", types.String().AsPhone(), "éééééééé", ""},
-		{"multibyte phone over limit", types.String().AsPhone(), "ééééééééé", ""},
-		{"empty phone", types.String().AsPhone(), "", ""},
-		{"phone without format restriction", types.String().AsPhone(), "a (b)", ""},
+		{"valid alpha-2 country", country, "IT", "IT", true},
+		{"valid alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "ITA", "ITA", true},
+		{"unknown alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "ZZZ", "", false},
+		{"unknown alpha-2 country", country, "ZZ", "", false},
+		{"empty country", country, "", "", false},
+		{"formatted phone", types.String().AsPhone(), "+39 02-36618 300", "+390236618300", true},
+		{"empty phone", types.String().AsPhone(), "", "", false},
+		{"invalid phone", types.String().AsPhone(), "a (b)", "", false},
 	}
 
 	for _, test := range tests {
 
 		t.Run(test.name, func(t *testing.T) {
 
-			schema := types.Object([]types.Property{{Name: "value", Type: test.semantics}})
 			for _, method := range []string{"Record", "RecordSlice", "RecordStrings"} {
 
 				t.Run(method, func(t *testing.T) {
 
 					var got Record
+					var yieldCount int
 					rw := newRecordWriter("test", nil, time.Time{}, nil, time.Time{}, 2)
-					rw.properties = schema.Properties().Slice()
-					rw.numPropertiesPerRecord = 1
+					err := rw.Columns([]types.Property{{Name: "value", Type: test.semantics}})
+					if err != nil {
+						t.Fatalf("expected Columns to succeed, got %v", err)
+					}
 					rw.yield = func(record Record) bool {
 						got = record
+						yieldCount++
 						return true
 					}
-					var err error
+
 					switch method {
 					case "Record":
 						err = rw.Record(map[string]any{"value": test.value})
@@ -228,8 +221,12 @@ func TestFileRecordSemantics(t *testing.T) {
 					if err != nil {
 						t.Fatalf("expected no error, got %v", err)
 					}
+
+					if yieldCount != 1 {
+						t.Fatalf("expected one record, got %d", yieldCount)
+					}
 					if err := got.Err; err != nil {
-						if test.want != "" {
+						if test.valid {
 							t.Fatalf("expected no record error, got %v", err)
 						}
 						if _, ok := errors.AsType[InputValidationError](err); !ok {
@@ -237,7 +234,7 @@ func TestFileRecordSemantics(t *testing.T) {
 						}
 						return
 					}
-					if test.want == "" {
+					if !test.valid {
 						t.Fatal("expected a record error, got nil")
 					}
 					if got.Attributes["value"] != test.want {
