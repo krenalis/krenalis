@@ -16,8 +16,6 @@ const gridKeyboardControlSelector = [
 	'wa-tab',
 	'wa-tab-group',
 	'wa-textarea',
-	'sl-tree',
-	'sl-tree-item',
 	'[role="combobox"]',
 	'[role="listbox"]',
 	'[role="menu"]',

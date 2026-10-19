@@ -156,23 +156,6 @@ wa-button > a {
 	height: 100%;
 }
 
-.button--standard.button--primary:hover:not(.button--disabled) {
-	background-color: #4049c6 !important;
-	border-color: #4049c6 !important;
-}
-
-sl-breadcrumb-item {
-	position: relative;
-}
-
-sl-breadcrumb-item > a {
-	position: absolute;
-	left: 0;
-	top: 0;
-	width: calc(100% - 14px);
-	height: 100%;
-}
-
 wa-switch:state(checked)::part(control) {
 	background-color: var(--sl-color-success-600) !important;
 	border-color: var(--sl-color-success-600) !important;
@@ -193,10 +176,6 @@ wa-input::part(input)::placeholder,
 wa-textarea::part(textarea)::placeholder {
 	color: var(--sl-color-neutral-400);
 	font-weight: 100;
-}
-
-sl-select::part(control) {
-	min-width: 150px;
 }
 
 ::part(form-control-label) {

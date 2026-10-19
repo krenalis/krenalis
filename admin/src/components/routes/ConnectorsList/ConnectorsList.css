@@ -1,7 +1,3 @@
-.connectors-list sl-breadcrumb::part(base) {
-	justify-content: center;
-}
-
 .connectors-list .route-content {
 	margin: auto;
 }

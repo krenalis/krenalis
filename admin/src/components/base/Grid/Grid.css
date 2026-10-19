@@ -64,10 +64,6 @@
 	background-color: var(--sl-color-primary-500);
 }
 
-sl-popup::part(arrow) {
-	background-color: var(--sl-color-primary-500);
-}
-
 .grid__row--selected .grid__cell {
 	background-color: var(--grid-selected-row-background) !important;
 }
