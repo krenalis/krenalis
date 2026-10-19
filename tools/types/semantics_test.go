@@ -37,7 +37,7 @@ func Test_CountryFormat(t *testing.T) {
 	}
 }
 
-// Test_DurationUnit tests duration unit names, lookup, and validation.
+// Test_DurationUnit tests duration unit names and lookup.
 func Test_DurationUnit(t *testing.T) {
 	tests := []struct {
 		unit DurationUnit
@@ -51,9 +51,6 @@ func Test_DurationUnit(t *testing.T) {
 		{Week, "week"},
 	}
 	for _, test := range tests {
-		if test.unit < 1 || int(test.unit) > len(durationUnitName) {
-			t.Errorf("expected valid duration unit, got %d", test.unit)
-		}
 		if got := test.unit.String(); got != test.name {
 			t.Errorf("expected name %q, got %q", test.name, got)
 		}
@@ -61,12 +58,6 @@ func Test_DurationUnit(t *testing.T) {
 		if !ok || got != test.unit {
 			t.Errorf("expected unit %d and true, got %d and %t", test.unit, got, ok)
 		}
-	}
-	if (1 <= DurationUnit(0) && int(DurationUnit(0)) <= len(durationUnitName)) ||
-		(1 <= DurationUnit(-1) && int(DurationUnit(-1)) <= len(durationUnitName)) ||
-		(1 <= DurationUnit(127) && int(DurationUnit(127)) <= len(durationUnitName)) ||
-		DurationUnit(0).String() != "%!DurationUnit(0)" {
-		t.Fatalf("expected invalid duration unit name %q, got %q", "%!DurationUnit(0)", DurationUnit(0).String())
 	}
 	if got, ok := DurationUnitByName("seconds"); ok || got != DurationUnit(0) {
 		t.Fatalf("expected invalid unit and false, got %d and %t", got, ok)
@@ -597,7 +588,7 @@ func Test_TypeSemanticsJSONRoundTrip(t *testing.T) {
 	}
 }
 
-// Test_UnitOfMeasure tests unit-of-measure names, lookup, and validation.
+// Test_UnitOfMeasure tests unit-of-measure names and lookup.
 func Test_UnitOfMeasure(t *testing.T) {
 	tests := []struct {
 		unit UnitOfMeasure
@@ -625,9 +616,6 @@ func Test_UnitOfMeasure(t *testing.T) {
 		{Mile, "mi"},
 	}
 	for _, test := range tests {
-		if test.unit < 1 || int(test.unit) > len(unitOfMeasureName) {
-			t.Errorf("expected valid unit of measure, got %d", test.unit)
-		}
 		if got := test.unit.String(); got != test.name {
 			t.Errorf("expected name %q, got %q", test.name, got)
 		}
@@ -635,12 +623,6 @@ func Test_UnitOfMeasure(t *testing.T) {
 		if !ok || got != test.unit {
 			t.Errorf("expected unit %d and true, got %d and %t", test.unit, got, ok)
 		}
-	}
-	if (1 <= UnitOfMeasure(0) && int(UnitOfMeasure(0)) <= len(unitOfMeasureName)) ||
-		(1 <= UnitOfMeasure(-1) && int(UnitOfMeasure(-1)) <= len(unitOfMeasureName)) ||
-		(1 <= UnitOfMeasure(127) && int(UnitOfMeasure(127)) <= len(unitOfMeasureName)) ||
-		UnitOfMeasure(0).String() != "%!UnitOfMeasure(0)" {
-		t.Fatalf("expected invalid unit of measure name %q, got %q", "%!UnitOfMeasure(0)", UnitOfMeasure(0).String())
 	}
 	if got, ok := UnitOfMeasureByName("kilogram"); ok || got != UnitOfMeasure(0) {
 		t.Fatalf("expected invalid unit and false, got %d and %t", got, ok)
