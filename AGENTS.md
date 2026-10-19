@@ -63,9 +63,8 @@ When allocating the zero value of a composite type, prefer `&T{}` over `new(T)` 
 
 Give every `switch` statement, including type switches and switches without a switch expression, a `default` clause that makes explicit what happens to the values not matched by the other cases:
 
-- When they need handling, handle them in the `default` clause rather than in code following the switch.
 - When they cannot occur, treat them as an unexpected situation, as described under Errors versus panics, naming the unexpected value or type in the message.
-- When they legitimately require no action, leave the `default` clause empty except for a short comment saying why.
+- When they require no action within the switch, leave the `default` clause empty except for a short comment saying why.
 
 Omit the `default` clause only in these cases:
 
