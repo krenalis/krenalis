@@ -1337,7 +1337,10 @@ func (core *Core) endLiveRun(ctx context.Context, run *state.PipelineRun, reason
 	}
 
 	// Waits for the metrics to be saved.
-	core.metrics.Pipelines.WaitStore()
+	err := core.metrics.Pipelines.WaitStore(ctx)
+	if err != nil {
+		return err
+	}
 
 	n := state.EndPipelineRun{
 		ID:       run.ID,
@@ -1585,7 +1588,7 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 			err := core.metrics.Identities.Refresh(core.close.ctx, ws.ID)
 			if err != nil {
 				slog.Error("core: cannot refresh identity metrics at the end of import",
-					"workspace", ws.ID, "run", run.ID, "error", warehouses.NewOperationError(err))
+					"workspace", ws.ID, "run", run.ID, "error", err)
 			}
 		}
 
@@ -1809,9 +1812,8 @@ func (core *Core) executeIdentityResolution(workspaceID, opID string) {
 				break
 			}
 			// In case of unknown error, try again.
-			loggedError := warehouses.NewOperationError(err)
-			if msg := loggedError.Error(); unknownErrorMsg != msg {
-				slog.Warn("failed to check the identity resolution status; retrying", "error", loggedError)
+			if msg := err.Error(); unknownErrorMsg != msg {
+				slog.Warn("failed to check the identity resolution status; retrying", "error", err)
 				unknownErrorMsg = msg
 			}
 			continue

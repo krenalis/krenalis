@@ -346,7 +346,7 @@ func (warehouse *Snowflake) finalizeIdentityResolution(ctx context.Context, conn
 		err := warehouse.setOperationAsCompleted(ctx, conn, opID, nil, operationError)
 		if err != nil {
 			slog.Error("cannot mark identity resolution operation as failed, retrying",
-				"err", warehouses.NewOperationError(err), "operationError", operationError)
+				"err", err, "operationError", operationError)
 			continue
 		}
 		status, err := warehouse.readOperationStatus(ctx, conn, opID, identityResolution)

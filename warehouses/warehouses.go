@@ -495,6 +495,9 @@ type OperationError struct{ message string }
 // MaxOperationErrorBytes are abbreviated at a Unicode character boundary with
 // a trailing "[...]". If the resulting message is not valid UTF-8, it is
 // replaced with a fixed message. NewOperationError panics if err is nil.
+//
+// NewOperationError is intended to be called by warehouse implementations
+// when an Identity Resolution or profile schema update operation fails.
 func NewOperationError(err error) *OperationError {
 	if err == nil {
 		panic("warehouses.NewOperationError: nil error")
