@@ -159,8 +159,6 @@ A function or method must return an error when it is expected to fail, for examp
 
 An unexpected situation is one that callers or the program's invariants rule out, such as an invalid argument or a value that should be impossible, and therefore reveals a bug. A function or method that meets one must return an error if its signature has one, so that a single failing operation does not bring down the whole process. It must panic instead if its signature has no error, or if the situation reveals corrupted internal state that no caller could safely recover from.
 
-If a function or method that returns errors for unexpected situations also returns errors that its callers handle as an expected outcome, give the latter an identity, such as a sentinel or a dedicated type, and have the callers check it, so that unexpected errors are propagated rather than mistaken for expected ones.
-
 ## Tests
 
 Test failure messages must use the form `expected ..., got ...`.
