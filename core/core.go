@@ -1337,7 +1337,10 @@ func (core *Core) endLiveRun(ctx context.Context, run *state.PipelineRun, reason
 	}
 
 	// Waits for the metrics to be saved.
-	core.metrics.Pipelines.WaitStore()
+	err := core.metrics.Pipelines.WaitStore(ctx)
+	if err != nil {
+		return err
+	}
 
 	n := state.EndPipelineRun{
 		ID:       run.ID,

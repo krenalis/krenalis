@@ -326,17 +326,28 @@ func (p *Pipelines) TransformationPassed(pipeline string, count int) {
 	p.Passed(TransformationStep, pipeline, count)
 }
 
-// WaitStore waits for collected pipeline metrics to be stored in the database.
-func (p *Pipelines) WaitStore() {
+// WaitStore waits until the collected pipeline metrics are stored in the
+// database. It returns ctx.Err() if the wait is canceled.
+func (p *Pipelines) WaitStore(ctx context.Context) error {
+
 	p.Lock()
+	defer p.Unlock()
 	tick := p.tick
-	for {
+	stop := context.AfterFunc(ctx, func() {
+		p.Lock()
+		p.stored.Broadcast()
+		p.Unlock()
+	})
+	defer stop()
+
+	for p.stored.tick < tick {
 		p.stored.Wait()
-		if p.stored.tick == tick {
-			break
+		if err := ctx.Err(); err != nil {
+			return err
 		}
 	}
-	p.Unlock()
+
+	return nil
 }
 
 // aggregate aggregates metrics based on the provided time unit, which can be
