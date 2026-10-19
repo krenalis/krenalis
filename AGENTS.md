@@ -67,7 +67,10 @@ Give every `switch` statement, be it an expression switch, a type switch, or a s
 - When they cannot occur, treat them as an unexpected situation, as described under Errors versus panics, naming the unexpected value or type in the message.
 - When they legitimately require no action, leave the `default` clause empty, adding a short comment when the reason is not obvious.
 
-Omit the `default` clause only when the switch tag is a local variable assigned just above the switch, so that a reader sees at a glance that it can only take values covered by the cases.
+Omit the `default` clause only in these cases:
+
+- The switch tag is a local variable assigned just above the switch, so that a reader sees at a glance that it can only take values covered by the cases.
+- Every case ends in a terminating statement, as defined by the Go specification, and the values not matched by the cases legitimately require no action, so that they simply proceed with the code following the switch.
 
 ## Signatures
 
