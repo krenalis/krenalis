@@ -167,18 +167,21 @@ func (c *Client) ClientSecret() (string, error) {
 // If the client supports OAuth, it adds the Authorization header automatically.
 //
 // It retries the request on network errors or when the client's retry policy
-// applies. A request is retried only if it is idempotent
-// (see http.Transport for details), which is defined as:
+// applies. A request is retried only if it is idempotent and either has no body
+// or has Request.GetBody set (see http.Transport for details).
+// A request is considered idempotent if:
 //
-//   - method is GET, HEAD, OPTIONS, or TRACE and Request.GetBody is set, or
+//   - its method is GET, HEAD, OPTIONS, or TRACE, or
 //   - Request.Header contains an Idempotency-Key or X-Idempotency-Key key.
 //
 // An empty header value is considered idempotent but is not sent.
 //
+// For unauthorized OAuth requests, idempotency is not required, but the request
+// must still have no body or have Request.GetBody set.
+//
 // It always closes the request body, even if an error occurs. It is the
-// caller's responsibility to close the response body; however, it is not
-// necessary to drain it, as the transport drains an unread body after it is
-// closed.
+// caller's responsibility to close the response body. Reading it to EOF before
+// closing may improve connection reuse.
 //
 // It does not follow redirects.
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
@@ -310,13 +313,6 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 		switch reason {
 		case connectors.PermanentFailure:
 			return res, nil
-		case connectors.NetFailure:
-			_ = res.Body.Close()
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			case <-time.After(waitTime):
-			}
 		case connectors.Unauthorized:
 			if isRetriveOAuthToken {
 				return res, nil
@@ -329,10 +325,21 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 			if !isBodyRetriable(req) {
 				return res, nil
 			}
+		default:
+			if !retriable {
+				return res, nil
+			}
 		}
 
+		_ = res.Body.Close()
+		if reason == connectors.NetFailure {
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(waitTime):
+			}
+		}
 		if hasBody {
-			_ = res.Body.Close()
 			body, err := req.GetBody()
 			if err != nil {
 				return nil, err
