@@ -299,7 +299,7 @@ A short comment for a package-level variable or constant may appear on the same 
 
 Never begin an error message with the article `the`.
 
-Prefix the message of every panic, and of every error that reports an unexpected situation, with the import path of the package that produces it, relative to the module path, followed by `: `, as in `core/internal/transformers/lambda: invalid function name`. Then:
+Prefix the message of every panic, and of every error that reports an unexpected situation, with the import path of the package that produces it, relative to the module path, followed by `: `, as in `core/internal/transformers/lambda: invalid function name`.
 
 - When wrapping an error from the same package, do not repeat the prefix.
 - When panicking again with a value obtained from `recover`, pass it unchanged.
