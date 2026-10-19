@@ -331,6 +331,73 @@ func (workspace workspace) IdentityMetricsPerDate(_ http.ResponseWriter, r *http
 	return ws.IdentityMetricsPerDate(r.Context(), start, end, connectionSelection)
 }
 
+// IdentityResolutionMetricsPerDate returns daily successful Identity Resolution
+// metrics for the current workspace over a date interval.
+func (workspace workspace) IdentityResolutionMetricsPerDate(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
+	if err != nil {
+		return nil, err
+	}
+	start, err := time.Parse(time.DateOnly, r.PathValue("start"))
+	if err != nil {
+		return nil, errors.NotFound("start is not valid")
+	}
+	end, err := time.Parse(time.DateOnly, r.PathValue("end"))
+	if err != nil {
+		return nil, errors.NotFound("end is not valid")
+	}
+	return ws.IdentityResolutionMetricsPerDate(r.Context(), start, end)
+}
+
+// IdentityResolutionRuns returns Identity Resolution runs for the current
+// workspace, newest first.
+func (workspace workspace) IdentityResolutionRuns(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
+	if err != nil {
+		return nil, err
+	}
+
+	query := r.URL.Query()
+
+	// Parse pagination.
+	first, limit := 0, 100
+	if values, ok := query["first"]; ok {
+		if len(values) != 1 {
+			return nil, errors.BadRequest("only one 'first' parameter is allowed")
+		}
+		first, err = strconv.Atoi(values[0])
+		if err != nil {
+			return nil, errors.BadRequest("'first' parameter is not valid")
+		}
+	}
+	if values, ok := query["limit"]; ok {
+		if len(values) != 1 {
+			return nil, errors.BadRequest("only one 'limit' parameter is allowed")
+		}
+		limit, err = strconv.Atoi(values[0])
+		if err != nil {
+			return nil, errors.BadRequest("'limit' parameter is not valid")
+		}
+	}
+
+	// Parse status.
+	var status string
+	if values, ok := query["status"]; ok {
+		if len(values) != 1 {
+			return nil, errors.BadRequest("only one 'status' parameter is allowed")
+		}
+		status = values[0]
+	}
+
+	runs, err := ws.IdentityResolutionRuns(r.Context(), first, limit, core.IdentityResolutionRunStatus(status))
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]any{"runs": runs}, nil
+}
+
 // ProfilePropertiesSuitableAsIdentifiers returns the properties of the profile
 // schema that can be used as identifiers in the Identity Resolution.
 func (workspace workspace) ProfilePropertiesSuitableAsIdentifiers(_ http.ResponseWriter, r *http.Request) (any, error) {
@@ -385,6 +452,16 @@ func (workspace workspace) LatestIdentityResolution(_ http.ResponseWriter, r *ht
 		"startTime": startTime,
 		"endTime":   endTime,
 	}, nil
+}
+
+// LatestIdentityResolutionMetric returns the latest successful Identity
+// Resolution metric for the current workspace.
+func (workspace workspace) LatestIdentityResolutionMetric(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
+	if err != nil {
+		return nil, err
+	}
+	return ws.LatestIdentityResolutionMetric(r.Context())
 }
 
 // LatestAlterProfileSchema returns information about the latest altering of the
@@ -598,7 +675,6 @@ func (workspace workspace) RefreshIdentityMetrics(_ http.ResponseWriter, r *http
 		return nil, err
 	}
 	err = ws.RefreshIdentityMetrics(r.Context())
-
 	return nil, err
 }
 

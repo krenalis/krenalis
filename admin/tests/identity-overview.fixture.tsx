@@ -1,23 +1,142 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { MemoryRouter } from 'react-router-dom';
 import '@shoelace-style/shoelace/dist/themes/light.css';
 import API from '../src/lib/api/api';
 import AppContext from '../src/context/AppContext';
 import IdentityOverview from '../src/components/routes/IdentityOverview/IdentityOverview';
+import { ResolutionEffectivenessChart } from '../src/components/routes/IdentityOverview/IdentityOverview.components';
+import { ResolutionEffectivenessPoint } from '../src/components/routes/IdentityOverview/IdentityOverview.helpers';
 
 declare global {
 	interface Window {
-		identityOverviewScenario: 'historyError' | 'latestError' | 'removed' | 'singleDay' | 'singleDayZero';
+		identityOverviewScenario:
+			| 'atomic'
+			| 'historyError'
+			| 'latestError'
+			| 'removed'
+			| 'singleDay'
+			| 'singleDayZero'
+			| 'resolution'
+			| 'resolutionAtIdentity'
+			| 'resolutionSingleDayZero'
+			| 'resolutionUnauthorized';
+		identityOverviewEffectivenessData?: ResolutionEffectivenessPoint[];
 		identityOverviewRequests: string[];
+		identityOverviewRevision?: number;
+		identityOverviewFailure?: string;
+		identityOverviewHold?: string;
+		identityOverviewPending: (() => void)[];
+		identityOverviewChangeWorkspace: (workspace: string) => void;
 	}
 }
 
-const api = new API('https://example.test', 'workspace111');
 let hasRefreshed = false;
 window.identityOverviewRequests = [];
+window.identityOverviewPending = [];
 window.fetch = async (input) => {
 	const url = String(input);
+	const revision = window.identityOverviewRevision ?? 0;
+	const failure = window.identityOverviewFailure;
 	window.identityOverviewRequests.push(url);
+	if (window.identityOverviewHold != null && url.includes(window.identityOverviewHold)) {
+		await new Promise<void>((release) => window.identityOverviewPending.push(release));
+	}
+	if (failure != null && url.includes(failure)) return new Response(null, { status: 500 });
+	if (window.identityOverviewScenario === 'atomic') {
+		const day = revision === 0 ? '2026-08-02' : '2026-08-03';
+		const total = revision === 0 ? 8 : 18;
+		const profiles = revision === 0 ? 3 : 6;
+		const resolution = {
+			observedAt: `${day}T11:00:00Z`,
+			identities: { total: profiles * 2, anonymous: 0, recognized: profiles * 2 },
+			profiles: { total: profiles, anonymous: 0, recognized: profiles },
+			composition: { one: 0, two: profiles, three: 0, fourToTen: 0, elevenToTwenty: 0, moreThanTwenty: 0 },
+			identitiesPerProfile: 2,
+			linkedIdentitiesRate: 1,
+		};
+		let data: unknown;
+		if (url.endsWith('/refresh')) return new Response(null);
+		if (url.includes('/metrics/identity-resolution/latest')) {
+			data = resolution;
+		} else if (url.includes('/metrics/identity-resolution/dates/')) {
+			data = [
+				{
+					day: '2026-07-31',
+					identities: profiles * 2,
+					profiles,
+					profilesAnonymous: 0,
+					profilesRecognized: profiles,
+					identitiesPerProfile: 2,
+					linkedIdentitiesRate: 1,
+				},
+			];
+		} else if (url.includes('/identity-resolution/runs')) {
+			data = {
+				runs: [
+					{
+						id: `run${revision}`,
+						status: 'successful',
+						startTime: `${day}T10:00:00Z`,
+						endTime: `${day}T11:00:00Z`,
+						error: null,
+					},
+				],
+			};
+		} else if (url.endsWith('/latest')) {
+			data = {
+				observedAt: `${day}T12:00:00Z`,
+				total,
+				anonymous: 0,
+				recognized: total,
+				withoutProfile: 0,
+				connections: [{ connection: 'connection11', anonymous: 0, recognized: total, withoutProfile: 0 }],
+			};
+		} else {
+			data = [{ day: '2026-07-31', total: total - 2, anonymous: 0, recognized: total - 2 }];
+		}
+		return new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } });
+	}
+	if (url.includes('/metrics/identity-resolution/latest')) {
+		if (window.identityOverviewScenario === 'resolutionUnauthorized') {
+			return new Response('{"error":{}}', { status: 401, headers: { 'Content-Type': 'application/json' } });
+		}
+		if (
+			window.identityOverviewScenario === 'resolution' ||
+			window.identityOverviewScenario === 'resolutionAtIdentity' ||
+			window.identityOverviewScenario === 'resolutionSingleDayZero'
+		) {
+			const hasZeroLinkRate = window.identityOverviewScenario === 'resolutionSingleDayZero';
+			return new Response(
+				JSON.stringify({
+					observedAt:
+						window.identityOverviewScenario === 'resolutionAtIdentity' || hasZeroLinkRate
+							? '2026-08-02T12:00:00Z'
+							: '2026-08-02T13:00:00Z',
+					identities: { total: 10, anonymous: 0, recognized: 10 },
+					profiles: { total: hasZeroLinkRate ? 10 : 5, anonymous: 0, recognized: hasZeroLinkRate ? 10 : 5 },
+					composition: {
+						one: hasZeroLinkRate ? 10 : 0,
+						two: hasZeroLinkRate ? 0 : 5,
+						three: 0,
+						fourToTen: 0,
+						elevenToTwenty: 0,
+						moreThanTwenty: 0,
+					},
+					identitiesPerProfile: hasZeroLinkRate ? 1 : 2,
+					linkedIdentitiesRate: hasZeroLinkRate ? 0 : 1,
+				}),
+				{ headers: { 'Content-Type': 'application/json' } },
+			);
+		}
+		return new Response('null', { headers: { 'Content-Type': 'application/json' } });
+	}
+	if (url.includes('/metrics/identity-resolution/dates/')) {
+		return new Response('[]', { headers: { 'Content-Type': 'application/json' } });
+	}
+	if (url.includes('/identity-resolution/runs')) {
+		return new Response('{"runs":[]}', { headers: { 'Content-Type': 'application/json' } });
+	}
 	if (url.endsWith('/refresh')) {
 		hasRefreshed = true;
 		return new Response(null);
@@ -55,14 +174,25 @@ window.fetch = async (input) => {
 };
 
 const context = {
-	api,
 	connections: [],
 	selectedWorkspace: 'workspace111',
 	setTitle: () => undefined,
 } as unknown as React.ContextType<typeof AppContext>;
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-	<AppContext.Provider value={context}>
-		<IdentityOverview />
-	</AppContext.Provider>,
-);
+const root = ReactDOM.createRoot(document.getElementById('root')!);
+window.identityOverviewChangeWorkspace = (workspace) => {
+	root.render(
+		<AppContext.Provider
+			value={{ ...context, api: new API('https://example.test', workspace), selectedWorkspace: workspace }}
+		>
+			<MemoryRouter>
+				<IdentityOverview />
+			</MemoryRouter>
+		</AppContext.Provider>,
+	);
+};
+if (window.identityOverviewEffectivenessData != null) {
+	root.render(<ResolutionEffectivenessChart data={window.identityOverviewEffectivenessData} loading={false} />);
+} else {
+	window.identityOverviewChangeWorkspace('workspace111');
+}
