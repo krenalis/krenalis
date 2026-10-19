@@ -216,16 +216,14 @@
 }
 
 .connection-pipelines__buttons-dropdown .connection-pipelines__run-button-tooltip,
+.connection-pipelines__buttons-dropdown .connection-pipelines__run-button,
 .connection-pipelines__buttons-dropdown .connection-pipelines__manage-button {
 	display: none;
 }
 
 .connection-pipelines__buttons-dropdown .connection-pipelines__run-button-tooltip::part(base__arrow) {
 	background-color: var(--bg-gray);
-	border: 1px solid var(--sl-color-neutral-300);
 	z-index: 10;
-	border-bottom: 0;
-	border-left: 0;
 }
 
 .connection-pipelines__grid-alert-pipeline-name {
@@ -255,11 +253,16 @@
 }
 
 @media screen and (max-width: 1320px) {
-	.connection-pipelines__buttons > .connection-pipelines__run-button-tooltip {
+	.connection-pipelines__buttons > .connection-pipelines__run-button-tooltip,
+	.connection-pipelines__buttons > .connection-pipelines__run-button {
 		display: none;
 	}
 
 	.connection-pipelines__buttons-dropdown .connection-pipelines__run-button-tooltip {
 		display: block;
+	}
+
+	.connection-pipelines__buttons-dropdown .connection-pipelines__run-button {
+		display: inline-block;
 	}
 }

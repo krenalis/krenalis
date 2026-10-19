@@ -1,9 +1,9 @@
-import React, { forwardRef, useImperativeHandle, useRef, useState, ReactNode } from 'react';
+import React, { forwardRef, useId, useImperativeHandle, useRef, useState, ReactNode } from 'react';
 import './FeedbackButton.css';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { buttonVariant } from '../../../utils/buttonVariant';
 import SlButtonType from '@awesome.me/webawesome/dist/components/button/button.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import { Size, Variant } from '../../routes/App/App.types';
 
@@ -12,7 +12,6 @@ interface FeedbackButtonProps {
 	loading?: boolean;
 	className?: string;
 	size?: Size;
-	hoist?: boolean;
 	animationDuration?: number;
 	variant?: Variant;
 	onClick?: () => void;
@@ -55,7 +54,6 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 			variant,
 			onClick,
 			size = 'medium',
-			hoist = false,
 			disabled,
 			name,
 			placement,
@@ -68,6 +66,7 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 		const [info, setInfo] = useState<ReactNode>(null);
 
 		const buttonRef = useRef<SlButtonType>(null);
+		const buttonID = useId();
 		const loadingDurationRef = useRef<number>(0);
 
 		const duration = animationDuration || 1200;
@@ -158,6 +157,7 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 
 		const button = (
 			<SlButton
+				id={buttonID}
 				className={`feedback-button${className != null ? ` ${className}` : ''}`}
 				ref={buttonRef}
 				size={buttonSizes[size]}
@@ -174,44 +174,45 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 		);
 
 		return (
-			<SlTooltip
-				className={`feedback-button__tooltip${className != null ? ' ' + className + '-tooltip' : ''}`}
-				open={error !== null || info !== null ? true : false}
-				trigger='manual'
-				style={{ '--max-width': '400px' } as React.CSSProperties}
-				placement={placement == null ? 'bottom' : placement}
-				hoist={hoist}
-			>
+			<>
 				{(error !== null || info !== null) && (
-					<div
-						slot='content'
-						className={`feedback-button__tooltip-content ${error !== null ? 'feedback-button__tooltip-content--error' : 'feedback-button__tooltip-content--info'}`}
+					<SlTooltip
+						className={`feedback-button__tooltip${className != null ? ' ' + className + '-tooltip' : ''}`}
+						for={buttonID}
+						open={true}
+						trigger='manual'
+						style={{ '--max-width': '400px' } as React.CSSProperties}
+						placement={placement == null ? 'bottom' : placement}
 					>
-						<SlIcon
-							className='feedback-button__tooltip-icon-close'
-							name='x-lg'
-							onClick={() => {
-								if (error !== null) {
-									setError(null);
-								} else {
-									setInfo(null);
-								}
-							}}
-						/>
-						{error !== null ? (
-							<SlIcon className='feedback-button__tooltip-icon-error' name='exclamation-circle' />
-						) : (
-							<SlIcon className='feedback-button__tooltip-icon-info' name='info-circle' />
-						)}
-						{error !== null ? (
-							<div className='feedback-button__tooltip-error'>{error}</div>
-						) : (
-							<div className='feedback-button__tooltip-info'>{info}</div>
-						)}
-					</div>
+						<div
+							className={`feedback-button__tooltip-content ${error !== null ? 'feedback-button__tooltip-content--error' : 'feedback-button__tooltip-content--info'}`}
+						>
+							<SlIcon
+								className='feedback-button__tooltip-icon-close'
+								name='x-lg'
+								onClick={() => {
+									if (error !== null) {
+										setError(null);
+									} else {
+										setInfo(null);
+									}
+								}}
+							/>
+							{error !== null ? (
+								<SlIcon className='feedback-button__tooltip-icon-error' name='exclamation-circle' />
+							) : (
+								<SlIcon className='feedback-button__tooltip-icon-info' name='info-circle' />
+							)}
+							{error !== null ? (
+								<div className='feedback-button__tooltip-error'>{error}</div>
+							) : (
+								<div className='feedback-button__tooltip-info'>{info}</div>
+							)}
+						</div>
+					</SlTooltip>
 				)}
 				{button}
-			</SlTooltip>
+			</>
 		);
 	},
 );

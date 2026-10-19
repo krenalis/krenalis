@@ -13,6 +13,11 @@
 	transform: scale(1.8);
 }
 
+.feedback-button__tooltip {
+	--wa-tooltip-border-color: var(--sl-color-neutral-300);
+	--wa-tooltip-border-width: 1px;
+}
+
 .feedback-button__tooltip::part(base) {
 	background-color: var(--sl-color-neutral-300);
 }
@@ -32,10 +37,7 @@
 
 .feedback-button__tooltip::part(base__arrow) {
 	background-color: var(--bg-gray);
-	border: 1px solid var(--sl-color-neutral-300);
 	z-index: 10;
-	border-right: 0;
-	border-bottom: 0;
 }
 
 .feedback-button__tooltip-content {

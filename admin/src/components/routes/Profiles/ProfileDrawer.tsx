@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useContext, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useContext, useId, useMemo, useRef } from 'react';
 import { useProfileDrawer } from './useProfileDrawer';
 import { ProfileTab } from './Profiles.types';
 import AppContext from '../../../context/AppContext';
@@ -12,7 +12,7 @@ import SlTabPanel from '@awesome.me/webawesome/dist/react/tab-panel/index.js';
 import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import toJSDate from '../../../utils/toJSDate';
 import { Link } from '../../base/Link/Link';
 import { PROFILES_EXPANDED_ATTRIBUTES_KEY, PROFILES_TAB_KEY } from '../../../constants/storage';
@@ -73,6 +73,7 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 	const panelRef = useRef<HTMLDivElement>(null);
 	const triggerRef = useRef<Element>(null);
 	const isFirstLayout = useRef(true);
+	const drawerID = useId();
 
 	// The drawer is contained in the profiles grid: it has no overlay and does
 	// not close on Escape, and the page stays interactive while it is open, so
@@ -222,9 +223,8 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 									</div>
 								)}
 							<span className='profile-drawer__kpid'>
-								<SlTooltip content='Krenalis Profile ID'>
-									<SlIcon name='info-circle-fill' />
-								</SlTooltip>
+								<SlTooltip for={`${drawerID}-kpid`}>Krenalis Profile ID</SlTooltip>
+								<SlIcon id={`${drawerID}-kpid`} name='info-circle-fill' />
 								KPID: <span className='profile-drawer__kpid-value'>{selectedProfile}</span>
 							</span>
 						</div>
@@ -318,31 +318,30 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 												<div className='profile-drawer__identity-head'>
 													<SlTooltip
 														className='profile-drawer__action'
+														for={`${drawerID}-${identity.updatedAt}`}
 														placement='left'
-														hoist
 													>
-														<div slot='content'>
-															Imported from pipeline{' '}
-															<span className='profile-drawer__identity-pipeline-link'>
-																<Link
-																	path={`connections/${connection.id}/pipelines/edit/${identity.pipeline}`}
-																>
-																	{identity.pipeline}
-																</Link>
-															</span>
-														</div>
-														<Link
-															path={`connections/${connection.id}/pipelines`}
-															className='profile-drawer__identity-connection'
-														>
-															<div className='profile-drawer__identity-connection-logo'>
-																{logo}
-															</div>
-															<div className='profile-drawer__identity-connection-name'>
-																{connection.name}
-															</div>
-														</Link>
+														Imported from pipeline{' '}
+														<span className='profile-drawer__identity-pipeline-link'>
+															<Link
+																path={`connections/${connection.id}/pipelines/edit/${identity.pipeline}`}
+															>
+																{identity.pipeline}
+															</Link>
+														</span>
 													</SlTooltip>
+													<Link
+														id={`${drawerID}-${identity.updatedAt}`}
+														path={`connections/${connection.id}/pipelines`}
+														className='profile-drawer__identity-connection'
+													>
+														<div className='profile-drawer__identity-connection-logo'>
+															{logo}
+														</div>
+														<div className='profile-drawer__identity-connection-name'>
+															{connection.name}
+														</div>
+													</Link>
 													<div className='profile-drawer__identity-updated-at'>
 														{toJSDate(identity.updatedAt).toLocaleString()}
 													</div>

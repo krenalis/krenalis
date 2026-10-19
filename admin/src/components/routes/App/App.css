@@ -1718,6 +1718,23 @@ wa-icon::part(svg) {
 	margin-inline-end: calc(var(--sl-spacing-x-small) - 2em);
 }
 
+/* Web Awesome tooltips, drawn as Shoelace drew them, at zero specificity:
+   Shoelace's maximum width and padding, and its text set on the body. Web
+   Awesome sets the color, size and line height on the host, where the rules
+   of the page around the tooltip reach them, and inherits the font. */
+:where(wa-tooltip) {
+	--max-width: 20rem;
+}
+
+:where(wa-tooltip)::part(body) {
+	color: var(--wa-tooltip-content-color);
+	font-family: var(--sl-font-sans);
+	font-size: var(--wa-tooltip-font-size);
+	font-weight: var(--sl-font-weight-normal);
+	line-height: var(--wa-tooltip-line-height);
+	padding: var(--sl-spacing-2x-small) var(--sl-spacing-x-small);
+}
+
 /* || Radix */
 
 .radix-themes:where([data-gray-color='slate']) {

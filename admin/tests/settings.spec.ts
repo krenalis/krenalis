@@ -203,34 +203,34 @@ test(`Add and remove purpose codes of a consent purpose`, async ({ page }) => {
 	await inputs.nth(0).fill('marketing');
 
 	// A blank row is removable, but the only non-empty row is not.
-	await rows.nth(0).locator('.consent-management__dialog-purpose-code-add wa-button').click();
+	await rows.nth(0).locator('.consent-management__dialog-purpose-code-add').click();
 	await expect(inputs).toHaveCount(2);
 	await expect(inputs.nth(1)).toBeFocused();
 	await expect.poll(() => rows.nth(1).evaluate((row) => row.getAnimations().length)).toBe(0);
 	await expect(inputs.nth(1)).toBeFocused();
 	await expect(rows.nth(0).locator('.consent-management__dialog-purpose-code-remove')).toHaveCount(0);
-	await rows.nth(1).locator('.consent-management__dialog-purpose-code-remove wa-button').click();
+	await rows.nth(1).locator('.consent-management__dialog-purpose-code-remove').click();
 	await expect(inputs).toHaveCount(1);
 	await expect(inputs.nth(0)).toHaveValue('marketing');
 
 	// The first row can be removed when another row has a value.
-	await rows.nth(0).locator('.consent-management__dialog-purpose-code-add wa-button').click();
+	await rows.nth(0).locator('.consent-management__dialog-purpose-code-add').click();
 	await expect(inputs.nth(1)).toBeFocused();
 	await inputs.nth(1).fill('oldmarketing');
 	await expect(rows.locator('.consent-management__dialog-purpose-code-remove')).toHaveCount(2);
-	await rows.nth(0).locator('.consent-management__dialog-purpose-code-add wa-button').click();
+	await rows.nth(0).locator('.consent-management__dialog-purpose-code-add').click();
 	await expect(inputs).toHaveCount(3);
 	await expect(inputs.nth(1)).toHaveValue('');
 	await expect(inputs.nth(1)).toBeFocused();
 	await expect(inputs.nth(2)).toHaveValue('oldmarketing');
-	await rows.nth(1).locator('.consent-management__dialog-purpose-code-remove wa-button').click();
+	await rows.nth(1).locator('.consent-management__dialog-purpose-code-remove').click();
 	await expect(inputs).toHaveCount(2);
 	await expect(inputs.nth(0)).toHaveValue('marketing');
 	await expect(inputs.nth(1)).toHaveValue('oldmarketing');
 	const firstPurposeCodeRemove = rows.nth(0).locator('.consent-management__dialog-purpose-code-remove');
 	await firstPurposeCodeRemove.hover();
-	await expect(firstPurposeCodeRemove).toHaveJSProperty('open', true);
-	await firstPurposeCodeRemove.locator('wa-button').dblclick();
+	await expect(rows.nth(0).locator('wa-tooltip', { hasText: 'Remove purpose code' })).toHaveJSProperty('open', true);
+	await firstPurposeCodeRemove.dblclick();
 	await expect(inputs).toHaveCount(1);
 	await expect(inputs.nth(0)).toHaveValue('oldmarketing');
 	await expect(dialog.locator('.consent-management__dialog-path-label').nth(0)).toContainText('Consent in events');
@@ -240,13 +240,13 @@ test(`Add and remove purpose codes of a consent purpose`, async ({ page }) => {
 	for (let i = 1; i < purposeCodes.length; i++) {
 		await rows
 			.nth(i - 1)
-			.locator('.consent-management__dialog-purpose-code-add wa-button')
+			.locator('.consent-management__dialog-purpose-code-add')
 			.click();
 		await expect(inputs).toHaveCount(i + 1);
 		await expect(inputs.nth(i)).toBeFocused();
 		await inputs.nth(i).fill(purposeCodes[i]);
 	}
-	const addButtons = rows.locator('.consent-management__dialog-purpose-code-add wa-button button');
+	const addButtons = rows.locator('.consent-management__dialog-purpose-code-add button');
 	await expect(addButtons).toHaveCount(5);
 	for (const button of await addButtons.all()) {
 		await expect(button).toBeDisabled();

@@ -3,7 +3,7 @@ import './PropertyPanel.css';
 import SlAnimation from '@awesome.me/webawesome/dist/react/animation/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import { PrimarySources } from '../../../lib/api/types/workspace';
 import { PropertyPanelLayout } from '../Schema/PropertyPanelLayout';
 import { PropertyForm } from './PropertyForm';
@@ -47,6 +47,8 @@ const PropertyPanel = ({
 	onSave,
 }: PropertyPanelProps) => {
 	const [valid, setValid] = React.useState(true);
+
+	const removeButtonID = React.useId();
 	const isNew = property != null && property.key == null;
 	const showActions = isNew || dirty;
 	const formID = 'schema-edit-property-form';
@@ -82,8 +84,12 @@ const PropertyPanel = ({
 		);
 	} else if (property != null && !isNew) {
 		actions = (
-			<SlTooltip className='schema-edit__toolbar-tooltip' content='Delete this property from the schema' hoist>
+			<>
+				<SlTooltip className='schema-edit__toolbar-tooltip' for={removeButtonID}>
+					Delete this property from the schema
+				</SlTooltip>
 				<SlButton
+					id={removeButtonID}
 					appearance='outlined'
 					className='property-panel__remove property-panel__delete-button schema-edit__toolbar-icon-button'
 					size='s'
@@ -92,7 +98,7 @@ const PropertyPanel = ({
 				>
 					<SlIcon name='trash' />
 				</SlButton>
-			</SlTooltip>
+			</>
 		);
 	}
 

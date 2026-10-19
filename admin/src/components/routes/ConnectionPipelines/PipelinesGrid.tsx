@@ -266,7 +266,6 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 							size='small'
 							onClick={() => runPipeline(connection, pipeline.id, pipeline.target)}
 							disabled={!pipeline.enabled}
-							hoist={true}
 						>
 							<WaIcon slot='start' name='play' />
 							Run now
@@ -333,7 +332,6 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 							size='small'
 							onClick={() => runPipeline(connection, pipeline.id, pipeline.target)}
 							disabled={!pipeline.enabled}
-							hoist={true}
 							placement='left'
 						>
 							Run now

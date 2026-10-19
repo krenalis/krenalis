@@ -83,11 +83,6 @@
 	font-size: 16px;
 }
 
-.schema-grid__toolbar-tooltip::part(base__arrow) {
-	border-bottom: 0;
-	border-right: 0;
-}
-
 .schema-grid__card .grid__cell {
 	padding-bottom: 9px;
 	padding-top: 9px;

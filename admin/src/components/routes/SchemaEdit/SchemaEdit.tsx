@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useId, useRef, useState } from 'react';
 import {
 	SchemaPropertyGridSummary,
 	SchemaPropertyGridToolbar,
@@ -13,7 +13,7 @@ import SlDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
 import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import Grid from '../../base/Grid/Grid';
 import { GridKeyboardHints } from '../../base/Grid/GridKeyboardHints';
@@ -41,9 +41,11 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 	const [propertyDraftDirty, setPropertyDraftDirty] = useState(false);
 	const [search, setSearch] = useState('');
 	const [showOnlyChanged, setShowOnlyChanged] = useState(false);
+
 	const selectedPropertyBeforeAddRef = useRef<PropertyToEdit | null>(null);
 	const discardAndLeaveRef = useRef(false);
 	const skipNavigationBlockRef = useRef(false);
+	const filterButtonID = useId();
 
 	const { schema } = useContext(SchemaContext);
 	const { closeFullscreen } = useContext(FullscreenContext);
@@ -380,30 +382,32 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 							onSearchChange={setSearch}
 							search={search}
 						>
-							<SlTooltip className='schema-edit__toolbar-tooltip' content='Filter properties' hoist>
-								<SlDropdown className='schema-edit__filter' placement='bottom-end' distance={8}>
-									<SlButton
-										appearance='outlined'
-										className='schema-edit__filter-button schema-edit__toolbar-icon-button'
-										slot='trigger'
-										size='s'
-										aria-label='Filter properties'
-									>
-										<SlIcon name='filter' />
-										<span
-											className={`schema-edit__filter-dot${showOnlyChanged ? ' schema-edit__filter-dot--active' : ''}`}
-										/>
-									</SlButton>
-									<SlSwitch
-										className='schema-edit__show-changed'
-										size='s'
-										checked={showOnlyChanged}
-										onChange={(event: any) => setShowOnlyChanged(event.target.checked)}
-									>
-										Show only changed properties
-									</SlSwitch>
-								</SlDropdown>
+							<SlTooltip className='schema-edit__toolbar-tooltip' for={filterButtonID}>
+								Filter properties
 							</SlTooltip>
+							<SlDropdown className='schema-edit__filter' placement='bottom-end' distance={8}>
+								<SlButton
+									id={filterButtonID}
+									appearance='outlined'
+									className='schema-edit__filter-button schema-edit__toolbar-icon-button'
+									slot='trigger'
+									size='s'
+									aria-label='Filter properties'
+								>
+									<SlIcon name='filter' />
+									<span
+										className={`schema-edit__filter-dot${showOnlyChanged ? ' schema-edit__filter-dot--active' : ''}`}
+									/>
+								</SlButton>
+								<SlSwitch
+									className='schema-edit__show-changed'
+									size='s'
+									checked={showOnlyChanged}
+									onChange={(event: any) => setShowOnlyChanged(event.target.checked)}
+								>
+									Show only changed properties
+								</SlSwitch>
+							</SlDropdown>
 						</SchemaPropertyGridToolbar>
 						<Grid
 							rows={rows}

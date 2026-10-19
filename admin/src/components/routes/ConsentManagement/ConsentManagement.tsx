@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
+import React, { Fragment, useContext, useEffect, useId, useMemo, useRef, useState, useLayoutEffect } from 'react';
 import { flushSync } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import './ConsentManagement.css';
@@ -16,7 +16,7 @@ import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
 import SlMenuItem from '@awesome.me/webawesome/dist/react/dropdown-item/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
@@ -98,6 +98,8 @@ const ConsentManagement = () => {
 	const [searchParams, setSearchParams] = useSearchParams();
 
 	const { api, connections, handleError, setTitle, redirect } = useContext(AppContext);
+
+	const gridID = useId();
 
 	const pipelinesByPurpose = useMemo(() => {
 		const result = new Map<string, PurposePipeline[]>();
@@ -233,14 +235,18 @@ const ConsentManagement = () => {
 							</span>
 						))}
 						{p.eventConsentLocations.length > SHOWN_EVENT_CONSENT_LOCATIONS && (
-							<SlTooltip
-								content={p.eventConsentLocations
-									.slice(SHOWN_EVENT_CONSENT_LOCATIONS)
-									.map((location) => location.purposeCode)
-									.join(', ')}
-							>
-								<span className='consent-management__grid-paths-more'>{`+${p.eventConsentLocations.length - SHOWN_EVENT_CONSENT_LOCATIONS}`}</span>
-							</SlTooltip>
+							<>
+								<SlTooltip for={`${gridID}-${p.id}-more`}>
+									{p.eventConsentLocations
+										.slice(SHOWN_EVENT_CONSENT_LOCATIONS)
+										.map((location) => location.purposeCode)
+										.join(', ')}
+								</SlTooltip>
+								<span
+									id={`${gridID}-${p.id}-more`}
+									className='consent-management__grid-paths-more'
+								>{`+${p.eventConsentLocations.length - SHOWN_EVENT_CONSENT_LOCATIONS}`}</span>
+							</>
 						)}
 					</div>
 				);
@@ -258,15 +264,17 @@ const ConsentManagement = () => {
 				) : (
 					<div className='consent-management__grid-pipelines'>
 						{pipelines.map((pl) => (
-							<SlTooltip key={pl.id} content={pl.name}>
+							<Fragment key={pl.id}>
+								<SlTooltip for={`${gridID}-${p.id}-${pl.id}`}>{pl.name}</SlTooltip>
 								<button
+									id={`${gridID}-${p.id}-${pl.id}`}
 									type='button'
 									className='consent-management__grid-pipeline-logo'
 									onClick={() => redirect(`connections/${pl.connection}/pipelines/edit/${pl.id}`)}
 								>
 									<LittleLogo code={pl.connector} path={CONNECTORS_ASSETS_PATH} />
 								</button>
-							</SlTooltip>
+							</Fragment>
 						))}
 					</div>
 				);
@@ -285,7 +293,7 @@ const ConsentManagement = () => {
 				key: p.id,
 			};
 		});
-	}, [pipelinesByPurpose, purposes, redirect]);
+	}, [pipelinesByPurpose, purposes, redirect, gridID]);
 
 	return (
 		<div className='consent-management'>
@@ -1008,6 +1016,7 @@ const PurposeCodeAction = ({
 	onClick,
 }: PurposeCodeActionProps) => {
 	const tooltipRef = useRef<any>();
+	const buttonID = useId();
 	const onActionClick = async () => {
 		if (shouldHideTooltipBeforeClick) {
 			await tooltipRef.current?.hide();
@@ -1015,9 +1024,13 @@ const PurposeCodeAction = ({
 		onClick();
 	};
 	return (
-		<SlTooltip ref={tooltipRef} className={className} content={label} hoist>
+		<>
+			<SlTooltip ref={tooltipRef} for={buttonID}>
+				{label}
+			</SlTooltip>
 			<SlButton
-				className='consent-management__dialog-purpose-code-action'
+				id={buttonID}
+				className={`consent-management__dialog-purpose-code-action ${className}`}
 				appearance='outlined'
 				size='s'
 				disabled={isDisabled}
@@ -1026,7 +1039,7 @@ const PurposeCodeAction = ({
 			>
 				<WaIcon name={icon} slot='start' />
 			</SlButton>
-		</SlTooltip>
+		</>
 	);
 };
 

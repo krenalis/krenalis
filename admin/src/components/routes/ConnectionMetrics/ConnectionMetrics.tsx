@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useMemo, useRef, ReactNode } from 'react';
+import React, { useState, useEffect, useContext, useId, useMemo, useRef, ReactNode } from 'react';
 import './ConnectionMetrics.css';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
@@ -10,7 +10,7 @@ import Arrow from '../../base/Arrow/Arrow';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
 import SlOption from '@awesome.me/webawesome/dist/react/option/index.js';
 import SlButtonGroup from '@awesome.me/webawesome/dist/react/button-group/index.js';
@@ -127,6 +127,8 @@ const ConnectionMetrics = () => {
 	const supportedTargets = useRef([]);
 	const currentMetricsIntervalID = useRef<any>();
 	const previouslySelectedPipeline = useRef<string | null>(null);
+
+	const errorCountNoticeID = useId();
 
 	const isUsersSelected = selectedTarget === 'User';
 
@@ -731,9 +733,11 @@ const ConnectionMetrics = () => {
 						<div className='connection-metrics__errors-heading'>
 							Error log
 							<div className='connection-metrics__error-count-notice'>
-								<SlTooltip content="These are the last 50 pipeline errors for this connection. They don't include errors from any deleted pipelines.">
-									<SlIcon name='info-circle' />
+								<SlTooltip for={errorCountNoticeID}>
+									These are the last 50 pipeline errors for this connection. They don't include errors
+									from any deleted pipelines.
 								</SlTooltip>
+								<SlIcon id={errorCountNoticeID} name='info-circle' />
 							</div>
 							<span>{titleRange}</span>
 						</div>

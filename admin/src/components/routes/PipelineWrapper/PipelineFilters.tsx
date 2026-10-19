@@ -1,4 +1,4 @@
-import React, { useContext, ReactNode, useMemo, forwardRef } from 'react';
+import React, { useContext, ReactNode, useId, useMemo, forwardRef } from 'react';
 import Section from '../../base/Section/Section';
 import { getFilterPropertyComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import PipelineContext from '../../../context/PipelineContext';
@@ -7,7 +7,7 @@ import SlSelect from '@awesome.me/webawesome/dist/react/select/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import SlIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import { Combobox } from '../../base/Combobox/Combobox';
 import {
 	FILTER_OPERATORS,
@@ -67,7 +67,10 @@ const pathID = (path: number[]): string => path.join('-');
 const PipelineFilters = forwardRef<any>((_, ref) => {
 	const { pipeline, setPipeline, pipelineType, connection, isTransformationDisabled, isImport } =
 		useContext(PipelineContext);
+
 	const [filterSubject] = pipelineObjectLabels(connection, pipeline, 'plural');
+
+	const filtersID = useId();
 	const filterSubjectTerm = filterSubject.toLowerCase();
 	const actionVerb = isImport ? 'import' : pipelineType.target === 'Event' ? 'send' : 'export';
 
@@ -438,8 +441,10 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 			}
 		}
 
+		const removeButtonID = `${filtersID}-${id}-remove-condition`;
 		const removeButton = (
 			<SlButton
+				id={removeButtonID}
 				className='pipeline__filters-remove-condition pipeline__filters-remove-rule'
 				size='s'
 				variant='brand'
@@ -471,9 +476,10 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 						{isRemoveDisabled ? (
 							removeButton
 						) : (
-							<SlTooltip content='Remove condition' hoist={true}>
+							<>
+								<SlTooltip for={removeButtonID}>Remove condition</SlTooltip>
 								{removeButton}
-							</SlTooltip>
+							</>
 						)}
 					</div>
 				</div>
@@ -484,6 +490,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 	const renderGroup = (group: Filter, groupPath: number[], depth: number): ReactNode => {
 		const isRoot = depth === 1;
 		const removeGroupTooltip = group.rules.some(isFilterGroup) ? 'Remove groups' : 'Remove group';
+		const removeGroupButtonID = `${filtersID}-${pathID(groupPath)}-remove-group`;
 
 		return (
 			<div
@@ -508,19 +515,19 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 					<span>of the following:</span>
 					{!isRoot && (
 						<div className='pipeline__filters-remove-group-wrapper'>
-							<SlTooltip content={removeGroupTooltip} hoist={true}>
-								<SlButton
-									className='pipeline__filters-remove-group pipeline__filters-remove-rule'
-									size='s'
-									variant='brand'
-									appearance='plain'
-									onClick={() => onRemoveRule(groupPath)}
-									disabled={isDisabled}
-								>
-									<SlIcon name='x-circle' aria-hidden='true' />
-									<span className='pipeline__filters-remove-rule-label'>Remove group</span>
-								</SlButton>
-							</SlTooltip>
+							<SlTooltip for={removeGroupButtonID}>{removeGroupTooltip}</SlTooltip>
+							<SlButton
+								id={removeGroupButtonID}
+								className='pipeline__filters-remove-group pipeline__filters-remove-rule'
+								size='s'
+								variant='brand'
+								appearance='plain'
+								onClick={() => onRemoveRule(groupPath)}
+								disabled={isDisabled}
+							>
+								<SlIcon name='x-circle' aria-hidden='true' />
+								<span className='pipeline__filters-remove-rule-label'>Remove group</span>
+							</SlButton>
 						</div>
 					)}
 				</div>

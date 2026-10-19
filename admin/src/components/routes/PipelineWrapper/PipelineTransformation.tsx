@@ -1,4 +1,14 @@
-import React, { useState, useRef, useContext, useEffect, forwardRef, useMemo, ReactNode, useLayoutEffect } from 'react';
+import React, {
+	useState,
+	useRef,
+	useContext,
+	useEffect,
+	forwardRef,
+	useId,
+	useMemo,
+	ReactNode,
+	useLayoutEffect,
+} from 'react';
 import {
 	checkIfPropertyExists,
 	updateMappingProperty,
@@ -41,7 +51,7 @@ import PipelineContext from '../../../context/PipelineContext';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlAnimation from '@awesome.me/webawesome/dist/react/animation/index.js';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { buttonVariant } from '../../../utils/buttonVariant';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
@@ -635,6 +645,7 @@ const PropertyAnnotation = ({ className, property }: PropertyAnnotationProps) =>
 	const description = property.description ?? '';
 	const annotation = propertyAnnotation(property);
 	const annotationRef = useRef<HTMLDivElement>(null);
+	const annotationID = useId();
 
 	useLayoutEffect(() => {
 		const annotationElement = annotationRef.current;
@@ -661,13 +672,16 @@ const PropertyAnnotation = ({ className, property }: PropertyAnnotationProps) =>
 	}
 
 	return (
-		<SlTooltip className='property-annotation__tooltip' content={annotation} disabled={!isOverflowing} hoist={true}>
-			<div className={className} ref={annotationRef}>
+		<>
+			<SlTooltip className='property-annotation__tooltip' for={annotationID} disabled={!isOverflowing}>
+				{annotation}
+			</SlTooltip>
+			<div id={annotationID} className={className} ref={annotationRef}>
 				{displayName !== '' && <span className='property-annotation__display-name'>{displayName}</span>}
 				{displayName !== '' && description !== '' && propertyAnnotationSeparator}
 				{description}
 			</div>
-		</SlTooltip>
+		</>
 	);
 };
 
@@ -767,6 +781,8 @@ const TransformationBox = ({
 	const pendingTransformationType = useRef<string>();
 	const firstValue = useRef<FlatSchema | TransformationFunction>();
 	const hasNeverChangedTransformationType = useRef<boolean>(true);
+
+	const transformationBoxID = useId();
 
 	const { handleError } = useContext(appContext);
 	const { connection } = useContext(ConnectionContext);
@@ -1054,12 +1070,14 @@ const TransformationBox = ({
 						>
 							{isIdentifier && (
 								<div className='pipeline__transformation-property-icon' slot='start'>
-									<SlTooltip content='Used as identifier in Identity Resolution' hoist={true}>
-										<SlIcon
-											name='person-check'
-											className='pipeline__transformation-property-identifier'
-										/>
+									<SlTooltip for={`${transformationBoxID}-${path}-identifier`}>
+										Used as identifier in Identity Resolution
 									</SlTooltip>
+									<SlIcon
+										id={`${transformationBoxID}-${path}-identifier`}
+										name='person-check'
+										className='pipeline__transformation-property-identifier'
+									/>
 								</div>
 							)}
 						</Combobox>
@@ -1092,17 +1110,20 @@ const TransformationBox = ({
 								</span>
 								<span className='pipeline__transformation-output-property-type'>{typeName}</span>
 								{isRequired && (
-									<SlTooltip
-										content={`Holds the consent for ${consentPurposes?.map((p) => `"${p.name}"`).join(', ')}`}
-										disabled={consentPurposes == null}
-										hoist={true}
-									>
+									<>
+										<SlTooltip
+											for={`${transformationBoxID}-${path}-required`}
+											disabled={consentPurposes == null}
+										>
+											{`Holds the consent for ${consentPurposes?.map((p) => `"${p.name}"`).join(', ')}`}
+										</SlTooltip>
 										<span
+											id={`${transformationBoxID}-${path}-required`}
 											className={`pipeline__transformation-output-property-required${isSelected ? ' pipeline__transformation-output-property-required--selected' : ''}`}
 										>
 											required
 										</span>
-									</SlTooltip>
+									</>
 								)}
 							</div>
 							<PropertyAnnotation
@@ -1202,6 +1223,7 @@ const TransformationBox = ({
 									const isDisabled = isTransformationDisabled || !isConfigured;
 									const tab = (
 										<SlButton
+											id={`${transformationBoxID}-${language}`}
 											key={language}
 											{...buttonVariant(
 												transformationType === 'function' && selectedLanguage === language
@@ -1218,12 +1240,15 @@ const TransformationBox = ({
 										return tab;
 									} else {
 										return (
-											<SlTooltip
-												content={`It is not possible to use ${language} for the transformation because it needs to be configured first.`}
-												className='transformation-box__not-configured-tooltip'
-											>
+											<React.Fragment key={language}>
+												<SlTooltip
+													for={`${transformationBoxID}-${language}`}
+													className='transformation-box__not-configured-tooltip'
+												>
+													{`It is not possible to use ${language} for the transformation because it needs to be configured first.`}
+												</SlTooltip>
 												{tab}
-											</SlTooltip>
+											</React.Fragment>
 										);
 									}
 								})}
@@ -1377,6 +1402,9 @@ const FullscreenTransformation = ({
 	const hasReloadedSamples = useRef<boolean>(false);
 	const selectedInProperties = useRef<string[]>();
 	const selectedOutProperties = useRef<string[]>();
+
+	const samplesFileWarningID = useId();
+	const outputClearID = useId();
 
 	const { flatOutputSchema } = useMemo(() => {
 		return {
@@ -2064,9 +2092,10 @@ const FullscreenTransformation = ({
 			{connection.isFileStorage && connection.isSource && pipeline.filter != null && (
 				<div className='fullscreen-transformation__samples-file-warning'>
 					<div className='fullscreen-transformation__samples-file-notice'>Samples are not filtered</div>
-					<SlTooltip content='No filtering is applied when fetching samples from files'>
-						<SlIcon name='info-circle' />
+					<SlTooltip for={samplesFileWarningID}>
+						No filtering is applied when fetching samples from files
 					</SlTooltip>
+					<SlIcon id={samplesFileWarningID} name='info-circle' />
 				</div>
 			)}
 			<div className='fullscreen-transformation__samples-reload'>
@@ -2579,9 +2608,15 @@ const FullscreenTransformation = ({
 							></SlSpinner>
 						) : output !== '' || outputError !== '' ? (
 							<div className='fullscreen-transformation__output-code'>
-								<SlTooltip content='Clear' placement='left' onClick={onClear} hoist={true}>
-									<SlIconButton className='fullscreen-transformation__output-clear' name='x-lg' />
+								<SlTooltip for={outputClearID} placement='left'>
+									Clear
 								</SlTooltip>
+								<SlIconButton
+									id={outputClearID}
+									className='fullscreen-transformation__output-clear'
+									name='x-lg'
+									onClick={onClear}
+								/>
 								{outputError !== '' ? (
 									<div className='fullscreen-transformation__output-error'>{outputError}</div>
 								) : (
@@ -2663,6 +2698,8 @@ const MapMapping = ({
 	const [reloadLogicalErrors, setReloadLogicalErrors] = useState<boolean>(false);
 	const [isResetting, setIsResetting] = useState<boolean>(false);
 	const [syncPairCombobox, setSyncPairCombobox] = useState<boolean>(false);
+
+	const mapMappingID = useId();
 
 	const { api, handleError } = useContext(appContext);
 	const { pipelineType } = useContext(pipelineContext);
@@ -3075,36 +3112,38 @@ const MapMapping = ({
 								}}
 							/>{' '}
 							"<span className='pipeline__transformation-output-property-type'>{elementType.kind}</span>
-							<SlTooltip content='Add key' hoist={true}>
-								<SlButton
-									appearance='outlined'
-									className='pipeline__transformation-output-property-add'
-									size='s'
-									onClick={areChildrenMappingDisabled ? null : () => onAddPair(i)}
-									disabled={areChildrenMappingDisabled}
-								>
-									<WaIcon name='plus-circle' />
-								</SlButton>
+							<SlTooltip for={`${mapMappingID}-${i}-add`}>Add key</SlTooltip>
+							<SlButton
+								id={`${mapMappingID}-${i}-add`}
+								appearance='outlined'
+								className='pipeline__transformation-output-property-add'
+								size='s'
+								onClick={areChildrenMappingDisabled ? null : () => onAddPair(i)}
+								disabled={areChildrenMappingDisabled}
+							>
+								<WaIcon name='plus-circle' />
+							</SlButton>
+							<SlTooltip for={`${mapMappingID}-${i}-remove`}>
+								{pairs.length === 1 ? 'Clear key' : 'Remove key'}
 							</SlTooltip>
-							<SlTooltip content={pairs.length === 1 ? 'Clear key' : 'Remove key'} hoist={true}>
-								<SlButton
-									appearance='outlined'
-									className='pipeline__transformation-output-property-remove'
-									size='s'
-									onClick={
-										areChildrenMappingDisabled
-											? null
-											: pairs.length > 1
-												? () => onRemovePair(i)
-												: hasFilledPairs
-													? () => onClearPair()
-													: null
-									}
-									disabled={areChildrenMappingDisabled || (pairs.length === 1 && !hasFilledPairs)}
-								>
-									<WaIcon name='x-circle' />
-								</SlButton>
-							</SlTooltip>
+							<SlButton
+								id={`${mapMappingID}-${i}-remove`}
+								appearance='outlined'
+								className='pipeline__transformation-output-property-remove'
+								size='s'
+								onClick={
+									areChildrenMappingDisabled
+										? null
+										: pairs.length > 1
+											? () => onRemovePair(i)
+											: hasFilledPairs
+												? () => onClearPair()
+												: null
+								}
+								disabled={areChildrenMappingDisabled || (pairs.length === 1 && !hasFilledPairs)}
+							>
+								<WaIcon name='x-circle' />
+							</SlButton>
 							{hasDuplicatedKey && (
 								<div className='pipeline__transformation-output-property-error'>{logicalErrors[i]}</div>
 							)}
@@ -3341,6 +3380,8 @@ const TransformationProperty = ({
 	const { workspaces, selectedWorkspace } = useContext(AppContext);
 	const { isImport, pipelineType, pipeline, consentPropertyPaths } = useContext(PipelineContext);
 
+	const propertyID = useId();
+
 	let path = property.name;
 	if (parentName) {
 		path = parentName + '.' + property.name;
@@ -3483,12 +3524,16 @@ const TransformationProperty = ({
 							<div className='fullscreen-transformation__property-head'>
 								<div className='fullscreen-transformation__property-head-main'>
 									{isIdentifier && (
-										<SlTooltip content='Used as identifier in Identity Resolution' hoist={true}>
+										<>
+											<SlTooltip for={`${propertyID}-identifier`}>
+												Used as identifier in Identity Resolution
+											</SlTooltip>
 											<SlIcon
+												id={`${propertyID}-identifier`}
 												className='fullscreen-transformation__property-identifier-icon'
 												name='person-check'
 											/>
-										</SlTooltip>
+										</>
 									)}
 									<span className='fullscreen-transformation__property-name-copy'>
 										{!isOutMatchingProperty && (
@@ -3510,29 +3555,34 @@ const TransformationProperty = ({
 										</span>
 										{side === 'input' && property.readOptional && <span>- optional</span>}
 										{isRequired && (
-											<SlTooltip
-												content={`Holds the consent for ${consentPurposes?.map((p) => `"${p.name}"`).join(', ')}`}
-												disabled={consentPurposes == null}
-												hoist={true}
-											>
+											<>
+												<SlTooltip
+													for={`${propertyID}-required`}
+													disabled={consentPurposes == null}
+												>
+													{`Holds the consent for ${consentPurposes?.map((p) => `"${p.name}"`).join(', ')}`}
+												</SlTooltip>
 												<span
+													id={`${propertyID}-required`}
 													className={`fullscreen-transformation__property-required${isSelected ? ' fullscreen-transformation__property-required--selected' : ''}`}
 												>
 													required
 												</span>
-											</SlTooltip>
+											</>
 										)}
 									</span>
 									{transformationType === 'function' && isOutMatchingProperty && !isFlagged && (
-										<SlTooltip
-											content='You cannot select this property since it is already used as matching property'
-											hoist={true}
-										>
+										<>
+											<SlTooltip for={`${propertyID}-disabled-info`}>
+												You cannot select this property since it is already used as matching
+												property
+											</SlTooltip>
 											<SlIcon
+												id={`${propertyID}-disabled-info`}
 												className='fullscreen-transformation__property-disabled-info'
 												name='info-circle'
 											/>
-										</SlTooltip>
+										</>
 									)}
 									{transformationType === 'function' && isOutMatchingProperty && isFlagged && (
 										<div className='fullscreen-transformation__property-error'>
@@ -3549,15 +3599,17 @@ const TransformationProperty = ({
 						</div>
 						<div className='fullscreen-transformation__property-right-column'>
 							{languageTypeName && (
-								<SlTooltip content={languageTypeLabel} hoist={true}>
+								<>
+									<SlTooltip for={`${propertyID}-language-type`}>{languageTypeLabel}</SlTooltip>
 									<SlBadge
+										id={`${propertyID}-language-type`}
 										className='fullscreen-transformation__property-language-type'
 										variant='neutral'
 										pill
 									>
 										{languageTypeName}
 									</SlBadge>
-								</SlTooltip>
+								</>
 							)}
 						</div>
 					</div>

@@ -83,7 +83,7 @@ const getKeyboardHintsBottomGap = async (container) => {
 };
 
 const expectPassiveInformationTooltip = async (info) => {
-	const tooltip = info.locator('xpath=..');
+	const tooltip = info.locator('xpath=preceding-sibling::wa-tooltip[1]');
 	const descriptionID = await info.getAttribute('aria-describedby');
 
 	expect(descriptionID).not.toBeNull();
@@ -263,8 +263,11 @@ test(`Show, paginate, and refresh consent purposes on profile schema properties`
 	await editBooleanPopup.getByRole('button', { name: 'Next consent purpose' }).click();
 	await expect(editBooleanPopup.locator('.schema-property-consent__purpose-name')).toHaveText(['New newsletter']);
 	const openPurposeTooltip = editBooleanRow.locator('.schema-property-consent__open-purpose-tooltip');
-	await expect(openPurposeTooltip).toHaveJSProperty('content', 'Open consent purpose');
-	await expect(openPurposeTooltip.locator('wa-icon')).toHaveAttribute('name', 'box-arrow-in-up-right');
+	await expect(openPurposeTooltip).toHaveText('Open consent purpose');
+	await expect(editBooleanRow.locator('.schema-property-consent__open-purpose wa-icon')).toHaveAttribute(
+		'name',
+		'box-arrow-in-up-right',
+	);
 	await editBooleanRow.locator('.schema-property-consent__open-purpose').click();
 	await expect(page).toHaveURL(`${adminURL}/settings/consent-management`);
 	await expect(page.locator('.alert-dialog', { hasText: 'Discard unsaved changes?' })).toHaveCount(0);
@@ -986,7 +989,7 @@ test(`Keep contextual and form actions in their expected tab order`, async ({ pa
 	const description = propertyPanel.locator('wa-textarea textarea[name="description"]');
 	await description.focus();
 	await primarySourceInfo.hover();
-	const primarySourceTooltip = primarySourceInfo.locator('xpath=..');
+	const primarySourceTooltip = primarySourceInfo.locator('xpath=preceding-sibling::wa-tooltip[1]');
 	await expect(primarySourceTooltip).toHaveAttribute('open');
 	await expect(primarySourceTooltip.locator('.schema-property-grid__tooltip-content')).toHaveText(
 		'If this source has a value for this property, its most recent value is used. Otherwise, the most recent value from any other source is used.',
@@ -2860,7 +2863,7 @@ test(`Do not restore focus to the delete action after closing its dialog`, async
 	const removeButton = propertyPanel.locator('.property-panel__remove');
 	const deleteTooltip = propertyPanel
 		.locator('.schema-edit__toolbar-tooltip')
-		.filter({ has: page.locator('.property-panel__remove') });
+		.filter({ hasText: 'Delete this property from the schema' });
 	const grid = page.locator('.schema-edit .grid');
 	const removeDialog = page
 		.locator('.alert-dialog')
@@ -2868,10 +2871,10 @@ test(`Do not restore focus to the delete action after closing its dialog`, async
 	await expect(deleteTooltip).toHaveCount(1);
 	await removeButton.click();
 	await expect(removeDialog.locator('[part~="dialog"]')).toBeVisible();
-	await deleteTooltip.evaluate((tooltip) => {
-		tooltip.dataset.focusReturnCount = '0';
-		tooltip.addEventListener('focusin', () => {
-			tooltip.dataset.focusReturnCount = String(Number(tooltip.dataset.focusReturnCount) + 1);
+	await removeButton.evaluate((button) => {
+		button.dataset.focusReturnCount = '0';
+		button.addEventListener('focusin', () => {
+			button.dataset.focusReturnCount = String(Number(button.dataset.focusReturnCount) + 1);
 		});
 	});
 	await removeDialog.evaluate((dialog) => {
@@ -2890,13 +2893,13 @@ test(`Do not restore focus to the delete action after closing its dialog`, async
 	await removeDialog.locator('wa-button').filter({ hasText: 'Cancel' }).click();
 	await expect(removeDialog).toHaveAttribute('data-after-hide-settled', 'true');
 	await expect(grid).toBeFocused();
-	await expect(deleteTooltip).toHaveAttribute('data-focus-return-count', '0');
+	await expect(removeButton).toHaveAttribute('data-focus-return-count', '0');
 	await expect(deleteTooltip).not.toHaveAttribute('open');
 
 	await removeButton.click();
 	await expect(removeDialog.locator('[part~="dialog"]')).toBeVisible();
-	await deleteTooltip.evaluate((tooltip) => {
-		tooltip.dataset.focusReturnCount = '0';
+	await removeButton.evaluate((button) => {
+		button.dataset.focusReturnCount = '0';
 	});
 	await removeDialog.evaluate((dialog) => {
 		dialog.dataset.afterHideSettled = 'false';
@@ -2913,7 +2916,7 @@ test(`Do not restore focus to the delete action after closing its dialog`, async
 	await removeDialog.locator('.schema-edit__confirm-remove-property').click();
 	await expect(removeDialog).toHaveAttribute('data-after-hide-settled', 'true');
 	await expect(grid).toBeFocused();
-	await expect(deleteTooltip).toHaveAttribute('data-focus-return-count', '0');
+	await expect(removeButton).toHaveAttribute('data-focus-return-count', '0');
 	await expect(deleteTooltip).not.toHaveAttribute('open');
 });
 

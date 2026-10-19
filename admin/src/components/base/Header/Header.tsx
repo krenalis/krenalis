@@ -1,4 +1,4 @@
-import React, { forwardRef, ReactNode, useContext, useEffect, useRef } from 'react';
+import React, { forwardRef, ReactNode, useContext, useEffect, useId, useRef } from 'react';
 import './Header.css';
 import SlAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
@@ -6,7 +6,7 @@ import SlDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
 import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import { Link } from '..//Link/Link';
 import appContext from '../../../context/AppContext';
 import { useLocation } from 'react-router-dom';
@@ -53,6 +53,8 @@ const Header = ({ title, member }: HeaderProps) => {
 
 	const hasWorkOS = publicMetadata.workosClientID !== '';
 
+	const docsID = useId();
+
 	return (
 		<header>
 			<div className='header__logo'>
@@ -64,18 +66,20 @@ const Header = ({ title, member }: HeaderProps) => {
 			<div className='header__title'>
 				<span>{title}</span>
 			</div>
-			<SlTooltip content='Krenalis documentation and API reference' placement='bottom'>
-				<a
-					className='header__docs'
-					href='https://www.krenalis.com/docs'
-					target='_blank'
-					rel='noreferrer'
-					aria-label='Documentation (opens in a new tab)'
-				>
-					<SlIcon className='header__docs-icon' name='question-circle' aria-hidden='true' />
-					Documentation
-				</a>
+			<SlTooltip for={docsID} placement='bottom'>
+				Krenalis documentation and API reference
 			</SlTooltip>
+			<a
+				id={docsID}
+				className='header__docs'
+				href='https://www.krenalis.com/docs'
+				target='_blank'
+				rel='noreferrer'
+				aria-label='Documentation (opens in a new tab)'
+			>
+				<SlIcon className='header__docs-icon' name='question-circle' aria-hidden='true' />
+				Documentation
+			</a>
 			<div className='header__account'>
 				{hasWorkOS ? (
 					<WorkOSAccountDropdown

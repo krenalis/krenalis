@@ -277,13 +277,13 @@
 	color: var(--sl-color-neutral-500);
 }
 
-.profile-drawer__kpid sl-tooltip::part(body) {
+.profile-drawer__kpid wa-tooltip::part(body) {
 	background-color: var(--sl-color-primary-500);
 	padding: 12px;
 	font-size: 13px;
 }
 
-.profile-drawer__kpid sl-tooltip::part(base__arrow) {
+.profile-drawer__kpid wa-tooltip::part(base__arrow) {
 	background-color: var(--sl-color-primary-500);
 }
 

@@ -4,7 +4,7 @@ import SlButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import SlPopup from '@awesome.me/webawesome/dist/react/popup/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import SlTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import AppContext from '../../../context/AppContext';
 import { ConsentPurpose } from '../../../lib/api/types/workspace';
 import { formatProfileConsentLocation } from '../../../lib/core/consentPurpose';
@@ -23,6 +23,7 @@ const SchemaPropertyConsent = ({ purposes }: SchemaPropertyConsentProps) => {
 	const hoverTimeoutRef = useRef<number>();
 	const triggerRef = useRef<HTMLButtonElement>(null);
 	const popupID = useId();
+	const openPurposeID = useId();
 
 	const { redirect } = useContext(AppContext);
 
@@ -130,20 +131,21 @@ const SchemaPropertyConsent = ({ purposes }: SchemaPropertyConsentProps) => {
 				<div className='schema-property-consent__open-purpose-action'>
 					<SlTooltip
 						className='schema-property-consent__open-purpose-tooltip'
-						content='Open consent purpose'
-						hoist
+						for={openPurposeID}
 						trigger='hover'
 					>
-						<SlButton
-							className='schema-property-consent__open-purpose'
-							appearance='plain'
-							size='s'
-							pill
-							onClick={openPurpose}
-						>
-							<WaIcon name='box-arrow-in-up-right' label='Open consent purpose' />
-						</SlButton>
+						Open consent purpose
 					</SlTooltip>
+					<SlButton
+						id={openPurposeID}
+						className='schema-property-consent__open-purpose'
+						appearance='plain'
+						size='s'
+						pill
+						onClick={openPurpose}
+					>
+						<WaIcon name='box-arrow-in-up-right' label='Open consent purpose' />
+					</SlButton>
 				</div>
 				<div
 					className='schema-property-consent__popup-content'

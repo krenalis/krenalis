@@ -117,10 +117,6 @@
 	font-size: 18px;
 }
 
-.schema-edit__toolbar-tooltip::part(base__arrow) {
-	box-sizing: border-box;
-}
-
 .schema-edit__filter-dot {
 	background-color: var(--sl-color-success-600);
 	border: 2px solid var(--bg-primary);
