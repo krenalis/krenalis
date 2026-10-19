@@ -3,7 +3,7 @@
 }
 
 .connector-ui__fields > * .connector-ui__fields-error {
-	color: var(--sl-color-danger-500);
+	color: var(--wa-color-danger-50);
 	font-weight: 600;
 	margin-top: 5px;
 	font-size: 14px;

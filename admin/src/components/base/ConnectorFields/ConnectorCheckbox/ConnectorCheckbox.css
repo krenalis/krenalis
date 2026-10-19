@@ -3,6 +3,6 @@
 }
 
 .connector-checkbox wa-checkbox::part(label) {
-	font-size: var(--sl-input-label-font-size-medium);
+	font-size: var(--wa-font-size-m);
 	color: var(--text-light);
 }

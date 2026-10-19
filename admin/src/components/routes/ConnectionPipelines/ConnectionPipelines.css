@@ -19,7 +19,7 @@
 
 .connection-pipelines__pipeline-type:last-child {
 	margin-bottom: 0 !important;
-	border-bottom: 1px solid var(--sl-color-neutral-200) !important;
+	border-bottom: 1px solid var(--wa-color-neutral-80) !important;
 	border-bottom-left-radius: var(--radius) !important;
 	border-bottom-right-radius: var(--radius) !important;
 }
@@ -109,12 +109,12 @@
 
 .connection-pipelines__scheduler-dot {
 	font-size: 8px;
-	color: var(--sl-color-neutral-400);
+	color: var(--wa-color-neutral-60);
 	transition: color 0.3s;
 }
 
 .connection-pipelines__scheduler-dot--success {
-	color: var(--sl-color-success-600);
+	color: var(--wa-color-success-40);
 }
 
 .connection-pipelines__scheduler-options::part(menu) {
@@ -153,7 +153,7 @@
 }
 
 .connection-pipelines__link {
-	color: var(--sl-color-primary-500);
+	color: var(--wa-color-brand-50);
 	text-decoration: underline;
 	cursor: pointer;
 	font-weight: 600;
@@ -177,7 +177,7 @@
 
 .connection-pipelines__pipeline-type--users:has(+ .connection-pipelines__pipeline-type--events) {
 	margin-bottom: 10px;
-	border-bottom: 1px solid var(--sl-color-neutral-200) !important;
+	border-bottom: 1px solid var(--wa-color-neutral-80) !important;
 	border-bottom-left-radius: var(--radius) !important;
 	border-bottom-right-radius: var(--radius) !important;
 }
@@ -196,7 +196,7 @@
 	transition:
 		background-color 0.3s,
 		color 0.3s;
-	background-color: var(--sl-color-danger-600);
+	background-color: var(--wa-color-danger-40);
 	color: var(--text-onaccent);
 }
 
@@ -211,7 +211,7 @@
 	transition:
 		background-color 0.3s,
 		color 0.3s;
-	background-color: var(--sl-color-primary-500);
+	background-color: var(--wa-color-brand-50);
 	color: var(--text-onaccent);
 }
 
@@ -228,7 +228,7 @@
 
 .connection-pipelines__grid-alert-pipeline-name {
 	font-family: var(--monospace-fonts);
-	background-color: var(--sl-color-neutral-100);
+	background-color: var(--wa-color-neutral-90);
 	display: inline-block;
 	padding: 0px 5px;
 	border-radius: 3px;

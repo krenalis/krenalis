@@ -21,7 +21,7 @@
 }
 
 .signup wa-input::part(form-control-label):after {
-	color: var(--sl-color-danger-500);
+	color: var(--wa-color-danger-50);
 }
 
 .signup__name,
@@ -31,7 +31,7 @@
 }
 
 .signup__error {
-	color: var(--sl-color-danger-600);
+	color: var(--wa-color-danger-40);
 	display: flex;
 	align-items: center;
 	gap: 7px;
@@ -39,7 +39,7 @@
 }
 
 .signup__error wa-icon {
-	color: var(--sl-color-danger-600);
+	color: var(--wa-color-danger-40);
 	position: relative;
 	top: 2px;
 }

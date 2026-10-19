@@ -14,17 +14,17 @@
 }
 
 .feedback-button__tooltip {
-	--wa-tooltip-border-color: var(--sl-color-neutral-300);
+	--wa-tooltip-border-color: var(--wa-color-neutral-70);
 	--wa-tooltip-border-width: 1px;
 }
 
 .feedback-button__tooltip::part(base) {
-	background-color: var(--sl-color-neutral-300);
+	background-color: var(--wa-color-neutral-70);
 }
 
 .feedback-button__tooltip::part(body) {
 	background-color: var(--bg-gray);
-	border: 1px solid var(--sl-color-neutral-300);
+	border: 1px solid var(--wa-color-neutral-70);
 	pointer-events: all;
 	padding: 0;
 	color: var(--text-primary);
@@ -32,7 +32,7 @@
 
 .feedback-button__tooltip::part(base__popup) {
 	pointer-events: all;
-	box-shadow: var(--sl-shadow-x-large);
+	box-shadow: var(--wa-shadow-xl);
 }
 
 .feedback-button__tooltip::part(base__arrow) {
@@ -44,7 +44,7 @@
 	font-size: 12px;
 	padding: 30px;
 	position: relative;
-	box-shadow: var(--sl-shadow-x-large);
+	box-shadow: var(--wa-shadow-xl);
 	display: flex;
 	gap: 12px;
 	overflow: auto;
@@ -76,11 +76,11 @@
 }
 
 .feedback-button__tooltip-content .feedback-button__tooltip-icon-error {
-	color: var(--sl-color-danger-500);
+	color: var(--wa-color-danger-50);
 }
 
 .feedback-button__tooltip-content .feedback-button__tooltip-icon-info {
-	color: var(--sl-color-primary-500);
+	color: var(--wa-color-brand-50);
 }
 
 .feedback-button__tooltip-icon-close {

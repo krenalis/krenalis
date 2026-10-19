@@ -12,7 +12,6 @@ import { registerIconLibrary } from '@awesome.me/webawesome/dist/components/icon
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import '@awesome.me/webawesome/dist/styles/layers.css';
 import '@awesome.me/webawesome/dist/styles/themes/default.css';
-import '../../../shoelace-compat.css';
 import { useApp } from './useApp';
 import { UnauthorizedError, UnprocessableError } from '../../../lib/api/errors';
 import * as Sentry from '@sentry/react';

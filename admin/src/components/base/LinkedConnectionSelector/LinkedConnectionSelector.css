@@ -16,7 +16,7 @@
 }
 
 .linked-connection-selector__dropdown wa-dropdown-item:hover {
-	background-color: var(--sl-color-primary-500);
+	background-color: var(--wa-color-brand-50);
 	color: var(--text-onaccent);
 }
 
@@ -56,6 +56,6 @@
 .linked-connection-selector__no-connection-message {
 	margin-top: 8px;
 	font-size: 14px;
-	color: var(--sl-color-neutral-500);
+	color: var(--wa-color-neutral-50);
 	text-align: center;
 }

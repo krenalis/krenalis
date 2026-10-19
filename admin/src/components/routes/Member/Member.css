@@ -23,7 +23,7 @@
 }
 
 .member wa-input::part(form-control-label):after {
-	color: var(--sl-color-danger-500);
+	color: var(--wa-color-danger-50);
 }
 
 .member__avatar,
@@ -61,9 +61,9 @@
 .member__remove-avatar {
 	max-width: 150px;
 	background-color: var(--bg-gray);
-	color: var(--sl-color-neutral-700);
+	color: var(--wa-color-neutral-30);
 	border-radius: var(--radius);
-	border: 1px solid var(--sl-color-neutral-300);
+	border: 1px solid var(--wa-color-neutral-70);
 	padding: 8px 25px;
 	font-size: 14px;
 	cursor: pointer;
@@ -71,7 +71,7 @@
 
 .member__remove-avatar {
 	margin-top: 10px;
-	background-color: var(--sl-color-danger-500);
+	background-color: var(--wa-color-danger-50);
 	color: var(--text-onaccent);
 	border: 0;
 }
@@ -98,14 +98,14 @@
 }
 
 .member__error {
-	color: var(--sl-color-danger-600);
+	color: var(--wa-color-danger-40);
 	display: flex;
 	align-items: center;
 	gap: 7px;
 }
 
 .member__error wa-icon {
-	color: var(--sl-color-danger-600);
+	color: var(--wa-color-danger-40);
 }
 
 .member__buttons {

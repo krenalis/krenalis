@@ -18,7 +18,7 @@
 }
 
 .connector-keyvalue__cell {
-	border: 1px solid var(--sl-input-border-color);
+	border: 1px solid var(--wa-form-control-border-color);
 	border-top: 0;
 	border-right: 0;
 	display: flex;
@@ -27,7 +27,7 @@
 
 .connector-keyvalue__draggable-wrapper:nth-child(2) .connector-keyvalue__cell,
 .connector-keyvalue__grid > .connector-keyvalue__row:nth-child(2) .connector-keyvalue__cell {
-	border-top: 1px solid var(--sl-input-border-color);
+	border-top: 1px solid var(--wa-form-control-border-color);
 }
 
 .connector-keyvalue__cell > * {
@@ -35,7 +35,7 @@
 }
 
 .connector-keyvalue__cell:last-of-type {
-	border-right: 1px solid var(--sl-input-border-color);
+	border-right: 1px solid var(--wa-form-control-border-color);
 }
 
 .connector-keyvalue__draggable-wrapper {
@@ -54,7 +54,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 }
 
 .connector-keyvalue__cell ::part(form-control-label) {
@@ -76,7 +76,7 @@
 	font-size: 13px;
 	background-color: var(--bg-primary);
 	padding: 5px;
-	color: var(--sl-color-danger-600);
+	color: var(--wa-color-danger-40);
 	border-radius: 100%;
 }
 
@@ -84,7 +84,7 @@
 	margin: 10px auto 0 auto;
 	display: block;
 	font-size: 17px;
-	color: var(--sl-color-neutral-600);
+	color: var(--wa-color-neutral-40);
 }
 
 .connector-keyvalue wa-icon {
@@ -107,7 +107,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 }
 
 .connector-keyvalue .overlay-row .connector-keyvalue__remove-row {
@@ -115,5 +115,5 @@
 }
 
 .connector-keyvalue .overlay-row .connector-keyvalue__cell {
-	border-top: 1px solid var(--sl-input-border-color);
+	border-top: 1px solid var(--wa-form-control-border-color);
 }

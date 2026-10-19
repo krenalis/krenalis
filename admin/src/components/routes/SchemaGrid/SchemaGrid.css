@@ -20,7 +20,7 @@
 
 .schema-grid__alter-error {
 	align-items: center;
-	color: var(--sl-color-danger-600);
+	color: var(--wa-color-danger-40);
 	display: flex;
 	font-size: 13px;
 	font-weight: 500;

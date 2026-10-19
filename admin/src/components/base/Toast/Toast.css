@@ -17,15 +17,15 @@
 .toast {
 	position: relative;
 	left: calc(var(--sidebar-width) / 2);
-	margin: var(--sl-spacing-medium);
+	margin: var(--wa-space-m);
 	padding: 0;
 	border: 0;
-	border-radius: var(--sl-border-radius-medium);
-	font-size: var(--sl-font-size-small);
+	border-radius: var(--wa-border-radius-m);
+	font-size: var(--wa-font-size-s);
 	font-weight: 600;
 	line-height: 1.6;
 	color: var(--text-onaccent);
-	box-shadow: var(--sl-shadow-large);
+	box-shadow: var(--wa-shadow-l);
 	overflow: hidden;
 }
 
@@ -34,30 +34,30 @@
 }
 
 .toast[variant='neutral'] {
-	background-color: var(--sl-color-neutral-600);
+	background-color: var(--wa-color-neutral-40);
 }
 
 .toast[variant='brand'] {
-	background-color: var(--sl-color-primary-600);
+	background-color: var(--wa-color-brand-40);
 }
 
 .toast[variant='success'] {
-	background-color: var(--sl-color-success-600);
+	background-color: var(--wa-color-success-40);
 }
 
 .toast[variant='danger'] {
-	background-color: var(--sl-color-danger-600);
+	background-color: var(--wa-color-danger-40);
 }
 
 .toast[variant='warning'] {
-	background-color: var(--sl-color-warning-600);
+	background-color: var(--wa-color-warning-40);
 }
 
 .toast::part(icon) {
 	align-items: start;
-	padding-inline-start: var(--sl-spacing-large);
+	padding-inline-start: 1.25rem;
 	padding-top: 1.25rem;
-	font-size: var(--sl-font-size-large);
+	font-size: var(--wa-font-size-l);
 }
 
 .toast wa-icon[slot='icon'] {
@@ -70,7 +70,7 @@
 
 .toast__text {
 	flex: 1 1 auto;
-	padding: var(--sl-spacing-large);
+	padding: 1.25rem;
 	overflow: hidden;
 }
 
@@ -80,12 +80,12 @@
 	align-items: center;
 	align-self: start;
 	margin-top: 1rem;
-	margin-inline-end: var(--sl-spacing-medium);
-	padding: var(--sl-spacing-x-small);
-	font-size: var(--sl-font-size-medium);
+	margin-inline-end: var(--wa-space-m);
+	padding: var(--wa-space-xs);
+	font-size: var(--wa-font-size-m);
 	color: inherit;
 	background: none;
 	border: none;
-	border-radius: var(--sl-border-radius-medium);
+	border-radius: var(--wa-border-radius-m);
 	cursor: pointer;
 }

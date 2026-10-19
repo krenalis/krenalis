@@ -1,6 +1,5 @@
 .property-form {
-	--sl-font-size-medium: var(--sl-font-size-small);
-	--sl-input-font-size-medium: var(--sl-font-size-small);
+	--input-font-size: var(--wa-font-size-s);
 }
 
 .property-form__control {
@@ -12,7 +11,7 @@
 }
 
 .property-form__change-name {
-	--sl-input-height-small: 20px;
+	--input-height-small: 20px;
 
 	margin-right: 5px;
 	transform: translate(3px, -1px);
@@ -49,7 +48,7 @@
 }
 
 .property-form__modified-dot {
-	background-color: var(--sl-color-primary-600);
+	background-color: var(--wa-color-brand-40);
 	border-radius: 50%;
 	flex: 0 0 auto;
 	height: 6px;
@@ -59,7 +58,7 @@
 }
 
 .property-form__optional-label {
-	color: var(--sl-color-neutral-400);
+	color: var(--wa-color-neutral-60);
 	margin-inline-start: 4px;
 }
 
@@ -71,16 +70,16 @@
 .property-form__read-only-value {
 	align-items: center;
 	background-color: transparent;
-	border: solid var(--sl-input-border-width) var(--sl-input-border-color);
-	border-radius: var(--sl-input-border-radius-medium);
+	border: solid var(--wa-border-width-s) var(--wa-form-control-border-color);
+	border-radius: var(--wa-border-radius-m);
 	box-sizing: border-box;
-	color: var(--sl-input-color);
+	color: var(--text-light);
 	display: flex;
-	font-family: var(--sl-input-font-family);
-	font-size: var(--sl-input-font-size-medium);
+	font-family: var(--input-font-family);
+	font-size: var(--input-font-size);
 	font-weight: 400;
-	height: var(--sl-input-height-medium);
-	padding-inline: var(--sl-input-spacing-medium);
+	height: var(--input-height-medium);
+	padding-inline: var(--wa-space-m);
 	width: 100%;
 }
 
@@ -112,9 +111,9 @@
 }
 
 .property-form__integer-sign::part(form-control-input) {
-	background-color: var(--sl-color-neutral-0);
+	background-color: var(--wa-color-surface-default);
 	border: 1px solid #aecbfa;
-	border-radius: var(--sl-input-border-radius-small);
+	border-radius: var(--wa-border-radius-m);
 	box-sizing: border-box;
 	flex-wrap: nowrap;
 	width: 100%;
@@ -128,32 +127,32 @@
 	justify-content: center;
 	margin-inline-start: 0 !important;
 	border: 0 !important;
-	min-height: calc(var(--sl-input-height-small) - 2px) !important;
+	min-height: calc(var(--input-height-small) - 2px) !important;
 	padding: 0;
 	cursor: pointer;
 	user-select: none;
 	-webkit-user-select: none;
 	transition:
-		var(--sl-transition-x-fast) background-color,
-		var(--sl-transition-x-fast) color,
-		var(--sl-transition-x-fast) border,
-		var(--sl-transition-x-fast) box-shadow;
+		50ms background-color,
+		50ms color,
+		50ms border,
+		50ms box-shadow;
 }
 
 /* The focus ring is on the host, where the global outline-color in App.css
    would otherwise recolour it. */
 .property-form__integer-sign wa-radio:focus-visible {
-	outline: var(--sl-focus-ring);
-	outline-offset: var(--sl-focus-ring-offset);
+	outline: var(--wa-focus-ring-style) var(--wa-focus-ring-width) var(--wa-color-brand-40);
+	outline-offset: var(--wa-focus-ring-offset);
 }
 
 .property-form__integer-sign wa-radio::part(label) {
 	margin-inline-start: 0;
-	padding: 0 var(--sl-spacing-small);
-	font-family: var(--sl-input-font-family);
-	font-size: var(--sl-button-font-size-small);
+	padding: 0 var(--wa-space-s);
+	font-family: var(--input-font-family);
+	font-size: var(--wa-font-size-xs);
 	font-weight: 400;
-	line-height: calc(var(--sl-input-height-small) - 2px);
+	line-height: calc(var(--input-height-small) - 2px);
 	white-space: nowrap;
 	transform: translateY(-1px);
 }
@@ -164,22 +163,22 @@
 
 .property-form__integer-sign wa-radio:state(checked) {
 	background-color: #e8f0fe !important;
-	color: color-mix(in srgb, var(--sl-color-neutral-900) 88%, var(--integer-sign-text-tint)) !important;
+	color: color-mix(in srgb, var(--wa-color-neutral-10) 88%, var(--integer-sign-text-tint)) !important;
 }
 
 .property-form__integer-sign wa-radio:state(checked):hover {
 	background-color: #dbe8fd !important;
-	color: color-mix(in srgb, var(--sl-color-neutral-900) 88%, var(--integer-sign-text-tint)) !important;
+	color: color-mix(in srgb, var(--wa-color-neutral-10) 88%, var(--integer-sign-text-tint)) !important;
 }
 
 .property-form__integer-sign wa-radio:not(:state(checked)) {
 	background-color: transparent !important;
-	color: color-mix(in srgb, var(--sl-color-neutral-600) 88%, var(--integer-sign-text-tint)) !important;
+	color: color-mix(in srgb, var(--wa-color-neutral-40) 88%, var(--integer-sign-text-tint)) !important;
 }
 
 .property-form__integer-sign wa-radio:not(:state(checked)):hover {
 	background-color: #f5f9ff !important;
-	color: color-mix(in srgb, var(--sl-color-neutral-800) 88%, var(--integer-sign-text-tint)) !important;
+	color: color-mix(in srgb, var(--wa-color-neutral-20) 88%, var(--integer-sign-text-tint)) !important;
 }
 
 .property-form__bit-size::part(form-control-label),
@@ -215,7 +214,7 @@
 }
 
 .property-form__float-special-values-label {
-	font-weight: var(--sl-font-weight-light);
+	font-weight: var(--wa-font-weight-light);
 }
 
 .property-form__constraints--decimal > .property-form__control-error {
@@ -233,10 +232,10 @@
 
 .property-form__numeric-range-separator {
 	align-items: center;
-	color: var(--sl-color-neutral-400);
+	color: var(--wa-color-neutral-60);
 	display: flex;
 	font-size: 12px;
-	height: var(--sl-input-height-small);
+	height: var(--input-height-small);
 	user-select: none;
 }
 
@@ -267,7 +266,7 @@
 
 .property-form__control-error {
 	align-items: flex-start;
-	color: var(--sl-color-danger-600);
+	color: var(--wa-color-danger-40);
 	display: flex;
 	font-size: 12px;
 	gap: 7px;
@@ -276,7 +275,7 @@
 }
 
 .property-form__control-error wa-icon {
-	color: var(--sl-color-danger-600);
+	color: var(--wa-color-danger-40);
 	margin-top: 2px;
 }
 

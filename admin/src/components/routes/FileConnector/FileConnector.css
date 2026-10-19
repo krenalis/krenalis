@@ -46,7 +46,7 @@
 
 .file-connector__pipeline-type:last-child {
 	margin-bottom: 0;
-	border-bottom: 1px solid var(--sl-color-neutral-200);
+	border-bottom: 1px solid var(--wa-color-neutral-80);
 	border-bottom-left-radius: var(--radius);
 	border-bottom-right-radius: var(--radius);
 }

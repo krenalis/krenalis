@@ -11,7 +11,7 @@
    Shoelace drew it whole, behind it. */
 .schema-property-consent::part(arrow) {
 	background-color: var(--bg-gray);
-	border: 1px solid var(--sl-color-neutral-300);
+	border: 1px solid var(--wa-color-neutral-70);
 	box-sizing: border-box;
 	clip-path: none;
 	z-index: -1;
@@ -21,7 +21,7 @@
 	appearance: none;
 	background: none;
 	border: 0;
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 	cursor: inherit;
 	display: inline-block;
 	font: inherit;
@@ -34,7 +34,7 @@
 
 .schema-property-consent__trigger:focus-visible {
 	border-radius: 2px;
-	outline: 2px solid var(--sl-color-primary-500);
+	outline: 2px solid var(--wa-color-brand-50);
 	outline-offset: 2px;
 }
 
@@ -50,9 +50,9 @@
 
 .schema-property-consent__popup {
 	background-color: var(--bg-gray);
-	border: 1px solid var(--sl-color-neutral-300);
+	border: 1px solid var(--wa-color-neutral-70);
 	border-radius: var(--radius);
-	box-shadow: var(--sl-shadow-medium);
+	box-shadow: var(--wa-shadow-m);
 	box-sizing: border-box;
 	color: #2d2a36;
 	cursor: default;
@@ -68,7 +68,7 @@
 }
 
 .schema-property-consent__popup-icon {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 	font-size: 26px;
 }
 
@@ -94,7 +94,7 @@
 }
 
 .schema-property-consent__open-purpose::part(button) {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 	font-size: 18px;
 	min-height: 28px;
 	padding: 0;
@@ -109,7 +109,7 @@
 }
 
 .schema-property-consent__purpose + .schema-property-consent__purpose {
-	border-top: 1px solid var(--sl-color-neutral-200);
+	border-top: 1px solid var(--wa-color-neutral-80);
 	margin-top: 14px;
 	padding-top: 14px;
 }
@@ -180,7 +180,7 @@
 }
 
 .schema-property-consent__pagination-button::part(button) {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 	font-size: 18px;
 	min-height: 28px;
 	padding: 0;
@@ -192,7 +192,7 @@
 
 .schema-property-consent__pagination-button[disabled]::part(button),
 .schema-property-consent__pagination-button[disabled] wa-icon {
-	color: var(--sl-color-neutral-400);
+	color: var(--wa-color-neutral-60);
 }
 
 .schema-property-consent__pagination-button wa-icon {

@@ -31,10 +31,10 @@ const AlertDialog = ({
 	switch (variant) {
 		case 'danger':
 			icon = <SlIcon name='exclamation-circle-fill'></SlIcon>;
-			color = 'var(--sl-color-danger-600)';
+			color = 'var(--wa-color-danger-40)';
 			break;
 		default:
-			color = 'var(--sl-color-neutral-600)';
+			color = 'var(--wa-color-neutral-40)';
 			break;
 	}
 

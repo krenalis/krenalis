@@ -13,7 +13,7 @@
 	flex-flow: column;
 	align-items: center;
 	background-color: #f5f5fb;
-	color: var(--sl-color-primary-900);
+	color: var(--wa-color-brand-10);
 	border-right: 1px solid var(--border-primary);
 }
 
@@ -84,17 +84,17 @@
 	background-color: #fff;
 	padding: 15px;
 	border: 1px solid rgba(52, 53, 146, 0.16);
-	box-shadow: var(--sl-shadow-x-large);
+	box-shadow: var(--wa-shadow-xl);
 	transition:
 		visibility 0.3s,
 		opacity 0.3s;
 	font-size: 14px;
 	cursor: default;
-	color: var(--sl-color-primary-900);
+	color: var(--wa-color-brand-10);
 }
 
 .workspace-selector__dialog-view-all {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 	margin-top: 12px;
 	padding-top: 10px;
 	border-top: 1px solid rgba(52, 53, 146, 0.16);
@@ -105,11 +105,11 @@
 }
 
 .workspace-selector__dialog-view-all wa-icon {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 }
 
 .workspace-selector__dialog-create {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 	padding-top: 9px;
 	display: flex;
 	align-items: center;
@@ -121,7 +121,7 @@
 }
 
 .workspace-selector__dialog-create wa-icon {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 	display: flex;
 	position: relative;
 	top: 1px;
@@ -147,7 +147,7 @@
 	transition:
 		visibility 0.3s,
 		opacity 0.3s;
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 }
 
 .workspace-selector__dialog-option--selected wa-icon {
@@ -189,7 +189,7 @@
 .sidebar__item--selected {
 	background-color: #696bd31a;
 	border-left-color: #696bd373;
-	color: var(--sl-color-primary-700);
+	color: var(--wa-color-brand-30);
 }
 
 .sidebar__item:not(.sidebar__item--selected):hover {
@@ -234,7 +234,7 @@
 
 .sidebar__sub-item--selected {
 	background: #e4e4f2;
-	color: var(--sl-color-primary-800);
+	color: var(--wa-color-brand-20);
 }
 
 .sidebar__sub-item--selected .sidebar__sub-item-text {

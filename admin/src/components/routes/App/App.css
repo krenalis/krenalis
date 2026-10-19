@@ -1,14 +1,14 @@
 :root {
-	--bg-primary: var(--sl-color-neutral-0);
+	--bg-primary: var(--wa-color-surface-default);
 	--bg-gray: #fcfbfe;
-	--bg-dark: var(--sl-color-neutral-950);
+	--bg-dark: var(--wa-color-neutral-05);
 	--bg-crystal: hsl(0deg 0% 98% / 50%);
 	--bg-transparent: #ffffff10;
 	--bg-editor: #1e1e1e;
 	--bg-overlay: #17171747;
-	--text-primary: var(--sl-color-neutral-900);
-	--text-onaccent: var(--sl-color-neutral-0);
-	--text-gray: var(--sl-color-neutral-400);
+	--text-primary: var(--wa-color-neutral-10);
+	--text-onaccent: var(--wa-color-surface-default);
+	--text-gray: var(--wa-color-neutral-60);
 	--text-light: #616161;
 	--border-primary: #e6e6e6;
 	--radius: 5px;
@@ -18,20 +18,115 @@
 		'Segoe UI Emoji';
 	--monospace-fonts: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
 
-	/* assign shoelace primary colors */
-	--color-primary-50: var(--sl-color-primary-50);
-	--color-primary-100: var(--sl-color-primary-100);
-	--color-primary-200: var(--sl-color-primary-200);
-	--color-primary-300: var(--sl-color-primary-300);
-	--color-primary-400: var(--sl-color-primary-400);
-	--color-primary-500: var(--sl-color-primary-500);
-	--color-primary-600: var(--sl-color-primary-600);
-	--color-primary-700: var(--sl-color-primary-700);
-	--color-primary-800: var(--sl-color-primary-800);
-	--color-primary-900: var(--sl-color-primary-900);
-	--color-primary-950: var(--sl-color-primary-950);
+	/* primary colors */
+	--color-primary-50: var(--wa-color-brand-95);
+	--color-primary-100: var(--wa-color-brand-90);
+	--color-primary-200: var(--wa-color-brand-80);
+	--color-primary-300: var(--wa-color-brand-70);
+	--color-primary-400: var(--wa-color-brand-60);
+	--color-primary-500: var(--wa-color-brand-50);
+	--color-primary-600: var(--wa-color-brand-40);
+	--color-primary-700: var(--wa-color-brand-30);
+	--color-primary-800: var(--wa-color-brand-20);
+	--color-primary-900: var(--wa-color-brand-10);
+	--color-primary-950: var(--wa-color-brand-05);
 
-	--sl-input-color: var(--text-light) !important;
+	/* Form controls, drawn as Shoelace drew them. */
+	--input-height-small: 1.875rem;
+	--input-height-medium: 2.5rem;
+	--input-height-large: 3.125rem;
+	--input-font-family:
+		-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji',
+		'Segoe UI Emoji', 'Segoe UI Symbol';
+	--input-font-size: var(--wa-font-size-m);
+	/* Shoelace's own blue, not derived from the brand. */
+	--input-focus-ring-color: hsl(198.6 88.7% 48.4% / 40%);
+	--toggle-size-small: 0.875rem;
+	--toggle-size-medium: 1.125rem;
+
+	/* Web Awesome theme. The brand is the Admin indigo. */
+	--wa-color-brand-95: #e3e4f7;
+	--wa-color-brand-90: #d0d0f1;
+	--wa-color-brand-80: #b8b9ea;
+	--wa-color-brand-70: #999ae1;
+	--wa-color-brand-60: #8183da;
+	--wa-color-brand-50: #696bd3;
+	--wa-color-brand-40: #6062d0;
+	--wa-color-brand-30: #4244c7;
+	--wa-color-brand-20: #3437b1;
+	--wa-color-brand-10: #2a2c8e;
+	--wa-color-brand-05: #21226e;
+	--wa-color-brand: var(--wa-color-brand-50);
+
+	/* Gray — Shoelace's light-theme ramp. Web Awesome aliases its neutral variant onto gray. */
+	--wa-color-gray-95: hsl(0 0% 97.5%);
+	--wa-color-gray-90: hsl(240 4.8% 95.9%);
+	--wa-color-gray-80: hsl(240 5.9% 90%);
+	--wa-color-gray-70: hsl(240 4.9% 83.9%);
+	--wa-color-gray-60: hsl(240 5% 64.9%);
+	--wa-color-gray-50: hsl(240 3.8% 46.1%);
+	--wa-color-gray-40: hsl(240 5.2% 33.9%);
+	--wa-color-gray-30: hsl(240 5.3% 26.1%);
+	--wa-color-gray-20: hsl(240 3.7% 15.9%);
+	--wa-color-gray-10: hsl(240 5.9% 10%);
+	--wa-color-gray-05: hsl(240 7.3% 8%);
+	--wa-color-gray: var(--wa-color-gray-50);
+
+	/* Danger — Shoelace's light-theme ramp. */
+	--wa-color-danger-95: hsl(0 85.7% 97.3%);
+	--wa-color-danger-90: hsl(0 93.3% 94.1%);
+	--wa-color-danger-80: hsl(0 96.3% 89.4%);
+	--wa-color-danger-70: hsl(0 93.5% 81.8%);
+	--wa-color-danger-60: hsl(0 90.6% 70.8%);
+	--wa-color-danger-50: hsl(0 84.2% 60.2%);
+	--wa-color-danger-40: hsl(0 72.2% 50.6%);
+	--wa-color-danger-30: hsl(0 73.7% 41.8%);
+	--wa-color-danger-20: hsl(0 70% 35.3%);
+	--wa-color-danger-10: hsl(0 62.8% 30.6%);
+	--wa-color-danger-05: hsl(0 60% 19.6%);
+	--wa-color-danger: var(--wa-color-danger-50);
+
+	/* Success — Shoelace's light-theme ramp. */
+	--wa-color-success-95: hsl(138.5 76.5% 96.7%);
+	--wa-color-success-90: hsl(140.6 84.2% 92.5%);
+	--wa-color-success-80: hsl(141 78.9% 85.1%);
+	--wa-color-success-70: hsl(141.7 76.6% 73.1%);
+	--wa-color-success-60: hsl(141.9 69.2% 58%);
+	--wa-color-success-50: hsl(142.1 70.6% 45.3%);
+	--wa-color-success-40: hsl(142.1 76.2% 36.3%);
+	--wa-color-success-30: hsl(142.4 71.8% 29.2%);
+	--wa-color-success-20: hsl(142.8 64.2% 24.1%);
+	--wa-color-success-10: hsl(143.8 61.2% 20.2%);
+	--wa-color-success-05: hsl(144.3 60.7% 12%);
+	--wa-color-success: var(--wa-color-success-50);
+
+	/* Warning — Shoelace's light-theme ramp. */
+	--wa-color-warning-95: hsl(48 100% 96.1%);
+	--wa-color-warning-90: hsl(48 96.5% 88.8%);
+	--wa-color-warning-80: hsl(48 96.6% 76.7%);
+	--wa-color-warning-70: hsl(45.9 96.7% 64.5%);
+	--wa-color-warning-60: hsl(43.3 96.4% 56.3%);
+	--wa-color-warning-50: hsl(37.7 92.1% 50.2%);
+	--wa-color-warning-40: hsl(32.1 94.6% 43.7%);
+	--wa-color-warning-30: hsl(26 90.5% 37.1%);
+	--wa-color-warning-20: hsl(22.7 82.5% 31.4%);
+	--wa-color-warning-10: hsl(21.7 77.8% 26.5%);
+	--wa-color-warning-05: hsl(22.9 74.1% 16.7%);
+	--wa-color-warning: var(--wa-color-warning-50);
+
+	/* Metrics where the Admin departs from Web Awesome's defaults. */
+	--wa-border-radius-m: 0.25rem;
+	--wa-shadow-s: 0 1px 2px hsl(240 3.8% 46.1% / 12%);
+	--wa-shadow-m: 0 2px 4px hsl(240 3.8% 46.1% / 12%);
+	--wa-shadow-l: 0 2px 8px hsl(240 3.8% 46.1% / 12%);
+	--wa-shadow-xl: 0 4px 16px hsl(240 3.8% 46.1% / 12%);
+	--wa-form-control-background-color: var(--wa-color-surface-default);
+	--wa-form-control-border-color: var(--wa-color-neutral-70);
+	--wa-form-control-placeholder-color: var(--wa-color-neutral-50);
+	--wa-tooltip-background-color: var(--wa-color-neutral-20);
+	--wa-tooltip-border-width: 0px;
+	--wa-tooltip-border-radius: var(--wa-border-radius-m);
+	--wa-tooltip-line-height: 1.4;
 
 	background-color: var(--bg-primary);
 }
@@ -140,7 +235,7 @@ wa-button[appearance='plain']:not(.icon-button)::part(label) {
 }
 
 wa-button[appearance='plain']:not(.icon-button) wa-icon {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 }
 
 wa-button[disabled],
@@ -157,12 +252,12 @@ wa-button > a {
 }
 
 wa-switch:state(checked)::part(control) {
-	background-color: var(--sl-color-success-600) !important;
-	border-color: var(--sl-color-success-600) !important;
+	background-color: var(--wa-color-success-40) !important;
+	border-color: var(--wa-color-success-40) !important;
 }
 
 wa-switch:state(checked)::part(thumb) {
-	border-color: var(--sl-color-success-600) !important;
+	border-color: var(--wa-color-success-40) !important;
 }
 
 wa-drawer[placement='bottom']::part(dialog) {
@@ -174,7 +269,7 @@ wa-drawer[placement='bottom']::part(dialog) {
 input::placeholder,
 wa-input::part(input)::placeholder,
 wa-textarea::part(textarea)::placeholder {
-	color: var(--sl-color-neutral-400);
+	color: var(--wa-color-neutral-60);
 	font-weight: 100;
 }
 
@@ -267,14 +362,14 @@ wa-divider {
 	--wa-form-control-required-content-color: inherit;
 	font-family: var(--system-fonts) !important;
 	font-size: inherit;
-	font-weight: var(--sl-input-font-weight);
+	font-weight: var(--wa-font-weight-normal);
 	line-height: inherit;
 	letter-spacing: normal;
 }
 
 :where(wa-input, wa-textarea, wa-select)::part(form-control-label) {
 	align-self: flex-start;
-	color: var(--sl-input-color);
+	color: var(--text-light);
 	font-family: var(--system-fonts);
 	font-weight: inherit;
 	line-height: 1.5;
@@ -290,7 +385,7 @@ wa-divider {
 }
 
 :where(wa-input, wa-textarea, wa-select)::part(hint) {
-	color: var(--sl-color-neutral-500);
+	color: var(--wa-color-neutral-50);
 	font-family: var(--system-fonts);
 	font-weight: inherit;
 	line-height: 1.5;
@@ -298,7 +393,7 @@ wa-divider {
 }
 
 :where(wa-input[size='s'], wa-textarea[size='s'], wa-select[size='s'])::part(form-control-label) {
-	font-size: var(--sl-font-size-small);
+	font-size: var(--wa-font-size-s);
 }
 
 :where(wa-input[size='s'], wa-textarea[size='s'], wa-select[size='s'])::part(hint) {
@@ -306,11 +401,11 @@ wa-divider {
 }
 
 :where(wa-input[size='m'], wa-textarea[size='m'], wa-select[size='m'])::part(form-control-label) {
-	font-size: var(--sl-font-size-medium);
+	font-size: var(--input-font-size);
 }
 
 :where(wa-input[size='m'], wa-textarea[size='m'], wa-select[size='m'])::part(hint) {
-	font-size: var(--sl-font-size-small);
+	font-size: var(--wa-font-size-s);
 }
 
 :where(wa-input[size='l'], wa-textarea[size='l'], wa-select[size='l'])::part(form-control-label) {
@@ -318,69 +413,69 @@ wa-divider {
 }
 
 :where(wa-input[size='l'], wa-textarea[size='l'], wa-select[size='l'])::part(hint) {
-	font-size: var(--sl-font-size-medium);
+	font-size: var(--input-font-size);
 }
 
 :where(wa-input)::part(input-wrapper),
 :where(wa-textarea)::part(textarea-wrapper) {
-	background-color: var(--sl-input-background-color);
-	border: solid var(--sl-input-border-width) var(--sl-input-border-color);
-	border-radius: var(--sl-input-border-radius-medium);
-	color: var(--sl-input-color);
+	background-color: var(--wa-form-control-background-color);
+	border: solid var(--wa-border-width-s) var(--wa-form-control-border-color);
+	border-radius: var(--wa-border-radius-m);
+	color: var(--text-light);
 	font-family: var(--system-fonts);
-	font-weight: var(--sl-input-font-weight);
+	font-weight: var(--wa-font-weight-normal);
 	line-height: 1.5;
 	letter-spacing: normal;
 	outline: none;
 	transition:
-		var(--sl-transition-fast) color,
-		var(--sl-transition-fast) border,
-		var(--sl-transition-fast) box-shadow,
-		var(--sl-transition-fast) background-color;
+		var(--wa-transition-normal) color,
+		var(--wa-transition-normal) border,
+		var(--wa-transition-normal) box-shadow,
+		var(--wa-transition-normal) background-color;
 }
 
 :where(wa-input:not([disabled]):hover)::part(input-wrapper),
 :where(wa-textarea:not([disabled]):hover)::part(textarea-wrapper) {
-	background-color: var(--sl-input-background-color-hover);
-	border-color: var(--sl-input-border-color-hover);
-	color: var(--sl-color-neutral-700);
+	background-color: var(--wa-form-control-background-color);
+	border-color: var(--wa-color-neutral-60);
+	color: var(--wa-color-neutral-30);
 }
 
 :where(wa-input:not([disabled]):focus-within)::part(input-wrapper),
 :where(wa-textarea:not([disabled]):focus-within)::part(textarea-wrapper) {
-	background-color: var(--sl-input-background-color);
-	border-color: var(--sl-input-border-color-focus);
-	box-shadow: 0 0 0 var(--sl-focus-ring-width) var(--sl-input-focus-ring-color);
-	color: var(--sl-color-neutral-700);
+	background-color: var(--wa-form-control-background-color);
+	border-color: var(--wa-color-brand-50);
+	box-shadow: 0 0 0 var(--wa-focus-ring-width) var(--input-focus-ring-color);
+	color: var(--wa-color-neutral-30);
 }
 
 :where(wa-input[disabled])::part(input-wrapper),
 :where(wa-textarea[disabled])::part(textarea-wrapper) {
-	background-color: var(--sl-color-neutral-100);
-	border-color: var(--sl-input-border-color);
+	background-color: var(--wa-color-neutral-90);
+	border-color: var(--wa-form-control-border-color);
 	opacity: 0.5;
 	cursor: not-allowed;
 }
 
 wa-input[disabled]::part(input),
 wa-textarea[disabled]::part(textarea) {
-	color: var(--sl-color-neutral-900);
+	color: var(--wa-color-neutral-10);
 }
 
 wa-input[disabled]::part(input)::placeholder,
 wa-textarea[disabled]::part(textarea)::placeholder {
-	color: var(--sl-color-neutral-600);
+	color: var(--wa-color-neutral-40);
 }
 
 :where(wa-input[appearance='filled'])::part(input-wrapper),
 :where(wa-textarea[appearance='filled'])::part(textarea-wrapper) {
-	background-color: var(--sl-color-neutral-100);
+	background-color: var(--wa-color-neutral-90);
 	border: none;
 }
 
 :where(wa-input[appearance='filled']:not([disabled]):focus-within)::part(input-wrapper),
 :where(wa-textarea[appearance='filled']:not([disabled]):focus-within)::part(textarea-wrapper) {
-	outline: solid var(--sl-focus-ring-width) var(--sl-color-primary-600);
+	outline: solid var(--wa-focus-ring-width) var(--wa-color-brand-40);
 	outline-offset: 1px;
 	box-shadow: none;
 }
@@ -400,7 +495,7 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 :where(wa-input)::part(end),
 :where(wa-input)::part(clear-button),
 :where(wa-input)::part(password-toggle-button) {
-	color: var(--sl-color-neutral-500);
+	color: var(--wa-color-neutral-50);
 }
 
 :where(wa-input)::part(clear-button),
@@ -413,7 +508,7 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 
 :where(wa-input)::part(clear-button):hover,
 :where(wa-input)::part(password-toggle-button):hover {
-	color: var(--sl-color-neutral-600);
+	color: var(--wa-color-neutral-40);
 }
 
 :where(wa-input)::part(clear-button):focus-visible,
@@ -422,13 +517,13 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 }
 
 :where(wa-input[size='s'])::part(input-wrapper) {
-	height: var(--sl-input-height-small);
-	border-radius: var(--sl-input-border-radius-small);
-	font-size: var(--sl-font-size-small);
+	height: var(--input-height-small);
+	border-radius: var(--wa-border-radius-m);
+	font-size: var(--wa-font-size-s);
 }
 
 :where(wa-input[size='s'])::part(input) {
-	height: calc(var(--sl-input-height-small) - var(--sl-input-border-width) * 2);
+	height: calc(var(--input-height-small) - var(--wa-border-width-s) * 2);
 	padding: 0 0.75rem;
 }
 
@@ -446,36 +541,36 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 }
 
 :where(wa-input:not([size]), wa-input[size='m'])::part(input-wrapper) {
-	height: var(--sl-input-height-medium);
-	font-size: var(--sl-font-size-medium);
+	height: var(--input-height-medium);
+	font-size: var(--input-font-size);
 }
 
 :where(wa-input:not([size]), wa-input[size='m'])::part(input) {
-	height: calc(var(--sl-input-height-medium) - var(--sl-input-border-width) * 2);
-	padding: 0 var(--sl-input-spacing-medium);
+	height: calc(var(--input-height-medium) - var(--wa-border-width-s) * 2);
+	padding: 0 var(--wa-space-m);
 }
 
 :where(wa-input:not([size]), wa-input[size='m']) > [slot='start'] {
-	margin-inline-start: var(--sl-input-spacing-medium);
+	margin-inline-start: var(--wa-space-m);
 }
 
 :where(wa-input:not([size]), wa-input[size='m']) > [slot='end'] {
-	margin-inline-end: var(--sl-input-spacing-medium);
+	margin-inline-end: var(--wa-space-m);
 }
 
 :where(wa-input:not([size]), wa-input[size='m'])::part(clear-button),
 :where(wa-input:not([size]), wa-input[size='m'])::part(password-toggle-button) {
-	width: calc(1em + var(--sl-input-spacing-medium) * 2);
+	width: calc(1em + var(--wa-space-m) * 2);
 }
 
 :where(wa-input[size='l'])::part(input-wrapper) {
-	height: var(--sl-input-height-large);
-	border-radius: var(--sl-input-border-radius-large);
+	height: var(--input-height-large);
+	border-radius: var(--wa-border-radius-m);
 	font-size: 1.25rem;
 }
 
 :where(wa-input[size='l'])::part(input) {
-	height: calc(var(--sl-input-height-large) - var(--sl-input-border-width) * 2);
+	height: calc(var(--input-height-large) - var(--wa-border-width-s) * 2);
 	padding: 0 1.25rem;
 }
 
@@ -497,13 +592,13 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 }
 
 :where(wa-textarea)::part(textarea) {
-	color: var(--sl-input-color);
+	color: var(--text-light);
 	line-height: 1.4;
 }
 
 :where(wa-textarea[size='s'])::part(textarea-wrapper) {
-	border-radius: var(--sl-input-border-radius-small);
-	font-size: var(--sl-font-size-small);
+	border-radius: var(--wa-border-radius-m);
+	font-size: var(--wa-font-size-s);
 }
 
 :where(wa-textarea[size='s'])::part(textarea) {
@@ -511,15 +606,15 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 }
 
 :where(wa-textarea:not([size]), wa-textarea[size='m'])::part(textarea-wrapper) {
-	font-size: var(--sl-font-size-medium);
+	font-size: var(--input-font-size);
 }
 
 :where(wa-textarea:not([size]), wa-textarea[size='m'])::part(textarea) {
-	padding: 0.5em var(--sl-input-spacing-medium);
+	padding: 0.5em var(--wa-space-m);
 }
 
 :where(wa-textarea[size='l'])::part(textarea-wrapper) {
-	border-radius: var(--sl-input-border-radius-large);
+	border-radius: var(--wa-border-radius-m);
 	font-size: 1.25rem;
 }
 
@@ -537,65 +632,65 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 
 :where(wa-select)::part(combobox) {
 	min-height: 0;
-	background-color: var(--sl-input-background-color);
-	border: solid var(--sl-input-border-width) var(--sl-input-border-color);
+	background-color: var(--wa-form-control-background-color);
+	border: solid var(--wa-border-width-s) var(--wa-form-control-border-color);
 	color: inherit;
-	font-family: var(--sl-input-font-family);
-	font-weight: var(--sl-input-font-weight);
+	font-family: var(--input-font-family);
+	font-weight: var(--wa-font-weight-normal);
 	line-height: inherit;
-	letter-spacing: var(--sl-input-letter-spacing);
+	letter-spacing: normal;
 	outline: none;
 	transition:
-		var(--sl-transition-fast) color,
-		var(--sl-transition-fast) border,
-		var(--sl-transition-fast) box-shadow,
-		var(--sl-transition-fast) background-color;
+		var(--wa-transition-normal) color,
+		var(--wa-transition-normal) border,
+		var(--wa-transition-normal) box-shadow,
+		var(--wa-transition-normal) background-color;
 }
 
 :where(wa-select:not([disabled]):is([open], :focus-within))::part(combobox) {
-	background-color: var(--sl-input-background-color-focus);
-	border-color: var(--sl-input-border-color-focus);
-	box-shadow: 0 0 0 var(--sl-focus-ring-width) var(--sl-input-focus-ring-color);
+	background-color: var(--wa-form-control-background-color);
+	border-color: var(--wa-color-brand-50);
+	box-shadow: 0 0 0 var(--wa-focus-ring-width) var(--input-focus-ring-color);
 }
 
 :where(wa-select[disabled])::part(combobox) {
-	background-color: var(--sl-input-background-color-disabled);
-	border-color: var(--sl-input-border-color-disabled);
-	color: var(--sl-input-color-disabled);
+	background-color: var(--wa-color-neutral-90);
+	border-color: var(--wa-color-neutral-70);
+	color: var(--wa-color-neutral-10);
 }
 
 :where(wa-select)::part(display-input) {
-	color: var(--sl-input-color);
+	color: var(--text-light);
 	line-height: inherit;
 }
 
 :where(wa-select:not([disabled]):hover)::part(display-input) {
-	color: var(--sl-input-color-hover);
+	color: var(--wa-color-neutral-30);
 }
 
 :where(wa-select)::part(display-input)::placeholder {
-	color: var(--sl-input-placeholder-color);
+	color: var(--wa-form-control-placeholder-color);
 }
 
 :where(wa-select)::part(start),
 :where(wa-select)::part(end) {
-	color: var(--sl-input-placeholder-color);
+	color: var(--wa-form-control-placeholder-color);
 }
 
 :where(wa-select) > [slot='end'] {
-	margin-inline-start: var(--sl-spacing-small);
+	margin-inline-start: var(--wa-space-s);
 }
 
 :where(wa-select)::part(clear-button) {
 	align-self: center;
 	inline-size: auto;
 	margin-inline-end: 0;
-	color: var(--sl-input-icon-color);
-	transition: var(--sl-transition-fast) color;
+	color: var(--wa-color-neutral-50);
+	transition: var(--wa-transition-normal) color;
 }
 
 :where(wa-select)::part(clear-button):hover {
-	color: var(--sl-input-icon-color-hover);
+	color: var(--wa-color-neutral-40);
 }
 
 /* Web Awesome draws Font Awesome's chevron; the mask cuts it down to
@@ -608,53 +703,53 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 	background-color: currentColor;
 	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708'/%3E%3C/svg%3E")
 		center / 1em 1em no-repeat;
-	margin-inline-start: var(--sl-spacing-small);
-	transition: var(--sl-transition-medium) rotate ease;
+	margin-inline-start: var(--wa-space-s);
+	transition: 250ms rotate ease;
 }
 
 :where(wa-select[size='s'])::part(combobox) {
-	min-height: var(--sl-input-height-small);
-	padding-inline: var(--sl-input-spacing-small);
-	border-radius: var(--sl-input-border-radius-small);
-	font-size: var(--sl-input-font-size-small);
+	min-height: var(--input-height-small);
+	padding-inline: var(--wa-space-s);
+	border-radius: var(--wa-border-radius-m);
+	font-size: var(--wa-font-size-s);
 }
 
 :where(wa-select[size='s']) > [slot='start'] {
-	margin-inline-end: var(--sl-input-spacing-small);
+	margin-inline-end: var(--wa-space-s);
 }
 
 :where(wa-select[size='s'])::part(clear-button) {
-	margin-inline-start: var(--sl-input-spacing-small);
+	margin-inline-start: var(--wa-space-s);
 }
 
 :where(wa-select[size='m'])::part(combobox) {
-	min-height: var(--sl-input-height-medium);
-	padding-inline: var(--sl-input-spacing-medium);
-	border-radius: var(--sl-input-border-radius-medium);
-	font-size: var(--sl-input-font-size-medium);
+	min-height: var(--input-height-medium);
+	padding-inline: var(--wa-space-m);
+	border-radius: var(--wa-border-radius-m);
+	font-size: var(--input-font-size);
 }
 
 :where(wa-select[size='m']) > [slot='start'] {
-	margin-inline-end: var(--sl-input-spacing-medium);
+	margin-inline-end: var(--wa-space-m);
 }
 
 :where(wa-select[size='m'])::part(clear-button) {
-	margin-inline-start: var(--sl-input-spacing-medium);
+	margin-inline-start: var(--wa-space-m);
 }
 
 :where(wa-select[size='l'])::part(combobox) {
-	min-height: var(--sl-input-height-large);
-	padding-inline: var(--sl-input-spacing-large);
-	border-radius: var(--sl-input-border-radius-large);
-	font-size: var(--sl-input-font-size-large);
+	min-height: var(--input-height-large);
+	padding-inline: 1.25rem;
+	border-radius: var(--wa-border-radius-m);
+	font-size: var(--wa-font-size-l);
 }
 
 :where(wa-select[size='l']) > [slot='start'] {
-	margin-inline-end: var(--sl-input-spacing-large);
+	margin-inline-end: 1.25rem;
 }
 
 :where(wa-select[size='l'])::part(clear-button) {
-	margin-inline-start: var(--sl-input-spacing-large);
+	margin-inline-start: 1.25rem;
 }
 
 /* Multiple selection: Shoelace drew the tags with less padding around them. */
@@ -676,7 +771,7 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 }
 
 :where(wa-select)::part(tags) {
-	margin-inline-start: var(--sl-spacing-2x-small);
+	margin-inline-start: var(--wa-space-2xs);
 }
 
 :where(wa-select[size='s'])::part(tags) {
@@ -693,9 +788,9 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 
 :where(wa-select)::part(tag) {
 	gap: 0;
-	background-color: var(--sl-color-neutral-50);
-	border: solid 1px var(--sl-color-neutral-200);
-	color: var(--sl-color-neutral-800);
+	background-color: var(--wa-color-neutral-95);
+	border: solid 1px var(--wa-color-neutral-80);
+	color: var(--wa-color-neutral-20);
 }
 
 :where(wa-select)::part(tag__content) {
@@ -706,8 +801,8 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 :where(wa-select)::part(tag__remove-button) {
 	width: 1em;
 	height: 1em;
-	margin-inline-start: var(--sl-spacing-x-small);
-	color: var(--sl-color-neutral-600);
+	margin-inline-start: var(--wa-space-xs);
+	color: var(--wa-color-neutral-40);
 	font-size: inherit;
 	background-color: currentColor;
 	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z'/%3E%3C/svg%3E")
@@ -715,45 +810,47 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 }
 
 :where(wa-select)::part(tag__remove-button):hover {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 }
 
 :where(wa-select[size='s'])::part(tag) {
-	height: calc(var(--sl-input-height-small) * 0.8);
-	padding: 0 var(--sl-spacing-x-small);
-	border-radius: var(--sl-input-border-radius-small);
-	font-size: var(--sl-button-font-size-small);
-	line-height: calc(var(--sl-input-height-small) - var(--sl-input-border-width) * 2);
+	height: calc(var(--input-height-small) * 0.8);
+	padding: 0 var(--wa-space-xs);
+	border-radius: var(--wa-border-radius-m);
+	font-size: var(--wa-font-size-xs);
+	line-height: calc(var(--input-height-small) - var(--wa-border-width-s) * 2);
 }
 
 :where(wa-select[size='m'])::part(tag) {
-	height: calc(var(--sl-input-height-medium) * 0.8);
-	padding: 0 var(--sl-spacing-small);
-	border-radius: var(--sl-input-border-radius-medium);
-	font-size: var(--sl-button-font-size-medium);
-	line-height: calc(var(--sl-input-height-medium) - var(--sl-input-border-width) * 2);
+	height: calc(var(--input-height-medium) * 0.8);
+	padding: 0 var(--wa-space-s);
+	border-radius: var(--wa-border-radius-m);
+	font-size: var(--wa-font-size-s);
+	line-height: calc(var(--input-height-medium) - var(--wa-border-width-s) * 2);
 }
 
 :where(wa-select[size='l'])::part(tag) {
-	height: calc(var(--sl-input-height-large) * 0.8);
-	padding: 0 var(--sl-spacing-medium);
-	border-radius: var(--sl-input-border-radius-large);
-	font-size: var(--sl-button-font-size-large);
-	line-height: calc(var(--sl-input-height-large) - var(--sl-input-border-width) * 2);
+	height: calc(var(--input-height-large) * 0.8);
+	padding: 0 var(--wa-space-m);
+	border-radius: var(--wa-border-radius-m);
+	font-size: var(--wa-font-size-m);
+	line-height: calc(var(--input-height-large) - var(--wa-border-width-s) * 2);
 }
 
 /* Listbox */
 
 :where(wa-select)::part(listbox) {
-	padding-block: var(--sl-spacing-x-small);
+	padding-block: var(--wa-space-xs);
 	padding-inline: 0;
-	background: var(--sl-panel-background-color);
-	border: solid var(--sl-panel-border-width) var(--sl-panel-border-color);
-	border-radius: var(--sl-border-radius-medium);
-	box-shadow: var(--sl-shadow-large);
-	font-family: var(--sl-font-sans);
-	font-size: var(--sl-font-size-medium);
-	font-weight: var(--sl-font-weight-normal);
+	background: var(--wa-color-surface-default);
+	border: solid var(--wa-border-width-s) var(--wa-color-neutral-80);
+	border-radius: var(--wa-border-radius-m);
+	box-shadow: var(--wa-shadow-l);
+	font-family:
+		-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji',
+		'Segoe UI Emoji', 'Segoe UI Symbol';
+	font-size: var(--input-font-size);
+	font-weight: var(--wa-font-weight-normal);
 }
 
 /* Cancel the gap Web Awesome leaves between the options. */
@@ -763,37 +860,37 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 
 /* Web Awesome options, drawn as Shoelace drew them. */
 :where(wa-option) {
-	padding: var(--sl-spacing-x-small) var(--sl-spacing-medium) var(--sl-spacing-x-small) var(--sl-spacing-x-small);
+	padding: var(--wa-space-xs) var(--wa-space-m) var(--wa-space-xs) var(--wa-space-xs);
 	border-radius: 0;
-	color: var(--sl-color-neutral-700);
+	color: var(--wa-color-neutral-30);
 	font-family: var(--system-fonts);
-	font-size: var(--sl-font-size-medium);
-	font-weight: var(--sl-font-weight-normal);
-	line-height: var(--sl-line-height-normal);
-	letter-spacing: var(--sl-letter-spacing-normal);
-	transition: var(--sl-transition-fast) fill;
+	font-size: var(--input-font-size);
+	font-weight: var(--wa-font-weight-normal);
+	line-height: 1.8;
+	letter-spacing: normal;
+	transition: var(--wa-transition-normal) fill;
 }
 
 :where(wa-option:not(:state(current), :state(disabled)):is(:hover, :state(hover))) {
-	background-color: var(--sl-color-neutral-100);
-	color: var(--sl-color-neutral-1000);
+	background-color: var(--wa-color-neutral-90);
+	color: black;
 }
 
 :where(wa-option:state(current)) {
-	background-color: var(--sl-color-primary-600);
-	color: var(--sl-color-neutral-0);
+	background-color: var(--wa-color-brand-40);
+	color: var(--wa-color-surface-default);
 }
 
 :where(wa-option)::part(label) {
-	line-height: var(--sl-line-height-dense);
+	line-height: 1.4;
 }
 
 :where(wa-option) > [slot='start'] {
-	margin-inline-end: var(--sl-spacing-x-small);
+	margin-inline-end: var(--wa-space-xs);
 }
 
 :where(wa-option) > [slot='end'] {
-	margin-inline-start: var(--sl-spacing-x-small);
+	margin-inline-start: var(--wa-space-xs);
 }
 
 /* Web Awesome draws Font Awesome's check; the mask cuts it down to Shoelace's. */
@@ -801,7 +898,7 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 	width: 1em;
 	min-width: 0;
 	height: 1em;
-	margin-inline-end: var(--sl-spacing-2x-small);
+	margin-inline-end: var(--wa-space-2xs);
 	font-size: inherit;
 	background-color: currentColor;
 	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-linecap='round'%3E%3Cpath d='M3.43 9.14 6.86 12.57M12.57 3.43 6.86 12.57'/%3E%3C/svg%3E")
@@ -830,19 +927,19 @@ wa-button {
 	aspect-ratio: auto;
 	padding: 0;
 	border-style: solid;
-	border-width: var(--sl-input-border-width);
-	font-family: var(--sl-input-font-family);
-	font-weight: var(--sl-font-weight-semibold);
+	border-width: var(--wa-border-width-s);
+	font-family: var(--input-font-family);
+	font-weight: var(--wa-font-weight-semibold);
 	transition:
-		var(--sl-transition-x-fast) background-color,
-		var(--sl-transition-x-fast) color,
-		var(--sl-transition-x-fast) border,
-		var(--sl-transition-x-fast) box-shadow;
+		50ms background-color,
+		50ms color,
+		50ms border,
+		50ms box-shadow;
 }
 
 :where(wa-button)::part(button):focus-visible {
-	outline: var(--sl-focus-ring);
-	outline-offset: var(--sl-focus-ring-offset);
+	outline: var(--wa-focus-ring-style) var(--wa-focus-ring-width) var(--wa-color-brand-40);
+	outline-offset: var(--wa-focus-ring-offset);
 }
 
 :where(wa-button) > [slot='start'],
@@ -861,72 +958,72 @@ wa-button {
 /* Sizes */
 
 :where(wa-button[size='s'])::part(button) {
-	min-height: var(--sl-input-height-small);
-	font-size: var(--sl-button-font-size-small);
-	line-height: calc(var(--sl-input-height-small) - var(--sl-input-border-width) * 2);
+	min-height: var(--input-height-small);
+	font-size: var(--wa-font-size-xs);
+	line-height: calc(var(--input-height-small) - var(--wa-border-width-s) * 2);
 }
 
 :where(wa-button[size='m'])::part(button) {
-	min-height: var(--sl-input-height-medium);
-	font-size: var(--sl-button-font-size-medium);
-	line-height: calc(var(--sl-input-height-medium) - var(--sl-input-border-width) * 2);
+	min-height: var(--input-height-medium);
+	font-size: var(--wa-font-size-s);
+	line-height: calc(var(--input-height-medium) - var(--wa-border-width-s) * 2);
 }
 
 :where(wa-button[size='l'])::part(button) {
-	min-height: var(--sl-input-height-large);
-	font-size: var(--sl-button-font-size-large);
-	line-height: calc(var(--sl-input-height-large) - var(--sl-input-border-width) * 2);
+	min-height: var(--input-height-large);
+	font-size: var(--wa-font-size-m);
+	line-height: calc(var(--input-height-large) - var(--wa-border-width-s) * 2);
 }
 
 :where(wa-button[size='s']) {
-	--wa-form-control-border-radius: var(--sl-input-border-radius-small);
+	--wa-form-control-border-radius: var(--wa-border-radius-m);
 }
 
 :where(wa-button[size='m']) {
-	--wa-form-control-border-radius: var(--sl-input-border-radius-medium);
+	--wa-form-control-border-radius: var(--wa-border-radius-m);
 }
 
 :where(wa-button[size='l']) {
-	--wa-form-control-border-radius: var(--sl-input-border-radius-large);
+	--wa-form-control-border-radius: var(--wa-border-radius-m);
 }
 
 :where(wa-button[size='s'])::part(label) {
-	padding: 0 var(--sl-spacing-small);
+	padding: 0 var(--wa-space-s);
 }
 
 :where(wa-button[size='m'])::part(label) {
-	padding: 0 var(--sl-spacing-medium);
+	padding: 0 var(--wa-space-m);
 }
 
 :where(wa-button[size='l'])::part(label) {
-	padding: 0 var(--sl-spacing-large);
+	padding: 0 1.25rem;
 }
 
 :where(wa-button[size='s']:state(icon-button))::part(button) {
-	width: var(--sl-input-height-small);
+	width: var(--input-height-small);
 }
 
 :where(wa-button[size='m']:state(icon-button))::part(button) {
-	width: var(--sl-input-height-medium);
+	width: var(--input-height-medium);
 }
 
 :where(wa-button[size='l']:state(icon-button))::part(button) {
-	width: var(--sl-input-height-large);
+	width: var(--input-height-large);
 }
 
 :where(wa-button[size='s']:has(> [slot='start']))::part(button),
 :where(wa-button[size='s']:has(> [slot='start']))::part(label) {
-	padding-inline-start: var(--sl-spacing-x-small);
+	padding-inline-start: var(--wa-space-xs);
 }
 
 :where(wa-button[size='m']:has(> [slot='start']), wa-button[size='l']:has(> [slot='start']))::part(button),
 :where(wa-button[size='m']:has(> [slot='start']), wa-button[size='l']:has(> [slot='start']))::part(label) {
-	padding-inline-start: var(--sl-spacing-small);
+	padding-inline-start: var(--wa-space-s);
 }
 
 :where(wa-button[size='s']:has(> [slot='end']), wa-button[size='s'][with-caret])::part(button),
 :where(wa-button[size='s']:has(> [slot='end']), wa-button[size='s'][with-caret])::part(label) {
-	padding-inline-end: var(--sl-spacing-x-small);
+	padding-inline-end: var(--wa-space-xs);
 }
 
 :where(
@@ -941,7 +1038,7 @@ wa-button {
 	wa-button[size='l']:has(> [slot='end']),
 	wa-button[size='l'][with-caret]
 )::part(label) {
-	padding-inline-end: var(--sl-spacing-small);
+	padding-inline-end: var(--wa-space-s);
 }
 
 /* Pill: Shoelace's circle */
@@ -951,15 +1048,15 @@ wa-button {
 }
 
 :where(wa-button[pill])::part(button) {
-	width: var(--sl-input-height-medium);
+	width: var(--input-height-medium);
 }
 
 :where(wa-button[pill][size='s'])::part(button) {
-	width: var(--sl-input-height-small);
+	width: var(--input-height-small);
 }
 
 :where(wa-button[pill][size='l'])::part(button) {
-	width: var(--sl-input-height-large);
+	width: var(--input-height-large);
 }
 
 /* Caret */
@@ -985,55 +1082,55 @@ wa-button {
 /* Default (outlined) */
 
 :where(wa-button[appearance='outlined'])::part(button) {
-	background-color: var(--sl-color-neutral-0);
-	border-color: var(--sl-input-border-color);
-	color: var(--sl-color-neutral-700);
+	background-color: var(--wa-color-surface-default);
+	border-color: var(--wa-form-control-border-color);
+	color: var(--wa-color-neutral-30);
 }
 
 :where(wa-button[appearance='outlined']:not([disabled]))::part(button):hover {
-	background-color: var(--sl-color-primary-50);
-	border-color: var(--sl-color-primary-300);
-	color: var(--sl-color-primary-700);
+	background-color: var(--wa-color-brand-95);
+	border-color: var(--wa-color-brand-70);
+	color: var(--wa-color-brand-30);
 }
 
 :where(wa-button[appearance='outlined']:not([disabled]))::part(button):active {
-	background-color: var(--sl-color-primary-100);
-	border-color: var(--sl-color-primary-400);
-	color: var(--sl-color-primary-700);
+	background-color: var(--wa-color-brand-90);
+	border-color: var(--wa-color-brand-60);
+	color: var(--wa-color-brand-30);
 }
 
 /* Solid variants (accent) */
 
 :where(wa-button[appearance='accent'][variant='brand'])::part(button) {
-	--_fill: var(--sl-color-primary-600);
-	--_fill-hover: var(--sl-color-primary-500);
+	--_fill: var(--wa-color-brand-40);
+	--_fill-hover: var(--wa-color-brand-50);
 }
 
 :where(wa-button[appearance='accent'][variant='success'])::part(button) {
-	--_fill: var(--sl-color-success-600);
-	--_fill-hover: var(--sl-color-success-500);
+	--_fill: var(--wa-color-success-40);
+	--_fill-hover: var(--wa-color-success-50);
 }
 
 :where(wa-button[appearance='accent'][variant='neutral'])::part(button) {
-	--_fill: var(--sl-color-neutral-600);
-	--_fill-hover: var(--sl-color-neutral-500);
+	--_fill: var(--wa-color-neutral-40);
+	--_fill-hover: var(--wa-color-neutral-50);
 }
 
 :where(wa-button[appearance='accent'][variant='warning'])::part(button) {
-	--_fill: var(--sl-color-warning-600);
-	--_fill-hover: var(--sl-color-warning-500);
+	--_fill: var(--wa-color-warning-40);
+	--_fill-hover: var(--wa-color-warning-50);
 }
 
 :where(wa-button[appearance='accent'][variant='danger'])::part(button) {
-	--_fill: var(--sl-color-danger-600);
-	--_fill-hover: var(--sl-color-danger-500);
+	--_fill: var(--wa-color-danger-40);
+	--_fill-hover: var(--wa-color-danger-50);
 }
 
 :where(wa-button[appearance='accent'])::part(button),
 :where(wa-button[appearance='accent'])::part(button):active {
 	background-color: var(--_fill);
 	border-color: var(--_fill);
-	color: var(--sl-color-neutral-0);
+	color: var(--wa-color-surface-default);
 }
 
 :where(wa-button[appearance='accent']:not([disabled]))::part(button):hover {
@@ -1046,27 +1143,27 @@ wa-button {
 :where(wa-button[appearance='plain'])::part(button) {
 	background-color: transparent;
 	border-color: transparent;
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 }
 
 :where(wa-button[appearance='plain']:not([disabled]))::part(button):hover,
 :where(wa-button[appearance='plain']:not([disabled]))::part(button):focus-visible {
 	background-color: transparent;
 	border-color: transparent;
-	color: var(--sl-color-primary-500);
+	color: var(--wa-color-brand-50);
 }
 
 :where(wa-button[appearance='plain']:not([disabled]))::part(button):active {
 	background-color: transparent;
 	border-color: transparent;
-	color: var(--sl-color-primary-700);
+	color: var(--wa-color-brand-30);
 }
 
 /* Icon buttons, drawn as Shoelace drew sl-icon-button: the icon takes the font
    size around it, inside an 8px padding. */
 
 :where(wa-button.icon-button) {
-	color: var(--sl-color-neutral-600);
+	color: var(--wa-color-neutral-40);
 }
 
 :where(wa-button.icon-button)::part(button) {
@@ -1076,13 +1173,13 @@ wa-button {
 	height: auto;
 	min-height: 0;
 	aspect-ratio: auto;
-	padding: var(--sl-spacing-x-small);
+	padding: var(--wa-space-xs);
 	border: none;
-	border-radius: var(--sl-border-radius-medium);
+	border-radius: var(--wa-border-radius-m);
 	background: none;
 	font-size: inherit;
 	color: inherit;
-	transition: var(--sl-transition-x-fast) color;
+	transition: 50ms color;
 }
 
 :where(wa-button.icon-button)::part(label) {
@@ -1102,18 +1199,18 @@ wa-button {
 
 :where(wa-button.icon-button:not([disabled]))::part(button):hover,
 :where(wa-button.icon-button:not([disabled]))::part(button):focus-visible {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 }
 
 :where(wa-button.icon-button:not([disabled]))::part(button):active {
-	color: var(--sl-color-primary-700);
+	color: var(--wa-color-brand-30);
 }
 
 /* Groups */
 
 :where(wa-button-group) > wa-button:not(:first-child),
 :where(wa-button-group) > :not(:first-child) wa-button {
-	margin-inline-start: calc(-1 * var(--sl-input-border-width));
+	margin-inline-start: calc(-1 * var(--wa-border-width-s));
 }
 
 :where(wa-button-group wa-button:not([appearance='outlined']):not(:hover))::part(button)::after {
@@ -1157,9 +1254,9 @@ wa-icon::part(svg) {
 /* The host is not :focus-visible when its input is, so the focus ring is
    Web Awesome's, drawn with Shoelace's tokens. */
 :where(wa-checkbox) {
-	--wa-form-control-toggle-size: var(--sl-toggle-size-medium);
-	--wa-focus-ring: var(--sl-focus-ring);
-	--wa-focus-ring-offset: var(--sl-focus-ring-offset);
+	--wa-form-control-toggle-size: var(--toggle-size-medium);
+	--wa-focus-ring: var(--wa-focus-ring-style) var(--wa-focus-ring-width) var(--wa-color-brand-40);
+	--wa-focus-ring-offset: var(--wa-focus-ring-offset);
 	display: inline-block;
 	flex-direction: row;
 	color: inherit;
@@ -1171,46 +1268,46 @@ wa-icon::part(svg) {
 }
 
 :where(wa-checkbox[size='s']) {
-	--wa-form-control-toggle-size: var(--sl-toggle-size-small);
+	--wa-form-control-toggle-size: var(--toggle-size-small);
 }
 
 :where(wa-checkbox)::part(checkbox) {
 	display: inline-flex;
-	font-size: var(--sl-input-font-size-medium);
-	font-weight: var(--sl-input-font-weight);
-	color: var(--sl-input-label-color);
+	font-size: var(--input-font-size);
+	font-weight: var(--wa-font-weight-normal);
+	color: inherit;
 }
 
 :where(wa-checkbox[size='s'])::part(checkbox) {
-	font-size: var(--sl-input-font-size-small);
+	font-size: var(--wa-font-size-s);
 }
 
 :where(wa-checkbox)::part(control) {
 	margin-inline-end: 0;
-	border: solid var(--sl-input-border-width) var(--sl-input-border-color);
+	border: solid var(--wa-border-width-s) var(--wa-form-control-border-color);
 	border-radius: 2px;
-	background-color: var(--sl-input-background-color);
-	color: var(--sl-color-neutral-0);
+	background-color: var(--wa-form-control-background-color);
+	color: var(--wa-color-surface-default);
 	transition:
-		var(--sl-transition-fast) border-color,
-		var(--sl-transition-fast) background-color,
-		var(--sl-transition-fast) color,
-		var(--sl-transition-fast) box-shadow;
+		var(--wa-transition-normal) border-color,
+		var(--wa-transition-normal) background-color,
+		var(--wa-transition-normal) color,
+		var(--wa-transition-normal) box-shadow;
 }
 
 :where(wa-checkbox:not(:state(checked), :state(disabled)))::part(control):hover {
-	border-color: var(--sl-input-border-color-hover);
-	background-color: var(--sl-input-background-color-hover);
+	border-color: var(--wa-color-neutral-60);
+	background-color: var(--wa-form-control-background-color);
 }
 
 :where(wa-checkbox:state(checked), wa-checkbox:state(indeterminate))::part(control) {
-	border-color: var(--sl-color-primary-600);
-	background-color: var(--sl-color-primary-600);
+	border-color: var(--wa-color-brand-40);
+	background-color: var(--wa-color-brand-40);
 }
 
 :where(wa-checkbox:is(:state(checked), :state(indeterminate)):not(:state(disabled)))::part(control):hover {
-	border-color: var(--sl-color-primary-500);
-	background-color: var(--sl-color-primary-500);
+	border-color: var(--wa-color-brand-50);
+	background-color: var(--wa-color-brand-50);
 }
 
 /* Web Awesome draws Font Awesome's glyphs; the masks cut the icon down to
@@ -1235,7 +1332,7 @@ wa-icon::part(svg) {
 
 :where(wa-checkbox)::part(label) {
 	display: inline-block;
-	color: var(--sl-input-label-color);
+	color: inherit;
 	line-height: var(--wa-form-control-toggle-size);
 	margin-inline-start: 0.5em;
 	user-select: none;
@@ -1248,68 +1345,68 @@ wa-icon::part(svg) {
    the thumb. */
 
 :where(wa-switch) {
-	--wa-focus-ring: var(--sl-focus-ring);
-	--wa-focus-ring-offset: var(--sl-focus-ring-offset);
-	--height: var(--sl-toggle-size-medium);
-	--thumb-size: calc(var(--sl-toggle-size-medium) + 4px);
+	--wa-focus-ring: var(--wa-focus-ring-style) var(--wa-focus-ring-width) var(--wa-color-brand-40);
+	--wa-focus-ring-offset: var(--wa-focus-ring-offset);
+	--height: var(--toggle-size-medium);
+	--thumb-size: calc(var(--toggle-size-medium) + 4px);
 	--width: calc(var(--height) * 2);
 	display: inline-block;
 	flex-direction: row;
-	font-size: var(--sl-input-font-size-medium);
+	font-size: var(--input-font-size);
 	line-height: inherit;
 }
 
 :where(wa-switch[size='s']) {
-	--height: var(--sl-toggle-size-small);
-	--thumb-size: calc(var(--sl-toggle-size-small) + 4px);
-	font-size: var(--sl-input-font-size-small);
+	--height: var(--toggle-size-small);
+	--thumb-size: calc(var(--toggle-size-small) + 4px);
+	font-size: var(--wa-font-size-s);
 }
 
 :where(wa-switch)::part(switch) {
 	display: inline-flex;
-	font-weight: var(--sl-input-font-weight);
-	color: var(--sl-input-label-color);
+	font-weight: var(--wa-font-weight-normal);
+	color: inherit;
 }
 
 :where(wa-switch)::part(control) {
-	background-color: var(--sl-color-neutral-400);
-	border: solid var(--sl-input-border-width) var(--sl-color-neutral-400);
+	background-color: var(--wa-color-neutral-60);
+	border: solid var(--wa-border-width-s) var(--wa-color-neutral-60);
 	transition:
-		var(--sl-transition-fast) border-color,
-		var(--sl-transition-fast) background-color;
+		var(--wa-transition-normal) border-color,
+		var(--wa-transition-normal) background-color;
 }
 
 :where(wa-switch)::part(thumb) {
-	background-color: var(--sl-color-neutral-0);
-	border: solid var(--sl-input-border-width) var(--sl-color-neutral-400);
+	background-color: var(--wa-color-surface-default);
+	border: solid var(--wa-border-width-s) var(--wa-color-neutral-60);
 	transition:
-		var(--sl-transition-fast) translate ease,
-		var(--sl-transition-fast) background-color,
-		var(--sl-transition-fast) border-color,
-		var(--sl-transition-fast) box-shadow;
+		var(--wa-transition-normal) translate ease,
+		var(--wa-transition-normal) background-color,
+		var(--wa-transition-normal) border-color,
+		var(--wa-transition-normal) box-shadow;
 }
 
 :where(wa-switch:state(checked))::part(control) {
-	background-color: var(--sl-color-primary-600);
-	border-color: var(--sl-color-primary-600);
+	background-color: var(--wa-color-brand-40);
+	border-color: var(--wa-color-brand-40);
 }
 
 :where(wa-switch:state(checked))::part(thumb) {
-	border-color: var(--sl-color-primary-600);
+	border-color: var(--wa-color-brand-40);
 }
 
 /* Help text of checkboxes and switches. */
 
 :where(wa-checkbox, wa-switch)::part(hint) {
-	margin-block-start: var(--sl-spacing-3x-small);
-	color: var(--sl-input-help-text-color);
-	font-size: var(--sl-input-help-text-font-size-medium);
+	margin-block-start: var(--wa-space-3xs);
+	color: var(--wa-color-neutral-50);
+	font-size: var(--wa-font-size-s);
 	font-weight: inherit;
 	line-height: inherit;
 }
 
 :where(wa-checkbox[size='s'], wa-switch[size='s'])::part(hint) {
-	font-size: var(--sl-input-help-text-font-size-small);
+	font-size: var(--wa-font-size-xs);
 }
 
 /* Web Awesome radios, drawn as Shoelace drew them. Shoelace wrapped the
@@ -1317,14 +1414,14 @@ wa-icon::part(svg) {
    has no such wrapper, so the radio is a flex row one line tall. */
 
 :where(wa-radio) {
-	--wa-form-control-toggle-size: var(--sl-toggle-size-medium);
+	--wa-form-control-toggle-size: var(--toggle-size-medium);
 	display: flex;
 	align-items: center;
 	min-height: 1lh;
 	margin-block: 0;
-	color: var(--sl-input-label-color);
+	color: inherit;
 	font-size: inherit;
-	font-weight: var(--sl-input-font-weight);
+	font-weight: var(--wa-font-weight-normal);
 	line-height: inherit;
 	cursor: auto;
 	user-select: auto;
@@ -1332,41 +1429,41 @@ wa-icon::part(svg) {
 }
 
 :where(wa-radio[size='s']) {
-	--wa-form-control-toggle-size: var(--sl-toggle-size-small);
+	--wa-form-control-toggle-size: var(--toggle-size-small);
 }
 
 :where(wa-radio)::part(control) {
 	margin-inline-end: 0;
-	border: solid var(--sl-input-border-width) var(--sl-input-border-color);
-	background-color: var(--sl-input-background-color);
+	border: solid var(--wa-border-width-s) var(--wa-form-control-border-color);
+	background-color: var(--wa-form-control-background-color);
 	color: transparent;
 	cursor: pointer;
 	transition:
-		var(--sl-transition-fast) border-color,
-		var(--sl-transition-fast) background-color,
-		var(--sl-transition-fast) color,
-		var(--sl-transition-fast) box-shadow;
+		var(--wa-transition-normal) border-color,
+		var(--wa-transition-normal) background-color,
+		var(--wa-transition-normal) color,
+		var(--wa-transition-normal) box-shadow;
 }
 
 :where(wa-radio:not(:state(checked), :state(disabled)))::part(control):hover {
-	border-color: var(--sl-input-border-color-hover);
-	background-color: var(--sl-input-background-color-hover);
+	border-color: var(--wa-color-neutral-60);
+	background-color: var(--wa-form-control-background-color);
 }
 
 :where(wa-radio:state(checked))::part(control) {
-	color: var(--sl-color-neutral-0);
-	border-color: var(--sl-color-primary-600);
-	background-color: var(--sl-color-primary-600);
+	color: var(--wa-color-surface-default);
+	border-color: var(--wa-color-brand-40);
+	background-color: var(--wa-color-brand-40);
 }
 
 :where(wa-radio:state(checked):not(:state(disabled)))::part(control):hover {
-	border-color: var(--sl-color-primary-500);
-	background-color: var(--sl-color-primary-500);
+	border-color: var(--wa-color-brand-50);
+	background-color: var(--wa-color-brand-50);
 }
 
 :where(wa-radio:focus-visible)::part(control) {
-	outline: var(--sl-focus-ring);
-	outline-offset: var(--sl-focus-ring-offset);
+	outline: var(--wa-focus-ring-style) var(--wa-focus-ring-width) var(--wa-color-brand-40);
+	outline-offset: var(--wa-focus-ring-offset);
 }
 
 /* Web Awesome's dot has radius 8 in 16; Shoelace's has radius 3.43. */
@@ -1377,7 +1474,7 @@ wa-icon::part(svg) {
 
 :where(wa-radio)::part(label) {
 	display: inline-block;
-	font-size: var(--sl-input-font-size-medium);
+	font-size: var(--input-font-size);
 	line-height: var(--wa-form-control-toggle-size);
 	margin-inline-start: 0.5em;
 	cursor: pointer;
@@ -1386,7 +1483,7 @@ wa-icon::part(svg) {
 }
 
 :where(wa-radio[size='s'])::part(label) {
-	font-size: var(--sl-input-font-size-small);
+	font-size: var(--wa-font-size-s);
 }
 
 /* Web Awesome sizes the group from its size too; Shoelace's inherited it. */
@@ -1401,67 +1498,67 @@ wa-icon::part(svg) {
 	align-self: flex-start;
 	margin-block-end: 0;
 	padding-bottom: 0;
-	font-size: var(--sl-input-label-font-size-medium);
+	font-size: var(--wa-font-size-m);
 	font-weight: inherit;
 	line-height: inherit;
 }
 
 :where(wa-radio-group[size='s'])::part(form-control-label) {
-	font-size: var(--sl-input-label-font-size-small);
+	font-size: var(--wa-font-size-s);
 }
 
 :where(wa-radio-group)::part(form-control-label)::before {
 	content: '';
-	line-height: calc(1lh + 4px + var(--sl-spacing-3x-small));
+	line-height: calc(1lh + 4px + var(--wa-space-3xs));
 	vertical-align: top;
 }
 
 /* Web Awesome tabs, drawn as Shoelace drew them, at zero specificity. */
 :where(wa-tab-group) {
-	--indicator-color: var(--sl-color-primary-600);
-	--track-color: var(--sl-color-neutral-200);
+	--indicator-color: var(--wa-color-brand-40);
+	--track-color: var(--wa-color-neutral-80);
 }
 
 /* Shoelace drew the focus ring on the host, where the global outline-color
    reaches it; Web Awesome draws it on the part. */
 :where(wa-tab)::part(tab) {
-	font-size: var(--sl-font-size-small);
-	padding: var(--sl-spacing-medium) var(--sl-spacing-large);
-	border-radius: var(--sl-border-radius-medium);
+	font-size: var(--wa-font-size-s);
+	padding: var(--wa-space-m) 1.25rem;
+	border-radius: var(--wa-border-radius-m);
 	outline-color: var(--color-primary-500);
 }
 
 :where(wa-tab:not([disabled]):hover) {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 }
 
 /* The padding of a top or bottom group. The placement is not reflected, so a
    group placed at the start or the end sets its own. */
 :where(wa-tab-panel) {
-	--padding: var(--sl-spacing-medium) 0;
+	--padding: var(--wa-space-m) 0;
 }
 
 /* Web Awesome dialogs and drawers, drawn as Shoelace drew them, at zero
    specificity. Shoelace padded the title rather than the header, and the
    Admin's rules on the title rely on it; its spacing properties are kept. */
 :where(wa-dialog, wa-drawer) {
-	--header-spacing: var(--sl-spacing-large);
-	--body-spacing: var(--sl-spacing-large);
-	--footer-spacing: var(--sl-spacing-large);
+	--header-spacing: 1.25rem;
+	--body-spacing: 1.25rem;
+	--footer-spacing: 1.25rem;
 	--show-duration: 250ms;
 	--hide-duration: 250ms;
-	--wa-color-overlay-modal: var(--sl-overlay-background-color);
+	--wa-color-overlay-modal: hsl(240 3.8% 46.1% / 33%);
 }
 
 :where(wa-dialog)::part(dialog) {
-	max-width: calc(100% - var(--sl-spacing-2x-large));
-	max-height: calc(100% - var(--sl-spacing-2x-large));
-	border-radius: var(--sl-border-radius-medium);
+	max-width: calc(100% - 2.25rem);
+	max-height: calc(100% - 2.25rem);
+	border-radius: var(--wa-border-radius-m);
 }
 
 :where(wa-dialog, wa-drawer)::part(dialog) {
-	background-color: var(--sl-panel-background-color);
-	box-shadow: var(--sl-shadow-x-large);
+	background-color: var(--wa-color-surface-default);
+	box-shadow: var(--wa-shadow-xl);
 }
 
 :where(wa-dialog, wa-drawer)::part(header) {
@@ -1470,15 +1567,15 @@ wa-icon::part(svg) {
 
 :where(wa-dialog, wa-drawer)::part(title) {
 	align-self: auto;
-	font-size: var(--sl-font-size-large);
+	font-size: var(--wa-font-size-l);
 	font-weight: inherit;
-	line-height: var(--sl-line-height-dense);
+	line-height: 1.4;
 	padding: var(--header-spacing);
 }
 
 :where(wa-dialog, wa-drawer)::part(header-actions) {
 	align-self: auto;
-	gap: var(--sl-spacing-2x-small);
+	gap: var(--wa-space-2xs);
 	padding: 0 var(--header-spacing);
 }
 
@@ -1503,36 +1600,36 @@ wa-icon::part(svg) {
 	display: flex;
 	align-items: center;
 	align-self: center;
-	font-size: var(--sl-font-size-medium);
-	border-radius: var(--sl-border-radius-medium);
+	font-size: var(--wa-font-size-m);
+	border-radius: var(--wa-border-radius-m);
 }
 
 :where(wa-dialog, wa-drawer)::part(close-button):focus-within {
-	outline: var(--sl-focus-ring);
-	outline-offset: var(--sl-focus-ring-offset);
+	outline: var(--wa-focus-ring-style) var(--wa-focus-ring-width) var(--wa-color-brand-40);
+	outline-offset: var(--wa-focus-ring-offset);
 }
 
 :where(wa-dialog, wa-drawer)::part(close-button__base) {
-	width: calc(1em + 2 * var(--sl-spacing-x-small));
-	height: calc(1em + 2 * var(--sl-spacing-x-small));
-	padding: var(--sl-spacing-x-small);
+	width: calc(1em + 2 * var(--wa-space-xs));
+	height: calc(1em + 2 * var(--wa-space-xs));
+	padding: var(--wa-space-xs);
 	font-size: inherit;
 	font-weight: inherit;
-	color: var(--sl-color-neutral-600);
+	color: var(--wa-color-neutral-40);
 	background: none;
 	border: none;
-	border-radius: var(--sl-border-radius-medium);
+	border-radius: var(--wa-border-radius-m);
 	background-color: currentColor;
 	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z'/%3E%3C/svg%3E")
 		center / 1em 1em no-repeat;
 }
 
 :where(wa-dialog, wa-drawer)::part(close-button__base):hover {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 }
 
 :where(wa-dialog, wa-drawer)::part(close-button__base):focus-visible {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 	outline: none;
 }
 
@@ -1551,25 +1648,25 @@ wa-icon::part(svg) {
 :where(wa-copy-button)::part(button) {
 	height: auto;
 	aspect-ratio: auto;
-	padding: var(--sl-spacing-x-small);
-	border-radius: var(--sl-border-radius-medium);
+	padding: var(--wa-space-xs);
+	border-radius: var(--wa-border-radius-m);
 	background-color: transparent;
 	color: inherit;
-	font-size: var(--sl-font-size-medium);
-	transition: var(--sl-transition-x-fast) color;
+	font-size: var(--wa-font-size-m);
+	transition: 50ms color;
 }
 
 :where(wa-copy-button)::part(button):focus-visible {
-	outline: var(--sl-focus-ring);
-	outline-offset: var(--sl-focus-ring-offset);
+	outline: var(--wa-focus-ring-style) var(--wa-focus-ring-width) var(--wa-color-brand-40);
+	outline-offset: var(--wa-focus-ring-offset);
 }
 
 :where(wa-copy-button:state(success))::part(button) {
-	color: var(--sl-color-success-600);
+	color: var(--wa-color-success-40);
 }
 
 :where(wa-copy-button:state(error))::part(button) {
-	color: var(--sl-color-danger-600);
+	color: var(--wa-color-danger-40);
 }
 
 /* Web Awesome draws Font Awesome's glyphs; the masks cut the icons down to
@@ -1607,14 +1704,14 @@ wa-icon::part(svg) {
 
 :where(wa-color-picker)::part(trigger) {
 	display: inline-block;
-	width: var(--sl-input-height-medium);
-	height: var(--sl-input-height-medium);
-	border-radius: var(--sl-border-radius-circle);
+	width: var(--input-height-medium);
+	height: var(--input-height-medium);
+	border-radius: var(--wa-border-radius-circle);
 	background-image:
-		linear-gradient(45deg, var(--sl-color-neutral-300) 25%, transparent 25%),
-		linear-gradient(45deg, transparent 75%, var(--sl-color-neutral-300) 75%),
-		linear-gradient(45deg, transparent 75%, var(--sl-color-neutral-300) 75%),
-		linear-gradient(45deg, var(--sl-color-neutral-300) 25%, transparent 25%);
+		linear-gradient(45deg, var(--wa-color-neutral-70) 25%, transparent 25%),
+		linear-gradient(45deg, transparent 75%, var(--wa-color-neutral-70) 75%),
+		linear-gradient(45deg, transparent 75%, var(--wa-color-neutral-70) 75%),
+		linear-gradient(45deg, var(--wa-color-neutral-70) 25%, transparent 25%);
 	background-size: 10px 10px;
 	background-position:
 		0 0,
@@ -1625,8 +1722,8 @@ wa-icon::part(svg) {
 
 :where(wa-color-picker)::part(trigger)::before {
 	box-shadow:
-		inset 0 0 0 2px var(--sl-input-border-color),
-		inset 0 0 0 4px var(--sl-color-neutral-0);
+		inset 0 0 0 2px var(--wa-form-control-border-color),
+		inset 0 0 0 4px var(--wa-color-surface-default);
 }
 
 /* Web Awesome dropdowns, drawn as Shoelace drew a dropdown with a menu in it,
@@ -1644,15 +1741,17 @@ wa-icon::part(svg) {
 	display: block;
 	flex-direction: row;
 	position: relative;
-	padding: var(--sl-spacing-x-small) 0;
-	border: solid var(--sl-panel-border-width) var(--sl-panel-border-color);
-	border-radius: var(--sl-border-radius-medium);
-	background-color: var(--sl-panel-background-color);
-	box-shadow: var(--sl-shadow-large);
+	padding: var(--wa-space-xs) 0;
+	border: solid var(--wa-border-width-s) var(--wa-color-neutral-80);
+	border-radius: var(--wa-border-radius-m);
+	background-color: var(--wa-color-surface-default);
+	box-shadow: var(--wa-shadow-l);
 	color: inherit;
-	font-family: var(--sl-font-sans);
-	font-size: var(--sl-font-size-medium);
-	font-weight: var(--sl-font-weight-normal);
+	font-family:
+		-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji',
+		'Segoe UI Emoji', 'Segoe UI Symbol';
+	font-size: var(--input-font-size);
+	font-weight: var(--wa-font-weight-normal);
 	user-select: auto;
 	overscroll-behavior: none;
 }
@@ -1666,14 +1765,16 @@ wa-icon::part(svg) {
 :where(wa-dropdown-item) {
 	--wa-font-size-smaller: 1em;
 	align-items: stretch;
-	padding: 5px var(--sl-spacing-2x-small);
+	padding: 5px var(--wa-space-2xs);
 	border-radius: 0;
-	color: var(--sl-color-neutral-700);
-	font-family: var(--sl-font-sans);
-	font-size: var(--sl-font-size-medium);
-	font-weight: var(--sl-font-weight-normal);
-	line-height: var(--sl-line-height-normal);
-	letter-spacing: var(--sl-letter-spacing-normal);
+	color: var(--wa-color-neutral-30);
+	font-family:
+		-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji',
+		'Segoe UI Emoji', 'Segoe UI Symbol';
+	font-size: var(--input-font-size);
+	font-weight: var(--wa-font-weight-normal);
+	line-height: 1.8;
+	letter-spacing: normal;
 	white-space: nowrap;
 	user-select: none;
 	transition: none;
@@ -1687,7 +1788,7 @@ wa-icon::part(svg) {
 
 :where(wa-dropdown-item:focus-visible) {
 	outline: none;
-	background-color: var(--sl-color-primary-600);
+	background-color: var(--wa-color-brand-40);
 	color: var(--text-onaccent);
 }
 
@@ -1696,11 +1797,11 @@ wa-icon::part(svg) {
 }
 
 :where(wa-dropdown-item:not([disabled]):hover) {
-	background-color: var(--sl-color-neutral-200);
+	background-color: var(--wa-color-neutral-80);
 }
 
 :where(wa-dropdown-item:not([disabled], :focus-visible):hover) {
-	color: var(--sl-color-neutral-1000);
+	color: black;
 }
 
 :where(wa-dropdown-item)::part(label) {
@@ -1718,11 +1819,11 @@ wa-icon::part(svg) {
 }
 
 :where(wa-dropdown-item:has(> [slot='icon']))::part(label) {
-	margin-inline-start: calc(var(--sl-spacing-x-small) - 0.75em);
+	margin-inline-start: calc(var(--wa-space-xs) - 0.75em);
 }
 
 :where(wa-dropdown-item:has(> [slot='details']))::part(label) {
-	margin-inline-end: calc(var(--sl-spacing-x-small) - 2em);
+	margin-inline-end: calc(var(--wa-space-xs) - 2em);
 }
 
 /* Web Awesome tooltips, drawn as Shoelace drew them, at zero specificity:
@@ -1735,28 +1836,30 @@ wa-icon::part(svg) {
 
 :where(wa-tooltip)::part(body) {
 	color: var(--wa-tooltip-content-color);
-	font-family: var(--sl-font-sans);
+	font-family:
+		-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji',
+		'Segoe UI Emoji', 'Segoe UI Symbol';
 	font-size: var(--wa-tooltip-font-size);
-	font-weight: var(--sl-font-weight-normal);
+	font-weight: var(--wa-font-weight-normal);
 	line-height: var(--wa-tooltip-line-height);
-	padding: var(--sl-spacing-2x-small) var(--sl-spacing-x-small);
+	padding: var(--wa-space-2xs) var(--wa-space-xs);
 }
 
 /* || Radix */
 
 .radix-themes:where([data-gray-color='slate']) {
-	--accent-1: var(--sl-color-primary-50) !important;
-	--accent-2: var(--sl-color-primary-100) !important;
-	--accent-3: var(--sl-color-primary-200) !important;
-	--accent-4: var(--sl-color-primary-300) !important;
-	--accent-5: var(--sl-color-primary-400) !important;
-	--accent-6: var(--sl-color-primary-500) !important;
-	--accent-7: var(--sl-color-primary-600) !important;
-	--accent-8: var(--sl-color-primary-700) !important;
-	--accent-9: var(--sl-color-primary-800!important);
-	--accent-10: var(--sl-color-primary-900!important);
-	--accent-11: var(--sl-color-primary-950) !important;
-	--accent-12: var(--sl-color-primary-950) !important;
+	--accent-1: var(--wa-color-brand-95) !important;
+	--accent-2: var(--wa-color-brand-90) !important;
+	--accent-3: var(--wa-color-brand-80) !important;
+	--accent-4: var(--wa-color-brand-70) !important;
+	--accent-5: var(--wa-color-brand-60) !important;
+	--accent-6: var(--wa-color-brand-50) !important;
+	--accent-7: var(--wa-color-brand-40) !important;
+	--accent-8: var(--wa-color-brand-30) !important;
+	--accent-9: var(--wa-color-brand-20!important);
+	--accent-10: var(--wa-color-brand-10!important);
+	--accent-11: var(--wa-color-brand-05) !important;
+	--accent-12: var(--wa-color-brand-05) !important;
 }
 
 .rt-TableColumnHeaderCell {
@@ -1821,12 +1924,12 @@ wa-icon::part(svg) {
 .rdrDateRangeWrapper .rdrInRange,
 .rdrDateRangeWrapper .rdrEndEdge,
 .rdrDateRangeWrapper .rdrDateDisplay {
-	color: var(--sl-color-primary-600) !important;
+	color: var(--wa-color-brand-40) !important;
 }
 
 .rdrDateRangePickerWrapper .rdrDayToday .rdrDayNumber span:after,
 .rdrDateRangeWrapper .rdrDayToday .rdrDayNumber span:after {
-	background-color: var(--sl-color-primary-600) !important;
+	background-color: var(--wa-color-brand-40) !important;
 }
 
 /* || Schema combobox items */

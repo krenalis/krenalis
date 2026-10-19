@@ -27,17 +27,17 @@
 }
 
 .property-panel__delete-button::part(button) {
-	color: var(--sl-color-danger-600);
+	color: var(--wa-color-danger-40);
 }
 
 .property-panel__delete-button::part(button):hover {
-	background-color: var(--sl-color-danger-50);
-	color: var(--sl-color-danger-600);
+	background-color: var(--wa-color-danger-95);
+	color: var(--wa-color-danger-40);
 }
 
 .property-panel__delete-button::part(button):active {
-	background-color: var(--sl-color-danger-100);
-	color: var(--sl-color-danger-600);
+	background-color: var(--wa-color-danger-90);
+	color: var(--wa-color-danger-40);
 }
 
 .property-panel__delete-button wa-icon {

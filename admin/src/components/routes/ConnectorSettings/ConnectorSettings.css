@@ -59,7 +59,7 @@
 .connector-settings__divider {
 	width: 100%;
 	border: none;
-	border-top: 1px solid var(--sl-color-neutral-200);
+	border-top: 1px solid var(--wa-color-neutral-80);
 	margin-top: 2.6rem;
 	margin-bottom: 0;
 }

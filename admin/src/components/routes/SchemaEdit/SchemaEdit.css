@@ -30,14 +30,14 @@
 }
 
 .schema-edit__change-count > span {
-	background-color: var(--sl-color-primary-600);
+	background-color: var(--wa-color-brand-40);
 	border-radius: 50%;
 	height: 8px;
 	width: 8px;
 }
 
 .schema-edit__change-count--empty > span {
-	background-color: var(--sl-color-neutral-300);
+	background-color: var(--wa-color-neutral-70);
 }
 
 .schema-edit__header-buttons {
@@ -79,11 +79,11 @@
 }
 
 .schema-edit__add-property::part(button):hover {
-	background-color: color-mix(in srgb, var(--sl-color-primary-50) 75%, var(--bg-primary));
+	background-color: color-mix(in srgb, var(--wa-color-brand-95) 75%, var(--bg-primary));
 }
 
 .schema-edit__add-property::part(button):active {
-	background-color: var(--sl-color-primary-50);
+	background-color: var(--wa-color-brand-95);
 }
 
 .schema-edit__add-property::part(label) {
@@ -118,7 +118,7 @@
 }
 
 .schema-edit__filter-dot {
-	background-color: var(--sl-color-success-600);
+	background-color: var(--wa-color-success-40);
 	border: 2px solid var(--bg-primary);
 	border-radius: 50%;
 	height: 8px;
@@ -138,7 +138,7 @@
 	background-color: var(--bg-primary);
 	border: 1px solid var(--border-primary);
 	border-radius: var(--radius);
-	box-shadow: var(--sl-shadow-medium), var(--sl-shadow-large);
+	box-shadow: var(--wa-shadow-m), var(--wa-shadow-l);
 	min-width: 270px;
 	overflow: visible;
 	padding: 20px;
@@ -209,9 +209,9 @@
 }
 
 .schema-edit__property-status {
-	background-color: var(--sl-color-primary-100);
+	background-color: var(--wa-color-brand-90);
 	border: 0;
-	color: var(--sl-color-primary-800);
+	color: var(--wa-color-brand-20);
 	font-size: 11px;
 }
 

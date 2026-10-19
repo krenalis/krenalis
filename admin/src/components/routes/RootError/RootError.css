@@ -24,7 +24,7 @@
 }
 
 .root-error .icon-wrapper wa-icon {
-	color: var(--sl-color-primary-500);
+	color: var(--wa-color-brand-50);
 }
 
 .root-error__action {
