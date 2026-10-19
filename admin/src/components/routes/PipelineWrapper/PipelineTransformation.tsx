@@ -1829,11 +1829,7 @@ const FullscreenTransformation = ({
 		}
 	};
 
-	const onSampleClick = (e: any, sample: Sample) => {
-		const isOnExecuteButton = e.target === 'SL-ICON-BUTTON';
-		if (isOnExecuteButton) {
-			return;
-		}
+	const onSampleClick = (sample: Sample) => {
 		const isOpen = JSON.stringify(sample) === JSON.stringify(selectedSample);
 		if (isOpen) {
 			setSelectedSample(null);
@@ -1842,11 +1838,7 @@ const FullscreenTransformation = ({
 		}
 	};
 
-	const onEventClick = (evt: any, event: EventListenerEvent) => {
-		const isOnExecuteButton = evt.target === 'SL-ICON-BUTTON';
-		if (isOnExecuteButton) {
-			return;
-		}
+	const onEventClick = (event: EventListenerEvent) => {
 		const isOpen = JSON.stringify(event) === JSON.stringify(selectedEvent);
 		if (isOpen) {
 			setSelectedEvent(null);
@@ -2262,7 +2254,7 @@ const FullscreenTransformation = ({
 								summary={
 									<div
 										className={`fullscreen-transformation__sample${isOpen ? ' fullscreen-transformation__sample--open' : ''}${isLastExecuted ? ' fullscreen-transformation__sample--last-executed' : ''}`}
-										onClick={(e) => onSampleClick(e, s)}
+										onClick={() => onSampleClick(s)}
 									>
 										<div className='fullscreen-transformation__sample-name'>
 											{pipelineType.target === 'User' ? (
@@ -2375,7 +2367,7 @@ const FullscreenTransformation = ({
 														? ' fullscreen-transformation__event--last-executed'
 														: ''
 												}`}
-												onClick={(evt) => onEventClick(evt, e)}
+												onClick={() => onEventClick(e)}
 											>
 												<div className='fullscreen-transformation__event-type'>
 													{e.type}{' '}
