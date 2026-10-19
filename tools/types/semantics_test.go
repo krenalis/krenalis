@@ -268,9 +268,9 @@ func Test_TypeSemanticsCopyOnWrite(t *testing.T) {
 	}
 }
 
-// TestEqualSemantics tests semantics equality while ignoring kind and unrelated
-// type properties.
-func TestEqualSemantics(t *testing.T) {
+// Test_EqualSemantics tests semantics equality while ignoring kind and
+// unrelated type properties.
+func Test_EqualSemantics(t *testing.T) {
 
 	tests := []struct {
 		name      string
