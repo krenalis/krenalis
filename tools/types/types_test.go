@@ -158,6 +158,164 @@ func Test_Generic(t *testing.T) {
 
 }
 
+// Test_IsFloat checks ordinary and real float recognition with optional bit
+// sizes, false results for other types and panics for invalid arguments.
+func Test_IsFloat(t *testing.T) {
+
+	for _, size := range []int{32, 64} {
+		for _, real := range []bool{false, true} {
+			typ := Float(size)
+			if real {
+				typ = typ.Real()
+			}
+			t.Run(fmt.Sprintf("size=%d/real=%t", size, real), func(t *testing.T) {
+				if got := typ.IsFloat(); !got {
+					t.Errorf("IsFloat(): expected true, got %t", got)
+				}
+				for _, requested := range []int{32, 64} {
+					expected := requested == size
+					if got := typ.IsFloat(requested); got != expected {
+						t.Errorf("IsFloat(%d): expected %t, got %t", requested, expected, got)
+					}
+				}
+			})
+		}
+	}
+
+	for _, typ := range []Type{Int(32), Int(64), Year(), String(), {}} {
+		t.Run(fmt.Sprintf("other/type=%s", typ), func(t *testing.T) {
+			if got := typ.IsFloat(); got {
+				t.Errorf("IsFloat(): expected false, got %t", got)
+			}
+			for _, size := range []int{32, 64} {
+				if got := typ.IsFloat(size); got {
+					t.Errorf("IsFloat(%d): expected false, got %t", size, got)
+				}
+			}
+		})
+	}
+
+	for _, typ := range []Type{Float(64), String(), {}} {
+		for _, sizes := range [][]int{{-1}, {0}, {8}, {16}, {24}, {63}, {128}, {32, 64}} {
+			t.Run(fmt.Sprintf("panic/type=%s/sizes=%v", typ, sizes), func(t *testing.T) {
+				defer func() {
+					if recover() == nil {
+						t.Fatal("expected panic, got none")
+					}
+				}()
+				typ.IsFloat(sizes...)
+			})
+		}
+	}
+
+}
+
+// Test_IsInt checks signed and unsigned int recognition with optional bit
+// sizes, false results for other types and panics for invalid arguments.
+func Test_IsInt(t *testing.T) {
+
+	for _, size := range []int{8, 16, 24, 32, 64} {
+		for _, unsigned := range []bool{false, true} {
+			typ := Int(size)
+			if unsigned {
+				typ = typ.Unsigned()
+			}
+			t.Run(fmt.Sprintf("size=%d/unsigned=%t", size, unsigned), func(t *testing.T) {
+				if got := typ.IsInt(); !got {
+					t.Errorf("IsInt(): expected true, got %t", got)
+				}
+				for _, requested := range []int{8, 16, 24, 32, 64} {
+					expected := requested == size
+					if got := typ.IsInt(requested); got != expected {
+						t.Errorf("IsInt(%d): expected %t, got %t", requested, expected, got)
+					}
+				}
+			})
+		}
+	}
+
+	for _, typ := range []Type{Float(32), Float(64), Year(), String(), {}} {
+		t.Run(fmt.Sprintf("other/type=%s", typ), func(t *testing.T) {
+			if got := typ.IsInt(); got {
+				t.Errorf("IsInt(): expected false, got %t", got)
+			}
+			for _, size := range []int{8, 16, 24, 32, 64} {
+				if got := typ.IsInt(size); got {
+					t.Errorf("IsInt(%d): expected false, got %t", size, got)
+				}
+			}
+		})
+	}
+
+	for _, typ := range []Type{Int(64), String(), {}} {
+		for _, sizes := range [][]int{{-1}, {0}, {9}, {63}, {128}, {32, 64}} {
+			t.Run(fmt.Sprintf("panic/type=%s/sizes=%v", typ, sizes), func(t *testing.T) {
+				defer func() {
+					if recover() == nil {
+						t.Fatal("expected panic, got none")
+					}
+				}()
+				typ.IsInt(sizes...)
+			})
+		}
+	}
+
+}
+
+// Test_IsReal checks recognition of floats marked with Real and false results
+// for ordinary floats, ints, strings and the zero Type.
+func Test_IsReal(t *testing.T) {
+
+	tests := []struct {
+		name     string
+		typ      Type
+		expected bool
+	}{
+		{"float32", Float(32), false},
+		{"float64", Float(64), false},
+		{"real32", Float(32).Real(), true},
+		{"real64", Float(64).Real(), true},
+		{"int", Int(32), false},
+		{"string", String(), false},
+		{"invalid", Type{}, false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := test.typ.IsReal(); got != test.expected {
+				t.Fatalf("IsReal(): expected %t, got %t", test.expected, got)
+			}
+		})
+	}
+
+}
+
+// Test_IsUnsigned checks that IsUnsigned returns true for unsigned integers
+// and false for signed integers and types other than integers.
+func Test_IsUnsigned(t *testing.T) {
+
+	tests := []struct {
+		name     string
+		typ      Type
+		expected bool
+	}{
+		{"signed", Int(32), false},
+		{"unsigned", Int(32).Unsigned(), true},
+		{"float", Float(32), false},
+		{"string", String(), false},
+		{"invalid", Type{}, false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := test.typ.IsUnsigned(); got != test.expected {
+				t.Fatalf("IsUnsigned(): expected %t, got %t", test.expected, got)
+			}
+		})
+	}
+
+}
+
 func Test_Ranges(t *testing.T) {
 
 	for _, s := range []int{8, 16, 24, 32, 64} {

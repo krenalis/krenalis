@@ -439,9 +439,9 @@ func (t Type) IsDecimal() bool {
 //
 // For example:
 //
-// t.IsFloat()   // any float type
-// t.IsFloat(32) // a 32-bit float type
-// t.IsFloat(64) // a 64-bit float type
+//	t.IsFloat()   // any float type
+//	t.IsFloat(32) // a 32-bit float type
+//	t.IsFloat(64) // a 64-bit float type
 func (t Type) IsFloat(size ...int) bool {
 	if len(size) > 1 {
 		panic("expected at most one bit size")
@@ -458,13 +458,13 @@ func (t Type) IsIP() bool {
 }
 
 // IsInt reports whether t is an int type and, if size is provided,
-// whether it has that bit size.
-// It panics if more than one size is provided or size is not 8, 16, 24, 32 or 64.
+// whether it has that bit size. It panics if more than one size is provided or
+// size is not 8, 16, 24, 32 or 64.
 //
 // For example:
 //
-// t.IsInt()   // any int type, signed or unsigned
-// t.IsInt(32) // a 32-bit int type, signed or unsigned
+//	t.IsInt()   // any int type, signed or unsigned
+//	t.IsInt(32) // a 32-bit int type, signed or unsigned
 func (t Type) IsInt(size ...int) bool {
 	if len(size) > 1 {
 		panic("expected at most one bit size")

@@ -126,7 +126,7 @@ func marshalJavaScript(b []byte, t types.Type, v any, preserveJSON bool) ([]byte
 		}
 	case uint:
 		b = strconv.AppendUint(b, uint64(v), 10)
-		if t.BitSize() == 64 {
+		if t.IsInt(64) {
 			b = append(b, 'n')
 		}
 	case float64:
