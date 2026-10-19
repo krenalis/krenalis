@@ -330,9 +330,11 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 				return res, nil
 			}
 			_ = res.Body.Close()
-		default:
-			// Slowdown and RateLimited: the request is retried.
+		case connectors.Slowdown, connectors.RateLimited:
 			_ = res.Body.Close()
+		default:
+			_ = res.Body.Close()
+			return nil, fmt.Errorf("core/internal/connections/httpclient: unexpected failure reason %d", reason)
 		}
 
 		if hasBody {

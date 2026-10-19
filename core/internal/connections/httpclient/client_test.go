@@ -49,7 +49,7 @@ func TestDoClosesRetriedResponses(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			// Run in a bubble, so as not to wait for the rate limiter in real time.
+			// Run in a bubble, so as not to wait for the retries in real time.
 			synctest.Test(t, func(t *testing.T) {
 				retried := &recordingBody{Reader: strings.NewReader("")}
 				returned := &recordingBody{Reader: strings.NewReader("")}
