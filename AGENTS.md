@@ -387,6 +387,11 @@ owning workspace from their consequences. Accept them when they are safe for
 Krenalis. Establishing truthfulness or authenticity requires an independent
 integrity mechanism.
 
+As an exception, validation may reject mutually inconsistent values when they
+violate a relationship that their meaning guarantees, such as a subset count
+exceeding the count of the set that contains it, so that callers can rely on
+that guarantee.
+
 # Uniformity across data warehouses
 
 Every supported data warehouse has its own package under `warehouses/`, and
