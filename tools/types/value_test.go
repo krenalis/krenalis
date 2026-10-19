@@ -341,7 +341,7 @@ func Test_Decode(t *testing.T) {
 }
 
 // Test_IsValidDecimal checks whether decimal values are within the supported
-//  range.
+// range.
 func Test_IsValidDecimal(t *testing.T) {
 	for _, test := range []struct {
 		name, input string
