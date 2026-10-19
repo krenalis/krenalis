@@ -1,4 +1,5 @@
 import React, { ReactNode, useState, useMemo, useRef, useEffect, useLayoutEffect, useContext } from 'react';
+import { flushSync } from 'react-dom';
 import './Combobox.css';
 import SlInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
@@ -118,7 +119,9 @@ const Combobox = ({
 			setIsOpen(true);
 			updateCursorPosition();
 		} else if (event.key === 'Escape' || event.key === 'Tab') {
-			setIsOpen(false);
+			// Close the list before the browser moves the focus on Tab, so that
+			// the focus does not land on the tabs of the list.
+			flushSync(() => setIsOpen(false));
 		}
 	};
 
