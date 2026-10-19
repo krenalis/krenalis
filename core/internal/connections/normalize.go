@@ -687,7 +687,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 	case types.ArrayKind:
 		if s, ok := src.(string); ok {
 			// Snowflake only supports json as the item type. The driver returns the value as a JSON array.
-			if s == "" || s[0] != '[' || typ.Elem().Kind() != types.JSONKind {
+			if s == "" || s[0] != '[' || !typ.Elem().IsJSON() {
 				return nil, inputValidationErrorf(name, "has a string value but does not contain a JSON array")
 			}
 			v := json.Value(s)
@@ -783,7 +783,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 	case types.MapKind:
 		if s, ok := src.(string); ok {
 			// Snowflake only supports json as the value type. The driver returns the value as a JSON object.
-			if s == "" || s[0] != '{' || typ.Elem().Kind() != types.JSONKind {
+			if s == "" || s[0] != '{' || !typ.Elem().IsJSON() {
 				return nil, inputValidationErrorf(name, "has a string value but does not contain a JSON object")
 			}
 			v := json.Value(s)

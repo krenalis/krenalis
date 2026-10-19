@@ -408,12 +408,115 @@ func (t Type) Real() Type {
 	return t
 }
 
-// IsReal reports whether t is real. Panics if t is not a float type.
-func (t Type) IsReal() bool {
-	if t.kind != FloatKind {
-		panic("type is not a float type")
+// IsArray reports whether t is an array type.
+func (t Type) IsArray() bool {
+	return t.kind == ArrayKind
+}
+
+// IsBoolean reports whether t is a boolean type.
+func (t Type) IsBoolean() bool {
+	return t.kind == BooleanKind
+}
+
+// IsDate reports whether t is a date type.
+func (t Type) IsDate() bool {
+	return t.kind == DateKind
+}
+
+// IsDateTime reports whether t is a datetime type.
+func (t Type) IsDateTime() bool {
+	return t.kind == DateTimeKind
+}
+
+// IsDecimal reports whether t is a decimal type.
+func (t Type) IsDecimal() bool {
+	return t.kind == DecimalKind
+}
+
+// IsFloat reports whether t is a float type and, if size is provided,
+// whether it has that bit size.
+// It panics if more than one size is provided or size is not 32 or 64.
+//
+// For example:
+//
+// t.IsFloat()   // any float type
+// t.IsFloat(32) // a 32-bit float type
+// t.IsFloat(64) // a 64-bit float type
+func (t Type) IsFloat(size ...int) bool {
+	if len(size) > 1 {
+		panic("expected at most one bit size")
 	}
-	return t.real
+	if len(size) == 1 && size[0] != 32 && size[0] != 64 {
+		panic("bit size is not valid")
+	}
+	return t.kind == FloatKind && (len(size) == 0 || bitSize[t.size] == size[0])
+}
+
+// IsIP reports whether t is an IP type.
+func (t Type) IsIP() bool {
+	return t.kind == IPKind
+}
+
+// IsInt reports whether t is an int type and, if size is provided,
+// whether it has that bit size.
+// It panics if more than one size is provided or size is not 8, 16, 24, 32 or 64.
+//
+// For example:
+//
+// t.IsInt()   // any int type, signed or unsigned
+// t.IsInt(32) // a 32-bit int type, signed or unsigned
+func (t Type) IsInt(size ...int) bool {
+	if len(size) > 1 {
+		panic("expected at most one bit size")
+	}
+	if len(size) == 1 {
+		switch size[0] {
+		case 8, 16, 24, 32, 64:
+		default:
+			panic("bit size is not valid")
+		}
+	}
+	return t.kind == IntKind && (len(size) == 0 || bitSize[t.size] == size[0])
+}
+
+// IsJSON reports whether t is a JSON type.
+func (t Type) IsJSON() bool {
+	return t.kind == JSONKind
+}
+
+// IsMap reports whether t is a map type.
+func (t Type) IsMap() bool {
+	return t.kind == MapKind
+}
+
+// IsObject reports whether t is an object type.
+func (t Type) IsObject() bool {
+	return t.kind == ObjectKind
+}
+
+// IsReal reports whether t is a float type that excludes NaN and infinities.
+func (t Type) IsReal() bool {
+	return t.kind == FloatKind && t.real
+}
+
+// IsString reports whether t is a string type.
+func (t Type) IsString() bool {
+	return t.kind == StringKind
+}
+
+// IsTime reports whether t is a time type.
+func (t Type) IsTime() bool {
+	return t.kind == TimeKind
+}
+
+// IsUUID reports whether t is a UUID type.
+func (t Type) IsUUID() bool {
+	return t.kind == UUIDKind
+}
+
+// IsYear reports whether t is a year type.
+func (t Type) IsYear() bool {
+	return t.kind == YearKind
 }
 
 // Valid indicates if t is valid.
@@ -500,12 +603,9 @@ func (t Type) Unsigned() Type {
 	return t
 }
 
-// IsUnsigned reports whether t is unsigned. Panics if t is not an int type.
+// IsUnsigned reports whether t is an unsigned int type.
 func (t Type) IsUnsigned() bool {
-	if t.kind != IntKind {
-		panic("type is not an int type")
-	}
-	return t.unsigned
+	return t.kind == IntKind && t.unsigned
 }
 
 type intRange struct{ min, max int64 }

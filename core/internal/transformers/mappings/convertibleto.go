@@ -45,10 +45,10 @@ func convertibleTo(st, dt types.Type) bool {
 	dk := dt.Kind()
 	mask := int32(1 << (types.MapKind - dk))
 	if convertMatrix[sk-1]&mask == 0 {
-		if sk == types.BooleanKind && dk == types.IntKind && dt.BitSize() == 8 { // boolean is convertible to int(8)
+		if sk == types.BooleanKind && dt.IsInt(8) { // boolean is convertible to int(8)
 			return true
 		}
-		if sk == types.IntKind && dk == types.BooleanKind && st.BitSize() == 8 { // int(8) is convertible to boolean.
+		if st.IsInt(8) && dk == types.BooleanKind { // int(8) is convertible to boolean.
 			return true
 		}
 		return false

@@ -208,7 +208,7 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target connectors.Targets, 
 			Nullable:    true,
 			DisplayName: r.Label,
 		}
-		if typ.Kind() == types.StringKind {
+		if typ.IsString() {
 			if len(r.Options) == 0 {
 				// HubSpot limits values written through the CRM (and therefore
 				// through the API) to 65536 characters, but values submitted

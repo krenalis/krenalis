@@ -217,7 +217,7 @@ func Test_Merge_Query(t *testing.T) {
 			case fmt.Stringer:
 				// Normalize the decimal type in the same way as the normalization does.
 				// This avoids the explicit dependency on "github.com/shopspring/decimal" for the krenalis module.
-				if typ := cols[i].KrenalisType; typ.Kind() == types.DecimalKind {
+				if typ := cols[i].KrenalisType; typ.IsDecimal() {
 					v, err = decimal.Parse(vt.String(), typ.Precision(), typ.Scale())
 					if err != nil {
 						t.Fatalf("column %q: an error occurred parsing %v (%T) as decimal: %s", table.Columns[i].Name, v, v, err)
