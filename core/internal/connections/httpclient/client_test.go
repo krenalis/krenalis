@@ -61,6 +61,9 @@ func TestDoClosesRetriedResponses(t *testing.T) {
 				c.transport = roundTripFunc(func(*http.Request) (*http.Response, error) {
 					res := responses[0]
 					responses = responses[1:]
+					if res.Body == returned && !retried.closed {
+						t.Error("expected body of the retried response to be closed before retrying, got open")
+					}
 					return res, nil
 				})
 				req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/", nil)
@@ -73,9 +76,6 @@ func TestDoClosesRetriedResponses(t *testing.T) {
 				}
 				if res.StatusCode != 200 {
 					t.Fatalf("expected status 200, got %d", res.StatusCode)
-				}
-				if !retried.closed {
-					t.Fatal("expected body of the retried response to be closed, got open")
 				}
 				if returned.closed {
 					t.Fatal("expected body of the returned response to be open, got closed")
