@@ -10,7 +10,6 @@ import { Outlet } from 'react-router-dom';
 import { useNavigate, useLocation, matchPath } from 'react-router-dom';
 import { registerIconLibrary } from '@awesome.me/webawesome/dist/components/icon/library.js';
 import SlSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
-import '@shoelace-style/shoelace/dist/themes/light.css';
 import '@awesome.me/webawesome/dist/styles/layers.css';
 import '@awesome.me/webawesome/dist/styles/themes/default.css';
 import '../../../shoelace-compat.css';
