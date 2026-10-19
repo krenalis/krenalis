@@ -163,6 +163,61 @@ func Test_Decimal_Neg(t *testing.T) {
 
 }
 
+// Test_Decimal_PrecisionScale checks that precision and scale are exact and
+// that the original decimal remains unchanged.
+func Test_Decimal_PrecisionScale(t *testing.T) {
+
+	// Build a large mantissa with trailing fractional zeros through binary decoding.
+	// Reducing it also exposes mutations caused by a shallow copy.
+	encoded, err := MustParse("12345678901234567890123456.78").Binary(4)
+	if err != nil {
+		t.Fatalf("expected decimal binary encoding, got %v", err)
+	}
+	nonMinimal, err := Binary(encoded, 30, 4)
+	if err != nil {
+		t.Fatalf("expected decimal with trailing fractional zeros, got %v", err)
+	}
+
+	for _, test := range []struct {
+		name             string
+		value            Decimal
+		precision, scale int
+	}{
+		{"zero_value", Decimal{}, 1, 0},
+		{"zero_max_scale", New(0, MaxScale), 1, 0},
+		{"parsed_negative_zero", MustParse("-0.000e999999"), 1, 0},
+		{"parsed_trailing_zeros", MustParse("123.4500"), 5, 2},
+		{"negative_fraction", MustParse("-.00500"), 3, 3},
+		{"negative_decimal", MustParse("-123.4500"), 5, 2},
+		{"trailing_fractional_zeros", New(12300, 4), 3, 2},
+		{"integer_with_scale", New(100, 1), 2, 0},
+		{"non_minimal_binary", nonMinimal, 28, 2},
+		{"scale_38", New(10, 38), 37, 37},
+		{"min_scale", New(10, MinScale), 2 - MinScale, 0},
+		{"max_scale", New(1000, MaxScale), MaxScale - 3, MaxScale - 3},
+		{"exponent_75", MustParse("1e75"), 76, 0},
+		{"exponent_76", MustParse("1e76"), 77, 0},
+		{"exponent_minus_37", MustParse("1e-37"), 37, 37},
+		{"exponent_minus_38", MustParse("1e-38"), 38, 38},
+		{"large_positive_exponent", MustParse("1e999999"), 1000000, 0},
+		{"large_negative_exponent", MustParse("1e-999999"), 999999, 999999},
+		{"76_integer_digits", MustParse(strings.Repeat("9", 76)), 76, 0},
+		{"76_mixed_digits", MustParse(strings.Repeat("9", 39) + "." + strings.Repeat("8", 37)), 76, 37},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			before := fmt.Sprintf("%e", test.value)
+			precision, scale := test.value.PrecisionScale()
+			if precision != test.precision || scale != test.scale {
+				t.Fatalf("expected precision %d and scale %d, got %d and %d", test.precision, test.scale, precision, scale)
+			}
+			if after := fmt.Sprintf("%e", test.value); before != after {
+				t.Fatalf("expected unchanged decimal %s, got %s", before, after)
+			}
+		})
+	}
+
+}
+
 func Test_Decimal_Uint64(t *testing.T) {
 
 	tests := []struct {
