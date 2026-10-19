@@ -299,7 +299,7 @@ A short comment for a package-level variable or constant may appear on the same 
 
 Never begin an error message with the article `the`.
 
-Begin the message of an error that represents an internal failure, and of every panic, with the import path of the package that produces it, relative to the module path, followed by `: `, as in `core/internal/transformers/lambda: invalid function name`. When wrapping an error within the same package, do not repeat the prefix.
+Begin the message of an error that reports a bug or another situation that should never occur, and of every panic, with the import path of the package that produces it, relative to the module path, followed by `: `, as in `core/internal/transformers/lambda: invalid function name`. When wrapping an error within the same package, do not repeat the prefix.
 
 ## Correctness
 
