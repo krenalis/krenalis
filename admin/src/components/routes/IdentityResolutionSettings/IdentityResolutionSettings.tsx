@@ -9,6 +9,7 @@ import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import WaDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
 import WaDropdownItem from '@awesome.me/webawesome/dist/react/dropdown-item/index.js';
+import type WaDropdownItemElement from '@awesome.me/webawesome/dist/components/dropdown-item/dropdown-item.js';
 import { ObjectType } from '../../../lib/api/types/types';
 import { Identifiers } from '../../../lib/api/types/identifiers';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboboxItems';
@@ -173,7 +174,21 @@ const IdentityResolutionSettings = () => {
 										items={rowItems}
 										size='small'
 									/>
-									<WaDropdown>
+									<WaDropdown
+										onWaSelect={(e) => {
+											switch ((e.detail.item as WaDropdownItemElement).value) {
+												case 'up':
+													moveIdentifierUp(position);
+													break;
+												case 'down':
+													moveIdentifierDown(position);
+													break;
+												case 'remove':
+													removeIdentifier(position);
+													break;
+											}
+										}}
+									>
 										<WaButton
 											appearance='outlined'
 											size='s'
@@ -184,7 +199,7 @@ const IdentityResolutionSettings = () => {
 										</WaButton>
 										<WaDropdownItem
 											className='identifiers__mapping-up'
-											onClick={() => moveIdentifierUp(position)}
+											value='up'
 											disabled={position === 1}
 										>
 											<WaIcon slot='icon' name='arrow-up-circle' />
@@ -192,16 +207,13 @@ const IdentityResolutionSettings = () => {
 										</WaDropdownItem>
 										<WaDropdownItem
 											className='identifiers__mapping-down'
-											onClick={() => moveIdentifierDown(position)}
+											value='down'
 											disabled={position === identifiers.length}
 										>
 											<WaIcon slot='icon' name='arrow-down-circle' />
 											Move down
 										</WaDropdownItem>
-										<WaDropdownItem
-											className='identifiers__mapping-remove'
-											onClick={() => removeIdentifier(position)}
-										>
+										<WaDropdownItem className='identifiers__mapping-remove' value='remove'>
 											<WaIcon slot='icon' name='trash3' />
 											Remove
 										</WaDropdownItem>

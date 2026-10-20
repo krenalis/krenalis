@@ -8,6 +8,7 @@ import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import WaSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
 import WaDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
 import WaDropdownItem from '@awesome.me/webawesome/dist/react/dropdown-item/index.js';
+import type WaDropdownItemElement from '@awesome.me/webawesome/dist/components/dropdown-item/dropdown-item.js';
 import WaRadio from '@awesome.me/webawesome/dist/react/radio/index.js';
 import WaRadioGroup from '@awesome.me/webawesome/dist/react/radio-group/index.js';
 import { Pipeline } from '../../../lib/api/types/pipeline';
@@ -310,6 +311,16 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 				<WaDropdown
 					className='connection-pipelines__buttons-dropdown'
 					placement='bottom-end'
+					onWaSelect={(e) => {
+						switch ((e.detail.item as WaDropdownItemElement).value) {
+							case 'manage':
+								onManageClick(pipeline);
+								break;
+							case 'delete':
+								onDeletePipeline(pipeline.id);
+								break;
+						}
+					}}
 					onWaHide={(e: any) => {
 						if (e.target !== e.currentTarget) {
 							return;
@@ -337,16 +348,10 @@ const PipelinesGrid = ({ newPipelineID, pipelines, onSelectPipeline }: Pipelines
 							Run now
 						</FeedbackButton>
 					)}
-					<WaDropdownItem
-						className='connection-pipelines__manage-button'
-						onClick={() => onManageClick(pipeline)}
-					>
+					<WaDropdownItem className='connection-pipelines__manage-button' value='manage'>
 						Manage...
 					</WaDropdownItem>
-					<WaDropdownItem
-						className='connection-pipelines__delete'
-						onClick={() => onDeletePipeline(pipeline.id)}
-					>
+					<WaDropdownItem className='connection-pipelines__delete' value='delete'>
 						Delete
 					</WaDropdownItem>
 				</WaDropdown>

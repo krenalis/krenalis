@@ -633,9 +633,9 @@ test(`Sort the identifiers`, async ({ page }) => {
 
 	const identifiers = page.locator('.identifiers__identifier');
 	await identifiers.nth(0).locator('.identifiers__identifier-menu').click();
-	await identifiers.nth(0).locator('.identifiers__mapping-down').click();
+	await identifiers.nth(0).locator('.identifiers__mapping-down').press('Enter');
 	await identifiers.nth(2).locator('.identifiers__identifier-menu').click();
-	await identifiers.nth(2).locator('.identifiers__mapping-up').click();
+	await identifiers.nth(2).locator('.identifiers__mapping-up').press('Space');
 	await page.click('.identifiers__save-button');
 	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
 	await page.reload();
@@ -651,7 +651,9 @@ test(`Remove the identifiers`, async ({ page }) => {
 	let identifiers = page.locator('.identifiers__identifier');
 
 	await identifiers.nth(2).locator('.identifiers__identifier-menu').click();
-	await identifiers.nth(2).locator('.identifiers__mapping-remove').click();
+	await expect(identifiers.nth(2).locator('.identifiers__mapping-up')).toBeFocused();
+	await page.keyboard.press('End');
+	await page.keyboard.press('Enter');
 
 	await identifiers.nth(1).locator('.identifiers__identifier-menu').click();
 	await identifiers.nth(1).locator('.identifiers__mapping-remove').click();
