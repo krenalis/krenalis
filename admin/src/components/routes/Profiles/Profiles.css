@@ -276,6 +276,7 @@
 .profile-drawer__kpid wa-icon {
 	position: relative;
 	top: 1px;
+	margin-right: 4px;
 	color: var(--wa-color-neutral-50);
 }
 
