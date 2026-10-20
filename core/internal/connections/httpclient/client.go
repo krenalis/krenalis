@@ -177,8 +177,8 @@ func (c *Client) ClientSecret() (string, error) {
 //
 // It always closes the request body, even if an error occurs. It is the
 // caller's responsibility to close the response body; however, it is not
-// necessary to drain it, as Close drains the body (reading until EOF, or up to
-// a fixed limit) before closing it.
+// necessary to drain it, as the transport drains an unread body after it is
+// closed.
 //
 // It does not follow redirects.
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
@@ -293,7 +293,6 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 			retries++
 			continue
 		}
-		res.Body = drainReadCloser{res.Body}
 
 		if status := res.StatusCode; status == 200 || status == 201 || status == 204 {
 			limiter.OnSuccess(duration)
@@ -465,18 +464,6 @@ func (c *Client) retrieveOAuthToken(ctx context.Context, auth *state.OAuth, code
 	expiration = expiration.Add(time.Duration(expiresIn) * time.Second)
 
 	return tokens.AccessToken, tokens.RefreshToken, expiration, nil
-}
-
-// drainReadCloser wraps an io.ReadCloser and ensures that the underlying reader
-// is drained (read until EOF, or up to a fixed limit) before it is closed.
-type drainReadCloser struct {
-	io.ReadCloser
-}
-
-func (d drainReadCloser) Close() error {
-	const maxDrain = 32 << 10 // 32 KiB
-	_, _ = io.Copy(io.Discard, io.LimitReader(d.ReadCloser, maxDrain))
-	return d.ReadCloser.Close()
 }
 
 // retryStrategy determines the failure reason and how long to wait before
