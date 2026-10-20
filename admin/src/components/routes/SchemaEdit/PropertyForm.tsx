@@ -444,6 +444,11 @@ const PropertyForm = ({
 	};
 
 	const valueType = getPropertyValueType(property.type);
+	const showStringConstraints =
+		valueType?.kind === 'string' &&
+		valueType.semantics !== 'country' &&
+		valueType.semantics !== 'phone' &&
+		canEditType;
 	let decimalDescription: string | null = null;
 	if (valueType?.kind === 'decimal' && checkDecimalType(valueType) == null) {
 		const scale = valueType.scale ?? 0;
@@ -567,7 +572,7 @@ const PropertyForm = ({
 					<PropertyFormError name='type'>{typeError.message}</PropertyFormError>
 				)}
 			</div>
-			{valueType?.kind === 'string' && canEditType && (
+			{showStringConstraints && (
 				<div className='property-form__constraints property-form__constraints--length'>
 					<WaInput
 						label='Max characters'

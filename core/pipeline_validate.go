@@ -341,6 +341,33 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 				return errors.BadRequest("input matching property cannot be converted to the output matching property")
 			}
 		}
+		// Check the semantics.
+		if !types.EqualSemantics(in.Type, out.Type) {
+			if in.Type.Semantics() != out.Type.Semantics() {
+				inSemantics, outSemantics := in.Type.Semantics().String(), out.Type.Semantics().String()
+				if in.Type.Semantics() == types.NoSemantics {
+					inSemantics = "no"
+				}
+				if out.Type.Semantics() == types.NoSemantics {
+					outSemantics = "no"
+				}
+				return errors.BadRequest(
+					"input matching property has %s semantics, but output matching property requires %s semantics",
+					inSemantics, outSemantics)
+			}
+			option := "semantics option"
+			switch in.Type.Semantics() {
+			case types.CountrySemantics:
+				option = "country format"
+			case types.DurationSemantics:
+				option = "duration unit"
+			case types.MeasurementSemantics:
+				option = "unit of measure"
+			}
+			return errors.BadRequest(
+				"input matching property has %s %s, but output matching property requires %s", option,
+				types.SemanticsOptionString(in.Type), types.SemanticsOptionString(out.Type))
+		}
 		// Check that the output property has not been transformed.
 		// This includes checks on the property itself and all its parent paths.
 		if tr := pipeline.Transformation; tr != nil {

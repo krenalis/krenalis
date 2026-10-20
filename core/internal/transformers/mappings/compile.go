@@ -552,6 +552,12 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 				msg = fmt.Sprintf("number %s is greater than %v", p.value, n)
 			case errEnumConversion:
 				msg = fmt.Sprintf("%q is not one of the allowed values", p.value)
+			case errCountryAlpha2Conversion:
+				msg = fmt.Sprintf("%q is not a 2-letter country code", p.value)
+			case errCountryAlpha3Conversion:
+				msg = fmt.Sprintf("%q is not a 3-letter country code", p.value)
+			case errPhoneConversion:
+				msg = fmt.Sprintf("%q is not a valid phone number", p.value)
 			case errPatternConversion:
 				msg = fmt.Sprintf("%q does not match /%s/", p.value, dt.Pattern())
 			case errMaxBytesConversion:
