@@ -35,7 +35,7 @@ type Expression struct {
 //
 // If schema is invalid, the expression will be compiled without path resolution.
 func Compile(expr string, schema, dt types.Type) (*Expression, []string, error) {
-	if schema.Valid() && schema.Kind() != types.ObjectKind {
+	if schema.Valid() && !schema.IsObject() {
 		return nil, nil, errors.New("schema is not an object")
 	}
 	if !dt.Valid() {
@@ -94,7 +94,7 @@ func checkArray(args [][]part, schema, dt types.Type, nullable bool, attributes 
 	// If the destination type (dt) is not an array, no checks are performed,
 	// and it is left to the caller to fail later.
 	et := types.JSON()
-	if dt.Kind() == types.ArrayKind {
+	if dt.IsArray() {
 		et = dt.Elem()
 	}
 	for _, arg := range args {
@@ -241,7 +241,7 @@ func checkMap(args [][]part, schema, dt types.Type, nullable bool, attributes ma
 		if len(args[i]) != 1 || args[i][0].path.elements != nil {
 			return types.Type{}, errors.New("'map' key is not constant")
 		}
-		if args[i][0].typ.Kind() != types.StringKind {
+		if !args[i][0].typ.IsString() {
 			return types.Type{}, errors.New("'map' key is not string")
 		}
 

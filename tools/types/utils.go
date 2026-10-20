@@ -274,7 +274,7 @@ func asRole(t Type, role Role) (Type, bool) {
 	pp := t.vl.(Properties).properties
 	var ppc []Property
 	for i := range pp {
-		if pp[i].Type.Kind() == ObjectKind {
+		if pp[i].Type.IsObject() {
 			if t, ok := asRole(pp[i].Type, role); ok {
 				if ppc == nil {
 					ppc = slices.Clone(pp)

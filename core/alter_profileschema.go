@@ -56,7 +56,7 @@ func (this *Workspace) AlterProfileSchema(ctx context.Context, schema types.Type
 	if !schema.Valid() {
 		return errors.BadRequest("schema must be valid")
 	}
-	if schema.Kind() != types.ObjectKind {
+	if !schema.IsObject() {
 		return errors.BadRequest("expected schema with kind object, got %s", schema.Kind())
 	}
 	if err := validatePrimarySources(schema, primarySources); err != nil {
@@ -119,7 +119,7 @@ func (this *Workspace) PreviewAlterProfileSchema(ctx context.Context, schema typ
 	if !schema.Valid() {
 		return nil, errors.BadRequest("schema must be valid")
 	}
-	if schema.Kind() != types.ObjectKind {
+	if !schema.IsObject() {
 		return nil, errors.BadRequest("expected schema with kind object, got %s", schema.Kind())
 	}
 	if err := validateRePaths(rePaths); err != nil {
@@ -279,7 +279,7 @@ func validatePrimarySources(schema types.Type, primarySources map[string]string)
 		if !IsValidID(source) {
 			return fmt.Errorf("primary source identifier %q is not valid", source)
 		}
-		if k := p.Type.Kind(); k == types.ObjectKind || k == types.ArrayKind {
+		if p.Type.IsObject() || p.Type.IsArray() {
 			return fmt.Errorf("primary sources cannot be specified for %s properties", p.Type)
 		}
 	}

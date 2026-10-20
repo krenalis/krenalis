@@ -240,7 +240,7 @@ func (d decoder) readValue() (json.Value, error) {
 
 // unmarshal unmarshals a JSON value.
 func (d decoder) unmarshal(t Type) (_ any, err error) {
-	if t.Kind() == JSONKind {
+	if t.IsJSON() {
 		v, err := d.readValue()
 		if err != nil {
 			return nil, err
@@ -253,7 +253,7 @@ func (d decoder) unmarshal(t Type) (_ any, err error) {
 		if _, err := d.readToken(); err != nil {
 			return nil, err
 		}
-		if t.Kind() != ArrayKind {
+		if !t.IsArray() {
 			return nil, newErrInvalidValue("cannot be an array", "")
 		}
 		minElements, maxElements := t.MinElements(), t.MaxElements()
@@ -320,7 +320,7 @@ func (d decoder) unmarshal(t Type) (_ any, err error) {
 					if _, err := d.readToken(); err != nil {
 						return nil, err
 					}
-					if p.Type.Kind() == JSONKind {
+					if p.Type.IsJSON() {
 						value = json.Value("null")
 					} else {
 						if !p.Nullable {
@@ -626,20 +626,19 @@ func marshal(b []byte, data any, t Type) (json.Value, error) {
 			b = append(b, "false"...)
 		}
 	case int:
-		quoted := t.Kind() != YearKind && t.BitSize() == 64
-		if quoted {
+		if t.IsInt(64) {
 			b = append(b, '"')
 		}
 		b = strconv.AppendInt(b, int64(v), 10)
-		if quoted {
+		if t.IsInt(64) {
 			b = append(b, '"')
 		}
 	case uint:
-		if t.BitSize() == 64 {
+		if t.IsInt(64) {
 			b = append(b, '"')
 		}
 		b = strconv.AppendUint(b, uint64(v), 10)
-		if t.BitSize() == 64 {
+		if t.IsInt(64) {
 			b = append(b, '"')
 		}
 	case float64:
