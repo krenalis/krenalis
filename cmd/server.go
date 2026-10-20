@@ -180,6 +180,9 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 				workOS.ServeHTTP(w, r)
 				return
 			}
+		case r.URL.Path == "/livez":
+			serveLivez(w, r)
+			return
 		case r.URL.Path == "/metrics":
 			if config.PrometheusMetricsEnabled {
 				prometheusMetricsHandler.ServeHTTP(w, r)
@@ -348,6 +351,19 @@ func verifyCertificate(cert tls.Certificate, dnsName string, roots *x509.CertPoo
 	}
 
 	return nil
+}
+
+// serveLivez serves the /livez endpoint, which reports that the process is
+// serving requests.
+func serveLivez(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		w.Header().Set("Allow", "GET")
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = w.Write([]byte("ok"))
 }
 
 // serveMCPServerHTMLIndex returns the MCP server HTML index page.

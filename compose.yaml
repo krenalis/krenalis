@@ -39,6 +39,11 @@ services:
     volumes:
       - ./storage:/var/krenalis/storage
       - transformation-functions:/var/krenalis/transformation-functions
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://krenalis:2022/livez"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     depends_on:
       db:
         condition: service_healthy

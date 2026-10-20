@@ -56,6 +56,16 @@ export default defineConfig({
 			use: { ...devices['Desktop Chrome'] },
 			testMatch: ['tests/settings.spec.ts'],
 		},
+		{
+			name: 'identity-overview.spec.ts',
+			use: { ...devices['Desktop Chrome'] },
+			testMatch: ['tests/identity-overview.spec.ts'],
+		},
+		{
+			name: 'segmented-date-range-control.spec.ts',
+			use: { ...devices['Desktop Chrome'] },
+			testMatch: ['tests/segmented-date-range-control.spec.ts'],
+		},
 
 		// {
 		// 	name: 'firefox',

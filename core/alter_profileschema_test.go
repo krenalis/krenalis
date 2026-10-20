@@ -133,7 +133,7 @@ func TestAlterProfileSchemaFinalization(t *testing.T) {
 			t.Fatalf("expected initialized State, got %v", err)
 		}
 		t.Cleanup(func() { st.Close(context.Background()) })
-		ds, err := datastore.New(st, nil)
+		ds, err := datastore.New(st)
 		if err != nil {
 			t.Fatalf("expected datastore, got %v", err)
 		}

@@ -319,22 +319,22 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 		})
 	}
 
-	// Init the metrics.
-	core.metrics = metrics.New(db, core.state)
-	defer func() {
-		if err != nil {
-			core.metrics.Close(context.Background())
-		}
-	}()
-
 	// Init the datastore.
-	core.datastore, err = datastore.New(core.state, &core.metrics.Pipelines)
+	core.datastore, err = datastore.New(core.state)
 	if err != nil {
 		return nil, fmt.Errorf("core: cannot init the datastore: %s", err)
 	}
 	defer func() {
 		if err != nil {
 			core.datastore.Close()
+		}
+	}()
+
+	// Init the metrics.
+	core.metrics = metrics.New(db, core.state, core.datastore)
+	defer func() {
+		if err != nil {
+			core.metrics.Close(context.Background())
 		}
 	}()
 
@@ -354,7 +354,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 
 	// Init the event collector.
 	sender.MaxQueuedEvents = conf.MaxQueuedEventsPerDestination
-	core.collector, err = collector.New(db, core.stream, core.state, core.datastore, core.connections, core.functionProvider, core.metrics, conf.MaxMindDBPath)
+	core.collector, err = collector.New(ctx, db, core.stream, core.state, core.datastore, core.connections, core.functionProvider, core.metrics, conf.MaxMindDBPath)
 	if err != nil {
 		return nil, err
 	}
@@ -1337,7 +1337,10 @@ func (core *Core) endLiveRun(ctx context.Context, run *state.PipelineRun, reason
 	}
 
 	// Waits for the metrics to be saved.
-	core.metrics.Pipelines.WaitStore()
+	err := core.metrics.Pipelines.WaitStore(ctx)
+	if err != nil {
+		return err
+	}
 
 	n := state.EndPipelineRun{
 		ID:       run.ID,
@@ -1560,18 +1563,18 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 		connection := &Connection{core: core, store: store, connection: c}
 		p := &Pipeline{core: core, pipeline: pipeline, connection: connection}
 
-		var err error
+		var runErr error
 		if c.Role == state.Source {
-			err = p.importUsers(executionCtx)
+			runErr = p.importUsers(executionCtx)
 		} else {
-			err = p.exportProfiles(executionCtx)
+			runErr = p.exportProfiles(executionCtx)
 		}
 		if executionCtx.Err() != nil {
 			return
 		}
 
 		// End the run.
-		err = core.endLiveRun(core.close.ctx, run, err)
+		err := core.endLiveRun(core.close.ctx, run, runErr)
 		if err != nil {
 			// Context has been canceled.
 			return
@@ -1579,6 +1582,15 @@ func (core *Core) tryStartPipelineRun(run *state.PipelineRun) {
 
 		// Stop pinging as it is no longer required.
 		stopPing()
+
+		// Refresh identity metrics after a successful import.
+		if c.Role == state.Source && runErr == nil {
+			err := core.metrics.Identities.Refresh(core.close.ctx, ws.ID)
+			if err != nil {
+				slog.Error("core: cannot refresh identity metrics at the end of import",
+					"workspace", ws.ID, "run", run.ID, "error", err)
+			}
+		}
 
 		// Start the Identity Resolution, if necessary.
 		if c.Role == state.Source && ws.ResolveIdentitiesOnBatchImport {
@@ -1793,9 +1805,8 @@ func (core *Core) executeIdentityResolution(workspaceID, opID string) {
 				break
 			}
 			// In case of unknown error, try again.
-			loggedError := warehouses.NewOperationError(err)
-			if msg := loggedError.Error(); unknownErrorMsg != msg {
-				slog.Warn("failed to check the identity resolution status; retrying", "error", loggedError)
+			if msg := err.Error(); unknownErrorMsg != msg {
+				slog.Warn("failed to check the identity resolution status; retrying", "error", err)
 				unknownErrorMsg = msg
 			}
 			continue
