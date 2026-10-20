@@ -5,6 +5,7 @@
 package httpclient
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/tools/errors"
 )
 
 // recordingBody is a response body that records whether it has been closed.
@@ -40,12 +42,19 @@ func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
 func TestDoClosesRetriedResponses(t *testing.T) {
 	tests := []struct {
 		name   string
+		method string
+		body   string
+		oauth  bool
 		status int
 		header http.Header
 	}{
-		{name: "RateLimited", status: 429, header: http.Header{"Retry-After": []string{"0.01"}}},
-		{name: "Slowdown", status: 429},
-		{name: "NetFailure", status: 500},
+		{name: "RateLimited", method: http.MethodGet, status: 429, header: http.Header{"Retry-After": []string{"0.01"}}},
+		{name: "Slowdown", method: http.MethodGet, status: 429},
+		{name: "NetFailure", method: http.MethodGet, status: 500},
+		{name: "Unauthorized", method: http.MethodGet, oauth: true, status: 401},
+		{name: "POST RateLimited", method: http.MethodPost, body: "request", status: 429, header: http.Header{"Retry-After": []string{"0.01"}}},
+		{name: "POST Slowdown", method: http.MethodPost, body: "request", status: 429},
+		{name: "POST NetFailure", method: http.MethodPost, body: "request", status: 500},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -58,7 +67,24 @@ func TestDoClosesRetriedResponses(t *testing.T) {
 					{StatusCode: 200, Body: returned},
 				}
 				c := client(t, newHTTP(t), "")
-				c.transport = roundTripFunc(func(*http.Request) (*http.Response, error) {
+				if test.oauth {
+					c.accessToken = "token"
+					group := c.endpointGroups.byPattern["/"]
+					group.requireOAuth = true
+					c.endpointGroups.byPattern["/"] = group
+				}
+				c.transport = roundTripFunc(func(req *http.Request) (*http.Response, error) {
+					var sent []byte
+					if req.Body != nil {
+						var err error
+						sent, err = io.ReadAll(req.Body)
+						if err != nil {
+							t.Fatal(err)
+						}
+					}
+					if string(sent) != test.body {
+						t.Errorf("expected request body %q, got %q", test.body, sent)
+					}
 					res := responses[0]
 					responses = responses[1:]
 					if res.Body == returned && !retried.closed {
@@ -66,7 +92,11 @@ func TestDoClosesRetriedResponses(t *testing.T) {
 					}
 					return res, nil
 				})
-				req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/", nil)
+				var body io.Reader
+				if test.body != "" {
+					body = strings.NewReader(test.body)
+				}
+				req, err := http.NewRequestWithContext(t.Context(), test.method, "https://example.com/", body)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -80,6 +110,55 @@ func TestDoClosesRetriedResponses(t *testing.T) {
 				if returned.closed {
 					t.Fatal("expected body of the returned response to be open, got closed")
 				}
+			})
+		})
+	}
+}
+
+// TestDoClosesRetriedResponsesOnDeadline tests that Do closes the body of a
+// response to retry, and returns the context error, when the context expires
+// while waiting to retry the request.
+func TestDoClosesRetriedResponsesOnDeadline(t *testing.T) {
+	tests := []struct {
+		name   string
+		status int
+		header http.Header
+	}{
+		{name: "RateLimited", status: 429, header: http.Header{"Retry-After": []string{"1"}}},
+		{name: "Slowdown", status: 429},
+		{name: "NetFailure", status: 500},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			// Run in a bubble, so as not to wait for the deadline in real time.
+			synctest.Test(t, func(t *testing.T) {
+				retried := &recordingBody{Reader: strings.NewReader("")}
+				calls := 0
+				c := client(t, newHTTP(t), "")
+				c.transport = roundTripFunc(func(*http.Request) (*http.Response, error) {
+					calls++
+					return &http.Response{StatusCode: test.status, Header: test.header, Body: retried}, nil
+				})
+				ctx, cancel := context.WithTimeout(t.Context(), time.Millisecond)
+				defer cancel()
+				req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://example.com/", nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				_, err = c.Do(req)
+				if err != nil {
+					if !errors.Is(err, context.DeadlineExceeded) {
+						t.Fatalf("expected error %q, got %q", context.DeadlineExceeded, err)
+					}
+					if calls != 1 {
+						t.Fatalf("expected 1 request, got %d", calls)
+					}
+					if !retried.closed {
+						t.Fatal("expected body of the response to be closed, got open")
+					}
+					return
+				}
+				t.Fatal("expected error, got nil")
 			})
 		})
 	}
