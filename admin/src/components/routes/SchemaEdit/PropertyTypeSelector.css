@@ -254,15 +254,6 @@
 	margin: 0 1px 6px;
 }
 
-.property-type-selector__type-change-note--read-only {
-	background-color: var(--sl-color-neutral-100);
-	border-radius: var(--sl-input-border-radius-medium);
-	color: var(--text-primary);
-	font-size: 13px;
-	margin: 0 0 8px;
-	padding: 6px 8px;
-}
-
 .property-type-selector__option::part(base) {
 	align-items: center;
 	border-radius: var(--radius);

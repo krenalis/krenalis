@@ -296,14 +296,10 @@ const PropertyTypeSelector = ({ type, canEditType, onChange }: PropertyTypeSelec
 	return (
 		<div className='property-type-selector'>
 			{type != null && (
-				<div
-					className={`property-type-selector__type-change-note${
-						canEditType ? '' : ' property-type-selector__type-change-note--read-only'
-					}`}
-				>
+				<div className='property-type-selector__type-change-note'>
 					{canEditType
 						? "Can't be changed once the property has been applied."
-						: 'The type of an existing property cannot be changed.'}
+						: "The type can't be changed for an existing property."}
 				</div>
 			)}
 			<div

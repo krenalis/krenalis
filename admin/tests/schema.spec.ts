@@ -1884,7 +1884,7 @@ test(`Keep applied property types read-only and preserve their configuration`, a
 		await expect(typeDropdown).toHaveAttribute('disabled');
 		await expect(structureTrigger.locator('button')).toBeDisabled();
 		await expect(typeTrigger.locator('button')).toBeDisabled();
-		await expect(typeChangeNote).toHaveText('The type of an existing property cannot be changed.');
+		await expect(typeChangeNote).toHaveText("The type can't be changed for an existing property.");
 		await expect(typeChangeNote).toBeVisible();
 		const changeNameButton = propertyPanel.locator('.property-form__change-name button');
 		await changeNameButton.focus();
@@ -2000,7 +2000,7 @@ test(`Render array and map property types and preserve their semantics`, async (
 		'phone number · string',
 	);
 	await expect(propertyPanel.locator('.property-type-selector__type-change-note')).toHaveText(
-		'The type of an existing property cannot be changed.',
+		"The type can't be changed for an existing property.",
 	);
 	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Updated description');
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
