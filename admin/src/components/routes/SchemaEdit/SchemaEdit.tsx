@@ -116,7 +116,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		initialPropertyKey,
 	);
 	const onRemoveClick = (propertyKey: string, propertyName: string, isNew: boolean) => {
-		// Shoelace restores focus to the element that was active when the dialog opened.
+		// Web Awesome restores focus to the element that was active when the dialog opened.
 		gridRef.current?.focus();
 		setPropertyToRemove({ key: propertyKey, name: propertyName, isNew });
 	};

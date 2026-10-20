@@ -42,7 +42,7 @@ const SchemaPropertyIdentifierValue = ({ position }: { position?: number }) =>
 		</span>
 	);
 
-// Prevent a surrounding Shoelace label from focusing its associated control.
+// Prevent a surrounding Web Awesome label from focusing its associated control.
 const preventInfoInteraction = (event: React.SyntheticEvent) => {
 	event.preventDefault();
 	event.stopPropagation();
@@ -278,7 +278,7 @@ const SchemaPropertyGridToolbar = ({
 	const classNamePrefix = schemaPropertyGridClassNamePrefixes[view];
 
 	// Filtering rerenders the grid and can move focus away from the search input.
-	// Wait for Shoelace to finish updating before restoring it.
+	// Wait for Web Awesome to finish updating before restoring it.
 	useEffect(() => {
 		if (!isSearchOpen || searchRef.current == null) {
 			return;
