@@ -1,7 +1,7 @@
 import { test, expect, type Locator } from '@playwright/test';
 import { login, logout, adminURL, logValidationErrors } from './utils';
 import Type, { ObjectType, Property } from '../src/lib/api/types/types';
-import { ConsentPurpose } from '../src/lib/api/types/workspace';
+import { ConsentPurpose, PrimarySources } from '../src/lib/api/types/workspace';
 
 const createConsentPurpose = (id: string, name: string, property: string, jsonKey?: string): ConsentPurpose => ({
 	id,
@@ -335,7 +335,6 @@ test(`Update consent associations while editing profile schema properties`, asyn
 });
 
 test(`Disable profile schema editing until the schema has loaded`, async ({ page }) => {
-	let schemaRequestCount = 0;
 	let releaseSchemaReload = () => {};
 	const schemaReloadGate = new Promise<void>((resolve) => {
 		releaseSchemaReload = resolve;
@@ -345,7 +344,7 @@ test(`Disable profile schema editing until the schema has loaded`, async ({ page
 		schemaReloadStarted = resolve;
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
-		if (route.request().method() === 'GET' && schemaRequestCount++ > 0) {
+		if (route.request().method() === 'GET') {
 			schemaReloadStarted();
 			await schemaReloadGate;
 		}
@@ -374,6 +373,234 @@ test(`Disable profile schema editing until the schema has loaded`, async ({ page
 	}
 	await expect(editSchemaButton).not.toHaveAttribute('disabled', { timeout: 10000 });
 });
+
+for (const {
+	scenario,
+	shouldFailWorkspaceReload,
+	shouldNavigateAway,
+	shouldCompleteOnReturn = false,
+	shouldFailInitialAlterStatus = false,
+	shouldNavigateBack = false,
+} of [
+	{ scenario: 'with a delayed workspace reload', shouldFailWorkspaceReload: false, shouldNavigateAway: false },
+	{ scenario: 'after a failed workspace reload', shouldFailWorkspaceReload: true, shouldNavigateAway: false },
+	{
+		scenario: 'after leaving and returning to the schema',
+		shouldFailWorkspaceReload: false,
+		shouldNavigateAway: true,
+	},
+	{
+		scenario: 'after returning to the schema and retrying a failed reload',
+		shouldFailWorkspaceReload: true,
+		shouldNavigateAway: true,
+	},
+	{
+		scenario: 'while an alteration completes during the return to the schema',
+		shouldFailWorkspaceReload: false,
+		shouldNavigateAway: true,
+		shouldCompleteOnReturn: true,
+	},
+	{
+		scenario: 'after retrying the initial alteration status on return',
+		shouldFailWorkspaceReload: false,
+		shouldNavigateAway: true,
+		shouldCompleteOnReturn: true,
+		shouldFailInitialAlterStatus: true,
+	},
+	{
+		scenario: 'after going Back during an alteration and workspace reload',
+		shouldFailWorkspaceReload: false,
+		shouldNavigateAway: false,
+		shouldNavigateBack: true,
+	},
+	{
+		scenario: 'after going Back and retrying a failed workspace reload',
+		shouldFailWorkspaceReload: true,
+		shouldNavigateAway: false,
+		shouldNavigateBack: true,
+	},
+]) {
+	test(`Preserve primary sources across schema saves ${scenario}`, async ({ page }) => {
+		await page.clock.install();
+		const sourceID = '9zQ4Tn7B3mS6';
+		const submittedSources: PrimarySources[] = [];
+		const submittedSchemas: ObjectType[] = [];
+		const previewedSchemas: ObjectType[] = [];
+		let isAlterComplete = false;
+		let schemaRequestCount = 0;
+		let shouldWaitForAlterStatus = false;
+		let initialAlterStatusRequestCount = 0;
+		let releaseAlterStatus = () => {};
+		const alterStatusGate = new Promise<void>((resolve) => {
+			releaseAlterStatus = resolve;
+		});
+		let workspaceReloadCount = 0;
+		let releaseWorkspaceReload = () => {};
+		const workspaceReloadGate = new Promise<void>((resolve) => {
+			releaseWorkspaceReload = resolve;
+		});
+		await page.route('**/v1/connections', async (route) => {
+			const response = await route.fetch();
+			const body = await response.json();
+			body.connections.push({
+				id: sourceID,
+				name: 'Schema test source',
+				connector: 'dummy',
+				connectorType: 'SDK',
+				role: 'Source',
+				storage: '',
+				compression: '',
+				strategy: null,
+				sendingMode: null,
+				hasSettings: false,
+				health: 'Healthy',
+				pipelines: [],
+				linkedConnections: null,
+			});
+			await route.fulfill({ response, json: body });
+		});
+		await page.route('**/v1/workspaces', async (route) => {
+			const primarySources = isAlterComplete ? submittedSources[0] : {};
+			if (isAlterComplete) {
+				workspaceReloadCount++;
+				if (shouldFailWorkspaceReload && workspaceReloadCount === 1) {
+					await route.fulfill({ status: 500, json: {} });
+					return;
+				}
+				await workspaceReloadGate;
+			}
+			const response = await route.fetch();
+			const body = await response.json();
+			for (const workspace of body.workspaces) {
+				workspace.primarySources = primarySources;
+			}
+			await route.fulfill({ response, json: body });
+		});
+		await page.route('**/v1/profiles/schema', async (route) => {
+			if (route.request().method() === 'PUT') {
+				submittedSources.push(route.request().postDataJSON().primarySources);
+				submittedSchemas.push(route.request().postDataJSON().schema);
+				await route.fulfill({ json: {} });
+				return;
+			}
+			schemaRequestCount++;
+			if (isAlterComplete) {
+				await route.fulfill({ json: submittedSchemas[0] });
+				return;
+			}
+			await route.continue();
+		});
+		await page.route('**/v1/profiles/schema/preview', async (route) => {
+			previewedSchemas.push(route.request().postDataJSON().schema);
+			await route.fulfill({ json: { queries: [] } });
+		});
+		await page.route('**/v1/profiles/schema/latest-alter', async (route) => {
+			if (shouldWaitForAlterStatus) {
+				initialAlterStatusRequestCount++;
+				if (shouldFailInitialAlterStatus && initialAlterStatusRequestCount === 1) {
+					await route.fulfill({ status: 500, json: {} });
+					return;
+				}
+				await alterStatusGate;
+			}
+			await route.fulfill({
+				json: {
+					startTime: submittedSources.length > 0 ? '2026-08-25T00:00:00Z' : null,
+					endTime: isAlterComplete ? '2026-08-25T00:00:01Z' : null,
+					error: null,
+				},
+			});
+		});
+
+		await page.goto(`${adminURL}/profile-unification/schema`);
+		await editSchema(page);
+		await openProperty(page, 'first_name');
+		const panel = page.locator('.property-panel');
+		const primarySource = panel.locator('.property-form__primary-source');
+		await primarySource.click();
+		await primarySource.locator(`sl-option[value="${sourceID}"]`).click();
+		await panel.locator('.property-panel__save').click();
+		await page.locator('.schema-edit__add-property').click();
+		await panel.locator('.property-form__name-input input').fill('added_during_alteration');
+		await selectPropertyType(page, 'string');
+		await panel.locator('.property-panel__save').click();
+		await page.locator('.schema-edit__header-apply-button').click();
+		await page.locator('.schema-edit__apply-alter-button').click();
+		await expect(page.locator('.schema-edit')).toHaveCount(0);
+		await expect(page).toHaveURL(`${adminURL}/profile-unification/schema`);
+		expect(submittedSources).toEqual([{ first_name: sourceID }]);
+		expect(submittedSchemas[0].properties.map((property) => property.name)).toContain('added_during_alteration');
+
+		const editSchemaButton = page.locator('.schema-grid__alter-button');
+		await expect(editSchemaButton).toHaveAttribute('disabled');
+		if (shouldNavigateBack) {
+			await page.goBack();
+			await expect(page).toHaveURL(`${adminURL}/profile-unification/schema/edit`);
+			await expect(page.locator('.schema-edit-fullscreen.fullscreen--loading')).toBeVisible();
+			await expect(page.locator('.schema-edit')).toHaveCount(0);
+		}
+		if (shouldNavigateAway) {
+			const initialDocument = await page.evaluateHandle(() => document);
+			await page.locator('.sidebar__item-text').getByText('Connections', { exact: true }).click();
+			await expect(page).toHaveURL(`${adminURL}/connections`);
+			await expect(page.locator('.schema')).toHaveCount(0);
+			isAlterComplete = !shouldCompleteOnReturn;
+			shouldWaitForAlterStatus = shouldCompleteOnReturn;
+			const schemaRequestsBeforeReturn = schemaRequestCount;
+			await page.locator('.sidebar__sub-item-text').getByText('Schema', { exact: true }).click();
+			await expect(page).toHaveURL(`${adminURL}/profile-unification/schema`);
+			expect(await initialDocument.evaluate((previous) => previous === document)).toBe(true);
+			await initialDocument.dispose();
+			if (shouldCompleteOnReturn) {
+				try {
+					await expect
+						.poll(() => initialAlterStatusRequestCount, { timeout: 10000 })
+						.toBe(shouldFailInitialAlterStatus ? 2 : 1);
+					await page.clock.runFor(6000);
+					expect(schemaRequestCount).toBe(schemaRequestsBeforeReturn);
+					await expect(editSchemaButton).toHaveAttribute('disabled');
+				} finally {
+					isAlterComplete = true;
+					releaseAlterStatus();
+				}
+			}
+		} else {
+			await page.waitForResponse('**/v1/profiles/schema/latest-alter');
+			isAlterComplete = true;
+		}
+		try {
+			await expect
+				.poll(() => workspaceReloadCount, { timeout: 10000 })
+				.toBeGreaterThan(shouldFailWorkspaceReload ? 1 : 0);
+			await page.clock.runFor(6000);
+			expect(workspaceReloadCount).toBe(shouldFailWorkspaceReload ? 2 : 1);
+			await expect(editSchemaButton).toHaveAttribute('disabled');
+			if (shouldNavigateBack) {
+				await expect(page.locator('.schema-edit-fullscreen.fullscreen--loading')).toBeVisible();
+				await expect(page.locator('.schema-edit')).toHaveCount(0);
+			}
+		} finally {
+			releaseWorkspaceReload();
+		}
+
+		if (shouldNavigateBack) {
+			await expect(page.locator('.schema-edit')).toBeVisible();
+		} else {
+			await editSchema(page);
+		}
+		await openProperty(page, 'last_name');
+		await panel.locator('sl-textarea textarea[name="description"]').fill('Updated description');
+		await panel.locator('.property-panel__save').click();
+		await page.locator('.schema-edit__header-apply-button').click();
+		await page.locator('.schema-edit__apply-alter-button').click();
+		await expect.poll(() => submittedSources.length).toBe(2);
+		expect(submittedSources[1]).toEqual(submittedSources[0]);
+		const expectedSchema = structuredClone(submittedSchemas[0]);
+		expectedSchema.properties.find((property) => property.name === 'last_name').description = 'Updated description';
+		expect(previewedSchemas[previewedSchemas.length - 1]).toEqual(expectedSchema);
+		expect(submittedSchemas[1]).toEqual(expectedSchema);
+	});
+}
 
 // Search profile schema properties by the technical type shown in the list.
 test(`Search profile schema properties by technical type`, async ({ page }) => {

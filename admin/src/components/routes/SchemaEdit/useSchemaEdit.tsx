@@ -115,8 +115,7 @@ const useSchemaEdit = (
 
 	const gridRef = useRef<GridRef>(null);
 
-	const { api, handleError, workspaces, selectedWorkspace, connections, setIsLoadingWorkspaces } =
-		useContext(AppContext);
+	const { api, handleError, workspaces, selectedWorkspace, connections } = useContext(AppContext);
 	const workspace = workspaces.find((candidate) => candidate.id === selectedWorkspace);
 
 	const { consentPurposes, setIsAltering } = useContext(SchemaContext);
@@ -604,7 +603,6 @@ const useSchemaEdit = (
 		setTimeout(() => {
 			setQueries(null);
 			setIsConfirmChangesLoading(false);
-			setIsLoadingWorkspaces(true);
 			setIsAltering(true);
 			onClose();
 		}, 300);
