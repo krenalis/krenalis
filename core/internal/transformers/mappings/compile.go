@@ -516,10 +516,25 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 			if p.value == nil {
 				return fmt.Errorf("null is not convertible to the %s type", dt)
 			}
+			var s string
+			switch v := p.value.(type) {
+			case string:
+				s = strconv.Quote(v)
+			case int:
+				s = strconv.Itoa(v)
+			case decimal.Decimal:
+				s = v.String()
+			case bool:
+				s = strconv.FormatBool(v)
+			case json.Value:
+				s = "null"
+			default:
+				return fmt.Errorf("core/internal/transformers/mappings: unexpected value type %T", v)
+			}
 			var msg string
 			switch err {
 			case errRangeConversion:
-				msg = fmt.Sprintf("number %s is not a %s value", p.value, dt)
+				msg = fmt.Sprintf("number %s is not a %s value", s, dt)
 			case errMinConversion:
 				var n any
 				switch dt.Kind() {
@@ -534,7 +549,7 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 				case types.DecimalKind:
 					n, _ = dt.DecimalRange()
 				}
-				msg = fmt.Sprintf("number %s is less than %v", p.value, n)
+				msg = fmt.Sprintf("number %s is less than %v", s, n)
 			case errMaxConversion:
 				var n any
 				switch dt.Kind() {
@@ -549,37 +564,24 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 				case types.DecimalKind:
 					_, n = dt.DecimalRange()
 				}
-				msg = fmt.Sprintf("number %s is greater than %v", p.value, n)
+				msg = fmt.Sprintf("number %s is greater than %v", s, n)
 			case errEnumConversion:
-				msg = fmt.Sprintf("%q is not one of the allowed values", p.value)
+				msg = fmt.Sprintf("%s is not one of the allowed values", s)
 			case errCountryAlpha2Conversion:
-				msg = fmt.Sprintf("%q is not a 2-letter country code", p.value)
+				msg = fmt.Sprintf("%s is not a 2-letter country code", s)
 			case errCountryAlpha3Conversion:
-				msg = fmt.Sprintf("%q is not a 3-letter country code", p.value)
+				msg = fmt.Sprintf("%s is not a 3-letter country code", s)
 			case errPhoneConversion:
-				msg = fmt.Sprintf("%q is not a valid phone number", p.value)
+				msg = fmt.Sprintf("%s is not a valid phone number", s)
 			case errPatternConversion:
-				msg = fmt.Sprintf("%q does not match /%s/", p.value, dt.Pattern())
+				msg = fmt.Sprintf("%s does not match /%s/", s, dt.Pattern())
 			case errMaxBytesConversion:
 				n, _ := dt.MaxBytes()
-				msg = fmt.Sprintf("%q exceeds the %d-byte limit", p.value, n)
+				msg = fmt.Sprintf("%s exceeds the %d-byte limit", s, n)
 			case errMaxLengthConversion:
 				n, _ := dt.MaxLength()
-				msg = fmt.Sprintf("%q exceeds the %d-char limit", p.value, n)
+				msg = fmt.Sprintf("%s exceeds the %d-char limit", s, n)
 			default:
-				var s string
-				switch v := p.value.(type) {
-				case string:
-					s = strconv.Quote(v)
-				case int:
-					s = strconv.Itoa(v)
-				case decimal.Decimal:
-					s = v.String()
-				case bool:
-					s = strconv.FormatBool(v)
-				case json.Value:
-					s = "null"
-				}
 				msg = fmt.Sprintf("%s is not convertible to the %s type", s, dt.String())
 			}
 			return errors.New(msg)
