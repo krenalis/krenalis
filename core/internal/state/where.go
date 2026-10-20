@@ -263,7 +263,7 @@ func marshalWhereCondition(b *bytes.Buffer, condition *WhereCondition, propertie
 	if condition.Values != nil {
 		p, _ := properties.ByPathSlice(condition.Property)
 		t := p.Type
-		if t.Kind() == types.ArrayKind {
+		if t.IsArray() {
 			t = t.Elem()
 		}
 		b.WriteString(`,"values":[`)
@@ -406,7 +406,7 @@ func unmarshalWhereCondition(value json.Value, properties types.Properties) (*Wh
 		return nil, err
 	}
 	p, err := properties.ByPathSlice(condition.Property)
-	if err != nil && p.Type.Kind() != types.JSONKind {
+	if err != nil && !p.Type.IsJSON() {
 		return nil, err
 	}
 	var values []any
