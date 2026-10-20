@@ -4,6 +4,11 @@
 	align-items: center;
 }
 
+/* Keeps the width while the confirmation icon is the only content. */
+.feedback-button::part(base) {
+	width: 100%;
+}
+
 .feedback-button::part(label) {
 	transition: transform var(--scale-animation-duration);
 	will-change: transform;

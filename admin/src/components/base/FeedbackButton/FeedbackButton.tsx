@@ -86,7 +86,7 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 			let iconHTML: string;
 			if (feedback === 'confirmation') {
 				className = 'feedback-button--confirm';
-				iconHTML = `<wa-icon name='check' />`;
+				iconHTML = `<wa-icon name='check' label='Confirmed' />`;
 				button.classList.add(className);
 				button.style.width = `${initialWidth}px`;
 				button.innerHTML = iconHTML;
