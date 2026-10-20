@@ -1,7 +1,8 @@
 import React, { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './IdentityOverview.css';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import { buttonVariant } from '../../../utils/buttonVariant';
 import AppContext from '../../../context/AppContext';
 import SegmentedDateRangeControl, {
 	SegmentedDateRangePreset,
@@ -341,17 +342,17 @@ const IdentityOverview = () => {
 					<p>Understand your current identity state and trends.</p>
 				</div>
 				<div className='identity-overview__page-actions'>
-					<SlButton
+					<WaButton
 						className='segmented-date-range-button'
-						variant='default'
-						size='small'
+						{...buttonVariant('default')}
+						size='s'
 						onClick={refreshDashboard}
 						loading={isRefreshing}
 						disabled={isRefreshing || isLoading || isConnectionLoading}
 					>
-						<SlIcon slot='prefix' name='arrow-clockwise' />
+						<WaIcon slot='start' name='arrow-clockwise' />
 						Refresh
-					</SlButton>
+					</WaButton>
 					<SegmentedDateRangeControl<IdentityOverviewDatePreset>
 						accessibleLabel='Trend range'
 						presets={DATE_RANGE_PRESETS}

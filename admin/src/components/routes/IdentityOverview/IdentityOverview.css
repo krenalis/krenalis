@@ -5,8 +5,8 @@
 	--identity-overview-card-padding-inline: 17px;
 	--identity-overview-removed-connection-color: color-mix(
 		in srgb,
-		var(--sl-color-neutral-400) 75%,
-		var(--sl-color-neutral-500)
+		var(--wa-color-neutral-60) 75%,
+		var(--wa-color-neutral-50)
 	);
 	width: 100%;
 	max-width: 1760px;
@@ -28,7 +28,7 @@
 	font-weight: 600;
 	line-height: 1.25;
 	margin: 0 0 3px;
-	color: var(--sl-color-neutral-900);
+	color: var(--wa-color-neutral-10);
 }
 
 .identity-overview__page-header p {
@@ -63,7 +63,7 @@
 	line-height: 1.4;
 	font-weight: 600;
 	margin: 0;
-	color: var(--sl-color-neutral-900);
+	color: var(--wa-color-neutral-10);
 }
 
 .identity-overview__section--current-state .identity-overview__section-heading h2 {
@@ -84,7 +84,7 @@
 .identity-overview__info {
 	border: 0;
 	background: transparent;
-	color: var(--sl-color-neutral-500);
+	color: var(--wa-color-neutral-50);
 	padding: 2px;
 	display: inline-flex;
 	align-items: center;
@@ -94,14 +94,14 @@
 
 .identity-overview__info:focus-visible {
 	border-radius: 50%;
-	box-shadow: 0 0 0 2px var(--sl-color-primary-200);
+	box-shadow: 0 0 0 2px var(--wa-color-brand-80);
 }
 
 .identity-overview__card {
 	background: var(--bg-primary);
-	border: 1px solid var(--sl-color-neutral-200);
+	border: 1px solid var(--wa-color-neutral-80);
 	border-radius: var(--radius);
-	box-shadow: var(--sl-shadow-x-small);
+	box-shadow: 0 1px 2px hsl(240 3.8% 46.1% / 6%);
 	min-width: 0;
 }
 
@@ -117,7 +117,7 @@
 	font-weight: 600;
 	line-height: 1.4;
 	margin: 0;
-	color: var(--sl-color-neutral-800);
+	color: var(--wa-color-neutral-20);
 }
 
 .identity-overview__card-heading > span {
@@ -153,14 +153,14 @@
 }
 
 .identity-overview__connection-option--deleted[aria-selected='true'] .identity-overview__connection-option-name {
-	color: var(--sl-color-neutral-100);
+	color: var(--wa-color-neutral-90);
 }
 
 .identity-overview__connection-option::part(label) {
 	width: 100%;
 }
 
-.identity-overview__connection-option::part(base) {
+.identity-overview__connection-option {
 	padding-block: 4px;
 }
 
@@ -192,7 +192,7 @@
 .identity-overview__kpi-title {
 	font-size: 13px;
 	font-weight: 600;
-	color: var(--sl-color-neutral-700);
+	color: var(--wa-color-neutral-30);
 	margin-bottom: 8px;
 	display: flex;
 	align-items: center;
@@ -222,7 +222,7 @@
 	font-weight: 600;
 	line-height: 1.25;
 	letter-spacing: -0.015em;
-	color: var(--sl-color-neutral-900);
+	color: var(--wa-color-neutral-10);
 	max-width: calc(100% - 100px);
 	white-space: nowrap;
 }
@@ -233,7 +233,7 @@
 }
 
 .identity-overview__kpi-value-unit {
-	color: var(--sl-color-neutral-500);
+	color: var(--wa-color-neutral-50);
 	font-size: 16px;
 	font-weight: 400;
 }
@@ -243,7 +243,7 @@
 	align-items: baseline;
 	gap: 4px;
 	margin-top: 1px;
-	color: var(--sl-color-neutral-500);
+	color: var(--wa-color-neutral-50);
 	font-size: 12px;
 	font-weight: 400;
 	line-height: 1.25;
@@ -262,14 +262,14 @@
 .identity-overview__local-time-trigger {
 	display: inline-block;
 	max-width: 100%;
-	border-bottom: 1px dotted var(--sl-color-neutral-400);
+	border-bottom: 1px dotted var(--wa-color-neutral-60);
 	cursor: help;
 	transform: translateY(2px);
 }
 
 .identity-overview__local-time-trigger:focus-visible {
 	border-radius: 2px;
-	outline: 2px solid var(--sl-color-primary-300);
+	outline: 2px solid var(--wa-color-brand-70);
 	outline-offset: 2px;
 }
 
@@ -312,16 +312,16 @@
 
 .identity-overview__chart .recharts-wrapper text {
 	font-size: 11px;
-	fill: var(--sl-color-neutral-600);
+	fill: var(--wa-color-neutral-40);
 }
 
 .identity-overview__chart-tooltip {
 	min-width: 190px;
 	padding: 9px 11px;
-	color: var(--sl-color-neutral-800);
+	color: var(--wa-color-neutral-20);
 	background: #fff;
-	border: 1px solid var(--sl-color-neutral-300);
-	box-shadow: var(--sl-shadow-small);
+	border: 1px solid var(--wa-color-neutral-70);
+	box-shadow: var(--wa-shadow-s);
 	font-size: 12px;
 	white-space: nowrap;
 }
@@ -345,7 +345,7 @@
 }
 
 .identity-overview__chart-tooltip dt {
-	color: var(--sl-color-neutral-600);
+	color: var(--wa-color-neutral-40);
 }
 
 .identity-overview__chart-tooltip dd {
@@ -359,7 +359,7 @@
 	gap: 14px;
 	margin: 0;
 	padding: 3px 0 0;
-	color: var(--sl-color-neutral-700);
+	color: var(--wa-color-neutral-30);
 	font-size: 12px;
 	list-style: none;
 }
@@ -379,7 +379,7 @@
 .identity-overview__connections-chart text.identity-overview__connection-axis-name,
 .identity-overview__connections-chart text.identity-overview__connection-axis-share {
 	font-size: 13px;
-	fill: var(--sl-color-neutral-600);
+	fill: var(--wa-color-neutral-40);
 }
 
 .identity-overview__connections-chart text.identity-overview__connection-axis-name--deleted,
@@ -394,12 +394,12 @@
 	align-items: center;
 	gap: 10px;
 	padding: 22px;
-	color: var(--sl-color-neutral-700);
+	color: var(--wa-color-neutral-30);
 }
 
-.identity-overview__state > sl-icon {
+.identity-overview__state > wa-icon {
 	font-size: 17px;
-	color: var(--sl-color-neutral-500);
+	color: var(--wa-color-neutral-50);
 	flex: 0 0 auto;
 }
 
@@ -414,16 +414,16 @@
 	margin-top: 5px;
 }
 
-.identity-overview__state sl-button {
+.identity-overview__state wa-button {
 	margin-top: 14px;
 }
 
 .identity-overview__state--error {
-	color: var(--sl-color-danger-800);
+	color: var(--wa-color-danger-20);
 }
 
-.identity-overview__state--error > sl-icon {
-	color: var(--sl-color-danger-600);
+.identity-overview__state--error > wa-icon {
+	color: var(--wa-color-danger-40);
 }
 
 .identity-overview__state--compact {
@@ -438,8 +438,8 @@
 	justify-content: flex-start;
 	margin: 0 0 10px;
 	padding: 10px 13px;
-	border: 1px solid var(--sl-color-danger-200);
-	background: var(--sl-color-danger-50);
+	border: 1px solid var(--wa-color-danger-80);
+	background: var(--wa-color-danger-95);
 }
 
 .identity-overview__loading {
@@ -458,9 +458,9 @@
 .identity-overview__skeleton {
 	background: linear-gradient(
 		90deg,
-		var(--sl-color-neutral-100) 25%,
-		var(--sl-color-neutral-200) 50%,
-		var(--sl-color-neutral-100) 75%
+		var(--wa-color-neutral-90) 25%,
+		var(--wa-color-neutral-80) 50%,
+		var(--wa-color-neutral-90) 75%
 	);
 	background-size: 200% 100%;
 	border-radius: 3px;

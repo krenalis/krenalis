@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useId } from 'react';
 import {
 	Area,
 	AreaChart,
@@ -14,12 +14,12 @@ import {
 	XAxis,
 	YAxis,
 } from 'recharts';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import type SlSelectElement from '@shoelace-style/shoelace/dist/components/select/select.component.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import type WaSelectElement from '@awesome.me/webawesome/dist/components/select/select.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import { formatNumber } from '../../../utils/formatNumber';
 import {
 	ConnectionBar,
@@ -43,12 +43,17 @@ interface InfoTooltipProps {
 }
 
 const InfoTooltip = ({ content, label }: InfoTooltipProps) => {
+	const buttonID = useId();
+
 	return (
-		<SlTooltip content={content} placement='top' hoist={true}>
-			<button className='identity-overview__info' type='button' aria-label={label}>
-				<SlIcon name='info-circle' />
+		<>
+			<WaTooltip for={buttonID} placement='top'>
+				{content}
+			</WaTooltip>
+			<button id={buttonID} className='identity-overview__info' type='button' aria-label={label}>
+				<WaIcon name='info-circle' />
 			</button>
-		</SlTooltip>
+		</>
 	);
 };
 
@@ -166,7 +171,7 @@ const StateMessage = ({ variant, title, description, action, compact }: StateMes
 			className={`identity-overview__state${variant === 'error' ? ' identity-overview__state--error' : ''}${compact ? ' identity-overview__state--compact' : ''}`}
 			role={variant === 'error' ? 'alert' : 'status'}
 		>
-			<SlIcon name={variant === 'error' ? 'exclamation-triangle' : 'info-circle'} />
+			<WaIcon name={variant === 'error' ? 'exclamation-triangle' : 'info-circle'} />
 			<div>
 				<div className='identity-overview__state-title'>{title}</div>
 				{description && <div className='identity-overview__state-description'>{description}</div>}
@@ -187,7 +192,7 @@ const CardLoading = ({ chart = false }: CardLoadingProps) => {
 			aria-label='Loading'
 		>
 			{chart ? (
-				<SlSpinner style={{ fontSize: '2rem', '--track-width': '4px' } as React.CSSProperties} />
+				<WaSpinner style={{ fontSize: '2rem', '--track-width': '4px' } as React.CSSProperties} />
 			) : (
 				<>
 					<div className='identity-overview__skeleton identity-overview__skeleton--value' />
@@ -456,19 +461,25 @@ const IdentitiesChart = ({
 			title='Identities over time (daily)'
 			info='Daily end-state recognized and anonymous identities for the Trend range. Missing observations remain gaps.'
 			headerAction={
-				<SlSelect
+				<WaSelect
 					className='identity-overview__connection-select'
-					size='small'
+					size='s'
 					value={selectedConnection}
-					hoist={true}
 					aria-label='Connection'
-					onSlChange={(event) => onConnectionChange(String((event.currentTarget as SlSelectElement).value))}
+					onChange={(event) => {
+						const connection = String((event.currentTarget as WaSelectElement).value);
+						// The select also reports the option that is already selected.
+						if (connection === selectedConnection) {
+							return;
+						}
+						onConnectionChange(connection);
+					}}
 				>
-					<SlOption className='identity-overview__connection-option' value=''>
+					<WaOption className='identity-overview__connection-option' value=''>
 						All connections
-					</SlOption>
+					</WaOption>
 					{connectionOptions.map((connection) => (
-						<SlOption
+						<WaOption
 							className={`identity-overview__connection-option${
 								connection.id === DELETED_CONNECTION_SCOPE
 									? ' identity-overview__connection-option--deleted'
@@ -478,9 +489,9 @@ const IdentitiesChart = ({
 							value={connection.id}
 						>
 							<span className='identity-overview__connection-option-name'>{connection.name}</span>
-						</SlOption>
+						</WaOption>
 					))}
-				</SlSelect>
+				</WaSelect>
 			}
 			days={days}
 			recognizedColor={CHART_COLOR}
