@@ -81,6 +81,15 @@ func Test_normalize(t *testing.T) {
 		{types.String(), []byte(nil), "", false, nil},
 		{types.String().WithValues("foo", "boo"), []byte(nil), nil, true, nil},
 		{types.String().WithPattern(regexp.MustCompile(`^foo$`)), []byte(nil), nil, true, nil},
+		{types.String().AsCountry(types.ISO3166Alpha2), "IT", "IT", false, nil},
+		{types.String().AsCountry(types.ISO3166Alpha3), "ITA", "ITA", false, nil},
+		{types.String().AsPhone(), "+39 02-36618 300", "+390236618300", false, nil},
+		{types.String().AsCountry(types.ISO3166Alpha2), []byte("IT"), "IT", false, nil},
+		{types.String().AsCountry(types.ISO3166Alpha3), []byte("ITA"), "ITA", false, nil},
+		{types.String().AsPhone(), []byte("+39 02-36618 300"), "+390236618300", false, nil},
+		{types.String().AsCountry(types.ISO3166Alpha2), "", nil, true, nil},
+		{types.String().AsCountry(types.ISO3166Alpha3), "", nil, true, nil},
+		{types.String().AsPhone(), "", nil, true, nil},
 		// boolean.
 		{types.Boolean(), true, true, false, nil},
 		// int(16).
@@ -204,12 +213,22 @@ func Test_normalize(t *testing.T) {
 		{types.Array(types.Int(32)), []any{1.0, 2.0}, []any{1, 2}, false, nil},
 		{types.Array(types.String()).WithUnique(), []any{"foo", "boo"}, []any{"foo", "boo"}, false, nil},
 		{types.Array(types.Array(types.String())), []any{[]any{"foo"}, []any{"foo"}}, []any{[]any{"foo"}, []any{"foo"}}, false, nil},
+		{types.Array(types.String().AsPhone()), []any{"+39 02-36618 300", []byte("+39 02-36618 300")}, []any{"+390236618300", "+390236618300"}, false, nil},
+		{types.Array(types.Map(types.String().AsPhone())), []any{map[string]any{"home": "+39 02-36618 300"}}, []any{map[string]any{"home": "+390236618300"}}, false, nil},
+		{types.Array(types.String().AsCountry(types.ISO3166Alpha2)), []any{"IT"}, []any{"IT"}, false, nil},
+		{types.Array(types.String().AsCountry(types.ISO3166Alpha3)), []any{"ITA"}, []any{"ITA"}, false, nil},
+		{types.Array(types.Map(types.Array(types.String().AsCountry(types.ISO3166Alpha2)))), []any{map[string]any{"home": []any{"IT"}}}, []any{map[string]any{"home": []any{"IT"}}}, false, nil},
+		{types.Array(types.Map(types.Array(types.String().AsCountry(types.ISO3166Alpha3)))), []any{map[string]any{"home": []any{"ITA"}}}, []any{map[string]any{"home": []any{"ITA"}}}, false, nil},
+		{types.Array(types.Map(types.Array(types.String().AsPhone()))), []any{map[string]any{"home": []any{"+39 02-36618 300"}}}, []any{map[string]any{"home": []any{"+390236618300"}}}, false, nil},
 		{types.Array(types.Int(32)), []any(nil), nil, true, nil},
 		{types.Array(types.Int(32)), []int(nil), nil, true, nil},
 		{types.Array(types.Int(32)), []string(nil), nil, true, nil},
 		{types.Array(types.Int(32)), []decimal.Decimal(nil), nil, true, nil},
 		{types.Array(types.Int(32)), []map[string][]map[string][]int(nil), nil, true, nil},
 		// object.
+		{types.Object([]types.Property{{Name: "value", Type: types.String().AsCountry(types.ISO3166Alpha2)}}), map[string]any{"value": "IT"}, map[string]any{"value": "IT"}, false, nil},
+		{types.Object([]types.Property{{Name: "value", Type: types.String().AsCountry(types.ISO3166Alpha3)}}), map[string]any{"value": "ITA"}, map[string]any{"value": "ITA"}, false, nil},
+		{types.Object([]types.Property{{Name: "value", Type: types.String().AsPhone()}}), map[string]any{"value": "+39 02-36618 300"}, map[string]any{"value": "+390236618300"}, false, nil},
 		{types.Object([]types.Property{{Name: "foo", Type: types.String()}, {Name: "boo", Type: types.Int(32)}}), map[string]any{"foo": "alt", "boo": 3}, map[string]any{"foo": "alt", "boo": 3}, false, nil},
 		{types.Object([]types.Property{{Name: "foo", Type: types.IP(), Nullable: true}}), map[string]any{"foo": ""}, map[string]any{"foo": nil}, true, nil},
 		{types.Object([]types.Property{{Name: "foo", Type: types.String()}, {Name: "boo", Type: types.Int(32)}}), map[string]any(nil), nil, true, nil},
@@ -220,6 +239,9 @@ func Test_normalize(t *testing.T) {
 		{types.Object([]types.Property{{Name: "nested", Type: types.Object([]types.Property{{Name: "foo", Type: types.String(), ReadOptional: true}})}}), map[string]any{"nested": map[string]any(nil)}, map[string]any{"nested": map[string]any{}}, false, nil},
 		{types.Object([]types.Property{{Name: "foo", Type: types.String()}, {Name: "boo", Type: types.Int(32), ReadOptional: true}}), map[string]any{"foo": "alt", "spurious": 5}, map[string]any{"foo": "alt"}, false, nil},
 		// map.
+		{types.Map(types.String().AsCountry(types.ISO3166Alpha2)), map[string]any{"home": "IT"}, map[string]any{"home": "IT"}, false, nil},
+		{types.Map(types.String().AsCountry(types.ISO3166Alpha3)), map[string]any{"home": "ITA"}, map[string]any{"home": "ITA"}, false, nil},
+		{types.Map(types.String().AsPhone()), map[string]any{"home": "+39 02-36618 300"}, map[string]any{"home": "+390236618300"}, false, nil},
 		{types.Map(types.String()), map[string]any{"foo": "boo"}, map[string]any{"foo": "boo"}, false, nil},
 		{types.Map(types.Array(types.Boolean())), map[string]any{"foo": []any{true, false}}, map[string]any{"foo": []any{true, false}}, false, nil},
 		{types.Map(types.String()), map[string]any(nil), nil, true, nil},
@@ -281,6 +303,7 @@ func Test_normalize_errors(t *testing.T) {
 		want           string
 		wantContains   string
 		wantInputError bool
+		wantNil        bool
 	}
 
 	tests := []testCase{
@@ -297,6 +320,39 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "textNullableEmptyBytesUnsupportedValue", typ: types.String().WithValues("foo", "bar"), value: []byte{}, nullable: true, wantContains: "contains an unsupported value", wantInputError: true},
 		{name: "textTooLong", typ: types.String().WithMaxBytes(1), value: "toolong", wantContains: "has a value longer than 1 bytes"},
 		{name: "textTooManyChars", typ: types.String().WithMaxLength(2), value: "bòò", wantContains: "has a value longer than 2 characters"},
+		{name: "countryAlpha2NullableInvalidValue", typ: types.String().AsCountry(types.ISO3166Alpha2), value: "ZZ", nullable: true, wantInputError: true},
+		{name: "countryAlpha3NullableInvalidValue", typ: types.String().AsCountry(types.ISO3166Alpha3), value: "ZZZ", nullable: true, wantInputError: true},
+		{name: "phoneNullableInvalidValue", typ: types.String().AsPhone(), value: "abc", nullable: true, wantInputError: true},
+		{name: "countryAlpha2UnknownValue", typ: types.String().AsCountry(types.ISO3166Alpha2), value: "ZZ", wantInputError: true, wantNil: true},
+		{name: "countryAlpha2UnknownValueBytes", typ: types.String().AsCountry(types.ISO3166Alpha2), value: []byte("ZZ"), wantInputError: true, wantNil: true},
+		{name: "countryAlpha2UnknownValueArray", typ: types.Array(types.String().AsCountry(types.ISO3166Alpha2)), value: []any{"ZZ"}, wantInputError: true, wantNil: true},
+		{name: "countryAlpha2UnknownValueMap", typ: types.Map(types.String().AsCountry(types.ISO3166Alpha2)), value: map[string]any{"home": "ZZ"}, wantInputError: true, wantNil: true},
+		{name: "countryAlpha2UnknownValueNested", typ: types.Array(types.Map(types.Array(types.String().AsCountry(types.ISO3166Alpha2)))), value: []any{map[string]any{"home": []any{"ZZ"}}}, wantInputError: true, wantNil: true},
+		{name: "countryAlpha2UnknownValueObject", typ: types.Object([]types.Property{{Name: "value", Type: types.String().AsCountry(types.ISO3166Alpha2)}}), value: map[string]any{"value": "ZZ"}, wantInputError: true, wantNil: true},
+		{name: "countryAlpha3UnknownValue", typ: types.String().AsCountry(types.ISO3166Alpha3), value: "ZZZ", wantInputError: true, wantNil: true},
+		{name: "countryAlpha3UnknownValueBytes", typ: types.String().AsCountry(types.ISO3166Alpha3), value: []byte("ZZZ"), wantInputError: true, wantNil: true},
+		{name: "countryAlpha3UnknownValueArray", typ: types.Array(types.String().AsCountry(types.ISO3166Alpha3)), value: []any{"ZZZ"}, wantInputError: true, wantNil: true},
+		{name: "countryAlpha3UnknownValueMap", typ: types.Map(types.String().AsCountry(types.ISO3166Alpha3)), value: map[string]any{"home": "ZZZ"}, wantInputError: true, wantNil: true},
+		{name: "countryAlpha3UnknownValueNested", typ: types.Array(types.Map(types.Array(types.String().AsCountry(types.ISO3166Alpha3)))), value: []any{map[string]any{"home": []any{"ZZZ"}}}, wantInputError: true, wantNil: true},
+		{name: "countryAlpha3UnknownValueObject", typ: types.Object([]types.Property{{Name: "value", Type: types.String().AsCountry(types.ISO3166Alpha3)}}), value: map[string]any{"value": "ZZZ"}, wantInputError: true, wantNil: true},
+		{name: "countryAlpha2EmptyValue", typ: types.String().AsCountry(types.ISO3166Alpha2), value: "", wantInputError: true, wantNil: true},
+		{name: "countryAlpha2EmptyValueBytes", typ: types.String().AsCountry(types.ISO3166Alpha2), value: []byte(""), wantInputError: true, wantNil: true},
+		{name: "countryAlpha2EmptyValueArray", typ: types.Array(types.String().AsCountry(types.ISO3166Alpha2)), value: []any{""}, wantInputError: true, wantNil: true},
+		{name: "countryAlpha2EmptyValueMap", typ: types.Map(types.String().AsCountry(types.ISO3166Alpha2)), value: map[string]any{"home": ""}, wantInputError: true, wantNil: true},
+		{name: "countryAlpha2EmptyValueNested", typ: types.Array(types.Map(types.Array(types.String().AsCountry(types.ISO3166Alpha2)))), value: []any{map[string]any{"home": []any{""}}}, wantInputError: true, wantNil: true},
+		{name: "countryAlpha2EmptyValueObject", typ: types.Object([]types.Property{{Name: "value", Type: types.String().AsCountry(types.ISO3166Alpha2)}}), value: map[string]any{"value": ""}, wantInputError: true, wantNil: true},
+		{name: "phoneEmptyValue", typ: types.String().AsPhone(), value: "", wantInputError: true, wantNil: true},
+		{name: "phoneEmptyValueBytes", typ: types.String().AsPhone(), value: []byte(""), wantInputError: true, wantNil: true},
+		{name: "phoneEmptyValueArray", typ: types.Array(types.String().AsPhone()), value: []any{""}, wantInputError: true, wantNil: true},
+		{name: "phoneEmptyValueMap", typ: types.Map(types.String().AsPhone()), value: map[string]any{"home": ""}, wantInputError: true, wantNil: true},
+		{name: "phoneEmptyValueNested", typ: types.Array(types.Map(types.Array(types.String().AsPhone()))), value: []any{map[string]any{"home": []any{""}}}, wantInputError: true, wantNil: true},
+		{name: "phoneEmptyValueObject", typ: types.Object([]types.Property{{Name: "value", Type: types.String().AsPhone()}}), value: map[string]any{"value": ""}, wantInputError: true, wantNil: true},
+		{name: "phoneInvalidValue", typ: types.String().AsPhone(), value: "a (b)", wantInputError: true, wantNil: true},
+		{name: "phoneInvalidValueBytes", typ: types.String().AsPhone(), value: []byte("a (b)"), wantInputError: true, wantNil: true},
+		{name: "phoneInvalidValueArray", typ: types.Array(types.String().AsPhone()), value: []any{"a (b)"}, wantInputError: true, wantNil: true},
+		{name: "phoneInvalidValueMap", typ: types.Map(types.String().AsPhone()), value: map[string]any{"home": "a (b)"}, wantInputError: true, wantNil: true},
+		{name: "phoneInvalidValueNested", typ: types.Array(types.Map(types.Array(types.String().AsPhone()))), value: []any{map[string]any{"home": []any{"a (b)"}}}, wantInputError: true, wantNil: true},
+		{name: "phoneInvalidValueObject", typ: types.Object([]types.Property{{Name: "value", Type: types.String().AsPhone()}}), value: map[string]any{"value": "a (b)"}, wantInputError: true, wantNil: true},
 		{name: "booleanWrongString", typ: types.Boolean(), value: "maybe", wantContains: "string value but it is not 'true' or 'false'"},
 		{name: "booleanInvalidType", typ: types.Boolean(), value: 1, wantContains: "has type int that is not allowed for type boolean"},
 		{name: "intFractionalFloat", typ: types.Int(32), value: 1.5, wantContains: "float64 value that cannot represent an int(32) value"},
@@ -388,6 +444,12 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "arrayUniqueDuplicated", typ: types.Array(types.Int(32)).WithUnique(), value: []any{1, 1}, want: "property 'k' contains a duplicated value"},
 		{name: "arrayUniqueDuplicatedNaNs", typ: types.Array(types.Float(64)).WithUnique(), value: []any{math.NaN(), math.NaN()}, want: "property 'k' contains a duplicated value"},
 		{name: "arrayUniqueEquivalentDecimals", typ: types.Array(types.Decimal(6, 2)).WithUnique(), value: []any{decimal.New(15, 1), decimal.MustParse("1.50")}, want: "property 'k' contains a duplicated value"},
+		{
+			name:  "arrayUniquePhoneNormalizationCollision",
+			typ:   types.Array(types.String().AsPhone()).WithUnique(),
+			value: []any{"+390236618300", []byte("+39 02-36618 300")},
+			want:  "property 'k' contains a duplicated value",
+		},
 		{name: "objectMissingRequired", typ: types.Object([]types.Property{{Name: "foo", Type: types.String()}}), value: map[string]any{}, wantContains: "property 'k.foo' does not have a value, but the property is not optional for reading"},
 		{name: "nilObjectMissingRequired", typ: types.Object([]types.Property{{Name: "foo", Type: types.String()}}), value: map[string]any(nil), wantContains: "property 'k.foo' does not have a value, but the property is not optional for reading"},
 		{name: "objectPropertyError", typ: types.Object([]types.Property{{Name: "foo", Type: types.Int(32)}}), value: map[string]any{"foo": "bad"}, wantContains: "property 'k.foo' has a string value that does not represent an int value"},
@@ -426,6 +488,9 @@ func Test_normalize_errors(t *testing.T) {
 					if _, ok := errors.AsType[InputValidationError](err); !ok {
 						t.Fatalf("got %T (%v), want InputValidationError", err, err)
 					}
+				}
+				if tt.wantNil && got != nil {
+					t.Fatalf("expected nil, got %#v", got)
 				}
 				if tt.want != "" && err.Error() != tt.want {
 					t.Fatalf("expected error %q, got %q", tt.want, err)

@@ -351,9 +351,12 @@ func Test_typeToPostgresType(t *testing.T) {
 		{types.String().WithMaxBytes(10).WithMaxLength(10), "character varying(10)"},
 		{types.String().WithMaxBytes(5).WithMaxLength(10), "character varying(5)"},
 		{types.String().WithMaxBytes(500).WithMaxLength(10), "character varying(10)"},
+		{types.String().AsPhone(), "character varying(16)"},
+		{types.String().AsCountry(types.ISO3166Alpha2), "character(2)"},
 
 		// array.
 		{types.Array(types.String()), "character varying[]"},
+		{types.Array(types.String().AsPhone()), "character varying(16)[]"},
 		{types.Array(types.Time()), "time without time zone[]"},
 		{types.Array(types.Int(32).Unsigned()), "bigint[]"},
 
