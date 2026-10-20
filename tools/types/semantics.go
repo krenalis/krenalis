@@ -427,12 +427,5 @@ func (t Type) withSemantics(semantics Semantics, option any) (Type, error) {
 // semanticsNumericType reports whether t is an int, decimal, or real float
 // type.
 func semanticsNumericType(t Type) bool {
-	switch t.kind {
-	case IntKind, DecimalKind:
-		return true
-	case FloatKind:
-		return t.real
-	default:
-		return false
-	}
+	return t.IsInt() || t.IsDecimal() || t.IsReal()
 }

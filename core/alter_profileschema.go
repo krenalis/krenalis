@@ -234,12 +234,12 @@ func checkAllowedSemanticsProfileSchema(t types.Type) error {
 			return errors.New("profile schema properties with country semantics must use ISO 3166 alpha-2 format")
 		}
 	case types.MoneySemantics, types.PercentageSemantics, types.MeasurementSemantics:
-		if t.Kind() != types.DecimalKind || t.Precision() != 18 || t.Scale() != 4 {
+		if !t.IsDecimal() || t.Precision() != 18 || t.Scale() != 4 {
 			return fmt.Errorf("profile schema properties with %s semantics must have decimal(18,4) values",
 				t.Semantics())
 		}
 	case types.DurationSemantics:
-		if t.Kind() != types.IntKind || t.BitSize() != 64 || t.IsUnsigned() {
+		if !t.IsInt(64) || t.IsUnsigned() {
 			return errors.New("profile schema properties with duration semantics must have signed int(64) values")
 		}
 	}
