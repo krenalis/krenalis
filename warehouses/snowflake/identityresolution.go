@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/tools/backoff"
-	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/snowflakedb/gosnowflake/v2"
@@ -168,7 +167,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	mergeProfiles.WriteString(`"_IDENTITIES", "_ANONYMOUS_COUNT", "_RECOGNIZED_COUNT", "_KPID", "_UPDATED_AT"`)
 	mergeProfiles.WriteString(") SELECT\n")
 	for _, c := range profileColumns {
-		if c.Type.Kind() == types.ArrayKind {
+		if c.Type.IsArray() {
 			mergeProfiles.WriteString(`CASE WHEN ARRAY_AGG(` + quoteIdent(c.Name) +
 				`) = [] THEN NULL ELSE ARRAY_SORT(ARRAY_DISTINCT(ARRAY_FLATTEN(ARRAY_AGG(` + quoteIdent(c.Name) + `)))) END`)
 		} else {

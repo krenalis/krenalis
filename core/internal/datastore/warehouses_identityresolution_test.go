@@ -740,7 +740,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					// properties, in ascending order.
 					slices.SortFunc(gotProfiles, func(u1, u2 map[string]any) int {
 						for _, c := range columns {
-							if c.Type.Kind() == types.StringKind {
+							if c.Type.IsString() {
 								v1, _ := u1[c.Name].(string)
 								v2, _ := u2[c.Name].(string)
 								if v1 != v2 {

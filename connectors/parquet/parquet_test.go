@@ -256,7 +256,7 @@ func TestExportAndImportParquet(t *testing.T) {
 			expectedProperty := expectedRecord[c.Name]
 			gotProperty := gotRecords[c.Name]
 			var equalProperty bool
-			if c.Type.Kind() == types.DecimalKind {
+			if c.Type.IsDecimal() {
 				expectedDec, ok1 := expectedProperty.(decimal.Decimal)
 				gotDec, ok2 := gotProperty.(decimal.Decimal)
 				if ok1 && ok2 {
