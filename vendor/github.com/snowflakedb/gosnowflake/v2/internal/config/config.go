@@ -68,11 +68,18 @@ type Config struct {
 	ExternalBrowserTimeout time.Duration // Timeout for external browser login
 	// Deprecated: timeouts may be reorganized in a future release.
 	CloudStorageTimeout time.Duration // Timeout for a single call to a cloud storage provider
+	CleanupTimeout      time.Duration // Bounds post-cancellation cleanup (query abort and session logout); 0 keeps the legacy unbounded behavior
 	MaxRetryCount       int           // Specifies how many times non-periodic HTTP request can be retried
 
-	Application       string           // application name.
-	DisableOCSPChecks bool             // driver doesn't check certificate revocation status
-	OCSPFailOpen      OCSPFailOpenMode // OCSP Fail Open
+	Application string // application name.
+	// DisableOCSPChecks, when true, always disables OCSP. false is unset
+	// (the default is off) and is not an opt-in.
+	DisableOCSPChecks bool
+	// OCSPFailOpen chooses fail-open vs fail-closed when OCSP is otherwise
+	// on. NotSet does not enable OCSP. True opts in unless
+	// DisableOCSPChecks or SF_DISABLE_OCSP_CHECKS is true. False (fail-closed)
+	// stays on unless DisableOCSPChecks is true; the env cannot disable it.
+	OCSPFailOpen OCSPFailOpenMode
 
 	Token                  string        // Token to use for OAuth other forms of token based auth
 	TokenFilePath          string        // TokenFilePath defines a file where to read token from
@@ -88,10 +95,15 @@ type Config struct {
 	// created, already configured with its dial timeout and its keep-alive, and
 	// returns the dial function the transport dials with.
 	//
-	// It allows, for example, to instrument the connections the driver
+	// It can be used, for example, to instrument the connections the driver
 	// establishes, keeping the certificate revocation checks, the proxy handling
 	// and the TLS configuration the driver sets up, which setting Transporter
 	// would replace. It is ignored when Transporter is set.
+	//
+	// WrapDialContext is called every time the driver creates a transport, which
+	// can happen many times during the life of a connection, and the dial
+	// functions it returns may be called concurrently. Both must therefore be
+	// safe for concurrent use.
 	WrapDialContext func(dial DialFunc) DialFunc
 
 	TLSConfigName string // Name of the TLS config to use
@@ -116,9 +128,11 @@ type Config struct {
 
 	DisableSamlURLCheck Bool // Indicates whether the SAML URL check should be disabled
 
-	WorkloadIdentityProvider          string   // The workload identity provider to use for WIF authentication
-	WorkloadIdentityEntraResource     string   // The resource to use for WIF authentication on Azure environment
-	WorkloadIdentityImpersonationPath []string // The components to use for WIF impersonation.
+	WorkloadIdentityProvider            string   // The workload identity provider to use for WIF authentication
+	WorkloadIdentityEntraResource       string   // The resource to use for WIF authentication on Azure environment
+	WorkloadIdentityImpersonationPath   []string // The components to use for WIF impersonation.
+	WorkloadIdentityAwsUseOutboundToken Bool     // For AWS WIF, obtain the attestation as an STS GetWebIdentityToken JWT instead of a signed GetCallerIdentity request envelope
+	WorkloadIdentityHost                string   // For AWS WIF, the STS host to call instead of the regional default.
 
 	CertRevocationCheckMode           CertRevocationCheckMode // revocation check mode for CRLs
 	CrlAllowCertificatesWithoutCrlURL Bool                    // Allow certificates (not short-lived) without CRL DP included to be treated as correct ones
@@ -210,6 +224,13 @@ func (c *Config) Validate() error {
 	}
 	if strings.EqualFold(c.WorkloadIdentityProvider, "azure") && len(c.WorkloadIdentityImpersonationPath) > 0 {
 		return errors.New("WorkloadIdentityImpersonationPath is not supported for Azure")
+	}
+	// Only a provider explicitly set to something else is a conflict. An empty
+	// provider means the value is simply unused - a workloadIdentityHost left in a
+	// shared profile must not break non-WIF connections. Validating the host string
+	// itself is the WIF code's job, since its shape is dictated by AWS STS.
+	if c.WorkloadIdentityHost != "" && c.WorkloadIdentityProvider != "" && !strings.EqualFold(c.WorkloadIdentityProvider, "aws") {
+		return errors.New("WorkloadIdentityHost is supported only for AWS")
 	}
 	if c.Token != "" && c.TokenFilePath != "" {
 		return errTokenConfigConflict

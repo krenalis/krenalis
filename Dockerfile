@@ -30,7 +30,12 @@ COPY *.go ./
 
 ENV GOCACHE=/root/.cache/go-build
 RUN --mount=type=cache,target="/root/.cache/go-build" go generate
-RUN --mount=type=cache,target="/root/.cache/go-build" GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -tags osusergo,netgo -trimpath
+# Krenalis version that will be reported by the executable, such as "v1.2.3".
+# When it is not provided, Krenalis uses a default version that identifies no
+# release.
+ARG KRENALIS_VERSION
+RUN --mount=type=cache,target="/root/.cache/go-build" GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -tags osusergo,netgo -trimpath \
+    -ldflags "-X github.com/krenalis/krenalis/cmd.buildVersion=${KRENALIS_VERSION}"
 
 # Stage 1: Krenalis Execution Stage.
 

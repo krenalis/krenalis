@@ -408,6 +408,14 @@ func Test_Marshal(t *testing.T) {
 			result: []byte(`{}`),
 		},
 		{
+			name: "Decimal without leading zero",
+			schema: Object([]Property{
+				{Name: "a", Type: Decimal(5, 3)},
+			}),
+			value:  map[string]any{"a": decimal.MustParse(".123")},
+			result: []byte(`{"a":0.123}`),
+		},
+		{
 			name: "JSON nil",
 			schema: Object([]Property{
 				{
@@ -431,6 +439,38 @@ func Test_Marshal(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Test_NormalizeUUID checks that UUIDs are canonicalized and invalid or
+// non-standard forms are rejected.
+func Test_NormalizeUUID(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		id, ok := NormalizeUUID("F47AC10B-58CC-4372-A567-0E02B2C3D479")
+		if !ok || id != "f47ac10b-58cc-4372-a567-0e02b2c3d479" {
+			t.Fatalf("unexpected result %q %t", id, ok)
+		}
+	})
+	t.Run("invalid", func(t *testing.T) {
+		if id, ok := NormalizeUUID("invalid"); ok || id != "" {
+			t.Fatalf("expected failure, got %q %t", id, ok)
+		}
+	})
+	t.Run("malformed", func(t *testing.T) {
+		if id, ok := NormalizeUUID("F47AC10B-58CC-4372-A567-0E02B2C3D47Z"); ok || id != "" {
+			t.Fatalf("expected failure, got %q %t", id, ok)
+		}
+	})
+	t.Run("non-standard", func(t *testing.T) {
+		for _, s := range []string{
+			"F47AC10B58CC4372A5670E02B2C3D479",
+			"{F47AC10B-58CC-4372-A567-0E02B2C3D479}",
+			"urn:uuid:F47AC10B-58CC-4372-A567-0E02B2C3D479",
+		} {
+			if id, ok := NormalizeUUID(s); ok || id != "" {
+				t.Fatalf("expected failure for %q, got %q %t", s, id, ok)
+			}
+		}
+	})
 }
 
 // equalValues reports whether v1 and v2 are equal according to the type t.
@@ -924,15 +964,16 @@ func TestDecodePhone(t *testing.T) {
 
 }
 
-// TestDecodeSemantics checks semantic constraints and nested containers.
+// TestDecodeSemantics checks constraints imposed by semantics and nested
+// containers.
 func TestDecodeSemantics(t *testing.T) {
 
 	country := String().AsCountry(ISO3166Alpha2)
 	tests := []struct {
-		name     string
-		semantic Type
-		value    string
-		valid    bool
+		name      string
+		semantics Type
+		value     string
+		valid     bool
 	}{
 		{"current country", country, "IT", true},
 		{"alpha-3 country", String().AsCountry(ISO3166Alpha3), "ITA", true},
@@ -972,7 +1013,7 @@ func TestDecodeSemantics(t *testing.T) {
 
 				t.Run(shape, func(t *testing.T) {
 
-					typ := test.semantic
+					typ := test.semantics
 					data := strconv.Quote(test.value)
 					switch shape {
 					case "array":
@@ -1014,9 +1055,9 @@ func TestDecodeSemantics(t *testing.T) {
 
 }
 
-// TestSemanticConstraintsRoundTrip checks that semantics do not introduce
+// TestSemanticsConstraintsRoundTrip checks that semantics do not introduce
 // string constraints.
-func TestSemanticConstraintsRoundTrip(t *testing.T) {
+func TestSemanticsConstraintsRoundTrip(t *testing.T) {
 
 	typesToTest := []Type{
 		String().AsCountry(ISO3166Alpha2),
@@ -1165,6 +1206,7 @@ func TestIsPhone(t *testing.T) {
 		want  bool
 	}{
 		{"canonical", "+390236618300", true},
+		{"surrounding whitespace", "\t +390236618300 \u00a0", false},
 		{"structurally possible", "+12001230101", true},
 		{"formatted", "+39 02-36618 300", false},
 		{"national", "0236618300", false},
@@ -1210,9 +1252,9 @@ func TestNormalizePhone(t *testing.T) {
 		{"011390236618300", ""},
 		{"0236618300", ""},
 		{"390236618300", ""},
-		{" +390236618300", ""},
-		{"+390236618300 ", ""},
-		{"\u00a0+390236618300", ""},
+		{" +390236618300", "+390236618300"},
+		{"+390236618300 ", "+390236618300"},
+		{"\u00a0+390236618300", "+390236618300"},
 		{"+390236618300\u200b", ""},
 		{"Call +390236618300", ""},
 		{"+390236618300 please", ""},
@@ -1228,7 +1270,7 @@ func TestNormalizePhone(t *testing.T) {
 		{"+390236618300/+16502530000", ""},
 		{"+390236618300 6502530000", ""},
 		{"+39\t0236618300", ""},
-		{"+390236618300\n", ""},
+		{"+390236618300\n", "+390236618300"},
 		{"+390236618300\xff", ""},
 		{"+12001230101", "+12001230101"}, // structurally possible even if not classified as valid
 		{"+12530000", ""},                // possible only locally: missing an area code
@@ -1236,7 +1278,8 @@ func TestNormalizePhone(t *testing.T) {
 		{"+3902", ""},
 		{"+9990236618300", ""},
 		{"+49301234567890123", ""}, // numbering-plan lengths must still fit E.164
-		{"+" + strings.Repeat("1", 250), ""},
+		{"+" + strings.Repeat("1", maxPhoneInputBytes), ""},
+		{strings.Repeat(" ", maxPhoneInputBytes+1-len("+390236618300")) + "+390236618300", ""},
 	}
 
 	for _, test := range tests {
@@ -1259,8 +1302,8 @@ func TestValidPhoneInput(t *testing.T) {
 		input string
 		valid bool
 	}{
-		{"at byte limit", "+" + strings.Repeat("1", 249), true},
-		{"over byte limit", "+" + strings.Repeat("1", 250), false},
+		{"at byte limit", "+" + strings.Repeat("1", maxPhoneInputBytes-1), true},
+		{"over byte limit", "+" + strings.Repeat("1", maxPhoneInputBytes), false},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -1280,7 +1323,7 @@ func TestNormalizePhoneInRegion(t *testing.T) {
 		region string
 		want   string
 	}{
-		{"02-36618 300", "IT", "+390236618300"},
+		{"\t 02-36618 300 \u00a0", "IT", "+390236618300"},
 		{"340 1234567", "IT", "+393401234567"},
 		{"0039 02-36618 300", "IT", "+390236618300"},
 		{"0039 02-36618 300", "US", ""},
@@ -1345,38 +1388,6 @@ func FuzzNormalizePhoneInRegion(f *testing.F) {
 				"expected regional result %q to normalize to itself and true, got %q and %t for input %q",
 				canonical, again, valid, s,
 			)
-		}
-	})
-}
-
-// Test_NormalizeUUID checks that UUIDs are canonicalized and invalid or
-// non-standard forms are rejected.
-func Test_NormalizeUUID(t *testing.T) {
-	t.Run("valid", func(t *testing.T) {
-		id, ok := NormalizeUUID("F47AC10B-58CC-4372-A567-0E02B2C3D479")
-		if !ok || id != "f47ac10b-58cc-4372-a567-0e02b2c3d479" {
-			t.Fatalf("unexpected result %q %t", id, ok)
-		}
-	})
-	t.Run("invalid", func(t *testing.T) {
-		if id, ok := NormalizeUUID("invalid"); ok || id != "" {
-			t.Fatalf("expected failure, got %q %t", id, ok)
-		}
-	})
-	t.Run("malformed", func(t *testing.T) {
-		if id, ok := NormalizeUUID("F47AC10B-58CC-4372-A567-0E02B2C3D47Z"); ok || id != "" {
-			t.Fatalf("expected failure, got %q %t", id, ok)
-		}
-	})
-	t.Run("non-standard", func(t *testing.T) {
-		for _, s := range []string{
-			"F47AC10B58CC4372A5670E02B2C3D479",
-			"{F47AC10B-58CC-4372-A567-0E02B2C3D479}",
-			"urn:uuid:F47AC10B-58CC-4372-A567-0E02B2C3D479",
-		} {
-			if id, ok := NormalizeUUID(s); ok || id != "" {
-				t.Fatalf("expected failure for %q, got %q %t", s, id, ok)
-			}
 		}
 	})
 }

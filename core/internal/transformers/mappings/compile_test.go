@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -51,7 +50,6 @@ func Test_Compile(t *testing.T) {
 		dt         types.Type
 		purpose    Purpose
 		nullable   bool
-		layouts    *state.TimeLayouts
 		compileErr error
 		evalErr    error
 		convertErr error
@@ -81,6 +79,9 @@ func Test_Compile(t *testing.T) {
 		{expr: "jsonNil", dt: types.JSON(), nullable: true, expected: nil},
 
 		{expr: "''", dt: types.Map(types.String()), compileErr: errors.New("\"\" is not convertible to the map(string) type")},
+		{expr: "'ZZ'", dt: types.String().AsCountry(types.ISO3166Alpha2), compileErr: errors.New(`"ZZ" is not a 2-letter country code`)},
+		{expr: "'ZZZ'", dt: types.String().AsCountry(types.ISO3166Alpha3), compileErr: errors.New(`"ZZZ" is not a 3-letter country code`)},
+		{expr: "'abc'", dt: types.String().AsPhone(), compileErr: errors.New(`"abc" is not a valid phone number`)},
 		{expr: "' '   '  '", dt: types.String(), expected: "   "},
 		{expr: "''", dt: types.JSON(), expected: json.Value(`""`)},
 		{expr: "'100'", dt: types.JSON(), expected: json.Value(`"100"`)},
@@ -452,7 +453,7 @@ func Test_Compile(t *testing.T) {
 				t.Fatalf("unexpected eval error: %s", err)
 			}
 			if v != nil {
-				v, err = convert(v, vt, test.dt, true, false, test.layouts, test.purpose)
+				v, err = convert(v, vt, test.dt, true, false, test.purpose)
 			}
 			if test.convertErr != nil {
 				if err == nil {

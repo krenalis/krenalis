@@ -45,7 +45,7 @@ func (warehouse *Snowflake) AlterProfileSchema(ctx context.Context, opID string,
 		err2 := warehouse.setOperationAsCompleted(ctx, db, opID, operationErr)
 		if err2 != nil {
 			slog.Error("cannot set alter profile columns operation as completed, retrying",
-				"err", warehouses.NewOperationError(err2), "operationError", operationErr)
+				"err", err2, "operationError", operationErr)
 			continue
 		}
 		if operationErr != nil {
@@ -222,15 +222,10 @@ func createViewQuery(profilesTableName string, profileColumns []warehouses.Colum
 func typeToSnowflakeType(t types.Type) string {
 	switch t.Kind() {
 	case types.StringKind:
-		switch t.Semantic() {
-		case types.CountrySemantic:
-			switch t.CountryFormat() {
-			case types.ISO3166Alpha2:
-				return "VARCHAR(2)"
-			case types.ISO3166Alpha3:
-				return "VARCHAR(3)"
-			}
-		case types.PhoneSemantic:
+		switch t.Semantics() {
+		case types.CountrySemantics:
+			return "VARCHAR(2)"
+		case types.PhoneSemantics:
 			return "VARCHAR(16)"
 		}
 		var maxLength int

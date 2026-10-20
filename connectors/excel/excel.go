@@ -131,9 +131,7 @@ func (xl *Excel) Read(ctx context.Context, r io.Reader, sheet string, records co
 						}
 					}
 					columns[i].Name = name
-					if name != record[i] {
-						columns[i].Description = header
-					}
+					columns[i].DisplayName = header
 					nameOfHeader[header] = name
 				} else {
 					name := columnNumberToName(i + 1)

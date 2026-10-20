@@ -13,6 +13,7 @@ import (
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/connections"
+	"github.com/krenalis/krenalis/core/internal/consents"
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/filters"
 	"github.com/krenalis/krenalis/core/internal/metrics"
@@ -37,7 +38,7 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 	// data warehouse after all identities have been written.
 	purge := true
 
-	transformer, err := transformers.New(pipeline.Organization().ID, pipeline, this.core.functionProvider, nil)
+	transformer, err := transformers.New(pipeline.Organization().ID, pipeline, this.core.functionProvider)
 	if err != nil {
 		return err
 	}
@@ -87,7 +88,7 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 	defer records.Close()
 
 	// Instantiate a batch identity writer.
-	iw, err := this.connection.store.NewBatchIdentityWriter(pipeline, purge)
+	iw, err := this.connection.store.NewBatchIdentityWriter(pipeline, purge, &this.core.metrics.Pipelines)
 	if err != nil {
 		if err == datastore.ErrInspectionMode || err == datastore.ErrMaintenanceMode {
 			return newPipelineError(metrics.FinalizeStep, err)
@@ -139,6 +140,11 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 			user.Attributes = record.Attributes
 			this.core.metrics.Pipelines.TransformationPassed(pipeline.ID, 1)
 			this.core.metrics.Pipelines.OutputValidationPassed(pipeline.ID, 1)
+			if rc := pipeline.RequiredConsents; !consents.SatisfiesProfile(rc.Operator, rc.Purposes, user.Attributes) {
+				this.core.metrics.Pipelines.ImportProfileConsentFailed(pipeline.ID, 1)
+				continue
+			}
+			this.core.metrics.Pipelines.ImportProfileConsentPassed(pipeline.ID, 1)
 			_ = iw.Write(ctx, datastore.Identity{
 				ID:         user.ID,
 				Attributes: user.Attributes,

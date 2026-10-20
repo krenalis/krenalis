@@ -6,6 +6,7 @@ package warehouses
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -148,6 +149,18 @@ func (e *RejectedReadOnlyQueryError) Error() string {
 	return e.Msg
 }
 
+// IdentityCounts contains counts of anonymous and recognized identities,
+// including those without a profile, grouped by connection.
+// A missing connection is equivalent to zero.
+type IdentityCounts struct {
+	Anonymous  map[string]int
+	Recognized map[string]int
+
+	// WithoutProfile counts anonymous and recognized identities that have not
+	// been assigned to a profile.
+	WithoutProfile map[string]int
+}
+
 // Warehouse is the interface implemented by warehouses.
 type Warehouse interface {
 
@@ -199,8 +212,22 @@ type Warehouse interface {
 	// information, maximum character count, enum values, etc...).
 	ColumnTypeDescription(t types.Type) (string, error)
 
-	// Count returns the number of rows in table.
-	Count(ctx context.Context, table string) (int, error)
+	// Counts returns one row count for each condition on the table.
+	// A nil slice of conditions, or a nil condition, counts all rows.
+	// A non-nil empty slice of conditions is invalid. Each result is between
+	// zero and math.MaxInt32. All counts use the same snapshot of the table.
+	Counts(ctx context.Context, table string, conditions []Expr) ([]int, error)
+
+	// CountIdentities counts anonymous and recognized identities, including those
+	// without a profile, from the provided pipelines, grouped by connection.
+	// For anonymous and recognized identities, it counts physical rows when all
+	// rows belonging to the provided pipelines for a connection come from one
+	// pipeline. When they span multiple pipelines, it counts each identity ID once
+	// within every category in which it occurs. Identities without a profile are
+	// always counted once per identity ID within each category.
+	//
+	// The returned maps are sparse; a missing connection is equivalent to zero.
+	CountIdentities(ctx context.Context, pipelines []string) (*IdentityCounts, error)
 
 	// Delete deletes rows from the specified table that match the provided where
 	// expression. Returns an error if the expression is nil.
@@ -443,6 +470,9 @@ type OperationError struct{ message string }
 // MaxOperationErrorBytes are abbreviated at a Unicode character boundary with
 // a trailing "[...]". If the resulting message is not valid UTF-8, it is
 // replaced with a fixed message. NewOperationError panics if err is nil.
+//
+// NewOperationError is intended to be called by warehouse implementations
+// when an Identity Resolution or profile schema update operation fails.
 func NewOperationError(err error) *OperationError {
 	if err == nil {
 		panic("warehouses.NewOperationError: nil error")
@@ -479,6 +509,60 @@ func NewPersistedOperationError(message string) *OperationError {
 // Error returns the operation error message.
 func (err OperationError) Error() string {
 	return err.message
+}
+
+// ValidateIdentityCounts validates the internal consistency of identity counts
+// returned by a warehouse.
+func ValidateIdentityCounts(counts *IdentityCounts) error {
+
+	if counts == nil {
+		return errors.New("warehouse returned nil identity counts")
+	}
+
+	var anonymousTotal, recognizedTotal, withoutProfileTotal int
+	for _, count := range counts.Anonymous {
+		if count < 0 {
+			return errors.New("warehouse returned a negative anonymous identity count")
+		}
+		if count > math.MaxInt-anonymousTotal {
+			return errors.New("warehouse returned an anonymous identity count total that is too large")
+		}
+		anonymousTotal += count
+	}
+	for _, count := range counts.Recognized {
+		if count < 0 {
+			return errors.New("warehouse returned a negative recognized identity count")
+		}
+		if count > math.MaxInt-recognizedTotal {
+			return errors.New("warehouse returned a recognized identity count total that is too large")
+		}
+		recognizedTotal += count
+	}
+	for _, count := range counts.WithoutProfile {
+		if count < 0 {
+			return errors.New("warehouse returned a negative identity count without a profile")
+		}
+		if count > math.MaxInt-withoutProfileTotal {
+			return errors.New("warehouse returned an identity count total without a profile that is too large")
+		}
+		withoutProfileTotal += count
+	}
+
+	for connection, anonymous := range counts.Anonymous {
+		if anonymous > math.MaxInt-counts.Recognized[connection] {
+			return errors.New("warehouse returned a connection identity count total that is too large")
+		}
+	}
+	for connection, withoutProfile := range counts.WithoutProfile {
+		if withoutProfile > counts.Anonymous[connection]+counts.Recognized[connection] {
+			return errors.New("warehouse returned an identity count without a profile greater than its connection total")
+		}
+	}
+	if anonymousTotal > math.MaxInt-recognizedTotal {
+		return errors.New("warehouse returned an identity count total that is too large")
+	}
+
+	return nil
 }
 
 // ValidateInt validates an int value.
@@ -629,20 +713,20 @@ func ValidateString(name string, t types.Type, s string) (any, error) {
 	if !utf8.ValidString(s) {
 		return nil, fmt.Errorf("data warehouse returned a value for column %s, which contains invalid UTF-8 characters", name)
 	}
-	switch t.Semantic() {
-	case types.CountrySemantic:
+	switch t.Semantics() {
+	case types.CountrySemantics:
 		switch t.CountryFormat() {
 		case types.ISO3166Alpha2:
 			if !validation.IsValidCountryCodeAlpha2(s) {
-				return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a 2-letters country code", name)
+				return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a 2-letter country code", name)
 			}
 		case types.ISO3166Alpha3:
 			if !validation.IsValidCountryCodeAlpha3(s) {
-				return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a 3-letters country code", name)
+				return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a 3-letter country code", name)
 			}
 		}
 		return s, nil
-	case types.PhoneSemantic:
+	case types.PhoneSemantics:
 		if !types.IsPhone(s) {
 			return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a valid canonical phone number", name)
 		}
@@ -737,10 +821,13 @@ const (
 	OpOr
 )
 
-// BaseExpr represents an SQL expression that refers to a property, on which an
-// operator is applied, an eventually an operand, if the operator is binary.
+// BaseExpr represents an SQL expression that applies an operator to a column.
+// For OpIsTrue and OpIsFalse on JSON columns, Keys specifies successive object
+// keys. Each key is treated literally, including any dots. If Keys is empty,
+// these operators apply to the entire column.
 type BaseExpr struct {
 	Column   Column
+	Keys     []string
 	Operator Operator
 	Values   []any // may be nil for unary expressions.
 }

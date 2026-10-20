@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"math"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -79,6 +78,12 @@ var destinationsProfilesTable = warehouses.Table{
 		{Name: "_out_matching_value", Type: types.String()},
 	},
 	Keys: []string{"_pipeline", "_external_id"},
+}
+
+// PipelineMetrics contains the pipeline metric operations used by datastore
+// writers.
+type PipelineMetrics interface {
+	FinalizePassed(pipeline string, count int)
 }
 
 type Store struct {
@@ -178,6 +183,32 @@ func (store *Store) ColumnTypeDescription(t types.Type) (string, error) {
 	return store.warehouse().ColumnTypeDescription(t)
 }
 
+// CountIdentities returns counts of anonymous and recognized identities, and
+// identities without a profile, from the provided pipelines, grouped by
+// connection.
+//
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
+// returns an *UnavailableError error.
+func (store *Store) CountIdentities(ctx context.Context, pipelines []string) (*warehouses.IdentityCounts, error) {
+	store.mustBeOpen()
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
+	if err != nil {
+		return nil, err
+	}
+	defer done()
+	if len(pipelines) == 0 {
+		return &warehouses.IdentityCounts{
+			Anonymous:      map[string]int{},
+			Recognized:     map[string]int{},
+			WithoutProfile: map[string]int{},
+		}, nil
+	}
+	counts, err := store.warehouse().CountIdentities(ctx, pipelines)
+
+	return counts, unavailableError(err)
+}
+
 // CountProfiles returns the exact number of profiles in the workspace's data
 // warehouse. If the warehouse is in maintenance mode, it returns
 // ErrMaintenanceMode. Warehouse errors are returned as *UnavailableError.
@@ -188,15 +219,12 @@ func (store *Store) CountProfiles(ctx context.Context) (int, error) {
 		return 0, err
 	}
 	defer done()
-	count, err := store.warehouse().Count(ctx, "profiles")
+	counts, err := store.warehouse().Counts(ctx, "profiles", nil)
 	if err != nil {
 		return 0, unavailableError(err)
 	}
-	if count < 0 || count > math.MaxInt32 {
-		return 0, unavailableError(fmt.Errorf("warehouse returned profile count outside the supported range: %d", count))
-	}
 
-	return count, nil
+	return counts[0], nil
 }
 
 // DeleteDestinationProfiles deletes the destination profiles of the provided
@@ -350,9 +378,9 @@ func (store *Store) Mode() state.WarehouseMode {
 //
 // If the pipeline's output schema does not align with the profile schema, it
 // returns a *schemas.Error error.
-func (store *Store) NewBatchIdentityWriter(pipeline *state.Pipeline, purge bool) (*BatchIdentityWriter, error) {
+func (store *Store) NewBatchIdentityWriter(pipeline *state.Pipeline, purge bool, metrics PipelineMetrics) (*BatchIdentityWriter, error) {
 	store.mustBeOpen()
-	return newBatchIdentityWriter(store, pipeline, purge)
+	return newBatchIdentityWriter(store, pipeline, purge, metrics)
 }
 
 // NewEventIdentityWriter returns an identity writer for writing identities,
@@ -360,15 +388,15 @@ func (store *Store) NewBatchIdentityWriter(pipeline *state.Pipeline, purge bool)
 // identities from events.
 //
 // It must be called on a frozen state.
-func (store *Store) NewEventIdentityWriter(pipelineID string) *EventIdentityWriter {
+func (store *Store) NewEventIdentityWriter(pipelineID string, metrics PipelineMetrics) *EventIdentityWriter {
 	store.mustBeOpen()
-	return newEventIdentityWriter(store, pipelineID)
+	return newEventIdentityWriter(store, pipelineID, metrics)
 }
 
 // NewEventWriter returns a new writer to write events.
-func (store *Store) NewEventWriter() *EventWriter {
+func (store *Store) NewEventWriter(metrics PipelineMetrics) *EventWriter {
 	store.mustBeOpen()
-	return newEventWriter(store)
+	return newEventWriter(store, metrics)
 }
 
 // PreviewAlterProfileSchema provides a preview of an alter profile schema
@@ -398,24 +426,44 @@ func (store *Store) PreviewAlterProfileSchema(ctx context.Context, schema types.
 	return store.warehouse().PreviewAlterProfileSchema(ctx, profileColumns, operations)
 }
 
+// ConsentCondition describes the consent locations a profile must satisfy.
+type ConsentCondition struct {
+	Operator  state.WhereLogical
+	Locations []state.ProfileConsentLocation
+}
+
+// ConsentConditionError reports an invalid consent condition.
+type ConsentConditionError struct {
+	Msg string
+}
+
+// Error returns the reason the consent condition is invalid.
+func (err *ConsentConditionError) Error() string {
+	return err.Msg
+}
+
 // ProfileRecords returns an iterator over the profiles, according to the
 // provided query and schema. The properties to return are the properties of
-// schema, and the returned properties will conform to schema.
+// schema, and the returned properties will conform to schema. Consent locations
+// are checked against the profile schema and need not be included in schema.
 //
 // query.Properties must be nil.
 //
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If the schema, which must be valid, does not align
 // with the profile schema, it returns a *schemas.Error error. If the workspace
-// no longer exists, it returns [ErrWorkspaceNotExist]. If an error occurs with
-// the data warehouse, it returns an *UnavailableError error.
-func (store *Store) ProfileRecords(ctx context.Context, query Query, schema types.Type, matching *Matching) (*Records, error) {
+// no longer exists, it returns [ErrWorkspaceNotExist]. If a consent property
+// is missing or has an incompatible type, it returns a *ConsentConditionError.
+// Warehouse errors are returned as *UnavailableError.
+func (store *Store) ProfileRecords(ctx context.Context, query Query, consentCondition ConsentCondition, schema types.Type, matching *Matching) (*Records, error) {
+
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
 	if err != nil {
 		return nil, err
 	}
 	defer done()
+
 	if query.Properties != nil {
 		return nil, errors.New("query.properties is not nil")
 	}
@@ -426,17 +474,50 @@ func (store *Store) ProfileRecords(ctx context.Context, query Query, schema type
 	if !ok {
 		return nil, ErrWorkspaceNotExist
 	}
+
 	// Check that schema is aligned with the profile schema.
 	err = schemas.CheckAlignment(schema, workspace.ProfileSchema, nil)
 	if err != nil {
 		return nil, err
 	}
+
+	// Check consent locations against the profile schema.
+	if len(consentCondition.Locations) > 0 {
+		if consentCondition.Operator != state.OpAnd && consentCondition.Operator != state.OpOr {
+			return nil, errors.New("invalid consent operator")
+		}
+		properties := workspace.ProfileSchema.Properties()
+		for _, loc := range consentCondition.Locations {
+			if !types.IsValidPropertyPath(loc.Property) {
+				return nil, errors.New("invalid consent property path")
+			}
+			property, err := properties.ByPath(loc.Property)
+			if err != nil {
+				return nil, &ConsentConditionError{
+					Msg: fmt.Sprintf("consent property «%s» does not exist in profile schema", loc.Property),
+				}
+			}
+			requiredKind := types.BooleanKind
+			if loc.JSONKey != "" {
+				requiredKind = types.JSONKind
+			}
+			if property.Type.Kind() != requiredKind {
+				return nil, &ConsentConditionError{
+					Msg: fmt.Sprintf("consent property «%s» does not have type «%s» but «%s»",
+						loc.Property, requiredKind, property.Type.Kind()),
+				}
+			}
+		}
+	}
+
 	query.table = "profiles"
+
 	query.Properties = []string{}
 	for path := range schema.Properties().WalkObjects() {
 		query.Properties = append(query.Properties, path)
 	}
-	return records(ctx, store.warehouse(), query, "_kpid", store.profileColumnByProperty(), true, matching)
+
+	return records(ctx, store.warehouse(), query, consentCondition, "_kpid", store.profileColumnByProperty(), true, matching)
 }
 
 // Profiles returns the profiles according to the provided query.

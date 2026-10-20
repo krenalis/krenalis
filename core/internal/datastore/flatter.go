@@ -32,7 +32,7 @@ func newFlatter(schema types.Type, columnByProperty map[string]warehouses.Column
 		}
 		parent := flatters[base]
 		node := &flatter{name: property.Name}
-		if property.Type.Kind() == types.ObjectKind {
+		if property.Type.IsObject() {
 			node.properties = []*flatter{}
 			flatters[path] = node
 		} else {

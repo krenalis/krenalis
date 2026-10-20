@@ -8,14 +8,161 @@ import (
 	"bytes"
 	"reflect"
 	"slices"
+	"strconv"
+	"strings"
 	"testing"
 
-	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/google/go-cmp/cmp"
 )
+
+// TestMappingSemanticsValidation verifies that mappings apply semantic rules
+// to values, including those nested in containers and object properties.
+func TestMappingSemanticsValidation(t *testing.T) {
+
+	country := types.String().AsCountry(types.ISO3166Alpha2)
+
+	tests := []struct {
+		name     string
+		typ      types.Type
+		value    string
+		expected string
+		valid    bool
+	}{
+		{"current country", country, "US", "US", true},
+		{"alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "USA", "USA", true},
+		{"unknown alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "ZZZ", "", false},
+		{"unknown country", country, "ZZ", "", false},
+		{"empty country", country, "", "", false},
+		{"canonical phone", types.String().AsPhone(), "+390236618300", "+390236618300", true},
+		{"formatted phone", types.String().AsPhone(), "+39 02-36618 300", "+390236618300", true},
+		{"empty phone", types.String().AsPhone(), "", "", false},
+		{"invalid phone", types.String().AsPhone(), "a (b)", "", false},
+	}
+
+	for _, test := range tests {
+
+		t.Run(test.name, func(t *testing.T) {
+
+			for _, shape := range []string{"string", "array", "map", "nested", "object"} {
+
+				t.Run(shape, func(t *testing.T) {
+
+					typ := test.typ
+					var value any = test.value
+					var expected any = test.expected
+					data := strconv.Quote(test.value)
+					switch shape {
+					case "array":
+						typ = types.Array(typ)
+						value = []any{test.value}
+						expected = []any{test.expected}
+						data = "[" + data + "]"
+					case "map":
+						typ = types.Map(typ)
+						value = map[string]any{"home": test.value}
+						expected = map[string]any{"home": test.expected}
+						data = "{\"home\":" + data + "}"
+					case "nested":
+						typ = types.Array(types.Map(types.Array(typ)))
+						value = []any{map[string]any{"home": []any{test.value}}}
+						expected = []any{map[string]any{"home": []any{test.expected}}}
+						data = "[{\"home\":[" + data + "]}]"
+					case "object":
+						typ = types.Object([]types.Property{{Name: "inner", Type: typ}})
+						value = map[string]any{"inner": test.value}
+						expected = map[string]any{"inner": test.expected}
+						data = "{\"inner\":" + data + "}"
+					}
+					outSchema := types.Object([]types.Property{{Name: "target", Type: typ, CreateRequired: true}})
+					for _, mode := range []string{"convert", "equal types", "json", "constant"} {
+
+						if mode == "constant" && shape != "string" {
+							continue
+						}
+						if mode == "equal types" && (!test.valid || test.value != test.expected) {
+							continue
+						}
+
+						t.Run(mode, func(t *testing.T) {
+
+							inputType, inputValue := typ, value
+							expr := "source"
+							switch mode {
+							case "convert":
+								inputType = types.String()
+								switch shape {
+								case "array":
+									inputType = types.Array(inputType)
+								case "map":
+									inputType = types.Map(inputType)
+								case "nested":
+									inputType = types.Array(types.Map(types.Array(inputType)))
+								case "object":
+									inputType = types.Object([]types.Property{{Name: "inner", Type: inputType}})
+								}
+							case "equal types":
+								inputType = typ
+							case "json":
+								inputType, inputValue = types.JSON(), json.Value(data)
+							case "constant":
+								expr = strconv.Quote(test.value)
+							}
+							inSchema := types.Object([]types.Property{{Name: "source", Type: inputType}})
+							mapping, err := New(map[string]string{"target": expr}, inSchema, outSchema, false)
+							if err != nil {
+								if test.valid {
+									t.Fatalf("expected mapping creation to succeed, got %v", err)
+								}
+								if mode != "constant" {
+									t.Fatalf("expected mapping creation to succeed for %s mode, got %v", mode, err)
+								}
+								want := " is not a valid phone number"
+								if test.typ.Semantics() == types.CountrySemantics {
+									want = " is not a 2-letter country code"
+									if test.typ.CountryFormat() == types.ISO3166Alpha3 {
+										want = " is not a 3-letter country code"
+									}
+								}
+								want = strconv.Quote(test.value) + want
+								if !strings.Contains(err.Error(), want) {
+									t.Fatalf("expected error containing %q, got %v", want, err)
+								}
+								return
+							}
+							got, err := mapping.Transform(map[string]any{"source": inputValue}, Create)
+							if err != nil {
+								if test.valid {
+									t.Fatalf("expected transformation to succeed, got %v", err)
+								}
+								if _, ok := errors.AsType[ValidationError](err); !ok {
+									t.Fatalf("expected ValidationError, got %T: %v", err, err)
+								}
+								return
+							}
+							if !test.valid {
+								t.Fatalf("expected invalid value to be rejected, got %#v", got["target"])
+							}
+							if !reflect.DeepEqual(got["target"], expected) {
+								t.Fatalf("expected value %#v, got %#v", expected, got["target"])
+							}
+
+						})
+
+					}
+
+				})
+
+			}
+
+		})
+
+	}
+
+}
 
 func Test_InOutPaths(t *testing.T) {
 
@@ -79,7 +226,7 @@ func Test_InOutPaths(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			mapping, err := New(test.expressions, inSchema, outSchema, false, nil)
+			mapping, err := New(test.expressions, inSchema, outSchema, false)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
@@ -112,6 +259,7 @@ func Test_Transform(t *testing.T) {
 		})},
 		{Name: "d", Type: types.JSON()},
 		{Name: "e", Type: types.JSON(), Nullable: true},
+		{Name: "emptyObject", Type: types.Object([]types.Property{{Name: "foo", Type: types.String(), ReadOptional: true}})},
 	})
 
 	outSchema := types.Object([]types.Property{
@@ -127,7 +275,6 @@ func Test_Transform(t *testing.T) {
 	tests := []struct {
 		name        string
 		expressions map[string]string
-		layouts     *state.TimeLayouts
 		attributes  map[string]any
 		purpose     Purpose
 		expected    map[string]any
@@ -203,6 +350,18 @@ func Test_Transform(t *testing.T) {
 			name:        `A property without a value assigned to a map(json) key -> no properties`,
 			expressions: map[string]string{"C": "map('k', a, 'h', 5)"},
 			expected:    map[string]any{"C": json.Value(`{"h":5}`)},
+		},
+		{
+			name:        `An empty object in array() -> an empty JSON object`,
+			expressions: map[string]string{"C": "array(emptyObject)"},
+			attributes:  map[string]any{"emptyObject": map[string]any{}},
+			expected:    map[string]any{"C": json.Value(`[{}]`)},
+		},
+		{
+			name:        `An empty object in map() -> an empty JSON object`,
+			expressions: map[string]string{"C": "map('k', emptyObject)"},
+			attributes:  map[string]any{"emptyObject": map[string]any{}},
+			expected:    map[string]any{"C": json.Value(`{"k":{}}`)},
 		},
 		{
 			name:        `A property with a nil value assigned to a map(json) key -> no properties`,
@@ -335,7 +494,7 @@ func Test_Transform(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			mapping, err := New(test.expressions, inSchema, outSchema, false, test.layouts)
+			mapping, err := New(test.expressions, inSchema, outSchema, false)
 			if err != nil {
 				t.Fatalf("unexpected error calling New: %q (%T)", err, err)
 			}
@@ -411,7 +570,7 @@ func Test_inPlace(t *testing.T) {
 			z := clone(v, inSchema)
 			inPlace := false
 			for {
-				mapping, err := New(expressions, inSchema, outSchema, inPlace, nil)
+				mapping, err := New(expressions, inSchema, outSchema, inPlace)
 				if err != nil {
 					t.Fatalf("unexpected error calling New: %q (%T)", err, err)
 				}

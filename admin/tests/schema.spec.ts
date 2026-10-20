@@ -1,7 +1,26 @@
 import { test, expect, type Locator } from '@playwright/test';
 import { login, logout, adminURL, logValidationErrors } from './utils';
-import { ObjectType, Property } from '../src/lib/api/types/types';
-import { ProfileRoleAssignments } from '../src/lib/api/types/workspace';
+import Type, { ObjectType, Property } from '../src/lib/api/types/types';
+import { ConsentPurpose, ProfileRoleAssignments } from '../src/lib/api/types/workspace';
+
+const createConsentPurpose = (id: string, name: string, property: string, jsonKey?: string): ConsentPurpose => ({
+	id,
+	name,
+	eventConsentLocations: [],
+	profileConsentLocation: { property, ...(jsonKey == null ? {} : { jsonKey }) },
+});
+
+const createSchemaProperty = (name: string, type: Property['type']): Property => ({
+	name,
+	prefilled: '',
+	type,
+	createRequired: false,
+	updateRequired: false,
+	readOptional: true,
+	nullable: false,
+	displayName: '',
+	description: '',
+});
 
 const selectPropertyType = async (page, option: string) => {
 	const panel = page.locator('.property-panel');
@@ -48,13 +67,13 @@ const mockProfileRoles = async (page, assignedRoles: ProfileRoleAssignments) => 
 		preferredName.name = 'preferred_name';
 		const avatarURL = structuredClone(firstName);
 		avatarURL.name = 'avatar_url';
-		avatarURL.type = { ...avatarURL.type, kind: 'string', semantic: 'url' };
+		avatarURL.type = { ...avatarURL.type, kind: 'string', semantics: 'url' };
 		const semanticEmail = structuredClone(firstName);
 		semanticEmail.name = 'semantic_email';
-		semanticEmail.type = { ...semanticEmail.type, kind: 'string', semantic: 'email' };
+		semanticEmail.type = { ...semanticEmail.type, kind: 'string', semantics: 'email' };
 		const semanticCountry = structuredClone(firstName);
 		semanticCountry.name = 'semantic_country';
-		semanticCountry.type = { kind: 'string', semantic: 'country', format: 'alpha-2' };
+		semanticCountry.type = { kind: 'string', semantics: 'country', format: 'alpha-2' };
 		const active = structuredClone(firstName);
 		active.name = 'active';
 		active.type = { kind: 'boolean' };
@@ -121,6 +140,249 @@ test.beforeEach(async ({ page }) => {
 
 test.afterEach(async ({ page }) => {
 	await logout(page);
+});
+
+test(`Show, paginate, and refresh consent purposes on profile schema properties`, async ({ page }) => {
+	const booleanPurpose = createConsentPurpose('boolean-purpose', 'Marketing', 'consent_boolean');
+	const booleanPurposeTwo = createConsentPurpose('boolean-purpose-two', 'Newsletter', 'consent_boolean');
+	let purposes = [
+		booleanPurpose,
+		booleanPurposeTwo,
+		{
+			...createConsentPurpose('json-purpose-one', 'Analytics', 'consent_json', 'analytics'),
+			eventConsentLocations: [{ purposeCode: 'analytics' }, { purposeCode: '#ANALYTICS' }],
+		},
+		createConsentPurpose('json-purpose-two', 'Personalization', 'consent_json', 'personalization'),
+	];
+	await page.route('**/v1/consent-purposes', async (route) => {
+		await route.fulfill({ json: { purposes } });
+	});
+	const refreshPurposes = async () => {
+		const response = page.waitForResponse((response) => response.url().endsWith('/consent-purposes'));
+		await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+		await response;
+	};
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		schema.properties.push(
+			createSchemaProperty('consent_boolean', { kind: 'boolean' }),
+			createSchemaProperty('consent_json', { kind: 'json' }),
+			createSchemaProperty('consent_string', { kind: 'string' }),
+		);
+		await route.fulfill({ response, json: schema });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+
+	const booleanRow = page.locator('.schema-grid .grid__row[data-id="consent_boolean"]');
+	const booleanTrigger = booleanRow.locator('.schema-property-consent__trigger');
+	await expect(booleanTrigger).toBeVisible();
+	await expect(booleanTrigger).toHaveText('Consent');
+	expect(await booleanTrigger.evaluate((element) => getComputedStyle(element).cursor)).toBe(
+		await booleanRow.evaluate((element) => getComputedStyle(element).cursor),
+	);
+	const booleanPopup = booleanRow.locator('.schema-property-consent__popup');
+	await booleanTrigger.hover();
+	await expect(booleanPopup).not.toBeVisible();
+	await page.mouse.move(0, 0);
+	await page.waitForTimeout(350);
+	await expect(booleanPopup).not.toBeVisible();
+	await booleanTrigger.hover();
+	await expect(booleanPopup).toBeVisible();
+	await expect(booleanPopup.locator('.schema-property-consent__popup-title')).toHaveText('Consent purposes');
+	await expect(booleanPopup.locator('.schema-property-consent__purpose-name')).toHaveText(['Marketing']);
+	await expect(booleanPopup.getByText('Consent in events:', { exact: true })).not.toBeVisible();
+	await expect(booleanPopup).toContainText('consent_boolean');
+	await expect(booleanPopup.locator('.schema-property-consent__pagination-status')).toHaveText('1 of 2');
+	const firstBooleanPopupHeight = await booleanPopup.evaluate((element) => element.getBoundingClientRect().height);
+	const previousBooleanPurpose = booleanPopup.getByRole('button', { name: 'Previous consent purpose' });
+	const nextBooleanPurpose = booleanPopup.getByRole('button', { name: 'Next consent purpose' });
+	const booleanPurposeTooltip = booleanPopup.locator('.schema-property-consent__open-purpose-tooltip');
+	await expect(previousBooleanPurpose).toBeDisabled();
+	await expect(nextBooleanPurpose).toBeEnabled();
+	await nextBooleanPurpose.click();
+	await expect(booleanPopup.locator('.schema-property-consent__purpose-name')).toHaveText(['Newsletter']);
+	await expect(booleanPopup.locator('.schema-property-consent__pagination-status')).toHaveText('2 of 2');
+	await expect(booleanPurposeTooltip).not.toHaveJSProperty('open', true);
+	expect(await booleanPopup.evaluate((element) => element.getBoundingClientRect().height)).toBeCloseTo(firstBooleanPopupHeight, 1);
+	await expect(previousBooleanPurpose).toBeEnabled();
+	await expect(nextBooleanPurpose).toBeDisabled();
+	await previousBooleanPurpose.click();
+	await expect(booleanPopup.locator('.schema-property-consent__purpose-name')).toHaveText(['Marketing']);
+	await expect(booleanPurposeTooltip).not.toHaveJSProperty('open', true);
+	await booleanTrigger.click();
+	await expect(booleanPopup).toBeVisible();
+	await expect(booleanRow).not.toHaveClass(/grid__row--selected/);
+	await booleanPopup.click();
+	await expect(booleanPopup).toBeVisible();
+	await expect(booleanRow).not.toHaveClass(/grid__row--selected/);
+
+	const jsonRow = page.locator('.schema-grid .grid__row[data-id="consent_json"]');
+	const jsonTrigger = jsonRow.locator('.schema-property-consent__trigger');
+	await expect(jsonTrigger).toHaveText('Consent');
+	await jsonTrigger.hover();
+	await expect(booleanPopup).not.toBeVisible();
+	const jsonPopup = jsonRow.locator('.schema-property-consent__popup');
+	await expect(jsonPopup).toBeVisible();
+	await expect(jsonPopup.locator('.schema-property-consent__popup-title')).toHaveText('Consent purposes');
+	expect(
+		await jsonPopup
+			.locator('.schema-property-consent__popup-content')
+			.evaluate((element) => element.getBoundingClientRect().width),
+	).toBeGreaterThan(250);
+	await expect(jsonPopup.locator('.schema-property-consent__purpose-name')).toHaveText(['Analytics']);
+	const eventPathCodes = jsonPopup.locator('.schema-property-consent__event-paths code');
+	await expect(eventPathCodes).toHaveText(['analytics', '#ANALYTICS']);
+	await expect(eventPathCodes.nth(0)).toBeVisible();
+	await expect(eventPathCodes.nth(1)).toBeVisible();
+	const eventPathBounds = await eventPathCodes.evaluateAll((codes) =>
+		codes.map((code) => {
+			const { x, y, height } = code.getBoundingClientRect();
+			return { x, y, height };
+		}),
+	);
+	expect(eventPathBounds[1].x).toBeCloseTo(eventPathBounds[0].x, 1);
+	expect(eventPathBounds[1].y).toBeGreaterThanOrEqual(eventPathBounds[0].y + eventPathBounds[0].height);
+	await expect(jsonPopup).toContainText('consent_json["analytics"]');
+	await expect(jsonPopup.locator('.schema-property-consent__pagination-status')).toHaveText('1 of 2');
+	const previousPurpose = jsonPopup.getByRole('button', { name: 'Previous consent purpose' });
+	const nextPurpose = jsonPopup.getByRole('button', { name: 'Next consent purpose' });
+	await expect(previousPurpose).toBeDisabled();
+	await expect(nextPurpose).toBeEnabled();
+	await nextPurpose.click();
+	await expect(jsonPopup.locator('.schema-property-consent__purpose-name')).toHaveText(['Personalization']);
+	await expect(jsonPopup.getByText('Consent in events:', { exact: true })).not.toBeVisible();
+	await expect(jsonPopup).toContainText('consent_json["personalization"]');
+	await expect(jsonPopup.locator('.schema-property-consent__pagination-status')).toHaveText('2 of 2');
+	await expect(previousPurpose).toBeEnabled();
+	await expect(nextPurpose).toBeDisabled();
+	await expect(jsonPopup).toBeVisible();
+	await expect(jsonRow).not.toHaveClass(/grid__row--selected/);
+	purposes = purposes.map((purpose) =>
+		purpose.id === 'json-purpose-two' ? { ...purpose, name: 'Updated personalization' } : purpose,
+	);
+	await refreshPurposes();
+	await expect(jsonPopup.locator('.schema-property-consent__purpose-name')).toHaveText(['Updated personalization']);
+	await expect(jsonPopup.locator('.schema-property-consent__pagination-status')).toHaveText('2 of 2');
+	await booleanTrigger.hover();
+	await expect(jsonPopup).not.toBeVisible();
+	await expect(
+		page.locator('.schema-grid .grid__row[data-id="consent_string"] .schema-property-consent'),
+	).toHaveCount(0);
+
+	await editSchema(page);
+	const editBooleanRow = page.locator('.schema-edit .grid__row[data-id="consent_boolean"]');
+	const editBooleanTrigger = editBooleanRow.locator('.schema-property-consent__trigger');
+	await expect(editBooleanTrigger).toBeVisible();
+
+	purposes = [{ ...booleanPurpose, name: 'Updated marketing' }];
+	await refreshPurposes();
+	await editBooleanTrigger.hover();
+	await expect(editBooleanRow.locator('.schema-property-consent__purpose-name')).toHaveText(['Updated marketing']);
+
+	purposes = [];
+	await refreshPurposes();
+	await expect(editBooleanRow.locator('.schema-property-consent')).toHaveCount(0);
+
+	purposes = [
+		{ ...booleanPurpose, id: 'new-boolean-purpose', name: 'New marketing' },
+		{ ...booleanPurposeTwo, id: 'new-boolean-purpose-two', name: 'New newsletter' },
+	];
+	await refreshPurposes();
+	await editBooleanTrigger.hover();
+	const editBooleanPopup = editBooleanRow.locator('.schema-property-consent__popup');
+	await expect(editBooleanPopup.locator('.schema-property-consent__purpose-name')).toHaveText(['New marketing']);
+	await editBooleanPopup.getByRole('button', { name: 'Next consent purpose' }).click();
+	await expect(editBooleanPopup.locator('.schema-property-consent__purpose-name')).toHaveText(['New newsletter']);
+	const openPurposeTooltip = editBooleanRow.locator('.schema-property-consent__open-purpose-tooltip');
+	await expect(openPurposeTooltip).toHaveJSProperty('content', 'Open consent purpose');
+	await expect(openPurposeTooltip.locator('sl-icon')).toHaveAttribute('name', 'box-arrow-in-up-right');
+	await editBooleanRow.locator('.schema-property-consent__open-purpose').click();
+	await expect(page).toHaveURL(`${adminURL}/settings/consent-management`);
+	await expect(page.locator('.alert-dialog', { hasText: 'Discard unsaved changes?' })).toHaveCount(0);
+	await expect(page.locator('.consent-management__dialog[open] .consent-management__dialog-name input')).toHaveValue(
+		'New newsletter',
+	);
+});
+
+test(`Update consent associations while editing profile schema properties`, async ({ page }) => {
+	await page.route('**/v1/consent-purposes', async (route) => {
+		await route.fulfill({
+			json: {
+				purposes: [
+					createConsentPurpose('renamed-purpose', 'Renamed purpose', 'property_to_rename'),
+					createConsentPurpose('boolean-purpose', 'Boolean purpose', 'replacement_property'),
+					createConsentPurpose('json-purpose', 'JSON purpose', 'replacement_property', 'value'),
+				],
+			},
+		});
+	});
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		schema.properties.push(
+			createSchemaProperty('property_to_rename', { kind: 'boolean' }),
+			createSchemaProperty('unassociated_property', { kind: 'boolean' }),
+			createSchemaProperty('replacement_property', { kind: 'boolean' }),
+		);
+		await route.fulfill({ response, json: schema });
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await expect(
+		page.locator('.schema-grid .grid__row[data-id="property_to_rename"] .schema-property-consent__trigger'),
+	).toBeVisible();
+	await editSchema(page);
+
+	const propertyPanel = page.locator('.property-panel');
+	await openProperty(page, 'property_to_rename');
+	await propertyPanel.locator('.property-form__change-name').click();
+	await propertyPanel.locator('.property-form__name-input input').fill('renamed_property');
+	await propertyPanel.locator('.property-panel__save').click();
+	await expect(
+		page.locator('.schema-edit .grid__row[data-id="property_to_rename"] .schema-property-consent'),
+	).toHaveCount(0);
+
+	await openProperty(page, 'unassociated_property');
+	await propertyPanel.locator('.property-form__change-name').click();
+	await propertyPanel.locator('.property-form__name-input input').fill('property_to_rename');
+	await propertyPanel.locator('.property-panel__save').click();
+	await expect(
+		page.locator('.schema-edit .grid__row[data-id="unassociated_property"] .schema-property-consent__trigger'),
+	).toBeVisible();
+
+	await removeProperty(page, 'replacement_property');
+	await expect(page.locator('.schema-edit .grid__row[data-id="replacement_property"]')).toHaveCount(0);
+	await page.locator('.schema-edit__add-property').click();
+	await propertyPanel.locator('.property-form__name-input input').fill('replacement_property');
+	await selectPropertyType(page, 'json');
+	await propertyPanel.locator('.property-panel__save').click();
+	const replacementRow = page.locator('.schema-edit .grid__row[data-id="replacement_property"]');
+	await replacementRow.locator('.schema-property-consent__trigger').hover();
+	await expect(replacementRow.locator('.schema-property-consent__purpose-name')).toHaveText(['JSON purpose']);
+
+	await openProperty(page, 'replacement_property');
+	await selectPropertyType(page, 'boolean');
+	await propertyPanel.locator('.property-panel__save').click();
+	await replacementRow.locator('.schema-property-consent__trigger').hover();
+	await expect(replacementRow.locator('.schema-property-consent__purpose-name')).toHaveText(['Boolean purpose']);
+
+	await replacementRow.locator('.schema-property-consent__open-purpose').click();
+	const discardDialog = page.locator('.alert-dialog', { hasText: 'Discard unsaved changes?' });
+	await expect(discardDialog).toBeVisible();
+	await expect(page).toHaveURL(`${adminURL}/profile-unification/schema/edit`);
+	await discardDialog.getByText('Keep editing', { exact: true }).click();
+	await expect(discardDialog).not.toBeVisible();
+
+	await replacementRow.locator('.schema-property-consent__trigger').hover();
+	await replacementRow.locator('.schema-property-consent__open-purpose').click();
+	await expect(discardDialog).toBeVisible();
+	await discardDialog.getByText('Discard and leave', { exact: true }).click();
+	await expect(page).toHaveURL(`${adminURL}/settings/consent-management`);
+	await expect(page.locator('.consent-management__dialog[open] .consent-management__dialog-name input')).toHaveValue(
+		'Boolean purpose',
+	);
 });
 
 test(`Disable profile schema editing until the schema has loaded`, async ({ page }) => {
@@ -398,19 +660,18 @@ test(`Keep profile schema search selection and expansion consistent`, async ({ p
 		schema.properties.push({
 			name: 'search_object',
 			prefilled: '',
-			role: 'Both',
 			type: {
 				kind: 'object',
 				properties: [
 					{
 						name: 'nested_match',
 						prefilled: '',
-						role: 'Both',
 						type: { kind: 'string' },
 						createRequired: false,
 						updateRequired: false,
 						readOptional: true,
 						nullable: false,
+						displayName: '',
 						description: '',
 					},
 				],
@@ -419,6 +680,7 @@ test(`Keep profile schema search selection and expansion consistent`, async ({ p
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -586,19 +848,18 @@ test(`Keep an object expanded when reordering it`, async ({ page }) => {
 			{
 				name: 'expanded_object',
 				prefilled: '',
-				role: 'Both',
 				type: {
 					kind: 'object',
 					properties: [
 						{
 							name: 'child',
 							prefilled: '',
-							role: 'Both',
 							type: { kind: 'string' },
 							createRequired: false,
 							updateRequired: false,
 							readOptional: true,
 							nullable: false,
+							displayName: '',
 							description: '',
 						},
 					],
@@ -607,17 +868,18 @@ test(`Keep an object expanded when reordering it`, async ({ page }) => {
 				updateRequired: false,
 				readOptional: true,
 				nullable: false,
+				displayName: '',
 				description: '',
 			},
 			{
 				name: 'following_property',
 				prefilled: '',
-				role: 'Both',
 				type: { kind: 'string' },
 				createRequired: false,
 				updateRequired: false,
 				readOptional: true,
 				nullable: false,
+				displayName: '',
 				description: '',
 			},
 		);
@@ -815,7 +1077,6 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 		schema.properties.push({
 			name: 'address',
 			prefilled: '',
-			role: 'Both',
 			type: {
 				kind: 'object',
 				properties: [
@@ -823,8 +1084,7 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 						name: 'country',
 						displayName: 'Country',
 						prefilled: '',
-						role: 'Both',
-						type: { kind: 'string', semantic: 'country', format: 'alpha-2' },
+						type: { kind: 'string', semantics: 'country', format: 'alpha-2' },
 						createRequired: false,
 						updateRequired: false,
 						readOptional: true,
@@ -837,6 +1097,7 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -874,18 +1135,18 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 	expect(emailPropertyCellBottom).toBeLessThanOrEqual(emailRowBottom);
 	await expect(panel.locator('.property-details-panel__value')).toHaveText([
 		'email',
-		'string',
+		'string, max 300 chars',
 		'Email address',
 		'—',
 		'Not an identifier',
 		emailCells[4],
 	]);
 	const gridTypeFont = await emailRow
-		.locator('.schema-property-type__primary')
+		.locator('.schema-property-grid__type-label')
 		.evaluate((type) => getComputedStyle(type).fontFamily);
 	expect(
 		await panel
-			.locator('.schema-property-type__details-physical')
+			.locator('.property-details-panel__physical-type')
 			.evaluate((type) => getComputedStyle(type).fontFamily),
 	).toBe(gridTypeFont);
 	await expect(emailRow).toHaveClass(/grid__row--selected/);
@@ -934,18 +1195,18 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 		panel.locator('.property-details-panel__detail').first().locator('.property-details-panel__value'),
 	).toHaveText('country');
 	const countryRow = page.locator('.schema-grid .grid__row[data-id="address.country"]');
-	await expect(countryRow.locator('.schema-property-type')).toHaveText('country — 2-letter ISO code · string');
+	await expect(countryRow.locator('.schema-property-grid__type')).toHaveText('country — 2-letter ISO code · string');
 	expect(
 		await countryRow
-			.locator('.schema-property-type__primary')
+			.locator('.schema-property-grid__type-label')
 			.evaluate((type) => getComputedStyle(type).fontFamily),
 	).toBe(gridTypeFont);
 	const countryTypeDetail = panel
 		.locator('.property-details-panel__detail')
 		.filter({ hasText: 'Type' })
 		.locator('.property-details-panel__value');
-	await expect(countryTypeDetail.locator('.schema-property-type__details-physical')).toHaveText('string');
-	await expect(countryTypeDetail.locator('.schema-property-type__details-semantic')).toHaveText('country (2-letter)');
+	await expect(countryTypeDetail.locator('.property-details-panel__physical-type')).toHaveText('string');
+	await expect(countryTypeDetail.locator('.property-details-panel__semantics')).toHaveText('country (2-letter)');
 	await page.locator('.schema-grid__page-header h1').hover();
 	const countryBackground = await countryRow
 		.locator('.grid__cell')
@@ -1037,19 +1298,18 @@ test(`Keep object types unchanged after canceling the schema review`, async ({ p
 		schema.properties.push({
 			name: 'review_object',
 			prefilled: '',
-			role: 'Both',
 			type: {
 				kind: 'object',
 				properties: [
 					{
 						name: 'child',
 						prefilled: '',
-						role: 'Both',
 						type: { kind: 'string' },
 						createRequired: false,
 						updateRequired: false,
 						readOptional: true,
 						nullable: false,
+						displayName: '',
 						description: '',
 					},
 				],
@@ -1058,6 +1318,7 @@ test(`Keep object types unchanged after canceling the schema review`, async ({ p
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -1184,12 +1445,12 @@ test(`Preserve create-required on top-level properties in the schema preview`, a
 		schema.properties.push({
 			name: 'create_required_property',
 			prefilled: '',
-			role: 'Both',
 			type: { kind: 'string' },
 			createRequired: true,
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -1295,17 +1556,13 @@ test(`Preview schema changes only when applying them`, async ({ page }) => {
 	await expect(dialog.locator('.schema-edit__apply-alter-button')).toHaveAttribute('variant', 'danger');
 });
 
-test(`Create profile schema properties with semantic defaults and options`, async ({ page }) => {
-	await page.route('**/v1/profiles/schema/preview', async (route) => {
-		await route.fulfill({ json: { queries: [] } });
-	});
-
+test(`Create profile schema properties with default semantics and options`, async ({ page }) => {
 	await page.goto(`${adminURL}/profile-unification/schema`);
 	await editSchema(page);
 	const propertyPanel = page.locator('.property-panel');
 
 	await page.locator('.schema-edit__add-property').click();
-	await propertyPanel.locator('.property-form__name-input input').fill('semantic_country');
+	await propertyPanel.locator('.property-form__name-input input').fill('semantics_country');
 	await propertyPanel.locator('.property-type-selector__trigger').click();
 	const stringOption = propertyPanel.locator('[data-type-option="string"]');
 	await expect(stringOption).not.toHaveClass(/property-type-selector__option--selected/);
@@ -1337,11 +1594,11 @@ test(`Create profile schema properties with semantic defaults and options`, asyn
 	]);
 	await expect(
 		propertyPanel.locator(
-			'[data-type-option="country"] .schema-property-type, ' +
-				'[data-type-option="duration"] .schema-property-type, ' +
-				'[data-type-option="money"] .schema-property-type, ' +
-				'[data-type-option="percentage"] .schema-property-type, ' +
-				'[data-type-option="measurement"] .schema-property-type',
+			'[data-type-option="country"] .property-type-selector__type, ' +
+				'[data-type-option="duration"] .property-type-selector__type, ' +
+				'[data-type-option="money"] .property-type-selector__type, ' +
+				'[data-type-option="percentage"] .property-type-selector__type, ' +
+				'[data-type-option="measurement"] .property-type-selector__type',
 		),
 	).toHaveText([
 		'country · string',
@@ -1351,45 +1608,36 @@ test(`Create profile schema properties with semantic defaults and options`, asyn
 		'measurement · decimal(18,4)',
 	]);
 	const physicalTypeFont = await propertyPanel
-		.locator('[data-type-option="country"] .schema-property-type__metadata-physical')
+		.locator('[data-type-option="country"] .property-type-selector__type-physical')
 		.evaluate((type) => getComputedStyle(type).fontFamily);
 	expect(
 		await propertyPanel
-			.locator('[data-type-option="country"] .schema-property-type__primary')
+			.locator('[data-type-option="country"] .property-type-selector__type-label')
 			.evaluate((type) => getComputedStyle(type).fontFamily),
 	).toBe(physicalTypeFont);
 	expect(
 		await stringOption
-			.locator('.schema-property-type__primary')
+			.locator('.property-type-selector__type-label')
 			.evaluate((type) => getComputedStyle(type).fontFamily),
 	).toBe(physicalTypeFont);
 	await propertyPanel.locator('[data-type-option="country"]').click();
-	await expect(propertyPanel.locator('.property-type-selector__trigger .schema-property-type')).toHaveText(
+	await expect(propertyPanel.locator('.property-type-selector__trigger .property-type-selector__type')).toHaveText(
 		'country · string',
 	);
 	await expect(propertyPanel.locator('.property-form__constraints--length')).toHaveCount(0);
 	const countryFormat = propertyPanel.locator('.property-form__country-format');
-	await expect(countryFormat).toHaveJSProperty('value', 'alpha-2');
-	expect(
-		await countryFormat
-			.locator('sl-option')
-			.evaluateAll((options) => options.map((option) => option.getAttribute('value'))),
-	).toEqual(['alpha-2', 'alpha-3']);
-	await countryFormat.click();
-	await countryFormat.locator('sl-option[value="alpha-3"]').click();
-	await expect(countryFormat).toHaveJSProperty('value', 'alpha-3');
-	await expect(propertyPanel.locator('.property-type-selector__trigger .schema-property-type')).toHaveText(
-		'country · string',
-	);
+	await expect(countryFormat.locator('input')).toHaveCount(0);
+	await expect(countryFormat.locator('.property-form__value')).toHaveText('2-letter ISO code');
+	await expect(propertyPanel.locator('sl-option[value="alpha-3"]')).toHaveCount(0);
 	await propertyPanel.locator('.property-panel__save').click();
-	await expect(page.locator('.schema-edit .grid__row[data-id="semantic_country"] .schema-property-type')).toHaveText(
-		'country — 3-letter ISO code · string',
-	);
+	await expect(
+		page.locator('.schema-edit .grid__row[data-id="semantics_country"] .schema-property-grid__type'),
+	).toHaveText('country — 2-letter ISO code · string');
 
 	await page.locator('.schema-edit__add-property').click();
-	await propertyPanel.locator('.property-form__name-input input').fill('semantic_percentage');
+	await propertyPanel.locator('.property-form__name-input input').fill('semantics_percentage');
 	await selectPropertyType(page, 'percentage');
-	await expect(propertyPanel.locator('.property-type-selector__trigger .schema-property-type')).toHaveText(
+	await expect(propertyPanel.locator('.property-type-selector__trigger .property-type-selector__type')).toHaveText(
 		'percentage · decimal',
 	);
 	await expect(propertyPanel.locator('.property-form__precision')).toHaveCount(0);
@@ -1398,11 +1646,11 @@ test(`Create profile schema properties with semantic defaults and options`, asyn
 	await propertyPanel.locator('.property-form__maximum input').fill('1.5');
 	await propertyPanel.locator('.property-panel__save').click();
 	await expect(
-		page.locator('.schema-edit .grid__row[data-id="semantic_percentage"] .schema-property-type'),
+		page.locator('.schema-edit .grid__row[data-id="semantics_percentage"] .schema-property-grid__type'),
 	).toHaveText('percentage · decimal(18,4) · min -0.25, max 1.5');
 
 	await page.locator('.schema-edit__add-property').click();
-	await propertyPanel.locator('.property-form__name-input input').fill('semantic_money');
+	await propertyPanel.locator('.property-form__name-input input').fill('semantics_money');
 	await selectPropertyType(page, 'money');
 	const currency = propertyPanel.locator('.property-form__currency');
 	await expect(currency).toHaveJSProperty('value', 'none');
@@ -1413,12 +1661,12 @@ test(`Create profile schema properties with semantic defaults and options`, asyn
 	await propertyPanel.locator('.property-form__minimum input').fill('-100.25');
 	await propertyPanel.locator('.property-form__maximum input').fill('999.9999');
 	await propertyPanel.locator('.property-panel__save').click();
-	await expect(page.locator('.schema-edit .grid__row[data-id="semantic_money"] .schema-property-type')).toHaveText(
-		'money — EUR · decimal(18,4) · min -100.25, max 999.9999',
-	);
+	await expect(
+		page.locator('.schema-edit .grid__row[data-id="semantics_money"] .schema-property-grid__type'),
+	).toHaveText('money — EUR · decimal(18,4) · min -100.25, max 999.9999');
 
 	await page.locator('.schema-edit__add-property').click();
-	await propertyPanel.locator('.property-form__name-input input').fill('semantic_measurement');
+	await propertyPanel.locator('.property-form__name-input input').fill('semantics_measurement');
 	await selectPropertyType(page, 'measurement');
 	const measurementUnit = propertyPanel.locator('.property-form__measurement-unit');
 	await expect(measurementUnit).toHaveJSProperty('value', '');
@@ -1443,11 +1691,11 @@ test(`Create profile schema properties with semantic defaults and options`, asyn
 	await propertyPanel.locator('.property-form__maximum input').fill('10.5');
 	await propertyPanel.locator('.property-panel__save').click();
 	await expect(
-		page.locator('.schema-edit .grid__row[data-id="semantic_measurement"] .schema-property-type'),
+		page.locator('.schema-edit .grid__row[data-id="semantics_measurement"] .schema-property-grid__type'),
 	).toHaveText('measurement — kg · decimal(18,4) · min -10.5, max 10.5');
 
 	await page.locator('.schema-edit__add-property').click();
-	await propertyPanel.locator('.property-form__name-input input').fill('semantic_duration');
+	await propertyPanel.locator('.property-form__name-input input').fill('semantics_duration');
 	await selectPropertyType(page, 'duration');
 	await expect(propertyPanel.locator('[data-error-on="duration-unit"]')).toHaveCount(0);
 	await expect(propertyPanel.locator('.property-panel__save')).not.toHaveAttribute('disabled');
@@ -1465,77 +1713,191 @@ test(`Create profile schema properties with semantic defaults and options`, asyn
 	await expect(propertyPanel.locator('[data-error-on="duration-unit"]')).toHaveCount(0);
 	await expect(propertyPanel.locator('.property-panel__save')).not.toHaveAttribute('disabled');
 	await propertyPanel.locator('.property-panel__save').click();
-	await expect(page.locator('.schema-edit .grid__row[data-id="semantic_duration"] .schema-property-type')).toHaveText(
-		'duration — s · int(64)',
-	);
+	await expect(
+		page.locator('.schema-edit .grid__row[data-id="semantics_duration"] .schema-property-grid__type'),
+	).toHaveText('duration — s · int(64)');
 
 	const previewRequestPromise = page.waitForRequest(
 		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
 	);
+	const previewResponsePromise = page.waitForResponse(
+		(response) => response.url().endsWith('/profiles/schema/preview') && response.request().method() === 'PUT',
+	);
 	await page.locator('.schema-edit__header-apply-button').click();
 	const schema = (await previewRequestPromise).postDataJSON().schema as ObjectType;
-	const country = schema.properties.find((property) => property.name === 'semantic_country');
-	expect(country?.type).toEqual({ kind: 'string', semantic: 'country', format: 'alpha-3' });
-	const percentage = schema.properties.find((property) => property.name === 'semantic_percentage');
+	const country = schema.properties.find((property) => property.name === 'semantics_country');
+	expect(country?.type).toEqual({ kind: 'string', semantics: 'country', format: 'alpha-2' });
+	const percentage = schema.properties.find((property) => property.name === 'semantics_percentage');
 	expect(percentage?.type).toEqual({
 		kind: 'decimal',
-		semantic: 'percentage',
+		semantics: 'percentage',
 		precision: 18,
 		scale: 4,
 		minimum: -0.25,
 		maximum: 1.5,
 	});
-	const money = schema.properties.find((property) => property.name === 'semantic_money');
+	const money = schema.properties.find((property) => property.name === 'semantics_money');
 	expect(money?.type).toEqual({
 		kind: 'decimal',
-		semantic: 'money',
+		semantics: 'money',
 		currency: 'EUR',
 		precision: 18,
 		scale: 4,
 		minimum: -100.25,
 		maximum: 999.9999,
 	});
-	const measurement = schema.properties.find((property) => property.name === 'semantic_measurement');
+	const measurement = schema.properties.find((property) => property.name === 'semantics_measurement');
 	expect(measurement?.type).toEqual({
 		kind: 'decimal',
-		semantic: 'measurement',
+		semantics: 'measurement',
 		unit: 'kg',
 		precision: 18,
 		scale: 4,
 		minimum: -10.5,
 		maximum: 10.5,
 	});
-	const duration = schema.properties.find((property) => property.name === 'semantic_duration');
+	const duration = schema.properties.find((property) => property.name === 'semantics_duration');
 	expect(duration?.type).toEqual({
 		kind: 'int',
-		semantic: 'duration',
+		semantics: 'duration',
 		unit: 'second',
 		bitSize: 64,
 		unsigned: false,
 	});
+	const previewResponse = await previewResponsePromise;
+	expect(previewResponse.status()).toBe(200);
+	await expect(page.locator('.schema-edit__queries')).toHaveAttribute('label', 'Review changes');
 });
 
-test(`Show materialized type catalogs, restrict transitions, and preserve physical configuration`, async ({ page }) => {
-	await page.route('**/v1/profiles/schema', async (route) => {
-		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
-		const email = schema.properties.find((property) => property.name === 'email');
-		email.type = { kind: 'string', maxLength: 100 };
-		const materializedEmail = structuredClone(email);
-		materializedEmail.name = 'materialized_email';
-		materializedEmail.type = { kind: 'string', semantic: 'email', maxLength: 100 };
-		const materializedMoney = structuredClone(email);
-		materializedMoney.name = 'materialized_money';
-		materializedMoney.type = {
+for (const [semantics, kind, structure] of [
+	['email', 'string', 'one'],
+	['phone', 'string', 'array'],
+	['url', 'string', 'map'],
+	['country', 'string', 'one'],
+	['duration', 'int', 'array'],
+	['money', 'decimal', 'one'],
+	['percentage', 'decimal', 'array'],
+	['measurement', 'decimal', 'map'],
+] as const) {
+	test(`Return a new ${structure} property from ${semantics} to pure ${kind}`, async ({ page }) => {
+		await page.route('**/v1/profiles/schema/preview', async (route) => {
+			await route.fulfill({ json: { queries: [] } });
+		});
+		await page.route('**/v1/profiles/schema', async (route) => {
+			if (route.request().method() === 'PUT') {
+				await route.fulfill({ status: 200 });
+				return;
+			}
+			await route.continue();
+		});
+
+		await page.goto(`${adminURL}/profile-unification/schema`);
+		await editSchema(page);
+		await page.locator('.schema-edit__add-property').click();
+		const propertyPanel = page.locator('.property-panel');
+		const name = `plain_${semantics}`;
+		await propertyPanel.locator('.property-form__name-input input').fill(name);
+		if (structure !== 'one') {
+			await propertyPanel.locator('.property-type-selector__structure-trigger').click();
+			await propertyPanel.locator(`[data-structure-option="${structure}"]`).click();
+		}
+		await selectPropertyType(page, semantics);
+		if (semantics === 'money' || semantics === 'measurement' || semantics === 'duration') {
+			const control = propertyPanel.locator(
+				`.property-form__${semantics === 'money' ? 'currency' : `${semantics}-unit`}`,
+			);
+			const value = semantics === 'money' ? 'EUR' : semantics === 'measurement' ? 'kg' : 'second';
+			await control.click();
+			await control.locator(`sl-option[value="${value}"]`).click();
+			await expect(control).toHaveJSProperty('value', value);
+		}
+		if (kind === 'decimal') {
+			await propertyPanel.locator('.property-form__minimum input').fill('-10.5');
+			await propertyPanel.locator('.property-form__maximum input').fill('10.5');
+		}
+		await selectPropertyType(page, kind);
+		await expect(
+			propertyPanel.locator('.property-type-selector__trigger .property-type-selector__type'),
+		).toHaveText(kind);
+		await expect(
+			propertyPanel.locator(
+				'.property-form__country-format, .property-form__currency, ' +
+					'.property-form__measurement-unit, .property-form__duration-unit',
+			),
+		).toHaveCount(0);
+		if (kind === 'decimal') {
+			await expect(propertyPanel.locator('.property-form__precision input')).toHaveValue('18');
+			await expect(propertyPanel.locator('.property-form__scale input')).toHaveValue('4');
+			await expect(propertyPanel.locator('.property-form__minimum input')).toHaveValue('-10.5');
+			await expect(propertyPanel.locator('.property-form__maximum input')).toHaveValue('10.5');
+		} else if (kind === 'int') {
+			await expect(propertyPanel.locator('.property-form__bit-size')).toHaveJSProperty('value', '64');
+			await expect(propertyPanel.locator('.property-form__integer-sign')).toHaveJSProperty('value', 'signed');
+		} else {
+			await expect(propertyPanel.locator('.property-form__constraints--length')).toBeVisible();
+		}
+		await propertyPanel.locator('.property-panel__save').click();
+		await expect(page.locator(`.schema-edit .grid__row[data-id="${name}"]`)).toBeVisible();
+
+		const previewRequestPromise = page.waitForRequest(
+			(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
+		);
+		await page.locator('.schema-edit__header-apply-button').click();
+		const previewRequest = await previewRequestPromise;
+		const alterRequestPromise = page.waitForRequest(
+			(request) => request.url().endsWith('/profiles/schema') && request.method() === 'PUT',
+		);
+		await page.locator('.schema-edit__apply-alter-button').click();
+		const alterRequest = await alterRequestPromise;
+		const valueType: Type =
+			kind === 'decimal'
+				? { kind, precision: 18, scale: 4, minimum: -10.5, maximum: 10.5 }
+				: kind === 'int'
+					? { kind, bitSize: 64, unsigned: false }
+					: { kind };
+		for (const request of [previewRequest, alterRequest]) {
+			const schema = request.postDataJSON().schema as ObjectType;
+			const property = schema.properties.find((property) => property.name === name);
+			expect(property?.type).toEqual(
+				structure === 'one' ? valueType : { kind: structure, elementType: valueType },
+			);
+		}
+		await expect(page.locator('.schema-edit')).toHaveCount(0);
+	});
+}
+
+test(`Keep applied property types read-only and preserve their configuration`, async ({ page }) => {
+	const appliedTypes: Record<string, Type> = {
+		email: { kind: 'string', maxLength: 100 },
+		materialized_email: { kind: 'string', semantics: 'email', maxLength: 100 },
+		materialized_money: {
 			kind: 'decimal',
-			semantic: 'money',
+			semantics: 'money',
 			currency: 'EUR',
 			precision: 18,
 			scale: 4,
 			minimum: -0.5,
 			maximum: 1.25,
-		};
-		schema.properties.push(materializedEmail, materializedMoney);
+		},
+		materialized_money_without_currency: { kind: 'decimal', semantics: 'money', precision: 18, scale: 4 },
+		materialized_measurement: { kind: 'decimal', semantics: 'measurement', unit: 'kg', precision: 18, scale: 4 },
+		materialized_duration: { kind: 'int', semantics: 'duration', unit: 'second', bitSize: 64, unsigned: false },
+		materialized_country: { kind: 'string', semantics: 'country', format: 'alpha-3' },
+		materialized_percentage: { kind: 'decimal', semantics: 'percentage', precision: 18, scale: 4 },
+		materialized_integer: { kind: 'int', bitSize: 32, unsigned: true, minimum: 0, maximum: 100 },
+		materialized_float: { kind: 'float', bitSize: 64, real: false, minimum: -1, maximum: 1 },
+		materialized_decimal: { kind: 'decimal', precision: 10, scale: 2, minimum: -10, maximum: 10 },
+	};
+	await page.route('**/v1/profiles/schema', async (route) => {
+		const response = await route.fetch();
+		const schema = (await response.json()) as ObjectType;
+		const email = schema.properties.find((property) => property.name === 'email');
+		email.type = appliedTypes.email;
+		for (const [name, type] of Object.entries(appliedTypes)) {
+			if (name !== 'email') {
+				schema.properties.push({ ...structuredClone(email), name, type });
+			}
+		}
 		await route.fulfill({ response, json: schema });
 	});
 	await page.route('**/v1/profiles/schema/preview', async (route) => {
@@ -1547,161 +1909,89 @@ test(`Show materialized type catalogs, restrict transitions, and preserve physic
 	const propertyPanel = page.locator('.property-panel');
 	const structureDropdown = propertyPanel.locator('.property-type-selector__structure-dropdown');
 	const structureTrigger = propertyPanel.locator('.property-type-selector__structure-trigger');
-	const structureOptions = propertyPanel.locator('.property-type-selector__structure-option');
 	const typeDropdown = propertyPanel.locator('.property-type-selector__dropdown');
 	const typeTrigger = propertyPanel.locator('.property-type-selector__trigger');
-	const typeOptions = propertyPanel.locator('.property-type-selector__option');
 	const typeChangeNote = propertyPanel.locator('.property-type-selector__type-change-note');
-	const getOptionVisualStyle = (option: Locator) =>
-		option.locator('[part="base"]').evaluate((base) => {
-			const style = getComputedStyle(base);
-			return {
-				backgroundColor: style.backgroundColor,
-				boxShadow: style.boxShadow,
-				color: style.color,
-				cursor: style.cursor,
-				opacity: style.opacity,
-			};
-		});
 
 	await page.locator('.schema-edit__add-property').click();
 	await expect(typeChangeNote).toHaveCount(0);
-	await selectPropertyType(page, 'string');
-	await expect(typeChangeNote).toHaveText("Can't be changed once the property has been applied.");
-	await selectPropertyType(page, 'email');
-	await expect(typeChangeNote).toHaveText("Can't be changed once the property has been applied.");
-	await selectPropertyType(page, 'money');
-	await expect(typeChangeNote).toHaveText("Can't be changed once the property has been applied.");
-	await selectPropertyType(page, 'duration');
-	await expect(typeChangeNote).toHaveText("Can't be changed once the property has been applied.");
+	for (const type of ['string', 'email', 'money', 'duration']) {
+		await selectPropertyType(page, type);
+		await expect(typeChangeNote).toHaveText("Can't be changed once the property has been applied.");
+		await expect(typeDropdown).not.toHaveAttribute('disabled');
+	}
 	await propertyPanel.locator('.property-panel__cancel').click();
 
-	await openProperty(page, 'email');
-	await expect(structureDropdown).toHaveCount(1);
-	await expect(structureTrigger).toContainText('one value');
-	await structureTrigger.click();
-	await expect(structureOptions).toHaveCount(4);
-	await expect(propertyPanel.locator('[data-structure-option="one"]')).not.toHaveAttribute('disabled');
-	await expect(propertyPanel.locator('[data-structure-option="array"]')).toHaveAttribute('disabled');
-	await expect(propertyPanel.locator('[data-structure-option="object"]')).toHaveAttribute('disabled');
-	await expect(propertyPanel.locator('[data-structure-option="map"]')).toHaveAttribute('disabled');
-	const unavailableStructureOption = propertyPanel.locator('[data-structure-option="array"]');
-	const unavailableStructureStyle = await getOptionVisualStyle(unavailableStructureOption);
-	expect(unavailableStructureStyle.cursor).toBe('default');
-	expect(unavailableStructureStyle.opacity).toBe('0.75');
-	await unavailableStructureOption.hover();
-	expect(await getOptionVisualStyle(unavailableStructureOption)).toEqual(unavailableStructureStyle);
-	await unavailableStructureOption.dispatchEvent('click');
-	await expect(structureDropdown).toHaveJSProperty('open', true);
-	await expect(structureTrigger).toContainText('one value');
-	await structureTrigger.click();
-
-	await expect(typeDropdown).toHaveCount(1);
-	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('string');
-	await expect(typeChangeNote).toHaveText("This type can't be changed.");
-	await typeTrigger.click();
-	await expect(typeOptions).toHaveCount(20);
-	await expect(propertyPanel.locator('[data-type-option="string"]')).not.toHaveAttribute('disabled');
-	await expect(propertyPanel.locator('.property-type-selector__option[disabled]')).toHaveCount(19);
-	const unavailableTypeOption = propertyPanel.locator('[data-type-option="email"]');
-	const unavailableTypeStyle = await getOptionVisualStyle(unavailableTypeOption);
-	expect(unavailableTypeStyle.cursor).toBe('default');
-	expect(unavailableTypeStyle.opacity).toBe('0.75');
-	await unavailableTypeOption.hover();
-	expect(await getOptionVisualStyle(unavailableTypeOption)).toEqual(unavailableTypeStyle);
-	await unavailableTypeOption.dispatchEvent('click');
-	await expect(typeDropdown).toHaveJSProperty('open', true);
-	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('string');
-	await typeTrigger.click();
-	const readOnlyLengthConstraints = propertyPanel.locator('.property-form__constraints--length sl-input');
-	await expect(readOnlyLengthConstraints).toHaveCount(2);
-	await expect(readOnlyLengthConstraints.first()).toHaveAttribute('readonly');
-	await expect(readOnlyLengthConstraints.first()).toHaveAttribute('tabindex', '-1');
-	await expect(readOnlyLengthConstraints.first()).not.toHaveAttribute('disabled');
-	const readOnlyLengthInputs = readOnlyLengthConstraints.locator('input');
-	await expect(readOnlyLengthInputs.first()).toHaveAttribute('tabindex', '-1');
-	await expect(readOnlyLengthInputs.last()).toHaveAttribute('tabindex', '-1');
-	expect(
-		await readOnlyLengthConstraints
-			.first()
-			.locator('[part="base"]')
-			.evaluate((control) => getComputedStyle(control).cursor),
-	).toBe('not-allowed');
-	await readOnlyLengthConstraints.first().click();
-	await expect(readOnlyLengthInputs.first()).not.toBeFocused();
-	await readOnlyLengthInputs.first().focus();
-	await page.keyboard.press('Tab');
-	await expect(propertyPanel.locator('.property-form__constraints--length input:focus')).toHaveCount(0);
-
-	await openProperty(page, 'materialized_email');
-	await expect(typeDropdown).toHaveCount(1);
-	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('email · string');
-	await expect(typeChangeNote).toHaveText("This type can't be changed.");
-	await typeTrigger.click();
-	await expect(typeOptions).toHaveCount(20);
-	expect(
-		await propertyPanel
-			.locator('.property-type-selector__option:not([disabled])')
-			.evaluateAll((options) => options.map((option) => option.getAttribute('data-type-option'))),
-	).toEqual(['email']);
-	await expect(propertyPanel.locator('.property-type-selector__option[disabled]')).toHaveCount(19);
-	await expect(typeDropdown.locator('.property-type-selector__type-change-note')).toHaveCount(0);
-	await expect(propertyPanel.locator('[data-type-option="email"] .schema-property-type')).toHaveText(
-		'email · string · max 100 chars',
-	);
-	await expect(propertyPanel.locator('[data-type-option="string"] .schema-property-type')).toHaveText(
-		'string · Text value, such as a name or code',
-	);
-	await expect(propertyPanel.locator('[data-type-option="phone"] .schema-property-type')).toHaveText(
-		'phone number · string',
-	);
-	await typeTrigger.click();
-
-	await openProperty(page, 'materialized_money');
-	const currency = propertyPanel.locator('.property-form__currency');
-	await expect(typeTrigger.locator('.schema-property-type')).toHaveText('money · decimal');
-	await expect(currency.locator('input')).toHaveValue('EUR · Euro');
-	await expect(currency).toHaveAttribute('readonly');
-	await expect(currency).toHaveAttribute('tabindex', '-1');
-	await expect(currency).not.toHaveAttribute('disabled');
-	await expect(typeChangeNote).toHaveText("This type can't be changed.");
-	await typeTrigger.click();
-	await expect(typeOptions).toHaveCount(20);
-	expect(
-		await propertyPanel
-			.locator('.property-type-selector__option:not([disabled])')
-			.evaluateAll((options) => options.map((option) => option.getAttribute('data-type-option'))),
-	).toEqual(['money']);
-	await expect(propertyPanel.locator('.property-type-selector__option[disabled]')).toHaveCount(19);
-	await expect(propertyPanel.locator('[data-type-option="money"] .schema-property-type')).toHaveText(
-		'money · decimal(18,4) · min -0.5, max 1.25',
-	);
-	await expect(propertyPanel.locator('[data-type-option="decimal"] .schema-property-type')).toHaveText(
-		'decimal(10,0) · Decimal number with fixed precision',
-	);
-	await typeTrigger.click();
-	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Materialized money');
-	await propertyPanel.locator('.property-panel__save').click();
+	const valuesForPropertiesWithSemantics = {
+		materialized_money: 'EUR · Euro',
+		materialized_money_without_currency: 'No currency specified',
+		materialized_measurement: 'Kilogram · kg',
+		materialized_duration: 'Seconds · s',
+		materialized_country: '3-letter ISO code',
+	};
+	for (const name of Object.keys(appliedTypes)) {
+		await openProperty(page, name);
+		await expect(structureDropdown).toHaveAttribute('disabled');
+		await expect(typeDropdown).toHaveAttribute('disabled');
+		await expect(structureTrigger.locator('button')).toBeDisabled();
+		await expect(typeTrigger.locator('button')).toBeDisabled();
+		await expect(typeChangeNote).toHaveText("The type can't be changed for an existing property.");
+		await expect(typeChangeNote).toBeVisible();
+		const changeNameButton = propertyPanel.locator('.property-form__change-name button');
+		await changeNameButton.focus();
+		await expect(changeNameButton).toBeFocused();
+		await page.keyboard.press('Tab');
+		const profileRoleTrigger = propertyPanel.locator('.profile-role-selector__trigger button');
+		if ((await profileRoleTrigger.count()) > 0) {
+			await expect(profileRoleTrigger).toBeFocused();
+			await page.keyboard.press('Tab');
+		}
+		await expect(propertyPanel.locator('.property-form__display-name input')).toBeFocused();
+		await expect(typeChangeNote).toBeVisible();
+		await structureTrigger.click({ force: true });
+		await typeTrigger.click({ force: true });
+		await expect(structureDropdown).toHaveJSProperty('open', false);
+		await expect(typeDropdown).toHaveJSProperty('open', false);
+		await expect(
+			propertyPanel.locator('.property-form__constraints sl-input, .property-form__constraints sl-select'),
+		).toHaveCount(0);
+		await expect(
+			propertyPanel.locator(
+				'.property-form__constraints sl-checkbox, .property-form__constraints sl-radio-group',
+			),
+		).toHaveCount(0);
+		await expect(propertyPanel.locator('.property-form__numeric-range')).toHaveCount(0);
+		await expect(propertyPanel.locator('.property-form__percentage-description')).toHaveCount(0);
+		const value = propertyPanel.locator('.property-form__value');
+		if (name in valuesForPropertiesWithSemantics) {
+			await expect(value).toHaveText(valuesForPropertiesWithSemantics[name]);
+			expect(await value.evaluate((element) => getComputedStyle(element).userSelect)).not.toBe('none');
+			const selectedText = await value.evaluate((element) => {
+				const range = document.createRange();
+				range.selectNodeContents(element);
+				const selection = window.getSelection();
+				selection.removeAllRanges();
+				selection.addRange(range);
+				return selection.toString();
+			});
+			expect(selectedText.trim()).toBe(valuesForPropertiesWithSemantics[name]);
+		} else {
+			await expect(value).toHaveCount(0);
+		}
+		await propertyPanel.locator('sl-textarea textarea[name="description"]').fill(`Updated ${name}`);
+		await propertyPanel.locator('.property-panel__save').click();
+	}
 
 	const previewRequestPromise = page.waitForRequest(
 		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
 	);
 	await page.locator('.schema-edit__header-apply-button').click();
 	const schema = (await previewRequestPromise).postDataJSON().schema as ObjectType;
-	const email = schema.properties.find((property) => property.name === 'email');
-	expect(email?.type).toEqual({ kind: 'string', maxLength: 100 });
-	const materializedEmail = schema.properties.find((property) => property.name === 'materialized_email');
-	expect(materializedEmail?.type).toEqual({ kind: 'string', semantic: 'email', maxLength: 100 });
-	const materializedMoney = schema.properties.find((property) => property.name === 'materialized_money');
-	expect(materializedMoney?.type).toEqual({
-		kind: 'decimal',
-		semantic: 'money',
-		currency: 'EUR',
-		precision: 18,
-		scale: 4,
-		minimum: -0.5,
-		maximum: 1.25,
-	});
+	for (const [name, type] of Object.entries(appliedTypes)) {
+		const property = schema.properties.find((property) => property.name === name);
+		expect(property?.type).toEqual(type);
+		expect(property?.description).toBe(`Updated ${name}`);
+	}
 });
 
 test(`Assign and reassign Profile roles only when the property form is confirmed`, async ({ page }) => {
@@ -1838,7 +2128,7 @@ test(`Confirm Profile role removal when a type becomes incompatible`, async ({ p
 	await openProperty(page, 'new_avatar_url');
 	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('Photo');
 
-	const typeTrigger = panel.locator('.property-type-selector__trigger .schema-property-type');
+	const typeTrigger = panel.locator('.property-type-selector__trigger .property-type-selector__type');
 	const initialType = await typeTrigger.innerText();
 	await selectPropertyType(page, 'string');
 	const changeTypeDialog = page.locator('.alert-dialog', { hasText: 'Change type?' });
@@ -1877,7 +2167,7 @@ test(`Confirm Profile role removal when a type becomes incompatible`, async ({ p
 	const request = (await alterRequestPromise).postDataJSON();
 	expect(request.assignedRoles.photo).toBe('');
 	const avatarURL = request.schema.properties.find((property) => property.name === 'new_avatar_url');
-	expect(avatarURL.type).toEqual({ kind: 'string', maxLength: 300 });
+	expect(avatarURL.type).toEqual({ kind: 'string' });
 });
 
 test(`Delete a property and its Profile role together`, async ({ page }) => {
@@ -1961,7 +2251,7 @@ test(`Show only compatible Profile roles and remove one when cardinality changes
 	await panel.locator('.property-panel__save').click();
 	const row = page.locator('.schema-edit .grid__row[data-id="new_avatar_url"]');
 	await expect(row.locator('.grid__cell-content').nth(3)).toBeEmpty();
-	await expect(row.locator('.schema-property-type')).toHaveText('array of URL · string');
+	await expect(row.locator('.schema-property-grid__type')).toHaveText('array of URL · string');
 });
 
 test(`Render array and map property types and preserve their semantics`, async ({ page }) => {
@@ -1979,11 +2269,11 @@ test(`Render array and map property types and preserve their semantics`, async (
 			const plainMapProperty = structuredClone(arrayProperty);
 			plainMapProperty.name = 'plain_phone_numbers_by_kind';
 			plainMapProperty.type = { kind: 'map', elementType: { kind: 'string', maxLength: 300 } };
-			arrayProperty.type = { kind: 'array', elementType: { kind: 'string', semantic: 'phone' } };
-			const semanticMapProperty = structuredClone(plainMapProperty);
-			semanticMapProperty.name = 'phone_numbers_by_kind';
-			semanticMapProperty.type = { kind: 'map', elementType: { kind: 'string', semantic: 'phone' } };
-			schema.properties.push(plainArrayProperty, plainMapProperty, semanticMapProperty);
+			arrayProperty.type = { kind: 'array', elementType: { kind: 'string', semantics: 'phone' } };
+			const phoneSemanticsMapProperty = structuredClone(plainMapProperty);
+			phoneSemanticsMapProperty.name = 'phone_numbers_by_kind';
+			phoneSemanticsMapProperty.type = { kind: 'map', elementType: { kind: 'string', semantics: 'phone' } };
+			schema.properties.push(plainArrayProperty, plainMapProperty, phoneSemanticsMapProperty);
 			await route.fulfill({ response, json: schema });
 			return;
 		}
@@ -2002,15 +2292,15 @@ test(`Render array and map property types and preserve their semantics`, async (
 		plain_phone_numbers_by_kind: 'map of string · max 300 chars',
 	};
 	for (const [property, type] of Object.entries(expectedTypes)) {
-		await expect(page.locator(`.schema-grid .grid__row[data-id="${property}"] .schema-property-type`)).toHaveText(
-			type,
-		);
+		await expect(
+			page.locator(`.schema-grid .grid__row[data-id="${property}"] .schema-property-grid__type`),
+		).toHaveText(type);
 	}
 	await editSchema(page);
 	for (const [property, type] of Object.entries(expectedTypes)) {
-		await expect(page.locator(`.schema-edit .grid__row[data-id="${property}"] .schema-property-type`)).toHaveText(
-			type,
-		);
+		await expect(
+			page.locator(`.schema-edit .grid__row[data-id="${property}"] .schema-property-grid__type`),
+		).toHaveText(type);
 	}
 	await openProperty(page, 'phone_numbers');
 	const propertyPanel = page.locator('.property-panel');
@@ -2018,16 +2308,15 @@ test(`Render array and map property types and preserve their semantics`, async (
 	const structureTrigger = propertyPanel.locator('.property-type-selector__structure-trigger');
 	await expect(structureDropdown).toHaveCount(1);
 	await expect(structureTrigger).toContainText('array of');
-	await structureTrigger.click();
-	await expect(propertyPanel.locator('.property-type-selector__structure-option')).toHaveCount(4);
-	await expect(propertyPanel.locator('[data-structure-option="array"]')).not.toHaveAttribute('disabled');
-	await expect(propertyPanel.locator('.property-type-selector__structure-option[disabled]')).toHaveCount(3);
-	await structureTrigger.click();
-	await expect(propertyPanel.locator('.property-type-selector__trigger .schema-property-type')).toHaveText(
+	await expect(structureDropdown).toHaveAttribute('disabled');
+	await expect(structureTrigger.locator('button')).toBeDisabled();
+	await expect(structureDropdown).toHaveJSProperty('open', false);
+	await expect(propertyPanel.locator('.property-type-selector__dropdown')).toHaveAttribute('disabled');
+	await expect(propertyPanel.locator('.property-type-selector__trigger .property-type-selector__type')).toHaveText(
 		'phone number · string',
 	);
 	await expect(propertyPanel.locator('.property-type-selector__type-change-note')).toHaveText(
-		"This type can't be changed.",
+		"The type can't be changed for an existing property.",
 	);
 	await propertyPanel.locator('sl-textarea textarea[name="description"]').fill('Updated description');
 	await page.waitForTimeout(1000); // Add a timeout to ensure that the React state is synced with the form controls.
@@ -2042,9 +2331,9 @@ test(`Render array and map property types and preserve their semantics`, async (
 	]);
 	const body = JSON.parse(response.request().postData());
 	const property = body.schema.properties.find((property) => property.name === 'phone_numbers');
-	expect(property.type).toEqual({ kind: 'array', elementType: { kind: 'string', semantic: 'phone' } });
+	expect(property.type).toEqual({ kind: 'array', elementType: { kind: 'string', semantics: 'phone' } });
 	const mapProperty = body.schema.properties.find((property) => property.name === 'phone_numbers_by_kind');
-	expect(mapProperty.type).toEqual({ kind: 'map', elementType: { kind: 'string', semantic: 'phone' } });
+	expect(mapProperty.type).toEqual({ kind: 'map', elementType: { kind: 'string', semantics: 'phone' } });
 });
 
 test(`Add schema property`, async ({ page }) => {
@@ -2320,7 +2609,7 @@ test(`Validate decimal constraints as they are edited`, async ({ page }) => {
 	await expect(saveButton).not.toHaveAttribute('disabled');
 	await saveButton.click();
 	const addedProperty = page.locator('.schema-edit .grid__row[data-id="decimal_constraints"]');
-	await expect(addedProperty.locator('.schema-property-type')).toHaveText('decimal(10,4)');
+	await expect(addedProperty.locator('.schema-property-grid__type')).toHaveText('decimal(10,4)');
 });
 
 test(`Validate numeric range constraints as they are edited`, async ({ page }) => {
@@ -2380,7 +2669,9 @@ test(`Validate numeric range constraints as they are edited`, async ({ page }) =
 	await saveButton.click();
 
 	const addedProperty = page.locator('.schema-edit .grid__row[data-id="numeric_range"]');
-	await expect(addedProperty.locator('.schema-property-type')).toHaveText('decimal(10,4) · min -1.2345, max 1.2345');
+	await expect(addedProperty.locator('.schema-property-grid__type')).toHaveText(
+		'decimal(10,4) · min -1.2345, max 1.2345',
+	);
 });
 
 test(`Edit schema property`, async ({ page }) => {
@@ -2462,12 +2753,12 @@ test(`Restore the original property name without leaving pending changes`, async
 		schema.properties.push({
 			name: 'original_property_name',
 			prefilled: '',
-			role: 'Both',
 			type: { kind: 'string' },
 			createRequired: false,
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -2520,12 +2811,12 @@ test(`Remove a renamed property without sending its stale RePath`, async ({ page
 		schema.properties.push({
 			name: 'property_to_rename_and_remove',
 			prefilled: '',
-			role: 'Both',
 			type: { kind: 'string' },
 			createRequired: false,
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -2561,12 +2852,12 @@ test(`Remove a replacement property without sending its stale RePath`, async ({ 
 		schema.properties.push({
 			name: 'property_to_replace_and_remove',
 			prefilled: '',
-			role: 'Both',
 			type: { kind: 'string' },
 			createRequired: false,
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -2607,12 +2898,12 @@ test(`Do not show modified field indicators on a replacement property`, async ({
 		schema.properties.push({
 			name: 'property_to_replace',
 			prefilled: '',
-			role: 'Both',
 			type: { kind: 'string' },
 			createRequired: false,
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: 'Original description',
 		});
 		await route.fulfill({ response, json: schema });
@@ -2641,23 +2932,23 @@ test(`Rename an existing property to a deleted property's name`, async ({ page }
 			{
 				name: 'property_to_rename',
 				prefilled: '',
-				role: 'Both',
 				type: { kind: 'string' },
 				createRequired: false,
 				updateRequired: false,
 				readOptional: true,
 				nullable: false,
+				displayName: '',
 				description: '',
 			},
 			{
 				name: 'deleted_property_name',
 				prefilled: '',
-				role: 'Both',
 				type: { kind: 'string' },
 				createRequired: false,
 				updateRequired: false,
 				readOptional: true,
 				nullable: false,
+				displayName: '',
 				description: '',
 			},
 		);
@@ -2758,12 +3049,12 @@ test(`Reuse a property name more than once before applying schema changes`, asyn
 		schema.properties.push({
 			name: 'reused_property_name',
 			prefilled: '',
-			role: 'Both',
 			type: { kind: 'string' },
 			createRequired: false,
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -2804,12 +3095,12 @@ test(`Remove a replacement property's RePath when renaming it`, async ({ page })
 		schema.properties.push({
 			name: 'replacement_name',
 			prefilled: '',
-			role: 'Both',
 			type: { kind: 'string' },
 			createRequired: false,
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -2849,12 +3140,12 @@ test(`Allow matching property names under different object parents`, async ({ pa
 		const createProperty = (name: string, type: Property['type']): Property => ({
 			name,
 			prefilled: '',
-			role: 'Both',
 			type,
 			createRequired: false,
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		schema.properties.push(
@@ -2919,12 +3210,12 @@ test(`Support hasOwnProperty as a profile schema property name`, async ({ page }
 		const createProperty = (name: string, type: Property['type']): Property => ({
 			name,
 			prefilled: '',
-			role: 'Both',
 			type,
 			createRequired: false,
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		schema.properties.push(
@@ -2969,12 +3260,12 @@ test(`Ignore inherited primary sources for prototype property names`, async ({ p
 		schema.properties.push({
 			name: 'toString',
 			prefilled: '',
-			role: 'Both',
 			type: { kind: 'string' },
 			createRequired: false,
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -3164,19 +3455,18 @@ test(`Reject descendant changes while renaming an object property`, async ({ pag
 		schema.properties.push({
 			name: 'object_to_rename',
 			prefilled: '',
-			role: 'Both',
 			type: {
 				kind: 'object',
 				properties: [
 					{
 						name: 'child',
 						prefilled: '',
-						role: 'Both',
 						type: { kind: 'string' },
 						createRequired: false,
 						updateRequired: false,
 						readOptional: true,
 						nullable: false,
+						displayName: '',
 						description: '',
 					},
 				],
@@ -3185,6 +3475,7 @@ test(`Reject descendant changes while renaming an object property`, async ({ pag
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });
@@ -3252,19 +3543,18 @@ test(`Reject an existing object property after removing all its sub-properties`,
 			{
 				name: 'object_to_empty',
 				prefilled: '',
-				role: 'Both',
 				type: {
 					kind: 'object',
 					properties: [
 						{
 							name: 'child',
 							prefilled: '',
-							role: 'Both',
 							type: { kind: 'string' },
 							createRequired: false,
 							updateRequired: false,
 							readOptional: true,
 							nullable: false,
+							displayName: '',
 							description: '',
 						},
 					],
@@ -3273,17 +3563,18 @@ test(`Reject an existing object property after removing all its sub-properties`,
 				updateRequired: false,
 				readOptional: true,
 				nullable: false,
+				displayName: '',
 				description: '',
 			},
 			{
 				name: 'object_to_empty_sibling',
 				prefilled: '',
-				role: 'Both',
 				type: { kind: 'string' },
 				createRequired: false,
 				updateRequired: false,
 				readOptional: true,
 				nullable: false,
+				displayName: '',
 				description: '',
 			},
 		);
@@ -3315,30 +3606,29 @@ test(`Count an object removal once after changing its children`, async ({ page }
 		schema.properties.push({
 			name: 'object_with_replaced_child',
 			prefilled: '',
-			role: 'Both',
 			type: {
 				kind: 'object',
 				properties: [
 					{
 						name: 'child',
 						prefilled: '',
-						role: 'Both',
 						type: { kind: 'string' },
 						createRequired: false,
 						updateRequired: false,
 						readOptional: true,
 						nullable: false,
+						displayName: '',
 						description: '',
 					},
 					{
 						name: 'removed_child',
 						prefilled: '',
-						role: 'Both',
 						type: { kind: 'string' },
 						createRequired: false,
 						updateRequired: false,
 						readOptional: true,
 						nullable: false,
+						displayName: '',
 						description: '',
 					},
 				],
@@ -3347,6 +3637,7 @@ test(`Count an object removal once after changing its children`, async ({ page }
 			updateRequired: false,
 			readOptional: true,
 			nullable: false,
+			displayName: '',
 			description: '',
 		});
 		await route.fulfill({ response, json: schema });

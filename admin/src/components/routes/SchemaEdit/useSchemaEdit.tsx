@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, ReactNode, useRef, useContext, useCallback } from 'react';
-import Type, { ObjectType, Role } from '../../../lib/api/types/types';
+import Type, { ObjectType } from '../../../lib/api/types/types';
 import { GridRef, SortableGridRow, GridColumn } from '../../base/Grid/Grid.types';
 import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
 import {
@@ -15,7 +15,12 @@ import { PreviewAlterProfileSchemaResponse, RePaths } from '../../../lib/api/typ
 import AppContext from '../../../context/AppContext';
 import { isMetaProperty } from '../../../lib/core/schema';
 import TransformedConnection from '../../../lib/core/connection';
-import { PrimarySources, ProfileRoleAssignments, ProfileRoleID } from '../../../lib/api/types/workspace';
+import {
+	ConsentPurpose,
+	PrimarySources,
+	ProfileRoleAssignments,
+	ProfileRoleID,
+} from '../../../lib/api/types/workspace';
 import { SchemaContext } from '../../../context/SchemaContext';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
@@ -27,7 +32,9 @@ import {
 	PROFILE_ROLES,
 } from '../../helpers/profileRoles';
 import { SchemaPropertyIdentifierBadge, SchemaPropertyName } from '../Schema/SchemaPropertyGrid';
-import { getSchemaPropertyTypePresentation, SchemaPropertyType } from '../Schema/SchemaPropertyType';
+import { getProfileSchemaTypePresentation } from '../../helpers/types';
+import { SchemaPropertyConsent } from '../Schema/SchemaPropertyConsent';
+import { getConsentPurposesByPropertyPath } from '../Schema/SchemaPropertyConsent.helpers';
 
 const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Name' },
@@ -45,7 +52,6 @@ interface PropertyToEdit {
 	root?: string;
 	name?: string;
 	prefilled?: string;
-	role?: Role;
 	type?: Type | null;
 	readOptional?: boolean;
 	createRequired?: boolean;
@@ -127,7 +133,7 @@ const useSchemaEdit = (
 		useContext(AppContext);
 	const workspace = workspaces.find((candidate) => candidate.id === selectedWorkspace);
 
-	const { setIsAltering } = useContext(SchemaContext);
+	const { consentPurposes, setIsAltering } = useContext(SchemaContext);
 
 	const primarySources = useRef<PrimarySources>(copyPrimarySources(workspace.primarySources));
 	const [assignedRoles, setAssignedRoles] = useState<ProfileRoleAssignments>(() =>
@@ -256,6 +262,13 @@ const useSchemaEdit = (
 		return key == null || editableSchema == null ? null : { key, ...editableSchema[key] };
 	}, [editableSchema, visiblePropertyKeys]);
 	const isSelectedPropertyVisible = selectedPropertyKey != null && visiblePropertyKeys.has(selectedPropertyKey);
+	const consentPurposesByPropertyPath = useMemo(
+		() =>
+			editableSchema == null
+				? new Map()
+				: getConsentPurposesByPropertyPath(normalizeSchema(editableSchema), consentPurposes),
+		[consentPurposes, editableSchema],
+	);
 	const rows = useMemo(() => {
 		return getRows(
 			editableSchema,
@@ -263,6 +276,7 @@ const useSchemaEdit = (
 			assignedRoles,
 			connections,
 			identifierPositions,
+			consentPurposesByPropertyPath,
 			propertyStatuses,
 			selectedPropertyKey,
 			visiblePropertyKeys,
@@ -272,6 +286,7 @@ const useSchemaEdit = (
 	}, [
 		connections,
 		assignedRoles,
+		consentPurposesByPropertyPath,
 		editableSchema,
 		identifierPositions,
 		isFiltered,
@@ -382,7 +397,6 @@ const useSchemaEdit = (
 			type: property.type,
 			nullable: property.nullable,
 			prefilled: '',
-			role: 'Both',
 			readOptional: true,
 			createRequired: false,
 			updateRequired: false,
@@ -508,7 +522,6 @@ const useSchemaEdit = (
 			type: property.type,
 			nullable: property.nullable,
 			prefilled: current.prefilled,
-			role: current.role,
 			readOptional: current.readOptional,
 			createRequired: current.createRequired,
 			updateRequired: current.updateRequired,
@@ -933,7 +946,7 @@ const getVisiblePropertyKeys = (
 	}
 	const term = search?.trim().toLocaleLowerCase() || '';
 	for (const [key, property] of Object.entries(schema)) {
-		const typePresentation = getSchemaPropertyTypePresentation(property.type, 'grid');
+		const typePresentation = getProfileSchemaTypePresentation(property.type);
 		const assignedRole = getAssignedProfileRole(assignedRoles, key);
 		const matchesSearch =
 			term === '' ||
@@ -999,6 +1012,7 @@ const getRows = (
 	assignedRoles: ProfileRoleAssignments,
 	connections: TransformedConnection[],
 	identifierPositions: ReadonlyMap<string, number>,
+	consentPurposesByPropertyPath: ReadonlyMap<string, ConsentPurpose[]>,
 	propertyStatuses: Record<string, PropertyChangeStatus>,
 	selectedPropertyKey: string | undefined,
 	visiblePropertyKeys: ReadonlySet<string>,
@@ -1016,6 +1030,11 @@ const getRows = (
 		}
 		const property = schema[propertyKey];
 		const assignedRole = getAssignedProfileRole(assignedRoles, propertyKey);
+		const propertyPath = propertyKey
+			.split('.')
+			.map((_, index, fragments) => schema[fragments.slice(0, index + 1).join('.')].name)
+			.join('.');
+		const consentPurposes = consentPurposesByPropertyPath.get(propertyPath);
 		const expanded = selectedPropertyKey?.startsWith(`${propertyKey}.`);
 		const isSubProperty = property.indentation > 0;
 		if (isSubProperty) {
@@ -1036,6 +1055,7 @@ const getRows = (
 					primarySourceConnection,
 					identifierPositions.get(propertyKey),
 					assignedRole,
+					consentPurposes,
 					propertyStatuses[propertyKey],
 					selectedPropertyKey === propertyKey,
 					expanded,
@@ -1050,6 +1070,7 @@ const getRows = (
 					primarySourceConnection,
 					identifierPositions.get(propertyKey),
 					assignedRole,
+					consentPurposes,
 					propertyStatuses[propertyKey],
 					selectedPropertyKey === propertyKey,
 					expanded,
@@ -1066,6 +1087,7 @@ const getRows = (
 					primarySourceConnection,
 					identifierPositions.get(propertyKey),
 					assignedRole,
+					consentPurposes,
 					propertyStatuses[propertyKey],
 					selectedPropertyKey === propertyKey,
 					expanded,
@@ -1080,6 +1102,7 @@ const getRows = (
 					primarySourceConnection,
 					identifierPositions.get(propertyKey),
 					assignedRole,
+					consentPurposes,
 					propertyStatuses[propertyKey],
 					selectedPropertyKey === propertyKey,
 					expanded,
@@ -1099,6 +1122,7 @@ const buildRow = (
 	primarySourceConnection: TransformedConnection,
 	identifierPosition: number | undefined,
 	assignedRole: ProfileRoleID | null,
+	consentPurposes: ConsentPurpose[] | undefined,
 	status: PropertyChangeStatus | undefined,
 	selected: boolean,
 	expanded: boolean,
@@ -1108,7 +1132,26 @@ const buildRow = (
 	const actions = (
 		<div className='schema-edit__property-actions'>{status != null && <PropertyStatusBadge status={status} />}</div>
 	);
-	const typeCell: ReactNode = <SchemaPropertyType context='grid' type={property.type} />;
+	const { primary, metadata } = getProfileSchemaTypePresentation(property.type);
+	const typeCell: ReactNode = (
+		<>
+			<span
+				className='schema-property-grid__type'
+				title={metadata == null ? primary : `${primary} · ${metadata}`}
+			>
+				<span className='schema-property-grid__type-label'>{primary}</span>
+				{metadata != null && (
+					<span className='schema-property-grid__type-metadata'>
+						<span className='schema-property-grid__type-separator' aria-hidden='true'>
+							{' · '}
+						</span>
+						<span className='schema-property-grid__type-physical'>{metadata}</span>
+					</span>
+				)}
+			</span>
+			<SchemaPropertyConsent purposes={consentPurposes} />
+		</>
+	);
 	let primarySourceCell: ReactNode;
 	if (property.type.kind !== 'object' && property.type.kind !== 'array') {
 		if (primarySourceConnection) {

@@ -151,7 +151,7 @@ type organizationLimits struct {
 
 // CreateOrganization creates a new organization.
 //
-// Authentication is performed using the platform management API key.
+// Authentication is performed using the Platform Management API key.
 func (api api) CreateOrganization(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if err := api.admitPlatformRequest(r, x1); err != nil {
 		return nil, err
@@ -280,7 +280,7 @@ func (api api) MemberInvitation(_ http.ResponseWriter, r *http.Request) (any, er
 
 // Organization returns the organization with the given identifier.
 //
-// Authentication is performed using the platform management API key.
+// Authentication is performed using the Platform Management API key.
 func (api api) Organization(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if err := api.admitPlatformRequest(r, x1); err != nil {
 		return nil, err
@@ -290,7 +290,7 @@ func (api api) Organization(_ http.ResponseWriter, r *http.Request) (any, error)
 
 // Organizations returns the organizations.
 //
-// Authentication is performed using the platform management API key.
+// Authentication is performed using the Platform Management API key.
 func (api api) Organizations(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if err := api.admitPlatformRequest(r, x1); err != nil {
 		return nil, err
@@ -334,6 +334,7 @@ type publicMetadata struct {
 	TelemetryLevel             string   `json:"telemetryLevel"`
 	WorkOSClientID             string   `json:"workosClientID"`
 	WorkOSDevMode              bool     `json:"workosDevMode"`
+	Version                    string   `json:"version"`
 }
 
 // PublicMetadata returns public information about the server installation:
@@ -349,6 +350,7 @@ type publicMetadata struct {
 //   - telemetryLevel: telemetry level - none, errors, stats, or all
 //   - workosClientID: WorkOS client ID, it's an empty string when WorkOS authentication is not configured
 //   - workosDevMode: when true, WorkOS AuthKit stores the refresh token in LocalStorage instead of using a cookie
+//   - version: Krenalis version - v1.2.3, dev-4e3f1b8, or "(devel)"
 //
 // Authentication is not required to call PublicMetadata.
 func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, error) {
@@ -361,6 +363,7 @@ func (api api) PublicMetadata(_ http.ResponseWriter, r *http.Request) (any, erro
 		InviteMembersViaEmail:      api.inviteMembersViaEmail,
 		CanSendMemberPasswordReset: api.core.CanSendMemberPasswordReset(),
 		TelemetryLevel:             string(api.sentryTelemetry.level),
+		Version:                    krenalisVersion(),
 	}
 	if api.workOS != nil {
 		metadata.WorkOSClientID = api.workOS.ClientID()
@@ -406,6 +409,35 @@ func (api api) SendMemberPasswordReset(_ http.ResponseWriter, r *http.Request) (
 	}
 	emailTemplate := strings.ReplaceAll(string(resetPasswordEmail), "${externalURL}", html.EscapeString(api.externalURL))
 	err = org.SendMemberPasswordReset(r.Context(), body.Email, emailTemplate)
+	return nil, err
+}
+
+// Signup creates an organization and invites its admin by email. It is served
+// only when WorkOS is enabled.
+//
+// Authentication is not required to call Signup.
+func (api api) Signup(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if api.workOS == nil {
+		return nil, errors.NotFound("signup is not enabled")
+	}
+	if err := validateRequiredBody(r, false); err != nil {
+		return nil, err
+	}
+	var body struct {
+		OrganizationName string `json:"organizationName"`
+		AdminEmail       string `json:"adminEmail"`
+		Website          string `json:"website"` // honeypot, must be empty.
+	}
+	err := json.Decode(r.Body, &body)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	// Requests that fill in the honeypot come from a bot: report a success
+	// without creating anything, so that the bot has nothing to learn.
+	if body.Website != "" {
+		return nil, nil
+	}
+	err = api.workOS.SignupOrganization(r.Context(), body.OrganizationName, body.AdminEmail)
 	return nil, err
 }
 

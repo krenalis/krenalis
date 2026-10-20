@@ -31,7 +31,7 @@ import (
 // Unlike Unmarshal, Marshal does not validate the values against the schema.
 // The values must already be validated.
 func Marshal(b []byte, schema types.Type, records []Record, language state.Language, preserveJSON bool) ([]byte, error) {
-	if schema.Valid() && schema.Kind() != types.ObjectKind {
+	if schema.Valid() && !schema.IsObject() {
 		return nil, errors.New("core/transformers: schema is not an object")
 	}
 	var marshal func([]byte, types.Type, any, bool) ([]byte, error)
@@ -66,8 +66,7 @@ func marshalJavaScript(b []byte, t types.Type, v any, preserveJSON bool) ([]byte
 	if v == nil {
 		return append(b, "null"...), nil
 	}
-	k := t.Kind()
-	if k == types.JSONKind {
+	if t.IsJSON() {
 		value := v.(json.Value)
 		if preserveJSON {
 			b = append(b, '\'')
@@ -122,12 +121,12 @@ func marshalJavaScript(b []byte, t types.Type, v any, preserveJSON bool) ([]byte
 		}
 	case int:
 		b = strconv.AppendInt(b, int64(v), 10)
-		if k == types.IntKind && t.BitSize() == 64 {
+		if t.IsInt(64) {
 			b = append(b, 'n')
 		}
 	case uint:
 		b = strconv.AppendUint(b, uint64(v), 10)
-		if t.BitSize() == 64 {
+		if t.IsInt(64) {
 			b = append(b, 'n')
 		}
 	case float64:
@@ -148,7 +147,7 @@ func marshalJavaScript(b []byte, t types.Type, v any, preserveJSON bool) ([]byte
 		b = append(b, '\'')
 	case time.Time:
 		b = append(b, '\'')
-		switch k {
+		switch t.Kind() {
 		case types.DateTimeKind:
 			b = v.AppendFormat(b, "2006-01-02T15:04:05.999999999Z")
 		case types.DateKind:
@@ -176,7 +175,7 @@ func marshalJavaScript(b []byte, t types.Type, v any, preserveJSON bool) ([]byte
 		var err error
 		b = append(b, '{')
 		i := 0
-		if k == types.ObjectKind {
+		if t.IsObject() {
 			for _, p := range t.Properties().All() {
 				e, ok := v[p.Name]
 				if !ok {
@@ -224,8 +223,7 @@ func marshalPython(b []byte, t types.Type, v any, preserveJSON bool) ([]byte, er
 	if v == nil {
 		return append(b, "None"...), nil
 	}
-	k := t.Kind()
-	if k == types.JSONKind {
+	if t.IsJSON() {
 		value := v.(json.Value)
 		if preserveJSON {
 			b = append(b, '\'')
@@ -278,7 +276,7 @@ func marshalPython(b []byte, t types.Type, v any, preserveJSON bool) ([]byte, er
 	}
 	switch v := v.(type) {
 	case string:
-		if k == types.UUIDKind {
+		if t.IsUUID() {
 			b = append(b, "uuid.UUID('"...)
 			b = append(b, v...)
 			b = append(b, '\'', ')')
@@ -314,7 +312,7 @@ func marshalPython(b []byte, t types.Type, v any, preserveJSON bool) ([]byte, er
 		b = append(b, v.String()...)
 		b = append(b, '\'', ')')
 	case time.Time:
-		switch k {
+		switch t.Kind() {
 		case types.DateTimeKind:
 			b = fmt.Appendf(b, "datetime.datetime(%d,%d,%d,%d,%d,%d,%d)", v.Year(), v.Month(), v.Day(), v.Hour(), v.Minute(), v.Second(), v.Nanosecond()/1000)
 		case types.DateKind:
@@ -342,7 +340,7 @@ func marshalPython(b []byte, t types.Type, v any, preserveJSON bool) ([]byte, er
 		var err error
 		b = append(b, '{')
 		i := 0
-		if k == types.ObjectKind {
+		if t.IsObject() {
 			for _, p := range t.Properties().All() {
 				e, ok := v[p.Name]
 				if !ok {
@@ -378,7 +376,7 @@ func marshalPython(b []byte, t types.Type, v any, preserveJSON bool) ([]byte, er
 		}
 		b = append(b, '}')
 	default:
-		return nil, fmt.Errorf("core/transformers: unexpected type %s", k)
+		return nil, fmt.Errorf("core/transformers: unexpected type %s", t.Kind())
 	}
 	return b, nil
 }

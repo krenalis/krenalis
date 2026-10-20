@@ -7,6 +7,7 @@ import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.
 import { PipelineIssues } from './PipelineIssues';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
+import { RequiredConsentsError } from '../../../lib/core/pipeline';
 
 const PipelineHeader = () => {
 	const [isNameEditable, setIsNameEditable] = useState(false);
@@ -29,6 +30,7 @@ const PipelineHeader = () => {
 		onClose,
 		issues,
 		showIssues,
+		handleRequiredConsentsError,
 	} = useContext(PipelineContext);
 
 	useEffect(() => {
@@ -80,7 +82,11 @@ const PipelineHeader = () => {
 					}, 500);
 				});
 			} else {
-				handleError(err);
+				if (err instanceof RequiredConsentsError) {
+					handleRequiredConsentsError();
+				} else {
+					handleError(err);
+				}
 				setIsSaving(false);
 			}
 		}, 200);

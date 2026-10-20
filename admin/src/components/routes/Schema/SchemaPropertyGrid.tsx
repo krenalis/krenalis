@@ -53,9 +53,11 @@ const SchemaPropertyInfoTooltip = ({ content, label }: { content: string; label:
 
 	return (
 		<SlTooltip className='schema-property-grid__tooltip' placement='top' trigger='hover' hoist={true}>
-			<span id={descriptionID} className='schema-property-grid__tooltip-content' slot='content'>
-				{content}
-			</span>
+			<div id={descriptionID} className='schema-property-grid__tooltip-content' slot='content'>
+				{content.split('\n\n').map((paragraph, index) => (
+					<p key={index}>{paragraph}</p>
+				))}
+			</div>
 			<span
 				className='schema-property-grid__info'
 				role='img'

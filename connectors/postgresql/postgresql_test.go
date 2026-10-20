@@ -22,7 +22,6 @@ import (
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 const (
@@ -87,10 +86,7 @@ func Test_Merge_Query(t *testing.T) {
 		postgres.WithDatabase(testDatabase),
 		postgres.WithUsername(testUser),
 		postgres.WithPassword(testPassword),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(60*time.Second)),
+		postgres.BasicWaitStrategies(),
 	)
 	defer func() {
 		if err := testcontainers.TerminateContainer(postgresContainer); err != nil {

@@ -341,11 +341,8 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 	this.core.mustBeOpen()
 
 	// Validate email.
-	if err := util.ValidateStringField("email", email, 255); err != nil {
+	if err := validateMemberEmail(email); err != nil {
 		return "", errors.BadRequest("%s", err)
-	}
-	if !emailRegExp.MatchString(email) {
-		return "", errors.BadRequest("email is not a valid email address")
 	}
 	// Validate password.
 	if password == "" {
@@ -573,6 +570,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 	if err != nil {
 		return "", err
 	}
+	observedAt := time.Now().UTC().Truncate(time.Microsecond)
 
 	// Create the workspace.
 	for {
@@ -602,6 +600,14 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 						return nil, errors.Unprocessable(OrganizationNotExist, "organization %s does not exist", n.Organization)
 					}
 				}
+				return nil, err
+			}
+			// Insert an identity metrics row with zero counts.
+			_, err = tx.Exec(ctx, `INSERT INTO identity_metrics
+				(workspace, day, observed_at, identities_anonymous, identities_recognized, identities_without_profile)
+				VALUES ($1, $2, $3, 0, 0, 0)`, n.ID, observedAt.Truncate(24*time.Hour),
+				observedAt.Format("15:04:05.999999"))
+			if err != nil {
 				return nil, err
 			}
 			return n, nil
@@ -881,8 +887,8 @@ type MetricSeries struct {
 	Workspace  string   `json:"workspace,omitzero"`
 	Connection string   `json:"connection,omitzero"`
 	Pipeline   string   `json:"pipeline,omitzero"`
-	Passed     [][7]int `json:"passed"`
-	Failed     [][7]int `json:"failed"`
+	Passed     [][9]int `json:"passed"`
+	Failed     [][9]int `json:"failed"`
 }
 
 // MetricSelection defines the selected pipeline metric series.
@@ -1140,13 +1146,16 @@ func (this *Organization) SetStatus(ctx context.Context, enabled bool) error {
 	}
 
 	// Waits for the metrics to be saved.
-	this.core.metrics.Pipelines.WaitStore()
+	err := this.core.metrics.Pipelines.WaitStore(ctx)
+	if err != nil {
+		return fmt.Errorf("cannot wait for pipeline metrics: %s", err)
+	}
 
 	n := state.SetOrganizationStatus{
 		ID:      this.organization.ID,
 		Enabled: enabled,
 	}
-	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		result, err := tx.Exec(ctx, "UPDATE organizations SET enabled = $1 WHERE id = $2 AND enabled <> $1", n.Enabled, n.ID)
 		if err != nil {
 			return nil, err
@@ -1192,13 +1201,17 @@ s AS (
 		COALESCE(SUM(m.passed_4), 0) AS passed_4,
 		COALESCE(SUM(m.passed_5), 0) AS passed_5,
 		COALESCE(SUM(m.passed_6), 0) AS passed_6,
+		COALESCE(SUM(m.passed_7), 0) AS passed_7,
+		COALESCE(SUM(m.passed_8), 0) AS passed_8,
 		COALESCE(SUM(m.failed_0), 0) AS failed_0,
 		COALESCE(SUM(m.failed_1), 0) AS failed_1,
 		COALESCE(SUM(m.failed_2), 0) AS failed_2,
 		COALESCE(SUM(m.failed_3), 0) AS failed_3,
 		COALESCE(SUM(m.failed_4), 0) AS failed_4,
 		COALESCE(SUM(m.failed_5), 0) AS failed_5,
-		COALESCE(SUM(m.failed_6), 0) AS failed_6
+		COALESCE(SUM(m.failed_6), 0) AS failed_6,
+		COALESCE(SUM(m.failed_7), 0) AS failed_7,
+		COALESCE(SUM(m.failed_8), 0) AS failed_8
 	FROM live_runs AS r
 	LEFT JOIN pipelines_metrics AS m ON m.pipeline = r.pipeline
 	GROUP BY r.id
@@ -1214,6 +1227,8 @@ ended_runs AS (
 		passed_4 = r.passed_4 + s.passed_4,
 		passed_5 = r.passed_5 + s.passed_5,
 		passed_6 = r.passed_6 + s.passed_6,
+		passed_7 = r.passed_7 + s.passed_7,
+		passed_8 = r.passed_8 + s.passed_8,
 		failed_0 = r.failed_0 + s.failed_0,
 		failed_1 = r.failed_1 + s.failed_1,
 		failed_2 = r.failed_2 + s.failed_2,
@@ -1221,6 +1236,8 @@ ended_runs AS (
 		failed_4 = r.failed_4 + s.failed_4,
 		failed_5 = r.failed_5 + s.failed_5,
 		failed_6 = r.failed_6 + s.failed_6,
+		failed_7 = r.failed_7 + s.failed_7,
+		failed_8 = r.failed_8 + s.failed_8,
 		error = $3
 	FROM s
 	WHERE r.id = s.id AND r.end_time IS NULL
@@ -1639,6 +1656,12 @@ func sendMail(mail *emailToSend, config *SMTPConfig) error {
 		}
 	}
 	return err
+}
+
+// ValidateMemberEmail validates a member's email address and returns an error
+// if it is not valid.
+func ValidateMemberEmail(email string) error {
+	return validateMemberEmail(email)
 }
 
 // validateMemberEmail validates a member's email and returns an error if it is

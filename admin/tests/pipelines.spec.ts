@@ -1,4 +1,5 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+import Type, { ObjectType, Property } from '../src/lib/api/types/types';
 import {
 	addDummyDestination,
 	addDummySource,
@@ -68,19 +69,19 @@ test(`Add "Import customers" pipeline on Dummy`, async ({ page }) => {
 		"inSchema": {
 			"kind": "object",
 			"properties": [
-				{ "name": "email", "type": { "kind": "string" }, "description": "Email", "nullable": true },
-				{ "name": "dummyId", "type": { "kind": "string" }, "description": "Dummy ID" },
-				{ "name": "firstName", "type": { "kind": "string" }, "description": "First name", "nullable": true },
-				{ "name": "lastName", "type": { "kind": "string" }, "description": "Last name", "nullable": true }
+				{ "name": "email", "type": { "kind": "string" }, "displayName": "Email", "nullable": true },
+				{ "name": "dummyId", "type": { "kind": "string" }, "displayName": "Dummy ID" },
+				{ "name": "firstName", "type": { "kind": "string" }, "displayName": "First name", "nullable": true },
+				{ "name": "lastName", "type": { "kind": "string" }, "displayName": "Last name", "nullable": true }
 			]
 		},
 		"outSchema": {
 			"kind": "object",
 			"properties": [
-				{ "name": "email", "type": { "kind": "string", "maxLength": 300 }, "readOptional": true, "description": "" },
-				{ "name": "dummy_id", "type": { "kind": "string" }, "readOptional": true, "description": "" },
-				{ "name": "first_name", "type": { "kind": "string", "maxLength": 300 }, "readOptional": true, "description": "" },
-				{ "name": "last_name", "type": { "kind": "string", "maxLength": 300 }, "readOptional": true, "description": "" }
+				{ "name": "email", "type": { "kind": "string", "maxLength": 300 }, "readOptional": true },
+				{ "name": "dummy_id", "type": { "kind": "string" }, "readOptional": true },
+				{ "name": "first_name", "type": { "kind": "string", "maxLength": 300 }, "readOptional": true },
+				{ "name": "last_name", "type": { "kind": "string", "maxLength": 300 }, "readOptional": true }
 			]
 		},
 		"incremental": false,
@@ -207,8 +208,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				},
 				{
 					"name": "last_name",
@@ -216,8 +216,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				},
 				{
 					"name": "email",
@@ -225,16 +224,14 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				},
 				{
 					"name": "dummy_id",
 					"type": {
 						"kind": "string"
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				}
 			]
 		},
@@ -247,7 +244,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string"
 					},
 					"nullable": true,
-					"description": "First name"
+					"displayName": "First name"
 				},
 				{
 					"name": "lastName",
@@ -255,7 +252,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string"
 					},
 					"nullable": true,
-					"description": "Last name"
+					"displayName": "Last name"
 				},
 				{
 					"name": "email",
@@ -263,7 +260,7 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string"
 					},
 					"nullable": true,
-					"description": "Email"
+					"displayName": "Email"
 				}
 			]
 		},
@@ -307,6 +304,181 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 	await expect(page.locator('.connection-pipelines__grid')).toBeAttached();
 });
 
+test.describe('Matching semantics', () => {
+	const openPipeline = async (page: Page, hasRequiredPhone = false) => {
+		const id = await addDummyDestination(page);
+		// API schemas omit the legacy role field.
+		const createProperty = (name: string, type: Type, updateRequired = false): Property => ({
+			name,
+			type,
+			prefilled: '',
+			createRequired: false,
+			updateRequired,
+			readOptional: false,
+			nullable: false,
+			displayName: '',
+			description: '',
+		});
+		const inputSchema: ObjectType = {
+			kind: 'object',
+			properties: [
+				createProperty('firstName', { kind: 'string' }),
+				createProperty('phone', { kind: 'string', semantics: 'phone' }),
+				createProperty('country', { kind: 'string', semantics: 'country', format: 'alpha-3' }),
+			],
+		};
+		const externalMatchingSchema: ObjectType = {
+			kind: 'object',
+			properties: [
+				createProperty('phone', { kind: 'string', semantics: 'phone' }),
+				createProperty('requiredPhone', { kind: 'string', semantics: 'phone' }),
+				createProperty('country', { kind: 'string', semantics: 'country', format: 'alpha-3' }),
+			],
+		};
+		const outputSchema: ObjectType = {
+			kind: 'object',
+			properties: [
+				createProperty('firstName', { kind: 'string' }),
+				createProperty('phone', { kind: 'string', semantics: 'email' }),
+				createProperty('requiredPhone', { kind: 'string', semantics: 'email' }, hasRequiredPhone),
+				createProperty('country', { kind: 'string', semantics: 'country', format: 'alpha-3' }),
+			],
+		};
+		await page.route(`**/connections/${id}/pipelines/schemas/User`, async (route) => {
+			await route.fulfill({
+				json: {
+					in: inputSchema,
+					out: outputSchema,
+					matchings: { internal: inputSchema, external: externalMatchingSchema },
+				},
+			});
+		});
+		await page.goto(`${adminURL}/connections/${id}/pipelines`);
+		await page
+			.locator('.connection-pipelines__no-pipeline-pipeline-types .list-tile__name', {
+				hasText: 'Export customers',
+			})
+			.locator('..')
+			.locator('..')
+			.locator('sl-button')
+			.click();
+		await expect(page.locator('.pipeline__header')).toBeAttached();
+	};
+
+	test('Refresh matching choices when the export mode changes', async ({ page }) => {
+		await openPipeline(page, true);
+		const exportMode = page.locator('.pipeline__export-mode sl-select');
+		await exportMode.locator('[part="display-input"]').click();
+		await exportMode.locator('sl-option[value="UpdateOnly"]').click();
+		await expect(exportMode.locator('sl-option[value="UpdateOnly"]')).toBeHidden();
+		const matching = page.locator('.pipeline__matching-properties [data-id="out"]');
+		await matching.locator('input').click();
+		await expect(matching.locator('.schema-combobox-item__name')).toHaveText(['phone', 'country']);
+		await matching.locator('.schema-combobox-item__name', { hasText: /^phone$/ }).click();
+		await page.keyboard.press('Escape');
+
+		for (const mode of ['CreateOnly', 'CreateOrUpdate']) {
+			await exportMode.locator('[part="display-input"]').click();
+			await exportMode.locator(`sl-option[value="${mode}"]`).click();
+			await expect(exportMode.locator(`sl-option[value="${mode}"]`)).toBeHidden();
+			await expect(matching.locator('.combobox-input__error')).toContainText('does not exist');
+			await matching.locator('input').fill('');
+			await expect(matching.locator('.schema-combobox-item__name')).toHaveText(['country']);
+			await matching.locator('input').fill('phone');
+			await page.keyboard.press('Escape');
+		}
+
+		await exportMode.locator('[part="display-input"]').click();
+		await exportMode.locator('sl-option[value="UpdateOnly"]').click();
+		await expect(exportMode.locator('sl-option[value="UpdateOnly"]')).toBeHidden();
+		await expect(matching.locator('.combobox-input__error')).toHaveCount(0);
+		await matching.locator('input').fill('');
+		await expect(matching.locator('.schema-combobox-item__name')).toHaveText(['phone', 'country']);
+	});
+
+	for (const scenario of [
+		{
+			property: 'country',
+			mode: 'CreateOrUpdate',
+			type: { kind: 'string', semantics: 'country', format: 'alpha-3' },
+		},
+		{ property: 'phone', mode: 'UpdateOnly', type: { kind: 'string', semantics: 'phone' } },
+	]) {
+		test(`Preserve ${scenario.property} semantics when saving in ${scenario.mode} mode`, async ({ page }) => {
+			await openPipeline(page);
+			const exportMode = page.locator('.pipeline__export-mode sl-select');
+			await exportMode.locator('[part="display-input"]').click();
+			await exportMode.locator(`sl-option[value="${scenario.mode}"]`).click();
+			await expect(exportMode.locator(`sl-option[value="${scenario.mode}"]`)).toBeHidden();
+			const matching = page.locator('.pipeline__matching-properties');
+			for (const side of ['in', 'out']) {
+				await matching.locator(`[data-id="${side}"] input`).fill(scenario.property);
+				await page.keyboard.press('Escape');
+			}
+			await page.locator('.pipeline__transformation .combobox[data-id="firstName"] input').fill('firstName');
+			await page.keyboard.press('Escape');
+			await page.route('**/v1/pipelines', async (route) => {
+				await route.fulfill({ json: { id: 'semantics-pipeline' } });
+			});
+			const requestPromise = page.waitForRequest(
+				(request) => request.url().endsWith('/v1/pipelines') && request.method() === 'POST',
+			);
+			await page.locator('.pipeline__header-save button').click();
+			const body = (await requestPromise).postDataJSON();
+			expect(body.exportMode).toBe(scenario.mode);
+			expect(body.matching).toEqual({ in: scenario.property, out: scenario.property });
+			for (const schema of [body.inSchema, body.outSchema]) {
+				const property = schema.properties.find((property: Property) => property.name === scenario.property);
+				expect(property?.type).toEqual(scenario.type);
+			}
+			expect(body.transformation.mapping).toEqual({ firstName: 'firstName' });
+			await expect(page.locator('.pipeline__header')).toHaveCount(0);
+		});
+	}
+
+	for (const scenario of [
+		{
+			in: 'firstName',
+			out: 'phone',
+			hasRequiredPhone: false,
+			error: 'Input and output matching properties do not have the same semantics and options',
+		},
+		{
+			in: 'phone',
+			out: 'requiredPhone',
+			hasRequiredPhone: true,
+			error: 'Matching property "requiredPhone" must have the same semantics and options in the source and destination schemas',
+		},
+	]) {
+		test(`Reject incompatible ${scenario.in}/${scenario.out} semantics before submitting a pipeline`, async ({
+			page,
+		}) => {
+			await openPipeline(page, scenario.hasRequiredPhone);
+			const exportMode = page.locator('.pipeline__export-mode sl-select');
+			await exportMode.locator('[part="display-input"]').click();
+			await exportMode.locator('sl-option[value="UpdateOnly"]').click();
+			await expect(exportMode.locator('sl-option[value="UpdateOnly"]')).toBeHidden();
+			const matching = page.locator('.pipeline__matching-properties');
+			await matching.locator('[data-id="in"] input').fill(scenario.in);
+			await page.keyboard.press('Escape');
+			await matching.locator('[data-id="out"] input').fill(scenario.out);
+			await page.keyboard.press('Escape');
+			await page.locator('.pipeline__transformation .combobox[data-id="firstName"] input').fill('firstName');
+			await page.keyboard.press('Escape');
+			let submissionCount = 0;
+			await page.route('**/v1/pipelines', async (route) => {
+				submissionCount++;
+				await route.fulfill({ status: 500 });
+			});
+			await page.locator('.pipeline__header-save button').click();
+			await expect(page.locator('sl-alert[variant="danger"]')).toContainText(scenario.error);
+			await expect(page.locator('.pipeline__header-save')).not.toHaveAttribute('loading');
+			expect(submissionCount).toBe(0);
+			await expect(page.locator('.pipeline__header')).toBeAttached();
+		});
+	}
+});
+
 test(`Add "Send Add to Cart" pipeline on Dummy`, async ({ page }) => {
 	const id = await addDummyDestination(page);
 	await page.goto(`${adminURL}/connections/${id}/pipelines`);
@@ -345,7 +517,7 @@ test(`Add "Send Add to Cart" pipeline on Dummy`, async ({ page }) => {
 						"kind": "string"
 					},
 					"createRequired": true,
-					"description": "Email"
+					"displayName": "Email"
 				}
 			]
 		},
@@ -437,8 +609,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"nullable": true,
-					"description": ""
+					"nullable": true
 				},
 				{
 					"name": "last_name",
@@ -446,8 +617,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"nullable": true,
-					"description": ""
+					"nullable": true
 				},
 				{
 					"name": "email",
@@ -455,8 +625,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"nullable": true,
-					"description": ""
+					"nullable": true
 				}
 			]
 		},
@@ -469,8 +638,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				},
 				{
 					"name": "last_name",
@@ -478,8 +646,7 @@ test(`Add "Import users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				}
 			]
 		},
@@ -604,8 +771,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				},
 				{
 					"name": "first_name",
@@ -613,8 +779,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				},
 				{
 					"name": "last_name",
@@ -622,16 +787,14 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				},
 				{
 					"name": "dummy_id",
 					"type": {
 						"kind": "string"
 					},
-					"readOptional": true,
-					"description": ""
+					"readOptional": true
 				}
 			]
 		},
@@ -646,8 +809,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 					},
 					"createRequired": true,
 					"updateRequired": false,
-					"nullable": false,
-					"description": ""
+					"nullable": false
 				},
 				{
 					"name": "first_name",
@@ -655,8 +817,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"nullable": true,
-					"description": ""
+					"nullable": true
 				},
 				{
 					"name": "last_name",
@@ -664,8 +825,7 @@ test(`Add "Export users" pipeline on PostgreSQL`, async ({ page }) => {
 						"kind": "string",
 						"maxLength": 300
 					},
-					"nullable": true,
-					"description": ""
+					"nullable": true
 				}
 			]
 		},
@@ -782,21 +942,21 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 						"type": {
 							"kind": "string"
 						},
-						"description": ""
+						"displayName": " email"
 					},
 					{
 						"name": "first_name",
 						"type": {
 							"kind": "string"
 						},
-						"description": ""
+						"displayName": "first_name"
 					},
 					{
 						"name": "last_name",
 						"type": {
 							"kind": "string"
 						},
-						"description": ""
+						"displayName": " last_name"
 					}
 				]
 			},
@@ -809,8 +969,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 							"kind": "string",
 							"maxLength": 300
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "first_name",
@@ -818,8 +977,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 							"kind": "string",
 							"maxLength": 300
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "last_name",
@@ -827,8 +985,7 @@ test(`Add "Import users" pipeline on CSV file on File System`, async ({ page }) 
 							"kind": "string",
 							"maxLength": 300
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					}
 				]
 			},
@@ -961,16 +1118,14 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 							"kind": "string",
 							"maxLength": 300
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "dummy_id",
 						"type": {
 							"kind": "string"
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "android",
@@ -982,29 +1137,25 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								},
 								{
 									"name": "idfa",
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								},
 								{
 									"name": "push_token",
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								}
 							]
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "ios",
@@ -1016,29 +1167,25 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								},
 								{
 									"name": "idfa",
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								},
 								{
 									"name": "push_token",
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								}
 							]
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "first_name",
@@ -1046,8 +1193,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 							"kind": "string",
 							"maxLength": 300
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "last_name",
@@ -1055,16 +1201,14 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 							"kind": "string",
 							"maxLength": 300
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "gender",
 						"type": {
 							"kind": "string"
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "food_preferences",
@@ -1076,21 +1220,18 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								},
 								{
 									"name": "fruit",
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								}
 							]
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "phone_numbers",
@@ -1101,8 +1242,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 								"maxLength": 300
 							}
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					},
 					{
 						"name": "favorite_movie",
@@ -1114,8 +1254,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 									"type": {
 										"kind": "string"
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								},
 								{
 									"name": "length",
@@ -1123,8 +1262,7 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 										"kind": "float",
 										"bitSize": 64
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								},
 								{
 									"name": "soundtrack",
@@ -1136,16 +1274,14 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 												"type": {
 													"kind": "string"
 												},
-												"readOptional": true,
-												"description": ""
+												"readOptional": true
 											},
 											{
 												"name": "author",
 												"type": {
 													"kind": "string"
 												},
-												"readOptional": true,
-												"description": ""
+												"readOptional": true
 											},
 											{
 												"name": "length",
@@ -1153,26 +1289,22 @@ test(`Add "Export users" pipeline on CSV file on File System`, async ({ page }) 
 													"kind": "float",
 													"bitSize": 64
 												},
-												"readOptional": true,
-												"description": ""
+												"readOptional": true
 											},
 											{
 												"name": "genre",
 												"type": {
 													"kind": "string"
 												},
-												"readOptional": true,
-												"description": ""
+												"readOptional": true
 											}
 										]
 									},
-									"readOptional": true,
-									"description": ""
+									"readOptional": true
 								}
 							]
 						},
-						"readOptional": true,
-						"description": ""
+						"readOptional": true
 					}
 				]
 			},

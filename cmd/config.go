@@ -29,15 +29,15 @@ import (
 )
 
 type Config struct {
-	KMS                    string
-	OrganizationsAPIKey    string
-	TerminationDelay       time.Duration
-	JavaScriptSDKURL       string
-	SentryTelemetryLevel   core.TelemetryLevel
-	ExternalAssetsURLs     []string // always non nil, can be empty.
-	PotentialConnectorsURL string   // must be a valid URL or empty string (which means: do not load the JSON file).
-	InviteMembersViaEmail  bool
-	HTTP                   struct {
+	KMS                      string
+	PlatformManagementAPIKey string
+	TerminationDelay         time.Duration
+	JavaScriptSDKURL         string
+	SentryTelemetryLevel     core.TelemetryLevel
+	ExternalAssetsURLs       []string // always non nil, can be empty.
+	PotentialConnectorsURL   string   // must be a valid URL or empty string (which means: do not load the JSON file).
+	InviteMembersViaEmail    bool
+	HTTP                     struct {
 		Host string
 		Port int
 		TLS  struct {
@@ -156,22 +156,22 @@ func loadConfig(ctx context.Context, source string) (*Config, error) {
 		return nil, errors.New("KRENALIS_KMS is not set")
 	}
 
-	if orgAPIKey, ok := conf.Lookup("KRENALIS_ORGANIZATIONS_API_KEY"); ok {
-		apiKey, ok := strings.CutPrefix(orgAPIKey, "org_")
+	if platformAPIKey, ok := conf.Lookup("KRENALIS_PLATFORM_MANAGEMENT_API_KEY"); ok {
+		apiKey, ok := strings.CutPrefix(platformAPIKey, "plat_")
 		if !ok {
-			return nil, errors.New("KRENALIS_ORGANIZATIONS_API_KEY must start with 'org_'")
+			return nil, errors.New("KRENALIS_PLATFORM_MANAGEMENT_API_KEY must start with 'plat_'")
 		}
 		if utf8.RuneCountInString(apiKey) != 43 {
-			return nil, fmt.Errorf("KRENALIS_ORGANIZATIONS_API_KEY has an invalid length (expected 'org_' + 43 alphanumeric characters)")
+			return nil, fmt.Errorf("KRENALIS_PLATFORM_MANAGEMENT_API_KEY has an invalid length (expected 'plat_' + 43 alphanumeric characters)")
 		}
 		for _, c := range apiKey {
 			switch {
 			case 'a' <= c && c <= 'z', 'A' <= c && c <= 'Z', '0' <= c && c <= '9':
 			default:
-				return nil, fmt.Errorf("invalid format of KRENALIS_ORGANIZATIONS_API_KEY, unexpected character %q", c)
+				return nil, fmt.Errorf("invalid format of KRENALIS_PLATFORM_MANAGEMENT_API_KEY, unexpected character %q", c)
 			}
 		}
-		settings.OrganizationsAPIKey = orgAPIKey
+		settings.PlatformManagementAPIKey = platformAPIKey
 	}
 
 	if delay := conf.Get("KRENALIS_TERMINATION_DELAY"); delay != "" {
@@ -522,7 +522,13 @@ func loadConfig(ctx context.Context, source string) (*Config, error) {
 		settings.SMTP.Password = conf.Get("KRENALIS_SMTP_PASSWORD")
 	}
 
-	if path, err := resolveFilePath(conf, "KRENALIS_MAXMIND_DB_PATH"); err != nil {
+	if location, ok := strings.CutPrefix(conf.Get("KRENALIS_MAXMIND_DB_PATH"), "s3://"); ok {
+		bucket, key, _ := strings.Cut(location, "/")
+		if bucket == "" || key == "" {
+			return nil, fmt.Errorf("KRENALIS_MAXMIND_DB_PATH must be an S3 URI in the form 's3://bucket/key'")
+		}
+		settings.MaxMindDBPath = "s3://" + location
+	} else if path, err := resolveFilePath(conf, "KRENALIS_MAXMIND_DB_PATH"); err != nil {
 		return nil, err
 	} else if path != "" {
 		settings.MaxMindDBPath = path

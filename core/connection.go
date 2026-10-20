@@ -65,10 +65,12 @@ type Connection struct {
 
 // EventType represents an event type of a destination application connection.
 type EventType struct {
-	ID            string `json:"id"`
-	Name          string `json:"name"`
-	Description   string `json:"description"`
-	DefaultFilter string `json:"defaultFilter"`
+	ID               string `json:"id"`
+	Name             string `json:"name"`
+	Description      string `json:"description"`
+	OrderingGroup    string `json:"orderingGroup"`
+	DeliveryEndpoint string `json:"deliveryEndpoint"`
+	DefaultFilter    string `json:"defaultFilter"`
 }
 
 type PipelineInfo struct {
@@ -103,10 +105,12 @@ var dummyGroupsSchema = types.Object([]types.Property{
 
 // PipelineType represents a pipeline type.
 type PipelineType struct {
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Target      Target  `json:"target"`
-	EventType   *string `json:"eventType"`
+	Name             string  `json:"name"`
+	Description      string  `json:"description"`
+	Target           Target  `json:"target"`
+	EventType        *string `json:"eventType"`
+	OrderingGroup    *string `json:"orderingGroup"`
+	DeliveryEndpoint *string `json:"deliveryEndpoint"`
 }
 
 // AbsolutePath returns the absolute representation of the given path, based
@@ -114,7 +118,8 @@ type PipelineType struct {
 // cannot be longer than MaxFilePathSize runes, and must be UTF-8 encoded.
 //
 // It returns an errors.UnprocessableError error with code:
-//   - InvalidPath, if path is not valid for the file storage connector.
+//   - InvalidPath, if path is not valid for the file storage connector or, for
+//     destination connections, is too long after placeholder replacement.
 //   - InvalidPlaceholder, if path for source connections contains a placeholder
 //     or path for destination connections contains an invalid placeholder.
 func (this *Connection) AbsolutePath(ctx context.Context, path string) (string, error) {
@@ -305,7 +310,7 @@ func (this *Connection) ApplicationUsers(ctx context.Context, schema types.Type,
 // of the created pipeline. target is the target of the pipeline and must be
 // supported by the connector of the connection.
 //
-// Refer to the specifications in the file "core/Pipelines.csv" for more
+// Refer to the specifications in the file "core/Pipelines.md" for more
 // details.
 //
 // It returns an errors.NotFoundError error if the connection does not exist
@@ -313,6 +318,9 @@ func (this *Connection) ApplicationUsers(ctx context.Context, schema types.Type,
 //
 //   - ConnectionNotExist, if the connection does not exist.
 //   - ConnectorsLimitReached, if the organization cannot have more connectors.
+//   - ConsentPurposeLocationNotSet, if a required consent purpose has no
+//     consent location for the target of the pipeline.
+//   - ConsentPurposeNotExist, if a required consent purpose does not exist.
 //   - EventTypeNotExist, if the event type does not exist for the connection.
 //   - FormatNotExist, if the format of the pipeline does not exist.
 //   - InvalidSettings, if the settings are not valid.
@@ -338,6 +346,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 	}
 
 	c := this.connection
+	ws := c.Workspace()
 	connector := c.Connector()
 
 	// Validate the target.
@@ -393,10 +402,23 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		return "", err
 	}
 
-	// Only for destination event pipeline checks that the out schema is aligned with the event type's schema.
-	// See issue https://github.com/krenalis/krenalis/issues/2086.
+	var orderingGroup, deliveryEndpoint string
 	if eventType != "" {
 		app := this.application()
+		et, err := app.EventType(ctx, eventType)
+		if err != nil {
+			if err == connectors.ErrEventTypeNotExist {
+				return "", errors.Unprocessable(EventTypeNotExist, "connection %s does not have event type %q", c.ID, eventType)
+			}
+			if _, ok := err.(*connections.UnavailableError); ok {
+				err = errors.Unavailable("%s", err)
+			}
+			return "", err
+		}
+		orderingGroup = et.OrderingGroup
+		deliveryEndpoint = et.DeliveryEndpoint
+		// Only for destination event pipeline checks that the out schema is aligned with the event type's schema.
+		// See issue https://github.com/krenalis/krenalis/issues/2086.
 		eventTypeSchema, err := app.Schema(ctx, state.TargetEvent, eventType)
 		if err != nil {
 			return "", err
@@ -422,6 +444,8 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		Name:               pipeline.Name,
 		Enabled:            pipeline.Enabled,
 		EventType:          eventType,
+		OrderingGroup:      orderingGroup,
+		DeliveryEndpoint:   deliveryEndpoint,
 		InSchema:           inSchema,
 		OutSchema:          pipeline.OutSchema,
 		RequiredConsents:   toStateRequiredConsents(pipeline.RequiredConsents),
@@ -451,7 +475,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 
 	// Add the filter to the notification.
 	if pipeline.Filter != nil {
-		n.Filter, _ = convertFilterToWhere(pipeline.Filter, inSchema).MarshalJSON()
+		n.Filter = []byte(state.MarshalWhere(convertFilterToWhere(pipeline.Filter, inSchema), inSchema))
 	}
 
 	// Determine the connector code, for file pipelines.
@@ -524,7 +548,12 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		n.ID = generateID(this.connection.Pipeline)
 		err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 			// Check the connector and pipeline limits.
-			if err := checkCreatePipelineLimits(ctx, tx, org.ID, n.Format); err != nil {
+			err := checkCreatePipelineLimits(ctx, tx, org.ID, n.Format)
+			if err != nil {
+				return nil, err
+			}
+			err = checkRequiredConsentPurposesTx(ctx, tx, ws.ID, "", n.Target, n.RequiredConsents.Purposes)
+			if err != nil {
 				return nil, err
 			}
 			switch n.Target {
@@ -548,22 +577,23 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 					return nil, err
 				}
 			}
-			query := "INSERT INTO pipelines (id, connection, target, event_type, name, enabled,\n" +
-				"schedule_start, schedule_period, in_schema, out_schema, filter, required_consents,\n" +
-				"required_consents_operator, transformation_mapping, transformation_id, transformation_version,\n" +
+			query := "INSERT INTO pipelines (id, connection, target, event_type, ordering_group, delivery_endpoint,\n" +
+				"name, enabled, schedule_start, schedule_period, in_schema, out_schema, filter, required_consents_operator,\n" +
+				"required_consents_purposes, transformation_mapping, transformation_id, transformation_version,\n" +
 				"transformation_language, transformation_source, transformation_preserve_json, transformation_in_paths,\n" +
 				"transformation_out_paths, query, format, path, sheet, compression, order_by, format_settings,\n" +
-				"export_mode, matching_in, matching_out, update_on_duplicates, table_name, table_key, \n" +
+				"export_mode, matching_in, matching_out, update_on_duplicates, table_name, table_key,\n" +
 				"user_id_column, updated_at_column, updated_at_format, incremental)\n" +
 				"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,\n" +
-				"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38)"
-			_, err := tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
-				n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod, rawInSchema, rawOutSchema,
-				n.Filter, n.RequiredConsents.Purposes, n.RequiredConsents.Operator, mapping, function.ID, function.Version,
+				"$22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40)"
+			_, err = tx.Exec(ctx, query, n.ID, n.Connection, n.Target, n.EventType,
+				n.OrderingGroup, n.DeliveryEndpoint, n.Name, n.Enabled, n.ScheduleStart, n.SchedulePeriod,
+				rawInSchema, rawOutSchema,
+				n.Filter, n.RequiredConsents.Operator, n.RequiredConsents.Purposes, mapping, function.ID, function.Version,
 				function.Language, function.Source, function.PreserveJSON, n.Transformation.InPaths, n.Transformation.OutPaths,
 				n.Query, formatCode, n.Path, n.Sheet, n.Compression, n.OrderBy, n.FormatSettings, n.ExportMode, n.Matching.In,
-				n.Matching.Out, n.UpdateOnDuplicates, n.TableName, n.TableKey, n.UserIDColumn, n.UpdatedAtColumn, n.UpdatedAtFormat,
-				n.Incremental)
+				n.Matching.Out, n.UpdateOnDuplicates, n.TableName, n.TableKey, n.UserIDColumn, n.UpdatedAtColumn,
+				n.UpdatedAtFormat, n.Incremental)
 			if err != nil {
 				if db.IsForeignKeyViolation(err) && db.ErrConstraintName(err) == "pipelines_connection_fkey" {
 					err = errors.Unprocessable(ConnectionNotExist, "connection %s does not exist", n.Connection)
@@ -893,8 +923,8 @@ type PipelineRun struct {
 	Pipeline  string     `json:"pipeline"`
 	StartTime time.Time  `json:"startTime"`
 	EndTime   *time.Time `json:"endTime"`
-	Passed    [7]int     `json:"passed"`
-	Failed    [7]int     `json:"failed"`
+	Passed    [9]int     `json:"passed"`
+	Failed    [9]int     `json:"failed"`
 	Error     string     `json:"error"`
 }
 
@@ -921,6 +951,7 @@ type PipelineRun struct {
 // It returns an errors.UnprocessableError error with code
 //
 //   - FormatNotExist, if the format does not exist.
+//   - InvalidPath, if path is not valid for the file storage connector.
 //   - InvalidSettings, if the settings are not valid.
 //   - NoColumnsFound, if the file has no columns.
 //   - SheetNotExist, if the file does not contain the provided sheet.
@@ -998,6 +1029,8 @@ func (this *Connection) File(ctx context.Context, path, format, sheet string, co
 			err = errors.Unprocessable(SheetNotExist, "file does not contain any sheet named %q", sheet)
 		default:
 			switch err.(type) {
+			case *connectors.InvalidPathError:
+				err = errors.Unprocessable(InvalidPath, "%s", err)
 			case *connectors.InvalidSettingsError:
 				err = errors.Unprocessable(InvalidSettings, "%s", err)
 			case *connections.UnavailableError:
@@ -1293,7 +1326,7 @@ func (this *Connection) PipelineSchemas(ctx context.Context, target Target, even
 // TODO(Gianluca): this method is deprecated. See the issue
 // https://github.com/krenalis/krenalis/issues/1265.
 //
-// Refer to the specifications in the file "core/Pipelines.csv" for more
+// Refer to the specifications in the file "core/Pipelines.md" for more
 // details.
 func (this *Connection) PipelineTypes(ctx context.Context) ([]PipelineType, error) {
 	this.core.mustBeOpen()
@@ -1455,10 +1488,12 @@ func (this *Connection) PipelineTypes(ctx context.Context) ([]PipelineType, erro
 				// Destination/Application/Event.
 				for _, et := range eventTypes {
 					pipelineTypes = append(pipelineTypes, PipelineType{
-						Name:        et.Name,
-						Description: et.Description,
-						Target:      TargetEvent,
-						EventType:   new(et.ID),
+						Name:             et.Name,
+						Description:      et.Description,
+						Target:           TargetEvent,
+						EventType:        new(et.ID),
+						OrderingGroup:    new(et.OrderingGroup),
+						DeliveryEndpoint: new(et.DeliveryEndpoint),
 					})
 				}
 			}
@@ -1528,7 +1563,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		if !outSchema.Valid() {
 			return nil, errors.BadRequest("a transformation has been provided but out schema is not valid")
 		}
-		if outSchema.Kind() != types.ObjectKind {
+		if !outSchema.IsObject() {
 			return nil, errors.BadRequest("out schema is not an object")
 		}
 
@@ -1548,7 +1583,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		// Validate the mapping and the transformation.
 		switch {
 		case transformation.Mapping != nil:
-			mapping, err := mappings.New(transformation.Mapping, schemas.Event, outSchema, false, nil)
+			mapping, err := mappings.New(transformation.Mapping, schemas.Event, outSchema, false)
 			if err != nil {
 				return nil, errors.BadRequest("mapping is not valid: %s", err)
 			}
@@ -1595,7 +1630,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		}
 
 		// Transform the attributes.
-		transformer, err := transformers.New(organization, pipeline, provider, nil)
+		transformer, err := transformers.New(organization, pipeline, provider)
 		if err != nil {
 			return nil, err
 		}
@@ -1719,6 +1754,7 @@ func (this *Connection) ServeUI(ctx context.Context, event string, settings json
 //
 // It returns an errors.UnprocessableError error with code
 //   - FormatNotExist, if the format does not exist.
+//   - InvalidPath, if path is not valid for the file storage connector.
 //   - InvalidSettings, if the settings are not valid.
 func (this *Connection) Sheets(ctx context.Context, path string, format string, compression Compression, settings json.Value) ([]string, error) {
 
@@ -1764,6 +1800,8 @@ func (this *Connection) Sheets(ctx context.Context, path string, format string, 
 	sheets, err := this.storage().Sheets(ctx, formatConnector, path, settings, state.Compression(compression))
 	if err != nil {
 		switch err.(type) {
+		case *connectors.InvalidPathError:
+			err = errors.Unprocessable(InvalidPath, "%s", err)
 		case *connectors.InvalidSettingsError:
 			err = errors.Unprocessable(InvalidSettings, "%s", err)
 		case *connections.UnavailableError:
@@ -2030,7 +2068,7 @@ func (this *Connection) validateTargetAndEventType(ctx context.Context, target T
 		return types.Type{}, errors.BadRequest("event type cannot be used with %s target", target)
 	}
 	// Perform a validation based on the connection's type and role (refer to
-	// the specifications in the file "core/Pipelines.csv" for more details).
+	// the specifications in the file "core/Pipelines.md" for more details).
 	c := this.connection
 	connector := c.Connector()
 	if target == TargetEvent {

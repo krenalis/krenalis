@@ -19,9 +19,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/transformers"
-	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/types"
-	"github.com/krenalis/krenalis/tools/validation"
 )
 
 // exportProfiles exports the profiles for the pipeline.
@@ -34,7 +32,6 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	pipeline := this.pipeline
 	store := this.connection.store
 	connector := pipeline.Connection().Connector()
-	prometheus.Increment("Pipeline.exportUsers.calls", 1)
 
 	// Synchronize destinations users with the application's users.
 	if connector.Type == state.Application {
@@ -58,13 +55,13 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	var transformer *transformers.Transformer
 	if t := this.pipeline.Transformation; t.Mapping != nil || t.Function != nil {
 		var err error
-		transformer, err = transformers.New(pipeline.Organization().ID, pipeline, this.core.functionProvider, &connector.TimeLayouts)
+		transformer, err = transformers.New(pipeline.Organization().ID, pipeline, this.core.functionProvider)
 		if err != nil {
 			return err
 		}
 	}
 
-	// Read the users.
+	// Build the query to read the profiles.
 	query := datastore.Query{Where: pipeline.Filter}
 	if connector.Type == state.FileStorage {
 		query.OrderBy = pipeline.OrderBy
@@ -78,7 +75,27 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 			UpdateOnDuplicates: pipeline.UpdateOnDuplicates,
 		}
 	}
-	records, err := store.ProfileRecords(ctx, query, pipeline.InSchema, matching)
+
+	var consentCondition datastore.ConsentCondition
+	if len(pipeline.RequiredConsents.Purposes) > 0 {
+		switch pipeline.RequiredConsents.Operator {
+		case state.PurposesAnd:
+			consentCondition.Operator = state.OpAnd
+		case state.PurposesOr:
+			consentCondition.Operator = state.OpOr
+		default:
+			return fmt.Errorf("invalid required consents operator %d", pipeline.RequiredConsents.Operator)
+		}
+		for _, purpose := range pipeline.RequiredConsents.Purposes {
+			if purpose.ProfileConsentLocation == nil {
+				return fmt.Errorf("consent purpose %s has no profile consent location", purpose.ID)
+			}
+			consentCondition.Locations = append(consentCondition.Locations, *purpose.ProfileConsentLocation)
+		}
+	}
+
+	// Read the profiles.
+	records, err := store.ProfileRecords(ctx, query, consentCondition, pipeline.InSchema, matching)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
 			return newPipelineError(metrics.ReceiveStep, err)
@@ -86,6 +103,8 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 		switch err := err.(type) {
 		case *datastore.UnavailableError:
 			return err
+		case *datastore.ConsentConditionError:
+			return newPipelineError(metrics.ExportProfileConsentStep, err)
 		case *schemas.Error:
 			err.Msg = fmt.Sprintf("in the input schema, %s. Please review and update the pipeline before attempting to export the profiles.", err.Msg)
 			return newPipelineError(metrics.InputValidationStep, err)
@@ -99,7 +118,6 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 	var ack func([]string, error)
 	if connector.Type != state.FileStorage {
 		ack = func(ids []string, err error) {
-			prometheus.Increment("Pipeline.exportProfiles.ack.calls", 1)
 			if err != nil {
 				this.core.metrics.Pipelines.FinalizeFailed(pipeline.ID, len(ids), err.Error())
 				return
@@ -176,8 +194,6 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 
 Records:
 	for record := range records.All(ctx) {
-
-		prometheus.Increment("Pipeline.exportProfiles.iterations_over_records_All", 1)
 
 		if record.Err != nil {
 			this.core.metrics.Pipelines.ReceiveFailed(pipeline.ID, 1, record.Err.Error())
@@ -407,12 +423,19 @@ func errMatchingPropertyConversion(in, ex string) error {
 //   - string to int, uuid, and string
 //   - uuid to uuid and string
 //
-// It panics if v is nil or the types in and ex are not conforming to these
-// supported conversions. It returns an error if the converted value does not
-// satisfy the constraints of the ex type.
+// It panics if v is nil, the types in and ex do not have the same semantics
+// and options, or they are not conforming to these supported conversions.
+//
+// It returns an error if the converted value does not satisfy the constraints
+// of the ex type.
 func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, error) {
 	if v == nil {
 		panic(fmt.Sprintf("core: unexpected value nil for internal kind %s", in.Kind()))
+	}
+	if !types.EqualSemantics(in, ex) {
+		panic(fmt.Sprintf("core: internal and external semantics differ: "+
+			"internal %s semantics (options %s), external %s semantics (options %s)",
+			in.Semantics(), types.SemanticsOptionString(in), ex.Semantics(), types.SemanticsOptionString(ex)))
 	}
 	switch ex.Kind() {
 	case types.StringKind:
@@ -427,31 +450,21 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 		default:
 			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
-		switch ex.Semantic() {
-		case types.CountrySemantic:
-			switch ex.CountryFormat() {
-			case types.ISO3166Alpha2:
-				if !validation.IsValidCountryCodeAlpha2(s) {
-					return nil, errMatchingPropertyConversion(inPath, outPath)
-				}
-			case types.ISO3166Alpha3:
-				if !validation.IsValidCountryCodeAlpha3(s) {
-					return nil, errMatchingPropertyConversion(inPath, outPath)
-				}
-			}
-		default:
-			if n, ok := ex.MaxBytes(); ok && len(s) > n {
-				return nil, errMatchingPropertyConversion(inPath, outPath)
-			}
-			if n, ok := ex.MaxLength(); ok && utf8.RuneCountInString(s) > n {
-				return nil, errMatchingPropertyConversion(inPath, outPath)
-			}
-			if values := ex.Values(); values != nil && !slices.Contains(values, s) {
-				return nil, errMatchingPropertyConversion(inPath, outPath)
-			}
-			if re := ex.Pattern(); re != nil && !re.MatchString(s) {
-				return nil, errMatchingPropertyConversion(inPath, outPath)
-			}
+		if in.Semantics() == types.CountrySemantics || in.Semantics() == types.PhoneSemantics {
+			return s, nil
+		}
+		// Validate that v matches the external property's constraints.
+		if n, ok := ex.MaxBytes(); ok && len(s) > n {
+			return nil, errMatchingPropertyConversion(inPath, outPath)
+		}
+		if n, ok := ex.MaxLength(); ok && utf8.RuneCountInString(s) > n {
+			return nil, errMatchingPropertyConversion(inPath, outPath)
+		}
+		if values := ex.Values(); values != nil && !slices.Contains(values, s) {
+			return nil, errMatchingPropertyConversion(inPath, outPath)
+		}
+		if re := ex.Pattern(); re != nil && !re.MatchString(s) {
+			return nil, errMatchingPropertyConversion(inPath, outPath)
 		}
 		return s, nil
 	case types.IntKind:

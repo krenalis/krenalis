@@ -15,7 +15,6 @@ import (
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // TestPlatformRateLimitLeaseUsesMetadata verifies that the singleton platform
@@ -447,10 +446,7 @@ func newTestDatabase(t *testing.T) *db.DB {
 		postgres.WithDatabase(databaseName),
 		postgres.WithUsername(user),
 		postgres.WithPassword(password),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(60*time.Second)),
+		postgres.BasicWaitStrategies(),
 	)
 	if err != nil {
 		t.Fatal(err)

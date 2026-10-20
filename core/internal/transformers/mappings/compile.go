@@ -35,7 +35,7 @@ type Expression struct {
 //
 // If schema is invalid, the expression will be compiled without path resolution.
 func Compile(expr string, schema, dt types.Type) (*Expression, []string, error) {
-	if schema.Valid() && schema.Kind() != types.ObjectKind {
+	if schema.Valid() && !schema.IsObject() {
 		return nil, nil, errors.New("schema is not an object")
 	}
 	if !dt.Valid() {
@@ -94,7 +94,7 @@ func checkArray(args [][]part, schema, dt types.Type, nullable bool, attributes 
 	// If the destination type (dt) is not an array, no checks are performed,
 	// and it is left to the caller to fail later.
 	et := types.JSON()
-	if dt.Kind() == types.ArrayKind {
+	if dt.IsArray() {
 		et = dt.Elem()
 	}
 	for _, arg := range args {
@@ -241,7 +241,7 @@ func checkMap(args [][]part, schema, dt types.Type, nullable bool, attributes ma
 		if len(args[i]) != 1 || args[i][0].path.elements != nil {
 			return types.Type{}, errors.New("'map' key is not constant")
 		}
-		if args[i][0].typ.Kind() != types.StringKind {
+		if !args[i][0].typ.IsString() {
 			return types.Type{}, errors.New("'map' key is not string")
 		}
 
@@ -511,7 +511,7 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 		if s, ok := p.value.(string); ok && s == "" {
 			nullable = false
 		}
-		v, err := convert(p.value, p.typ, dt, nullable, false, nil, None)
+		v, err := convert(p.value, p.typ, dt, nullable, false, None)
 		if err != nil {
 			if p.value == nil {
 				return fmt.Errorf("null is not convertible to the %s type", dt)
@@ -552,6 +552,12 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 				msg = fmt.Sprintf("number %s is greater than %v", p.value, n)
 			case errEnumConversion:
 				msg = fmt.Sprintf("%q is not one of the allowed values", p.value)
+			case errCountryAlpha2Conversion:
+				msg = fmt.Sprintf("%q is not a 2-letter country code", p.value)
+			case errCountryAlpha3Conversion:
+				msg = fmt.Sprintf("%q is not a 3-letter country code", p.value)
+			case errPhoneConversion:
+				msg = fmt.Sprintf("%q is not a valid phone number", p.value)
 			case errPatternConversion:
 				msg = fmt.Sprintf("%q does not match /%s/", p.value, dt.Pattern())
 			case errMaxBytesConversion:

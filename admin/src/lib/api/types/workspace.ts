@@ -39,8 +39,19 @@ interface LatestAlterProfileSchema {
 }
 
 interface ConsentPurpose {
-	code: string;
+	id: string;
 	name: string;
+	eventConsentLocations: EventConsentLocation[];
+	profileConsentLocation: ProfileConsentLocation | null;
+}
+
+interface EventConsentLocation {
+	purposeCode: string;
+}
+
+interface ProfileConsentLocation {
+	property: string;
+	jsonKey?: string;
 }
 
 export default Workspace;
@@ -52,4 +63,6 @@ export type {
 	ConsentPurpose,
 	ProfileRoleAssignments,
 	ProfileRoleID,
+	EventConsentLocation,
+	ProfileConsentLocation,
 };

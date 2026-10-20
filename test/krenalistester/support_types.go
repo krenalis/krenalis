@@ -17,28 +17,34 @@ import (
 // These data types are copy-paste of the types defined within the APIs.
 
 type PipelineToSet struct {
-	Name               string          `json:"name"`
-	Enabled            bool            `json:"enabled"`
-	Filter             *Filter         `json:"filter"`
-	InSchema           types.Type      `json:"inSchema"`
-	OutSchema          types.Type      `json:"outSchema"`
-	Transformation     *Transformation `json:"transformation"`
-	Query              string          `json:"query"`
-	Format             string          `json:"format"`
-	Path               string          `json:"path"`
-	Sheet              string          `json:"sheet"`
-	Compression        Compression     `json:"compression"`
-	OrderBy            string          `json:"orderBy"`
-	FormatSettings     json.Value      `json:"formatSettings,omitempty"`
-	ExportMode         ExportMode      `json:"exportMode,omitempty"`
-	Matching           Matching        `json:"matching"`
-	UpdateOnDuplicates bool            `json:"updateOnDuplicates"`
-	TableName          string          `json:"tableName"`
-	TableKey           string          `json:"tableKey"`
-	UserIDColumn       string          `json:"userIDColumn"`
-	UpdatedAtColumn    string          `json:"updatedAtColumn"`
-	UpdatedAtFormat    string          `json:"updatedAtFormat"`
-	Incremental        bool            `json:"incremental"`
+	Name               string            `json:"name"`
+	Enabled            bool              `json:"enabled"`
+	Filter             *Filter           `json:"filter"`
+	RequiredConsents   *RequiredConsents `json:"requiredConsents,omitempty"`
+	InSchema           types.Type        `json:"inSchema"`
+	OutSchema          types.Type        `json:"outSchema"`
+	Transformation     *Transformation   `json:"transformation"`
+	Query              string            `json:"query"`
+	Format             string            `json:"format"`
+	Path               string            `json:"path"`
+	Sheet              string            `json:"sheet"`
+	Compression        Compression       `json:"compression"`
+	OrderBy            string            `json:"orderBy"`
+	FormatSettings     json.Value        `json:"formatSettings,omitempty"`
+	ExportMode         ExportMode        `json:"exportMode,omitempty"`
+	Matching           Matching          `json:"matching"`
+	UpdateOnDuplicates bool              `json:"updateOnDuplicates"`
+	TableName          string            `json:"tableName"`
+	TableKey           string            `json:"tableKey"`
+	UserIDColumn       string            `json:"userIDColumn"`
+	UpdatedAtColumn    string            `json:"updatedAtColumn"`
+	UpdatedAtFormat    string            `json:"updatedAtFormat"`
+	Incremental        bool              `json:"incremental"`
+}
+
+type RequiredConsents struct {
+	Operator string   `json:"operator"`
+	Purposes []string `json:"purposes"`
 }
 
 type Compression string
@@ -79,8 +85,8 @@ type PipelineRun struct {
 	Pipeline  string     `json:"pipeline"`
 	StartTime time.Time  `json:"startTime"`
 	EndTime   *time.Time `json:"endTime"`
-	Passed    [7]int     `json:"passed"`
-	Failed    [7]int     `json:"failed"`
+	Passed    [9]int     `json:"passed"`
+	Failed    [9]int     `json:"failed"`
 	Error     string     `json:"error"`
 }
 

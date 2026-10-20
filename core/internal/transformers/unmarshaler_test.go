@@ -6,6 +6,7 @@ package transformers
 
 import (
 	"bytes"
+	jsonv1 "encoding/json"
 	"fmt"
 	"maps"
 	"math"
@@ -18,9 +19,149 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
+
+// TestUnmarshalPhone checks canonical output, nested string leaves and
+// post-normalization uniqueness.
+func TestUnmarshalPhone(t *testing.T) {
+
+	phone := types.String().AsPhone()
+	tests := []struct {
+		typ  types.Type
+		data string
+		want any
+	}{
+		{types.Array(types.Map(phone)), `[{"home":"+39 02-36618 300"}]`, []any{map[string]any{"home": "+390236618300"}}},
+		{
+			types.Array(phone).WithMaxElements(2), `["+39 02-36618 300","+12001230101"]`,
+			[]any{"+390236618300", "+12001230101"},
+		},
+		{types.Array(phone).WithUnique(), `["+390236618300","+39 02-36618 300"]`, nil},
+		{types.Array(phone), `["+390236618300","+39 02-36618 300"]`, []any{"+390236618300", "+390236618300"}},
+	}
+	for _, test := range tests {
+		schema := types.Object([]types.Property{{Name: "phone", Type: test.typ}})
+		for _, language := range []state.Language{state.JavaScript, state.Python} {
+			records := make([]Record, 1)
+			input := strings.NewReader(`{"records":[{"value":{"phone":` + test.data + `}}]}`)
+			err := Unmarshal(input, records, schema, language, false)
+			if err != nil {
+				t.Fatalf("expected no error for %s and %s, got %v", language, test.data, err)
+			}
+			if err := records[0].Err; err != nil {
+				if test.want != nil {
+					t.Fatalf("expected no record error, got %v", err)
+				}
+				continue
+			}
+			if test.want == nil || !reflect.DeepEqual(records[0].Attributes["phone"], test.want) {
+				t.Fatalf("expected phone %#v, got %#v", test.want, records[0].Attributes["phone"])
+			}
+		}
+	}
+
+}
+
+// TestUnmarshalSemanticsValidation verifies that unmarshaling applies semantic
+// rules to scalar and nested values for both JavaScript and Python.
+func TestUnmarshalSemanticsValidation(t *testing.T) {
+
+	alpha2Country := types.String().AsCountry(types.ISO3166Alpha2)
+	alpha3Country := types.String().AsCountry(types.ISO3166Alpha3)
+	phone := types.String().AsPhone()
+	tests := []struct {
+		name     string
+		typ      types.Type
+		value    string
+		expected string
+		valid    bool
+	}{
+		{"current alpha-2 country", alpha2Country, "US", "US", true},
+		{"current alpha-3 country", alpha3Country, "USA", "USA", true},
+		{"unknown alpha-3 country", alpha3Country, "ZZZ", "", false},
+		{"unknown alpha-2 country", alpha2Country, "ZZ", "", false},
+		{"empty alpha-2 country", alpha2Country, "", "", false},
+		{"formatted phone", phone, "+39 02-36618 300", "+390236618300", true},
+		{"empty phone", phone, "", "", false},
+		{"non-phone text", phone, "a (b)", "", false},
+	}
+
+	for _, test := range tests {
+
+		t.Run(test.name, func(t *testing.T) {
+			valueJSON, err := jsonv1.Marshal(test.value)
+			if err != nil {
+				t.Fatalf("expected value to be JSON-encodable, got %v", err)
+			}
+
+			for _, shape := range []string{"string", "array", "map", "nested", "object"} {
+
+				t.Run(shape, func(t *testing.T) {
+
+					typ := test.typ
+					var value any = test.expected
+					data := string(valueJSON)
+					switch shape {
+					case "array":
+						typ = types.Array(typ)
+						value = []any{test.expected}
+						data = "[" + data + "]"
+					case "map":
+						typ = types.Map(typ)
+						value = map[string]any{"home": test.expected}
+						data = "{\"home\":" + data + "}"
+					case "nested":
+						typ = types.Array(types.Map(types.Array(typ)))
+						value = []any{map[string]any{"home": []any{test.expected}}}
+						data = "[{\"home\":[" + data + "]}]"
+					case "object":
+						typ = types.Object([]types.Property{{Name: "inner", Type: typ}})
+						value = map[string]any{"inner": test.expected}
+						data = "{\"inner\":" + data + "}"
+					}
+					schema := types.Object([]types.Property{{Name: "value", Type: typ}})
+					for _, language := range []state.Language{state.JavaScript, state.Python} {
+
+						t.Run(language.String(), func(t *testing.T) {
+
+							records := make([]Record, 1)
+							input := strings.NewReader("{\"records\":[{\"value\":{\"value\":" + data + "}}]}")
+							err := Unmarshal(input, records, schema, language, false)
+							if err != nil {
+								t.Fatalf("expected Unmarshal to succeed, got %v", err)
+							}
+							if err := records[0].Err; err != nil {
+								if test.valid {
+									t.Fatalf("expected no record error, got %v", err)
+								}
+								if _, ok := errors.AsType[RecordValidationError](err); !ok {
+									t.Fatalf("expected RecordValidationError, got %T: %v", err, err)
+								}
+								return
+							}
+							if !test.valid {
+								t.Fatalf("expected invalid value to be rejected, got attributes %#v", records[0].Attributes)
+							}
+							if !reflect.DeepEqual(records[0].Attributes["value"], value) {
+								t.Fatalf("expected value %#v, got %#v", value, records[0].Attributes["value"])
+							}
+
+						})
+
+					}
+
+				})
+
+			}
+
+		})
+
+	}
+
+}
 
 func Test_Unmarshal(t *testing.T) {
 
@@ -379,6 +520,24 @@ func Test_Unmarshal(t *testing.T) {
 		{
 			language: state.JavaScript,
 			schema:   schema,
+			data:     `{"records":[{"value":{"Array":[1]}}]}`,
+			records:  []Record{{Err: newRecordValidationError("Array[0]", `property «Array[0]» has a value that is not of type «string»`)}},
+		},
+		{
+			language: state.JavaScript,
+			schema:   schema,
+			data:     `{"records":[{"value":{"Map":{"home":"x"}}}]}`,
+			records:  []Record{{Err: newRecordValidationError(`Map["home"]`, `property «Map["home"]» has a value that is not of type «number»`)}},
+		},
+		{
+			language: state.JavaScript,
+			schema:   types.Object([]types.Property{{Name: "Nested", Type: types.Array(types.Map(types.Array(types.Int(32))))}}),
+			data:     `{"records":[{"value":{"Nested":[{"home":["x"]}]}}]}`,
+			records:  []Record{{Err: newRecordValidationError(`Nested[0]["home"][0]`, `property «Nested[0]["home"][0]» has a value that is not of type «number»`)}},
+		},
+		{
+			language: state.JavaScript,
+			schema:   schema,
 			data:     `{"records":[{"value":{"Int8":21}}]}`,
 			records:  []Record{{Err: newRecordValidationError("Int8", `property «Int8» is greater than 20`)}},
 		},
@@ -678,23 +837,21 @@ func Test_UnmarshalEdgeCases(t *testing.T) {
 		less := strings.NewReader(`{"records":[{"value":{"a":[1]}}]}`)
 		err := Unmarshal(less, rec, sch, state.JavaScript, false)
 		if err != nil {
-			t.Fatalf("expected no error, got %v", err)
+			t.Fatal(err)
 		}
 		if rec[0].Err == nil || rec[0].Err.Error() != "property «a» contains less than 2 elements" {
-			t.Fatalf("expected record error %q, got %v", "property «a» contains less than 2 elements", rec[0].Err)
+			t.Fatalf("unexpected error for less elements: %v", rec[0].Err)
 		}
 		rec[0].Err = nil
 		rec[0].Attributes = nil
 		more := strings.NewReader(`{"records":[{"value":{"a":[1,2,3,4]}}]}`)
 		err = Unmarshal(more, rec, sch, state.JavaScript, false)
 		if err != nil {
-			t.Fatalf("expected no error, got %v", err)
+			t.Fatalf("unexpected error for more elements: %v", err)
 		}
-		if rec[0].Err == nil || rec[0].Err.Error() != "property «a» contains more than 3 elements" {
-			t.Fatalf("expected record error %q, got %v", "property «a» contains more than 3 elements", rec[0].Err)
-		}
-		if rec[0].Attributes != nil {
-			t.Fatalf("expected nil attributes, got %#v", rec[0].Attributes)
+		want := "property «a» contains more than 3 elements"
+		if rec[0].Err == nil || rec[0].Err.Error() != want {
+			t.Fatalf("expected %q, got %v", want, rec[0].Err)
 		}
 	})
 }
