@@ -607,7 +607,7 @@ func objectToColumns(obj types.Type) ([]*parquetschema.ColumnDefinition, error) 
 
 		// Handle objects.
 		columns = append(columns, col)
-		if property.Type.Kind() == types.ObjectKind {
+		if property.Type.IsObject() {
 			var err error
 			col.Children, err = objectToColumns(property.Type)
 			if err != nil {

@@ -189,7 +189,7 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 	if r == nil {
 		return errors.New("core/transformers: r is nil")
 	}
-	if schema.Valid() && schema.Kind() != types.ObjectKind {
+	if schema.Valid() && !schema.IsObject() {
 		return errors.New("core/transformers: schema is not an object")
 	}
 	d := decoder{dec: json.NewDecoder(r)}
@@ -351,7 +351,7 @@ func (d decoder) readValue() (json.Value, error) {
 
 // unmarshal unmarshals a JSON value.
 func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ any, err error) {
-	if t.Kind() == types.JSONKind && !preserveJSON {
+	if t.IsJSON() && !preserveJSON {
 		v, err := d.readValue()
 		if err != nil {
 			return nil, err
@@ -372,7 +372,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 		if _, err := d.readToken(); err != nil {
 			return nil, err
 		}
-		if t.Kind() != types.ArrayKind {
+		if !t.IsArray() {
 			return nil, newRecordValidationError("", fmt.Sprintf("has a value that is not of type «%s»", d.opts.terms.Type(t)))
 		}
 		min := t.MinElements()
@@ -459,7 +459,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 						return nil, err
 					}
 					if !p.Nullable {
-						if p.Type.Kind() != types.JSONKind || preserveJSON {
+						if !p.Type.IsJSON() || preserveJSON {
 							if purpose == Import {
 								continue
 							}
