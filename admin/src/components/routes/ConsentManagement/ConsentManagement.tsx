@@ -547,7 +547,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 
 	// The components in the dialog bubble their own after-hide events up to the
 	// dialog, which would close it. Only the event of the dialog itself closes it.
-	const onSlAfterHide = (e: WaAfterHideEvent) => {
+	const onWaAfterHide = (e: WaAfterHideEvent) => {
 		if (e.target !== e.currentTarget) {
 			e.stopPropagation();
 			return;
@@ -825,7 +825,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 				className='consent-management__dialog'
 				label={isEditing ? 'Edit consent purpose' : 'Add consent purpose'}
 				open={isOpen}
-				onWaAfterHide={onSlAfterHide}
+				onWaAfterHide={onWaAfterHide}
 			>
 				<div className='consent-management__dialog-form' ref={formRef}>
 					<WaInput
