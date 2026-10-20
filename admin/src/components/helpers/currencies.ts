@@ -7,10 +7,10 @@ interface CurrencyOption {
 const COMMON_CURRENCY_OPTION_COUNT = 5;
 // Keep the codes synchronized with IsValidCurrencyCode in tools/validation/currency.go.
 const CURRENCY_OPTIONS: CurrencyOption[] = [
-	{ code: 'USD', name: 'US dollar', symbol: '$' },
+	{ code: 'USD', name: 'US Dollar', symbol: '$' },
 	{ code: 'EUR', name: 'Euro', symbol: '€' },
-	{ code: 'GBP', name: 'British pound', symbol: '£' },
-	{ code: 'JPY', name: 'Japanese yen', symbol: '¥' },
+	{ code: 'GBP', name: 'British Pound', symbol: '£' },
+	{ code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
 	{ code: 'CNY', name: 'Chinese Yuan', symbol: '¥' },
 	{ code: 'AED', name: 'United Arab Emirates Dirham' },
 	{ code: 'AFN', name: 'Afghan Afghani', symbol: '؋' },
@@ -41,7 +41,7 @@ const CURRENCY_OPTIONS: CurrencyOption[] = [
 	{ code: 'CAD', name: 'Canadian Dollar', symbol: '$' },
 	{ code: 'CDF', name: 'Congolese Franc' },
 	{ code: 'CHE', name: 'WIR Euro' },
-	{ code: 'CHF', name: 'Swiss franc' },
+	{ code: 'CHF', name: 'Swiss Franc' },
 	{ code: 'CHW', name: 'WIR Franc' },
 	{ code: 'CLF', name: 'Chilean Unit of Account (UF)' },
 	{ code: 'CLP', name: 'Chilean Peso', symbol: '$' },
