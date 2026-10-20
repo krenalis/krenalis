@@ -4,8 +4,8 @@ interface CurrencyOption {
 	symbol?: string;
 }
 
-// Keep the codes synchronized with IsValidCurrencyCode in tools/validation/currency.go.
 const COMMON_CURRENCY_OPTION_COUNT = 5;
+// Keep the codes synchronized with IsValidCurrencyCode in tools/validation/currency.go.
 const CURRENCY_OPTIONS: CurrencyOption[] = [
 	{ code: 'USD', name: 'US dollar', symbol: '$' },
 	{ code: 'EUR', name: 'Euro', symbol: '€' },
