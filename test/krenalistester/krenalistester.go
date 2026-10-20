@@ -182,7 +182,7 @@ func (k *Krenalis) SetNATSAckWait(duration string) {
 // Call it before [Start]. It overrides [PopulateProfileSchema] and panics if
 // schema is not a valid object type.
 func (k *Krenalis) SetProfileSchema(schema types.Type) {
-	if !schema.Valid() || schema.Kind() != types.ObjectKind {
+	if !schema.IsObject() {
 		panic("test/krenalistester: profile schema must be a valid object type")
 	}
 	k.overrideProfileSchema = &schema
