@@ -14,7 +14,7 @@ interface LinkProps {
 }
 
 const Link = ({ children, path, id, className, onRedirect, onClick }: LinkProps) => {
-	const { setIsLoadingState, toastRef } = useContext(AppContext);
+	const { setIsLoadingState, hideStatus } = useContext(AppContext);
 
 	const onLinkClick = async (e) => {
 		if (onClick != null) {
@@ -28,8 +28,8 @@ const Link = ({ children, path, id, className, onRedirect, onClick }: LinkProps)
 			// opened in a new tab.
 			return;
 		}
-		if (toastRef?.current) {
-			toastRef.current.hide();
+		if (hideStatus != null) {
+			hideStatus();
 		}
 		if (`${UI_BASE_PATH}${path}` === location.pathname) {
 			setIsLoadingState(true);

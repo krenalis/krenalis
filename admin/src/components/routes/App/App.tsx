@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, ReactNode } from 'react';
 import './App.css';
-import Toast, { ToastRef } from '../../base/Toast/Toast';
 import * as icons from '../../../constants/icons';
 import { Status } from './App.types';
 import { FULLSCREEN_PATHS, RESET_PASSWORD_PATH } from '../../../constants/paths';
@@ -10,6 +9,8 @@ import { Outlet } from 'react-router-dom';
 import { useNavigate, useLocation, matchPath } from 'react-router-dom';
 import { registerIconLibrary } from '@awesome.me/webawesome/dist/components/icon/library.js';
 import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaToast from '@awesome.me/webawesome/dist/react/toast/index.js';
+import type WaToastElement from '@awesome.me/webawesome/dist/components/toast/toast.js';
 import '@awesome.me/webawesome/dist/styles/layers.css';
 import '@awesome.me/webawesome/dist/styles/themes/default.css';
 import { useApp } from './useApp';
@@ -30,22 +31,32 @@ registerIconLibrary('default', { resolver: iconResolver });
 
 const App = ({ onWorkOSLogout }: { onWorkOSLogout?: () => void } = {}) => {
 	const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
-	const [status, setStatus] = useState<Status | null>(null);
 	const [title, setTitle] = useState<ReactNode>('');
 	const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
-	const toastRef = useRef<ToastRef | null>(null);
+	const toastRef = useRef<WaToastElement | null>(null);
+	const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 	const navigate = useNavigate();
 	const location = useLocation();
 
 	const hasWorkOS = onWorkOSLogout != null;
 
+	const hideStatus = () => {
+		toastRef.current?.querySelectorAll('wa-toast-item').forEach((item) => item.hide());
+	};
+
 	const showStatus = (status: Status) => {
 		if (toastRef.current == null) return;
-		toastRef.current.hide();
-		setTimeout(() => {
-			setStatus(status);
-			toastRef.current!.toast();
+		hideStatus();
+		// Only the most recent status is shown, so that there is never more
+		// than one toast.
+		clearTimeout(toastTimeoutRef.current);
+		toastTimeoutRef.current = setTimeout(() => {
+			toastRef.current!.create(status.text, {
+				variant: status.variant === 'primary' ? 'brand' : status.variant,
+				icon: status.icon,
+				duration: 0,
+			});
 		}, 300);
 	};
 
@@ -76,16 +87,11 @@ const App = ({ onWorkOSLogout }: { onWorkOSLogout?: () => void } = {}) => {
 		if (err instanceof UnprocessableError && err.code === 'OrganizationDisabled') {
 			logout();
 		}
-		if (toastRef.current == null) return;
-		toastRef.current.hide();
-		setTimeout(() => {
-			setStatus({
-				variant: 'danger',
-				icon: icons.EXCLAMATION,
-				text: err instanceof Error ? err.message : err,
-			});
-			toastRef.current!.toast();
-		}, 300);
+		showStatus({
+			variant: 'danger',
+			icon: icons.EXCLAMATION,
+			text: err instanceof Error ? err.message : err,
+		});
 	};
 
 	const showNotFound = () => {
@@ -93,9 +99,7 @@ const App = ({ onWorkOSLogout }: { onWorkOSLogout?: () => void } = {}) => {
 	};
 
 	const redirect = (url: string) => {
-		if (toastRef.current) {
-			toastRef.current.hide();
-		}
+		hideStatus();
 		const redirectURL = `${UI_BASE_PATH}${url}`;
 		if (redirectURL === location.pathname) {
 			setIsLoadingState(true);
@@ -175,6 +179,7 @@ const App = ({ onWorkOSLogout }: { onWorkOSLogout?: () => void } = {}) => {
 					api,
 					handleError,
 					showStatus,
+					hideStatus,
 					showNotFound,
 					redirect,
 					setTitle,
@@ -194,7 +199,6 @@ const App = ({ onWorkOSLogout }: { onWorkOSLogout?: () => void } = {}) => {
 					title,
 					logout,
 					setIsLoggedIn,
-					toastRef,
 					runPipeline,
 					runPipelineButtonRefs,
 					runPipelineDropdownButtonRefs,
@@ -212,7 +216,11 @@ const App = ({ onWorkOSLogout }: { onWorkOSLogout?: () => void } = {}) => {
 		<Sentry.ErrorBoundary fallback={<RootError />}>
 			{content}
 			<div>
-				<Toast ref={toastRef} status={status} isFullscreen={isFullscreen} />
+				<WaToast
+					ref={toastRef}
+					className={`toast${isFullscreen ? ' toast--fullscreen' : ''}`}
+					placement='top-center'
+				/>
 			</div>
 		</Sentry.ErrorBoundary>
 	);

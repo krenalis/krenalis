@@ -1901,6 +1901,87 @@ wa-icon::part(svg) {
 	transform: translate(-50%, calc(-50% - 100px));
 }
 
+/* || Toast */
+
+/* The toast is drawn as Shoelace drew its alerts in the toast stack. */
+
+.toast {
+	translate: calc(-50% + var(--sidebar-width) / 2) 0;
+}
+
+.toast--fullscreen {
+	translate: -50% 0;
+}
+
+.toast > wa-toast-item {
+	--accent-width: 0;
+	--show-duration: 250ms;
+	--hide-duration: 250ms;
+	font-size: var(--wa-font-size-s);
+	font-weight: 400;
+	line-height: 1.6;
+	color: var(--text-onaccent);
+}
+
+.toast > wa-toast-item::part(toast-item) {
+	border: 0;
+}
+
+.toast > wa-toast-item[variant='neutral']::part(toast-item) {
+	background-color: var(--wa-color-neutral-40);
+}
+
+.toast > wa-toast-item[variant='brand']::part(toast-item) {
+	background-color: var(--wa-color-brand-40);
+}
+
+.toast > wa-toast-item[variant='success']::part(toast-item) {
+	background-color: var(--wa-color-success-40);
+}
+
+.toast > wa-toast-item[variant='danger']::part(toast-item) {
+	background-color: var(--wa-color-danger-40);
+}
+
+.toast > wa-toast-item[variant='warning']::part(toast-item) {
+	background-color: var(--wa-color-warning-40);
+}
+
+.toast > wa-toast-item::part(icon) {
+	align-items: start;
+	padding-block: 1.25rem 0;
+	padding-inline: 1.25rem 0;
+	font-size: var(--wa-font-size-l);
+	color: inherit;
+}
+
+.toast > wa-toast-item > wa-icon[slot='icon'] {
+	width: 1em;
+	min-width: 1em;
+}
+
+.toast > wa-toast-item::part(content) {
+	align-self: stretch;
+	padding: 1.25rem;
+	overflow: hidden;
+	font-weight: bolder;
+	color: inherit;
+}
+
+.toast > wa-toast-item::part(close-button) {
+	align-self: start;
+	margin-top: 1rem;
+	margin-inline-end: var(--wa-space-m);
+	padding: var(--wa-space-xs);
+	font-size: var(--wa-font-size-m);
+	color: inherit;
+	border-radius: var(--wa-border-radius-m);
+}
+
+.toast > wa-toast-item::part(progress-ring) {
+	--size: 1em;
+}
+
 /* || Animations */
 
 @keyframes fade-in-entrance {

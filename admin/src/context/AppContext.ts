@@ -5,7 +5,6 @@ import TransformedConnection from '../lib/core/connection';
 import { Status } from '../components/routes/App/App.types';
 import { Warehouse } from '../components/routes/App/App.types';
 import Workspace from '../lib/api/types/workspace';
-import type { ToastRef } from '../components/base/Toast/Toast';
 import { FeedbackButtonRef } from '../components/base/FeedbackButton/FeedbackButton';
 import { Member, PublicMetadata } from '../lib/api/types/responses';
 import { PipelineTarget } from '../lib/api/types/pipeline';
@@ -14,6 +13,7 @@ interface AppContext {
 	api: API;
 	handleError: (err: Error | string) => void;
 	showStatus: (status: Status) => void;
+	hideStatus: () => void;
 	showNotFound: () => void;
 	setTitle: React.Dispatch<React.SetStateAction<ReactNode>>;
 	redirect: (url: string) => void;
@@ -33,7 +33,6 @@ interface AppContext {
 	title: ReactNode;
 	logout: () => Promise<void>;
 	setIsLoggedIn: React.Dispatch<React.SetStateAction<boolean>>;
-	toastRef: React.MutableRefObject<ToastRef>;
 	runPipeline: (
 		connection: TransformedConnection,
 		pipelineID: string,
