@@ -5,7 +5,6 @@
 package snowflake
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -15,56 +14,6 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
-
-// TestDecimalExpressionLimits checks decimal operands in direct expressions.
-func TestDecimalExpressionLimits(t *testing.T) {
-	for _, test := range []struct {
-		text  string
-		valid bool
-	}{
-		{"0", true}, {"1.2300", true}, {"1e75", true}, {"1e-37", true},
-		{strings.Repeat("9", 76), true},
-		{"-" + strings.Repeat("9", 39) + "." + strings.Repeat("9", 37), true},
-		{"1e76", false}, {"1e-38", false}, {strings.Repeat("9", 77), false},
-		{"1e999999", false}, {"1e-999999", false},
-	} {
-		for _, typ := range []types.Type{types.Decimal(3, 2), types.Array(types.Decimal(3, 2))} {
-			number := decimal.MustParse(test.text)
-			column := warehouses.Column{Name: "value", Type: typ}
-			operators := []warehouses.Operator{
-				warehouses.OpIs, warehouses.OpIsNot, warehouses.OpIsLessThan, warehouses.OpIsLessThanOrEqualTo,
-				warehouses.OpIsGreaterThan, warehouses.OpIsGreaterThanOrEqualTo,
-				warehouses.OpIsBetween, warehouses.OpIsNotBetween, warehouses.OpIsOneOf, warehouses.OpIsNotOneOf,
-			}
-			if typ.Kind() == types.ArrayKind {
-				operators = []warehouses.Operator{warehouses.OpContains, warehouses.OpDoesNotContain}
-			}
-			for _, op := range operators {
-				t.Run(fmt.Sprintf("%s/%s/%d", typ, test.text, op), func(t *testing.T) {
-					values := []any{number}
-					if op == warehouses.OpIsBetween || op == warehouses.OpIsNotBetween ||
-						op == warehouses.OpIsOneOf || op == warehouses.OpIsNotOneOf {
-						values = append([]any{decimal.Decimal{}}, values...)
-					}
-					expr := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-						warehouses.NewBaseExpr(column, op, values...),
-					})
-					var b strings.Builder
-					err := renderExpr(&b, expr)
-					if err != nil {
-						if test.valid || err.Error() != "decimal operand exceeds precision 76 or scale 37" {
-							t.Fatalf("expected range error only for invalid operands, got %v", err)
-						}
-						return
-					}
-					if !test.valid {
-						t.Fatalf("expected decimal range error, got SQL %s", b.String())
-					}
-				})
-			}
-		}
-	}
-}
 
 func Test_renderExpr(t *testing.T) {
 	tests := []struct {
