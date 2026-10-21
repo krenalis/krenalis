@@ -100,8 +100,8 @@ func Test_unmarshalWhere(t *testing.T) {
 		},
 		{
 			name:      "JSON number",
-			condition: `{"property":["i"],"operator":"IsBetween","values":["34"]}`,
-			expected:  WhereCondition{Property: []string{"i"}, Operator: OpIsBetween, Values: []any{JSONConditionValue{String: "34", Number: &vDecimalInt}}},
+			condition: `{"property":["i"],"operator":"Is","values":["34"]}`,
+			expected:  WhereCondition{Property: []string{"i"}, Operator: OpIs, Values: []any{JSONConditionValue{String: "34", Number: &vDecimalInt}}},
 		},
 		{
 			name:      "datetime",
