@@ -134,14 +134,14 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	// Check that, if the schemas are valid, they have type object.
 	var inProperties types.Properties
 	if inSchema.Valid() {
-		if inSchema.Kind() != types.ObjectKind {
+		if !inSchema.IsObject() {
 			return errors.BadRequest("input schema, if provided, must be an object")
 		}
 		inProperties = inSchema.Properties()
 	}
 	var outProperties types.Properties
 	if outSchema.Valid() {
-		if outSchema.Kind() != types.ObjectKind {
+		if !outSchema.IsObject() {
 			return errors.BadRequest("out schema, if provided, must be an object")
 		}
 		outProperties = outSchema.Properties()
@@ -333,13 +333,40 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		// Check that the input property can be converted to the output property.
 		switch in.Type.Kind() {
 		case types.IntKind:
-			if k := out.Type.Kind(); k == types.UUIDKind {
+			if out.Type.IsUUID() {
 				return errors.BadRequest("input matching property cannot be converted to the output matching property")
 			}
 		case types.UUIDKind:
-			if k := out.Type.Kind(); k == types.IntKind {
+			if out.Type.IsInt() {
 				return errors.BadRequest("input matching property cannot be converted to the output matching property")
 			}
+		}
+		// Check the semantics.
+		if !types.EqualSemantics(in.Type, out.Type) {
+			if in.Type.Semantics() != out.Type.Semantics() {
+				inSemantics, outSemantics := in.Type.Semantics().String(), out.Type.Semantics().String()
+				if in.Type.Semantics() == types.NoSemantics {
+					inSemantics = "no"
+				}
+				if out.Type.Semantics() == types.NoSemantics {
+					outSemantics = "no"
+				}
+				return errors.BadRequest(
+					"input matching property has %s semantics, but output matching property requires %s semantics",
+					inSemantics, outSemantics)
+			}
+			option := "semantics option"
+			switch in.Type.Semantics() {
+			case types.CountrySemantics:
+				option = "country format"
+			case types.DurationSemantics:
+				option = "duration unit"
+			case types.MeasurementSemantics:
+				option = "unit of measure"
+			}
+			return errors.BadRequest(
+				"input matching property has %s %s, but output matching property requires %s", option,
+				types.SemanticsOptionString(in.Type), types.SemanticsOptionString(out.Type))
 		}
 		// Check that the output property has not been transformed.
 		// This includes checks on the property itself and all its parent paths.
@@ -758,7 +785,7 @@ func canBeUsedAsTableKey(k types.Kind) bool {
 func unusedPropertyPath(schema types.Type, usedPaths []string) (string, bool) {
 walk:
 	for schemaPath, property := range schema.Properties().WalkObjects() {
-		if property.Type.Kind() == types.ObjectKind {
+		if property.Type.IsObject() {
 			// Do not report unused errors for object properties, only for their
 			// sub-properties.
 			continue

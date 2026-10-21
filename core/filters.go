@@ -209,7 +209,7 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 			values = make([]any, len(cond.Values))
 		}
 		t := p.Type
-		if t.Kind() == types.ArrayKind {
+		if t.IsArray() {
 			t = t.Elem()
 		}
 		kind := t.Kind()
@@ -293,7 +293,7 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 			case float64:
 				p, _ := properties.ByPathSlice(cond.Property)
 				t := p.Type
-				if t.Kind() == types.ArrayKind {
+				if t.IsArray() {
 					t = t.Elem()
 				}
 				v = strconv.FormatFloat(value, 'g', -1, t.BitSize())
@@ -306,7 +306,7 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 			case time.Time:
 				p, _ := properties.ByPathSlice(cond.Property)
 				t := p.Type
-				if t.Kind() == types.ArrayKind {
+				if t.IsArray() {
 					t = t.Elem()
 				}
 				switch t.Kind() {
@@ -567,7 +567,7 @@ func parseYear(s string) (int, bool) {
 func resolveFilterProperty(properties types.Properties, path string) (types.Property, string, error) {
 	p, err := properties.ByPath(path)
 	if err != nil {
-		if p.Type.Kind() != types.JSONKind {
+		if !p.Type.IsJSON() {
 			return types.Property{}, "", err
 		}
 		path = err.(types.PathNotExistError).Path
@@ -908,7 +908,7 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 		}
 	}
 	t := p.Type
-	if t.Kind() == types.ArrayKind {
+	if t.IsArray() {
 		t = t.Elem()
 	}
 	k := t.Kind()

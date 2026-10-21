@@ -21,6 +21,7 @@ import (
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/tools/validation"
 )
 
 var (
@@ -189,7 +190,7 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 	if r == nil {
 		return errors.New("core/transformers: r is nil")
 	}
-	if schema.Valid() && schema.Kind() != types.ObjectKind {
+	if schema.Valid() && !schema.IsObject() {
 		return errors.New("core/transformers: schema is not an object")
 	}
 	d := decoder{dec: json.NewDecoder(r)}
@@ -351,7 +352,7 @@ func (d decoder) readValue() (json.Value, error) {
 
 // unmarshal unmarshals a JSON value.
 func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ any, err error) {
-	if t.Kind() == types.JSONKind && !preserveJSON {
+	if t.IsJSON() && !preserveJSON {
 		v, err := d.readValue()
 		if err != nil {
 			return nil, err
@@ -372,7 +373,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 		if _, err := d.readToken(); err != nil {
 			return nil, err
 		}
-		if t.Kind() != types.ArrayKind {
+		if !t.IsArray() {
 			return nil, newRecordValidationError("", fmt.Sprintf("has a value that is not of type «%s»", d.opts.terms.Type(t)))
 		}
 		min := t.MinElements()
@@ -459,7 +460,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 						return nil, err
 					}
 					if !p.Nullable {
-						if p.Type.Kind() != types.JSONKind || preserveJSON {
+						if !p.Type.IsJSON() || preserveJSON {
 							if purpose == Import {
 								continue
 							}
@@ -555,6 +556,26 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 	case types.StringKind:
 		if v.Kind() == '"' {
 			s := d.unquoteString(v)
+			switch t.Semantics() {
+			case types.CountrySemantics:
+				switch t.CountryFormat() {
+				case types.ISO3166Alpha2:
+					if !validation.IsValidCountryCodeAlpha2(s) {
+						return nil, newRecordValidationError("", "is not a 2-letter country code")
+					}
+				case types.ISO3166Alpha3:
+					if !validation.IsValidCountryCodeAlpha3(s) {
+						return nil, newRecordValidationError("", "is not a 3-letter country code")
+					}
+				}
+				return s, nil
+			case types.PhoneSemantics:
+				normalized, ok := types.NormalizePhone(s)
+				if !ok {
+					return nil, newRecordValidationError("", "is not a valid phone number")
+				}
+				return normalized, nil
+			}
 			if values := t.Values(); values != nil {
 				if !slices.Contains(values, s) {
 					return nil, newRecordValidationError("", "is not one of the allowed values")

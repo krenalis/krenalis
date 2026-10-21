@@ -18,7 +18,7 @@ import (
 func profileSchemaInfoForMCPClient(profileSchema types.Type, columnTypeDescription func(types.Type) (string, error)) []any {
 	var info []any
 	for path, p := range profileSchema.Properties().WalkAll() {
-		if p.Type.Kind() == types.ObjectKind {
+		if p.Type.IsObject() {
 			continue
 		}
 		colTypDescription, _ := columnTypeDescription(p.Type)
@@ -62,7 +62,7 @@ var eventSchemaInfoForMCPClient []any
 func init() {
 	// Initialize eventSchemaInfoForMCPClient.
 	for path, p := range core.EventSchema().Properties().WalkAll() {
-		if p.Type.Kind() == types.ObjectKind {
+		if p.Type.IsObject() {
 			continue
 		}
 		column := core.EventColumnByPath(path)
