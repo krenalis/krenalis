@@ -229,7 +229,7 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 			case types.FloatKind:
 				v, _ = parseFloat(value, t.BitSize())
 			case types.DecimalKind:
-				v, _ = parseDecimal(value)
+				v, _ = parseFilterDecimal(value)
 			case types.DateTimeKind:
 				v, _ = iso8601.ParseString(value)
 			case types.DateKind:
@@ -242,7 +242,7 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 				v, _ = types.NormalizeUUID(value)
 			case types.JSONKind:
 				jv := state.JSONConditionValue{String: value}
-				d, valid := parseDecimal(value)
+				d, valid := parseFilterDecimal(value)
 				if valid {
 					jv.Number = &d
 				}
@@ -333,10 +333,10 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 	return filter
 }
 
-// parseDecimal parses a decimal from s and returns the parsed decimal value and
-// true. If s cannot fit a decimal type with precision <= 76 and scale <= 37,
+// parseFilterDecimal parses a decimal from s and returns the parsed decimal value
+// and true. If s cannot fit a decimal type with precision <= 76 and scale <= 37,
 // or is not a valid decimal, it returns 0 and false.
-func parseDecimal(s string) (decimal.Decimal, bool) {
+func parseFilterDecimal(s string) (decimal.Decimal, bool) {
 	d, err := decimal.Parse(s, 0, 0)
 	if err != nil {
 		return decimal.Decimal{}, false
@@ -935,7 +935,7 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 		case types.FloatKind:
 			_, valid = parseFloat(value, t.BitSize())
 		case types.DecimalKind:
-			_, valid = parseDecimal(value)
+			_, valid = parseFilterDecimal(value)
 		case types.DateTimeKind:
 			if t, err := iso8601.ParseString(value); err == nil {
 				y := t.UTC().Year()

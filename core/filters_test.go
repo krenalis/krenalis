@@ -887,7 +887,7 @@ func Test_convertFilterWhereTemporalArrays(t *testing.T) {
 
 }
 
-func Test_parseDecimal(t *testing.T) {
+func Test_parseFilterDecimal(t *testing.T) {
 	tests := []struct {
 		n        string
 		expected string
@@ -915,7 +915,7 @@ func Test_parseDecimal(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.n, func(t *testing.T) {
-			got, valid := parseDecimal(test.n)
+			got, valid := parseFilterDecimal(test.n)
 			if !valid {
 				if test.valid {
 					t.Fatalf("expected valid, got invalid")
