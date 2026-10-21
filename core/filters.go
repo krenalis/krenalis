@@ -333,9 +333,10 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 	return filter
 }
 
-// parseFilterDecimal parses s as a decimal filter operand. It returns the parsed
-// value and true if the number can be represented exactly by a decimal type
-// supported by the types package; otherwise, it returns the zero value and false.
+// parseFilterDecimal parses s as a decimal filter operand. It returns the
+// parsed value and true if the number can be represented exactly by a decimal
+// type supported by the types package; otherwise, it returns the zero value and
+// false.
 func parseFilterDecimal(s string) (decimal.Decimal, bool) {
 	d, err := decimal.Parse(s, 0, 0)
 	if err != nil {
