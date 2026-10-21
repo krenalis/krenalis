@@ -222,8 +222,8 @@ func (op *WhereOperator) UnmarshalJSON(data []byte) error {
 // JSON property.
 //
 //   - String holds the raw value.
-//   - Number is non-nil if String fits a decimal(p,s) with p <= 76 and
-//     0 <= s <= min(p,37).
+//   - Number is non-nil if String contains a number that can be represented
+//     exactly by a decimal type supported by the types package.
 type JSONConditionValue struct {
 	String string
 	Number *decimal.Decimal
