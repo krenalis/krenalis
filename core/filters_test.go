@@ -1804,19 +1804,16 @@ func Test_validateFilterRejectsNilRules(t *testing.T) {
 
 // Test_validateFilterValueLimits checks operand lengths in runes.
 func Test_validateFilterValueLimits(t *testing.T) {
-	for _, test := range []struct {
-		typ       types.Type
-		maxLength int
-	}{
-		{types.Decimal(3, 2), 78}, {types.Array(types.Decimal(3, 2)), 78},
-		{types.JSON(), 78}, {types.Array(types.JSON()), 78},
-		{types.String(), 60}, {types.Array(types.String()), 60},
+	for _, testType := range []types.Type{
+		types.Decimal(3, 2), types.Array(types.Decimal(3, 2)),
+		types.JSON(), types.Array(types.JSON()),
+		types.String(), types.Array(types.String()),
 	} {
-		for _, length := range []int{test.maxLength, test.maxLength + 1} {
-			t.Run(fmt.Sprintf("%s/%d", test.typ, length), func(t *testing.T) {
-				schema := types.Object([]types.Property{{Name: "value", Type: test.typ}})
+		for _, length := range []int{80, 81} {
+			t.Run(fmt.Sprintf("%s/%d", testType, length), func(t *testing.T) {
+				schema := types.Object([]types.Property{{Name: "value", Type: testType}})
 				op := OpIs
-				typ := test.typ
+				typ := testType
 				if typ.Kind() == types.ArrayKind {
 					op = OpContains
 					typ = typ.Elem()
@@ -1830,12 +1827,12 @@ func Test_validateFilterValueLimits(t *testing.T) {
 				}}
 				_, err := validateFilter(filter, schema, state.Source, state.TargetUser)
 				if err != nil {
-					if length <= test.maxLength || err.Error() != fmt.Sprintf("condition value is longer than %d runes", test.maxLength) {
-						t.Fatalf("expected length error only above %d runes, got %v", test.maxLength, err)
+					if length <= 80 || err.Error() != "condition value is longer than 80 runes" {
+						t.Fatalf("expected length error only above 80 runes, got %v", err)
 					}
 					return
 				}
-				if length > test.maxLength {
+				if length > 80 {
 					t.Fatal("expected operand length error, got nil")
 				}
 			})

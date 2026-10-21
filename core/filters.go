@@ -107,9 +107,7 @@ type FilterCondition struct {
 
 	// Values.
 	// If the property has a string type with allowed values, each value must be one of the allowed values.
-	// Otherwise, each value must be at most 60 runes (78 for decimal and JSON operands) and contain no NUL byte.
-	// Decimal operands must fit a decimal(p,s) with p <= 76 and 0 <= s <= min(p,37).
-	// In addition to JSON strings, only JSON operands within these decimal limits are compared with JSON numbers.
+	// In all other cases, each value must be at most 80 runes and must not contain the NUL byte.
 	Values []string `json:"values,omitzero"`
 }
 
@@ -920,12 +918,8 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 		t = t.Elem()
 	}
 	k := t.Kind()
-	maxValueLength := 60
-	if k == types.DecimalKind || k == types.JSONKind {
-		maxValueLength = types.MaxDecimalPrecision + 2 // Allow a sign and decimal point.
-	}
 	for _, value := range cond.Values {
-		if err := util.ValidateStringField("condition value", value, maxValueLength); err != nil {
+		if err := util.ValidateStringField("condition value", value, 80); err != nil {
 			return "", err
 		}
 		var valid bool
