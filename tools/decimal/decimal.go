@@ -444,15 +444,17 @@ func New(mantissa int64, scale int) Decimal {
 
 // Parse parses n as a decimal number without rounding.
 // When precision > 0, the value must be exactly representable with the given
-// precision and scale. For nonnegative scale, this means at most
-// precision - scale digits before the decimal point and scale digits
-// after it, ignoring trailing fractional zeros.
+// precision and scale. For nonnegative scale, this means that the value has at
+// most precision - scale digits in its integer part, so 0.5 has none, and at
+// most scale digits in its fractional part, ignoring trailing zeros.
+// precision cannot be negative.
 //
-// It returns [ErrSyntax] if n is syntactically invalid and [ErrRange] if the
-// value is out of range or cannot be represented exactly.
+// It returns [ErrSyntax] if n is syntactically invalid and [ErrRange] if
+// precision or scale are invalid, or if the value is out of range or cannot be
+// represented exactly.
 //
-// When precision is 0, the parsed value is not constrained by the supplied
-// precision and scale.
+// Scale must be <= precision. When precision is 0, no limits are enforced on
+// the parsed value.
 //
 // For example:
 //
