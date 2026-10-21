@@ -134,7 +134,8 @@ func TestClientDoResponseBody(t *testing.T) {
 								return first, nil
 							}
 							if firstBody.closes != 1 {
-								t.Errorf("expected first response body closed once before retry, got %d", firstBody.closes)
+								t.Errorf("expected first response body closed once before retry, got %d",
+									firstBody.closes)
 							}
 
 							return last, nil
@@ -183,7 +184,8 @@ func TestClientDoResponseBody(t *testing.T) {
 							t.Errorf("expected no response on cancellation, got %v", res)
 						}
 						if firstBody.closes != 1 {
-							t.Errorf("expected first response body closed once on cancellation, got %d", firstBody.closes)
+							t.Errorf("expected first response body closed once on cancellation, got %d",
+								firstBody.closes)
 						}
 						if calls != 1 {
 							t.Errorf("expected 1 request before cancellation, got %d", calls)
