@@ -171,35 +171,34 @@ const ProfilesList = () => {
 							<div className='profiles-list__identity-resolution-since-start'>{`Progress: ${String(secondsSinceIRStart)}s`}</div>
 						) : latestIRExecutionEnd ? (
 							<div className='profiles-list__identity-resolution-end-time'>
-								<span>Latest Identity Resolution:</span>
-								<RelativeTime date={latestIRExecutionEnd} />
+								<span>Latest Identity Resolution:</span> <RelativeTime date={latestIRExecutionEnd} />
 							</div>
 						) : (
 							''
 						)}
 					</span>
 				</div>
-				<AlertDialog
-					isOpen={askRunIRConfirmation}
-					onClose={() => setAskResolveIdentitiesConfirmation(false)}
-					title='Processing time notice'
-					actions={
-						<>
-							<WaButton appearance='outlined' onClick={() => setAskResolveIdentitiesConfirmation(false)}>
-								Cancel
-							</WaButton>
-							<WaButton variant='brand' onClick={onStartIdentityResolution}>
-								Run Profile Unification
-							</WaButton>
-						</>
-					}
-				>
-					<p>
-						The time it takes to resolve the identities can vary significantly, from seconds to hours,
-						depending on the size of user data.
-					</p>
-				</AlertDialog>
 			</Toolbar>
+			<AlertDialog
+				isOpen={askRunIRConfirmation}
+				onClose={() => setAskResolveIdentitiesConfirmation(false)}
+				title='Processing time notice'
+				actions={
+					<>
+						<WaButton appearance='outlined' onClick={() => setAskResolveIdentitiesConfirmation(false)}>
+							Cancel
+						</WaButton>
+						<WaButton variant='brand' onClick={onStartIdentityResolution}>
+							Run Profile Unification
+						</WaButton>
+					</>
+				}
+			>
+				<p>
+					The time it takes to resolve the identities can vary significantly, from seconds to hours, depending
+					on the size of user data.
+				</p>
+			</AlertDialog>
 			<div className='profiles-list__content'>
 				<div className='profiles-list__grid-container'>
 					<Grid
