@@ -219,6 +219,9 @@ func makeVendor() error {
 			if entry.IsDir() || (base != "LICENSE" && base != "LICENCE") {
 				continue
 			}
+			if ext != "" && ext != ".md" && ext != ".txt" {
+				continue
+			}
 			src = filepath.Join("admin/node_modules", dir, entry.Name())
 			dst = filepath.Join("admin/node_modules_vendor", dir, base+ext)
 			err = copyFile(dst, src)
