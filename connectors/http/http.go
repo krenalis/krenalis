@@ -80,7 +80,7 @@ func (h *HTTP) AbsolutePath(ctx context.Context, name string) (string, error) {
 	for i := 0; i < len(name); i++ {
 		c := name[i]
 		if c == '#' || (!parsingQuery && (c < ' ' || c == 0x7f)) {
-			return "", connectors.InvalidPathErrorf("path cannot contains “#“, and control characters")
+			return "", connectors.InvalidPathErrorf("path cannot contains “#”, and control characters")
 		}
 		if c == '%' && (i+2 < len(name) || !ishex(name[i+1]) || !ishex(name[i+2])) {
 			return "", connectors.InvalidPathErrorf("path contains an invalid escape sequence")

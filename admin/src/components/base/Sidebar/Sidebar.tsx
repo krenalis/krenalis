@@ -45,6 +45,12 @@ const sidebarItems: sidebarItem[] = [
 		icon: 'people',
 		subItems: [
 			{
+				name: 'profile-unification/overview',
+				label: 'Overview',
+				link: 'profile-unification/overview',
+				icon: 'activity',
+			},
+			{
 				name: 'profile-unification/profiles',
 				label: 'Profiles',
 				link: 'profile-unification/profiles',
@@ -72,12 +78,17 @@ const sidebarItems: sidebarItem[] = [
 		subItems: [
 			{ name: 'settings/general', label: 'General', link: 'settings/general', icon: 'list' },
 			{
+				name: 'settings/consent-management',
+				label: 'Consent management',
+				link: 'settings/consent-management',
+				icon: 'shield-check',
+			},
+			{
 				name: 'settings/dataWarehouse',
 				label: 'Data Warehouse',
 				link: 'settings/data-warehouse',
 				icon: 'database',
 			},
-			{ name: 'settings/privacy', label: 'Privacy', link: 'settings/privacy', icon: 'shield-check' },
 		],
 	},
 ];

@@ -13,7 +13,6 @@ const profileProperty = (
 	name,
 	displayName,
 	prefilled: '',
-	role: 'Both',
 	type: { kind: 'string' },
 	createRequired: false,
 	updateRequired: false,
@@ -32,13 +31,13 @@ const profileSchema: ObjectType = {
 	kind: 'object',
 	properties: [
 		profileProperty('customer_id', 'Customer ID'),
-		profileProperty('email', '   ', { type: { kind: 'string', semantic: 'email' } }),
+		profileProperty('email', '   ', { type: { kind: 'string', semantics: 'email' } }),
 		profileProperty('first_name', 'First name'),
 		profileProperty('last_name', 'Last name'),
 		profileProperty('country', 'Country', {
-			type: { kind: 'string', semantic: 'country', format: 'alpha-2' },
+			type: { kind: 'string', semantics: 'country', format: 'alpha-2' },
 		}),
-		profileProperty('photo_url', 'Photo', { type: { kind: 'string', semantic: 'url' } }),
+		profileProperty('photo_url', 'Photo', { type: { kind: 'string', semantics: 'url' } }),
 		profileObjectProperty('billing_address', [profileProperty('city', 'City')], 'Billing address'),
 		profileObjectProperty('shipping_address', [profileProperty('city', 'City')]),
 	],
@@ -48,7 +47,7 @@ const getProfileSchema = (countryFormat: CountryFormat): ObjectType => ({
 	...profileSchema,
 	properties: profileSchema.properties?.map((property) =>
 		property.name === 'country'
-			? { ...property, type: { kind: 'string', semantic: 'country', format: countryFormat } }
+			? { ...property, type: { kind: 'string', semantics: 'country', format: countryFormat } }
 			: property,
 	),
 });

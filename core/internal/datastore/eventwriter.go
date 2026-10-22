@@ -22,7 +22,7 @@ type EventWriter struct {
 
 // newEventWriter constructs and starts a EventWriter.
 // The returned EventWriter is ready to use.
-func newEventWriter(store *Store) *EventWriter {
+func newEventWriter(store *Store, metrics PipelineMetrics) *EventWriter {
 	w := &EventWriter{workspace: store.workspace}
 	opts := flusherOptions{
 		QueueSize:        8192,
@@ -32,7 +32,7 @@ func newEventWriter(store *Store) *EventWriter {
 		MaxFlushLatency:  10 * time.Second,
 		IdleFlushDelay:   750 * time.Millisecond,
 		RateAlpha:        0.4,
-		MetricsFinalizer: store.ds.metrics.FinalizePassed,
+		MetricsFinalizer: metrics.FinalizePassed,
 		LogError:         w.logError,
 	}
 	w.flusher = newFlusher(opts, store.mc.StartOperation, func(ctx context.Context, events [][]any) error {

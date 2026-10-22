@@ -205,6 +205,7 @@ interface PublicMetadata {
 	telemetryLevel: TelemetryLevel;
 	workosClientID: string;
 	workosDevMode: boolean;
+	version: string;
 }
 
 export type {

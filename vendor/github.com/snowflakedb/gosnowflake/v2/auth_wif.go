@@ -10,7 +10,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -123,12 +125,131 @@ type awsAttestationMetadataProvider interface {
 	awsCredentials() (aws.Credentials, error)
 	awsCredentialsViaRoleChaining() (aws.Credentials, error)
 	awsRegion() string
+	awsWebIdentityToken(creds aws.Credentials, region string) (string, error)
 }
 
 type defaultAwsAttestationMetadataProvider struct {
 	ctx    context.Context
 	cfg    *Config
 	awsCfg aws.Config
+}
+
+// awsStsEndpoint resolves the STS endpoint for a given region. Populated by awsStsEndpointFor.
+type awsStsEndpoint struct {
+	authority  string // bare host[:port] for SigV4 Host header
+	baseURL    string // full URL (with scheme) for SDK BaseEndpoint option
+	overridden bool   // whether WorkloadIdentityHost was set (vs regional default)
+}
+
+// parseWorkloadIdentityHost normalizes user input: accepts bare host or full URL,
+// adds https:// default, strips trailing slashes, validates scheme/host/no-query.
+func parseWorkloadIdentityHost(host string) (awsStsEndpoint, error) {
+	host = strings.TrimSpace(host)
+	if host == "" {
+		return awsStsEndpoint{}, fmt.Errorf("workloadIdentityHost is empty")
+	}
+
+	// If no scheme, prepend https://
+	if !strings.Contains(host, "://") {
+		host = "https://" + host
+	}
+
+	u, err := url.Parse(host)
+	if err != nil {
+		return awsStsEndpoint{}, fmt.Errorf("workloadIdentityHost %q is malformed: %w", host, err)
+	}
+
+	if u.Scheme != "https" && u.Scheme != "http" {
+		return awsStsEndpoint{}, fmt.Errorf("workloadIdentityHost %q must use https or http, got scheme %q", host, u.Scheme)
+	}
+	if u.Host == "" {
+		return awsStsEndpoint{}, fmt.Errorf("workloadIdentityHost %q does not contain a hostname", host)
+	}
+	if u.User != nil || u.RawQuery != "" || u.Fragment != "" {
+		return awsStsEndpoint{}, fmt.Errorf("workloadIdentityHost %q must not contain user info, a query or a fragment", host)
+	}
+
+	baseURL := url.URL{
+		Scheme: u.Scheme,
+		Host:   u.Host,
+		Path:   u.Path,
+	}
+
+	return awsStsEndpoint{
+		authority:  u.Host,                                   // host[:port] for Host header
+		baseURL:    strings.TrimRight(baseURL.String(), "/"), // full URL for SDK
+		overridden: true,
+	}, nil
+}
+
+// awsStsEndpointFor resolves the STS endpoint for the given region, checking
+// WorkloadIdentityHost first, falling back to the regional default.
+func awsStsEndpointFor(ctx context.Context, cfg *Config, region string) (awsStsEndpoint, error) {
+	if cfg.WorkloadIdentityHost != "" {
+		return parseWorkloadIdentityHost(cfg.WorkloadIdentityHost)
+	}
+	return defaultStsEndpoint(ctx, region)
+}
+
+// defaultStsEndpoint resolves the regional STS endpoint using the AWS SDK's own
+// endpoint rules. The DNS suffix is partition-specific and not derivable from the
+// region name - the ISO partitions and the European Sovereign Cloud do not use
+// amazonaws.com at all - so formatting the hostname here would be wrong for every
+// partition the SDK already knows about. Resolution is a pure evaluation of the
+// endpoint rules compiled into the SDK: no network calls and no credentials.
+//
+// FIPS, dualstack and the legacy global endpoint are pinned off so this returns
+// the plain regional endpoint. The SDK-driven flows (role chaining, outbound
+// token) resolve their own endpoints and continue to honour the ambient
+// AWS_USE_FIPS_ENDPOINT and AWS_USE_DUALSTACK_ENDPOINT preferences.
+func defaultStsEndpoint(ctx context.Context, region string) (awsStsEndpoint, error) {
+	resolved, err := sts.NewDefaultEndpointResolverV2().ResolveEndpoint(ctx, sts.EndpointParameters{
+		Region:            aws.String(region),
+		UseFIPS:           aws.Bool(false),
+		UseDualStack:      aws.Bool(false),
+		UseGlobalEndpoint: aws.Bool(false),
+	})
+	if err != nil {
+		return awsStsEndpoint{}, fmt.Errorf("could not resolve an STS endpoint for region %q: %w", region, err)
+	}
+
+	uri := resolved.URI
+	if uri.Host == "" {
+		return awsStsEndpoint{}, fmt.Errorf("resolved STS endpoint for region %q has no host: %q", region, uri.String())
+	}
+
+	baseURL := url.URL{
+		Scheme: uri.Scheme,
+		Host:   uri.Host,
+		Path:   uri.Path,
+	}
+	return awsStsEndpoint{
+		authority:  uri.Host,
+		baseURL:    strings.TrimRight(baseURL.String(), "/"),
+		overridden: false,
+	}, nil
+}
+
+// withStsBaseEndpoint returns a functional option that pins the SDK's STS endpoint
+// resolution to the given override. When an override is set, it also clears
+// FIPS and dualstack preferences so they don't conflict with the custom host.
+func withStsBaseEndpoint(endpoint awsStsEndpoint) func(*config.LoadOptions) error {
+	return func(opts *config.LoadOptions) error {
+		if endpoint.overridden {
+			opts.BaseEndpoint = endpoint.baseURL
+			// Clear FIPS/dualstack preferences when override is set — they're only
+			// endpoint-selection inputs, not crypto settings. Leaving them enabled
+			// would make the SDK resolver reject the custom host.
+			opts.UseFIPSEndpoint = aws.FIPSEndpointStateDisabled
+			opts.UseDualStackEndpoint = aws.DualStackEndpointStateDisabled
+			if os.Getenv("AWS_USE_FIPS_ENDPOINT") != "" || os.Getenv("AWS_USE_DUALSTACK_ENDPOINT") != "" {
+				logger.Warnf("WorkloadIdentityHost is set; clearing FIPS/dualstack preferences to allow custom endpoint resolution")
+			}
+		}
+		// If regional default, leave SDK's endpoint resolution alone — it respects
+		// FIPS/dualstack env vars naturally.
+		return nil
+	}
 }
 
 func createDefaultAwsAttestationMetadataProvider(ctx context.Context, cfg *Config) awsAttestationMetadataProvider {
@@ -163,9 +284,20 @@ func (s *defaultAwsAttestationMetadataProvider) awsCredentialsViaRoleChaining() 
 
 func (s *defaultAwsAttestationMetadataProvider) assumeRole(creds aws.Credentials, roleArn string) (aws.Credentials, error) {
 	logger.Debugf("assuming role %v", roleArn)
-	awsCfg := s.awsCfg
-	awsCfg.Credentials = credentials.StaticCredentialsProvider{Value: creds}
-	awsCfg.Region = s.awsRegion()
+	region := s.awsRegion()
+	endpoint, err := awsStsEndpointFor(s.ctx, s.cfg, region)
+	if err != nil {
+		return aws.Credentials{}, err
+	}
+	awsCfg, err := config.LoadDefaultConfig(
+		s.ctx,
+		config.WithRegion(region),
+		config.WithCredentialsProvider(credentials.StaticCredentialsProvider{Value: creds}),
+		withStsBaseEndpoint(endpoint),
+	)
+	if err != nil {
+		return aws.Credentials{}, err
+	}
 	stsClient := sts.NewFromConfig(awsCfg)
 
 	role, err := stsClient.AssumeRole(s.ctx, &sts.AssumeRoleInput{
@@ -187,6 +319,36 @@ func (s *defaultAwsAttestationMetadataProvider) assumeRole(creds aws.Credentials
 
 func (s *defaultAwsAttestationMetadataProvider) awsRegion() string {
 	return s.awsCfg.Region
+}
+
+func (s *defaultAwsAttestationMetadataProvider) awsWebIdentityToken(creds aws.Credentials, region string) (string, error) {
+	endpoint, err := awsStsEndpointFor(s.ctx, s.cfg, region)
+	if err != nil {
+		return "", err
+	}
+	awsCfg, err := config.LoadDefaultConfig(
+		s.ctx,
+		config.WithRegion(region),
+		config.WithCredentialsProvider(credentials.StaticCredentialsProvider{Value: creds}),
+		withStsBaseEndpoint(endpoint),
+	)
+	if err != nil {
+		return "", err
+	}
+	stsClient := sts.NewFromConfig(awsCfg)
+
+	resp, err := stsClient.GetWebIdentityToken(s.ctx, &sts.GetWebIdentityTokenInput{
+		Audience:         []string{snowflakeAudience},
+		SigningAlgorithm: aws.String("ES384"),
+	})
+	if err != nil {
+		logger.Debugf("failed to obtain AWS web identity token from STS: %v", err)
+		return "", err
+	}
+	if resp.WebIdentityToken == nil {
+		return "", nil
+	}
+	return *resp.WebIdentityToken, nil
 }
 
 func (c *awsIdentityAttestationCreator) createAttestation() (*wifAttestation, error) {
@@ -221,8 +383,20 @@ func (c *awsIdentityAttestationCreator) createAttestation() (*wifAttestation, er
 		return nil, fmt.Errorf("no AWS region was found")
 	}
 
-	stsHostname := stsHostname(region)
-	req, err := c.createStsRequest(stsHostname)
+	if c.cfg.WorkloadIdentityAwsUseOutboundToken == ConfigBoolTrue {
+		return c.createOutboundIdentityAttestation(attestationService, creds, region)
+	}
+	return c.createCallerIdentityAttestation(creds, region)
+}
+
+// createCallerIdentityAttestation produces the attestation as a base64-encoded,
+// SigV4-signed STS GetCallerIdentity request envelope.
+func (c *awsIdentityAttestationCreator) createCallerIdentityAttestation(creds aws.Credentials, region string) (*wifAttestation, error) {
+	endpoint, err := awsStsEndpointFor(c.ctx, c.cfg, region)
+	if err != nil {
+		return nil, err
+	}
+	req, err := c.createStsRequest(endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -244,24 +418,31 @@ func (c *awsIdentityAttestationCreator) createAttestation() (*wifAttestation, er
 	}, nil
 }
 
-func stsHostname(region string) string {
-	var domain string
-	if strings.HasPrefix(region, "cn-") {
-		domain = "amazonaws.com.cn"
-	} else {
-		domain = "amazonaws.com"
+// createOutboundIdentityAttestation produces the attestation as a signed JWT
+// obtained from the STS GetWebIdentityToken API.
+func (c *awsIdentityAttestationCreator) createOutboundIdentityAttestation(attestationService awsAttestationMetadataProvider, creds aws.Credentials, region string) (*wifAttestation, error) {
+	token, err := attestationService.awsWebIdentityToken(creds, region)
+	if err != nil {
+		return nil, err
 	}
-	return fmt.Sprintf("sts.%s.%s", region, domain)
+	if token == "" {
+		return nil, errors.New("failed to obtain AWS web identity token from STS")
+	}
+	return &wifAttestation{
+		ProviderType: string(awsWif),
+		Credential:   token,
+		Metadata:     map[string]string{},
+	}, nil
 }
 
-func (c *awsIdentityAttestationCreator) createStsRequest(hostname string) (*http.Request, error) {
-	url := fmt.Sprintf("https://%s?Action=GetCallerIdentity&Version=2011-06-15", hostname)
+func (c *awsIdentityAttestationCreator) createStsRequest(endpoint awsStsEndpoint) (*http.Request, error) {
+	url := endpoint.baseURL + "?Action=GetCallerIdentity&Version=2011-06-15"
 	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Set("Host", hostname)
+	req.Header.Set("Host", endpoint.authority)
 	req.Header.Set("X-Snowflake-Audience", "snowflakecomputing.com")
 	return req, nil
 }
@@ -350,7 +531,7 @@ func (c *gcpIdentityAttestationCreator) createGcpIdentityViaImpersonation() (*wi
 	// map paths to full service account paths
 	var fullServiceAccountPaths []string
 	for _, path := range c.cfg.WorkloadIdentityImpersonationPath {
-		fullServiceAccountPaths = append(fullServiceAccountPaths, fmt.Sprintf("projects/-/serviceAccounts/%s", path))
+		fullServiceAccountPaths = append(fullServiceAccountPaths, "projects/-/serviceAccounts/"+path)
 	}
 	targetServiceAccount := fullServiceAccountPaths[len(fullServiceAccountPaths)-1]
 	delegates := fullServiceAccountPaths[:len(fullServiceAccountPaths)-1]
@@ -649,13 +830,27 @@ func extractTokenFromJSON(tokenJSON string) (string, error) {
 }
 
 func (a *azureIdentityAttestationCreator) azureFunctionsIdentityRequest(identityEndpoint, identityHeader, managedIdentityClientID string) (*http.Request, error) {
-	queryParams := fmt.Sprintf("api-version=2019-08-01&resource=%s", a.workloadIdentityEntraResource)
-	if managedIdentityClientID != "" {
-		queryParams += fmt.Sprintf("&client_id=%s", managedIdentityClientID)
+	// IDENTITY_ENDPOINT comes from the process environment. Azure's contract
+	// places it on a loopback / link-local address (App Service, Functions and
+	// Arc all expose MSI on localhost). Verify that before the IDENTITY_HEADER
+	// value is attached and the request is issued.
+	if err := validateLocalMetadataEndpoint(identityEndpoint); err != nil {
+		return nil, err
 	}
 
-	url := fmt.Sprintf("%s?%s", identityEndpoint, queryParams)
-	req, err := http.NewRequest("GET", url, nil)
+	// Build the query with url.Values so the Entra resource and the
+	// managed-identity client id are percent-encoded. With raw interpolation a
+	// value such as "api://app&client_id=<other>" would add or replace other
+	// IMDS query parameters instead of staying confined to its own.
+	values := url.Values{}
+	values.Set("api-version", "2019-08-01")
+	values.Set("resource", a.workloadIdentityEntraResource)
+	if managedIdentityClientID != "" {
+		values.Set("client_id", managedIdentityClientID)
+	}
+
+	requestURL := fmt.Sprintf("%s?%s", identityEndpoint, values.Encode())
+	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -664,12 +859,48 @@ func (a *azureIdentityAttestationCreator) azureFunctionsIdentityRequest(identity
 	return req, nil
 }
 
-func (a *azureIdentityAttestationCreator) azureVMIdentityRequest() (*http.Request, error) {
-	urlWithoutQuery := a.azureMetadataServiceBaseURL + "/metadata/identity/oauth2/token?"
-	queryParams := fmt.Sprintf("api-version=2018-02-01&resource=%s", a.workloadIdentityEntraResource)
+// validateLocalMetadataEndpoint requires the identity endpoint URL to address
+// the local metadata service (loopback or link-local) before any platform value
+// is attached to a request sent to it. Remote hosts are rejected.
+func validateLocalMetadataEndpoint(endpoint string) error {
+	parsed, err := url.Parse(endpoint)
+	if err != nil {
+		return fmt.Errorf("invalid identity endpoint URL: %w", err)
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return fmt.Errorf("identity endpoint must use http or https scheme, got %q", parsed.Scheme)
+	}
+	host := parsed.Hostname()
+	if !isLoopbackOrLinkLocalHost(host) {
+		return fmt.Errorf("identity endpoint host %q is not a permitted local metadata address", host)
+	}
+	return nil
+}
 
-	url := urlWithoutQuery + queryParams
-	req, err := http.NewRequest("GET", url, nil)
+// isLoopbackOrLinkLocalHost reports whether host is the loopback hostname or a
+// loopback / link-local IP literal: localhost, 127.0.0.0/8, ::1,
+// 169.254.0.0/16 and fe80::/10.
+func isLoopbackOrLinkLocalHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return false
+	}
+	return ip.IsLoopback() || ip.IsLinkLocalUnicast()
+}
+
+func (a *azureIdentityAttestationCreator) azureVMIdentityRequest() (*http.Request, error) {
+	// Percent-encode the query so the Entra resource cannot inject additional
+	// IMDS parameters (e.g. client_id/object_id/mi_res_id) that would select a
+	// different managed identity attached to the same VM.
+	values := url.Values{}
+	values.Set("api-version", "2018-02-01")
+	values.Set("resource", a.workloadIdentityEntraResource)
+
+	requestURL := a.azureMetadataServiceBaseURL + "/metadata/identity/oauth2/token?" + values.Encode()
+	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -71,29 +71,78 @@ func (*profileVersionTx) Commit() error { return nil }
 // Rollback completes the test transaction.
 func (*profileVersionTx) Rollback() error { return nil }
 
-// TestObsoleteProfilesTableVersionsValidation verifies that invalid or excessive results are rejected without
-// returning a partial cleanup list.
-func TestObsoleteProfilesTableVersionsValidation(t *testing.T) {
+// TestFinalizePublishedProfilesDeletesAtMostBatchLimit verifies that
+// finalization deletes no more than one batch of obsolete profile tables.
+func TestFinalizePublishedProfilesDeletesAtMostBatchLimit(t *testing.T) {
 
-	limitValues := make([]driver.Value, maxObsoleteProfilesTableVersions)
+	const maxTables = 10
+	const publishedVersion = math.MaxInt32
+	rows := make([][]driver.Value, maxTables+1)
+	for i := range rows[:maxTables] {
+		rows[i] = []driver.Value{int64(i)}
+	}
+	rows[maxTables] = []driver.Value{int64(maxTables)}
+	responses := []checkReadOnlyQuery{
+		{match: `MAX("VERSION")`, cols: []string{"VERSION"}, rows: [][]driver.Value{{int64(publishedVersion)}}},
+		{match: `MAX("V"."VERSION")`, cols: []string{"VERSION"}, rows: [][]driver.Value{{int64(publishedVersion)}}},
+		{match: `SELECT EXISTS`, cols: []string{"EXISTS"}, rows: [][]driver.Value{{true}}},
+		{match: `CREATE OR REPLACE VIEW`},
+		{
+			suffix:  "LIMIT " + strconv.Itoa(maxTables),
+			cols:    []string{"VERSION"},
+			rows:    rows,
+			maxRows: maxTables,
+		},
+	}
+	for version := range maxTables {
+		responses = append(responses, checkReadOnlyQuery{
+			match: `DROP TABLE IF EXISTS "KRENALIS_PROFILES_` + strconv.Itoa(version) + `"`,
+		})
+	}
+	db, queries := newProfileVersionTestDB(t, responses)
+	defer db.Close()
+	err := (&Snowflake{db: db}).finalizePublishedProfiles(t.Context(), db, "published-operation", nil)
+	if err != nil {
+		t.Fatalf("expected bounded cleanup to succeed, got %v", err)
+	}
+	if len(*queries) != len(responses) {
+		t.Fatalf("expected %d statements, got %d", len(responses), len(*queries))
+	}
+
+}
+
+// TestDropObsoleteProfileTables verifies that obsolete profile table versions
+// are validated before any tables are dropped.
+func TestDropObsoleteProfileTables(t *testing.T) {
+
+	const maxTables = 10
+	const publishedProfilesVersion = maxTables + 10
+	limitValues := make([]driver.Value, maxTables)
 	for i := range limitValues {
 		limitValues[i] = int64(i)
 	}
-	surplusValues := append(append([]driver.Value{}, limitValues...), "must not be scanned")
+	surplusValues := append([]driver.Value(nil), limitValues...)
+	surplusValues = append(surplusValues, "must not be scanned")
 	for _, tc := range []struct {
 		name         string
 		values       []driver.Value
+		wantDropped  []int
 		wantError    string
 		wantAnyError bool
 	}{
 		{name: "empty"},
-		{name: "valid", values: []driver.Value{int64(0), int64(1)}},
-		{name: "duplicates", values: []driver.Value{int64(1), int64(1)}},
-		{name: "limit", values: limitValues},
+		{name: "valid", values: []driver.Value{int64(0), int64(1)}, wantDropped: []int{0, 1}},
+		{
+			name:        "last valid",
+			values:      []driver.Value{int64(publishedProfilesVersion - 1)},
+			wantDropped: []int{publishedProfilesVersion - 1},
+		},
+		{name: "duplicates", values: []driver.Value{int64(1), int64(1)}, wantDropped: []int{1, 1}},
+		{name: "limit", values: limitValues, wantDropped: []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}},
 		{
 			name:      "surplus",
 			values:    surplusValues,
-			wantError: "warehouse returned too many obsolete profile table versions",
+			wantError: "warehouse returned an unexpected number of profile table versions",
 		},
 		{
 			name:      "negative",
@@ -101,13 +150,23 @@ func TestObsoleteProfilesTableVersionsValidation(t *testing.T) {
 			wantError: "warehouse returned an invalid obsolete profile table version -1",
 		},
 		{
-			name:   "published",
-			values: []driver.Value{int64(maxObsoleteProfilesTableVersions + 1)},
+			name:      "negative after valid",
+			values:    []driver.Value{int64(0), int64(-1)},
+			wantError: "warehouse returned an invalid obsolete profile table version -1",
+		},
+		{
+			name:   "equal to published version",
+			values: []driver.Value{int64(publishedProfilesVersion)},
 			wantError: fmt.Sprintf("warehouse returned an invalid obsolete profile table version %d",
-				maxObsoleteProfilesTableVersions+1),
+				publishedProfilesVersion),
 		},
 		{name: "missing", values: []driver.Value{nil}, wantAnyError: true},
 		{name: "fractional", values: []driver.Value{"1.5"}, wantAnyError: true},
+		{
+			name:         "scan error after valid",
+			values:       []driver.Value{int64(0), "1.5"},
+			wantAnyError: true,
+		},
 		{name: "overflow", values: []driver.Value{"9223372036854775808"}, wantAnyError: true},
 	} {
 
@@ -117,20 +176,26 @@ func TestObsoleteProfilesTableVersionsValidation(t *testing.T) {
 			for i, value := range tc.values {
 				rows[i] = []driver.Value{value}
 			}
-			db, _ := newCheckReadOnlyTestDB(t, []checkReadOnlyQuery{{
-				match: "LIMIT " + strconv.Itoa(maxObsoleteProfilesTableVersions+1),
-				cols:  []string{"VERSION"},
-				rows:  rows,
-			}})
+			responses := []checkReadOnlyQuery{{
+				suffix: "LIMIT " + strconv.Itoa(maxTables),
+				cols:   []string{"VERSION"},
+				rows:   rows,
+			}}
+			for _, version := range tc.wantDropped {
+				responses = append(responses, checkReadOnlyQuery{
+					match: `DROP TABLE IF EXISTS "KRENALIS_PROFILES_` + strconv.Itoa(version) + `"`,
+				})
+			}
+			db, queries := newProfileVersionTestDB(t, responses)
 			defer db.Close()
-			versions, err := obsoleteProfilesTableVersions(t.Context(), db, maxObsoleteProfilesTableVersions+1)
+			err := dropObsoleteProfileTables(t.Context(), db, publishedProfilesVersion, maxTables)
 			if db.Stats().InUse != 0 {
 				t.Fatal("result rows were not closed")
 			}
+			if got, want := len(*queries), 1+len(tc.wantDropped); got != want {
+				t.Fatalf("expected %d statements, got %d", want, got)
+			}
 			if err != nil {
-				if versions != nil {
-					t.Fatal("returned a partial cleanup list")
-				}
 				if tc.wantError != "" {
 					if err.Error() != tc.wantError {
 						t.Fatalf("unexpected validation error: %v", err)
@@ -143,15 +208,7 @@ func TestObsoleteProfilesTableVersionsValidation(t *testing.T) {
 				t.Fatal(err)
 			}
 			if tc.wantError != "" || tc.wantAnyError {
-				t.Fatalf("expected an error, got versions %v", versions)
-			}
-			if len(versions) != len(tc.values) {
-				t.Fatalf("unexpected version count %d without an error", len(versions))
-			}
-			for i, version := range versions {
-				if int64(version) != tc.values[i] {
-					t.Fatalf("row %d: unexpected version %d", i, version)
-				}
+				t.Fatal("expected an error, got nil")
 			}
 
 		})

@@ -4,7 +4,7 @@ import Type from '../../../lib/api/types/types';
 import {
 	DURATION_UNIT_OPTIONS,
 	getPropertyValueType,
-	getTypeSemantic,
+	getTypeSemantics,
 	toKrenalisStringType,
 } from '../../helpers/types';
 
@@ -28,7 +28,7 @@ interface PresentationOptions {
 }
 
 const SchemaPropertyType = ({ catalogOption, context, description, type }: SchemaPropertyTypeProps) => {
-	const semantic = getTypeSemantic(getPropertyValueType(type));
+	const semantic = getTypeSemantics(getPropertyValueType(type));
 	if (context === 'details') {
 		const physicalType = toCompactPhysicalType(type);
 		const semanticLabel = semantic == null ? null : toSemanticLabel(type, context);
@@ -80,7 +80,7 @@ const getSchemaPropertyTypePresentation = (
 	context: Exclude<SchemaPropertyTypeContext, 'details'>,
 	options: PresentationOptions = {},
 ): SchemaPropertyTypePresentation => {
-	const semantic = getTypeSemantic(getPropertyValueType(type));
+	const semantic = getTypeSemantics(getPropertyValueType(type));
 	if (semantic == null) {
 		let primary: string;
 		if (context === 'trigger' || options.catalogOption) {
@@ -157,7 +157,7 @@ const withPropertyStructure = (type: Type, label: string): string => {
 
 const toSemanticLabel = (type: Type, context: SchemaPropertyTypeContext): string => {
 	const valueType = getPropertyValueType(type);
-	const semantic = getTypeSemantic(valueType);
+	const semantic = getTypeSemantics(valueType);
 	switch (semantic) {
 		case 'email':
 			return 'email';

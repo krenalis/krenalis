@@ -33,8 +33,8 @@ const filterSchema: ObjectType = {
 	properties: [
 		{
 			name: 'email',
+			displayName: '',
 			prefilled: '',
-			role: 'Both',
 			type: { kind: 'string' },
 			createRequired: false,
 			updateRequired: false,
@@ -242,7 +242,7 @@ test(`Normalize filter drafts without silently accepting partial conditions`, ()
 			{ property: 'email', operator: 'contains', values: ['example.com'] },
 		],
 	};
-	expect(validateAndNormalizeFilter(filter, filterSchema, 'Destination', 'User')).toEqual({
+	expect(validateAndNormalizeFilter(filter, filterSchema)).toEqual({
 		operator: 'and',
 		rules: [{ property: 'email', operator: 'contains', values: ['example.com'] }],
 	});
@@ -250,16 +250,12 @@ test(`Normalize filter drafts without silently accepting partial conditions`, ()
 		validateAndNormalizeFilter(
 			{ operator: 'and', rules: [{ property: 'email', operator: 'contains', values: [''] }] },
 			filterSchema,
-			'Destination',
-			'User',
 		),
 	).toThrow('cannot be empty');
 	expect(
 		validateAndNormalizeFilter(
 			{ operator: 'and', rules: [{ property: 'email', operator: 'does not exist', values: [] }] },
 			filterSchema,
-			'Destination',
-			'User',
 		),
 	).toEqual({ operator: 'and', rules: [{ property: 'email', operator: 'does not exist' }] });
 });

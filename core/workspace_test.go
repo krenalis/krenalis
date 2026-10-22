@@ -110,7 +110,7 @@ func TestWorkspaceEncodeJSON(t *testing.T) {
 }
 
 // TestWorkspaceMarshalJSON verifies that json.Marshal encodes nil Workspace
-// collection fields using their empty JSON representations.
+// collection fields as null.
 func TestWorkspaceMarshalJSON(t *testing.T) {
 
 	value, err := json.Marshal(Workspace{})
@@ -122,8 +122,8 @@ func TestWorkspaceMarshalJSON(t *testing.T) {
 		name string
 		want string
 	}{
-		{name: "primarySources", want: "{}"},
-		{name: "identifiers", want: "[]"},
+		{name: "primarySources", want: "null"},
+		{name: "identifiers", want: "null"},
 	}
 
 	for _, test := range tests {

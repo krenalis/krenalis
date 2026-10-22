@@ -3,18 +3,26 @@ import { ObjectType, Property } from '../../../lib/api/types/types';
 import { GridColumn, GridRow, StandardGridRow } from '../../base/Grid/Grid.types';
 import AppContext from '../../../context/AppContext';
 import TransformedConnection from '../../../lib/core/connection';
-import { PrimarySources, ProfileRoleAssignments, ProfileRoleID } from '../../../lib/api/types/workspace';
+import {
+	ConsentPurpose,
+	PrimarySources,
+	ProfileRoleAssignments,
+	ProfileRoleID,
+} from '../../../lib/api/types/workspace';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { getAssignedProfileRole, getProfileRole } from '../../helpers/profileRoles';
 import { SchemaPropertyIdentifierBadge, SchemaPropertyName } from '../Schema/SchemaPropertyGrid';
 import { getSchemaPropertyTypePresentation, SchemaPropertyType } from '../Schema/SchemaPropertyType';
+import { SchemaContext } from '../../../context/SchemaContext';
+import { SchemaPropertyConsent } from '../Schema/SchemaPropertyConsent';
+import { getConsentPurposesByPropertyPath } from '../Schema/SchemaPropertyConsent.helpers';
 
 const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Property' },
 	{ name: 'Type' },
 	{ name: 'Identifier', alignment: 'center' },
-	{ name: 'Profile role' },
+	{ name: 'Role' },
 	{ name: 'Primary source' },
 ];
 
@@ -26,10 +34,15 @@ const useSchemaGrid = (
 	onSelectProperty: (path: string) => void,
 ) => {
 	const { workspaces, selectedWorkspace, connections } = useContext(AppContext);
+	const { consentPurposes } = useContext(SchemaContext);
 	const workspace = workspaces.find((candidate) => candidate.id === selectedWorkspace);
 	const identifierPositions = useMemo(
 		() => new Map(workspace.identifiers.map((identifier, index) => [identifier, index + 1])),
 		[workspace],
+	);
+	const consentPurposesByPropertyPath = useMemo(
+		() => (schema == null ? new Map() : getConsentPurposesByPropertyPath(schema, consentPurposes)),
+		[consentPurposes, schema],
 	);
 
 	const rows = useMemo(() => {
@@ -42,12 +55,14 @@ const useSchemaGrid = (
 			workspace.assignedRoles,
 			connections,
 			identifierPositions,
+			consentPurposesByPropertyPath,
 			search.trim().toLocaleLowerCase(),
 			selectedPropertyPath,
 			onSelectProperty,
 		);
 	}, [
 		connections,
+		consentPurposesByPropertyPath,
 		identifierPositions,
 		isLoading,
 		onSelectProperty,
@@ -68,6 +83,7 @@ const useSchemaGrid = (
 			return null;
 		}
 		return {
+			assignedRole: getAssignedProfileRole(workspace.assignedRoles, selectedPropertyPath),
 			identifierPosition: identifierPositions.get(selectedPropertyPath),
 			path: selectedPropertyPath,
 			primarySource: getPrimarySource(selectedPropertyPath, workspace.primarySources, connections),
@@ -93,6 +109,7 @@ const getRows = (
 	assignedRoles: ProfileRoleAssignments,
 	connections: TransformedConnection[],
 	identifierPositions: ReadonlyMap<string, number>,
+	consentPurposesByPropertyPath: ReadonlyMap<string, ConsentPurpose[]>,
 	search: string,
 	selectedPropertyPath: string | null,
 	onSelectProperty: (path: string) => void,
@@ -127,6 +144,7 @@ const getRows = (
 				assignedRoles,
 				connections,
 				identifierPositions,
+				consentPurposesByPropertyPath,
 				search,
 				selectedPropertyPath,
 				onSelectProperty,
@@ -144,6 +162,7 @@ const getRows = (
 			primarySource,
 			identifierPositions.get(path),
 			assignedRole,
+			consentPurposesByPropertyPath.get(path),
 			selectedPropertyPath === path,
 			search !== '',
 			onSelectProperty,
@@ -163,11 +182,17 @@ const buildRow = (
 	primarySource: TransformedConnection | null,
 	identifierPosition: number | undefined,
 	assignedRole: ProfileRoleID | null,
+	consentPurposes: ConsentPurpose[] | undefined,
 	selected: boolean,
 	forceExpanded: boolean,
 	onSelectProperty: (path: string) => void,
 ): StandardGridRow => {
-	const typeCell: ReactNode = <SchemaPropertyType context='grid' type={property.type} />;
+	const typeCell: ReactNode = (
+		<>
+			<SchemaPropertyType context='grid' type={property.type} />
+			<SchemaPropertyConsent purposes={consentPurposes} />
+		</>
+	);
 	let primarySourceCell: ReactNode = <span className='schema-grid__empty-cell'>—</span>;
 	if (property.type.kind !== 'object' && property.type.kind !== 'array') {
 		if (primarySource != null) {

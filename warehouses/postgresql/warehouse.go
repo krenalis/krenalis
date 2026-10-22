@@ -20,7 +20,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/tools/json"
-	"github.com/krenalis/krenalis/tools/prometheus"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
@@ -151,6 +150,154 @@ func (warehouse *PostgreSQL) ColumnTypeDescription(t types.Type) (string, error)
 	return typeToPostgresType(t), nil
 }
 
+// CountIdentities counts anonymous and recognized identities, including those
+// without a profile, from the provided pipelines, grouped by connection.
+func (warehouse *PostgreSQL) CountIdentities(ctx context.Context, pipelines []string) (*warehouses.IdentityCounts, error) {
+
+	const maxConnectionLength = 12
+	counts := &warehouses.IdentityCounts{
+		Anonymous:      make(map[string]int, len(pipelines)),
+		Recognized:     make(map[string]int, len(pipelines)),
+		WithoutProfile: make(map[string]int, len(pipelines)),
+	}
+	if len(pipelines) == 0 {
+		return counts, nil
+	}
+
+	pool, _, err := warehouse.connectionPool(ctx, false)
+	if err != nil {
+		return nil, err
+	}
+
+	const query = `
+WITH selected_identities AS (
+	SELECT
+		"_pipeline",
+		"_is_anonymous",
+		"_identity_id",
+		"_connection",
+		"_kpid",
+		MIN("_pipeline") OVER (PARTITION BY "_connection")
+			= MAX("_pipeline") OVER (PARTITION BY "_connection") AS single_pipeline
+	FROM "krenalis_identities"
+	WHERE "_pipeline" = ANY($1::text[])
+),
+product_identities AS (
+	SELECT
+		"_connection",
+		"_is_anonymous",
+		"_identity_id",
+		single_pipeline,
+		COUNT(*) AS row_count,
+		BOOL_OR("_kpid" IS NOT NULL) AS assigned
+	FROM selected_identities
+	GROUP BY "_connection", "_is_anonymous", "_identity_id", single_pipeline
+)
+SELECT
+	LEFT("_connection", $2) AS "_connection",
+	SUM(CASE WHEN "_is_anonymous"
+		THEN CASE WHEN single_pipeline THEN row_count ELSE 1 END
+		ELSE 0 END)::bigint AS anonymous_count,
+	SUM(CASE WHEN NOT "_is_anonymous"
+		THEN CASE WHEN single_pipeline THEN row_count ELSE 1 END
+		ELSE 0 END)::bigint AS recognized_count,
+	COUNT(*) FILTER (WHERE NOT assigned) AS without_profile_count
+FROM product_identities
+GROUP BY "_connection"
+LIMIT $3`
+
+	rows, err := pool.Query(ctx, query, pipelines, maxConnectionLength+1, len(pipelines)+1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	rowCount := 0
+	for rows.Next() {
+		if rowCount == len(pipelines) {
+			return nil, errors.New("identity counts contain too many connections")
+		}
+		rowCount++
+		var connection string
+		var anonymous, recognized, withoutProfile int
+		if err := rows.Scan(&connection, &anonymous, &recognized, &withoutProfile); err != nil {
+			return nil, err
+		}
+		if len(connection) > maxConnectionLength {
+			return nil, errors.New("identity counts contain an oversized connection identifier")
+		}
+		if anonymous > 0 {
+			counts.Anonymous[connection] = anonymous
+		}
+		if recognized > 0 {
+			counts.Recognized[connection] = recognized
+		}
+		if withoutProfile > 0 {
+			counts.WithoutProfile[connection] = withoutProfile
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if err := warehouses.ValidateIdentityCounts(counts); err != nil {
+		return nil, err
+	}
+
+	return counts, nil
+}
+
+// Counts returns one row count for each condition on the table.
+func (warehouse *PostgreSQL) Counts(ctx context.Context, table string, conditions []warehouses.Expr) ([]int, error) {
+
+	if conditions == nil {
+		conditions = []warehouses.Expr{nil}
+	}
+	if len(conditions) == 0 {
+		return nil, errors.New("conditions are empty")
+	}
+
+	pool, _, err := warehouse.connectionPool(ctx, false)
+	if err != nil {
+		return nil, err
+	}
+
+	var b strings.Builder
+	b.WriteString("SELECT ")
+	for i, condition := range conditions {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		if condition == nil {
+			b.WriteString("COUNT(*)")
+			continue
+		}
+		b.WriteString("COUNT(CASE WHEN ")
+		err = renderExpr(&b, condition)
+		if err != nil {
+			return nil, fmt.Errorf("cannot build count condition: %s", err)
+		}
+		b.WriteString(" THEN 1 END)")
+	}
+	b.WriteString(" FROM ")
+	b.WriteString(quoteIdent(table))
+
+	counts := make([]int, len(conditions))
+	values := make([]any, len(counts))
+	for i := range counts {
+		values[i] = &counts[i]
+	}
+	err = pool.QueryRow(ctx, b.String()).Scan(values...)
+	if err != nil {
+		return nil, err
+	}
+	for _, count := range counts {
+		if count < 0 || count > math.MaxInt32 {
+			return nil, fmt.Errorf("warehouse returned count outside the supported range: %d", count)
+		}
+	}
+
+	return counts, nil
+}
+
 // Delete deletes rows from the specified table that match the provided where
 // expression.
 func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where warehouses.Expr) error {
@@ -176,8 +323,6 @@ func (warehouse *PostgreSQL) Delete(ctx context.Context, table string, where war
 
 // Merge performs a table merge operation.
 func (warehouse *PostgreSQL) Merge(ctx context.Context, table warehouses.Table, rows [][]any, deleted []any) error {
-	prometheus.Increment("warehouses.PostgreSQL.Merge.calls", 1)
-	prometheus.Increment("warehouses.PostgreSQL.Merge.passed_rows", len(rows))
 	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {
 		return err
@@ -204,9 +349,6 @@ var immutableMergeIdentitiesColumns = []string{
 // MergeIdentities merges existing identities, deletes them, and inserts new
 // ones.
 func (warehouse *PostgreSQL) MergeIdentities(ctx context.Context, columns []warehouses.Column, rows []map[string]any) error {
-
-	prometheus.Increment("warehouses.PostgreSQL.MergeIdentities.calls", 1)
-	prometheus.Increment("warehouses.PostgreSQL.MergeIdentities.passed_rows", len(rows))
 
 	pool, _, err := warehouse.connectionPool(ctx, false)
 	if err != nil {

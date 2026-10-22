@@ -1,4 +1,4 @@
-import Type, { DurationUnit, Semantic, UnitOfMeasure } from '../../lib/api/types/types';
+import Type, { DurationUnit, Semantics, UnitOfMeasure } from '../../lib/api/types/types';
 
 interface UnitOfMeasureOption {
 	groupLabel?: string;
@@ -10,6 +10,11 @@ interface DurationUnitOption {
 	label: string;
 	symbol: string;
 	value: DurationUnit;
+}
+
+interface ProfileSchemaTypePresentation {
+	metadata?: string;
+	primary: string;
 }
 
 const UNIT_OF_MEASURE_OPTIONS: UnitOfMeasureOption[] = [
@@ -51,8 +56,46 @@ function getPropertyValueType(type: Type | null): Type | null {
 	return type;
 }
 
-function getTypeSemantic(type: Type | null): Semantic | undefined {
-	return type != null && 'semantic' in type ? type.semantic : undefined;
+function getProfileSchemaTypePresentation(type: Type): ProfileSchemaTypePresentation {
+	const valueType = getPropertyValueType(type);
+	const semantics = getTypeSemantics(valueType);
+	if (semantics == null) {
+		return { primary: toProfileSchemaPhysicalType(type) };
+	}
+
+	let primary = toSemanticsLabel(semantics);
+	switch (semantics) {
+		case 'country': {
+			const letters = valueType.kind === 'string' && valueType.format === 'alpha-2' ? 2 : 3;
+			primary += ` — ${letters}-letter ISO code`;
+			break;
+		}
+		case 'money':
+			if (valueType.kind === 'decimal' && valueType.currency != null) {
+				primary += ` — ${valueType.currency}`;
+			}
+			break;
+		case 'measurement':
+			if ('unit' in valueType) {
+				primary += ` — ${valueType.unit}`;
+			}
+			break;
+		case 'duration': {
+			const unit = DURATION_UNIT_OPTIONS.find((option) => 'unit' in valueType && option.value === valueType.unit);
+			if (unit != null) {
+				primary += ` — ${unit.symbol}`;
+			}
+			break;
+		}
+	}
+	if (type.kind === 'array' || type.kind === 'map') {
+		primary = `${type.kind} of ${primary}`;
+	}
+	return { primary, metadata: toProfileSchemaPhysicalType(valueType) };
+}
+
+function getTypeSemantics(type: Type | null): Semantics | undefined {
+	return type != null && 'semantics' in type ? type.semantics : undefined;
 }
 
 function isSuitableAsIdentifier(type: Type): boolean {
@@ -74,6 +117,45 @@ function replacePropertyValueType(type: Type, valueType: Type): Type {
 		return { ...type, elementType: valueType };
 	}
 	return valueType;
+}
+
+function toCompactPhysicalType(type: Type): string {
+	switch (type.kind) {
+		case 'array':
+		case 'map':
+			return `${type.kind} of ${toCompactPhysicalType(type.elementType)}`;
+		case 'int':
+			return type.unsigned ? 'unsigned int' : 'int';
+		default:
+			return type.kind;
+	}
+}
+
+function toProfileSchemaPhysicalType(type: Type): string {
+	if (type.kind === 'array' || type.kind === 'map') {
+		return `${type.kind} of ${toProfileSchemaPhysicalType(type.elementType)}`;
+	}
+	const normalizedType =
+		type.kind === 'int' && type.unsigned && type.minimum == null ? { ...type, minimum: 0 } : type;
+	return toKrenalisStringType(normalizedType, undefined, ' · ');
+}
+
+function toSemanticsLabel(semantics: Semantics): string {
+	switch (semantics) {
+		case 'phone':
+			return 'phone number';
+		case 'url':
+			return 'URL';
+		case 'email':
+		case 'country':
+		case 'money':
+		case 'percentage':
+		case 'measurement':
+		case 'duration':
+			return semantics;
+		default:
+			throw new Error(`unknown property semantics ${semantics satisfies never}`);
+	}
 }
 
 function toKrenalisStringType(type: Type, nullable?: boolean, firstConstraintSeparator = ', ') {
@@ -288,9 +370,13 @@ export {
 	DURATION_UNIT_OPTIONS,
 	UNIT_OF_MEASURE_OPTIONS,
 	getPropertyValueType,
-	getTypeSemantic,
+	getProfileSchemaTypePresentation,
+	getTypeSemantics,
 	isSuitableAsIdentifier,
 	replacePropertyValueType,
+	toCompactPhysicalType,
+	toProfileSchemaPhysicalType,
+	toSemanticsLabel,
 	toKrenalisStringType,
 	toJavascriptType,
 	toPythonType,

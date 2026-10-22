@@ -114,7 +114,7 @@ func TestUsageMetricsHTTPContract(t *testing.T) {
 
 	createPipelineMetricsFixture(t, k)
 	k.RunIdentityResolutionAndWait()
-	_, _, total := k.Profiles(nil, "", false, 0, 100)
+	_, total := k.Profiles(nil, "", false, 0, 100)
 	k.Call("GET", path, nil, nil, &workspaceMetrics)
 	today := usageDay(t, workspaceMetrics, now.Format(time.DateOnly))
 	if today.Profiles != total {

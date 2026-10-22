@@ -6,7 +6,7 @@ import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
 import Type, { DurationUnit, TypeKind, UnitOfMeasure } from '../../../lib/api/types/types';
-import { getPropertyValueType, getTypeSemantic } from '../../helpers/types';
+import { getPropertyValueType, getTypeSemantics } from '../../helpers/types';
 import { SchemaPropertyType } from '../Schema/SchemaPropertyType';
 
 type PropertyStructure = 'one' | 'array' | 'object' | 'map';
@@ -88,22 +88,22 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 	{
 		id: 'email',
 		kind: 'string',
-		create: () => ({ kind: 'string', semantic: 'email' }),
+		create: () => ({ kind: 'string', semantics: 'email' }),
 	},
 	{
 		id: 'phone',
 		kind: 'string',
-		create: () => ({ kind: 'string', semantic: 'phone' }),
+		create: () => ({ kind: 'string', semantics: 'phone' }),
 	},
 	{
 		id: 'country',
 		kind: 'string',
-		create: () => ({ kind: 'string', semantic: 'country', format: 'alpha-2' }),
+		create: () => ({ kind: 'string', semantics: 'country', format: 'alpha-2' }),
 	},
 	{
 		id: 'url',
 		kind: 'string',
-		create: () => ({ kind: 'string', semantic: 'url' }),
+		create: () => ({ kind: 'string', semantics: 'url' }),
 	},
 	{
 		id: 'string',
@@ -122,7 +122,7 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 		id: 'duration',
 		kind: 'int',
 		separated: true,
-		create: () => ({ kind: 'int', bitSize: 64, unsigned: false, semantic: 'duration', unit: EMPTY_DURATION_UNIT }),
+		create: () => ({ kind: 'int', bitSize: 64, unsigned: false, semantics: 'duration', unit: EMPTY_DURATION_UNIT }),
 	},
 	{
 		id: 'int',
@@ -141,19 +141,19 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 		id: 'money',
 		kind: 'decimal',
 		separated: true,
-		create: () => ({ ...PROFILE_SEMANTIC_DECIMAL_TYPE, semantic: 'money' }),
+		create: () => ({ ...PROFILE_SEMANTIC_DECIMAL_TYPE, semantics: 'money' }),
 	},
 	{
 		id: 'percentage',
 		kind: 'decimal',
-		create: () => ({ ...PROFILE_SEMANTIC_DECIMAL_TYPE, semantic: 'percentage' }),
+		create: () => ({ ...PROFILE_SEMANTIC_DECIMAL_TYPE, semantics: 'percentage' }),
 	},
 	{
 		id: 'measurement',
 		kind: 'decimal',
 		create: () => ({
 			...PROFILE_SEMANTIC_DECIMAL_TYPE,
-			semantic: 'measurement',
+			semantics: 'measurement',
 			unit: EMPTY_UNIT_OF_MEASURE,
 		}),
 	},
@@ -279,9 +279,9 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 			}
 			const selection = option.create();
 			let nextValueType = valueType;
-			if (canEditType && (getTypeSemantic(selection) != null || valueType?.kind !== option.kind)) {
+			if (canEditType && (getTypeSemantics(selection) != null || valueType?.kind !== option.kind)) {
 				nextValueType = selection;
-			} else if (canEditType && valueType != null && getTypeSemantic(valueType) != null) {
+			} else if (canEditType && valueType != null && getTypeSemantics(valueType) != null) {
 				nextValueType = withoutSemantic(valueType);
 			}
 			if (nextValueType == null) {
@@ -362,7 +362,7 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 								aria-label={valueType == null ? 'Select type' : undefined}
 							>
 								{valueType == null ? (
-									<span className='property-type-selector__placeholder'>Select type...</span>
+									<span className='property-form__placeholder'>Select type...</span>
 								) : (
 									<SchemaPropertyType context='trigger' type={valueType} />
 								)}
@@ -424,14 +424,14 @@ const getPropertyStructure = (type: Type | null): PropertyStructure => {
 
 const getPropertyTypeOption = (type: Type | null): PropertyTypeOption | undefined => {
 	const valueType = getPropertyValueType(type);
-	const id: PropertyTypeOptionID | undefined = getTypeSemantic(valueType) ?? valueType?.kind;
+	const id: PropertyTypeOptionID | undefined = getTypeSemantics(valueType) ?? valueType?.kind;
 	return PROPERTY_TYPE_OPTIONS.find((option) => option.id === id);
 };
 
 const withoutSemantic = (type: Type): Type => {
 	const result = { ...type };
-	if ('semantic' in result) {
-		delete result.semantic;
+	if ('semantics' in result) {
+		delete result.semantics;
 	}
 	if (result.kind === 'string') {
 		delete result.format;

@@ -188,11 +188,6 @@
 	color: var(--sl-color-primary-600);
 }
 
-.property-type-selector__placeholder {
-	color: var(--sl-input-placeholder-color);
-	font-weight: var(--sl-font-weight-normal);
-}
-
 .property-type-selector__browser {
 	background-color: var(--sl-panel-background-color);
 	border: solid var(--sl-panel-border-width) var(--sl-panel-border-color);

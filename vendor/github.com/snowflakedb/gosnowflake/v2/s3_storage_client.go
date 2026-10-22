@@ -6,16 +6,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/smithy-go"
-	"github.com/aws/smithy-go/logging"
 	"io"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/smithy-go"
+	"github.com/aws/smithy-go/logging"
 )
 
 const (
@@ -82,7 +83,7 @@ func getS3CustomEndpoint(info *execResponseStageInfo) *string {
 	var endPoint *string
 	isRegionalURLEnabled := info.UseRegionalURL || info.UseS3RegionalURL
 	if info.EndPoint != "" {
-		tmp := fmt.Sprintf("https://%s", info.EndPoint)
+		tmp := "https://" + info.EndPoint
 		endPoint = &tmp
 	} else if info.Region != "" && isRegionalURLEnabled {
 		domainSuffixForRegionalURL := "amazonaws.com"
@@ -176,7 +177,7 @@ func convertContentLength(contentLength any) int64 {
 }
 
 type s3UploadAPI interface {
-	Upload(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*manager.Uploader)) (*manager.UploadOutput, error)
+	UploadObject(ctx context.Context, params *transfermanager.UploadObjectInput, optFns ...func(*transfermanager.Options)) (*transfermanager.UploadObjectOutput, error)
 }
 
 // cloudUtil implementation
@@ -208,10 +209,13 @@ func (util *snowflakeS3Client) uploadFile(
 			Message: "failed to cast to s3 client",
 		}
 	}
+	const minS3PartSize = 5 * 1024 * 1024 // AWS S3 minimum part size
 	var uploader s3UploadAPI
-	uploader = manager.NewUploader(client, func(u *manager.Uploader) {
-		u.Concurrency = maxConcurrency
-		u.PartSize = int64Max(multiPartThreshold, manager.DefaultUploadPartSize)
+	partSize := max(multiPartThreshold, minS3PartSize)
+	uploader = transfermanager.New(client, func(o *transfermanager.Options) {
+		o.Concurrency = maxConcurrency
+		o.PartSizeBytes = partSize
+		o.MultipartUploadThreshold = partSize // Files >= this size use multipart
 	})
 	// for testing only
 	if meta.mockUploader != nil {
@@ -221,7 +225,7 @@ func (util *snowflakeS3Client) uploadFile(
 	_, err = withCloudStorageTimeout(ctx, util.cfg, func(ctx context.Context) (any, error) {
 		if meta.srcStream != nil {
 			uploadStream := cmp.Or(meta.realSrcStream, meta.srcStream)
-			return uploader.Upload(ctx, &s3.PutObjectInput{
+			return uploader.UploadObject(ctx, &transfermanager.UploadObjectInput{
 				Bucket:   &s3loc.bucketName,
 				Key:      &s3path,
 				Body:     bytes.NewBuffer(uploadStream.Bytes()),
@@ -238,7 +242,7 @@ func (util *snowflakeS3Client) uploadFile(
 				logger.Warnf("failed to close %v file: %v", dataFile, err)
 			}
 		}()
-		return uploader.Upload(ctx, &s3.PutObjectInput{
+		return uploader.UploadObject(ctx, &transfermanager.UploadObjectInput{
 			Bucket:   &s3loc.bucketName,
 			Key:      &s3path,
 			Body:     file,
@@ -269,7 +273,32 @@ func (util *snowflakeS3Client) uploadFile(
 }
 
 type s3DownloadAPI interface {
-	Download(ctx context.Context, w io.WriterAt, params *s3.GetObjectInput, optFns ...func(*manager.Downloader)) (int64, error)
+	DownloadObject(ctx context.Context, params *transfermanager.DownloadObjectInput, optFns ...func(*transfermanager.Options)) (*transfermanager.DownloadObjectOutput, error)
+}
+
+// writeAtBuffer wraps a bytes.Buffer to implement io.WriterAt for parallel downloads
+type writeAtBuffer struct {
+	buf []byte
+}
+
+func newWriteAtBuffer(buf []byte) *writeAtBuffer {
+	return &writeAtBuffer{buf: buf}
+}
+
+func (b *writeAtBuffer) WriteAt(p []byte, pos int64) (n int, err error) {
+	pLen := len(p)
+	expLen := pos + int64(pLen)
+	if int64(len(b.buf)) < expLen {
+		newBuf := make([]byte, expLen)
+		copy(newBuf, b.buf)
+		b.buf = newBuf
+	}
+	copy(b.buf[pos:], p)
+	return pLen, nil
+}
+
+func (b *writeAtBuffer) Bytes() []byte {
+	return b.buf
 }
 
 // cloudUtil implementation
@@ -288,10 +317,13 @@ func (util *snowflakeS3Client) nativeDownloadFile(
 	}
 	logger.Debugf("S3 Client: Send Get Request to the Bucket: %v", meta.stageInfo.Location)
 
+	const minS3PartSize = 5 * 1024 * 1024 // AWS S3 minimum part size
 	var downloader s3DownloadAPI
-	downloader = manager.NewDownloader(client, func(u *manager.Downloader) {
-		u.Concurrency = int(maxConcurrency)
-		u.PartSize = int64Max(partSize, manager.DefaultDownloadPartSize)
+	downloadPartSize := max(partSize, minS3PartSize)
+	downloader = transfermanager.New(client, func(o *transfermanager.Options) {
+		o.Concurrency = int(maxConcurrency)
+		o.PartSizeBytes = downloadPartSize
+		o.MultipartUploadThreshold = downloadPartSize // Downloads >= this size use multipart
 	})
 	// for testing only
 	if meta.mockDownloader != nil {
@@ -300,10 +332,11 @@ func (util *snowflakeS3Client) nativeDownloadFile(
 
 	_, err := withCloudStorageTimeout(ctx, util.cfg, func(ctx context.Context) (any, error) {
 		if isFileGetStream(ctx) {
-			buf := manager.NewWriteAtBuffer([]byte{})
-			if _, err := downloader.Download(ctx, buf, &s3.GetObjectInput{
-				Bucket: s3Obj.Bucket,
-				Key:    s3Obj.Key,
+			buf := newWriteAtBuffer([]byte{})
+			if _, err := downloader.DownloadObject(ctx, &transfermanager.DownloadObjectInput{
+				Bucket:   s3Obj.Bucket,
+				Key:      s3Obj.Key,
+				WriterAt: buf,
 			}); err != nil {
 				return nil, err
 			}
@@ -318,9 +351,10 @@ func (util *snowflakeS3Client) nativeDownloadFile(
 					logger.Warnf("failed to close %v file: %v", fullDstFileName, err)
 				}
 			}()
-			if _, err = downloader.Download(ctx, f, &s3.GetObjectInput{
-				Bucket: s3Obj.Bucket,
-				Key:    s3Obj.Key,
+			if _, err = downloader.DownloadObject(ctx, &transfermanager.DownloadObjectInput{
+				Bucket:   s3Obj.Bucket,
+				Key:      s3Obj.Key,
+				WriterAt: f,
 			}); err != nil {
 				return nil, err
 			}
@@ -349,6 +383,42 @@ func (util *snowflakeS3Client) nativeDownloadFile(
 	}
 	meta.resStatus = downloaded
 	return nil
+}
+
+func (util *snowflakeS3Client) downloadToStream(ctx context.Context, meta *fileMetadata) (io.ReadCloser, error) {
+	s3Obj, err := util.getS3Object(meta, meta.srcFileName)
+	if err != nil {
+		return nil, err
+	}
+	client, ok := meta.client.(*s3.Client)
+	if !ok {
+		return nil, &SnowflakeError{Message: "failed to cast to s3 client"}
+	}
+	// Do not wrap GetObject in withCloudStorageTimeout: that helper cancels the
+	// request context when the API call returns, which aborts the response body.
+	out, err := client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: s3Obj.Bucket,
+		Key:    s3Obj.Key,
+	})
+	if err != nil {
+		var ae smithy.APIError
+		if errors.As(err, &ae) && ae.ErrorCode() == expiredToken {
+			meta.resStatus = renewToken
+		}
+		return nil, err
+	}
+	header := &fileHeader{
+		digest:        out.Metadata[sfcDigest],
+		contentLength: convertContentLength(out.ContentLength),
+	}
+	if out.Metadata[amzKey] != "" {
+		header.encryptionMetadata = &encryptMetadata{
+			out.Metadata[amzKey],
+			out.Metadata[amzIv],
+			out.Metadata[amzMatdesc],
+		}
+	}
+	return maybeDecryptStream(out.Body, header, meta.encryptionMaterial)
 }
 
 func (util *snowflakeS3Client) extractBucketNameAndPath(location string) (*s3Location, error) {

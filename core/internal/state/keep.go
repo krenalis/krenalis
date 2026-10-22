@@ -7,6 +7,7 @@ package state
 import (
 	"bytes"
 	stdjson "encoding/json"
+	"fmt"
 	"log/slog"
 	"slices"
 	"strings"
@@ -22,173 +23,146 @@ import (
 
 const logNotifications = false // Set to true to enable logging of received notifications.
 
-// keep keeps the state updated and in sync with the database.
-// It is called in its own goroutine.
-func (state *State) keep() {
+// applyNotification applies and dispatches a reconstructed trusted event,
+// then publishes the event's version and wakes version waiters.
+// The caller is responsible for ordering and deduplication. This method takes
+// no context because applying an event must run to completion once started.
+// A panic leaves the State unusable.
+func (state *State) applyNotification(n notification, client analytics.Client) error {
 
-	// If sending statistics is enabled, initialize the Krenalis analytics client.
-	var client analytics.Client
-	if state.sendStats {
-		client, _ = analytics.NewWithConfig("eEC2uyWaJ1XmFNEq0dkH0a872GzZChUV", analytics.Config{
-			Endpoint: "https://telemetry.krenalis.com/v1/events",
-			Logger:   discardLogger{}, // comment this line to debug sending of analytics data.
-		})
-		defer func() {
-			err := client.Close()
-			if err != nil {
-				slog.Error("error while closing analytics.Client", "error", err)
-			}
-		}()
+	if logNotifications {
+		slog.Info("core/state: received notification", "version", n.Version, "name", n.Name, "payload", n.Payload)
 	}
 
-	defer state.close.Done()
-
-	done := state.close.ctx.Done()
-	notifications := state.notifications.ch
-
-	var n notification
-
-	for {
-		select {
-		case <-done:
-			return
-		case n = <-notifications:
-		}
-		if logNotifications {
-			slog.Info("core/state: received notification", "version", n.Version, "name", n.Name, "payload", n.Payload)
-		}
-		var org string
-		state.changing.Lock()
-		// Multiple goroutines may read different parts of the state concurrently, but
-		// only this goroutine can write to it. Therefore, this goroutine can read the
-		// state without acquiring the corresponding locks.
-		switch n.Name {
-		case "AcceptInvitation":
-			org = state.acceptInvitation(n)
-		case "AddConsentPurpose":
-			org = state.addConsentPurpose(n)
-		case "AddMember":
-			org = state.addMember(n)
-		case "CreateAccessKey":
-			org = state.createAccessKey(n)
-		case "CreateConnection":
-			org = state.createConnection(n)
-		case "CreateOrganization":
-			org = state.createOrganization(n)
-		case "CreatePipeline":
-			org = state.createPipeline(n)
-		case "CreateWorkspace":
-			org = state.createWorkspace(n)
-		case "CreateEventWriteKey":
-			org = state.createEventWriteKey(n)
-		case "DeleteAccessKey":
-			org = state.deleteAccessKey(n)
-		case "DeleteConnection":
-			org = state.deleteConnection(n)
-		case "DeleteConsentPurpose":
-			org = state.deleteConsentPurpose(n)
-		case "DeleteEventWriteKey":
-			org = state.deleteEventWriteKey(n)
-		case "DeleteMember":
-			org = state.deleteMember(n)
-		case "DeleteMembers":
-			org = state.deleteMembers(n)
-		case "DeleteOrganization":
-			org = state.deleteOrganization(n)
-		case "DeletePipeline":
-			org = state.deletePipeline(n)
-		case "DeleteWorkspace":
-			org = state.deleteWorkspace(n)
-		case "ElectLeader":
-			state.electLeader(n)
-		case "EndAlterProfileSchema":
-			org = state.endAlterProfileSchema(n)
-		case "EndIdentityResolution":
-			org = state.endIdentityResolution(n)
-		case "EndPipelineRun":
-			org = state.endPipelineRun(n)
-		case "InviteMember":
-			org = state.inviteMember(n)
-		case "LinkConnection":
-			org = state.linkConnection(n)
-		case "PurgePipelines":
-			org = state.purgePipelines(n)
-		case "RenameConnection":
-			org = state.renameConnection(n)
-		case "RenameWorkspace":
-			org = state.renameWorkspace(n)
-		case "RunPipeline":
-			org = state.runPipeline(n)
-		case "SeeLeader":
-			state.seeLeader(n)
-		case "SetAccount":
-			org = state.setAccount(n)
-		case "SetConnectionSettings":
-			org = state.setConnectionSettings(n)
-		case "SetOrganizationStatus":
-			org = state.setOrganizationStatus(n)
-		case "SetPipelineFormatSettings":
-			org = state.setPipelineFormatSettings(n)
-		case "SetPipelineSchedulePeriod":
-			org = state.setPipelineSchedulePeriod(n)
-		case "SetPipelineStatus":
-			org = state.setPipelineStatus(n)
-		case "StartAlterProfileSchema":
-			org = state.startAlterProfileSchema(n)
-		case "StartIdentityResolution":
-			org = state.startIdentityResolution(n)
-		case "UnlinkConnection":
-			org = state.unlinkConnection(n)
-		case "UpdateConnection":
-			org = state.updateConnection(n)
-		case "UpdateConsentPurpose":
-			org = state.updateConsentPurpose(n)
-		case "UpdateIdentityPropertiesToUnset":
-			org = state.updateIdentityPropertiesToUnset(n)
-		case "UpdateIdentityResolutionSettings":
-			org = state.updateIdentityResolutionSettings(n)
-		case "UpdateOrganization":
-			org = state.updateOrganization(n)
-		case "UpdatePipeline":
-			org = state.updatePipeline(n)
-		case "UpdateWarehouse":
-			org = state.updateWarehouse(n)
-		case "UpdateWarehouseMode":
-			org = state.updateWarehouseMode(n)
-		case "UpdateWorkspace":
-			org = state.updateWorkspace(n)
-		default:
-			slog.Warn("core/internal/state: unknown notification", "version", n.Version, "name", n.Name, "payload", n.Payload)
-		}
-		// Notify any goroutines waiting for a new version.
-		if n.Version > 0 {
-			state.version.Lock()
-			state.version.current = n.Version
-			state.version.next.Broadcast()
-			state.version.Unlock()
-		}
+	var org string
+	state.changing.Lock()
+	// Multiple goroutines may read different parts of the state concurrently, but
+	// only this goroutine can write to it. Therefore, this goroutine can read the
+	// state without acquiring the corresponding locks.
+	switch n.Name {
+	case "AcceptInvitation":
+		org = state.acceptInvitation(n)
+	case "AddConsentPurpose":
+		org = state.addConsentPurpose(n)
+	case "AddMember":
+		org = state.addMember(n)
+	case "CreateAccessKey":
+		org = state.createAccessKey(n)
+	case "CreateConnection":
+		org = state.createConnection(n)
+	case "CreateOrganization":
+		org = state.createOrganization(n)
+	case "CreatePipeline":
+		org = state.createPipeline(n)
+	case "CreateWorkspace":
+		org = state.createWorkspace(n)
+	case "CreateEventWriteKey":
+		org = state.createEventWriteKey(n)
+	case "DeleteAccessKey":
+		org = state.deleteAccessKey(n)
+	case "DeleteConnection":
+		org = state.deleteConnection(n)
+	case "DeleteConsentPurpose":
+		org = state.deleteConsentPurpose(n)
+	case "DeleteEventWriteKey":
+		org = state.deleteEventWriteKey(n)
+	case "DeleteMember":
+		org = state.deleteMember(n)
+	case "DeleteMembers":
+		org = state.deleteMembers(n)
+	case "DeleteOrganization":
+		org = state.deleteOrganization(n)
+	case "DeletePipeline":
+		org = state.deletePipeline(n)
+	case "DeleteWorkspace":
+		org = state.deleteWorkspace(n)
+	case "ElectLeader":
+		state.electLeader(n)
+	case "EndAlterProfileSchema":
+		org = state.endAlterProfileSchema(n)
+	case "EndIdentityResolution":
+		org = state.endIdentityResolution(n)
+	case "EndPipelineRun":
+		org = state.endPipelineRun(n)
+	case "InviteMember":
+		org = state.inviteMember(n)
+	case "LinkConnection":
+		org = state.linkConnection(n)
+	case "PurgePipelines":
+		org = state.purgePipelines(n)
+	case "RenameConnection":
+		org = state.renameConnection(n)
+	case "RenameWorkspace":
+		org = state.renameWorkspace(n)
+	case "RunPipeline":
+		org = state.runPipeline(n)
+	case "SeeLeader":
+		state.seeLeader(n)
+	case "SetAccount":
+		org = state.setAccount(n)
+	case "SetConnectionSettings":
+		org = state.setConnectionSettings(n)
+	case "SetOrganizationStatus":
+		org = state.setOrganizationStatus(n)
+	case "SetPipelineFormatSettings":
+		org = state.setPipelineFormatSettings(n)
+	case "SetPipelineSchedulePeriod":
+		org = state.setPipelineSchedulePeriod(n)
+	case "SetPipelineStatus":
+		org = state.setPipelineStatus(n)
+	case "StartAlterProfileSchema":
+		org = state.startAlterProfileSchema(n)
+	case "StartIdentityResolution":
+		org = state.startIdentityResolution(n)
+	case "UnlinkConnection":
+		org = state.unlinkConnection(n)
+	case "UpdateConnection":
+		org = state.updateConnection(n)
+	case "UpdateConsentPurpose":
+		org = state.updateConsentPurpose(n)
+	case "UpdateIdentityPropertiesToUnset":
+		org = state.updateIdentityPropertiesToUnset(n)
+	case "UpdateIdentityResolutionSettings":
+		org = state.updateIdentityResolutionSettings(n)
+	case "UpdateOrganization":
+		org = state.updateOrganization(n)
+	case "UpdatePipeline":
+		org = state.updatePipeline(n)
+	case "UpdateWarehouse":
+		org = state.updateWarehouse(n)
+	case "UpdateWarehouseMode":
+		org = state.updateWarehouseMode(n)
+	case "UpdateWorkspace":
+		org = state.updateWorkspace(n)
+	default:
 		state.changing.Unlock()
-		if n.Version > 0 {
-			// Acknowledge that the notification has been received.
-			if ack, ok := state.notifications.acks.LoadAndDelete(n.Version); ok {
-				ack.(chan struct{}) <- struct{}{}
-			}
-		}
-		if state.sendStats && org != "" {
-			state.sendNotificationStats(client, org, n)
-		}
+		return &replicationError{message: fmt.Sprintf("unknown notification (version %d)", n.Version)}
 	}
 
+	// Notify any goroutines waiting for a new version.
+	if n.Version > 0 {
+		state.version.Lock()
+		state.version.current = n.Version
+		state.version.next.Broadcast()
+		state.version.Unlock()
+	}
+
+	state.changing.Unlock()
+
+	if client != nil && org != "" {
+		state.sendNotificationStats(client, org, n)
+	}
+
+	return nil
 }
 
-// decodeNotification decodes a notification.
-func decodeNotification(n notification, e any) bool {
-	err := json.NewDecoder(strings.NewReader(n.Payload)).Decode(&e)
+// decodeNotification decodes a trusted notification and panics if its payload
+// is not formally compatible with the expected event type.
+func decodeNotification(n notification, e any) {
+	err := json.Unmarshal([]byte(n.Payload), e)
 	if err != nil {
-		slog.Error("core/state: cannot unmarshal notification", "version", n.Version, "name", n.Name, "error", err)
-		return false
+		panic(fmt.Sprintf("invalid notification payload %s (version %d)", n.Name, n.Version))
 	}
-	return true
 }
 
 // replaceAccount calls the function f passing a copy of the account with
@@ -211,6 +185,19 @@ func (workspace *Workspace) replaceAccount(id int, f func(*Account)) *Account {
 		}
 	}
 	return aa
+}
+
+// replaceConsentPurpose calls f with a copy of the consent purpose, replaces
+// the purpose in the workspace, and returns the copy.
+func (workspace *Workspace) replaceConsentPurpose(id string, f func(*ConsentPurpose)) *ConsentPurpose {
+	c := workspace.consentPurposes[id]
+	cc := new(ConsentPurpose)
+	*cc = *c
+	f(cc)
+	workspace.mu.Lock()
+	workspace.consentPurposes[id] = cc
+	workspace.mu.Unlock()
+	return cc
 }
 
 // replacePipeline calls the function f passing a copy of the pipeline with
@@ -334,9 +321,7 @@ type AcceptInvitation struct {
 // acceptInvitation accepts a member invitation.
 func (state *State) acceptInvitation(n notification) string {
 	e := AcceptInvitation{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	org := state.organizations[e.Organization]
 	org.mu.Lock()
 	org.members[e.Member] = true
@@ -346,24 +331,26 @@ func (state *State) acceptInvitation(n notification) string {
 
 // AddConsentPurpose is the event sent when a new consent purpose is added.
 type AddConsentPurpose struct {
-	Workspace string
-	Code      string
-	Name      string
+	Workspace              string
+	ID                     string
+	Name                   string
+	EventConsentLocations  []EventConsentLocation
+	ProfileConsentLocation *ProfileConsentLocation
 }
 
 // addConsentPurpose adds a new consent purpose.
 func (state *State) addConsentPurpose(n notification) string {
 	e := AddConsentPurpose{}
-	if !decodeNotification(n, &e) {
-		return ""
+	decodeNotification(n, &e)
+	cp := &ConsentPurpose{
+		ID:                     e.ID,
+		Name:                   e.Name,
+		EventConsentLocations:  e.EventConsentLocations,
+		ProfileConsentLocation: e.ProfileConsentLocation,
 	}
 	ws := state.workspaces[e.Workspace]
-	cp := &ConsentPurpose{
-		Code: e.Code,
-		Name: e.Name,
-	}
 	ws.mu.Lock()
-	ws.consentPurposes[cp.Code] = cp
+	ws.consentPurposes[cp.ID] = cp
 	ws.mu.Unlock()
 	dispatchNotification(state, e)
 	return ws.organization.ID
@@ -378,9 +365,7 @@ type AddMember struct {
 // addMember adds a member.
 func (state *State) addMember(n notification) string {
 	e := AddMember{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	org := state.organizations[e.Organization]
 	org.mu.Lock()
 	org.members[e.ID] = true
@@ -401,9 +386,7 @@ type CreateAccessKey struct {
 // createAccessKey creates an access key.
 func (state *State) createAccessKey(n notification) string {
 	e := CreateAccessKey{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	key := AccessKey{
 		ID:           e.ID,
 		Organization: e.Organization,
@@ -445,9 +428,7 @@ type CreateConnection struct {
 // createConnection creates a new connection.
 func (state *State) createConnection(n notification) string {
 	e := CreateConnection{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	ws := state.workspaces[e.Workspace]
 	connector := state.connectors[e.Connector]
 	var a *Account
@@ -533,9 +514,7 @@ type CreateOrganization struct {
 // createOrganization creates an organization.
 func (state *State) createOrganization(n notification) string {
 	e := CreateOrganization{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	org := &Organization{
 		mu:         &sync.Mutex{},
 		bucket:     state.rateLimiter.NewBucket("organization", e.ID, requestLeaseSize, requestMaxUnits),
@@ -559,6 +538,8 @@ type CreatePipeline struct {
 	Connection         string
 	Target             Target
 	EventType          string
+	OrderingGroup      string
+	DeliveryEndpoint   string
 	Name               string
 	Enabled            bool
 	ScheduleStart      int16
@@ -566,7 +547,7 @@ type CreatePipeline struct {
 	InSchema           types.Type
 	OutSchema          types.Type
 	Filter             stdjson.RawMessage
-	RequiredConsents   RequiredConsents
+	RequiredConsents   RequiredConsentsByIDs
 	Transformation     Transformation
 	Query              string
 	Format             string
@@ -589,9 +570,7 @@ type CreatePipeline struct {
 // createPipeline creates a new pipeline.
 func (state *State) createPipeline(n notification) string {
 	e := CreatePipeline{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	// json.Value(nil) is marshaled into "null", but when it is
 	// deserialized it becomes json.Value("null"), so this code converts it
 	// back to json.Value(nil).
@@ -603,6 +582,13 @@ func (state *State) createPipeline(n notification) string {
 	}
 	c := state.connections[e.Connection]
 	format := state.connectors[e.Format]
+	requiredConsents := RequiredConsents{
+		Operator: e.RequiredConsents.Operator,
+		Purposes: make([]*ConsentPurpose, len(e.RequiredConsents.Purposes)),
+	}
+	for i, id := range e.RequiredConsents.Purposes {
+		requiredConsents.Purposes[i] = c.workspace.consentPurposes[id]
+	}
 	pipeline := &Pipeline{
 		mu:                 new(sync.Mutex),
 		ID:                 e.ID,
@@ -613,11 +599,13 @@ func (state *State) createPipeline(n notification) string {
 		Name:               e.Name,
 		Enabled:            e.Enabled,
 		EventType:          e.EventType,
+		OrderingGroup:      e.OrderingGroup,
+		DeliveryEndpoint:   e.DeliveryEndpoint,
 		ScheduleStart:      e.ScheduleStart,
 		SchedulePeriod:     e.SchedulePeriod,
 		InSchema:           e.InSchema,
 		OutSchema:          e.OutSchema,
-		RequiredConsents:   e.RequiredConsents,
+		RequiredConsents:   requiredConsents,
 		Transformation:     e.Transformation,
 		Query:              e.Query,
 		Path:               e.Path,
@@ -639,7 +627,11 @@ func (state *State) createPipeline(n notification) string {
 		pipeline.propertiesToUnset = []string{}
 	}
 	if e.Filter != nil {
-		pipeline.Filter, _ = unmarshalWhere(e.Filter, e.InSchema)
+		var err error
+		pipeline.Filter, err = unmarshalWhere(e.Filter, e.InSchema)
+		if err != nil {
+			panic(fmt.Sprintf("invalid notification payload %s (version %d)", n.Name, n.Version))
+		}
 	}
 
 	state.mu.Lock()
@@ -663,6 +655,7 @@ type CreateWorkspace struct {
 	Organization                   string
 	Name                           string
 	ProfileSchema                  types.Type
+	AssignedRoles                  ProfileRoleAssignments
 	ResolveIdentitiesOnBatchImport bool
 	Warehouse                      struct {
 		Platform       string
@@ -676,9 +669,7 @@ type CreateWorkspace struct {
 // createWorkspace creates a workspace.
 func (state *State) createWorkspace(n notification) string {
 	e := CreateWorkspace{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	organization := state.organizations[e.Organization]
 	ws := Workspace{
 		mu:                             &sync.Mutex{},
@@ -689,6 +680,7 @@ func (state *State) createWorkspace(n notification) string {
 		organization:                   organization,
 		Name:                           e.Name,
 		ProfileSchema:                  e.ProfileSchema,
+		AssignedRoles:                  e.AssignedRoles,
 		PrimarySources:                 map[string]string{},
 		accounts:                       map[int]*Account{},
 		consentPurposes:                map[string]*ConsentPurpose{},
@@ -722,9 +714,7 @@ type CreateEventWriteKey struct {
 // createEventWriteKey creates an event write key.
 func (state *State) createEventWriteKey(n notification) string {
 	e := CreateEventWriteKey{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	c := state.replaceConnection(e.Connection, func(c *Connection) {
 		keys := make([]string, len(c.Keys)+1)
 		copy(keys, c.Keys)
@@ -745,9 +735,7 @@ type DeleteAccessKey struct {
 // deleteAccessKey deletes an access key.
 func (state *State) deleteAccessKey(n notification) string {
 	e := DeleteAccessKey{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	state.mu.Lock()
 	var hmac string
 	var key *AccessKey
@@ -779,9 +767,7 @@ func (n DeleteConnection) Connection() *Connection {
 // deleteConnection deletes a connection.
 func (state *State) deleteConnection(n notification) string {
 	e := DeleteConnection{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	e.connection = state.connections[e.ID]
 	// Update connections and keys.
 	state.mu.Lock()
@@ -877,18 +863,16 @@ func (state *State) deleteConnection(n notification) string {
 // DeleteConsentPurpose is the event sent when a consent purpose is deleted.
 type DeleteConsentPurpose struct {
 	Workspace string
-	Code      string
+	ID        string
 }
 
 // deleteConsentPurpose deletes a consent purpose.
 func (state *State) deleteConsentPurpose(n notification) string {
 	e := DeleteConsentPurpose{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	ws := state.workspaces[e.Workspace]
 	ws.mu.Lock()
-	delete(ws.consentPurposes, e.Code)
+	delete(ws.consentPurposes, e.ID)
 	ws.mu.Unlock()
 	dispatchNotification(state, e)
 	return ws.organization.ID
@@ -903,9 +887,7 @@ type DeleteEventWriteKey struct {
 // deleteEventWriteKey deletes an event write key.
 func (state *State) deleteEventWriteKey(n notification) string {
 	e := DeleteEventWriteKey{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	c := state.replaceConnection(e.Connection, func(c *Connection) {
 		keys := make([]string, len(c.Keys)-1)
 		i := 0
@@ -932,9 +914,7 @@ type DeleteMember struct {
 // deleteMember deletes a member.
 func (state *State) deleteMember(n notification) string {
 	e := DeleteMember{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	org := state.organizations[e.Organization]
 	org.mu.Lock()
 	delete(org.members, e.ID)
@@ -951,9 +931,7 @@ type DeleteMembers struct {
 // deleteMembers deletes multiple members.
 func (state *State) deleteMembers(n notification) string {
 	e := DeleteMembers{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	for _, org := range state.organizations {
 		org.mu.Lock()
 		for _, id := range e.IDs {
@@ -980,9 +958,7 @@ func (n DeleteOrganization) Organization() *Organization {
 // deleteOrganization deletes an organization.
 func (state *State) deleteOrganization(n notification) string {
 	e := DeleteOrganization{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	state.mu.Lock()
 	e.organization = state.organizations[e.ID]
 	delete(state.organizations, e.ID)
@@ -1027,9 +1003,7 @@ func (n DeletePipeline) Pipeline() *Pipeline {
 // deletePipeline deletes a pipeline.
 func (state *State) deletePipeline(n notification) string {
 	e := DeletePipeline{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	e.pipeline = state.pipelines[e.ID]
 	state.mu.Lock()
 	delete(state.pipelines, e.ID)
@@ -1069,9 +1043,7 @@ func (n DeleteWorkspace) Workspace() *Workspace {
 // deleteWorkspace deletes a workspace.
 func (state *State) deleteWorkspace(n notification) string {
 	e := DeleteWorkspace{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	e.workspace = state.workspaces[e.ID]
 	org := e.workspace.organization
 	// Update the organization.
@@ -1121,16 +1093,18 @@ type ElectLeader struct {
 // electLeader elects a leader.
 func (state *State) electLeader(n notification) {
 	e := ElectLeader{}
-	if !decodeNotification(n, &e) {
-		return
-	}
+	decodeNotification(n, &e)
 	// Update election.
 	election := election{
-		number:   e.Number,
-		leader:   e.Leader,
-		lastSeen: time.Now(),
+		number:     e.Number,
+		leader:     e.Leader,
+		validUntil: time.Now().Add(grantedLeaderInterval),
 	}
 	state.mu.Lock()
+	if e.Number <= state.election.number {
+		state.mu.Unlock()
+		return
+	}
 	previous := state.election.leader
 	state.election = election
 	state.mu.Unlock()
@@ -1153,9 +1127,7 @@ type EndAlterProfileSchema struct {
 // endAlterProfileSchema ends the alter of the profile schema.
 func (state *State) endAlterProfileSchema(n notification) string {
 	e := EndAlterProfileSchema{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		if e.Err == "" {
 			// These fields should be updated only in case of success,
@@ -1188,9 +1160,7 @@ type EndIdentityResolution struct {
 // endIdentityResolution ends the Identity Resolution.
 func (state *State) endIdentityResolution(n notification) string {
 	e := EndIdentityResolution{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.IR.ID = nil
 		w.IR.EndTime = &e.EndTime
@@ -1209,9 +1179,7 @@ type EndPipelineRun struct {
 // endPipelineRun marks an in-progress pipeline run as finished.
 func (state *State) endPipelineRun(n notification) string {
 	e := EndPipelineRun{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	state.mu.Lock()
 	delete(state.liveRuns, e.ID)
 	state.mu.Unlock()
@@ -1237,9 +1205,7 @@ type InviteMember struct {
 // inviteMember invites a member.
 func (state *State) inviteMember(n notification) string {
 	e := InviteMember{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	org := state.organizations[e.Organization]
 	org.mu.Lock()
 	org.members[e.Member] = false
@@ -1251,9 +1217,7 @@ func (state *State) inviteMember(n notification) string {
 // linkConnection links two unlinked connections.
 func (state *State) linkConnection(n notification) string {
 	e := LinkConnection{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	state.replaceConnection(e.Connections[0], func(c *Connection) {
 		c.LinkedConnections = addLinkedConnection(c.LinkedConnections, e.Connections[1])
 	})
@@ -1273,9 +1237,7 @@ type PurgePipelines struct {
 // purgePipelines purges pipelines of a workspace.
 func (state *State) purgePipelines(n notification) string {
 	e := PurgePipelines{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	ws, _ := state.Workspace(e.Workspace)
 	ws.mu.Lock()
 	ws.pipelinesToPurge = e.PipelinesToPurge
@@ -1292,9 +1254,7 @@ type RenameConnection struct {
 // renameConnection renames a connection.
 func (state *State) renameConnection(n notification) string {
 	e := RenameConnection{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	c := state.replaceConnection(e.Connection, func(c *Connection) {
 		c.Name = e.Name
 	})
@@ -1310,9 +1270,7 @@ type RenameWorkspace struct {
 // renameWorkspace renames a workspace.
 func (state *State) renameWorkspace(n notification) string {
 	e := RenameWorkspace{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	ws := state.replaceWorkspace(e.Workspace, func(ws *Workspace) {
 		ws.Name = e.Name
 	})
@@ -1331,9 +1289,7 @@ type RunPipeline struct {
 // runPipeline runs a pipeline.
 func (state *State) runPipeline(n notification) string {
 	e := RunPipeline{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	p := state.pipelines[e.Pipeline]
 	run := &PipelineRun{
 		mu:          &sync.Mutex{},
@@ -1353,23 +1309,40 @@ func (state *State) runPipeline(n notification) string {
 	return p.organization.ID
 }
 
-// SeeLeader is the event sent when the leader is seen.
+// SeeLeader is the heartbeat sent by the leader. Sequence increases within an
+// election; Timestamp is the send time in Unix milliseconds. Node clocks must
+// stay synchronized within leaderClockSkew, even across restarts.
+// Heartbeats without a sequence or timestamp are ignored.
 type SeeLeader struct {
-	Election int
+	Election  int
+	Sequence  uint64
+	Timestamp int64
 }
 
-// seeLeader sees the leader.
+// seeLeader extends the leader's validity only for fresh heartbeats in the
+// current election with a sequence greater than the last accepted sequence.
 func (state *State) seeLeader(n notification) {
+
 	e := SeeLeader{}
-	if !decodeNotification(n, &e) {
+	decodeNotification(n, &e)
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if e.Election != state.election.number || e.Sequence <= state.election.sequence {
 		return
 	}
 	now := time.Now()
-	state.mu.Lock()
-	if state.election.number == e.Election {
-		state.election.lastSeen = now
+	age := now.Sub(time.UnixMilli(e.Timestamp))
+	if age < -leaderClockSkew || age >= grantedLeaderInterval+leaderClockSkew {
+		return
 	}
-	state.mu.Unlock()
+
+	// Base expiry on the send time while preserving now's monotonic component.
+	validUntil := now.Add(grantedLeaderInterval + leaderClockSkew - age)
+	state.election.sequence = e.Sequence
+	if validUntil.After(state.election.validUntil) {
+		state.election.validUntil = validUntil
+	}
+
 }
 
 // SetAccount is the event sent when an account is changed.
@@ -1384,9 +1357,7 @@ type SetAccount struct {
 // setAccount sets an account.
 func (state *State) setAccount(n notification) string {
 	e := SetAccount{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	ws := state.workspaces[e.Workspace]
 	ws.replaceAccount(e.ID, func(a *Account) {
 		a.AccessToken = e.AccessToken
@@ -1406,9 +1377,7 @@ type SetConnectionSettings struct {
 // setConnectionSettings sets the settings of a connection.
 func (state *State) setConnectionSettings(n notification) string {
 	e := SetConnectionSettings{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	c := state.connections[e.Connection]
 	c.mu.Lock()
 	c.settings = e.Settings
@@ -1427,9 +1396,7 @@ type SetPipelineFormatSettings struct {
 // setPipelineFormatSettings sets the format settings of a pipeline.
 func (state *State) setPipelineFormatSettings(n notification) string {
 	e := SetPipelineFormatSettings{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	p := state.replacePipeline(e.Pipeline, func(p *Pipeline) {
 		p.FormatSettings = e.Settings
 	})
@@ -1446,9 +1413,7 @@ type SetPipelineSchedulePeriod struct {
 // setPipelineSchedulePeriod sets the schedule period of a pipeline.
 func (state *State) setPipelineSchedulePeriod(n notification) string {
 	e := SetPipelineSchedulePeriod{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	p := state.replacePipeline(e.ID, func(p *Pipeline) {
 		p.SchedulePeriod = e.SchedulePeriod
 	})
@@ -1475,9 +1440,7 @@ func (n SetOrganizationStatus) EndedLiveRuns() []*PipelineRun {
 // setOrganizationStatus sets the status of an organization.
 func (state *State) setOrganizationStatus(n notification) string {
 	e := SetOrganizationStatus{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	o := state.replaceOrganization(e.ID, func(p *Organization) {
 		p.Enabled = e.Enabled
 	})
@@ -1521,9 +1484,7 @@ type SetPipelineStatus struct {
 // setPipelineStatus sets the status of a pipeline.
 func (state *State) setPipelineStatus(n notification) string {
 	e := SetPipelineStatus{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	p := state.replacePipeline(e.ID, func(p *Pipeline) {
 		p.Enabled = e.Enabled
 	})
@@ -1546,9 +1507,7 @@ type StartAlterProfileSchema struct {
 // startAlterProfileSchema starts the alter of the profile schema.
 func (state *State) startAlterProfileSchema(n notification) string {
 	e := StartAlterProfileSchema{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.AlterProfileSchema.ID = &e.ID
 		w.AlterProfileSchema.Schema = e.Schema
@@ -1574,9 +1533,7 @@ type StartIdentityResolution struct {
 // startIdentityResolution starts the Identity Resolution.
 func (state *State) startIdentityResolution(n notification) string {
 	e := StartIdentityResolution{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.IR.ID = &e.ID
 		w.IR.StartTime = &e.StartTime
@@ -1594,9 +1551,7 @@ type UnlinkConnection struct {
 // unlinkConnection unlinks two linked connections.
 func (state *State) unlinkConnection(n notification) string {
 	e := UnlinkConnection{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	state.replaceConnection(e.Connections[0], func(c *Connection) {
 		c.LinkedConnections = removeLinkedConnection(c.LinkedConnections, e.Connections[1])
 	})
@@ -1618,9 +1573,7 @@ type UpdateConnection struct {
 // updateConnection updates a connection.
 func (state *State) updateConnection(n notification) string {
 	e := UpdateConnection{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	c := state.replaceConnection(e.Connection, func(c *Connection) {
 		c.Name = e.Name
 		c.Strategy = e.Strategy
@@ -1632,27 +1585,38 @@ func (state *State) updateConnection(n notification) string {
 
 // UpdateConsentPurpose is the event sent when a consent purpose is updated.
 type UpdateConsentPurpose struct {
-	Workspace string
-	Purpose   string
-	Code      string
-	Name      string
+	Workspace              string
+	ID                     string
+	Name                   string
+	EventConsentLocations  []EventConsentLocation
+	ProfileConsentLocation *ProfileConsentLocation
 }
 
 // updateConsentPurpose updates a consent purpose.
 func (state *State) updateConsentPurpose(n notification) string {
 	e := UpdateConsentPurpose{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	ws := state.workspaces[e.Workspace]
-	cp := &ConsentPurpose{
-		Code: e.Code,
-		Name: e.Name,
+	previous := ws.consentPurposes[e.ID]
+	cp := ws.replaceConsentPurpose(e.ID, func(cp *ConsentPurpose) {
+		cp.Name = e.Name
+		cp.EventConsentLocations = e.EventConsentLocations
+		cp.ProfileConsentLocation = e.ProfileConsentLocation
+	})
+	// Replace the consent purpose in the pipelines that require it.
+	for _, c := range ws.connections {
+		for _, p := range c.pipelines {
+			i := slices.Index(p.RequiredConsents.Purposes, previous)
+			if i == -1 {
+				continue
+			}
+			purposes := slices.Clone(p.RequiredConsents.Purposes)
+			purposes[i] = cp
+			state.replacePipeline(p.ID, func(p *Pipeline) {
+				p.RequiredConsents.Purposes = purposes
+			})
+		}
 	}
-	ws.mu.Lock()
-	delete(ws.consentPurposes, e.Purpose)
-	ws.consentPurposes[cp.Code] = cp
-	ws.mu.Unlock()
 	dispatchNotification(state, e)
 	return ws.organization.ID
 }
@@ -1668,9 +1632,7 @@ type UpdateIdentityPropertiesToUnset struct {
 // a pipeline.
 func (state *State) updateIdentityPropertiesToUnset(n notification) string {
 	e := UpdateIdentityPropertiesToUnset{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	p := state.pipelines[e.Pipeline]
 	p.mu.Lock()
 	p.propertiesToUnset = e.Properties
@@ -1690,9 +1652,7 @@ type UpdateIdentityResolutionSettings struct {
 // a workspace.
 func (state *State) updateIdentityResolutionSettings(n notification) string {
 	e := UpdateIdentityResolutionSettings{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.ResolveIdentitiesOnBatchImport = e.ResolveIdentitiesOnBatchImport
 		w.Identifiers = e.Identifiers
@@ -1710,9 +1670,7 @@ type UpdateOrganization struct {
 // updateOrganization updates an organization.
 func (state *State) updateOrganization(n notification) string {
 	e := UpdateOrganization{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	state.replaceOrganization(e.ID, func(org *Organization) {
 		org.Name = e.Name
 		if e.Limits != nil {
@@ -1730,7 +1688,7 @@ type UpdatePipeline struct {
 	InSchema           types.Type
 	OutSchema          types.Type
 	Filter             stdjson.RawMessage
-	RequiredConsents   RequiredConsents
+	RequiredConsents   RequiredConsentsByIDs
 	Transformation     Transformation
 	Query              string
 	Format             string
@@ -1754,9 +1712,7 @@ type UpdatePipeline struct {
 // updatePipeline updates a pipeline.
 func (state *State) updatePipeline(n notification) string {
 	e := UpdatePipeline{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	// json.Value(nil) is marshaled into "null", but when it is
 	// deserialized it becomes json.Value("null"), so this code converts it
 	// back to json.Value(nil).
@@ -1769,9 +1725,21 @@ func (state *State) updatePipeline(n notification) string {
 	format := state.connectors[e.Format]
 	var filter *Where
 	if e.Filter != nil {
-		filter, _ = unmarshalWhere(e.Filter, e.InSchema)
+		var err error
+		filter, err = unmarshalWhere(e.Filter, e.InSchema)
+		if err != nil {
+			panic(fmt.Sprintf("invalid notification payload %s (version %d)", n.Name, n.Version))
+		}
 	}
-	oldFormat := state.pipelines[e.ID].format
+	previous := state.pipelines[e.ID]
+	ws := previous.connection.workspace
+	requiredConsents := RequiredConsents{
+		Operator: e.RequiredConsents.Operator,
+		Purposes: make([]*ConsentPurpose, len(e.RequiredConsents.Purposes)),
+	}
+	for i, id := range e.RequiredConsents.Purposes {
+		requiredConsents.Purposes[i] = ws.consentPurposes[id]
+	}
 	p := state.replacePipeline(e.ID, func(p *Pipeline) {
 		p.format = format
 		p.propertiesToUnset = e.PropertiesToUnset
@@ -1780,7 +1748,7 @@ func (state *State) updatePipeline(n notification) string {
 		p.InSchema = e.InSchema
 		p.OutSchema = e.OutSchema
 		p.Filter = filter
-		p.RequiredConsents = e.RequiredConsents
+		p.RequiredConsents = requiredConsents
 		p.Transformation = e.Transformation
 		p.Query = e.Query
 		p.Path = e.Path
@@ -1800,9 +1768,9 @@ func (state *State) updatePipeline(n notification) string {
 	})
 	org := p.organization
 	// When the format changes, both oldFormat and format are non-nil.
-	if oldFormat != format {
+	if previous.format != format {
 		org.mu.Lock()
-		org.usage.updatePipelineFormat(oldFormat, format)
+		org.usage.updatePipelineFormat(previous.format, format)
 		org.mu.Unlock()
 	}
 	dispatchNotification(state, e)
@@ -1833,9 +1801,7 @@ func (n UpdateWarehouse) MCPSettingsHaveChanged() bool {
 // updateWarehouse updates a warehouse.
 func (state *State) updateWarehouse(n notification) string {
 	e := UpdateWarehouse{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Warehouse.Mode = e.Mode
 		if e.settingsHaveChanged = !bytes.Equal(w.Warehouse.settings, e.Settings); e.settingsHaveChanged {
@@ -1860,9 +1826,7 @@ type UpdateWarehouseMode struct {
 // updateWarehouseMode updates the mode of a data warehouse.
 func (state *State) updateWarehouseMode(n notification) string {
 	e := UpdateWarehouseMode{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Warehouse.Mode = e.Mode
 	})
@@ -1879,9 +1843,7 @@ type UpdateWorkspace struct {
 // updateWorkspace updates the name of a workspace.
 func (state *State) updateWorkspace(n notification) string {
 	e := UpdateWorkspace{}
-	if !decodeNotification(n, &e) {
-		return ""
-	}
+	decodeNotification(n, &e)
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.Name = e.Name
 	})

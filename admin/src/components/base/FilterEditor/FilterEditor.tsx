@@ -30,7 +30,8 @@ import {
 	FilterOperator,
 	PipelineTarget,
 } from '../../../lib/api/types/pipeline';
-import { ObjectType, Role, StringType } from '../../../lib/api/types/types';
+import { ObjectType, StringType } from '../../../lib/api/types/types';
+import { ConnectionRole } from '../../../lib/api/types/connection';
 
 // countFilterRules returns the number of groups and conditions below filter.
 const countFilterRules = (filter: Filter): number =>
@@ -97,7 +98,7 @@ interface FilterEditorProps {
 	onChange: (filter: Filter | null) => void;
 	onCommit?: (filter: Filter | null) => void;
 	propertiesToHide?: string[];
-	role: Role;
+	role: ConnectionRole;
 	rootActions?: ReactNode;
 	schema: ObjectType;
 	showEmptyFilterAsCondition?: boolean;
@@ -279,7 +280,7 @@ const FilterEditor = ({
 		const newProperty = findPropertyInSchema(newPropertyName);
 		const [, newPath] = splitPropertyAndPath(newPropertyName, flatInputSchema);
 
-		const compatibleOperators = getCompatibleFilterOperators(newProperty, newPath !== '', role, target);
+		const compatibleOperators = getCompatibleFilterOperators(newProperty, newPath !== '');
 		if (condition.operator !== '' && !compatibleOperators.includes(FILTER_OPERATORS.indexOf(condition.operator))) {
 			condition.operator = '';
 			condition.values = [''];
@@ -297,12 +298,7 @@ const FilterEditor = ({
 		const updatedFilter = updateProperty(path, value);
 		const condition = filterConditionAt(updatedFilter, path);
 		const [, propertyPath] = splitPropertyAndPath(condition.property, flatInputSchema);
-		const compatibleOperators = getCompatibleFilterOperators(
-			flatInputSchema[value],
-			propertyPath !== '',
-			role,
-			target,
-		);
+		const compatibleOperators = getCompatibleFilterOperators(flatInputSchema[value], propertyPath !== '');
 		const currentOperatorIndex = FILTER_OPERATORS.findIndex((operator) => operator === condition.operator);
 		const isJSON = flatInputSchema[value]?.type === 'json';
 
@@ -332,7 +328,7 @@ const FilterEditor = ({
 		const updatedFilter = structuredClone(editableFilter);
 		const condition = filterConditionAt(updatedFilter, path);
 		const [base] = splitPropertyAndPath(condition.property, flatInputSchema);
-		const compatibleOperators = getCompatibleFilterOperators(flatInputSchema[base], value !== '', role, target);
+		const compatibleOperators = getCompatibleFilterOperators(flatInputSchema[base], value !== '');
 		if (condition.operator !== '' && !compatibleOperators.includes(FILTER_OPERATORS.indexOf(condition.operator))) {
 			condition.operator = '';
 			condition.values = [''];
@@ -500,7 +496,7 @@ const FilterEditor = ({
 				hoist={hoistMenus}
 			>
 				{property != null
-					? getCompatibleFilterOperators(property, propertyPath !== '', role, target).map((index) => (
+					? getCompatibleFilterOperators(property, propertyPath !== '').map((index) => (
 							<SlOption key={index} value={String(index)}>
 								{FILTER_OPERATORS[index]}
 							</SlOption>

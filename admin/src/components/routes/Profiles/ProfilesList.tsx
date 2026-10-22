@@ -62,7 +62,7 @@ const ProfilesList = () => {
 	);
 	const countryType = profileSchemaProperties[assignedRoles?.country ?? '']?.type;
 	const countryFormat =
-		countryType?.kind === 'string' && countryType.semantic === 'country' ? countryType.format : undefined;
+		countryType?.kind === 'string' && countryType.semantics === 'country' ? countryType.format : undefined;
 	const gridRef = useRef<GridRef>(null);
 	const [filterGridActionContainer, setFilterGridActionContainer] = useState<HTMLDivElement | null>(null);
 	const { profilesRows, profileColumns } = useProfilesGrid(

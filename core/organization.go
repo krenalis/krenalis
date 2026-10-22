@@ -341,11 +341,8 @@ func (this *Organization) AuthenticateMember(ctx context.Context, email, passwor
 	this.core.mustBeOpen()
 
 	// Validate email.
-	if err := util.ValidateStringField("email", email, 255); err != nil {
+	if err := validateMemberEmail(email); err != nil {
 		return "", errors.BadRequest("%s", err)
-	}
-	if !emailRegExp.MatchString(email) {
-		return "", errors.BadRequest("email is not a valid email address")
 	}
 	// Validate password.
 	if password == "" {
@@ -515,8 +512,9 @@ type Warehouse struct {
 	Settings json.Value    `json:"settings"`
 }
 
-// CreateWorkspace creates a workspace with the given name and profile schema,
-// and connects to a data warehouse of the given platform and settings.
+// CreateWorkspace creates a workspace with the given name, profile schema and
+// role assignments, and connects to a data warehouse of the given platform and
+// settings.
 // Returns the identifier of the workspace that has been created.
 // name must be between 1 and 100 runes long.
 //
@@ -529,11 +527,11 @@ type Warehouse struct {
 //   - WarehousePlatformNotExist, if a warehouse platform does not exist.
 //   - WarehouseNotInitializable, if the warehouse is not initializable.
 //   - WorkspacesLimitReached, if the organization cannot have more workspaces.
-func (this *Organization) CreateWorkspace(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse) (string, error) {
+func (this *Organization) CreateWorkspace(ctx context.Context, name string, profileSchema types.Type, assignedRoles ProfileRoleAssignments, warehouse Warehouse) (string, error) {
 
 	this.core.mustBeOpen()
 
-	settings, err := this.validateWorkspaceCreation(ctx, name, profileSchema, warehouse)
+	settings, err := this.validateWorkspaceCreation(ctx, name, profileSchema, assignedRoles, warehouse)
 	if err != nil {
 		return "", err
 	}
@@ -555,6 +553,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 		Organization:                   this.organization.ID,
 		Name:                           name,
 		ProfileSchema:                  profileSchema,
+		AssignedRoles:                  state.ProfileRoleAssignments(assignedRoles),
 		ResolveIdentitiesOnBatchImport: true,
 	}
 	n.Warehouse.Platform = warehouse.Platform
@@ -573,6 +572,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 	if err != nil {
 		return "", err
 	}
+	observedAt := time.Now().UTC().Truncate(time.Microsecond)
 
 	// Create the workspace.
 	for {
@@ -590,18 +590,28 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 			}
 			// Add the workspace.
 			_, err = tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name,"+
-				" profile_schema, resolve_identities_on_batch_import, warehouse_name, warehouse_mode,"+
+				" profile_schema, profile_role_first_name, profile_role_last_name, profile_role_email,"+
+				" profile_role_country, profile_role_photo, resolve_identities_on_batch_import, warehouse_name, warehouse_mode,"+
 				" warehouse_settings, kms_encrypted_warehouse_settings_key, kms_encrypted_warehouse_mcp_settings_key)"+
-				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
-				n.ID, n.Organization, n.Name, encodedProfileSchema, n.ResolveIdentitiesOnBatchImport,
-				n.Warehouse.Platform, n.Warehouse.Mode, n.Warehouse.Settings, n.Warehouse.SettingsKey,
-				n.Warehouse.MCPSettingsKey)
+				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)",
+				n.ID, n.Organization, n.Name, encodedProfileSchema, n.AssignedRoles.FirstName,
+				n.AssignedRoles.LastName, n.AssignedRoles.Email, n.AssignedRoles.Country, n.AssignedRoles.Photo,
+				n.ResolveIdentitiesOnBatchImport, n.Warehouse.Platform, n.Warehouse.Mode, n.Warehouse.Settings,
+				n.Warehouse.SettingsKey, n.Warehouse.MCPSettingsKey)
 			if err != nil {
 				if db.IsForeignKeyViolation(err) {
 					if db.ErrConstraintName(err) == "workspaces_organization_fkey" {
 						return nil, errors.Unprocessable(OrganizationNotExist, "organization %s does not exist", n.Organization)
 					}
 				}
+				return nil, err
+			}
+			// Insert an identity metrics row with zero counts.
+			_, err = tx.Exec(ctx, `INSERT INTO identity_metrics
+				(workspace, day, observed_at, identities_anonymous, identities_recognized, identities_without_profile)
+				VALUES ($1, $2, $3, 0, 0, 0)`, n.ID, observedAt.Truncate(24*time.Hour),
+				observedAt.Format("15:04:05.999999"))
+			if err != nil {
 				return nil, err
 			}
 			return n, nil
@@ -881,8 +891,8 @@ type MetricSeries struct {
 	Workspace  string   `json:"workspace,omitzero"`
 	Connection string   `json:"connection,omitzero"`
 	Pipeline   string   `json:"pipeline,omitzero"`
-	Passed     [][7]int `json:"passed"`
-	Failed     [][7]int `json:"failed"`
+	Passed     [][9]int `json:"passed"`
+	Failed     [][9]int `json:"failed"`
 }
 
 // MetricSelection defines the selected pipeline metric series.
@@ -1140,13 +1150,16 @@ func (this *Organization) SetStatus(ctx context.Context, enabled bool) error {
 	}
 
 	// Waits for the metrics to be saved.
-	this.core.metrics.Pipelines.WaitStore()
+	err := this.core.metrics.Pipelines.WaitStore(ctx)
+	if err != nil {
+		return fmt.Errorf("cannot wait for pipeline metrics: %s", err)
+	}
 
 	n := state.SetOrganizationStatus{
 		ID:      this.organization.ID,
 		Enabled: enabled,
 	}
-	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
+	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		result, err := tx.Exec(ctx, "UPDATE organizations SET enabled = $1 WHERE id = $2 AND enabled <> $1", n.Enabled, n.ID)
 		if err != nil {
 			return nil, err
@@ -1192,13 +1205,17 @@ s AS (
 		COALESCE(SUM(m.passed_4), 0) AS passed_4,
 		COALESCE(SUM(m.passed_5), 0) AS passed_5,
 		COALESCE(SUM(m.passed_6), 0) AS passed_6,
+		COALESCE(SUM(m.passed_7), 0) AS passed_7,
+		COALESCE(SUM(m.passed_8), 0) AS passed_8,
 		COALESCE(SUM(m.failed_0), 0) AS failed_0,
 		COALESCE(SUM(m.failed_1), 0) AS failed_1,
 		COALESCE(SUM(m.failed_2), 0) AS failed_2,
 		COALESCE(SUM(m.failed_3), 0) AS failed_3,
 		COALESCE(SUM(m.failed_4), 0) AS failed_4,
 		COALESCE(SUM(m.failed_5), 0) AS failed_5,
-		COALESCE(SUM(m.failed_6), 0) AS failed_6
+		COALESCE(SUM(m.failed_6), 0) AS failed_6,
+		COALESCE(SUM(m.failed_7), 0) AS failed_7,
+		COALESCE(SUM(m.failed_8), 0) AS failed_8
 	FROM live_runs AS r
 	LEFT JOIN pipelines_metrics AS m ON m.pipeline = r.pipeline
 	GROUP BY r.id
@@ -1214,6 +1231,8 @@ ended_runs AS (
 		passed_4 = r.passed_4 + s.passed_4,
 		passed_5 = r.passed_5 + s.passed_5,
 		passed_6 = r.passed_6 + s.passed_6,
+		passed_7 = r.passed_7 + s.passed_7,
+		passed_8 = r.passed_8 + s.passed_8,
 		failed_0 = r.failed_0 + s.failed_0,
 		failed_1 = r.failed_1 + s.failed_1,
 		failed_2 = r.failed_2 + s.failed_2,
@@ -1221,6 +1240,8 @@ ended_runs AS (
 		failed_4 = r.failed_4 + s.failed_4,
 		failed_5 = r.failed_5 + s.failed_5,
 		failed_6 = r.failed_6 + s.failed_6,
+		failed_7 = r.failed_7 + s.failed_7,
+		failed_8 = r.failed_8 + s.failed_8,
 		error = $3
 	FROM s
 	WHERE r.id = s.id AND r.end_time IS NULL
@@ -1239,8 +1260,8 @@ FROM ended_runs
 INNER JOIN updated_pipelines AS p ON ended_runs.pipeline = p.id
 `
 
-// TestWorkspaceCreation tests a workspace creation. It tests that a warehouse
-// with the provided platform and settings can be initialized.
+// TestWorkspaceCreation tests a workspace creation, including the profile schema
+// and role assignments, and checks that the data warehouse can be initialized.
 //
 // It returns an errors.UnprocessableError error with code:
 //
@@ -1249,9 +1270,9 @@ INNER JOIN updated_pipelines AS p ON ended_runs.pipeline = p.id
 //   - WarehouseNotInitializable, if the warehouse intended for connection is
 //     not initializable.
 //   - WorkspacesLimitReached, if the organization cannot have more workspaces.
-func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse) error {
+func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, assignedRoles ProfileRoleAssignments, warehouse Warehouse) error {
 	this.core.mustBeOpen()
-	_, err := this.validateWorkspaceCreation(ctx, name, profileSchema, warehouse)
+	_, err := this.validateWorkspaceCreation(ctx, name, profileSchema, assignedRoles, warehouse)
 	return err
 }
 
@@ -1495,7 +1516,7 @@ func (this *Organization) filterMetricsSelection(workspace string, selection *Me
 //     not initializable.
 //   - WarehousePlatformNotExist, if a warehouse platform does not exist.
 //   - WorkspacesLimitReached, if the organization cannot have more workspaces.
-func (this *Organization) validateWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse) (json.Value, error) {
+func (this *Organization) validateWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, assignedRoles ProfileRoleAssignments, warehouse Warehouse) (json.Value, error) {
 
 	// Validate the parameters.
 	if err := util.ValidateStringField("name", name, 100); err != nil {
@@ -1518,6 +1539,9 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 		return nil, errors.BadRequest("%s", err)
 	}
 	if err := datastore.CheckConflictingProperties("profile", profileSchema); err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	if err := validateProfileRoleAssignments(profileSchema, assignedRoles); err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
 
@@ -1639,6 +1663,12 @@ func sendMail(mail *emailToSend, config *SMTPConfig) error {
 		}
 	}
 	return err
+}
+
+// ValidateMemberEmail validates a member's email address and returns an error
+// if it is not valid.
+func ValidateMemberEmail(email string) error {
+	return validateMemberEmail(email)
 }
 
 // validateMemberEmail validates a member's email and returns an error if it is

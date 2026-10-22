@@ -15,6 +15,16 @@ Use it to choose the right iteration method and payload-building pattern.
 ## EventTypes
 
 - Return stable event type IDs (<= 100 runes), names, descriptions, and optionally `DefaultFilter`.
+- Set `OrderingGroup` to the same value on event types whose events must remain
+  ordered for each user. Every event type must have a non-empty ordering group
+  that follows the property name syntax and cannot be longer than 16 characters.
+- Set `DeliveryEndpoint` when event types use separate destination endpoints.
+  Event types in the same ordering group must use the same delivery endpoint.
+  An empty value identifies the connector's default endpoint. Explicit endpoint
+  identifiers follow the property name syntax and cannot be longer than 16
+  characters.
+- Do not change an ID, ordering group, or delivery endpoint after the connector
+  has been released.
 - Return only event types the connector actually supports.
 
 ## EventTypeSchema
@@ -39,20 +49,20 @@ func (c *MyApp) EventTypeSchema(ctx context.Context, eventType string) (types.Ty
 				Type:           types.String().WithPattern(purchaseNameRE),
 				Prefilled:      "event",
 				CreateRequired: true,
-				Description:    "Event name",
+				DisplayName:    "Event name",
 			},
 			{
 				Name:           "email",
 				Type:           types.String().WithMaxBytes(320),
 				Prefilled:      "traits.email",
 				CreateRequired: true,
-				Description:    "Customer email",
+				DisplayName:    "Customer email",
 			},
 			{
 				Name:        "properties",
 				Type:        types.Map(types.JSON()),
 				Prefilled:   "properties",
-				Description: "Event properties",
+				DisplayName: "Event properties",
 			},
 		}), nil
 	default:

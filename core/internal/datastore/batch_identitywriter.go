@@ -66,7 +66,7 @@ type BatchIdentityWriter struct {
 //
 // If the pipeline's output schema does not align with the profile schema, it
 // returns a *schemas.Error error.
-func newBatchIdentityWriter(store *Store, pipeline *state.Pipeline, purge bool) (*BatchIdentityWriter, error) {
+func newBatchIdentityWriter(store *Store, pipeline *state.Pipeline, purge bool, metrics PipelineMetrics) (*BatchIdentityWriter, error) {
 
 	connection := pipeline.Connection()
 	run, ok := pipeline.Run()
@@ -109,7 +109,7 @@ func newBatchIdentityWriter(store *Store, pipeline *state.Pipeline, purge bool) 
 		MaxFlushLatency:  15 * time.Second,
 		IdleFlushDelay:   2 * time.Second,
 		RateAlpha:        0.3,
-		MetricsFinalizer: store.ds.metrics.FinalizePassed,
+		MetricsFinalizer: metrics.FinalizePassed,
 		LogError:         w.logError,
 	}
 	w.flusher = newFlusher(opts, store.mc.StartOperation, func(ctx context.Context, identities []map[string]any) error {
@@ -177,7 +177,7 @@ func (w *BatchIdentityWriter) Keep(ctx context.Context, id string) error {
 		"_run":          w.run,
 	}
 	select {
-	case w.identities <- flusherRow[map[string]any]{key: key, pipeline: w.pipeline, row: row}:
+	case w.identities <- flusherRow[map[string]any]{key: key, row: row}:
 		return nil
 	case <-ctx.Done():
 		return ctx.Err()

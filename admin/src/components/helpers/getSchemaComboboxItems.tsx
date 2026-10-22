@@ -1,6 +1,7 @@
 import React from 'react';
 import { FlatSchema, flattenSchema, getCompatibleFilterOperators } from '../../lib/core/pipeline';
-import { DecimalType, ObjectType, Role } from '../../lib/api/types/types';
+import { DecimalType, ObjectType } from '../../lib/api/types/types';
+import { ConnectionRole } from '../../lib/api/types/connection';
 import { ComboboxItem } from '../base/Combobox/Combobox.types';
 import { TypeIcon } from '../base/TypeIcon/TypeIcon';
 import { PipelineTarget } from '../../lib/api/types/pipeline';
@@ -39,7 +40,7 @@ const getMatchingComboboxItems = (schema: FlatSchema): ComboboxItem[] => {
 
 const getFilterPropertyComboboxItems = (
 	schema: ObjectType,
-	role: Role,
+	role: ConnectionRole,
 	target: PipelineTarget,
 	toHide?: string[],
 ): ComboboxItem[] => {
@@ -54,7 +55,7 @@ const getFilterPropertyComboboxItems = (
 			continue;
 		}
 		if (property.type === 'object' || property.type === 'array') {
-			const compatibleOperators = getCompatibleFilterOperators(property, false, role, target);
+			const compatibleOperators = getCompatibleFilterOperators(property, false);
 			if (compatibleOperators.length === 0) {
 				continue;
 			}

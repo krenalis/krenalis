@@ -363,8 +363,7 @@ const ProfilesFilters = ({
 	}, [resultsUpdatedContext]);
 
 	const normalizeFilter = useCallback(
-		(filter: Filter | null): Filter | null =>
-			filter == null ? null : validateAndNormalizeFilter(filter, schema, 'Destination', 'User'),
+		(filter: Filter | null): Filter | null => (filter == null ? null : validateAndNormalizeFilter(filter, schema)),
 		[schema],
 	);
 

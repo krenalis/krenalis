@@ -225,6 +225,25 @@ func (x Decimal) Neg() Decimal {
 	return y
 }
 
+// PrecisionScale returns the minimum precision and nonnegative scale needed to
+// represent x exactly, ignoring trailing fractional zeros.
+// Leading fractional zeros count toward precision: 0.005 has precision 3 and
+// scale 3. Zero has precision 1 and scale 0.
+func (x Decimal) PrecisionScale() (precision, scale int) {
+	if x.b.Sign() == 0 {
+		return 1, 0
+	}
+	integerDigits := x.b.Precision() - x.b.Scale()
+	if x.b.Scale() <= 0 {
+		return integerDigits, 0
+	}
+	var reduced decimal.Big
+	reduced.Copy(&x.b)
+	decimal.ContextUnlimited.Reduce(&reduced)
+	scale = max(reduced.Scale(), 0)
+	return max(integerDigits, 0) + scale, scale
+}
+
 // Sign returns:
 //
 //	-1 if x <  0
@@ -423,16 +442,25 @@ func New(mantissa int64, scale int) Decimal {
 	return x
 }
 
-// Parse parses n, which must contain a text representation of a decimal number
-// that does not exceed the provided precision or scale, where precision > 0
-// and scale <= precision.
+// Parse parses n as a decimal number without rounding.
+// When precision > 0, the value must be exactly representable with the given
+// precision and scale. For nonnegative scale, this means that the value has at
+// most precision - scale digits in its integer part, so 0.5 has none, and at
+// most scale digits in its fractional part, ignoring trailing zeros.
+// precision cannot be negative.
 //
-// If n is not syntactically correct, it returns [ErrSyntax]. If the number is
-// out of range, [ErrRange] is returned.
+// It returns [ErrSyntax] if n is syntactically invalid and [ErrRange] if
+// precision or scale are invalid, or if the value is out of range or cannot be
+// represented exactly.
 //
-// As a special case, if precision is 0, the precision and scale are ignored,
-// and no limits are enforced on the number of significant digits or the scale
-// of the number.
+// Scale must be <= precision. When precision is 0, no limits are enforced on
+// the parsed value.
+//
+// For example:
+//
+//	Parse("12.3400", 4, 2) // returns 12.34, nil
+//	Parse("123.4", 4, 2)   // returns ErrRange: more than 2 integer digits
+//	Parse("1.234", 4, 2)   // returns ErrRange: more than 2 fractional digits
 //
 // The following formats are valid:
 //
@@ -548,34 +576,42 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 		}
 		prev := s
 		factor := 1
+		overflow := false
 		for j := len(n) - 1; j >= i; j-- {
 			c := n[j]
 			if c < '0' || c > '9' {
 				return Decimal{}, ErrSyntax
 			}
-			if c == '0' {
-				factor *= 10
+			if overflow {
 				continue
 			}
-			d := int(c-'0') * factor
-			if d < 0 {
-				return Decimal{}, ErrRange
-			}
-			s2 := s
-			if neg {
-				s += d
-				if s < s2 {
-					return Decimal{}, ErrRange
+			if c != '0' {
+				if factor == 0 || factor > math.MaxInt/int(c-'0') {
+					overflow = true
+					continue
 				}
+				d := int(c-'0') * factor
+				s2 := s
+				if neg {
+					s += d
+					if s < s2 {
+						overflow = true
+					}
+				} else {
+					s -= d
+					if s > s2 {
+						overflow = true
+					}
+				}
+			}
+			if factor > math.MaxInt/10 {
+				// Only leading zeros are allowed beyond this position.
+				factor = 0
 			} else {
-				s -= d
-				if s > s2 {
-					return Decimal{}, ErrRange
-				}
+				factor *= 10
 			}
-			factor *= 10
 		}
-		if s < MinScale || s > MaxScale {
+		if overflow || s < MinScale || s > MaxScale {
 			return Decimal{}, ErrRange
 		}
 		if s == prev {

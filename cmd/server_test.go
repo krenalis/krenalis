@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -14,6 +15,9 @@ import (
 	"crypto/x509/pkix"
 	"log/slog"
 	"math/big"
+	"net/http"
+	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -150,6 +154,66 @@ func Test_verifyCertificate(t *testing.T) {
 			t.Fatalf("expected intermediate parse error, got %q", err)
 		}
 	})
+}
+
+// Test_serveLivez checks that serveLivez responds "ok" to GET requests and
+// rejects the other methods.
+func Test_serveLivez(t *testing.T) {
+	tests := []struct {
+		method string
+		status int
+		body   string
+	}{
+		{http.MethodGet, http.StatusOK, "ok"},
+		{http.MethodPost, http.StatusMethodNotAllowed, "Method Not Allowed\n"},
+	}
+	for _, test := range tests {
+		t.Run(test.method, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			serveLivez(w, httptest.NewRequest(test.method, "/livez", nil))
+			if w.Code != test.status {
+				t.Fatalf("expected status %d, got %d", test.status, w.Code)
+			}
+			if w.Body.String() != test.body {
+				t.Fatalf("expected body %q, got %q", test.body, w.Body.String())
+			}
+		})
+	}
+}
+
+// Test_serveSignupHTMLPage checks that serveSignupHTMLPage writes the embedded
+// signup page and the headers that keep it out of search engines.
+func Test_serveSignupHTMLPage(t *testing.T) {
+
+	const robotsTag = "noindex, nofollow, noarchive, nosnippet, notranslate, noimageindex"
+
+	w := httptest.NewRecorder()
+	err := serveSignupHTMLPage(w, httptest.NewRequest(http.MethodGet, "/signup", nil))
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+	if got := w.Header().Get("Content-Type"); got != "text/html; charset=utf-8" {
+		t.Errorf("expected content type %q, got %q", "text/html; charset=utf-8", got)
+	}
+	if got := w.Header().Get("X-Robots-Tag"); got != robotsTag {
+		t.Errorf("expected X-Robots-Tag %q, got %q", robotsTag, got)
+	}
+
+	page, err := static.ReadFile("static/signup.html")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if got := w.Header().Get("Content-Length"); got != strconv.Itoa(len(page)) {
+		t.Errorf("expected content length %d, got %q", len(page), got)
+	}
+	if !bytes.Equal(w.Body.Bytes(), page) {
+		t.Errorf("expected the embedded signup page, got %q", w.Body.String())
+	}
+
 }
 
 type testTLSCertificateOptions struct {

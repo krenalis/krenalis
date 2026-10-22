@@ -11,6 +11,7 @@ import { PostgreSQLSettings } from '../../base/PostgreSQLSettings/PostgreSQLSett
 import { SnowflakeSettings } from '../../base/SnowflakeSettings/SnowflakeSettings';
 import { WarehouseSettings } from '../../../lib/api/types/warehouse';
 import InitialSchema from './InitialSchema.json';
+import InitialRoleAssignments from './InitialRoleAssignments.json';
 import * as icons from '../../../constants/icons';
 import { IS_DOCKER_KEY } from '../../../constants/storage';
 import { ExternalLogo } from '../ExternalLogo/ExternalLogo';
@@ -20,6 +21,14 @@ import Section from '../../base/Section/Section';
 const postgresqlIcon = <ExternalLogo slot='prefix' code='postgresql' path={WAREHOUSES_ASSETS_PATH} />;
 
 const snowflakeIcon = <ExternalLogo slot='prefix' code='snowflake' path={WAREHOUSES_ASSETS_PATH} />;
+
+// The consent purposes added to a workspace when it is created. Their purpose
+// codes match the names of the properties under "consents" in InitialSchema.
+const INITIAL_CONSENT_PURPOSES = [
+	{ purposeCode: 'marketing', name: 'Marketing communications' },
+	{ purposeCode: 'profiling', name: 'Profiling' },
+	{ purposeCode: 'analytics', name: 'Analytics' },
+];
 
 const WorkspaceCreate = () => {
 	const [name, setName] = useState<string>('');
@@ -93,7 +102,14 @@ const WorkspaceCreate = () => {
 
 		if (action == 'test') {
 			try {
-				await api.workspaces.testCreation(name, InitialSchema as ObjectType, warehouse, 'Normal', settings);
+				await api.workspaces.testCreation(
+					name,
+					InitialSchema as ObjectType,
+					InitialRoleAssignments,
+					warehouse,
+					'Normal',
+					settings,
+				);
 			} catch (err) {
 				setTimeout(() => {
 					setIsCheckingWarehouse(false);
@@ -115,6 +131,7 @@ const WorkspaceCreate = () => {
 				const res = await api.workspaces.create(
 					name,
 					InitialSchema as ObjectType,
+					InitialRoleAssignments,
 					warehouse,
 					'Normal',
 					settings,
@@ -128,6 +145,11 @@ const WorkspaceCreate = () => {
 			try {
 				const newApi = new API(window.location.origin, id);
 				await newApi.workspaces.updateWarehouse(name, 'Normal', settings, mcpSettings, false);
+				for (const purpose of INITIAL_CONSENT_PURPOSES) {
+					await newApi.workspaces.addConsentPurpose(purpose.name, [{ purposeCode: purpose.purposeCode }], {
+						property: `consents.${purpose.purposeCode}`,
+					});
+				}
 			} catch (err) {
 				handleError(err);
 				return;

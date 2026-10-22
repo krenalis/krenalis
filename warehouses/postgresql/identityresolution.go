@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/tools/backoff"
-	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/jackc/pgx/v5"
@@ -56,7 +55,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 	if err != nil {
 		return err
 	}
-	// Ensure the next version fits in the INTEGER column before creating the table.
+	// Ensure the next version fits in the integer column before creating the table.
 	if maxProfilesVersion >= math.MaxInt32 {
 		return fmt.Errorf("profile table version limit reached")
 	}
@@ -172,7 +171,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 	mergeProfiles.WriteString(`"_identities", "_anonymous_count", "_recognized_count", "_kpid", "_updated_at"`)
 	mergeProfiles.WriteString(") SELECT\n")
 	for _, c := range profileColumns {
-		if c.Type.Kind() == types.ArrayKind {
+		if c.Type.IsArray() {
 			mergeProfiles.WriteString(`(array_cat_agg(DISTINCT ` + quoteIdent(c.Name) + ` ORDER BY ` + quoteIdent(c.Name) + `) FILTER ( WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL))`)
 		} else {
 			mergeProfiles.WriteByte('(')
@@ -298,7 +297,7 @@ func (warehouse *PostgreSQL) finalizeIdentityResolution(ctx context.Context, con
 	for bo.Next(ctx) {
 		if err := warehouse.setOperationAsCompleted(ctx, conn, opID, operationError); err != nil {
 			slog.Error("cannot mark identity resolution operation as failed, retrying",
-				"err", warehouses.NewOperationError(err), "operationError", operationError)
+				"err", err, "operationError", operationError)
 			continue
 		}
 		status, err := warehouse.readOperationStatus(ctx, conn, opID)

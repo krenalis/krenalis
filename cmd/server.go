@@ -10,7 +10,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
-	"expvar"
 	"fmt"
 	"io"
 	"io/fs"
@@ -28,7 +27,6 @@ import (
 	"github.com/krenalis/krenalis/cmd/internal/mcp"
 	"github.com/krenalis/krenalis/cmd/internal/workos"
 	corePkg "github.com/krenalis/krenalis/core"
-	"github.com/krenalis/krenalis/tools/prometheus"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -47,7 +45,6 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 
 	conf := corePkg.Config{
 		KMS:                           config.KMS,
-		OrganizationsAPIKey:           config.OrganizationsAPIKey,
 		DB:                            config.DB,
 		NATS:                          config.NATS,
 		MaxMindDBPath:                 config.MaxMindDBPath,
@@ -95,7 +92,7 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 	runsOnHTTPS := config.HTTP.TLS.Enabled || strings.HasPrefix(config.HTTP.ExternalURL, "https://")
 	apisServer := newAPIsServer(core, runsOnHTTPS, config.JavaScriptSDKURL,
 		config.HTTP.ExternalURL, config.HTTP.ExternalEventURL, config.ExternalAssetsURLs,
-		config.PotentialConnectorsURL, config.InviteMembersViaEmail, config.OrganizationsAPIKey, workOS,
+		config.PotentialConnectorsURL, config.InviteMembersViaEmail, config.PlatformManagementAPIKey, workOS,
 		config.SentryTelemetryLevel, sentryErrorTunnel)
 
 	admin, err := newAdmin(assetsFS)
@@ -164,20 +161,33 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 		case r.URL.Path == "/admin" || strings.HasPrefix(r.URL.Path, "/admin/"):
 			admin.ServeHTTP(w, r)
 			return
+		case r.URL.Path == "/signup":
+			if workOS != nil {
+				if r.Method != "GET" {
+					w.Header().Set("Allow", "GET")
+					http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+					return
+				}
+				err := serveSignupHTMLPage(w, r)
+				if err != nil {
+					slog.Error("failed to serve the signup HTML page", "error", err)
+				}
+				return
+			}
 		case strings.HasPrefix(r.URL.Path, "/workos/"):
 			if workOS != nil {
 				r.URL.Path = strings.TrimPrefix(r.URL.Path, "/workos")
 				workOS.ServeHTTP(w, r)
 				return
 			}
+		case r.URL.Path == "/livez":
+			serveLivez(w, r)
+			return
 		case r.URL.Path == "/metrics":
 			if config.PrometheusMetricsEnabled {
 				prometheusMetricsHandler.ServeHTTP(w, r)
 				return
 			}
-		case prometheus.Enabled && strings.HasPrefix(r.URL.Path, "/debug/vars"):
-			expvar.Handler().ServeHTTP(w, r)
-			return
 		default:
 		}
 
@@ -343,6 +353,19 @@ func verifyCertificate(cert tls.Certificate, dnsName string, roots *x509.CertPoo
 	return nil
 }
 
+// serveLivez serves the /livez endpoint, which reports that the process is
+// serving requests.
+func serveLivez(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		w.Header().Set("Allow", "GET")
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = w.Write([]byte("ok"))
+}
+
 // serveMCPServerHTMLIndex returns the MCP server HTML index page.
 func serveMCPServerHTMLIndex(w http.ResponseWriter) error {
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet, notranslate, noimageindex")
@@ -353,6 +376,18 @@ func serveMCPServerHTMLIndex(w http.ResponseWriter) error {
 	}
 	_, _ = io.Copy(w, fi)
 	_ = fi.Close()
+	return nil
+}
+
+// serveSignupHTMLPage serves the signup HTML page.
+func serveSignupHTMLPage(w http.ResponseWriter, r *http.Request) error {
+	w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet, notranslate, noimageindex")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	page, err := static.ReadFile("static/signup.html")
+	if err != nil {
+		return errors.New("embedded file 'static/signup.html' not found in executable")
+	}
+	http.ServeContent(w, r, "signup.html", time.Time{}, bytes.NewReader(page))
 	return nil
 }
 
