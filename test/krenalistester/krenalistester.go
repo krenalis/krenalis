@@ -35,7 +35,6 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/nats"
 	_postgres "github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // launchKrenalisExternally determines if Krenalis should be launched externally
@@ -73,6 +72,7 @@ type Krenalis struct {
 	// Options.
 	fileSystemRoot        string
 	natsAckWait           string
+	overrideProfileSchema *types.Type
 	populateProfileSchema bool
 }
 
@@ -89,8 +89,8 @@ func (k *Krenalis) Addr() string {
 // NewKrenalisInstance initializes a new instance of Krenalis for testing.
 //
 // After initializing an instance, its options can be set (via
-// [PopulateProfileSchema], [SetFileSystemRoot], and [SetNATSAckWait]) and
-// finally the instance can be started with the [Start] method.
+// [PopulateProfileSchema], [SetFileSystemRoot], [SetNATSAckWait], and
+// [SetProfileSchema]) before calling [Start].
 func NewKrenalisInstance(t *testing.T) *Krenalis {
 
 	if !launchKrenalisExternally {
@@ -178,6 +178,16 @@ func (k *Krenalis) SetNATSAckWait(duration string) {
 	k.natsAckWait = duration
 }
 
+// SetProfileSchema sets the schema used to create the initial workspace.
+// Call it before [Start]. It overrides [PopulateProfileSchema] and panics if
+// schema is not a valid object type.
+func (k *Krenalis) SetProfileSchema(schema types.Type) {
+	if !schema.IsObject() {
+		panic("test/krenalistester: profile schema must be a valid object type")
+	}
+	k.overrideProfileSchema = &schema
+}
+
 // Start starts the Krenalis instance.
 //
 // After calling this method, the [Stop] method must be called to stop the
@@ -232,10 +242,7 @@ func (k *Krenalis) Start() {
 			_postgres.WithDatabase("test_postgres"),
 			_postgres.WithUsername("test_postgres"),
 			_postgres.WithPassword("test_postgres"),
-			testcontainers.WithWaitStrategy(
-				wait.ForLog("database system is ready to accept connections").
-					WithOccurrence(2).
-					WithStartupTimeout(60*time.Second)),
+			_postgres.BasicWaitStrategies(),
 		)
 		k.stopPostgresContainer = func() error {
 			return testcontainers.TerminateContainer(postgresContainer)
@@ -265,10 +272,7 @@ func (k *Krenalis) Start() {
 			_postgres.WithDatabase("test_warehouse"),
 			_postgres.WithUsername("test_warehouse"),
 			_postgres.WithPassword("test_warehouse"),
-			testcontainers.WithWaitStrategy(
-				wait.ForLog("database system is ready to accept connections").
-					WithOccurrence(2).
-					WithStartupTimeout(60*time.Second)),
+			_postgres.BasicWaitStrategies(),
 		)
 		k.stopWarehouseContainer = func() error {
 			return testcontainers.TerminateContainer(warehouseContainer)
@@ -346,7 +350,7 @@ func (k *Krenalis) Start() {
 			"KRENALIS_POTENTIAL_CONNECTORS_URL=https://assets.krenalis.com/admin/connectors/potentials.json",
 			"KRENALIS_TELEMETRY_LEVEL=none",
 			"KRENALIS_KMS=" + testKMS(),
-			"KRENALIS_ORGANIZATIONS_API_KEY=" + testsSettings.OrganizationsAPIKey,
+			"KRENALIS_PLATFORM_MANAGEMENT_API_KEY=" + testsSettings.PlatformManagementAPIKey,
 			"KRENALIS_PROMETHEUS_METRICS_ENABLED=true",
 			"KRENALIS_HTTP_HOST=" + testsSettings.HTTP.Host,
 			"KRENALIS_HTTP_PORT=" + strconv.Itoa(testsSettings.HTTP.Port),
@@ -384,7 +388,7 @@ func (k *Krenalis) Start() {
 		// Keep these in sync with the environment variables set above.
 		setts := cmd.Config{}
 		setts.KMS = testKMS()
-		setts.OrganizationsAPIKey = testsSettings.OrganizationsAPIKey
+		setts.PlatformManagementAPIKey = testsSettings.PlatformManagementAPIKey
 		setts.JavaScriptSDKURL = "https://cdn.krenalis.com/krenalis.min.js"
 		setts.SentryTelemetryLevel = core.TelemetryLevelNone
 		setts.ExternalAssetsURLs = []string{"https://assets.krenalis.com/"}
@@ -479,7 +483,9 @@ func (k *Krenalis) Start() {
 
 	// Create the workspace and connect the warehouse.
 	var profileSchema types.Type
-	if k.populateProfileSchema {
+	if k.overrideProfileSchema != nil {
+		profileSchema = *k.overrideProfileSchema
+	} else if k.populateProfileSchema {
 		profileSchema = testsProfileSchema
 	} else {
 		profileSchema = minimalProfileSchema

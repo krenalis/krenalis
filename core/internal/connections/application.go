@@ -110,7 +110,57 @@ func (app *Application) Connector() string {
 	return app.connector
 }
 
+// EventType returns the application's event type with the specified ID.
+//
+// It returns the event type obtained directly from the connector, after
+// validation. The caller must not modify the returned value.
+//
+// If the event type does not exist, it returns connectors.ErrEventTypeNotExist.
+// If the connector returns an error, it returns an *UnavailableError.
+// It panics if the application does not support the event target.
+func (app *Application) EventType(ctx context.Context, id string) (*EventType, error) {
+	if app.err != nil {
+		return nil, app.err
+	}
+	eventTypes, err := app.inner.(connectors.EventSender).EventTypes(ctx)
+	if err != nil {
+		return nil, connectorError(err)
+	}
+	var et *EventType
+	for _, candidate := range eventTypes {
+		if candidate == nil || candidate.ID != id {
+			continue
+		}
+		if et != nil {
+			return nil, fmt.Errorf("connector %s returned multiple event types with the same ID (%s)", app.connector, id)
+		}
+		et = candidate
+	}
+	if et == nil {
+		return nil, connectors.ErrEventTypeNotExist
+	}
+	if err := validateEventType(app.connector, et); err != nil {
+		return nil, err
+	}
+	for _, candidate := range eventTypes {
+		if candidate == nil || candidate.OrderingGroup != et.OrderingGroup {
+			continue
+		}
+		if candidate.DeliveryEndpoint == et.DeliveryEndpoint {
+			continue
+		}
+		return nil, fmt.Errorf(
+			"connector %s returned a different DeliveryEndpoint for ordering group %q", app.connector, et.OrderingGroup)
+	}
+	return et, nil
+}
+
 // EventTypes returns the application's event types.
+//
+// It returns the event types obtained directly from the connector, after
+// validation. The caller must not modify the returned slice or any of the event
+// types it contains.
+//
 // If the connector returns an error, it returns an *UnavailableError error.
 // It panics if the application does not support the event target.
 func (app *Application) EventTypes(ctx context.Context) ([]*EventType, error) {
@@ -121,9 +171,26 @@ func (app *Application) EventTypes(ctx context.Context) ([]*EventType, error) {
 	if err != nil {
 		return nil, connectorError(err)
 	}
-	for _, typ := range eventTypes {
-		if err := util.ValidateStringField("event type", typ.ID, 100); err != nil {
+	for i, eventType := range eventTypes {
+		if eventType == nil {
+			return nil, fmt.Errorf("connector %s returned a nil event type", app.connector)
+		}
+		if err := validateEventType(app.connector, eventType); err != nil {
 			return nil, err
+		}
+		for _, next := range eventTypes[i+1:] {
+			if next != nil && next.ID == eventType.ID {
+				return nil, fmt.Errorf(
+					"connector %s returned multiple event types with the same ID (%s)", app.connector, eventType.ID)
+			}
+			if next == nil || next.OrderingGroup != eventType.OrderingGroup {
+				continue
+			}
+			if next.DeliveryEndpoint == eventType.DeliveryEndpoint {
+				continue
+			}
+			return nil, fmt.Errorf(
+				"connector %s returned a different DeliveryEndpoint for ordering group %q", app.connector, eventType.OrderingGroup)
 		}
 	}
 	return eventTypes, nil
@@ -147,7 +214,7 @@ func (app *Application) PreviewSendEvent(ctx context.Context, event connectors.E
 	if app.err != nil {
 		return nil, app.err
 	}
-	eventTypeSchema, err := app.inner.(connectors.EventSender).EventTypeSchema(ctx, event.Type.ID)
+	eventTypeSchema, err := app.eventTypeSchema(ctx, event.Type.ID)
 	if err != nil {
 		return nil, connectorError(err)
 	}
@@ -215,7 +282,7 @@ func (app *Application) SchemaAsRole(ctx context.Context, role state.Role, targe
 		if role != state.Destination {
 			panic("invalid role")
 		}
-		schema, err := app.inner.(connectors.EventSender).EventTypeSchema(ctx, eventType)
+		schema, err := app.eventTypeSchema(ctx, eventType)
 		if err != nil {
 			return types.Type{}, connectorError(err)
 		}
@@ -345,6 +412,19 @@ func (app *Application) Writer(ctx context.Context, outSchema types.Type, export
 	return writer, nil
 }
 
+// eventTypeSchema returns the event type schema provided by the connector and
+// rejects generic schemas.
+func (app *Application) eventTypeSchema(ctx context.Context, eventType string) (types.Type, error) {
+	schema, err := app.inner.(connectors.EventSender).EventTypeSchema(ctx, eventType)
+	if err != nil {
+		return types.Type{}, err
+	}
+	if schema.Generic() {
+		return types.Type{}, fmt.Errorf("connector %s returned an invalid event schema", app.connector)
+	}
+	return schema, nil
+}
+
 // userSchema returns the user schema with the provided role.
 // If the connector returns an error, it returns an *UnavailableError error.
 // It panics if role is not Source or Destination.
@@ -367,8 +447,9 @@ func (app *Application) userSchema(ctx context.Context, role state.Role) (types.
 	if err != nil {
 		return types.Type{}, connectorError(fmt.Errorf("cannot get user schema: %s", err))
 	}
-	if !schema.Valid() {
-		return types.Type{}, connectorError(fmt.Errorf("connector %s returned an invalid %s schema", app.connector, strings.ToLower(role.String())))
+	if !schema.Valid() || schema.Generic() {
+		return types.Type{}, connectorError(fmt.Errorf(
+			"connector %s returned an invalid %s schema", app.connector, strings.ToLower(role.String())))
 	}
 	schema = types.AsRole(schema, types.Role(role))
 	app.users.schemas[role-1] = schema
@@ -677,4 +758,21 @@ func (r *appRecords) Err() error {
 type schema struct {
 	lock    chan struct{}
 	schemas [2]types.Type
+}
+
+// validateEventType validates an event type provided by a connector.
+func validateEventType(connector string, eventType *EventType) error {
+	if err := util.ValidateStringField("event type", eventType.ID, 100); err != nil {
+		return err
+	}
+	if !types.IsValidPropertyName(eventType.OrderingGroup) || len(eventType.OrderingGroup) > connectors.MaxOrderingGroupLen {
+		return fmt.Errorf("connector %s returned an invalid ordering group (%q)", connector, eventType.OrderingGroup)
+	}
+	if eventType.DeliveryEndpoint != "" {
+		if !types.IsValidPropertyName(eventType.DeliveryEndpoint) ||
+			len(eventType.DeliveryEndpoint) > connectors.MaxDeliveryEndpointLen {
+			return fmt.Errorf("connector %s returned an invalid delivery endpoint (%q)", connector, eventType.DeliveryEndpoint)
+		}
+	}
+	return nil
 }

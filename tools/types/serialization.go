@@ -7,6 +7,7 @@ package types
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -16,7 +17,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/tools/decimal"
-	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/validation"
 
 	"golang.org/x/text/unicode/norm"
@@ -27,7 +27,10 @@ var errNullToken = errors.New("invalid type syntax")
 var null = []byte("null")
 
 // Parse parses the JSON-encoded data and returns the decoded type.
-// If data represents JSON null, Parse returns an error.
+// If data is JSON null, Parse returns an error.
+//
+// Parse accepts only recognized concrete kinds; generic type parameters cannot
+// be parsed from JSON.
 func Parse(data string) (Type, error) {
 	dec := json.NewDecoder(strings.NewReader(norm.NFC.String(data)))
 	dec.UseNumber()
@@ -45,7 +48,10 @@ func Parse(data string) (Type, error) {
 }
 
 // MarshalJSON marshals t into JSON.
-// If t is not valid, it is marshalled as 'null'.
+// If t is invalid, it is marshaled as 'null'.
+//
+// Generic types are intentionally encoded for documentation with their
+// parameter names used as kinds.
 func (t Type) MarshalJSON() ([]byte, error) {
 	if !t.Valid() && !t.Generic() {
 		return null, nil
@@ -55,8 +61,11 @@ func (t Type) MarshalJSON() ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// UnmarshalJSON parses the JSON-encoded data and stores the result in the type
-// pointed by t.
+// UnmarshalJSON parses the JSON-encoded data and stores the result in the value
+// pointed to by t.
+//
+// It accepts only recognized concrete kinds; generic type parameters cannot be
+// unmarshaled from JSON.
 func (t *Type) UnmarshalJSON(data []byte) error {
 	dec := json.NewDecoder(bytes.NewReader(norm.NFC.Bytes(data)))
 	dec.UseNumber()
@@ -73,23 +82,23 @@ func marshalType(b *bytes.Buffer, t Type) {
 	b.WriteString(`{"kind":"`)
 	b.WriteString(t.KindName())
 	b.WriteString(`"`)
-	if t.semantic != NoSemantic {
-		b.WriteString(`,"semantic":"`)
-		b.WriteString(t.semantic.String())
+	if t.semantics != NoSemantics {
+		b.WriteString(`,"semantics":"`)
+		b.WriteString(t.semantics.String())
 		b.WriteByte('"')
-		switch t.semantic {
-		case CountrySemantic:
+		switch t.semantics {
+		case CountrySemantics:
 			b.WriteString(`,"format":`)
 			_ = marshalString(b, t.CountryFormat().String())
-		case MoneySemantic:
+		case MoneySemantics:
 			if currency, ok := t.Currency(); ok {
 				b.WriteString(`,"currency":`)
 				_ = marshalString(b, currency)
 			}
-		case MeasurementSemantic:
+		case MeasurementSemantics:
 			b.WriteString(`,"unit":`)
 			_ = marshalString(b, t.UnitOfMeasure().String())
-		case DurationSemantic:
+		case DurationSemantics:
 			b.WriteString(`,"unit":`)
 			_ = marshalString(b, t.DurationUnit().String())
 		}
@@ -236,6 +245,8 @@ func marshalType(b *bytes.Buffer, t Type) {
 }
 
 // MarshalJSON marshals p into JSON.
+//
+// Properties with generic types are supported.
 func (p Property) MarshalJSON() ([]byte, error) {
 	var b bytes.Buffer
 	err := marshalProperty(&b, p)
@@ -247,6 +258,8 @@ func (p Property) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON parses the JSON-encoded data and stores the result in the
 // property pointed by p.
+//
+// Properties with generic types cannot be unmarshaled from JSON.
 func (p *Property) UnmarshalJSON(data []byte) error {
 	dec := json.NewDecoder(bytes.NewReader(norm.NFC.Bytes(data)))
 	dec.UseNumber()
@@ -300,8 +313,10 @@ func marshalProperty(b *bytes.Buffer, p Property) error {
 		b.WriteString(`,"displayName":`)
 		_ = marshalString(b, p.DisplayName)
 	}
-	b.WriteString(`,"description":`)
-	_ = marshalString(b, p.Description)
+	if p.Description != "" {
+		b.WriteString(`,"description":`)
+		_ = marshalString(b, p.Description)
+	}
 	b.WriteByte('}')
 	return nil
 }
@@ -323,10 +338,10 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	}
 
 	var hasUnsigned, hasReal, hasScale, hasMinElements, hasMaxElements, hasUniqueElements bool
-	var hasSemantic, hasFormat, hasCurrency, hasUnit bool
+	var hasSemantics, hasFormat, hasCurrency, hasUnit bool
 
 	var kind, format, currency, unit string
-	var semantic Semantic
+	var semantics Semantics
 	var bitSize int
 	var unsigned bool
 	var minimum, maximum json.Number
@@ -377,26 +392,26 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			if !IsValidPropertyName(kind) {
 				return Type{}, errors.New("invalid type kind")
 			}
-		case "semantic":
-			if hasSemantic {
-				return Type{}, errors.New("repeated 'semantic' key")
+		case "semantics":
+			if hasSemantics {
+				return Type{}, errors.New("repeated 'semantics' key")
 			}
 			name, ok := tok.(string)
 			if !ok {
-				return Type{}, errors.New("invalid semantic")
+				return Type{}, errors.New("invalid semantics")
 			}
-			semantic, ok = SemanticByName(name)
+			semantics, ok = SemanticsByName(name)
 			if !ok {
-				return Type{}, fmt.Errorf("invalid semantic %q", name)
+				return Type{}, fmt.Errorf("invalid semantics %q", name)
 			}
-			hasSemantic = true
+			hasSemantics = true
 		case "format":
 			if hasFormat {
 				return Type{}, errors.New("repeated 'format' key")
 			}
 			format, ok = tok.(string)
 			if !ok {
-				return Type{}, errors.New("invalid semantic format")
+				return Type{}, errors.New("invalid semantics format")
 			}
 			hasFormat = true
 		case "currency":
@@ -405,7 +420,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			}
 			currency, ok = tok.(string)
 			if !ok {
-				return Type{}, errors.New("invalid semantic currency")
+				return Type{}, errors.New("invalid semantics currency")
 			}
 			hasCurrency = true
 		case "unit":
@@ -414,7 +429,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			}
 			unit, ok = tok.(string)
 			if !ok {
-				return Type{}, errors.New("invalid semantic unit")
+				return Type{}, errors.New("invalid semantics unit")
 			}
 			hasUnit = true
 		case "bitSize":
@@ -473,6 +488,12 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			if values != nil {
 				return Type{}, errors.New("pattern cannot be provided if values are provided")
 			}
+			if maxBytes != 0 {
+				return Type{}, errors.New("pattern cannot be provided if max bytes is provided")
+			}
+			if maxLength != 0 {
+				return Type{}, errors.New("pattern cannot be provided if max length is provided")
+			}
 			if expr, ok := tok.(string); ok {
 				pattern, _ = regexp.Compile(expr)
 			}
@@ -485,6 +506,12 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			}
 			if pattern != nil {
 				return Type{}, errors.New("values cannot be provided if pattern is provided")
+			}
+			if maxBytes != 0 {
+				return Type{}, errors.New("values cannot be provided if max bytes is provided")
+			}
+			if maxLength != 0 {
+				return Type{}, errors.New("values cannot be provided if max length is provided")
 			}
 			if tok != json.Delim('[') {
 				return Type{}, errors.New("invalid values")
@@ -533,8 +560,14 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			}
 			hasScale = true
 		case "maxBytes":
-			if maxBytes > 0 {
+			if maxBytes != 0 {
 				return Type{}, errors.New("repeated 'maxBytes' key")
+			}
+			if pattern != nil {
+				return Type{}, errors.New("max bytes cannot be provided if pattern is provided")
+			}
+			if values != nil {
+				return Type{}, errors.New("max bytes cannot be provided if values are provided")
 			}
 			n, ok := tok.(json.Number)
 			if !ok {
@@ -545,8 +578,14 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				return Type{}, errors.New("invalid length in bytes")
 			}
 		case "maxLength":
-			if maxLength > 0 {
+			if maxLength != 0 {
 				return Type{}, errors.New("repeated 'maxLength' key")
+			}
+			if pattern != nil {
+				return Type{}, errors.New("max length cannot be provided if pattern is provided")
+			}
+			if values != nil {
+				return Type{}, errors.New("max length cannot be provided if values are provided")
 			}
 			n, ok := tok.(json.Number)
 			if !ok {
@@ -641,8 +680,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	}
 	t.kind, _ = KindByName(kind)
 	if t.kind == InvalidKind {
-		t.generic = true
-		t.vl = kind
+		return Type{}, fmt.Errorf("unknown type kind %q", kind)
 	}
 	if pattern != nil {
 		if t.kind != StringKind {
@@ -943,11 +981,10 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 		t.real = real
 	}
-	if elementType.Valid() || elementType.Generic() {
+	if elementType.Valid() {
 		if t.kind != ArrayKind && t.kind != MapKind {
 			return Type{}, errors.New("unexpected element type for non-array and non-map type")
 		}
-		t.generic = elementType.generic
 		t.vl = elementType
 	} else {
 		if t.kind == ArrayKind || t.kind == MapKind {
@@ -988,59 +1025,53 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		if t.kind != ObjectKind {
 			return Type{}, errors.New("unexpected properties for non-object type")
 		}
-		for _, p := range properties {
-			if p.Type.generic {
-				t.generic = true
-				break
-			}
-		}
 		names := make(map[string]int, len(properties))
 		for i, p := range properties {
 			names[p.Name] = i
 		}
 		t.vl = Properties{properties: properties, names: names}
 	}
-	if !hasSemantic {
+	if !hasSemantics {
 		if hasFormat {
-			return Type{}, errors.New("unexpected 'format' key without semantic")
+			return Type{}, errors.New("unexpected 'format' key without semantics")
 		}
 		if hasCurrency {
-			return Type{}, errors.New("unexpected 'currency' key without semantic")
+			return Type{}, errors.New("unexpected 'currency' key without semantics")
 		}
 		if hasUnit {
-			return Type{}, errors.New("unexpected 'unit' key without semantic")
+			return Type{}, errors.New("unexpected 'unit' key without semantics")
 		}
 		return t, nil
 	}
 
-	var semanticOption any
-	switch semantic {
-	case EmailSemantic, PhoneSemantic, PercentageSemantic:
+	var semanticsOption any
+	switch semantics {
+	case EmailSemantics, PhoneSemantics, PercentageSemantics:
 		if hasFormat {
-			return Type{}, fmt.Errorf("unexpected 'format' key for %s semantic", semantic)
+			return Type{}, fmt.Errorf("unexpected 'format' key for %s semantics", semantics)
 		}
 		if hasCurrency {
-			return Type{}, fmt.Errorf("unexpected 'currency' key for %s semantic", semantic)
+			return Type{}, fmt.Errorf("unexpected 'currency' key for %s semantics", semantics)
 		}
 		if hasUnit {
-			return Type{}, fmt.Errorf("unexpected 'unit' key for %s semantic", semantic)
+			return Type{}, fmt.Errorf("unexpected 'unit' key for %s semantics", semantics)
 		}
-	case URLSemantic:
+	case URLSemantics:
 		if hasFormat {
-			return Type{}, errors.New("unexpected 'format' key for URL semantic")
+			return Type{}, errors.New("unexpected 'format' key for URL semantics")
 		}
 		if hasCurrency {
-			return Type{}, errors.New("unexpected 'currency' key for URL semantic")
+			return Type{}, errors.New("unexpected 'currency' key for URL semantics")
 		}
 		if hasUnit {
-			return Type{}, errors.New("unexpected 'unit' key for URL semantic")
+			return Type{}, errors.New("unexpected 'unit' key for URL semantics")
 		}
-	case CountrySemantic:
+	case CountrySemantics:
 		if hasCurrency {
-			return Type{}, errors.New("unexpected 'currency' key for country semantic")
+			return Type{}, errors.New("unexpected 'currency' key for country semantics")
 		}
 		if hasUnit {
-			return Type{}, errors.New("unexpected 'unit' key for country semantic")
+			return Type{}, errors.New("unexpected 'unit' key for country semantics")
 		}
 		if !hasFormat {
 			return Type{}, errors.New("missing country format")
@@ -1049,20 +1080,20 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		if !ok {
 			return Type{}, fmt.Errorf("invalid country format %q", format)
 		}
-		semanticOption = countryFormat
-	case MoneySemantic:
+		semanticsOption = countryFormat
+	case MoneySemantics:
 		if hasFormat {
-			return Type{}, errors.New("unexpected 'format' key for money semantic")
+			return Type{}, errors.New("unexpected 'format' key for money semantics")
 		}
 		if hasUnit {
-			return Type{}, errors.New("unexpected 'unit' key for money semantic")
+			return Type{}, errors.New("unexpected 'unit' key for money semantics")
 		}
-	case MeasurementSemantic:
+	case MeasurementSemantics:
 		if hasFormat {
-			return Type{}, errors.New("unexpected 'format' key for measurement semantic")
+			return Type{}, errors.New("unexpected 'format' key for measurement semantics")
 		}
 		if hasCurrency {
-			return Type{}, errors.New("unexpected 'currency' key for measurement semantic")
+			return Type{}, errors.New("unexpected 'currency' key for measurement semantics")
 		}
 		if !hasUnit {
 			return Type{}, errors.New("missing measurement unit")
@@ -1071,13 +1102,13 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		if !ok {
 			return Type{}, fmt.Errorf("invalid unit of measure %q", unit)
 		}
-		semanticOption = measurementUnit
-	case DurationSemantic:
+		semanticsOption = measurementUnit
+	case DurationSemantics:
 		if hasFormat {
-			return Type{}, errors.New("unexpected 'format' key for duration semantic")
+			return Type{}, errors.New("unexpected 'format' key for duration semantics")
 		}
 		if hasCurrency {
-			return Type{}, errors.New("unexpected 'currency' key for duration semantic")
+			return Type{}, errors.New("unexpected 'currency' key for duration semantics")
 		}
 		if !hasUnit {
 			return Type{}, errors.New("missing duration unit")
@@ -1086,10 +1117,10 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		if !ok {
 			return Type{}, fmt.Errorf("invalid duration unit %q", unit)
 		}
-		semanticOption = durationUnit
+		semanticsOption = durationUnit
 	}
 
-	t, err = t.withSemantic(semantic, semanticOption)
+	t, err = t.withSemantics(semantics, semanticsOption)
 	if err != nil {
 		return Type{}, err
 	}
@@ -1124,7 +1155,7 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 		key := tok.(string)
 
 		if key == "type" {
-			if p.Type.Valid() || p.Type.Generic() {
+			if p.Type.Valid() {
 				return Property{}, errors.New("repeated 'type' key")
 			}
 			p.Type, err = unmarshalType(dec)
@@ -1229,7 +1260,7 @@ func unmarshalProperty(dec *json.Decoder) (Property, error) {
 	if p.Name == "" {
 		return Property{}, errors.New("missing property name")
 	}
-	if !p.Type.Valid() && !p.Type.Generic() {
+	if !p.Type.Valid() {
 		return Property{}, errors.New("missing property type")
 	}
 

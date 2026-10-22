@@ -39,7 +39,7 @@ export default defineConfig({
 		{
 			name: 'schema.spec.ts',
 			use: { ...devices['Desktop Chrome'] },
-			testMatch: ['tests/schema.spec.ts', 'tests/schema-reordering.spec.ts'],
+			testMatch: ['tests/schema.spec.ts', 'tests/schema-consents.spec.ts', 'tests/schema-reordering.spec.ts'],
 		},
 		{
 			name: 'connections.spec.ts',
@@ -49,12 +49,22 @@ export default defineConfig({
 		{
 			name: 'pipelines.spec.ts',
 			use: { ...devices['Desktop Chrome'] },
-			testMatch: ['tests/pipelines.spec.ts'],
+			testMatch: ['tests/pipeline-semantics.spec.ts', 'tests/pipelines.spec.ts'],
 		},
 		{
 			name: 'settings.spec.ts',
 			use: { ...devices['Desktop Chrome'] },
 			testMatch: ['tests/settings.spec.ts'],
+		},
+		{
+			name: 'identity-overview.spec.ts',
+			use: { ...devices['Desktop Chrome'] },
+			testMatch: ['tests/identity-overview.spec.ts'],
+		},
+		{
+			name: 'segmented-date-range-control.spec.ts',
+			use: { ...devices['Desktop Chrome'] },
+			testMatch: ['tests/segmented-date-range-control.spec.ts'],
 		},
 
 		// {

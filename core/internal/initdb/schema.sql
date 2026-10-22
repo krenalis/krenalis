@@ -153,10 +153,13 @@ CREATE TABLE access_keys (
 );
 
 CREATE TABLE consent_purposes (
+    id varchar(12) NOT NULL CHECK (id ~ '^[1-9A-HJ-NP-Za-km-z]{12}$'),
     workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
-    code varchar(100) NOT NULL CHECK (code ~ '^[A-Za-z_][0-9A-Za-z_]{0,99}$'),
     name varchar(100) NOT NULL,
-    PRIMARY KEY (workspace, code)
+    event_purpose_codes varchar(1024)[] NOT NULL DEFAULT '{}',
+    profile_property varchar(1024) NOT NULL DEFAULT '',
+    profile_json_key varchar(1024) NOT NULL DEFAULT '',
+    PRIMARY KEY (id)
 );
 
 CREATE TYPE role AS ENUM ('Source', 'Destination');
@@ -195,6 +198,8 @@ CREATE TABLE pipelines (
     connection varchar(12) NOT NULL REFERENCES connections ON DELETE CASCADE,
     target pipeline_target NOT NULL,
     event_type varchar(100) NOT NULL,
+    ordering_group varchar(16) NOT NULL,
+    delivery_endpoint varchar(16) NOT NULL,
     name varchar(60) NOT NULL DEFAULT '',
     enabled boolean NOT NULL DEFAULT FALSE,
     schedule_start smallint NOT NULL DEFAULT 0 CHECK (schedule_start >= 0 AND schedule_start < 1440),
@@ -202,8 +207,8 @@ CREATE TABLE pipelines (
     in_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     out_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     filter jsonb,
-    required_consents varchar(100)[] NOT NULL DEFAULT '{}',
     required_consents_operator varchar(3) NOT NULL DEFAULT 'and' CHECK (required_consents_operator IN ('and', 'or')),
+    required_consents_purposes varchar(12)[] NOT NULL DEFAULT '{}',
     transformation_mapping jsonb,
     transformation_id varchar(200) NOT NULL DEFAULT '',
     transformation_version varchar(128) NOT NULL DEFAULT '',
@@ -271,20 +276,24 @@ CREATE TABLE pipelines_runs (
     start_time timestamp NOT NULL,
     ping_time timestamp NOT NULL,
     end_time timestamp,
-    passed_0 integer NOT NULL DEFAULT 0,
-    passed_1 integer NOT NULL DEFAULT 0,
-    passed_2 integer NOT NULL DEFAULT 0,
-    passed_3 integer NOT NULL DEFAULT 0,
-    passed_4 integer NOT NULL DEFAULT 0,
-    passed_5 integer NOT NULL DEFAULT 0,
-    passed_6 integer NOT NULL DEFAULT 0,
-    failed_0 integer NOT NULL DEFAULT 0,
-    failed_1 integer NOT NULL DEFAULT 0,
-    failed_2 integer NOT NULL DEFAULT 0,
-    failed_3 integer NOT NULL DEFAULT 0,
-    failed_4 integer NOT NULL DEFAULT 0,
-    failed_5 integer NOT NULL DEFAULT 0,
-    failed_6 integer NOT NULL DEFAULT 0,
+    passed_0 integer NOT NULL DEFAULT 0, -- Receive
+    passed_1 integer NOT NULL DEFAULT 0, -- InputValidation
+    passed_2 integer NOT NULL DEFAULT 0, -- Filter
+    passed_3 integer NOT NULL DEFAULT 0, -- EventConsent
+    passed_4 integer NOT NULL DEFAULT 0, -- ExportProfileConsent
+    passed_5 integer NOT NULL DEFAULT 0, -- Transformation
+    passed_6 integer NOT NULL DEFAULT 0, -- OutputValidation
+    passed_7 integer NOT NULL DEFAULT 0, -- ImportProfileConsent
+    passed_8 integer NOT NULL DEFAULT 0, -- Finalize
+    failed_0 integer NOT NULL DEFAULT 0, -- Receive
+    failed_1 integer NOT NULL DEFAULT 0, -- InputValidation
+    failed_2 integer NOT NULL DEFAULT 0, -- Filter
+    failed_3 integer NOT NULL DEFAULT 0, -- EventConsent
+    failed_4 integer NOT NULL DEFAULT 0, -- ExportProfileConsent
+    failed_5 integer NOT NULL DEFAULT 0, -- Transformation
+    failed_6 integer NOT NULL DEFAULT 0, -- OutputValidation
+    failed_7 integer NOT NULL DEFAULT 0, -- ImportProfileConsent
+    failed_8 integer NOT NULL DEFAULT 0, -- Finalize
     error varchar NOT NULL DEFAULT '',
     PRIMARY KEY (id)
 );
@@ -316,21 +325,58 @@ CREATE TABLE pipelines_metrics (
     pipeline varchar(12) NOT NULL,
     target pipeline_target NOT NULL,
     timeslot integer NOT NULL,
-    passed_0 integer NOT NULL,
-    passed_1 integer NOT NULL,
-    passed_2 integer NOT NULL,
-    passed_3 integer NOT NULL,
-    passed_4 integer NOT NULL,
-    passed_5 integer NOT NULL,
-    passed_6 integer NOT NULL,
-    failed_0 integer NOT NULL,
-    failed_1 integer NOT NULL,
-    failed_2 integer NOT NULL,
-    failed_3 integer NOT NULL,
-    failed_4 integer NOT NULL,
-    failed_5 integer NOT NULL,
-    failed_6 integer NOT NULL,
+    passed_0 integer NOT NULL, -- Receive
+    passed_1 integer NOT NULL, -- InputValidation
+    passed_2 integer NOT NULL, -- Filter
+    passed_3 integer NOT NULL, -- EventConsent
+    passed_4 integer NOT NULL, -- ExportProfileConsent
+    passed_5 integer NOT NULL, -- Transformation
+    passed_6 integer NOT NULL, -- OutputValidation
+    passed_7 integer NOT NULL, -- ImportProfileConsent
+    passed_8 integer NOT NULL, -- Finalize
+    failed_0 integer NOT NULL, -- Receive
+    failed_1 integer NOT NULL, -- InputValidation
+    failed_2 integer NOT NULL, -- Filter
+    failed_3 integer NOT NULL, -- EventConsent
+    failed_4 integer NOT NULL, -- ExportProfileConsent
+    failed_5 integer NOT NULL, -- Transformation
+    failed_6 integer NOT NULL, -- OutputValidation
+    failed_7 integer NOT NULL, -- ImportProfileConsent
+    failed_8 integer NOT NULL, -- Finalize
     PRIMARY KEY (pipeline, timeslot)
+);
+
+CREATE TABLE usage_metrics (
+    organization varchar(12) NOT NULL REFERENCES organizations ON DELETE CASCADE,
+    workspace varchar(12) NOT NULL,
+    day date NOT NULL,
+    profiles bigint NOT NULL DEFAULT 0,
+    profile_seconds bigint NOT NULL DEFAULT 0,
+    observed_at time without time zone,
+    events bigint NOT NULL DEFAULT 0,
+    PRIMARY KEY (organization, workspace, day)
+);
+
+CREATE INDEX usage_metrics_organization_day_idx
+    ON usage_metrics (organization, day);
+
+CREATE TABLE identity_metrics (
+    workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+    day date NOT NULL,
+    observed_at time without time zone NOT NULL,
+    identities_anonymous bigint NOT NULL,
+    identities_recognized bigint NOT NULL,
+    identities_without_profile bigint NOT NULL,
+    PRIMARY KEY (workspace, day)
+);
+
+CREATE TABLE identity_connection_metrics (
+    connection varchar(12) NOT NULL REFERENCES connections ON DELETE CASCADE,
+    day date NOT NULL,
+    identities_anonymous bigint NOT NULL,
+    identities_recognized bigint NOT NULL,
+    identities_without_profile bigint NOT NULL,
+    PRIMARY KEY (connection, day)
 );
 
 CREATE INDEX pipelines_metrics_workspace_timeslot_idx ON pipelines_metrics (workspace, timeslot);
@@ -345,7 +391,7 @@ CREATE TABLE discontinued_functions (
 );
 
 CREATE TABLE election (
-    number integer NOT NULL,
+    number bigint NOT NULL,
     leader varchar(22) NOT NULL CHECK (leader = '' OR leader ~ '^[1-9A-HJ-NP-Za-km-z]{22}$'),
     date timestamp NOT NULL,
     PRIMARY KEY (number)

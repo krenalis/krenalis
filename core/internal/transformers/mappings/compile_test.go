@@ -7,10 +7,10 @@ package mappings
 import (
 	"errors"
 	"reflect"
+	"regexp"
 	"testing"
 	"time"
 
-	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -51,7 +51,6 @@ func Test_Compile(t *testing.T) {
 		dt         types.Type
 		purpose    Purpose
 		nullable   bool
-		layouts    *state.TimeLayouts
 		compileErr error
 		evalErr    error
 		convertErr error
@@ -81,6 +80,21 @@ func Test_Compile(t *testing.T) {
 		{expr: "jsonNil", dt: types.JSON(), nullable: true, expected: nil},
 
 		{expr: "''", dt: types.Map(types.String()), compileErr: errors.New("\"\" is not convertible to the map(string) type")},
+		{expr: "'ZZ'", dt: types.String().AsCountry(types.ISO3166Alpha2), compileErr: errors.New(`"ZZ" is not a 2-letter country code`)},
+		{expr: "'ZZZ'", dt: types.String().AsCountry(types.ISO3166Alpha3), compileErr: errors.New(`"ZZZ" is not a 3-letter country code`)},
+		{expr: "'abc'", dt: types.String().AsPhone(), compileErr: errors.New(`"abc" is not a valid phone number`)},
+		{expr: "-1", dt: types.Int(32).Unsigned(), compileErr: errors.New("number -1 is not a int(32) value")},
+		{expr: "-200", dt: types.Int(8), compileErr: errors.New("number -200 is less than -128")},
+		{expr: "300", dt: types.Int(8), compileErr: errors.New("number 300 is greater than 127")},
+		{expr: "'300'", dt: types.Int(8), compileErr: errors.New(`number "300" is greater than 127`)},
+		{expr: "1.5", dt: types.Float(64).WithFloatRange(2, 10), compileErr: errors.New("number 1.5 is less than 2")},
+		{expr: "true", dt: types.String().WithValues("a", "b"), compileErr: errors.New("true is not one of the allowed values")},
+		{expr: "12", dt: types.String().AsCountry(types.ISO3166Alpha2), compileErr: errors.New("12 is not a 2-letter country code")},
+		{expr: "123", dt: types.String().AsCountry(types.ISO3166Alpha3), compileErr: errors.New("123 is not a 3-letter country code")},
+		{expr: "1", dt: types.String().AsPhone(), compileErr: errors.New("1 is not a valid phone number")},
+		{expr: "12", dt: types.String().WithPattern(regexp.MustCompile(`^[a-z]+$`)), compileErr: errors.New("12 does not match /^[a-z]+$/")},
+		{expr: "1.5", dt: types.String().WithMaxBytes(2), compileErr: errors.New("1.5 exceeds the 2-byte limit")},
+		{expr: "123", dt: types.String().WithMaxLength(2), compileErr: errors.New("123 exceeds the 2-char limit")},
 		{expr: "' '   '  '", dt: types.String(), expected: "   "},
 		{expr: "''", dt: types.JSON(), expected: json.Value(`""`)},
 		{expr: "'100'", dt: types.JSON(), expected: json.Value(`"100"`)},
@@ -452,7 +466,7 @@ func Test_Compile(t *testing.T) {
 				t.Fatalf("unexpected eval error: %s", err)
 			}
 			if v != nil {
-				v, err = convert(v, vt, test.dt, true, false, test.layouts, test.purpose)
+				v, err = convert(v, vt, test.dt, true, false, test.purpose)
 			}
 			if test.convertErr != nil {
 				if err == nil {

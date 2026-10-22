@@ -6,7 +6,6 @@ package types
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -16,12 +15,16 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 	"uuid"
 
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/validation"
 
+	"github.com/nyaruka/phonenumbers/v2"
 	"github.com/relvacode/iso8601"
 )
 
@@ -92,6 +95,85 @@ func Marshal(data any, schema Type) (json.Value, error) {
 	return marshal(nil, data, schema)
 }
 
+// NormalizeIP normalizes value and returns its canonical form for use wherever
+// a value of type ip is required. It reports whether value is a valid IP
+// address.
+//
+// If value is a string, it is parsed with [netip.ParseAddr]; if parsing fails,
+// NormalizeIP returns "", false.
+func NormalizeIP[T string | netip.Addr](value T) (string, bool) {
+	var addr netip.Addr
+	switch v := any(value).(type) {
+	case string:
+		var err error
+		addr, err = netip.ParseAddr(v)
+		if err != nil {
+			return "", false
+		}
+	case netip.Addr:
+		addr = v
+	}
+	if !addr.IsValid() {
+		return "", false
+	}
+	return addr.Unmap().WithZone("").String(), true
+}
+
+// NormalizeUUID normalizes s and returns its canonical form for use wherever
+// a UUID value is required.
+//
+// The boolean return value reports whether s is a UUID in the standard form
+// xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
+func NormalizeUUID(s string) (string, bool) {
+	if len(s) != 36 {
+		return "", false
+	}
+	id, err := uuid.Parse(s)
+	if err != nil {
+		return "", false
+	}
+	return id.String(), true
+}
+
+// IsPhone reports whether s is a canonical E.164 phone value.
+func IsPhone(s string) bool {
+	normalized, ok := normalizePhone(s, "")
+	return ok && normalized == s
+}
+
+// NormalizePhone normalizes s and returns its canonical E.164 form for use
+// wherever phone semantics are required.
+//
+// s must represent a single complete international phone number beginning with
+// '+' after trimming leading and trailing Unicode whitespace, and must not
+// exceed 250 bytes before trimming.
+//
+// The boolean return value reports whether s can be normalized to E.164.
+func NormalizePhone(s string) (string, bool) {
+	return normalizePhone(s, "")
+}
+
+// NormalizePhoneInRegion normalizes s using region as the parsing context and
+// returns its canonical E.164 form for use wherever phone semantics are
+// required.
+//
+// s must represent a single complete national or international phone number and
+// cannot exceed 250 bytes before trimming.
+// Leading and trailing Unicode whitespace is ignored. region must be an
+// uppercase two-letter CLDR region code recognized by the phone number parser,
+// even when s is already an international number. region is used only as
+// parsing context and does not restrict the number's country.
+// See https://unicode.org/reports/tr35/#unicode_region_subtag.
+//
+// The boolean return value reports whether region is recognized and s can be
+// normalized to E.164.
+func NormalizePhoneInRegion(s, region string) (string, bool) {
+	if len(region) != 2 || !phonenumbers.GetSupportedRegions()[region] {
+		return "", false
+	}
+	return normalizePhone(s, region)
+}
+
 var (
 	nan         = []byte("NaN")
 	posInfinity = []byte("Infinity")
@@ -158,7 +240,7 @@ func (d decoder) readValue() (json.Value, error) {
 
 // unmarshal unmarshals a JSON value.
 func (d decoder) unmarshal(t Type) (_ any, err error) {
-	if t.Kind() == JSONKind {
+	if t.IsJSON() {
 		v, err := d.readValue()
 		if err != nil {
 			return nil, err
@@ -171,7 +253,7 @@ func (d decoder) unmarshal(t Type) (_ any, err error) {
 		if _, err := d.readToken(); err != nil {
 			return nil, err
 		}
-		if t.Kind() != ArrayKind {
+		if !t.IsArray() {
 			return nil, newErrInvalidValue("cannot be an array", "")
 		}
 		minElements, maxElements := t.MinElements(), t.MaxElements()
@@ -188,13 +270,23 @@ func (d decoder) unmarshal(t Type) (_ any, err error) {
 				return nil, err
 			}
 			elements = append(elements, elem)
-			i++
 		}
 		if _, err := d.readToken(); err != nil {
 			return nil, err
 		}
 		if len(elements) < minElements {
 			return nil, newErrInvalidValue(fmt.Sprintf("contains less than %d elements", minElements), "")
+		}
+		if t.Unique() {
+			duplicate, err := FirstDuplicate(elements, t.Elem())
+			if err != nil {
+				return nil, newErrInvalidValue(err.Error(), "")
+			}
+			if duplicate >= 0 {
+				err := &SchemaValidationError{kind: invalidValue, msg: "duplicates an earlier array element"}
+				err.appendIndexToPath(duplicate)
+				return nil, err
+			}
 		}
 		return elements, nil
 	case '{':
@@ -228,7 +320,7 @@ func (d decoder) unmarshal(t Type) (_ any, err error) {
 					if _, err := d.readToken(); err != nil {
 						return nil, err
 					}
-					if p.Type.Kind() == JSONKind {
+					if p.Type.IsJSON() {
 						value = json.Value("null")
 					} else {
 						if !p.Nullable {
@@ -314,6 +406,25 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 	case StringKind:
 		if v.Kind() == '"' {
 			s := string(d.unquoteString(v))
+			switch t.Semantics() {
+			case CountrySemantics:
+				switch t.CountryFormat() {
+				case ISO3166Alpha2:
+					if !validation.IsValidCountryCodeAlpha2(s) {
+						return nil, newErrInvalidValue("is not a 2-letter country code", "")
+					}
+				case ISO3166Alpha3:
+					if !validation.IsValidCountryCodeAlpha3(s) {
+						return nil, newErrInvalidValue("is not a 3-letter country code", "")
+					}
+				}
+				return s, nil
+			case PhoneSemantics:
+				if !IsPhone(s) {
+					return nil, newErrInvalidValue("is not a valid canonical phone number", "")
+				}
+				return s, nil
+			}
 			if values := t.Values(); values != nil {
 				if !slices.Contains(values, s) {
 					return nil, newErrInvalidValue(fmt.Sprintf("has an invalid value: %s; valid values are %s",
@@ -330,7 +441,7 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 				if n, ok := t.MaxLength(); ok && utf8.RuneCountInString(s) > n {
 					return nil, newErrInvalidValue(fmt.Sprintf("is longer than %d characters: %s", n, d.formatString(v)), "")
 				}
-				if n, ok := t.MaxBytes(); ok && utf8.RuneCountInString(s) > n {
+				if n, ok := t.MaxBytes(); ok && len(s) > n {
 					return nil, newErrInvalidValue(fmt.Sprintf("is longer than %d bytes: %s", n, d.formatString(v)), "")
 				}
 				return s, nil
@@ -381,14 +492,15 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 				return n, nil
 			}
 		case '"':
-			if bytes.Equal(v, nan) || bytes.Equal(v, posInfinity) || bytes.Equal(v, negInfinity) {
+			s := d.unquoteString(v)
+			if bytes.Equal(s, nan) || bytes.Equal(s, posInfinity) || bytes.Equal(s, negInfinity) {
 				if t.IsReal() {
 					return nil, newErrInvalidValue(fmt.Sprintf("is not a real: %s", string(v)), "")
 				}
 				var n float64
-				if bytes.Equal(v, nan) {
+				if bytes.Equal(s, nan) {
 					n = math.NaN()
-				} else if v[0] == 'p' {
+				} else if bytes.Equal(s, posInfinity) {
 					n = math.Inf(1)
 				} else {
 					n = math.Inf(-1)
@@ -442,8 +554,8 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 		}
 	case UUIDKind:
 		if v.Kind() == '"' {
-			if u, err := uuid.Parse(string(v.AppendUnquote(nil))); err == nil {
-				return u.String(), nil
+			if u, ok := NormalizeUUID(string(v.AppendUnquote(nil))); ok {
+				return u, nil
 			}
 		}
 	case JSONKind:
@@ -452,8 +564,8 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 		}
 	case IPKind:
 		if v.Kind() == '"' {
-			if ip, err := netip.ParseAddr(string(d.unquoteString(v))); err == nil {
-				return ip.String(), nil
+			if ip, ok := NormalizeIP(string(d.unquoteString(v))); ok {
+				return ip, nil
 			}
 		}
 	case ArrayKind, ObjectKind, MapKind:
@@ -514,20 +626,19 @@ func marshal(b []byte, data any, t Type) (json.Value, error) {
 			b = append(b, "false"...)
 		}
 	case int:
-		quoted := t.Kind() != YearKind && t.BitSize() == 64
-		if quoted {
+		if t.IsInt(64) {
 			b = append(b, '"')
 		}
 		b = strconv.AppendInt(b, int64(v), 10)
-		if quoted {
+		if t.IsInt(64) {
 			b = append(b, '"')
 		}
 	case uint:
-		if t.BitSize() == 64 {
+		if t.IsInt(64) {
 			b = append(b, '"')
 		}
 		b = strconv.AppendUint(b, uint64(v), 10)
-		if t.BitSize() == 64 {
+		if t.IsInt(64) {
 			b = append(b, '"')
 		}
 	case float64:
@@ -543,7 +654,11 @@ func marshal(b []byte, data any, t Type) (json.Value, error) {
 			b = strconv.AppendFloat(b, v, 'g', -1, t.BitSize())
 		}
 	case decimal.Decimal:
-		b = append(b, v.String()...)
+		encoded, err := v.MarshalJSON()
+		if err != nil {
+			return nil, fmt.Errorf("json: unexpected decimal value: %s", err)
+		}
+		b = append(b, encoded...)
 	case time.Time:
 		b = append(b, '"')
 		switch t.Kind() {
@@ -719,4 +834,89 @@ func newErrMissingProperty(path string) error {
 // propertyNotExist.
 func newErrPropertyNotExist(path string) error {
 	return &SchemaValidationError{kind: propertyNotExist, path: path}
+}
+
+const maxPhoneInputBytes = 250 // maximum input size before trimming whitespace
+
+// normalizePhone normalizes s to E.164, using region when provided to parse
+// national numbers and international dialing prefixes.
+func normalizePhone(s, region string) (string, bool) {
+
+	if len(s) > maxPhoneInputBytes {
+		return "", false
+	}
+	s = strings.TrimSpace(s)
+
+	if region == "" && (s == "" || s[0] != '+') {
+		return "", false
+	}
+	if !validPhoneInput(s) {
+		return "", false
+	}
+
+	// Only the first candidate can span the entire input, so one invalid candidate
+	// is enough to reject the input.
+	for match := range phonenumbers.FindNumbersWithLeniency(s, region, phonenumbers.POSSIBLE, 1) {
+		if match.Start() != 0 || match.End() != len(s) {
+			return "", false
+		}
+		number := match.Number()
+		// Extensions are not part of E.164.
+		if number.GetExtension() != "" {
+			return "", false
+		}
+		// Require a complete, structurally possible number. A number possible only
+		// locally cannot provide an unambiguous E.164 value.
+		if phonenumbers.IsPossibleNumberWithReason(number) != phonenumbers.IS_POSSIBLE {
+			return "", false
+		}
+		canonical := phonenumbers.Format(number, phonenumbers.E164)
+		if len(canonical) > 16 {
+			return "", false
+		}
+		// Reparse the canonical form to ensure normalization is stable. Some
+		// possible-but-unallocated numbers lose another national prefix on each parse.
+		reparsed, err := phonenumbers.Parse(canonical, "")
+		if err != nil {
+			return "", false
+		}
+		if phonenumbers.IsPossibleNumberWithReason(reparsed) != phonenumbers.IS_POSSIBLE ||
+			phonenumbers.Format(reparsed, phonenumbers.E164) != canonical {
+			return "", false
+		}
+		return canonical, true
+	}
+
+	return "", false
+}
+
+// phonePunctuation contains the punctuation accepted by the phonenumbers
+// package, excluding alphabetic 'x' because carrier placeholders and extensions
+// are not supported.
+const phonePunctuation = "-\u2010\u2011\u2012\u2013\u2014\u2015\u2212\u30FC\uFF0D\uFF0E\uFF0F " +
+	"\u00A0\u00AD\u200B\u2060\u3000()\uFF08\uFF09\uFF3B\uFF3D.[]/~\u2053\u223C\uFF5E"
+
+// validPhoneInput reports whether s satisfies the phone input grammar checked
+// before parsing.
+func validPhoneInput(s string) bool {
+	if s == "" || len(s) > maxPhoneInputBytes || !utf8.ValidString(s) {
+		return false
+	}
+	first, _ := utf8.DecodeRuneInString(s)
+	last, _ := utf8.DecodeLastRuneInString(s)
+	if unicode.IsSpace(first) || unicode.IsSpace(last) {
+		return false
+	}
+	for i, r := range s {
+		if r == '+' {
+			if i != 0 {
+				return false
+			}
+			continue
+		}
+		if !unicode.IsDigit(r) && !strings.ContainsRune(phonePunctuation, r) {
+			return false
+		}
+	}
+	return true
 }

@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"uuid"
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/core/internal/collector"
@@ -65,13 +66,15 @@ type ProfileRoleAssignments struct {
 type PipelineStep int
 
 const (
-	ReceiveStep          = PipelineStep(metrics.ReceiveStep)
-	InputValidationStep  = PipelineStep(metrics.InputValidationStep)
-	FilterStep           = PipelineStep(metrics.FilterStep)
-	ConsentStep          = PipelineStep(metrics.ConsentStep)
-	TransformationStep   = PipelineStep(metrics.TransformationStep)
-	OutputValidationStep = PipelineStep(metrics.OutputValidationStep)
-	FinalizeStep         = PipelineStep(metrics.FinalizeStep)
+	ReceiveStep              = PipelineStep(metrics.ReceiveStep)
+	InputValidationStep      = PipelineStep(metrics.InputValidationStep)
+	FilterStep               = PipelineStep(metrics.FilterStep)
+	EventConsentStep         = PipelineStep(metrics.EventConsentStep)
+	ExportProfileConsentStep = PipelineStep(metrics.ExportProfileConsentStep)
+	TransformationStep       = PipelineStep(metrics.TransformationStep)
+	OutputValidationStep     = PipelineStep(metrics.OutputValidationStep)
+	ImportProfileConsentStep = PipelineStep(metrics.ImportProfileConsentStep)
+	FinalizeStep             = PipelineStep(metrics.FinalizeStep)
 )
 
 func (step PipelineStep) String() string {
@@ -82,12 +85,16 @@ func (step PipelineStep) String() string {
 		return "InputValidation"
 	case FilterStep:
 		return "Filter"
-	case ConsentStep:
-		return "Consent"
+	case EventConsentStep:
+		return "EventConsent"
+	case ExportProfileConsentStep:
+		return "ExportProfileConsent"
 	case TransformationStep:
 		return "Transformation"
 	case OutputValidationStep:
 		return "OutputValidation"
+	case ImportProfileConsentStep:
+		return "ImportProfileConsent"
 	case FinalizeStep:
 		return "Finalize"
 	}
@@ -104,12 +111,16 @@ func ParsePipelineStep(step string) (PipelineStep, error) {
 		return InputValidationStep, nil
 	case "Filter":
 		return FilterStep, nil
-	case "Consent":
-		return ConsentStep, nil
+	case "EventConsent":
+		return EventConsentStep, nil
+	case "ExportProfileConsent":
+		return ExportProfileConsentStep, nil
 	case "Transformation":
 		return TransformationStep, nil
 	case "OutputValidation":
 		return OutputValidationStep, nil
+	case "ImportProfileConsent":
+		return ImportProfileConsentStep, nil
 	case "Finalize":
 		return FinalizeStep, nil
 	}
@@ -175,12 +186,12 @@ func (this *Workspace) PipelineErrors(ctx context.Context, start, end time.Time,
 	}
 
 	// Validate step.
-	var s *metrics.Step
+	var s *metrics.PipelineStep
 	if step != nil {
 		if *step < ReceiveStep || *step > FinalizeStep {
 			return nil, errors.BadRequest("step %d is not valid", *step)
 		}
-		s = (*metrics.Step)(step)
+		s = (*metrics.PipelineStep)(step)
 	}
 
 	// validate first and limit.
@@ -196,7 +207,7 @@ func (this *Workspace) PipelineErrors(ctx context.Context, start, end time.Time,
 		return []PipelineError{}, nil
 	}
 
-	metricsErrors, err := this.core.metrics.Errors(ctx, start, end, pipelines, s, first, limit)
+	metricsErrors, err := this.core.metrics.Pipelines.Errors(ctx, start, end, pipelines, s, first, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -226,10 +237,12 @@ func (this *Workspace) Attributes(ctx context.Context, kpid string) (json.Value,
 
 	ws := this.workspace
 
-	// Validate the KPID.
-	if _, ok := types.ParseUUID(kpid); !ok {
+	// Parse the KPID.
+	id, err := uuid.Parse(kpid)
+	if err != nil {
 		return nil, errors.BadRequest("profile %q is not a valid profile identifier", kpid)
 	}
+	kpid = id.String()
 
 	properties := this.workspace.ProfileSchema.Properties().Names()
 	where := &state.Where{
@@ -378,10 +391,12 @@ func (this *Workspace) Connection(ctx context.Context, id string) (*Connection, 
 		eventTypes := make([]EventType, len(appEventTypes))
 		for i, et := range appEventTypes {
 			eventTypes[i] = EventType{
-				ID:            et.ID,
-				Name:          et.Name,
-				Description:   et.Description,
-				DefaultFilter: et.DefaultFilter,
+				ID:               et.ID,
+				Name:             et.Name,
+				Description:      et.Description,
+				OrderingGroup:    et.OrderingGroup,
+				DeliveryEndpoint: et.DeliveryEndpoint,
+				DefaultFilter:    et.DefaultFilter,
 			}
 		}
 		connection.EventTypes = &eventTypes
@@ -719,6 +734,13 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	return n.ID, nil
 }
 
+// EventListenerConsents represents the consents required by an event
+// listener. Each purpose is represented by its event consent locations.
+type EventListenerConsents struct {
+	Operator ConsentPurposesOperator  `json:"operator"`
+	Purposes [][]EventConsentLocation `json:"purposes"`
+}
+
 // CreateEventListener creates an event listener for the workspace that listens
 // to events and returns its identifier.
 //
@@ -737,12 +759,12 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 //
 // If requiredConsents is non-nil, only events whose consents satisfy its
 // purposes, according to its operator, will be observed. Its purposes must be
-// at most MaxRequiredConsentPurposes and must not contain duplicates.
+// at most MaxRequiredConsentPurposes, and each must have at least one event
+// consent location.
 //
-// It returns an errors.UnprocessableError error with code:
-//
-//   - TooManyListeners, if there are already too many listeners.
-func (this *Workspace) CreateEventListener(connection string, size int, filter *Filter, requiredConsents *RequiredConsents) (string, error) {
+// It returns an errors.UnprocessableError error with code TooManyListeners if
+// there are already too many listeners.
+func (this *Workspace) CreateEventListener(connection string, size int, filter *Filter, requiredConsents *EventListenerConsents) (string, error) {
 	this.core.mustBeOpen()
 	if connection != "" && !IsValidID(connection) {
 		return "", errors.BadRequest("identifier %q is not a valid connection identifier", connection)
@@ -784,15 +806,20 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 		}
 		rc = &state.RequiredConsents{
 			Operator: state.ConsentPurposesOperator(requiredConsents.Operator),
-			Purposes: slices.Clone(requiredConsents.Purposes),
+			Purposes: make([]*state.ConsentPurpose, len(requiredConsents.Purposes)),
 		}
-		for i, code := range rc.Purposes {
-			if err := validateConsentPurposeCode(code); err != nil {
+		for i, locations := range requiredConsents.Purposes {
+			if len(locations) == 0 {
+				return "", errors.BadRequest("required consent purpose %d has no event consent locations", i)
+			}
+			if err := validateEventConsentLocations(locations); err != nil {
 				return "", errors.BadRequest("%s", err)
 			}
-			if slices.Contains(rc.Purposes[i+1:], code) {
-				return "", errors.BadRequest("required consent purpose %q is duplicated", code)
+			cp := &state.ConsentPurpose{EventConsentLocations: make([]state.EventConsentLocation, len(locations))}
+			for j, loc := range locations {
+				cp.EventConsentLocations[j] = state.EventConsentLocation(loc)
 			}
+			rc.Purposes[i] = cp
 		}
 	}
 	observer, ok := this.core.collector.Observer(this.workspace.ID)
@@ -814,13 +841,24 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 // If the workspace does not exist anymore, it returns an errors.NotFound error.
 func (this *Workspace) Delete(ctx context.Context) error {
 	this.core.mustBeOpen()
+	organization := this.workspace.Organization().ID
 	n := state.DeleteWorkspace{
 		ID: this.workspace.ID,
 	}
 	err := this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		// Mark the pipeline functions as discontinued.
+		// Lock the workspace to serialize deletion with every other operation.
+		exists, err := tx.QueryExists(ctx,
+			"SELECT FROM workspaces WHERE id = $1 AND organization = $2 FOR UPDATE",
+			n.ID, organization)
+		if err != nil {
+			return nil, err
+		}
+		if !exists {
+			return nil, errors.NotFound("workspace %s does not exist", n.ID)
+		}
 		now := time.Now().UTC()
-		_, err := tx.Exec(ctx, "INSERT INTO discontinued_functions (id, organization, discontinued_at)\n"+
+		// Mark the pipeline functions as discontinued.
+		_, err = tx.Exec(ctx, "INSERT INTO discontinued_functions (id, organization, discontinued_at)\n"+
 			"SELECT p.transformation_id, w.organization, $1\n"+
 			"FROM pipelines AS p\n"+
 			"INNER JOIN connections AS c ON p.connection = c.id\n"+
@@ -830,8 +868,15 @@ func (this *Workspace) Delete(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
+		// Record the terminal profile state in the same transaction.
+		// The usage history, including this terminal observation, is retained after the workspace is deleted.
+		err = this.core.metrics.Usage.RecordProfileObservation(ctx, tx, organization, n.ID, 0, now)
+		if err != nil {
+			return nil, err
+		}
 		// Delete the workspace.
-		result, err := tx.Exec(ctx, "DELETE FROM workspaces WHERE id = $1", n.ID)
+		result, err := tx.Exec(ctx, "DELETE FROM workspaces WHERE id = $1 AND organization = $2",
+			n.ID, organization)
 		if err != nil {
 			return nil, err
 		}
@@ -967,9 +1012,11 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 // the data warehouse is in maintenance mode.
 func (this *Workspace) Identities(ctx context.Context, kpid string, first, limit int) ([]Identity, int, error) {
 	this.core.mustBeOpen()
-	if _, ok := types.ParseUUID(kpid); !ok {
+	id, err := uuid.Parse(kpid)
+	if err != nil {
 		return nil, 0, errors.BadRequest("profile %q is not a valid KPID", kpid)
 	}
+	kpid = id.String()
 	if first < 0 {
 		return nil, 0, errors.BadRequest("first %d is not valid", first)
 	}
@@ -1100,15 +1147,15 @@ func (this *Workspace) PipelineRun(ctx context.Context, id string) (*PipelineRun
 	var run PipelineRun
 	err := this.core.db.QueryRow(ctx,
 		"SELECT r.id, r.pipeline, r.start_time, r.end_time, r.passed_0, r.passed_1, r.passed_2, r.passed_3,"+
-			" r.passed_4, r.passed_5, r.passed_6, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4,"+
-			" r.failed_5, r.failed_6, r.error\n"+
+			" r.passed_4, r.passed_5, r.passed_6, r.passed_7, r.passed_8, r.failed_0, r.failed_1, r.failed_2, r.failed_3,"+
+			" r.failed_4, r.failed_5, r.failed_6, r.failed_7, r.failed_8, r.error\n"+
 			"FROM pipelines_runs r\n"+
 			"INNER JOIN pipelines p ON p.id = r.pipeline\n"+
 			"INNER JOIN connections c ON c.id = p.connection\n"+
 			"WHERE c.workspace = $1 AND r.id = $2", this.workspace.ID, id).Scan(
 		&run.ID, &run.Pipeline, &run.StartTime, &run.EndTime, &run.Passed[0], &run.Passed[1], &run.Passed[2], &run.Passed[3],
-		&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
-		&run.Failed[5], &run.Failed[6], &run.Error)
+		&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Passed[7], &run.Passed[8], &run.Failed[0], &run.Failed[1], &run.Failed[2],
+		&run.Failed[3], &run.Failed[4], &run.Failed[5], &run.Failed[6], &run.Failed[7], &run.Failed[8], &run.Error)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.NotFound("pipeline run %s does not exist", id)
@@ -1116,8 +1163,8 @@ func (this *Workspace) PipelineRun(ctx context.Context, id string) (*PipelineRun
 		return nil, err
 	}
 	if run.EndTime == nil {
-		run.Passed = [7]int{}
-		run.Failed = [7]int{}
+		run.Passed = [9]int{}
+		run.Failed = [9]int{}
 	}
 	return &run, nil
 }
@@ -1130,7 +1177,7 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 	runs := []*PipelineRun{}
 	err := this.core.db.QueryScan(ctx,
 		"SELECT r.id, r.pipeline, r.start_time, r.end_time, r.passed_0, r.passed_1, r.passed_2, r.passed_3,"+
-			" r.passed_4, r.passed_5, r.passed_6, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4, r.failed_5, r.failed_6, r.error\n"+
+			" r.passed_4, r.passed_5, r.passed_6, r.passed_7, r.passed_8, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4, r.failed_5, r.failed_6, r.failed_7, r.failed_8, r.error\n"+
 			"FROM pipelines_runs r\n"+
 			"INNER JOIN pipelines p ON p.id = r.pipeline\n"+
 			"INNER JOIN connections c ON c.id = p.connection\n"+
@@ -1140,8 +1187,8 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 			for rows.Next() {
 				var run PipelineRun
 				if err = rows.Scan(&run.ID, &run.Pipeline, &run.StartTime, &run.EndTime, &run.Passed[0], &run.Passed[1], &run.Passed[2], &run.Passed[3],
-					&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
-					&run.Failed[5], &run.Failed[6], &run.Error); err != nil {
+					&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Passed[7], &run.Passed[8], &run.Failed[0], &run.Failed[1], &run.Failed[2],
+					&run.Failed[3], &run.Failed[4], &run.Failed[5], &run.Failed[6], &run.Failed[7], &run.Failed[8], &run.Error); err != nil {
 					return err
 				}
 				runs = append(runs, &run)
@@ -1154,8 +1201,8 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 
 	for _, run := range runs {
 		if run.EndTime == nil {
-			run.Passed = [7]int{}
-			run.Failed = [7]int{}
+			run.Passed = [9]int{}
+			run.Failed = [9]int{}
 		}
 	}
 
@@ -2183,4 +2230,16 @@ func filterWorkspacePipelines(ws *state.Workspace, pipelines []string) []string 
 		return ok
 	})
 	return pipelines
+}
+
+// lockWorkspace locks the workspace with the given identifier until tx ends.
+func lockWorkspace(ctx context.Context, tx *db.Tx, workspace string) error {
+	locked, err := tx.QueryExists(ctx, "SELECT FROM workspaces WHERE id = $1 FOR UPDATE", workspace)
+	if err != nil {
+		return err
+	}
+	if !locked {
+		return fmt.Errorf("cannot lock workspace %s: it does not exist", workspace)
+	}
+	return nil
 }

@@ -6,6 +6,7 @@ package types
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"regexp"
@@ -15,7 +16,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/tools/decimal"
-	"github.com/krenalis/krenalis/tools/errors"
 
 	"golang.org/x/text/unicode/norm"
 )
@@ -166,8 +166,8 @@ type Type struct {
 	unique   bool // unique reports whether the elements of an array must be unique.
 	real     bool // real reports whether NaN, +Inf and -Inf are not allowed for float.
 
-	semantic       Semantic
-	semanticOption any // country format, currency, unit of measure, or duration unit
+	semantics       Semantics
+	semanticsOption any // country format, currency, unit of measure, or duration unit
 
 	// p represents
 	//   - minimum value for int with 8, 16, 24, and 32 bits; for unsigned, p is converted to uint32
@@ -319,7 +319,7 @@ func IP() Type {
 
 // Array returns an array type with elements of type t.
 func Array(t Type) Type {
-	return Type{kind: ArrayKind, s: MaxElements, vl: t}
+	return Type{kind: ArrayKind, generic: t.generic, s: MaxElements, vl: t}
 }
 
 // Object returns an object type with the given properties.
@@ -336,7 +336,7 @@ func Object(properties []Property) Type {
 
 // Map returns a map type with value type t.
 func Map(t Type) Type {
-	return Type{kind: MapKind, vl: t}
+	return Type{kind: MapKind, generic: t.generic, vl: t}
 }
 
 // ObjectOf is like Object but returns an error instead of panicking if any.
@@ -411,12 +411,115 @@ func (t Type) Real() Type {
 	return t
 }
 
-// IsReal reports whether t is real. Panics if t is not a float type.
-func (t Type) IsReal() bool {
-	if t.kind != FloatKind {
-		panic("type is not a float type")
+// IsArray reports whether t is an array type.
+func (t Type) IsArray() bool {
+	return t.kind == ArrayKind
+}
+
+// IsBoolean reports whether t is a boolean type.
+func (t Type) IsBoolean() bool {
+	return t.kind == BooleanKind
+}
+
+// IsDate reports whether t is a date type.
+func (t Type) IsDate() bool {
+	return t.kind == DateKind
+}
+
+// IsDateTime reports whether t is a datetime type.
+func (t Type) IsDateTime() bool {
+	return t.kind == DateTimeKind
+}
+
+// IsDecimal reports whether t is a decimal type.
+func (t Type) IsDecimal() bool {
+	return t.kind == DecimalKind
+}
+
+// IsFloat reports whether t is a float type and, if size is provided,
+// whether it has that bit size.
+// It panics if more than one size is provided or size is not 32 or 64.
+//
+// For example:
+//
+//	t.IsFloat()   // any float type
+//	t.IsFloat(32) // a 32-bit float type
+//	t.IsFloat(64) // a 64-bit float type
+func (t Type) IsFloat(size ...int) bool {
+	if len(size) > 1 {
+		panic("expected at most one bit size")
 	}
-	return t.real
+	if len(size) == 1 && size[0] != 32 && size[0] != 64 {
+		panic("bit size is not valid")
+	}
+	return t.kind == FloatKind && (len(size) == 0 || bitSize[t.size] == size[0])
+}
+
+// IsIP reports whether t is an IP type.
+func (t Type) IsIP() bool {
+	return t.kind == IPKind
+}
+
+// IsInt reports whether t is an int type and, if size is provided,
+// whether it has that bit size. It panics if more than one size is provided or
+// size is not 8, 16, 24, 32 or 64.
+//
+// For example:
+//
+//	t.IsInt()   // any int type, signed or unsigned
+//	t.IsInt(32) // a 32-bit int type, signed or unsigned
+func (t Type) IsInt(size ...int) bool {
+	if len(size) > 1 {
+		panic("expected at most one bit size")
+	}
+	if len(size) == 1 {
+		switch size[0] {
+		case 8, 16, 24, 32, 64:
+		default:
+			panic("bit size is not valid")
+		}
+	}
+	return t.kind == IntKind && (len(size) == 0 || bitSize[t.size] == size[0])
+}
+
+// IsJSON reports whether t is a JSON type.
+func (t Type) IsJSON() bool {
+	return t.kind == JSONKind
+}
+
+// IsMap reports whether t is a map type.
+func (t Type) IsMap() bool {
+	return t.kind == MapKind
+}
+
+// IsObject reports whether t is an object type.
+func (t Type) IsObject() bool {
+	return t.kind == ObjectKind
+}
+
+// IsReal reports whether t is a float type that excludes NaN and infinities.
+func (t Type) IsReal() bool {
+	return t.kind == FloatKind && t.real
+}
+
+// IsString reports whether t is a string type.
+func (t Type) IsString() bool {
+	return t.kind == StringKind
+}
+
+// IsTime reports whether t is a time type.
+func (t Type) IsTime() bool {
+	return t.kind == TimeKind
+}
+
+// IsUUID reports whether t is a UUID type.
+func (t Type) IsUUID() bool {
+	return t.kind == UUIDKind
+}
+
+// IsYear reports whether t is a year type.
+func (t Type) IsYear() bool {
+	return t.kind == YearKind
 }
 
 // Valid indicates if t is valid.
@@ -503,12 +606,9 @@ func (t Type) Unsigned() Type {
 	return t
 }
 
-// IsUnsigned reports whether t is unsigned. Panics if t is not an int type.
+// IsUnsigned reports whether t is an unsigned int type.
 func (t Type) IsUnsigned() bool {
-	if t.kind != IntKind {
-		panic("type is not an int type")
-	}
-	return t.unsigned
+	return t.kind == IntKind && t.unsigned
 }
 
 type intRange struct{ min, max int64 }
@@ -754,24 +854,31 @@ func (t Type) MaxBytes() (int, bool) {
 
 // WithMaxBytes returns t configured with a maximum of n bytes. n must be in the
 // range [1, MaxStringLen].
-// It panics if t is not a string type, if t's semantic does not allow string
-// constraints, if t already specifies a maximum number of bytes, if t already
-// has values, or if n is out of range.
+//
+// It panics if:
+//   - t is not a string type
+//   - t has country or phone semantics
+//   - n is not in range [1, MaxStringLen]
+//   - t already has values or a pattern
+//   - t is already restricted by max bytes
 func (t Type) WithMaxBytes(n int) Type {
 	if t.kind != StringKind {
 		panic("cannot set max byte length of a non-string type")
 	}
-	if t.semantic == CountrySemantic || t.semantic == PhoneSemantic {
-		panic(fmt.Sprintf("%s semantic cannot be combined with other string constraints", t.semantic))
+	if t.semantics == CountrySemantics || t.semantics == PhoneSemantics {
+		panic(fmt.Sprintf("%s semantics cannot be combined with other string constraints", t.semantics))
 	}
-	if t.p > 0 {
-		panic("max bytes already specified")
-	}
-	if n < 1 || MaxStringLen < n {
+	if n < 1 || n > MaxStringLen {
 		panic("invalid max bytes")
 	}
-	if _, ok := t.vl.([]string); ok {
+	switch t.vl.(type) {
+	case []string:
 		panic("t already has values")
+	case *regexp.Regexp:
+		panic("t already has a pattern")
+	}
+	if t.p != 0 {
+		panic("t already has max bytes")
 	}
 	t.p = int32(uint32(n))
 	return t
@@ -787,25 +894,32 @@ func (t Type) MaxLength() (int, bool) {
 	return int(uint32(t.s)), t.s != 0
 }
 
-// WithMaxLength returns t with a maximum length of l of a string type. l must
-// be in range [1, MaxStringLen]. Panics if t is not a string type, or if t's
-// semantic does not allow string constraints, or if l is not in range, or if t
-// has already a char length, or if t already has values.
+// WithMaxLength returns t with a maximum length of l of a string type.
+//
+// It panics if:
+//   - t is not a string type
+//   - t has country or phone semantics
+//   - l is not in range [1, MaxStringLen]
+//   - t already has values or a pattern
+//   - t is already restricted by max length
 func (t Type) WithMaxLength(l int) Type {
 	if t.kind != StringKind {
 		panic("cannot set max length of non-string types")
 	}
-	if t.semantic == CountrySemantic || t.semantic == PhoneSemantic {
-		panic(fmt.Sprintf("%s semantic cannot be combined with other string constraints", t.semantic))
+	if t.semantics == CountrySemantics || t.semantics == PhoneSemantics {
+		panic(fmt.Sprintf("%s semantics cannot be combined with other string constraints", t.semantics))
 	}
-	if t.s > 0 {
-		panic("repeated length in characters")
-	}
-	if l < 1 || MaxStringLen < l {
+	if l < 1 || l > MaxStringLen {
 		panic("invalid string length")
 	}
-	if _, ok := t.vl.([]string); ok {
+	switch t.vl.(type) {
+	case []string:
 		panic("t already has values")
+	case *regexp.Regexp:
+		panic("t already has a pattern")
+	}
+	if t.s != 0 {
+		panic("t already has max length")
 	}
 	t.s = int32(uint32(l))
 	return t
@@ -822,20 +936,34 @@ func (t Type) Pattern() *regexp.Regexp {
 }
 
 // WithPattern returns t with the pattern p.
-// Panics if t is not a string type, if t's semantic does not allow string
-// constraints, or if t already has a pattern or values.
+//
+// It panics if:
+//   - t is not a string type
+//   - t has country or phone semantics
+//   - p is nil
+//   - t already has values or a pattern
+//   - t is already restricted by max bytes or max length
 func (t Type) WithPattern(p *regexp.Regexp) Type {
 	if t.kind != StringKind {
 		panic("cannot set pattern for a non-string type")
 	}
-	if t.semantic == CountrySemantic || t.semantic == PhoneSemantic {
-		panic(fmt.Sprintf("%s semantic cannot be combined with other string constraints", t.semantic))
+	if t.semantics == CountrySemantics || t.semantics == PhoneSemantics {
+		panic(fmt.Sprintf("%s semantics cannot be combined with other string constraints", t.semantics))
+	}
+	if p == nil {
+		panic("pattern is nil")
 	}
 	switch t.vl.(type) {
 	case []string:
-		panic("cannot set pattern when t has values")
+		panic("t already has values")
 	case *regexp.Regexp:
 		panic("t already has a pattern")
+	}
+	if t.p != 0 {
+		panic("t already has max bytes")
+	}
+	if t.s != 0 {
+		panic("t already has max length")
 	}
 	t.vl = p
 	return t
@@ -860,19 +988,19 @@ func (t Type) Values() []string {
 //
 // It panics if:
 //   - t is not a string type
-//   - t's semantic does not allow string constraints
+//   - t has country or phone semantics
 //   - no values are provided
 //   - any value is not valid UTF-8
-//   - t already has values or a regular expression
-//   - t is already restricted by byte or character length
+//   - t already has values or a pattern
+//   - t is already restricted by max bytes or max length
 //
 // The empty string is allowed as one of the values.
 func (t Type) WithValues(values ...string) Type {
 	if t.kind != StringKind {
 		panic("cannot set values for a non-string type")
 	}
-	if t.semantic == CountrySemantic || t.semantic == PhoneSemantic {
-		panic(fmt.Sprintf("%s semantic cannot be combined with other string constraints", t.semantic))
+	if t.semantics == CountrySemantics || t.semantics == PhoneSemantics {
+		panic(fmt.Sprintf("%s semantics cannot be combined with other string constraints", t.semantics))
 	}
 	if len(values) == 0 {
 		panic("values is empty")
@@ -884,10 +1012,10 @@ func (t Type) WithValues(values ...string) Type {
 		panic("t already has a pattern")
 	}
 	if t.p != 0 {
-		panic("t already has a maximum byte length")
+		panic("t already has max bytes")
 	}
 	if t.s != 0 {
-		panic("t already has a maximum character length")
+		panic("t already has max length")
 	}
 	vl := make([]string, len(values))
 	for i, s := range values {

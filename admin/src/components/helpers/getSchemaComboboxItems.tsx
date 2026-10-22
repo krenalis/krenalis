@@ -56,7 +56,7 @@ const getFilterPropertyComboboxItems = (
 		}
 		const property = flatSchema[k];
 		if (property.type === 'object' || property.type === 'array') {
-			const compatibleOperators = getCompatibleFilterOperators(property, false, connection.role, target);
+			const compatibleOperators = getCompatibleFilterOperators(property, false);
 			if (compatibleOperators.length === 0) {
 				continue;
 			}

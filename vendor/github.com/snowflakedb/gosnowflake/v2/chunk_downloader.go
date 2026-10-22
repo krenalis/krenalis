@@ -139,7 +139,7 @@ func (scd *snowflakeChunkDownloader) start() error {
 				scd.getQueryResultFormat(), i+1, chunk.URL, chunk.RowCount, chunk.UncompressedSize, scd.QueryResultFormat)
 			scd.ChunksChan <- i
 		}
-		for i := 0; i < intMin(chunkDownloadWorkers, chunkMetaLen); i++ {
+		for i := 0; i < min(chunkDownloadWorkers, chunkMetaLen); i++ {
 			scd.schedule()
 		}
 	}
@@ -412,7 +412,7 @@ func downloadChunkHelper(ctx context.Context, scd *snowflakeChunkDownloader, idx
 	if len(scd.ChunkHeader) > 0 {
 		logger.WithContext(ctx).Debug("chunk header is provided.")
 		for k, v := range scd.ChunkHeader {
-			logger.WithContext(ctx).Debugf("adding header: %v, value: %v", k, v)
+			logger.WithContext(ctx).Debugf("adding header: %v", k)
 
 			headers[k] = v
 		}

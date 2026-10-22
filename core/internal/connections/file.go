@@ -117,7 +117,8 @@ func (file *File) Connector() string {
 // that case Err returns ErrNoColumnsFound.
 //
 // It returns an error if a non-zero starting time is provided and the pipeline
-// has no update time property.
+// has no update time property, and a *connectors.InvalidPathError if the
+// pipeline's path is not valid for the storage.
 func (file *File) Records(ctx context.Context, startTime time.Time) (Records, error) {
 	if file.err != nil {
 		return nil, file.err
@@ -128,6 +129,10 @@ func (file *File) Records(ctx context.Context, startTime time.Time) (Records, er
 	storage, err := file.storage()
 	if err != nil {
 		return nil, err
+	}
+	_, err = storage.(fileStorageAbsolutePathConnection).AbsolutePath(ctx, file.pipeline.Path)
+	if err != nil {
+		return nil, connectorError(err)
 	}
 	s := newCompressedStorage(storage, file.pipeline.Compression)
 	rc, storageUpdatedAt, err := s.Reader(ctx, file.pipeline.Path)
@@ -158,7 +163,8 @@ func (file *File) Records(ctx context.Context, startTime time.Time) (Records, er
 // If pathReplacer is not nil, placeholders in path are replaced using it; in
 // this case a *PlaceholderError may be returned when placeholders are invalid.
 //
-// It returns an *UnavailableError if the connector returns an error.
+// It returns a *connectors.InvalidPathError if the path is not valid for the
+// storage, and an *UnavailableError if the connector returns an error.
 func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer) (Writer, error) {
 	if file.err != nil {
 		return nil, file.err
@@ -176,6 +182,10 @@ func (file *File) Writer(ctx context.Context, pathReplacer PlaceholderReplacer) 
 		if err != nil {
 			return nil, err
 		}
+	}
+	_, err = storage.(fileStorageAbsolutePathConnection).AbsolutePath(ctx, path)
+	if err != nil {
+		return nil, connectorError(err)
 	}
 	sw, err := s.Writer(ctx, path, file.inner.(fileContentTypeConnection).ContentType(ctx), extension)
 	if err != nil {

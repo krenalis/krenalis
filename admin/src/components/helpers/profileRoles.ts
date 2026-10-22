@@ -67,7 +67,7 @@ const getProfileRole = (id: ProfileRoleID): ProfileRoleDefinition => {
 
 const isProfileRoleCompatible = (role: ProfileRoleID, property: ProfileRoleProperty): boolean => {
 	if (role === 'firstName' || role === 'lastName') {
-		return property.type?.kind === 'string' && property.type.semantic == null;
+		return property.type?.kind === 'string' && property.type.semantics == null;
 	}
 	const singleValue = property.type != null && property.type.kind !== 'array' && property.type.kind !== 'map';
 	if (!singleValue) {
@@ -75,11 +75,11 @@ const isProfileRoleCompatible = (role: ProfileRoleID, property: ProfileRolePrope
 	}
 	switch (role) {
 		case 'email':
-			return property.type?.kind === 'string' && property.type.semantic === 'email';
+			return property.type?.kind === 'string' && property.type.semantics === 'email';
 		case 'country':
-			return property.type?.kind === 'string' && property.type.semantic === 'country';
+			return property.type?.kind === 'string' && property.type.semantics === 'country';
 		case 'photo':
-			return property.type?.kind === 'string' && property.type.semantic === 'url';
+			return property.type?.kind === 'string' && property.type.semantics === 'url';
 	}
 };
 

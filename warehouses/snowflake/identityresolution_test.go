@@ -23,11 +23,11 @@ func Test_createPendingViewQuery(t *testing.T) {
 	}})
 	wants := []string{
 		`SELECT` + "\n\t" + `"_KPID",` + "\n\t" + `"_UPDATED_AT",` + "\n\t" + `"EMAIL"`,
-		`SELECT * FROM "KRENALIS_PROFILES_2" WHERE EXISTS (`,
+		`FROM "KRENALIS_PROFILES_2" WHERE EXISTS (`,
 		`WHERE "ID" = 'operation\'id'`,
 		`AND "COMPLETED_AT" IS NOT NULL`,
 		`AND "ERROR" = ''`,
-		`SELECT * FROM "KRENALIS_PROFILES_1" WHERE NOT EXISTS (`,
+		`FROM "KRENALIS_PROFILES_1" WHERE NOT EXISTS (`,
 	}
 	for _, want := range wants {
 		if !strings.Contains(query, want) {
@@ -65,6 +65,45 @@ func Test_finalizeIdentityResolutionPreservesPersistedSuccess(t *testing.T) {
 	}
 	if operationError != "" {
 		t.Fatalf("expected successful operation to remain successful, got error %q", operationError)
+	}
+
+}
+
+// TestResolveIdentitiesAddsMissingIdentityCountColumns verifies that a new
+// profiles table includes identity count columns when copied from a previous
+// schema.
+func TestResolveIdentitiesAddsMissingIdentityCountColumns(t *testing.T) {
+
+	warehouse, db := newTestSnowflakeWarehouse(t)
+	profileColumns := []warehouses.Column{{Name: "email", Type: types.String(), Nullable: true}}
+	err := warehouse.Initialize(t.Context(), profileColumns)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, column := range []string{"_ANONYMOUS_COUNT", "_RECOGNIZED_COUNT"} {
+		_, err = db.ExecContext(t.Context(), `ALTER TABLE "KRENALIS_PROFILES_0" DROP COLUMN `+quoteIdent(column))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	const opID = "a44731d8-d89d-44b9-ac87-a8ce1a8770d7"
+	err = warehouse.ResolveIdentities(t.Context(), opID, profileColumns, profileColumns, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var countColumns int
+	err = db.QueryRowContext(t.Context(), `SELECT COUNT(*)
+		FROM INFORMATION_SCHEMA.COLUMNS
+		WHERE TABLE_SCHEMA = CURRENT_SCHEMA()
+			AND TABLE_NAME = 'KRENALIS_PROFILES_1'
+			AND COLUMN_NAME IN ('_ANONYMOUS_COUNT', '_RECOGNIZED_COUNT')`).Scan(&countColumns)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if countColumns != 2 {
+		t.Fatalf("expected two identity count columns in the new profiles table, got %d", countColumns)
 	}
 
 }
@@ -117,8 +156,8 @@ func TestResolveIdentitiesFinalizesCurrentProfilesVersionOnRetry(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = db.ExecContext(t.Context(), `INSERT INTO "KRENALIS_PROFILES_2"
-		("_KPID", "_IDENTITIES", "_UPDATED_AT", "EMAIL", "PHONE")
-		SELECT ?, ARRAY_CONSTRUCT(1), ?, ?, ?`,
+		("_KPID", "_IDENTITIES", "_ANONYMOUS_COUNT", "_RECOGNIZED_COUNT", "_UPDATED_AT", "EMAIL", "PHONE")
+		SELECT ?, ARRAY_CONSTRUCT(1), 0, 0, ?, ?, ?`,
 		"a44731d8-d89d-44b9-ac87-a8ce1a8770dd", time.Now().UTC(), "person@example.com", "+390000000000")
 	if err != nil {
 		t.Fatal(err)
@@ -197,7 +236,8 @@ func TestAlterProfileSchemaUsesPublishedProfilesAfterIdentityResolutionFailure(t
 	}
 
 	_, err = db.ExecContext(t.Context(), `INSERT INTO "KRENALIS_PROFILES_0"
-		("_KPID", "_IDENTITIES", "_UPDATED_AT", "EMAIL") SELECT ?, ARRAY_CONSTRUCT(1), ?, ?`,
+		("_KPID", "_IDENTITIES", "_ANONYMOUS_COUNT", "_RECOGNIZED_COUNT", "_UPDATED_AT", "EMAIL")
+		SELECT ?, ARRAY_CONSTRUCT(1), 0, 0, ?, ?`,
 		"a44731d8-d89d-44b9-ac87-a8ce1a8770d7", time.Now().UTC(), "person@example.com")
 	if err != nil {
 		t.Fatal(err)

@@ -10,19 +10,18 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"net/netip"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
-	"uuid"
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/tools/validation"
 )
 
 var (
@@ -55,7 +54,20 @@ func (err RecordValidationError) Error() string {
 }
 
 func (err RecordValidationError) addIndexToPath(i int) RecordValidationError {
-	err.path = "[" + strconv.Itoa(i) + "]." + err.path
+	index := "[" + strconv.Itoa(i) + "]"
+	if err.path != "" && err.path[0] != '[' {
+		index += "."
+	}
+	err.path = index + err.path
+	return err
+}
+
+func (err RecordValidationError) addMapKeyToPath(key string) RecordValidationError {
+	name := "[" + strconv.Quote(key) + "]"
+	if err.path != "" && err.path[0] != '[' {
+		name += "."
+	}
+	err.path = name + err.path
 	return err
 }
 
@@ -178,7 +190,7 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 	if r == nil {
 		return errors.New("core/transformers: r is nil")
 	}
-	if schema.Valid() && schema.Kind() != types.ObjectKind {
+	if schema.Valid() && !schema.IsObject() {
 		return errors.New("core/transformers: schema is not an object")
 	}
 	d := decoder{dec: json.NewDecoder(r)}
@@ -340,7 +352,7 @@ func (d decoder) readValue() (json.Value, error) {
 
 // unmarshal unmarshals a JSON value.
 func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ any, err error) {
-	if t.Kind() == types.JSONKind && !preserveJSON {
+	if t.IsJSON() && !preserveJSON {
 		v, err := d.readValue()
 		if err != nil {
 			return nil, err
@@ -361,17 +373,18 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 		if _, err := d.readToken(); err != nil {
 			return nil, err
 		}
-		if t.Kind() != types.ArrayKind {
+		if !t.IsArray() {
 			return nil, newRecordValidationError("", fmt.Sprintf("has a value that is not of type «%s»", d.opts.terms.Type(t)))
 		}
 		min := t.MinElements()
 		max := t.MaxElements()
+		et := t.Elem()
 		arr := []any{}
 		for i := 0; d.peekKind() != ']'; i++ {
 			if i == max {
 				return nil, newRecordValidationError("", fmt.Sprintf("contains more than %d %s", max, d.opts.terms.Elements))
 			}
-			elem, err := d.unmarshal(t.Elem(), preserveJSON, purpose)
+			elem, err := d.unmarshal(et, preserveJSON, purpose)
 			if err != nil {
 				if e, ok := err.(RecordValidationError); ok {
 					err = e.addIndexToPath(i)
@@ -379,20 +392,21 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 				return nil, err
 			}
 			arr = append(arr, elem)
-			i++
-		}
-		if _, err := d.readToken(); err != nil {
-			return nil, err
 		}
 		if len(arr) < min {
 			return nil, newRecordValidationError("", fmt.Sprintf("contains less than %d %s", min, d.opts.terms.Elements))
 		}
 		if t.Unique() {
-			for i, elem := range arr {
-				if slices.Contains(arr[i+1:], elem) {
-					return nil, newRecordValidationError("", "contains a duplicated value")
-				}
+			duplicate, err := types.FirstDuplicate(arr, et)
+			if err != nil {
+				return nil, err
 			}
+			if duplicate != -1 {
+				return nil, newRecordValidationError("", "contains a duplicated value")
+			}
+		}
+		if _, err := d.readToken(); err != nil {
+			return nil, err
 		}
 		return arr, nil
 	case '{':
@@ -446,7 +460,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 						return nil, err
 					}
 					if !p.Nullable {
-						if p.Type.Kind() != types.JSONKind || preserveJSON {
+						if !p.Type.IsJSON() || preserveJSON {
 							if purpose == Import {
 								continue
 							}
@@ -507,6 +521,9 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 				// Read the property's value.
 				value, err := d.unmarshal(t.Elem(), preserveJSON, purpose)
 				if err != nil {
+					if e, ok := err.(RecordValidationError); ok {
+						err = e.addMapKeyToPath(name)
+					}
 					return nil, err
 				}
 				m[name] = value
@@ -539,6 +556,26 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 	case types.StringKind:
 		if v.Kind() == '"' {
 			s := d.unquoteString(v)
+			switch t.Semantics() {
+			case types.CountrySemantics:
+				switch t.CountryFormat() {
+				case types.ISO3166Alpha2:
+					if !validation.IsValidCountryCodeAlpha2(s) {
+						return nil, newRecordValidationError("", "is not a 2-letter country code")
+					}
+				case types.ISO3166Alpha3:
+					if !validation.IsValidCountryCodeAlpha3(s) {
+						return nil, newRecordValidationError("", "is not a 3-letter country code")
+					}
+				}
+				return s, nil
+			case types.PhoneSemantics:
+				normalized, ok := types.NormalizePhone(s)
+				if !ok {
+					return nil, newRecordValidationError("", "is not a valid phone number")
+				}
+				return normalized, nil
+			}
 			if values := t.Values(); values != nil {
 				if !slices.Contains(values, s) {
 					return nil, newRecordValidationError("", "is not one of the allowed values")
@@ -553,7 +590,7 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 				if n, ok := t.MaxLength(); ok && utf8.RuneCountInString(s) > n {
 					return nil, newRecordValidationError("", fmt.Sprintf("exceeds the %d-char limit", n))
 				}
-				if n, ok := t.MaxBytes(); ok && utf8.RuneCountInString(s) > n {
+				if n, ok := t.MaxBytes(); ok && len(s) > n {
 					return nil, newRecordValidationError("", fmt.Sprintf("exceeds the %d-byte limit", n))
 				}
 				return s, nil
@@ -700,8 +737,8 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		}
 	case types.UUIDKind:
 		if v.Kind() == '"' {
-			if u, err := uuid.Parse(string(v.AppendUnquote(nil))); err == nil {
-				return u.String(), nil
+			if u, ok := types.NormalizeUUID(string(v.AppendUnquote(nil))); ok {
+				return u, nil
 			}
 		}
 	case types.JSONKind:
@@ -714,8 +751,8 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 		}
 	case types.IPKind:
 		if v.Kind() == '"' {
-			if ip, err := netip.ParseAddr(d.unquoteString(v)); err == nil {
-				return ip.String(), nil
+			if ip, ok := types.NormalizeIP(d.unquoteString(v)); ok {
+				return ip, nil
 			}
 		}
 	}

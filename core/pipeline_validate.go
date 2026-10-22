@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/core/internal/connections"
@@ -76,11 +77,11 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	outSchema := pipeline.OutSchema
 
 	importEventsIntoWarehouse := isImportingEventsIntoWarehouse(v.connection.connector.typ, v.connection.role, v.target)
-	dispatchEventsToAplications := isDispatchingEventsToApplications(v.connection.connector.typ, v.connection.role, v.target)
+	dispatchEventsToApplications := isDispatchingEventsToApplications(v.connection.connector.typ, v.connection.role, v.target)
 	importUserIdentitiesFromEvents := isImportingUserIdentitiesFromEvents(v.connection.connector.typ, v.connection.role, v.target)
 	exportUsersToFile := isExportUsersToFile(v.connection.connector.typ, v.connection.role, v.target)
 
-	allowConstantTransformation := importUserIdentitiesFromEvents || dispatchEventsToAplications
+	allowConstantTransformation := importUserIdentitiesFromEvents || dispatchEventsToApplications
 
 	// In cases where the input schema refers to events, that is when:
 	//
@@ -89,7 +90,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	//  - events are dispatched to apps
 	//
 	// the input schema must be nil, which means the schema of the events.
-	inSchemaIsEventSchema := importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToAplications
+	inSchemaIsEventSchema := importUserIdentitiesFromEvents || importEventsIntoWarehouse || dispatchEventsToApplications
 	if inSchemaIsEventSchema {
 		if inSchema.Valid() {
 			switch {
@@ -97,7 +98,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 				return errors.BadRequest("input schema must be invalid for pipelines that import identities from events")
 			case importEventsIntoWarehouse:
 				return errors.BadRequest("input schema must be invalid for pipelines that import events into data warehouse")
-			case dispatchEventsToAplications:
+			case dispatchEventsToApplications:
 				return errors.BadRequest("input schema must be invalid for pipelines that send events to applications")
 			}
 		}
@@ -133,14 +134,14 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	// Check that, if the schemas are valid, they have type object.
 	var inProperties types.Properties
 	if inSchema.Valid() {
-		if inSchema.Kind() != types.ObjectKind {
+		if !inSchema.IsObject() {
 			return errors.BadRequest("input schema, if provided, must be an object")
 		}
 		inProperties = inSchema.Properties()
 	}
 	var outProperties types.Properties
 	if outSchema.Valid() {
-		if outSchema.Kind() != types.ObjectKind {
+		if !outSchema.IsObject() {
 			return errors.BadRequest("out schema, if provided, must be an object")
 		}
 		outProperties = outSchema.Properties()
@@ -165,20 +166,16 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		}
 	}
 	// Validate the required consents.
-	requiredConsentsAllowed := dispatchEventsToAplications || importEventsIntoWarehouse || importUserIdentitiesFromEvents
 	if len(pipeline.RequiredConsents.Purposes) > 0 {
-		if !requiredConsentsAllowed {
-			return errors.BadRequest("required consents are not allowed")
-		}
 		if len(pipeline.RequiredConsents.Purposes) > MaxRequiredConsentPurposes {
 			return errors.BadRequest("required consent purposes must be at most %d", MaxRequiredConsentPurposes)
 		}
-		for i, code := range pipeline.RequiredConsents.Purposes {
-			if err := validateConsentPurposeCode(code); err != nil {
-				return errors.BadRequest("%s", err)
+		for i, id := range pipeline.RequiredConsents.Purposes {
+			if !IsValidID(id) {
+				return errors.BadRequest("identifier %q is not a valid consent purpose identifier", id)
 			}
-			if slices.Contains(pipeline.RequiredConsents.Purposes[i+1:], code) {
-				return errors.BadRequest("required consent purpose %q is duplicated", code)
+			if slices.Contains(pipeline.RequiredConsents.Purposes[i+1:], id) {
+				return errors.BadRequest("required consent purpose %s is duplicated", id)
 			}
 		}
 		if op := pipeline.RequiredConsents.Operator; op != PurposesAnd && op != PurposesOr {
@@ -204,7 +201,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			if !outSchema.Valid() {
 				return errors.BadRequest("output schema is required by the mapping")
 			}
-			transformer, err := mappings.New(tr.Mapping, inSchema, outSchema, false, nil)
+			transformer, err := mappings.New(tr.Mapping, inSchema, outSchema, false)
 			if err != nil {
 				return errors.BadRequest("invalid mapping: %s", err)
 			}
@@ -267,12 +264,12 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 				return errors.BadRequest("placeholders syntax is not supported by source pipelines")
 			}
 		case state.Destination:
-			_, err := connections.ReplacePlaceholders(pipeline.Path, func(name string) (string, bool) {
-				name = strings.ToLower(name)
-				return "", name == "today" || name == "now" || name == "unix"
-			})
+			path, err := connections.ReplacePlaceholders(pipeline.Path, newPathPlaceholderReplacer(time.Now().UTC()))
 			if err != nil {
 				return errors.BadRequest("path is not valid: %s", err)
+			}
+			if utf8.RuneCountInString(path) > MaxFilePathSize {
+				return errors.BadRequest("path is longer than %d runes after placeholder replacement", MaxFilePathSize)
 			}
 		}
 	}
@@ -324,7 +321,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			return errors.BadRequest("output schema must be valid")
 		}
 		if !types.IsValidPropertyPath(pipeline.Matching.Out) {
-			return errors.BadRequest("output matching property %q is not a valid property name", pipeline.Matching.Out)
+			return errors.BadRequest("output matching property %q is not a valid property path", pipeline.Matching.Out)
 		}
 		out, err := outProperties.ByPath(pipeline.Matching.Out)
 		if err != nil {
@@ -336,13 +333,40 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		// Check that the input property can be converted to the output property.
 		switch in.Type.Kind() {
 		case types.IntKind:
-			if k := out.Type.Kind(); k == types.UUIDKind {
+			if out.Type.IsUUID() {
 				return errors.BadRequest("input matching property cannot be converted to the output matching property")
 			}
 		case types.UUIDKind:
-			if k := out.Type.Kind(); k == types.IntKind {
+			if out.Type.IsInt() {
 				return errors.BadRequest("input matching property cannot be converted to the output matching property")
 			}
+		}
+		// Check the semantics.
+		if !types.EqualSemantics(in.Type, out.Type) {
+			if in.Type.Semantics() != out.Type.Semantics() {
+				inSemantics, outSemantics := in.Type.Semantics().String(), out.Type.Semantics().String()
+				if in.Type.Semantics() == types.NoSemantics {
+					inSemantics = "no"
+				}
+				if out.Type.Semantics() == types.NoSemantics {
+					outSemantics = "no"
+				}
+				return errors.BadRequest(
+					"input matching property has %s semantics, but output matching property requires %s semantics",
+					inSemantics, outSemantics)
+			}
+			option := "semantics option"
+			switch in.Type.Semantics() {
+			case types.CountrySemantics:
+				option = "country format"
+			case types.DurationSemantics:
+				option = "duration unit"
+			case types.MeasurementSemantics:
+				option = "unit of measure"
+			}
+			return errors.BadRequest(
+				"input matching property has %s %s, but output matching property requires %s", option,
+				types.SemanticsOptionString(in.Type), types.SemanticsOptionString(out.Type))
 		}
 		// Check that the output property has not been transformed.
 		// This includes checks on the property itself and all its parent paths.
@@ -744,14 +768,14 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 // canBeUsedAsMatchingProp reports whether a type with kind k can be used as a
 // matching property when exporting users to an application.
 func canBeUsedAsMatchingProp(k types.Kind) bool {
-	// Only int, uint, uuid, and string types are allowed.
+	// Only int, uuid, and string types are allowed.
 	return k == types.StringKind || k == types.IntKind || k == types.UUIDKind
 }
 
 // canBeUsedAsTableKey reports whether a type with kind k can be used as a
 // table key when exporting users to databases.
 func canBeUsedAsTableKey(k types.Kind) bool {
-	// Only int, uint, uuid, and string types are allowed.
+	// Only int, uuid, and string types are allowed.
 	return k == types.StringKind || k == types.IntKind || k == types.UUIDKind
 }
 
@@ -761,7 +785,7 @@ func canBeUsedAsTableKey(k types.Kind) bool {
 func unusedPropertyPath(schema types.Type, usedPaths []string) (string, bool) {
 walk:
 	for schemaPath, property := range schema.Properties().WalkObjects() {
-		if property.Type.Kind() == types.ObjectKind {
+		if property.Type.IsObject() {
 			// Do not report unused errors for object properties, only for their
 			// sub-properties.
 			continue

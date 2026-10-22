@@ -20,6 +20,7 @@ import (
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/tools/validation"
 
 	"github.com/relvacode/iso8601"
 )
@@ -81,11 +82,6 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		var v string
 		switch s := src.(type) {
 		case string:
-			if s == "" {
-				if values := typ.Values(); values != nil && !slices.Contains(values, "") {
-					return nil, nil
-				}
-			}
 			v = s
 		case []byte:
 			if s == nil && nullable {
@@ -98,20 +94,52 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		if !utf8.ValidString(v) {
 			return nil, inputValidationErrorf(name, "does not contain valid UTF-8 characters")
 		}
-		if values := typ.Values(); values != nil {
-			if !slices.Contains(values, v) {
-				return nil, inputValidationErrorf(name, "contains an unsupported value")
+		switch typ.Semantics() {
+		case types.CountrySemantics:
+			if src == "" && nullable {
+				return nil, nil
 			}
-		} else if rx := typ.Pattern(); rx != nil {
-			if !rx.MatchString(v) {
-				return nil, inputValidationErrorf(name, "contains an unsupported value")
+			switch typ.CountryFormat() {
+			case types.ISO3166Alpha2:
+				if !validation.IsValidCountryCodeAlpha2(v) {
+					return nil, inputValidationErrorf(name, "is not a 2-letter country code")
+				}
+			case types.ISO3166Alpha3:
+				if !validation.IsValidCountryCodeAlpha3(v) {
+					return nil, inputValidationErrorf(name, "is not a 3-letter country code")
+				}
 			}
-		} else {
-			if l, ok := typ.MaxBytes(); ok && len(v) > l {
-				return nil, inputValidationErrorf(name, "has a value longer than %d bytes", l)
+		case types.PhoneSemantics:
+			if src == "" && nullable {
+				return nil, nil
 			}
-			if l, ok := typ.MaxLength(); ok && utf8.RuneCountInString(v) > l {
-				return nil, inputValidationErrorf(name, "has a value longer than %d characters", l)
+			var ok bool
+			v, ok = types.NormalizePhone(v)
+			if !ok {
+				return nil, inputValidationErrorf(name, "is not a valid phone number")
+			}
+		default:
+			if values := typ.Values(); values != nil {
+				if !slices.Contains(values, v) {
+					if src == "" && nullable {
+						return nil, nil
+					}
+					return nil, inputValidationErrorf(name, "contains an unsupported value")
+				}
+			} else if rx := typ.Pattern(); rx != nil {
+				if !rx.MatchString(v) {
+					if src == "" && nullable {
+						return nil, nil
+					}
+					return nil, inputValidationErrorf(name, "contains an unsupported value")
+				}
+			} else {
+				if l, ok := typ.MaxBytes(); ok && len(v) > l {
+					return nil, inputValidationErrorf(name, "has a value longer than %d bytes", l)
+				}
+				if l, ok := typ.MaxLength(); ok && utf8.RuneCountInString(v) > l {
+					return nil, inputValidationErrorf(name, "has a value longer than %d characters", l)
+				}
 			}
 		}
 		return v, nil
@@ -164,12 +192,12 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				v = src
 			case float32:
 				f := float64(src)
-				if src < 0 || math.IsInf(f, 1) || f != math.Trunc(f) {
+				if src < 0 || f >= 0x1p64 || f != math.Trunc(f) {
 					return nil, inputValidationErrorf(name, "has a float32 value that cannot represent an unsigned int(%d) value", typ.BitSize())
 				}
 				v = uint64(src)
 			case float64:
-				if src < 0 || math.IsInf(src, 1) || src != math.Trunc(src) {
+				if src < 0 || src >= 0x1p64 || src != math.Trunc(src) {
 					return nil, inputValidationErrorf(name, "has a float64 value that cannot represent an unsigned int(%d) value", typ.BitSize())
 				}
 				v = uint64(src)
@@ -233,12 +261,12 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			v = int64(src)
 		case float32:
 			f := float64(src)
-			if math.IsInf(f, 0) || f != math.Trunc(f) {
+			if f < -0x1p63 || f >= 0x1p63 || f != math.Trunc(f) {
 				return nil, inputValidationErrorf(name, "has a float32 value that cannot represent an int(%d) value", typ.BitSize())
 			}
 			v = int64(f)
 		case float64:
-			if math.IsInf(src, 0) || src != math.Trunc(src) {
+			if src < -0x1p63 || src >= 0x1p63 || src != math.Trunc(src) {
 				return nil, inputValidationErrorf(name, "has a float64 value that cannot represent an int(%d) value", typ.BitSize())
 			}
 			v = int64(src)
@@ -557,15 +585,15 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			v = int64(src)
 		case float32:
 			f := float64(src)
-			if math.IsInf(f, 0) || f != math.Trunc(f) {
+			if f < types.MinYear || f > types.MaxYear || f != math.Trunc(f) {
 				return nil, inputValidationErrorf(name, "has a float32 value that cannot represent a year value")
 			}
 			v = int64(f)
 		case float64:
-			v = int64(src)
-			if math.IsInf(src, 0) || src != math.Trunc(src) {
+			if src < types.MinYear || src > types.MaxYear || src != math.Trunc(src) {
 				return nil, inputValidationErrorf(name, "has a float64 value that cannot represent a year value")
 			}
+			v = int64(src)
 		case decimal.Decimal:
 			v, err = src.Int64()
 			if err != nil {
@@ -597,7 +625,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			if src == "" && nullable {
 				return nil, nil
 			}
-			v, ok := types.ParseUUID(src)
+			v, ok := types.NormalizeUUID(src)
 			if !ok {
 				return nil, inputValidationErrorf(name, "has a string value that cannot represent a uuid value")
 			}
@@ -673,10 +701,6 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			if !ok {
 				return nil, inputValidationErrorf(name, "has a net.IP value that cannot represent a valid ip value")
 			}
-			// Unmap an IPv6-mapped IPv4 address as the net.IP.String method does.
-			if addr.Is4In6() {
-				addr = addr.Unmap()
-			}
 		case netip.Addr:
 			addr = ip
 		default:
@@ -685,11 +709,12 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		if !addr.IsValid() {
 			return nil, inputValidationErrorf(name, "is not a valid IP address")
 		}
-		return addr.WithZone("").String(), nil
+		ip, _ := types.NormalizeIP(addr)
+		return ip, nil
 	case types.ArrayKind:
 		if s, ok := src.(string); ok {
 			// Snowflake only supports json as the item type. The driver returns the value as a JSON array.
-			if s == "" || s[0] != '[' || typ.Elem().Kind() != types.JSONKind {
+			if s == "" || s[0] != '[' || !typ.Elem().IsJSON() {
 				return nil, inputValidationErrorf(name, "has a string value but does not contain a JSON array")
 			}
 			v := json.Value(s)
@@ -732,10 +757,12 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			}
 		}
 		if typ.Unique() {
-			for i, e := range a {
-				if slices.Contains(a[i:], e) {
-					return nil, inputValidationErrorf(name, "contains the duplicated value %v", e)
-				}
+			duplicate, err := types.FirstDuplicate(a, t)
+			if err != nil {
+				return nil, err
+			}
+			if duplicate != -1 {
+				return nil, inputValidationErrorf(name, "contains a duplicated value")
 			}
 		}
 		return a, nil
@@ -776,11 +803,14 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				delete(obj, name)
 			}
 		}
+		if obj == nil {
+			obj = map[string]any{}
+		}
 		return obj, nil
 	case types.MapKind:
 		if s, ok := src.(string); ok {
 			// Snowflake only supports json as the value type. The driver returns the value as a JSON object.
-			if s == "" || s[0] != '{' || typ.Elem().Kind() != types.JSONKind {
+			if s == "" || s[0] != '{' || !typ.Elem().IsJSON() {
 				return nil, inputValidationErrorf(name, "has a string value but does not contain a JSON object")
 			}
 			v := json.Value(s)
@@ -840,10 +870,16 @@ func dateTimeFromUnixInt(n int64, layout string) (time.Time, bool) {
 }
 
 // dateTimeFromUnixFloat returns the local Time corresponding to the provided
-// Unix time. Unix time is expressed in seconds, milliseconds, microseconds or
-// nanoseconds according to layout.
-// The second return value reports whether the layout is appropriate.
+// Unix time. Unix time is expressed in seconds, milliseconds, microseconds, or
+// nanoseconds, as specified by layout.
+// The second return value reports whether layout is supported and n can
+// be converted to int64.
 func dateTimeFromUnixFloat(n float64, layout string) (time.Time, bool) {
+	// MaxInt64 rounds to 2^63 when represented as a float64, so the upper
+	// bound is exclusive.
+	if math.IsNaN(n) || n < math.MinInt64 || n >= math.MaxInt64 {
+		return time.Time{}, false
+	}
 	switch layout {
 	case "unix":
 		sec := int64(n)

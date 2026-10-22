@@ -1,3 +1,11 @@
+# Krenalis
+
+Go monorepo. Dependencies are vendored in `vendor/`. This file holds the conventions that every change must follow.
+
+# Changes
+
+Keep the diff as small as the change allows. Touch only the lines the change needs: no drive-by reformatting, renaming, reordering, or rewrapping of a comment you happened to read. When the same fix can be written in two ways, pick the one that leaves more of the surrounding lines untouched. Reread your own diff before reporting it: every hunk should be one you can justify.
+
 # Review process
 
 When assessing a change against existing practices, use the code as it existed before the changes under review as the source of precedent. Do not treat code introduced or altered by the current change as evidence of an established convention.
@@ -8,7 +16,7 @@ Apply review rules to code introduced or modified by the change under review. Do
 
 ## Line length
 
-Allow Go code lines to be up to 120 characters long without wrapping. A line may exceed 120 characters when a more specific convention requires it, notably the rule that keeps exported signatures on one line.
+Allow Go code lines to be up to 120 characters long without wrapping. A line may exceed 120 characters when a more specific convention requires it, notably the rule that keeps exported signatures on one line. In `_test.go` files, the limit does not apply to the table of cases of a table-driven test, whose lines may be as long as needed; the rest of a test file follows the limit like any other code.
 
 ## File organization
 
@@ -23,9 +31,21 @@ After the type groups, place package-level functions in alphabetical order.
 
 Place package-level constants and variables at the beginning of the file when they have broad relevance. When one is specific to a single function or method, or is otherwise of secondary importance, declare it immediately before the function or method that uses it.
 
+## Layout and naming
+
+An exported function or method may call another exported function or method of the same package when it is solely a wrapper offering a simpler API for a common case. Otherwise, extract a shared unexported function or method and call that from both.
+
+Declare a variable as close as possible to where it is used, as long as the code stays readable.
+
+A field guarded by a mutex carries a `// protected by mu` comment, so the guard shows up in the editor when reading the field's documentation.
+
+Keep the receiver name the type already uses. The facade types in `core/` (`Connection`, `Connector`, `Organization`, `Pipeline`, `Workspace`) use `this`; leave it as it is.
+
 ## Imports
 
-Outside the implementation and compatibility tests of `tools/errors`, always import `github.com/krenalis/krenalis/tools/errors` instead of the standard-library `errors` package. The repository package exposes every standard `errors` name in addition to repository-specific functionality.
+In `cmd`, `core`, and their subpackages, always import `github.com/krenalis/krenalis/tools/errors` instead of the standard-library `errors` package. The repository package exposes every standard `errors` name in addition to repository-specific functionality.
+
+In other packages, prefer the standard-library `errors` package. Import `github.com/krenalis/krenalis/tools/errors` only when its repository-specific functionality is needed. The implementation and compatibility tests of `tools/errors` use the standard-library package as required to avoid an import cycle.
 
 Use an imported package's default name unless Go requires disambiguation because of an actual identifier conflict. Do not alias an import merely to avoid reusing the same name for a variable, field, or selector when the language permits it.
 
@@ -38,6 +58,18 @@ When initializing an empty writable map without a capacity hint, prefer a map li
 ## Composite values
 
 When allocating the zero value of a composite type, prefer `&T{}` over `new(T)` when both forms are valid.
+
+## Switch statements
+
+Give every `switch` statement, including type switches and switches without a switch expression, a `default` clause that makes explicit what happens to the values not matched by the other cases:
+
+- When they cannot occur, treat them as an unexpected situation, as described under Errors versus panics, naming the unexpected value or type in the message.
+- When they require no action within the switch, leave the `default` clause empty except for a short comment saying why.
+
+Omit the `default` clause only in these cases:
+
+- The switch expression, or the expression in the type switch guard, is a local variable assigned just above the switch, so that a reader sees at a glance that it can only take values or types covered by the cases.
+- Every case ends in a terminating statement, as defined by the Go specification, and the values not matched by the cases are expected ones, which continue with the code following the switch.
 
 ## Signatures
 
@@ -71,6 +103,8 @@ if err := f(); err != nil {
     return err
 }
 ```
+
+Calls to `(*sql.Rows).Scan` are an exception. Place them in the initializer of the error check to follow the Go convention for scanning SQL results. Calls to `(*sql.Row).Scan` follow the general rule.
 
 Perform any classification of the returned error, including `errors.Is` checks for sentinel errors and `errors.AsType` checks for typed errors, inside that non-nil branch rather than using classification as a substitute for the `err != nil` check. In tests that expect a particular error, enter the `err != nil` branch, verify the error there, and fail after the branch when the call returned nil.
 
@@ -119,13 +153,23 @@ if err != nil {
 return n, nil
 ```
 
+## Errors versus panics
+
+A function or method must return an error when it is expected to fail, for example because it performs operations that can fail, or when it can return errors that callers can identify and usefully handle. Otherwise, it may omit the error from its signature.
+
+An unexpected situation is one that callers or the program's invariants rule out, such as an invalid argument or a value that should be impossible, and therefore reveals a bug. A function or method that meets one must return an error if its signature has one, so that a single failing operation does not bring down the whole process. It must panic instead if its signature has no error, or if the situation reveals corrupted internal state that no caller could safely recover from.
+
 ## Tests
+
+Test failure messages must use the form `expected ..., got ...`.
 
 In tests, use `t.Context()` for operations whose lifetime follows the test. Pass `t.Context()` directly instead of first assigning it to a local variable when its scope of use is small; name it only when it spans a broader portion of the test or must be used to derive another context. When a test helper already accepts `*testing.T`, obtain that context inside the helper instead of also passing a `context.Context`. Accept a separate context only when callers intentionally need to supply a context with different values, deadline, cancellation state, or lifetime.
 
 Use the standard-library `testing/synctest` package when testing concurrent or asynchronous Go code whose behavior depends on timers, deadlines, or goroutine quiescence and can run entirely inside a synctest bubble. Prefer its virtual time and `synctest.Wait` to real sleeps or polling. Do not use it around real network I/O, system calls, or external processes unless those dependencies are replaced with fakes that operate entirely within the bubble.
 
 When running the complete Admin test suite, you may use `go run ./test/commit -just-test-admin` to receive each individual test result without waiting for the complete suite to finish. This command is optional.
+
+When a test starts a container with testcontainers and reads one of its mapped ports, its wait strategy must include `wait.ForListeningPort` for that port; otherwise, notably on Docker Desktop, `MappedPort` can fail. For PostgreSQL, use `postgres.BasicWaitStrategies()`, which includes it.
 
 ## Behavioral contracts
 
@@ -149,20 +193,24 @@ Exported methods in `core/internal/metrics` are an exception: they must assume t
 
 ## Block spacing
 
-Choose internal spacing for readability first: use blank lines when they help distinguish logical groups of statements. Keep short, cohesive blocks compact when no such separation is useful. This applies to function and method bodies too; neither a guard nor a `return` requires a blank line on its own.
+Apply the following procedure to every brace-delimited block, be it a function or method body or a block nested inside one. Decide each block on its own, from the inside out.
 
-When reviewing existing code within the scope of a change, make this decision independently of blank lines used only to satisfy the boundary rule below, including padding before a final `return`. Remove that padding if no useful internal separation remains.
+1. Choose the internal spacing. Looking only at the statements of the block, and ignoring any blank line adjacent to its braces, insert a blank line only between phases that do clearly different things, and only where it genuinely helps readability. Judge by the structure of the block, not by its length. Statements that are steps toward a single result, such as a run of guards, the construction of a value, or a loop followed by the operation that consumes its result, form one phase and stay together, even in a block well beyond 20 lines. Phases that do unrelated things, especially when each is introduced by its own comment, may be separated even in a short block. A single-statement block never needs a blank line, and a guard or a `return` does not earn one on its own. Use length only to settle doubtful cases: below roughly 20 non-blank lines between its braces, nested blocks included, separation is rarely worth the space; above it, separation more often helps the reader.
+2. Pad the boundaries. If step 1 left at least one internal blank line, leave a blank line immediately after the opening brace and another immediately before the closing brace. If it left none, the block has no blank line between its statements or at its boundaries: never pad an otherwise compact block.
+3. Place the closing pad before a final `return`. When a padded block ends with a `return`, its trailing blank line goes immediately before that `return`, with no blank line between the `return` and the closing brace. A `return` inside a nested block is not the enclosing block's final statement.
 
-Once the internal spacing has been chosen, make the boundaries of every brace-delimited code block containing a blank line visible:
+Only two shapes are therefore valid:
 
-- Leave a blank line immediately after the opening brace.
-- If a function or method body ends with a top-level `return`, leave a blank line immediately before that statement and none between it and the closing brace.
-- In every other case, including a function or method body without a final `return`, leave a blank line immediately before the closing brace.
-- Separate the complete construct that owns the block from surrounding code with blank lines. Keep declaration comments attached to their declarations.
+- A compact block, with no blank line between its statements or at its boundaries.
+- A separated block, whose internal blank lines are matched by a blank line after the opening brace and one before the closing brace, the latter moved above a final `return`.
 
-A `return` inside a nested block does not count as the body's final `return`. These boundary requirements are conditional on internal blank lines; do not add blank lines solely to pad an otherwise compact block.
+A nested block does not inherit the shape of the block that contains it, in either direction. A function literal, such as a subtest passed to `t.Run`, a goroutine, or an HTTP handler, is a function in its own right: decide its spacing as for a function body. A control-flow block may also be separated inside a compact block when the enclosing statements are only a thin frame around it, such as declaring a result, filling it in a loop, and returning it. Conversely, a separated nested block does not by itself make its enclosing block separated.
 
-Short, cohesive bodies stay compact, with or without a final `return`:
+Separate the complete construct that owns the block from surrounding code with blank lines. Keep declaration comments attached to their declarations.
+
+When reviewing existing code within the scope of a change, run step 1 independently of blank lines that are only boundary padding, including padding before a final `return`. Remove that padding if no useful internal separation remains.
+
+Short bodies stay compact, with or without a final `return`, even when they perform distinct steps:
 
 ```go
 func nonNegative(n int) int {
@@ -176,19 +224,33 @@ func (c *cache) resetStats() {
     c.hits = 0
     c.misses = 0
 }
+
+func sortedKeys(entries map[string]int) []string {
+    keys := make([]string, 0, len(entries))
+    for key := range entries {
+        keys = append(keys, key)
+    }
+    slices.Sort(keys)
+    return keys
+}
 ```
 
-The following examples illustrate boundary placement once internal blank lines have been chosen to separate logical steps. They do not prescribe where to separate statements in other functions or methods:
+The following examples illustrate boundary placement once internal blank lines have been chosen to separate logical steps. They do not prescribe where to separate statements in other functions or methods, and for brevity they are shorter than blocks that would normally be separated:
 
 ```go
-func sortedKeys(entries map[string]int) []string {
+func topKeys(entries map[string]int, n int) []string {
 
     keys := make([]string, 0, len(entries))
     for key := range entries {
         keys = append(keys, key)
     }
 
-    slices.Sort(keys)
+    slices.SortFunc(keys, func(a, b string) int {
+        return cmp.Compare(entries[b], entries[a])
+    })
+    if len(keys) > n {
+        keys = keys[:n]
+    }
 
     return keys
 }
@@ -214,9 +276,15 @@ var x int
 }
 ```
 
+A function whose body is only a `synctest.Test` call is a single-statement block: keep it compact even when the function passed to `synctest.Test` is padded.
+
 ## Declaration comments
 
-Every package-level type, function, variable, and constant, as well as every method, must have a declaration comment written in the style of the Go standard library, except for the grouped declarations and self-explanatory test fixture constants described below.
+Every exported package-level type, function, variable, and constant, as well as every exported method, must have a declaration comment written in the style of the Go standard library, except for the grouped declarations and self-explanatory test fixture constants described below. An unexported declaration does not need one, but add it when the declaration is long, takes or returns several values, or its behavior is not obvious from the code.
+
+Keep comments compact: one precise sentence beats three loose ones, and do not restate what the code already says.
+
+Limit each line of declaration comments starting in column 1 to 80 characters, including comment markers and spaces; comments on the same line as code are exempt.
 
 When a variable or constant belongs to a parenthesized `var` or `const` declaration whose other members do not have individual declaration comments, do not add an individual comment only to that member. Preserve the established comment style consistently throughout the group.
 
@@ -229,6 +297,43 @@ A short comment for a package-level variable or constant may appear on the same 
 ## Error messages
 
 Never begin an error message with the article `the`.
+
+Prefix the message of every panic, and of every error that reports an unexpected situation, with the import path of the package that produces it, relative to the module path, followed by `: `, as in `core/internal/transformers/lambda: invalid function name`.
+
+- When wrapping an error from the same package, do not repeat the prefix.
+- When panicking again with a value obtained from `recover`, pass it unchanged.
+- When passing on an error from another package, as in `panic(err)`, add the prefix only if the error's message alone does not show where the problem occurred.
+
+## Correctness
+
+Anything arriving from outside — request bodies, settings, API values, connector responses — is validated and bounded before use, unless there is a stated reason not to.
+
+# Admin conventions
+
+Apply these conventions to the TypeScript and React code under `admin/`.
+
+- In every boolean context, use a boolean expression. Do not rely on the truthiness of strings, numbers, objects, or other non-boolean values. Write checks such as `name !== ''`, `items.length > 0`, and `value != null` instead of `name`, `items.length`, and `value`. In JSX expression containers, however, prefer idiomatic React patterns when they are clearer and conventional, such as `{condition && <Component />}`, rather than forcing an explicit boolean comparison solely to satisfy this rule.
+- Name boolean values with a predicate prefix such as `is`, `has`, `can`, or `should` when that makes their meaning clearer.
+- Use `===` and `!==` for value comparisons. The intentional exception is `value == null` or `value != null` when a single check must cover both `null` and `undefined`.
+- Use an `interface` for object shapes and a `type` for unions, tuples, and aliases that do not describe object shapes.
+- Prefer the existing domain and API types stored in `admin/src/lib/` over recreating their shapes locally.
+- Use PascalCase for components and types, and camelCase for functions, variables, and ordinary const values. Use uppercase snake case for module-level constants representing fixed keys, limits, delays, and similar configuration values.
+- Write function components and custom hooks as arrow functions assigned to `const`.
+- Type the component's props with an interface named `<ComponentName>Props` immediately before the component, unless the type is shared from another module. Destructure and type the props in the component's parameter list; do not use `React.FC`.
+- Keep component-specific styles in a separate `.css` file in the same directory as the component, and import that stylesheet from the component file. Follow the existing BEM-style class names: a block such as `schema-grid`, elements such as `schema-grid__search`, and modifiers such as `schema-grid--loading`.
+- When using a Shoelace icon, make sure its file name is listed in `admin/src/shoelace-icons.txt`, in alphabetical order, and run `npm run makevendor` from `admin/`. Unlisted icons are not embedded, and the Admin fails to load them.
+
+# Reuse
+
+Before writing something new, look for the same thing already done elsewhere in the repo, and reuse it or follow it.
+
+Prefer the standard library, or an existing helper under `tools/`, over a hand-rolled version.
+
+When deleting something, look for what it leaves behind: callers, columns, fixtures, documentation, constants that are now dead.
+
+# Dependencies
+
+Do not state what a vendored library does from its API surface or from memory. Read it in `vendor/` and follow the call chain up to the caller that matters: an option that looks dropped along one path often arrives by another. Cite file and line when reporting such behavior.
 
 # Database constraints
 
@@ -284,6 +389,44 @@ owning workspace from their consequences. Accept them when they are safe for
 Krenalis. Establishing truthfulness or authenticity requires an independent
 integrity mechanism.
 
+As an exception, validation may reject mutually inconsistent values when they
+violate a relationship that their meaning guarantees, such as a subset count
+exceeding the count of the set that contains it, so that callers can rely on
+that guarantee.
+
+# Uniformity across data warehouses
+
+Every supported data warehouse has its own package under `warehouses/`, and
+they all implement the same interfaces. Keep those packages as similar to one
+another as the platforms allow: whoever knows one should know them all, and a
+change made to one should be easy to apply to the others. Do not treat one
+platform as the reference implementation and the others as ports; the same
+rules apply to all of them, including any platform added later.
+
+Mirror the code: the same file names for the same responsibilities, the same
+declaration order inside a file, the same type, function, and variable names,
+the same signatures, the same error messages, and the same shape of the code
+inside each function. When a feature, a fix, or a validation is added to one
+warehouse, add it to the others in the same form, unless the platform makes it
+inapplicable.
+
+Apply the rule to tests as well: the same test files, the same test names, the
+same table-driven cases, and comparable fixtures, so that the coverage of one
+warehouse can be compared with the coverage of another at a glance. When a case
+applies to every platform, write it the same way everywhere instead of giving
+each platform its own structure. When a case applies to only one platform, keep
+it recognizable as the exception it is.
+
+Similarity is a means, not an end. Platforms genuinely differ in SQL dialect,
+type system, quoting rules, driver behavior, and supported features, and those
+differences must be expressed naturally where they occur. Do not distort code
+to make packages match: no pointless abstraction, no dead or unreachable code
+kept only for symmetry, no test that asserts nothing on a platform where the
+case cannot arise, and no renaming of a concept that a platform names
+differently for a good reason. When a divergence is necessary, keep it local
+and confined to the part that truly differs, leaving the surrounding code
+identical.
+
 # `core` and `cmd` conventions
 
 ## API errors and validation
@@ -307,6 +450,12 @@ API endpoint handlers in `cmd` parse values from paths, query strings, and reque
 
 Methods in `core` that serve an endpoint must select their error according to where that endpoint receives each argument, even though this couples them to the endpoint shape. Return the final API-ready error from `core` so that `cmd` can propagate it without translation.
 
+A method of `core` that can return an `errors.UnprocessableError` documents it and lists the codes. Handlers in `cmd/api.go` never document unprocessable errors.
+
 ## Core entry guards
 
 Every exported method in `core` that is called by `cmd` must execute `<receiver>.core.mustBeOpen()` as its first statement. If the method body contains any blank line, leave a blank line immediately after the opening brace and another immediately after the guard statement.
+
+## Pipeline specifications
+
+`core/Pipelines.md` documents, as part of the code, the rules that pipelines follow for each combination of connection role, connector type, and target. Whenever a change in `core` or in the Admin alters these rules, update the file in the same change.

@@ -90,6 +90,8 @@ func TestPipelineMetricsHTTPContract(t *testing.T) {
 	})
 }
 
+// createPipelineMetricsFixture creates a source and pipeline, runs the pipeline,
+// and returns the source connection ID.
 func createPipelineMetricsFixture(t *testing.T, k *krenalistester.Krenalis) string {
 	t.Helper()
 	k.UpdateIdentityResolutionSettings(false, nil)
@@ -152,7 +154,7 @@ func assertPipelineMetricsRange(t *testing.T, res pipelineMetricsResponse) {
 }
 
 // assertMetricSeriesBuckets verifies that a metric series includes the expected
-// number of passed and failed buckets, each with the seven pipeline step
+// number of passed and failed buckets, each with the nine pipeline step
 // counters.
 func assertMetricSeriesBuckets(t *testing.T, series map[string]json.Value, expectedBuckets int) {
 	t.Helper()
@@ -176,8 +178,8 @@ func assertMetricSeriesBuckets(t *testing.T, series map[string]json.Value, expec
 				}
 				counterCount++
 			}
-			if counterCount != 7 {
-				t.Fatalf("expected metric series %q bucket %d to contain seven counters, got %d", key, bucketIndex, counterCount)
+			if counterCount != 9 {
+				t.Fatalf("expected metric series %q bucket %d to contain nine counters, got %d", key, bucketIndex, counterCount)
 			}
 			bucketCount++
 		}

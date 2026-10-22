@@ -79,14 +79,14 @@ const PropertyDetailsPanel = ({ identifierPosition, onClose, primarySource, prop
 
 const getSemanticDetail = (property: Property): { label: string; value?: string } | null => {
 	const type = getPropertyValueType(property.type);
-	if (type?.kind === 'decimal' && type.semantic === 'money') {
+	if (type?.kind === 'decimal' && type.semantics === 'money') {
 		return { label: 'Currency', value: type.currency };
 	}
-	if (type != null && 'semantic' in type && type.semantic === 'measurement') {
+	if (type != null && 'semantics' in type && type.semantics === 'measurement') {
 		const option = UNIT_OF_MEASURE_OPTIONS.find((candidate) => candidate.value === type.unit);
 		return { label: 'Unit', value: option == null ? undefined : `${option.label} · ${option.value}` };
 	}
-	if (type != null && 'semantic' in type && type.semantic === 'duration') {
+	if (type != null && 'semantics' in type && type.semantics === 'duration') {
 		const option = DURATION_UNIT_OPTIONS.find((candidate) => candidate.value === type.unit);
 		return { label: 'Unit', value: option == null ? undefined : `${option.label} · ${option.symbol}` };
 	}

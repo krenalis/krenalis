@@ -5,12 +5,232 @@
 package httpclient
 
 import (
+	"context"
+	"io"
 	"net/http"
+	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/krenalis/krenalis/connectors"
+	"github.com/krenalis/krenalis/tools/errors"
 )
+
+// responseBody tracks how many times it is closed.
+type responseBody struct {
+	io.Reader
+	closes int
+}
+
+// Close increments the close count.
+func (b *responseBody) Close() error {
+	b.closes++
+	return nil
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+// RoundTrip calls f with req.
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+// TestClientDoResponseBody checks that discarded response bodies are closed and
+// the returned response body remains open.
+func TestClientDoResponseBody(t *testing.T) {
+
+	tests := []struct {
+		name              string
+		method            string
+		idempotencyHeader string
+		status            int
+		header            http.Header
+		accessToken       string
+		retrieveToken     bool
+		cancelDuringWait  bool
+		wantRetry         bool
+	}{
+		{name: "ok", status: 200},
+		{name: "created", status: 201},
+		{name: "no content", status: 204},
+		{name: "permanent failure", status: 404},
+		{name: "slowdown", status: 429, wantRetry: true},
+		{name: "rate limited", status: 429, header: http.Header{"Retry-After": {"1"}}, wantRetry: true},
+		{name: "internal server error", status: 500, wantRetry: true},
+		{name: "POST slowdown", method: http.MethodPost, status: 429},
+		{name: "POST rate limited", method: http.MethodPost, status: 429, header: http.Header{"Retry-After": {"1"}}},
+		{name: "POST internal server error", method: http.MethodPost, status: 500},
+		{name: "idempotent POST slowdown", method: http.MethodPost, idempotencyHeader: "Idempotency-Key", status: 429, wantRetry: true},
+		{name: "idempotent POST rate limited", method: http.MethodPost, idempotencyHeader: "Idempotency-Key", status: 429, header: http.Header{"Retry-After": {"1"}}, wantRetry: true},
+		{name: "idempotent POST internal server error", method: http.MethodPost, idempotencyHeader: "Idempotency-Key", status: 500, wantRetry: true},
+		{name: "idempotent POST with X-Idempotency-Key", method: http.MethodPost, idempotencyHeader: "X-Idempotency-Key", status: 500, wantRetry: true},
+		{name: "unauthorized without OAuth", status: 401},
+		{name: "unauthorized with OAuth", status: 401, accessToken: "token", wantRetry: true},
+		{name: "unauthorized POST with OAuth", method: http.MethodPost, status: 401, accessToken: "token", wantRetry: true},
+		{name: "unauthorized token retrieval", status: 401, accessToken: "token", retrieveToken: true},
+		{name: "canceled during rate limit", status: 429, header: http.Header{"Retry-After": {"1"}}, cancelDuringWait: true, wantRetry: true},
+		{name: "canceled during backoff", status: 500, cancelDuringWait: true, wantRetry: true},
+		{name: "POST rate limited with deadline", method: http.MethodPost, status: 429, header: http.Header{"Retry-After": {"1"}}, cancelDuringWait: true},
+		{name: "POST internal server error with deadline", method: http.MethodPost, status: 500, cancelDuringWait: true},
+	}
+
+	for _, test := range tests {
+		for _, bodyKind := range []string{"nil", "empty", "replayable", "non-replayable"} {
+			t.Run(test.name+"/"+bodyKind, func(t *testing.T) {
+				// TODO: remove when Do no longer retries requests that are not
+				// idempotent or whose body cannot be read again.
+				isIdempotentRequest := test.method != http.MethodPost || test.idempotencyHeader != ""
+				isRetriable := isIdempotentRequest && bodyKind != "non-replayable"
+				if (test.status == 429 || test.status == 500) && !isRetriable {
+					t.Skip("Do retries requests that are not retriable")
+				}
+				synctest.Test(t, func(t *testing.T) {
+
+					firstContent := "first response"
+					if test.status == http.StatusNoContent {
+						firstContent = ""
+					}
+					firstBody := &responseBody{Reader: strings.NewReader(firstContent)}
+					first := &http.Response{StatusCode: test.status, Header: test.header, Body: firstBody}
+					lastBody := &responseBody{Reader: strings.NewReader("last response")}
+					last := &http.Response{StatusCode: 200, Body: lastBody}
+					wantRequestContent := ""
+					if bodyKind == "replayable" || bodyKind == "non-replayable" {
+						wantRequestContent = "request"
+					}
+					calls := 0
+					c := &Client{
+						accessToken: test.accessToken,
+						transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+
+							wantMethod := test.method
+							if wantMethod == "" {
+								wantMethod = http.MethodGet
+							}
+							if req.Method != wantMethod {
+								t.Errorf("expected method %q, got %q", wantMethod, req.Method)
+							}
+							if test.idempotencyHeader != "" {
+								if got := req.Header.Get(test.idempotencyHeader); got != "key" {
+									t.Errorf("expected idempotency key %q, got %q", "key", got)
+								}
+							}
+							var data []byte
+							if req.Body != nil {
+								defer req.Body.Close()
+								var err error
+								data, err = io.ReadAll(req.Body)
+								if err != nil {
+									t.Fatalf("expected request body read to succeed, got %v", err)
+								}
+							}
+							if string(data) != wantRequestContent {
+								t.Errorf("expected request body %q, got %q", wantRequestContent, data)
+							}
+
+							calls++
+							if calls == 1 {
+								return first, nil
+							}
+							if firstBody.closes != 1 {
+								t.Errorf("expected first response body closed once before retry, got %d",
+									firstBody.closes)
+							}
+
+							return last, nil
+						}),
+					}
+					c.endpointGroups.mux = http.NewServeMux()
+					c.endpointGroups.mux.Handle("/", noOpHandle)
+					c.endpointGroups.byPattern = map[string]endpointGroup{
+						"/": {requireOAuth: true, rateLimiter: newRateLimiter(100, 10, 0)},
+					}
+
+					ctx := t.Context()
+					if test.cancelDuringWait {
+						var cancel context.CancelFunc
+						ctx, cancel = context.WithTimeout(ctx, time.Millisecond)
+						defer cancel()
+					}
+					var body io.Reader
+					switch bodyKind {
+					case "nil":
+					case "empty":
+						body = http.NoBody
+					case "replayable":
+						body = strings.NewReader("request")
+					case "non-replayable":
+						body = io.NopCloser(strings.NewReader("request"))
+					default:
+						t.Fatalf("expected a known request body kind, got %q", bodyKind)
+					}
+					req, err := http.NewRequestWithContext(ctx, test.method, "https://example.com/", body)
+					if err != nil {
+						t.Fatalf("expected request creation to succeed, got %v", err)
+					}
+					if test.idempotencyHeader != "" {
+						req.Header.Set(test.idempotencyHeader, "key")
+					}
+
+					wantRetry := test.wantRetry && bodyKind != "non-replayable"
+					wantCancellation := test.cancelDuringWait && wantRetry
+					res, err := c.do(req, test.retrieveToken)
+					if err != nil {
+						if !wantCancellation || !errors.Is(err, context.DeadlineExceeded) {
+							t.Fatalf("expected only a deadline error during the retry wait, got %v", err)
+						}
+						if res != nil {
+							t.Errorf("expected no response on cancellation, got %v", res)
+						}
+						if firstBody.closes != 1 {
+							t.Errorf("expected first response body closed once on cancellation, got %d",
+								firstBody.closes)
+						}
+						if calls != 1 {
+							t.Errorf("expected 1 request before cancellation, got %d", calls)
+						}
+						return
+					}
+					if wantCancellation {
+						t.Fatal("expected deadline error during the retry wait, got nil")
+					}
+					if res == nil {
+						t.Fatal("expected a response, got nil")
+					}
+					defer res.Body.Close()
+					wantResponse, wantCalls, wantCloses := first, 1, 0
+					wantContent := firstContent
+					if wantRetry {
+						wantResponse, wantCalls, wantCloses = last, 2, 1
+						wantContent = "last response"
+					}
+					if res != wantResponse {
+						t.Errorf("expected response %p, got %p", wantResponse, res)
+					}
+					if calls != wantCalls {
+						t.Errorf("expected %d requests, got %d", wantCalls, calls)
+					}
+					if firstBody.closes != wantCloses {
+						t.Errorf("expected first response body closed %d times, got %d", wantCloses, firstBody.closes)
+					}
+					if lastBody.closes != 0 {
+						t.Errorf("expected final response body to remain open, got %d closes", lastBody.closes)
+					}
+					data, err := io.ReadAll(res.Body)
+					if err != nil {
+						t.Fatalf("expected response body read to succeed, got %v", err)
+					}
+					if string(data) != wantContent {
+						t.Errorf("expected response body %q, got %q", wantContent, data)
+					}
+
+				})
+			})
+		}
+	}
+
+}
 
 func Test_retryStrategy(t *testing.T) {
 

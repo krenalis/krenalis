@@ -107,6 +107,11 @@
 	font-size: 13px;
 }
 
+.property-form__value {
+	font-size: 13px;
+	line-height: 1.45;
+}
+
 .property-form__read-only-value {
 	align-items: center;
 	background-color: transparent;

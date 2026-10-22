@@ -5,6 +5,8 @@ import {
 	getSampleIdentifiers,
 	updateMappingPropertyError,
 	pipelineObjectLabels,
+	propertyAnnotation,
+	propertyAnnotationSeparator,
 } from './Pipeline.helpers';
 import {
 	getSchemaComboboxItems,
@@ -70,10 +72,10 @@ import { EventListenerEvent } from '../../../hooks/useEventListener';
 import { Sample } from './Pipeline.types';
 import { UnprocessableError } from '../../../lib/api/errors';
 import ConnectionContext from '../../../context/ConnectionContext';
-import Workspace from '../../../lib/api/types/workspace';
+import Workspace, { EventConsentLocation } from '../../../lib/api/types/workspace';
 import {
 	PipelineToSet,
-	RequiredConsents,
+	EventListenerConsents,
 	TransformationFunction,
 	TransformationPurpose,
 } from '../../../lib/api/types/pipeline';
@@ -616,6 +618,54 @@ const PipelineTransformation = forwardRef<any>((_, ref) => {
 	);
 });
 
+interface PropertyAnnotationProps {
+	className: string;
+	property: Property;
+}
+
+const PropertyAnnotation = ({ className, property }: PropertyAnnotationProps) => {
+	const [isOverflowing, setIsOverflowing] = useState<boolean>(false);
+
+	const displayName = property.displayName ?? '';
+	const description = property.description ?? '';
+	const annotation = propertyAnnotation(property);
+	const annotationRef = useRef<HTMLDivElement>(null);
+
+	useLayoutEffect(() => {
+		const annotationElement = annotationRef.current;
+		if (annotationElement == null) {
+			return;
+		}
+
+		const updateIsOverflowing = () => {
+			setIsOverflowing(annotationElement.scrollWidth > annotationElement.clientWidth);
+		};
+
+		updateIsOverflowing();
+
+		const resizeObserver = new ResizeObserver(updateIsOverflowing);
+		resizeObserver.observe(annotationElement);
+
+		return () => {
+			resizeObserver.disconnect();
+		};
+	}, [annotation]);
+
+	if (annotation === '') {
+		return null;
+	}
+
+	return (
+		<SlTooltip className='property-annotation__tooltip' content={annotation} disabled={!isOverflowing} hoist={true}>
+			<div className={className} ref={annotationRef}>
+				{displayName !== '' && <span className='property-annotation__display-name'>{displayName}</span>}
+				{displayName !== '' && description !== '' && propertyAnnotationSeparator}
+				{description}
+			</div>
+		</SlTooltip>
+	);
+};
+
 interface TransformationBoxProps {
 	transformationType: 'mappings' | 'function' | '';
 	setTransformationType: React.Dispatch<React.SetStateAction<'mappings' | 'function' | ''>>;
@@ -715,8 +765,14 @@ const TransformationBox = ({
 
 	const { handleError } = useContext(appContext);
 	const { connection } = useContext(ConnectionContext);
-	const { setSelectedInPaths, setSelectedOutPaths, isEditing, isImport, computeAutoSelectedPaths } =
-		useContext(pipelineContext);
+	const {
+		setSelectedInPaths,
+		setSelectedOutPaths,
+		isEditing,
+		isImport,
+		computeAutoSelectedPaths,
+		consentPropertyPaths,
+	} = useContext(pipelineContext);
 
 	useEffect(() => {
 		if (transformationType === 'mappings') {
@@ -910,6 +966,12 @@ const TransformationBox = ({
 
 			let { isRequired, isSelected } = checkMapping(path, pipeline, pipelineType);
 
+			// The properties holding a required consent must be mapped.
+			const consentPurposes = consentPropertyPaths.get(path);
+			if (consentPurposes != null) {
+				isRequired = true;
+			}
+
 			const typ = property.full.type;
 			const isEnum = typ.kind === 'string' && (typ as StringType).values != null;
 			const isBool = typ.kind === 'boolean';
@@ -1026,18 +1088,23 @@ const TransformationBox = ({
 								</span>
 								<span className='pipeline__transformation-output-property-type'>{typeName}</span>
 								{isRequired && (
-									<span
-										className={`pipeline__transformation-output-property-required${isSelected ? ' pipeline__transformation-output-property-required--selected' : ''}`}
+									<SlTooltip
+										content={`Holds the consent for ${consentPurposes?.map((p) => `"${p.name}"`).join(', ')}`}
+										disabled={consentPurposes == null}
+										hoist={true}
 									>
-										required
-									</span>
+										<span
+											className={`pipeline__transformation-output-property-required${isSelected ? ' pipeline__transformation-output-property-required--selected' : ''}`}
+										>
+											required
+										</span>
+									</SlTooltip>
 								)}
 							</div>
-							{property.full.description && (
-								<div className='pipeline__transformation-output-property-description'>
-									{property.full.description}
-								</div>
-							)}
+							<PropertyAnnotation
+								className='pipeline__transformation-output-property-annotation'
+								property={property.full}
+							/>
 						</div>
 					</React.Fragment>,
 				);
@@ -1292,6 +1359,7 @@ const FullscreenTransformation = ({
 		setSelectedInPaths,
 		selectedOutPaths,
 		setSelectedOutPaths,
+		consentPurposes,
 	} = useContext(PipelineContext);
 
 	const firstNameIdentifier = useRef<string>('');
@@ -1317,14 +1385,30 @@ const FullscreenTransformation = ({
 	}, [pipeline.filter]);
 
 	const normalizedConsents = useMemo(() => {
-		// Discard the required consents (and their operator) when no purpose
-		// has been selected.
-		let consents: RequiredConsents | null = null;
-		if (pipeline.requiredConsents != null && pipeline.requiredConsents.purposes.length > 0) {
-			consents = pipeline.requiredConsents;
+		// Pipelines that import users from events check the required consents on
+		// the profile they produce, and not on the event they receive, so their
+		// samples must not be filtered by the consents.
+		if (isEventBasedUserImport) {
+			return null;
+		}
+		// Skip the purposes that no longer exist or have no event consent
+		// location, as they never apply to the events, and discard the required
+		// consents (and their operator) when no purpose remains.
+		let consents: EventListenerConsents | null = null;
+		if (pipeline.requiredConsents != null) {
+			const purposes: EventConsentLocation[][] = [];
+			for (const id of pipeline.requiredConsents.purposes) {
+				const purpose = consentPurposes.find((p) => p.id === id);
+				if (purpose != null && purpose.eventConsentLocations.length > 0) {
+					purposes.push(purpose.eventConsentLocations);
+				}
+			}
+			if (purposes.length > 0) {
+				consents = { operator: pipeline.requiredConsents.operator, purposes: purposes };
+			}
 		}
 		return consents;
-	}, [pipeline.requiredConsents]);
+	}, [isEventBasedUserImport, pipeline.requiredConsents, consentPurposes]);
 
 	const { startListening, stopListening } = useEventListener(
 		(newly: EventListenerEvent[]) => {
@@ -1356,7 +1440,7 @@ const FullscreenTransformation = ({
 
 	useEffect(() => {
 		setEvents([]);
-	}, [pipeline.filter, pipeline.requiredConsents]);
+	}, [pipeline.filter, JSON.stringify(normalizedConsents)]);
 
 	useEffect(() => {
 		setShowOnlyInSelected(false);
@@ -2928,11 +3012,10 @@ const MapMapping = ({
 						</span>
 					)}
 				</div>
-				{property.full.description && (
-					<div className='pipeline__transformation-output-property-description'>
-						{property.full.description}
-					</div>
-				)}
+				<PropertyAnnotation
+					className='pipeline__transformation-output-property-annotation'
+					property={property.full}
+				/>
 			</div>
 			{pairs.map(([key, value], i) => {
 				const elementType = (property.full.type as MapType).elementType;
@@ -3093,9 +3176,10 @@ const TransformationNestedProperties = ({
 	if (searchTerm === '') {
 		isSearched = true;
 	} else {
+		const annotation = propertyAnnotation(property);
 		isSearched =
 			property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-			(property.description != '' && property.description.toLowerCase().includes(searchTerm.toLowerCase()));
+			(annotation != '' && annotation.toLowerCase().includes(searchTerm.toLowerCase()));
 	}
 
 	let hasSearchedChildren = false;
@@ -3109,10 +3193,10 @@ const TransformationNestedProperties = ({
 					continue;
 				}
 				const name = flatSchema[key].full.name;
-				const description = flatSchema[key].full.description;
+				const annotation = propertyAnnotation(flatSchema[key].full);
 				const isSearched =
 					name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-					(description != '' && description.toLowerCase().includes(searchTerm.toLowerCase()));
+					(annotation != '' && annotation.toLowerCase().includes(searchTerm.toLowerCase()));
 				if (isSearched) {
 					hasSearchedChildren = true;
 					break;
@@ -3125,10 +3209,10 @@ const TransformationNestedProperties = ({
 			const s = flattenSchema(property.type as ArrayType | MapType);
 			for (const key in s) {
 				const name = s[key].full.name;
-				const description = s[key].full.description;
+				const annotation = propertyAnnotation(s[key].full);
 				const isSearched =
 					name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-					(description != '' && description.toLowerCase().includes(searchTerm.toLowerCase()));
+					(annotation != '' && annotation.toLowerCase().includes(searchTerm.toLowerCase()));
 				if (isSearched) {
 					hasSearchedChildren = true;
 					break;
@@ -3247,21 +3331,8 @@ const TransformationProperty = ({
 	setIsExpanded,
 	isOutMatchingProperty,
 }: TransformationPropertyProps) => {
-	const [showDescriptionTooltip, setShowDescriptionTooltip] = useState<boolean>(false);
-
 	const { workspaces, selectedWorkspace } = useContext(AppContext);
-	const { isImport, pipelineType, pipeline } = useContext(PipelineContext);
-
-	const descriptionRef = useRef(null);
-
-	useEffect(() => {
-		if (descriptionRef.current == null) {
-			return;
-		}
-		const el = descriptionRef.current;
-		const hasEllipsis = el.scrollWidth > el.clientWidth;
-		setShowDescriptionTooltip(hasEllipsis);
-	}, [descriptionRef.current]);
+	const { isImport, pipelineType, pipeline, consentPropertyPaths } = useContext(PipelineContext);
 
 	let path = property.name;
 	if (parentName) {
@@ -3323,21 +3394,29 @@ const TransformationProperty = ({
 		onChangeSelectedPath(path);
 	};
 
+	const annotation = propertyAnnotation(property);
+
 	let isSearched = true;
 	if (searchTerm != null && searchTerm !== '') {
 		isSearched =
 			property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-			(property.description != '' && property.description.toLowerCase().includes(searchTerm.toLowerCase()));
+			(annotation != '' && annotation.toLowerCase().includes(searchTerm.toLowerCase()));
 	}
 
 	if (!isSearched) {
 		return null;
 	}
 
-	const { isRequired, isSelected } =
+	let { isRequired, isSelected } =
 		transformationType === 'function'
 			? checkFunctionPath(path, pipeline, pipelineType, side, selectedPaths)
 			: checkMapping(path, pipeline, pipelineType);
+
+	// The output properties holding a required consent must be transformed.
+	const consentPurposes = side === 'output' ? consentPropertyPaths.get(path) : undefined;
+	if (consentPurposes != null) {
+		isRequired = true;
+	}
 
 	const krenalisTypeName = toKrenalisStringType(property.type, property.nullable);
 	let languageTypeName: string | null = null;
@@ -3358,15 +3437,6 @@ const TransformationProperty = ({
 			);
 			languageTypeLabel = 'JavaScript type';
 		}
-	}
-
-	let description = null;
-	if (property.description) {
-		description = (
-			<div className='fullscreen-transformation__property-description' ref={descriptionRef}>
-				{property.description}
-			</div>
-		);
 	}
 
 	return (
@@ -3434,11 +3504,17 @@ const TransformationProperty = ({
 										</span>
 										{side === 'input' && property.readOptional && <span>- optional</span>}
 										{isRequired && (
-											<span
-												className={`fullscreen-transformation__property-required${isSelected ? ' fullscreen-transformation__property-required--selected' : ''}`}
+											<SlTooltip
+												content={`Holds the consent for ${consentPurposes?.map((p) => `"${p.name}"`).join(', ')}`}
+												disabled={consentPurposes == null}
+												hoist={true}
 											>
-												required
-											</span>
+												<span
+													className={`fullscreen-transformation__property-required${isSelected ? ' fullscreen-transformation__property-required--selected' : ''}`}
+												>
+													required
+												</span>
+											</SlTooltip>
 										)}
 									</span>
 									{transformationType === 'function' && isOutMatchingProperty && !isFlagged && (
@@ -3460,14 +3536,10 @@ const TransformationProperty = ({
 									)}
 								</div>
 							</div>
-							{description != null &&
-								(showDescriptionTooltip ? (
-									<SlTooltip content={property.description} hoist={true}>
-										{description}
-									</SlTooltip>
-								) : (
-									description
-								))}
+							<PropertyAnnotation
+								className='fullscreen-transformation__property-annotation'
+								property={property}
+							/>
 						</div>
 						<div className='fullscreen-transformation__property-right-column'>
 							{languageTypeName && (

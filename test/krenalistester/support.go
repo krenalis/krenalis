@@ -163,6 +163,23 @@ func (k *Krenalis) ConnectionUI(connection string) map[string]any {
 	return ui
 }
 
+// ConsentPurpose returns the consent purpose with the given ID, failing the
+// test if it cannot be read or does not exist.
+func (k *Krenalis) ConsentPurpose(id string) core.ConsentPurpose {
+	k.t.Helper()
+	var response struct {
+		Purposes []core.ConsentPurpose `json:"purposes"`
+	}
+	must(k.t, k.tryCall("GET", "/v1/consent-purposes", nil, nil, &response, true))
+	for _, purpose := range response.Purposes {
+		if purpose.ID == id {
+			return purpose
+		}
+	}
+	k.t.Fatalf("expected a purpose with ID %q, got no matching purpose", id)
+	return core.ConsentPurpose{}
+}
+
 // CreateConnection creates a connection and returns its ID.
 func (k *Krenalis) CreateConnection(connection ConnectionToCreate) string {
 	id, err := k.TryCreateConnection(connection)
@@ -591,12 +608,12 @@ func (k *Krenalis) TryOrganizations(first, limit int) ([]Organization, error) {
 	return response.Organizations, err
 }
 
-// organizationsHeaders returns the headers needed to call the platform
-// management API.
+// organizationsHeaders returns the headers needed to call the Platform
+// Management API.
 func organizationsHeaders() http.Header {
 	return http.Header{
 		"Krenalis-Workspace": nil, // so that Call does not add automatically the header.
-		"Authorization":      []string{"Bearer " + testsSettings.OrganizationsAPIKey},
+		"Authorization":      []string{"Bearer " + testsSettings.PlatformManagementAPIKey},
 	}
 }
 
@@ -782,7 +799,7 @@ func (s sendEventCallback) Failure(msg analytics.Message, err error) {
 }
 
 // SetOrganizationStatus enables or disables an organization through the
-// platform management API.
+// Platform Management API.
 func (k *Krenalis) SetOrganizationStatus(id string, enabled bool) {
 	must(k.t, k.TrySetOrganizationStatus(id, enabled, organizationsHeaders()))
 }
@@ -792,6 +809,12 @@ func (k *Krenalis) SetOrganizationStatus(id string, enabled bool) {
 func (k *Krenalis) TrySetOrganizationStatus(id string, enabled bool, headers http.Header) error {
 	body := map[string]any{"enabled": enabled}
 	return k.TryCall("PUT", fmt.Sprintf("/v1/organizations/%s/status", id), headers, body, nil)
+}
+
+// TrySetOrganizationStatusWithBody is like TrySetOrganizationStatus but sends
+// the given request body with the Platform Management API key.
+func (k *Krenalis) TrySetOrganizationStatusWithBody(id string, body any) error {
+	return k.TryCall("PUT", fmt.Sprintf("/v1/organizations/%s/status", id), organizationsHeaders(), body, nil)
 }
 
 // SettingsProperties encodes the given "JSON" format properties as connection
@@ -941,6 +964,13 @@ func (k *Krenalis) UpdateWarehouse(mode string, settings json.Value) {
 	k.Call("PUT", "/v1/warehouse", nil, body, nil)
 }
 
+// Version returns the Krenalis version from the public metadata.
+func (k *Krenalis) Version() string {
+	var metadata map[string]any
+	k.Call("GET", "/v1/public/metadata", nil, nil, &metadata)
+	return metadata["version"].(string)
+}
+
 // WaitConnectionIdentitiesStoredIntoWarehouse waits until the expected number
 // of the connection's identities are stored into the warehouse.
 func (k *Krenalis) WaitConnectionIdentitiesStoredIntoWarehouse(ctx context.Context, connection string, expected int) {
@@ -1013,7 +1043,7 @@ func (k *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...string) {
 				if run.Error != "" {
 					k.t.Fatalf("error running pipeline %s for run %s: %s", run.Pipeline, run.ID, run.Error)
 				}
-				if !allowFailed && run.Failed != [7]int{} {
+				if !allowFailed && run.Failed != [9]int{} {
 					k.t.Fatalf("error running pipeline %s for run %s: %d failed", run.Pipeline, run.ID, run.Failed)
 				}
 				return
@@ -1034,7 +1064,7 @@ func (k *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...string) {
 			if run.Error != "" {
 				k.t.Fatalf("error running pipeline %s for run %s: %s", run.Pipeline, run.ID, run.Error)
 			}
-			if !allowFailed && run.Failed != [7]int{} {
+			if !allowFailed && run.Failed != [9]int{} {
 				k.t.Fatalf("error running pipeline %s for run %s: %d failed", run.Pipeline, run.ID, run.Failed)
 			}
 		}
