@@ -30,7 +30,7 @@ import (
 )
 
 // TestJSONFilters verifies that SQL filters return the same records as the
-// in-memory evaluator across PostgreSQL and Snowflake.
+// in-memory evaluator on both PostgreSQL and Snowflake.
 func TestJSONFilters(t *testing.T) {
 
 	// Check the differential oracle against independently specified matches.
@@ -101,47 +101,25 @@ func TestJSONFilters(t *testing.T) {
 		"\"a'b\\\\c\"", "\"a\\nb\\tc\"", "\"é\"", "\"e\\u0301\"", "\"😀\"", "\"ÿ\"", "\"Ā\"",
 		"{}", "{\"x\":null}", "{\"x\":\"foo\"}", "[]", "[null]", "[true,false]",
 		"[\"foo\",670,null,true,{},[]]", "[670.0]", "[\"670\"]", "[[670]]", "[{\"x\":670}]",
+		"9007199254740992", "9007199254740993e0", "1.234567890123456789e0",
+		strings.Repeat("9", 37), strings.Repeat("9", 39), strings.Repeat("9", 76),
+		"-9007199254740993", "-" + strings.Repeat("9", 38),
+		"12.345678901234567890123456789012345678", "-12.345678901234567890123456789012345678",
+		"1e308", "-1e308", "1e-308", "-1e-308", "1e-324",
 	}
-	type record struct {
-		id         string
-		attributes map[string]any
-	}
-	var records []record
 	var data [][]any
 	// Nil represents a missing property (SQL NULL); json.Value("null") is present.
 	add := func(value, document any, array []any, mapping map[string]any) {
-
-		id := fmt.Sprintf("00000000-0000-0000-0000-%012d", len(records)+1)
-		attributes := map[string]any{}
-		object := map[string]any{}
-		containers := map[string]any{}
-		if value != nil {
-			attributes["value"] = value
-			object["value"] = value
-			attributes["object"] = object
-			containers["json"] = value
-		}
-		if document != nil {
-			attributes["document"] = document
-		}
+		id := fmt.Sprintf("00000000-0000-0000-0000-%012d", len(data)+1)
 		var arrayValue, mapValue any
 		if array != nil {
 			arrayValue = array
-			attributes["array"] = array
-			containers["array"] = array
 		}
 		if mapping != nil {
 			mapValue = mapping
-			attributes["map"] = mapping
-			containers["map"] = mapping
 		}
-		if len(containers) > 0 {
-			attributes["containers"] = containers
-		}
-		records = append(records, record{id: id, attributes: attributes})
 		data = append(data, []any{id, 0, 1, time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 			value, document, arrayValue, mapValue, value})
-
 	}
 	for _, raw := range rawValues {
 		if raw == "" {
@@ -176,6 +154,10 @@ func TestJSONFilters(t *testing.T) {
 		strings.Repeat("9", 76), "1e75", "1e76", "1e-37", "1e-38", "0e999999",
 		"0.1234567890123456789012345678901234567", "1e999999", "-1e999999", "1e-999999",
 		"null", "true", "a'b\\c", "a\nb\tc", "é", "e\u0301", "😀", "ÿ", "Ā",
+		strings.Repeat("9", 37), "-" + strings.Repeat("9", 38),
+		"9007199254740993." + strings.Repeat("0", 36) + "1",
+		"-9007199254740993." + strings.Repeat("0", 36) + "1",
+		"12.3456789012345678901234567890123456781", "-12.3456789012345678901234567890123456781",
 	}
 	for _, op := range []state.WhereOperator{
 		state.OpIs, state.OpIsNot, state.OpIsLessThan, state.OpIsLessThanOrEqualTo,
@@ -191,6 +173,8 @@ func TestJSONFilters(t *testing.T) {
 			{"5", "670"}, {"670", "5"}, {"670", "670"}, {"-5", "0.005"}, {"foo", "foobar"},
 			{"1e-37", "1e75"}, {"1e76", "1e75"},
 			{"foo", "670"}, {"-1e999999", "1e999999"}, {"1e-999999", "0.001"}, {"ÿ", "😀"},
+			{"12.345678901234567890123456789012345678", "12.3456789012345678901234567890123456781"},
+			{"-12.3456789012345678901234567890123456781", "-12.345678901234567890123456789012345678"},
 		} {
 			conditions = append(conditions, condition{op, []any{jsonFilterOperand(bounds[0]), jsonFilterOperand(bounds[1])}})
 		}
@@ -199,6 +183,8 @@ func TestJSONFilters(t *testing.T) {
 		for _, list := range [][]string{
 			{"foo"}, {"670", "foo", "null"}, {"670", "670", "+670"}, {"", "true", "é"},
 			{"1e76", "1e-38", "1e75", "1e-37", strings.Repeat("9", 76)},
+			{"9007199254740993", "9007199254740993." + strings.Repeat("0", 36) + "1", "foo"},
+			{"12.3456789012345678901234567890123456781", "-12.3456789012345678901234567890123456781"},
 		} {
 			values := make([]any, len(list))
 			for i, text := range list {
@@ -225,6 +211,73 @@ func TestJSONFilters(t *testing.T) {
 			err = warehouse.Merge(t.Context(), table, data, nil)
 			if err != nil {
 				t.Fatalf("expected fixture merge, got %v", err)
+			}
+
+			// Evaluate the stored values, including warehouse numeric rounding.
+			rows, _, err := warehouse.Query(t.Context(), warehouses.RowQuery{
+				Table: table.Name, Columns: append([]warehouses.Column{idColumn}, profileColumns...),
+				OrderBy: []warehouses.Column{idColumn},
+			}, false)
+			if err != nil {
+				t.Fatalf("expected stored fixture query, got %v", err)
+			}
+			defer rows.Close()
+			type record struct {
+				id         string
+				attributes map[string]any
+			}
+			var storedRecords []record
+			values := make([]any, 1+len(profileColumns))
+			for rows.Next() {
+				err = rows.Scan(values...)
+				if err != nil {
+					t.Fatalf("expected stored fixture scan, got %v", err)
+				}
+				id, ok := values[0].(string)
+				if !ok {
+					t.Fatalf("expected stored string ID, got %T", values[0])
+				}
+				attributes := map[string]any{}
+				for i, column := range profileColumns {
+					if values[i+1] == nil {
+						continue
+					}
+					if column.Name == "object_value" {
+						attributes["object"] = map[string]any{"value": values[i+1]}
+						continue
+					}
+					attributes[column.Name] = values[i+1]
+				}
+				containers := map[string]any{}
+				for _, name := range []string{"value", "array", "map"} {
+					if value, exists := attributes[name]; exists {
+						key := name
+						if name == "value" {
+							key = "json"
+						}
+						containers[key] = value
+					}
+				}
+				if len(containers) > 0 {
+					attributes["containers"] = containers
+				}
+				storedRecords = append(storedRecords, record{id: id, attributes: attributes})
+			}
+			err = rows.Err()
+			if err != nil {
+				t.Fatalf("expected complete stored fixture iteration, got %v", err)
+			}
+			err = rows.Close()
+			if err != nil {
+				t.Fatalf("expected stored fixture query close, got %v", err)
+			}
+			if len(storedRecords) != len(data) {
+				t.Fatalf("expected %d stored fixtures, got %d", len(data), len(storedRecords))
+			}
+			for i, record := range storedRecords {
+				if record.id != data[i][0] {
+					t.Fatalf("expected stored fixture ID %s, got %s", data[i][0], record.id)
+				}
 			}
 
 			type queryCase struct {
@@ -305,7 +358,7 @@ func TestJSONFilters(t *testing.T) {
 				wants := make([]int, len(batch))
 				for i, query := range batch {
 					var ids []any
-					for _, record := range records {
+					for _, record := range storedRecords {
 						if filters.Applies(query.where, record.attributes) {
 							ids = append(ids, record.id)
 						}
