@@ -730,6 +730,7 @@ func Test_Parse(t *testing.T) {
 		{"0.01e-x" + strconv.Itoa(math.MaxInt), 0, 0, "", "", ErrSyntax},
 
 		{"1", 1, 1, "", "", ErrRange},
+		{"1", -1, -1, "", "", ErrRange},
 		{"678", 3, 1, "", "", ErrRange},
 		{"-8492.033", 8, 5, "", "", ErrRange},
 		{"1.0000001", 7, 7, "", "", ErrRange},
@@ -926,6 +927,8 @@ func Test_New_Panic(t *testing.T) {
 func Test_Range_Panic(t *testing.T) {
 	cases := []struct{ p, s int }{
 		{MaxPrecision + 1, 0},
+		{0, 0},
+		{-1, -1},
 		{0, MaxScale + 1},
 		{1, 2},
 		{1, MinScale - 1},

@@ -57,7 +57,7 @@ import (
 
 const (
 	MaxPrecision = 999_999_999_999_999_999
-	MinPrecision = -MaxPrecision
+	MinPrecision = 1
 	MaxScale     = 999_999_999_999_999_999
 	MinScale     = -MaxScale
 )
