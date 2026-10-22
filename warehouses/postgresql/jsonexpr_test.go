@@ -30,12 +30,17 @@ func TestJSONDecimalRendering(t *testing.T) {
 		{decimal.New(12300, 4), "1.23"},
 		{decimal.MustParse("-0.0012300"), "-0.00123"},
 		{decimal.New(10, 38), "0." + strings.Repeat("0", 36) + "1"},
+		{decimal.MustParse("1" + strings.Repeat("0", 38)), "1" + strings.Repeat("0", 38)},
+		{decimal.MustParse("1." + strings.Repeat("0", 38)), "1"},
 		{decimal.MustParse("1e75"), "1" + strings.Repeat("0", 75)},
+		{decimal.MustParse(strings.Repeat("9", 38)), strings.Repeat("9", 38)},
+		{decimal.MustParse(strings.Repeat("9", 39)), strings.Repeat("9", 39)},
+		{decimal.MustParse("-" + strings.Repeat("9", 39)), "-" + strings.Repeat("9", 39)},
 		{decimal.MustParse(strings.Repeat("9", 76)), strings.Repeat("9", 76)},
 		{decimal.MustParse("-" + strings.Repeat("9", 39) + "." + strings.Repeat("8", 37)), "-" + strings.Repeat("9", 39) + "." + strings.Repeat("8", 37)},
 	} {
 		for _, op := range []warehouses.Operator{warehouses.OpIs, warehouses.OpIsOneOf, warehouses.OpContains} {
-			t.Run(fmt.Sprintf("%d/%s", op, test.literal), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%d/%s", op, test.number), func(t *testing.T) {
 				column := warehouses.Column{Name: "value", Type: types.JSON()}
 				if op == warehouses.OpContains {
 					column.Type = types.Array(types.JSON())

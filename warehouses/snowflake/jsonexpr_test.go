@@ -18,27 +18,35 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// TestJSONDecimalRendering checks exact numeric literals and normalization.
+// TestJSONDecimalRendering checks numeric literals and comparison bounds.
 func TestJSONDecimalRendering(t *testing.T) {
+
 	for _, test := range []struct {
-		number              decimal.Decimal
-		literal, comparison string
+		number  decimal.Decimal
+		literal string // empty when the operand needs more than 38 significant digits
 	}{
-		{decimal.Decimal{}, "0", "ELSE 1 END) = 0"},
-		{decimal.New(0, decimal.MaxScale), "0", "ELSE 1 END) = 0"},
-		{decimal.MustParse("1000"), "+4:1", ") < 4 THEN -1 WHEN"},
-		{decimal.New(12300, 4), "+1:123", ") < 1 THEN -1 WHEN"},
-		{decimal.MustParse("-0.0012300"), "--2:123", ") < -2 THEN 1 WHEN"},
-		{decimal.New(10, 38), "+-36:1", ") < -36 THEN -1 WHEN"},
-		{decimal.MustParse("1e75"), "+76:1", ") < 76 THEN -1 WHEN"},
-		{decimal.MustParse(strings.Repeat("9", 76)), "+76:" + strings.Repeat("9", 76), ") < 76 THEN -1 WHEN"},
-		{decimal.MustParse("-" + strings.Repeat("9", 39) + "." + strings.Repeat("8", 37)), "-39:" + strings.Repeat("9", 39) + strings.Repeat("8", 37), ") < 39 THEN 1 WHEN"},
+		{decimal.Decimal{}, "0"},
+		{decimal.New(0, decimal.MaxScale), "0"},
+		{decimal.MustParse("1000"), "1e3"},
+		{decimal.New(12300, 4), "123e-2"},
+		{decimal.MustParse("-0.0012300"), "-123e-5"},
+		{decimal.New(10, 38), "1e-37"},
+		{decimal.MustParse("1" + strings.Repeat("0", 38)), "1e38"},
+		{decimal.MustParse("1." + strings.Repeat("0", 38)), "1e0"},
+		{decimal.MustParse("1e75"), "1e75"},
+		{decimal.MustParse(strings.Repeat("9", 38)), strings.Repeat("9", 38) + "e0"},
+		{decimal.MustParse(strings.Repeat("9", 39)), ""},
+		{decimal.MustParse("-" + strings.Repeat("9", 39)), ""},
+		{decimal.MustParse(strings.Repeat("9", 76)), ""},
+		{decimal.MustParse("-" + strings.Repeat("9", 39) + "." + strings.Repeat("8", 37)), ""},
 	} {
 		for _, op := range []warehouses.Operator{warehouses.OpIs, warehouses.OpIsOneOf, warehouses.OpContains} {
-			t.Run(fmt.Sprintf("%d/%s", op, test.literal), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%d/%s", op, test.number), func(t *testing.T) {
 				column := warehouses.Column{Name: "value", Type: types.JSON()}
+				target := `"VALUE"`
 				if op == warehouses.OpContains {
 					column.Type = types.Array(types.JSON())
+					target = "krenalis_json_element"
 				}
 				operand := warehouses.JSONConditionValue{String: "threshold", Number: &test.number}
 				var b strings.Builder
@@ -46,16 +54,63 @@ func TestJSONDecimalRendering(t *testing.T) {
 				if err != nil {
 					t.Fatalf("expected valid numeric expression, got %v", err)
 				}
-				want := `COLLATE 'utf8' IN ('` + test.literal + `')`
-				if op != warehouses.OpIsOneOf {
-					want = test.comparison
+				query := b.String()
+				want := "TRY_TO_DECFLOAT(TO_JSON(" + target + ")) = TO_DECFLOAT('" + test.literal + "')"
+				if op == warehouses.OpIsOneOf {
+					want = "TRY_TO_DECFLOAT(TO_JSON(" + target + ")) IN (TO_DECFLOAT('" + test.literal + "'))"
 				}
-				if !strings.Contains(b.String(), want) {
-					t.Fatalf("expected numeric SQL containing %s, got %s", want, b.String())
+				if test.literal == "" {
+					if strings.Contains(query, "TO_DECFLOAT(") {
+						t.Fatalf("expected no numeric conversion for an inexact equality operand, got %s", query)
+					}
+					want = "WHEN (IS_DECIMAL(" + target + ") OR IS_DOUBLE(" + target + ")) THEN FALSE"
+					if op == warehouses.OpIsOneOf {
+						want = `COALESCE(CASE WHEN IS_VARCHAR("VALUE") THEN COLLATE(AS_VARCHAR("VALUE"), 'utf8') ` +
+							`IN ('threshold') ELSE FALSE END, FALSE)`
+						if query != want {
+							t.Fatalf("expected SQL %s, got %s", want, query)
+						}
+						return
+					}
+				}
+				if !strings.Contains(query, want) {
+					t.Fatalf("expected numeric SQL containing %s, got %s", want, query)
 				}
 			})
 		}
 	}
+
+	for _, test := range []struct {
+		number     string
+		operator   warehouses.Operator
+		comparison string
+	}{
+		{"12345678901234567890123456789012345678.9", warehouses.OpIsLessThan, "<= TO_DECFLOAT('12345678901234567890123456789012345678e0')"},
+		{"12345678901234567890123456789012345678.9", warehouses.OpIsLessThanOrEqualTo, "<= TO_DECFLOAT('12345678901234567890123456789012345678e0')"},
+		{"12345678901234567890123456789012345678.9", warehouses.OpIsGreaterThan, "> TO_DECFLOAT('12345678901234567890123456789012345678e0')"},
+		{"12345678901234567890123456789012345678.9", warehouses.OpIsGreaterThanOrEqualTo, "> TO_DECFLOAT('12345678901234567890123456789012345678e0')"},
+		{"-12345678901234567890123456789012345678.9", warehouses.OpIsLessThan, "< TO_DECFLOAT('-12345678901234567890123456789012345678e0')"},
+		{"-12345678901234567890123456789012345678.9", warehouses.OpIsLessThanOrEqualTo, "< TO_DECFLOAT('-12345678901234567890123456789012345678e0')"},
+		{"-12345678901234567890123456789012345678.9", warehouses.OpIsGreaterThan, ">= TO_DECFLOAT('-12345678901234567890123456789012345678e0')"},
+		{"-12345678901234567890123456789012345678.9", warehouses.OpIsGreaterThanOrEqualTo, ">= TO_DECFLOAT('-12345678901234567890123456789012345678e0')"},
+		{"99999999999999999999999999999999999999.9", warehouses.OpIsLessThan, "<= TO_DECFLOAT('99999999999999999999999999999999999999e0')"},
+		{"-99999999999999999999999999999999999999.9", warehouses.OpIsGreaterThan, ">= TO_DECFLOAT('-99999999999999999999999999999999999999e0')"},
+	} {
+		t.Run(fmt.Sprintf("%d/%s", test.operator, test.number), func(t *testing.T) {
+			column := warehouses.Column{Name: "value", Type: types.JSON()}
+			var b strings.Builder
+			err := renderExpr(&b, warehouses.NewBaseExpr(column, test.operator, warehouseexpr.Operand(test.number)))
+			if err != nil {
+				t.Fatalf("expected valid numeric expression, got %v", err)
+			}
+			want := `WHEN (IS_DECIMAL("VALUE") OR IS_DOUBLE("VALUE")) THEN TRY_TO_DECFLOAT(TO_JSON("VALUE")) ` +
+				test.comparison
+			if !strings.Contains(b.String(), want) {
+				t.Fatalf("expected numeric SQL containing %s, got %s", want, b.String())
+			}
+		})
+	}
+
 }
 
 // TestJSONExpressionErrors verifies that invalid JSON expressions are rejected.

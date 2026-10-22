@@ -15,6 +15,8 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
+const maxJSONNumberPrecision = 38 // maximum significant digits in JSON numbers
+
 // jsonNumberParts returns the significant digits and decimal magnitude of a
 // nonzero number within the expression operand limits.
 func jsonNumberParts(number decimal.Decimal) (string, int) {
@@ -201,8 +203,8 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 		b.WriteByte(')')
 
 	case warehouses.OpIsOneOf:
-		// Group operands by kind to avoid repeating extraction and normalization
-		// for every entry of a potentially long membership list.
+		// Group operands by kind to avoid repeating extraction and conversion
+		// for each element in a potentially long membership list.
 		isString := "IS_VARCHAR(" + target + ")"
 		isNumber := "(IS_DECIMAL(" + target + ") OR IS_DOUBLE(" + target + "))"
 		text := "COLLATE(AS_VARCHAR(" + target + "), 'utf8')"
@@ -221,33 +223,24 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 				continue
 			}
 			if operand.Number.Sign() == 0 {
-				numbers = append(numbers, "0")
+				numbers = append(numbers, "TO_DECFLOAT('0')")
 				continue
 			}
 			coefficient, magnitude := jsonNumberParts(*operand.Number)
-			sign := "+"
+			if len(coefficient) > maxJSONNumberPrecision {
+				// A stored JSON number cannot equal a more precise operand.
+				continue
+			}
+			sign := ""
 			if operand.Number.Sign() < 0 {
 				sign = "-"
 			}
-			numbers = append(numbers, sign+strconv.Itoa(magnitude)+":"+coefficient)
+			numbers = append(numbers, "TO_DECFLOAT('"+sign+coefficient+"e"+
+				strconv.Itoa(magnitude-len(coefficient))+"')")
 		}
 		if len(numbers) > 0 {
-			text := "TO_JSON(" + target + ")"
-			mantissa := "SPLIT_PART(LOWER(" + text + "), 'e', 1)"
-			digits := "LTRIM(REPLACE(" + mantissa + ", '.', ''), '-0')"
-			magnitude := "(LENGTH(" + digits + ") - LENGTH(SPLIT_PART(" + mantissa + ", '.', 2))" +
-				" + COALESCE(NULLIF(SPLIT_PART(LOWER(" + text + "), 'e', 2), '')::BIGINT, 0))"
-			fmt.Fprintf(b, " WHEN %s THEN (CASE WHEN %s = '' THEN '0' ELSE CONCAT(", isNumber, digits)
-			fmt.Fprintf(b, "CASE WHEN LEFT(%s, 1) = '-' THEN '-' ELSE '+' END, %s::VARCHAR, ':', "+
-				"RTRIM(%s, '0')) END) COLLATE 'utf8' IN (",
-				text, magnitude, digits)
-			for i, number := range numbers {
-				if i > 0 {
-					b.WriteString(", ")
-				}
-				quoteString(b, number)
-			}
-			b.WriteByte(')')
+			fmt.Fprintf(b, " WHEN %s THEN TRY_TO_DECFLOAT(TO_JSON(%s)) IN (%s)",
+				isNumber, target, strings.Join(numbers, ", "))
 		}
 		b.WriteString(" ELSE FALSE END")
 
@@ -301,28 +294,45 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 	return nil
 }
 
-// renderJSONNumberComparison orders decimals by sign, decimal magnitude, and
-// significant digits, avoiding database casts that round or overflow operands.
+// renderJSONNumberComparison compares JSON numbers with decimal operands,
+// preserving exact ordering beyond Snowflake's numeric precision.
 func renderJSONNumberComparison(b *strings.Builder, value, operator string, number decimal.Decimal) {
-
-	text := "TO_JSON(" + value + ")"
-	mantissa := "SPLIT_PART(LOWER(" + text + "), 'e', 1)"
-	digits := "LTRIM(REPLACE(" + mantissa + ", '.', ''), '-0')"
-	sign := "(CASE WHEN " + digits + " = '' THEN 0 WHEN LEFT(" + text + ", 1) = '-' THEN -1 ELSE 1 END)"
 	if number.Sign() == 0 {
-		fmt.Fprintf(b, "%s %s 0", sign, operator)
+		fmt.Fprintf(b, "TRY_TO_DECFLOAT(TO_JSON(%s)) %s TO_DECFLOAT('0')", value, operator)
 		return
 	}
-	magnitude := "(LENGTH(" + digits + ") - LENGTH(SPLIT_PART(" + mantissa + ", '.', 2))" +
-		" + COALESCE(NULLIF(SPLIT_PART(LOWER(" + text + "), 'e', 2), '')::BIGINT, 0))"
-	significand := "COLLATE(RTRIM(" + digits + ", '0'), 'utf8')"
-
-	coefficient, n := jsonNumberParts(number)
-	s := number.Sign()
-
-	fmt.Fprintf(b, "(CASE WHEN %s < %d THEN -1 WHEN %s > %d THEN 1", sign, s, sign, s)
-	fmt.Fprintf(b, " WHEN %s < %d THEN %d WHEN %s > %d THEN %d", magnitude, n, -s, magnitude, n, s)
-	fmt.Fprintf(b, " WHEN %s < '%s' THEN %d WHEN %s > '%s' THEN %d ELSE 0 END) %s 0",
-		significand, coefficient, -s, significand, coefficient, s, operator)
-
+	coefficient, magnitude := jsonNumberParts(number)
+	// Stored JSON numbers have at most 38 significant digits. If an operand
+	// has a nonzero remainder beyond that precision, no stored number can lie
+	// strictly between the operand and its truncation to 38 significant digits.
+	// Equality with the operand is therefore impossible. Ordering comparisons
+	// use the truncated bound, adjusting whether it is inclusive based on the
+	// sign of the discarded remainder.
+	if len(coefficient) > maxJSONNumberPrecision {
+		if operator == "=" {
+			b.WriteString("FALSE")
+			return
+		}
+		switch operator {
+		case "<", "<=":
+			operator = "<"
+			if number.Sign() > 0 {
+				operator = "<="
+			}
+		case ">", ">=":
+			operator = ">"
+			if number.Sign() < 0 {
+				operator = ">="
+			}
+		default:
+			panic(fmt.Sprintf("warehouses/snowflake: unexpected comparison operator %q", operator))
+		}
+		coefficient = coefficient[:maxJSONNumberPrecision]
+	}
+	sign := ""
+	if number.Sign() < 0 {
+		sign = "-"
+	}
+	fmt.Fprintf(b, "TRY_TO_DECFLOAT(TO_JSON(%s)) %s TO_DECFLOAT('%s%se%d')",
+		value, operator, sign, coefficient, magnitude-len(coefficient))
 }
