@@ -672,6 +672,7 @@ class Workspaces {
 	create = async (
 		name: string,
 		profileSchema: ObjectType,
+		assignedRoles: ProfileRoleAssignments,
 		warehousePlatform: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
@@ -679,6 +680,7 @@ class Workspaces {
 		return await call(`${this.apiURL}/workspaces`, http.POST, null, {
 			name: name,
 			profileSchema: profileSchema,
+			assignedRoles: assignedRoles,
 			warehouse: {
 				platform: warehousePlatform,
 				mode: warehouseMode,
@@ -690,6 +692,7 @@ class Workspaces {
 	testCreation = async (
 		name: string,
 		profileSchema: ObjectType,
+		assignedRoles: ProfileRoleAssignments,
 		warehousePlatform: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
@@ -697,6 +700,7 @@ class Workspaces {
 		return await call(`${this.apiURL}/workspaces/test`, http.POST, null, {
 			name: name,
 			profileSchema: profileSchema,
+			assignedRoles: assignedRoles,
 			warehouse: {
 				platform: warehousePlatform,
 				mode: warehouseMode,

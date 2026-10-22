@@ -655,6 +655,7 @@ type CreateWorkspace struct {
 	Organization                   string
 	Name                           string
 	ProfileSchema                  types.Type
+	AssignedRoles                  ProfileRoleAssignments
 	ResolveIdentitiesOnBatchImport bool
 	Warehouse                      struct {
 		Platform       string
@@ -679,6 +680,7 @@ func (state *State) createWorkspace(n notification) string {
 		organization:                   organization,
 		Name:                           e.Name,
 		ProfileSchema:                  e.ProfileSchema,
+		AssignedRoles:                  e.AssignedRoles,
 		PrimarySources:                 map[string]string{},
 		accounts:                       map[int]*Account{},
 		consentPurposes:                map[string]*ConsentPurpose{},
