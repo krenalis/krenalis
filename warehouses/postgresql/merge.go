@@ -226,7 +226,7 @@ func newRowEncoder(columns []warehouses.Column) (*rowEncoder, bool) {
 	for i, c := range columns {
 		switch c.Type.Kind() {
 		case types.ArrayKind:
-			if k := c.Type.Elem().Kind(); k != types.StringKind && k != types.JSONKind {
+			if t := c.Type.Elem(); !t.IsString() && !t.IsJSON() {
 				continue
 			}
 			fallthrough
@@ -259,7 +259,7 @@ func (enc rowEncoder) encode(row []any) error {
 			row[i] = json.Value(json.StripZeroBytes(row[i].(json.Value)))
 		case types.ArrayKind:
 			arr := row[i].([]any)
-			if k := t.Elem().Kind(); k == types.JSONKind {
+			if t.Elem().IsJSON() {
 				for j, s := range arr {
 					arr[j] = json.Value(json.StripZeroBytes(s.(json.Value)))
 				}

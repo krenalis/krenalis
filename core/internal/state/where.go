@@ -219,8 +219,8 @@ func (op *WhereOperator) UnmarshalJSON(data []byte) error {
 // JSON property.
 //
 //   - String holds the raw value.
-//   - Number is non-nil if String fits a decimal(p,s) with p <= 76 and
-//     0 <= s <= min(p,37).
+//   - Number is non-nil if String contains a number that can be represented
+//     exactly by a decimal type supported by the types package.
 type JSONConditionValue struct {
 	String string
 	Number *decimal.Decimal
@@ -261,7 +261,7 @@ func marshalWhereCondition(b *bytes.Buffer, condition *WhereCondition, propertie
 	if condition.Values != nil {
 		p, _ := properties.ByPathSlice(condition.Property)
 		t := p.Type
-		if t.Kind() == types.ArrayKind {
+		if t.IsArray() {
 			t = t.Elem()
 		}
 		b.WriteString(`,"values":[`)
@@ -408,7 +408,7 @@ func unmarshalWhereCondition(value json.Value, properties types.Properties) (*Wh
 		return nil, err
 	}
 	p, err := properties.ByPathSlice(condition.Property)
-	if err != nil && p.Type.Kind() != types.JSONKind {
+	if err != nil && !p.Type.IsJSON() {
 		return nil, err
 	}
 	var values []any

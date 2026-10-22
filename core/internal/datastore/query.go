@@ -12,7 +12,6 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/errors"
-	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
 
@@ -111,7 +110,7 @@ func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Col
 				parentPath := path
 				for n := len(rule.Property) - 1; n > 0; n-- {
 					parentPath = parentPath[:len(parentPath)-len(rule.Property[n])-1]
-					if column, ok := columnByProperty[parentPath]; ok && column.Type.Kind() == types.JSONKind {
+					if column, ok := columnByProperty[parentPath]; ok && column.Type.IsJSON() {
 						operand := warehouses.NewBaseExpr(column, warehouses.Operator(rule.Operator), values...)
 						operand.Keys = rule.Property[n:]
 						expr.Operands[i] = operand

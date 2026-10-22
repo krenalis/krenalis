@@ -19,6 +19,7 @@ import (
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/tools/validation"
 )
 
 // Platform represents a warehouse platform.
@@ -469,6 +470,9 @@ type OperationError struct{ message string }
 // MaxOperationErrorBytes are abbreviated at a Unicode character boundary with
 // a trailing "[...]". If the resulting message is not valid UTF-8, it is
 // replaced with a fixed message. NewOperationError panics if err is nil.
+//
+// NewOperationError is intended to be called by warehouse implementations
+// when an Identity Resolution or profile schema update operation fails.
 func NewOperationError(err error) *OperationError {
 	if err == nil {
 		panic("warehouses.NewOperationError: nil error")
@@ -708,6 +712,25 @@ func ValidateIP(name string, s string) (any, error) {
 func ValidateString(name string, t types.Type, s string) (any, error) {
 	if !utf8.ValidString(s) {
 		return nil, fmt.Errorf("data warehouse returned a value for column %s, which contains invalid UTF-8 characters", name)
+	}
+	switch t.Semantics() {
+	case types.CountrySemantics:
+		switch t.CountryFormat() {
+		case types.ISO3166Alpha2:
+			if !validation.IsValidCountryCodeAlpha2(s) {
+				return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a 2-letter country code", name)
+			}
+		case types.ISO3166Alpha3:
+			if !validation.IsValidCountryCodeAlpha3(s) {
+				return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a 3-letter country code", name)
+			}
+		}
+		return s, nil
+	case types.PhoneSemantics:
+		if !types.IsPhone(s) {
+			return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a valid canonical phone number", name)
+		}
+		return s, nil
 	}
 	if values := t.Values(); values != nil {
 		if !slices.Contains(values, s) {
