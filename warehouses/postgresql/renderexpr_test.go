@@ -5,7 +5,6 @@
 package postgresql
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -16,86 +15,16 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// TestDecimalExpressionLimits checks decimal operands in direct expressions.
-func TestDecimalExpressionLimits(t *testing.T) {
-
-	for _, test := range []struct {
-		text  string
-		valid bool
-	}{
-		{"0", true}, {"1.2300", true}, {"1e75", true}, {"1e-37", true},
-		{strings.Repeat("9", 76), true},
-		{"-" + strings.Repeat("9", 39) + "." + strings.Repeat("9", 37), true},
-		{"1e76", false}, {"1e-38", false}, {strings.Repeat("9", 77), false},
-		{"1e999999", false}, {"1e-999999", false},
-	} {
-		for _, typ := range []types.Type{types.Decimal(3, 2), types.Array(types.Decimal(3, 2)), types.JSON(), types.Array(types.JSON())} {
-			number := decimal.MustParse(test.text)
-			var operand any = number
-			if typ.Kind() == types.JSONKind || typ.Kind() == types.ArrayKind && typ.Elem().Kind() == types.JSONKind {
-				operand = warehouses.JSONConditionValue{String: test.text, Number: &number}
-			}
-			column := warehouses.Column{Name: "value", Type: typ}
-			operators := []warehouses.Operator{
-				warehouses.OpIs, warehouses.OpIsNot, warehouses.OpIsLessThan, warehouses.OpIsLessThanOrEqualTo,
-				warehouses.OpIsGreaterThan, warehouses.OpIsGreaterThanOrEqualTo,
-				warehouses.OpIsBetween, warehouses.OpIsNotBetween, warehouses.OpIsOneOf, warehouses.OpIsNotOneOf,
-			}
-			if typ.Kind() == types.ArrayKind {
-				operators = []warehouses.Operator{warehouses.OpContains, warehouses.OpDoesNotContain}
-			}
-			for _, op := range operators {
-				t.Run(fmt.Sprintf("%s/%s/%d", typ, test.text, op), func(t *testing.T) {
-					values := []any{operand}
-					if op == warehouses.OpIsBetween || op == warehouses.OpIsNotBetween ||
-						op == warehouses.OpIsOneOf || op == warehouses.OpIsNotOneOf {
-						var zero any = decimal.Decimal{}
-						if _, ok := operand.(warehouses.JSONConditionValue); ok {
-							n := decimal.Decimal{}
-							zero = warehouses.JSONConditionValue{String: "0", Number: &n}
-						}
-						values = append([]any{zero}, values...)
-					}
-					expr := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-						warehouses.NewBaseExpr(column, op, values...),
-					})
-					var b strings.Builder
-					err := renderExpr(&b, expr)
-					if err != nil {
-						if test.valid || err.Error() != "decimal operand exceeds precision 76 or scale 37" {
-							t.Fatalf("expected range error only for invalid operands, got %v", err)
-						}
-						return
-					}
-					if !test.valid {
-						t.Fatalf("expected decimal range error, got SQL %s", b.String())
-					}
-				})
-			}
-		}
-	}
-
-	column := warehouses.Column{Name: "value", Type: types.JSON()}
-	for _, operand := range []any{
-		warehouses.JSONConditionValue{String: "1e999999"},
-		json.Value("1e76"),
-	} {
-		var b strings.Builder
-		err := renderExpr(&b, warehouses.NewBaseExpr(column, warehouses.OpIs, operand))
-		if err != nil {
-			t.Fatalf("expected string-only or structural JSON operand, got %v", err)
-		}
-	}
-
-}
-
 // Test_renderExpr converts various expressions to SQL and compares with the
 // expected query strings.
 func Test_renderExpr(t *testing.T) {
+	column := warehouses.Column{Name: "value", Type: types.Decimal(3, 2)}
+	array := warehouses.Column{Name: "value", Type: types.Array(types.Decimal(3, 2))}
 	tests := []struct {
+		name    string
 		expr    warehouses.Expr
 		query   string
-		invalid bool
+		wantErr string
 	}{
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpIs, "qwerty"),
@@ -319,23 +248,117 @@ func Test_renderExpr(t *testing.T) {
 				}),
 			query: `("type" IS NOT NULL AND "type" <> '') OR COALESCE(("properties" IS NULL OR "properties" IN ('null'::jsonb, '""'::jsonb, '[]'::jsonb, '{}'::jsonb)), FALSE) OR array_length("scores", 1) IS NULL OR "properties" <> '{}'::jsonb`,
 		},
+		{
+			name:  "decimal zero",
+			expr:  warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.Decimal{}),
+			query: `"value" = 0`,
+		},
+		{
+			name:  "decimal trailing zeros",
+			expr:  warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.MustParse("1.2300")),
+			query: `"value" = 1.23`,
+		},
+		{
+			name:  "decimal maximum precision exceeds column precision",
+			expr:  warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.MustParse("1e75")),
+			query: `"value" = 1e75`,
+		},
+		{
+			name:  "decimal maximum scale exceeds column scale",
+			expr:  warehouses.NewBaseExpr(column, warehouses.OpIsLessThan, decimal.MustParse("1e-37")),
+			query: `"value" < 1e-37`,
+		},
+		{
+			name:  "decimal array maximum precision",
+			expr:  warehouses.NewBaseExpr(array, warehouses.OpContains, decimal.MustParse("1e75")),
+			query: `1e75 = ANY("value")`,
+		},
+		{
+			name:  "decimal array maximum scale",
+			expr:  warehouses.NewBaseExpr(array, warehouses.OpDoesNotContain, decimal.MustParse("1e-37")),
+			query: `NOT (1e-37 = ANY("value"))`,
+		},
+		{
+			name:    "decimal excessive precision",
+			expr:    warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.MustParse("1e76")),
+			wantErr: "decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name:    "decimal excessive scale",
+			expr:    warehouses.NewBaseExpr(column, warehouses.OpIsLessThan, decimal.MustParse("1e-38")),
+			wantErr: "decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name:    "decimal large positive exponent",
+			expr:    warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.MustParse("1e999999")),
+			wantErr: "decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name:    "decimal large negative exponent",
+			expr:    warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.MustParse("1e-999999")),
+			wantErr: "decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name:    "decimal between invalid second operand",
+			expr:    warehouses.NewBaseExpr(column, warehouses.OpIsBetween, decimal.Decimal{}, decimal.MustParse("1e-38")),
+			wantErr: "decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name:    "decimal membership invalid second operand",
+			expr:    warehouses.NewBaseExpr(column, warehouses.OpIsOneOf, decimal.Decimal{}, decimal.MustParse("1e76")),
+			wantErr: "decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name:    "decimal array excessive precision",
+			expr:    warehouses.NewBaseExpr(array, warehouses.OpContains, decimal.MustParse("1e76")),
+			wantErr: "decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name:    "decimal array excessive scale",
+			expr:    warehouses.NewBaseExpr(array, warehouses.OpDoesNotContain, decimal.MustParse("1e-38")),
+			wantErr: "decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name: "decimal invalid nested expression after valid expression",
+			expr: warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
+				warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.Decimal{}),
+				warehouses.NewMultiExpr(warehouses.OpOr, []warehouses.Expr{
+					warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.MustParse("1e76")),
+				}),
+			}),
+			wantErr: "decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name: "JSON numeric text without number",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs,
+				warehouses.JSONConditionValue{String: "1e999999"}),
+			query: `COALESCE(CASE WHEN jsonb_typeof("values") = 'string' THEN ("values" #>> '{}') COLLATE "C" = '1e999999' ELSE FALSE END, FALSE)`,
+		},
+		{
+			name: "structural JSON number outside decimal limits",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs,
+				json.Value("1e76")),
+			query: `COALESCE("values" = '1e76'::jsonb, FALSE)`,
+		},
 	}
 	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			var b strings.Builder
 			err := renderExpr(&b, test.expr)
 			if err != nil {
-				if !test.invalid {
-					t.Fatalf("expected query %q, got error: %s", test.query, err)
+				if test.wantErr == "" {
+					t.Fatalf("expected query %q, got error %q", test.query, err)
+				}
+				if err.Error() != test.wantErr {
+					t.Fatalf("expected error %q, got %q", test.wantErr, err.Error())
 				}
 				return
 			}
-			got := b.String()
-			if test.invalid {
-				t.Fatalf("expected invalid, got query %q", got)
+			if test.wantErr != "" {
+				t.Fatalf("expected error %q, got nil and SQL %q", test.wantErr, b.String())
 			}
-			if test.query != got {
-				t.Fatalf("\nexpected query:  %s\ngot:             %s", test.query, got)
+			if got := b.String(); test.query != got {
+				t.Fatalf("expected query %q, got %q", test.query, got)
 			}
 		})
 	}
