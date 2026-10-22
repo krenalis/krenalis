@@ -79,7 +79,11 @@ Negative operators are boolean complements, including for absent values and JSON
 
 ### Representation limits
 
-SQL generation preserves exact filter operands, including long coefficients and large exponents. Numeric comparisons order the sign, decimal magnitude, and significant digits without rounding the operand to a database numeric type. They compare the numeric representation available from the warehouse; they cannot reconstruct information already lost during storage.
+SQL generation preserves exact comparison semantics for decimal operands with precision up to 76 and scale up to 37, regardless of the property's precision and scale. Comparisons use the numeric representation available from the warehouse and cannot recover information already lost during storage.
+
+PostgreSQL compares JSON numbers as `numeric`. Snowflake converts their `TO_JSON` representation to `DECFLOAT`. Stored Snowflake JSON numbers have up to 38 significant digits, so this conversion is exact. An operand with more than 38 significant digits therefore cannot equal a stored Snowflake JSON number.
+
+For ordered comparisons, such operands are truncated toward zero to 38 significant digits. No stored number lies strictly between the original operand and the truncated bound. The comparison operator is adjusted to make the bound inclusive or exclusive according to the operand's sign. Membership comparisons exclude these operands from the numeric branch while preserving their original text in the string branch.
 
 * [Snowflake `PARSE_JSON`](https://docs.snowflake.com/en/sql-reference/functions/parse_json) stores scientific notation and decimals outside its fixed-point range as DOUBLE. Distinct original decimals can consequently become the same stored value. Exact equivalence with the original input is impossible after that conversion. Its JSON numeric output is the reference for comparisons with stored values.
 * [PostgreSQL `jsonb`](https://www.postgresql.org/docs/current/datatype-json.html) has the range limits of `numeric` and cannot store NUL in JSON strings. The existing warehouse encoder removes NUL; comparisons with an original string containing it cannot preserve that information.
@@ -89,6 +93,8 @@ These are storage limits, not additional JSON operator restrictions. Changes to 
 
 ### Verification
 
-`warehouses/postgresql/jsonexpr_test.go` and `warehouses/snowflake/jsonexpr_test.go` execute the same truth table from `test/warehouseexpr`, checking matching IDs and totals through `Merge` and `Query`. `core/internal/datastore/query_json_test.go` additionally compares warehouse results with `filters.Applies` across operators, scalar kinds, containers, literal keys, nested paths, numeric spellings, and Unicode strings. Batched counts prove exact membership by checking both the expected number of matches and that no unexpected ID matches.
+`warehouses/postgresql/jsonexpr_test.go` and `warehouses/snowflake/jsonexpr_test.go` run the same truth table defined in `test/warehouseexpr`, verifying matching IDs and counts through `Merge` and `Query`. In addition, `core/internal/datastore/query_json_test.go` compares warehouse results with `filters.Applies` across operators, scalar kinds, containers, literal keys, nested paths, numeric spellings, and Unicode strings.
+
+The test reloads the fixtures from the warehouse before evaluating them in Go, so that expected results account for any rounding during storage. Batched counts verify exact membership by checking both the expected number of matches and the absence of unexpected matching IDs.
 
 Run the local tests with `KRENALIS_SKIP_SNOWFLAKE_TESTS=true`. With the usual `KRENALIS_SNOWFLAKE_TESTER_*` credentials, run both JSON database suites together with `go test -p 1 ./warehouses/snowflake ./core/internal/datastore -run '^(TestJSONExpressions|TestJSONFilters)$' -count=1`. Each suite reuses its environment for all cases, so Snowflake can remain active throughout the run.
