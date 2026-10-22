@@ -2234,6 +2234,78 @@ test(`Confirm Profile role removal when a type becomes incompatible`, async ({ p
 	expect(avatarURL.type).toEqual({ kind: 'string' });
 });
 
+for (const finalType of ['url', 'object']) {
+	test(`Track descendant role removals through successive type changes to ${finalType}`, async ({ page }) => {
+		await mockProfileRoles(page, { firstName: '', lastName: '', email: '', country: '', photo: '' });
+
+		await page.goto(`${adminURL}/profile-unification/schema`);
+		await editSchema(page);
+		const panel = page.locator('.property-panel');
+		await page.locator('.schema-edit__add-property').click();
+		await panel.locator('.property-form__name-input input').fill('details');
+		await panel.locator('.property-type-selector__structure-trigger').click();
+		await panel.locator('[data-structure-option="object"]').click();
+		await panel.locator('.property-panel__save').click();
+		await page.locator('.schema-edit__add-property').click();
+		await panel.locator('.property-form__parent').evaluate((select: any) => {
+			select.value = 'details';
+			select.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
+		});
+		await panel.locator('.property-form__name-input input').fill('email');
+		await selectPropertyType(page, 'email');
+		await selectProfileRole(page, 'email');
+		await panel.locator('.property-panel__save').click();
+		await openProperty(page, 'details');
+
+		const changeTypeDialog = page.locator('.alert-dialog', { hasText: 'Change type?' });
+		await panel.locator('.property-type-selector__structure-trigger').click();
+		await panel.locator('[data-structure-option="one"]').click();
+		await selectPropertyType(page, 'string');
+		await expect(changeTypeDialog).toContainText('will remove these roles: Email');
+		await changeTypeDialog.getByRole('button', { name: 'Change type' }).click();
+		await expect(changeTypeDialog).toBeHidden();
+		await selectProfileRole(page, 'firstName');
+		await selectPropertyType(page, 'url');
+		await expect(changeTypeDialog).toContainText('will remove the First name role from this property');
+		await changeTypeDialog.getByRole('button', { name: 'Change type' }).click();
+		await expect(changeTypeDialog).toBeHidden();
+		if (finalType === 'object') {
+			await selectProfileRole(page, 'photo');
+			await panel.locator('.property-type-selector__structure-trigger').click();
+			await panel.locator('[data-structure-option="object"]').click();
+			await expect(changeTypeDialog).toContainText('will remove the Photo role from this property');
+			await changeTypeDialog.getByRole('button', { name: 'Change type' }).click();
+			await expect(changeTypeDialog).toBeHidden();
+			await panel.locator('sl-textarea textarea[name="description"]').fill('Contact details');
+		}
+		await panel.locator('.property-panel__save').click();
+
+		await page.locator('.schema-edit__header-apply-button').click();
+		await expect(page.locator('.schema-edit__queries')).toBeVisible();
+		const alterRequestPromise = page.waitForRequest(
+			(request) => request.url().endsWith('/profiles/schema') && request.method() === 'PUT',
+		);
+		await page.locator('.schema-edit__apply-alter-button').click();
+		const request = (await alterRequestPromise).postDataJSON();
+		expect(request.assignedRoles).toEqual({
+			firstName: '',
+			lastName: '',
+			email: finalType === 'object' ? 'details.email' : '',
+			country: '',
+			photo: '',
+		});
+		const details = request.schema.properties.find((property) => property.name === 'details');
+		if (finalType === 'object') {
+			expect(details.type.kind).toBe('object');
+			expect(details.type.properties).toEqual([
+				expect.objectContaining({ name: 'email', type: { kind: 'string', semantics: 'email' } }),
+			]);
+		} else {
+			expect(details.type).toEqual({ kind: 'string', semantics: 'url' });
+		}
+	});
+}
+
 test(`Delete a property and its Profile role together`, async ({ page }) => {
 	await mockProfileRoles(page, { firstName: '', lastName: '', email: '', country: '', photo: 'avatar_url' });
 

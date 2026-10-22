@@ -468,7 +468,10 @@ const PropertyForm = ({
 		if (assignedRole != null && pendingTypeChange.rolesToUnassign.includes(assignedRole)) {
 			setAssignedRole(null);
 		}
-		setDescendantRolesToUnassign(pendingTypeChange.rolesToUnassign.filter((role) => role !== assignedRole));
+		const rolesToUnassign = pendingTypeChange.rolesToUnassign.filter((role) => role !== assignedRole);
+		setDescendantRolesToUnassign((current) =>
+			pendingTypeChange.type.kind === 'object' ? [] : [...new Set([...current, ...rolesToUnassign])],
+		);
 		applyTypeChange(pendingTypeChange.type);
 		setPendingTypeChange(null);
 	};
