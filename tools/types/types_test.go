@@ -380,6 +380,35 @@ func Test_Len(t *testing.T) {
 
 }
 
+// Test_String checks the string representation of types, including the
+// unsigned flag of integers.
+func Test_String(t *testing.T) {
+
+	tests := []struct {
+		typ      Type
+		expected string
+	}{
+		{Boolean(), "boolean"},
+		{Int(8), "int(8)"},
+		{Int(32).Unsigned(), "unsigned int(32)"},
+		{Int(64).Unsigned().WithUnsignedRange(1, 10), "unsigned int(64)"},
+		{Float(32), "float(32)"},
+		{Decimal(10, 2), "decimal(10,2)"},
+		{String(), "string"},
+		{Array(Int(16).Unsigned()), "array(unsigned int(16))"},
+		{Map(Int(24)), "map(int(24))"},
+		{Parameter("T"), "T"},
+		{Type{}, ""},
+	}
+
+	for _, test := range tests {
+		if got := test.typ.String(); got != test.expected {
+			t.Errorf("String(): expected %q, got %q", test.expected, got)
+		}
+	}
+
+}
+
 // Test_StringConstraintPanics checks that combining incompatible string
 // constraints or passing a nil pattern causes a panic.
 func Test_StringConstraintPanics(t *testing.T) {

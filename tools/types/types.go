@@ -550,6 +550,9 @@ func (t Type) String() string {
 	switch t.kind {
 	case IntKind, FloatKind:
 		s += "(" + strconv.Itoa(bitSize[t.size]) + ")"
+		if t.unsigned {
+			s = "unsigned " + s
+		}
 	case DecimalKind:
 		if t.p > 0 {
 			s += "(" + strconv.Itoa(int(t.p)) + "," + strconv.Itoa(int(t.s)) + ")"
