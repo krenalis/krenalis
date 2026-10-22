@@ -362,7 +362,7 @@ const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSel
 								aria-label={valueType == null ? 'Select type' : undefined}
 							>
 								{valueType == null ? (
-									<span className='property-type-selector__placeholder'>Select type...</span>
+									<span className='property-form__placeholder'>Select type...</span>
 								) : (
 									<SchemaPropertyType context='trigger' type={valueType} />
 								)}

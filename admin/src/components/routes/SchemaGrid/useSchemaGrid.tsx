@@ -22,7 +22,7 @@ const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Property' },
 	{ name: 'Type' },
 	{ name: 'Identifier', alignment: 'center' },
-	{ name: 'Profile role' },
+	{ name: 'Role' },
 	{ name: 'Primary source' },
 ];
 
@@ -83,6 +83,7 @@ const useSchemaGrid = (
 			return null;
 		}
 		return {
+			assignedRole: getAssignedProfileRole(workspace.assignedRoles, selectedPropertyPath),
 			identifierPosition: identifierPositions.get(selectedPropertyPath),
 			path: selectedPropertyPath,
 			primarySource: getPrimarySource(selectedPropertyPath, workspace.primarySources, connections),

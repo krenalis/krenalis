@@ -37,7 +37,11 @@ const ProfileRoleSelector = ({
 	return (
 		<SlDropdown className='profile-role-selector' hoist placement='bottom-end' distance={6}>
 			<SlButton className='profile-role-selector__trigger' slot='trigger' caret>
-				{assignedRole == null ? 'Not assigned' : getProfileRole(assignedRole).label}
+				{assignedRole == null ? (
+					<span className='property-form__placeholder'>Assign a role...</span>
+				) : (
+					getProfileRole(assignedRole).label
+				)}
 			</SlButton>
 			<SlMenu className='profile-role-selector__menu' onSlSelect={onSelect}>
 				<SlMenuItem
@@ -47,7 +51,7 @@ const ProfileRoleSelector = ({
 					data-profile-role-option='none'
 					value='none'
 				>
-					Not assigned
+					Assign a role
 					{assignedRole == null && <SlIcon slot='suffix' name='check-lg' />}
 				</SlMenuItem>
 				<SlDivider />

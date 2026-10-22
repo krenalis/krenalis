@@ -40,7 +40,7 @@ const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Name' },
 	{ name: 'Type' },
 	{ name: 'Identifier', alignment: 'center' },
-	{ name: 'Profile role' },
+	{ name: 'Role' },
 	{ name: 'Primary source' },
 	{ name: '' },
 ];

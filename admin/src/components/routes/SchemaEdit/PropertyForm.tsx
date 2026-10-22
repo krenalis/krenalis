@@ -1170,12 +1170,15 @@ const PropertyForm = ({
 			{showAssignedRole && (
 				<div className='property-form__control property-form__assigned-role'>
 					<div className='property-form__label'>
-						<PropertyFormLabel modified={fieldChanges?.profileRole}>
-							Assigned role <span className='property-form__optional-label'>(optional)</span>
+						<PropertyFormLabel
+							modified={fieldChanges?.profileRole}
+							tooltip={{
+								content: 'Specifies which profile concept this property represents.',
+								label: 'About roles',
+							}}
+						>
+							Role <span className='property-form__optional-label'>(optional)</span>
 						</PropertyFormLabel>
-					</div>
-					<div className='property-form__assigned-role-description'>
-						Specifies which profile concept this property represents.
 					</div>
 					<ProfileRoleSelector
 						assignedRole={assignedRole}

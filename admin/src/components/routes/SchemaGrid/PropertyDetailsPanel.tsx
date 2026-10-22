@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
+import { getCompatibleProfileRoles, getProfileRole } from '../../helpers/profileRoles';
 import {
 	DURATION_UNIT_OPTIONS,
 	getPropertyValueType,
@@ -8,6 +9,7 @@ import {
 } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { Property } from '../../../lib/api/types/types';
+import { ProfileRoleID } from '../../../lib/api/types/workspace';
 import TransformedConnection from '../../../lib/core/connection';
 import { PropertyPanelLayout } from '../Schema/PropertyPanelLayout';
 import {
@@ -18,6 +20,7 @@ import {
 import { SchemaPropertyType } from '../Schema/SchemaPropertyType';
 
 interface PropertyDetailsPanelProps {
+	assignedRole: ProfileRoleID | null;
 	identifierPosition?: number;
 	onClose: () => void;
 	primarySource: TransformedConnection | null;
@@ -30,7 +33,13 @@ interface PropertyDetailProps {
 	label: ReactNode;
 }
 
-const PropertyDetailsPanel = ({ identifierPosition, onClose, primarySource, property }: PropertyDetailsPanelProps) => {
+const PropertyDetailsPanel = ({
+	assignedRole,
+	identifierPosition,
+	onClose,
+	primarySource,
+	property,
+}: PropertyDetailsPanelProps) => {
 	const semanticDetail = getSemanticDetail(property);
 
 	return (
@@ -48,6 +57,15 @@ const PropertyDetailsPanel = ({ identifierPosition, onClose, primarySource, prop
 					)}
 				</div>
 				<div className='property-details-panel__section property-details-panel__section--metadata'>
+					{getCompatibleProfileRoles(property).length > 0 && (
+						<PropertyDetail label='Role'>
+							{assignedRole == null ? (
+								<span className='property-details-panel__empty-value'>—</span>
+							) : (
+								getProfileRole(assignedRole).label
+							)}
+						</PropertyDetail>
+					)}
 					<PropertyDetail label='Display name'>
 						{property.displayName || <span className='property-details-panel__empty-value'>—</span>}
 					</PropertyDetail>

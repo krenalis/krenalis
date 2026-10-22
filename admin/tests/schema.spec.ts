@@ -1015,7 +1015,7 @@ test(`Keep contextual and form actions in their expected tab order`, async ({ pa
 	const removeButton = propertyPanel.locator('.property-panel__remove');
 	const identifierInfo = propertyPanel.getByLabel('About identifiers');
 	const primarySourceInfo = propertyPanel.getByLabel('About primary source');
-	await expect(propertyPanel.locator('.schema-property-grid__info')).toHaveCount(2);
+	await expect(propertyPanel.locator('.schema-property-grid__info')).toHaveCount(3);
 	await expectPassiveInformationTooltip(identifierInfo);
 	await expectPassiveInformationTooltip(primarySourceInfo);
 
@@ -1114,6 +1114,7 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 	await expect(panel.locator('.property-details-panel__label')).toContainText([
 		'Name',
 		'Type',
+		'Role',
 		'Display name',
 		'Description',
 		'Identifier',
@@ -1139,6 +1140,7 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 	await expect(panel.locator('.property-details-panel__value')).toHaveText([
 		'email',
 		'string',
+		'—',
 		'Email address',
 		'—',
 		'Not an identifier',
@@ -2082,7 +2084,7 @@ test(`Assign and reassign Profile roles only when the property form is confirmed
 	const reassignDialog = page.locator('.alert-dialog', { hasText: 'Reassign role?' });
 
 	await openProperty(page, 'preferred_name');
-	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('Not assigned');
+	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('Assign a role...');
 	await selectProfileRole(page, 'lastName');
 	await expect(reassignDialog).toBeHidden();
 	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('Last name');
@@ -2208,7 +2210,7 @@ test(`Confirm Profile role removal when a type becomes incompatible`, async ({ p
 	await changeTypeDialog.getByRole('button', { name: 'Change type' }).click();
 	await expect(changeTypeDialog).toBeHidden();
 	await expect(typeTrigger).toHaveText('string');
-	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('Not assigned');
+	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('Assign a role...');
 	await panel.locator('.property-panel__cancel').click();
 	await expect(roleCell).toHaveText('Photo');
 
@@ -2274,7 +2276,7 @@ test(`Show only compatible Profile roles and remove one when cardinality changes
 	await panel.locator('[data-profile-role-option="firstName"]').click();
 	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('First name');
 	await selectProfileRole(page, 'none');
-	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('Not assigned');
+	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('Assign a role...');
 	await selectPropertyType(page, 'email');
 	await panel.locator('.profile-role-selector__trigger').click();
 	expect(
