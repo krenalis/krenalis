@@ -1,0 +1,96 @@
+.profile-role-selector,
+.profile-role-selector__trigger {
+	width: 100%;
+}
+
+.profile-role-selector {
+	container-type: inline-size;
+}
+
+.profile-role-selector .profile-role-selector__trigger::part(base) {
+	background-color: var(--sl-input-background-color);
+	color: var(--sl-input-color);
+	justify-content: flex-start;
+}
+
+.profile-role-selector__trigger::part(label) {
+	font-weight: var(--sl-font-weight-normal);
+	text-align: left;
+	width: 100%;
+}
+
+.profile-role-selector__trigger::part(caret) {
+	margin-left: auto;
+}
+
+.profile-role-selector__menu {
+	background-color: var(--sl-panel-background-color);
+	border: solid var(--sl-panel-border-width) var(--sl-panel-border-color);
+	border-radius: var(--sl-border-radius-medium);
+	box-sizing: border-box;
+	padding: 0;
+	width: min(100cqi, calc(100vw - 40px));
+}
+
+.profile-role-selector__menu sl-divider {
+	--spacing: 0;
+}
+
+.profile-role-selector__option::part(base) {
+	min-height: 32px;
+	padding: 3px 12px;
+}
+
+.profile-role-selector__none-option::part(base) {
+	align-items: center;
+	min-height: var(--sl-input-height-medium);
+}
+
+.profile-role-selector__option::part(checked-icon),
+.profile-role-selector__option::part(submenu-icon) {
+	display: none;
+}
+
+.profile-role-selector__option::part(label) {
+	overflow: visible;
+	white-space: normal;
+}
+
+.profile-role-selector__option:not(.profile-role-selector__option--selected):hover::part(base),
+.profile-role-selector__option:not(.profile-role-selector__option--selected):focus-visible::part(base) {
+	background-color: var(--property-form-option-hover-background-color);
+	color: var(--text-primary) !important;
+}
+
+.profile-role-selector__option--selected::part(base),
+.profile-role-selector__option--selected:hover::part(base),
+.profile-role-selector__option--selected:focus::part(base),
+.profile-role-selector__option--selected:focus-visible::part(base) {
+	background-color: var(--property-form-option-selected-background-color);
+	color: var(--text-primary) !important;
+}
+
+.profile-role-selector__option > [slot='suffix'] {
+	color: var(--sl-color-primary-600);
+}
+
+.profile-role-selector__option-content {
+	display: flex;
+	flex-direction: column;
+	line-height: 1.25;
+	padding-block: 4px;
+}
+
+.profile-role-selector__option-description {
+	color: var(--text-light);
+	font-size: 12px;
+}
+
+.profile-role-selector__option-assignment {
+	color: var(--sl-color-primary-600);
+	font-size: 11px;
+}
+
+.profile-role-selector__option-assignment-path {
+	font-family: var(--monospace-fonts);
+}

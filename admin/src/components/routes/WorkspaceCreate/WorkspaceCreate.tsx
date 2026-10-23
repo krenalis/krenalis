@@ -1,7 +1,6 @@
 import React, { useState, useContext, useRef, useEffect } from 'react';
 import './WorkspaceCreate.css';
 import { ObjectType } from '../../../lib/api/types/types';
-import { UIPreferences } from '../../../lib/api/types/workspace';
 import API from '../../../lib/api/api';
 import appContext from '../../../context/AppContext';
 import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
@@ -12,6 +11,7 @@ import { PostgreSQLSettings } from '../../base/PostgreSQLSettings/PostgreSQLSett
 import { SnowflakeSettings } from '../../base/SnowflakeSettings/SnowflakeSettings';
 import { WarehouseSettings } from '../../../lib/api/types/warehouse';
 import InitialSchema from './InitialSchema.json';
+import InitialRoleAssignments from './InitialRoleAssignments.json';
 import * as icons from '../../../constants/icons';
 import { IS_DOCKER_KEY } from '../../../constants/storage';
 import { ExternalLogo } from '../ExternalLogo/ExternalLogo';
@@ -100,24 +100,15 @@ const WorkspaceCreate = () => {
 			};
 		}
 
-		let uiProperties: UIPreferences = {
-			profile: {
-				image: '',
-				firstName: 'first_name',
-				lastName: 'last_name',
-				extra: 'email',
-			},
-		};
-
 		if (action == 'test') {
 			try {
 				await api.workspaces.testCreation(
 					name,
 					InitialSchema as ObjectType,
+					InitialRoleAssignments,
 					warehouse,
 					'Normal',
 					settings,
-					uiProperties,
 				);
 			} catch (err) {
 				setTimeout(() => {
@@ -140,10 +131,10 @@ const WorkspaceCreate = () => {
 				const res = await api.workspaces.create(
 					name,
 					InitialSchema as ObjectType,
+					InitialRoleAssignments,
 					warehouse,
 					'Normal',
 					settings,
-					uiProperties,
 				);
 				id = res.id;
 			} catch (err) {

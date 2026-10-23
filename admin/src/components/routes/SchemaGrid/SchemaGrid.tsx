@@ -17,7 +17,7 @@ import { useSchemaGrid } from './useSchemaGrid';
 import { GridKeyboardHints } from '../../base/Grid/GridKeyboardHints';
 import { useDocumentGridKeyboardNavigation } from '../../base/Grid/useDocumentGridKeyboardNavigation';
 
-const schemaGridColumns = 'minmax(180px, 0.75fr) minmax(300px, 1.6fr) 86px minmax(170px, 0.65fr)';
+const schemaGridColumns = 'minmax(180px, 0.75fr) minmax(290px, 1.45fr) 86px minmax(130px, 0.5fr) minmax(170px, 0.65fr)';
 
 interface SchemaGridOutletContext {
 	selectedPropertyPath: string | null;
@@ -166,6 +166,7 @@ const SchemaGrid = () => {
 					{detailsPanelProperty != null && (
 						<div className='schema-grid__details-panel' onTransitionEnd={onDetailsPanelTransitionEnd}>
 							<PropertyDetailsPanel
+								assignedRole={detailsPanelProperty.assignedRole}
 								identifierPosition={detailsPanelProperty.identifierPosition}
 								property={detailsPanelProperty.property}
 								primarySource={detailsPanelProperty.primarySource}

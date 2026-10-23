@@ -513,8 +513,8 @@ type Warehouse struct {
 }
 
 // CreateWorkspace creates a workspace with the given name, profile schema and
-// displayed properties, and connects to a data warehouse of the given platform
-// and settings.
+// role assignments, and connects to a data warehouse of the given platform and
+// settings.
 // Returns the identifier of the workspace that has been created.
 // name must be between 1 and 100 runes long.
 //
@@ -527,11 +527,11 @@ type Warehouse struct {
 //   - WarehousePlatformNotExist, if a warehouse platform does not exist.
 //   - WarehouseNotInitializable, if the warehouse is not initializable.
 //   - WorkspacesLimitReached, if the organization cannot have more workspaces.
-func (this *Organization) CreateWorkspace(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse, uiPreferences UIPreferences) (string, error) {
+func (this *Organization) CreateWorkspace(ctx context.Context, name string, profileSchema types.Type, assignedRoles ProfileRoleAssignments, warehouse Warehouse) (string, error) {
 
 	this.core.mustBeOpen()
 
-	settings, err := this.validateWorkspaceCreation(ctx, name, profileSchema, warehouse, uiPreferences)
+	settings, err := this.validateWorkspaceCreation(ctx, name, profileSchema, assignedRoles, warehouse)
 	if err != nil {
 		return "", err
 	}
@@ -553,8 +553,8 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 		Organization:                   this.organization.ID,
 		Name:                           name,
 		ProfileSchema:                  profileSchema,
+		AssignedRoles:                  state.ProfileRoleAssignments(assignedRoles),
 		ResolveIdentitiesOnBatchImport: true,
-		UIPreferences:                  state.UIPreferences(uiPreferences),
 	}
 	n.Warehouse.Platform = warehouse.Platform
 	n.Warehouse.Mode = state.WarehouseMode(warehouse.Mode)
@@ -590,14 +590,14 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 			}
 			// Add the workspace.
 			_, err = tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name,"+
-				" profile_schema, resolve_identities_on_batch_import, ui_profile_image, ui_profile_first_name,"+
-				" ui_profile_last_name, ui_profile_extra, warehouse_name, warehouse_mode,"+
+				" profile_schema, profile_role_first_name, profile_role_last_name, profile_role_email,"+
+				" profile_role_country, profile_role_photo, resolve_identities_on_batch_import, warehouse_name, warehouse_mode,"+
 				" warehouse_settings, kms_encrypted_warehouse_settings_key, kms_encrypted_warehouse_mcp_settings_key)"+
-				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
-				n.ID, n.Organization, n.Name, encodedProfileSchema, n.ResolveIdentitiesOnBatchImport,
-				n.UIPreferences.Profile.Image, n.UIPreferences.Profile.FirstName,
-				n.UIPreferences.Profile.LastName, n.UIPreferences.Profile.Extra, n.Warehouse.Platform,
-				n.Warehouse.Mode, n.Warehouse.Settings, n.Warehouse.SettingsKey, n.Warehouse.MCPSettingsKey)
+				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)",
+				n.ID, n.Organization, n.Name, encodedProfileSchema, n.AssignedRoles.FirstName,
+				n.AssignedRoles.LastName, n.AssignedRoles.Email, n.AssignedRoles.Country, n.AssignedRoles.Photo,
+				n.ResolveIdentitiesOnBatchImport, n.Warehouse.Platform, n.Warehouse.Mode, n.Warehouse.Settings,
+				n.Warehouse.SettingsKey, n.Warehouse.MCPSettingsKey)
 			if err != nil {
 				if db.IsForeignKeyViolation(err) {
 					if db.ErrConstraintName(err) == "workspaces_organization_fkey" {
@@ -1260,8 +1260,8 @@ FROM ended_runs
 INNER JOIN updated_pipelines AS p ON ended_runs.pipeline = p.id
 `
 
-// TestWorkspaceCreation tests a workspace creation. It tests that a warehouse
-// with the provided platform and settings can be initialized.
+// TestWorkspaceCreation tests a workspace creation, including the profile schema
+// and role assignments, and checks that the data warehouse can be initialized.
 //
 // It returns an errors.UnprocessableError error with code:
 //
@@ -1270,9 +1270,9 @@ INNER JOIN updated_pipelines AS p ON ended_runs.pipeline = p.id
 //   - WarehouseNotInitializable, if the warehouse intended for connection is
 //     not initializable.
 //   - WorkspacesLimitReached, if the organization cannot have more workspaces.
-func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse, uiPreferences UIPreferences) error {
+func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, assignedRoles ProfileRoleAssignments, warehouse Warehouse) error {
 	this.core.mustBeOpen()
-	_, err := this.validateWorkspaceCreation(ctx, name, profileSchema, warehouse, uiPreferences)
+	_, err := this.validateWorkspaceCreation(ctx, name, profileSchema, assignedRoles, warehouse)
 	return err
 }
 
@@ -1439,11 +1439,11 @@ func (this *Organization) Workspace(id string) (*Workspace, error) {
 		ID:                             ws.ID,
 		Name:                           ws.Name,
 		ProfileSchema:                  ws.ProfileSchema,
+		AssignedRoles:                  ProfileRoleAssignments(ws.AssignedRoles),
 		PrimarySources:                 maps.Clone(ws.PrimarySources),
 		ResolveIdentitiesOnBatchImport: ws.ResolveIdentitiesOnBatchImport,
 		Identifiers:                    ws.Identifiers,
 		WarehouseMode:                  WarehouseMode(ws.Warehouse.Mode),
-		UIPreferences:                  UIPreferences(ws.UIPreferences),
 	}
 	return &workspace, nil
 }
@@ -1465,11 +1465,11 @@ func (this *Organization) Workspaces() []*Workspace {
 			ID:                             ws.ID,
 			Name:                           ws.Name,
 			ProfileSchema:                  ws.ProfileSchema,
+			AssignedRoles:                  ProfileRoleAssignments(ws.AssignedRoles),
 			PrimarySources:                 maps.Clone(ws.PrimarySources),
 			ResolveIdentitiesOnBatchImport: ws.ResolveIdentitiesOnBatchImport,
 			Identifiers:                    ws.Identifiers,
 			WarehouseMode:                  WarehouseMode(ws.Warehouse.Mode),
-			UIPreferences:                  UIPreferences(ws.UIPreferences),
 		}
 		infos = append(infos, &workspace)
 	}
@@ -1516,7 +1516,7 @@ func (this *Organization) filterMetricsSelection(workspace string, selection *Me
 //     not initializable.
 //   - WarehousePlatformNotExist, if a warehouse platform does not exist.
 //   - WorkspacesLimitReached, if the organization cannot have more workspaces.
-func (this *Organization) validateWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, warehouse Warehouse, uiPreferences UIPreferences) (json.Value, error) {
+func (this *Organization) validateWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, assignedRoles ProfileRoleAssignments, warehouse Warehouse) (json.Value, error) {
 
 	// Validate the parameters.
 	if err := util.ValidateStringField("name", name, 100); err != nil {
@@ -1524,9 +1524,6 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	}
 	if !profileSchema.Valid() {
 		return nil, errors.BadRequest("profile schema is invalid")
-	}
-	if err := validateUIPreferences(uiPreferences); err != nil {
-		return nil, errors.BadRequest("%s", err)
 	}
 	if warehouse.Platform == "" {
 		return nil, errors.BadRequest("warehouse platform is empty")
@@ -1542,6 +1539,9 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 		return nil, errors.BadRequest("%s", err)
 	}
 	if err := datastore.CheckConflictingProperties("profile", profileSchema); err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	if err := validateProfileRoleAssignments(profileSchema, assignedRoles); err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
 

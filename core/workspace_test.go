@@ -6,7 +6,6 @@ package core
 
 import (
 	"bytes"
-	"strings"
 	"testing"
 
 	"github.com/krenalis/krenalis/tools/json"
@@ -110,84 +109,31 @@ func TestWorkspaceEncodeJSON(t *testing.T) {
 	}
 }
 
-func Test_validateUIPreferences(t *testing.T) {
+// TestWorkspaceMarshalJSON verifies that json.Marshal encodes nil Workspace
+// collection fields as null.
+func TestWorkspaceMarshalJSON(t *testing.T) {
+
+	value, err := json.Marshal(Workspace{})
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+
 	tests := []struct {
-		name  string
-		prefs UIPreferences
-		err   string
+		name string
+		want string
 	}{
-		{
-			name: "Nothing is set",
-			prefs: UIPreferences{
-				Profile: struct {
-					Image     string "json:\"image\""
-					FirstName string "json:\"firstName\""
-					LastName  string "json:\"lastName\""
-					Extra     string "json:\"extra\""
-				}{},
-			},
-		},
-		{
-			name: "Valid property paths",
-			prefs: UIPreferences{
-				Profile: struct {
-					Image     string "json:\"image\""
-					FirstName string "json:\"firstName\""
-					LastName  string "json:\"lastName\""
-					Extra     string "json:\"extra\""
-				}{
-					Image:     "additional_data.image",
-					FirstName: "first_name",
-					LastName:  "last_name",
-					Extra:     "email",
-				},
-			},
-		},
-		{
-			name: "Last name has an invalid property path",
-			prefs: UIPreferences{
-				Profile: struct {
-					Image     string "json:\"image\""
-					FirstName string "json:\"firstName\""
-					LastName  string "json:\"lastName\""
-					Extra     string "json:\"extra\""
-				}{
-					Image:     "additional_data.image",
-					FirstName: "first_name",
-					LastName:  "last name", // space instead of _
-					Extra:     "email",
-				},
-			},
-			err: "invalid profile 'lastName' \"last name\"",
-		},
-		{
-			name: "Extra is too long",
-			prefs: UIPreferences{
-				Profile: struct {
-					Image     string "json:\"image\""
-					FirstName string "json:\"firstName\""
-					LastName  string "json:\"lastName\""
-					Extra     string "json:\"extra\""
-				}{
-					Image:     "additional_data.image",
-					FirstName: "first_name",
-					LastName:  "last_name",
-					Extra:     strings.Repeat("x", 1025),
-				},
-			},
-			err: "invalid profile 'extra' \"" + strings.Repeat("x", 1025) + "\"",
-		},
+		{name: "primarySources", want: "null"},
+		{name: "identifiers", want: "null"},
 	}
+
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := validateUIPreferences(test.prefs)
-			var gotStr string
-			if got != nil {
-				gotStr = got.Error()
-			}
-			if gotStr != test.err {
-				t.Fatalf("expected error %q, got %q", test.err, gotStr)
-			}
-		})
+		got, ok := value.Get([]string{test.name})
+		if !ok {
+			t.Fatalf("json.Marshal() omitted %s", test.name)
+		}
+		if string(got) != test.want {
+			t.Fatalf("json.Marshal() %s = %q, want %q", test.name, got, test.want)
+		}
 	}
+
 }

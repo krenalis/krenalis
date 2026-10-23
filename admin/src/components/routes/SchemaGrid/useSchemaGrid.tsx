@@ -3,11 +3,17 @@ import { ObjectType, Property } from '../../../lib/api/types/types';
 import { GridColumn, GridRow, StandardGridRow } from '../../base/Grid/Grid.types';
 import AppContext from '../../../context/AppContext';
 import TransformedConnection from '../../../lib/core/connection';
-import { ConsentPurpose, PrimarySources } from '../../../lib/api/types/workspace';
+import {
+	ConsentPurpose,
+	PrimarySources,
+	ProfileRoleAssignments,
+	ProfileRoleID,
+} from '../../../lib/api/types/workspace';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
+import { getAssignedProfileRole, getProfileRole } from '../../helpers/profileRoles';
 import { SchemaPropertyIdentifierBadge, SchemaPropertyName } from '../Schema/SchemaPropertyGrid';
-import { getProfileSchemaTypePresentation } from '../../helpers/types';
+import { getSchemaPropertyTypePresentation, SchemaPropertyType } from '../Schema/SchemaPropertyType';
 import { SchemaContext } from '../../../context/SchemaContext';
 import { SchemaPropertyConsent } from '../Schema/SchemaPropertyConsent';
 import { getConsentPurposesByPropertyPath } from '../Schema/SchemaPropertyConsent.helpers';
@@ -16,6 +22,7 @@ const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Property' },
 	{ name: 'Type' },
 	{ name: 'Identifier', alignment: 'center' },
+	{ name: 'Role' },
 	{ name: 'Primary source' },
 ];
 
@@ -45,6 +52,7 @@ const useSchemaGrid = (
 		return getRows(
 			schema,
 			workspace.primarySources,
+			workspace.assignedRoles,
 			connections,
 			identifierPositions,
 			consentPurposesByPropertyPath,
@@ -75,6 +83,7 @@ const useSchemaGrid = (
 			return null;
 		}
 		return {
+			assignedRole: getAssignedProfileRole(workspace.assignedRoles, selectedPropertyPath),
 			identifierPosition: identifierPositions.get(selectedPropertyPath),
 			path: selectedPropertyPath,
 			primarySource: getPrimarySource(selectedPropertyPath, workspace.primarySources, connections),
@@ -97,6 +106,7 @@ const useSchemaGrid = (
 const getRows = (
 	schema: ObjectType,
 	primarySources: PrimarySources,
+	assignedRoles: ProfileRoleAssignments,
 	connections: TransformedConnection[],
 	identifierPositions: ReadonlyMap<string, number>,
 	consentPurposesByPropertyPath: ReadonlyMap<string, ConsentPurpose[]>,
@@ -109,7 +119,8 @@ const getRows = (
 	const rows: GridRow[] = [];
 	for (const property of schema.properties || []) {
 		const path = parent == null ? property.name : `${parent}.${property.name}`;
-		const typePresentation = getProfileSchemaTypePresentation(property.type);
+		const typePresentation = getSchemaPropertyTypePresentation(property.type, 'grid');
+		const assignedRole = getAssignedProfileRole(assignedRoles, path);
 		const matches =
 			includeAll ||
 			search === '' ||
@@ -119,6 +130,7 @@ const getRows = (
 				property.description,
 				typePresentation.primary,
 				typePresentation.metadata,
+				assignedRole == null ? null : getProfileRole(assignedRole).label,
 			]
 				.filter(Boolean)
 				.join(' ')
@@ -129,6 +141,7 @@ const getRows = (
 			nestedRows = getRows(
 				property.type,
 				primarySources,
+				assignedRoles,
 				connections,
 				identifierPositions,
 				consentPurposesByPropertyPath,
@@ -148,6 +161,7 @@ const getRows = (
 			property,
 			primarySource,
 			identifierPositions.get(path),
+			assignedRole,
 			consentPurposesByPropertyPath.get(path),
 			selectedPropertyPath === path,
 			search !== '',
@@ -167,28 +181,15 @@ const buildRow = (
 	property: Property,
 	primarySource: TransformedConnection | null,
 	identifierPosition: number | undefined,
+	assignedRole: ProfileRoleID | null,
 	consentPurposes: ConsentPurpose[] | undefined,
 	selected: boolean,
 	forceExpanded: boolean,
 	onSelectProperty: (path: string) => void,
 ): StandardGridRow => {
-	const { primary, metadata } = getProfileSchemaTypePresentation(property.type);
 	const typeCell: ReactNode = (
 		<>
-			<span
-				className='schema-property-grid__type'
-				title={metadata == null ? primary : `${primary} · ${metadata}`}
-			>
-				<span className='schema-property-grid__type-label'>{primary}</span>
-				{metadata != null && (
-					<span className='schema-property-grid__type-metadata'>
-						<span className='schema-property-grid__type-separator' aria-hidden='true'>
-							{' · '}
-						</span>
-						<span className='schema-property-grid__type-physical'>{metadata}</span>
-					</span>
-				)}
-			</span>
+			<SchemaPropertyType context='grid' type={property.type} />
 			<SchemaPropertyConsent purposes={consentPurposes} />
 		</>
 	);
@@ -208,6 +209,7 @@ const buildRow = (
 			<SchemaPropertyName property={property} />,
 			typeCell,
 			identifierPosition == null ? null : <SchemaPropertyIdentifierBadge position={identifierPosition} />,
+			assignedRole == null ? null : getProfileRole(assignedRole).label,
 			primarySourceCell,
 		],
 		forceExpanded,

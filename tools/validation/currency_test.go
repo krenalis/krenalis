@@ -14,6 +14,7 @@ func TestIsValidCurrencyCode(t *testing.T) {
 	}{
 		{name: "fast path", code: "USD", want: true},
 		{name: "slow path", code: "CHF", want: true},
+		{name: "code following unaligned occurrence", code: "SLL", want: true},
 		{name: "unknown code", code: "ZZZ", want: false},
 		{name: "empty string", code: "", want: false},
 		{name: "too short", code: "EU", want: false},

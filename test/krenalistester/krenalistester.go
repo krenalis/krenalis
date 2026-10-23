@@ -70,10 +70,11 @@ type Krenalis struct {
 	assetsGenerated      chan struct{}
 
 	// Options.
-	fileSystemRoot        string
-	natsAckWait           string
-	overrideProfileSchema *types.Type
-	populateProfileSchema bool
+	fileSystemRoot         string
+	natsAckWait            string
+	overrideProfileSchema  *types.Type
+	populateProfileSchema  bool
+	profileRoleAssignments *ProfileRoleAssignments
 }
 
 var assetsAlreadyGenerated bool
@@ -89,8 +90,8 @@ func (k *Krenalis) Addr() string {
 // NewKrenalisInstance initializes a new instance of Krenalis for testing.
 //
 // After initializing an instance, its options can be set (via
-// [PopulateProfileSchema], [SetFileSystemRoot], [SetNATSAckWait], and
-// [SetProfileSchema]) before calling [Start].
+// [PopulateProfileSchema], [SetFileSystemRoot], [SetNATSAckWait],
+// [SetProfileRoleAssignments], and [SetProfileSchema]) before calling [Start].
 func NewKrenalisInstance(t *testing.T) *Krenalis {
 
 	if !launchKrenalisExternally {
@@ -176,6 +177,12 @@ func (k *Krenalis) SetFileSystemRoot(root string) {
 // SetNATSAckWait sets the NATS ack wait duration.
 func (k *Krenalis) SetNATSAckWait(duration string) {
 	k.natsAckWait = duration
+}
+
+// SetProfileRoleAssignments sets the roles used to create the initial
+// workspace. Call it before [Start].
+func (k *Krenalis) SetProfileRoleAssignments(assignments ProfileRoleAssignments) {
+	k.profileRoleAssignments = &assignments
 }
 
 // SetProfileSchema sets the schema used to create the initial workspace.
@@ -483,18 +490,14 @@ func (k *Krenalis) Start() {
 
 	// Create the workspace and connect the warehouse.
 	var profileSchema types.Type
-	var uiPreferences UIPreferences
 	if k.overrideProfileSchema != nil {
 		profileSchema = *k.overrideProfileSchema
 	} else if k.populateProfileSchema {
 		profileSchema = testsProfileSchema
-		uiPreferences.Profile.FirstName = "first_name"
-		uiPreferences.Profile.LastName = "last_name"
-		uiPreferences.Profile.Extra = "email"
 	} else {
 		profileSchema = minimalProfileSchema
 	}
-	id, err := k.createWorkspace("Test workspace", profileSchema, uiPreferences)
+	id, err := k.createWorkspace("Test workspace", profileSchema)
 	if err != nil {
 		k.t.Fatalf("cannot create workspace: %s", err)
 	}
@@ -574,7 +577,7 @@ func init() {
 	}
 }
 
-func (k *Krenalis) createWorkspace(name string, profileSchema types.Type, uiPreferences UIPreferences) (string, error) {
+func (k *Krenalis) createWorkspace(name string, profileSchema types.Type) (string, error) {
 	req := map[string]any{
 		"name":          name,
 		"profileSchema": profileSchema,
@@ -582,7 +585,9 @@ func (k *Krenalis) createWorkspace(name string, profileSchema types.Type, uiPref
 			"platform": testsSettings.WarehousePlatform,
 			"settings": testsSettings.Warehouse,
 		},
-		"uiPreferences": uiPreferences,
+	}
+	if k.profileRoleAssignments != nil {
+		req["assignedRoles"] = *k.profileRoleAssignments
 	}
 	var response struct {
 		ID string `json:"id"`

@@ -100,32 +100,24 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 		setSelectedProfile('');
 	};
 
-	let profileImage: string | number | undefined;
-	let profileFirstName: string | number | undefined;
-	let profileLastName: string | number | undefined;
-	let profileExtra: string | number | undefined;
-	if (attributes && Object.keys(attributes).length > 0) {
-		function getValueFromPath(path: string): string | number | undefined {
-			if (path == '') {
-				return undefined;
-			}
-			let v: any = attributes;
-			for (const part of path.split('.')) {
-				if (typeof v === 'object' && v !== null && part in v) {
-					v = v[part];
-				}
-			}
-			if (typeof v != 'string' && typeof v != 'number') {
-				return undefined;
-			} else {
-				return v;
-			}
+	const getValueFromPath = (path: string): string | undefined => {
+		if (attributes == null || path === '') {
+			return undefined;
 		}
-		profileImage = getValueFromPath(workspace.uiPreferences.profile.image);
-		profileFirstName = getValueFromPath(workspace.uiPreferences.profile.firstName);
-		profileLastName = getValueFromPath(workspace.uiPreferences.profile.lastName);
-		profileExtra = getValueFromPath(workspace.uiPreferences.profile.extra);
-	}
+		let value: any = attributes;
+		for (const part of path.split('.')) {
+			if (typeof value !== 'object' || value === null || !(part in value)) {
+				return undefined;
+			}
+			value = value[part];
+		}
+		return typeof value === 'string' ? value : undefined;
+	};
+
+	const profilePhoto = getValueFromPath(workspace.assignedRoles.photo);
+	const profileFirstName = getValueFromPath(workspace.assignedRoles.firstName);
+	const profileLastName = getValueFromPath(workspace.assignedRoles.lastName);
+	const profileEmail = getValueFromPath(workspace.assignedRoles.email);
 
 	const spinner = (
 		<SlSpinner
@@ -151,24 +143,11 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 				<SlIconButton name='chevron-right' onClick={() => onNavigate('next')} />
 			</div>
 			<div className='profile-drawer__top-section'>
-				<SlAvatar className='profile-drawer__image' image={profileImage != null ? String(profileImage) : ''} />
+				<SlAvatar className='profile-drawer__photo' image={profilePhoto ?? ''} />
 				<div className='profile-drawer__profile-properties'>
-					<span className='profile-drawer__first-name'>
-						{profileFirstName != null ? profileFirstName : ''}
-					</span>{' '}
-					<span className='profile-drawer__last-name'>{profileLastName != null ? profileLastName : ''}</span>
-					<div className='profile-drawer__information'>{profileExtra != null ? profileExtra : ''}</div>
-					{profileImage == null &&
-						profileFirstName == null &&
-						profileLastName == null &&
-						profileExtra == null && (
-							<div className='profile-drawer__customize'>
-								You can customize the properties to display in the{' '}
-								<Link path='settings/general'>
-									<span className='profile-drawer__customize-link'>settings</span>
-								</Link>
-							</div>
-						)}
+					<span className='profile-drawer__first-name'>{profileFirstName ?? ''}</span>{' '}
+					<span className='profile-drawer__last-name'>{profileLastName ?? ''}</span>
+					<div className='profile-drawer__email'>{profileEmail ?? ''}</div>
 					<span className='profile-drawer__kpid'>
 						<SlTooltip
 							content='Krenalis Profile ID'
