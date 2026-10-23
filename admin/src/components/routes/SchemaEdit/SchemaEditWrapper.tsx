@@ -8,7 +8,7 @@ import type { SchemaGridOutletContext } from '../SchemaGrid/SchemaGrid';
 
 const SchemaEditWrapper = () => {
 	const { redirect } = useContext(AppContext);
-	const { setIsLoadingSchema } = useContext(SchemaContext);
+	const { isLoadingSchema, setIsLoadingSchema, isAltering } = useContext(SchemaContext);
 	const { selectedPropertyPath } = useOutletContext<SchemaGridOutletContext>();
 
 	const onClose = () => {
@@ -17,7 +17,7 @@ const SchemaEditWrapper = () => {
 	};
 
 	return (
-		<Fullscreen className='schema-edit-fullscreen' isLoading={false} onClose={onClose}>
+		<Fullscreen className='schema-edit-fullscreen' isLoading={isLoadingSchema || isAltering} onClose={onClose}>
 			<SchemaEdit initialPropertyKey={selectedPropertyPath} />
 		</Fullscreen>
 	);

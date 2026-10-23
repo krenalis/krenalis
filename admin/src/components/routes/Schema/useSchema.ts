@@ -15,9 +15,10 @@ const useSchema = () => {
 	const [isLoadingSchema, setIsLoadingSchema] = useState<boolean>(true);
 	const [schema, setSchema] = useState<ObjectType>();
 	const [isAltering, setIsAltering] = useState<boolean>(false);
+	const [hasLoadedAlterStatus, setHasLoadedAlterStatus] = useState<boolean>(false);
 	const [latestAlterError, setLatestAlterError] = useState<string>();
 
-	const { api, handleError, selectedWorkspace } = useContext(AppContext);
+	const { api, handleError, selectedWorkspace, setWorkspaces } = useContext(AppContext);
 	const [consentPurposesState, setConsentPurposesState] = useState<ConsentPurposesState>({
 		workspace: selectedWorkspace,
 		purposes: [],
@@ -30,19 +31,38 @@ const useSchema = () => {
 	}, [isAltering]);
 
 	useEffect(() => {
+		if (!hasLoadedAlterStatus || !isLoadingSchema || isAltering) {
+			return;
+		}
+		let active = true;
+		let timeoutID: number;
 		const fetchSchema = async () => {
-			let schema: ObjectType;
 			try {
-				schema = await api.workspaces.profileSchema();
+				const schema = await api.workspaces.profileSchema();
+				if (!active) {
+					return;
+				}
+				const workspaces = await api.workspaces.list();
+				if (!active) {
+					return;
+				}
+				setWorkspaces(workspaces);
+				setSchema(schema);
+				timeoutID = window.setTimeout(() => setIsLoadingSchema(false), 300);
 			} catch (err) {
+				if (!active) {
+					return;
+				}
 				handleError(err);
-				return;
+				timeoutID = window.setTimeout(fetchSchema, 3000);
 			}
-			setSchema(schema);
-			setTimeout(() => setIsLoadingSchema(false), 300);
 		};
 		fetchSchema();
-	}, [selectedWorkspace, isLoadingSchema]);
+		return () => {
+			active = false;
+			window.clearTimeout(timeoutID);
+		};
+	}, [selectedWorkspace, isLoadingSchema, isAltering, hasLoadedAlterStatus]);
 
 	useEffect(() => {
 		let active = true;
@@ -93,11 +113,21 @@ const useSchema = () => {
 	}, [selectedWorkspace]);
 
 	useEffect(() => {
-		const intervalID = setInterval(() => {
-			handleSchemaAltering();
-		}, 3000);
+		let isPolling = false;
+		const pollSchemaAltering = async () => {
+			if (isPolling) {
+				return;
+			}
+			isPolling = true;
+			try {
+				await handleSchemaAltering();
+			} finally {
+				isPolling = false;
+			}
+		};
+		const intervalID = setInterval(pollSchemaAltering, 3000);
 
-		handleSchemaAltering();
+		pollSchemaAltering();
 
 		return () => {
 			clearInterval(intervalID);
@@ -118,11 +148,12 @@ const useSchema = () => {
 			// the schema is being altered.
 			setIsAltering(true);
 		} else if (isAlteringRef.current && endTime != null) {
-			// schema altering is concluded.
+			// Refresh the schema and workspace before allowing further edits.
 			setIsLoadingSchema(true);
 			setIsAltering(false);
 		}
 		setLatestAlterError(res.error);
+		setHasLoadedAlterStatus(true);
 	};
 
 	return {
