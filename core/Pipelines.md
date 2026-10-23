@@ -24,12 +24,6 @@ A constant transformation reads no input property, so its output depends only on
 
 For Destination / Application / Event, the transformation is not supported if the event type has no schema, because there is no output schema. If the event type has a schema, the transformation is optional, unless the schema has properties required for creation: the output schema must include them, so the transformation is required. The core does not enforce this yet; see issue [#2600](https://github.com/krenalis/krenalis/issues/2600).
 
-### Decimal filter operands
-
-Decimal filter operands must be exactly representable in at least one `decimal(p,s)` with `1 <= p <= 76` and `0 <= s <= min(p,37)`, independently of the property's precision and scale. This allows integers of 76 digits; it is not the range of the single type `decimal(76,37)`. Exponents and insignificant trailing zeros are taken into account without rounding.
-
-JSON filter operands always retain their original text for comparisons with JSON strings. Only operands within these decimal limits also compare with JSON numbers. The limits apply to operands, not to the numbers stored in JSON properties. Decimal and JSON operands allow up to 78 characters, including a sign and decimal point; other operand length limits remain unchanged.
-
 ### Schemas
 
 | Pipeline                          | Input schema in Admin     | Output schema in Admin                             | Input schema properties in state                                                 | Output schema properties in state                   |
