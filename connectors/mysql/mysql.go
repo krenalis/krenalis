@@ -272,6 +272,10 @@ func config(s *innerSettings, dial connectors.DialFunc) *mysql.Config {
 	c.AllowOldPasswords = true
 	c.ParseTime = true
 	c.DialFunc = dial
+	// Enable backslash escaping in SQL string literals.
+	c.Params = map[string]string{
+		"sql_mode": "REPLACE(@@SESSION.sql_mode, 'NO_BACKSLASH_ESCAPES', '')",
+	}
 	return c
 }
 

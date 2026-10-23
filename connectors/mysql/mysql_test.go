@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -23,6 +24,259 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
+
+// TestStringValuesWithSQLModes verifies that string values are preserved
+// across different SQL modes when querying and merging data.
+func TestStringValuesWithSQLModes(t *testing.T) {
+
+	const database, username, password = "krenalis", "krenalis", "krenalis"
+	container, err := testcontainers.GenericContainer(t.Context(), testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image:        testimages.MySQL,
+			ExposedPorts: []string{"3306/tcp"},
+			Env: map[string]string{
+				"MYSQL_DATABASE":             database,
+				"MYSQL_USER":                 username,
+				"MYSQL_PASSWORD":             password,
+				"MYSQL_ALLOW_EMPTY_PASSWORD": "true",
+				"MYSQL_ROOT_HOST":            "%",
+			},
+			WaitingFor: wait.ForAll(
+				wait.ForLog("port: 3306  MySQL Community Server").WithStartupTimeout(3*time.Minute),
+				wait.ForListeningPort("3306/tcp"),
+			),
+		},
+		Started: true,
+	})
+	if err != nil {
+		t.Fatalf("expected MySQL container, got %v", err)
+	}
+	t.Cleanup(func() {
+		err := testcontainers.TerminateContainer(container)
+		if err != nil {
+			t.Errorf("expected container cleanup, got %v", err)
+		}
+	})
+	host, err := container.Host(t.Context())
+	if err != nil {
+		t.Fatalf("expected MySQL host, got %v", err)
+	}
+	port, err := container.MappedPort(t.Context(), "3306/tcp")
+	if err != nil {
+		t.Fatalf("expected MySQL port, got %v", err)
+	}
+	settings := innerSettings{Host: host, Port: int(port.Num()), Username: "root", Database: database}
+	admin, err := testconnector.NewDatabase[*MySQL]("mysql", settings)
+	if err != nil {
+		t.Fatalf("expected administrative connector, got %v", err)
+	}
+	t.Cleanup(func() {
+		err := admin.Close()
+		if err != nil {
+			t.Errorf("expected administrative connector cleanup, got %v", err)
+		}
+	})
+	err = admin.openDB(t.Context())
+	if err != nil {
+		t.Fatalf("expected administrative database, got %v", err)
+	}
+	_, err = admin.db.ExecContext(t.Context(), "CREATE TABLE string_values (id INT PRIMARY KEY, value TEXT)")
+	if err != nil {
+		t.Fatalf("expected fixture table, got %v", err)
+	}
+	settings.Username = username
+	settings.Password = password
+
+	for _, mode := range []string{
+		"STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION",
+		"STRICT_TRANS_TABLES,NO_BACKSLASH_ESCAPES,NO_ENGINE_SUBSTITUTION",
+		"STRICT_TRANS_TABLES,ANSI_QUOTES,NO_ENGINE_SUBSTITUTION",
+		"STRICT_TRANS_TABLES,ANSI,NO_BACKSLASH_ESCAPES,NO_ENGINE_SUBSTITUTION",
+	} {
+		t.Run(mode, func(t *testing.T) {
+
+			_, err := admin.db.ExecContext(t.Context(), "SET GLOBAL sql_mode = ?", mode)
+			if err != nil {
+				t.Fatalf("expected updated server SQL mode, got %v", err)
+			}
+			var globalMode string
+			err = admin.db.QueryRowContext(t.Context(), "SELECT @@GLOBAL.sql_mode").Scan(&globalMode)
+			if err != nil {
+				t.Fatalf("expected server SQL mode, got %v", err)
+			}
+			globalModes := strings.Split(globalMode, ",")
+			for requested := range strings.SplitSeq(mode, ",") {
+				if !slices.Contains(globalModes, requested) {
+					t.Fatalf("expected server SQL mode %q, got %q", requested, globalMode)
+				}
+			}
+			var expectedModes []string
+			for _, mode := range globalModes {
+				if mode != "NO_BACKSLASH_ESCAPES" {
+					expectedModes = append(expectedModes, mode)
+				}
+			}
+			slices.Sort(expectedModes)
+			connector, err := testconnector.NewDatabase[*MySQL]("mysql", settings)
+			if err != nil {
+				t.Fatalf("expected MySQL connector, got %v", err)
+			}
+			t.Cleanup(func() {
+				err := connector.Close()
+				if err != nil {
+					t.Errorf("expected connector cleanup, got %v", err)
+				}
+			})
+
+			t.Run("NewConnections", func(t *testing.T) {
+				var firstID uint64
+				for range 2 {
+					rows, _, err := connector.Query(t.Context(),
+						"SELECT CONNECTION_ID() AS connection_id, @@SESSION.sql_mode AS session_mode")
+					if err != nil {
+						t.Fatalf("expected session query, got %v", err)
+					}
+					// Keep both connections acquired until the subtest finishes.
+					defer rows.Close()
+					if !rows.Next() {
+						t.Fatalf("expected session result, got %v", rows.Err())
+					}
+					var id uint64
+					var sessionMode string
+					err = rows.Scan(&id, &sessionMode)
+					if err != nil {
+						t.Fatalf("expected session details, got %v", err)
+					}
+					if id == firstID {
+						t.Fatalf("expected distinct connections, got repeated ID %d", id)
+					}
+					firstID = id
+					actualModes := strings.Split(sessionMode, ",")
+					slices.Sort(actualModes)
+					if !slices.Equal(actualModes, expectedModes) {
+						t.Fatalf("expected session SQL modes %v, got %v", expectedModes, actualModes)
+					}
+				}
+			})
+
+			for _, test := range []struct {
+				name   string
+				value  any
+				typ    types.Type
+				stored any
+			}{
+				{"null", nil, types.String(), nil},
+				{"empty", "", types.String(), ""},
+				{"single quote", `x' OR TRUE # `, types.String(), `x' OR TRUE # `},
+				{"double quote", `x" OR TRUE # `, types.String(), `x" OR TRUE # `},
+				{"case and spaces", "AbC ", types.String(), "AbC "},
+				{"escapes", "\x00'\"\b\n\r\t\032\\雪🍎", types.String(), "\x00'\"\b\n\r\t\032\\雪🍎"},
+				{"json", json.Value(`{"value":"x\" OR TRUE #","quote":"'","slash":"\\"}`), types.JSON(), `{"value":"x\" OR TRUE #","quote":"'","slash":"\\"}`},
+				{"json string", `{"value":"x' OR TRUE #","slash":"\\"}`, types.JSON(), `{"value":"x' OR TRUE #","slash":"\\"}`},
+				{"json timestamp", "2026'10'23", types.JSON(), "2026'10'23"},
+				{"datetime", time.Date(2026, 10, 23, 16, 35, 12, 123456000, time.UTC), types.DateTime(), "2026-10-23 16:35:12.123456"},
+				{"date", time.Date(2026, 10, 23, 0, 0, 0, 0, time.UTC), types.Date(), "2026-10-23"},
+				{"time", time.Date(1970, 1, 1, 16, 35, 12, 123456000, time.UTC), types.Time(), "16:35:12.123456"},
+			} {
+				t.Run("SQLLiteral/"+test.name, func(t *testing.T) {
+
+					_, err := admin.db.ExecContext(t.Context(), "DELETE FROM string_values")
+					if err != nil {
+						t.Fatalf("expected cleared fixtures, got %v", err)
+					}
+					_, err = admin.db.ExecContext(t.Context(),
+						"INSERT INTO string_values VALUES (1, ?), (2, ?)", "safe", test.stored)
+					if err != nil {
+						t.Fatalf("expected inserted fixtures, got %v", err)
+					}
+					query := "SELECT @@SESSION.sql_mode AS session_mode, COUNT(*) AS matches_count, " +
+						"COALESCE(MIN(id), 0) AS matched_id FROM string_values WHERE CAST(value AS BINARY) <=> " +
+						connector.SQLLiteral(test.value, test.typ)
+					rows, _, err := connector.Query(t.Context(), query)
+					if err != nil {
+						t.Fatalf("expected literal query, got %v", err)
+					}
+					defer rows.Close()
+					if !rows.Next() {
+						t.Fatalf("expected query result, got %v", rows.Err())
+					}
+					var sessionMode string
+					var count, id int
+					err = rows.Scan(&sessionMode, &count, &id)
+					if err != nil {
+						t.Fatalf("expected literal query result, got %v", err)
+					}
+					if count != 1 || id != 2 {
+						t.Fatalf("expected one matching row with ID 2, got %d rows with minimum ID %d", count, id)
+					}
+					actualModes := strings.Split(sessionMode, ",")
+					slices.Sort(actualModes)
+					if !slices.Equal(actualModes, expectedModes) {
+						t.Fatalf("expected session SQL modes %v, got %v", expectedModes, actualModes)
+					}
+
+				})
+			}
+
+			table := connectors.Table{
+				Name: "string_values",
+				Columns: []connectors.Column{
+					{Name: "id", Type: types.Int(32)},
+					{Name: "value", Type: types.String()},
+				},
+				Keys: []string{"id"},
+			}
+			for _, test := range []struct {
+				name    string
+				payload string
+			}{
+				{"single quote", `x'),(2,0x696e6a6563746564) # `},
+				{"double quote", `x"),(2,0x696e6a6563746564) # `},
+				{"backslash", `path\to\file`},
+				{"backslash quote", `x\' OR TRUE # `},
+				{"null byte", "a\x00b"},
+				{"unicode", "雪🍎"},
+			} {
+				t.Run("Merge/"+test.name, func(t *testing.T) {
+
+					_, err := admin.db.ExecContext(t.Context(), "DELETE FROM string_values")
+					if err != nil {
+						t.Fatalf("expected cleared fixtures, got %v", err)
+					}
+
+					// Insert the row, then update the same primary key with a different value.
+					for _, payload := range []string{test.payload, "updated " + test.payload} {
+						err = connector.Merge(t.Context(), table, [][]any{{1, payload}})
+						if err != nil {
+							t.Fatalf("expected merged string value, got %v", err)
+						}
+						var count, id int
+						var value string
+						err = admin.db.QueryRowContext(t.Context(),
+							"SELECT COUNT(*), COALESCE(MIN(id), 0), COALESCE(MIN(value), '') FROM string_values").
+							Scan(&count, &id, &value)
+						if err != nil {
+							t.Fatalf("expected stored string value, got %v", err)
+						}
+						if count != 1 || id != 1 || value != payload {
+							t.Fatalf("expected one row with ID 1 and value %q, got %d rows, ID %d and value %q",
+								payload, count, id, value)
+						}
+					}
+
+				})
+			}
+
+			// Connection checks must also work with the server's SQL mode.
+			err = testConnection(t.Context(), &settings, connector.env.Dial)
+			if err != nil {
+				t.Fatalf("expected connection check, got %v", err)
+			}
+
+		})
+	}
+
+}
 
 // Test_Merge_Query tests the Merge and Query methods on supported types. It
 // creates a table, inserts a row, and retrieves the data, verifying that the
