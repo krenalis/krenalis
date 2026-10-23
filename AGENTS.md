@@ -459,3 +459,7 @@ Every exported method in `core` that is called by `cmd` must execute `<receiver>
 ## Pipeline specifications
 
 `core/Pipelines.md` documents, as part of the code, the rules that pipelines follow for each combination of connection role, connector type, and target. Whenever a change in `core` or in the Admin alters these rules, update the file in the same change.
+
+## Database upgrades
+
+Write, restore, or remove the database updater only as a step of the release procedure. When a change requires an existing Krenalis PostgreSQL database to be upgraded, including a change to the format of stored data that leaves the schema unchanged, record it in `core/internal/initdb/RELEASE-UPGRADE.md` in the same change, following `.agents/skills/release-upgrade/SKILL.md`.

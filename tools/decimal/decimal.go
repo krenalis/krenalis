@@ -22,7 +22,8 @@
 // Precision defines the total number of significant digits, while scale
 // specifies the number of digits after the decimal point. Precision must be
 // within [MinPrecision, MaxPrecision], and scale must be within
-// [MinScale, MaxScale].
+// [MinScale, MaxScale]. As an exception, [Parse] also accepts a precision
+// of 0, meaning no limit.
 //
 // The [Int], [Uint], [Parse], and [Binary] functions ensure the decimal fits
 // within the specified precision and scale, returning an error otherwise. The
@@ -57,7 +58,7 @@ import (
 
 const (
 	MaxPrecision = 999_999_999_999_999_999
-	MinPrecision = -MaxPrecision
+	MinPrecision = 1
 	MaxScale     = 999_999_999_999_999_999
 	MinScale     = -MaxScale
 )
