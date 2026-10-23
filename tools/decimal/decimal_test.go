@@ -730,7 +730,6 @@ func Test_Parse(t *testing.T) {
 		{"0.01e-x" + strconv.Itoa(math.MaxInt), 0, 0, "", "", ErrSyntax},
 
 		{"1", 1, 1, "", "", ErrRange},
-		{"1", -1, -1, "", "", ErrRange},
 		{"678", 3, 1, "", "", ErrRange},
 		{"-8492.033", 8, 5, "", "", ErrRange},
 		{"1.0000001", 7, 7, "", "", ErrRange},
@@ -747,6 +746,9 @@ func Test_Parse(t *testing.T) {
 		{"1e" + strconv.Itoa(math.MinInt), 0, 0, "", "", ErrRange},
 		{"100e" + strconv.Itoa(math.MaxInt), 0, 0, "", "", ErrRange},
 		{"0.01e" + strconv.Itoa(math.MinInt), 0, 0, "", "", ErrRange},
+
+		// Invalid precision or scale.
+		{"1", -1, -1, "", "", ErrRange},
 	}
 
 	for _, test := range tests {
