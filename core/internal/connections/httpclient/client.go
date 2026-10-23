@@ -251,7 +251,15 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 	netRetries := false // indicates if the last retry was triggered by a network error.
 
 	// Send the request.
-	for {
+	for attempt := 0; ; attempt++ {
+
+		if attempt > 0 && hasBody {
+			body, err := req.GetBody()
+			if err != nil {
+				return nil, err
+			}
+			req.Body = body
+		}
 
 		// Add Authorization header.
 		var accessToken string
@@ -341,14 +349,6 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 		default:
 			_ = res.Body.Close()
 			return nil, fmt.Errorf("core/internal/connections/httpclient: unexpected failure reason %d", reason)
-		}
-
-		if hasBody {
-			body, err := req.GetBody()
-			if err != nil {
-				return nil, err
-			}
-			req.Body = body
 		}
 
 	}

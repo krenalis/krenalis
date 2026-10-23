@@ -5,6 +5,7 @@
 package httpclient
 
 import (
+	"compress/gzip"
 	"context"
 	"io"
 	"net/http"
@@ -34,6 +35,121 @@ type roundTripFunc func(*http.Request) (*http.Response, error)
 // RoundTrip calls f with req.
 func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
+}
+
+// TestClientDoNetworkError checks body preservation across network retries
+// and error propagation when body recreation fails or the context is canceled.
+func TestClientDoNetworkError(t *testing.T) {
+
+	networkErr := errors.New("connection reset by peer")
+	bodyErr := errors.New("cannot recreate request body")
+	tests := []struct {
+		name        string
+		method      string
+		idempotent  bool
+		encoding    connectors.ContentEncoding
+		failGetBody bool
+		cancelAfter int
+		wantCalls   int
+		wantErr     error
+	}{
+		{name: "GET", method: http.MethodGet, wantCalls: 3},
+		{name: "idempotent POST", method: http.MethodPost, idempotent: true, wantCalls: 3},
+		{name: "compressed POST", method: http.MethodPost, idempotent: true, encoding: connectors.Gzip, wantCalls: 3},
+		{name: "non-idempotent POST", method: http.MethodPost, wantCalls: 1, wantErr: networkErr},
+		{name: "body recreation error", method: http.MethodPost, idempotent: true, failGetBody: true, wantCalls: 1, wantErr: bodyErr},
+		{name: "canceled after network errors", method: http.MethodPost, idempotent: true, cancelAfter: 2, wantCalls: 2, wantErr: context.Canceled},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
+				bb := connectors.GetBodyBuffer(test.encoding, 0)
+				defer bb.Close()
+				bb.WriteString("request")
+				req, err := bb.NewRequest(ctx, test.method, "https://example.com/")
+				if err != nil {
+					t.Fatalf("expected request creation to succeed, got %v", err)
+				}
+				if test.idempotent {
+					req.Header["Idempotency-Key"] = nil // mark the request as idempotent without sending the header
+				}
+				if test.failGetBody {
+					req.GetBody = func() (io.ReadCloser, error) {
+						return nil, bodyErr
+					}
+				}
+
+				calls := 0
+				c := &Client{
+					transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+
+						calls++
+						defer req.Body.Close()
+						var body io.Reader = req.Body
+						if test.encoding == connectors.Gzip {
+							reader, err := gzip.NewReader(body)
+							if err != nil {
+								t.Fatalf("expected valid gzip request body on attempt %d, got %v", calls, err)
+							}
+							defer reader.Close()
+							body = reader
+						}
+						data, err := io.ReadAll(body)
+						if err != nil {
+							t.Fatalf("expected readable request body on attempt %d, got %v", calls, err)
+						}
+						if string(data) != "request" {
+							t.Fatalf("expected request body %q on attempt %d, got %q", "request", calls, data)
+						}
+
+						if calls <= 2 {
+							if calls == test.cancelAfter {
+								cancel()
+							}
+							return nil, networkErr
+						}
+
+						return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader("response"))}, nil
+					}),
+				}
+				c.endpointGroups.mux = http.NewServeMux()
+				c.endpointGroups.mux.Handle("/", noOpHandle)
+				c.endpointGroups.byPattern = map[string]endpointGroup{
+					"/": {rateLimiter: newRateLimiter(100, 10, 0)},
+				}
+
+				res, err := c.Do(req)
+				if calls != test.wantCalls {
+					t.Errorf("expected %d attempts, got %d", test.wantCalls, calls)
+				}
+				if err != nil {
+					if test.wantErr == nil || !errors.Is(err, test.wantErr) {
+						t.Fatalf("expected error %v, got %v", test.wantErr, err)
+					}
+					if res != nil {
+						t.Errorf("expected no response on error, got %v", res)
+					}
+					return
+				}
+				if test.wantErr != nil {
+					t.Fatalf("expected error %v, got nil", test.wantErr)
+				}
+				if res == nil {
+					t.Fatal("expected a response, got nil")
+				}
+				defer res.Body.Close()
+				if res.StatusCode != 200 {
+					t.Errorf("expected status 200, got %d", res.StatusCode)
+				}
+
+			})
+		})
+	}
+
 }
 
 // TestClientDoResponseBody checks that discarded response bodies are closed and
