@@ -270,6 +270,9 @@ func Test_Transform(t *testing.T) {
 		{Name: "E", Type: types.Int(32)},
 		{Name: "F", Type: types.String(), CreateRequired: true},
 		{Name: "G", Type: types.String(), UpdateRequired: true},
+		{Name: "H", Type: types.Int(64).Unsigned()},
+		{Name: "I", Type: types.Float(64)},
+		{Name: "J", Type: types.Decimal(5, 2)},
 	})
 
 	tests := []struct {
@@ -489,6 +492,36 @@ func Test_Transform(t *testing.T) {
 			attributes:  map[string]any{"c.z": nil},
 			purpose:     Update,
 			err:         ValidationError{msg: `«c.z» is null but it is required for update while mapping to «G»`},
+		},
+		{
+			name:        `A string exceeding the int64 range assigned to an int property -> error`,
+			expressions: map[string]string{"E": "a"},
+			attributes:  map[string]any{"a": "9223372036854775808"},
+			err:         ValidationError{msg: `number «a» is too small or too large for the «int(32)» type while mapping to «E»`},
+		},
+		{
+			name:        `A JSON number exceeding the int64 range assigned to an int property -> error`,
+			expressions: map[string]string{"E": "d"},
+			attributes:  map[string]any{"d": json.Value(`9223372036854775808`)},
+			err:         ValidationError{msg: `number «d» is too small or too large for the «int(32)» type while mapping to «E»`},
+		},
+		{
+			name:        `A string exceeding the uint64 range assigned to an unsigned int property -> error`,
+			expressions: map[string]string{"H": "a"},
+			attributes:  map[string]any{"a": "18446744073709551616"},
+			err:         ValidationError{msg: `number «a» is too small or too large for the «unsigned int(64)» type while mapping to «H»`},
+		},
+		{
+			name:        `A string exceeding the float64 range assigned to a float property -> error`,
+			expressions: map[string]string{"I": "a"},
+			attributes:  map[string]any{"a": "1e400"},
+			err:         ValidationError{msg: `number «a» is too small or too large for the «float(64)» type while mapping to «I»`},
+		},
+		{
+			name:        `A JSON number exceeding the precision assigned to a decimal property -> error`,
+			expressions: map[string]string{"J": "d"},
+			attributes:  map[string]any{"d": json.Value(`1000`)},
+			err:         ValidationError{msg: `number «d» is too small or too large for the «decimal(5,2)» type while mapping to «J»`},
 		},
 	}
 

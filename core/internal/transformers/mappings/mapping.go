@@ -180,7 +180,7 @@ func (mapping *Mapping) Transform(attributes map[string]any, purpose Purpose) (m
 				var msg string
 				switch err {
 				case errRangeConversion:
-					msg = fmt.Sprintf("number «%s» is not a «%s» value while mapping to «%s»", code(e.expr.source), e.dt, code(e.path))
+					msg = fmt.Sprintf("number «%s» is too small or too large for the «%s» type while mapping to «%s»", code(e.expr.source), e.dt, code(e.path))
 				case errMinConversion:
 					var n any
 					switch e.dt.Kind() {
