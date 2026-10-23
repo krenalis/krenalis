@@ -538,6 +538,8 @@ func (warehouse *PostgreSQL) connectionPool(ctx context.Context, returnSchema bo
 	if err != nil {
 		return nil, "", err
 	}
+	// String literals use doubled quotes and require literal backslashes.
+	config.ConnConfig.RuntimeParams["standard_conforming_strings"] = "on"
 	config.ConnConfig.DialFunc = warehouse.dialWith(config.ConnConfig.DialFunc)
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
