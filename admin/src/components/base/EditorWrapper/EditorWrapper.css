@@ -1,8 +1,8 @@
 .editor-wrapper {
 	border-radius: 20px;
 	background-color: var(--bg-primary);
-	box-shadow: var(--sl-shadow-small);
-	border: 1px solid var(--sl-color-neutral-200);
+	box-shadow: var(--wa-shadow-s);
+	border: 1px solid var(--wa-color-neutral-80);
 }
 
 .editor-wrapper * {
@@ -40,14 +40,14 @@
 }
 
 .editor-wrapper .line-numbers {
-	color: var(--sl-color-neutral-800) !important;
+	color: var(--wa-color-neutral-20) !important;
 	opacity: 0.8;
 	user-select: none;
 	font-size: 16px !important;
 }
 
 .editor-wrapper .line-numbers.active-line-number {
-	color: var(--sl-color-primary-600) !important;
+	color: var(--wa-color-brand-40) !important;
 	opacity: 1;
 }
 

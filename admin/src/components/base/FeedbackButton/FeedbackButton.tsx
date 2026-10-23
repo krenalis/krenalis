@@ -1,9 +1,10 @@
-import React, { forwardRef, useImperativeHandle, useRef, useState, ReactNode } from 'react';
+import React, { forwardRef, useId, useImperativeHandle, useRef, useState, ReactNode } from 'react';
 import './FeedbackButton.css';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlButtonType from '@shoelace-style/shoelace/dist/components/button/button.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import { buttonVariant } from '../../../utils/buttonVariant';
+import WaButtonElement from '@awesome.me/webawesome/dist/components/button/button.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { Size, Variant } from '../../routes/App/App.types';
 
 interface FeedbackButtonProps {
@@ -11,7 +12,6 @@ interface FeedbackButtonProps {
 	loading?: boolean;
 	className?: string;
 	size?: Size;
-	hoist?: boolean;
 	animationDuration?: number;
 	variant?: Variant;
 	onClick?: () => void;
@@ -41,6 +41,9 @@ interface FeedbackButtonRef {
 	hideTooltip: () => void;
 }
 
+// buttonSizes maps the Shoelace sizes of the size prop onto Web Awesome's.
+const buttonSizes = { small: 's', medium: 'm', large: 'l' } as const;
+
 const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 	(
 		{
@@ -51,7 +54,6 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 			variant,
 			onClick,
 			size = 'medium',
-			hoist = false,
 			disabled,
 			name,
 			placement,
@@ -63,7 +65,8 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 		const [error, setError] = useState<ReactNode>(null);
 		const [info, setInfo] = useState<ReactNode>(null);
 
-		const buttonRef = useRef<SlButtonType>(null);
+		const buttonRef = useRef<WaButtonElement>(null);
+		const buttonID = useId();
 		const loadingDurationRef = useRef<number>(0);
 
 		const duration = animationDuration || 1200;
@@ -83,7 +86,7 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 			let iconHTML: string;
 			if (feedback === 'confirmation') {
 				className = 'feedback-button--confirm';
-				iconHTML = `<sl-icon name='check' />`;
+				iconHTML = `<wa-icon name='check' label='Confirmed' />`;
 				button.classList.add(className);
 				button.style.width = `${initialWidth}px`;
 				button.innerHTML = iconHTML;
@@ -153,12 +156,13 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 		);
 
 		const button = (
-			<SlButton
+			<WaButton
+				id={buttonID}
 				className={`feedback-button${className != null ? ` ${className}` : ''}`}
 				ref={buttonRef}
-				size={size}
+				size={buttonSizes[size]}
 				onClick={onClick}
-				variant={variant ? variant : 'default'}
+				{...buttonVariant(variant)}
 				style={{ '--scale-animation-duration': `${halfAnimation / 1.5}ms` } as React.CSSProperties}
 				disabled={disabled || loading || isLoading}
 				loading={loading || isLoading}
@@ -166,48 +170,49 @@ const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(
 				{...delegated}
 			>
 				{children}
-			</SlButton>
+			</WaButton>
 		);
 
 		return (
-			<SlTooltip
-				className={`feedback-button__tooltip${className != null ? ' ' + className + '-tooltip' : ''}`}
-				open={error !== null || info !== null ? true : false}
-				trigger='manual'
-				style={{ '--max-width': '400px' } as React.CSSProperties}
-				placement={placement == null ? 'bottom' : placement}
-				hoist={hoist}
-			>
+			<>
 				{(error !== null || info !== null) && (
-					<div
-						slot='content'
-						className={`feedback-button__tooltip-content ${error !== null ? 'feedback-button__tooltip-content--error' : 'feedback-button__tooltip-content--info'}`}
+					<WaTooltip
+						className={`feedback-button__tooltip${className != null ? ' ' + className + '-tooltip' : ''}`}
+						for={buttonID}
+						open={true}
+						trigger='manual'
+						style={{ '--max-width': '400px' } as React.CSSProperties}
+						placement={placement == null ? 'bottom' : placement}
 					>
-						<SlIcon
-							className='feedback-button__tooltip-icon-close'
-							name='x-lg'
-							onClick={() => {
-								if (error !== null) {
-									setError(null);
-								} else {
-									setInfo(null);
-								}
-							}}
-						/>
-						{error !== null ? (
-							<SlIcon className='feedback-button__tooltip-icon-error' name='exclamation-circle' />
-						) : (
-							<SlIcon className='feedback-button__tooltip-icon-info' name='info-circle' />
-						)}
-						{error !== null ? (
-							<div className='feedback-button__tooltip-error'>{error}</div>
-						) : (
-							<div className='feedback-button__tooltip-info'>{info}</div>
-						)}
-					</div>
+						<div
+							className={`feedback-button__tooltip-content ${error !== null ? 'feedback-button__tooltip-content--error' : 'feedback-button__tooltip-content--info'}`}
+						>
+							<WaIcon
+								className='feedback-button__tooltip-icon-close'
+								name='x-lg'
+								onClick={() => {
+									if (error !== null) {
+										setError(null);
+									} else {
+										setInfo(null);
+									}
+								}}
+							/>
+							{error !== null ? (
+								<WaIcon className='feedback-button__tooltip-icon-error' name='exclamation-circle' />
+							) : (
+								<WaIcon className='feedback-button__tooltip-icon-info' name='info-circle' />
+							)}
+							{error !== null ? (
+								<div className='feedback-button__tooltip-error'>{error}</div>
+							) : (
+								<div className='feedback-button__tooltip-info'>{info}</div>
+							)}
+						</div>
+					</WaTooltip>
 				)}
 				{button}
-			</SlTooltip>
+			</>
 		);
 	},
 );

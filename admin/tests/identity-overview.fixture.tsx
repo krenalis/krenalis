@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import '@shoelace-style/shoelace/dist/themes/light.css';
+import '@awesome.me/webawesome/dist/styles/layers.css';
+import '@awesome.me/webawesome/dist/styles/themes/default.css';
 import API from '../src/lib/api/api';
 import AppContext from '../src/context/AppContext';
 import IdentityOverview from '../src/components/routes/IdentityOverview/IdentityOverview';

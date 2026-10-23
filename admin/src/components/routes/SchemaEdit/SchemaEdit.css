@@ -30,14 +30,14 @@
 }
 
 .schema-edit__change-count > span {
-	background-color: var(--sl-color-primary-600);
+	background-color: var(--wa-color-brand-40);
 	border-radius: 50%;
 	height: 8px;
 	width: 8px;
 }
 
 .schema-edit__change-count--empty > span {
-	background-color: var(--sl-color-neutral-300);
+	background-color: var(--wa-color-neutral-70);
 }
 
 .schema-edit__header-buttons {
@@ -45,11 +45,11 @@
 	gap: 12px;
 }
 
-.schema-edit__header-cancel-button::part(base) {
+.schema-edit__header-cancel-button::part(button) {
 	min-width: 110px;
 }
 
-.schema-edit__header-apply-button::part(base) {
+.schema-edit__header-apply-button::part(button) {
 	min-width: 200px;
 }
 
@@ -74,16 +74,16 @@
 	align-items: center;
 }
 
-.schema-edit__add-property::part(base) {
+.schema-edit__add-property::part(button) {
 	padding-inline-end: 6px;
 }
 
-.schema-edit__add-property::part(base):hover {
-	background-color: color-mix(in srgb, var(--sl-color-primary-50) 75%, var(--bg-primary));
+.schema-edit__add-property::part(button):hover {
+	background-color: color-mix(in srgb, var(--wa-color-brand-95) 75%, var(--bg-primary));
 }
 
-.schema-edit__add-property::part(base):active {
-	background-color: var(--sl-color-primary-50);
+.schema-edit__add-property::part(button):active {
+	background-color: var(--wa-color-brand-95);
 }
 
 .schema-edit__add-property::part(label) {
@@ -105,24 +105,20 @@
 	position: relative;
 }
 
-.schema-edit__toolbar-icon-button sl-icon {
+.schema-edit__toolbar-icon-button wa-icon {
 	font-size: 16px;
 }
 
-.schema-edit__expansion-button sl-icon {
+.schema-edit__expansion-button wa-icon {
 	font-size: 20px;
 }
 
-.schema-edit__filter-button sl-icon {
+.schema-edit__filter-button wa-icon {
 	font-size: 18px;
 }
 
-.schema-edit__toolbar-tooltip::part(base__arrow) {
-	box-sizing: border-box;
-}
-
 .schema-edit__filter-dot {
-	background-color: var(--sl-color-success-600);
+	background-color: var(--wa-color-success-40);
 	border: 2px solid var(--bg-primary);
 	border-radius: 50%;
 	height: 8px;
@@ -138,18 +134,18 @@
 	opacity: 1;
 }
 
-.schema-edit__filter-menu {
+.schema-edit__filter::part(menu) {
 	background-color: var(--bg-primary);
 	border: 1px solid var(--border-primary);
 	border-radius: var(--radius);
-	box-shadow: var(--sl-shadow-medium);
+	box-shadow: var(--wa-shadow-m), var(--wa-shadow-l);
 	min-width: 270px;
 	overflow: visible;
 	padding: 20px;
 	position: relative;
 }
 
-.schema-edit__filter-menu::before {
+.schema-edit__filter::part(menu)::before {
 	background-color: var(--bg-primary);
 	border-left: 1px solid var(--border-primary);
 	border-top: 1px solid var(--border-primary);
@@ -162,7 +158,7 @@
 	width: 12px;
 }
 
-.schema-edit__filter-menu sl-switch::part(base) {
+.schema-edit__filter wa-switch::part(switch) {
 	align-items: center;
 	color: var(--text-primary);
 }
@@ -187,7 +183,7 @@
 	width: 20px;
 }
 
-.schema-edit__schema-panel .draggable-wrapper__handle sl-icon {
+.schema-edit__schema-panel .draggable-wrapper__handle wa-icon {
 	left: 15px;
 	transform: translate(-50%, -50%);
 }
@@ -212,10 +208,10 @@
 	width: 100%;
 }
 
-.schema-edit__property-status::part(base) {
-	background-color: var(--sl-color-primary-100);
+.schema-edit__property-status {
+	background-color: var(--wa-color-brand-90);
 	border: 0;
-	color: var(--sl-color-primary-800);
+	color: var(--wa-color-brand-20);
 	font-size: 11px;
 }
 
@@ -234,7 +230,7 @@
 
 .schema-edit .grid__nested-rows .grid__row--children::before,
 .schema-edit .grid__nested-rows--children > .grid__row--parent::before {
-	transform: translateX(-15px) translateY(-50%);
+	transform: translateX(-22px) translateY(-50%);
 }
 
 .schema-edit .grid__nested-rows .grid__row--children::before {
@@ -245,11 +241,11 @@
 	left: calc(var(--parent-indentation) + 15px);
 }
 
-.schema-edit sl-dialog::part(base) {
-	padding-left: var(--sidebar-width);
+.schema-edit wa-dialog::part(dialog) {
+	left: var(--sidebar-width);
 }
 
-.schema-edit__queries::part(panel) {
+.schema-edit__queries::part(dialog) {
 	max-height: calc(100vh - 80px);
 	width: min(720px, calc(100vw - 80px));
 }
@@ -279,7 +275,7 @@
 	justify-content: end;
 }
 
-.schema-edit__queries-buttons sl-button::part(base) {
+.schema-edit__queries-buttons wa-button::part(button) {
 	min-width: 110px;
 }
 

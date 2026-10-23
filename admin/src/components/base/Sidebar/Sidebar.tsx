@@ -1,8 +1,8 @@
 import React, { useContext, ReactNode, useState, useEffect } from 'react';
 import './Sidebar.css';
 import AppContext from '../../../context/AppContext';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import { useLocation } from 'react-router-dom';
 import getCurrentRoute from './getCurrentRoute';
 import Workspace from '../../../lib/api/types/workspace';
@@ -130,7 +130,7 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 								: ''
 					}`}
 				>
-					<SlIcon className='sidebar__item-icon' name={item.icon} />
+					<WaIcon className='sidebar__item-icon' name={item.icon} />
 					<div className='sidebar__item-text'>{item.label}</div>
 				</div>
 			</Link>,
@@ -141,7 +141,7 @@ const Sidebar = ({ workspaces, selectedWorkspace, setSelectedWorkspace }: Sideba
 				items.push(
 					<Link path={subItem.link} key={subItem.name}>
 						<div className={`sidebar__sub-item${isSelected ? ' sidebar__sub-item--selected' : ''}`}>
-							{subItem.icon && <SlIcon name={subItem.icon} />}
+							{subItem.icon && <WaIcon name={subItem.icon} />}
 							<div className='sidebar__sub-item-text'>{subItem.label}</div>
 						</div>
 					</Link>,
@@ -254,7 +254,7 @@ const WorkspaceSelector = ({
 				className={`workspace-selector__dialog-option${s.id === selectedWorkspace ? ' workspace-selector__dialog-option--selected' : ''}`}
 				onClick={() => onWorkspaceChange(s.id)}
 			>
-				<SlIcon name='check-lg' />
+				<WaIcon name='check-lg' />
 				<div className='workspace-selector__dialog-option-name'>{s.name}</div>
 			</div>,
 		);
@@ -271,25 +271,25 @@ const WorkspaceSelector = ({
 					{workspaces.find((w) => w.id === selectedWorkspace).name}
 				</div>
 			</div>
-			<SlIcon name='chevron-down' className='workspace-selector__arrow' />
+			<WaIcon name='chevron-down' className='workspace-selector__arrow' />
 			<div className='workspace-selector__dialog'>
-				<SlInput
+				<WaInput
 					className='workspace-selector__dialog-search'
 					value={searchTerm}
-					size='small'
+					size='s'
 					placeholder='Search workspace'
-					onSlInput={onSearchTermChange}
+					onInput={onSearchTermChange}
 				>
-					<SlIcon name='search' slot='prefix' />
-				</SlInput>
+					<WaIcon name='search' slot='start' />
+				</WaInput>
 				{options}
 				<div className='workspace-selector__dialog-view-all' onClick={onViewAllWorkspaces}>
 					View all workspaces
-					<SlIcon name='arrow-right-short' />
+					<WaIcon name='arrow-right-short' />
 				</div>
 				<div className='workspace-selector__dialog-create' onClick={onCreateWorkspace}>
 					Create a new workspace
-					<SlIcon name='plus-circle' />
+					<WaIcon name='plus-circle' />
 				</div>
 			</div>
 		</div>

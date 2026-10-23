@@ -1,11 +1,11 @@
 import React, { useContext, useState, useEffect, useRef, useMemo, useLayoutEffect, useCallback } from 'react';
 import './Member.css';
 import appContext from '../../../context/AppContext';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import * as icons from '../../../constants/icons';
 import { MemberAvatar, MemberToSet } from '../../../lib/api/types/responses';
 import { toBase64 } from '../../../utils/toBase64';
@@ -218,7 +218,7 @@ const Member = () => {
 		<div className='member'>
 			<div className={`member__content${isUpdate ? ' member__content--update' : ''}`}>
 				{isLoading ? (
-					<SlSpinner
+					<WaSpinner
 						style={
 							{
 								fontSize: '3rem',
@@ -231,52 +231,60 @@ const Member = () => {
 						<div className='member__title'>{isUpdate ? 'Your profile' : 'Add a new team member'}</div>
 						<form onSubmit={onSave}>
 							<div className='member__name'>
-								<SlInput
+								<WaInput
 									ref={nameInputRef}
 									label='Name'
 									name='name'
 									value={name}
-									onSlInput={onUpdateName}
+									onInput={onUpdateName}
 									required
 								/>
 							</div>
 							<div className='member__email'>
-								<SlInput
+								<WaInput
 									label='Email'
 									type='email'
 									name='email'
 									value={email}
-									onSlInput={onUpdateEmail}
+									onInput={onUpdateEmail}
 									required
 								/>
 							</div>
 							<div className='member__password'>
-								<SlInput
+								<WaInput
 									ref={passwordInputRef}
 									type='password'
 									label='Password'
 									name='password'
 									disabled={isUpdate && password === null}
 									required={!isUpdate || password !== null}
-									onSlInput={onUpdatePassword}
+									onInput={onUpdatePassword}
 									value={isUpdate && password === null ? '••••••••••••••••' : password}
-									password-toggle
-								/>
+									passwordToggle
+								>
+									<WaIcon name='eye' slot='show-password-icon' />
+									<WaIcon name='eye-slash' slot='hide-password-icon' />
+								</WaInput>
 								{isUpdate && password === null && (
-									<SlButton onClick={onPasswordEnable}>Change</SlButton>
+									<WaButton appearance='outlined' onClick={onPasswordEnable}>
+										Change
+									</WaButton>
 								)}
 							</div>
 							{!isUpdate && (
 								<div className='member__confirm-password'>
-									<SlInput
+									<WaInput
 										type='password'
 										label='Confirm password'
 										name='confirm-password'
 										required={true}
-										onSlInput={onUpdatePassword2}
+										onInput={onUpdatePassword2}
 										value={password2}
-										password-toggle
-									/>
+										passwordToggle
+									>
+										<WaIcon name='eye' slot='show-password-icon' />
+										<WaIcon name='eye-slash' slot='hide-password-icon' />
+									</WaInput>
 								</div>
 							)}
 							<div className='member__avatar'>
@@ -295,7 +303,9 @@ const Member = () => {
 											</div>
 										)}
 									</div>
-									<SlAvatar image={avatar ? `data:${avatar.mimeType};base64, ${avatar.image}` : ''} />
+									<WaAvatar image={avatar ? `data:${avatar.mimeType};base64, ${avatar.image}` : ''}>
+										<WaIcon slot='icon' name='person-fill' />
+									</WaAvatar>
 									<input
 										ref={fileInputRef}
 										type='file'
@@ -306,22 +316,24 @@ const Member = () => {
 							</div>
 							{error && (
 								<div className='member__error'>
-									<SlIcon slot='icon' name='exclamation-octagon' />
+									<WaIcon slot='icon' name='exclamation-octagon' />
 									{error}
 								</div>
 							)}
 							<div className='member__buttons'>
 								<Link path='organization/members'>
-									<SlButton className='member__cancel-button'>Cancel</SlButton>
+									<WaButton appearance='outlined' className='member__cancel-button'>
+										Cancel
+									</WaButton>
 								</Link>
-								<SlButton
+								<WaButton
 									className='member__save-button'
-									variant='primary'
+									variant='brand'
 									loading={isSaving}
 									type='submit'
 								>
 									{isUpdate ? 'Save' : 'Add'}
-								</SlButton>
+								</WaButton>
 							</div>
 						</form>
 					</>

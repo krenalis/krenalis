@@ -1,6 +1,7 @@
 import React, { ReactNode, useState } from 'react';
 import './PropertyPanelLayout.css';
-import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 
 interface PropertyPanelLayoutProps {
 	actions?: ReactNode;
@@ -27,7 +28,11 @@ const PropertyPanelLayout = ({
 	const actionContainer = (actions != null || onClose != null) && (
 		<div className='property-panel__header-actions'>
 			{actions}
-			{onClose != null && <SlIconButton name='x-lg' label={closeLabel} onClick={onClose} />}
+			{onClose != null && (
+				<WaButton className='icon-button' appearance='plain' onClick={onClose}>
+					<WaIcon name='x-lg' label={closeLabel} />
+				</WaButton>
+			)}
 		</div>
 	);
 

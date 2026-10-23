@@ -10,7 +10,7 @@
 	padding-left: 5px;
 }
 
-.access-keys__back-button sl-icon {
+.access-keys__back-button wa-icon {
 	position: relative;
 	top: 2px;
 }
@@ -35,7 +35,7 @@
 }
 
 .access-keys__workspace {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 	cursor: pointer;
 	text-decoration: underline;
 }
@@ -50,7 +50,7 @@
 }
 
 .access-keys__grid-any-workspace {
-	color: var(--sl-color-neutral-400);
+	color: var(--wa-color-neutral-60);
 }
 
 .access-keys__grid-learn-more {
@@ -69,7 +69,7 @@
 	display: none;
 }
 
-.access-keys__dialog--copy::part(panel) {
+.access-keys__dialog--copy::part(dialog) {
 	width: 560px;
 	max-width: calc(100vw - 40px);
 }
@@ -79,7 +79,7 @@
 }
 
 .access-keys__dialog-error {
-	color: var(--sl-color-danger-600);
+	color: var(--wa-color-danger-40);
 	display: flex;
 	align-items: center;
 	gap: 7px;
@@ -87,8 +87,8 @@
 	font-size: 15px;
 }
 
-.access-keys__dialog-error sl-icon {
-	color: var(--sl-color-danger-600);
+.access-keys__dialog-error wa-icon {
+	color: var(--wa-color-danger-40);
 	font-size: 14px;
 }
 
@@ -101,7 +101,7 @@
 	margin-bottom: 10px;
 	margin-top: 5px;
 	font-size: 14px;
-	color: var(--sl-color-neutral-800);
+	color: var(--wa-color-neutral-20);
 }
 
 .access-keys__dialog-done {
@@ -117,14 +117,14 @@
 	gap: 5px;
 }
 
-.access-keys__key-copy > sl-input {
+.access-keys__key-copy > wa-input {
 	width: 100%;
 }
 
-.access-keys__key-copy > sl-input::part(input) {
+.access-keys__key-copy > wa-input::part(input) {
 	font-family: var(--monospace-fonts);
 }
 
-.access-keys__key-copy > sl-input::part(base) {
+.access-keys__key-copy > wa-input::part(input-wrapper) {
 	font-size: 14px;
 }

@@ -10,7 +10,7 @@
 	margin-bottom: 15px;
 }
 
-.general-settings sl-input::part(form-control-label) {
+.general-settings wa-input::part(form-control-label) {
 	font-weight: 400;
 }
 
@@ -45,7 +45,7 @@
 	margin-left: auto;
 }
 
-.general-settings sl-divider {
+.general-settings wa-divider {
 	margin-top: 40px;
 	margin-bottom: 40px;
 }
@@ -63,7 +63,7 @@
 
 .general-settings__grid-alert-workspace-name {
 	font-family: var(--monospace-fonts);
-	background-color: var(--sl-color-neutral-100);
+	background-color: var(--wa-color-neutral-90);
 	display: inline-block;
 	padding: 0px 5px;
 	border-radius: 3px;

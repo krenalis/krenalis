@@ -73,7 +73,7 @@ test('loads removed connection history after refreshing the current state to zer
 	await expect(page.locator('.identity-overview__kpi-value').first()).toHaveText('5');
 	await page.getByRole('button', { name: 'Refresh', exact: true }).click();
 	await expect(page.locator('.identity-overview__kpi-value').first()).toHaveText('0');
-	await page.locator('sl-select[aria-label="Connection"]').click();
+	await page.locator('wa-select[aria-label="Connection"]').click();
 	await page.getByRole('option', { name: 'Removed connections' }).click();
 	await expect
 		.poll(async () =>

@@ -1,18 +1,16 @@
 .property-form {
 	--property-form-option-hover-background-color: #f5f5fb;
 	--property-form-option-selected-background-color: #e4e4f2;
-	--sl-font-size-medium: var(--sl-font-size-small);
-	--sl-input-font-size-medium: var(--sl-font-size-small);
+	--input-font-size: var(--wa-font-size-s);
 }
 
-.property-form sl-option {
-	--sl-color-neutral-0: var(--text-primary);
-	--sl-color-neutral-100: var(--property-form-option-hover-background-color);
-	--sl-color-neutral-1000: var(--text-primary);
-	--sl-color-primary-600: var(--property-form-option-selected-background-color);
+.property-form wa-option:not(:state(current), :state(disabled), [aria-selected='true']):is(:hover, :state(hover)) {
+	background-color: var(--property-form-option-hover-background-color);
+	color: var(--text-primary);
 }
 
-.property-form sl-option[aria-selected='true']::part(base) {
+.property-form wa-option:state(current),
+.property-form wa-option[aria-selected='true'] {
 	background-color: var(--property-form-option-selected-background-color);
 	color: var(--text-primary);
 }
@@ -30,13 +28,13 @@
 }
 
 .property-form__change-name {
-	--sl-input-height-small: 20px;
+	--input-height-small: 20px;
 
 	margin-right: 5px;
 	transform: translate(3px, -1px);
 }
 
-.property-form__change-name::part(base) {
+.property-form__change-name::part(button) {
 	font-weight: 400;
 	padding-inline: 4px;
 }
@@ -67,7 +65,7 @@
 }
 
 .property-form__modified-dot {
-	background-color: var(--sl-color-primary-600);
+	background-color: var(--wa-color-brand-40);
 	border-radius: 50%;
 	flex: 0 0 auto;
 	height: 6px;
@@ -77,7 +75,7 @@
 }
 
 .property-form__optional-label {
-	color: var(--sl-color-neutral-400);
+	color: var(--wa-color-neutral-60);
 	margin-inline-start: 4px;
 }
 
@@ -108,16 +106,16 @@
 .property-form__read-only-value {
 	align-items: center;
 	background-color: transparent;
-	border: solid var(--sl-input-border-width) var(--sl-input-border-color);
-	border-radius: var(--sl-input-border-radius-medium);
+	border: solid var(--wa-border-width-s) var(--wa-form-control-border-color);
+	border-radius: var(--wa-border-radius-m);
 	box-sizing: border-box;
-	color: var(--sl-input-color);
+	color: var(--text-light);
 	display: flex;
-	font-family: var(--sl-input-font-family);
-	font-size: var(--sl-input-font-size-medium);
+	font-family: var(--input-font-family);
+	font-size: var(--input-font-size);
 	font-weight: 400;
-	height: var(--sl-input-height-medium);
-	padding-inline: var(--sl-input-spacing-medium);
+	height: var(--input-height-medium);
+	padding-inline: var(--wa-space-m);
 	width: 100%;
 }
 
@@ -134,7 +132,7 @@
 	transform: translateY(-1px);
 }
 
-.property-form__float-special-values sl-checkbox::part(control) {
+.property-form__float-special-values wa-checkbox::part(control) {
 	transform: translateY(4px);
 }
 
@@ -148,61 +146,79 @@
 	align-self: end;
 }
 
-.property-form__integer-sign::part(button-group),
 .property-form__integer-sign::part(form-control-input) {
-	width: 100%;
-}
-
-.property-form__integer-sign::part(button-group__base) {
-	background-color: var(--sl-color-neutral-0);
+	background-color: var(--wa-color-surface-default);
 	border: 1px solid #aecbfa;
-	border-radius: var(--sl-input-border-radius-small);
+	border-radius: var(--wa-border-radius-m);
 	box-sizing: border-box;
+	flex-wrap: nowrap;
 	width: 100%;
 }
 
 .property-form__float-special-values-label {
-	font-weight: var(--sl-font-weight-light);
+	font-weight: var(--wa-font-weight-light);
 }
 
-.property-form__integer-sign sl-radio-button {
-	flex: 1;
+/* The radio is the button itself, drawn as Shoelace drew its small radio
+   buttons; this also undoes the radio port in App.css. An equal basis keeps
+   the halves equal, since the separator border is on the second one. */
+.property-form__integer-sign wa-radio {
+	flex: 1 1 50%;
+	justify-content: center;
 	margin-inline-start: 0 !important;
-}
-
-.property-form__integer-sign sl-radio-button::part(button) {
 	border: 0 !important;
-	min-height: calc(var(--sl-input-height-small) - 2px) !important;
-	width: 100%;
+	min-height: calc(var(--input-height-small) - 2px) !important;
+	padding: 0;
+	cursor: pointer;
+	user-select: none;
+	-webkit-user-select: none;
+	transition:
+		50ms background-color,
+		50ms color,
+		50ms border,
+		50ms box-shadow;
 }
 
-.property-form__integer-sign sl-radio-button::part(label) {
+/* The focus ring is on the host, where the global outline-color in App.css
+   would otherwise recolour it. */
+.property-form__integer-sign wa-radio:focus-visible {
+	outline: var(--wa-focus-ring-style) var(--wa-focus-ring-width) var(--wa-color-brand-40);
+	outline-offset: var(--wa-focus-ring-offset);
+}
+
+.property-form__integer-sign wa-radio::part(label) {
+	margin-inline-start: 0;
+	padding: 0 var(--wa-space-s);
+	font-family: var(--input-font-family);
+	font-size: var(--wa-font-size-xs);
 	font-weight: 400;
+	line-height: calc(var(--input-height-small) - 2px);
+	white-space: nowrap;
 	transform: translateY(-1px);
 }
 
-.property-form__integer-sign sl-radio-button + sl-radio-button::part(button) {
+.property-form__integer-sign wa-radio + wa-radio {
 	border-inline-start: 1px solid #aecbfa !important;
 }
 
-.property-form__integer-sign sl-radio-button[checked]::part(button) {
+.property-form__integer-sign wa-radio:state(checked) {
 	background-color: #e8f0fe !important;
-	color: color-mix(in srgb, var(--sl-color-neutral-900) 88%, var(--integer-sign-text-tint)) !important;
+	color: color-mix(in srgb, var(--wa-color-neutral-10) 88%, var(--integer-sign-text-tint)) !important;
 }
 
-.property-form__integer-sign sl-radio-button[checked]:hover::part(button) {
+.property-form__integer-sign wa-radio:state(checked):hover {
 	background-color: #dbe8fd !important;
-	color: color-mix(in srgb, var(--sl-color-neutral-900) 88%, var(--integer-sign-text-tint)) !important;
+	color: color-mix(in srgb, var(--wa-color-neutral-10) 88%, var(--integer-sign-text-tint)) !important;
 }
 
-.property-form__integer-sign sl-radio-button:not([checked])::part(button) {
+.property-form__integer-sign wa-radio:not(:state(checked)) {
 	background-color: transparent !important;
-	color: color-mix(in srgb, var(--sl-color-neutral-600) 88%, var(--integer-sign-text-tint)) !important;
+	color: color-mix(in srgb, var(--wa-color-neutral-40) 88%, var(--integer-sign-text-tint)) !important;
 }
 
-.property-form__integer-sign sl-radio-button:not([checked]):hover::part(button) {
+.property-form__integer-sign wa-radio:not(:state(checked)):hover {
 	background-color: #f5f9ff !important;
-	color: color-mix(in srgb, var(--sl-color-neutral-800) 88%, var(--integer-sign-text-tint)) !important;
+	color: color-mix(in srgb, var(--wa-color-neutral-20) 88%, var(--integer-sign-text-tint)) !important;
 }
 
 .property-form__bit-size::part(form-control-label),
@@ -244,14 +260,14 @@
 	grid-column: 1 / -1;
 }
 
-.property-form__currency sl-option::part(base),
-.property-form__duration-unit sl-option::part(base),
-.property-form__measurement-unit sl-option::part(base) {
+.property-form__currency wa-option,
+.property-form__duration-unit wa-option,
+.property-form__measurement-unit wa-option {
 	height: 32px;
 	padding-block: 0;
 }
 
-/* Prevent Shoelace from highlighting the first real option while the select is empty. */
+/* Prevent Web Awesome from highlighting the first real option while the select is empty. */
 .property-form__unit-placeholder {
 	display: none;
 }
@@ -259,13 +275,13 @@
 .property-form__unit-option-group {
 	color: var(--text-light);
 	font-size: 11px;
-	font-weight: var(--sl-font-weight-bold);
+	font-weight: var(--wa-font-weight-bold);
 	line-height: 1;
-	padding: 10px 12px 7px calc(var(--sl-spacing-x-small) + var(--sl-font-size-small) + var(--sl-spacing-2x-small));
+	padding: 10px 12px 7px calc(var(--wa-space-xs) + var(--wa-font-size-s) + var(--wa-space-2xs));
 }
 
 .property-form__unit-option-separator {
-	color: var(--sl-color-neutral-500);
+	color: var(--wa-color-neutral-50);
 }
 
 .property-form__unit-option-symbol {
@@ -289,22 +305,17 @@
 }
 
 .property-form__percentage-badge {
-	font-size: 11px;
-	grid-column: 2;
-	justify-self: stretch;
-	margin-inline: var(--sl-spacing-medium);
-}
-
-.property-form__percentage-badge::part(base) {
 	background-color: #ededf7;
 	border: 0;
 	box-sizing: border-box;
-	color: color-mix(in srgb, var(--sl-color-neutral-700) 88%, #6062d0);
+	color: color-mix(in srgb, var(--wa-color-neutral-30) 88%, #6062d0);
 	font-size: 11px;
-	font-weight: var(--sl-font-weight-normal);
+	font-weight: var(--wa-font-weight-normal);
+	grid-column: 2;
 	height: 19px;
+	justify-self: stretch;
+	margin-inline: var(--wa-space-m);
 	padding-block: 4px;
-	width: 100%;
 }
 
 .property-form__percentage-badge-text {
@@ -329,10 +340,10 @@
 
 .property-form__numeric-range-separator {
 	align-items: center;
-	color: var(--sl-color-neutral-400);
+	color: var(--wa-color-neutral-60);
 	display: flex;
 	font-size: 12px;
-	height: var(--sl-input-height-small);
+	height: var(--input-height-small);
 	user-select: none;
 }
 
@@ -345,11 +356,11 @@
 }
 
 .property-form__primary-source .little-logo svg,
-.property-form__primary-source sl-option .little-logo svg {
+.property-form__primary-source wa-option .little-logo svg {
 	height: 17px;
 }
 
-.property-form__primary-source [slot='prefix'] {
+.property-form__primary-source [slot='start'] {
 	margin-right: 7px;
 }
 
@@ -357,13 +368,13 @@
 	padding-left: 7px;
 }
 
-.property-form__primary-source sl-option::part(checked-icon) {
+.property-form__primary-source wa-option::part(checked-icon) {
 	display: none;
 }
 
 .property-form__control-error {
 	align-items: flex-start;
-	color: var(--sl-color-danger-600);
+	color: var(--wa-color-danger-40);
 	display: flex;
 	font-size: 12px;
 	gap: 7px;
@@ -371,8 +382,8 @@
 	padding-top: 5px;
 }
 
-.property-form__control-error sl-icon {
-	color: var(--sl-color-danger-600);
+.property-form__control-error wa-icon {
+	color: var(--wa-color-danger-40);
 	margin-top: 2px;
 }
 

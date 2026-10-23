@@ -2,8 +2,9 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 import { DateRange } from 'react-date-range';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlButtonGroup from '@shoelace-style/shoelace/dist/react/button-group/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaButtonGroup from '@awesome.me/webawesome/dist/react/button-group/index.js';
+import { buttonVariant } from '../../../utils/buttonVariant';
 import './SegmentedDateRangeControl.css';
 
 const DATE_RANGE_INTERACTIVE_ELEMENTS = '.rdrCalendarWrapper button, .rdrCalendarWrapper input';
@@ -93,27 +94,27 @@ const SegmentedDateRangeControl = <T extends string>({
 
 	return (
 		<div className='segmented-date-range-control' ref={root}>
-			<SlButtonGroup label={accessibleLabel ?? 'Date range'}>
+			<WaButtonGroup label={accessibleLabel ?? 'Date range'}>
 				{presets.map((preset) => (
-					<SlButton
+					<WaButton
 						key={preset.value}
-						variant={value === preset.value ? 'primary' : 'default'}
+						{...buttonVariant(value === preset.value ? 'primary' : 'default')}
 						onClick={() => selectPreset(preset.value)}
-						size='small'
+						size='s'
 						disabled={disabled}
 					>
 						{preset.label}
-					</SlButton>
+					</WaButton>
 				))}
 				<div className='segmented-date-range-control__custom'>
-					<SlButton
-						variant={value === 'Custom' ? 'primary' : 'default'}
+					<WaButton
+						{...buttonVariant(value === 'Custom' ? 'primary' : 'default')}
 						onClick={() => setIsPickerOpen((open) => !open)}
-						size='small'
+						size='s'
 						disabled={disabled}
 					>
 						{value === 'Custom' ? formatCustomRange(customRange) : 'Custom range'}
-					</SlButton>
+					</WaButton>
 					<div
 						className={`segmented-date-range-control__picker segmented-date-range-control__picker--${pickerAlignment}${isPickerOpen ? ' segmented-date-range-control__picker--open' : ''}`}
 					>
@@ -130,7 +131,7 @@ const SegmentedDateRangeControl = <T extends string>({
 						/>
 					</div>
 				</div>
-			</SlButtonGroup>
+			</WaButtonGroup>
 		</div>
 	);
 };

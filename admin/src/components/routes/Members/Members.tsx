@@ -4,13 +4,13 @@ import AppContext from '../../../context/AppContext';
 import ListTile from '../../base/ListTile/ListTile';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import { Member } from '../../../lib/api/types/responses';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
-import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaDialog from '@awesome.me/webawesome/dist/react/dialog/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { validateMemberEmail } from '../../../lib/core/member';
 import { Link } from '../../base/Link/Link';
@@ -90,14 +90,14 @@ const Members = () => {
 		return (
 			<div className='members'>
 				<div className='members__content'>
-					<SlSpinner
+					<WaSpinner
 						style={
 							{
 								fontSize: '3rem',
 								'--track-width': '6px',
 							} as React.CSSProperties
 						}
-					></SlSpinner>
+					></WaSpinner>
 				</div>
 			</div>
 		);
@@ -110,14 +110,14 @@ const Members = () => {
 					<div className='members__title'>
 						<p className='members__title-text'>Team members</p>
 						{publicMetadata.inviteMembersViaEmail ? (
-							<SlButton size='small' variant='primary' onClick={() => setIsInviteMemberDialogOpen(true)}>
+							<WaButton size='s' variant='brand' onClick={() => setIsInviteMemberDialogOpen(true)}>
 								Invite a new team member
-							</SlButton>
+							</WaButton>
 						) : (
 							<Link path={'organization/members/add'}>
-								<SlButton size='small' variant='primary' onClick={() => null}>
+								<WaButton size='s' variant='brand' onClick={() => null}>
 									Add a new team member
-								</SlButton>
+								</WaButton>
 							</Link>
 						)}
 					</div>
@@ -130,48 +130,55 @@ const Members = () => {
 									name={
 										<div className='members__member-name'>
 											{member.name}
-											{member.invitation !== '' && <SlBadge variant='neutral'>Invited</SlBadge>}
+											{member.invitation !== '' && <WaBadge variant='neutral'>Invited</WaBadge>}
 											{member.invitation === 'Expired' && (
-												<SlBadge variant='danger'>Invitation expired</SlBadge>
+												<WaBadge variant='danger'>Invitation expired</WaBadge>
 											)}
 										</div>
 									}
 									description={member.email}
 									icon={
-										<SlAvatar
+										<WaAvatar
 											image={
 												member.avatar
 													? `data:${member.avatar.mimeType};base64, ${member.avatar.image}`
 													: ''
 											}
-										/>
+										>
+											<WaIcon slot='icon' name='person-fill' />
+										</WaAvatar>
 									}
 									action={
 										<div className='members__member-pipelines'>
 											{member.email === loggedMember.email && (
-												<SlButton
+												<WaButton
+													appearance='outlined'
 													className='members__member-logout'
-													size='small'
+													size='s'
 													onClick={onLogout}
 												>
 													Logout
-												</SlButton>
+												</WaButton>
 											)}
 											{member.id === loggedMember.id && (
 												<Link path={'organization/members/current'}>
-													<SlButton className='members__member-edit' size='small'>
+													<WaButton
+														appearance='outlined'
+														className='members__member-edit'
+														size='s'
+													>
 														Edit
-													</SlButton>
+													</WaButton>
 												</Link>
 											)}
 											{members.length > 1 && (
-												<SlButton
-													size='small'
+												<WaButton
+													size='s'
 													variant='danger'
 													onClick={() => onDeleteMember(member.id)}
 												>
 													Delete
-												</SlButton>
+												</WaButton>
 											)}
 										</div>
 									}
@@ -187,10 +194,12 @@ const Members = () => {
 					title='Delete the team member?'
 					actions={
 						<>
-							<SlButton onClick={onDeleteMemberCancel}>Cancel</SlButton>
-							<SlButton variant='danger' onClick={onDeleteMemberConfirmation}>
+							<WaButton appearance='outlined' onClick={onDeleteMemberCancel}>
+								Cancel
+							</WaButton>
+							<WaButton variant='danger' onClick={onDeleteMemberConfirmation}>
 								Delete
-							</SlButton>
+							</WaButton>
 						</>
 					}
 				>
@@ -341,28 +350,33 @@ const InviteMemberDialog = ({ isOpen, setIsOpen, setIsLoadingMembers }: InviteMe
 	};
 
 	return (
-		<SlDialog
+		<WaDialog
 			className='members__invite-dialog'
 			label='Invite new team member'
 			open={isOpen}
-			onSlAfterHide={() => setIsOpen(false)}
+			lightDismiss
+			onWaAfterHide={(e) => {
+				if (e.target === e.currentTarget) {
+					setIsOpen(false);
+				}
+			}}
 		>
 			<div className='members__invite-dialog-description'>
 				An invitation to create a new team member account will be sent to the email address provided.
 			</div>
 			<form onSubmit={onInviteMember}>
-				<SlInput ref={inputRef} label='Email' type='email' value={email} onSlInput={onUpdateEmail} required />
+				<WaInput ref={inputRef} label='Email' type='email' value={email} onInput={onUpdateEmail} required />
 				{error && (
 					<div className='members__invite-dialog-error'>
-						<SlIcon slot='icon' name='exclamation-octagon' />
+						<WaIcon slot='icon' name='exclamation-octagon' />
 						{error}
 					</div>
 				)}
-				<SlButton loading={isSaving} className='members__invite' type='submit' variant='primary'>
+				<WaButton loading={isSaving} className='members__invite' type='submit' variant='brand'>
 					Invite
-				</SlButton>
+				</WaButton>
 			</form>
-		</SlDialog>
+		</WaDialog>
 	);
 };
 

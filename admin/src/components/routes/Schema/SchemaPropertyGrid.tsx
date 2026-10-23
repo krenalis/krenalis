@@ -1,10 +1,10 @@
 import React, { ReactNode, useEffect, useId, useRef, useState } from 'react';
 import './SchemaPropertyGrid.css';
-import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import WaBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import { Property } from '../../../lib/api/types/types';
 import { GridNestedRowsIndentation } from '../../base/Grid/Grid.types';
 
@@ -28,9 +28,9 @@ const SchemaPropertyName = ({ property }: { property: Property }) => (
 );
 
 const SchemaPropertyIdentifierBadge = ({ position }: { position: number }) => (
-	<SlBadge className='schema-property-grid__identifier' pill variant='neutral'>
+	<WaBadge className='schema-property-grid__identifier' pill variant='neutral'>
 		#{position}
-	</SlBadge>
+	</WaBadge>
 );
 
 const SchemaPropertyIdentifierValue = ({ position }: { position?: number }) =>
@@ -42,7 +42,7 @@ const SchemaPropertyIdentifierValue = ({ position }: { position?: number }) =>
 		</span>
 	);
 
-// Prevent a surrounding Shoelace label from focusing its associated control.
+// Prevent a surrounding Web Awesome label from focusing its associated control.
 const preventInfoInteraction = (event: React.SyntheticEvent) => {
 	event.preventDefault();
 	event.stopPropagation();
@@ -50,14 +50,17 @@ const preventInfoInteraction = (event: React.SyntheticEvent) => {
 
 const SchemaPropertyInfoTooltip = ({ content, label }: { content: string; label: string }) => {
 	const descriptionID = useId();
+	const iconID = useId();
 
 	return (
-		<SlTooltip className='schema-property-grid__tooltip' placement='top' trigger='hover' hoist={true}>
-			<div id={descriptionID} className='schema-property-grid__tooltip-content' slot='content'>
-				{content.split('\n\n').map((paragraph, index) => (
-					<p key={index}>{paragraph}</p>
-				))}
-			</div>
+		<>
+			<WaTooltip className='schema-property-grid__tooltip' for={iconID} placement='top' trigger='hover'>
+				<div id={descriptionID} className='schema-property-grid__tooltip-content'>
+					{content.split('\n\n').map((paragraph, index) => (
+						<p key={index}>{paragraph}</p>
+					))}
+				</div>
+			</WaTooltip>
 			<span
 				className='schema-property-grid__info'
 				role='img'
@@ -66,9 +69,9 @@ const SchemaPropertyInfoTooltip = ({ content, label }: { content: string; label:
 				onPointerDownCapture={preventInfoInteraction}
 				onClickCapture={preventInfoInteraction}
 			>
-				<SlIcon name='info-circle' aria-hidden='true' />
+				<WaIcon id={iconID} name='info-circle' aria-hidden='true' />
 			</span>
-		</SlTooltip>
+		</>
 	);
 };
 
@@ -109,7 +112,7 @@ interface SchemaPropertyGridSummaryProps {
 const SchemaPropertyGridSummary = ({ children, objectCount, propertyCount, view }: SchemaPropertyGridSummaryProps) => (
 	<div className={`${schemaPropertyGridClassNamePrefixes[view]}__summary`}>
 		<span>
-			<SlIcon name='table' />
+			<WaIcon name='table' />
 			<span>
 				{propertyCount} {propertyCount === 1 ? 'property' : 'properties'} ({objectCount}{' '}
 				{objectCount === 1 ? 'object' : 'objects'})
@@ -134,31 +137,39 @@ const SchemaPropertyGridExpansionButtons = ({
 }: SchemaPropertyGridExpansionButtonsProps) => {
 	const editButtonClassName = classNamePrefix === 'schema-edit' ? ' schema-edit__expansion-button' : '';
 	const buttonClassName = `${classNamePrefix}__toolbar-icon-button${editButtonClassName}`;
+	const expandID = useId();
+	const collapseID = useId();
 
 	return (
 		<div className={`${classNamePrefix}__expansion-buttons`}>
-			<SlTooltip className={`${classNamePrefix}__toolbar-tooltip`} content='Expand all properties' hoist>
-				<SlButton
-					className={`${classNamePrefix}__expand-all-button ${buttonClassName}`}
-					size='small'
-					aria-label='Expand all properties'
-					disabled={disabled}
-					onClick={onExpand}
-				>
-					<SlIcon name='chevron-expand' />
-				</SlButton>
-			</SlTooltip>
-			<SlTooltip className={`${classNamePrefix}__toolbar-tooltip`} content='Collapse all properties' hoist>
-				<SlButton
-					className={`${classNamePrefix}__collapse-all-button ${buttonClassName}`}
-					size='small'
-					aria-label='Collapse all properties'
-					disabled={disabled}
-					onClick={onCollapse}
-				>
-					<SlIcon name='chevron-contract' />
-				</SlButton>
-			</SlTooltip>
+			<WaTooltip className={`${classNamePrefix}__toolbar-tooltip`} for={expandID}>
+				Expand all properties
+			</WaTooltip>
+			<WaButton
+				id={expandID}
+				appearance='outlined'
+				className={`${classNamePrefix}__expand-all-button ${buttonClassName}`}
+				size='s'
+				aria-label='Expand all properties'
+				disabled={disabled}
+				onClick={onExpand}
+			>
+				<WaIcon name='chevron-expand' />
+			</WaButton>
+			<WaTooltip className={`${classNamePrefix}__toolbar-tooltip`} for={collapseID}>
+				Collapse all properties
+			</WaTooltip>
+			<WaButton
+				id={collapseID}
+				appearance='outlined'
+				className={`${classNamePrefix}__collapse-all-button ${buttonClassName}`}
+				size='s'
+				aria-label='Collapse all properties'
+				disabled={disabled}
+				onClick={onCollapse}
+			>
+				<WaIcon name='chevron-contract' />
+			</WaButton>
 		</div>
 	);
 };
@@ -181,6 +192,7 @@ const SchemaPropertySearch = ({
 	value,
 }: SchemaPropertySearchProps) => {
 	const searchControlRef = useRef<HTMLDivElement>(null);
+	const searchButtonID = useId();
 
 	useEffect(() => {
 		if (!isOpen || value !== '') {
@@ -209,29 +221,34 @@ const SchemaPropertySearch = ({
 			className={`${classNamePrefix}__search-control${isOpen ? ` ${classNamePrefix}__search-control--open` : ''}`}
 		>
 			{isOpen ? (
-				<SlInput
+				<WaInput
 					ref={searchRef}
 					className={`${classNamePrefix}__search`}
-					size='small'
+					size='s'
 					placeholder='Search a property...'
-					clearable
+					withClear
 					value={value}
-					onSlInput={(event: any) => onChange(event.target.value)}
+					onInput={(event: any) => onChange(event.target.value)}
 				>
-					<SlIcon name='search' slot='prefix' />
-					<SlIcon name='backspace' slot='clear-icon' />
-				</SlInput>
+					<WaIcon name='search' slot='start' />
+					<WaIcon name='backspace' slot='clear-icon' />
+				</WaInput>
 			) : (
-				<SlTooltip className={`${classNamePrefix}__toolbar-tooltip`} content='Search properties' hoist>
-					<SlButton
+				<>
+					<WaTooltip className={`${classNamePrefix}__toolbar-tooltip`} for={searchButtonID}>
+						Search properties
+					</WaTooltip>
+					<WaButton
+						id={searchButtonID}
+						appearance='outlined'
 						className={`${classNamePrefix}__search-button ${classNamePrefix}__toolbar-icon-button`}
-						size='small'
+						size='s'
 						aria-label='Search properties'
 						onClick={onClick}
 					>
-						<SlIcon name='search' />
-					</SlButton>
-				</SlTooltip>
+						<WaIcon name='search' />
+					</WaButton>
+				</>
 			)}
 		</div>
 	);
@@ -261,7 +278,7 @@ const SchemaPropertyGridToolbar = ({
 	const classNamePrefix = schemaPropertyGridClassNamePrefixes[view];
 
 	// Filtering rerenders the grid and can move focus away from the search input.
-	// Wait for Shoelace to finish updating before restoring it.
+	// Wait for Web Awesome to finish updating before restoring it.
 	useEffect(() => {
 		if (!isSearchOpen || searchRef.current == null) {
 			return;

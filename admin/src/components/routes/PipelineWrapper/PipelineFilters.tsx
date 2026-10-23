@@ -1,13 +1,13 @@
-import React, { useContext, ReactNode, useMemo, forwardRef } from 'react';
+import React, { useContext, ReactNode, useId, useMemo, forwardRef } from 'react';
 import Section from '../../base/Section/Section';
 import { getFilterPropertyComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import PipelineContext from '../../../context/PipelineContext';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import { Combobox } from '../../base/Combobox/Combobox';
 import {
 	FILTER_OPERATORS,
@@ -67,7 +67,10 @@ const pathID = (path: number[]): string => path.join('-');
 const PipelineFilters = forwardRef<any>((_, ref) => {
 	const { pipeline, setPipeline, pipelineType, connection, isTransformationDisabled, isImport } =
 		useContext(PipelineContext);
+
 	const [filterSubject] = pipelineObjectLabels(connection, pipeline, 'plural');
+
+	const filtersID = useId();
 	const filterSubjectTerm = filterSubject.toLowerCase();
 	const actionVerb = isImport ? 'import' : pipelineType.target === 'Event' ? 'send' : 'export';
 
@@ -240,7 +243,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 			if (valueInput == null) {
 				return;
 			}
-			if (valueInput.tagName === 'SL-SELECT') {
+			if (valueInput.tagName === 'WA-SELECT') {
 				valueInput.show();
 			} else {
 				valueInput.focus();
@@ -270,7 +273,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 			if (input == null) {
 				return;
 			}
-			if (input.tagName === 'SL-SELECT') {
+			if (input.tagName === 'WA-SELECT') {
 				input.show();
 			} else {
 				input.focus();
@@ -328,39 +331,39 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 			/>
 		);
 		const pathInput = isJSON ? (
-			<SlInput
-				size='small'
+			<WaInput
+				size='s'
 				className='pipeline__filters-path'
 				value={propertyPath}
-				onSlInput={(event: any) => onInputPath(path, event.target.value)}
+				onInput={(event: any) => onInputPath(path, event.target.value)}
 				name={`path-${id}`}
 				disabled={isDisabled}
 				placeholder='Path (optional)'
 			/>
 		) : null;
 		const operatorSelect = (
-			<SlSelect
-				size='small'
+			<WaSelect
+				size='s'
 				name={`operator-${id}`}
 				className='pipeline__filters-operator'
 				value={String(FILTER_OPERATORS.findIndex((operator) => operator === condition.operator))}
-				onSlChange={(event: any) => changeOperator(path, FILTER_OPERATORS[event.target.value])}
-				onSlHide={onOperatorSelectClose}
+				onChange={(event: any) => changeOperator(path, FILTER_OPERATORS[event.target.value])}
+				onWaHide={onOperatorSelectClose}
 				placeholder='Operator'
 				disabled={isInvalidProperty || isDisabled}
 			>
 				{property != null
 					? getCompatibleFilterOperators(property, propertyPath !== '').map((index) => (
-							<SlOption key={index} value={String(index)}>
+							<WaOption key={index} value={String(index)}>
 								{FILTER_OPERATORS[index]}
-							</SlOption>
+							</WaOption>
 						))
 					: FILTER_OPERATORS.map((operator, index) => (
-							<SlOption key={operator} value={String(index)}>
+							<WaOption key={operator} value={String(index)}>
 								{operator}
-							</SlOption>
+							</WaOption>
 						))}
-			</SlSelect>
+			</WaSelect>
 		);
 
 		const valueElements: ReactNode[] = [];
@@ -407,31 +410,34 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 					);
 				}
 				valueElements.push(
-					<SlButton
+					<WaButton
 						className='pipeline__filters-add-value'
 						key='add-button'
-						variant='default'
-						size='small'
+						appearance='outlined'
+						size='s'
 						disabled={isDisabled}
 						onClick={() => onAddValue(path)}
 					>
 						Add value
-					</SlButton>,
+					</WaButton>,
 				);
 			}
 		}
 
+		const removeButtonID = `${filtersID}-${id}-remove-condition`;
 		const removeButton = (
-			<SlButton
+			<WaButton
+				id={removeButtonID}
 				className='pipeline__filters-remove-condition pipeline__filters-remove-rule'
-				size='small'
-				variant='text'
+				size='s'
+				variant='brand'
+				appearance='plain'
 				onClick={() => onRemoveRule(path)}
 				disabled={isRemoveDisabled}
 			>
-				<SlIcon name='x-circle' aria-hidden='true' />
+				<WaIcon name='x-circle' aria-hidden='true' />
 				<span className='pipeline__filters-remove-rule-label'>Remove condition</span>
-			</SlButton>
+			</WaButton>
 		);
 
 		return (
@@ -453,9 +459,10 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 						{isRemoveDisabled ? (
 							removeButton
 						) : (
-							<SlTooltip content='Remove condition' hoist={true}>
+							<>
+								<WaTooltip for={removeButtonID}>Remove condition</WaTooltip>
 								{removeButton}
-							</SlTooltip>
+							</>
 						)}
 					</div>
 				</div>
@@ -466,6 +473,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 	const renderGroup = (group: Filter, groupPath: number[], depth: number): ReactNode => {
 		const isRoot = depth === 1;
 		const removeGroupTooltip = group.rules.some(isFilterGroup) ? 'Remove groups' : 'Remove group';
+		const removeGroupButtonID = `${filtersID}-${pathID(groupPath)}-remove-group`;
 
 		return (
 			<div
@@ -476,32 +484,33 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 					<span className='pipeline__filters-group-subject'>
 						{isRoot ? `${filterSubject} matching` : 'matching'}
 					</span>
-					<SlSelect
+					<WaSelect
 						className='pipeline__filters-logical'
-						size='small'
+						size='s'
 						value={group.operator}
-						onSlChange={(event: any) => onLogicalChange(groupPath, event.target.value as FilterLogical)}
+						onChange={(event: any) => onLogicalChange(groupPath, event.target.value as FilterLogical)}
 						disabled={isDisabled}
 						aria-label='Match rules'
 					>
-						<SlOption value='and'>all</SlOption>
-						<SlOption value='or'>any</SlOption>
-					</SlSelect>
+						<WaOption value='and'>all</WaOption>
+						<WaOption value='or'>any</WaOption>
+					</WaSelect>
 					<span>of the following:</span>
 					{!isRoot && (
 						<div className='pipeline__filters-remove-group-wrapper'>
-							<SlTooltip content={removeGroupTooltip} hoist={true}>
-								<SlButton
-									className='pipeline__filters-remove-group pipeline__filters-remove-rule'
-									size='small'
-									variant='text'
-									onClick={() => onRemoveRule(groupPath)}
-									disabled={isDisabled}
-								>
-									<SlIcon name='x-circle' aria-hidden='true' />
-									<span className='pipeline__filters-remove-rule-label'>Remove group</span>
-								</SlButton>
-							</SlTooltip>
+							<WaTooltip for={removeGroupButtonID}>{removeGroupTooltip}</WaTooltip>
+							<WaButton
+								id={removeGroupButtonID}
+								className='pipeline__filters-remove-group pipeline__filters-remove-rule'
+								size='s'
+								variant='brand'
+								appearance='plain'
+								onClick={() => onRemoveRule(groupPath)}
+								disabled={isDisabled}
+							>
+								<WaIcon name='x-circle' aria-hidden='true' />
+								<span className='pipeline__filters-remove-rule-label'>Remove group</span>
+							</WaButton>
 						</div>
 					)}
 				</div>
@@ -528,28 +537,30 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 					})}
 				</div>
 				<div className='pipeline__filters-group-actions'>
-					<SlButton
+					<WaButton
 						className='pipeline__filters-add-condition'
-						size='medium'
-						variant='text'
+						size='m'
+						variant='brand'
+						appearance='plain'
 						onClick={() => onAddCondition(groupPath)}
 						disabled={isDisabled || filterRuleCount >= MAX_FILTER_RULE_COUNT}
 					>
-						<SlIcon slot='prefix' name='plus-circle' />
+						<WaIcon slot='start' name='plus-circle' />
 						Add a condition
-					</SlButton>
-					<SlButton
+					</WaButton>
+					<WaButton
 						className='pipeline__filters-add-group'
-						size='medium'
-						variant='text'
+						size='m'
+						variant='brand'
+						appearance='plain'
 						onClick={() => onAddGroup(groupPath)}
 						disabled={
 							isDisabled || depth >= MAX_FILTER_DEPTH || filterRuleCount > MAX_FILTER_RULE_COUNT - 2
 						}
 					>
-						<SlIcon slot='prefix' name='plus-circle' />
+						<WaIcon slot='start' name='plus-circle' />
 						Add a group
-					</SlButton>
+					</WaButton>
 				</div>
 			</div>
 		);
@@ -572,16 +583,17 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 			annotated={true}
 		>
 			{pipeline.filter == null ? (
-				<SlButton
+				<WaButton
 					className='pipeline__filters-add-condition'
-					size='medium'
-					variant='text'
+					size='m'
+					variant='brand'
+					appearance='plain'
 					onClick={() => onAddCondition([])}
 					disabled={isDisabled || filterRuleCount >= MAX_FILTER_RULE_COUNT}
 				>
-					<SlIcon slot='prefix' name='plus-circle' />
+					<WaIcon slot='start' name='plus-circle' />
 					Add filter
-				</SlButton>
+				</WaButton>
 			) : (
 				renderGroup(pipeline.filter, [], 1)
 			)}
@@ -618,53 +630,54 @@ const PipelineFilterValueControl = ({
 		onValueChange(v);
 	};
 
-	const removeButton = removable ? (
-		<SlButton
-			slot='suffix'
-			variant='default'
-			size='small'
-			circle
-			className='pipeline__filters-value-remove'
-			onClick={onRemove}
-			disabled={disabled}
-		>
-			<SlIcon name='x' />
-		</SlButton>
-	) : null;
+	const removeButton = (slot: 'end' | 'suffix') =>
+		removable ? (
+			<WaButton
+				slot={slot}
+				appearance='outlined'
+				size='s'
+				pill
+				className='pipeline__filters-value-remove'
+				onClick={onRemove}
+				disabled={disabled}
+			>
+				<WaIcon name='x' />
+			</WaButton>
+		) : null;
 
 	if (options.length > 0) {
 		return (
 			<div className={removable ? 'pipeline__filters-value-control--removable' : undefined}>
-				<SlSelect
-					size='small'
+				<WaSelect
+					size='s'
 					className='pipeline__filters-value-input'
 					name={name}
 					value={value ?? ''}
-					onSlChange={handleSelect}
+					onChange={handleSelect}
 					disabled={disabled}
 				>
 					{options.map((option, index) => (
-						<SlOption key={`${index}-${option}`} value={option}>
+						<WaOption key={`${index}-${option}`} value={option}>
 							{option === '' ? '\u00A0' : option}
-						</SlOption>
+						</WaOption>
 					))}
-					{removeButton}
-				</SlSelect>
+					{removeButton('suffix')}
+				</WaSelect>
 			</div>
 		);
 	}
 
 	return (
-		<SlInput
-			size='small'
+		<WaInput
+			size='s'
 			className='pipeline__filters-value-input'
 			value={value ?? ''}
-			onSlInput={handleInput}
+			onInput={handleInput}
 			name={name}
 			disabled={disabled}
 		>
-			{removeButton}
-		</SlInput>
+			{removeButton('end')}
+		</WaInput>
 	);
 };
 

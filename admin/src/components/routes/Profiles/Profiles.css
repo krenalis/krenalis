@@ -41,7 +41,7 @@
 	margin-bottom: 6px;
 }
 
-.profiles-list__identity-resolution-button::part(base) {
+.profiles-list__identity-resolution-button::part(button) {
 	min-width: 220px;
 }
 
@@ -74,7 +74,7 @@
 }
 
 .profiles-list .grid::-webkit-scrollbar-thumb {
-	background: var(--sl-color-neutral-300);
+	background: var(--wa-color-neutral-70);
 	border-radius: 5px;
 }
 
@@ -90,22 +90,46 @@
 	border-radius: 0;
 }
 
-.profiles-list__toggle-columns sl-option sl-switch {
+.profiles-list__toggle-columns-list {
+	max-height: calc(100vh - 220px);
+	overflow: auto;
+}
+
+/* Each column is drawn as the Shoelace option it was, with the room of its
+   hidden check before it. */
+.profiles-list__toggle-column {
+	display: flex;
+	align-items: center;
+	padding: var(--wa-space-xs) var(--wa-space-m) var(--wa-space-xs)
+		calc(var(--wa-space-xs) + 1em + var(--wa-space-2xs));
+	color: var(--wa-color-neutral-30);
+	font-family:
+		-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji',
+		'Segoe UI Emoji', 'Segoe UI Symbol';
+	font-size: var(--wa-font-size-m);
+	font-weight: var(--wa-font-weight-normal);
+	line-height: 1.4;
+	cursor: pointer;
+	user-select: none;
+}
+
+.profiles-list__toggle-column:hover {
+	background-color: var(--wa-color-neutral-90);
+	color: black;
+}
+
+.profiles-list__toggle-column wa-switch {
 	--thumb-size: 14px;
 }
 
-.profiles-list__toggle-columns sl-option sl-switch::part(base) {
+.profiles-list__toggle-column wa-switch::part(switch) {
 	font-size: 14px;
 	gap: 5px;
 }
 
-.profiles-list__toggle-columns::part(panel) {
-	max-height: calc(100vh - 220px) !important;
-	overflow: auto;
-}
-
-.profiles-list__toggle-columns sl-menu {
-	overflow: hidden;
+.profiles-list__toggle-column wa-switch::part(label) {
+	position: relative;
+	top: -2px;
 }
 
 .profiles-list__grid-container {
@@ -132,7 +156,7 @@
 .profiles-list__grid-container .grid__header-row {
 	position: sticky;
 	top: 0;
-	border-bottom: 1px solid var(--sl-color-neutral-200);
+	border-bottom: 1px solid var(--wa-color-neutral-80);
 }
 
 .profiles-list__footer {
@@ -146,7 +170,7 @@
 	width: 100%;
 	height: 80px;
 	background-color: var(--bg-primary);
-	border-top: 1px solid var(--sl-color-neutral-200);
+	border-top: 1px solid var(--wa-color-neutral-80);
 	z-index: 5;
 	border-bottom-left-radius: 10px;
 	border-bottom-right-radius: 10px;
@@ -162,29 +186,65 @@
 	position: relative;
 }
 
-.profile-drawer::part(title) {
-	display: none;
-}
-
-.profile-drawer::part(header) {
+/* The drawer is drawn as Shoelace's contained drawer. */
+.profile-drawer {
 	position: absolute;
-	min-height: 50px;
+	top: 0;
+	left: 0;
+	z-index: 1000;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	pointer-events: none;
+}
+
+.profile-drawer__panel {
+	position: absolute;
+	top: 0;
 	right: 0;
-}
-
-.profile-drawer::part(panel) {
+	z-index: 2;
+	display: flex;
+	flex-direction: column;
+	width: 600px;
+	max-width: 100%;
+	height: 100%;
 	max-height: calc(100% - 80px);
+	overflow: auto;
+	background-color: var(--wa-color-surface-default);
+	box-shadow: var(--wa-shadow-xl);
+	pointer-events: all;
 }
 
-.profile-drawer--loading::part(panel) {
+.profile-drawer__panel:focus {
+	outline: none;
+}
+
+.profile-drawer--loading .profile-drawer__panel {
 	overflow: hidden;
 }
 
-.profile-drawer::part(body) {
-	padding-bottom: 0;
+.profile-drawer__header {
+	position: absolute;
+	right: 0;
+	display: flex;
+	min-height: 50px;
+	padding: 0 1.25rem;
 }
 
-.profile-drawer sl-tab-group sl-tab-panel::part(base) {
+.profile-drawer__close {
+	display: flex;
+	align-items: center;
+	font-size: var(--wa-font-size-m);
+}
+
+.profile-drawer__body {
+	flex: 1 1 auto;
+	padding: 1.25rem;
+	padding-bottom: 0;
+	overflow: auto;
+}
+
+.profile-drawer wa-tab-group wa-tab-panel::part(base) {
 	max-height: calc(100% - 200px);
 	overflow: auto;
 	margin-top: 10px;
@@ -192,7 +252,7 @@
 	padding-bottom: 5px;
 }
 
-.profile-drawer--loading sl-tab-group sl-tab-panel::part(base) {
+.profile-drawer--loading wa-tab-group wa-tab-panel::part(base) {
 	overflow: hidden;
 }
 
@@ -213,20 +273,21 @@
 	font-size: 14px;
 }
 
-.profile-drawer__kpid sl-icon {
+.profile-drawer__kpid wa-icon {
 	position: relative;
 	top: 1px;
-	color: var(--sl-color-neutral-500);
+	margin-right: 4px;
+	color: var(--wa-color-neutral-50);
 }
 
-.profile-drawer__kpid sl-tooltip::part(body) {
-	background-color: var(--sl-color-primary-500);
+.profile-drawer__kpid wa-tooltip::part(body) {
+	background-color: var(--wa-color-brand-50);
 	padding: 12px;
 	font-size: 13px;
 }
 
-.profile-drawer__kpid sl-tooltip::part(base__arrow) {
-	background-color: var(--sl-color-primary-500);
+.profile-drawer__kpid wa-tooltip::part(base__arrow) {
+	background-color: var(--wa-color-brand-50);
 }
 
 .profile-drawer__customize {
@@ -235,7 +296,7 @@
 }
 
 .profile-drawer__customize-link {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 	text-decoration: underline;
 	cursor: pointer;
 }
@@ -245,7 +306,7 @@
 	font-family: var(--monospace-fonts);
 }
 
-.profile-drawer sl-spinner {
+.profile-drawer wa-spinner {
 	margin: 15px auto;
 	display: block;
 }
@@ -255,8 +316,8 @@
 	visibility: hidden;
 }
 
-.profile-drawer__events > sl-spinner,
-.profile-drawer__identities > sl-spinner {
+.profile-drawer__events > wa-spinner,
+.profile-drawer__identities > wa-spinner {
 	visibility: visible;
 }
 
@@ -279,7 +340,7 @@
 
 .profile-drawer__attribute-object {
 	font-family: var(--monospace-fonts);
-	background-color: var(--sl-color-neutral-100);
+	background-color: var(--wa-color-neutral-90);
 	width: fit-content;
 	border-radius: 5px;
 	font-size: 13px;
@@ -325,17 +386,17 @@
 	font-size: 0;
 }
 
-.drawer-attribute__value-copy::part(tooltip__body) {
+.drawer-attribute__value-copy::part(feedback) {
 	font-size: 13px;
 }
 
 .drawer-attribute__value-copy::part(copy-icon) {
-	color: var(--sl-color-neutral-500);
+	color: var(--wa-color-neutral-50);
 }
 
 .drawer-attribute__preview {
 	font-family: var(--monospace-fonts) !important;
-	color: var(--sl-color-neutral-500);
+	color: var(--wa-color-neutral-50);
 	font-weight: 200;
 	font-size: 12px;
 	white-space: nowrap;
@@ -368,7 +429,7 @@
 }
 
 .drawer-attribute__property-caret {
-	color: var(--sl-color-neutral-400);
+	color: var(--wa-color-neutral-60);
 	font-size: 12px;
 	margin-right: 8px;
 	cursor: pointer;
@@ -381,7 +442,7 @@
 	transition: transform 0.3s;
 }
 
-.drawer-nested-attributes--expand > .drawer-attributes > .drawer-attribute__property-padding > sl-icon::part(svg) {
+.drawer-nested-attributes--expand > .drawer-attributes > .drawer-attribute__property-padding > wa-icon::part(svg) {
 	transform: rotate(90deg);
 }
 
@@ -390,8 +451,8 @@
 	left: calc(var(--property-indentation) - 20px);
 	width: 12px;
 	height: 12px;
-	border-left: 2px solid var(--sl-color-neutral-400);
-	border-bottom: 2px solid var(--sl-color-neutral-400);
+	border-left: 2px solid var(--wa-color-neutral-60);
+	border-bottom: 2px solid var(--wa-color-neutral-60);
 	border-bottom-left-radius: 2px;
 	top: 3px;
 }
@@ -405,7 +466,7 @@
 	position: relative;
 	padding-left: 20px;
 	padding-bottom: 20px;
-	border-left: 4px solid var(--sl-color-neutral-200);
+	border-left: 4px solid var(--wa-color-neutral-80);
 }
 
 .profile-drawer__event:only-child {
@@ -422,7 +483,7 @@
 	width: 13px;
 	height: 13px;
 	border-radius: 100%;
-	background-color: var(--sl-color-primary-500);
+	background-color: var(--wa-color-brand-50);
 	position: absolute;
 	left: 0;
 	top: 0;
@@ -476,11 +537,11 @@
 }
 
 .profile-drawer__action .profile-drawer__identity-pipeline-link a {
-	color: var(--sl-color-primary-300);
+	color: var(--wa-color-brand-70);
 }
 
 .profile-drawer__identity-pipeline-link {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 	text-decoration: underline;
 	cursor: pointer;
 }
@@ -522,7 +583,7 @@
 }
 
 .profile-drawer code {
-	background-color: var(--sl-color-neutral-100);
+	background-color: var(--wa-color-neutral-90);
 	font-size: 13px;
 	border-radius: 5px;
 	padding: 0 3px;
