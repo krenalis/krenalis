@@ -240,15 +240,15 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 
 // renderJSONComparison compares JSON strings and numbers without coercing other
 // types, using byte order for strings and exact decimal ordering for numbers.
-func renderJSONComparison(b *strings.Builder, value, operator string, operand warehouses.JSONConditionValue) {
-	isString := "IS_VARCHAR(" + value + ")"
-	isNumber := "(IS_DECIMAL(" + value + ") OR IS_DOUBLE(" + value + "))"
-	text := "COLLATE(AS_VARCHAR(" + value + "), 'utf8')"
+func renderJSONComparison(b *strings.Builder, target, operator string, value warehouses.JSONConditionValue) {
+	isString := "IS_VARCHAR(" + target + ")"
+	isNumber := "(IS_DECIMAL(" + target + ") OR IS_DOUBLE(" + target + "))"
+	text := "COLLATE(AS_VARCHAR(" + target + "), 'utf8')"
 	fmt.Fprintf(b, "CASE WHEN %s THEN %s %s ", isString, text, operator)
-	quoteString(b, operand.String)
-	if operand.Number != nil {
+	quoteString(b, value.String)
+	if value.Number != nil {
 		fmt.Fprintf(b, " WHEN %s THEN ", isNumber)
-		renderJSONNumberComparison(b, value, operator, *operand.Number)
+		renderJSONNumberComparison(b, target, operator, *value.Number)
 	}
 	b.WriteString(" ELSE FALSE END")
 }
