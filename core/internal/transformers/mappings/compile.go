@@ -534,7 +534,7 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 			var msg string
 			switch err {
 			case errRangeConversion:
-				msg = fmt.Sprintf("number %s is not a %s value", s, dt)
+				msg = fmt.Sprintf("number %s is out of range for the %s type", s, dt)
 			case errMinConversion:
 				var n any
 				switch dt.Kind() {
