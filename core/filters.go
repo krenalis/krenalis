@@ -107,7 +107,7 @@ type FilterCondition struct {
 
 	// Values.
 	// If the property has a string type with allowed values, each value must be one of the allowed values.
-	// In all other cases, each value must be at most 60 runes and must not contain the NUL byte.
+	// In all other cases, each value must be at most 80 runes and must not contain the NUL byte.
 	Values []string `json:"values,omitzero"`
 }
 
@@ -229,7 +229,7 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 			case types.FloatKind:
 				v, _ = parseFloat(value, t.BitSize())
 			case types.DecimalKind:
-				v, _ = parseDecimal(value)
+				v, _ = parseFilterDecimal(value)
 			case types.DateTimeKind:
 				v, _ = iso8601.ParseString(value)
 			case types.DateKind:
@@ -242,7 +242,8 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 				v, _ = types.NormalizeUUID(value)
 			case types.JSONKind:
 				jv := state.JSONConditionValue{String: value}
-				if d, err := decimal.Parse(jv.String, 0, 0); err == nil {
+				d, valid := parseFilterDecimal(value)
+				if valid {
 					jv.Number = &d
 				}
 				v = jv
@@ -332,11 +333,17 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 	return filter
 }
 
-// parseDecimal parses a decimal from s and returns the parsed decimal value and
-// true. If s is not a valid decimal, it returns 0 and false.
-func parseDecimal(s string) (decimal.Decimal, bool) {
+// parseFilterDecimal parses s as a decimal filter operand. It returns the
+// parsed value and true if the number can be represented exactly by a decimal
+// type supported by the types package; otherwise, it returns the zero value and
+// false.
+func parseFilterDecimal(s string) (decimal.Decimal, bool) {
 	d, err := decimal.Parse(s, 0, 0)
 	if err != nil {
+		return decimal.Decimal{}, false
+	}
+	precision, scale := d.PrecisionScale()
+	if precision > types.MaxDecimalPrecision || scale > types.MaxDecimalScale {
 		return decimal.Decimal{}, false
 	}
 	return d, true
@@ -913,7 +920,7 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 	}
 	k := t.Kind()
 	for _, value := range cond.Values {
-		if err := util.ValidateStringField("condition value", value, 60); err != nil {
+		if err := util.ValidateStringField("condition value", value, 80); err != nil {
 			return "", err
 		}
 		var valid bool
@@ -929,7 +936,7 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 		case types.FloatKind:
 			_, valid = parseFloat(value, t.BitSize())
 		case types.DecimalKind:
-			_, valid = parseDecimal(value)
+			_, valid = parseFilterDecimal(value)
 		case types.DateTimeKind:
 			if t, err := iso8601.ParseString(value); err == nil {
 				y := t.UTC().Year()

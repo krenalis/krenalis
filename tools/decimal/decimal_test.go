@@ -746,6 +746,9 @@ func Test_Parse(t *testing.T) {
 		{"1e" + strconv.Itoa(math.MinInt), 0, 0, "", "", ErrRange},
 		{"100e" + strconv.Itoa(math.MaxInt), 0, 0, "", "", ErrRange},
 		{"0.01e" + strconv.Itoa(math.MinInt), 0, 0, "", "", ErrRange},
+
+		// Invalid precision or scale.
+		{"1", -1, -1, "", "", ErrRange},
 	}
 
 	for _, test := range tests {
@@ -926,7 +929,9 @@ func Test_New_Panic(t *testing.T) {
 func Test_Range_Panic(t *testing.T) {
 	cases := []struct{ p, s int }{
 		{MaxPrecision + 1, 0},
-		{0, MaxScale + 1},
+		{0, 0},
+		{-1, -1},
+		{1, MaxScale + 1},
 		{1, 2},
 		{1, MinScale - 1},
 	}
@@ -946,8 +951,8 @@ func Test_validPrecisionScale(t *testing.T) {
 	cases := []struct{ p, s int }{
 		{MaxPrecision + 1, 0},
 		{MinPrecision - 1, 0},
-		{0, MaxScale + 1},
-		{0, MinScale - 1},
+		{1, MaxScale + 1},
+		{1, MinScale - 1},
 		{1, 2},
 	}
 	for _, c := range cases {
