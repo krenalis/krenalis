@@ -73,8 +73,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		}
 	}
 
-	if k := c.Type.Kind(); k == types.JSONKind ||
-		(k == types.ArrayKind || k == types.MapKind) && c.Type.Elem().Kind() == types.JSONKind {
+	if c.Type.IsJSON() || (c.Type.IsArray() || c.Type.IsMap()) && c.Type.Elem().IsJSON() {
 		return renderJSONExpr(b, baseExpr)
 	}
 
@@ -179,7 +178,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		serializeValue(b, baseExpr.Values[0], c.Type)
 
 	case warehouses.OpIsTrue, warehouses.OpIsFalse:
-		if c.Type.Kind() != types.BooleanKind {
+		if !c.Type.IsBoolean() {
 			return fmt.Errorf("operator %d is not supported for type %q", op, c.Type)
 		}
 		if op == warehouses.OpIsFalse {
@@ -188,8 +187,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		b.WriteString(qname)
 
 	case warehouses.OpIsEmpty:
-		k := c.Type.Kind()
-		if k == types.ArrayKind {
+		if c.Type.IsArray() {
 			b.WriteString("array_length(")
 			b.WriteString(qname)
 			b.WriteString(", 1) IS NULL")
@@ -201,7 +199,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 			}
 			b.WriteString(qname)
 			var s string
-			switch k {
+			switch c.Type.Kind() {
 			case types.StringKind:
 				s = " = ''"
 			case types.MapKind:
@@ -214,8 +212,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		}
 
 	case warehouses.OpIsNotEmpty:
-		k := c.Type.Kind()
-		if k == types.ArrayKind {
+		if c.Type.IsArray() {
 			b.WriteString("array_length(")
 			b.WriteString(qname)
 			b.WriteString(", 1) IS NOT NULL")
@@ -227,7 +224,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 			}
 			b.WriteString(qname)
 			var s string
-			switch k {
+			switch c.Type.Kind() {
 			case types.StringKind:
 				s = " <> ''"
 			case types.MapKind:
@@ -277,17 +274,16 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 	c := expr.Column
 	target := quoteIdent(c.Name)
 
-	k := c.Type.Kind()
 	op := expr.Operator
 
-	if k != types.JSONKind && len(expr.Keys) > 0 {
+	if !c.Type.IsJSON() && len(expr.Keys) > 0 {
 		return fmt.Errorf("JSON keys cannot be used with type %q", c.Type)
 	}
 
-	if (k == types.ArrayKind || k == types.MapKind) && op != warehouses.OpContains && op != warehouses.OpDoesNotContain {
+	if (c.Type.IsArray() || c.Type.IsMap()) && op != warehouses.OpContains && op != warehouses.OpDoesNotContain {
 		switch expr.Operator {
 		case warehouses.OpIsEmpty, warehouses.OpIsNotEmpty:
-			switch k {
+			switch c.Type.Kind() {
 			case types.ArrayKind:
 				b.WriteString("array_length(")
 				b.WriteString(target)
@@ -464,18 +460,18 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 		b.WriteString(" ELSE FALSE END")
 
 	case warehouses.OpContains:
-		if k == types.MapKind {
+		if c.Type.IsMap() {
 			return fmt.Errorf("operator %d is not supported for type %q", expr.Operator, c.Type)
 		}
 		b.WriteByte('(')
-		if expr.Column.Type.Kind() == types.JSONKind {
+		if expr.Column.Type.IsJSON() {
 			fmt.Fprintf(b, "(jsonb_typeof(%s) = 'string' AND POSITION(", target)
 			quoteString(b, values[0].String)
 			fmt.Fprintf(b, " IN (%s #>> '{}')) > 0)", target)
 			b.WriteString(" OR ")
 		}
 		b.WriteString("EXISTS (SELECT 1 FROM ")
-		if expr.Column.Type.Kind() == types.ArrayKind {
+		if expr.Column.Type.IsArray() {
 			fmt.Fprintf(b, "unnest(%s)", target)
 		} else {
 			fmt.Fprintf(b, "jsonb_array_elements(CASE WHEN jsonb_typeof(%s) = 'array' THEN %s ELSE '[]'::jsonb END)",

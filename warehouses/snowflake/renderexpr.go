@@ -84,8 +84,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		}
 	}
 
-	if k := c.Type.Kind(); k == types.JSONKind ||
-		(k == types.ArrayKind || k == types.MapKind) && c.Type.Elem().Kind() == types.JSONKind {
+	if c.Type.IsJSON() || (c.Type.IsArray() || c.Type.IsMap()) && c.Type.Elem().IsJSON() {
 		return renderJSONExpr(b, baseExpr)
 	}
 
@@ -174,7 +173,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		b.WriteString(")")
 
 	case warehouses.OpIsTrue, warehouses.OpIsFalse:
-		if c.Type.Kind() != types.BooleanKind {
+		if !c.Type.IsBoolean() {
 			return fmt.Errorf("operator %d is not supported for type %q", op, c.Type)
 		}
 		if op == warehouses.OpIsFalse {
@@ -262,14 +261,13 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 	c := expr.Column
 	target := quoteIdent(c.Name)
 
-	k := c.Type.Kind()
 	op := expr.Operator
 
-	if k != types.JSONKind && len(expr.Keys) > 0 {
+	if !c.Type.IsJSON() && len(expr.Keys) > 0 {
 		return fmt.Errorf("JSON keys cannot be used with type %q", c.Type)
 	}
 
-	if (k == types.ArrayKind || k == types.MapKind) && op != warehouses.OpContains && op != warehouses.OpDoesNotContain {
+	if (c.Type.IsArray() || c.Type.IsMap()) && op != warehouses.OpContains && op != warehouses.OpDoesNotContain {
 		switch expr.Operator {
 		case warehouses.OpIsEmpty, warehouses.OpIsNotEmpty:
 			if c.Nullable {
@@ -287,7 +285,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 			} else {
 				b.WriteString(" <> ")
 			}
-			if k == types.ArrayKind {
+			if c.Type.IsArray() {
 				b.WriteString("ARRAY_CONSTRUCT()")
 			} else {
 				b.WriteString("OBJECT_CONSTRUCT()")
@@ -458,18 +456,18 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 		b.WriteString(" ELSE FALSE END")
 
 	case warehouses.OpContains:
-		if k == types.MapKind {
+		if c.Type.IsMap() {
 			return fmt.Errorf("operator %d is not supported for type %q", expr.Operator, c.Type)
 		}
 		b.WriteByte('(')
-		if expr.Column.Type.Kind() == types.JSONKind {
+		if expr.Column.Type.IsJSON() {
 			fmt.Fprintf(b, "CONTAINS(AS_VARCHAR(%s), ", target)
 			quoteString(b, values[0].String)
 			b.WriteByte(')')
 			b.WriteString(" OR ")
 		}
 		b.WriteString("ARRAY_SIZE(FILTER(")
-		if expr.Column.Type.Kind() == types.ArrayKind {
+		if expr.Column.Type.IsArray() {
 			b.WriteString(target)
 		} else {
 			fmt.Fprintf(b, "AS_ARRAY(%s)", target)

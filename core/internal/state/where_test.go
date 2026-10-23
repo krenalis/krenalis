@@ -386,7 +386,7 @@ func Test_unmarshalWhereJSONDecimals(t *testing.T) {
 
 				schema := types.Object([]types.Property{{Name: "value", Type: typ}})
 				op := "Is"
-				if typ.Kind() == types.ArrayKind {
+				if typ.IsArray() {
 					op = "Contains"
 				}
 				raw := `"` + test.text + `"`

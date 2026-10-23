@@ -2024,12 +2024,12 @@ func Test_validateFilterValueLimits(t *testing.T) {
 				schema := types.Object([]types.Property{{Name: "value", Type: test.typ}})
 				op := OpIs
 				typ := test.typ
-				if typ.Kind() == types.ArrayKind {
+				if typ.IsArray() {
 					op = OpContains
 					typ = typ.Elem()
 				}
 				text := strings.Repeat("é", length)
-				if typ.Kind() == types.DecimalKind {
+				if typ.IsDecimal() {
 					text = "1." + strings.Repeat("0", length-2)
 				}
 				filter := &Filter{Operator: OpAnd, Rules: []FilterRule{
