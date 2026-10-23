@@ -6,6 +6,9 @@
 	--bg-transparent: #ffffff10;
 	--bg-editor: #1e1e1e;
 	--bg-overlay: #17171747;
+	--destructive-icon-button-active-background: var(--sl-color-danger-100);
+	--destructive-icon-button-color: var(--sl-color-danger-600);
+	--destructive-icon-button-hover-background: var(--sl-color-danger-50);
 	--text-primary: var(--sl-color-neutral-900);
 	--text-onaccent: var(--sl-color-neutral-0);
 	--text-gray: var(--sl-color-neutral-400);
@@ -81,6 +84,23 @@ code {
 
 button {
 	line-height: normal;
+}
+
+.app-tooltip::part(body) {
+	background-color: var(--bg-primary);
+	border: 1px solid var(--sl-color-neutral-300);
+	color: var(--text-primary);
+	font-weight: var(--sl-font-weight-light);
+	padding: calc(var(--sl-spacing-2x-small) + 2px) calc(var(--sl-spacing-x-small) + 4px);
+}
+
+.app-tooltip::part(base__popup) {
+	box-shadow: var(--sl-shadow-medium);
+}
+
+.app-tooltip::part(base__arrow) {
+	background-color: var(--bg-primary);
+	border: 1px solid var(--sl-color-neutral-300);
 }
 
 h1,

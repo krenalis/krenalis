@@ -66,7 +66,7 @@ def transform(user: dict) -> dict:
 
 	// Retrieve the profiles.
 	const expectedTotal = 10
-	profiles, _, total := k.Profiles([]string{"email", "first_name", "gender"}, "email", false, 0, expectedTotal)
+	profiles, total := k.Profiles([]string{"email", "first_name", "gender"}, "email", false, 0, expectedTotal)
 
 	// Validate the profiles total.
 	if total != expectedTotal {

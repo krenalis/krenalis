@@ -254,8 +254,13 @@ const parseText = (s: string): string => {
 };
 
 // serializeFilter returns a string representation of the given Filter object.
-// If formatted is true, each rule appears on its own indented line.
-const serializeFilter = (filter: Filter, formatted: boolean): string => {
+// If formatted is true, each rule appears on its own indented line. A property
+// label resolver can be supplied by UIs that have human-readable schema names.
+const serializeFilter = (
+	filter: Filter,
+	formatted: boolean,
+	propertyLabel: (property: string) => string = (property) => property,
+): string => {
 	// escapeString returns the input string escaped and wrapped in double quotes.
 	function escapeString(value: string): string {
 		return `"${value
@@ -299,7 +304,7 @@ const serializeFilter = (filter: Filter, formatted: boolean): string => {
 	function formatCondition(condition: FilterCondition): string {
 		const { property, operator, values } = condition;
 		const formattedValues = formatValues(values ?? [], operator);
-		return `${property} ${operator}${formattedValues === '' ? '' : ` ${formattedValues}`}`;
+		return `${propertyLabel(property)} ${operator}${formattedValues === '' ? '' : ` ${formattedValues}`}`;
 	}
 
 	// formatRule formats a condition or nested group.

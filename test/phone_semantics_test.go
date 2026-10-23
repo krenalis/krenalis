@@ -71,7 +71,7 @@ func TestPhoneImportIdentityResolution(t *testing.T) {
 
 	// Without phone-based identity resolution, the two connections must produce
 	// four separate profiles.
-	profiles, _, total := k.Profiles([]string{"phone"}, "", false, 0, 100)
+	profiles, total := k.Profiles([]string{"phone"}, "", false, 0, 100)
 	if total != 4 || len(profiles) != 4 {
 		t.Fatalf("expected four profiles before resolution, got total %d and length %d", total, len(profiles))
 	}
@@ -92,7 +92,7 @@ func TestPhoneImportIdentityResolution(t *testing.T) {
 	// including a structurally possible but unallocated number.
 	k.UpdateIdentityResolutionSettings(true, []string{"phone"})
 	k.RunIdentityResolutionAndWait()
-	profiles, _, total = k.Profiles([]string{"phone"}, "", false, 0, 100)
+	profiles, total = k.Profiles([]string{"phone"}, "", false, 0, 100)
 	if total != 2 || len(profiles) != 2 {
 		t.Fatalf("expected two resolved profiles, got total %d and length %d", total, len(profiles))
 	}
