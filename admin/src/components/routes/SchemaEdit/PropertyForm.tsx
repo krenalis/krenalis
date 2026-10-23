@@ -1,7 +1,9 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import './PropertyForm.css';
+import WaBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
 import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import WaCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
+import WaDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
@@ -16,12 +18,20 @@ import Type, {
 	FloatType,
 	IntBitSize,
 	IntType,
+	Semantics,
 	StringType,
 } from '../../../lib/api/types/types';
 import TransformedConnection from '../../../lib/core/connection';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
-import { isSuitableAsIdentifier } from '../../helpers/types';
+import { COMMON_CURRENCY_OPTION_COUNT, CURRENCY_OPTIONS } from '../../helpers/currencies';
+import {
+	DURATION_UNIT_OPTIONS,
+	getPropertyValueType,
+	isSuitableAsIdentifier,
+	replacePropertyValueType,
+	UNIT_OF_MEASURE_OPTIONS,
+} from '../../helpers/types';
 import {
 	SchemaPropertyIdentifierLabel,
 	SchemaPropertyIdentifierValue,
@@ -30,12 +40,7 @@ import {
 } from '../Schema/SchemaPropertyGrid';
 import { getParentPropertyKey } from './SchemaEdit.helpers';
 import { PropertyFieldChanges, PropertyParent, PropertyToEdit } from './useSchemaEdit';
-import {
-	getPropertyValueType,
-	PropertyTypeSelector,
-	type PropertyTypeSelectorRef,
-	replacePropertyValueType,
-} from './PropertyTypeSelector';
+import { PropertyTypeSelector } from './PropertyTypeSelector';
 
 const INT_BITSIZES: string[] = ['8', '16', '24', '32', '64'];
 const FLOAT_BITSIZES: string[] = ['32', '64'];
@@ -62,7 +67,13 @@ interface NumericRangeInputs {
 type NumericType = IntType | FloatType | DecimalType;
 
 interface PropertyTypeError {
-	location: 'type' | 'string-constraints' | 'decimal-constraints' | 'numeric-range';
+	location:
+		| 'type'
+		| 'string-constraints'
+		| 'decimal-constraints'
+		| 'numeric-range'
+		| 'measurement-unit'
+		| 'duration-unit';
 	message: string;
 }
 
@@ -104,7 +115,6 @@ const PropertyForm = ({
 	const [typeError, setTypeError] = useState<PropertyTypeError | null>(null);
 	const initialState = useRef('');
 	const nameInputRef = useRef<any>();
-	const typeSelectorRef = useRef<PropertyTypeSelectorRef>();
 
 	const { connections } = useContext(AppContext);
 	const isEditing = propertyToEdit.key != null;
@@ -173,9 +183,15 @@ const PropertyForm = ({
 
 	useEffect(() => {
 		const type = getPropertyValueType(property.type);
-		if (isNumericType(type)) {
-			setTypeError(getNumericTypeError(type, decimalTypeInputs, numericRangeInputs));
-		}
+		setTypeError((current) => {
+			if (current != null && current.location !== 'decimal-constraints' && current.location !== 'numeric-range') {
+				return current;
+			}
+			if (isNumericType(type) && (type.semantics == null || hasSemanticsDecimalRange(type.semantics))) {
+				return getNumericTypeError(type, decimalTypeInputs, numericRangeInputs);
+			}
+			return null;
+		});
 	}, [property.type, decimalTypeInputs, numericRangeInputs]);
 
 	useEffect(() => {
@@ -236,21 +252,6 @@ const PropertyForm = ({
 		updateProperty((nextProperty) => {
 			nextProperty.name = name;
 		});
-	};
-
-	const onKeyDownName = (event: React.KeyboardEvent<any>) => {
-		if (
-			isEditing ||
-			event.currentTarget.value === '' ||
-			event.key !== 'Tab' ||
-			event.shiftKey ||
-			event.altKey ||
-			event.ctrlKey ||
-			event.metaKey
-		) {
-			return;
-		}
-		requestAnimationFrame(() => typeSelectorRef.current?.focusStructureTrigger());
 	};
 
 	const onKeyDownPrimarySource = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -412,6 +413,38 @@ const PropertyForm = ({
 		});
 	};
 
+	const onChangeCurrency = (event) => {
+		const currency = event.target.value;
+		updateValueType((type: DecimalType) => {
+			if (type.semantics !== 'money') {
+				return;
+			}
+			if (currency === 'none') {
+				delete type.currency;
+			} else {
+				type.currency = currency;
+			}
+		});
+	};
+
+	const onChangeMeasurementUnit = (event) => {
+		updateValueType((type: DecimalType) => {
+			if (type.semantics === 'measurement') {
+				type.unit = event.target.value;
+			}
+		});
+		setTypeError((current) => (current?.location === 'measurement-unit' ? null : current));
+	};
+
+	const onChangeDurationUnit = (event) => {
+		updateValueType((type: IntType) => {
+			if (type.semantics === 'duration') {
+				type.unit = event.target.value;
+			}
+		});
+		setTypeError((current) => (current?.location === 'duration-unit' ? null : current));
+	};
+
 	const onChangePrimarySource = (event) => {
 		setPrimarySource(event.target.value === 'none' ? null : event.target.value);
 	};
@@ -444,11 +477,13 @@ const PropertyForm = ({
 	};
 
 	const valueType = getPropertyValueType(property.type);
-	const showStringConstraints =
+	const shouldShowPercentageControls =
+		canEditType && valueType?.kind === 'decimal' && valueType.semantics === 'percentage';
+	const shouldShowStringConstraints =
+		canEditType &&
 		valueType?.kind === 'string' &&
 		valueType.semantics !== 'country' &&
-		valueType.semantics !== 'phone' &&
-		canEditType;
+		valueType.semantics !== 'phone';
 	let decimalDescription: string | null = null;
 	if (valueType?.kind === 'decimal' && checkDecimalType(valueType) == null) {
 		const scale = valueType.scale ?? 0;
@@ -459,6 +494,18 @@ const PropertyForm = ({
 				: `${precisionDescription}, with ${scale} ${scale === 1 ? 'digit' : 'digits'} after the decimal point`;
 	}
 	const selectedConnection = sourceConnections.find((connection) => connection.id === primarySource);
+	const selectedCurrencyOption =
+		valueType?.kind === 'decimal' && valueType.semantics === 'money'
+			? CURRENCY_OPTIONS.find((option) => option.code === valueType.currency)
+			: undefined;
+	const selectedMeasurementUnitOption =
+		valueType?.kind === 'decimal' && valueType.semantics === 'measurement'
+			? UNIT_OF_MEASURE_OPTIONS.find((option) => option.value === valueType.unit)
+			: undefined;
+	const selectedDurationUnitOption =
+		valueType?.kind === 'int' && valueType.semantics === 'duration'
+			? DURATION_UNIT_OPTIONS.find((option) => option.value === valueType.unit)
+			: undefined;
 	let minimumPlaceholder = '';
 	let maximumPlaceholder = '';
 	let minimumTooltip: { content: string; label: string } | undefined;
@@ -486,42 +533,43 @@ const PropertyForm = ({
 	} else if (valueType?.kind === 'decimal') {
 		numericRangeStep = 10 ** -(valueType.scale ?? 0);
 	}
-	const numericRangeControls = isNumericType(valueType) ? (
-		<div className='property-form__numeric-range'>
-			<WaInput
-				className='property-form__minimum'
-				size='s'
-				value={numericRangeInputs.minimum.value}
-				type='number'
-				step={numericRangeStep}
-				placeholder={minimumPlaceholder}
-				onInput={(event) => onInputNumericRange('minimum', event)}
-			>
-				<PropertyFormLabel slot='label' tooltip={minimumTooltip}>
-					Min
-				</PropertyFormLabel>
-			</WaInput>
-			<span className='property-form__numeric-range-separator' aria-hidden='true'>
-				–
-			</span>
-			<WaInput
-				className='property-form__maximum'
-				size='s'
-				value={numericRangeInputs.maximum.value}
-				type='number'
-				step={numericRangeStep}
-				placeholder={maximumPlaceholder}
-				onInput={(event) => onInputNumericRange('maximum', event)}
-			>
-				<PropertyFormLabel slot='label' tooltip={maximumTooltip}>
-					Max
-				</PropertyFormLabel>
-			</WaInput>
-			{typeError?.location === 'numeric-range' && (
-				<PropertyFormError name='numeric-range'>{typeError.message}</PropertyFormError>
-			)}
-		</div>
-	) : null;
+	const numericRangeControls =
+		canEditType && isNumericType(valueType) ? (
+			<div className='property-form__numeric-range'>
+				<WaInput
+					className='property-form__minimum'
+					size='s'
+					value={numericRangeInputs.minimum.value}
+					type='number'
+					step={numericRangeStep}
+					placeholder={minimumPlaceholder}
+					onInput={(event) => onInputNumericRange('minimum', event)}
+				>
+					<PropertyFormLabel slot='label' tooltip={minimumTooltip}>
+						Min
+					</PropertyFormLabel>
+				</WaInput>
+				<span className='property-form__numeric-range-separator' aria-hidden='true'>
+					–
+				</span>
+				<WaInput
+					className='property-form__maximum'
+					size='s'
+					value={numericRangeInputs.maximum.value}
+					type='number'
+					step={numericRangeStep}
+					placeholder={maximumPlaceholder}
+					onInput={(event) => onInputNumericRange('maximum', event)}
+				>
+					<PropertyFormLabel slot='label' tooltip={maximumTooltip}>
+						Max
+					</PropertyFormLabel>
+				</WaInput>
+				{typeError?.location === 'numeric-range' && (
+					<PropertyFormError name='numeric-range'>{typeError.message}</PropertyFormError>
+				)}
+			</div>
+		) : null;
 
 	return (
 		<form className='property-form' id={formID} onSubmit={onSubmit}>
@@ -537,7 +585,6 @@ const PropertyForm = ({
 					onBlur={onBlurName}
 					onFocus={onFocusName}
 					onInput={onInputName}
-					onKeyDown={onKeyDownName}
 				>
 					<PropertyFormLabel slot='label' modified={fieldChanges?.name}>
 						Name
@@ -558,21 +605,53 @@ const PropertyForm = ({
 				</WaInput>
 				{nameError !== '' && <PropertyFormError name='name'>{nameError}</PropertyFormError>}
 			</div>
-			<div className='property-form__control'>
+			{showParent && parents != null && (
+				<div className='property-form__control'>
+					<WaSelect
+						className='property-form__parent'
+						label='Add property to'
+						value={property.parentKey || '__root__'}
+						onChange={onChangeParent}
+					>
+						{parents.map((parent) => (
+							<WaOption key={parent.key || '__root__'} value={parent.key || '__root__'}>
+								{parent.label}
+							</WaOption>
+						))}
+					</WaSelect>
+				</div>
+			)}
+			<div
+				className={`property-form__control${
+					shouldShowPercentageControls ? ' property-form__control--percentage-type' : ''
+				}`}
+			>
 				<div className='property-form__label'>
 					<PropertyFormLabel modified={fieldChanges?.type}>Type</PropertyFormLabel>
 				</div>
-				<PropertyTypeSelector
-					ref={typeSelectorRef}
-					type={property.type}
-					canEditType={canEditType}
-					onChange={onChangeType}
-				/>
+				<PropertyTypeSelector type={property.type} canEditType={canEditType} onChange={onChangeType} />
+				{shouldShowPercentageControls && (
+					<div className='property-form__percentage-description'>
+						<WaBadge className='property-form__percentage-badge' pill variant='neutral'>
+							<span className='property-form__percentage-badge-text'>0.9 represents 90%</span>
+						</WaBadge>
+					</div>
+				)}
 				{typeError?.location === 'type' && (
 					<PropertyFormError name='type'>{typeError.message}</PropertyFormError>
 				)}
 			</div>
-			{showStringConstraints && (
+			{valueType?.kind === 'string' && valueType.semantics === 'country' && (
+				<div className='property-form__constraints property-form__constraints--country'>
+					<div className='property-form__country-format'>
+						<div className='property-form__label'>Format</div>
+						<div className='property-form__value'>
+							{valueType.format === 'alpha-2' ? '2-letter ISO code' : '3-letter ISO code'}
+						</div>
+					</div>
+				</div>
+			)}
+			{shouldShowStringConstraints && (
 				<div className='property-form__constraints property-form__constraints--length'>
 					<WaInput
 						label='Max characters'
@@ -599,51 +678,57 @@ const PropertyForm = ({
 					)}
 				</div>
 			)}
-			{(valueType?.kind === 'int' || valueType?.kind === 'float') && canEditType && (
-				<div
-					className={`property-form__constraints property-form__constraints--${
-						valueType.kind === 'int' ? 'integer' : 'float'
-					}`}
-				>
-					{valueType.kind === 'int' && (
-						<WaRadioGroup
-							className='property-form__integer-sign'
-							label='Sign'
-							orientation='horizontal'
-							size='s'
-							value={valueType.unsigned ? 'unsigned' : 'signed'}
-							onChange={onUnsignedChange}
-						>
-							<WaRadio appearance='button' value='signed'>
-								signed
-							</WaRadio>
-							<WaRadio appearance='button' value='unsigned'>
-								unsigned
-							</WaRadio>
-						</WaRadioGroup>
-					)}
-					<WaSelect
-						className='property-form__bit-size'
-						label={valueType.kind === 'int' ? 'Integer size' : 'Bit size'}
-						size='s'
-						value={String(valueType.bitSize)}
-						onChange={onChangeBitSize}
+			{canEditType &&
+				(valueType?.kind === 'int' || valueType?.kind === 'float') &&
+				valueType.semantics == null && (
+					<div
+						className={`property-form__constraints property-form__constraints--${
+							valueType.kind === 'int' ? 'integer' : 'float'
+						}`}
 					>
-						{(valueType.kind === 'int' ? INT_BITSIZES : FLOAT_BITSIZES).map((bitSize) => (
-							<WaOption key={bitSize} value={bitSize}>
-								{bitSize}-bit
-							</WaOption>
-						))}
-					</WaSelect>
-					{valueType.kind === 'float' && (
-						<WaCheckbox size='s' checked={!valueType.real} onChange={onRealChange}>
-							<span className='property-form__float-special-values-label'>Allow ±Inf and NaN</span>
-						</WaCheckbox>
-					)}
-					{numericRangeControls}
-				</div>
-			)}
-			{valueType?.kind === 'decimal' && canEditType && (
+						{valueType.kind === 'int' && (
+							<WaRadioGroup
+								className='property-form__integer-sign'
+								label='Sign'
+								orientation='horizontal'
+								size='s'
+								value={valueType.unsigned ? 'unsigned' : 'signed'}
+								onChange={onUnsignedChange}
+							>
+								<WaRadio appearance='button' value='signed'>
+									signed
+								</WaRadio>
+								<WaRadio appearance='button' value='unsigned'>
+									unsigned
+								</WaRadio>
+							</WaRadioGroup>
+						)}
+						<WaSelect
+							className='property-form__bit-size'
+							label={valueType.kind === 'int' ? 'Integer size' : 'Bit size'}
+							size='s'
+							value={String(valueType.bitSize)}
+							onChange={onChangeBitSize}
+						>
+							{(valueType.kind === 'int' ? INT_BITSIZES : FLOAT_BITSIZES).map((bitSize) => (
+								<WaOption key={bitSize} value={bitSize}>
+									{bitSize}-bit
+								</WaOption>
+							))}
+						</WaSelect>
+						{valueType.kind === 'float' && (
+							<div className='property-form__float-special-values'>
+								<WaCheckbox size='s' checked={!valueType.real} onChange={onRealChange}>
+									<span className='property-form__float-special-values-label'>
+										Allow ±Inf and NaN
+									</span>
+								</WaCheckbox>
+							</div>
+						)}
+						{numericRangeControls}
+					</div>
+				)}
+			{canEditType && valueType?.kind === 'decimal' && valueType.semantics == null && (
 				<div className='property-form__constraints property-form__constraints--decimal'>
 					<WaInput
 						className='property-form__precision'
@@ -673,20 +758,133 @@ const PropertyForm = ({
 					{numericRangeControls}
 				</div>
 			)}
-			{showParent && parents != null && (
-				<div className='property-form__control'>
-					<WaSelect
-						className='property-form__parent'
-						label='Add to'
-						value={property.parentKey || '__root__'}
-						onChange={onChangeParent}
-					>
-						{parents.map((parent) => (
-							<WaOption key={parent.key || '__root__'} value={parent.key || '__root__'}>
-								{parent.label}
-							</WaOption>
-						))}
-					</WaSelect>
+			{valueType?.kind === 'decimal' && valueType.semantics === 'money' && (
+				<div className='property-form__constraints property-form__constraints--money'>
+					{canEditType ? (
+						<WaSelect
+							className='property-form__currency'
+							size='s'
+							value={valueType.currency || 'none'}
+							onChange={onChangeCurrency}
+						>
+							<PropertyFormLabel slot='label'>Currency</PropertyFormLabel>
+							<WaOption value='none'>No currency specified</WaOption>
+							<WaDivider />
+							{CURRENCY_OPTIONS.map((option, index) => (
+								<React.Fragment key={option.code}>
+									{index === COMMON_CURRENCY_OPTION_COUNT && <WaDivider />}
+									<WaOption value={option.code}>
+										<span className='property-form__currency-option-code'>{option.code}</span>
+										<span className='property-form__currency-option-separator'> · </span>
+										<span>{option.name}</span>
+										{option.symbol != null && (
+											<span className='property-form__currency-option-symbol' slot='end'>
+												{option.symbol}
+											</span>
+										)}
+									</WaOption>
+								</React.Fragment>
+							))}
+						</WaSelect>
+					) : (
+						<div className='property-form__currency'>
+							<div className='property-form__label'>Currency</div>
+							<div className='property-form__value'>
+								{selectedCurrencyOption == null
+									? 'No currency specified'
+									: `${selectedCurrencyOption.code} · ${selectedCurrencyOption.name}`}
+							</div>
+						</div>
+					)}
+					{numericRangeControls}
+				</div>
+			)}
+			{shouldShowPercentageControls && (
+				<div className='property-form__constraints property-form__constraints--percentage'>
+					{numericRangeControls}
+				</div>
+			)}
+			{valueType?.kind === 'decimal' && valueType.semantics === 'measurement' && (
+				<div className='property-form__constraints property-form__constraints--measurement'>
+					{canEditType ? (
+						<WaSelect
+							className='property-form__measurement-unit'
+							size='s'
+							value={valueType.unit}
+							placeholder='Select a unit...'
+							onChange={onChangeMeasurementUnit}
+						>
+							<PropertyFormLabel slot='label'>Unit</PropertyFormLabel>
+							{(valueType.unit == null || valueType.unit.length === 0) && (
+								<WaOption className='property-form__unit-placeholder' value='' disabled />
+							)}
+							{UNIT_OF_MEASURE_OPTIONS.map((option, index) => (
+								<React.Fragment key={option.value}>
+									{option.groupLabel != null && index > 0 && <WaDivider />}
+									{option.groupLabel != null && (
+										<div className='property-form__unit-option-group' role='presentation'>
+											{option.groupLabel}
+										</div>
+									)}
+									<WaOption value={option.value}>
+										<span>{option.label}</span>
+										<span className='property-form__unit-option-separator'> · </span>
+										<span className='property-form__unit-option-symbol'>{option.value}</span>
+									</WaOption>
+								</React.Fragment>
+							))}
+						</WaSelect>
+					) : (
+						<div className='property-form__measurement-unit'>
+							<div className='property-form__label'>Unit</div>
+							<div className='property-form__value'>
+								{selectedMeasurementUnitOption == null
+									? ''
+									: `${selectedMeasurementUnitOption.label} · ${selectedMeasurementUnitOption.value}`}
+							</div>
+						</div>
+					)}
+					{typeError?.location === 'measurement-unit' && (
+						<PropertyFormError name='measurement-unit'>{typeError.message}</PropertyFormError>
+					)}
+					{numericRangeControls}
+				</div>
+			)}
+			{valueType?.kind === 'int' && valueType.semantics === 'duration' && (
+				<div className='property-form__constraints property-form__constraints--duration'>
+					{canEditType ? (
+						<WaSelect
+							className='property-form__duration-unit'
+							size='s'
+							value={valueType.unit}
+							placeholder='Select a unit...'
+							onChange={onChangeDurationUnit}
+						>
+							<PropertyFormLabel slot='label'>Unit</PropertyFormLabel>
+							{(valueType.unit == null || valueType.unit.length === 0) && (
+								<WaOption className='property-form__unit-placeholder' value='' disabled />
+							)}
+							{DURATION_UNIT_OPTIONS.map((option) => (
+								<WaOption key={option.value} value={option.value}>
+									<span>{option.label}</span>
+									<span className='property-form__unit-option-separator'> · </span>
+									<span className='property-form__unit-option-symbol'>{option.symbol}</span>
+								</WaOption>
+							))}
+						</WaSelect>
+					) : (
+						<div className='property-form__duration-unit'>
+							<div className='property-form__label'>Unit</div>
+							<div className='property-form__value'>
+								{selectedDurationUnitOption == null
+									? ''
+									: `${selectedDurationUnitOption.label} · ${selectedDurationUnitOption.symbol}`}
+							</div>
+						</div>
+					)}
+					{typeError?.location === 'duration-unit' && (
+						<PropertyFormError name='duration-unit'>{typeError.message}</PropertyFormError>
+					)}
 				</div>
 			)}
 			<WaInput
@@ -817,6 +1015,9 @@ const validatePropertyType = (
 		return { location: 'type', message: 'Type cannot be empty' };
 	}
 	const type = getPropertyValueType(property.type);
+	if (type.kind === 'decimal' && type.semantics === 'measurement' && (type.unit == null || type.unit.length === 0)) {
+		return { location: 'measurement-unit', message: 'Unit is required' };
+	}
 	if (type.kind === 'string') {
 		if (
 			type.maxLength != null &&
@@ -838,7 +1039,13 @@ const validatePropertyType = (
 		}
 	}
 	if (isNumericType(type)) {
-		return getNumericTypeError(type, decimalTypeInputs, numericRangeInputs);
+		const error = getNumericTypeError(type, decimalTypeInputs, numericRangeInputs);
+		if (error != null) {
+			return error;
+		}
+	}
+	if (type.kind === 'int' && type.semantics === 'duration' && (type.unit == null || type.unit.length === 0)) {
+		return { location: 'duration-unit', message: 'Unit is required' };
 	}
 	return null;
 };
@@ -1011,6 +1218,10 @@ const getNumericTypeError = (
 
 const isNumericType = (type: Type | null | undefined): type is NumericType => {
 	return type?.kind === 'int' || type?.kind === 'float' || type?.kind === 'decimal';
+};
+
+const hasSemanticsDecimalRange = (semantics?: Semantics): boolean => {
+	return semantics === 'money' || semantics === 'percentage' || semantics === 'measurement';
 };
 
 const validatePropertyName = (name: string) => {

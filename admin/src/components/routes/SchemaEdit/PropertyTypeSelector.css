@@ -5,8 +5,10 @@
 .property-type-selector__controls {
 	border: solid var(--wa-border-width-s) var(--wa-form-control-border-color);
 	border-radius: var(--wa-border-radius-m);
+	box-sizing: border-box;
 	display: grid;
 	grid-template-columns: minmax(120px, 0.8fr) minmax(0, 1.2fr);
+	height: var(--input-height-medium);
 	transition:
 		var(--wa-transition-normal) border,
 		var(--wa-transition-normal) box-shadow;
@@ -16,7 +18,7 @@
 	grid-template-columns: minmax(0, 1fr);
 }
 
-.property-type-selector__controls:hover {
+.property-type-selector__controls:not(.property-type-selector__controls--read-only):hover {
 	border-color: var(--wa-color-neutral-60);
 }
 
@@ -36,10 +38,6 @@
 	width: 100%;
 }
 
-.property-type-selector__controls--read-only .property-type-selector__structure-trigger::part(button) {
-	cursor: default;
-}
-
 .property-type-selector__structure-trigger > [slot='start'],
 .property-type-selector__trigger > [slot='start'] {
 	transform: translateY(1px);
@@ -51,7 +49,8 @@
 	border-radius: 0;
 	box-shadow: none;
 	color: var(--text-light);
-	min-height: calc(var(--input-height-medium) - 2px);
+	height: calc(var(--input-height-medium) - var(--wa-border-width-s) * 2);
+	min-height: calc(var(--input-height-medium) - var(--wa-border-width-s) * 2);
 	outline: 0;
 }
 
@@ -85,7 +84,62 @@
 
 .property-type-selector__structure-trigger::part(label),
 .property-type-selector__trigger::part(label) {
+	align-items: center;
+	display: flex;
+	font-weight: var(--wa-font-weight-normal);
+	min-width: 0;
+	overflow: hidden;
 	text-align: left;
+	width: 100%;
+}
+
+.property-type-selector__structure-trigger::part(label) {
+	line-height: 1.8;
+}
+
+.property-type-selector__type {
+	display: block;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.property-type-selector__type-label,
+.property-type-selector__type-physical {
+	font-family: var(--monospace-fonts);
+}
+
+.property-type-selector__type-label {
+	font-size: 14px;
+	font-weight: 400;
+}
+
+.property-type-selector__type-metadata {
+	color: var(--text-light);
+	font-size: 12px;
+	font-weight: 400;
+}
+
+.property-type-selector__option .property-type-selector__type-metadata--physical {
+	color: var(--wa-color-neutral-60);
+}
+
+.property-type-selector__option
+	.property-type-selector__type-metadata:not(.property-type-selector__type-metadata--physical) {
+	font-size: 13px;
+}
+
+.property-type-selector__type-separator {
+	margin-inline: 0.25em;
+}
+
+.property-type-selector__option .property-type-selector__type-separator {
+	color: color-mix(in srgb, var(--text-primary), currentcolor 60%);
+}
+
+.property-type-selector__trigger .property-type-selector__type {
+	line-height: 1.8;
 	width: 100%;
 }
 
@@ -95,6 +149,7 @@
 
 .property-type-selector__structure-option {
 	align-items: center;
+	font-weight: var(--wa-font-weight-normal);
 	padding: 9px 12px;
 }
 
@@ -115,27 +170,22 @@
 
 .property-type-selector__structure-option:not(.property-type-selector__structure-option--selected):hover,
 .property-type-selector__structure-option:not(.property-type-selector__structure-option--selected):focus-visible {
-	background-color: var(--wa-color-neutral-95);
+	background-color: var(--property-form-option-hover-background-color);
 	color: var(--text-primary) !important;
 }
 
 .property-type-selector__structure-option--selected {
-	background-color: #f5f5fb;
+	background-color: var(--property-form-option-selected-background-color);
 	color: var(--text-primary) !important;
 }
 
 .property-type-selector__structure-option:focus-visible .property-type-selector__structure-option-content,
 .property-type-selector__structure-option:focus-visible .property-type-selector__structure-option-content *,
-.property-type-selector__structure-option:focus-visible > [slot='icon'],
-.property-type-selector__option:focus-visible .property-type-selector__option-content,
-.property-type-selector__option:focus-visible .property-type-selector__option-content *,
-.property-type-selector__option:focus-visible .property-type-selector__option-icon,
-.property-type-selector__option:focus-visible .property-type-selector__option-icon * {
+.property-type-selector__structure-option:focus-visible > [slot='icon'] {
 	color: var(--text-primary) !important;
 }
 
-.property-type-selector__structure-option:focus-visible .property-type-selector__structure-option-description,
-.property-type-selector__option:focus-visible .property-type-selector__option-description {
+.property-type-selector__structure-option:focus-visible .property-type-selector__structure-option-description {
 	color: var(--text-light) !important;
 }
 
@@ -152,7 +202,7 @@
 
 .property-type-selector__structure-option-label {
 	font-size: 13px;
-	font-weight: 600;
+	font-weight: var(--wa-font-weight-normal);
 }
 
 .property-type-selector__structure-option-description {
@@ -174,35 +224,39 @@
 	border: solid var(--wa-border-width-s) var(--wa-color-neutral-80);
 	border-radius: var(--wa-border-radius-m);
 	box-sizing: border-box;
-	max-height: min(400px, var(--auto-size-available-height));
+	height: 390px;
 	overflow-y: auto;
-	padding: var(--wa-space-xs) 6px;
-	width: min(calc(100cqi - 20px), calc(100vw - 40px));
+	padding: var(--wa-space-xs) 6px 0;
+	width: min(120cqi, calc(100vw - 40px));
 }
 
-.property-type-selector__search {
-	display: none;
-	width: 100%;
-	margin-bottom: 8px;
+/* The menu is the scroll container and its items must be its children, so
+   the fade sticks to its bottom and also stands in for its bottom padding. */
+.property-type-selector__browser-fade {
+	background: linear-gradient(to bottom, transparent, rgb(0 0 0 / 6%));
+	bottom: 0;
+	flex: 0 0 auto;
+	height: 10px;
+	margin: calc(var(--wa-space-xs) - 10px) -6px 0;
+	pointer-events: none;
+	position: sticky;
+	z-index: 1;
 }
 
-.property-type-selector__group-label {
+.property-type-selector__type-change-note {
 	color: var(--text-light);
 	font-size: 12px;
-	font-weight: 600;
-	padding: 8px 10px 4px;
-}
-
-.property-type-selector__group-label--separated {
-	border-top: 1px solid var(--border-primary);
-	margin-top: 6px;
+	line-height: 1.4;
+	margin: 0 1px 6px;
 }
 
 .property-type-selector__option {
 	align-items: center;
 	border-radius: var(--radius);
 	color: var(--text-primary);
-	padding: 6px 10px;
+	font-weight: var(--wa-font-weight-normal);
+	height: 32px;
+	padding: 0 14px;
 }
 
 .property-type-selector__option::before,
@@ -211,58 +265,56 @@
 }
 
 .property-type-selector__option::part(label) {
-	overflow: visible;
-	white-space: normal;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
 }
 
 .property-type-selector__option:not(.property-type-selector__option--selected):hover,
+.property-type-selector__option:not(.property-type-selector__option--selected):focus,
 .property-type-selector__option:not(.property-type-selector__option--selected):focus-visible {
-	background-color: var(--wa-color-neutral-95);
+	background-color: var(--property-form-option-hover-background-color);
 	color: var(--text-primary) !important;
 }
 
 .property-type-selector__option--selected {
-	background-color: #f5f5fb;
+	background-color: var(--property-form-option-selected-background-color);
 	color: var(--text-primary) !important;
 }
 
-.property-type-selector__option:last-of-type {
-	margin-bottom: 6px;
+/* App.css recolours every descendant of a focused dropdown item; keep the
+   colours that the option has when it is not focused. */
+.property-type-selector__option:focus-visible * {
+	color: inherit !important;
 }
 
-.property-type-selector__option-icon {
-	align-items: center;
-	display: flex;
-	font-size: 16px;
-	height: 22px;
-	justify-content: center;
-	width: 22px;
+.property-type-selector__option:focus-visible .property-type-selector__type-metadata {
+	color: var(--text-light) !important;
 }
 
-.property-type-selector__option-content {
-	display: flex;
-	flex-direction: column;
-	line-height: 1.3;
-	min-width: 0;
+.property-type-selector__option:focus-visible .property-type-selector__type-metadata--physical {
+	color: var(--wa-color-neutral-60) !important;
 }
 
-.property-type-selector__option-label {
-	font-size: 13px;
-	font-weight: 600;
+.property-type-selector__option:focus-visible .property-type-selector__type-separator {
+	color: color-mix(in srgb, var(--text-primary), currentcolor 60%) !important;
 }
 
-.property-type-selector__option-description {
-	color: var(--text-light);
-	font-size: 12px;
+.property-type-selector__option--separated {
+	margin-top: 10px;
+	position: relative;
+}
+
+.property-type-selector__option--separated::before {
+	border-top: 1px solid var(--border-primary);
+	content: '';
+	display: block;
+	left: 0;
+	position: absolute;
+	right: 0;
+	top: -5px;
 }
 
 .property-type-selector__option > [slot='details'] {
 	color: var(--wa-color-brand-40);
-}
-
-.property-type-selector__no-options {
-	color: var(--text-light);
-	font-size: 13px;
-	padding: 24px;
-	text-align: center;
 }

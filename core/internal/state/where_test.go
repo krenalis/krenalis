@@ -37,6 +37,7 @@ func Test_unmarshalWhere(t *testing.T) {
 		{Name: "o", Type: types.IP()},
 		{Name: "p", Type: types.Year()},
 		{Name: "q", Type: types.Array(types.String())},
+		{Name: "r", Type: types.Array(types.JSON())},
 	})
 
 	vDecimalInt := decimal.MustParse("34")
@@ -45,11 +46,13 @@ func Test_unmarshalWhere(t *testing.T) {
 	vDate := time.Date(2024, 9, 12, 0, 0, 0, 0, time.UTC)
 	vTime := time.Date(1970, 1, 1, 11, 3, 6, 801586201, time.UTC)
 
-	tests := []struct {
+	type testCase struct {
 		name      string
 		condition string
 		expected  WhereCondition
-	}{
+	}
+
+	tests := []testCase{
 		{
 			name:      "signed integer",
 			condition: `{"property":["a"],"operator":"Is","values":[5]}`,
@@ -97,8 +100,8 @@ func Test_unmarshalWhere(t *testing.T) {
 		},
 		{
 			name:      "JSON number",
-			condition: `{"property":["i"],"operator":"IsBetween","values":["34"]}`,
-			expected:  WhereCondition{Property: []string{"i"}, Operator: OpIsBetween, Values: []any{JSONConditionValue{String: "34", Number: &vDecimalInt}}},
+			condition: `{"property":["i"],"operator":"Is","values":["34"]}`,
+			expected:  WhereCondition{Property: []string{"i"}, Operator: OpIs, Values: []any{JSONConditionValue{String: "34", Number: &vDecimalInt}}},
 		},
 		{
 			name:      "datetime",
@@ -136,10 +139,47 @@ func Test_unmarshalWhere(t *testing.T) {
 			expected:  WhereCondition{Property: []string{"p"}, Operator: OpIs, Values: []any{2024}},
 		},
 		{
+			name:      "JSON array at decimal limit",
+			condition: `{"property":["r"],"operator":"Contains","values":["1e75"]}`,
+			expected:  WhereCondition{Property: []string{"r"}, Operator: OpContains, Values: []any{JSONConditionValue{String: "1e75", Number: new(decimal.MustParse("1e75"))}}},
+		},
+		{
+			name:      "JSON array outside decimal limit",
+			condition: `{"property":["r"],"operator":"Contains","values":["1e76"]}`,
+			expected:  WhereCondition{Property: []string{"r"}, Operator: OpContains, Values: []any{JSONConditionValue{String: "1e76"}}},
+		},
+		{
 			name:      "array element",
 			condition: `{"property":["q"],"operator":"Contains","values":["foo"]}`,
 			expected:  WhereCondition{Property: []string{"q"}, Operator: OpContains, Values: []any{"foo"}},
 		},
+	}
+
+	for _, operand := range []struct {
+		text  string
+		valid bool
+	}{
+		{"0", true}, {"-0.00e999999", true}, {"0e-999999", true}, {"1.2300", true},
+		{"1e75", true}, {"-1e75", true}, {"1e-37", true},
+		{"10e-38", true}, {"1e" + strings.Repeat("0", 64) + "1", true},
+		{strings.Repeat("9", 76), true},
+		{"-" + strings.Repeat("9", 39) + "." + strings.Repeat("9", 37), true},
+		{strings.Repeat("9", 39) + "." + strings.Repeat("9", 37) + "0", true},
+		{"1e76", false}, {"-1e76", false}, {"1e-38", false},
+		{strings.Repeat("9", 77), false},
+		{strings.Repeat("9", 40) + "." + strings.Repeat("9", 37), false},
+		{"1e999999", false}, {"1e-999999", false},
+	} {
+		value := JSONConditionValue{String: operand.text}
+		if operand.valid {
+			number := decimal.MustParse(operand.text)
+			value.Number = &number
+		}
+		tests = append(tests, testCase{
+			name:      "JSON decimal/" + operand.text,
+			condition: fmt.Sprintf(`{"property":["h"],"operator":"Is","values":[%q]}`, operand.text),
+			expected:  WhereCondition{Property: []string{"h"}, Operator: OpIs, Values: []any{value}},
+		})
 	}
 
 	for _, test := range tests {
@@ -585,6 +625,7 @@ func Test_MarshalWhereValues(t *testing.T) {
 		{Name: "j", Type: types.DateTime()},
 		{Name: "k", Type: types.Decimal(5, 3)},
 		{Name: "l", Type: types.Time()},
+		{Name: "m", Type: types.Array(types.JSON())},
 	})
 	tests := []struct {
 		name     string
@@ -617,6 +658,18 @@ func Test_MarshalWhereValues(t *testing.T) {
 				`{"property":["g"],"operator":"IsNotOneOf","values":[1,2,3]},` +
 				`{"property":["h"],"operator":"Is","values":["foo"]},` +
 				`{"property":["i"],"operator":"Is","values":["34"]}` + `]}`),
+		},
+		{
+			name: "JSON operand text",
+			where: Where{Operator: OpAnd, Rules: []WhereRule{
+				&WhereCondition{Property: []string{"h"}, Operator: OpIs, Values: []any{JSONConditionValue{String: "1.2300", Number: new(decimal.MustParse("1.23"))}}},
+				&WhereCondition{Property: []string{"h", "number"}, Operator: OpIs, Values: []any{JSONConditionValue{String: "1e76"}}},
+				&WhereCondition{Property: []string{"m"}, Operator: OpContains, Values: []any{JSONConditionValue{String: "1e-38"}}},
+			}},
+			expected: []byte(`{"operator":"And","rules":[` +
+				`{"property":["h"],"operator":"Is","values":["1.2300"]},` +
+				`{"property":["h","number"],"operator":"Is","values":["1e76"]},` +
+				`{"property":["m"],"operator":"Contains","values":["1e-38"]}]}`),
 		},
 		{
 			name: "decimal without leading zero",

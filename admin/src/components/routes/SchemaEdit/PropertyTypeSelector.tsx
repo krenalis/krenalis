@@ -1,43 +1,57 @@
-import React, { forwardRef, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import './PropertyTypeSelector.css';
 import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
-import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import WaDropdown, { WaAfterHideEvent, WaShowEvent } from '@awesome.me/webawesome/dist/react/dropdown/index.js';
-import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import WaDropdownItem from '@awesome.me/webawesome/dist/react/dropdown-item/index.js';
-import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
-import Type, { TypeKind } from '../../../lib/api/types/types';
-import { TypeIcon } from '../../base/TypeIcon/TypeIcon';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import Type, { DurationUnit, TypeKind, UnitOfMeasure } from '../../../lib/api/types/types';
+import {
+	getPropertyValueType,
+	getTypeSemantics,
+	toCompactPhysicalType,
+	toProfileSchemaPhysicalType,
+	toSemanticsLabel,
+} from '../../helpers/types';
 
 type PropertyStructure = 'one' | 'array' | 'object' | 'map';
 
+type PropertyTypeOptionID =
+	| TypeKind
+	| 'email'
+	| 'phone'
+	| 'url'
+	| 'country'
+	| 'duration'
+	| 'money'
+	| 'percentage'
+	| 'measurement';
+
 interface PropertyStructureOption {
+	description: string;
+	icon: string;
 	id: PropertyStructure;
 	label: string;
 	triggerLabel: string;
-	description: string;
-	icon: string;
 }
 
 interface PropertyTypeOption {
-	id: TypeKind;
-	group: 'Basic values' | 'Date and time' | 'Specialized values';
-	label: string;
-	description: string;
-	kind: TypeKind;
-	icon?: string;
 	create: () => Type;
+	description?: string;
+	id: PropertyTypeOptionID;
+	kind: TypeKind;
+	separated?: boolean;
 }
 
 interface PropertyTypeSelectorProps {
-	type: Type | null;
 	canEditType: boolean;
 	onChange: (type: Type | null) => void;
+	type: Type | null;
 }
 
-interface PropertyTypeSelectorRef {
-	focusStructureTrigger: () => void;
-}
+// The empty value exists only while editing and cannot pass form validation.
+const EMPTY_DURATION_UNIT = '' as DurationUnit;
+const EMPTY_UNIT_OF_MEASURE = '' as UnitOfMeasure;
+const PROFILE_SEMANTICS_DECIMAL_TYPE = { kind: 'decimal', precision: 18, scale: 4 } as const;
 
 const PROPERTY_STRUCTURE_OPTIONS: PropertyStructureOption[] = [
 	{
@@ -72,347 +86,376 @@ const PROPERTY_STRUCTURE_OPTIONS: PropertyStructureOption[] = [
 
 const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 	{
-		id: 'string',
-		group: 'Basic values',
-		label: 'string',
-		description: 'Text without a specific meaning',
+		id: 'email',
 		kind: 'string',
+		create: () => ({ kind: 'string', semantics: 'email' }),
+	},
+	{
+		id: 'phone',
+		kind: 'string',
+		create: () => ({ kind: 'string', semantics: 'phone' }),
+	},
+	{
+		id: 'country',
+		kind: 'string',
+		create: () => ({ kind: 'string', semantics: 'country', format: 'alpha-2' }),
+	},
+	{
+		id: 'url',
+		kind: 'string',
+		create: () => ({ kind: 'string', semantics: 'url' }),
+	},
+	{
+		id: 'string',
+		kind: 'string',
+		description: 'Text value, such as a name or code',
 		create: () => ({ kind: 'string' }),
 	},
 	{
-		id: 'int',
-		group: 'Basic values',
-		label: 'int',
-		description: 'Number without decimal places',
-		kind: 'int',
-		create: () => ({ kind: 'int', bitSize: 32, unsigned: false }),
-	},
-	{
-		id: 'decimal',
-		group: 'Basic values',
-		label: 'decimal',
-		description: 'Fixed-point numeric value',
-		kind: 'decimal',
-		create: () => ({ kind: 'decimal', precision: 10, scale: 0 }),
-	},
-	{
-		id: 'float',
-		group: 'Basic values',
-		label: 'float',
-		description: 'Floating-point numeric value',
-		kind: 'float',
-		create: () => ({ kind: 'float', bitSize: 64, real: false }),
-	},
-	{
 		id: 'boolean',
-		group: 'Basic values',
-		label: 'boolean',
-		description: 'True or false value',
 		kind: 'boolean',
+		description: 'True or false',
+		separated: true,
 		create: () => ({ kind: 'boolean' }),
 	},
 	{
+		id: 'duration',
+		kind: 'int',
+		separated: true,
+		create: () => ({ kind: 'int', bitSize: 64, unsigned: false, semantics: 'duration', unit: EMPTY_DURATION_UNIT }),
+	},
+	{
+		id: 'int',
+		kind: 'int',
+		description: 'Number with no decimal places',
+		create: () => ({ kind: 'int', bitSize: 32, unsigned: false }),
+	},
+	{
+		id: 'float',
+		kind: 'float',
+		description: 'Number with approximate precision',
+		separated: true,
+		create: () => ({ kind: 'float', bitSize: 64, real: false }),
+	},
+	{
+		id: 'money',
+		kind: 'decimal',
+		separated: true,
+		create: () => ({ ...PROFILE_SEMANTICS_DECIMAL_TYPE, semantics: 'money' }),
+	},
+	{
+		id: 'percentage',
+		kind: 'decimal',
+		create: () => ({ ...PROFILE_SEMANTICS_DECIMAL_TYPE, semantics: 'percentage' }),
+	},
+	{
+		id: 'measurement',
+		kind: 'decimal',
+		create: () => ({
+			...PROFILE_SEMANTICS_DECIMAL_TYPE,
+			semantics: 'measurement',
+			unit: EMPTY_UNIT_OF_MEASURE,
+		}),
+	},
+	{
+		id: 'decimal',
+		kind: 'decimal',
+		description: 'Decimal number with fixed precision',
+		create: () => ({ kind: 'decimal', precision: 10, scale: 0 }),
+	},
+	{
 		id: 'datetime',
-		group: 'Date and time',
-		label: 'datetime',
-		description: 'Native date-time value',
 		kind: 'datetime',
+		description: 'Date and time',
+		separated: true,
 		create: () => ({ kind: 'datetime' }),
 	},
 	{
 		id: 'date',
-		group: 'Date and time',
-		label: 'date',
-		description: 'Date without a time',
 		kind: 'date',
+		description: 'Date without a time',
 		create: () => ({ kind: 'date' }),
 	},
 	{
 		id: 'time',
-		group: 'Date and time',
-		label: 'time',
-		description: 'Time without a date',
 		kind: 'time',
+		description: 'Time without a date',
 		create: () => ({ kind: 'time' }),
 	},
 	{
 		id: 'year',
-		group: 'Date and time',
-		label: 'year',
-		description: 'Year value',
 		kind: 'year',
+		description: 'Year',
 		create: () => ({ kind: 'year' }),
 	},
 	{
 		id: 'uuid',
-		group: 'Specialized values',
-		label: 'uuid',
-		description: 'Universally unique identifier',
 		kind: 'uuid',
+		description: 'UUID',
+		separated: true,
 		create: () => ({ kind: 'uuid' }),
 	},
 	{
 		id: 'json',
-		group: 'Specialized values',
-		label: 'json',
-		description: 'Structured data stored as JSON',
 		kind: 'json',
+		description: 'JSON value',
 		create: () => ({ kind: 'json' }),
 	},
 	{
 		id: 'ip',
-		group: 'Specialized values',
-		label: 'ip',
-		description: 'IPv4 or IPv6 network address',
 		kind: 'ip',
+		description: 'IPv4 or IPv6 address',
 		create: () => ({ kind: 'ip' }),
 	},
 ];
 
-const PropertyTypeSelector = forwardRef<PropertyTypeSelectorRef, PropertyTypeSelectorProps>(
-	({ type, canEditType, onChange }, ref) => {
-		const [search, setSearch] = useState('');
-		const [structure, setStructure] = useState<PropertyStructure>(() => getPropertyStructure(type));
+const PropertyTypeSelector = ({ type, canEditType, onChange }: PropertyTypeSelectorProps) => {
+	const [structure, setStructure] = useState<PropertyStructure>(() => getPropertyStructure(type));
+	const dropdownRef = useRef<any>();
+	const focusTypeAfterStructureSelectionRef = useRef(false);
 
-		const structureDropdownRef = useRef<any>();
-		const dropdownRef = useRef<any>();
-		const focusTypeAfterStructureSelectionRef = useRef(false);
-		const controlsID = useId();
+	const valueType = getPropertyValueType(type);
+	const semantics = getTypeSemantics(valueType);
+	let typeLabel: string | null = null;
+	if (valueType != null) {
+		typeLabel = semantics == null ? valueType.kind : toSemanticsLabel(semantics);
+	}
+	const physicalType = semantics == null ? null : toCompactPhysicalType(valueType);
+	const selectedOption = getPropertyTypeOption(type);
+	const selectedStructureOption =
+		PROPERTY_STRUCTURE_OPTIONS.find((option) => option.id === structure) || PROPERTY_STRUCTURE_OPTIONS[0];
+	const showValueTypeSelector = structure !== 'object';
 
-		useImperativeHandle(
-			ref,
-			() => ({
-				focusStructureTrigger: () => {
-					if (!canEditType) {
-						return;
-					}
-					focusTrigger(structureDropdownRef.current);
-				},
-			}),
-			[canEditType],
-		);
+	useEffect(() => {
+		if (type != null) {
+			setStructure(getPropertyStructure(type));
+		}
+	}, [type]);
 
-		const valueType = getPropertyValueType(type);
-		const selectedOption = getPropertyTypeOption(type);
-		const selectedStructureOption =
-			PROPERTY_STRUCTURE_OPTIONS.find((option) => option.id === structure) || PROPERTY_STRUCTURE_OPTIONS[0];
-		const showValueTypeSelector = structure !== 'object';
-		const options = useMemo(() => {
-			const term = search.trim().toLocaleLowerCase();
-			return PROPERTY_TYPE_OPTIONS.filter((option) => {
-				if (!canEditType && !isOptionCompatibleWithType(option, valueType)) {
-					return false;
-				}
-				return term === '' || `${option.label} ${option.description}`.toLocaleLowerCase().includes(term);
-			});
-		}, [canEditType, search, valueType]);
+	const onSelectStructure = (event) => {
+		if (!canEditType) {
+			return;
+		}
+		const nextStructure = event.detail.item.value as PropertyStructure;
+		focusTypeAfterStructureSelectionRef.current = nextStructure !== 'object';
+		if (nextStructure === structure) {
+			return;
+		}
+		setStructure(nextStructure);
+		if (nextStructure === 'object') {
+			onChange({ kind: 'object', properties: [] });
+			return;
+		}
+		if (valueType == null || valueType.kind === 'object') {
+			onChange(null);
+			return;
+		}
+		onChange(wrapPropertyValueType(valueType, nextStructure));
+	};
 
-		useEffect(() => {
-			if (type != null) {
-				setStructure(getPropertyStructure(type));
+	const onStructureMenuAfterHide = (event: WaAfterHideEvent) => {
+		if (event.target !== event.currentTarget || !focusTypeAfterStructureSelectionRef.current) {
+			return;
+		}
+		focusTypeAfterStructureSelectionRef.current = false;
+		focusTrigger(dropdownRef.current);
+	};
+
+	// Web Awesome's dropdown has no disabled state: a type that cannot be
+	// edited keeps its menus closed.
+	const onShowMenu = (event: WaShowEvent) => {
+		if (event.target === event.currentTarget && !canEditType) {
+			event.preventDefault();
+		}
+	};
+
+	const onSelectOption = (event) => {
+		if (!canEditType) {
+			return;
+		}
+		const option = PROPERTY_TYPE_OPTIONS.find((candidate) => candidate.id === event.detail.item.value);
+		if (option == null || option.id === selectedOption?.id) {
+			return;
+		}
+		const selection = option.create();
+		let nextValueType = valueType;
+		if (getTypeSemantics(selection) != null || valueType?.kind !== option.kind) {
+			nextValueType = selection;
+		} else if (valueType != null && 'semantics' in valueType) {
+			nextValueType = { ...valueType };
+			delete nextValueType.semantics;
+			if (nextValueType.kind === 'string') {
+				delete nextValueType.format;
 			}
-		}, [type]);
+			if (nextValueType.kind === 'decimal') {
+				delete nextValueType.currency;
+			}
+			if ('unit' in nextValueType) {
+				delete nextValueType.unit;
+			}
+		}
+		if (nextValueType == null) {
+			return;
+		}
+		onChange(wrapPropertyValueType(nextValueType, structure));
+	};
 
-		const onSelectStructure = (event) => {
-			if (!canEditType) {
-				return;
-			}
-			const newStructure = event.detail.item.value as PropertyStructure;
-			focusTypeAfterStructureSelectionRef.current = newStructure !== 'object';
-			if (newStructure === structure) {
-				return;
-			}
-			setStructure(newStructure);
-			if (newStructure === 'object') {
-				onChange({ kind: 'object', properties: [] });
-				return;
-			}
-			const newValueType = getPropertyValueType(type);
-			if (newValueType == null || newValueType.kind === 'object') {
-				onChange(null);
-				return;
-			}
-			onChange(wrapPropertyValueType(newValueType, newStructure));
-		};
-
-		const onStructureMenuAfterHide = (event: WaAfterHideEvent) => {
-			if (event.target !== event.currentTarget || !focusTypeAfterStructureSelectionRef.current) {
-				return;
-			}
-			focusTypeAfterStructureSelectionRef.current = false;
-			focusTrigger(dropdownRef.current);
-		};
-
-		// Web Awesome's dropdown has no disabled state: a type that cannot be
-		// edited keeps its menus closed.
-		const onShowMenu = (event: WaShowEvent) => {
-			if (event.target === event.currentTarget && !canEditType) {
-				event.preventDefault();
-			}
-		};
-
-		const onSelectOption = (event) => {
-			const option = options.find((candidate) => candidate.id === event.detail.item.value);
-			if (option == null) {
-				return;
-			}
-			const newType = canEditType ? wrapPropertyValueType(option.create(), structure) : type;
-			onChange(newType);
-		};
-
-		const groupedOptions = options.reduce<Record<string, PropertyTypeOption[]>>((groups, option) => {
-			if (groups[option.group] == null) {
-				groups[option.group] = [];
-			}
-			groups[option.group].push(option);
-			return groups;
-		}, {});
-
-		return (
-			<div className='property-type-selector'>
-				<WaTooltip className='schema-edit__toolbar-tooltip' for={controlsID} disabled={canEditType}>
-					The type of an existing property cannot be changed.
-				</WaTooltip>
-				<div
-					id={controlsID}
-					className={`property-type-selector__controls${
-						canEditType ? '' : ' property-type-selector__controls--read-only'
-					}${showValueTypeSelector ? '' : ' property-type-selector__controls--structure-only'}`}
-					onPointerDown={(event) => {
-						if (!canEditType) {
-							event.preventDefault();
-						}
-					}}
+	return (
+		<div className='property-type-selector'>
+			{type != null && (
+				<div className='property-type-selector__type-change-note'>
+					{canEditType
+						? "Can't be changed once the property has been applied."
+						: "The type can't be changed for an existing property."}
+				</div>
+			)}
+			<div
+				className={`property-type-selector__controls${
+					canEditType ? '' : ' property-type-selector__controls--read-only'
+				}${showValueTypeSelector ? '' : ' property-type-selector__controls--structure-only'}`}
+			>
+				<WaDropdown
+					className='property-type-selector__structure-dropdown'
+					placement='bottom-start'
+					distance={6}
+					onWaShow={onShowMenu}
+					onWaSelect={onSelectStructure}
+					onWaAfterHide={onStructureMenuAfterHide}
 				>
+					<WaButton
+						appearance='outlined'
+						className='property-type-selector__structure-trigger'
+						slot='trigger'
+						withCaret={canEditType}
+						disabled={!canEditType}
+						aria-label={`Structure: ${selectedStructureOption.label}`}
+						onKeyDown={onTriggerKeyDown}
+					>
+						<WaIcon slot='start' name={selectedStructureOption.icon} />
+						{selectedStructureOption.triggerLabel}
+					</WaButton>
+					{PROPERTY_STRUCTURE_OPTIONS.map((option) => (
+						<WaDropdownItem
+							className={`property-type-selector__structure-option${
+								structure === option.id ? ' property-type-selector__structure-option--selected' : ''
+							}`}
+							key={option.id}
+							data-structure-option={option.id}
+							value={option.id}
+						>
+							<WaIcon slot='icon' name={option.icon} />
+							<span className='property-type-selector__structure-option-content'>
+								<span className='property-type-selector__structure-option-label'>{option.label}</span>
+								<span className='property-type-selector__structure-option-description'>
+									{option.description}
+								</span>
+							</span>
+							{structure === option.id && <WaIcon slot='details' name='check-lg' />}
+						</WaDropdownItem>
+					))}
+				</WaDropdown>
+				{showValueTypeSelector && (
 					<WaDropdown
-						className='property-type-selector__structure-dropdown'
-						ref={structureDropdownRef}
-						placement='bottom-start'
+						className='property-type-selector__dropdown'
+						ref={dropdownRef}
+						placement='bottom-end'
 						distance={6}
 						onWaShow={onShowMenu}
-						onWaSelect={onSelectStructure}
-						onWaAfterHide={onStructureMenuAfterHide}
+						onWaSelect={onSelectOption}
 					>
 						<WaButton
 							appearance='outlined'
-							className='property-type-selector__structure-trigger'
+							className='property-type-selector__trigger'
 							slot='trigger'
 							withCaret={canEditType}
-							aria-disabled={!canEditType || undefined}
-							aria-label={`Structure: ${selectedStructureOption.label}`}
+							disabled={!canEditType}
+							aria-label={valueType == null ? 'Select type' : undefined}
 							onKeyDown={onTriggerKeyDown}
 						>
-							<WaIcon slot='start' name={selectedStructureOption.icon} />
-							{selectedStructureOption.triggerLabel}
-						</WaButton>
-						{PROPERTY_STRUCTURE_OPTIONS.map((option) => (
-							<WaDropdownItem
-								className={`property-type-selector__structure-option${
-									structure === option.id ? ' property-type-selector__structure-option--selected' : ''
-								}`}
-								key={option.id}
-								data-structure-option={option.id}
-								value={option.id}
-							>
-								<WaIcon slot='icon' name={option.icon} />
-								<span className='property-type-selector__structure-option-content'>
-									<span className='property-type-selector__structure-option-label'>
-										{option.label}
-									</span>
-									<span className='property-type-selector__structure-option-description'>
-										{option.description}
-									</span>
+							{valueType == null ? (
+								<span className='property-type-selector__placeholder'>Select type...</span>
+							) : (
+								<span
+									className='property-type-selector__type'
+									title={physicalType == null ? typeLabel : `${typeLabel} · ${physicalType}`}
+								>
+									<span className='property-type-selector__type-label'>{typeLabel}</span>
+									{physicalType != null && (
+										<span className='property-type-selector__type-metadata'>
+											<span className='property-type-selector__type-separator' aria-hidden='true'>
+												{' · '}
+											</span>
+											<span className='property-type-selector__type-physical'>
+												{physicalType}
+											</span>
+										</span>
+									)}
 								</span>
-								{structure === option.id && <WaIcon slot='details' name='check-lg' />}
-							</WaDropdownItem>
-						))}
-					</WaDropdown>
-					{showValueTypeSelector && (
-						<WaDropdown
-							className='property-type-selector__dropdown'
-							ref={dropdownRef}
-							placement='bottom-end'
-							distance={6}
-							onWaShow={onShowMenu}
-							onWaSelect={onSelectOption}
-							onWaAfterHide={(event: WaAfterHideEvent) => {
-								if (event.target === event.currentTarget) {
-									setSearch('');
-								}
-							}}
-						>
-							<WaButton
-								appearance='outlined'
-								className='property-type-selector__trigger'
-								slot='trigger'
-								withCaret={canEditType}
-								aria-disabled={!canEditType || undefined}
-								aria-label={selectedOption != null ? `Type: ${selectedOption.label}` : 'Select type'}
-								onKeyDown={onTriggerKeyDown}
-							>
-								{selectedOption != null && (
-									<PropertyTypeOptionIcon option={selectedOption} slot='start' />
-								)}
-								{selectedOption != null ? (
-									selectedOption.label
-								) : (
-									<span className='property-type-selector__placeholder'>Select type</span>
-								)}
-							</WaButton>
-							<WaInput
-								className='property-type-selector__search'
-								placeholder='Search types...'
-								value={search}
-								onInput={(event: any) => setSearch(event.target.value)}
-							>
-								<WaIcon slot='start' name='search' />
-							</WaInput>
-							{Object.entries(groupedOptions).map(([group, groupOptions], groupIndex) => (
-								<React.Fragment key={group}>
-									<div
-										className={`property-type-selector__group-label${
-											groupIndex === 0 ? '' : ' property-type-selector__group-label--separated'
-										}`}
-									>
-										{group}
-									</div>
-									{groupOptions.map((option) => (
-										<WaDropdownItem
-											className={`property-type-selector__option${
-												selectedOption?.id === option.id
-													? ' property-type-selector__option--selected'
-													: ''
-											}`}
-											key={option.id}
-											data-type-option={option.id}
-											value={option.id}
-										>
-											<PropertyTypeOptionIcon option={option} slot='icon' />
-											<span className='property-type-selector__option-content'>
-												<span className='property-type-selector__option-label'>
-													{option.label}
+							)}
+						</WaButton>
+						{PROPERTY_TYPE_OPTIONS.map((option) => {
+							const optionType = option.create();
+							const optionSemantics = getTypeSemantics(optionType);
+							const label = optionSemantics == null ? optionType.kind : toSemanticsLabel(optionSemantics);
+							let metadata = option.description;
+							if (optionSemantics != null) {
+								metadata =
+									optionSemantics === 'country' || optionSemantics === 'duration'
+										? toCompactPhysicalType(optionType)
+										: toProfileSchemaPhysicalType(optionType);
+							}
+							return (
+								<WaDropdownItem
+									className={`property-type-selector__option${
+										option.separated ? ' property-type-selector__option--separated' : ''
+									}${
+										selectedOption?.id === option.id
+											? ' property-type-selector__option--selected'
+											: ''
+									}`}
+									key={option.id}
+									data-type-option={option.id}
+									value={option.id}
+								>
+									<span className='property-type-selector__type'>
+										<span className='property-type-selector__type-label'>{label}</span>
+										{metadata != null && (
+											<span
+												className={`property-type-selector__type-metadata${
+													optionSemantics == null
+														? ''
+														: ' property-type-selector__type-metadata--physical'
+												}`}
+											>
+												<span
+													className='property-type-selector__type-separator'
+													aria-hidden='true'
+												>
+													{' · '}
 												</span>
-												<span className='property-type-selector__option-description'>
-													{option.description}
+												<span
+													className={
+														optionSemantics == null
+															? ''
+															: 'property-type-selector__type-physical'
+													}
+												>
+													{metadata}
 												</span>
 											</span>
-											{selectedOption?.id === option.id && (
-												<WaIcon slot='details' name='check-lg' />
-											)}
-										</WaDropdownItem>
-									))}
-								</React.Fragment>
-							))}
-							{options.length === 0 && (
-								<div className='property-type-selector__no-options'>No matching types</div>
-							)}
-						</WaDropdown>
-					)}
-				</div>
+										)}
+									</span>
+									{selectedOption?.id === option.id && <WaIcon slot='details' name='check-lg' />}
+								</WaDropdownItem>
+							);
+						})}
+						<div className='property-type-selector__browser-fade' aria-hidden='true' />
+					</WaDropdown>
+				)}
 			</div>
-		);
-	},
-);
+		</div>
+	);
+};
 
 // focusTrigger focuses the trigger of a dropdown, as the focusOnTrigger method
 // of Shoelace's dropdown did.
@@ -431,17 +474,6 @@ const onTriggerKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
 	dropdown.open = true;
 };
 
-const PropertyTypeOptionIcon = ({ option, slot }: { option: PropertyTypeOption; slot?: string }) => {
-	if (option.icon != null) {
-		return <WaIcon className='property-type-selector__option-icon' name={option.icon} slot={slot} />;
-	}
-	return (
-		<span className='property-type-selector__option-icon' slot={slot}>
-			<TypeIcon kind={option.kind} />
-		</span>
-	);
-};
-
 const getPropertyStructure = (type: Type | null): PropertyStructure => {
 	if (type?.kind === 'array') {
 		return 'array';
@@ -456,32 +488,9 @@ const getPropertyStructure = (type: Type | null): PropertyStructure => {
 };
 
 const getPropertyTypeOption = (type: Type | null): PropertyTypeOption | undefined => {
-	const id = getPropertyValueType(type)?.kind;
+	const valueType = getPropertyValueType(type);
+	const id: PropertyTypeOptionID | undefined = getTypeSemantics(valueType) ?? valueType?.kind;
 	return PROPERTY_TYPE_OPTIONS.find((option) => option.id === id);
-};
-
-const getPropertyValueType = (type: Type | null): Type | null => {
-	if (type?.kind === 'array' || type?.kind === 'map') {
-		return type.elementType;
-	}
-	return type;
-};
-
-const isOptionCompatibleWithType = (option: PropertyTypeOption, type: Type | null): boolean => {
-	if (type == null || option.kind !== type.kind) {
-		return false;
-	}
-	return true;
-};
-
-const replacePropertyValueType = (type: Type, valueType: Type): Type => {
-	if (type.kind === 'array') {
-		return { ...type, elementType: valueType };
-	}
-	if (type.kind === 'map') {
-		return { ...type, elementType: valueType };
-	}
-	return valueType;
 };
 
 const wrapPropertyValueType = (type: Type, structure: PropertyStructure): Type => {
@@ -494,4 +503,4 @@ const wrapPropertyValueType = (type: Type, structure: PropertyStructure): Type =
 	return type;
 };
 
-export { getPropertyValueType, PropertyTypeSelector, type PropertyTypeSelectorRef, replacePropertyValueType };
+export { PropertyTypeSelector };
