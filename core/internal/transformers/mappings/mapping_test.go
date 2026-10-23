@@ -497,31 +497,31 @@ func Test_Transform(t *testing.T) {
 			name:        `A string exceeding the int64 range assigned to an int property -> error`,
 			expressions: map[string]string{"E": "a"},
 			attributes:  map[string]any{"a": "9223372036854775808"},
-			err:         ValidationError{msg: `number «a» is out of range for the «int(32)» type while mapping to «E»`},
+			err:         ValidationError{msg: `number «a» is too small or too large for the «int(32)» type while mapping to «E»`},
 		},
 		{
 			name:        `A JSON number exceeding the int64 range assigned to an int property -> error`,
 			expressions: map[string]string{"E": "d"},
 			attributes:  map[string]any{"d": json.Value(`9223372036854775808`)},
-			err:         ValidationError{msg: `number «d» is out of range for the «int(32)» type while mapping to «E»`},
+			err:         ValidationError{msg: `number «d» is too small or too large for the «int(32)» type while mapping to «E»`},
 		},
 		{
 			name:        `A string exceeding the uint64 range assigned to an unsigned int property -> error`,
 			expressions: map[string]string{"H": "a"},
 			attributes:  map[string]any{"a": "18446744073709551616"},
-			err:         ValidationError{msg: `number «a» is out of range for the «unsigned int(64)» type while mapping to «H»`},
+			err:         ValidationError{msg: `number «a» is too small or too large for the «unsigned int(64)» type while mapping to «H»`},
 		},
 		{
 			name:        `A string exceeding the float64 range assigned to a float property -> error`,
 			expressions: map[string]string{"I": "a"},
 			attributes:  map[string]any{"a": "1e400"},
-			err:         ValidationError{msg: `number «a» is out of range for the «float(64)» type while mapping to «I»`},
+			err:         ValidationError{msg: `number «a» is too small or too large for the «float(64)» type while mapping to «I»`},
 		},
 		{
 			name:        `A JSON number exceeding the precision assigned to a decimal property -> error`,
 			expressions: map[string]string{"J": "d"},
 			attributes:  map[string]any{"d": json.Value(`1000`)},
-			err:         ValidationError{msg: `number «d» is out of range for the «decimal(5,2)» type while mapping to «J»`},
+			err:         ValidationError{msg: `number «d» is too small or too large for the «decimal(5,2)» type while mapping to «J»`},
 		},
 	}
 
