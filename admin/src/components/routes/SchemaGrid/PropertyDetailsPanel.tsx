@@ -15,6 +15,7 @@ import { PropertyPanelLayout } from '../Schema/PropertyPanelLayout';
 import {
 	SchemaPropertyIdentifierLabel,
 	SchemaPropertyIdentifierValue,
+	SchemaPropertyInfoTooltip,
 	SchemaPropertyPrimarySourceLabel,
 } from '../Schema/SchemaPropertyGrid';
 import { SchemaPropertyType } from '../Schema/SchemaPropertyType';
@@ -58,7 +59,17 @@ const PropertyDetailsPanel = ({
 				</div>
 				<div className='property-details-panel__section property-details-panel__section--metadata'>
 					{getCompatibleProfileRoles(property).length > 0 && (
-						<PropertyDetail label='Role'>
+						<PropertyDetail
+							label={
+								<span className='schema-property-grid__label-content'>
+									Role
+									<SchemaPropertyInfoTooltip
+										content='Specifies which profile concept this property represents.'
+										label='About roles'
+									/>
+								</span>
+							}
+						>
 							{assignedRole == null ? (
 								<span className='property-details-panel__empty-value'>—</span>
 							) : (
