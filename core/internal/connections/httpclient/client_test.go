@@ -78,13 +78,6 @@ func TestClientDoResponseBody(t *testing.T) {
 	for _, test := range tests {
 		for _, bodyKind := range []string{"nil", "empty", "replayable", "non-replayable"} {
 			t.Run(test.name+"/"+bodyKind, func(t *testing.T) {
-				// TODO: remove when Do no longer retries requests that are not
-				// idempotent or whose body cannot be read again.
-				isIdempotentRequest := test.method != http.MethodPost || test.idempotencyHeader != ""
-				isRetriable := isIdempotentRequest && bodyKind != "non-replayable"
-				if (test.status == 429 || test.status == 500) && !isRetriable {
-					t.Skip("Do retries requests that are not retriable")
-				}
 				synctest.Test(t, func(t *testing.T) {
 
 					firstContent := "first response"

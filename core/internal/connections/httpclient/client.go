@@ -311,6 +311,9 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 		case connectors.PermanentFailure:
 			return res, nil
 		case connectors.NetFailure:
+			if !retriable {
+				return res, nil
+			}
 			_ = res.Body.Close()
 			select {
 			case <-ctx.Done():
@@ -331,6 +334,9 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 			}
 			_ = res.Body.Close()
 		case connectors.Slowdown, connectors.RateLimited:
+			if !retriable {
+				return res, nil
+			}
 			_ = res.Body.Close()
 		default:
 			_ = res.Body.Close()
