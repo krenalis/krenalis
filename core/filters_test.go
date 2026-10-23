@@ -614,7 +614,7 @@ func Test_convertFilterToWhere(t *testing.T) {
 		text  string
 		valid bool
 	}{
-		{"0", true}, {"-0e999999", true}, {"0e-999999", true}, {"1.2300", true},
+		{"0", true}, {"-0.00e999999", true}, {"0e-999999", true}, {"1.2300", true},
 		{"1e75", true}, {"-1e75", true}, {"1e-37", true},
 		{"10e-38", true}, {"1e" + strings.Repeat("0", 64) + "1", true},
 		{strings.Repeat("9", 76), true},
@@ -1781,7 +1781,7 @@ func Test_validateFilter(t *testing.T) {
 		text  string
 		valid bool
 	}{
-		{"0", true}, {"-0e999999", true}, {"0e-999999", true}, {"1.2300", true},
+		{"0", true}, {"-0.00e999999", true}, {"0e-999999", true}, {"1.2300", true},
 		{"1e75", true}, {"-1e75", true}, {"1e-37", true},
 		{"10e-38", true}, {"1e" + strings.Repeat("0", 64) + "1", true},
 		{strings.Repeat("9", 76), true},

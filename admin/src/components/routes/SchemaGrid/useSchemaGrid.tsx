@@ -5,9 +5,9 @@ import AppContext from '../../../context/AppContext';
 import TransformedConnection from '../../../lib/core/connection';
 import { ConsentPurpose, PrimarySources } from '../../../lib/api/types/workspace';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
-import { toKrenalisStringType } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { SchemaPropertyIdentifierBadge, SchemaPropertyName } from '../Schema/SchemaPropertyGrid';
+import { getProfileSchemaTypePresentation } from '../../helpers/types';
 import { SchemaContext } from '../../../context/SchemaContext';
 import { SchemaPropertyConsent } from '../Schema/SchemaPropertyConsent';
 import { getConsentPurposesByPropertyPath } from '../Schema/SchemaPropertyConsent.helpers';
@@ -16,7 +16,6 @@ const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Property' },
 	{ name: 'Type' },
 	{ name: 'Identifier', alignment: 'center' },
-	{ name: 'Description' },
 	{ name: 'Primary source' },
 ];
 
@@ -110,10 +109,17 @@ const getRows = (
 	const rows: GridRow[] = [];
 	for (const property of schema.properties || []) {
 		const path = parent == null ? property.name : `${parent}.${property.name}`;
+		const typePresentation = getProfileSchemaTypePresentation(property.type);
 		const matches =
 			includeAll ||
 			search === '' ||
-			[property.name, property.displayName, property.description, toKrenalisStringType(property.type)]
+			[
+				property.name,
+				property.displayName,
+				property.description,
+				typePresentation.primary,
+				typePresentation.metadata,
+			]
 				.filter(Boolean)
 				.join(' ')
 				.toLocaleLowerCase()
@@ -166,9 +172,23 @@ const buildRow = (
 	forceExpanded: boolean,
 	onSelectProperty: (path: string) => void,
 ): StandardGridRow => {
+	const { primary, metadata } = getProfileSchemaTypePresentation(property.type);
 	const typeCell: ReactNode = (
 		<>
-			<span className='schema-grid__technical-type'>{toKrenalisStringType(property.type)}</span>
+			<span
+				className='schema-property-grid__type'
+				title={metadata == null ? primary : `${primary} · ${metadata}`}
+			>
+				<span className='schema-property-grid__type-label'>{primary}</span>
+				{metadata != null && (
+					<span className='schema-property-grid__type-metadata'>
+						<span className='schema-property-grid__type-separator' aria-hidden='true'>
+							{' · '}
+						</span>
+						<span className='schema-property-grid__type-physical'>{metadata}</span>
+					</span>
+				)}
+			</span>
 			<SchemaPropertyConsent purposes={consentPurposes} />
 		</>
 	);
@@ -188,7 +208,6 @@ const buildRow = (
 			<SchemaPropertyName property={property} />,
 			typeCell,
 			identifierPosition == null ? null : <SchemaPropertyIdentifierBadge position={identifierPosition} />,
-			property.description || <span className='schema-grid__empty-cell'>—</span>,
 			primarySourceCell,
 		],
 		forceExpanded,

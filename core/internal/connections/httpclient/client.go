@@ -329,10 +329,15 @@ func (c *Client) do(req *http.Request, isRetriveOAuthToken bool) (*http.Response
 			if !isBodyRetriable(req) {
 				return res, nil
 			}
+			_ = res.Body.Close()
+		case connectors.Slowdown, connectors.RateLimited:
+			_ = res.Body.Close()
+		default:
+			_ = res.Body.Close()
+			return nil, fmt.Errorf("core/internal/connections/httpclient: unexpected failure reason %d", reason)
 		}
 
 		if hasBody {
-			_ = res.Body.Close()
 			body, err := req.GetBody()
 			if err != nil {
 				return nil, err
