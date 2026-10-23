@@ -239,7 +239,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 }
 
 // renderJSONComparison compares JSON strings and numbers without coercing other
-// kinds, using byte order for strings and exact decimal order for numbers.
+// types, using byte order for strings and exact decimal ordering for numbers.
 func renderJSONComparison(b *strings.Builder, value, operator string, operand warehouses.JSONConditionValue) {
 	isString := "IS_VARCHAR(" + value + ")"
 	isNumber := "(IS_DECIMAL(" + value + ") OR IS_DOUBLE(" + value + "))"
@@ -359,7 +359,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 		return fmt.Errorf("operator %d requires %d values, got %d", expr.Operator, count, len(expr.Values))
 	}
 
-	// Preserve structural equality for callers supplying an encoded JSON value.
+	// Preserve structural equality when callers provide an encoded JSON value.
 	if count == 1 && op == warehouses.OpIs {
 		if operand, ok := expr.Values[0].(json.Value); ok {
 			if negative {
@@ -414,8 +414,8 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 		b.WriteByte(')')
 
 	case warehouses.OpIsOneOf:
-		// Group operands by kind to avoid repeating extraction and conversion
-		// for each element in a potentially long membership list.
+		// Group operands by kind to avoid repeated extraction and conversion
+		// for each entry in a potentially long membership list.
 		isString := "IS_VARCHAR(" + target + ")"
 		isNumber := "(IS_DECIMAL(" + target + ") OR IS_DOUBLE(" + target + "))"
 		text := "COLLATE(AS_VARCHAR(" + target + "), 'utf8')"
