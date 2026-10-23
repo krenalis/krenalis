@@ -385,7 +385,7 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "unsignedFloat32NaN", typ: types.Int(64).Unsigned(), value: float32(math.NaN()), wantContains: "has a float32 value that cannot represent an unsigned int(64) value"},
 		{name: "unsignedFloat32Inf", typ: types.Int(64).Unsigned(), value: float32(math.Inf(1)), wantContains: "has a float32 value that cannot represent an unsigned int(64) value"},
 		{name: "unsignedDecimalNegative", typ: types.Int(16).Unsigned(), value: decimal.MustInt(-1), wantContains: "has a decimal.decimal value that cannot represent an unsigned int value"},
-		{name: "unsignedInvalidType", typ: types.Int(16).Unsigned(), value: true, wantContains: "has type bool that is not allowed for type int(16)"},
+		{name: "unsignedInvalidType", typ: types.Int(16).Unsigned(), value: true, wantContains: "has type bool that is not allowed for type unsigned int(16)"},
 		{name: "floatIntNotRepresentable", typ: types.Float(32), value: 1 << 26, wantContains: "has an int value that cannot represent a float(32) value"},
 		{name: "float64TooPreciseFor32", typ: types.Float(32), value: 1e40, wantContains: "has a float64 value that cannot represent a float(32) value"},
 		{name: "floatDecimalNotRepresentable", typ: types.Float(64), value: decimal.MustParse("1e500"), wantContains: "has a decimal.Decimal value that cannot represent a float(64) value"},

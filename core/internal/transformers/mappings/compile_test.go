@@ -83,7 +83,7 @@ func Test_Compile(t *testing.T) {
 		{expr: "'ZZ'", dt: types.String().AsCountry(types.ISO3166Alpha2), compileErr: errors.New(`"ZZ" is not a 2-letter country code`)},
 		{expr: "'ZZZ'", dt: types.String().AsCountry(types.ISO3166Alpha3), compileErr: errors.New(`"ZZZ" is not a 3-letter country code`)},
 		{expr: "'abc'", dt: types.String().AsPhone(), compileErr: errors.New(`"abc" is not a valid phone number`)},
-		{expr: "-1", dt: types.Int(32).Unsigned(), compileErr: errors.New("number -1 is not a int(32) value")},
+		{expr: "-1", dt: types.Int(32).Unsigned(), compileErr: errors.New("number -1 is not a unsigned int(32) value")},
 		{expr: "-200", dt: types.Int(8), compileErr: errors.New("number -200 is less than -128")},
 		{expr: "300", dt: types.Int(8), compileErr: errors.New("number 300 is greater than 127")},
 		{expr: "'300'", dt: types.Int(8), compileErr: errors.New(`number "300" is greater than 127`)},
