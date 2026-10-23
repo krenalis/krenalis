@@ -135,6 +135,8 @@ func Open(opts *Options) (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
+	// String literals use doubled quotes and require literal backslashes.
+	config.ConnConfig.RuntimeParams["standard_conforming_strings"] = "on"
 	if opts.MaxConnections > 0 {
 		config.MaxConns = opts.MaxConnections
 	}
