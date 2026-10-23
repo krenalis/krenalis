@@ -5,10 +5,13 @@
 package datastore
 
 import (
+	"maps"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/test/warehouseexpr"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
@@ -75,6 +78,79 @@ func TestConvertWhereJSONBooleanOperators(t *testing.T) {
 
 				operand := warehouses.NewBaseExpr(column, warehouses.Operator(operator))
 				operand.Keys = tt.keys
+				want := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{operand})
+				if !reflect.DeepEqual(want, got) {
+					t.Fatalf("expected %#v, got %#v", want, got)
+				}
+
+			})
+		}
+	}
+
+}
+
+// TestConvertWhereJSONOperators verifies that JSON filter conditions are
+// converted across property paths without modifying the input.
+func TestConvertWhereJSONOperators(t *testing.T) {
+
+	_, cases := warehouseexpr.JSONCases()
+	if len(cases) == 0 {
+		t.Fatal("expected at least one JSON test case, got 0")
+	}
+	paths := []struct {
+		name       string
+		columnPath string
+		property   []string
+		keys       []string
+	}{
+		{"column", "j", []string{"j"}, nil},
+		{"nested keys", "j", []string{"j", "a", "b"}, []string{"a", "b"}},
+		{"object column literal dot", "object.j", []string{"object", "j", "a.b"}, []string{"a.b"}},
+	}
+	for _, c := range cases {
+		for _, path := range paths {
+			t.Run(c.Name+"/"+path.name, func(t *testing.T) {
+
+				var values, originalValues []any
+				if c.Values != nil {
+					values = make([]any, len(c.Values))
+					originalValues = make([]any, len(c.Values))
+					for i, raw := range c.Values {
+						value, ok := raw.(warehouses.JSONConditionValue)
+						if !ok {
+							t.Fatalf("expected warehouses.JSONConditionValue at index %d, got %T", i, raw)
+						}
+						originalValues[i] = state.JSONConditionValue{String: value.String, Number: value.Number}
+						if value.Number != nil {
+							number := *value.Number
+							value.Number = &number
+						}
+						values[i] = state.JSONConditionValue{String: value.String, Number: value.Number}
+					}
+				}
+				original := &state.WhereCondition{
+					Property: slices.Clone(path.property), Operator: state.WhereOperator(c.Operator), Values: originalValues,
+				}
+				condition := &state.WhereCondition{Property: path.property, Operator: original.Operator, Values: values}
+				where := &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{condition}}
+				originalWhere := &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{original}}
+				column := warehouses.Column{Name: "json_column", Type: types.JSON(), Nullable: true}
+				columns := map[string]warehouses.Column{path.columnPath: column}
+				originalColumns := maps.Clone(columns)
+
+				got, err := convertWhere(where, columns)
+				if err != nil {
+					t.Fatalf("expected filter conversion, got %v", err)
+				}
+				if !reflect.DeepEqual(originalWhere, where) {
+					t.Errorf("expected unchanged input %+v, got %+v", originalWhere, where)
+				}
+				if !reflect.DeepEqual(originalColumns, columns) {
+					t.Errorf("expected unchanged columns %+v, got %+v", originalColumns, columns)
+				}
+
+				operand := warehouses.NewBaseExpr(column, c.Operator, c.Values...)
+				operand.Keys = path.keys
 				want := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{operand})
 				if !reflect.DeepEqual(want, got) {
 					t.Fatalf("expected %#v, got %#v", want, got)
@@ -209,16 +285,16 @@ func TestConvertWhereExistsOperators(t *testing.T) {
 		t.Fatalf("convertWhere returned error: %v", err)
 	}
 	want := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-		warehouses.NewBaseExpr(colA, warehouses.OpIsNotNull),
-		warehouses.NewBaseExpr(colH, warehouses.OpIsNull),
+		warehouses.NewBaseExpr(colA, warehouses.OpExists),
+		warehouses.NewBaseExpr(colH, warehouses.OpDoesNotExist),
 		warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-			warehouses.NewBaseExpr(colBC, warehouses.OpIsNull),
-			warehouses.NewBaseExpr(colBD, warehouses.OpIsNull),
-			warehouses.NewBaseExpr(colBEF, warehouses.OpIsNull),
+			warehouses.NewBaseExpr(colBC, warehouses.OpDoesNotExist),
+			warehouses.NewBaseExpr(colBD, warehouses.OpDoesNotExist),
+			warehouses.NewBaseExpr(colBEF, warehouses.OpDoesNotExist),
 		}),
 		warehouses.NewMultiExpr(warehouses.OpOr, []warehouses.Expr{
-			warehouses.NewBaseExpr(colEF, warehouses.OpIsNotNull),
-			warehouses.NewBaseExpr(colEG, warehouses.OpIsNotNull),
+			warehouses.NewBaseExpr(colEF, warehouses.OpExists),
+			warehouses.NewBaseExpr(colEG, warehouses.OpExists),
 		}),
 	})
 	if !reflect.DeepEqual(want, got) {
@@ -440,8 +516,7 @@ func TestConvertWhereUnknownProperty(t *testing.T) {
 }
 
 // TestConvertWhereOperatorValues verifies that state.WhereLogical values and
-// state.WhereOperator values through state.OpIsNotNull match their warehouse
-// counterparts.
+// state.WhereOperator values match their warehouse counterparts.
 func TestConvertWhereOperatorValues(t *testing.T) {
 
 	logicalOperators := []struct {
@@ -492,6 +567,8 @@ func TestConvertWhereOperatorValues(t *testing.T) {
 		{"is not empty", state.OpIsNotEmpty, warehouses.OpIsNotEmpty},
 		{"is null", state.OpIsNull, warehouses.OpIsNull},
 		{"is not null", state.OpIsNotNull, warehouses.OpIsNotNull},
+		{"exists", state.OpExists, warehouses.OpExists},
+		{"does not exist", state.OpDoesNotExist, warehouses.OpDoesNotExist},
 	}
 
 	for _, operator := range conditionOperators {

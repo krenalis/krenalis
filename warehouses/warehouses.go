@@ -822,9 +822,14 @@ const (
 )
 
 // BaseExpr represents an SQL expression that applies an operator to a column.
-// For OpIsTrue and OpIsFalse on JSON columns, Keys specifies successive object
-// keys. Each key is treated literally, including any dots. If Keys is empty,
-// these operators apply to the entire column.
+// On JSON columns, Keys specifies successive object keys, treated literally,
+// including any dots. An empty Keys applies to the entire column. SQL NULL
+// represents an absent JSON property; JSON null represents a present null.
+// JSON filter operands have type JSONConditionValue; encoded json.Value
+// operands may also be used for structural equality.
+// Decimal operands, including JSONConditionValue.Number, must fit a
+// decimal(p,s) with p <= 76 and 0 <= s <= min(p,37), independently of the
+// column's precision and scale. Rendering rejects operands beyond these limits.
 type BaseExpr struct {
 	Column   Column
 	Keys     []string
@@ -839,6 +844,16 @@ func (*BaseExpr) expr() {}
 // If the operator is unary, value should be nil.
 func NewBaseExpr(column Column, operator Operator, values ...any) *BaseExpr {
 	return &BaseExpr{Column: column, Operator: operator, Values: values}
+}
+
+// JSONConditionValue is an operand for a JSON value or array(json) element.
+// String is compared with JSON strings; Number, when non-nil, is also compared
+// with JSON numbers. Other JSON kinds do not match either representation.
+// Number must fit a decimal(p,s) with p <= 76 and 0 <= s <= min(p,37).
+// A nil Number permits any String, including numeric text outside those limits.
+type JSONConditionValue struct {
+	String string
+	Number *decimal.Decimal
 }
 
 // Operator presents a unary or binary operator of a BaseExpr.
@@ -869,4 +884,6 @@ const (
 	OpIsNotEmpty                             // is not empty
 	OpIsNull                                 // is null
 	OpIsNotNull                              // is not null
+	OpExists                                 // exists
+	OpDoesNotExist                           // does not exist
 )
