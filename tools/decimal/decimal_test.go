@@ -929,7 +929,7 @@ func Test_Range_Panic(t *testing.T) {
 		{MaxPrecision + 1, 0},
 		{0, 0},
 		{-1, -1},
-		{0, MaxScale + 1},
+		{1, MaxScale + 1},
 		{1, 2},
 		{1, MinScale - 1},
 	}
@@ -949,8 +949,8 @@ func Test_validPrecisionScale(t *testing.T) {
 	cases := []struct{ p, s int }{
 		{MaxPrecision + 1, 0},
 		{MinPrecision - 1, 0},
-		{0, MaxScale + 1},
-		{0, MinScale - 1},
+		{1, MaxScale + 1},
+		{1, MinScale - 1},
 		{1, 2},
 	}
 	for _, c := range cases {
