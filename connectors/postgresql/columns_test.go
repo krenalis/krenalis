@@ -80,7 +80,8 @@ func TestColumnsWithSpecialCharacters(t *testing.T) {
 				t.Fatalf("expected fixture schema, got %v", err)
 			}
 			name := quoteIdent(test.schema) + "." + quoteIdent(test.table)
-			_, err = connector.pool.Exec(t.Context(), "CREATE TABLE "+name+" ("+quoteIdent(test.column)+" varchar(7)[])")
+			_, err = connector.pool.Exec(t.Context(), "CREATE TABLE "+name+" ("+quoteIdent(test.column)+
+				" varchar(7)[])")
 			if err != nil {
 				t.Fatalf("expected fixture table, got %v", err)
 			}
