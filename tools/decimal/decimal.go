@@ -613,6 +613,9 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 			}
 		}
 		if overflow || s < MinScale || s > MaxScale {
+			if mantissa.isZero() {
+				return Decimal{s: "0"}, nil
+			}
 			return Decimal{}, ErrRange
 		}
 		if s == prev {
