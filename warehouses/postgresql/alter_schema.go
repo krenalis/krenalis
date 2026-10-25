@@ -222,6 +222,12 @@ func createViewQuery(profilesTableName string, profileColumns []warehouses.Colum
 func typeToPostgresType(t types.Type) string {
 	switch t.Kind() {
 	case types.StringKind:
+		switch t.Semantics() {
+		case types.CountrySemantics:
+			return "character(2)"
+		case types.PhoneSemantics:
+			return "character varying(16)"
+		}
 		var maxLength int
 		if l, ok := t.MaxBytes(); ok {
 			maxLength = l // we represent N bytes len as N chars len in PostgreSQL.

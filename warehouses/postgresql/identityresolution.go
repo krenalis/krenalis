@@ -16,7 +16,6 @@ import (
 
 	"github.com/krenalis/krenalis/tools/backoff"
 	"github.com/krenalis/krenalis/tools/json"
-	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/jackc/pgx/v5"
@@ -176,7 +175,7 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 	mergeProfiles.WriteString(`"_identities", "_anonymous_count", "_recognized_count", "_kpid", "_updated_at"`)
 	mergeProfiles.WriteString(") SELECT\n")
 	for _, c := range profileColumns {
-		if c.Type.Kind() == types.ArrayKind {
+		if c.Type.IsArray() {
 			mergeProfiles.WriteString(`(array_cat_agg(DISTINCT ` + quoteIdent(c.Name) + ` ORDER BY ` + quoteIdent(c.Name) + `) FILTER ( WHERE ` + quoteIdent(c.Name) + ` IS NOT NULL))`)
 		} else {
 			mergeProfiles.WriteByte('(')

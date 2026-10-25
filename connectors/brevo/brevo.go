@@ -503,7 +503,7 @@ func (br *Brevo) Records(ctx context.Context, target connectors.Targets, updated
 				continue
 			}
 			v, ok := contact.Attributes[p.Name]
-			if !ok && p.Type.Kind() == types.StringKind {
+			if !ok && p.Type.IsString() {
 				v = ""
 			}
 			record.Attributes[p.Name] = v

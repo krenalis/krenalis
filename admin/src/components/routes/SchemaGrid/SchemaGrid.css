@@ -117,17 +117,12 @@
 	color: var(--property-panel-label-color);
 	font-size: var(--property-panel-label-font-size);
 	font-weight: var(--property-panel-label-font-weight);
-	margin: 0 0 5px 1px;
+	margin: 0 0 5px;
 }
 
 .property-details-panel__value {
 	font-size: 13px;
 	line-height: 1.45;
-}
-
-.property-details-panel__technical-type {
-	font-family: var(--monospace-fonts);
-	word-break: break-word;
 }
 
 .property-details-panel__description {

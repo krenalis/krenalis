@@ -17,6 +17,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/validation"
 
 	"golang.org/x/text/unicode/norm"
 )
@@ -81,6 +82,27 @@ func marshalType(b *bytes.Buffer, t Type) {
 	b.WriteString(`{"kind":"`)
 	b.WriteString(t.KindName())
 	b.WriteString(`"`)
+	if t.semantics != NoSemantics {
+		b.WriteString(`,"semantics":"`)
+		b.WriteString(t.semantics.String())
+		b.WriteByte('"')
+		switch t.semantics {
+		case CountrySemantics:
+			b.WriteString(`,"format":`)
+			_ = marshalString(b, t.CountryFormat().String())
+		case MoneySemantics:
+			if currency, ok := t.Currency(); ok {
+				b.WriteString(`,"currency":`)
+				_ = marshalString(b, currency)
+			}
+		case MeasurementSemantics:
+			b.WriteString(`,"unit":`)
+			_ = marshalString(b, t.UnitOfMeasure().String())
+		case DurationSemantics:
+			b.WriteString(`,"unit":`)
+			_ = marshalString(b, t.DurationUnit().String())
+		}
+	}
 	switch t.kind {
 	case StringKind:
 		if t.p > 0 {
@@ -316,8 +338,10 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 	}
 
 	var hasUnsigned, hasReal, hasScale, hasMinElements, hasMaxElements, hasUniqueElements bool
+	var hasSemantics, hasFormat, hasCurrency, hasUnit bool
 
-	var kind string
+	var kind, format, currency, unit string
+	var semantics Semantics
 	var bitSize int
 	var unsigned bool
 	var minimum, maximum json.Number
@@ -368,6 +392,46 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			if !IsValidPropertyName(kind) {
 				return Type{}, errors.New("invalid type kind")
 			}
+		case "semantics":
+			if hasSemantics {
+				return Type{}, errors.New("repeated 'semantics' key")
+			}
+			name, ok := tok.(string)
+			if !ok {
+				return Type{}, errors.New("invalid semantics")
+			}
+			semantics, ok = SemanticsByName(name)
+			if !ok {
+				return Type{}, fmt.Errorf("invalid semantics %q", name)
+			}
+			hasSemantics = true
+		case "format":
+			if hasFormat {
+				return Type{}, errors.New("repeated 'format' key")
+			}
+			format, ok = tok.(string)
+			if !ok {
+				return Type{}, errors.New("invalid semantics format")
+			}
+			hasFormat = true
+		case "currency":
+			if hasCurrency {
+				return Type{}, errors.New("repeated 'currency' key")
+			}
+			currency, ok = tok.(string)
+			if !ok {
+				return Type{}, errors.New("invalid semantics currency")
+			}
+			hasCurrency = true
+		case "unit":
+			if hasUnit {
+				return Type{}, errors.New("repeated 'unit' key")
+			}
+			unit, ok = tok.(string)
+			if !ok {
+				return Type{}, errors.New("invalid semantics unit")
+			}
+			hasUnit = true
 		case "bitSize":
 			if bitSize != 0 {
 				return Type{}, errors.New("repeated 'bitSize' key")
@@ -966,6 +1030,105 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			names[p.Name] = i
 		}
 		t.vl = Properties{properties: properties, names: names}
+	}
+	if !hasSemantics {
+		if hasFormat {
+			return Type{}, errors.New("unexpected 'format' key without semantics")
+		}
+		if hasCurrency {
+			return Type{}, errors.New("unexpected 'currency' key without semantics")
+		}
+		if hasUnit {
+			return Type{}, errors.New("unexpected 'unit' key without semantics")
+		}
+		return t, nil
+	}
+
+	var semanticsOption any
+	switch semantics {
+	case EmailSemantics, PhoneSemantics, PercentageSemantics:
+		if hasFormat {
+			return Type{}, fmt.Errorf("unexpected 'format' key for %s semantics", semantics)
+		}
+		if hasCurrency {
+			return Type{}, fmt.Errorf("unexpected 'currency' key for %s semantics", semantics)
+		}
+		if hasUnit {
+			return Type{}, fmt.Errorf("unexpected 'unit' key for %s semantics", semantics)
+		}
+	case URLSemantics:
+		if hasFormat {
+			return Type{}, errors.New("unexpected 'format' key for URL semantics")
+		}
+		if hasCurrency {
+			return Type{}, errors.New("unexpected 'currency' key for URL semantics")
+		}
+		if hasUnit {
+			return Type{}, errors.New("unexpected 'unit' key for URL semantics")
+		}
+	case CountrySemantics:
+		if hasCurrency {
+			return Type{}, errors.New("unexpected 'currency' key for country semantics")
+		}
+		if hasUnit {
+			return Type{}, errors.New("unexpected 'unit' key for country semantics")
+		}
+		if !hasFormat {
+			return Type{}, errors.New("missing country format")
+		}
+		countryFormat, ok := CountryFormatByName(format)
+		if !ok {
+			return Type{}, fmt.Errorf("invalid country format %q", format)
+		}
+		semanticsOption = countryFormat
+	case MoneySemantics:
+		if hasFormat {
+			return Type{}, errors.New("unexpected 'format' key for money semantics")
+		}
+		if hasUnit {
+			return Type{}, errors.New("unexpected 'unit' key for money semantics")
+		}
+	case MeasurementSemantics:
+		if hasFormat {
+			return Type{}, errors.New("unexpected 'format' key for measurement semantics")
+		}
+		if hasCurrency {
+			return Type{}, errors.New("unexpected 'currency' key for measurement semantics")
+		}
+		if !hasUnit {
+			return Type{}, errors.New("missing measurement unit")
+		}
+		measurementUnit, ok := UnitOfMeasureByName(unit)
+		if !ok {
+			return Type{}, fmt.Errorf("invalid unit of measure %q", unit)
+		}
+		semanticsOption = measurementUnit
+	case DurationSemantics:
+		if hasFormat {
+			return Type{}, errors.New("unexpected 'format' key for duration semantics")
+		}
+		if hasCurrency {
+			return Type{}, errors.New("unexpected 'currency' key for duration semantics")
+		}
+		if !hasUnit {
+			return Type{}, errors.New("missing duration unit")
+		}
+		durationUnit, ok := DurationUnitByName(unit)
+		if !ok {
+			return Type{}, fmt.Errorf("invalid duration unit %q", unit)
+		}
+		semanticsOption = durationUnit
+	}
+
+	t, err = t.withSemantics(semantics, semanticsOption)
+	if err != nil {
+		return Type{}, err
+	}
+	if hasCurrency {
+		if !validation.IsValidCurrencyCode(currency) {
+			return Type{}, fmt.Errorf("invalid currency code %q", currency)
+		}
+		t = t.WithCurrency(currency)
 	}
 
 	return t, nil

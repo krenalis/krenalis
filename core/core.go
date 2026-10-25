@@ -842,7 +842,7 @@ func (core *Core) InstallationID() string {
 // list of expressions.
 func (core *Core) ExpressionsProperties(expressions []ExpressionToBeExtracted, schema types.Type) ([]string, error) {
 	core.mustBeOpen()
-	if schema.Valid() && schema.Kind() != types.ObjectKind {
+	if schema.Valid() && !schema.IsObject() {
 		return nil, errors.BadRequest("schema is not an object")
 	}
 	var properties []string

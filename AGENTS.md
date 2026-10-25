@@ -16,7 +16,7 @@ Apply review rules to code introduced or modified by the change under review. Do
 
 ## Line length
 
-Allow Go code lines to be up to 120 characters long without wrapping. A line may exceed 120 characters when a more specific convention requires it, notably the rule that keeps exported signatures on one line. The 120-character limit does not apply to `_test.go` files, whose lines may be as long as needed.
+Allow Go code lines to be up to 120 characters long without wrapping. A line may exceed 120 characters when a more specific convention requires it, notably the rule that keeps exported signatures on one line. In `_test.go` files, the limit does not apply to the table of cases of a table-driven test, whose lines may be as long as needed; the rest of a test file follows the limit like any other code.
 
 ## File organization
 
@@ -58,6 +58,18 @@ When initializing an empty writable map without a capacity hint, prefer a map li
 ## Composite values
 
 When allocating the zero value of a composite type, prefer `&T{}` over `new(T)` when both forms are valid.
+
+## Switch statements
+
+Give every `switch` statement, including type switches and switches without a switch expression, a `default` clause that makes explicit what happens to the values not matched by the other cases:
+
+- When they cannot occur, treat them as an unexpected situation, as described under Errors versus panics, naming the unexpected value or type in the message.
+- When they require no action within the switch, leave the `default` clause empty except for a short comment saying why.
+
+Omit the `default` clause only in these cases:
+
+- The switch expression, or the expression in the type switch guard, is a local variable assigned just above the switch, so that a reader sees at a glance that it can only take values or types covered by the cases.
+- Every case ends in a terminating statement, as defined by the Go specification, and the values not matched by the cases are expected ones, which continue with the code following the switch.
 
 ## Signatures
 
@@ -141,6 +153,12 @@ if err != nil {
 return n, nil
 ```
 
+## Errors versus panics
+
+A function or method must return an error when it is expected to fail, for example because it performs operations that can fail, or when it can return errors that callers can identify and usefully handle. Otherwise, it may omit the error from its signature.
+
+An unexpected situation is one that callers or the program's invariants rule out, such as an invalid argument or a value that should be impossible, and therefore reveals a bug. A function or method that meets one must return an error if its signature has one, so that a single failing operation does not bring down the whole process. It must panic instead if its signature has no error, or if the situation reveals corrupted internal state that no caller could safely recover from.
+
 ## Tests
 
 Test failure messages must use the form `expected ..., got ...`.
@@ -177,14 +195,16 @@ Exported methods in `core/internal/metrics` are an exception: they must assume t
 
 Apply the following procedure to every brace-delimited block, be it a function or method body or a block nested inside one. Decide each block on its own, from the inside out.
 
-1. Choose the internal spacing. Looking only at the statements of the block, and ignoring any blank line adjacent to its braces, insert a blank line wherever it genuinely helps readability, typically by separating logically distinct groups of statements. A single-statement block never needs one, and neither does a short cohesive block; a guard or a `return` does not earn a blank line on its own. A small block, roughly up to 20 non-blank lines between its braces with nested blocks included, normally needs none either, even when its statements form distinct groups: at that size, separation is rarely worth the space. Treat 20 as a guide, not a cutoff: a block just below it may still be separated when its groups are clearly distinct, and one just above it may still stay compact when it reads well as a whole.
-2. Pad the boundaries. If step 1 left at least one internal blank line, leave a blank line immediately after the opening brace and another immediately before the closing brace. If it left none, the block contains no blank line at all: never pad an otherwise compact block.
+1. Choose the internal spacing. Looking only at the statements of the block, and ignoring any blank line adjacent to its braces, insert a blank line only between phases that do clearly different things, and only where it genuinely helps readability. Judge by the structure of the block, not by its length. Statements that are steps toward a single result, such as a run of guards, the construction of a value, or a loop followed by the operation that consumes its result, form one phase and stay together, even in a block well beyond 20 lines. Phases that do unrelated things, especially when each is introduced by its own comment, may be separated even in a short block. A single-statement block never needs a blank line, and a guard or a `return` does not earn one on its own. Use length only to settle doubtful cases: below roughly 20 non-blank lines between its braces, nested blocks included, separation is rarely worth the space; above it, separation more often helps the reader.
+2. Pad the boundaries. If step 1 left at least one internal blank line, leave a blank line immediately after the opening brace and another immediately before the closing brace. If it left none, the block has no blank line between its statements or at its boundaries: never pad an otherwise compact block.
 3. Place the closing pad before a final `return`. When a padded block ends with a `return`, its trailing blank line goes immediately before that `return`, with no blank line between the `return` and the closing brace. A `return` inside a nested block is not the enclosing block's final statement.
 
 Only two shapes are therefore valid:
 
-- A compact block, with no blank line anywhere inside it.
+- A compact block, with no blank line between its statements or at its boundaries.
 - A separated block, whose internal blank lines are matched by a blank line after the opening brace and one before the closing brace, the latter moved above a final `return`.
+
+A nested block does not inherit the shape of the block that contains it, in either direction. A function literal, such as a subtest passed to `t.Run`, a goroutine, or an HTTP handler, is a function in its own right: decide its spacing as for a function body. A control-flow block may also be separated inside a compact block when the enclosing statements are only a thin frame around it, such as declaring a result, filling it in a loop, and returning it. Conversely, a separated nested block does not by itself make its enclosing block separated.
 
 Separate the complete construct that owns the block from surrounding code with blank lines. Keep declaration comments attached to their declarations.
 
@@ -278,6 +298,12 @@ A short comment for a package-level variable or constant may appear on the same 
 
 Never begin an error message with the article `the`.
 
+Prefix the message of every panic, and of every error that reports an unexpected situation, with the import path of the package that produces it, relative to the module path, followed by `: `, as in `core/internal/transformers/lambda: invalid function name`.
+
+- When wrapping an error from the same package, do not repeat the prefix.
+- When panicking again with a value obtained from `recover`, pass it unchanged.
+- When passing on an error from another package, as in `panic(err)`, add the prefix only if the error's message alone does not show where the problem occurred.
+
 ## Correctness
 
 Anything arriving from outside — request bodies, settings, API values, connector responses — is validated and bounded before use, unless there is a stated reason not to.
@@ -363,6 +389,11 @@ owning workspace from their consequences. Accept them when they are safe for
 Krenalis. Establishing truthfulness or authenticity requires an independent
 integrity mechanism.
 
+As an exception, validation may reject mutually inconsistent values when they
+violate a relationship that their meaning guarantees, such as a subset count
+exceeding the count of the set that contains it, so that callers can rely on
+that guarantee.
+
 # Uniformity across data warehouses
 
 Every supported data warehouse has its own package under `warehouses/`, and
@@ -428,3 +459,7 @@ Every exported method in `core` that is called by `cmd` must execute `<receiver>
 ## Pipeline specifications
 
 `core/Pipelines.md` documents, as part of the code, the rules that pipelines follow for each combination of connection role, connector type, and target. Whenever a change in `core` or in the Admin alters these rules, update the file in the same change.
+
+## Database upgrades
+
+Write, restore, or remove the database updater only as a step of the release procedure. When a change requires an existing Krenalis PostgreSQL database to be upgraded, including a change to the format of stored data that leaves the schema unchanged, record it in `core/internal/initdb/RELEASE-UPGRADE.md` in the same change, following `.agents/skills/release-upgrade/SKILL.md`.
