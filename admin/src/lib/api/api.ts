@@ -1,3 +1,4 @@
+import { decodeFilter, encodeFilter, toTransportFilter } from '../../utils/filters';
 import call from './call';
 import * as http from './http';
 import Type, { Property, ObjectType } from './types/types';
@@ -256,6 +257,9 @@ class Connections {
 	find = async (): Promise<Connection[]> => {
 		const res = await call(`${this.apiURL}/connections`, http.GET, this.workspaceID);
 		for (let c of res.connections) {
+			for (const pipeline of c.pipelines ?? []) {
+				if (pipeline.filter != null) pipeline.filter = decodeFilter(pipeline.filter);
+			}
 			if (!('linkedConnections' in c)) {
 				c.linkedConnections = null;
 			}
@@ -267,6 +271,9 @@ class Connections {
 		const c = await call(`${this.apiURL}/connections/${connection}`, http.GET, this.workspaceID);
 		if (!('linkedConnections' in c)) {
 			c.linkedConnections = null;
+		}
+		for (const pipeline of c.pipelines ?? []) {
+			if (pipeline.filter != null) pipeline.filter = decodeFilter(pipeline.filter);
 		}
 		return c as Connection;
 	};
@@ -422,12 +429,16 @@ class Connections {
 			target,
 			eventType,
 			...pipeline,
+			filter: pipeline.filter == null ? pipeline.filter : toTransportFilter(pipeline.filter),
 		});
 		return res.id;
 	};
 
 	updatePipeline = async (id: string, pipeline: PipelineToSet): Promise<void> => {
-		return await call(`${this.apiURL}/pipelines/${id}`, http.PUT, this.workspaceID, pipeline);
+		return await call(`${this.apiURL}/pipelines/${id}`, http.PUT, this.workspaceID, {
+			...pipeline,
+			filter: pipeline.filter == null ? pipeline.filter : toTransportFilter(pipeline.filter),
+		});
 	};
 
 	deletePipeline = async (pipeline: string): Promise<void> => {
@@ -489,7 +500,7 @@ class Connections {
 		let params = [];
 		params.push(['schema', JSON.stringify(schema)]);
 		if (filter != null) {
-			params.push(['filter', JSON.stringify(filter)]);
+			params.push(['filter', encodeFilter(filter)]);
 		}
 		if (cursor !== undefined) {
 			params.push(['cursor', cursor]);
@@ -543,7 +554,7 @@ class EventListeners {
 		return await call(`${this.apiURL}/events/listeners`, http.POST, this.workspaceID, {
 			connection,
 			size,
-			filter,
+			filter: filter == null ? filter : toTransportFilter(filter),
 			requiredConsents,
 		});
 	};
@@ -585,7 +596,7 @@ class Profiles {
 		let params = [];
 		params.push(['properties', properties.join(',')]);
 		if (filter != null) {
-			params.push(['filter', JSON.stringify(filter)]);
+			params.push(['filter', encodeFilter(filter)]);
 		}
 		params.push(['order', order]);
 		params.push(['orderDesc', orderDesc]);
@@ -615,7 +626,7 @@ class Profiles {
 			'userId',
 		];
 		params.push(['properties', properties.join(',')]);
-		let filter = {
+		let filter: Filter = {
 			operator: 'and',
 			rules: [
 				{
@@ -625,7 +636,7 @@ class Profiles {
 				},
 			],
 		};
-		params.push(['filter', JSON.stringify(filter)]);
+		params.push(['filter', encodeFilter(filter)]);
 		params.push(['order', 'timestamp']);
 		params.push(['orderDesc', true]);
 		params.push(['first', 0]);

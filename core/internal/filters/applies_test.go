@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/test/warehouseexpr"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 )
@@ -21,13 +22,13 @@ import (
 func Test_Applies(t *testing.T) {
 
 	var n670 = decimal.MustInt(670)
-	var v670 = state.JSONConditionValue{String: "670", Number: &n670}
+	var v670 = warehouseexpr.Number(n670)
 
 	var n812 = decimal.MustInt(812)
-	var v812 = state.JSONConditionValue{String: "812", Number: &n812}
+	var v812 = warehouseexpr.Number(n812)
 
-	var vFoo = state.JSONConditionValue{String: "foo"}
-	var vBoo = state.JSONConditionValue{String: "boo"}
+	var vFoo = json.Value("\"foo\"")
+	var vBoo = json.Value("\"boo\"")
 
 	tests := []struct {
 		op        state.WhereOperator
@@ -56,7 +57,7 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIs, v: nil, v0: 5, expected: false},
 		{op: state.OpIs, v: json.Value("670"), v0: v670, expected: true},
 		{op: state.OpIs, v: json.Value("670.0"), v0: v670, expected: true},
-		{op: state.OpIs, v: json.Value(`"670"`), v0: v670, expected: true},
+		{op: state.OpIs, v: json.Value(`"670"`), v0: v670, expected: false},
 		{op: state.OpIs, v: json.Value("true"), v0: v670, expected: false},
 		{op: state.OpIs, v: json.Value(`"foo"`), v0: v670, expected: false},
 		{op: state.OpIs, v: json.Value("920"), v0: v670, expected: false},
@@ -80,7 +81,7 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsNot, v: nil, v0: 5, expected: true},
 		{op: state.OpIsNot, v: json.Value("670"), v0: v670, expected: false},
 		{op: state.OpIsNot, v: json.Value("670.0"), v0: v670, expected: false},
-		{op: state.OpIsNot, v: json.Value(`"670"`), v0: v670, expected: false},
+		{op: state.OpIsNot, v: json.Value(`"670"`), v0: v670, expected: true},
 		{op: state.OpIsNot, v: json.Value("true"), v0: v670, expected: true},
 		{op: state.OpIsNot, v: json.Value(`"foo"`), v0: v670, expected: true},
 		{op: state.OpIsNot, v: json.Value("920"), v0: v670, expected: true},
@@ -101,7 +102,7 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsLessThan, v: nil, v0: 5, expected: false},
 		{op: state.OpIsLessThan, v: json.Value("315"), v0: v670, expected: true},
 		{op: state.OpIsLessThan, v: json.Value("315.0"), v0: v670, expected: true},
-		{op: state.OpIsLessThan, v: json.Value(`"315"`), v0: v670, expected: true},
+		{op: state.OpIsLessThan, v: json.Value(`"315"`), v0: v670, expected: false},
 		{op: state.OpIsLessThan, v: json.Value("true"), v0: v670, expected: false},
 		{op: state.OpIsLessThan, v: json.Value(`"foo"`), v0: v670, expected: false},
 		{op: state.OpIsLessThan, v: json.Value("920"), v0: v670, expected: false},
@@ -126,7 +127,7 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsLessThanOrEqualTo, v: nil, v0: 5, expected: false},
 		{op: state.OpIsLessThanOrEqualTo, v: json.Value("315"), v0: v670, expected: true},
 		{op: state.OpIsLessThanOrEqualTo, v: json.Value("315.0"), v0: v670, expected: true},
-		{op: state.OpIsLessThanOrEqualTo, v: json.Value(`"315"`), v0: v670, expected: true},
+		{op: state.OpIsLessThanOrEqualTo, v: json.Value(`"315"`), v0: v670, expected: false},
 		{op: state.OpIsLessThanOrEqualTo, v: json.Value(`"671"`), v0: v670, expected: false},
 		{op: state.OpIsLessThanOrEqualTo, v: json.Value("true"), v0: v670, expected: false},
 		{op: state.OpIsLessThanOrEqualTo, v: json.Value(`"foo"`), v0: v670, expected: false},
@@ -153,10 +154,10 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsGreaterThan, v: json.Value("315.0"), v0: v670, expected: false},
 		{op: state.OpIsGreaterThan, v: json.Value("810"), v0: v670, expected: true},
 		{op: state.OpIsGreaterThan, v: json.Value("810.0"), v0: v670, expected: true},
-		{op: state.OpIsGreaterThan, v: json.Value(`"810"`), v0: v670, expected: true},
+		{op: state.OpIsGreaterThan, v: json.Value(`"810"`), v0: v670, expected: false},
 		{op: state.OpIsGreaterThan, v: json.Value(`"670"`), v0: v670, expected: false},
 		{op: state.OpIsGreaterThan, v: json.Value("true"), v0: v670, expected: false},
-		{op: state.OpIsGreaterThan, v: json.Value(`"foo"`), v0: v670, expected: true},
+		{op: state.OpIsGreaterThan, v: json.Value(`"foo"`), v0: v670, expected: false},
 		{op: state.OpIsGreaterThan, v: json.Value(`""`), v0: v670, expected: false},
 		{op: state.OpIsGreaterThan, v: json.Value("100"), v0: v670, expected: false},
 		{op: state.OpIsGreaterThan, v: json.Value("null"), v0: v670, expected: false},
@@ -183,10 +184,10 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsGreaterThanOrEqualTo, v: json.Value("315.0"), v0: v670, expected: false},
 		{op: state.OpIsGreaterThanOrEqualTo, v: json.Value("810"), v0: v670, expected: true},
 		{op: state.OpIsGreaterThanOrEqualTo, v: json.Value("810.0"), v0: v670, expected: true},
-		{op: state.OpIsGreaterThanOrEqualTo, v: json.Value(`"810"`), v0: v670, expected: true},
-		{op: state.OpIsGreaterThanOrEqualTo, v: json.Value(`"670"`), v0: v670, expected: true},
+		{op: state.OpIsGreaterThanOrEqualTo, v: json.Value(`"810"`), v0: v670, expected: false},
+		{op: state.OpIsGreaterThanOrEqualTo, v: json.Value(`"670"`), v0: v670, expected: false},
 		{op: state.OpIsGreaterThanOrEqualTo, v: json.Value("true"), v0: v670, expected: false},
-		{op: state.OpIsGreaterThanOrEqualTo, v: json.Value(`"foo"`), v0: v670, expected: true},
+		{op: state.OpIsGreaterThanOrEqualTo, v: json.Value(`"foo"`), v0: v670, expected: false},
 		{op: state.OpIsGreaterThanOrEqualTo, v: json.Value(`""`), v0: v670, expected: false},
 		{op: state.OpIsGreaterThanOrEqualTo, v: json.Value("100"), v0: v670, expected: false},
 		{op: state.OpIsGreaterThanOrEqualTo, v: json.Value("null"), v0: v670, expected: false},
@@ -225,13 +226,13 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsBetween, v: json.Value("670"), v0: v670, v1: v812, expected: true},
 		{op: state.OpIsBetween, v: json.Value("810"), v0: v670, v1: v812, expected: true},
 		{op: state.OpIsBetween, v: json.Value("812.0"), v0: v670, v1: v812, expected: true},
-		{op: state.OpIsBetween, v: json.Value("511.0"), v0: v670, v1: vFoo, expected: false},
-		{op: state.OpIsBetween, v: json.Value("775.0"), v0: v670, v1: vFoo, expected: false},
+		{op: state.OpIsBetween, v: json.Value("511.0"), v0: json.Value(`"670"`), v1: vFoo, expected: false},
+		{op: state.OpIsBetween, v: json.Value("775.0"), v0: json.Value(`"670"`), v1: vFoo, expected: false},
 		{op: state.OpIsBetween, v: json.Value("775.0"), v0: vFoo, v1: v812, expected: false},
 		{op: state.OpIsBetween, v: json.Value("775.0"), v0: vBoo, v1: vFoo, expected: false},
-		{op: state.OpIsBetween, v: json.Value(`"boo"`), v0: v670, v1: vFoo, expected: true},
+		{op: state.OpIsBetween, v: json.Value(`"boo"`), v0: json.Value(`"670"`), v1: vFoo, expected: true},
 		{op: state.OpIsBetween, v: json.Value(`"850"`), v0: v670, v1: v812, expected: false},
-		{op: state.OpIsBetween, v: json.Value(`"670"`), v0: v670, v1: v812, expected: true},
+		{op: state.OpIsBetween, v: json.Value(`"670"`), v0: v670, v1: v812, expected: false},
 		{op: state.OpIsBetween, v: json.Value("true"), v0: v670, v1: v812, expected: false},
 		{op: state.OpIsBetween, v: json.Value(`"foo"`), v0: v670, v1: v812, expected: false},
 		{op: state.OpIsBetween, v: json.Value(`""`), v0: v670, v1: v812, expected: false},
@@ -270,15 +271,15 @@ func Test_Applies(t *testing.T) {
 		{op: state.OpIsNotBetween, v: json.Value("775.0"), v0: v670, v1: v812, expected: false},
 		{op: state.OpIsNotBetween, v: json.Value("812.0"), v0: v670, v1: v812, expected: false},
 		{op: state.OpIsNotBetween, v: json.Value("913.0"), v0: v670, v1: v812, expected: true},
-		{op: state.OpIsNotBetween, v: json.Value("511.0"), v0: v670, v1: vFoo, expected: true},
-		{op: state.OpIsNotBetween, v: json.Value("775.0"), v0: v670, v1: vFoo, expected: true},
+		{op: state.OpIsNotBetween, v: json.Value("511.0"), v0: json.Value(`"670"`), v1: vFoo, expected: true},
+		{op: state.OpIsNotBetween, v: json.Value("775.0"), v0: json.Value(`"670"`), v1: vFoo, expected: true},
 		{op: state.OpIsNotBetween, v: json.Value("775.0"), v0: vFoo, v1: v812, expected: true},
 		{op: state.OpIsNotBetween, v: json.Value("775.0"), v0: vBoo, v1: vFoo, expected: true},
-		{op: state.OpIsNotBetween, v: json.Value(`"boo"`), v0: v670, v1: vFoo, expected: false},
-		{op: state.OpIsNotBetween, v: json.Value(`"670"`), v0: v670, v1: v812, expected: false},
+		{op: state.OpIsNotBetween, v: json.Value(`"boo"`), v0: json.Value(`"670"`), v1: vFoo, expected: false},
+		{op: state.OpIsNotBetween, v: json.Value(`"670"`), v0: v670, v1: v812, expected: true},
 		{op: state.OpIsNotBetween, v: json.Value("812.0"), v0: v670, v1: v812, expected: false},
 		{op: state.OpIsNotBetween, v: json.Value(`"850"`), v0: v670, v1: v812, expected: true},
-		{op: state.OpIsNotBetween, v: json.Value(`"670"`), v0: v670, v1: v812, expected: false},
+		{op: state.OpIsNotBetween, v: json.Value(`"670"`), v0: v670, v1: v812, expected: true},
 		{op: state.OpIsNotBetween, v: json.Value("true"), v0: v670, v1: v812, expected: true},
 		{op: state.OpIsNotBetween, v: json.Value(`"foo"`), v0: v670, v1: v812, expected: true},
 		{op: state.OpIsNotBetween, v: json.Value(`""`), v0: v670, v1: v812, expected: true},
@@ -656,10 +657,7 @@ func Test_AppliesWithNestedPath(t *testing.T) {
 		Operator: state.OpAnd,
 		Rules: []state.WhereRule{
 			&state.WhereCondition{Property: []string{"n1", "b"}, Operator: state.OpIs, Values: []any{5}},
-			&state.WhereCondition{Property: []string{"n2", "b"}, Operator: state.OpIs, Values: []any{func() state.JSONConditionValue {
-				d := decimal.MustInt(5)
-				return state.JSONConditionValue{Number: &d, String: "5"}
-			}()}},
+			&state.WhereCondition{Property: []string{"n2", "b"}, Operator: state.OpIs, Values: []any{json.Value("5")}},
 		},
 	}
 

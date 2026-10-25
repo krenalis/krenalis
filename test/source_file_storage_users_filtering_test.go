@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -41,7 +42,7 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 				&krenalistester.FilterCondition{
 					Property: "email",
 					Operator: krenalistester.OpIsNot,
-					Values:   []string{"ap@example.com"},
+					Values:   []json.Value{json.Value("\"ap@example.com\"")},
 				},
 				&krenalistester.Filter{
 					Operator: krenalistester.OpOr,
@@ -49,12 +50,12 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 						&krenalistester.FilterCondition{
 							Property: "email",
 							Operator: krenalistester.OpIs,
-							Values:   []string{"ap@example.com"},
+							Values:   []json.Value{json.Value("\"ap@example.com\"")},
 						},
 						&krenalistester.FilterCondition{
 							Property: "email",
 							Operator: krenalistester.OpIs,
-							Values:   []string{"cp@example.com"},
+							Values:   []json.Value{json.Value("\"cp@example.com\"")},
 						},
 					},
 				},

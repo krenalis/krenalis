@@ -17,7 +17,6 @@ import (
 	"github.com/krenalis/krenalis/test/snowflaketester"
 	"github.com/krenalis/krenalis/test/testimages"
 	"github.com/krenalis/krenalis/test/warehouseexpr"
-	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
@@ -37,14 +36,7 @@ func TestJSONFilters(t *testing.T) {
 	fixtures, cases := warehouseexpr.JSONCases()
 	for _, c := range cases {
 		t.Run("oracle/"+c.Name, func(t *testing.T) {
-			values := make([]any, len(c.Values))
-			for i, raw := range c.Values {
-				value, ok := raw.(warehouses.JSONConditionValue)
-				if !ok {
-					t.Fatalf("expected JSON operand at index %d, got %T", i, raw)
-				}
-				values[i] = state.JSONConditionValue{String: value.String, Number: value.Number}
-			}
+			values := slices.Clone(c.Values)
 			where := &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
 				&state.WhereCondition{Property: []string{"value"}, Operator: state.WhereOperator(c.Operator), Values: values},
 			}}
@@ -147,57 +139,74 @@ func TestJSONFilters(t *testing.T) {
 		values   []any
 	}
 	var conditions []condition
-	operands := []string{
+	for _, c := range cases {
+		conditions = append(conditions, condition{state.WhereOperator(c.Operator), slices.Clone(c.Values)})
+	}
+	operands := []json.Value{
+		json.Value("670"), json.Value("670.0"), json.Value("6.7e2"), json.Value("0.005"), json.Value("-0"),
+		json.Value("-5"), json.Value("0.001"), json.Value("9007199254740993"),
+		json.Value(strings.Repeat("9", 38)), json.Value(strings.Repeat("9", 76)),
+		json.Value("1e75"), json.Value("1e-37"), json.Value("0e999999"),
+		json.Value("0.1234567890123456789012345678901234567"),
+		json.Value("9007199254740993." + strings.Repeat("0", 36) + "1"),
+		json.Value("-9007199254740993." + strings.Repeat("0", 36) + "1"),
+		json.Value("12.3456789012345678901234567890123456781"),
+		json.Value("-12.3456789012345678901234567890123456781"),
+	}
+	for _, text := range []string{
 		"", "foo", "670", "670.0", "+670", "6.7e2", ".005", "0.", "-0", "-5", "0.001",
-		"9007199254740993", "99999999999999999999999999999999999999",
-		"999999999999999999999999999999999999999999999999999999999999",
-		strings.Repeat("9", 76), "1e75", "1e76", "1e-37", "1e-38", "0e999999",
-		"0.1234567890123456789012345678901234567", "1e999999", "-1e999999", "1e-999999",
-		"null", "true", "a'b\\c", "a\nb\tc", "é", "e\u0301", "😀", "ÿ", "Ā",
-		strings.Repeat("9", 37), "-" + strings.Repeat("9", 38),
-		"9007199254740993." + strings.Repeat("0", 36) + "1",
-		"-9007199254740993." + strings.Repeat("0", 36) + "1",
-		"12.3456789012345678901234567890123456781", "-12.3456789012345678901234567890123456781",
+		"9007199254740993", strings.Repeat("9", 38), strings.Repeat("9", 76),
+		"1e75", "1e76", "1e-37", "1e-38", "0e999999",
+		"1e999999", "-1e999999", "1e-999999", "null", "true", "false",
+		"a'b\\c", "a\nb\tc", "é", "e\u0301", "😀", "ÿ", "Ā",
+	} {
+		value, err := json.Marshal(text)
+		if err != nil {
+			t.Fatalf("expected String operand encoding, got %v", err)
+		}
+		operands = append(operands, value)
 	}
 	for _, op := range []state.WhereOperator{
 		state.OpIs, state.OpIsNot, state.OpIsLessThan, state.OpIsLessThanOrEqualTo,
 		state.OpIsGreaterThan, state.OpIsGreaterThanOrEqualTo, state.OpContains, state.OpDoesNotContain,
 		state.OpStartsWith, state.OpEndsWith,
 	} {
-		for _, text := range operands {
-			conditions = append(conditions, condition{op, []any{jsonFilterOperand(text)}})
+		for _, operand := range operands {
+			if (op == state.OpStartsWith || op == state.OpEndsWith) && !operand.IsString() {
+				continue
+			}
+			conditions = append(conditions, condition{op, []any{operand}})
 		}
 	}
 	for _, op := range []state.WhereOperator{state.OpIsBetween, state.OpIsNotBetween} {
-		for _, bounds := range [][2]string{
-			{"5", "670"}, {"670", "5"}, {"670", "670"}, {"-5", "0.005"}, {"foo", "foobar"},
-			{"1e-37", "1e75"}, {"1e76", "1e75"},
-			{"foo", "670"}, {"-1e999999", "1e999999"}, {"1e-999999", "0.001"}, {"ÿ", "😀"},
-			{"12.345678901234567890123456789012345678", "12.3456789012345678901234567890123456781"},
-			{"-12.3456789012345678901234567890123456781", "-12.345678901234567890123456789012345678"},
+		for _, bounds := range [][2]json.Value{
+			{json.Value("5"), json.Value("670")}, {json.Value("670"), json.Value("5")},
+			{json.Value("670"), json.Value("670")}, {json.Value("-5"), json.Value("0.005")},
+			{json.Value("1e-37"), json.Value("1e75")},
+			{json.Value(`"foo"`), json.Value(`"foobar"`)}, {json.Value(`"foo"`), json.Value(`"670"`)},
+			{json.Value(`"ÿ"`), json.Value(`"😀"`)},
+			{json.Value("12.345678901234567890123456789012345678"), json.Value("12.3456789012345678901234567890123456781")},
+			{json.Value("-12.3456789012345678901234567890123456781"), json.Value("-12.345678901234567890123456789012345678")},
 		} {
-			conditions = append(conditions, condition{op, []any{jsonFilterOperand(bounds[0]), jsonFilterOperand(bounds[1])}})
+			conditions = append(conditions, condition{op, []any{bounds[0], bounds[1]}})
 		}
 	}
 	for _, op := range []state.WhereOperator{state.OpIsOneOf, state.OpIsNotOneOf} {
-		for _, list := range [][]string{
-			{"foo"}, {"670", "foo", "null"}, {"670", "670", "+670"}, {"", "true", "é"},
-			{"1e76", "1e-38", "1e75", "1e-37", strings.Repeat("9", 76)},
-			{"9007199254740993", "9007199254740993." + strings.Repeat("0", 36) + "1", "foo"},
-			{"12.3456789012345678901234567890123456781", "-12.3456789012345678901234567890123456781"},
+		for _, list := range [][]json.Value{
+			{json.Value(`"foo"`)},
+			{json.Value("670"), json.Value(`"foo"`), json.Value(`"null"`), json.Value("null"), json.Value("false")},
+			{json.Value("670"), json.Value("670.0"), json.Value(`"+670"`)},
+			{json.Value(`""`), json.Value(`"true"`), json.Value(`"é"`), json.Value("true")},
+			{json.Value(`"1e76"`), json.Value(`"1e-38"`), json.Value("1e75"), json.Value("1e-37"), json.Value(strings.Repeat("9", 76))},
+			{json.Value("9007199254740993"), json.Value("9007199254740993." + strings.Repeat("0", 36) + "1"), json.Value(`"foo"`)},
+			{json.Value("12.3456789012345678901234567890123456781"), json.Value("-12.3456789012345678901234567890123456781")},
 		} {
 			values := make([]any, len(list))
-			for i, text := range list {
-				values[i] = jsonFilterOperand(text)
+			for i, value := range list {
+				values[i] = value
 			}
 			conditions = append(conditions, condition{op, values})
 		}
-	}
-	for _, op := range []state.WhereOperator{
-		state.OpIsTrue, state.OpIsFalse, state.OpIsEmpty, state.OpIsNotEmpty,
-		state.OpIsNull, state.OpIsNotNull, state.OpExists, state.OpDoesNotExist,
-	} {
-		conditions = append(conditions, condition{operator: op})
 	}
 
 	for _, name := range []string{"PostgreSQL", "Snowflake"} {
@@ -293,7 +302,7 @@ func TestJSONFilters(t *testing.T) {
 				for _, cond := range conditions {
 					texts := make([]string, len(cond.values))
 					for i, value := range cond.values {
-						texts[i] = value.(state.JSONConditionValue).String
+						texts[i] = string(value.(json.Value))
 					}
 					queries = append(queries, queryCase{
 						name: fmt.Sprintf("%s/%s/%q", strings.Join(path, "/"), cond.operator, texts),
@@ -327,7 +336,7 @@ func TestJSONFilters(t *testing.T) {
 					}
 					texts := make([]string, len(cond.values))
 					for i, value := range cond.values {
-						texts[i] = value.(state.JSONConditionValue).String
+						texts[i] = string(value.(json.Value))
 					}
 					queries = append(queries, queryCase{
 						name: fmt.Sprintf("%s/%s/%q", path, cond.operator, texts),
@@ -342,8 +351,8 @@ func TestJSONFilters(t *testing.T) {
 				where: &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
 					&state.WhereCondition{Property: []string{"document", "a", "b"}, Operator: state.OpIsNotNull},
 					&state.Where{Operator: state.OpOr, Rules: []state.WhereRule{
-						&state.WhereCondition{Property: []string{"value"}, Operator: state.OpIsNot, Values: []any{jsonFilterOperand("670")}},
-						&state.WhereCondition{Property: []string{"array"}, Operator: state.OpContains, Values: []any{jsonFilterOperand("foo")}},
+						&state.WhereCondition{Property: []string{"value"}, Operator: state.OpIsNot, Values: []any{json.Value("670")}},
+						&state.WhereCondition{Property: []string{"array"}, Operator: state.OpContains, Values: []any{json.Value("\"foo\"")}},
 					}},
 				}},
 			})
@@ -392,43 +401,6 @@ func TestJSONFilters(t *testing.T) {
 		})
 	}
 
-}
-
-// TestJSONFilterOperand checks numeric classification and preserves value text.
-func TestJSONFilterOperand(t *testing.T) {
-	for _, c := range []struct {
-		text   string
-		number bool
-	}{
-		{"670", true}, {"670.0", true}, {"+670", true}, {"6.7e2", true},
-		{".005", true}, {"0.", true}, {"-0", true},
-		{"1e75", true}, {"1e-37", true}, {"1e76", false}, {"1e-38", false},
-		{"1e999999", false}, {"-1e999999", false}, {"1e-999999", false},
-		{"", false}, {"foo", false}, {"null", false}, {"true", false}, {"1e", false},
-	} {
-		t.Run(c.text, func(t *testing.T) {
-			value := jsonFilterOperand(c.text)
-			if value.String != c.text {
-				t.Errorf("expected original value text %q, got %q", c.text, value.String)
-			}
-			if got := value.Number != nil; got != c.number {
-				t.Errorf("expected numeric operand %t, got %t", c.number, got)
-			}
-		})
-	}
-}
-
-// jsonFilterOperand constructs the same dual representation as core filters.
-func jsonFilterOperand(text string) state.JSONConditionValue {
-	value := state.JSONConditionValue{String: text}
-	number, err := decimal.Parse(text, 0, 0)
-	if err != nil {
-		return value
-	}
-	if types.IsDecimal(number) {
-		value.Number = &number
-	}
-	return value
 }
 
 // newJSONFilterTestWarehouse creates one environment for all JSON filter tests.

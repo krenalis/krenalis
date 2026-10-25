@@ -1,12 +1,25 @@
+import { FILTER_OPERATORS, MAX_FILTER_DEPTH, MAX_FILTER_RULE_COUNT, isFilterGroup, isUnaryOperator } from './filters';
 import {
-	FILTER_OPERATORS,
-	MAX_FILTER_DEPTH,
-	MAX_FILTER_RULE_COUNT,
-	isFilterGroup,
-	isUnaryOperator,
-} from '../lib/core/pipeline';
-import { FilterLogical, FilterOperator, Filter, FilterCondition, FilterRule } from '../lib/api/types/pipeline';
-import { isFilterNumber, isValidPropertyPath } from './filters';
+	FilterLogical,
+	FilterOperator,
+	EditorFilter,
+	EditorFilterCondition,
+	EditorFilterRule,
+} from '../lib/api/types/pipeline';
+import { ObjectType } from '../lib/api/types/types';
+import {
+	isValidPropertyPath,
+	quoteFilterText,
+	formatString,
+	filterProperty,
+	parseFilterOperand,
+	filterValueKind,
+} from './filters';
+
+interface FilterToken {
+	text: string;
+	isQuoted: boolean;
+}
 
 const SORTED_OPERATORS = [...FILTER_OPERATORS].sort((a, b) => b.length - a.length);
 
@@ -53,7 +66,7 @@ function parseNumber(s: string, i: number): [string, number] {
 	const start = i;
 	while (i < s.length && /[0-9eE.+\-]/.test(s[i])) i++;
 	const str = s.slice(start, i);
-	if (!isFilterNumber(str)) throw new Error(`Invalid number: ${str}`);
+	if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(str)) throw new Error(`Invalid number: ${str}`);
 	return [str, i];
 }
 
@@ -119,28 +132,35 @@ function parseString(s: string, i: number): [string, number] {
 	throw new Error('Unterminated string');
 }
 
-// parseValue parses a single value (string, number, or boolean).
-function parseValue(s: string, i: number): [string, number] {
+// parseValue parses a value token while retaining its quoting.
+function parseValue(s: string, i: number): [FilterToken, number] {
 	i = skipSpaces(s, i);
 	const c = s[i];
 
-	if (s.startsWith('true', i)) return ['true', i + 4];
-	if (s.startsWith('false', i)) return ['false', i + 5];
-	if (c === '"' || c === "'") return parseString(s, i);
-	if ((c >= '0' && c <= '9') || c === '-' || c === '+' || c === '.') return parseNumber(s, i);
+	if (s.startsWith('true', i)) return [{ text: 'true', isQuoted: false }, i + 4];
+	if (s.startsWith('false', i)) return [{ text: 'false', isQuoted: false }, i + 5];
+	if (s.startsWith('null', i)) return [{ text: 'null', isQuoted: false }, i + 4];
+	if (c === '"' || c === "'") {
+		const [text, end] = parseString(s, i);
+		return [{ text, isQuoted: true }, end];
+	}
+	if ((c >= '0' && c <= '9') || c === '-' || c === '+' || c === '.') {
+		const [text, end] = parseNumber(s, i);
+		return [{ text, isQuoted: false }, end];
+	}
 
 	throw new Error(`Invalid value at position ${i}`);
 }
 
 // parseValues parses one or more values, with or without parentheses for lists.
-function parseValues(s: string, i: number, expectMultiple: boolean): [string[], number] {
+function parseValues(s: string, i: number, expectMultiple: boolean): [FilterToken[], number] {
 	i = skipSpaces(s, i);
 	if (s[i] === '(') {
 		if (!expectMultiple) {
 			throw new Error('Parentheses are not allowed when only one value is expected');
 		}
 		i++; // skip '('
-		const values: string[] = [];
+		const values: FilterToken[] = [];
 		while (true) {
 			i = skipSpaces(s, i);
 			const [val, ni] = parseValue(s, i);
@@ -219,19 +239,19 @@ const parseLogical = (s: string, i: number): FilterLogical | null => {
 	return null;
 };
 
-// parseFilter parses a user-readable filter expression into a Filter object.
+// parseFilter parses a user-readable expression into an EditorFilter object.
 // Parentheses delimit nested groups with their own logical operator.
-export function parseFilter(s: string): Filter {
+export function parseFilter(s: string, schema?: ObjectType): EditorFilter {
 	let ruleCount = 0;
 
-	const parseCondition = (start: number): [FilterCondition, number] => {
+	const parseCondition = (start: number): [EditorFilterCondition, number] => {
 		let i = start;
 		const [property, ni1] = parseProperty(s, i);
 		i = skipSpaces(s, ni1);
 		const [operator, ni2] = parseOperator(s, i);
 		i = skipSpaces(s, ni2);
 
-		let values: string[] = [];
+		let values: FilterToken[] = [];
 		if (!isUnaryOperator(operator)) {
 			const expectMultiple =
 				operator === 'is one of' ||
@@ -253,29 +273,46 @@ export function parseFilter(s: string): Filter {
 			}
 		}
 
-		return [{ property, operator, values }, i];
+		if (isUnaryOperator(operator)) return [{ property, operator }, i];
+		const propertyType = schema == null ? undefined : filterProperty(schema, property).type;
+		const type = propertyType?.kind === 'array' ? propertyType.elementType : propertyType;
+		const controls = values.map((token) => {
+			if (!token.isQuoted) return token.text;
+			if (type?.kind === 'json' || type == null) return quoteFilterText(token.text);
+			if (type.kind === 'int' || type.kind === 'year' || type.kind === 'float' || type.kind === 'decimal') {
+				return quoteFilterText(token.text);
+			}
+			return propertyType.kind === 'string' && propertyType.values != null
+				? token.text
+				: formatString(token.text);
+		});
+		const valueKinds =
+			propertyType == null
+				? undefined
+				: controls.map((text) => filterValueKind(parseFilterOperand(text, propertyType, operator)));
+		return [{ property, operator, values: controls, ...(valueKinds == null ? {} : { valueKinds }) }, i];
 	};
 
-	const parseGroup = (start: number, depth: number, nested: boolean): [Filter, number] => {
+	const parseGroup = (start: number, depth: number, nested: boolean): [EditorFilter, number] => {
 		if (depth > MAX_FILTER_DEPTH + 1) {
 			throw new Error(`Filter exceeds maximum depth of ${MAX_FILTER_DEPTH}`);
 		}
 
 		let i = skipSpaces(s, start);
-		const rules: FilterRule[] = [];
+		const rules: EditorFilterRule[] = [];
 		let operator: FilterLogical | null = null;
 		for (;;) {
 			if (nested && s[i] === ')') {
 				if (rules.length === 0) throw new Error('Filter groups cannot be empty');
-				return [{ operator: operator || 'and', rules }, i + 1];
+				return [{ operator: operator ?? 'and', rules }, i + 1];
 			}
 			if (i >= s.length) {
 				if (nested) throw new Error('Unclosed filter group');
 				if (rules.length === 0) throw new Error('Filter groups cannot be empty');
-				return [{ operator: operator || 'and', rules }, i];
+				return [{ operator: operator ?? 'and', rules }, i];
 			}
 
-			let rule: FilterRule;
+			let rule: EditorFilterRule;
 			if (s[i] === '(') {
 				[rule, i] = parseGroup(i + 1, depth + 1, true);
 			} else {
@@ -289,11 +326,11 @@ export function parseFilter(s: string): Filter {
 
 			i = skipSpaces(s, i);
 			if (nested && s[i] === ')') {
-				return [{ operator: operator || 'and', rules }, i + 1];
+				return [{ operator: operator ?? 'and', rules }, i + 1];
 			}
 			if (i >= s.length) {
 				if (nested) throw new Error('Unclosed filter group');
-				return [{ operator: operator || 'and', rules }, i];
+				return [{ operator: operator ?? 'and', rules }, i];
 			}
 			if (s[i] === ')') throw new Error('Unexpected closing parenthesis');
 
@@ -315,7 +352,7 @@ export function parseFilter(s: string): Filter {
 	const result = filter.rules.length === 1 && isFilterGroup(filter.rules[0]) ? filter.rules[0] : filter;
 
 	let actualRuleCount = 0;
-	const validateGroupLimits = (group: Filter, depth: number) => {
+	const validateGroupLimits = (group: EditorFilter, depth: number) => {
 		if (depth > MAX_FILTER_DEPTH) {
 			throw new Error(`Filter exceeds maximum depth of ${MAX_FILTER_DEPTH}`);
 		}

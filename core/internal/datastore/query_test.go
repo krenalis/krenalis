@@ -13,6 +13,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/test/warehouseexpr"
 	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
@@ -76,7 +77,7 @@ func TestConvertWhereJSONBooleanOperators(t *testing.T) {
 					t.Fatalf("expected no error, got %v", err)
 				}
 
-				operand := warehouses.NewBaseExpr(column, warehouses.Operator(operator))
+				operand := newJSONFilterExpr(column, warehouses.Operator(operator))
 				operand.Keys = tt.keys
 				want := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{operand})
 				if !reflect.DeepEqual(want, got) {
@@ -116,16 +117,12 @@ func TestConvertWhereJSONOperators(t *testing.T) {
 					values = make([]any, len(c.Values))
 					originalValues = make([]any, len(c.Values))
 					for i, raw := range c.Values {
-						value, ok := raw.(warehouses.JSONConditionValue)
+						value, ok := raw.(json.Value)
 						if !ok {
-							t.Fatalf("expected warehouses.JSONConditionValue at index %d, got %T", i, raw)
+							t.Fatalf("expected json.Value at index %d, got %T", i, raw)
 						}
-						originalValues[i] = state.JSONConditionValue{String: value.String, Number: value.Number}
-						if value.Number != nil {
-							number := *value.Number
-							value.Number = &number
-						}
-						values[i] = state.JSONConditionValue{String: value.String, Number: value.Number}
+						originalValues[i] = slices.Clone(value)
+						values[i] = slices.Clone(value)
 					}
 				}
 				original := &state.WhereCondition{
@@ -149,7 +146,7 @@ func TestConvertWhereJSONOperators(t *testing.T) {
 					t.Errorf("expected unchanged columns %+v, got %+v", originalColumns, columns)
 				}
 
-				operand := warehouses.NewBaseExpr(column, c.Operator, c.Values...)
+				operand := newJSONFilterExpr(column, c.Operator, c.Values...)
 				operand.Keys = path.keys
 				want := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{operand})
 				if !reflect.DeepEqual(want, got) {
@@ -581,4 +578,10 @@ func TestConvertWhereOperatorValues(t *testing.T) {
 		})
 	}
 
+}
+
+func newJSONFilterExpr(column warehouses.Column, operator warehouses.Operator, values ...any) *warehouses.BaseExpr {
+	expr := warehouses.NewBaseExpr(column, operator, values...)
+	expr.JSONComparison = warehouses.JSONTypedComparison
+	return expr
 }

@@ -361,6 +361,7 @@ const usePipeline = (
 					providedPipeline,
 					outputSchema,
 					fields.includes('Transformation'),
+					inputSchema,
 				);
 				if (transformedPipeline.transformation.function != null) {
 					// Set the initial value of the selected properties
@@ -370,7 +371,17 @@ const usePipeline = (
 					setSelectedOutPaths(func.outPaths);
 				}
 			} else {
-				transformedPipeline = computeDefaultPipeline(pipelineType, connection, outputSchema, fields);
+				try {
+					transformedPipeline = computeDefaultPipeline(
+						transformedPipelineType,
+						connection,
+						outputSchema,
+						fields,
+					);
+				} catch (err) {
+					handleException(err);
+					return;
+				}
 			}
 			setPipeline(transformedPipeline);
 			setIsLoading(false);

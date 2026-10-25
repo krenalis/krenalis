@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/krenalis/analytics-go"
@@ -44,8 +45,14 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 		Filter: &krenalistester.Filter{
 			Operator: krenalistester.OpOr,
 			Rules: []krenalistester.FilterRule{
-				&krenalistester.FilterCondition{Property: "messageId", Operator: "is", Values: []string{"message1"}}, // message of the anonymous identity
-				&krenalistester.FilterCondition{Property: "messageId", Operator: "is", Values: []string{"message3"}}, // message of the not-anonymous identity
+				&krenalistester.FilterCondition{
+					Property: "messageId", Operator: "is",
+					Values: []json.Value{json.Value(`"message1"`)}, // message of the anonymous identity
+				},
+				&krenalistester.FilterCondition{
+					Property: "messageId", Operator: "is",
+					Values: []json.Value{json.Value(`"message3"`)}, // message of the not-anonymous identity
+				},
 			},
 		},
 		Transformation: &krenalistester.Transformation{
@@ -67,7 +74,10 @@ func TestAnonymousNotAnonymous(t *testing.T) {
 		Filter: &krenalistester.Filter{
 			Operator: krenalistester.OpOr,
 			Rules: []krenalistester.FilterRule{
-				&krenalistester.FilterCondition{Property: "messageId", Operator: "is", Values: []string{"message2"}}, // message of the anonymous identity
+				&krenalistester.FilterCondition{
+					Property: "messageId", Operator: "is",
+					Values: []json.Value{json.Value(`"message2"`)}, // message of the anonymous identity
+				},
 			},
 		},
 		Transformation: &krenalistester.Transformation{

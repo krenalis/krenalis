@@ -6,12 +6,12 @@
 package warehouseexpr
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
-	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
 
@@ -50,44 +50,45 @@ func JSONCases() ([]json.Value, []JSONCase) {
 	positiveFractionNeighbor := "12.3456789012345678901234567890123456781"
 	negativeFractionNeighbor := "-" + positiveFractionNeighbor
 	cases := []JSONCase{
-		{"is number", warehouses.OpIs, []any{Operand("5")}, []int{9, 13, 14}},
-		{"is decimal notation", warehouses.OpIs, []any{Operand("5.0")}, []int{10, 13, 14}},
-		{"is exponent notation", warehouses.OpIs, []any{Operand("5e0")}, []int{13, 14}},
-		{"is signed notation", warehouses.OpIs, []any{Operand("+5")}, []int{13, 14}},
-		{"is string", warehouses.OpIs, []any{Operand("foo")}, []int{5}},
-		{"is empty string", warehouses.OpIs, []any{Operand("")}, []int{4}},
-		{"is true text", warehouses.OpIs, []any{Operand("true")}, []int{27}},
-		{"is null text", warehouses.OpIs, []any{Operand("null")}, []int{28}},
-		{"large integer", warehouses.OpIs, []any{Operand("9007199254740993")}, []int{19}},
-		{"large integer neighbor", warehouses.OpIs, []any{Operand("9007199254740992")}, []int{31}},
-		{"large integer ordering", warehouses.OpIsGreaterThan, []any{Operand("9007199254740992")},
-			[]int{5, 6, 7, 8, 19, 27, 28, 29, 30, 36, 37}},
-		{"zero", warehouses.OpIs, []any{Operand("0")}, []int{11, 12}},
-		{"negative zero", warehouses.OpIs, []any{Operand("-0.0")}, []int{11, 12}},
-		{"thousand", warehouses.OpIs, []any{Operand("1000")}, []int{18, 32}},
-		{"thousand exponent", warehouses.OpIs, []any{Operand("1e3")}, []int{18, 32}},
-		{"precise decimal", warehouses.OpIs, []any{Operand("0.1234567890123456789012345678901234567")}, []int{33}},
-		{"precise decimal neighbor", warehouses.OpIs, []any{Operand("0.1234567890123456789012345678901234568")}, []int{34}},
-		{"precise decimal ordering", warehouses.OpIsLessThan, []any{Operand("0.1234567890123456789012345678901234568")},
-			[]int{4, 11, 12, 15, 33, 35, 39, 40}},
-		{"less than", warehouses.OpIsLessThan, []any{Operand("5")}, []int{4, 11, 12, 15, 17, 33, 34, 35, 39, 40}},
-		{"less than or equal", warehouses.OpIsLessThanOrEqualTo, []any{Operand("5")},
-			[]int{4, 9, 11, 12, 13, 14, 15, 17, 33, 34, 35, 39, 40}},
-		{"greater than", warehouses.OpIsGreaterThan, []any{Operand("5")},
-			[]int{5, 6, 7, 8, 10, 16, 18, 19, 27, 28, 29, 30, 31, 32, 36, 37, 38}},
-		{"greater than or equal", warehouses.OpIsGreaterThanOrEqualTo, []any{Operand("5")},
-			[]int{5, 6, 7, 8, 9, 10, 13, 14, 16, 18, 19, 27, 28, 29, 30, 31, 32, 36, 37, 38}},
-		{"between inclusive", warehouses.OpIsBetween, []any{Operand("0.5"), Operand("5")}, []int{9, 13, 14, 17}},
-		{"between reversed", warehouses.OpIsBetween, []any{Operand("5"), Operand("0.5")}, []int{}},
-		{"between mixed operands", warehouses.OpIsBetween, []any{Operand("5"), Operand("foo")}, []int{5, 7, 8, 9, 10}},
-		{"contains number", warehouses.OpContains, []any{Operand("5")}, []int{9, 10, 23, 24, 25}},
-		{"contains text", warehouses.OpContains, []any{Operand("foo")}, []int{5, 6, 7, 25}},
-		{"contains boolean text", warehouses.OpContains, []any{Operand("true")}, []int{27}},
-		{"contains empty text", warehouses.OpContains, []any{Operand("")}, []int{4, 5, 6, 7, 8, 9, 10, 27, 28, 29, 30}},
-		{"one of", warehouses.OpIsOneOf, []any{Operand("5"), Operand("foo"), Operand("null")}, []int{5, 9, 13, 14, 28}},
-		{"one of duplicate", warehouses.OpIsOneOf, []any{Operand("5"), Operand("+5")}, []int{9, 13, 14}},
-		{"starts with", warehouses.OpStartsWith, []any{Operand("foo")}, []int{5, 6}},
-		{"ends with", warehouses.OpEndsWith, []any{Operand("foo")}, []int{5, 7}},
+		{"is number", warehouses.OpIs, []any{json.Value("5")}, []int{13, 14}},
+		{"is decimal notation", warehouses.OpIs, []any{json.Value("5.0")}, []int{13, 14}},
+		{"is exponent notation", warehouses.OpIs, []any{json.Value("5e0")}, []int{13, 14}},
+		{"is signed text", warehouses.OpIs, []any{json.Value(`"+5"`)}, []int{}},
+		{"is string", warehouses.OpIs, []any{json.Value("\"foo\"")}, []int{5}},
+		{"is empty string", warehouses.OpIs, []any{json.Value("\"\"")}, []int{4}},
+		{"is true text", warehouses.OpIs, []any{json.Value("\"true\"")}, []int{27}},
+		{"is null text", warehouses.OpIs, []any{json.Value("\"null\"")}, []int{28}},
+		{"large integer", warehouses.OpIs, []any{json.Value("9007199254740993")}, []int{19}},
+		{"large integer neighbor", warehouses.OpIs, []any{json.Value("9007199254740992")}, []int{31}},
+		{"large integer ordering", warehouses.OpIsGreaterThan, []any{json.Value("9007199254740992")},
+			[]int{19, 36, 37}},
+		{"zero", warehouses.OpIs, []any{json.Value("0")}, []int{11, 12}},
+		{"negative zero", warehouses.OpIs, []any{json.Value("-0.0")}, []int{11, 12}},
+		{"thousand", warehouses.OpIs, []any{json.Value("1000")}, []int{18, 32}},
+		{"thousand exponent", warehouses.OpIs, []any{json.Value("1e3")}, []int{18, 32}},
+		{"precise decimal", warehouses.OpIs, []any{json.Value("0.1234567890123456789012345678901234567")}, []int{33}},
+		{"precise decimal neighbor", warehouses.OpIs,
+			[]any{json.Value("0.1234567890123456789012345678901234568")}, []int{34}},
+		{"precise decimal ordering", warehouses.OpIsLessThan, []any{json.Value("0.1234567890123456789012345678901234568")},
+			[]int{11, 12, 15, 33, 35, 39, 40}},
+		{"less than", warehouses.OpIsLessThan, []any{json.Value("5")}, []int{11, 12, 15, 17, 33, 34, 35, 39, 40}},
+		{"less than or equal", warehouses.OpIsLessThanOrEqualTo, []any{json.Value("5")},
+			[]int{11, 12, 13, 14, 15, 17, 33, 34, 35, 39, 40}},
+		{"greater than", warehouses.OpIsGreaterThan, []any{json.Value("5")},
+			[]int{16, 18, 19, 31, 32, 36, 37, 38}},
+		{"greater than or equal", warehouses.OpIsGreaterThanOrEqualTo, []any{json.Value("5")},
+			[]int{13, 14, 16, 18, 19, 31, 32, 36, 37, 38}},
+		{"between inclusive", warehouses.OpIsBetween, []any{json.Value("0.5"), json.Value("5")}, []int{13, 14, 17}},
+		{"between reversed", warehouses.OpIsBetween, []any{json.Value("5"), json.Value("0.5")}, []int{}},
+		{"between strings", warehouses.OpIsBetween, []any{json.Value("\"5\""), json.Value("\"foo\"")}, []int{5, 7, 8, 9, 10}},
+		{"contains number", warehouses.OpContains, []any{json.Value("5")}, []int{23, 25}},
+		{"contains text", warehouses.OpContains, []any{json.Value("\"foo\"")}, []int{5, 6, 7, 25}},
+		{"contains boolean text", warehouses.OpContains, []any{json.Value("\"true\"")}, []int{27}},
+		{"contains empty text", warehouses.OpContains, []any{json.Value(`""`)}, []int{4, 5, 6, 7, 8, 9, 10, 27, 28, 29, 30}},
+		{"one of", warehouses.OpIsOneOf, []any{json.Value("5"), json.Value(`"foo"`), json.Value(`"null"`)}, []int{5, 13, 14, 28}},
+		{"one of duplicate", warehouses.OpIsOneOf, []any{json.Value("5"), json.Value("5e0")}, []int{13, 14}},
+		{"starts with", warehouses.OpStartsWith, []any{json.Value("\"foo\"")}, []int{5, 6}},
+		{"ends with", warehouses.OpEndsWith, []any{json.Value("\"foo\"")}, []int{5, 7}},
 		{"is true", warehouses.OpIsTrue, nil, []int{2}},
 		{"is false", warehouses.OpIsFalse, nil, []int{3}},
 		{"empty", warehouses.OpIsEmpty, nil, []int{0, 1, 4, 20, 22}},
@@ -95,71 +96,79 @@ func JSONCases() ([]json.Value, []JSONCase) {
 		{"exists", warehouses.OpExists, nil,
 			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
 				25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40}},
-		{"37 digit integer", warehouses.OpIs, []any{Operand(strings.Repeat("9", 37))},
+		{"37 digit integer", warehouses.OpIs, []any{json.Value(strings.Repeat("9", 37))},
 			[]int{36}},
-		{"38 digit integer", warehouses.OpIs, []any{Operand(strings.Repeat("9", 38))},
+		{"38 digit integer", warehouses.OpIs, []any{json.Value(strings.Repeat("9", 38))},
 			[]int{37}},
-		{"39 digit equality", warehouses.OpIs, []any{Operand(positiveFractionNeighbor)},
+		{"39 digit equality", warehouses.OpIs, []any{json.Value(positiveFractionNeighbor)},
 			[]int{}},
-		{"negative 39 digit equality", warehouses.OpIs, []any{Operand(negativeFractionNeighbor)},
+		{"negative 39 digit equality", warehouses.OpIs, []any{json.Value(negativeFractionNeighbor)},
 			[]int{}},
-		{"53 digit equality", warehouses.OpIs, []any{Operand(positiveNeighbor)},
+		{"53 digit equality", warehouses.OpIs, []any{json.Value(positiveNeighbor)},
 			[]int{}},
-		{"negative 53 digit equality", warehouses.OpIs, []any{Operand(negativeNeighbor)},
+		{"negative 53 digit equality", warehouses.OpIs, []any{json.Value(negativeNeighbor)},
 			[]int{}},
-		{"positive integer neighbor/less than", warehouses.OpIsLessThan, []any{Operand(positiveNeighbor)},
-			[]int{4, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 31, 32, 33, 34, 35, 38, 39, 40}},
-		{"positive integer neighbor/less than or equal", warehouses.OpIsLessThanOrEqualTo, []any{Operand(positiveNeighbor)},
-			[]int{4, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 31, 32, 33, 34, 35, 38, 39, 40}},
-		{"positive integer neighbor/greater than", warehouses.OpIsGreaterThan, []any{Operand(positiveNeighbor)},
-			[]int{5, 6, 7, 8, 27, 28, 29, 30, 36, 37}},
+		{"positive integer neighbor/less than", warehouses.OpIsLessThan, []any{json.Value(positiveNeighbor)},
+			[]int{11, 12, 13, 14, 15, 16, 17, 18, 19, 31, 32, 33, 34, 35, 38, 39, 40}},
+		{"positive integer neighbor/less than or equal", warehouses.OpIsLessThanOrEqualTo,
+			[]any{json.Value(positiveNeighbor)},
+			[]int{11, 12, 13, 14, 15, 16, 17, 18, 19, 31, 32, 33, 34, 35, 38, 39, 40}},
+		{"positive integer neighbor/greater than", warehouses.OpIsGreaterThan, []any{json.Value(positiveNeighbor)},
+			[]int{36, 37}},
 		{"positive integer neighbor/greater than or equal", warehouses.OpIsGreaterThanOrEqualTo,
-			[]any{Operand(positiveNeighbor)}, []int{5, 6, 7, 8, 27, 28, 29, 30, 36, 37}},
-		{"negative integer neighbor/less than", warehouses.OpIsLessThan, []any{Operand(negativeNeighbor)},
-			[]int{4}},
-		{"negative integer neighbor/less than or equal", warehouses.OpIsLessThanOrEqualTo, []any{Operand(negativeNeighbor)},
-			[]int{4}},
-		{"negative integer neighbor/greater than", warehouses.OpIsGreaterThan, []any{Operand(negativeNeighbor)},
-			[]int{5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 27, 28, 29, 30, 31, 32, 33, 34,
-				35, 36, 37, 38, 39, 40}},
+			[]any{json.Value(positiveNeighbor)}, []int{36, 37}},
+		{"negative integer neighbor/less than", warehouses.OpIsLessThan, []any{json.Value(negativeNeighbor)},
+			[]int{}},
+		{"negative integer neighbor/less than or equal", warehouses.OpIsLessThanOrEqualTo,
+			[]any{json.Value(negativeNeighbor)},
+			[]int{}},
+		{"negative integer neighbor/greater than", warehouses.OpIsGreaterThan, []any{json.Value(negativeNeighbor)},
+			[]int{11, 12, 13, 14, 15, 16, 17, 18, 19, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40}},
 		{"negative integer neighbor/greater than or equal", warehouses.OpIsGreaterThanOrEqualTo,
-			[]any{Operand(negativeNeighbor)},
-			[]int{5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 27, 28, 29, 30, 31, 32, 33, 34,
-				35, 36, 37, 38, 39, 40}},
-		{"positive fraction neighbor/less than", warehouses.OpIsLessThan, []any{Operand(positiveFractionNeighbor)},
-			[]int{4, 11, 12, 13, 14, 15, 17, 33, 34, 35, 38, 39, 40}},
+			[]any{json.Value(negativeNeighbor)},
+			[]int{11, 12, 13, 14, 15, 16, 17, 18, 19, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40}},
+		{"positive fraction neighbor/less than", warehouses.OpIsLessThan, []any{json.Value(positiveFractionNeighbor)},
+			[]int{11, 12, 13, 14, 15, 17, 33, 34, 35, 38, 39, 40}},
 		{"positive fraction neighbor/less than or equal", warehouses.OpIsLessThanOrEqualTo,
-			[]any{Operand(positiveFractionNeighbor)}, []int{4, 11, 12, 13, 14, 15, 17, 33, 34, 35, 38, 39, 40}},
-		{"positive fraction neighbor/greater than", warehouses.OpIsGreaterThan, []any{Operand(positiveFractionNeighbor)},
-			[]int{5, 6, 7, 8, 9, 10, 16, 18, 19, 27, 28, 29, 30, 31, 32, 36, 37}},
+			[]any{json.Value(positiveFractionNeighbor)}, []int{11, 12, 13, 14, 15, 17, 33, 34, 35, 38, 39, 40}},
+		{"positive fraction neighbor/greater than", warehouses.OpIsGreaterThan, []any{json.Value(positiveFractionNeighbor)},
+			[]int{16, 18, 19, 31, 32, 36, 37}},
 		{"positive fraction neighbor/greater than or equal", warehouses.OpIsGreaterThanOrEqualTo,
-			[]any{Operand(positiveFractionNeighbor)}, []int{5, 6, 7, 8, 9, 10, 16, 18, 19, 27, 28, 29, 30, 31, 32, 36, 37}},
-		{"negative fraction neighbor/less than", warehouses.OpIsLessThan, []any{Operand(negativeFractionNeighbor)},
-			[]int{4, 35}},
+			[]any{json.Value(positiveFractionNeighbor)}, []int{16, 18, 19, 31, 32, 36, 37}},
+		{"negative fraction neighbor/less than", warehouses.OpIsLessThan, []any{json.Value(negativeFractionNeighbor)},
+			[]int{35}},
 		{"negative fraction neighbor/less than or equal", warehouses.OpIsLessThanOrEqualTo,
-			[]any{Operand(negativeFractionNeighbor)}, []int{4, 35}},
-		{"negative fraction neighbor/greater than", warehouses.OpIsGreaterThan, []any{Operand(negativeFractionNeighbor)},
-			[]int{5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 27, 28, 29, 30, 31, 32, 33, 34, 36, 37, 38, 39, 40}},
+			[]any{json.Value(negativeFractionNeighbor)}, []int{35}},
+		{"negative fraction neighbor/greater than", warehouses.OpIsGreaterThan, []any{json.Value(negativeFractionNeighbor)},
+			[]int{11, 12, 13, 14, 15, 16, 17, 18, 19, 31, 32, 33, 34, 36, 37, 38, 39, 40}},
 		{"negative fraction neighbor/greater than or equal", warehouses.OpIsGreaterThanOrEqualTo,
-			[]any{Operand(negativeFractionNeighbor)},
-			[]int{5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 27, 28, 29, 30, 31, 32, 33, 34, 36, 37, 38, 39, 40}},
+			[]any{json.Value(negativeFractionNeighbor)},
+			[]int{11, 12, 13, 14, 15, 16, 17, 18, 19, 31, 32, 33, 34, 36, 37, 38, 39, 40}},
 		{"between precise integer neighbors", warehouses.OpIsBetween, []any{
-			Operand(positiveNeighbor), Operand(strings.Repeat("9", 38)),
+			json.Value(positiveNeighbor), json.Value(strings.Repeat("9", 38)),
 		}, []int{36, 37}},
 		{"between precise negative neighbors", warehouses.OpIsBetween, []any{
-			Operand(negativeNeighbor), Operand("-9007199254740993"),
+			json.Value(negativeNeighbor), json.Value("-9007199254740993"),
 		}, []int{35}},
 		{"membership with inexact and exact operands", warehouses.OpIsOneOf, []any{
-			Operand(positiveNeighbor), Operand("9007199254740993"), Operand("foo"),
+			json.Value(positiveNeighbor), json.Value("9007199254740993"), json.Value("\"foo\""),
 		}, []int{5, 19}},
 		{"membership with only inexact operands", warehouses.OpIsOneOf, []any{
-			Operand(positiveNeighbor), Operand(negativeNeighbor),
-			Operand(positiveFractionNeighbor), Operand(negativeFractionNeighbor),
+			json.Value(positiveNeighbor), json.Value(negativeNeighbor),
+			json.Value(positiveFractionNeighbor), json.Value(negativeFractionNeighbor),
 		}, []int{}},
-		{"76 digit equality", warehouses.OpIs, []any{Operand(strings.Repeat("9", 76))},
+		{"76 digit equality", warehouses.OpIs, []any{json.Value(strings.Repeat("9", 76))},
 			[]int{}},
-		{"maximum scale equality", warehouses.OpIs, []any{Operand("1e-37")},
+		{"maximum scale equality", warehouses.OpIs, []any{json.Value("1e-37")},
 			[]int{40}},
+		{"is numeric string", warehouses.OpIs, []any{json.Value("\"5\"")}, []int{9}},
+		{"contains numeric string", warehouses.OpContains, []any{json.Value("\"5\"")}, []int{9, 10, 24}},
+		{"membership mixed kinds", warehouses.OpIsOneOf, []any{
+			json.Value("5"), json.Value("\"5\""), json.Value("true"), json.Value("false"), json.Value("null"),
+		}, []int{1, 2, 3, 9, 13, 14}},
+		{"membership false", warehouses.OpIsOneOf, []any{json.Value("false")}, []int{3}},
+		{"membership null", warehouses.OpIsOneOf, []any{json.Value("null")}, []int{1}},
+		{"membership zero", warehouses.OpIsOneOf, []any{json.Value("0")}, []int{11, 12}},
 	}
 	negative := map[warehouses.Operator]warehouses.Operator{
 		warehouses.OpIs: warehouses.OpIsNot, warehouses.OpIsBetween: warehouses.OpIsNotBetween,
@@ -183,15 +192,12 @@ func JSONCases() ([]json.Value, []JSONCase) {
 	return values, cases
 }
 
-// Operand constructs the dual string and decimal representation of a filter.
-func Operand(text string) warehouses.JSONConditionValue {
-	value := warehouses.JSONConditionValue{String: text}
-	number, err := decimal.Parse(text, 0, 0)
+// Number encodes a decimal operand without changing its value or checking
+// filter limits, so fixtures can also exercise invalid numeric thresholds.
+func Number(value decimal.Decimal) json.Value {
+	encoded, err := value.MarshalJSON()
 	if err != nil {
-		return value
+		panic(fmt.Errorf("test/warehouseexpr: cannot encode decimal operand: %w", err))
 	}
-	if types.IsDecimal(number) {
-		value.Number = &number
-	}
-	return value
+	return json.Value(encoded)
 }

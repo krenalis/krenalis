@@ -126,7 +126,7 @@ const (
 type FilterCondition struct {
 	Property string         `json:"property"`
 	Operator FilterOperator `json:"operator"`
-	Values   []string       `json:"values"`
+	Values   []json.Value   `json:"values"`
 }
 
 // filterRule marks FilterCondition as a filter rule.

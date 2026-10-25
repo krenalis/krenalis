@@ -7,12 +7,10 @@ package core
 import (
 	"bytes"
 	"fmt"
-	"math"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/util"
@@ -20,8 +18,6 @@ import (
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
-
-	"github.com/relvacode/iso8601"
 )
 
 // Filter complexity limits.
@@ -105,12 +101,10 @@ type FilterCondition struct {
 	// Operator to apply.
 	Operator FilterOperator `json:"operator"`
 
-	// Values.
-	// If the property has a string type with allowed values, each value must be one of the allowed values.
-	// In all other cases, each value must be at most 80 runes and must not contain the NUL byte.
-	// Decimal operands must fit a decimal(p,s) with p <= 76 and 0 <= s <= min(p,37).
-	// In addition to JSON strings, only JSON operands within these decimal limits are compared with JSON numbers.
-	Values []string `json:"values,omitzero"`
+	// Values are JSON operands whose kinds must match the property's type.
+	// String operands are limited to 80 runes without NUL, except allowed values.
+	// Decimal and JSON Number operands must fit precision 76 and scale 37.
+	Values []json.Value `json:"values,omitzero"`
 }
 
 // MarshalJSON returns the JSON representation of condition.
@@ -124,6 +118,21 @@ func (condition *FilterCondition) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	return b.Bytes(), nil
+}
+
+// UnmarshalJSON replaces condition with its JSON representation.
+func (condition *FilterCondition) UnmarshalJSON(data []byte) error {
+	if condition == nil {
+		return errors.New("core: cannot unmarshal a filter condition into nil")
+	}
+	type conditionJSON FilterCondition
+	var decoded conditionJSON
+	err := json.Unmarshal(data, &decoded)
+	if err != nil {
+		return errors.New(err.Error())
+	}
+	*condition = FilterCondition(decoded)
+	return nil
 }
 
 // filterRule marks FilterCondition as a filter rule.
@@ -186,84 +195,6 @@ func convertOperatorToWhere(op FilterOperator) state.WhereOperator {
 	return state.WhereOperator(slices.Index(operators[:], op))
 }
 
-// convertFilterToWhere converts the provided filter into a where.
-// The filter must have been validated using the validateFilter function with
-// the same schema. Panics if the filter is nil or the schema is not valid.
-func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
-
-	where := &state.Where{
-		Operator: convertLogicalToWhere(filter.Operator),
-		Rules:    make([]state.WhereRule, len(filter.Rules)),
-	}
-	properties := schema.Properties()
-
-	for i, rule := range filter.Rules {
-		if group, ok := rule.(*Filter); ok {
-			where.Rules[i] = convertFilterToWhere(group, schema)
-			continue
-		}
-		cond := rule.(*FilterCondition)
-		p, _, _ := resolveFilterProperty(properties, cond.Property)
-		var values []any
-		if len(cond.Values) > 0 {
-			values = make([]any, len(cond.Values))
-		}
-		t := p.Type
-		if t.IsArray() {
-			t = t.Elem()
-		}
-		kind := t.Kind()
-		for i, value := range cond.Values {
-			var v any
-			switch kind {
-			case types.StringKind:
-				v = value
-			case types.BooleanKind:
-				v = value == "true"
-			case types.IntKind:
-				if t.IsUnsigned() {
-					v, _ = parseUnsigned(value)
-				} else {
-					v, _ = parseInt(value)
-				}
-			case types.FloatKind:
-				v, _ = parseFloat(value, t.BitSize())
-			case types.DecimalKind:
-				v, _ = parseFilterDecimal(value)
-			case types.DateTimeKind:
-				v, _ = iso8601.ParseString(value)
-			case types.DateKind:
-				v, _ = time.Parse(time.DateOnly, value)
-			case types.TimeKind:
-				v, _ = util.ParseTime(value)
-			case types.YearKind:
-				v, _ = parseYear(value)
-			case types.UUIDKind:
-				v, _ = types.NormalizeUUID(value)
-			case types.JSONKind:
-				jv := state.JSONConditionValue{String: value}
-				d, valid := parseFilterDecimal(value)
-				if valid {
-					jv.Number = &d
-				}
-				v = jv
-			case types.IPKind:
-				v, _ = types.NormalizeIP(value)
-			default:
-				panic(fmt.Errorf("unexpected type for property %s", cond.Property))
-			}
-			values[i] = v
-		}
-		where.Rules[i] = &state.WhereCondition{
-			Property: strings.Split(cond.Property, "."),
-			Operator: convertOperatorToWhere(cond.Operator),
-			Values:   values,
-		}
-	}
-
-	return where
-}
-
 // convertWhereToFilter converts the provided where into a filter.
 // Panics if where is nil or the schema is not valid.
 func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
@@ -280,46 +211,52 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 			continue
 		}
 		cond := rule.(*state.WhereCondition)
-		var values []string
+		var values []json.Value
 		if len(cond.Values) > 0 {
-			values = make([]string, len(cond.Values))
+			values = make([]json.Value, len(cond.Values))
 		}
 		for i, value := range cond.Values {
-			var v string
+			var v json.Value
 			switch value := value.(type) {
 			case string:
-				v = value
+				v, _ = json.Quote([]byte(value))
 			case bool:
-				v = strconv.FormatBool(value)
+				v = json.Value(strconv.FormatBool(value))
 			case float64:
 				p, _ := properties.ByPathSlice(cond.Property)
 				t := p.Type
 				if t.IsArray() {
 					t = t.Elem()
 				}
-				v = strconv.FormatFloat(value, 'g', -1, t.BitSize())
+				v = json.Value(strconv.FormatFloat(value, 'g', -1, t.BitSize()))
 			case int:
-				v = strconv.FormatInt(int64(value), 10)
+				v = json.Value(strconv.FormatInt(int64(value), 10))
 			case uint:
-				v = strconv.FormatUint(uint64(value), 10)
+				v = json.Value(strconv.FormatUint(uint64(value), 10))
 			case decimal.Decimal:
-				v = value.String()
+				v, _ = value.MarshalJSON()
 			case time.Time:
 				p, _ := properties.ByPathSlice(cond.Property)
 				t := p.Type
 				if t.IsArray() {
 					t = t.Elem()
 				}
+				var text string
 				switch t.Kind() {
 				case types.DateTimeKind:
-					v = value.Format("2006-01-02T15:04:05.999999999")
+					text = value.Format(time.RFC3339Nano)
 				case types.DateKind:
-					v = value.Format("2006-01-02")
+					text = value.Format(time.DateOnly)
 				case types.TimeKind:
-					v = value.Format("15:04:05.999999999")
+					text = value.Format("15:04:05.999999999")
+				default:
+					panic(fmt.Errorf("core: unexpected filter time type %s", t))
 				}
-			case state.JSONConditionValue:
-				v = value.String
+				v, _ = json.Quote([]byte(text))
+			case json.Value:
+				v = bytes.Clone(value)
+			default:
+				panic(fmt.Errorf("core: unexpected filter operand %T", value))
 			}
 			values[i] = v
 		}
@@ -331,90 +268,6 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 	}
 
 	return filter
-}
-
-// parseFilterDecimal parses s as a decimal filter operand. It returns the parsed
-// value and true if the number can be represented exactly by a decimal type
-// supported by the types package; otherwise, it returns the zero value and false.
-func parseFilterDecimal(s string) (decimal.Decimal, bool) {
-	d, err := decimal.Parse(s, 0, 0)
-	if err != nil {
-		return decimal.Decimal{}, false
-	}
-	if !types.IsDecimal(d) {
-		return decimal.Decimal{}, false
-	}
-	return d, true
-}
-
-// parseDecimalDigits parses the string s and returns the index of the first
-// byte in s that is not a decimal digit (0-9).
-func parseDecimalDigits(s string) int {
-	i := 0
-	for ; i < len(s); i++ {
-		var c = s[i]
-		if c < '0' || c > '9' {
-			break
-		}
-	}
-	return i
-}
-
-// parseFloat parses a float(n) from s with the provided bit size and returns
-// the parsed float value and true. If s is not a valid float, it returns 0
-// and false. bitSize can be 32 for float(32) or 64 for float(64).
-func parseFloat(s string, bitSize int) (float64, bool) {
-	if s == "0" {
-		return 0, true
-	}
-	if !isFloatingPoint(s) {
-		return 0, false
-	}
-	f, err := strconv.ParseFloat(s, bitSize)
-	if err != nil {
-		return 0, false
-	}
-	return f, true
-}
-
-// isFloatingPoint checks whether the string s represents a valid floating-point
-// value.
-func isFloatingPoint(s string) bool {
-	if len(s) == 0 {
-		return false
-	}
-	if s[0] == '-' || s[0] == '+' {
-		s = s[1:]
-	}
-	i := parseDecimalDigits(s)
-	if i == 0 {
-		return false
-	}
-	if i == len(s) {
-		return true
-	}
-	c := s[i]
-	s = s[i+1:]
-	if c == '.' {
-		i = parseDecimalDigits(s)
-		if i == 0 {
-			return false
-		}
-		if i == len(s) {
-			return true
-		}
-		c = s[i]
-		s = s[i+1:]
-	}
-	if c != 'e' && c != 'E' || len(s) == 0 {
-		return false
-	}
-	c = s[0]
-	if c == '-' || c == '+' {
-		s = s[1:]
-	}
-	i = parseDecimalDigits(s)
-	return i == len(s)
 }
 
 // marshalFilterConditionJSON appends the JSON representation of condition to
@@ -486,84 +339,6 @@ func marshalFilterJSON(b *json.Buffer, filter *Filter) error {
 	return nil
 }
 
-// parseInt parses an int(64) from s and returns the int(64) value and true.
-// If s is not a valid int(64), it returns 0 and false.
-func parseInt(s string) (int, bool) {
-	if len(s) == 0 {
-		return 0, false
-	}
-	if s == "0" {
-		return 0, true
-	}
-	sign := 1
-	switch s[0] {
-	case '-':
-		sign = -1
-		fallthrough
-	case '+':
-		s = s[1:]
-	}
-	un, valid := parseUnsigned(s)
-	if !valid {
-		return 0, false
-	}
-	if sign < 0 && un > math.MaxInt64+1 {
-		return 0, false
-	}
-	if sign > 0 && un > math.MaxInt64 {
-		return 0, false
-	}
-	return sign * int(un), true
-}
-
-// parseUnsigned parses an unsigned int(64) from s and returns the unsigned
-// int(64) value and true.
-// If s is not a valid unsigned int(64), it returns 0 and false.
-func parseUnsigned(s string) (uint, bool) {
-	if len(s) == 0 {
-		return 0, false
-	}
-	if s == "0" {
-		return 0, true
-	}
-	var n uint
-	for i := range len(s) {
-		c := s[i]
-		if c < '0' || c > '9' || i == 0 && c == '0' {
-			return 0, false
-		}
-		n2 := n*10 + uint(c-'0')
-		if n2 < n {
-			return 0, false
-		}
-		n = n2
-	}
-	return n, true
-}
-
-// parseYear parses a year from s and returns the year and true.
-// If s is not a valid year, it returns 0 and false.
-func parseYear(s string) (int, bool) {
-	if l := len(s); l == 0 || l > 4 {
-		return 0, false
-	}
-	var year int
-	for i := range len(s) {
-		c := s[i]
-		if c < '0' || c > '9' {
-			return 0, false
-		}
-		year = year*10 + int(c-'0')
-		if year > types.MaxYear {
-			return 0, false
-		}
-	}
-	if year < types.MinYear {
-		return 0, false
-	}
-	return year, true
-}
-
 // resolveFilterProperty resolves path against properties.
 //
 // It returns the property at path and its schema path or, if path extends into
@@ -606,7 +381,7 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup bool) (Filter
 	var operator string
 	var property string
 	var rules []FilterRule
-	var values []string
+	var values []json.Value
 	var descendantRuleCount int
 	var hasOperator, hasProperty, hasRules, hasValues bool
 
@@ -722,30 +497,34 @@ func unmarshalFilterRules(dec *json.Decoder, depth int) ([]FilterRule, int, erro
 	return rules, ruleCount, nil
 }
 
-// validateFilter checks the validity of a filter and returns the referenced
-// property paths.
-// Returns an error if the filter is not valid. Specifically, it returns a
-// types.PathNotExistError if a path does not exist.
-// Panics if the filter is nil or the schema is not valid.
-func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
-	validation := filterValidation{properties: schema.Properties()}
-	if err := validateFilterGroup(filter, &validation, 1); err != nil {
-		return nil, err
+// prepareFilter validates filter and returns its typed expression and used
+// paths.
+func prepareFilter(filter *Filter, schema types.Type) (*state.Where, []string, error) {
+	if filter == nil {
+		return nil, nil, nil
 	}
-	return validation.paths, nil
+	if !schema.Valid() || !schema.IsObject() {
+		return nil, nil, errors.New("filter schema must be an object")
+	}
+	validation := filterValidation{properties: schema.Properties()}
+	where, err := prepareFilterGroup(filter, &validation, 1)
+	if err != nil {
+		return nil, nil, err
+	}
+	return where, validation.paths, nil
 }
 
-// validateFilterCondition checks the validity of a filter condition and
-// returns its property path.
-func validateFilterCondition(cond *FilterCondition, validation *filterValidation) (string, error) {
+// prepareFilterCondition validates a condition and returns its typed form and
+// base path.
+func prepareFilterCondition(cond *FilterCondition, validation *filterValidation) (*state.WhereCondition, string, error) {
 
 	if !types.IsValidPropertyPath(cond.Property) {
-		return "", errors.New("property path is not valid")
+		return nil, "", errors.New("property path is not valid")
 	}
 
 	p, path, err := resolveFilterProperty(validation.properties, cond.Property)
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
 
 	op := cond.Operator
@@ -789,32 +568,34 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 	case OpIs, OpIsNot:
 		switch kind {
 		case types.BooleanKind, types.ArrayKind, types.ObjectKind, types.MapKind:
-			return "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
+			return nil, "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 		}
 	case OpIsBetween, OpIsNotBetween:
 		switch kind {
 		case types.StringKind:
 			if p.Type.Values() != nil {
-				return "", fmt.Errorf("operator %q cannot be used with string type that has values", op)
+				return nil, "", fmt.Errorf("operator %q cannot be used with string type that has values", op)
 			}
 		case types.BooleanKind, types.UUIDKind, types.IPKind, types.ArrayKind, types.ObjectKind, types.MapKind:
-			return "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
+			return nil, "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
+		default:
+			// Other scalar kinds support intervals.
 		}
 	case OpIsOneOf, OpIsNotOneOf:
 		switch kind {
 		case types.BooleanKind, types.UUIDKind, types.IPKind, types.ArrayKind, types.ObjectKind, types.MapKind:
-			return "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
+			return nil, "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 		}
 	case OpIsLessThan, OpIsLessThanOrEqualTo, OpIsGreaterThan, OpIsGreaterThanOrEqualTo:
 		switch kind {
 		case types.StringKind:
 			if p.Type.Values() != nil {
-				return "", fmt.Errorf("operator %q cannot be used with string type that has values", op)
+				return nil, "", fmt.Errorf("operator %q cannot be used with string type that has values", op)
 			}
 		case types.IntKind, types.FloatKind, types.DecimalKind:
 		case types.JSONKind:
 		default:
-			return "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
+			return nil, "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 		}
 	case OpContains, OpDoesNotContain:
 		switch kind {
@@ -822,182 +603,172 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 		case types.ArrayKind:
 			switch k := p.Type.Elem().Kind(); k {
 			case types.BooleanKind, types.ArrayKind, types.ObjectKind, types.MapKind:
-				return "", fmt.Errorf("operator %q cannot be used with array(%s) properties", op, k)
+				return nil, "", fmt.Errorf("operator %q cannot be used with array(%s) properties", op, k)
 			}
 		default:
-			return "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
+			return nil, "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 		}
 	case OpStartsWith, OpEndsWith:
 		switch kind {
 		case types.StringKind:
 			if p.Type.Values() != nil {
-				return "", fmt.Errorf("operator %q cannot be used with string type that has values", op)
+				return nil, "", fmt.Errorf("operator %q cannot be used with string type that has values", op)
 			}
 		case types.JSONKind:
 		default:
-			return "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
+			return nil, "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 		}
 	case OpIsBefore, OpIsAfter, OpIsOnOrBefore, OpIsOnOrAfter:
 		switch kind {
 		case types.DateTimeKind, types.DateKind, types.TimeKind:
 		case types.YearKind:
 		default:
-			return "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
+			return nil, "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 		}
 	case OpIsTrue, OpIsFalse:
 		if kind != types.BooleanKind && kind != types.JSONKind {
-			return "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
+			return nil, "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 		}
 	case OpIsEmpty, OpIsNotEmpty:
 		switch kind {
 		case types.StringKind:
 			if values := p.Type.Values(); len(values) > 0 {
 				if !slices.Contains(values, "") {
-					return "", fmt.Errorf("operator %q cannot be used on string properties that exclude the empty string from allowed values", op)
+					return nil, "", fmt.Errorf("operator %q cannot be used on string properties "+
+						"that exclude the empty string from allowed values", op)
 				}
 			}
 		case types.JSONKind, types.ArrayKind, types.MapKind:
 		default:
-			return "", fmt.Errorf("operator %q can only be used with json, string, array, and map properties", op)
+			return nil, "", fmt.Errorf("operator %q can only be used with json, string, array, and map properties", op)
 		}
 	case OpIsNull, OpIsNotNull:
 		if !p.Nullable && kind != types.JSONKind {
-			return "", fmt.Errorf("operator %q can only be used with nullable or json properties", op)
+			return nil, "", fmt.Errorf("operator %q can only be used with nullable or json properties", op)
 		}
 	case OpExists, OpDoesNotExist:
 		if !p.ReadOptional && path == cond.Property {
-			return "", fmt.Errorf("operator %q can only be used with read-optional properties or with json properties that include a JSON path", op)
+			return nil, "", fmt.Errorf("operator %q can only be used with read-optional properties "+
+				"or with json properties that include a JSON path", op)
 		}
 	default:
-		return "", fmt.Errorf("operator %q is not valid", op)
+		return nil, "", fmt.Errorf("operator %q is not valid", op)
 	}
 
 	// Validate the values.
 	switch op {
 	case OpIsTrue, OpIsFalse, OpIsEmpty, OpIsNotEmpty, OpIsNull, OpIsNotNull, OpExists, OpDoesNotExist:
 		if cond.Values != nil {
-			return "", fmt.Errorf("values cannot be used with the operator %q", op)
+			return nil, "", fmt.Errorf("values cannot be used with the operator %q", op)
 		}
 	default:
 		if len(cond.Values) != 1 {
-			return "", fmt.Errorf("only one value can be used with the operator %q", op)
+			return nil, "", fmt.Errorf("only one value can be used with the operator %q", op)
 		}
 	case OpIsBetween, OpIsNotBetween:
 		if len(cond.Values) != 2 {
-			return "", fmt.Errorf("two values must be used with the operator %q", op)
+			return nil, "", fmt.Errorf("two values must be used with the operator %q", op)
 		}
 	case OpIsOneOf, OpIsNotOneOf:
 		if len(cond.Values) == 0 {
-			return "", fmt.Errorf("at least one value must be used with the operator %q", op)
+			return nil, "", fmt.Errorf("at least one value must be used with the operator %q", op)
 		}
+	}
+	condition := &state.WhereCondition{
+		Property: strings.Split(cond.Property, "."),
+		Operator: convertOperatorToWhere(op),
 	}
 	if cond.Values == nil {
-		return path, nil
-	}
-	// Handle string properties with allowed values separately.
-	if kind == types.StringKind {
-		if values := p.Type.Values(); values != nil {
-			for _, value := range cond.Values {
-				if !slices.Contains(values, value) {
-					return "", fmt.Errorf("value of the %q property is not among the allowed values", cond.Property)
-				}
-			}
-			return path, nil
-		}
+		return condition, path, nil
 	}
 	t := p.Type
 	if t.IsArray() {
 		t = t.Elem()
 	}
-	k := t.Kind()
-	for _, value := range cond.Values {
-		if err := util.ValidateStringField("condition value", value, 80); err != nil {
-			return "", err
+	condition.Values = make([]any, len(cond.Values))
+	for i, value := range cond.Values {
+		if len(value) == 0 || !json.Valid(value) {
+			return nil, "", errors.New("condition value must contain valid JSON")
 		}
-		var valid bool
-		switch k {
-		case types.StringKind, types.JSONKind:
-			valid = utf8.ValidString(value)
-		case types.IntKind:
-			if t.IsUnsigned() {
-				_, valid = parseUnsigned(value)
-			} else {
-				_, valid = parseInt(value)
+		if value.IsString() {
+			text := value.String()
+			if kind == types.StringKind && p.Type.Values() != nil {
+				if !slices.Contains(p.Type.Values(), text) {
+					return nil, "", fmt.Errorf("value of the %q property is not among the allowed values", cond.Property)
+				}
+			} else if !t.IsJSON() || text != "" {
+				err := util.ValidateStringField("condition value", text, 80)
+				if err != nil {
+					return nil, "", err
+				}
 			}
-		case types.FloatKind:
-			_, valid = parseFloat(value, t.BitSize())
-		case types.DecimalKind:
-			_, valid = parseFilterDecimal(value)
-		case types.DateTimeKind:
-			if t, err := iso8601.ParseString(value); err == nil {
-				y := t.UTC().Year()
-				valid = types.MinYear <= y && y <= types.MaxYear
-			}
-		case types.DateKind:
-			if t, err := time.Parse(time.DateOnly, value); err == nil {
-				y := t.UTC().Year()
-				valid = types.MinYear <= y && y <= types.MaxYear
-			}
-		case types.TimeKind:
-			_, valid = util.ParseTime(value)
-		case types.YearKind:
-			_, valid = parseYear(value)
-		case types.UUIDKind:
-			_, valid = types.NormalizeUUID(value)
-		case types.IPKind:
-			_, valid = types.NormalizeIP(value)
-		default:
-			return "", fmt.Errorf("unexpected type for property %q", cond.Property)
 		}
-		if !valid {
-			return "", fmt.Errorf("value of the %q property is not a valid %s", cond.Property, k)
+		value, err := state.DecodeFilterOperand(value, t, condition.Operator)
+		if err != nil {
+			return nil, "", fmt.Errorf("value of the %q property is not a valid %s: %w", cond.Property, t.Kind(), err)
+		}
+		condition.Values[i] = value
+	}
+	if t.IsJSON() && (op == OpIsBetween || op == OpIsNotBetween) {
+		if condition.Values[0].(json.Value).Kind() != condition.Values[1].(json.Value).Kind() {
+			return nil, "", errors.New("JSON interval bounds must have the same kind")
 		}
 	}
 
-	return path, nil
+	return condition, path, nil
 }
 
-// validateFilterGroup checks the validity of a filter group and its rules.
-func validateFilterGroup(filter *Filter, validation *filterValidation, depth int) error {
+// prepareFilterGroup validates and prepares a group and its descendant rules.
+func prepareFilterGroup(filter *Filter, validation *filterValidation, depth int) (*state.Where, error) {
 
 	if depth > maxFilterDepth {
-		return fmt.Errorf("filter exceeds maximum depth of %d", maxFilterDepth)
+		return nil, fmt.Errorf("filter exceeds maximum depth of %d", maxFilterDepth)
 	}
 	if op := filter.Operator; op != OpAnd && op != OpOr {
-		return fmt.Errorf("invalid logical operator %q", op)
+		return nil, fmt.Errorf("invalid logical operator %q", op)
 	}
 	if len(filter.Rules) == 0 {
-		return errors.New("rules are missing")
+		return nil, errors.New("rules are missing")
+	}
+	if len(filter.Rules) > maxFilterRuleCount-validation.ruleCount {
+		return nil, fmt.Errorf("filter exceeds maximum rule count of %d", maxFilterRuleCount)
 	}
 
-	for _, rule := range filter.Rules {
+	where := &state.Where{
+		Operator: convertLogicalToWhere(filter.Operator),
+		Rules:    make([]state.WhereRule, len(filter.Rules)),
+	}
+	for i, rule := range filter.Rules {
 		validation.ruleCount++
 		if validation.ruleCount > maxFilterRuleCount {
-			return fmt.Errorf("filter exceeds maximum rule count of %d", maxFilterRuleCount)
+			return nil, fmt.Errorf("filter exceeds maximum rule count of %d", maxFilterRuleCount)
 		}
 		switch rule := rule.(type) {
 		case *Filter:
 			if rule == nil {
-				return errors.New("filter group cannot be nil")
+				return nil, errors.New("filter group cannot be nil")
 			}
-			if err := validateFilterGroup(rule, validation, depth+1); err != nil {
-				return err
+			group, err := prepareFilterGroup(rule, validation, depth+1)
+			if err != nil {
+				return nil, err
 			}
+			where.Rules[i] = group
 		case *FilterCondition:
 			if rule == nil {
-				return errors.New("filter condition cannot be nil")
+				return nil, errors.New("filter condition cannot be nil")
 			}
-			path, err := validateFilterCondition(rule, validation)
+			condition, path, err := prepareFilterCondition(rule, validation)
 			if err != nil {
-				return err
+				return nil, err
 			}
+			where.Rules[i] = condition
 			if i, ok := slices.BinarySearch(validation.paths, path); !ok {
 				validation.paths = slices.Insert(validation.paths, i, path)
 			}
 		default:
-			return errors.New("unsupported filter rule")
+			return nil, errors.New("unsupported filter rule")
 		}
 	}
 
-	return nil
+	return where, nil
 }

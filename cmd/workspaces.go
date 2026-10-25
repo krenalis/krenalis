@@ -843,13 +843,17 @@ func (workspace workspace) ProfileEvents(_ http.ResponseWriter, r *http.Request)
 	// Parse the properties.
 	properties := splitQueryParameters(q["properties"])
 
+	value, err := json.Marshal(kpid)
+	if err != nil {
+		return nil, errors.New("cmd: cannot encode profile identifier")
+	}
 	filter := &core.Filter{
 		Operator: core.OpAnd,
 		Rules: []core.FilterRule{
 			&core.FilterCondition{
 				Property: "kpid",
 				Operator: core.OpIs,
-				Values:   []string{kpid},
+				Values:   []json.Value{value},
 			},
 		},
 	}

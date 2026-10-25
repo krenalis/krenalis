@@ -6,7 +6,6 @@ package core
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -14,6 +13,8 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/transformers"
+	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -83,7 +84,7 @@ func Test_validatePipeline(t *testing.T) {
 						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
-							Values:   []string{"a@b"},
+							Values:   filterValues("a@b"),
 						},
 					},
 				},
@@ -244,12 +245,12 @@ func Test_validatePipeline(t *testing.T) {
 						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
-							Values:   []string{"a@b"},
+							Values:   filterValues("a@b"),
 						},
 						&FilterCondition{
 							Property: "id",
 							Operator: OpIsNot,
-							Values:   []string{"1234567890"},
+							Values:   filterValues(json.Value("1234567890")),
 						},
 					},
 				},
@@ -416,7 +417,7 @@ func Test_validatePipeline(t *testing.T) {
 						&FilterCondition{
 							Property: "anonymousId",
 							Operator: OpIsNot,
-							Values:   []string{"abc"},
+							Values:   filterValues("abc"),
 						},
 					},
 				},
@@ -603,10 +604,10 @@ func Test_validatePipeline(t *testing.T) {
 						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
-							Values:   []string{"a@b"},
+							Values:   filterValues("a@b"),
 						},
-						&FilterCondition{Property: "metadata.plan", Operator: OpIs, Values: []string{"pro"}},
-						&FilterCondition{Property: "tags", Operator: OpContains, Values: []string{"active"}},
+						&FilterCondition{Property: "metadata.plan", Operator: OpIs, Values: filterValues("pro")},
+						&FilterCondition{Property: "tags", Operator: OpContains, Values: filterValues("active")},
 					},
 				},
 				InSchema: types.Object([]types.Property{
@@ -983,7 +984,7 @@ func Test_validatePipeline(t *testing.T) {
 				Filter: &Filter{
 					Operator: OpAnd,
 					Rules: []FilterRule{
-						&FilterCondition{Property: "first_name", Operator: OpIs, Values: []string{"Bob"}},
+						&FilterCondition{Property: "first_name", Operator: OpIs, Values: filterValues("Bob")},
 					},
 				},
 				InSchema: types.Object([]types.Property{
@@ -2746,7 +2747,7 @@ func Test_validatePipeline(t *testing.T) {
 						&FilterCondition{
 							Property: "_id",
 							Operator: OpIsNot,
-							Values:   []string{"a@b"},
+							Values:   filterValues("a@b"),
 						},
 					},
 				},
@@ -2784,7 +2785,7 @@ func Test_validatePipeline(t *testing.T) {
 						&FilterCondition{
 							Property: "_id",
 							Operator: OpIsNot,
-							Values:   []string{"a@b"},
+							Values:   filterValues("a@b"),
 						},
 					},
 				},
@@ -3232,12 +3233,12 @@ func Test_validatePipeline(t *testing.T) {
 						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
-							Values:   []string{"a@b"},
+							Values:   filterValues("a@b"),
 						},
 						&FilterCondition{
 							Property: "id",
 							Operator: OpIsNot,
-							Values:   []string{"1234567890"},
+							Values:   filterValues(json.Value("1234567890")),
 						},
 					},
 				},
@@ -3272,7 +3273,7 @@ func Test_validatePipeline(t *testing.T) {
 						&FilterCondition{
 							Property: "anonymousId",
 							Operator: OpIsNot,
-							Values:   []string{"a@b"},
+							Values:   filterValues("a@b"),
 						},
 					},
 				},
@@ -3412,7 +3413,7 @@ func Test_validatePipeline(t *testing.T) {
 						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
-							Values:   []string{"a@b"},
+							Values:   filterValues("a@b"),
 						},
 					},
 				},
@@ -3521,7 +3522,7 @@ func Test_validatePipeline(t *testing.T) {
 						&FilterCondition{
 							Property: "email_in",
 							Operator: OpIsNot,
-							Values:   []string{"a@b"},
+							Values:   filterValues("a@b"),
 						},
 					},
 				},
@@ -3717,7 +3718,7 @@ func Test_validatePipeline(t *testing.T) {
 			if err := validateTestOnPipeline(test.name, test.connectionRole, test.connectionConnectorType, test.target, test.err); err != nil {
 				t.Fatalf("test %q is badly written: %s", test.name, err)
 			}
-			v := validationState{}
+			v := validationState{filter: &state.Where{}}
 			v.target = test.target
 			v.connection.role = test.connectionRole
 			v.connection.connector.typ = test.connectionConnectorType
@@ -3726,7 +3727,7 @@ func Test_validatePipeline(t *testing.T) {
 			v.format.hasSheets = test.formatHasSheets
 			v.format.hasSettings = test.formatHasSettings
 			v.provider = test.provider
-			err := validatePipelineToSet(test.pipeline, v)
+			err := validatePipelineToSet(test.pipeline, &v)
 			var gotErr string
 			if err != nil {
 				gotErr = err.Error()
@@ -3739,6 +3740,10 @@ func Test_validatePipeline(t *testing.T) {
 					t.Fatalf("no validation errors expected, got %q", gotErr)
 				}
 				t.Fatalf("expected validation error %q, got %q", test.err, gotErr)
+			}
+			wantFilter := test.err == "" && test.pipeline.Filter != nil
+			if got := v.filter != nil; got != wantFilter {
+				t.Fatalf("expected prepared filter presence %t, got %t", wantFilter, got)
 			}
 		})
 	}
@@ -3848,7 +3853,7 @@ func TestMatchingPropertySemantics(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 
-			err := validatePipelineToSet(pipeline(test.in, test.out, test.mode), v)
+			err := validatePipelineToSet(pipeline(test.in, test.out, test.mode), &v)
 			if test.wantErr == "" {
 				if err != nil {
 					t.Fatalf("expected no error, got %v", err)
@@ -3881,7 +3886,7 @@ func TestMatchingPropertySemantics(t *testing.T) {
 		p.Matching = Matching{In: "container.matching", Out: "container.matching"}
 
 		wantErr := "input matching property has phone semantics, but output matching property requires email semantics"
-		err := validatePipelineToSet(p, v)
+		err := validatePipelineToSet(p, &v)
 		if err == nil {
 			t.Fatalf("expected error %q, got nil", wantErr)
 		}

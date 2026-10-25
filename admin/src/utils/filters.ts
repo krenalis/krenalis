@@ -1,4 +1,66 @@
-import { Filter, FilterCondition, FilterRule } from '../lib/api/types/pipeline';
+import BigNumber from 'bignumber.js';
+import JSONbig from 'json-bigint';
+import {
+	Filter,
+	FilterCondition,
+	FilterRule,
+	FilterOperator,
+	FilterNumber,
+	FilterValue,
+	FilterValueKind,
+	EditorFilter,
+	EditorFilterRule,
+	TransportFilter,
+} from '../lib/api/types/pipeline';
+import Type, { ObjectType, Property } from '../lib/api/types/types';
+
+const FILTER_OPERATORS: FilterOperator[] = [
+	'is',
+	'is not',
+	'is less than',
+	'is less than or equal to',
+	'is greater than',
+	'is greater than or equal to',
+	'is between',
+	'is not between',
+	'contains',
+	'does not contain',
+	'is one of',
+	'is not one of',
+	'starts with',
+	'ends with',
+	'is before',
+	'is on or before',
+	'is after',
+	'is on or after',
+	'is true',
+	'is false',
+	'is empty',
+	'is not empty',
+	'is null',
+	'is not null',
+	'exists',
+	'does not exist',
+];
+
+const MAX_FILTER_DEPTH = 4;
+const MAX_FILTER_RULE_COUNT = 100;
+
+const UNARY_OPERATORS = new Set<FilterOperator>([
+	'is true',
+	'is false',
+	'is empty',
+	'is not empty',
+	'is null',
+	'is not null',
+	'exists',
+	'does not exist',
+]);
+
+const isFilterGroup = <T extends FilterRule | EditorFilterRule>(rule: T): rule is Extract<T, Filter | EditorFilter> =>
+	'rules' in rule;
+
+const isUnaryOperator = (op: FilterOperator | ''): boolean => op !== '' && UNARY_OPERATORS.has(op);
 
 const MIN_INT = BigInt('-9223372036854775808');
 const MAX_INT = BigInt('9223372036854775807');
@@ -6,11 +68,6 @@ const MAX_UNSIGNED = BigInt('18446744073709551615');
 const MAX_FLOAT32 = 3.4028234663852885981170418348451692544e38;
 const MIN_YEAR = 1;
 const MAX_YEAR = 9999;
-
-// isFilterNumber reports whether value uses the numeric syntax accepted by the
-// filter parser.
-const isFilterNumber = (value: string): boolean =>
-	/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value) && Number.isFinite(Number(value));
 
 // formatText formats a string value as a string.
 const formatString = (str: string): string => {
@@ -42,7 +99,7 @@ const isDate = (s: string): boolean => {
 		return false;
 	}
 	const [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
-	if (year !== date.getFullYear() || month !== date.getMonth() + 1 || day !== date.getDate()) {
+	if (year !== date.getUTCFullYear() || month !== date.getUTCMonth() + 1 || day !== date.getUTCDate()) {
 		return false;
 	}
 	return MIN_YEAR <= year && year <= MAX_YEAR;
@@ -51,20 +108,11 @@ const isDate = (s: string): boolean => {
 // isDateTime checks whether the string s represents a valid datetime value that
 // can be used as a filter value.
 const isDateTime = (s: string): boolean => {
-	const m = s.match(/^(\d{4})-(\d{2})-(\d{2})T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:[+-]\d{2}:\d{2}|Z)?$/);
-	if (m == null) {
+	const match = s.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?([+-]\d{2}:\d{2}|Z)?$/);
+	if (match == null || !isDate(match[1]) || Number(match[2]) > 23 || Number(match[3]) > 59 || Number(match[4]) > 59)
 		return false;
-	}
-	const date = new Date(s);
-	if (Number.isNaN(date.valueOf())) {
-		return false;
-	}
-	let [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
-	if (year !== date.getFullYear() || month !== date.getMonth() + 1 || day !== date.getDate()) {
-		return false;
-	}
-	year = date.getUTCFullYear();
-	return MIN_YEAR <= year && year <= MAX_YEAR;
+	const date = new Date(match[5] == null ? s + 'Z' : s);
+	return Number.isFinite(date.valueOf()) && date.getUTCFullYear() >= MIN_YEAR && date.getUTCFullYear() <= MAX_YEAR;
 };
 
 // isDecimal checks whether the string s represents a valid decimal value that
@@ -154,7 +202,7 @@ const isFloat = (s: string, bitSize: number): boolean => {
 		return false;
 	}
 	const n = parseFloat(s);
-	if (bitSize == 32) {
+	if (bitSize === 32) {
 		return -MAX_FLOAT32 <= n && n <= MAX_FLOAT32;
 	}
 	return n !== Infinity && n !== -Infinity;
@@ -188,7 +236,7 @@ const isUnsigned = (s: string): boolean => {
 	}
 	for (let i = 0; i < s.length; i++) {
 		const c = s[i];
-		if (c < '0' || c > '9' || (i == 0 && c == '0')) {
+		if (c < '0' || c > '9' || (i === 0 && c === '0')) {
 			return false;
 		}
 	}
@@ -218,40 +266,226 @@ const parseDecimalDigits = (s: string): number => {
 const EmptyTextError = new Error('text is empty');
 const InvalidTextError = new Error('text is not valid');
 
-// parseText parses s and returns the corresponding text value.
-// If the resulting text value is empty, it throws the EmptyTextError error.
-// If the resulting text is not valid, it throws the InvalidTextError error.
-const parseText = (s: string): string => {
-	s = s.trim();
-	if (s === '') {
-		throw EmptyTextError;
-	}
+// parseFilterText retains quoting while sharing the editor's escape syntax.
+const parseFilterText = (input: string): { text: string; isQuoted: boolean } => {
+	const s = input.trim();
+	if (s === '') throw EmptyTextError;
 	const quote = s[0];
-	if (quote !== '"' && quote !== "'") {
-		return s;
-	}
-	if (s.length < 3) {
-		throw EmptyTextError;
-	}
-	if (s[s.length - 1] !== quote) {
-		throw InvalidTextError;
-	}
+	if (quote !== '"' && quote !== "'") return { text: s, isQuoted: false };
+	if (s.length < 2 || s[s.length - 1] !== quote) throw InvalidTextError;
 	let text = '';
 	for (let i = 1; i < s.length - 1; i++) {
-		switch (s[i]) {
-			case '\\':
-				i++;
-				if (i === s.length - 1) {
-					throw InvalidTextError;
-				}
-				break;
-			case quote:
-				throw InvalidTextError;
+		if (s[i] === '\\') {
+			i++;
+			if (i === s.length - 1) throw InvalidTextError;
+		} else if (s[i] === quote) {
+			throw InvalidTextError;
 		}
 		text += s[i];
 	}
+	return { text, isQuoted: true };
+};
+
+const parseText = (input: string): string => {
+	const { text } = parseFilterText(input);
+	if (text === '') throw EmptyTextError;
 	return text;
 };
+
+const JSON_NUMBER = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$/;
+const isJSONNumber = (text: string): boolean => JSON_NUMBER.test(text);
+const isMembershipOperator = (operator: FilterOperator | ''): boolean =>
+	operator === 'is one of' || operator === 'is not one of';
+
+// isDecimalNumber checks representability without rounding or expanding powers.
+const isDecimalNumber = (text: string): boolean => {
+	if (!isJSONNumber(text)) return false;
+	const [mantissa, exponent = '0'] = text.replace(/^-/, '').split(/[eE]/);
+	const [integer, fraction = ''] = mantissa.split('.');
+	const coefficient = (integer + fraction).replace(/^0+/, '');
+	if (coefficient === '') return true;
+	const significant = coefficient.replace(/0+$/, '');
+	const exponentDigits = exponent.replace(/^[+-]?0*/, '') || '0';
+	const bound = text.length + 76;
+	if (exponentDigits.length > String(bound).length || Number(exponentDigits) > bound) return false;
+	const e = Number(exponent) - fraction.length + coefficient.length - significant.length;
+	const scale = Math.max(-e, 0);
+	const precision = Math.max(significant.length + e, 0) + scale;
+	return precision <= 76 && scale <= 37;
+};
+
+const filterNumber = (text: string, decimalLimits: boolean): FilterNumber => {
+	if (!isJSONNumber(text)) throw new Error('Invalid JSON Number');
+	if (decimalLimits && !isDecimalNumber(text)) {
+		throw new Error('Number must fit precision 76 and scale 37');
+	}
+	// Canonicalize zero before passing an arbitrarily large exponent to BigNumber.
+	const mantissa = text.split(/[eE]/)[0];
+	return { kind: 'number', text: /^-?0(?:\.0+)?$/.test(mantissa) ? '0' : text };
+};
+
+const parseJSONFilterText = (input: string, operator: FilterOperator): FilterValue => {
+	const { text, isQuoted } = parseFilterText(input);
+	if (isQuoted) return text;
+	if (isMembershipOperator(operator)) {
+		if (text === 'true') return true;
+		if (text === 'false') return false;
+		if (text === 'null') return null;
+	}
+	return isJSONNumber(text) ? filterNumber(text, true) : text;
+};
+
+// parseFilterOperand converts one editor control using its schema type.
+const parseFilterOperand = (input: string, type: Type, operator: FilterOperator): FilterValue => {
+	const isArray = type.kind === 'array';
+	if (type.kind === 'array') type = type.elementType;
+	if (type.kind === 'json') return parseJSONFilterText(input, operator);
+	if (type.kind === 'string') return !isArray && type.values != null ? input : parseText(input);
+	let valid = false;
+	switch (type.kind) {
+		case 'int':
+			valid = type.unsigned ? isUnsigned(input) : isInt(input);
+			break;
+		case 'year':
+			valid = isYear(input);
+			break;
+		case 'float':
+			valid = isFloat(input, type.bitSize);
+			break;
+		case 'decimal':
+			valid = isDecimal(input);
+			break;
+		case 'datetime':
+			valid = isDateTime(input);
+			break;
+		case 'date':
+			valid = isDate(input);
+			break;
+		case 'time':
+			valid = isTime(input);
+			break;
+		case 'uuid':
+			valid = isUUID(input);
+			break;
+		case 'ip':
+			valid = isIP(input);
+			break;
+		default:
+			throw new Error(`Operands are not supported for ${type.kind}`);
+	}
+	if (!valid) throw new Error(`Invalid ${type.kind} filter value`);
+	if (type.kind === 'int' || type.kind === 'year' || type.kind === 'float' || type.kind === 'decimal') {
+		const text = input.replace(/^\+/, '').replace(/^(-?)0+(?=\d)/, '$1');
+		return filterNumber(text, type.kind === 'decimal');
+	}
+	return input;
+};
+
+// quoteFilterText is the inverse of the editor tokenizer, not JSON quoting.
+const quoteFilterText = (text: string): string => '"' + text.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+
+const filterValueKind = (value: FilterValue): FilterValueKind =>
+	value === null ? 'null' : typeof value === 'object' ? 'number' : (typeof value as 'string' | 'boolean');
+
+const formatJSONFilterValue = (value: FilterValue): string => {
+	if (typeof value === 'string') return quoteFilterText(value);
+	if (value === null) return 'null';
+	if (typeof value === 'boolean') return String(value);
+	return value.text;
+};
+
+// filterProperty resolves ordinary object paths and stops at a JSON property.
+const filterProperty = (schema: ObjectType, path: string): Property => {
+	let properties = schema.properties;
+	const names = path.split('.');
+	for (const [i, name] of names.entries()) {
+		const property = properties.find((p) => p.name === name);
+		if (property == null) throw new Error(`Filter property "${path}" does not exist`);
+		if (i === names.length - 1 || property.type.kind === 'json') return property;
+		if (property.type.kind !== 'object') throw new Error(`Filter property "${path}" does not exist`);
+		properties = property.type.properties;
+	}
+	throw new Error(`Invalid filter property "${path}"`);
+};
+
+const toEditorFilter = (filter: Filter, schema: ObjectType): EditorFilter => ({
+	operator: filter.operator,
+	rules: filter.rules.map((rule) => {
+		if (isFilterGroup(rule)) return toEditorFilter(rule, schema);
+		let type: Type;
+		try {
+			type = filterProperty(schema, rule.property).type;
+		} catch {
+			/* Display unresolved properties too. */
+		}
+		const isEnum = type?.kind === 'string' && type.values != null;
+		if (type?.kind === 'array') type = type.elementType;
+		const values = rule.values?.map((value) => {
+			if (type?.kind === 'json' || type == null) return formatJSONFilterValue(value);
+			if (typeof value !== 'string') return formatJSONFilterValue(value);
+			return isEnum ? value : formatString(value);
+		});
+		return { ...rule, values, valueKinds: rule.values?.map(filterValueKind) };
+	}),
+});
+
+// decodeFilter accepts values only from the lossless HTTP JSON decoder.
+const decodeFilter = (value: unknown): Filter => {
+	if (
+		value == null ||
+		typeof value !== 'object' ||
+		!('operator' in value) ||
+		!('rules' in value) ||
+		(value.operator !== 'and' && value.operator !== 'or') ||
+		!Array.isArray(value.rules)
+	) {
+		throw new Error('Invalid filter response');
+	}
+	return {
+		operator: value.operator,
+		rules: value.rules.map((rule): FilterRule => {
+			if (rule == null || typeof rule !== 'object') throw new Error('Invalid filter rule response');
+			if ('rules' in rule) return decodeFilter(rule);
+			if (
+				typeof rule.property !== 'string' ||
+				!FILTER_OPERATORS.includes(rule.operator) ||
+				(rule.values != null && !Array.isArray(rule.values))
+			)
+				throw new Error('Invalid filter condition response');
+			const condition: FilterCondition = { property: rule.property, operator: rule.operator };
+			if (rule.values != null)
+				condition.values = rule.values.map((operand: unknown): FilterValue => {
+					if (operand === null) return null;
+					if (typeof operand === 'string' || typeof operand === 'boolean') return operand;
+					if (BigNumber.isBigNumber(operand)) return filterNumber(operand.toString(), false);
+					if (typeof operand === 'number' && Number.isFinite(operand))
+						return filterNumber(String(operand), false);
+					throw new Error('Invalid filter operand response');
+				});
+			return condition;
+		}),
+	};
+};
+
+const toTransportFilter = (filter: Filter): TransportFilter => ({
+	operator: filter.operator,
+	rules: filter.rules.map((rule) => {
+		if (isFilterGroup(rule)) return toTransportFilter(rule);
+		const values = rule.values?.map((value) => {
+			if (value === null) return null;
+			if (typeof value === 'string' || typeof value === 'boolean') return value;
+			if (value.kind !== 'number' || !isJSONNumber(value.text)) throw new Error('Invalid filter Number');
+			const number = new BigNumber(value.text);
+			if (!number.isFinite()) throw new Error('Non-finite filter Number');
+			return number;
+		});
+		return values == null
+			? { property: rule.property, operator: rule.operator }
+			: { property: rule.property, operator: rule.operator, values };
+	}),
+});
+
+const encodeFilter = (filter: Filter): string => JSONbig.stringify(toTransportFilter(filter));
 
 // serializeFilter returns a string representation of the given Filter object.
 // If formatted is true, each rule appears on its own indented line.
@@ -267,32 +501,20 @@ const serializeFilter = (filter: Filter, formatted: boolean): string => {
 	}
 
 	// formatValues formats a list of values as a string.
-	function formatValues(values: string[], operator: FilterCondition['operator']): string {
-		if (values.length === 0) {
-			return '';
-		}
-
-		const usesValueList =
-			operator === 'is one of' ||
-			operator === 'is not one of' ||
-			operator === 'is between' ||
-			operator === 'is not between';
-		if (values.length === 1 && !usesValueList) {
-			const v = values[0];
-			if ((operator !== 'is' && (v === 'true' || v === 'false')) || isFilterNumber(v)) {
-				return v;
-			}
-			return escapeString(v);
-		}
-
-		const formattedList = values.map((v) => {
-			if (v === 'true' || v === 'false' || isFilterNumber(v)) {
-				return v;
-			}
-			return escapeString(v);
+	function formatValues(values: FilterValue[], operator: FilterOperator): string {
+		const formattedValues = values.map((value) => {
+			if (typeof value === 'string') return escapeString(value);
+			if (value === null || typeof value === 'boolean') return String(value);
+			if (!isJSONNumber(value.text)) throw new Error('Invalid filter Number');
+			return value.text;
 		});
-
-		return `(${formattedList.join(', ')})`;
+		if (values.length === 0) return '';
+		return values.length === 1 &&
+			!isMembershipOperator(operator) &&
+			operator !== 'is between' &&
+			operator !== 'is not between'
+			? formattedValues[0]
+			: `(${formattedValues.join(', ')})`;
 	}
 
 	// formatCondition builds a single condition string.
@@ -328,11 +550,29 @@ const serializeFilter = (filter: Filter, formatted: boolean): string => {
 };
 
 export {
+	FILTER_OPERATORS,
+	MAX_FILTER_DEPTH,
+	MAX_FILTER_RULE_COUNT,
+	isFilterGroup,
+	isUnaryOperator,
+	decodeFilter,
+	toTransportFilter,
+	encodeFilter,
+	toEditorFilter,
+	filterProperty,
+	parseJSONFilterText,
+	formatJSONFilterValue,
+	quoteFilterText,
+	filterValueKind,
+	isJSONNumber,
+	isDecimalNumber,
+	filterNumber,
+	isMembershipOperator,
+	parseFilterOperand,
 	formatString,
 	isDate,
 	isDateTime,
 	isDecimal,
-	isFilterNumber,
 	isFloat,
 	isIP,
 	isInt,

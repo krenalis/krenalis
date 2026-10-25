@@ -239,14 +239,14 @@ func (this *Connection) ApplicationUsers(ctx context.Context, schema types.Type,
 	// Validate the filter.
 	var where *state.Where
 	if filter != nil {
-		_, err := validateFilter(filter, schema)
+		prepared, _, err := prepareFilter(filter, schema)
 		if err != nil {
 			if err, ok := err.(types.PathNotExistError); ok {
 				return nil, "", errors.BadRequest("filter's property %q does not exist", err.Path)
 			}
 			return nil, "", errors.BadRequest("filter is not valid: %w", err)
 		}
-		where = convertFilterToWhere(filter, schema)
+		where = prepared
 	}
 
 	// Validate the cursor.
@@ -397,7 +397,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 		v.format.hasSettings = c.Role == state.Source && format.HasSourceSettings || c.Role == state.Destination && format.HasDestinationSettings
 	}
 	v.provider = this.core.functionProvider
-	err := validatePipelineToSet(pipeline, v)
+	err := validatePipelineToSet(pipeline, &v)
 	if err != nil {
 		return "", err
 	}
@@ -475,7 +475,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 
 	// Add the filter to the notification.
 	if pipeline.Filter != nil {
-		n.Filter = []byte(state.MarshalWhere(convertFilterToWhere(pipeline.Filter, inSchema), inSchema))
+		n.Filter = []byte(state.MarshalWhere(v.filter, inSchema))
 	}
 
 	// Determine the connector code, for file pipelines.

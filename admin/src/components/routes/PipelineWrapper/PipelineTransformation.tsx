@@ -20,13 +20,10 @@ import {
 	TransformedProperty,
 	doesUpdatedAtColumnNeedFormat,
 	flattenSchema,
-	getFilterConditions,
 	isRecursiveType,
-	omitEmptyFilterRules,
 	propertyTypesAreEqual,
-	splitPropertyAndPath,
 	transformInPipelineToSet,
-	validateAndNormalizeFilterCondition,
+	prepareEditorFilter,
 	computeDefaultTransformationFunction,
 	checkMapping,
 	checkFunctionPath,
@@ -866,19 +863,11 @@ const TransformationBox = ({
 
 	const onOpenTransformation = () => {
 		// Validate the filter to prevent Bad Request when loading the samples.
-		const conditions = pipeline.filter
-			? getFilterConditions(pipeline.filter).filter((condition) => condition.property !== '')
-			: [];
-		for (const condition of conditions) {
-			const propertyName = condition.property;
-			const [base, path] = splitPropertyAndPath(propertyName, flatInputSchema);
-			const property = flatInputSchema[base];
-			try {
-				validateAndNormalizeFilterCondition(condition, property, path, propertyName);
-			} catch (err) {
-				handleError(err);
-				return;
-			}
+		try {
+			prepareEditorFilter(pipeline.filter, pipelineType.inputSchema);
+		} catch (err) {
+			handleError(err);
+			return;
 		}
 		// Open full mode.
 		onOpenFullscreenTransformation();
@@ -1380,9 +1369,13 @@ const FullscreenTransformation = ({
 		};
 	}, [outputSchema]);
 
-	const normalizedFilter = useMemo(() => {
-		return pipeline.filter == null ? null : omitEmptyFilterRules(pipeline.filter);
-	}, [pipeline.filter]);
+	const { filter: normalizedFilter, error: filterError } = useMemo(() => {
+		try {
+			return { filter: prepareEditorFilter(pipeline.filter, inputSchema), error: null };
+		} catch (error) {
+			return { filter: null, error };
+		}
+	}, [pipeline.filter, inputSchema]);
 
 	const normalizedConsents = useMemo(() => {
 		// Pipelines that import users from events check the required consents on
@@ -1418,18 +1411,19 @@ const FullscreenTransformation = ({
 		connection.id,
 		normalizedFilter,
 		normalizedConsents,
+		filterError == null,
 	);
 
 	useEffect(() => {
 		if (!isEventBasedUserImport && !isAppEventsExport) {
 			return;
 		}
-		if (isFullscreenTransformationOpen) {
+		if (isFullscreenTransformationOpen && filterError == null) {
 			startListening();
 		} else {
 			stopListening();
 		}
-	}, [isFullscreenTransformationOpen]);
+	}, [isFullscreenTransformationOpen, filterError]);
 
 	useEffect(() => {
 		// Reset the output of the transformation tests when the user
@@ -1481,6 +1475,10 @@ const FullscreenTransformation = ({
 
 	useEffect(() => {
 		const fetchSamples = async () => {
+			if (filterError != null) {
+				if (isFullscreenTransformationOpen) handleError(filterError);
+				return;
+			}
 			if (pipelineType.target !== 'User') {
 				return;
 			}
