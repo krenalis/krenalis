@@ -870,6 +870,7 @@
 }
 
 .identity-dashboard__history-status::part(base) {
+	border-color: transparent;
 	font-size: 11px;
 	font-weight: 500;
 }
