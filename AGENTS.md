@@ -16,7 +16,7 @@ Apply review rules to code introduced or modified by the change under review. Do
 
 ## Line length
 
-Allow Go code lines to be up to 120 characters long without wrapping. Count each tab as 4 columns when measuring line length. A line may exceed 120 characters when a more specific convention requires it, notably the rule that keeps exported signatures on one line. In `_test.go` files, the limit does not apply to the table of cases of a table-driven test, whose lines may be as long as needed; the rest of a test file follows the limit like any other code.
+Allow Go code lines to be up to 120 characters long without wrapping. Count each tab as 4 characters when measuring line length. A line may exceed 120 characters when a more specific convention requires it, notably the rule that keeps exported signatures on one line. In `_test.go` files, the limit does not apply to the table of cases of a table-driven test, whose lines may be as long as needed; the rest of a test file follows the limit like any other code.
 
 ## File organization
 
