@@ -1032,6 +1032,7 @@ interface TypeDistributionBlockProps {
 	error?: string;
 	recognizedColor?: string;
 	anonymousColor?: string;
+	typeDescriptions?: Record<IdentityType, string>;
 }
 
 const TypeDistributionBlock = ({
@@ -1041,6 +1042,7 @@ const TypeDistributionBlock = ({
 	error,
 	recognizedColor = TYPE_DISTRIBUTION_COLORS.recognized,
 	anonymousColor = TYPE_DISTRIBUTION_COLORS.anonymous,
+	typeDescriptions,
 }: TypeDistributionBlockProps) => {
 	const segments =
 		snapshot == null ? [] : buildTypeDistribution(snapshot.recognized, snapshot.anonymous, snapshot.total);
@@ -1095,7 +1097,15 @@ const TypeDistributionBlock = ({
 							<div className='identity-dashboard__distribution-legend-item' key={segment.key}>
 								<i style={{ background: colors[segment.key] }} />
 								<div>
-									<span>{segment.label}</span>
+									<span>
+										{segment.label}
+										{typeDescriptions != null && (
+											<InfoTooltip
+												content={typeDescriptions[segment.key]}
+												label={`About ${segment.label.toLowerCase()} profiles`}
+											/>
+										)}
+									</span>
 									<strong>{formatPercentage(segment.percentage)}</strong>
 									<small>{formatNumber(segment.count)}</small>
 								</div>
@@ -1130,7 +1140,9 @@ const TypeDistributionCard = ({ processed, unified, loading, error }: TypeDistri
 					error={error}
 				/>
 				<div className='identity-dashboard__distribution-divider' aria-hidden='true'>
-					<span>↔</span>
+					<span>
+						<SlIcon name='arrows' />
+					</span>
 				</div>
 				<TypeDistributionBlock
 					title='Unified profiles'
@@ -1139,18 +1151,11 @@ const TypeDistributionCard = ({ processed, unified, loading, error }: TypeDistri
 					error={error}
 					recognizedColor={UNIFIED_PROFILES_RECOGNIZED_COLOR}
 					anonymousColor={UNIFIED_PROFILES_ANONYMOUS_COLOR}
+					typeDescriptions={{
+						recognized: 'A profile with at least one recognized identity.',
+						anonymous: 'A profile with only anonymous identities.',
+					}}
 				/>
-			</div>
-			<div className='identity-dashboard__distribution-footer'>
-				<span>
-					<SlIcon name='people' />
-					<strong>Recognized:</strong> has at least one recognized identity
-				</span>
-				<i aria-hidden='true' />
-				<span>
-					<SlIcon name='person' />
-					<strong>Anonymous:</strong> only anonymous identities
-				</span>
 			</div>
 		</DashboardCard>
 	);

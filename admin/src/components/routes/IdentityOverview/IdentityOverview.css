@@ -455,6 +455,8 @@
 .identity-dashboard__distribution-panel {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) 38px minmax(0, 1fr);
+	border: 0;
+	border-radius: 0;
 }
 
 .identity-dashboard__distribution-block {
@@ -554,13 +556,15 @@
 	margin-top: 4px;
 }
 
-.identity-dashboard__distribution-legend-item span,
 .identity-dashboard__distribution-legend-item strong,
 .identity-dashboard__distribution-legend-item small {
 	display: block;
 }
 
 .identity-dashboard__distribution-legend-item span {
+	display: flex;
+	align-items: center;
+	gap: 4px;
 	font-size: 13px;
 	color: var(--sl-color-neutral-800);
 }
@@ -591,11 +595,13 @@
 	left: 50%;
 	width: 1px;
 	background: var(--sl-color-neutral-200);
+	transform: translateX(-50%);
 }
 
 .identity-dashboard__distribution-divider span {
 	position: relative;
 	z-index: 1;
+	display: flex;
 	padding: 4px 6px;
 	background: var(--bg-primary);
 	font-size: 17px;
@@ -620,38 +626,6 @@
 	min-height: 184px;
 }
 
-.identity-dashboard__distribution-footer {
-	display: flex;
-	align-items: center;
-	gap: 18px;
-	margin: 12px 14px 0;
-	padding: 10px 0 12px;
-	font-size: 12px;
-	color: var(--sl-color-neutral-700);
-}
-
-.identity-dashboard__distribution-footer span {
-	display: inline-flex;
-	align-items: center;
-	gap: 5px;
-}
-
-.identity-dashboard__distribution-footer sl-icon {
-	font-size: 15px;
-	color: var(--sl-color-neutral-600);
-}
-
-.identity-dashboard__distribution-footer strong {
-	font-weight: 600;
-	color: var(--sl-color-neutral-800);
-}
-
-.identity-dashboard__distribution-footer > i {
-	width: 1px;
-	height: 17px;
-	background: var(--sl-color-neutral-300);
-}
-
 .identity-dashboard__resolution-layout {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -667,8 +641,12 @@
 }
 
 .identity-dashboard__resolution-layout > .identity-dashboard__distribution-card .identity-dashboard__distribution-body {
-	grid-template-columns: 162px minmax(0, 1fr);
-	gap: 12px;
+	grid-template-columns: minmax(136px, 162px) minmax(max-content, 1fr);
+	gap: 8px;
+}
+
+.identity-dashboard__distribution-body .identity-dashboard__donut-ring {
+	max-width: 100%;
 }
 
 .identity-dashboard__resolution-layout > .identity-dashboard__resolution-chart-card,
@@ -982,6 +960,14 @@
 		right: 18px;
 		width: auto;
 		height: 1px;
+		transform: translateY(-50%);
+	}
+
+	.identity-dashboard__resolution-layout
+		> .identity-dashboard__distribution-card
+		.identity-dashboard__distribution-divider
+		span {
+		transform: rotate(90deg);
 	}
 }
 
@@ -1038,6 +1024,11 @@
 		right: 18px;
 		width: auto;
 		height: 1px;
+		transform: translateY(-50%);
+	}
+
+	.identity-dashboard__distribution-divider span {
+		transform: rotate(90deg);
 	}
 }
 
@@ -1095,16 +1086,5 @@
 
 	.identity-dashboard__distribution-legend {
 		width: min(100%, 240px);
-	}
-
-	.identity-dashboard__distribution-footer {
-		align-items: flex-start;
-		flex-direction: column;
-		margin-right: 10px;
-		margin-left: 10px;
-	}
-
-	.identity-dashboard__distribution-footer > i {
-		display: none;
 	}
 }
