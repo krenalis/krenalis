@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import Fullscreen from '../../base/Fullscreen/Fullscreen';
 import AppContext from '../../../context/AppContext';
@@ -10,6 +10,14 @@ const SchemaEditWrapper = () => {
 	const { redirect } = useContext(AppContext);
 	const { isLoadingSchema, setIsLoadingSchema, isAltering } = useContext(SchemaContext);
 	const { selectedPropertyPath } = useOutletContext<SchemaGridOutletContext>();
+	const [hasOpenedEditor, setHasOpenedEditor] = useState(false);
+	const isLoading = !hasOpenedEditor && (isLoadingSchema || isAltering);
+
+	useEffect(() => {
+		if (!isLoading) {
+			setHasOpenedEditor(true);
+		}
+	}, [isLoading]);
 
 	const onClose = () => {
 		redirect('profile-unification/schema');
@@ -17,7 +25,7 @@ const SchemaEditWrapper = () => {
 	};
 
 	return (
-		<Fullscreen className='schema-edit-fullscreen' isLoading={isLoadingSchema || isAltering} onClose={onClose}>
+		<Fullscreen className='schema-edit-fullscreen' isLoading={isLoading} onClose={onClose}>
 			<SchemaEdit initialPropertyKey={selectedPropertyPath} />
 		</Fullscreen>
 	);

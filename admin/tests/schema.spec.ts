@@ -374,6 +374,223 @@ test(`Disable profile schema editing until the schema has loaded`, async ({ page
 	await expect(editSchemaButton).not.toHaveAttribute('disabled', { timeout: 10000 });
 });
 
+for (const { scenario, shouldObserveAltering, shouldDelayPreview, initialStartTime } of [
+	{
+		scenario: 'while another session alters the schema',
+		shouldObserveAltering: true,
+		shouldDelayPreview: false,
+		initialStartTime: '2026-08-24T00:00:00Z',
+	},
+	{
+		scenario: 'when an alteration completes between polls',
+		shouldObserveAltering: false,
+		shouldDelayPreview: false,
+		initialStartTime: '2026-08-24T00:00:00Z',
+	},
+	{
+		scenario: 'when the first alteration completes during a preview',
+		shouldObserveAltering: false,
+		shouldDelayPreview: true,
+		initialStartTime: null,
+	},
+]) {
+	test(`Preserve pending edits and block stale schema saves ${scenario}`, async ({ page }) => {
+		let latestAlter = {
+			startTime: initialStartTime,
+			endTime: initialStartTime == null ? null : '2026-08-24T00:00:01Z',
+			error: null,
+		};
+		let hasExternalChanges = false;
+		let schemaRequestCount = 0;
+		let alterationRequestCount = 0;
+		let releasePreview = () => {};
+		const previewGate = new Promise<void>((resolve) => {
+			releasePreview = resolve;
+		});
+		await page.route('**/v1/profiles/schema/latest-alter', async (route) => {
+			await route.fulfill({ json: latestAlter });
+		});
+		await page.route('**/v1/profiles/schema', async (route) => {
+			if (route.request().method() === 'PUT') {
+				alterationRequestCount++;
+				await route.fulfill({ json: {} });
+				return;
+			}
+			schemaRequestCount++;
+			await route.fulfill({
+				json: {
+					kind: 'object',
+					properties: [
+						createSchemaProperty('first_name', { kind: 'string' }),
+						createSchemaProperty('last_name', { kind: 'string' }),
+						...(hasExternalChanges ? [createSchemaProperty('changed_elsewhere', { kind: 'string' })] : []),
+					],
+				},
+			});
+		});
+		await page.route('**/v1/profiles/schema/preview', async (route) => {
+			if (shouldDelayPreview) {
+				await previewGate;
+			}
+			await route.fulfill({ json: { queries: [] } });
+		});
+
+		await page.goto(`${adminURL}/profile-unification/schema`);
+		await editSchema(page);
+		await openProperty(page, 'first_name');
+		const panel = page.locator('.property-panel');
+		const description = panel.locator('sl-textarea textarea[name="description"]');
+		await description.fill('Pending schema change');
+		await panel.locator('.property-panel__save').click();
+		await expect(page.locator('.schema-edit__change-count')).toHaveText('1 pending change');
+		if (shouldObserveAltering) {
+			await description.fill('Unsaved property draft');
+		} else {
+			await page.locator('.schema-edit__header-apply-button').click();
+			await expect(page.locator('.schema-edit__queries')).toHaveJSProperty('open', true);
+			if (!shouldDelayPreview) {
+				await expect(page.locator('.schema-edit__apply-alter-button')).toBeVisible();
+			}
+		}
+
+		latestAlter = {
+			startTime: '2026-08-25T00:00:00Z',
+			endTime: shouldObserveAltering ? null : '2026-08-25T00:00:01Z',
+			error: null,
+		};
+		hasExternalChanges = !shouldObserveAltering;
+		const warning = page.locator('.schema-edit__outdated-warning');
+		const previewResponse = shouldDelayPreview ? page.waitForResponse('**/v1/profiles/schema/preview') : null;
+		try {
+			await expect(warning).toContainText('The schema was changed in another session', { timeout: 10000 });
+			await expect(page.locator('.schema-edit__queries')).toHaveJSProperty('open', false);
+		} finally {
+			releasePreview();
+		}
+		if (previewResponse != null) {
+			await previewResponse;
+		}
+		await expect(page.locator('.schema-edit__header-apply-button')).toHaveAttribute('disabled');
+		await expect(page.locator('.schema-edit__change-count')).toHaveText('1 pending change');
+		await expect(description).toHaveValue(
+			shouldObserveAltering ? 'Unsaved property draft' : 'Pending schema change',
+		);
+		await description.fill('Unsaved property draft');
+		latestAlter.endTime = '2026-08-25T00:00:01Z';
+		hasExternalChanges = true;
+		await expect.poll(() => schemaRequestCount, { timeout: 10000 }).toBe(2);
+		await page.waitForResponse('**/v1/profiles/schema/latest-alter');
+		await expect(warning).toBeVisible();
+		await expect(description).toHaveValue('Unsaved property draft');
+		await expect(page.locator('.schema-edit__change-count')).toHaveText('1 pending change');
+		await expect(page.locator('.schema-edit__queries')).toHaveJSProperty('open', false);
+		await expect(page.locator('.schema-edit__header-apply-button')).toHaveAttribute('disabled');
+		expect(alterationRequestCount).toBe(0);
+
+		page.once('dialog', async (dialog) => {
+			expect(dialog.type()).toBe('beforeunload');
+			await dialog.dismiss();
+		});
+		await warning.getByText('Reload schema', { exact: true }).click();
+		await expect(description).toHaveValue('Unsaved property draft');
+		page.once('dialog', async (dialog) => {
+			expect(dialog.type()).toBe('beforeunload');
+			await dialog.accept();
+		});
+		await warning.getByText('Reload schema', { exact: true }).click();
+		await expect(page.locator('.schema-edit .grid__row[data-id="changed_elsewhere"]')).toBeVisible();
+		await expect(warning).toHaveCount(0);
+		await expect(description).toHaveValue('');
+		await description.fill('Change on the updated schema');
+		await panel.locator('.property-panel__save').click();
+		await expect(page.locator('.schema-edit__header-apply-button')).not.toHaveAttribute('disabled');
+		await page.locator('.schema-edit__header-cancel-button').click();
+		await page.getByText('Discard and leave', { exact: true }).click();
+		await expect(page).toHaveURL(`${adminURL}/profile-unification/schema`);
+	});
+}
+
+for (const shouldFailSave of [false, true]) {
+	test(`Suppress external schema warnings during a local save ${shouldFailSave ? 'that fails' : 'that succeeds'}`, async ({
+		page,
+	}) => {
+		await page.clock.install();
+		let submittedSchema: ObjectType;
+		let isAlterComplete = false;
+		let releaseSave = () => {};
+		const saveGate = new Promise<void>((resolve) => {
+			releaseSave = resolve;
+		});
+		await page.route('**/v1/profiles/schema', async (route) => {
+			if (route.request().method() === 'PUT') {
+				submittedSchema = route.request().postDataJSON().schema;
+				await saveGate;
+				await route.fulfill({ status: shouldFailSave ? 500 : 200, json: {} });
+				return;
+			}
+			if (isAlterComplete) {
+				await route.fulfill({ json: submittedSchema });
+				return;
+			}
+			await route.continue();
+		});
+		await page.route('**/v1/profiles/schema/preview', async (route) => {
+			await route.fulfill({ json: { queries: [] } });
+		});
+		await page.route('**/v1/profiles/schema/latest-alter', async (route) => {
+			await route.fulfill({
+				json: {
+					startTime: submittedSchema == null ? null : '2026-08-25T00:00:00Z',
+					endTime: isAlterComplete ? '2026-08-25T00:00:01Z' : null,
+					error: null,
+				},
+			});
+		});
+
+		await page.goto(`${adminURL}/profile-unification/schema`);
+		await editSchema(page);
+		await openProperty(page, 'first_name');
+		const description = page.locator('.property-panel sl-textarea textarea[name="description"]');
+		await description.fill('Local schema change');
+		await page.locator('.property-panel__save').click();
+		await page.locator('.schema-edit__header-apply-button').click();
+		const confirmButton = page.locator('.schema-edit__apply-alter-button');
+		await confirmButton.click();
+		const editSchemaButton = page.locator('.schema-grid__alter-button');
+		const warning = page.locator('.schema-edit__outdated-warning');
+		try {
+			await expect.poll(() => submittedSchema).toBeDefined();
+			const alteringResponse = page.waitForResponse('**/v1/profiles/schema/latest-alter');
+			await page.clock.fastForward(3000);
+			await alteringResponse;
+			await expect(editSchemaButton).toHaveJSProperty('loading', true);
+			await expect(confirmButton).toHaveJSProperty('loading', true);
+			await expect(warning).toHaveCount(0);
+
+			isAlterComplete = true;
+			const completedResponse = page.waitForResponse('**/v1/profiles/schema/latest-alter');
+			await page.clock.fastForward(3000);
+			await completedResponse;
+			await expect(editSchemaButton).not.toHaveAttribute('disabled');
+			await expect(confirmButton).toHaveJSProperty('loading', true);
+			await expect(warning).toHaveCount(0);
+			await expect(description).toHaveValue('Local schema change');
+			await expect(page.locator('.schema-edit__change-count')).toHaveText('1 pending change');
+		} finally {
+			releaseSave();
+		}
+		if (shouldFailSave) {
+			await expect(warning).toBeVisible();
+			await expect(page.locator('.schema-edit__header-apply-button')).toHaveAttribute('disabled');
+			await expect(description).toHaveValue('Local schema change');
+			await page.locator('.schema-edit__header-cancel-button').click();
+			await page.getByText('Discard and leave', { exact: true }).click();
+		}
+		await expect(page.locator('.schema-edit')).toHaveCount(0);
+		await expect(editSchemaButton).not.toHaveAttribute('disabled');
+	});
+}
+
 for (const {
 	scenario,
 	shouldFailWorkspaceReload,
@@ -599,6 +816,8 @@ for (const {
 		expectedSchema.properties.find((property) => property.name === 'last_name').description = 'Updated description';
 		expect(previewedSchemas[previewedSchemas.length - 1]).toEqual(expectedSchema);
 		expect(submittedSchemas[1]).toEqual(expectedSchema);
+		await expect(page.locator('.schema-edit')).toHaveCount(0);
+		await expect(editSchemaButton).not.toHaveAttribute('disabled');
 	});
 }
 

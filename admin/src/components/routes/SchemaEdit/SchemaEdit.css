@@ -53,6 +53,10 @@
 	min-width: 200px;
 }
 
+.schema-edit__outdated-warning {
+	margin-top: 12px;
+}
+
 .schema-edit__layout {
 	--schema-edit-property-panel-width: 390px;
 	--grid-keyboard-hints-side-width: var(--schema-edit-property-panel-width);

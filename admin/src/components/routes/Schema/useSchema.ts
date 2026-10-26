@@ -16,6 +16,7 @@ const useSchema = () => {
 	const [schema, setSchema] = useState<ObjectType>();
 	const [isAltering, setIsAltering] = useState<boolean>(false);
 	const [hasLoadedAlterStatus, setHasLoadedAlterStatus] = useState<boolean>(false);
+	const [latestAlterStartTime, setLatestAlterStartTime] = useState<string | null>(null);
 	const [latestAlterError, setLatestAlterError] = useState<string>();
 
 	const { api, handleError, selectedWorkspace, setWorkspaces } = useContext(AppContext);
@@ -25,6 +26,7 @@ const useSchema = () => {
 	});
 
 	const isAlteringRef = useRef<boolean>();
+	const latestAlterStartTimeRef = useRef<string | null>();
 
 	useEffect(() => {
 		isAlteringRef.current = isAltering;
@@ -62,7 +64,7 @@ const useSchema = () => {
 			active = false;
 			window.clearTimeout(timeoutID);
 		};
-	}, [selectedWorkspace, isLoadingSchema, isAltering, hasLoadedAlterStatus]);
+	}, [selectedWorkspace, isLoadingSchema, isAltering, hasLoadedAlterStatus, latestAlterStartTime]);
 
 	useEffect(() => {
 		let active = true;
@@ -147,11 +149,17 @@ const useSchema = () => {
 		if (startTime != null && endTime == null) {
 			// the schema is being altered.
 			setIsAltering(true);
-		} else if (isAlteringRef.current && endTime != null) {
+		} else if (
+			endTime != null &&
+			(isAlteringRef.current === true ||
+				(latestAlterStartTimeRef.current !== undefined && startTime !== latestAlterStartTimeRef.current))
+		) {
 			// Refresh the schema and workspace before allowing further edits.
 			setIsLoadingSchema(true);
 			setIsAltering(false);
 		}
+		latestAlterStartTimeRef.current = startTime;
+		setLatestAlterStartTime(startTime);
 		setLatestAlterError(res.error);
 		setHasLoadedAlterStatus(true);
 	};
@@ -163,6 +171,7 @@ const useSchema = () => {
 		schema,
 		isAltering,
 		setIsAltering,
+		latestAlterStartTime,
 		latestAlterError,
 	};
 };
