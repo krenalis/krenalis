@@ -216,6 +216,10 @@
 	background: #faf9fc;
 }
 
+.identity-dashboard__section:first-of-type .identity-dashboard__kpi:first-child {
+	container-type: inline-size;
+}
+
 .identity-dashboard__kpi-title {
 	font-size: 13px;
 	font-weight: 600;
@@ -257,6 +261,11 @@
 .identity-dashboard__kpi:first-child .identity-dashboard__kpi-value,
 .identity-dashboard__kpi:nth-child(4) .identity-dashboard__kpi-value {
 	max-width: none;
+}
+
+.identity-dashboard__section:first-of-type .identity-dashboard__kpi:first-child .identity-dashboard__kpi-value {
+	font-size: 18px;
+	font-size: clamp(18px, 8cqw, 24px);
 }
 
 .identity-dashboard__kpi-value-unit {
@@ -918,6 +927,10 @@
 }
 
 @media (min-width: 1181px) and (max-width: 1599px) {
+	.identity-dashboard__kpi-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
 	.identity-dashboard__resolution-layout
 		> .identity-dashboard__distribution-card
 		.identity-dashboard__distribution-panel {
