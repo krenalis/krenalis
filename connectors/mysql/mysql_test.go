@@ -143,8 +143,7 @@ func TestStringValuesWithSQLModes(t *testing.T) {
 					}
 					var id uint64
 					var sessionMode string
-					err = rows.Scan(&id, &sessionMode)
-					if err != nil {
+					if err := rows.Scan(&id, &sessionMode); err != nil {
 						t.Fatalf("expected session details, got %v", err)
 					}
 					if id == firstID {
@@ -179,7 +178,6 @@ func TestStringValuesWithSQLModes(t *testing.T) {
 				{"time", time.Date(1970, 1, 1, 16, 35, 12, 123456000, time.UTC), types.Time(), "16:35:12.123456"},
 			} {
 				t.Run("SQLLiteral/"+test.name, func(t *testing.T) {
-
 					_, err := admin.db.ExecContext(t.Context(), "DELETE FROM string_values")
 					if err != nil {
 						t.Fatalf("expected cleared fixtures, got %v", err)
@@ -202,8 +200,7 @@ func TestStringValuesWithSQLModes(t *testing.T) {
 					}
 					var sessionMode string
 					var count, id int
-					err = rows.Scan(&sessionMode, &count, &id)
-					if err != nil {
+					if err := rows.Scan(&sessionMode, &count, &id); err != nil {
 						t.Fatalf("expected literal query result, got %v", err)
 					}
 					if count != 1 || id != 2 {
@@ -214,7 +211,6 @@ func TestStringValuesWithSQLModes(t *testing.T) {
 					if !slices.Equal(actualModes, expectedModes) {
 						t.Fatalf("expected session SQL modes %v, got %v", expectedModes, actualModes)
 					}
-
 				})
 			}
 
