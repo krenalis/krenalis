@@ -679,8 +679,10 @@ class Workspaces {
 	): Promise<CreateWorkspaceResponse> => {
 		return await call(`${this.apiURL}/workspaces`, http.POST, null, {
 			name: name,
-			profileSchema: profileSchema,
-			propertyRoles: propertyRoles,
+			profiles: {
+				schema: profileSchema,
+				propertyRoles: propertyRoles,
+			},
 			warehouse: {
 				platform: warehousePlatform,
 				mode: warehouseMode,
