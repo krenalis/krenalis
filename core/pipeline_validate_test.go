@@ -605,11 +605,15 @@ func Test_validatePipeline(t *testing.T) {
 							Operator: OpIsNot,
 							Values:   []string{"a@b"},
 						},
+						&FilterCondition{Property: "metadata.plan", Operator: OpIs, Values: []string{"pro"}},
+						&FilterCondition{Property: "tags", Operator: OpContains, Values: []string{"active"}},
 					},
 				},
 				InSchema: types.Object([]types.Property{
 					{Name: "email_in", Type: types.String(), ReadOptional: true},
 					{Name: "id", Type: types.Int(32), ReadOptional: true},
+					{Name: "metadata", Type: types.JSON(), ReadOptional: true},
+					{Name: "tags", Type: types.Array(types.JSON()), ReadOptional: true},
 				}),
 				OutSchema: types.Object([]types.Property{
 					{Name: "email_out", Type: types.String()},
