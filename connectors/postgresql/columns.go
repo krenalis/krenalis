@@ -84,8 +84,8 @@ func (pg *PostgreSQL) columns(ctx context.Context, schema, table string) ([]conn
 			"FROM pg_attribute AS a\n" +
 			"INNER JOIN pg_class AS c ON a.attrelid = c.oid\n" +
 			"INNER JOIN pg_namespace AS n ON c.relnamespace = n.oid\n" +
-			"WHERE n.nspname = '" + schema + "' AND a.atttypmod <> -1"
-		rows, err := tx.Query(ctx, query)
+			"WHERE n.nspname = $1 AND a.atttypmod <> -1"
+		rows, err := tx.Query(ctx, query, schema)
 		if err != nil {
 			return nil, err
 		}
@@ -116,10 +116,10 @@ func (pg *PostgreSQL) columns(ctx context.Context, schema, table string) ([]conn
 			" c.numeric_precision, c.numeric_precision_radix, c.numeric_scale, c.is_updatable\n" +
 			"FROM information_schema.columns c\n" +
 			"INNER JOIN information_schema.tables t ON c.table_name = t.table_name AND c.table_schema = t.table_schema\n" +
-			"WHERE t.table_schema = '" + schema + "' AND t.table_type = 'BASE TABLE' AND" +
-			" ( t.table_name IN ('" + table + "'))\n" +
+			"WHERE t.table_schema = $1 AND t.table_type = 'BASE TABLE' AND" +
+			" ( t.table_name IN ($2))\n" +
 			"ORDER BY c.table_name, c.ordinal_position"
-		rows, err := tx.Query(ctx, query)
+		rows, err := tx.Query(ctx, query, schema, table)
 		if err != nil {
 			return nil, err
 		}

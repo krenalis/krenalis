@@ -8,8 +8,113 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/krenalis/krenalis/core/testconnector"
+	"github.com/krenalis/krenalis/test/testimages"
 	"github.com/krenalis/krenalis/tools/types"
+
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
+
+// TestColumnsWithSpecialCharacters verifies that schema and table names with
+// special characters are handled literally when retrieving column metadata.
+func TestColumnsWithSpecialCharacters(t *testing.T) {
+
+	container, err := postgres.Run(t.Context(), testimages.PostgreSQL,
+		postgres.WithDatabase(testDatabase), postgres.WithUsername(testUser), postgres.WithPassword(testPassword),
+		postgres.BasicWaitStrategies())
+	if err != nil {
+		t.Fatalf("expected PostgreSQL container, got %v", err)
+	}
+	t.Cleanup(func() {
+		err := testcontainers.TerminateContainer(container)
+		if err != nil {
+			t.Errorf("expected container cleanup, got %v", err)
+		}
+	})
+	host, err := container.Host(t.Context())
+	if err != nil {
+		t.Fatalf("expected PostgreSQL host, got %v", err)
+	}
+	port, err := container.MappedPort(t.Context(), "5432/tcp")
+	if err != nil {
+		t.Fatalf("expected PostgreSQL port, got %v", err)
+	}
+	connector, err := testconnector.NewDatabase[*PostgreSQL]("postgresql", innerSettings{
+		Host: host, Port: int(port.Num()), Database: testDatabase, Username: testUser, Password: testPassword,
+		Schema: testSchema,
+	})
+	if err != nil {
+		t.Fatalf("expected PostgreSQL connector, got %v", err)
+	}
+	t.Cleanup(func() {
+		err := connector.Close()
+		if err != nil {
+			t.Errorf("expected connector cleanup, got %v", err)
+		}
+	})
+	err = connector.openDB(t.Context())
+	if err != nil {
+		t.Fatalf("expected connector pool, got %v", err)
+	}
+
+	for _, test := range []struct {
+		name   string
+		schema string
+		table  string
+		column string
+	}{
+		{"plain identifiers", testSchema, "plain_table", "plain_value"},
+		{"quoted table", testSchema, "quoted'table", "quoted_table_value"},
+		{"quoted schema", "quoted'schema", "plain_table", "quoted_schema_value"},
+		{"quoted schema and table", "quoted'schema", "quoted'table", "both_quoted_value"},
+		{"SQL injection in schema", "schema' OR TRUE --", "plain_table", "injected_schema_value"},
+		{"SQL injection in table", testSchema, "table')) OR TRUE --", "injected_table_value"},
+		{"double quotes in identifiers", `quoted"schema`, `quoted"table`, "double_quoted_value"},
+		{"case-sensitive identifiers", "MixedSchema", "MixedTable", "mixed_case_value"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+
+			_, err := connector.pool.Exec(t.Context(), "CREATE SCHEMA IF NOT EXISTS "+quoteIdent(test.schema))
+			if err != nil {
+				t.Fatalf("expected fixture schema, got %v", err)
+			}
+			name := quoteIdent(test.schema) + "." + quoteIdent(test.table)
+			_, err = connector.pool.Exec(t.Context(), "CREATE TABLE "+name+" ("+quoteIdent(test.column)+
+				" varchar(7)[])")
+			if err != nil {
+				t.Fatalf("expected fixture table, got %v", err)
+			}
+
+			columns, err := connector.columns(t.Context(), test.schema, test.table)
+			if err != nil {
+				t.Fatalf("expected column metadata, got %v", err)
+			}
+			if len(columns) != 1 {
+				t.Fatalf("expected one column, got %d: %+v", len(columns), columns)
+			}
+			column := columns[0]
+			if column.Name != test.column || column.Issue != "" ||
+				!types.Equal(column.Type, types.Array(types.String().WithMaxLength(7))) {
+				t.Fatalf("expected column %q of type array(string(7)) without issues, got %+v", test.column, column)
+			}
+
+			missingTable := test.table + "_missing"
+			columns, err = connector.columns(t.Context(), test.schema, missingTable)
+			if err != nil {
+				want := fmt.Sprintf("table %q does not exist", missingTable)
+				if err.Error() != want {
+					t.Fatalf("expected error %q, got %v", want, err)
+				}
+				return
+			}
+
+			t.Fatalf("expected missing table error, got columns %+v", columns)
+
+		})
+	}
+
+}
 
 func TestTypes(t *testing.T) {
 
