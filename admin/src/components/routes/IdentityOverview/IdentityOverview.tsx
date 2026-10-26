@@ -411,24 +411,27 @@ const IdentityOverview = () => {
 	);
 	const browserTimeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
 	const shouldShowResolutionKpiComparison = temporalSemantics.shouldShowLatestResolutionComparison;
-	const unifiedProfilesComparison = shouldShowResolutionKpiComparison
-		? {
-				delta: formatTrendPercent(resolutionKpiComparison.profilesChangePercent),
-				referenceDate: resolutionComparisonDate,
-			}
-		: undefined;
-	const identitiesPerProfileComparison = shouldShowResolutionKpiComparison
-		? {
-				delta: formatRatioDelta(resolutionKpiComparison.identitiesPerProfileChange),
-				referenceDate: resolutionComparisonDate,
-			}
-		: undefined;
-	const identityLinkRateComparison = shouldShowResolutionKpiComparison
-		? {
-				delta: formatPercentagePointDelta(resolutionKpiComparison.linkedIdentitiesRatePercentagePoints),
-				referenceDate: resolutionComparisonDate,
-			}
-		: undefined;
+	const unifiedProfilesComparison =
+		shouldShowResolutionKpiComparison && resolutionKpiComparison.profilesChangePercent != null
+			? {
+					delta: formatTrendPercent(resolutionKpiComparison.profilesChangePercent),
+					referenceDate: resolutionComparisonDate,
+				}
+			: undefined;
+	const identitiesPerProfileComparison =
+		shouldShowResolutionKpiComparison && resolutionKpiComparison.identitiesPerProfileChange != null
+			? {
+					delta: formatRatioDelta(resolutionKpiComparison.identitiesPerProfileChange),
+					referenceDate: resolutionComparisonDate,
+				}
+			: undefined;
+	const identityLinkRateComparison =
+		shouldShowResolutionKpiComparison && resolutionKpiComparison.linkedIdentitiesRatePercentagePoints != null
+			? {
+					delta: formatPercentagePointDelta(resolutionKpiComparison.linkedIdentitiesRatePercentagePoints),
+					referenceDate: resolutionComparisonDate,
+				}
+			: undefined;
 	const shouldShowResolutionStructure = isInitialLoading || chartError != null || latestResolution != null;
 	const resolutionDistributionTemporalLabel =
 		latestResolution == null ? '' : `Completed ${formatUTCTimestamp(latestResolution.observedAt)} UTC`;
