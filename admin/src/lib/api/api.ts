@@ -752,10 +752,6 @@ class Workspaces {
 		return await call(`${this.apiURL}/metrics/identities/latest`, http.GET, this.workspaceID);
 	};
 
-	refreshIdentityMetrics = async (): Promise<void> => {
-		return await call(`${this.apiURL}/metrics/identities/refresh`, http.POST, this.workspaceID);
-	};
-
 	identityResolutionMetricsPerDate = async (start: string, end: string): Promise<IdentityResolutionMetricDay[]> => {
 		return await call(
 			`${this.apiURL}/metrics/identity-resolution/dates/${encodeURIComponent(start)}/${encodeURIComponent(end)}`,

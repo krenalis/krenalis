@@ -462,7 +462,7 @@ const RecognizedAnonymousHistoryChart = ({
 				<StateMessage
 					variant='empty'
 					title={emptyTitle}
-					description='Choose another start date or refresh the dashboard.'
+					description='Choose another start date.'
 					compact={true}
 				/>
 			) : (
@@ -548,7 +548,6 @@ interface IdentitiesChartProps {
 	connectionOptions: IdentityConnectionOption[];
 	selectedConnection: string;
 	onConnectionChange: (connection: string) => void;
-	disabled?: boolean;
 }
 
 const IdentitiesChart = ({
@@ -558,7 +557,6 @@ const IdentitiesChart = ({
 	connectionOptions,
 	selectedConnection,
 	onConnectionChange,
-	disabled,
 }: IdentitiesChartProps) => {
 	return (
 		<RecognizedAnonymousHistoryChart
@@ -571,7 +569,6 @@ const IdentitiesChart = ({
 					value={selectedConnection}
 					hoist={true}
 					aria-label='Connection'
-					disabled={disabled}
 					onSlChange={(event) => onConnectionChange(String((event.currentTarget as SlSelectElement).value))}
 				>
 					<SlOption className='identity-dashboard__connection-option' value=''>

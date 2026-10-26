@@ -144,7 +144,7 @@ const tests: { name: string; run: () => void | Promise<void> }[] = [
 		},
 	},
 	{
-		name: 'removed connection history remains selectable after a zero refresh',
+		name: 'removed connection history remains selectable with zero current identities',
 		run: () => {
 			const latest: IdentityMetric = {
 				observedAt: '2026-08-03T12:00:00Z',

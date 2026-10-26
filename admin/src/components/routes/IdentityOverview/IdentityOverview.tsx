@@ -1,7 +1,5 @@
 import React, { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './IdentityOverview.css';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
 import AppContext from '../../../context/AppContext';
 import SegmentedDateRangeControl, {
@@ -124,7 +122,6 @@ const IdentityOverview = () => {
 	const [dashboardError, setDashboardError] = useState<string>();
 	const [selectedIdentityConnection, setSelectedIdentityConnection] = useState<string>('');
 	const [isLoading, setIsLoading] = useState<boolean>(true);
-	const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 	const requestVersion = useRef<number>(0);
 	// Only completed loads can supply cached snapshots for range and connection changes.
 	const dashboardDataRef = useRef<DashboardData>();
@@ -197,77 +194,66 @@ const IdentityOverview = () => {
 		[api],
 	);
 
-	const loadMetrics = useCallback(
-		async (shouldRefresh = false) => {
-			const version = ++requestVersion.current;
-			setDashboardError(undefined);
-			setIsLoading(true);
-			setIsRefreshing(shouldRefresh);
-			try {
-				if (shouldRefresh) {
-					await api.workspaces.refreshIdentityMetrics();
-					if (version !== requestVersion.current) return;
-				}
-				const cached = shouldRefresh ? undefined : dashboardDataRef.current;
-				const [identity, resolution, runs] = await Promise.all([
-					cached == null ? api.workspaces.latestIdentityMetric() : cached.latestIdentityMetric,
-					cached == null ? api.workspaces.latestIdentityResolutionMetric() : cached.latestResolutionMetric,
-					cached == null ? api.workspaces.identityResolutionRuns() : { runs: cached.resolutionRuns },
-				]);
-				if (version !== requestVersion.current) return;
+	const loadMetrics = useCallback(async () => {
+		const version = ++requestVersion.current;
+		setDashboardError(undefined);
+		setIsLoading(true);
+		try {
+			const cached = dashboardDataRef.current;
+			const [identity, resolution, runs] = await Promise.all([
+				cached == null ? api.workspaces.latestIdentityMetric() : cached.latestIdentityMetric,
+				cached == null ? api.workspaces.latestIdentityResolutionMetric() : cached.latestResolutionMetric,
+				cached == null ? api.workspaces.identityResolutionRuns() : { runs: cached.resolutionRuns },
+			]);
+			if (version !== requestVersion.current) return;
 
-				const requestedRange =
-					selectedDateRange === 'Custom'
-						? displayRange
-						: displayRangeForPreset(selectedDateRange, instantToDateKey(identity.observedAt));
-				const hasCachedRange =
-					cached != null &&
-					cached.displayRange.start === requestedRange.start &&
-					cached.displayRange.end === requestedRange.end;
-				const [identityDays, resolutionDays, connectionDays] = await Promise.all([
-					hasCachedRange ? cached.identityMetricDays : fetchIdentityMetricDays(identity, requestedRange),
-					hasCachedRange
-						? cached.resolutionMetricDays
-						: resolution == null
-							? []
-							: fetchResolutionMetricDays(resolution, requestedRange),
-					selectedIdentityConnection === ''
-						? undefined
-						: fetchIdentityMetricDays(identity, requestedRange, selectedIdentityConnection),
-				]);
-				if (version !== requestVersion.current) return;
+			const requestedRange =
+				selectedDateRange === 'Custom'
+					? displayRange
+					: displayRangeForPreset(selectedDateRange, instantToDateKey(identity.observedAt));
+			const hasCachedRange =
+				cached != null &&
+				cached.displayRange.start === requestedRange.start &&
+				cached.displayRange.end === requestedRange.end;
+			const [identityDays, resolutionDays, connectionDays] = await Promise.all([
+				hasCachedRange ? cached.identityMetricDays : fetchIdentityMetricDays(identity, requestedRange),
+				hasCachedRange
+					? cached.resolutionMetricDays
+					: resolution == null
+						? []
+						: fetchResolutionMetricDays(resolution, requestedRange),
+				selectedIdentityConnection === ''
+					? undefined
+					: fetchIdentityMetricDays(identity, requestedRange, selectedIdentityConnection),
+			]);
+			if (version !== requestVersion.current) return;
 
-				const data: DashboardData = {
-					displayRange: requestedRange,
-					latestIdentityMetric: identity,
-					identityMetricDays: identityDays,
-					latestResolutionMetric: resolution,
-					resolutionMetricDays: resolutionDays,
-					resolutionRuns: runs.runs,
-					selectedIdentityConnection,
-					connectionIdentityMetricDays: connectionDays,
-				};
-				dashboardDataRef.current = data;
-				setDashboardData(data);
-			} catch (err) {
-				if (version !== requestVersion.current) return;
-				setDashboardError(getErrorMessage(err));
-			} finally {
-				if (version === requestVersion.current) {
-					setIsLoading(false);
-					setIsRefreshing(false);
-				}
-			}
-		},
-		[
-			api,
-			displayRange,
-			selectedDateRange,
-			selectedIdentityConnection,
-			fetchIdentityMetricDays,
-			fetchResolutionMetricDays,
-		],
-	);
+			const data: DashboardData = {
+				displayRange: requestedRange,
+				latestIdentityMetric: identity,
+				identityMetricDays: identityDays,
+				latestResolutionMetric: resolution,
+				resolutionMetricDays: resolutionDays,
+				resolutionRuns: runs.runs,
+				selectedIdentityConnection,
+				connectionIdentityMetricDays: connectionDays,
+			};
+			dashboardDataRef.current = data;
+			setDashboardData(data);
+		} catch (err) {
+			if (version !== requestVersion.current) return;
+			setDashboardError(getErrorMessage(err));
+		} finally {
+			if (version === requestVersion.current) setIsLoading(false);
+		}
+	}, [
+		api,
+		displayRange,
+		selectedDateRange,
+		selectedIdentityConnection,
+		fetchIdentityMetricDays,
+		fetchResolutionMetricDays,
+	]);
 
 	useLayoutEffect(() => {
 		const workspaceChanged = previousWorkspace.current !== selectedWorkspace;
@@ -469,8 +455,6 @@ const IdentityOverview = () => {
 		setSelectedIdentityConnection(connection);
 	};
 
-	const refreshDashboard = () => loadMetrics(true);
-
 	const onCustomRangeChange = (selection: SegmentedDateRangeSelection[]) => {
 		const range = selection[0];
 		if (range == null) return;
@@ -490,17 +474,6 @@ const IdentityOverview = () => {
 					<p>Understand the effectiveness of your identity resolution and your current identity state.</p>
 				</div>
 				<div className='identity-dashboard__page-actions'>
-					<SlButton
-						className='identity-dashboard__refresh'
-						variant='default'
-						size='small'
-						onClick={refreshDashboard}
-						loading={isRefreshing}
-						disabled={isLoading}
-					>
-						<SlIcon slot='prefix' name='arrow-clockwise' />
-						Refresh
-					</SlButton>
 					<SegmentedDateRangeControl<IdentityDashboardDatePreset>
 						accessibleLabel='Trend range'
 						presets={DATE_RANGE_PRESETS}
@@ -510,7 +483,6 @@ const IdentityOverview = () => {
 						onCustomRangeChange={onCustomRangeChange}
 						maxDate={dateKeyToPickerDate(today)}
 						pickerAlignment='end'
-						disabled={isRefreshing}
 					/>
 				</div>
 			</div>
@@ -684,7 +656,6 @@ const IdentityOverview = () => {
 						connectionOptions={identityConnectionOptions}
 						selectedConnection={loadedIdentityConnection}
 						onConnectionChange={onIdentityConnectionChange}
-						disabled={isRefreshing}
 					/>
 					<ConnectionsChart
 						data={connectionBars}

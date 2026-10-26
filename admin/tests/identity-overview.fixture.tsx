@@ -32,7 +32,6 @@ declare global {
 	}
 }
 
-let hasRefreshed = false;
 window.identityOverviewRequests = [];
 window.identityOverviewPending = [];
 window.fetch = async (input) => {
@@ -57,7 +56,6 @@ window.fetch = async (input) => {
 			linkedIdentitiesRate: 1,
 		};
 		let data: unknown;
-		if (url.endsWith('/refresh')) return new Response(null);
 		if (url.includes('/metrics/identity-resolution/latest')) {
 			data = resolution;
 		} else if (url.includes('/metrics/identity-resolution/dates/')) {
@@ -138,10 +136,6 @@ window.fetch = async (input) => {
 	if (url.includes('/identity-resolution/runs')) {
 		return new Response('{"runs":[]}', { headers: { 'Content-Type': 'application/json' } });
 	}
-	if (url.endsWith('/refresh')) {
-		hasRefreshed = true;
-		return new Response(null);
-	}
 	if (url.endsWith('/latest')) {
 		if (window.identityOverviewScenario === 'latestError') return new Response(null, { status: 500 });
 		if (window.identityOverviewScenario === 'connectionTypes') {
@@ -172,17 +166,18 @@ window.fetch = async (input) => {
 				{ headers: { 'Content-Type': 'application/json' } },
 			);
 		}
-		let total = window.identityOverviewScenario === 'removed' ? (hasRefreshed ? 0 : 5) : 8;
+		const hasRemovedConnections = window.identityOverviewScenario === 'removed';
+		let total = hasRemovedConnections ? 0 : 8;
 		if (window.identityOverviewScenario === 'singleDay') total = 10;
 		if (window.identityOverviewScenario === 'singleDayZero') total = 0;
 		return new Response(
 			JSON.stringify({
-				observedAt: hasRefreshed ? '2026-08-03T12:00:00Z' : '2026-08-02T12:00:00Z',
+				observedAt: hasRemovedConnections ? '2026-08-03T12:00:00Z' : '2026-08-02T12:00:00Z',
 				total,
 				anonymous: 0,
 				recognized: total,
 				withoutProfile: 0,
-				connections: hasRefreshed
+				connections: hasRemovedConnections
 					? []
 					: [{ connection: 'connection11', anonymous: 0, recognized: total, withoutProfile: 0 }],
 			}),
