@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useState } from 'react';
 import {
 	Area,
 	AreaChart,
@@ -383,22 +383,46 @@ const compactNumber = (value: number): string =>
 
 const formatPercentage = (value: number | null): string => (value == null ? '—' : `${value.toFixed(1)}%`);
 
+type IdentityType = 'recognized' | 'anonymous';
+
 interface RecognizedAnonymousLegendProps {
 	recognizedColor: string;
 	anonymousColor: string;
+	hiddenIdentityTypes?: IdentityType[];
+	onToggle?: (type: IdentityType) => void;
 }
 
-const RecognizedAnonymousLegend = ({ recognizedColor, anonymousColor }: RecognizedAnonymousLegendProps) => {
+const RecognizedAnonymousLegend = ({
+	recognizedColor,
+	anonymousColor,
+	hiddenIdentityTypes = [],
+	onToggle,
+}: RecognizedAnonymousLegendProps) => {
+	const types = [
+		{ type: 'recognized', label: 'Recognized', color: recognizedColor },
+		{ type: 'anonymous', label: 'Anonymous', color: anonymousColor },
+	] as const;
 	return (
 		<ul className='identity-dashboard__connection-legend' aria-label='Identity types'>
-			<li>
-				<span style={{ background: recognizedColor }} />
-				Recognized
-			</li>
-			<li>
-				<span style={{ background: anonymousColor }} />
-				Anonymous
-			</li>
+			{types.map(({ type, label, color }) => (
+				<li key={type}>
+					{onToggle == null ? (
+						<>
+							<span style={{ background: color }} />
+							{label}
+						</>
+					) : (
+						<button
+							type='button'
+							aria-pressed={!hiddenIdentityTypes.includes(type)}
+							onClick={() => onToggle(type)}
+						>
+							<span style={{ background: color }} />
+							{label}
+						</button>
+					)}
+				</li>
+			))}
 		</ul>
 	);
 };
@@ -604,28 +628,28 @@ const ProfilesChart = ({ days, loading, error }: ProfilesChartProps) => {
 interface ConnectionTooltipProps {
 	active?: boolean;
 	connection?: ConnectionBar;
+	hiddenIdentityTypes?: IdentityType[];
 }
 
-const ConnectionTooltip = ({ active, connection }: ConnectionTooltipProps) => {
+const ConnectionTooltip = ({ active, connection, hiddenIdentityTypes = [] }: ConnectionTooltipProps) => {
 	if (!active || connection == null) return null;
+	const rows = [
+		{ label: hiddenIdentityTypes.length === 0 ? 'Total' : 'Total shown', value: formatNumber(connection.total) },
+	];
+	if (!hiddenIdentityTypes.includes('recognized')) {
+		rows.push({
+			label: 'Recognized',
+			value: `${formatNumber(connection.recognized)} (${formatSharePercent(connection.recognized, connection.total, 2)})`,
+		});
+	}
+	if (!hiddenIdentityTypes.includes('anonymous')) {
+		rows.push({
+			label: 'Anonymous',
+			value: `${formatNumber(connection.anonymous)} (${formatSharePercent(connection.anonymous, connection.total, 2)})`,
+		});
+	}
 
-	return (
-		<ChartTooltip
-			active={true}
-			title={connection.name}
-			rows={[
-				{ label: 'Total', value: formatNumber(connection.total) },
-				{
-					label: 'Recognized',
-					value: `${formatNumber(connection.recognized)} (${formatSharePercent(connection.recognized, connection.total, 2)})`,
-				},
-				{
-					label: 'Anonymous',
-					value: `${formatNumber(connection.anonymous)} (${formatSharePercent(connection.anonymous, connection.total, 2)})`,
-				},
-			]}
-		/>
-	);
+	return <ChartTooltip active={true} title={connection.name} rows={rows} />;
 };
 
 interface ConnectionAxisTickProps {
@@ -678,6 +702,18 @@ interface ConnectionsChartProps {
 }
 
 const ConnectionsChart = ({ data, totalIdentities, observedLabel, loading, error }: ConnectionsChartProps) => {
+	const [hiddenIdentityTypes, setHiddenIdentityTypes] = useState<IdentityType[]>([]);
+	const isRecognizedVisible = !hiddenIdentityTypes.includes('recognized');
+	const isAnonymousVisible = !hiddenIdentityTypes.includes('anonymous');
+	const visibleData = data.map((connection) => ({
+		...connection,
+		total: (isRecognizedVisible ? connection.recognized : 0) + (isAnonymousVisible ? connection.anonymous : 0),
+	}));
+	const visibleTotalIdentities =
+		hiddenIdentityTypes.length === 0
+			? totalIdentities
+			: visibleData.reduce((total, connection) => total + connection.total, 0);
+	const hasVisibleIdentities = visibleData.some((connection) => connection.total > 0);
 	return (
 		<DashboardCard
 			title='Identities by connection'
@@ -707,9 +743,20 @@ const ConnectionsChart = ({ data, totalIdentities, observedLabel, loading, error
 					style={{ height: 258 + (data.length > 1 ? data.length * 2 + 2 : 0) }}
 				>
 					<ResponsiveContainer width='100%' height='100%'>
-						<BarChart data={data} layout='vertical' margin={{ top: 8, right: 58, bottom: 2, left: 4 }}>
+						<BarChart
+							data={visibleData}
+							layout='vertical'
+							margin={{ top: 8, right: 58, bottom: 2, left: 4 }}
+						>
 							<CartesianGrid stroke={GRID_COLOR} horizontal={false} />
-							<XAxis type='number' tickFormatter={compactNumber} allowDecimals={false} tickLine={false} />
+							<XAxis
+								type='number'
+								tickFormatter={compactNumber}
+								allowDecimals={false}
+								tickLine={false}
+								allowDataOverflow={!hasVisibleIdentities}
+								domain={hasVisibleIdentities ? undefined : [0, 1]}
+							/>
 							<YAxis
 								type='category'
 								dataKey='name'
@@ -718,7 +765,9 @@ const ConnectionsChart = ({ data, totalIdentities, observedLabel, loading, error
 								tickSize={0}
 								tickMargin={0}
 								interval={0}
-								tick={<ConnectionAxisTick data={data} totalIdentities={totalIdentities} />}
+								tick={
+									<ConnectionAxisTick data={visibleData} totalIdentities={visibleTotalIdentities} />
+								}
 							/>
 							<Tooltip
 								cursor={{ fill: '#f6f6f8' }}
@@ -726,6 +775,7 @@ const ConnectionsChart = ({ data, totalIdentities, observedLabel, loading, error
 									<ConnectionTooltip
 										active={active}
 										connection={payload?.[0]?.payload as ConnectionBar | undefined}
+										hiddenIdentityTypes={hiddenIdentityTypes}
 									/>
 								)}
 							/>
@@ -734,20 +784,39 @@ const ConnectionsChart = ({ data, totalIdentities, observedLabel, loading, error
 									<RecognizedAnonymousLegend
 										recognizedColor={CHART_COLOR}
 										anonymousColor={CONNECTION_ANONYMOUS_COLOR}
+										hiddenIdentityTypes={hiddenIdentityTypes}
+										onToggle={(type) =>
+											setHiddenIdentityTypes((hidden) =>
+												hidden.includes(type)
+													? hidden.filter((value) => value !== type)
+													: [...hidden, type],
+											)
+										}
 									/>
 								}
 							/>
 							<Bar
 								dataKey='recognized'
 								name='Recognized'
+								hide={!isRecognizedVisible}
 								fill={CHART_COLOR}
 								stackId='identity-types'
 								barSize={17}
+								radius={!isAnonymousVisible ? [0, 4, 4, 0] : undefined}
 								isAnimationActive={false}
-							/>
+							>
+								{!isAnonymousVisible && (
+									<LabelList
+										dataKey='total'
+										position='right'
+										formatter={(value) => formatNumber(Number(value))}
+									/>
+								)}
+							</Bar>
 							<Bar
 								dataKey='anonymous'
 								name='Anonymous'
+								hide={!isAnonymousVisible}
 								fill={CONNECTION_ANONYMOUS_COLOR}
 								stackId='identity-types'
 								barSize={17}

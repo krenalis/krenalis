@@ -49,6 +49,96 @@ test('shows unavailable current state when latest fails', async ({ page }) => {
 	).toHaveText('—');
 });
 
+test('filters connection series with mouse and keyboard and updates the chart', async ({ page }) => {
+	await page.evaluate(() => {
+		window.identityOverviewScenario = 'connectionTypes';
+	});
+	await page.addScriptTag({ content: componentScript });
+	const chart = page.locator('.identity-dashboard__connections-chart');
+	const recognized = chart.getByRole('button', { name: 'Recognized', exact: true });
+	const anonymous = chart.getByRole('button', { name: 'Anonymous', exact: true });
+	const totals = chart.locator('.recharts-label-list text');
+	const shares = chart.locator('.identity-dashboard__connection-axis-share');
+	const ticks = chart.locator('.recharts-xAxis .recharts-cartesian-axis-tick-value');
+	await expect(recognized).toHaveAttribute('aria-pressed', 'true');
+	await expect(anonymous).toHaveAttribute('aria-pressed', 'true');
+	await expect(totals).toHaveText(['1,000', '20']);
+	await expect(shares).toHaveText(['98%', '2%']);
+	await expect(ticks.last()).toHaveText('1K');
+	await anonymous.click();
+	await expect(anonymous).toHaveAttribute('aria-pressed', 'false');
+	await expect(recognized).toBeEnabled();
+	await expect(chart.locator('.recharts-bar')).toHaveCount(1);
+	await expect(totals).toHaveText(['10', '20']);
+	await expect(shares).toHaveText(['33%', '67%']);
+	await expect(ticks.last()).toHaveText('20');
+	await chart.locator('.recharts-bar-rectangle').first().hover();
+	const tooltip = chart.locator('.identity-dashboard__chart-tooltip');
+	await expect(tooltip.locator('dt')).toHaveText(['Total shown', 'Recognized']);
+	await expect(tooltip.locator('dd')).toHaveText(['10', '10 (100.00%)']);
+	await recognized.press('Enter');
+	await expect(recognized).toHaveAttribute('aria-pressed', 'false');
+	await expect(anonymous).toHaveAttribute('aria-pressed', 'false');
+	await expect(recognized).toBeEnabled();
+	await expect(anonymous).toBeEnabled();
+	await expect(chart.locator('.recharts-bar')).toHaveCount(0);
+	await expect(totals).toHaveCount(0);
+	await expect(ticks).toHaveText(['0', '1']);
+	await expect(shares).toHaveText(['—', '—']);
+	await expect(tooltip).toHaveCount(0);
+	await anonymous.press('Space');
+	await expect(anonymous).toHaveAttribute('aria-pressed', 'true');
+	await expect(totals).toHaveText(['990', '0']);
+	await expect(shares).toHaveText(['100%', '0%']);
+	await chart.locator('.recharts-bar-rectangle').first().hover();
+	await expect(tooltip.locator('dt')).toHaveText(['Total shown', 'Anonymous']);
+	await expect(tooltip.locator('dd')).toHaveText(['990', '990 (100.00%)']);
+	await recognized.click();
+	await expect(chart.locator('.recharts-bar')).toHaveCount(2);
+	await expect(totals).toHaveText(['1,000', '20']);
+	await expect(shares).toHaveText(['98%', '2%']);
+	await expect(ticks.last()).toHaveText('1K');
+	await expect(anonymous).toBeEnabled();
+	await expect(
+		page.locator('.identity-dashboard__chart:not(.identity-dashboard__connections-chart)').getByRole('button'),
+	).toHaveCount(0);
+});
+
+for (const [hiddenType, revision] of [
+	['Recognized', 1],
+	['Anonymous', 2],
+] as const) {
+	test(`keeps the connection scale and zero labels after a refresh clears the series shown without ${hiddenType}`, async ({
+		page,
+	}) => {
+		await page.evaluate(() => {
+			window.identityOverviewScenario = 'connectionTypes';
+		});
+		await page.addScriptTag({ content: componentScript });
+		const chart = page.locator('.identity-dashboard__connections-chart');
+		const toggle = chart.getByRole('button', { name: hiddenType, exact: true });
+		const totals = chart.locator('.recharts-label-list text');
+		const ticks = chart.locator('.recharts-xAxis .recharts-cartesian-axis-tick-value');
+		await toggle.click();
+		await expect(totals).toHaveText(revision === 1 ? ['990', '0'] : ['10', '20']);
+		await page.evaluate((revision) => {
+			window.identityOverviewRevision = revision;
+		}, revision);
+		await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+		await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+		await expect(chart.getByRole('button', { pressed: true })).toBeEnabled();
+		await expect(ticks).toHaveText(['0', '1']);
+		await expect(totals).toHaveText(['0', '0']);
+		await expect(chart.locator('.identity-dashboard__connection-axis-share')).toHaveText(['—', '—']);
+		await toggle.click();
+		await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+		await expect(totals).toHaveText(revision === 1 ? ['20', '10'] : ['990', '0']);
+		await toggle.click();
+		await expect(ticks).toHaveText(['0', '1']);
+		await expect(totals).toHaveText(['0', '0']);
+	});
+}
+
 test('hides the since-resolution comparison until identities have been observed after resolution', async ({ page }) => {
 	await page.evaluate(() => {
 		window.identityOverviewScenario = 'resolution';

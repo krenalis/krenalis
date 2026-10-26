@@ -12,6 +12,7 @@ declare global {
 	interface Window {
 		identityOverviewScenario:
 			| 'atomic'
+			| 'connectionTypes'
 			| 'historyError'
 			| 'latestError'
 			| 'removed'
@@ -143,6 +144,34 @@ window.fetch = async (input) => {
 	}
 	if (url.endsWith('/latest')) {
 		if (window.identityOverviewScenario === 'latestError') return new Response(null, { status: 500 });
+		if (window.identityOverviewScenario === 'connectionTypes') {
+			const anonymous = revision === 1 ? 0 : 990;
+			const hasRecognized = revision !== 2;
+			return new Response(
+				JSON.stringify({
+					observedAt: revision === 0 ? '2026-08-02T12:00:00Z' : '2026-08-03T12:00:00Z',
+					total: anonymous + (hasRecognized ? 30 : 0),
+					anonymous,
+					recognized: hasRecognized ? 30 : 0,
+					withoutProfile: 0,
+					connections: [
+						{
+							connection: 'connection11',
+							anonymous,
+							recognized: hasRecognized ? 10 : 0,
+							withoutProfile: 0,
+						},
+						{
+							connection: 'connection22',
+							anonymous: 0,
+							recognized: hasRecognized ? 20 : 0,
+							withoutProfile: 0,
+						},
+					],
+				}),
+				{ headers: { 'Content-Type': 'application/json' } },
+			);
+		}
 		let total = window.identityOverviewScenario === 'removed' ? (hasRefreshed ? 0 : 5) : 8;
 		if (window.identityOverviewScenario === 'singleDay') total = 10;
 		if (window.identityOverviewScenario === 'singleDayZero') total = 0;
