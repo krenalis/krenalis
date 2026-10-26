@@ -162,8 +162,8 @@ func parseCli() cliOptions {
 		" so some parts of the software and/or changes made may not be validated " +
 		"when running the script with this option"
 
-	flag.BoolVar(&justTestAdmin, "just-test-admin", false, "just run the Go tests on the Admin console. "+
-		reducedTestSetWarning)
+	flag.BoolVar(&justTestAdmin, "just-test-admin", false, "just regenerate the Admin files and run the Go tests"+
+		" on the Admin console. "+reducedTestSetWarning)
 	flag.BoolVar(&noConnectorTests, "no-connector-tests", false, "do not run 'go test' within the 'connectors' directory. "+reducedTestSetWarning)
 	flag.BoolVar(&noSnowflakeTests, "no-snowflake-tests", false, "skip Go tests that need a Snowflake environment. "+reducedTestSetWarning)
 	flag.BoolVar(&noGoTest, "no-go-test", false, "do not run 'go test' at all."+
@@ -307,7 +307,7 @@ func removeGoSum(repo, module string) {
 }
 
 // runGoTestAdmin runs Admin tests via go test, after regenerating the Admin
-// files that the Krenalis built by the tests embeds.
+// files embedded in the Krenalis instance that the tests build.
 func runGoTestAdmin(repo string) {
 	// Keep in sync with the corresponding commands in the main function.
 	NewCmd("npm", "ci").InDir(repo, "admin").Run()
