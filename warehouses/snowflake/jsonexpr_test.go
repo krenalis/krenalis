@@ -5,6 +5,7 @@
 package snowflake
 
 import (
+	"database/sql"
 	"fmt"
 	"slices"
 	"strconv"
@@ -65,7 +66,7 @@ func TestJSONDecimalRendering(t *testing.T) {
 					}
 					want = "WHEN (IS_DECIMAL(" + target + ") OR IS_DOUBLE(" + target + ")) THEN FALSE"
 					if op == warehouses.OpIsOneOf {
-						want = `COALESCE(FALSE, FALSE)`
+						want = `CASE WHEN "VALUE" IS NOT NULL THEN COALESCE(FALSE, FALSE) ELSE NULL END`
 						if query != want {
 							t.Fatalf("expected SQL %s, got %s", want, query)
 						}
@@ -221,12 +222,86 @@ func TestJSONExpressions(t *testing.T) {
 	}{{"scalar", nil}, {"document", []string{"a.b", "key'\\"}}} {
 		for _, c := range cases {
 			t.Run(path.name+"/"+c.Name, func(t *testing.T) {
+
 				expr := newJSONFilterExpr(column, c.Operator, c.Values...)
 				if len(path.keys) > 0 {
 					expr.Column = documentColumn
 					expr.Keys = path.keys
 				}
 				checkJSONExpression(t, warehouse, table.Name, idColumn, expr, c.Matches)
+
+				var b strings.Builder
+				err := renderExpr(&b, expr)
+				if err != nil {
+					t.Fatalf("expected JSON expression, got %v", err)
+				}
+				statement := "SELECT " + quoteIdent(idColumn.Name) + ", (" + b.String() + ") FROM " +
+					quoteIdent(table.Name) + " ORDER BY " + quoteIdent(idColumn.Name)
+				rows, err := db.QueryContext(t.Context(), statement)
+				if err != nil {
+					t.Fatalf("expected truth-table query, got %v", err)
+				}
+				defer rows.Close()
+				count := 0
+				nulls := c.Nulls(len(values))
+				for rows.Next() {
+					var id int
+					var got sql.NullBool
+					if err := rows.Scan(&id, &got); err != nil {
+						t.Fatalf("expected truth-table row, got %v", err)
+					}
+					want := sql.NullBool{Bool: slices.Contains(c.Matches, id), Valid: !slices.Contains(nulls, id)}
+					if got != want {
+						t.Errorf("expected fixture %d result %v, got %v", id, want, got)
+					}
+					count++
+				}
+				err = rows.Err()
+				if err != nil {
+					t.Fatalf("expected complete truth table, got %v", err)
+				}
+				if count != len(values) {
+					t.Fatalf("expected %d truth-table rows, got %d", len(values), count)
+				}
+
+			})
+		}
+	}
+
+	// Composition preserves SQL NULL until the query uses the filter.
+	for _, op := range []warehouses.LogicalOperator{warehouses.OpAnd, warehouses.OpOr} {
+		for _, definite := range []bool{false, true} {
+			t.Run(fmt.Sprintf("composition/%d/%t", op, definite), func(t *testing.T) {
+				knownID := -1
+				if definite {
+					knownID = 0
+				}
+				expr := warehouses.NewMultiExpr(op, []warehouses.Expr{
+					newJSONFilterExpr(column, warehouses.OpIsNot, json.Value("5")),
+					warehouses.NewBaseExpr(idColumn, warehouses.OpIs, knownID),
+				})
+				var b strings.Builder
+				err := renderExpr(&b, expr)
+				if err != nil {
+					t.Fatalf("expected composed expression, got %v", err)
+				}
+				statement := "SELECT (" + b.String() + ") FROM " + quoteIdent(table.Name) +
+					" WHERE " + quoteIdent(idColumn.Name) + " = 0"
+				var got sql.NullBool
+				err = db.QueryRowContext(t.Context(), statement).Scan(&got)
+				if err != nil {
+					t.Fatalf("expected composed truth value, got %v", err)
+				}
+				want := sql.NullBool{}
+				if op == warehouses.OpAnd && !definite {
+					want.Valid = true
+				}
+				if op == warehouses.OpOr && definite {
+					want = sql.NullBool{Bool: true, Valid: true}
+				}
+				if got != want {
+					t.Fatalf("expected composition %v, got %v", want, got)
+				}
 			})
 		}
 	}

@@ -110,11 +110,11 @@ func Test_renderExpr(t *testing.T) {
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.JSON()}, warehouses.OpIsTrue),
-			query: `AS_BOOLEAN("PROPERTIES") IS NOT DISTINCT FROM TRUE`,
+			query: `CASE WHEN "PROPERTIES" IS NOT NULL THEN AS_BOOLEAN("PROPERTIES") IS NOT DISTINCT FROM TRUE ELSE NULL END`,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.JSON()}, warehouses.OpIsFalse),
-			query: `AS_BOOLEAN("PROPERTIES") IS NOT DISTINCT FROM FALSE`,
+			query: `CASE WHEN "PROPERTIES" IS NOT NULL THEN AS_BOOLEAN("PROPERTIES") IS NOT DISTINCT FROM FALSE ELSE NULL END`,
 		},
 		{
 			expr: &warehouses.BaseExpr{
@@ -122,7 +122,7 @@ func Test_renderExpr(t *testing.T) {
 				Keys:     []string{"enabled"},
 				Operator: warehouses.OpIsTrue,
 			},
-			query: `AS_BOOLEAN(GET("PROPERTIES", 'enabled')) IS NOT DISTINCT FROM TRUE`,
+			query: `CASE WHEN GET("PROPERTIES", 'enabled') IS NOT NULL THEN AS_BOOLEAN(GET("PROPERTIES", 'enabled')) IS NOT DISTINCT FROM TRUE ELSE NULL END`,
 		},
 		{
 			expr: &warehouses.BaseExpr{
@@ -130,7 +130,7 @@ func Test_renderExpr(t *testing.T) {
 				Keys:     []string{"archived"},
 				Operator: warehouses.OpIsFalse,
 			},
-			query: `AS_BOOLEAN(GET("PROPERTIES", 'archived')) IS NOT DISTINCT FROM FALSE`,
+			query: `CASE WHEN GET("PROPERTIES", 'archived') IS NOT NULL THEN AS_BOOLEAN(GET("PROPERTIES", 'archived')) IS NOT DISTINCT FROM FALSE ELSE NULL END`,
 		},
 		{
 			expr: &warehouses.BaseExpr{
@@ -138,7 +138,7 @@ func Test_renderExpr(t *testing.T) {
 				Keys:     []string{"a", "b"},
 				Operator: warehouses.OpIsTrue,
 			},
-			query: `AS_BOOLEAN(GET(GET("PROPERTIES", 'a'), 'b')) IS NOT DISTINCT FROM TRUE`,
+			query: `CASE WHEN GET(GET("PROPERTIES", 'a'), 'b') IS NOT NULL THEN AS_BOOLEAN(GET(GET("PROPERTIES", 'a'), 'b')) IS NOT DISTINCT FROM TRUE ELSE NULL END`,
 		},
 		{
 			expr: &warehouses.BaseExpr{
@@ -146,7 +146,7 @@ func Test_renderExpr(t *testing.T) {
 				Keys:     []string{"a", "b"},
 				Operator: warehouses.OpIsFalse,
 			},
-			query: `AS_BOOLEAN(GET(GET("PROPERTIES", 'a'), 'b')) IS NOT DISTINCT FROM FALSE`,
+			query: `CASE WHEN GET(GET("PROPERTIES", 'a'), 'b') IS NOT NULL THEN AS_BOOLEAN(GET(GET("PROPERTIES", 'a'), 'b')) IS NOT DISTINCT FROM FALSE ELSE NULL END`,
 		},
 		{
 			expr: &warehouses.BaseExpr{
@@ -154,7 +154,7 @@ func Test_renderExpr(t *testing.T) {
 				Keys:     []string{"a.b"},
 				Operator: warehouses.OpIsTrue,
 			},
-			query: `AS_BOOLEAN(GET("PROPERTIES", 'a.b')) IS NOT DISTINCT FROM TRUE`,
+			query: `CASE WHEN GET("PROPERTIES", 'a.b') IS NOT NULL THEN AS_BOOLEAN(GET("PROPERTIES", 'a.b')) IS NOT DISTINCT FROM TRUE ELSE NULL END`,
 		},
 		{
 			expr: &warehouses.BaseExpr{
@@ -162,7 +162,7 @@ func Test_renderExpr(t *testing.T) {
 				Keys:     []string{"a'b", "c'd"},
 				Operator: warehouses.OpIsFalse,
 			},
-			query: `AS_BOOLEAN(GET(GET("PROPERTIES", 'a\'b'), 'c\'d')) IS NOT DISTINCT FROM FALSE`,
+			query: `CASE WHEN GET(GET("PROPERTIES", 'a\'b'), 'c\'d') IS NOT NULL THEN AS_BOOLEAN(GET(GET("PROPERTIES", 'a\'b'), 'c\'d')) IS NOT DISTINCT FROM FALSE ELSE NULL END`,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpIsNull),
@@ -257,12 +257,12 @@ func Test_renderExpr(t *testing.T) {
 		{
 			name:  "decimal array maximum precision",
 			expr:  warehouses.NewBaseExpr(array, warehouses.OpContains, decimal.MustParse("1e75")),
-			query: `CONTAINS("VALUE", 1e75)`,
+			query: `CASE WHEN "VALUE" IS NOT NULL THEN COALESCE((ARRAY_SIZE(FILTER("VALUE", krenalis_json_element -> CASE WHEN (IS_DECIMAL(krenalis_json_element) OR IS_DOUBLE(krenalis_json_element)) THEN TRY_TO_DECFLOAT(TO_JSON(krenalis_json_element)) = TO_DECFLOAT('1e75') ELSE FALSE END)) > 0), FALSE) ELSE NULL END`,
 		},
 		{
 			name:  "decimal array maximum scale",
 			expr:  warehouses.NewBaseExpr(array, warehouses.OpDoesNotContain, decimal.MustParse("1e-37")),
-			query: `NOT CONTAINS("VALUE", 1e-37)`,
+			query: `CASE WHEN "VALUE" IS NOT NULL THEN NOT COALESCE((ARRAY_SIZE(FILTER("VALUE", krenalis_json_element -> CASE WHEN (IS_DECIMAL(krenalis_json_element) OR IS_DOUBLE(krenalis_json_element)) THEN TRY_TO_DECFLOAT(TO_JSON(krenalis_json_element)) = TO_DECFLOAT('1e-37') ELSE FALSE END)) > 0), FALSE) ELSE NULL END`,
 		},
 		{
 			name:    "decimal excessive precision",
@@ -318,7 +318,7 @@ func Test_renderExpr(t *testing.T) {
 			name: "JSON numeric text without number",
 			expr: newJSONFilterExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs,
 				json.Value("\"1e999999\"")),
-			query: `COALESCE(CASE WHEN IS_VARCHAR("VALUES") THEN COLLATE(AS_VARCHAR("VALUES"), 'utf8') = '1e999999' ELSE FALSE END, FALSE)`,
+			query: `CASE WHEN "VALUES" IS NOT NULL THEN COALESCE(CASE WHEN IS_VARCHAR("VALUES") THEN COLLATE(AS_VARCHAR("VALUES"), 'utf8') = '1e999999' ELSE FALSE END, FALSE) ELSE NULL END`,
 		},
 		{
 			name: "structural JSON number outside decimal limits",

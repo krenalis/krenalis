@@ -124,11 +124,11 @@ func Test_renderExpr(t *testing.T) {
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.JSON()}, warehouses.OpIsTrue),
-			query: `"properties" IS NOT DISTINCT FROM 'true'::jsonb`,
+			query: `"properties" = 'true'::jsonb`,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.JSON()}, warehouses.OpIsFalse),
-			query: `"properties" IS NOT DISTINCT FROM 'false'::jsonb`,
+			query: `"properties" = 'false'::jsonb`,
 		},
 		{
 			expr: &warehouses.BaseExpr{
@@ -136,7 +136,7 @@ func Test_renderExpr(t *testing.T) {
 				Keys:     []string{"enabled"},
 				Operator: warehouses.OpIsTrue,
 			},
-			query: `("properties" -> 'enabled') IS NOT DISTINCT FROM 'true'::jsonb`,
+			query: `("properties" -> 'enabled') = 'true'::jsonb`,
 		},
 		{
 			expr: &warehouses.BaseExpr{
@@ -144,7 +144,7 @@ func Test_renderExpr(t *testing.T) {
 				Keys:     []string{"archived"},
 				Operator: warehouses.OpIsFalse,
 			},
-			query: `("properties" -> 'archived') IS NOT DISTINCT FROM 'false'::jsonb`,
+			query: `("properties" -> 'archived') = 'false'::jsonb`,
 		},
 		{
 			expr: &warehouses.BaseExpr{
@@ -152,7 +152,7 @@ func Test_renderExpr(t *testing.T) {
 				Keys:     []string{"a", "b"},
 				Operator: warehouses.OpIsTrue,
 			},
-			query: `("properties" -> 'a' -> 'b') IS NOT DISTINCT FROM 'true'::jsonb`,
+			query: `("properties" -> 'a' -> 'b') = 'true'::jsonb`,
 		},
 		{
 			expr: &warehouses.BaseExpr{
@@ -160,7 +160,7 @@ func Test_renderExpr(t *testing.T) {
 				Keys:     []string{"a", "b"},
 				Operator: warehouses.OpIsFalse,
 			},
-			query: `("properties" -> 'a' -> 'b') IS NOT DISTINCT FROM 'false'::jsonb`,
+			query: `("properties" -> 'a' -> 'b') = 'false'::jsonb`,
 		},
 		{
 			expr: &warehouses.BaseExpr{
@@ -168,7 +168,7 @@ func Test_renderExpr(t *testing.T) {
 				Keys:     []string{"a.b"},
 				Operator: warehouses.OpIsTrue,
 			},
-			query: `("properties" -> 'a.b') IS NOT DISTINCT FROM 'true'::jsonb`,
+			query: `("properties" -> 'a.b') = 'true'::jsonb`,
 		},
 		{
 			expr: &warehouses.BaseExpr{
@@ -176,7 +176,7 @@ func Test_renderExpr(t *testing.T) {
 				Keys:     []string{"a'b", "c'd"},
 				Operator: warehouses.OpIsFalse,
 			},
-			query: `("properties" -> 'a''b' -> 'c''d') IS NOT DISTINCT FROM 'false'::jsonb`,
+			query: `("properties" -> 'a''b' -> 'c''d') = 'false'::jsonb`,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpIsNull),
@@ -332,7 +332,7 @@ func Test_renderExpr(t *testing.T) {
 			name: "JSON numeric text without number",
 			expr: newJSONFilterExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs,
 				json.Value("\"1e999999\"")),
-			query: `COALESCE(CASE WHEN jsonb_typeof("values") = 'string' THEN ("values" #>> '{}') COLLATE "C" = '1e999999' ELSE FALSE END, FALSE)`,
+			query: `"values" = '"1e999999"'::jsonb`,
 		},
 		{
 			name: "structural JSON number outside decimal limits",

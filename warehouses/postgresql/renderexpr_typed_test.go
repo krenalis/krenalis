@@ -66,7 +66,7 @@ func TestTypedFilterOrdinarySQLRegression(t *testing.T) {
 		{"unsigned maximum", types.Int(64).Unsigned(), warehouses.OpIs, uint(18446744073709551615), `"value" = 18446744073709551615`},
 		{"negative ordinary", types.Int(8), warehouses.OpIsNot, 100, `"value" <> 100`},
 		{"float outside decimal range", types.Float(64), warehouses.OpIs, 1e100, `"value" = 1E+100`},
-		{"datetime offset", types.DateTime(), warehouses.OpIsAfter, time.Date(2026, 10, 24, 12, 0, 0, 123456789, time.FixedZone("", 7200)), `"value" > '2026-10-24 12:00:00.123456'`},
+		{"datetime offset", types.DateTime(), warehouses.OpIsAfter, time.Date(2026, 10, 24, 12, 0, 0, 123456789, time.FixedZone("", 7200)), `"value" > '2026-10-24 10:00:00.123456'`},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			expr := warehouses.NewBaseExpr(warehouses.Column{Name: "value", Type: test.typ}, test.op, test.value)
@@ -135,16 +135,16 @@ func TestTypedJSONRendering(t *testing.T) {
 		values []any
 		want   string
 	}{
-		{"String numeric text", warehouses.OpIs, []any{json.Value(`"100"`)}, `COALESCE(CASE WHEN jsonb_typeof("value") = 'string' THEN ("value" #>> '{}') COLLATE "C" = '100' ELSE FALSE END, FALSE)`},
-		{"Number decimal notation", warehouses.OpIs, []any{json.Value("100.0")}, `COALESCE(CASE WHEN jsonb_typeof("value") = 'number' THEN ("value")::numeric = 100 ELSE FALSE END, FALSE)`},
-		{"Number exponent notation", warehouses.OpIs, []any{json.Value("1e2")}, `COALESCE(CASE WHEN jsonb_typeof("value") = 'number' THEN ("value")::numeric = 100 ELSE FALSE END, FALSE)`},
-		{"negative Number", warehouses.OpIsNot, []any{json.Value("100")}, `NOT COALESCE(CASE WHEN jsonb_typeof("value") = 'number' THEN ("value")::numeric = 100 ELSE FALSE END, FALSE)`},
-		{"mixed membership", warehouses.OpIsOneOf, []any{json.Value("100"), json.Value(`"100"`), json.Value("false"), json.Value("null")}, `COALESCE(CASE WHEN jsonb_typeof("value") = 'string' THEN ("value" #>> '{}') COLLATE "C" IN ('100') WHEN jsonb_typeof("value") = 'number' THEN ("value")::numeric IN (100) WHEN jsonb_typeof("value") = 'boolean' THEN "value" IN ('false'::jsonb) WHEN jsonb_typeof("value") = 'null' THEN TRUE ELSE FALSE END, FALSE)`},
-		{"negative mixed membership", warehouses.OpIsNotOneOf, []any{json.Value("100"), json.Value(`"100"`), json.Value("false"), json.Value("null")}, `NOT COALESCE(CASE WHEN jsonb_typeof("value") = 'string' THEN ("value" #>> '{}') COLLATE "C" IN ('100') WHEN jsonb_typeof("value") = 'number' THEN ("value")::numeric IN (100) WHEN jsonb_typeof("value") = 'boolean' THEN "value" IN ('false'::jsonb) WHEN jsonb_typeof("value") = 'null' THEN TRUE ELSE FALSE END, FALSE)`},
-		{"Null member", warehouses.OpIsOneOf, []any{json.Value("null")}, `COALESCE(CASE WHEN jsonb_typeof("value") = 'null' THEN TRUE ELSE FALSE END, FALSE)`},
-		{"negative Null member", warehouses.OpIsNotOneOf, []any{json.Value("null")}, `NOT COALESCE(CASE WHEN jsonb_typeof("value") = 'null' THEN TRUE ELSE FALSE END, FALSE)`},
-		{"false member", warehouses.OpIsOneOf, []any{json.Value("false")}, `COALESCE(CASE WHEN jsonb_typeof("value") = 'boolean' THEN "value" IN ('false'::jsonb) ELSE FALSE END, FALSE)`},
-		{"empty String", warehouses.OpIs, []any{json.Value(`""`)}, `COALESCE(CASE WHEN jsonb_typeof("value") = 'string' THEN ("value" #>> '{}') COLLATE "C" = '' ELSE FALSE END, FALSE)`},
+		{"String numeric text", warehouses.OpIs, []any{json.Value(`"100"`)}, `"value" = '"100"'::jsonb`},
+		{"Number decimal notation", warehouses.OpIs, []any{json.Value("100.0")}, `"value" = '100'::jsonb`},
+		{"Number exponent notation", warehouses.OpIs, []any{json.Value("1e2")}, `"value" = '100'::jsonb`},
+		{"negative Number", warehouses.OpIsNot, []any{json.Value("100")}, `"value" <> '100'::jsonb`},
+		{"mixed membership", warehouses.OpIsOneOf, []any{json.Value("100"), json.Value(`"100"`), json.Value("false"), json.Value("null")}, `"value" IN ('100'::jsonb, '"100"'::jsonb, 'false'::jsonb, 'null'::jsonb)`},
+		{"negative mixed membership", warehouses.OpIsNotOneOf, []any{json.Value("100"), json.Value(`"100"`), json.Value("false"), json.Value("null")}, `"value" NOT IN ('100'::jsonb, '"100"'::jsonb, 'false'::jsonb, 'null'::jsonb)`},
+		{"Null member", warehouses.OpIsOneOf, []any{json.Value("null")}, `"value" IN ('null'::jsonb)`},
+		{"negative Null member", warehouses.OpIsNotOneOf, []any{json.Value("null")}, `"value" NOT IN ('null'::jsonb)`},
+		{"false member", warehouses.OpIsOneOf, []any{json.Value("false")}, `"value" IN ('false'::jsonb)`},
+		{"empty String", warehouses.OpIs, []any{json.Value(`""`)}, `"value" = '""'::jsonb`},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			column := warehouses.Column{Name: "value", Type: types.JSON()}

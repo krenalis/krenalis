@@ -66,7 +66,7 @@ func TestTypedFilterOrdinarySQLRegression(t *testing.T) {
 		{"unsigned maximum", types.Int(64).Unsigned(), warehouses.OpIs, uint(18446744073709551615), `"VALUE" = 18446744073709551615`},
 		{"negative ordinary", types.Int(8), warehouses.OpIsNot, 100, `"VALUE" <> 100`},
 		{"float outside decimal range", types.Float(64), warehouses.OpIs, 1e100, `"VALUE" = 1E+100`},
-		{"datetime offset", types.DateTime(), warehouses.OpIsAfter, time.Date(2026, 10, 24, 12, 0, 0, 123456789, time.FixedZone("", 7200)), `"VALUE" > '2026-10-24 12:00:00.123456789'`},
+		{"datetime offset", types.DateTime(), warehouses.OpIsAfter, time.Date(2026, 10, 24, 12, 0, 0, 123456789, time.FixedZone("", 7200)), `"VALUE" > '2026-10-24 10:00:00.123456789'`},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			expr := warehouses.NewBaseExpr(warehouses.Column{Name: "value", Type: test.typ}, test.op, test.value)
@@ -135,16 +135,16 @@ func TestTypedJSONRendering(t *testing.T) {
 		values []any
 		want   string
 	}{
-		{"String numeric text", warehouses.OpIs, []any{json.Value(`"100"`)}, `COALESCE(CASE WHEN IS_VARCHAR("VALUE") THEN COLLATE(AS_VARCHAR("VALUE"), 'utf8') = '100' ELSE FALSE END, FALSE)`},
-		{"Number decimal notation", warehouses.OpIs, []any{json.Value("100.0")}, `COALESCE(CASE WHEN (IS_DECIMAL("VALUE") OR IS_DOUBLE("VALUE")) THEN TRY_TO_DECFLOAT(TO_JSON("VALUE")) = TO_DECFLOAT('1e2') ELSE FALSE END, FALSE)`},
-		{"Number exponent notation", warehouses.OpIs, []any{json.Value("1e2")}, `COALESCE(CASE WHEN (IS_DECIMAL("VALUE") OR IS_DOUBLE("VALUE")) THEN TRY_TO_DECFLOAT(TO_JSON("VALUE")) = TO_DECFLOAT('1e2') ELSE FALSE END, FALSE)`},
-		{"negative Number", warehouses.OpIsNot, []any{json.Value("100")}, `NOT COALESCE(CASE WHEN (IS_DECIMAL("VALUE") OR IS_DOUBLE("VALUE")) THEN TRY_TO_DECFLOAT(TO_JSON("VALUE")) = TO_DECFLOAT('1e2') ELSE FALSE END, FALSE)`},
-		{"mixed membership", warehouses.OpIsOneOf, []any{json.Value("100"), json.Value(`"100"`), json.Value("false"), json.Value("null")}, `COALESCE(CASE WHEN IS_VARCHAR("VALUE") THEN COLLATE(AS_VARCHAR("VALUE"), 'utf8') IN ('100') WHEN (IS_DECIMAL("VALUE") OR IS_DOUBLE("VALUE")) THEN TRY_TO_DECFLOAT(TO_JSON("VALUE")) IN (TO_DECFLOAT('1e2')) WHEN AS_BOOLEAN("VALUE") IS NOT NULL THEN AS_BOOLEAN("VALUE") IN (FALSE) WHEN IS_NULL_VALUE("VALUE") THEN TRUE ELSE FALSE END, FALSE)`},
-		{"negative mixed membership", warehouses.OpIsNotOneOf, []any{json.Value("100"), json.Value(`"100"`), json.Value("false"), json.Value("null")}, `NOT COALESCE(CASE WHEN IS_VARCHAR("VALUE") THEN COLLATE(AS_VARCHAR("VALUE"), 'utf8') IN ('100') WHEN (IS_DECIMAL("VALUE") OR IS_DOUBLE("VALUE")) THEN TRY_TO_DECFLOAT(TO_JSON("VALUE")) IN (TO_DECFLOAT('1e2')) WHEN AS_BOOLEAN("VALUE") IS NOT NULL THEN AS_BOOLEAN("VALUE") IN (FALSE) WHEN IS_NULL_VALUE("VALUE") THEN TRUE ELSE FALSE END, FALSE)`},
-		{"Null member", warehouses.OpIsOneOf, []any{json.Value("null")}, `COALESCE(CASE WHEN IS_NULL_VALUE("VALUE") THEN TRUE ELSE FALSE END, FALSE)`},
-		{"negative Null member", warehouses.OpIsNotOneOf, []any{json.Value("null")}, `NOT COALESCE(CASE WHEN IS_NULL_VALUE("VALUE") THEN TRUE ELSE FALSE END, FALSE)`},
-		{"false member", warehouses.OpIsOneOf, []any{json.Value("false")}, `COALESCE(CASE WHEN AS_BOOLEAN("VALUE") IS NOT NULL THEN AS_BOOLEAN("VALUE") IN (FALSE) ELSE FALSE END, FALSE)`},
-		{"empty String", warehouses.OpIs, []any{json.Value(`""`)}, `COALESCE(CASE WHEN IS_VARCHAR("VALUE") THEN COLLATE(AS_VARCHAR("VALUE"), 'utf8') = '' ELSE FALSE END, FALSE)`},
+		{"String numeric text", warehouses.OpIs, []any{json.Value(`"100"`)}, `CASE WHEN "VALUE" IS NOT NULL THEN COALESCE(CASE WHEN IS_VARCHAR("VALUE") THEN COLLATE(AS_VARCHAR("VALUE"), 'utf8') = '100' ELSE FALSE END, FALSE) ELSE NULL END`},
+		{"Number decimal notation", warehouses.OpIs, []any{json.Value("100.0")}, `CASE WHEN "VALUE" IS NOT NULL THEN COALESCE(CASE WHEN (IS_DECIMAL("VALUE") OR IS_DOUBLE("VALUE")) THEN TRY_TO_DECFLOAT(TO_JSON("VALUE")) = TO_DECFLOAT('1e2') ELSE FALSE END, FALSE) ELSE NULL END`},
+		{"Number exponent notation", warehouses.OpIs, []any{json.Value("1e2")}, `CASE WHEN "VALUE" IS NOT NULL THEN COALESCE(CASE WHEN (IS_DECIMAL("VALUE") OR IS_DOUBLE("VALUE")) THEN TRY_TO_DECFLOAT(TO_JSON("VALUE")) = TO_DECFLOAT('1e2') ELSE FALSE END, FALSE) ELSE NULL END`},
+		{"negative Number", warehouses.OpIsNot, []any{json.Value("100")}, `CASE WHEN "VALUE" IS NOT NULL THEN NOT COALESCE(CASE WHEN (IS_DECIMAL("VALUE") OR IS_DOUBLE("VALUE")) THEN TRY_TO_DECFLOAT(TO_JSON("VALUE")) = TO_DECFLOAT('1e2') ELSE FALSE END, FALSE) ELSE NULL END`},
+		{"mixed membership", warehouses.OpIsOneOf, []any{json.Value("100"), json.Value(`"100"`), json.Value("false"), json.Value("null")}, `CASE WHEN "VALUE" IS NOT NULL THEN COALESCE(CASE WHEN IS_VARCHAR("VALUE") THEN COLLATE(AS_VARCHAR("VALUE"), 'utf8') IN ('100') WHEN (IS_DECIMAL("VALUE") OR IS_DOUBLE("VALUE")) THEN TRY_TO_DECFLOAT(TO_JSON("VALUE")) IN (TO_DECFLOAT('1e2')) WHEN AS_BOOLEAN("VALUE") IS NOT NULL THEN AS_BOOLEAN("VALUE") IN (FALSE) WHEN IS_NULL_VALUE("VALUE") THEN TRUE ELSE FALSE END, FALSE) ELSE NULL END`},
+		{"negative mixed membership", warehouses.OpIsNotOneOf, []any{json.Value("100"), json.Value(`"100"`), json.Value("false"), json.Value("null")}, `CASE WHEN "VALUE" IS NOT NULL THEN NOT COALESCE(CASE WHEN IS_VARCHAR("VALUE") THEN COLLATE(AS_VARCHAR("VALUE"), 'utf8') IN ('100') WHEN (IS_DECIMAL("VALUE") OR IS_DOUBLE("VALUE")) THEN TRY_TO_DECFLOAT(TO_JSON("VALUE")) IN (TO_DECFLOAT('1e2')) WHEN AS_BOOLEAN("VALUE") IS NOT NULL THEN AS_BOOLEAN("VALUE") IN (FALSE) WHEN IS_NULL_VALUE("VALUE") THEN TRUE ELSE FALSE END, FALSE) ELSE NULL END`},
+		{"Null member", warehouses.OpIsOneOf, []any{json.Value("null")}, `CASE WHEN "VALUE" IS NOT NULL THEN COALESCE(CASE WHEN IS_NULL_VALUE("VALUE") THEN TRUE ELSE FALSE END, FALSE) ELSE NULL END`},
+		{"negative Null member", warehouses.OpIsNotOneOf, []any{json.Value("null")}, `CASE WHEN "VALUE" IS NOT NULL THEN NOT COALESCE(CASE WHEN IS_NULL_VALUE("VALUE") THEN TRUE ELSE FALSE END, FALSE) ELSE NULL END`},
+		{"false member", warehouses.OpIsOneOf, []any{json.Value("false")}, `CASE WHEN "VALUE" IS NOT NULL THEN COALESCE(CASE WHEN AS_BOOLEAN("VALUE") IS NOT NULL THEN AS_BOOLEAN("VALUE") IN (FALSE) ELSE FALSE END, FALSE) ELSE NULL END`},
+		{"empty String", warehouses.OpIs, []any{json.Value(`""`)}, `CASE WHEN "VALUE" IS NOT NULL THEN COALESCE(CASE WHEN IS_VARCHAR("VALUE") THEN COLLATE(AS_VARCHAR("VALUE"), 'utf8') = '' ELSE FALSE END, FALSE) ELSE NULL END`},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			column := warehouses.Column{Name: "value", Type: types.JSON()}

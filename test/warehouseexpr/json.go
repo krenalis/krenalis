@@ -23,8 +23,47 @@ type JSONCase struct {
 	Matches  []int
 }
 
+// Nulls returns the fixture indices expected to produce SQL NULL.
+// The index groups refer to the fixture order returned by JSONCases.
+func (c JSONCase) Nulls(fixtureCount int) []int {
+	stringIDs := []int{4, 5, 6, 7, 8, 9, 10, 27, 28, 29, 30}
+	numberIDs := []int{11, 12, 13, 14, 15, 16, 17, 18, 19, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40}
+	arrayIDs := []int{22, 23, 24, 25, 26}
+	var applicable []int
+	switch c.Operator {
+	case warehouses.OpIs, warehouses.OpIsNot, warehouses.OpIsOneOf, warehouses.OpIsNotOneOf,
+		warehouses.OpIsTrue, warehouses.OpIsFalse:
+		return []int{0}
+	case warehouses.OpIsLessThan, warehouses.OpIsLessThanOrEqualTo, warehouses.OpIsGreaterThan,
+		warehouses.OpIsGreaterThanOrEqualTo, warehouses.OpIsBetween, warehouses.OpIsNotBetween:
+		applicable = numberIDs
+		if c.Values[0].(json.Value).IsString() {
+			applicable = stringIDs
+		}
+	case warehouses.OpContains, warehouses.OpDoesNotContain:
+		applicable = arrayIDs
+		if c.Values[0].(json.Value).IsString() {
+			applicable = append(applicable, stringIDs...)
+		}
+	case warehouses.OpStartsWith, warehouses.OpEndsWith:
+		applicable = stringIDs
+	case warehouses.OpIsEmpty, warehouses.OpIsNotEmpty, warehouses.OpIsNull, warehouses.OpIsNotNull,
+		warehouses.OpExists, warehouses.OpDoesNotExist:
+		return nil
+	default:
+		panic(fmt.Sprintf("test/warehouseexpr: unexpected JSON operator %d", c.Operator))
+	}
+	var nulls []int
+	for i := range fixtureCount {
+		if !slices.Contains(applicable, i) {
+			nulls = append(nulls, i)
+		}
+	}
+	return nulls
+}
+
 // JSONCases returns JSON fixtures and manually specified positive matches.
-// Negative matches are complements, as defined by the filter evaluator.
+// Negative matches exclude absent and inapplicable values.
 // A nil fixture represents an absent property, distinct from JSON null.
 func JSONCases() ([]json.Value, []JSONCase) {
 	values := []json.Value{
@@ -182,8 +221,9 @@ func JSONCases() ([]json.Value, []JSONCase) {
 			continue
 		}
 		var matches []int
+		nulls := c.Nulls(len(values))
 		for i := range values {
-			if !slices.Contains(c.Matches, i) {
+			if !slices.Contains(c.Matches, i) && !slices.Contains(nulls, i) {
 				matches = append(matches, i)
 			}
 		}

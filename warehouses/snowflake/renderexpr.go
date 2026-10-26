@@ -130,6 +130,48 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		serializeValue(b, baseExpr.Values[1], c.Type)
 
 	case warehouses.OpContains, warehouses.OpDoesNotContain:
+		if c.Type.IsArray() {
+			elem := c.Type.Elem()
+			switch elem.Kind() {
+			case types.FloatKind, types.DateTimeKind, types.DateKind, types.TimeKind:
+				fmt.Fprintf(b, "CASE WHEN %s IS NOT NULL THEN ", qname)
+				if op == warehouses.OpDoesNotContain {
+					b.WriteString("NOT ")
+				}
+				fmt.Fprintf(b, "(ARRAY_SIZE(FILTER(%s, krenalis_element -> ", qname)
+				switch elem.Kind() {
+				case types.FloatKind:
+					b.WriteString("TO_DOUBLE(krenalis_element)")
+				case types.DateTimeKind:
+					b.WriteString("CONVERT_TIMEZONE('UTC', " +
+						"TO_TIMESTAMP_TZ(AS_VARCHAR(krenalis_element)))::TIMESTAMP_NTZ")
+				case types.DateKind:
+					b.WriteString("TO_DATE(AS_VARCHAR(krenalis_element))")
+				case types.TimeKind:
+					b.WriteString("TO_TIME(AS_VARCHAR(krenalis_element))")
+				default:
+					return fmt.Errorf("warehouses/snowflake: unexpected array element type %s", elem)
+				}
+				b.WriteString(" = ")
+				if value, ok := baseExpr.Values[0].(float64); ok && elem.IsFloat(32) {
+					// Array JSON uses the element's floating-point precision.
+					b.WriteString(strconv.FormatFloat(value, 'G', -1, 32))
+				} else {
+					serializeValue(b, baseExpr.Values[0], elem)
+				}
+				b.WriteString(")) > 0) ELSE NULL END")
+				return nil
+			default:
+				// Match the JSON encoding used when array elements are stored.
+				value, err := types.Marshal(baseExpr.Values[0], elem)
+				if err != nil {
+					return err
+				}
+				expr := warehouses.NewBaseExpr(c, op, value)
+				expr.JSONComparison = warehouses.JSONTypedComparison
+				return renderJSONExpr(b, expr)
+			}
+		}
 		if op == warehouses.OpDoesNotContain {
 			b.WriteString("NOT ")
 		}
@@ -250,8 +292,8 @@ func renderJSONComparison(b *strings.Builder, target, operator string, value jso
 }
 
 // renderJSONExpr renders filters on JSON columns and containers of JSON values.
-// Predicates on JSON values are two-valued, so negative operators include
-// absent values, nulls, and non-matching JSON kinds.
+// Value predicates preserve SQL NULL for absent or inapplicable values.
+// Data-state predicates remain two-valued.
 func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 
 	if expr.JSONComparison != warehouses.JSONStructuralComparison &&
@@ -414,6 +456,34 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 		return fmt.Errorf("JSON interval bounds must have the same kind")
 	}
 
+	applicability := ""
+	switch op {
+	case warehouses.OpIs, warehouses.OpIsOneOf, warehouses.OpIsTrue, warehouses.OpIsFalse:
+		applicability = target + " IS NOT NULL"
+	case warehouses.OpIsLessThan, warehouses.OpIsLessThanOrEqualTo, warehouses.OpIsGreaterThan,
+		warehouses.OpIsGreaterThanOrEqualTo, warehouses.OpIsBetween:
+		if values[0].IsString() {
+			applicability = fmt.Sprintf("IS_VARCHAR(%s)", target)
+		} else {
+			applicability = fmt.Sprintf("(IS_DECIMAL(%s) OR IS_DOUBLE(%s))", target, target)
+		}
+	case warehouses.OpContains:
+		if c.Type.IsArray() {
+			applicability = target + " IS NOT NULL"
+		} else if values[0].IsString() {
+			applicability = fmt.Sprintf("(IS_VARCHAR(%s) OR IS_ARRAY(%s))", target, target)
+		} else {
+			applicability = fmt.Sprintf("IS_ARRAY(%s)", target)
+		}
+	case warehouses.OpStartsWith, warehouses.OpEndsWith:
+		applicability = fmt.Sprintf("IS_VARCHAR(%s)", target)
+	default:
+		// Data-state predicates apply even when the value is absent.
+	}
+	if applicability != "" {
+		fmt.Fprintf(b, "CASE WHEN %s THEN ", applicability)
+	}
+
 	if op == warehouses.OpIsTrue || op == warehouses.OpIsFalse {
 		fmt.Fprintf(b, "AS_BOOLEAN(%s) IS NOT DISTINCT FROM ", target)
 		if op == warehouses.OpIsTrue {
@@ -421,6 +491,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 		} else {
 			b.WriteString("FALSE")
 		}
+		b.WriteString(" ELSE NULL END")
 		return nil
 	}
 
@@ -548,6 +619,9 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 
 	}
 	b.WriteString(", FALSE)")
+	if applicability != "" {
+		b.WriteString(" ELSE NULL END")
+	}
 
 	return nil
 }
@@ -623,7 +697,7 @@ func serializeValue(b *strings.Builder, v any, t types.Type) {
 		b.WriteByte('\'')
 		switch t.Kind() {
 		case types.DateTimeKind:
-			b.WriteString(v.Format("2006-01-02 15:04:05.999999999"))
+			b.WriteString(v.UTC().Format("2006-01-02 15:04:05.999999999"))
 		case types.DateKind:
 			b.WriteString(v.Format(time.DateOnly))
 		case types.TimeKind:

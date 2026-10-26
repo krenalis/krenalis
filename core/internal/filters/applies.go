@@ -46,6 +46,30 @@ func appliesCondition(condition *state.WhereCondition, attributes map[string]any
 
 	op := condition.Operator
 	v, exists := readAttributeFrom(attributes, condition.Property)
+	// The first 20 operators test values; the remaining six test data state.
+	if op < state.OpIsEmpty && (!exists || v == nil) {
+		return false
+	}
+	if value, ok := v.(json.Value); ok {
+		switch op {
+		case state.OpIsLessThan, state.OpIsLessThanOrEqualTo, state.OpIsGreaterThan,
+			state.OpIsGreaterThanOrEqualTo, state.OpIsBetween, state.OpIsNotBetween:
+			operand := condition.Values[0].(json.Value)
+			if value.Kind() != operand.Kind() || !value.IsString() && !value.IsNumber() {
+				return false
+			}
+		case state.OpContains, state.OpDoesNotContain:
+			if !value.IsArray() && !(value.IsString() && condition.Values[0].(json.Value).IsString()) {
+				return false
+			}
+		case state.OpStartsWith, state.OpEndsWith:
+			if !value.IsString() {
+				return false
+			}
+		default:
+			// Other operators have no JSON kind applicability restriction.
+		}
+	}
 	switch op {
 	case state.OpIs:
 		return opIs(v, condition.Values)
@@ -238,7 +262,7 @@ func opIsBetween(v any, values []any) bool {
 	case time.Time:
 		v0 := v0.(time.Time)
 		v1 := v1.(time.Time)
-		return v.After(v0) && v.Before(v1) || v.Equal(v0) || v.Equal(v1)
+		return (v.After(v0) || v.Equal(v0)) && (v.Before(v1) || v.Equal(v1))
 	case int:
 		return v0.(int) <= v && v <= v1.(int)
 	case uint:

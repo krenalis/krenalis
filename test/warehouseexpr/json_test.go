@@ -5,6 +5,7 @@
 package warehouseexpr
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/krenalis/krenalis/tools/json"
@@ -35,6 +36,15 @@ func TestJSONCases(t *testing.T) {
 		for _, i := range c.Matches {
 			if i < 0 || i >= len(values) || i <= previous {
 				t.Errorf("expected sorted unique indices in [0, %d) for %s, got %v", len(values), c.Name, c.Matches)
+				break
+			}
+			previous = i
+		}
+		previous = -1
+		nulls := c.Nulls(len(values))
+		for _, i := range nulls {
+			if i < 0 || i >= len(values) || i <= previous || slices.Contains(c.Matches, i) {
+				t.Errorf("expected sorted unique NULL indices disjoint from matches for %s, got %v", c.Name, nulls)
 				break
 			}
 			previous = i

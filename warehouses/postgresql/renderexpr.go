@@ -245,27 +245,20 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 }
 
 // renderJSONComparison compares a validated JSON String or Number operand.
-// Strings use byte order and numbers use exact decimal ordering.
+// Equality uses typed JSONB; ordered strings retain byte order.
 func renderJSONComparison(b *strings.Builder, target, operator string, value json.Value) {
-	if value.IsString() {
-		fmt.Fprintf(b, "CASE WHEN jsonb_typeof(%s) = 'string' THEN (%s #>> '{}') COLLATE \"C\" %s ",
-			target, target, operator)
+	if value.IsString() && operator != "=" && operator != "<>" {
+		fmt.Fprintf(b, "(%s #>> '{}') COLLATE \"C\" %s ", target, operator)
 		quoteString(b, value.String())
 	} else {
-		number, err := value.Decimal(0, 0)
-		if err != nil {
-			panic(fmt.Sprintf("warehouses/postgresql: invalid prepared JSON operand: %v", err))
-		}
-		_, scale := number.PrecisionScale()
-		fmt.Fprintf(b, "CASE WHEN jsonb_typeof(%s) = 'number' THEN (%s)::numeric %s %.*f",
-			target, target, operator, scale, number)
+		fmt.Fprintf(b, "%s %s ", target, operator)
+		serializeValue(b, value, types.JSON())
 	}
-	b.WriteString(" ELSE FALSE END")
 }
 
 // renderJSONExpr renders filters on JSON columns and containers of JSON values.
-// Predicates on JSON values are two-valued, so negative operators include
-// absent values, nulls, and non-matching JSON kinds.
+// Value predicates preserve SQL NULL for absent or inapplicable values.
+// Data-state predicates remain two-valued.
 func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 
 	if expr.JSONComparison != warehouses.JSONStructuralComparison &&
@@ -419,6 +412,9 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 			if !types.IsDecimal(number) {
 				return fmt.Errorf("decimal operand exceeds precision 76 or scale 37")
 			}
+			// Reuse the validated decimal to keep JSON numeric literals bounded.
+			_, scale := number.PrecisionScale()
+			value = json.Value(fmt.Sprintf("%.*f", scale, number))
 		case json.True, json.False, json.Null:
 			if op != warehouses.OpIsOneOf {
 				return fmt.Errorf("JSON boolean and null operands require membership")
@@ -432,21 +428,44 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 		return fmt.Errorf("JSON interval bounds must have the same kind")
 	}
 
-	if op == warehouses.OpIsTrue || op == warehouses.OpIsFalse {
-		b.WriteString(target)
-		b.WriteString(" IS NOT DISTINCT FROM ")
-		if op == warehouses.OpIsTrue {
-			b.WriteString("'true'::jsonb")
-		} else {
-			b.WriteString("'false'::jsonb")
+	applicability := ""
+	switch op {
+	case warehouses.OpIsLessThan, warehouses.OpIsLessThanOrEqualTo, warehouses.OpIsGreaterThan,
+		warehouses.OpIsGreaterThanOrEqualTo, warehouses.OpIsBetween:
+		kind := "number"
+		if values[0].IsString() {
+			kind = "string"
 		}
+		applicability = fmt.Sprintf("jsonb_typeof(%s) = '%s'", target, kind)
+	case warehouses.OpContains:
+		if c.Type.IsArray() {
+			applicability = target + " IS NOT NULL"
+		} else if values[0].IsString() {
+			applicability = fmt.Sprintf("jsonb_typeof(%s) IN ('string', 'array')", target)
+		} else {
+			applicability = fmt.Sprintf("jsonb_typeof(%s) = 'array'", target)
+		}
+	case warehouses.OpStartsWith, warehouses.OpEndsWith:
+		applicability = fmt.Sprintf("jsonb_typeof(%s) = 'string'", target)
+	default:
+		// Other predicates do not need an applicability guard.
+	}
+	if applicability != "" {
+		fmt.Fprintf(b, "CASE WHEN %s THEN ", applicability)
+	}
+
+	if op == warehouses.OpIsTrue || op == warehouses.OpIsFalse {
+		fmt.Fprintf(b, "%s = '%t'::jsonb", target, op == warehouses.OpIsTrue)
 		return nil
 	}
 
-	if negative {
+	if negative && op != warehouses.OpIs && op != warehouses.OpIsOneOf {
 		b.WriteString("NOT ")
 	}
-	b.WriteString("COALESCE(")
+	dataState := op == warehouses.OpIsEmpty || op == warehouses.OpIsNull || op == warehouses.OpExists
+	if dataState {
+		b.WriteString("COALESCE(")
+	}
 	switch op {
 
 	case warehouses.OpIs, warehouses.OpIsLessThan, warehouses.OpIsLessThanOrEqualTo,
@@ -455,6 +474,9 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 			warehouses.OpIs: "=", warehouses.OpIsLessThan: "<", warehouses.OpIsLessThanOrEqualTo: "<=",
 			warehouses.OpIsGreaterThan: ">", warehouses.OpIsGreaterThanOrEqualTo: ">=",
 		}[op]
+		if op == warehouses.OpIs && negative {
+			operator = "<>"
+		}
 		renderJSONComparison(b, target, operator, values[0])
 
 	case warehouses.OpIsBetween:
@@ -465,44 +487,18 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 		b.WriteByte(')')
 
 	case warehouses.OpIsOneOf:
-		// Partition by kind without coercing a value into another domain.
-		var texts, numbers, booleans []string
-		hasNull := false
-		for _, operand := range values {
-			switch operand.Kind() {
-			case json.String:
-				var literal strings.Builder
-				quoteString(&literal, operand.String())
-				texts = append(texts, literal.String())
-			case json.Number:
-				number, _ := operand.Decimal(0, 0) // Validated above.
-				_, scale := number.PrecisionScale()
-				numbers = append(numbers, fmt.Sprintf("%.*f", scale, number))
-			case json.True, json.False:
-				booleans = append(booleans, "'"+string(operand)+"'::jsonb")
-			case json.Null:
-				hasNull = true
-			default:
-				return fmt.Errorf("warehouses/postgresql: unexpected JSON operand kind %v", operand.Kind())
+		b.WriteString(target)
+		if negative {
+			b.WriteString(" NOT")
+		}
+		b.WriteString(" IN (")
+		for i, value := range values {
+			if i > 0 {
+				b.WriteString(", ")
 			}
+			serializeValue(b, value, types.JSON())
 		}
-		b.WriteString("CASE")
-		if len(texts) > 0 {
-			fmt.Fprintf(b, " WHEN jsonb_typeof(%s) = 'string' THEN (%s #>> '{}') COLLATE \"C\" IN (%s)",
-				target, target, strings.Join(texts, ", "))
-		}
-		if len(numbers) > 0 {
-			fmt.Fprintf(b, " WHEN jsonb_typeof(%s) = 'number' THEN (%s)::numeric IN (%s)",
-				target, target, strings.Join(numbers, ", "))
-		}
-		if len(booleans) > 0 {
-			fmt.Fprintf(b, " WHEN jsonb_typeof(%s) = 'boolean' THEN %s IN (%s)",
-				target, target, strings.Join(booleans, ", "))
-		}
-		if hasNull {
-			fmt.Fprintf(b, " WHEN jsonb_typeof(%s) = 'null' THEN TRUE", target)
-		}
-		b.WriteString(" ELSE FALSE END")
+		b.WriteByte(')')
 
 	case warehouses.OpContains:
 		if c.Type.IsMap() {
@@ -528,7 +524,6 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 		b.WriteByte(')')
 
 	case warehouses.OpStartsWith, warehouses.OpEndsWith:
-		fmt.Fprintf(b, "(jsonb_typeof(%s) = 'string' AND ", target)
 		if op == warehouses.OpStartsWith {
 			b.WriteString("LEFT(")
 		} else {
@@ -538,7 +533,6 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 		quoteString(b, values[0].String())
 		b.WriteString(")) COLLATE \"C\" = ")
 		quoteString(b, values[0].String())
-		b.WriteByte(')')
 
 	case warehouses.OpIsEmpty:
 		fmt.Fprintf(b, "(%s IS NULL OR %s IN ('null'::jsonb, '\"\"'::jsonb, '[]'::jsonb, '{}'::jsonb))",
@@ -552,7 +546,12 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 		b.WriteString(" IS NOT NULL")
 
 	}
-	b.WriteString(", FALSE)")
+	if dataState {
+		b.WriteString(", FALSE)")
+	}
+	if applicability != "" {
+		b.WriteString(" ELSE NULL END")
+	}
 
 	return nil
 }
@@ -585,7 +584,7 @@ func serializeValue(b *strings.Builder, v any, t types.Type) {
 		b.WriteByte('\'')
 		switch t.Kind() {
 		case types.DateTimeKind:
-			b.WriteString(v.Format("2006-01-02 15:04:05.999999"))
+			b.WriteString(v.UTC().Format("2006-01-02 15:04:05.999999"))
 		case types.DateKind:
 			b.WriteString(v.Format(time.DateOnly))
 		case types.TimeKind:

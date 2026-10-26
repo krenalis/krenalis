@@ -109,7 +109,7 @@ func TestAppliesTypedMembershipPresence(t *testing.T) {
 		present bool
 		matches bool
 	}{
-		{"missing", nil, false, false}, {"Go nil present", nil, true, true},
+		{"missing", nil, false, false}, {"Go nil present", nil, true, false},
 		{"JSON null", json.Value("null"), true, true}, {"Boolean false", json.Value("false"), true, true},
 		{"Boolean true", json.Value("true"), true, false}, {"Number zero", json.Value("0"), true, false},
 		{"Number", json.Value("100"), true, true}, {"Number fraction", json.Value("100.0"), true, true},
@@ -129,6 +129,9 @@ func TestAppliesTypedMembershipPresence(t *testing.T) {
 						json.Value("100"), json.Value(`"100"`), json.Value("false"), json.Value("null"),
 					}},
 				}}
+				if !test.present || test.value == nil {
+					expected = false
+				}
 				attributes := map[string]any{}
 				if test.present {
 					attributes["value"] = test.value
