@@ -166,7 +166,7 @@ const SchemaGrid = () => {
 					{detailsPanelProperty != null && (
 						<div className='schema-grid__details-panel' onTransitionEnd={onDetailsPanelTransitionEnd}>
 							<PropertyDetailsPanel
-								assignedRole={detailsPanelProperty.assignedRole}
+								propertyRole={detailsPanelProperty.propertyRole}
 								identifierPosition={detailsPanelProperty.identifierPosition}
 								property={detailsPanelProperty.property}
 								primarySource={detailsPanelProperty.primarySource}

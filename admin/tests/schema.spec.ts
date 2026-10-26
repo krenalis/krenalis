@@ -1,7 +1,7 @@
 import { test, expect, type Locator } from '@playwright/test';
 import { login, logout, adminURL, logValidationErrors } from './utils';
 import Type, { ObjectType, Property } from '../src/lib/api/types/types';
-import { ConsentPurpose, ProfileRoleAssignments } from '../src/lib/api/types/workspace';
+import { ConsentPurpose, ProfilePropertyRoles } from '../src/lib/api/types/workspace';
 
 const createConsentPurpose = (id: string, name: string, property: string, jsonKey?: string): ConsentPurpose => ({
 	id,
@@ -34,24 +34,24 @@ const selectPropertyType = async (page, option: string) => {
 	await typeOption.click();
 };
 
-const selectProfileRole = async (page, role: string) => {
+const selectProfilePropertyRole = async (page, role: string) => {
 	const panel = page.locator('.property-panel');
-	const dropdown = panel.locator('.profile-role-selector');
-	const option = panel.locator(`[data-profile-role-option="${role}"]`);
+	const dropdown = panel.locator('.property-role-selector');
+	const option = panel.locator(`[data-property-role-option="${role}"]`);
 	await expect(dropdown).toHaveJSProperty('open', false);
 	await option.waitFor({ state: 'hidden' });
-	await panel.locator('.profile-role-selector__trigger').click();
+	await panel.locator('.property-role-selector__trigger').click();
 	await expect(dropdown).toHaveJSProperty('open', true);
 	await option.waitFor({ state: 'visible' });
 	await option.click();
 };
 
-const mockProfileRoles = async (page, assignedRoles: ProfileRoleAssignments) => {
+const mockProfilePropertyRoles = async (page, propertyRoles: ProfilePropertyRoles) => {
 	await page.route('**/v1/workspaces', async (route) => {
 		const response = await route.fetch();
 		const body = await response.json();
 		for (const workspace of body.workspaces) {
-			workspace.assignedRoles = assignedRoles;
+			workspace.propertyRoles = propertyRoles;
 		}
 		await route.fulfill({ response, json: body });
 	});
@@ -2059,8 +2059,8 @@ test(`Show materialized type catalogs, restrict transitions, and preserve physic
 	});
 });
 
-test(`Assign and reassign Profile roles only when the property form is confirmed`, async ({ page }) => {
-	await mockProfileRoles(page, {
+test(`Assign and reassign property roles only when the property form is confirmed`, async ({ page }) => {
+	await mockProfilePropertyRoles(page, {
 		firstName: 'first_name',
 		lastName: '',
 		email: 'semantic_email',
@@ -2085,74 +2085,74 @@ test(`Assign and reassign Profile roles only when the property form is confirmed
 	const reassignDialog = page.locator('.alert-dialog', { hasText: 'Reassign role?' });
 
 	await openProperty(page, 'preferred_name');
-	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('Assign a role...');
-	await selectProfileRole(page, 'lastName');
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Assign a role...');
+	await selectProfilePropertyRole(page, 'lastName');
 	await expect(reassignDialog).toBeHidden();
-	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('Last name');
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Last name');
 	await panel.locator('.property-panel__cancel').click();
 	await expect(roleCell(editGrid, 'preferred_name')).toBeEmpty();
 
 	await openProperty(page, 'preferred_name');
-	await selectProfileRole(page, 'lastName');
+	await selectProfilePropertyRole(page, 'lastName');
 	await expect(reassignDialog).toBeHidden();
 	await panel.locator('.property-panel__save').click();
 	await expect(roleCell(editGrid, 'preferred_name')).toHaveText('Last name');
 
 	await openProperty(page, 'first_name');
-	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('First name');
-	await panel.locator('.profile-role-selector__trigger').click();
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('First name');
+	await panel.locator('.property-role-selector__trigger').click();
 	expect(
 		await panel
-			.locator('[data-profile-role-option]')
-			.evaluateAll((options) => options.map((option) => option.getAttribute('data-profile-role-option'))),
+			.locator('[data-property-role-option]')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('data-property-role-option'))),
 	).toEqual(['none', 'firstName', 'lastName']);
-	await expect(panel.locator('[data-profile-role-option="lastName"]')).toContainText(
+	await expect(panel.locator('[data-property-role-option="lastName"]')).toContainText(
 		'Currently assigned to preferred_name',
 	);
 
 	await openProperty(page, 'semantic_email');
-	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('Email');
-	await panel.locator('.profile-role-selector__trigger').click();
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Email');
+	await panel.locator('.property-role-selector__trigger').click();
 	expect(
 		await panel
-			.locator('[data-profile-role-option]')
-			.evaluateAll((options) => options.map((option) => option.getAttribute('data-profile-role-option'))),
+			.locator('[data-property-role-option]')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('data-property-role-option'))),
 	).toEqual(['none', 'email']);
 	await openProperty(page, 'semantic_country');
-	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('Country');
-	await panel.locator('.profile-role-selector__trigger').click();
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Country');
+	await panel.locator('.property-role-selector__trigger').click();
 	expect(
 		await panel
-			.locator('[data-profile-role-option]')
-			.evaluateAll((options) => options.map((option) => option.getAttribute('data-profile-role-option'))),
+			.locator('[data-property-role-option]')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('data-property-role-option'))),
 	).toEqual(['none', 'country']);
 	await openProperty(page, 'active');
-	await expect(panel.locator('.property-form__assigned-role')).toHaveCount(0);
+	await expect(panel.locator('.property-form__role')).toHaveCount(0);
 	await openProperty(page, 'avatar_url');
-	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('Photo');
-	await panel.locator('.profile-role-selector__trigger').click();
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Photo');
+	await panel.locator('.property-role-selector__trigger').click();
 	expect(
 		await panel
-			.locator('[data-profile-role-option]')
-			.evaluateAll((options) => options.map((option) => option.getAttribute('data-profile-role-option'))),
+			.locator('[data-property-role-option]')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('data-property-role-option'))),
 	).toEqual(['none', 'photo']);
 
 	await openProperty(page, 'preferred_name');
-	await selectProfileRole(page, 'firstName');
+	await selectProfilePropertyRole(page, 'firstName');
 	await expect(reassignDialog).toContainText(
 		'First name is currently assigned to first_name. Reassign the First name role to preferred_name? ' +
 			'This will remove the Last name role from preferred_name.',
 	);
 	await reassignDialog.getByRole('button', { name: 'Reassign' }).click();
 	await expect(reassignDialog).toBeHidden();
-	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('First name');
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('First name');
 	await panel.locator('.property-panel__cancel').click();
 	await expect(roleCell(editGrid, 'first_name')).toHaveText('First name');
 	await expect(roleCell(editGrid, 'preferred_name')).toHaveText('Last name');
 
 	await openProperty(page, 'preferred_name');
-	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('Last name');
-	await selectProfileRole(page, 'firstName');
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Last name');
+	await selectProfilePropertyRole(page, 'firstName');
 	await reassignDialog.getByRole('button', { name: 'Reassign' }).click();
 	await expect(reassignDialog).toBeHidden();
 	await panel.locator('.property-form__change-name').click();
@@ -2167,8 +2167,8 @@ test(`Assign and reassign Profile roles only when the property form is confirmed
 	await page.locator('.schema-edit__header-apply-button').click();
 	await expect(page.locator('.schema-edit__queries')).toBeVisible();
 	await page.locator('.schema-edit__apply-alter-button').click();
-	const assignedRoles = (await alterRequestPromise).postDataJSON().assignedRoles;
-	expect(assignedRoles).toEqual({
+	const propertyRoles = (await alterRequestPromise).postDataJSON().propertyRoles;
+	expect(propertyRoles).toEqual({
 		firstName: 'preferred_name_updated',
 		lastName: '',
 		email: 'semantic_email',
@@ -2177,8 +2177,8 @@ test(`Assign and reassign Profile roles only when the property form is confirmed
 	});
 });
 
-test(`Confirm Profile role removal when a type becomes incompatible`, async ({ page }) => {
-	await mockProfileRoles(page, { firstName: '', lastName: '', email: '', country: '', photo: '' });
+test(`Confirm property role removal when a type becomes incompatible`, async ({ page }) => {
+	await mockProfilePropertyRoles(page, { firstName: '', lastName: '', email: '', country: '', photo: '' });
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
 	await editSchema(page);
@@ -2186,12 +2186,12 @@ test(`Confirm Profile role removal when a type becomes incompatible`, async ({ p
 	await page.locator('.schema-edit__add-property').click();
 	await panel.locator('.property-form__name-input input').fill('new_avatar_url');
 	await selectPropertyType(page, 'url');
-	await selectProfileRole(page, 'photo');
+	await selectProfilePropertyRole(page, 'photo');
 	await panel.locator('.property-panel__save').click();
 	const roleCell = page.locator('.schema-edit .grid__row[data-id="new_avatar_url"] .grid__cell-content').nth(3);
 	await expect(roleCell).toHaveText('Photo');
 	await openProperty(page, 'new_avatar_url');
-	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('Photo');
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Photo');
 
 	const typeTrigger = panel.locator('.property-type-selector__trigger .schema-property-type');
 	const initialType = await typeTrigger.innerText();
@@ -2201,22 +2201,22 @@ test(`Confirm Profile role removal when a type becomes incompatible`, async ({ p
 		'Changing the type to string will remove the Photo role from this property.',
 	);
 	await expect(typeTrigger).toHaveText(initialType);
-	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('Photo');
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Photo');
 	await changeTypeDialog.getByRole('button', { name: 'Cancel' }).click();
 	await expect(changeTypeDialog).toBeHidden();
 	await expect(typeTrigger).toHaveText(initialType);
-	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('Photo');
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Photo');
 
 	await selectPropertyType(page, 'string');
 	await changeTypeDialog.getByRole('button', { name: 'Change type' }).click();
 	await expect(changeTypeDialog).toBeHidden();
 	await expect(typeTrigger).toHaveText('string');
-	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('Assign a role...');
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Assign a role...');
 	await panel.locator('.property-panel__cancel').click();
 	await expect(roleCell).toHaveText('Photo');
 
 	await openProperty(page, 'new_avatar_url');
-	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('Photo');
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Photo');
 	await selectPropertyType(page, 'string');
 	await changeTypeDialog.getByRole('button', { name: 'Change type' }).click();
 	await expect(changeTypeDialog).toBeHidden();
@@ -2230,14 +2230,14 @@ test(`Confirm Profile role removal when a type becomes incompatible`, async ({ p
 	await expect(page.locator('.schema-edit__queries')).toBeVisible();
 	await page.locator('.schema-edit__apply-alter-button').click();
 	const request = (await alterRequestPromise).postDataJSON();
-	expect(request.assignedRoles.photo).toBe('');
+	expect(request.propertyRoles.photo).toBe('');
 	const avatarURL = request.schema.properties.find((property) => property.name === 'new_avatar_url');
 	expect(avatarURL.type).toEqual({ kind: 'string' });
 });
 
 for (const finalType of ['url', 'object']) {
 	test(`Track descendant role removals through successive type changes to ${finalType}`, async ({ page }) => {
-		await mockProfileRoles(page, { firstName: '', lastName: '', email: '', country: '', photo: '' });
+		await mockProfilePropertyRoles(page, { firstName: '', lastName: '', email: '', country: '', photo: '' });
 
 		await page.goto(`${adminURL}/profile-unification/schema`);
 		await editSchema(page);
@@ -2254,7 +2254,7 @@ for (const finalType of ['url', 'object']) {
 		});
 		await panel.locator('.property-form__name-input input').fill('email');
 		await selectPropertyType(page, 'email');
-		await selectProfileRole(page, 'email');
+		await selectProfilePropertyRole(page, 'email');
 		await panel.locator('.property-panel__save').click();
 		await openProperty(page, 'details');
 
@@ -2265,13 +2265,13 @@ for (const finalType of ['url', 'object']) {
 		await expect(changeTypeDialog).toContainText('will remove these roles: Email');
 		await changeTypeDialog.getByRole('button', { name: 'Change type' }).click();
 		await expect(changeTypeDialog).toBeHidden();
-		await selectProfileRole(page, 'firstName');
+		await selectProfilePropertyRole(page, 'firstName');
 		await selectPropertyType(page, 'url');
 		await expect(changeTypeDialog).toContainText('will remove the First name role from this property');
 		await changeTypeDialog.getByRole('button', { name: 'Change type' }).click();
 		await expect(changeTypeDialog).toBeHidden();
 		if (finalType === 'object') {
-			await selectProfileRole(page, 'photo');
+			await selectProfilePropertyRole(page, 'photo');
 			await panel.locator('.property-type-selector__structure-trigger').click();
 			await panel.locator('[data-structure-option="object"]').click();
 			await expect(changeTypeDialog).toContainText('will remove the Photo role from this property');
@@ -2288,7 +2288,7 @@ for (const finalType of ['url', 'object']) {
 		);
 		await page.locator('.schema-edit__apply-alter-button').click();
 		const request = (await alterRequestPromise).postDataJSON();
-		expect(request.assignedRoles).toEqual({
+		expect(request.propertyRoles).toEqual({
 			firstName: '',
 			lastName: '',
 			email: finalType === 'object' ? 'details.email' : '',
@@ -2307,8 +2307,8 @@ for (const finalType of ['url', 'object']) {
 	});
 }
 
-test(`Delete a property and its Profile role together`, async ({ page }) => {
-	await mockProfileRoles(page, { firstName: '', lastName: '', email: '', country: '', photo: 'avatar_url' });
+test(`Delete a property and its role together`, async ({ page }) => {
+	await mockProfilePropertyRoles(page, { firstName: '', lastName: '', email: '', country: '', photo: 'avatar_url' });
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
 	await editSchema(page);
@@ -2327,12 +2327,12 @@ test(`Delete a property and its Profile role together`, async ({ page }) => {
 	await expect(page.locator('.schema-edit__queries')).toBeVisible();
 	await page.locator('.schema-edit__apply-alter-button').click();
 	const request = (await alterRequestPromise).postDataJSON();
-	expect(request.assignedRoles.photo).toBe('');
+	expect(request.propertyRoles.photo).toBe('');
 	expect(request.schema.properties.some((property) => property.name === 'avatar_url')).toBe(false);
 });
 
-test(`Show only compatible Profile roles and remove one when cardinality changes`, async ({ page }) => {
-	await mockProfileRoles(page, { firstName: '', lastName: '', email: '', country: '', photo: '' });
+test(`Show only compatible property roles and remove one when cardinality changes`, async ({ page }) => {
+	await mockProfilePropertyRoles(page, { firstName: '', lastName: '', email: '', country: '', photo: '' });
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
 	await editSchema(page);
@@ -2340,41 +2340,41 @@ test(`Show only compatible Profile roles and remove one when cardinality changes
 	const panel = page.locator('.property-panel');
 	await panel.locator('.property-form__name-input input').fill('new_avatar_url');
 	await selectPropertyType(page, 'string');
-	await panel.locator('.profile-role-selector__trigger').click();
+	await panel.locator('.property-role-selector__trigger').click();
 	expect(
 		await panel
-			.locator('[data-profile-role-option]')
-			.evaluateAll((options) => options.map((option) => option.getAttribute('data-profile-role-option'))),
+			.locator('[data-property-role-option]')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('data-property-role-option'))),
 	).toEqual(['none', 'firstName', 'lastName']);
-	await panel.locator('[data-profile-role-option="firstName"]').click();
-	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('First name');
-	await selectProfileRole(page, 'none');
-	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('Assign a role...');
+	await panel.locator('[data-property-role-option="firstName"]').click();
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('First name');
+	await selectProfilePropertyRole(page, 'none');
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Assign a role...');
 	await selectPropertyType(page, 'email');
-	await panel.locator('.profile-role-selector__trigger').click();
+	await panel.locator('.property-role-selector__trigger').click();
 	expect(
 		await panel
-			.locator('[data-profile-role-option]')
-			.evaluateAll((options) => options.map((option) => option.getAttribute('data-profile-role-option'))),
+			.locator('[data-property-role-option]')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('data-property-role-option'))),
 	).toEqual(['none', 'email']);
-	await panel.locator('[data-profile-role-option="none"]').click();
+	await panel.locator('[data-property-role-option="none"]').click();
 	await selectPropertyType(page, 'country');
-	await panel.locator('.profile-role-selector__trigger').click();
+	await panel.locator('.property-role-selector__trigger').click();
 	expect(
 		await panel
-			.locator('[data-profile-role-option]')
-			.evaluateAll((options) => options.map((option) => option.getAttribute('data-profile-role-option'))),
+			.locator('[data-property-role-option]')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('data-property-role-option'))),
 	).toEqual(['none', 'country']);
-	await panel.locator('[data-profile-role-option="none"]').click();
+	await panel.locator('[data-property-role-option="none"]').click();
 	await selectPropertyType(page, 'url');
-	await panel.locator('.profile-role-selector__trigger').click();
+	await panel.locator('.property-role-selector__trigger').click();
 	expect(
 		await panel
-			.locator('[data-profile-role-option]')
-			.evaluateAll((options) => options.map((option) => option.getAttribute('data-profile-role-option'))),
+			.locator('[data-property-role-option]')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('data-property-role-option'))),
 	).toEqual(['none', 'photo']);
-	await panel.locator('[data-profile-role-option="photo"]').click();
-	await expect(panel.locator('.profile-role-selector__trigger')).toHaveText('Photo');
+	await panel.locator('[data-property-role-option="photo"]').click();
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Photo');
 
 	await panel.locator('.property-type-selector__structure-trigger').click();
 	await panel.locator('[data-structure-option="array"]').click();
@@ -2384,7 +2384,7 @@ test(`Show only compatible Profile roles and remove one when cardinality changes
 	);
 	await changeTypeDialog.getByRole('button', { name: 'Change type' }).click();
 	await expect(changeTypeDialog).toBeHidden();
-	await expect(panel.locator('.property-form__assigned-role')).toHaveCount(0);
+	await expect(panel.locator('.property-form__role')).toHaveCount(0);
 	await panel.locator('.property-panel__save').click();
 	const row = page.locator('.schema-edit .grid__row[data-id="new_avatar_url"]');
 	await expect(row.locator('.grid__cell-content').nth(3)).toBeEmpty();

@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
-import { getCompatibleProfileRoles, getProfileRole } from '../../helpers/profileRoles';
+import { getCompatibleProfilePropertyRoles, getProfilePropertyRole } from '../../helpers/profilePropertyRoles';
 import {
 	DURATION_UNIT_OPTIONS,
 	getPropertyValueType,
@@ -9,7 +9,7 @@ import {
 } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { Property } from '../../../lib/api/types/types';
-import { ProfileRoleID } from '../../../lib/api/types/workspace';
+import { ProfilePropertyRoleID } from '../../../lib/api/types/workspace';
 import TransformedConnection from '../../../lib/core/connection';
 import { PropertyPanelLayout } from '../Schema/PropertyPanelLayout';
 import {
@@ -21,7 +21,7 @@ import {
 import { SchemaPropertyType } from '../Schema/SchemaPropertyType';
 
 interface PropertyDetailsPanelProps {
-	assignedRole: ProfileRoleID | null;
+	propertyRole: ProfilePropertyRoleID | null;
 	identifierPosition?: number;
 	onClose: () => void;
 	primarySource: TransformedConnection | null;
@@ -35,7 +35,7 @@ interface PropertyDetailProps {
 }
 
 const PropertyDetailsPanel = ({
-	assignedRole,
+	propertyRole,
 	identifierPosition,
 	onClose,
 	primarySource,
@@ -58,7 +58,7 @@ const PropertyDetailsPanel = ({
 					)}
 				</div>
 				<div className='property-details-panel__section property-details-panel__section--metadata'>
-					{getCompatibleProfileRoles(property).length > 0 && (
+					{getCompatibleProfilePropertyRoles(property).length > 0 && (
 						<PropertyDetail
 							label={
 								<span className='schema-property-grid__label-content'>
@@ -70,10 +70,10 @@ const PropertyDetailsPanel = ({
 								</span>
 							}
 						>
-							{assignedRole == null ? (
+							{propertyRole == null ? (
 								<span className='property-details-panel__empty-value'>—</span>
 							) : (
-								getProfileRole(assignedRole).label
+								getProfilePropertyRole(propertyRole).label
 							)}
 						</PropertyDetail>
 					)}

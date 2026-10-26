@@ -1,17 +1,17 @@
-import { ProfileRoleAssignments, ProfileRoleID } from '../../lib/api/types/workspace';
+import { ProfilePropertyRoles, ProfilePropertyRoleID } from '../../lib/api/types/workspace';
 import Type from '../../lib/api/types/types';
 
-interface ProfileRoleDefinition {
+interface ProfilePropertyRoleDefinition {
 	description: string;
-	id: ProfileRoleID;
+	id: ProfilePropertyRoleID;
 	label: string;
 }
 
-interface ProfileRoleProperty {
+interface PropertyRoleTarget {
 	type?: Type | null;
 }
 
-const PROFILE_ROLES: readonly ProfileRoleDefinition[] = [
+const PROFILE_PROPERTY_ROLES: readonly ProfilePropertyRoleDefinition[] = [
 	{
 		id: 'firstName',
 		label: 'First name',
@@ -39,7 +39,7 @@ const PROFILE_ROLES: readonly ProfileRoleDefinition[] = [
 	},
 ];
 
-const copyProfileRoleAssignments = (assignments?: ProfileRoleAssignments): ProfileRoleAssignments => ({
+const copyProfilePropertyRoles = (assignments?: ProfilePropertyRoles): ProfilePropertyRoles => ({
 	firstName: assignments?.firstName ?? '',
 	lastName: assignments?.lastName ?? '',
 	email: assignments?.email ?? '',
@@ -47,25 +47,25 @@ const copyProfileRoleAssignments = (assignments?: ProfileRoleAssignments): Profi
 	photo: assignments?.photo ?? '',
 });
 
-const getAssignedProfileRole = (
-	assignments: ProfileRoleAssignments | undefined,
+const getPropertyRole = (
+	assignments: ProfilePropertyRoles | undefined,
 	propertyKey: string,
-): ProfileRoleID | null => {
+): ProfilePropertyRoleID | null => {
 	if (assignments == null) {
 		return null;
 	}
-	return PROFILE_ROLES.find((role) => assignments[role.id] === propertyKey)?.id ?? null;
+	return PROFILE_PROPERTY_ROLES.find((role) => assignments[role.id] === propertyKey)?.id ?? null;
 };
 
-const getCompatibleProfileRoles = (property: ProfileRoleProperty): readonly ProfileRoleDefinition[] => {
-	return PROFILE_ROLES.filter((role) => isProfileRoleCompatible(role.id, property));
+const getCompatibleProfilePropertyRoles = (property: PropertyRoleTarget): readonly ProfilePropertyRoleDefinition[] => {
+	return PROFILE_PROPERTY_ROLES.filter((role) => isProfilePropertyRoleCompatible(role.id, property));
 };
 
-const getProfileRole = (id: ProfileRoleID): ProfileRoleDefinition => {
-	return PROFILE_ROLES.find((role) => role.id === id)!;
+const getProfilePropertyRole = (id: ProfilePropertyRoleID): ProfilePropertyRoleDefinition => {
+	return PROFILE_PROPERTY_ROLES.find((role) => role.id === id)!;
 };
 
-const isProfileRoleCompatible = (role: ProfileRoleID, property: ProfileRoleProperty): boolean => {
+const isProfilePropertyRoleCompatible = (role: ProfilePropertyRoleID, property: PropertyRoleTarget): boolean => {
 	if (role === 'firstName' || role === 'lastName') {
 		return property.type?.kind === 'string' && property.type.semantics == null;
 	}
@@ -84,11 +84,11 @@ const isProfileRoleCompatible = (role: ProfileRoleID, property: ProfileRolePrope
 };
 
 export {
-	PROFILE_ROLES,
-	copyProfileRoleAssignments,
-	getAssignedProfileRole,
-	getCompatibleProfileRoles,
-	getProfileRole,
-	isProfileRoleCompatible,
+	PROFILE_PROPERTY_ROLES,
+	copyProfilePropertyRoles,
+	getPropertyRole,
+	getCompatibleProfilePropertyRoles,
+	getProfilePropertyRole,
+	isProfilePropertyRoleCompatible,
 };
-export type { ProfileRoleDefinition, ProfileRoleProperty };
+export type { ProfilePropertyRoleDefinition, PropertyRoleTarget };

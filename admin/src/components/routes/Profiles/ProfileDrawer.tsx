@@ -114,10 +114,10 @@ const ProfileDrawer = ({ selectedProfile, setSelectedProfile }: ProfileDrawerPro
 		return typeof value === 'string' ? value : undefined;
 	};
 
-	const profilePhoto = getValueFromPath(workspace.assignedRoles.photo);
-	const profileFirstName = getValueFromPath(workspace.assignedRoles.firstName);
-	const profileLastName = getValueFromPath(workspace.assignedRoles.lastName);
-	const profileEmail = getValueFromPath(workspace.assignedRoles.email);
+	const profilePhoto = getValueFromPath(workspace.propertyRoles.photo);
+	const profileFirstName = getValueFromPath(workspace.propertyRoles.firstName);
+	const profileLastName = getValueFromPath(workspace.propertyRoles.lastName);
+	const profileEmail = getValueFromPath(workspace.propertyRoles.email);
 
 	const spinner = (
 		<SlSpinner

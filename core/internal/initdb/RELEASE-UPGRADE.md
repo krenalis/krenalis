@@ -8,7 +8,7 @@ base release. See `.agents/skills/release-upgrade/SKILL.md`.
 - Add `workspaces.profile_role_first_name`, `profile_role_last_name`,
   `profile_role_email`, `profile_role_country`, and `profile_role_photo` as
   `varchar NOT NULL DEFAULT ''`. Initialize all existing rows to `''`, so
-  no Profile role is assigned; do not copy the old UI preferences.
+  no property role is assigned; do not copy the old UI preferences.
 - Add `workspaces.alter_profile_schema_role_first_name`,
   `alter_profile_schema_role_last_name`, `alter_profile_schema_role_email`,
   `alter_profile_schema_role_country`, and `alter_profile_schema_role_photo`

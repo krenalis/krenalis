@@ -513,7 +513,7 @@ type Warehouse struct {
 }
 
 // CreateWorkspace creates a workspace with the given name, profile schema and
-// role assignments, and connects to a data warehouse of the given platform and
+// property roles, and connects to a data warehouse of the given platform and
 // settings.
 // Returns the identifier of the workspace that has been created.
 // name must be between 1 and 100 runes long.
@@ -527,11 +527,11 @@ type Warehouse struct {
 //   - WarehousePlatformNotExist, if a warehouse platform does not exist.
 //   - WarehouseNotInitializable, if the warehouse is not initializable.
 //   - WorkspacesLimitReached, if the organization cannot have more workspaces.
-func (this *Organization) CreateWorkspace(ctx context.Context, name string, profileSchema types.Type, assignedRoles ProfileRoleAssignments, warehouse Warehouse) (string, error) {
+func (this *Organization) CreateWorkspace(ctx context.Context, name string, profileSchema types.Type, propertyRoles PropertyRoles, warehouse Warehouse) (string, error) {
 
 	this.core.mustBeOpen()
 
-	settings, err := this.validateWorkspaceCreation(ctx, name, profileSchema, assignedRoles, warehouse)
+	settings, err := this.validateWorkspaceCreation(ctx, name, profileSchema, propertyRoles, warehouse)
 	if err != nil {
 		return "", err
 	}
@@ -553,7 +553,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 		Organization:                   this.organization.ID,
 		Name:                           name,
 		ProfileSchema:                  profileSchema,
-		AssignedRoles:                  state.ProfileRoleAssignments(assignedRoles),
+		PropertyRoles:                  state.PropertyRoles(propertyRoles),
 		ResolveIdentitiesOnBatchImport: true,
 	}
 	n.Warehouse.Platform = warehouse.Platform
@@ -594,8 +594,8 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 				" profile_role_country, profile_role_photo, resolve_identities_on_batch_import, warehouse_name, warehouse_mode,"+
 				" warehouse_settings, kms_encrypted_warehouse_settings_key, kms_encrypted_warehouse_mcp_settings_key)"+
 				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)",
-				n.ID, n.Organization, n.Name, encodedProfileSchema, n.AssignedRoles.FirstName,
-				n.AssignedRoles.LastName, n.AssignedRoles.Email, n.AssignedRoles.Country, n.AssignedRoles.Photo,
+				n.ID, n.Organization, n.Name, encodedProfileSchema, n.PropertyRoles.FirstName,
+				n.PropertyRoles.LastName, n.PropertyRoles.Email, n.PropertyRoles.Country, n.PropertyRoles.Photo,
 				n.ResolveIdentitiesOnBatchImport, n.Warehouse.Platform, n.Warehouse.Mode, n.Warehouse.Settings,
 				n.Warehouse.SettingsKey, n.Warehouse.MCPSettingsKey)
 			if err != nil {
@@ -1261,7 +1261,7 @@ INNER JOIN updated_pipelines AS p ON ended_runs.pipeline = p.id
 `
 
 // TestWorkspaceCreation tests a workspace creation, including the profile schema
-// and role assignments, and checks that the data warehouse can be initialized.
+// and property roles, and checks that the data warehouse can be initialized.
 //
 // It returns an errors.UnprocessableError error with code:
 //
@@ -1270,9 +1270,9 @@ INNER JOIN updated_pipelines AS p ON ended_runs.pipeline = p.id
 //   - WarehouseNotInitializable, if the warehouse intended for connection is
 //     not initializable.
 //   - WorkspacesLimitReached, if the organization cannot have more workspaces.
-func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, assignedRoles ProfileRoleAssignments, warehouse Warehouse) error {
+func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, propertyRoles PropertyRoles, warehouse Warehouse) error {
 	this.core.mustBeOpen()
-	_, err := this.validateWorkspaceCreation(ctx, name, profileSchema, assignedRoles, warehouse)
+	_, err := this.validateWorkspaceCreation(ctx, name, profileSchema, propertyRoles, warehouse)
 	return err
 }
 
@@ -1439,7 +1439,7 @@ func (this *Organization) Workspace(id string) (*Workspace, error) {
 		ID:                             ws.ID,
 		Name:                           ws.Name,
 		ProfileSchema:                  ws.ProfileSchema,
-		AssignedRoles:                  ProfileRoleAssignments(ws.AssignedRoles),
+		PropertyRoles:                  PropertyRoles(ws.PropertyRoles),
 		PrimarySources:                 maps.Clone(ws.PrimarySources),
 		ResolveIdentitiesOnBatchImport: ws.ResolveIdentitiesOnBatchImport,
 		Identifiers:                    ws.Identifiers,
@@ -1465,7 +1465,7 @@ func (this *Organization) Workspaces() []*Workspace {
 			ID:                             ws.ID,
 			Name:                           ws.Name,
 			ProfileSchema:                  ws.ProfileSchema,
-			AssignedRoles:                  ProfileRoleAssignments(ws.AssignedRoles),
+			PropertyRoles:                  PropertyRoles(ws.PropertyRoles),
 			PrimarySources:                 maps.Clone(ws.PrimarySources),
 			ResolveIdentitiesOnBatchImport: ws.ResolveIdentitiesOnBatchImport,
 			Identifiers:                    ws.Identifiers,
@@ -1516,7 +1516,7 @@ func (this *Organization) filterMetricsSelection(workspace string, selection *Me
 //     not initializable.
 //   - WarehousePlatformNotExist, if a warehouse platform does not exist.
 //   - WorkspacesLimitReached, if the organization cannot have more workspaces.
-func (this *Organization) validateWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, assignedRoles ProfileRoleAssignments, warehouse Warehouse) (json.Value, error) {
+func (this *Organization) validateWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, propertyRoles PropertyRoles, warehouse Warehouse) (json.Value, error) {
 
 	// Validate the parameters.
 	if err := util.ValidateStringField("name", name, 100); err != nil {
@@ -1541,7 +1541,7 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	if err := datastore.CheckConflictingProperties("profile", profileSchema); err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	if err := validateProfileRoleAssignments(profileSchema, assignedRoles); err != nil {
+	if err := validatePropertyRoles(profileSchema, propertyRoles); err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
 

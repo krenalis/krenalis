@@ -10,9 +10,9 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-// Test_validateProfileRoleAssignments verifies Profile role assignment
+// Test_validateProfilePropertyRoles verifies property role assignment
 // validation.
-func Test_validateProfileRoleAssignments(t *testing.T) {
+func Test_validateProfilePropertyRoles(t *testing.T) {
 
 	schema := types.Object([]types.Property{
 		{Name: "given_name", Type: types.String(), ReadOptional: true},
@@ -31,13 +31,13 @@ func Test_validateProfileRoleAssignments(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		assignments ProfileRoleAssignments
+		assignments PropertyRoles
 		err         string
 	}{
 		{name: "No assignments"},
 		{
 			name: "All roles",
-			assignments: ProfileRoleAssignments{
+			assignments: PropertyRoles{
 				FirstName: "given_name",
 				LastName:  "family_name",
 				Email:     "email",
@@ -45,63 +45,63 @@ func Test_validateProfileRoleAssignments(t *testing.T) {
 				Photo:     "photo_url",
 			},
 		},
-		{name: "Nested property", assignments: ProfileRoleAssignments{FirstName: "details.name"}},
+		{name: "Nested property", assignments: PropertyRoles{FirstName: "details.name"}},
 		{
 			name:        "Invalid path",
-			assignments: ProfileRoleAssignments{FirstName: "invalid-path"},
-			err:         `profile role "first_name" has invalid property path "invalid-path"`,
+			assignments: PropertyRoles{FirstName: "invalid-path"},
+			err:         `property role "first_name" has invalid property path "invalid-path"`,
 		},
 		{
 			name:        "Missing property",
-			assignments: ProfileRoleAssignments{FirstName: "missing"},
-			err:         `profile role "first_name" refers to property "missing", which does not exist`,
+			assignments: PropertyRoles{FirstName: "missing"},
+			err:         `property role "first_name" refers to property "missing", which does not exist`,
 		},
 		{
 			name:        "Two roles on one property",
-			assignments: ProfileRoleAssignments{FirstName: "given_name", LastName: "given_name"},
-			err:         `property "given_name" is assigned to both profile roles "first_name" and "last_name"`,
+			assignments: PropertyRoles{FirstName: "given_name", LastName: "given_name"},
+			err:         `property "given_name" is assigned to both roles "first_name" and "last_name"`,
 		},
 		{
 			name:        "Name with semantic",
-			assignments: ProfileRoleAssignments{FirstName: "email"},
-			err:         `property "email" is not compatible with profile role "first_name"`,
+			assignments: PropertyRoles{FirstName: "email"},
+			err:         `property "email" is not compatible with role "first_name"`,
 		},
 		{
 			name:        "String email",
-			assignments: ProfileRoleAssignments{Email: "given_name"},
-			err:         `property "given_name" is not compatible with profile role "email"`,
+			assignments: PropertyRoles{Email: "given_name"},
+			err:         `property "given_name" is not compatible with role "email"`,
 		},
 		{
 			name:        "Array email",
-			assignments: ProfileRoleAssignments{Email: "emails"},
-			err:         `property "emails" is not compatible with profile role "email"`,
+			assignments: PropertyRoles{Email: "emails"},
+			err:         `property "emails" is not compatible with role "email"`,
 		},
 		{
 			name:        "Email country",
-			assignments: ProfileRoleAssignments{Country: "email"},
-			err:         `property "email" is not compatible with profile role "country"`,
+			assignments: PropertyRoles{Country: "email"},
+			err:         `property "email" is not compatible with role "country"`,
 		},
 		{
 			name:        "Array country",
-			assignments: ProfileRoleAssignments{Country: "countries"},
-			err:         `property "countries" is not compatible with profile role "country"`,
+			assignments: PropertyRoles{Country: "countries"},
+			err:         `property "countries" is not compatible with role "country"`,
 		},
 		{
 			name:        "Boolean photo",
-			assignments: ProfileRoleAssignments{Photo: "subscribed"},
-			err:         `property "subscribed" is not compatible with profile role "photo"`,
+			assignments: PropertyRoles{Photo: "subscribed"},
+			err:         `property "subscribed" is not compatible with role "photo"`,
 		},
 		{
 			name:        "Array photo",
-			assignments: ProfileRoleAssignments{Photo: "photo_urls"},
-			err:         `property "photo_urls" is not compatible with profile role "photo"`,
+			assignments: PropertyRoles{Photo: "photo_urls"},
+			err:         `property "photo_urls" is not compatible with role "photo"`,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 
-			err := validateProfileRoleAssignments(schema, test.assignments)
+			err := validatePropertyRoles(schema, test.assignments)
 			var got string
 			if err != nil {
 				got = err.Error()

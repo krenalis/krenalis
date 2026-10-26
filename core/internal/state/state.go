@@ -905,7 +905,7 @@ type Workspace struct {
 	organization                   *Organization
 	Name                           string
 	ProfileSchema                  types.Type // without meta properties.
-	AssignedRoles                  ProfileRoleAssignments
+	PropertyRoles                  PropertyRoles
 	PrimarySources                 map[string]string
 	accounts                       map[int]*Account
 	consentPurposes                map[string]*ConsentPurpose
@@ -922,16 +922,16 @@ type Workspace struct {
 		EndTime        *time.Time // nil means profile schema alteration is running or has never started.
 		Err            *string    // pointer to empty string if no errors occurred during last execution of alter profile schema.
 		Schema         types.Type
-		AssignedRoles  ProfileRoleAssignments
+		PropertyRoles  PropertyRoles
 		PrimarySources map[string]string // nil if, and only if, schema alteration is not in execution.
 		Operations     []warehouses.AlterOperation
 	}
 	pipelinesToPurge []string // never nil
 }
 
-// ProfileRoleAssignments maps each Profile role to the path of the property
-// assigned to it. An empty path means no property is assigned to that role.
-type ProfileRoleAssignments struct {
+// PropertyRoles maps each property role to a property path.
+// An empty path means no property is assigned to that role.
+type PropertyRoles struct {
 	FirstName string
 	LastName  string
 	Email     string

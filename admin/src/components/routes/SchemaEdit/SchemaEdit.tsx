@@ -14,7 +14,7 @@ import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
 import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
 import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
-import { ProfileRoleID } from '../../../lib/api/types/workspace';
+import { ProfilePropertyRoleID } from '../../../lib/api/types/workspace';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import Grid from '../../base/Grid/Grid';
 import { GridKeyboardHints } from '../../base/Grid/GridKeyboardHints';
@@ -22,7 +22,7 @@ import { useDocumentGridKeyboardNavigation } from '../../base/Grid/useDocumentGr
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
 import { FullscreenContext } from '../../../context/FullscreenContext';
 import { SchemaContext } from '../../../context/SchemaContext';
-import { getAssignedProfileRole, PROFILE_ROLES } from '../../helpers/profileRoles';
+import { getPropertyRole, PROFILE_PROPERTY_ROLES } from '../../helpers/profilePropertyRoles';
 import { EditableProperty, getParentPropertyKey, newPropertyToEdit } from './SchemaEdit.helpers';
 import { PropertyPanel } from './PropertyPanel';
 import { PropertyToEdit, PropertyToRemove, SelectPropertyOptions, useSchemaEdit } from './useSchemaEdit';
@@ -92,7 +92,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		propertyParents,
 		selectedPropertyFieldChanges,
 		propertyStatuses,
-		assignedRoles,
+		propertyRoles,
 		propertyPaths,
 		primarySources,
 		queries,
@@ -216,15 +216,15 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 	const onSaveProperty = (
 		property: PropertyToEdit,
 		primarySource: string | null,
-		assignedRole: ProfileRoleID | null,
-		rolesToUnassign: readonly ProfileRoleID[],
+		propertyRole: ProfilePropertyRoleID | null,
+		rolesToUnassign: readonly ProfilePropertyRoleID[],
 	) => {
 		setAnimatePropertyActions(false);
 		if (property.key == null) {
 			const addedProperty = onAddProperty(
 				property,
 				primarySource,
-				assignedRole,
+				propertyRole,
 				selectedPropertyBeforeAddRef.current?.key,
 			);
 			selectedPropertyBeforeAddRef.current = null;
@@ -232,7 +232,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 			setPropertyDraftDirty(false);
 			return;
 		}
-		onEditProperty(property, primarySource, assignedRole, rolesToUnassign);
+		onEditProperty(property, primarySource, propertyRole, rolesToUnassign);
 		resetPropertyDraft(property);
 		setPropertyDraftDirty(false);
 	};
@@ -326,15 +326,15 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		onCancelChanges();
 	};
 	const isDiscardingNewProperty = propertyToRemove?.isNew === true;
-	const propertyInPanelAssignedRole =
-		propertyInPanel?.key == null ? null : getAssignedProfileRole(assignedRoles, propertyInPanel.key);
+	const propertyInPanelRole =
+		propertyInPanel?.key == null ? null : getPropertyRole(propertyRoles, propertyInPanel.key);
 	const rolesUnassignedByRemoval =
 		propertyToRemove == null
 			? []
-			: PROFILE_ROLES.filter(
+			: PROFILE_PROPERTY_ROLES.filter(
 					(role) =>
-						assignedRoles[role.id] === propertyToRemove.key ||
-						assignedRoles[role.id].startsWith(`${propertyToRemove.key}.`),
+						propertyRoles[role.id] === propertyToRemove.key ||
+						propertyRoles[role.id].startsWith(`${propertyToRemove.key}.`),
 				);
 
 	return (
@@ -432,8 +432,8 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 						/>
 					</div>
 					<PropertyPanel
-						assignedRole={propertyInPanelAssignedRole}
-						assignedRoles={assignedRoles}
+						propertyRole={propertyInPanelRole}
+						propertyRoles={propertyRoles}
 						animateActions={animatePropertyActions}
 						dirty={propertyDraftDirty}
 						fieldChanges={propertyInPanel == null ? undefined : selectedPropertyFieldChanges}

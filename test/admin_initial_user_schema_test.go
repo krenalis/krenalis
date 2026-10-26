@@ -16,7 +16,7 @@ import (
 )
 
 // TestAdminInitialProfileSchema verifies that the initial profile schema and
-// role assignments used by the Admin are applied to a workspace and its roles
+// property roles used by the Admin are applied to a workspace and its roles
 // persist.
 func TestAdminInitialProfileSchema(t *testing.T) {
 
@@ -36,36 +36,36 @@ func TestAdminInitialProfileSchema(t *testing.T) {
 		t.Fatalf("expected valid schema JSON in %q, got %s", schemaPath, err)
 	}
 
-	rolesPath := filepath.Join(fixturesDir, "InitialRoleAssignments.json")
+	rolesPath := filepath.Join(fixturesDir, "InitialPropertyRoles.json")
 	encodedRoles, err := os.ReadFile(rolesPath)
 	if err != nil {
-		t.Fatalf("expected readable role assignments file %q, got %s", rolesPath, err)
+		t.Fatalf("expected readable property roles file %q, got %s", rolesPath, err)
 	}
-	var assignedRoles krenalistester.ProfileRoleAssignments
-	err = json.Unmarshal(encodedRoles, &assignedRoles)
+	var propertyRoles krenalistester.PropertyRoles
+	err = json.Unmarshal(encodedRoles, &propertyRoles)
 	if err != nil {
-		t.Fatalf("expected valid role assignments JSON in %q, got %s", rolesPath, err)
+		t.Fatalf("expected valid property roles JSON in %q, got %s", rolesPath, err)
 	}
-	expectedRoles := krenalistester.ProfileRoleAssignments{
+	expectedRoles := krenalistester.PropertyRoles{
 		FirstName: "first_name",
 		LastName:  "last_name",
 		Email:     "email",
 		Country:   "address.country",
 	}
-	if assignedRoles != expectedRoles {
-		t.Fatalf("expected initial role assignments %#v, got %#v", expectedRoles, assignedRoles)
+	if propertyRoles != expectedRoles {
+		t.Fatalf("expected initial property roles %#v, got %#v", expectedRoles, propertyRoles)
 	}
 
 	k := krenalistester.NewKrenalisInstance(t)
 	k.SetProfileSchema(schema)
-	k.SetProfileRoleAssignments(assignedRoles)
+	k.SetPropertyRoles(propertyRoles)
 	k.Start()
 	defer k.Stop()
 
 	workspace := k.Workspace()
-	t.Run("assigned roles", func(t *testing.T) {
-		if workspace.AssignedRoles != expectedRoles {
-			t.Errorf("expected assigned roles %#v, got %#v", expectedRoles, workspace.AssignedRoles)
+	t.Run("property roles", func(t *testing.T) {
+		if workspace.PropertyRoles != expectedRoles {
+			t.Errorf("expected property roles %#v, got %#v", expectedRoles, workspace.PropertyRoles)
 		}
 	})
 
