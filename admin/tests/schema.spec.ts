@@ -1122,7 +1122,8 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 	]);
 	const primarySourceInfo = panel.getByLabel('About primary source');
 	await expect(primarySourceInfo).toBeVisible();
-	await expect(panel.locator('.schema-property-grid__info')).toHaveCount(2);
+	await expect(panel.locator('.schema-property-grid__info')).toHaveCount(3);
+	await expectPassiveInformationTooltip(panel.getByLabel('About roles'));
 	await expectPassiveInformationTooltip(panel.getByLabel('About identifiers'));
 	await expectPassiveInformationTooltip(primarySourceInfo);
 	await primarySourceInfo.hover();
