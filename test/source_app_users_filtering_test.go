@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -32,7 +33,7 @@ func TestSourceAppUsersFiltering(t *testing.T) {
 				&krenalistester.FilterCondition{
 					Property: "email",
 					Operator: krenalistester.OpIsNot,
-					Values:   []string{"kdericut4@example.com"},
+					Values:   []json.Value{json.Value("\"kdericut4@example.com\"")},
 				},
 			},
 		},

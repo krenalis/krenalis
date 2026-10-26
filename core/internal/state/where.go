@@ -126,12 +126,34 @@ func (condition *WhereCondition) Equal(other *WhereCondition) bool {
 			if otherValue, ok := otherValue.(decimal.Decimal); !ok || !value.Equal(otherValue) {
 				return false
 			}
-		case JSONConditionValue:
-			otherValue, ok := otherValue.(JSONConditionValue)
-			if !ok || value.String != otherValue.String || value.Number == nil != (otherValue.Number == nil) {
+		case json.Value:
+			otherValue, ok := otherValue.(json.Value)
+			if !ok || len(value) == 0 || len(otherValue) == 0 || !json.Valid(value) || !json.Valid(otherValue) {
 				return false
 			}
-			if value.Number != nil && !value.Number.Equal(*otherValue.Number) {
+			if value.Kind() != otherValue.Kind() {
+				return false
+			}
+			switch value.Kind() {
+			case json.Number:
+				number, err := value.Decimal(0, 0)
+				if err != nil {
+					return false
+				}
+				otherNumber, err := otherValue.Decimal(0, 0)
+				if err != nil {
+					return false
+				}
+				if !number.Equal(otherNumber) {
+					return false
+				}
+			case json.String:
+				if value.String() != otherValue.String() {
+					return false
+				}
+			case json.True, json.False, json.Null:
+				// Matching kinds identify the same boolean or null value.
+			default:
 				return false
 			}
 		default:
@@ -215,17 +237,6 @@ func (op *WhereOperator) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// JSONConditionValue represents a value in a Where condition that refers to a
-// JSON property.
-//
-//   - String holds the raw value.
-//   - Number is non-nil if String contains a number that can be represented
-//     exactly by a decimal type supported by the types package.
-type JSONConditionValue struct {
-	String string
-	Number *decimal.Decimal
-}
-
 // whereConditionJSON is the persisted representation of a WhereCondition.
 type whereConditionJSON struct {
 	Property []string      `json:"property"`
@@ -303,9 +314,8 @@ func marshalWhereValue(b *bytes.Buffer, value any, t types.Type) {
 	case string:
 		quoted, _ := json.Quote([]byte(v))
 		b.Write(quoted)
-	case JSONConditionValue:
-		quoted, _ := json.Quote([]byte(v.String))
-		b.Write(quoted)
+	case json.Value:
+		b.Write(v)
 	case int:
 		b.WriteString(strconv.FormatInt(int64(v), 10))
 	case uint:
@@ -334,64 +344,6 @@ func marshalWhereValue(b *bytes.Buffer, value any, t types.Type) {
 	}
 }
 
-// unmarshalConditionValue unmarshals a Where condition value and returns it.
-// v is the value to unmarshal, and t is the type of the property.
-func unmarshalConditionValue(v json.Value, t types.Type) (any, error) {
-	switch t.Kind() {
-	case types.StringKind, types.UUIDKind, types.IPKind:
-		if !v.IsString() {
-			return nil, errors.New("where condition value must be a string")
-		}
-		return v.String(), nil
-	case types.IntKind:
-		if t.IsUnsigned() {
-			return v.Uint()
-		}
-		return v.Int()
-	case types.FloatKind:
-		return v.Float(t.BitSize())
-	case types.DecimalKind:
-		return v.Decimal(0, 0)
-	case types.DateTimeKind:
-		t, err := time.Parse(time.RFC3339Nano, v.String())
-		if err != nil {
-			return nil, err
-		}
-		return t.UTC(), nil
-	case types.DateKind:
-		t, err := time.Parse(time.DateOnly, v.String())
-		if err != nil {
-			return nil, err
-		}
-		t = t.UTC()
-		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC), nil
-	case types.TimeKind:
-		t, err := time.Parse("15:04:05.999999999", v.String())
-		if err != nil {
-			return nil, err
-		}
-		return time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC), nil
-	case types.YearKind:
-		return v.Int()
-	case types.JSONKind:
-		if !v.IsString() {
-			return nil, errors.New("where condition value must be a string")
-		}
-		value := JSONConditionValue{String: v.String()}
-		d, err := decimal.Parse(value.String, 0, 0)
-		if err != nil {
-			return value, nil
-		}
-		if types.IsDecimal(d) {
-			value.Number = &d
-		}
-		return value, nil
-	case types.ArrayKind:
-		return unmarshalConditionValue(v, t.Elem())
-	}
-	return nil, fmt.Errorf("unexpected kind %s in where condition", t.Kind())
-}
-
 // unmarshalWhere unmarshals a Where value and returns it.
 func unmarshalWhere(b []byte, schema types.Type) (*Where, error) {
 	var value json.Value
@@ -411,14 +363,42 @@ func unmarshalWhereCondition(value json.Value, properties types.Properties) (*Wh
 	if err != nil && !p.Type.IsJSON() {
 		return nil, err
 	}
+	switch condition.Operator {
+	case OpIsTrue, OpIsFalse, OpIsEmpty, OpIsNotEmpty, OpIsNull, OpIsNotNull, OpExists, OpDoesNotExist:
+		if condition.Values != nil {
+			return nil, errors.New("unary filter operator cannot have values")
+		}
+	case OpIsBetween, OpIsNotBetween:
+		if len(condition.Values) != 2 {
+			return nil, errors.New("filter interval requires two values")
+		}
+	case OpIsOneOf, OpIsNotOneOf:
+		if len(condition.Values) == 0 {
+			return nil, errors.New("filter membership requires at least one value")
+		}
+	default:
+		if len(condition.Values) != 1 {
+			return nil, errors.New("filter comparison requires one value")
+		}
+	}
 	var values []any
 	if condition.Values != nil {
 		values = make([]any, len(condition.Values))
 	}
 	for i, value := range condition.Values {
-		values[i], err = unmarshalConditionValue(value, p.Type)
+		values[i], err = DecodeFilterOperand(value, p.Type, condition.Operator)
 		if err != nil {
 			return nil, err
+		}
+	}
+	if (condition.Operator == OpIsBetween || condition.Operator == OpIsNotBetween) && p.Type.IsJSON() {
+		if values[0].(json.Value).Kind() != values[1].(json.Value).Kind() {
+			return nil, errors.New("JSON interval bounds must have the same kind")
+		}
+	}
+	if p.Type.Kind() == types.DateTimeKind || p.Type.IsArray() && p.Type.Elem().Kind() == types.DateTimeKind {
+		for i, value := range values {
+			values[i] = value.(time.Time).UTC()
 		}
 	}
 	return &WhereCondition{Property: condition.Property, Operator: condition.Operator, Values: values}, nil

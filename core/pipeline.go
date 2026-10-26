@@ -775,7 +775,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 		v.format.hasSettings = c.Role == state.Source && format.HasSourceSettings || c.Role == state.Destination && format.HasDestinationSettings
 	}
 	v.provider = this.core.functionProvider
-	err := validatePipelineToSet(pipeline, v)
+	err := validatePipelineToSet(pipeline, &v)
 	if err != nil {
 		return err
 	}
@@ -835,7 +835,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 
 	// Add the filter to the notification.
 	if pipeline.Filter != nil {
-		n.Filter = []byte(state.MarshalWhere(convertFilterToWhere(pipeline.Filter, inSchema), inSchema))
+		n.Filter = []byte(state.MarshalWhere(v.filter, inSchema))
 	}
 
 	// Determine the format code, for file pipelines.

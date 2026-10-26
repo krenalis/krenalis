@@ -71,14 +71,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 	}
 
 	for _, value := range baseExpr.Values {
-		var number *decimal.Decimal
-		switch value := value.(type) {
-		case decimal.Decimal:
-			number = &value
-		case warehouses.JSONConditionValue:
-			number = value.Number
-		}
-		if number != nil && !types.IsDecimal(*number) {
+		if number, ok := value.(decimal.Decimal); ok && !types.IsDecimal(number) {
 			return fmt.Errorf("decimal operand exceeds precision %d or scale %d",
 				types.MaxDecimalPrecision, types.MaxDecimalScale)
 		}
@@ -238,17 +231,20 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 	return nil
 }
 
-// renderJSONComparison compares JSON strings and numbers without coercing other
-// types, using byte order for strings and exact decimal ordering for numbers.
-func renderJSONComparison(b *strings.Builder, target, operator string, value warehouses.JSONConditionValue) {
-	isString := "IS_VARCHAR(" + target + ")"
-	isNumber := "(IS_DECIMAL(" + target + ") OR IS_DOUBLE(" + target + "))"
-	text := "COLLATE(AS_VARCHAR(" + target + "), 'utf8')"
-	fmt.Fprintf(b, "CASE WHEN %s THEN %s %s ", isString, text, operator)
-	quoteString(b, value.String)
-	if value.Number != nil {
-		fmt.Fprintf(b, " WHEN %s THEN ", isNumber)
-		renderJSONNumberComparison(b, target, operator, *value.Number)
+// renderJSONComparison compares a validated JSON String or Number operand.
+// Strings use byte order and numbers use exact decimal ordering.
+func renderJSONComparison(b *strings.Builder, target, operator string, value json.Value) {
+	if value.IsString() {
+		fmt.Fprintf(b, "CASE WHEN IS_VARCHAR(%s) THEN COLLATE(AS_VARCHAR(%s), 'utf8') %s ",
+			target, target, operator)
+		quoteString(b, value.String())
+	} else {
+		number, err := value.Decimal(0, 0)
+		if err != nil {
+			panic(fmt.Sprintf("warehouses/snowflake: invalid prepared JSON operand: %v", err))
+		}
+		fmt.Fprintf(b, "CASE WHEN (IS_DECIMAL(%s) OR IS_DOUBLE(%s)) THEN ", target, target)
+		renderJSONNumberComparison(b, target, operator, number)
 	}
 	b.WriteString(" ELSE FALSE END")
 }
@@ -257,6 +253,11 @@ func renderJSONComparison(b *strings.Builder, target, operator string, value war
 // Predicates on JSON values are two-valued, so negative operators include
 // absent values, nulls, and non-matching JSON kinds.
 func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
+
+	if expr.JSONComparison != warehouses.JSONStructuralComparison &&
+		expr.JSONComparison != warehouses.JSONTypedComparison {
+		return fmt.Errorf("invalid JSON comparison mode %d", expr.JSONComparison)
+	}
 
 	c := expr.Column
 	target := quoteIdent(c.Name)
@@ -360,8 +361,11 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 	}
 
 	// Preserve structural equality when callers provide an encoded JSON value.
-	if count == 1 && op == warehouses.OpIs {
+	if count == 1 && op == warehouses.OpIs && expr.JSONComparison == warehouses.JSONStructuralComparison {
 		if operand, ok := expr.Values[0].(json.Value); ok {
+			if len(operand) == 0 || !json.Valid(operand) {
+				return fmt.Errorf("structural JSON operand must contain valid JSON")
+			}
 			if negative {
 				b.WriteString("NOT ")
 			}
@@ -373,13 +377,41 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 			return nil
 		}
 	}
-	values := make([]warehouses.JSONConditionValue, count)
+	if count > 0 && expr.JSONComparison != warehouses.JSONTypedComparison {
+		return fmt.Errorf("JSON filter operands require typed comparison mode")
+	}
+	values := make([]json.Value, count)
 	for i, operand := range expr.Values {
-		var ok bool
-		values[i], ok = operand.(warehouses.JSONConditionValue)
-		if !ok {
-			return fmt.Errorf("expected a JSONConditionValue, got %T", operand)
+		value, ok := operand.(json.Value)
+		if !ok || len(value) == 0 || !json.Valid(value) {
+			return fmt.Errorf("JSON filter operand must contain valid encoded JSON")
 		}
+		value = json.TrimSpace(value)
+		switch value.Kind() {
+		case json.String:
+			// String operands are valid for every supported comparison.
+		case json.Number:
+			if op == warehouses.OpStartsWith || op == warehouses.OpEndsWith {
+				return fmt.Errorf("JSON prefix and suffix operands must be strings")
+			}
+			number, err := value.Decimal(0, 0)
+			if err != nil {
+				return fmt.Errorf("decimal operand exceeds precision 76 or scale 37")
+			}
+			if !types.IsDecimal(number) {
+				return fmt.Errorf("decimal operand exceeds precision 76 or scale 37")
+			}
+		case json.True, json.False, json.Null:
+			if op != warehouses.OpIsOneOf {
+				return fmt.Errorf("JSON boolean and null operands require membership")
+			}
+		default:
+			return fmt.Errorf("JSON filter operand has an incompatible kind")
+		}
+		values[i] = value
+	}
+	if op == warehouses.OpIsBetween && values[0].Kind() != values[1].Kind() {
+		return fmt.Errorf("JSON interval bounds must have the same kind")
 	}
 
 	if op == warehouses.OpIsTrue || op == warehouses.OpIsFalse {
@@ -414,44 +446,59 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 		b.WriteByte(')')
 
 	case warehouses.OpIsOneOf:
-		// Group operands by kind to avoid repeated extraction and conversion
-		// for each entry in a potentially long membership list.
-		isString := "IS_VARCHAR(" + target + ")"
-		isNumber := "(IS_DECIMAL(" + target + ") OR IS_DOUBLE(" + target + "))"
-		text := "COLLATE(AS_VARCHAR(" + target + "), 'utf8')"
-		fmt.Fprintf(b, "CASE WHEN %s THEN %s IN (", isString, text)
-		for i, operand := range values {
-			if i > 0 {
-				b.WriteString(", ")
-			}
-			quoteString(b, operand.String)
-		}
-		b.WriteByte(')')
-
-		var numbers []string
+		// Partition by kind without coercing a value into another domain.
+		var texts, numbers, booleans []string
+		hasNull := false
 		for _, operand := range values {
-			if operand.Number == nil {
-				continue
+			switch operand.Kind() {
+			case json.String:
+				var literal strings.Builder
+				quoteString(&literal, operand.String())
+				texts = append(texts, literal.String())
+			case json.Number:
+				number, _ := operand.Decimal(0, 0) // Validated above.
+				if number.Sign() == 0 {
+					numbers = append(numbers, "TO_DECFLOAT('0')")
+					continue
+				}
+				coefficient, magnitude := jsonNumberParts(number)
+				if len(coefficient) > maxJSONNumberPrecision {
+					// A stored JSON number cannot equal a more precise operand.
+					continue
+				}
+				sign := ""
+				if number.Sign() < 0 {
+					sign = "-"
+				}
+				numbers = append(numbers, "TO_DECFLOAT('"+sign+coefficient+"e"+
+					strconv.Itoa(magnitude-len(coefficient))+"')")
+			case json.True, json.False:
+				booleans = append(booleans, strings.ToUpper(string(operand)))
+			case json.Null:
+				hasNull = true
+			default:
+				return fmt.Errorf("warehouses/snowflake: unexpected JSON operand kind %v", operand.Kind())
 			}
-			if operand.Number.Sign() == 0 {
-				numbers = append(numbers, "TO_DECFLOAT('0')")
-				continue
-			}
-			coefficient, magnitude := jsonNumberParts(*operand.Number)
-			if len(coefficient) > maxJSONNumberPrecision {
-				// A stored JSON number cannot equal a more precise operand.
-				continue
-			}
-			sign := ""
-			if operand.Number.Sign() < 0 {
-				sign = "-"
-			}
-			numbers = append(numbers, "TO_DECFLOAT('"+sign+coefficient+"e"+
-				strconv.Itoa(magnitude-len(coefficient))+"')")
+		}
+		if len(texts)+len(numbers)+len(booleans) == 0 && !hasNull {
+			b.WriteString("FALSE")
+			break
+		}
+		b.WriteString("CASE")
+		if len(texts) > 0 {
+			fmt.Fprintf(b, " WHEN IS_VARCHAR(%s) THEN COLLATE(AS_VARCHAR(%s), 'utf8') IN (%s)",
+				target, target, strings.Join(texts, ", "))
 		}
 		if len(numbers) > 0 {
-			fmt.Fprintf(b, " WHEN %s THEN TRY_TO_DECFLOAT(TO_JSON(%s)) IN (%s)",
-				isNumber, target, strings.Join(numbers, ", "))
+			fmt.Fprintf(b, " WHEN (IS_DECIMAL(%s) OR IS_DOUBLE(%s)) THEN TRY_TO_DECFLOAT(TO_JSON(%s)) IN (%s)",
+				target, target, target, strings.Join(numbers, ", "))
+		}
+		if len(booleans) > 0 {
+			fmt.Fprintf(b, " WHEN AS_BOOLEAN(%s) IS NOT NULL THEN AS_BOOLEAN(%s) IN (%s)",
+				target, target, strings.Join(booleans, ", "))
+		}
+		if hasNull {
+			fmt.Fprintf(b, " WHEN IS_NULL_VALUE(%s) THEN TRUE", target)
 		}
 		b.WriteString(" ELSE FALSE END")
 
@@ -460,9 +507,9 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 			return fmt.Errorf("operator %d is not supported for type %q", expr.Operator, c.Type)
 		}
 		b.WriteByte('(')
-		if expr.Column.Type.IsJSON() {
+		if expr.Column.Type.IsJSON() && values[0].IsString() {
 			fmt.Fprintf(b, "CONTAINS(AS_VARCHAR(%s), ", target)
-			quoteString(b, values[0].String)
+			quoteString(b, values[0].String())
 			b.WriteByte(')')
 			b.WriteString(" OR ")
 		}
@@ -484,7 +531,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 			b.WriteString("ENDSWITH(")
 		}
 		fmt.Fprintf(b, "AS_VARCHAR(%s), ", target)
-		quoteString(b, values[0].String)
+		quoteString(b, values[0].String())
 		b.WriteByte(')')
 
 	case warehouses.OpIsEmpty:

@@ -1,3 +1,4 @@
+import BigNumber from 'bignumber.js';
 import { ConnectorSettings } from './responses';
 import { Compression } from './connection';
 import Type, { ObjectType } from './types';
@@ -89,10 +90,44 @@ type FilterOperator =
 	| 'exists'
 	| 'does not exist';
 
-interface FilterCondition {
+interface FilterNumber {
+	readonly kind: 'number';
+	readonly text: string;
+}
+
+type FilterValue = string | FilterNumber | boolean | null;
+type FilterValueKind = 'string' | 'number' | 'boolean' | 'null';
+
+interface EditorFilterCondition {
 	property: string;
 	operator: FilterOperator | '';
 	values?: string[];
+	// Retain the intended kinds across property/operator changes until edited.
+	valueKinds?: (FilterValueKind | undefined)[];
+}
+
+type EditorFilterRule = EditorFilterCondition | EditorFilter;
+
+interface EditorFilter {
+	operator: FilterLogical;
+	rules: EditorFilterRule[];
+}
+
+interface TransportFilterCondition {
+	property: string;
+	operator: FilterOperator;
+	values?: (string | BigNumber | boolean | null)[];
+}
+
+interface TransportFilter {
+	operator: FilterLogical;
+	rules: (TransportFilterCondition | TransportFilter)[];
+}
+
+interface FilterCondition {
+	property: string;
+	operator: FilterOperator;
+	values?: FilterValue[];
 }
 
 type FilterRule = FilterCondition | Filter;
@@ -194,6 +229,13 @@ interface PipelineMetrics {
 }
 
 export type {
+	FilterNumber,
+	FilterValue,
+	FilterValueKind,
+	EditorFilter,
+	EditorFilterCondition,
+	EditorFilterRule,
+	TransportFilter,
 	PipelineTarget,
 	Transformation,
 	TransformationFunction,

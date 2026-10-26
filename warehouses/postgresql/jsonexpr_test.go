@@ -45,9 +45,9 @@ func TestJSONDecimalRendering(t *testing.T) {
 				if op == warehouses.OpContains {
 					column.Type = types.Array(types.JSON())
 				}
-				operand := warehouses.JSONConditionValue{String: "threshold", Number: &test.number}
+				operand := warehouseexpr.Number(test.number)
 				var b strings.Builder
-				err := renderExpr(&b, warehouses.NewBaseExpr(column, op, operand))
+				err := renderExpr(&b, newJSONFilterExpr(column, op, operand))
 				if err != nil {
 					t.Fatalf("expected valid numeric expression, got %v", err)
 				}
@@ -77,47 +77,47 @@ func TestJSONExpressionErrors(t *testing.T) {
 		expr    *warehouses.BaseExpr
 		wantErr string
 	}{
-		{"unsupported JSON operator", warehouses.NewBaseExpr(column, warehouses.OpIsBefore, warehouseexpr.Operand("2026-01-01")),
+		{"unsupported JSON operator", newJSONFilterExpr(column, warehouses.OpIsBefore, json.Value("\"2026-01-01\"")),
 			`operator 14 is not supported for type "json"`},
-		{"missing operand", warehouses.NewBaseExpr(column, warehouses.OpIs),
+		{"missing operand", newJSONFilterExpr(column, warehouses.OpIs),
 			"operator 0 requires 1 values, got 0"},
-		{"invalid operand type", warehouses.NewBaseExpr(column, warehouses.OpIs, "foo"),
-			"expected a JSONConditionValue, got string"},
-		{"between with one operand", warehouses.NewBaseExpr(column, warehouses.OpIsBetween, warehouseexpr.Operand("1")),
+		{"invalid operand type", newJSONFilterExpr(column, warehouses.OpIs, "foo"),
+			"JSON filter operand must contain valid encoded JSON"},
+		{"between with one operand", newJSONFilterExpr(column, warehouses.OpIsBetween, json.Value("1")),
 			"operator 6 requires 2 values, got 1"},
-		{"one of without operands", warehouses.NewBaseExpr(column, warehouses.OpIsOneOf),
+		{"one of without operands", newJSONFilterExpr(column, warehouses.OpIsOneOf),
 			"JSON membership requires at least one value"},
-		{"empty with operand", warehouses.NewBaseExpr(column, warehouses.OpIsEmpty, warehouseexpr.Operand("foo")),
+		{"empty with operand", newJSONFilterExpr(column, warehouses.OpIsEmpty, json.Value("\"foo\"")),
 			"operator 20 requires 0 values, got 1"},
-		{"array with scalar comparison", warehouses.NewBaseExpr(array, warehouses.OpIs, warehouseexpr.Operand("foo")),
+		{"array with scalar comparison", newJSONFilterExpr(array, warehouses.OpIs, json.Value("\"foo\"")),
 			`operator 0 is not supported for type "array(json)"`},
-		{"map with scalar contains", warehouses.NewBaseExpr(mapping, warehouses.OpContains, warehouseexpr.Operand("foo")),
+		{"map with scalar contains", newJSONFilterExpr(mapping, warehouses.OpContains, json.Value("\"foo\"")),
 			`operator 8 is not supported for type "map(json)"`},
 		{"array with JSON keys", &warehouses.BaseExpr{Column: array, Keys: []string{"key"}, Operator: warehouses.OpExists},
 			`JSON keys cannot be used with type "array(json)"`},
-		{"number exceeds precision", warehouses.NewBaseExpr(column, warehouses.OpIs,
-			warehouses.JSONConditionValue{String: "1e76", Number: new(decimal.MustParse("1e76"))}),
+		{"number exceeds precision", newJSONFilterExpr(column, warehouses.OpIs,
+			warehouseexpr.Number(decimal.MustParse("1e76"))),
 			"decimal operand exceeds precision 76 or scale 37"},
-		{"number exceeds scale", warehouses.NewBaseExpr(column, warehouses.OpIs,
-			warehouses.JSONConditionValue{String: "1e-38", Number: new(decimal.MustParse("1e-38"))}),
+		{"number exceeds scale", newJSONFilterExpr(column, warehouses.OpIs,
+			warehouseexpr.Number(decimal.MustParse("1e-38"))),
 			"decimal operand exceeds precision 76 or scale 37"},
-		{"number has large positive exponent", warehouses.NewBaseExpr(column, warehouses.OpIs,
-			warehouses.JSONConditionValue{String: "1e999999", Number: new(decimal.MustParse("1e999999"))}),
+		{"number has large positive exponent", newJSONFilterExpr(column, warehouses.OpIs,
+			warehouseexpr.Number(decimal.MustParse("1e999999"))),
 			"decimal operand exceeds precision 76 or scale 37"},
-		{"number has large negative exponent", warehouses.NewBaseExpr(column, warehouses.OpIs,
-			warehouses.JSONConditionValue{String: "1e-999999", Number: new(decimal.MustParse("1e-999999"))}),
+		{"number has large negative exponent", newJSONFilterExpr(column, warehouses.OpIs,
+			warehouseexpr.Number(decimal.MustParse("1e-999999"))),
 			"decimal operand exceeds precision 76 or scale 37"},
-		{"between with invalid second number", warehouses.NewBaseExpr(column, warehouses.OpIsBetween,
-			warehouseexpr.Operand("0"), warehouses.JSONConditionValue{String: "1e-38", Number: new(decimal.MustParse("1e-38"))}),
+		{"between with invalid second number", newJSONFilterExpr(column, warehouses.OpIsBetween,
+			json.Value("0"), warehouseexpr.Number(decimal.MustParse("1e-38"))),
 			"decimal operand exceeds precision 76 or scale 37"},
-		{"one of with invalid second number", warehouses.NewBaseExpr(column, warehouses.OpIsOneOf,
-			warehouseexpr.Operand("0"), warehouses.JSONConditionValue{String: "1e76", Number: new(decimal.MustParse("1e76"))}),
+		{"one of with invalid second number", newJSONFilterExpr(column, warehouses.OpIsOneOf,
+			json.Value("0"), warehouseexpr.Number(decimal.MustParse("1e76"))),
 			"decimal operand exceeds precision 76 or scale 37"},
-		{"array number exceeds precision", warehouses.NewBaseExpr(array, warehouses.OpContains,
-			warehouses.JSONConditionValue{String: "1e76", Number: new(decimal.MustParse("1e76"))}),
+		{"array number exceeds precision", newJSONFilterExpr(array, warehouses.OpContains,
+			warehouseexpr.Number(decimal.MustParse("1e76"))),
 			"decimal operand exceeds precision 76 or scale 37"},
-		{"array number exceeds scale", warehouses.NewBaseExpr(array, warehouses.OpDoesNotContain,
-			warehouses.JSONConditionValue{String: "1e-38", Number: new(decimal.MustParse("1e-38"))}),
+		{"array number exceeds scale", newJSONFilterExpr(array, warehouses.OpDoesNotContain,
+			warehouseexpr.Number(decimal.MustParse("1e-38"))),
 			"decimal operand exceeds precision 76 or scale 37"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -175,7 +175,7 @@ func TestJSONExpressions(t *testing.T) {
 	}{{"scalar", nil}, {"document", []string{"a.b", "key'\\"}}} {
 		for _, c := range cases {
 			t.Run(path.name+"/"+c.Name, func(t *testing.T) {
-				expr := warehouses.NewBaseExpr(column, c.Operator, c.Values...)
+				expr := newJSONFilterExpr(column, c.Operator, c.Values...)
 				if len(path.keys) > 0 {
 					expr.Column = documentColumn
 					expr.Keys = path.keys
@@ -196,7 +196,7 @@ func TestJSONExpressions(t *testing.T) {
 				op = warehouses.OpDoesNotContain
 			}
 			checkJSONExpression(t, warehouse, table.Name, idColumn,
-				warehouses.NewBaseExpr(arrayColumn, op, c.Values...), c.Matches)
+				newJSONFilterExpr(arrayColumn, op, c.Values...), c.Matches)
 		})
 	}
 
@@ -231,7 +231,7 @@ func TestJSONExpressions(t *testing.T) {
 		} {
 			t.Run(container.Name+"/"+c.name, func(t *testing.T) {
 				checkJSONExpression(t, warehouse, table.Name, idColumn,
-					warehouses.NewBaseExpr(container, c.op), c.matches)
+					newJSONFilterExpr(container, c.op), c.matches)
 			})
 		}
 	}
@@ -250,8 +250,8 @@ func TestJSONExpressions(t *testing.T) {
 		name, text string
 		matches    bool
 	}{
-		{"number", "5", true}, {"string", "foo", true}, {"nested number", "6", false},
-		{"boolean text", "true", false}, {"null text", "null", false},
+		{"number", "5", true}, {"string", "\"foo\"", true}, {"nested number", "6", false},
+		{"boolean text", "\"true\"", false}, {"null text", "\"null\"", false},
 	} {
 		for _, op := range []warehouses.Operator{warehouses.OpContains, warehouses.OpDoesNotContain} {
 			name := "contains"
@@ -265,8 +265,8 @@ func TestJSONExpressions(t *testing.T) {
 					want = []int{mixedID}
 				}
 				expr := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-					warehouses.NewBaseExpr(idColumn, warehouses.OpIs, mixedID),
-					warehouses.NewBaseExpr(arrayColumn, op, warehouseexpr.Operand(c.text)),
+					newJSONFilterExpr(idColumn, warehouses.OpIs, mixedID),
+					newJSONFilterExpr(arrayColumn, op, json.Value(c.text)),
 				})
 				checkJSONExpression(t, warehouse, table.Name, idColumn, expr, want)
 			})
@@ -290,7 +290,7 @@ func TestJSONExpressions(t *testing.T) {
 			if err != nil {
 				t.Fatalf("expected numeric fixture merge, got %v", err)
 			}
-			idExpr := warehouses.NewBaseExpr(idColumn, warehouses.OpIs, id)
+			idExpr := newJSONFilterExpr(idColumn, warehouses.OpIs, id)
 			rows, _, err := warehouse.Query(t.Context(), warehouses.RowQuery{
 				Table: table.Name, Columns: []warehouses.Column{column}, Where: idExpr,
 			}, false)
@@ -329,8 +329,8 @@ func TestJSONExpressions(t *testing.T) {
 			if err != nil {
 				t.Fatalf("expected numeric original value, got %v", err)
 			}
-			original := warehouseexpr.Operand(fixture.raw)
-			storedOperand := warehouseexpr.Operand(string(stored))
+			original := json.Value(fixture.raw)
+			storedOperand := json.Value(string(stored))
 			changed := !number.Equal(originalNumber)
 			if changed != fixture.changed {
 				t.Fatalf("expected numeric storage change %t, got %t: %s became %s", fixture.changed, changed, fixture.raw, stored)
@@ -343,23 +343,35 @@ func TestJSONExpressions(t *testing.T) {
 			for _, c := range []struct {
 				name    string
 				op      warehouses.Operator
-				operand warehouses.JSONConditionValue
+				operand json.Value
 				matches bool
 			}{
-				{"stored equality", warehouses.OpIs, storedOperand, storedOperand.Number != nil},
-				{"original equality", warehouses.OpIs, original, original.Number != nil && !changed},
-				{"original less than", warehouses.OpIsLessThan, original, original.Number != nil && number.Less(originalNumber)},
-				{"original greater than", warehouses.OpIsGreaterThan, original, original.Number != nil && number.Greater(originalNumber)},
-				{"less than upper bound", warehouses.OpIsLessThan, warehouseexpr.Operand(fixture.upper), true},
-				{"greater than lower bound", warehouses.OpIsGreaterThan, warehouseexpr.Operand(fixture.lower), true},
+				{"stored equality", warehouses.OpIs, storedOperand, types.IsDecimal(number)},
+				{"original equality", warehouses.OpIs, original, types.IsDecimal(originalNumber) && !changed},
+				{"original less than", warehouses.OpIsLessThan, original, types.IsDecimal(originalNumber) && number.Less(originalNumber)},
+				{"original greater than", warehouses.OpIsGreaterThan, original, types.IsDecimal(originalNumber) && number.Greater(originalNumber)},
+				{"less than upper bound", warehouses.OpIsLessThan, json.Value(fixture.upper), true},
+				{"greater than lower bound", warehouses.OpIsGreaterThan, json.Value(fixture.lower), true},
 			} {
 				t.Run(c.name, func(t *testing.T) {
+					operandNumber, err := c.operand.Decimal(0, 0)
+					if err != nil {
+						t.Fatalf("expected numeric fixture operand, got %v", err)
+					}
+					if !types.IsDecimal(operandNumber) {
+						var b strings.Builder
+						err := renderExpr(&b, newJSONFilterExpr(column, c.op, c.operand))
+						if err != nil {
+							return
+						}
+						t.Fatal("expected out-of-domain operand error, got nil")
+					}
 					var want []int
 					if c.matches {
 						want = []int{id}
 					}
 					expr := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-						idExpr, warehouses.NewBaseExpr(column, c.op, c.operand),
+						idExpr, newJSONFilterExpr(column, c.op, c.operand),
 					})
 					checkJSONExpression(t, warehouse, table.Name, idColumn, expr, want)
 				})
@@ -406,4 +418,13 @@ func checkJSONExpression(t *testing.T, warehouse warehouses.Warehouse, table str
 		t.Errorf("expected total %d, got %d", len(want), total)
 	}
 
+}
+
+// newJSONFilterExpr marks raw scalar operands as typed filter operands.
+func newJSONFilterExpr(column warehouses.Column, operator warehouses.Operator, values ...any) *warehouses.BaseExpr {
+	expr := warehouses.NewBaseExpr(column, operator, values...)
+	if column.Type.IsJSON() || (column.Type.IsArray() || column.Type.IsMap()) && column.Type.Elem().IsJSON() {
+		expr.JSONComparison = warehouses.JSONTypedComparison
+	}
+	return expr
 }

@@ -5,15 +5,17 @@
 package krenalistester
 
 import (
-	"encoding/json"
+	stdjson "encoding/json"
 	"testing"
+
+	"github.com/krenalis/krenalis/tools/json"
 )
 
 // TestDefaultFilterUserFromEventsJSON verifies the JSON representation of the
 // default filter for pipelines that import users from events.
 func TestDefaultFilterUserFromEventsJSON(t *testing.T) {
 
-	got, err := json.Marshal(DefaultFilterUserFromEvents)
+	got, err := stdjson.Marshal(DefaultFilterUserFromEvents)
 	if err != nil {
 		t.Fatalf("cannot marshal filter: %v", err)
 	}
@@ -36,14 +38,14 @@ func TestFilterJSON(t *testing.T) {
 			&Filter{
 				Operator: OpOr,
 				Rules: []FilterRule{
-					&FilterCondition{Property: "y", Operator: OpIs, Values: []string{"a"}},
-					&FilterCondition{Property: "z", Operator: OpIs, Values: []string{"b"}},
+					&FilterCondition{Property: "y", Operator: OpIs, Values: []json.Value{json.Value(`"a"`)}},
+					&FilterCondition{Property: "z", Operator: OpIs, Values: []json.Value{json.Value(`"b"`)}},
 				},
 			},
 		},
 	}
 
-	got, err := json.Marshal(filter)
+	got, err := stdjson.Marshal(filter)
 	if err != nil {
 		t.Fatalf("cannot marshal filter: %v", err)
 	}

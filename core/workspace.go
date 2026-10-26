@@ -789,11 +789,11 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 	}
 	var where *state.Where
 	if filter != nil {
-		_, err := validateFilter(filter, schemas.Event)
+		prepared, _, err := prepareFilter(filter, schemas.Event)
 		if err != nil {
 			return "", errors.BadRequest("filter is not valid: %w", err)
 		}
-		where = convertFilterToWhere(filter, schemas.Event)
+		where = prepared
 	}
 	var rc *state.RequiredConsents
 	if requiredConsents != nil {
@@ -940,14 +940,14 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 	// Validate the filter.
 	var where *state.Where
 	if filter != nil {
-		_, err := validateFilter(filter, schemas.Event)
+		prepared, _, err := prepareFilter(filter, schemas.Event)
 		if err != nil {
 			if err, ok := err.(types.PathNotExistError); ok {
 				return nil, errors.BadRequest("filter's property %q does not exist", err.Path)
 			}
 			return nil, errors.BadRequest("filter is not valid: %w", err)
 		}
-		where = convertFilterToWhere(filter, schemas.Event)
+		where = prepared
 	}
 
 	// Validate the order.
@@ -1279,14 +1279,14 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 	// Validate the filter.
 	var where *state.Where
 	if filter != nil {
-		_, err := validateFilter(filter, ws.ProfileSchema)
+		prepared, _, err := prepareFilter(filter, ws.ProfileSchema)
 		if err != nil {
 			if err, ok := err.(types.PathNotExistError); ok {
 				return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)
 			}
 			return nil, types.Type{}, 0, errors.BadRequest("filter is not valid: %w", err)
 		}
-		where = convertFilterToWhere(filter, ws.ProfileSchema)
+		where = prepared
 	}
 
 	// Validate the order.

@@ -49,7 +49,11 @@ export default defineConfig({
 		{
 			name: 'pipelines.spec.ts',
 			use: { ...devices['Desktop Chrome'] },
-			testMatch: ['tests/pipeline-semantics.spec.ts', 'tests/pipelines.spec.ts'],
+			testMatch: [
+				'tests/pipeline-semantics.spec.ts',
+				'tests/pipelines.spec.ts',
+				'tests/typed-filter-values.spec.ts',
+			],
 		},
 		{
 			name: 'settings.spec.ts',

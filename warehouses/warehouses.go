@@ -825,16 +825,17 @@ const (
 // On JSON columns, Keys specifies successive object keys, treated literally,
 // including any dots. An empty Keys applies to the entire column. SQL NULL
 // represents an absent JSON property; JSON null represents a present null.
-// JSON filter operands have type JSONConditionValue; encoded json.Value
-// operands may also be used for structural equality.
-// Decimal operands, including JSONConditionValue.Number, must fit a
+// JSON filter operands have type json.Value and use JSONTypedComparison.
+// The default JSONStructuralComparison preserves encoded JSON equality.
+// Decimal and typed JSON Number operands must fit a
 // decimal(p,s) with p <= 76 and 0 <= s <= min(p,37), independently of the
 // column's precision and scale. Rendering rejects operands beyond these limits.
 type BaseExpr struct {
-	Column   Column
-	Keys     []string
-	Operator Operator
-	Values   []any // may be nil for unary expressions.
+	Column         Column
+	Keys           []string
+	Operator       Operator
+	Values         []any // may be nil for unary expressions.
+	JSONComparison JSONComparisonMode
 }
 
 func (*BaseExpr) expr() {}
@@ -846,15 +847,13 @@ func NewBaseExpr(column Column, operator Operator, values ...any) *BaseExpr {
 	return &BaseExpr{Column: column, Operator: operator, Values: values}
 }
 
-// JSONConditionValue is an operand for a JSON value or array(json) element.
-// String is compared with JSON strings; Number, when non-nil, is also compared
-// with JSON numbers. Other JSON kinds do not match either representation.
-// Number must fit a decimal(p,s) with p <= 76 and 0 <= s <= min(p,37).
-// A nil Number permits any String, including numeric text outside those limits.
-type JSONConditionValue struct {
-	String string
-	Number *decimal.Decimal
-}
+// JSONComparisonMode distinguishes structural JSON equality from typed filters.
+type JSONComparisonMode uint8
+
+const (
+	JSONStructuralComparison JSONComparisonMode = iota
+	JSONTypedComparison
+)
 
 // Operator presents a unary or binary operator of a BaseExpr.
 type Operator int

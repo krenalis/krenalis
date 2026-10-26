@@ -3,6 +3,7 @@ import { NotFoundError, UnprocessableError } from '../lib/api/errors';
 import AppContext from '../context/AppContext';
 import { Event, CreateEventListenerResponse, EventListenerEventsResponse } from '../lib/api/types/responses';
 import { Filter, EventListenerConsents } from '../lib/api/types/pipeline';
+import { encodeFilter } from '../utils/filters';
 
 interface EventListenerEvent {
 	id: number;
@@ -17,6 +18,7 @@ const useEventListener = (
 	connection?: string | null,
 	filter?: Filter,
 	requiredConsents?: EventListenerConsents | null,
+	canListen = true,
 ) => {
 	const [isStarted, setIsStarted] = useState<boolean>(false);
 	const [isListenerNotFound, setIsListenerNotFound] = useState<boolean>(false);
@@ -30,9 +32,10 @@ const useEventListener = (
 	// requiredConsentsKey changes only when the content of requiredConsents
 	// changes, so the listener is created again only in that case.
 	const requiredConsentsKey = JSON.stringify(requiredConsents ?? null);
+	const filterKey = filter == null ? 'null' : encodeFilter(filter);
 
 	useEffect(() => {
-		if (!isStarted) {
+		if (!isStarted || !canListen) {
 			return;
 		}
 		if (isListenerNotFound) {
@@ -117,7 +120,7 @@ const useEventListener = (
 			removeListener();
 			clearInterval(eventIntervalID.current);
 		};
-	}, [isStarted, isListenerNotFound, requiredConsentsKey]);
+	}, [isStarted, isListenerNotFound, requiredConsentsKey, filterKey, connection, canListen]);
 
 	const startListening = () => {
 		setIsStarted(true);

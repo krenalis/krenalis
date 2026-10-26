@@ -7,9 +7,12 @@ import {
 	ExpressionToBeExtracted,
 	Filter,
 	FilterCondition,
+	EditorFilter,
+	EditorFilterCondition,
+	EditorFilterRule,
 	FilterRule,
+	FilterValue,
 	RequiredConsents,
-	FilterOperator,
 	Mapping,
 	Matching,
 	SchedulePeriod,
@@ -23,19 +26,17 @@ import API from '../api/api';
 import TransformedConnection from './connection';
 import { filterOrderingPropertySchema } from '../../components/helpers/getSchemaComboboxItems';
 import {
-	formatString,
-	isDate,
-	isDateTime,
-	isDecimal,
-	isFloat,
-	isIP,
-	isInt,
-	isUnsigned,
-	isUUID,
+	FILTER_OPERATORS,
+	MAX_FILTER_DEPTH,
+	MAX_FILTER_RULE_COUNT,
+	isFilterGroup,
+	isUnaryOperator,
 	isValidPropertyPath,
-	isYear,
-	parseText,
+	parseFilterOperand,
+	toEditorFilter,
+	filterValueKind,
 } from '../../utils/filters';
+import { parseFilter } from '../../utils/filters_parser';
 import { RAW_TRANSFORMATION_FUNCTIONS } from '../../components/routes/PipelineWrapper/Pipeline.constants';
 
 const SCHEDULE_PERIODS: SchedulePeriod[] = ['Off', '5m', '15m', '30m', '1h', '2h', '3h', '6h', '8h', '12h', '24h'];
@@ -43,64 +44,10 @@ const SCHEDULE_PERIODS: SchedulePeriod[] = ['Off', '5m', '15m', '30m', '1h', '2h
 // Profile export consent metrics are deferred until matching is accounted for.
 const SHOW_EXPORT_PROFILE_CONSENT_METRICS = false;
 
-const FILTER_OPERATORS: FilterOperator[] = [
-	'is',
-	'is not',
-	'is less than',
-	'is less than or equal to',
-	'is greater than',
-	'is greater than or equal to',
-	'is between',
-	'is not between',
-	'contains',
-	'does not contain',
-	'is one of',
-	'is not one of',
-	'starts with',
-	'ends with',
-	'is before',
-	'is on or before',
-	'is after',
-	'is on or after',
-	'is true',
-	'is false',
-	'is empty',
-	'is not empty',
-	'is null',
-	'is not null',
-	'exists',
-	'does not exist',
-];
-
-const MAX_FILTER_DEPTH = 4;
-const MAX_FILTER_RULE_COUNT = 100;
-
-// isFilterGroup reports whether rule is a filter group.
-const isFilterGroup = (rule: FilterRule): rule is Filter => 'rules' in rule;
-
-// getFilterConditions returns every condition in filter in traversal order.
-const getFilterConditions = (filter: Filter): FilterCondition[] => {
-	const conditions: FilterCondition[] = [];
-	for (const rule of filter.rules) {
-		if (isFilterGroup(rule)) {
-			conditions.push(...getFilterConditions(rule));
-		} else {
-			conditions.push(rule);
-		}
-	}
-	return conditions;
-};
-
-// mapFilterConditions applies transform to every condition in filter.
-const mapFilterConditions = (filter: Filter, transform: (condition: FilterCondition) => FilterCondition): Filter => ({
-	operator: filter.operator,
-	rules: filter.rules.map((rule) => (isFilterGroup(rule) ? mapFilterConditions(rule, transform) : transform(rule))),
-});
-
 // omitEmptyFilterRules removes draft conditions and groups that contain no
 // complete rules. It returns null when the root group becomes empty.
-const omitEmptyFilterRules = (filter: Filter): Filter | null => {
-	const rules: FilterRule[] = [];
+const omitEmptyFilterRules = (filter: EditorFilter): EditorFilter | null => {
+	const rules: EditorFilterRule[] = [];
 	for (const rule of filter.rules) {
 		if (isFilterGroup(rule)) {
 			const group = omitEmptyFilterRules(rule);
@@ -113,17 +60,6 @@ const omitEmptyFilterRules = (filter: Filter): Filter | null => {
 	}
 	return rules.length === 0 ? null : { operator: filter.operator, rules };
 };
-
-const UNARY_OPERATORS = new Set<FilterOperator>([
-	'is true',
-	'is false',
-	'is empty',
-	'is not empty',
-	'is null',
-	'is not null',
-	'exists',
-	'does not exist',
-]);
 
 const typesByFilterOperator: string[][] = [
 	['int', 'float', 'decimal', 'datetime', 'date', 'time', 'year', 'uuid', 'json', 'ip', 'string'], // is
@@ -276,7 +212,7 @@ interface TransformedEventType {
 	id: string;
 	name: string;
 	description: string;
-	defaultFilter: Filter | null;
+	defaultFilter: string | null;
 }
 
 interface TransformedPipeline {
@@ -291,7 +227,7 @@ interface TransformedPipeline {
 	schedulePeriod?: SchedulePeriod | null;
 	inSchema: ObjectType | null;
 	outSchema: ObjectType | null;
-	filter: Filter | null;
+	filter: EditorFilter | null;
 	requiredConsents: RequiredConsents | null;
 	transformation: TransformedTransformation | null;
 	query?: string | null;
@@ -365,8 +301,6 @@ const getCompatibleFilterOperators = (property: TransformedProperty, hasPath: bo
 	}
 	return operators;
 };
-
-const isUnaryOperator = (op: FilterOperator | ''): boolean => (op === '' ? false : UNARY_OPERATORS.has(op));
 
 const isBetweenOperator = (operator: string): boolean => {
 	return operator === 'is between' || operator === 'is not between';
@@ -604,6 +538,7 @@ const transformPipeline = (
 	pipeline: Pipeline,
 	outputSchema: ObjectType,
 	supportsTransformation: boolean,
+	filterSchema?: ObjectType,
 ): TransformedPipeline => {
 	let pipelineMapping = pipeline.transformation?.mapping;
 	if (
@@ -625,13 +560,6 @@ const transformPipeline = (
 		pipeline.updatedAtFormat = pipeline.updatedAtFormat.substring(1, pipeline.updatedAtFormat.length - 1);
 	}
 
-	if (pipeline.filter) {
-		pipeline.filter = mapFilterConditions(pipeline.filter, (condition) => ({
-			...condition,
-			values: (condition.values ?? []).map((value) => formatString(value)),
-		}));
-	}
-
 	return {
 		id: pipeline.id,
 		connection: pipeline.connection,
@@ -644,7 +572,10 @@ const transformPipeline = (
 		schedulePeriod: pipeline.schedulePeriod,
 		inSchema: pipeline.inSchema,
 		outSchema: pipeline.outSchema,
-		filter: pipeline.filter,
+		filter:
+			pipeline.filter == null
+				? null
+				: toEditorFilter(pipeline.filter, filterSchema ?? pipeline.inSchema ?? outputSchema),
 		requiredConsents: pipeline.requiredConsents,
 		transformation: {
 			mapping: pipelineMapping != null ? transformPipelineMapping(pipelineMapping, outputSchema) : null,
@@ -971,23 +902,30 @@ const transformInPipelineToSet = async (
 		const isEventBasedUserImport = connection.isEventBased && connection.isSource && pipelineType.target === 'User';
 		const isAppEventsExport =
 			connection.isApplication && connection.isDestination && pipelineType.target === 'Event';
-		const draftFilter = omitEmptyFilterRules(pipeline.filter);
-		if (draftFilter != null) {
-			filter = mapFilterConditions(draftFilter, (condition) => {
-				const propertyName = condition.property;
-				const [base, path] = splitPropertyAndPath(propertyName, flattenedInputSchema);
-				const property = flattenedInputSchema[base];
-				const normalized = validateAndNormalizeFilterCondition(
-					condition,
-					property,
-					path,
-					propertyName,
-					isEventBasedUserImport || isAppEventsExport || isEventImport ? ['kpid'] : null,
-				);
-				addPropertyToSchema(base, property.full, inSchema, flattenedInputSchema, property.indentation === 0);
-
-				return normalized;
-			});
+		filter = prepareEditorFilter(
+			pipeline.filter,
+			pipelineType.inputSchema,
+			isEventBasedUserImport || isAppEventsExport || isEventImport ? ['kpid'] : undefined,
+		);
+		if (filter != null) {
+			const addFilterProperties = (group: Filter) => {
+				for (const rule of group.rules) {
+					if (isFilterGroup(rule)) {
+						addFilterProperties(rule);
+						continue;
+					}
+					const [base] = splitPropertyAndPath(rule.property, flattenedInputSchema);
+					const property = flattenedInputSchema[base];
+					addPropertyToSchema(
+						base,
+						property.full,
+						inSchema,
+						flattenedInputSchema,
+						property.indentation === 0,
+					);
+				}
+			};
+			addFilterProperties(filter);
 		}
 	}
 
@@ -1161,7 +1099,7 @@ const transformInPipelineToSet = async (
 };
 
 const computeDefaultPipeline = (
-	pipelineType: PipelineType | TransformedPipelineType,
+	pipelineType: TransformedPipelineType,
 	connection: TransformedConnection,
 	outputSchema: ObjectType,
 	fields: PipelineTypeField[],
@@ -1185,7 +1123,7 @@ const computeDefaultPipeline = (
 	if (fields.includes('Filter')) {
 		const eventType = connection.eventTypes.find((t) => t.id === pipelineType.eventType);
 		if (eventType != null && eventType.defaultFilter != null) {
-			pipeline.filter = eventType.defaultFilter;
+			pipeline.filter = parseFilter(eventType.defaultFilter, pipelineType.inputSchema);
 		} else if ((connection.isSDK || connection.isWebhook) && pipelineType.target === 'User') {
 			pipeline.filter = {
 				operator: 'or',
@@ -2103,11 +2041,44 @@ const getTransformationFunctionParameter = (
 	}
 };
 
-// validateAndNormalizeFilterCondition validates and normalizes a filter
-// condition. It throws an error if the condition is invalid, otherwise it
-// returns the condition with its values parsed.
+// prepareEditorFilter validates the draft and returns the exact model to send.
+const prepareEditorFilter = (
+	filter: EditorFilter | null,
+	schema: ObjectType,
+	propertiesToHide?: string[],
+): Filter | null => {
+	if (filter == null) return null;
+	const draft = omitEmptyFilterRules(filter);
+	if (draft == null) return null;
+	if (schema == null) throw new Error('Input schema is required by the filter');
+	const properties = flattenSchema(schema);
+	let count = 0;
+	const visit = (group: EditorFilter, depth: number): Filter => {
+		if (depth > MAX_FILTER_DEPTH) throw new Error(`Filter exceeds maximum depth of ${MAX_FILTER_DEPTH}`);
+		if (group.operator !== 'and' && group.operator !== 'or') throw new Error('Invalid filter logical operator');
+		return {
+			operator: group.operator,
+			rules: group.rules.map((rule): FilterRule => {
+				if (++count > MAX_FILTER_RULE_COUNT)
+					throw new Error(`Filter exceeds maximum rule count of ${MAX_FILTER_RULE_COUNT}`);
+				if (isFilterGroup(rule)) return visit(rule, depth + 1);
+				const [base, path] = splitPropertyAndPath(rule.property, properties);
+				return validateAndNormalizeFilterCondition(
+					rule,
+					properties[base],
+					path,
+					rule.property,
+					propertiesToHide,
+				);
+			}),
+		};
+	};
+	return visit(draft, 1);
+};
+
+// validateAndNormalizeFilterCondition parses each operand once in its context.
 const validateAndNormalizeFilterCondition = (
-	condition: FilterCondition,
+	condition: EditorFilterCondition,
 	property: TransformedProperty,
 	propertyPath: string,
 	propertyName: string,
@@ -2116,107 +2087,65 @@ const validateAndNormalizeFilterCondition = (
 	if (property == null || propertiesToHide?.includes(propertyName)) {
 		throw new Error(`Property "${propertyName}" of filter condition does not exist`);
 	}
-
-	if (property.type === 'json' && propertyPath.trim() !== '') {
-		const isValid = isValidPropertyPath(propertyPath);
-		if (!isValid) {
-			throw new Error(`Property path "${propertyPath}" of filter condition is not valid`);
+	if (!isValidPropertyPath(propertyName) || (propertyPath !== '' && !isValidPropertyPath(propertyPath))) {
+		throw new Error(`Property path "${propertyName}" of filter condition is not valid`);
+	}
+	const operator = condition.operator;
+	if (operator === '') throw new Error('Operator of filter condition is required');
+	if (!getCompatibleFilterOperators(property, propertyPath !== '').includes(FILTER_OPERATORS.indexOf(operator))) {
+		throw new Error(`Operator "${operator}" is not compatible with property "${propertyName}"`);
+	}
+	if (isUnaryOperator(operator)) {
+		if (condition.values != null) throw new Error(`Operator "${operator}" cannot have values`);
+		return { property: condition.property, operator };
+	}
+	const controls = condition.values ?? [];
+	const isBetween = isBetweenOperator(operator);
+	const isMembership = isOneOfOperator(operator);
+	if ((isBetween && controls.length !== 2) || (!isBetween && !isMembership && controls.length !== 1)) {
+		throw new Error(`Invalid number of filter values on "${propertyName}"`);
+	}
+	const type = property.full.type.kind === 'array' ? property.full.type.elementType : property.full.type;
+	const enumValues = property.full.type.kind === 'string' ? property.full.type.values : undefined;
+	const values: FilterValue[] = [];
+	for (const [i, control] of controls.entries()) {
+		if (control.trim() === '' && enumValues?.includes(control) !== true) {
+			if (isMembership && i > 0) continue;
+			throw new Error(`The filter value on the property "${propertyName}" cannot be empty`);
 		}
-	}
-
-	if (condition.operator == '') {
-		throw new Error(`Operator of filter condition is required`);
-	}
-
-	let isJsonOrText = property.type === 'json' || property.type === 'string';
-	if (property.type === 'array') {
-		const typ = property.full.type as ArrayType;
-		if (typ.elementType.kind === 'json' || typ.elementType.kind === 'string') {
-			isJsonOrText = true;
+		const value = parseFilterOperand(control, property.full.type, operator);
+		const kind = filterValueKind(value);
+		if (condition.valueKinds?.[i] != null && condition.valueKinds[i] !== kind) {
+			throw new Error(`Filter value on "${propertyName}" changed type; edit it explicitly for the new context`);
 		}
-	}
-
-	const conditionValues = condition.values ?? [];
-	let values: string[] = [];
-	if (isJsonOrText) {
-		const stringType = property.type === 'string' ? (property.full.type as StringType) : null;
-		const propertyValues = stringType?.values ?? null;
-		const allowsEmptySelection = propertyValues != null && propertyValues.includes('');
-
-		for (const [i, v] of conditionValues.entries()) {
-			const isFirstValueEmpty = i === 0 && v === '';
-			const isSecondBetweenEmpty = i === 1 && v === '' && isBetweenOperator(condition.operator);
-			if ((isFirstValueEmpty || isSecondBetweenEmpty) && !allowsEmptySelection) {
-				throw new Error(`The filter value on the property "${propertyName}" cannot be empty`);
-			}
-			if (v === '') {
-				if (allowsEmptySelection) {
-					values.push('');
-				}
-				// discard empty values.
-				continue;
-			}
-			let parsed: string;
-			try {
-				parsed = parseText(v);
-			} catch (err) {
-				throw new Error(`Value "${v}" of filter condition is not valid: ${err.message}`);
-			}
-			values.push(parsed);
-		}
-	} else {
-		values = conditionValues;
-	}
-
-	try {
-		validateFilterConditionValues(property.full.type, conditionValues, propertyName);
-	} catch (err) {
-		throw err;
-	}
-
-	const c: FilterCondition = { property: condition.property, operator: condition.operator };
-	if (!isUnaryOperator(condition.operator)) {
-		c.values = values;
-	}
-	return c;
-};
-
-const validateFilterConditionValues = (type: Type, values: string[], propertyName: string) => {
-	const throwIfInvalid = (isValid: boolean, typeKind: string, unsigned?: boolean) => {
-		if (!isValid) {
-			throw new Error(
-				`The filter value on the property "${propertyName}" is not a valid${unsigned === true ? ' unsigned' : ''} ${typeKind}`,
-			);
-		}
-	};
-
-	for (const v of values) {
-		if (type.kind === 'int') {
-			if (type.unsigned) {
-				throwIfInvalid(isUnsigned(v), type.kind, true);
-			} else {
-				throwIfInvalid(isInt(v), type.kind);
-			}
-		} else if (type.kind === 'float') {
-			throwIfInvalid(isFloat(v, type.bitSize), type.kind);
-		} else if (type.kind === 'decimal') {
-			throwIfInvalid(isDecimal(v), type.kind);
-		} else if (type.kind === 'datetime') {
-			throwIfInvalid(isDateTime(v), type.kind);
-		} else if (type.kind === 'date') {
-			throwIfInvalid(isDate(v), type.kind);
-		} else if (type.kind === 'year') {
-			throwIfInvalid(isYear(v), type.kind);
-		} else if (type.kind === 'uuid') {
-			throwIfInvalid(isUUID(v), type.kind);
-		} else if (type.kind === 'ip') {
-			throwIfInvalid(isIP(v), type.kind);
-		} else if (type.kind === 'array') {
-			if (type.elementType.kind !== 'json' && type.elementType.kind !== 'string') {
-				validateFilterConditionValues(type.elementType, [v], propertyName);
+		if (typeof value === 'string') {
+			if (enumValues != null) {
+				if (!enumValues.includes(value))
+					throw new Error(`Filter value on "${propertyName}" is not among allowed values`);
+			} else if (
+				!value.isWellFormed() ||
+				value.includes('\0') ||
+				[...value].length > 80 ||
+				(value === '' && type.kind !== 'json')
+			) {
+				throw new Error(`Filter value on "${propertyName}" must contain 1–80 valid characters without NUL`);
 			}
 		}
+		if (type.kind === 'json') {
+			if ((operator === 'starts with' || operator === 'ends with') && kind !== 'string') {
+				throw new Error('JSON prefix and suffix operands must be Strings');
+			}
+			if (!isMembership && (kind === 'boolean' || kind === 'null')) {
+				throw new Error('Boolean and Null operands require JSON membership');
+			}
+		}
+		values.push(value);
 	}
+	if (values.length === 0) throw new Error(`Filter values on "${propertyName}" are required`);
+	if (type.kind === 'json' && isBetween && filterValueKind(values[0]) !== filterValueKind(values[1])) {
+		throw new Error('JSON interval bounds must have the same kind');
+	}
+	return { property: condition.property, operator, values };
 };
 
 const validateMatching = (inMatching: Property, outMatching: Property) => {
@@ -2334,7 +2263,6 @@ export {
 	checkMapping,
 	checkFunctionPath,
 	getCompatibleFilterOperators,
-	getFilterConditions,
 	isFilterGroup,
 	isUnaryOperator,
 	isBetweenOperator,
@@ -2345,6 +2273,7 @@ export {
 	doesUpdatedAtColumnNeedFormat,
 	computeDefaultTransformationFunction,
 	validateAndNormalizeFilterCondition,
+	prepareEditorFilter,
 	validateMatching,
 	typeSemanticsAreEqual,
 	matchingSemanticsAreCompatibleWithDestination,

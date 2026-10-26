@@ -23,21 +23,22 @@ import {
 	TransformedPipeline,
 	TransformedProperty,
 } from '../../../lib/core/pipeline';
-import { Filter, FilterCondition, FilterLogical, FilterOperator } from '../../../lib/api/types/pipeline';
+import { EditorFilter, EditorFilterCondition, FilterLogical, FilterOperator } from '../../../lib/api/types/pipeline';
 import { checkIfPropertyExists, pipelineObjectLabels } from './Pipeline.helpers';
+import { parseFilterOperand, filterValueKind } from '../../../utils/filters';
 import { StringType } from '../../../lib/api/types/types';
 
 // countFilterRules returns the number of groups and conditions below filter.
-const countFilterRules = (filter: Filter): number =>
+const countFilterRules = (filter: EditorFilter): number =>
 	filter.rules.reduce((count, rule) => count + 1 + (isFilterGroup(rule) ? countFilterRules(rule) : 0), 0);
 
 // filterGroupAt returns the group at path in filter.
-const filterGroupAt = (filter: Filter, path: number[]): Filter => {
+const filterGroupAt = (filter: EditorFilter, path: number[]): EditorFilter => {
 	let group = filter;
 	for (const index of path) {
 		const rule = group.rules[index];
 		if (!isFilterGroup(rule)) {
-			throw new Error('Filter path does not identify a group');
+			throw new Error('EditorFilter path does not identify a group');
 		}
 		group = rule;
 	}
@@ -45,21 +46,21 @@ const filterGroupAt = (filter: Filter, path: number[]): Filter => {
 };
 
 // filterConditionAt returns the condition at path in filter.
-const filterConditionAt = (filter: Filter, path: number[]): FilterCondition => {
+const filterConditionAt = (filter: EditorFilter, path: number[]): EditorFilterCondition => {
 	const group = filterGroupAt(filter, path.slice(0, -1));
 	const rule = group.rules[path[path.length - 1]];
 	if (isFilterGroup(rule)) {
-		throw new Error('Filter path does not identify a condition');
+		throw new Error('EditorFilter path does not identify a condition');
 	}
 	return rule;
 };
 
 // filterConditionValues returns the values of condition, initializing them
 // when they are absent from the API representation.
-const filterConditionValues = (condition: FilterCondition): string[] => (condition.values ??= []);
+const filterConditionValues = (condition: EditorFilterCondition): string[] => (condition.values ??= []);
 
 // newFilterCondition returns an empty condition for the visual editor.
-const newFilterCondition = (): FilterCondition => ({ property: '', operator: '', values: [''] });
+const newFilterCondition = (): EditorFilterCondition => ({ property: '', operator: '', values: [''] });
 
 // pathID returns a stable identifier for a rule path.
 const pathID = (path: number[]): string => path.join('-');
@@ -153,12 +154,14 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		if (condition.operator !== '' && !compatibleOperators.includes(FILTER_OPERATORS.indexOf(condition.operator))) {
 			condition.operator = '';
 			condition.values = [''];
+			condition.valueKinds = [];
 		}
 
 		condition.property = newPropertyName;
 		const newPropertyValues = getPropertyValues(newProperty);
 		if (previousPropertyName !== newPropertyName && (previousPropertyValues != null || newPropertyValues != null)) {
 			condition.values = isBetweenOperator(condition.operator) ? ['', ''] : [''];
+			condition.valueKinds = [];
 		}
 		setPipeline(p);
 		return p;
@@ -201,6 +204,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		if (condition.operator !== '' && !compatibleOperators.includes(FILTER_OPERATORS.indexOf(condition.operator))) {
 			condition.operator = '';
 			condition.values = [''];
+			condition.valueKinds = [];
 		}
 		condition.property = value === '' ? base : `${base}.${value}`;
 		setPipeline(p);
@@ -213,17 +217,21 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		condition.operator = operator;
 		if (isUnaryOperator(operator)) {
 			delete condition.values;
+			delete condition.valueKinds;
 		} else if (isBetweenOperator(operator)) {
 			condition.values = values.slice(0, 2);
+			condition.valueKinds = condition.valueKinds?.slice(0, 2);
 			while (condition.values.length < 2) {
 				condition.values.push('');
 			}
 		} else if (isOneOfOperator(operator)) {
 			if (values.length === 0) {
 				condition.values = [''];
+				condition.valueKinds = [];
 			}
 		} else {
 			condition.values = [values[0] ?? ''];
+			condition.valueKinds = condition.valueKinds?.slice(0, 1);
 		}
 		setPipeline(p);
 	};
@@ -250,7 +258,18 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 
 	const onChangeValue = (path: number[], position: number, value: string) => {
 		const p = structuredClone(pipeline);
-		filterConditionValues(filterConditionAt(p.filter!, path))[position] = value;
+		const condition = filterConditionAt(p.filter!, path);
+		filterConditionValues(condition)[position] = value;
+		const kinds = (condition.valueKinds ??= []);
+		kinds[position] = undefined;
+		const property = findPropertyInSchema(condition.property);
+		if (property != null && condition.operator !== '' && value.trim() !== '') {
+			try {
+				kinds[position] = filterValueKind(parseFilterOperand(value, property.full.type, condition.operator));
+			} catch {
+				/* Keep invalid input editable; preparation reports the error. */
+			}
+		}
 		setPipeline(p);
 	};
 
@@ -260,6 +279,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		const values = filterConditionValues(condition);
 		const position = values.length;
 		values.push('');
+		if (condition.valueKinds != null) condition.valueKinds[position] = undefined;
 		setPipeline(p);
 		setTimeout(() => {
 			const property: any = document.querySelector(`[data-id="property-${pathID(path)}"]`);
@@ -282,10 +302,11 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		const p = structuredClone(pipeline);
 		const condition = filterConditionAt(p.filter!, path);
 		filterConditionValues(condition).splice(position, 1);
+		condition.valueKinds?.splice(position, 1);
 		setPipeline(p);
 	};
 
-	const renderCondition = (condition: FilterCondition, path: number[]): ReactNode => {
+	const renderCondition = (condition: EditorFilterCondition, path: number[]): ReactNode => {
 		const id = pathID(path);
 		const groupPath = path.slice(0, -1);
 		const isOnlyRuleInNestedGroup =
@@ -461,7 +482,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		);
 	};
 
-	const renderGroup = (group: Filter, groupPath: number[], depth: number): ReactNode => {
+	const renderGroup = (group: EditorFilter, groupPath: number[], depth: number): ReactNode => {
 		const isRoot = depth === 1;
 		const removeGroupTooltip = group.rules.some(isFilterGroup) ? 'Remove groups' : 'Remove group';
 

@@ -9,7 +9,6 @@ import (
 	"context"
 	"maps"
 	"math"
-	"reflect"
 	"slices"
 	"sync"
 	"testing"
@@ -438,6 +437,24 @@ func TestPipelineNotificationFilterDecoding(t *testing.T) {
 				}},
 				false,
 			},
+			{
+				"typed membership",
+				`{"operator":"And","rules":[{"property":["value"],"operator":"IsOneOf","values":[100,"100",true,false,null]}]}`,
+				&Where{Operator: OpAnd, Rules: []WhereRule{
+					&WhereCondition{Property: []string{"value"}, Operator: OpIsOneOf, Values: []any{
+						json.Value("100"), json.Value(`"100"`), json.Value("true"), json.Value("false"), json.Value("null"),
+					}},
+				}},
+				false,
+			},
+			{
+				"typed integer",
+				`{"operator":"And","rules":[{"property":["account"],"operator":"Is","values":[9223372036854775807]}]}`,
+				&Where{Operator: OpAnd, Rules: []WhereRule{
+					&WhereCondition{Property: []string{"account"}, Operator: OpIs, Values: []any{int(math.MaxInt64)}},
+				}},
+				false,
+			},
 			{"unknown-property", `{"operator":"And","rules":[{"property":["PrivateCredentialValue"],"operator":"Is","values":["Ada"]}]}`, nil, true},
 			{"legacy-shape", `{"logical":"And","conditions":[]}`, nil, true},
 		} {
@@ -456,7 +473,11 @@ func TestPipelineNotificationFilterDecoding(t *testing.T) {
 					func(CreatePipeline) { createCalls++ },
 					func(UpdatePipeline) { updateCalls++ },
 				}
-				schema := types.Object([]types.Property{{Name: "name", Type: types.String()}})
+				schema := types.Object([]types.Property{
+					{Name: "name", Type: types.String()},
+					{Name: "value", Type: types.JSON()},
+					{Name: "account", Type: types.Int(64)},
+				})
 				var event any = CreatePipeline{
 					ID: stateTestPipelineID, Connection: connection.ID, Name: "changed", InSchema: schema, Filter: []byte(filter.payload), Format: updatedFormat.Code,
 				}
@@ -541,7 +562,7 @@ func TestPipelineNotificationFilterDecoding(t *testing.T) {
 						t.Fatalf("expected one UpdatePipeline dispatch, got %d create and %d update", createCalls, updateCalls)
 					}
 				}
-				if !reflect.DeepEqual(filter.expected, pipeline.Filter) {
+				if !filter.expected.Equal(pipeline.Filter) {
 					t.Fatalf("expected filter %#v, got %#v", filter.expected, pipeline.Filter)
 				}
 				if pipeline.FormatSettings != nil {

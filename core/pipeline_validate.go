@@ -36,6 +36,9 @@ const (
 // validationState is a state for the validation of a pipeline.
 type validationState struct {
 
+	// filter is populated only after successful validation.
+	filter *state.Where
+
 	// target is the pipeline's target.
 	target state.Target
 
@@ -71,7 +74,9 @@ type validationState struct {
 //   - FormatNotExist, if the pipeline is on file and the specified format does
 //     not exist.
 //   - UnsupportedLanguage, if the transformation language is not supported.
-func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
+func validatePipelineToSet(pipeline PipelineToSet, v *validationState) error {
+
+	v.filter = nil
 
 	inSchema := pipeline.InSchema
 	outSchema := pipeline.OutSchema
@@ -148,6 +153,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	}
 	// Validate the filter.
 	var usedInPaths []string
+	var preparedFilter *state.Where
 	filtersAllowed := !(v.connection.role == state.Source &&
 		v.connection.connector.typ == state.Database && v.target == state.TargetUser)
 	if pipeline.Filter != nil {
@@ -157,10 +163,11 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		if !inSchema.Valid() {
 			return errors.BadRequest("input schema is required by the filter")
 		}
-		properties, err := validateFilter(pipeline.Filter, inSchema)
+		filter, properties, err := prepareFilter(pipeline.Filter, inSchema)
 		if err != nil {
 			return errors.BadRequest("filter is not valid: %w", err)
 		}
+		preparedFilter = filter
 		if !exportUsersToFile {
 			usedInPaths = properties
 		}
@@ -761,6 +768,8 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			return errors.BadRequest("output schema contains an unused property: %s", path)
 		}
 	}
+
+	v.filter = preparedFilter
 
 	return nil
 }

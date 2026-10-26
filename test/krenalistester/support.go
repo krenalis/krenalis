@@ -414,7 +414,7 @@ var DefaultFilterUserFromEvents = &Filter{
 		&FilterCondition{
 			Property: "type",
 			Operator: "is",
-			Values:   []string{"identify"},
+			Values:   []json.Value{json.Value("\"identify\"")},
 		},
 		&FilterCondition{
 			Property: "traits",
@@ -653,7 +653,7 @@ func (k *Krenalis) ProfileEvents(kpid uuid.UUID, properties []string) []map[stri
 		Rules: []FilterRule{
 			&FilterCondition{Property: "kpid",
 				Operator: OpIs,
-				Values:   []string{kpid.String()}},
+				Values:   []json.Value{json.Value(strconv.Quote(kpid.String()))}},
 		},
 	}
 	jsonFilter, err := stdjson.Marshal(filter)

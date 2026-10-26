@@ -97,13 +97,12 @@ func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Col
 					int(rule.Operator), path)
 			}
 			values := slices.Clone(rule.Values)
-			for j, value := range values {
-				if value, ok := value.(state.JSONConditionValue); ok {
-					values[j] = warehouses.JSONConditionValue{String: value.String, Number: value.Number}
-				}
-			}
 			if column, ok := columnByProperty[path]; ok {
-				expr.Operands[i] = warehouses.NewBaseExpr(column, warehouses.Operator(rule.Operator), values...)
+				operand := warehouses.NewBaseExpr(column, warehouses.Operator(rule.Operator), values...)
+				if column.Type.IsJSON() || column.Type.IsArray() && column.Type.Elem().IsJSON() {
+					operand.JSONComparison = warehouses.JSONTypedComparison
+				}
+				expr.Operands[i] = operand
 				continue
 			}
 			if len(rule.Property) > 1 {
@@ -113,6 +112,7 @@ func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Col
 					if column, ok := columnByProperty[parentPath]; ok && column.Type.IsJSON() {
 						operand := warehouses.NewBaseExpr(column, warehouses.Operator(rule.Operator), values...)
 						operand.Keys = rule.Property[n:]
+						operand.JSONComparison = warehouses.JSONTypedComparison
 						expr.Operands[i] = operand
 						break
 					}

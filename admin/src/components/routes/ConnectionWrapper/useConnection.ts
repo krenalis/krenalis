@@ -54,9 +54,10 @@ const useConnection = () => {
 						description: t.description,
 						defaultFilter: null,
 					};
-					if (t.defaultFilter) {
+					if (t.defaultFilter != null && t.defaultFilter !== '') {
 						try {
-							tt.defaultFilter = parseFilter(t.defaultFilter);
+							parseFilter(t.defaultFilter);
+							tt.defaultFilter = t.defaultFilter;
 						} catch (err) {
 							handleError(
 								`The default filter of the event type with ID "${t.id}" is invalid: ${err.message.toLowerCase()}`,

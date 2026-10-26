@@ -330,8 +330,8 @@ func Test_renderExpr(t *testing.T) {
 		},
 		{
 			name: "JSON numeric text without number",
-			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs,
-				warehouses.JSONConditionValue{String: "1e999999"}),
+			expr: newJSONFilterExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs,
+				json.Value("\"1e999999\"")),
 			query: `COALESCE(CASE WHEN jsonb_typeof("values") = 'string' THEN ("values" #>> '{}') COLLATE "C" = '1e999999' ELSE FALSE END, FALSE)`,
 		},
 		{

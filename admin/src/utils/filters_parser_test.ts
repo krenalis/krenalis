@@ -11,7 +11,9 @@
  */
 
 import { parseFilter } from './filters_parser';
-import { serializeFilter } from './filters';
+import { serializeFilter, encodeFilter } from './filters';
+import { prepareEditorFilter } from '../lib/core/pipeline';
+import { ObjectType } from '../lib/api/types/types';
 
 const tests = [
 	// ✅ Valid cases (single values, no parentheses)
@@ -337,12 +339,26 @@ const roundTripExpressions = [
 		}),
 	),
 ];
+const schema: ObjectType = {
+	kind: 'object',
+	properties: ['status', 'country', 'code', 'property'].map((name) => ({
+		name,
+		type: { kind: 'json' },
+		readOptional: true,
+		nullable: false,
+		prefilled: '',
+		createRequired: false,
+		updateRequired: false,
+		displayName: '',
+		description: '',
+	})),
+};
 for (const roundTrip of roundTripExpressions) {
-	const filter = parseFilter(roundTrip.expression);
+	const filter = prepareEditorFilter(parseFilter(roundTrip.expression, schema), schema);
 	for (const formatted of [false, true]) {
 		const serialized = serializeFilter(filter, formatted);
-		const parsed = parseFilter(serialized);
-		if (JSON.stringify(parsed) === JSON.stringify(filter)) {
+		const parsed = prepareEditorFilter(parseFilter(serialized, schema), schema);
+		if (encodeFilter(parsed) === encodeFilter(filter)) {
 			console.log(`✅ [PASS] ${roundTrip.name} ${formatted ? 'formatted' : 'compact'} round trip`);
 			passed++;
 		} else {
