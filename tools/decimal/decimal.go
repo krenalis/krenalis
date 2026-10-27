@@ -360,7 +360,8 @@ func Binary(b []byte, precision, scale int) (Decimal, error) {
 // places using rounding to nearest with ties to even. Precision must be > 0
 // and scale <= precision. If the rounded value cannot be represented with the
 // specified precision and scale, or if f is NaN, +Inf or -Inf, Float64 returns
-// 0 and [ErrRange].
+// 0 and [ErrRange]. Rounding applies to the exact binary value of f. For
+// example, Float64(0.15, 5, 1) returns 0.1.
 func Float64(f float64, precision, scale int) (Decimal, error) {
 	if err := validPrecisionScale(precision, scale); err != nil {
 		return Decimal{}, err
