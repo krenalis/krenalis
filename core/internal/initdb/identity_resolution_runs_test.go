@@ -39,7 +39,8 @@ func TestIdentityResolutionRunsSchema(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected history index definition, got %v", err)
 	}
-	if want := "CREATE INDEX identity_resolution_runs_workspace_start_idx ON public.identity_resolution_runs USING btree (workspace, start_time DESC, id DESC)"; indexDefinition != want {
+	if want := "CREATE INDEX identity_resolution_runs_workspace_start_idx " +
+		"ON public.identity_resolution_runs USING btree (workspace, start_time DESC, id DESC)"; indexDefinition != want {
 		t.Fatalf("expected history index definition %q, got %q", want, indexDefinition)
 	}
 

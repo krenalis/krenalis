@@ -731,7 +731,8 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 
 					// Retry the previous operation after publishing different counts.
 					if previousResolution.opID != "" && previousResolution.counts != returnedCounts {
-						counts, err := dw.ResolveIdentities(t.Context(), previousResolution.opID, previousResolution.identifiers, columns, previousResolution.primarySources)
+						counts, err := dw.ResolveIdentities(t.Context(), previousResolution.opID,
+							previousResolution.identifiers, columns, previousResolution.primarySources)
 						if err != nil {
 							t.Fatalf("expected previous resolution retry to succeed, got %v", err)
 						}

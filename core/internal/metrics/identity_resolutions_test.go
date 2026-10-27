@@ -311,13 +311,17 @@ func assertIdentityResolutionMetricDays(t *testing.T, got []IdentityResolutionMe
 			t.Errorf("expected profiles on %s to be %d, got %d", day, want[index].profiles, got[index].Profiles)
 		}
 		if got[index].ProfilesAnonymous != want[index].profilesAnonymous {
-			t.Errorf("expected anonymous profiles on %s to be %d, got %d", day, want[index].profilesAnonymous, got[index].ProfilesAnonymous)
+			t.Errorf("expected anonymous profiles on %s to be %d, got %d",
+				day, want[index].profilesAnonymous, got[index].ProfilesAnonymous)
 		}
 		if got[index].ProfilesRecognized != want[index].profilesRecognized {
-			t.Errorf("expected recognized profiles on %s to be %d, got %d", day, want[index].profilesRecognized, got[index].ProfilesRecognized)
+			t.Errorf("expected recognized profiles on %s to be %d, got %d",
+				day, want[index].profilesRecognized, got[index].ProfilesRecognized)
 		}
-		assertIdentityResolutionFloat(t, "identities per profile on "+day, got[index].IdentitiesPerProfile, want[index].identitiesPerProfile)
-		assertIdentityResolutionFloat(t, "linked identities rate on "+day, got[index].LinkedIdentitiesRate, want[index].linkedIdentitiesRate)
+		assertIdentityResolutionFloat(t, "identities per profile on "+day,
+			got[index].IdentitiesPerProfile, want[index].identitiesPerProfile)
+		assertIdentityResolutionFloat(t, "linked identities rate on "+day,
+			got[index].LinkedIdentitiesRate, want[index].linkedIdentitiesRate)
 	}
 
 }
