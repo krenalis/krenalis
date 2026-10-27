@@ -1078,7 +1078,10 @@
 		padding-left: 14px;
 	}
 
-	.identity-dashboard__distribution-body {
+	.identity-dashboard__distribution-body,
+	.identity-dashboard__resolution-layout
+		> .identity-dashboard__distribution-card
+		.identity-dashboard__distribution-body {
 		grid-template-columns: minmax(0, 1fr);
 		justify-items: center;
 	}
