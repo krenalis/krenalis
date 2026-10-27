@@ -630,20 +630,19 @@ const PipelineFilterValueControl = ({
 		onValueChange(v);
 	};
 
-	const removeButton = (slot: 'end' | 'suffix') =>
-		removable ? (
-			<WaButton
-				slot={slot}
-				appearance='outlined'
-				size='s'
-				pill
-				className='pipeline__filters-value-remove'
-				onClick={onRemove}
-				disabled={disabled}
-			>
-				<WaIcon name='x' />
-			</WaButton>
-		) : null;
+	const removeButton = removable ? (
+		<WaButton
+			slot='end'
+			appearance='outlined'
+			size='s'
+			pill
+			className='pipeline__filters-value-remove'
+			onClick={onRemove}
+			disabled={disabled}
+		>
+			<WaIcon name='x' />
+		</WaButton>
+	) : null;
 
 	if (options.length > 0) {
 		return (
@@ -661,7 +660,7 @@ const PipelineFilterValueControl = ({
 							{option === '' ? '\u00A0' : option}
 						</WaOption>
 					))}
-					{removeButton('suffix')}
+					{removeButton}
 				</WaSelect>
 			</div>
 		);
@@ -676,7 +675,7 @@ const PipelineFilterValueControl = ({
 			name={name}
 			disabled={disabled}
 		>
-			{removeButton('end')}
+			{removeButton}
 		</WaInput>
 	);
 };
