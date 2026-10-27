@@ -292,6 +292,8 @@ An unexported package-level constant or constant group in a `_test.go` file may 
 
 When a function or method can return an error, document all and only the errors that callers can identify and handle without inspecting the error message. Do not document errors whose only distinguishing information is their message.
 
+As an exception, a method of `core` does not document the `errors.BadRequestError` it returns for invalid arguments: callers are expected to propagate it, not handle it, and the declaration comment states the argument requirements instead when they are not obvious. Document it only when callers need to distinguish it from the method's other errors.
+
 A short comment for a package-level variable or constant may appear on the same line as its declaration. In that case, start the comment with a lowercase letter or a number, do not use a period, and use a semicolon to separate phrases that would otherwise be separate sentences.
 
 ## Error messages
@@ -451,8 +453,6 @@ API endpoint handlers in `cmd` parse values from paths, query strings, and reque
 Methods in `core` that serve an endpoint must select their error according to where that endpoint receives each argument, even though this couples them to the endpoint shape. Return the final API-ready error from `core` so that `cmd` can propagate it without translation.
 
 A method of `core` that can return an `errors.UnprocessableError` documents it and lists the codes. Handlers in `cmd/api.go` never document unprocessable errors.
-
-As an exception to the rule on documenting errors, a method of `core` does not document the `errors.BadRequestError` it returns for invalid arguments: callers are expected to propagate it, not handle it, and the declaration comment states the argument requirements instead when they are not obvious. Document it only when callers need to distinguish it from the method's other errors.
 
 ## Core entry guards
 
