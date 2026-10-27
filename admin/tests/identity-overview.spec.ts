@@ -532,7 +532,6 @@ for (const shouldFail of [false, true]) {
 		await page.getByRole('button', { name: 'Last 7 days', exact: true }).click();
 		await expect.poll(() => dashboardSnapshot(page)).not.toEqual(previous);
 		const current = await dashboardSnapshot(page);
-		expect(current).not.toEqual(previous);
 		await page.evaluate(() => window.identityOverviewPending[0]());
 		expect(await dashboardSnapshot(page)).toEqual(current);
 		await expect(page.getByRole('alert')).toHaveCount(0);

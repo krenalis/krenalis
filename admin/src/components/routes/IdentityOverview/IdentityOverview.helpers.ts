@@ -89,7 +89,6 @@ interface ProfileCompositionBucket {
 	key: keyof IdentityResolutionComposition;
 	label: string;
 	count: number;
-	percentage: number | null;
 }
 
 interface TypeDistributionSegment {
@@ -545,15 +544,11 @@ const PROFILE_COMPOSITION_BUCKETS: Pick<ProfileCompositionBucket, 'key' | 'label
 	{ key: 'moreThanTwenty', label: '21+ identities' },
 ];
 
-const buildProfileComposition = (
-	composition: IdentityResolutionComposition,
-	profiles: number,
-): ProfileCompositionBucket[] =>
+const buildProfileComposition = (composition: IdentityResolutionComposition): ProfileCompositionBucket[] =>
 	PROFILE_COMPOSITION_BUCKETS.map(({ key, label }) => ({
 		key,
 		label,
 		count: composition[key],
-		percentage: profiles === 0 ? null : (composition[key] / profiles) * 100,
 	}));
 
 const buildTypeDistribution = (

@@ -646,10 +646,10 @@ const ProfilesChart = ({ days, loading, error }: ProfilesChartProps) => {
 interface ConnectionTooltipProps {
 	active?: boolean;
 	connection?: ConnectionBar;
-	hiddenIdentityTypes?: IdentityType[];
+	hiddenIdentityTypes: IdentityType[];
 }
 
-const ConnectionTooltip = ({ active, connection, hiddenIdentityTypes = [] }: ConnectionTooltipProps) => {
+const ConnectionTooltip = ({ active, connection, hiddenIdentityTypes }: ConnectionTooltipProps) => {
 	if (!active || connection == null) return null;
 	const rows = [
 		{ label: hiddenIdentityTypes.length === 0 ? 'Total' : 'Total shown', value: formatNumber(connection.total) },
@@ -1186,7 +1186,7 @@ const ProfileComposition = ({ profiles, composition, loading, error }: ProfileCo
 	const buckets =
 		composition == null
 			? []
-			: buildProfileComposition(composition, profiles).map((bucket, index) => ({
+			: buildProfileComposition(composition).map((bucket, index) => ({
 					...bucket,
 					color: COMPOSITION_COLORS[index],
 				}));

@@ -879,45 +879,27 @@ const tests: { name: string; run: () => void | Promise<void> }[] = [
 		},
 	},
 	{
-		name: 'profile composition preserves the approved exact buckets and calculates percentages',
+		name: 'profile composition preserves the exact buckets and counts',
 		run: () => {
-			const buckets = buildProfileComposition(
-				{
-					one: 10,
-					two: 3,
-					three: 1,
-					fourToTen: 3,
-					elevenToTwenty: 2,
-					moreThanTwenty: 1,
-				},
-				20,
-			);
+			const buckets = buildProfileComposition({
+				one: 10,
+				two: 3,
+				three: 1,
+				fourToTen: 3,
+				elevenToTwenty: 2,
+				moreThanTwenty: 1,
+			});
 			equal(
-				buckets.map(({ label, count, percentage }) => ({ label, count, percentage })),
+				buckets,
 				[
-					{ label: '1 identity', count: 10, percentage: 50 },
-					{ label: '2 identities', count: 3, percentage: 15 },
-					{ label: '3 identities', count: 1, percentage: 5 },
-					{ label: '4–10 identities', count: 3, percentage: 15 },
-					{ label: '11–20 identities', count: 2, percentage: 10 },
-					{ label: '21+ identities', count: 1, percentage: 5 },
+					{ key: 'one', label: '1 identity', count: 10 },
+					{ key: 'two', label: '2 identities', count: 3 },
+					{ key: 'three', label: '3 identities', count: 1 },
+					{ key: 'fourToTen', label: '4–10 identities', count: 3 },
+					{ key: 'elevenToTwenty', label: '11–20 identities', count: 2 },
+					{ key: 'moreThanTwenty', label: '21+ identities', count: 1 },
 				],
 				'composition buckets',
-			);
-			equal(
-				buildProfileComposition(
-					{
-						one: 0,
-						two: 0,
-						three: 0,
-						fourToTen: 0,
-						elevenToTwenty: 0,
-						moreThanTwenty: 0,
-					},
-					0,
-				).map((bucket) => bucket.percentage),
-				[null, null, null, null, null, null],
-				'zero-profile percentages',
 			);
 		},
 	},

@@ -40,7 +40,6 @@
 .identity-dashboard__page-actions {
 	display: flex;
 	align-items: center;
-	gap: 12px;
 	flex-shrink: 0;
 }
 
@@ -391,12 +390,6 @@
 	list-style: none;
 }
 
-.identity-dashboard__connection-legend li {
-	display: flex;
-	align-items: center;
-	gap: 4px;
-}
-
 .identity-dashboard__legend-toggle {
 	display: flex;
 	align-items: center;
@@ -444,16 +437,12 @@
 .identity-dashboard__distribution-panel,
 .identity-dashboard__effectiveness-content {
 	margin: 10px 14px 0;
-	border: 1px solid var(--sl-color-neutral-200);
-	border-radius: var(--radius);
 	overflow: hidden;
 }
 
 .identity-dashboard__distribution-panel {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) 38px minmax(0, 1fr);
-	border: 0;
-	border-radius: 0;
 }
 
 .identity-dashboard__distribution-block {
@@ -673,6 +662,8 @@
 	gap: 8px;
 	min-height: 0;
 	margin-bottom: 14px;
+	border: 1px solid var(--sl-color-neutral-200);
+	border-radius: var(--radius);
 	padding: 16px 12px 14px;
 }
 
@@ -1039,7 +1030,6 @@
 
 	.identity-dashboard__page-actions {
 		width: 100%;
-		flex-wrap: wrap;
 	}
 
 	.identity-dashboard__card-heading:has(.identity-dashboard__card-heading-action) {
