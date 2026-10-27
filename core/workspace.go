@@ -52,7 +52,7 @@ type Workspace struct {
 	WarehouseMode                  WarehouseMode     `json:"warehouseMode"`
 }
 
-// PropertyRoles maps eachproperty role to its property's path.
+// PropertyRoles maps each property role to its property's path.
 // An empty path means no property is assigned to that role.
 type PropertyRoles struct {
 	FirstName string `json:"firstName"`
