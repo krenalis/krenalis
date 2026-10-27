@@ -28,8 +28,8 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"DELETE /connections/{src}/links/{dst}":                   connection.UnlinkConnection,
 		"DELETE /consent-purposes/{id}":                           workspace.DeleteConsentPurpose,
 		"DELETE /events/listeners/{id}":                           workspace.DeleteEventListener,
-		"DELETE /keys/{key}":                                      organization.DeleteAccessKey, /* Admin only */
-		"DELETE /members/{id}":                                    organization.DeleteMember,    /* Admin only */
+		"DELETE /keys/{key}":                                      organization.DeleteAccessKey, /* Admin console only */
+		"DELETE /members/{id}":                                    organization.DeleteMember,    /* Admin console only */
 		"DELETE /organizations/{id}":                              organization.Delete,          /* Needs Platform Management API key */
 		"DELETE /pipelines/{id}":                                  pipeline.Delete,
 		"DELETE /workspaces/current":                              workspace.Delete,
@@ -107,11 +107,11 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"POST   /events/{type}":                                   workspace.IngestEvents,
 		"POST   /expressions-properties":                          api.ExpressionsProperties, /* Admin console only */
 		"POST   /identity-resolution/start":                       workspace.StartIdentityResolution,
-		"POST   /keys":                                            organization.CreateAccessKey, /* Admin only */
-		"POST   /members":                                         organization.AddMember,       /* Admin only */
-		"POST   /members/invitations":                             organization.InviteMember,    /* Admin only */
-		"POST   /members/login":                                   s.login,                      /* Admin only */
-		"POST   /members/logout":                                  s.logout,                     /* Admin only */
+		"POST   /keys":                                            organization.CreateAccessKey, /* Admin console only */
+		"POST   /members":                                         organization.AddMember,       /* Admin console only */
+		"POST   /members/invitations":                             organization.InviteMember,    /* Admin console only */
+		"POST   /members/login":                                   s.login,                      /* Admin console only */
+		"POST   /members/logout":                                  s.logout,                     /* Admin console only */
 		"POST   /metrics/identities/refresh":                      workspace.RefreshIdentityMetrics,
 		"POST   /organizations":                                   api.CreateOrganization, /* Needs Platform Management API key */
 		"POST   /pipelines":                                       connection.CreatePipeline,
@@ -129,11 +129,11 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"PUT    /connections/{id}":                                connection.Update,
 		"PUT    /consent-purposes/{id}":                           workspace.UpdateConsentPurpose,
 		"PUT    /identity-resolution/settings":                    workspace.UpdateIdentityResolutionSettings,
-		"PUT    /keys/{key}":                                      organization.UpdateAccessKey,    /* Admin only */
-		"PUT    /members/current":                                 organization.UpdateMember,       /* Admin only */
-		"PUT    /members/invitations/{token}":                     api.AcceptInvitation,            /* Admin only */
-		"PUT    /members/reset-password":                          api.SendMemberPasswordReset,     /* Admin only */
-		"PUT    /members/reset-password/{token}":                  api.ChangeMemberPasswordByToken, /* Admin only */
+		"PUT    /keys/{key}":                                      organization.UpdateAccessKey,    /* Admin console only */
+		"PUT    /members/current":                                 organization.UpdateMember,       /* Admin console only */
+		"PUT    /members/invitations/{token}":                     api.AcceptInvitation,            /* Admin console only */
+		"PUT    /members/reset-password":                          api.SendMemberPasswordReset,     /* Admin console only */
+		"PUT    /members/reset-password/{token}":                  api.ChangeMemberPasswordByToken, /* Admin console only */
 		"PUT    /organizations/{id}":                              organization.Update,             /* Needs Platform Management API key */
 		"PUT    /organizations/{id}/status":                       organization.SetStatus,          /* Needs Platform Management API key */
 		"PUT    /pipelines/{id}":                                  pipeline.Update,
