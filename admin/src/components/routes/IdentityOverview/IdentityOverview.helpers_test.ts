@@ -65,7 +65,7 @@ const equal = (actual: unknown, expected: unknown, message: string) => {
 };
 
 const closeTo = (actual: number | null, expected: number, message: string) => {
-	if (actual == null || Math.abs(actual - expected) > 0.000001) {
+	if (actual == null || !Number.isFinite(actual) || Math.abs(actual - expected) > 0.000001) {
 		throw new Error(`${message}: expected ${expected}, got ${String(actual)}`);
 	}
 };
