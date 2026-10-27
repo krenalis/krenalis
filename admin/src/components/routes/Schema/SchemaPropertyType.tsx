@@ -30,7 +30,7 @@ interface PresentationOptions {
 const SchemaPropertyType = ({ catalogOption, context, description, type }: SchemaPropertyTypeProps) => {
 	const semantic = getTypeSemantics(getPropertyValueType(type));
 	if (context === 'details') {
-		const physicalType = toCompactPhysicalType(type);
+		const physicalType = toKrenalisStringType(type);
 		const semanticLabel = semantic == null ? null : toSemanticLabel(type, context);
 		const title = semanticLabel == null ? physicalType : `${physicalType}\n${semanticLabel}`;
 
@@ -111,19 +111,6 @@ const getSchemaPropertyTypePresentation = (
 		metadata: usePhysicalTypeFamily ? toPhysicalTypeFamily(type) : toProfileSchemaPhysicalType(type),
 		primary: semanticLabel,
 	};
-};
-
-const toCompactPhysicalType = (type: Type): string => {
-	switch (type.kind) {
-		case 'array':
-			return `array of ${toCompactPhysicalType(type.elementType)}`;
-		case 'map':
-			return `map of ${toCompactPhysicalType(type.elementType)}`;
-		case 'int':
-			return type.unsigned ? 'unsigned int' : 'int';
-		default:
-			return type.kind;
-	}
 };
 
 const toPhysicalTypeFamily = (type: Type): string => {

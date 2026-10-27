@@ -1140,13 +1140,14 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 	expect(emailPropertyCellBottom).toBeLessThanOrEqual(emailRowBottom);
 	await expect(panel.locator('.property-details-panel__value')).toHaveText([
 		'email',
-		'string',
+		'string, max 300 chars',
 		'—',
 		'Email address',
 		'—',
 		'Not an identifier',
 		emailCells[4],
 	]);
+	await expect(panel.locator('.schema-property-type--details')).toHaveAttribute('title', 'string, max 300 chars');
 	const gridTypeFont = await emailRow
 		.locator('.schema-property-type__primary')
 		.evaluate((type) => getComputedStyle(type).fontFamily);
