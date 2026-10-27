@@ -1,0 +1,62 @@
+// Copyright 2026 Open2b. All rights reserved.
+// Use of this source code is governed by an Elastic License 2.0
+// that can be found in the LICENSE file.
+
+package core
+
+import (
+	"testing"
+	"time"
+
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/tools/json"
+)
+
+// TestPrepareUnifiedRecordCount preserves the existing Record round-trip.
+func TestPrepareUnifiedRecordCount(t *testing.T) {
+	filter := &Filter{Operator: OpAnd, Rules: []FilterRule{&FilterCondition{Property: "properties.currency",
+		Operator: OpIs, Values: []json.Value{json.Value(`"EUR"`)}}}}
+	before, err := json.Marshal(filter)
+	if err != nil {
+		t.Fatalf("expected public filter encoding, got %v", err)
+	}
+	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	scope := unified.Scope{Event: "Purchase", Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at}
+	rule, err := prepareUnifiedRecordCount(scope, filter, unified.CountTest{Operator: unified.Equal})
+	if err != nil {
+		t.Fatalf("expected prepared internal Count, got %v", err)
+	}
+	condition := rule.Count.Where.Rules[0].(*state.WhereCondition)
+	if string(condition.Values[0].(json.Value)) != `"EUR"` || len(condition.Property) != 2 {
+		t.Fatalf("expected preserved typed Record operands and path, got %+v", condition)
+	}
+	err = unified.Validate(&rule, at, unified.Page{Limit: 10})
+	if err != nil {
+		t.Fatalf("expected admitted Count, got %v", err)
+	}
+	after, err := json.Marshal(filter)
+	if err != nil {
+		t.Fatalf("expected public filter encoding, got %v", err)
+	}
+	if string(before) != string(after) {
+		t.Fatalf("expected public round-trip %s, got %s", before, after)
+	}
+	var restored Filter
+	err = json.Unmarshal(before, &restored)
+	if err != nil {
+		t.Fatalf("expected existing public filter decoding, got %v", err)
+	}
+	roundtrip, err := prepareUnifiedRecordCount(scope, &restored, unified.CountTest{Operator: unified.Equal})
+	if err != nil {
+		t.Fatalf("expected prepared round-trip, got %v", err)
+	}
+	if !rule.Count.Where.Equal(roundtrip.Count.Where) {
+		t.Fatal("expected existing persisted Record equality, got different conditions")
+	}
+	filter.Rules = []FilterRule{&FilterCondition{Property: "noSuchField", Operator: OpIsTrue}}
+	_, err = prepareUnifiedRecordCount(scope, filter, unified.CountTest{})
+	if err == nil {
+		t.Fatal("expected existing schema validation error, got success")
+	}
+}
