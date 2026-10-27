@@ -436,7 +436,8 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = org.TestWorkspaceCreation(r.Context(), body.Name, body.Profiles.Schema, body.Profiles.PropertyRoles, body.Warehouse)
+	err = org.TestWorkspaceCreation(r.Context(), body.Name, body.Profiles.Schema,
+		body.Profiles.PropertyRoles, body.Warehouse)
 	return nil, err
 }
 

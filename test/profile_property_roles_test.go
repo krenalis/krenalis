@@ -215,7 +215,8 @@ func TestProfilePropertyRoles(t *testing.T) {
 	}
 	workspace = k.Workspace()
 	if workspace.PropertyRoles != propertyRoles {
-		t.Fatalf("expected rejected assignments to leave %#v unchanged, got %#v", propertyRoles, workspace.PropertyRoles)
+		t.Fatalf("expected rejected assignments to leave %#v unchanged, got %#v",
+			propertyRoles, workspace.PropertyRoles)
 	}
 	if !types.Equal(workspace.ProfileSchema, schema) {
 		t.Fatalf("expected unchanged schema %#v, got %#v", schema.Properties().Slice(), workspace.ProfileSchema)
@@ -236,7 +237,8 @@ func TestProfilePropertyRoles(t *testing.T) {
 		profile_role_first_name, profile_role_last_name, profile_role_email, profile_role_country, profile_role_photo]
 		FROM workspaces WHERE id = $1`, k.WorkspaceID())
 	expectedPersistedRoles := []string{
-		propertyRoles.FirstName, propertyRoles.LastName, propertyRoles.Email, propertyRoles.Country, propertyRoles.Photo,
+		propertyRoles.FirstName, propertyRoles.LastName, propertyRoles.Email,
+		propertyRoles.Country, propertyRoles.Photo,
 	}
 	if !slices.Equal(persistedRoles, expectedPersistedRoles) {
 		t.Fatalf("expected persisted roles %v, got %v", expectedPersistedRoles, persistedRoles)

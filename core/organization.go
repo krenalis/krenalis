@@ -591,7 +591,8 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 			// Add the workspace.
 			_, err = tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name,"+
 				" profile_schema, profile_role_first_name, profile_role_last_name, profile_role_email,"+
-				" profile_role_country, profile_role_photo, resolve_identities_on_batch_import, warehouse_name, warehouse_mode,"+
+				" profile_role_country, profile_role_photo, resolve_identities_on_batch_import,"+
+				" warehouse_name, warehouse_mode,"+
 				" warehouse_settings, kms_encrypted_warehouse_settings_key, kms_encrypted_warehouse_mcp_settings_key)"+
 				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)",
 				n.ID, n.Organization, n.Name, encodedProfileSchema, n.PropertyRoles.FirstName,
@@ -1260,7 +1261,7 @@ FROM ended_runs
 INNER JOIN updated_pipelines AS p ON ended_runs.pipeline = p.id
 `
 
-// TestWorkspaceCreation tests a workspace creation, including the profile schema
+// TestWorkspaceCreation tests workspace creation, including the profile schema
 // and property roles, and checks that the data warehouse can be initialized.
 //
 // It returns an errors.UnprocessableError error with code:

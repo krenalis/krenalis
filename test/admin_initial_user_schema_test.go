@@ -74,7 +74,8 @@ func TestAdminInitialProfileSchema(t *testing.T) {
 		profile_role_first_name, profile_role_last_name, profile_role_email, profile_role_country, profile_role_photo]
 		FROM workspaces WHERE id = $1`, k.WorkspaceID())
 	expectedPersistedRoles := []string{
-		expectedRoles.FirstName, expectedRoles.LastName, expectedRoles.Email, expectedRoles.Country, expectedRoles.Photo,
+		expectedRoles.FirstName, expectedRoles.LastName, expectedRoles.Email,
+		expectedRoles.Country, expectedRoles.Photo,
 	}
 	t.Run("persisted roles", func(t *testing.T) {
 		if !slices.Equal(persistedRoles, expectedPersistedRoles) {
