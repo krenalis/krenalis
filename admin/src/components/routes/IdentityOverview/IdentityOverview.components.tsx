@@ -1319,12 +1319,6 @@ const HISTORY_STATUSES = {
 	failed: { label: 'Failed', variant: 'danger' },
 } as const;
 
-interface HistorySectionProps {
-	runs: IdentityResolutionRun[];
-	loading: boolean;
-	error?: string;
-}
-
 const historyStatusBadge = (status: IdentityResolutionRun['status']): ReactNode => {
 	const { label, variant } = HISTORY_STATUSES[status];
 	return (
@@ -1351,6 +1345,12 @@ const historyRows = (runs: IdentityResolutionRun[]): GridRow[] =>
 			),
 		],
 	}));
+
+interface HistorySectionProps {
+	runs: IdentityResolutionRun[];
+	loading: boolean;
+	error?: string;
+}
 
 const HistorySection = ({ runs, loading, error }: HistorySectionProps) => {
 	return (
