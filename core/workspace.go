@@ -1116,7 +1116,7 @@ func (this *Workspace) IdentityResolutionRuns(ctx context.Context, first, limit 
 			case run.EndTime != nil && run.Error != nil:
 				run.Status = IdentityResolutionRunFailed
 			default:
-				return fmt.Errorf("unexpected status for identity resolution run %q", run.ID)
+				return fmt.Errorf("core: unexpected status for identity resolution run %q", run.ID)
 			}
 			runs = append(runs, run)
 		}

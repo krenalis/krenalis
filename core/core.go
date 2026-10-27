@@ -1860,7 +1860,7 @@ func (core *Core) executeIdentityResolution(workspaceID, opID string) {
 			}
 			if res.RowsAffected() == 0 {
 				return nil, fmt.Errorf(
-					"cannot finalize open Identity Resolution run %s for workspace %s", n.ID, n.Workspace)
+					"core: cannot finalize open Identity Resolution run %s for workspace %s", n.ID, n.Workspace)
 			}
 			if successful {
 				// Record the dashboard result and reuse its profile total for the billing
@@ -1884,7 +1884,7 @@ func (core *Core) executeIdentityResolution(workspaceID, opID string) {
 			}
 			if res.RowsAffected() == 0 {
 				return nil, fmt.Errorf(
-					"cannot close Identity Resolution lifecycle %s for workspace %s", n.ID, n.Workspace)
+					"core: cannot close Identity Resolution lifecycle %s for workspace %s", n.ID, n.Workspace)
 			}
 			return n, nil
 		})

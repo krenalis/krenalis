@@ -162,7 +162,8 @@ func (resolutions *IdentityResolutions) MetricsPerDate(ctx context.Context, work
 		}
 		i := int(day.Sub(start) / (24 * time.Hour))
 		if i < 0 || i >= dayCount {
-			return nil, fmt.Errorf("metrics: identity resolution metrics contain a day outside the requested interval")
+			return nil, fmt.Errorf(
+				"core/internal/metrics: identity resolution metrics contain a day outside the requested interval")
 		}
 		updates[i] = s
 	}
