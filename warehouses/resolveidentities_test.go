@@ -33,9 +33,7 @@ type profileIdentityGroup struct {
 // return the expected profile and identity counts when resolving identities
 // and preserve those counts when the same operation is retried.
 func TestResolveIdentitiesCounts(t *testing.T) {
-
 	for _, platform := range []string{"PostgreSQL", "Snowflake"} {
-
 		t.Run(platform, func(t *testing.T) {
 
 			dw := newCountIdentitiesWarehouse(t, platform)
@@ -307,9 +305,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 			})
 
 		})
-
 	}
-
 }
 
 // assertIdentityResolutionCountInvariants verifies the internal consistency of
