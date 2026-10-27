@@ -290,7 +290,6 @@ func validatePrimarySources(schema types.Type, primarySources map[string]string)
 
 // validatePropertyRoles validates roles against schema.
 func validatePropertyRoles(schema types.Type, roles PropertyRoles) error {
-
 	propertyToRole := map[string]string{}
 	properties := schema.Properties()
 	for _, assignment := range [...]struct {
@@ -337,7 +336,6 @@ func validatePropertyRoles(schema types.Type, roles PropertyRoles) error {
 		}
 		propertyToRole[assignment.path] = assignment.role
 	}
-
 	return nil
 }
 
