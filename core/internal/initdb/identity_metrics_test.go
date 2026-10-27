@@ -292,5 +292,6 @@ func identityMetricPrimaryKey(t *testing.T, database *db.DB, table string) strin
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
+
 	return columns
 }

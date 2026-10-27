@@ -675,6 +675,7 @@ func (workspace workspace) RefreshIdentityMetrics(_ http.ResponseWriter, r *http
 		return nil, err
 	}
 	err = ws.RefreshIdentityMetrics(r.Context())
+
 	return nil, err
 }
 
