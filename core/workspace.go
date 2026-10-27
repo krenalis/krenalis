@@ -1067,8 +1067,9 @@ func (this *Workspace) Identities(ctx context.Context, kpid string, first, limit
 }
 
 // IdentityResolutionRuns returns Identity Resolution runs for the workspace,
-// newest first. first must be >= 0 and 0 < limit <= 1000.
-// status is optional; when provided it must be running, successful, or failed.
+// ordered from newest to oldest.
+// first must be between 0 and math.MaxInt32, and limit between 1 and 1000.
+// status is optional and, if specified, must be running, successful, or failed.
 func (this *Workspace) IdentityResolutionRuns(ctx context.Context, first, limit int, status IdentityResolutionRunStatus) ([]IdentityResolutionRun, error) {
 
 	this.core.mustBeOpen()
