@@ -184,6 +184,7 @@ func makeVendor() error {
 	}
 
 	// Copy the icons.
+	packages[path.Dir(iconsPath)] = struct{}{}
 	icons, err := usedIconFiles(iconsListPath)
 	if err != nil {
 		return fmt.Errorf("cannot find icons: %s", err)
