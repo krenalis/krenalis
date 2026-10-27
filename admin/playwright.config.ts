@@ -57,6 +57,11 @@ export default defineConfig({
 			testMatch: ['tests/settings.spec.ts'],
 		},
 		{
+			name: 'profile-drawer.spec.ts',
+			use: { ...devices['Desktop Chrome'] },
+			testMatch: ['tests/profile-drawer.spec.ts'],
+		},
+		{
 			name: 'identity-overview.spec.ts',
 			use: { ...devices['Desktop Chrome'] },
 			testMatch: ['tests/identity-overview.spec.ts'],
