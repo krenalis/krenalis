@@ -542,7 +542,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 		},
 	}
 
-	// Exercise the boundaries of the larger profile composition buckets.
+	// Test the boundaries between profile composition size buckets.
 	for _, size := range []int{4, 10, 11, 20, 21} {
 		var identities []rawIdentity
 		for i := range size {
