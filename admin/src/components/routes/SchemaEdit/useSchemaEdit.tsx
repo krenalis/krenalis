@@ -32,7 +32,7 @@ import {
 	PROFILE_PROPERTY_ROLES,
 } from '../../helpers/profilePropertyRoles';
 import { SchemaPropertyIdentifierBadge, SchemaPropertyName } from '../Schema/SchemaPropertyGrid';
-import { getSchemaPropertyTypePresentation, SchemaPropertyType } from '../Schema/SchemaPropertyType';
+import { getProfileSchemaTypePresentation } from '../../helpers/types';
 import { SchemaPropertyConsent } from '../Schema/SchemaPropertyConsent';
 import { getConsentPurposesByPropertyPath } from '../Schema/SchemaPropertyConsent.helpers';
 
@@ -941,7 +941,7 @@ const getVisiblePropertyKeys = (
 	}
 	const term = search?.trim().toLocaleLowerCase() || '';
 	for (const [key, property] of Object.entries(schema)) {
-		const typePresentation = getSchemaPropertyTypePresentation(property.type, 'grid');
+		const typePresentation = getProfileSchemaTypePresentation(property.type);
 		const propertyRole = getPropertyRole(propertyRoles, key);
 		const matchesSearch =
 			term === '' ||
@@ -1127,9 +1127,23 @@ const buildRow = (
 	const actions = (
 		<div className='schema-edit__property-actions'>{status != null && <PropertyStatusBadge status={status} />}</div>
 	);
+	const { primary, metadata } = getProfileSchemaTypePresentation(property.type);
 	const typeCell: ReactNode = (
 		<>
-			<SchemaPropertyType context='grid' type={property.type} />
+			<span
+				className='schema-property-grid__type'
+				title={metadata == null ? primary : `${primary} · ${metadata}`}
+			>
+				<span className='schema-property-grid__type-label'>{primary}</span>
+				{metadata != null && (
+					<span className='schema-property-grid__type-metadata'>
+						<span className='schema-property-grid__type-separator' aria-hidden='true'>
+							{' · '}
+						</span>
+						<span className='schema-property-grid__type-physical'>{metadata}</span>
+					</span>
+				)}
+			</span>
 			<SchemaPropertyConsent purposes={consentPurposes} />
 		</>
 	);

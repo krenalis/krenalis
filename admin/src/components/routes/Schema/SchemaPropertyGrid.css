@@ -280,6 +280,31 @@
 	white-space: nowrap;
 }
 
+.schema-property-grid__type {
+	display: block;
+	font-size: 13px;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.schema-property-grid__type-label,
+.schema-property-grid__type-physical {
+	font-family: var(--monospace-fonts);
+	font-weight: 400;
+}
+
+.schema-property-grid__type-metadata {
+	color: var(--text-light);
+	font-size: 12px;
+	font-weight: 400;
+}
+
+.schema-property-grid__type-separator {
+	margin-inline: 0.25em;
+}
+
 .schema-property-grid__identifier::part(base) {
 	background-color: var(--sl-color-neutral-100);
 	border: 0;
