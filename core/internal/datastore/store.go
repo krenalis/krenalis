@@ -632,7 +632,12 @@ func (store *Store) ResolveIdentities(ctx context.Context, opID string) (*wareho
 	}
 
 	// Resolve the identities.
-	return store.warehouse().ResolveIdentities(ctx, opID, identifiers, profileColumns, primarySources)
+	counts, err := store.warehouse().ResolveIdentities(ctx, opID, identifiers, profileColumns, primarySources)
+	if err != nil {
+		return nil, err
+	}
+
+	return counts, nil
 }
 
 // TestWarehouseUpdate tests if it is possible to update the warehouse of the
