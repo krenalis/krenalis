@@ -452,6 +452,8 @@ Methods in `core` that serve an endpoint must select their error according to wh
 
 A method of `core` that can return an `errors.UnprocessableError` documents it and lists the codes. Handlers in `cmd/api.go` never document unprocessable errors.
 
+As an exception to the rule on documenting errors, a method of `core` does not document the `errors.BadRequestError` it returns for invalid arguments: callers are expected to propagate it, not handle it, and the declaration comment states the argument requirements instead when they are not obvious. Document it only when callers need to distinguish it from the method's other errors.
+
 ## Core entry guards
 
 Every exported method in `core` that is called by `cmd` must execute `<receiver>.core.mustBeOpen()` as its first statement. If the method body contains any blank line, leave a blank line immediately after the opening brace and another immediately after the guard statement.
