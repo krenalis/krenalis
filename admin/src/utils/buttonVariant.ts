@@ -2,7 +2,7 @@ import { Variant } from '../components/routes/App/App.types';
 
 // ButtonVariant is a button variant as Shoelace named it. The Admin still uses
 // these names, and the server sends them for connector buttons.
-type ButtonVariant = Variant | 'default' | 'text';
+type ButtonVariant = Variant | 'default' | 'text' | '';
 
 // buttonVariant returns the Web Awesome variant and appearance of a button that
 // Shoelace drew with the given variant.
@@ -13,6 +13,7 @@ const buttonVariant = (
 	appearance: 'accent' | 'outlined' | 'plain';
 } => {
 	switch (variant) {
+		case '':
 		case 'default':
 			return { variant: 'neutral', appearance: 'outlined' };
 		case 'text':
