@@ -41,7 +41,7 @@ interface FeedbackButtonRef {
 	hideTooltip: () => void;
 }
 
-// buttonSizes maps the Shoelace sizes of the size prop onto Web Awesome's.
+// buttonSizes maps the sizes of the size prop onto Web Awesome's.
 const buttonSizes = { small: 's', medium: 'm', large: 'l' } as const;
 
 const FeedbackButton = forwardRef<FeedbackButtonRef, FeedbackButtonProps>(

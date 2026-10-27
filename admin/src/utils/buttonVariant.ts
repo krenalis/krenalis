@@ -1,11 +1,11 @@
 import { Variant } from '../components/routes/App/App.types';
 
-// ButtonVariant is a button variant as Shoelace named it. The Admin still uses
-// these names, and the server sends them for connector buttons.
+// ButtonVariant is a button variant as the Admin names it, and as the server
+// sends it for connector buttons. An empty variant is the default one.
 type ButtonVariant = Variant | 'default' | 'text' | '';
 
-// buttonVariant returns the Web Awesome variant and appearance of a button that
-// Shoelace drew with the given variant.
+// buttonVariant returns the Web Awesome variant and appearance of a button with
+// the given variant.
 const buttonVariant = (
 	variant: ButtonVariant = 'default',
 ): {

@@ -8,7 +8,7 @@
 }
 
 /* Web Awesome draws the arrow above the popup, clipped to its outer half;
-   Shoelace drew it whole, behind it. */
+   draw it whole, behind it. */
 .schema-property-consent::part(arrow) {
 	background-color: var(--bg-gray);
 	border: 1px solid var(--wa-color-neutral-70);

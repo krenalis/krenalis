@@ -159,8 +159,8 @@
 	font-weight: var(--wa-font-weight-light);
 }
 
-/* The radio is the button itself, drawn as Shoelace drew its small radio
-   buttons; this also undoes the radio port in App.css. An equal basis keeps
+/* The radio is the button itself, drawn as a small radio button; this also
+   undoes the radio rules in App.css. An equal basis keeps
    the halves equal, since the separator border is on the second one. */
 .property-form__integer-sign wa-radio {
 	flex: 1 1 50%;

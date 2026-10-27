@@ -18,8 +18,7 @@ import { PROFILES_EXPANDED_ATTRIBUTES_KEY, PROFILES_TAB_KEY } from '../../../con
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 
-// The panel slides in from the end of the profiles grid, as Shoelace's
-// contained drawer did.
+// The panel slides in from the end of the profiles grid.
 const showKeyframes = [
 	{ opacity: 0, translate: '100%' },
 	{ opacity: 1, translate: '0' },

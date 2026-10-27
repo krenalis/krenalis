@@ -31,7 +31,7 @@
 	--color-primary-900: var(--wa-color-brand-10);
 	--color-primary-950: var(--wa-color-brand-05);
 
-	/* Form controls, drawn as Shoelace drew them. */
+	/* Form controls. */
 	--input-height-small: 1.875rem;
 	--input-height-medium: 2.5rem;
 	--input-height-large: 3.125rem;
@@ -39,7 +39,7 @@
 		-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji',
 		'Segoe UI Emoji', 'Segoe UI Symbol';
 	--input-font-size: var(--wa-font-size-m);
-	/* Shoelace's own blue, not derived from the brand. */
+	/* A sky blue, not derived from the brand. */
 	--input-focus-ring-color: hsl(198.6 88.7% 48.4% / 40%);
 	--toggle-size-small: 0.875rem;
 	--toggle-size-medium: 1.125rem;
@@ -58,7 +58,8 @@
 	--wa-color-brand-05: #21226e;
 	--wa-color-brand: var(--wa-color-brand-50);
 
-	/* Gray — Shoelace's light-theme ramp. Web Awesome aliases its neutral variant onto gray. */
+	/* Gray — the Admin's ramp. Web Awesome aliases its neutral variant
+	onto gray. */
 	--wa-color-gray-95: hsl(0 0% 97.5%);
 	--wa-color-gray-90: hsl(240 4.8% 95.9%);
 	--wa-color-gray-80: hsl(240 5.9% 90%);
@@ -72,7 +73,7 @@
 	--wa-color-gray-05: hsl(240 7.3% 8%);
 	--wa-color-gray: var(--wa-color-gray-50);
 
-	/* Danger — Shoelace's light-theme ramp. */
+	/* Danger — the Admin's ramp. */
 	--wa-color-danger-95: hsl(0 85.7% 97.3%);
 	--wa-color-danger-90: hsl(0 93.3% 94.1%);
 	--wa-color-danger-80: hsl(0 96.3% 89.4%);
@@ -86,7 +87,7 @@
 	--wa-color-danger-05: hsl(0 60% 19.6%);
 	--wa-color-danger: var(--wa-color-danger-50);
 
-	/* Success — Shoelace's light-theme ramp. */
+	/* Success — the Admin's ramp. */
 	--wa-color-success-95: hsl(138.5 76.5% 96.7%);
 	--wa-color-success-90: hsl(140.6 84.2% 92.5%);
 	--wa-color-success-80: hsl(141 78.9% 85.1%);
@@ -100,7 +101,7 @@
 	--wa-color-success-05: hsl(144.3 60.7% 12%);
 	--wa-color-success: var(--wa-color-success-50);
 
-	/* Warning — Shoelace's light-theme ramp. */
+	/* Warning — the Admin's ramp. */
 	--wa-color-warning-95: hsl(48 100% 96.1%);
 	--wa-color-warning-90: hsl(48 96.5% 88.8%);
 	--wa-color-warning-80: hsl(48 96.6% 76.7%);
@@ -317,15 +318,15 @@ wa-split-panel::part(divider) {
 	z-index: 20;
 }
 
-/* Web Awesome lightens the indicator and makes the track opaque; keep what
-Shoelace drew. */
+/* Web Awesome lightens the indicator and makes the track opaque; keep a
+   darker indicator and a translucent track. */
 wa-spinner {
 	--indicator-color: var(--wa-color-brand-40);
 	--track-color: rgb(128 128 128 / 25%);
 }
 
-/* Web Awesome darkens the neutral badge, lightens the danger one, drops the
-   white border and changes the metrics; keep what Shoelace drew. */
+/* Web Awesome darkens the neutral badge, lightens the danger one, drops
+   the white border and changes the metrics; override them. */
 wa-badge {
 	--wa-color-neutral-fill-loud: var(--wa-color-neutral-40);
 	--wa-color-danger-fill-loud: var(--wa-color-danger-40);
@@ -342,20 +343,20 @@ wa-badge::part(end) {
 	display: none;
 }
 
-/* Web Awesome lightens the avatar and sizes its icon from --size; keep what
-Shoelace drew. */
+/* Web Awesome lightens the avatar and sizes its icon from --size; keep
+   it darker, with a 1.5rem icon. */
 wa-avatar {
 	font-size: 1.5rem;
 	color: var(--wa-color-surface-default);
 	background-color: var(--wa-color-neutral-60);
 }
 
-/* Web Awesome lightens the divider; keep what Shoelace drew. */
+/* Web Awesome lightens the divider; keep it darker. */
 wa-divider {
 	--color: var(--wa-color-neutral-80);
 }
 
-/* Web Awesome inputs and textareas, drawn as Shoelace drew them. */
+/* Web Awesome inputs and textareas. */
 :where(wa-input, wa-textarea) {
 	--wa-form-control-padding-inline: 0;
 	--wa-form-control-required-content-offset: -2px;
@@ -480,7 +481,7 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 	box-shadow: none;
 }
 
-/* Clip what the wrapper holds to its rounded border, as Shoelace did. */
+/* Clip what the wrapper holds to its rounded border. */
 :where(wa-input)::part(input-wrapper) {
 	overflow: hidden;
 }
@@ -622,8 +623,8 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 	padding: 0.5em 1.25rem;
 }
 
-/* Web Awesome selects, drawn as Shoelace drew them. The labels and hints are
-   the ones of the inputs above. */
+/* Web Awesome selects. The labels and hints are the ones of the inputs
+   above. */
 :where(wa-select) {
 	--wa-form-control-padding-inline: 0;
 	font-size: inherit;
@@ -694,7 +695,7 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 }
 
 /* Web Awesome draws Font Awesome's chevron; the mask cuts it down to
-   Shoelace's, which is Bootstrap's. */
+   Bootstrap Icons' chevron-down. */
 :where(wa-select)::part(expand-icon) {
 	width: 1em;
 	height: 1em;
@@ -752,7 +753,7 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 	margin-inline-start: 1.25rem;
 }
 
-/* Multiple selection: Shoelace drew the tags with less padding around them. */
+/* Multiple selection: keep the tags compact. */
 
 :where(wa-select[multiple]:has(> wa-option:state(selected)))::part(combobox) {
 	padding-inline-start: 0;
@@ -797,7 +798,8 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 	font-size: inherit;
 }
 
-/* Web Awesome draws Font Awesome's cross; the mask cuts it down to Shoelace's. */
+/* Web Awesome draws Font Awesome's cross; the mask cuts it down to
+   Bootstrap Icons' x-lg. */
 :where(wa-select)::part(tag__remove-button) {
 	width: 1em;
 	height: 1em;
@@ -858,7 +860,7 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 	margin-block-start: -0.125rem;
 }
 
-/* Web Awesome options, drawn as Shoelace drew them. */
+/* Web Awesome options. */
 :where(wa-option) {
 	padding: var(--wa-space-xs) var(--wa-space-m) var(--wa-space-xs) var(--wa-space-xs);
 	border-radius: 0;
@@ -893,7 +895,7 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 	margin-inline-start: var(--wa-space-xs);
 }
 
-/* Web Awesome draws Font Awesome's check; the mask cuts it down to Shoelace's. */
+/* Web Awesome draws Font Awesome's check; the mask cuts it to a thinner one. */
 :where(wa-option)::part(checked-icon) {
 	width: 1em;
 	min-width: 0;
@@ -905,17 +907,15 @@ wa-textarea[disabled]::part(textarea)::placeholder {
 		center / contain no-repeat;
 }
 
-/* Web Awesome buttons, drawn as Shoelace drew them. This is Shoelace's button
-   stylesheet ported onto the wa-button parts: :where() keeps it at zero
-   specificity, so every rule the Admin writes for a button still wins, as it
-   did over Shoelace's shadow styles. */
+/* Web Awesome buttons. :where() keeps these rules at zero specificity, so
+   every rule the Admin writes for a button still wins. */
 
 wa-button {
 	--wa-button-transform-active: none;
 	cursor: pointer;
 }
 
-/* Web Awesome sizes the host too; Shoelace sized only the inner button. */
+/* Web Awesome sizes the host too; let it inherit, and size the inner button. */
 :where(wa-button) {
 	font-size: inherit;
 }
@@ -1041,7 +1041,7 @@ wa-button {
 	padding-inline-end: var(--wa-space-s);
 }
 
-/* Pill: Shoelace's circle */
+/* Pill: a circle */
 
 :where(wa-button[pill]) {
 	--wa-border-radius-pill: 50%;
@@ -1061,7 +1061,7 @@ wa-button {
 
 /* Caret */
 
-/* Web Awesome draws Font Awesome's chevron; the mask cuts the box down to Shoelace's thinner one. */
+/* Web Awesome draws Font Awesome's chevron; the mask cuts the box down to a thinner one. */
 :where(wa-button)::part(caret) {
 	align-self: stretch;
 	width: 1em;
@@ -1159,8 +1159,8 @@ wa-button {
 	color: var(--wa-color-brand-30);
 }
 
-/* Icon buttons, drawn as Shoelace drew sl-icon-button: the icon takes the font
-   size around it, inside an 8px padding. */
+/* Icon buttons: the icon takes the font size around it, inside an 8px
+   padding. */
 
 :where(wa-button.icon-button) {
 	color: var(--wa-color-neutral-40);
@@ -1228,7 +1228,7 @@ wa-button {
 	content: none;
 }
 
-/* Shoelace icons are a 1em square content-box block; Web Awesome's default
+/* Icons are a 1em square content-box block; Web Awesome's default
    canvas is 1.25em wide and centres a flex item, and the global border-box
    wins over its content-box. */
 wa-icon {
@@ -1247,12 +1247,10 @@ wa-icon::part(svg) {
 	height: 100%;
 }
 
-/* Web Awesome checkboxes, drawn as Shoelace drew them. Like the buttons, this
-   is Shoelace's stylesheet ported onto the wa-checkbox parts, at zero
-   specificity. */
+/* Web Awesome checkboxes, at zero specificity like the buttons. */
 
 /* The host is not :focus-visible when its input is, so the focus ring is
-   Web Awesome's, drawn with Shoelace's tokens. */
+   Web Awesome's, drawn in the brand color. */
 :where(wa-checkbox) {
 	--wa-form-control-toggle-size: var(--toggle-size-medium);
 	--wa-focus-ring: var(--wa-focus-ring-style) var(--wa-focus-ring-width) var(--wa-color-brand-40);
@@ -1311,7 +1309,7 @@ wa-icon::part(svg) {
 }
 
 /* Web Awesome draws Font Awesome's glyphs; the masks cut the icon down to
-   Shoelace's. */
+   thin strokes. */
 :where(wa-checkbox)::part(icon) {
 	width: var(--wa-form-control-toggle-size);
 	min-width: 0;
@@ -1339,10 +1337,9 @@ wa-icon::part(svg) {
 	-webkit-user-select: none;
 }
 
-/* Web Awesome switches, drawn as Shoelace drew them, as the checkboxes above.
-   Local rules still override --thumb-size, which has the same name in both.
-   The focus ring is drawn around the control, where Shoelace drew it around
-   the thumb. */
+/* Web Awesome switches, at zero specificity as the checkboxes above. Local
+   rules can still set --thumb-size, which Web Awesome reads too. The focus
+   ring is drawn around the control rather than the thumb. */
 
 :where(wa-switch) {
 	--wa-focus-ring: var(--wa-focus-ring-style) var(--wa-focus-ring-width) var(--wa-color-brand-40);
@@ -1409,9 +1406,8 @@ wa-icon::part(svg) {
 	font-size: var(--wa-font-size-xs);
 }
 
-/* Web Awesome radios, drawn as Shoelace drew them. Shoelace wrapped the
-   control and the label in a base aligned to the middle of a line; Web Awesome
-   has no such wrapper, so the radio is a flex row one line tall. */
+/* Web Awesome radios. The radio is a flex row one line tall, so that the
+   control and the label are aligned to the middle of the line. */
 
 :where(wa-radio) {
 	--wa-form-control-toggle-size: var(--toggle-size-medium);
@@ -1466,7 +1462,7 @@ wa-icon::part(svg) {
 	outline-offset: var(--wa-focus-ring-offset);
 }
 
-/* Web Awesome's dot has radius 8 in 16; Shoelace's has radius 3.43. */
+/* Web Awesome's dot has radius 8 in 16; scale it down to radius 3.43. */
 :where(wa-radio)::part(checked-icon) {
 	min-width: 0;
 	scale: calc(3 / 7);
@@ -1486,12 +1482,12 @@ wa-icon::part(svg) {
 	font-size: var(--wa-font-size-s);
 }
 
-/* Web Awesome sizes the group from its size too; Shoelace's inherited it. */
+/* Web Awesome sizes the group from its size too; let it inherit instead. */
 :where(wa-radio-group) {
 	font-size: inherit;
 }
 
-/* As for the inputs, the gap Shoelace left below the label is in the line
+/* As for the inputs, the gap below the label is in the line
    height of an empty ::before, so that a group without a label has no gap. */
 :where(wa-radio-group)::part(form-control-label) {
 	display: inline-block;
@@ -1513,14 +1509,14 @@ wa-icon::part(svg) {
 	vertical-align: top;
 }
 
-/* Web Awesome tabs, drawn as Shoelace drew them, at zero specificity. */
+/* Web Awesome tabs, at zero specificity. */
 :where(wa-tab-group) {
 	--indicator-color: var(--wa-color-brand-40);
 	--track-color: var(--wa-color-neutral-80);
 }
 
-/* Shoelace drew the focus ring on the host, where the global outline-color
-   reaches it; Web Awesome draws it on the part. */
+/* Web Awesome draws the focus ring on the part, which the global
+   outline-color does not reach. */
 :where(wa-tab)::part(tab) {
 	font-size: var(--wa-font-size-s);
 	padding: var(--wa-space-m) 1.25rem;
@@ -1538,9 +1534,9 @@ wa-icon::part(svg) {
 	--padding: var(--wa-space-m) 0;
 }
 
-/* Web Awesome dialogs and drawers, drawn as Shoelace drew them, at zero
-   specificity. Shoelace padded the title rather than the header, and the
-   Admin's rules on the title rely on it; its spacing properties are kept. */
+/* Web Awesome dialogs and drawers, at zero specificity. The title is padded
+   rather than the header, as the Admin's rules on the title rely on it, and
+   the spacing comes from the --*-spacing properties. */
 :where(wa-dialog, wa-drawer) {
 	--header-spacing: 1.25rem;
 	--body-spacing: 1.25rem;
@@ -1583,8 +1579,8 @@ wa-icon::part(svg) {
 	padding: var(--body-spacing);
 }
 
-/* A scrollable body takes the focus when the drawer opens; Shoelace drew no
-   ring around it. */
+/* A scrollable body takes the focus when the drawer opens; draw no ring
+   around it. */
 :where(wa-dialog, wa-drawer)::part(body):focus-visible {
 	outline: none;
 }
@@ -1593,8 +1589,8 @@ wa-icon::part(svg) {
 	padding: var(--footer-spacing);
 }
 
-/* The close button, drawn as Shoelace's icon button. Web Awesome draws Font
-   Awesome's cross; the mask cuts it down to Shoelace's, which is Bootstrap's.
+/* The close button, drawn as an icon button. Web Awesome draws Font
+   Awesome's cross; the mask cuts it down to Bootstrap Icons' x-lg.
    The mask would hide the focus ring too, so the ring is on the host. */
 :where(wa-dialog, wa-drawer)::part(close-button) {
 	display: flex;
@@ -1633,7 +1629,7 @@ wa-icon::part(svg) {
 	outline: none;
 }
 
-/* Web Awesome copy buttons, drawn as Shoelace drew them, at zero specificity:
+/* Web Awesome copy buttons, at zero specificity:
    no background on hover, and the color of the text around them. The button
    shares a line of a div with two empty slots and the spaces between them:
    with no font size, they take no room, so the button has its own. The grid
@@ -1670,7 +1666,7 @@ wa-icon::part(svg) {
 }
 
 /* Web Awesome draws Font Awesome's glyphs; the masks cut the icons down to
-   Shoelace's. */
+   Bootstrap Icons' copy and x-lg, and to a thin check. */
 :where(wa-copy-button)::part(copy-icon),
 :where(wa-copy-button)::part(success-icon),
 :where(wa-copy-button)::part(error-icon) {
@@ -1694,10 +1690,9 @@ wa-icon::part(svg) {
 		center / contain no-repeat;
 }
 
-/* The trigger of Web Awesome color pickers, drawn as Shoelace drew it, at
-   zero specificity: a circle as high as a medium input, inline as it was, so
-   with the room for descenders below it. The panel keeps the look of Web
-   Awesome. */
+/* The trigger of Web Awesome color pickers, at zero specificity: a circle as
+   high as a medium input, inline, so with the room for descenders below it.
+   The panel keeps the look of Web Awesome. */
 :where(wa-color-picker) {
 	display: block;
 }
@@ -1726,10 +1721,9 @@ wa-icon::part(svg) {
 		inset 0 0 0 4px var(--wa-color-surface-default);
 }
 
-/* Web Awesome dropdowns, drawn as Shoelace drew a dropdown with a menu in it,
-   at zero specificity. The host is inline-block, as Shoelace's was, rather
+/* Web Awesome dropdowns, at zero specificity. The host is inline-block rather
    than display: contents, and does not set the size of the trigger's text.
-   The menu part is the panel and the menu of Shoelace together. */
+   The menu part is drawn as a panel holding a menu. */
 :where(wa-dropdown) {
 	--show-duration: 100ms;
 	--hide-duration: 100ms;
@@ -1756,12 +1750,11 @@ wa-icon::part(svg) {
 	overscroll-behavior: none;
 }
 
-/* Web Awesome dropdown items, drawn as Shoelace's menu items, at zero
-   specificity: the host is what Shoelace's base part was. Shoelace kept a 1.5em
-   column for the check before the item and one for the submenu chevron after
-   it; the pseudo-elements keep their room. Web Awesome's margins around the
-   icon and the details are !important in its shadow root, so the label makes
-   up the difference, leaving the icon and details parts to the items. */
+/* Web Awesome dropdown items, at zero specificity. The pseudo-elements keep a
+   1.5em column for the check before the item and one for the submenu chevron
+   after it. Web Awesome's margins around the icon and the details are
+   !important in its shadow root, so the label makes up the difference, leaving
+   the icon and details parts to the items. */
 :where(wa-dropdown-item) {
 	--wa-font-size-smaller: 1em;
 	align-items: stretch;
@@ -1826,10 +1819,10 @@ wa-icon::part(svg) {
 	margin-inline-end: calc(var(--wa-space-xs) - 2em);
 }
 
-/* Web Awesome tooltips, drawn as Shoelace drew them, at zero specificity:
-   Shoelace's maximum width and padding, and its text set on the body. Web
-   Awesome sets the color, size and line height on the host, where the rules
-   of the page around the tooltip reach them, and inherits the font. */
+/* Web Awesome tooltips, at zero specificity, with their own maximum width and
+   padding, and the text set on the body. Web Awesome sets the color, size and
+   line height on the host, where the rules of the page around the tooltip
+   reach them, and inherits the font. */
 :where(wa-tooltip) {
 	--max-width: 20rem;
 }
@@ -1903,7 +1896,7 @@ wa-icon::part(svg) {
 
 /* || Toast */
 
-/* The toast is drawn as Shoelace drew its alerts in the toast stack. */
+/* The toasts are solid, borderless alerts in the color of their variant. */
 
 .toast {
 	translate: calc(-50% + var(--sidebar-width) / 2) 0;

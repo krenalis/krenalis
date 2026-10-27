@@ -95,8 +95,8 @@
 	overflow: auto;
 }
 
-/* Each column is drawn as the Shoelace option it was, with the room of its
-   hidden check before it. */
+/* Each column is drawn as a select option, with the room of its hidden check
+   before it. */
 .profiles-list__toggle-column {
 	display: flex;
 	align-items: center;
@@ -186,7 +186,7 @@
 	position: relative;
 }
 
-/* The drawer is drawn as Shoelace's contained drawer. */
+/* The drawer is contained in the profiles grid. */
 .profile-drawer {
 	position: absolute;
 	top: 0;

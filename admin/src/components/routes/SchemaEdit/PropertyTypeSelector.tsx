@@ -457,14 +457,13 @@ const PropertyTypeSelector = ({ type, canEditType, onChange }: PropertyTypeSelec
 	);
 };
 
-// focusTrigger focuses the trigger of a dropdown, as the focusOnTrigger method
-// of Shoelace's dropdown did.
+// focusTrigger focuses the trigger of a dropdown.
 const focusTrigger = (dropdown: HTMLElement | null) => {
 	dropdown?.querySelector<HTMLElement>('[slot="trigger"]')?.focus();
 };
 
-// onTriggerKeyDown opens the dropdown of a trigger from the arrow keys, as
-// Shoelace's dropdown did; Web Awesome's opens only on a click.
+// onTriggerKeyDown opens the dropdown of a trigger from the arrow keys, Home
+// and End; Web Awesome's opens only on a click.
 const onTriggerKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
 	if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
 		return;

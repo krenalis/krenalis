@@ -595,7 +595,7 @@ const PurposeDialog = ({ isOpen, purposeToEdit, purposes, profileSchema, onClose
 	};
 
 	// The input is not a button, so the dropdown does not open it from the
-	// keyboard: open it as Shoelace's dropdown did.
+	// keyboard: open it on Space and Enter.
 	const onKeyDownProfilePath = (event: React.KeyboardEvent) => {
 		if ([' ', 'Enter'].includes(event.key)) {
 			event.preventDefault();
