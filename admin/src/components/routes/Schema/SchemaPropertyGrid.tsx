@@ -85,7 +85,11 @@ const SchemaPropertyIdentifierLabel = () => (
 	</span>
 );
 
-const SchemaPropertyPrimarySourceLabel = ({ primarySourceName }: { primarySourceName?: string | null }) => {
+interface SchemaPropertyPrimarySourceLabelProps {
+	primarySourceName?: string | null;
+}
+
+const SchemaPropertyPrimarySourceLabel = ({ primarySourceName }: SchemaPropertyPrimarySourceLabelProps) => {
 	let content =
 		'If this source has a value for this property, its most recent value is used. Otherwise, the most recent value from any other source is used.';
 	if (primarySourceName === null) {
