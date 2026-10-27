@@ -1354,9 +1354,10 @@ const historyRows = (runs: IdentityResolutionRun[]): GridRow[] =>
 
 const HistorySection = ({ runs, loading, error }: HistorySectionProps) => {
 	return (
-		<section className='identity-dashboard__section'>
+		<section className='identity-dashboard__section identity-dashboard__section--history'>
 			<SectionHeading
 				title='Identity resolution history'
+				secondary='Most recent runs (up to 100)'
 				info='Identity resolution runs, including those in progress, successful, and failed.'
 			/>
 			<DashboardCard className='identity-dashboard__history-card'>

@@ -76,6 +76,16 @@
 	margin-bottom: 12px;
 }
 
+.identity-dashboard__section--history .identity-dashboard__section-heading {
+	flex-wrap: wrap;
+	row-gap: 3px;
+}
+
+.identity-dashboard__section--history .identity-dashboard__section-heading > span {
+	flex-basis: 100%;
+	order: 1;
+}
+
 .identity-dashboard__section-heading > span {
 	font-size: 14px;
 	color: var(--text-light);
