@@ -484,6 +484,7 @@ func Test_Float64(t *testing.T) {
 		{-1.375, 4, 2, "-1.38", nil},
 		{0.001, 3, 3, "0.001", nil},
 		{0.001, 5, 2, "0", nil},
+		{-0.001, 5, 2, "0", nil},
 		{0.0001, 5, 2, "0", nil},
 		{-0.0001, 5, 2, "0", nil},
 		{0.05, 5, 1, "0.1", nil},
@@ -502,6 +503,7 @@ func Test_Float64(t *testing.T) {
 		{-999.995, 5, 2, "", ErrRange},
 		{9.5, 1, 0, "", ErrRange},
 		{-9.5, 1, 0, "", ErrRange},
+		{-5, 1, -1, "0", nil},
 		{125, 2, -1, "120", nil},
 		{135, 2, -1, "140", nil},
 		{995, 2, -1, "", ErrRange},
@@ -530,6 +532,7 @@ func Test_Float64(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%g/%d/%d", test.f, test.precision, test.scale), func(t *testing.T) {
+
 			got, err := Float64(test.f, test.precision, test.scale)
 			if err != nil {
 				if err != test.err {
@@ -546,6 +549,17 @@ func Test_Float64(t *testing.T) {
 			if !MustParse(test.expected).Equal(got) {
 				t.Fatalf("expected %q, got %q", test.expected, got)
 			}
+
+			if test.expected == "0" {
+				b, err := got.MarshalJSON()
+				if err != nil {
+					t.Fatalf("expected JSON 0, got error %v", err)
+				}
+				if string(b) != "0" {
+					t.Fatalf("expected JSON %q, got %q", "0", b)
+				}
+			}
+
 		})
 	}
 

@@ -379,6 +379,9 @@ func Float64(f float64, precision, scale int) (Decimal, error) {
 	}
 	if x.b.Scale() > scale {
 		decimal.ContextUnlimited.Quantize(&x.b, scale)
+		if x.b.Sign() == 0 {
+			return Decimal{}, nil
+		}
 	}
 	if x.b.Precision()-x.b.Scale() > precision-scale {
 		return Decimal{}, ErrRange
