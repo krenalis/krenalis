@@ -329,6 +329,8 @@ func validatePropertyRoles(schema types.Type, roles PropertyRoles) error {
 			compatible = singleValue && property.Type.Semantics() == types.CountrySemantics
 		case "photo":
 			compatible = singleValue && property.Type.Semantics() == types.URLSemantics
+		default:
+			return fmt.Errorf("core: unexpected property role %q", assignment.role)
 		}
 		if !compatible {
 			return fmt.Errorf("property %q is not compatible with role %q", assignment.path, assignment.role)
