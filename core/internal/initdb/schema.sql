@@ -352,10 +352,6 @@ CREATE TABLE pipelines_metrics (
     PRIMARY KEY (pipeline, timeslot)
 );
 
-CREATE INDEX pipelines_metrics_workspace_timeslot_idx ON pipelines_metrics (workspace, timeslot);
-CREATE INDEX pipelines_metrics_connection_timeslot_idx ON pipelines_metrics (connection, timeslot);
-CREATE INDEX pipelines_metrics_timeslot_idx ON pipelines_metrics (timeslot);
-
 CREATE TABLE usage_metrics (
     organization varchar(12) NOT NULL REFERENCES organizations ON DELETE CASCADE,
     workspace varchar(12) NOT NULL,
@@ -405,6 +401,10 @@ CREATE TABLE identity_connection_metrics (
     identities_without_profile bigint NOT NULL,
     PRIMARY KEY (connection, day)
 );
+
+CREATE INDEX pipelines_metrics_workspace_timeslot_idx ON pipelines_metrics (workspace, timeslot);
+CREATE INDEX pipelines_metrics_connection_timeslot_idx ON pipelines_metrics (connection, timeslot);
+CREATE INDEX pipelines_metrics_timeslot_idx ON pipelines_metrics (timeslot);
 
 CREATE TABLE discontinued_functions (
     id varchar(200) NOT NULL,
