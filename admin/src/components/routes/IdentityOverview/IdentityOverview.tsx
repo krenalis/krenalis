@@ -13,6 +13,7 @@ import {
 	IdentityResolutionMetricDay,
 } from '../../../lib/api/types/metrics';
 import { IdentityResolutionRun } from '../../../lib/api/types/workspace';
+import { NotFoundError } from '../../../lib/api/errors';
 import { formatNumber } from '../../../utils/formatNumber';
 import {
 	DisplayDateRange,
@@ -224,7 +225,19 @@ const IdentityOverview = () => {
 						: fetchResolutionMetricDays(resolution, requestedRange),
 				selectedIdentityConnection === ''
 					? undefined
-					: fetchIdentityMetricDays(identity, requestedRange, selectedIdentityConnection),
+					: fetchIdentityMetricDays(identity, requestedRange, selectedIdentityConnection).catch((err) => {
+							if (
+								version === requestVersion.current &&
+								selectedIdentityConnection !== DELETED_CONNECTION_SCOPE &&
+								err instanceof NotFoundError
+							) {
+								// Discard this load before retrying with a valid selection.
+								requestVersion.current += 1;
+								dashboardDataRef.current = undefined;
+								setSelectedIdentityConnection('');
+							}
+							throw err;
+						}),
 			]);
 			if (version !== requestVersion.current) return;
 
