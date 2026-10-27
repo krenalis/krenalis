@@ -736,7 +736,7 @@ const ConnectionsChart = ({ data, totalIdentities, observedLabel, loading, error
 		<DashboardCard
 			title='Identities by connection'
 			temporalLabel={observedLabel == null ? undefined : `(as of ${observedLabel})`}
-			info='Latest identity state grouped by active source connection. Identities from deleted connections are grouped under Other. Identities without a profile are included in the appropriate recognized or anonymous count.'
+			info='Latest identity state grouped by source connection. Identities from deleted connections are grouped under “Removed connections”. Smaller categories may be combined under “Other”. Identities without a profile are still counted as recognized or anonymous.'
 			className='identity-dashboard__chart-card'
 		>
 			{loading ? (
