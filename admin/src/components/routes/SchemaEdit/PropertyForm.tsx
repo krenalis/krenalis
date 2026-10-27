@@ -98,6 +98,12 @@ const disableShoelaceTextareaHeightReset = (textarea: SlTextareaElement | null) 
 	Reflect.set(textarea, 'setTextareaHeight', () => undefined);
 };
 
+interface PendingTypeChange {
+	description: React.ReactNode;
+	rolesToUnassign: ProfilePropertyRoleID[];
+	type: Type;
+}
+
 interface PropertyFormProps {
 	propertyRole: ProfilePropertyRoleID | null;
 	propertyRoles: ProfilePropertyRoles;
@@ -117,12 +123,6 @@ interface PropertyFormProps {
 	) => void;
 	onDirtyChange?: (dirty: boolean) => void;
 	onValidityChange?: (valid: boolean) => void;
-}
-
-interface PendingTypeChange {
-	description: React.ReactNode;
-	rolesToUnassign: ProfilePropertyRoleID[];
-	type: Type;
 }
 
 const PropertyForm = ({
