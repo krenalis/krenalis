@@ -54,11 +54,12 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 				{name: "anonymous-two", anonymous: 2},
 			})
 			anonymousOp := uuid.New().String()
-			anonymousCounts := resolveAndAssertCounts(t, dw, anonymousOp, profileColumns, warehouses.IdentityResolutionCounts{
-				Profiles:    warehouses.Counts{Anonymous: 2},
-				Identities:  warehouses.Counts{Anonymous: 3},
-				Composition: warehouses.IdentityResolutionComposition{One: 1, Two: 1},
-			})
+			anonymousCounts := resolveAndAssertCounts(t, dw, anonymousOp, profileColumns,
+				warehouses.IdentityResolutionCounts{
+					Profiles:    warehouses.Counts{Anonymous: 2},
+					Identities:  warehouses.Counts{Anonymous: 3},
+					Composition: warehouses.IdentityResolutionComposition{One: 1, Two: 1},
+				})
 
 			// Turn both existing profiles into recognized profiles. They retain their
 			// anonymous identities and gain one recognized identity each.
@@ -67,11 +68,12 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 				{name: "anonymous-two", recognized: 1},
 			})
 			recognizedOp := uuid.New().String()
-			recognizedCounts := resolveAndAssertCounts(t, dw, recognizedOp, profileColumns, warehouses.IdentityResolutionCounts{
-				Profiles:    warehouses.Counts{Recognized: 2},
-				Identities:  warehouses.Counts{Anonymous: 3, Recognized: 2},
-				Composition: warehouses.IdentityResolutionComposition{Two: 1, Three: 1},
-			})
+			recognizedCounts := resolveAndAssertCounts(t, dw, recognizedOp, profileColumns,
+				warehouses.IdentityResolutionCounts{
+					Profiles:    warehouses.Counts{Recognized: 2},
+					Identities:  warehouses.Counts{Anonymous: 3, Recognized: 2},
+					Composition: warehouses.IdentityResolutionComposition{Two: 1, Three: 1},
+				})
 
 			// Exercise the 4-10 and 11-20 bucket boundaries and the open-ended
 			// 21+ bucket.
@@ -133,7 +135,8 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 				t.Fatal("expected non-nil retry counts after dropping the physical table, got nil")
 			}
 			if diff := cmp.Diff(emptyCounts, retryCounts); diff != "" {
-				t.Fatalf("expected original retry counts after dropping the physical table, got diff (-want +got):\n%s", diff)
+				t.Fatalf("expected original retry counts after dropping the physical table, got diff (-want +got):\n%s",
+					diff)
 			}
 			retryCounts, err = dw.ResolveIdentities(ctx, anonymousOp, profileColumns, profileColumns, nil)
 			if err != nil {
@@ -143,7 +146,8 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 				t.Fatal("expected non-nil retry counts after dropping the physical table, got nil")
 			}
 			if diff := cmp.Diff(anonymousCounts, retryCounts); diff != "" {
-				t.Fatalf("expected original retry counts after dropping the physical table, got diff (-want +got):\n%s", diff)
+				t.Fatalf("expected original retry counts after dropping the physical table, got diff (-want +got):\n%s",
+					diff)
 			}
 
 			t.Run("completed legacy operation without a result", func(t *testing.T) {
@@ -254,7 +258,8 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 					t.Fatalf("expected no error, got %v", countErr)
 				}
 				if profilesAfter[0] != profilesBefore[0] {
-					t.Fatalf("expected %d visible profiles after failed Identity Resolution, got %d", profilesBefore[0], profilesAfter[0])
+					t.Fatalf("expected %d visible profiles after failed Identity Resolution, got %d",
+						profilesBefore[0], profilesAfter[0])
 				}
 
 				// Retry with valid arguments to verify that the persisted failure is
@@ -262,7 +267,8 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 				retryCounts, retryErr := dw.ResolveIdentities(ctx, opFailed, profileColumns, profileColumns, nil)
 				if retryErr != nil {
 					if _, ok := errors.AsType[*warehouses.OperationError](retryErr); !ok {
-						t.Fatalf("expected ResolveIdentities retry to return *warehouses.OperationError, got %v", retryErr)
+						t.Fatalf("expected ResolveIdentities retry to return *warehouses.OperationError, got %v",
+							retryErr)
 					}
 				}
 				if retryErr == nil {
@@ -383,7 +389,8 @@ func assertPersistedIdentityResolutionResult(t *testing.T, dw warehouses.Warehou
 		}
 	}
 	if len(countsObject) != 3 {
-		t.Fatalf("expected operation result counts to contain only profiles, identities, and composition, got %v", countsObject)
+		t.Fatalf("expected operation result counts to contain only profiles, identities, and composition, got %v",
+			countsObject)
 	}
 	for _, field := range []string{"profiles", "identities"} {
 		countObject, ok := countsObject[field].(map[string]any)
@@ -396,7 +403,8 @@ func assertPersistedIdentityResolutionResult(t *testing.T, dw warehouses.Warehou
 			}
 		}
 		if len(countObject) != 2 {
-			t.Fatalf("expected operation result %s to contain only anonymous and recognized, got %v", field, countObject)
+			t.Fatalf("expected operation result %s to contain only anonymous and recognized, got %v",
+				field, countObject)
 		}
 	}
 	compositionObject, ok := countsObject["composition"].(map[string]any)

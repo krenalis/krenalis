@@ -58,7 +58,8 @@ func Test_finalizeIdentityResolutionPreservesPersistedSuccess(t *testing.T) {
 
 			_, err := pool.Exec(t.Context(), `INSERT INTO "krenalis_system_operations"
 				("id", "operation_type", "completed_at", "result")
-				VALUES ($1, $2, $3, $4::jsonb)`, test.opID, identityResolution, time.Now().UTC(), []byte(test.result))
+				VALUES ($1, $2, $3, $4::jsonb)`,
+				test.opID, identityResolution, time.Now().UTC(), []byte(test.result))
 			if err != nil {
 				t.Fatalf("expected successful operation insertion to succeed, got %v", err)
 			}
@@ -76,7 +77,8 @@ func Test_finalizeIdentityResolutionPreservesPersistedSuccess(t *testing.T) {
 			}
 
 			var operationError string
-			err = pool.QueryRow(t.Context(), `SELECT "error" FROM "krenalis_system_operations" WHERE "id" = $1`, test.opID).
+			err = pool.QueryRow(t.Context(),
+				`SELECT "error" FROM "krenalis_system_operations" WHERE "id" = $1`, test.opID).
 				Scan(&operationError)
 			if err != nil {
 				t.Fatalf("expected persisted operation error to be readable, got %v", err)
@@ -523,7 +525,8 @@ func TestResolveIdentitiesWithLegacyWarehouseSchema(t *testing.T) {
 	err = pool.QueryRow(t.Context(), `SELECT COUNT(*),
 		COUNT(CASE WHEN column_name IN ('_anonymous_count', '_recognized_count') THEN 1 END)
 		FROM information_schema.columns
-		WHERE table_schema = current_schema() AND table_name = 'krenalis_profiles_0'`).Scan(&legacyColumns, &countColumns)
+		WHERE table_schema = current_schema() AND table_name = 'krenalis_profiles_0'`).
+		Scan(&legacyColumns, &countColumns)
 	if err != nil {
 		t.Fatalf("expected legacy profile columns to be readable, got %v", err)
 	}

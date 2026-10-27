@@ -158,7 +158,8 @@ func TestIdentityResolutionHTTPContract(t *testing.T) {
 
 	t.Run("history", func(t *testing.T) {
 
-		k.ExecQueryTestDatabase(t.Context(), "DELETE FROM identity_resolution_runs WHERE workspace = $1", k.WorkspaceID())
+		k.ExecQueryTestDatabase(t.Context(),
+			"DELETE FROM identity_resolution_runs WHERE workspace = $1", k.WorkspaceID())
 		if runs := k.IdentityResolutionRuns(0, 100, ""); runs == nil || len(runs) != 0 {
 			t.Fatalf("expected an empty runs array, got %#v", runs)
 		}

@@ -714,7 +714,8 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 					// original counts.
 					var returnedCounts warehouses.IdentityResolutionCounts
 					for i := range 5 {
-						counts, err := dw.ResolveIdentities(ctx, opID.String(), identifiers, columns, test.primarySources)
+						counts, err := dw.ResolveIdentities(
+							ctx, opID.String(), identifiers, columns, test.primarySources)
 						if err != nil {
 							t.Fatal(err)
 						}
@@ -740,7 +741,8 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 							t.Fatal("expected previous resolution counts, got nil")
 						}
 						if *counts != previousResolution.counts {
-							t.Fatalf("expected previous resolution counts %v, got %v", previousResolution.counts, *counts)
+							t.Fatalf("expected previous resolution counts %v, got %v",
+								previousResolution.counts, *counts)
 						}
 					}
 

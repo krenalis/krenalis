@@ -68,7 +68,8 @@ func TestIdentityMetricsSchema(t *testing.T) {
 			t.Fatalf("expected identity_resolution_metrics.%s column definition, got %v", column, err)
 		}
 		if dataType != "bigint" || nullable != "NO" {
-			t.Errorf("expected identity_resolution_metrics.%s to be bigint NOT NULL, got data_type=%q, is_nullable=%q", column, dataType, nullable)
+			t.Errorf("expected identity_resolution_metrics.%s to be bigint NOT NULL, got data_type=%q, is_nullable=%q",
+				column, dataType, nullable)
 		}
 	}
 
@@ -180,7 +181,8 @@ func TestIdentityMetricsSchema(t *testing.T) {
 	}
 	for _, table := range []string{"identity_resolution_metrics", "identity_metrics"} {
 		var parentRows int
-		err = database.QueryRow(ctx, "SELECT COUNT(*) FROM "+table+" WHERE workspace = 'workspace111'").Scan(&parentRows)
+		err = database.QueryRow(ctx, "SELECT COUNT(*) FROM "+table+" WHERE workspace = 'workspace111'").
+			Scan(&parentRows)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}

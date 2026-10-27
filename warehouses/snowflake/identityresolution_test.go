@@ -81,7 +81,8 @@ func Test_finalizeIdentityResolutionPreservesPersistedSuccess(t *testing.T) {
 
 			_, err := db.ExecContext(t.Context(), `INSERT INTO "KRENALIS_SYSTEM_OPERATIONS"
 				("ID", "OPERATION_TYPE", "COMPLETED_AT", "RESULT")
-				SELECT ?, ?, ?, PARSE_JSON(NULLIF(?, ''))`, test.opID, identityResolution, time.Now().UTC(), string(test.result))
+				SELECT ?, ?, ?, PARSE_JSON(NULLIF(?, ''))`,
+				test.opID, identityResolution, time.Now().UTC(), string(test.result))
 			if err != nil {
 				t.Fatalf("expected successful operation insertion to succeed, got %v", err)
 			}
@@ -726,7 +727,8 @@ func TestResolveIdentitiesWithLegacyWarehouseSchema(t *testing.T) {
 	err = db.QueryRowContext(t.Context(), `SELECT COUNT(*),
 		COUNT(CASE WHEN COLUMN_NAME IN ('_ANONYMOUS_COUNT', '_RECOGNIZED_COUNT') THEN 1 END)
 		FROM INFORMATION_SCHEMA.COLUMNS
-		WHERE TABLE_SCHEMA = CURRENT_SCHEMA() AND TABLE_NAME = 'KRENALIS_PROFILES_0'`).Scan(&legacyColumns, &countColumns)
+		WHERE TABLE_SCHEMA = CURRENT_SCHEMA() AND TABLE_NAME = 'KRENALIS_PROFILES_0'`).
+		Scan(&legacyColumns, &countColumns)
 	if err != nil {
 		t.Fatalf("expected legacy profile columns to be readable, got %v", err)
 	}

@@ -220,7 +220,8 @@ func TestIdentityResolution2(t *testing.T) {
 	if len(runs) != 2 {
 		t.Fatalf("expected both accepted Identity Resolution runs in history, got %d", len(runs))
 	}
-	if runs[0].Status != "successful" || runs[1].Status != "successful" || runs[0].EndTime == nil || runs[0].Error != nil {
+	if runs[0].Status != "successful" || runs[1].Status != "successful" ||
+		runs[0].EndTime == nil || runs[0].Error != nil {
 		t.Fatalf("expected successful runs, got %#v", runs)
 	}
 	if !runs[0].StartTime.After(runs[1].StartTime) {
@@ -260,7 +261,8 @@ func TestIdentityResolution2(t *testing.T) {
 	}
 
 	// Check the successful filter against running and failed history fixtures.
-	k.ExecQueryTestDatabase(t.Context(), `INSERT INTO identity_resolution_runs (id, workspace, start_time, end_time, error)
+	k.ExecQueryTestDatabase(t.Context(),
+		`INSERT INTO identity_resolution_runs (id, workspace, start_time, end_time, error)
 		VALUES ('11111111-1111-1111-1111-111111111111', $1, $2, NULL, NULL),
 			('22222222-2222-2222-2222-222222222222', $1, $2, $3, 'warehouse failure')`,
 		k.WorkspaceID(), firstRun.StartTime, *firstRun.EndTime)
