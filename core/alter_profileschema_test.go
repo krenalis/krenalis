@@ -100,14 +100,18 @@ func TestAlterProfileSchemaFinalization(t *testing.T) {
 		warehouses.Register(warehouses.Platform{Name: platform}, func(warehouses.SettingsLoader, warehouses.DialWith) *finalizationWarehouse {
 			return remote
 		})
-		// Only primary sources change, so execution needs no warehouse DDL.
+		currentRoles := state.PropertyRoles{FirstName: "email"}
+		pendingRoles := state.PropertyRoles{LastName: "email"}
+		// Only primary sources and property roles change, so execution needs no warehouse DDL.
 		_, err = database.Exec(t.Context(), `INSERT INTO workspaces
 				(id, organization, name, warehouse_name, warehouse_mode, warehouse_settings,
 				kms_encrypted_warehouse_settings_key, kms_encrypted_warehouse_mcp_settings_key,
 				profile_schema, identifiers, alter_profile_schema_id, alter_profile_schema_schema,
-				alter_profile_schema_primary_sources, alter_profile_schema_operations)
+				alter_profile_schema_primary_sources, alter_profile_schema_operations,
+				profile_role_first_name, alter_profile_schema_role_last_name)
 				SELECT $1, id, 'test', $5, 'Normal', '', '', '', $2, ARRAY['email'], $3, $2,
-				jsonb_build_object('email', $4::text), '[]' FROM organizations`, workspace, raw, opID, source, platform)
+				jsonb_build_object('email', $4::text), '[]', $6, $7 FROM organizations`,
+			workspace, raw, opID, source, platform, currentRoles.FirstName, pendingRoles.LastName)
 		if err != nil {
 			t.Fatalf("expected pending schema operation, got %v", err)
 		}
@@ -133,6 +137,16 @@ func TestAlterProfileSchemaFinalization(t *testing.T) {
 			t.Fatalf("expected initialized State, got %v", err)
 		}
 		t.Cleanup(func() { st.Close(context.Background()) })
+		loaded, ok := st.Workspace(workspace)
+		if !ok {
+			t.Fatal("expected loaded workspace, got none")
+		}
+		if loaded.PropertyRoles != currentRoles {
+			t.Fatalf("expected loaded property roles %#v, got %#v", currentRoles, loaded.PropertyRoles)
+		}
+		if loaded.AlterProfileSchema.PropertyRoles != pendingRoles {
+			t.Fatalf("expected pending roles %#v, got %#v", pendingRoles, loaded.AlterProfileSchema.PropertyRoles)
+		}
 		ds, err := datastore.New(st)
 		if err != nil {
 			t.Fatalf("expected datastore, got %v", err)
@@ -150,7 +164,7 @@ func TestAlterProfileSchemaFinalization(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected committed finalization, got %v", err)
 		}
-		// A duplicate must not overwrite schema or primary sources. Change only
+		// A duplicate must not overwrite schema, property roles or primary sources. Change only
 		// schema metadata to keep this check independent of warehouse DDL.
 		duplicateSchema := types.Object([]types.Property{
 			{Name: "email", Type: types.String(), ReadOptional: true, Description: "Unexpected description"},
@@ -163,13 +177,26 @@ func TestAlterProfileSchemaFinalization(t *testing.T) {
 			t.Fatal("expected duplicate schema to differ from committed schema, got identical JSON")
 		}
 		core.executeAlterProfileSchema(workspace, opID, duplicateSchema, map[string]string{}, nil)
-		var schemaValid, identifiersValid, operationCleared, completionUnchanged bool
-		if err := database.QueryRow(ctx, `SELECT profile_schema = $2, identifiers = ARRAY['email'],
+		loaded, ok = st.Workspace(workspace)
+		if !ok {
+			t.Fatal("expected finalized workspace, got none")
+		}
+		if loaded.PropertyRoles != pendingRoles {
+			t.Fatalf("expected finalized property roles %#v, got %#v", pendingRoles, loaded.PropertyRoles)
+		}
+		if loaded.AlterProfileSchema.PropertyRoles != (state.PropertyRoles{}) {
+			t.Fatalf("expected cleared pending roles, got %#v", loaded.AlterProfileSchema.PropertyRoles)
+		}
+		var schemaValid, identifiersValid, rolesValid, operationCleared, completionUnchanged bool
+		err = database.QueryRow(ctx, `SELECT profile_schema = $2, identifiers = ARRAY['email'],
+				profile_role_first_name = '' AND profile_role_last_name = 'email',
 				alter_profile_schema_id IS NULL AND alter_profile_schema_schema = 'null'
-					AND alter_profile_schema_primary_sources = 'null' AND alter_profile_schema_operations = 'null',
+					AND alter_profile_schema_primary_sources = 'null' AND alter_profile_schema_operations = 'null'
+					AND alter_profile_schema_role_last_name = '',
 				alter_profile_schema_end_time = $3
 				FROM workspaces WHERE id = $1`, workspace, raw, completed).
-			Scan(&schemaValid, &identifiersValid, &operationCleared, &completionUnchanged); err != nil {
+			Scan(&schemaValid, &identifiersValid, &rolesValid, &operationCleared, &completionUnchanged)
+		if err != nil {
 			t.Fatalf("expected finalization readback, got %v", err)
 		}
 		if !schemaValid {
@@ -178,8 +205,11 @@ func TestAlterProfileSchemaFinalization(t *testing.T) {
 		if !identifiersValid {
 			t.Error("expected preserved identifiers, got changed identifiers")
 		}
+		if !rolesValid {
+			t.Error("expected persisted pending property roles, got different roles")
+		}
 		if !operationCleared {
-			t.Error("expected cleared operation ID, schema, primary sources and operations, got pending fields")
+			t.Error("expected cleared schema alteration fields, got pending fields")
 		}
 		if !completionUnchanged {
 			t.Error("expected preserved completion time, got changed completion time")
