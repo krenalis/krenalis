@@ -12,6 +12,7 @@ import AppContext from '../src/context/AppContext';
 import ProfilesContext from '../src/context/ProfilesContext';
 import { ProfileDrawer } from '../src/components/routes/Profiles/ProfileDrawer';
 import '../src/components/routes/Profiles/Profiles.css';
+import './profile-drawer.fixture.css';
 
 declare global {
 	interface Window {
@@ -61,7 +62,7 @@ const Fixture = () => {
 	return (
 		<AppContext.Provider value={appContext}>
 			<ProfilesContext.Provider value={profilesContext}>
-				<div className='profiles-list__grid-container' style={{ height: '600px' }}>
+				<div className='profiles-list__grid-container profile-drawer-fixture'>
 					<ProfileDrawer selectedProfile={selectedProfile} setSelectedProfile={setSelectedProfile} />
 				</div>
 			</ProfilesContext.Provider>
