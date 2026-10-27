@@ -101,8 +101,137 @@ test('filters connection series with mouse and keyboard and updates the chart', 
 	await expect(ticks.last()).toHaveText('1K');
 	await expect(anonymous).toBeEnabled();
 	await expect(
-		page.locator('.identity-dashboard__chart:not(.identity-dashboard__connections-chart)').getByRole('button'),
-	).toHaveCount(0);
+		page
+			.locator('.identity-dashboard__chart:not(.identity-dashboard__connections-chart)')
+			.getByRole('button', { pressed: true }),
+	).toHaveCount(2);
+});
+
+for (const [title, maximum, anonymousMaximum] of [
+	['Identities over time (daily)', '1K', '990'],
+	['Profiles over time (daily)', '100', '90'],
+] as const) {
+	test(`filters ${title} independently and rescales its visible series`, async ({ page }) => {
+		await page.evaluate(() => {
+			window.identityOverviewScenario = 'legendFilters';
+		});
+		await page.addScriptTag({ content: componentScript });
+		const card = page.locator('.identity-dashboard__chart-card').filter({ hasText: title });
+		const recognized = card.getByRole('button', { name: 'Recognized', exact: true });
+		const anonymous = card.getByRole('button', { name: 'Anonymous', exact: true });
+		const ticks = card.locator('.recharts-yAxis .recharts-cartesian-axis-tick-value');
+		const tooltip = card.locator('.identity-dashboard__chart-tooltip');
+		await expect(ticks.last()).toHaveText(maximum);
+		await anonymous.click();
+		await expect(anonymous).toHaveAttribute('aria-pressed', 'false');
+		await expect(
+			page.locator('.identity-dashboard__connection-legend').getByRole('button', { pressed: false }),
+		).toHaveCount(1);
+		await expect(card.locator('.recharts-area')).toHaveCount(1);
+		await expect(ticks.last()).toHaveText('10');
+		await page.getByRole('button', { name: 'Last 7 days', exact: true }).click();
+		await expect(anonymous).toHaveAttribute('aria-pressed', 'false');
+		await page.clock.runFor(2000);
+		await card.locator('.recharts-wrapper').scrollIntoViewIfNeeded();
+		const point = await card.locator('.recharts-area-dot').last().boundingBox();
+		const firstTick = await card
+			.locator('.recharts-xAxis .recharts-cartesian-axis-tick-value')
+			.first()
+			.boundingBox();
+		await page.mouse.move(firstTick!.x + firstTick!.width / 2, point!.y + point!.height / 2 + 10);
+		await expect(tooltip).toHaveCount(0);
+		await page.mouse.move(point!.x + point!.width / 2, point!.y + point!.height / 2 + 1);
+		await expect(tooltip.locator('dt')).toHaveText(['Recognized']);
+		await expect(tooltip.locator('dd')).toHaveText(['10 (100.00%)']);
+		await recognized.press('Enter');
+		await expect(card.locator('.recharts-area')).toHaveCount(0);
+		await expect(ticks).toHaveText(['0', '1']);
+		await expect(tooltip).toHaveCount(0);
+		await anonymous.press('Space');
+		await expect(ticks.last()).toHaveText(anonymousMaximum);
+		await recognized.click();
+		await expect(card.getByRole('button', { pressed: true })).toHaveCount(2);
+		await expect(ticks.last()).toHaveText(maximum);
+		await expect(
+			page.locator('.identity-dashboard__connections-chart').getByRole('button', { pressed: true }),
+		).toHaveCount(2);
+		await expect(
+			page.locator('.identity-dashboard__composition-legend').getByRole('button', { pressed: true }),
+		).toHaveCount(6);
+		if (title === 'Identities over time (daily)') {
+			await anonymous.click();
+			await page.locator('sl-select[aria-label="Connection"]').click();
+			await page.getByRole('option', { name: 'Removed connections' }).click();
+			await expect(ticks.last()).toHaveText('8');
+			await expect(anonymous).toHaveAttribute('aria-pressed', 'false');
+		}
+	});
+}
+
+for (const [title, scenario, hiddenType] of [
+	['Identities over time (daily)', 'singleDayZero', 'Anonymous'],
+	['Profiles over time (daily)', 'resolutionSingleDayZero', 'Recognized'],
+] as const) {
+	test(`keeps the scale and zero point in ${title} when the visible series contains only zeros`, async ({ page }) => {
+		await page.evaluate((scenario) => {
+			window.identityOverviewScenario = scenario;
+		}, scenario);
+		await page.addScriptTag({ content: componentScript });
+		const card = page.locator('.identity-dashboard__chart-card').filter({ hasText: title });
+		await card.getByRole('button', { name: hiddenType, exact: true }).click();
+		await expect(card.locator('.recharts-yAxis .recharts-cartesian-axis-tick-value')).toHaveText(['0', '1']);
+		await expect(card.locator('.recharts-area')).toHaveCount(1);
+		await expect(card.locator('.recharts-area-dot')).toHaveCount(1);
+		await expect(card.locator('.recharts-area-dot')).toBeVisible();
+	});
+}
+
+test('filters composition buckets while keeping colors, percentages and the shown total consistent', async ({
+	page,
+}) => {
+	await page.evaluate(() => {
+		window.identityOverviewScenario = 'legendFilters';
+	});
+	await page.addScriptTag({ content: componentScript });
+	const card = page.locator('.identity-dashboard__composition-card');
+	const legend = card.locator('.identity-dashboard__composition-legend');
+	const buttons = legend.getByRole('button');
+	const percentages = legend.locator('strong');
+	const center = card.locator('.identity-dashboard__donut-center');
+	const sectors = card.locator('.recharts-pie-sector path');
+	await expect(center).toHaveText('100Profiles');
+	await expect(percentages).toHaveText(['80.0%', '15.0%', '5.0%', '0.0%', '0.0%', '0.0%']);
+	await expect(sectors).toHaveCount(3);
+	const colors = await sectors.evaluateAll((paths) => paths.map((path) => path.getAttribute('fill')));
+	await buttons.nth(0).click();
+	await expect(center).toHaveText('20Profiles shown');
+	await expect(percentages).toHaveText(['—', '75.0%', '25.0%', '0.0%', '0.0%', '0.0%']);
+	await expect(sectors).toHaveCount(2);
+	await expect(sectors.nth(0)).toHaveAttribute('fill', colors[1]!);
+	await expect(sectors.nth(1)).toHaveAttribute('fill', colors[2]!);
+	const ring = await card.locator('.identity-dashboard__donut-ring').boundingBox();
+	await page.mouse.move(ring!.x + ring!.width / 2 + 42, ring!.y + ring!.height / 2 - 42);
+	await expect(card.locator('.identity-dashboard__chart-tooltip strong')).toHaveText('2 identities');
+	await expect(card.locator('.identity-dashboard__chart-tooltip dd')).toHaveText('15');
+	await buttons.nth(1).press('Enter');
+	await expect(center).toHaveText('5Profiles shown');
+	await expect(percentages).toHaveText(['—', '—', '100.0%', '0.0%', '0.0%', '0.0%']);
+	await buttons.nth(2).press('Space');
+	await expect(center).toHaveText('0Profiles shown');
+	await expect(card.locator('.identity-dashboard__composition-ring-placeholder')).toBeVisible();
+	await expect(card.locator('.identity-dashboard__chart-tooltip')).toHaveCount(0);
+	for (const button of (await buttons.all()).slice(3)) await button.click();
+	await expect(buttons).toHaveCount(6);
+	await expect(legend.getByRole('button', { pressed: true })).toHaveCount(0);
+	await expect(percentages).toHaveText(['—', '—', '—', '—', '—', '—']);
+	for (const button of await buttons.all()) await button.click();
+	await expect(center).toHaveText('100Profiles');
+	await expect(percentages).toHaveText(['80.0%', '15.0%', '5.0%', '0.0%', '0.0%', '0.0%']);
+	await expect(sectors).toHaveCount(3);
+	expect(await sectors.evaluateAll((paths) => paths.map((path) => path.getAttribute('fill')))).toEqual(colors);
+	await expect(
+		page.locator('.identity-dashboard__connection-legend').getByRole('button', { pressed: true }),
+	).toHaveCount(6);
 });
 
 for (const [hiddenType, revision] of [

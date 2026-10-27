@@ -397,7 +397,7 @@
 	gap: 4px;
 }
 
-.identity-dashboard__connection-legend button {
+.identity-dashboard__legend-toggle {
 	display: flex;
 	align-items: center;
 	gap: 4px;
@@ -406,10 +406,11 @@
 	background: none;
 	color: inherit;
 	font: inherit;
+	text-align: left;
 	cursor: pointer;
 }
 
-.identity-dashboard__connection-legend button[aria-pressed='false'] {
+.identity-dashboard__legend-toggle[aria-pressed='false'] {
 	text-decoration: line-through;
 }
 
@@ -744,7 +745,7 @@
 	gap: 6px;
 }
 
-.identity-dashboard__composition-legend > div {
+.identity-dashboard__composition-legend > button {
 	display: grid;
 	grid-template-columns: 9px 1fr auto;
 	align-items: center;

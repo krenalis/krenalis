@@ -385,17 +385,41 @@ const formatPercentage = (value: number | null): string => (value == null ? '—
 
 type IdentityType = 'recognized' | 'anonymous';
 
+const useSeriesVisibility = <Key extends string>() => {
+	const [hiddenSeries, setHiddenSeries] = useState<Key[]>([]);
+	const toggleSeries = (key: Key) => {
+		setHiddenSeries((hidden) =>
+			hidden.includes(key) ? hidden.filter((value) => value !== key) : [...hidden, key],
+		);
+	};
+	return { hiddenSeries, toggleSeries };
+};
+
+interface LegendToggleProps {
+	isVisible: boolean;
+	onToggle: () => void;
+	children: ReactNode;
+}
+
+const LegendToggle = ({ isVisible, onToggle, children }: LegendToggleProps) => {
+	return (
+		<button className='identity-dashboard__legend-toggle' type='button' aria-pressed={isVisible} onClick={onToggle}>
+			{children}
+		</button>
+	);
+};
+
 interface RecognizedAnonymousLegendProps {
 	recognizedColor: string;
 	anonymousColor: string;
-	hiddenIdentityTypes?: IdentityType[];
-	onToggle?: (type: IdentityType) => void;
+	hiddenIdentityTypes: IdentityType[];
+	onToggle: (type: IdentityType) => void;
 }
 
 const RecognizedAnonymousLegend = ({
 	recognizedColor,
 	anonymousColor,
-	hiddenIdentityTypes = [],
+	hiddenIdentityTypes,
 	onToggle,
 }: RecognizedAnonymousLegendProps) => {
 	const types = [
@@ -403,24 +427,13 @@ const RecognizedAnonymousLegend = ({
 		{ type: 'anonymous', label: 'Anonymous', color: anonymousColor },
 	] as const;
 	return (
-		<ul className='identity-dashboard__connection-legend' aria-label='Identity types'>
+		<ul className='identity-dashboard__connection-legend' aria-label='Series'>
 			{types.map(({ type, label, color }) => (
 				<li key={type}>
-					{onToggle == null ? (
-						<>
-							<span style={{ background: color }} />
-							{label}
-						</>
-					) : (
-						<button
-							type='button'
-							aria-pressed={!hiddenIdentityTypes.includes(type)}
-							onClick={() => onToggle(type)}
-						>
-							<span style={{ background: color }} />
-							{label}
-						</button>
-					)}
+					<LegendToggle isVisible={!hiddenIdentityTypes.includes(type)} onToggle={() => onToggle(type)}>
+						<span style={{ background: color }} />
+						{label}
+					</LegendToggle>
 				</li>
 			))}
 		</ul>
@@ -452,6 +465,17 @@ const RecognizedAnonymousHistoryChart = ({
 	errorTitle,
 	emptyTitle,
 }: RecognizedAnonymousHistoryChartProps) => {
+	const { hiddenSeries: hiddenIdentityTypes, toggleSeries: toggleIdentityType } = useSeriesVisibility<IdentityType>();
+	const isRecognizedVisible = !hiddenIdentityTypes.includes('recognized');
+	const isAnonymousVisible = !hiddenIdentityTypes.includes('anonymous');
+	const maximumVisibleTotal = days.reduce(
+		(maximum, day) =>
+			Math.max(
+				maximum,
+				(isRecognizedVisible ? (day.recognized ?? 0) : 0) + (isAnonymousVisible ? (day.anonymous ?? 0) : 0),
+			),
+		1,
+	);
 	return (
 		<DashboardCard title={title} info={info} headerAction={headerAction} className='identity-dashboard__chart-card'>
 			{loading ? (
@@ -477,14 +501,7 @@ const RecognizedAnonymousHistoryChart = ({
 								tickLine={false}
 								width={54}
 								allowDataOverflow={true}
-								domain={[
-									0,
-									days.reduce(
-										(maximum, day) =>
-											Math.max(maximum, (day.recognized ?? 0) + (day.anonymous ?? 0)),
-										1,
-									),
-								]}
+								domain={[0, maximumVisibleTotal]}
 							/>
 							<Tooltip
 								content={({ active, label, payload }) => (
@@ -500,6 +517,8 @@ const RecognizedAnonymousHistoryChart = ({
 									<RecognizedAnonymousLegend
 										recognizedColor={recognizedColor}
 										anonymousColor={anonymousColor}
+										hiddenIdentityTypes={hiddenIdentityTypes}
+										onToggle={toggleIdentityType}
 									/>
 								}
 							/>
@@ -507,6 +526,7 @@ const RecognizedAnonymousHistoryChart = ({
 								type='linear'
 								dataKey='recognized'
 								name='Recognized'
+								hide={!isRecognizedVisible}
 								stackId='identity-types'
 								stroke='none'
 								fill={recognizedColor}
@@ -522,6 +542,7 @@ const RecognizedAnonymousHistoryChart = ({
 								type='linear'
 								dataKey='anonymous'
 								name='Anonymous'
+								hide={!isAnonymousVisible}
 								stackId='identity-types'
 								stroke='none'
 								fill={anonymousColor}
@@ -699,7 +720,7 @@ interface ConnectionsChartProps {
 }
 
 const ConnectionsChart = ({ data, totalIdentities, observedLabel, loading, error }: ConnectionsChartProps) => {
-	const [hiddenIdentityTypes, setHiddenIdentityTypes] = useState<IdentityType[]>([]);
+	const { hiddenSeries: hiddenIdentityTypes, toggleSeries: toggleIdentityType } = useSeriesVisibility<IdentityType>();
 	const isRecognizedVisible = !hiddenIdentityTypes.includes('recognized');
 	const isAnonymousVisible = !hiddenIdentityTypes.includes('anonymous');
 	const visibleData = data.map((connection) => ({
@@ -782,13 +803,7 @@ const ConnectionsChart = ({ data, totalIdentities, observedLabel, loading, error
 										recognizedColor={CHART_COLOR}
 										anonymousColor={CONNECTION_ANONYMOUS_COLOR}
 										hiddenIdentityTypes={hiddenIdentityTypes}
-										onToggle={(type) =>
-											setHiddenIdentityTypes((hidden) =>
-												hidden.includes(type)
-													? hidden.filter((value) => value !== type)
-													: [...hidden, type],
-											)
-										}
+										onToggle={toggleIdentityType}
 									/>
 								}
 							/>
@@ -1166,8 +1181,19 @@ interface ProfileCompositionProps {
 }
 
 const ProfileComposition = ({ profiles, composition, loading, error }: ProfileCompositionProps) => {
-	const buckets = composition == null ? [] : buildProfileComposition(composition, profiles);
-	const hasValues = buckets.some((bucket) => bucket.count > 0);
+	const { hiddenSeries: hiddenBuckets, toggleSeries: toggleBucket } =
+		useSeriesVisibility<keyof IdentityResolutionComposition>();
+	const buckets =
+		composition == null
+			? []
+			: buildProfileComposition(composition, profiles).map((bucket, index) => ({
+					...bucket,
+					color: COMPOSITION_COLORS[index],
+				}));
+	const visibleBuckets = buckets.filter((bucket) => !hiddenBuckets.includes(bucket.key));
+	const visibleProfiles =
+		hiddenBuckets.length === 0 ? profiles : visibleBuckets.reduce((total, bucket) => total + bucket.count, 0);
+	const hasVisibleValues = visibleBuckets.some((bucket) => bucket.count > 0);
 	return (
 		<DashboardCard
 			title='Profiles by number of identities'
@@ -1188,11 +1214,11 @@ const ProfileComposition = ({ profiles, composition, loading, error }: ProfileCo
 			) : (
 				<div className='identity-dashboard__composition-content'>
 					<div className='identity-dashboard__donut-ring' aria-label='Profiles by number of identities'>
-						{hasValues ? (
+						{hasVisibleValues ? (
 							<ResponsiveContainer width='100%' height='100%'>
 								<PieChart>
 									<Pie
-										data={buckets}
+										data={visibleBuckets}
 										dataKey='count'
 										nameKey='label'
 										innerRadius={DASHBOARD_DONUT_INNER_RADIUS}
@@ -1200,8 +1226,8 @@ const ProfileComposition = ({ profiles, composition, loading, error }: ProfileCo
 										stroke='none'
 										isAnimationActive={false}
 									>
-										{buckets.map((bucket, index) => (
-											<Cell key={bucket.key} fill={COMPOSITION_COLORS[index]} />
+										{visibleBuckets.map((bucket) => (
+											<Cell key={bucket.key} fill={bucket.color} />
 										))}
 									</Pie>
 									<Tooltip
@@ -1214,16 +1240,28 @@ const ProfileComposition = ({ profiles, composition, loading, error }: ProfileCo
 						) : (
 							<div className='identity-dashboard__composition-ring-placeholder' />
 						)}
-						<DonutCenter value={formatNumber(profiles)} label='Profiles' />
+						<DonutCenter
+							value={formatNumber(visibleProfiles)}
+							label={hiddenBuckets.length === 0 ? 'Profiles' : 'Profiles shown'}
+						/>
 					</div>
 					<div className='identity-dashboard__composition-legend'>
-						{buckets.map((bucket, index) => (
-							<div key={bucket.key}>
-								<i style={{ background: COMPOSITION_COLORS[index] }} />
-								<span>{bucket.label}</span>
-								<strong>{formatPercentage(bucket.percentage)}</strong>
-							</div>
-						))}
+						{buckets.map((bucket) => {
+							const isVisible = !hiddenBuckets.includes(bucket.key);
+							return (
+								<LegendToggle
+									key={bucket.key}
+									isVisible={isVisible}
+									onToggle={() => toggleBucket(bucket.key)}
+								>
+									<i style={{ background: bucket.color }} />
+									<span>{bucket.label}</span>
+									<strong>
+										{isVisible ? formatSharePercent(bucket.count, visibleProfiles, 1) : '—'}
+									</strong>
+								</LegendToggle>
+							);
+						})}
 					</div>
 				</div>
 			)}

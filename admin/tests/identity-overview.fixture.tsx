@@ -13,6 +13,7 @@ declare global {
 		identityOverviewScenario:
 			| 'atomic'
 			| 'connectionTypes'
+			| 'legendFilters'
 			| 'historyError'
 			| 'latestError'
 			| 'removed'
@@ -43,17 +44,30 @@ window.fetch = async (input) => {
 		await new Promise<void>((release) => window.identityOverviewPending.push(release));
 	}
 	if (failure != null && url.includes(failure)) return new Response(null, { status: 500 });
-	if (window.identityOverviewScenario === 'atomic') {
+	const hasLegendFilters = window.identityOverviewScenario === 'legendFilters';
+	if (window.identityOverviewScenario === 'atomic' || hasLegendFilters) {
 		const day = revision === 0 ? '2026-08-02' : '2026-08-03';
-		const total = revision === 0 ? 8 : 18;
-		const profiles = revision === 0 ? 3 : 6;
+		const total = hasLegendFilters ? 1000 : revision === 0 ? 8 : 18;
+		const recognized = hasLegendFilters ? 10 : total;
+		const anonymous = total - recognized;
+		const profiles = hasLegendFilters ? 100 : revision === 0 ? 3 : 6;
+		const profilesRecognized = hasLegendFilters ? 10 : profiles;
 		const resolution = {
 			observedAt: `${day}T11:00:00Z`,
-			identities: { total: profiles * 2, anonymous: 0, recognized: profiles * 2 },
-			profiles: { total: profiles, anonymous: 0, recognized: profiles },
-			composition: { one: 0, two: profiles, three: 0, fourToTen: 0, elevenToTwenty: 0, moreThanTwenty: 0 },
-			identitiesPerProfile: 2,
-			linkedIdentitiesRate: 1,
+			identities: hasLegendFilters
+				? { total: 125, anonymous: 100, recognized: 25 }
+				: { total: profiles * 2, anonymous: 0, recognized: profiles * 2 },
+			profiles: { total: profiles, anonymous: profiles - profilesRecognized, recognized: profilesRecognized },
+			composition: {
+				one: hasLegendFilters ? 80 : 0,
+				two: hasLegendFilters ? 15 : profiles,
+				three: hasLegendFilters ? 5 : 0,
+				fourToTen: 0,
+				elevenToTwenty: 0,
+				moreThanTwenty: 0,
+			},
+			identitiesPerProfile: hasLegendFilters ? 1.25 : 2,
+			linkedIdentitiesRate: hasLegendFilters ? 0.2 : 1,
 		};
 		let data: unknown;
 		if (url.includes('/metrics/identity-resolution/latest')) {
@@ -62,12 +76,12 @@ window.fetch = async (input) => {
 			data = [
 				{
 					day: '2026-07-31',
-					identities: profiles * 2,
+					identities: resolution.identities.total,
 					profiles,
-					profilesAnonymous: 0,
-					profilesRecognized: profiles,
-					identitiesPerProfile: 2,
-					linkedIdentitiesRate: 1,
+					profilesAnonymous: profiles - profilesRecognized,
+					profilesRecognized,
+					identitiesPerProfile: resolution.identitiesPerProfile,
+					linkedIdentitiesRate: resolution.linkedIdentitiesRate,
 				},
 			];
 		} else if (url.includes('/identity-resolution/runs')) {
@@ -86,13 +100,13 @@ window.fetch = async (input) => {
 			data = {
 				observedAt: `${day}T12:00:00Z`,
 				total,
-				anonymous: 0,
-				recognized: total,
+				anonymous,
+				recognized,
 				withoutProfile: 0,
-				connections: [{ connection: 'connection11', anonymous: 0, recognized: total, withoutProfile: 0 }],
+				connections: [{ connection: 'connection11', anonymous, recognized, withoutProfile: 0 }],
 			};
 		} else {
-			data = [{ day: '2026-07-31', total: total - 2, anonymous: 0, recognized: total - 2 }];
+			data = [{ day: '2026-07-31', total: total - 2, anonymous, recognized: recognized - 2 }];
 		}
 		return new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } });
 	}
