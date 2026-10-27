@@ -100,16 +100,19 @@ func Test_validateProfilePropertyRoles(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-
 			err := validatePropertyRoles(schema, test.assignments)
-			var got string
 			if err != nil {
-				got = err.Error()
+				if test.err == "" {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				if got := err.Error(); got != test.err {
+					t.Fatalf("expected error %q, got %q", test.err, got)
+				}
+				return
 			}
-			if got != test.err {
-				t.Fatalf("expected error %q, got %q", test.err, got)
+			if test.err != "" {
+				t.Fatalf("expected error %q, got nil", test.err)
 			}
-
 		})
 	}
 
