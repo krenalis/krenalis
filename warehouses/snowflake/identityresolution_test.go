@@ -110,7 +110,8 @@ func TestResolveIdentitiesAddsMissingIdentityCountColumns(t *testing.T) {
 
 // TestResolveIdentitiesAssociatesEventsWithProfiles verifies that an event is
 // associated with the profile of the identity in its connection that matches
-// its user ID or, when the user ID is missing, its anonymous ID.
+// its user ID or, when the user ID is missing, its anonymous ID, preferring a
+// recognized identity to an anonymous one.
 func TestResolveIdentitiesAssociatesEventsWithProfiles(t *testing.T) {
 
 	warehouse, db := newTestSnowflakeWarehouse(t)
@@ -125,7 +126,13 @@ func TestResolveIdentitiesAssociatesEventsWithProfiles(t *testing.T) {
 		("_PIPELINE", "_IS_ANONYMOUS", "_IDENTITY_ID", "_CONNECTION", "_ANONYMOUS_IDS", "_UPDATED_AT")
 		SELECT '1', FALSE, 'user-1', '1', ARRAY_CONSTRUCT('anonymous-1'), ?
 		UNION ALL
-		SELECT '1', TRUE, 'anonymous-2', '1', NULL, ?`, now, now)
+		SELECT '1', TRUE, 'anonymous-2', '1', NULL, ?
+		UNION ALL
+		SELECT '1', TRUE, 'anonymous-3', '1', NULL, ?
+		UNION ALL
+		SELECT '1', FALSE, 'user-3', '1', ARRAY_CONSTRUCT('anonymous-3'), ?
+		UNION ALL
+		SELECT '2', FALSE, 'user-4', '2', ARRAY_CONSTRUCT('anonymous-2'), ?`, now, now, now, now, now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +155,8 @@ func TestResolveIdentitiesAssociatesEventsWithProfiles(t *testing.T) {
 		{messageID: "6", connection: "1", userID: "anonymous-2", anonymousID: "anonymous-9", identity: ""},
 		{messageID: "7", connection: "2", userID: "user-1", anonymousID: "anonymous-9", identity: ""},
 		{messageID: "8", connection: "2", userID: nil, anonymousID: "anonymous-1", identity: ""},
-		{messageID: "9", connection: "2", userID: nil, anonymousID: "anonymous-2", identity: ""},
+		{messageID: "9", connection: "2", userID: nil, anonymousID: "anonymous-2", identity: "user-4"},
+		{messageID: "10", connection: "1", userID: nil, anonymousID: "anonymous-3", identity: "user-3"},
 	}
 	for _, event := range events {
 		_, err = db.ExecContext(t.Context(), `INSERT INTO "KRENALIS_EVENTS"

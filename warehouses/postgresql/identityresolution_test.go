@@ -88,7 +88,8 @@ func TestResolveIdentitiesAddsMissingIdentityCountColumns(t *testing.T) {
 
 // TestResolveIdentitiesAssociatesEventsWithProfiles verifies that an event is
 // associated with the profile of the identity in its connection that matches
-// its user ID or, when the user ID is missing, its anonymous ID.
+// its user ID or, when the user ID is missing, its anonymous ID, preferring a
+// recognized identity to an anonymous one.
 func TestResolveIdentitiesAssociatesEventsWithProfiles(t *testing.T) {
 
 	warehouse, pool := newTestPostgreSQLWarehouse(t)
@@ -102,7 +103,10 @@ func TestResolveIdentitiesAssociatesEventsWithProfiles(t *testing.T) {
 	_, err = pool.Exec(t.Context(), `INSERT INTO "krenalis_identities"
 		("_pipeline", "_is_anonymous", "_identity_id", "_connection", "_anonymous_ids", "_updated_at") VALUES
 		('1', false, 'user-1', '1', ARRAY['anonymous-1'], $1),
-		('1', true, 'anonymous-2', '1', NULL, $1)`, now)
+		('1', true, 'anonymous-2', '1', NULL, $1),
+		('1', true, 'anonymous-3', '1', NULL, $1),
+		('1', false, 'user-3', '1', ARRAY['anonymous-3'], $1),
+		('2', false, 'user-4', '2', ARRAY['anonymous-2'], $1)`, now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +129,8 @@ func TestResolveIdentitiesAssociatesEventsWithProfiles(t *testing.T) {
 		{messageID: "6", connection: "1", userID: "anonymous-2", anonymousID: "anonymous-9", identity: ""},
 		{messageID: "7", connection: "2", userID: "user-1", anonymousID: "anonymous-9", identity: ""},
 		{messageID: "8", connection: "2", userID: nil, anonymousID: "anonymous-1", identity: ""},
-		{messageID: "9", connection: "2", userID: nil, anonymousID: "anonymous-2", identity: ""},
+		{messageID: "9", connection: "2", userID: nil, anonymousID: "anonymous-2", identity: "user-4"},
+		{messageID: "10", connection: "1", userID: nil, anonymousID: "anonymous-3", identity: "user-3"},
 	}
 	for _, event := range events {
 		_, err = pool.Exec(t.Context(), `INSERT INTO "krenalis_events"

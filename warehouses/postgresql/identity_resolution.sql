@@ -127,12 +127,23 @@ AS $$
         "krenalis_events"."connection_id" = "krenalis_identities"."_connection"
             AND
         (
+            -- An event with a user ID matches the recognized identity with that ID.
             (NOT "krenalis_identities"."_is_anonymous" AND "krenalis_events"."user_id" = "krenalis_identities"."_identity_id")
                 OR
+            -- An event without a user ID matches through its anonymous ID.
             ("krenalis_events"."user_id" IS NULL AND (
+                -- It matches the recognized identities that hold the anonymous ID.
                 "krenalis_events"."anonymous_id" = ANY ("krenalis_identities"."_anonymous_ids")
                     OR
-                ("krenalis_identities"."_is_anonymous" AND "krenalis_events"."anonymous_id" = "krenalis_identities"."_identity_id")
+                -- It matches the anonymous identity with that anonymous ID only if
+                -- no recognized identity holds it too. Both exist, for example,
+                -- after a logout with the Fusion strategy, which keeps the ID.
+                ("krenalis_identities"."_is_anonymous" AND "krenalis_events"."anonymous_id" = "krenalis_identities"."_identity_id"
+                    AND NOT EXISTS (
+                        SELECT 1 FROM "krenalis_identities" "r"
+                        WHERE "r"."_connection" = "krenalis_events"."connection_id"
+                            AND "krenalis_events"."anonymous_id" = ANY ("r"."_anonymous_ids")
+                    ))
             ))
         );
 

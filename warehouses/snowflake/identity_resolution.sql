@@ -130,12 +130,23 @@ BEGIN
        "KRENALIS_EVENTS"."CONNECTION_ID" = "KRENALIS_IDENTITIES"."_CONNECTION"
            AND
        (
+           -- An event with a user ID matches the recognized identity with that ID.
            (NOT "KRENALIS_IDENTITIES"."_IS_ANONYMOUS" AND "KRENALIS_EVENTS"."USER_ID" = "KRENALIS_IDENTITIES"."_IDENTITY_ID")
                OR
+           -- An event without a user ID matches through its anonymous ID.
            ("KRENALIS_EVENTS"."USER_ID" IS NULL AND (
+               -- It matches the recognized identities that hold the anonymous ID.
                ARRAY_CONTAINS("KRENALIS_EVENTS"."ANONYMOUS_ID"::variant, "KRENALIS_IDENTITIES"."_ANONYMOUS_IDS")
                    OR
-               ("KRENALIS_IDENTITIES"."_IS_ANONYMOUS" AND "KRENALIS_EVENTS"."ANONYMOUS_ID" = "KRENALIS_IDENTITIES"."_IDENTITY_ID")
+               -- It matches the anonymous identity with that anonymous ID only if
+               -- no recognized identity holds it too. Both exist, for example,
+               -- after a logout with the Fusion strategy, which keeps the ID.
+               ("KRENALIS_IDENTITIES"."_IS_ANONYMOUS" AND "KRENALIS_EVENTS"."ANONYMOUS_ID" = "KRENALIS_IDENTITIES"."_IDENTITY_ID"
+                   AND NOT EXISTS (
+                       SELECT 1 FROM "KRENALIS_IDENTITIES" "R"
+                       WHERE "R"."_CONNECTION" = "KRENALIS_EVENTS"."CONNECTION_ID"
+                           AND ARRAY_CONTAINS("KRENALIS_EVENTS"."ANONYMOUS_ID"::variant, "R"."_ANONYMOUS_IDS")
+                   ))
            ))
        );
 
