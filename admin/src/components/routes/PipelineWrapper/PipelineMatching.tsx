@@ -167,7 +167,7 @@ const PipelineMatching = forwardRef<any>((_, ref) => {
 				</div>
 				{showEmptyMatchingError && (pipeline.matching.in === '' || pipeline.matching.out === '') && (
 					<div className='pipeline__matching-empty-error'>
-						<WaIcon name='exclamation-circle' slot='prefix' />
+						<WaIcon name='exclamation-circle' />
 						Matching properties cannot be empty
 					</div>
 				)}
