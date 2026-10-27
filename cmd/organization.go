@@ -424,16 +424,18 @@ func (organization organization) TestWorkspaceCreation(_ http.ResponseWriter, r 
 		return nil, err
 	}
 	var body struct {
-		Name          string             `json:"name"`
-		ProfileSchema types.Type         `json:"profileSchema"`
-		PropertyRoles core.PropertyRoles `json:"propertyRoles"`
-		Warehouse     core.Warehouse     `json:"warehouse"`
+		Name     string `json:"name"`
+		Profiles struct {
+			Schema        types.Type         `json:"schema"`
+			PropertyRoles core.PropertyRoles `json:"propertyRoles"`
+		} `json:"profiles"`
+		Warehouse core.Warehouse `json:"warehouse"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = org.TestWorkspaceCreation(r.Context(), body.Name, body.ProfileSchema, body.PropertyRoles, body.Warehouse)
+	err = org.TestWorkspaceCreation(r.Context(), body.Name, body.Profiles.Schema, body.Profiles.PropertyRoles, body.Warehouse)
 	return nil, err
 }
 

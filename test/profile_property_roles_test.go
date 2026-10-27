@@ -52,19 +52,14 @@ func TestProfilePropertyRoles(t *testing.T) {
 				t.Run(endpoint+"/"+test.name, func(t *testing.T) {
 					body := map[string]any{
 						"name": "Invalid roles",
+						"profiles": map[string]any{
+							"schema":        workspace.ProfileSchema,
+							"propertyRoles": test.assignments,
+						},
 						"warehouse": map[string]any{
 							"platform": "PostgreSQL",
 							"settings": krenalistester.PostgresWarehouseSettings(),
 						},
-					}
-					if endpoint == "/v1/workspaces" {
-						body["profiles"] = map[string]any{
-							"schema":        workspace.ProfileSchema,
-							"propertyRoles": test.assignments,
-						}
-					} else {
-						body["profileSchema"] = workspace.ProfileSchema
-						body["propertyRoles"] = test.assignments
 					}
 					err := k.TryCall(http.MethodPost, endpoint, headers, body, nil)
 					if err != nil {
