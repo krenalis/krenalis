@@ -338,9 +338,11 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 			{isSchemaOutdated && !isConfirmChangesLoading && !skipNavigationBlockRef.current && (
 				<SlAlert className='schema-edit__outdated-warning' variant='warning' open>
 					<SlIcon name='exclamation-triangle' slot='icon' />
-					The schema was changed in another session. Your pending changes are still visible, but cannot be
-					applied until you reload the updated schema.
-					<SlButton variant='text' size='small' onClick={() => window.location.reload()}>
+					<span className='schema-edit__outdated-message'>
+						The schema was changed in another session. Your pending changes are still visible, but cannot be
+						applied. Reloading will discard them.
+					</span>
+					<SlButton size='small' onClick={() => window.location.reload()}>
 						Reload schema
 					</SlButton>
 				</SlAlert>
