@@ -43,7 +43,7 @@ import (
 //   - int (8, 16, 24, and 32 bits): a JSON Number representing an integer
 //   - int (64 bits): a JSON String representing an integer
 //   - float: a JSON Number, or one of "NaN", "Infinity" or "-Infinity"
-//   - decimal: a JSON String representing a JSON Number
+//   - decimal: a JSON Number
 //   - datetime: a JSON String representing a time in the ISO8601 format
 //   - date: a JSON String representing a date in the ISO8601 format, formatted
 //     as the Go time format "2006-01-02"
