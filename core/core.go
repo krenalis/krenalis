@@ -1840,7 +1840,9 @@ func (core *Core) executeIdentityResolution(workspaceID, opID string) {
 			// Lock the workspace to serialize completion with every other operation.
 			var pending bool
 			query := `SELECT COALESCE(ir_id = $1, false)
-				FROM workspaces WHERE id = $2 AND organization = $3 FOR UPDATE`
+				FROM workspaces
+				WHERE id = $2 AND organization = $3
+				FOR UPDATE`
 			err := tx.QueryRow(ctx, query, n.ID, n.Workspace, organizationID).Scan(&pending)
 			if err != nil {
 				if errors.Is(err, sql.ErrNoRows) {
@@ -1889,7 +1891,7 @@ func (core *Core) executeIdentityResolution(workspaceID, opID string) {
 			return n, nil
 		})
 		if err != nil {
-			if err := ctx.Err(); err != nil {
+			if ctx.Err() != nil {
 				return
 			}
 			// Try again to do the query and send the notification.
