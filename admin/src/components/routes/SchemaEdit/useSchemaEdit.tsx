@@ -129,11 +129,21 @@ const useSchemaEdit = (
 
 	const gridRef = useRef<GridRef>(null);
 
-	const { api, handleError, workspaces, selectedWorkspace, connections, setIsLoadingWorkspaces } =
-		useContext(AppContext);
+	const { api, handleError, workspaces, selectedWorkspace, connections } = useContext(AppContext);
 	const workspace = workspaces.find((candidate) => candidate.id === selectedWorkspace);
 
-	const { consentPurposes, setIsAltering } = useContext(SchemaContext);
+	const { consentPurposes, isAltering, setIsAltering, latestAlterStartTime } = useContext(SchemaContext);
+	const initialAlterStartTime = useRef(latestAlterStartTime);
+	const isSchemaOutdated = isAltering || latestAlterStartTime !== initialAlterStartTime.current;
+
+	useEffect(() => {
+		if (!isSchemaOutdated || isConfirmChangesLoading) {
+			return;
+		}
+		previewRequestSequence.current++;
+		setQueries(null);
+		setIsQueriesLoading(false);
+	}, [isSchemaOutdated, isConfirmChangesLoading]);
 
 	const primarySources = useRef<PrimarySources>(copyPrimarySources(workspace.primarySources));
 	const [propertyRoles, setPropertyRoles] = useState<ProfilePropertyRoles>(() =>
@@ -595,6 +605,9 @@ const useSchemaEdit = (
 	};
 
 	const onApplyChanges = async () => {
+		if (isSchemaOutdated) {
+			return;
+		}
 		const requestSequence = ++previewRequestSequence.current;
 		let request: SchemaPreviewRequest;
 		try {
@@ -636,6 +649,9 @@ const useSchemaEdit = (
 	};
 
 	const onConfirmChanges = async () => {
+		if (isSchemaOutdated) {
+			return;
+		}
 		// compute the real paths of the primary sources (currently they
 		// are based on the editable schema keys).
 		const sources: PrimarySources = {};
@@ -658,7 +674,6 @@ const useSchemaEdit = (
 		setTimeout(() => {
 			setQueries(null);
 			setIsConfirmChangesLoading(false);
-			setIsLoadingWorkspaces(true);
 			setIsAltering(true);
 			onClose();
 		}, 300);
@@ -680,6 +695,7 @@ const useSchemaEdit = (
 		firstVisibleProperty,
 		isFiltered,
 		isSchemaReady: editableSchema != null,
+		isSchemaOutdated,
 		isSelectedPropertyVisible,
 		identifierPositions,
 		objectCount,
