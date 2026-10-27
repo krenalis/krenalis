@@ -42,7 +42,8 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 			return nil, status.executionError
 		}
 		if status.identityResolutionCounts == nil {
-			return nil, fmt.Errorf("identity resolution result is unavailable for operation %s", opID)
+			return nil, fmt.Errorf(
+				"warehouses/snowflake: identity resolution result is unavailable for operation %s", opID)
 		}
 		err = warehouse.finalizePublishedProfiles(ctx, db, opID, profileColumns)
 		return status.identityResolutionCounts, err
@@ -362,7 +363,8 @@ func (warehouse *Snowflake) finalizeIdentityResolution(ctx context.Context, conn
 			return nil, status.executionError
 		}
 		if status.identityResolutionCounts == nil {
-			return nil, fmt.Errorf("identity resolution result is unavailable for operation %s", opID)
+			return nil, fmt.Errorf(
+				"warehouses/snowflake: identity resolution result is unavailable for operation %s", opID)
 		}
 		return status.identityResolutionCounts, nil
 	}

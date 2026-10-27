@@ -41,7 +41,8 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 			return nil, status.executionError
 		}
 		if status.identityResolutionCounts == nil {
-			return nil, fmt.Errorf("identity resolution result is unavailable for operation %s", opID)
+			return nil, fmt.Errorf(
+				"warehouses/postgresql: identity resolution result is unavailable for operation %s", opID)
 		}
 		return status.identityResolutionCounts, nil
 	}
@@ -359,7 +360,8 @@ func (warehouse *PostgreSQL) finalizeIdentityResolution(ctx context.Context, con
 			return nil, status.executionError
 		}
 		if status.identityResolutionCounts == nil {
-			return nil, fmt.Errorf("identity resolution result is unavailable for operation %s", opID)
+			return nil, fmt.Errorf(
+				"warehouses/postgresql: identity resolution result is unavailable for operation %s", opID)
 		}
 		return status.identityResolutionCounts, nil
 	}
