@@ -86,6 +86,81 @@ func TestResolveIdentitiesAddsMissingIdentityCountColumns(t *testing.T) {
 
 }
 
+// TestResolveIdentitiesAssociatesEventsWithProfiles verifies that an event is
+// associated with the profile of the identity in its connection that matches
+// its user ID or, when the user ID is missing, its anonymous ID.
+func TestResolveIdentitiesAssociatesEventsWithProfiles(t *testing.T) {
+
+	warehouse, pool := newTestPostgreSQLWarehouse(t)
+	profileColumns := []warehouses.Column{{Name: "email", Type: types.String(), Nullable: true}}
+	err := warehouse.Initialize(t.Context(), profileColumns)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now().UTC()
+	_, err = pool.Exec(t.Context(), `INSERT INTO "krenalis_identities"
+		("_pipeline", "_is_anonymous", "_identity_id", "_connection", "_anonymous_ids", "_updated_at") VALUES
+		('1', false, 'user-1', '1', ARRAY['anonymous-1'], $1),
+		('1', true, 'anonymous-2', '1', NULL, $1)`, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// identity is the identity ID of the identity whose profile the event is
+	// expected to be associated with, or empty if it is expected to remain
+	// unassociated.
+	events := []struct {
+		messageID   string
+		connection  string
+		userID      any
+		anonymousID string
+		identity    string
+	}{
+		{messageID: "1", connection: "1", userID: "user-1", anonymousID: "anonymous-9", identity: "user-1"},
+		{messageID: "2", connection: "1", userID: nil, anonymousID: "anonymous-1", identity: "user-1"},
+		{messageID: "3", connection: "1", userID: nil, anonymousID: "anonymous-2", identity: "anonymous-2"},
+		{messageID: "4", connection: "1", userID: "user-9", anonymousID: "anonymous-1", identity: ""},
+		{messageID: "5", connection: "1", userID: nil, anonymousID: "user-1", identity: ""},
+		{messageID: "6", connection: "1", userID: "anonymous-2", anonymousID: "anonymous-9", identity: ""},
+		{messageID: "7", connection: "2", userID: "user-1", anonymousID: "anonymous-9", identity: ""},
+		{messageID: "8", connection: "2", userID: nil, anonymousID: "anonymous-1", identity: ""},
+		{messageID: "9", connection: "2", userID: nil, anonymousID: "anonymous-2", identity: ""},
+	}
+	for _, event := range events {
+		_, err = pool.Exec(t.Context(), `INSERT INTO "krenalis_events"
+			("connection_id", "anonymous_id", "message_id",
+			"received_at", "sent_at", "timestamp", "traits", "type", "user_id")
+			VALUES ($1, $2, $3, $4, $4, $4, '{}', 'track', $5)`,
+			event.connection, event.anonymousID, event.messageID, now, event.userID)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	const opID = "a44731d8-d89d-44b9-ac87-a8ce1a8770db"
+	err = warehouse.ResolveIdentities(t.Context(), opID, profileColumns, profileColumns, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, event := range events {
+		var identity string
+		err = pool.QueryRow(t.Context(), `SELECT coalesce("i"."_identity_id", '')
+			FROM "krenalis_events" "e"
+			LEFT JOIN "krenalis_identities" "i" ON "i"."_kpid" = "e"."kpid"
+			WHERE "e"."message_id" = $1`, event.messageID).Scan(&identity)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if identity != event.identity {
+			t.Errorf("event %s: expected association with identity %q, got %q",
+				event.messageID, event.identity, identity)
+		}
+	}
+
+}
+
 // TestAlterProfileSchemaUsesPublishedProfilesAfterIdentityResolutionFailure
 // verifies that after a failed Identity Resolution, altering the profile schema
 // keeps the last published profiles visible and updates the published profiles

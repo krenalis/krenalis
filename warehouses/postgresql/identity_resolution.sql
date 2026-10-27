@@ -127,9 +127,13 @@ AS $$
         "krenalis_events"."connection_id" = "krenalis_identities"."_connection"
             AND
         (
-            ("krenalis_events"."user_id" <> '' AND "krenalis_events"."user_id" = "krenalis_identities"."_identity_id")
+            (NOT "krenalis_identities"."_is_anonymous" AND "krenalis_events"."user_id" = "krenalis_identities"."_identity_id")
                 OR
-            ("krenalis_events"."user_id" = '' AND "krenalis_events"."anonymous_id" = ANY ("krenalis_identities"."_anonymous_ids"))
+            ("krenalis_events"."user_id" IS NULL AND (
+                "krenalis_events"."anonymous_id" = ANY ("krenalis_identities"."_anonymous_ids")
+                    OR
+                ("krenalis_identities"."_is_anonymous" AND "krenalis_events"."anonymous_id" = "krenalis_identities"."_identity_id")
+            ))
         );
 
 $$;
