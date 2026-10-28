@@ -488,15 +488,20 @@ func Test_convertFilterToWhere(t *testing.T) {
 		{Name: "o", Type: types.Array(types.String()), Nullable: true},
 		{Name: "p", Type: types.Object([]types.Property{{Name: "x", Type: types.String()}}), Nullable: true},
 		{Name: "q", Type: types.Map(types.String()), Nullable: true},
+		{Name: "r", Type: types.Array(types.Float(32))},
+		{Name: "s", Type: types.Array(types.Decimal(3, 2))},
+		{Name: "t", Type: types.Array(types.JSON())},
 	})
 
 	d := decimal.MustParse("56.19")
 
-	tests := []struct {
+	type testCase struct {
 		name     string
 		filter   Filter
 		expected state.Where
-	}{
+	}
+
+	tests := []testCase{
 		{
 			name: "all property types",
 			filter: Filter{
@@ -515,6 +520,7 @@ func Test_convertFilterToWhere(t *testing.T) {
 					&FilterCondition{Property: "j", Operator: OpIsOnOrAfter, Values: []string{"2024"}},
 					&FilterCondition{Property: "k", Operator: OpIs, Values: []string{"38d065ab-ca46-4812-a83c-a9712e09c153"}},
 					&FilterCondition{Property: "l", Operator: OpIs, Values: []string{"foo"}},
+					&FilterCondition{Property: "l.a", Operator: OpIsOneOf, Values: []string{"1e75", "1e76"}},
 					&FilterCondition{Property: "l", Operator: OpIsOneOf, Values: []string{"foo", "56.19", "boo"}},
 					&FilterCondition{Property: "l.x", Operator: OpExists},
 					&FilterCondition{Property: "m", Operator: OpIsNot, Values: []string{"::ffff:192.168.1.1"}},
@@ -525,6 +531,9 @@ func Test_convertFilterToWhere(t *testing.T) {
 					&FilterCondition{Property: "p.x", Operator: OpIs, Values: []string{"foo"}},
 					&FilterCondition{Property: "l.x.y", Operator: OpExists},
 					&FilterCondition{Property: "q", Operator: OpIsNull},
+					&FilterCondition{Property: "s", Operator: OpContains, Values: []string{"1e75"}},
+					&FilterCondition{Property: "t", Operator: OpContains, Values: []string{"1e75"}},
+					&FilterCondition{Property: "t", Operator: OpContains, Values: []string{"1e76"}},
 				},
 			},
 			expected: state.Where{
@@ -543,6 +552,10 @@ func Test_convertFilterToWhere(t *testing.T) {
 					&state.WhereCondition{Property: []string{"j"}, Operator: state.OpIsOnOrAfter, Values: []any{2024}},
 					&state.WhereCondition{Property: []string{"k"}, Operator: state.OpIs, Values: []any{"38d065ab-ca46-4812-a83c-a9712e09c153"}},
 					&state.WhereCondition{Property: []string{"l"}, Operator: state.OpIs, Values: []any{state.JSONConditionValue{String: "foo"}}},
+					&state.WhereCondition{Property: []string{"l", "a"}, Operator: state.OpIsOneOf, Values: []any{
+						state.JSONConditionValue{String: "1e75", Number: new(decimal.MustParse("1e75"))},
+						state.JSONConditionValue{String: "1e76"},
+					}},
 					&state.WhereCondition{Property: []string{"l"}, Operator: state.OpIsOneOf, Values: []any{
 						state.JSONConditionValue{String: "foo"},
 						state.JSONConditionValue{String: "56.19", Number: &d},
@@ -557,6 +570,24 @@ func Test_convertFilterToWhere(t *testing.T) {
 					&state.WhereCondition{Property: []string{"p", "x"}, Operator: state.OpIs, Values: []any{"foo"}},
 					&state.WhereCondition{Property: []string{"l", "x", "y"}, Operator: state.OpExists},
 					&state.WhereCondition{Property: []string{"q"}, Operator: state.OpIsNull},
+					&state.WhereCondition{Property: []string{"s"}, Operator: state.OpContains, Values: []any{decimal.MustParse("1e75")}},
+					&state.WhereCondition{Property: []string{"t"}, Operator: state.OpContains, Values: []any{state.JSONConditionValue{String: "1e75", Number: new(decimal.MustParse("1e75"))}}},
+					&state.WhereCondition{Property: []string{"t"}, Operator: state.OpContains, Values: []any{state.JSONConditionValue{String: "1e76"}}},
+				},
+			},
+		},
+		{
+			name: "float array",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "r", Operator: OpContains, Values: []string{"3.802"}},
+				},
+			},
+			expected: state.Where{
+				Operator: state.OpAnd,
+				Rules: []state.WhereRule{
+					&state.WhereCondition{Property: []string{"r"}, Operator: state.OpContains, Values: []any{float64(float32(3.802))}},
 				},
 			},
 		},
@@ -577,6 +608,37 @@ func Test_convertFilterToWhere(t *testing.T) {
 		},
 	}
 
+	for _, operand := range []struct {
+		text  string
+		valid bool
+	}{
+		{"0", true}, {"-0.00e999999", true}, {"0e-999999", true}, {"1.2300", true},
+		{"1e75", true}, {"-1e75", true}, {"1e-37", true},
+		{"10e-38", true}, {"1e" + strings.Repeat("0", 64) + "1", true},
+		{strings.Repeat("9", 76), true},
+		{"-" + strings.Repeat("9", 39) + "." + strings.Repeat("9", 37), true},
+		{strings.Repeat("9", 39) + "." + strings.Repeat("9", 37) + "0", true},
+		{"1e76", false}, {"-1e76", false}, {"1e-38", false},
+		{strings.Repeat("9", 77), false},
+		{strings.Repeat("9", 40) + "." + strings.Repeat("9", 37), false},
+		{"1e999999", false}, {"1e-999999", false},
+	} {
+		value := state.JSONConditionValue{String: operand.text}
+		if operand.valid {
+			number := decimal.MustParse(operand.text)
+			value.Number = &number
+		}
+		tests = append(tests, testCase{
+			name: "JSON decimal/" + operand.text,
+			filter: Filter{Operator: OpAnd, Rules: []FilterRule{
+				&FilterCondition{Property: "l", Operator: OpIs, Values: []string{operand.text}},
+			}},
+			expected: state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
+				&state.WhereCondition{Property: []string{"l"}, Operator: state.OpIs, Values: []any{value}},
+			}},
+		})
+	}
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := convertFilterToWhere(&test.filter, schema)
@@ -585,6 +647,7 @@ func Test_convertFilterToWhere(t *testing.T) {
 			}
 		})
 	}
+
 }
 
 // Test_convertWhereToFilter verifies conversion from where expressions to
@@ -609,6 +672,8 @@ func Test_convertWhereToFilter(t *testing.T) {
 		{Name: "o", Type: types.Array(types.String()), Nullable: true},
 		{Name: "p", Type: types.Object([]types.Property{{Name: "x", Type: types.String()}}), Nullable: true},
 		{Name: "q", Type: types.Map(types.String()), Nullable: true},
+		{Name: "r", Type: types.Array(types.Float(32))},
+		{Name: "s", Type: types.Array(types.JSON())},
 	})
 
 	d := decimal.MustParse("56.19")
@@ -636,6 +701,9 @@ func Test_convertWhereToFilter(t *testing.T) {
 					&state.WhereCondition{Property: []string{"j"}, Operator: state.OpIsOnOrAfter, Values: []any{2024}},
 					&state.WhereCondition{Property: []string{"k"}, Operator: state.OpIs, Values: []any{"38d065ab-ca46-4812-a83c-a9712e09c153"}},
 					&state.WhereCondition{Property: []string{"l"}, Operator: state.OpIs, Values: []any{state.JSONConditionValue{String: "foo"}}},
+					&state.WhereCondition{Property: []string{"l"}, Operator: state.OpIs, Values: []any{state.JSONConditionValue{String: "1.2300", Number: new(decimal.MustParse("1.23"))}}},
+					&state.WhereCondition{Property: []string{"l", "a"}, Operator: state.OpIs, Values: []any{state.JSONConditionValue{String: "1e76"}}},
+					&state.WhereCondition{Property: []string{"s"}, Operator: state.OpContains, Values: []any{state.JSONConditionValue{String: "1e-38"}}},
 					&state.WhereCondition{Property: []string{"l"}, Operator: state.OpIsOneOf, Values: []any{
 						state.JSONConditionValue{String: "foo"},
 						state.JSONConditionValue{String: "56.19", Number: &d},
@@ -668,6 +736,9 @@ func Test_convertWhereToFilter(t *testing.T) {
 					&FilterCondition{Property: "j", Operator: OpIsOnOrAfter, Values: []string{"2024"}},
 					&FilterCondition{Property: "k", Operator: OpIs, Values: []string{"38d065ab-ca46-4812-a83c-a9712e09c153"}},
 					&FilterCondition{Property: "l", Operator: OpIs, Values: []string{"foo"}},
+					&FilterCondition{Property: "l", Operator: OpIs, Values: []string{"1.2300"}},
+					&FilterCondition{Property: "l.a", Operator: OpIs, Values: []string{"1e76"}},
+					&FilterCondition{Property: "s", Operator: OpContains, Values: []string{"1e-38"}},
 					&FilterCondition{Property: "l", Operator: OpIsOneOf, Values: []string{"foo", "56.19", "boo"}},
 					&FilterCondition{Property: "l.x", Operator: OpExists},
 					&FilterCondition{Property: "m", Operator: OpIsNot, Values: []string{"192.168.1.1"}},
@@ -678,6 +749,21 @@ func Test_convertWhereToFilter(t *testing.T) {
 					&FilterCondition{Property: "p.x", Operator: OpIs, Values: []string{"foo"}},
 					&FilterCondition{Property: "l.x.y", Operator: OpExists},
 					&FilterCondition{Property: "q", Operator: OpIsNull},
+				},
+			},
+		},
+		{
+			name: "float array",
+			where: state.Where{
+				Operator: state.OpAnd,
+				Rules: []state.WhereRule{
+					&state.WhereCondition{Property: []string{"r"}, Operator: state.OpContains, Values: []any{float64(float32(3.802))}},
+				},
+			},
+			expected: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "r", Operator: OpContains, Values: []string{"3.802"}},
 				},
 			},
 		},
@@ -706,6 +792,7 @@ func Test_convertWhereToFilter(t *testing.T) {
 			}
 		})
 	}
+
 }
 
 // Test_convertFilterWhereNested verifies conversion between nested filters and
@@ -752,7 +839,55 @@ func Test_convertFilterWhereNested(t *testing.T) {
 	}
 }
 
-func Test_parseDecimal(t *testing.T) {
+// Test_convertFilterWhereTemporalArrays verifies that temporal values for array
+// properties have the expected where representation and are preserved when
+// converted back to filters.
+func Test_convertFilterWhereTemporalArrays(t *testing.T) {
+
+	tests := []struct {
+		name     string
+		elem     types.Type
+		value    string
+		expected time.Time
+	}{
+		{"datetime", types.DateTime(), "2024-09-19T14:36:57.264699103", time.Date(2024, 9, 19, 14, 36, 57, 264699103, time.UTC)},
+		{"date", types.Date(), "2024-09-19", time.Date(2024, 9, 19, 0, 0, 0, 0, time.UTC)},
+		{"time", types.Time(), "14:36:57.264699103", time.Date(1970, 1, 1, 14, 36, 57, 264699103, time.UTC)},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+
+			schema := types.Object([]types.Property{{Name: "a", Type: types.Array(test.elem)}})
+			filter := &Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "a", Operator: OpContains, Values: []string{test.value}},
+				},
+			}
+
+			where := convertFilterToWhere(filter, schema)
+			expected := &state.Where{
+				Operator: state.OpAnd,
+				Rules: []state.WhereRule{
+					&state.WhereCondition{Property: []string{"a"}, Operator: state.OpContains, Values: []any{test.expected}},
+				},
+			}
+			if diff := cmp.Diff(expected, where); diff != "" {
+				t.Fatalf("expected where expression, got difference (-want +got):\n%s", diff)
+			}
+
+			got := convertWhereToFilter(where, schema)
+			if diff := cmp.Diff(filter, got); diff != "" {
+				t.Fatalf("expected original filter, got difference (-want +got):\n%s", diff)
+			}
+
+		})
+	}
+
+}
+
+func Test_parseFilterDecimal(t *testing.T) {
 	tests := []struct {
 		n        string
 		expected string
@@ -780,7 +915,7 @@ func Test_parseDecimal(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.n, func(t *testing.T) {
-			got, valid := parseDecimal(test.n)
+			got, valid := parseFilterDecimal(test.n)
 			if !valid {
 				if test.valid {
 					t.Fatalf("expected valid, got invalid")
@@ -1034,6 +1169,7 @@ func Test_resolveFilterProperty(t *testing.T) {
 // values.
 func Test_validateFilter(t *testing.T) {
 
+	longAllowedValue := strings.Repeat("é", 81)
 	schema := types.Object([]types.Property{
 		{Name: "a", Type: types.Boolean()},
 		{Name: "b", Type: types.String(), Nullable: true},
@@ -1052,18 +1188,24 @@ func Test_validateFilter(t *testing.T) {
 		{Name: "o", Type: types.String().WithValues("foo", "boo", ""), Nullable: true},
 		{Name: "p", Type: types.String().WithValues("foo"), Nullable: true},
 		{Name: "q", Type: types.Array(types.Float(64)), Nullable: true},
+		{Name: "r", Type: types.Decimal(3, 2)},
+		{Name: "s", Type: types.Array(types.Decimal(3, 2))},
+		{Name: "t", Type: types.Array(types.JSON())},
+		{Name: "u", Type: types.String().WithValues(longAllowedValue)},
 	})
 	destinationRole := state.Destination
 	eventTarget := state.TargetEvent
 
-	tests := []struct {
+	type testCase struct {
 		name     string
 		filter   Filter
 		role     *state.Role
 		target   *state.Target
 		expected []string
 		err      error
-	}{
+	}
+
+	tests := []testCase{
 		{
 			name: "invalid logical operator",
 			filter: Filter{
@@ -1177,6 +1319,86 @@ func Test_validateFilter(t *testing.T) {
 				},
 			},
 			err: errors.New(`operator "is before" cannot be used with boolean properties`),
+		},
+		{
+			name: "is before on JSON",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d", Operator: OpIsBefore, Values: []string{"2024-09-10"}},
+				},
+			},
+			err: errors.New(`operator "is before" cannot be used with json properties`),
+		},
+		{
+			name: "is before on JSON path",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d.s", Operator: OpIsBefore, Values: []string{"2024-09-10"}},
+				},
+			},
+			err: errors.New(`operator "is before" cannot be used with json properties`),
+		},
+		{
+			name: "is on or before on JSON",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d", Operator: OpIsOnOrBefore, Values: []string{"2024-09-10"}},
+				},
+			},
+			err: errors.New(`operator "is on or before" cannot be used with json properties`),
+		},
+		{
+			name: "is on or before on JSON path",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d.s", Operator: OpIsOnOrBefore, Values: []string{"2024-09-10"}},
+				},
+			},
+			err: errors.New(`operator "is on or before" cannot be used with json properties`),
+		},
+		{
+			name: "is after on JSON",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d", Operator: OpIsAfter, Values: []string{"2024-09-10"}},
+				},
+			},
+			err: errors.New(`operator "is after" cannot be used with json properties`),
+		},
+		{
+			name: "is after on JSON path",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d.s", Operator: OpIsAfter, Values: []string{"2024-09-10"}},
+				},
+			},
+			err: errors.New(`operator "is after" cannot be used with json properties`),
+		},
+		{
+			name: "is on or after on JSON",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d", Operator: OpIsOnOrAfter, Values: []string{"2024-09-10"}},
+				},
+			},
+			err: errors.New(`operator "is on or after" cannot be used with json properties`),
+		},
+		{
+			name: "is on or after on JSON path",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d.s", Operator: OpIsOnOrAfter, Values: []string{"2024-09-10"}},
+				},
+			},
+			err: errors.New(`operator "is on or after" cannot be used with json properties`),
 		},
 		{
 			name: "is true on string",
@@ -1319,6 +1541,20 @@ func Test_validateFilter(t *testing.T) {
 			err: errors.New(`operator "is less than" cannot be used with string type that has values`),
 		},
 		{
+			name: "allowed string exceeds value length limit",
+			filter: Filter{Operator: OpAnd, Rules: []FilterRule{
+				&FilterCondition{Property: "u", Operator: OpIs, Values: []string{longAllowedValue}},
+			}},
+			expected: []string{"u"},
+		},
+		{
+			name: "unlisted string exceeds value length limit",
+			filter: Filter{Operator: OpAnd, Rules: []FilterRule{
+				&FilterCondition{Property: "u", Operator: OpIs, Values: []string{longAllowedValue + "x"}},
+			}},
+			err: errors.New(`value of the "u" property is not among the allowed values`),
+		},
+		{
 			name: "value outside allowed values",
 			filter: Filter{
 				Operator: OpAnd,
@@ -1356,7 +1592,7 @@ func Test_validateFilter(t *testing.T) {
 					&FilterCondition{Property: "g", Operator: OpIsEmpty},
 				},
 			},
-			err: errors.New(`operator "is empty" can only be used with json, string, object, array, and map properties`),
+			err: errors.New(`operator "is empty" can only be used with json, string, array, and map properties`),
 		},
 		{
 			name: "is not empty on time",
@@ -1366,7 +1602,27 @@ func Test_validateFilter(t *testing.T) {
 					&FilterCondition{Property: "g", Operator: OpIsNotEmpty},
 				},
 			},
-			err: errors.New(`operator "is not empty" can only be used with json, string, object, array, and map properties`),
+			err: errors.New(`operator "is not empty" can only be used with json, string, array, and map properties`),
+		},
+		{
+			name: "is empty on source user object",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "m", Operator: OpIsEmpty},
+				},
+			},
+			err: errors.New(`operator "is empty" can only be used with json, string, array, and map properties`),
+		},
+		{
+			name: "is not empty on source user object",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "m", Operator: OpIsNotEmpty},
+				},
+			},
+			err: errors.New(`operator "is not empty" can only be used with json, string, array, and map properties`),
 		},
 		{
 			name: "is empty on destination user object",
@@ -1377,7 +1633,7 @@ func Test_validateFilter(t *testing.T) {
 				},
 			},
 			role: &destinationRole,
-			err:  errors.New(`operator "is empty" cannot be used on object properties for destination pipelines on users`),
+			err:  errors.New(`operator "is empty" can only be used with json, string, array, and map properties`),
 		},
 		{
 			name: "is not empty on event object",
@@ -1388,7 +1644,7 @@ func Test_validateFilter(t *testing.T) {
 				},
 			},
 			target: &eventTarget,
-			err:    errors.New(`operator "is not empty" cannot be used on object properties for pipelines on events`),
+			err:    errors.New(`operator "is not empty" can only be used with json, string, array, and map properties`),
 		},
 		{
 			name: "JSON in destination user filter",
@@ -1442,7 +1698,6 @@ func Test_validateFilter(t *testing.T) {
 					&FilterCondition{Property: "k", Operator: OpIsNull},
 					&FilterCondition{Property: "k", Operator: OpContains, Values: []string{"boo"}},
 					&FilterCondition{Property: "m", Operator: OpIsNull},
-					&FilterCondition{Property: "m", Operator: OpIsEmpty},
 					&FilterCondition{Property: "m.x", Operator: OpContains, Values: []string{"abc"}},
 					&FilterCondition{Property: "n", Operator: OpIsNotNull},
 					&FilterCondition{Property: "n", Operator: OpIsNotEmpty},
@@ -1453,10 +1708,77 @@ func Test_validateFilter(t *testing.T) {
 					&FilterCondition{Property: "o", Operator: OpIsEmpty},
 					&FilterCondition{Property: "o", Operator: OpIsNotEmpty},
 					&FilterCondition{Property: "q", Operator: OpContains, Values: []string{"1.34"}},
+					&FilterCondition{Property: "d", Operator: OpIs, Values: []string{"1e76"}},
+					&FilterCondition{Property: "d.s", Operator: OpIsOneOf, Values: []string{"1e76", "1e-38"}},
+					&FilterCondition{Property: "t", Operator: OpContains, Values: []string{"1e-38"}},
 				},
 			},
-			expected: []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "m", "m.x", "n", "o", "q"},
+			expected: []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "m", "m.x", "n", "o", "q", "t"},
 		},
+	}
+
+	for _, operand := range []struct {
+		text  string
+		valid bool
+	}{
+		{"0", true}, {"-0.00e999999", true}, {"0e-999999", true}, {"1.2300", true},
+		{"1e75", true}, {"-1e75", true}, {"1e-37", true},
+		{"10e-38", true}, {"1e" + strings.Repeat("0", 64) + "1", true},
+		{strings.Repeat("9", 76), true},
+		{"-" + strings.Repeat("9", 39) + "." + strings.Repeat("9", 37), true},
+		{strings.Repeat("9", 39) + "." + strings.Repeat("9", 37) + "0", true},
+		{"1e76", false}, {"-1e76", false}, {"1e-38", false},
+		{strings.Repeat("9", 77), false},
+		{strings.Repeat("9", 40) + "." + strings.Repeat("9", 37), false},
+		{"1e999999", false}, {"1e-999999", false},
+	} {
+		for _, property := range []string{"r", "s"} {
+			op := OpIs
+			if property == "s" {
+				op = OpContains
+			}
+			test := testCase{
+				name: "decimal operand/" + property + "/" + operand.text,
+				filter: Filter{Operator: OpAnd, Rules: []FilterRule{
+					&FilterCondition{Property: property, Operator: op, Values: []string{operand.text}},
+				}},
+				expected: []string{property},
+			}
+			if !operand.valid {
+				test.expected = nil
+				test.err = fmt.Errorf("value of the %q property is not a valid decimal", property)
+			}
+			tests = append(tests, test)
+		}
+	}
+
+	for _, property := range []string{"r", "s", "d", "t", "b", "k"} {
+		op := OpIs
+		if property == "s" || property == "t" || property == "k" {
+			op = OpContains
+		}
+		for _, length := range []int{0, 80, 81} {
+			text := strings.Repeat("é", length)
+			if (property == "r" || property == "s") && length > 0 {
+				text = "1." + strings.Repeat("0", length-2)
+			}
+			test := testCase{
+				name: fmt.Sprintf("value length/%s/%d", property, length),
+				filter: Filter{Operator: OpAnd, Rules: []FilterRule{
+					&FilterCondition{Property: property, Operator: op, Values: []string{text}},
+				}},
+				expected: []string{property},
+			}
+			if length == 0 {
+				test.expected = nil
+				test.err = errors.New("condition value is empty")
+			}
+			if length > 80 {
+				test.expected = nil
+				test.err = errors.New("condition value is longer than 80 runes")
+			}
+			tests = append(tests, test)
+		}
 	}
 
 	for _, test := range tests {

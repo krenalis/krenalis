@@ -475,7 +475,7 @@ func (this *Connection) CreatePipeline(ctx context.Context, target Target, event
 
 	// Add the filter to the notification.
 	if pipeline.Filter != nil {
-		n.Filter, _ = convertFilterToWhere(pipeline.Filter, inSchema).MarshalJSON()
+		n.Filter = []byte(state.MarshalWhere(convertFilterToWhere(pipeline.Filter, inSchema), inSchema))
 	}
 
 	// Determine the connector code, for file pipelines.
@@ -1563,7 +1563,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		if !outSchema.Valid() {
 			return nil, errors.BadRequest("a transformation has been provided but out schema is not valid")
 		}
-		if outSchema.Kind() != types.ObjectKind {
+		if !outSchema.IsObject() {
 			return nil, errors.BadRequest("out schema is not an object")
 		}
 

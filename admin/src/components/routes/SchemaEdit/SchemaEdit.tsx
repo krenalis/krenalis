@@ -6,6 +6,7 @@ import {
 } from '../Schema/SchemaPropertyGrid';
 import './SchemaEdit.css';
 import { useBeforeUnload, useBlocker } from 'react-router-dom';
+import SlAlert from '@shoelace-style/shoelace/dist/react/alert/index.js';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
 import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
@@ -25,8 +26,7 @@ import { EditableProperty, getParentPropertyKey, newPropertyToEdit } from './Sch
 import { PropertyPanel } from './PropertyPanel';
 import { PropertyToEdit, PropertyToRemove, SelectPropertyOptions, useSchemaEdit } from './useSchemaEdit';
 
-const schemaEditGridColumns =
-	'minmax(160px, 0.65fr) minmax(210px, 0.85fr) 86px minmax(240px, 1.5fr) minmax(160px, 0.65fr) 90px';
+const schemaEditGridColumns = 'minmax(180px, 0.7fr) minmax(310px, 1.45fr) 86px minmax(170px, 0.65fr) 90px';
 
 interface SchemaEditProps {
 	initialPropertyKey?: string | null;
@@ -82,6 +82,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		firstVisibleProperty,
 		isFiltered,
 		isSchemaReady,
+		isSchemaOutdated,
 		isSelectedPropertyVisible,
 		identifierPositions,
 		objectCount,
@@ -328,12 +329,24 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 						className='schema-edit__header-apply-button'
 						variant='primary'
 						onClick={onReviewChangesClick}
-						disabled={!hasSchemaChanges && !hasUnsavedPropertyChanges}
+						disabled={isSchemaOutdated || (!hasSchemaChanges && !hasUnsavedPropertyChanges)}
 					>
 						Apply changes
 					</SlButton>
 				</div>
 			</div>
+			{isSchemaOutdated && !isConfirmChangesLoading && !skipNavigationBlockRef.current && (
+				<SlAlert className='schema-edit__outdated-warning' variant='warning' open>
+					<SlIcon name='exclamation-triangle' slot='icon' />
+					<span className='schema-edit__outdated-message'>
+						The schema was changed in another session. Your pending changes are still visible, but cannot be
+						applied. Reloading will discard them.
+					</span>
+					<SlButton size='small' onClick={() => window.location.reload()}>
+						Reload schema
+					</SlButton>
+				</SlAlert>
+			)}
 			<div className='schema-edit__overview'>
 				<div className='schema-edit__overview-main'>
 					<SchemaPropertyGridSummary view='edit' objectCount={objectCount} propertyCount={propertyCount}>
@@ -475,6 +488,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 									size='small'
 									variant={hasNoWarehouseQueries ? 'primary' : 'danger'}
 									onClick={onConfirmChanges}
+									disabled={isSchemaOutdated}
 									loading={isConfirmChangesLoading}
 								>
 									Apply changes

@@ -56,7 +56,7 @@ func (this *Workspace) AlterProfileSchema(ctx context.Context, schema types.Type
 	if !schema.Valid() {
 		return errors.BadRequest("schema must be valid")
 	}
-	if schema.Kind() != types.ObjectKind {
+	if !schema.IsObject() {
 		return errors.BadRequest("expected schema with kind object, got %s", schema.Kind())
 	}
 	if err := validatePrimarySources(schema, primarySources); err != nil {
@@ -119,7 +119,7 @@ func (this *Workspace) PreviewAlterProfileSchema(ctx context.Context, schema typ
 	if !schema.Valid() {
 		return nil, errors.BadRequest("schema must be valid")
 	}
-	if schema.Kind() != types.ObjectKind {
+	if !schema.IsObject() {
 		return nil, errors.BadRequest("expected schema with kind object, got %s", schema.Kind())
 	}
 	if err := validateRePaths(rePaths); err != nil {
@@ -171,6 +171,7 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 		if p.Nullable {
 			return fmt.Errorf("profile schema properties cannot be nullable")
 		}
+		semanticsType := p.Type
 		switch p.Type.Kind() {
 		case types.StringKind:
 			if p.Type.Values() != nil {
@@ -201,6 +202,7 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 			if p.Type.MaxElements() != types.MaxElements {
 				return fmt.Errorf("profile schema properties with type array cannot specify maximum elements count")
 			}
+			semanticsType = et
 		case types.MapKind:
 			et := p.Type.Elem()
 			switch et.Kind() {
@@ -214,6 +216,31 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 			case types.ArrayKind, types.ObjectKind, types.MapKind:
 				return fmt.Errorf("profile schema properties cannot have type %s(%s)", p.Type.Kind(), et.Kind())
 			}
+			semanticsType = et
+		}
+		if err := checkAllowedSemanticsProfileSchema(semanticsType); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// checkAllowedSemanticsProfileSchema returns an error if t does not meet the
+// semantics restrictions for profile schema properties.
+func checkAllowedSemanticsProfileSchema(t types.Type) error {
+	switch t.Semantics() {
+	case types.CountrySemantics:
+		if t.CountryFormat() != types.ISO3166Alpha2 {
+			return errors.New("profile schema properties with country semantics must use ISO 3166 alpha-2 format")
+		}
+	case types.MoneySemantics, types.PercentageSemantics, types.MeasurementSemantics:
+		if !t.IsDecimal() || t.Precision() != 18 || t.Scale() != 4 {
+			return fmt.Errorf("profile schema properties with %s semantics must have decimal(18,4) values",
+				t.Semantics())
+		}
+	case types.DurationSemantics:
+		if !t.IsInt(64) || t.IsUnsigned() {
+			return errors.New("profile schema properties with duration semantics must have signed int(64) values")
 		}
 	}
 	return nil
@@ -252,7 +279,7 @@ func validatePrimarySources(schema types.Type, primarySources map[string]string)
 		if !IsValidID(source) {
 			return fmt.Errorf("primary source identifier %q is not valid", source)
 		}
-		if k := p.Type.Kind(); k == types.ObjectKind || k == types.ArrayKind {
+		if p.Type.IsObject() || p.Type.IsArray() {
 			return fmt.Errorf("primary sources cannot be specified for %s properties", p.Type)
 		}
 	}

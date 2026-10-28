@@ -7,6 +7,7 @@ interface SchemaContextType {
 	consentPurposes: ConsentPurpose[];
 	isLoadingSchema: boolean;
 	setIsLoadingSchema: React.Dispatch<React.SetStateAction<boolean>>;
+	latestAlterStartTime: string | null;
 	latestAlterError: string | null;
 	isAltering: boolean;
 	setIsAltering: React.Dispatch<React.SetStateAction<boolean>>;

@@ -18,9 +18,9 @@ import TransformedConnection from '../../../lib/core/connection';
 import { ConsentPurpose, PrimarySources } from '../../../lib/api/types/workspace';
 import { SchemaContext } from '../../../context/SchemaContext';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
-import { toKrenalisStringType } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { SchemaPropertyIdentifierBadge, SchemaPropertyName } from '../Schema/SchemaPropertyGrid';
+import { getProfileSchemaTypePresentation } from '../../helpers/types';
 import { SchemaPropertyConsent } from '../Schema/SchemaPropertyConsent';
 import { getConsentPurposesByPropertyPath } from '../Schema/SchemaPropertyConsent.helpers';
 
@@ -28,7 +28,6 @@ const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Name' },
 	{ name: 'Type' },
 	{ name: 'Identifier', alignment: 'center' },
-	{ name: 'Description' },
 	{ name: 'Primary source' },
 	{ name: '' },
 ];
@@ -116,11 +115,21 @@ const useSchemaEdit = (
 
 	const gridRef = useRef<GridRef>(null);
 
-	const { api, handleError, workspaces, selectedWorkspace, connections, setIsLoadingWorkspaces } =
-		useContext(AppContext);
+	const { api, handleError, workspaces, selectedWorkspace, connections } = useContext(AppContext);
 	const workspace = workspaces.find((candidate) => candidate.id === selectedWorkspace);
 
-	const { consentPurposes, setIsAltering } = useContext(SchemaContext);
+	const { consentPurposes, isAltering, setIsAltering, latestAlterStartTime } = useContext(SchemaContext);
+	const initialAlterStartTime = useRef(latestAlterStartTime);
+	const isSchemaOutdated = isAltering || latestAlterStartTime !== initialAlterStartTime.current;
+
+	useEffect(() => {
+		if (!isSchemaOutdated || isConfirmChangesLoading) {
+			return;
+		}
+		previewRequestSequence.current++;
+		setQueries(null);
+		setIsQueriesLoading(false);
+	}, [isSchemaOutdated, isConfirmChangesLoading]);
 
 	const primarySources = useRef<PrimarySources>(copyPrimarySources(workspace.primarySources));
 	const rePaths = useRef<RePaths>({});
@@ -539,6 +548,9 @@ const useSchemaEdit = (
 	};
 
 	const onApplyChanges = async () => {
+		if (isSchemaOutdated) {
+			return;
+		}
 		const requestSequence = ++previewRequestSequence.current;
 		let request: SchemaPreviewRequest;
 		try {
@@ -575,6 +587,9 @@ const useSchemaEdit = (
 	};
 
 	const onConfirmChanges = async () => {
+		if (isSchemaOutdated) {
+			return;
+		}
 		// compute the real paths of the primary sources (currently they
 		// are based on the editable schema keys).
 		const sources: PrimarySources = {};
@@ -605,7 +620,6 @@ const useSchemaEdit = (
 		setTimeout(() => {
 			setQueries(null);
 			setIsConfirmChangesLoading(false);
-			setIsLoadingWorkspaces(true);
 			setIsAltering(true);
 			onClose();
 		}, 300);
@@ -627,6 +641,7 @@ const useSchemaEdit = (
 		firstVisibleProperty,
 		isFiltered,
 		isSchemaReady: editableSchema != null,
+		isSchemaOutdated,
 		isSelectedPropertyVisible,
 		identifierPositions,
 		objectCount,
@@ -798,9 +813,16 @@ const getVisiblePropertyKeys = (
 	}
 	const term = search?.trim().toLocaleLowerCase() || '';
 	for (const [key, property] of Object.entries(schema)) {
+		const typePresentation = getProfileSchemaTypePresentation(property.type);
 		const matchesSearch =
 			term === '' ||
-			[property.name, property.displayName, property.description, toKrenalisStringType(property.type)]
+			[
+				property.name,
+				property.displayName,
+				property.description,
+				typePresentation.primary,
+				typePresentation.metadata,
+			]
 				.filter(Boolean)
 				.join(' ')
 				.toLocaleLowerCase()
@@ -966,9 +988,23 @@ const buildRow = (
 	const actions = (
 		<div className='schema-edit__property-actions'>{status != null && <PropertyStatusBadge status={status} />}</div>
 	);
+	const { primary, metadata } = getProfileSchemaTypePresentation(property.type);
 	const typeCell: ReactNode = (
 		<>
-			<span className='schema-edit__property-technical-type'>{toKrenalisStringType(property.type)}</span>
+			<span
+				className='schema-property-grid__type'
+				title={metadata == null ? primary : `${primary} · ${metadata}`}
+			>
+				<span className='schema-property-grid__type-label'>{primary}</span>
+				{metadata != null && (
+					<span className='schema-property-grid__type-metadata'>
+						<span className='schema-property-grid__type-separator' aria-hidden='true'>
+							{' · '}
+						</span>
+						<span className='schema-property-grid__type-physical'>{metadata}</span>
+					</span>
+				)}
+			</span>
 			<SchemaPropertyConsent purposes={consentPurposes} />
 		</>
 	);
@@ -990,7 +1026,6 @@ const buildRow = (
 			<SchemaPropertyName property={property} />,
 			typeCell,
 			identifierPosition == null ? null : <SchemaPropertyIdentifierBadge position={identifierPosition} />,
-			property.description || <span className='schema-edit__empty-cell'>—</span>,
 			primarySourceCell,
 			actions,
 		],

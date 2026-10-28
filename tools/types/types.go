@@ -166,6 +166,9 @@ type Type struct {
 	unique   bool // unique reports whether the elements of an array must be unique.
 	real     bool // real reports whether NaN, +Inf and -Inf are not allowed for float.
 
+	semantics       Semantics
+	semanticsOption any // country format, currency, unit of measure, or duration unit
+
 	// p represents
 	//   - minimum value for int with 8, 16, 24, and 32 bits; for unsigned, p is converted to uint32
 	//   - precision for decimal
@@ -408,12 +411,115 @@ func (t Type) Real() Type {
 	return t
 }
 
-// IsReal reports whether t is real. Panics if t is not a float type.
-func (t Type) IsReal() bool {
-	if t.kind != FloatKind {
-		panic("type is not a float type")
+// IsArray reports whether t is an array type.
+func (t Type) IsArray() bool {
+	return t.kind == ArrayKind
+}
+
+// IsBoolean reports whether t is a boolean type.
+func (t Type) IsBoolean() bool {
+	return t.kind == BooleanKind
+}
+
+// IsDate reports whether t is a date type.
+func (t Type) IsDate() bool {
+	return t.kind == DateKind
+}
+
+// IsDateTime reports whether t is a datetime type.
+func (t Type) IsDateTime() bool {
+	return t.kind == DateTimeKind
+}
+
+// IsDecimal reports whether t is a decimal type.
+func (t Type) IsDecimal() bool {
+	return t.kind == DecimalKind
+}
+
+// IsFloat reports whether t is a float type and, if size is provided,
+// whether it has that bit size.
+// It panics if more than one size is provided or size is not 32 or 64.
+//
+// For example:
+//
+//	t.IsFloat()   // any float type
+//	t.IsFloat(32) // a 32-bit float type
+//	t.IsFloat(64) // a 64-bit float type
+func (t Type) IsFloat(size ...int) bool {
+	if len(size) > 1 {
+		panic("expected at most one bit size")
 	}
-	return t.real
+	if len(size) == 1 && size[0] != 32 && size[0] != 64 {
+		panic("bit size is not valid")
+	}
+	return t.kind == FloatKind && (len(size) == 0 || bitSize[t.size] == size[0])
+}
+
+// IsIP reports whether t is an IP type.
+func (t Type) IsIP() bool {
+	return t.kind == IPKind
+}
+
+// IsInt reports whether t is an int type and, if size is provided,
+// whether it has that bit size. It panics if more than one size is provided or
+// size is not 8, 16, 24, 32 or 64.
+//
+// For example:
+//
+//	t.IsInt()   // any int type, signed or unsigned
+//	t.IsInt(32) // a 32-bit int type, signed or unsigned
+func (t Type) IsInt(size ...int) bool {
+	if len(size) > 1 {
+		panic("expected at most one bit size")
+	}
+	if len(size) == 1 {
+		switch size[0] {
+		case 8, 16, 24, 32, 64:
+		default:
+			panic("bit size is not valid")
+		}
+	}
+	return t.kind == IntKind && (len(size) == 0 || bitSize[t.size] == size[0])
+}
+
+// IsJSON reports whether t is a JSON type.
+func (t Type) IsJSON() bool {
+	return t.kind == JSONKind
+}
+
+// IsMap reports whether t is a map type.
+func (t Type) IsMap() bool {
+	return t.kind == MapKind
+}
+
+// IsObject reports whether t is an object type.
+func (t Type) IsObject() bool {
+	return t.kind == ObjectKind
+}
+
+// IsReal reports whether t is a float type that excludes NaN and infinities.
+func (t Type) IsReal() bool {
+	return t.kind == FloatKind && t.real
+}
+
+// IsString reports whether t is a string type.
+func (t Type) IsString() bool {
+	return t.kind == StringKind
+}
+
+// IsTime reports whether t is a time type.
+func (t Type) IsTime() bool {
+	return t.kind == TimeKind
+}
+
+// IsUUID reports whether t is a UUID type.
+func (t Type) IsUUID() bool {
+	return t.kind == UUIDKind
+}
+
+// IsYear reports whether t is a year type.
+func (t Type) IsYear() bool {
+	return t.kind == YearKind
 }
 
 // Valid indicates if t is valid.
@@ -442,7 +548,12 @@ func (t Type) KindName() string {
 func (t Type) String() string {
 	s := t.kind.String()
 	switch t.kind {
-	case IntKind, FloatKind:
+	case IntKind:
+		if t.unsigned {
+			s = "unsigned " + s
+		}
+		s += "(" + strconv.Itoa(bitSize[t.size]) + ")"
+	case FloatKind:
 		s += "(" + strconv.Itoa(bitSize[t.size]) + ")"
 	case DecimalKind:
 		if t.p > 0 {
@@ -500,12 +611,9 @@ func (t Type) Unsigned() Type {
 	return t
 }
 
-// IsUnsigned reports whether t is unsigned. Panics if t is not an int type.
+// IsUnsigned reports whether t is an unsigned int type.
 func (t Type) IsUnsigned() bool {
-	if t.kind != IntKind {
-		panic("type is not an int type")
-	}
-	return t.unsigned
+	return t.kind == IntKind && t.unsigned
 }
 
 type intRange struct{ min, max int64 }
@@ -754,12 +862,16 @@ func (t Type) MaxBytes() (int, bool) {
 //
 // It panics if:
 //   - t is not a string type
+//   - t has country or phone semantics
 //   - n is not in range [1, MaxStringLen]
 //   - t already has values or a pattern
 //   - t is already restricted by max bytes
 func (t Type) WithMaxBytes(n int) Type {
 	if t.kind != StringKind {
 		panic("cannot set max byte length of a non-string type")
+	}
+	if t.semantics == CountrySemantics || t.semantics == PhoneSemantics {
+		panic(fmt.Sprintf("%s semantics cannot be combined with other string constraints", t.semantics))
 	}
 	if n < 1 || n > MaxStringLen {
 		panic("invalid max bytes")
@@ -791,12 +903,16 @@ func (t Type) MaxLength() (int, bool) {
 //
 // It panics if:
 //   - t is not a string type
+//   - t has country or phone semantics
 //   - l is not in range [1, MaxStringLen]
 //   - t already has values or a pattern
 //   - t is already restricted by max length
 func (t Type) WithMaxLength(l int) Type {
 	if t.kind != StringKind {
 		panic("cannot set max length of non-string types")
+	}
+	if t.semantics == CountrySemantics || t.semantics == PhoneSemantics {
+		panic(fmt.Sprintf("%s semantics cannot be combined with other string constraints", t.semantics))
 	}
 	if l < 1 || l > MaxStringLen {
 		panic("invalid string length")
@@ -828,12 +944,16 @@ func (t Type) Pattern() *regexp.Regexp {
 //
 // It panics if:
 //   - t is not a string type
+//   - t has country or phone semantics
 //   - p is nil
 //   - t already has values or a pattern
 //   - t is already restricted by max bytes or max length
 func (t Type) WithPattern(p *regexp.Regexp) Type {
 	if t.kind != StringKind {
 		panic("cannot set pattern for a non-string type")
+	}
+	if t.semantics == CountrySemantics || t.semantics == PhoneSemantics {
+		panic(fmt.Sprintf("%s semantics cannot be combined with other string constraints", t.semantics))
 	}
 	if p == nil {
 		panic("pattern is nil")
@@ -873,6 +993,7 @@ func (t Type) Values() []string {
 //
 // It panics if:
 //   - t is not a string type
+//   - t has country or phone semantics
 //   - no values are provided
 //   - any value is not valid UTF-8
 //   - t already has values or a pattern
@@ -882,6 +1003,9 @@ func (t Type) Values() []string {
 func (t Type) WithValues(values ...string) Type {
 	if t.kind != StringKind {
 		panic("cannot set values for a non-string type")
+	}
+	if t.semantics == CountrySemantics || t.semantics == PhoneSemantics {
+		panic(fmt.Sprintf("%s semantics cannot be combined with other string constraints", t.semantics))
 	}
 	if len(values) == 0 {
 		panic("values is empty")

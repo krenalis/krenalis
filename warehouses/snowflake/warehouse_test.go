@@ -229,7 +229,7 @@ func Test_Merge(t *testing.T) {
 			}
 			got = v
 		case types.ArrayKind:
-			if c.KrenalisType.Elem().Kind() == types.JSONKind {
+			if c.KrenalisType.Elem().IsJSON() {
 				elements, ok := got.([]any)
 				if !ok {
 					t.Fatalf("type %s: expected a []any value, got %#v (type %T)", c.KrenalisType, got, got)
@@ -247,7 +247,7 @@ func Test_Merge(t *testing.T) {
 				}
 			}
 		case types.MapKind:
-			if c.KrenalisType.Elem().Kind() == types.JSONKind {
+			if c.KrenalisType.Elem().IsJSON() {
 				elements, ok := got.(map[string]any)
 				if !ok {
 					t.Fatalf("type %s: expected a map[string]any value, got %#v (type %T)", c.KrenalisType, got, got)

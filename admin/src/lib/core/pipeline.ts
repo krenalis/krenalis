@@ -16,7 +16,7 @@ import {
 	TransformationFunction,
 } from '../api/types/pipeline';
 import { ConnectorSettings } from '../api/types/responses';
-import { Compression, ConnectionRole } from '../api/types/connection';
+import { Compression } from '../api/types/connection';
 import { ConsentPurpose } from '../api/types/workspace';
 import Type, { ArrayType, FloatType, IntType, MapType, ObjectType, Property, StringType } from '../api/types/types';
 import API from '../api/api';
@@ -146,8 +146,8 @@ const typesByFilterOperator: string[][] = [
 	['datetime', 'date', 'time', 'year'], // is on or after
 	['boolean', 'json'], // is true
 	['boolean', 'json'], // is false
-	['json', 'string', 'object', 'array', 'map'], // is empty
-	['json', 'string', 'object', 'array', 'map'], // is not empty
+	['json', 'string', 'array', 'map'], // is empty
+	['json', 'string', 'array', 'map'], // is not empty
 	[
 		'boolean',
 		'int',
@@ -311,12 +311,7 @@ interface TransformedPipeline {
 	format?: string;
 }
 
-const getCompatibleFilterOperators = (
-	property: TransformedProperty,
-	hasPath: boolean,
-	role: ConnectionRole,
-	target: PipelineTarget,
-): number[] => {
+const getCompatibleFilterOperators = (property: TransformedProperty, hasPath: boolean): number[] => {
 	if (property == null) {
 		return [];
 	}
@@ -355,14 +350,6 @@ const getCompatibleFilterOperators = (
 					break;
 				default:
 					continue;
-			}
-		}
-
-		// 'is empty' and 'is not empty' cannot be used on object properties for users with role 'Destination' or for events.
-		if ((op === 'is empty' || op === 'is not empty') && property.type === 'object') {
-			const disallowEmptyOnObject = (role === 'Destination' && target == 'User') || target == 'Event';
-			if (disallowEmptyOnObject) {
-				continue;
 			}
 		}
 
@@ -899,6 +886,11 @@ const transformInPipelineToSet = async (
 			// not be there in the case of ‘UpdateOnly’.
 			const a = outMatchingProperty.full;
 			const b = flattenedOutputSchema[outMatching]?.full;
+			const semanticsAreCompatible = matchingSemanticsAreCompatibleWithDestination(
+				a.type,
+				b,
+				pipeline.exportMode,
+			);
 			const existsInOutputSchema =
 				b != null && propertyTypesAreEqual(a.type, b.type) && a.nullable === b.nullable;
 			let p: Property;
@@ -911,6 +903,10 @@ const transformInPipelineToSet = async (
 				if (pipeline.exportMode === 'CreateOnly' || pipeline.exportMode === 'CreateOrUpdate') {
 					throw new Error(
 						`Since "${pipeline.matching.out}" is set as the ${connection.connector.label}'s matching property and it is read-only, users can only be updated, not created. Change the matching property accordingly or select 'Update only'.`,
+					);
+				} else if (!semanticsAreCompatible) {
+					throw new Error(
+						`Matching property "${pipeline.matching.out}" must have the same semantics and options in the source and destination schemas`,
 					);
 				} else {
 					p = a;
@@ -2189,7 +2185,7 @@ const validateFilterConditionValues = (type: Type, values: string[], propertyNam
 	const throwIfInvalid = (isValid: boolean, typeKind: string, unsigned?: boolean) => {
 		if (!isValid) {
 			throw new Error(
-				`The filter value on the property "${propertyName}" is not a valid${unsigned === true ? 'unsigned ' : ''} ${typeKind}`,
+				`The filter value on the property "${propertyName}" is not a valid${unsigned === true ? ' unsigned' : ''} ${typeKind}`,
 			);
 		}
 	};
@@ -2247,10 +2243,49 @@ const validateMatching = (inMatching: Property, outMatching: Property) => {
 			throw conversionError;
 		}
 	}
+
+	if (!typeSemanticsAreEqual(inMatching.type, outMatching.type)) {
+		throw new Error('Input and output matching properties do not have the same semantics and options');
+	}
+};
+
+const typeSemanticsAreEqual = (aType: Type, bType: Type): boolean => {
+	const aSemantics = 'semantics' in aType ? aType.semantics : undefined;
+	const bSemantics = 'semantics' in bType ? bType.semantics : undefined;
+	if (aSemantics !== bSemantics) {
+		return false;
+	}
+
+	switch (aSemantics) {
+		case 'country':
+			return ('format' in aType ? aType.format : undefined) === ('format' in bType ? bType.format : undefined);
+		case 'duration':
+		case 'measurement':
+			return ('unit' in aType ? aType.unit : undefined) === ('unit' in bType ? bType.unit : undefined);
+		case 'money':
+			return (
+				('currency' in aType ? aType.currency : undefined) ===
+				('currency' in bType ? bType.currency : undefined)
+			);
+		default:
+			return true;
+	}
+};
+
+const matchingSemanticsAreCompatibleWithDestination = (
+	sourceType: Type,
+	destination: Property | undefined,
+	exportMode: ExportMode | null,
+): boolean => {
+	return (
+		destination == null ||
+		(exportMode === 'UpdateOnly' && !destination.updateRequired) ||
+		typeSemanticsAreEqual(sourceType, destination.type)
+	);
 };
 
 const propertyTypesAreEqual = (aType: Type, bType: Type): boolean => {
-	if (aType.kind !== bType.kind) {
+	if (aType.kind !== bType.kind || !typeSemanticsAreEqual(aType, bType)) {
 		return false;
 	}
 
@@ -2311,6 +2346,8 @@ export {
 	computeDefaultTransformationFunction,
 	validateAndNormalizeFilterCondition,
 	validateMatching,
+	typeSemanticsAreEqual,
+	matchingSemanticsAreCompatibleWithDestination,
 	propertyTypesAreEqual,
 	omitEmptyFilterRules,
 };

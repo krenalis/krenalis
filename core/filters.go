@@ -107,7 +107,7 @@ type FilterCondition struct {
 
 	// Values.
 	// If the property has a string type with allowed values, each value must be one of the allowed values.
-	// In all other cases, each value must be at most 60 runes and must not contain the NUL byte.
+	// In all other cases, each value must be at most 80 runes and must not contain the NUL byte.
 	Values []string `json:"values,omitzero"`
 }
 
@@ -209,7 +209,7 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 			values = make([]any, len(cond.Values))
 		}
 		t := p.Type
-		if t.Kind() == types.ArrayKind {
+		if t.IsArray() {
 			t = t.Elem()
 		}
 		kind := t.Kind()
@@ -227,9 +227,9 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 					v, _ = parseInt(value)
 				}
 			case types.FloatKind:
-				v, _ = parseFloat(value, p.Type.BitSize())
+				v, _ = parseFloat(value, t.BitSize())
 			case types.DecimalKind:
-				v, _ = parseDecimal(value)
+				v, _ = parseFilterDecimal(value)
 			case types.DateTimeKind:
 				v, _ = iso8601.ParseString(value)
 			case types.DateKind:
@@ -242,7 +242,8 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 				v, _ = types.NormalizeUUID(value)
 			case types.JSONKind:
 				jv := state.JSONConditionValue{String: value}
-				if d, err := decimal.Parse(jv.String, 0, 0); err == nil {
+				d, valid := parseFilterDecimal(value)
+				if valid {
 					jv.Number = &d
 				}
 				v = jv
@@ -292,7 +293,11 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 				v = strconv.FormatBool(value)
 			case float64:
 				p, _ := properties.ByPathSlice(cond.Property)
-				v = strconv.FormatFloat(value, 'g', -1, p.Type.BitSize())
+				t := p.Type
+				if t.IsArray() {
+					t = t.Elem()
+				}
+				v = strconv.FormatFloat(value, 'g', -1, t.BitSize())
 			case int:
 				v = strconv.FormatInt(int64(value), 10)
 			case uint:
@@ -301,7 +306,11 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 				v = value.String()
 			case time.Time:
 				p, _ := properties.ByPathSlice(cond.Property)
-				switch p.Type.Kind() {
+				t := p.Type
+				if t.IsArray() {
+					t = t.Elem()
+				}
+				switch t.Kind() {
 				case types.DateTimeKind:
 					v = value.Format("2006-01-02T15:04:05.999999999")
 				case types.DateKind:
@@ -324,11 +333,17 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 	return filter
 }
 
-// parseDecimal parses a decimal from s and returns the parsed decimal value and
-// true. If s is not a valid decimal, it returns 0 and false.
-func parseDecimal(s string) (decimal.Decimal, bool) {
+// parseFilterDecimal parses s as a decimal filter operand. It returns the
+// parsed value and true if the number can be represented exactly by a decimal
+// type supported by the types package; otherwise, it returns the zero value and
+// false.
+func parseFilterDecimal(s string) (decimal.Decimal, bool) {
 	d, err := decimal.Parse(s, 0, 0)
 	if err != nil {
+		return decimal.Decimal{}, false
+	}
+	precision, scale := d.PrecisionScale()
+	if precision > types.MaxDecimalPrecision || scale > types.MaxDecimalScale {
 		return decimal.Decimal{}, false
 	}
 	return d, true
@@ -559,7 +574,7 @@ func parseYear(s string) (int, bool) {
 func resolveFilterProperty(properties types.Properties, path string) (types.Property, string, error) {
 	p, err := properties.ByPath(path)
 	if err != nil {
-		if p.Type.Kind() != types.JSONKind {
+		if !p.Type.IsJSON() {
 			return types.Property{}, "", err
 		}
 		path = err.(types.PathNotExistError).Path
@@ -729,10 +744,6 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 	// disallowJSON indicates whether JSON properties are disallowed.
 	disallowJSON := validation.role == state.Destination && validation.target == state.TargetUser
 
-	// disallowEmptyOnObject indicates whether the "is empty" and "is not empty"
-	// operators are disallowed on object properties.
-	disallowEmptyOnObject := validation.role == state.Destination && validation.target == state.TargetUser || validation.target == state.TargetEvent
-
 	if !types.IsValidPropertyPath(cond.Property) {
 		return "", errors.New("property path is not valid")
 	}
@@ -771,18 +782,17 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 	// is on or after              : datetime, date, time, year
 	// is true                     : boolean, json
 	// is false                    : boolean, json
-	// is empty                    : json, string, object, array, map [^3]
-	// is not empty                : json, string, object, array, map [^3]
-	// is null                     : All types [^4]
-	// is not null                 : All types [^4]
-	// exists                      : All types [^5]
-	// does not exist              : All types [^5]
+	// is empty                    : json, string, array, map
+	// is not empty                : json, string, array, map
+	// is null                     : All types [^3]
+	// is not null                 : All types [^3]
+	// exists                      : All types [^4]
+	// does not exist              : All types [^4]
 	//
 	// [1]: Strings with allowed values are not supported.
 	// [2]: array(T) is supported if T is supported by the "is" operator.
-	// [3]: Object properties are not supported for destination pipelines on users or for pipelines on events.
-	// [4]: Only if the property is nullable or has type JSON.
-	// [5]: Only if the property is read-optional or the path continues inside a JSON property.
+	// [3]: Only if the property is nullable or has type JSON.
+	// [4]: Only if the property is read-optional or the path continues inside a JSON property.
 	//
 	switch op {
 	case OpIs, OpIsNot:
@@ -840,7 +850,6 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 		switch kind {
 		case types.DateTimeKind, types.DateKind, types.TimeKind:
 		case types.YearKind:
-		case types.JSONKind:
 		default:
 			return "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 		}
@@ -857,15 +866,8 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 				}
 			}
 		case types.JSONKind, types.ArrayKind, types.MapKind:
-		case types.ObjectKind:
-			if disallowEmptyOnObject {
-				if validation.target == state.TargetEvent {
-					return "", fmt.Errorf("operator %q cannot be used on object properties for pipelines on events", op)
-				}
-				return "", fmt.Errorf("operator %q cannot be used on object properties for destination pipelines on users", op)
-			}
 		default:
-			return "", fmt.Errorf("operator %q can only be used with json, string, object, array, and map properties", op)
+			return "", fmt.Errorf("operator %q can only be used with json, string, array, and map properties", op)
 		}
 	case OpIsNull, OpIsNotNull:
 		if !p.Nullable && kind != types.JSONKind {
@@ -913,12 +915,12 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 		}
 	}
 	t := p.Type
-	if t.Kind() == types.ArrayKind {
+	if t.IsArray() {
 		t = t.Elem()
 	}
 	k := t.Kind()
 	for _, value := range cond.Values {
-		if err := util.ValidateStringField("condition value", value, 60); err != nil {
+		if err := util.ValidateStringField("condition value", value, 80); err != nil {
 			return "", err
 		}
 		var valid bool
@@ -934,7 +936,7 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 		case types.FloatKind:
 			_, valid = parseFloat(value, t.BitSize())
 		case types.DecimalKind:
-			_, valid = parseDecimal(value)
+			_, valid = parseFilterDecimal(value)
 		case types.DateTimeKind:
 			if t, err := iso8601.ParseString(value); err == nil {
 				y := t.UTC().Year()

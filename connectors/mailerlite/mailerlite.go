@@ -414,7 +414,7 @@ func (ml *MailerLite) recordFromSubscriber(s subscriber, schema types.Type) conn
 	fields := make(map[string]any, p.Type.Properties().Len())
 	for _, f := range p.Type.Properties().All() {
 		if value, ok := s.Fields[f.Name]; ok {
-			if f.Type.Kind() == types.DecimalKind {
+			if f.Type.IsDecimal() {
 				fields[f.Name] = parseNumber(value)
 			} else {
 				fields[f.Name] = value

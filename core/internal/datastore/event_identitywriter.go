@@ -44,7 +44,7 @@ type EventIdentityWriter struct {
 // importing identities from events.
 //
 // It must be called on a frozen state.
-func newEventIdentityWriter(store *Store, pipelineID string) *EventIdentityWriter {
+func newEventIdentityWriter(store *Store, pipelineID string, metrics PipelineMetrics) *EventIdentityWriter {
 
 	// Initialize the EventIdentityWriter.
 	w := &EventIdentityWriter{
@@ -95,7 +95,7 @@ func newEventIdentityWriter(store *Store, pipelineID string) *EventIdentityWrite
 		MaxFlushLatency:  15 * time.Second,
 		IdleFlushDelay:   2 * time.Second,
 		RateAlpha:        0.3,
-		MetricsFinalizer: store.ds.metrics.FinalizePassed,
+		MetricsFinalizer: metrics.FinalizePassed,
 		LogError:         w.logError,
 	}
 	w.flusher = newFlusher(opts, store.mc.StartOperation, func(ctx context.Context, identities []map[string]any) error {

@@ -835,7 +835,7 @@ func (this *Pipeline) Update(ctx context.Context, pipeline PipelineToSet) error 
 
 	// Add the filter to the notification.
 	if pipeline.Filter != nil {
-		n.Filter, _ = convertFilterToWhere(pipeline.Filter, inSchema).MarshalJSON()
+		n.Filter = []byte(state.MarshalWhere(convertFilterToWhere(pipeline.Filter, inSchema), inSchema))
 	}
 
 	// Determine the format code, for file pipelines.
@@ -1636,7 +1636,7 @@ func shouldReload(a *state.Pipeline, n *state.UpdatePipeline) bool {
 		if a.Filter == nil || n.Filter == nil {
 			return true
 		}
-		if filter, _ := a.Filter.MarshalJSON(); !bytes.Equal(filter, n.Filter) {
+		if filter := state.MarshalWhere(a.Filter, a.InSchema); !bytes.Equal(filter, n.Filter) {
 			return true
 		}
 	}

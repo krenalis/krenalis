@@ -76,7 +76,8 @@ func Equal(t1, t2 Type) bool {
 		t1.unsigned == t2.unsigned &&
 		t1.unique == t2.unique &&
 		t1.real == t2.real &&
-		t1.p == t2.p && t1.s == t2.s
+		t1.p == t2.p && t1.s == t2.s &&
+		t1.semantics == t2.semantics && t1.semanticsOption == t2.semanticsOption
 	if !almostEqual {
 		return false
 	}
@@ -123,6 +124,12 @@ func Equal(t1, t2 Type) bool {
 		return ok && vl1.String() == vl2.String()
 	}
 	panic("unreachable code")
+}
+
+// EqualSemantics reports whether two types have the same semantics and
+// associated options. Types with no semantics are considered equivalent.
+func EqualSemantics(t1, t2 Type) bool {
+	return t1.semantics == t2.semantics && t1.semanticsOption == t2.semanticsOption
 }
 
 // Filter returns a subset of object t containing only the properties for which
@@ -250,6 +257,15 @@ func PruneAtPath(t Type, path string) (Type, error) {
 	return pruneAtPath(t, path), nil
 }
 
+// SemanticsOptionString returns the string representation of the option
+// associated with t's semantics. It returns "none" if no option is set.
+func SemanticsOptionString(t Type) string {
+	if t.semanticsOption == nil {
+		return "none"
+	}
+	return fmt.Sprint(t.semanticsOption)
+}
+
 // asRole is a recursive function called by the AsRole method. t must be an
 // object type, and role must be either Source or Destination. It returns the
 // resulting type and a boolean indicating whether the returned type is
@@ -258,7 +274,7 @@ func asRole(t Type, role Role) (Type, bool) {
 	pp := t.vl.(Properties).properties
 	var ppc []Property
 	for i := range pp {
-		if pp[i].Type.Kind() == ObjectKind {
+		if pp[i].Type.IsObject() {
 			if t, ok := asRole(pp[i].Type, role); ok {
 				if ppc == nil {
 					ppc = slices.Clone(pp)

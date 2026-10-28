@@ -138,6 +138,27 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 	if k1 != k2 {
 		return &Error{Msg: fmt.Sprintf("«%s» property's type has changed from «%s» to «%s»", name, t1, t2)}
 	}
+	if !types.EqualSemantics(t1, t2) {
+		if t1.Semantics() != t2.Semantics() {
+			return &Error{Msg: fmt.Sprintf("semantics of the «%s» property's type have changed from «%s» to «%s»", name,
+				t1.Semantics(), t2.Semantics())}
+		}
+		var label string
+		switch t1.Semantics() {
+		case types.CountrySemantics:
+			label = "country format"
+		case types.DurationSemantics:
+			label = "duration unit"
+		case types.MeasurementSemantics:
+			label = "unit of measure"
+		case types.MoneySemantics:
+			label = "currency"
+		default:
+			return fmt.Errorf("unexpected semantics %q", t1.Semantics())
+		}
+		return &Error{Msg: fmt.Sprintf("%s of the «%s» property's type has changed from «%s» to «%s»",
+			label, name, types.SemanticsOptionString(t1), types.SemanticsOptionString(t2))}
+	}
 	switch k1 {
 	case types.StringKind:
 		c1, ok1 := t1.MaxLength()
@@ -197,13 +218,7 @@ func checkTypeAlignment(name string, t1, t2 types.Type, exportMode *state.Export
 		}
 		return &Error{Msg: fmt.Sprintf("regular expression of the «%s» property's type has changed from %s to %s", name, v1, v2)}
 	case types.IntKind:
-		if t1.IsUnsigned() != t2.IsUnsigned() {
-			if t1.IsUnsigned() {
-				return &Error{Msg: fmt.Sprintf("«%s» property's type has changed from «unsigned %s» to «%s»", name, t1, t2)}
-			}
-			return &Error{Msg: fmt.Sprintf("«%s» property's type has changed from «%s» to «unsigned %s»", name, t1, t2)}
-		}
-		if t1.BitSize() != t2.BitSize() {
+		if t1.IsUnsigned() != t2.IsUnsigned() || t1.BitSize() != t2.BitSize() {
 			return &Error{Msg: fmt.Sprintf("«%s» property's type has changed from «%s» to «%s»", name, t1, t2)}
 		}
 		if t1.IsUnsigned() {

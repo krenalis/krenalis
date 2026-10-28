@@ -133,7 +133,7 @@ func TestAlterProfileSchemaFinalization(t *testing.T) {
 			t.Fatalf("expected initialized State, got %v", err)
 		}
 		t.Cleanup(func() { st.Close(context.Background()) })
-		ds, err := datastore.New(st, nil)
+		ds, err := datastore.New(st)
 		if err != nil {
 			t.Fatalf("expected datastore, got %v", err)
 		}
@@ -255,6 +255,14 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 			name: "No errors",
 			schema: types.Object([]types.Property{
 				{Name: "first_name", Type: types.String(), ReadOptional: true},
+				{Name: "country", Type: types.String().AsCountry(types.ISO3166Alpha2), ReadOptional: true},
+				{Name: "amount", Type: types.Decimal(18, 4).AsMoney(), ReadOptional: true},
+				{Name: "percentages", Type: types.Array(types.Decimal(18, 4).AsPercentage()), ReadOptional: true},
+				{
+					Name: "measurements", Type: types.Map(types.Decimal(18, 4).AsMeasurement(types.Kilogram)),
+					ReadOptional: true,
+				},
+				{Name: "duration", Type: types.Int(64).AsDuration(types.Second), ReadOptional: true},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
 					{Name: "street1", Type: types.String(), ReadOptional: true},
 					{Name: "street2", Type: types.String(), ReadOptional: true},
@@ -391,6 +399,72 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 				}), ReadOptional: true},
 			}),
 			err: "profile schema properties with type string cannot specify values",
+		},
+		{
+			name: "Country semantics with alpha-3 format",
+			schema: types.Object([]types.Property{
+				{Name: "country", Type: types.String().AsCountry(types.ISO3166Alpha3), ReadOptional: true},
+			}),
+			err: "profile schema properties with country semantics must use ISO 3166 alpha-2 format",
+		},
+		{
+			name: "Money semantics with wrong decimal precision",
+			schema: types.Object([]types.Property{
+				{Name: "amount", Type: types.Decimal(17, 4).AsMoney(), ReadOptional: true},
+			}),
+			err: "profile schema properties with money semantics must have decimal(18,4) values",
+		},
+		{
+			name: "Percentage semantics with wrong decimal precision",
+			schema: types.Object([]types.Property{
+				{
+					Name: "percentage", Type: types.Decimal(17, 4).AsPercentage(), ReadOptional: true,
+				},
+			}),
+			err: "profile schema properties with percentage semantics must have decimal(18,4) values",
+		},
+		{
+			name: "Measurement semantics on map of int",
+			schema: types.Object([]types.Property{
+				{
+					Name: "measurements", Type: types.Map(types.Int(64).AsMeasurement(types.Kilogram)), ReadOptional: true,
+				},
+			}),
+			err: "profile schema properties with measurement semantics must have decimal(18,4) values",
+		},
+		{
+			name: "Measurement semantics with wrong decimal scale",
+			schema: types.Object([]types.Property{
+				{
+					Name: "measurement", Type: types.Decimal(18, 3).AsMeasurement(types.Kilogram), ReadOptional: true,
+				},
+			}),
+			err: "profile schema properties with measurement semantics must have decimal(18,4) values",
+		},
+		{
+			name: "Duration semantics on decimal",
+			schema: types.Object([]types.Property{
+				{
+					Name: "duration", Type: types.Decimal(10, 2).AsDuration(types.Second), ReadOptional: true,
+				},
+			}),
+			err: "profile schema properties with duration semantics must have signed int(64) values",
+		},
+		{
+			name: "Duration semantics on int(32)",
+			schema: types.Object([]types.Property{
+				{Name: "duration", Type: types.Int(32).AsDuration(types.Second), ReadOptional: true},
+			}),
+			err: "profile schema properties with duration semantics must have signed int(64) values",
+		},
+		{
+			name: "Duration semantics on unsigned int(64)",
+			schema: types.Object([]types.Property{
+				{
+					Name: "duration", Type: types.Int(64).Unsigned().AsDuration(types.Second), ReadOptional: true,
+				},
+			}),
+			err: "profile schema properties with duration semantics must have signed int(64) values",
 		},
 	}
 
