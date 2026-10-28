@@ -7,12 +7,14 @@ package datastore
 import (
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/unified"
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
@@ -161,17 +163,17 @@ INSERT INTO krenalis_events
 			if err != nil {
 				t.Fatalf("expected existing Record listing, got %v", err)
 			}
-			var actual, expected []string
+			var expected, actual []string
 			for _, row := range existing {
-				actual = append(actual, row["_kpid"].(string))
+				expected = append(expected, row["_kpid"].(string))
 			}
 			for _, outcome := range result.Profiles {
 				if outcome.Truth == unified.Match {
-					expected = append(expected, outcome.ID)
+					actual = append(actual, outcome.ID)
 				}
 			}
 			if !slices.Equal(actual, expected) {
-				t.Fatalf("expected existing Record membership %v, got %v", actual, expected)
+				t.Fatalf("expected existing Record membership %v, got %v", expected, actual)
 			}
 
 		})
@@ -206,6 +208,12 @@ INSERT INTO krenalis_events
 			{Record: &state.WhereCondition{Property: []string{"profile_id"}, Operator: state.OpDoesNotExist}}}}
 		result, err := store.UnifiedProfiles(t.Context(), &root, bindings, at, page)
 		if err != nil {
+			if _, ok := errors.AsType[*UnavailableError](err); !ok {
+				t.Fatalf("expected occurrence source UnavailableError, got %T (%v)", err, err)
+			}
+			if !strings.Contains(err.Error(), "occurrence source violates the prepared Count contract") {
+				t.Fatalf("expected occurrence source contract failure, got %v", err)
+			}
 			if result != nil {
 				t.Fatalf("expected no partial result on source conflict, got %+v", result)
 			}

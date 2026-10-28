@@ -29,10 +29,10 @@ type unifiedQuery struct {
 	Page unified.Page
 }
 
-// unifiedRule is a profile Record filter, Count or AND/OR group. A profile
-// filter contributes its existing groups and conditions to the common tree.
+// unifiedRule is a profile Record condition or group, Count or AND/OR group.
+// Only explicit groups contribute a level and a node to the common tree.
 type unifiedRule struct {
-	Profile  *Filter
+	Profile  FilterRule
 	Count    *unifiedCount
 	Operator FilterLogical
 	Rules    []unifiedRule
@@ -91,11 +91,23 @@ func prepareUnifiedRule(rule unifiedRule, schema types.Type, depth int, nodes *i
 		if rule.Count != nil || rule.Operator != "" || len(rule.Rules) != 0 {
 			return unified.Rule{}, fmt.Errorf("profile Record input cannot contain other rules")
 		}
-		where, _, err := prepareFilter(rule.Profile, schema)
+		filter, group := rule.Profile.(*Filter)
+		if group && filter == nil {
+			return unified.Rule{}, fmt.Errorf("profile Record group cannot be nil")
+		}
+		if !group {
+			filter = &Filter{Operator: OpAnd, Rules: []FilterRule{rule.Profile}}
+		}
+		where, _, err := prepareFilter(filter, schema)
 		if err != nil {
 			return unified.Rule{}, err
 		}
-		return convertWhereToUnified(where), nil
+		prepared := convertWhereToUnified(where)
+		if !group {
+			// The wrapper validates one condition; it is not an input group.
+			return prepared.Children[0], nil
+		}
+		return prepared, nil
 	}
 	if rule.Count != nil {
 		if rule.Operator != "" || len(rule.Rules) != 0 {

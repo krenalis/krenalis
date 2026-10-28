@@ -77,6 +77,10 @@ func TestPrepareUnifiedProfileRecord(t *testing.T) {
 			&FilterCondition{Property: "absent", Operator: OpExists}}}},
 		{Profile: &Filter{Operator: OpAnd, Rules: []FilterRule{
 			&FilterCondition{Property: "country", Operator: OpIsNull}}}},
+		{Profile: (*Filter)(nil)},
+		{Profile: (*FilterCondition)(nil)},
+		{Profile: &FilterCondition{Property: "absent", Operator: OpExists}},
+		{Profile: &FilterCondition{Property: "country", Operator: OpIsNull}},
 		{Profile: &filter, Count: &unifiedCount{}},
 		{Profile: &filter, Operator: OpAnd},
 		{Operator: "invalid", Rules: []unifiedRule{{Profile: &filter}}},
@@ -90,7 +94,7 @@ func TestPrepareUnifiedProfileRecord(t *testing.T) {
 
 }
 
-// TestPrepareUnifiedProfileLimits counts Record and Count in one root budget.
+// TestPrepareUnifiedProfileLimits counts explicit Record groups and Count.
 func TestPrepareUnifiedProfileLimits(t *testing.T) {
 
 	schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
@@ -131,6 +135,90 @@ func TestPrepareUnifiedProfileLimits(t *testing.T) {
 		}
 		check(unifiedRule{Profile: filter}, true)
 		check(unifiedRule{Operator: OpAnd, Rules: []unifiedRule{{Profile: filter}, {Count: count}}}, n == 98)
+	}
+
+}
+
+// TestPrepareUnifiedProfileCondition admits Record and Count as sibling leaves.
+func TestPrepareUnifiedProfileCondition(t *testing.T) {
+
+	schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
+	condition := &FilterCondition{Property: "country", Operator: OpIs, Values: filterValues("IT")}
+	before, err := json.Marshal(condition)
+	if err != nil {
+		t.Fatalf("expected Record condition encoding, got %v", err)
+	}
+	expected, _, err := prepareFilter(&Filter{Operator: OpAnd, Rules: []FilterRule{condition}}, schema)
+	if err != nil {
+		t.Fatalf("expected existing Record preparation, got %v", err)
+	}
+	nodes := 0
+	rule, err := prepareUnifiedRule(unifiedRule{Profile: condition}, schema, 0, &nodes)
+	if err != nil {
+		t.Fatalf("expected bare Record leaf preparation, got %v", err)
+	}
+	if rule.Record == nil || len(rule.Children) != 0 || !reflect.DeepEqual(rule.Record, expected.Rules[0]) {
+		t.Fatalf("expected one unchanged prepared Record leaf, got %+v", rule)
+	}
+	after, err := json.Marshal(condition)
+	if err != nil {
+		t.Fatalf("expected unchanged Record encoding, got %v", err)
+	}
+	if string(before) != string(after) {
+		t.Fatalf("expected unchanged Record input %s, got %s", before, after)
+	}
+
+	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	count := unifiedRule{Count: &unifiedCount{Scope: unified.Scope{Event: "Purchase", Grain: "registered-message",
+		Start: at.AddDate(0, -1, 0), End: at}, Test: unified.CountTest{Operator: unified.Equal}}}
+	root := unifiedRule{Operator: OpAnd, Rules: []unifiedRule{{Profile: condition}, count}}
+	for levels := 1; levels <= 5; levels++ {
+		nodes := 0
+		prepared, err := prepareUnifiedRule(root, schema, 0, &nodes)
+		if err != nil {
+			if levels <= 4 {
+				t.Fatalf("expected %d mixed group levels, got %v", levels, err)
+			}
+			break
+		}
+		err = unified.Validate(&prepared, at, unified.Page{Limit: 1})
+		if err != nil {
+			if levels <= 4 {
+				t.Fatalf("expected %d mixed group levels, got %v", levels, err)
+			}
+		}
+		if levels == 5 && err == nil {
+			t.Fatal("expected fifth mixed group rejection, got success")
+		}
+		root = unifiedRule{Operator: OpOr, Rules: []unifiedRule{root}}
+	}
+	for _, size := range []int{99, 100} {
+		root := unifiedRule{Operator: OpAnd, Rules: make([]unifiedRule, size+1)}
+		for i := range size {
+			root.Rules[i] = unifiedRule{Profile: condition}
+		}
+		root.Rules[size] = count
+		nodes := 0
+		prepared, err := prepareUnifiedRule(root, schema, 0, &nodes)
+		if err != nil {
+			if size == 99 {
+				t.Fatalf("expected 99 Record leaves plus Count, got %v", err)
+			}
+			continue
+		}
+		err = unified.Validate(&prepared, at, unified.Page{Limit: 1})
+		if err != nil {
+			if size == 99 {
+				t.Fatalf("expected 99 Record leaves plus Count, got %v", err)
+			}
+			continue
+		}
+		if size == 100 {
+			t.Fatal("expected 101 descendant rejection, got success")
+		}
+		if len(prepared.Children) != 100 || prepared.Children[0].Record == nil || prepared.Children[99].Count == nil {
+			t.Fatalf("expected sibling Record/Count leaves without extra groups, got %+v", prepared)
+		}
 	}
 
 }

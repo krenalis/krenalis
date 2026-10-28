@@ -19,7 +19,8 @@ import (
 // and event attribution supply that view; it does not implement that guarantee.
 // It returns *unified.UnsupportedError for unimplemented capabilities, mode
 // errors when the operation is unavailable, and *UnavailableError on execution
-// failure. No partial result is returned on failure.
+// failure. Prepared-filter limits are checked before backend execution.
+// No partial result is returned on failure.
 func (store *Store) UnifiedProfiles(ctx context.Context, root *unified.Rule, bindings unified.Bindings, at time.Time, page unified.Page) (*unified.Result, error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
@@ -50,10 +51,15 @@ func (store *Store) UnifiedProfiles(ctx context.Context, root *unified.Rule, bin
 	if err != nil {
 		return nil, err
 	}
-	result, err := backend.ProfileOutcomes(ctx, filter, warehouses.ProfileOutcomeRequest{
+	request := warehouses.ProfileOutcomeRequest{
 		Population: source.Profiles,
 		First:      page.First, Limit: page.Limit, MatchingOnly: page.MatchingOnly,
-	})
+	}
+	err = warehouses.ValidateProfileFilter(filter, request)
+	if err != nil {
+		return nil, err
+	}
+	result, err := backend.ProfileOutcomes(ctx, filter, request)
 	if err != nil {
 		return nil, unavailableError(err)
 	}

@@ -12,9 +12,12 @@ now an internal detail of the warehouse implementation.
 `Workspace.unifiedProfiles` prepares its internal recursive request using
 `prepareFilter`: profile predicates use the workspace Profile schema; Count
 qualification uses the Event schema. Every prepared profile condition becomes
-one Record leaf in the common canonical AND/OR tree. Groups, including singleton
-groups, remain visible to its four-level/100-descendant validation. The request
-is a Go service input, not a second public filter or persistence format.
+one Record leaf in the common canonical AND/OR tree. Profile inputs accept an
+existing `FilterCondition` or an explicit `Filter` group. A bare condition becomes
+a sibling of Count without an extra group: the temporary AND wrapper used by
+Record validation is not part of the input. Explicit groups, including
+singletons, remain visible to the four-level/100-descendant validation. The
+request is a Go service input, not a second public filter or persistence format.
 `datastore.Store.UnifiedProfiles` fixes the evaluation input T, validates the
 supported canonical shape and calls `unified.Prepare` with resolved source
 metadata and the existing `convertWhere` Record binders for the two subjects.
@@ -42,7 +45,11 @@ property-reference comparison or a governed current-profile dependency.
 - Profile Record conditions and Count share the root AND/OR tree: at most four
   groups including the root and 100 descendant nodes excluding the root. A Record
   subtree is expanded into these same groups and leaves, not an opaque body with
-  a separate root budget. Nil root is AllProfiles.
+  a separate root budget. Record conditions and Count can be siblings in the
+  deepest fourth group, or 99 Record leaves plus one Count in the root group.
+  Passing a complete `Filter` deliberately retains its own explicit root group;
+  it contributes a node and level like any nested input group. Nil root is
+  AllProfiles.
 - Profile Record reuses the existing 26 operators, schema validation, typed
   literals and paths. SQL NULL becomes UNKNOWN before outer composition; the
   six explicit data-state operators keep their original results. Ordinary
@@ -144,6 +151,13 @@ its 100 semantic descendants: object presence may expand into many columns. The
 internal argument adapter admits text and UTC DateTime; it never uses float for
 Count bounds or existing Record Decimal/JSON operands.
 
+The datastore validates the prepared filter and request before calling the
+backend, and returns these backend-independent admission errors directly.
+Exceeding the physical-node budget is not a warehouse availability failure or a
+semantic UNKNOWN. Drivers still validate their own arguments. SQL rendering,
+transport and execution limits remain operation errors; no public error format
+is defined by this internal entry.
+
 Any query, scan, final `Rows.Err`, cancellation or Close failure returns an error
 and a nil result. There is no successful partial page/count and no error-to-
 UNKNOWN conversion. Cancelled and failed operations close their cursor, and the
@@ -168,7 +182,7 @@ Within `core`, a programmatic request can reuse it without defining a new wire t
 ```go
 result, err := workspace.unifiedProfiles(ctx, unifiedQuery{
     Root: &unifiedRule{Operator: OpAnd, Rules: []unifiedRule{
-        {Profile: profileFilter},
+        {Profile: profileCondition},
         {Count: &unifiedCount{Scope: scope, Where: recordFilter,
             Test: unified.CountTest{Operator: unified.Equal, Value: 0}}},
     }},
@@ -176,9 +190,10 @@ result, err := workspace.unifiedProfiles(ctx, unifiedQuery{
 })
 ```
 
-Both `profileFilter` and `recordFilter` use existing public Record JSON and are
-prepared against their respective schemas inside the service. That JSON does
-not express the Count, mixed tree, period or result request. A concrete unresolved
+`profileCondition` uses the existing public `FilterCondition` payload;
+`recordFilter` uses the existing Record filter group. Both are prepared against
+their respective schemas inside the service. That JSON does not express the
+Count, mixed tree, period or result request. A concrete unresolved
 exposure is how to embed this Count-of-Purchase, with that exact Record predicate and Count=0, as a new
 `core.FilterRule`, and how to load/save it without changing existing
 `FilterCondition` payloads or `state.Where.Equal`. No Count JSON tag, marshaler,
@@ -192,7 +207,10 @@ of that decision. Internal Rule/Bindings structs are not a serialization contrac
 executes the complete service/datastore/warehouse path against a disposable
 application database and warehouse schema, for Count, profile Record and mixed
 AND/OR. Core tests preserve Record round-trip/equality and exercise the combined
-semantic depth/node boundaries after expanding the Record tree.
+semantic depth/node boundaries after expanding the Record tree, including
+Record/Count siblings at four levels and 100 descendants. Tests for a complete
+Profile filter retain the extra explicit group; their 98-leaf boundary is not
+the limit for a flat mixed tree.
 
 `TestUnifiedProfilesPostgreSQL` exercises the real Go datastore/compiler/Record
 renderer/compiled transport/scanner/decoder against PostgreSQL 18.6. It covers
@@ -219,6 +237,10 @@ It also checks NativeCurrency Boolean/Number/Object/Array and verbatim Strings.
 checks that the current aggregate expressions have bigint result metadata.
 These probes do not demonstrate Snowflake runtime behavior or production scale.
 
+`TestUnifiedPreparedBudget` builds a semantically valid 99-condition tree on a
+170-field object. Its deterministic physical-budget error is returned before
+warehouse execution and is not classified as `UnavailableError`.
+
 `warehouses/internal/profilefilter.TestRead` separately injects Scan, final Err and Close failures, malformed
 metadata, duplicate/oversize pages, bad output types, overflow and cancellation.
 Adapter tests on both packages reuse `warehouseexpr.ValueCases` and `JSONCases`
@@ -236,7 +258,10 @@ physical adapter and transport implementation, shared-compiler/local tests and
 an explicit **inactive Unified gate**. No Snowflake credentials were configured
 for this work; no remote query, scanner, precision/overflow, timestamp, NULL,
 subquery or count/page conformance is claimed. Real Snowflake probes and the
-common runtime fixtures must pass before changing that gate.
+common runtime fixtures must pass before changing that gate. The JSON-null
+fixtures currently write SQL directly: writer round-trips still need checking
+on both platforms before product activation. Snowflake activation also requires
+resolving the declared ordinary-text collation and Float/NaN questions.
 
 Example targeted commands, with Docker available and dependencies vendored:
 

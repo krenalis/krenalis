@@ -5,7 +5,9 @@
 package datastore
 
 import (
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -152,5 +154,53 @@ func TestUnifiedPrepareProfileRecord(t *testing.T) {
 			t.Fatal("expected missing profile binding error, got success")
 		}
 	}
+
+}
+
+// TestUnifiedPreparedBudget rejects physical limits before backend execution.
+func TestUnifiedPreparedBudget(t *testing.T) {
+
+	dw := warehouses.Registered("PostgreSQL").New(newTestSettingsLoader(nil), nil)
+	t.Cleanup(func() {
+		err := dw.Close()
+		if err != nil {
+			t.Errorf("expected warehouse cleanup, got %v", err)
+		}
+	})
+	store := &Store{mc: newModeCoordinator(state.Normal)}
+	store.wh.Store(dw)
+	properties := make([]types.Property, 170)
+	for i := range properties {
+		properties[i] = types.Property{Name: fmt.Sprintf("field%d", i), Type: types.String(), ReadOptional: true}
+	}
+	schema := types.Object([]types.Property{{Name: "wide", Type: types.Object(properties), ReadOptional: true}})
+	store.columnByProperty.user = profileColumnByProperty(schema)
+	root := unified.Rule{Operator: state.OpAnd, Children: make([]unified.Rule, 99)}
+	for i := range root.Children {
+		root.Children[i] = unified.Rule{Record: &state.WhereCondition{
+			Property: []string{"wide"}, Operator: state.OpExists}}
+	}
+	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	page := unified.Page{Limit: 1}
+	err := unified.Validate(&root, at, page)
+	if err != nil {
+		t.Fatalf("expected valid semantic tree, got %v", err)
+	}
+
+	// The unconfigured backend requires no connection for this rejection.
+	result, err := store.UnifiedProfiles(t.Context(), &root, unified.Bindings{}, at, page)
+	if err != nil {
+		if _, unavailable := errors.AsType[*UnavailableError](err); unavailable {
+			t.Fatalf("expected filter admission error, got warehouse failure %v", err)
+		}
+		if !strings.Contains(err.Error(), "exceeds structural budget") {
+			t.Fatalf("expected physical budget error, got %v", err)
+		}
+		if result != nil {
+			t.Fatalf("expected no result on admission failure, got %+v", result)
+		}
+		return
+	}
+	t.Fatal("expected physical budget rejection, got success")
 
 }

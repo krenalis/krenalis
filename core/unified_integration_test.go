@@ -179,7 +179,7 @@ INSERT INTO unified_v.krenalis_events VALUES
 	} {
 		t.Run(string(test.op), func(t *testing.T) {
 			result, err := workspace.unifiedProfiles(t.Context(), unifiedQuery{
-				Root: &unifiedRule{Operator: test.op, Rules: []unifiedRule{{Profile: profile}, count}},
+				Root: &unifiedRule{Operator: test.op, Rules: []unifiedRule{{Profile: profile.Rules[0]}, count}},
 				At:   at, Page: unified.Page{Limit: 10},
 			})
 			if err != nil {
@@ -191,6 +191,40 @@ INSERT INTO unified_v.krenalis_events VALUES
 			for i, outcome := range result.Profiles {
 				if outcome.Truth != test.want[i] {
 					t.Fatalf("expected profile %d truth %d, got %+v", i, test.want[i], outcome)
+				}
+			}
+		})
+	}
+	deep := unifiedRule{Operator: OpAnd, Rules: []unifiedRule{{Profile: profile.Rules[0]}, count}}
+	for range 3 {
+		deep = unifiedRule{Operator: OpAnd, Rules: []unifiedRule{deep}}
+	}
+	wide := unifiedRule{Operator: OpAnd, Rules: make([]unifiedRule, 100)}
+	for i := range 99 {
+		wide.Rules[i] = unifiedRule{Profile: profile.Rules[0]}
+	}
+	wide.Rules[99] = count
+	for _, test := range []struct {
+		name string
+		root unifiedRule
+	}{
+		{"four mixed levels", deep},
+		{"100 mixed descendants", wide},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			result, err := workspace.unifiedProfiles(t.Context(), unifiedQuery{
+				Root: &test.root, At: at, Page: unified.Page{Limit: 10},
+			})
+			if err != nil {
+				t.Fatalf("expected complete mixed query at the structural limit, got %v", err)
+			}
+			expected := []unified.Truth{unified.Match, unified.NoMatch, unified.Unknown, unified.Unknown}
+			if len(result.Profiles) != len(expected) || result.Match != 1 || result.NoMatch != 1 || result.Unknown != 2 {
+				t.Fatalf("expected four profiles and totals 1/1/2, got %+v", result)
+			}
+			for i, outcome := range result.Profiles {
+				if outcome.Truth != expected[i] {
+					t.Fatalf("expected profile %d truth %d, got %+v", i, expected[i], outcome)
 				}
 			}
 		})
