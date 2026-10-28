@@ -292,6 +292,8 @@ An unexported package-level constant or constant group in a `_test.go` file may 
 
 When a function or method can return an error, document all and only the errors that callers can identify and handle without inspecting the error message. Do not document errors whose only distinguishing information is their message.
 
+As an exception, a method of `core` does not document the `errors.BadRequestError` it returns for invalid arguments: callers are expected to propagate it, not handle it, and the declaration comment states the argument requirements instead when they are not obvious. Document it only when callers need to distinguish it from the method's other errors.
+
 A short comment for a package-level variable or constant may appear on the same line as its declaration. In that case, start the comment with a lowercase letter or a number, do not use a period, and use a semicolon to separate phrases that would otherwise be separate sentences.
 
 ## Error messages
