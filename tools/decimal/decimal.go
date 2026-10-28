@@ -518,8 +518,15 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 			return Decimal{}, ErrSyntax
 		}
 	case '.':
+		if len(n) == 1 || n[1] < '0' || n[1] > '9' {
+			return Decimal{}, ErrSyntax
+		}
 		dot = -1
 		n = n[1:]
+	default:
+		if n[0] < '1' || n[0] > '9' {
+			return Decimal{}, ErrSyntax
+		}
 	}
 	zeros := 0
 	mantissa := mantissa{}
@@ -612,7 +619,7 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 				factor *= 10
 			}
 		}
-		if overflow || s < MinScale || s > MaxScale {
+		if (overflow || s < MinScale || s > MaxScale) && !mantissa.isZero() {
 			return Decimal{}, ErrRange
 		}
 		if s == prev {
