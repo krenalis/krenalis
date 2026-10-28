@@ -506,10 +506,11 @@ func TestUnifiedWritersPostgreSQL(t *testing.T) {
 					connection, id, properties = eventConnection, "event/missing", json.Value(`{"currency":null}`)
 				}
 				stamp := season.at.Add(offset)
+				// Keep transport times outside the queried event-time windows.
 				attributes := map[string]any{"connectionId": connection, "anonymousId": "anonymous/" + id,
 					"userId": id, "event": eventName, "messageId": fmt.Sprintf("elapsed/%s/%d", season.name, i),
 					"type": "track", "traits": json.Value(`{}`), "properties": properties,
-					"timestamp": stamp, "receivedAt": stamp, "sentAt": stamp, "originalTimestamp": stamp}
+					"timestamp": stamp, "receivedAt": observed, "sentAt": observed, "originalTimestamp": observed}
 				encoded, err := types.Marshal(attributes, schemas.Event)
 				if err != nil {
 					t.Fatalf("expected elapsed event encoding, got %v", err)

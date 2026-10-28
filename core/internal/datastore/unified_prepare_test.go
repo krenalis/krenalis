@@ -122,7 +122,6 @@ func TestUnifiedPrepare(t *testing.T) {
 // TestUnifiedPrepareElapsedPeriods resolves offsets before the warehouse
 // boundary without mutating the scope or relying on a dialect or Unix nanos.
 func TestUnifiedPrepareElapsedPeriods(t *testing.T) {
-
 	rome, err := time.LoadLocation("Europe/Rome")
 	if err != nil {
 		t.Fatalf("expected Rome calendar, got %v", err)
@@ -143,7 +142,6 @@ func TestUnifiedPrepareElapsedPeriods(t *testing.T) {
 		{"far past", time.Date(1, 1, 2, 0, 0, 0, 0, time.UTC), unified.ElapsedPeriod{Older: time.Microsecond}, time.Date(1, 1, 1, 23, 59, 59, 999999000, time.UTC), time.Date(1, 1, 2, 0, 0, 0, 0, time.UTC)},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-
 			scope := unified.Scope{Event: "Purchase", Grain: "registered-message", Elapsed: &test.period}
 			rule := unified.Rule{Operator: state.OpAnd, Children: []unified.Rule{{Count: &unified.Count{Scope: scope}}}}
 			source := unified.SourceBinding{
@@ -168,10 +166,8 @@ func TestUnifiedPrepareElapsedPeriods(t *testing.T) {
 				!rule.Children[0].Count.Scope.Start.IsZero() || !rule.Children[0].Count.Scope.End.IsZero() {
 				t.Fatalf("expected unchanged relative input %+v, got %+v", before, rule.Children[0].Count.Scope)
 			}
-
 		})
 	}
-
 }
 
 // TestUnifiedPrepareProfileRecord binds without an occurrence source.

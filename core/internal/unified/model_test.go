@@ -86,7 +86,6 @@ func TestValidate(t *testing.T) {
 // TestValidateElapsedPeriod distinguishes invalid periods from unsupported
 // precision and timestamp ranges before any binding or execution.
 func TestValidateElapsedPeriod(t *testing.T) {
-
 	for _, test := range []struct {
 		name        string
 		change      func(*Scope, *time.Time)
@@ -128,7 +127,6 @@ func TestValidateElapsedPeriod(t *testing.T) {
 			t.Fatal("expected rejected elapsed period, got success")
 		})
 	}
-
 }
 
 // TestValidateProfileRecord checks the leaf union and mixed structural limits.
