@@ -10,6 +10,7 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
 
@@ -30,23 +31,27 @@ func (store *Store) UnifiedProfiles(ctx context.Context, root *unified.Rule, bin
 	if err != nil {
 		return nil, err
 	}
-	backend, ok := store.warehouse().(warehouses.CompiledQueryWarehouse)
-	if !ok || !backend.CompiledQueryDialect().CountVerified {
+	backend, ok := store.warehouse().(warehouses.ProfileFilterWarehouse)
+	if !ok || !backend.ProfileFilterVerified() {
 		return nil, &unified.UnsupportedError{Capability: "Unified Count on this warehouse has not been verified"}
 	}
-	query, err := unified.Compile(root, bindings, at, page, backend.CompiledQueryDialect(), func(where *state.Where) (warehouses.Expr, error) {
-		return convertWhere(where, eventColumnByProperty)
-	})
+	source := unified.SourceBinding{
+		Occurrences: warehouses.OccurrenceSource{Table: "krenalis_events", Profile: eventColumnByProperty["kpid"],
+			Identity: eventColumnByProperty["messageId"], Timestamp: eventColumnByProperty["timestamp"]},
+		Properties: eventColumnByProperty["properties"],
+		Record:     func(where *state.Where) (warehouses.Expr, error) { return convertWhere(where, eventColumnByProperty) },
+	}
+	filter, err := unified.Prepare(root, bindings, at, source)
 	if err != nil {
 		return nil, err
 	}
-	rows, err := backend.QueryCompiled(ctx, query)
+	result, err := backend.ProfileOutcomes(ctx, filter, warehouses.ProfileOutcomeRequest{
+		Population: warehouses.ProfileSource{Table: "profiles", Key: warehouses.Column{Name: "_kpid", Type: types.UUID()}},
+		First:      page.First, Limit: page.Limit, MatchingOnly: page.MatchingOnly,
+	})
 	if err != nil {
 		return nil, unavailableError(err)
 	}
-	result, err := unified.Read(ctx, rows, at, page)
-	if err != nil {
-		return nil, unavailableError(err)
-	}
-	return result, nil
+	return &unified.Result{Profiles: result.Profiles, Match: result.Match, NoMatch: result.NoMatch,
+		Unknown: result.Unknown, At: at.UTC()}, nil
 }

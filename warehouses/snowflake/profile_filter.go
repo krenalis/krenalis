@@ -11,16 +11,32 @@ import (
 
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
+	"github.com/krenalis/krenalis/warehouses/internal/profilefilter"
 )
 
-// CompiledQueryDialect returns the physical adapters for generated queries.
-func (warehouse *Snowflake) CompiledQueryDialect() warehouses.QueryDialect {
-	return warehouses.QueryDialect{QuoteIdentifier: quoteIdent, Record: compiledRecord,
-		KnownText: compiledKnownText, Parameter: compiledParameter, CountVerified: false}
+// profileFilterVerified gates the Count subset pending real-database tests.
+const profileFilterVerified = false
+
+// ProfileFilterVerified reports verification of this backend's Count subset.
+func (warehouse *Snowflake) ProfileFilterVerified() bool {
+	return profileFilterVerified
 }
 
-// QueryCompiled executes generated SQL using the normalized scanner.
-func (warehouse *Snowflake) QueryCompiled(ctx context.Context, query warehouses.CompiledQuery) (warehouses.Rows, error) {
+// ProfileOutcomes evaluates the prepared Count filter and returns a complete
+// ordered page and exact ternary totals from one statement. Source contract,
+// execution, cancellation, scan and Close failures return no partial result.
+func (warehouse *Snowflake) ProfileOutcomes(ctx context.Context, filter warehouses.Filter, request warehouses.ProfileOutcomeRequest) (*warehouses.ProfileOutcomes, error) {
+	err := warehouses.ValidateProfileFilter(filter, request)
+	if err != nil {
+		return nil, err
+	}
+	if !profileFilterVerified {
+		return nil, fmt.Errorf("warehouses/snowflake: prepared Profiles filtering has not been verified")
+	}
+	query, err := profilefilter.Build(filter, request, profileFilterDialect())
+	if err != nil {
+		return nil, err
+	}
 	values, err := query.Values()
 	if err != nil {
 		return nil, err
@@ -40,14 +56,19 @@ func (warehouse *Snowflake) QueryCompiled(ctx context.Context, query warehouses.
 	}
 	if len(columns) != len(query.Columns) {
 		_ = rows.Close()
-		return nil, fmt.Errorf("warehouses/snowflake: compiled result schema mismatch")
+		return nil, fmt.Errorf("warehouses/snowflake: profile outcome schema mismatch")
 	}
-	return newScanner(query.Columns, rows), nil
+	return profilefilter.Read(ctx, newScanner(query.Columns, rows), request)
 }
 
-// compiledKnownText extracts only a JSON String, preserving unknown business
+func profileFilterDialect() profilefilter.Dialect {
+	return profilefilter.Dialect{QuoteIdentifier: quoteIdent, Record: profileRecord,
+		KnownText: profileKnownText, Parameter: profileParameter}
+}
+
+// profileKnownText extracts only a JSON String, preserving unknown business
 // values as SQL NULL. It does not change the Record comparison operators.
-func compiledKnownText(column warehouses.Column, keys []string) (string, error) {
+func profileKnownText(column warehouses.Column, keys []string) (string, error) {
 	if !warehouses.IsValidIdentifier(column.Name) || !column.Type.IsJSON() || len(keys) > 32 {
 		return "", fmt.Errorf("warehouses/snowflake: invalid governed text binding")
 	}
@@ -63,7 +84,7 @@ func compiledKnownText(column warehouses.Column, keys []string) (string, error) 
 	return "CASE WHEN IS_VARCHAR(" + target + ") THEN AS_VARCHAR(" + target + ") END", nil
 }
 
-func compiledParameter(index int, typ types.Type) (string, error) {
+func profileParameter(index int, typ types.Type) (string, error) {
 	if index < 1 || index > 1000 {
 		return "", fmt.Errorf("warehouses/snowflake: invalid compiled parameter index")
 	}
@@ -78,9 +99,9 @@ func compiledParameter(index int, typ types.Type) (string, error) {
 	}
 }
 
-// compiledRecord keeps malformed internal prepared expressions from bringing
+// profileRecord keeps malformed internal prepared expressions from bringing
 // down the caller; the original renderer still owns every Record operation.
-func compiledRecord(expr warehouses.Expr) (text string, err error) {
+func profileRecord(expr warehouses.Expr) (text string, err error) {
 	defer func() {
 		if recover() != nil {
 			text, err = "", fmt.Errorf("warehouses/snowflake: malformed prepared Record expression")

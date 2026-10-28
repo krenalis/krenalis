@@ -3,22 +3,33 @@
 This package implements the first backend subset of the B architecture consolidated
 in `filtering/14-confronto-architetture-interrogazione-unified-fase-4b.md`. The
 normative baseline remains 06/07/08 version 1.2. This is an internal Go entry;
-Admin, API and destination connections do not expose it yet.
+Admin, API and destination connections do not expose it yet. The prepared-filter
+boundary refines the SQL transport described in report 14 §5.4: generated SQL is
+now an internal detail of the warehouse implementation.
 
 ## Executable path
 
-`Workspace.unifiedRecordProfiles` is the internal service entry for an existing
-Record predicate. It calls `prepareUnifiedRecordCount`, which reuses
-`prepareFilter` with the Event schema, then passes the resulting Count to `datastore.Store.UnifiedProfiles`, which
-validates its supported canonical shape, binds prepared `state.Where` through
-`convertWhere`, compiles using this shared package, and calls
-`warehouses.CompiledQueryWarehouse.QueryCompiled`. The database adapters reuse
-their existing Record renderer, connection pool and normalized scanner.
-`unified.Read` consumes and closes the cursor before returning a complete result.
+`Workspace.unifiedRecordProfiles` reuses `prepareFilter` with the Event schema.
+`datastore.Store.UnifiedProfiles` fixes the evaluation input T, validates the
+supported canonical shape and calls `unified.Prepare` with resolved source
+metadata and the existing `convertWhere` Record binder.
+
+`Prepare` returns `warehouses.Filter`: Count sources, mature absolute periods,
+local qualifications and normalized accepted integer ranges. It produces no SQL
+and receives no dialect callbacks. T remains in core because maturity and all
+periods have already been resolved before the warehouse call.
+
+Both drivers implement `ProfileFilterWarehouse.ProfileOutcomes`. They use the
+shared physical composer and decoder in `warehouses/internal/profilefilter`,
+with their existing Record renderer, pool and normalized scanner. SQL, parameter
+positions, CTEs and the metadata-row protocol stay below the warehouse boundary.
+Adding a backend does not require backend-specific branches in core.
 
 `RowQuery`, `Expr`, `core.Filter`, `FilterCondition`, `state.Where`, their JSON
-representations and equality are unchanged. The compiler does not persist its
-CTEs and has no relational IR, lowering pass or independent optimizer.
+representations and equality are unchanged. The prepared filter has no public
+wire or persistence format, relational IR, optimizer or generic expression
+language. Root Record conditions will be added with their producer in a later
+increment; the current entry still accepts only Count and outer groups.
 
 ## Admitted subset and evidence contract
 
@@ -31,7 +42,9 @@ CTEs and has no relational IR, lowering pass or independent optimizer.
   `message_id` occurrence identity and determined `kpid` attribution. The grain
   is **registered-message**, not business Order identity. Different message IDs
   with identical payloads remain different occurrences. Duplicate source-view
-  join rows with the same identity and values are deduplicated before counting.
+  join rows with the same identity and relevant state are deduplicated before
+  counting. Source conflicts are execution errors under this determined-identity
+  contract, not a general policy for semantic identity uncertainty.
 - The raw event-name equality is a local nullable qualifier. An unknown name is
   retained as possible evidence; a certainly different name is excluded.
 - Explicit absolute `[Start,End)` periods with `Start < End <= T`. All bounds
@@ -47,8 +60,10 @@ CTEs and has no relational IR, lowering pass or independent optimizer.
   contains an immutable meaning reference and the currency literal; separate
   `Bindings.Currencies` resolve the exact reference/revision to its JSON path
   and evidence contract. Missing, JSON null and non-String values are unknown
-  business currency. Known String values must satisfy the resolved currency
-  domain. Bindings are supplied by an internal caller; this change does not
+  business currency. Known Strings are compared verbatim: `"eur"` and
+  `"not-a-code"` are known values different from `"EUR"`. No domain attestation,
+  normalization or `KnownCanonicalStrings` flag is introduced. A future closed
+  domain requires a distinct resolved reading contract. Bindings are supplied by an internal caller; this change does not
   implement a registry, infer a business meaning from raw JSON, or automatically
   adopt meaning revisions. Missing or duplicate bindings fail before execution.
 
@@ -62,8 +77,9 @@ governed qualification in the same Count is currently unsupported.
 For a determined deduplicated population, let S be the number of TRUE qualifiers
 and U the number of NULL qualifiers. With the admitted independent memberships,
 every integer in `[S,S+U]` is reachable: choose any k of the U occurrences for
-each k between 0 and U. The compiler may therefore decide these Count tests from
-exact lower/upper bounds. This proof does not apply to E, K, shares or arbitrary
+each k between 0 and U. Core normalizes the test and sample minimum into at
+most two sorted, disjoint, non-adjacent accepted integer ranges. The physical
+helper compares the reachable integer interval with that accepted set. This proof does not apply to E, K, shares or arbitrary
 correlated bases. It does not treat an arbitrary real interval as reachable.
 
 `SharedBoolean` records a governed `EqualCurrentProfile` dependency explicitly
@@ -98,7 +114,7 @@ Profile totals use checked signed 64-bit values. Pages contain at most 1,000
 profiles; offset is bounded to signed 32-bit range. Output UUID text is bounded
 at the query source and validated by the existing scanner and decoder. Generated
 statements are limited to 1 MiB, 100 columns and 1,000 typed arguments. The
-current argument adapter admits text and UTC DateTime; it never uses float for
+internal argument adapter admits text and UTC DateTime; it never uses float for
 Count bounds or existing Record Decimal/JSON operands.
 
 Any query, scan, final `Rows.Err`, cancellation or Close failure returns an error
@@ -154,7 +170,15 @@ membership and empty pages, a separate exhaustive completion oracle for 27
 three-occurrence histories, reused typed JSON fixtures including literal dotted
 keys, shared-fact rejection, SQL/scan errors and in-flight cancellation.
 
-`TestRead` separately injects Scan, final Err and Close failures, malformed
+`TestUnifiedSourcePostgreSQL` uses a separate source without a primary key to
+exercise duplicate identities, conflicting qualification, attribution (including
+NULL/non-NULL), copies across the period boundary and irrelevant differences.
+It also checks NativeCurrency Boolean/Number/Object/Array and verbatim Strings.
+`TestNumericPostgreSQL` executes the real decision SQL at int64 boundaries and
+checks that the current aggregate expressions have bigint result metadata.
+These probes do not demonstrate Snowflake runtime behavior or production scale.
+
+`warehouses/internal/profilefilter.TestRead` separately injects Scan, final Err and Close failures, malformed
 metadata, duplicate/oversize pages, bad output types, overflow and cancellation.
 Adapter tests on both packages reuse `warehouseexpr.ValueCases` and `JSONCases`
 and verify coverage of all 26 operators against each original renderer. They
@@ -172,12 +196,12 @@ Example targeted commands, with Docker available and dependencies vendored:
 ```sh
 GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off KRENALIS_SKIP_SNOWFLAKE_TESTS=true \
 go test -mod=vendor ./core ./core/internal/datastore \
-  -run '^(TestUnifiedWorkspacePostgreSQL|TestUnifiedProfiles.*)$' -count=1
+  -run '^(TestUnifiedWorkspacePostgreSQL|TestUnifiedProfiles.*|TestUnifiedSourcePostgreSQL)$' -count=1
 
 GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off \
 go test -mod=vendor ./core ./core/internal/unified ./core/internal/datastore \
-  ./warehouses ./warehouses/postgresql ./warehouses/snowflake \
-  -run '^(TestPrepareUnifiedRecordCount|TestRead|TestValidate|TestUnifiedCompileDialects|TestCompiledQueryDialect|TestCompiledQueryValues)$' -count=1
+  ./warehouses ./warehouses/internal/profilefilter ./warehouses/postgresql ./warehouses/snowflake \
+  -run '^(TestPrepareUnifiedRecordCount|TestRead|TestValidate|TestUnifiedPrepare|TestAcceptedCountRanges|TestValidateProfileFilter|TestProfileFilterDialect|TestProfileFilterSQL|TestStatementValues)$' -count=1
 ```
 
 API/Admin/destination activation additionally requires a decided and verified

@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 // Comparison is a Count terminal, independent of the Record operator catalog.
@@ -93,10 +94,7 @@ type Page struct {
 }
 
 // Profile is one internal profile outcome.
-type Profile struct {
-	ID    string
-	Truth Truth
-}
+type Profile = warehouses.ProfileOutcome
 
 // Result is complete only when the operation returned no error.
 type Result struct {
@@ -137,12 +135,12 @@ type SharedBoolean struct {
 }
 
 // Truth is the result of successful semantic evaluation.
-type Truth uint8
+type Truth = warehouses.FilterTruth
 
 const (
-	NoMatch Truth = iota
-	Match
-	Unknown
+	NoMatch = warehouses.FilterNoMatch
+	Match   = warehouses.FilterMatch
+	Unknown = warehouses.FilterUnknown
 )
 
 // UnsupportedError reports a valid-language capability outside this vertical.
@@ -162,6 +160,11 @@ func Validate(root *Rule, at time.Time, page Page) error {
 	if page.Limit < 1 || page.Limit > 1000 || page.First < 0 || int64(page.First) > math.MaxInt32 {
 		return fmt.Errorf("invalid internal Unified page")
 	}
+	return validateFilter(root, at)
+}
+
+// validateFilter checks semantic shape independently of the result request.
+func validateFilter(root *Rule, at time.Time) error {
 	if err := validateTime(at); err != nil {
 		return err
 	}
