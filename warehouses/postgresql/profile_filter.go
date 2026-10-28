@@ -25,7 +25,9 @@ func (warehouse *PostgreSQL) ProfileFilterVerified() bool {
 
 // ProfileOutcomes returns a complete Record/Count page and exact ternary
 // totals from one statement. Source, execution, cancellation, scan and Close
-// failures return no partial result.
+// failures return no partial result. It returns
+// warehouses.ErrProfileProjectionTooWide or warehouses.ErrProfileResultTooLarge
+// when the requested projection or page exceeds its budget.
 func (warehouse *PostgreSQL) ProfileOutcomes(ctx context.Context, filter warehouses.Filter, request warehouses.ProfileOutcomeRequest) (*warehouses.ProfileOutcomes, error) {
 	err := warehouses.ValidateProfileFilter(filter, request)
 	if err != nil {

@@ -15,6 +15,12 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
+// ErrProfileProjectionTooWide reports a Unified projection over its budget.
+var ErrProfileProjectionTooWide = errors.New("profile projection exceeds the column limit")
+
+// ErrProfileResultTooLarge reports a Unified page over its size budget.
+var ErrProfileResultTooLarge = errors.New("profile result exceeds the size limit")
+
 // ErrUnifiedUnavailable reports a workspace backend without verified support.
 var ErrUnifiedUnavailable = errors.New("Unified filtering is unavailable on this warehouse")
 
@@ -24,7 +30,8 @@ var ErrUnifiedUnavailable = errors.New("Unified filtering is unavailable on this
 // It returns *unified.UnsupportedError for unimplemented capabilities, mode
 // errors when the operation is unavailable (including ErrUnifiedUnavailable),
 // and *UnavailableError on execution failure. Prepared-filter limits are
-// checked before backend execution.
+// checked before backend execution. ErrProfileProjectionTooWide and
+// ErrProfileResultTooLarge distinguish request-dependent page limits.
 // No partial result is returned on failure.
 func (store *Store) UnifiedProfiles(ctx context.Context, root *unified.Rule, bindings unified.Bindings, at time.Time, page unified.Page) (*unified.Result, error) {
 	store.mustBeOpen()
@@ -72,10 +79,16 @@ func (store *Store) UnifiedProfiles(ctx context.Context, root *unified.Rule, bin
 	}
 	err = warehouses.ValidateProfileFilter(filter, request)
 	if err != nil {
+		if errors.Is(err, warehouses.ErrProfileProjectionTooWide) {
+			return nil, ErrProfileProjectionTooWide
+		}
 		return nil, err
 	}
 	result, err := backend.ProfileOutcomes(ctx, filter, request)
 	if err != nil {
+		if errors.Is(err, warehouses.ErrProfileResultTooLarge) {
+			return nil, ErrProfileResultTooLarge
+		}
 		return nil, unavailableError(err)
 	}
 	profiles := make([]unified.Profile, len(result.Profiles))

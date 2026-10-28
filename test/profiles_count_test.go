@@ -6,6 +6,7 @@ package test
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"strings"
 	"testing"
@@ -23,10 +24,22 @@ func TestProfilesCountAPI(t *testing.T) {
 		t.Skip("requires PostgreSQL, NATS and the API server")
 	}
 	k := krenalistester.NewKrenalisInstance(t)
-	k.SetProfileSchema(types.Object([]types.Property{
+	properties := []types.Property{
 		{Name: "email", Type: types.String(), ReadOptional: true},
 		{Name: "country", Type: types.String(), ReadOptional: true},
-	}))
+	}
+	for i := range 93 {
+		properties = append(properties, types.Property{Name: fmt.Sprintf("field_%02d", i),
+			Type: types.String(), ReadOptional: true})
+	}
+	details := make([]types.Property, 92)
+	for i := range details {
+		details[i] = types.Property{Name: fmt.Sprintf("field_%02d", i), Type: types.String(), ReadOptional: true}
+	}
+	longName := "long_" + strings.Repeat("x", 12000)
+	properties = append(properties, types.Property{Name: "details", Type: types.Object(details), ReadOptional: true},
+		types.Property{Name: longName, Type: types.String(), ReadOptional: true})
+	k.SetProfileSchema(types.Object(properties))
 	k.Start()
 	defer k.Stop()
 	k.UpdateIdentityResolutionSettings(false, nil)
@@ -60,7 +73,8 @@ SELECT _kpid,'e'||n,'Purchase','2026-01-15','2026-02-01','2026-02-01','track','f
 		`"duration":{"value":31,"unit":"day"}},"where":{"operator":"and","rules":[` +
 		`{"property":"properties.currency","operator":"is","values":["EUR"]}]}},"operator":"is","values":[0]}]}`
 	const at = "2026-02-01T00:00:00Z"
-	query := url.Values{"filter": {count}, "at": {at}, "order": {"email"}, "limit": {"1"}}
+	query := url.Values{"filter": {count}, "at": {at}, "order": {"email"}, "limit": {"1"},
+		"properties": {"email", "country"}}
 	type evaluation struct {
 		At      time.Time `json:"at"`
 		Match   int64     `json:"match"`
@@ -149,6 +163,130 @@ SELECT _kpid,'e'||n,'Purchase','2026-01-15','2026-02-01','2026-02-01','track','f
 				t.Fatalf("expected HTTP %d, got success: %s", test.status, body)
 			}
 		})
+	}
+
+	// A wide schema is valid for Record. Count must fail actionably for an
+	// oversized physical projection, including flattened object properties.
+	names := make([]string, 95)
+	for i := range names {
+		names[i] = properties[i].Name
+	}
+	for _, test := range []struct {
+		name       string
+		properties []string
+		fail       bool
+	}{
+		{"all properties", nil, true},
+		{"89 columns plus metadata", names[:89], false},
+		{"90 columns plus metadata", names[:90], true},
+		{"one wide object", []string{"details"}, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			q := url.Values{"filter": {count}, "at": {at}, "limit": {"1"}}
+			if test.properties != nil {
+				q["properties"] = test.properties
+			}
+			var got response
+			err := k.TryCall("GET", "/v1/profiles?"+q.Encode(), nil, nil, &got)
+			if err != nil {
+				status, ok := errors.AsType[*krenalistester.StatusCodeError](err)
+				if !test.fail || !ok || status.Response.Code != 422 ||
+					!strings.Contains(status.Response.Text, "ProfileProjectionTooWide") ||
+					!strings.Contains(status.Response.Text, "90 physical columns") {
+					t.Fatalf("expected projection-limit classification, got %v", err)
+				}
+			}
+			if test.fail && err == nil {
+				t.Fatal("expected projection-limit response, got success")
+			}
+			if !test.fail && (err != nil || len(got.Profiles) != 1 || got.Total != 2) {
+				t.Fatalf("expected a bounded projection with complete totals, got %+v, %v", got, err)
+			}
+		})
+	}
+	var record response
+	k.Call("GET", "/v1/profiles?limit=100", nil, nil, &record)
+	if len(record.Profiles) != 4 || record.Total != 4 || record.Evaluation != nil {
+		t.Fatalf("expected unchanged Record support for wide schemas, got %+v", record)
+	}
+
+	// A deterministic size limit can be resolved by reducing either the page
+	// or its projection. The same dataset remains readable through Record.
+	_, err = pool.Exec(t.Context(), `INSERT INTO krenalis_profiles_0
+ (_kpid,_updated_at,_anonymous_count,_recognized_count)
+ SELECT ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,'2026-02-01',0,1
+ FROM generate_series(5,20) n;
+UPDATE krenalis_profiles_0 SET email=repeat('x',60000);`)
+	if err != nil {
+		t.Fatalf("expected size-limit fixture, got %v", err)
+	}
+	allCount := strings.Replace(count, `"operator":"is","values":[0]`,
+		`"operator":"is greater than or equal to","values":[0]`, 1)
+	for _, test := range []struct {
+		name     string
+		limit    string
+		property string
+		fail     bool
+		rows     int
+	}{
+		{"oversized page", "100", "email", true, 0},
+		{"smaller page", "17", "email", false, 17},
+		{"smaller projection", "100", "country", false, 20},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			q := url.Values{"filter": {allCount}, "at": {at}, "properties": {test.property}, "limit": {test.limit}}
+			var got response
+			err := k.TryCall("GET", "/v1/profiles?"+q.Encode(), nil, nil, &got)
+			if err != nil {
+				status, ok := errors.AsType[*krenalistester.StatusCodeError](err)
+				if !test.fail || !ok || status.Response.Code != 422 ||
+					!strings.Contains(status.Response.Text, "ProfileResultTooLarge") ||
+					!strings.Contains(status.Response.Text, "reduce limit") {
+					t.Fatalf("expected actionable page-size response, got %v", err)
+				}
+			}
+			if test.fail && err == nil {
+				t.Fatal("expected page-size response, got success")
+			}
+			if !test.fail && (err != nil || len(got.Profiles) != test.rows || got.Total != 20 ||
+				got.Evaluation == nil || got.Evaluation.Match != 20) {
+				t.Fatalf("expected complete page with total 20, got %+v, %v", got, err)
+			}
+		})
+	}
+	record = response{}
+	k.Call("GET", "/v1/profiles?properties=email&limit=100", nil, nil, &record)
+	if len(record.Profiles) != 20 || record.Total != 20 || record.Evaluation != nil {
+		t.Fatalf("expected unchanged Record support beyond the Count page budget, got %+v", record)
+	}
+
+	// Repeated long property names can exceed the HTTP encoding budget while
+	// values remain well below the SQL and transport budgets.
+	_, err = pool.Exec(t.Context(), `INSERT INTO krenalis_profiles_0
+ (_kpid,_updated_at,_anonymous_count,_recognized_count)
+ SELECT ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,'2026-02-01',0,1
+ FROM generate_series(21,1000) n;
+UPDATE krenalis_profiles_0 SET "`+longName+`"='';`)
+	if err != nil {
+		t.Fatalf("expected encoded-size fixture, got %v", err)
+	}
+	encodedQuery := url.Values{"filter": {allCount}, "at": {at}, "properties": {longName}, "limit": {"1000"}}
+	var failed response
+	err = k.TryCall("GET", "/v1/profiles?"+encodedQuery.Encode(), nil, nil, &failed)
+	if err != nil {
+		status, ok := errors.AsType[*krenalistester.StatusCodeError](err)
+		if !ok || status.Response.Code != 422 || !strings.Contains(status.Response.Text, "ProfileResultTooLarge") {
+			t.Fatalf("expected encoded-size limit before writing a partial response, got %v", err)
+		}
+	}
+	if err == nil {
+		t.Fatal("expected encoded-size limit, got successful page")
+	}
+	encodedQuery.Set("limit", "10")
+	page = response{}
+	k.Call("GET", "/v1/profiles?"+encodedQuery.Encode(), nil, nil, &page)
+	if len(page.Profiles) != 10 || page.Total != 1000 {
+		t.Fatalf("expected a smaller encoded page with total 1000, got %+v", page)
 	}
 
 	_, err = pool.Exec(t.Context(), `TRUNCATE krenalis_profiles_0`)

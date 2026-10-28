@@ -5,12 +5,34 @@
 package warehouses
 
 import (
+	"errors"
 	"math"
 	"testing"
 	"time"
 
 	"github.com/krenalis/krenalis/tools/types"
 )
+
+// TestProfileProjectionBudget distinguishes an oversized projection from
+// malformed filter data, before a driver can attempt warehouse access.
+func TestProfileProjectionBudget(t *testing.T) {
+	for _, size := range []int{MaxProfileProjectionColumns, MaxProfileProjectionColumns + 1} {
+		request := ProfileOutcomeRequest{Population: ProfileSource{Table: "profiles",
+			Key: Column{Name: "_kpid", Type: types.UUID()}}, Limit: 1, Columns: make([]Column, size)}
+		for i := range request.Columns {
+			request.Columns[i] = Column{Name: "value", Type: types.String()}
+		}
+		err := ValidateProfileFilter(Filter{}, request)
+		if err != nil {
+			if size <= MaxProfileProjectionColumns || !errors.Is(err, ErrProfileProjectionTooWide) {
+				t.Fatalf("expected projection-limit error only beyond %d columns, got %v", MaxProfileProjectionColumns, err)
+			}
+		}
+		if size > MaxProfileProjectionColumns && err == nil {
+			t.Fatal("expected oversized projection error, got success")
+		}
+	}
+}
 
 // TestValidateProfileFilter checks the prepared contract and its budgets.
 func TestValidateProfileFilter(t *testing.T) {

@@ -121,7 +121,7 @@ func TestProfileFilterSQL(t *testing.T) {
 	if len(values) != 6 || values[1] != "2026-01-31 23:00:00.123456" || values[2] != "EUR" || values[5] != "EUR" {
 		t.Fatalf("expected ordered exact UTC bounds and literals, got %v", values)
 	}
-	if len(query.Columns) != 7 || !strings.Contains(query.SQL, "GROUP BY occurrence_id") ||
+	if len(query.Columns) != 8 || !strings.Contains(query.SQL, "GROUP BY occurrence_id") ||
 		!strings.Contains(query.SQL, "period_min<>period_max") || !strings.Contains(query.SQL,
 		"ORDER BY profile_id LIMIT 10 OFFSET 20") || !strings.Contains(query.SQL, "WHERE truth=TRUE") {
 		t.Fatalf("expected identity checks and complete page protocol, got %s", query.SQL)
@@ -198,14 +198,17 @@ func TestProfileProjectionSQL(t *testing.T) {
 			q("profile_id") + " AS " + q("$value0"),
 			"ORDER BY " + order + " NULLS LAST,profile_id LIMIT 2 OFFSET 1",
 			"ORDER BY b." + order + " NULLS LAST,b.profile_id",
-			"page_size AS", dialect.ValueSize("b." + q("$value0")), "WHERE truth=TRUE",
+			"e.failures,(z.bytes>1048576)", "page_size AS", dialect.ValueSize("b." + q("$value0")), "WHERE truth=TRUE",
 		} {
 			if !strings.Contains(query.SQL, fragment) {
 				t.Fatalf("expected projection fragment %s, got %s", fragment, query.SQL)
 			}
 		}
-		if len(query.Columns) != 8 || !query.Columns[7].Nullable || !types.Equal(query.Columns[7].Type, column.Type) {
+		if len(query.Columns) != 9 || !query.Columns[8].Nullable || !types.Equal(query.Columns[8].Type, column.Type) {
 			t.Fatalf("expected nullable projected metadata-row column, got %+v", query.Columns)
+		}
+		if query.Columns[7].Name != "payload_exceeded" || query.Columns[7].Nullable || !query.Columns[7].Type.IsBoolean() {
+			t.Fatalf("expected a separate non-null payload diagnostic, got %+v", query.Columns[7])
 		}
 		dialect.ValueSize = nil
 		_, err = profilefilter.Build(warehouses.Filter{}, request, dialect)

@@ -54,6 +54,8 @@ const (
 	PipelineAlreadyRunning         errors.Code = "PipelineAlreadyRunning"
 	PipelineDisabled               errors.Code = "PipelineDisabled"
 	PipelinesLimitReached          errors.Code = "PipelinesLimitReached"
+	ProfileProjectionTooWide       errors.Code = "ProfileProjectionTooWide"
+	ProfileResultTooLarge          errors.Code = "ProfileResultTooLarge"
 	PropertyNotExist               errors.Code = "PropertyNotExist"
 	SchemaNotAligned               errors.Code = "SchemaNotAligned"
 	SheetNotExist                  errors.Code = "SheetNotExist"

@@ -939,17 +939,18 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 		for i, profile := range profiles {
 			encoded, marshalErr := types.Marshal(profile.Attributes, schema)
 			if marshalErr != nil {
-				return nil, errors.New("cannot encode profile attributes")
+				return nil, errors.New("cmd: cannot encode profile attributes")
 			}
 			if len(encoded) > 10*1024*1024-bytes {
-				return nil, errors.New("profile response exceeds size limit")
+				return nil, errors.Unprocessable(core.ProfileResultTooLarge,
+					"encoded profile page exceeds the supported size; reduce limit or request fewer properties")
 			}
 			attributes[i] = encoded
 			bytes += len(encoded)
 		}
 		evaluation, err = json.Marshal(result.Evaluation)
 		if err != nil {
-			return nil, errors.New("cannot encode profile evaluation")
+			return nil, errors.New("cmd: cannot encode profile evaluation")
 		}
 	}
 	w.Header().Set("Content-Type", "application/json")

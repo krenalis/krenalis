@@ -7,6 +7,7 @@ package profilefilter
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"strings"
 	"testing"
@@ -51,7 +52,7 @@ func (r *outcomeRows) Scan(dest ...any) error {
 
 // TestRead rejects incomplete results and always closes the cursor.
 func TestRead(t *testing.T) {
-	row := []any{"00000000-0000-0000-0000-000000000001", nil, true, 0, 0, 1, 0}
+	row := []any{"00000000-0000-0000-0000-000000000001", nil, true, 0, 0, 1, 0, false}
 	tests := []struct {
 		name string
 		rows *outcomeRows
@@ -59,11 +60,11 @@ func TestRead(t *testing.T) {
 		fail bool
 	}{
 		{"unknown", &outcomeRows{rows: [][]any{row}}, warehouses.ProfileOutcomeRequest{Limit: 1}, false},
-		{"source conflict", &outcomeRows{rows: [][]any{{nil, nil, false, 0, 0, 0, 1}}},
+		{"source conflict", &outcomeRows{rows: [][]any{{nil, nil, false, 0, 0, 0, 1, false}}},
 			warehouses.ProfileOutcomeRequest{Limit: 1}, true},
-		{"invalid diagnostic", &outcomeRows{rows: [][]any{{nil, nil, false, 0, 0, 0, "bad"}}},
+		{"invalid diagnostic", &outcomeRows{rows: [][]any{{nil, nil, false, 0, 0, 0, "bad", false}}},
 			warehouses.ProfileOutcomeRequest{Limit: 1}, true},
-		{"metadata", &outcomeRows{rows: [][]any{{nil, nil, false, 0, 0, 0, 0}}},
+		{"metadata", &outcomeRows{rows: [][]any{{nil, nil, false, 0, 0, 0, 0, false}}},
 			warehouses.ProfileOutcomeRequest{Limit: 1}, false},
 		{"scan", &outcomeRows{rows: [][]any{row}, scanError: errors.New("scan failed")},
 			warehouses.ProfileOutcomeRequest{Limit: 1}, true},
@@ -72,23 +73,23 @@ func TestRead(t *testing.T) {
 		{"close", &outcomeRows{rows: [][]any{row}, closeError: errors.New("close failed")},
 			warehouses.ProfileOutcomeRequest{Limit: 1}, true},
 		{"empty stream", &outcomeRows{}, warehouses.ProfileOutcomeRequest{Limit: 1}, true},
-		{"overflow", &outcomeRows{rows: [][]any{{nil, nil, false, math.MaxInt, 1, 0, 0}}},
+		{"overflow", &outcomeRows{rows: [][]any{{nil, nil, false, math.MaxInt, 1, 0, 0, false}}},
 			warehouses.ProfileOutcomeRequest{Limit: 1}, true},
-		{"negative", &outcomeRows{rows: [][]any{{nil, nil, false, -1, 0, 0, 0}}},
+		{"negative", &outcomeRows{rows: [][]any{{nil, nil, false, -1, 0, 0, 0, false}}},
 			warehouses.ProfileOutcomeRequest{Limit: 1}, true},
 		{"duplicate identity", &outcomeRows{rows: [][]any{row, row}}, warehouses.ProfileOutcomeRequest{Limit: 2}, true},
 		{"too many rows", &outcomeRows{rows: [][]any{row, row}}, warehouses.ProfileOutcomeRequest{Limit: 1}, true},
-		{"wrong truth", &outcomeRows{rows: [][]any{{row[0], "true", true, 1, 0, 0, 0}}},
+		{"wrong truth", &outcomeRows{rows: [][]any{{row[0], "true", true, 1, 0, 0, 0, false}}},
 			warehouses.ProfileOutcomeRequest{Limit: 1}, true},
-		{"wrong marker", &outcomeRows{rows: [][]any{{row[0], true, nil, 1, 0, 0, 0}}},
+		{"wrong marker", &outcomeRows{rows: [][]any{{row[0], true, nil, 1, 0, 0, 0, false}}},
 			warehouses.ProfileOutcomeRequest{Limit: 1}, true},
-		{"wrong id", &outcomeRows{rows: [][]any{{"bad", true, true, 1, 0, 0, 0}}},
+		{"wrong id", &outcomeRows{rows: [][]any{{"bad", true, true, 1, 0, 0, 0, false}}},
 			warehouses.ProfileOutcomeRequest{Limit: 1}, true},
 		{"matching only", &outcomeRows{rows: [][]any{row}}, warehouses.ProfileOutcomeRequest{Limit: 1,
 			MatchingOnly: true}, true},
-		{"matching page exceeds total", &outcomeRows{rows: [][]any{{row[0], true, true, 0, 0, 0, 0}}},
+		{"matching page exceeds total", &outcomeRows{rows: [][]any{{row[0], true, true, 0, 0, 0, 0, false}}},
 			warehouses.ProfileOutcomeRequest{Limit: 1, MatchingOnly: true}, true},
-		{"metadata mixed", &outcomeRows{rows: [][]any{{nil, nil, false, 1, 0, 0, 0}, row}},
+		{"metadata mixed", &outcomeRows{rows: [][]any{{nil, nil, false, 1, 0, 0, 0, false}, row}},
 			warehouses.ProfileOutcomeRequest{Limit: 2}, true},
 	}
 	for _, test := range tests {
@@ -119,10 +120,41 @@ func TestRead(t *testing.T) {
 	}
 }
 
+// TestReadLimits separates payload limits from source and cursor failures.
+func TestReadLimits(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		row       []any
+		scanError error
+		limit     bool
+	}{
+		{"payload limit", []any{nil, nil, false, 0, 0, 0, 0, true}, nil, true},
+		{"source conflict", []any{nil, nil, false, 0, 0, 0, 1, false}, nil, false},
+		{"source conflict and payload limit", []any{nil, nil, false, 0, 0, 0, 1, true}, nil, false},
+		{"invalid flag", []any{nil, nil, false, 0, 0, 0, 0, nil}, nil, false},
+		{"transport budget", []any{nil, nil, false, 0, 0, 0, 0, false},
+			fmt.Errorf("scan error: %w", warehouses.ErrProfileResultTooLarge), true},
+		{"technical scan failure", []any{nil, nil, false, 0, 0, 0, 0, false}, errors.New("scan failed"), false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			rows := &outcomeRows{rows: [][]any{test.row}, scanError: test.scanError}
+			result, err := Read(t.Context(), rows, warehouses.ProfileOutcomeRequest{Limit: 1})
+			if err != nil {
+				if errors.Is(err, warehouses.ErrProfileResultTooLarge) != test.limit {
+					t.Fatalf("expected size-limit classification %t, got %v", test.limit, err)
+				}
+			}
+			if err == nil || result != nil || !rows.closed {
+				t.Fatalf("expected failed operation with no result and a closed cursor, got %+v, %v, %t", result, err, rows.closed)
+			}
+		})
+	}
+}
+
 // TestReadProjection preserves sorted projections and rejects partial payloads.
 func TestReadProjection(t *testing.T) {
 	columns := []warehouses.Column{{Name: "name", Type: types.String()}}
-	row := func(id, name string) []any { return []any{id, true, true, 2, 1, 1, 0, name} }
+	row := func(id, name string) []any { return []any{id, true, true, 2, 1, 1, 0, false, name} }
 	first := row("00000000-0000-0000-0000-000000000002", "A")
 	second := row("00000000-0000-0000-0000-000000000001", "Z")
 	for _, test := range []struct {
@@ -135,11 +167,11 @@ func TestReadProjection(t *testing.T) {
 		{"UUID order", [][]any{second, first}, false, false},
 		{"wrong UUID order", [][]any{first, second}, false, true},
 		{"duplicate in sorted page", [][]any{first, first}, true, true},
-		{"required value missing", [][]any{{first[0], true, true, 2, 1, 1, 0, nil}}, true, true},
+		{"required value missing", [][]any{{first[0], true, true, 2, 1, 1, 0, false, nil}}, true, true},
 		{"oversized value", [][]any{row(first[0].(string), strings.Repeat("x", warehouses.MaxProfilePageBytes+1))}, true, true},
 		{"page byte budget", [][]any{row(first[0].(string), strings.Repeat("x", warehouses.MaxProfilePageBytes/2+1)),
 			row(second[0].(string), strings.Repeat("x", warehouses.MaxProfilePageBytes/2+1))}, true, true},
-		{"empty page", [][]any{{nil, nil, false, 2, 1, 1, 0, nil}}, true, false},
+		{"empty page", [][]any{{nil, nil, false, 2, 1, 1, 0, false, nil}}, true, false},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			request := warehouses.ProfileOutcomeRequest{Columns: columns, Limit: 2, MatchingOnly: true}
@@ -149,6 +181,10 @@ func TestReadProjection(t *testing.T) {
 			rows := &outcomeRows{rows: test.rows}
 			result, err := Read(t.Context(), rows, request)
 			if err != nil {
+				if (test.name == "oversized value" || test.name == "page byte budget") &&
+					!errors.Is(err, warehouses.ErrProfileResultTooLarge) {
+					t.Fatalf("expected identifiable size limit, got %v", err)
+				}
 				if !test.fail || result != nil {
 					t.Fatalf("expected fail=%t without partial result, got %+v, %v", test.fail, result, err)
 				}
@@ -160,7 +196,7 @@ func TestReadProjection(t *testing.T) {
 				if result.Match != 2 || result.NoMatch != 1 || result.Unknown != 1 {
 					t.Fatalf("expected totals 2/1/1, got %+v", result)
 				}
-				if len(result.Profiles) > 0 && result.Profiles[0].Values[0] != test.rows[0][7] {
+				if len(result.Profiles) > 0 && result.Profiles[0].Values[0] != test.rows[0][8] {
 					t.Fatalf("expected projected first value, got %+v", result.Profiles)
 				}
 			}

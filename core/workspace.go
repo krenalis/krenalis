@@ -1231,6 +1231,8 @@ type Profile struct {
 // satisfies the filter, if not nil, and in range [first,first+limit] with
 // first >= 0 and 0 < limit <= 1000 and only the given properties.
 //
+// This Record-only entry remains for Go callers. QueryProfiles admits Count.
+//
 // If properties is nil, all properties are returned; otherwise, properties
 // must contain at least one element.
 //

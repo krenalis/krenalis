@@ -6,12 +6,23 @@ package warehouses
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 )
 
 // MaxProfilePageBytes bounds variable-size values in a Unified profile page.
 const MaxProfilePageBytes = 1 << 20
+
+// MaxProfileProjectionColumns bounds a Unified page's flat projection,
+// including the metadata columns requested by core.
+const MaxProfileProjectionColumns = 90
+
+// ErrProfileProjectionTooWide reports a projection beyond the column budget.
+var ErrProfileProjectionTooWide = errors.New("profile projection exceeds the column limit")
+
+// ErrProfileResultTooLarge reports a page beyond its size budget.
+var ErrProfileResultTooLarge = errors.New("profile result exceeds the size limit")
 
 // Filter is a backend-independent filter prepared by core. It has no wire or
 // persistence format. A nil Root matches every profile in the requested

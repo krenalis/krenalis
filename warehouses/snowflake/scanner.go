@@ -174,7 +174,7 @@ func (sv scanValue) Scan(v any) error {
 			}
 			if size > sv.s.maxBytes-sv.s.readBytes {
 				sv.s.index = 0
-				return fmt.Errorf("profile payload exceeds transport limit")
+				return warehouses.ErrProfileResultTooLarge
 			}
 			sv.s.readBytes += size
 		}

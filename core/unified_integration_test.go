@@ -490,8 +490,9 @@ INSERT INTO unified_v.krenalis_events VALUES
 		}
 		failed, err := workspace.QueryProfiles(t.Context(), query)
 		if err != nil {
-			if _, ok := errors.AsType[*errors.UnavailableError](err); !ok {
-				t.Fatalf("expected unavailable payload operation, got %T: %v", err, err)
+			failure, ok := errors.AsType[*errors.UnprocessableError](err)
+			if !ok || failure.Code != ProfileResultTooLarge {
+				t.Fatalf("expected Unprocessable ProfileResultTooLarge, got %T: %v", err, err)
 			}
 		}
 		if err == nil || failed != nil {

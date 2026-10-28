@@ -423,12 +423,24 @@ retain their existing 422 codes. Valid-language capabilities not implemented
 return 422 `FilterCapabilityNotImplemented`; an unverified workspace backend
 returns 422 `UnifiedFilteringUnavailable`. Maintenance and execution failure use
 the existing MaintenanceMode/Unavailable responses; warehouse-supplied failure
-text is not exposed by this new API path. There is no Record fallback,
+text is not exposed by this new API path. Request-dependent page limits have
+their own 422 codes: `ProfileProjectionTooWide` for the physical column budget
+and `ProfileResultTooLarge` for SQL page, raw transport or HTTP encoding budgets.
+These responses advise reducing `properties` or `limit` rather than retrying an
+unavailable warehouse. Source-contract violations and execution/scan failures
+remain technical failures and are not reclassified as page-size limits.
+There is no Record fallback,
 error-to-UNKNOWN conversion or successful partial page. All Count attributes are
 encoded before the HTTP response is started.
 
-The physical projection is limited to 90 flattened columns and its SQL text-size
-budget to 1 MiB per page. The normalized cursor additionally bounds cumulative
+The physical projection is limited to 90 flattened columns, including the
+`_updated_at` metadata column: at most 89 user columns fit. An object may occupy
+multiple columns. Omitting `properties` still requests every profile property;
+if that projection exceeds the budget the request fails with
+`ProfileProjectionTooWide`, before warehouse execution. It never silently drops
+properties or switches to a Record query. Select a smaller explicit projection
+to query a wider schema. Its SQL text-size budget remains 1 MiB per page. The
+normalized cursor additionally bounds cumulative
 raw text/binary input to 8 MiB before variable-size decoding, allowing for
 physical encoding overhead; the handler bounds encoded attributes to 10 MiB.
 Exceeding a resource limit fails the operation. The legacy Record path is not

@@ -24,9 +24,13 @@ projection slots on the metadata row, not a fabricated profile.
 
 Projection is bounded to 90 physical columns and 1 MiB of SQL text-sized page
 values before transport. Dialects supply only the value-size operation; the
-common composer guards the projected fields and reports an over-budget page as
-a technical failure. The driver scanner additionally limits cumulative raw
-text/binary input to 8 MiB before normalizing JSON, arrays or maps. Existing
+common composer guards the projected fields and returns a separate boolean
+`payload_exceeded` diagnostic. `Read` maps it to
+`warehouses.ErrProfileResultTooLarge`, independently of source violations. The
+driver scanner additionally limits cumulative raw
+text/binary input to 8 MiB before normalizing JSON, arrays or maps, returning the
+same size-limit identity on overflow. Oversized projections return
+`warehouses.ErrProfileProjectionTooWide` before execution. Existing
 Record queries do not enable these new scanner limits.
 
 Semantic groups and leaves share the four-level/100-descendant contract.
@@ -53,9 +57,12 @@ A known-identity source with an attributed NULL identity in the period also
 fails. Source schema guarantees and the coherent view remain caller/binding
 preconditions; this is not a warehouse authenticity or general quality audit.
 
-The helper produces a bounded, fixed diagnostic field with the totals, rather
-than exceptions or error text dependent on a database dialect. A nonzero field
-causes `Read` to discard the result. The decoder preserves the old checks for
+The helper produces bounded diagnostic fields with the totals, rather than
+exceptions or error text dependent on a database dialect. A nonzero
+`source_failures` field causes `Read` to discard the result with a technical
+source-contract failure; it takes precedence over a concurrent size limit.
+`payload_exceeded` instead identifies a page-size limit. Both return a nil result.
+The decoder preserves the old checks for
 count type, sign and overflow, UUIDs, ordering, page limits, cancellation,
 `Rows.Err` and `Close`. Every failure returns a nil result.
 

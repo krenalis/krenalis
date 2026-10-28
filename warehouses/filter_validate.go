@@ -15,7 +15,8 @@ import (
 // ValidateProfileFilter checks the prepared Profiles subset and request. Core
 // still owns normative admissibility and evidence contracts. Expanded Record
 // expressions share a whole-filter budget because object presence may expand
-// a single public condition into many physical-column predicates.
+// a single public condition into many physical-column predicates. It returns
+// ErrProfileProjectionTooWide when the projection exceeds its column budget.
 func ValidateProfileFilter(filter Filter, request ProfileOutcomeRequest) error {
 	if request.Limit < 1 || request.Limit > 1000 || request.First < 0 || int64(request.First) > math.MaxInt32 {
 		return fmt.Errorf("warehouses: invalid profile outcome page")
@@ -24,8 +25,11 @@ func ValidateProfileFilter(filter Filter, request ProfileOutcomeRequest) error {
 	if err != nil {
 		return err
 	}
-	if len(request.Columns) > 90 || len(request.OrderBy) > 1 {
-		return fmt.Errorf("warehouses: profile projection or ordering exceeds limits")
+	if len(request.Columns) > MaxProfileProjectionColumns {
+		return ErrProfileProjectionTooWide
+	}
+	if len(request.OrderBy) > 1 {
+		return fmt.Errorf("warehouses: profile ordering exceeds limits")
 	}
 	for _, column := range request.Columns {
 		if !IsValidIdentifier(column.Name) || !column.Type.Valid() || column.Type.IsObject() {

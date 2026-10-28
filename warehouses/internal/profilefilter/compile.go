@@ -254,8 +254,7 @@ func Build(filter warehouses.Filter, request warehouses.ProfileOutcomeRequest, d
 	result := Statement{
 		SQL: "WITH " + strings.Join(c.ctes, ",\n") +
 			"\nSELECT b.profile_id,b.truth,COALESCE(b.is_profile,FALSE),a.m,a.f,a.u," +
-			"e.failures+CASE WHEN z.bytes>" + strconv.Itoa(warehouses.MaxProfilePageBytes) +
-			" THEN 1 ELSE 0 END" + fields +
+			"e.failures,(z.bytes>" + strconv.Itoa(warehouses.MaxProfilePageBytes) + ")" + fields +
 			" FROM totals a CROSS JOIN failures e CROSS JOIN page_size z LEFT JOIN outcome_page b ON TRUE" +
 			" ORDER BY " + finalOrder,
 		Arguments: c.arguments,
@@ -267,6 +266,7 @@ func Build(filter warehouses.Filter, request warehouses.ProfileOutcomeRequest, d
 			{Name: "no_match_count", Type: types.Int(64)},
 			{Name: "unknown_count", Type: types.Int(64)},
 			{Name: "source_failures", Type: types.Int(64)},
+			{Name: "payload_exceeded", Type: types.Boolean()},
 		},
 	}
 	for _, column := range request.Columns {

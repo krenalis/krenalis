@@ -14,6 +14,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/unified"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 // ProfileQuery selects a profile page. At optionally fixes the Count reference
@@ -54,6 +55,7 @@ type ProfileEvaluation struct {
 //     for schema errors.
 //   - FilterCapabilityNotImplemented for an unavailable language capability.
 //   - UnifiedFilteringUnavailable for an unverified workspace backend.
+//   - ProfileProjectionTooWide or ProfileResultTooLarge for page limits.
 //   - MaintenanceMode when warehouse access is in maintenance.
 func (this *Workspace) QueryProfiles(ctx context.Context, query ProfileQuery) (*ProfileQueryResult, error) {
 
@@ -149,6 +151,15 @@ func (this *Workspace) QueryProfiles(ctx context.Context, query ProfileQuery) (*
 		Properties: append([]string{"_updated_at"}, properties...), OrderBy: order, OrderDesc: query.OrderDesc,
 		First: query.First, Limit: query.Limit, MatchingOnly: true})
 	if err != nil {
+		if errors.Is(err, datastore.ErrProfileProjectionTooWide) {
+			return nil, errors.Unprocessable(ProfileProjectionTooWide,
+				"profile projection exceeds %d physical columns including metadata; request fewer properties",
+				warehouses.MaxProfileProjectionColumns)
+		}
+		if errors.Is(err, datastore.ErrProfileResultTooLarge) {
+			return nil, errors.Unprocessable(ProfileResultTooLarge,
+				"profile page exceeds the supported size; reduce limit or request fewer properties")
+		}
 		if errors.Is(err, datastore.ErrUnifiedUnavailable) {
 			return nil, errors.Unprocessable(UnifiedFilteringUnavailable, "Unified filtering is unavailable on this warehouse")
 		}

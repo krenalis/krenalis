@@ -5,6 +5,7 @@
 package snowflake
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -21,6 +22,11 @@ func TestProfileScanBudget(t *testing.T) {
 	} {
 		s := &scanner{columns: []warehouses.Column{{Name: "value", Type: typ}}, maxBytes: 16, dest: make([]any, 1)}
 		err := (scanValue{s}).Scan(strings.Repeat("x", 17))
+		if err != nil {
+			if !errors.Is(err, warehouses.ErrProfileResultTooLarge) {
+				t.Fatalf("expected size-limit error before %s normalization, got %v", typ, err)
+			}
+		}
 		if err == nil || s.dest[0] != nil {
 			t.Fatalf("expected bounded %s before normalization, got %v, %v", typ, s.dest[0], err)
 		}
@@ -30,6 +36,9 @@ func TestProfileScanBudget(t *testing.T) {
 		s := &scanner{columns: []warehouses.Column{{Name: "value", Type: typ}}, maxBytes: 1024, dest: make([]any, 1)}
 		err := (scanValue{s}).Scan("warehouse-controlled-value")
 		if err != nil {
+			if errors.Is(err, warehouses.ErrProfileResultTooLarge) {
+				t.Fatalf("expected invalid-value failure distinct from a size limit, got %v", err)
+			}
 			if strings.Contains(err.Error(), "warehouse-controlled-value") {
 				t.Fatalf("expected sanitized normalization error, got %v", err)
 			}
@@ -45,6 +54,9 @@ func TestProfileScanBudget(t *testing.T) {
 		for i := range 3 {
 			err := (scanValue{s}).Scan("four")
 			if err != nil {
+				if !errors.Is(err, warehouses.ErrProfileResultTooLarge) {
+					t.Fatalf("expected cumulative size-limit identity, got %v", err)
+				}
 				if limit == 0 || i != 2 {
 					t.Fatalf("expected only the bounded third value to fail, got %v", err)
 				}

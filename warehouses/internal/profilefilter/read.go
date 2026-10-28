@@ -14,7 +14,8 @@ import (
 )
 
 // Read consumes and closes the normalized outcome cursor. Any read, decode,
-// cancellation or Close failure discards the whole operation's result.
+// cancellation or Close failure discards the whole operation's result. It
+// returns warehouses.ErrProfileResultTooLarge when a page exceeds its budget.
 func Read(ctx context.Context, rows warehouses.Rows, request warehouses.ProfileOutcomeRequest) (result *warehouses.ProfileOutcomes, err error) {
 
 	if rows == nil {
@@ -39,7 +40,7 @@ func Read(ctx context.Context, rows warehouses.Rows, request warehouses.ProfileO
 		if seen > request.Limit {
 			return nil, fmt.Errorf("warehouses/internal/profilefilter: result row limit exceeded")
 		}
-		values := make([]any, 7+len(request.Columns))
+		values := make([]any, 8+len(request.Columns))
 		err := rows.Scan(values...)
 		if err != nil {
 			return nil, err
@@ -49,8 +50,14 @@ func Read(ctx context.Context, rows warehouses.Rows, request warehouses.ProfileO
 			return nil, fmt.Errorf("warehouses/internal/profilefilter: invalid source diagnostic")
 		}
 		if failures != 0 {
-			return nil, fmt.Errorf("warehouses/internal/profilefilter: occurrence source violates " +
-				"the prepared Count contract or profile payload exceeds its limit")
+			return nil, fmt.Errorf("warehouses/internal/profilefilter: occurrence source violates the prepared Count contract")
+		}
+		oversized, ok := values[7].(bool)
+		if !ok {
+			return nil, fmt.Errorf("warehouses/internal/profilefilter: invalid payload diagnostic")
+		}
+		if oversized {
+			return nil, warehouses.ErrProfileResultTooLarge
 		}
 		m, mok := values[3].(int)
 		f, fok := values[4].(int)
@@ -98,7 +105,7 @@ func Read(ctx context.Context, rows warehouses.Rows, request warehouses.ProfileO
 			if request.MatchingOnly && truth != warehouses.FilterMatch {
 				return nil, fmt.Errorf("warehouses/internal/profilefilter: unexpected non-matching profile")
 			}
-			for i, value := range values[7:] {
+			for i, value := range values[8:] {
 				if value == nil && !request.Columns[i].Nullable {
 					return nil, fmt.Errorf("warehouses/internal/profilefilter: missing required profile value")
 				}
@@ -111,11 +118,11 @@ func Read(ctx context.Context, rows warehouses.Rows, request warehouses.ProfileO
 					// Other normalized values are bounded by their scalar/schema type.
 				}
 				if bytesRead > warehouses.MaxProfilePageBytes {
-					return nil, fmt.Errorf("warehouses/internal/profilefilter: profile payload exceeds limit")
+					return nil, warehouses.ErrProfileResultTooLarge
 				}
 			}
 			result.Profiles = append(result.Profiles, warehouses.ProfileOutcome{ID: id, Truth: truth,
-				Values: values[7:]})
+				Values: values[8:]})
 			identities[id] = true
 			previous = id
 		}
