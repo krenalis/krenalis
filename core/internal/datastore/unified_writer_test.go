@@ -465,4 +465,174 @@ func TestUnifiedWritersPostgreSQL(t *testing.T) {
 		})
 	}
 
+	rome, err := time.LoadLocation("Europe/Rome")
+	if err != nil {
+		t.Fatalf("expected Rome timezone, got %v", err)
+	}
+	for _, season := range []struct {
+		name, operation string
+		at              time.Time
+	}{
+		{"spring", "fb43b3c4-dcc6-42ca-99e7-83679cbd5645", time.Date(2026, 3, 29, 12, 0, 0, 0, rome)},
+		{"autumn", "fb43b3c4-dcc6-42ca-99e7-83679cbd5646", time.Date(2026, 10, 25, 12, 0, 0, 0, rome)},
+	} {
+		t.Run("elapsed "+season.name, func(t *testing.T) {
+
+			// Use new recorded events and complete attribution before reading.
+			// The already published identities supply the same controlled population.
+			eventName := "Elapsed " + season.name
+			writer := store.NewEventWriter(unifiedWriterMetrics{})
+			defer func() {
+				if !writer.closed.Load() {
+					_ = writer.Close(ctx)
+				}
+			}()
+			for i, offset := range []time.Duration{
+				-48*time.Hour - time.Millisecond,
+				-48 * time.Hour,
+				-24*time.Hour - time.Millisecond,
+				-24 * time.Hour,
+				-time.Millisecond,
+				0,
+				time.Millisecond,
+				-400 * time.Microsecond,
+				-600 * time.Microsecond,
+				-24*time.Hour - 400*time.Microsecond,
+				-24*time.Hour - 600*time.Microsecond,
+				-24 * time.Hour,
+			} {
+				connection, id, properties := batchConnection, "batch/eur", json.Value(`{"currency":"EUR"}`)
+				if i == 11 {
+					connection, id, properties = eventConnection, "event/missing", json.Value(`{"currency":null}`)
+				}
+				stamp := season.at.Add(offset)
+				attributes := map[string]any{"connectionId": connection, "anonymousId": "anonymous/" + id,
+					"userId": id, "event": eventName, "messageId": fmt.Sprintf("elapsed/%s/%d", season.name, i),
+					"type": "track", "traits": json.Value(`{}`), "properties": properties,
+					"timestamp": stamp, "receivedAt": stamp, "sentAt": stamp, "originalTimestamp": stamp}
+				encoded, err := types.Marshal(attributes, schemas.Event)
+				if err != nil {
+					t.Fatalf("expected elapsed event encoding, got %v", err)
+				}
+				attributes, err = types.Decode[map[string]any](strings.NewReader(string(encoded)), schemas.Event)
+				if err != nil {
+					t.Fatalf("expected validated elapsed event, got %v", err)
+				}
+				event := streams.Event{Attributes: attributes, Destinations: []streams.Destination{{}}}
+				err = writer.Write(ctx, event, eventPipeline)
+				if err != nil {
+					t.Fatalf("expected queued elapsed event, got %v", err)
+				}
+			}
+			err = writer.Close(ctx)
+			if err != nil {
+				t.Fatalf("expected completed elapsed event writes, got %v", err)
+			}
+			err = store.ResolveIdentities(ctx, season.operation)
+			if err != nil {
+				t.Fatalf("expected completed elapsed event attribution, got %v", err)
+			}
+			published, _, err := store.Profiles(ctx,
+				Query{Properties: []string{"_kpid", "fixture"}, OrderBy: "fixture", Limit: 100})
+			if err != nil {
+				t.Fatalf("expected published elapsed profile listing, got %v", err)
+			}
+			if len(published) != len(names) {
+				t.Fatalf("expected %d published profiles, got %d", len(names), len(published))
+			}
+			profileNames := map[string]string{}
+			for _, profile := range published {
+				profileNames[profile["_kpid"].(string)] = profile["fixture"].(string)
+			}
+
+			for _, test := range []struct {
+				name                    string
+				period                  unified.ElapsedPeriod
+				value                   uint64
+				currency, combined      bool
+				known, uncertain, other unified.Truth
+			}{
+				{"lookback count", unified.ElapsedPeriod{Older: 24 * time.Hour}, 4, false, false, unified.Match, unified.NoMatch, unified.NoMatch},
+				{"lookback absence", unified.ElapsedPeriod{Older: 24 * time.Hour}, 0, true, false, unified.NoMatch, unified.Unknown, unified.Match},
+				{"ago band count", unified.ElapsedPeriod{Older: 48 * time.Hour, Newer: 24 * time.Hour}, 3, false, false, unified.Match, unified.NoMatch, unified.NoMatch},
+				{"ago band absence", unified.ElapsedPeriod{Older: 48 * time.Hour, Newer: 24 * time.Hour}, 0, true, false, unified.NoMatch, unified.Match, unified.Match},
+				{"microsecond start", unified.ElapsedPeriod{Older: 24*time.Hour - time.Microsecond}, 2, false, false, unified.Match, unified.NoMatch, unified.NoMatch},
+				{"microsecond end", unified.ElapsedPeriod{Older: 48 * time.Hour, Newer: 24*time.Hour - time.Microsecond}, 5, false, false, unified.Match, unified.NoMatch, unified.NoMatch},
+				{"microsecond empty", unified.ElapsedPeriod{Older: time.Microsecond}, 0, false, false, unified.Match, unified.Match, unified.Match},
+				{"one T for both periods", unified.ElapsedPeriod{Older: 24 * time.Hour}, 4, false, true, unified.Match, unified.NoMatch, unified.NoMatch},
+			} {
+				t.Run(test.name, func(t *testing.T) {
+
+					c := unified.Count{Scope: unified.Scope{Event: eventName,
+						Grain: "registered-message", Elapsed: &test.period},
+						Test: unified.CountTest{Operator: unified.Equal, Value: test.value}}
+					if test.currency {
+						c.Currency = &unified.NativeCurrency{Definition: "NativeCurrency", Revision: "1", Value: "EUR"}
+					}
+					root := unified.Rule{Count: &c}
+					if test.combined {
+						previous := unified.Count{Scope: unified.Scope{Event: eventName, Grain: "registered-message",
+							Elapsed: &unified.ElapsedPeriod{Older: 48 * time.Hour, Newer: 24 * time.Hour}},
+							Test: unified.CountTest{Operator: unified.Equal, Value: 3}}
+						root = unified.Rule{Operator: state.OpAnd, Children: []unified.Rule{root, {Count: &previous}}}
+					}
+					result, err := store.UnifiedProfiles(ctx, &root, bindings, season.at, unified.Page{Limit: 100})
+					if err != nil {
+						t.Fatalf("expected complete elapsed writer-backed query, got %v", err)
+					}
+					if len(result.Profiles) != len(profileNames) || !result.At.Equal(season.at) ||
+						result.At.Location() != time.UTC {
+						t.Fatalf("expected %d outcomes at %s in UTC, got %+v", len(profileNames), season.at, result)
+					}
+
+					var match, noMatch, unknown int64
+					for _, outcome := range result.Profiles {
+						name, ok := profileNames[outcome.ID]
+						if !ok {
+							t.Fatalf("expected published profile ID, got %q", outcome.ID)
+						}
+						expected := test.other
+						switch name {
+						case "batch/eur":
+							expected = test.known
+						case "event/missing":
+							expected = test.uncertain
+						default:
+							// All other profiles have no events in this named repertoire.
+						}
+						if outcome.Truth != expected {
+							t.Fatalf("expected %s truth %d, got %d", name, expected, outcome.Truth)
+						}
+						switch expected {
+						case unified.Match:
+							match++
+						case unified.NoMatch:
+							noMatch++
+						case unified.Unknown:
+							unknown++
+						default:
+							t.Fatalf("expected known truth, got %v", expected)
+						}
+					}
+					if result.Match != match || result.NoMatch != noMatch || result.Unknown != unknown {
+						t.Fatalf("expected elapsed totals %d/%d/%d, got %+v", match, noMatch, unknown, result)
+					}
+					if test.currency && test.period.Newer == 0 {
+						empty, err := store.UnifiedProfiles(ctx, &root, bindings, season.at.UTC(),
+							unified.Page{First: 100, Limit: 2, MatchingOnly: true})
+						if err != nil {
+							t.Fatalf("expected empty elapsed page with totals, got %v", err)
+						}
+						if len(empty.Profiles) != 0 || empty.Match != match || empty.NoMatch != noMatch ||
+							empty.Unknown != unknown || !empty.At.Equal(result.At) {
+							t.Fatalf("expected empty page and same ternary totals at T, got %+v", empty)
+						}
+					}
+
+				})
+			}
+
+		})
+	}
+
 }

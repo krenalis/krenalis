@@ -73,8 +73,15 @@ property-reference comparison or a governed current-profile dependency.
   contract, not a general policy for semantic identity uncertainty.
 - The raw event-name equality is a local nullable qualifier. An unknown name is
   retained as possible evidence; a certainly different name is excluded.
-- Explicit absolute `[Start,End)` periods with `Start < End <= T`. All bounds
-  are unambiguous instants, represented exactly to microseconds in UTC. Event
+- Explicit absolute `[Start,End)` periods with `Start < End <= T`, or elapsed
+  periods resolved by core against that same T. Internal `Scope.Elapsed` uses
+  `Older=d, Newer=0` for `ElapsedLookback(d)` and `Older=a, Newer=b` for
+  `ElapsedAgoBand(a,b)`: both produce `[T-Older,T-Newer)`, with `Older > Newer >= 0`.
+  Offsets are elapsed `time.Duration` values, not calendar days. Nanosecond
+  precision and bounds outside the existing timestamp range are unsupported;
+  no rounding or clipping is applied. This internal representation does not
+  define public or persisted constructor payloads. The prepared warehouse
+  filter still receives only absolute UTC bounds, exact to microseconds. Event
   timestamps remain the values actually stored, including the current schema's
   millisecond precision; they are not reconstructed from the original input.
 - Prepared Record qualification on Event properties, with the existing 26
@@ -116,8 +123,8 @@ rejected with `*UnsupportedError` before SQL execution. They are not declared
 invalid under 1.2 and do not yield UNKNOWN.
 
 The following also remain outside this vertical: governed FullRelevantHistory
-and AvailableHistory bindings, future/unmatured windows (06 §17.4), elapsed and
-calendar constructors, personal anchors, unknown timestamps/attribution/grain,
+and AvailableHistory bindings, future/unmatured windows (06 §17.4), calendar
+constructors, personal anchors, unknown timestamps/attribution/grain,
 business deduplication, source unions, property-reference terminals, other
 governed predicates, owned-member traversal, E/K/P/T, sums and shares. Count
 literal bounds above signed 64-bit range are unsupported. Structurally invalid
@@ -248,9 +255,22 @@ distinct on profiles and events; an empty flattened object has no present
 descendant, as in the existing Profiles layout. Separate event queries require
 one Purchase per event fixture, distinguish root `properties` JSON null from
 missing, and compare the exact JSON integer. This fixture exercises `user_id`
-attribution only. Anonymous-ID attribution and writer timestamp boundaries,
-precision and timezone behavior are not covered. It has no concurrent writers
+attribution only; anonymous-ID attribution remains untested. Additional elapsed
+queries use Rome instants around both DST changes, fresh events, drained writes
+and completed attribution before reading. They exercise both half-open borders,
+exclusion of events at/after T, real timestamp(3) rounding from submillisecond
+input, and microsecond start/end parameters. They also check governed UNKNOWN,
+profiles without matching events, one T across composed periods, UTC result T
+and empty membership pages with totals. The fixture has no concurrent writes
 or Identity Resolution; it does not establish a concurrent read guarantee.
+
+`TestUnifiedPrepareElapsedPeriods` checks backend-independent UTC bounds through
+the real Record binder, including spring/autumn DST, microsecond windows,
+the largest microsecond `time.Duration`, dates outside the Unix-nanosecond range,
+and unchanged input. `TestValidateElapsedPeriod` distinguishes invalid widths,
+offset order and conflicting period forms from unsupported precision/ranges.
+The internal Workspace fixture also executes both relative forms through the
+service with existing public Record qualification and the same ternary outcomes.
 
 `TestUnifiedPreparedBudget` builds a semantically valid 99-condition tree on a
 170-field object. Its deterministic physical-budget error is returned before

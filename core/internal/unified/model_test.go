@@ -83,6 +83,54 @@ func TestValidate(t *testing.T) {
 	}
 }
 
+// TestValidateElapsedPeriod distinguishes invalid periods from unsupported
+// precision and timestamp ranges before any binding or execution.
+func TestValidateElapsedPeriod(t *testing.T) {
+
+	for _, test := range []struct {
+		name        string
+		change      func(*Scope, *time.Time)
+		unsupported bool
+	}{
+		{"zero width", func(s *Scope, at *time.Time) { s.Elapsed.Older = 0 }, false},
+		{"negative width", func(s *Scope, at *time.Time) { s.Elapsed.Older = -time.Hour }, false},
+		{"minimum duration", func(s *Scope, at *time.Time) { s.Elapsed.Older = -1 << 63 }, false},
+		{"negative newer", func(s *Scope, at *time.Time) { s.Elapsed.Newer = -time.Microsecond }, false},
+		{"equal offsets", func(s *Scope, at *time.Time) { s.Elapsed.Newer = s.Elapsed.Older }, false},
+		{"reversed offsets", func(s *Scope, at *time.Time) { s.Elapsed.Newer = 48 * time.Hour }, false},
+		{"explicit start", func(s *Scope, at *time.Time) { s.Start = at.Add(-time.Hour) }, false},
+		{"explicit end", func(s *Scope, at *time.Time) { s.End = *at }, false},
+		{"history", func(s *Scope, at *time.Time) { s.FullHistory = true }, false},
+		{"older nanoseconds", func(s *Scope, at *time.Time) { s.Elapsed.Older += time.Nanosecond }, true},
+		{"newer nanoseconds", func(s *Scope, at *time.Time) { s.Elapsed.Newer = time.Nanosecond }, true},
+		{"T nanoseconds", func(s *Scope, at *time.Time) { *at = at.Add(time.Nanosecond) }, true},
+		{"before supported dates", func(s *Scope, at *time.Time) {
+			*at = time.Date(1, 1, 2, 0, 0, 0, 0, time.UTC)
+			s.Elapsed.Older = 48 * time.Hour
+		}, true},
+		{"zero timestamp", func(s *Scope, at *time.Time) {
+			*at = time.Date(1, 1, 2, 0, 0, 0, 0, time.UTC)
+		}, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+			scope := Scope{Event: "Purchase", Grain: "registered-message",
+				Elapsed: &ElapsedPeriod{Older: 24 * time.Hour}}
+			test.change(&scope, &at)
+			err := Validate(&Rule{Count: &Count{Scope: scope}}, at, Page{Limit: 1})
+			if err != nil {
+				_, unsupported := errors.AsType[*UnsupportedError](err)
+				if unsupported != test.unsupported {
+					t.Fatalf("expected unsupported=%v, got %v", test.unsupported, err)
+				}
+				return
+			}
+			t.Fatal("expected rejected elapsed period, got success")
+		})
+	}
+
+}
+
 // TestValidateProfileRecord checks the leaf union and mixed structural limits.
 func TestValidateProfileRecord(t *testing.T) {
 

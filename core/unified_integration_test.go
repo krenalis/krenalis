@@ -167,6 +167,32 @@ INSERT INTO unified_v.krenalis_events VALUES
 		}
 	}
 
+	for _, period := range []unified.ElapsedPeriod{
+		{Older: 31 * 24 * time.Hour},
+		{Older: 31 * 24 * time.Hour, Newer: 14 * 24 * time.Hour},
+	} {
+		t.Run(fmt.Sprintf("elapsed %s to %s", period.Older, period.Newer), func(t *testing.T) {
+			c := *count.Count
+			c.Scope = unified.Scope{Event: "Purchase", Grain: "registered-message", Elapsed: &period}
+			root := unifiedRule{Count: &c}
+			result, err := workspace.unifiedProfiles(t.Context(), unifiedQuery{
+				Root: &root, At: at, Page: unified.Page{Limit: 10},
+			})
+			if err != nil {
+				t.Fatalf("expected elapsed service/datastore/warehouse query, got %v", err)
+			}
+			if len(result.Profiles) != len(want) || result.Match != 2 || result.NoMatch != 1 || result.Unknown != 1 ||
+				!result.At.Equal(at) {
+				t.Fatalf("expected four elapsed outcomes with totals 2/1/1 at %s, got %+v", at, result)
+			}
+			for i, profile := range result.Profiles {
+				if profile.Truth != want[i] {
+					t.Fatalf("expected elapsed profile %d truth %d, got %+v", i, want[i], profile)
+				}
+			}
+		})
+	}
+
 	profile := &Filter{Operator: OpAnd, Rules: []FilterRule{
 		&FilterCondition{Property: "country", Operator: OpIs, Values: filterValues("IT")},
 	}}

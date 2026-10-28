@@ -75,6 +75,15 @@ const (
 	IndependentOccurrenceValues EvidenceModel = iota + 1
 )
 
+// ElapsedPeriod is the internal period [T-Older,T-Newer). Newer zero represents
+// a lookback; a positive Newer excludes that recent duration. Both offsets are
+// elapsed durations, independent of calendar days and daylight-saving changes.
+// It has no public or persisted representation.
+type ElapsedPeriod struct {
+	Older time.Duration
+	Newer time.Duration
+}
+
 // NativeCurrency binds a resolved occurrence-local currency definition.
 // Missing, JSON null and non-text values are unknown business currency.
 // The definition must guarantee independent unknown values per occurrence.
@@ -116,8 +125,9 @@ type Rule struct {
 }
 
 // Scope qualifies recorded events by their raw name at message_id grain.
-// Start/End define a mature [Start,End) period. FullHistory is recognized but
-// requires a governed history binding not implemented by this first vertical.
+// Start/End define a mature [Start,End) period, alternatively Elapsed resolves
+// against the operation's single T. FullHistory is recognized but requires a
+// governed history binding not implemented by this first vertical.
 // All event timestamps are known and every event has a determined message_id
 // and profile attribution in the coherent view supplied to this operation.
 type Scope struct {
@@ -125,7 +135,52 @@ type Scope struct {
 	Grain       string
 	Start       time.Time
 	End         time.Time
+	Elapsed     *ElapsedPeriod
 	FullHistory bool
+}
+
+// bounds validates the period and resolves elapsed offsets against validated T.
+func (s Scope) bounds(at time.Time) (time.Time, time.Time, error) {
+
+	start, end := s.Start, s.End
+	if s.Elapsed != nil {
+		if s.FullHistory || !start.IsZero() || !end.IsZero() {
+			return time.Time{}, time.Time{}, fmt.Errorf("elapsed period cannot have explicit bounds or FullHistory")
+		}
+		p := s.Elapsed
+		if p.Older <= 0 || p.Newer < 0 || p.Newer >= p.Older {
+			return time.Time{}, time.Time{}, fmt.Errorf("invalid elapsed observation period")
+		}
+		if p.Older%time.Microsecond != 0 || p.Newer%time.Microsecond != 0 {
+			return time.Time{}, time.Time{}, &UnsupportedError{
+				Capability: "elapsed duration precision greater than one microsecond"}
+		}
+		start, end = at.Add(-p.Older), at.Add(-p.Newer)
+	} else if s.FullHistory {
+		if !start.IsZero() || !end.IsZero() {
+			return time.Time{}, time.Time{}, fmt.Errorf("FullHistory cannot have explicit bounds")
+		}
+		return time.Time{}, time.Time{}, &UnsupportedError{Capability: "governed FullRelevantHistory binding"}
+	}
+
+	for _, bound := range []time.Time{start, end} {
+		err := validateTime(bound)
+		if err != nil {
+			if s.Elapsed != nil {
+				return time.Time{}, time.Time{}, &UnsupportedError{
+					Capability: "elapsed period outside supported timestamp range"}
+			}
+			return time.Time{}, time.Time{}, err
+		}
+	}
+	if !start.Before(end) {
+		return time.Time{}, time.Time{}, fmt.Errorf("invalid absolute observation period")
+	}
+	if end.After(at) {
+		return time.Time{}, time.Time{}, &UnsupportedError{Capability: "unmatured event windows"}
+	}
+
+	return start.UTC(), end.UTC(), nil
 }
 
 // SharedBoolean identifies a single governed fact used by multiple occurrence
@@ -218,24 +273,9 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 		!utf8.ValidString(c.Scope.Event) || strings.ContainsRune(c.Scope.Event, 0) {
 		return fmt.Errorf("invalid recorded event selector")
 	}
-	if c.Scope.FullHistory {
-		if !c.Scope.Start.IsZero() || !c.Scope.End.IsZero() {
-			return fmt.Errorf("FullHistory cannot have explicit bounds")
-		}
-		return &UnsupportedError{Capability: "governed FullRelevantHistory binding"}
-	} else {
-		for _, bound := range []time.Time{c.Scope.Start, c.Scope.End} {
-			err := validateTime(bound)
-			if err != nil {
-				return err
-			}
-		}
-		if !c.Scope.Start.Before(c.Scope.End) {
-			return fmt.Errorf("invalid absolute observation period")
-		}
-		if c.Scope.End.After(at) {
-			return &UnsupportedError{Capability: "unmatured event windows"}
-		}
+	_, _, err := c.Scope.bounds(at)
+	if err != nil {
+		return err
 	}
 	if c.Minimum > math.MaxInt64 || c.Test.Value > math.MaxInt64 || c.Test.Upper > math.MaxInt64 {
 		return &UnsupportedError{Capability: "Count bounds beyond signed 64-bit range"}

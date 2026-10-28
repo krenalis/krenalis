@@ -6,6 +6,7 @@ package datastore
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"strings"
 	"testing"
@@ -116,6 +117,61 @@ func TestUnifiedPrepare(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected unsupported evidence model, got success")
 	}
+}
+
+// TestUnifiedPrepareElapsedPeriods resolves offsets before the warehouse
+// boundary without mutating the scope or relying on a dialect or Unix nanos.
+func TestUnifiedPrepareElapsedPeriods(t *testing.T) {
+
+	rome, err := time.LoadLocation("Europe/Rome")
+	if err != nil {
+		t.Fatalf("expected Rome calendar, got %v", err)
+	}
+	for _, test := range []struct {
+		name       string
+		at         time.Time
+		period     unified.ElapsedPeriod
+		start, end time.Time
+	}{
+		{"spring lookback", time.Date(2026, 3, 29, 12, 0, 0, 0, rome), unified.ElapsedPeriod{Older: 24 * time.Hour}, time.Date(2026, 3, 28, 10, 0, 0, 0, time.UTC), time.Date(2026, 3, 29, 10, 0, 0, 0, time.UTC)},
+		{"spring ago band", time.Date(2026, 3, 29, 12, 0, 0, 0, rome), unified.ElapsedPeriod{Older: 48 * time.Hour, Newer: 24 * time.Hour}, time.Date(2026, 3, 27, 10, 0, 0, 0, time.UTC), time.Date(2026, 3, 28, 10, 0, 0, 0, time.UTC)},
+		{"autumn lookback", time.Date(2026, 10, 25, 12, 0, 0, 0, rome), unified.ElapsedPeriod{Older: 24 * time.Hour}, time.Date(2026, 10, 24, 11, 0, 0, 0, time.UTC), time.Date(2026, 10, 25, 11, 0, 0, 0, time.UTC)},
+		{"microsecond lookback", time.Date(2026, 2, 1, 0, 0, 0, 123456000, time.UTC), unified.ElapsedPeriod{Older: time.Microsecond}, time.Date(2026, 2, 1, 0, 0, 0, 123455000, time.UTC), time.Date(2026, 2, 1, 0, 0, 0, 123456000, time.UTC)},
+		{"microsecond ago band", time.Date(2026, 2, 1, 0, 0, 0, 123456000, time.UTC), unified.ElapsedPeriod{Older: 3 * time.Microsecond, Newer: time.Microsecond}, time.Date(2026, 2, 1, 0, 0, 0, 123453000, time.UTC), time.Date(2026, 2, 1, 0, 0, 0, 123455000, time.UTC)},
+		{"maximum microsecond duration", time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC), unified.ElapsedPeriod{Older: time.Duration(math.MaxInt64/1000) * time.Microsecond}, time.Date(1677, 9, 21, 0, 12, 43, 145225000, time.UTC), time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)},
+		{"far future", time.Date(9999, 12, 31, 23, 59, 59, 999999000, time.UTC), unified.ElapsedPeriod{Older: time.Microsecond}, time.Date(9999, 12, 31, 23, 59, 59, 999998000, time.UTC), time.Date(9999, 12, 31, 23, 59, 59, 999999000, time.UTC)},
+		{"far past", time.Date(1, 1, 2, 0, 0, 0, 0, time.UTC), unified.ElapsedPeriod{Older: time.Microsecond}, time.Date(1, 1, 1, 23, 59, 59, 999999000, time.UTC), time.Date(1, 1, 2, 0, 0, 0, 0, time.UTC)},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+
+			scope := unified.Scope{Event: "Purchase", Grain: "registered-message", Elapsed: &test.period}
+			rule := unified.Rule{Operator: state.OpAnd, Children: []unified.Rule{{Count: &unified.Count{Scope: scope}}}}
+			source := unified.SourceBinding{
+				Occurrences: warehouses.OccurrenceSource{Table: "krenalis_events",
+					Profile:  eventColumnByProperty["kpid"],
+					Identity: eventColumnByProperty["messageId"], Timestamp: eventColumnByProperty["timestamp"]},
+				Record: func(where *state.Where) (warehouses.Expr, error) {
+					return convertWhere(where, eventColumnByProperty)
+				},
+			}
+			before := test.period
+			filter, err := unified.Prepare(&rule, unified.Bindings{}, test.at, source)
+			if err != nil {
+				t.Fatalf("expected resolved elapsed period, got %v", err)
+			}
+			count := filter.Root.(*warehouses.FilterGroup).Children[0].(*warehouses.IndependentOccurrenceCount)
+			if !count.Start.Equal(test.start) || !count.End.Equal(test.end) ||
+				count.Start.Location() != time.UTC || count.End.Location() != time.UTC {
+				t.Fatalf("expected UTC period [%s,%s), got [%s,%s)", test.start, test.end, count.Start, count.End)
+			}
+			if *rule.Children[0].Count.Scope.Elapsed != before ||
+				!rule.Children[0].Count.Scope.Start.IsZero() || !rule.Children[0].Count.Scope.End.IsZero() {
+				t.Fatalf("expected unchanged relative input %+v, got %+v", before, rule.Children[0].Count.Scope)
+			}
+
+		})
+	}
+
 }
 
 // TestUnifiedPrepareProfileRecord binds without an occurrence source.

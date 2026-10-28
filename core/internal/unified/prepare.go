@@ -51,7 +51,7 @@ func Prepare(root *Rule, bindings Bindings, at time.Time, source SourceBinding) 
 	if root == nil {
 		return warehouses.Filter{}, nil
 	}
-	node, err := prepareRule(*root, bindings, source)
+	node, err := prepareRule(*root, bindings, at, source)
 	if err != nil {
 		return warehouses.Filter{}, err
 	}
@@ -97,7 +97,7 @@ func acceptedCountRanges(test CountTest, minimum uint64) []warehouses.CountRange
 	return accepted
 }
 
-func prepareRule(rule Rule, bindings Bindings, source SourceBinding) (warehouses.FilterCondition, error) {
+func prepareRule(rule Rule, bindings Bindings, at time.Time, source SourceBinding) (warehouses.FilterCondition, error) {
 	if rule.Record != nil {
 		if source.ProfileRecord == nil {
 			return nil, fmt.Errorf("core/internal/unified: missing profile Record binder")
@@ -125,7 +125,7 @@ func prepareRule(rule Rule, bindings Bindings, source SourceBinding) (warehouses
 		}
 		group := &warehouses.FilterGroup{Operator: operator, Children: make([]warehouses.FilterCondition, len(rule.Children))}
 		for i, child := range rule.Children {
-			prepared, err := prepareRule(child, bindings, source)
+			prepared, err := prepareRule(child, bindings, at, source)
 			if err != nil {
 				return nil, err
 			}
@@ -175,8 +175,12 @@ func prepareRule(rule Rule, bindings Bindings, source SourceBinding) (warehouses
 		qualifiers = append(qualifiers, &warehouses.KnownTextEqual{Column: source.Properties,
 			Keys: append([]string(nil), binding.Path[1:]...), Value: c.Currency.Value})
 	}
+	start, end, err := c.Scope.bounds(at)
+	if err != nil {
+		return nil, err
+	}
 	return &warehouses.IndependentOccurrenceCount{
-		Source: source.Occurrences, Start: c.Scope.Start.UTC(), End: c.Scope.End.UTC(),
+		Source: source.Occurrences, Start: start, End: end,
 		Qualification: &warehouses.QualificationGroup{Operator: warehouses.OpAnd, Children: qualifiers},
 		Accept:        acceptedCountRanges(c.Test, c.Minimum),
 	}, nil
