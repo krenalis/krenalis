@@ -9,15 +9,15 @@ now an internal detail of the warehouse implementation.
 
 ## Executable path
 
-`Workspace.unifiedProfiles` prepares its internal recursive request using
-`prepareFilter`: profile predicates use the workspace Profile schema; Count
-qualification uses the Event schema. Every prepared profile condition becomes
-one Record leaf in the common canonical AND/OR tree. Profile inputs accept an
-existing `FilterCondition` or an explicit `Filter` group. A bare condition becomes
-a sibling of Count without an extra group: the temporary AND wrapper used by
-Record validation is not part of the input. Explicit groups, including
-singletons, remain visible to the four-level/100-descendant validation. The
-request is a Go service input, not a second public filter or persistence format.
+`Workspace.unifiedProfiles` now receives one `core.Filter`, decoded using the
+public Record/Count JSON contract below. The temporary private `unifiedRule` and
+`unifiedCount` input trees have been removed. Profile predicates reuse
+`prepareFilter` with the workspace Profile schema; Count qualification uses the
+Event schema. Every prepared profile condition becomes one Record leaf in the
+common canonical AND/OR tree. The temporary AND wrapper used to validate a
+single Record condition does not enter that tree. Explicit groups, including
+singletons, retain their four-level/100-descendant budget. T and pagination
+remain an internal operation request, separate from the filter document.
 `datastore.Store.UnifiedProfiles` fixes the evaluation input T, validates the
 supported canonical shape and calls `unified.Prepare` with resolved source
 metadata and the existing `convertWhere` Record binders for the two subjects.
@@ -33,8 +33,9 @@ with their existing Record renderer, pool and normalized scanner. SQL, parameter
 positions, CTEs and the metadata-row protocol stay below the warehouse boundary.
 Adding a backend does not require backend-specific branches in core.
 
-`RowQuery`, `Expr`, `core.Filter`, `FilterCondition`, `state.Where`, their JSON
-representations and equality are unchanged. The prepared filter has no public
+`RowQuery`, `Expr`, `FilterCondition`, `state.Where`, the Record JSON shapes
+and existing equality remain unchanged. `core.FilterRule` additionally accepts
+`FilterCountCondition`; the shared root `Filter` shape is preserved. The prepared filter has no public
 wire or persistence format, relational IR, optimizer or generic expression
 language. `RecordFilter` reads only the profile population row;
 `RecordQualification` reads only an occurrence row. Neither can express a
@@ -176,44 +177,87 @@ asynchronous ingestion/KPID attribution and destination matching remain separate
 deferred work. Fixture views are published before the tests and not concurrently
 modified. Neither T nor UUID ordering freezes a view across later requests.
 
-## Public/persisted format still to decide
+## Public Count contract and persistence boundary
 
-The following existing public Record input retains its current round-trip:
+`FilterCountCondition` adds a `count` subject alongside the existing
+`property` conditions and `rules` groups. Each rule has exactly one of these
+three discriminators. A filter root remains a group. For example, profiles in
+Italy with no recorded Purchase in the previous 30 elapsed days:
 
 ```json
-{"operator":"and","rules":[{"property":"properties.currency","operator":"is","values":["EUR"]}]}
+{
+  "operator": "and",
+  "rules": [
+    {"property": "country", "operator": "is", "values": ["IT"]},
+    {
+      "count": {
+        "source": {"kind": "recordedEvents", "name": "Purchase", "grain": "registered-message"},
+        "period": {"kind": "elapsedLookback", "duration": {"value": 30, "unit": "day"}}
+      },
+      "operator": "is",
+      "values": [0]
+    }
+  ]
+}
 ```
 
-Within `core`, a programmatic request can reuse it without defining a new wire tag:
+- Source kind is `recordedEvents`; `name` is a raw event name. `grain` is
+  mandatory: this increment executes only `registered-message`. No source
+  ontology or governed currency definition is inferred from raw names/paths.
+- `operator` admits exactly `is`, `is not`, `is less than`,
+  `is less than or equal to`, `is greater than`, `is greater than or equal to`,
+  and `is between`. There are no Count membership, data-state or generic NOT
+  operators. `is between` is inclusive and takes two values; the others take one.
+- `values` contains nonnegative base-10 integer JSON numbers, following the
+  Record Int spelling: no strings, decimals or exponent notation. Negative zero
+  denotes zero. Numbers above 2^53 retain their exact digits. Out-of-range
+  natural literals are unsupported execution capabilities, not a permanent
+  int64 definition of the language; no conversion through Float is used.
+- Optional `count.minimum` is a positive integer sample guard, independent of
+  the comparison values. Omission means no extra sample minimum.
+- Optional `count.where` reuses Record predicates against the Event schema.
+  Its budget is two group levels and 100 descendants, independent of the main
+  filter's four levels and 100 descendants. Count inside this body is rejected
+  during decoding as well as programmatic Record preparation.
+- `period.kind` is `absoluteHalfOpen` with `start`/`end` RFC 3339 instants,
+  `elapsedLookback` with `duration`, or `elapsedAgoBand` with `older`/`newer`.
+  Fields of another variant and null temporal fields are rejected. A duration
+  contains an integer `value` and a fixed `unit`: `microsecond`, `millisecond`,
+  `second`, `minute`, `hour`, `day` (24 hours), or `week` (7 days).
+  Values are multiplied with checked integer arithmetic; months/years are not
+  elapsed units. Relative periods retain their kind, offsets and units on the
+  wire instead of becoming bounds resolved against one T.
 
-```go
-result, err := workspace.unifiedProfiles(ctx, unifiedQuery{
-    Root: &unifiedRule{Operator: OpAnd, Rules: []unifiedRule{
-        {Profile: profileCondition},
-        {Count: &unifiedCount{Scope: scope, Where: recordFilter,
-            Test: unified.CountTest{Operator: unified.Equal, Value: 0}}},
-    }},
-    At: at, Page: unified.Page{Limit: 50, MatchingOnly: true},
-})
-```
+Encoding/decoding is distinct from semantic validation, as for existing Record
+conditions. Unknown/duplicate members and ambiguous shapes are rejected;
+operator/type/cardinality/source/period checks occur during preparation and
+canonical admission. The numeric limits of the executable backend remain
+capability errors. An older decoder rejects the unknown `count` member.
 
-`profileCondition` uses the existing public `FilterCondition` payload;
-`recordFilter` uses the existing Record filter group. Both are prepared against
-their respective schemas inside the service. That JSON does not express the
-Count, mixed tree, period or result request. A concrete unresolved
-exposure is how to embed this Count-of-Purchase, with that exact Record predicate and Count=0, as a new
-`core.FilterRule`, and how to load/save it without changing existing
-`FilterCondition` payloads or `state.Where.Equal`. No Count JSON tag, marshaler,
-database format or migration is chosen here. `TestPrepareUnifiedRecordCount`
-checks public JSON encode/decode and the prepared Record equality independently
-of that decision. Internal Rule/Bindings structs are not a serialization contract.
+The existing Record-only preparer explicitly rejects Count. This increment
+connects the public document to the internal Unified service; it does not
+activate Unified in the existing Profiles HTTP handler, Admin editor or
+export pipeline. No new public result/UNKNOWN diagnostic contract is implied.
+
+The application currently persists pipeline Record filters as `state.Where`,
+using the existing schema-aware codec and equality. That format, its database
+rows, notifications and reload/change detection are unchanged. There is no
+saved Profiles segment store in the current schema. This increment provides
+the public document's encode/decode round-trip, not a new application storage
+format or migration for mixed filters. Such persistence must preserve explicit
+grain, relative periods, applicable future meaning revisions and public grouping;
+it must not save resolved T bounds or `warehouses.Filter`. No format/version for
+that internal storage is chosen here. The canonical/internal `Rule` and
+`Bindings` remain execution inputs rather than serialization contracts.
 
 ## Verification and activation
 
-`TestUnifiedWorkspacePostgreSQL` decodes existing public Record JSON and
+`TestUnifiedWorkspacePostgreSQL` decodes the new public Count document and
 executes the complete service/datastore/warehouse path against a disposable
-application database and warehouse schema, for Count, profile Record and mixed
-AND/OR. Core tests preserve Record round-trip/equality and exercise the combined
+application database and warehouse schema, for all seven Count comparisons,
+sample minimum, absolute/lookback/ago-band periods, profile Record and mixed
+AND/OR. The `TestFilterCount*` tests check strict syntax, exact round-trips,
+Record-context rejection and independent main/occurrence budgets. Core tests preserve Record round-trip/equality and exercise the combined
 semantic depth/node boundaries after expanding the Record tree, including
 Record/Count siblings at four levels and 100 descendants. Tests for a complete
 Profile filter retain the extra explicit group; their 98-leaf boundary is not

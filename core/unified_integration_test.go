@@ -140,19 +140,34 @@ INSERT INTO unified_v.krenalis_events VALUES
 		t.Fatal("expected workspace state, got none")
 	}
 	workspace := &Workspace{core: &Core{}, store: store, workspace: ws}
-	var filter Filter
-	err = json.Unmarshal([]byte(`{"operator":"and","rules":[`+
-		`{"property":"properties.currency","operator":"is","values":["EUR"]}]}`), &filter)
+	var document Filter
+	err = json.Unmarshal([]byte(`{"operator":"and","rules":[{"count":{`+
+		`"source":{"kind":"recordedEvents","name":"Purchase","grain":"registered-message"},`+
+		`"period":{"kind":"elapsedLookback","duration":{"value":31,"unit":"day"}},`+
+		`"where":{"operator":"and","rules":[`+
+		`{"property":"properties.currency","operator":"is","values":["EUR"]}]}},`+
+		`"operator":"is","values":[0]}]}`), &document)
 	if err != nil {
-		t.Fatalf("expected existing public Record filter decoding, got %v", err)
+		t.Fatalf("expected public Count document decoding, got %v", err)
+	}
+	encodedDocument, err := json.Marshal(&document)
+	if err != nil {
+		t.Fatalf("expected public Count document encoding, got %v", err)
+	}
+	var storedDocument []byte
+	err = database.QueryRow(t.Context(), "SELECT $1::jsonb", string(encodedDocument)).Scan(&storedDocument)
+	if err != nil {
+		t.Fatalf("expected exact JSONB document round-trip, got %v", err)
+	}
+	err = json.Unmarshal(storedDocument, &document)
+	if err != nil {
+		t.Fatalf("expected reloaded public Count document, got %v", err)
 	}
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
-	count := unifiedRule{Count: &unifiedCount{
-		Scope: unified.Scope{Event: "Purchase", Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at},
-		Where: &filter, Test: unified.CountTest{Operator: unified.Equal},
-	}}
+	count := document.Rules[0].(*FilterCountCondition)
+	countRoot := &document
 	result, err := workspace.unifiedProfiles(t.Context(), unifiedQuery{
-		Root: &count, At: at, Page: unified.Page{Limit: 10},
+		Root: countRoot, At: at, Page: unified.Page{Limit: 10},
 	})
 	if err != nil {
 		t.Fatalf("expected complete service/datastore/warehouse query, got %v", err)
@@ -167,14 +182,17 @@ INSERT INTO unified_v.krenalis_events VALUES
 		}
 	}
 
-	for _, period := range []unified.ElapsedPeriod{
-		{Older: 31 * 24 * time.Hour},
-		{Older: 31 * 24 * time.Hour, Newer: 14 * 24 * time.Hour},
+	start := at.AddDate(0, -1, 0)
+	for _, period := range []FilterPeriod{
+		{Kind: "absoluteHalfOpen", Start: &start, End: &at},
+		{Kind: "elapsedLookback", Duration: &FilterDuration{Value: json.Value(`31`), Unit: "day"}},
+		{Kind: "elapsedAgoBand", Older: &FilterDuration{Value: json.Value(`31`), Unit: "day"},
+			Newer: &FilterDuration{Value: json.Value(`14`), Unit: "day"}},
 	} {
-		t.Run(fmt.Sprintf("elapsed %s to %s", period.Older, period.Newer), func(t *testing.T) {
-			c := *count.Count
-			c.Scope = unified.Scope{Event: "Purchase", Grain: "registered-message", Elapsed: &period}
-			root := unifiedRule{Count: &c}
+		t.Run(period.Kind, func(t *testing.T) {
+			c := *count
+			c.Count.Period = period
+			root := Filter{Operator: OpAnd, Rules: []FilterRule{&c}}
 			result, err := workspace.unifiedProfiles(t.Context(), unifiedQuery{
 				Root: &root, At: at, Page: unified.Page{Limit: 10},
 			})
@@ -193,6 +211,51 @@ INSERT INTO unified_v.krenalis_events VALUES
 		})
 	}
 
+	for _, test := range []struct {
+		op      FilterOperator
+		values  []json.Value
+		minimum json.Value
+		want    []unified.Truth
+	}{
+		{OpIs, filterValues(0), nil, []unified.Truth{unified.Match, unified.NoMatch, unified.Match, unified.Unknown}},
+		{OpIsNot, filterValues(0), nil, []unified.Truth{unified.NoMatch, unified.Match, unified.NoMatch, unified.Unknown}},
+		{OpIsLessThan, filterValues(1), nil, []unified.Truth{unified.Match, unified.NoMatch, unified.Match, unified.Unknown}},
+		{OpIsLessThanOrEqualTo, filterValues(0), nil, []unified.Truth{unified.Match, unified.NoMatch, unified.Match, unified.Unknown}},
+		{OpIsGreaterThan, filterValues(0), nil, []unified.Truth{unified.NoMatch, unified.Match, unified.NoMatch, unified.Unknown}},
+		{OpIsGreaterThanOrEqualTo, filterValues(1), nil, []unified.Truth{unified.NoMatch, unified.Match, unified.NoMatch, unified.Unknown}},
+		{OpIsBetween, filterValues(0, 1), nil, []unified.Truth{unified.Match, unified.Match, unified.Match, unified.Match}},
+		{OpIsGreaterThanOrEqualTo, filterValues(0), json.Value(`1`), []unified.Truth{unified.NoMatch, unified.Match, unified.NoMatch, unified.Unknown}},
+	} {
+		t.Run(fmt.Sprintf("public %s minimum %s", test.op, test.minimum), func(t *testing.T) {
+			c := *count
+			c.Operator, c.Values, c.Count.Minimum = test.op, test.values, test.minimum
+			input := &Filter{Operator: OpAnd, Rules: []FilterRule{&c}}
+			encoded, err := json.Marshal(input)
+			if err != nil {
+				t.Fatalf("expected public Count encoding, got %v", err)
+			}
+			var restored Filter
+			err = json.Unmarshal(encoded, &restored)
+			if err != nil {
+				t.Fatalf("expected restored Count document, got %v", err)
+			}
+			result, err := workspace.unifiedProfiles(t.Context(), unifiedQuery{
+				Root: &restored, At: at, Page: unified.Page{Limit: 10},
+			})
+			if err != nil {
+				t.Fatalf("expected complete public Count execution, got %v", err)
+			}
+			if len(result.Profiles) != len(test.want) {
+				t.Fatalf("expected %d profile outcomes, got %+v", len(test.want), result)
+			}
+			for i, profile := range result.Profiles {
+				if profile.Truth != test.want[i] {
+					t.Fatalf("expected public Count profile %d truth %d, got %+v", i, test.want[i], profile)
+				}
+			}
+		})
+	}
+
 	profile := &Filter{Operator: OpAnd, Rules: []FilterRule{
 		&FilterCondition{Property: "country", Operator: OpIs, Values: filterValues("IT")},
 	}}
@@ -205,7 +268,7 @@ INSERT INTO unified_v.krenalis_events VALUES
 	} {
 		t.Run(string(test.op), func(t *testing.T) {
 			result, err := workspace.unifiedProfiles(t.Context(), unifiedQuery{
-				Root: &unifiedRule{Operator: test.op, Rules: []unifiedRule{{Profile: profile.Rules[0]}, count}},
+				Root: &Filter{Operator: test.op, Rules: []FilterRule{profile.Rules[0], count}},
 				At:   at, Page: unified.Page{Limit: 10},
 			})
 			if err != nil {
@@ -221,25 +284,25 @@ INSERT INTO unified_v.krenalis_events VALUES
 			}
 		})
 	}
-	deep := unifiedRule{Operator: OpAnd, Rules: []unifiedRule{{Profile: profile.Rules[0]}, count}}
+	deep := &Filter{Operator: OpAnd, Rules: []FilterRule{profile.Rules[0], count}}
 	for range 3 {
-		deep = unifiedRule{Operator: OpAnd, Rules: []unifiedRule{deep}}
+		deep = &Filter{Operator: OpAnd, Rules: []FilterRule{deep}}
 	}
-	wide := unifiedRule{Operator: OpAnd, Rules: make([]unifiedRule, 100)}
+	wide := &Filter{Operator: OpAnd, Rules: make([]FilterRule, 100)}
 	for i := range 99 {
-		wide.Rules[i] = unifiedRule{Profile: profile.Rules[0]}
+		wide.Rules[i] = profile.Rules[0]
 	}
 	wide.Rules[99] = count
 	for _, test := range []struct {
 		name string
-		root unifiedRule
+		root *Filter
 	}{
 		{"four mixed levels", deep},
 		{"100 mixed descendants", wide},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			result, err := workspace.unifiedProfiles(t.Context(), unifiedQuery{
-				Root: &test.root, At: at, Page: unified.Page{Limit: 10},
+				Root: test.root, At: at, Page: unified.Page{Limit: 10},
 			})
 			if err != nil {
 				t.Fatalf("expected complete mixed query at the structural limit, got %v", err)
@@ -256,7 +319,7 @@ INSERT INTO unified_v.krenalis_events VALUES
 		})
 	}
 	result, err = workspace.unifiedProfiles(t.Context(), unifiedQuery{
-		Root: &unifiedRule{Profile: profile}, At: at, Page: unified.Page{Limit: 10, MatchingOnly: true},
+		Root: profile, At: at, Page: unified.Page{Limit: 10, MatchingOnly: true},
 	})
 	if err != nil {
 		t.Fatalf("expected pure Record service query, got %v", err)

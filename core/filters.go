@@ -34,7 +34,7 @@ type Filter struct {
 }
 
 // FilterRule represents a condition or a nested filter group.
-// It is implemented by *FilterCondition and *Filter.
+// It is implemented by *FilterCondition, *FilterCountCondition and *Filter.
 type FilterRule interface {
 	filterRule()
 }
@@ -55,7 +55,7 @@ func (filter *Filter) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON sets filter to the filter group represented by data.
 func (filter *Filter) UnmarshalJSON(data []byte) error {
 	dec := json.NewDecoder(bytes.NewBuffer(data))
-	group, _, err := unmarshalFilterRule(dec, 1, expectFilterGroup)
+	group, _, err := unmarshalFilterRule(dec, 1, expectFilterGroup, false)
 	if err != nil {
 		return err
 	}
@@ -329,6 +329,14 @@ func marshalFilterJSON(b *json.Buffer, filter *Filter) error {
 			if err != nil {
 				return err
 			}
+		case *FilterCountCondition:
+			if rule == nil {
+				return errors.New("filter count condition cannot be nil")
+			}
+			err = b.Encode(rule)
+			if err != nil {
+				return err
+			}
 		case nil:
 			return errors.New("filter rule cannot be nil")
 		default:
@@ -368,7 +376,7 @@ const (
 
 // unmarshalFilterRule unmarshals a filter rule and returns it and its number of
 // descendant rules. If expectGroup is true, it accepts only a filter group.
-func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup bool) (FilterRule, int, error) {
+func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence bool) (FilterRule, int, error) {
 
 	tok, err := dec.ReadToken()
 	if err != nil {
@@ -382,6 +390,8 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup bool) (Filter
 	var property string
 	var rules []FilterRule
 	var values []json.Value
+	var count FilterCount
+	var hasCount bool
 	var descendantRuleCount int
 	var hasOperator, hasProperty, hasRules, hasValues bool
 
@@ -412,11 +422,28 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup bool) (Filter
 			if hasRules {
 				return nil, 0, fmt.Errorf("duplicate filter property %q", name)
 			}
-			if depth > maxFilterDepth {
-				return nil, 0, fmt.Errorf("filter exceeds maximum depth of %d", maxFilterDepth)
+			maxDepth := maxFilterDepth
+			if occurrence {
+				maxDepth = 2
+			}
+			if depth > maxDepth {
+				return nil, 0, fmt.Errorf("filter exceeds maximum depth of %d", maxDepth)
 			}
 			hasRules = true
-			rules, descendantRuleCount, err = unmarshalFilterRules(dec, depth)
+			rules, descendantRuleCount, err = unmarshalFilterRules(dec, depth, occurrence)
+		case "count":
+			if occurrence {
+				return nil, 0, errors.New("Count is not allowed in an occurrence Record filter")
+			}
+			if hasCount {
+				return nil, 0, errors.New("duplicate filter property count")
+			}
+			hasCount = true
+			if expectGroup {
+				err = dec.SkipValue()
+			} else {
+				err = dec.Decode(&count)
+			}
 		case "values":
 			if hasValues {
 				return nil, 0, fmt.Errorf("duplicate filter property %q", name)
@@ -437,6 +464,18 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup bool) (Filter
 
 	_ = dec.SkipToken() // skip '}'
 
+	if hasCount {
+		if expectGroup {
+			return nil, 0, errors.New("filter must be a group")
+		}
+		if hasRules || hasProperty {
+			return nil, 0, errors.New("filter rule cannot combine count with rules or property")
+		}
+		if !hasOperator || !hasValues {
+			return nil, 0, errors.New("Count condition must contain operator and values")
+		}
+		return &FilterCountCondition{Count: count, Operator: FilterOperator(operator), Values: values}, 0, nil
+	}
 	if hasRules && hasProperty {
 		return nil, 0, errors.New(`filter rule cannot contain both "rules" and "property"`)
 	}
@@ -467,7 +506,7 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup bool) (Filter
 
 // unmarshalFilterRules unmarshals the rules of a filter group and returns them
 // and their total rule count.
-func unmarshalFilterRules(dec *json.Decoder, depth int) ([]FilterRule, int, error) {
+func unmarshalFilterRules(dec *json.Decoder, depth int, occurrence bool) ([]FilterRule, int, error) {
 
 	tok, err := dec.ReadToken()
 	if err != nil {
@@ -480,7 +519,7 @@ func unmarshalFilterRules(dec *json.Decoder, depth int) ([]FilterRule, int, erro
 	rules := []FilterRule{}
 	ruleCount := 0
 	for dec.PeekKind() != ']' {
-		rule, descendantRuleCount, err := unmarshalFilterRule(dec, depth+1, expectAnyFilterRule)
+		rule, descendantRuleCount, err := unmarshalFilterRule(dec, depth+1, expectAnyFilterRule, occurrence)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -765,6 +804,8 @@ func prepareFilterGroup(filter *Filter, validation *filterValidation, depth int)
 			if i, ok := slices.BinarySearch(validation.paths, path); !ok {
 				validation.paths = slices.Insert(validation.paths, i, path)
 			}
+		case *FilterCountCondition:
+			return nil, errors.New("Count requires Unified profile filtering")
 		default:
 			return nil, errors.New("unsupported filter rule")
 		}

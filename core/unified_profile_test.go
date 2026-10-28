@@ -42,7 +42,7 @@ func TestPrepareUnifiedProfileRecord(t *testing.T) {
 	}
 
 	nodes := 0
-	rule, err := prepareUnifiedRule(unifiedRule{Profile: &filter}, schema, 0, &nodes)
+	rule, err := prepareUnifiedRule(&filter, schema, 0, &nodes)
 	if err != nil {
 		t.Fatalf("expected prepared Unified tree, got %v", err)
 	}
@@ -72,18 +72,17 @@ func TestPrepareUnifiedProfileRecord(t *testing.T) {
 		t.Fatal("expected existing Where equality, got different prepared inputs")
 	}
 
-	for _, invalid := range []unifiedRule{
-		{Profile: &Filter{Operator: OpAnd, Rules: []FilterRule{
-			&FilterCondition{Property: "absent", Operator: OpExists}}}},
-		{Profile: &Filter{Operator: OpAnd, Rules: []FilterRule{
-			&FilterCondition{Property: "country", Operator: OpIsNull}}}},
-		{Profile: (*Filter)(nil)},
-		{Profile: (*FilterCondition)(nil)},
-		{Profile: &FilterCondition{Property: "absent", Operator: OpExists}},
-		{Profile: &FilterCondition{Property: "country", Operator: OpIsNull}},
-		{Profile: &filter, Count: &unifiedCount{}},
-		{Profile: &filter, Operator: OpAnd},
-		{Operator: "invalid", Rules: []unifiedRule{{Profile: &filter}}},
+	for _, invalid := range []FilterRule{
+		&Filter{Operator: OpAnd, Rules: []FilterRule{
+			&FilterCondition{Property: "absent", Operator: OpExists}}},
+		&Filter{Operator: OpAnd, Rules: []FilterRule{
+			&FilterCondition{Property: "country", Operator: OpIsNull}}},
+		(*Filter)(nil),
+		(*FilterCondition)(nil),
+		(*FilterCountCondition)(nil),
+		&FilterCondition{Property: "absent", Operator: OpExists},
+		&FilterCondition{Property: "country", Operator: OpIsNull},
+		&Filter{Operator: "invalid", Rules: []FilterRule{&filter}},
 	} {
 		nodes := 0
 		_, err := prepareUnifiedRule(invalid, schema, 0, &nodes)
@@ -101,14 +100,16 @@ func TestPrepareUnifiedProfileLimits(t *testing.T) {
 	filter := &Filter{Operator: OpAnd, Rules: []FilterRule{
 		&FilterCondition{Property: "country", Operator: OpIs, Values: filterValues("IT")}}}
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
-	count := &unifiedCount{Scope: unified.Scope{Event: "Purchase", Grain: "registered-message",
-		Start: at.AddDate(0, -1, 0), End: at}, Test: unified.CountTest{Operator: unified.Equal}}
-	check := func(input unifiedRule, valid bool) {
+	count := countFilterCondition()
+	check := func(input FilterRule, valid bool) {
 		t.Helper()
 		nodes := 0
 		rule, err := prepareUnifiedRule(input, schema, 0, &nodes)
 		if err != nil {
-			t.Fatalf("expected bounded input preparation, got %v", err)
+			if valid {
+				t.Fatalf("expected bounded input preparation, got %v", err)
+			}
+			return
 		}
 		err = unified.Validate(&rule, at, unified.Page{Limit: 1})
 		if err != nil {
@@ -123,8 +124,8 @@ func TestPrepareUnifiedProfileLimits(t *testing.T) {
 	}
 
 	for levels := 1; levels <= 4; levels++ {
-		check(unifiedRule{Profile: filter}, true)
-		check(unifiedRule{Operator: OpAnd, Rules: []unifiedRule{{Profile: filter}, {Count: count}}}, levels < 4)
+		check(filter, true)
+		check(&Filter{Operator: OpAnd, Rules: []FilterRule{filter, count}}, levels < 4)
 		filter = &Filter{Operator: OpOr, Rules: []FilterRule{filter}}
 	}
 
@@ -133,8 +134,8 @@ func TestPrepareUnifiedProfileLimits(t *testing.T) {
 		for i := range filter.Rules {
 			filter.Rules[i] = &FilterCondition{Property: "country", Operator: OpIs, Values: filterValues("IT")}
 		}
-		check(unifiedRule{Profile: filter}, true)
-		check(unifiedRule{Operator: OpAnd, Rules: []unifiedRule{{Profile: filter}, {Count: count}}}, n == 98)
+		check(filter, true)
+		check(&Filter{Operator: OpAnd, Rules: []FilterRule{filter, count}}, n == 98)
 	}
 
 }
@@ -153,7 +154,7 @@ func TestPrepareUnifiedProfileCondition(t *testing.T) {
 		t.Fatalf("expected existing Record preparation, got %v", err)
 	}
 	nodes := 0
-	rule, err := prepareUnifiedRule(unifiedRule{Profile: condition}, schema, 0, &nodes)
+	rule, err := prepareUnifiedRule(condition, schema, 0, &nodes)
 	if err != nil {
 		t.Fatalf("expected bare Record leaf preparation, got %v", err)
 	}
@@ -169,9 +170,8 @@ func TestPrepareUnifiedProfileCondition(t *testing.T) {
 	}
 
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
-	count := unifiedRule{Count: &unifiedCount{Scope: unified.Scope{Event: "Purchase", Grain: "registered-message",
-		Start: at.AddDate(0, -1, 0), End: at}, Test: unified.CountTest{Operator: unified.Equal}}}
-	root := unifiedRule{Operator: OpAnd, Rules: []unifiedRule{{Profile: condition}, count}}
+	count := countFilterCondition()
+	root := &Filter{Operator: OpAnd, Rules: []FilterRule{condition, count}}
 	for levels := 1; levels <= 5; levels++ {
 		nodes := 0
 		prepared, err := prepareUnifiedRule(root, schema, 0, &nodes)
@@ -190,12 +190,12 @@ func TestPrepareUnifiedProfileCondition(t *testing.T) {
 		if levels == 5 && err == nil {
 			t.Fatal("expected fifth mixed group rejection, got success")
 		}
-		root = unifiedRule{Operator: OpOr, Rules: []unifiedRule{root}}
+		root = &Filter{Operator: OpOr, Rules: []FilterRule{root}}
 	}
 	for _, size := range []int{99, 100} {
-		root := unifiedRule{Operator: OpAnd, Rules: make([]unifiedRule, size+1)}
+		root := &Filter{Operator: OpAnd, Rules: make([]FilterRule, size+1)}
 		for i := range size {
-			root.Rules[i] = unifiedRule{Profile: condition}
+			root.Rules[i] = condition
 		}
 		root.Rules[size] = count
 		nodes := 0
