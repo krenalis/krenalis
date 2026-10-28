@@ -209,6 +209,64 @@ func TestUnifiedPrepareProfileRecord(t *testing.T) {
 
 }
 
+// TestUnifiedPrepareReferencePrecedence rejects unresolved revisions before
+// unavailable evidence, regardless of their position in nested groups.
+func TestUnifiedPrepareReferencePrecedence(t *testing.T) {
+	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	source := unified.SourceBinding{
+		Occurrences: warehouses.OccurrenceSource{Table: "krenalis_events", Profile: eventColumnByProperty["kpid"],
+			Identity: eventColumnByProperty["messageId"], Timestamp: eventColumnByProperty["timestamp"]},
+		Properties: eventColumnByProperty["properties"],
+		Record: func(where *state.Where) (warehouses.Expr, error) {
+			return convertWhere(where, eventColumnByProperty)
+		},
+	}
+	for _, unresolved := range []bool{false, true} {
+		for _, operator := range []state.WhereLogical{state.OpAnd, state.OpOr} {
+			for _, reversed := range []bool{false, true} {
+				t.Run(fmt.Sprintf("unresolved=%v/%d/reversed=%v", unresolved, operator, reversed), func(t *testing.T) {
+					bindings := unified.Bindings{Currencies: []unified.CurrencyBinding{
+						{Definition: "NativeCurrency", Revision: "1", Path: []string{"properties", "currency"}},
+						{Definition: "NativeCurrency", Revision: "2", Path: []string{"properties", "currency"}},
+					}}
+					if unresolved {
+						bindings.Currencies = bindings.Currencies[:1]
+					}
+					children := make([]unified.Rule, 2)
+					for i := range children {
+						children[i].Count = &unified.Count{Scope: unified.Scope{Event: "Purchase",
+							Grain: "registered-message", Start: at.Add(-time.Hour), End: at},
+							Currency: &unified.NativeCurrency{Definition: "NativeCurrency",
+								Revision: fmt.Sprint(i + 1), Value: "EUR"}}
+					}
+					if reversed {
+						children[0], children[1] = children[1], children[0]
+					}
+					root := unified.Rule{Operator: state.OpAnd, Children: []unified.Rule{
+						{Operator: operator, Children: children}}}
+					filter, err := unified.Prepare(&root, bindings, at, source)
+					if err != nil {
+						if filter.Root != nil {
+							t.Fatalf("expected no partial prepared filter, got %+v", filter)
+						}
+						if unresolved {
+							if err.Error() != "unresolved NativeCurrency meaning revision" {
+								t.Fatalf("expected unresolved NativeCurrency meaning revision, got %v", err)
+							}
+							return
+						}
+						if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+							t.Fatalf("expected unavailable evidence capability, got %v", err)
+						}
+						return
+					}
+					t.Fatal("expected binding rejection, got success")
+				})
+			}
+		}
+	}
+}
+
 // TestUnifiedPreparedBudget rejects physical limits before backend execution.
 func TestUnifiedPreparedBudget(t *testing.T) {
 

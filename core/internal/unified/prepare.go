@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/warehouses"
 )
 
@@ -124,12 +125,20 @@ func prepareRule(rule Rule, bindings Bindings, at time.Time, source SourceBindin
 			return nil, fmt.Errorf("core/internal/unified: unexpected group operator %d", rule.Operator)
 		}
 		group := &warehouses.FilterGroup{Operator: operator, Children: make([]warehouses.FilterCondition, len(rule.Children))}
+		var unavailable error
 		for i, child := range rule.Children {
 			prepared, err := prepareRule(child, bindings, at, source)
 			if err != nil {
-				return nil, err
+				if _, unsupported := errors.AsType[*UnsupportedError](err); !unsupported {
+					return nil, err
+				}
+				unavailable = err
+				continue
 			}
 			group.Children[i] = prepared
+		}
+		if unavailable != nil {
+			return nil, unavailable
 		}
 		return group, nil
 	}

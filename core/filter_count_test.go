@@ -98,6 +98,42 @@ func TestFilterCountEncoding(t *testing.T) {
 
 }
 
+// TestFilterCountInstantOffsets preserves the admitted offsets and instants.
+func TestFilterCountInstantOffsets(t *testing.T) {
+	for _, test := range []struct {
+		offset string
+		shift  time.Duration
+	}{
+		{"Z", 0}, {"+01:00", time.Hour}, {"-00:00", 0},
+	} {
+		t.Run(test.offset, func(t *testing.T) {
+			data := fmt.Sprintf(`{"kind":"absoluteHalfOpen",`+
+				`"start":"2026-01-01T00:00:00.000001%s","end":"2026-01-02T00:00:00.000001%s"}`, test.offset, test.offset)
+			var period FilterPeriod
+			err := json.Unmarshal([]byte(data), &period)
+			if err != nil {
+				t.Fatalf("expected admitted offset %s, got %v", test.offset, err)
+			}
+			encoded, err := json.Marshal(&period)
+			if err != nil {
+				t.Fatalf("expected period encoding, got %v", err)
+			}
+			var restored FilterPeriod
+			err = json.Unmarshal(encoded, &restored)
+			if err != nil {
+				t.Fatalf("expected restored period, got %v", err)
+			}
+			start := time.Date(2026, 1, 1, 0, 0, 0, 1000, time.UTC).Add(-test.shift)
+			end := start.Add(24 * time.Hour)
+			if !period.Start.Equal(start) || !period.End.Equal(end) ||
+				!restored.Start.Equal(start) || !restored.End.Equal(end) {
+				t.Fatalf("expected instants [%s,%s) before and after encoding, got %s and %s",
+					start, end, data, encoded)
+			}
+		})
+	}
+}
+
 // TestFilterCountInstants rejects excess precision before time.Time decoding.
 func TestFilterCountInstants(t *testing.T) {
 	for _, test := range []struct {
@@ -191,6 +227,12 @@ func TestFilterCountInvalidBeforeUnsupported(t *testing.T) {
 			c.Count.Where = &Filter{Operator: OpAnd, Rules: []FilterRule{
 				&FilterCondition{Property: "absent", Operator: OpExists}}}
 		}},
+		{"where with unavailable period", func(c *FilterCountCondition) {
+			c.Values = filterValues(0)
+			c.Count.Period.Duration.Value = json.Value(`1000000000000000000000000000000`)
+			c.Count.Where = &Filter{Operator: OpAnd, Rules: []FilterRule{
+				&FilterCondition{Property: "absent", Operator: OpExists}}}
+		}},
 		{"deep where", func(c *FilterCountCondition) {
 			c.Count.Where = &Filter{Operator: OpAnd, Rules: []FilterRule{
 				&FilterCondition{Property: "event", Operator: OpIs, Values: filterValues("Purchase")}}}
@@ -206,6 +248,16 @@ func TestFilterCountInvalidBeforeUnsupported(t *testing.T) {
 		{"absolute ordering", func(c *FilterCountCondition) {
 			end := time.Date(2026, 1, 1, 0, 0, 0, 1, time.UTC)
 			c.Count.Period = FilterPeriod{Kind: "absoluteHalfOpen", Start: &end, End: &end}
+		}},
+		{"zero absolute start", func(c *FilterCountCondition) {
+			start := time.Time{}
+			end := time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)
+			c.Count.Period = FilterPeriod{Kind: "absoluteHalfOpen", Start: &start, End: &end}
+		}},
+		{"absolute start outside UTC range", func(c *FilterCountCondition) {
+			start := time.Date(1, 1, 1, 0, 30, 0, 0, time.FixedZone("", 3600))
+			end := time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)
+			c.Count.Period = FilterPeriod{Kind: "absoluteHalfOpen", Start: &start, End: &end}
 		}},
 	} {
 		for _, reversed := range []bool{false, true} {

@@ -15,8 +15,6 @@ import (
 	"github.com/krenalis/krenalis/core/internal/unified"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
-
-	"github.com/relvacode/iso8601"
 )
 
 // FilterCount describes the occurrence population counted by a condition.
@@ -257,9 +255,15 @@ func (period *FilterPeriod) UnmarshalJSON(data []byte) error {
 				return errors.New("period instant must be an RFC 3339 string")
 			}
 			// Reject excess fractional digits before time.Time can truncate them.
-			_, err := iso8601.ParseString(value.String())
-			if err != nil {
-				return errors.New("period instant must be a valid datetime")
+			text := value.String()
+			if separator := strings.IndexAny(text, ".,"); separator >= 0 {
+				end := separator + 1
+				for end < len(text) && text[end] >= '0' && text[end] <= '9' {
+					end++
+				}
+				if end-separator-1 > 9 {
+					return errors.New("period instant has more than nine fractional digits")
+				}
 			}
 		case "kind", "duration", "older", "newer":
 			if value.IsNull() {

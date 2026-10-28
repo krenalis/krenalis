@@ -237,6 +237,8 @@ minimums and elapsed offsets are checked exactly before execution range limits,
 including inverted intervals beyond uint64. Absolute instants with more than
 nine fractional digits are rejected before decoding into time.Time; admitted
 nanoseconds retain the existing microsecond execution capability check.
+The lexical precision guard preserves the offsets admitted by time.Time,
+including `-00:00`; it does not impose the Record DateTime parser's offset rules.
 The numeric limits of the executable backend remain capability errors.
 An older decoder rejects the unknown `count` member.
 
@@ -244,6 +246,9 @@ The existing Record-only preparer explicitly rejects Count. This increment
 connects the public document to the internal Unified service; it does not
 activate Unified in the existing Profiles HTTP handler, Admin editor or
 export pipeline. No new public result/UNKNOWN diagnostic contract is implied.
+Validation currently parses exact natural literals with big.Int. Very long
+literals still need a resource bound or a less costly exact comparison before
+API activation; no public digit limit is defined here.
 
 The application currently persists pipeline Record filters as `state.Where`,
 using the existing schema-aware codec and equality. That format, its database
