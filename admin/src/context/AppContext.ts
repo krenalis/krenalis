@@ -24,6 +24,7 @@ interface AppContext {
 	setConnections: React.Dispatch<React.SetStateAction<TransformedConnection[]>>;
 	setIsLoadingConnections: React.Dispatch<React.SetStateAction<boolean>>;
 	workspaces: Workspace[];
+	setWorkspaces: React.Dispatch<React.SetStateAction<Workspace[]>>;
 	setIsLoadingWorkspaces: React.Dispatch<React.SetStateAction<boolean>>;
 	warehouse: Warehouse;
 	selectedWorkspace: string;

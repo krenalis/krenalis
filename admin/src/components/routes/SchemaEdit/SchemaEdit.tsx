@@ -8,6 +8,7 @@ import './SchemaEdit.css';
 import { useBeforeUnload, useBlocker } from 'react-router-dom';
 import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { buttonVariant } from '../../../utils/buttonVariant';
+import WaCallout from '@awesome.me/webawesome/dist/react/callout/index.js';
 import WaDialog from '@awesome.me/webawesome/dist/react/dialog/index.js';
 import WaDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
@@ -83,6 +84,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 		firstVisibleProperty,
 		isFiltered,
 		isSchemaReady,
+		isSchemaOutdated,
 		isSelectedPropertyVisible,
 		identifierPositions,
 		objectCount,
@@ -341,12 +343,24 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 						className='schema-edit__header-apply-button'
 						variant='brand'
 						onClick={onReviewChangesClick}
-						disabled={!hasSchemaChanges && !hasUnsavedPropertyChanges}
+						disabled={isSchemaOutdated || (!hasSchemaChanges && !hasUnsavedPropertyChanges)}
 					>
 						Apply changes
 					</WaButton>
 				</div>
 			</div>
+			{isSchemaOutdated && !isConfirmChangesLoading && !skipNavigationBlockRef.current && (
+				<WaCallout className='schema-edit__outdated-warning' variant='warning'>
+					<WaIcon name='exclamation-triangle' slot='icon' />
+					<span className='schema-edit__outdated-message'>
+						The schema was changed in another session. Your pending changes are still visible, but cannot be
+						applied. Reloading will discard them.
+					</span>
+					<WaButton size='s' appearance='outlined' onClick={() => window.location.reload()}>
+						Reload schema
+					</WaButton>
+				</WaCallout>
+			)}
 			<div className='schema-edit__overview'>
 				<div className='schema-edit__overview-main'>
 					<SchemaPropertyGridSummary view='edit' objectCount={objectCount} propertyCount={propertyCount}>
@@ -498,6 +512,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 									size='s'
 									{...buttonVariant(hasNoWarehouseQueries ? 'primary' : 'danger')}
 									onClick={onConfirmChanges}
+									disabled={isSchemaOutdated}
 									loading={isConfirmChangesLoading}
 								>
 									Apply changes
